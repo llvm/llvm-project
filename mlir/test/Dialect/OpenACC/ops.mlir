@@ -19,7 +19,7 @@ func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
       %co = arith.addf %cij, %p : f32
       memref.store %co, %C[%arg3, %arg4] : memref<10x10xf32>
       acc.yield
-    } attributes { collapse = [3], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true, true>}
+    } attributes { collapse = [3], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true, true>, independent = [#acc.device_type<none>]}
     acc.yield
   }
 
@@ -40,7 +40,7 @@ func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
 //  CHECK-NEXT:       %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
 //  CHECK-NEXT:       memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 //  CHECK-NEXT:       acc.yield
-//  CHECK-NEXT:     } attributes {collapse = [3], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true, true>}
+//  CHECK-NEXT:     } attributes {collapse = [3], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true, true>, independent = [#acc.device_type<none>]}
 //  CHECK-NEXT:     acc.yield
 //  CHECK-NEXT:   }
 //  CHECK-NEXT:   return %{{.*}} : memref<10x10xf32>
@@ -129,7 +129,7 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
           %tmp = arith.addf %axy, %bxy : f32
           memref.store %tmp, %c[%y] : memref<10xf32>
           acc.yield
-        } attributes {inclusiveUpperbound = array<i1: true>}
+        } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
         acc.loop control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
           // for i = 0 to 10 step 1
@@ -139,9 +139,9 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
           %z = arith.addf %ci, %dx : f32
           memref.store %z, %d[%x] : memref<10xf32>
           acc.yield
-        } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<nvidia>]}
+        } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>], seq = [#acc.device_type<nvidia>]}
         acc.yield
-      } attributes {inclusiveUpperbound = array<i1: true>}
+      } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
       acc.yield
     }
     acc.terminator
@@ -166,16 +166,16 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 // CHECK-NEXT:           %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
 // CHECK-NEXT:           memref.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:           acc.yield
-// CHECK-NEXT:         } attributes {inclusiveUpperbound = array<i1: true>}
+// CHECK-NEXT:         } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 // CHECK-NEXT:         acc.loop control(%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
 // CHECK-NEXT:           %{{.*}} = memref.load %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:           %{{.*}} = memref.load %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:           %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
 // CHECK-NEXT:           memref.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:           acc.yield
-// CHECK-NEXT:         } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<nvidia>]}
+// CHECK-NEXT:         } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>], seq = [#acc.device_type<nvidia>]}
 // CHECK-NEXT:         acc.yield
-// CHECK-NEXT:       } attributes {inclusiveUpperbound = array<i1: true>}
+// CHECK-NEXT:       } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 // CHECK-NEXT:       acc.yield
 // CHECK-NEXT:     }
 // CHECK-NEXT:     acc.terminator
@@ -196,72 +196,72 @@ func.func @testloopop(%a : memref<10xf32>) -> () {
   acc.loop gang vector worker control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({num=%i64Value: i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({static=%i64Value: i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop worker(%i64Value: i64) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop worker(%i32Value: i32) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop worker(%idxValue: index) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop vector(%i64Value: i64) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop vector(%i32Value: i32) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop vector(%idxValue: index) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({num=%i64Value: i64}) worker vector control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({num=%i64Value: i64, static=%i64Value: i64}) worker(%i64Value: i64) vector(%i64Value: i64) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({num=%i32Value: i32, static=%idxValue: index}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop tile({%i64Value : i64, %i64Value : i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop tile({%i32Value : i32, %i32Value : i32}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({static=%i64Value: i64, num=%i64Value: i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({dim=%i64Value : i64, static=%i64Value: i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   %b = acc.cache varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
   acc.loop cache(%b : memref<10xf32>) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   return
 }
 
@@ -271,7 +271,7 @@ func.func @testloopop(%a : memref<10xf32>) -> () {
 // CHECK:      acc.loop
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
-// CHECK-NEXT: attributes {inclusiveUpperbound = array<i1: true>}
+// CHECK-NEXT: attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 // CHECK:      acc.loop gang({num=[[I64VALUE]] : i64})
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
@@ -343,7 +343,7 @@ func.func @acc_loop_multiple_block() {
       cf.br ^bb1(%22 : index)
     ^bb3:
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>}
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
     acc.yield
   }
   return
@@ -1477,7 +1477,7 @@ func.func @acc_reduc_test(%a : i64) -> () {
   acc.parallel reduction(@reduction_add_i64 -> %a : i64) {
     acc.loop reduction(@reduction_add_i64 -> %a : i64) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
-    } attributes { inclusiveUpperbound = array<i1: true> }
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
     acc.yield
   }
   return
@@ -1869,21 +1869,21 @@ func.func @acc_combined() {
   acc.parallel combined(loop) {
     acc.loop combined(parallel) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
-    }
+    } attributes {independent = [#acc.device_type<none>]}
     acc.terminator
   }
 
   acc.kernels combined(loop) {
     acc.loop combined(kernels) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
-    }
+    } attributes {auto_ = [#acc.device_type<none>]}
     acc.terminator
   }
 
   acc.serial combined(loop) {
     acc.loop combined(serial) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
-    }
+    } attributes {seq = [#acc.device_type<none>]}
     acc.terminator
   }
 
@@ -1949,7 +1949,7 @@ func.func @acc_loop_container() {
       scf.yield
     }
     acc.yield
-  }
+  } attributes {independent = [#acc.device_type<none>]}
   return
 }
 
@@ -1971,7 +1971,7 @@ func.func @acc_loop_container() {
       scf.yield
     }
     acc.yield
-  } attributes { collapse = [2], collapseDeviceType = [#acc.device_type<none>] }
+  } attributes { collapse = [2], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>]}
   return
 }
 

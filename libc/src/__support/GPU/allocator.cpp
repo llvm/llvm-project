@@ -229,24 +229,34 @@ struct Slab {
 
     // The uniform mask represents which lanes contain a uniform target pointer.
     // We attempt to place these next to each other.
-    // TODO: We should coalesce these bits and use the result of `fetch_or` to
-    //       search for free bits in parallel.
     void *result = nullptr;
     for (uint64_t mask = lane_mask; mask;
          mask = gpu::ballot(lane_mask, !result)) {
-      uint32_t id = impl::lane_count(uniform & mask);
-      uint32_t index =
-          (gpu::broadcast_value(lane_mask, impl::xorshift32(state)) + id) %
-          usable_bits(chunk_size);
+      if (result)
+        continue;
 
+      uint32_t start = gpu::broadcast_value(lane_mask, impl::xorshift32(state));
+
+      uint32_t id = impl::lane_count(uniform & mask);
+      uint32_t index = (start + id) % usable_bits(chunk_size);
       uint32_t slot = index / BITS_IN_WORD;
       uint32_t bit = index % BITS_IN_WORD;
-      if (!result) {
-        uint32_t before = cpp::AtomicRef(get_bitfield()[slot])
-                              .fetch_or(1u << bit, cpp::MemoryOrder::RELAXED);
-        if (~before & (1 << bit))
-          result = ptr_from_index(index, chunk_size);
-      }
+
+      // Get the mask of bits destined for the same slot and coalesce it.
+      uint64_t match = uniform & gpu::match_any(mask, slot);
+      uint32_t length = cpp::popcount(match);
+      uint32_t bitmask = static_cast<uint32_t>((uint64_t(1) << length) - 1)
+                         << bit;
+
+      uint32_t before = 0;
+      if (gpu::get_lane_id() == static_cast<uint32_t>(cpp::countr_zero(match)))
+        before = cpp::AtomicRef(get_bitfield()[slot])
+                     .fetch_or(bitmask, cpp::MemoryOrder::RELAXED);
+      before = gpu::shuffle(mask, cpp::countr_zero(match), before);
+      if (~before & (1 << bit))
+        result = ptr_from_index(index, chunk_size);
+      else
+        sleep_briefly();
     }
 
     cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
@@ -273,7 +283,7 @@ struct Slab {
 
 /// A wait-free guard around a pointer resource to be created dynamically if
 /// space is available and freed once there are no more users.
-template <typename T> struct GuardPtr {
+struct GuardPtr {
 private:
   struct RefCounter {
     // Indicates that the object is in its deallocation phase and thus invalid.
@@ -329,22 +339,22 @@ private:
     cpp::Atomic<uint64_t> counter{0};
   };
 
-  cpp::Atomic<T *> ptr{nullptr};
+  cpp::Atomic<Slab *> ptr{nullptr};
   RefCounter ref{};
 
   // Should be called be a single lane for each different pointer.
   template <typename... Args>
-  T *try_lock_impl(uint32_t n, uint64_t &count, Args &&...args) {
-    T *expected = ptr.load(cpp::MemoryOrder::RELAXED);
+  Slab *try_lock_impl(uint32_t n, uint64_t &count, Args &&...args) {
+    Slab *expected = ptr.load(cpp::MemoryOrder::RELAXED);
     if (!expected &&
-        ptr.compare_exchange_strong(expected, reinterpret_cast<T *>(SENTINEL),
-                                    cpp::MemoryOrder::RELAXED,
-                                    cpp::MemoryOrder::RELAXED)) {
+        ptr.compare_exchange_strong(
+            expected, reinterpret_cast<Slab *>(SENTINEL),
+            cpp::MemoryOrder::RELAXED, cpp::MemoryOrder::RELAXED)) {
       count = cpp::numeric_limits<uint64_t>::max();
-      void *raw = impl::rpc_allocate(sizeof(T));
+      void *raw = impl::rpc_allocate(sizeof(Slab));
       if (!raw)
         return nullptr;
-      T *mem = new (raw) T(cpp::forward<Args>(args)...);
+      Slab *mem = new (raw) Slab(cpp::forward<Args>(args)...);
 
       cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
       ptr.store(mem, cpp::MemoryOrder::RELAXED);
@@ -354,7 +364,7 @@ private:
       return mem;
     }
 
-    if (!expected || expected == reinterpret_cast<T *>(SENTINEL))
+    if (!expected || expected == reinterpret_cast<Slab *>(SENTINEL))
       return nullptr;
 
     if (!ref.acquire(n, count))
@@ -369,10 +379,10 @@ public:
   // The uniform mask represents which lanes share the same pointer. For each
   // uniform value we elect a leader to handle it on behalf of the other lanes.
   template <typename... Args>
-  T *try_lock(uint64_t lane_mask, uint64_t uniform, uint64_t &count,
-              Args &&...args) {
+  Slab *try_lock(uint64_t lane_mask, uint64_t uniform, uint64_t &count,
+                 Args &&...args) {
     count = 0;
-    T *result = nullptr;
+    Slab *result = nullptr;
     if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(uniform)))
       result = try_lock_impl(cpp::popcount(uniform), count,
                              cpp::forward<Args>(args)...);
@@ -393,8 +403,8 @@ public:
     cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
     if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(mask)) &&
         ref.release(cpp::popcount(mask))) {
-      T *p = ptr.load(cpp::MemoryOrder::RELAXED);
-      p->~T();
+      Slab *p = ptr.load(cpp::MemoryOrder::RELAXED);
+      p->~Slab();
       impl::rpc_free(p);
       cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
       ptr.store(nullptr, cpp::MemoryOrder::RELAXED);
@@ -407,7 +417,7 @@ public:
 };
 
 // The global array used to search for a valid slab to allocate from.
-static GuardPtr<Slab> slots[ARRAY_SIZE] = {};
+static GuardPtr slots[ARRAY_SIZE] = {};
 
 // Tries to find a slab in the table that can support the given chunk size.
 static Slab *find_slab(uint32_t chunk_size) {

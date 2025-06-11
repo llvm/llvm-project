@@ -6885,8 +6885,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
     int Sz = TE.Scalars.size();
     if (isSplat(TE.Scalars) && !allConstant(TE.Scalars) &&
         count_if(TE.Scalars, IsaPred<UndefValue>) == Sz - 1) {
-      const auto *It =
-          find_if(TE.Scalars, [](Value *V) { return !isConstant(V); });
+      const auto *It = find_if_not(TE.Scalars, isConstant);
       if (It == TE.Scalars.begin())
         return OrdersType();
       auto *Ty = getWidenedType(TE.Scalars.front()->getType(), Sz);
@@ -15321,13 +15320,11 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         if (TEUseEI.UserTE->State == TreeEntry::Vectorize &&
             (TEUseEI.UserTE->getOpcode() != Instruction::PHI ||
              TEUseEI.UserTE->isAltShuffle()) &&
-            all_of(TEUseEI.UserTE->Scalars,
-                   [](Value *V) { return isUsedOutsideBlock(V); })) {
+            all_of(TEUseEI.UserTE->Scalars, isUsedOutsideBlock)) {
           if (UseEI.UserTE->State != TreeEntry::Vectorize ||
               (UseEI.UserTE->getOpcode() == Instruction::PHI &&
                !UseEI.UserTE->isAltShuffle()) ||
-              any_of(UseEI.UserTE->Scalars,
-                     [](Value *V) { return !isUsedOutsideBlock(V); }))
+              !all_of(UseEI.UserTE->Scalars, isUsedOutsideBlock))
             continue;
         }
 
@@ -17437,6 +17434,12 @@ static Instruction *propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   return llvm::propagateMetadata(Inst, Insts);
 }
 
+static DebugLoc getDebugLocFromPHI(PHINode &PN) {
+  if (DebugLoc DL = PN.getDebugLoc())
+    return DL;
+  return DebugLoc::getUnknown();
+}
+
 Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   IRBuilderBase::InsertPointGuard Guard(Builder);
 
@@ -17602,14 +17605,14 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       auto *PH = cast<PHINode>(VL0);
       Builder.SetInsertPoint(PH->getParent(),
                              PH->getParent()->getFirstNonPHIIt());
-      Builder.SetCurrentDebugLocation(PH->getDebugLoc());
+      Builder.SetCurrentDebugLocation(getDebugLocFromPHI(*PH));
       PHINode *NewPhi = Builder.CreatePHI(VecTy, PH->getNumIncomingValues());
       Value *V = NewPhi;
 
       // Adjust insertion point once all PHI's have been generated.
       Builder.SetInsertPoint(PH->getParent(),
                              PH->getParent()->getFirstInsertionPt());
-      Builder.SetCurrentDebugLocation(PH->getDebugLoc());
+      Builder.SetCurrentDebugLocation(getDebugLocFromPHI(*PH));
 
       V = FinalShuffle(V, E);
 
@@ -17641,7 +17644,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
 
         Builder.SetInsertPoint(IBB->getTerminator());
-        Builder.SetCurrentDebugLocation(PH->getDebugLoc());
+        Builder.SetCurrentDebugLocation(getDebugLocFromPHI(*PH));
         Value *Vec = vectorizeOperand(E, I);
         if (VecTy != Vec->getType()) {
           assert((It != MinBWs.end() || getOperandEntry(E, I)->isGather() ||
