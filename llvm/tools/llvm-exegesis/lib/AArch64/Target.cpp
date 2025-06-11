@@ -238,8 +238,8 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
     const BitVector &ForbiddenRegs) const {
   const Operand &Op = Instr.getPrimaryOperand(Var);
   const auto OperandType = Op.getExplicitOperandInfo().OperandType;
-  // Introducing some illegal instructions for (15) a few opcodes
-  // TODO: Look into immediate values to be opcode specific
+  // TODO: Look into immediate values to be opcode specific for
+  // MRS, MSR, MSRpstatesvcrImm1, SYSLxt, SYSxt, UDF (illegal instruction)
   switch (OperandType) {
   case MCOI::OperandType::OPERAND_UNKNOWN: {
     unsigned Opcode = Instr.getOpcode();
