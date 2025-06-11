@@ -871,7 +871,8 @@ public:
   /// extracted from vectors.
   InstructionCost getScalarizationOverhead(
       VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) const override {
+      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+      ArrayRef<Value *> VL = {}) const override {
     /// FIXME: a bitfield is not a reasonable abstraction for talking about
     /// which elements are needed from a scalable vector
     if (isa<ScalableVectorType>(InTy))
@@ -1409,8 +1410,8 @@ public:
 
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override {
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override {
     return getRegUsageForType(Val->getScalarType());
   }
 
@@ -2407,6 +2408,11 @@ public:
                                           CmpInst::ICMP_ULT, CostKind);
       return Cost;
     }
+    case Intrinsic::experimental_memset_pattern:
+      // This cost is set to match the cost of the memset_pattern16 libcall.
+      // It should likely be re-evaluated after migration to this intrinsic
+      // is complete.
+      return TTI::TCC_Basic * 4;
     case Intrinsic::abs:
       ISD = ISD::ABS;
       break;

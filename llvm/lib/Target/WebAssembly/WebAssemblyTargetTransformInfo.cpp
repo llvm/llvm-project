@@ -184,7 +184,7 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
 
 InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-    Value *Op0, Value *Op1) const {
+    const Value *Op0, const Value *Op1) const {
   InstructionCost Cost = BasicTTIImplBase::getVectorInstrCost(
       Opcode, Val, CostKind, Index, Op0, Op1);
 
@@ -294,7 +294,7 @@ bool WebAssemblyTTIImpl::isProfitableToSinkOperands(
 
   Value *V = I->getOperand(1);
   // We dont need to sink constant splat.
-  if (dyn_cast<Constant>(V))
+  if (isa<Constant>(V))
     return false;
 
   if (match(V, m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),

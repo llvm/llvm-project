@@ -737,6 +737,10 @@ def GR32_SIDI : RegisterClass<"X86", [i32], 32, (add ESI, EDI)>;
 def GR32_DIBP : RegisterClass<"X86", [i32], 32, (add EDI, EBP)>;
 def GR32_BPSP : RegisterClass<"X86", [i32], 32, (add EBP, ESP)>;
 
+// Class to support Windows Import Call Optimization: all indirect jumps must
+// happen through RAX.
+def GR64_A : RegisterClass<"X86", [i64], 64, (add RAX)>;
+
 // Scalar SSE2 floating point registers.
 def FR32 : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 15)>;
 

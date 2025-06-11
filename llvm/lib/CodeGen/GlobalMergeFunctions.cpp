@@ -14,6 +14,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/CGData/CodeGenData.h"
+#include "llvm/CGData/CodeGenDataWriter.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/InitializePasses.h"
@@ -328,7 +329,7 @@ checkConstLocationCompatible(const StableFunctionMap::StableFunctionEntry &SF,
     std::optional<Constant *> OldConst;
     for (auto &Loc : ParamLocs) {
       assert(SF.IndexOperandHashMap->count(Loc));
-      auto CurrHash = SF.IndexOperandHashMap.get()->at(Loc);
+      auto CurrHash = SF.IndexOperandHashMap->at(Loc);
       auto [InstIndex, OpndIndex] = Loc;
       assert(InstIndex < IndexInstruction.size());
       const auto *Inst = IndexInstruction.lookup(InstIndex);
@@ -526,13 +527,16 @@ void GlobalMergeFunc::emitFunctionMap(Module &M) {
   SmallVector<char> Buf;
   raw_svector_ostream OS(Buf);
 
-  StableFunctionMapRecord::serialize(OS, LocalFunctionMap.get());
+  std::vector<CGDataPatchItem> PatchItems;
+  StableFunctionMapRecord::serialize(OS, LocalFunctionMap.get(), PatchItems);
+  CGDataOStream COS(OS);
+  COS.patch(PatchItems);
 
   std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(
       OS.str(), "in-memory stable function map", false);
 
   Triple TT(M.getTargetTriple());
-  embedBufferInModule(M, *Buffer.get(),
+  embedBufferInModule(M, *Buffer,
                       getCodeGenDataSectionName(CG_merge, TT.getObjectFormat()),
                       Align(4));
 }

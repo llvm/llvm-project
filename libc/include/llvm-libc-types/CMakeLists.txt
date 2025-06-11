@@ -186,7 +186,7 @@ add_header(EFI_HANDLE HDR EFI_HANDLE.h)
 add_header(EFI_TIME HDR EFI_TIME.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(EFI_TIMER_DELAY HDR EFI_TIMER_DELAY.h)
 add_header(EFI_TPL HDR EFI_TPL.h DEPENDS .size_t)
-add_header(EFI_STATUS HDR EFI_STATUS.h DEPENDS .size_t)
+add_header(EFI_STATUS HDR EFI_STATUS.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 
 add_header(EFI_OPEN_PROTOCOL_INFORMATION_ENTRY
   HDR

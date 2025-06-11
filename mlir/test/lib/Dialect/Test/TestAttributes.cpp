@@ -317,6 +317,49 @@ static ParseResult parseCustomFloatAttr(AsmParser &p, StringAttr &typeStrAttr,
 }
 
 //===----------------------------------------------------------------------===//
+// TestCustomStructAttr
+//===----------------------------------------------------------------------===//
+
+static void printCustomStructAttr(AsmPrinter &p, int64_t value) {
+  if (ShapedType::isDynamic(value)) {
+    p << "?";
+  } else {
+    p.printStrippedAttrOrType(value);
+  }
+}
+
+static ParseResult parseCustomStructAttr(AsmParser &p, int64_t &value) {
+  if (succeeded(p.parseOptionalQuestion())) {
+    value = ShapedType::kDynamic;
+    return success();
+  }
+  return p.parseInteger(value);
+}
+
+static void printCustomOptStructFieldAttr(AsmPrinter &p, ArrayAttr attr) {
+  if (attr && attr.size() == 1 && isa<IntegerAttr>(attr[0])) {
+    p << cast<IntegerAttr>(attr[0]).getInt();
+  } else {
+    p.printStrippedAttrOrType(attr);
+  }
+}
+
+static ParseResult parseCustomOptStructFieldAttr(AsmParser &p,
+                                                 ArrayAttr &attr) {
+  int64_t value;
+  OptionalParseResult result = p.parseOptionalInteger(value);
+  if (result.has_value()) {
+    if (failed(result.value()))
+      return failure();
+    attr = ArrayAttr::get(
+        p.getContext(),
+        {IntegerAttr::get(IntegerType::get(p.getContext(), 64), value)});
+    return success();
+  }
+  return p.parseAttribute(attr);
+}
+
+//===----------------------------------------------------------------------===//
 // TestOpAsmAttrInterfaceAttr
 //===----------------------------------------------------------------------===//
 
@@ -452,6 +495,24 @@ getDynamicCustomAssemblyFormatAttr(TestDialect *testDialect) {
   return DynamicAttrDefinition::get("dynamic_custom_assembly_format",
                                     testDialect, std::move(verifier),
                                     std::move(parser), std::move(printer));
+}
+
+//===----------------------------------------------------------------------===//
+// SlashAttr
+//===----------------------------------------------------------------------===//
+
+Attribute SlashAttr::parse(AsmParser &parser, Type type) {
+  int lhs, rhs;
+
+  if (parser.parseLess() || parser.parseInteger(lhs) || parser.parseSlash() ||
+      parser.parseInteger(rhs) || parser.parseGreater())
+    return Attribute();
+
+  return SlashAttr::get(parser.getContext(), lhs, rhs);
+}
+
+void SlashAttr::print(AsmPrinter &printer) const {
+  printer << "<" << getLhs() << " / " << getRhs() << ">";
 }
 
 //===----------------------------------------------------------------------===//

@@ -41,6 +41,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -1207,12 +1208,7 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
-                                  const RecurrenceDescriptor &Desc,
-                                  PHINode *OrigPhi) {
-  assert(
-      RecurrenceDescriptor::isAnyOfRecurrenceKind(Desc.getRecurrenceKind()) &&
-      "Unexpected reduction kind");
-  Value *InitVal = Desc.getRecurrenceStartValue();
+                                  Value *InitVal, PHINode *OrigPhi) {
   Value *NewVal = nullptr;
 
   // First use the original phi to determine the new value we're trying to
@@ -1242,12 +1238,7 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
-                                       Value *Start,
-                                       const RecurrenceDescriptor &Desc) {
-  assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-             Desc.getRecurrenceKind()) &&
-         "Unexpected reduction kind");
-  Value *Sentinel = Desc.getSentinelValue();
+                                       Value *Start, Value *Sentinel) {
   Value *MaxRdx = Src->getType()->isVectorTy()
                       ? Builder.CreateIntMaxReduce(Src, true)
                       : Src;
@@ -1830,10 +1821,11 @@ void llvm::appendLoopsToWorklist(RangeT &&Loops,
   appendReversedLoopsToWorklist(reverse(Loops), Worklist);
 }
 
-template void llvm::appendLoopsToWorklist<ArrayRef<Loop *> &>(
+template LLVM_EXPORT_TEMPLATE void
+llvm::appendLoopsToWorklist<ArrayRef<Loop *> &>(
     ArrayRef<Loop *> &Loops, SmallPriorityWorklist<Loop *, 4> &Worklist);
 
-template void
+template LLVM_EXPORT_TEMPLATE void
 llvm::appendLoopsToWorklist<Loop &>(Loop &L,
                                     SmallPriorityWorklist<Loop *, 4> &Worklist);
 

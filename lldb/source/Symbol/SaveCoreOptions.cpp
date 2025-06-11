@@ -24,7 +24,6 @@ Status SaveCoreOptions::SetPluginName(const char *name) {
   if (!PluginManager::IsRegisteredObjectFilePluginName(name)) {
     return Status::FromErrorStringWithFormat(
         "plugin name '%s' is not a valid ObjectFile plugin name", name);
-    return error;
   }
 
   m_plugin_name = name;
@@ -143,6 +142,27 @@ SaveCoreOptions::GetThreadsToSave() const {
     thread_collection.push_back(thread_list.FindThreadByID(tid));
 
   return thread_collection;
+}
+
+llvm::Expected<uint64_t> SaveCoreOptions::GetCurrentSizeInBytes() {
+  Status error;
+  if (!m_process_sp)
+    return Status::FromErrorString("Requires a process to be set.").takeError();
+
+  error = EnsureValidConfiguration(m_process_sp);
+  if (error.Fail())
+    return error.takeError();
+
+  CoreFileMemoryRanges ranges;
+  error = m_process_sp->CalculateCoreFileSaveRanges(*this, ranges);
+  if (error.Fail())
+    return error.takeError();
+
+  uint64_t total_in_bytes = 0;
+  for (auto &core_range : ranges)
+    total_in_bytes += core_range.data.range.size();
+
+  return total_in_bytes;
 }
 
 void SaveCoreOptions::ClearProcessSpecificData() {

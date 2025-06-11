@@ -204,6 +204,8 @@ class CompilerInstance : public ModuleLoader {
   void operator=(const CompilerInstance &) = delete;
 public:
   explicit CompilerInstance(
+      std::shared_ptr<CompilerInvocation> Invocation =
+          std::make_shared<CompilerInvocation>(),
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
       ModuleCache *ModCache = nullptr);
@@ -251,17 +253,9 @@ public:
   /// @name Compiler Invocation and Options
   /// @{
 
-  bool hasInvocation() const { return Invocation != nullptr; }
-
-  CompilerInvocation &getInvocation() {
-    assert(Invocation && "Compiler instance has no invocation!");
-    return *Invocation;
-  }
+  CompilerInvocation &getInvocation() { return *Invocation; }
 
   std::shared_ptr<CompilerInvocation> getInvocationPtr() { return Invocation; }
-
-  /// setInvocation - Replace the current invocation.
-  void setInvocation(std::shared_ptr<CompilerInvocation> Value);
 
   /// Indicates whether we should (re)build the global module index.
   bool shouldBuildGlobalModuleIndex() const;
@@ -680,7 +674,7 @@ public:
   ///
   /// \return The new object on success, or null on failure.
   static IntrusiveRefCntPtr<DiagnosticsEngine>
-  createDiagnostics(llvm::vfs::FileSystem &VFS, DiagnosticOptions *Opts,
+  createDiagnostics(llvm::vfs::FileSystem &VFS, DiagnosticOptions &Opts,
                     DiagnosticConsumer *Client = nullptr,
                     bool ShouldOwnClient = true,
                     const CodeGenOptions *CodeGenOpts = nullptr);

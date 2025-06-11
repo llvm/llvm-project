@@ -558,6 +558,13 @@ void spirv::ConstantOp::print(OpAsmPrinter &printer) {
 
 static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
                                         Type opType) {
+  if (isa<spirv::CooperativeMatrixType>(opType)) {
+    auto denseAttr = dyn_cast<DenseElementsAttr>(value);
+    if (!denseAttr || !denseAttr.isSplat())
+      return op.emitOpError("expected a splat dense attribute for cooperative "
+                            "matrix constant, but found ")
+             << denseAttr;
+  }
   if (llvm::isa<IntegerAttr, FloatAttr>(value)) {
     auto valueType = llvm::cast<TypedAttr>(value).getType();
     if (valueType != opType)
@@ -776,8 +783,6 @@ void spirv::EntryPointOp::build(OpBuilder &builder, OperationState &state,
 ParseResult spirv::EntryPointOp::parse(OpAsmParser &parser,
                                        OperationState &result) {
   spirv::ExecutionModel execModel;
-  SmallVector<OpAsmParser::UnresolvedOperand, 0> identifiers;
-  SmallVector<Type, 0> idTypes;
   SmallVector<Attribute, 4> interfaceVars;
 
   FlatSymbolRefAttr fn;

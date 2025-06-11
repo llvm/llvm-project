@@ -718,6 +718,54 @@ static Operation *replaceForAllWithNewSignature(
   return newforallOp;
 }
 
+/// Given two operands coming from a loop iter arg, 'src' and 'dst', return true
+/// if the operand 'src' is equal to 'dst' or equal to a iter arg present in a
+/// outer loop. To determine the second condition, this function iterates
+/// using a worklist over the enclosing loops, trying to find 'src' in any of
+/// the parent loop's iter args.
+static bool sameOrEquivalentIterArg(Value src, Value dst) {
+  // Stack like vector containing possible iterArgs candidates. The first one
+  // is dst, and we will transverse the IR from there.
+  SmallVector<Value> destWorklist;
+  destWorklist.push_back(dst);
+
+  while (!destWorklist.empty()) {
+    Value currentDst = destWorklist.pop_back_val();
+
+    // We have found the same operand in some iter arg in the loop structure,
+    // so src and dst are equivalent.
+    if (src == currentDst)
+      return true;
+
+    // The operands are not equivalent, look for enclosing loops over
+    // currentDst.
+    auto bbArg = dyn_cast<BlockArgument>(currentDst);
+    if (!bbArg)
+      continue;
+
+    Block *parentBlock = bbArg.getOwner();
+    assert(parentBlock && "unlinked block argument");
+
+    Operation *parentOp = parentBlock->getParentOp();
+    assert(parentOp && "expected block argument with parent operation");
+
+    // Check if parent is loop-like. If it's not, do not add it to the worklist.
+    auto parentLoop = dyn_cast<LoopLikeOpInterface>(parentOp);
+    if (!parentLoop)
+      continue;
+
+    for (auto innerIterArg : parentLoop.getRegionIterArgs()) {
+      // No need to check for null as innerIterArg is tied to parentLoop.
+      OpOperand *operand = parentLoop.getTiedLoopInit(innerIterArg);
+      Value loopBlockArgument =
+          parentLoop->getOperand(operand->getOperandNumber());
+      destWorklist.push_back(loopBlockArgument);
+    }
+  }
+
+  return false;
+}
+
 /// Find the first "extract" user of `producerOp` and tile it right before its
 /// use. The tiled op is fused under the `containingOp`.
 /// Return this fused op on success or nullptr if anything fails.
@@ -754,6 +802,40 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
   // Try to fuse the producer in-place.
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(sliceOpToTile);
+
+  // Clone the producer inside the consumer and try to update the producer init
+  // operands using the loop bbArgs if applicable. More precisely, if the bbArg
+  // of the container loop points to a value that it is used by the consumer op,
+  // then, instead of using such value on the consumer, use the value coming
+  // from the bbArg instead. This allows to reuse the output tensor (instead of
+  // creating a new one) of the container when both producer and container write
+  // to the same output.
+  if (LoopLikeOpInterface containerLoop =
+          dyn_cast<LoopLikeOpInterface>(sliceOpToTile->getParentOp())) {
+    Operation *clone = rewriter.clone(*producerOp);
+    rewriter.modifyOpInPlace(clone, [&]() {
+      // Iterate over the outputs of the producer and over the loop bbArgs and
+      // check if any bbArg points to the same value as the producer output. In
+      // such case, make the producer output point to the bbArg directly.
+      for (OpOperand &initOperandPtr :
+           cast<DestinationStyleOpInterface>(clone).getDpsInitsMutable()) {
+        Value producerOperand =
+            clone->getOperand(initOperandPtr.getOperandNumber());
+        for (BlockArgument containerIterArg :
+             containerLoop.getRegionIterArgs()) {
+          OpOperand *bbArg = containerLoop.getTiedLoopInit(containerIterArg);
+          Value consumerOperand =
+              containerLoop->getOperand(bbArg->getOperandNumber());
+          // The producer has the same init as the loop bbArg, use it.
+          if (sameOrEquivalentIterArg(producerOperand, consumerOperand)) {
+            initOperandPtr.set(containerIterArg);
+          }
+        }
+      }
+    });
+
+    tileableProducer = dyn_cast<TilingInterface>(clone);
+  }
 
   // Tile the producer.
   int64_t resultNumber =
@@ -796,6 +878,10 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
   Operation *newContainingOp = replaceForAllWithNewSignature(
       rewriter, diag, producerOp, containingOp, *tileAndFuseResult,
       resultNumber, offsets, sizes);
+
+  // Cleanup clone.
+  if (dyn_cast<LoopLikeOpInterface>(containingOp))
+    rewriter.eraseOp(tileableProducer);
 
   return std::make_tuple(tileAndFuseResult->tiledOps, newContainingOp);
 }
@@ -1211,7 +1297,7 @@ DiagnosedSilenceableFailure transform::LinalgCopyToMemrefOp::applyToOne(
   // linalg.copy supports different element types on source/dest whereas
   // memref.copy does not, so we must check that the source and dest types can
   // be handled by memref.copy and otherwise reject the transformation.
-  if (!dyn_cast<ShapedType>(input.getType())) {
+  if (!isa<ShapedType>(input.getType())) {
     DiagnosedSilenceableFailure diag =
         emitSilenceableError()
         << "cannot transform a linalg.copy which input has no shape";
@@ -1220,7 +1306,7 @@ DiagnosedSilenceableFailure transform::LinalgCopyToMemrefOp::applyToOne(
   }
 
   // linalg.copy destination must be a shaped type.
-  assert(dyn_cast<ShapedType>(output.getType()));
+  assert(isa<ShapedType>(output.getType()));
 
   if (cast<ShapedType>(input.getType()).getElementType() !=
       cast<ShapedType>(output.getType()).getElementType()) {
@@ -2288,7 +2374,6 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
     }
     return tileSizes;
   });
-  SmallVector<int64_t> emptyTileSizes;
   rewriter.setInsertionPoint(target);
   FailureOr<scf::SCFTilingResult> maybeTilingResult = tileUsingSCF(
       rewriter, cast<TilingInterface>(target.getOperation()), tilingOptions);
@@ -2296,7 +2381,7 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
     return emitDefaultDefiniteFailure(target);
 
   if (target->getNumResults())
-    rewriter.replaceOp(target, maybeTilingResult->mergeResult.replacements);
+    rewriter.replaceOp(target, maybeTilingResult->replacements);
   else
     rewriter.eraseOp(target);
 
@@ -2347,7 +2432,6 @@ transform::RewriteInDestinationPassingStyleOp::applyToOne(
     transform::TransformRewriter &rewriter, Operation *target,
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
-  SmallVector<Operation *> res;
   rewriter.setInsertionPoint(target);
   FailureOr<Operation *> maybeResult =
       TypeSwitch<Operation *, FailureOr<Operation *>>(target)
@@ -2716,12 +2800,12 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForOp::applyToOne(
 
   if (failed(result))
     return emitDefaultSilenceableFailure(target);
-  rewriter.replaceOp(target, result->mergeResult.replacements);
+  rewriter.replaceOp(target, result->replacements);
   for (Value initValue : result->initialValues)
     results.push_back(initValue.getDefiningOp());
   for (auto parallelTiledOp : result->tiledOps)
     results.push_back(parallelTiledOp);
-  for (auto mergeOp : result->mergeResult.mergeOps)
+  for (auto mergeOp : result->mergeOps)
     results.push_back(mergeOp);
   results.push_back(result->loops.front());
   return DiagnosedSilenceableFailure::success();
@@ -3145,7 +3229,7 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
     if (failed(maybeTilingResult))
       return DiagnosedSilenceableFailure::definiteFailure();
 
-    rewriter.replaceOp(op, maybeTilingResult->mergeResult.replacements);
+    rewriter.replaceOp(op, maybeTilingResult->replacements);
 
     tiled.append(maybeTilingResult->tiledOps);
     for (const auto &en2 : llvm::enumerate(maybeTilingResult->loops))
@@ -3317,10 +3401,7 @@ static scf::ForallOp normalizeForallLoopOp(RewriterBase &rewriter,
   SmallVector<OpFoldResult> ubs = loop.getMixedUpperBound();
   SmallVector<OpFoldResult> steps = loop.getMixedStep();
 
-  if (llvm::all_of(
-          lbs, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); }) &&
-      llvm::all_of(
-          steps, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); })) {
+  if (llvm::all_of(lbs, isZeroInteger) && llvm::all_of(steps, isOneInteger)) {
     return loop;
   }
 
@@ -3384,7 +3465,7 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
   if (failed(maybeTilingResult))
     return transformOp.emitDefaultSilenceableFailure(tileableOp);
 
-  rewriter.replaceOp(tileableOp, maybeTilingResult->mergeResult.replacements);
+  rewriter.replaceOp(tileableOp, maybeTilingResult->replacements);
 
   tilingResult = *maybeTilingResult;
 

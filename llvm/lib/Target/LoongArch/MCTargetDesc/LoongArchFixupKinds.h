@@ -9,10 +9,7 @@
 #ifndef LLVM_LIB_TARGET_LOONGARCH_MCTARGETDESC_LOONGARCHFIXUPKINDS_H
 #define LLVM_LIB_TARGET_LOONGARCH_MCTARGETDESC_LOONGARCHFIXUPKINDS_H
 
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCFixup.h"
-
-#undef LoongArch
 
 namespace llvm {
 namespace LoongArch {

@@ -434,7 +434,7 @@ static const Loop *PickMostRelevantLoop(const Loop *A, const Loop *B,
 /// expression, according to PickMostRelevantLoop.
 const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
   // Test whether we've already computed the most relevant loop for this SCEV.
-  auto Pair = RelevantLoops.insert(std::make_pair(S, nullptr));
+  auto Pair = RelevantLoops.try_emplace(S);
   if (!Pair.second)
     return Pair.first->second;
 
@@ -1440,7 +1440,7 @@ Value *SCEVExpander::visitSequentialUMinExpr(const SCEVSequentialUMinExpr *S) {
 }
 
 Value *SCEVExpander::visitVScale(const SCEVVScale *S) {
-  return Builder.CreateVScale(ConstantInt::get(S->getType(), 1));
+  return Builder.CreateVScale(S->getType());
 }
 
 Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty,

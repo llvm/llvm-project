@@ -998,6 +998,10 @@ SymbolTable &SymbolTableCollection::getSymbolTable(Operation *op) {
   return *it.first->second;
 }
 
+void SymbolTableCollection::invalidateSymbolTable(Operation *op) {
+  symbolTables.erase(op);
+}
+
 //===----------------------------------------------------------------------===//
 // LockedSymbolTableCollection
 //===----------------------------------------------------------------------===//
