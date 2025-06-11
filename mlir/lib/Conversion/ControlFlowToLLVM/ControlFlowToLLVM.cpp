@@ -170,8 +170,9 @@ struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
         op, adaptor.getCondition(), *convertedTrueBlock,
         adaptor.getTrueDestOperands(), *convertedFalseBlock,
         adaptor.getFalseDestOperands());
-    if (auto weights = op.getBranchWeightsOrNull()) {
-      newOp.setBranchWeights(weights);
+    ArrayRef<int32_t> weights = op.getWeights();
+    if (!weights.empty()) {
+      newOp.setWeights(weights);
       op.removeBranchWeightsAttr();
     }
     // TODO: We should not just forward all attributes like that. But there are
