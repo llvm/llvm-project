@@ -408,6 +408,10 @@ public:
 
   unsigned getMinTripCountTailFoldingThreshold() const override;
 
+  bool preferFixedOverScalableIfEqualCost() const {
+    return ST->useFixedOverScalableIfEqualCost();
+  }
+
   enum RISCVRegisterClass { GPRRC, FPRRC, VRRC };
   unsigned getNumberOfRegisters(unsigned ClassID) const override {
     switch (ClassID) {
