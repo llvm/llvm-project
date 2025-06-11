@@ -2506,8 +2506,7 @@ LogicalResult acc::LoopOp::verify() {
                        deviceTypeAttr.getValue()) ||
           getGangValue(mlir::acc::GangArgType::Static,
                        deviceTypeAttr.getValue()))
-        return emitError()
-               << "gang, worker or vector cannot appear with seq";
+        return emitError() << "gang, worker or vector cannot appear with seq";
     }
   }
 
