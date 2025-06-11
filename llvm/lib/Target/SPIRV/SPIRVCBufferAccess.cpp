@@ -54,7 +54,12 @@ static Instruction *findHandleDef(GlobalVariable *HandleVar) {
 }
 
 static bool replaceCBufferAccesses(Module &M) {
-  std::optional<hlsl::CBufferMetadata> CBufMD = hlsl::CBufferMetadata::get(M);
+  std::optional<hlsl::CBufferMetadata> CBufMD =
+      hlsl::CBufferMetadata::get(M, [](Type *Ty) {
+        if (auto *TET = dyn_cast<TargetExtType>(Ty))
+          return TET->getName() == "spirv.Padding";
+        return false;
+      });
   if (!CBufMD)
     return false;
 
