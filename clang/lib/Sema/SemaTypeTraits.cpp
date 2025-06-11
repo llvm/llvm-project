@@ -249,7 +249,8 @@ Sema::GetCXX2CTypeRelocationInfo(const CXXRecordDecl *D) {
     if (!Is.has_value())
       Is = D->isUnion() && !D->hasUserDeclaredCopyConstructor() &&
            !D->hasUserDeclaredCopyAssignment() &&
-           !D->hasUserDeclaredMoveOperation() && !D->hasUserDeclaredDestructor();
+           !D->hasUserDeclaredMoveOperation() &&
+           !D->hasUserDeclaredDestructor();
     return *Is;
   };
 
