@@ -2,9 +2,9 @@
 #include "clang/Sema/SemaSummarizer.h"
 
 namespace clang {
-void NoWriteGlobalDescription::Callback::run(const ast_matchers::MatchFinder::MatchResult &Result) {
-  const auto *Assignment =
-      Result.Nodes.getNodeAs<BinaryOperator>("assignment");
+void NoWriteGlobalDescription::Callback::run(
+    const ast_matchers::MatchFinder::MatchResult &Result) {
+  const auto *Assignment = Result.Nodes.getNodeAs<BinaryOperator>("assignment");
   if (!Assignment)
     return;
 
@@ -27,6 +27,6 @@ bool NoWriteGlobalDescription::infer(const FunctionDecl *FD) const {
 }
 
 bool NoWriteGlobalDescription::merge(const FunctionSummary &Summary) const {
-  return Summary.getFunctionAttrs().count(this);
+  return Summary.getAttributes().count(this);
 }
 } // namespace clang

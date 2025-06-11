@@ -17,16 +17,19 @@ class SummaryAttribute {
   std::string_view Serialzed;
 
 public:
-  SummaryAttribute(SummaryAttributeKind Attr, const char *Str) : Kind(Attr), Serialzed(Str) {}
+  SummaryAttribute(SummaryAttributeKind Attr, const char *Str)
+      : Kind(Attr), Serialzed(Str) {}
   virtual ~SummaryAttribute() = default;
-  
+
   SummaryAttributeKind getKind() { return Kind; }
 
   virtual bool infer(const FunctionDecl *FD) const = 0;
   virtual bool merge(const FunctionSummary &Summary) const = 0;
 
   virtual std::string serialize() const { return std::string(Serialzed); };
-  virtual bool parse(std::string_view input) const { return input == Serialzed; };
+  virtual bool parse(std::string_view input) const {
+    return input == Serialzed;
+  };
 };
 
 class NoWriteGlobalDescription : public SummaryAttribute {
@@ -34,13 +37,14 @@ class NoWriteGlobalDescription : public SummaryAttribute {
   public:
     bool WriteGlobal = false;
 
-    void run(const ast_matchers::MatchFinder::MatchResult &Result) override final;
+    void
+    run(const ast_matchers::MatchFinder::MatchResult &Result) override final;
   };
 
 public:
   NoWriteGlobalDescription()
-  : SummaryAttribute(NO_WRITE_GLOBAL, "no_write_global") {}
-  
+      : SummaryAttribute(NO_WRITE_GLOBAL, "no_write_global") {}
+
   bool infer(const FunctionDecl *FD) const override final;
   bool merge(const FunctionSummary &Summary) const override final;
 };
