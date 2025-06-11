@@ -1056,24 +1056,16 @@ void foo18() {
 // CIR: %[[SHL_RES:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["shl", init]
 // CIR: %[[VEC_B:.*]] = cir.alloca !cir.vector<4 x !u32i>, !cir.ptr<!cir.vector<4 x !u32i>>, ["b", init]
 // CIR: %[[SHR_RES:.*]] = cir.alloca !cir.vector<4 x !u32i>, !cir.ptr<!cir.vector<4 x !u32i>>, ["shr", init]
-// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
-// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
-// CIR: %[[VEC_A_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
-// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC_A_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i,
+// CIR-SAME: #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_A_VAL]], %[[VEC_A]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[SH_AMOUNT:.*]] = cir.const #cir.int<3> : !s32i
 // CIR: %[[SPLAT_VEC:.*]] = cir.vec.splat %[[SH_AMOUNT]] : !s32i, !cir.vector<4 x !s32i>
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[TMP_A]] : !cir.vector<4 x !s32i>, %[[SPLAT_VEC]] : !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[SHL]], %[[SHL_RES]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !u32i
-// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !u32i
-// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !u32i
-// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !u32i
-// CIR: %[[VEC_B_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
-// CIR-SAME: !u32i, !u32i, !u32i, !u32i) : !cir.vector<4 x !u32i>
+// CIR: %[[VEC_B_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !u32i, #cir.int<2> : !u32i,
+// CIR-SAME: #cir.int<3> : !u32i, #cir.int<4> : !u32i]> : !cir.vector<4 x !u32i>
 // CIR: cir.store{{.*}} %[[VEC_B_VAL]], %[[VEC_B]] : !cir.vector<4 x !u32i>, !cir.ptr<!cir.vector<4 x !u32i>>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !u32i>>, !cir.vector<4 x !u32i>
 // CIR: %[[SH_AMOUNT:.*]] = cir.const #cir.int<3> : !u32i
