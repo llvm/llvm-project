@@ -4330,6 +4330,7 @@ static bool collectConcatOps(SDNode *N, SmallVectorImpl<SDValue> &Ops,
     }
   }
 
+  assert(Ops.empty() && "Expected an empty ops vector");
   return false;
 }
 

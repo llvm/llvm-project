@@ -1300,7 +1300,11 @@ public:
 
   /// Returns a canonicalized OS version number for the specified OS.
   static VersionTuple getCanonicalVersionForOS(OSType OSKind,
-                                               const VersionTuple &Version);
+                                               const VersionTuple &Version,
+                                               bool IsInValidRange);
+
+  /// Returns whether an OS version is invalid and would not map to an Apple OS.
+  static bool isValidVersionForOS(OSType OSKind, const VersionTuple &Version);
 };
 
 } // End llvm namespace
