@@ -1,5 +1,5 @@
-! RUN: %flang_fc1 -emit-hlfir -mmlir --enable-delayed-privatization-staging=true -o - %s | FileCheck %s
 ! XFAIL: *
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
 
 subroutine local_assoc
   implicit none
