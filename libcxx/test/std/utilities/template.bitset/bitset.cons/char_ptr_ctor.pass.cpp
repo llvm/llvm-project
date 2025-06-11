@@ -81,7 +81,7 @@ TEST_CONSTEXPR_CXX23 void test_char_pointer_ctor()
     for (std::size_t i = 0; i < M; ++i)
       assert(v[i] == (not_null_terminated[M - 1 - i] == '1'));
     for (std::size_t i = 10; i < v.size(); ++i)
-      assert(v[i] == false);
+      assert(!v[i]);
   }
   {
     const char not_null_terminated[] = {'1', 'a', '1', 'a', '1', 'a', '1', 'a', '1', 'a'};
@@ -90,7 +90,7 @@ TEST_CONSTEXPR_CXX23 void test_char_pointer_ctor()
     for (std::size_t i = 0; i < M; ++i)
       assert(v[i] == (not_null_terminated[M - 1 - i] == '1'));
     for (std::size_t i = 10; i < v.size(); ++i)
-      assert(v[i] == false);
+      assert(!v[i]);
   }
   {
     const char not_null_terminated[] = {'b', 'a', 'b', 'a', 'b', 'a', 'b', 'a', 'b', 'a'};
@@ -99,7 +99,7 @@ TEST_CONSTEXPR_CXX23 void test_char_pointer_ctor()
     for (std::size_t i = 0; i < M; ++i)
       assert(v[i] == (not_null_terminated[M - 1 - i] == 'b'));
     for (std::size_t i = 10; i < v.size(); ++i)
-      assert(v[i] == false);
+      assert(!v[i]);
   }
 }
 
