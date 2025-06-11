@@ -398,8 +398,9 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   if (!resultLayout.isAssigned())
     return;
   // We only consider 2D -> 1D reductions at this point.
-  if (resultLayout.getLayout().size() != 1) {
-    reduction.emitWarning("Expected 1D layout for reduction result. ");
+  VectorType resultTy = llvm::dyn_cast<VectorType>(reduction.getDestType());
+  if (!resultTy || resultTy.getRank() != 1) {
+    reduction.emitWarning("Expecting output type to be 1D vector.");
     return;
   }
   // Given that the result is 1D, the layout of the operand should be 2D with
@@ -679,7 +680,7 @@ RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
   }
 }
 
-using GetLayoutCallbackFnTy = function_ref<xegpu::LayoutAttr(Value)>;
+using GetLayoutFnTy = function_ref<xegpu::LayoutAttr(Value)>;
 /// Helper to update the users of a value with a given layout.
 static void updateUsers(Value v, xegpu::LayoutAttr layout) {
   // Update all users of the value with the layout.
@@ -697,7 +698,7 @@ static void updateUsers(Value v, xegpu::LayoutAttr layout) {
 /// attribute. The users of the result are also updated with the layout
 /// attribute.
 static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
-                     GetLayoutCallbackFnTy getLayoutOfValue) {
+                     GetLayoutFnTy getLayoutOfValue) {
 
   // Iterate over all the results.
   for (OpResult result : op->getResults()) {
@@ -734,7 +735,7 @@ static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
 static void updateBranchTerminatorOpInterface(
     mlir::OpBuilder &builder,
     mlir::RegionBranchTerminatorOpInterface terminator,
-    GetLayoutCallbackFnTy getLayoutOfValue) {
+    GetLayoutFnTy getLayoutOfValue) {
   if (!mlir::isa<mlir::RegionBranchOpInterface>(terminator->getParentOp()))
     return;
 
@@ -786,7 +787,7 @@ static void updateBranchTerminatorOpInterface(
 /// regions with the assigned layouts.
 static void updateBranchOpInterface(mlir::OpBuilder &builder,
                                     mlir::RegionBranchOpInterface branch,
-                                    GetLayoutCallbackFnTy getLayoutOfValue) {
+                                    GetLayoutFnTy getLayoutOfValue) {
   mlir::Operation *op = branch.getOperation();
   llvm::SmallVector<mlir::RegionSuccessor> successors;
   llvm::SmallVector<mlir::Attribute> operands(op->getNumOperands(), nullptr);
@@ -865,7 +866,7 @@ static void updateBranchOpInterface(mlir::OpBuilder &builder,
 /// Update the function arguments and results with the layouts.
 static void updateFunctionOpInterface(mlir::OpBuilder &builder,
                                       mlir::FunctionOpInterface funcOp,
-                                      GetLayoutCallbackFnTy getLayoutOfValue) {
+                                      GetLayoutFnTy getLayoutOfValue) {
   SmallVector<Type> newArgTypes;
   // Update the function arguments.
   for (BlockArgument arg : funcOp.getArguments()) {
