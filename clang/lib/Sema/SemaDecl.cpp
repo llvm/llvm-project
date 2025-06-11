@@ -13528,11 +13528,10 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
 
     // If the variable isn't directly annotated, check to see if it's a member
     // of an annotated class.
-    const VarDecl *VD = dyn_cast_if_present<VarDecl>(Target);
+    const VarDecl *VD = dyn_cast<VarDecl>(Target);
 
     if (VD && VD->isStaticDataMember()) {
-      const CXXRecordDecl *Ctx =
-          dyn_cast_if_present<CXXRecordDecl>(VD->getDeclContext());
+      const CXXRecordDecl *Ctx = dyn_cast<CXXRecordDecl>(VD->getDeclContext());
       if (Ctx &&
           (Ctx->hasAttr<DLLExportAttr>() || Ctx->hasAttr<DLLImportAttr>()))
         return false;
