@@ -4163,8 +4163,10 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
 
   // Drop unnecessary callee_type metadata from calls that were converted
   // into direct calls.
-  if (Call.getMetadata(LLVMContext::MD_callee_type) && !Call.isIndirectCall())
+  if (Call.getMetadata(LLVMContext::MD_callee_type) && !Call.isIndirectCall()) {
     Call.setMetadata(LLVMContext::MD_callee_type, nullptr);
+    Changed = true;
+  }
 
   // Drop unnecessary kcfi operand bundles from calls that were converted
   // into direct calls.
