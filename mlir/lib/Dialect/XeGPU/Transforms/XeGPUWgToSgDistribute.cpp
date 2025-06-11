@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <optional>
 
@@ -317,7 +318,7 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
-// This pattern transforms elementwise ops (unary/binary) in math/arith dialect
+// This pattern transforms elementwise ops in math/arith dialect
 struct WgToSgElementwiseOp : public ConversionPattern {
   WgToSgElementwiseOp(MLIRContext *ctx)
       : ConversionPattern(MatchAnyOpTypeTag(), /*benefit=*/1, ctx) {}
@@ -329,20 +330,10 @@ struct WgToSgElementwiseOp : public ConversionPattern {
     if (!OpTrait::hasElementwiseMappableTraits(op))
       return rewriter.notifyMatchFailure(op, "Not an elementwise op");
 
-    // All operands/results must be 1D or 2D vectors
     auto resultType = dyn_cast<VectorType>(op->getResult(0).getType());
     ArrayRef<int64_t> shape = resultType.getShape();
-    for (Value operand : op->getOperands()) {
-      auto operandType = dyn_cast<VectorType>(operand.getType());
-      if (!operandType || operandType.getRank() != resultType.getRank() ||
-          operandType.getShape() != shape) {
-        return rewriter.notifyMatchFailure(
-            op, "Operand type is not a 1D or 2D vector with the same shape as "
-                "result type");
-      }
-    }
 
-    auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
+    xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op->getResult(0));
     if (!layout || !layout.getSgLayout())
       return rewriter.notifyMatchFailure(
           op, "Operation does not have a valid layout attribute for subgroup "
@@ -379,13 +370,14 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       OperationState state(op->getLoc(), op->getName());
       state.addOperands(opOperands);
       state.addTypes(newResultType);
-      // Copy all attributes except "layout"
+      // Copy all attributes, but update "layout_result_0" to drop
+      // sgLayout/sgData
       for (auto attr : op->getAttrs()) {
-        if (attr.getName() != "layout")
+        if (attr.getName() != "layout_result_0")
           state.addAttribute(attr.getName(), attr.getValue());
       }
-      state.addAttribute("layout_result_0", layout.dropSgLayoutAndData());
       Operation *newOp = rewriter.create(state);
+      xegpu::setLayoutAttr(newOp->getResult(0), layout.dropSgLayoutAndData());
       newResults.push_back(newOp->getResult(0));
     }
 
@@ -448,6 +440,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
     return isLegal(layout);
   });
+
   target.addDynamicallyLegalDialect<math::MathDialect, arith::ArithDialect>(
       [=](Operation *op) -> std::optional<bool> {
         // Only handle elementwise mappable ops
@@ -456,20 +449,19 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
         VectorType resultType =
             dyn_cast<VectorType>(op->getResult(0).getType());
-        if (!resultType || resultType.getRank() != 2)
+        if (!resultType)
           return true;
 
         // Check if all operands are vectors of the same shape
         for (Value operand : op->getOperands()) {
           VectorType operandType = dyn_cast<VectorType>(operand.getType());
-          if (!operandType || operandType.getRank() != 2 ||
-              operandType.getShape() != resultType.getShape()) {
+          if (!operandType || operandType.getShape() != resultType.getShape()) {
             return true;
           }
         }
 
         auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(
-            op->getAttrOfType<xegpu::LayoutAttr>("layout"));
+            op->getAttrOfType<xegpu::LayoutAttr>("layout_result_0"));
         return isLegal(layout);
       });
 
