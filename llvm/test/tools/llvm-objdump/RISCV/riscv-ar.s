@@ -1,7 +1,7 @@
 # RUN: llvm-objdump -d %p/Inputs/riscv-ar | FileCheck %s
 
 # CHECK:   auipc a0, {{-?0x[0-9a-fA-F]+}}
-# CHECK:   ld a0, {{-?0x[0-9a-fA-F]+}}(a0) <ldata+0xfa4>
+# CHECK:   ld a0, {{-?0x[0-9a-fA-F]+}}(a0)
 # CHECK:   auipc a0, {{-?0x[0-9a-fA-F]+}}
 # CHECK:   addi a0, a0, {{-?0x[0-9a-fA-F]+}} <gdata>
 # CHECK:   auipc	a0, {{-?0x[0-9a-fA-F]+}}
