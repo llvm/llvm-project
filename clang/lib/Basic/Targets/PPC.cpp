@@ -685,6 +685,12 @@ bool PPCTargetInfo::initFeatureMap(
       return false;
     }
 
+    if (ABI == "elfv1") {
+      Diags.Report(diag::err_unsupported_abi_for_opt)
+          << "-mrop-protect" << "elfv2";
+      return false;
+    }
+
     if (!(ArchDefs & ArchDefinePwr8)) {
       // We can turn on ROP Protect on Power 8 and above.
       Diags.Report(diag::err_opt_not_valid_with_opt) << "-mrop-protect" << CPU;
