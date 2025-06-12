@@ -12,9 +12,9 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using LlvmLibcFBfloat16Test = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
+using LlvmLibcFBfloat16SmokeTest = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
 
-TEST_F(LlvmLibcFBfloat16Test, SpecialNumbers) {
+TEST_F(LlvmLibcFBfloat16SmokeTest, SpecialNumbers) {
   constexpr float SPECIAL_FLOATS[] = {
     0.0f, 1.0f, 2.0f, 4.5f, -1.0f, -0.5f, 3.140625f
   };
