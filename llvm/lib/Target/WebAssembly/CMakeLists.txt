@@ -65,22 +65,11 @@ add_llvm_target(WebAssemblyCodeGen
   intrinsics_gen
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  BinaryFormat
-  CodeGen
-  CodeGenTypes
-  Core
-  MC
-  Scalar
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
   WebAssemblyDesc
   WebAssemblyInfo
   WebAssemblyUtils
+  ${TARGET_LIBRARIES}
+  BinaryFormat
 
   ADD_TO_COMPONENT
   WebAssembly

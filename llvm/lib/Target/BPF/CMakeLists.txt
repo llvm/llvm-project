@@ -44,23 +44,11 @@ add_llvm_target(BPFCodeGen
   BTFDebug.cpp
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
   BPFDesc
   BPFInfo
-  CodeGen
-  CodeGenTypes
-  Core
+  ${TARGET_LIBRARIES}
   GlobalISel
-  IPO
-  MC
   Passes
-  Scalar
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
 
   ADD_TO_COMPONENT
   BPF
