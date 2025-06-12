@@ -1619,6 +1619,10 @@ libc_header_library(
 libc_support_library(
     name = "__support_libc_errno",
     hdrs = ["src/__support/libc_errno.h"],
+    deps = [
+        ":__support_macros_config",
+        ":hdr_errno_macros",
+    ],
 )
 
 libc_support_library(
@@ -1981,6 +1985,9 @@ libc_support_library(
 libc_support_library(
     name = "__support_math_exp_float_constants",
     hdrs = ["src/__support/math/exp_float_constants.h"],
+    deps = [
+        ":__support_macros_config",
+    ],
 )
 
 libc_support_library(
