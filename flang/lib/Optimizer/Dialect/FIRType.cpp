@@ -255,7 +255,7 @@ mlir::Type dyn_cast_ptrOrBoxEleTy(mlir::Type t) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(t)
       .Case<fir::ReferenceType, fir::PointerType, fir::HeapType,
             fir::LLVMPointerType>([](auto p) { return p.getEleTy(); })
-      .Case<fir::BaseBoxType>(
+      .Case<fir::BaseBoxType, fir::BoxCharType>(
           [](auto p) { return unwrapRefType(p.getEleTy()); })
       .Default([](mlir::Type) { return mlir::Type{}; });
 }
@@ -1407,6 +1407,13 @@ mlir::Type BaseBoxType::getEleTy() const {
           [](auto type) { return type.getEleTy(); });
 }
 
+mlir::Type BaseBoxType::getBaseAddressType() const {
+  mlir::Type eleTy = getEleTy();
+  if (fir::isa_ref_type(eleTy))
+    return eleTy;
+  return fir::ReferenceType::get(eleTy, isVolatile());
+}
+
 mlir::Type BaseBoxType::unwrapInnerType() const {
   return fir::unwrapInnerType(getEleTy());
 }
@@ -1475,10 +1482,12 @@ fir::BaseBoxType fir::BaseBoxType::getBoxTypeWithNewAttr(
     break;
   }
   return llvm::TypeSwitch<fir::BaseBoxType, fir::BaseBoxType>(*this)
-      .Case<fir::BoxType>(
-          [baseType](auto) { return fir::BoxType::get(baseType); })
-      .Case<fir::ClassType>(
-          [baseType](auto) { return fir::ClassType::get(baseType); });
+      .Case<fir::BoxType>([baseType](auto b) {
+        return fir::BoxType::get(baseType, b.isVolatile());
+      })
+      .Case<fir::ClassType>([baseType](auto b) {
+        return fir::ClassType::get(baseType, b.isVolatile());
+      });
 }
 
 bool fir::BaseBoxType::isAssumedRank() const {
@@ -1491,6 +1500,12 @@ bool fir::BaseBoxType::isAssumedRank() const {
 bool fir::BaseBoxType::isPointer() const {
   return llvm::isa<fir::PointerType>(getEleTy());
 }
+
+bool fir::BaseBoxType::isPointerOrAllocatable() const {
+  return llvm::isa<fir::PointerType, fir::HeapType>(getEleTy());
+}
+
+bool BaseBoxType::isVolatile() const { return fir::isa_volatile_type(*this); }
 
 //===----------------------------------------------------------------------===//
 // FIROpsDialect

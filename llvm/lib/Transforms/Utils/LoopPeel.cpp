@@ -351,6 +351,7 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
                     m_BasicBlock(Succ1), m_BasicBlock(Succ2))) &&
          ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
           (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) &&
+         Bound->getType()->isIntegerTy() && 
          SE.isLoopInvariant(SE.getSCEV(Bound), &L) &&
          match(SE.getSCEV(Inc),
                m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(&L)));
@@ -373,6 +374,9 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
                                    L.getLoopPredecessor()->getTerminator()))
     return false;
 
+  auto Guards = ScalarEvolution::LoopGuards::collect(&L, SE);
+  BTC = SE.applyLoopGuards(BTC, Guards);
+  RightSCEV = SE.applyLoopGuards(RightSCEV, Guards);
   const SCEV *ValAtLastIter = LeftAR->evaluateAtIteration(BTC, SE);
   const SCEV *ValAtSecondToLastIter = LeftAR->evaluateAtIteration(
       SE.getMinusSCEV(BTC, SE.getOne(BTC->getType())), SE);
@@ -1256,7 +1260,11 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
     // Now adjust users of the original exit values by replacing them with the
     // exit value from the peeled iteration and remove them.
     for (const auto &[P, E] : ExitValues) {
-      P->replaceAllUsesWith(isa<Constant>(E) ? E : &*VMap.lookup(E));
+      Instruction *ExitInst = dyn_cast<Instruction>(E);
+      if (ExitInst && L->contains(ExitInst))
+        P->replaceAllUsesWith(&*VMap[ExitInst]);
+      else
+        P->replaceAllUsesWith(E);
       P->eraseFromParent();
     }
     formLCSSA(*L, DT, LI, SE);

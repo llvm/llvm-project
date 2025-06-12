@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_ERRNOCHECKINGTEST_H
 #define LLVM_LIBC_TEST_UNITTEST_ERRNOCHECKINGTEST_H
 
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -25,7 +25,7 @@ class ErrnoCheckingTest : public Test {
 public:
   void SetUp() override {
     Test::SetUp();
-    LIBC_NAMESPACE::libc_errno = 0;
+    libc_errno = 0;
   }
 
   void TearDown() override {

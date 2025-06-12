@@ -45,9 +45,14 @@ class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
         optimized_variable = self.dap_server.get_local_variable("argc")
 
-        self.assertTrue(optimized_variable["value"].startswith("<error:"))
+        value: str = optimized_variable["value"]
+        self.assertTrue(
+            value.startswith("<error:"),
+            f"expect error for value: '{value}'",
+        )
         error_msg = optimized_variable["$__lldb_extensions"]["error"]
         self.assertTrue(
             ("could not evaluate DW_OP_entry_value: no parent function" in error_msg)
             or ("variable not available" in error_msg)
         )
+        self.continue_to_exit()

@@ -97,6 +97,8 @@ Potentially breaking changes
 - The implementation of ``num_put::do_put`` has been replaced to improve the performance, which can lead to different
   output when printing pointers.
 
+- User-defined specializations of ``std::common_reference`` are diagnosed now. To customize the common reference type, ``std::basic_common_reference`` should be specialized instead.
+
 Announcements About Future Releases
 -----------------------------------
 

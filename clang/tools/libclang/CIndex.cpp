@@ -1638,7 +1638,7 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
   case BuiltinType::OCLQueue:
   case BuiltinType::OCLReserveID:
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
@@ -1792,6 +1792,11 @@ bool CursorVisitor::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
 bool CursorVisitor::VisitHLSLAttributedResourceTypeLoc(
     HLSLAttributedResourceTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
+}
+
+bool CursorVisitor::VisitHLSLInlineSpirvTypeLoc(HLSLInlineSpirvTypeLoc TL) {
+  // Nothing to do.
+  return false;
 }
 
 bool CursorVisitor::VisitFunctionTypeLoc(FunctionTypeLoc TL,
