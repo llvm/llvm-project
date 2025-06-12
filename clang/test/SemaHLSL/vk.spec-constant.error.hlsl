@@ -8,7 +8,7 @@
 const bool sc0 = true;
 
 #ifdef __spirv__
-// expected-error@+2{{variable with 'vk::constant_id' attribute cannot have an initializer that is not a constexpr}}
+// expected-error@+2{{variable with 'vk::constant_id' attribute cannot have an initializer that is not a literal}}
 [[vk::constant_id(1)]]
 const bool sc1 = sc0; // error
 
