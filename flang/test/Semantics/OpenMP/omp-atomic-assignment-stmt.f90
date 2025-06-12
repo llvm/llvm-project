@@ -20,64 +20,70 @@ program sample
 
     !$omp atomic read
     !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches scalar INTEGER(4) and rank 1 array of INTEGER(4)
-    !ERROR: Atomic variable y(1_8:3_8:1_8) should be a scalar
+    !ERROR: Expected scalar expression on the RHS of atomic assignment statement
         v = y(1:3)
 
     !$omp atomic read
-    !ERROR: Atomic expression x*(10_4+x) should be a variable
+    !ERROR: Expected scalar variable of intrinsic type on RHS of atomic assignment statement
         v = x * (10 + x)
 
     !$omp atomic read
-    !ERROR: Atomic expression 4_4 should be a variable
+    !ERROR: Expected scalar variable of intrinsic type on RHS of atomic assignment statement
         v = 4
 
     !$omp atomic read
-    !ERROR: Atomic variable k cannot be ALLOCATABLE
+    !ERROR: k must not have ALLOCATABLE attribute
         v = k
 
     !$omp atomic write
-    !ERROR: Atomic variable k cannot be ALLOCATABLE
+    !ERROR: k must not have ALLOCATABLE attribute
         k = x
 
     !$omp atomic update
-    !ERROR: Atomic variable k cannot be ALLOCATABLE
+    !ERROR: k must not have ALLOCATABLE attribute
         k = k + x * (v * x)
 
     !$omp atomic
-    !ERROR: Atomic variable k cannot be ALLOCATABLE
+    !ERROR: k must not have ALLOCATABLE attribute
         k = v * k  
          
     !$omp atomic write
-    !ERROR: Within atomic operation z%y and x+z%y access the same storage
+    !ERROR: RHS expression on atomic assignment statement cannot access 'z%y'
        z%y = x + z%y
 
     !$omp atomic write
-    !ERROR: Within atomic operation x and x access the same storage
+    !ERROR: RHS expression on atomic assignment statement cannot access 'x'
         x = x
 
     !$omp atomic write
-    !ERROR: Within atomic operation m and min(m,x,z%m)+k access the same storage
+    !ERROR: RHS expression on atomic assignment statement cannot access 'm'
         m = min(m, x, z%m) + k
  
     !$omp atomic read
-    !ERROR: Within atomic operation x and x access the same storage
+    !ERROR: RHS expression on atomic assignment statement cannot access 'x'
         x = x
 
     !$omp atomic read
-    !ERROR: Atomic expression min(m,x,z%m)+k should be a variable
+    !ERROR: Expected scalar variable of intrinsic type on RHS of atomic assignment statement
+    !ERROR: RHS expression on atomic assignment statement cannot access 'm'
         m = min(m, x, z%m) + k
 
     !$omp atomic read
     !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches scalar INTEGER(4) and rank 1 array of INTEGER(4)
-    !ERROR: Atomic variable a should be a scalar
+    !ERROR: Expected scalar expression on the RHS of atomic assignment statement
         x = a
+
+    !$omp atomic read
+    !ERROR: Expected scalar variable on the LHS of atomic assignment statement
+        a = x
 
     !$omp atomic write
     !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches scalar INTEGER(4) and rank 1 array of INTEGER(4)
+    !ERROR: Expected scalar expression on the RHS of atomic assignment statement
         x = a
 
     !$omp atomic write
-    !ERROR: Atomic variable a should be a scalar
+    !ERROR: Expected scalar variable on the LHS of atomic assignment statement
         a = x
 
     !$omp atomic capture
@@ -87,7 +93,7 @@ program sample
 
     !$omp atomic release capture
         v = x
-    ! This ends up being "x = b + x".
+    !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
         x = b + (x*1)
     !$omp end atomic
 
@@ -97,58 +103,60 @@ program sample
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read b
+    !ERROR: Captured variable/array element/derived-type component x expected to be assigned in the second statement of ATOMIC CAPTURE construct
         v = x
         b = b + 1
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read b
+    !ERROR: Captured variable/array element/derived-type component x expected to be assigned in the second statement of ATOMIC CAPTURE construct
         v = x
         b = 10
     !$omp end atomic
 
     !$omp atomic capture
+    !ERROR: Updated variable/array element/derived-type component x expected to be captured in the second statement of ATOMIC CAPTURE construct
         x = x + 10
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read x
         v = b
     !$omp end atomic
 
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE neither statement could be the update or the capture
     !$omp atomic capture
+    !ERROR: Invalid ATOMIC CAPTURE construct statements. Expected one of [update-stmt, capture-stmt], [capture-stmt, update-stmt], or [capture-stmt, write-stmt]
         v = 1
         x = 4
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read z%m
+    !ERROR: Captured variable/array element/derived-type component z%y expected to be assigned in the second statement of ATOMIC CAPTURE construct
         x = z%y
         z%m = z%m + 1.0
     !$omp end atomic
 
     !$omp atomic capture
+    !ERROR: Updated variable/array element/derived-type component z%m expected to be captured in the second statement of ATOMIC CAPTURE construct
         z%m = z%m + 1.0
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read z%m
         x = z%y
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read y(1_8)
+    !ERROR: Captured variable/array element/derived-type component y(2) expected to be assigned in the second statement of ATOMIC CAPTURE construct
         x = y(2)
         y(1) = y(1) + 1
     !$omp end atomic
 
     !$omp atomic capture
+    !ERROR: Updated variable/array element/derived-type component y(1) expected to be captured in the second statement of ATOMIC CAPTURE construct
         y(1) = y(1) + 1
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read y(1_8)
         x = y(2)
     !$omp end atomic
 
     !$omp atomic read
-    !ERROR: Atomic variable r cannot have CHARACTER type
+    !ERROR: Expected scalar variable on the LHS of atomic assignment statement
+    !ERROR: Expected scalar expression on the RHS of atomic assignment statement
         l = r
 
     !$omp atomic write
-    !ERROR: Atomic variable l cannot have CHARACTER type
+    !ERROR: Expected scalar variable on the LHS of atomic assignment statement
+    !ERROR: Expected scalar expression on the RHS of atomic assignment statement
         l = r
 end program

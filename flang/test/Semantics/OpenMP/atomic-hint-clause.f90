@@ -16,21 +16,20 @@ program sample
     !$omp atomic read hint(2)
         y = x    
      
-    !ERROR: The synchronization hint is not valid
+    !ERROR: Hint clause value is not a valid OpenMP synchronization value
     !$omp atomic hint(3)
         y = y + 10
     
     !$omp atomic update hint(5)
         y = x + y
     
-    !ERROR: The synchronization hint is not valid
+    !ERROR: Hint clause value is not a valid OpenMP synchronization value
     !$omp atomic hint(7) capture
-    !WARNING: In ATOMIC UPDATE operation with CAPTURE either statement could be the update and the capture, assuming the first one is the capture statement
         y = x
         x = y
     !$omp end atomic
    
-    !ERROR: Synchronization hint must be a constant integer value
+    !ERROR: Hint clause must have non-negative constant integer expression
     !ERROR: Must be a constant value
     !$omp atomic update hint(x)
         y = y * 1
@@ -47,7 +46,7 @@ program sample
     !$omp atomic hint(omp_lock_hint_speculative)
         x = y + x
     
-    !ERROR: Synchronization hint must be a constant integer value
+    !ERROR: Hint clause must have non-negative constant integer expression
     !ERROR: Must be a constant value
     !$omp atomic hint(omp_sync_hint_uncontended + omp_sync_hint) read
         y = x 
@@ -70,36 +69,36 @@ program sample
     !$omp atomic hint(omp_lock_hint_contended + omp_sync_hint_nonspeculative)
         x = y + x
 
-    !ERROR: The synchronization hint is not valid
+    !ERROR: Hint clause value is not a valid OpenMP synchronization value
     !$omp atomic hint(omp_sync_hint_uncontended + omp_sync_hint_contended) read
         y = x 
 
-    !ERROR: The synchronization hint is not valid
+    !ERROR: Hint clause value is not a valid OpenMP synchronization value
     !$omp atomic hint(omp_sync_hint_nonspeculative + omp_lock_hint_speculative)
         y = y * 9
 
-    !ERROR: Synchronization hint must be a constant integer value
+    !ERROR: Hint clause must have non-negative constant integer expression
     !ERROR: Must have INTEGER type, but is REAL(4)
     !$omp atomic hint(1.0) read
         y = x
 
-    !ERROR: Synchronization hint must be a constant integer value
+    !ERROR: Hint clause must have non-negative constant integer expression
     !ERROR: Operands of + must be numeric; have LOGICAL(4) and INTEGER(4)
     !$omp atomic hint(z + omp_sync_hint_nonspeculative) read
         y = x
 
-    !ERROR: Synchronization hint must be a constant integer value
+    !ERROR: Hint clause must have non-negative constant integer expression
     !ERROR: Must be a constant value
     !$omp atomic hint(k + omp_sync_hint_speculative) read
         y = x
 
-    !ERROR: Synchronization hint must be a constant integer value
+    !ERROR: Hint clause must have non-negative constant integer expression
     !ERROR: Must be a constant value
     !$omp atomic hint(p(1) + omp_sync_hint_uncontended) write
         x = 10 * y
 
     !$omp atomic write hint(a)
-    !ERROR: Within atomic operation x and y+x access the same storage
+    !ERROR: RHS expression on atomic assignment statement cannot access 'x'
         x = y + x
 
     !$omp atomic hint(abs(-1)) write

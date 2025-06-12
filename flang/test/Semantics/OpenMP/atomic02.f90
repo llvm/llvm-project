@@ -28,29 +28,36 @@ program OmpAtomic
    !$omp atomic
    a = a/(b + 1)
    !$omp atomic
-   !ERROR: The ** operator is not a valid ATOMIC UPDATE operation
+   !ERROR: Invalid or missing operator in atomic update statement
    a = a**4
    !$omp atomic 
-   !ERROR: Atomic variable c cannot have CHARACTER type
-   !ERROR: The atomic variable c should appear as an argument in the update operation
+   !ERROR: Expected scalar variable on the LHS of atomic update assignment statement
+   !ERROR: Invalid or missing operator in atomic update statement
+   !ERROR: Expected scalar expression on the RHS of atomic update assignment statement
    c = d 
    !$omp atomic
-   !ERROR: The < operator is not a valid ATOMIC UPDATE operation
+   !ERROR: Atomic update statement should be of form `l = l operator expr` OR `l = expr operator l`
+   !ERROR: Invalid or missing operator in atomic update statement
    l = a .LT. b
    !$omp atomic
-   !ERROR: The <= operator is not a valid ATOMIC UPDATE operation
+   !ERROR: Atomic update statement should be of form `l = l operator expr` OR `l = expr operator l`
+   !ERROR: Invalid or missing operator in atomic update statement
    l = a .LE. b
    !$omp atomic
-   !ERROR: The == operator is not a valid ATOMIC UPDATE operation
+   !ERROR: Atomic update statement should be of form `l = l operator expr` OR `l = expr operator l`
+   !ERROR: Invalid or missing operator in atomic update statement
    l = a .EQ. b
    !$omp atomic
-   !ERROR: The /= operator is not a valid ATOMIC UPDATE operation
+   !ERROR: Atomic update statement should be of form `l = l operator expr` OR `l = expr operator l`
+   !ERROR: Invalid or missing operator in atomic update statement
    l = a .NE. b
    !$omp atomic
-   !ERROR: The >= operator is not a valid ATOMIC UPDATE operation
+   !ERROR: Atomic update statement should be of form `l = l operator expr` OR `l = expr operator l`
+   !ERROR: Invalid or missing operator in atomic update statement
    l = a .GE. b
    !$omp atomic
-   !ERROR: The > operator is not a valid ATOMIC UPDATE operation
+   !ERROR: Atomic update statement should be of form `l = l operator expr` OR `l = expr operator l`
+   !ERROR: Invalid or missing operator in atomic update statement
    l = a .GT. b
    !$omp atomic
    m = m .AND. n
@@ -69,26 +76,32 @@ program OmpAtomic
    !$omp atomic update
    a = a/(b + 1)
    !$omp atomic update
-   !ERROR: The ** operator is not a valid ATOMIC UPDATE operation
+   !ERROR: Invalid or missing operator in atomic update statement
    a = a**4
    !$omp atomic update
-   !ERROR: Atomic variable c cannot have CHARACTER type
-   !ERROR: This is not a valid ATOMIC UPDATE operation
+   !ERROR: Expected scalar variable on the LHS of atomic update assignment statement
+   !ERROR: Invalid or missing operator in atomic update statement
+   !ERROR: Expected scalar expression on the RHS of atomic update assignment statement
    c = c//d
    !$omp atomic update
-   !ERROR: The < operator is not a valid ATOMIC UPDATE operation
+   !ERROR: Atomic update statement should be of form `l = l operator expr` OR `l = expr operator l`
+   !ERROR: Invalid or missing operator in atomic update statement
    l = a .LT. b
    !$omp atomic update
-   !ERROR: The <= operator is not a valid ATOMIC UPDATE operation
+   !ERROR: Atomic update statement should be of form `l = l operator expr` OR `l = expr operator l`
+   !ERROR: Invalid or missing operator in atomic update statement
    l = a .LE. b
    !$omp atomic update
-   !ERROR: The == operator is not a valid ATOMIC UPDATE operation
+   !ERROR: Atomic update statement should be of form `l = l operator expr` OR `l = expr operator l`
+   !ERROR: Invalid or missing operator in atomic update statement
    l = a .EQ. b
    !$omp atomic update
-   !ERROR: The >= operator is not a valid ATOMIC UPDATE operation
+   !ERROR: Atomic update statement should be of form `l = l operator expr` OR `l = expr operator l`
+   !ERROR: Invalid or missing operator in atomic update statement
    l = a .GE. b
    !$omp atomic update
-   !ERROR: The > operator is not a valid ATOMIC UPDATE operation
+   !ERROR: Atomic update statement should be of form `l = l operator expr` OR `l = expr operator l`
+   !ERROR: Invalid or missing operator in atomic update statement
    l = a .GT. b
    !$omp atomic update
    m = m .AND. n

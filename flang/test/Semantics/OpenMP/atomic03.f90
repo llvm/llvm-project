@@ -25,26 +25,28 @@ program OmpAtomic
    y = MIN(y, 8)
 
 !$omp atomic
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level AND operator
+   !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'z'
    z = IAND(y, 4)
 !$omp atomic
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level OR operator
+   !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'z'
    z = IOR(y, 5)
 !$omp atomic
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level NEQV/EOR operator
+   !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'z'
    z = IEOR(y, 6)
 !$omp atomic
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level MAX operator
+   !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'z'
    z = MAX(y, 7, b, c)
 !$omp atomic
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level MIN operator
+   !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'z'
    z = MIN(y, 8, a, d)
 
 !$omp atomic
-   !ERROR: This intrinsic function is not a valid ATOMIC UPDATE operation
+   !ERROR: Invalid intrinsic procedure name in OpenMP ATOMIC (UPDATE) statement
+   !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'y'
    y = FRACTION(x)
 !$omp atomic
-   !ERROR: The atomic variable y should appear as an argument in the update operation
+   !ERROR: Invalid intrinsic procedure name in OpenMP ATOMIC (UPDATE) statement
+   !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'y'
    y = REAL(x)
 !$omp atomic update
    y = IAND(y, 4)
@@ -58,26 +60,26 @@ program OmpAtomic
    y = MIN(y, 8)
 
 !$omp atomic update
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level AND operator
+   !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'z'
    z = IAND(y, 4)
 !$omp atomic update 
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level OR operator
+   !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'z'
    z = IOR(y, 5)
 !$omp atomic update
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level NEQV/EOR operator
+   !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'z'
    z = IEOR(y, 6)
 !$omp atomic update
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level MAX operator
+   !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'z'
    z = MAX(y, 7)
 !$omp atomic update
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level MIN operator
+   !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'z'
    z = MIN(y, 8)
 
 !$omp atomic update
-  !ERROR: This intrinsic function is not a valid ATOMIC UPDATE operation
+   !ERROR: Invalid intrinsic procedure name in OpenMP ATOMIC (UPDATE) statement
    y = MOD(y, 9)
 !$omp atomic update
-  !ERROR: This intrinsic function is not a valid ATOMIC UPDATE operation
+   !ERROR: Invalid intrinsic procedure name in OpenMP ATOMIC (UPDATE) statement
    x = ABS(x)
 end program OmpAtomic
 
@@ -90,7 +92,7 @@ subroutine conflicting_types()
     type(simple) ::s
     z = 1
     !$omp atomic
-    !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level AND operator
+    !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'z'
     z = IAND(s%z, 4)
 end subroutine
 
@@ -103,37 +105,40 @@ subroutine more_invalid_atomic_update_stmts()
     type(some_type) :: s
  
     !$omp atomic update
-    !ERROR: The atomic variable a should occur exactly once among the arguments of the top-level MIN operator
+    !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'a'
         a = min(a, a, b)
      
     !$omp atomic
-    !ERROR: The atomic variable a should occur exactly once among the arguments of the top-level MAX operator
+    !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'a'
         a = max(b, a, b, a)
 
     !$omp atomic
+    !ERROR: Atomic update statement should be of the form `a = intrinsic_procedure(a, expr_list)` OR `a = intrinsic_procedure(expr_list, a)`
         a = min(b, a, b)
 
     !$omp atomic
-    !ERROR: The atomic variable a should occur exactly once among the arguments of the top-level MAX operator
+    !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'a'
         a = max(b, a, b, a, b)
     
     !$omp atomic update
-    !ERROR: The atomic variable y should occur exactly once among the arguments of the top-level MIN operator
+    !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'y'
         y = min(z, x)
      
     !$omp atomic
         z = max(z, y)
 
     !$omp atomic update
-    !ERROR: Atomic variable k should be a scalar
-    !ERROR: The atomic variable k should occur exactly once among the arguments of the top-level MAX operator
+    !ERROR: Expected scalar variable on the LHS of atomic update assignment statement
+    !ERROR: Intrinsic procedure arguments in atomic update statement must have exactly one occurence of 'k'
         k = max(x, y)
-
+    
     !$omp atomic
     !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches scalar REAL(4) and rank 1 array of REAL(4)
+    !ERROR: Expected scalar expression on the RHS of atomic update assignment statement
         x = min(x, k)
 
     !$omp atomic
     !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches scalar REAL(4) and rank 1 array of REAL(4)
-        z = z + s%m
+    !ERROR: Expected scalar expression on the RHS of atomic update assignment statement
+        z =z + s%m
 end subroutine
