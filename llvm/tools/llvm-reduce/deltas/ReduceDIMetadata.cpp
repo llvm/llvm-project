@@ -62,7 +62,7 @@ void identifyUninterestingMDNodes(Oracle &O, MDNodeList &MDs) {
     for (size_t I = 0; I < Tup->getNumOperands(); ++I) {
       // Ignore any operands that are not DebugInfo metadata nodes.
       if (Metadata *Op = Tup->getOperand(I).get()) {
-        if (isa<DINode>(Op) || isa<DIGlobalVariableExpression>(Op))
+        if (isa<DINode, DIGlobalVariableExpression>(Op))
           // Don't add uninteresting operands to the tuple.
           if (!O.shouldKeep())
             continue;

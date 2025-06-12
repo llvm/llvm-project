@@ -236,7 +236,7 @@ bool SearchableTableEmitter::compareBy(const Record *LHS, const Record *RHS,
     const Init *LHSI = LHS->getValueInit(Field.Name);
     const Init *RHSI = RHS->getValueInit(Field.Name);
 
-    if (isa<BitsRecTy>(Field.RecType) || isa<IntRecTy>(Field.RecType)) {
+    if (isa<BitsRecTy, IntRecTy>(Field.RecType)) {
       int64_t LHSi = getAsInt(LHSI);
       int64_t RHSi = getAsInt(RHSI);
       if (LHSi < RHSi)
