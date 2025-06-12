@@ -102,6 +102,7 @@
 #include "mlir/Target/LLVM/NVVM/Target.h"
 #include "mlir/Target/LLVM/ROCDL/Target.h"
 #include "mlir/Target/SPIRV/Target.h"
+#include "mlir/Transforms/InliningUtils.h"
 
 namespace mlir {
 
@@ -165,6 +166,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
   bufferization::func_ext::registerBufferizableOpInterfaceExternalModels(
       registry);
   builtin::registerCastOpInterfaceExternalModels(registry);
+  builtin::registerBuiltinDialectInlinerInterfaceExternalModel(registry);
   cf::registerBufferizableOpInterfaceExternalModels(registry);
   cf::registerBufferDeallocationOpInterfaceExternalModels(registry);
   gpu::registerBufferDeallocationOpInterfaceExternalModels(registry);

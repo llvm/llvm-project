@@ -13,6 +13,7 @@
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/CallInterfaces.h"
@@ -556,4 +557,24 @@ LogicalResult mlir::inlineCall(
                               shouldCloneInlinedRegion, call)))
     return cleanupState();
   return success();
+}
+
+namespace {
+/// This class defines the interface for handling inlining with builtin
+/// operations.
+struct BuiltinInlinerInterface : public DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+
+  /// All builtin ops can be inlined.
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
+void mlir::builtin::registerBuiltinDialectInlinerInterfaceExternalModel(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, BuiltinDialect *dialect) {
+    dialect->addInterfaces<BuiltinInlinerInterface>();
+  });
 }
