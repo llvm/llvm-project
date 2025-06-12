@@ -84,6 +84,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case x86_64:         return "x86_64";
   case xcore:          return "xcore";
   case xtensa:         return "xtensa";
+  case pe:             return "pe";
   }
 
   llvm_unreachable("Invalid ArchType!");
@@ -248,6 +249,8 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case dxil:        return "dx";
 
   case xtensa:      return "xtensa";
+
+  case pe:          return "pe";
   }
 }
 
@@ -490,6 +493,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("loongarch64", loongarch64)
     .Case("dxil", dxil)
     .Case("xtensa", xtensa)
+    .Case("pe", pe)
     .Default(UnknownArch);
 }
 
@@ -636,6 +640,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
                  "dxilv1.4", "dxilv1.5", "dxilv1.6", "dxilv1.7", "dxilv1.8",
                  Triple::dxil)
           .Case("xtensa", Triple::xtensa)
+          .Case("pe", Triple::pe)
           .Default(Triple::UnknownArch);
 
   // Some architectures require special parsing logic just to compute the
@@ -965,6 +970,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::r600:
   case Triple::renderscript32:
   case Triple::renderscript64:
+  case Triple::pe:
   case Triple::riscv32:
   case Triple::riscv64:
   case Triple::shave:
@@ -1697,6 +1703,7 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::r600:
   case llvm::Triple::renderscript32:
   case llvm::Triple::riscv32:
+  case llvm::Triple::pe:
   case llvm::Triple::shave:
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
@@ -1805,6 +1812,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::r600:
   case Triple::renderscript32:
   case Triple::riscv32:
+  case Triple::pe:
   case Triple::shave:
   case Triple::sparc:
   case Triple::sparcel:
@@ -1869,6 +1877,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::tcele:
   case Triple::xcore:
   case Triple::xtensa:
+  case Triple::pe:
     T.setArch(UnknownArch);
     break;
 
