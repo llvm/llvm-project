@@ -4024,6 +4024,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
           parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(clause.id));
       TODO(clauseLocation, name + " clause is not implemented yet");
     }
+
+    if (std::holds_alternative<clause::Private>(clause.u) &&
+        origDirective == llvm::omp::Directive::OMPD_target_teams)
+      TODO(clauseLocation, "TARGET TEAMS PRIVATE is not implemented yet");
+    if (std::holds_alternative<clause::Private>(clause.u) &&
+        origDirective == llvm::omp::Directive::OMPD_target_parallel)
+      TODO(clauseLocation, "TARGET PARALLEL PRIVATE is not implemented yet");
   }
 
   llvm::omp::Directive directive =
