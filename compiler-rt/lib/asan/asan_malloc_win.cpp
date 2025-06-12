@@ -17,6 +17,7 @@
 #include "asan_allocator.h"
 #include "asan_interceptors.h"
 #include "asan_internal.h"
+#include "asan_poisoning.h"
 #include "asan_stack.h"
 #include "interception/interception.h"
 #include <stddef.h>
@@ -296,7 +297,7 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
     if (ownershipState == RTL ||
         (ownershipState == NEITHER && !only_asan_supported_flags)) {
       if (only_asan_supported_flags) {
-        // if this is a conversion to ASAN upported flags, transfer this
+        // if this is a conversion to ASAN supported flags, transfer this
         // allocation to the ASAN allocator
         void *replacement_alloc;
         if (dwFlags & HEAP_ZERO_MEMORY)
@@ -323,6 +324,27 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
     }
 
     if (ownershipState == ASAN && !only_asan_supported_flags) {
+
+      if (dwFlags & HEAP_REALLOC_IN_PLACE_ONLY) {
+        size_t old_usable_size = asan_malloc_usable_size(lpMem, pc, bp);
+        if (dwBytes == old_usable_size) {
+          // nothing to change
+          return lpMem;
+        } else if (dwBytes < 1 || dwBytes >= old_usable_size) {
+          // growing with HEAP_REALLOC_IN_PLACE_ONLY is not supported.
+          return nullptr;
+        } else {
+          // poison just the "freed" part
+          uptr aligned_ptr = RoundUpTo((uptr)((char *)lpMem + dwBytes), ASAN_SHADOW_GRANULARITY);
+          uptr aligned_size = RoundUpTo(dwBytes, ASAN_SHADOW_GRANULARITY);
+          PoisonShadow(aligned_ptr, aligned_size, kAsanHeapFreeMagic);
+          // unpoison the lower part, it could be poisoned by a previous realloc in place
+          __asan_unpoison_memory_region((char *)lpMem, dwBytes);
+          __asan::asan_update_deallocation_context(lpMem, &stack);
+          return lpMem;
+        }
+      }
+
       // Conversion to unsupported flags allocation,
       // transfer this allocation back to the original allocator.
       void *replacement_alloc = allocFunc(hHeap, dwFlags, dwBytes);
@@ -348,6 +370,7 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
   }
   // asan_realloc will never reallocate in place, so for now this flag is
   // unsupported until we figure out a way to fake this.
+  // Small exception when shrinking or staying below the inital size, see above.
   if (dwFlags & HEAP_REALLOC_IN_PLACE_ONLY)
     return nullptr;
 
