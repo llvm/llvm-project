@@ -672,17 +672,6 @@ RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
 }
 
 using GetLayoutFnTy = function_ref<xegpu::LayoutAttr(Value)>;
-/// Helper to update the users of a value with a given layout.
-// static void updateUsers(Value v, xegpu::LayoutAttr layout) {
-//   // Update all users of the value with the layout.
-//   for (OpOperand &user : v.getUses()) {
-//     Operation *owner = user.getOwner();
-//     // Add temporary layout attribute at the user op.
-//     std::string attrName = xegpu::getLayoutName(user);
-//     owner->setAttr(attrName, layout);
-//   }
-// }
-
 /// Update an operation with the layout of its results. If the result type is a
 /// vector type, a temporary layout attribute is added to the operation. If the
 /// result type is a tensor descriptor type, the type is updated with the layout

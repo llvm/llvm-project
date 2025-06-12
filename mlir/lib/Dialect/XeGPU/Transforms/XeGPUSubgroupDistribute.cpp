@@ -812,6 +812,27 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
 }
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
+  // Attach layout to operands.
+  Operation *op = getOperation();
+  op->walk([&](Operation *op) {
+    for (OpOperand &operand : op->getOpOperands()) {
+      // Layouts are needed for vector type only.
+      if (!isa<VectorType>(operand.get().getType()))
+        continue;
+      // If the operand already has a layout, skip it.
+      if (xegpu::getLayoutAttr(operand))
+        continue;
+
+      xegpu::LayoutAttr layout = xegpu::getLayoutAttr(operand);
+      if (!layout) {
+        op->emitError("Could not find layout attribute for operand ")
+            << operand.getOperandNumber() << " of operation " << op->getName();
+        signalPassFailure();
+        return;
+      }
+      xegpu::setLayoutAttr(operand, layout);
+    }
+  });
   // Move all operations of a GPU function inside gpu.warp_execute_on_lane_0
   // operation.
   {
