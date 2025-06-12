@@ -2481,6 +2481,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   clearList(Instructions);
   clearList(OffsetToCFI);
   clearList(TakenBranches);
+  clearList(Relocations);
 
   // Update the state.
   CurrentState = State::CFG;
