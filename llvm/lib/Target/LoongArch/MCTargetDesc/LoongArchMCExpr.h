@@ -20,38 +20,24 @@ namespace llvm {
 
 class StringRef;
 
-class LoongArchMCExpr : public MCTargetExpr {
+class LoongArchMCExpr : public MCSpecifierExpr {
 public:
   using Specifier = uint16_t;
   enum { VK_None };
 
 private:
-  const MCExpr *Expr;
-  const Specifier specifier;
   const bool RelaxHint;
 
   explicit LoongArchMCExpr(const MCExpr *Expr, Specifier S, bool Hint)
-      : Expr(Expr), specifier(S), RelaxHint(Hint) {}
+      : MCSpecifierExpr(Expr, S), RelaxHint(Hint) {}
 
 public:
   static const LoongArchMCExpr *create(const MCExpr *Expr, uint16_t S,
                                        MCContext &Ctx, bool Hint = false);
 
-  Specifier getSpecifier() const { return specifier; }
-  const MCExpr *getSubExpr() const { return Expr; }
   bool getRelaxHint() const { return RelaxHint; }
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAssembler *Asm) const override;
-  void visitUsedExpr(MCStreamer &Streamer) const override;
-  MCFragment *findAssociatedFragment() const override {
-    return getSubExpr()->findAssociatedFragment();
-  }
-
-  static bool classof(const MCExpr *E) {
-    return E->getKind() == MCExpr::Target;
-  }
 
   static StringRef getSpecifierName(uint16_t S);
   static Specifier parseSpecifier(StringRef name);

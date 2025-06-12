@@ -26,8 +26,30 @@
 
 #include "gtest/gtest.h"
 
+#include <cstdlib>
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
+
+/// Custom deleter to use with unique_ptr.
+///
+/// Usage:
+/// \code{.cpp}
+///
+/// auto OB =
+///     std::unique_ptr<TrackingOutputBuffer, TrackingOutputBufferDeleter>(
+///         new TrackingOutputBuffer());
+///
+/// \endcode
+struct TrackingOutputBufferDeleter {
+  void operator()(TrackingOutputBuffer *TOB) {
+    if (!TOB)
+      return;
+    std::free(TOB->getBuffer());
+    delete TOB;
+  }
+};
 
 TEST(MangledTest, ResultForValidName) {
   ConstString MangledName("_ZN1a1b1cIiiiEEvm");
@@ -589,25 +611,25 @@ TEST_P(DemanglingPartsTestFixture, DemanglingParts) {
 
   ASSERT_NE(nullptr, Root);
 
-  TrackingOutputBuffer OB;
-  Root->print(OB);
-  auto demangled = std::string_view(OB);
+  auto OB = std::unique_ptr<TrackingOutputBuffer, TrackingOutputBufferDeleter>(
+      new TrackingOutputBuffer());
+  Root->print(*OB);
+  auto demangled = std::string_view(*OB);
 
-  ASSERT_EQ(OB.NameInfo.hasBasename(), valid_basename);
+  ASSERT_EQ(OB->NameInfo.hasBasename(), valid_basename);
 
-  EXPECT_EQ(OB.NameInfo.BasenameRange, info.BasenameRange);
-  EXPECT_EQ(OB.NameInfo.ScopeRange, info.ScopeRange);
-  EXPECT_EQ(OB.NameInfo.ArgumentsRange, info.ArgumentsRange);
-  EXPECT_EQ(OB.NameInfo.QualifiersRange, info.QualifiersRange);
+  EXPECT_EQ(OB->NameInfo.BasenameRange, info.BasenameRange);
+  EXPECT_EQ(OB->NameInfo.ScopeRange, info.ScopeRange);
+  EXPECT_EQ(OB->NameInfo.ArgumentsRange, info.ArgumentsRange);
+  EXPECT_EQ(OB->NameInfo.QualifiersRange, info.QualifiersRange);
 
   auto get_part = [&](const std::pair<size_t, size_t> &loc) {
     return demangled.substr(loc.first, loc.second - loc.first);
   };
 
-  EXPECT_EQ(get_part(OB.NameInfo.BasenameRange), basename);
-  EXPECT_EQ(get_part(OB.NameInfo.ScopeRange), scope);
-  EXPECT_EQ(get_part(OB.NameInfo.QualifiersRange), qualifiers);
-  std::free(OB.getBuffer());
+  EXPECT_EQ(get_part(OB->NameInfo.BasenameRange), basename);
+  EXPECT_EQ(get_part(OB->NameInfo.ScopeRange), scope);
+  EXPECT_EQ(get_part(OB->NameInfo.QualifiersRange), qualifiers);
 }
 
 INSTANTIATE_TEST_SUITE_P(DemanglingPartsTests, DemanglingPartsTestFixture,
@@ -635,36 +657,35 @@ TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
 
   ASSERT_NE(nullptr, Root);
 
-  TrackingOutputBuffer OB;
-  Root->print(OB);
+  auto OB = std::unique_ptr<TrackingOutputBuffer, TrackingOutputBufferDeleter>(
+      new TrackingOutputBuffer());
+  Root->print(*OB);
 
   // Filter out cases which would never show up in frames. We only care about
   // function names.
   if (Root->getKind() !=
           llvm::itanium_demangle::Node::Kind::KFunctionEncoding &&
-      Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix) {
-    std::free(OB.getBuffer());
+      Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix)
     return;
-  }
 
-  ASSERT_TRUE(OB.NameInfo.hasBasename());
+  ASSERT_TRUE(OB->NameInfo.hasBasename());
 
-  auto tracked_name = llvm::StringRef(OB);
+  auto tracked_name = llvm::StringRef(*OB);
 
-  auto return_left = tracked_name.slice(0, OB.NameInfo.ScopeRange.first);
-  auto scope = tracked_name.slice(OB.NameInfo.ScopeRange.first,
-                                  OB.NameInfo.ScopeRange.second);
-  auto basename = tracked_name.slice(OB.NameInfo.BasenameRange.first,
-                                     OB.NameInfo.BasenameRange.second);
-  auto template_args = tracked_name.slice(OB.NameInfo.BasenameRange.second,
-                                          OB.NameInfo.ArgumentsRange.first);
-  auto args = tracked_name.slice(OB.NameInfo.ArgumentsRange.first,
-                                 OB.NameInfo.ArgumentsRange.second);
-  auto return_right = tracked_name.slice(OB.NameInfo.ArgumentsRange.second,
-                                         OB.NameInfo.QualifiersRange.first);
-  auto qualifiers = tracked_name.slice(OB.NameInfo.QualifiersRange.first,
-                                       OB.NameInfo.QualifiersRange.second);
-  auto suffix = tracked_name.slice(OB.NameInfo.QualifiersRange.second,
+  auto return_left = tracked_name.slice(0, OB->NameInfo.ScopeRange.first);
+  auto scope = tracked_name.slice(OB->NameInfo.ScopeRange.first,
+                                  OB->NameInfo.ScopeRange.second);
+  auto basename = tracked_name.slice(OB->NameInfo.BasenameRange.first,
+                                     OB->NameInfo.BasenameRange.second);
+  auto template_args = tracked_name.slice(OB->NameInfo.BasenameRange.second,
+                                          OB->NameInfo.ArgumentsRange.first);
+  auto args = tracked_name.slice(OB->NameInfo.ArgumentsRange.first,
+                                 OB->NameInfo.ArgumentsRange.second);
+  auto return_right = tracked_name.slice(OB->NameInfo.ArgumentsRange.second,
+                                         OB->NameInfo.QualifiersRange.first);
+  auto qualifiers = tracked_name.slice(OB->NameInfo.QualifiersRange.first,
+                                       OB->NameInfo.QualifiersRange.second);
+  auto suffix = tracked_name.slice(OB->NameInfo.QualifiersRange.second,
                                    llvm::StringRef::npos);
 
   auto reconstructed_name =
@@ -672,7 +693,6 @@ TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
                        return_right, qualifiers, suffix);
 
   EXPECT_EQ(reconstructed_name, demangled);
-  std::free(OB.getBuffer());
 }
 
 INSTANTIATE_TEST_SUITE_P(

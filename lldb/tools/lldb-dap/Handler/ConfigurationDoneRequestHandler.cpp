@@ -8,8 +8,9 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
+#include "ProtocolUtils.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBDebugger.h"
 
@@ -30,7 +31,6 @@ llvm::Error
 ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
   dap.configuration_done = true;
 
-  SendTargetBasedCapabilities(dap);
   // Ensure any command scripts did not leave us in an unexpected state.
   lldb::SBProcess process = dap.target.GetProcess();
   if (!process.IsValid() ||
@@ -40,6 +40,11 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
         "state and may have missed an initial configuration. Please check that "
         "any debugger command scripts are not resuming the process during the "
         "launch sequence.");
+
+  // Waiting until 'configurationDone' to send target based capabilities in case
+  // the launch or attach scripts adjust the target. The initial dummy target
+  // may have different capabilities than the final target.
+  SendTargetBasedCapabilities(dap);
 
   // Clients can request a baseline of currently existing threads after
   // we acknowledge the configurationDone request.
@@ -52,11 +57,9 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
   SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
 
   if (dap.stop_at_entry)
-    SendThreadStoppedEvent(dap);
-  else
-    process.Continue();
+    return SendThreadStoppedEvent(dap, /*on_entry=*/true);
 
-  return Error::success();
+  return ToError(process.Continue());
 }
 
 } // namespace lldb_dap

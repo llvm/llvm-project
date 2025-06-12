@@ -27,8 +27,9 @@ add_host_subdirectory(common
   common/HostNativeThreadBase.cpp
   common/HostProcess.cpp
   common/HostThread.cpp
-  common/LockFileBase.cpp
+  common/JSONTransport.cpp
   common/LZMA.cpp
+  common/LockFileBase.cpp
   common/MainLoopBase.cpp
   common/MemoryMonitor.cpp
   common/MonitoringProcessLauncher.cpp
@@ -177,6 +178,8 @@ endif()
 add_lldb_library(lldbHost NO_PLUGIN_DEPENDENCIES
   ${HOST_SOURCES}
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Host
   LINK_COMPONENTS
     Object
     Support

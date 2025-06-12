@@ -728,7 +728,7 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
     // Get the map for this target prefix.
     auto &[Map, CommonPrefix] = BuiltinMap[Int.TargetPrefix];
 
-    if (!Map.insert({BuiltinName, Int.EnumName}).second)
+    if (!Map.try_emplace(BuiltinName, Int.EnumName).second)
       PrintFatalError(Int.TheDef->getLoc(),
                       "Intrinsic '" + Int.TheDef->getName() + "': duplicate " +
                           CompilerName + " builtin name!");

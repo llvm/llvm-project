@@ -2159,6 +2159,10 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     assert(InitStyle == CXXNewInitializationStyle::Parens &&
            "paren init for non-call init");
     Exprs = MultiExprArg(List->getExprs(), List->getNumExprs());
+  } else if (auto *List = dyn_cast_or_null<CXXParenListInitExpr>(Initializer)) {
+    assert(InitStyle == CXXNewInitializationStyle::Parens &&
+           "paren init for non-call init");
+    Exprs = List->getInitExprs();
   }
 
   // C++11 [expr.new]p15:
@@ -2884,7 +2888,7 @@ static bool resolveAllocationOverload(
     // type-identity-less argument list.
     IAP.PassTypeIdentity = TypeAwareAllocationMode::No;
     IAP.PassAlignment = InitialAlignmentMode;
-    Args = UntypedParameters;
+    Args = std::move(UntypedParameters);
   }
   assert(!S.isStdTypeIdentity(Args[0]->getType(), nullptr));
   return resolveAllocationOverloadInterior(

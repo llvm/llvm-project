@@ -122,13 +122,6 @@ public:
   /// getRegBank - Return the register bank description.
   CodeGenRegBank &getRegBank() const;
 
-  /// Return the largest register class on \p RegBank which supports \p Ty and
-  /// covers \p SubIdx if it exists.
-  const CodeGenRegisterClass *
-  getSuperRegForSubReg(const ValueTypeByHwMode &Ty, CodeGenRegBank &RegBank,
-                       const CodeGenSubRegIndex *SubIdx,
-                       bool MustBeAllocatable = false) const;
-
   /// getRegisterByName - If there is a register with the specific AsmName,
   /// return it.
   const CodeGenRegister *getRegisterByName(StringRef Name) const;

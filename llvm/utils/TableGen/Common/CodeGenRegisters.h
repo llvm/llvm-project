@@ -831,6 +831,13 @@ public:
   getMinimalPhysRegClass(const Record *RegRecord,
                          ValueTypeByHwMode *VT = nullptr);
 
+  /// Return the largest register class which supports \p Ty and covers \p
+  /// SubIdx if it exists.
+  const CodeGenRegisterClass *
+  getSuperRegForSubReg(const ValueTypeByHwMode &Ty,
+                       const CodeGenSubRegIndex *SubIdx,
+                       bool MustBeAllocatable = false) const;
+
   // Get the sum of unit weights.
   unsigned getRegUnitSetWeight(const std::vector<unsigned> &Units) const {
     unsigned Weight = 0;

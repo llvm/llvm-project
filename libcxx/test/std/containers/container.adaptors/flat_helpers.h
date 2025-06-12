@@ -25,6 +25,13 @@ struct CopyOnlyVector : std::vector<T> {
   CopyOnlyVector& operator=(CopyOnlyVector& other) { return this->operator=(other); }
 };
 
+template <class T>
+struct SillyReserveVector : std::vector<T> {
+  using std::vector<T>::vector;
+
+  void reserve(size_t) { this->clear(); }
+};
+
 template <class T, bool ConvertibleToT = false>
 struct Transparent {
   T t;
