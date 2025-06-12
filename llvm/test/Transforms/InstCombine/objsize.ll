@@ -19,11 +19,10 @@ define ptr @bar(ptr %retval) nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 true, label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RETVAL:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RETVAL:%.*]], align 4
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[RETVAL]], align 8
-; CHECK-NEXT:    ret ptr [[TMP2]]
+; CHECK-NEXT:    ret ptr poison
 ;
 entry:
   %0 = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false)

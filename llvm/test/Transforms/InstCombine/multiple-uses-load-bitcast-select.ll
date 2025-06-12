@@ -26,10 +26,9 @@ define void @PR35618_asan(ptr %st1, ptr %st2, ptr %y1, ptr %z1) sanitize_address
 ; CHECK-NEXT:    [[LD1:%.*]] = load double, ptr [[Y1:%.*]], align 8
 ; CHECK-NEXT:    [[LD2:%.*]] = load double, ptr [[Z1:%.*]], align 8
 ; CHECK-NEXT:    [[TMP:%.*]] = fcmp olt double [[LD1]], [[LD2]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP]], ptr [[Y1]], ptr [[Z1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[SEL]], align 8
-; CHECK-NEXT:    store i64 [[TMP12]], ptr [[ST1:%.*]], align 8
-; CHECK-NEXT:    store i64 [[TMP12]], ptr [[ST2:%.*]], align 8
+; CHECK-NEXT:    [[TMP12_V:%.*]] = select i1 [[TMP]], double [[LD1]], double [[LD2]]
+; CHECK-NEXT:    store double [[TMP12_V]], ptr [[ST1:%.*]], align 8
+; CHECK-NEXT:    store double [[TMP12_V]], ptr [[ST2:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %ld1 = load double, ptr %y1
