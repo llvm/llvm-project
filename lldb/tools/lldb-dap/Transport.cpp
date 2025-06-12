@@ -18,6 +18,9 @@ using namespace lldb_dap;
 
 Transport::Transport(llvm::StringRef client_name, lldb_dap::Log *log,
                      lldb::IOObjectSP input, lldb::IOObjectSP output)
-    : JSONWithHeaderTransport(client_name, input, output), m_log(log) {}
+    : HTTPDelimitedJSONTransport(input, output), m_client_name(client_name),
+      m_log(log) {}
 
-void Transport::Log(llvm::StringRef message) { DAP_LOG(m_log, "{0}", message); }
+void Transport::Log(llvm::StringRef message) {
+  DAP_LOG(m_log, "({0}) {1}", m_client_name, message);
+}

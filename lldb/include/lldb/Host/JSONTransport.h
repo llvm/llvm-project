@@ -68,8 +68,7 @@ public:
 /// A transport class that uses JSON for communication.
 class JSONTransport {
 public:
-  JSONTransport(llvm::StringRef client_name, lldb::IOObjectSP input,
-                lldb::IOObjectSP output);
+  JSONTransport(lldb::IOObjectSP input, lldb::IOObjectSP output);
   virtual ~JSONTransport() = default;
 
   /// Transport is not copyable.
@@ -90,37 +89,33 @@ public:
     llvm::Expected<std::string> message = ReadImpl(timeout);
     if (!message)
       return message.takeError();
-    return llvm::json::parse<T>(/*JSON=*/*message,
-                                /*RootName=*/"transport_message");
+    return llvm::json::parse<T>(/*JSON=*/*message);
   }
-
-  /// Returns the name of this transport client, for example `stdin/stdout` or
-  /// `client_1`.
-  llvm::StringRef GetClientName() { return m_client_name; }
 
 protected:
   virtual void Log(llvm::StringRef message);
+
   virtual llvm::Error WriteImpl(const std::string &message) = 0;
   virtual llvm::Expected<std::string>
   ReadImpl(const std::chrono::microseconds &timeout) = 0;
 
-  llvm::StringRef m_client_name;
   lldb::IOObjectSP m_input;
   lldb::IOObjectSP m_output;
 };
 
-/// A transport class that uses JSON with a header for communication.
-class JSONWithHeaderTransport : public JSONTransport {
+/// A transport class for JSON with a HTTP header.
+class HTTPDelimitedJSONTransport : public JSONTransport {
 public:
-  JSONWithHeaderTransport(llvm::StringRef client_name, lldb::IOObjectSP input,
-                          lldb::IOObjectSP output)
-      : JSONTransport(client_name, input, output) {}
-  virtual ~JSONWithHeaderTransport() = default;
+  HTTPDelimitedJSONTransport(lldb::IOObjectSP input, lldb::IOObjectSP output)
+      : JSONTransport(input, output) {}
+  virtual ~HTTPDelimitedJSONTransport() = default;
 
+protected:
   virtual llvm::Error WriteImpl(const std::string &message) override;
   virtual llvm::Expected<std::string>
   ReadImpl(const std::chrono::microseconds &timeout) override;
 
+  // FIXME: Support any header.
   static constexpr llvm::StringLiteral kHeaderContentLength =
       "Content-Length: ";
   static constexpr llvm::StringLiteral kHeaderSeparator = "\r\n\r\n";

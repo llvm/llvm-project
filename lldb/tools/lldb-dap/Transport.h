@@ -23,7 +23,7 @@ namespace lldb_dap {
 
 /// A transport class that performs the Debug Adapter Protocol communication
 /// with the client.
-class Transport : public lldb_private::JSONWithHeaderTransport {
+class Transport : public lldb_private::HTTPDelimitedJSONTransport {
 public:
   Transport(llvm::StringRef client_name, lldb_dap::Log *log,
             lldb::IOObjectSP input, lldb::IOObjectSP output);
@@ -31,7 +31,12 @@ public:
 
   virtual void Log(llvm::StringRef message) override;
 
+  /// Returns the name of this transport client, for example `stdin/stdout` or
+  /// `client_1`.
+  llvm::StringRef GetClientName() { return m_client_name; }
+
 private:
+  llvm::StringRef m_client_name;
   lldb_dap::Log *m_log;
 };
 

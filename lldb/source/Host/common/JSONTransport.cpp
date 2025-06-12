@@ -82,17 +82,15 @@ ReadUntil(IOObject &descriptor, StringRef delimiter,
   return buffer.substr(0, buffer.size() - delimiter.size());
 }
 
-JSONTransport::JSONTransport(StringRef client_name, IOObjectSP input,
-                             IOObjectSP output)
-    : m_client_name(client_name), m_input(std::move(input)),
-      m_output(std::move(output)) {}
+JSONTransport::JSONTransport(IOObjectSP input, IOObjectSP output)
+    : m_input(std::move(input)), m_output(std::move(output)) {}
 
 void JSONTransport::Log(llvm::StringRef message) {
   LLDB_LOG(GetLog(LLDBLog::Host), "{0}", message);
 }
 
 Expected<std::string>
-JSONWithHeaderTransport::ReadImpl(const std::chrono::microseconds &timeout) {
+HTTPDelimitedJSONTransport::ReadImpl(const std::chrono::microseconds &timeout) {
   if (!m_input || !m_input->IsValid())
     return createStringError("transport output is closed");
 
@@ -126,16 +124,16 @@ JSONWithHeaderTransport::ReadImpl(const std::chrono::microseconds &timeout) {
           return createStringError("unexpected EOF while reading JSON");
         });
 
-  Log(llvm::formatv("--> ({0}) {1}", m_client_name, *raw_json).str());
+  Log(llvm::formatv("--> {0}", *raw_json).str());
 
   return raw_json;
 }
 
-Error JSONWithHeaderTransport::WriteImpl(const std::string &message) {
+Error HTTPDelimitedJSONTransport::WriteImpl(const std::string &message) {
   if (!m_output || !m_output->IsValid())
     return llvm::make_error<TransportClosedError>();
 
-  Log(llvm::formatv("<-- ({0}) {1}", m_client_name, message).str());
+  Log(llvm::formatv("<-- {0}", message).str());
 
   std::string Output;
   raw_string_ostream OS(Output);
