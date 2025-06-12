@@ -14,6 +14,7 @@
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -1136,7 +1137,20 @@ void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
 /// getAlign - Return the minimum known alignment in bytes of the
 /// actual memory reference.
 Align MachineMemOperand::getAlign() const {
-  return commonAlignment(getBaseAlign(), getOffset());
+  Align RetAlign = commonAlignment(getBaseAlign(), getOffset());
+  if (const Value *V = getValue()) {
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      DataLayout DL = I->getDataLayout();
+      unsigned PtrWidth = DL.getPointerTypeSizeInBits(V->getType());
+      KnownBits Known(PtrWidth);
+      llvm::computeKnownBits(V, Known, DL);
+      Known = KnownBits::add(
+          Known, KnownBits::makeConstant(APInt(PtrWidth, getOffset())));
+      unsigned AlignBits = Known.countMinTrailingZeros();
+      RetAlign = std::max(Align(1ull << std::min(31U, AlignBits)), RetAlign);
+    }
+  }
+  return RetAlign;
 }
 
 void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
