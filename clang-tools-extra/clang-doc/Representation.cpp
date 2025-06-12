@@ -143,7 +143,7 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
     return reduce<FunctionInfo>(Values);
   case InfoType::IT_typedef:
     return reduce<TypedefInfo>(Values);
-  default:
+  case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unexpected info type");
   }

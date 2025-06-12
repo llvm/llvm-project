@@ -37,7 +37,7 @@ static std::string writeInfo(Info *I) {
     return writeInfo(*static_cast<FunctionInfo *>(I));
   case InfoType::IT_typedef:
     return writeInfo(*static_cast<TypedefInfo *>(I));
-  default:
+  case InfoType::IT_default:
     return "";
   }
 }
