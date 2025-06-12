@@ -216,15 +216,13 @@ def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
     // copy 2.
     %cp2 = nvgpu.device_async_copy %C[%c0], %D[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
     // group 1 contains copy 1 and copy 2.
-    %token1 = nvgpu.device_async_create_group %cp1, %cp2
+    nvgpu.device_async_create_group %cp1, %cp2
     // copy 3.
     %cp3 = nvgpu.device_async_copy %E[%c0], %F[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
     // group 2 contains copy 3.
-    %token2 = nvgpu.device_async_create_group %cp3
-    // after the wait copy 1 and copy 2 are complete.
-    nvgpu.device_async_wait %token1
-    // after the wait copy 3 is complete.
-    nvgpu.device_async_wait %token2
+    nvgpu.device_async_create_group %cp3
+    // after the wait copy 1, copy 2 and copy 3 are complete.
+    nvgpu.device_async_wait
     ```
 
     Example:
@@ -255,9 +253,7 @@ def NVGPU_DeviceAsyncCreateGroupOp : NVGPU_Op<"device_async_create_group", []> {
     The `nvgpu.device_async_create_group` op creates a group of memory accesses
     containing all the pending `device_async_copy` operations associated with
     argument tokens. Each token can only be part of one group.
-
-    It returns a token that can be use to wait until the group fully completes.
-
+ 
     This is meant to be used with `nvgpu.device_async_wait` to synchronize copies
     as explained in those ops descriptions.
 
@@ -266,10 +262,10 @@ def NVGPU_DeviceAsyncCreateGroupOp : NVGPU_Op<"device_async_create_group", []> {
     Example:
 
     ```mlir
-    %0 = nvgpu.device_async_create_group
-  ```
+    %cp = nvgpu.device_async_copy %E[%c0], %F[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
+    nvgpu.device_async_create_group %cp
+    ```
   }];
-  let results = (outs NVGPU_DeviceAsyncToken:$asyncToken);
   let arguments = (ins Variadic<NVGPU_DeviceAsyncToken>:$inputTokens);
   let assemblyFormat = [{
     $inputTokens attr-dict
@@ -279,25 +275,36 @@ def NVGPU_DeviceAsyncCreateGroupOp : NVGPU_Op<"device_async_create_group", []> {
 def NVGPU_DeviceAsyncWaitOp : NVGPU_Op<"device_async_wait", []> {
   let summary = "Wait for async gpu ops to complete.";
   let description = [{
-    The `nvgpu.device_async_wait` op will block the execution thread until the group
-    associated with the source token is fully completed.
+    The `nvgpu.device_async_wait` op will block the execution thread until the till
+    only `$numGroups` or fewer of the most recent async copy groups are pending and
+    all the prior async copy groups committed by the executing threads are complete.
 
     The optional `$numGroups` attribute gives an upper bound of the number of
     groups uncompleted when the wait can unblock the thread. For example,  if
     16 async groups are pushe and `$numGroups` is set to 12, then the thread
-    will unblock when 12 groups or fewer are in flight (4 groups have
-    completed).
+    will unblock when 12 groups or fewer are in flight (4 groups have completed).
+    Its default value is 0, This means waiting for all previously committed groups
+    to complete.
 
     Example:
 
     ```mlir
-    nvgpu.device_async_wait %0
+    // copy 1.
+    %cp1 = nvgpu.device_async_copy %A[%c0], %B[%c0], 4 :memref<16xf32> to memref<16xf32, 3>
+    nvgpu.device_async_create_group %cp1
+    // copy 2.
+    %cp2 = nvgpu.device_async_copy %C[%c0], %D[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
+    nvgpu.device_async_create_group %cp2
+    // copy 3.
+    %cp3 = nvgpu.device_async_copy %E[%c0], %F[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
+    nvgpu.device_async_create_group %cp3
+    // after the wait copy 1 and copy 2 are complete.
+    nvgpu.device_async_wait {numGroups = 1 : i32}
     ```
   }];
-  let arguments = (ins NVGPU_DeviceAsyncToken:$asyncDependencies,
-                       OptionalAttr<I32Attr>:$numGroups);
+  let arguments = (ins OptionalAttr<I32Attr>:$numGroups);
   let assemblyFormat = [{
-    $asyncDependencies attr-dict
+    prop-dict attr-dict
   }];
 }
 
