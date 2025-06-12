@@ -65,7 +65,7 @@ protected:
   struct AtomicBits {
     LLVM_PREFERRED_TYPE(ConstraintKind)
     unsigned Kind : 5;
-    unsigned : 1;
+    unsigned Placeholder : 1;
     unsigned PackSubstitutionIndex : 26;
     llvm::SmallBitVector Indexes;
     TemplateArgumentLoc *Args;
@@ -114,6 +114,7 @@ protected:
                        const NamedDecl *ConstraintDecl,
                        UnsignedOrNone PackIndex)
       : Atomic{llvm::to_underlying(ConstraintKind::Atomic),
+               /*Placeholder=*/0,
                PackIndex.toInternalRepresentation(),
                /*Indexes=*/{},
                /*Args=*/nullptr,
@@ -134,7 +135,8 @@ protected:
                        NormalizedConstraint *SubConstraint,
                        UnsignedOrNone PackIndex)
       : ConceptId{{llvm::to_underlying(ConstraintKind::ConceptId),
-                   PackIndex.toInternalRepresentation(), /*Indexes=*/{},
+                   /*Placeholder=*/0, PackIndex.toInternalRepresentation(),
+                   /*Indexes=*/{},
                    /*Args=*/nullptr, ConceptId, ConstraintDecl},
                   SubConstraint} {}
 
@@ -237,7 +239,8 @@ private:
   fromAssociatedConstraints(Sema &S, const NamedDecl *D,
                             ArrayRef<AssociatedConstraint> ACs);
   static NormalizedConstraint *fromConstraintExpr(Sema &S, const NamedDecl *D,
-                                                  const Expr *E);
+                                                  const Expr *E,
+                                                  UnsignedOrNone SubstIndex);
 };
 
 class CompoundConstraint : public NormalizedConstraint {
