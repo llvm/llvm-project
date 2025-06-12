@@ -1496,7 +1496,7 @@ define half @test_copysign(half %a, half %b) #0 {
 ; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
 ; CHECK-CVT-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: test_copysign:
@@ -1505,7 +1505,7 @@ define half @test_copysign(half %a, half %b) #0 {
 ; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-FP16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
 ; CHECK-FP16-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-FP16-GI-NEXT:    ret
   %r = call half @llvm.copysign.f16(half %a, half %b)
   ret half %r
@@ -1536,7 +1536,7 @@ define half @test_copysign_f32(half %a, float %b) #0 {
 ; CHECK-CVT-GI-NEXT:    mvni v2.4h, #128, lsl #8
 ; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-CVT-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: test_copysign_f32:
@@ -1545,7 +1545,7 @@ define half @test_copysign_f32(half %a, float %b) #0 {
 ; CHECK-FP16-GI-NEXT:    mvni v2.4h, #128, lsl #8
 ; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-FP16-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-FP16-GI-NEXT:    ret
   %tb = fptrunc float %b to half
   %r = call half @llvm.copysign.f16(half %a, half %tb)
@@ -1577,7 +1577,7 @@ define half @test_copysign_f64(half %a, double %b) #0 {
 ; CHECK-CVT-GI-NEXT:    mvni v2.4h, #128, lsl #8
 ; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-CVT-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: test_copysign_f64:
@@ -1586,7 +1586,7 @@ define half @test_copysign_f64(half %a, double %b) #0 {
 ; CHECK-FP16-GI-NEXT:    mvni v2.4h, #128, lsl #8
 ; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-FP16-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-FP16-GI-NEXT:    ret
   %tb = fptrunc double %b to half
   %r = call half @llvm.copysign.f16(half %a, half %tb)
