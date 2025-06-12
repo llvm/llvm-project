@@ -1180,6 +1180,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
 
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   // Try to narrow wide and replicating recipes to single scalar recipes,
   // based on VPlan analysis. Only process blocks in the loop region for now,
   // without traversing into nested regions, as recipes in replicate regions
@@ -1188,19 +1189,25 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR && !isa<VPWidenRecipe>(&R))
+      if (!RepR && !isa<VPWidenRecipe, VPWidenCastRecipe>(&R))
         continue;
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
       auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
+      Value *UV = RepOrWidenR->getUnderlyingValue();
+      if (!UV)
+        continue;
+
       // Skip recipes that aren't single scalars or don't have only their
       // scalar results used. In the latter case, we would introduce extra
       // broadcasts.
       if (!vputils::isSingleScalar(RepOrWidenR) ||
-          any_of(RepOrWidenR->users(), [RepOrWidenR](VPUser *U) {
-            return !U->usesScalars(RepOrWidenR);
-          }))
+          any_of(RepOrWidenR->users(),
+                 [RepOrWidenR](VPUser *U) {
+                   return !U->usesScalars(RepOrWidenR);
+                 }) ||
+          UV->getType() != TypeInfo.inferScalarType(RepOrWidenR))
         continue;
 
       auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
