@@ -862,7 +862,7 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
             "Reached BB end within common tail");
       }
       assert(MI.isIdenticalTo(*Pos) && "Expected matching MIIs!");
-      DL = DILocation::getMergedLocation(DL, Pos->getDebugLoc());
+      DL = DebugLoc::getMergedLocation(DL, Pos->getDebugLoc());
       NextCommonInsts[i] = ++Pos;
     }
     MI.setDebugLoc(DL);
