@@ -390,3 +390,7 @@ add_subdirectory(HashTable)
 add_subdirectory(fixed_point)
 
 add_subdirectory(time)
+
+add_subdirectory(wchar)
+
+add_subdirectory(math)
