@@ -2212,7 +2212,8 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
     if (Arg.getKind() != TemplateArgument::Expression) {
       assert(SemaRef.inParameterMappingSubstitution());
       // FIXME: SourceLocation()?
-      ExprResult E = SemaRef.BuildExpressionFromNonTypeTemplateArgument(Arg, SourceLocation());
+      ExprResult E = SemaRef.BuildExpressionFromNonTypeTemplateArgument(
+          Arg, SourceLocation());
       if (E.isInvalid())
         return E;
       Arg = TemplateArgument(E.get(), /*IsCanonical=*/false);

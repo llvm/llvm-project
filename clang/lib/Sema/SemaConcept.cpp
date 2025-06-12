@@ -593,7 +593,9 @@ static bool calculateConstraintSatisfaction(
 
     Sema::SFINAETrap Trap(S);
     Sema::ArgPackSubstIndexRAII SubstIndex(
-        S, Constraint.getPackSubstitutionIndex());
+        S, Constraint.getPackSubstitutionIndex()
+               ? Constraint.getPackSubstitutionIndex()
+               : PackSubstitutionIndex);
 
     const ASTTemplateArgumentListInfo *Ori =
         Constraint.getConceptId()->getTemplateArgsAsWritten();
@@ -1766,9 +1768,8 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
     if (substituteParameterMappings(S, *SubNF, CSE))
       return nullptr;
 
-    return ConceptIdConstraint::Create(S.getASTContext(),
-                                       CSE->getConceptReference(), SubNF, D,
-                                       SubstIndex);
+    return ConceptIdConstraint::Create(
+        S.getASTContext(), CSE->getConceptReference(), SubNF, D, SubstIndex);
 
   } else if (auto *FE = dyn_cast<const CXXFoldExpr>(E);
              FE && S.getLangOpts().CPlusPlus26 &&
