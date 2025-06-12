@@ -11,35 +11,58 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         FAD58DE7366495DB9A0000006733DBEA42F87ED3C60E0B951FF3509D0101001A01060C130210020100010101070008050009008A8080800805000A0204090204008A8080800809000A020410030100010D01030A02110013001A15001C001F19002000A180808008190021020410030100011D010306021D0007000D25000F0090808080082500100015290018001D2101030502210007000D31000F018980808008310109000E350109000E10010100012D0103000B
+    CovFun:
+      - FuncName:        main
+        FuncHash:        0xD37EF842EADB3367
+        FilenamesRef:    0x9D50F31F950B0EC6
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        showLineExecutionCounts.cpp
+            Regions:
+              - { dLoc: [ 6, 12, 19, 2 ], Ref: 0 }
+              - { dLoc: [ 2, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 7, 0, 8 ], Ref: 0 }
+              - { dLoc: [ 0, 9, 0, 10 ], isGap: true, Ref: 1 }
+              - { dLoc: [ 0, 10, 2, 4 ], Ref: 1 }
+              - { dLoc: [ 2, 4, 0, 10 ], isGap: true, Ref: 2 }
+              - { dLoc: [ 0, 10, 2, 4 ], Ref: 2 }
+              - { dLoc: [ 3, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 10, 2 ], Ref: 3 }
+              - { dLoc: [ 0, 19, 0, 26 ], Ref: 4 }
+              - { dLoc: [ 0, 28, 0, 31 ], Ref: 5 }
+              - { dLoc: [ 0, 32, 0, 33 ], isGap: true, Ref: 6 }
+              - { dLoc: [ 0, 33, 2, 4 ], Ref: 6 }
+              - { dLoc: [ 3, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 6, 2 ], Ref: 7 }
+              - { dLoc: [ 0, 7, 0, 13 ], Ref: 7 }
+              - { dLoc: [ 0, 15, 0, 16 ], isGap: true, Ref: 9 }
+              - { dLoc: [ 0, 16, 0, 21 ], Ref: 9 }
+              - { dLoc: [ 0, 24, 0, 29 ], Ref: 10 }
+              - { dLoc: [ 1, 3, 5, 2 ], Ref: 8 }
+              - { dLoc: [ 0, 7, 0, 13 ], Ref: 8 }
+              - { dLoc: [ 0, 15, 1, 9 ], isGap: true, Ref: 12 }
+              - { dLoc: [ 1, 9, 0, 14 ], Ref: 12 }
+              - { dLoc: [ 1, 9, 0, 14 ], Ref: 13 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 0, 11 ], Ref: 11 }
   - Name:            __llvm_covmap
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         00000000200000000000000006000000021D00001B73686F774C696E65457865637574696F6E436F756E74732E637070
+    CovMap:
+      - FilenamesRef:    0x9D50F31F950B0EC6
+        Version:         6
   - Name:            __llvm_prf_names
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
     AddressAlign:    0x1
-    Content:         04006D61696E
+    PrfNames:
+      - - main
   - Type:            SectionHeaderTable
     Sections:
       - Name:            .strtab
       - Name:            __llvm_covfun
       - Name:            __llvm_covmap
       - Name:            __llvm_prf_names
-      - Name:            .symtab
-Symbols:
-  - Name:            __llvm_covmap
-    Type:            STT_SECTION
-    Section:         __llvm_covmap
-  - Name:            __llvm_prf_names
-    Type:            STT_SECTION
-    Section:         __llvm_prf_names
-  - Name:            __covrec_DB956436E78DD5FAu
-    Type:            STT_OBJECT
-    Section:         __llvm_covfun
-    Binding:         STB_WEAK
-    Size:            0xB6
-    Other:           [ STV_HIDDEN ]
 ...
