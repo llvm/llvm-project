@@ -1989,6 +1989,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
       return Shadow;
     }
+    // Handle fully undefined values
+    // (partially undefined constant vectors are handled later)
     if (UndefValue *U = dyn_cast<UndefValue>(V)) {
       Value *AllOnes = (PropagateShadow && PoisonUndef) ? getPoisonedShadow(V)
                                                         : getCleanShadow(V);
@@ -2086,8 +2088,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       return ShadowPtr;
     }
 
-    // TODO: Partially undefined vectors are handled by the fall-through case
-    //       below (see partial-poison.ll); this causes false negatives.
+    // Check for partially undefined constant vectors
+    // TODO: scalable vectors (this is hard because we do not have IRBuilder)
+    if (   isa<FixedVectorType>(V->getType())
+        && isa<Constant>(V)
+        && (cast<Constant>(V))->containsUndefOrPoisonElement()
+        && PropagateShadow
+        && PoisonUndef) {
+      unsigned NumElems = (cast<FixedVectorType>(V->getType()))->getNumElements();
+      SmallVector<Constant *, 32> ShadowVector(NumElems);
+      for (unsigned i = 0; i != NumElems; ++i) {
+        Constant *Elem = (cast<Constant>(V))->getAggregateElement(i);
+        ShadowVector[i] = isa<UndefValue>(Elem) ? getPoisonedShadow(Elem) : getCleanShadow(Elem);
+      }
+
+      Value *ShadowConstant = ConstantVector::get(ShadowVector);
+      LLVM_DEBUG(dbgs() << "Partial undef constant vector: " << *V << " ==> " << *ShadowConstant << "\n");
+
+      return ShadowConstant;
+    }
 
     // For everything else the shadow is zero.
     return getCleanShadow(V);
