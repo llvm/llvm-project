@@ -475,6 +475,7 @@ exit:
 }
 
 ; Reassociate xor.
+; FIXME: Not currently matched by matchSimpleRecurrence.
 define i8 @xor_reassoc(i32 %n) {
 ; CHECK-LABEL: define i8 @xor_reassoc(
 ; CHECK-SAME: i32 [[N:%.*]]) {
@@ -482,12 +483,15 @@ define i8 @xor_reassoc(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = xor i8 [[PN]], 4
+; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[OP1:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[PN2:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[OP2:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[OP1]] = xor i8 [[PN]], 3
+; CHECK-NEXT:    [[OP2]] = xor i8 [[PN2]], 7
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RDX:%.*]] = xor i8 [[OP2]], [[OP1]]
 ; CHECK-NEXT:    ret i8 [[RDX]]
 ;
 entry:
@@ -509,6 +513,7 @@ exit:
 }
 
 ; Reassociate fadd if reassoc and nsz are present on all instructions.
+; FIXME: Not currently matched by matchSimpleRecurrence.
 define float @fadd_reassoc_nsz(i32 %n) {
 ; CHECK-LABEL: define float @fadd_reassoc_nsz(
 ; CHECK-SAME: i32 [[N:%.*]]) {
@@ -516,12 +521,15 @@ define float @fadd_reassoc_nsz(i32 %n) {
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN:%.*]] = phi float [ 1.000000e+00, %[[ENTRY]] ], [ [[RDX:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[RDX]] = fadd reassoc nsz float [[PN]], 5.000000e+00
+; CHECK-NEXT:    [[PN:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[OP1:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[PN2:%.*]] = phi float [ 1.000000e+00, %[[ENTRY]] ], [ [[OP2:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[OP1]] = fadd reassoc nsz float [[PN]], 2.000000e+00
+; CHECK-NEXT:    [[OP2]] = fadd reassoc nsz float [[PN2]], 3.000000e+00
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RDX:%.*]] = fadd reassoc nsz float [[OP2]], [[OP1]]
 ; CHECK-NEXT:    ret float [[RDX]]
 ;
 entry:

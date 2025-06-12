@@ -1004,30 +1004,22 @@ Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
 ///
 /// For now, we require init1, init2, constant1 and constant2 to be constants.
 Instruction *InstCombinerImpl::foldPHIReduction(PHINode &PN) {
-  // For now, only handle PHIs with one use and exactly two incoming values.
-  if (!PN.hasOneUse() || PN.getNumIncomingValues() != 2)
+  BinaryOperator *BO1;
+  Value *Start1;
+  Value *Step1;
+
+  // Find the first recurrence.
+  if (!PN.hasOneUse() || !matchSimpleRecurrence(&PN, BO1, Start1, Step1))
     return nullptr;
 
-  // Find the binop that uses PN and ensure it can be reassociated.
-  auto *BO1 = dyn_cast<BinaryOperator>(PN.user_back());
-  if (!BO1 || !BO1->hasNUses(2) || !BO1->isAssociative())
+  // Ensure BO1 has two uses (PN and the reduction op) and can be reassociated.
+  if (!BO1->hasNUses(2) || !BO1->isAssociative())
     return nullptr;
 
-  // Ensure PN has an incoming value for BO1.
-  if (PN.getIncomingValue(0) != BO1 && PN.getIncomingValue(1) != BO1)
-    return nullptr;
-
-  // Find the initial value of PN.
-  auto *Init1 =
-      dyn_cast<Constant>(PN.getIncomingValue(PN.getIncomingValue(0) == BO1));
-  if (!Init1)
-    return nullptr;
-
-  // Find the constant operand of BO1.
-  assert((BO1->getOperand(0) == &PN || BO1->getOperand(1) == &PN) &&
-         "Unexpected operand!");
-  auto *C1 = dyn_cast<Constant>(BO1->getOperand(BO1->getOperand(0) == &PN));
-  if (!C1)
+  // Convert Start1 and Step1 to constants.
+  auto *Init1 = dyn_cast<Constant>(Start1);
+  auto *C1 = dyn_cast<Constant>(Step1);
+  if (!Init1 || !C1)
     return nullptr;
 
   // Find the reduction operation.
@@ -1050,26 +1042,21 @@ Instruction *InstCombinerImpl::foldPHIReduction(PHINode &PN) {
       BO2->getOpcode() != Opc || BO2->getParent() != BO1->getParent())
     return nullptr;
 
-  // Find the interleaved PHI and recurrence constant.
-  auto *PN2 = dyn_cast<PHINode>(BO2->getOperand(0));
-  auto *C2 = dyn_cast<Constant>(BO2->getOperand(1));
-  if (!PN2 && !C2) {
-    PN2 = dyn_cast<PHINode>(BO2->getOperand(1));
-    C2 = dyn_cast<Constant>(BO2->getOperand(0));
-  }
-  if (!PN2 || !C2 || !PN2->hasOneUse() || PN2->getParent() != PN.getParent())
+  // Find the interleaved PHI and recurrence constants.
+  PHINode *PN2;
+  Value *Start2;
+  Value *Step2;
+  if (!matchSimpleRecurrence(BO2, PN2, Start2, Step2) || !PN2->hasOneUse() ||
+      PN2->getParent() != PN.getParent())
     return nullptr;
+
   assert(PN2->getNumIncomingValues() == PN.getNumIncomingValues() &&
          "Expected PHIs with the same number of incoming values!");
 
-  // Ensure PN2 has an incoming value for BO2.
-  if (PN2->getIncomingValue(0) != BO2 && PN2->getIncomingValue(1) != BO2)
-    return nullptr;
-
-  // Find the initial value of PN2.
-  auto *Init2 = dyn_cast<Constant>(
-      PN2->getIncomingValue(PN2->getIncomingValue(0) == BO2));
-  if (!Init2)
+  // Convert Start2 and Step2 to constants.
+  auto *Init2 = dyn_cast<Constant>(Start2);
+  auto *C2 = dyn_cast<Constant>(Step2);
+  if (!Init2 || !C2)
     return nullptr;
 
   assert(BO1->isCommutative() && BO2->isCommutative() && Rdx->isCommutative() &&
