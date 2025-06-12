@@ -15,12 +15,11 @@
 #include "src/stdio/fread_unlocked.h"
 #include "src/stdio/funlockfile.h"
 #include "src/stdio/fwrite_unlocked.h"
-#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
-using LlvmLibcFILETest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+#include "src/__support/libc_errno.h"
 
-TEST_F(LlvmLibcFILETest, UnlockedReadAndWrite) {
+TEST(LlvmLibcFILETest, UnlockedReadAndWrite) {
   constexpr char fNAME[] = "testdata/unlocked_read_and_write.test";
   ::FILE *f = LIBC_NAMESPACE::fopen(fNAME, "w");
   ASSERT_FALSE(f == nullptr);
@@ -37,6 +36,7 @@ TEST_F(LlvmLibcFILETest, UnlockedReadAndWrite) {
             LIBC_NAMESPACE::fread_unlocked(data, 1, sizeof(READ_SIZE), f));
   ASSERT_NE(LIBC_NAMESPACE::ferror_unlocked(f), 0);
   ASSERT_ERRNO_FAILURE();
+  libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr_unlocked(f);
   ASSERT_EQ(LIBC_NAMESPACE::ferror_unlocked(f), 0);
@@ -57,6 +57,7 @@ TEST_F(LlvmLibcFILETest, UnlockedReadAndWrite) {
             LIBC_NAMESPACE::fwrite_unlocked(CONTENT, 1, sizeof(CONTENT), f));
   ASSERT_NE(LIBC_NAMESPACE::ferror_unlocked(f), 0);
   ASSERT_ERRNO_FAILURE();
+  libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr_unlocked(f);
   ASSERT_EQ(LIBC_NAMESPACE::ferror_unlocked(f), 0);
