@@ -851,8 +851,10 @@ private:
 
 template <class _Tp, class _Compare>
 #ifndef _LIBCPP_CXX03_LANG
-_LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Compare const&, _Tp const&, _Tp const&>,
-                         "the specified comparator type does not provide a viable const call operator")
+_LIBCPP_DIAGNOSE_IF("pedantic",
+                    "warning",
+                    "the specified comparator type does not provide a viable const call operator",
+                    !__is_invocable_v<_Compare const&, _Tp const&, _Tp const&>)
 #endif
 int __diagnose_non_const_comparator();
 
