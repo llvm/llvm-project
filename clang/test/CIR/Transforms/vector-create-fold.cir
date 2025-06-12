@@ -1,0 +1,19 @@
+// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module  {
+  cir.func @fold_create_vector_op_test() -> !cir.vector<4 x !s32i> {
+    %2 = cir.const #cir.int<1> : !s32i
+    %3 = cir.const #cir.int<2> : !s32i
+    %4 = cir.const #cir.int<3> : !s32i
+    %5 = cir.const #cir.int<4> : !s32i
+    %vec = cir.vec.create(%2, %3, %4, %5 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    cir.return %vec : !cir.vector<4 x !s32i>
+  }
+
+  // CHECK:  cir.func @fold_create_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK-NEXT: %[[VEC:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+  // CHECK-SAME: #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+  // CHECK-NEXT: cir.return %[[VEC]] : !cir.vector<4 x !s32i>
+}
