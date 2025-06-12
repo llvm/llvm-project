@@ -14,7 +14,6 @@
 
 #include "ClauseFinder.h"
 #include "Clauses.h"
-#include "ReductionProcessor.h"
 #include "Utils.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Bridge.h"
