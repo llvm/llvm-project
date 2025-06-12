@@ -42,7 +42,7 @@ public:
 
 struct GEPData {
   ArrayType *ParentArrayType;
-  Value *ParendOperand;
+  Value *ParentOperand;
   SmallVector<Value *> Indices;
   SmallVector<uint64_t> Dims;
   bool AllIndicesAreConstInt;
@@ -211,7 +211,7 @@ bool DXILFlattenArraysVisitor::visitAllocaInst(AllocaInst &AI) {
 
   ArrayType *FattenedArrayType = ArrayType::get(BaseType, TotalElements);
   AllocaInst *FlatAlloca =
-      Builder.CreateAlloca(FattenedArrayType, nullptr, AI.getName() + ".flat");
+      Builder.CreateAlloca(FattenedArrayType, nullptr, AI.getName() + ".1dim");
   FlatAlloca->setAlignment(AI.getAlign());
   AI.replaceAllUsesWith(FlatAlloca);
   AI.eraseFromParent();
@@ -222,6 +222,10 @@ void DXILFlattenArraysVisitor::recursivelyCollectGEPs(
     GetElementPtrInst &CurrGEP, ArrayType *FlattenedArrayType,
     Value *PtrOperand, unsigned &GEPChainUseCount, SmallVector<Value *> Indices,
     SmallVector<uint64_t> Dims, bool AllIndicesAreConstInt) {
+  // Check if this GEP is already in the map to avoid circular references
+  if (GEPChainMap.count(&CurrGEP) > 0)
+    return;
+
   Value *LastIndex = CurrGEP.getOperand(CurrGEP.getNumOperands() - 1);
   AllIndicesAreConstInt &= isa<ConstantInt>(LastIndex);
   Indices.push_back(LastIndex);
@@ -271,9 +275,19 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInstInGEPChainBase(
         genInstructionFlattenIndices(GEPInfo.Indices, GEPInfo.Dims, Builder);
 
   ArrayType *FlattenedArrayType = GEPInfo.ParentArrayType;
-  Value *FlatGEP =
-      Builder.CreateGEP(FlattenedArrayType, GEPInfo.ParendOperand, FlatIndex,
-                        GEP.getName() + ".flat", GEP.isInBounds());
+
+  // Don't append '.flat' to an empty string. If the SSA name isn't available
+  // it could conflict with the ParentOperand's name.
+  std::string FlatName = GEP.hasName() ? GEP.getName().str() + ".flat" : "";
+
+  Value *FlatGEP = Builder.CreateGEP(FlattenedArrayType, GEPInfo.ParentOperand,
+                                     {Builder.getInt32(0), FlatIndex}, FlatName,
+                                     GEP.getNoWrapFlags());
+
+  // Note: Old gep will become an invalid instruction after replaceAllUsesWith.
+  // Erase the old GEP in the map before to avoid invalid instructions
+  // and circular references.
+  GEPChainMap.erase(&GEP);
 
   GEP.replaceAllUsesWith(FlatGEP);
   GEP.eraseFromParent();
