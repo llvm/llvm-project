@@ -1146,6 +1146,12 @@ public:
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
 
+  virtual std::optional<InstructionUniformity> getInstructionUniformity(
+      const Instruction &I,
+      SmallVector<InstructionUniformity> OperandUniformities) const {
+    return std::nullopt;
+  }
+
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
   // In case of a vector it returns the min required size for one element.
