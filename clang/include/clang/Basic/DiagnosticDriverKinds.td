@@ -520,6 +520,9 @@ def warn_drv_math_errno_enabled_after_veclib: Warning<
   "math errno enabled by '%0' after it was implicitly disabled by '%1',"
   " this may limit the utilization of the vector library">,
   InGroup<MathErrnoEnabledWithVecLib>;
+def warn_drv_gcc_incompatible_complex_range_override: Warning<
+  "combination of '%0' and '%1' results in complex number calculations incompatible with GCC">,
+  InGroup<GccCompat>;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;
