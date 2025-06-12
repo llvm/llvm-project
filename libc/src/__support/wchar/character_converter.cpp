@@ -8,6 +8,7 @@
 
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/utf_ret.h"
 
@@ -25,52 +26,51 @@ bool CharacterConverter::isComplete() {
 int CharacterConverter::push(char8_t utf8_byte) {
   // Checking the first byte if first push
   if (state->bytes_processed == 0 && state->total_bytes == 0) {
+    state->partial = static_cast<char32_t>(0);
     // 1 byte total
-    if ((utf8_byte & 128) == 0) {
+    if (cpp::countl_one(utf8_byte) == 0) {
       state->total_bytes = 1;
-      state->bytes_processed = 1;
-      state->partial = static_cast<char32_t>(utf8_byte);
-      return 0;
     }
     // 2 bytes total
-    else if ((utf8_byte & 0xE0) == 0xC0) {
+    else if (cpp::countl_one(utf8_byte) == 2) {
       state->total_bytes = 2;
-      state->bytes_processed = 1;
       utf8_byte &= 0x1F;
-      state->partial = static_cast<char32_t>(utf8_byte);
-      return 0;
     }
     // 3 bytes total
-    else if ((utf8_byte & 0xF0) == 0xE0) {
+    else if (cpp::countl_one(utf8_byte) == 3) {
       state->total_bytes = 3;
-      state->bytes_processed = 1;
       utf8_byte &= 0x0F;
-      state->partial = static_cast<char32_t>(utf8_byte);
-      return 0;
     }
     // 4 bytes total
-    else if ((utf8_byte & 0xF8) == 0xF0) {
+    else if (cpp::countl_one(utf8_byte) == 4) {
       state->total_bytes = 4;
-      state->bytes_processed = 1;
       utf8_byte &= 0x07;
-      state->partial = static_cast<char32_t>(utf8_byte);
-      return 0;
     }
-    // Invalid
+    // Invalid byte -> reset mbstate
     else {
-      state->bytes_processed++;
+      state->partial = static_cast<char32_t>(0);
+      state->bytes_processed = 0;
+      state->total_bytes = 0;
       return -1;
     }
+    state->partial = static_cast<char32_t>(utf8_byte);
+    state->bytes_processed++;
+    return 0;
   }
   // Any subsequent push
-  if ((utf8_byte & 0xC0) == 0x80) {
-    state->partial = state->partial << 6;
+  if (cpp::countl_one(utf8_byte) == 1 && !isComplete()) {
     char32_t byte = utf8_byte & 0x3F;
+    state->partial = state->partial << 6;
     state->partial |= byte;
     state->bytes_processed++;
     return 0;
   }
-  state->bytes_processed++;
+  // Invalid byte -> reset if we didn't get successful complete read
+  if (!isComplete()) {
+    state->partial = static_cast<char32_t>(0);
+    state->bytes_processed = 0;
+    state->total_bytes = 0;
+  }
   return -1;
 }
 
@@ -78,6 +78,11 @@ utf_ret<char32_t> CharacterConverter::pop_utf32() {
   utf_ret<char32_t> utf32;
   utf32.error = 0;
   utf32.out = state->partial;
+  if (!isComplete())
+    utf32.error = -1;
+  state->bytes_processed = 0;
+  state->total_bytes = 0;
+  state->partial = static_cast<char32_t>(0);
   return utf32;
 }
 

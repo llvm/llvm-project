@@ -1,4 +1,4 @@
-//===-- Unittests for character_converter utf8->3 -------------------------===//
+//===-- Unittests for character_converter utf8->utf32 ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,7 +30,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoBytes) {
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_processed = 0;
   state.total_bytes = 0;
-  const char *ch = ""; // hex 0xC2, 0x8E
+  const char ch[2] = {static_cast<char>(0xC2), static_cast<char>(0x8E)}; // 
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   char_conv.push(static_cast<char8_t>(ch[0]));
@@ -45,7 +45,8 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, ThreeBytes) {
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_processed = 0;
   state.total_bytes = 0;
-  const char *ch = "∑"; // hex 0xE2, 0x88, 0x91
+  const char ch[3] = {static_cast<char>(0xE2), static_cast<char>(0x88),
+                      static_cast<char>(0x91)}; // ∑
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   char_conv.push(static_cast<char8_t>(ch[0]));
@@ -61,7 +62,8 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, FourBytes) {
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_processed = 0;
   state.total_bytes = 0;
-  const char *ch = "🤡"; // hex 0xF0, 0x9F, 0xA4, 0xA1
+  const char ch[4] = {static_cast<char>(0xF0), static_cast<char>(0x9F),
+                      static_cast<char>(0xA4), static_cast<char>(0xA1)}; // 🤡
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   char_conv.push(static_cast<char8_t>(ch[0]));
@@ -90,36 +92,85 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidMultiByte) {
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_processed = 0;
   state.total_bytes = 0;
-  const char ch[4] = {static_cast<char>(0x80), static_cast<char>(0x00),
-                      static_cast<char>(0x00),
-                      static_cast<char>(0x00)}; // All bytes are invalid
+  const char ch[4] = {
+      static_cast<char>(0x80), static_cast<char>(0x00), static_cast<char>(0x80),
+      static_cast<char>(0x00)}; // first, third, and last bytes are invalid
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   int err = char_conv.push(static_cast<char8_t>(ch[0]));
   ASSERT_EQ(err, -1);
   err = char_conv.push(static_cast<char8_t>(ch[1]));
-  ASSERT_EQ(err, -1);
+  ASSERT_EQ(err, 0);
+  // Prev byte was single byte so trying to read another should error.
   err = char_conv.push(static_cast<char8_t>(ch[2]));
   ASSERT_EQ(err, -1);
   err = char_conv.push(static_cast<char8_t>(ch[3]));
   ASSERT_EQ(err, -1);
 }
 
-TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidMiddleByte) {
+TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidLastByte) {
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_processed = 0;
   state.total_bytes = 0;
-  const char ch[4] = {static_cast<char>(0xF1), static_cast<char>(0xC0),
+  const char ch[4] = {static_cast<char>(0xF1), static_cast<char>(0x80),
                       static_cast<char>(0x80),
-                      static_cast<char>(0x80)}; // invalid second byte
+                      static_cast<char>(0xC0)}; // invalid last byte
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   int err = char_conv.push(static_cast<char8_t>(ch[0]));
   ASSERT_EQ(err, 0);
   err = char_conv.push(static_cast<char8_t>(ch[1]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[2]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[3]));
   ASSERT_EQ(err, -1);
+}
+
+TEST(LlvmLibcCharacterConverterUTF8To32Test, ValidTwoByteWithExtraRead) {
+  LIBC_NAMESPACE::internal::mbstate state;
+  state.bytes_processed = 0;
+  state.total_bytes = 0;
+  const char ch[3] = {static_cast<char>(0xC2), static_cast<char>(0x8E),
+                      static_cast<char>(0x80)};
+
+  LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
+  int err = char_conv.push(static_cast<char8_t>(ch[0]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[1]));
+  ASSERT_EQ(err, 0);
+  // Should produce an error on 3rd byte
+  err = char_conv.push(static_cast<char8_t>(ch[2]));
+  ASSERT_EQ(err, -1);
+
+  LIBC_NAMESPACE::internal::utf_ret<char32_t> wch = char_conv.pop_utf32();
+  ASSERT_EQ(wch.error, 0);
+  // Should still output the correct result.
+  ASSERT_EQ(static_cast<int>(wch.out), 142);
+}
+
+TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoValidTwoBytes) {
+  LIBC_NAMESPACE::internal::mbstate state;
+  state.bytes_processed = 0;
+  state.total_bytes = 0;
+  const char ch[4] = {static_cast<char>(0xC2), static_cast<char>(0x8E),
+                      static_cast<char>(0xC7), static_cast<char>(0x8C)};
+
+  LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
+  int err = char_conv.push(static_cast<char8_t>(ch[0]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[1]));
+  ASSERT_EQ(err, 0);
+  LIBC_NAMESPACE::internal::utf_ret<char32_t> wch = char_conv.pop_utf32();
+  ASSERT_EQ(wch.error, 0);
+  ASSERT_EQ(static_cast<int>(wch.out), 142);
+
+  // Second two byte character
   err = char_conv.push(static_cast<char8_t>(ch[2]));
   ASSERT_EQ(err, 0);
   err = char_conv.push(static_cast<char8_t>(ch[3]));
   ASSERT_EQ(err, 0);
+  wch = char_conv.pop_utf32();
+  ASSERT_EQ(wch.error, 0);
+  ASSERT_EQ(static_cast<int>(wch.out), 460);
 }
