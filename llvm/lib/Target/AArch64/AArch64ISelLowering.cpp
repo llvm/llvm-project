@@ -7154,6 +7154,7 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   switch (CC) {
   default:
     NestReg = 0x0f; // X15
+    LLVM_FALLTHROUGH;
   case CallingConv::ARM64EC_Thunk_Native:
   case CallingConv::ARM64EC_Thunk_X64:
     // Must be kept in sync with AArch64CallingConv.td
