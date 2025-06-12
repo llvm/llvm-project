@@ -695,9 +695,11 @@ void MCAsmStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
     if (E->inlineAssignedExpr())
       EmitSet = false;
   if (EmitSet) {
-    OS << ".set ";
+    bool UseSet = MAI->usesSetToEquateSymbol();
+    if (UseSet)
+      OS << ".set ";
     Symbol->print(OS, MAI);
-    OS << ", ";
+    OS << (UseSet ? ", " : " = ");
     Value->print(OS, MAI);
 
     EmitEOL();
