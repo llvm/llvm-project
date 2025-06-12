@@ -331,7 +331,9 @@ static int64_t getArgumentStackToRestore(MachineFunction &MF,
 static bool produceCompactUnwindFrame(MachineFunction &MF);
 static bool needsWinCFI(const MachineFunction &MF);
 static StackOffset getSVEStackSize(const MachineFunction &MF);
-static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB);
+static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
+                                                 bool HasCall = false);
+static bool requiresSaveVG(const MachineFunction &MF);
 
 /// Returns true if a homogeneous prolog or epilog code can be emitted
 /// for the size optimization. If possible, a frame helper call is injected.
@@ -1006,6 +1008,16 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   }
 }
 
+static bool windowsRequiresStackProbe(const MachineFunction &MF,
+                                      uint64_t StackSizeInBytes) {
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  const AArch64FunctionInfo &MFI = *MF.getInfo<AArch64FunctionInfo>();
+  // TODO: When implementing stack protectors, take that into account
+  // for the probe threshold.
+  return Subtarget.isTargetWindows() && MFI.hasStackProbing() &&
+         StackSizeInBytes >= uint64_t(MFI.getStackProbeSize());
+}
+
 static void getLiveRegsForEntryMBB(LivePhysRegs &LiveRegs,
                                    const MachineBasicBlock &MBB) {
   const MachineFunction *MF = MBB.getParent();
@@ -1027,7 +1039,8 @@ static void getLiveRegsForEntryMBB(LivePhysRegs &LiveRegs,
 // but we would then have to make sure that we were in fact saving at least one
 // callee-save register in the prologue, which is additional complexity that
 // doesn't seem worth the benefit.
-static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
+static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
+                                                 bool HasCall) {
   MachineFunction *MF = MBB->getParent();
 
   // If MBB is an entry block, use X9 as the scratch register
@@ -1041,6 +1054,11 @@ static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
   const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
   LivePhysRegs LiveRegs(TRI);
   getLiveRegsForEntryMBB(LiveRegs, *MBB);
+  if (HasCall) {
+    LiveRegs.addReg(AArch64::X16);
+    LiveRegs.addReg(AArch64::X17);
+    LiveRegs.addReg(AArch64::X18);
+  }
 
   // Prefer X9 since it was historically used for the prologue scratch reg.
   const MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -1081,23 +1099,18 @@ bool AArch64FrameLowering::canUseAsPrologue(
       MBB.isLiveIn(AArch64::NZCV))
     return false;
 
-  // Don't need a scratch register if we're not going to re-align the stack or
-  // emit stack probes.
-  if (!RegInfo->hasStackRealignment(*MF) && !TLI->hasInlineStackProbe(*MF))
-    return true;
-  // Otherwise, we can use any block as long as it has a scratch register
-  // available.
-  return findScratchNonCalleeSaveRegister(TmpMBB) != AArch64::NoRegister;
-}
+  if (RegInfo->hasStackRealignment(*MF) || TLI->hasInlineStackProbe(*MF))
+    if (findScratchNonCalleeSaveRegister(TmpMBB) == AArch64::NoRegister)
+      return false;
 
-static bool windowsRequiresStackProbe(MachineFunction &MF,
-                                      uint64_t StackSizeInBytes) {
-  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  const AArch64FunctionInfo &MFI = *MF.getInfo<AArch64FunctionInfo>();
-  // TODO: When implementing stack protectors, take that into account
-  // for the probe threshold.
-  return Subtarget.isTargetWindows() && MFI.hasStackProbing() &&
-         StackSizeInBytes >= uint64_t(MFI.getStackProbeSize());
+  // May need a scratch register (for return value) if require making a special
+  // call
+  if (requiresSaveVG(*MF) ||
+      windowsRequiresStackProbe(*MF, std::numeric_limits<uint64_t>::max()))
+    if (findScratchNonCalleeSaveRegister(TmpMBB, true) == AArch64::NoRegister)
+      return false;
+
+  return true;
 }
 
 static bool needsWinCFI(const MachineFunction &MF) {
@@ -1378,8 +1391,8 @@ bool requiresGetVGCall(MachineFunction &MF) {
          !MF.getSubtarget<AArch64Subtarget>().hasSVE();
 }
 
-static bool requiresSaveVG(MachineFunction &MF) {
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+static bool requiresSaveVG(const MachineFunction &MF) {
+  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   // For Darwin platforms we don't save VG for non-SVE functions, even if SME
   // is enabled with streaming mode changes.
   if (!AFI->hasStreamingModeChanges())
@@ -2049,6 +2062,29 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     if (AFI->getSVECalleeSavedStackSize())
       report_fatal_error(
           "SVE callee saves not yet supported with stack probing");
+
+    // Find an available register to spill the value of X15 to, if X15 is being
+    // used already for nest.
+    unsigned X15Scratch = AArch64::NoRegister;
+    const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+    if (llvm::any_of(MBB.liveins(),
+                     [&STI](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
+                       return STI.getRegisterInfo()->isSuperOrSubRegisterEq(
+                           AArch64::X15, LiveIn.PhysReg);
+                     })) {
+      X15Scratch = findScratchNonCalleeSaveRegister(&MBB, true);
+      assert(X15Scratch != AArch64::NoRegister &&
+             (X15Scratch < AArch64::X15 || X15Scratch > AArch64::X17));
+#ifndef NDEBUG
+      LiveRegs.removeReg(AArch64::X15); // ignore X15 since we restore it
+#endif
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrr), X15Scratch)
+          .addReg(AArch64::XZR)
+          .addReg(AArch64::X15, RegState::Undef)
+          .addReg(AArch64::X15, RegState::Implicit)
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
+
     uint64_t NumWords = (NumBytes + RealignmentPadding) >> 4;
     if (NeedsWinCFI) {
       HasWinCFI = true;
@@ -2170,6 +2206,13 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       // No need for SEH instructions here; if we're realigning the stack,
       // we've set a frame pointer and already finished the SEH prologue.
       assert(!NeedsWinCFI);
+    }
+    if (X15Scratch != AArch64::NoRegister) {
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrr), AArch64::X15)
+          .addReg(AArch64::XZR)
+          .addReg(X15Scratch, RegState::Undef)
+          .addReg(X15Scratch, RegState::Implicit)
+          .setMIFlag(MachineInstr::FrameSetup);
     }
   }
 
@@ -3355,7 +3398,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     unsigned X0Scratch = AArch64::NoRegister;
     if (Reg1 == AArch64::VG) {
       // Find an available register to store value of VG to.
-      Reg1 = findScratchNonCalleeSaveRegister(&MBB);
+      Reg1 = findScratchNonCalleeSaveRegister(&MBB, true);
       assert(Reg1 != AArch64::NoRegister);
       SMEAttrs Attrs = AFI->getSMEFnAttrs();
 
