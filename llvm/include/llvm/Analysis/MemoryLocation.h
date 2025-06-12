@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
 #include <optional>
@@ -30,8 +31,6 @@ class StoreInst;
 class MemTransferInst;
 class MemIntrinsic;
 class AtomicCmpXchgInst;
-class AtomicMemTransferInst;
-class AtomicMemIntrinsic;
 class AtomicRMWInst;
 class AnyMemTransferInst;
 class AnyMemIntrinsic;
@@ -80,11 +79,7 @@ class LocationSize {
 
   uint64_t Value;
 
-  // Hack to support implicit construction. This should disappear when the
-  // public LocationSize ctor goes away.
-  enum DirectConstruction { Direct };
-
-  constexpr LocationSize(uint64_t Raw, DirectConstruction) : Value(Raw) {}
+  constexpr LocationSize(uint64_t Raw) : Value(Raw) {}
   constexpr LocationSize(uint64_t Raw, bool Scalable)
       : Value(Raw > MaxValue ? AfterPointer
                              : Raw | (Scalable ? ScalableBit : uint64_t(0))) {}
@@ -96,14 +91,6 @@ class LocationSize {
   static_assert(~(MaxValue & ScalableBit), "Max value don't have bit 62 set");
 
 public:
-  // FIXME: Migrate all users to construct via either `precise` or `upperBound`,
-  // to make it more obvious at the callsite the kind of size that they're
-  // providing.
-  //
-  // Since the overwhelming majority of users of this provide precise values,
-  // this assumes the provided value is precise.
-  constexpr LocationSize(uint64_t Raw)
-      : Value(Raw > MaxValue ? AfterPointer : Raw) {}
   // Create non-scalable LocationSize
   static LocationSize precise(uint64_t Value) {
     return LocationSize(Value, false /*Scalable*/);
@@ -118,7 +105,7 @@ public:
       return precise(0);
     if (LLVM_UNLIKELY(Value > MaxValue))
       return afterPointer();
-    return LocationSize(Value | ImpreciseBit, Direct);
+    return LocationSize(Value | ImpreciseBit);
   }
   static LocationSize upperBound(TypeSize Value) {
     if (Value.isScalable())
@@ -129,21 +116,21 @@ public:
   /// Any location after the base pointer (but still within the underlying
   /// object).
   constexpr static LocationSize afterPointer() {
-    return LocationSize(AfterPointer, Direct);
+    return LocationSize(AfterPointer);
   }
 
   /// Any location before or after the base pointer (but still within the
   /// underlying object).
   constexpr static LocationSize beforeOrAfterPointer() {
-    return LocationSize(BeforeOrAfterPointer, Direct);
+    return LocationSize(BeforeOrAfterPointer);
   }
 
   // Sentinel values, generally used for maps.
   constexpr static LocationSize mapTombstone() {
-    return LocationSize(MapTombstone, Direct);
+    return LocationSize(MapTombstone);
   }
   constexpr static LocationSize mapEmpty() {
-    return LocationSize(MapEmpty, Direct);
+    return LocationSize(MapEmpty);
   }
 
   // Returns a LocationSize that can correctly represent either `*this` or
@@ -189,21 +176,23 @@ public:
   bool operator==(const LocationSize &Other) const {
     return Value == Other.Value;
   }
-
   bool operator==(const TypeSize &Other) const {
-    return hasValue() && getValue() == Other;
+    return (*this == LocationSize::precise(Other));
+  }
+  bool operator==(uint64_t Other) const {
+    return (*this == LocationSize::precise(Other));
   }
 
   bool operator!=(const LocationSize &Other) const { return !(*this == Other); }
-
   bool operator!=(const TypeSize &Other) const { return !(*this == Other); }
+  bool operator!=(uint64_t Other) const { return !(*this == Other); }
 
   // Ordering operators are not provided, since it's unclear if there's only one
   // reasonable way to compare:
   // - values that don't exist against values that do, and
   // - precise values to imprecise values
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   // Returns an opaque value that represents this LocationSize. Cannot be
   // reliably converted back into a LocationSize.
@@ -251,32 +240,32 @@ public:
 
   /// Return a location with information about the memory reference by the given
   /// instruction.
-  static MemoryLocation get(const LoadInst *LI);
-  static MemoryLocation get(const StoreInst *SI);
-  static MemoryLocation get(const VAArgInst *VI);
-  static MemoryLocation get(const AtomicCmpXchgInst *CXI);
-  static MemoryLocation get(const AtomicRMWInst *RMWI);
+  LLVM_ABI static MemoryLocation get(const LoadInst *LI);
+  LLVM_ABI static MemoryLocation get(const StoreInst *SI);
+  LLVM_ABI static MemoryLocation get(const VAArgInst *VI);
+  LLVM_ABI static MemoryLocation get(const AtomicCmpXchgInst *CXI);
+  LLVM_ABI static MemoryLocation get(const AtomicRMWInst *RMWI);
   static MemoryLocation get(const Instruction *Inst) {
     return *MemoryLocation::getOrNone(Inst);
   }
-  static std::optional<MemoryLocation> getOrNone(const Instruction *Inst);
+  LLVM_ABI static std::optional<MemoryLocation>
+  getOrNone(const Instruction *Inst);
 
   /// Return a location representing the source of a memory transfer.
-  static MemoryLocation getForSource(const MemTransferInst *MTI);
-  static MemoryLocation getForSource(const AtomicMemTransferInst *MTI);
-  static MemoryLocation getForSource(const AnyMemTransferInst *MTI);
+  LLVM_ABI static MemoryLocation getForSource(const MemTransferInst *MTI);
+  LLVM_ABI static MemoryLocation getForSource(const AnyMemTransferInst *MTI);
 
   /// Return a location representing the destination of a memory set or
   /// transfer.
-  static MemoryLocation getForDest(const MemIntrinsic *MI);
-  static MemoryLocation getForDest(const AtomicMemIntrinsic *MI);
-  static MemoryLocation getForDest(const AnyMemIntrinsic *MI);
-  static std::optional<MemoryLocation> getForDest(const CallBase *CI,
-                                                  const TargetLibraryInfo &TLI);
+  LLVM_ABI static MemoryLocation getForDest(const MemIntrinsic *MI);
+  LLVM_ABI static MemoryLocation getForDest(const AnyMemIntrinsic *MI);
+  LLVM_ABI static std::optional<MemoryLocation>
+  getForDest(const CallBase *CI, const TargetLibraryInfo &TLI);
 
   /// Return a location representing a particular argument of a call.
-  static MemoryLocation getForArgument(const CallBase *Call, unsigned ArgIdx,
-                                       const TargetLibraryInfo *TLI);
+  LLVM_ABI static MemoryLocation getForArgument(const CallBase *Call,
+                                                unsigned ArgIdx,
+                                                const TargetLibraryInfo *TLI);
   static MemoryLocation getForArgument(const CallBase *Call, unsigned ArgIdx,
                                        const TargetLibraryInfo &TLI) {
     return getForArgument(Call, ArgIdx, &TLI);
@@ -301,6 +290,12 @@ public:
   explicit MemoryLocation(const Value *Ptr, LocationSize Size,
                           const AAMDNodes &AATags = AAMDNodes())
       : Ptr(Ptr), Size(Size), AATags(AATags) {}
+  explicit MemoryLocation(const Value *Ptr, TypeSize Size,
+                          const AAMDNodes &AATags = AAMDNodes())
+      : Ptr(Ptr), Size(LocationSize::precise(Size)), AATags(AATags) {}
+  explicit MemoryLocation(const Value *Ptr, uint64_t Size,
+                          const AAMDNodes &AATags = AAMDNodes())
+      : Ptr(Ptr), Size(LocationSize::precise(Size)), AATags(AATags) {}
 
   MemoryLocation getWithNewPtr(const Value *NewPtr) const {
     MemoryLocation Copy(*this);
@@ -312,6 +307,12 @@ public:
     MemoryLocation Copy(*this);
     Copy.Size = NewSize;
     return Copy;
+  }
+  MemoryLocation getWithNewSize(uint64_t NewSize) const {
+    return getWithNewSize(LocationSize::precise(NewSize));
+  }
+  MemoryLocation getWithNewSize(TypeSize NewSize) const {
+    return getWithNewSize(LocationSize::precise(NewSize));
   }
 
   MemoryLocation getWithoutAATags() const {

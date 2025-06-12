@@ -46,9 +46,9 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK:  %[[OFFLOADPTRS:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
 // CHECK:  store ptr @[[GLOBAL_BYTE_ARRAY]], ptr %[[OFFLOADPTRS]], align 8
 // CHECK: %[[BASEPTRS:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
-// CHECK: store ptr getelementptr (i8, ptr @[[GLOBAL_BYTE_ARRAY]], i64 4), ptr %[[BASEPTRS]], align 8
+// CHECK: store ptr getelementptr inbounds nuw (i8, ptr @[[GLOBAL_BYTE_ARRAY]], i64 4), ptr %[[BASEPTRS]], align 8
 // CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 1
-// CHECK: store ptr getelementptr (i8, ptr @[[GLOBAL_BYTE_ARRAY]], i64 4), ptr %[[OFFLOADPTRS]], align 8
+// CHECK: store ptr getelementptr inbounds nuw (i8, ptr @[[GLOBAL_BYTE_ARRAY]], i64 4), ptr %[[OFFLOADPTRS]], align 8
 
 // CHECK: define void @omp_map_common_block_using_common_block_symbol()
 // CHECK:  %[[BASEPTRS:.*]] = getelementptr inbounds [1 x ptr], ptr %.offload_baseptrs, i32 0, i32 0

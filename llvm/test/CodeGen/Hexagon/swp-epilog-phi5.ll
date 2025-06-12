@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that we use the correct name in an epilog phi for a phi value
 ; that is defined for the last time in the kernel. Previously, we

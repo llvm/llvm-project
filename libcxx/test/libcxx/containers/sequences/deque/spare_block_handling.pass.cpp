@@ -33,12 +33,16 @@ struct ContainerAdaptor : public Adaptor {
 
 template <class Deque>
 static void print(const Deque& d) {
-  std::printf("%zu : __front_spare() == %zu"
-              " : __back_spare() == %zu"
-              " : __capacity() == %zu"
-              " : bytes allocated == %zu\n",
-              d.size(), d.__front_spare(), d.__back_spare(), d.__capacity(),
-              malloc_allocator_base::outstanding_bytes);
+  std::printf(
+      "%zu : __front_spare() == %zu"
+      " : __back_spare() == %zu"
+      " : __capacity() == %zu"
+      " : bytes allocated == %zu\n",
+      d.size(),
+      d.__front_spare(),
+      d.__back_spare(),
+      d.__capacity(),
+      malloc_allocator_base::outstanding_bytes);
 }
 
 template <class T>
@@ -48,7 +52,7 @@ template <class T>
 using BlockSize = std::__deque_block_size<T, std::ptrdiff_t>;
 
 struct LargeT {
-  LargeT() = default;
+  LargeT()       = default;
   char buff[256] = {};
 };
 static_assert(BlockSize<LargeT>::value == 16, "");
@@ -57,14 +61,14 @@ const auto& AllocBytes = malloc_allocator_base::outstanding_bytes;
 
 template <class Deque>
 struct PrintOnFailure {
-   explicit PrintOnFailure(Deque const& deque) : deque_(&deque) {}
-   void operator()() const { print(*deque_); }
+  explicit PrintOnFailure(Deque const& deque) : deque_(&deque) {}
+  void operator()() const { print(*deque_); }
+
 private:
   const Deque* deque_;
 
   PrintOnFailure(PrintOnFailure const&) = delete;
 };
-
 
 static void push_back() {
   const auto BS = BlockSize<LargeT>::value;
@@ -194,11 +198,11 @@ static void push_front() {
 }
 
 static void std_queue() {
-  using D = Deque<LargeT>;
+  using D     = Deque<LargeT>;
   using Queue = std::queue<LargeT, D>;
   ContainerAdaptor<Queue> CA;
   const D& d = CA.GetContainer();
-  Queue &q = CA;
+  Queue& q   = CA;
   PrintOnFailure<Deque<LargeT>> on_fail(d);
 
   while (d.__block_count() < 4)

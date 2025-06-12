@@ -16,7 +16,7 @@ define dso_local void @_Z3fooPKcz(ptr noundef %0, ...) "frame-pointer"="all" {
 ; RV64V-NEXT:    addi s0, sp, 432
 ; RV64V-NEXT:    .cfi_def_cfa s0, 64
 ; RV64V-NEXT:    lui t0, 2
-; RV64V-NEXT:    addiw t0, t0, -576
+; RV64V-NEXT:    addi t0, t0, -576
 ; RV64V-NEXT:    sub sp, sp, t0
 ; RV64V-NEXT:    sd a5, 40(s0)
 ; RV64V-NEXT:    sd a6, 48(s0)
@@ -28,7 +28,7 @@ define dso_local void @_Z3fooPKcz(ptr noundef %0, ...) "frame-pointer"="all" {
 ; RV64V-NEXT:    sd a0, -32(s0)
 ; RV64V-NEXT:    addi a0, s0, 8
 ; RV64V-NEXT:    sd a0, -40(s0)
-; RV64V-NEXT:    addi sp, s0, -496
+; RV64V-NEXT:    addi sp, s0, -432
 ; RV64V-NEXT:    .cfi_def_cfa sp, 496
 ; RV64V-NEXT:    ld ra, 424(sp) # 8-byte Folded Reload
 ; RV64V-NEXT:    ld s0, 416(sp) # 8-byte Folded Reload

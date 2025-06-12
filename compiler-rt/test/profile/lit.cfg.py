@@ -166,6 +166,10 @@ if config.host_os not in [
 ]:
     config.unsupported = True
 
+config.substitutions.append(
+    ("%shared_lib_flag", "-dynamiclib" if (config.host_os == "Darwin") else "-shared")
+)
+
 if config.host_os in ["AIX"]:
     config.available_features.add("system-aix")
     exclude_unsupported_files_for_aix(config.test_source_root)
@@ -179,3 +183,6 @@ if config.android:
 
 if config.have_curl:
     config.available_features.add("curl")
+
+if config.host_os in ("AIX", "Darwin", "Linux"):
+    config.available_features.add("continuous-mode")

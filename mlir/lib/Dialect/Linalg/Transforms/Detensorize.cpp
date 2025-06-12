@@ -154,7 +154,6 @@ public:
     });
 
     addSourceMaterialization(sourceMaterializationCallback);
-    addArgumentMaterialization(sourceMaterializationCallback);
   }
 };
 
@@ -318,9 +317,8 @@ struct LinalgDetensorize
         //       * Add the argument to blockArgsToDetensor.
         //       * Walk the use-def chain backwards to add each predecessor's
         //       terminator-operands corresponding to currentItem to workList.
-        if (dyn_cast<BlockArgument>(currentItem)) {
-          BlockArgument currentItemBlockArgument =
-              cast<BlockArgument>(currentItem);
+        if (auto currentItemBlockArgument =
+                dyn_cast<BlockArgument>(currentItem)) {
           Block *ownerBlock = currentItemBlockArgument.getOwner();
 
           // Function arguments are not detensored/converted.
@@ -415,7 +413,7 @@ struct LinalgDetensorize
         Block *block = blockArg.getParentBlock();
 
         // For the potentially detensorable block argument, find the
-        // correpsonding operands in predecessor blocks.
+        // corresponding operands in predecessor blocks.
         for (PredecessorIterator pred = block->pred_begin();
              pred != block->pred_end(); ++pred) {
           BranchOpInterface terminator =
@@ -459,8 +457,7 @@ struct LinalgDetensorize
       });
 
       for (Block &block : llvm::drop_begin(func.getFunctionBody(), 1))
-        for (BlockArgument blockArgument : block.getArguments())
-          blockArgsToDetensor.insert(blockArgument);
+        blockArgsToDetensor.insert_range(block.getArguments());
     }
   };
 
@@ -563,8 +560,7 @@ struct LinalgDetensorize
 
     RewritePatternSet canonPatterns(context);
     tensor::FromElementsOp::getCanonicalizationPatterns(canonPatterns, context);
-    if (failed(applyPatternsAndFoldGreedily(getOperation(),
-                                            std::move(canonPatterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(canonPatterns))))
       signalPassFailure();
 
     // Get rid of the dummy entry block we created in the beginning to work

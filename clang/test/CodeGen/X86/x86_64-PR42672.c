@@ -58,7 +58,7 @@ void odd_struct(void) {
       : "=r"(str));
 #endif
 }
-// CHECK-IMPOSSIBLE_ODD: impossible constraint in asm: can't store value into a register
+// CHECK-IMPOSSIBLE_ODD: impossible constraint in asm: cannot store value into a register
 
 // Check Clang reports an error if attempting to return a big structure via a register.
 void big_struct(void) {
@@ -70,7 +70,7 @@ void big_struct(void) {
       : "=r"(str));
 #endif
 }
-// CHECK-IMPOSSIBLE_BIG: impossible constraint in asm: can't store value into a register
+// CHECK-IMPOSSIBLE_BIG: impossible constraint in asm: cannot store value into a register
 
 // Clang is able to emit LLVM IR for an 16-byte structure.
 void x_constraint_fit(void) {
@@ -103,7 +103,7 @@ void x_constraint_nofit(void) {
 
 // http://crbug.com/999160
 // Clang used to report the following message:
-//   "impossible constraint in asm: can't store struct into a register"
+//   "impossible constraint in asm: cannot store struct into a register"
 // for the assembly directive below, although there's no struct.
 void crbug_999160_regtest(void) {
 #ifdef IMPOSSIBLE_9BYTES
@@ -113,7 +113,7 @@ void crbug_999160_regtest(void) {
 #endif
 }
 
-// CHECK-IMPOSSIBLE_9BYTES: impossible constraint in asm: can't store value into a register
+// CHECK-IMPOSSIBLE_9BYTES: impossible constraint in asm: cannot store value into a register
 
 void crbug_999160_regtest_v2(void) {
 #ifdef IMPOSSIBLE_9BYTES_V2
@@ -121,4 +121,4 @@ void crbug_999160_regtest_v2(void) {
   asm("" : "=r"(buf) : "0"(buf));
 #endif
 }
-// CHECK-IMPOSSIBLE_9BYTES_V2: impossible constraint in asm: can't store value into a register
+// CHECK-IMPOSSIBLE_9BYTES_V2: impossible constraint in asm: cannot store value into a register

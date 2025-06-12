@@ -54,6 +54,8 @@ define void @atomic_rmw_ops(ptr %p, i32 %i, float %f) {
   %a.fsub      = atomicrmw fsub      ptr %p, float %f acq_rel, align 8
   %a.fmax      = atomicrmw fmax      ptr %p, float %f acq_rel, align 8
   %a.fmin      = atomicrmw fmin      ptr %p, float %f acq_rel, align 8
+  %a.fmaximum  = atomicrmw fmaximum  ptr %p, float %f acq_rel, align 8
+  %a.fminimum  = atomicrmw fminimum  ptr %p, float %f acq_rel, align 8
 
   %a.uinc_wrap = atomicrmw uinc_wrap ptr %p, i32 %i acq_rel, align 8
   %a.udec_wrap = atomicrmw udec_wrap ptr %p, i32 %i acq_rel, align 8

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_INTEGER_SEQUENCE_H
-#define _LIBCPP___UTILITY_INTEGER_SEQUENCE_H
+#ifndef _LIBCPP___CXX03___UTILITY_INTEGER_SEQUENCE_H
+#define _LIBCPP___CXX03___UTILITY_INTEGER_SEQUENCE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_integral.h>
@@ -43,48 +43,6 @@ using __make_indices_imp =
 #  error "No known way to get an integer pack from the compiler"
 #endif
 
-#if _LIBCPP_STD_VER >= 14
-
-template <class _Tp, _Tp... _Ip>
-struct _LIBCPP_TEMPLATE_VIS integer_sequence {
-  typedef _Tp value_type;
-  static_assert(is_integral<_Tp>::value, "std::integer_sequence can only be instantiated with an integral type");
-  static _LIBCPP_HIDE_FROM_ABI constexpr size_t size() noexcept { return sizeof...(_Ip); }
-};
-
-template <size_t... _Ip>
-using index_sequence = integer_sequence<size_t, _Ip...>;
-
-#  if __has_builtin(__make_integer_seq)
-
-template <class _Tp, _Tp _Ep>
-using make_integer_sequence _LIBCPP_NODEBUG = __make_integer_seq<integer_sequence, _Tp, _Ep>;
-
-#  elif __has_builtin(__integer_pack)
-
-template <class _Tp, _Tp _SequenceSize>
-using make_integer_sequence _LIBCPP_NODEBUG = integer_sequence<_Tp, __integer_pack(_SequenceSize)...>;
-
-#  else
-#    error "No known way to get an integer pack from the compiler"
-#  endif
-
-template <size_t _Np>
-using make_index_sequence = make_integer_sequence<size_t, _Np>;
-
-template <class... _Tp>
-using index_sequence_for = make_index_sequence<sizeof...(_Tp)>;
-
-#  if _LIBCPP_STD_VER >= 20
-// Executes __func for every element in an index_sequence.
-template <size_t... _Index, class _Function>
-_LIBCPP_HIDE_FROM_ABI constexpr void __for_each_index_sequence(index_sequence<_Index...>, _Function __func) {
-  (__func.template operator()<_Index>(), ...);
-}
-#  endif // _LIBCPP_STD_VER >= 20
-
-#endif // _LIBCPP_STD_VER >= 14
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_INTEGER_SEQUENCE_H
+#endif // _LIBCPP___CXX03___UTILITY_INTEGER_SEQUENCE_H

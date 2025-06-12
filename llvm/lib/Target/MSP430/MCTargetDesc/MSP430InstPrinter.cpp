@@ -17,7 +17,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -54,8 +53,7 @@ void MSP430InstPrinter::printPCRelImmOperand(const MCInst *MI, unsigned OpNo,
 }
 
 void MSP430InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                     raw_ostream &O, const char *Modifier) {
-  assert((Modifier == nullptr || Modifier[0] == 0) && "No modifiers supported");
+                                     raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     O << getRegisterName(Op.getReg());
@@ -69,8 +67,7 @@ void MSP430InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 }
 
 void MSP430InstPrinter::printSrcMemOperand(const MCInst *MI, unsigned OpNo,
-                                           raw_ostream &O,
-                                           const char *Modifier) {
+                                           raw_ostream &O) {
   const MCOperand &Base = MI->getOperand(OpNo);
   const MCOperand &Disp = MI->getOperand(OpNo+1);
 

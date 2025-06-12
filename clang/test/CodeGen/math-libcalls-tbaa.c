@@ -14,9 +14,9 @@ float crealf(float _Complex);
 // Emit int TBAA metadata on FP math libcalls, which is useful for alias analysis
 
 // CHECK-LABEL: define dso_local float @test_expf(
-// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[NUM]], i64 40
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 40
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2:![0-9]+]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9:[0-9]+]], !tbaa [[TBAA6:![0-9]+]]
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[CALL]]
@@ -29,9 +29,9 @@ float test_expf (float num[]) {
 }
 
 // CHECK-LABEL: define dso_local float @test_builtin_expf(
-// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[NUM]], i64 40
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 40
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9]], !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[CALL]]
@@ -46,9 +46,9 @@ float test_builtin_expf (float num[]) {
 //
 // Negative test: fabs cannot set errno
 // CHECK-LABEL: define dso_local double @test_fabs(
-// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[NUM]], i64 80
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 80
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA8:![0-9]+]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call double @llvm.fabs.f64(double [[TMP0]])
 // CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TMP0]], [[TMP1]]
@@ -61,9 +61,9 @@ double test_fabs (double num[]) {
 }
 
 // CHECK-LABEL: define dso_local double @test_remainder(
-// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]], double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NUM:%.*]], double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[NUM]], i64 80
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 80
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA8]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call double @remainder(double noundef [[TMP0]], double noundef [[A]]) #[[ATTR9]], !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TMP0]], [[CALL]]
@@ -79,11 +79,11 @@ double test_remainder (double num[], double a) {
 // TODO: frexp is not subject to any errors, but also writes to
 // its int pointer out argument, so it could emit int TBAA metadata.
 // CHECK-LABEL: define dso_local double @test_frexp(
-// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[E:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[E]]) #[[ATTR9]]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[NUM]], i64 16
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA8]]
 // CHECK-NEXT:    [[CALL:%.*]] = call double @frexp(double noundef [[TMP0]], ptr noundef nonnull [[E]]) #[[ATTR9]]
 // CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TMP0]], [[CALL]]
@@ -101,13 +101,13 @@ double test_frexp (double num[]) {
 // Negative test: sincos is a library function, but is not a builtin function
 // checked in CodeGenFunction::EmitCallExpr.
 // CHECK-LABEL: define dso_local float @test_sincos(
-// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[SIN:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[COS:%.*]] = alloca float, align 4
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[SIN]]) #[[ATTR9]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[COS]]) #[[ATTR9]]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[NUM]], i64 8
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    call void @sincos(float noundef [[TMP0]], ptr noundef nonnull [[SIN]], ptr noundef nonnull [[COS]]) #[[ATTR9]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[SIN]], align 4, !tbaa [[TBAA2]]
@@ -128,9 +128,9 @@ float test_sincos (float num[]) {
 
 // TODO: The builtin return a complex type
 // CHECK-LABEL: define dso_local float @test_cacoshf(
-// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[NUM]], i64 8
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x float] poison, float [[TMP0]], 0
 // CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x float] [[DOTFCA_0_INSERT]], float 0.000000e+00, 1

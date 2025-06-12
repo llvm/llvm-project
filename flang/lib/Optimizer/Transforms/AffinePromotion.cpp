@@ -49,8 +49,9 @@ struct AffineIfAnalysis;
 /// second when doing rewrite.
 struct AffineFunctionAnalysis {
   explicit AffineFunctionAnalysis(mlir::func::FuncOp funcOp) {
-    for (fir::DoLoopOp op : funcOp.getOps<fir::DoLoopOp>())
-      loopAnalysisMap.try_emplace(op, op, *this);
+    funcOp->walk([&](fir::DoLoopOp doloop) {
+      loopAnalysisMap.try_emplace(doloop, doloop, *this);
+    });
   }
 
   AffineLoopAnalysis getChildLoopAnalysis(fir::DoLoopOp op) const;
@@ -102,10 +103,23 @@ private:
     return true;
   }
 
+  bool analysisResults(fir::DoLoopOp loopOperation) {
+    if (loopOperation.getFinalValue() &&
+        !loopOperation.getResult(0).use_empty()) {
+      LLVM_DEBUG(
+          llvm::dbgs()
+              << "AffineLoopAnalysis: cannot promote loop final value\n";);
+      return false;
+    }
+
+    return true;
+  }
+
   bool analyzeLoop(fir::DoLoopOp loopOperation,
                    AffineFunctionAnalysis &functionAnalysis) {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: \n"; loopOperation.dump(););
     return analyzeMemoryAccess(loopOperation) &&
+           analysisResults(loopOperation) &&
            analyzeBody(loopOperation, functionAnalysis);
   }
 
@@ -461,14 +475,28 @@ public:
     LLVM_ATTRIBUTE_UNUSED auto loopAnalysis =
         functionAnalysis.getChildLoopAnalysis(loop);
     auto &loopOps = loop.getBody()->getOperations();
+    auto resultOp = cast<fir::ResultOp>(loop.getBody()->getTerminator());
+    auto results = resultOp.getOperands();
+    auto loopResults = loop->getResults();
     auto loopAndIndex = createAffineFor(loop, rewriter);
     auto affineFor = loopAndIndex.first;
     auto inductionVar = loopAndIndex.second;
+
+    if (loop.getFinalValue()) {
+      results = results.drop_front();
+      loopResults = loopResults.drop_front();
+    }
 
     rewriter.startOpModification(affineFor.getOperation());
     affineFor.getBody()->getOperations().splice(
         std::prev(affineFor.getBody()->end()), loopOps, loopOps.begin(),
         std::prev(loopOps.end()));
+    rewriter.replaceAllUsesWith(loop.getRegionIterArgs(),
+                                affineFor.getRegionIterArgs());
+    if (!results.empty()) {
+      rewriter.setInsertionPointToEnd(affineFor.getBody());
+      rewriter.create<affine::AffineYieldOp>(resultOp->getLoc(), results);
+    }
     rewriter.finalizeOpModification(affineFor.getOperation());
 
     rewriter.startOpModification(loop.getOperation());
@@ -479,7 +507,8 @@ public:
 
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopConversion: loop rewriten to:\n";
                affineFor.dump(););
-    rewriter.replaceOp(loop, affineFor.getOperation()->getResults());
+    rewriter.replaceAllUsesWith(loopResults, affineFor->getResults());
+    rewriter.eraseOp(loop);
     return success();
   }
 
@@ -503,7 +532,7 @@ private:
         ValueRange(op.getUpperBound()),
         mlir::AffineMap::get(0, 1,
                              1 + mlir::getAffineSymbolExpr(0, op.getContext())),
-        step);
+        step, op.getIterOperands());
     return std::make_pair(affineFor, affineFor.getInductionVar());
   }
 
@@ -528,7 +557,7 @@ private:
         genericUpperBound.getResult(),
         mlir::AffineMap::get(0, 1,
                              1 + mlir::getAffineSymbolExpr(0, op.getContext())),
-        1);
+        1, op.getIterOperands());
     rewriter.setInsertionPointToStart(affineFor.getBody());
     auto actualIndex = rewriter.create<affine::AffineApplyOp>(
         op.getLoc(), actualIndexMap,

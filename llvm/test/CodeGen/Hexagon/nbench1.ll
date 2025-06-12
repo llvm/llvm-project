@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s
 
 ; if instruction being considered for addition to packet has higher latency,
 ; end existing packet and start a new one.

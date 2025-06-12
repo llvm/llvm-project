@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -no-integrated-as < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -no-integrated-as < %s | FileCheck %s
 
 target triple = "hexagon"
 

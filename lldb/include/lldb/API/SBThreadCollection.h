@@ -48,7 +48,7 @@ protected:
 private:
   friend class SBProcess;
   friend class SBThread;
-
+  friend class SBSaveCoreOptions;
   lldb::ThreadCollectionSP m_opaque_sp;
 };
 

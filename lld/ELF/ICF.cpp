@@ -81,7 +81,6 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/Object/ELF.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -119,7 +118,7 @@ private:
   void forEachClassRange(size_t begin, size_t end,
                          llvm::function_ref<void(size_t, size_t)> fn);
 
-  void forEachClass(llvm::function_ref<void(size_t, size_t)> fn);
+  void parallelForEachClass(llvm::function_ref<void(size_t, size_t)> fn);
 
   Ctx &ctx;
   SmallVector<InputSection *, 0> sections;
@@ -409,8 +408,10 @@ void ICF<ELFT>::forEachClassRange(size_t begin, size_t end,
 }
 
 // Call Fn on each equivalence class.
+
 template <class ELFT>
-void ICF<ELFT>::forEachClass(llvm::function_ref<void(size_t, size_t)> fn) {
+void ICF<ELFT>::parallelForEachClass(
+    llvm::function_ref<void(size_t, size_t)> fn) {
   // If threading is disabled or the number of sections are
   // too small to use threading, call Fn sequentially.
   if (parallel::strategy.ThreadsRequested == 1 || sections.size() < 1024) {
@@ -459,20 +460,8 @@ static void combineRelocHashes(unsigned cnt, InputSection *isec,
   isec->eqClass[(cnt + 1) % 2] = hash | (1U << 31);
 }
 
-static void print(Ctx &ctx, const Twine &s) {
-  if (ctx.arg.printIcfSections)
-    message(s);
-}
-
 // The main function of ICF.
 template <class ELFT> void ICF<ELFT>::run() {
-  // Compute isPreemptible early. We may add more symbols later, so this loop
-  // cannot be merged with the later computeIsPreemptible() pass which is used
-  // by scanRelocations().
-  if (ctx.arg.hasDynSymTab)
-    for (Symbol *sym : ctx.symtab->getSymbols())
-      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
-
   // Two text sections may have identical content and relocations but different
   // LSDA, e.g. the two functions may have catch blocks of different types. If a
   // text section is referenced by a .eh_frame FDE with LSDA, it is not
@@ -530,27 +519,30 @@ template <class ELFT> void ICF<ELFT>::run() {
   // static content. Use a base offset for these IDs to ensure no overlap with
   // the unique IDs already assigned.
   uint32_t eqClassBase = ++uniqueId;
-  forEachClass([&](size_t begin, size_t end) {
+  parallelForEachClass([&](size_t begin, size_t end) {
     segregate(begin, end, eqClassBase, true);
   });
 
   // Split groups by comparing relocations until convergence is obtained.
   do {
     repeat = false;
-    forEachClass([&](size_t begin, size_t end) {
+    parallelForEachClass([&](size_t begin, size_t end) {
       segregate(begin, end, eqClassBase, false);
     });
   } while (repeat);
 
-  log("ICF needed " + Twine(cnt) + " iterations");
+  Log(ctx) << "ICF needed " << cnt << " iterations";
 
+  auto print = [&ctx = ctx]() -> ELFSyncStream {
+    return {ctx, ctx.arg.printIcfSections ? DiagLevel::Msg : DiagLevel::None};
+  };
   // Merge sections by the equivalence class.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
     if (end - begin == 1)
       return;
-    print(ctx, "selected section " + toString(sections[begin]));
+    print() << "selected section " << sections[begin];
     for (size_t i = begin + 1; i < end; ++i) {
-      print(ctx, "  removing identical section " + toString(sections[i]));
+      print() << "  removing identical section " << sections[i];
       sections[begin]->replace(sections[i]);
 
       // At this point we know sections merged are fully identical and hence

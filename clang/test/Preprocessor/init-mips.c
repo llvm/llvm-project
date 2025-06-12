@@ -49,26 +49,31 @@
 // MIPS32BE:#define __FLT_MIN_EXP__ (-125)
 // MIPS32BE:#define __FLT_MIN__ 1.17549435e-38F
 // MIPS32BE:#define __FLT_RADIX__ 2
+// MIPS32BE:#define __INT16_C(c) c
 // MIPS32BE:#define __INT16_C_SUFFIX__
 // MIPS32BE:#define __INT16_FMTd__ "hd"
 // MIPS32BE:#define __INT16_FMTi__ "hi"
 // MIPS32BE:#define __INT16_MAX__ 32767
 // MIPS32BE:#define __INT16_TYPE__ short
+// MIPS32BE:#define __INT32_C(c) c
 // MIPS32BE:#define __INT32_C_SUFFIX__
 // MIPS32BE:#define __INT32_FMTd__ "d"
 // MIPS32BE:#define __INT32_FMTi__ "i"
 // MIPS32BE:#define __INT32_MAX__ 2147483647
 // MIPS32BE:#define __INT32_TYPE__ int
+// MIPS32BE:#define __INT64_C(c) c##LL
 // MIPS32BE:#define __INT64_C_SUFFIX__ LL
 // MIPS32BE:#define __INT64_FMTd__ "lld"
 // MIPS32BE:#define __INT64_FMTi__ "lli"
 // MIPS32BE:#define __INT64_MAX__ 9223372036854775807LL
 // MIPS32BE:#define __INT64_TYPE__ long long int
+// MIPS32BE:#define __INT8_C(c) c
 // MIPS32BE:#define __INT8_C_SUFFIX__
 // MIPS32BE:#define __INT8_FMTd__ "hhd"
 // MIPS32BE:#define __INT8_FMTi__ "hhi"
 // MIPS32BE:#define __INT8_MAX__ 127
 // MIPS32BE:#define __INT8_TYPE__ signed char
+// MIPS32BE:#define __INTMAX_C(c) c##LL
 // MIPS32BE:#define __INTMAX_C_SUFFIX__ LL
 // MIPS32BE:#define __INTMAX_FMTd__ "lld"
 // MIPS32BE:#define __INTMAX_FMTi__ "lli"
@@ -159,18 +164,23 @@
 // MIPS32BE:#define __STDC_HOSTED__ 0
 // MIPS32BE-C:#define __STDC_VERSION__ 201710L
 // MIPS32BE:#define __STDC__ 1
+// MIPS32BE:#define __UINT16_C(c) c
 // MIPS32BE:#define __UINT16_C_SUFFIX__
 // MIPS32BE:#define __UINT16_MAX__ 65535
 // MIPS32BE:#define __UINT16_TYPE__ unsigned short
+// MIPS32BE:#define __UINT32_C(c) c##U
 // MIPS32BE:#define __UINT32_C_SUFFIX__ U
 // MIPS32BE:#define __UINT32_MAX__ 4294967295U
 // MIPS32BE:#define __UINT32_TYPE__ unsigned int
+// MIPS32BE:#define __UINT64_C(c) c##ULL
 // MIPS32BE:#define __UINT64_C_SUFFIX__ ULL
 // MIPS32BE:#define __UINT64_MAX__ 18446744073709551615ULL
 // MIPS32BE:#define __UINT64_TYPE__ long long unsigned int
+// MIPS32BE:#define __UINT8_C(c) c
 // MIPS32BE:#define __UINT8_C_SUFFIX__
 // MIPS32BE:#define __UINT8_MAX__ 255
 // MIPS32BE:#define __UINT8_TYPE__ unsigned char
+// MIPS32BE:#define __UINTMAX_C(c) c##ULL
 // MIPS32BE:#define __UINTMAX_C_SUFFIX__ ULL
 // MIPS32BE:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // MIPS32BE:#define __UINTMAX_TYPE__ long long unsigned int
@@ -259,26 +269,31 @@
 // MIPS32EL:#define __FLT_MIN_EXP__ (-125)
 // MIPS32EL:#define __FLT_MIN__ 1.17549435e-38F
 // MIPS32EL:#define __FLT_RADIX__ 2
+// MIPS32EL:#define __INT16_C(c) c
 // MIPS32EL:#define __INT16_C_SUFFIX__
 // MIPS32EL:#define __INT16_FMTd__ "hd"
 // MIPS32EL:#define __INT16_FMTi__ "hi"
 // MIPS32EL:#define __INT16_MAX__ 32767
 // MIPS32EL:#define __INT16_TYPE__ short
+// MIPS32EL:#define __INT32_C(c) c
 // MIPS32EL:#define __INT32_C_SUFFIX__
 // MIPS32EL:#define __INT32_FMTd__ "d"
 // MIPS32EL:#define __INT32_FMTi__ "i"
 // MIPS32EL:#define __INT32_MAX__ 2147483647
 // MIPS32EL:#define __INT32_TYPE__ int
+// MIPS32EL:#define __INT64_C(c) c##LL
 // MIPS32EL:#define __INT64_C_SUFFIX__ LL
 // MIPS32EL:#define __INT64_FMTd__ "lld"
 // MIPS32EL:#define __INT64_FMTi__ "lli"
 // MIPS32EL:#define __INT64_MAX__ 9223372036854775807LL
 // MIPS32EL:#define __INT64_TYPE__ long long int
+// MIPS32EL:#define __INT8_C(c) c
 // MIPS32EL:#define __INT8_C_SUFFIX__
 // MIPS32EL:#define __INT8_FMTd__ "hhd"
 // MIPS32EL:#define __INT8_FMTi__ "hhi"
 // MIPS32EL:#define __INT8_MAX__ 127
 // MIPS32EL:#define __INT8_TYPE__ signed char
+// MIPS32EL:#define __INTMAX_C(c) c##LL
 // MIPS32EL:#define __INTMAX_C_SUFFIX__ LL
 // MIPS32EL:#define __INTMAX_FMTd__ "lld"
 // MIPS32EL:#define __INTMAX_FMTi__ "lli"
@@ -366,18 +381,23 @@
 // MIPS32EL:#define __SIZE_MAX__ 4294967295U
 // MIPS32EL:#define __SIZE_TYPE__ unsigned int
 // MIPS32EL:#define __SIZE_WIDTH__ 32
+// MIPS32EL:#define __UINT16_C(c) c
 // MIPS32EL:#define __UINT16_C_SUFFIX__
 // MIPS32EL:#define __UINT16_MAX__ 65535
 // MIPS32EL:#define __UINT16_TYPE__ unsigned short
+// MIPS32EL:#define __UINT32_C(c) c##U
 // MIPS32EL:#define __UINT32_C_SUFFIX__ U
 // MIPS32EL:#define __UINT32_MAX__ 4294967295U
 // MIPS32EL:#define __UINT32_TYPE__ unsigned int
+// MIPS32EL:#define __UINT64_C(c) c##ULL
 // MIPS32EL:#define __UINT64_C_SUFFIX__ ULL
 // MIPS32EL:#define __UINT64_MAX__ 18446744073709551615ULL
 // MIPS32EL:#define __UINT64_TYPE__ long long unsigned int
+// MIPS32EL:#define __UINT8_C(c) c
 // MIPS32EL:#define __UINT8_C_SUFFIX__
 // MIPS32EL:#define __UINT8_MAX__ 255
 // MIPS32EL:#define __UINT8_TYPE__ unsigned char
+// MIPS32EL:#define __UINTMAX_C(c) c##ULL
 // MIPS32EL:#define __UINTMAX_C_SUFFIX__ ULL
 // MIPS32EL:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // MIPS32EL:#define __UINTMAX_TYPE__ long long unsigned int
@@ -496,26 +516,31 @@
 // MIPSN32BE: #define __GNUC__ 4
 // MIPSN32BE: #define __GXX_ABI_VERSION 1002
 // MIPSN32BE: #define __ILP32__ 1
+// MIPSN32BE: #define __INT16_C(c) c
 // MIPSN32BE: #define __INT16_C_SUFFIX__
 // MIPSN32BE: #define __INT16_FMTd__ "hd"
 // MIPSN32BE: #define __INT16_FMTi__ "hi"
 // MIPSN32BE: #define __INT16_MAX__ 32767
 // MIPSN32BE: #define __INT16_TYPE__ short
+// MIPSN32BE: #define __INT32_C(c) c
 // MIPSN32BE: #define __INT32_C_SUFFIX__
 // MIPSN32BE: #define __INT32_FMTd__ "d"
 // MIPSN32BE: #define __INT32_FMTi__ "i"
 // MIPSN32BE: #define __INT32_MAX__ 2147483647
 // MIPSN32BE: #define __INT32_TYPE__ int
+// MIPSN32BE: #define __INT64_C(c) c##LL
 // MIPSN32BE: #define __INT64_C_SUFFIX__ LL
 // MIPSN32BE: #define __INT64_FMTd__ "lld"
 // MIPSN32BE: #define __INT64_FMTi__ "lli"
 // MIPSN32BE: #define __INT64_MAX__ 9223372036854775807LL
 // MIPSN32BE: #define __INT64_TYPE__ long long int
+// MIPSN32BE: #define __INT8_C(c) c
 // MIPSN32BE: #define __INT8_C_SUFFIX__
 // MIPSN32BE: #define __INT8_FMTd__ "hhd"
 // MIPSN32BE: #define __INT8_FMTi__ "hhi"
 // MIPSN32BE: #define __INT8_MAX__ 127
 // MIPSN32BE: #define __INT8_TYPE__ signed char
+// MIPSN32BE: #define __INTMAX_C(c) c##LL
 // MIPSN32BE: #define __INTMAX_C_SUFFIX__ LL
 // MIPSN32BE: #define __INTMAX_FMTd__ "lld"
 // MIPSN32BE: #define __INTMAX_FMTi__ "lli"
@@ -618,6 +643,7 @@
 // MIPSN32BE: #define __STDC_UTF_32__ 1
 // MIPSN32BE-C: #define __STDC_VERSION__ 201710L
 // MIPSN32BE: #define __STDC__ 1
+// MIPSN32BE: #define __UINT16_C(c) c
 // MIPSN32BE: #define __UINT16_C_SUFFIX__
 // MIPSN32BE: #define __UINT16_FMTX__ "hX"
 // MIPSN32BE: #define __UINT16_FMTo__ "ho"
@@ -625,6 +651,7 @@
 // MIPSN32BE: #define __UINT16_FMTx__ "hx"
 // MIPSN32BE: #define __UINT16_MAX__ 65535
 // MIPSN32BE: #define __UINT16_TYPE__ unsigned short
+// MIPSN32BE: #define __UINT32_C(c) c##U
 // MIPSN32BE: #define __UINT32_C_SUFFIX__ U
 // MIPSN32BE: #define __UINT32_FMTX__ "X"
 // MIPSN32BE: #define __UINT32_FMTo__ "o"
@@ -632,6 +659,7 @@
 // MIPSN32BE: #define __UINT32_FMTx__ "x"
 // MIPSN32BE: #define __UINT32_MAX__ 4294967295U
 // MIPSN32BE: #define __UINT32_TYPE__ unsigned int
+// MIPSN32BE: #define __UINT64_C(c) c##ULL
 // MIPSN32BE: #define __UINT64_C_SUFFIX__ ULL
 // MIPSN32BE: #define __UINT64_FMTX__ "llX"
 // MIPSN32BE: #define __UINT64_FMTo__ "llo"
@@ -639,6 +667,7 @@
 // MIPSN32BE: #define __UINT64_FMTx__ "llx"
 // MIPSN32BE: #define __UINT64_MAX__ 18446744073709551615ULL
 // MIPSN32BE: #define __UINT64_TYPE__ long long unsigned int
+// MIPSN32BE: #define __UINT8_C(c) c
 // MIPSN32BE: #define __UINT8_C_SUFFIX__
 // MIPSN32BE: #define __UINT8_FMTX__ "hhX"
 // MIPSN32BE: #define __UINT8_FMTo__ "hho"
@@ -646,6 +675,7 @@
 // MIPSN32BE: #define __UINT8_FMTx__ "hhx"
 // MIPSN32BE: #define __UINT8_MAX__ 255
 // MIPSN32BE: #define __UINT8_TYPE__ unsigned char
+// MIPSN32BE: #define __UINTMAX_C(c) c##ULL
 // MIPSN32BE: #define __UINTMAX_C_SUFFIX__ ULL
 // MIPSN32BE: #define __UINTMAX_FMTX__ "llX"
 // MIPSN32BE: #define __UINTMAX_FMTo__ "llo"
@@ -803,26 +833,31 @@
 // MIPSN32EL: #define __GNUC__ 4
 // MIPSN32EL: #define __GXX_ABI_VERSION 1002
 // MIPSN32EL: #define __ILP32__ 1
+// MIPSN32EL: #define __INT16_C(c) c
 // MIPSN32EL: #define __INT16_C_SUFFIX__
 // MIPSN32EL: #define __INT16_FMTd__ "hd"
 // MIPSN32EL: #define __INT16_FMTi__ "hi"
 // MIPSN32EL: #define __INT16_MAX__ 32767
 // MIPSN32EL: #define __INT16_TYPE__ short
+// MIPSN32EL: #define __INT32_C(c) c
 // MIPSN32EL: #define __INT32_C_SUFFIX__
 // MIPSN32EL: #define __INT32_FMTd__ "d"
 // MIPSN32EL: #define __INT32_FMTi__ "i"
 // MIPSN32EL: #define __INT32_MAX__ 2147483647
 // MIPSN32EL: #define __INT32_TYPE__ int
+// MIPSN32EL: #define __INT64_C(c) c##LL
 // MIPSN32EL: #define __INT64_C_SUFFIX__ LL
 // MIPSN32EL: #define __INT64_FMTd__ "lld"
 // MIPSN32EL: #define __INT64_FMTi__ "lli"
 // MIPSN32EL: #define __INT64_MAX__ 9223372036854775807LL
 // MIPSN32EL: #define __INT64_TYPE__ long long int
+// MIPSN32EL: #define __INT8_C(c) c
 // MIPSN32EL: #define __INT8_C_SUFFIX__
 // MIPSN32EL: #define __INT8_FMTd__ "hhd"
 // MIPSN32EL: #define __INT8_FMTi__ "hhi"
 // MIPSN32EL: #define __INT8_MAX__ 127
 // MIPSN32EL: #define __INT8_TYPE__ signed char
+// MIPSN32EL: #define __INTMAX_C(c) c##LL
 // MIPSN32EL: #define __INTMAX_C_SUFFIX__ LL
 // MIPSN32EL: #define __INTMAX_FMTd__ "lld"
 // MIPSN32EL: #define __INTMAX_FMTi__ "lli"
@@ -925,6 +960,7 @@
 // MIPSN32EL: #define __STDC_UTF_32__ 1
 // MIPSN32EL: #define __STDC_VERSION__ 201710L
 // MIPSN32EL: #define __STDC__ 1
+// MIPSN32EL: #define __UINT16_C(c) c
 // MIPSN32EL: #define __UINT16_C_SUFFIX__
 // MIPSN32EL: #define __UINT16_FMTX__ "hX"
 // MIPSN32EL: #define __UINT16_FMTo__ "ho"
@@ -932,6 +968,7 @@
 // MIPSN32EL: #define __UINT16_FMTx__ "hx"
 // MIPSN32EL: #define __UINT16_MAX__ 65535
 // MIPSN32EL: #define __UINT16_TYPE__ unsigned short
+// MIPSN32EL: #define __UINT32_C(c) c##U
 // MIPSN32EL: #define __UINT32_C_SUFFIX__ U
 // MIPSN32EL: #define __UINT32_FMTX__ "X"
 // MIPSN32EL: #define __UINT32_FMTo__ "o"
@@ -939,6 +976,7 @@
 // MIPSN32EL: #define __UINT32_FMTx__ "x"
 // MIPSN32EL: #define __UINT32_MAX__ 4294967295U
 // MIPSN32EL: #define __UINT32_TYPE__ unsigned int
+// MIPSN32EL: #define __UINT64_C(c) c##ULL
 // MIPSN32EL: #define __UINT64_C_SUFFIX__ ULL
 // MIPSN32EL: #define __UINT64_FMTX__ "llX"
 // MIPSN32EL: #define __UINT64_FMTo__ "llo"
@@ -946,6 +984,7 @@
 // MIPSN32EL: #define __UINT64_FMTx__ "llx"
 // MIPSN32EL: #define __UINT64_MAX__ 18446744073709551615ULL
 // MIPSN32EL: #define __UINT64_TYPE__ long long unsigned int
+// MIPSN32EL: #define __UINT8_C(c) c
 // MIPSN32EL: #define __UINT8_C_SUFFIX__
 // MIPSN32EL: #define __UINT8_FMTX__ "hhX"
 // MIPSN32EL: #define __UINT8_FMTo__ "hho"
@@ -953,6 +992,7 @@
 // MIPSN32EL: #define __UINT8_FMTx__ "hhx"
 // MIPSN32EL: #define __UINT8_MAX__ 255
 // MIPSN32EL: #define __UINT8_TYPE__ unsigned char
+// MIPSN32EL: #define __UINTMAX_C(c) c##ULL
 // MIPSN32EL: #define __UINTMAX_C_SUFFIX__ ULL
 // MIPSN32EL: #define __UINTMAX_FMTX__ "llX"
 // MIPSN32EL: #define __UINTMAX_FMTo__ "llo"
@@ -1086,26 +1126,31 @@
 // MIPS64BE:#define __FLT_MIN_EXP__ (-125)
 // MIPS64BE:#define __FLT_MIN__ 1.17549435e-38F
 // MIPS64BE:#define __FLT_RADIX__ 2
+// MIPS64BE:#define __INT16_C(c) c
 // MIPS64BE:#define __INT16_C_SUFFIX__
 // MIPS64BE:#define __INT16_FMTd__ "hd"
 // MIPS64BE:#define __INT16_FMTi__ "hi"
 // MIPS64BE:#define __INT16_MAX__ 32767
 // MIPS64BE:#define __INT16_TYPE__ short
+// MIPS64BE:#define __INT32_C(c) c
 // MIPS64BE:#define __INT32_C_SUFFIX__
 // MIPS64BE:#define __INT32_FMTd__ "d"
 // MIPS64BE:#define __INT32_FMTi__ "i"
 // MIPS64BE:#define __INT32_MAX__ 2147483647
 // MIPS64BE:#define __INT32_TYPE__ int
+// MIPS64BE:#define __INT64_C(c) c##L
 // MIPS64BE:#define __INT64_C_SUFFIX__ L
 // MIPS64BE:#define __INT64_FMTd__ "ld"
 // MIPS64BE:#define __INT64_FMTi__ "li"
 // MIPS64BE:#define __INT64_MAX__ 9223372036854775807L
 // MIPS64BE:#define __INT64_TYPE__ long int
+// MIPS64BE:#define __INT8_C(c) c
 // MIPS64BE:#define __INT8_C_SUFFIX__
 // MIPS64BE:#define __INT8_FMTd__ "hhd"
 // MIPS64BE:#define __INT8_FMTi__ "hhi"
 // MIPS64BE:#define __INT8_MAX__ 127
 // MIPS64BE:#define __INT8_TYPE__ signed char
+// MIPS64BE:#define __INTMAX_C(c) c##L
 // MIPS64BE:#define __INTMAX_C_SUFFIX__ L
 // MIPS64BE:#define __INTMAX_FMTd__ "ld"
 // MIPS64BE:#define __INTMAX_FMTi__ "li"
@@ -1194,18 +1239,23 @@
 // MIPS64BE:#define __SIZE_TYPE__ long unsigned int
 // MIPS64BE:#define __SIZE_WIDTH__ 64
 // MIPS64BE-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
+// MIPS64BE:#define __UINT16_C(c) c
 // MIPS64BE:#define __UINT16_C_SUFFIX__
 // MIPS64BE:#define __UINT16_MAX__ 65535
 // MIPS64BE:#define __UINT16_TYPE__ unsigned short
+// MIPS64BE:#define __UINT32_C(c) c##U
 // MIPS64BE:#define __UINT32_C_SUFFIX__ U
 // MIPS64BE:#define __UINT32_MAX__ 4294967295U
 // MIPS64BE:#define __UINT32_TYPE__ unsigned int
+// MIPS64BE:#define __UINT64_C(c) c##UL
 // MIPS64BE:#define __UINT64_C_SUFFIX__ UL
 // MIPS64BE:#define __UINT64_MAX__ 18446744073709551615UL
 // MIPS64BE:#define __UINT64_TYPE__ long unsigned int
+// MIPS64BE:#define __UINT8_C(c) c
 // MIPS64BE:#define __UINT8_C_SUFFIX__
 // MIPS64BE:#define __UINT8_MAX__ 255
 // MIPS64BE:#define __UINT8_TYPE__ unsigned char
+// MIPS64BE:#define __UINTMAX_C(c) c##UL
 // MIPS64BE:#define __UINTMAX_C_SUFFIX__ UL
 // MIPS64BE:#define __UINTMAX_MAX__ 18446744073709551615UL
 // MIPS64BE:#define __UINTMAX_TYPE__ long unsigned int
@@ -1296,26 +1346,31 @@
 // MIPS64EL:#define __FLT_MIN_EXP__ (-125)
 // MIPS64EL:#define __FLT_MIN__ 1.17549435e-38F
 // MIPS64EL:#define __FLT_RADIX__ 2
+// MIPS64EL:#define __INT16_C(c) c
 // MIPS64EL:#define __INT16_C_SUFFIX__
 // MIPS64EL:#define __INT16_FMTd__ "hd"
 // MIPS64EL:#define __INT16_FMTi__ "hi"
 // MIPS64EL:#define __INT16_MAX__ 32767
 // MIPS64EL:#define __INT16_TYPE__ short
+// MIPS64EL:#define __INT32_C(c) c
 // MIPS64EL:#define __INT32_C_SUFFIX__
 // MIPS64EL:#define __INT32_FMTd__ "d"
 // MIPS64EL:#define __INT32_FMTi__ "i"
 // MIPS64EL:#define __INT32_MAX__ 2147483647
 // MIPS64EL:#define __INT32_TYPE__ int
+// MIPS64EL:#define __INT64_C(c) c##L
 // MIPS64EL:#define __INT64_C_SUFFIX__ L
 // MIPS64EL:#define __INT64_FMTd__ "ld"
 // MIPS64EL:#define __INT64_FMTi__ "li"
 // MIPS64EL:#define __INT64_MAX__ 9223372036854775807L
 // MIPS64EL:#define __INT64_TYPE__ long int
+// MIPS64EL:#define __INT8_C(c) c
 // MIPS64EL:#define __INT8_C_SUFFIX__
 // MIPS64EL:#define __INT8_FMTd__ "hhd"
 // MIPS64EL:#define __INT8_FMTi__ "hhi"
 // MIPS64EL:#define __INT8_MAX__ 127
 // MIPS64EL:#define __INT8_TYPE__ signed char
+// MIPS64EL:#define __INTMAX_C(c) c##L
 // MIPS64EL:#define __INTMAX_C_SUFFIX__ L
 // MIPS64EL:#define __INTMAX_FMTd__ "ld"
 // MIPS64EL:#define __INTMAX_FMTi__ "li"
@@ -1404,18 +1459,23 @@
 // MIPS64EL:#define __SIZE_MAX__ 18446744073709551615UL
 // MIPS64EL:#define __SIZE_TYPE__ long unsigned int
 // MIPS64EL:#define __SIZE_WIDTH__ 64
+// MIPS64EL:#define __UINT16_C(c) c
 // MIPS64EL:#define __UINT16_C_SUFFIX__
 // MIPS64EL:#define __UINT16_MAX__ 65535
 // MIPS64EL:#define __UINT16_TYPE__ unsigned short
+// MIPS64EL:#define __UINT32_C(c) c##U
 // MIPS64EL:#define __UINT32_C_SUFFIX__ U
 // MIPS64EL:#define __UINT32_MAX__ 4294967295U
 // MIPS64EL:#define __UINT32_TYPE__ unsigned int
+// MIPS64EL:#define __UINT64_C(c) c##UL
 // MIPS64EL:#define __UINT64_C_SUFFIX__ UL
 // MIPS64EL:#define __UINT64_MAX__ 18446744073709551615UL
 // MIPS64EL:#define __UINT64_TYPE__ long unsigned int
+// MIPS64EL:#define __UINT8_C(c) c
 // MIPS64EL:#define __UINT8_C_SUFFIX__
 // MIPS64EL:#define __UINT8_MAX__ 255
 // MIPS64EL:#define __UINT8_TYPE__ unsigned char
+// MIPS64EL:#define __UINTMAX_C(c) c##UL
 // MIPS64EL:#define __UINTMAX_C_SUFFIX__ UL
 // MIPS64EL:#define __UINTMAX_MAX__ 18446744073709551615UL
 // MIPS64EL:#define __UINTMAX_TYPE__ long unsigned int

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_REMOVE_VOLATILE_H
-#define _LIBCPP___TYPE_TRAITS_REMOVE_VOLATILE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_VOLATILE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_VOLATILE_H
 
 #include <__cxx03/__config>
 
@@ -39,11 +39,6 @@ template <class _Tp>
 using __remove_volatile_t = typename remove_volatile<_Tp>::type;
 #endif // __has_builtin(__remove_volatile)
 
-#if _LIBCPP_STD_VER >= 14
-template <class _Tp>
-using remove_volatile_t = __remove_volatile_t<_Tp>;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_REMOVE_VOLATILE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_VOLATILE_H

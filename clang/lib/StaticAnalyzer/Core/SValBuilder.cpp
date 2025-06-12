@@ -24,6 +24,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
@@ -34,7 +35,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <optional>
@@ -76,22 +76,18 @@ DefinedOrUnknownSVal SValBuilder::makeZeroVal(QualType type) {
 
 nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *lhs,
                                           BinaryOperator::Opcode op,
-                                          const llvm::APSInt &rhs,
-                                          QualType type) {
-  // The Environment ensures we always get a persistent APSInt in
-  // BasicValueFactory, so we don't need to get the APSInt from
-  // BasicValueFactory again.
+                                          APSIntPtr rhs, QualType type) {
   assert(lhs);
   assert(!Loc::isLocType(type));
-  return nonloc::SymbolVal(SymMgr.getSymIntExpr(lhs, op, rhs, type));
+  return nonloc::SymbolVal(SymMgr.acquire<SymIntExpr>(lhs, op, rhs, type));
 }
 
-nonloc::SymbolVal SValBuilder::makeNonLoc(const llvm::APSInt &lhs,
+nonloc::SymbolVal SValBuilder::makeNonLoc(APSIntPtr lhs,
                                           BinaryOperator::Opcode op,
                                           const SymExpr *rhs, QualType type) {
   assert(rhs);
   assert(!Loc::isLocType(type));
-  return nonloc::SymbolVal(SymMgr.getIntSymExpr(lhs, op, rhs, type));
+  return nonloc::SymbolVal(SymMgr.acquire<IntSymExpr>(lhs, op, rhs, type));
 }
 
 nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *lhs,
@@ -99,14 +95,14 @@ nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *lhs,
                                           const SymExpr *rhs, QualType type) {
   assert(lhs && rhs);
   assert(!Loc::isLocType(type));
-  return nonloc::SymbolVal(SymMgr.getSymSymExpr(lhs, op, rhs, type));
+  return nonloc::SymbolVal(SymMgr.acquire<SymSymExpr>(lhs, op, rhs, type));
 }
 
 NonLoc SValBuilder::makeNonLoc(const SymExpr *operand, UnaryOperator::Opcode op,
                                QualType type) {
   assert(operand);
   assert(!Loc::isLocType(type));
-  return nonloc::SymbolVal(SymMgr.getUnarySymExpr(operand, op, type));
+  return nonloc::SymbolVal(SymMgr.acquire<UnarySymExpr>(operand, op, type));
 }
 
 nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *operand,
@@ -115,7 +111,7 @@ nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *operand,
   assert(!Loc::isLocType(toTy));
   if (fromTy == toTy)
     return nonloc::SymbolVal(operand);
-  return nonloc::SymbolVal(SymMgr.getCastSymbol(operand, fromTy, toTy));
+  return nonloc::SymbolVal(SymMgr.acquire<SymbolCast>(operand, fromTy, toTy));
 }
 
 SVal SValBuilder::convertToArrayIndex(SVal val) {
@@ -147,7 +143,7 @@ SValBuilder::getRegionValueSymbolVal(const TypedValueRegion *region) {
   if (!SymbolManager::canSymbolicate(T))
     return UnknownVal();
 
-  SymbolRef sym = SymMgr.getRegionValueSymbol(region);
+  SymbolRef sym = SymMgr.acquire<SymbolRegionValue>(region);
 
   if (Loc::isLocType(T))
     return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));
@@ -156,9 +152,11 @@ SValBuilder::getRegionValueSymbolVal(const TypedValueRegion *region) {
 }
 
 DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *SymbolTag,
-                                                   const Expr *Ex,
+                                                   ConstCFGElementRef elem,
                                                    const LocationContext *LCtx,
                                                    unsigned Count) {
+  const Expr *Ex = dyn_cast<Expr>(elem->getAs<CFGStmt>()->getStmt());
+  assert(Ex && "elem must be a CFGStmt containing an Expr");
   QualType T = Ex->getType();
 
   if (T->isNullPtrType())
@@ -170,11 +168,11 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *SymbolTag,
   if (Ex->isGLValue())
     T = LCtx->getAnalysisDeclContext()->getASTContext().getPointerType(ExType);
 
-  return conjureSymbolVal(SymbolTag, Ex, LCtx, T, Count);
+  return conjureSymbolVal(SymbolTag, elem, LCtx, T, Count);
 }
 
 DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *symbolTag,
-                                                   const Stmt *St,
+                                                   ConstCFGElementRef elem,
                                                    const LocationContext *LCtx,
                                                    QualType type,
                                                    unsigned count) {
@@ -184,7 +182,7 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *symbolTag,
   if (!SymbolManager::canSymbolicate(type))
     return UnknownVal();
 
-  SymbolRef sym = SymMgr.conjureSymbol(St, LCtx, type, count, symbolTag);
+  SymbolRef sym = SymMgr.conjureSymbol(elem, LCtx, type, count, symbolTag);
 
   if (Loc::isLocType(type))
     return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));
@@ -192,32 +190,30 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *symbolTag,
   return nonloc::SymbolVal(sym);
 }
 
-DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const Stmt *stmt,
+DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(ConstCFGElementRef elem,
                                                    const LocationContext *LCtx,
                                                    QualType type,
                                                    unsigned visitCount) {
-  if (type->isNullPtrType())
-    return makeZeroVal(type);
-
-  if (!SymbolManager::canSymbolicate(type))
-    return UnknownVal();
-
-  SymbolRef sym = SymMgr.conjureSymbol(stmt, LCtx, type, visitCount);
-
-  if (Loc::isLocType(type))
-    return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));
-
-  return nonloc::SymbolVal(sym);
+  return conjureSymbolVal(/*symbolTag=*/nullptr, elem, LCtx, type, visitCount);
 }
 
-DefinedSVal SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
-                                                  const LocationContext *LCtx,
-                                                  unsigned VisitCount) {
-  QualType T = E->getType();
-  return getConjuredHeapSymbolVal(E, LCtx, T, VisitCount);
+DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const CallEvent &call,
+                                                   unsigned visitCount,
+                                                   const void *symbolTag) {
+  return conjureSymbolVal(symbolTag, call.getCFGElementRef(),
+                          call.getLocationContext(), call.getResultType(),
+                          visitCount);
 }
 
-DefinedSVal SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
+DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const CallEvent &call,
+                                                   QualType type,
+                                                   unsigned visitCount,
+                                                   const void *symbolTag) {
+  return conjureSymbolVal(symbolTag, call.getCFGElementRef(),
+                          call.getLocationContext(), type, visitCount);
+}
+
+DefinedSVal SValBuilder::getConjuredHeapSymbolVal(ConstCFGElementRef elem,
                                                   const LocationContext *LCtx,
                                                   QualType type,
                                                   unsigned VisitCount) {
@@ -229,7 +225,7 @@ DefinedSVal SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
     return makeZeroVal(type).castAs<DefinedSVal>();
   }
 
-  SymbolRef sym = SymMgr.conjureSymbol(E, LCtx, type, VisitCount);
+  SymbolRef sym = SymMgr.conjureSymbol(elem, LCtx, type, VisitCount);
   return loc::MemRegionVal(MemMgr.getSymbolicHeapRegion(sym));
 }
 
@@ -248,8 +244,8 @@ DefinedSVal SValBuilder::getMetadataSymbolVal(const void *symbolTag,
                                               unsigned count) {
   assert(SymbolManager::canSymbolicate(type) && "Invalid metadata symbol type");
 
-  SymbolRef sym =
-      SymMgr.getMetadataSymbol(region, expr, type, LCtx, count, symbolTag);
+  SymbolRef sym = SymMgr.acquire<SymbolMetadata>(region, expr, type, LCtx,
+                                                 count, symbolTag);
 
   if (Loc::isLocType(type))
     return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));
@@ -268,7 +264,7 @@ SValBuilder::getDerivedRegionValueSymbolVal(SymbolRef parentSymbol,
   if (!SymbolManager::canSymbolicate(T))
     return UnknownVal();
 
-  SymbolRef sym = SymMgr.getDerivedSymbol(parentSymbol, region);
+  SymbolRef sym = SymMgr.acquire<SymbolDerived>(parentSymbol, region);
 
   if (Loc::isLocType(T))
     return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));
@@ -372,7 +368,10 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
 
   case Stmt::TypeTraitExprClass: {
     const auto *TE = cast<TypeTraitExpr>(E);
-    return makeTruthVal(TE->getValue(), TE->getType());
+    if (TE->isStoredAsBoolean())
+      return makeTruthVal(TE->getBoolValue(), TE->getType());
+    assert(TE->getAPValue().isInt() && "APValue type not supported");
+    return makeIntVal(TE->getAPValue().getInt());
   }
 
   case Stmt::IntegerLiteralClass:
@@ -671,7 +670,7 @@ public:
   SVal VisitConcreteInt(loc::ConcreteInt V) {
     // Pointer to bool.
     if (CastTy->isBooleanType())
-      return VB.makeTruthVal(V.getValue().getBoolValue(), CastTy);
+      return VB.makeTruthVal(V.getValue()->getBoolValue(), CastTy);
 
     // Pointer to integer.
     if (CastTy->isIntegralOrEnumerationType()) {
@@ -728,7 +727,7 @@ public:
             // because there are no generic region address metadata
             // symbols to use, only content metadata.
             return nonloc::SymbolVal(
-                VB.getSymbolManager().getExtentSymbol(FTR));
+                VB.getSymbolManager().acquire<SymbolExtent>(FTR));
 
       if (const SymbolicRegion *SymR = R->getSymbolicBase()) {
         SymbolRef Sym = SymR->getSymbol();
@@ -875,7 +874,7 @@ public:
 
     // Integer to bool.
     if (CastTy->isBooleanType())
-      return VB.makeTruthVal(V.getValue().getBoolValue(), CastTy);
+      return VB.makeTruthVal(V.getValue()->getBoolValue(), CastTy);
 
     // Integer to pointer.
     if (CastTy->isIntegralOrEnumerationType())

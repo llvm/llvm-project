@@ -14,18 +14,18 @@ using namespace llvm;
 
 #define DEBUG_TYPE "lanaimcexpr"
 
-const LanaiMCExpr *LanaiMCExpr::create(VariantKind Kind, const MCExpr *Expr,
+const LanaiMCExpr *LanaiMCExpr::create(Spec S, const MCExpr *Expr,
                                        MCContext &Ctx) {
-  return new (Ctx) LanaiMCExpr(Kind, Expr);
+  return new (Ctx) LanaiMCExpr(Expr, S);
 }
 
 void LanaiMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  if (Kind == VK_Lanai_None) {
+  if (specifier == VK_Lanai_None) {
     Expr->print(OS, MAI);
     return;
   }
 
-  switch (Kind) {
+  switch (specifier) {
   default:
     llvm_unreachable("Invalid kind!");
   case VK_Lanai_ABS_HI:
@@ -40,20 +40,4 @@ void LanaiMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   const MCExpr *Expr = getSubExpr();
   Expr->print(OS, MAI);
   OS << ')';
-}
-
-void LanaiMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
-}
-
-bool LanaiMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                            const MCAssembler *Asm,
-                                            const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
-    return false;
-
-  Res =
-      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
-
-  return true;
 }

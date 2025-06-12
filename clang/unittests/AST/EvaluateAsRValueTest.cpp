@@ -13,7 +13,7 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
 #include <map>
@@ -28,8 +28,8 @@ typedef std::map<std::string, bool> VarInfoMap;
 
 /// \brief Records information on variable initializers to a map.
 class EvaluateConstantInitializersVisitor
-    : public clang::RecursiveASTVisitor<EvaluateConstantInitializersVisitor> {
- public:
+    : public clang::DynamicRecursiveASTVisitor {
+public:
   explicit EvaluateConstantInitializersVisitor(VarInfoMap &VarInfo)
       : VarInfo(VarInfo) {}
 
@@ -38,7 +38,7 @@ class EvaluateConstantInitializersVisitor
   ///
   /// For each VarDecl with an initializer this also records in VarInfo
   /// whether the initializer could be evaluated as a constant.
-  bool VisitVarDecl(const clang::VarDecl *VD) {
+  bool VisitVarDecl(clang::VarDecl *VD) override {
     if (const clang::Expr *Init = VD->getInit()) {
       clang::Expr::EvalResult Result;
       bool WasEvaluated = Init->EvaluateAsRValue(Result, VD->getASTContext());
@@ -109,9 +109,9 @@ TEST(EvaluateAsRValue, FailsGracefullyForUnknownTypes) {
 }
 
 class CheckLValueToRValueConversionVisitor
-    : public clang::RecursiveASTVisitor<CheckLValueToRValueConversionVisitor> {
+    : public clang::DynamicRecursiveASTVisitor {
 public:
-  bool VisitDeclRefExpr(const clang::DeclRefExpr *E) {
+  bool VisitDeclRefExpr(clang::DeclRefExpr *E) override {
     clang::Expr::EvalResult Result;
     E->EvaluateAsRValue(Result, E->getDecl()->getASTContext(), true);
 

@@ -31,9 +31,9 @@ def AOp : NS_Op<"a_op", []> {
 // CHECK-LABEL: AOp declarations
 // Note: `cAttr` below could be conditionally optional and so the generation is
 // currently conservative.
-// CHECK-DAG: ::mlir::Value lhs, some-attr-kind aAttr, some-attr-kind bAttr, /*optional*/some-attr-kind cAttr, /*optional*/some-attr-kind dAttr);
+// CHECK-DAG: ::mlir::Value lhs, some-attr-kind aAttr, some-attr-kind bAttr, /*optional*/some-attr-kind cAttr, /*optional*/some-attr-kind dAttr = nullptr);
 // CHECK-DAG: ::mlir::Value lhs, some-return-type aAttr, some-return-type bAttr, /*optional*/some-attr-kind cAttr, /*optional*/some-return-type dAttr = 7.2);
-// CHECK-DAG: ::mlir::TypeRange resultTypes, ::mlir::Value lhs, some-attr-kind aAttr, some-attr-kind bAttr, /*optional*/some-attr-kind cAttr, /*optional*/some-attr-kind dAttr);
+// CHECK-DAG: ::mlir::TypeRange resultTypes, ::mlir::Value lhs, some-attr-kind aAttr, some-attr-kind bAttr, /*optional*/some-attr-kind cAttr, /*optional*/some-attr-kind dAttr = nullptr);
 // CHECK-DAG: ::mlir::TypeRange resultTypes, ::mlir::Value lhs, some-return-type aAttr, some-return-type bAttr, /*optional*/some-attr-kind cAttr, /*optional*/some-return-type dAttr = 7.2);
 
 def BOp : NS_Op<"b_op", []> {

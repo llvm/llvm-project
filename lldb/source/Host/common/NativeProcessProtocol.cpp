@@ -43,7 +43,7 @@ lldb_private::Status NativeProcessProtocol::Interrupt() {
 
 Status NativeProcessProtocol::IgnoreSignals(llvm::ArrayRef<int> signals) {
   m_signals_to_ignore.clear();
-  m_signals_to_ignore.insert(signals.begin(), signals.end());
+  m_signals_to_ignore.insert_range(signals);
   return Status();
 }
 

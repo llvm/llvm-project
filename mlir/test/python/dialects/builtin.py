@@ -246,3 +246,7 @@ def testDenseElementsAttr():
         # CHECK{LITERAL}: dense<[[0, 1], [2, 3]]> : tensor<2x2xi32>
         print(DenseElementsAttr.get(values, type=VectorType.get((2, 2), i32)))
         # CHECK{LITERAL}: dense<[[0, 1], [2, 3]]> : vector<2x2xi32>
+        idx_values = np.arange(4, dtype=np.int64)
+        idx_type = IndexType.get()
+        print(DenseElementsAttr.get(idx_values, type=VectorType.get([4], idx_type)))
+        # CHECK{LITERAL}: dense<[0, 1, 2, 3]> : vector<4xindex>
