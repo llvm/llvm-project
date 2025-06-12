@@ -188,14 +188,19 @@ static bool IsEligibleForTrivialRelocation(Sema &SemaRef,
       return false;
   }
 
+  bool IsUnion = D->isUnion();
   for (const FieldDecl *Field : D->fields()) {
-    if (Field->getType()->isDependentType())
+    QualType FieldType = Field->getType();
+    if (FieldType->isDependentType())
       continue;
-    if (Field->getType()->isReferenceType())
+    if (FieldType->isReferenceType())
       continue;
     // ... has a non-static data member of an object type that is not
     // of a trivially relocatable type
     if (!SemaRef.IsCXXTriviallyRelocatableType(Field->getType()))
+      return false;
+    if (IsUnion &&
+        SemaRef.Context.containsAddressDiscriminatedPointerAuth(FieldType))
       return false;
   }
   return !D->hasDeletedDestructor();
@@ -320,9 +325,6 @@ bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
     return false;
 
   if (BaseElementType.hasNonTrivialObjCLifetime())
-    return false;
-
-  if (BaseElementType.hasAddressDiscriminatedPointerAuth())
     return false;
 
   if (BaseElementType->isIncompleteType())
@@ -670,7 +672,7 @@ static bool IsTriviallyRelocatableType(Sema &SemaRef, QualType T) {
   if (!BaseElementType->isObjectType())
     return false;
 
-  if (T.hasAddressDiscriminatedPointerAuth())
+  if (SemaRef.getASTContext().containsAddressDiscriminatedPointerAuth(T))
     return false;
 
   if (const auto *RD = BaseElementType->getAsCXXRecordDecl();
