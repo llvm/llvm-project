@@ -9,6 +9,7 @@
 #include "Protocol/ProtocolTypes.h"
 #include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
+#include "TestingSupport/TestUtilities.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
@@ -20,21 +21,13 @@ using namespace llvm;
 using namespace lldb;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
+using lldb_private::roundtripJSON;
 using llvm::json::parse;
 using llvm::json::Value;
 
 /// Returns a pretty printed json string of a `llvm::json::Value`.
 static std::string pp(const json::Value &E) {
   return formatv("{0:2}", E).str();
-}
-
-template <typename T> static llvm::Expected<T> roundtrip(const T &input) {
-  llvm::json::Value value = toJSON(input);
-  llvm::json::Path::Root root;
-  T output;
-  if (!fromJSON(value, output, root))
-    return root.getError();
-  return output;
 }
 
 TEST(ProtocolTypesTest, ExceptionBreakpointsFilter) {
@@ -47,7 +40,7 @@ TEST(ProtocolTypesTest, ExceptionBreakpointsFilter) {
   filter.conditionDescription = "Condition for test filter";
 
   llvm::Expected<ExceptionBreakpointsFilter> deserialized_filter =
-      roundtrip(filter);
+      roundtripJSON(filter);
   ASSERT_THAT_EXPECTED(deserialized_filter, llvm::Succeeded());
 
   EXPECT_EQ(filter.filter, deserialized_filter->filter);
@@ -66,7 +59,7 @@ TEST(ProtocolTypesTest, Source) {
   source.sourceReference = 12345;
   source.presentationHint = Source::eSourcePresentationHintEmphasize;
 
-  llvm::Expected<Source> deserialized_source = roundtrip(source);
+  llvm::Expected<Source> deserialized_source = roundtripJSON(source);
   ASSERT_THAT_EXPECTED(deserialized_source, llvm::Succeeded());
 
   EXPECT_EQ(source.name, deserialized_source->name);
@@ -83,7 +76,7 @@ TEST(ProtocolTypesTest, ColumnDescriptor) {
   column.type = eColumnTypeString;
   column.width = 20;
 
-  llvm::Expected<ColumnDescriptor> deserialized_column = roundtrip(column);
+  llvm::Expected<ColumnDescriptor> deserialized_column = roundtripJSON(column);
   ASSERT_THAT_EXPECTED(deserialized_column, llvm::Succeeded());
 
   EXPECT_EQ(column.attributeName, deserialized_column->attributeName);
@@ -101,7 +94,7 @@ TEST(ProtocolTypesTest, BreakpointMode) {
   mode.appliesTo = {eBreakpointModeApplicabilitySource,
                     eBreakpointModeApplicabilityException};
 
-  llvm::Expected<BreakpointMode> deserialized_mode = roundtrip(mode);
+  llvm::Expected<BreakpointMode> deserialized_mode = roundtripJSON(mode);
   ASSERT_THAT_EXPECTED(deserialized_mode, llvm::Succeeded());
 
   EXPECT_EQ(mode.mode, deserialized_mode->mode);
@@ -125,7 +118,8 @@ TEST(ProtocolTypesTest, Breakpoint) {
   breakpoint.offset = 4;
   breakpoint.reason = BreakpointReason::eBreakpointReasonPending;
 
-  llvm::Expected<Breakpoint> deserialized_breakpoint = roundtrip(breakpoint);
+  llvm::Expected<Breakpoint> deserialized_breakpoint =
+      roundtripJSON(breakpoint);
   ASSERT_THAT_EXPECTED(deserialized_breakpoint, llvm::Succeeded());
 
   EXPECT_EQ(breakpoint.id, deserialized_breakpoint->id);
@@ -157,7 +151,7 @@ TEST(ProtocolTypesTest, SourceBreakpoint) {
   source_breakpoint.mode = "hardware";
 
   llvm::Expected<SourceBreakpoint> deserialized_source_breakpoint =
-      roundtrip(source_breakpoint);
+      roundtripJSON(source_breakpoint);
   ASSERT_THAT_EXPECTED(deserialized_source_breakpoint, llvm::Succeeded());
 
   EXPECT_EQ(source_breakpoint.line, deserialized_source_breakpoint->line);
@@ -178,7 +172,7 @@ TEST(ProtocolTypesTest, FunctionBreakpoint) {
   function_breakpoint.hitCondition = "3";
 
   llvm::Expected<FunctionBreakpoint> deserialized_function_breakpoint =
-      roundtrip(function_breakpoint);
+      roundtripJSON(function_breakpoint);
   ASSERT_THAT_EXPECTED(deserialized_function_breakpoint, llvm::Succeeded());
 
   EXPECT_EQ(function_breakpoint.name, deserialized_function_breakpoint->name);
@@ -196,7 +190,7 @@ TEST(ProtocolTypesTest, DataBreakpoint) {
   data_breakpoint_info.hitCondition = "10";
 
   llvm::Expected<DataBreakpoint> deserialized_data_breakpoint_info =
-      roundtrip(data_breakpoint_info);
+      roundtripJSON(data_breakpoint_info);
   ASSERT_THAT_EXPECTED(deserialized_data_breakpoint_info, llvm::Succeeded());
 
   EXPECT_EQ(data_breakpoint_info.dataId,
@@ -233,9 +227,9 @@ TEST(ProtocolTypesTest, Capabilities) {
                                    {eBreakpointModeApplicabilitySource}}};
   capabilities.lldbExtVersion = "1.0.0";
 
-  // Perform roundtrip serialization and deserialization.
+  // Perform roundtripJSON serialization and deserialization.
   llvm::Expected<Capabilities> deserialized_capabilities =
-      roundtrip(capabilities);
+      roundtripJSON(capabilities);
   ASSERT_THAT_EXPECTED(deserialized_capabilities, llvm::Succeeded());
 
   // Verify supported features.
@@ -316,7 +310,7 @@ TEST(ProtocolTypesTest, Scope) {
   source.presentationHint = Source::eSourcePresentationHintNormal;
   scope.source = source;
 
-  llvm::Expected<Scope> deserialized_scope = roundtrip(scope);
+  llvm::Expected<Scope> deserialized_scope = roundtripJSON(scope);
   ASSERT_THAT_EXPECTED(deserialized_scope, llvm::Succeeded());
   EXPECT_EQ(scope.name, deserialized_scope->name);
   EXPECT_EQ(scope.presentationHint, deserialized_scope->presentationHint);
@@ -755,7 +749,7 @@ TEST(ProtocolTypesTest, StepInTarget) {
   target.endLine = 32;
   target.endColumn = 23;
 
-  llvm::Expected<StepInTarget> deserialized_target = roundtrip(target);
+  llvm::Expected<StepInTarget> deserialized_target = roundtripJSON(target);
   ASSERT_THAT_EXPECTED(deserialized_target, llvm::Succeeded());
 
   EXPECT_EQ(target.id, deserialized_target->id);
