@@ -9,6 +9,18 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_DAP_H
 #define LLDB_TOOLS_LLDB_DAP_DAP_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/Threading.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include "lldb/API/SBAttachInfo.h"
+#include "lldb/API/SBEvent.h"
+#include "lldb/API/SBLaunchInfo.h"
+
 #include "DAPForward.h"
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
@@ -22,7 +34,6 @@
 #include "Transport.h"
 #include "Variables.h"
 #include "lldb/API/SBBroadcaster.h"
-#include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFile.h"
@@ -34,7 +45,6 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -44,11 +54,14 @@
 #include "llvm/Support/Threading.h"
 #include <condition_variable>
 #include <cstdint>
+#include <cstdio>
 #include <deque>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #define NO_TYPENAME "<no-type>"

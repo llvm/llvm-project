@@ -1,0 +1,12 @@
+prefix=/var/empty/local
+exec_prefix=${prefix}
+libdir=/var/empty/local/lib
+includedir=/var/empty/local/include
+
+Name: benchmark
+Description: Google microbenchmark framework
+Version: v0.0.0
+
+Libs: -L${libdir} -lbenchmark
+Libs.private: -lpthread
+Cflags: -I${includedir}
