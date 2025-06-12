@@ -6,159 +6,187 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
-#include <vector>
+#include <cstdint>
 
 namespace clang {
 namespace {
 
-struct Point {
-  const clang::CFGBlock *Block;
-  /// Index into Block->Elements().
-  unsigned ElementIndex;
-
-  Point(const clang::CFGBlock *B = nullptr, unsigned Idx = 0)
-      : Block(B), ElementIndex(Idx) {}
-
-  bool operator==(const Point &Other) const {
-    return Block == Other.Block && ElementIndex == Other.ElementIndex;
-  }
-};
-
 /// Represents the storage location being borrowed, e.g., a specific stack
 /// variable.
-/// TODO: Handle member accesseslike `s.y`.
-struct Path {
+struct AccessPath {
   const clang::ValueDecl *D;
 
   enum class Kind : uint8_t {
     StackVariable,
-    Heap,            // TODO: Handle.
-    Field,           // TODO: Handle.
-    ArrayElement,    // TODO: Handle.
-    TemporaryObject, // TODO: Handle.
-    StaticOrGlobal,  // TODO: Handle.
+    Temporary,    // TODO: Handle.
+    Field,        // TODO: Handle like `s.y`.
+    Heap,         // TODO: Handle.
+    ArrayElement, // TODO: Handle.
+    Static,       // TODO: Handle.
   };
 
   Kind PathKind;
 
-  Path(const clang::ValueDecl *D, Kind K) : D(D), PathKind(K) {}
+  AccessPath(const clang::ValueDecl *D, Kind K) : D(D), PathKind(K) {}
 };
 
-using LoanID = uint32_t;
-using OriginID = uint32_t;
+/// A generic, type-safe wrapper for an ID, distinguished by its `Tag` type.
+/// Used for giving ID to loans and origins.
+template <typename Tag> struct ID {
+  uint32_t Value = 0;
+
+  bool operator==(const ID<Tag> &Other) const { return Value == Other.Value; }
+  bool operator!=(const ID<Tag> &Other) const { return !(*this == Other); }
+  bool operator<(const ID<Tag> &Other) const { return Value < Other.Value; }
+  ID<Tag> &operator++() {
+    ++Value;
+    return *this;
+  }
+  void Profile(llvm::FoldingSetNodeID &IDBuilder) const {
+    IDBuilder.AddInteger(Value);
+  }
+};
+
+template <typename Tag>
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ID<Tag> ID) {
+  return OS << ID.Value;
+}
+
+struct LoanTag {};
+struct OriginTag {};
+
+using LoanID = ID<LoanTag>;
+using OriginID = ID<OriginTag>;
 
 /// Information about a single borrow, or "Loan". A loan is created when a
 /// reference or pointer is taken.
-struct LoanInfo {
+struct Loan {
   /// TODO: Represent opaque loans.
   /// TODO: Represent nullptr: loans to no path. Accessing it UB! Currently it
   /// is represented as empty LoanSet
   LoanID ID;
-  Path SourcePath;
+  AccessPath Path;
   SourceLocation IssueLoc;
 
-  LoanInfo(LoanID id, Path path, SourceLocation loc)
-      : ID(id), SourcePath(path), IssueLoc(loc) {}
+  Loan(LoanID id, AccessPath path, SourceLocation loc)
+      : ID(id), Path(path), IssueLoc(loc) {}
 };
-
-enum class OriginKind : uint8_t { Variable, ExpressionResult };
 
 /// An Origin is a symbolic identifier that represents the set of possible
 /// loans a pointer-like object could hold at any given time.
 /// TODO: Also represent Origins of complex types (fields, inner types).
-struct OriginInfo {
+struct Origin {
   OriginID ID;
-  OriginKind Kind;
-  union {
-    const clang::ValueDecl *Decl;
-    const clang::Expr *Expression;
-  };
-  OriginInfo(OriginID id, OriginKind kind, const clang::ValueDecl *D)
-      : ID(id), Kind(kind), Decl(D) {}
-  OriginInfo(OriginID id, OriginKind kind, const clang::Expr *E)
-      : ID(id), Kind(kind), Expression(E) {}
+  llvm::PointerUnion<const clang::ValueDecl *, const clang::Expr *> Ptr;
+
+  Origin(OriginID ID, const clang::ValueDecl *D) : ID(ID), Ptr(D) {}
+  Origin(OriginID ID, const clang::Expr *E) : ID(ID), Ptr(E) {}
+
+  const clang::ValueDecl *getDecl() const {
+    return Ptr.dyn_cast<const clang::ValueDecl *>();
+  }
+  const clang::Expr *getExpr() const {
+    return Ptr.dyn_cast<const clang::Expr *>();
+  }
 };
 
 class LoanManager {
 public:
   LoanManager() = default;
 
-  LoanInfo &addLoanInfo(Path path, SourceLocation loc) {
-    NextLoanIDVal++;
-    AllLoans.emplace_back(NextLoanIDVal, path, loc);
+  Loan &addLoan(AccessPath path, SourceLocation loc) {
+    ++NextLoanID;
+    AllLoans.emplace_back(NextLoanID, path, loc);
     return AllLoans.back();
   }
 
-  const LoanInfo *getLoanInfo(LoanID id) const {
-    if (id < AllLoans.size())
-      return &AllLoans[id];
-    return nullptr;
+  const Loan &getLoan(LoanID id) const {
+    assert(id.Value < AllLoans.size());
+    return AllLoans[id.Value];
   }
-  llvm::ArrayRef<LoanInfo> getLoanInfos() const { return AllLoans; }
+  llvm::ArrayRef<Loan> getLoans() const { return AllLoans; }
 
 private:
-  LoanID NextLoanIDVal = 0;
-  llvm::SmallVector<LoanInfo> AllLoans;
+  LoanID NextLoanID{0};
+  /// TODO(opt): Profile and evaluate the usefullness of small buffer
+  /// optimisation.
+  llvm::SmallVector<Loan> AllLoans;
 };
 
 class OriginManager {
 public:
   OriginManager() = default;
 
-  OriginID getNextOriginID() { return NextOriginIDVal++; }
-  OriginInfo &addOriginInfo(OriginID id, const clang::ValueDecl *D) {
-    assert(D != nullptr);
-    AllOrigins.emplace_back(id, OriginKind::Variable, D);
+  OriginID getNextOriginID() { return ++NextOriginID; }
+  Origin &addOrigin(OriginID id, const clang::ValueDecl &D) {
+    AllOrigins.emplace_back(id, &D);
     return AllOrigins.back();
   }
-  OriginInfo &addOriginInfo(OriginID id, const clang::Expr *E) {
-    assert(E != nullptr);
-    AllOrigins.emplace_back(id, OriginKind::ExpressionResult, E);
+  Origin &addOrigin(OriginID id, const clang::Expr &E) {
+    AllOrigins.emplace_back(id, &E);
     return AllOrigins.back();
   }
 
-  OriginID getOrCreate(const Expr *E) {
-    auto It = ExprToOriginID.find(E);
+  OriginID get(const Expr &E) {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(&E)) {
+      // Origin of DeclRefExpr is that of the declaration it refers to.
+      return get(*DRE->getDecl());
+    }
+    auto It = ExprToOriginID.find(&E);
+    assert(It != ExprToOriginID.end());
+    return It->second;
+  }
+
+  OriginID get(const ValueDecl &D) {
+    auto It = DeclToOriginID.find(&D);
+    assert(It != DeclToOriginID.end());
+    return It->second;
+  }
+
+  OriginID getOrCreate(const Expr &E) {
+    auto It = ExprToOriginID.find(&E);
     if (It != ExprToOriginID.end())
       return It->second;
 
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(&E)) {
       // Origin of DeclRefExpr is that of the declaration it refers to.
-      return getOrCreate(DRE->getDecl());
+      return getOrCreate(*DRE->getDecl());
     }
     OriginID NewID = getNextOriginID();
-    addOriginInfo(NewID, E);
-    ExprToOriginID[E] = NewID;
+    addOrigin(NewID, E);
+    ExprToOriginID[&E] = NewID;
     return NewID;
   }
 
-  const OriginInfo *getOriginInfo(OriginID id) const {
-    if (id < AllOrigins.size())
-      return &AllOrigins[id];
-    return nullptr;
+  const Origin &getOrigin(OriginID ID) const {
+    assert(ID.Value < AllOrigins.size());
+    return AllOrigins[ID.Value];
   }
 
-  llvm::ArrayRef<OriginInfo> getOriginInfos() const { return AllOrigins; }
+  llvm::ArrayRef<Origin> getOrigins() const { return AllOrigins; }
 
-  OriginID getOrCreate(const ValueDecl *D) {
-    auto It = DeclToOriginID.find(D);
+  OriginID getOrCreate(const ValueDecl &D) {
+    auto It = DeclToOriginID.find(&D);
     if (It != DeclToOriginID.end())
       return It->second;
     OriginID NewID = getNextOriginID();
-    addOriginInfo(NewID, D);
-    DeclToOriginID[D] = NewID;
+    addOrigin(NewID, D);
+    DeclToOriginID[&D] = NewID;
     return NewID;
   }
 
 private:
-  OriginID NextOriginIDVal = 0;
-  llvm::SmallVector<OriginInfo> AllOrigins;
+  OriginID NextOriginID{0};
+  /// TODO(opt): Profile and evaluate the usefullness of small buffer
+  /// optimisation.
+  llvm::SmallVector<Origin> AllOrigins;
   llvm::DenseMap<const clang::ValueDecl *, OriginID> DeclToOriginID;
   llvm::DenseMap<const clang::Expr *, OriginID> ExprToOriginID;
 };
@@ -183,13 +211,11 @@ private:
   Kind K;
 
 protected:
-  Point P;
-  Fact(Kind K, Point Pt) : K(K), P(Pt) {}
+  Fact(Kind K) : K(K) {}
 
 public:
   virtual ~Fact() = default;
   Kind getKind() const { return K; }
-  Point getPoint() const { return P; }
 
   template <typename T> const T *getAs() const {
     if (T::classof(this))
@@ -198,8 +224,7 @@ public:
   }
 
   virtual void dump(llvm::raw_ostream &OS) const {
-    OS << "Fact (Kind: " << static_cast<int>(K) << ", Point: B"
-       << P.Block->getBlockID() << ":" << P.ElementIndex << ")\n";
+    OS << "Fact (Kind: " << static_cast<int>(K) << ")\n";
   }
 };
 
@@ -208,11 +233,11 @@ class IssueFact : public Fact {
   OriginID OID;
 
 public:
-  IssueFact(LoanID LID, OriginID OID, Point Pt)
-      : Fact(Kind::Issue, Pt), LID(LID), OID(OID) {}
+  static bool classof(const Fact *F) { return F->getKind() == Kind::Issue; }
+
+  IssueFact(LoanID LID, OriginID OID) : Fact(Kind::Issue), LID(LID), OID(OID) {}
   LoanID getLoanID() const { return LID; }
   OriginID getOriginID() const { return OID; }
-  static bool classof(const Fact *F) { return F->getKind() == Kind::Issue; }
   void dump(llvm::raw_ostream &OS) const override {
     OS << "Issue (LoanID: " << getLoanID() << ", OriginID: " << getOriginID()
        << ")\n";
@@ -223,9 +248,10 @@ class ExpireFact : public Fact {
   LoanID LID;
 
 public:
-  ExpireFact(LoanID LID, Point Pt) : Fact(Kind::Expire, Pt), LID(LID) {}
-  LoanID getLoanID() const { return LID; }
   static bool classof(const Fact *F) { return F->getKind() == Kind::Expire; }
+
+  ExpireFact(LoanID LID) : Fact(Kind::Expire), LID(LID) {}
+  LoanID getLoanID() const { return LID; }
   void dump(llvm::raw_ostream &OS) const override {
     OS << "Expire (LoanID: " << getLoanID() << ")\n";
   }
@@ -236,13 +262,14 @@ class AssignOriginFact : public Fact {
   OriginID OIDSrc;
 
 public:
-  AssignOriginFact(OriginID OIDDest, OriginID OIDSrc, Point Pt)
-      : Fact(Kind::AssignOrigin, Pt), OIDDest(OIDDest), OIDSrc(OIDSrc) {}
-  OriginID getDestOriginID() const { return OIDDest; }
-  OriginID getSrcOriginID() const { return OIDSrc; }
   static bool classof(const Fact *F) {
     return F->getKind() == Kind::AssignOrigin;
   }
+
+  AssignOriginFact(OriginID OIDDest, OriginID OIDSrc)
+      : Fact(Kind::AssignOrigin), OIDDest(OIDDest), OIDSrc(OIDSrc) {}
+  OriginID getDestOriginID() const { return OIDDest; }
+  OriginID getSrcOriginID() const { return OIDSrc; }
   void dump(llvm::raw_ostream &OS) const override {
     OS << "AssignOrigin (DestID: " << getDestOriginID()
        << ", SrcID: " << getSrcOriginID() << ")\n";
@@ -253,12 +280,12 @@ class ReturnOfOriginFact : public Fact {
   OriginID OID;
 
 public:
-  ReturnOfOriginFact(OriginID OID, Point Pt)
-      : Fact(Kind::ReturnOfOrigin, Pt), OID(OID) {}
-  OriginID getReturnedOriginID() const { return OID; }
   static bool classof(const Fact *F) {
     return F->getKind() == Kind::ReturnOfOrigin;
   }
+
+  ReturnOfOriginFact(OriginID OID) : Fact(Kind::ReturnOfOrigin), OID(OID) {}
+  OriginID getReturnedOriginID() const { return OID; }
   void dump(llvm::raw_ostream &OS) const override {
     OS << "ReturnOfOrigin (OriginID: " << getReturnedOriginID() << ")\n";
   }
@@ -266,15 +293,17 @@ public:
 
 class FactManager {
 public:
-  llvm::ArrayRef<Fact *> getFacts(const CFGBlock *B) const {
+  llvm::ArrayRef<const Fact *> getFacts(const CFGBlock *B) const {
     auto It = BlockToFactsMap.find(B);
     if (It != BlockToFactsMap.end())
       return It->second;
     return {};
   }
 
-  void addFact(const CFGBlock *B, Fact *NewFact) {
-    BlockToFactsMap[B].push_back(NewFact);
+  void addBlockFacts(const CFGBlock *B, llvm::ArrayRef<Fact *> NewFacts) {
+    if (!NewFacts.empty()) {
+      BlockToFactsMap[B].assign(NewFacts.begin(), NewFacts.end());
+    }
   }
 
   template <typename FactType, typename... Args>
@@ -308,75 +337,70 @@ public:
     }
   }
 
+  LoanManager &getLoanMgr() { return LoanMgr; }
+  OriginManager &getOriginMgr() { return OriginMgr; }
+
 private:
-  llvm::DenseMap<const clang::CFGBlock *, llvm::SmallVector<Fact *>>
+  LoanManager LoanMgr;
+  OriginManager OriginMgr;
+  llvm::DenseMap<const clang::CFGBlock *, llvm::SmallVector<const Fact *>>
       BlockToFactsMap;
   llvm::BumpPtrAllocator FactAllocator;
-};
-
-struct FactsContext {
-  FactManager Facts;
-  LoanManager Loans;
-  OriginManager Origins;
 };
 
 class FactGenerator : public ConstStmtVisitor<FactGenerator> {
 
 public:
-  FactGenerator(const CFG &Cfg, FactsContext &FactsCtx, AnalysisDeclContext &AC)
-      : FactsCtx(FactsCtx), Cfg(Cfg), AC(AC), CurrentBlock(nullptr) {}
+  FactGenerator(const CFG &Cfg, FactManager &FactMgr, AnalysisDeclContext &AC)
+      : FactMgr(FactMgr), Cfg(Cfg), AC(AC) {}
 
   void run() {
-    llvm::TimeTraceScope TimeProfile("Fact Generation");
-    // Iterate through the CFG blocks in pre-order to ensure that
+    llvm::TimeTraceScope TimeProfile("FactGenerator");
+    // Iterate through the CFG blocks in reverse post-order to ensure that
     // initializations and destructions are processed in the correct sequence.
-    // TODO: A pre-order traversal utility should be provided by Dataflow
-    // framework.
+    // TODO: A reverse post-order traversal utility should be provided by
+    // Dataflow framework.
     ForwardDataflowWorklist Worklist(Cfg, AC);
     for (const CFGBlock *B : Cfg.const_nodes())
       Worklist.enqueueBlock(B);
     while (const CFGBlock *Block = Worklist.dequeue()) {
-      CurrentBlock = Block;
+      CurrentBlockFacts.clear();
       for (unsigned I = 0; I < Block->size(); ++I) {
         const CFGElement &Element = Block->Elements[I];
-        CurrentPoint = Point(Block, I);
         if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
           Visit(CS->getStmt());
         else if (std::optional<CFGAutomaticObjDtor> DtorOpt =
                      Element.getAs<CFGAutomaticObjDtor>())
           handleDestructor(*DtorOpt);
       }
+      FactMgr.addBlockFacts(Block, CurrentBlockFacts);
     }
   }
 
   void VisitDeclStmt(const DeclStmt *DS) {
-    for (const Decl *D : DS->decls()) {
-      if (const auto *VD = dyn_cast<VarDecl>(D)) {
-        if (hasOrigin(VD->getType())) {
-          if (const Expr *InitExpr = VD->getInit()) {
-            OriginID DestOID = FactsCtx.Origins.getOrCreate(VD);
-            OriginID SrcOID = FactsCtx.Origins.getOrCreate(InitExpr);
-            FactsCtx.Facts.addFact(CurrentBlock,
-                                   FactsCtx.Facts.createFact<AssignOriginFact>(
-                                       DestOID, SrcOID, CurrentPoint));
-          }
-        }
-      }
-    }
+    for (const Decl *D : DS->decls())
+      if (const auto *VD = dyn_cast<VarDecl>(D))
+        if (hasOrigin(VD->getType()))
+          if (const Expr *InitExpr = VD->getInit())
+            addAssignOriginFact(*VD, *InitExpr);
+  }
+
+  void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N) {
+    /// TODO: Handle nullptr expr as a special 'null' loan. Uninintialed
+    /// pointers can use the same type of loan.
+    FactMgr.getOriginMgr().getOrCreate(*N);
   }
 
   void VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
     if (!hasOrigin(ICE->getType()))
       return;
+    Visit(ICE->getSubExpr());
+    /// TODO: Consider if this is actually useful in practice. Alternatively, we
+    /// could directly use the sub-expression's OriginID instead of creating a
+    /// new one.
     // An ImplicitCastExpr node itself gets an origin, which flows from the
     // origin of its sub-expression (after stripping its own parens/casts).
-    if (ICE->getCastKind() == CK_LValueToRValue) {
-      OriginID IceOID = FactsCtx.Origins.getOrCreate(ICE);
-      OriginID SubExprOID = FactsCtx.Origins.getOrCreate(ICE->getSubExpr());
-      FactsCtx.Facts.addFact(CurrentBlock,
-                             FactsCtx.Facts.createFact<AssignOriginFact>(
-                                 IceOID, SubExprOID, CurrentPoint));
-    }
+    addAssignOriginFact(*ICE, *ICE->getSubExpr());
   }
 
   void VisitUnaryOperator(const UnaryOperator *UO) {
@@ -386,13 +410,12 @@ public:
         if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
           // Check if it's a local variable.
           if (VD->hasLocalStorage()) {
-            OriginID OID = FactsCtx.Origins.getOrCreate(UO);
-            Path AddrOfLocalVarPath(VD, Path::Kind::StackVariable);
-            LoanInfo &Loan = FactsCtx.Loans.addLoanInfo(AddrOfLocalVarPath,
-                                                        UO->getOperatorLoc());
-            FactsCtx.Facts.addFact(CurrentBlock,
-                                   FactsCtx.Facts.createFact<IssueFact>(
-                                       Loan.ID, OID, CurrentPoint));
+            OriginID OID = FactMgr.getOriginMgr().getOrCreate(*UO);
+            AccessPath AddrOfLocalVarPath(VD, AccessPath::Kind::StackVariable);
+            Loan &L = FactMgr.getLoanMgr().addLoan(AddrOfLocalVarPath,
+                                                   UO->getOperatorLoc());
+            CurrentBlockFacts.push_back(
+                FactMgr.createFact<IssueFact>(L.ID, OID));
           }
         }
       }
@@ -402,10 +425,9 @@ public:
   void VisitReturnStmt(const ReturnStmt *RS) {
     if (const Expr *RetExpr = RS->getRetValue()) {
       if (hasOrigin(RetExpr->getType())) {
-        OriginID OID = FactsCtx.Origins.getOrCreate(RetExpr);
-        FactsCtx.Facts.addFact(
-            CurrentBlock,
-            FactsCtx.Facts.createFact<ReturnOfOriginFact>(OID, CurrentPoint));
+        OriginID OID = FactMgr.getOriginMgr().getOrCreate(*RetExpr);
+        CurrentBlockFacts.push_back(
+            FactMgr.createFact<ReturnOfOriginFact>(OID));
       }
     }
   }
@@ -419,17 +441,11 @@ public:
       // LHS must be a pointer/reference type that can be an origin.
       // RHS must also represent an origin (either another pointer/ref or an
       // address-of).
-      if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
+      if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr))
         if (const auto *VD_LHS =
                 dyn_cast<ValueDecl>(DRE_LHS->getDecl()->getCanonicalDecl());
-            VD_LHS && hasOrigin(VD_LHS->getType())) {
-          OriginID DestOID = FactsCtx.Origins.getOrCreate(VD_LHS);
-          OriginID SrcOID = FactsCtx.Origins.getOrCreate(RHSExpr);
-          FactsCtx.Facts.addFact(CurrentBlock,
-                                 FactsCtx.Facts.createFact<AssignOriginFact>(
-                                     DestOID, SrcOID, CurrentPoint));
-        }
-      }
+            VD_LHS && hasOrigin(VD_LHS->getType()))
+          addAssignOriginFact(*VD_LHS, *RHSExpr);
     }
   }
 
@@ -437,33 +453,40 @@ private:
   // Check if a type have an origin.
   bool hasOrigin(QualType QT) { return QT->isPointerOrReferenceType(); }
 
+  template <typename Destination, typename Source>
+  void addAssignOriginFact(const Destination &D, const Source &S) {
+    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
+    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<AssignOriginFact>(DestOID, SrcOID));
+  }
+
   void handleDestructor(const CFGAutomaticObjDtor &DtorOpt) {
     /// TODO: Also handle trivial destructors (e.g., for `int`
-    // variables) which will never have a CFGAutomaticObjDtor node.
+    /// variables) which will never have a CFGAutomaticObjDtor node.
     /// TODO: Handle loans to temporaries.
     const VarDecl *DestructedVD = DtorOpt.getVarDecl();
     if (!DestructedVD)
       return;
     // Iterate through all loans to see if any expire.
-    for (const LoanInfo &Loan : FactsCtx.Loans.getLoanInfos()) {
-      const Path &LoanPath = Loan.SourcePath;
+    /// TODO(opt): Do better than a linear search to find loans associated with
+    /// 'DestructedVD'.
+    for (const Loan &L : FactMgr.getLoanMgr().getLoans()) {
+      const AccessPath &LoanPath = L.Path;
       // Check if the loan is for a stack variable and if that variable
       // is the one being destructed.
-      if (LoanPath.PathKind == Path::Kind::StackVariable) {
+      if (LoanPath.PathKind == AccessPath::Kind::StackVariable) {
         if (LoanPath.D == DestructedVD) {
-          FactsCtx.Facts.addFact(
-              CurrentBlock,
-              FactsCtx.Facts.createFact<ExpireFact>(Loan.ID, CurrentPoint));
+          CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(L.ID));
         }
       }
     }
   }
 
-  FactsContext &FactsCtx;
+  FactManager &FactMgr;
   const CFG &Cfg;
   AnalysisDeclContext &AC;
-  const CFGBlock *CurrentBlock;
-  Point CurrentPoint;
+  llvm::SmallVector<Fact *> CurrentBlockFacts;
 };
 
 // ========================================================================= //
@@ -476,7 +499,7 @@ private:
 using LoanSet = llvm::ImmutableSet<LoanID>;
 using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
 
-/// A context object to hold the factories for immutable collections, ensuring
+/// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
   OriginLoanMap::Factory OriginMapFact;
@@ -512,28 +535,28 @@ struct LifetimeLattice {
     return Factory.LoanSetFact.getEmptySet();
   }
 
-  /// Computes the union of two lattices by performing a key-wise merge of
+  /// Computes the union of two lattices by performing a key-wise join of
   /// their OriginLoanMaps.
-  LifetimeLattice merge(const LifetimeLattice &Other,
-                        LifetimeFactory &Factory) const {
+  LifetimeLattice join(const LifetimeLattice &Other,
+                       LifetimeFactory &Factory) const {
     /// Merge the smaller map into the larger one ensuring we iterate over the
     /// smaller map.
     if (Origins.getHeight() < Other.Origins.getHeight())
-      return Other.merge(*this, Factory);
+      return Other.join(*this, Factory);
 
-    OriginLoanMap MergedState = Origins;
+    OriginLoanMap JoinedState = Origins;
     // For each origin in the other map, union its loan set with ours.
     for (const auto &Entry : Other.Origins) {
       OriginID OID = Entry.first;
       LoanSet OtherLoanSet = Entry.second;
-      MergedState = Factory.OriginMapFact.add(
-          MergedState, OID,
-          merge(getLoans(OID, Factory), OtherLoanSet, Factory));
+      JoinedState = Factory.OriginMapFact.add(
+          JoinedState, OID,
+          join(getLoans(OID, Factory), OtherLoanSet, Factory));
     }
-    return LifetimeLattice(MergedState);
+    return LifetimeLattice(JoinedState);
   }
 
-  LoanSet merge(LoanSet a, LoanSet b, LifetimeFactory &Factory) const {
+  LoanSet join(LoanSet a, LoanSet b, LifetimeFactory &Factory) const {
     /// Merge the smaller set into the larger one ensuring we iterate over the
     /// smaller set.
     if (a.getHeight() < b.getHeight())
@@ -542,7 +565,7 @@ struct LifetimeLattice {
     for (LoanID LID : b) {
       /// TODO(opt): Profiling shows that this loop is a major performance
       /// bottleneck. Investigate using a BitVector to represent the set of
-      /// loans for improved merge performance.
+      /// loans for improved join performance.
       Result = Factory.LoanSetFact.add(Result, LID);
     }
     return Result;
@@ -579,7 +602,7 @@ public:
   LifetimeLattice transferBlock(const CFGBlock *Block,
                                 LifetimeLattice EntryState) {
     LifetimeLattice BlockState = EntryState;
-    llvm::ArrayRef<Fact *> Facts = AllFacts.getFacts(Block);
+    llvm::ArrayRef<const Fact *> Facts = AllFacts.getFacts(Block);
 
     for (const Fact *F : Facts) {
       BlockState = transferFact(BlockState, F);
@@ -664,7 +687,7 @@ public:
                                                 ? SuccIt->second
                                                 : LifetimeLattice{};
         LifetimeLattice NewSuccEntryState =
-            OldSuccEntryState.merge(ExitState, LifetimeFact);
+            OldSuccEntryState.join(ExitState, LifetimeFact);
         if (SuccIt == BlockEntryStates.end() ||
             NewSuccEntryState != OldSuccEntryState) {
           BlockEntryStates[Successor] = NewSuccEntryState;
@@ -707,10 +730,12 @@ public:
 void runLifetimeAnalysis(const DeclContext &DC, const CFG &Cfg,
                          AnalysisDeclContext &AC) {
   llvm::TimeTraceScope TimeProfile("Lifetime Analysis");
-  FactsContext FactsCtx;
-  FactGenerator FactGen(Cfg, FactsCtx, AC);
+  DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
+                                       /*ShowColors=*/true));
+  FactManager FactMgr;
+  FactGenerator FactGen(Cfg, FactMgr, AC);
   FactGen.run();
-  DEBUG_WITH_TYPE("LifetimeFacts", FactsCtx.Facts.dump(Cfg, AC));
+  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr.dump(Cfg, AC));
 
   /// TODO(opt): Consider optimizing individual blocks before running the
   /// dataflow analysis.
@@ -721,7 +746,7 @@ void runLifetimeAnalysis(const DeclContext &DC, const CFG &Cfg,
   ///    blocks; only Decls are visible.  Therefore, loans in a block that
   ///    never reach an Origin associated with a Decl can be safely dropped by
   ///    the analysis.
-  LifetimeDataflow Dataflow(Cfg, FactsCtx.Facts, AC);
+  LifetimeDataflow Dataflow(Cfg, FactMgr, AC);
   Dataflow.run();
   DEBUG_WITH_TYPE("LifetimeDataflow", Dataflow.dump());
 }
