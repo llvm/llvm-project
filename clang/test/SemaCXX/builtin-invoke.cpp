@@ -83,7 +83,27 @@ void call() {
   __builtin_invoke(malloc, 0);
   __builtin_invoke(__builtin_malloc, 0); // expected-error {{builtin functions must be directly called}}
 
-  // Member functiom pointer
+  // Variadic function
+  void variadic_func(int, ...); // expected-note {{declared here}}
+
+  __builtin_invoke(variadic_func); // expected-error {{too few arguments to function call, expected at least 1, have 0}}
+  __builtin_invoke(variadic_func, 1);
+  __builtin_invoke(variadic_func, 1, 2, 3);
+
+  // static member function
+  struct StaticMember {
+    static void func(int);
+  };
+
+  __builtin_invoke(StaticMember::func, 1);
+  StaticMember sm;
+  __builtin_invoke(sm.func, 1);
+
+  // lambda
+  __builtin_invoke([] {});
+  __builtin_invoke([](int) {}, 1);
+
+  // Member function pointer
   __builtin_invoke(&Callable::func); // expected-error {{too few arguments to function call, expected at least 2, have 1}}
   __builtin_invoke(&Callable::func, 1); // expected-error {{indirection requires pointer operand ('int' invalid)}}
   __builtin_invoke(&Callable::func, Callable{});
@@ -145,4 +165,20 @@ auto test(T v) {
 
 auto call2() {
   test(call);
+}
+
+template <class ClassT, class FuncT>
+void func(ClassT& c, FuncT&& func) {
+  __builtin_invoke(func, c, 1, 2, 3); // expected-error {{too many arguments to function call, expected 0, have 3}}
+}
+
+struct DependentTest {
+  void func(int, int, int);
+  void bad_func();
+};
+
+void call3() {
+  DependentTest d;
+  func(d, &DependentTest::func);
+  func(d, &DependentTest::bad_func); // expected-note {{requested here}}
 }
