@@ -205,9 +205,9 @@ static cl::opt<bool>
     EnableLoopInterchange("enable-loopinterchange", cl::init(false), cl::Hidden,
                           cl::desc("Enable the LoopInterchange Pass"));
 
-static cl::opt<bool> EnableLoopFuse("enable-loopfuse", cl::init(false),
-                                    cl::Hidden,
-                                    cl::desc("Enable the LoopFuse Pass"));
+static cl::opt<bool> EnableLoopFusion("enable-loopfusion", cl::init(false),
+                                      cl::Hidden,
+                                      cl::desc("Enable the LoopFusion Pass"));
 
 static cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam",
                                         cl::init(false), cl::Hidden,
@@ -318,7 +318,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   SLPVectorization = false;
   LoopUnrolling = true;
   LoopInterchange = EnableLoopInterchange;
-  LoopFuse = EnableLoopFuse;
+  LoopFusion = EnableLoopFusion;
   ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
   LicmMssaOptCap = SetLicmMssaOptCap;
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
@@ -520,9 +520,6 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
 
   invokeLoopOptimizerEndEPCallbacks(LPM2, Level);
 
-  if (PTO.LoopFuse)
-    FPM.addPass(LoopFusePass());
-
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1),
                                               /*UseMemorySSA=*/true,
                                               /*UseBlockFrequencyInfo=*/true));
@@ -647,6 +644,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   if (EnableConstraintElimination)
     FPM.addPass(ConstraintEliminationPass());
 
+  if (PTO.LoopFusion)
+    FPM.addPass(LoopFusePass());
+
   // Add the primary loop simplification pipeline.
   // FIXME: Currently this is split into two loop pass pipelines because we run
   // some function passes in between them. These can and should be removed
@@ -711,9 +711,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
                                     PTO.ForgetAllSCEVInLoopUnroll));
 
   invokeLoopOptimizerEndEPCallbacks(LPM2, Level);
-
-  if (PTO.LoopFuse)
-    FPM.addPass(LoopFusePass());
 
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1),
                                               /*UseMemorySSA=*/true,
@@ -2127,6 +2124,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     LPM.addPass(LoopFlattenPass());
   LPM.addPass(IndVarSimplifyPass());
   LPM.addPass(LoopDeletionPass());
+  // FIXME: Add loop interchange.
 
   // Unroll small loops and perform peeling.
   LPM.addPass(LoopFullUnrollPass(Level.getSpeedupLevel(),
