@@ -13,7 +13,9 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaInternal.h"
@@ -238,22 +240,21 @@ static bool DiagReservedModuleName(Sema &S, const IdentifierInfo *II,
   llvm_unreachable("fell off a fully covered switch");
 }
 
-Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
-                                           SourceLocation ModuleLoc,
-                                           ModuleDeclKind MDK,
-                                           ModuleNameLoc *PathLoc,
-                                           ModuleNameLoc *PartitionLoc,
-                                           ModuleImportState &ImportState) {
+Sema::DeclGroupPtrTy
+Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
+                      ModuleDeclKind MDK, ModuleIdPath Path,
+                      ModuleIdPath Partition, ModuleImportState &ImportState,
+                      bool AtStartOfTU) {
   assert(getLangOpts().CPlusPlusModules &&
          "should only have module decl in standard C++ modules");
 
-  bool IsFirstDecl = ImportState == ModuleImportState::FirstDecl;
   bool SeenGMF = ImportState == ModuleImportState::GlobalFragment;
   // If any of the steps here fail, we count that as invalidating C++20
   // module state;
   ImportState = ModuleImportState::NotACXX20Module;
 
-  if (PartitionLoc)
+  bool IsPartition = !Partition.empty();
+  if (IsPartition)
     switch (MDK) {
     case ModuleDeclKind::Implementation:
       MDK = ModuleDeclKind::PartitionImplementation;
@@ -282,7 +283,7 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
     // We were asked to compile a module interface unit but this is a module
     // implementation unit.
     Diag(ModuleLoc, diag::err_module_interface_implementation_mismatch)
-      << FixItHint::CreateInsertion(ModuleLoc, "export ");
+        << FixItHint::CreateInsertion(ModuleLoc, "export ");
     MDK = ModuleDeclKind::Interface;
     break;
 
@@ -314,7 +315,7 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
 
   // In C++20, the module-declaration must be the first declaration if there
   // is no global module fragment.
-  if (getLangOpts().CPlusPlusModules && !IsFirstDecl && !SeenGMF) {
+  if (getLangOpts().CPlusPlusModules && !AtStartOfTU && !SeenGMF) {
     Diag(ModuleLoc, diag::err_module_decl_not_at_start);
     SourceLocation BeginLoc =
         ModuleScopes.empty()
@@ -335,18 +336,17 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
 
   // Test the first part of the path to see if it's std[0-9]+ but allow the
   // name in a system header.
-  StringRef FirstComponentName =
-      PathLoc->getModuleIdPath()[0].getIdentifierInfo()->getName();
-  if (!getSourceManager().isInSystemHeader(PathLoc->getBeginLoc()) &&
+  StringRef FirstComponentName = Path[0].getIdentifierInfo()->getName();
+  if (!getSourceManager().isInSystemHeader(Path[0].getLoc()) &&
       (FirstComponentName == "std" ||
        (FirstComponentName.starts_with("std") &&
         llvm::all_of(FirstComponentName.drop_front(3), &llvm::isDigit))))
-    Diag(PathLoc->getBeginLoc(), diag::warn_reserved_module_name)
-        << PathLoc->getModuleIdPath()[0].getIdentifierInfo();
+    Diag(Path[0].getLoc(), diag::warn_reserved_module_name)
+        << Path[0].getIdentifierInfo();
 
   // Then test all of the components in the path to see if any of them are
   // using another kind of reserved or invalid identifier.
-  for (auto Part : PathLoc->getModuleIdPath()) {
+  for (auto Part : Path) {
     if (DiagReservedModuleName(*this, Part.getIdentifierInfo(), Part.getLoc()))
       return nullptr;
   }
@@ -354,20 +354,23 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
   // Flatten the dots in a module name. Unlike Clang's hierarchical module map
   // modules, the dots here are just another character that can appear in a
   // module name.
-  std::string ModuleName = PathLoc->str();
-  if (PartitionLoc) {
+  std::string ModuleName = ModuleNameLoc::stringFromModuleIdPath(Path);
+  if (IsPartition) {
     ModuleName += ":";
-    ModuleName += PartitionLoc->str();
+    ModuleName += ModuleNameLoc::stringFromModuleIdPath(Partition);
   }
   // If a module name was explicitly specified on the command line, it must be
   // correct.
   if (!getLangOpts().CurrentModule.empty() &&
       getLangOpts().CurrentModule != ModuleName) {
-    Diag(PathLoc->getBeginLoc(), diag::err_current_module_name_mismatch)
-        << PathLoc->getRange() << getLangOpts().CurrentModule;
+    Diag(Path.front().getLoc(), diag::err_current_module_name_mismatch)
+        << SourceRange(Path.front().getLoc(), IsPartition
+                                                  ? Partition.back().getLoc()
+                                                  : Path.back().getLoc())
+        << getLangOpts().CurrentModule;
     return nullptr;
   }
-  const_cast<LangOptions&>(getLangOpts()).CurrentModule = ModuleName;
+  const_cast<LangOptions &>(getLangOpts()).CurrentModule = ModuleName;
 
   auto &Map = PP.getHeaderSearchInfo().getModuleMap();
   Module *Mod;                 // The module we are creating.
@@ -378,7 +381,7 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
     // We can't have parsed or imported a definition of this module or parsed a
     // module map defining it already.
     if (auto *M = Map.findOrLoadModule(ModuleName)) {
-      Diag(PathLoc->getBeginLoc(), diag::err_module_redefinition) << ModuleName;
+      Diag(Path[0].getLoc(), diag::err_module_redefinition) << ModuleName;
       if (M->DefinitionLoc.isValid())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition);
       else if (OptionalFileEntryRef FE = M->getASTFile())
@@ -401,7 +404,7 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
     // keyword nor a module-partition implicitly imports the primary
     // module interface unit of the module as if by a module-import-
     // declaration.
-    IdentifierLoc ModuleNameLoc(PathLoc->getBeginLoc(),
+    IdentifierLoc ModuleNameLoc(Path[0].getLoc(),
                                 PP.getIdentifierInfo(ModuleName));
 
     // The module loader will assume we're trying to import the module that
@@ -412,7 +415,7 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
     Interface = getModuleLoader().loadModule(ModuleLoc, {ModuleNameLoc},
                                              Module::AllVisible,
                                              /*IsInclusionDirective=*/false);
-    const_cast<LangOptions&>(getLangOpts()).CurrentModule = ModuleName;
+    const_cast<LangOptions &>(getLangOpts()).CurrentModule = ModuleName;
 
     if (!Interface) {
       Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
@@ -474,7 +477,7 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
 
     // Make the import decl for the interface in the impl module.
     ImportDecl *Import = ImportDecl::Create(Context, CurContext, ModuleLoc,
-                                            Interface, PathLoc->getBeginLoc());
+                                            Interface, Path[0].getLoc());
     CurContext->addDecl(Import);
 
     // Sequence initialization of the imported module before that of the current

@@ -187,6 +187,8 @@ void Lexer::InitLexer(const char *BufStart, const char *BufPtr,
   ExtendedTokenMode = 0;
 
   NewLinePtr = nullptr;
+
+  IsFirstPPToken = true;
 }
 
 /// Lexer constructor - Create a new lexer object for the specified buffer
@@ -3739,11 +3741,20 @@ bool Lexer::Lex(Token &Result) {
     HasLeadingEmptyMacro = false;
   }
 
+  if (IsFirstPPToken) {
+    Result.setFlag(Token::FirstPPToken);
+    IsFirstPPToken = false;
+  }
+
   bool atPhysicalStartOfLine = IsAtPhysicalStartOfLine;
   IsAtPhysicalStartOfLine = false;
   bool isRawLex = isLexingRawMode();
   (void) isRawLex;
   bool returnedToken = LexTokenInternal(Result, atPhysicalStartOfLine);
+
+  if (returnedToken && Result.isFirstPPToken() && PP)
+    PP->setFirstPPToken(Result);
+
   // (After the LexTokenInternal call, the lexer might be destroyed.)
   assert((returnedToken || !isRawLex) && "Raw lex must succeed");
   return returnedToken;

@@ -17,6 +17,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/StackExhaustionHandler.h"
+#include "clang/Lex/ModuleLoader.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -2303,7 +2304,8 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
 
 Parser::DeclGroupPtrTy
 Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
-  SourceLocation StartLoc = Tok.getLocation();
+  Token Introducer = Tok;
+  SourceLocation StartLoc = Introducer.getLocation();
 
   Sema::ModuleDeclKind MDK = TryConsumeToken(tok::kw_export)
                                  ? Sema::ModuleDeclKind::Interface
@@ -2322,7 +2324,7 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   // Parse a global-module-fragment, if present.
   if (getLangOpts().CPlusPlusModules && Tok.is(tok::semi)) {
     SourceLocation SemiLoc = ConsumeToken();
-    if (ImportState != Sema::ModuleImportState::FirstDecl) {
+    if (!Introducer.isFirstPPToken()) {
       Diag(StartLoc, diag::err_global_module_introducer_not_at_start)
         << SourceRange(StartLoc, SemiLoc);
       return nullptr;
@@ -2378,8 +2380,10 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
 
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
 
-  return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
-                                 ImportState);
+  return Actions.ActOnModuleDecl(
+      StartLoc, ModuleLoc, MDK, Path->getModuleIdPath(),
+      Partition ? Partition->getModuleIdPath() : ModuleIdPath{}, ImportState,
+      Introducer.isFirstPPToken());
 }
 
 Decl *Parser::ParseModuleImport(SourceLocation AtLoc,

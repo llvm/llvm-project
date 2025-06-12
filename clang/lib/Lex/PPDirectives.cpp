@@ -4089,7 +4089,7 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
       this->ImportingCXXNamedModules);
   ImportingCXXNamedModules = true;
 
-  if (LastTokenWasExportKeyword)
+  if (LastTokenWasExportKeyword.isValid())
     LastTokenWasExportKeyword.reset();
 
   Token Tok;
@@ -4216,13 +4216,26 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
 
 void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
   assert(getLangOpts().CPlusPlusModules && ModuleTok.is(tok::kw_module));
-  SourceLocation StartLoc = ModuleTok.getLocation();
-  if (LastTokenWasExportKeyword) {
-    StartLoc = LastTokenWasExportKeyword->ExportTok.getLocation();
+  Token Introducer = ModuleTok;
+  if (LastTokenWasExportKeyword.isValid()) {
+    Introducer = LastTokenWasExportKeyword.getExportTok();
     LastTokenWasExportKeyword.reset();
   }
-  bool IsInHeaderInclusion = !IncludeMacroStack.empty();
-  bool IsInConditionBlock = CurPPLexer->getConditionalStackDepth() != 0;
+
+  SourceLocation StartLoc = Introducer.getLocation();
+  if (!IncludeMacroStack.empty()) {
+    SourceLocation End = DiscardUntilEndOfDirective().getEnd();
+    Diag(StartLoc, diag::err_module_decl_in_header)
+        << SourceRange(StartLoc, End);
+    return;
+  }
+
+  if (CurPPLexer->getConditionalStackDepth() != 0) {
+    SourceLocation End = DiscardUntilEndOfDirective().getEnd();
+    Diag(StartLoc, diag::err_pp_cond_span_module_decl)
+        << SourceRange(StartLoc, End);
+    return;
+  }
 
   Token Tok;
   SourceLocation UseLoc = ModuleTok.getLocation();
@@ -4305,13 +4318,6 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     End = CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName());
   else
     End = DirToks.pop_back_val().getLocation();
-  if (IsInHeaderInclusion)
-    Diag(StartLoc, diag::err_module_decl_in_header)
-        << SourceRange(StartLoc, End);
-
-  if (IsInConditionBlock)
-    Diag(StartLoc, diag::err_pp_cond_span_module_decl)
-        << SourceRange(StartLoc, End);
 
   EnterModuleSuffixTokenStream(DirToks);
 }

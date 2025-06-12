@@ -137,6 +137,24 @@ struct CXXStandardLibraryVersionInfo {
   std::uint64_t Version;
 };
 
+class ExportContextualKeywordInfo {
+  Token ExportTok;
+  bool AtPhysicalStartOfLine = false;
+
+public:
+  ExportContextualKeywordInfo() = default;
+  ExportContextualKeywordInfo(const Token &Tok, bool AtPhysicalStartOfLine)
+      : ExportTok(Tok), AtPhysicalStartOfLine(AtPhysicalStartOfLine) {}
+
+  bool isValid() const { return ExportTok.is(tok::kw_export); }
+  bool isAtPhysicalStartOfLine() const { return AtPhysicalStartOfLine; }
+  Token getExportTok() const { return ExportTok; }
+  void reset() {
+    ExportTok.startToken();
+    AtPhysicalStartOfLine = false;
+  }
+};
+
 /// Engages in a tight little dance with the lexer to efficiently
 /// preprocess tokens.
 ///
@@ -359,14 +377,11 @@ private:
   /// Whether we're declaring a standard C++20 named Modules.
   bool DeclaringCXXNamedModules = false;
 
-  struct ExportContextualKeywordInfo {
-    Token ExportTok;
-    bool TokAtPhysicalStartOfLine;
-  };
-
   /// Whether the last token we lexed was an 'export' keyword.
-  std::optional<ExportContextualKeywordInfo> LastTokenWasExportKeyword =
-      std::nullopt;
+  ExportContextualKeywordInfo LastTokenWasExportKeyword;
+
+  /// First pp-token in current translation unit.
+  Token FirstPPToken;
 
   /// A position within a C++20 import-seq.
   class StdCXXImportSeq {
@@ -1773,6 +1788,9 @@ public:
   void EnterModuleSuffixTokenStream(ArrayRef<Token> Toks);
   void HandleCXXImportDirective(Token Import);
   void HandleCXXModuleDirective(Token Module);
+
+  void setFirstPPToken(const Token &Tok) { FirstPPToken = Tok; }
+  Token getFirstPPToken() const { return FirstPPToken; }
 
   /// Callback invoked when the lexer sees one of export, import or module token
   /// at the start of a line.

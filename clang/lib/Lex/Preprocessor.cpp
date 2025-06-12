@@ -1185,11 +1185,10 @@ bool Preprocessor::HandleModuleContextualKeyword(
     return false;
   }
 
-  if (LastTokenWasExportKeyword) {
-    auto Export = *LastTokenWasExportKeyword;
+  if (LastTokenWasExportKeyword.isValid()) {
     // The export keyword was not at the start of line, it's not a
     // directive-introducing token.
-    if (!Export.TokAtPhysicalStartOfLine)
+    if (!LastTokenWasExportKeyword.isAtPhysicalStartOfLine())
       return false;
     // [cpp.pre]/1.4
     // export                  // not a preprocessing directive

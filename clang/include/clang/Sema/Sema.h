@@ -9937,9 +9937,9 @@ public:
   /// of a module interface or implementation.
   DeclGroupPtrTy ActOnModuleDecl(SourceLocation StartLoc,
                                  SourceLocation ModuleLoc, ModuleDeclKind MDK,
-                                 ModuleNameLoc *PathLoc,
-                                 ModuleNameLoc *PartitionLoc,
-                                 ModuleImportState &ImportState);
+                                 ModuleIdPath Path, ModuleIdPath Partition,
+                                 ModuleImportState &ImportState,
+                                 bool AtStartOfTU);
 
   /// The parser has processed a global-module-fragment declaration that begins
   /// the definition of the global module fragment of the current module unit.
