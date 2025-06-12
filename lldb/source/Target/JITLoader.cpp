@@ -39,3 +39,5 @@ bool JITLoader::ResolveLoadAddress(addr_t load_addr, Address &addr) {
 void JITLoader::HandleBreakpointEvent(
     BreakpointEventType sub_type, Breakpoint &breakpoint,
     const BreakpointLocationCollection *locations) {}
+
+void JITLoader::NotifyJITToLoadDebugInformation(Symbol &symbol) {}

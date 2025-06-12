@@ -67,3 +67,9 @@ void JITLoaderList::HandleBreakpointEvent(
   for (auto const &jit_loader : m_jit_loaders_vec)
     jit_loader->HandleBreakpointEvent(sub_type, breakpoint, locations);
 }
+
+void JITLoaderList::NotifyJITToLoadDebugInformation(Symbol &symbol) {
+  std::lock_guard<std::recursive_mutex> guard(m_jit_loaders_mutex);
+  for (auto const &jit_loader : m_jit_loaders_vec)
+    jit_loader->NotifyJITToLoadDebugInformation(symbol);
+}

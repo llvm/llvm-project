@@ -800,6 +800,11 @@ BreakpointSP Target::CreateBreakpoint(SearchFilterSP &filter_sp,
   return bp_sp;
 }
 
+void Target::NotifyJITToLoadDebugInformation(Symbol &symbol) {
+  if (m_process_sp)
+    m_process_sp->GetJITLoaders().NotifyJITToLoadDebugInformation(symbol);
+}
+
 void Target::AddBreakpoint(lldb::BreakpointSP bp_sp, bool internal) {
   if (!bp_sp)
     return;

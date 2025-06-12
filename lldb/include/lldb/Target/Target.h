@@ -1364,6 +1364,9 @@ public:
   void NotifyBreakpointChanged(Breakpoint &bp,
                                const lldb::EventDataSP &breakpoint_data_sp);
 
+  /// Notify a JIT that debug information needs to be loaded for this symbol.
+  void NotifyJITToLoadDebugInformation(Symbol &symbol);
+
   // Target Stop Hooks
   class StopHook : public UserID {
   public:

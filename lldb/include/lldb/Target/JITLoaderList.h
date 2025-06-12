@@ -50,6 +50,9 @@ public:
       lldb::BreakpointEventType sub_type, lldb_private::Breakpoint &breakpoint,
       const lldb_private::BreakpointLocationCollection *locations);
 
+  /// Notify a JIT that debug information needs to be loaded for this symbol.
+  void NotifyJITToLoadDebugInformation(Symbol &symbol);
+
 private:
   std::vector<lldb::JITLoaderSP> m_jit_loaders_vec;
   std::recursive_mutex m_jit_loaders_mutex;

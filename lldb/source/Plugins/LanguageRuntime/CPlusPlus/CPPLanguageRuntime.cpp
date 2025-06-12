@@ -431,6 +431,8 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   if (symbol == nullptr)
     return ret_plan_sp;
 
+  thread.GetProcess()->GetTarget().NotifyJITToLoadDebugInformation(*symbol);
+
   llvm::StringRef function_name(symbol->GetName().GetCString());
 
   // Handling the case where we are attempting to step into std::function.

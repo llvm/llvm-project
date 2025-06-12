@@ -70,6 +70,9 @@ public:
       lldb::BreakpointEventType sub_type, lldb_private::Breakpoint &breakpoint,
       const lldb_private::BreakpointLocationCollection *locations);
 
+  /// Notify a JIT that debug information needs to be loaded for this symbol.
+  virtual void NotifyJITToLoadDebugInformation(Symbol &symbol);
+
 protected:
   // Member variables.
   Process *m_process;
