@@ -21,7 +21,6 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
-
 #include <future>
 
 using namespace lldb_private;

@@ -28,6 +28,7 @@
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Errc.h"
 
 #include <mutex>
@@ -503,6 +504,19 @@ public:
   /// \returns
   ///   A DWOStats struct with loaded, total, and error counts for DWO files.
   virtual DWOStats GetDwoStats() { return {}; }
+
+  /// Return a map of separate debug info files that are loaded.
+  ///
+  /// Unlike GetSeparateDebugInfo(), this function will only return the list of
+  /// files, if there are errors they are simply ignored. This function will
+  /// always return a valid list, even if it is empty.
+  ///
+  /// \return
+  ///     A unique map of all the filespecs, dwos in a dwps would be joined to the dwp path
+  ///     for example.
+  virtual llvm::StringMap<lldb_private::FileSpec> GetSeparateDebugInfoFiles() {
+    return {};
+  }
 
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,
