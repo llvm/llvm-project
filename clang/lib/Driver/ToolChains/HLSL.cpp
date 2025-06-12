@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "HLSL.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Job.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/Triple.h"
+#include <regex>
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -173,6 +173,39 @@ bool isLegalValidatorVersion(StringRef ValVersionStr, const Driver &D) {
   return true;
 }
 
+std::string getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
+  if (SpvExtensionArgs.empty()) {
+    return "-spirv-ext=all";
+  }
+
+  std::string LlvmOption =
+      (Twine("-spirv-ext=+") + SpvExtensionArgs.front()).str();
+  SpvExtensionArgs = SpvExtensionArgs.slice(1);
+  for (auto Extension : SpvExtensionArgs) {
+    LlvmOption = (Twine(LlvmOption) + ",+" + Extension).str();
+  }
+  return LlvmOption;
+}
+
+bool isValidSPIRVExtensionName(const std::string &str) {
+  std::regex pattern("SPV_[a-zA-Z0-9_]+");
+  return std::regex_match(str, pattern);
+}
+
+// SPIRV extension names are of the form `SPV_[a-zA-Z0-9_]+`. We want to
+// disallow obviously invalid names to avoid issues when parsing `spirv-ext`.
+bool checkExtensionArgsAreValid(ArrayRef<std::string> SpvExtensionArgs,
+                                const Driver &Driver) {
+  bool AllValid = true;
+  for (auto Extension : SpvExtensionArgs) {
+    if (!isValidSPIRVExtensionName(Extension)) {
+      Driver.Diag(diag::err_drv_invalid_value)
+          << "-fspv_extension" << Extension;
+      AllValid = false;
+    }
+  }
+  return AllValid;
+}
 } // namespace
 
 void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
@@ -253,7 +286,6 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   for (Arg *A : Args) {
     if (A->getOption().getID() == options::OPT_dxil_validator_version) {
       StringRef ValVerStr = A->getValue();
-      std::string ErrorMsg;
       if (!isLegalValidatorVersion(ValVerStr, getDriver()))
         continue;
     }
@@ -299,6 +331,17 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       continue;
     }
     DAL->append(A);
+  }
+
+  if (getArch() == llvm::Triple::spirv) {
+    std::vector<std::string> SpvExtensionArgs =
+        Args.getAllArgValues(options::OPT_fspv_extension_EQ);
+    if (checkExtensionArgsAreValid(SpvExtensionArgs, getDriver())) {
+      std::string LlvmOption = getSpirvExtArg(SpvExtensionArgs);
+      DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_mllvm),
+                          LlvmOption);
+    }
+    Args.claimAllArgs(options::OPT_fspv_extension_EQ);
   }
 
   if (!DAL->hasArg(options::OPT_O_Group)) {

@@ -311,8 +311,6 @@ private:
   const ArrayRef<StringRef> StableDirs;
   /// Path to the main source file.
   std::string MainFile;
-  /// Hash identifying the compilation conditions of the current TU.
-  std::string ContextHash;
   /// Non-modular file dependencies. This includes the main source file and
   /// textually included header files.
   std::vector<std::string> FileDeps;

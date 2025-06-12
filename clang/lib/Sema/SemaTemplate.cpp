@@ -514,15 +514,18 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     FilterCCC.WantExpressionKeywords = false;
     FilterCCC.WantRemainingKeywords = false;
     FilterCCC.WantCXXNamedCasts = true;
-    if (TypoCorrection Corrected =
-            CorrectTypo(Found.getLookupNameInfo(), Found.getLookupKind(), S,
-                        &SS, FilterCCC, CTK_ErrorRecovery, LookupCtx)) {
+    if (TypoCorrection Corrected = CorrectTypo(
+            Found.getLookupNameInfo(), Found.getLookupKind(), S, &SS, FilterCCC,
+            CorrectTypoKind::ErrorRecovery, LookupCtx)) {
       if (auto *ND = Corrected.getFoundDecl())
         Found.addDecl(ND);
       FilterAcceptableTemplateNames(Found);
       if (Found.isAmbiguous()) {
         Found.clear();
       } else if (!Found.empty()) {
+        // Do not erase the typo-corrected result to avoid duplicated
+        // diagnostics.
+        AllowFunctionTemplatesInLookup = true;
         Found.setLookupName(Corrected.getCorrection());
         if (LookupCtx) {
           std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
@@ -686,8 +689,9 @@ void Sema::diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
 
   DeclarationName Name = NameInfo.getName();
   TemplateCandidateFilter CCC(*this);
-  if (TypoCorrection Corrected = CorrectTypo(NameInfo, LookupKind, S, &SS, CCC,
-                                             CTK_ErrorRecovery, LookupCtx)) {
+  if (TypoCorrection Corrected =
+          CorrectTypo(NameInfo, LookupKind, S, &SS, CCC,
+                      CorrectTypoKind::ErrorRecovery, LookupCtx)) {
     auto *ND = Corrected.getFoundDecl();
     if (ND)
       ND = getAsTemplateNameDecl(ND);
@@ -2116,6 +2120,8 @@ DeclResult Sema::CheckClassTemplate(
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.
   if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip)) {
+    if (LangOpts.HLSL)
+      NewClass->addAttr(PackedAttr::CreateImplicit(Context));
     AddAlignmentAttributesForRecord(NewClass);
     AddMsStructLayoutForRecord(NewClass);
   }
@@ -3112,7 +3118,7 @@ static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
 
     EnterExpressionEvaluationContext UnevaluatedContext(
         S, Sema::ExpressionEvaluationContext::Unevaluated);
-    Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+    Sema::SFINAETrap SFINAE(S, /*ForValidityCheck=*/true);
     Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
     QualType BaseTemplateInst =
@@ -3158,7 +3164,7 @@ static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
       auto CheckConditionalOperands = [&](bool ConstRefQual) -> QualType {
         EnterExpressionEvaluationContext UnevaluatedContext(
             S, Sema::ExpressionEvaluationContext::Unevaluated);
-        Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+        Sema::SFINAETrap SFINAE(S, /*ForValidityCheck=*/true);
         Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
         // false
@@ -3226,6 +3232,59 @@ static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
     return Result;
   }
   }
+}
+
+static bool isInVkNamespace(const RecordType *RT) {
+  DeclContext *DC = RT->getDecl()->getDeclContext();
+  if (!DC)
+    return false;
+
+  NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC);
+  if (!ND)
+    return false;
+
+  return ND->getQualifiedNameAsString() == "hlsl::vk";
+}
+
+static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
+                                              QualType OperandArg,
+                                              SourceLocation Loc) {
+  if (auto *RT = OperandArg->getAs<RecordType>()) {
+    bool Literal = false;
+    SourceLocation LiteralLoc;
+    if (isInVkNamespace(RT) && RT->getDecl()->getName() == "Literal") {
+      auto SpecDecl = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
+      assert(SpecDecl);
+
+      const TemplateArgumentList &LiteralArgs = SpecDecl->getTemplateArgs();
+      QualType ConstantType = LiteralArgs[0].getAsType();
+      RT = ConstantType->getAs<RecordType>();
+      Literal = true;
+      LiteralLoc = SpecDecl->getSourceRange().getBegin();
+    }
+
+    if (RT && isInVkNamespace(RT) &&
+        RT->getDecl()->getName() == "integral_constant") {
+      auto SpecDecl = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
+      assert(SpecDecl);
+
+      const TemplateArgumentList &ConstantArgs = SpecDecl->getTemplateArgs();
+
+      QualType ConstantType = ConstantArgs[0].getAsType();
+      llvm::APInt Value = ConstantArgs[1].getAsIntegral();
+
+      if (Literal)
+        return SpirvOperand::createLiteral(Value);
+      return SpirvOperand::createConstant(ConstantType, Value);
+    } else if (Literal) {
+      SemaRef.Diag(LiteralLoc, diag::err_hlsl_vk_literal_must_contain_constant);
+      return SpirvOperand();
+    }
+  }
+  if (SemaRef.RequireCompleteType(Loc, OperandArg,
+                                  diag::err_call_incomplete_argument))
+    return SpirvOperand();
+  return SpirvOperand::createType(OperandArg);
 }
 
 static QualType
@@ -3327,6 +3386,36 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     }
     QualType HasNoTypeMember = Converted[2].getAsType();
     return HasNoTypeMember;
+  }
+
+  case BTK__hlsl_spirv_type: {
+    assert(Converted.size() == 4);
+
+    if (!Context.getTargetInfo().getTriple().isSPIRV()) {
+      SemaRef.Diag(TemplateLoc, diag::err_hlsl_spirv_only) << BTD;
+    }
+
+    if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))
+      return QualType();
+
+    uint64_t Opcode = Converted[0].getAsIntegral().getZExtValue();
+    uint64_t Size = Converted[1].getAsIntegral().getZExtValue();
+    uint64_t Alignment = Converted[2].getAsIntegral().getZExtValue();
+
+    ArrayRef<TemplateArgument> OperandArgs = Converted[3].getPackAsArray();
+
+    llvm::SmallVector<SpirvOperand> Operands;
+
+    for (auto &OperandTA : OperandArgs) {
+      QualType OperandArg = OperandTA.getAsType();
+      auto Operand = checkHLSLSpirvTypeOperand(SemaRef, OperandArg,
+                                               TemplateArgs[3].getLocation());
+      if (!Operand.isValid())
+        return QualType();
+      Operands.push_back(Operand);
+    }
+
+    return Context.getHLSLInlineSpirvType(Opcode, Size, Alignment, Operands);
   }
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
@@ -3733,7 +3822,7 @@ bool Sema::resolveAssumedTemplateNameAsType(Scope *S, TemplateName &Name,
 
   TypoCorrection Corrected =
       CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, nullptr,
-                  FilterCCC, CTK_ErrorRecovery);
+                  FilterCCC, CorrectTypoKind::ErrorRecovery);
   if (Corrected && Corrected.getFoundDecl()) {
     diagnoseTypo(Corrected, PDiag(diag::err_no_template_suggest)
                                 << ATN->getDeclName());
@@ -3772,12 +3861,10 @@ TypeResult Sema::ActOnTemplateIdType(
       NestedNameSpecifier *NNS =
           NestedNameSpecifier::Create(Context, SS.getScopeRep(), TemplateII);
       if (AllowImplicitTypename == ImplicitTypenameContext::Yes) {
-        if (getLangOpts().CPlusPlus20)
-          Diag(SS.getBeginLoc(), diag::warn_cxx17_compat_implicit_typename);
-        else
-          Diag(SS.getBeginLoc(), diag::ext_implicit_typename)
-              << NNS
-              << FixItHint::CreateInsertion(SS.getBeginLoc(), "typename ");
+        auto DB = DiagCompat(SS.getBeginLoc(), diag_compat::implicit_typename)
+                  << NNS;
+        if (!getLangOpts().CPlusPlus20)
+          DB << FixItHint::CreateInsertion(SS.getBeginLoc(), "typename ");
       } else
         Diag(SS.getBeginLoc(), diag::err_typename_missing_template) << NNS;
 
@@ -3909,7 +3996,7 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
     //   resolves to an alias template specialization, the
     //   elaborated-type-specifier is ill-formed.
     Diag(TemplateLoc, diag::err_tag_reference_non_tag)
-        << TAT << NTK_TypeAliasTemplate << llvm::to_underlying(TagKind);
+        << TAT << NonTagKind::TypeAliasTemplate << TagKind;
     Diag(TAT->getLocation(), diag::note_declared_at);
   }
 
@@ -4349,6 +4436,25 @@ struct PartialSpecMatchResult {
   VarTemplatePartialSpecializationDecl *Partial;
   TemplateArgumentList *Args;
 };
+
+// HACK 2025-05-13: workaround std::format_kind since libstdc++ 15.1 (2025-04)
+// See GH139067 / https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120190
+static bool IsLibstdcxxStdFormatKind(Preprocessor &PP, VarDecl *Var) {
+  if (Var->getName() != "format_kind" ||
+      !Var->getDeclContext()->isStdNamespace())
+    return false;
+
+  // Checking old versions of libstdc++ is not needed because 15.1 is the first
+  // release in which users can access std::format_kind.
+  // We can use 20250520 as the final date, see the following commits.
+  // GCC releases/gcc-15 branch:
+  // https://gcc.gnu.org/g:fedf81ef7b98e5c9ac899b8641bb670746c51205
+  // https://gcc.gnu.org/g:53680c1aa92d9f78e8255fbf696c0ed36f160650
+  // GCC master branch:
+  // https://gcc.gnu.org/g:9361966d80f625c5accc25cbb439f0278dd8b278
+  // https://gcc.gnu.org/g:c65725eccbabf3b9b5965f27fff2d3b9f6c75930
+  return PP.NeedsStdLibCxxWorkaroundBefore(2025'05'20);
+}
 } // end anonymous namespace
 
 DeclResult
@@ -4369,8 +4475,45 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // Produce a placeholder value if the specialization is dependent.
   if (Template->getDeclContext()->isDependentContext() ||
       TemplateSpecializationType::anyDependentTemplateArguments(
-          TemplateArgs, CTAI.CanonicalConverted))
+          TemplateArgs, CTAI.CanonicalConverted)) {
+    if (ParsingInitForAutoVars.empty())
+      return DeclResult();
+
+    auto IsSameTemplateArg = [&](const TemplateArgument &Arg1,
+                                 const TemplateArgument &Arg2) {
+      return Context.isSameTemplateArgument(Arg1, Arg2);
+    };
+
+    if (VarDecl *Var = Template->getTemplatedDecl();
+        ParsingInitForAutoVars.count(Var) &&
+        // See comments on this function definition
+        !IsLibstdcxxStdFormatKind(PP, Var) &&
+        llvm::equal(
+            CTAI.CanonicalConverted,
+            Template->getTemplateParameters()->getInjectedTemplateArgs(Context),
+            IsSameTemplateArg)) {
+      Diag(TemplateNameLoc,
+           diag::err_auto_variable_cannot_appear_in_own_initializer)
+          << diag::ParsingInitFor::VarTemplate << Var << Var->getType();
+      return true;
+    }
+
+    SmallVector<VarTemplatePartialSpecializationDecl *, 4> PartialSpecs;
+    Template->getPartialSpecializations(PartialSpecs);
+    for (VarTemplatePartialSpecializationDecl *Partial : PartialSpecs)
+      if (ParsingInitForAutoVars.count(Partial) &&
+          llvm::equal(CTAI.CanonicalConverted,
+                      Partial->getTemplateArgs().asArray(),
+                      IsSameTemplateArg)) {
+        Diag(TemplateNameLoc,
+             diag::err_auto_variable_cannot_appear_in_own_initializer)
+            << diag::ParsingInitFor::VarTemplatePartialSpec << Partial
+            << Partial->getType();
+        return true;
+      }
+
     return DeclResult();
+  }
 
   // Find the variable template specialization declaration that
   // corresponds to these arguments.
@@ -4378,6 +4521,20 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   if (VarTemplateSpecializationDecl *Spec =
           Template->findSpecialization(CTAI.CanonicalConverted, InsertPos)) {
     checkSpecializationReachability(TemplateNameLoc, Spec);
+    if (Spec->getType()->isUndeducedType()) {
+      if (ParsingInitForAutoVars.count(Spec))
+        Diag(TemplateNameLoc,
+             diag::err_auto_variable_cannot_appear_in_own_initializer)
+            << diag::ParsingInitFor::VarTemplateExplicitSpec << Spec
+            << Spec->getType();
+      else
+        // We are substituting the initializer of this variable template
+        // specialization.
+        Diag(TemplateNameLoc, diag::err_var_template_spec_type_depends_on_self)
+            << Spec << Spec->getType();
+
+      return true;
+    }
     // If we already have a variable template specialization, return it.
     return Spec;
   }
@@ -4592,6 +4749,8 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
   EnterExpressionEvaluationContext EECtx{
       *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
+  ContextRAII CurContext(*this, CSD->getDeclContext(),
+                         /*NewThisContext=*/false);
   if (!AreArgsDependent &&
       CheckConstraintSatisfaction(
           NamedConcept, AssociatedConstraint(NamedConcept->getConstraintExpr()),
@@ -6158,6 +6317,15 @@ bool UnnamedLocalNoLinkageFinder::VisitHLSLAttributedResourceType(
   return Visit(T->getWrappedType());
 }
 
+bool UnnamedLocalNoLinkageFinder::VisitHLSLInlineSpirvType(
+    const HLSLInlineSpirvType *T) {
+  for (auto &Operand : T->getOperands())
+    if (Operand.isConstant() && Operand.isLiteral())
+      if (Visit(Operand.getResultType()))
+        return true;
+  return false;
+}
+
 bool Sema::CheckTemplateArgument(TypeSourceInfo *ArgInfo) {
   assert(ArgInfo && "invalid TypeSourceInfo");
   QualType Arg = ArgInfo->getType();
@@ -6959,7 +7127,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     if (IsConvertedConstantExpression) {
       ArgResult = BuildConvertedConstantExpression(
           DeductionArg, ParamType,
-          StrictCheck ? CCEK_TempArgStrict : CCEK_TemplateArg, Param);
+          StrictCheck ? CCEKind::TempArgStrict : CCEKind::TemplateArg, Param);
       assert(!ArgResult.isUnset());
       if (ArgResult.isInvalid()) {
         NoteTemplateParameterLocation(*Param);
@@ -6981,7 +7149,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
 
     APValue PreNarrowingValue;
     ArgResult = EvaluateConvertedConstantExpression(
-        ArgResult.get(), ParamType, Value, CCEK_TemplateArg, /*RequireInt=*/
+        ArgResult.get(), ParamType, Value, CCEKind::TemplateArg, /*RequireInt=*/
         false, PreNarrowingValue);
     if (ArgResult.isInvalid())
       return ExprError();
@@ -7080,7 +7248,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       //        template-parameter; or
       llvm::APSInt Value;
       ExprResult ArgResult = CheckConvertedConstantExpression(
-          DeductionArg, ParamType, Value, CCEK_TemplateArg);
+          DeductionArg, ParamType, Value, CCEKind::TemplateArg);
       if (ArgResult.isInvalid())
         return ExprError();
       setDeductionArg(ArgResult.get());
@@ -7615,9 +7783,8 @@ ExprResult Sema::BuildExpressionFromDeclTemplateArgument(
   QualType DestExprType = ParamType.getNonLValueExprType(Context);
   if (!Context.hasSameType(RefExpr.get()->getType(), DestExprType)) {
     CastKind CK;
-    QualType Ignored;
     if (Context.hasSimilarType(RefExpr.get()->getType(), DestExprType) ||
-        IsFunctionConversion(RefExpr.get()->getType(), DestExprType, Ignored)) {
+        IsFunctionConversion(RefExpr.get()->getType(), DestExprType)) {
       CK = CK_NoOp;
     } else if (ParamType->isVoidPointerType() &&
                RefExpr.get()->getType()->isPointerType()) {
@@ -8655,6 +8822,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.
   if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip)) {
+    if (LangOpts.HLSL)
+      Specialization->addAttr(PackedAttr::CreateImplicit(Context));
     AddAlignmentAttributesForRecord(Specialization);
     AddMsStructLayoutForRecord(Specialization);
   }
@@ -8933,8 +9102,7 @@ Sema::CheckSpecializationInstantiationRedecl(SourceLocation NewLoc,
         // The declaration itself has not actually been instantiated, so it is
         // still okay to specialize it.
         StripImplicitInstantiation(
-            PrevDecl,
-            Context.getTargetInfo().getTriple().isWindowsGNUEnvironment());
+            PrevDecl, Context.getTargetInfo().getTriple().isOSCygMing());
         return false;
       }
       // Fall through
@@ -9329,7 +9497,10 @@ bool Sema::CheckFunctionTemplateSpecialization(
 
   // Mark the prior declaration as an explicit specialization, so that later
   // clients know that this is an explicit specialization.
-  if (!isFriend) {
+  // A dependent friend specialization which has a definition should be treated
+  // as explicit specialization, despite being invalid.
+  if (FunctionDecl *InstFrom = FD->getInstantiatedFromMemberFunction();
+      !isFriend || (InstFrom && InstFrom->getDependentSpecializationInfo())) {
     // Since explicit specializations do not inherit '=delete' from their
     // primary function template - check if the 'specialization' that was
     // implicitly generated (during template argument deduction for partial
@@ -9775,8 +9946,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
 
   if (!ClassTemplate) {
     NonTagKind NTK = getNonTagTypeDeclKind(TD, Kind);
-    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag)
-        << TD << NTK << llvm::to_underlying(Kind);
+    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag) << TD << NTK << Kind;
     Diag(TD->getLocation(), diag::note_previous_use);
     return true;
   }
@@ -9802,7 +9972,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
                                        : TSK_ExplicitInstantiationDeclaration;
 
   if (TSK == TSK_ExplicitInstantiationDeclaration &&
-      !Context.getTargetInfo().getTriple().isWindowsGNUEnvironment()) {
+      !Context.getTargetInfo().getTriple().isOSCygMing()) {
     // Check for dllexport class template instantiation declarations,
     // except for MinGW mode.
     for (const ParsedAttr &AL : Attr) {
@@ -9867,7 +10037,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
     = PrevDecl ? PrevDecl->getTemplateSpecializationKind() : TSK_Undeclared;
 
   if (TSK == TSK_ExplicitInstantiationDefinition && PrevDecl != nullptr &&
-      Context.getTargetInfo().getTriple().isWindowsGNUEnvironment()) {
+      Context.getTargetInfo().getTriple().isOSCygMing()) {
     // Check for dllexport class template instantiation definitions in MinGW
     // mode, if a previous declaration of the instantiation was seen.
     for (const ParsedAttr &AL : Attr) {
@@ -10035,7 +10205,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
     // In MinGW mode, export the template instantiation if the declaration
     // was marked dllexport.
     if (PrevDecl_TSK == TSK_ExplicitInstantiationDeclaration &&
-        Context.getTargetInfo().getTriple().isWindowsGNUEnvironment() &&
+        Context.getTargetInfo().getTriple().isOSCygMing() &&
         PrevDecl->hasAttr<DLLExportAttr>()) {
       dllExportImportClassTemplateSpecialization(*this, Def);
     }
@@ -10067,7 +10237,7 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                Attr, AS_none, /*ModulePrivateLoc=*/SourceLocation(),
                MultiTemplateParamsArg(), Owned, IsDependent, SourceLocation(),
                false, TypeResult(), /*IsTypeSpecifier*/ false,
-               /*IsTemplateParamOrArg*/ false, /*OOK=*/OOK_Outside)
+               /*IsTemplateParamOrArg*/ false, /*OOK=*/OffsetOfKind::Outside)
           .get();
   assert(!IsDependent && "explicit instantiation of dependent name not yet handled");
 
@@ -10639,8 +10809,7 @@ TypeResult Sema::ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
 
   if (TUK == TagUseKind::Declaration || TUK == TagUseKind::Definition) {
     Diag(NameLoc, diag::err_dependent_tag_decl)
-        << (TUK == TagUseKind::Definition) << llvm::to_underlying(Kind)
-        << SS.getRange();
+        << (TUK == TagUseKind::Definition) << Kind << SS.getRange();
     return true;
   }
 
@@ -10889,7 +11058,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
   unsigned DiagID = 0;
   Decl *Referenced = nullptr;
   switch (Result.getResultKind()) {
-  case LookupResult::NotFound: {
+  case LookupResultKind::NotFound: {
     // If we're looking up 'type' within a template named 'enable_if', produce
     // a more specific diagnostic.
     SourceRange CondRange;
@@ -10921,7 +11090,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
     break;
   }
 
-  case LookupResult::FoundUnresolvedValue: {
+  case LookupResultKind::FoundUnresolvedValue: {
     // We found a using declaration that is a value. Most likely, the using
     // declaration itself is meant to have the 'typename' keyword.
     SourceRange FullRange(KeywordLoc.isValid() ? KeywordLoc : SS.getBeginLoc(),
@@ -10935,17 +11104,17 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
         << FixItHint::CreateInsertion(Loc, "typename ");
     }
   }
-  // Fall through to create a dependent typename type, from which we can recover
-  // better.
-  [[fallthrough]];
+    // Fall through to create a dependent typename type, from which we can
+    // recover better.
+    [[fallthrough]];
 
-  case LookupResult::NotFoundInCurrentInstantiation:
+  case LookupResultKind::NotFoundInCurrentInstantiation:
     // Okay, it's a member of an unknown instantiation.
     return Context.getDependentNameType(Keyword,
                                         QualifierLoc.getNestedNameSpecifier(),
                                         &II);
 
-  case LookupResult::Found:
+  case LookupResultKind::Found:
     if (TypeDecl *Type = dyn_cast<TypeDecl>(Result.getFoundDecl())) {
       // C++ [class.qual]p2:
       //   In a lookup in which function names are not ignored and the
@@ -11003,13 +11172,13 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
     Referenced = Result.getFoundDecl();
     break;
 
-  case LookupResult::FoundOverloaded:
+  case LookupResultKind::FoundOverloaded:
     DiagID = Ctx ? diag::err_typename_nested_not_type
                  : diag::err_typename_not_type;
     Referenced = *Result.begin();
     break;
 
-  case LookupResult::Ambiguous:
+  case LookupResultKind::Ambiguous:
     return QualType();
   }
 
@@ -11318,7 +11487,12 @@ private:
   template<typename SpecDecl>
   void checkImpl(SpecDecl *Spec) {
     bool IsHiddenExplicitSpecialization = false;
-    if (Spec->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {
+    TemplateSpecializationKind SpecKind = Spec->getTemplateSpecializationKind();
+    // Some invalid friend declarations are written as specializations but are
+    // instantiated implicitly.
+    if constexpr (std::is_same_v<SpecDecl, FunctionDecl>)
+      SpecKind = Spec->getTemplateSpecializationKindForInstantiation();
+    if (SpecKind == TSK_ExplicitSpecialization) {
       IsHiddenExplicitSpecialization = Spec->getMemberSpecializationInfo()
                                            ? !CheckMemberSpecialization(Spec)
                                            : !CheckExplicitSpecialization(Spec);

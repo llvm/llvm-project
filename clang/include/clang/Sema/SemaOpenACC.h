@@ -125,38 +125,78 @@ private:
   /// 'loop' clause enforcement, where this is 'blocked' by a compute construct.
   llvm::SmallVector<OpenACCReductionClause *> ActiveReductionClauses;
 
-  // Type to check the info about the 'for stmt'.
-  struct ForStmtBeginChecker {
+  // Type to check the 'for' (or range-for) statement for compatibility with the
+  // 'loop' directive.
+  class ForStmtBeginChecker {
     SemaOpenACC &SemaRef;
     SourceLocation ForLoc;
-    bool IsRangeFor = false;
-    std::optional<const CXXForRangeStmt *> RangeFor = nullptr;
-    const Stmt *Init = nullptr;
-    bool InitChanged = false;
-    std::optional<const Stmt *> Cond = nullptr;
-    std::optional<const Stmt *> Inc = nullptr;
+    bool IsInstantiation = false;
+
+    struct RangeForInfo {
+      const CXXForRangeStmt *Uninstantiated = nullptr;
+      const CXXForRangeStmt *CurrentVersion = nullptr;
+      // GCC 7.x requires this constructor, else the construction of variant
+      // doesn't work correctly.
+      RangeForInfo() : Uninstantiated{nullptr}, CurrentVersion{nullptr} {}
+      RangeForInfo(const CXXForRangeStmt *Uninst, const CXXForRangeStmt *Cur)
+          : Uninstantiated{Uninst}, CurrentVersion{Cur} {}
+    };
+
+    struct ForInfo {
+      const Stmt *Init = nullptr;
+      const Stmt *Condition = nullptr;
+      const Stmt *Increment = nullptr;
+    };
+
+    struct CheckForInfo {
+      ForInfo Uninst;
+      ForInfo Current;
+    };
+
+    std::variant<RangeForInfo, CheckForInfo> Info;
     // Prevent us from checking 2x, which can happen with collapse & tile.
     bool AlreadyChecked = false;
 
-    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
-                        std::optional<const CXXForRangeStmt *> S)
-        : SemaRef(SemaRef), ForLoc(ForLoc), IsRangeFor(true), RangeFor(S) {}
+    void checkRangeFor();
 
+    bool checkForInit(const Stmt *InitStmt, const ValueDecl *&InitVar,
+                      bool Diag);
+    bool checkForCond(const Stmt *CondStmt, const ValueDecl *InitVar,
+                      bool Diag);
+    bool checkForInc(const Stmt *IncStmt, const ValueDecl *InitVar, bool Diag);
+
+    void checkFor();
+
+    //  void checkRangeFor(); ?? ERICH
+    //  const ValueDecl *checkInit();
+    //  void checkCond(const ValueDecl *Init);
+    //  void checkInc(const ValueDecl *Init);
+  public:
+    // Checking for non-instantiation version of a Range-for.
     ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
-                        const Stmt *I, bool InitChanged,
-                        std::optional<const Stmt *> C,
-                        std::optional<const Stmt *> Inc)
-        : SemaRef(SemaRef), ForLoc(ForLoc), IsRangeFor(false), Init(I),
-          InitChanged(InitChanged), Cond(C), Inc(Inc) {}
-    // Do the checking for the For/Range-For. Currently this implements the 'not
-    // seq' restrictions only, and should be called either if we know we are a
-    // top-level 'for' (the one associated via associated-stmt), or extended via
-    // 'collapse'.
+                        const CXXForRangeStmt *RangeFor)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsInstantiation(false),
+          Info(RangeForInfo{nullptr, RangeFor}) {}
+    // Checking for an instantiation of the range-for.
+    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
+                        const CXXForRangeStmt *OldRangeFor,
+                        const CXXForRangeStmt *RangeFor)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsInstantiation(true),
+          Info(RangeForInfo{OldRangeFor, RangeFor}) {}
+    // Checking for a non-instantiation version of a traditional for.
+    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
+                        const Stmt *Init, const Stmt *Cond, const Stmt *Inc)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsInstantiation(false),
+          Info(CheckForInfo{{}, {Init, Cond, Inc}}) {}
+    // Checking for an instantiation version of a traditional for.
+    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
+                        const Stmt *OldInit, const Stmt *OldCond,
+                        const Stmt *OldInc, const Stmt *Init, const Stmt *Cond,
+                        const Stmt *Inc)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsInstantiation(true),
+          Info(CheckForInfo{{OldInit, OldCond, OldInc}, {Init, Cond, Inc}}) {}
+
     void check();
-
-    const ValueDecl *checkInit();
-    void checkCond();
-    void checkInc(const ValueDecl *Init);
   };
 
   /// Helper function for checking the 'for' and 'range for' stmts.

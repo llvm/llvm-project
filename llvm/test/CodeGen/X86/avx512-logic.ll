@@ -889,7 +889,7 @@ define <16 x i32> @ternlog_xor_andn(<16 x i32> %x, <16 x i32> %y, <16 x i32> %z)
 define <16 x i32> @ternlog_or_and_mask(<16 x i32> %x, <16 x i32> %y) {
 ; ALL-LABEL: ternlog_or_and_mask:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & mem) | zmm1
+; ALL-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & m32bcst) | zmm1
 ; ALL-NEXT:    retq
   %a = and <16 x i32> %x, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %b = or <16 x i32> %a, %y
@@ -899,7 +899,7 @@ define <16 x i32> @ternlog_or_and_mask(<16 x i32> %x, <16 x i32> %y) {
 define <8 x i64> @ternlog_xor_and_mask(<8 x i64> %x, <8 x i64> %y) {
 ; ALL-LABEL: ternlog_xor_and_mask:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm1 ^ (zmm0 & mem)
+; ALL-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm1 ^ (zmm0 & m64bcst)
 ; ALL-NEXT:    retq
   %a = and <8 x i64> %x, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
   %b = xor <8 x i64> %a, %y

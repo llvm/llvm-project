@@ -170,7 +170,7 @@ class TestCase(TestBase):
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
             "totalSymbolTablesSavedToCache",
-            "totalSymbolsLoaded",
+            "totalSymbolTableSymbolCount",
             "totalSymbolTablesLoaded",
             "totalDebugInfoByteSize",
             "totalDebugInfoIndexTime",
@@ -180,7 +180,7 @@ class TestCase(TestBase):
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         if self.getPlatform() != "windows":
-            self.assertGreater(debug_stats["totalSymbolsLoaded"], 0)
+            self.assertGreater(debug_stats["totalSymbolTableSymbolCount"], 0)
             self.assertGreater(debug_stats["totalSymbolTablesLoaded"], 0)
 
         # Verify target stats keys.
@@ -203,13 +203,34 @@ class TestCase(TestBase):
         # Verify module stats keys.
         for module_stats in debug_stats["modules"]:
             module_stat_keys_exist = [
-                "symbolsLoaded",
+                "symbolTableSymbolCount",
             ]
             self.verify_keys(
                 module_stats, '"module_stats"', module_stat_keys_exist, None
             )
             if self.getPlatform() != "windows":
-                self.assertGreater(module_stats["symbolsLoaded"], 0)
+                self.assertGreater(module_stats["symbolTableSymbolCount"], 0)
+
+    def test_default_no_run_no_preload_symbols(self):
+        """Test "statistics dump" without running the target and without
+        preloading symbols.
+
+        Checks that symbol count are zero.
+        """
+        # Make sure symbols will not be preloaded.
+        self.runCmd("settings set target.preload-symbols false")
+
+        # Build and load the target
+        self.build()
+        self.createTestTarget()
+
+        # Get statistics
+        debug_stats = self.get_stats()
+
+        # No symbols should be loaded in the main module.
+        main_module_stats = debug_stats["modules"][0]
+        if self.getPlatform() != "windows":
+            self.assertEqual(main_module_stats["symbolTableSymbolCount"], 0)
 
     def test_default_with_run(self):
         """Test "statistics dump" when running the target to a breakpoint.
@@ -1047,3 +1068,89 @@ class TestCase(TestBase):
         all_targets_stats = self.get_stats("--all-targets")
         self.assertIsNotNone(self.find_module_in_metrics(main_exe, all_targets_stats))
         self.assertIsNotNone(self.find_module_in_metrics(second_exe, all_targets_stats))
+
+    # Return some level of the plugin stats hierarchy.
+    # Will return either the top-level node, the namespace node, or a specific
+    # plugin node based on requested values.
+    #
+    # If any of the requested keys are not found in the stats then return None.
+    #
+    # Plugin stats look like this:
+    #
+    # "plugins": {
+    #     "system-runtime": [
+    #         {
+    #             "enabled": true,
+    #             "name": "systemruntime-macosx"
+    #         }
+    #     ]
+    # },
+    def get_plugin_stats(self, debugger_stats, plugin_namespace=None, plugin_name=None):
+        # Get top level plugin stats.
+        if "plugins" not in debugger_stats:
+            return None
+        plugins = debugger_stats["plugins"]
+        if not plugin_namespace:
+            return plugins
+
+        # Plugin namespace stats.
+        if plugin_namespace not in plugins:
+            return None
+        plugins_for_namespace = plugins[plugin_namespace]
+        if not plugin_name:
+            return plugins_for_namespace
+
+        # Specific plugin stats.
+        for plugin in debugger_stats["plugins"][plugin_namespace]:
+            if plugin["name"] == plugin_name:
+                return plugin
+        return None
+
+    def test_plugin_stats(self):
+        """
+        Test "statistics dump" contains plugin info.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        debugger_stats = self.get_stats()
+
+        # Verify that the statistics dump contains the plugin information.
+        plugins = self.get_plugin_stats(debugger_stats)
+        self.assertIsNotNone(plugins)
+
+        # Check for a known plugin namespace that should be in the stats.
+        system_runtime_plugins = self.get_plugin_stats(debugger_stats, "system-runtime")
+        self.assertIsNotNone(system_runtime_plugins)
+
+        # Validate the keys exists for the bottom-level plugin stats.
+        plugin_keys_exist = [
+            "name",
+            "enabled",
+        ]
+        for plugin in system_runtime_plugins:
+            self.verify_keys(
+                plugin, 'debugger_stats["plugins"]["system-runtime"]', plugin_keys_exist
+            )
+
+        # Check for a known plugin that is enabled by default.
+        system_runtime_macosx_plugin = self.get_plugin_stats(
+            debugger_stats, "system-runtime", "systemruntime-macosx"
+        )
+        self.assertIsNotNone(system_runtime_macosx_plugin)
+        self.assertTrue(system_runtime_macosx_plugin["enabled"])
+
+        # Now disable the plugin and check the stats again.
+        # The stats should show the plugin is disabled.
+        self.runCmd("plugin disable system-runtime.systemruntime-macosx")
+        debugger_stats = self.get_stats()
+        system_runtime_macosx_plugin = self.get_plugin_stats(
+            debugger_stats, "system-runtime", "systemruntime-macosx"
+        )
+        self.assertIsNotNone(system_runtime_macosx_plugin)
+        self.assertFalse(system_runtime_macosx_plugin["enabled"])
+
+        # Plugins should not show up in the stats when disabled with an option.
+        debugger_stats = self.get_stats("--plugins false")
+        plugins = self.get_plugin_stats(debugger_stats)
+        self.assertIsNone(plugins)

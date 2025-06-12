@@ -137,6 +137,15 @@ hlfir::ElementalAddrOp convertVectorSubscriptedExprToElementalAddr(
     const Fortran::lower::SomeExpr &, Fortran::lower::SymMap &,
     Fortran::lower::StatementContext &);
 
+/// Lower a designator containing vector subscripts, creating a hlfir::Entity
+/// representing the first element in the vector subscripted array. This is a
+/// helper which calls convertVectorSubscriptedExprToElementalAddr and lowers
+/// the hlfir::ElementalAddrOp.
+hlfir::Entity genVectorSubscriptedDesignatorFirstElementAddress(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx);
+
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CONVERTEXPRTOHLFIR_H

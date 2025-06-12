@@ -9,7 +9,7 @@
 #include "hdr/fcntl_macros.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/struct_flock.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/fcntl/fcntl.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
@@ -166,7 +166,7 @@ TEST(LlvmLibcFcntlTest, UseAfterClose) {
 }
 
 TEST(LlvmLibcFcntlTest, SetGetOwnerTest) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   pid_t pid = LIBC_NAMESPACE::getpid();
   ASSERT_GT(pid, -1);

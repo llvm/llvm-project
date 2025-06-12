@@ -70,11 +70,15 @@
 ///
 //===----------------------------------------------------------------------===//
 
-def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
-                           SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
-                                                SDTCisInt<1>]>>;
-def riscv_read_vlenb : SDNode<"RISCVISD::READ_VLENB",
-                              SDTypeProfile<1, 0, [SDTCisVT<0, XLenVT>]>>;
+// VMV_X_S matches the semantics of vmv.x.s. The result is always XLenVT sign
+// extended from the vector element size.
+def riscv_vmv_x_s : RVSDNode<"VMV_X_S",
+                             SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
+                                                  SDTCisInt<1>]>>;
+
+// Read VLENB CSR
+def riscv_read_vlenb : RVSDNode<"READ_VLENB",
+                                SDTypeProfile<1, 0, [SDTCisVT<0, XLenVT>]>>;
 
 // Operand that is allowed to be a register other than X0, a 5 bit unsigned
 // immediate, or -1. -1 means VLMAX. This allows us to pick between VSETIVLI and
@@ -6052,7 +6056,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1 in {
                         PseudoInstExpansion<(CSRRS GPR:$rd, SysRegVLENB.Encoding, X0)>,
                         Sched<[WriteRdVLENB]>;
   let Defs = [VL, VTYPE] in {
-  def PseudoReadVLENBViaVSETVLIX0 : Pseudo<(outs GPR:$rd), (ins uimm5:$shamt),
+  def PseudoReadVLENBViaVSETVLIX0 : Pseudo<(outs GPRNoX0:$rd), (ins uimm5:$shamt),
                                   []>,
                            Sched<[WriteVSETVLI, ReadVSETVLI]>;
   }
@@ -6092,9 +6096,12 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Defs = [VL, VTYPE] in {
 def PseudoVSETVLI : Pseudo<(outs GPR:$rd), (ins GPRNoX0:$rs1, VTypeIOp11:$vtypei), []>,
                     PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
                     Sched<[WriteVSETVLI, ReadVSETVLI]>;
-def PseudoVSETVLIX0 : Pseudo<(outs GPR:$rd), (ins GPRX0:$rs1, VTypeIOp11:$vtypei), []>,
+def PseudoVSETVLIX0 : Pseudo<(outs GPRNoX0:$rd), (ins GPRX0:$rs1, VTypeIOp11:$vtypei), []>,
                       PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
                       Sched<[WriteVSETVLI, ReadVSETVLI]>;
+def PseudoVSETVLIX0X0 : Pseudo<(outs GPRX0:$rd), (ins GPRX0:$rs1, VTypeIOp11:$vtypei), []>,
+                        PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
+                        Sched<[WriteVSETVLI, ReadVSETVLI]>;
 def PseudoVSETIVLI : Pseudo<(outs GPR:$rd), (ins uimm5:$rs1, VTypeIOp10:$vtypei), []>,
                      PseudoInstExpansion<(VSETIVLI GPR:$rd, uimm5:$rs1, VTypeIOp10:$vtypei)>,
                      Sched<[WriteVSETIVLI]>;
@@ -6225,6 +6232,36 @@ foreach vti = AllIntegerVectors in {
                                                         GPR:$vl,
                                                         vti.Log2SEW,
                                                         (XLenVT timm:$policy))>;
+  }
+}
+
+// (add v, C) -> (sub v, -C) if -C cheaper to materialize
+defvar I64IntegerVectors = !filter(vti, AllIntegerVectors, !eq(vti.SEW, 64));
+foreach vti = I64IntegerVectors in {
+  let Predicates = [HasVInstructionsI64] in {
+    def : Pat<(vti.Vector (int_riscv_vadd (vti.Vector vti.RegClass:$passthru),
+                                          (vti.Vector vti.RegClass:$rs1),
+                                          (i64 negImm:$rs2),
+                                          VLOpFrag)),
+              (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX)
+                                             vti.RegClass:$passthru,
+                                             vti.RegClass:$rs1,
+                                             negImm:$rs2,
+                                             GPR:$vl, vti.Log2SEW, TU_MU)>;
+    def : Pat<(vti.Vector (int_riscv_vadd_mask (vti.Vector vti.RegClass:$passthru),
+                                               (vti.Vector vti.RegClass:$rs1),
+                                               (i64 negImm:$rs2),
+                                               (vti.Mask VMV0:$vm),
+                                               VLOpFrag,
+                                               (i64 timm:$policy))),
+              (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX#"_MASK")
+                                             vti.RegClass:$passthru,
+                                             vti.RegClass:$rs1,
+                                             negImm:$rs2,
+                                             (vti.Mask VMV0:$vm),
+                                             GPR:$vl,
+                                             vti.Log2SEW,
+                                             (i64 timm:$policy))>;
   }
 }
 
@@ -6699,9 +6736,9 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
     Sched<[WriteVMovXS, ReadVMovXS]>,
     RISCVVPseudo;
   let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X, isReMaterializable = 1,
-      Constraints = "$rd = $rs1" in
+      Constraints = "$rd = $passthru" in
   def PseudoVMV_S_X: Pseudo<(outs VR:$rd),
-                            (ins VR:$rs1, GPR:$rs2, AVL:$vl, sew:$sew),
+                            (ins VR:$passthru, GPR:$rs1, AVL:$vl, sew:$sew),
                             []>,
     Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]>,
     RISCVVPseudo;
@@ -6722,10 +6759,10 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
       Sched<[WriteVMovFS, ReadVMovFS]>,
       RISCVVPseudo;
     let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F, isReMaterializable = 1,
-        Constraints = "$rd = $rs1" in
+        Constraints = "$rd = $passthru" in
     def "PseudoVFMV_S_" # f.FX :
       Pseudo<(outs VR:$rd),
-             (ins VR:$rs1, f.fprclass:$rs2, AVL:$vl, sew:$sew),
+             (ins VR:$passthru, f.fprclass:$rs1, AVL:$vl, sew:$sew),
              []>,
       Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>,
       RISCVVPseudo;

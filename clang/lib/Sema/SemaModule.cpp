@@ -395,7 +395,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   case ModuleDeclKind::PartitionInterface: {
     // We can't have parsed or imported a definition of this module or parsed a
     // module map defining it already.
-    if (auto *M = Map.findModule(ModuleName)) {
+    if (auto *M = Map.findOrLoadModule(ModuleName)) {
       Diag(Path[0].getLoc(), diag::err_module_redefinition) << ModuleName;
       if (M->DefinitionLoc.isValid())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition);
@@ -712,7 +712,13 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
       Mod->Kind == Module::ModuleKind::ModulePartitionImplementation) {
     Diag(ExportLoc, diag::err_export_partition_impl)
         << SourceRange(ExportLoc, Path.back().getLoc());
-  } else if (!ModuleScopes.empty() && !currentModuleIsImplementation()) {
+  } else if (ExportLoc.isValid() &&
+             (ModuleScopes.empty() || currentModuleIsImplementation())) {
+    // [module.interface]p1:
+    // An export-declaration shall inhabit a namespace scope and appear in the
+    // purview of a module interface unit.
+    Diag(ExportLoc, diag::err_export_not_in_module_interface);
+  } else if (!ModuleScopes.empty()) {
     // Re-export the module if the imported module is exported.
     // Note that we don't need to add re-exported module to Imports field
     // since `Exports` implies the module is imported already.
@@ -720,11 +726,6 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
       getCurrentModule()->Exports.emplace_back(Mod, false);
     else
       getCurrentModule()->Imports.insert(Mod);
-  } else if (ExportLoc.isValid()) {
-    // [module.interface]p1:
-    // An export-declaration shall inhabit a namespace scope and appear in the
-    // purview of a module interface unit.
-    Diag(ExportLoc, diag::err_export_not_in_module_interface);
   }
 
   return Import;
@@ -942,7 +943,7 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
   // HLSL: export declaration is valid only on functions
   if (S.getLangOpts().HLSL) {
     // Export-within-export was already diagnosed in ActOnStartExportDecl
-    if (!dyn_cast<FunctionDecl>(D) && !dyn_cast<ExportDecl>(D)) {
+    if (!isa<FunctionDecl, ExportDecl>(D)) {
       S.Diag(D->getBeginLoc(), diag::err_hlsl_export_not_on_function);
       D->setInvalidDecl();
       return false;

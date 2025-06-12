@@ -4,7 +4,7 @@
 define void @null_ptr_is_valid_call_with_null() #0 {
 ; CHECK-LABEL: define void @null_ptr_is_valid_call_with_null(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    call void @store_as0(ptr nofree noundef writeonly null) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @store_as0(ptr noalias nofree noundef writeonly null) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @store_as0(ptr null)

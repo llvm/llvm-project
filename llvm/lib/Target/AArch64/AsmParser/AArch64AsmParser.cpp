@@ -31,7 +31,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
@@ -230,6 +230,9 @@ private:
   bool parseDirectiveSEHClearUnwoundToCall(SMLoc L);
   bool parseDirectiveSEHPACSignLR(SMLoc L);
   bool parseDirectiveSEHSaveAnyReg(SMLoc L, bool Paired, bool Writeback);
+  bool parseDirectiveSEHAllocZ(SMLoc L);
+  bool parseDirectiveSEHSaveZReg(SMLoc L);
+  bool parseDirectiveSEHSavePReg(SMLoc L);
   bool parseDirectiveAeabiSubSectionHeader(SMLoc L);
   bool parseDirectiveAeabiAArch64Attr(SMLoc L);
 
@@ -1272,7 +1275,7 @@ public:
       RK = RegKind::SVEPredicateAsCounter;
       break;
     default:
-      llvm_unreachable("Unsupport register class");
+      llvm_unreachable("Unsupported register class");
     }
 
     return (Kind == k_Register && Reg.Kind == RK) &&
@@ -1299,7 +1302,7 @@ public:
       RK = RegKind::SVEPredicateVector;
       break;
     default:
-      llvm_unreachable("Unsupport register class");
+      llvm_unreachable("Unsupported register class");
     }
 
     return (Kind == k_Register && Reg.Kind == RK) &&
@@ -3496,43 +3499,40 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
 AArch64CC::CondCode
 AArch64AsmParser::parseCondCodeString(StringRef Cond, std::string &Suggestion) {
   AArch64CC::CondCode CC = StringSwitch<AArch64CC::CondCode>(Cond.lower())
-                    .Case("eq", AArch64CC::EQ)
-                    .Case("ne", AArch64CC::NE)
-                    .Case("cs", AArch64CC::HS)
-                    .Case("hs", AArch64CC::HS)
-                    .Case("cc", AArch64CC::LO)
-                    .Case("lo", AArch64CC::LO)
-                    .Case("mi", AArch64CC::MI)
-                    .Case("pl", AArch64CC::PL)
-                    .Case("vs", AArch64CC::VS)
-                    .Case("vc", AArch64CC::VC)
-                    .Case("hi", AArch64CC::HI)
-                    .Case("ls", AArch64CC::LS)
-                    .Case("ge", AArch64CC::GE)
-                    .Case("lt", AArch64CC::LT)
-                    .Case("gt", AArch64CC::GT)
-                    .Case("le", AArch64CC::LE)
-                    .Case("al", AArch64CC::AL)
-                    .Case("nv", AArch64CC::NV)
-                    .Default(AArch64CC::Invalid);
+                               .Case("eq", AArch64CC::EQ)
+                               .Case("ne", AArch64CC::NE)
+                               .Case("cs", AArch64CC::HS)
+                               .Case("hs", AArch64CC::HS)
+                               .Case("cc", AArch64CC::LO)
+                               .Case("lo", AArch64CC::LO)
+                               .Case("mi", AArch64CC::MI)
+                               .Case("pl", AArch64CC::PL)
+                               .Case("vs", AArch64CC::VS)
+                               .Case("vc", AArch64CC::VC)
+                               .Case("hi", AArch64CC::HI)
+                               .Case("ls", AArch64CC::LS)
+                               .Case("ge", AArch64CC::GE)
+                               .Case("lt", AArch64CC::LT)
+                               .Case("gt", AArch64CC::GT)
+                               .Case("le", AArch64CC::LE)
+                               .Case("al", AArch64CC::AL)
+                               .Case("nv", AArch64CC::NV)
+                               // SVE condition code aliases:
+                               .Case("none", AArch64CC::EQ)
+                               .Case("any", AArch64CC::NE)
+                               .Case("nlast", AArch64CC::HS)
+                               .Case("last", AArch64CC::LO)
+                               .Case("first", AArch64CC::MI)
+                               .Case("nfrst", AArch64CC::PL)
+                               .Case("pmore", AArch64CC::HI)
+                               .Case("plast", AArch64CC::LS)
+                               .Case("tcont", AArch64CC::GE)
+                               .Case("tstop", AArch64CC::LT)
+                               .Default(AArch64CC::Invalid);
 
-  if (CC == AArch64CC::Invalid && getSTI().hasFeature(AArch64::FeatureSVE)) {
-    CC = StringSwitch<AArch64CC::CondCode>(Cond.lower())
-                    .Case("none",  AArch64CC::EQ)
-                    .Case("any",   AArch64CC::NE)
-                    .Case("nlast", AArch64CC::HS)
-                    .Case("last",  AArch64CC::LO)
-                    .Case("first", AArch64CC::MI)
-                    .Case("nfrst", AArch64CC::PL)
-                    .Case("pmore", AArch64CC::HI)
-                    .Case("plast", AArch64CC::LS)
-                    .Case("tcont", AArch64CC::GE)
-                    .Case("tstop", AArch64CC::LT)
-                    .Default(AArch64CC::Invalid);
+  if (CC == AArch64CC::Invalid && Cond.lower() == "nfirst")
+    Suggestion = "nfrst";
 
-    if (CC == AArch64CC::Invalid && Cond.lower() == "nfirst")
-      Suggestion = "nfrst";
-  }
   return CC;
 }
 
@@ -3914,6 +3914,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
   const AsmToken &Tok = getTok();
   StringRef Op = Tok.getString();
   SMLoc S = Tok.getLoc();
+  bool ExpectRegister = true;
 
   if (Mnemonic == "ic") {
     const AArch64IC::IC *IC = AArch64IC::lookupICByName(Op);
@@ -3924,6 +3925,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(IC->getRequiredFeatures(), Str);
       return TokError(Str);
     }
+    ExpectRegister = IC->NeedsReg;
     createSysAlias(IC->Encoding, Operands, S);
   } else if (Mnemonic == "dc") {
     const AArch64DC::DC *DC = AArch64DC::lookupDCByName(Op);
@@ -3954,6 +3956,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(TLBI->getRequiredFeatures(), Str);
       return TokError(Str);
     }
+    ExpectRegister = TLBI->NeedsReg;
     createSysAlias(TLBI->Encoding, Operands, S);
   } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" || Mnemonic == "cosp") {
 
@@ -3984,7 +3987,6 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
 
   Lex(); // Eat operand.
 
-  bool ExpectRegister = !Op.contains_insensitive("all");
   bool HasRegister = false;
 
   // Check for the optional register operand.
@@ -5403,7 +5405,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
 
   // A prefix only applies to the instruction following it.  Here we extract
   // prefix information for the next instruction before validating the current
-  // one so that in the case of failure we don't erronously continue using the
+  // one so that in the case of failure we don't erroneously continue using the
   // current prefix.
   PrefixInfo Prefix = NextPrefix;
   NextPrefix = PrefixInfo::CreateFromInst(Inst, MCID.TSFlags);
@@ -5415,7 +5417,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
       (Inst.getOpcode() != AArch64::BRK) &&
       (Inst.getOpcode() != AArch64::HLT)) {
 
-    // Prefixed intructions must have a destructive operand.
+    // Prefixed instructions must have a destructive operand.
     if ((MCID.TSFlags & AArch64::DestructiveInstTypeMask) ==
         AArch64::NotDestructive)
       return Error(IDLoc, "instruction is unpredictable when following a"
@@ -6405,7 +6407,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                MCStreamer &Out,
                                                uint64_t &ErrorInfo,
                                                bool MatchingInlineAsm) {
-  assert(!Operands.empty() && "Unexpect empty operand list!");
+  assert(!Operands.empty() && "Unexpected empty operand list!");
   AArch64Operand &Op = static_cast<AArch64Operand &>(*Operands[0]);
   assert(Op.isToken() && "Leading operand should always be a mnemonic!");
 
@@ -7111,6 +7113,12 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHSaveAnyReg(Loc, false, true);
     else if (IDVal == ".seh_save_any_reg_px")
       parseDirectiveSEHSaveAnyReg(Loc, true, true);
+    else if (IDVal == ".seh_allocz")
+      parseDirectiveSEHAllocZ(Loc);
+    else if (IDVal == ".seh_save_zreg")
+      parseDirectiveSEHSaveZReg(Loc);
+    else if (IDVal == ".seh_save_preg")
+      parseDirectiveSEHSavePReg(Loc);
     else
       return true;
   } else if (IsELF) {
@@ -7180,9 +7188,9 @@ static SMLoc incrementLoc(SMLoc L, int Offset) {
 bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   SMLoc CurLoc = getLoc();
 
+  StringRef Name = getParser().parseStringToEndOfStatement().trim();
   StringRef Arch, ExtensionString;
-  std::tie(Arch, ExtensionString) =
-      getParser().parseStringToEndOfStatement().trim().split('+');
+  std::tie(Arch, ExtensionString) = Name.split('+');
 
   const AArch64::ArchInfo *ArchInfo = AArch64::parseArch(Arch);
   if (!ArchInfo)
@@ -7229,6 +7237,8 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   }
   FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
   setAvailableFeatures(Features);
+
+  getTargetStreamer().emitDirectiveArch(Name);
   return false;
 }
 
@@ -7237,12 +7247,13 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
 bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
   SMLoc ExtLoc = getLoc();
 
-  StringRef Name = getParser().parseStringToEndOfStatement().trim();
+  StringRef FullName = getParser().parseStringToEndOfStatement().trim();
 
   if (parseEOL())
     return true;
 
   bool EnableFeature = true;
+  StringRef Name = FullName;
   if (Name.starts_with_insensitive("no")) {
     EnableFeature = false;
     Name = Name.substr(2);
@@ -7262,6 +7273,8 @@ bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
     STI.ClearFeatureBitsTransitively(It->Features);
   FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
   setAvailableFeatures(Features);
+
+  getTargetStreamer().emitDirectiveArchExtension(FullName);
   return false;
 }
 
@@ -7856,6 +7869,54 @@ bool AArch64AsmParser::parseDirectiveSEHSaveAnyReg(SMLoc L, bool Paired,
   return false;
 }
 
+/// parseDirectiveAllocZ
+/// ::= .seh_allocz
+bool AArch64AsmParser::parseDirectiveSEHAllocZ(SMLoc L) {
+  int64_t Offset;
+  if (parseImmExpr(Offset))
+    return true;
+  getTargetStreamer().emitARM64WinCFIAllocZ(Offset);
+  return false;
+}
+
+/// parseDirectiveSEHSaveZReg
+/// ::= .seh_save_zreg
+bool AArch64AsmParser::parseDirectiveSEHSaveZReg(SMLoc L) {
+  MCRegister RegNum;
+  StringRef Kind;
+  int64_t Offset;
+  ParseStatus Res =
+      tryParseVectorRegister(RegNum, Kind, RegKind::SVEDataVector);
+  if (!Res.isSuccess())
+    return true;
+  if (check(RegNum < AArch64::Z8 || RegNum > AArch64::Z23, L,
+            "expected register in range z8 to z23"))
+    return true;
+  if (parseComma() || parseImmExpr(Offset))
+    return true;
+  getTargetStreamer().emitARM64WinCFISaveZReg(RegNum - AArch64::Z0, Offset);
+  return false;
+}
+
+/// parseDirectiveSEHSavePReg
+/// ::= .seh_save_preg
+bool AArch64AsmParser::parseDirectiveSEHSavePReg(SMLoc L) {
+  MCRegister RegNum;
+  StringRef Kind;
+  int64_t Offset;
+  ParseStatus Res =
+      tryParseVectorRegister(RegNum, Kind, RegKind::SVEPredicateVector);
+  if (!Res.isSuccess())
+    return true;
+  if (check(RegNum < AArch64::P4 || RegNum > AArch64::P15, L,
+            "expected register in range p4 to p15"))
+    return true;
+  if (parseComma() || parseImmExpr(Offset))
+    return true;
+  getTargetStreamer().emitARM64WinCFISavePReg(RegNum - AArch64::P0, Offset);
+  return false;
+}
+
 bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
   // Expecting 3 AsmToken::Identifier after '.aeabi_subsection', a name and 2
   // parameters, e.g.: .aeabi_subsection (1)aeabi_feature_and_bits, (2)optional,
@@ -7881,7 +7942,7 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
   }
 
   std::unique_ptr<MCELFStreamer::AttributeSubSection> SubsectionExists =
-      getTargetStreamer().getAtributesSubsectionByName(SubsectionName);
+      getTargetStreamer().getAttributesSubsectionByName(SubsectionName);
 
   // Consume the first parameter (optionality parameter)
   AArch64BuildAttributes::SubsectionOptional IsOptional;
@@ -7977,7 +8038,7 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     return true;
   }
 
-  getTargetStreamer().emitAtributesSubsection(SubsectionName, IsOptional, Type);
+  getTargetStreamer().emitAttributesSubsection(SubsectionName, IsOptional, Type);
 
   return false;
 }
@@ -7989,7 +8050,7 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   MCAsmParser &Parser = getParser();
 
   std::unique_ptr<MCELFStreamer::AttributeSubSection> ActiveSubsection =
-      getTargetStreamer().getActiveAtributesSubsection();
+      getTargetStreamer().getActiveAttributesSubsection();
   if (nullptr == ActiveSubsection) {
     Error(Parser.getTok().getLoc(),
           "no active subsection, build attribute can not be added");

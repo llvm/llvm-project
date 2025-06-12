@@ -99,6 +99,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVVMIntrRangePass(PR);
   initializeGenericToNVVMLegacyPassPass(PR);
   initializeNVPTXAllocaHoistingPass(PR);
+  initializeNVPTXAsmPrinterPass(PR);
   initializeNVPTXAssignValidGlobalNamesPass(PR);
   initializeNVPTXAtomicLowerPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
@@ -112,6 +113,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXAAWrapperPassPass(PR);
   initializeNVPTXExternalAAWrapperPass(PR);
   initializeNVPTXPeepholePass(PR);
+  initializeNVPTXTagInvariantLoadLegacyPassPass(PR);
 }
 
 static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
@@ -232,7 +234,7 @@ MachineFunctionInfo *NVPTXTargetMachine::createMachineFunctionInfo(
                                                                     F, STI);
 }
 
-void NVPTXTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
+void NVPTXTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<NVPTXAA>();
 }
 
@@ -268,7 +270,7 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 TargetTransformInfo
 NVPTXTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(NVPTXTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<NVPTXTTIImpl>(this, F));
 }
 
 std::pair<const Value *, unsigned>
@@ -347,10 +349,7 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&RemoveLoadsIntoFakeUsesID);
 
   addPass(createNVPTXAAWrapperPass());
-  addPass(createExternalAAWrapperPass([](Pass &P, Function &, AAResults &AAR) {
-    if (auto *WrapperPass = P.getAnalysisIfAvailable<NVPTXAAWrapperPass>())
-      AAR.addAAResult(WrapperPass->getResult());
-  }));
+  addPass(createNVPTXExternalAAWrapperPass());
 
   // NVVMReflectPass is added in addEarlyAsPossiblePasses, so hopefully running
   // it here does nothing.  But since we need it for correctness when lowering
@@ -395,6 +394,7 @@ void NVPTXPassConfig::addIRPasses() {
     if (!DisableLoadStoreVectorizer)
       addPass(createLoadStoreVectorizerPass());
     addPass(createSROAPass());
+    addPass(createNVPTXTagInvariantLoadsPass());
   }
 
   if (ST.hasPTXASUnreachableBug()) {

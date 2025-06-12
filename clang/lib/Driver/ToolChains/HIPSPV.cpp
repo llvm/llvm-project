@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPSPV.h"
-#include "CommonArgs.h"
 #include "HIPUtility.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Support/FileSystem.h"

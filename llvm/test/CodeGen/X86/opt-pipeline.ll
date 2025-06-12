@@ -121,12 +121,12 @@
 ; CHECK-NEXT:       Peephole Optimizations
 ; CHECK-NEXT:       Remove dead machine instructions
 ; CHECK-NEXT:       Live Range Shrink
-; CHECK-NEXT:       X86 Windows Fixup Buffer Security Check
 ; CHECK-NEXT:       X86 Fixup SetCC
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       X86 LEA Optimize
 ; CHECK-NEXT:       X86 Optimize Call Frame
 ; CHECK-NEXT:       X86 Avoid Store Forwarding Block
+; CHECK-NEXT:       X86 Suppress APX features for relocation
 ; CHECK-NEXT:       X86 speculative load hardening
 ; CHECK-NEXT:       X86 EFLAGS copy lowering
 ; CHECK-NEXT:       X86 DynAlloca Expander

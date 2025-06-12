@@ -319,7 +319,7 @@ public:
   ///
   /// \return
   ///     The symbol table for this object file.
-  Symtab *GetSymtab();
+  Symtab *GetSymtab(bool can_create = true);
 
   /// Parse the symbol table into the provides symbol table object.
   ///
@@ -708,6 +708,13 @@ public:
   static lldb::SymbolType GetSymbolTypeFromName(
       llvm::StringRef name,
       lldb::SymbolType symbol_type_hint = lldb::eSymbolTypeUndefined);
+
+  /// Parses the section type from a section name for DWARF sections.
+  ///
+  /// The \a name must be stripped of the default prefix (e.g. ".debug_" or
+  /// "__debug_"). If there's no matching section type, \a eSectionTypeOther
+  /// will be returned.
+  static lldb::SectionType GetDWARFSectionTypeFromName(llvm::StringRef name);
 
   /// Loads this objfile to memory.
   ///

@@ -18,7 +18,7 @@ using namespace llvm;
 // should be printed before the section name
 bool MCSectionCOFF::shouldOmitSectionDirective(StringRef Name,
                                                const MCAsmInfo &MAI) const {
-  if (COMDATSymbol)
+  if (COMDATSymbol || isUnique())
     return false;
 
   // FIXME: Does .section .bss/.data/.text work everywhere??
@@ -67,6 +67,10 @@ void MCSectionCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << 'i';
   OS << '"';
 
+  // unique should be tail of .section directive.
+  if (isUnique() && !COMDATSymbol)
+    OS << ",unique," << UniqueID;
+
   if (getCharacteristics() & COFF::IMAGE_SCN_LNK_COMDAT) {
     if (COMDATSymbol)
       OS << ",";
@@ -103,6 +107,10 @@ void MCSectionCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
       COMDATSymbol->print(OS, &MAI);
     }
   }
+
+  if (isUnique() && COMDATSymbol)
+    OS << ",unique," << UniqueID;
+
   OS << '\n';
 }
 

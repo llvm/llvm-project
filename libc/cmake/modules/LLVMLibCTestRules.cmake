@@ -1,15 +1,22 @@
 function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_flags(compile_flags ${flags})
+  _get_compile_options_from_config(config_flags)
 
   # Remove -fno-math-errno if it was added.
   if(LIBC_ADD_FNO_MATH_ERRNO)
-    list(REMOVE_ITEM compile_options "-fno-math-errno")
+    list(REMOVE_ITEM compile_flags "-fno-math-errno")
+  endif()
+
+  # Death test executor is only available in Linux for now.
+  if(NOT ${LIBC_TARGET_OS} STREQUAL "linux")
+    list(REMOVE_ITEM config_flags "-DLIBC_ADD_NULL_CHECKS")
   endif()
 
   set(compile_options
       ${LIBC_COMPILE_OPTIONS_DEFAULT}
       ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
-      ${compile_flags})
+      ${compile_flags}
+      ${config_flags})
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
@@ -64,6 +71,11 @@ endfunction()
 
 function(_get_hermetic_test_compile_options output_var)
   _get_common_test_compile_options(compile_options "" "")
+
+  # null check tests are death tests, remove from hermetic tests for now.
+  if(LIBC_ADD_NULL_CHECKS)
+    list(REMOVE_ITEM compile_options "-DLIBC_ADD_NULL_CHECKS")
+  endif()
 
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
@@ -156,10 +168,6 @@ function(get_object_files_for_test result skipped_entrypoints_list)
           endif()
           list(APPEND dep_obj ${object_file_raw})
         endif()
-      elseif(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
-        # Skip tests for externally implemented entrypoints.
-        list(APPEND dep_skip ${dep})
-        list(REMOVE_ITEM dep_obj ${dep})
       endif()
 
       set_target_properties(${dep} PROPERTIES
@@ -321,6 +329,7 @@ function(create_libc_unittest fq_target_name)
       ${fq_target_name}
       COMMAND ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${fq_build_target_name}
       COMMENT "Running unit test ${fq_target_name}"
+      DEPENDS ${fq_build_target_name}
     )
   endif()
 

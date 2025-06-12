@@ -102,14 +102,9 @@ struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
   template <typename T>
   using has_required_t = decltype(std::declval<T &>().isRequired());
 
-  template <typename T>
-  static std::enable_if_t<is_detected<has_required_t, T>::value, bool>
-  passIsRequiredImpl() {
-    return T::isRequired();
-  }
-  template <typename T>
-  static std::enable_if_t<!is_detected<has_required_t, T>::value, bool>
-  passIsRequiredImpl() {
+  template <typename T> static bool passIsRequiredImpl() {
+    if constexpr (is_detected<has_required_t, T>::value)
+      return T::isRequired();
     return false;
   }
 

@@ -78,13 +78,16 @@ static void genLocationAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
       {// 0. Fixed-size integer (line number)
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
                              BitCodeConstants::LineNumberSize),
-       // 1. Boolean (IsFileInRootDir)
+       // 1. Fixed-size integer (start line number)
+       llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
+                             BitCodeConstants::LineNumberSize),
+       // 2. Boolean (IsFileInRootDir)
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
                              BitCodeConstants::BoolSize),
-       // 2. Fixed-size integer (length of the following string (filename))
+       // 3. Fixed-size integer (length of the following string (filename))
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
                              BitCodeConstants::StringLengthSize),
-       // 3. The string blob
+       // 4. The string blob
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob)});
 }
 
@@ -357,7 +360,8 @@ void ClangDocBitcodeWriter::emitRecord(const Location &Loc, RecordId ID) {
   if (!prepRecordData(ID, true))
     return;
   // FIXME: Assert that the line number is of the appropriate size.
-  Record.push_back(Loc.LineNumber);
+  Record.push_back(Loc.StartLineNumber);
+  Record.push_back(Loc.EndLineNumber);
   assert(Loc.Filename.size() < (1U << BitCodeConstants::StringLengthSize));
   Record.push_back(Loc.IsFileInRootDir);
   Record.push_back(Loc.Filename.size());
@@ -480,8 +484,9 @@ void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
 
 void ClangDocBitcodeWriter::emitBlock(const CommentInfo &I) {
   StreamSubBlockGuard Block(Stream, BI_COMMENT_BLOCK_ID);
+  // Handle Kind (enum) separately, since it is not a string.
+  emitRecord(commentKindToString(I.Kind), COMMENT_KIND);
   for (const auto &L : std::vector<std::pair<llvm::StringRef, RecordId>>{
-           {I.Kind, COMMENT_KIND},
            {I.Text, COMMENT_TEXT},
            {I.Name, COMMENT_NAME},
            {I.Direction, COMMENT_DIRECTION},

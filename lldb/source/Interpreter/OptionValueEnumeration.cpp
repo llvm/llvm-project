@@ -38,7 +38,7 @@ void OptionValueEnumeration::DumpValue(const ExecutionContext *exe_ctx,
 }
 
 llvm::json::Value
-OptionValueEnumeration::ToJSON(const ExecutionContext *exe_ctx) {
+OptionValueEnumeration::ToJSON(const ExecutionContext *exe_ctx) const {
   for (const auto &enums : m_enumerations) {
     if (enums.value.value == m_current_value)
       return enums.cstring.GetStringRef();

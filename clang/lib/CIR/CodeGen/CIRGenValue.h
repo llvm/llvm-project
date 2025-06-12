@@ -19,8 +19,6 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
 
-#include "llvm/ADT/PointerIntPair.h"
-
 #include "mlir/IR/Value.h"
 
 #include "clang/CIR/MissingFeatures.h"
@@ -34,27 +32,85 @@ namespace clang::CIRGen {
 class RValue {
   enum Flavor { Scalar, Complex, Aggregate };
 
-  // Stores first value and flavor.
-  llvm::PointerIntPair<mlir::Value, 2, Flavor> v1;
-  // Stores second value and volatility.
-  llvm::PointerIntPair<llvm::PointerUnion<mlir::Value, int *>, 1, bool> v2;
-  // Stores element type for aggregate values.
-  mlir::Type elementType;
+  union {
+    // Stores first and second value.
+    struct {
+      mlir::Value first;
+      mlir::Value second;
+    } vals;
+
+    // Stores aggregate address.
+    Address aggregateAddr;
+  };
+
+  unsigned isVolatile : 1;
+  unsigned flavor : 2;
 
 public:
-  bool isScalar() const { return v1.getInt() == Scalar; }
+  RValue() : vals{nullptr, nullptr}, flavor(Scalar) {}
 
-  /// Return the mlir::Value of this scalar value.
+  bool isScalar() const { return flavor == Scalar; }
+  bool isComplex() const { return flavor == Complex; }
+  bool isAggregate() const { return flavor == Aggregate; }
+
+  bool isVolatileQualified() const { return isVolatile; }
+
+  /// Return the value of this scalar value.
   mlir::Value getScalarVal() const {
     assert(isScalar() && "Not a scalar!");
-    return v1.getPointer();
+    return vals.first;
+  }
+
+  /// Return the real/imag components of this complex value.
+  std::pair<mlir::Value, mlir::Value> getComplexVal() const {
+    return std::make_pair(vals.first, vals.second);
+  }
+
+  /// Return the value of the address of the aggregate.
+  Address getAggregateAddress() const {
+    assert(isAggregate() && "Not an aggregate!");
+    return aggregateAddr;
+  }
+
+  mlir::Value getAggregatePointer(QualType pointeeType) const {
+    return getAggregateAddress().getPointer();
+  }
+
+  static RValue getIgnored() {
+    // FIXME: should we make this a more explicit state?
+    return get(nullptr);
   }
 
   static RValue get(mlir::Value v) {
     RValue er;
-    er.v1.setPointer(v);
-    er.v1.setInt(Scalar);
-    er.v2.setInt(false);
+    er.vals.first = v;
+    er.flavor = Scalar;
+    er.isVolatile = false;
+    return er;
+  }
+
+  static RValue getComplex(mlir::Value v1, mlir::Value v2) {
+    RValue er;
+    er.vals = {v1, v2};
+    er.flavor = Complex;
+    er.isVolatile = false;
+    return er;
+  }
+  static RValue getComplex(const std::pair<mlir::Value, mlir::Value> &c) {
+    return getComplex(c.first, c.second);
+  }
+  // FIXME: Aggregate rvalues need to retain information about whether they are
+  // volatile or not.  Remove default to find all places that probably get this
+  // wrong.
+
+  /// Convert an Address to an RValue. If the Address is not
+  /// signed, create an RValue using the unsigned address. Otherwise, resign the
+  /// address using the provided type.
+  static RValue getAggregate(Address addr, bool isVolatile = false) {
+    RValue er;
+    er.aggregateAddr = addr;
+    er.flavor = Aggregate;
+    er.isVolatile = isVolatile;
     return er;
   }
 };
@@ -115,6 +171,7 @@ class LValue {
   // this is the alignment of the whole vector)
   unsigned alignment;
   mlir::Value v;
+  mlir::Value vectorIdx; // Index for vector subscript
   mlir::Type elementType;
   LValueBaseInfo baseInfo;
 
@@ -135,6 +192,7 @@ class LValue {
 
 public:
   bool isSimple() const { return lvType == Simple; }
+  bool isVectorElt() const { return lvType == VectorElt; }
   bool isBitField() const { return lvType == BitField; }
 
   // TODO: Add support for volatile
@@ -161,6 +219,7 @@ public:
   clang::Qualifiers &getQuals() { return quals; }
 
   LValueBaseInfo getBaseInfo() const { return baseInfo; }
+  void setBaseInfo(LValueBaseInfo info) { baseInfo = info; }
 
   static LValue makeAddr(Address address, clang::QualType t,
                          LValueBaseInfo baseInfo) {
@@ -173,6 +232,31 @@ public:
     r.v = address.getPointer();
     r.elementType = address.getElementType();
     r.initialize(t, t.getQualifiers(), address.getAlignment(), baseInfo);
+    return r;
+  }
+
+  Address getVectorAddress() const {
+    return Address(getVectorPointer(), elementType, getAlignment());
+  }
+
+  mlir::Value getVectorPointer() const {
+    assert(isVectorElt());
+    return v;
+  }
+
+  mlir::Value getVectorIdx() const {
+    assert(isVectorElt());
+    return vectorIdx;
+  }
+
+  static LValue makeVectorElt(Address vecAddress, mlir::Value index,
+                              clang::QualType t, LValueBaseInfo baseInfo) {
+    LValue r;
+    r.lvType = VectorElt;
+    r.v = vecAddress.getPointer();
+    r.elementType = vecAddress.getElementType();
+    r.vectorIdx = index;
+    r.initialize(t, t.getQualifiers(), vecAddress.getAlignment(), baseInfo);
     return r;
   }
 };

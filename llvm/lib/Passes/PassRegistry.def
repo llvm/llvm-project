@@ -24,7 +24,9 @@ MODULE_ANALYSIS("ctx-prof-analysis", CtxProfAnalysis())
 MODULE_ANALYSIS("dxil-metadata", DXILMetadataAnalysis())
 MODULE_ANALYSIS("dxil-resources", DXILResourceAnalysis())
 MODULE_ANALYSIS("dxil-resource-type", DXILResourceTypeAnalysis())
+MODULE_ANALYSIS("dxil-resource-bindings", DXILResourceBindingAnalysis())
 MODULE_ANALYSIS("inline-advisor", InlineAdvisorAnalysis())
+MODULE_ANALYSIS("ir2vec-vocab", IR2VecVocabAnalysis())
 MODULE_ANALYSIS("ir-similarity", IRSimilarityAnalysis())
 MODULE_ANALYSIS("last-run-tracking", LastRunTrackingAnalysis())
 MODULE_ANALYSIS("lcg", LazyCallGraphAnalysis())
@@ -99,6 +101,7 @@ MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass())
 MODULE_PASS("lower-emutls", LowerEmuTLSPass())
 MODULE_PASS("lower-global-dtors", LowerGlobalDtorsPass())
 MODULE_PASS("lower-ifunc", LowerIFuncPass())
+MODULE_PASS("simplify-type-tests", SimplifyTypeTestsPass())
 MODULE_PASS("lowertypetests", LowerTypeTestsPass())
 MODULE_PASS("fatlto-cleanup", FatLtoCleanup())
 MODULE_PASS("pgo-force-function-attrs", PGOForceFunctionAttrsPass(PGOOpt ? PGOOpt->ColdOptType : PGOOptions::ColdFuncOpt::Default))
@@ -132,6 +135,7 @@ MODULE_PASS("print-stack-safety", StackSafetyGlobalPrinterPass(errs()))
 MODULE_PASS("print<dxil-metadata>", DXILMetadataAnalysisPrinterPass(errs()))
 MODULE_PASS("print<dxil-resources>", DXILResourcePrinterPass(errs()))
 MODULE_PASS("print<inline-advisor>", InlineAdvisorAnalysisPrinterPass(errs()))
+MODULE_PASS("print<ir2vec>", IR2VecPrinterPass(errs()))
 MODULE_PASS("print<module-debuginfo>", ModuleDebugInfoPrinterPass(errs()))
 MODULE_PASS("print<reg-usage>", PhysicalRegisterUsageInfoPrinterPass(errs()))
 MODULE_PASS("pseudo-probe", SampleProfileProbePass(TM))
@@ -438,7 +442,6 @@ FUNCTION_PASS("print-cfg-sccs", CFGSCCPrinterPass(errs()))
 FUNCTION_PASS("print-memderefs", MemDerefPrinterPass(errs()))
 FUNCTION_PASS("print-mustexecute", MustExecutePrinterPass(errs()))
 FUNCTION_PASS("print-predicateinfo", PredicateInfoPrinterPass(errs()))
-FUNCTION_PASS("print<access-info>", LoopAccessInfoPrinterPass(errs()))
 FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(errs()))
 FUNCTION_PASS("print<block-freq>", BlockFrequencyPrinterPass(errs()))
 FUNCTION_PASS("print<branch-prob>", BranchProbabilityPrinterPass(errs()))
@@ -581,6 +584,16 @@ FUNCTION_PASS_WITH_PARAMS(
     },
     parseMergedLoadStoreMotionOptions, "no-split-footer-bb;split-footer-bb")
 FUNCTION_PASS_WITH_PARAMS(
+    "print<access-info>", "LoopAccessInfoPrinterPass",
+    [](bool AllowPartial) {
+      return LoopAccessInfoPrinterPass(errs(), AllowPartial);
+    },
+    [](StringRef Params) {
+      return PassBuilder::parseSinglePassOption(Params, "allow-partial",
+						"LoopAccessInfoPrinterPass");
+    },
+    "allow-partial")
+FUNCTION_PASS_WITH_PARAMS(
     "print<da>", "DependenceAnalysisPrinterPass",
     [](bool NormalizeResults) {
       return DependenceAnalysisPrinterPass(errs(), NormalizeResults);
@@ -659,6 +672,7 @@ LOOPNEST_PASS("no-op-loopnest", NoOpLoopNestPass())
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)
 #endif
 LOOP_ANALYSIS("ddg", DDGAnalysis())
+LOOP_ANALYSIS("hash-recognize", HashRecognizeAnalysis())
 LOOP_ANALYSIS("iv-users", IVUsersAnalysis())
 LOOP_ANALYSIS("no-op-loop", NoOpLoopAnalysis())
 LOOP_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
@@ -672,6 +686,7 @@ LOOP_ANALYSIS("should-run-extra-simple-loop-unswitch",
 #endif
 LOOP_PASS("canon-freeze", CanonicalizeFreezeInLoopsPass())
 LOOP_PASS("dot-ddg", DDGDotPrinterPass())
+LOOP_PASS("evl-iv-simplify", EVLIndVarSimplifyPass())
 LOOP_PASS("guard-widening", GuardWideningPass())
 LOOP_PASS("extra-simple-loop-unswitch-passes",
               ExtraLoopPassManager<ShouldRunExtraSimpleLoopUnswitch>())
@@ -691,6 +706,7 @@ LOOP_PASS("loop-versioning-licm", LoopVersioningLICMPass())
 LOOP_PASS("no-op-loop", NoOpLoopPass())
 LOOP_PASS("print", PrintLoopPass(errs()))
 LOOP_PASS("print<ddg>", DDGAnalysisPrinterPass(errs()))
+LOOP_PASS("print<hash-recognize>", HashRecognizePrinterPass(errs()))
 LOOP_PASS("print<iv-users>", IVUsersPrinterPass(errs()))
 LOOP_PASS("print<loop-cache-cost>", LoopCachePrinterPass(errs()))
 LOOP_PASS("print<loopnest>", LoopNestPrinterPass(errs()))

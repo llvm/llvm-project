@@ -11,13 +11,16 @@
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
+#include "lldb/API/SBAddress.h"
 #include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBSymbol.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/lldb-types.h"
 #include "llvm/Support/Error.h"
 
 namespace lldb_dap {
@@ -33,19 +36,24 @@ SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
     return llvm::make_error<DAPError>(
         "invalid arguments, expected source.sourceReference to be set");
 
-  lldb::SBProcess process = dap.target.GetProcess();
-  // Upper 32 bits is the thread index ID
-  lldb::SBThread thread =
-      process.GetThreadByIndexID(GetLLDBThreadIndexID(source));
-  // Lower 32 bits is the frame index
-  lldb::SBFrame frame = thread.GetFrameAtIndex(GetLLDBFrameID(source));
-  if (!frame.IsValid())
+  lldb::SBAddress address(source, dap.target);
+  if (!address.IsValid())
     return llvm::make_error<DAPError>("source not found");
 
-  lldb::SBInstructionList insts = frame.GetSymbol().GetInstructions(dap.target);
+  lldb::SBSymbol symbol = address.GetSymbol();
+
   lldb::SBStream stream;
-  lldb::SBExecutionContext exe_ctx(frame);
-  insts.GetDescription(stream, exe_ctx);
+  lldb::SBExecutionContext exe_ctx(dap.target);
+
+  if (symbol.IsValid()) {
+    lldb::SBInstructionList insts = symbol.GetInstructions(dap.target);
+    insts.GetDescription(stream, exe_ctx);
+  } else {
+    // No valid symbol, just return the disassembly.
+    lldb::SBInstructionList insts = dap.target.ReadInstructions(
+        address, dap.k_number_of_assembly_lines_for_nodebug);
+    insts.GetDescription(stream, exe_ctx);
+  }
 
   return protocol::SourceResponseBody{/*content=*/stream.GetData(),
                                       /*mimeType=*/"text/x-lldb.disassembly"};

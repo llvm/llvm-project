@@ -1164,7 +1164,9 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
                   ->hasAttr<CUDAGlobalAttr>())) &&
             GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
         bool IsOCLDeviceStub =
-            ND && isa<FunctionDecl>(ND) && ND->hasAttr<OpenCLKernelAttr>() &&
+            ND && isa<FunctionDecl>(ND) &&
+            DeviceKernelAttr::isOpenCLSpelling(
+                ND->getAttr<DeviceKernelAttr>()) &&
             GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
         if (IsDeviceStub)
           mangleSourceName(
@@ -2828,6 +2830,13 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
+#define SVE_TYPE(Name, Id, SingletonId)                                        \
+  case BuiltinType::Id:                                                        \
+    mangleArtificialTagType(TagTypeKind::Struct, #Name, {"__clang"});          \
+    break;
+#define SVE_SCALAR_TYPE(Name, MangledName, Id, SingletonId, Bits)
+#include "clang/Basic/AArch64ACLETypes.def"
+
     // Issue an error for any type not explicitly handled.
   default:
     Error(Range.getBegin(), "built-in type: ",
@@ -3535,7 +3544,21 @@ void MicrosoftCXXNameMangler::mangleType(const DependentSizedExtVectorType *T,
 
 void MicrosoftCXXNameMangler::mangleType(const ConstantMatrixType *T,
                                          Qualifiers quals, SourceRange Range) {
-  Error(Range.getBegin(), "matrix type") << Range;
+  QualType EltTy = T->getElementType();
+
+  llvm::SmallString<64> TemplateMangling;
+  llvm::raw_svector_ostream Stream(TemplateMangling);
+  MicrosoftCXXNameMangler Extra(Context, Stream);
+
+  Stream << "?$";
+
+  Extra.mangleSourceName("__matrix");
+  Extra.mangleType(EltTy, Range, QMM_Escape);
+
+  Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumRows()));
+  Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumColumns()));
+
+  mangleArtificialTagType(TagTypeKind::Struct, TemplateMangling, {"__clang"});
 }
 
 void MicrosoftCXXNameMangler::mangleType(const DependentSizedMatrixType *T,
@@ -3750,6 +3773,11 @@ void MicrosoftCXXNameMangler::mangleType(const DependentBitIntType *T,
 }
 
 void MicrosoftCXXNameMangler::mangleType(const HLSLAttributedResourceType *T,
+                                         Qualifiers, SourceRange Range) {
+  llvm_unreachable("HLSL uses Itanium name mangling");
+}
+
+void MicrosoftCXXNameMangler::mangleType(const HLSLInlineSpirvType *T,
                                          Qualifiers, SourceRange Range) {
   llvm_unreachable("HLSL uses Itanium name mangling");
 }

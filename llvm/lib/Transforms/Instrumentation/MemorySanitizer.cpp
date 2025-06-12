@@ -316,14 +316,22 @@ static cl::opt<bool> ClEagerChecks(
 
 static cl::opt<bool> ClDumpStrictInstructions(
     "msan-dump-strict-instructions",
-    cl::desc("print out instructions with default strict semantics"),
+    cl::desc("print out instructions with default strict semantics i.e.,"
+             "check that all the inputs are fully initialized, and mark "
+             "the output as fully initialized. These semantics are applied "
+             "to instructions that could not be handled explicitly nor "
+             "heuristically."),
     cl::Hidden, cl::init(false));
 
-static cl::opt<bool> ClDumpStrictIntrinsics(
-    "msan-dump-strict-intrinsics",
-    cl::desc("Prints 'unknown' intrinsics that were handled heuristically. "
-             "Use -msan-dump-strict-instructions to print intrinsics that "
-             "could not be handled exactly nor heuristically."),
+// Currently, all the heuristically handled instructions are specifically
+// IntrinsicInst. However, we use the broader "HeuristicInstructions" name
+// to parallel 'msan-dump-strict-instructions', and to keep the door open to
+// handling non-intrinsic instructions heuristically.
+static cl::opt<bool> ClDumpHeuristicInstructions(
+    "msan-dump-heuristic-instructions",
+    cl::desc("Prints 'unknown' instructions that were handled heuristically. "
+             "Use -msan-dump-strict-instructions to print instructions that "
+             "could not be handled explicitly nor heuristically."),
     cl::Hidden, cl::init(false));
 
 static cl::opt<int> ClInstrumentationWithCallThreshold(
@@ -2077,6 +2085,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(ShadowPtr && "Could not find shadow for an argument");
       return ShadowPtr;
     }
+
+    // TODO: Partially undefined vectors are handled by the fall-through case
+    //       below (see partial-poison.ll); this causes false negatives.
+
     // For everything else the shadow is zero.
     return getCleanShadow(V);
   }
@@ -3197,10 +3209,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   bool handleUnknownIntrinsic(IntrinsicInst &I) {
     if (handleUnknownIntrinsicUnlogged(I)) {
-      if (ClDumpStrictIntrinsics)
+      if (ClDumpHeuristicInstructions)
         dumpInst(I);
 
-      LLVM_DEBUG(dbgs() << "UNKNOWN INTRINSIC HANDLED HEURISTICALLY: " << I
+      LLVM_DEBUG(dbgs() << "UNKNOWN INSTRUCTION HANDLED HEURISTICALLY: " << I
                         << "\n");
       return true;
     } else
@@ -4159,6 +4171,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, PtrSrcOrigin);
   }
 
+  // Instrument AVX permutation intrinsic.
+  // We apply the same permutation (argument index 1) to the shadow.
+  void handleAVXVpermilvar(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *Shadow = getShadow(&I, 0);
+    insertShadowCheck(I.getArgOperand(1), &I);
+
+    // Shadows are integer-ish types but some intrinsics require a
+    // different (e.g., floating-point) type.
+    Shadow = IRB.CreateBitCast(Shadow, I.getArgOperand(0)->getType());
+    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                       {Shadow, I.getArgOperand(1)});
+
+    setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
+    setOriginForNaryOp(I);
+  }
+
   // Instrument BMI / BMI2 intrinsics.
   // All of these intrinsics are Z = I(X, Y)
   // where the types of all operands and the result match, and are either i32 or
@@ -4309,6 +4338,69 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Shadow = IRB.CreateInsertValue(Shadow, ShadowElt1, 1);
 
     setShadow(&I, Shadow);
+    setOriginForNaryOp(I);
+  }
+
+  Value *extractLowerShadow(IRBuilder<> &IRB, Value *V) {
+    assert(isa<FixedVectorType>(V->getType()));
+    assert(cast<FixedVectorType>(V->getType())->getNumElements() > 0);
+    Value *Shadow = getShadow(V);
+    return IRB.CreateExtractElement(Shadow,
+                                    ConstantInt::get(IRB.getInt32Ty(), 0));
+  }
+
+  // For sh.* compiler intrinsics:
+  //   llvm.x86.avx512fp16.mask.{add/sub/mul/div/max/min}.sh.round
+  //     (<8 x half>, <8 x half>, <8 x half>, i8,  i32)
+  //      A           B           WriteThru   Mask RoundingMode
+  //
+  // DstShadow[0] = Mask[0] ? (AShadow[0] | BShadow[0]) : WriteThruShadow[0]
+  // DstShadow[1..7] = AShadow[1..7]
+  void visitGenericScalarHalfwordInst(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 5);
+    Value *A = I.getOperand(0);
+    Value *B = I.getOperand(1);
+    Value *WriteThrough = I.getOperand(2);
+    Value *Mask = I.getOperand(3);
+    Value *RoundingMode = I.getOperand(4);
+
+    // Technically, we could probably just check whether the LSB is
+    // initialized, but intuitively it feels like a partly uninitialized mask
+    // is unintended, and we should warn the user immediately.
+    insertShadowCheck(Mask, &I);
+    insertShadowCheck(RoundingMode, &I);
+
+    assert(isa<FixedVectorType>(A->getType()));
+    unsigned NumElements =
+        cast<FixedVectorType>(A->getType())->getNumElements();
+    assert(NumElements == 8);
+    assert(A->getType() == B->getType());
+    assert(B->getType() == WriteThrough->getType());
+    assert(Mask->getType()->getPrimitiveSizeInBits() == NumElements);
+    assert(RoundingMode->getType()->isIntegerTy());
+
+    Value *ALowerShadow = extractLowerShadow(IRB, A);
+    Value *BLowerShadow = extractLowerShadow(IRB, B);
+
+    Value *ABLowerShadow = IRB.CreateOr(ALowerShadow, BLowerShadow);
+
+    Value *WriteThroughLowerShadow = extractLowerShadow(IRB, WriteThrough);
+
+    Mask = IRB.CreateBitCast(
+        Mask, FixedVectorType::get(IRB.getInt1Ty(), NumElements));
+    Value *MaskLower =
+        IRB.CreateExtractElement(Mask, ConstantInt::get(IRB.getInt32Ty(), 0));
+
+    Value *AShadow = getShadow(A);
+    Value *DstLowerShadow =
+        IRB.CreateSelect(MaskLower, ABLowerShadow, WriteThroughLowerShadow);
+    Value *DstShadow = IRB.CreateInsertElement(
+        AShadow, DstLowerShadow, ConstantInt::get(IRB.getInt32Ty(), 0),
+        "_msprop");
+
+    setShadow(&I, DstShadow);
     setOriginForNaryOp(I);
   }
 
@@ -5038,6 +5130,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       [[maybe_unused]] bool Success =
           maybeHandleSimpleNomemIntrinsic(I, /*trailingFlags=*/1);
       assert(Success);
+      break;
+    }
+
+    case Intrinsic::x86_avx_vpermilvar_pd:
+    case Intrinsic::x86_avx_vpermilvar_pd_256:
+    case Intrinsic::x86_avx512_vpermilvar_pd_512:
+    case Intrinsic::x86_avx_vpermilvar_ps:
+    case Intrinsic::x86_avx_vpermilvar_ps_256:
+    case Intrinsic::x86_avx512_vpermilvar_ps_512: {
+      handleAVXVpermilvar(I);
+      break;
+    }
+
+    case Intrinsic::x86_avx512fp16_mask_add_sh_round:
+    case Intrinsic::x86_avx512fp16_mask_sub_sh_round:
+    case Intrinsic::x86_avx512fp16_mask_mul_sh_round:
+    case Intrinsic::x86_avx512fp16_mask_div_sh_round:
+    case Intrinsic::x86_avx512fp16_mask_max_sh_round:
+    case Intrinsic::x86_avx512fp16_mask_min_sh_round: {
+      visitGenericScalarHalfwordInst(I);
       break;
     }
 
@@ -6519,7 +6631,6 @@ struct VarArgPowerPC64Helper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
-    Triple TargetTriple(F.getParent()->getTargetTriple());
     for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
@@ -6552,7 +6663,6 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
     unsigned VAArgBase;
-    Triple TargetTriple(F.getParent()->getTargetTriple());
     // Parameter save area is 8 bytes from frame pointer in PPC32
     VAArgBase = 8;
     unsigned VAArgOffset = VAArgBase;
@@ -6657,7 +6767,6 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
-    Triple TargetTriple(F.getParent()->getTargetTriple());
     for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);

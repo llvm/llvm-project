@@ -47,11 +47,8 @@ module iso_c_binding
     c_long_long = c_int64_t, &
     c_signed_char = c_int8_t, &
     c_size_t = kind(c_sizeof(1)), &
-#if __powerpc__
+    ! Currently both gcc and clang define intmax_t to be 64 bit.
     c_intmax_t = c_int64_t, &
-#else
-    c_intmax_t = c_int128_t, &
-#endif
     c_intptr_t = c_size_t, &
     c_ptrdiff_t = c_size_t
   integer, parameter, public :: &

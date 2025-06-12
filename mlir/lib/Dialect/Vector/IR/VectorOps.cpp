@@ -33,6 +33,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
@@ -151,29 +152,32 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
   return false;
 }
 
-/// Returns the number of dimensions of the `shapedType` that participate in the
-/// vector transfer, effectively the rank of the vector dimensions within the
-/// `shapedType`. This is calculated by taking the rank of the `vectorType`
-/// being transferred and subtracting the rank of the `shapedType`'s element
-/// type if it's also a vector.
+///  Returns the effective rank of the vector to read/write for Xfer Ops
 ///
-/// This is used to determine the number of minor dimensions for identity maps
-/// in vector transfers.
+///  When the element type of the shaped type is _a scalar_, this will simply
+///  return the rank of the vector ( the result for xfer_read or the value to
+///  store for xfer_write).
 ///
-/// For example, given a transfer operation involving `shapedType` and
-/// `vectorType`:
+///  When the element type of the base shaped type is _a vector_, returns the
+///  difference between the original vector type and the element type of the
+///  shaped type.
 ///
+///  EXAMPLE 1 (element type is _a scalar_):
 ///   - shapedType = tensor<10x20xf32>, vectorType = vector<2x4xf32>
 ///     - shapedType.getElementType() = f32 (rank 0)
 ///     - vectorType.getRank() = 2
 ///     - Result = 2 - 0 = 2
 ///
+/// EXAMPLE 2 (element type is _a vector_):
 ///   - shapedType = tensor<10xvector<20xf32>>, vectorType = vector<20xf32>
 ///     - shapedType.getElementType() = vector<20xf32> (rank 1)
 ///     - vectorType.getRank() = 1
 ///     - Result = 1 - 1 = 0
-static unsigned getRealVectorRank(ShapedType shapedType,
-                                  VectorType vectorType) {
+///
+/// This is used to determine the number of minor dimensions for identity maps
+/// in vector transfer Ops.
+static unsigned getEffectiveVectorRankForXferOp(ShapedType shapedType,
+                                                VectorType vectorType) {
   unsigned elementVectorRank = 0;
   VectorType elementVectorType =
       llvm::dyn_cast<VectorType>(shapedType.getElementType());
@@ -192,7 +196,8 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
         /*numDims=*/0, /*numSymbols=*/0,
         getAffineConstantExpr(0, shapedType.getContext()));
   return AffineMap::getMinorIdentityMap(
-      shapedType.getRank(), getRealVectorRank(shapedType, vectorType),
+      shapedType.getRank(),
+      getEffectiveVectorRankForXferOp(shapedType, vectorType),
       shapedType.getContext());
 }
 
@@ -310,7 +315,7 @@ bool mlir::vector::isDisjointTransferIndices(
 bool mlir::vector::isDisjointTransferSet(VectorTransferOpInterface transferA,
                                          VectorTransferOpInterface transferB,
                                          bool testDynamicValueUsingBounds) {
-  if (transferA.getSource() != transferB.getSource())
+  if (transferA.getBase() != transferB.getBase())
     return false;
   return isDisjointTransferIndices(transferA, transferB,
                                    testDynamicValueUsingBounds);
@@ -1132,7 +1137,6 @@ void ContractionOp::getIterationBounds(
   auto lhsShape = getLhsType().getShape();
   auto resVectorType = llvm::dyn_cast<VectorType>(getResultType());
   SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
-  SmallVector<int64_t, 2> iterationShape;
   for (const auto &it : llvm::enumerate(getIteratorTypes())) {
     // Search lhs/rhs map results for 'targetExpr'.
     auto targetExpr = getAffineDimExpr(it.index(), getContext());
@@ -2140,10 +2144,15 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   // mismatch).
   if (getNumIndices() == 0 && getVector().getType() == getResult().getType())
     return getVector();
+  if (auto res = foldPoisonSrcExtractOp(adaptor.getVector()))
+    return res;
+  // Fold `arith.constant` indices into the `vector.extract` operation. Make
+  // sure that patterns requiring constant indices are added after this fold.
+  SmallVector<Value> operands = {getVector()};
+  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
+    return val;
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
-    return res;
-  if (auto res = foldPoisonSrcExtractOp(adaptor.getVector()))
     return res;
   if (auto res = foldDenseElementsAttrSrcExtractOp(*this, adaptor.getVector()))
     return res;
@@ -2162,9 +2171,6 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   if (auto val = foldExtractStridedOpFromInsertChain(*this))
     return val;
   if (auto val = foldScalarExtractFromFromElements(*this))
-    return val;
-  SmallVector<Value> operands = {getVector()};
-  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
     return val;
   return OpFoldResult();
 }
@@ -2382,9 +2388,129 @@ static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
   return success();
 }
 
+/// Rewrite from_elements on multiple scalar extracts as a shape_cast
+/// on a single extract. Example:
+///   %0 = vector.extract %source[0, 0] : i8 from vector<2x2xi8>
+///   %1 = vector.extract %source[0, 1] : i8 from vector<2x2xi8>
+///   %2 = vector.from_elements %0, %1 : vector<2xi8>
+///
+/// becomes
+///   %1 = vector.extract %source[0] : vector<1x2xi8> from vector<2x2xi8>
+///   %2 = vector.shape_cast %1 : vector<1x2xi8> to vector<2xi8>
+///
+/// The requirements for this to be valid are
+///
+///   i) The elements are extracted from the same vector (%source).
+///
+///  ii) The elements form a suffix of %source. Specifically, the number
+///      of elements is the same as the product of the last N dimension sizes
+///      of %source, for some N.
+///
+/// iii) The elements are extracted contiguously in ascending order.
+
+class FromElementsToShapeCast : public OpRewritePattern<FromElementsOp> {
+
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FromElementsOp fromElements,
+                                PatternRewriter &rewriter) const override {
+
+    // Handled by `rewriteFromElementsAsSplat`
+    if (fromElements.getType().getNumElements() == 1)
+      return failure();
+
+    // The common source that all elements are extracted from, if one exists.
+    TypedValue<VectorType> source;
+    // The position of the combined extract operation, if one is created.
+    ArrayRef<int64_t> combinedPosition;
+    // The expected index of extraction of the current element in the loop, if
+    // elements are extracted contiguously in ascending order.
+    SmallVector<int64_t> expectedPosition;
+
+    for (auto [insertIndex, element] :
+         llvm::enumerate(fromElements.getElements())) {
+
+      // Check that the element is from a vector.extract operation.
+      auto extractOp =
+          dyn_cast_if_present<vector::ExtractOp>(element.getDefiningOp());
+      if (!extractOp) {
+        return rewriter.notifyMatchFailure(fromElements,
+                                           "element not from vector.extract");
+      }
+
+      // Check condition (i) by checking that all elements have the same source
+      // as the first element.
+      if (insertIndex == 0) {
+        source = extractOp.getVector();
+      } else if (extractOp.getVector() != source) {
+        return rewriter.notifyMatchFailure(fromElements,
+                                           "element from different vector");
+      }
+
+      ArrayRef<int64_t> position = extractOp.getStaticPosition();
+      int64_t rank = position.size();
+      assert(rank == source.getType().getRank() &&
+             "scalar extract must have full rank position");
+
+      // Check condition (ii) by checking that the position that the first
+      // element is extracted from has sufficient trailing 0s. For example, in
+      //
+      //   %elm0 = vector.extract %source[1, 0, 0] : i8 from vector<2x3x4xi8>
+      //   [...]
+      //   %elms = vector.from_elements %elm0, [...] : vector<12xi8>
+      //
+      // The 2 trailing 0s in the position of extraction of %elm0 cover 3*4 = 12
+      // elements, which is the number of elements of %n, so this is valid.
+      if (insertIndex == 0) {
+        const int64_t numElms = fromElements.getType().getNumElements();
+        int64_t numSuffixElms = 1;
+        int64_t index = rank;
+        while (index > 0 && position[index - 1] == 0 &&
+               numSuffixElms < numElms) {
+          numSuffixElms *= source.getType().getDimSize(index - 1);
+          --index;
+        }
+        if (numSuffixElms != numElms) {
+          return rewriter.notifyMatchFailure(
+              fromElements, "elements do not form a suffix of source");
+        }
+        expectedPosition = llvm::to_vector(position);
+        combinedPosition = position.drop_back(rank - index);
+      }
+
+      // Check condition (iii).
+      else if (expectedPosition != position) {
+        return rewriter.notifyMatchFailure(
+            fromElements, "elements not in ascending order (static order)");
+      }
+      increment(expectedPosition, source.getType().getShape());
+    }
+
+    auto extracted = rewriter.createOrFold<vector::ExtractOp>(
+        fromElements.getLoc(), source, combinedPosition);
+
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
+        fromElements, fromElements.getType(), extracted);
+
+    return success();
+  }
+
+  /// Increments n-D `indices` by 1 starting from the innermost dimension.
+  static void increment(MutableArrayRef<int64_t> indices,
+                        ArrayRef<int64_t> shape) {
+    for (int dim : llvm::reverse(llvm::seq<int>(0, indices.size()))) {
+      indices[dim] += 1;
+      if (indices[dim] < shape[dim])
+        break;
+      indices[dim] = 0;
+    }
+  }
+};
+
 void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
   results.add(rewriteFromElementsAsSplat);
+  results.add<FromElementsToShapeCast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2394,6 +2520,10 @@ void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
 void BroadcastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                     SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), argRanges.front());
+}
+
+std::optional<SmallVector<int64_t, 4>> BroadcastOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
 /// Return the dimensions of the result vector that were formerly ones in the
@@ -3142,6 +3272,8 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   // (type mismatch).
   if (getNumIndices() == 0 && getValueToStoreType() == getType())
     return getValueToStore();
+  // Fold `arith.constant` indices into the `vector.insert` operation. Make
+  // sure that patterns requiring constant indices are added after this fold.
   SmallVector<Value> operands = {getValueToStore(), getDest()};
   if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
     return val;
@@ -4202,7 +4334,7 @@ static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
 }
 
 void TransferReadOp::print(OpAsmPrinter &p) {
-  p << " " << getSource() << "[" << getIndices() << "], " << getPadding();
+  p << " " << getBase() << "[" << getIndices() << "], " << getPadding();
   if (getMask())
     p << ", " << getMask();
   printTransferAttrs(p, *this);
@@ -4261,7 +4393,8 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   Attribute permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
-    if (shapedType.getRank() < getRealVectorRank(shapedType, vectorType))
+    if (shapedType.getRank() <
+        getEffectiveVectorRankForXferOp(shapedType, vectorType))
       return parser.emitError(typesLoc,
                               "expected a custom permutation_map when "
                               "rank(source) != rank(destination)");
@@ -4460,7 +4593,7 @@ static LogicalResult foldTransferFullMask(TransferOp op) {
 static Value foldRAW(TransferReadOp readOp) {
   if (!llvm::isa<RankedTensorType>(readOp.getShapedType()))
     return {};
-  auto defWrite = readOp.getSource().getDefiningOp<vector::TransferWriteOp>();
+  auto defWrite = readOp.getBase().getDefiningOp<vector::TransferWriteOp>();
   while (defWrite) {
     if (checkSameValueRAW(defWrite, readOp))
       return defWrite.getVector();
@@ -4468,7 +4601,7 @@ static Value foldRAW(TransferReadOp readOp) {
             cast<VectorTransferOpInterface>(defWrite.getOperation()),
             cast<VectorTransferOpInterface>(readOp.getOperation())))
       break;
-    defWrite = defWrite.getSource().getDefiningOp<vector::TransferWriteOp>();
+    defWrite = defWrite.getBase().getDefiningOp<vector::TransferWriteOp>();
   }
   return {};
 }
@@ -4496,7 +4629,7 @@ void TransferReadOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   if (llvm::isa<MemRefType>(getShapedType()))
-    effects.emplace_back(MemoryEffects::Read::get(), &getSourceMutable(),
+    effects.emplace_back(MemoryEffects::Read::get(), &getBaseMutable(),
                          SideEffects::DefaultResource::get());
 }
 
@@ -4535,11 +4668,14 @@ struct TransferReadAfterWriteToBroadcast
 
   LogicalResult matchAndRewrite(TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
-    if (readOp.hasOutOfBoundsDim() ||
-        !llvm::isa<RankedTensorType>(readOp.getShapedType()))
-      return failure();
-    auto defWrite = readOp.getSource().getDefiningOp<vector::TransferWriteOp>();
+    auto defWrite = readOp.getBase().getDefiningOp<vector::TransferWriteOp>();
     if (!defWrite)
+      return failure();
+    // Bail if we need an alias analysis.
+    if (!readOp.hasPureTensorSemantics() || !defWrite.hasPureTensorSemantics())
+      return failure();
+    // Bail if we need a bounds analysis.
+    if (readOp.hasOutOfBoundsDim() || defWrite.hasOutOfBoundsDim())
       return failure();
     // TODO: If the written transfer chunk is a superset of the read transfer
     // chunk we could do an extract_strided_slice.
@@ -4551,15 +4687,28 @@ struct TransferReadAfterWriteToBroadcast
     if (getUnusedDimsBitVector({readOp.getPermutationMap()}) !=
         getUnusedDimsBitVector({defWrite.getPermutationMap()}))
       return failure();
-    if (readOp.getIndices() != defWrite.getIndices() ||
-        readOp.getMask() != defWrite.getMask())
+    // This pattern should only catch the broadcast case, the non-broadcast case
+    // should be done separately to keep application conditions clean and
+    // separate.
+    AffineMap readMap = compressUnusedDims(readOp.getPermutationMap());
+    AffineMap writeMap = compressUnusedDims(defWrite.getPermutationMap());
+    bool bcast = !readMap.getBroadcastDims().empty() ||
+                 !writeMap.getBroadcastDims().empty();
+    if (!bcast)
       return failure();
+    // At this point, we know we have a bcast.
+    // Bail in the masked case (too complex atm and needed to properly account
+    // for padding).
+    if (readOp.getMask() || defWrite.getMask())
+      return failure();
+    // If indices are not the same a shift may be required, bail.
+    if (readOp.getIndices() != defWrite.getIndices())
+      return failure();
+
     Value vec = defWrite.getVector();
     // TODO: loop through the chain of transfer_write if we can prove that they
     // don't overlap with the transfer_read. This requires improving
     // `isDisjointTransferIndices` helper.
-    AffineMap readMap = compressUnusedDims(readOp.getPermutationMap());
-    AffineMap writeMap = compressUnusedDims(defWrite.getPermutationMap());
     AffineMap map = readMap.compose(writeMap);
     if (map.getNumResults() == 0)
       return failure();
@@ -4680,7 +4829,8 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
   auto permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
-    if (shapedType.getRank() < getRealVectorRank(shapedType, vectorType))
+    if (shapedType.getRank() <
+        getEffectiveVectorRankForXferOp(shapedType, vectorType))
       return parser.emitError(typesLoc,
                               "expected a custom permutation_map when "
                               "rank(source) != rank(destination)");
@@ -4722,7 +4872,7 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
 }
 
 void TransferWriteOp::print(OpAsmPrinter &p) {
-  p << " " << getVector() << ", " << getSource() << "[" << getIndices() << "]";
+  p << " " << getVector() << ", " << getBase() << "[" << getIndices() << "]";
   if (getMask())
     p << ", " << getMask();
   printTransferAttrs(p, *this);
@@ -4801,7 +4951,7 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
   if (write.getTransferRank() == 0)
     return failure();
   auto rankedTensorType =
-      llvm::dyn_cast<RankedTensorType>(write.getSource().getType());
+      llvm::dyn_cast<RankedTensorType>(write.getBase().getType());
   // If not operating on tensors, bail.
   if (!rankedTensorType)
     return failure();
@@ -4823,7 +4973,7 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
   if (read.hasOutOfBoundsDim() || write.hasOutOfBoundsDim())
     return failure();
   // Tensor types must be the same.
-  if (read.getSource().getType() != rankedTensorType)
+  if (read.getBase().getType() != rankedTensorType)
     return failure();
   // Vector types must be the same.
   if (read.getVectorType() != write.getVectorType())
@@ -4840,13 +4990,13 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
       llvm::any_of(write.getIndices(), isNotConstantZero))
     return failure();
   // Success.
-  results.push_back(read.getSource());
+  results.push_back(read.getBase());
   return success();
 }
 
 static bool checkSameValueWAR(vector::TransferReadOp read,
                               vector::TransferWriteOp write) {
-  return read.getSource() == write.getSource() &&
+  return read.getBase() == write.getBase() &&
          read.getIndices() == write.getIndices() &&
          read.getPermutationMap() == write.getPermutationMap() &&
          read.getVectorType() == write.getVectorType() && !read.getMask() &&
@@ -4868,7 +5018,7 @@ static bool checkSameValueWAR(vector::TransferReadOp read,
 /// ```
 static LogicalResult foldWAR(TransferWriteOp write,
                              SmallVectorImpl<OpFoldResult> &results) {
-  if (!llvm::isa<RankedTensorType>(write.getSource().getType()))
+  if (!llvm::isa<RankedTensorType>(write.getBase().getType()))
     return failure();
   auto read = write.getVector().getDefiningOp<vector::TransferReadOp>();
   if (!read)
@@ -4876,7 +5026,7 @@ static LogicalResult foldWAR(TransferWriteOp write,
 
   if (!checkSameValueWAR(read, write))
     return failure();
-  results.push_back(read.getSource());
+  results.push_back(read.getBase());
   return success();
 }
 
@@ -4904,7 +5054,7 @@ void TransferWriteOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   if (llvm::isa<MemRefType>(getShapedType()))
-    effects.emplace_back(MemoryEffects::Write::get(), &getValueToStoreMutable(),
+    effects.emplace_back(MemoryEffects::Write::get(), &getBaseMutable(),
                          SideEffects::DefaultResource::get());
 }
 
@@ -4948,12 +5098,11 @@ public:
       return failure();
     vector::TransferWriteOp writeToModify = writeOp;
 
-    auto defWrite =
-        writeOp.getSource().getDefiningOp<vector::TransferWriteOp>();
+    auto defWrite = writeOp.getBase().getDefiningOp<vector::TransferWriteOp>();
     while (defWrite) {
       if (checkSameValueWAW(writeOp, defWrite)) {
         rewriter.modifyOpInPlace(writeToModify, [&]() {
-          writeToModify.getSourceMutable().assign(defWrite.getSource());
+          writeToModify.getBaseMutable().assign(defWrite.getBase());
         });
         return success();
       }
@@ -4966,7 +5115,7 @@ public:
       if (!defWrite->hasOneUse())
         break;
       writeToModify = defWrite;
-      defWrite = defWrite.getSource().getDefiningOp<vector::TransferWriteOp>();
+      defWrite = defWrite.getBase().getDefiningOp<vector::TransferWriteOp>();
     }
     return failure();
   }
@@ -5540,124 +5689,95 @@ void ShapeCastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setResultRanges(getResult(), argRanges.front());
 }
 
-/// Returns true if each element of 'a' is equal to the product of a contiguous
-/// sequence of the elements of 'b'. Returns false otherwise.
-static bool isValidShapeCast(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
-  unsigned rankA = a.size();
-  unsigned rankB = b.size();
-  assert(rankA < rankB);
+LogicalResult ShapeCastOp::verify() {
 
-  auto isOne = [](int64_t v) { return v == 1; };
+  VectorType sourceType = getSourceVectorType();
+  VectorType resultType = getResultVectorType();
 
-  // Special-case for n-D to 0-d shape cast. 'b' must be all ones to be shape
-  // casted to a 0-d vector.
-  if (rankA == 0 && llvm::all_of(b, isOne))
-    return true;
+  // Check that element type is preserved
+  if (sourceType.getElementType() != resultType.getElementType())
+    return emitOpError("has different source and result element types");
 
-  unsigned i = 0;
-  unsigned j = 0;
-  while (i < rankA && j < rankB) {
-    int64_t dimA = a[i];
-    int64_t dimB = 1;
-    while (dimB < dimA && j < rankB)
-      dimB *= b[j++];
-    if (dimA != dimB)
-      break;
-    ++i;
-
-    // Handle the case when trailing dimensions are of size 1.
-    // Include them into the contiguous sequence.
-    if (i < rankA && llvm::all_of(a.slice(i), isOne))
-      i = rankA;
-    if (j < rankB && llvm::all_of(b.slice(j), isOne))
-      j = rankB;
-  }
-
-  return i == rankA && j == rankB;
-}
-
-static LogicalResult verifyVectorShapeCast(Operation *op,
-                                           VectorType sourceVectorType,
-                                           VectorType resultVectorType) {
-  // Check that element type is the same.
-  if (sourceVectorType.getElementType() != resultVectorType.getElementType())
-    return op->emitOpError("source/result vectors must have same element type");
-  auto sourceShape = sourceVectorType.getShape();
-  auto resultShape = resultVectorType.getShape();
-
-  // Check that product of source dim sizes matches product of result dim sizes.
-  int64_t sourceDimProduct = std::accumulate(
-      sourceShape.begin(), sourceShape.end(), 1LL, std::multiplies<int64_t>{});
-  int64_t resultDimProduct = std::accumulate(
-      resultShape.begin(), resultShape.end(), 1LL, std::multiplies<int64_t>{});
-  if (sourceDimProduct != resultDimProduct)
-    return op->emitOpError("source/result number of elements must match");
-
-  // Check that expanding/contracting rank cases.
-  unsigned sourceRank = sourceVectorType.getRank();
-  unsigned resultRank = resultVectorType.getRank();
-  if (sourceRank < resultRank) {
-    if (!isValidShapeCast(sourceShape, resultShape))
-      return op->emitOpError("invalid shape cast");
-  } else if (sourceRank > resultRank) {
-    if (!isValidShapeCast(resultShape, sourceShape))
-      return op->emitOpError("invalid shape cast");
+  // Check that number of elements is preserved
+  int64_t sourceNElms = sourceType.getNumElements();
+  int64_t resultNElms = resultType.getNumElements();
+  if (sourceNElms != resultNElms) {
+    return emitOpError() << "has different number of elements at source ("
+                         << sourceNElms << ") and result (" << resultNElms
+                         << ")";
   }
 
   // Check that (non-)scalability is preserved
-  int64_t sourceNScalableDims = sourceVectorType.getNumScalableDims();
-  int64_t resultNScalableDims = resultVectorType.getNumScalableDims();
+  int64_t sourceNScalableDims = sourceType.getNumScalableDims();
+  int64_t resultNScalableDims = resultType.getNumScalableDims();
   if (sourceNScalableDims != resultNScalableDims)
-    return op->emitOpError("different number of scalable dims at source (")
-           << sourceNScalableDims << ") and result (" << resultNScalableDims
-           << ")";
-  sourceVectorType.getNumDynamicDims();
+    return emitOpError() << "has different number of scalable dims at source ("
+                         << sourceNScalableDims << ") and result ("
+                         << resultNScalableDims << ")";
 
   return success();
 }
 
-LogicalResult ShapeCastOp::verify() {
-  auto sourceVectorType =
-      llvm::dyn_cast_or_null<VectorType>(getSource().getType());
-  auto resultVectorType =
-      llvm::dyn_cast_or_null<VectorType>(getResult().getType());
-
-  // Check if source/result are of vector type.
-  if (sourceVectorType && resultVectorType)
-    return verifyVectorShapeCast(*this, sourceVectorType, resultVectorType);
-
-  return success();
+/// Return true if `transpose` does not permute a pair of non-unit dims.
+/// By `order preserving` we mean that the flattened versions of the input and
+/// output vectors are (numerically) identical. In other words `transpose` is
+/// effectively a shape cast.
+static bool isOrderPreserving(TransposeOp transpose) {
+  ArrayRef<int64_t> permutation = transpose.getPermutation();
+  VectorType sourceType = transpose.getSourceVectorType();
+  ArrayRef<int64_t> inShape = sourceType.getShape();
+  ArrayRef<bool> inDimIsScalable = sourceType.getScalableDims();
+  auto isNonScalableUnitDim = [&](int64_t dim) {
+    return inShape[dim] == 1 && !inDimIsScalable[dim];
+  };
+  int64_t current = 0;
+  for (auto p : permutation) {
+    if (!isNonScalableUnitDim(p)) {
+      if (p < current) {
+        return false;
+      }
+      current = p;
+    }
+  }
+  return true;
 }
 
 OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 
-  // No-op shape cast.
-  if (getSource().getType() == getType())
-    return getSource();
-
   VectorType resultType = getType();
 
-  // Canceling shape casts.
-  if (auto otherOp = getSource().getDefiningOp<ShapeCastOp>()) {
+  // No-op shape cast.
+  if (getSource().getType() == resultType)
+    return getSource();
 
-    // Only allows valid transitive folding (expand/collapse dimensions).
-    VectorType srcType = otherOp.getSource().getType();
-    if (resultType == srcType)
-      return otherOp.getSource();
-    if (srcType.getRank() < resultType.getRank()) {
-      if (!isValidShapeCast(srcType.getShape(), resultType.getShape()))
-        return {};
-    } else if (srcType.getRank() > resultType.getRank()) {
-      if (!isValidShapeCast(resultType.getShape(), srcType.getShape()))
-        return {};
-    } else {
-      return {};
-    }
-    setOperand(otherOp.getSource());
+  // shape_cast(shape_cast(x)) -> shape_cast(x)
+  if (auto precedingShapeCast = getSource().getDefiningOp<ShapeCastOp>()) {
+    setOperand(precedingShapeCast.getSource());
     return getResult();
   }
 
-  // Cancelling broadcast and shape cast ops.
+  // shape_cast(transpose(x)) -> shape_cast(x)
+  if (auto transpose = getSource().getDefiningOp<TransposeOp>()) {
+    // This folder does
+    //    shape_cast(transpose) -> shape_cast
+    // But another pattern, ConvertIllegalShapeCastOpsToTransposes, does
+    //    shape_cast -> shape_cast(transpose)
+    // i.e. the complete opposite. When paired, these 2 patterns can cause
+    // infinite cycles in pattern rewriting.
+    // ConvertIllegalShapeCastOpsToTransposes only matches on scalable
+    // vectors, so by disabling this folder for scalable vectors the
+    // cycle is avoided.
+    // TODO: Check if ConvertIllegalShapeCastOpsToTransposes is
+    // still needed. If it's not, then we can fold here.
+    if (!transpose.getType().isScalable() && isOrderPreserving(transpose)) {
+      setOperand(transpose.getVector());
+      return getResult();
+    }
+    return {};
+  }
+
+  // Y = shape_cast(broadcast(X))
+  //      -> X, if X and Y have same type
   if (auto bcastOp = getSource().getDefiningOp<BroadcastOp>()) {
     if (bcastOp.getSourceType() == resultType)
       return bcastOp.getSource();
@@ -5681,7 +5801,7 @@ namespace {
 /// Helper function that computes a new vector type based on the input vector
 /// type by removing the trailing one dims:
 ///
-///   vector<4x1x1xi1> --> vector<4x1>
+///   vector<4x1x1xi1> --> vector<4x1xi1>
 ///
 static VectorType trimTrailingOneDims(VectorType oldType) {
   ArrayRef<int64_t> oldShape = oldType.getShape();
@@ -6018,18 +6138,22 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
   if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getVector()))
     return ub::PoisonAttr::get(getContext());
 
-  // Eliminate identity transpose ops. This happens when the dimensions of the
-  // input vector remain in their original order after the transpose operation.
-  ArrayRef<int64_t> perm = getPermutation();
+  // Eliminate identity transposes, and more generally any transposes that
+  // preserves the shape without permuting elements.
+  //
+  // Examples of what to fold:
+  // %0 = vector.transpose %arg, [0, 1] : vector<1x1xi8> to vector<1x1xi8>
+  // %0 = vector.transpose %arg, [0, 1] : vector<2x2xi8> to vector<2x2xi8>
+  // %0 = vector.transpose %arg, [1, 0] : vector<1x1xi8> to vector<1x1xi8>
+  //
+  // Example of what NOT to fold:
+  // %0 = vector.transpose %arg, [1, 0] : vector<2x2xi8> to vector<2x2xi8>
+  //
+  if (getSourceVectorType() == getResultVectorType() &&
+      isOrderPreserving(*this))
+    return getVector();
 
-  // Check if the permutation of the dimensions contains sequential values:
-  // {0, 1, 2, ...}.
-  for (int64_t i = 0, e = perm.size(); i < e; i++) {
-    if (perm[i] != i)
-      return {};
-  }
-
-  return getVector();
+  return {};
 }
 
 LogicalResult vector::TransposeOp::verify() {
@@ -6148,6 +6272,32 @@ public:
   }
 };
 
+/// Folds transpose(shape_cast) into a new shape_cast.
+class FoldTransposeShapeCast final : public OpRewritePattern<TransposeOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    auto shapeCastOp =
+        transposeOp.getVector().getDefiningOp<vector::ShapeCastOp>();
+    if (!shapeCastOp)
+      return failure();
+    if (!isOrderPreserving(transposeOp))
+      return failure();
+
+    VectorType resultType = transposeOp.getType();
+
+    // We don't need to check isValidShapeCast at this point, because it is
+    // guaranteed that merging the transpose into the the shape_cast is a valid
+    // shape_cast, because the transpose just inserts/removes ones.
+
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(transposeOp, resultType,
+                                                     shapeCastOp.getSource());
+    return success();
+  }
+};
+
 /// Folds transpose(broadcast(x)) to broadcast(x) if the transpose is
 /// 'order preserving', where 'order preserving' means the flattened
 /// inputs and outputs of the transpose have identical (numerical) values.
@@ -6196,7 +6346,7 @@ public:
     bool inputIsScalar = !inputType;
     if (inputIsScalar) {
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
-                                                       transpose.getVector());
+                                                       broadcast.getSource());
       return success();
     }
 
@@ -6222,6 +6372,7 @@ public:
                 transpose, "permutation not local to group");
           }
         }
+        low = high;
       }
     }
 
@@ -6236,7 +6387,7 @@ public:
            "not broadcastable directly to transpose output");
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
-                                                     transpose.getVector());
+                                                     broadcast.getSource());
 
     return success();
   }
@@ -6246,8 +6397,8 @@ public:
 
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<FoldTransposeCreateMask, TransposeFolder, FoldTransposeSplat,
-              FoldTransposeBroadcast>(context);
+  results.add<FoldTransposeCreateMask, FoldTransposeShapeCast, TransposeFolder,
+              FoldTransposeSplat, FoldTransposeBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6511,9 +6662,15 @@ ParseResult MaskOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.resolveOperand(mask, maskType, result.operands))
     return failure();
 
-  if (parsePassthru.succeeded())
+  if (parsePassthru.succeeded()) {
+    if (resultTypes.empty())
+      return parser.emitError(
+          parser.getNameLoc(),
+          "expects a result if passthru operand is provided");
+
     if (parser.resolveOperand(passthru, resultTypes[0], result.operands))
       return failure();
+  }
 
   return success();
 }
@@ -6538,29 +6695,33 @@ void mlir::vector::MaskOp::print(OpAsmPrinter &p) {
 }
 
 void MaskOp::ensureTerminator(Region &region, Builder &builder, Location loc) {
-  OpTrait::SingleBlockImplicitTerminator<vector::YieldOp>::Impl<
-      MaskOp>::ensureTerminator(region, builder, loc);
-  // Keep the default yield terminator if the number of masked operations is not
-  // the expected. This case will trigger a verification failure.
+  // 1. For an empty `vector.mask`, create a default terminator.
+  if (region.empty() || region.front().empty()) {
+    OpTrait::SingleBlockImplicitTerminator<vector::YieldOp>::Impl<
+        MaskOp>::ensureTerminator(region, builder, loc);
+    return;
+  }
+
+  // 2. For a non-empty `vector.mask` with an explicit terminator, do nothing.
   Block &block = region.front();
-  if (block.getOperations().size() != 2)
+  if (isa<vector::YieldOp>(block.back()))
     return;
 
-  // Replace default yield terminator with a new one that returns the results
-  // from the masked operation.
+  // 3. For a non-empty `vector.mask` without an explicit terminator:
+
+  // Create default terminator if the number of masked operations is not
+  // one. This case will trigger a verification failure.
+  if (block.getOperations().size() != 1) {
+    OpTrait::SingleBlockImplicitTerminator<vector::YieldOp>::Impl<
+        MaskOp>::ensureTerminator(region, builder, loc);
+    return;
+  }
+
+  // Create a terminator that yields the results from the masked operation.
   OpBuilder opBuilder(builder.getContext());
   Operation *maskedOp = &block.front();
-  Operation *oldYieldOp = &block.back();
-  assert(isa<vector::YieldOp>(oldYieldOp) && "Expected vector::YieldOp");
-
-  // Empty vector.mask op.
-  if (maskedOp == oldYieldOp)
-    return;
-
-  opBuilder.setInsertionPoint(oldYieldOp);
+  opBuilder.setInsertionPointToEnd(&block);
   opBuilder.create<vector::YieldOp>(loc, maskedOp->getResults());
-  oldYieldOp->dropAllReferences();
-  oldYieldOp->erase();
 }
 
 LogicalResult MaskOp::verify() {
@@ -6595,6 +6756,10 @@ LogicalResult MaskOp::verify() {
     return emitOpError("expects number of results to match maskable operation "
                        "number of results");
 
+  if (!llvm::equal(maskableOp->getResults(), terminator.getOperands()))
+    return emitOpError("expects all the results from the MaskableOpInterface "
+                       "to match all the values returned by the terminator");
+
   if (!llvm::equal(maskableOp->getResultTypes(), getResultTypes()))
     return emitOpError(
         "expects result type to match maskable operation result type");
@@ -6626,13 +6791,43 @@ LogicalResult MaskOp::verify() {
   return success();
 }
 
-/// Folds vector.mask ops with an all-true mask.
-LogicalResult MaskOp::fold(FoldAdaptor adaptor,
-                           SmallVectorImpl<OpFoldResult> &results) {
-  MaskFormat maskFormat = getMaskFormat(getMask());
-  if (isEmpty())
+/// Folds empty `vector.mask` with no passthru operand and with or without
+/// return values. For example:
+///
+///   %0 = vector.mask %mask { vector.yield %a : vector<8xf32> } :
+///     vector<8xi1> -> vector<8xf32>
+///   %1 = user_op %0 : vector<8xf32>
+///
+/// becomes:
+///
+///   %0 = user_op %a : vector<8xf32>
+///
+/// Empty `vector.mask` with passthru operand are handled by the canonicalizer
+/// as it requires creating new operations.
+
+static LogicalResult foldEmptyMaskOp(MaskOp maskOp, MaskOp::FoldAdaptor adaptor,
+                                     SmallVectorImpl<OpFoldResult> &results) {
+  if (!maskOp.isEmpty() || maskOp.hasPassthru())
     return failure();
 
+  Block *block = maskOp.getMaskBlock();
+  auto terminator = cast<vector::YieldOp>(block->front());
+  if (terminator.getNumOperands() == 0) {
+    // `vector.mask` has no results, just remove the `vector.mask`.
+    return success();
+  }
+
+  // `vector.mask` has results, propagate the results.
+  llvm::append_range(results, terminator.getOperands());
+  return success();
+}
+
+LogicalResult MaskOp::fold(FoldAdaptor adaptor,
+                           SmallVectorImpl<OpFoldResult> &results) {
+  if (succeeded(foldEmptyMaskOp(*this, adaptor, results)))
+    return success();
+
+  MaskFormat maskFormat = getMaskFormat(getMask());
   if (maskFormat != MaskFormat::AllTrue)
     return failure();
 
@@ -6645,27 +6840,37 @@ LogicalResult MaskOp::fold(FoldAdaptor adaptor,
   return success();
 }
 
-// Elides empty vector.mask operations with or without return values. Propagates
-// the yielded values by the vector.yield terminator, if any, or erases the op,
-// otherwise.
-class ElideEmptyMaskOp : public OpRewritePattern<MaskOp> {
+/// Canonialize empty `vector.mask` operations that can't be handled in
+/// `VectorMask::fold` as they require creating new operations.
+///
+/// Example 1: Empty `vector.mask` with passthru operand.
+///
+///   %0 = vector.mask %mask, %passthru { vector.yield %a : vector<8xf32> } :
+///     vector<8xi1> -> vector<8xf32>
+///
+/// becomes:
+///
+///   %0 = arith.select %mask, %a, %passthru : vector<8xf32>
+///
+class CanonializeEmptyMaskOp : public OpRewritePattern<MaskOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(MaskOp maskOp,
                                 PatternRewriter &rewriter) const override {
-    auto maskingOp = cast<MaskingOpInterface>(maskOp.getOperation());
-    if (maskingOp.getMaskableOp())
+    if (!maskOp.isEmpty())
       return failure();
 
-    if (!maskOp.isEmpty())
+    if (!maskOp.hasPassthru())
       return failure();
 
     Block *block = maskOp.getMaskBlock();
     auto terminator = cast<vector::YieldOp>(block->front());
-    if (terminator.getNumOperands() == 0)
-      rewriter.eraseOp(maskOp);
-    else
-      rewriter.replaceOp(maskOp, terminator.getOperands());
+    assert(terminator.getNumOperands() == 1 &&
+           "expected one result when passthru is provided");
+
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(
+        maskOp, maskOp.getResultTypes(), maskOp.getMask(),
+        terminator.getOperand(0), maskOp.getPassthru());
 
     return success();
   }
@@ -6673,7 +6878,7 @@ class ElideEmptyMaskOp : public OpRewritePattern<MaskOp> {
 
 void MaskOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<ElideEmptyMaskOp>(context);
+  results.add<CanonializeEmptyMaskOp>(context);
 }
 
 // MaskingOpInterface definitions.

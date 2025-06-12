@@ -1114,7 +1114,7 @@ bool MatchableInfo::validate(StringRef CommentDelimiter, bool IsAlias) const {
     // Verify that any operand is only mentioned once.
     // We reject aliases and ignore instructions for now.
     if (!IsAlias && TheDef->getValueAsString("AsmMatchConverter").empty() &&
-        Tok[0] == '$' && !OperandNames.insert(std::string(Tok)).second) {
+        Tok[0] == '$' && !OperandNames.insert(Tok.str()).second) {
       LLVM_DEBUG({
         errs() << "warning: '" << TheDef->getName() << "': "
                << "ignoring instruction with tied operand '" << Tok << "'\n";
@@ -1170,7 +1170,7 @@ static std::string getEnumNameForToken(StringRef Str) {
 }
 
 ClassInfo *AsmMatcherInfo::getTokenClass(StringRef Token) {
-  ClassInfo *&Entry = TokenClasses[std::string(Token)];
+  ClassInfo *&Entry = TokenClasses[Token.str()];
 
   if (!Entry) {
     Classes.emplace_front();
@@ -1178,7 +1178,7 @@ ClassInfo *AsmMatcherInfo::getTokenClass(StringRef Token) {
     Entry->Kind = ClassInfo::Token;
     Entry->ClassName = "Token";
     Entry->Name = "MCK_" + getEnumNameForToken(Token);
-    Entry->ValueName = std::string(Token);
+    Entry->ValueName = Token.str();
     Entry->PredicateMethod = "<invalid>";
     Entry->RenderMethod = "<invalid>";
     Entry->ParserMethod = "";
@@ -1330,8 +1330,7 @@ void AsmMatcherInfo::buildRegisterClasses(
   for (const RegisterSet &RS : RegisterSets) {
     ClassInfo *CI = RegisterSetClasses[RS];
     for (const RegisterSet &RS2 : RegisterSets)
-      if (RS != RS2 && std::includes(RS2.begin(), RS2.end(), RS.begin(),
-                                     RS.end(), LessRecordByID()))
+      if (RS != RS2 && llvm::includes(RS2, RS, LessRecordByID()))
         CI->SuperClasses.push_back(RegisterSetClasses[RS2]);
   }
 
@@ -1347,16 +1346,17 @@ void AsmMatcherInfo::buildRegisterClasses(
       CI->ClassName = RC.getName();
       CI->Name = "MCK_" + RC.getName();
       CI->ValueName = RC.getName();
-    } else
+    } else {
       CI->ValueName = CI->ValueName + "," + RC.getName();
+    }
 
     const Init *DiagnosticType = Def->getValueInit("DiagnosticType");
     if (const StringInit *SI = dyn_cast<StringInit>(DiagnosticType))
-      CI->DiagnosticType = std::string(SI->getValue());
+      CI->DiagnosticType = SI->getValue().str();
 
     const Init *DiagnosticString = Def->getValueInit("DiagnosticString");
     if (const StringInit *SI = dyn_cast<StringInit>(DiagnosticString))
-      CI->DiagnosticString = std::string(SI->getValue());
+      CI->DiagnosticString = SI->getValue().str();
 
     // If we have a diagnostic string but the diagnostic type is not specified
     // explicitly, create an anonymous diagnostic type.
@@ -1376,11 +1376,12 @@ void AsmMatcherInfo::buildRegisterClasses(
     assert(CI && "Missing singleton register class info!");
 
     if (CI->ValueName.empty()) {
-      CI->ClassName = std::string(Rec->getName());
+      CI->ClassName = Rec->getName().str();
       CI->Name = "MCK_" + Rec->getName().str();
-      CI->ValueName = std::string(Rec->getName());
-    } else
+      CI->ValueName = Rec->getName().str();
+    } else {
       CI->ValueName = CI->ValueName + "," + Rec->getName().str();
+    }
   }
 }
 
@@ -1400,7 +1401,7 @@ void AsmMatcherInfo::buildOperandClasses() {
     CI->Kind = ClassInfo::UserClass0 + Index;
 
     const ListInit *Supers = Rec->getValueAsListInit("SuperClasses");
-    for (const Init *I : Supers->getValues()) {
+    for (const Init *I : Supers->getElements()) {
       const DefInit *DI = dyn_cast<DefInit>(I);
       if (!DI) {
         PrintError(Rec->getLoc(), "Invalid super class reference!");
@@ -1413,14 +1414,14 @@ void AsmMatcherInfo::buildOperandClasses() {
       else
         CI->SuperClasses.push_back(SC);
     }
-    CI->ClassName = std::string(Rec->getValueAsString("Name"));
+    CI->ClassName = Rec->getValueAsString("Name").str();
     CI->Name = "MCK_" + CI->ClassName;
-    CI->ValueName = std::string(Rec->getName());
+    CI->ValueName = Rec->getName().str();
 
     // Get or construct the predicate method name.
     const Init *PMName = Rec->getValueInit("PredicateMethod");
     if (const StringInit *SI = dyn_cast<StringInit>(PMName)) {
-      CI->PredicateMethod = std::string(SI->getValue());
+      CI->PredicateMethod = SI->getValue().str();
     } else {
       assert(isa<UnsetInit>(PMName) && "Unexpected PredicateMethod field!");
       CI->PredicateMethod = "is" + CI->ClassName;
@@ -1429,7 +1430,7 @@ void AsmMatcherInfo::buildOperandClasses() {
     // Get or construct the render method name.
     const Init *RMName = Rec->getValueInit("RenderMethod");
     if (const StringInit *SI = dyn_cast<StringInit>(RMName)) {
-      CI->RenderMethod = std::string(SI->getValue());
+      CI->RenderMethod = SI->getValue().str();
     } else {
       assert(isa<UnsetInit>(RMName) && "Unexpected RenderMethod field!");
       CI->RenderMethod = "add" + CI->ClassName + "Operands";
@@ -1438,15 +1439,15 @@ void AsmMatcherInfo::buildOperandClasses() {
     // Get the parse method name or leave it as empty.
     const Init *PRMName = Rec->getValueInit("ParserMethod");
     if (const StringInit *SI = dyn_cast<StringInit>(PRMName))
-      CI->ParserMethod = std::string(SI->getValue());
+      CI->ParserMethod = SI->getValue().str();
 
     // Get the diagnostic type and string or leave them as empty.
     const Init *DiagnosticType = Rec->getValueInit("DiagnosticType");
     if (const StringInit *SI = dyn_cast<StringInit>(DiagnosticType))
-      CI->DiagnosticType = std::string(SI->getValue());
+      CI->DiagnosticType = SI->getValue().str();
     const Init *DiagnosticString = Rec->getValueInit("DiagnosticString");
     if (const StringInit *SI = dyn_cast<StringInit>(DiagnosticString))
-      CI->DiagnosticString = std::string(SI->getValue());
+      CI->DiagnosticString = SI->getValue().str();
     // If we have a DiagnosticString, we need a DiagnosticType for use within
     // the matcher.
     if (!CI->DiagnosticString.empty() && CI->DiagnosticType.empty())
@@ -1459,7 +1460,7 @@ void AsmMatcherInfo::buildOperandClasses() {
     // Get or construct the default method name.
     const Init *DMName = Rec->getValueInit("DefaultMethod");
     if (const StringInit *SI = dyn_cast<StringInit>(DMName)) {
-      CI->DefaultMethod = std::string(SI->getValue());
+      CI->DefaultMethod = SI->getValue().str();
     } else {
       assert(isa<UnsetInit>(DMName) && "Unexpected DefaultMethod field!");
       CI->DefaultMethod = "default" + CI->ClassName + "Operands";
@@ -1663,13 +1664,14 @@ void AsmMatcherInfo::buildInfo() {
         // Add the alias to the matchables list.
         NewMatchables.push_back(std::move(AliasII));
       }
-    } else
+    } else {
       // FIXME: The tied operands checking is not yet integrated with the
       // framework for reporting multiple near misses. To prevent invalid
       // formats from being matched with an alias if a tied-operands check
       // would otherwise have disallowed it, we just disallow such constructs
       // in TableGen completely.
       II->buildAliasResultOperands(!ReportMultipleNearMisses);
+    }
   }
   if (!NewMatchables.empty())
     Matchables.insert(Matchables.end(),
@@ -1905,7 +1907,7 @@ void MatchableInfo::buildAliasResultOperands(bool AliasConstraintsAreChecked) {
     }
 
     // Handle all the suboperands for this operand.
-    const std::string &OpName = OpInfo.Name;
+    StringRef OpName = OpInfo.Name;
     for (; AliasOpNo < LastOpNo &&
            CGA.ResultInstOperandIndex[AliasOpNo].first == Idx;
          ++AliasOpNo) {
@@ -2303,9 +2305,10 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
          << utostr(std::get<2>(KV.first)) << " },\n";
     }
     OS << "};\n\n";
-  } else
+  } else {
     OS << "static const uint8_t TiedAsmOperandTable[][3] = "
           "{ /* empty  */ {0, 0, 0} };\n\n";
+  }
 
   OS << "namespace {\n";
 
@@ -2503,8 +2506,9 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
       OS << "      return " << Info.Target.getName() << "AsmParser::Match_"
          << CI.DiagnosticType << ";\n";
       OS << "    break;\n";
-    } else
+    } else {
       OS << "    break;\n";
+    }
     OS << "  }\n";
   }
   OS << "  } // end switch (Kind)\n\n";
@@ -3052,7 +3056,7 @@ static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
                                           AsmMatcherInfo &Info, raw_ostream &OS,
                                           bool HasOptionalOperands) {
   std::string AsmParserName =
-      std::string(Info.AsmParser->getValueAsString("AsmParserClassName"));
+      Info.AsmParser->getValueAsString("AsmParserClassName").str();
   OS << "static bool ";
   OS << "checkAsmTiedOperandConstraints(const " << Target.getName()
      << AsmParserName << "&AsmParser,\n";

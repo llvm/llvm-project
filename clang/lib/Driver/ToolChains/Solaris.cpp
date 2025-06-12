@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Solaris.h"
-#include "CommonArgs.h"
 #include "Gnu.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/ToolChain.h"
@@ -243,13 +242,10 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-latomic");
       addAsNeededOption(ToolChain, Args, CmdArgs, false);
     }
-    addAsNeededOption(ToolChain, Args, CmdArgs, true);
-    CmdArgs.push_back("-lgcc_s");
-    addAsNeededOption(ToolChain, Args, CmdArgs, false);
+
+    AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
     CmdArgs.push_back("-lc");
-    if (!Args.hasArg(options::OPT_shared)) {
-      CmdArgs.push_back("-lgcc");
-    }
+
     const SanitizerArgs &SA = ToolChain.getSanitizerArgs(Args);
     if (NeedsSanitizerDeps) {
       linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);

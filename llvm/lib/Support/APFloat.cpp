@@ -893,8 +893,9 @@ writeSignedDecimal (char *dst, int value)
   if (value < 0) {
     *dst++ = '-';
     dst = writeUnsignedDecimal(dst, -(unsigned) value);
-  } else
+  } else {
     dst = writeUnsignedDecimal(dst, value);
+  }
 
   return dst;
 }
@@ -2814,8 +2815,8 @@ APFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
   if (lost_fraction == lfExactlyZero) {
     *isExact = true;
     return opOK;
-  } else
-    return opInexact;
+  }
+  return opInexact;
 }
 
 /* Same as convertToSignExtendedInteger, except we provide
@@ -3262,9 +3263,8 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
     return true;
   }
 
-  bool IsNegative = str.front() == '-';
+  bool IsNegative = str.consume_front("-");
   if (IsNegative) {
-    str = str.drop_front();
     if (str.size() < MIN_NAME_SIZE)
       return false;
 
@@ -3275,16 +3275,13 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
   }
 
   // If we have a 's' (or 'S') prefix, then this is a Signaling NaN.
-  bool IsSignaling = str.front() == 's' || str.front() == 'S';
+  bool IsSignaling = str.consume_front_insensitive("s");
   if (IsSignaling) {
-    str = str.drop_front();
     if (str.size() < MIN_NAME_SIZE)
       return false;
   }
 
-  if (str.starts_with("nan") || str.starts_with("NaN")) {
-    str = str.drop_front(3);
-
+  if (str.consume_front("nan") || str.consume_front("NaN")) {
     // A NaN without payload.
     if (str.empty()) {
       makeNaN(IsSignaling, IsNegative);
@@ -3306,8 +3303,9 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
       if (str.size() > 1 && tolower(str[1]) == 'x') {
         str = str.drop_front(2);
         Radix = 16;
-      } else
+      } else {
         Radix = 8;
+      }
     }
 
     // Parse the payload and make the NaN.
@@ -4533,8 +4531,9 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
           Str.append(FormatPrecision - 1, '0');
         append(Str, "e+00");
       }
-    } else
+    } else {
       Str.push_back('0');
+    }
     return;
 
   case fcNormal:

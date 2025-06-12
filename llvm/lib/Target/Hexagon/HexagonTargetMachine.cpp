@@ -179,6 +179,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeHexagonAsmPrinterPass(PR);
   initializeHexagonBitSimplifyPass(PR);
   initializeHexagonConstExtendersPass(PR);
   initializeHexagonConstPropagationPass(PR);
@@ -286,7 +287,7 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 TargetTransformInfo
 HexagonTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(HexagonTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<HexagonTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *HexagonTargetMachine::createMachineFunctionInfo(

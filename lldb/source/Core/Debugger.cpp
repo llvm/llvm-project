@@ -112,24 +112,24 @@ static llvm::DefaultThreadPool *g_thread_pool = nullptr;
 
 static constexpr OptionEnumValueElement g_show_disassembly_enum_values[] = {
     {
-        Debugger::eStopDisassemblyTypeNever,
+        lldb::eStopDisassemblyTypeNever,
         "never",
         "Never show disassembly when displaying a stop context.",
     },
     {
-        Debugger::eStopDisassemblyTypeNoDebugInfo,
+        lldb::eStopDisassemblyTypeNoDebugInfo,
         "no-debuginfo",
         "Show disassembly when there is no debug information.",
     },
     {
-        Debugger::eStopDisassemblyTypeNoSource,
+        lldb::eStopDisassemblyTypeNoSource,
         "no-source",
         "Show disassembly when there is no source information, or the source "
         "file "
         "is missing when displaying a stop context.",
     },
     {
-        Debugger::eStopDisassemblyTypeAlways,
+        lldb::eStopDisassemblyTypeAlways,
         "always",
         "Always show disassembly when displaying a stop context.",
     },
@@ -294,19 +294,19 @@ bool Debugger::GetAutoConfirm() const {
       idx, g_debugger_properties[idx].default_uint_value != 0);
 }
 
-const FormatEntity::Entry *Debugger::GetDisassemblyFormat() const {
+FormatEntity::Entry Debugger::GetDisassemblyFormat() const {
   constexpr uint32_t idx = ePropertyDisassemblyFormat;
-  return GetPropertyAtIndexAs<const FormatEntity::Entry *>(idx);
+  return GetPropertyAtIndexAs<FormatEntity::Entry>(idx, {});
 }
 
-const FormatEntity::Entry *Debugger::GetFrameFormat() const {
+FormatEntity::Entry Debugger::GetFrameFormat() const {
   constexpr uint32_t idx = ePropertyFrameFormat;
-  return GetPropertyAtIndexAs<const FormatEntity::Entry *>(idx);
+  return GetPropertyAtIndexAs<FormatEntity::Entry>(idx, {});
 }
 
-const FormatEntity::Entry *Debugger::GetFrameFormatUnique() const {
+FormatEntity::Entry Debugger::GetFrameFormatUnique() const {
   constexpr uint32_t idx = ePropertyFrameFormatUnique;
-  return GetPropertyAtIndexAs<const FormatEntity::Entry *>(idx);
+  return GetPropertyAtIndexAs<FormatEntity::Entry>(idx, {});
 }
 
 uint64_t Debugger::GetStopDisassemblyMaxSize() const {
@@ -350,14 +350,14 @@ void Debugger::SetPrompt(llvm::StringRef p) {
   GetCommandInterpreter().UpdatePrompt(new_prompt);
 }
 
-const FormatEntity::Entry *Debugger::GetThreadFormat() const {
+FormatEntity::Entry Debugger::GetThreadFormat() const {
   constexpr uint32_t idx = ePropertyThreadFormat;
-  return GetPropertyAtIndexAs<const FormatEntity::Entry *>(idx);
+  return GetPropertyAtIndexAs<FormatEntity::Entry>(idx, {});
 }
 
-const FormatEntity::Entry *Debugger::GetThreadStopFormat() const {
+FormatEntity::Entry Debugger::GetThreadStopFormat() const {
   constexpr uint32_t idx = ePropertyThreadStopFormat;
-  return GetPropertyAtIndexAs<const FormatEntity::Entry *>(idx);
+  return GetPropertyAtIndexAs<FormatEntity::Entry>(idx, {});
 }
 
 lldb::ScriptLanguage Debugger::GetScriptLanguage() const {
@@ -492,9 +492,9 @@ bool Debugger::GetShowStatusline() const {
       idx, g_debugger_properties[idx].default_uint_value != 0);
 }
 
-const FormatEntity::Entry *Debugger::GetStatuslineFormat() const {
+FormatEntity::Entry Debugger::GetStatuslineFormat() const {
   constexpr uint32_t idx = ePropertyStatuslineFormat;
-  return GetPropertyAtIndexAs<const FormatEntity::Entry *>(idx);
+  return GetPropertyAtIndexAs<FormatEntity::Entry>(idx, {});
 }
 
 bool Debugger::SetStatuslineFormat(const FormatEntity::Entry &format) {
@@ -611,10 +611,10 @@ uint64_t Debugger::GetStopSourceLineCount(bool before) const {
       idx, g_debugger_properties[idx].default_uint_value);
 }
 
-Debugger::StopDisassemblyType Debugger::GetStopDisassemblyDisplay() const {
+lldb::StopDisassemblyType Debugger::GetStopDisassemblyDisplay() const {
   const uint32_t idx = ePropertyStopDisassemblyDisplay;
-  return GetPropertyAtIndexAs<Debugger::StopDisassemblyType>(
-      idx, static_cast<Debugger::StopDisassemblyType>(
+  return GetPropertyAtIndexAs<lldb::StopDisassemblyType>(
+      idx, static_cast<lldb::StopDisassemblyType>(
                g_debugger_properties[idx].default_uint_value));
 }
 
@@ -839,6 +839,12 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
   }
   debugger_sp->InstanceInitialize();
   return debugger_sp;
+}
+
+void Debugger::DispatchClientTelemetry(
+    const lldb_private::StructuredDataImpl &entry) {
+  lldb_private::telemetry::TelemetryManager::GetInstance()
+      ->DispatchClientTelemetry(entry, this);
 }
 
 void Debugger::HandleDestroyCallback() {
@@ -1530,8 +1536,11 @@ bool Debugger::FormatDisassemblerAddress(const FormatEntity::Entry *format,
   FormatEntity::Entry format_entry;
 
   if (format == nullptr) {
-    if (exe_ctx != nullptr && exe_ctx->HasTargetScope())
-      format = exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    if (exe_ctx != nullptr && exe_ctx->HasTargetScope()) {
+      format_entry =
+          exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+      format = &format_entry;
+    }
     if (format == nullptr) {
       FormatEntity::Parse("${addr}: ", format_entry);
       format = &format_entry;
@@ -2025,6 +2034,9 @@ void Debugger::CancelForwardEvents(const ListenerSP &listener_sp) {
 }
 
 bool Debugger::StatuslineSupported() {
+// We have trouble with the contol codes on Windows, see
+// https://github.com/llvm/llvm-project/issues/134846.
+#ifndef _WIN32
   if (GetShowStatusline()) {
     if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
       File &file = stream_sp->GetUnlockedFile();
@@ -2032,6 +2044,7 @@ bool Debugger::StatuslineSupported() {
              file.GetIsTerminalWithColors();
     }
   }
+#endif
   return false;
 }
 
@@ -2215,9 +2228,9 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   // progress reports.
   {
     std::lock_guard<std::mutex> guard(m_progress_reports_mutex);
-    auto it = std::find_if(
-        m_progress_reports.begin(), m_progress_reports.end(),
-        [&](const auto &report) { return report.id == progress_report.id; });
+    auto it = llvm::find_if(m_progress_reports, [&](const auto &report) {
+      return report.id == progress_report.id;
+    });
     if (it != m_progress_reports.end()) {
       const bool complete = data->GetCompleted() == data->GetTotal();
       if (complete)

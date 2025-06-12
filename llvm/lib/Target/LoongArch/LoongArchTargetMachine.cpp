@@ -189,14 +189,14 @@ void LoongArchPassConfig::addCodeGenPrepare() {
 }
 
 bool LoongArchPassConfig::addInstSelector() {
-  addPass(createLoongArchISelDag(getLoongArchTargetMachine()));
+  addPass(createLoongArchISelDag(getLoongArchTargetMachine(), getOptLevel()));
 
   return false;
 }
 
 TargetTransformInfo
 LoongArchTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(LoongArchTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<LoongArchTTIImpl>(this, F));
 }
 
 void LoongArchPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }
