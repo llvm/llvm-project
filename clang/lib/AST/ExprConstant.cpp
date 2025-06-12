@@ -1529,7 +1529,7 @@ CallStackFrame::~CallStackFrame() {
 
 static bool isRead(AccessKinds AK) {
   return AK == AK_Read || AK == AK_ReadObjectRepresentation ||
-         AK == AK_IsWithinLifetime || AK == AK_CheckReferenceInitialization;
+         AK == AK_IsWithinLifetime || AK == AK_ReferenceInitialization;
 }
 
 static bool isModification(AccessKinds AK) {
@@ -1540,7 +1540,7 @@ static bool isModification(AccessKinds AK) {
   case AK_DynamicCast:
   case AK_TypeId:
   case AK_IsWithinLifetime:
-  case AK_CheckReferenceInitialization:
+  case AK_ReferenceInitialization:
     return false;
   case AK_Assign:
   case AK_Increment:
@@ -1559,7 +1559,7 @@ static bool isAnyAccess(AccessKinds AK) {
 /// Is this an access per the C++ definition?
 static bool isFormalAccess(AccessKinds AK) {
   return isAnyAccess(AK) && AK != AK_Construct && AK != AK_Destroy &&
-         AK != AK_IsWithinLifetime && AK != AK_CheckReferenceInitialization;
+         AK != AK_IsWithinLifetime && AK != AK_ReferenceInitialization;
 }
 
 /// Is this kind of axcess valid on an indeterminate object value?
@@ -1572,7 +1572,7 @@ static bool isValidIndeterminateAccess(AccessKinds AK) {
     return false;
 
   case AK_IsWithinLifetime:
-  case AK_CheckReferenceInitialization:
+  case AK_ReferenceInitialization:
   case AK_ReadObjectRepresentation:
   case AK_Assign:
   case AK_Construct:
@@ -4419,6 +4419,9 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       return CompleteObject();
     }
 
+    // if(AK == clang::AK_ReferenceInitialization)
+    //     return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
+
     bool IsConstant = BaseType.isConstant(Info.Ctx);
     bool ConstexprVar = false;
     if (const auto *VD = dyn_cast_if_present<VarDecl>(
@@ -4427,7 +4430,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
 
     // Unless we're looking at a local variable or argument in a constexpr call,
     // the variable we're reading must be const.
-    if (!Frame && AK != clang::AK_CheckReferenceInitialization) {
+    if (AK != clang::AK_ReferenceInitialization && !Frame) {
       if (IsAccess && isa<ParmVarDecl>(VD)) {
         // Access of a parameter that's not associated with a frame isn't going
         // to work out, but we can leave it to evaluateVarDeclInit to provide a
@@ -4491,7 +4494,9 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       }
     }
 
-    if (!evaluateVarDeclInit(Info, E, VD, Frame, LVal.getLValueVersion(), BaseVal))
+    if (AK != clang::AK_ReferenceInitialization &&
+        !evaluateVarDeclInit(Info, E, VD, Frame, LVal.getLValueVersion(),
+                             BaseVal))
       return CompleteObject();
   } else if (DynamicAllocLValue DA = LVal.Base.dyn_cast<DynamicAllocLValue>()) {
     std::optional<DynAlloc *> Alloc = Info.lookupDynamicAlloc(DA);
@@ -4504,7 +4509,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   } else {
     const Expr *Base = LVal.Base.dyn_cast<const Expr*>();
 
-    if (!Frame && AK != clang::AK_CheckReferenceInitialization) {
+    if (AK != clang::AK_ReferenceInitialization && !Frame) {
       if (const MaterializeTemporaryExpr *MTE =
               dyn_cast_or_null<MaterializeTemporaryExpr>(Base)) {
         assert(MTE->getStorageDuration() == SD_Static &&
@@ -4558,7 +4563,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         NoteLValueLocation(Info, LVal.Base);
         return CompleteObject();
       }
-    } else if (AK != clang::AK_CheckReferenceInitialization) {
+    } else if (AK != clang::AK_ReferenceInitialization) {
       BaseVal = Frame->getTemporary(Base, LVal.Base.getVersion());
       assert(BaseVal && "missing value for temporary");
     }
@@ -5224,6 +5229,24 @@ enum EvalStmtResult {
 };
 }
 
+static bool EvaluateInitForDeclOfReferenceType(EvalInfo &Info,
+                                               const ValueDecl *D,
+                                               const Expr *Init, LValue &Result,
+                                               APValue &Val) {
+  assert(Init->isGLValue() && D->getType()->isReferenceType());
+  if (!EvaluateLValue(Init, Result, Info))
+    return false;
+  CompleteObject Obj = findCompleteObject(
+      Info, Init, AK_ReferenceInitialization, Result, Init->getType());
+  if (!Result.Designator.Invalid && Result.Designator.isOnePastTheEnd()) {
+    Info.FFDiag(Init, diag::note_constexpr_access_past_end)
+        << AK_ReferenceInitialization;
+    return false;
+  }
+  Result.moveInto(Val);
+  return !!Obj;
+}
+
 static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
   if (VD->isInvalidDecl())
     return false;
@@ -5244,18 +5267,8 @@ static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
   if (InitE->isValueDependent())
     return false;
 
-  if (VD->getType()->isReferenceType() && InitE->isGLValue()) {
-    if (!EvaluateLValue(InitE, Result, Info))
-      return false;
-    CompleteObject Obj = findCompleteObject(
-        Info, InitE, AK_CheckReferenceInitialization, Result, InitE->getType());
-    if (Result.Designator.isOnePastTheEnd()) {
-      Info.FFDiag(InitE, diag::note_constexpr_access_past_end)
-          << AK_CheckReferenceInitialization;
-      return false;
-    }
-    Result.moveInto(Val);
-    return !!Obj;
+  if (VD->getType()->isReferenceType()) {
+    return EvaluateInitForDeclOfReferenceType(Info, VD, InitE, Result, Val);
   } else if (!EvaluateInPlace(Val, Info, Result, InitE)) {
     // Wipe out any partially-computed value, to allow tracking that this
     // evaluation failed.
@@ -6897,9 +6910,18 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
       ThisOverrideRAII ThisOverride(*Info.CurrentCall, &SubobjectParent,
                                     isa<CXXDefaultInitExpr>(Init));
       FullExpressionRAII InitScope(Info);
-      if (!EvaluateInPlace(*Value, Info, Subobject, Init) ||
-          (FD && FD->isBitField() &&
-           !truncateBitfieldValue(Info, Init, *Value, FD))) {
+
+      if (FD && FD->getType()->isReferenceType()) {
+        LValue Result;
+        if (!EvaluateInitForDeclOfReferenceType(Info, FD, Init, Result,
+                                                *Value)) {
+          if (!Info.noteFailure())
+            return false;
+          Success = false;
+        }
+      } else if (!EvaluateInPlace(*Value, Info, Subobject, Init) ||
+                 (FD && FD->isBitField() &&
+                  !truncateBitfieldValue(Info, Init, *Value, FD))) {
         // If we're checking for a potential constant expression, evaluate all
         // initializers even if some of them fail.
         if (!Info.noteFailure())
@@ -10926,9 +10948,18 @@ bool RecordExprEvaluator::VisitCXXParenListOrInitListExpr(
                                   isa<CXXDefaultInitExpr>(Init));
 
     APValue &FieldVal = Result.getStructField(Field->getFieldIndex());
-    if (!EvaluateInPlace(FieldVal, Info, Subobject, Init) ||
-        (Field->isBitField() && !truncateBitfieldValue(Info, Init,
-                                                       FieldVal, Field))) {
+
+    if (Field->getType()->isReferenceType()) {
+      LValue Result;
+      if (!EvaluateInitForDeclOfReferenceType(Info, Field, Init, Result,
+                                              FieldVal)) {
+        if (!Info.noteFailure())
+          return false;
+        Success = false;
+      }
+    } else if (!EvaluateInPlace(FieldVal, Info, Subobject, Init) ||
+               (Field->isBitField() &&
+                !truncateBitfieldValue(Info, Init, FieldVal, Field))) {
       if (!Info.noteFailure())
         return false;
       Success = false;
