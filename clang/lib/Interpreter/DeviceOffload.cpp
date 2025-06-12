@@ -151,7 +151,7 @@ llvm::Error IncrementalCUDADeviceParser::GenerateFatbinary() {
                    llvm::StringRef(FatbinContent.data(), FatbinContent.size()),
                    "", false));
 
-  CodeGenOpts.CudaGpuBinaryFileName = FatbinFileName;
+  CodeGenOpts.CudaGpuBinaryFileName = std::move(FatbinFileName);
 
   FatbinContent.clear();
 
