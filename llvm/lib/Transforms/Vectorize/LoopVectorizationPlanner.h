@@ -175,7 +175,8 @@ public:
   VPInstruction *createNaryOp(unsigned Opcode,
                               std::initializer_list<VPValue *> Operands,
                               Type *ResultTy, const VPIRFlags &Flags = {},
-                              DebugLoc DL = DebugLoc::getUnknown()const Twine &Name = "") {
+                              DebugLoc DL = DebugLoc::getUnknown(),
+                              const Twine &Name = "") {
     return tryInsertInstruction(new VPInstructionWithType(
         Opcode, Operands, ResultTy, Flags, DL, /*IsSingleScalar=*/false, Name));
   }

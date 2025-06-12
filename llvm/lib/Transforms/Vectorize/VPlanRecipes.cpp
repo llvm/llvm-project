@@ -858,8 +858,7 @@ bool VPInstruction::isVectorToScalar() const {
 
 bool VPInstruction::isSingleScalar() const {
   // TODO: Set IsSingleScalar for PHI.
-  return IsSingleScalar ||
-         getOpcode() == Instruction::PHI;
+  return IsSingleScalar || getOpcode() == Instruction::PHI;
 }
 
 void VPInstruction::execute(VPTransformState &State) {

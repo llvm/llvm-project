@@ -1070,8 +1070,8 @@ class VPInstructionWithType : public VPInstruction {
 public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, const VPIRFlags &Flags, DebugLoc DL,
-                        bool SingleScalar = false, const Twine &Name = "")
-      : VPInstruction(Opcode, Operands, Flags, DL, Name, true),
+                        bool IsSingleScalar = false, const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, Flags, DL, Name, IsSingleScalar),
         ResultTy(ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
