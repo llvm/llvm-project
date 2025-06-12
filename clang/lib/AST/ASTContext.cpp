@@ -6742,7 +6742,7 @@ QualType ASTContext::getTagDeclType(const TagDecl *Decl) const {
 /// needs to agree with the definition in <stddef.h>.
 QualType ASTContext::getSizeType() const {
   if (SizeType.isNull()) {
-    if (auto const &LO = getLangOpts(); !LO.HLSL && (LO.C99 || LO.CPlusPlus))
+    if (!getLangOpts().HLSL)
       SizeType = getTypedefType(buildImplicitTypedef(
           getFromTargetType(Target->getSizeType()), "__size_t"));
     else
@@ -6759,7 +6759,7 @@ CanQualType ASTContext::getCanonicalSizeType() const {
 /// corresponding to size_t.
 QualType ASTContext::getSignedSizeType() const {
   if (SignedSizeType.isNull()) {
-    if (auto const &LO = getLangOpts(); !LO.HLSL && (LO.C99 || LO.CPlusPlus))
+    if (!getLangOpts().HLSL)
       SignedSizeType = getTypedefType(buildImplicitTypedef(
           getFromTargetType(Target->getSignedSizeType()), "__signed_size_t"));
     else
@@ -6772,7 +6772,7 @@ QualType ASTContext::getSignedSizeType() const {
 /// defined in <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
 QualType ASTContext::getPointerDiffType() const {
   if (PtrdiffType.isNull()) {
-    if (auto const &LO = getLangOpts(); !LO.HLSL && (LO.C99 || LO.CPlusPlus))
+    if (!getLangOpts().HLSL)
       PtrdiffType = getTypedefType(buildImplicitTypedef(
           getFromTargetType(Target->getPtrDiffType(LangAS::Default)),
           "__ptrdiff_t"));
