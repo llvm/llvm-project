@@ -313,6 +313,7 @@ template <> void d(a<0> &, double, double, double, unsigned, bool);
 } // namespace b
 }
 
+#if __cplusplus >= 201103L
 namespace PR95420 {
 template <typename _Container>
 constexpr auto
@@ -329,6 +330,7 @@ template <>
 void f1<A>(unsigned long size, const A& f, const A& b) { // We also need b
   f1<A>(0, *f.data[0]); // We still need this line
 
-  size; // Changing the name of size prevents crash
+  (void) size; // Changing the name of size prevents crash
 }
 }
+#endif
