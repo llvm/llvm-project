@@ -2953,7 +2953,7 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     Options.AllowedTailExpansions = {3};
   }
 
-  if (IsZeroCmp && ST->hasVInstructions() && ST->enableUnalignedVectorMem()) {
+  if (IsZeroCmp && ST->hasVInstructions()) {
     unsigned VLenB = ST->getRealMinVLen() / 8;
     // The minimum size should be the maximum bytes between `VLen * LMUL_MF8`
     // and `XLen * 2`.
