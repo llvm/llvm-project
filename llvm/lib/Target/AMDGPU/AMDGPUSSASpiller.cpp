@@ -140,12 +140,14 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   void initActiveSetUsualBlock(MachineBasicBlock &MBB);
   void initActiveSetLoopHeader(MachineBasicBlock &MBB);
 
-  void reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP);
+  Register reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP);
   void spillAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP);
-  void reloadBefore(MachineBasicBlock &MBB,
+  Register reloadBefore(MachineBasicBlock &MBB,
                     MachineBasicBlock::iterator InsertBefore, VRegMaskPair VMP);
   void spillBefore(MachineBasicBlock &MBB,
                    MachineBasicBlock::iterator InsertBefore, VRegMaskPair VMP);
+
+  void rewriteUses(MachineBasicBlock &MBB, Register OldVReg, Register NewVReg);
 
   unsigned getLoopMaxRP(MachineLoop *L);
   // Returns number of spilled VRegs
@@ -381,7 +383,8 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
     for (auto R : Reloads) {
       LLVM_DEBUG(dbgs() << "\nReloading "; printVRegMaskPair(R);
                  dbgs() << "\n");
-      reloadBefore(MBB, I, R);
+      Register NewVReg = reloadBefore(MBB, I, R);
+      rewriteUses(MBB, R.VReg, NewVReg);
     }
 
     std::advance(I, NSpills);
@@ -423,7 +426,29 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
           if (ValueSrc->getNumber() == MBB.getNumber()) {
             VRegMaskPair VMP(U, TRI, MRI);
             if (!isCoveredActive(VMP, Active)) {
-              reloadBefore(MBB, MBB.getFirstInstrTerminator(), VMP);
+              Register NewVReg = reloadAtEnd(MBB, VMP);
+              U.setReg(NewVReg);
+              U.setSubReg(AMDGPU::NoRegister);
+
+              // The code below is commented out because of the BUG in
+              // MachineSSAUpdater. In case the register class of a PHI operand
+              // defined register is a superclass of a NewReg it inserts a COPY
+              // AFTER the PHI
+
+              //  Predecessor:
+              //  %157:vgpr_32 = SI_SPILL_V32_RESTORE %stack.0
+
+              //  %146:vreg_64 = PHI %70:vreg_64.sub0, %bb.3, %144:vgpr_32, %bb.1
+
+              // becomes:
+
+              // %146:vreg_64 = PHI %158:vreg_64.sub0, %bb.3, %144:vgpr_32,
+              // %bb.1 %158:vreg_64 = COPY %157
+
+              // MachineSSAUpdater SSAUpddater(*MBB.getParent());
+              // SSAUpddater.Initialize(U.getReg());
+              // SSAUpddater.AddAvailableValue(&MBB, NewVReg);
+              // SSAUpddater.RewriteUse(U);
             }
           }
         }
@@ -523,16 +548,18 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
     set_intersect(ReloadInPred, PE.SpillSet);
     dumpRegSet(ReloadInPred);
     if (!ReloadInPred.empty()) {
-      // We're about to insert N reloads at the end of the predecessor block.
-      // Make sure we have enough registers for N definitions or spill to make
-      // room for them.
-      limit(*Pred, PE.ActiveSet, PE.SpillSet, Pred->getFirstTerminator(),
-            NumAvailableRegs - getSizeInRegs(ReloadInPred));
+
+      // Since we operate on SSA, any register that is live across the edge must
+      // either be defined before or within the IDom, or be a PHI operand. If a
+      // register is neither a PHI operand nor live-out from all predecessors,
+      // it must have been spilled in one of them. Registers that are defined
+      // and used entirely within a predecessor are dead at its exit. Therefore,
+      // there is always room to reload a register that is not live across the
+      // edge.
 
       for (auto R : ReloadInPred) {
-        reloadAtEnd(*Pred, R);
-        // FIXME: Do we need to update sets?
-        PE.ActiveSet.insert(R);
+        Register NewVReg = reloadAtEnd(*Pred, R);
+        rewriteUses(*Pred, R.VReg, NewVReg);
       }
     }
 
@@ -542,7 +569,6 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
     for (auto S : set_intersection(set_difference(Entry.SpillSet, PE.SpillSet),
                                    PE.ActiveSet)) {
       spillAtEnd(*Pred, S);
-      // FIXME: Do we need to update sets?
       PE.SpillSet.insert(S);
       PE.ActiveSet.remove(S);
       Entry.SpillSet.insert(S);
@@ -694,15 +720,15 @@ AMDGPUSSASpiller::getRegClassForVregMaskPair(VRegMaskPair VMP,
   return RC;
 }
 
-void AMDGPUSSASpiller::reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP) {
-  reloadBefore(MBB, MBB.getFirstInstrTerminator(), VMP);
+Register AMDGPUSSASpiller::reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP) {
+  return reloadBefore(MBB, MBB.getFirstInstrTerminator(), VMP);
 }
 
 void AMDGPUSSASpiller::spillAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP) {
   spillBefore(MBB, MBB.getFirstTerminator(), VMP);
 }
 
-void AMDGPUSSASpiller::reloadBefore(MachineBasicBlock &MBB,
+Register AMDGPUSSASpiller::reloadBefore(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator InsertBefore,
                                     VRegMaskPair VMP) {
   unsigned SubRegIdx = 0;
@@ -713,40 +739,11 @@ void AMDGPUSSASpiller::reloadBefore(MachineBasicBlock &MBB,
   // FIXME: dirty hack! To avoid further changing the TargetInstrInfo interface.
   MachineInstr &ReloadMI = *(--InsertBefore);
   LIS.InsertMachineInstrInMaps(ReloadMI);
-  MachineSSAUpdater Updater(*MBB.getParent());
-  Updater.Initialize(NewVReg);
-  Updater.AddAvailableValue(ReloadMI.getParent(), NewVReg);
-  // FIXME: we'd better pass the exact UseMI here to avoid scanning all the
-  // users. isCoveredActive takes care of possible uses with the mask narrower
-  // then this, reloaded here.
-  SmallVector<MachineOperand*> ToUpdate;
-  for (auto &U : MRI->use_nodbg_operands(VMP.VReg)) {
-    // if (SpillPoints.contains(VMP)) {
-    //     MachineInstr *UseMI = U.getParent();
-        
-    //     // FIXME: If we have 2 spills ? Which one dominates current Use?
-    //     // SpillPoints should be the map [VMP => [Vector[MIs]]]
-    //     // Proper fix: MachineSSAUpdater should take care of this!!!
-    //     MachineInstr *Spill = SpillPoints[VMP];
-    //     VRegMaskPair UseVMP(U, TRI, MRI);
-    //     if (UseMI != Spill && MDT.dominates(Spill, UseMI) && UseVMP == VMP)
-    //       ToUpdate.push_back(&U);
-    // } else {
-    //   llvm::report_fatal_error(
-    //       "We're going to reload VReg which has not been spilled!");
-    // }
-    MachineInstr *UseMI = U.getParent();
-    if (MDT.dominates(&ReloadMI, UseMI))
-      Updater.RewriteUse(U);
-  }
-  // for (auto U : ToUpdate) {
-  //   // FIXME: Do we always want "AtEndOfBlock"?
-  //   U->setSubReg(AMDGPU::NoRegister);
-  //   U->setReg(Updater.GetValueAtEndOfBlock(&MBB));
-  // }
+
   LIS.createAndComputeVirtRegInterval(NewVReg);
   auto &Entry = getBlockInfo(MBB);
   Entry.ActiveSet.insert({NewVReg, getFullMaskForRC(*RC, TRI)});
+  return NewVReg;
 }
 
 void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
@@ -778,6 +775,29 @@ void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
     // }
   }
   SpillPoints[VMP] = &Spill;
+}
+
+void AMDGPUSSASpiller::rewriteUses(MachineBasicBlock &MBB, Register OldVReg,
+                                   Register NewVReg) {
+  MachineSSAUpdater SSAUpdater(*MBB.getParent());
+  SSAUpdater.Initialize(OldVReg);
+  SSAUpdater.AddAvailableValue(&MBB, NewVReg);
+  for (MachineOperand &UseOp : MRI->use_operands(OldVReg)) {
+    MachineInstr *UseMI = UseOp.getParent();
+    MachineBasicBlock *UseMBB = UseMI->getParent();
+
+    if (UseMBB->getNumber() == MBB.getNumber()) {
+      UseOp.setReg(NewVReg);
+      UseOp.setSubReg(AMDGPU::NoRegister);
+    } else {
+      // We skip rewriting if SSAUpdater already has a dominating def for
+      // this block
+      if (SSAUpdater.HasValueForBlock(UseMBB))
+        continue;
+      // This rewrites the use to a PHI result or correct value
+      SSAUpdater.RewriteUse(UseOp);
+    }
+  }
 }
 
 unsigned AMDGPUSSASpiller::getLoopMaxRP(MachineLoop *L) {
@@ -872,14 +892,12 @@ unsigned AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
     dumpRegSet(Spilled);
   }
 
-  LLVM_DEBUG(
-    if (!ToSpill.empty()) {
-      dbgs() << "\nActive set after spilling:\n";
-      dumpRegSet(Active);
-      dbgs() << "\nSpilled set after spilling:\n";
-      dumpRegSet(Spilled);
-    }
-);
+  LLVM_DEBUG(if (!ToSpill.empty()) {
+    dbgs() << "\nActive set after spilling:\n";
+    dumpRegSet(Active);
+    dbgs() << "\nSpilled set after spilling:\n";
+    dumpRegSet(Spilled);
+  });
   // T2->stopTimer();
   return NumSpills;
 }
