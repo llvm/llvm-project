@@ -11,6 +11,7 @@
 #include "src/stdio/fread.h"
 #include "src/stdio/fwrite.h"
 #include "src/stdio/setvbuf.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/stdio_macros.h"
