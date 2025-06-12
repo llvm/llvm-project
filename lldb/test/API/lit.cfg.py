@@ -9,8 +9,6 @@ import shutil
 import subprocess
 import sys
 
-import lit.formats
-
 # name: The name of this test suite.
 config.name = "lldb-api"
 
