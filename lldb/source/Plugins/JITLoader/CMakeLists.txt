@@ -2,3 +2,4 @@ set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND JITLoader)
 set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES ObjectFile)
 
 add_subdirectory(GDB)
+add_subdirectory(ROAR)

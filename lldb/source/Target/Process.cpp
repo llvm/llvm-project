@@ -5880,7 +5880,8 @@ void Process::ClearPreResumeAction(PreResumeActionCallback callback, void *baton
 }
 
 ProcessRunLock &Process::GetRunLock() {
-  if (Process::CurrentThreadIsPrivateStateThread())
+  if (m_making_external_plugin_call ||
+      Process::CurrentThreadIsPrivateStateThread())
     return m_private_run_lock;
   return m_public_run_lock;
 }

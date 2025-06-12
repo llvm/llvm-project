@@ -56,6 +56,9 @@ public:
   lldb::BreakpointResolverSP
   CopyForBreakpoint(lldb::BreakpointSP &breakpoint) override;
 
+  /// Get the location spec that this resolver is using.
+  const SourceLocationSpec &GetLocationSpec() const { return m_location_spec; }
+
 protected:
   void FilterContexts(SymbolContextList &sc_list);
   void DeduceSourceMapping(const SymbolContextList &sc_list);

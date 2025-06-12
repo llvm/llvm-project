@@ -938,6 +938,15 @@ public:
 
   const lldb::UnixSignalsSP &GetUnixSignals();
 
+  /// Called by LLDB before calling an external plugin that needs access to
+  /// internal process state using the public API.
+  void WillCallExternalPlugin() { m_making_external_plugin_call = true; }
+
+  /// Called by LLDB after a call to an external plugin that needs access to
+  /// internal process state using the public API returns, thus restoring the
+  /// public API behavior to the default.
+  void DoneCallingExternalPlugin() { m_making_external_plugin_call = false; }
+
   //==================================================================
   // Plug-in Process Control Overrides
   //==================================================================
@@ -3273,6 +3282,10 @@ protected:
   /// A repository for extra crash information, consulted in
   /// GetExtendedCrashInformation.
   StructuredData::DictionarySP m_crash_info_dict_sp;
+
+  /// Set to true before calling an external plugin that needs access to
+  /// internal process state.
+  bool m_making_external_plugin_call = false;
 
   size_t RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
                                            uint8_t *buf) const;
