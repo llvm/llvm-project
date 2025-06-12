@@ -893,6 +893,7 @@ void MicrosoftCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
                                               QualType ElementType,
                                               const CXXDestructorDecl *Dtor) {
   // FIXME: Provide a source location here even though there's no
+  // CXXMemberCallExpr for dtor call.
   EmitVirtualDestructorCall(CGF, Dtor, Dtor_Deleting, Ptr, DE,
                             /*CallOrInvoke=*/nullptr);
 }
