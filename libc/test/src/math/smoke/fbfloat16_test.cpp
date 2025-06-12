@@ -15,17 +15,16 @@
 using LlvmLibcFBfloat16Test = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
 
 TEST_F(LlvmLibcFBfloat16Test, SpecialNumbers) {
+  constexpr float SPECIAL_FLOATS[] = {
+    0.0f, 1.0f, 2.0f, 4.5f, -1.0f, -0.5f, 3.140625f
+  };
 
-  bfloat16 x{0.0f};
-  ASSERT_EQ(0, static_cast<int>(x.bits));
+  constexpr uint16_t SPECIAL_BFLOAT16_BITS[] = {
+    0, 0x3f80U, 0x4000U, 0x4090U, 0xbf80U, 0xbf00, 0x4049U
+  };
 
-
-  bfloat16 y{1.0f};
-  ASSERT_EQ(1, static_cast<int>(y.bits));
-
-  // TODO: implement this!
-  // x = some bfloat number
-  // float y = x as float (using our ctor?)
-  // float z = mfpr(x) as float
-  // check y == z
+  for (int i=0; i<7; i++) {
+    bfloat16 x{SPECIAL_FLOATS[i]};
+    ASSERT_EQ(SPECIAL_BFLOAT16_BITS[i], x.bits);
+  }
 }
