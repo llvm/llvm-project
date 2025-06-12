@@ -212,33 +212,35 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
   for (const auto &R : llvm::reverse(Info->Namespace)) {
     // Look for the current namespace in the children of the index I is
     // pointing.
-    auto It = llvm::find(I->Children, R.USR);
+    auto It = I->Children.find(llvm::toStringRef(R.USR));
     if (It != I->Children.end()) {
       // If it is found, just change I to point the namespace reference found.
-      I = &*It;
+      I = &It->second;
     } else {
       // If it is not found a new reference is created
-      I->Children.emplace_back(R.USR, R.Name, R.RefType, R.Path);
+      auto [NewInfo, success] = I->Children.try_emplace(
+          llvm::toStringRef(R.USR), R.USR, R.Name, R.RefType, R.Path);
       // I is updated with the reference of the new namespace reference
-      I = &I->Children.back();
+      if (success)
+        I = &NewInfo->second;
     }
   }
   // Look for Info in the vector where it is supposed to be; it could already
   // exist if it is a parent namespace of an Info already passed to this
   // function.
-  auto It = llvm::find(I->Children, Info->USR);
+  auto It = I->Children.find(llvm::toStringRef(Info->USR));
   if (It == I->Children.end()) {
     // If it is not in the vector it is inserted
-    I->Children.emplace_back(Info->USR, Info->extractName(), Info->IT,
-                             Info->Path);
+    I->Children.try_emplace(llvm::toStringRef(Info->USR), Info->USR,
+                            Info->extractName(), Info->IT, Info->Path);
   } else {
     // If it not in the vector we only check if Path and Name are not empty
     // because if the Info was included by a namespace it may not have those
     // values.
-    if (It->Path.empty())
-      It->Path = Info->Path;
-    if (It->Name.empty())
-      It->Name = Info->extractName();
+    if (It->second.Path.empty())
+      It->second.Path = Info->Path;
+    if (It->second.Name.empty())
+      It->second.Name = Info->extractName();
   }
 }
 
