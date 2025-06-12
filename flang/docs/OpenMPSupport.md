@@ -60,3 +60,16 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | target teams distribute parallel loop construct            | P      | device, reduction and dist_schedule clauses are not supported |
 | teams distribute parallel loop simd construct              | P      | reduction, dist_schedule, and linear clauses are not supported |
 | target teams distribute parallel loop simd construct       | P      | device, reduction, dist_schedule and linear clauses are not supported |
+
+## Extensions
+### ATOMIC construct
+The implementation of the ATOMIC construct follows OpenMP 6.0 with the following extensions:
+- `x = x` is an allowed form of ATOMIC UPDATE.
+This is motivated by the fact that the equivalent forms `x = x+0` or `x = x*1` are allowed.
+- Explicit type conversions are allowed in ATOMIC READ, WRITE or UPDATE constructs, and in the capture statement in ATOMIC UPDATE CAPTURE.
+The OpenMP spec requires intrinsic- or pointer-assignments, which include (as per the Fortran standard) implicit type conversions.  Since such conversions need to be handled, allowing explicit conversions comes at no extra cost.
+- A literal `.true.` or `.false.` is an allowed condition in ATOMIC UPDATE COMPARE. [1]
+- A logical variable is an allowed form of the condition even if its value is not computed within the ATOMIC UPDATE COMPARE construct [1].
+- `expr equalop x` is an allowed condition in ATOMIC UPDATE COMPARE. [1]
+
+[1] Code generation for ATOMIC UPDATE COMPARE is not implemented yet.

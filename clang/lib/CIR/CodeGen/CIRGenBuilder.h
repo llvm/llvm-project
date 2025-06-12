@@ -11,10 +11,12 @@
 
 #include "Address.h"
 #include "CIRGenTypeCache.h"
+#include "clang/CIR/Interfaces/CIRFPTypeInterface.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 
 namespace clang::CIRGen {
@@ -228,6 +230,15 @@ public:
   cir::IntType getUInt16Ty() { return typeCache.UInt16Ty; }
   cir::IntType getUInt32Ty() { return typeCache.UInt32Ty; }
   cir::IntType getUInt64Ty() { return typeCache.UInt64Ty; }
+
+  cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal);
+
+  cir::ConstantOp getConstInt(mlir::Location loc, llvm::APInt intVal);
+
+  cir::ConstantOp getConstInt(mlir::Location loc, mlir::Type t, uint64_t c);
+
+  cir::ConstantOp getConstFP(mlir::Location loc, mlir::Type t,
+                             llvm::APFloat fpVal);
 
   bool isInt8Ty(mlir::Type i) {
     return i == typeCache.UInt8Ty || i == typeCache.SInt8Ty;

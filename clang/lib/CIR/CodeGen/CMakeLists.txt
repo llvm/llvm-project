@@ -13,6 +13,7 @@ add_clang_library(clangCIR
   CIRGenClass.cpp
   CIRGenCXXABI.cpp
   CIRGenCXXExpr.cpp
+  CIRGenBuiltin.cpp
   CIRGenDecl.cpp
   CIRGenDeclOpenACC.cpp
   CIRGenExpr.cpp

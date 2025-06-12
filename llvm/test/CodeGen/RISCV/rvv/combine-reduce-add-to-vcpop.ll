@@ -313,12 +313,12 @@ define i32 @test_nxv128i1(<vscale x 128 x i1> %x) {
 ; CHECK-NEXT:    vslidedown.vx v0, v6, a0
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v6, v7, a1
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v5, v6, a0
-; CHECK-NEXT:    vslidedown.vx v4, v7, a0
-; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v4
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v7, a0
+; CHECK-NEXT:    vslidedown.vx v5, v6, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vadd.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v5
 ; CHECK-NEXT:    vadd.vi v16, v16, 1, v0.t
@@ -364,9 +364,9 @@ define i32 @test_nxv256i1(<vscale x 256 x i1> %x) {
 ; CHECK-NEXT:    vmv1r.v v7, v9
 ; CHECK-NEXT:    vmv1r.v v5, v8
 ; CHECK-NEXT:    vmv1r.v v4, v0
-; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmv.v.i v24, 0
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v24, 1, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    mv a2, a0
@@ -376,7 +376,7 @@ define i32 @test_nxv256i1(<vscale x 256 x i1> %x) {
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vmv1r.v v0, v5
-; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v24, 1, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 5
 ; CHECK-NEXT:    add a0, sp, a0
@@ -388,9 +388,8 @@ define i32 @test_nxv256i1(<vscale x 256 x i1> %x) {
 ; CHECK-NEXT:    vslidedown.vx v3, v4, a0
 ; CHECK-NEXT:    vslidedown.vx v2, v5, a0
 ; CHECK-NEXT:    vmv.v.v v0, v3
-; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v24, 1, v0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    mv a3, a2
@@ -398,42 +397,43 @@ define i32 @test_nxv256i1(<vscale x 256 x i1> %x) {
 ; CHECK-NEXT:    add a2, a2, a3
 ; CHECK-NEXT:    add a2, sp, a2
 ; CHECK-NEXT:    addi a2, a2, 16
-; CHECK-NEXT:    vs8r.v v16, (a2) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vmv1r.v v0, v2
-; CHECK-NEXT:    vmerge.vim v16, v8, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v24, 1, v0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 4
 ; CHECK-NEXT:    add a2, sp, a2
 ; CHECK-NEXT:    addi a2, a2, 16
-; CHECK-NEXT:    vs8r.v v16, (a2) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v3, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmerge.vim v16, v8, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v24, 1, v0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    add a2, sp, a2
 ; CHECK-NEXT:    addi a2, a2, 16
-; CHECK-NEXT:    vs8r.v v16, (a2) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v2, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmerge.vim v24, v8, 1, v0
+; CHECK-NEXT:    vmerge.vim v16, v24, 1, v0
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v4, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmerge.vim v16, v8, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v24, 1, v0
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v5, a1
+; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmerge.vim v24, v24, 1, v0
+; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v6, a1
 ; CHECK-NEXT:    vslidedown.vx v5, v7, a1
-; CHECK-NEXT:    vslidedown.vx v4, v6, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, mu
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v4
-; CHECK-NEXT:    vadd.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vadd.vi v24, v24, 1, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v5
-; CHECK-NEXT:    vadd.vi v16, v16, 1, v0.t
-; CHECK-NEXT:    vadd.vv v8, v16, v8
+; CHECK-NEXT:    vadd.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vadd.vv v8, v8, v24
 ; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
@@ -443,7 +443,7 @@ define i32 @test_nxv256i1(<vscale x 256 x i1> %x) {
 ; CHECK-NEXT:    vslidedown.vx v0, v4, a1
 ; CHECK-NEXT:    vslidedown.vx v3, v5, a1
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
-; CHECK-NEXT:    vadd.vi v24, v24, 1, v0.t
+; CHECK-NEXT:    vadd.vi v16, v16, 1, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v3
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
@@ -451,7 +451,7 @@ define i32 @test_nxv256i1(<vscale x 256 x i1> %x) {
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vadd.vi v8, v8, 1, v0.t
-; CHECK-NEXT:    vadd.vv v8, v8, v24
+; CHECK-NEXT:    vadd.vv v8, v8, v16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
@@ -492,16 +492,16 @@ define i32 @test_nxv256i1(<vscale x 256 x i1> %x) {
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vadd.vi v24, v24, 1, v0.t
-; CHECK-NEXT:    vadd.vv v24, v24, v8
+; CHECK-NEXT:    vadd.vv v0, v24, v8
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v0, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vadd.vv v8, v8, v0
-; CHECK-NEXT:    vadd.vv v16, v24, v16
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vadd.vv v8, v8, v24
+; CHECK-NEXT:    vadd.vv v16, v0, v16
 ; CHECK-NEXT:    vadd.vv v8, v16, v8
 ; CHECK-NEXT:    vmv.s.x v16, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v16
@@ -537,18 +537,17 @@ entry:
 define i16 @test_narrow_nxv64i1(<vscale x 64 x i1> %x) {
 ; CHECK-LABEL: test_narrow_nxv64i1:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
-; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v0, a0
+; CHECK-NEXT:    vslidedown.vx v0, v0, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
-; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vadd.vi v16, v16, 1, v0.t
-; CHECK-NEXT:    vmv.s.x v8, zero
-; CHECK-NEXT:    vredsum.vs v8, v16, v8
+; CHECK-NEXT:    vadd.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vmv.s.x v16, zero
+; CHECK-NEXT:    vredsum.vs v8, v8, v16
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:

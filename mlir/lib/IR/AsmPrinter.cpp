@@ -1146,8 +1146,7 @@ template <typename T, typename... PrintArgs>
 std::pair<size_t, size_t> AliasInitializer::visitImpl(
     T value, llvm::MapVector<const void *, InProgressAliasInfo> &aliases,
     bool canBeDeferred, PrintArgs &&...printArgs) {
-  auto [it, inserted] =
-      aliases.insert({value.getAsOpaquePointer(), InProgressAliasInfo()});
+  auto [it, inserted] = aliases.try_emplace(value.getAsOpaquePointer());
   size_t aliasIndex = std::distance(aliases.begin(), it);
   if (!inserted) {
     // Make sure that the alias isn't deferred if we don't permit it.

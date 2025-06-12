@@ -63,10 +63,6 @@ PreservedAnalyses PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>::run(
       detail::getAnalysisResult<PassInstrumentationAnalysis>(
           AM, IR, std::tuple<ExtraArgTs...>(ExtraArgs...));
 
-  // RemoveDIs: if requested, convert debug-info to DbgRecord representation
-  // for duration of these passes.
-  ScopedDbgInfoFormatSetter FormatSetter(IR, true);
-
   StackTraceEntry Entry(PI, IR);
   for (auto &Pass : Passes) {
     Entry.setPass(&*Pass);

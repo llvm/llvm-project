@@ -68,7 +68,7 @@ public:
   const bool CoveredBySubRegs;
   const unsigned *SuperClasses;
   const uint16_t SuperClassesSize;
-  ArrayRef<MCPhysReg> (*OrderFunc)(const MachineFunction&);
+  ArrayRef<MCPhysReg> (*OrderFunc)(const MachineFunction &, bool Rev);
 
   /// Return the register class ID number.
   unsigned getID() const { return MC->getID(); }
@@ -199,8 +199,9 @@ public:
   /// other criteria.
   ///
   /// By default, this method returns all registers in the class.
-  ArrayRef<MCPhysReg> getRawAllocationOrder(const MachineFunction &MF) const {
-    return OrderFunc ? OrderFunc(MF) : getRegisters();
+  ArrayRef<MCPhysReg> getRawAllocationOrder(const MachineFunction &MF,
+                                            bool Rev = false) const {
+    return OrderFunc ? OrderFunc(MF, Rev) : getRegisters();
   }
 
   /// Returns the combination of all lane masks of register in this class.

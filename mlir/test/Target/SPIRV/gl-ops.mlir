@@ -44,6 +44,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %20 = spirv.GL.Log2 %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.Tanh {{%.*}} : f32
     %21 = spirv.GL.Tanh %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Exp2 {{%.*}} : f32
+    %22 = spirv.GL.Exp2 %arg0 : f32
     spirv.Return
   }
 

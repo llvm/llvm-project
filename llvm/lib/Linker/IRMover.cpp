@@ -1444,9 +1444,6 @@ Error IRLinker::run() {
     if (Error Err = SrcM->getMaterializer()->materializeMetadata())
       return Err;
 
-  // Convert source module to match dest for the duration of the link.
-  ScopedDbgInfoFormatSetter FormatSetter(*SrcM, DstM.IsNewDbgInfoFormat);
-
   // Inherit the target data from the source module if the destination
   // module doesn't have one already.
   if (DstM.getDataLayout().isDefault())

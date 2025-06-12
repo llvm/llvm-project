@@ -1029,8 +1029,48 @@ static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
   return cgm.getAddrOfFunction(gd);
 }
 
-static CIRGenCallee emitDirectCallee(CIRGenModule &cgm, GlobalDecl gd) {
-  assert(!cir::MissingFeatures::opCallBuiltinFunc());
+// Detect the unusual situation where an inline version is shadowed by a
+// non-inline version. In that case we should pick the external one
+// everywhere. That's GCC behavior too.
+static bool onlyHasInlineBuiltinDeclaration(const FunctionDecl *fd) {
+  for (const FunctionDecl *pd = fd; pd; pd = pd->getPreviousDecl())
+    if (!pd->isInlineBuiltinDeclaration())
+      return false;
+  return true;
+}
+
+CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
+  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+
+  if (unsigned builtinID = fd->getBuiltinID()) {
+    if (fd->getAttr<AsmLabelAttr>()) {
+      cgm.errorNYI("AsmLabelAttr");
+    }
+
+    StringRef ident = fd->getName();
+    std::string fdInlineName = (ident + ".inline").str();
+
+    bool isPredefinedLibFunction =
+        cgm.getASTContext().BuiltinInfo.isPredefinedLibFunction(builtinID);
+    bool hasAttributeNoBuiltin = false;
+    assert(!cir::MissingFeatures::attributeNoBuiltin());
+
+    // When directing calling an inline builtin, call it through it's mangled
+    // name to make it clear it's not the actual builtin.
+    auto fn = cast<cir::FuncOp>(curFn);
+    if (fn.getName() != fdInlineName && onlyHasInlineBuiltinDeclaration(fd)) {
+      cgm.errorNYI("Inline only builtin function calls");
+    }
+
+    // Replaceable builtins provide their own implementation of a builtin. If we
+    // are in an inline builtin implementation, avoid trivial infinite
+    // recursion. Honor __attribute__((no_builtin("foo"))) or
+    // __attribute__((no_builtin)) on the current function unless foo is
+    // not a predefined library function which means we must generate the
+    // builtin no matter what.
+    else if (!isPredefinedLibFunction || !hasAttributeNoBuiltin)
+      return CIRGenCallee::forBuiltin(builtinID, fd);
+  }
 
   cir::FuncOp callee = emitFunctionDeclPointer(cgm, gd);
 
@@ -1106,7 +1146,7 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
   } else if (const auto *declRef = dyn_cast<DeclRefExpr>(e)) {
     // Resolve direct calls.
     const auto *funcDecl = cast<FunctionDecl>(declRef->getDecl());
-    return emitDirectCallee(cgm, funcDecl);
+    return emitDirectCallee(funcDecl);
   } else if (isa<MemberExpr>(e)) {
     cgm.errorNYI(e->getSourceRange(),
                  "emitCallee: call to member function is NYI");
@@ -1162,10 +1202,9 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
 
   CIRGenCallee callee = emitCallee(e->getCallee());
 
-  if (e->getBuiltinCallee()) {
-    cgm.errorNYI(e->getSourceRange(), "call to builtin functions");
-  }
-  assert(!cir::MissingFeatures::opCallBuiltinFunc());
+  if (callee.isBuiltin())
+    return emitBuiltinExpr(callee.getBuiltinDecl(), callee.getBuiltinID(), e,
+                           returnValue);
 
   if (isa<CXXPseudoDestructorExpr>(e->getCallee())) {
     cgm.errorNYI(e->getSourceRange(), "call to pseudo destructor");

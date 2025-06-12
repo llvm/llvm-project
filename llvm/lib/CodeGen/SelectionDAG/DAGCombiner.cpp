@@ -8139,7 +8139,7 @@ static SDValue foldMaskedMergeImpl(SDValue AndL0, SDValue AndR0, SDValue AndL1,
   if (NotOp != AndL1)
     return SDValue();
 
-  EVT VT = AndL1->getValueType(0);
+  EVT VT = AndL1.getValueType();
   SDValue Xor0 = DAG.getNode(ISD::XOR, DL, VT, AndR1, AndR0);
   SDValue And = DAG.getNode(ISD::AND, DL, VT, Xor0, NotOp);
   SDValue Xor1 = DAG.getNode(ISD::XOR, DL, VT, And, AndR0);

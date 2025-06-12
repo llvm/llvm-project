@@ -1053,6 +1053,10 @@ public:
   /// defined.
   void setAlignment(MaybeAlign Align) { GlobalObject::setAlignment(Align); }
 
+  /// Return the value for vscale based on the vscale_range attribute or 0 when
+  /// unknown.
+  unsigned getVScaleValue() const;
+
 private:
   void allocHungoffUselist();
   template<int Idx> void setHungoffOperand(Constant *C);

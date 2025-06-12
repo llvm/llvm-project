@@ -2382,7 +2382,9 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
       dsa = prevDSA;
     } else if (taskGenDir) {
       // TODO 5) dummy arg in orphaned taskgen construct -> firstprivate
-      if (prevDSA.test(Symbol::Flag::OmpShared) || isStaticStorageDuration) {
+      if (prevDSA.test(Symbol::Flag::OmpShared) ||
+          (isStaticStorageDuration &&
+              (prevDSA & dataSharingAttributeFlags).none())) {
         // 6) shared in enclosing context -> shared
         dsa = {Symbol::Flag::OmpShared};
         makeSymbol(dsa);

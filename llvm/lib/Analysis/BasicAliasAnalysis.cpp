@@ -79,10 +79,6 @@ STATISTIC(SearchLimitReached, "Number of times the limit to "
                               "decompose GEPs is reached");
 STATISTIC(SearchTimes, "Number of times a GEP is decomposed");
 
-// The max limit of the search depth in DecomposeGEPExpression() and
-// getUnderlyingObject().
-static const unsigned MaxLookupSearchDepth = 6;
-
 bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &Inv) {
   // We don't care if this analysis itself is preserved, it has no state. But

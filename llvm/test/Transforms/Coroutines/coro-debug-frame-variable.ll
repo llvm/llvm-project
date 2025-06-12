@@ -23,11 +23,11 @@
 ;
 ; The CHECKs verify that dbg.declare intrinsics are created for the coroutine
 ; funclet 'f.resume', and that they reference the address of the variables on
-; the coroutine frame. The debug locations for the original function 'f' are
+; the coroutine frame. The debug locations for the original function 'foo' are
 ; static (!11 and !13), whereas the coroutine funclet will have its own new
 ; ones with identical line and column numbers.
 ;
-; CHECK-LABEL: define void @f() {{.*}} {
+; CHECK-LABEL: define void @_Z3foov() {{.*}} {
 ; CHECK:       entry:
 ; CHECK:         %j = alloca i32, align 4
 ; CHECK:         #dbg_declare(ptr %j, ![[JVAR:[0-9]+]], !DIExpression(), ![[JDBGLOC:[0-9]+]]
@@ -36,7 +36,7 @@
 ; CHECK:         #dbg_declare(ptr %[[MEMORY]], ![[IVAR:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 20), ![[IDBGLOC]]
 ; CHECK:       await.ready:
 ;
-; CHECK-LABEL: define internal fastcc void @f.resume({{.*}}) {{.*}} {
+; CHECK-LABEL: define internal fastcc void @_Z3foov.resume({{.*}}) {{.*}} {
 ; CHECK:       entry.resume:
 ; CHECK-NEXT:    %[[DBG_PTR:.*]] = alloca ptr
 ; CHECK-NEXT:    #dbg_declare(ptr %[[DBG_PTR]], ![[XVAR_RESUME:[0-9]+]],   !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32),
@@ -58,13 +58,13 @@
 ; CHECK-DAG: ![[JDBGLOC]] = !DILocation(line: 32, column: 7, scope: ![[BLK_SCOPE]])
 
 ; CHECK-DAG: ![[XVAR_RESUME]] = !DILocalVariable(name: "x"
-; CHECK-DAG: ![[RESUME_PROG_SCOPE:[0-9]+]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov"
+; CHECK-DAG: ![[RESUME_PROG_SCOPE:[0-9]+]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov.resume"
 ; CHECK-DAG: ![[IDBGLOC_RESUME]] = !DILocation(line: 24, column: 7, scope: ![[RESUME_BLK_SCOPE:[0-9]+]])
 ; CHECK-DAG: ![[RESUME_BLK_SCOPE]] = distinct !DILexicalBlock(scope: ![[RESUME_PROG_SCOPE]], file: !1, line: 23, column: 12)
 ; CHECK-DAG: ![[IVAR_RESUME]] = !DILocalVariable(name: "i"
 ; CHECK-DAG: ![[JVAR_RESUME]] = !DILocalVariable(name: "j"
 ; CHECK-DAG: ![[JDBGLOC_RESUME]] = !DILocation(line: 32, column: 7, scope: ![[RESUME_BLK_SCOPE]])
-define void @f() presplitcoroutine !dbg !8 {
+define void @_Z3foov() presplitcoroutine !dbg !8 {
 entry:
   %__promise = alloca i8, align 8
   %i = alloca i32, align 4
