@@ -9,10 +9,6 @@
 namespace llvm {
 namespace VNCoercion {
 
-static bool isFirstClassAggregate(Type *Ty) {
-  return Ty->isStructTy() || Ty->isArrayTy();
-}
-
 /// Return true if coerceAvailableValueToLoadType will succeed.
 bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
                                      Function *F) {
@@ -40,7 +36,8 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
     unsigned MinVScale = Attrs.getVScaleRangeMin();
     MinStoreSize =
         TypeSize::getFixed(MinStoreSize.getKnownMinValue() * MinVScale);
-  } else if (isa<ScalableVectorType>(StoredTy) || isa<ScalableVectorType>(LoadTy)) {
+  } else if (isa<ScalableVectorType>(StoredTy) ||
+             isa<ScalableVectorType>(LoadTy)) {
     return false;
   }
 
@@ -61,7 +58,7 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
       return true;
   }
 
-  if (isFirstClassAggregate(LoadTy) || isFirstClassAggregate(StoredTy))
+  if (LoadTy->isAggregateType() || StoredTy->isAggregateType())
     return false;
 
   bool StoredNI = DL.isNonIntegralPointerType(StoredTy->getScalarType());
@@ -325,7 +322,7 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
   // (e.g. creating a ptrtoint on NI addrspace), since it is a special case in
   // canCoerceMustAliasedValueToLoad, so instead form the NullValue for the load
   // directly
-  if (auto *CI = dyn_cast<Constant>(getUnderlyingObject(SrcVal)))
+  if (auto *CI = dyn_cast<Constant>(SrcVal))
     if (CI->isNullValue())
       return Constant::getNullValue(LoadTy);
 
