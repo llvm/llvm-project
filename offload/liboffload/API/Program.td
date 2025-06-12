@@ -14,7 +14,7 @@ def : Function {
     let name = "olCreateProgram";
     let desc = "Create a program for the device from the binary image pointed to by `ProgData`.";
     let details = [
-        "`ProgData` must remain valid for the entire lifetime of the output `Program` handle",
+        "The provided `ProgData` will be copied and need not outlive the returned handle",
     ];
     let params = [
         Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
