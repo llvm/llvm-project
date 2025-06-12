@@ -20,9 +20,8 @@ def FormExpressionsPass : Pass<"form-expressions"> {
   let dependentDialects = ["emitc::EmitCDialect"];
 }
 
-def ConvertFuncToClassPass
-    : Pass<"convert-emitc-func-to-class", "mlir::emitc::FuncOp"> {
-  let summary = "Convert functions to classes, using arguments as fields.";
+def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
+  let summary = "Wrap functions in classes, using arguments as fields.";
   let description = [{
     This pass transforms `emitc.func` operations into `emitc.class` operations.
     Function arguments become fields of the class, and the function body is moved
