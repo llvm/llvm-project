@@ -3283,9 +3283,10 @@ define void @vec384_i8_widen_to_i128_factor16_broadcast_to_v3i128_factor3(ptr %i
 ; AVX-NEXT:    vpaddb (%rdx), %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb 32(%rdx), %xmm0, %xmm2
 ; AVX-NEXT:    vpaddb 16(%rdx), %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa %xmm1, (%rcx)
 ; AVX-NEXT:    vmovdqa %xmm0, 16(%rcx)
 ; AVX-NEXT:    vmovdqa %xmm2, 32(%rcx)
+; AVX-NEXT:    vmovdqa %xmm1, (%rcx)
+; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: vec384_i8_widen_to_i128_factor16_broadcast_to_v3i128_factor3:

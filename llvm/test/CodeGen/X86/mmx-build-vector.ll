@@ -290,15 +290,21 @@ define void @build_v4i16_0zuz(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
 define void @build_v4i16_012u(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
 ; X86-LABEL: build_v4i16_012u:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    punpcklwd %mm0, %mm0 # mm0 = mm0[0,0,1,1]
-; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm1
-; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm2
-; X86-NEXT:    punpcklwd %mm1, %mm2 # mm2 = mm2[0],mm1[0],mm2[1],mm1[1]
-; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
+; X86-NEXT:    movd %eax, %mm0
+; X86-NEXT:    movd %esi, %mm1
+; X86-NEXT:    punpcklwd %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1]
+; X86-NEXT:    movd %edx, %mm0
+; X86-NEXT:    movd %ecx, %mm2
+; X86-NEXT:    punpcklwd %mm0, %mm2 # mm2 = mm2[0],mm0[0],mm2[1],mm0[1]
+; X86-NEXT:    punpckldq %mm1, %mm2 # mm2 = mm2[0],mm1[0]
 ; X86-NEXT:    paddd %mm2, %mm2
 ; X86-NEXT:    movq %mm2, (%eax)
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: build_v4i16_012u:
@@ -475,45 +481,61 @@ define void @build_v8i8_0u2345z7(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
   ret void
 }
 
+
+; Recursion depth limit in isGuaranteedNotToBeUndefOrPoison prevents llc from
+; detecting that we insert an "undef" element in a position that already is
+; undef. OTOH, opt would optimize away that insertelement operation from the
+; IR, so maybe that isn't a problem in reality.
 define void @build_v8i8_0123zzzu(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
-; X86-LABEL: build_v8i8_0123zzzu:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm1
-; X86-NEXT:    punpcklbw %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1],mm1[2],mm0[2],mm1[3],mm0[3]
-; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm2
-; X86-NEXT:    punpcklbw %mm0, %mm2 # mm2 = mm2[0],mm0[0],mm2[1],mm0[1],mm2[2],mm0[2],mm2[3],mm0[3]
-; X86-NEXT:    punpcklwd %mm1, %mm2 # mm2 = mm2[0],mm1[0],mm2[1],mm1[1]
-; X86-NEXT:    pxor %mm0, %mm0
-; X86-NEXT:    pxor %mm1, %mm1
-; X86-NEXT:    punpcklbw %mm1, %mm1 # mm1 = mm1[0,0,1,1,2,2,3,3]
-; X86-NEXT:    punpcklbw %mm0, %mm0 # mm0 = mm0[0,0,1,1,2,2,3,3]
-; X86-NEXT:    punpcklwd %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
-; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
-; X86-NEXT:    paddd %mm2, %mm2
-; X86-NEXT:    movq %mm2, (%eax)
-; X86-NEXT:    retl
+; X86-MMX-LABEL: build_v8i8_0123zzzu:
+; X86-MMX:       # %bb.0:
+; X86-MMX-NEXT:    pushl %ebp
+; X86-MMX-NEXT:    movl %esp, %ebp
+; X86-MMX-NEXT:    pushl %esi
+; X86-MMX-NEXT:    andl $-8, %esp
+; X86-MMX-NEXT:    subl $16, %esp
+; X86-MMX-NEXT:    movl 8(%ebp), %eax
+; X86-MMX-NEXT:    movzbl 20(%ebp), %edx
+; X86-MMX-NEXT:    movzbl 24(%ebp), %ecx
+; X86-MMX-NEXT:    shll $8, %ecx
+; X86-MMX-NEXT:    orl %edx, %ecx
+; X86-MMX-NEXT:    shll $16, %ecx
+; X86-MMX-NEXT:    movzbl 12(%ebp), %edx
+; X86-MMX-NEXT:    movzbl 16(%ebp), %esi
+; X86-MMX-NEXT:    shll $8, %esi
+; X86-MMX-NEXT:    orl %edx, %esi
+; X86-MMX-NEXT:    movzwl %si, %edx
+; X86-MMX-NEXT:    orl %ecx, %edx
+; X86-MMX-NEXT:    movzbl %al, %ecx
+; X86-MMX-NEXT:    shll $24, %ecx
+; X86-MMX-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-MMX-NEXT:    movl %edx, (%esp)
+; X86-MMX-NEXT:    movq (%esp), %mm0
+; X86-MMX-NEXT:    paddd %mm0, %mm0
+; X86-MMX-NEXT:    movq %mm0, (%eax)
+; X86-MMX-NEXT:    leal -4(%ebp), %esp
+; X86-MMX-NEXT:    popl %esi
+; X86-MMX-NEXT:    popl %ebp
+; X86-MMX-NEXT:    retl
 ;
-; X64-LABEL: build_v8i8_0123zzzu:
-; X64:       # %bb.0:
-; X64-NEXT:    movd %r8d, %mm0
-; X64-NEXT:    movd %ecx, %mm1
-; X64-NEXT:    punpcklbw %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1],mm1[2],mm0[2],mm1[3],mm0[3]
-; X64-NEXT:    movd %edx, %mm0
-; X64-NEXT:    movd %esi, %mm2
-; X64-NEXT:    punpcklbw %mm0, %mm2 # mm2 = mm2[0],mm0[0],mm2[1],mm0[1],mm2[2],mm0[2],mm2[3],mm0[3]
-; X64-NEXT:    punpcklwd %mm1, %mm2 # mm2 = mm2[0],mm1[0],mm2[1],mm1[1]
-; X64-NEXT:    pxor %mm0, %mm0
-; X64-NEXT:    pxor %mm1, %mm1
-; X64-NEXT:    punpcklbw %mm1, %mm1 # mm1 = mm1[0,0,1,1,2,2,3,3]
-; X64-NEXT:    punpcklbw %mm0, %mm0 # mm0 = mm0[0,0,1,1,2,2,3,3]
-; X64-NEXT:    punpcklwd %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
-; X64-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
-; X64-NEXT:    paddd %mm2, %mm2
-; X64-NEXT:    movq %mm2, (%rdi)
-; X64-NEXT:    retq
+; X86-SSE-LABEL: build_v8i8_0123zzzu:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-SSE-NEXT:    shll $8, %edx
+; X86-SSE-NEXT:    orl %ecx, %edx
+; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    shll $16, %ecx
+; X86-SSE-NEXT:    orl %edx, %ecx
+; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-SSE-NEXT:    shll $24, %edx
+; X86-SSE-NEXT:    orl %ecx, %edx
+; X86-SSE-NEXT:    movd %edx, %xmm0
+; X86-SSE-NEXT:    movdq2q %xmm0, %mm0
+; X86-SSE-NEXT:    paddd %mm0, %mm0
+; X86-SSE-NEXT:    movq %mm0, (%eax)
+; X86-SSE-NEXT:    retl
   %1  = insertelement <8 x i8> undef, i8   %a0, i32 0
   %2  = insertelement <8 x i8>    %1, i8   %a1, i32 1
   %3  = insertelement <8 x i8>    %2, i8   %a2, i32 2
@@ -558,22 +580,34 @@ define void @build_v8i8_0uuuuzzz(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 }
 
 define void @build_v8i8_0zzzzzzu(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
-; X86-LABEL: build_v8i8_0zzzzzzu:
-; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movd %eax, %mm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%eax)
-; X86-NEXT:    retl
+; X86-MMX-LABEL: build_v8i8_0zzzzzzu:
+; X86-MMX:       # %bb.0:
+; X86-MMX-NEXT:    pushl %ebp
+; X86-MMX-NEXT:    movl %esp, %ebp
+; X86-MMX-NEXT:    andl $-8, %esp
+; X86-MMX-NEXT:    subl $8, %esp
+; X86-MMX-NEXT:    movl 8(%ebp), %eax
+; X86-MMX-NEXT:    movzbl 12(%ebp), %ecx
+; X86-MMX-NEXT:    movl %ecx, (%esp)
+; X86-MMX-NEXT:    movzbl %al, %ecx
+; X86-MMX-NEXT:    shll $24, %ecx
+; X86-MMX-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-MMX-NEXT:    movq (%esp), %mm0
+; X86-MMX-NEXT:    paddd %mm0, %mm0
+; X86-MMX-NEXT:    movq %mm0, (%eax)
+; X86-MMX-NEXT:    movl %ebp, %esp
+; X86-MMX-NEXT:    popl %ebp
+; X86-MMX-NEXT:    retl
 ;
-; X64-LABEL: build_v8i8_0zzzzzzu:
-; X64:       # %bb.0:
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    movd %eax, %mm0
-; X64-NEXT:    paddd %mm0, %mm0
-; X64-NEXT:    movq %mm0, (%rdi)
-; X64-NEXT:    retq
+; X86-SSE-LABEL: build_v8i8_0zzzzzzu:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movd %ecx, %xmm0
+; X86-SSE-NEXT:    movdq2q %xmm0, %mm0
+; X86-SSE-NEXT:    paddd %mm0, %mm0
+; X86-SSE-NEXT:    movq %mm0, (%eax)
+; X86-SSE-NEXT:    retl
   %1  = insertelement <8 x i8> undef, i8   %a0, i32 0
   %2  = insertelement <8 x i8>    %1, i8     0, i32 1
   %3  = insertelement <8 x i8>    %2, i8     0, i32 2

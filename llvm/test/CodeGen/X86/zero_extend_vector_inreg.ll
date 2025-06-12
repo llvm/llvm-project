@@ -7058,21 +7058,22 @@ define void @vec512_v16i32_to_v8i64_factor2(ptr %in.vec.base.ptr, ptr %in.vec.bi
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX-NEXT:    vpaddb 16(%rsi), %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero
+; AVX-NEXT:    vpaddb 16(%rsi), %xmm1, %xmm1
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
 ; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm3[2],xmm0[3],xmm3[3]
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm4 = xmm1[0],zero,xmm1[1],zero
 ; AVX-NEXT:    vpunpckhdq {{.*#+}} xmm1 = xmm1[2],xmm3[2],xmm1[3],xmm3[3]
-; AVX-NEXT:    vpaddb 48(%rdx), %xmm1, %xmm1
-; AVX-NEXT:    vpaddb 32(%rdx), %xmm4, %xmm3
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm4 = xmm0[0],zero,xmm0[1],zero
+; AVX-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm3[2],xmm0[3],xmm3[3]
 ; AVX-NEXT:    vpaddb 16(%rdx), %xmm0, %xmm0
-; AVX-NEXT:    vpaddb (%rdx), %xmm2, %xmm2
-; AVX-NEXT:    vmovdqa %xmm2, (%rcx)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rcx)
-; AVX-NEXT:    vmovdqa %xmm3, 32(%rcx)
+; AVX-NEXT:    vpaddb (%rdx), %xmm4, %xmm3
+; AVX-NEXT:    vpaddb 48(%rdx), %xmm1, %xmm1
+; AVX-NEXT:    vpaddb 32(%rdx), %xmm2, %xmm2
+; AVX-NEXT:    vmovdqa %xmm2, 32(%rcx)
 ; AVX-NEXT:    vmovdqa %xmm1, 48(%rcx)
+; AVX-NEXT:    vmovdqa %xmm3, (%rcx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rcx)
+; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: vec512_v16i32_to_v8i64_factor2:
