@@ -6337,12 +6337,11 @@ struct AAUnderlyingObjects : AbstractAttribute {
   forallUnderlyingObjects(function_ref<bool(Value &)> Pred,
                           AA::ValueScope Scope = AA::Interprocedural) const = 0;
 };
-
-/// An abstract interface for address space information.
-struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
-  AAAddressSpace(const IRPosition &IRP, Attributor &A)
+/// An abstract interface for potential address space information.
+struct AAPotentialAddrSpace
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  AAPotentialAddrSpace(const IRPosition &IRP, Attributor &A)
       : StateWrapper<BooleanState, AbstractAttribute>(IRP) {}
-
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
     if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
@@ -6352,6 +6351,44 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
 
   /// See AbstractAttribute::requiresCallersForArgOrFunction
   static bool requiresCallersForArgOrFunction() { return true; }
+
+  void baseInit(Attributor &A,
+                function_ref<void(unsigned)> HandleFlat = nullptr,
+                function_ref<void(unsigned)> HandleAS = nullptr) {
+    assert(getAssociatedType()->isPtrOrPtrVectorTy() &&
+           "Associated value is not a pointer");
+
+    std::optional<unsigned> FlatAS = A.getInfoCache().getFlatAddressSpace();
+
+    if (!FlatAS.has_value()) {
+      indicatePessimisticFixpoint();
+      return;
+    }
+
+    if (!(HandleFlat == nullptr))
+      HandleFlat(*FlatAS);
+
+    unsigned AS = getAssociatedType()->getPointerAddressSpace();
+    if (AS != *FlatAS) {
+      if (!(HandleAS == nullptr))
+        HandleAS(AS);
+      indicateOptimisticFixpoint();
+    }
+  }
+  ChangeStatus baseUpdate(Attributor &A, function_ref<bool(Value &)> Pred,
+                          function_ref<ChangeStatus()> PredChange) {
+    auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
+                                                        DepClassTy::REQUIRED);
+    if (!AUO->forallUnderlyingObjects(Pred))
+      return indicatePessimisticFixpoint();
+    return PredChange();
+  }
+};
+
+/// An abstract interface for address space information.
+struct AAAddressSpace : AAPotentialAddrSpace {
+  AAAddressSpace(const IRPosition &IRP, Attributor &A)
+      : AAPotentialAddrSpace(IRP, A) {}
 
   /// Return the address space of the associated value. \p NoAddressSpace is
   /// returned if the associated value is dead. This functions is not supposed
@@ -6383,19 +6420,10 @@ protected:
 };
 
 /// An abstract interface for potential address space information.
-struct AANoAliasAddrSpace
-    : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+struct AANoAliasAddrSpace : AAPotentialAddrSpace {
   using RangeMap = IntervalMap<unsigned, bool>;
   AANoAliasAddrSpace(const IRPosition &IRP, Attributor &A)
-      : Base(IRP), Map(Allocator) {}
-
-  /// See AbstractAttribute::isValidIRPositionForInit
-  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
-      return false;
-    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
-  }
+      : AAPotentialAddrSpace(IRP, A), Map(Allocator) {}
 
   /// See AbstractAttribute::requiresCallersForArgOrFunction
   static bool requiresCallersForArgOrFunction() { return true; }
