@@ -27,27 +27,29 @@ int CharacterConverter::push(char8_t utf8_byte) {
   // Checking the first byte if first push
   if (state->bytes_processed == 0 && state->total_bytes == 0) {
     state->partial = static_cast<char32_t>(0);
+    int numOnes = cpp::countl_one(utf8_byte);
+    switch (numOnes) {
     // 1 byte total
-    if (cpp::countl_one(utf8_byte) == 0) {
+    case 0:
       state->total_bytes = 1;
-    }
+      break;
     // 2 bytes total
-    else if (cpp::countl_one(utf8_byte) == 2) {
+    case 2:
       state->total_bytes = 2;
       utf8_byte &= 0x1F;
-    }
+      break;
     // 3 bytes total
-    else if (cpp::countl_one(utf8_byte) == 3) {
+    case 3:
       state->total_bytes = 3;
       utf8_byte &= 0x0F;
-    }
+      break;
     // 4 bytes total
-    else if (cpp::countl_one(utf8_byte) == 4) {
+    case 4:
       state->total_bytes = 4;
       utf8_byte &= 0x07;
-    }
-    // Invalid byte -> reset mbstate
-    else {
+      break;
+    // Invalid first byte
+    default:
       return -1;
     }
     state->partial = static_cast<char32_t>(utf8_byte);
