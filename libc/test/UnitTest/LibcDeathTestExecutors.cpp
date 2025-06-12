@@ -8,11 +8,10 @@
 
 #include "LibcTest.h"
 
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
-
-#include <assert.h>
 
 namespace {
 constexpr unsigned TIMEOUT_MS = 10000;
@@ -50,7 +49,7 @@ bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
   }
 
   int KilledBy = Result.get_fatal_signal();
-  assert(KilledBy != 0 && "Not killed by any signal");
+  LIBC_ASSERT(KilledBy != 0 && "Not killed by any signal");
   if (Signal == -1 || KilledBy == Signal)
     return true;
 

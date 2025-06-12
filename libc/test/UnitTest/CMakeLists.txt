@@ -25,6 +25,9 @@ function(add_unittest_framework_library name)
     endif()
   endforeach()
 
+  target_compile_definitions(${name}.unit PRIVATE LIBC_UNIT_TEST_FRAMEWORK)
+  target_compile_definitions(${name}.hermetic PRIVATE LIBC_HERMETIC_TEST_FRAMEWORK)
+
   if(LLVM_LIBC_FULL_BUILD)
     # TODO: Build test framework with LIBC_FULL_BUILD in full build mode after
     # making LibcFPExceptionHelpers and LibcDeathTestExecutors hermetic.
@@ -91,6 +94,23 @@ add_unittest_framework_library(
     ${libc_death_test_srcs}
   HDRS
     ExecuteFunction.h
+  DEPENDS
+    libc.hdr.sys_epoll_macros
+    libc.hdr.sys_wait_macros
+    libc.src.__support.CPP.new
+    libc.src.__support.common
+    libc.src.__support.libc_assert
+    libc.src.signal.kill
+    libc.src.stdio.fflush
+    libc.src.stdlib.exit
+    libc.src.string.strsignal
+    libc.src.sys.epoll.epoll_create1
+    libc.src.sys.epoll.epoll_ctl
+    libc.src.sys.epoll.epoll_wait
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.close
+    libc.src.unistd.fork
+    libc.src.unistd.pipe
 )
 
 add_unittest_framework_library(

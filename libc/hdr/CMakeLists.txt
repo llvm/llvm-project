@@ -219,6 +219,15 @@ add_proxy_header_library(
     libc.include.sys_auxv
 )
 
+add_proxy_header_library(
+  sys_wait_macros
+  HDRS
+    sys_wait_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_wait_macros
+    libc.include.sys_wait
+)
+
 add_header_library(wchar_overlay HDRS wchar_overlay.h)
 
 add_header_library(uchar_overlay HDRS uchar_overlay.h)
