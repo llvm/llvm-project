@@ -1274,6 +1274,41 @@ def SPIRV_GLReflectOp : SPIRV_GLBinaryArithmeticOp<"Reflect", 71, SPIRV_Float> {
 
 // ----
 
+def SPIRV_GLFindILsbOp : SPIRV_GLUnaryArithmeticOp<"FindILsb", 73, SPIRV_Integer> {
+  let summary = "Integer least-significant bit";
+
+  let description = [{
+    Results in the bit number of the least-significant 1-bit in the binary
+    representation of Value. If Value is 0, the result is -1.
+
+    Result Type and the type of Value must both be integer scalar or
+    integer vector types. Result Type and operand types must have the
+    same number of components with the same component width. Results are
+    computed per component.
+  }];
+}
+
+// ----
+
+def SPIRV_GLFindSMsbOp : SPIRV_GLUnaryArithmeticOp<"FindSMsb", 74, SPIRV_Int32> {
+  let summary = "Signed-integer most-significant bit, with Value interpreted as a signed integer";
+
+  let description = [{
+    For positive numbers, the result will be the bit number of the most significant
+    1-bit. For negative numbers, the result will be the bit number of the most
+    significant 0-bit. For a Value of 0 or -1, the result is -1.
+
+    Result Type and the type of Value must both be integer scalar or
+    integer vector types. Result Type and operand types must have the
+    same number of components with the same component width. Results are
+    computed per component.
+
+    This instruction is currently limited to 32-bit width components.
+  }];
+}
+
+// ----
+
 def SPIRV_GLFindUMsbOp : SPIRV_GLUnaryArithmeticOp<"FindUMsb", 75, SPIRV_Int32> {
   let summary = "Unsigned-integer most-significant bit";
 
