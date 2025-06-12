@@ -17,18 +17,19 @@
 #include <utility>
 
 #include "test_macros.h"
+#include "../../types.h"
 
-struct Data {
-  int i;
-  constexpr Data(int ii) : i(ii) {}
-
-  friend constexpr bool operator==(const Data& data, int ii) { return data.i == ii; }
-};
+#if TEST_STD_VER >= 26
+// https://wg21.link/P3379R0
+static_assert(CanCompare<std::expected<int, int>, int>);
+static_assert(CanCompare<std::expected<int, int>, EqualityComparable>);
+static_assert(!CanCompare<std::expected<int, int>, NonComparable>);
+#endif
 
 constexpr bool test() {
   // x.has_value()
   {
-    const std::expected<Data, int> e1(std::in_place, 5);
+    const std::expected<EqualityComparable, int> e1(std::in_place, 5);
     int i2 = 10;
     int i3 = 5;
     assert(e1 != i2);
@@ -37,7 +38,7 @@ constexpr bool test() {
 
   // !x.has_value()
   {
-    const std::expected<Data, int> e1(std::unexpect, 5);
+    const std::expected<EqualityComparable, int> e1(std::unexpect, 5);
     int i2 = 10;
     int i3 = 5;
     assert(e1 != i2);

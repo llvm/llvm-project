@@ -88,7 +88,7 @@ static cl::opt<std::string> AssumeFileName(
              "  CSharp: .cs\n"
              "  Java: .java\n"
              "  JavaScript: .js .mjs .cjs .ts\n"
-             "  Json: .json\n"
+             "  Json: .json .ipynb\n"
              "  Objective-C: .m .mm\n"
              "  Proto: .proto .protodevel\n"
              "  TableGen: .td\n"
@@ -240,9 +240,9 @@ static bool fillRanges(MemoryBuffer *Code,
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   FileManager Files(FileSystemOptions(), InMemoryFileSystem);
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-      new DiagnosticOptions);
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts);
   SourceManager Sources(Diagnostics, Files);
   FileID ID = createInMemoryFile("<irrelevant>", *Code, Sources, Files,
                                  InMemoryFileSystem.get());
@@ -478,10 +478,9 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   }
 
   if (SortIncludes.getNumOccurrences() != 0) {
+    FormatStyle->SortIncludes = {};
     if (SortIncludes)
-      FormatStyle->SortIncludes = FormatStyle::SI_CaseSensitive;
-    else
-      FormatStyle->SortIncludes = FormatStyle::SI_Never;
+      FormatStyle->SortIncludes.Enabled = true;
   }
   unsigned CursorPosition = Cursor;
   Replacements Replaces = sortIncludes(*FormatStyle, Code->getBuffer(), Ranges,
@@ -492,8 +491,8 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   // To format JSON insert a variable to trick the code into thinking its
   // JavaScript.
   if (IsJson && !FormatStyle->DisableFormat) {
-    auto Err = Replaces.add(tooling::Replacement(
-        tooling::Replacement(AssumedFileName, 0, 0, "x = ")));
+    auto Err =
+        Replaces.add(tooling::Replacement(AssumedFileName, 0, 0, "x = "));
     if (Err)
       llvm::errs() << "Bad Json variable insertion\n";
   }
@@ -520,10 +519,10 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
         new llvm::vfs::InMemoryFileSystem);
     FileManager Files(FileSystemOptions(), InMemoryFileSystem);
 
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions());
+    DiagnosticOptions DiagOpts;
     ClangFormatDiagConsumer IgnoreDiagnostics;
     DiagnosticsEngine Diagnostics(
-        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts,
+        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts,
         &IgnoreDiagnostics, false);
     SourceManager Sources(Diagnostics, Files);
     FileID ID = createInMemoryFile(AssumedFileName, *Code, Sources, Files,

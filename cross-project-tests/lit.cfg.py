@@ -34,10 +34,21 @@ config.test_exec_root = config.cross_project_tests_obj_root
 
 llvm_config.use_default_substitutions()
 
+lldb_python_path = os.path.join(
+    config.llvm_libs_dir,
+    f"python{sys.version_info.major}.{sys.version_info.minor}",
+    "site-packages",
+)
+python_exec_path = sys.executable
 tools = [
     ToolSubst(
         "%test_debuginfo",
-        command=os.path.join(
+        command="PYTHON_EXEC_PATH="
+        + python_exec_path
+        + " LLDB_PYTHON_PATH="
+        + lldb_python_path
+        + " "
+        + os.path.join(
             config.cross_project_tests_src_root,
             "debuginfo-tests",
             "llgdb-tests",
@@ -81,7 +92,13 @@ if is_msvc:
 # use_clang() and use_lld() respectively, so set them to "", if needed.
 if not hasattr(config, "clang_src_dir"):
     config.clang_src_dir = ""
-llvm_config.use_clang(required=("clang" in config.llvm_enabled_projects))
+# Facebook T92898286
+should_test_bolt = get_required_attr(config, "llvm_test_bolt")
+if should_test_bolt:
+    llvm_config.use_clang(required=("clang" in config.llvm_enabled_projects), additional_flags=["--post-link-optimize"])
+else:
+    llvm_config.use_clang(required=("clang" in config.llvm_enabled_projects))
+# End Facebook T92898286
 
 if not hasattr(config, "lld_src_dir"):
     config.lld_src_dir = ""
@@ -120,18 +137,31 @@ def configure_dexter_substitutions():
     if platform.system() == "Windows":
         # The Windows builder script uses lld.
         dependencies = ["clang", "lld-link"]
-        dexter_regression_test_builder = "clang-cl"
+        dexter_regression_test_c_builder = "clang-cl"
+        dexter_regression_test_cxx_builder = "clang-cl"
         dexter_regression_test_debugger = "dbgeng"
-        dexter_regression_test_flags = "/Zi /Od"
+        dexter_regression_test_c_flags = "/Zi /Od"
+        dexter_regression_test_cxx_flags = "/Zi /Od"
+        dexter_regression_test_additional_flags = ""
     else:
         # Use lldb as the debugger on non-Windows platforms.
         dependencies = ["clang", "lldb"]
-        dexter_regression_test_builder = "clang++"
+        dexter_regression_test_c_builder = "clang"
+        dexter_regression_test_cxx_builder = "clang++"
         dexter_regression_test_debugger = "lldb"
-        dexter_regression_test_flags = "-O0 -glldb -std=gnu++11"
+        dexter_regression_test_c_flags = "-O0 -glldb -std=gnu11"
+        dexter_regression_test_cxx_flags = "-O0 -glldb -std=gnu++11"
+        dexter_regression_test_additional_flags = '--lldb-executable "{}"'.format(
+            lldb_path
+        )
 
     tools.append(
-        ToolSubst("%dexter_regression_test_builder", dexter_regression_test_builder)
+        ToolSubst("%dexter_regression_test_c_builder", dexter_regression_test_c_builder)
+    )
+    tools.append(
+        ToolSubst(
+            "%dexter_regression_test_cxx_builder", dexter_regression_test_cxx_builder
+        )
     )
     tools.append(
         ToolSubst("%dexter_regression_test_debugger", dexter_regression_test_debugger)
@@ -140,7 +170,10 @@ def configure_dexter_substitutions():
     # regression tests we use clang to drive the linker, and so all flags will be
     # passed in a single command.
     tools.append(
-        ToolSubst("%dexter_regression_test_flags", dexter_regression_test_flags)
+        ToolSubst("%dexter_regression_test_c_flags", dexter_regression_test_c_flags)
+    )
+    tools.append(
+        ToolSubst("%dexter_regression_test_cxx_flags", dexter_regression_test_cxx_flags)
     )
 
     # Typical command would take the form:
@@ -154,18 +187,30 @@ def configure_dexter_substitutions():
             "--fail-lt 1.0 -w",
             "--debugger",
             dexter_regression_test_debugger,
+            dexter_regression_test_additional_flags,
         ]
     )
     tools.append(ToolSubst("%dexter_regression_test_run", dexter_regression_test_run))
 
     # Include build flags for %dexter_regression_test.
-    dexter_regression_test_build = " ".join(
+    dexter_regression_test_c_build = " ".join(
         [
-            dexter_regression_test_builder,
-            dexter_regression_test_flags,
+            dexter_regression_test_c_builder,
+            dexter_regression_test_c_flags,
         ]
     )
-    tools.append(ToolSubst("%dexter_regression_test_build", dexter_regression_test_build))
+    dexter_regression_test_cxx_build = " ".join(
+        [
+            dexter_regression_test_cxx_builder,
+            dexter_regression_test_cxx_flags,
+        ]
+    )
+    tools.append(
+        ToolSubst("%dexter_regression_test_c_build", dexter_regression_test_c_build)
+    )
+    tools.append(
+        ToolSubst("%dexter_regression_test_cxx_build", dexter_regression_test_cxx_build)
+    )
     return dependencies
 
 
@@ -294,3 +339,9 @@ llvm_config.feature_config([("--build-mode", {"Debug|RelWithDebInfo": "debug-inf
 # Allow 'REQUIRES: XXX-registered-target' in tests.
 for arch in config.targets_to_build:
     config.available_features.add(arch.lower() + "-registered-target")
+
+# Facebook T92898286
+# Ensure the user's PYTHONPATH is included.
+if "PYTHONPATH" in os.environ:
+    config.environment["PYTHONPATH"] = os.environ["PYTHONPATH"]
+# End Facebook T92898286

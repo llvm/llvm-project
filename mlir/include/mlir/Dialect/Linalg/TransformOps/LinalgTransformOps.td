@@ -560,6 +560,40 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
 }
 
 //===----------------------------------------------------------------------===//
+// LinalgCopyToMemrefOp
+//===----------------------------------------------------------------------===//
+
+def LinalgCopyToMemrefOp :
+    Op<Transform_Dialect, "structured.linalg_copy_to_memref",
+      [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+       TransformEachOpTrait, TransformOpInterface]> {
+  let description = [{
+    Targeted rewrite of a linalg.copy on memrefs to a memref.copy.
+    This is useful when bufferizing copies to a linalg.copy, later applying some
+    transformations, and then rewriting the copy into a memref.copy.
+    If the element types of the source and destination differ, or if the source
+    is a scalar, the transform produces a silenceable failure.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat = "$target attr-dict `:` "
+                       "functional-type(operands, results) ";
+
+  let builders = [
+    OpBuilder<(ins "Value":$target)>,
+  ];
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // LowerPackOp
 //===----------------------------------------------------------------------===//
 def LowerPackOp : Op<Transform_Dialect, "structured.lower_pack", [

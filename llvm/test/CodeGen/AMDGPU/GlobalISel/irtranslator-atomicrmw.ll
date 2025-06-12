@@ -178,5 +178,3 @@ define <2 x half> @test_atomicrmw_fmax_vector(ptr addrspace(3) %addr) {
   ret <2 x half> %oldval
 }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

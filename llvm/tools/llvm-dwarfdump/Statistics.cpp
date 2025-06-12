@@ -529,8 +529,9 @@ static void collectStatsRecursive(
     auto OffsetFn = Die.find(dwarf::DW_AT_abstract_origin);
     if (OffsetFn) {
       uint64_t OffsetOfInlineFnCopy = (*OffsetFn).getRawUValue();
-      if (LocalAbstractOriginFnInfo.count(OffsetOfInlineFnCopy)) {
-        AbstractOriginVars = LocalAbstractOriginFnInfo[OffsetOfInlineFnCopy];
+      if (auto It = LocalAbstractOriginFnInfo.find(OffsetOfInlineFnCopy);
+          It != LocalAbstractOriginFnInfo.end()) {
+        AbstractOriginVars = It->second;
         AbstractOriginVarsPtr = &AbstractOriginVars;
       } else {
         // This means that the DW_AT_inline fn copy is out of order
@@ -782,9 +783,10 @@ static void collectZeroLocCovForVarsWithAbstractOrigin(
     // If there is no entry within LocalAbstractOriginFnInfo for the given
     // FnCopyRawUValue, function isn't out-of-order in DWARF. Rather, we have
     // CrossCU referencing.
-    if (!LocalAbstractOriginFnInfo.count(FnCopyRawUValue))
+    auto It = LocalAbstractOriginFnInfo.find(FnCopyRawUValue);
+    if (It == LocalAbstractOriginFnInfo.end())
       continue;
-    AbstractOriginVars = LocalAbstractOriginFnInfo[FnCopyRawUValue];
+    AbstractOriginVars = It->second;
     updateVarsWithAbstractOriginLocCovInfo(FnDieWithAbstractOrigin,
                                            AbstractOriginVars);
 

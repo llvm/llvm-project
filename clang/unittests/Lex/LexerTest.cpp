@@ -41,14 +41,11 @@ using testing::ElementsAre;
 class LexerTest : public ::testing::Test {
 protected:
   LexerTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      TargetOpts(new TargetOptions)
-  {
+      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
+        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   std::unique_ptr<Preprocessor> CreatePP(StringRef Source,
@@ -57,11 +54,11 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(Source);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
-    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                            Diags, LangOpts, Target.get());
+    HeaderSearchOptions HSOpts;
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+    PreprocessorOptions PPOpts;
     std::unique_ptr<Preprocessor> PP = std::make_unique<Preprocessor>(
-        std::make_shared<PreprocessorOptions>(), Diags, LangOpts, SourceMgr,
-        HeaderInfo, ModLoader,
+        PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
         /*IILookup =*/nullptr,
         /*OwnsHeaderSearch =*/false);
     PP->Initialize(*Target);
@@ -104,6 +101,7 @@ protected:
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;

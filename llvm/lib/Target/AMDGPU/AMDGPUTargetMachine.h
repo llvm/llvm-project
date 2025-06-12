@@ -181,6 +181,7 @@ public:
   void addMachineSSAOptimization(AddMachinePass &) const;
   void addPostRegAlloc(AddMachinePass &) const;
   void addPreEmitPass(AddMachinePass &) const;
+  Error addRegAssignmentOptimized(AddMachinePass &) const;
 
   /// Check if a pass is enabled given \p Opt option. The option always
   /// overrides defaults if explicitly used. Otherwise its default will be used

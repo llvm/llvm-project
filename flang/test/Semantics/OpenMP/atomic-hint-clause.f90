@@ -78,6 +78,7 @@ program sample
         y = y * 9
 
     !ERROR: Hint clause must have non-negative constant integer expression
+    !ERROR: Must have INTEGER type, but is REAL(4)
     !$omp atomic hint(1.0) read
         y = x
 

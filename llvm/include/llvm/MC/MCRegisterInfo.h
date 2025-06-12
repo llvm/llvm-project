@@ -20,6 +20,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -63,7 +64,7 @@ public:
 
   /// getRegister - Return the specified register in the class.
   ///
-  unsigned getRegister(unsigned i) const {
+  MCRegister getRegister(unsigned i) const {
     assert(i < getNumRegs() && "Register number out of range!");
     return RegsBegin[i];
   }
@@ -146,7 +147,7 @@ struct MCRegisterDesc {
 /// TableGen generated physical register data. It must not be extended with
 /// virtual methods.
 ///
-class MCRegisterInfo {
+class LLVM_ABI MCRegisterInfo {
 public:
   using regclass_iterator = const MCRegisterClass *;
 

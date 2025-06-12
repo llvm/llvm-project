@@ -1,8 +1,6 @@
 ; RUN: opt -passes=inline -S < %s | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 
-; RUN: opt -passes=inline -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
-; RUN: opt -passes='cgscc(inline)' -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
 ; struct A {
 ;   int arg0;
 ;   double arg1[2];

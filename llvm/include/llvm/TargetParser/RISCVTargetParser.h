@@ -24,14 +24,6 @@ class Triple;
 
 namespace RISCV {
 
-namespace RISCVExtensionBitmaskTable {
-struct RISCVExtensionBitmask {
-  const char *Name;
-  unsigned GroupID;
-  unsigned BitPosition;
-};
-} // namespace RISCVExtensionBitmaskTable
-
 struct CPUModel {
   uint32_t MVendorID;
   uint64_t MArchID;
@@ -49,6 +41,7 @@ struct CPUInfo {
 
 // We use 64 bits as the known part in the scalable vector types.
 static constexpr unsigned RVVBitsPerBlock = 64;
+static constexpr unsigned RVVBytesPerBlock = RVVBitsPerBlock / 8;
 
 void getFeaturesForCPU(StringRef CPU,
                        SmallVectorImpl<std::string> &EnabledFeatures,
@@ -96,6 +89,8 @@ inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
 unsigned encodeVTYPE(VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
                      bool MaskAgnostic);
 
+unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt);
+
 inline static VLMUL getVLMUL(unsigned VType) {
   unsigned VLMul = VType & 0x7;
   return static_cast<VLMUL>(VLMul);
@@ -125,9 +120,33 @@ inline static unsigned getSEW(unsigned VType) {
   return decodeVSEW(VSEW);
 }
 
+inline static unsigned decodeTWiden(unsigned TWiden) {
+  assert((TWiden == 1 || TWiden == 2 || TWiden == 3) &&
+         "Unexpected TWiden value");
+  return 1 << (TWiden - 1);
+}
+
+inline static bool hasXSfmmWiden(unsigned VType) {
+  unsigned TWiden = (VType >> 9) & 0x3;
+  return TWiden != 0;
+}
+
+inline static unsigned getXSfmmWiden(unsigned VType) {
+  unsigned TWiden = (VType >> 9) & 0x3;
+  assert(TWiden != 0 && "Invalid widen value");
+  return 1 << (TWiden - 1);
+}
+
+static inline bool isValidXSfmmVType(unsigned VTypeI) {
+  return (VTypeI & ~0x738) == 0 && RISCVVType::hasXSfmmWiden(VTypeI) &&
+         RISCVVType::getSEW(VTypeI) * RISCVVType::getXSfmmWiden(VTypeI) <= 64;
+}
+
 inline static bool isTailAgnostic(unsigned VType) { return VType & 0x40; }
 
 inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
+
+inline static bool isAltFmt(unsigned VType) { return VType & 0x100; }
 
 void printVType(unsigned VType, raw_ostream &OS);
 

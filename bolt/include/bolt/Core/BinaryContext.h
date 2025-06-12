@@ -230,6 +230,12 @@ class BinaryContext {
   /// Functions injected by BOLT
   std::vector<BinaryFunction *> InjectedBinaryFunctions;
 
+  /// Thunk functions.
+  std::vector<BinaryFunction *> ThunkBinaryFunctions;
+
+  /// Function that precedes thunks in the binary.
+  const BinaryFunction *ThunkLocation{nullptr};
+
   /// Jump tables for all functions mapped by address.
   std::map<uint64_t, JumpTable *> JumpTables;
 
@@ -537,9 +543,31 @@ public:
   BinaryFunction *createInjectedBinaryFunction(const std::string &Name,
                                                bool IsSimple = true);
 
+  /// Patch the original binary contents at address \p Address with a sequence
+  /// of instructions from the \p Instructions list. The callee is responsible
+  /// for checking that the sequence doesn't cross any function or section
+  /// boundaries.
+  ///
+  /// Optional \p Name can be assigned to the patch. The name will be emitted to
+  /// the symbol table at \p Address.
+  BinaryFunction *
+  createInstructionPatch(uint64_t Address,
+                         const InstructionListType &Instructions,
+                         const Twine &Name = "");
+
   std::vector<BinaryFunction *> &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
   }
+
+  BinaryFunction *createThunkBinaryFunction(const std::string &Name);
+
+  std::vector<BinaryFunction *> &getThunkBinaryFunctions() {
+    return ThunkBinaryFunctions;
+  }
+
+  const BinaryFunction *getThunkLocation() const { return ThunkLocation; }
+
+  void setThunkLocation(const BinaryFunction *BF) { ThunkLocation = BF; }
 
   /// Return vector with all functions, i.e. include functions from the input
   /// binary and functions created by BOLT.
@@ -1284,7 +1312,7 @@ public:
   void foldFunction(BinaryFunction &ChildBF, BinaryFunction &ParentBF);
 
   /// Add a Section relocation at a given \p Address.
-  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t Type,
+  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
                      uint64_t Addend = 0, uint64_t Value = 0);
 
   /// Return a relocation registered at a given \p Address, or nullptr if there
@@ -1297,7 +1325,7 @@ public:
   }
 
   /// Register dynamic relocation at \p Address.
-  void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t Type,
+  void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
                             uint64_t Addend, uint64_t Value = 0);
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr
@@ -1360,6 +1388,10 @@ public:
   uint64_t
   computeInstructionSize(const MCInst &Inst,
                          const MCCodeEmitter *Emitter = nullptr) const {
+    // FIXME: hack for faster size computation on aarch64.
+    if (isAArch64())
+      return MIB->isPseudo(Inst) ? 0 : 4;
+
     if (std::optional<uint32_t> Size = MIB->getSize(Inst))
       return *Size;
 
@@ -1487,7 +1519,7 @@ public:
     MCEInstance.LocalCtx.reset(
         new MCContext(*TheTriple, AsmInfo.get(), MRI.get(), STI.get()));
     MCEInstance.LocalMOFI.reset(
-        TheTarget->createMCObjectFileInfo(*MCEInstance.LocalCtx.get(),
+        TheTarget->createMCObjectFileInfo(*MCEInstance.LocalCtx,
                                           /*PIC=*/!HasFixedLoadAddress));
     MCEInstance.LocalCtx->setObjectFileInfo(MCEInstance.LocalMOFI.get());
     MCEInstance.MCE.reset(

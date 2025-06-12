@@ -662,7 +662,7 @@ FunctionSpecializer::~FunctionSpecializer() {
 /// non-negative, which is true for both TCK_CodeSize and TCK_Latency, and
 /// always Valid.
 static unsigned getCostValue(const Cost &C) {
-  int64_t Value = *C.getValue();
+  int64_t Value = C.getValue();
 
   assert(Value >= 0 && "CodeSize and Latency cannot be negative");
   // It is safe to down cast since we know the arguments cannot be negative and
@@ -713,7 +713,7 @@ bool FunctionSpecializer::run() {
     if (!SpecializeLiteralConstant && !Inserted && !Metrics.isRecursive)
       continue;
 
-    int64_t Sz = *Metrics.NumInsts.getValue();
+    int64_t Sz = Metrics.NumInsts.getValue();
     assert(Sz > 0 && "CodeSize should be positive");
     // It is safe to down cast from int64_t, NumInsts is always positive.
     unsigned FuncSize = static_cast<unsigned>(Sz);

@@ -368,6 +368,17 @@ add_libc_test(
     libc.src.stdlib.srand
 )
 
+add_libc_test(
+  memalignment_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    memalignment_test.cpp
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.memalignment
+)
+
 if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(

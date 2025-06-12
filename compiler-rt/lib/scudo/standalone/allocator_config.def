@@ -81,6 +81,10 @@ PRIMARY_REQUIRED(const s32, MaxReleaseToOsIntervalMs)
 
 // PRIMARY_OPTIONAL(TYPE, NAME, DEFAULT)
 //
+
+// Enables/disables primary block caching. Batch class still caches.
+PRIMARY_OPTIONAL(const bool, EnableBlockCache, true)
+
 // The scale of a compact pointer. E.g., Ptr = Base + (CompactPtr << Scale).
 PRIMARY_OPTIONAL(const uptr, CompactPtrScale, SCUDO_MIN_ALIGNMENT_LOG)
 

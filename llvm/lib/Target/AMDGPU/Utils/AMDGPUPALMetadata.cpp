@@ -23,6 +23,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/VersionTuple.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -226,9 +227,9 @@ void AMDGPUPALMetadata::setRegister(unsigned Reg, const MCExpr *Val,
       return;
   }
   auto &N = getRegisters()[MsgPackDoc.getNode(Reg)];
-  auto ExprIt = REM.find(Reg);
+  auto [ExprIt, Inserted] = REM.try_emplace(Reg);
 
-  if (ExprIt != REM.end()) {
+  if (!Inserted) {
     Val = MCBinaryExpr::createOr(Val, ExprIt->getSecond(), Ctx);
     // This conditional may be redundant most of the time, but the alternate
     // setRegister(unsigned, unsigned) could've been called while the
@@ -245,7 +246,7 @@ void AMDGPUPALMetadata::setRegister(unsigned Reg, const MCExpr *Val,
     // propagate ORs.
     N = (uint64_t)0;
   }
-  REM[Reg] = Val;
+  ExprIt->second = Val;
   DelayedExprs.assignDocNode(N, msgpack::Type::UInt, Val);
 }
 
@@ -259,13 +260,16 @@ void AMDGPUPALMetadata::setEntryPoint(unsigned CC, StringRef Name) {
   getHwStage(CC)[".entry_point_symbol"] =
       MsgPackDoc.getNode(Name, /*Copy=*/true);
 
-  // Set .entry_point which is defined
-  // to be _amdgpu_<stage> and _amdgpu_cs for non-shader functions
-  SmallString<16> EPName("_amdgpu_");
-  raw_svector_ostream EPNameOS(EPName);
-  EPNameOS << getStageName(CC) + 1;
-  getHwStage(CC)[".entry_point"] =
-      MsgPackDoc.getNode(EPNameOS.str(), /*Copy=*/true);
+  // For PAL version 3.6 and above, entry_point is no longer required.
+  if (getPALVersion() < VersionTuple(3, 6)) {
+    // Set .entry_point which is defined to be _amdgpu_<stage>_main and
+    // _amdgpu_cs_main for non-shader functions.
+    SmallString<16> EPName("_amdgpu_");
+    raw_svector_ostream EPNameOS(EPName);
+    EPNameOS << getStageName(CC) + 1 << "_main";
+    getHwStage(CC)[".entry_point"] =
+        MsgPackDoc.getNode(EPNameOS.str(), /*Copy=*/true);
+  }
 }
 
 // Set the number of used vgprs in the metadata. This is an optional
@@ -1051,6 +1055,10 @@ unsigned AMDGPUPALMetadata::getPALVersion(unsigned idx) {
 unsigned AMDGPUPALMetadata::getPALMajorVersion() { return getPALVersion(0); }
 
 unsigned AMDGPUPALMetadata::getPALMinorVersion() { return getPALVersion(1); }
+
+VersionTuple AMDGPUPALMetadata::getPALVersion() {
+  return VersionTuple(getPALVersion(0), getPALVersion(1));
+}
 
 // Set the field in a given .hardware_stages entry
 void AMDGPUPALMetadata::setHwStage(unsigned CC, StringRef field, unsigned Val) {

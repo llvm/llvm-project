@@ -30,8 +30,7 @@ define i16 @convert_to_bitmask16(<16 x i8> %vec) {
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    cmeq.16b v0, v0, #0
-; CHECK-GI-NEXT:    mvn.16b v0, v0
+; CHECK-GI-NEXT:    cmtst.16b v0, v0, v0
 ; CHECK-GI-NEXT:    umov.b w8, v0[1]
 ; CHECK-GI-NEXT:    umov.b w9, v0[0]
 ; CHECK-GI-NEXT:    umov.b w10, v0[2]
@@ -106,8 +105,7 @@ define i16 @convert_to_bitmask8(<8 x i16> %vec) {
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    cmeq.8h v0, v0, #0
-; CHECK-GI-NEXT:    mvn.16b v0, v0
+; CHECK-GI-NEXT:    cmtst.8h v0, v0, v0
 ; CHECK-GI-NEXT:    xtn.8b v0, v0
 ; CHECK-GI-NEXT:    umov.b w8, v0[1]
 ; CHECK-GI-NEXT:    umov.b w9, v0[0]
@@ -158,8 +156,7 @@ define i4 @convert_to_bitmask4(<4 x i32> %vec) {
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    cmeq.4s v0, v0, #0
-; CHECK-GI-NEXT:    mvn.16b v0, v0
+; CHECK-GI-NEXT:    cmtst.4s v0, v0, v0
 ; CHECK-GI-NEXT:    mov.s w8, v0[1]
 ; CHECK-GI-NEXT:    mov.s w9, v0[2]
 ; CHECK-GI-NEXT:    fmov w11, s0
@@ -709,10 +706,8 @@ define i8 @convert_large_vector(<8 x i32> %vec) {
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    cmeq.4s v0, v0, #0
-; CHECK-GI-NEXT:    cmeq.4s v1, v1, #0
-; CHECK-GI-NEXT:    mvn.16b v0, v0
-; CHECK-GI-NEXT:    mvn.16b v1, v1
+; CHECK-GI-NEXT:    cmtst.4s v0, v0, v0
+; CHECK-GI-NEXT:    cmtst.4s v1, v1, v1
 ; CHECK-GI-NEXT:    uzp1.8h v0, v0, v1
 ; CHECK-GI-NEXT:    xtn.8b v0, v0
 ; CHECK-GI-NEXT:    umov.b w8, v0[1]
@@ -766,9 +761,7 @@ define i4 @convert_legalized_illegal_element_size(<4 x i22> %vec) {
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GI-NEXT:    movi.4s v1, #63, msl #16
-; CHECK-GI-NEXT:    and.16b v0, v0, v1
-; CHECK-GI-NEXT:    cmeq.4s v0, v0, #0
-; CHECK-GI-NEXT:    mvn.16b v0, v0
+; CHECK-GI-NEXT:    cmtst.4s v0, v0, v1
 ; CHECK-GI-NEXT:    mov.s w8, v0[1]
 ; CHECK-GI-NEXT:    mov.s w9, v0[2]
 ; CHECK-GI-NEXT:    fmov w11, s0
@@ -819,18 +812,11 @@ define i8 @no_direct_convert_for_bad_concat(<4 x i32> %vec) {
 }
 
 define <8 x i1> @no_convert_without_direct_bitcast(<8 x i16> %vec) {
-; CHECK-SD-LABEL: no_convert_without_direct_bitcast:
-; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:    cmtst.8h v0, v0, v0
-; CHECK-SD-NEXT:    xtn.8b v0, v0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: no_convert_without_direct_bitcast:
-; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    cmeq.8h v0, v0, #0
-; CHECK-GI-NEXT:    mvn.16b v0, v0
-; CHECK-GI-NEXT:    xtn.8b v0, v0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: no_convert_without_direct_bitcast:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    cmtst.8h v0, v0, v0
+; CHECK-NEXT:    xtn.8b v0, v0
+; CHECK-NEXT:    ret
 
    %cmp_result = icmp ne <8 x i16> %vec, zeroinitializer
    ret <8 x i1> %cmp_result
@@ -882,8 +868,7 @@ define i6 @no_combine_illegal_num_elements(<6 x i32> %vec) {
 ; CHECK-GI-NEXT:    cmeq.4s v1, v1, v2
 ; CHECK-GI-NEXT:    mvn.16b v1, v1
 ; CHECK-GI-NEXT:    mov.s v0[3], w3
-; CHECK-GI-NEXT:    cmeq.4s v0, v0, #0
-; CHECK-GI-NEXT:    mvn.16b v0, v0
+; CHECK-GI-NEXT:    cmtst.4s v0, v0, v0
 ; CHECK-GI-NEXT:    mov.s w8, v0[1]
 ; CHECK-GI-NEXT:    mov.s w9, v0[2]
 ; CHECK-GI-NEXT:    mov.s w10, v0[3]

@@ -479,10 +479,8 @@ define i1 @any_of_cost(ptr %start, ptr %end) #0 {
 ; CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP18]], i32 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x ptr> [[TMP20]], ptr [[TMP19]], i32 1
-; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq <2 x ptr> [[TMP17]], zeroinitializer
-; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq <2 x ptr> [[TMP21]], zeroinitializer
-; CHECK-NEXT:    [[TMP24:%.*]] = xor <2 x i1> [[TMP22]], splat (i1 true)
-; CHECK-NEXT:    [[TMP25:%.*]] = xor <2 x i1> [[TMP23]], splat (i1 true)
+; CHECK-NEXT:    [[TMP24:%.*]] = icmp ne <2 x ptr> [[TMP17]], zeroinitializer
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne <2 x ptr> [[TMP21]], zeroinitializer
 ; CHECK-NEXT:    [[TMP26]] = or <2 x i1> [[VEC_PHI]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP27]] = or <2 x i1> [[VEC_PHI3]], [[TMP25]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -603,11 +601,10 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE37:%.*]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 12
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl nsw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nsw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl nsw i64 [[TMP6]], 2
@@ -630,6 +627,7 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i1> [[TMP19]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = shl nsw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP24]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP25]], align 8
@@ -665,7 +663,8 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <4 x i1> [[TMP20]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP38]], label [[PRED_STORE_IF14:%.*]], label [[PRED_STORE_CONTINUE15:%.*]]
 ; CHECK:       pred.store.if14:
-; CHECK-NEXT:    [[TMP39:%.*]] = shl nsw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP88:%.*]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP39:%.*]] = shl nsw i64 [[TMP88]], 2
 ; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP39]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP40]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE15]]
@@ -700,7 +699,8 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i1> [[TMP21]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP53]], label [[PRED_STORE_IF22:%.*]], label [[PRED_STORE_CONTINUE23:%.*]]
 ; CHECK:       pred.store.if22:
-; CHECK-NEXT:    [[TMP54:%.*]] = shl nsw i64 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP107:%.*]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP54:%.*]] = shl nsw i64 [[TMP107]], 2
 ; CHECK-NEXT:    [[TMP55:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP54]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP55]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE23]]
@@ -735,7 +735,8 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP68:%.*]] = extractelement <4 x i1> [[TMP22]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP68]], label [[PRED_STORE_IF30:%.*]], label [[PRED_STORE_CONTINUE31:%.*]]
 ; CHECK:       pred.store.if30:
-; CHECK-NEXT:    [[TMP69:%.*]] = shl nsw i64 [[TMP6]], 2
+; CHECK-NEXT:    [[TMP108:%.*]] = add i64 [[INDEX]], 12
+; CHECK-NEXT:    [[TMP69:%.*]] = shl nsw i64 [[TMP108]], 2
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP69]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP70]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE31]]
@@ -785,8 +786,7 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX40:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL1]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT51:%.*]], [[PRED_STORE_CONTINUE50:%.*]] ]
-; CHECK-NEXT:    [[TMP86:%.*]] = add i64 [[INDEX40]], 0
-; CHECK-NEXT:    [[TMP87:%.*]] = shl nsw i64 [[TMP86]], 2
+; CHECK-NEXT:    [[TMP87:%.*]] = shl nsw i64 [[INDEX40]], 2
 ; CHECK-NEXT:    [[TMP89:%.*]] = getelementptr nusw double, ptr [[A]], i64 [[TMP87]]
 ; CHECK-NEXT:    [[WIDE_VEC41:%.*]] = load <16 x double>, ptr [[TMP89]], align 8
 ; CHECK-NEXT:    [[STRIDED_VEC42:%.*]] = shufflevector <16 x double> [[WIDE_VEC41]], <16 x double> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
@@ -794,6 +794,7 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP91:%.*]] = extractelement <4 x i1> [[TMP90]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP91]], label [[PRED_STORE_IF43:%.*]], label [[PRED_STORE_CONTINUE44:%.*]]
 ; CHECK:       pred.store.if43:
+; CHECK-NEXT:    [[TMP86:%.*]] = add i64 [[INDEX40]], 0
 ; CHECK-NEXT:    [[TMP92:%.*]] = shl nsw i64 [[TMP86]], 2
 ; CHECK-NEXT:    [[TMP93:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP92]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP93]], align 8
@@ -889,9 +890,7 @@ define i64 @cost_assume(ptr %end, i64 %N) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[N:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i64> [[BROADCAST_SPLAT]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i64 [[N:%.*]], 0
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -903,7 +902,6 @@ define i64 @cost_assume(ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[TMP8]] = add <2 x i64> [[VEC_PHI2]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP9]] = add <2 x i64> [[VEC_PHI3]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP10]] = add <2 x i64> [[VEC_PHI4]], splat (i64 1)
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
@@ -1046,20 +1044,15 @@ define i64 @live_in_known_1_via_scev() {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ <i64 3, i64 1, i64 1, i64 1>, [[VECTOR_PH]] ], [ [[VEC_PHI]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[INDEX]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i32> [[VEC_IV]], splat (i32 5)
-; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[VEC_PHI]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 8
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.mul.v4i64(<4 x i64> [[TMP1]])
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.mul.v4i64(<4 x i64> [[VEC_PHI]])
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 8, [[MIDDLE_BLOCK]] ], [ 0, [[PH]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ 3, [[PH]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[PH]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 3, [[PH]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -1101,12 +1094,12 @@ define i64 @cost_loop_invariant_recipes(i1 %x, i64 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i1> [[TMP0]] to <2 x i64>
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[Y:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[BROADCAST_SPLAT2]], [[TMP1]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -1333,6 +1326,72 @@ loop:
 
 exit:
   ret i32 %select.next
+}
+
+; Test for https://github.com/llvm/llvm-project/issues/129236.
+define i32 @cost_ashr_with_op_known_invariant_via_scev(i8 %a) {
+; CHECK-LABEL: @cost_ashr_with_op_known_invariant_via_scev(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i16 0, 0
+; CHECK-NEXT:    [[CONV_I:%.*]] = sext i16 0 to i32
+; CHECK-NEXT:    [[CONV5_I:%.*]] = sext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 100, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[P_1:%.*]] = phi i32 [ [[REM_I:%.*]], [[ELSE]] ], [ 0, [[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[SHR_I:%.*]] = ashr i32 [[CONV5_I]], [[P_1]]
+; CHECK-NEXT:    [[TOBOOL6_NOT_I:%.*]] = icmp eq i32 [[SHR_I]], 0
+; CHECK-NEXT:    [[SEXT_I:%.*]] = shl i32 [[P_1]], 24
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr exact i32 [[SEXT_I]], 24
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TOBOOL6_NOT_I]], i32 [[TMP0]], i32 0
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       else:
+; CHECK-NEXT:    [[REM_I]] = urem i32 -1, [[CONV_I]]
+; CHECK-NEXT:    [[CMP3_I:%.*]] = icmp sgt i32 [[REM_I]], 1
+; CHECK-NEXT:    br i1 [[CMP3_I]], label [[LOOP_LATCH]], label [[THEN]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[P_2:%.*]] = phi i32 [ 0, [[ELSE]] ], [ [[TMP1]], [[THEN]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P_2_LCSSA:%.*]] = phi i32 [ [[P_2]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i32 [[P_2_LCSSA]]
+;
+entry:
+  %cmp.i = icmp eq i16 0, 0
+  %conv.i = sext i16 0 to i32
+  %conv5.i = sext i8 %a to i32
+  br label %loop.header
+
+loop.header:
+  %iv = phi i8 [ 100, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %cmp.i, label %then, label %else
+
+then:
+  %p.1 = phi i32 [ %rem.i, %else ], [ 0, %loop.header ]
+  %shr.i = ashr i32 %conv5.i, %p.1
+  %tobool6.not.i = icmp eq i32 %shr.i, 0
+  %sext.i = shl i32 %p.1, 24
+  %2 = ashr exact i32 %sext.i, 24
+  %3 = select i1 %tobool6.not.i, i32 %2, i32 0
+  br label %loop.latch
+
+else:
+  %rem.i = urem i32 -1, %conv.i
+  %cmp3.i = icmp sgt i32 %rem.i, 1
+  br i1 %cmp3.i, label %loop.latch, label %then
+
+loop.latch:
+  %p.2 = phi i32 [ 0, %else ], [ %3, %then ]
+  %iv.next = add i8 %iv, -1
+  %ec = icmp eq i8 %iv.next, 0
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret i32 %p.2
 }
 
 declare void @llvm.assume(i1 noundef) #0

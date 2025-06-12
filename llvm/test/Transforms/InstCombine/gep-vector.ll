@@ -129,8 +129,8 @@ define ptr @test_accumulate_constant_offset_vscale_nonzero(<vscale x 16 x i1> %p
 ; CHECK-LABEL: @test_accumulate_constant_offset_vscale_nonzero(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
-; CHECK-NEXT:    [[GEP_OFFS:%.*]] = or disjoint i64 [[TMP2]], 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[GEP_OFFS]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP3]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep = getelementptr <vscale x 16 x i8>, ptr %base, i64 1, i64 4

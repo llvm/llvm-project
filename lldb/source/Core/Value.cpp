@@ -24,6 +24,8 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h"
@@ -223,10 +225,16 @@ uint64_t Value::GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx) {
   case ContextType::Variable: // Variable *
   {
     auto *scope = exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
-    if (std::optional<uint64_t> size = GetCompilerType().GetByteSize(scope)) {
+    auto size_or_err = GetCompilerType().GetByteSize(scope);
+    if (!size_or_err) {
+      if (error_ptr && error_ptr->Success())
+        *error_ptr = Status::FromError(size_or_err.takeError());
+      else
+        LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), size_or_err.takeError(), "{0}");
+    } else {
       if (error_ptr)
         error_ptr->Clear();
-      return *size;
+      return *size_or_err;
     }
     break;
   }
@@ -321,8 +329,9 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
   AddressType address_type = eAddressTypeFile;
   Address file_so_addr;
   const CompilerType &ast_type = GetCompilerType();
-  std::optional<uint64_t> type_size = ast_type.GetByteSize(
-      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
+  std::optional<uint64_t> type_size =
+      llvm::expectedToOptional(ast_type.GetByteSize(
+          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr));
   // Nothing to be done for a zero-sized type.
   if (type_size && *type_size == 0)
     return error;

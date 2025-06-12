@@ -50,6 +50,9 @@ public:
 
   /// Extended Altivec ABI on AIX
   bool EnableAIXExtendedAltivecABI;
+
+  /// Print verbose assembly
+  bool asmVerbose = false;
 };
 
 } // end namespace Fortran::frontend

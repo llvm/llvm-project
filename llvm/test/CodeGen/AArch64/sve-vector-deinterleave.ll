@@ -151,6 +151,102 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>} @vector_deinterleave_nxv2i64_nxv
   ret {<vscale x 2 x i64>, <vscale x 2 x i64>} %retval
 }
 
+define {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} @vector_deinterleave_nxv16i8_nxv64i8(<vscale x 64 x i8> %vec) {
+; CHECK-LABEL: vector_deinterleave_nxv16i8_nxv64i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z4.b, z2.b, z3.b
+; CHECK-NEXT:    uzp1 z5.b, z0.b, z1.b
+; CHECK-NEXT:    uzp2 z3.b, z2.b, z3.b
+; CHECK-NEXT:    uzp2 z6.b, z0.b, z1.b
+; CHECK-NEXT:    uzp1 z0.b, z5.b, z4.b
+; CHECK-NEXT:    uzp2 z2.b, z5.b, z4.b
+; CHECK-NEXT:    uzp1 z1.b, z6.b, z3.b
+; CHECK-NEXT:    uzp2 z3.b, z6.b, z3.b
+; CHECK-NEXT:    ret
+  %retval = call {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.vector.deinterleave4.nxv64i8(<vscale x 64 x i8> %vec)
+  ret {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} %retval
+}
+
+define {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @vector_deinterleave_nxv8i16_nxv32i16(<vscale x 32 x i16> %vec) {
+; CHECK-LABEL: vector_deinterleave_nxv8i16_nxv32i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z4.h, z2.h, z3.h
+; CHECK-NEXT:    uzp1 z5.h, z0.h, z1.h
+; CHECK-NEXT:    uzp2 z3.h, z2.h, z3.h
+; CHECK-NEXT:    uzp2 z6.h, z0.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z5.h, z4.h
+; CHECK-NEXT:    uzp2 z2.h, z5.h, z4.h
+; CHECK-NEXT:    uzp1 z1.h, z6.h, z3.h
+; CHECK-NEXT:    uzp2 z3.h, z6.h, z3.h
+; CHECK-NEXT:    ret
+  %retval = call {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.vector.deinterleave4.nxv32i16(<vscale x 32 x i16> %vec)
+  ret {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} %retval
+}
+
+define {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @vector_deinterleave_nxv4i32_nxv16i32(<vscale x 16 x i32> %vec) {
+; CHECK-LABEL: vector_deinterleave_nxv4i32_nxv16i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z4.s, z2.s, z3.s
+; CHECK-NEXT:    uzp1 z5.s, z0.s, z1.s
+; CHECK-NEXT:    uzp2 z3.s, z2.s, z3.s
+; CHECK-NEXT:    uzp2 z6.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.s, z5.s, z4.s
+; CHECK-NEXT:    uzp2 z2.s, z5.s, z4.s
+; CHECK-NEXT:    uzp1 z1.s, z6.s, z3.s
+; CHECK-NEXT:    uzp2 z3.s, z6.s, z3.s
+; CHECK-NEXT:    ret
+  %retval = call {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.vector.deinterleave4.nxv16i32(<vscale x 16 x i32> %vec)
+  ret {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} %retval
+}
+
+define {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} @vector_deinterleave_nxv2i64_nxv8i64(<vscale x 8 x i64> %vec) {
+; CHECK-LABEL: vector_deinterleave_nxv2i64_nxv8i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z4.d, z2.d, z3.d
+; CHECK-NEXT:    uzp1 z5.d, z0.d, z1.d
+; CHECK-NEXT:    uzp2 z3.d, z2.d, z3.d
+; CHECK-NEXT:    uzp2 z6.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z0.d, z5.d, z4.d
+; CHECK-NEXT:    uzp2 z2.d, z5.d, z4.d
+; CHECK-NEXT:    uzp1 z1.d, z6.d, z3.d
+; CHECK-NEXT:    uzp2 z3.d, z6.d, z3.d
+; CHECK-NEXT:    ret
+  %retval = call {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.vector.deinterleave4.nxv8i64(<vscale x 8 x i64> %vec)
+  ret {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} %retval
+}
+
+define {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} @vector_deinterleave_nxv2i64_nxv16i64(<vscale x 16 x i64> %vec) {
+; CHECK-LABEL: vector_deinterleave_nxv2i64_nxv16i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z24.d, z6.d, z7.d
+; CHECK-NEXT:    uzp1 z25.d, z4.d, z5.d
+; CHECK-NEXT:    uzp1 z26.d, z2.d, z3.d
+; CHECK-NEXT:    uzp1 z27.d, z0.d, z1.d
+; CHECK-NEXT:    uzp2 z6.d, z6.d, z7.d
+; CHECK-NEXT:    uzp2 z4.d, z4.d, z5.d
+; CHECK-NEXT:    uzp2 z2.d, z2.d, z3.d
+; CHECK-NEXT:    uzp2 z0.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z5.d, z25.d, z24.d
+; CHECK-NEXT:    uzp2 z24.d, z25.d, z24.d
+; CHECK-NEXT:    uzp1 z7.d, z27.d, z26.d
+; CHECK-NEXT:    uzp1 z28.d, z4.d, z6.d
+; CHECK-NEXT:    uzp2 z25.d, z27.d, z26.d
+; CHECK-NEXT:    uzp1 z29.d, z0.d, z2.d
+; CHECK-NEXT:    uzp2 z26.d, z4.d, z6.d
+; CHECK-NEXT:    uzp2 z27.d, z0.d, z2.d
+; CHECK-NEXT:    uzp1 z0.d, z7.d, z5.d
+; CHECK-NEXT:    uzp1 z2.d, z25.d, z24.d
+; CHECK-NEXT:    uzp2 z4.d, z7.d, z5.d
+; CHECK-NEXT:    uzp1 z1.d, z29.d, z28.d
+; CHECK-NEXT:    uzp1 z3.d, z27.d, z26.d
+; CHECK-NEXT:    uzp2 z5.d, z29.d, z28.d
+; CHECK-NEXT:    uzp2 z6.d, z25.d, z24.d
+; CHECK-NEXT:    uzp2 z7.d, z27.d, z26.d
+; CHECK-NEXT:    ret
+  %retval = call {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.vector.deinterleave8.nxv16i64(<vscale x 16 x i64> %vec)
+  ret {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} %retval
+}
+
 ; Predicated
 define {<vscale x 16 x i1>, <vscale x 16 x i1>} @vector_deinterleave_nxv16i1_nxv32i1(<vscale x 32 x i1> %vec) {
 ; CHECK-LABEL: vector_deinterleave_nxv16i1_nxv32i1:
@@ -278,7 +374,6 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @vector_deinterleave_nxv2i32_nxv
   %retval = call {<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %vec)
   ret {<vscale x 2 x i32>, <vscale x 2 x i32>} %retval
 }
-
 
 ; Floating declarations
 declare {<vscale x 2 x half>,<vscale x 2 x half>} @llvm.vector.deinterleave2.nxv4f16(<vscale x 4 x half>)

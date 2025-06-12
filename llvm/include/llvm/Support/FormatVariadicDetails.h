@@ -9,8 +9,9 @@
 #ifndef LLVM_SUPPORT_FORMATVARIADICDETAILS_H
 #define LLVM_SUPPORT_FORMATVARIADICDETAILS_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <type_traits>
@@ -21,7 +22,7 @@ class Error;
 
 namespace support {
 namespace detail {
-class format_adapter {
+class LLVM_ABI format_adapter {
   virtual void anchor();
 
 protected:

@@ -30,60 +30,64 @@ struct RecordIdToIndexFunctor {
 
 using AbbrevDsc = void (*)(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev);
 
-static void AbbrevGen(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev,
-                      const std::initializer_list<llvm::BitCodeAbbrevOp> Ops) {
+static void
+generateAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev,
+               const std::initializer_list<llvm::BitCodeAbbrevOp> Ops) {
   for (const auto &Op : Ops)
     Abbrev->Add(Op);
 }
 
-static void BoolAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
-  AbbrevGen(Abbrev,
-            {// 0. Boolean
-             llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                                   BitCodeConstants::BoolSize)});
+static void genBoolAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
+  generateAbbrev(Abbrev,
+                 {// 0. Boolean
+                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
+                                        BitCodeConstants::BoolSize)});
 }
 
-static void IntAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
-  AbbrevGen(Abbrev,
-            {// 0. Fixed-size integer
-             llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                                   BitCodeConstants::IntSize)});
+static void genIntAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
+  generateAbbrev(Abbrev,
+                 {// 0. Fixed-size integer
+                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
+                                        BitCodeConstants::IntSize)});
 }
 
-static void SymbolIDAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
-  AbbrevGen(Abbrev,
-            {// 0. Fixed-size integer (length of the sha1'd USR)
-             llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                                   BitCodeConstants::USRLengthSize),
-             // 1. Fixed-size array of Char6 (USR)
-             llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Array),
-             llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                                   BitCodeConstants::USRBitLengthSize)});
+static void genSymbolIdAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
+  generateAbbrev(Abbrev,
+                 {// 0. Fixed-size integer (length of the sha1'd USR)
+                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
+                                        BitCodeConstants::USRLengthSize),
+                  // 1. Fixed-size array of Char6 (USR)
+                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Array),
+                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
+                                        BitCodeConstants::USRBitLengthSize)});
 }
 
-static void StringAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
-  AbbrevGen(Abbrev,
-            {// 0. Fixed-size integer (length of the following string)
-             llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                                   BitCodeConstants::StringLengthSize),
-             // 1. The string blob
-             llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob)});
+static void genStringAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
+  generateAbbrev(Abbrev,
+                 {// 0. Fixed-size integer (length of the following string)
+                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
+                                        BitCodeConstants::StringLengthSize),
+                  // 1. The string blob
+                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob)});
 }
 
 // Assumes that the file will not have more than 65535 lines.
-static void LocationAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
-  AbbrevGen(
+static void genLocationAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
+  generateAbbrev(
       Abbrev,
       {// 0. Fixed-size integer (line number)
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
                              BitCodeConstants::LineNumberSize),
-       // 1. Boolean (IsFileInRootDir)
+       // 1. Fixed-size integer (start line number)
+       llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
+                             BitCodeConstants::LineNumberSize),
+       // 2. Boolean (IsFileInRootDir)
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
                              BitCodeConstants::BoolSize),
-       // 2. Fixed-size integer (length of the following string (filename))
+       // 3. Fixed-size integer (length of the following string (filename))
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
                              BitCodeConstants::StringLengthSize),
-       // 3. The string blob
+       // 4. The string blob
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob)});
 }
 
@@ -140,65 +144,68 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
       // There is no init-list constructor for the IndexedMap, so have to
       // improvise
       static const std::vector<std::pair<RecordId, RecordIdDsc>> Inits = {
-          {VERSION, {"Version", &IntAbbrev}},
-          {COMMENT_KIND, {"Kind", &StringAbbrev}},
-          {COMMENT_TEXT, {"Text", &StringAbbrev}},
-          {COMMENT_NAME, {"Name", &StringAbbrev}},
-          {COMMENT_DIRECTION, {"Direction", &StringAbbrev}},
-          {COMMENT_PARAMNAME, {"ParamName", &StringAbbrev}},
-          {COMMENT_CLOSENAME, {"CloseName", &StringAbbrev}},
-          {COMMENT_SELFCLOSING, {"SelfClosing", &BoolAbbrev}},
-          {COMMENT_EXPLICIT, {"Explicit", &BoolAbbrev}},
-          {COMMENT_ATTRKEY, {"AttrKey", &StringAbbrev}},
-          {COMMENT_ATTRVAL, {"AttrVal", &StringAbbrev}},
-          {COMMENT_ARG, {"Arg", &StringAbbrev}},
-          {FIELD_TYPE_NAME, {"Name", &StringAbbrev}},
-          {FIELD_DEFAULT_VALUE, {"DefaultValue", &StringAbbrev}},
-          {MEMBER_TYPE_NAME, {"Name", &StringAbbrev}},
-          {MEMBER_TYPE_ACCESS, {"Access", &IntAbbrev}},
-          {NAMESPACE_USR, {"USR", &SymbolIDAbbrev}},
-          {NAMESPACE_NAME, {"Name", &StringAbbrev}},
-          {NAMESPACE_PATH, {"Path", &StringAbbrev}},
-          {ENUM_USR, {"USR", &SymbolIDAbbrev}},
-          {ENUM_NAME, {"Name", &StringAbbrev}},
-          {ENUM_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
-          {ENUM_LOCATION, {"Location", &LocationAbbrev}},
-          {ENUM_SCOPED, {"Scoped", &BoolAbbrev}},
-          {ENUM_VALUE_NAME, {"Name", &StringAbbrev}},
-          {ENUM_VALUE_VALUE, {"Value", &StringAbbrev}},
-          {ENUM_VALUE_EXPR, {"Expr", &StringAbbrev}},
-          {RECORD_USR, {"USR", &SymbolIDAbbrev}},
-          {RECORD_NAME, {"Name", &StringAbbrev}},
-          {RECORD_PATH, {"Path", &StringAbbrev}},
-          {RECORD_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
-          {RECORD_LOCATION, {"Location", &LocationAbbrev}},
-          {RECORD_TAG_TYPE, {"TagType", &IntAbbrev}},
-          {RECORD_IS_TYPE_DEF, {"IsTypeDef", &BoolAbbrev}},
-          {BASE_RECORD_USR, {"USR", &SymbolIDAbbrev}},
-          {BASE_RECORD_NAME, {"Name", &StringAbbrev}},
-          {BASE_RECORD_PATH, {"Path", &StringAbbrev}},
-          {BASE_RECORD_TAG_TYPE, {"TagType", &IntAbbrev}},
-          {BASE_RECORD_IS_VIRTUAL, {"IsVirtual", &BoolAbbrev}},
-          {BASE_RECORD_ACCESS, {"Access", &IntAbbrev}},
-          {BASE_RECORD_IS_PARENT, {"IsParent", &BoolAbbrev}},
-          {FUNCTION_USR, {"USR", &SymbolIDAbbrev}},
-          {FUNCTION_NAME, {"Name", &StringAbbrev}},
-          {FUNCTION_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
-          {FUNCTION_LOCATION, {"Location", &LocationAbbrev}},
-          {FUNCTION_ACCESS, {"Access", &IntAbbrev}},
-          {FUNCTION_IS_METHOD, {"IsMethod", &BoolAbbrev}},
-          {REFERENCE_USR, {"USR", &SymbolIDAbbrev}},
-          {REFERENCE_NAME, {"Name", &StringAbbrev}},
-          {REFERENCE_QUAL_NAME, {"QualName", &StringAbbrev}},
-          {REFERENCE_TYPE, {"RefType", &IntAbbrev}},
-          {REFERENCE_PATH, {"Path", &StringAbbrev}},
-          {REFERENCE_FIELD, {"Field", &IntAbbrev}},
-          {TEMPLATE_PARAM_CONTENTS, {"Contents", &StringAbbrev}},
-          {TEMPLATE_SPECIALIZATION_OF, {"SpecializationOf", &SymbolIDAbbrev}},
-          {TYPEDEF_USR, {"USR", &SymbolIDAbbrev}},
-          {TYPEDEF_NAME, {"Name", &StringAbbrev}},
-          {TYPEDEF_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
-          {TYPEDEF_IS_USING, {"IsUsing", &BoolAbbrev}}};
+          {VERSION, {"Version", &genIntAbbrev}},
+          {COMMENT_KIND, {"Kind", &genStringAbbrev}},
+          {COMMENT_TEXT, {"Text", &genStringAbbrev}},
+          {COMMENT_NAME, {"Name", &genStringAbbrev}},
+          {COMMENT_DIRECTION, {"Direction", &genStringAbbrev}},
+          {COMMENT_PARAMNAME, {"ParamName", &genStringAbbrev}},
+          {COMMENT_CLOSENAME, {"CloseName", &genStringAbbrev}},
+          {COMMENT_SELFCLOSING, {"SelfClosing", &genBoolAbbrev}},
+          {COMMENT_EXPLICIT, {"Explicit", &genBoolAbbrev}},
+          {COMMENT_ATTRKEY, {"AttrKey", &genStringAbbrev}},
+          {COMMENT_ATTRVAL, {"AttrVal", &genStringAbbrev}},
+          {COMMENT_ARG, {"Arg", &genStringAbbrev}},
+          {FIELD_TYPE_NAME, {"Name", &genStringAbbrev}},
+          {FIELD_DEFAULT_VALUE, {"DefaultValue", &genStringAbbrev}},
+          {MEMBER_TYPE_NAME, {"Name", &genStringAbbrev}},
+          {MEMBER_TYPE_ACCESS, {"Access", &genIntAbbrev}},
+          {MEMBER_TYPE_IS_STATIC, {"IsStatic", &genBoolAbbrev}},
+          {NAMESPACE_USR, {"USR", &genSymbolIdAbbrev}},
+          {NAMESPACE_NAME, {"Name", &genStringAbbrev}},
+          {NAMESPACE_PATH, {"Path", &genStringAbbrev}},
+          {ENUM_USR, {"USR", &genSymbolIdAbbrev}},
+          {ENUM_NAME, {"Name", &genStringAbbrev}},
+          {ENUM_DEFLOCATION, {"DefLocation", &genLocationAbbrev}},
+          {ENUM_LOCATION, {"Location", &genLocationAbbrev}},
+          {ENUM_SCOPED, {"Scoped", &genBoolAbbrev}},
+          {ENUM_VALUE_NAME, {"Name", &genStringAbbrev}},
+          {ENUM_VALUE_VALUE, {"Value", &genStringAbbrev}},
+          {ENUM_VALUE_EXPR, {"Expr", &genStringAbbrev}},
+          {RECORD_USR, {"USR", &genSymbolIdAbbrev}},
+          {RECORD_NAME, {"Name", &genStringAbbrev}},
+          {RECORD_PATH, {"Path", &genStringAbbrev}},
+          {RECORD_DEFLOCATION, {"DefLocation", &genLocationAbbrev}},
+          {RECORD_LOCATION, {"Location", &genLocationAbbrev}},
+          {RECORD_TAG_TYPE, {"TagType", &genIntAbbrev}},
+          {RECORD_IS_TYPE_DEF, {"IsTypeDef", &genBoolAbbrev}},
+          {BASE_RECORD_USR, {"USR", &genSymbolIdAbbrev}},
+          {BASE_RECORD_NAME, {"Name", &genStringAbbrev}},
+          {BASE_RECORD_PATH, {"Path", &genStringAbbrev}},
+          {BASE_RECORD_TAG_TYPE, {"TagType", &genIntAbbrev}},
+          {BASE_RECORD_IS_VIRTUAL, {"IsVirtual", &genBoolAbbrev}},
+          {BASE_RECORD_ACCESS, {"Access", &genIntAbbrev}},
+          {BASE_RECORD_IS_PARENT, {"IsParent", &genBoolAbbrev}},
+          {FUNCTION_USR, {"USR", &genSymbolIdAbbrev}},
+          {FUNCTION_NAME, {"Name", &genStringAbbrev}},
+          {FUNCTION_DEFLOCATION, {"DefLocation", &genLocationAbbrev}},
+          {FUNCTION_LOCATION, {"Location", &genLocationAbbrev}},
+          {FUNCTION_ACCESS, {"Access", &genIntAbbrev}},
+          {FUNCTION_IS_METHOD, {"IsMethod", &genBoolAbbrev}},
+          {FUNCTION_IS_STATIC, {"IsStatic", &genBoolAbbrev}},
+          {REFERENCE_USR, {"USR", &genSymbolIdAbbrev}},
+          {REFERENCE_NAME, {"Name", &genStringAbbrev}},
+          {REFERENCE_QUAL_NAME, {"QualName", &genStringAbbrev}},
+          {REFERENCE_TYPE, {"RefType", &genIntAbbrev}},
+          {REFERENCE_PATH, {"Path", &genStringAbbrev}},
+          {REFERENCE_FIELD, {"Field", &genIntAbbrev}},
+          {TEMPLATE_PARAM_CONTENTS, {"Contents", &genStringAbbrev}},
+          {TEMPLATE_SPECIALIZATION_OF,
+           {"SpecializationOf", &genSymbolIdAbbrev}},
+          {TYPEDEF_USR, {"USR", &genSymbolIdAbbrev}},
+          {TYPEDEF_NAME, {"Name", &genStringAbbrev}},
+          {TYPEDEF_DEFLOCATION, {"DefLocation", &genLocationAbbrev}},
+          {TYPEDEF_IS_USING, {"IsUsing", &genBoolAbbrev}}};
       assert(Inits.size() == RecordIdCount);
       for (const auto &Init : Inits) {
         RecordIdNameMap[Init.first] = Init.second;
@@ -222,7 +229,8 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // FieldType Block
         {BI_FIELD_TYPE_BLOCK_ID, {FIELD_TYPE_NAME, FIELD_DEFAULT_VALUE}},
         // MemberType Block
-        {BI_MEMBER_TYPE_BLOCK_ID, {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS}},
+        {BI_MEMBER_TYPE_BLOCK_ID,
+         {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS, MEMBER_TYPE_IS_STATIC}},
         // Enum Block
         {BI_ENUM_BLOCK_ID,
          {ENUM_USR, ENUM_NAME, ENUM_DEFLOCATION, ENUM_LOCATION, ENUM_SCOPED}},
@@ -247,7 +255,7 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Function Block
         {BI_FUNCTION_BLOCK_ID,
          {FUNCTION_USR, FUNCTION_NAME, FUNCTION_DEFLOCATION, FUNCTION_LOCATION,
-          FUNCTION_ACCESS, FUNCTION_IS_METHOD}},
+          FUNCTION_ACCESS, FUNCTION_IS_METHOD, FUNCTION_IS_STATIC}},
         // Reference Block
         {BI_REFERENCE_BLOCK_ID,
          {REFERENCE_USR, REFERENCE_NAME, REFERENCE_QUAL_NAME, REFERENCE_TYPE,
@@ -324,7 +332,7 @@ void ClangDocBitcodeWriter::emitAbbrev(RecordId ID, BlockId Block) {
 
 void ClangDocBitcodeWriter::emitRecord(const SymbolID &Sym, RecordId ID) {
   assert(RecordIdNameMap[ID] && "Unknown RecordId.");
-  assert(RecordIdNameMap[ID].Abbrev == &SymbolIDAbbrev &&
+  assert(RecordIdNameMap[ID].Abbrev == &genSymbolIdAbbrev &&
          "Abbrev type mismatch.");
   if (!prepRecordData(ID, Sym != EmptySID))
     return;
@@ -336,7 +344,7 @@ void ClangDocBitcodeWriter::emitRecord(const SymbolID &Sym, RecordId ID) {
 
 void ClangDocBitcodeWriter::emitRecord(llvm::StringRef Str, RecordId ID) {
   assert(RecordIdNameMap[ID] && "Unknown RecordId.");
-  assert(RecordIdNameMap[ID].Abbrev == &StringAbbrev &&
+  assert(RecordIdNameMap[ID].Abbrev == &genStringAbbrev &&
          "Abbrev type mismatch.");
   if (!prepRecordData(ID, !Str.empty()))
     return;
@@ -347,12 +355,13 @@ void ClangDocBitcodeWriter::emitRecord(llvm::StringRef Str, RecordId ID) {
 
 void ClangDocBitcodeWriter::emitRecord(const Location &Loc, RecordId ID) {
   assert(RecordIdNameMap[ID] && "Unknown RecordId.");
-  assert(RecordIdNameMap[ID].Abbrev == &LocationAbbrev &&
+  assert(RecordIdNameMap[ID].Abbrev == &genLocationAbbrev &&
          "Abbrev type mismatch.");
   if (!prepRecordData(ID, true))
     return;
   // FIXME: Assert that the line number is of the appropriate size.
-  Record.push_back(Loc.LineNumber);
+  Record.push_back(Loc.StartLineNumber);
+  Record.push_back(Loc.EndLineNumber);
   assert(Loc.Filename.size() < (1U << BitCodeConstants::StringLengthSize));
   Record.push_back(Loc.IsFileInRootDir);
   Record.push_back(Loc.Filename.size());
@@ -361,7 +370,8 @@ void ClangDocBitcodeWriter::emitRecord(const Location &Loc, RecordId ID) {
 
 void ClangDocBitcodeWriter::emitRecord(bool Val, RecordId ID) {
   assert(RecordIdNameMap[ID] && "Unknown RecordId.");
-  assert(RecordIdNameMap[ID].Abbrev == &BoolAbbrev && "Abbrev type mismatch.");
+  assert(RecordIdNameMap[ID].Abbrev == &genBoolAbbrev &&
+         "Abbrev type mismatch.");
   if (!prepRecordData(ID, Val))
     return;
   Record.push_back(Val);
@@ -370,7 +380,8 @@ void ClangDocBitcodeWriter::emitRecord(bool Val, RecordId ID) {
 
 void ClangDocBitcodeWriter::emitRecord(int Val, RecordId ID) {
   assert(RecordIdNameMap[ID] && "Unknown RecordId.");
-  assert(RecordIdNameMap[ID].Abbrev == &IntAbbrev && "Abbrev type mismatch.");
+  assert(RecordIdNameMap[ID].Abbrev == &genIntAbbrev &&
+         "Abbrev type mismatch.");
   if (!prepRecordData(ID, Val))
     return;
   // FIXME: Assert that the integer is of the appropriate size.
@@ -380,7 +391,8 @@ void ClangDocBitcodeWriter::emitRecord(int Val, RecordId ID) {
 
 void ClangDocBitcodeWriter::emitRecord(unsigned Val, RecordId ID) {
   assert(RecordIdNameMap[ID] && "Unknown RecordId.");
-  assert(RecordIdNameMap[ID].Abbrev == &IntAbbrev && "Abbrev type mismatch.");
+  assert(RecordIdNameMap[ID].Abbrev == &genIntAbbrev &&
+         "Abbrev type mismatch.");
   if (!prepRecordData(ID, Val))
     return;
   assert(Val < (1U << BitCodeConstants::IntSize));
@@ -465,6 +477,7 @@ void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
   emitBlock(T.Type, FieldId::F_type);
   emitRecord(T.Name, MEMBER_TYPE_NAME);
   emitRecord(T.Access, MEMBER_TYPE_ACCESS);
+  emitRecord(T.IsStatic, MEMBER_TYPE_IS_STATIC);
   for (const auto &CI : T.Description)
     emitBlock(CI);
 }
@@ -600,6 +613,7 @@ void ClangDocBitcodeWriter::emitBlock(const FunctionInfo &I) {
     emitBlock(CI);
   emitRecord(I.Access, FUNCTION_ACCESS);
   emitRecord(I.IsMethod, FUNCTION_IS_METHOD);
+  emitRecord(I.IsStatic, FUNCTION_IS_STATIC);
   if (I.DefLoc)
     emitRecord(*I.DefLoc, FUNCTION_DEFLOCATION);
   for (const auto &L : I.Loc)

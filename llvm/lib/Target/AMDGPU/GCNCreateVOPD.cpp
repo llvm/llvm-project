@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "gcn-create-vopd"
@@ -36,32 +37,20 @@ using namespace llvm;
 
 namespace {
 
-class GCNCreateVOPD : public MachineFunctionPass {
+class GCNCreateVOPD {
 private:
-    class VOPDCombineInfo {
-    public:
-      VOPDCombineInfo() = default;
-      VOPDCombineInfo(MachineInstr *First, MachineInstr *Second)
-          : FirstMI(First), SecondMI(Second) {}
+  class VOPDCombineInfo {
+  public:
+    VOPDCombineInfo() = default;
+    VOPDCombineInfo(MachineInstr *First, MachineInstr *Second)
+        : FirstMI(First), SecondMI(Second) {}
 
-      MachineInstr *FirstMI;
-      MachineInstr *SecondMI;
-    };
+    MachineInstr *FirstMI;
+    MachineInstr *SecondMI;
+  };
 
 public:
-  static char ID;
   const GCNSubtarget *ST = nullptr;
-
-  GCNCreateVOPD() : MachineFunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  StringRef getPassName() const override {
-    return "GCN Create VOPD Instructions";
-  }
 
   bool doReplace(const SIInstrInfo *SII, VOPDCombineInfo &CI) {
     auto *FirstMI = CI.FirstMI;
@@ -112,9 +101,7 @@ public:
     return true;
   }
 
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
+  bool run(MachineFunction &MF) {
     ST = &MF.getSubtarget<GCNSubtarget>();
     if (!AMDGPU::hasVOPD(*ST) || !ST->isWave32())
       return false;
@@ -163,11 +150,40 @@ public:
   }
 };
 
+class GCNCreateVOPDLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  GCNCreateVOPDLegacy() : MachineFunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  StringRef getPassName() const override {
+    return "GCN Create VOPD Instructions";
+  }
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+
+    return GCNCreateVOPD().run(MF);
+  }
+};
+
 } // namespace
 
-char GCNCreateVOPD::ID = 0;
+PreservedAnalyses
+llvm::GCNCreateVOPDPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &AM) {
+  if (!GCNCreateVOPD().run(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
+}
 
-char &llvm::GCNCreateVOPDID = GCNCreateVOPD::ID;
+char GCNCreateVOPDLegacy::ID = 0;
 
-INITIALIZE_PASS(GCNCreateVOPD, DEBUG_TYPE, "GCN Create VOPD Instructions",
+char &llvm::GCNCreateVOPDID = GCNCreateVOPDLegacy::ID;
+
+INITIALIZE_PASS(GCNCreateVOPDLegacy, DEBUG_TYPE, "GCN Create VOPD Instructions",
                 false, false)

@@ -85,6 +85,7 @@ struct ArchInfo {
 };
 
 bool isValidArchName(StringRef Arch);
+bool isValidFeatureName(StringRef Feature);
 bool getArchFeatures(StringRef Arch, std::vector<StringRef> &Features);
 bool isValidCPUName(StringRef TuneCPU);
 void fillValidCPUList(SmallVectorImpl<StringRef> &Values);

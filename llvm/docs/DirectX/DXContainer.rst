@@ -111,7 +111,7 @@ FXC are marked with \*.
 #. `PSV0`_ - Stores Pipeline State Validation data.
 #. RDAT† - Stores Runtime Data.
 #. RDEF\* - Stores resource definitions.
-#. RTS0 - Stores compiled root signature.
+#. `RTS0`_ - Stores compiled root signature.
 #. `SFI0`_ - Stores shader feature flags.
 #. SHDR\* - Stores compiled DXBC bytecode.
 #. SHEX\* - Stores compiled DXBC bytecode.
@@ -222,7 +222,7 @@ is an index table, and the third block is the elements themselves, which in turn
 are separeated by input, output and patch constant or primitive elements.
 
 Signature elements capture much of the same data captured in the :ref:`SG1
-<ISG1>` parts. The use of an index table allows de-duplciation of data for a more
+<ISG1>` parts. The use of an index table allows de-duplication of data for a more
 compact final representation.
 
 The string table begins with a 32-bit unsigned integer specifying the table
@@ -392,6 +392,187 @@ or primitive vector mask * the number of outputs * 4 (for each component). Each
 bit in the mask vector identifies one column of a patch constant input and a
 column of an output. A value of 1 means the output is impacted by the primitive
 input.
+
+Root Signature (RTS0) Part
+--------------------------
+.. _RTS0:
+
+The Root Signature data defines the shader's resource interface with Direct3D 
+12, specifying what resources the shader needs to access and how they're 
+organized and bound to the pipeline. 
+
+The RTS0 part comprises three data structures: ``RootSignatureHeader``, 
+``RootParameters`` and ``StaticSamplers``. The details of each will be described 
+in the following sections. All ``RootParameters`` will be serialized following 
+the order they were defined in the metadata representation.
+
+The table below summarizes the data being serialized as well as it's size. The 
+details of it part will be discussed in further details on the next sections 
+of this document.
+
+======================== =========================================== =============================
+Part Name                Size In Bytes                                 Maximum number of Instances 
+======================== =========================================== =============================
+Root Signature Header    24                                          1               
+Root Parameter Headers   12                                          Many              
+Root Parameter           ================================ ===        Many
+                         Root Constants                   12                                      
+                         Root Descriptor Version 1.0      8                                      
+                         Root Descriptor Version 1.1      12                                      
+                         Descriptors Tables Version 1.0   20                                     
+                         Descriptors Tables Version 1.1   24                                      
+                         ================================ ===       
+                                             
+Static Samplers          52                                          Many              
+======================== =========================================== =============================
+
+
+Root Signature Header
+~~~~~~~~~~~~~~~~~~~~~
+
+The root signature header is 24 bytes long, consisting of six 32-bit values
+representing the version, number and offset of parameters, number and offset 
+of static samplers, and a flags field for global behaviours:
+
+.. code-block:: c
+
+   struct RootSignatureHeader {
+     uint32_t Version;
+     uint32_t NumParameters;
+     uint32_t ParametersOffset;
+     uint32_t NumStaticSamplers;
+     uint32_t StaticSamplerOffset;
+     uint32_t Flags;
+   }
+
+
+Root Parameters
+~~~~~~~~~~~~~~~
+
+Root parameters define how resources are bound to the shader pipeline, each 
+type having different size and fields. 
+
+The slot of root parameters is preceded by a variable size section containing 
+the header information for such parameters. Such structure is 12 bytes long, 
+composed of three 32-bit values, representing the parameter type, a flag
+encoding the pipeline stages where the data is visible, and an offset 
+calculated from the start of RTS0 section.
+
+.. code-block:: c
+
+   struct RootParameterHeader {
+     uint32_t ParameterType;
+     uint32_t ShaderVisibility;
+     uint32_t ParameterOffset;
+   };
+
+After the header information has been serialized, the actual data for each of the
+root parameters is layout in a single continuous blob. The parameters can be fetch 
+from such using the offset information, present in the header.
+
+The following sections will describe each of the root parameters types and their 
+encodings.
+
+Root Constants
+''''''''''''''
+
+The root constants are inline 32-bit values that show up in the shader 
+as a constant buffer. It is a 12 bytes long structure, two 32-bit values
+encoding the register and space the constant is assigned to, and 
+the last 32 bits encode the number of constants being defined in the buffer.
+
+.. code-block:: c
+
+  struct RootConstants {
+    uint32_t Register;
+    uint32_t Space;
+    uint32_t NumOfConstants;
+  };
+
+Root Descriptor
+'''''''''''''''
+
+Root descriptors provide direct GPU memory addresses to resources.
+
+In version 1.0, the root descriptor is 8 bytes. It encodes the register and
+space as 2 32-bit values.
+
+In version 1.1, the root descriptor is 12 bytes. It matches the 1.0 descriptor
+but adds a 32-bit access flag.
+
+.. code-block:: c
+
+   struct RootDescriptor_V1_0 {
+      uint32_t ShaderRegister;
+      uint32_t RegisterSpace;
+   };
+   
+   struct RootDescriptor_V1_1 {
+      uint32_t ShaderRegister;
+      uint32_t RegisterSpace;      
+      uint32_t Flags;
+   };
+
+Root Descriptor Table
+'''''''''''''''''''''
+
+Descriptor tables let shaders access multiple resources through a single pointer 
+to a descriptor heap. 
+
+The tables are made of a collection of descriptor ranges. In Version 1.0, the 
+descriptor range is 20 bytes, containing five 32-bit values. It encodes a range
+of registers, including the register type, range length, register numbers and 
+space within range and the offset locating each range inside the table.
+
+In version 1.1, the descriptor range is 24 bytes. It matches the 1.0 descriptor
+but adds a 32-bit access flag.
+
+.. code-block:: c
+
+   struct DescriptorRange_V1_0 {
+      uint32_t RangeType;
+      uint32_t NumDescriptors;
+      uint32_t BaseShaderRegister;
+      uint32_t RegisterSpace;
+      uint32_t OffsetInDescriptorsFromTableStart;
+   };
+
+   struct DescriptorRange_V1_1 {
+      dxbc::DescriptorRangeType RangeType;
+      uint32_t NumDescriptors;
+      uint32_t BaseShaderRegister;
+      uint32_t RegisterSpace;
+      uint32_t OffsetInDescriptorsFromTableStart;      
+      uint32_t Flags;
+   };
+
+Static Samplers
+~~~~~~~~~~~~~~~
+
+Static samplers are predefined filtering settings built into the root signature, 
+avoiding descriptor heap lookups. 
+
+This section also has a variable size, since it can contain multiple static 
+samplers definitions. However, the definition is a fixed sized struct, 
+containing 13 32-byte fields of various enum, float, and integer values. 
+
+.. code-block:: c
+
+   struct StaticSamplerDesc {
+      FilterMode Filter; 
+      TextureAddressMode AddressU;
+      TextureAddressMode AddressV;
+      TextureAddressMode AddressW;
+      float MipLODBias;
+      uint32_t MaxAnisotropy;
+      ComparisonFunc ComparisonFunc; 
+      StaticBorderColor BorderColor;
+      float MinLOD;
+      float MaxLOD;
+      uint32_t ShaderRegister;
+      uint32_t RegisterSpace;
+      ShaderVisibility ShaderVisibility;
+   };
 
 SFI0 Part
 ---------

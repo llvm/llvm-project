@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file defines CheckerContext that provides contextual info for
-// path-sensitive checkers.
+//  path-sensitive checkers.
 //
 //===----------------------------------------------------------------------===//
 
@@ -51,6 +51,8 @@ public:
       wasInlined(wasInlined) {
     assert(Pred->getState() &&
            "We should not call the checkers on an empty state.");
+    assert(loc.getTag() && "The ProgramPoint associated with CheckerContext "
+                           "must be tagged with the active checker.");
   }
 
   AnalysisManager &getAnalysisManager() {
@@ -151,8 +153,10 @@ public:
     return Pred->getSVal(S);
   }
 
+  ConstCFGElementRef getCFGElementRef() const { return Eng.getCFGElementRef(); }
+
   /// Returns true if the value of \p E is greater than or equal to \p
-  /// Val under unsigned comparison
+  /// Val under unsigned comparison.
   bool isGreaterOrEqual(const Expr *E, unsigned long long Val);
 
   /// Returns true if the value of \p E is negative.
@@ -392,7 +396,7 @@ public:
   /// hardened variant that's not yet covered by it.
   static bool isHardenedVariantOf(const FunctionDecl *FD, StringRef Name);
 
-  /// Depending on wither the location corresponds to a macro, return
+  /// Depending on whether the location corresponds to a macro, return
   /// either the macro name or the token spelling.
   ///
   /// This could be useful when checkers' logic depends on whether a function

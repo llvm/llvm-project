@@ -328,3 +328,108 @@ define { ppc_fp128, ppc_fp128 } @test_modf_ppcf128(ppc_fp128 %a) {
   %result = call { ppc_fp128, ppc_fp128 } @llvm.modf.ppcf128(ppc_fp128 %a)
   ret { ppc_fp128, ppc_fp128 } %result
 }
+
+define ppc_fp128 @test_modf_ppcf128_only_use_intergral(ppc_fp128 %a) {
+; CHECK-LABEL: test_modf_ppcf128_only_use_intergral:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    std r0, 64(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    addi r5, r1, 32
+; CHECK-NEXT:    bl modfl
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    lfd f1, 32(r1)
+; CHECK-NEXT:    lfd f2, 40(r1)
+; CHECK-NEXT:    addi r1, r1, 48
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+  %result = call { ppc_fp128, ppc_fp128 } @llvm.modf.ppcf128(ppc_fp128 %a)
+  %result.1 = extractvalue { ppc_fp128, ppc_fp128 } %result, 1
+  ret ppc_fp128 %result.1
+}
+
+define ppc_fp128 @test_modf_ppcf128_only_use_fractional(ppc_fp128 %a) {
+; CHECK-LABEL: test_modf_ppcf128_only_use_fractional:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    std r0, 64(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    addi r5, r1, 32
+; CHECK-NEXT:    bl modfl
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 48
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+  %result = call { ppc_fp128, ppc_fp128 } @llvm.modf.ppcf128(ppc_fp128 %a)
+  %result.1 = extractvalue { ppc_fp128, ppc_fp128 } %result, 0
+  ret ppc_fp128 %result.1
+}
+
+define { ppc_fp128, ppc_fp128 } @test_modf_ppcf128_tail_call(ppc_fp128 %a) {
+; CHECK-LABEL: test_modf_ppcf128_tail_call:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    std r0, 64(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    addi r5, r1, 32
+; CHECK-NEXT:    bl modfl
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    lfd f3, 32(r1)
+; CHECK-NEXT:    lfd f4, 40(r1)
+; CHECK-NEXT:    addi r1, r1, 48
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+  %result = tail call { ppc_fp128, ppc_fp128 } @llvm.modf.ppcf128(ppc_fp128 %a)
+  ret { ppc_fp128, ppc_fp128 } %result
+}
+
+define ppc_fp128 @test_modf_ppcf128_only_use_intergral_tail_call(ppc_fp128 %a) {
+; CHECK-LABEL: test_modf_ppcf128_only_use_intergral_tail_call:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    std r0, 64(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    addi r5, r1, 32
+; CHECK-NEXT:    bl modfl
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    lfd f1, 32(r1)
+; CHECK-NEXT:    lfd f2, 40(r1)
+; CHECK-NEXT:    addi r1, r1, 48
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+  %result = tail call { ppc_fp128, ppc_fp128 } @llvm.modf.ppcf128(ppc_fp128 %a)
+  %result.1 = extractvalue { ppc_fp128, ppc_fp128 } %result, 1
+  ret ppc_fp128 %result.1
+}
+
+define ppc_fp128 @test_modf_ppcf128_only_use_fractional_tail_call(ppc_fp128 %a) {
+; CHECK-LABEL: test_modf_ppcf128_only_use_fractional_tail_call:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    std r0, 64(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    addi r5, r1, 32
+; CHECK-NEXT:    bl modfl
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 48
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+  %result = tail call { ppc_fp128, ppc_fp128 } @llvm.modf.ppcf128(ppc_fp128 %a)
+  %result.1 = extractvalue { ppc_fp128, ppc_fp128 } %result, 0
+  ret ppc_fp128 %result.1
+}

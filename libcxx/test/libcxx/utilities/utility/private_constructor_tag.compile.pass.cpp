@@ -18,4 +18,5 @@
 #include <__utility/private_constructor_tag.h>
 #include <type_traits>
 
-static_assert(std::is_trivial<std::__private_constructor_tag>::value, "");
+static_assert(std::is_trivially_copyable<std::__private_constructor_tag>::value, "");
+static_assert(std::is_trivially_default_constructible<std::__private_constructor_tag>::value, "");

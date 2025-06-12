@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -92,15 +91,15 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
   return CachedMCSymbol;
 }
 
-MCSymbol *MachineBasicBlock::getEHCatchretSymbol() const {
-  if (!CachedEHCatchretMCSymbol) {
+MCSymbol *MachineBasicBlock::getEHContSymbol() const {
+  if (!CachedEHContMCSymbol) {
     const MachineFunction *MF = getParent();
     SmallString<128> SymbolName;
     raw_svector_ostream(SymbolName)
         << "$ehgcr_" << MF->getFunctionNumber() << '_' << getNumber();
-    CachedEHCatchretMCSymbol = MF->getContext().getOrCreateSymbol(SymbolName);
+    CachedEHContMCSymbol = MF->getContext().getOrCreateSymbol(SymbolName);
   }
-  return CachedEHCatchretMCSymbol;
+  return CachedEHContMCSymbol;
 }
 
 MCSymbol *MachineBasicBlock::getEndSymbol() const {
@@ -1587,20 +1586,36 @@ MachineBasicBlock::getSuccProbability(const_succ_iterator Succ) const {
     return BranchProbability(1, succ_size());
 
   const auto &Prob = *getProbabilityIterator(Succ);
-  if (Prob.isUnknown()) {
-    // For unknown probabilities, collect the sum of all known ones, and evenly
-    // ditribute the complemental of the sum to each unknown probability.
-    unsigned KnownProbNum = 0;
-    auto Sum = BranchProbability::getZero();
-    for (const auto &P : Probs) {
-      if (!P.isUnknown()) {
-        Sum += P;
-        KnownProbNum++;
-      }
-    }
-    return Sum.getCompl() / (Probs.size() - KnownProbNum);
-  } else
+  if (!Prob.isUnknown())
     return Prob;
+  // For unknown probabilities, collect the sum of all known ones, and evenly
+  // ditribute the complemental of the sum to each unknown probability.
+  unsigned KnownProbNum = 0;
+  auto Sum = BranchProbability::getZero();
+  for (const auto &P : Probs) {
+    if (!P.isUnknown()) {
+      Sum += P;
+      KnownProbNum++;
+    }
+  }
+  return Sum.getCompl() / (Probs.size() - KnownProbNum);
+}
+
+bool MachineBasicBlock::canPredictBranchProbabilities() const {
+  if (succ_size() <= 1)
+    return true;
+  if (!hasSuccessorProbabilities())
+    return true;
+
+  SmallVector<BranchProbability, 8> Normalized(Probs.begin(), Probs.end());
+  BranchProbability::normalizeProbabilities(Normalized);
+
+  // Normalize assuming unknown probabilities. This will assign equal
+  // probabilities to all successors.
+  SmallVector<BranchProbability, 8> Equal(Normalized.size());
+  BranchProbability::normalizeProbabilities(Equal);
+
+  return llvm::equal(Normalized, Equal);
 }
 
 /// Set successor probability of a given iterator.
@@ -1760,20 +1775,18 @@ void MachineBasicBlock::clearLiveIns(
 }
 
 MachineBasicBlock::livein_iterator MachineBasicBlock::livein_begin() const {
-  assert(getParent()->getProperties().hasProperty(
-      MachineFunctionProperties::Property::TracksLiveness) &&
-      "Liveness information is accurate");
+  assert(getParent()->getProperties().hasTracksLiveness() &&
+         "Liveness information is accurate");
   return LiveIns.begin();
 }
 
 MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   const MachineFunction &MF = *getParent();
-  assert(MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::TracksLiveness) &&
-      "Liveness information is accurate");
+  assert(MF.getProperties().hasTracksLiveness() &&
+         "Liveness information is accurate");
 
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-  MCPhysReg ExceptionPointer = 0, ExceptionSelector = 0;
+  MCRegister ExceptionPointer, ExceptionSelector;
   if (MF.getFunction().hasPersonalityFn()) {
     auto PersonalityFn = MF.getFunction().getPersonalityFn();
     ExceptionPointer = TLI.getExceptionPointerRegister(PersonalityFn);

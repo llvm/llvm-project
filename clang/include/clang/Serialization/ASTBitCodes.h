@@ -1129,7 +1129,7 @@ enum PredefinedTypeIDs {
 #include "clang/Basic/OpenCLExtensionTypes.def"
 // \brief SVE types with auto numeration
 #define SVE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 // \brief  PowerPC MMA types with auto numeration
 #define PPC_VECTOR_TYPE(Name, Id, Size) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/PPCTypes.def"
@@ -1528,7 +1528,13 @@ enum DeclCode {
   // A decls specialization record.
   DECL_PARTIAL_SPECIALIZATIONS,
 
-  DECL_LAST = DECL_PARTIAL_SPECIALIZATIONS
+  // An OpenACCDeclareDecl record.
+  DECL_OPENACC_DECLARE,
+
+  // An OpenACCRoutineDecl record.
+  DECL_OPENACC_ROUTINE,
+
+  DECL_LAST = DECL_OPENACC_ROUTINE
 };
 
 /// Record codes for each kind of statement or expression.
@@ -2046,6 +2052,7 @@ enum StmtCode {
   STMT_OPENACC_SET_CONSTRUCT,
   STMT_OPENACC_UPDATE_CONSTRUCT,
   STMT_OPENACC_ATOMIC_CONSTRUCT,
+  STMT_OPENACC_CACHE_CONSTRUCT,
 
   // HLSL Constructs
   EXPR_HLSL_OUT_ARG,

@@ -22,9 +22,9 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; VLENUNK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; VLENUNK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; VLENUNK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; VLENUNK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[V:%.*]], i64 0
 ; VLENUNK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; VLENUNK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; VLENUNK-NEXT:    [[TMP8:%.*]] = mul <vscale x 4 x i64> [[TMP6]], splat (i64 1)
 ; VLENUNK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP8]]
 ; VLENUNK-NEXT:    [[TMP11:%.*]] = mul i64 1, [[TMP5]]
@@ -34,14 +34,13 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK:       vector.body:
 ; VLENUNK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; VLENUNK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VLENUNK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 0
 ; VLENUNK-NEXT:    [[TMP13:%.*]] = icmp ult <vscale x 4 x i64> [[VEC_IND]], splat (i64 512)
-; VLENUNK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[TMP12]]
+; VLENUNK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; VLENUNK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[TMP14]], i32 0
 ; VLENUNK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP15]], i32 4, <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i32> poison)
 ; VLENUNK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], <vscale x 4 x i32> zeroinitializer
 ; VLENUNK-NEXT:    [[TMP17:%.*]] = add <vscale x 4 x i32> [[PREDPHI]], [[BROADCAST_SPLAT]]
-; VLENUNK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP12]]
+; VLENUNK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
 ; VLENUNK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP18]], i32 0
 ; VLENUNK-NEXT:    store <vscale x 4 x i32> [[TMP17]], ptr [[TMP19]], align 4
 ; VLENUNK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]

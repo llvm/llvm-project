@@ -176,6 +176,10 @@ iretl
 // CHECK: encoding: [0x66,0xcf]          
 iretw 
 
+// CHECK: jcxz 64
+// CHECK: encoding: [0x67,0xe3,A]
+jcxz 64
+
 // CHECK: jecxz 64 
 // CHECK: encoding: [0xe3,A]         
 jecxz 64 

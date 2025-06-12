@@ -56,7 +56,6 @@ struct DXILOperationDesc {
   SmallVector<const Record *> OverloadRecs;
   SmallVector<const Record *> StageRecs;
   SmallVector<const Record *> AttrRecs;
-  SmallVector<const Record *> PropRecs;
   SmallVector<DXILIntrinsicSelect> IntrinsicSelects;
   SmallVector<StringRef, 4>
       ShaderStages; // shader stages to which this applies, empty for all.
@@ -114,9 +113,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 
   ParamTypeRecs.push_back(R->getValueAsDef("result"));
 
-  for (const Record *ArgTy : R->getValueAsListOfDefs("arguments")) {
-    ParamTypeRecs.push_back(ArgTy);
-  }
+  llvm::append_range(ParamTypeRecs, R->getValueAsListOfDefs("arguments"));
   size_t ParamTypeRecsSize = ParamTypeRecs.size();
   // Populate OpTypes with return type and parameter types
 
@@ -149,9 +146,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   ascendingSortByVersion(Recs);
 
-  for (const Record *CR : Recs) {
-    OverloadRecs.push_back(CR);
-  }
+  llvm::append_range(OverloadRecs, Recs);
 
   // Get stage records
   Recs = R->getValueAsListOfDefs("stages");
@@ -164,9 +159,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   ascendingSortByVersion(Recs);
 
-  for (const Record *CR : Recs) {
-    StageRecs.push_back(CR);
-  }
+  llvm::append_range(StageRecs, Recs);
 
   // Get attribute records
   Recs = R->getValueAsListOfDefs("attributes");
@@ -174,23 +167,14 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   ascendingSortByVersion(Recs);
 
-  for (const Record *CR : Recs) {
-    AttrRecs.push_back(CR);
-  }
-
-  Recs = R->getValueAsListOfDefs("properties");
-
-  // Get property records
-  for (const Record *CR : Recs)
-    PropRecs.push_back(CR);
+  llvm::append_range(AttrRecs, Recs);
 
   // Get the operation class
   OpClass = R->getValueAsDef("OpClass")->getName();
 
-  if (!OpClass.str().compare("UnknownOpClass")) {
+  if (OpClass.str() == "UnknownOpClass")
     PrintFatalError(R, Twine("Unspecified DXIL OpClass for DXIL operation - ") +
                            OpName);
-  }
 
   auto IntrinsicSelectRecords = R->getValueAsListOfDefs("intrinsics");
   if (IntrinsicSelectRecords.size()) {
@@ -427,15 +411,6 @@ static void emitDXILOpAttributes(const RecordKeeper &Records,
   OS << "#endif\n\n";
 }
 
-/// Emit a list of DXIL op properties
-static void emitDXILProperties(const RecordKeeper &Records, raw_ostream &OS) {
-  OS << "#ifdef DXIL_PROPERTY\n";
-  for (const Record *Prop : Records.getAllDerivedDefinitions("DXILProperty"))
-    OS << "DXIL_PROPERTY(" << Prop->getName() << ")\n";
-  OS << "#undef DXIL_PROPERTY\n";
-  OS << "#endif\n\n";
-}
-
 /// Emit a list of DXIL op function types
 static void emitDXILOpFunctionTypes(ArrayRef<DXILOperationDesc> Ops,
                                     raw_ostream &OS) {
@@ -639,7 +614,6 @@ static void emitDxilOperation(const RecordKeeper &Records, raw_ostream &OS) {
   emitDXILOpParamTypes(Records, OS);
   emitDXILAttributes(Records, OS);
   emitDXILOpAttributes(Records, DXILOps, OS);
-  emitDXILProperties(Records, OS);
   emitDXILOpFunctionTypes(DXILOps, OS);
   emitDXILIntrinsicArgSelectTypes(Records, OS);
   emitDXILIntrinsicMap(DXILOps, OS);

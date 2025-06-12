@@ -47,6 +47,10 @@ static const LangASMap FakeAddrSpaceMap = {
     11, // ptr32_uptr
     12, // ptr64
     13, // hlsl_groupshared
+    14, // hlsl_constant
+    15, // hlsl_private
+    16, // hlsl_device
+    17, // hlsl_input
     20, // wasm_funcref
 };
 
@@ -155,7 +159,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   SSERegParmMax = 0;
   HasAlignMac68kSupport = false;
   HasBuiltinMSVaList = false;
-  HasAArch64SVETypes = false;
+  HasAArch64ACLETypes = false;
   HasRISCVVTypes = false;
   AllowAMDGPUUnsafeFPAtomics = false;
   HasUnalignedAccess = false;

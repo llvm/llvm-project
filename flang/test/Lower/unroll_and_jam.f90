@@ -2,8 +2,10 @@
 
 ! CHECK: #loop_unroll_and_jam = #llvm.loop_unroll_and_jam<disable = false>
 ! CHECK: #loop_unroll_and_jam1 = #llvm.loop_unroll_and_jam<disable = false, count = 2 : i64>
+! CHECK: #loop_unroll_and_jam2 = #llvm.loop_unroll_and_jam<disable = true>
 ! CHECK: #loop_annotation = #llvm.loop_annotation<unrollAndJam = #loop_unroll_and_jam>
 ! CHECK: #loop_annotation1 = #llvm.loop_annotation<unrollAndJam = #loop_unroll_and_jam1>
+! CHECK: #loop_annotation2 = #llvm.loop_annotation<unrollAndJam = #loop_unroll_and_jam2>
 
 ! CHECK-LABEL: unroll_and_jam_dir
 subroutine unroll_and_jam_dir
@@ -32,3 +34,14 @@ subroutine intermediate_directive
      a(i)=i
   end do
 end subroutine intermediate_directive
+
+
+! CHECK-LABEL: nounroll_and_jam_dir
+subroutine nounroll_and_jam_dir
+  integer :: a(10)
+  !dir$ nounroll_and_jam
+  !CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #loop_annotation2}
+  do i=1,10
+     a(i)=i
+  end do
+end subroutine nounroll_and_jam_dir

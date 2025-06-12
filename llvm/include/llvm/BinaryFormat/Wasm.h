@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -28,8 +29,9 @@ const char WasmMagic[] = {'\0', 'a', 's', 'm'};
 const uint32_t WasmVersion = 0x1;
 // Wasm linking metadata version
 const uint32_t WasmMetadataVersion = 0x2;
-// Wasm uses a 64k page size
-const uint32_t WasmPageSize = 65536;
+// Wasm uses a 64k page size by default (but the custom-page-sizes proposal
+// allows changing it)
+const uint32_t WasmDefaultPageSize = 65536;
 
 enum : unsigned {
   WASM_SEC_CUSTOM = 0,     // Custom / User-defined section
@@ -157,6 +159,7 @@ enum : unsigned {
   WASM_LIMITS_FLAG_HAS_MAX = 0x1,
   WASM_LIMITS_FLAG_IS_SHARED = 0x2,
   WASM_LIMITS_FLAG_IS_64 = 0x4,
+  WASM_LIMITS_FLAG_HAS_PAGE_SIZE = 0x8,
 };
 
 enum : unsigned {
@@ -319,6 +322,7 @@ struct WasmLimits {
   uint8_t Flags;
   uint64_t Minimum;
   uint64_t Maximum;
+  uint32_t PageSize;
 };
 
 struct WasmTableType {
@@ -534,17 +538,20 @@ inline bool operator!=(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
 inline bool operator==(const WasmLimits &LHS, const WasmLimits &RHS) {
   return LHS.Flags == RHS.Flags && LHS.Minimum == RHS.Minimum &&
          (LHS.Flags & WASM_LIMITS_FLAG_HAS_MAX ? LHS.Maximum == RHS.Maximum
-                                               : true);
+                                               : true) &&
+         (LHS.Flags & WASM_LIMITS_FLAG_HAS_PAGE_SIZE
+              ? LHS.PageSize == RHS.PageSize
+              : true);
 }
 
 inline bool operator==(const WasmTableType &LHS, const WasmTableType &RHS) {
   return LHS.ElemType == RHS.ElemType && LHS.Limits == RHS.Limits;
 }
 
-llvm::StringRef toString(WasmSymbolType type);
-llvm::StringRef relocTypetoString(uint32_t type);
-llvm::StringRef sectionTypeToString(uint32_t type);
-bool relocTypeHasAddend(uint32_t type);
+LLVM_ABI llvm::StringRef toString(WasmSymbolType type);
+LLVM_ABI llvm::StringRef relocTypetoString(uint32_t type);
+LLVM_ABI llvm::StringRef sectionTypeToString(uint32_t type);
+LLVM_ABI bool relocTypeHasAddend(uint32_t type);
 
 } // end namespace wasm
 } // end namespace llvm

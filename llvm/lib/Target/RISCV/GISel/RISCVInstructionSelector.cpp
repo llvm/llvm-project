@@ -16,7 +16,7 @@
 #include "RISCVSubtarget.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -44,10 +44,10 @@ public:
 
   bool select(MachineInstr &MI) override;
 
-  void setupMF(MachineFunction &MF, GISelKnownBits *KB,
+  void setupMF(MachineFunction &MF, GISelValueTracking *VT,
                CodeGenCoverage *CoverageInfo, ProfileSummaryInfo *PSI,
                BlockFrequencyInfo *BFI) override {
-    InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
+    InstructionSelector::setupMF(MF, VT, CoverageInfo, PSI, BFI);
     MRI = &MF.getRegInfo();
   }
 
@@ -305,7 +305,7 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root,
     } else {
       // SimplifyDemandedBits may have optimized the mask so try restoring any
       // bits that are known zero.
-      KnownBits Known = KB->getKnownBits(AndSrcReg);
+      KnownBits Known = VT->getKnownBits(AndSrcReg);
       if (ShMask.isSubsetOf(AndMask | Known.Zero))
         ShAmtReg = AndSrcReg;
     }
@@ -361,7 +361,7 @@ RISCVInstructionSelector::selectSExtBits(MachineOperand &Root,
   }
 
   unsigned Size = MRI->getType(RootReg).getScalarSizeInBits();
-  if ((Size - KB->computeNumSignBits(RootReg)) < Bits)
+  if ((Size - VT->computeNumSignBits(RootReg)) < Bits)
     return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
 
   return std::nullopt;
@@ -385,7 +385,7 @@ RISCVInstructionSelector::selectZExtBits(MachineOperand &Root,
     return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RegX); }}};
 
   unsigned Size = MRI->getType(RootReg).getScalarSizeInBits();
-  if (KB->maskedValueIsZero(RootReg, APInt::getBitsSetFrom(Size, Bits)))
+  if (VT->maskedValueIsZero(RootReg, APInt::getBitsSetFrom(Size, Bits)))
     return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
 
   return std::nullopt;

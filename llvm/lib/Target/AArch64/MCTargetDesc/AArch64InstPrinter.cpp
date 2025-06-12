@@ -1018,7 +1018,7 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
     return false;
 
   std::string Str = Ins + Name;
-  std::transform(Str.begin(), Str.end(), Str.begin(), ::tolower);
+  llvm::transform(Str, Str.begin(), ::tolower);
 
   O << '\t' << Str;
   if (NeedsReg) {
@@ -1077,7 +1077,7 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
     return false;
 
   std::string Str = Ins + Name;
-  std::transform(Str.begin(), Str.end(), Str.begin(), ::tolower);
+  llvm::transform(Str, Str.begin(), ::tolower);
 
   O << '\t' << Str;
   O << ", ";

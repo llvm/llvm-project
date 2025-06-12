@@ -604,9 +604,7 @@ ExpandVariadics::defineVariadicWrapper(Module &M, IRBuilder<> &Builder,
   Builder.CreateIntrinsic(Intrinsic::vastart, {DL.getAllocaPtrType(Ctx)},
                           {VaListInstance});
 
-  SmallVector<Value *> Args;
-  for (Argument &A : F.args())
-    Args.push_back(&A);
+  SmallVector<Value *> Args(llvm::make_pointer_range(F.args()));
 
   Type *ParameterType = ABI->vaListParameterType(M);
   if (ABI->vaListPassedInSSARegister())

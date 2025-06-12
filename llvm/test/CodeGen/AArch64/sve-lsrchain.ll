@@ -85,7 +85,7 @@ define void @test(ptr nocapture noundef readonly %kernel, i32 noundef %kw, float
 ; CHECK-NEXT:    ldr z5, [x4, #3, mul vl]
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
 ; CHECK-NEXT:    str z4, [x16, #3, mul vl]
-; CHECK-NEXT:    addvl x16, x16, #4
+; CHECK-NEXT:    incb x16, all, mul #4
 ; CHECK-NEXT:    cmp x16, x11
 ; CHECK-NEXT:    b.lo .LBB0_4
 ; CHECK-NEXT:  // %bb.5: // %while.cond.i..exit_crit_edge.us
