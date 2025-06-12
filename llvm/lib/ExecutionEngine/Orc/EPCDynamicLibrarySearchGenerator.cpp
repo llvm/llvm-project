@@ -86,7 +86,8 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
       const auto &Sym = *SymsIt++;
       if (Sym && Sym->getAddress())
         NewSymbols[Name] = *Sym;
-      else if (LLVM_UNLIKELY(!Sym && Flags == SymbolLookupFlags::RequiredSymbol))
+      else if (LLVM_UNLIKELY(!Sym &&
+                             Flags == SymbolLookupFlags::RequiredSymbol))
         MissingSymbols.insert(Name);
     }
 
