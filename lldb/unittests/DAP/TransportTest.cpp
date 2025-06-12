@@ -26,6 +26,8 @@ using namespace lldb_dap::protocol;
 using lldb_private::File;
 using lldb_private::NativeFile;
 using lldb_private::Pipe;
+using lldb_private::TransportEOFError;
+using lldb_private::TransportTimeoutError;
 
 class TransportTest : public PipeBase {
 protected:
@@ -50,7 +52,7 @@ TEST_F(TransportTest, MalformedRequests) {
       input.Write(malformed_header.data(), malformed_header.size()),
       Succeeded());
   ASSERT_THAT_EXPECTED(
-      transport->Read(std::chrono::milliseconds(1)),
+      transport->Read<protocol::Message>(std::chrono::milliseconds(1)),
       FailedWithMessage(
           "expected 'Content-Length: ' and got 'COnTent-LenGth: '"));
 }
@@ -63,20 +65,22 @@ TEST_F(TransportTest, Read) {
   ASSERT_THAT_EXPECTED(input.Write(message.data(), message.size()),
                        Succeeded());
   ASSERT_THAT_EXPECTED(
-      transport->Read(std::chrono::milliseconds(1)),
+      transport->Read<protocol::Message>(std::chrono::milliseconds(1)),
       HasValue(testing::VariantWith<Request>(testing::FieldsAre(
           /*seq=*/1, /*command=*/"abc", /*arguments=*/std::nullopt))));
 }
 
 TEST_F(TransportTest, ReadWithTimeout) {
-  ASSERT_THAT_EXPECTED(transport->Read(std::chrono::milliseconds(1)),
-                       Failed<TimeoutError>());
+  ASSERT_THAT_EXPECTED(
+      transport->Read<protocol::Message>(std::chrono::milliseconds(1)),
+      Failed<TransportTimeoutError>());
 }
 
 TEST_F(TransportTest, ReadWithEOF) {
   input.CloseWriteFileDescriptor();
-  ASSERT_THAT_EXPECTED(transport->Read(std::chrono::milliseconds(1)),
-                       Failed<EndOfFileError>());
+  ASSERT_THAT_EXPECTED(
+      transport->Read<protocol::Message>(std::chrono::milliseconds(1)),
+      Failed<TransportEOFError>());
 }
 
 TEST_F(TransportTest, Write) {
