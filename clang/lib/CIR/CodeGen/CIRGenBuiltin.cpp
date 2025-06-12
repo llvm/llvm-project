@@ -66,7 +66,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitLibraryCall(*this, fd, e,
                            cgm.getBuiltinLibFunction(fd, builtinID));
 
-  cgm.errorNYI(e->getSourceRange(), "non constant foldable builtin calls");
+  cgm.errorNYI(e->getSourceRange(), "unimplemented builtin call");
   return getUndefRValue(e->getType());
 }
 
