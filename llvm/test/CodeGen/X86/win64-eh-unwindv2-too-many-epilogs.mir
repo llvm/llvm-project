@@ -1,16 +1,16 @@
 # Require V2 and restrict the number of unwind codes to 8
-# RUN: not llc -mtriple=x86_64-unknown-windows-msvc -o - %s \
+# RUN: not llc -mtriple=x86_64-pc-windows-msvc -o - %s \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-max-unwind-codes=8 \
 # RUN:    2>&1 | FileCheck %s -check-prefix=REQUIREV2
 
 # Force best-effort and restrict the number of unwind codes to 8
-# RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %s \
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %s \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-max-unwind-codes=8 \
 # RUN:    -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s -check-prefix=BESTEFFORT
 
 # Require V2, but allow the default number of unwind codes (255)
-# RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %s \
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %s \
 # RUN:    -run-pass=x86-wineh-unwindv2 | FileCheck %s -check-prefix=ALLOWMORE
 
 # Usually 255 unwind codes are permitted, but we passed an arg to llc to limit

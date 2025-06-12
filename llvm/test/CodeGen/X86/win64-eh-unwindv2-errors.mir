@@ -6,10 +6,10 @@
 # BESTEFFORT-NOT: SEH_UnwindV2Start
 
 ;--- alloc_no_dealloc.mir
-# RUN: not llc -mtriple=x86_64-unknown-windows-msvc -o - \
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/alloc_no_dealloc.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=ALLOC-NO-DEALLOC
-# RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %t/alloc_no_dealloc.mir \
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/alloc_no_dealloc.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # ALLOC-NO-DEALLOC: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'alloc_no_dealloc':
@@ -36,10 +36,10 @@ body:             |
 ...
 
 ;--- missed_push.mir
-# RUN: not llc -mtriple=x86_64-unknown-windows-msvc -o - %t/missed_push.mir \
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - %t/missed_push.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 2>&1 | FileCheck %s \
 # RUN:    --check-prefix=MISSED-PUSH
-# RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %t/missed_push.mir \
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/missed_push.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # MISSED-PUSH: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'missed_push':
@@ -69,10 +69,10 @@ body:             |
 ...
 
 ;--- dealloc_no_alloc.mir
-# RUN: not llc -mtriple=x86_64-unknown-windows-msvc -o - \
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/dealloc_no_alloc.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=DEALLOC-NO-ALLOC
-# RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %t/dealloc_no_alloc.mir \
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/dealloc_no_alloc.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # DEALLOC-NO-ALLOC: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'dealloc_no_alloc':
@@ -98,10 +98,10 @@ body:             |
 ...
 
 ;--- double_dealloc.mir
-# RUN: not llc -mtriple=x86_64-unknown-windows-msvc -o - %t/double_dealloc.mir \
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - %t/double_dealloc.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 2>&1 | FileCheck %s \
 # RUN:    --check-prefix=DOUBLE-DEALLOC
-# RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %t/double_dealloc.mir \
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/double_dealloc.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # DOUBLE-DEALLOC: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'double_dealloc':
@@ -130,10 +130,10 @@ body:             |
 ...
 
 ;--- dealloc_after_epilog.mir
-# RUN: not llc -mtriple=x86_64-unknown-windows-msvc -o - \
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/dealloc_after_epilog.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=DEALLOC-AFTER-EPILOG
-# RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - \
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/dealloc_after_epilog.mir -run-pass=x86-wineh-unwindv2 \
 # RUN:    -x86-wineh-unwindv2-force-mode=1 |  FileCheck %s \
 # RUN:    --check-prefix=BESTEFFORT
@@ -160,10 +160,10 @@ body:             |
 ...
 
 ;--- pop_before_dealloc.mir
-# RUN: not llc -mtriple=x86_64-unknown-windows-msvc -o - \
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/pop_before_dealloc.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=POP-BEFORE-DEALLOC
-# RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %t/pop_before_dealloc.mir \
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/pop_before_dealloc.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # POP-BEFORE-DEALLOC: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'pop_before_dealloc':
@@ -194,10 +194,10 @@ body:             |
 ...
 
 ;--- too_many_pops.mir
-# RUN: not llc -mtriple=x86_64-unknown-windows-msvc -o - %t/too_many_pops.mir \
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - %t/too_many_pops.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 2>&1 | FileCheck %s \
 # RUN:    --check-prefix=TOO-MANY-POPS
-# RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %t/too_many_pops.mir \
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/too_many_pops.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # TOO-MANY-POPS: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'too_many_pops':
@@ -226,10 +226,10 @@ body:             |
 ...
 
 ;--- pop_in_wrong_order.mir
-# RUN: not llc -mtriple=x86_64-unknown-windows-msvc -o - \
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/pop_in_wrong_order.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=POP-WRONG-ORDER
-# RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %t/pop_in_wrong_order.mir \
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/pop_in_wrong_order.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # POP-WRONG-ORDER: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'pop_in_wrong_order':
@@ -260,10 +260,10 @@ body:             |
 ...
 
 ;--- pop_after_epilog.mir
-# RUN: not llc -mtriple=x86_64-unknown-windows-msvc -o - \
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/pop_after_epilog.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=POP-AFTER-EPILOG
-# RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %t/pop_after_epilog.mir \
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/pop_after_epilog.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # POP-AFTER-EPILOG: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'pop_after_epilog':
@@ -289,10 +289,10 @@ body:             |
 ...
 
 ;--- instr_after_epilog.mir
-# RUN: not llc -mtriple=x86_64-unknown-windows-msvc -o - \
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/instr_after_epilog.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=INSTR-AFTER-END
-# RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %t/instr_after_epilog.mir \
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/instr_after_epilog.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # INSTR-AFTER-END: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'instr_after_epilog':
