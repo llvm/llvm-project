@@ -6413,7 +6413,8 @@ static Value *foldMinMaxSharedOp(Intrinsic::ID IID, Value *Op0, Value *Op1) {
 static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
                                          Value *Op1) {
   assert((IID == Intrinsic::maxnum || IID == Intrinsic::minnum ||
-          IID == Intrinsic::maximum || IID == Intrinsic::minimum) &&
+          IID == Intrinsic::maximum || IID == Intrinsic::minimum ||
+          IID == Intrinsic::maximumnum || IID == Intrinsic::minimumnum) &&
          "Unsupported intrinsic");
 
   auto *M0 = dyn_cast<IntrinsicInst>(Op0);
@@ -6709,7 +6710,16 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   case Intrinsic::maxnum:
   case Intrinsic::minnum:
   case Intrinsic::maximum:
-  case Intrinsic::minimum: {
+  case Intrinsic::minimum:
+  case Intrinsic::maximumnum:
+  case Intrinsic::minimumnum: {
+    // In several cases here, we deviate from exact IEEE 754 semantics
+    // to enable optimizations (as allowed by the LLVM IR spec).
+    //
+    // For instance, we may return one of the arguments unmodified instead of
+    // inserting an llvm.canonicalize to transform input sNaNs into qNaNs,
+    // or may assume all NaN inputs are qNaNs.
+
     // If the arguments are the same, this is a no-op.
     if (Op0 == Op1)
       return Op0;
@@ -6723,32 +6733,50 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return Op0;
 
     bool PropagateNaN = IID == Intrinsic::minimum || IID == Intrinsic::maximum;
-    bool IsMin = IID == Intrinsic::minimum || IID == Intrinsic::minnum;
+    bool PropagateSNaN = IID == Intrinsic::minnum || IID == Intrinsic::maxnum;
+    bool IsMin = IID == Intrinsic::minimum || IID == Intrinsic::minnum ||
+                 IID == Intrinsic::minimumnum;
 
-    // minnum(X, nan) -> X
-    // maxnum(X, nan) -> X
-    // minimum(X, nan) -> nan
-    // maximum(X, nan) -> nan
-    if (match(Op1, m_NaN()))
-      return PropagateNaN ? propagateNaN(cast<Constant>(Op1)) : Op0;
+    // minnum(x, qnan) -> x
+    // maxnum(x, qnan) -> x
+    // minnum(x, snan) -> qnan
+    // maxnum(x, snan) -> qnan
+    // minimum(X, nan) -> qnan
+    // maximum(X, nan) -> qnan
+    if (PropagateSNaN && match(Op1, m_sNaN()))
+      return propagateNaN(cast<Constant>(Op1));
+    if (match(Op1, m_NaN())) {
+      if (PropagateNaN)
+        return propagateNaN(cast<Constant>(Op1));
+      // In cases like mixed <sNaN, qNaN> vectors, avoid the optimization to
+      // allow correct sNaN propagation where necessary.
+      else if (PropagateSNaN && !match(Op1, m_qNaN()))
+        break;
+      else
+        return Op0;
+    }
 
     // In the following folds, inf can be replaced with the largest finite
     // float, if the ninf flag is set.
     const APFloat *C;
     if (match(Op1, m_APFloat(C)) &&
         (C->isInfinity() || (Call && Call->hasNoInfs() && C->isLargest()))) {
-      // minnum(X, -inf) -> -inf
-      // maxnum(X, +inf) -> +inf
+      // minnum(X, -inf) -> -inf (ignoring sNaN -> qNaN propagation)
+      // maxnum(X, +inf) -> +inf (ignoring sNaN -> qNaN propagation)
       // minimum(X, -inf) -> -inf if nnan
       // maximum(X, +inf) -> +inf if nnan
+      // minimumnum(X, -inf) -> -inf
+      // maximumnum(X, +inf) -> +inf
       if (C->isNegative() == IsMin &&
           (!PropagateNaN || (Call && Call->hasNoNaNs())))
         return ConstantFP::get(ReturnType, *C);
 
       // minnum(X, +inf) -> X if nnan
       // maxnum(X, -inf) -> X if nnan
-      // minimum(X, +inf) -> X
-      // maximum(X, -inf) -> X
+      // minimum(X, +inf) -> X (ignoring quieting of sNaNs)
+      // maximum(X, -inf) -> X (ignoring quieting of sNaNs)
+      // maximumnum(X, -inf) -> X if nnan
+      // minimumnum(X, +inf) -> X if nnan
       if (C->isNegative() != IsMin &&
           (PropagateNaN || (Call && Call->hasNoNaNs())))
         return Op0;
