@@ -604,7 +604,7 @@ define amdgpu_kernel void @v_insertelement_v2bf16_dynamic_vgpr(ptr addrspace(1) 
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v1, v1, 0xffff
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_bitop3_b32 v1, 0x12341234, v2, v1 bitop3:0xe4
+; GFX1250-NEXT:    v_bfi_b32 v1, v1, 0x12341234, v2
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; GFX1250-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
