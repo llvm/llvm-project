@@ -55,7 +55,7 @@ private:
 
   void test_one_input(RoundToIntegerFunc func, FloatType input,
                       IntType expected, bool expectError) {
-    LIBC_NAMESPACE::libc_errno = 0;
+    libc_errno = 0;
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
     ASSERT_EQ(func(input), expected);
