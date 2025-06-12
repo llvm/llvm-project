@@ -234,3 +234,34 @@ namespace Template {
   template void h<d>();
 }
 #endif // __cplusplus < 201703L
+
+namespace implicit_constructor_bool {
+
+struct B {
+  bool a;
+  B(bool V) : a(V) {} // expected-note {{'B' declared here}}
+};
+
+void test(const B& b);
+
+void test0(B* b) {
+  test(b); // expected-warning {{implicit conversion from 'B *' to 'const B' calls}}
+  test((const B&)b);
+  test(B(b));
+  test((bool)b);
+  test(static_cast<bool>(b));
+  test(*b);
+}
+
+struct C {
+  bool a;
+  explicit C(bool V) : a(V) {}
+};
+
+void testC(const C& b); // expected-note {{candidate function not viable: no known conversion from 'C *' to 'const C'}}
+
+void testC0(C* b) {
+  testC(b); // expected-error {{no matching function for call to 'testC'}}
+}
+
+}
