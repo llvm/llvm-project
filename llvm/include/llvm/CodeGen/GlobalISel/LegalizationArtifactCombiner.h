@@ -100,8 +100,8 @@ public:
       const LLT DstTy = MRI.getType(DstReg);
       if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
         auto &CstVal = SrcMI->getOperand(1);
-        auto *MergedLocation = DILocation::getMergedLocation(
-            MI.getDebugLoc().get(), SrcMI->getDebugLoc().get());
+        auto MergedLocation =
+            DebugLoc::getMergedLocation(MI.getDebugLoc(), SrcMI->getDebugLoc());
         // Set the debug location to the merged location of the SrcMI and the MI
         // if the aext fold is successful.
         Builder.setDebugLoc(MergedLocation);

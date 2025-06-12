@@ -97,6 +97,86 @@ MCSymbol *MCResourceInfo::getMaxSGPRSymbol(MCContext &OutContext) {
   return OutContext.getOrCreateSymbol("amdgpu.max_num_sgpr");
 }
 
+// Tries to flatten recursive call register resource gathering. Simple cycle
+// avoiding dfs to find the constants in the propagated symbols.
+// Assumes:
+// - RecSym has been confirmed to recurse (this means the callee symbols should
+//   all be populated, started at RecSym).
+// - Shape of the resource symbol's MCExpr (`max` args are order agnostic):
+//   RecSym.MCExpr := max(<constant>+, <callee_symbol>*)
+const MCExpr *MCResourceInfo::flattenedCycleMax(MCSymbol *RecSym,
+                                                ResourceInfoKind RIK,
+                                                MCContext &OutContext) {
+  SmallPtrSet<const MCExpr *, 8> Seen;
+  SmallVector<const MCExpr *, 8> WorkList;
+  int64_t Maximum = 0;
+
+  const MCExpr *RecExpr = RecSym->getVariableValue();
+  WorkList.push_back(RecExpr);
+
+  while (!WorkList.empty()) {
+    const MCExpr *CurExpr = WorkList.pop_back_val();
+    switch (CurExpr->getKind()) {
+    default: {
+      // Assuming the recursion is of shape `max(<constant>, <callee_symbol>)`
+      // where <callee_symbol> will eventually recurse. If this condition holds,
+      // the recursion occurs within some other (possibly unresolvable) MCExpr,
+      // thus using the worst case value then.
+      if (!AMDGPUMCExpr::isSymbolUsedInExpression(RecSym, CurExpr)) {
+        LLVM_DEBUG(dbgs() << "MCResUse:   " << RecSym->getName()
+                          << ": Recursion in unexpected sub-expression, using "
+                             "module maximum\n");
+        switch (RIK) {
+        default:
+          break;
+        case RIK_NumVGPR:
+          return MCSymbolRefExpr::create(getMaxVGPRSymbol(OutContext),
+                                         OutContext);
+          break;
+        case RIK_NumSGPR:
+          return MCSymbolRefExpr::create(getMaxSGPRSymbol(OutContext),
+                                         OutContext);
+          break;
+        case RIK_NumAGPR:
+          return MCSymbolRefExpr::create(getMaxAGPRSymbol(OutContext),
+                                         OutContext);
+          break;
+        }
+      }
+      break;
+    }
+    case MCExpr::ExprKind::Constant: {
+      int64_t Val = cast<MCConstantExpr>(CurExpr)->getValue();
+      Maximum = std::max(Maximum, Val);
+      break;
+    }
+    case MCExpr::ExprKind::SymbolRef: {
+      const MCSymbolRefExpr *SymExpr = cast<MCSymbolRefExpr>(CurExpr);
+      const MCSymbol &SymRef = SymExpr->getSymbol();
+      if (SymRef.isVariable()) {
+        const MCExpr *SymVal = SymRef.getVariableValue();
+        if (Seen.insert(SymVal).second)
+          WorkList.push_back(SymVal);
+      }
+      break;
+    }
+    case MCExpr::ExprKind::Target: {
+      const AMDGPUMCExpr *TargetExpr = cast<AMDGPUMCExpr>(CurExpr);
+      if (TargetExpr->getKind() == AMDGPUMCExpr::VariantKind::AGVK_Max) {
+        for (auto &Arg : TargetExpr->getArgs())
+          WorkList.push_back(Arg);
+      }
+      break;
+    }
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "MCResUse:   " << RecSym->getName()
+                    << ": Using flattened max: << " << Maximum << '\n');
+
+  return MCConstantExpr::create(Maximum, OutContext);
+}
+
 void MCResourceInfo::assignResourceInfoExpr(
     int64_t LocalValue, ResourceInfoKind RIK, AMDGPUMCExpr::VariantKind Kind,
     const MachineFunction &MF, const SmallVectorImpl<const Function *> &Callees,
@@ -133,25 +213,19 @@ void MCResourceInfo::assignResourceInfoExpr(
                           << CalleeValSym->getName() << " as callee\n");
         ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
       } else {
-        LLVM_DEBUG(
-            dbgs() << "MCResUse:   " << Sym->getName()
-                   << ": Recursion found, falling back to module maximum\n");
-        // In case of recursion: make sure to use conservative register counts
-        // (i.e., specifically for VGPR/SGPR/AGPR).
+        LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName()
+                          << ": Recursion found, attempt flattening of cycle "
+                             "for resource usage\n");
+        // In case of recursion for vgpr/sgpr/agpr resource usage: try to
+        // flatten and use the max of the call cycle. May still end up emitting
+        // module max if not fully resolvable.
         switch (RIK) {
         default:
           break;
         case RIK_NumVGPR:
-          ArgExprs.push_back(MCSymbolRefExpr::create(
-              getMaxVGPRSymbol(OutContext), OutContext));
-          break;
         case RIK_NumSGPR:
-          ArgExprs.push_back(MCSymbolRefExpr::create(
-              getMaxSGPRSymbol(OutContext), OutContext));
-          break;
         case RIK_NumAGPR:
-          ArgExprs.push_back(MCSymbolRefExpr::create(
-              getMaxAGPRSymbol(OutContext), OutContext));
+          ArgExprs.push_back(flattenedCycleMax(CalleeValSym, RIK, OutContext));
           break;
         }
       }

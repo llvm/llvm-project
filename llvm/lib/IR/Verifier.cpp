@@ -2878,11 +2878,6 @@ void Verifier::visitFunction(const Function &F) {
   Check(verifyAttributeCount(Attrs, FT->getNumParams()),
         "Attribute after last parameter!", &F);
 
-  CheckDI(F.IsNewDbgInfoFormat == F.getParent()->IsNewDbgInfoFormat,
-          "Function debug format should match parent module", &F,
-          F.IsNewDbgInfoFormat, F.getParent(),
-          F.getParent()->IsNewDbgInfoFormat);
-
   bool IsIntrinsic = F.isIntrinsic();
 
   // Check function attributes.
@@ -3233,15 +3228,9 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
     Check(I.getParent() == &BB, "Instruction has bogus parent pointer!");
   }
 
-  CheckDI(BB.IsNewDbgInfoFormat == BB.getParent()->IsNewDbgInfoFormat,
-          "BB debug format should match parent function", &BB,
-          BB.IsNewDbgInfoFormat, BB.getParent(),
-          BB.getParent()->IsNewDbgInfoFormat);
-
   // Confirm that no issues arise from the debug program.
-  if (BB.IsNewDbgInfoFormat)
-    CheckDI(!BB.getTrailingDbgRecords(), "Basic Block has trailing DbgRecords!",
-            &BB);
+  CheckDI(!BB.getTrailingDbgRecords(), "Basic Block has trailing DbgRecords!",
+          &BB);
 }
 
 void Verifier::visitTerminator(Instruction &I) {
