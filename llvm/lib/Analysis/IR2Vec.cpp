@@ -55,6 +55,51 @@ static cl::opt<float> ArgWeight("ir2vec-arg-weight", cl::Optional,
 
 AnalysisKey IR2VecVocabAnalysis::Key;
 
+namespace llvm::json {
+inline bool fromJSON(const llvm::json::Value &E, Embedding &Out,
+                     llvm::json::Path P) {
+  std::vector<double> TempOut;
+  if (!llvm::json::fromJSON(E, TempOut, P))
+    return false;
+  Out = Embedding(std::move(TempOut));
+  return true;
+}
+} // namespace llvm::json
+
+// ==----------------------------------------------------------------------===//
+// Embedding
+//===----------------------------------------------------------------------===//
+
+Embedding &Embedding::operator+=(const Embedding &RHS) {
+  assert(this->size() == RHS.size() && "Vectors must have the same dimension");
+  std::transform(this->begin(), this->end(), RHS.begin(), this->begin(),
+                 std::plus<double>());
+  return *this;
+}
+
+Embedding &Embedding::operator-=(const Embedding &RHS) {
+  assert(this->size() == RHS.size() && "Vectors must have the same dimension");
+  std::transform(this->begin(), this->end(), RHS.begin(), this->begin(),
+                 std::minus<double>());
+  return *this;
+}
+
+Embedding &Embedding::scaleAndAdd(const Embedding &Src, float Factor) {
+  assert(this->size() == Src.size() && "Vectors must have the same dimension");
+  for (size_t Itr = 0; Itr < this->size(); ++Itr)
+    (*this)[Itr] += Src[Itr] * Factor;
+  return *this;
+}
+
+bool Embedding::approximatelyEquals(const Embedding &RHS,
+                                    double Tolerance) const {
+  assert(this->size() == RHS.size() && "Vectors must have the same dimension");
+  for (size_t Itr = 0; Itr < this->size(); ++Itr)
+    if (std::abs((*this)[Itr] - RHS[Itr]) > Tolerance)
+      return false;
+  return true;
+}
+
 // ==----------------------------------------------------------------------===//
 // Embedder and its subclasses
 //===----------------------------------------------------------------------===//
@@ -71,20 +116,6 @@ Embedder::create(IR2VecKind Mode, const Function &F, const Vocab &Vocabulary) {
     return std::make_unique<SymbolicEmbedder>(F, Vocabulary);
   }
   return make_error<StringError>("Unknown IR2VecKind", errc::invalid_argument);
-}
-
-void Embedder::addVectors(Embedding &Dst, const Embedding &Src) {
-  assert(Dst.size() == Src.size() && "Vectors must have the same dimension");
-  std::transform(Dst.begin(), Dst.end(), Src.begin(), Dst.begin(),
-                 std::plus<double>());
-}
-
-void Embedder::addScaledVector(Embedding &Dst, const Embedding &Src,
-                               float Factor) {
-  assert(Dst.size() == Src.size() && "Vectors must have the same dimension");
-  for (size_t i = 0; i < Dst.size(); ++i) {
-    Dst[i] += Src[i] * Factor;
-  }
 }
 
 // FIXME: Currently lookups are string based. Use numeric Keys
@@ -164,20 +195,20 @@ void SymbolicEmbedder::computeEmbeddings(const BasicBlock &BB) const {
     Embedding InstVector(Dimension, 0);
 
     const auto OpcVec = lookupVocab(I.getOpcodeName());
-    addScaledVector(InstVector, OpcVec, OpcWeight);
+    InstVector.scaleAndAdd(OpcVec, OpcWeight);
 
     // FIXME: Currently lookups are string based. Use numeric Keys
     // for efficiency.
     const auto Type = I.getType();
     const auto TypeVec = getTypeEmbedding(Type);
-    addScaledVector(InstVector, TypeVec, TypeWeight);
+    InstVector.scaleAndAdd(TypeVec, TypeWeight);
 
     for (const auto &Op : I.operands()) {
       const auto OperandVec = getOperandEmbedding(Op.get());
-      addScaledVector(InstVector, OperandVec, ArgWeight);
+      InstVector.scaleAndAdd(OperandVec, ArgWeight);
     }
     InstVecMap[&I] = InstVector;
-    addVectors(BBVector, InstVector);
+    BBVector += InstVector;
   }
   BBVecMap[&BB] = BBVector;
 }
@@ -187,7 +218,7 @@ void SymbolicEmbedder::computeEmbeddings() const {
     return;
   for (const auto &BB : F) {
     computeEmbeddings(BB);
-    addVectors(FuncVector, BBVecMap[&BB]);
+    FuncVector += BBVecMap[&BB];
   }
 }
 

@@ -34,6 +34,12 @@ namespace {
 class ScalarExprEmitter;
 } // namespace
 
+namespace mlir {
+namespace acc {
+class LoopOp;
+} // namespace acc
+} // namespace mlir
+
 namespace clang::CIRGen {
 
 class CIRGenFunction : public CIRGenTypeCache {
@@ -60,6 +66,7 @@ public:
   ImplicitParamDecl *cxxabiThisDecl = nullptr;
   mlir::Value cxxabiThisValue = nullptr;
   mlir::Value cxxThisValue = nullptr;
+  clang::CharUnits cxxThisAlignment;
 
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
@@ -467,6 +474,9 @@ public:
 
   bool shouldNullCheckClassCastValue(const CastExpr *ce);
 
+  static bool
+  isConstructorDelegationValid(const clang::CXXConstructorDecl *ctor);
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
 
   /// Construct an address with the natural alignment of T. If a pointer to T
@@ -511,6 +521,7 @@ public:
     assert(cxxThisValue && "no 'this' value for this function");
     return cxxThisValue;
   }
+  Address loadCXXThisAddress();
 
   /// Get an appropriate 'undef' rvalue for the given type.
   /// TODO: What's the equivalent for MLIR? Currently we're only using this for
@@ -665,6 +676,8 @@ private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
                               clang::CharUnits alignment);
 
+  CIRGenCallee emitDirectCallee(const GlobalDecl &gd);
+
 public:
   Address emitAddrOfFieldStorage(Address base, const FieldDecl *field,
                                  llvm::StringRef fieldName,
@@ -711,6 +724,9 @@ public:
 
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
 
+  RValue emitBuiltinExpr(const clang::GlobalDecl &gd, unsigned builtinID,
+                         const clang::CallExpr *e, ReturnValueSlot returnValue);
+
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
@@ -742,7 +758,22 @@ public:
 
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
 
+  void emitConstructorBody(FunctionArgList &args);
+
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
+
+  void emitCXXConstructExpr(const clang::CXXConstructExpr *e,
+                            AggValueSlot dest);
+
+  void emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
+                              clang::CXXCtorType type, bool forVirtualBase,
+                              bool delegating, AggValueSlot thisAVS,
+                              const clang::CXXConstructExpr *e);
+
+  void emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
+                              clang::CXXCtorType type, bool forVirtualBase,
+                              bool delegating, Address thisAddr,
+                              CallArgList &args, clang::SourceLocation loc);
 
   mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
                                           llvm::ArrayRef<const Attr *> attrs);
@@ -816,6 +847,17 @@ public:
   mlir::LogicalResult emitDefaultStmt(const clang::DefaultStmt &s,
                                       mlir::Type condType,
                                       bool buildingTopLevelCase);
+
+  void emitDelegateCXXConstructorCall(const clang::CXXConstructorDecl *ctor,
+                                      clang::CXXCtorType ctorType,
+                                      const FunctionArgList &args,
+                                      clang::SourceLocation loc);
+
+  /// We are performing a delegate call; that is, the current function is
+  /// delegating to another one. Produce a r-value suitable for passing the
+  /// given parameter.
+  void emitDelegateCallArg(CallArgList &args, const clang::VarDecl *param,
+                           clang::SourceLocation loc);
 
   /// Emit an `if` on a boolean condition to the specified blocks.
   /// FIXME: Based on the condition, this might try to simplify the codegen of
@@ -1063,6 +1105,12 @@ private:
   void emitOpenACCClauses(ComputeOp &op, LoopOp &loopOp,
                           OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
                           ArrayRef<const OpenACCClause *> clauses);
+
+  // The OpenACC LoopOp requires that we have auto, seq, or independent on all
+  // LoopOp operations for the 'none' device type case. This function checks if
+  // the LoopOp has one, else it updates it to have one.
+  void updateLoopOpParallelism(mlir::acc::LoopOp &op, bool isOrphan,
+                               OpenACCDirectiveKind dk);
 
 public:
   mlir::LogicalResult

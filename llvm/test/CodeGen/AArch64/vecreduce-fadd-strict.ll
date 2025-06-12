@@ -79,10 +79,11 @@ define half @add_HalfH(<4 x half> %bin.rdx)  {
 ; CHECK-GI-FP16-LABEL: add_HalfH:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[2]
-; CHECK-GI-FP16-NEXT:    faddp h2, v0.2h
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
+; CHECK-GI-FP16-NEXT:    fadd h1, h0, h1
 ; CHECK-GI-FP16-NEXT:    mov h0, v0.h[3]
-; CHECK-GI-FP16-NEXT:    fadd h1, h2, h1
+; CHECK-GI-FP16-NEXT:    fadd h1, h1, h2
 ; CHECK-GI-FP16-NEXT:    fadd h0, h1, h0
 ; CHECK-GI-FP16-NEXT:    ret
   %r = call half @llvm.vector.reduce.fadd.f16.v4f16(half -0.0, <4 x half> %bin.rdx)
