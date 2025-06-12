@@ -27,11 +27,6 @@ extern cl::opt<unsigned> AlignFunctions;
 extern cl::opt<bool> UseOldText;
 extern cl::opt<bool> HotFunctionsAtEnd;
 
-static cl::opt<bool>
-    ExperimentalRelaxation("relax-exp",
-                           cl::desc("run experimental relaxation pass"),
-                           cl::init(false), cl::cat(BoltOptCategory));
-
 static cl::opt<bool> GroupStubs("group-stubs",
                                 cl::desc("share stubs across functions"),
                                 cl::init(true), cl::cat(BoltOptCategory));
@@ -898,203 +893,12 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
   }
 }
 
-void LongJmpPass::relaxCalls(BinaryContext &BC) {
-  // Map every function to its direct callees. Note that this is different from
-  // a typical call graph as here we completely ignore indirect calls.
-  uint64_t EstimatedSize = 0;
-  // Conservatively estimate emitted function size.
-  auto estimateFunctionSize = [&](const BinaryFunction &BF) -> uint64_t {
-    if (!BC.shouldEmit(BF))
-      return 0;
-    uint64_t Size = BF.estimateSize();
-    if (BF.hasValidIndex())
-      Size += BF.getAlignment();
-    if (BF.hasIslandsInfo()) {
-      Size += BF.estimateConstantIslandSize();
-      Size += BF.getConstantIslandAlignment();
-    }
-
-    return Size;
-  };
-
-  std::unordered_map<BinaryFunction *, std::set<BinaryFunction *>> CallMap;
-  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
-    if (!BC.shouldEmit(BF))
-      continue;
-
-    EstimatedSize += estimateFunctionSize(BF);
-
-    for (const BinaryBasicBlock &BB : BF) {
-      for (const MCInst &Inst : BB) {
-        if (!BC.MIB->isCall(Inst) || BC.MIB->isIndirectCall(Inst) ||
-            BC.MIB->isIndirectBranch(Inst))
-          continue;
-        const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(Inst);
-        assert(TargetSymbol);
-
-        BinaryFunction *Callee = BC.getFunctionForSymbol(TargetSymbol);
-        if (!Callee) {
-          // Ignore internal calls that use basic block labels as a destination.
-          continue;
-        }
-
-        CallMap[&BF].insert(Callee);
-      }
-    }
-  }
-
-  LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << EstimatedSize
-                    << '\n');
-
-  // Build clusters in the order the functions will appear in the output.
-  std::vector<FunctionCluster> Clusters;
-  Clusters.emplace_back(FunctionCluster());
-
-  for (BinaryFunction *BF : BC.getSortedFunctions()) {
-    if (!BC.shouldEmit(*BF))
-      continue;
-
-    const uint64_t BFSize = estimateFunctionSize(*BF);
-    if (Clusters.empty() || Clusters.back().Size + BFSize > MaxClusterSize) {
-      Clusters.emplace_back(FunctionCluster());
-    }
-
-    FunctionCluster &FC = Clusters.back();
-    FC.Functions.insert(BF);
-    auto It = FC.Callees.find(BF);
-    if (It != FC.Callees.end()) {
-      FC.Callees.erase(It);
-    }
-    FC.Size += BFSize;
-    FC.LastBF = BF;
-
-    for (BinaryFunction *Callee : CallMap[BF])
-      if (!FC.Functions.count(Callee))
-        FC.Callees.insert(Callee);
-  }
-
-  // Print cluster stats.
-  dbgs() << "Built " << Clusters.size() << " clusters\n";
-  uint64_t Index = 0;
-  for (const FunctionCluster &FC : Clusters) {
-    dbgs() << "  Cluster: " << Index++ << '\n';
-    dbgs() << "    " << FC.Functions.size() << " functions\n";
-    dbgs() << "    " << FC.Callees.size() << " callees\n";
-    dbgs() << "    " << FC.Size << " bytes\n";
-  }
-
-  if (Clusters.size() > 2) {
-    BC.errs() << "Large code model is unsupported\n";
-    exit(1);
-  }
-
-  // Populate one of the clusters with PLT functions based on the proximity of
-  // the PLT section to avoid unneeded thunk redirection.
-  // FIXME: this part is extremely fragile as it depends on the placement
-  //        of PLT section and its proximity to old or new .text.
-  // FIXME: a slightly better approach will be to always use thunks for PLT and
-  //        eliminate redirection later using final addresses in address maps.
-  const size_t PLTClusterNum = opts::UseOldText ? 1 : 0;
-  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
-    if (BF.isPLTFunction()) {
-      auto &PLTCluster = Clusters[PLTClusterNum];
-      PLTCluster.Functions.insert(&BF);
-      auto It = PLTCluster.Callees.find(&BF);
-      if (It != PLTCluster.Callees.end())
-        PLTCluster.Callees.erase(It);
-    }
-  }
-
-  // FIXME: section name to use for thunks.
-  std::string SectionName =
-      Clusters[0].LastBF->getCodeSectionName().str().str();
-
-  // Build thunk functions.
-  auto createSmallThunk = [&](BinaryFunction &Callee) {
-    BinaryFunction *ThunkBF =
-        BC.createThunkBinaryFunction("__BThunk__" + Callee.getOneName().str());
-    MCInst Inst;
-    BC.MIB->createTailCall(Inst, Callee.getSymbol(), BC.Ctx.get());
-    ThunkBF->addBasicBlock()->addInstruction(Inst);
-    ThunkBF->setCodeSectionName(SectionName);
-
-    return ThunkBF;
-  };
-
-  auto createLongThunk = [&](BinaryFunction &Callee) {
-    BinaryFunction *ThunkBF =
-        BC.createThunkBinaryFunction("__BThunk__" + Callee.getOneName().str());
-    InstructionListType Instructions;
-    BC.MIB->createLongTailCall(Instructions, Callee.getSymbol(), BC.Ctx.get());
-    ThunkBF->addBasicBlock()->addInstructions(Instructions);
-    ThunkBF->setCodeSectionName(SectionName);
-
-    return ThunkBF;
-  };
-
-  DenseMap<BinaryFunction *, BinaryFunction *> Thunks;
-  for (unsigned ClusterNum = 0; ClusterNum < Clusters.size(); ++ClusterNum) {
-    FunctionCluster &FC = Clusters[ClusterNum];
-    SmallVector<BinaryFunction *, 16> Callees(FC.Callees.begin(),
-                                              FC.Callees.end());
-    llvm::sort(Callees, compareBinaryFunctionByIndex);
-    FunctionCluster *AdjacentCluster =
-        Clusters.size() == 2 ? &Clusters[1 - ClusterNum] : nullptr;
-    // Create short thunks for callees in adjacent cluster and long thunks
-    // for callees outside.
-    for (BinaryFunction *Callee : Callees) {
-      if (AdjacentCluster && AdjacentCluster->Functions.count(Callee))
-        Thunks[Callee] = createSmallThunk(*Callee);
-      else if (!Thunks.count(Callee))
-        Thunks[Callee] = createLongThunk(*Callee);
-    }
-  }
-
-  BC.outs() << "BOLT-INFO: " << Thunks.size() << " thunks created\n";
-
-  // Replace callees with thunks.
-  for (FunctionCluster &FC : Clusters) {
-    for (BinaryFunction *BF : FC.Functions) {
-      if (!CallMap.count(BF))
-        continue;
-
-      for (BinaryBasicBlock &BB : *BF) {
-        for (MCInst &Inst : BB) {
-          if (!BC.MIB->isCall(Inst) || BC.MIB->isIndirectCall(Inst) ||
-              BC.MIB->isIndirectBranch(Inst))
-            continue;
-          const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(Inst);
-          assert(TargetSymbol);
-
-          BinaryFunction *Callee = BC.getFunctionForSymbol(TargetSymbol);
-          if (!Callee) {
-            // Ignore internal calls that use basic block labels as a
-            // destination.
-            continue;
-          }
-
-          // Check if the callee is in the same cluster.
-          if (!FC.Callees.count(Callee))
-            continue;
-
-          // Use thunk as the call destination.
-          BC.MIB->replaceBranchTarget(Inst, Thunks[Callee]->getSymbol(),
-                                      BC.Ctx.get());
-        }
-      }
-    }
-  }
-
-  BC.setThunkLocation(Clusters[0].LastBF);
-}
-
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
 
-  if (opts::CompactCodeModel || opts::ExperimentalRelaxation) {
+  if (opts::CompactCodeModel) {
     BC.outs()
         << "BOLT-INFO: relaxing branches for compact code model (<128MB)\n";
 
-  // TODO: set correct code model based on the total size of split-code.
     ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
       relaxLocalBranches(BF);
     };
@@ -1107,12 +911,6 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
     ParallelUtilities::runOnEachFunction(
         BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
         SkipPredicate, "RelaxLocalBranches");
-
-    if (!opts::ExperimentalRelaxation)
-      return Error::success();
-
-    BC.outs() << "BOLT-INFO: starting experimental relaxation pass\n";
-    relaxCalls(BC);
 
     return Error::success();
   }

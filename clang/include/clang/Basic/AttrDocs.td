@@ -4433,7 +4433,14 @@ destroy the object before returning. The lifetime of the copy of the parameter
 in the caller ends without a destructor call when the call begins.
 
 If a type is trivial for the purpose of calls, it is assumed to be trivially
-relocatable for the purpose of ``__is_trivially_relocatable``.
+relocatable for the purpose of ``__is_trivially_relocatable`` and
+``__builtin_is_cpp_trivially_relocatable``.
+When a type marked with ``[[trivial_abi]]`` is used as a function argument,
+the compiler may omit the call to the copy constructor.
+Thus, side effects of the copy constructor are potentially not performed.
+For example, objects that contain pointers to themselves or otherwise depend
+on their address (or the address or their subobjects) should not be declared
+``[[trivial_abi]]``.
 
 Attribute ``trivial_abi`` has no effect in the following cases:
 
@@ -8519,6 +8526,20 @@ The semantic on the field is ignored when not used as a parameter.
 This attribute is only supported in compute shaders.
 
 The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-dispatchthreadid
+  }];
+}
+
+def HLSLSV_PositionDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_Position`` semantic, when applied to an input parameter in a pixel
+shader, contains the location of the pixel center (x, y) in screen space.
+This semantic can be applied to the parameter, or a field in a struct used
+as an input parameter.
+This attribute is supported as an input in pixel, hull, domain and mesh shaders.
+This attribute is supported as an output in vertex, geometry and domain shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
   }];
 }
 

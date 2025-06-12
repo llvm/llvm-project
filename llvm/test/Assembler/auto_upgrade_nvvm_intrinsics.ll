@@ -307,9 +307,9 @@ define void @nvvm_cp_async_bulk_intrinsics(ptr addrspace(3) %dst, ptr addrspace(
 
 ; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_im2col
 define void @nvvm_cp_async_bulk_tensor_g2s_im2col(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 %mc, i64 %ch) {
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 0, i64 0, i1 false, i1 false)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(ptr addrspace(7) %2, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 0, i64 0, i1 false, i1 false)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(ptr addrspace(7) %3, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 0, i64 0, i1 false, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 0, i64 0, i1 false, i1 false, i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(ptr addrspace(7) %2, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 0, i64 0, i1 false, i1 false, i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(ptr addrspace(7) %3, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 0, i64 0, i1 false, i1 false, i32 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 0, i64 0, i1 0, i1 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 0, i64 0, i1 0, i1 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 0, i64 0, i1 0, i1 0)
@@ -318,11 +318,11 @@ define void @nvvm_cp_async_bulk_tensor_g2s_im2col(ptr addrspace(3) %d, ptr addrs
 
 ; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_tile
 define void @nvvm_cp_async_bulk_tensor_g2s_tile(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %mc, i64 %ch) {
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 0, i64 0, i1 false, i1 false)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(7) %2, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 0, i64 0, i1 false, i1 false)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(7) %3, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 0, i64 0, i1 false, i1 false)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(ptr addrspace(7) %4, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 0, i64 0, i1 false, i1 false)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d(ptr addrspace(7) %5, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 0, i64 0, i1 false, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 0, i64 0, i1 false, i1 false, i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(7) %2, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 0, i64 0, i1 false, i1 false, i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(7) %3, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 0, i64 0, i1 false, i1 false, i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(ptr addrspace(7) %4, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 0, i64 0, i1 false, i1 false, i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d(ptr addrspace(7) %5, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 0, i64 0, i1 false, i1 false, i32 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 0, i64 0, i1 0, i1 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 0, i64 0, i1 0, i1 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 0, i64 0, i1 0, i1 0)

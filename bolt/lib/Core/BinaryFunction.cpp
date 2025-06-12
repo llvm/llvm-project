@@ -114,10 +114,6 @@ cl::opt<bool>
                             cl::desc("try to preserve basic block alignment"),
                             cl::cat(BoltOptCategory));
 
-static cl::opt<bool> PrintOffsets("print-offsets",
-                                  cl::desc("print basic block offsets"),
-                                  cl::Hidden, cl::cat(BoltOptCategory));
-
 static cl::opt<bool> PrintOutputAddressRange(
     "print-output-address-range",
     cl::desc(
@@ -475,6 +471,8 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Sample Count: " << RawSampleCount;
     OS << "\n  Profile Acc : " << format("%.1f%%", ProfileMatchRatio * 100.0f);
   }
+  if (ExternEntryCount)
+    OS << "\n  Extern Entry Count: " << ExternEntryCount;
 
   if (opts::PrintDynoStats && !getLayout().block_empty()) {
     OS << '\n';
@@ -556,11 +554,6 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
 
       if (BB->isLandingPad())
         OS << "  Landing Pad\n";
-
-      if (opts::PrintOffsets && BB->getOutputStartAddress()) {
-        OS << "  OutputOffset: 0x"
-           << Twine::utohexstr(BB->getOutputStartAddress()) << '\n';
-      }
 
       uint64_t BBExecCount = BB->getExecutionCount();
       if (hasValidProfile()) {

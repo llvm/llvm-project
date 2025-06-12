@@ -2193,6 +2193,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/ArmSVE/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":ArmSVEDialect",
         ":ArmSVEPassIncGen",
         ":DialectUtils",
@@ -2203,6 +2204,7 @@ cc_library(
         ":MemRefDialect",
         ":Pass",
         ":TransformUtils",
+        ":UBDialect",
         ":VectorDialect",
     ],
 )
@@ -2213,6 +2215,38 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/ArmSVE/IR/ArmSVE.td",
     deps = [":ArmSVETdFiles"],
+)
+
+gentbl_cc_library(
+    name = "ArmSVEVectorTransformOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/ArmSVE/TransformOps/ArmSVEVectorTransformOps.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/ArmSVE/TransformOps/ArmSVEVectorTransformOps.cpp.inc": ["-gen-op-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/ArmSVE/TransformOps/ArmSVEVectorTransformOps.td",
+    deps = [
+        ":ArmSVETdFiles",
+        ":TransformDialectTdFiles",
+    ],
+)
+
+cc_library(
+    name = "ArmSVEVectorTransformOps",
+    srcs = glob(["lib/Dialect/ArmSVE/TransformOps/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/ArmSVE/TransformOps/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArmSVEDialect",
+        ":ArmSVETransforms",
+        ":ArmSVEVectorTransformOpsIncGen",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":VectorDialect",
+    ],
 )
 
 ##---------------------------------------------------------------------------##
@@ -4468,6 +4502,7 @@ cc_library(
         ":ArithToEmitC",
         ":ArithToLLVM",
         ":ArmNeonTransformOps",
+        ":ArmSVEVectorTransformOps",
         ":BufferizationTransformOps",
         ":BuiltinToLLVMIRTranslation",
         ":ComplexToLLVM",
@@ -6846,6 +6881,7 @@ cc_library(
     deps = [
         ":SPIRVDialect",
         ":Support",
+        "//llvm:Support",
         "//llvm:config",
     ],
 )
@@ -10816,6 +10852,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":ArmNeonDialect",
+        ":ArmNeonTransforms",
         ":ArmSVEDialect",
         ":ArmSVETransforms",
         ":ConversionPassIncGen",
@@ -11212,13 +11249,19 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "TransformDialectEnumsIncGen",
+    name = "TransformAttrsIncGen",
     tbl_outs = {
         "include/mlir/Dialect/Transform/IR/TransformDialectEnums.h.inc": [
             "-gen-enum-decls",
         ],
         "include/mlir/Dialect/Transform/IR/TransformDialectEnums.cpp.inc": [
             "-gen-enum-defs",
+        ],
+        "include/mlir/Dialect/Transform/IR/TransformAttrs.h.inc": [
+            "-gen-attrdef-decls",
+        ],
+        "include/mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc": [
+            "-gen-attrdef-defs",
         ],
     },
     tblgen = ":mlir-tblgen",
@@ -11345,7 +11388,7 @@ cc_library(
         ":Rewrite",
         ":SideEffectInterfaces",
         ":Support",
-        ":TransformDialectEnumsIncGen",
+        ":TransformAttrsIncGen",
         ":TransformDialectIncGen",
         ":TransformDialectInterfaces",
         ":TransformDialectUtils",

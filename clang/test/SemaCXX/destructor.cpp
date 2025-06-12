@@ -58,7 +58,7 @@ struct D {
 
 struct D2 {
   void ~D2() { } //                          \
-  // expected-error{{destructor cannot have a return type}}  
+  // expected-error{{destructor cannot have a return type}}
 };
 
 
@@ -86,7 +86,7 @@ struct G {
 G::~G() { }
 
 struct H {
-  ~H(void) { } 
+  ~H(void) { }
 };
 
 struct X {};
@@ -103,7 +103,7 @@ namespace PR6421 {
     template<typename U>
     void foo(T t) // expected-error{{variable has incomplete type}}
     { }
-    
+
     void disconnect()
     {
       T* t;
@@ -364,7 +364,7 @@ struct __is_destructor_wellformed {
                        decltype(_Tp1().~_Tp1())>::type);
   template <typename _Tp1>
   static __two __test (...);
-              
+
   static const bool value = sizeof(__test<_Tp>(12)) == sizeof(char);
 };
 

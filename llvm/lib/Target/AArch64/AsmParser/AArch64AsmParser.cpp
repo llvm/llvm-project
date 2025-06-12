@@ -1275,7 +1275,7 @@ public:
       RK = RegKind::SVEPredicateAsCounter;
       break;
     default:
-      llvm_unreachable("Unsupport register class");
+      llvm_unreachable("Unsupported register class");
     }
 
     return (Kind == k_Register && Reg.Kind == RK) &&
@@ -1302,7 +1302,7 @@ public:
       RK = RegKind::SVEPredicateVector;
       break;
     default:
-      llvm_unreachable("Unsupport register class");
+      llvm_unreachable("Unsupported register class");
     }
 
     return (Kind == k_Register && Reg.Kind == RK) &&
@@ -5405,7 +5405,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
 
   // A prefix only applies to the instruction following it.  Here we extract
   // prefix information for the next instruction before validating the current
-  // one so that in the case of failure we don't erronously continue using the
+  // one so that in the case of failure we don't erroneously continue using the
   // current prefix.
   PrefixInfo Prefix = NextPrefix;
   NextPrefix = PrefixInfo::CreateFromInst(Inst, MCID.TSFlags);
@@ -5417,7 +5417,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
       (Inst.getOpcode() != AArch64::BRK) &&
       (Inst.getOpcode() != AArch64::HLT)) {
 
-    // Prefixed intructions must have a destructive operand.
+    // Prefixed instructions must have a destructive operand.
     if ((MCID.TSFlags & AArch64::DestructiveInstTypeMask) ==
         AArch64::NotDestructive)
       return Error(IDLoc, "instruction is unpredictable when following a"
@@ -6407,7 +6407,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                MCStreamer &Out,
                                                uint64_t &ErrorInfo,
                                                bool MatchingInlineAsm) {
-  assert(!Operands.empty() && "Unexpect empty operand list!");
+  assert(!Operands.empty() && "Unexpected empty operand list!");
   AArch64Operand &Op = static_cast<AArch64Operand &>(*Operands[0]);
   assert(Op.isToken() && "Leading operand should always be a mnemonic!");
 
@@ -7942,7 +7942,7 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
   }
 
   std::unique_ptr<MCELFStreamer::AttributeSubSection> SubsectionExists =
-      getTargetStreamer().getAtributesSubsectionByName(SubsectionName);
+      getTargetStreamer().getAttributesSubsectionByName(SubsectionName);
 
   // Consume the first parameter (optionality parameter)
   AArch64BuildAttributes::SubsectionOptional IsOptional;
@@ -8038,7 +8038,7 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     return true;
   }
 
-  getTargetStreamer().emitAtributesSubsection(SubsectionName, IsOptional, Type);
+  getTargetStreamer().emitAttributesSubsection(SubsectionName, IsOptional, Type);
 
   return false;
 }
@@ -8050,7 +8050,7 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   MCAsmParser &Parser = getParser();
 
   std::unique_ptr<MCELFStreamer::AttributeSubSection> ActiveSubsection =
-      getTargetStreamer().getActiveAtributesSubsection();
+      getTargetStreamer().getActiveAttributesSubsection();
   if (nullptr == ActiveSubsection) {
     Error(Parser.getTok().getLoc(),
           "no active subsection, build attribute can not be added");

@@ -368,10 +368,6 @@ private:
   /// True if the function should not have an associated symbol table entry.
   bool IsAnonymous{false};
 
-  /// True if the function is used for remapping hot text and shall not be
-  /// placed on a huge page.
-  bool IsHotTextMover{false};
-
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -391,6 +387,10 @@ private:
 
   /// The profile data for the number of times the function was executed.
   uint64_t ExecutionCount{COUNT_NO_PROFILE};
+
+  /// Profile data for the number of times this function was entered from
+  /// external code (DSO, JIT, etc).
+  uint64_t ExternEntryCount{0};
 
   /// Profile match ratio.
   float ProfileMatchRatio{0.0f};
@@ -1415,8 +1415,6 @@ public:
   /// Return true if the function uses ORC format for stack unwinding.
   bool hasORC() const { return HasORC; }
 
-  bool isHotTextMover() const { return IsHotTextMover; }
-
   const JumpTable *getJumpTable(const MCInst &Inst) const {
     const uint64_t Address = BC.MIB->getJumpTable(Inst);
     return getJumpTableContainingAddress(Address);
@@ -1767,8 +1765,6 @@ public:
   /// Mark function that should not be emitted.
   void setIgnored();
 
-  void setHotTextMover(bool V) { IsHotTextMover = V; }
-
   void setHasIndirectTargetToSplitFragment(bool V) {
     HasIndirectTargetToSplitFragment = V;
   }
@@ -1885,6 +1881,10 @@ public:
     return *this;
   }
 
+  /// Set the profile data for the number of times the function was entered from
+  /// external code (DSO/JIT).
+  void setExternEntryCount(uint64_t Count) { ExternEntryCount = Count; }
+
   /// Adjust execution count for the function by a given \p Count. The value
   /// \p Count will be subtracted from the current function count.
   ///
@@ -1911,6 +1911,10 @@ public:
   ///
   /// Return COUNT_NO_PROFILE if there's no profile info.
   uint64_t getExecutionCount() const { return ExecutionCount; }
+
+  /// Return the profile information about the number of times the function was
+  /// entered from external code (DSO/JIT).
+  uint64_t getExternEntryCount() const { return ExternEntryCount; }
 
   /// Return the raw profile information about the number of branch
   /// executions corresponding to this function.

@@ -1661,6 +1661,9 @@ static bool hasGOTReference(const MCExpr *Expr) {
 
   case MCExpr::Unary:
     return hasGOTReference(cast<MCUnaryExpr>(Expr)->getSubExpr());
+
+  case MCExpr::Specifier:
+    llvm_unreachable("unused by this backend");
   }
   return false;
 }
