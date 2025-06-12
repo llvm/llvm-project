@@ -6,7 +6,11 @@ on:
   pull_request:
     types: [opened, synchronize]
     branches:
+      - 'amd-gfx13'
+      - 'amd-gfx-gfx13'
+      - 'amd-gfx-gfx12'
       - 'amd-gfx'
+      - 'amd-gfx12'
 
 jobs:
   llvm-psdb:
