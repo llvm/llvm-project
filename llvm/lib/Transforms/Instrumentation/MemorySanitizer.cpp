@@ -265,16 +265,21 @@ static cl::opt<bool>
                       cl::desc("Print name of local stack variable"),
                       cl::Hidden, cl::init(true));
 
-static cl::opt<bool> ClPoisonUndef("msan-poison-undef",
-                                   cl::desc("poison undef temps"), cl::Hidden,
-                                   cl::init(true));
+static cl::opt<bool>
+    ClPoisonUndef("msan-poison-undef",
+                  cl::desc("Poison fully undef temporary values. "
+                           "Partially undefined constant vectors "
+                           "are unaffected by this flag (see "
+                           "-msan-poison-undef-vectors)."),
+                  cl::Hidden, cl::init(true));
 
 static cl::opt<bool> ClPoisonUndefVectors(
     "msan-poison-undef-vectors",
     cl::desc("Precisely poison partially undefined constant vectors. "
              "If false (legacy behavior), the entire vector is "
              "considered fully initialized, which may lead to false "
-             "negatives."),
+             "negatives. Fully undefined constant vectors are "
+             "unaffected by this flag (see -msan-poison-undef)."),
     cl::Hidden, cl::init(true));
 
 static cl::opt<bool>
