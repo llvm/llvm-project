@@ -407,7 +407,7 @@ ABICreateInstance PluginManager::GetABICreateCallbackAtIndex(uint32_t idx) {
 #pragma mark Architecture
 
 typedef PluginInstance<ArchitectureCreateInstance> ArchitectureInstance;
-typedef std::vector<ArchitectureInstance> ArchitectureInstances;
+typedef PluginInstances<ArchitectureInstance> ArchitectureInstances;
 
 static ArchitectureInstances &GetArchitectureInstances() {
   static ArchitectureInstances g_instances;
@@ -417,25 +417,18 @@ static ArchitectureInstances &GetArchitectureInstances() {
 void PluginManager::RegisterPlugin(llvm::StringRef name,
                                    llvm::StringRef description,
                                    ArchitectureCreateInstance create_callback) {
-  GetArchitectureInstances().push_back({name, description, create_callback});
+  GetArchitectureInstances().RegisterPlugin(name, description, create_callback);
 }
 
 void PluginManager::UnregisterPlugin(
     ArchitectureCreateInstance create_callback) {
   auto &instances = GetArchitectureInstances();
-
-  for (auto pos = instances.begin(), end = instances.end(); pos != end; ++pos) {
-    if (pos->create_callback == create_callback) {
-      instances.erase(pos);
-      return;
-    }
-  }
-  llvm_unreachable("Plugin not found");
+  instances.UnregisterPlugin(create_callback);
 }
 
 std::unique_ptr<Architecture>
 PluginManager::CreateArchitectureInstance(const ArchSpec &arch) {
-  for (const auto &instances : GetArchitectureInstances()) {
+  for (const auto &instances : GetArchitectureInstances().GetSnapshot()) {
     if (auto plugin_up = instances.create_callback(arch))
       return plugin_up;
   }
