@@ -62,7 +62,7 @@ using namespace mlir;
 static constexpr StringRef varargsAttrName = "func.varargs";
 static constexpr StringRef linkageAttrName = "llvm.linkage";
 static constexpr StringRef barePtrAttrName = "llvm.bareptr";
-static constexpr StringRef noInlineAttr = "no_inline";
+static constexpr StringRef noInlineAttrName = "no_inline";
 
 /// Return `true` if the `op` should use bare pointer calling convention.
 static bool shouldUseBarePtrCallConv(Operation *op,
@@ -383,9 +383,7 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
   }
 
   // Propagate no_inline attributes
-  if (funcOp->hasAttr(noInlineAttr)) {
-    newFuncOp->setAttr(noInlineAttr, rewriter.getUnitAttr());
-  }
+  newFuncOp.setNoInline(funcOp->hasAttr(noInlineAttrName));
 
   // Propagate argument/result attributes to all converted arguments/result
   // obtained after converting a given original argument/result.
