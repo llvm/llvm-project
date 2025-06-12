@@ -1756,8 +1756,6 @@ unsigned Triple::getTrampolineSize() const {
     if (isOSLinux())
       return 48;
     break;
-  case Triple::aarch64:
-    return 36;
   }
   return 32;
 }
