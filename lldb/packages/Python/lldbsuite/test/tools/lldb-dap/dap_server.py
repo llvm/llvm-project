@@ -173,20 +173,20 @@ def read_packet(
     if line.startswith(prefix):
         # Decode length of JSON bytes
         if verbose:
-            print('content: "%s"' % (line))
+            print(f"content: {line}")
         length = int(line[len(prefix) :])
         if verbose:
-            print('length: "%u"' % (length))
+            print(f"length: {length}")
         # Skip empty line
         line = f.readline().decode()
         if verbose:
-            print('empty: "%s"' % (line))
+            print(f"empty: {line!r}")
         # Read JSON bytes
         json_str = f.read(length)
         if verbose:
-            print('json: "%r"' % (json_str))
+            print(f"json: {json_str!r}")
         if trace_file:
-            trace_file.write("from adapter:\n%r\n" % (json_str))
+            trace_file.write(f"from adapter:\n{json_str!r}\n")
         # Decode the JSON bytes into a python dictionary
         return json.loads(json_str)
 
