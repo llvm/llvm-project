@@ -12654,6 +12654,11 @@ private:
     case IRP_RETURNED:
     case IRP_CALL_SITE:
       return false;
+    case IRP_CALL_SITE_RETURNED: {
+      const auto &CB = cast<CallBase>(getAnchorValue());
+      return !isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
+          &CB, /*MustPreserveNullness=*/false);
+    }
     case IRP_ARGUMENT: {
       const Function *F = getAssociatedFunction();
       assert(F && "no associated function for argument");
@@ -12674,7 +12679,7 @@ private:
     if (isKnown(IS_NOALIAS) || !isAssumed(IS_NOALIAS))
       return ChangeStatus::UNCHANGED;
 
-    // try to use AANoAlias
+    // Try to use AANoAlias.
     if (const auto *ANoAlias = A.getOrCreateAAFor<AANoAlias>(
             getIRPosition(), this, DepClassTy::REQUIRED)) {
       if (ANoAlias->isKnownNoAlias()) {
@@ -12690,15 +12695,15 @@ private:
       return ChangeStatus::UNCHANGED;
     }
 
-    // try to infer noalias from argument attribute, since it is applicable for
-    // the duration of the function
+    // Try to infer noalias from argument attribute, since it is applicable for
+    // the duration of the function.
     if (const Argument *Arg = getAssociatedArgument()) {
       if (Arg->hasNoAliasAttr()) {
         addKnownBits(IS_NOALIAS);
         return ChangeStatus::UNCHANGED;
       }
 
-      // noalias information is not provided, and cannot be inferred,
+      // Noalias information is not provided, and cannot be inferred,
       // so we conservatively assume the pointer aliases.
       removeAssumedBits(IS_NOALIAS);
       return ChangeStatus::CHANGED;
@@ -12721,7 +12726,7 @@ private:
     if (!A.checkForAllUses(HasNoEffectLoads, *this, getAssociatedValue()))
       return indicatePessimisticFixpoint();
 
-    // try to use AAMemoryBehavior to infer readonly attribute
+    // Try to use AAMemoryBehavior to infer readonly attribute.
     if (const auto *AMemoryBehavior = A.getOrCreateAAFor<AAMemoryBehavior>(
             getIRPosition(), this, DepClassTy::REQUIRED)) {
       if (!AMemoryBehavior->isAssumedReadOnly())
@@ -12741,8 +12746,8 @@ private:
         return ChangeStatus::UNCHANGED;
       }
 
-      // readonly information is not provided, and cannot be inferred from
-      // AAMemoryBehavior
+      // Readonly information is not provided, and cannot be inferred from
+      // AAMemoryBehavior.
       return indicatePessimisticFixpoint();
     }
 
@@ -12766,7 +12771,7 @@ private:
       const auto *IsInvariantLoadPointer =
           A.getOrCreateAAFor<AAInvariantLoadPointer>(IRPosition::value(V), this,
                                                      DepClassTy::REQUIRED);
-      // conservatively fail if invariance cannot be inferred
+      // Conservatively fail if invariance cannot be inferred.
       if (!IsInvariantLoadPointer)
         return false;
 
@@ -12781,8 +12786,18 @@ private:
     if (!AUO->forallUnderlyingObjects(IsLocallyInvariantLoadIfPointer))
       return indicatePessimisticFixpoint();
 
+    if (const auto *CB = dyn_cast<CallBase>(&getAnchorValue())) {
+      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
+              CB, /*MustPreserveNullness=*/false)) {
+        for (const Value *Arg : CB->args()) {
+          if (!IsLocallyInvariantLoadIfPointer(*Arg))
+            return indicatePessimisticFixpoint();
+        }
+      }
+    }
+
     if (!UsedAssumedInformation) {
-      // pointer is known (not assumed) to be locally invariant
+      // Pointer is known and not just assumed to be locally invariant.
       addKnownBits(IS_LOCALLY_INVARIANT);
       return ChangeStatus::CHANGED;
     }
@@ -12814,14 +12829,20 @@ struct AAInvariantLoadPointerCallSiteReturned final
     const Function *F = getAssociatedFunction();
     assert(F && "no associated function for return from call");
 
-    // There is not much we can say about opaque functions.
-    if (F->isDeclaration() || F->isIntrinsic()) {
-      if (!F->onlyReadsMemory() || !F->hasNoSync()) {
-        indicatePessimisticFixpoint();
-        return;
-      }
-    }
-    AAInvariantLoadPointerImpl::initialize(A);
+    if (!F->isDeclaration() && !F->isIntrinsic())
+      return AAInvariantLoadPointerImpl::initialize(A);
+
+    const auto &CB = cast<CallBase>(getAnchorValue());
+    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
+            &CB, /*MustPreserveNullness=*/false))
+      return AAInvariantLoadPointerImpl::initialize(A);
+
+    if (F->onlyReadsMemory() && F->hasNoSync())
+      return AAInvariantLoadPointerImpl::initialize(A);
+
+    // At this point, the function is opaque, so we conservatively assume
+    // non-invariance.
+    indicatePessimisticFixpoint();
   }
 };
 

@@ -11,7 +11,7 @@ define void @test_nonkernel(ptr addrspace(1) noalias %ptr) {
 ; AMDGCN-LABEL: define void @test_nonkernel(
 ; AMDGCN-SAME: ptr addrspace(1) noalias nofree noundef readonly align 4 captures(none) dereferenceable_or_null(4) [[PTR:%.*]]) #[[ATTR2:[0-9]+]] {
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5:[0-9]+]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6:[0-9]+]]
 ; AMDGCN-NEXT:    ret void
 ;
   %val = load i32, ptr addrspace(1) %ptr, align 4
@@ -24,7 +24,7 @@ define amdgpu_kernel void @test_plain(ptr addrspace(1) %ptr) {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_plain(
 ; AMDGCN-SAME: ptr addrspace(1) nofree noundef readonly align 4 captures(none) dereferenceable_or_null(4) [[PTR:%.*]]) #[[ATTR2]] {
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %val = load i32, ptr addrspace(1) %ptr, align 4
@@ -37,7 +37,7 @@ define amdgpu_kernel void @test_noalias_ptr(ptr addrspace(1) noalias %ptr) {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_noalias_ptr(
 ; AMDGCN-SAME: ptr addrspace(1) noalias nofree noundef readonly align 4 captures(none) dereferenceable_or_null(4) [[PTR:%.*]]) #[[ATTR2]] {
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4, !invariant.load [[META0:![0-9]+]]
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %val = load i32, ptr addrspace(1) %ptr, align 4
@@ -50,7 +50,7 @@ define amdgpu_kernel void @test_gep(ptr addrspace(1) %ptr) {
 ; AMDGCN-SAME: ptr addrspace(1) nofree readonly align 4 captures(none) [[PTR:%.*]]) #[[ATTR2]] {
 ; AMDGCN-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i32 4
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 4
@@ -64,7 +64,7 @@ define amdgpu_kernel void @test_noalias_gep(ptr addrspace(1) noalias %ptr) {
 ; AMDGCN-SAME: ptr addrspace(1) noalias nofree readonly align 4 captures(none) [[PTR:%.*]]) #[[ATTR2]] {
 ; AMDGCN-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[PTR]], i32 4
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4, !invariant.load [[META0]]
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 4
@@ -78,7 +78,7 @@ define amdgpu_kernel void @test_swap(ptr addrspace(1) noalias %ptr, i32 inreg %s
 ; AMDGCN-SAME: ptr addrspace(1) noalias nofree noundef align 4 captures(none) dereferenceable_or_null(4) [[PTR:%.*]], i32 inreg [[SWAP:%.*]]) #[[ATTR2]] {
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
 ; AMDGCN-NEXT:    store i32 [[SWAP]], ptr addrspace(1) [[PTR]], align 4
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %val = load i32, ptr addrspace(1) %ptr, align 4
@@ -92,7 +92,7 @@ define amdgpu_kernel void @test_volatile(ptr addrspace(1) noalias %ptr) {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_volatile(
 ; AMDGCN-SAME: ptr addrspace(1) noalias nofree noundef align 4 [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load volatile i32, ptr addrspace(1) [[PTR]], align 4
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %val = load volatile i32, ptr addrspace(1) %ptr, align 4
@@ -105,7 +105,7 @@ define amdgpu_kernel void @test_unordered(ptr addrspace(1) noalias %ptr) {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_unordered(
 ; AMDGCN-SAME: ptr addrspace(1) noalias nofree noundef readonly align 4 captures(none) dereferenceable_or_null(4) [[PTR:%.*]]) #[[ATTR2]] {
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] unordered, align 4, !invariant.load [[META0]]
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %val = load atomic i32, ptr addrspace(1) %ptr unordered, align 4
@@ -117,7 +117,7 @@ define amdgpu_kernel void @test_monotonic(ptr addrspace(1) noalias %ptr) {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_monotonic(
 ; AMDGCN-SAME: ptr addrspace(1) noalias nofree noundef readonly align 4 captures(none) dereferenceable_or_null(4) [[PTR:%.*]]) #[[ATTR2]] {
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %val = load atomic i32, ptr addrspace(1) %ptr monotonic, align 4
@@ -130,7 +130,7 @@ define amdgpu_kernel void @test_global() {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_global(
 ; AMDGCN-SAME: ) #[[ATTR2]] {
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) @G, align 4
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %val = load i32, ptr addrspace(1) @G, align 4
@@ -153,8 +153,8 @@ define internal i32 @test_internal_noalias_load(ptr addrspace(1) %ptr) {
 define amdgpu_kernel void @test_call_internal_noalias(ptr addrspace(1) noalias %ptr) {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_call_internal_noalias(
 ; AMDGCN-SAME: ptr addrspace(1) noalias nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR2]] {
-; AMDGCN-NEXT:    [[VAL:%.*]] = call i32 @test_internal_noalias_load(ptr addrspace(1) noalias nofree noundef readonly align 4 captures(none) [[PTR]]) #[[ATTR6:[0-9]+]]
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    [[VAL:%.*]] = call i32 @test_internal_noalias_load(ptr addrspace(1) noalias nofree noundef readonly align 4 captures(none) [[PTR]]) #[[ATTR7:[0-9]+]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %val = call i32 @test_internal_noalias_load(ptr addrspace(1) %ptr)
@@ -176,8 +176,8 @@ define internal i32 @test_internal_load(ptr addrspace(1) noalias %ptr) {
 define amdgpu_kernel void @test_call_internal(ptr addrspace(1) %ptr) {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_call_internal(
 ; AMDGCN-SAME: ptr addrspace(1) nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR2]] {
-; AMDGCN-NEXT:    [[VAL:%.*]] = call i32 @test_internal_load(ptr addrspace(1) nofree noundef readonly align 4 captures(none) [[PTR]]) #[[ATTR6]]
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    [[VAL:%.*]] = call i32 @test_internal_load(ptr addrspace(1) nofree noundef readonly align 4 captures(none) [[PTR]]) #[[ATTR7]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %val = call i32 @test_internal_load(ptr addrspace(1) %ptr)
@@ -199,9 +199,9 @@ define internal i32 @test_internal_written(ptr addrspace(1) %ptr) {
 define amdgpu_kernel void @test_call_internal_written(ptr addrspace(1) noalias %ptr, i32 inreg %x) {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_call_internal_written(
 ; AMDGCN-SAME: ptr addrspace(1) noalias nofree captures(none) [[PTR:%.*]], i32 inreg [[X:%.*]]) #[[ATTR2]] {
-; AMDGCN-NEXT:    [[VAL:%.*]] = call i32 @test_internal_written(ptr addrspace(1) noalias nofree noundef readonly align 4 captures(none) [[PTR]]) #[[ATTR6]]
+; AMDGCN-NEXT:    [[VAL:%.*]] = call i32 @test_internal_written(ptr addrspace(1) noalias nofree noundef readonly align 4 captures(none) [[PTR]]) #[[ATTR7]]
 ; AMDGCN-NEXT:    store i32 [[X]], ptr addrspace(1) [[PTR]], align 4
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %val = call i32 @test_internal_written(ptr addrspace(1) %ptr)
@@ -213,9 +213,9 @@ define amdgpu_kernel void @test_call_internal_written(ptr addrspace(1) noalias %
 define amdgpu_kernel void @test_call_ptr() {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_call_ptr(
 ; AMDGCN-SAME: ) #[[ATTR2]] {
-; AMDGCN-NEXT:    [[PTR:%.*]] = call align 4 ptr addrspace(1) @get_ptr() #[[ATTR5]]
+; AMDGCN-NEXT:    [[PTR:%.*]] = call align 4 ptr addrspace(1) @get_ptr() #[[ATTR6]]
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %ptr = call ptr addrspace(1) @get_ptr()
@@ -228,9 +228,9 @@ define amdgpu_kernel void @test_call_ptr() {
 define amdgpu_kernel void @test_call_noalias_ptr() {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_call_noalias_ptr(
 ; AMDGCN-SAME: ) #[[ATTR2]] {
-; AMDGCN-NEXT:    [[PTR:%.*]] = call align 4 ptr addrspace(1) @get_noalias_ptr() #[[ATTR5]]
+; AMDGCN-NEXT:    [[PTR:%.*]] = call align 4 ptr addrspace(1) @get_noalias_ptr() #[[ATTR6]]
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %ptr = call ptr addrspace(1) @get_noalias_ptr()
@@ -243,13 +243,42 @@ define amdgpu_kernel void @test_call_noalias_ptr() {
 define amdgpu_kernel void @test_call_untouched_ptr() {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_call_untouched_ptr(
 ; AMDGCN-SAME: ) #[[ATTR2]] {
-; AMDGCN-NEXT:    [[PTR:%.*]] = call noalias align 4 ptr addrspace(1) @get_untouched_ptr() #[[ATTR7:[0-9]+]]
+; AMDGCN-NEXT:    [[PTR:%.*]] = call noalias align 4 ptr addrspace(1) @get_untouched_ptr() #[[ATTR8:[0-9]+]]
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4, !invariant.load [[META0]]
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %ptr = call ptr addrspace(1) @get_untouched_ptr()
   %val = load i32, ptr addrspace(1) %ptr, align 4
+  call void @clobber(i32 %val)
+  ret void
+}
+
+define amdgpu_kernel void @test_make_buffer(ptr addrspace(1) %ptr) {
+; AMDGCN-LABEL: define amdgpu_kernel void @test_make_buffer(
+; AMDGCN-SAME: ptr addrspace(1) nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR2]] {
+; AMDGCN-NEXT:    [[RSRC:%.*]] = call align 4 ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) [[PTR]], i16 noundef 0, i32 noundef 0, i32 noundef 0) #[[ATTR9:[0-9]+]]
+; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(7) [[RSRC]], align 4
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
+; AMDGCN-NEXT:    ret void
+;
+  %rsrc = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) %ptr, i16 0, i32 0, i32 0)
+  %val = load i32, ptr addrspace(7) %rsrc, align 4
+  ;; original %ptr may alias
+  call void @clobber(i32 %val)
+  ret void
+}
+
+define amdgpu_kernel void @test_make_buffer_noalias(ptr addrspace(1) noalias %ptr) {
+; AMDGCN-LABEL: define amdgpu_kernel void @test_make_buffer_noalias(
+; AMDGCN-SAME: ptr addrspace(1) noalias nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR2]] {
+; AMDGCN-NEXT:    [[RSRC:%.*]] = call align 4 ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) [[PTR]], i16 noundef 0, i32 noundef 0, i32 noundef 0) #[[ATTR9]]
+; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(7) [[RSRC]], align 4, !invariant.load [[META0]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
+; AMDGCN-NEXT:    ret void
+;
+  %rsrc = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) %ptr, i16 0, i32 0, i32 0)
+  %val = load i32, ptr addrspace(7) %rsrc, align 4
   call void @clobber(i32 %val)
   ret void
 }
@@ -259,7 +288,7 @@ define amdgpu_kernel void @test_selected_load(i1 inreg %cond, ptr addrspace(1) n
 ; AMDGCN-SAME: i1 inreg [[COND:%.*]], ptr addrspace(1) noalias nofree readonly captures(none) [[PTR_TRUE:%.*]], ptr addrspace(1) noalias nofree readonly captures(none) [[PTR_FALSE:%.*]]) #[[ATTR2]] {
 ; AMDGCN-NEXT:    [[PTR:%.*]] = select i1 [[COND]], ptr addrspace(1) [[PTR_TRUE]], ptr addrspace(1) [[PTR_FALSE]]
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4, !invariant.load [[META0]]
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %ptr = select i1 %cond, ptr addrspace(1) %ptr.true, ptr addrspace(1) %ptr.false
@@ -274,7 +303,7 @@ define amdgpu_kernel void @test_selected_load_partial_noalias(i1 inreg %cond, pt
 ; AMDGCN-SAME: i1 inreg [[COND:%.*]], ptr addrspace(1) noalias nofree readonly captures(none) [[PTR_TRUE:%.*]], ptr addrspace(1) nofree readonly captures(none) [[PTR_FALSE:%.*]]) #[[ATTR2]] {
 ; AMDGCN-NEXT:    [[PTR:%.*]] = select i1 [[COND]], ptr addrspace(1) [[PTR_TRUE]], ptr addrspace(1) [[PTR_FALSE]]
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
   %ptr = select i1 %cond, ptr addrspace(1) %ptr.true, ptr addrspace(1) %ptr.false
@@ -290,14 +319,14 @@ define amdgpu_kernel void @test_branch_load(i1 %cond, ptr addrspace(1) noalias %
 ; AMDGCN-NEXT:  [[ENTRY:.*:]]
 ; AMDGCN-NEXT:    br i1 [[COND]], label %[[TRUE:.*]], label %[[FALSE:.*]]
 ; AMDGCN:       [[TRUE]]:
-; AMDGCN-NEXT:    call void @clobber(i32 noundef 1) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 noundef 1) #[[ATTR6]]
 ; AMDGCN-NEXT:    br label %[[FINISH:.*]]
 ; AMDGCN:       [[FALSE]]:
 ; AMDGCN-NEXT:    br label %[[FINISH]]
 ; AMDGCN:       [[FINISH]]:
 ; AMDGCN-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ [[PTR_TRUE]], %[[TRUE]] ], [ [[PTR_FALSE]], %[[FALSE]] ]
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4, !invariant.load [[META0]]
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
 entry:
@@ -321,14 +350,14 @@ define amdgpu_kernel void @test_branch_load_partial_noalias(i1 %cond, ptr addrsp
 ; AMDGCN-NEXT:  [[ENTRY:.*:]]
 ; AMDGCN-NEXT:    br i1 [[COND]], label %[[TRUE:.*]], label %[[FALSE:.*]]
 ; AMDGCN:       [[TRUE]]:
-; AMDGCN-NEXT:    call void @clobber(i32 noundef 1) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 noundef 1) #[[ATTR6]]
 ; AMDGCN-NEXT:    br label %[[FINISH:.*]]
 ; AMDGCN:       [[FALSE]]:
 ; AMDGCN-NEXT:    br label %[[FINISH]]
 ; AMDGCN:       [[FINISH]]:
 ; AMDGCN-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ [[PTR_TRUE]], %[[TRUE]] ], [ [[PTR_FALSE]], %[[FALSE]] ]
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
-; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR5]]
+; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR6]]
 ; AMDGCN-NEXT:    ret void
 ;
 entry:
