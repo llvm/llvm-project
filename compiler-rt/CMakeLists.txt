@@ -309,11 +309,6 @@ option(COMPILER_RT_USE_BUILTINS_LIBRARY
 
 option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatomic" OFF)
 
-if (LLVM_EXECUTE_ONLY_CODE AND NOT LLVM_RUNTIMES_BUILD)
-  message(SEND_ERROR "LLVM_EXECUTE_ONLY_CODE is only supported "
-                     "for runtimes build of compiler-rt.")
-endif()
-
 include(config-ix)
 
 #================================
