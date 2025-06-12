@@ -2331,12 +2331,12 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-static Type *getGEPIndexTy(bool IsScalable, bool IsReverse,
+static Type *getGEPIndexTy(bool IsScalable, bool IsReverse, bool IsUnitStride,
                            unsigned CurrentPart, IRBuilderBase &Builder) {
   // Use i32 for the gep index type when the value is constant,
   // or query DataLayout for a more suitable index type otherwise.
   const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  return IsScalable && (IsReverse || CurrentPart > 0)
+  return !IsUnitStride || (IsScalable && (IsReverse || CurrentPart > 0))
              ? DL.getIndexType(Builder.getPtrTy(0))
              : Builder.getInt32Ty();
 }
@@ -2345,7 +2345,7 @@ void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
   Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ true,
-                                CurrentPart, Builder);
+                                /*IsUnitStride*/ true, CurrentPart, Builder);
 
   // The wide store needs to start at the last vector element.
   Value *RunTimeVF = State.get(getVFValue(), VPLane(0));
@@ -2380,18 +2380,19 @@ void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
   Value *Stride = State.get(getStride(), /*IsScalar*/ true);
-  bool IsStrideOne =
-      isa<ConstantInt>(Stride) && cast<ConstantInt>(Stride)->isOne();
-  // TODO: can use i32 index type if stride is minus one and the part is zero
-  // part.
-  Type *IndexTy = IsStrideOne
-                      ? getGEPIndexTy(State.VF.isScalable(),
-                                      /*IsReverse*/ false, CurrentPart, Builder)
-                      : Stride->getType();
+
+  auto *StrideC = dyn_cast<ConstantInt>(Stride);
+  bool IsStrideOne = StrideC && StrideC->isOne();
+  bool IsUnitStride = IsStrideOne || (StrideC && StrideC->isMinusOne());
+  Type *IndexTy =
+      getGEPIndexTy(State.VF.isScalable(),
+                    /*IsReverse*/ false, IsUnitStride, CurrentPart, Builder);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
 
+  Stride = Builder.CreateSExtOrTrunc(Stride, IndexTy);
   Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
   Value *Index = IsStrideOne ? Increment : Builder.CreateMul(Increment, Stride);
+
   Value *ResultPtr =
       Builder.CreateGEP(IndexedTy, Ptr, Index, "", getGEPNoWrapFlags());
 
