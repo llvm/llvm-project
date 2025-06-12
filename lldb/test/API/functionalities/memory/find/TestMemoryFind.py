@@ -79,3 +79,44 @@ class MemoryFindTestCase(TestBase):
             'memory find -s "nothere" `stringdata` `stringdata+10`',
             substrs=["data not found within the range."],
         )
+
+        # Expression results with unsupported result types.
+        self.expect(
+            'memory find -e "ThreeBytes{}" `&bytedata[0]` `&bytedata[2]`',
+            substrs=[
+                "Only expressions resulting in 1, 2, 4, or 8-byte-sized values are supported"
+            ],
+            error=True,
+        )
+
+        self.expect(
+            'memory find -e "FiveBytes{}" `&bytedata[0]` `&bytedata[2]`',
+            substrs=[
+                "Only expressions resulting in 1, 2, 4, or 8-byte-sized values are supported"
+            ],
+            error=True,
+        )
+
+        self.expect(
+            'memory find -e "SixBytes{}" `&bytedata[0]` `&bytedata[2]`',
+            substrs=[
+                "Only expressions resulting in 1, 2, 4, or 8-byte-sized values are supported"
+            ],
+            error=True,
+        )
+
+        self.expect(
+            'memory find -e "SevenBytes{}" `&bytedata[0]` `&bytedata[2]`',
+            substrs=[
+                "Only expressions resulting in 1, 2, 4, or 8-byte-sized values are supported"
+            ],
+            error=True,
+        )
+
+        self.expect(
+            'memory find -e "NineBytes{}" `&bytedata[0]` `&bytedata[2]`',
+            substrs=[
+                "Only expressions resulting in 1, 2, 4, or 8-byte-sized values are supported"
+            ],
+            error=True,
+        )
