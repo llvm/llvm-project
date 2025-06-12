@@ -15,7 +15,10 @@ static struct __AvailabilityDomain __feature3 __attribute__((availability_domain
 static struct __AvailabilityDomain __feature4 __attribute__((availability_domain(feature4))) = {__AVAILABILITY_DOMAIN_DYNAMIC, pred1};
 #endif
 
-__attribute__((availability(domain:feature1, AVAIL))) void func12(void);
+#pragma clang attribute push (__attribute__((availability(domain:feature1, AVAIL))), apply_to=any(function))
+void func12(void);
+#pragma clang attribute pop
+
 __attribute__((availability(domain:feature2, AVAIL))) void func13(void);
 __attribute__((availability(domain:feature1, AVAIL))) void func6(void);
 __attribute__((availability(domain:feature1, UNAVAIL))) void func7(void);
