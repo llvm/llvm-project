@@ -482,6 +482,8 @@ public:
   }
 
   const FileSpec &GetSymbolFileFileSpec() const { return m_symfile_spec; }
+  
+  const llvm::StringMap<FileSpec> GetSeparateDebugInfoFiles();
 
   void PreloadSymbols();
 

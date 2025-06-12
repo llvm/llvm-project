@@ -28,6 +28,7 @@
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Errc.h"
 
 #include <mutex>
@@ -495,6 +496,19 @@ public:
   ///     A pair containing (loaded_dwo_count, total_dwo_count). If this
   ///     symbol file doesn't support DWO files, both counts will be 0.
   virtual std::pair<uint32_t, uint32_t> GetDwoFileCounts() { return {0, 0}; }
+
+  /// Return a map of separate debug info files that are loaded.
+  ///
+  /// Unlike GetSeparateDebugInfo(), this function will only return the list of
+  /// files, if there are errors they are simply ignored. This function will
+  /// always return a valid list, even if it is empty.
+  ///
+  /// \return
+  ///     A unique map of all the filespecs, dwos in a dwps would be joined to the dwp path
+  ///     for example.
+  virtual llvm::StringMap<lldb_private::FileSpec> GetSeparateDebugInfoFiles() {
+    return {};
+  }
 
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,

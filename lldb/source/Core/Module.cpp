@@ -1647,3 +1647,11 @@ DataFileCache *Module::GetIndexCache() {
                             .GetPath());
   return g_data_file_cache;
 }
+
+const llvm::StringMap<lldb_private::FileSpec> Module::GetSeparateDebugInfoFiles() {
+  SymbolFile *symfile = GetSymbolFile(false);
+  if (!symfile)
+    return {};
+
+  return symfile->GetSeparateDebugInfoFiles();
+}

@@ -279,6 +279,8 @@ public:
 
   void DumpClangAST(Stream &s, llvm::StringRef filter) override;
 
+  llvm::StringMap<lldb_private::FileSpec> GetSeparateDebugInfoFiles() override;
+
   /// List separate dwo files.
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
                             bool load_all_debug_info = false) override;
