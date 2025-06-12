@@ -1772,7 +1772,8 @@ def FuncOp : CIR_Op<"func", [
                        OptionalAttr<StrAttr>:$sym_visibility,
                        UnitAttr:$comdat,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs);
+                       OptionalAttr<DictArrayAttr>:$res_attrs,
+                       OptionalAttr<FlatSymbolRefAttr>:$aliasee);
 
   let regions = (region AnyRegion:$body);
 
