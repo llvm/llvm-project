@@ -10,7 +10,6 @@
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/Support/Debug.h"
 
 namespace mlir {
 namespace emitc {
@@ -41,80 +40,6 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder) {
   op->moveBefore(yieldOp);
 
   return expressionOp;
-}
-
-ClassOp createClass(FuncOp funcOp, OpBuilder &builder) {
-  builder.setInsertionPoint(funcOp);
-
-  auto classOp = builder.create<emitc::ClassOp>(
-      funcOp.getLoc(), builder.getStringAttr("MyModelClass"));
-
-  builder.createBlock(&classOp.getBody());
-  builder.setInsertionPointToStart(&classOp.getBody().front());
-
-  SmallVector<std::pair<StringRef, Type>> fields;
-  llvm::SmallDenseMap<Value, Value> argToFieldMap;
-
-  auto argAttrs = funcOp.getArgAttrs();
-  if (argAttrs) {
-    for (const auto [arg, val] : zip(*argAttrs, funcOp.getArguments())) {
-      if (auto da = dyn_cast<mlir::DictionaryAttr>(arg)) {
-        auto nv = da.getNamed("tf_saved_model.index_path")->getValue();
-        auto fieldName = cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(nv)[0]);
-        auto fieldType = emitc::LValueType::get(emitc::PointerType::get(
-            dyn_cast_or_null<emitc::ArrayType>(val.getType())
-                .getElementType()));
-        fields.push_back({fieldName.str(), fieldType});
-
-        auto typeAttr = TypeAttr::get(val.getType());
-        mlir::Attribute emptyAttr = builder.getAttr<mlir::UnitAttr>();
-        auto dictAttr = DictionaryAttr::get(
-            builder.getContext(),
-            {builder.getNamedAttr(fieldName.str(), emptyAttr)});
-        builder.create<emitc::FieldOp>(funcOp.getLoc(), fieldName, typeAttr,
-                                       /* attributes*/ dictAttr);
-
-        // TODO: From my current understanding, we need to instantiate a class
-        // so we can get the pointers from .field but we can't do that in here
-        // so I'm unsure how I can rewrite the following line to ensure
-        // GetFieldOp works correctly. auto pointer =
-        // emitc::PointerType::get(dyn_cast_or_null<emitc::ArrayType>(val.getType()).getElementType());
-        // auto ptr = builder.create<emitc::GetFieldOp>(funcOp.getLoc(),
-        // pointer, val, "MyModelClass", fieldName);
-        argToFieldMap[val] = nullptr;
-      }
-    }
-  }
-
-  auto funcContext = funcOp.getContext();
-  auto inputTypes = funcOp.getFunctionType().getInputs();
-  auto results = funcOp.getFunctionType().getResults();
-  auto funcType = FunctionType::get(funcContext, inputTypes, results);
-  auto loc = funcOp.getLoc();
-  auto newFuncOp = builder.create<emitc::FuncOp>(
-      loc, builder.getStringAttr("execute"), funcType);
-
-  builder.createBlock(&newFuncOp.getBody());
-  builder.setInsertionPointToStart(&newFuncOp.getBody().front());
-
-  IRMapping mapper;
-
-  auto body = llvm::make_early_inc_range(funcOp.getBody().front());
-  for (Operation &opToClone : body) {
-    if (isa<emitc::ConstantOp>(opToClone) ||
-        isa<emitc::SubscriptOp>(opToClone) || isa<emitc::LoadOp>(opToClone) ||
-        isa<emitc::AddOp>(opToClone) || isa<emitc::AssignOp>(opToClone) ||
-        isa<emitc::ReturnOp>(opToClone)) {
-      builder.clone(opToClone, mapper);
-    } else {
-      opToClone.emitOpError("Unsupported operation found");
-    }
-  }
-
-  // TODO: Need to erase the funcOp after all this. Using funcOp->erase raises
-  // errors:
-
-  return classOp;
 }
 
 } // namespace emitc
