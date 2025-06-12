@@ -399,7 +399,7 @@
 
           function omp_get_cancellation() bind(c)
             use omp_lib_kinds
-            integer (kind=omp_integer_kind) omp_get_cancellation
+            logical (kind=omp_logical_kind) omp_get_cancellation
           end function omp_get_cancellation
 
           function omp_is_initial_device() bind(c)
