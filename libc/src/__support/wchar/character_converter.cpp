@@ -58,8 +58,8 @@ int CharacterConverter::push(char8_t utf8_byte) {
     }
     // Invalid
     else {
-        state->bytes_processed++;
-        return -1;
+      state->bytes_processed++;
+      return -1;
     }
   }
   // Any subsequent push
@@ -74,9 +74,7 @@ int CharacterConverter::push(char8_t utf8_byte) {
   return -1;
 }
 
-int CharacterConverter::push(char32_t utf32) { 
-    return utf32; 
-}
+int CharacterConverter::push(char32_t utf32) { return utf32; }
 
 utf_ret<char8_t> CharacterConverter::pop_utf8() {
   utf_ret<char8_t> utf8;
