@@ -10,14 +10,7 @@
 #define LLVM_LIBC_SHARED_MATH_H
 
 #include "libc_common.h"
-#include "src/__support/math/expf.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace shared {
+#include "math/expf.h"
 
-using math::expf;
-
-} // namespace shared
-} // namespace LIBC_NAMESPACE_DECL
-
-#endif // LLVM_LIBC_SHARED_FP_BITS_H
+#endif // LLVM_LIBC_SHARED_MATH_H
