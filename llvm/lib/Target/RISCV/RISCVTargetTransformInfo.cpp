@@ -2953,7 +2953,7 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     Options.AllowedTailExpansions = {3};
   }
 
-  if (IsZeroCmp && ST->hasVInstructions() && ST->enableUnalignedVectorMem()) {
+  if (IsZeroCmp && ST->hasVInstructions()) {
     unsigned RealMinVLen = ST->getRealMinVLen();
     // Support Fractional LMULs if the lengths are larger than XLen.
     // TODO: Support non-power-of-2 types.
