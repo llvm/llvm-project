@@ -334,9 +334,6 @@ class RestartRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "restart"; }
-  FeatureSet GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureRestartRequest};
-  }
   void operator()(const llvm::json::Object &request) const override;
 };
 
@@ -356,21 +353,7 @@ public:
   llvm::Error Run(const protocol::StepInArguments &args) const override;
 };
 
-class StepInTargetsRequestHandler
-    : public RequestHandler<
-          protocol::StepInTargetsArguments,
-          llvm::Expected<protocol::StepInTargetsResponseBody>> {
-public:
-  using RequestHandler::RequestHandler;
-  static llvm::StringLiteral GetCommand() { return "stepInTargets"; }
-  FeatureSet GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureStepInTargetsRequest};
-  }
-  llvm::Expected<protocol::StepInTargetsResponseBody>
-  Run(const protocol::StepInTargetsArguments &args) const override;
-};
-
-class StepInTargetsRequestHandler2 : public LegacyRequestHandler {
+class StepInTargetsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "stepInTargets"; }
@@ -536,11 +519,14 @@ public:
   }
 };
 
-class ThreadsRequestHandler : public LegacyRequestHandler {
+class ThreadsRequestHandler
+    : public RequestHandler<protocol::ThreadsArguments,
+                            llvm::Expected<protocol::ThreadsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "threads"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::ThreadsResponseBody>
+  Run(const protocol::ThreadsArguments &) const override;
 };
 
 class VariablesRequestHandler : public LegacyRequestHandler {

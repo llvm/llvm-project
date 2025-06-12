@@ -824,6 +824,7 @@ public:
     IPM_OneUse,
     IPM_GenericPredicate,
     IPM_MIFlags,
+    OPM_LeafPredicate,
     OPM_SameOperand,
     OPM_ComplexPattern,
     OPM_IntrinsicID,
@@ -1255,6 +1256,26 @@ public:
                             RuleMatcher &Rule) const override;
 };
 
+/// Generates code to check that this operand is a register whose value meets
+/// the predicate.
+class OperandLeafPredicateMatcher : public OperandPredicateMatcher {
+protected:
+  TreePredicateFn Predicate;
+
+public:
+  OperandLeafPredicateMatcher(unsigned InsnVarID, unsigned OpIdx,
+                              const TreePredicateFn &Predicate)
+      : OperandPredicateMatcher(OPM_LeafPredicate, InsnVarID, OpIdx),
+        Predicate(Predicate) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == OPM_LeafPredicate;
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override;
+};
+
 /// Generates code to check that a set of predicates match for a particular
 /// operand.
 class OperandMatcher : public PredicateListMatcher<OperandPredicateMatcher> {
@@ -1400,7 +1421,7 @@ public:
   }
 
   bool hasValue() const override {
-    return Insts.size() == 1 && OpcodeValues.count(Insts[0]);
+    return Insts.size() == 1 && OpcodeValues.contains(Insts[0]);
   }
 
   // TODO: This is used for the SwitchMatcher optimization. We should be able to

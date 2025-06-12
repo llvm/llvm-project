@@ -20,11 +20,67 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Representation.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
 namespace clang {
 namespace doc {
+
+CommentKind stringToCommentKind(llvm::StringRef KindStr) {
+  static const llvm::StringMap<CommentKind> KindMap = {
+      {"FullComment", CommentKind::CK_FullComment},
+      {"ParagraphComment", CommentKind::CK_ParagraphComment},
+      {"TextComment", CommentKind::CK_TextComment},
+      {"InlineCommandComment", CommentKind::CK_InlineCommandComment},
+      {"HTMLStartTagComment", CommentKind::CK_HTMLStartTagComment},
+      {"HTMLEndTagComment", CommentKind::CK_HTMLEndTagComment},
+      {"BlockCommandComment", CommentKind::CK_BlockCommandComment},
+      {"ParamCommandComment", CommentKind::CK_ParamCommandComment},
+      {"TParamCommandComment", CommentKind::CK_TParamCommandComment},
+      {"VerbatimBlockComment", CommentKind::CK_VerbatimBlockComment},
+      {"VerbatimBlockLineComment", CommentKind::CK_VerbatimBlockLineComment},
+      {"VerbatimLineComment", CommentKind::CK_VerbatimLineComment},
+  };
+
+  auto It = KindMap.find(KindStr);
+  if (It != KindMap.end()) {
+    return It->second;
+  }
+  return CommentKind::CK_Unknown;
+}
+
+llvm::StringRef commentKindToString(CommentKind Kind) {
+  switch (Kind) {
+  case CommentKind::CK_FullComment:
+    return "FullComment";
+  case CommentKind::CK_ParagraphComment:
+    return "ParagraphComment";
+  case CommentKind::CK_TextComment:
+    return "TextComment";
+  case CommentKind::CK_InlineCommandComment:
+    return "InlineCommandComment";
+  case CommentKind::CK_HTMLStartTagComment:
+    return "HTMLStartTagComment";
+  case CommentKind::CK_HTMLEndTagComment:
+    return "HTMLEndTagComment";
+  case CommentKind::CK_BlockCommandComment:
+    return "BlockCommandComment";
+  case CommentKind::CK_ParamCommandComment:
+    return "ParamCommandComment";
+  case CommentKind::CK_TParamCommandComment:
+    return "TParamCommandComment";
+  case CommentKind::CK_VerbatimBlockComment:
+    return "VerbatimBlockComment";
+  case CommentKind::CK_VerbatimBlockLineComment:
+    return "VerbatimBlockLineComment";
+  case CommentKind::CK_VerbatimLineComment:
+    return "VerbatimLineComment";
+  case CommentKind::CK_Unknown:
+    return "Unknown";
+  }
+  llvm_unreachable("Unhandled CommentKind");
+}
 
 namespace {
 

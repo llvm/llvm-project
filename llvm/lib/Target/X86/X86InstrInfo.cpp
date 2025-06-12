@@ -2487,6 +2487,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
       break;
     }
 
+    assert(Opc == X86::MOVSDrr && "Only MOVSD can commute to SHUFPD");
     WorkingMI = CloneIfNew(MI);
     WorkingMI->setDesc(get(X86::SHUFPDrri));
     WorkingMI->addOperand(MachineOperand::CreateImm(0x02));

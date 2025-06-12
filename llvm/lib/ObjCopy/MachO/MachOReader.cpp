@@ -10,6 +10,7 @@
 #include "MachOObject.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 #include <memory>
 
 using namespace llvm;

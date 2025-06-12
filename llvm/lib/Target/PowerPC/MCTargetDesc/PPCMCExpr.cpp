@@ -86,7 +86,3 @@ bool PPCMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
 
   return true;
 }
-
-void PPCMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
-}

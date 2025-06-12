@@ -1,8 +1,10 @@
 // Make sure dlerror is not classified as a leak even if we use dynamic TLS.
 // This is currently not implemented, so this test is XFAIL.
 
+// Android HWAsan does not support LSan.
+// UNSUPPORTED: android
+
 // RUN: %clangxx_hwasan -O0 %s -o %t && HWASAN_OPTIONS=detect_leaks=1 %run %t
-// XFAIL: *
 
 #include <assert.h>
 #include <dlfcn.h>
@@ -12,7 +14,8 @@
 #include <string.h>
 #include <unistd.h>
 
-constexpr auto kKeys = 500;
+// musl only has  128 keys
+constexpr auto kKeys = 100;
 
 int main(int argc, char **argv) {
   __hwasan_enable_allocator_tagging();

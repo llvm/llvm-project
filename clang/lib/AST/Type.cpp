@@ -3606,14 +3606,12 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
     return "aarch64_vector_pcs";
   case CC_AArch64SVEPCS:
     return "aarch64_sve_pcs";
-  case CC_AMDGPUKernelCall:
-    return "amdgpu_kernel";
   case CC_IntelOclBicc:
     return "intel_ocl_bicc";
   case CC_SpirFunction:
     return "spir_function";
-  case CC_OpenCLKernel:
-    return "opencl_kernel";
+  case CC_DeviceKernel:
+    return "device_kernel";
   case CC_Swift:
     return "swiftcall";
   case CC_SwiftAsync:
@@ -4015,18 +4013,17 @@ StringRef CountAttributedType::getAttributeName(bool WithMacroPrefix) const {
 }
 
 TypedefType::TypedefType(TypeClass tc, const TypedefNameDecl *D,
-                         QualType Underlying, QualType can)
-    : Type(tc, can, toSemanticDependence(can->getDependence())),
+                         QualType UnderlyingType, bool HasTypeDifferentFromDecl)
+    : Type(tc, UnderlyingType.getCanonicalType(),
+           toSemanticDependence(UnderlyingType->getDependence())),
       Decl(const_cast<TypedefNameDecl *>(D)) {
-  assert(!isa<TypedefType>(can) && "Invalid canonical type");
-  TypedefBits.hasTypeDifferentFromDecl = !Underlying.isNull();
+  TypedefBits.hasTypeDifferentFromDecl = HasTypeDifferentFromDecl;
   if (!typeMatchesDecl())
-    *getTrailingObjects<QualType>() = Underlying;
+    *getTrailingObjects() = UnderlyingType;
 }
 
 QualType TypedefType::desugar() const {
-  return typeMatchesDecl() ? Decl->getUnderlyingType()
-                           : *getTrailingObjects<QualType>();
+  return typeMatchesDecl() ? Decl->getUnderlyingType() : *getTrailingObjects();
 }
 
 UsingType::UsingType(const UsingShadowDecl *Found, QualType Underlying,
@@ -4035,14 +4032,14 @@ UsingType::UsingType(const UsingShadowDecl *Found, QualType Underlying,
       Found(const_cast<UsingShadowDecl *>(Found)) {
   UsingBits.hasTypeDifferentFromDecl = !Underlying.isNull();
   if (!typeMatchesDecl())
-    *getTrailingObjects<QualType>() = Underlying;
+    *getTrailingObjects() = Underlying;
 }
 
 QualType UsingType::getUnderlyingType() const {
   return typeMatchesDecl()
              ? QualType(
                    cast<TypeDecl>(Found->getTargetDecl())->getTypeForDecl(), 0)
-             : *getTrailingObjects<QualType>();
+             : *getTrailingObjects();
 }
 
 QualType MacroQualifiedType::desugar() const { return getUnderlyingType(); }
@@ -4148,7 +4145,7 @@ PackIndexingType::PackIndexingType(QualType Canonical, QualType Pattern,
       Pattern(Pattern), IndexExpr(IndexExpr), Size(Expansions.size()),
       FullySubstituted(FullySubstituted) {
 
-  llvm::uninitialized_copy(Expansions, getTrailingObjects<QualType>());
+  llvm::uninitialized_copy(Expansions, getTrailingObjects());
 }
 
 UnsignedOrNone PackIndexingType::getSelectedIndex() const {
@@ -4328,7 +4325,7 @@ bool AttributedType::isCallingConv() const {
   case attr::VectorCall:
   case attr::AArch64VectorPcs:
   case attr::AArch64SVEPcs:
-  case attr::AMDGPUKernelCall:
+  case attr::DeviceKernel:
   case attr::Pascal:
   case attr::MSABI:
   case attr::SysVABI:
@@ -4371,7 +4368,7 @@ SubstTemplateTypeParmType::SubstTemplateTypeParmType(QualType Replacement,
   SubstTemplateTypeParmTypeBits.HasNonCanonicalUnderlyingType =
       Replacement != getCanonicalTypeInternal();
   if (SubstTemplateTypeParmTypeBits.HasNonCanonicalUnderlyingType)
-    *getTrailingObjects<QualType>() = Replacement;
+    *getTrailingObjects() = Replacement;
 
   SubstTemplateTypeParmTypeBits.Index = Index;
   SubstTemplateTypeParmTypeBits.Final = Final;

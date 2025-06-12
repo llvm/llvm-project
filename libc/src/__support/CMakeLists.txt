@@ -2,6 +2,15 @@ add_subdirectory(CPP)
 add_subdirectory(macros)
 
 add_header_library(
+  libc_errno
+  HDRS
+    libc_errno.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   block
   HDRS
     block.h
@@ -381,3 +390,7 @@ add_subdirectory(HashTable)
 add_subdirectory(fixed_point)
 
 add_subdirectory(time)
+
+add_subdirectory(wchar)
+
+add_subdirectory(math)

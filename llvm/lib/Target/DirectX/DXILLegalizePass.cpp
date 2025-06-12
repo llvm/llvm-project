@@ -470,7 +470,8 @@ static void legalizeMemCpy(Instruction &I,
   Value *Src = CI->getArgOperand(1);
   ConstantInt *Length = dyn_cast<ConstantInt>(CI->getArgOperand(2));
   assert(Length && "Expected Length to be a ConstantInt");
-  ConstantInt *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
+  [[maybe_unused]] ConstantInt *IsVolatile =
+      dyn_cast<ConstantInt>(CI->getArgOperand(3));
   assert(IsVolatile && "Expected IsVolatile to be a ConstantInt");
   assert(IsVolatile->getZExtValue() == 0 && "Expected IsVolatile to be false");
   emitMemcpyExpansion(Builder, Dst, Src, Length);
