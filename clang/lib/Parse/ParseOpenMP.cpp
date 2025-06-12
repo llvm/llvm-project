@@ -1483,6 +1483,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
   OMPTraitInfo &TI = ASTCtx.getNewOMPTraitInfo();
   SmallVector<Expr *, 6> AdjustNothing;
   SmallVector<Expr *, 6> AdjustNeedDevicePtr;
+  SmallVector<Expr *, 6> AdjustNeedDeviceAddr;
   SmallVector<OMPInteropInfo, 3> AppendArgs;
   SourceLocation AdjustArgsLoc, AppendArgsLoc;
 
@@ -1515,11 +1516,21 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
         SmallVector<Expr *> Vars;
         IsError = ParseOpenMPVarList(OMPD_declare_variant, OMPC_adjust_args,
                                      Vars, Data);
-        if (!IsError)
-          llvm::append_range(Data.ExtraModifier == OMPC_ADJUST_ARGS_nothing
-                                 ? AdjustNothing
-                                 : AdjustNeedDevicePtr,
-                             Vars);
+        if (!IsError) {
+          switch (Data.ExtraModifier) {
+          case OMPC_ADJUST_ARGS_nothing:
+            llvm::append_range(AdjustNothing, Vars);
+            break;
+          case OMPC_ADJUST_ARGS_need_device_ptr:
+            llvm::append_range(AdjustNeedDevicePtr, Vars);
+            break;
+          case OMPC_ADJUST_ARGS_need_device_addr:
+            llvm::append_range(AdjustNeedDeviceAddr, Vars);
+            break;
+          default:
+            llvm_unreachable("Unexpected 'adjust_args' clause modifier.");
+          }
+        }
         break;
       }
       case OMPC_append_args:
@@ -1559,8 +1570,8 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
   if (DeclVarData && !TI.Sets.empty())
     Actions.OpenMP().ActOnOpenMPDeclareVariantDirective(
         DeclVarData->first, DeclVarData->second, TI, AdjustNothing,
-        AdjustNeedDevicePtr, AppendArgs, AdjustArgsLoc, AppendArgsLoc,
-        SourceRange(Loc, Tok.getLocation()));
+        AdjustNeedDevicePtr, AdjustNeedDeviceAddr, AppendArgs, AdjustArgsLoc,
+        AppendArgsLoc, SourceRange(Loc, Tok.getLocation()));
 
   // Skip the last annot_pragma_openmp_end.
   (void)ConsumeAnnotationToken();
@@ -4818,7 +4829,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         getLangOpts());
     Data.ExtraModifierLoc = Tok.getLocation();
     if (Data.ExtraModifier == OMPC_ADJUST_ARGS_unknown) {
-      Diag(Tok, diag::err_omp_unknown_adjust_args_op);
+      Diag(Tok, diag::err_omp_unknown_adjust_args_op)
+          << (getLangOpts().OpenMP >= 60 ? 1 : 0);
       SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
     } else {
       ConsumeToken();
