@@ -527,6 +527,7 @@ static void instantiateOMPDeclareVariantAttr(
 
   SmallVector<Expr *, 8> NothingExprs;
   SmallVector<Expr *, 8> NeedDevicePtrExprs;
+  SmallVector<Expr *, 8> NeedDeviceAddrExprs;
   SmallVector<OMPInteropInfo, 4> AppendArgs;
 
   for (Expr *E : Attr.adjustArgsNothing()) {
@@ -541,14 +542,20 @@ static void instantiateOMPDeclareVariantAttr(
       continue;
     NeedDevicePtrExprs.push_back(ER.get());
   }
+  for (Expr *E : Attr.adjustArgsNeedDeviceAddr()) {
+    ExprResult ER = Subst(E);
+    if (ER.isInvalid())
+      continue;
+    NeedDeviceAddrExprs.push_back(ER.get());
+  }
   for (OMPInteropInfo &II : Attr.appendArgs()) {
     // When prefer_type is implemented for append_args handle them here too.
     AppendArgs.emplace_back(II.IsTarget, II.IsTargetSync);
   }
 
   S.OpenMP().ActOnOpenMPDeclareVariantDirective(
-      FD, E, TI, NothingExprs, NeedDevicePtrExprs, AppendArgs, SourceLocation(),
-      SourceLocation(), Attr.getRange());
+      FD, E, TI, NothingExprs, NeedDevicePtrExprs, NeedDeviceAddrExprs,
+      AppendArgs, SourceLocation(), SourceLocation(), Attr.getRange());
 }
 
 static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
