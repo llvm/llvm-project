@@ -1366,56 +1366,68 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
 
 /// Determine whether the pointer V had only undefined content (due to Def) up
 /// to the given Size, either because it was freshly alloca'd or started its
-/// lifetime.
-static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
-                             MemoryDef *Def, Value *Size) {
-  if (MSSA->isLiveOnEntryDef(Def))
-    return isa<AllocaInst>(getUnderlyingObject(V));
+/// lifetime by walking the MSSA graph.
+static bool hadUndefContentsBefore(MemorySSA *MSSA, BatchAAResults &BAA,
+                                   Value *V, MemoryAccess *Clobber,
+                                   MemoryLocation Loc, Value *Size) {
+  while (1) {
+    Clobber = MSSA->getWalker()->getClobberingMemoryAccess(Clobber, Loc, BAA);
+    MemoryDef *Def = dyn_cast<MemoryDef>(Clobber);
+    if (!Def)
+      return false;
 
-  if (auto *II = dyn_cast_or_null<IntrinsicInst>(Def->getMemoryInst())) {
-    if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
-      auto *LTSize = cast<ConstantInt>(II->getArgOperand(0));
+    if (MSSA->isLiveOnEntryDef(Def))
+      return isa<AllocaInst>(getUnderlyingObject(V));
 
-      if (auto *CSize = dyn_cast<ConstantInt>(Size)) {
-        if (AA.isMustAlias(V, II->getArgOperand(1)) &&
-            LTSize->getZExtValue() >= CSize->getZExtValue())
-          return true;
-      }
+    if (auto *II = dyn_cast_or_null<IntrinsicInst>(Def->getMemoryInst())) {
+      if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
+        auto *LTSize = cast<ConstantInt>(II->getArgOperand(0));
 
-      // If the lifetime.start covers a whole alloca (as it almost always
-      // does) and we're querying a pointer based on that alloca, then we know
-      // the memory is definitely undef, regardless of how exactly we alias.
-      // The size also doesn't matter, as an out-of-bounds access would be UB.
-      if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V))) {
-        if (getUnderlyingObject(II->getArgOperand(1)) == Alloca) {
-          const DataLayout &DL = Alloca->getDataLayout();
-          if (std::optional<TypeSize> AllocaSize =
-                  Alloca->getAllocationSize(DL))
-            if (*AllocaSize == LTSize->getValue())
+        if (Size)
+          if (auto CSize = dyn_cast<ConstantInt>(Size))
+            if (BAA.isMustAlias(V, II->getArgOperand(1)) &&
+                LTSize->getZExtValue() >= CSize->getZExtValue())
               return true;
+
+        // If the lifetime.start covers a whole alloca (as it almost always
+        // does) and we're querying a pointer based on that alloca, then we know
+        // the memory is definitely undef, regardless of how exactly we alias.
+        // The size also doesn't matter, as an out-of-bounds access would be UB.
+        if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V))) {
+          if (getUnderlyingObject(II->getArgOperand(1)) == Alloca) {
+            const DataLayout &DL = Alloca->getDataLayout();
+            if (std::optional<TypeSize> AllocaSize =
+                    Alloca->getAllocationSize(DL))
+              if (*AllocaSize == LTSize->getValue())
+                return true;
+          }
         }
+        Clobber = Def->getDefiningAccess();
+        continue;
+      } else if (II->getIntrinsicID() == Intrinsic::lifetime_end) {
+        Clobber = Def->getDefiningAccess();
+        continue;
       }
     }
-  }
 
-  return false;
+    return false;
+  }
 }
 
 // If the memcpy is larger than the previous, but the memory was undef prior to
 // that, we can just ignore the tail. Technically we're only interested in the
 // bytes from 0..MemSrcOffset and MemSrcLength+MemSrcOffset..CopySize here, but
-// as we can't easily represent this location (hasUndefContents uses mustAlias
-// which cannot deal with offsets), we use the full 0..CopySize range.
+// as we can't easily represent this location (hadUndefContentsBefore uses
+// mustAlias which cannot deal with offsets), we use the full 0..CopySize range.
 static bool overreadUndefContents(MemorySSA *MSSA, MemCpyInst *MemCpy,
                                   MemIntrinsic *MemSrc, BatchAAResults &BAA) {
   Value *CopySize = MemCpy->getLength();
-  MemoryLocation MemCpyLoc = MemoryLocation::getForSource(MemCpy);
-  MemoryUseOrDef *MemSrcAccess = MSSA->getMemoryAccess(MemSrc);
-  MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
-      MemSrcAccess->getDefiningAccess(), MemCpyLoc, BAA);
-  if (auto *MD = dyn_cast<MemoryDef>(Clobber))
-    if (hasUndefContents(MSSA, BAA, MemCpy->getSource(), MD, CopySize))
-      return true;
+  MemoryLocation LoadLoc = MemoryLocation::getForSource(MemCpy);
+  MemoryAccess *MemSrcAccess =
+      MSSA->getMemoryAccess(MemSrc)->getDefiningAccess();
+  if (hadUndefContentsBefore(MSSA, BAA, MemCpy->getSource(), MemSrcAccess,
+                             LoadLoc, CopySize))
+    return true;
   return false;
 }
 
@@ -1573,11 +1585,14 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
             // since both llvm.lifetime.start and llvm.lifetime.end intrinsics
             // practically fill all the bytes of the alloca with an undefined
             // value, although conceptually marked as alive/dead.
-            int64_t Size = cast<ConstantInt>(UI->getOperand(0))->getSExtValue();
-            if (Size < 0 || Size == DestSize) {
-              LifetimeMarkers.push_back(UI);
-              continue;
-            }
+            // We don't currently track GEP offsets and sizes, so we don't have
+            // a way to check whether this lifetime marker affects the relevant
+            // memory regions.
+            // While we only really need to delete lifetime.end from Src and
+            // lifetime.begin from Dst, those are often implied by the memcpy
+            // anyways so hopefully not much is lost by removing all of them.
+            LifetimeMarkers.push_back(UI);
+            continue;
           }
           AAMetadataInstrs.insert(UI);
 
@@ -1594,9 +1609,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return true;
   };
 
-  // Check that dest has no Mod/Ref, from the alloca to the Store, except full
-  // size lifetime intrinsics. And collect modref inst for the reachability
-  // check.
+  // Check that dest has no Mod/Ref, from the alloca to the Store. And collect
+  // modref inst for the reachability check.
   ModRefInfo DestModRef = ModRefInfo::NoModRef;
   MemoryLocation DestLoc(DestAlloca, LocationSize::precise(Size));
   SmallVector<BasicBlock *, 8> ReachabilityWorklist;
@@ -1779,8 +1793,9 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
         if (processMemSetMemCpyDependence(M, MDep, BAA))
           return true;
 
-  MemoryAccess *SrcClobber = MSSA->getWalker()->getClobberingMemoryAccess(
-      AnyClobber, MemoryLocation::getForSource(M), BAA);
+  MemoryLocation SrcLoc = MemoryLocation::getForSource(M);
+  MemoryAccess *SrcClobber =
+      MSSA->getWalker()->getClobberingMemoryAccess(AnyClobber, SrcLoc, BAA);
 
   // There are five possible optimizations we can do for memcpy:
   //   a) memcpy-memcpy xform which exposes redundance for DSE.
@@ -1820,7 +1835,8 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       }
     }
 
-    if (hasUndefContents(MSSA, BAA, M->getSource(), MD, M->getLength())) {
+    if (hadUndefContentsBefore(MSSA, BAA, M->getSource(), AnyClobber, SrcLoc,
+                               M->getLength())) {
       LLVM_DEBUG(dbgs() << "Removed memcpy from undef\n");
       eraseInstruction(M);
       ++NumMemCpyInstr;
