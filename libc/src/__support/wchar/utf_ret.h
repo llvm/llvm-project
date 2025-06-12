@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_UTF_RET_H
 #define LLVM_LIBC_SRC___SUPPORT_UTF_RET_H
 
+#include "src/__support/common.h"
+
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 template <typename T> struct utf_ret {

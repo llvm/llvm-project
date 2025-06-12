@@ -8,4 +8,4 @@ add_libc_test(
     utf32_to_8_test.cpp 
   DEPENDS
     libc.src.__support.wchar.character_converter
- )
+)
