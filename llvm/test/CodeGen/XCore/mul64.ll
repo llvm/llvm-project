@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
-; RUN: llc < %s -march=xcore -regalloc=basic | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore -regalloc=basic | FileCheck %s
 define i64 @umul_lohi(i32 %a, i32 %b) {
 entry:
 	%0 = zext i32 %a to i64

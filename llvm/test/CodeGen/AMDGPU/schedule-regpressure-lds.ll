@@ -7,7 +7,7 @@
 ; which (incorrectly) used to look to the scheduler like an occupancy reduction.
 
 ; 6 kB of LDS, allows 10 workgroups
-@lds = internal addrspace(3) global [384 x <4 x i32>] undef
+@lds = internal addrspace(3) global [384 x <4 x i32>] poison
 
 define internal amdgpu_gfx void @copy(ptr addrspace(1) %src, i32 %ofs) alwaysinline {
   %src.gep = getelementptr <4 x i32>, ptr addrspace(1) %src, i32 %ofs

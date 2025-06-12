@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -83,21 +84,20 @@ enum GPUKind : uint32_t {
   GK_GFX909 = 65,
   GK_GFX90A = 66,
   GK_GFX90C = 67,
-  GK_GFX940 = 68,
-  GK_GFX941 = 69,
   GK_GFX942 = 70,
+  GK_GFX950 = 71,
 
-  GK_GFX1010 = 71,
-  GK_GFX1011 = 72,
-  GK_GFX1012 = 73,
-  GK_GFX1013 = 74,
-  GK_GFX1030 = 75,
-  GK_GFX1031 = 76,
-  GK_GFX1032 = 77,
-  GK_GFX1033 = 78,
-  GK_GFX1034 = 79,
-  GK_GFX1035 = 80,
-  GK_GFX1036 = 81,
+  GK_GFX1010 = 72,
+  GK_GFX1011 = 73,
+  GK_GFX1012 = 74,
+  GK_GFX1013 = 75,
+  GK_GFX1030 = 76,
+  GK_GFX1031 = 77,
+  GK_GFX1032 = 78,
+  GK_GFX1033 = 79,
+  GK_GFX1034 = 80,
+  GK_GFX1035 = 81,
+  GK_GFX1036 = 82,
 
   GK_GFX1100 = 90,
   GK_GFX1101 = 91,
@@ -119,9 +119,10 @@ enum GPUKind : uint32_t {
   GK_GFX10_3_GENERIC = 194,
   GK_GFX11_GENERIC = 195,
   GK_GFX12_GENERIC = 196,
+  GK_GFX9_4_GENERIC = 197,
 
   GK_AMDGCN_GENERIC_FIRST = GK_GFX9_GENERIC,
-  GK_AMDGCN_GENERIC_LAST = GK_GFX12_GENERIC,
+  GK_AMDGCN_GENERIC_LAST = GK_GFX9_4_GENERIC,
 };
 
 /// Instruction set architecture version.
@@ -164,27 +165,27 @@ enum FeatureError : uint32_t {
   UNSUPPORTED_TARGET_FEATURE
 };
 
-StringRef getArchFamilyNameAMDGCN(GPUKind AK);
+LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
 
-StringRef getArchNameAMDGCN(GPUKind AK);
-StringRef getArchNameR600(GPUKind AK);
-StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
-GPUKind parseArchAMDGCN(StringRef CPU);
-GPUKind parseArchR600(StringRef CPU);
-unsigned getArchAttrAMDGCN(GPUKind AK);
-unsigned getArchAttrR600(GPUKind AK);
+LLVM_ABI StringRef getArchNameAMDGCN(GPUKind AK);
+LLVM_ABI StringRef getArchNameR600(GPUKind AK);
+LLVM_ABI StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
+LLVM_ABI GPUKind parseArchAMDGCN(StringRef CPU);
+LLVM_ABI GPUKind parseArchR600(StringRef CPU);
+LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
+LLVM_ABI unsigned getArchAttrR600(GPUKind AK);
 
-void fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values);
-void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI void fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
 
-IsaVersion getIsaVersion(StringRef GPU);
+LLVM_ABI IsaVersion getIsaVersion(StringRef GPU);
 
 /// Fills Features map with default values for given target GPU
-void fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
-                          StringMap<bool> &Features);
+LLVM_ABI void fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
+                                   StringMap<bool> &Features);
 
 /// Inserts wave size feature for given GPU into features map
-std::pair<FeatureError, StringRef>
+LLVM_ABI std::pair<FeatureError, StringRef>
 insertWaveSizeFeature(StringRef GPU, const Triple &T,
                       StringMap<bool> &Features);
 

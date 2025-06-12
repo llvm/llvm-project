@@ -238,7 +238,7 @@ define <3 x i1> @logical_or_not_and_vector1(<3 x i1> %x, <3 x i1> %y) {
 define <3 x i1> @logical_or_not_and_vector1_poison1(<3 x i1> %x, <3 x i1> %y) {
 ; CHECK-LABEL: @logical_or_not_and_vector1_poison1(
 ; CHECK-NEXT:    [[L_AND:%.*]] = select <3 x i1> [[X:%.*]], <3 x i1> <i1 true, i1 true, i1 poison>, <3 x i1> [[Y:%.*]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor <3 x i1> [[L_AND]], <i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <3 x i1> [[L_AND]], splat (i1 true)
 ; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[NOT]], <3 x i1> [[X]], <3 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
@@ -299,7 +299,7 @@ define i1 @logical_nand_logical_or_common_op_commute1(i1 %x, i1 %y) {
 
 define <2 x i1> @logical_nand_logical_or_common_op_commute2(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @logical_nand_logical_or_common_op_commute2(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %and = select <2 x i1> %y, <2 x i1> %x, <2 x i1> zeroinitializer
   %nand = xor <2 x i1> %and, <i1 -1, i1 -1>
@@ -309,7 +309,7 @@ define <2 x i1> @logical_nand_logical_or_common_op_commute2(<2 x i1> %x, <2 x i1
 
 define <2 x i1> @logical_nand_logical_or_common_op_commute3(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @logical_nand_logical_or_common_op_commute3(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %and = select <2 x i1> %x, <2 x i1> %y, <2 x i1> zeroinitializer
   %nand = xor <2 x i1> %and, <i1 -1, i1 poison>
@@ -332,8 +332,8 @@ define i1 @logical_nand_logical_or_common_op_commute4(i1 %x, i1 %y) {
 define <2 x i1> @logical_nand_logical_or_common_op_commute4_poison_vec(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @logical_nand_logical_or_common_op_commute4_poison_vec(
 ; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i1> [[X:%.*]], <2 x i1> <i1 false, i1 poison>
-; CHECK-NEXT:    [[NAND:%.*]] = xor <2 x i1> [[AND]], <i1 true, i1 true>
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[X]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[NAND]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor <2 x i1> [[AND]], splat (i1 true)
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[X]], <2 x i1> splat (i1 true), <2 x i1> [[NAND]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %and = select <2 x i1> %y, <2 x i1> %x, <2 x i1> <i1 0, i1 poison>
@@ -666,7 +666,7 @@ define <2 x i1> @or_same_op(<2 x i1> %x) {
 
 define <2 x i1> @always_true_same_op(<2 x i1> %x) {
 ; CHECK-LABEL: @always_true_same_op(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %r = select <2 x i1> %x, <2 x i1> %x, <2 x i1> <i1 poison, i1 true>
   ret <2 x i1> %r
@@ -714,7 +714,7 @@ define <2 x i1> @or_and_common_op_commute2(<2 x i1> %x, <2 x i1> %y) {
 define <2 x i1> @or_and_common_op_commute2_poison(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @or_and_common_op_commute2_poison(
 ; CHECK-NEXT:    [[A:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> [[Y:%.*]], <2 x i1> <i1 false, i1 poison>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[Y]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[A]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[Y]], <2 x i1> splat (i1 true), <2 x i1> [[A]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %a = select <2 x i1> %x, <2 x i1> %y, <2 x i1> <i1 0, i1 poison>

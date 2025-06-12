@@ -13,10 +13,8 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
-#include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -26,7 +24,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <sstream>
 
@@ -35,7 +32,7 @@ using namespace llvm;
 #define AARCH64_LOWER_HOMOGENEOUS_PROLOG_EPILOG_NAME                           \
   "AArch64 homogeneous prolog/epilog lowering pass"
 
-cl::opt<int> FrameHelperSizeThreshold(
+static cl::opt<int> FrameHelperSizeThreshold(
     "frame-helper-size-threshold", cl::init(2), cl::Hidden,
     cl::desc("The minimum number of instructions that are outlined in a frame "
              "helper (default = 2)"));
@@ -76,10 +73,7 @@ class AArch64LowerHomogeneousPrologEpilog : public ModulePass {
 public:
   static char ID;
 
-  AArch64LowerHomogeneousPrologEpilog() : ModulePass(ID) {
-    initializeAArch64LowerHomogeneousPrologEpilogPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AArch64LowerHomogeneousPrologEpilog() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineModuleInfoWrapperPass>();
     AU.addPreserved<MachineModuleInfoWrapperPass>();
@@ -172,18 +166,14 @@ static MachineFunction &createFrameHelperMachineFunction(Module *M,
   F->setLinkage(GlobalValue::LinkOnceODRLinkage);
   F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
-  // Set no-opt/minsize, so we don't insert padding between outlined
-  // functions.
-  F->addFnAttr(Attribute::OptimizeNone);
+  // Set minsize, so we don't insert padding between outlined functions.
   F->addFnAttr(Attribute::NoInline);
   F->addFnAttr(Attribute::MinSize);
   F->addFnAttr(Attribute::Naked);
 
   MachineFunction &MF = MMI->getOrCreateMachineFunction(*F);
   // Remove unnecessary register liveness and set NoVRegs.
-  MF.getProperties().reset(MachineFunctionProperties::Property::TracksLiveness);
-  MF.getProperties().reset(MachineFunctionProperties::Property::IsSSA);
-  MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+  MF.getProperties().resetTracksLiveness().resetIsSSA().setNoVRegs();
   MF.getRegInfo().freezeReservedRegs();
 
   // Create entry block.
@@ -412,7 +402,7 @@ static bool shouldUseFrameHelper(MachineBasicBlock &MBB,
     InstCount--;
     break;
   case FrameHelperType::PrologFrame: {
-    // Effecitvely no change in InstCount since FpAdjusment is included.
+    // Effectively no change in InstCount since FpAdjustment is included.
     break;
   }
   case FrameHelperType::Epilog:

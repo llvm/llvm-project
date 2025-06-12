@@ -125,6 +125,33 @@ CGPointerAuthInfo CodeGenFunction::EmitPointerAuthInfo(
                            Schema.authenticatesNullValues(), Discriminator);
 }
 
+CGPointerAuthInfo
+CodeGenFunction::EmitPointerAuthInfo(PointerAuthQualifier Qual,
+                                     Address StorageAddress) {
+  assert(Qual && "don't call this if you don't know that the Qual is present");
+  if (Qual.hasKeyNone())
+    return CGPointerAuthInfo();
+
+  llvm::Value *Discriminator = nullptr;
+  if (unsigned Extra = Qual.getExtraDiscriminator())
+    Discriminator = llvm::ConstantInt::get(IntPtrTy, Extra);
+
+  if (Qual.isAddressDiscriminated()) {
+    assert(StorageAddress.isValid() &&
+           "address discrimination without address");
+    llvm::Value *StoragePtr = StorageAddress.emitRawPointer(*this);
+    if (Discriminator)
+      Discriminator =
+          EmitPointerAuthBlendDiscriminator(StoragePtr, Discriminator);
+    else
+      Discriminator = Builder.CreatePtrToInt(StoragePtr, IntPtrTy);
+  }
+
+  return CGPointerAuthInfo(Qual.getKey(), Qual.getAuthenticationMode(),
+                           Qual.isIsaPointer(), Qual.authenticatesNullValues(),
+                           Discriminator);
+}
+
 /// Return the natural pointer authentication for values of the given
 /// pointee type.
 static CGPointerAuthInfo
@@ -148,7 +175,7 @@ CGPointerAuthInfo CodeGenModule::getPointerAuthInfoForPointeeType(QualType T) {
 /// pointer type.
 static CGPointerAuthInfo getPointerAuthInfoForType(CodeGenModule &CGM,
                                                    QualType PointerType) {
-  assert(PointerType->isSignableType());
+  assert(PointerType->isSignableType(CGM.getContext()));
 
   // Block pointers are currently not signed.
   if (PointerType->isBlockPointerType())
@@ -166,6 +193,91 @@ CGPointerAuthInfo CodeGenModule::getPointerAuthInfoForType(QualType T) {
   return ::getPointerAuthInfoForType(*this, T);
 }
 
+static std::pair<llvm::Value *, CGPointerAuthInfo>
+emitLoadOfOrigPointerRValue(CodeGenFunction &CGF, const LValue &LV,
+                            SourceLocation Loc) {
+  llvm::Value *Value = CGF.EmitLoadOfScalar(LV, Loc);
+  CGPointerAuthInfo AuthInfo;
+  if (PointerAuthQualifier PtrAuth = LV.getQuals().getPointerAuth())
+    AuthInfo = CGF.EmitPointerAuthInfo(PtrAuth, LV.getAddress());
+  else
+    AuthInfo = getPointerAuthInfoForType(CGF.CGM, LV.getType());
+  return {Value, AuthInfo};
+}
+
+/// Retrieve a pointer rvalue and its ptrauth info. When possible, avoid
+/// needlessly resigning the pointer.
+std::pair<llvm::Value *, CGPointerAuthInfo>
+CodeGenFunction::EmitOrigPointerRValue(const Expr *E) {
+  assert(E->getType()->isSignableType(getContext()));
+
+  E = E->IgnoreParens();
+  if (const auto *Load = dyn_cast<ImplicitCastExpr>(E)) {
+    if (Load->getCastKind() == CK_LValueToRValue) {
+      E = Load->getSubExpr()->IgnoreParens();
+
+      // We're semantically required to not emit loads of certain DREs naively.
+      if (const auto *RefExpr = dyn_cast<DeclRefExpr>(E)) {
+        if (ConstantEmission Result = tryEmitAsConstant(RefExpr)) {
+          // Fold away a use of an intermediate variable.
+          if (!Result.isReference())
+            return {Result.getValue(),
+                    getPointerAuthInfoForType(CGM, RefExpr->getType())};
+
+          // Fold away a use of an intermediate reference.
+          LValue LV = Result.getReferenceLValue(*this, RefExpr);
+          return emitLoadOfOrigPointerRValue(*this, LV, RefExpr->getLocation());
+        }
+      }
+
+      // Otherwise, load and use the pointer
+      LValue LV = EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
+      return emitLoadOfOrigPointerRValue(*this, LV, E->getExprLoc());
+    }
+  }
+
+  // Fallback: just use the normal rules for the type.
+  llvm::Value *Value = EmitScalarExpr(E);
+  return {Value, getPointerAuthInfoForType(CGM, E->getType())};
+}
+
+llvm::Value *
+CodeGenFunction::EmitPointerAuthQualify(PointerAuthQualifier DestQualifier,
+                                        const Expr *E,
+                                        Address DestStorageAddress) {
+  assert(DestQualifier);
+  auto [Value, CurAuthInfo] = EmitOrigPointerRValue(E);
+
+  CGPointerAuthInfo DestAuthInfo =
+      EmitPointerAuthInfo(DestQualifier, DestStorageAddress);
+  return emitPointerAuthResign(Value, E->getType(), CurAuthInfo, DestAuthInfo,
+                               isPointerKnownNonNull(E));
+}
+
+llvm::Value *CodeGenFunction::EmitPointerAuthQualify(
+    PointerAuthQualifier DestQualifier, llvm::Value *Value,
+    QualType PointerType, Address DestStorageAddress, bool IsKnownNonNull) {
+  assert(DestQualifier);
+
+  CGPointerAuthInfo CurAuthInfo = getPointerAuthInfoForType(CGM, PointerType);
+  CGPointerAuthInfo DestAuthInfo =
+      EmitPointerAuthInfo(DestQualifier, DestStorageAddress);
+  return emitPointerAuthResign(Value, PointerType, CurAuthInfo, DestAuthInfo,
+                               IsKnownNonNull);
+}
+
+llvm::Value *CodeGenFunction::EmitPointerAuthUnqualify(
+    PointerAuthQualifier CurQualifier, llvm::Value *Value, QualType PointerType,
+    Address CurStorageAddress, bool IsKnownNonNull) {
+  assert(CurQualifier);
+
+  CGPointerAuthInfo CurAuthInfo =
+      EmitPointerAuthInfo(CurQualifier, CurStorageAddress);
+  CGPointerAuthInfo DestAuthInfo = getPointerAuthInfoForType(CGM, PointerType);
+  return emitPointerAuthResign(Value, PointerType, CurAuthInfo, DestAuthInfo,
+                               IsKnownNonNull);
+}
+
 static bool isZeroConstant(const llvm::Value *Value) {
   if (const auto *CI = dyn_cast<llvm::ConstantInt>(Value))
     return CI->isZero();
@@ -179,7 +291,10 @@ static bool equalAuthPolicies(const CGPointerAuthInfo &Left,
   if (Left.isSigned() != Right.isSigned())
     return false;
   return Left.getKey() == Right.getKey() &&
-         Left.getAuthenticationMode() == Right.getAuthenticationMode();
+         Left.getAuthenticationMode() == Right.getAuthenticationMode() &&
+         Left.isIsaPointer() == Right.isIsaPointer() &&
+         Left.authenticatesNullValues() == Right.authenticatesNullValues() &&
+         Left.getDiscriminator() == Right.getDiscriminator();
 }
 
 // Return the discriminator or return zero if the discriminator is null.
@@ -288,6 +403,23 @@ llvm::Value *CodeGenFunction::emitPointerAuthResign(
   return Value;
 }
 
+void CodeGenFunction::EmitPointerAuthCopy(PointerAuthQualifier Qual, QualType T,
+                                          Address DestAddress,
+                                          Address SrcAddress) {
+  assert(Qual);
+  llvm::Value *Value = Builder.CreateLoad(SrcAddress);
+
+  // If we're using address-discrimination, we have to re-sign the value.
+  if (Qual.isAddressDiscriminated()) {
+    CGPointerAuthInfo SrcPtrAuth = EmitPointerAuthInfo(Qual, SrcAddress);
+    CGPointerAuthInfo DestPtrAuth = EmitPointerAuthInfo(Qual, DestAddress);
+    Value = emitPointerAuthResign(Value, T, SrcPtrAuth, DestPtrAuth,
+                                  /*IsKnownNonNull=*/false);
+  }
+
+  Builder.CreateStore(Value, DestAddress);
+}
+
 llvm::Constant *
 CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
                                         llvm::Constant *StorageAddress,
@@ -388,14 +520,19 @@ llvm::Constant *CodeGenModule::getMemberFunctionPointer(llvm::Constant *Pointer,
         Pointer, PointerAuth.getKey(), nullptr,
         cast_or_null<llvm::ConstantInt>(PointerAuth.getDiscriminator()));
 
+  if (const auto *MFT = dyn_cast<MemberPointerType>(FT.getTypePtr())) {
+    if (MFT->hasPointeeToToCFIUncheckedCalleeFunctionType())
+      Pointer = llvm::NoCFIValue::get(cast<llvm::GlobalValue>(Pointer));
+  }
+
   return Pointer;
 }
 
 llvm::Constant *CodeGenModule::getMemberFunctionPointer(const FunctionDecl *FD,
                                                         llvm::Type *Ty) {
   QualType FT = FD->getType();
-  FT = getContext().getMemberPointerType(
-      FT, cast<CXXMethodDecl>(FD)->getParent()->getTypeForDecl());
+  FT = getContext().getMemberPointerType(FT, /*Qualifier=*/nullptr,
+                                         cast<CXXMethodDecl>(FD)->getParent());
   return getMemberFunctionPointer(getRawFunctionPointer(FD, Ty), FT);
 }
 
@@ -513,10 +650,10 @@ llvm::Value *CodeGenFunction::authPointerToPointerCast(llvm::Value *ResultPtr,
                                                        QualType SourceType,
                                                        QualType DestType) {
   CGPointerAuthInfo CurAuthInfo, NewAuthInfo;
-  if (SourceType->isSignableType())
+  if (SourceType->isSignableType(getContext()))
     CurAuthInfo = getPointerAuthInfoForType(CGM, SourceType);
 
-  if (DestType->isSignableType())
+  if (DestType->isSignableType(getContext()))
     NewAuthInfo = getPointerAuthInfoForType(CGM, DestType);
 
   if (!CurAuthInfo && !NewAuthInfo)
@@ -538,10 +675,10 @@ Address CodeGenFunction::authPointerToPointerCast(Address Ptr,
                                                   QualType SourceType,
                                                   QualType DestType) {
   CGPointerAuthInfo CurAuthInfo, NewAuthInfo;
-  if (SourceType->isSignableType())
+  if (SourceType->isSignableType(getContext()))
     CurAuthInfo = getPointerAuthInfoForType(CGM, SourceType);
 
-  if (DestType->isSignableType())
+  if (DestType->isSignableType(getContext()))
     NewAuthInfo = getPointerAuthInfoForType(CGM, DestType);
 
   if (!CurAuthInfo && !NewAuthInfo)
@@ -595,7 +732,6 @@ Address Address::getResignedAddress(const CGPointerAuthInfo &NewInfo,
     Val = CGF.emitPointerAuthResign(getBasePointer(), QualType(), CurInfo,
                                     NewInfo, isKnownNonNull());
 
-  Val = CGF.Builder.CreateBitCast(Val, getType());
   return Address(Val, getElementType(), getAlignment(), NewInfo,
                  /*Offset=*/nullptr, isKnownNonNull());
 }

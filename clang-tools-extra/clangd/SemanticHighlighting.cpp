@@ -9,7 +9,6 @@
 #include "SemanticHighlighting.h"
 #include "Config.h"
 #include "FindTarget.h"
-#include "HeuristicResolver.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
@@ -27,6 +26,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -489,7 +489,7 @@ public:
     // Initializer lists can give duplicates of tokens, therefore all tokens
     // must be deduplicated.
     llvm::sort(Tokens);
-    auto Last = std::unique(Tokens.begin(), Tokens.end());
+    auto Last = llvm::unique(Tokens);
     Tokens.erase(Last, Tokens.end());
 
     // Macros can give tokens that have the same source range but conflicting

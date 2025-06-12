@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VersionTuple.h"
 #include "gtest/gtest.h"
 
@@ -1341,6 +1342,36 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_TRUE(T.isTime64ABI());
   EXPECT_TRUE(T.isHardFloatABI());
 
+  T = Triple("x86_64-pc-linux-llvm");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::LLVM, T.getEnvironment());
+
+  T = Triple("spirv64-intel-unknown");
+  EXPECT_EQ(Triple::spirv64, T.getArch());
+  EXPECT_EQ(Triple::Intel, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("aarch64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::aarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
+  T = Triple("x86_64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
+  T = Triple("riscv64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
 }
@@ -1403,6 +1434,132 @@ TEST(TripleTest, Normalization) {
   EXPECT_EQ("unknown-unknown-linux", Triple::normalize("linux"));
 
   EXPECT_EQ("x86_64-unknown-linux-gnu", Triple::normalize("x86_64-gnu-linux"));
+
+  EXPECT_EQ("a-unknown-unknown",
+            Triple::normalize("a", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-unknown",
+            Triple::normalize("a-b", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-c",
+            Triple::normalize("a-b-c", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-c",
+            Triple::normalize("a-b-c-d", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-c",
+            Triple::normalize("a-b-c-d-e", Triple::CanonicalForm::THREE_IDENT));
+
+  EXPECT_EQ("a-unknown-unknown-unknown",
+            Triple::normalize("a", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-unknown-unknown",
+            Triple::normalize("a-b", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-c-unknown",
+            Triple::normalize("a-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-c-d",
+            Triple::normalize("a-b-c-d", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-c-d",
+            Triple::normalize("a-b-c-d-e", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("a-unknown-unknown-unknown-unknown",
+            Triple::normalize("a", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-unknown-unknown-unknown",
+            Triple::normalize("a-b", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-c-unknown-unknown",
+            Triple::normalize("a-b-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-c-d-unknown",
+            Triple::normalize("a-b-c-d", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-c-d-e",
+            Triple::normalize("a-b-c-d-e", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-b-c-unknown",
+            Triple::normalize("i386-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-b-c-unknown-unknown",
+            Triple::normalize("i386-b-c", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-a-c-unknown",
+            Triple::normalize("a-i386-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-a-c-unknown-unknown",
+            Triple::normalize("a-i386-c", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-a-b-unknown",
+            Triple::normalize("a-b-i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-a-b-c",
+            Triple::normalize("a-b-c-i386", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("a-pc-c-unknown",
+            Triple::normalize("a-pc-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-b-c",
+            Triple::normalize("pc-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-pc-b-unknown",
+            Triple::normalize("a-b-pc", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-pc-b-c",
+            Triple::normalize("a-b-c-pc", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("a-b-linux-unknown",
+            Triple::normalize("a-b-linux", Triple::CanonicalForm::FOUR_IDENT));
+  // We lose `-c` here as expected.
+  EXPECT_EQ("unknown-unknown-linux-b",
+            Triple::normalize("linux-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-unknown-linux-c",
+            Triple::normalize("a-linux-c", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("i386-pc-a-unknown",
+            Triple::normalize("a-pc-i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-pc-unknown-unknown",
+            Triple::normalize("-pc-i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-linux-c",
+            Triple::normalize("linux-pc-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-linux-unknown",
+            Triple::normalize("linux-pc-", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("i386-unknown-unknown-unknown",
+            Triple::normalize("i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-unknown-unknown",
+            Triple::normalize("pc", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-unknown-linux-unknown",
+            Triple::normalize("linux", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ(
+      "x86_64-unknown-linux-gnu",
+      Triple::normalize("x86_64-gnu-linux", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("i386-a-b-unknown-unknown",
+            Triple::normalize("a-b-i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("i386-a-b-c-unknown",
+            Triple::normalize("a-b-c-i386", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("a-pc-c-unknown-unknown",
+            Triple::normalize("a-pc-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-b-c-unknown",
+            Triple::normalize("pc-b-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-pc-b-unknown-unknown",
+            Triple::normalize("a-b-pc", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-pc-b-c-unknown",
+            Triple::normalize("a-b-c-pc", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("a-b-linux-unknown-unknown",
+            Triple::normalize("a-b-linux", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-unknown-linux-b-c",
+            Triple::normalize("linux-b-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-unknown-linux-c-unknown",
+            Triple::normalize("a-linux-c", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-pc-a-unknown-unknown",
+            Triple::normalize("a-pc-i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("i386-pc-unknown-unknown-unknown",
+            Triple::normalize("-pc-i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-linux-c-unknown",
+            Triple::normalize("linux-pc-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-linux-unknown-unknown",
+            Triple::normalize("linux-pc-", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-unknown-unknown-unknown-unknown",
+            Triple::normalize("i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-unknown-unknown-unknown",
+            Triple::normalize("pc", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-unknown-linux-unknown-unknown",
+            Triple::normalize("linux", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ(
+      "x86_64-unknown-linux-gnu-unknown",
+      Triple::normalize("x86_64-gnu-linux", Triple::CanonicalForm::FIVE_IDENT));
 
   // Check that normalizing a permutated set of valid components returns a
   // triple with the unpermuted components.
@@ -2197,6 +2354,79 @@ TEST(TripleTest, getOSVersion) {
   T.getMacOSXVersion(Version);
   EXPECT_EQ(VersionTuple(10, 16), Version);
 
+  // 16 forms a valid triple, even though it's not
+  // a version of a macOS.
+  T = Triple("x86_64-apple-macos16.0");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(16, 0), Version);
+
+  T = Triple("arm64-apple-macosx26.1");
+  EXPECT_TRUE(T.isMacOSX());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(26, 1), Version);
+
+  // 19.0 forms a valid triple, even though it's not
+  // a version of a iOS.
+  T = Triple("arm64-apple-ios19.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(19, 0), T.getOSVersion());
+
+  T = Triple("arm64-apple-ios27.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(27, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-watchos12.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isWatchOS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(26, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-visionos3.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(26, 0), T.getiOSVersion());
+
+  T = Triple("x86_64-apple-darwin26");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(27), Version);
+
+  // Check invalid ranges are remapped.
+  T = Triple("arm64-apple-visionos6.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(29, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-watchos14.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isWatchOS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(28, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-ios21.1");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(28, 1), T.getiOSVersion());
+
   T = Triple("x86_64-apple-darwin20");
   EXPECT_TRUE(T.isMacOSX());
   T.getMacOSXVersion(Version);
@@ -2311,11 +2541,76 @@ TEST(TripleTest, isMacOSVersionLT) {
 TEST(TripleTest, CanonicalizeOSVersion) {
   EXPECT_EQ(VersionTuple(10, 15, 4),
             Triple::getCanonicalVersionForOS(Triple::MacOSX,
-                                             VersionTuple(10, 15, 4)));
-  EXPECT_EQ(VersionTuple(11, 0), Triple::getCanonicalVersionForOS(
-                                     Triple::MacOSX, VersionTuple(10, 16)));
+                                             VersionTuple(10, 15, 4),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(11, 0),
+            Triple::getCanonicalVersionForOS(
+                Triple::MacOSX, VersionTuple(10, 16), /*IsInValidRange=*/true));
   EXPECT_EQ(VersionTuple(20),
-            Triple::getCanonicalVersionForOS(Triple::Darwin, VersionTuple(20)));
+            Triple::getCanonicalVersionForOS(Triple::Darwin, VersionTuple(20),
+                                             /*IsInValidRange=*/true));
+
+  // Validate mappings for all expected OS versions remapping to 26.
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::MacOSX, VersionTuple(16),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::IOS, VersionTuple(19),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::TvOS, VersionTuple(19),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::WatchOS, VersionTuple(12),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::XROS, VersionTuple(3),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::Darwin, VersionTuple(26),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::BridgeOS, VersionTuple(26),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::BridgeOS, VersionTuple(26),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(10),
+            Triple::getCanonicalVersionForOS(Triple::BridgeOS, VersionTuple(10),
+                                             /*IsInValidRange=*/true));
+
+  // Verify invalid ranges can be remapped.
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::MacOSX, VersionTuple(18),
+                                             /*IsInValidRange=*/false));
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::IOS, VersionTuple(21),
+                                             /*IsInValidRange=*/false));
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::WatchOS, VersionTuple(14),
+                                             /*IsInValidRange=*/false));
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::TvOS, VersionTuple(21),
+                                             /*IsInValidRange=*/false));
+}
+
+TEST(TripleTest, CheckValidOSVersion) {
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::MacOSX, VersionTuple(16)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::IOS, VersionTuple(19)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::TvOS, VersionTuple(19)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::TvOS, VersionTuple(18, 2)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::WatchOS, VersionTuple(12)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::XROS, VersionTuple(3)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::Darwin, VersionTuple(26)));
+  EXPECT_TRUE(
+      Triple::isValidVersionForOS(Triple::BridgeOS, VersionTuple(26, 1, 1)));
+
+  EXPECT_FALSE(
+      Triple::isValidVersionForOS(Triple::MacOSX, VersionTuple(16, 1)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::MacOSX, VersionTuple(18)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::IOS, VersionTuple(21)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::WatchOS, VersionTuple(14)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::TvOS, VersionTuple(21)));
 }
 
 TEST(TripleTest, FileFormat) {
@@ -2433,6 +2728,8 @@ TEST(TripleTest, NormalizeWindows) {
   EXPECT_EQ("i686-unknown-windows-gnu", Triple::normalize("i686-mingw32-w64"));
   EXPECT_EQ("i686-pc-windows-cygnus", Triple::normalize("i686-pc-cygwin"));
   EXPECT_EQ("i686-unknown-windows-cygnus", Triple::normalize("i686-cygwin"));
+  EXPECT_EQ("i686-pc-windows-cygnus", Triple::normalize("i686-pc-msys"));
+  EXPECT_EQ("i686-unknown-windows-cygnus", Triple::normalize("i686-msys"));
 
   EXPECT_EQ("x86_64-pc-windows-msvc", Triple::normalize("x86_64-pc-win32"));
   EXPECT_EQ("x86_64-unknown-windows-msvc", Triple::normalize("x86_64-win32"));
@@ -2442,6 +2739,11 @@ TEST(TripleTest, NormalizeWindows) {
             Triple::normalize("x86_64-pc-mingw32-w64"));
   EXPECT_EQ("x86_64-unknown-windows-gnu",
             Triple::normalize("x86_64-mingw32-w64"));
+  EXPECT_EQ("x86_64-pc-windows-cygnus", Triple::normalize("x86_64-pc-cygwin"));
+  EXPECT_EQ("x86_64-unknown-windows-cygnus",
+            Triple::normalize("x86_64-cygwin"));
+  EXPECT_EQ("x86_64-pc-windows-cygnus", Triple::normalize("x86_64-pc-msys"));
+  EXPECT_EQ("x86_64-unknown-windows-cygnus", Triple::normalize("x86_64-msys"));
 
   EXPECT_EQ("i686-pc-windows-elf", Triple::normalize("i686-pc-win32-elf"));
   EXPECT_EQ("i686-unknown-windows-elf", Triple::normalize("i686-win32-elf"));
@@ -2724,5 +3026,42 @@ TEST(TripleTest, DXILNormaizeWithVersion) {
   EXPECT_EQ("dxil-unknown-unknown-unknown", Triple::normalize("dxil---"));
   EXPECT_EQ("dxilv1.0-pc-shadermodel5.0-compute",
             Triple::normalize("dxil-shadermodel5.0-pc-compute"));
+}
+
+TEST(TripleTest, isCompatibleWith) {
+  struct {
+    const char *A;
+    const char *B;
+    bool Result;
+  } Cases[] = {
+      {"armv7-linux-gnueabihf", "thumbv7-linux-gnueabihf", true},
+      {"armv4-none-unknown-eabi", "thumbv6-unknown-linux-gnueabihf", false},
+      {"x86_64-apple-macosx10.9.0", "x86_64-apple-macosx10.10.0", true},
+      {"x86_64-apple-macosx10.9.0", "i386-apple-macosx10.9.0", false},
+      {"x86_64-apple-macosx10.9.0", "x86_64h-apple-macosx10.9.0", true},
+      {"x86_64-unknown-linux-gnu", "x86_64-unknown-linux-gnu", true},
+      {"x86_64-unknown-linux-gnu", "i386-unknown-linux-gnu", false},
+      {"x86_64-unknown-linux-gnu", "x86_64h-unknown-linux-gnu", true},
+      {"x86_64-pc-windows-gnu", "x86_64-pc-windows-msvc", false},
+      {"x86_64-pc-windows-msvc", "x86_64-pc-windows-msvc-elf", false},
+      {"i686-w64-windows-gnu", "i386-w64-windows-gnu", true},
+      {"x86_64-w64-windows-gnu", "x86_64-pc-windows-gnu", true},
+      {"armv7-w64-windows-gnu", "thumbv7-pc-windows-gnu", true},
+  };
+
+  auto DoTest = [](const char *A, const char *B,
+                   bool Result) -> testing::AssertionResult {
+    if (Triple(A).isCompatibleWith(Triple(B)) != Result) {
+      return testing::AssertionFailure()
+             << llvm::formatv("Triple {0} and {1} were expected to be {2}", A,
+                              B, Result ? "compatible" : "incompatible");
+    }
+    return testing::AssertionSuccess();
+  };
+  for (const auto &C : Cases) {
+    EXPECT_TRUE(DoTest(C.A, C.B, C.Result));
+    // Test that the comparison is commutative.
+    EXPECT_TRUE(DoTest(C.B, C.A, C.Result));
+  }
 }
 } // end anonymous namespace

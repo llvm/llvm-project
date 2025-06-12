@@ -1,0 +1,12 @@
+--- !Passed
+Pass:            loop-vectorize
+Name:            Vectorized
+DebugLoc:        { File: './Inputs/scalable.c', Line: 5, Column: 3 }
+Function:        foo
+Args:
+  - String:          'vectorized loop (vectorization width: '
+  - VectorizationFactor: vscale x 4
+  - String:          ', interleaved count: '
+  - InterleaveCount: '2'
+  - String:          ')'
+...

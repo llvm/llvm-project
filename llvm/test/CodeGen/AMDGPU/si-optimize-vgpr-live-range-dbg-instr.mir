@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -run-pass=si-opt-vgpr-liverange  %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -passes=si-opt-vgpr-liverange  %s -o - | FileCheck -check-prefix=GCN %s
 
 # SIOptimizeVGPRLiveRange shouldn't try to modify use of %5 in DBG_VALUE_LIST
 

@@ -38,4 +38,34 @@ define void @dynalloc(i32 %N) #0 {
   ret void
 }
 
+; Check that .stack_sizes section is linked to the function's section (.text),
+; and not to the section containing the jump table (.rodata).
+; CHECK-LABEL: .section .stack_sizes,"o",@progbits,.text{{$}}
+; CHECK-NEXT: .quad .Lfunc_begin4
+; CHECK-NEXT: .ascii "\260!"
+define i32 @linked_section(i32 %x) {
+  %arr = alloca [1024 x i32]
+  switch i32 %x, label %sw.epilog [
+    i32 0, label %sw.bb0
+    i32 1, label %sw.bb1
+    i32 2, label %sw.bb2
+    i32 3, label %sw.bb3
+  ]
+
+sw.bb0:
+  ret i32 0
+
+sw.bb1:
+  ret i32 1
+
+sw.bb2:
+  ret i32 2
+
+sw.bb3:
+  ret i32 3
+
+sw.epilog:
+  ret i32 -1
+}
+
 attributes #0 = { "frame-pointer"="all" }

@@ -4,7 +4,8 @@ Clang Maintainers
 
 This file is a list of the
 `maintainers <https://llvm.org/docs/DeveloperPolicy.html#maintainers>`_ for
-Clang.
+Clang. The list of current Clang Area Team members can be found
+`here <https://github.com/llvm/llvm-project/blob/main/clang/AreaTeamMembers.txt>`_.
 
 .. contents::
    :depth: 2
@@ -19,7 +20,7 @@ assistance.
 Lead Maintainer
 ---------------
 | Aaron Ballman
-| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 Contained Components
@@ -30,7 +31,7 @@ Clang that are typically contained to one area of the compiler.
 AST matchers
 ~~~~~~~~~~~~
 | Aaron Ballman
-| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 AST Visitors
@@ -49,6 +50,14 @@ Clang LLVM IR generation
 
 | Anton Korobeynikov
 | anton\@korobeynikov.info (email), asl (Phabricator), asl (GitHub)
+
+Clang MLIR generation
+~~~~~~~~~~~~~~~~~~~~~
+| Andy Kaylor
+| akaylor\@nvidia.com (email), AndyKaylor (Discord), AndyKaylor (GitHub)
+
+| Bruno Cardoso Lopes
+| bruno.cardoso\@gmail.com (email), sonicsprawl (Discord), bcardosolopes (GitHub)
 
 
 Analysis & CFG
@@ -134,6 +143,9 @@ Clang static analyzer
 | Gábor Horváth
 | xazax.hun\@gmail.com (email), xazax.hun (Phabricator), Xazax-hun (GitHub)
 
+| Balázs Benics
+| benicsbalazs\@gmail.com (email), steakhal (Phabricator), steakhal (GitHub)
+| balazs.benics\@sonarsource.com (email), balazs-benics-sonarsource (GitHub)
 
 Compiler options
 ~~~~~~~~~~~~~~~~
@@ -155,6 +167,11 @@ OpenBSD driver
 | Brad Smith
 | brad\@comstyle.com (email), brad (Phabricator), brad0 (GitHub)
 
+Offloading driver
+~~~~~~~~~~~~~~~~~
+| Joseph Huber
+| joseph.huber\@amd.com (email), jhuber6 (GitHub)
+
 
 Driver parts not covered by someone else
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -166,6 +183,21 @@ Constant Expressions
 ~~~~~~~~~~~~~~~~~~~~
 | Mariya Podchishchaeva
 | mariya.podchishchaeva\@intel.com (email), Fznamznon (GitHub), fznamznon (Discord), Fznamznon (Discourse)
+
+
+Thread Safety Analysis
+~~~~~~~~~~~~~~~~~~~~~~
+| Aaron Puchert
+| aaron.puchert\@sap.com (email), aaronpuchert (GitHub), aaronpuchert (Discourse)
+
+
+Function Effect Analysis
+~~~~~~~~~~~~~~~~~~~~~~~~
+| Doug Wyatt
+| dwyatt\@apple.com (email), dougsonos (GitHub), dougsonos (Discourse)
+
+| Sirraide
+| aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 
 Tools
@@ -268,7 +300,7 @@ standard, when fixing standards bugs, or when implementing a new standard featur
 C conformance
 ~~~~~~~~~~~~~
 | Aaron Ballman
-| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 C++ conformance
@@ -303,8 +335,8 @@ OpenMP conformance
 
 OpenCL conformance
 ~~~~~~~~~~~~~~~~~~
-| Anastasia Stulova
-| anastasia\@compiler-experts.com (email), Anastasia (Phabricator), AnastasiaStulova (GitHub)
+| Sven van Haastregt
+| sven.vanhaastregt\@arm.com (email), svenvh (GitHub)
 
 
 OpenACC
@@ -348,6 +380,7 @@ Emeritus Lead Maintainers
 
 Inactive component maintainers
 ------------------------------
+| Anastasia Stulova (stulovaa\@gmail.com) -- OpenCL, C++ for OpenCL
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers

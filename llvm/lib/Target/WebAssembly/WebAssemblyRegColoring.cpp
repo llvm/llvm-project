@@ -311,8 +311,8 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
     // If we reassigned the stack pointer, update the debug frame base info.
     if (Old != New && MFI.isFrameBaseVirtual() && MFI.getFrameBaseVreg() == Old)
       MFI.setFrameBaseVreg(New);
-    LLVM_DEBUG(dbgs() << "Assigning vreg" << Register::virtReg2Index(LI->reg())
-                      << " to vreg" << Register::virtReg2Index(New) << "\n");
+    LLVM_DEBUG(dbgs() << "Assigning vreg " << printReg(LI->reg()) << " to vreg "
+                      << printReg(New) << "\n");
   }
   if (!Changed)
     return false;

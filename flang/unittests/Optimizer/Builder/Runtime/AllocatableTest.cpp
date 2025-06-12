@@ -9,7 +9,7 @@
 #include "flang/Optimizer/Builder/Runtime/Allocatable.h"
 #include "RuntimeCallTestBase.h"
 #include "gtest/gtest.h"
-#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/descriptor-consts.h"
 
 using namespace Fortran::runtime;
 

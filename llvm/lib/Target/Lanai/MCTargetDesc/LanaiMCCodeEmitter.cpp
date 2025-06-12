@@ -21,11 +21,9 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
 
@@ -92,7 +90,7 @@ static Lanai::Fixups FixupKind(const MCExpr *Expr) {
   if (isa<MCSymbolRefExpr>(Expr))
     return Lanai::FIXUP_LANAI_21;
   if (const LanaiMCExpr *McExpr = dyn_cast<LanaiMCExpr>(Expr)) {
-    LanaiMCExpr::VariantKind ExprKind = McExpr->getKind();
+    LanaiMCExpr::Spec ExprKind = McExpr->getSpecifier();
     switch (ExprKind) {
     case LanaiMCExpr::VK_Lanai_None:
       return Lanai::FIXUP_LANAI_21;

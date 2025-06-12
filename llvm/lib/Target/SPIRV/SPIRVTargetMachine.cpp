@@ -12,9 +12,9 @@
 
 #include "SPIRVTargetMachine.h"
 #include "SPIRV.h"
-#include "SPIRVCallLowering.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
+#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
@@ -23,13 +23,13 @@
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Transforms/Scalar/Reg2Mem.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
 
@@ -44,7 +44,19 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeSPIRVModuleAnalysisPass(PR);
+  initializeSPIRVAsmPrinterPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
+  initializeSPIRVStructurizerPass(PR);
+  initializeSPIRVPreLegalizerCombinerPass(PR);
+  initializeSPIRVLegalizePointerCastPass(PR);
+  initializeSPIRVRegularizerPass(PR);
+  initializeSPIRVPreLegalizerPass(PR);
+  initializeSPIRVPostLegalizerPass(PR);
+  initializeSPIRVMergeRegionExitTargetsPass(PR);
+  initializeSPIRVEmitIntrinsicsPass(PR);
+  initializeSPIRVEmitNonSemanticDIPass(PR);
+  initializeSPIRVPrepareFunctionsPass(PR);
+  initializeSPIRVStripConvergentIntrinsicsPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -57,6 +69,9 @@ static std::string computeDataLayout(const Triple &TT) {
   if (Arch == Triple::spirv32)
     return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
            "v256:256-v512:512-v1024:1024-n8:16:32:64-G1";
+  if (Arch == Triple::spirv)
+    return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
+           "v512:512-v1024:1024-n8:16:32:64-G10";
   if (TT.getVendor() == Triple::VendorType::AMD &&
       TT.getOS() == Triple::OSType::AMDHSA)
     return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
@@ -80,9 +95,9 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<SPIRVTargetObjectFile>()),
       Subtarget(TT, CPU.str(), FS.str(), *this) {
   initAsmInfo();
@@ -90,6 +105,11 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
   setFastISel(false);
   setO0WantsFastISel(false);
   setRequiresStructuredCFG(false);
+}
+
+void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "SPIRVPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
 }
 
 namespace {
@@ -102,6 +122,7 @@ public:
   SPIRVTargetMachine &getSPIRVTargetMachine() const {
     return getTM<SPIRVTargetMachine>();
   }
+  void addMachineSSAOptimization() override;
   void addIRPasses() override;
   void addISelPrepare() override;
 
@@ -129,6 +150,11 @@ FunctionPass *SPIRVPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr;
 }
 
+// A place to disable passes that may break CFG.
+void SPIRVPassConfig::addMachineSSAOptimization() {
+  TargetPassConfig::addMachineSSAOptimization();
+}
+
 // Disable passes that break from assuming no virtual registers exist.
 void SPIRVPassConfig::addPostRegAlloc() {
   // Do not work with vregs instead of physical regs.
@@ -152,7 +178,7 @@ void SPIRVPassConfig::addPostRegAlloc() {
 
 TargetTransformInfo
 SPIRVTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(SPIRVTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<SPIRVTTIImpl>(this, F));
 }
 
 TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
@@ -162,7 +188,13 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
-  if (TM.getSubtargetImpl()->isVulkanEnv()) {
+  if (TM.getSubtargetImpl()->isShader()) {
+    // Vulkan does not allow address space casts. This pass is run to remove
+    // address space casts that can be removed.
+    // If an address space cast is not removed while targeting Vulkan, lowering
+    // will fail during MIR lowering.
+    addPass(createInferAddressSpacesPass());
+
     // 1.  Simplify loop for subsequent transformations. After this steps, loops
     // have the following properties:
     //  - loops have a single entry edge (pre-header to loop header).
@@ -194,6 +226,8 @@ void SPIRVPassConfig::addIRPasses() {
 
 void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
+  if (TM.getSubtargetImpl()->isLogicalSPIRV())
+    addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));
   TargetPassConfig::addISelPrepare();
 }
 
@@ -203,6 +237,7 @@ bool SPIRVPassConfig::addIRTranslator() {
 }
 
 void SPIRVPassConfig::addPreLegalizeMachineIR() {
+  addPass(createSPIRVPreLegalizerCombiner());
   addPass(createSPIRVPreLegalizerPass());
 }
 
@@ -236,8 +271,7 @@ namespace {
 class SPIRVInstructionSelect : public InstructionSelect {
   // We don't use register banks, so unset the requirement for them
   MachineFunctionProperties getRequiredProperties() const override {
-    return InstructionSelect::getRequiredProperties().reset(
-        MachineFunctionProperties::Property::RegBankSelected);
+    return InstructionSelect::getRequiredProperties().resetRegBankSelected();
   }
 };
 } // namespace

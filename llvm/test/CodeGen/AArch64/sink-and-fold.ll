@@ -298,7 +298,6 @@ exit:
 define i32 @f6(i1 %c, ptr %a, i32 %i) {
 ; CHECK-LABEL: f6:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    tbz w0, #0, .LBB6_2
 ; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    mov w0, wzr

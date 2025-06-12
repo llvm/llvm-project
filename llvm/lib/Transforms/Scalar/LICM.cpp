@@ -140,7 +140,7 @@ static cl::opt<unsigned> FPAssociationUpperLimit(
         "Set upper limit for the number of transformations performed "
         "during a single round of hoisting the reassociated expressions."));
 
-cl::opt<unsigned> IntAssociationUpperLimit(
+static cl::opt<unsigned> IntAssociationUpperLimit(
     "licm-max-num-int-reassociations", cl::init(5U), cl::Hidden,
     cl::desc(
         "Set upper limit for the number of transformations performed "
@@ -296,8 +296,7 @@ private:
 PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
                                 LoopStandardAnalysisResults &AR, LPMUpdater &) {
   if (!AR.MSSA)
-    report_fatal_error("LICM requires MemorySSA (loop-mssa)",
-                       /*GenCrashDiag*/false);
+    reportFatalUsageError("LICM requires MemorySSA (loop-mssa)");
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
   // pass.  Function analyses need to be preserved across loop transformations
@@ -330,8 +329,7 @@ PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
                                  LoopStandardAnalysisResults &AR,
                                  LPMUpdater &) {
   if (!AR.MSSA)
-    report_fatal_error("LNICM requires MemorySSA (loop-mssa)",
-                       /*GenCrashDiag*/false);
+    reportFatalUsageError("LNICM requires MemorySSA (loop-mssa)");
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
   // pass.  Function analyses need to be preserved across loop transformations
@@ -688,9 +686,10 @@ public:
     // intersection of their successors is non-empty.
     // TODO: This could be expanded to allowing branches where both ends
     // eventually converge to a single block.
-    SmallPtrSet<BasicBlock *, 4> TrueDestSucc, FalseDestSucc;
-    TrueDestSucc.insert(succ_begin(TrueDest), succ_end(TrueDest));
-    FalseDestSucc.insert(succ_begin(FalseDest), succ_end(FalseDest));
+    SmallPtrSet<BasicBlock *, 4> TrueDestSucc(llvm::from_range,
+                                              successors(TrueDest));
+    SmallPtrSet<BasicBlock *, 4> FalseDestSucc(llvm::from_range,
+                                               successors(FalseDest));
     BasicBlock *CommonSucc = nullptr;
     if (TrueDestSucc.count(FalseDest)) {
       CommonSucc = FalseDest;
@@ -730,10 +729,9 @@ public:
       return false;
     // We can hoist phis if the block they are in is the target of hoistable
     // branches which cover all of the predecessors of the block.
-    SmallPtrSet<BasicBlock *, 8> PredecessorBlocks;
     BasicBlock *BB = PN->getParent();
-    for (BasicBlock *PredBB : predecessors(BB))
-      PredecessorBlocks.insert(PredBB);
+    SmallPtrSet<BasicBlock *, 8> PredecessorBlocks(llvm::from_range,
+                                                   predecessors(BB));
     // If we have less predecessor blocks than predecessors then the phi will
     // have more than one incoming value for the same block which we can't
     // handle.
@@ -766,8 +764,8 @@ public:
     if (!ControlFlowHoisting)
       return CurLoop->getLoopPreheader();
     // If BB has already been hoisted, return that
-    if (HoistDestinationMap.count(BB))
-      return HoistDestinationMap[BB];
+    if (auto It = HoistDestinationMap.find(BB); It != HoistDestinationMap.end())
+      return It->second;
 
     // Check if this block is conditional based on a pending branch
     auto HasBBAsSuccessor =
@@ -788,8 +786,8 @@ public:
       return InitialPreheader;
     }
     BranchInst *BI = It->first;
-    assert(std::find_if(++It, HoistableBranches.end(), HasBBAsSuccessor) ==
-               HoistableBranches.end() &&
+    assert(std::none_of(std::next(It), HoistableBranches.end(),
+                        HasBBAsSuccessor) &&
            "BB is expected to be the target of at most one branch");
 
     LLVMContext &C = BB->getContext();
@@ -800,11 +798,12 @@ public:
 
     // Create hoisted versions of blocks that currently don't have them
     auto CreateHoistedBlock = [&](BasicBlock *Orig) {
-      if (HoistDestinationMap.count(Orig))
-        return HoistDestinationMap[Orig];
+      auto [It, Inserted] = HoistDestinationMap.try_emplace(Orig);
+      if (!Inserted)
+        return It->second;
       BasicBlock *New =
           BasicBlock::Create(C, Orig->getName() + ".licm", Orig->getParent());
-      HoistDestinationMap[Orig] = New;
+      It->second = New;
       DT->addNewBlock(New, HoistTarget);
       if (CurLoop->getParentLoop())
         CurLoop->getParentLoop()->addBasicBlockToLoop(New, *LI);
@@ -933,14 +932,14 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
         auto ReciprocalDivisor = BinaryOperator::CreateFDiv(One, Divisor);
         ReciprocalDivisor->setFastMathFlags(I.getFastMathFlags());
         SafetyInfo->insertInstructionTo(ReciprocalDivisor, I.getParent());
-        ReciprocalDivisor->insertBefore(&I);
+        ReciprocalDivisor->insertBefore(I.getIterator());
         ReciprocalDivisor->setDebugLoc(I.getDebugLoc());
 
         auto Product =
             BinaryOperator::CreateFMul(I.getOperand(0), ReciprocalDivisor);
         Product->setFastMathFlags(I.getFastMathFlags());
         SafetyInfo->insertInstructionTo(Product, I.getParent());
-        Product->insertAfter(&I);
+        Product->insertAfter(I.getIterator());
         Product->setDebugLoc(I.getDebugLoc());
         I.replaceAllUsesWith(Product);
         eraseInstruction(I, *SafetyInfo, MSSAU);
@@ -1448,9 +1447,9 @@ static Instruction *cloneInstructionInExitBlock(
       const ColorVector &CV = BlockColors.find(&ExitBlock)->second;
       assert(CV.size() == 1 && "non-unique color for exit block!");
       BasicBlock *BBColor = CV.front();
-      Instruction *EHPad = BBColor->getFirstNonPHI();
+      BasicBlock::iterator EHPad = BBColor->getFirstNonPHIIt();
       if (EHPad->isEHPad())
-        OpBundles.emplace_back("funclet", EHPad);
+        OpBundles.emplace_back("funclet", &*EHPad);
     }
 
     New = CallInst::Create(CI, OpBundles);
@@ -1465,8 +1464,11 @@ static Instruction *cloneInstructionInExitBlock(
 
   if (MSSAU.getMemorySSA()->getMemoryAccess(&I)) {
     // Create a new MemoryAccess and let MemorySSA set its defining access.
+    // After running some passes, MemorySSA might be outdated, and the
+    // instruction `I` may have become a non-memory touching instruction.
     MemoryAccess *NewMemAcc = MSSAU.createMemoryAccessInBB(
-        New, nullptr, New->getParent(), MemorySSA::Beginning);
+        New, nullptr, New->getParent(), MemorySSA::Beginning,
+        /*CreationMustSucceed=*/false);
     if (NewMemAcc) {
       if (auto *MemDef = dyn_cast<MemoryDef>(NewMemAcc))
         MSSAU.insertDef(MemDef, /*RenameUses=*/true);
@@ -1528,14 +1530,11 @@ static Instruction *sinkThroughTriviallyReplaceablePHI(
   assert(isTriviallyReplaceablePHI(*TPN, *I) &&
          "Expect only trivially replaceable PHI");
   BasicBlock *ExitBlock = TPN->getParent();
-  Instruction *New;
-  auto It = SunkCopies.find(ExitBlock);
-  if (It != SunkCopies.end())
-    New = It->second;
-  else
-    New = SunkCopies[ExitBlock] = cloneInstructionInExitBlock(
-        *I, *ExitBlock, *TPN, LI, SafetyInfo, MSSAU);
-  return New;
+  auto [It, Inserted] = SunkCopies.try_emplace(ExitBlock);
+  if (Inserted)
+    It->second = cloneInstructionInExitBlock(*I, *ExitBlock, *TPN, LI,
+                                             SafetyInfo, MSSAU);
+  return It->second;
 }
 
 static bool canSplitPredecessors(PHINode *PN, LoopSafetyInfo *SafetyInfo) {
@@ -1546,7 +1545,8 @@ static bool canSplitPredecessors(PHINode *PN, LoopSafetyInfo *SafetyInfo) {
   // it require updating BlockColors for all offspring blocks accordingly. By
   // skipping such corner case, we can make updating BlockColors after splitting
   // predecessor fairly simple.
-  if (!SafetyInfo->getBlockColors().empty() && BB->getFirstNonPHI()->isEHPad())
+  if (!SafetyInfo->getBlockColors().empty() &&
+      BB->getFirstNonPHIIt()->isEHPad())
     return false;
   for (BasicBlock *BBPred : predecessors(BB)) {
     if (isa<IndirectBrInst>(BBPred->getTerminator()))
@@ -1562,8 +1562,7 @@ static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
 #ifndef NDEBUG
   SmallVector<BasicBlock *, 32> ExitBlocks;
   CurLoop->getUniqueExitBlocks(ExitBlocks);
-  SmallPtrSet<BasicBlock *, 32> ExitBlockSet(ExitBlocks.begin(),
-                                             ExitBlocks.end());
+  SmallPtrSet<BasicBlock *, 32> ExitBlockSet(llvm::from_range, ExitBlocks);
 #endif
   BasicBlock *ExitBB = PN->getParent();
   assert(ExitBlockSet.count(ExitBB) && "Expect the PHI is in an exit block.");
@@ -1697,8 +1696,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
 #ifndef NDEBUG
   SmallVector<BasicBlock *, 32> ExitBlocks;
   CurLoop->getUniqueExitBlocks(ExitBlocks);
-  SmallPtrSet<BasicBlock *, 32> ExitBlockSet(ExitBlocks.begin(),
-                                             ExitBlocks.end());
+  SmallPtrSet<BasicBlock *, 32> ExitBlockSet(llvm::from_range, ExitBlocks);
 #endif
 
   // Clones of this instruction. Don't create more than one per exit block!
@@ -1930,9 +1928,9 @@ bool isNotCapturedBeforeOrInLoop(const Value *V, const Loop *L,
   // loop header, as the loop header is reachable from any instruction inside
   // the loop.
   // TODO: ReturnCaptures=true shouldn't be necessary here.
-  return !PointerMayBeCapturedBefore(V, /* ReturnCaptures */ true,
-                                     /* StoreCaptures */ true,
-                                     L->getHeader()->getTerminator(), DT);
+  return capturesNothing(PointerMayBeCapturedBefore(
+      V, /*ReturnCaptures=*/true, L->getHeader()->getTerminator(), DT,
+      /*IncludeI=*/false, CaptureComponents::Provenance));
 }
 
 /// Return true if we can prove that a caller cannot inspect the object if an
@@ -2027,7 +2025,9 @@ bool llvm::promoteLoopAccessesToScalars(
 
   bool DereferenceableInPH = false;
   bool StoreIsGuanteedToExecute = false;
+  bool LoadIsGuaranteedToExecute = false;
   bool FoundLoadToPromote = false;
+
   // Goes from Unknown to either Safe or Unsafe, but can't switch between them.
   enum {
     StoreSafe,
@@ -2085,6 +2085,10 @@ bool llvm::promoteLoopAccessesToScalars(
         FoundLoadToPromote = true;
 
         Align InstAlignment = Load->getAlign();
+
+        if (!LoadIsGuaranteedToExecute)
+          LoadIsGuaranteedToExecute =
+              SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
 
         // Note that proving a load safe to speculate requires proving
         // sufficient alignment at the target location.  Proving it guaranteed
@@ -2230,8 +2234,9 @@ bool llvm::promoteLoopAccessesToScalars(
   SSAUpdater SSA(&NewPHIs);
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, ExitBlocks, InsertPts,
                         MSSAInsertPts, PIC, MSSAU, *LI, DL, Alignment,
-                        SawUnorderedAtomic, AATags, *SafetyInfo,
-                        StoreSafety == StoreSafe);
+                        SawUnorderedAtomic,
+                        StoreIsGuanteedToExecute ? AATags : AAMDNodes(),
+                        *SafetyInfo, StoreSafety == StoreSafe);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
@@ -2243,8 +2248,8 @@ bool llvm::promoteLoopAccessesToScalars(
     if (SawUnorderedAtomic)
       PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
     PreheaderLoad->setAlignment(Alignment);
-    PreheaderLoad->setDebugLoc(DebugLoc());
-    if (AATags)
+    PreheaderLoad->setDebugLoc(DebugLoc::getDropped());
+    if (AATags && LoadIsGuaranteedToExecute)
       PreheaderLoad->setAAMetadata(AATags);
 
     MemoryAccess *PreheaderLoadMemoryAccess = MSSAU.createMemoryAccessInBB(
@@ -2288,10 +2293,14 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
   AliasSetTracker AST(BatchAA);
 
   auto IsPotentiallyPromotable = [L](const Instruction *I) {
-    if (const auto *SI = dyn_cast<StoreInst>(I))
-      return L->isLoopInvariant(SI->getPointerOperand());
-    if (const auto *LI = dyn_cast<LoadInst>(I))
-      return L->isLoopInvariant(LI->getPointerOperand());
+    if (const auto *SI = dyn_cast<StoreInst>(I)) {
+      const Value *PtrOp = SI->getPointerOperand();
+      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+    }
+    if (const auto *LI = dyn_cast<LoadInst>(I)) {
+      const Value *PtrOp = LI->getPointerOperand();
+      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+    }
     return false;
   };
 
@@ -2420,8 +2429,8 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   } else
     return false;
 
-  auto MatchICmpAgainstInvariant = [&](Value *C, ICmpInst::Predicate &P,
-                                       Value *&LHS, Value *&RHS) {
+  auto MatchICmpAgainstInvariant = [&](Value *C, CmpPredicate &P, Value *&LHS,
+                                       Value *&RHS) {
     if (!match(C, m_OneUse(m_ICmp(P, m_Value(LHS), m_Value(RHS)))))
       return false;
     if (!LHS->getType()->isIntegerTy())
@@ -2438,20 +2447,22 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
       P = ICmpInst::getInversePredicate(P);
     return true;
   };
-  ICmpInst::Predicate P1, P2;
+  CmpPredicate P1, P2;
   Value *LHS1, *LHS2, *RHS1, *RHS2;
   if (!MatchICmpAgainstInvariant(Cond1, P1, LHS1, RHS1) ||
       !MatchICmpAgainstInvariant(Cond2, P2, LHS2, RHS2))
     return false;
-  if (P1 != P2 || LHS1 != LHS2)
+  auto MatchingPred = CmpPredicate::getMatching(P1, P2);
+  if (!MatchingPred || LHS1 != LHS2)
     return false;
 
   // Everything is fine, we can do the transform.
-  bool UseMin = ICmpInst::isLT(P1) || ICmpInst::isLE(P1);
+  bool UseMin = ICmpInst::isLT(*MatchingPred) || ICmpInst::isLE(*MatchingPred);
   assert(
-      (UseMin || ICmpInst::isGT(P1) || ICmpInst::isGE(P1)) &&
+      (UseMin || ICmpInst::isGT(*MatchingPred) ||
+       ICmpInst::isGE(*MatchingPred)) &&
       "Relational predicate is either less (or equal) or greater (or equal)!");
-  Intrinsic::ID id = ICmpInst::isSigned(P1)
+  Intrinsic::ID id = ICmpInst::isSigned(*MatchingPred)
                          ? (UseMin ? Intrinsic::smin : Intrinsic::smax)
                          : (UseMin ? Intrinsic::umin : Intrinsic::umax);
   auto *Preheader = L.getLoopPreheader();
@@ -2464,11 +2475,12 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   if (isa<SelectInst>(I))
     RHS2 = Builder.CreateFreeze(RHS2, RHS2->getName() + ".fr");
   Value *NewRHS = Builder.CreateBinaryIntrinsic(
-      id, RHS1, RHS2, nullptr, StringRef("invariant.") +
-                                   (ICmpInst::isSigned(P1) ? "s" : "u") +
-                                   (UseMin ? "min" : "max"));
+      id, RHS1, RHS2, nullptr,
+      StringRef("invariant.") +
+          (ICmpInst::isSigned(*MatchingPred) ? "s" : "u") +
+          (UseMin ? "min" : "max"));
   Builder.SetInsertPoint(&I);
-  ICmpInst::Predicate P = P1;
+  ICmpInst::Predicate P = *MatchingPred;
   if (Inverse)
     P = ICmpInst::getInversePredicate(P);
   Value *NewCond = Builder.CreateICmp(P, LHS1, NewRHS);
@@ -2527,6 +2539,7 @@ static bool hoistGEP(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                                     IsInBounds);
   GEP->replaceAllUsesWith(NewGEP);
   eraseInstruction(*GEP, SafetyInfo, MSSAU);
+  salvageDebugInfo(*Src);
   eraseInstruction(*Src, SafetyInfo, MSSAU);
   return true;
 }
@@ -2581,7 +2594,10 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
-  eraseInstruction(cast<Instruction>(*VariantLHS), SafetyInfo, MSSAU);
+
+  Instruction &DeadI = cast<Instruction>(*VariantLHS);
+  salvageDebugInfo(DeadI);
+  eraseInstruction(DeadI, SafetyInfo, MSSAU);
   return true;
 }
 
@@ -2659,7 +2675,10 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
-  eraseInstruction(cast<Instruction>(*VariantLHS), SafetyInfo, MSSAU);
+
+  Instruction &DeadI = cast<Instruction>(*VariantLHS);
+  salvageDebugInfo(DeadI);
+  eraseInstruction(DeadI, SafetyInfo, MSSAU);
   return true;
 }
 
@@ -2668,7 +2687,7 @@ static bool hoistAddSub(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                         MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                         DominatorTree *DT) {
   using namespace PatternMatch;
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   Value *LHS, *RHS;
   if (!match(&I, m_ICmp(Pred, m_Value(LHS), m_Value(RHS))))
     return false;
@@ -2789,6 +2808,7 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
     auto *NewBO =
         BinaryOperator::Create(Ins->getOpcode(), LHS, RHS,
                                Ins->getName() + ".reass", Ins->getIterator());
+    NewBO->setDebugLoc(DebugLoc::getDropped());
     NewBO->copyIRFlags(Ins);
     if (VariantOp == Ins)
       VariantOp = NewBO;
@@ -2845,20 +2865,24 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
 
   auto *NewBO = BinaryOperator::Create(
       Opcode, LV, Inv, BO->getName() + ".reass", BO->getIterator());
+  NewBO->setDebugLoc(DebugLoc::getDropped());
 
-  // Copy NUW for ADDs if both instructions have it.
-  if (Opcode == Instruction::Add && BO->hasNoUnsignedWrap() &&
-      BO0->hasNoUnsignedWrap()) {
-    // If `Inv` was not constant-folded, a new Instruction has been created.
-    if (auto *I = dyn_cast<Instruction>(Inv))
-      I->setHasNoUnsignedWrap(true);
-    NewBO->setHasNoUnsignedWrap(true);
-  } else if (Opcode == Instruction::FAdd || Opcode == Instruction::FMul) {
+  if (Opcode == Instruction::FAdd || Opcode == Instruction::FMul) {
     // Intersect FMF flags for FADD and FMUL.
     FastMathFlags Intersect = BO->getFastMathFlags() & BO0->getFastMathFlags();
     if (auto *I = dyn_cast<Instruction>(Inv))
       I->setFastMathFlags(Intersect);
     NewBO->setFastMathFlags(Intersect);
+  } else {
+    OverflowTracking Flags;
+    Flags.AllKnownNonNegative = false;
+    Flags.AllKnownNonZero = false;
+    Flags.mergeFlags(*BO);
+    Flags.mergeFlags(*BO0);
+    // If `Inv` was not constant-folded, a new Instruction has been created.
+    if (auto *I = dyn_cast<Instruction>(Inv))
+      Flags.applyFlags(*I);
+    Flags.applyFlags(*NewBO);
   }
 
   BO->replaceAllUsesWith(NewBO);
@@ -2866,8 +2890,10 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
 
   // (LV op C1) might not be erased if it has more uses than the one we just
   // replaced.
-  if (BO0->use_empty())
+  if (BO0->use_empty()) {
+    salvageDebugInfo(*BO0);
     eraseInstruction(*BO0, SafetyInfo, MSSAU);
+  }
 
   return true;
 }

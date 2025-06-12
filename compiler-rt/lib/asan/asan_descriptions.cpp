@@ -45,6 +45,9 @@ void DescribeThread(AsanThreadContext *context) {
   }
   context->announced = true;
 
+  InternalScopedString str;
+  str.AppendF("Thread %s", AsanThreadIdAndName(context).c_str());
+
   AsanThreadContext *parent_context =
       context->parent_tid == kInvalidTid
           ? nullptr
@@ -52,12 +55,7 @@ void DescribeThread(AsanThreadContext *context) {
 
   // `context->parent_tid` may point to reused slot. Check `unique_id` which
   // is always smaller for the parent, always greater for a new user.
-  if (context->unique_id <= parent_context->unique_id)
-    parent_context = nullptr;
-
-  InternalScopedString str;
-  str.AppendF("Thread %s", AsanThreadIdAndName(context).c_str());
-  if (!parent_context) {
+  if (!parent_context || context->unique_id <= parent_context->unique_id) {
     str.Append(" created by unknown thread\n");
     Printf("%s", str.data());
     return;

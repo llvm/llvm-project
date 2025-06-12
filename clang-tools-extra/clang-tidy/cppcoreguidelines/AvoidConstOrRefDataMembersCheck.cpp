@@ -13,79 +13,88 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
+
+static bool isCopyConstructible(CXXRecordDecl const &Node) {
+  if (Node.needsOverloadResolutionForCopyConstructor() &&
+      Node.needsImplicitCopyConstructor()) {
+    // unresolved
+    for (CXXBaseSpecifier const &BS : Node.bases()) {
+      CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
+      if (BRD != nullptr && !isCopyConstructible(*BRD))
+        return false;
+    }
+  }
+  if (Node.hasSimpleCopyConstructor())
+    return true;
+  for (CXXConstructorDecl const *Ctor : Node.ctors())
+    if (Ctor->isCopyConstructor())
+      return !Ctor->isDeleted();
+  return false;
+}
+
+static bool isMoveConstructible(CXXRecordDecl const &Node) {
+  if (Node.needsOverloadResolutionForMoveConstructor() &&
+      Node.needsImplicitMoveConstructor()) {
+    // unresolved
+    for (CXXBaseSpecifier const &BS : Node.bases()) {
+      CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
+      if (BRD != nullptr && !isMoveConstructible(*BRD))
+        return false;
+    }
+  }
+  if (Node.hasSimpleMoveConstructor())
+    return true;
+  for (CXXConstructorDecl const *Ctor : Node.ctors())
+    if (Ctor->isMoveConstructor())
+      return !Ctor->isDeleted();
+  return false;
+}
+
+static bool isCopyAssignable(CXXRecordDecl const &Node) {
+  if (Node.needsOverloadResolutionForCopyAssignment() &&
+      Node.needsImplicitCopyAssignment()) {
+    // unresolved
+    for (CXXBaseSpecifier const &BS : Node.bases()) {
+      CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
+      if (BRD != nullptr && !isCopyAssignable(*BRD))
+        return false;
+    }
+  }
+  if (Node.hasSimpleCopyAssignment())
+    return true;
+  for (CXXMethodDecl const *Method : Node.methods())
+    if (Method->isCopyAssignmentOperator())
+      return !Method->isDeleted();
+  return false;
+}
+
+static bool isMoveAssignable(CXXRecordDecl const &Node) {
+  if (Node.needsOverloadResolutionForMoveAssignment() &&
+      Node.needsImplicitMoveAssignment()) {
+    // unresolved
+    for (CXXBaseSpecifier const &BS : Node.bases()) {
+      CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
+      if (BRD != nullptr && !isMoveAssignable(*BRD))
+        return false;
+    }
+  }
+  if (Node.hasSimpleMoveAssignment())
+    return true;
+  for (CXXMethodDecl const *Method : Node.methods())
+    if (Method->isMoveAssignmentOperator())
+      return !Method->isDeleted();
+  return false;
+}
+
 namespace {
 
 AST_MATCHER(FieldDecl, isMemberOfLambda) {
   return Node.getParent()->isLambda();
 }
 
-struct MemberFunctionInfo {
-  bool Declared{};
-  bool Deleted{};
-};
-
-struct MemberFunctionPairInfo {
-  MemberFunctionInfo Copy{};
-  MemberFunctionInfo Move{};
-};
-
-MemberFunctionPairInfo getConstructorsInfo(CXXRecordDecl const &Node) {
-  MemberFunctionPairInfo Constructors{};
-
-  for (CXXConstructorDecl const *Ctor : Node.ctors()) {
-    if (Ctor->isCopyConstructor()) {
-      Constructors.Copy.Declared = true;
-      if (Ctor->isDeleted())
-        Constructors.Copy.Deleted = true;
-    }
-    if (Ctor->isMoveConstructor()) {
-      Constructors.Move.Declared = true;
-      if (Ctor->isDeleted())
-        Constructors.Move.Deleted = true;
-    }
-  }
-
-  return Constructors;
-}
-
-MemberFunctionPairInfo getAssignmentsInfo(CXXRecordDecl const &Node) {
-  MemberFunctionPairInfo Assignments{};
-
-  for (CXXMethodDecl const *Method : Node.methods()) {
-    if (Method->isCopyAssignmentOperator()) {
-      Assignments.Copy.Declared = true;
-      if (Method->isDeleted())
-        Assignments.Copy.Deleted = true;
-    }
-
-    if (Method->isMoveAssignmentOperator()) {
-      Assignments.Move.Declared = true;
-      if (Method->isDeleted())
-        Assignments.Move.Deleted = true;
-    }
-  }
-
-  return Assignments;
-}
-
 AST_MATCHER(CXXRecordDecl, isCopyableOrMovable) {
-  MemberFunctionPairInfo Constructors = getConstructorsInfo(Node);
-  MemberFunctionPairInfo Assignments = getAssignmentsInfo(Node);
-
-  if (Node.hasSimpleCopyConstructor() ||
-      (Constructors.Copy.Declared && !Constructors.Copy.Deleted))
-    return true;
-  if (Node.hasSimpleMoveConstructor() ||
-      (Constructors.Move.Declared && !Constructors.Move.Deleted))
-    return true;
-  if (Node.hasSimpleCopyAssignment() ||
-      (Assignments.Copy.Declared && !Assignments.Copy.Deleted))
-    return true;
-  if (Node.hasSimpleMoveAssignment() ||
-      (Assignments.Move.Declared && !Assignments.Move.Deleted))
-    return true;
-
-  return false;
+  return isCopyConstructible(Node) || isMoveConstructible(Node) ||
+         isCopyAssignable(Node) || isMoveAssignable(Node);
 }
 
 } // namespace

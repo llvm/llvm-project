@@ -9,7 +9,6 @@
 #ifndef _LIBCPP___ALGORITHM_COPY_MOVE_COMMON_H
 #define _LIBCPP___ALGORITHM_COPY_MOVE_COMMON_H
 
-#include <__algorithm/iterator_operations.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/unwrap_range.h>
 #include <__config>

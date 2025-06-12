@@ -20,15 +20,23 @@
 #include "test_macros.h"
 #include "MoveOnly.h"
 
-int main(int, char**)
-{
-    std::priority_queue<MoveOnly> q;
-    q.push(1);
-    assert(q.top() == 1);
-    q.push(3);
-    assert(q.top() == 3);
-    q.push(2);
-    assert(q.top() == 3);
+TEST_CONSTEXPR_CXX26 bool test() {
+  std::priority_queue<MoveOnly> q;
+  q.push(1);
+  assert(q.top() == 1);
+  q.push(3);
+  assert(q.top() == 3);
+  q.push(2);
+  assert(q.top() == 3);
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

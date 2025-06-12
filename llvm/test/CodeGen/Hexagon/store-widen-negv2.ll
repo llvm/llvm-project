@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK-LABEL: foo:
 ; CHECK: memh(r0+#0){{.*}}={{.*}}#-2
 ; Don't use memh(r0+#0)=##65534.

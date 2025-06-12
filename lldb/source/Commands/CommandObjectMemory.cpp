@@ -519,14 +519,14 @@ protected:
         --pointer_count;
       }
 
-      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
-      if (!size) {
+      auto size_or_err = compiler_type.GetByteSize(nullptr);
+      if (!size_or_err) {
         result.AppendErrorWithFormat(
-            "unable to get the byte size of the type '%s'\n",
-            view_as_type_cstr);
+            "unable to get the byte size of the type '%s'\n%s",
+            view_as_type_cstr, llvm::toString(size_or_err.takeError()).c_str());
         return;
       }
-      m_format_options.GetByteSizeValue() = *size;
+      m_format_options.GetByteSizeValue() = *size_or_err;
 
       if (!m_format_options.GetCountValue().OptionWasSet())
         m_format_options.GetCountValue() = 1;
@@ -639,15 +639,16 @@ protected:
       if (!m_format_options.GetFormatValue().OptionWasSet())
         m_format_options.GetFormatValue().SetCurrentValue(eFormatDefault);
 
-      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
-      if (!size) {
-        result.AppendError("can't get size of type");
+      auto size_or_err = compiler_type.GetByteSize(nullptr);
+      if (!size_or_err) {
+        result.AppendError(llvm::toString(size_or_err.takeError()));
         return;
       }
-      bytes_read = *size * m_format_options.GetCountValue().GetCurrentValue();
+      auto size = *size_or_err;
+      bytes_read = size * m_format_options.GetCountValue().GetCurrentValue();
 
       if (argc > 0)
-        addr = addr + (*size * m_memory_options.m_offset.GetCurrentValue());
+        addr = addr + (size * m_memory_options.m_offset.GetCurrentValue());
     } else if (m_format_options.GetFormatValue().GetCurrentValue() !=
                eFormatCString) {
       data_sp = std::make_shared<DataBufferHeap>(total_byte_size, '\0');
@@ -1034,8 +1035,8 @@ protected:
                frame, result_sp)) &&
           result_sp) {
         uint64_t value = result_sp->GetValueAsUnsigned(0);
-        std::optional<uint64_t> size =
-            result_sp->GetCompilerType().GetByteSize(nullptr);
+        std::optional<uint64_t> size = llvm::expectedToOptional(
+            result_sp->GetCompilerType().GetByteSize(nullptr));
         if (!size)
           return;
         switch (*size) {
@@ -1664,6 +1665,9 @@ protected:
     MemoryRegionInfo::OptionalBool memory_tagged = range_info.GetMemoryTagged();
     if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
       result.AppendMessage("memory tagging: enabled");
+    MemoryRegionInfo::OptionalBool is_shadow_stack = range_info.IsShadowStack();
+    if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
+      result.AppendMessage("shadow stack: yes");
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();
@@ -1737,7 +1741,7 @@ protected:
 
     // It is important that we track the address used to request the region as
     // this will give the correct section name in the case that regions overlap.
-    // On Windows we get mutliple regions that start at the same place but are
+    // On Windows we get multiple regions that start at the same place but are
     // different sizes and refer to different sections.
     std::vector<std::pair<lldb_private::MemoryRegionInfo, lldb::addr_t>>
         region_list;

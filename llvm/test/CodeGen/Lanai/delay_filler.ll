@@ -1,5 +1,5 @@
-; RUN: llc -march=lanai < %s | FileCheck %s
-; RUN: llc -march=lanai --lanai-nop-delay-filler < %s | \
+; RUN: llc < %s | FileCheck %s
+; RUN: llc --lanai-nop-delay-filler < %s | \
 ; RUN:   FileCheck %s --check-prefix=NOP
 
 ; CHECK: bt f

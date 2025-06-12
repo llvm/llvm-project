@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s android-cloexec-memfd-create %t
+// RUN: %check_clang_tidy --match-partial-fixes %s android-cloexec-memfd-create %t
 
 #define MFD_ALLOW_SEALING 1
 #define __O_CLOEXEC 3

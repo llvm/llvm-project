@@ -35,6 +35,7 @@
 #define PT_GUARDED_BY(x)                __attribute__((pt_guarded_by(x)))
 
 // Common
+#define REENTRANT_CAPABILITY            __attribute__((reentrant_capability))
 #define SCOPED_LOCKABLE                 __attribute__((scoped_lockable))
 #define ACQUIRED_AFTER(...)             __attribute__((acquired_after(__VA_ARGS__)))
 #define ACQUIRED_BEFORE(...)            __attribute__((acquired_before(__VA_ARGS__)))

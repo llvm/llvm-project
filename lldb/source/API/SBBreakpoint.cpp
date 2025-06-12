@@ -137,7 +137,7 @@ SBBreakpointLocation SBBreakpoint::FindLocationByAddress(addr_t vm_addr) {
           bkpt_sp->GetTarget().GetAPIMutex());
       Address address;
       Target &target = bkpt_sp->GetTarget();
-      if (!target.GetSectionLoadList().ResolveLoadAddress(vm_addr, address)) {
+      if (!target.ResolveLoadAddress(vm_addr, address)) {
         address.SetRawAddress(vm_addr);
       }
       sb_bp_location.SetLocation(bkpt_sp->FindLocationByAddress(address));
@@ -157,7 +157,7 @@ break_id_t SBBreakpoint::FindLocationIDByAddress(addr_t vm_addr) {
         bkpt_sp->GetTarget().GetAPIMutex());
     Address address;
     Target &target = bkpt_sp->GetTarget();
-    if (!target.GetSectionLoadList().ResolveLoadAddress(vm_addr, address)) {
+    if (!target.ResolveLoadAddress(vm_addr, address)) {
       address.SetRawAddress(vm_addr);
     }
     break_id = bkpt_sp->FindLocationIDByAddress(address);

@@ -124,7 +124,8 @@ static const char kStdSuppressions[] =
 #  endif
     // TLS leak in some glibc versions, described in
     // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.
-    "leak:*tls_get_addr*\n";
+    "leak:*tls_get_addr*\n"
+    "leak:*dlerror*\n";
 
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
@@ -569,7 +570,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
     PtraceRegistersStatus have_registers =
         suspended_threads.GetRegistersAndSP(i, &registers, &sp);
     if (have_registers != REGISTERS_AVAILABLE) {
-      Report("Unable to get registers from thread %llu.\n", os_id);
+      VReport(1, "Unable to get registers from thread %llu.\n", os_id);
       // If unable to get SP, consider the entire stack to be reachable unless
       // GetRegistersAndSP failed with ESRCH.
       if (have_registers == REGISTERS_UNAVAILABLE_FATAL)

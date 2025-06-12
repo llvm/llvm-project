@@ -16,7 +16,7 @@ namespace std {
   public:
     typedef _Tp element_type;
     auto_ptr(element_type* __p = 0) throw() : _M_ptr(__p) {    }
-    element_type&     operator*() const throw()     {    }
+    element_type&     operator*() const throw()     { return *_M_ptr; }
   };
 }
 class Pointer32 {
@@ -69,17 +69,17 @@ template <typename SIZE_AND_ENDIANNESS> void extract_dwarf_data_from_header(TExt
                                                                             TRawSymbolOwnerData<typename SIZE_AND_ENDIANNESS::SIZE>& symbol_owner_data,
                                                                             TAddressRelocator<typename SIZE_AND_ENDIANNESS::SIZE>* address_relocator) {}
 struct CSCppSymbolOwnerHashFunctor {
-  size_t operator()(const CSCppSymbolOwner& symbol_owner) const {
+  void operator()(const CSCppSymbolOwner& symbol_owner) const {
 # 97 "wrong_place_for_decl.cpp"
   }
 };
-template <typename SIZE_AND_ENDIANNESS> CSCppSymbolOwnerData* create_symbol_owner_data_arch_specific(CSCppSymbolOwner* symbol_owner, const char* dsym_path) {
+template <typename SIZE_AND_ENDIANNESS> void create_symbol_owner_data_arch_specific(CSCppSymbolOwner* symbol_owner, const char* dsym_path) {
   typedef typename SIZE_AND_ENDIANNESS::SIZE SIZE;
   std::auto_ptr< TRawSymbolOwnerData<SIZE> > data(new TRawSymbolOwnerData<SIZE>());
   std::auto_ptr< TExtendedMachOHeader<SIZE_AND_ENDIANNESS> > header;
   extract_dwarf_data_from_header(*header, *data, (TAddressRelocator<typename SIZE_AND_ENDIANNESS::SIZE>*)__null);
 }
-CSCppSymbolOwnerData* create_symbol_owner_data2(CSCppSymbolOwner* symbol_owner, const char* dsym_path) {
+void create_symbol_owner_data2(CSCppSymbolOwner* symbol_owner, const char* dsym_path) {
   create_symbol_owner_data_arch_specific< ISA32Little >(symbol_owner, dsym_path);
   create_symbol_owner_data_arch_specific< ISA32Big >(symbol_owner, dsym_path);
   create_symbol_owner_data_arch_specific< ISA64Little >(symbol_owner, dsym_path);
