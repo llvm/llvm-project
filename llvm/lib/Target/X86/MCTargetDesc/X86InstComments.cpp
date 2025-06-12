@@ -957,10 +957,10 @@ static bool printPTERNLOGComments(const MCInst *MI, raw_ostream &OS,
     Src3Name = "mem";
     break;
   case -2:
-    Src3Name = "bst32";
+    Src3Name = "m32bcst";
     break;
   case -3:
-    Src3Name = "bst64";
+    Src3Name = "m64bcst";
     break;
   default:
     Src3Name = getRegName(MI->getOperand(Src3Idx).getReg());
