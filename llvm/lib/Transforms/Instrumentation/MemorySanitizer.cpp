@@ -2101,13 +2101,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Check for partially-undefined constant vectors
     // TODO: scalable vectors (this is hard because we do not have IRBuilder)
     if (isa<FixedVectorType>(V->getType()) && isa<Constant>(V) &&
-        (cast<Constant>(V))->containsUndefOrPoisonElement() &&
-        PropagateShadow && PoisonUndefVectors) {
-      unsigned NumElems =
-          (cast<FixedVectorType>(V->getType()))->getNumElements();
+        cast<Constant>(V)->containsUndefOrPoisonElement() && PropagateShadow &&
+        PoisonUndefVectors) {
+      unsigned NumElems = cast<FixedVectorType>(V->getType())->getNumElements();
       SmallVector<Constant *, 32> ShadowVector(NumElems);
       for (unsigned i = 0; i != NumElems; ++i) {
-        Constant *Elem = (cast<Constant>(V))->getAggregateElement(i);
+        Constant *Elem = cast<Constant>(V)->getAggregateElement(i);
         ShadowVector[i] = isa<UndefValue>(Elem) ? getPoisonedShadow(Elem)
                                                 : getCleanShadow(Elem);
       }
