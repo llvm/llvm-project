@@ -20,7 +20,7 @@ using namespace AMDGPU;
 
 /// Find KV in array using binary search.
 static const BasicSubtargetSubTypeKV *
-Find(StringRef S, ArrayRef<BasicSubtargetSubTypeKV> A) {
+find(StringRef S, ArrayRef<BasicSubtargetSubTypeKV> A) {
   // Binary search the array
   auto F = llvm::lower_bound(A, S);
   // If not found then return NULL
@@ -31,14 +31,14 @@ Find(StringRef S, ArrayRef<BasicSubtargetSubTypeKV> A) {
 }
 
 /// For each feature that is (transitively) implied by this feature, set it.
-static void SetImpliedBits(FeatureBitset &Bits, const FeatureBitset &Implies,
+static void setImpliedBits(FeatureBitset &Bits, const FeatureBitset &Implies,
                            ArrayRef<BasicSubtargetFeatureKV> FeatureTable) {
   // OR the Implies bits in outside the loop. This allows the Implies for CPUs
   // which might imply features not in FeatureTable to use this.
   Bits |= Implies;
   for (const auto &FE : FeatureTable)
     if (Implies.test(FE.Value))
-      SetImpliedBits(Bits, FE.Implies.getAsBitset(), FeatureTable);
+      setImpliedBits(Bits, FE.Implies.getAsBitset(), FeatureTable);
 }
 
 std::optional<llvm::StringMap<bool>> llvm::getCPUDefaultTargetFeatures(
@@ -47,14 +47,14 @@ std::optional<llvm::StringMap<bool>> llvm::getCPUDefaultTargetFeatures(
   if (CPU.empty())
     return std::nullopt;
 
-  const BasicSubtargetSubTypeKV *CPUEntry = Find(CPU, ProcDesc);
+  const BasicSubtargetSubTypeKV *CPUEntry = ::find(CPU, ProcDesc);
   if (!CPUEntry)
     return std::nullopt;
 
   // Set the features implied by this CPU feature if there is a match.
   FeatureBitset Bits;
   llvm::StringMap<bool> DefaultFeatures;
-  SetImpliedBits(Bits, CPUEntry->Implies.getAsBitset(), ProcFeatures);
+  setImpliedBits(Bits, CPUEntry->Implies.getAsBitset(), ProcFeatures);
 
   unsigned BitSize = Bits.size();
   for (const BasicSubtargetFeatureKV &FE : ProcFeatures) {
