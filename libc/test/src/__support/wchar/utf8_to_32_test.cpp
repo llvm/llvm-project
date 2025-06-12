@@ -185,7 +185,8 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidPop) {
   int err = char_conv.push(static_cast<char8_t>(ch[0]));
   ASSERT_EQ(err, 0);
   auto wch = char_conv.pop_utf32();
-  ASSERT_FALSE(wch.has_value()); // Should fail since we have not read enough bytes
+  ASSERT_FALSE(
+      wch.has_value()); // Should fail since we have not read enough bytes
   err = char_conv.push(static_cast<char8_t>(ch[1]));
   ASSERT_EQ(err, 0);
   wch = char_conv.pop_utf32();
