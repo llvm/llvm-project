@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -mllvm -debug-only=ExperimentalLifetimeAnalysis,LifetimeFacts,LifetimeDataflow %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -mllvm -debug-only=LifetimeFacts,LifetimeDataflow -Wexperimental-lifetime-safety %s 2>&1 | FileCheck %s
 
 struct MyObj {
   int id;
@@ -117,12 +117,18 @@ void conditional(bool condition) {
   int *q = p;
   // CHECK: AssignOrigin (DestID: [[O_P_RVAL:[0-9]+]], SrcID: [[O_P]])
   // CHECK: AssignOrigin (DestID: [[O_Q:[0-9]+]], SrcID: [[O_P_RVAL]])
+  int *q = p;
+  // CHECK: AssignOrigin (DestID: [[O_P_RVAL:[0-9]+]], SrcID: [[O_P]])
+  // CHECK: AssignOrigin (DestID: [[O_Q:[0-9]+]], SrcID: [[O_P_RVAL]])
 }
 // CHECK: Dataflow results:
 // CHECK-DAG: Origin [[O_ADDR_A]] contains Loan [[L_A]]
 // CHECK-DAG: Origin [[O_ADDR_B]] contains Loan [[L_B]]
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_A]]
+// CHECK-DAG: Origin [[O_P]] contains Loan [[L_A]]
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_B]]
+// CHECK-DAG: Origin [[O_Q]] contains Loan [[L_A]]
+// CHECK-DAG: Origin [[O_Q]] contains Loan [[L_B]]
 // CHECK-DAG: Origin [[O_Q]] contains Loan [[L_A]]
 // CHECK-DAG: Origin [[O_Q]] contains Loan [[L_B]]
 
@@ -250,6 +256,8 @@ void assign_in_switch(int mode) {
 // CHECK: Block B{{[0-9]+}}:
 // CHECK:   AssignOrigin (DestID: [[O_NULLPTR_CAST:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
 // CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR_CAST]])
+// CHECK:   AssignOrigin (DestID: [[O_NULLPTR_CAST:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR_CAST]])
   switch (mode) {
     case 1:
       p = &s1;
@@ -287,6 +295,8 @@ void assign_in_switch(int mode) {
 // CHECK-LABEL: Function: loan_in_loop
 void loan_in_loop(bool condition) {
   MyObj* p = nullptr;
+  // CHECK:   AssignOrigin (DestID: [[O_NULLPTR_CAST:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
+  // CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR_CAST]])
   // CHECK:   AssignOrigin (DestID: [[O_NULLPTR_CAST:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
   // CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR_CAST]])
   while (condition) {
@@ -338,6 +348,8 @@ void nested_scopes() {
 // CHECK: Block B{{[0-9]+}}:
 // CHECK:   AssignOrigin (DestID: [[O_NULLPTR_CAST:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
 // CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR_CAST]])
+// CHECK:   AssignOrigin (DestID: [[O_NULLPTR_CAST:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR_CAST]])
   {
     MyObj outer;
     p = &outer;
@@ -358,3 +370,20 @@ void nested_scopes() {
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_INNER]]
 // CHECK-DAG: Origin [[O_ADDR_INNER]] contains Loan [[L_INNER]]
 // CHECK-DAG: Origin [[O_ADDR_OUTER]] contains Loan [[L_OUTER]]
+
+
+// CHECK-LABEL: Function: pointer_indirection
+void pointer_indirection() {
+  int a;
+  int *p = &a;
+// CHECK: Block B1:
+// CHECK:   Issue (LoanID: [[L_A:[0-9]+]], OriginID: [[O_ADDR_A:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_ADDR_A]])
+  int **pp = &p;
+// CHECK:   Issue (LoanID: [[L_P:[0-9]+]], OriginID: [[O_ADDR_P:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_PP:[0-9]+]], SrcID: [[O_ADDR_P]])
+
+// FIXME: The Origin for the RHS is broken
+  int *q = *pp;
+// CHECK:   AssignOrigin (DestID: [[O_Q:[0-9]+]], SrcID: {{[0-9]+}})
+}

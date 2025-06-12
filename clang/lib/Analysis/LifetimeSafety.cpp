@@ -45,9 +45,10 @@ template <typename Tag> struct ID {
   bool operator==(const ID<Tag> &Other) const { return Value == Other.Value; }
   bool operator!=(const ID<Tag> &Other) const { return !(*this == Other); }
   bool operator<(const ID<Tag> &Other) const { return Value < Other.Value; }
-  ID<Tag> &operator++() {
+  ID<Tag> operator++(int) {
+    ID<Tag> Tmp = *this;
     ++Value;
-    return *this;
+    return Tmp;
   }
   void Profile(llvm::FoldingSetNodeID &IDBuilder) const {
     IDBuilder.AddInteger(Value);
@@ -59,11 +60,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ID<Tag> ID) {
   return OS << ID.Value;
 }
 
-struct LoanTag {};
-struct OriginTag {};
-
-using LoanID = ID<LoanTag>;
-using OriginID = ID<OriginTag>;
+using LoanID = ID<struct LoanTag>;
+using OriginID = ID<struct OriginTag>;
 
 /// Information about a single borrow, or "Loan". A loan is created when a
 /// reference or pointer is taken.
@@ -81,7 +79,12 @@ struct Loan {
 
 /// An Origin is a symbolic identifier that represents the set of possible
 /// loans a pointer-like object could hold at any given time.
-/// TODO: Also represent Origins of complex types (fields, inner types).
+/// TODO: Enhance the origin model to handle complex types, pointer
+/// indirection and reborrowing. The plan is to move from a single origin per
+/// variable/expression to a "list of origins" governed by the Type.
+/// For example, the type 'int**' would have two origins.
+/// See discussion:
+/// https://github.com/llvm/llvm-project/pull/142313/commits/0cd187b01e61b200d92ca0b640789c1586075142#r2137644238
 struct Origin {
   OriginID ID;
   llvm::PointerUnion<const clang::ValueDecl *, const clang::Expr *> Ptr;
@@ -101,19 +104,20 @@ class LoanManager {
 public:
   LoanManager() = default;
 
-  Loan &addLoan(AccessPath path, SourceLocation loc) {
-    ++NextLoanID;
-    AllLoans.emplace_back(NextLoanID, path, loc);
+  Loan &addLoan(AccessPath Path, SourceLocation Loc) {
+    AllLoans.emplace_back(getNextLoanID(), Path, Loc);
     return AllLoans.back();
   }
 
-  const Loan &getLoan(LoanID id) const {
-    assert(id.Value < AllLoans.size());
-    return AllLoans[id.Value];
+  const Loan &getLoan(LoanID ID) const {
+    assert(ID.Value < AllLoans.size());
+    return AllLoans[ID.Value];
   }
   llvm::ArrayRef<Loan> getLoans() const { return AllLoans; }
 
 private:
+  LoanID getNextLoanID() { return NextLoanID++; }
+
   LoanID NextLoanID{0};
   /// TODO(opt): Profile and evaluate the usefullness of small buffer
   /// optimisation.
@@ -124,23 +128,27 @@ class OriginManager {
 public:
   OriginManager() = default;
 
-  OriginID getNextOriginID() { return ++NextOriginID; }
-  Origin &addOrigin(OriginID id, const clang::ValueDecl &D) {
-    AllOrigins.emplace_back(id, &D);
+  Origin &addOrigin(OriginID ID, const clang::ValueDecl &D) {
+    AllOrigins.emplace_back(ID, &D);
     return AllOrigins.back();
   }
-  Origin &addOrigin(OriginID id, const clang::Expr &E) {
-    AllOrigins.emplace_back(id, &E);
+  Origin &addOrigin(OriginID ID, const clang::Expr &E) {
+    AllOrigins.emplace_back(ID, &E);
     return AllOrigins.back();
   }
 
   OriginID get(const Expr &E) {
+    // Origin of DeclRefExpr is that of the declaration it refers to.
     if (const auto *DRE = dyn_cast<DeclRefExpr>(&E)) {
-      // Origin of DeclRefExpr is that of the declaration it refers to.
       return get(*DRE->getDecl());
     }
     auto It = ExprToOriginID.find(&E);
-    assert(It != ExprToOriginID.end());
+    // TODO: This should be an assert(It != ExprToOriginID.end()). The current
+    // implementation falls back to getOrCreate to avoid crashing on
+    // yet-unhandled pointer expressions, creating an empty origin for them.
+    if (It == ExprToOriginID.end())
+      return getOrCreate(E);
+
     return It->second;
   }
 
@@ -183,6 +191,8 @@ public:
   }
 
 private:
+  OriginID getNextOriginID() { return NextOriginID++; }
+
   OriginID NextOriginID{0};
   /// TODO(opt): Profile and evaluate the usefullness of small buffer
   /// optimisation.
@@ -321,10 +331,7 @@ public:
         llvm::dbgs() << "Function: " << ND->getQualifiedNameAsString() << "\n";
     }
     // Print blocks in the order as they appear in code for a stable ordering.
-    ForwardDataflowWorklist worklist(Cfg, AC);
-    for (const CFGBlock *B : Cfg.const_nodes())
-      worklist.enqueueBlock(B);
-    while (const CFGBlock *B = worklist.dequeue()) {
+    for (const CFGBlock *B : *AC.getAnalysis<PostOrderCFGView>()) {
       llvm::dbgs() << "  Block B" << B->getBlockID() << ":\n";
       auto It = BlockToFactsMap.find(B);
       if (It != BlockToFactsMap.end()) {
@@ -351,19 +358,14 @@ private:
 class FactGenerator : public ConstStmtVisitor<FactGenerator> {
 
 public:
-  FactGenerator(const CFG &Cfg, FactManager &FactMgr, AnalysisDeclContext &AC)
-      : FactMgr(FactMgr), Cfg(Cfg), AC(AC) {}
+  FactGenerator(FactManager &FactMgr, AnalysisDeclContext &AC)
+      : FactMgr(FactMgr), AC(AC) {}
 
   void run() {
     llvm::TimeTraceScope TimeProfile("FactGenerator");
     // Iterate through the CFG blocks in reverse post-order to ensure that
     // initializations and destructions are processed in the correct sequence.
-    // TODO: A reverse post-order traversal utility should be provided by
-    // Dataflow framework.
-    ForwardDataflowWorklist Worklist(Cfg, AC);
-    for (const CFGBlock *B : Cfg.const_nodes())
-      Worklist.enqueueBlock(B);
-    while (const CFGBlock *Block = Worklist.dequeue()) {
+    for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
       CurrentBlockFacts.clear();
       for (unsigned I = 0; I < Block->size(); ++I) {
         const CFGElement &Element = Block->Elements[I];
@@ -386,7 +388,7 @@ public:
   }
 
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N) {
-    /// TODO: Handle nullptr expr as a special 'null' loan. Uninintialed
+    /// TODO: Handle nullptr expr as a special 'null' loan. Uninitialized
     /// pointers can use the same type of loan.
     FactMgr.getOriginMgr().getOrCreate(*N);
   }
@@ -484,7 +486,6 @@ private:
   }
 
   FactManager &FactMgr;
-  const CFG &Cfg;
   AnalysisDeclContext &AC;
   llvm::SmallVector<Fact *> CurrentBlockFacts;
 };
@@ -537,6 +538,9 @@ struct LifetimeLattice {
 
   /// Computes the union of two lattices by performing a key-wise join of
   /// their OriginLoanMaps.
+  // TODO(opt): This key-wise join is a performance bottleneck. A more
+  // efficient merge could be implemented using a Patricia Trie or HAMT
+  // instead of the current AVL-tree-based ImmutableMap.
   LifetimeLattice join(const LifetimeLattice &Other,
                        LifetimeFactory &Factory) const {
     /// Merge the smaller map into the larger one ensuring we iterate over the
@@ -652,7 +656,8 @@ private:
 /// Orchestrates the analysis by iterating over the CFG using a worklist
 /// algorithm. It computes a fixed point by propagating the LifetimeLattice
 /// state through each block until the state no longer changes.
-/// TODO: Maybe use the dataflow framework!
+/// TODO: Maybe use the dataflow framework! The framework might need changes
+/// to support the current comparison done at block-entry.
 class LifetimeDataflow {
   const CFG &Cfg;
   AnalysisDeclContext &AC;
@@ -688,6 +693,9 @@ public:
                                                 : LifetimeLattice{};
         LifetimeLattice NewSuccEntryState =
             OldSuccEntryState.join(ExitState, LifetimeFact);
+        // Enqueue the successor if its entry state has changed.
+        // TODO(opt): Consider changing 'join' to report a change if !=
+        // comparison is found expensive.
         if (SuccIt == BlockEntryStates.end() ||
             NewSuccEntryState != OldSuccEntryState) {
           BlockEntryStates[Successor] = NewSuccEntryState;
@@ -733,7 +741,7 @@ void runLifetimeAnalysis(const DeclContext &DC, const CFG &Cfg,
   DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
                                        /*ShowColors=*/true));
   FactManager FactMgr;
-  FactGenerator FactGen(Cfg, FactMgr, AC);
+  FactGenerator FactGen(FactMgr, AC);
   FactGen.run();
   DEBUG_WITH_TYPE("LifetimeFacts", FactMgr.dump(Cfg, AC));
 
