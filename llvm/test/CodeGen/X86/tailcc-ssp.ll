@@ -78,7 +78,7 @@ define void @tailcall_unrelated_frame() sspreq {
 ; WINDOWS-NEXT:    callq __security_check_cookie
 ; WINDOWS-NEXT:    int3
 ; WINDOWS-NEXT:    .seh_endproc
-
+;
 ; LINUX-LABEL: tailcall_unrelated_frame:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    pushq %rax
@@ -97,6 +97,7 @@ define void @tailcall_unrelated_frame() sspreq {
 ; LINUX-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-NEXT:    callq __stack_chk_fail@PLT
 
+
   call void @bar()
   tail call void @bar()
   ret void
@@ -105,18 +106,48 @@ define void @tailcall_unrelated_frame() sspreq {
 declare void @callee()
 define void @caller() sspreq {
 ; WINDOWS-LABEL: caller:
-; WINDOWS: callq   callee
-; WINDOWS: callq   callee
-; WINDOWS: cmpq    __security_cookie(%rip), %rcx
-; WINDOWS: jne
-; WINDOWS: callq   __security_check_cookie
-
+; WINDOWS:       # %bb.0:
+; WINDOWS-NEXT:    subq $40, %rsp
+; WINDOWS-NEXT:    .seh_stackalloc 40
+; WINDOWS-NEXT:    .seh_endprologue
+; WINDOWS-NEXT:    movq __security_cookie(%rip), %rax
+; WINDOWS-NEXT:    xorq %rsp, %rax
+; WINDOWS-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; WINDOWS-NEXT:    callq callee
+; WINDOWS-NEXT:    callq callee
+; WINDOWS-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; WINDOWS-NEXT:    xorq %rsp, %rcx
+; WINDOWS-NEXT:    cmpq __security_cookie(%rip), %rcx
+; WINDOWS-NEXT:    jne .LBB2_2
+; WINDOWS-NEXT:  # %bb.1:
+; WINDOWS-NEXT:    .seh_startepilogue
+; WINDOWS-NEXT:    addq $40, %rsp
+; WINDOWS-NEXT:    .seh_endepilogue
+; WINDOWS-NEXT:    retq
+; WINDOWS-NEXT:  .LBB2_2:
+; WINDOWS-NEXT:    callq __security_check_cookie
+; WINDOWS-NEXT:    int3
+; WINDOWS-NEXT:    .seh_endproc
+;
 ; LINUX-LABEL: caller:
-; LINUX: callq   callee@PLT
-; LINUX: callq   callee@PLT
-; LINUX: cmpq
-; LINUX: jne
-; LINUX: callq   __stack_chk_fail@PLT
+; LINUX:       # %bb.0:
+; LINUX-NEXT:    pushq %rax
+; LINUX-NEXT:    .cfi_def_cfa_offset 16
+; LINUX-NEXT:    movq %fs:40, %rax
+; LINUX-NEXT:    movq %rax, (%rsp)
+; LINUX-NEXT:    callq callee@PLT
+; LINUX-NEXT:    callq callee@PLT
+; LINUX-NEXT:    movq %fs:40, %rax
+; LINUX-NEXT:    cmpq (%rsp), %rax
+; LINUX-NEXT:    jne .LBB2_2
+; LINUX-NEXT:  # %bb.1: # %SP_return
+; LINUX-NEXT:    popq %rax
+; LINUX-NEXT:    .cfi_def_cfa_offset 8
+; LINUX-NEXT:    retq
+; LINUX-NEXT:  .LBB2_2: # %CallStackCheckFailBlk
+; LINUX-NEXT:    .cfi_def_cfa_offset 16
+; LINUX-NEXT:    callq __stack_chk_fail@PLT
+
 
   tail call void @callee()
   call void @callee()
