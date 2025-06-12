@@ -326,6 +326,9 @@ constexpr struct {
     {"attiny1624", "avrxmega3", "avrxmega3", 0x803800},
     {"attiny1626", "avrxmega3", "avrxmega3", 0x803800},
     {"attiny1627", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny3224", "avrxmega3", "avrxmega3", 0x803400},
+    {"attiny3226", "avrxmega3", "avrxmega3", 0x803400},
+    {"attiny3227", "avrxmega3", "avrxmega3", 0x803400},
     {"attiny3216", "avrxmega3", "avrxmega3", 0x803800},
     {"attiny3217", "avrxmega3", "avrxmega3", 0x803800},
 
