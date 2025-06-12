@@ -5634,6 +5634,21 @@ static SDValue performMOVFR2GR_SCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue performVMSKLTZCombine(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const LoongArchSubtarget &Subtarget) {
+  MVT VT = N->getSimpleValueType(0);
+  unsigned NumBits = VT.getScalarSizeInBits();
+
+  // Simplify the inputs.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  APInt DemandedMask(APInt::getAllOnes(NumBits));
+  if (TLI.SimplifyDemandedBits(SDValue(N, 0), DemandedMask, DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -5658,6 +5673,9 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performMOVGR2FR_WCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::MOVFR2GR_S_LA64:
     return performMOVFR2GR_SCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::VMSKLTZ:
+  case LoongArchISD::XVMSKLTZ:
+    return performVMSKLTZCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
 }
@@ -8191,4 +8209,59 @@ unsigned LoongArchTargetLowering::getNumRegistersForCallingConv(
     return 1;
 
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
+}
+
+bool LoongArchTargetLowering::SimplifyDemandedBitsForTargetNode(
+    SDValue Op, const APInt &OriginalDemandedBits,
+    const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,
+    unsigned Depth) const {
+  EVT VT = Op.getValueType();
+  unsigned BitWidth = OriginalDemandedBits.getBitWidth();
+  unsigned Opc = Op.getOpcode();
+  switch (Opc) {
+  default:
+    break;
+  case LoongArchISD::VMSKLTZ:
+  case LoongArchISD::XVMSKLTZ: {
+    SDValue Src = Op.getOperand(0);
+    MVT SrcVT = Src.getSimpleValueType();
+    unsigned SrcBits = SrcVT.getScalarSizeInBits();
+    unsigned NumElts = SrcVT.getVectorNumElements();
+
+    // If we don't need the sign bits at all just return zero.
+    if (OriginalDemandedBits.countr_zero() >= NumElts)
+      return TLO.CombineTo(Op, TLO.DAG.getConstant(0, SDLoc(Op), VT));
+
+    // Only demand the vector elements of the sign bits we need.
+    APInt KnownUndef, KnownZero;
+    APInt DemandedElts = OriginalDemandedBits.zextOrTrunc(NumElts);
+    if (SimplifyDemandedVectorElts(Src, DemandedElts, KnownUndef, KnownZero,
+                                   TLO, Depth + 1))
+      return true;
+
+    Known.Zero = KnownZero.zext(BitWidth);
+    Known.Zero.setHighBits(BitWidth - NumElts);
+
+    // [X]VMSKLTZ only uses the MSB from each vector element.
+    KnownBits KnownSrc;
+    APInt DemandedSrcBits = APInt::getSignMask(SrcBits);
+    if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedElts, KnownSrc, TLO,
+                             Depth + 1))
+      return true;
+
+    if (KnownSrc.One[SrcBits - 1])
+      Known.One.setLowBits(NumElts);
+    else if (KnownSrc.Zero[SrcBits - 1])
+      Known.Zero.setLowBits(NumElts);
+
+    // Attempt to avoid multi-use ops if we don't need anything from it.
+    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+            Src, DemandedSrcBits, DemandedElts, TLO.DAG, Depth + 1))
+      return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc));
+    return false;
+  }
+  }
+
+  return TargetLowering::SimplifyDemandedBitsForTargetNode(
+      Op, OriginalDemandedBits, OriginalDemandedElts, Known, TLO, Depth);
 }

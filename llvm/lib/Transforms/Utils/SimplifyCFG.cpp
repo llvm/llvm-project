@@ -4055,13 +4055,11 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   Module *M = BB->getModule();
 
-  if (PredBlock->IsNewDbgInfoFormat) {
-    PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
-    for (DbgVariableRecord &DVR :
-         filterDbgVars(PredBlock->getTerminator()->getDbgRecordRange())) {
-      RemapDbgRecord(M, &DVR, VMap,
-                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    }
+  PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
+  for (DbgVariableRecord &DVR :
+       filterDbgVars(PredBlock->getTerminator()->getDbgRecordRange())) {
+    RemapDbgRecord(M, &DVR, VMap,
+                   RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
   }
 
   // Now that the Cond was cloned into the predecessor basic block,
