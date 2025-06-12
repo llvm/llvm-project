@@ -4786,6 +4786,7 @@ def OMPDeclareVariant : InheritableAttr {
     OMPTraitInfoArgument<"TraitInfos">,
     VariadicExprArgument<"AdjustArgsNothing">,
     VariadicExprArgument<"AdjustArgsNeedDevicePtr">,
+    VariadicExprArgument<"AdjustArgsNeedDeviceAddr">,
     VariadicOMPInteropInfoArgument<"AppendArgs">,
   ];
   let AdditionalMembers = [{
