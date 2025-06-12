@@ -8680,6 +8680,7 @@ public:
   // FIXME: This is in Sema because it requires
   // overload resolution, can we move to ASTContext?
   bool IsCXXTriviallyRelocatableType(QualType T);
+  bool IsCXXTriviallyRelocatableType(const CXXRecordDecl &RD);
 
   //// Determines if a type is replaceable
   /// according to the C++26 rules.
@@ -14031,7 +14032,7 @@ public:
                               Decl *D)
         : TmplAttr(A), Scope(S), NewDecl(D) {}
   };
-  typedef SmallVector<LateInstantiatedAttribute, 16> LateInstantiatedAttrVec;
+  typedef SmallVector<LateInstantiatedAttribute, 1> LateInstantiatedAttrVec;
 
   void InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                         const Decl *Pattern, Decl *Inst,

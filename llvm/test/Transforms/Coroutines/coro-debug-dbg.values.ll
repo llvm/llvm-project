@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
 ;
 ; This file is based on coro-debug-frame-variable.ll.
-; CHECK-LABEL: define void @f(
+; CHECK-LABEL: define void @_Z3foov(
 ; CHECK:       %[[frame:.*]] = call {{.*}} @llvm.coro.begin
 ; CHECK:       #dbg_value(ptr %[[frame]]
 ; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetX:[0-9]*]]),
@@ -20,7 +20,7 @@
 ; CHECK:       #dbg_value(ptr %[[frame]]
 ; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetJ:[0-9]*]], DW_OP_deref),
 
-; CHECK-LABEL: void @f.resume(
+; CHECK-LABEL: void @_Z3foov.resume(
 ; CHECK-SAME:                 ptr {{.*}} %[[frame:.*]])
 ; CHECK-SAME:  !dbg ![[RESUME_FN_DBG_NUM:[0-9]+]]
 ; CHECK:         %[[frame_alloca:.*]] = alloca ptr
@@ -37,7 +37,7 @@
 ; CHECK:         #dbg_value(ptr %[[frame_alloca]], ![[JVAR_RESUME:[0-9]+]],
 ; CHECK-SAME:        !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[OffsetJ]], DW_OP_deref)
 ;
-; CHECK: ![[RESUME_FN_DBG_NUM]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov"
+; CHECK: ![[RESUME_FN_DBG_NUM]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov.resume"
 ; CHECK: ![[FRAME_DI_NUM]] = !DILocalVariable(name: "__coro_frame"
 ; CHECK: ![[IVAR_RESUME]] = !DILocalVariable(name: "i"
 ; CHECK: ![[XVAR_RESUME]] = !DILocalVariable(name: "x"
@@ -46,7 +46,7 @@
 
 declare void @consume(i32)
 
-define void @f(i32 %i, i32 %j) presplitcoroutine !dbg !8 {
+define void @_Z3foov(i32 %i, i32 %j) presplitcoroutine !dbg !8 {
 entry:
   %__promise = alloca i8, align 8
   %x = alloca [10 x i32], align 16

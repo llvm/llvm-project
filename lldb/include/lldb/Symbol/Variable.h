@@ -89,6 +89,9 @@ public:
 
   bool IsInScope(StackFrame *frame);
 
+  /// Returns true if this variable is in scope at `addr` inside `block`.
+  bool IsInScope(const Block &block, const Address &addr);
+
   bool LocationIsValidForFrame(StackFrame *frame);
 
   bool LocationIsValidForAddress(const Address &address);

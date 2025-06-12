@@ -231,22 +231,6 @@ func.func @fold_insert(%arg0 : index) -> (tensor<4xf32>) {
   return %ins_1 : tensor<4xf32>
 }
 
-
-// -----
-
-func.func @canonicalize_insert_after_constant() -> (tensor<2x2xi32>) {
-  // Fold an insert into a splat.
-  // CHECK: %[[C4:.+]] = arith.constant dense<{{\[\[}}1, 2], [4, 4]]> : tensor<2x2xi32>
-  // CHECK-LITERAL:
-  // CHECK-NEXT: return %[[C4]]
-  %cst = arith.constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
-  %c0 = arith.constant 0 : index
-  %c1 = arith.constant 1 : index
-  %c4_i32 = arith.constant 4 : i32
-  %inserted = tensor.insert %c4_i32 into %cst[%c1, %c0] : tensor<2x2xi32>
-  return %inserted : tensor<2x2xi32>
-}
-
 // -----
 
 // CHECK-LABEL: func @extract_from_tensor.cast
@@ -1285,6 +1269,20 @@ func.func @compose_expand_of_collapse_dynamic(%arg0 : tensor<4x?x10x64x2xf16>, %
 //      CHECK:   %[[RESULT:.+]] = tensor.collapse_shape %[[ARG0]]
 // CHECK-SAME:     [0], [1], [2], [3, 4]
 //      CHECK:   return %[[RESULT]]
+
+// -----
+
+func.func @no_compose_collapse_of_expand_dynamic(%arg0 : tensor<?x8x128x?xf16>, %arg1: index) -> tensor<?x128x?xf16> {
+  %collapse = tensor.collapse_shape %arg0 [[0, 1, 2, 3]] : tensor<?x8x128x?xf16> into tensor<?xf16>
+  %expanded_19 = tensor.expand_shape %collapse [[0, 1, 2]] output_shape [%arg1, 8, %arg1] : tensor<?xf16> into tensor<?x128x?xf16>
+  return %expanded_19 : tensor<?x128x?xf16>
+}
+// CHECK-LABEL: func @no_compose_collapse_of_expand_dynamic
+//  CHECK-SAME:   %[[ARG0:.+]]: tensor
+//  CHECK-SAME:   %[[ARG1:.+]]: index
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape %[[ARG0]]
+//       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape %[[COLLAPSE]]
+//       CHECK:   return %[[EXPAND]]
 
 // -----
 

@@ -140,7 +140,9 @@ public:
 
   // l-values
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e) {
-    assert(!cir::MissingFeatures::tryEmitAsConstant());
+    if (CIRGenFunction::ConstantEmission constant = cgf.tryEmitAsConstant(e))
+      return cgf.emitScalarConstant(constant, e);
+
     return emitLoadOfLValue(e);
   }
 
@@ -189,9 +191,24 @@ public:
           cgf.getLoc(e->getSourceRange()), inputVec, indexVec);
     }
 
-    cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
-                                   "ShuffleVectorExpr with indices");
-    return {};
+    mlir::Value vec1 = Visit(e->getExpr(0));
+    mlir::Value vec2 = Visit(e->getExpr(1));
+
+    // The documented form of __builtin_shufflevector, where the indices are
+    // a variable number of integer constants. The constants will be stored
+    // in an ArrayAttr.
+    SmallVector<mlir::Attribute, 8> indices;
+    for (unsigned i = 2; i < e->getNumSubExprs(); ++i) {
+      indices.push_back(
+          cir::IntAttr::get(cgf.builder.getSInt64Ty(),
+                            e->getExpr(i)
+                                ->EvaluateKnownConstInt(cgf.getContext())
+                                .getSExtValue()));
+    }
+
+    return cgf.builder.create<cir::VecShuffleOp>(
+        cgf.getLoc(e->getSourceRange()), cgf.convertType(e->getType()), vec1,
+        vec2, cgf.builder.getArrayAttr(indices));
   }
 
   mlir::Value VisitConvertVectorExpr(ConvertVectorExpr *e) {
@@ -1763,6 +1780,14 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                               cgf.convertType(destTy));
   }
 
+  case CK_VectorSplat: {
+    // Create a vector object and fill all elements with the same scalar value.
+    assert(destTy->isVectorType() && "CK_VectorSplat to non-vector type");
+    return builder.create<cir::VecSplatOp>(
+        cgf.getLoc(subExpr->getSourceRange()), cgf.convertType(destTy),
+        Visit(subExpr));
+  }
+
   default:
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
                                    "CastExpr: ", ce->getCastKindName());
@@ -1954,19 +1979,28 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     }
   }
 
+  QualType condType = condExpr->getType();
+
   // OpenCL: If the condition is a vector, we can treat this condition like
   // the select function.
-  if ((cgf.getLangOpts().OpenCL && condExpr->getType()->isVectorType()) ||
-      condExpr->getType()->isExtVectorType()) {
+  if ((cgf.getLangOpts().OpenCL && condType->isVectorType()) ||
+      condType->isExtVectorType()) {
     assert(!cir::MissingFeatures::vectorType());
     cgf.cgm.errorNYI(e->getSourceRange(), "vector ternary op");
   }
 
-  if (condExpr->getType()->isVectorType() ||
-      condExpr->getType()->isSveVLSBuiltinType()) {
-    assert(!cir::MissingFeatures::vecTernaryOp());
-    cgf.cgm.errorNYI(e->getSourceRange(), "vector ternary op");
-    return {};
+  if (condType->isVectorType() || condType->isSveVLSBuiltinType()) {
+    if (!condType->isVectorType()) {
+      assert(!cir::MissingFeatures::vecTernaryOp());
+      cgf.cgm.errorNYI(loc, "TernaryOp for SVE vector");
+      return {};
+    }
+
+    mlir::Value condValue = Visit(condExpr);
+    mlir::Value lhsValue = Visit(lhsExpr);
+    mlir::Value rhsValue = Visit(rhsExpr);
+    return builder.create<cir::VecTernaryOp>(loc, condValue, lhsValue,
+                                             rhsValue);
   }
 
   // If this is a really simple expression (like x ? 4 : 5), emit this as a

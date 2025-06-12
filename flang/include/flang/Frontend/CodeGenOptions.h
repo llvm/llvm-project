@@ -53,8 +53,11 @@ public:
   /// The paths to the pass plugins that were registered using -fpass-plugin.
   std::vector<std::string> LLVMPassPlugins;
 
-  // The prefered vector width, if requested by -mprefer-vector-width.
+  /// The prefered vector width, if requested by -mprefer-vector-width.
   std::string PreferVectorWidth;
+
+  /// List of reciprocal estimate sub-options.
+  std::string Reciprocals;
 
   /// List of filenames passed in using the -fembed-offload-object option. These
   /// are offloading binaries containing device images and metadata.

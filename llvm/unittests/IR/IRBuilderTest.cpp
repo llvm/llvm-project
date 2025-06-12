@@ -212,14 +212,6 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
     EXPECT_EQ(FTy->getParamType(i), Args[i]->getType());
 }
 
-TEST_F(IRBuilderTest, CreateVScale) {
-  IRBuilder<> Builder(BB);
-
-  Constant *Zero = Builder.getInt32(0);
-  Value *VScale = Builder.CreateVScale(Zero);
-  EXPECT_TRUE(isa<ConstantInt>(VScale) && cast<ConstantInt>(VScale)->isZero());
-}
-
 TEST_F(IRBuilderTest, CreateStepVector) {
   IRBuilder<> Builder(BB);
 
@@ -1011,18 +1003,8 @@ TEST_F(IRBuilderTest, DIBuilder) {
     EXPECT_TRUE(verifyModule(*M));
   };
 
-  // Test in new-debug mode.
-  EXPECT_TRUE(M->IsNewDbgInfoFormat);
   RunTest();
-
-  // Test in old-debug mode.
-  // Reset the test then call convertFromNewDbgValues to flip the flag
-  // on the test's Module, Function and BasicBlock.
   TearDown();
-  SetUp();
-  M->convertFromNewDbgValues();
-  EXPECT_FALSE(M->IsNewDbgInfoFormat);
-  RunTest();
 }
 
 TEST_F(IRBuilderTest, createArtificialSubprogram) {
