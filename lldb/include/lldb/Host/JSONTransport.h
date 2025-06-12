@@ -51,17 +51,17 @@ public:
   }
 };
 
-class TransportClosedError : public llvm::ErrorInfo<TransportClosedError> {
+class TransportInvalidError : public llvm::ErrorInfo<TransportInvalidError> {
 public:
   static char ID;
 
-  TransportClosedError() = default;
+  TransportInvalidError() = default;
 
   void log(llvm::raw_ostream &OS) const override {
-    OS << "transport is closed";
+    OS << "transport IO object invalid";
   }
   std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
+    return std::make_error_code(std::errc::not_connected);
   }
 };
 

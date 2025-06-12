@@ -31,7 +31,7 @@ static Expected<std::string>
 ReadFull(IOObject &descriptor, size_t length,
          std::optional<std::chrono::microseconds> timeout = std::nullopt) {
   if (!descriptor.IsValid())
-    return llvm::make_error<TransportClosedError>();
+    return llvm::make_error<TransportInvalidError>();
 
   bool timeout_supported = true;
   // FIXME: SelectHelper does not work with NativeFile on Win32.
@@ -92,7 +92,7 @@ void JSONTransport::Log(llvm::StringRef message) {
 Expected<std::string>
 HTTPDelimitedJSONTransport::ReadImpl(const std::chrono::microseconds &timeout) {
   if (!m_input || !m_input->IsValid())
-    return llvm::make_error<TransportClosedError>();
+    return llvm::make_error<TransportInvalidError>();
 
   IOObject *input = m_input.get();
   Expected<std::string> message_header =
@@ -131,7 +131,7 @@ HTTPDelimitedJSONTransport::ReadImpl(const std::chrono::microseconds &timeout) {
 
 Error HTTPDelimitedJSONTransport::WriteImpl(const std::string &message) {
   if (!m_output || !m_output->IsValid())
-    return llvm::make_error<TransportClosedError>();
+    return llvm::make_error<TransportInvalidError>();
 
   Log(llvm::formatv("<-- {0}", message).str());
 
@@ -145,7 +145,7 @@ Error HTTPDelimitedJSONTransport::WriteImpl(const std::string &message) {
 Expected<std::string>
 JSONRPCTransport::ReadImpl(const std::chrono::microseconds &timeout) {
   if (!m_input || !m_input->IsValid())
-    return make_error<TransportClosedError>();
+    return make_error<TransportInvalidError>();
 
   IOObject *input = m_input.get();
   Expected<std::string> raw_json =
@@ -160,7 +160,7 @@ JSONRPCTransport::ReadImpl(const std::chrono::microseconds &timeout) {
 
 Error JSONRPCTransport::WriteImpl(const std::string &message) {
   if (!m_output || !m_output->IsValid())
-    return llvm::make_error<TransportClosedError>();
+    return llvm::make_error<TransportInvalidError>();
 
   Log(llvm::formatv("<-- {0}", message).str());
 
@@ -173,4 +173,4 @@ Error JSONRPCTransport::WriteImpl(const std::string &message) {
 
 char TransportEOFError::ID;
 char TransportTimeoutError::ID;
-char TransportClosedError::ID;
+char TransportInvalidError::ID;

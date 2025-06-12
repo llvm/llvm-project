@@ -90,6 +90,20 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReadWithEOF) {
       Failed<TransportEOFError>());
 }
 
+TEST_F(HTTPDelimitedJSONTransportTest, ReadAfterClosed) {
+  input.CloseReadFileDescriptor();
+  ASSERT_THAT_EXPECTED(
+      transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
+      llvm::Failed());
+}
+
+TEST_F(HTTPDelimitedJSONTransportTest, InvalidTransport) {
+  transport = std::make_unique<HTTPDelimitedJSONTransport>(nullptr, nullptr);
+  ASSERT_THAT_EXPECTED(
+      transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
+      Failed<TransportInvalidError>());
+}
+
 TEST_F(HTTPDelimitedJSONTransportTest, Write) {
   ASSERT_THAT_ERROR(transport->Write(JSONTestType{"foo"}), Succeeded());
   output.CloseWriteFileDescriptor();
@@ -134,6 +148,13 @@ TEST_F(JSONRPCTransportTest, ReadWithEOF) {
       Failed<TransportEOFError>());
 }
 
+TEST_F(JSONRPCTransportTest, ReadAfterClosed) {
+  input.CloseReadFileDescriptor();
+  ASSERT_THAT_EXPECTED(
+      transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
+      llvm::Failed());
+}
+
 TEST_F(JSONRPCTransportTest, Write) {
   ASSERT_THAT_ERROR(transport->Write(JSONTestType{"foo"}), Succeeded());
   output.CloseWriteFileDescriptor();
@@ -143,4 +164,11 @@ TEST_F(JSONRPCTransportTest, Write) {
   ASSERT_THAT_EXPECTED(bytes_read, Succeeded());
   ASSERT_EQ(StringRef(buf, *bytes_read), StringRef(R"json({"str":"foo"})json"
                                                    "\n"));
+}
+
+TEST_F(JSONRPCTransportTest, InvalidTransport) {
+  transport = std::make_unique<JSONRPCTransport>(nullptr, nullptr);
+  ASSERT_THAT_EXPECTED(
+      transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
+      Failed<TransportInvalidError>());
 }
