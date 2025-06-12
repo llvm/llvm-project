@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Analysis/SPIRVTypeAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
@@ -218,6 +219,7 @@ public:
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<SPIRVTypeAnalysisWrapperPass>();
     ModulePass::getAnalysisUsage(AU);
   }
 };
@@ -250,8 +252,11 @@ bool expectIgnoredInIRTranslation(const Instruction *I) {
 
 char SPIRVEmitIntrinsics::ID = 0;
 
-INITIALIZE_PASS(SPIRVEmitIntrinsics, "emit-intrinsics", "SPIRV emit intrinsics",
-                false, false)
+INITIALIZE_PASS_BEGIN(SPIRVEmitIntrinsics, "emit-intrinsics",
+                      "SPIRV emit intrinsics", false, false)
+INITIALIZE_PASS_DEPENDENCY(SPIRVTypeAnalysisWrapperPass)
+INITIALIZE_PASS_END(SPIRVEmitIntrinsics, "emit-intrinsics",
+                    "SPIRV emit intrinsics", false, false)
 
 static inline bool isAssignTypeInstr(const Instruction *I) {
   return isa<IntrinsicInst>(I) &&
@@ -2574,6 +2579,7 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
 
 bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   bool Changed = false;
+  auto TI = getAnalysis<SPIRVTypeAnalysisWrapperPass>().getTypeInfo();
 
   parseFunDeclarations(M);
 
