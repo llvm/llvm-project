@@ -144,10 +144,9 @@ body: |
     ; CHECK-LABEL: name: move_vleff
     ; CHECK: liveins: $v8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:vr, %vl:gpr = PseudoVLE32FF_V_M1 $noreg, $noreg, 4, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size, align 1)
     ; CHECK-NEXT: %passthru:vr = COPY $v8
+    ; CHECK-NEXT: %x:vr, %vl:gpr = PseudoVLE32FF_V_M1 %passthru, $noreg, 4, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size, align 1)
     ; CHECK-NEXT: %y:gpr = ADDI $x0, 1
-    ; CHECK-NEXT: %z:vr = PseudoVMV_V_V_M1 %passthru, %x, 4, 5 /* e32 */, 0 /* tu, mu */
     %x:vr, %vl:gpr = PseudoVLE32FF_V_M1 $noreg, $noreg, 4, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size)
     %passthru:vr = COPY $v8
     %y:gpr = ADDI $x0, 1

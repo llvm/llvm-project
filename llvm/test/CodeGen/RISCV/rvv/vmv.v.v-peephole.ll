@@ -212,11 +212,9 @@ define <vscale x 1 x i64> @undef_passthru(<vscale x 1 x i64> %passthru, <vscale 
 define <vscale x 1 x i64> @vleff_move_past_passthru(ptr %p, ptr %q, iXLen %avl) {
 ; CHECK-LABEL: vleff_move_past_passthru:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
-; CHECK-NEXT:    vle64ff.v v9, (a0)
 ; CHECK-NEXT:    vl1re64.v v8, (a1)
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 1 x i64>, iXLen } @llvm.riscv.vleff(<vscale x 1 x i64> poison, ptr %p, iXLen %avl)
   %vec = extractvalue { <vscale x 1 x i64>, iXLen } %a, 0
