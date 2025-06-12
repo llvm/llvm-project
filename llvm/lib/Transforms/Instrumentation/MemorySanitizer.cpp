@@ -4192,7 +4192,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleAVXVpermil2var(IntrinsicInst &I) {
     assert(I.arg_size() == 3);
     assert(I.getArgOperand(0)->getType() == I.getArgOperand(2)->getType());
-    assert(I.getType() == I.getArgOperand(0)->getType() );
+    assert(I.getType() == I.getArgOperand(0)->getType());
     assert(I.getArgOperand(1)->getType()->isIntOrIntVectorTy());
     IRBuilder<> IRB(&I);
     Value *AShadow = getShadow(&I, 0);
