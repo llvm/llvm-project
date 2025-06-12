@@ -25,11 +25,11 @@ define void @quux(i32 %arg, i1 %arg1, i1 %arg2) {
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0xffff
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_and_b32_sdwa v0, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 24
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0xff
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
-; CHECK-NEXT:    v_lshrrev_b32_sdwa v1, v1, v0 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; CHECK-NEXT:    v_lshrrev_b32_e32 v1, 24, v0
 ; CHECK-NEXT:    v_and_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; CHECK-NEXT:    v_lshlrev_b16 v1, 8, v1
 ; CHECK-NEXT:    v_or_b32_sdwa v1, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; CHECK-NEXT:  .LBB0_2: ; %bb9
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s4

@@ -864,25 +864,25 @@ define i16 @v_fshr_v2i8(i16 %lhs.arg, i16 %rhs.arg, i16 %amt.arg) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v3, 8, v2
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
-; GFX10-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
+; GFX10-NEXT:    v_lshrrev_b32_e32 v6, 8, v1
 ; GFX10-NEXT:    v_xor_b32_e32 v7, -1, v2
 ; GFX10-NEXT:    v_lshlrev_b16 v0, 1, v0
-; GFX10-NEXT:    v_xor_b32_e32 v6, -1, v3
+; GFX10-NEXT:    v_xor_b32_e32 v5, -1, v3
 ; GFX10-NEXT:    v_lshlrev_b16 v4, 1, v4
 ; GFX10-NEXT:    v_and_b32_e32 v3, 7, v3
-; GFX10-NEXT:    v_and_b32_e32 v5, 0xff, v5
+; GFX10-NEXT:    v_and_b32_e32 v6, 0xff, v6
 ; GFX10-NEXT:    v_and_b32_e32 v2, 7, v2
-; GFX10-NEXT:    v_and_b32_e32 v6, 7, v6
+; GFX10-NEXT:    v_and_b32_e32 v5, 7, v5
 ; GFX10-NEXT:    v_and_b32_e32 v1, 0xff, v1
-; GFX10-NEXT:    v_and_b32_e32 v7, 7, v7
-; GFX10-NEXT:    v_lshrrev_b16 v3, v3, v5
-; GFX10-NEXT:    v_lshlrev_b16 v4, v6, v4
+; GFX10-NEXT:    v_lshrrev_b16 v3, v3, v6
+; GFX10-NEXT:    v_lshlrev_b16 v4, v5, v4
+; GFX10-NEXT:    v_and_b32_e32 v5, 7, v7
 ; GFX10-NEXT:    v_lshrrev_b16 v1, v2, v1
-; GFX10-NEXT:    v_lshlrev_b16 v0, v7, v0
-; GFX10-NEXT:    v_or_b32_e32 v2, v4, v3
-; GFX10-NEXT:    v_mov_b32_e32 v3, 0xff
+; GFX10-NEXT:    v_or_b32_e32 v3, v4, v3
+; GFX10-NEXT:    v_lshlrev_b16 v0, v5, v0
+; GFX10-NEXT:    v_and_b32_e32 v2, 0xff, v3
 ; GFX10-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX10-NEXT:    v_and_b32_sdwa v1, v2, v3 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX10-NEXT:    v_lshlrev_b16 v1, 8, v2
 ; GFX10-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
