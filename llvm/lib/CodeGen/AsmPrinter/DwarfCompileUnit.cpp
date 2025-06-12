@@ -1291,12 +1291,10 @@ DwarfCompileUnit::getDwarf5OrGNULocationAtom(dwarf::LocationAtom Loc) const {
   }
 }
 
-DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
-                                                 const DISubprogram *CalleeSP,
-                                                 bool IsTail,
-                                                 const MCSymbol *PCAddr,
-                                                 const MCSymbol *CallAddr,
-                                                 unsigned CallReg) {
+DIE &DwarfCompileUnit::constructCallSiteEntryDIE(
+    DIE &ScopeDIE, const DISubprogram *CalleeSP, bool IsTail,
+    const MCSymbol *PCAddr, const MCSymbol *CallAddr, unsigned CallReg,
+    DIType *AllocSiteTy) {
   // Insert a call site entry DIE within ScopeDIE.
   DIE &CallSiteDIE = createAndAddDIE(getDwarf5OrGNUTag(dwarf::DW_TAG_call_site),
                                      ScopeDIE, nullptr);
@@ -1305,7 +1303,7 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
     // Indirect call.
     addAddress(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_target),
                MachineLocation(CallReg));
-  } else {
+  } else if (CalleeSP) {
     DIE *CalleeDIE = getOrCreateSubprogramDIE(CalleeSP);
     assert(CalleeDIE && "Could not create DIE for call site entry origin");
     if (AddLinkageNamesToDeclCallOriginsForTuning(DD) &&
@@ -1348,6 +1346,10 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
     assert(PCAddr && "Missing return PC information for a call");
     addLabelAddress(CallSiteDIE,
                     getDwarf5OrGNUAttr(dwarf::DW_AT_call_return_pc), PCAddr);
+  }
+
+  if (AllocSiteTy) {
+    addType(CallSiteDIE, AllocSiteTy, dwarf::DW_AT_LLVM_heapallocsite);
   }
 
   return CallSiteDIE;
