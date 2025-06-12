@@ -1015,3 +1015,11 @@ func.func @test_box_total_elements(%arg0: !fir.class<!fir.type<sometype{i:i32}>>
   %6 = arith.addi %2, %5 : index
   return %6 : index
 }
+
+// omp.flush operation
+// CHECK-LABEL: func.func @omp_flush
+func.func @omp_flush(%arg0: !fir.class<!fir.type<_QMmymodTmyt1{t:i32}>>) {
+  // CHECK: omp.flush(%{{.*}} : !fir.class<!fir.type<_QMmymodTmyt1{t:i32}>>)
+  omp.flush(%arg0 : !fir.class<!fir.type<_QMmymodTmyt1{t:i32}>>)
+  return
+}
