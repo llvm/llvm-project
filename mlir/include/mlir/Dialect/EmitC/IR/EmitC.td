@@ -1572,46 +1572,45 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
   let hasVerifier = 1;
 }
 
-def EmitC_ClassOp : EmitC_Op<"class", [AutomaticAllocationScope,
-                                       IsolatedFromAbove, OpAsmOpInterface]> {
+def EmitC_ClassOp
+    : EmitC_Op<"class", [AutomaticAllocationScope, IsolatedFromAbove,
+                         OpAsmOpInterface, SymbolTable,
+                         Symbol]#GraphRegionNoTerminator.traits> {
   let summary =
       "Represents a C++ class definition, encapsulating fields and methods.";
 
+  // FIX WORDING
   let description = [{
     The `emitc.class` operation defines a C++ class, acting as a container
     for its data fields (`emitc.variable`) and methods (`emitc.func`).
     It creates a distinct scope, isolating its contents from the surrounding
     MLIR region, similar to how C++ classes encapsulate their internals.
+    All the class memebrs need to be default initalizable. 
 
     Example:
     ```mlir
-    emitc.class @MyModelClass {
-        emitc.field @another_feature : !emitc.lvalue<!emitc.ptr<f32>>
-        emitc.field @some_feature : !emitc.lvalue<!emitc.ptr<f32>>
-        emitc.field @output_0 : !emitc.lvalue<!emitc.ptr<f32>>
+    emitc.class @MymainClass {
+      emitc.field @another_feature : !emitc.array<1xf32> = {tf_saved_model.index_path = ["another_feature"]}
+      emitc.field @some_feature : !emitc.array<1xf32> = {tf_saved_model.index_path = ["some_feature"]}
+      emitc.field @output_0 : !emitc.array<1xf32> = {tf_saved_model.index_path = ["output_0"]}
 
-        emitc.func @main() attributes {tf.entry_function = {inputs = "serving_default_another_feature:0,serving_default_some_feature:0", outputs = "PartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
-          %c0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+      emitc.func @execute() {
+        %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
 
-          %some_ptr = emitc.get_field %self : @MyModelClass, @some_feature -> !emitc.ptr<f32>
-          %another_ptr = emitc.get_field %self : @MyModelClass, @another_feature -> !emitc.ptr<f32>
-          %output_ptr = emitc.get_field %self : @MyModelClass, @output_0 -> !emitc.ptr<f32>
+        %1 = get_field @another_feature : !emitc.array<1xf32>
+        %2 = get_field @some_feature : !emitc.array<1xf32>
+        %3 = get_field @output_0 : !emitc.array<1xf32>
 
-          %v1 = subscript %some_ptr[%c0] : (!emitc.ptr<f32>, !emitc.size_t) -> !emitc.lvalue<f32>
-          %v1_val = load %v1 : !emitc.lvalue<f32> -> f32
-
-          %v2 = subscript %another_ptr[%c0] : (!emitc.ptr<f32>, !emitc.size_t) -> !emitc.lvalue<f32>
-          %v2_val = load %v2 : !emitc.lvalue<f32> -> f32
-
-          %v3_val = add %v1_val, %v2_val : (f32, f32) -> f32
-
-          %output_lvalue = subscript %output_ptr[%c0] : (!emitc.ptr<f32>, !emitc.size_t) -> !emitc.lvalue<f32>
-          assign %v3_val, %output_lvalue : (f32, !emitc.lvalue<f32>) -> ()
-
-          return
-        }
+        %4 = subscript %2[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+        %5 = load %4 : <f32>
+        %6 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+        %7 = load %6 : <f32>
+        %8 = add %5, %7 : (f32, f32) -> f32
+        %9 = subscript %3[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+        assign %8 : f32 to %9 : <f32>
+        return
       }
-    }
+  }
 
     ```
   }];
@@ -1629,7 +1628,7 @@ def EmitC_ClassOp : EmitC_Op<"class", [AutomaticAllocationScope,
 
   let hasCustomAssemblyFormat = 1;
 
-  let assemblyFormat = "`class` $sym_name attr-dict-with-keyword $body";
+  let assemblyFormat = [{ $sym_name attr-dict-with-keyword $body }];
 }
 
 def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
@@ -1642,15 +1641,9 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
 
     ```mlir
     emitc.class @MyModelClass {
-      emitc.field @another_feature : !emitc.lvalue<!emitc.ptr<f32>> = #emitc.value<0.0> : !emitc.f32
-      emitc.field @some_feature : !emitc.lvalue<!emitc.ptr<f32>> = #emitc.value<1.0> : !emitc.f32
-      emitc.field @output_0 : !emitc.lvalue<!emitc.ptr<f32>>
-    }
-    ```
-    Example without initial value:
-    ```mlir
-    emitc.class @MyModelClass {
-      emitc.field @another_feature : !emitc.lvalue<!emitc.ptr<f32>>
+      emitc.field @another_feature : !emitc.array<1xf32> = {tf_saved_model.index_path = ["another_feature"]}
+      emitc.field @some_feature : !emitc.array<1xf32> = {tf_saved_model.index_path = ["some_feature"]}
+      emitc.field @output_0 : !emitc.array<1xf32> = {tf_saved_model.index_path = ["output_0"]}
     }
     ```
   }];
@@ -1658,7 +1651,8 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
   let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type,
       OptionalAttr<AnyAttr>:$initial_value);
 
-  let assemblyFormat = "$sym_name `:` $type (`=` $initial_value^)? attr-dict";
+  let assemblyFormat =
+      [{ $sym_name `:` $type (`=` $initial_value^)? attr-dict}];
 
   let hasVerifier = 1;
 }
@@ -1674,18 +1668,15 @@ def EmitC_GetFieldOp
      Example:
 
      ```mlir
-     %some_ptr = emitc.get_field %self : @MyModelClass, @some_feature -> !emitc.ptr<f32>
-     %another_ptr = emitc.get_field %self : @MyModelClass, @another_feature -> !emitc.ptr<f32>
-     %output_ptr = emitc.get_field %self : @MyModelClass, @output_0 -> !emitc.ptr<f32>
+    %some_ptr = emitc.get_field @some_feature : !emitc.array<1xf32> 
+    %another_ptr = emitc.get_field @another_feature : !emitc.array<1xf32> 
+    %output_ptr = emitc.get_field @output_0 : !emitc.array<1xf32> 
      ```
   }];
 
-  let arguments = (ins AnyTypeOf<[EmitC_LValueType, EmitC_PointerType]>:$base,
-      FlatSymbolRefAttr:$class_name, FlatSymbolRefAttr:$field_name);
-
-  let results = (outs AnyTypeOf<[EmitC_LValueType, EmitC_PointerType]>:$result);
-  let assemblyFormat = "$base `:` type($base) $class_name `,` $field_name `->` "
-                       "type($result) attr-dict";
+  let arguments = (ins FlatSymbolRefAttr:$field_name);
+  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>:$result);
+  let assemblyFormat = "$field_name `:` type($result) attr-dict";
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC
