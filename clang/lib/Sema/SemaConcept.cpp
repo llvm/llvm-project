@@ -368,6 +368,8 @@ SubstitutionInTemplateArguments(
 
   TemplateArgumentListInfo SubstArgs;
   if (Constraint.hasParameterMapping()) {
+    Sema::ArgPackSubstIndexRAII SubstIndex(
+        S, Constraint.getPackSubstitutionIndex());
     if (S.SubstTemplateArgumentsInParameterMapping(
             Constraint.getParameterMapping(), MLTAL, SubstArgs) ||
         Trap.hasErrorOccurred())
@@ -590,6 +592,8 @@ static bool calculateConstraintSatisfaction(
       return Ok;
 
     Sema::SFINAETrap Trap(S);
+    Sema::ArgPackSubstIndexRAII SubstIndex(
+        S, Constraint.getPackSubstitutionIndex());
 
     const ASTTemplateArgumentListInfo *Ori =
         Constraint.getConceptId()->getTemplateArgsAsWritten();
@@ -604,7 +608,8 @@ static bool calculateConstraintSatisfaction(
                                           Ori->NumTemplateArgs, TransArgs))
       return Ok;
 
-    if (S.SubstTemplateArguments(TransArgs.arguments(), MLTAL, OutArgs) ||
+    if (S.SubstTemplateArguments(TransArgs.arguments(), *SubstitutedArgs,
+                                 OutArgs) ||
         Trap.hasErrorOccurred())
       return Ok;
 
@@ -1659,7 +1664,9 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr,
       /*ForConstraintInstantiation=*/true);
-
+  // Don't build Subst* nodes to model lambda expressions.
+  // The transform of Subst* is oblivious to the lambda type.
+  MLTAL.setKind(TemplateSubstitutionKind::Rewrite);
   return substituteParameterMappings(S, N, MLTAL,
                                      CSE->getTemplateArgsAsWritten());
 }
@@ -1667,11 +1674,13 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
 NormalizedConstraint *NormalizedConstraint::fromAssociatedConstraints(
     Sema &S, const NamedDecl *D, ArrayRef<AssociatedConstraint> ACs) {
   assert(ACs.size() != 0);
-  auto Conjunction = fromConstraintExpr(S, D, ACs[0].ConstraintExpr);
+  auto *Conjunction =
+      fromConstraintExpr(S, D, ACs[0].ConstraintExpr, ACs[0].ArgPackSubstIndex);
   if (!Conjunction)
     return nullptr;
   for (unsigned I = 1; I < ACs.size(); ++I) {
-    auto Next = fromConstraintExpr(S, D, ACs[I].ConstraintExpr);
+    auto *Next = fromConstraintExpr(S, D, ACs[I].ConstraintExpr,
+                                    ACs[I].ArgPackSubstIndex);
     if (!Next)
       return nullptr;
     Conjunction = CompoundConstraint::CreateConjunction(S.getASTContext(),
@@ -1680,9 +1689,8 @@ NormalizedConstraint *NormalizedConstraint::fromAssociatedConstraints(
   return Conjunction;
 }
 
-NormalizedConstraint *
-NormalizedConstraint::fromConstraintExpr(Sema &S, const NamedDecl *D,
-                                         const Expr *E) {
+NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
+    Sema &S, const NamedDecl *D, const Expr *E, UnsignedOrNone SubstIndex) {
   assert(E != nullptr);
 
   // C++ [temp.constr.normal]p1.1
@@ -1703,10 +1711,10 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, const NamedDecl *D,
   // See http://cplusplus.github.io/concepts-ts/ts-active.html#28
 
   if (LogicalBinOp BO = E) {
-    auto LHS = fromConstraintExpr(S, D, BO.getLHS());
+    auto *LHS = fromConstraintExpr(S, D, BO.getLHS(), SubstIndex);
     if (!LHS)
       return nullptr;
-    auto RHS = fromConstraintExpr(S, D, BO.getRHS());
+    auto *RHS = fromConstraintExpr(S, D, BO.getRHS(), SubstIndex);
     if (!RHS)
       return nullptr;
 
@@ -1734,7 +1742,7 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, const NamedDecl *D,
       ConceptDecl *CD = CSE->getNamedConcept();
       SubNF = NormalizedConstraint::fromAssociatedConstraints(
           S, CSE->getNamedConcept(),
-          AssociatedConstraint(CD->getConstraintExpr()));
+          AssociatedConstraint(CD->getConstraintExpr(), SubstIndex));
 
       if (!SubNF)
         return nullptr;
@@ -1744,7 +1752,7 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, const NamedDecl *D,
 
     return ConceptIdConstraint::Create(S.getASTContext(),
                                        CSE->getConceptReference(), SubNF, D,
-                                       S.ArgPackSubstIndex);
+                                       SubstIndex);
 
   } else if (auto *FE = dyn_cast<const CXXFoldExpr>(E);
              FE && S.getLangOpts().CPlusPlus26 &&
@@ -1759,8 +1767,8 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, const NamedDecl *D,
             : FoldExpandedConstraint::FoldOperatorKind::Or;
 
     if (FE->getInit()) {
-      auto LHS = fromConstraintExpr(S, D, FE->getLHS());
-      auto RHS = fromConstraintExpr(S, D, FE->getRHS());
+      auto *LHS = fromConstraintExpr(S, D, FE->getLHS(), SubstIndex);
+      auto *RHS = fromConstraintExpr(S, D, FE->getRHS(), SubstIndex);
       if (!LHS || !RHS)
         return nullptr;
 
@@ -1777,13 +1785,13 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, const NamedDecl *D,
                                                             : CCK_Disjunction),
           RHS);
     }
-    auto Sub = fromConstraintExpr(S, D, FE->getPattern());
+    auto *Sub = fromConstraintExpr(S, D, FE->getPattern(), SubstIndex);
     if (!Sub)
       return nullptr;
     return FoldExpandedConstraint::Create(S.getASTContext(), FE->getPattern(),
                                           Kind, Sub);
   }
-  return AtomicConstraint::Create(S.getASTContext(), E, D, S.ArgPackSubstIndex);
+  return AtomicConstraint::Create(S.getASTContext(), E, D, SubstIndex);
 }
 
 bool FoldExpandedConstraint::AreCompatibleForSubsumption(

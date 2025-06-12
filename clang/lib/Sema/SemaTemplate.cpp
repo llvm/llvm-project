@@ -1165,7 +1165,9 @@ static ExprResult formImmediatelyDeclaredConstraint(
   ExprResult ImmediatelyDeclaredConstraint = S.CheckConceptTemplateId(
       SS, /*TemplateKWLoc=*/SourceLocation(), NameInfo,
       /*FoundDecl=*/FoundDecl ? FoundDecl : NamedConcept, NamedConcept,
-      &ConstraintArgs);
+      &ConstraintArgs,
+      /*DoCheckConstraintSatisfaction=*/
+      !S.inParameterMappingSubstitution());
   if (ImmediatelyDeclaredConstraint.isInvalid() || !EllipsisLoc.isValid())
     return ImmediatelyDeclaredConstraint;
 
@@ -4742,7 +4744,7 @@ ExprResult Sema::CheckConceptTemplateId(
           *TemplateArgs, CTAI.CanonicalConverted);
   MultiLevelTemplateArgumentList MLTAL(NamedConcept, CTAI.CanonicalConverted,
                                        /*Final=*/false);
-      auto *CL = ConceptReference::Create(
+  auto *CL = ConceptReference::Create(
       Context,
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc{},
       TemplateKWLoc, ConceptNameInfo, FoundDecl, NamedConcept,

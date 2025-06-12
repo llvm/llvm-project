@@ -623,10 +623,15 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     Inst.DeductionInfo = DeductionInfo;
     Inst.InstantiationRange = InstantiationRange;
     Inst.InConstraintSubstitution =
-        Inst.Kind == CodeSynthesisContext::ConstraintSubstitution;
-    if (!SemaRef.CodeSynthesisContexts.empty())
+        Inst.Kind == CodeSynthesisContext::ConstraintsCheck;
+    Inst.InParameterMappingSubstitution =
+        Inst.Kind == CodeSynthesisContext::ParameterMappingSubstitution;
+    if (!SemaRef.CodeSynthesisContexts.empty()) {
       Inst.InConstraintSubstitution |=
           SemaRef.CodeSynthesisContexts.back().InConstraintSubstitution;
+      Inst.InParameterMappingSubstitution |=
+          SemaRef.CodeSynthesisContexts.back().InParameterMappingSubstitution;
+    }
 
     SemaRef.pushCodeSynthesisContext(Inst);
 
@@ -2225,6 +2230,14 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
     // We're rewriting the template parameter as a reference to another
     // template parameter.
     Arg = getTemplateArgumentPackPatternForRewrite(Arg);
+    if (Arg.getKind() != TemplateArgument::Expression) {
+      assert(SemaRef.inParameterMappingSubstitution());
+      // FIXME: SourceLocation()?
+      ExprResult E = SemaRef.BuildExpressionFromNonTypeTemplateArgument(Arg, SourceLocation());
+      if (E.isInvalid())
+        return E;
+      Arg = TemplateArgument(E.get(), /*IsCanonical=*/false);
+    }
     assert(Arg.getKind() == TemplateArgument::Expression &&
            "unexpected nontype template argument kind in template rewrite");
     // FIXME: This can lead to the same subexpression appearing multiple times
@@ -3249,7 +3262,7 @@ bool Sema::SubstTypeConstraint(
   const ASTTemplateArgumentListInfo *TemplArgInfo =
       TC->getTemplateArgsAsWritten();
 
-  if (!EvaluateConstraints) {
+  if (!EvaluateConstraints && !inParameterMappingSubstitution()) {
     UnsignedOrNone Index = TC->getArgPackSubstIndex();
     if (!Index)
       Index = SemaRef.ArgPackSubstIndex;
