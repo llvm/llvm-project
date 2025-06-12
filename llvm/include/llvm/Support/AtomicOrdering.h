@@ -158,6 +158,28 @@ inline AtomicOrderingCABI toCABI(AtomicOrdering AO) {
   return lookup[static_cast<size_t>(AO)];
 }
 
+inline AtomicOrdering fromCABI(AtomicOrderingCABI AO) {
+  // Acquire is the the closest but still stronger ordering of consume.
+  static const AtomicOrdering lookup[8] = {
+      /* relaxed */ AtomicOrdering::Monotonic,
+      /* consume */ AtomicOrdering::Acquire,
+      /* acquire */ AtomicOrdering::Acquire,
+      /* release */ AtomicOrdering::Release,
+      /* acq_rel */ AtomicOrdering::AcquireRelease,
+      /* acq_seq */ AtomicOrdering::SequentiallyConsistent,
+  };
+  return lookup[static_cast<size_t>(AO)];
+}
+
+inline AtomicOrdering fromCABI(int64_t AO) {
+  if (!isValidAtomicOrderingCABI(AO)) {
+    // This fallback is what CGAtomic does
+    return AtomicOrdering::Monotonic;
+  }
+  assert(isValidAtomicOrderingCABI(AO));
+  return fromCABI(static_cast<AtomicOrderingCABI>(AO));
+}
+
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_ATOMICORDERING_H
