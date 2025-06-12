@@ -13,16 +13,23 @@
 #include "hdr/types/char8_t.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/utf_ret.h"
+#include "src/__support/common.h"
+
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 class CharacterConverter {
 private:
-  mbstate_t *state;
+  mbstate *state;
+
+  utf_ret<char8_t> pop_utf8_seqlength1();
+  utf_ret<char8_t> pop_utf8_seqlength2();
+  utf_ret<char8_t> pop_utf8_seqlength3();
+  utf_ret<char8_t> pop_utf8_seqlength4();
 
 public:
-  CharacterConverter(mbstate_t *mbstate);
+  CharacterConverter(mbstate *mbstate);
 
   bool isComplete();
 
