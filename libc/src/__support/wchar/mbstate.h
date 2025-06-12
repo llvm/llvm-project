@@ -18,7 +18,7 @@ namespace internal {
 
 struct mbstate {
   char32_t partial;
-  uint8_t bits_processed;
+  uint8_t bytes_processed;
   uint8_t total_bytes;
 };
 
