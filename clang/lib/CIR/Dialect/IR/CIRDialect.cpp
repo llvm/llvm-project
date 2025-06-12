@@ -1697,6 +1697,18 @@ LogicalResult cir::VecTernaryOp::verify() {
   return success();
 }
 
+// VecSplatOp
+OpFoldResult cir::VecSplatOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute value = adaptor.getValue();
+  if (!mlir::isa_and_nonnull<cir::IntAttr>(value) &&
+      !mlir::isa_and_nonnull<cir::FPAttr>(value))
+    return {};
+
+  SmallVector<mlir::Attribute, 16> elements(getType().getSize(), value);
+  return cir::ConstVectorAttr::get(
+      getType(), mlir::ArrayAttr::get(getContext(), elements));
+}
+
 OpFoldResult cir::VecTernaryOp::fold(FoldAdaptor adaptor) {
   mlir::Attribute cond = adaptor.getCond();
   mlir::Attribute lhs = adaptor.getLhs();
