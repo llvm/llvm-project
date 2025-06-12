@@ -23,8 +23,6 @@ bool CharacterConverter::isComplete() {
   return state->bytes_processed == state->total_bytes;
 }
 
-int CharacterConverter::push(char8_t utf8_byte) { return utf8_byte; }
-
 int CharacterConverter::push(char32_t utf32) {
   state->partial = utf32;
   state->bytes_processed = 0;
@@ -151,10 +149,6 @@ utf_ret<char8_t> CharacterConverter::pop_utf8() {
     return pop_utf8_seqlength4();
   }
 
-  return {.out = 0, .error = -1};
-}
-
-utf_ret<char32_t> CharacterConverter::pop_utf32() {
   return {.out = 0, .error = -1};
 }
 
