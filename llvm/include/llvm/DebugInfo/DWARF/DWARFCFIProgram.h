@@ -37,7 +37,6 @@ class CFIProgram {
 public:
   static constexpr size_t MaxOperands = 3;
   typedef SmallVector<uint64_t, MaxOperands> Operands;
-  friend CFIPrinter;
 
   /// An instruction consists of a DWARF CFI opcode and an optional sequence of
   /// operands. If it refers to an expression, then this expression has its own
@@ -89,6 +88,32 @@ public:
   /// Get a DWARF CFI call frame string for the given DW_CFA opcode.
   LLVM_ABI StringRef callFrameString(unsigned Opcode) const;
 
+  /// Types of operands to CFI instructions
+  /// In DWARF, this type is implicitly tied to a CFI instruction opcode and
+  /// thus this type doesn't need to be explicitly written to the file (this is
+  /// not a DWARF encoding). The relationship of instrs to operand types can
+  /// be obtained from getOperandTypes() and is only used to simplify
+  /// instruction printing and error messages.
+  enum OperandType {
+    OT_Unset,
+    OT_None,
+    OT_Address,
+    OT_Offset,
+    OT_FactoredCodeOffset,
+    OT_SignedFactDataOffset,
+    OT_UnsignedFactDataOffset,
+    OT_Register,
+    OT_AddressSpace,
+    OT_Expression
+  };
+
+  /// Get the OperandType as a "const char *".
+  static const char *operandTypeString(OperandType OT);
+
+  /// Retrieve the array describing the types of operands according to the enum
+  /// above. This is indexed by opcode.
+  static ArrayRef<OperandType[MaxOperands]> getOperandTypes();
+
 private:
   std::vector<Instruction> Instructions;
   const uint64_t CodeAlignmentFactor;
@@ -121,32 +146,6 @@ private:
     Instructions.back().Ops.push_back(Operand2);
     Instructions.back().Ops.push_back(Operand3);
   }
-
-  /// Types of operands to CFI instructions
-  /// In DWARF, this type is implicitly tied to a CFI instruction opcode and
-  /// thus this type doesn't need to be explicitly written to the file (this is
-  /// not a DWARF encoding). The relationship of instrs to operand types can
-  /// be obtained from getOperandTypes() and is only used to simplify
-  /// instruction printing.
-  enum OperandType {
-    OT_Unset,
-    OT_None,
-    OT_Address,
-    OT_Offset,
-    OT_FactoredCodeOffset,
-    OT_SignedFactDataOffset,
-    OT_UnsignedFactDataOffset,
-    OT_Register,
-    OT_AddressSpace,
-    OT_Expression
-  };
-
-  /// Get the OperandType as a "const char *".
-  static const char *operandTypeString(OperandType OT);
-
-  /// Retrieve the array describing the types of operands according to the enum
-  /// above. This is indexed by opcode.
-  static ArrayRef<OperandType[MaxOperands]> getOperandTypes();
 };
 
 } // end namespace dwarf

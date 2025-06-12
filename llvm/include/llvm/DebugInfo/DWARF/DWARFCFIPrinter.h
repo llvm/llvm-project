@@ -24,10 +24,10 @@ namespace dwarf {
 class CFIPrinter {
 public:
   static void print(const CFIProgram &P, raw_ostream &OS,
-                    DIDumpOptions DumpOpts, unsigned IndentLevel,
+                    DIDumpOptions &DumpOpts, unsigned IndentLevel,
                     std::optional<uint64_t> Address);
 
-  static void printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
+  static void printOperand(raw_ostream &OS, DIDumpOptions &DumpOpts,
                            const CFIProgram &P,
                            const CFIProgram::Instruction &Instr,
                            unsigned OperandIdx, uint64_t Operand,

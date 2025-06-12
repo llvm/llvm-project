@@ -25,7 +25,7 @@ using namespace llvm;
 using namespace dwarf;
 
 void CFIPrinter::print(const CFIProgram &P, raw_ostream &OS,
-                       DIDumpOptions DumpOpts, unsigned IndentLevel,
+                       DIDumpOptions &DumpOpts, unsigned IndentLevel,
                        std::optional<uint64_t> Address) {
   for (const auto &Instr : P) {
     uint8_t Opcode = Instr.Opcode;
@@ -37,7 +37,7 @@ void CFIPrinter::print(const CFIProgram &P, raw_ostream &OS,
   }
 }
 
-static void printRegister(raw_ostream &OS, DIDumpOptions DumpOpts,
+static void printRegister(raw_ostream &OS, DIDumpOptions &DumpOpts,
                           unsigned RegNum) {
   if (DumpOpts.GetNameForDWARFReg) {
     auto RegName = DumpOpts.GetNameForDWARFReg(RegNum, DumpOpts.IsEH);
@@ -50,7 +50,7 @@ static void printRegister(raw_ostream &OS, DIDumpOptions DumpOpts,
 }
 
 /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
-void CFIPrinter::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
+void CFIPrinter::printOperand(raw_ostream &OS, DIDumpOptions &DumpOpts,
                               const CFIProgram &P,
                               const CFIProgram::Instruction &Instr,
                               unsigned OperandIdx, uint64_t Operand,
@@ -82,24 +82,24 @@ void CFIPrinter::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
     OS << format(" %+" PRId64, int64_t(Operand));
     break;
   case CFIProgram::OT_FactoredCodeOffset: // Always Unsigned
-    if (P.CodeAlignmentFactor)
-      OS << format(" %" PRId64, Operand * P.CodeAlignmentFactor);
+    if (P.codeAlign())
+      OS << format(" %" PRId64, Operand * P.codeAlign());
     else
       OS << format(" %" PRId64 "*code_alignment_factor", Operand);
-    if (Address && P.CodeAlignmentFactor) {
-      *Address += Operand * P.CodeAlignmentFactor;
+    if (Address && P.codeAlign()) {
+      *Address += Operand * P.codeAlign();
       OS << format(" to 0x%" PRIx64, *Address);
     }
     break;
   case CFIProgram::OT_SignedFactDataOffset:
-    if (P.DataAlignmentFactor)
-      OS << format(" %" PRId64, int64_t(Operand) * P.DataAlignmentFactor);
+    if (P.dataAlign())
+      OS << format(" %" PRId64, int64_t(Operand) * P.dataAlign());
     else
       OS << format(" %" PRId64 "*data_alignment_factor", int64_t(Operand));
     break;
   case CFIProgram::OT_UnsignedFactDataOffset:
-    if (P.DataAlignmentFactor)
-      OS << format(" %" PRId64, Operand * P.DataAlignmentFactor);
+    if (P.dataAlign())
+      OS << format(" %" PRId64, Operand * P.dataAlign());
     else
       OS << format(" %" PRId64 "*data_alignment_factor", Operand);
     break;
