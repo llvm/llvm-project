@@ -7275,7 +7275,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
 
 /// Add branch weight metadata, if the \p Plan's middle block is terminated by a
 /// BranchOnCond recipe.
-static void addBranchWeigthToMiddleTerminator(VPlan &Plan, ElementCount VF,
+static void addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
                                               Loop *OrigLoop) {
   // 4. Adjust branch weight of the branch in the middle block.
   Instruction *LatchTerm = OrigLoop->getLoopLatch()->getTerminator();
@@ -7321,7 +7321,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::convertToConcreteRecipes(BestVPlan,
                                             *Legal->getWidestInductionType());
 
-  addBranchWeigthToMiddleTerminator(BestVPlan, BestVF, OrigLoop);
+  addBranchWeightToMiddleTerminator(BestVPlan, BestVF, OrigLoop);
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
