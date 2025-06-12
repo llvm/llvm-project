@@ -62,16 +62,10 @@ struct Layout {
   Layout(std::initializer_list<int64_t> list) : layout(list) {}
   void print(llvm::raw_ostream &os) const;
   size_t size() const { return layout.size(); }
-  int64_t operator[](size_t idx) const;
 };
 
 void Layout::print(llvm::raw_ostream &os) const {
   os << llvm::interleaved_array(layout);
-}
-
-int64_t Layout::operator[](size_t idx) const {
-  assert(idx < layout.size() && "Index out of bounds.");
-  return layout[idx];
 }
 
 /// LaneLayout represents the logical layout of lanes within a subgroup when it
@@ -679,15 +673,15 @@ RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
 
 using GetLayoutFnTy = function_ref<xegpu::LayoutAttr(Value)>;
 /// Helper to update the users of a value with a given layout.
-static void updateUsers(Value v, xegpu::LayoutAttr layout) {
-  // Update all users of the value with the layout.
-  for (OpOperand &user : v.getUses()) {
-    Operation *owner = user.getOwner();
-    // Add temporary layout attribute at the user op.
-    std::string attrName = xegpu::getLayoutName(user);
-    owner->setAttr(attrName, layout);
-  }
-}
+// static void updateUsers(Value v, xegpu::LayoutAttr layout) {
+//   // Update all users of the value with the layout.
+//   for (OpOperand &user : v.getUses()) {
+//     Operation *owner = user.getOwner();
+//     // Add temporary layout attribute at the user op.
+//     std::string attrName = xegpu::getLayoutName(user);
+//     owner->setAttr(attrName, layout);
+//   }
+// }
 
 /// Update an operation with the layout of its results. If the result type is a
 /// vector type, a temporary layout attribute is added to the operation. If the
@@ -721,9 +715,7 @@ static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     // If the result is a vector type, add a temporary layout attribute to the
     // op.
     std::string resultLayoutName = xegpu::getLayoutName(result);
-    op->setAttr(resultLayoutName, layout);
-    // Update all users of the result with the layout.
-    updateUsers(result, layout);
+    xegpu::setLayoutAttr(result, layout);
   }
 }
 
@@ -854,9 +846,7 @@ static void updateBranchOpInterface(mlir::OpBuilder &builder,
     // If the result is a vector type, add a temporary layout attribute to
     // the op.
     std::string resultLayoutName = xegpu::getLayoutName(r);
-    op->setAttr(resultLayoutName, layout);
-    // Update all users of the result with the layout.
-    updateUsers(r, layout);
+    xegpu::setLayoutAttr(r, layout);
   }
 }
 
@@ -885,9 +875,6 @@ static void updateFunctionOpInterface(mlir::OpBuilder &builder,
       newArgTypes.back() = newTdescTy;
       continue;
     }
-    // If the argument is a vector type, update all the users of the argument
-    // with the layout.
-    updateUsers(arg, layout);
   }
   // Update the function type with the new argument types.
   // NOTE: We assume that function results are not expected to have layouts.
