@@ -151,7 +151,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
-  Args.AddLastArg(CmdArgs, options::OPT_floop_fuse, options::OPT_fno_loop_fuse);
+  Args.AddLastArg(CmdArgs, options::OPT_fexperimental_loop_fusion,
+                  options::OPT_fno_experimental_loop_fusion);
 
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
