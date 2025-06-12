@@ -845,6 +845,130 @@ return:                                           ; preds = %if.end, %land.lhs.t
   ret i32 %retval.0
 }
 
+; (a < 0 && b == c) || (a < -1 && b == d)
+define i32 @combine_gt_lt_n0() #0 {
+; CHECK-LABEL: combine_gt_lt_n0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    adrp x8, :got:a
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
+; CHECK-NEXT:    ldr w8, [x8]
+; CHECK-NEXT:    tbz w8, #31, .LBB12_3
+; CHECK-NEXT:  // %bb.1: // %land.lhs.true
+; CHECK-NEXT:    adrp x8, :got:b
+; CHECK-NEXT:    adrp x9, :got:c
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
+; CHECK-NEXT:    ldr x9, [x9, :got_lo12:c]
+; CHECK-NEXT:    ldr w8, [x8]
+; CHECK-NEXT:    ldr w9, [x9]
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    b.ne .LBB12_3
+; CHECK-NEXT:  // %bb.2:
+; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB12_3: // %if.end
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i32, ptr @a, align 4
+  %cmp = icmp slt i32 %0, 0
+  br i1 %cmp, label %land.lhs.true, label %lor.lhs.false
+
+land.lhs.true:                                    ; preds = %entry
+  %1 = load i32, ptr @b, align 4
+  %2 = load i32, ptr @c, align 4
+  %cmp1 = icmp eq i32 %1, %2
+  br i1 %cmp1, label %return, label %if.end
+
+lor.lhs.false:                                    ; preds = %entry
+  %cmp2 = icmp slt i32 %0, -1
+  br i1 %cmp2, label %land.lhs.true3, label %if.end
+
+land.lhs.true3:                                   ; preds = %lor.lhs.false
+  %3 = load i32, ptr @b, align 4
+  %4 = load i32, ptr @d, align 4
+  %cmp4 = icmp eq i32 %3, %4
+  br i1 %cmp4, label %return, label %if.end
+
+if.end:                                           ; preds = %land.lhs.true3, %lor.lhs.false, %land.lhs.true
+  br label %return
+
+return:                                           ; preds = %if.end, %land.lhs.true3, %land.lhs.true
+  %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
+  ret i32 %retval.0
+}
+
+define i32 @combine_gt_ge_sel_2(i64 %v, ptr %p) #0 {
+; CHECK-LABEL: combine_gt_ge_sel_2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    adrp x8, :got:a
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
+; CHECK-NEXT:    ldr w8, [x8]
+; CHECK-NEXT:    cmn w8, #1
+; CHECK-NEXT:    csel x9, x0, xzr, gt
+; CHECK-NEXT:    str x9, [x1]
+; CHECK-NEXT:    tbnz w8, #31, .LBB13_2
+; CHECK-NEXT:  // %bb.1: // %lor.lhs.false
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    b.ge .LBB13_4
+; CHECK-NEXT:    b .LBB13_6
+; CHECK-NEXT:  .LBB13_2: // %land.lhs.true
+; CHECK-NEXT:    adrp x8, :got:b
+; CHECK-NEXT:    adrp x9, :got:c
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
+; CHECK-NEXT:    ldr x9, [x9, :got_lo12:c]
+; CHECK-NEXT:    ldr w8, [x8]
+; CHECK-NEXT:    ldr w9, [x9]
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    b.ne .LBB13_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB13_4: // %land.lhs.true3
+; CHECK-NEXT:    adrp x8, :got:b
+; CHECK-NEXT:    adrp x9, :got:d
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
+; CHECK-NEXT:    ldr x9, [x9, :got_lo12:d]
+; CHECK-NEXT:    ldr w8, [x8]
+; CHECK-NEXT:    ldr w9, [x9]
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    b.ne .LBB13_6
+; CHECK-NEXT:  // %bb.5:
+; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB13_6: // %if.end
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i32, ptr @a, align 4
+  %cmp = icmp sgt i32 %0, -1
+  %m = select i1 %cmp, i64 %v, i64 0
+  store i64 %m, ptr %p
+  br i1 %cmp, label %lor.lhs.false, label %land.lhs.true
+
+land.lhs.true:                                    ; preds = %entry
+  %1 = load i32, ptr @b, align 4
+  %2 = load i32, ptr @c, align 4
+  %cmp1 = icmp eq i32 %1, %2
+  br i1 %cmp1, label %return, label %land.lhs.true3
+
+lor.lhs.false:                                    ; preds = %entry
+  %cmp2 = icmp sgt i32 %0, 0
+  br i1 %cmp2, label %land.lhs.true3, label %if.end
+
+land.lhs.true3:                                   ; preds = %lor.lhs.false, %land.lhs.true
+  %3 = load i32, ptr @b, align 4
+  %4 = load i32, ptr @d, align 4
+  %cmp4 = icmp eq i32 %3, %4
+  br i1 %cmp4, label %return, label %if.end
+
+if.end:                                           ; preds = %land.lhs.true3, %lor.lhs.false
+  br label %return
+
+return:                                           ; preds = %if.end, %land.lhs.true3, %land.lhs.true
+  %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
+  ret i32 %retval.0
+}
+
 declare i32 @zoo(i32)
 
 declare double @yoo(i32)
