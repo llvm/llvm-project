@@ -812,15 +812,15 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
 }
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
-  // Attach layout to operands.
+  // Step 1: Attach layout to op operands.
+  // TODO: Following assumptions are made:
+  // 1) It is assumed that there are no layout conflicts.
+  // 2) Any existing layout attributes attached to the operands are ignored.
   Operation *op = getOperation();
   op->walk([&](Operation *op) {
     for (OpOperand &operand : op->getOpOperands()) {
       // Layouts are needed for vector type only.
       if (!isa<VectorType>(operand.get().getType()))
-        continue;
-      // If the operand already has a layout, skip it.
-      if (xegpu::getLayoutAttr(operand))
         continue;
 
       xegpu::LayoutAttr layout = xegpu::getLayoutAttr(operand);
@@ -833,8 +833,8 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       xegpu::setLayoutAttr(operand, layout);
     }
   });
-  // Move all operations of a GPU function inside gpu.warp_execute_on_lane_0
-  // operation.
+  // Step 2: Move all operations of a GPU function inside
+  // gpu.warp_execute_on_lane_0 operation.
   {
     RewritePatternSet patterns(&getContext());
     patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
@@ -853,7 +853,7 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       }
     });
   }
-  // Apply subgroup to workitem distribution patterns.
+  // Step 3: Finally, Apply subgroup to workitem distribution patterns.
   RewritePatternSet patterns(&getContext());
   xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
   // TODO: distributionFn and shuffleFn are not used at this point.
@@ -874,8 +874,8 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     return;
   }
 
-  // Clean up UnrealizedConversionCastOps that were inserted due to tensor
-  // desc type mismatches created by using upstream distribution patterns
+  // Step 4: Clean up UnrealizedConversionCastOps that were inserted due to
+  // tensor desc type mismatches created by using upstream distribution patterns
   // (scf.for)
   getOperation()->walk([&](mlir::UnrealizedConversionCastOp op) {
     // We are only interested in UnrealizedConversionCastOps there were added
