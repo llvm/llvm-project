@@ -52,8 +52,8 @@ public:
   LLVM_ABI Expected<tpctypes::DylibHandle> open(StringRef Path, uint64_t Mode);
 
   /// Looks up symbols within the given dylib.
-  Expected<tpctypes::LookupResult>
-  lookup(tpctypes::DylibHandle H, const SymbolLookupSet &Lookup) {
+  Expected<tpctypes::LookupResult> lookup(tpctypes::DylibHandle H,
+                                          const SymbolLookupSet &Lookup) {
     std::promise<MSVCPExpected<tpctypes::LookupResult>> RP;
     auto RF = RP.get_future();
     lookupAsync(H, Lookup, [&RP](auto R) { RP.set_value(std::move(R)); });
@@ -61,8 +61,8 @@ public:
   }
 
   /// Looks up symbols within the given dylib.
-  Expected<tpctypes::LookupResult>
-  lookup(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &Lookup) {
+  Expected<tpctypes::LookupResult> lookup(tpctypes::DylibHandle H,
+                                          const RemoteSymbolLookupSet &Lookup) {
     std::promise<MSVCPExpected<tpctypes::LookupResult>> RP;
     auto RF = RP.get_future();
     lookupAsync(H, Lookup, [&RP](auto R) { RP.set_value(std::move(R)); });
