@@ -8219,6 +8219,8 @@ bool LoongArchTargetLowering::SimplifyDemandedBitsForTargetNode(
   unsigned BitWidth = OriginalDemandedBits.getBitWidth();
   unsigned Opc = Op.getOpcode();
   switch (Opc) {
+  default:
+    break;
   case LoongArchISD::VMSKLTZ:
   case LoongArchISD::XVMSKLTZ: {
     SDValue Src = Op.getOperand(0);
@@ -8252,7 +8254,7 @@ bool LoongArchTargetLowering::SimplifyDemandedBitsForTargetNode(
     else if (KnownSrc.Zero[SrcBits - 1])
       Known.Zero.setLowBits(NumElts);
 
-    // Attempt to avoid multi-use os if we don't need anything from it.
+    // Attempt to avoid multi-use ops if we don't need anything from it.
     if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(
             Src, DemandedSrcBits, DemandedElts, TLO.DAG, Depth + 1))
       return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc));
