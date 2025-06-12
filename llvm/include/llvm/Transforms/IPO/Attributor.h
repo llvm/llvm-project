@@ -6429,8 +6429,8 @@ struct AANoAliasAddrSpace : AAPotentialAddrSpace {
   static bool requiresCallersForArgOrFunction() { return true; }
 
   /// Create an abstract attribute view for the position \p IRP.
-  static AANoAliasAddrSpace &createForPosition(const IRPosition &IRP,
-                                               Attributor &A);
+  LLVM_ABI static AANoAliasAddrSpace &createForPosition(const IRPosition &IRP,
+                                                        Attributor &A);
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AANoAliasAddrSpace"; }
 
@@ -6444,7 +6444,7 @@ struct AANoAliasAddrSpace : AAPotentialAddrSpace {
   }
 
   /// Unique ID (due to the unique address)
-  static const char ID;
+  LLVM_ABI static const char ID;
 
 protected:
   RangeMap::Allocator Allocator;
