@@ -64,9 +64,6 @@ struct ExecutionEnvironment {
   bool defaultUTF8{false}; // DEFAULT_UTF8
   bool checkPointerDeallocation{true}; // FORT_CHECK_POINTER_DEALLOCATION
 
-  enum InternalDebugging { WorkQueue = 1 };
-  int internalDebugging{0}; // FLANG_RT_DEBUG
-
   // CUDA related variables
   std::size_t cudaStackLimit{0}; // ACC_OFFLOAD_STACK_SIZE
   bool cudaDeviceIsManaged{false}; // NV_CUDAFOR_DEVICE_IS_MANAGED

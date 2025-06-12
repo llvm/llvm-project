@@ -44,15 +44,24 @@ public:
 class CIRGenCallee {
   enum class SpecialKind : uintptr_t {
     Invalid,
+    Builtin,
 
-    Last = Invalid,
+    Last = Builtin,
+  };
+
+  struct BuiltinInfoStorage {
+    const clang::FunctionDecl *decl;
+    unsigned id;
   };
 
   SpecialKind kindOrFunctionPtr;
 
   union {
     CIRGenCalleeInfo abstractInfo;
+    BuiltinInfoStorage builtinInfo;
   };
+
+  explicit CIRGenCallee(SpecialKind kind) : kindOrFunctionPtr(kind) {}
 
 public:
   CIRGenCallee() : kindOrFunctionPtr(SpecialKind::Invalid) {}
@@ -67,6 +76,25 @@ public:
   forDirect(mlir::Operation *funcPtr,
             const CIRGenCalleeInfo &abstractInfo = CIRGenCalleeInfo()) {
     return CIRGenCallee(abstractInfo, funcPtr);
+  }
+
+  bool isBuiltin() const { return kindOrFunctionPtr == SpecialKind::Builtin; }
+
+  const clang::FunctionDecl *getBuiltinDecl() const {
+    assert(isBuiltin());
+    return builtinInfo.decl;
+  }
+  unsigned getBuiltinID() const {
+    assert(isBuiltin());
+    return builtinInfo.id;
+  }
+
+  static CIRGenCallee forBuiltin(unsigned builtinID,
+                                 const clang::FunctionDecl *builtinDecl) {
+    CIRGenCallee result(SpecialKind::Builtin);
+    result.builtinInfo.decl = builtinDecl;
+    result.builtinInfo.id = builtinID;
+    return result;
   }
 
   bool isOrdinary() const {
