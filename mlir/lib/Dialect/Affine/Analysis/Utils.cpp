@@ -1341,6 +1341,9 @@ mlir::affine::getMemRefIntOrFloatEltSizeInBytes(MemRefType memRefType) {
           vectorType.getElementTypeBitWidth() * vectorType.getNumElements();
     else
       return std::nullopt;
+  } else if (auto memrefEltType = dyn_cast<MemRefElementTypeInterface>(
+                 memRefType.getElementType())) {
+    sizeInBits = memrefEltType.getAnalysisSizeInBytes() * 8;
   } else {
     return std::nullopt;
   }
