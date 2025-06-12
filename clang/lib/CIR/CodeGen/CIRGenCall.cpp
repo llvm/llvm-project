@@ -171,7 +171,7 @@ void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
 
   QualType type = param->getType();
 
-  if (const auto *rd = type->getAsCXXRecordDecl()) {
+  if (type->getAsCXXRecordDecl()) {
     cgm.errorNYI(param->getSourceRange(),
                  "emitDelegateCallArg: record argument");
     return;
