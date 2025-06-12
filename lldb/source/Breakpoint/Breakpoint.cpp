@@ -1186,12 +1186,17 @@ void Breakpoint::BreakpointEventData::Dump(Stream *s) const {
 
 const Breakpoint::BreakpointEventData *
 Breakpoint::BreakpointEventData::GetEventDataFromEvent(const Event *event) {
-  if (event) {
-    const EventData *event_data = event->GetData();
-    if (event_data &&
-        event_data->GetFlavor() == BreakpointEventData::GetFlavorString())
-      return static_cast<const BreakpointEventData *>(event->GetData());
-  }
+  if (!event)
+    return nullptr;
+  return GetBreakpointEventDataFromEventData(event->GetData());
+}
+
+const Breakpoint::BreakpointEventData *
+Breakpoint::BreakpointEventData::GetBreakpointEventDataFromEventData(
+    const EventData *event_data) {
+  if (event_data &&
+      event_data->GetFlavor() == BreakpointEventData::GetFlavorString())
+    return static_cast<const BreakpointEventData *>(event_data);
   return nullptr;
 }
 

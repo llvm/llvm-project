@@ -119,6 +119,11 @@ public:
       return m_locations;
     }
 
+    const BreakpointLocationCollection &
+    GetBreakpointLocationCollection() const {
+      return m_locations;
+    }
+
     void Dump(Stream *s) const override;
 
     static lldb::BreakpointEventType
@@ -136,6 +141,9 @@ public:
 
     static const BreakpointEventData *
     GetEventDataFromEvent(const Event *event_sp);
+
+    static const BreakpointEventData *
+    GetBreakpointEventDataFromEventData(const EventData *event_data);
 
   private:
     lldb::BreakpointEventType m_breakpoint_event;

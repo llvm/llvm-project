@@ -357,6 +357,7 @@ class Process : public std::enable_shared_from_this<Process>,
                 public Broadcaster,
                 public ExecutionContextScope,
                 public PluginInterface {
+  friend class Breakpoint;     // For GetJITLoaders
   friend class FunctionCaller; // For WaitForStateChangeEventsPrivate
   friend class Debugger; // For PopProcessIOHandler and ProcessIOHandlerIsActive
   friend class DynamicLoader; // For LoadOperatingSystemPlugin

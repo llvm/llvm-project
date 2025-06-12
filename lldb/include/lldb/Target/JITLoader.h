@@ -13,6 +13,7 @@
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/JITLoaderList.h"
+#include "lldb/lldb-enumerations.h"
 
 namespace lldb_private {
 
@@ -61,6 +62,13 @@ public:
   /// Called when the debugger needs to resolve an address that might be
   /// know to the jit.
   virtual bool ResolveLoadAddress(lldb::addr_t load_addr, Address &addr);
+
+  /// Called when debugger is about to fire a breakpoint event to give the
+  /// JITLoaders a chance to observe the event. Unlike a normal event, this call
+  /// is synchronous and event_data, ephemeral.
+  virtual void HandleBreakpointEvent(
+      lldb::BreakpointEventType sub_type, lldb_private::Breakpoint &breakpoint,
+      const lldb_private::BreakpointLocationCollection *locations);
 
 protected:
   // Member variables.

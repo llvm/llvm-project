@@ -43,6 +43,13 @@ public:
   /// know to the jit.
   bool ResolveLoadAddress(lldb::addr_t load_addr, Address &addr);
 
+  /// Called when debugger is about to fire a breakpoint event to give the
+  /// JITLoaders a chance to observe the event. Unlike a normal event, this call
+  /// is synchronous and event_data, ephemeral.
+  void HandleBreakpointEvent(
+      lldb::BreakpointEventType sub_type, lldb_private::Breakpoint &breakpoint,
+      const lldb_private::BreakpointLocationCollection *locations);
+
 private:
   std::vector<lldb::JITLoaderSP> m_jit_loaders_vec;
   std::recursive_mutex m_jit_loaders_mutex;

@@ -46,6 +46,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/JITLoaderList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
@@ -5248,6 +5249,8 @@ void Target::DumpSectionLoadList(Stream &s) {
 
 void Target::NotifyBreakpointChanged(Breakpoint &bp,
                                      lldb::BreakpointEventType eventKind) {
+  if (m_process_sp)
+    m_process_sp->GetJITLoaders().HandleBreakpointEvent(eventKind, bp, nullptr);
   if (EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged)) {
     std::shared_ptr<Breakpoint::BreakpointEventData> data =
         std::make_shared<Breakpoint::BreakpointEventData>(
@@ -5258,6 +5261,14 @@ void Target::NotifyBreakpointChanged(Breakpoint &bp,
 
 void Target::NotifyBreakpointChanged(
     Breakpoint &bp, const lldb::EventDataSP &breakpoint_data_sp) {
+  if (m_process_sp) {
+    const Breakpoint::BreakpointEventData *data =
+        Breakpoint::BreakpointEventData::GetBreakpointEventDataFromEventData(
+            breakpoint_data_sp.get());
+    m_process_sp->GetJITLoaders().HandleBreakpointEvent(
+        data->GetBreakpointEventType(), bp,
+        &data->GetBreakpointLocationCollection());
+  }
   if (EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
     BroadcastEvent(Target::eBroadcastBitBreakpointChanged, breakpoint_data_sp);
 }

@@ -59,3 +59,11 @@ bool JITLoaderList::ResolveLoadAddress(lldb::addr_t load_addr, Address &addr) {
       return true;
   return false;
 }
+
+void JITLoaderList::HandleBreakpointEvent(
+    BreakpointEventType sub_type, Breakpoint &breakpoint,
+    const BreakpointLocationCollection *locations) {
+  std::lock_guard<std::recursive_mutex> guard(m_jit_loaders_mutex);
+  for (auto const &jit_loader : m_jit_loaders_vec)
+    jit_loader->HandleBreakpointEvent(sub_type, breakpoint, locations);
+}

@@ -35,3 +35,7 @@ bool JITLoader::ResolveLoadAddress(addr_t load_addr, Address &addr) {
   addr.Clear();
   return false;
 }
+
+void JITLoader::HandleBreakpointEvent(
+    BreakpointEventType sub_type, Breakpoint &breakpoint,
+    const BreakpointLocationCollection *locations) {}
