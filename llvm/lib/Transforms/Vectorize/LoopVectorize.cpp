@@ -530,6 +530,9 @@ protected:
   /// Returns (and creates if needed) the trip count of the widened loop.
   Value *getOrCreateVectorTripCount(BasicBlock *InsertBlock);
 
+  // Create a check to see if the vector loop should be executed
+  Value *createIterationCountCheck(ElementCount VF, unsigned UF) const;
+
   /// Emit a bypass check to see if the vector trip count is zero, including if
   /// it overflows.
   void emitIterationCountCheck(BasicBlock *Bypass);
@@ -2370,13 +2373,8 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
   }
 }
 
-void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
-  Value *Count = getTripCount();
-  // Reuse existing vector loop preheader for TC checks.
-  // Note that new preheader block is generated for vector loop.
-  BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
-  IRBuilder<> Builder(TCCheckBlock->getTerminator());
-
+Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
+                                                      unsigned UF) const {
   // Generate code to check if the loop's trip count is less than VF * UF, or
   // equal to it in case a scalar epilogue is required; this implies that the
   // vector trip count is zero. This check also covers the case where adding one
@@ -2385,7 +2383,13 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   auto P = Cost->requiresScalarEpilogue(VF.isVector()) ? ICmpInst::ICMP_ULE
                                                        : ICmpInst::ICMP_ULT;
 
+  // Reuse existing vector loop preheader for TC checks.
+  // Note that new preheader block is generated for vector loop.
+  BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
+  IRBuilder<> Builder(TCCheckBlock->getTerminator());
+
   // If tail is to be folded, vector loop takes care of all iterations.
+  Value *Count = getTripCount();
   Type *CountTy = Count->getType();
   Value *CheckMinIters = Builder.getFalse();
   auto CreateStep = [&]() -> Value * {
@@ -2434,7 +2438,12 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
     // Don't execute the vector loop if (UMax - n) < (VF * UF).
     CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, CreateStep());
   }
+  return CheckMinIters;
+}
 
+void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
+  BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
+  Value *CheckMinIters = createIterationCountCheck(VF, UF);
   // Create new preheader for vector loop.
   LoopVectorPreHeader = SplitBlock(TCCheckBlock, TCCheckBlock->getTerminator(),
                                    static_cast<DominatorTree *>(nullptr), LI,
@@ -7272,33 +7281,6 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
       BypassBlock, MainResumePhi->getIncomingValueForBlock(BypassBlock));
 }
 
-/// Add branch weight metadata, if the \p Plan's middle block is terminated by a
-/// BranchOnCond recipe.
-static void addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
-                                              Loop *OrigLoop) {
-  // 4. Adjust branch weight of the branch in the middle block.
-  Instruction *LatchTerm = OrigLoop->getLoopLatch()->getTerminator();
-  if (!hasBranchWeightMD(*LatchTerm))
-    return;
-
-  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
-  auto *MiddleTerm =
-      dyn_cast_or_null<VPInstruction>(MiddleVPBB->getTerminator());
-  // Only add branch metadata if there is a (conditional) terminator.
-  if (!MiddleTerm)
-    return;
-
-  assert(MiddleTerm->getOpcode() == VPInstruction::BranchOnCond &&
-         "must have a BranchOnCond");
-  // Assume that `Count % VectorTripCount` is equally distributed.
-  unsigned TripCount = Plan.getUF() * VF.getKnownMinValue();
-  assert(TripCount > 0 && "trip count should not be zero");
-  MDBuilder MDB(LatchTerm->getContext());
-  MDNode *BranchWeights =
-      MDB.createBranchWeights({1, TripCount - 1}, /*IsExpected=*/false);
-  MiddleTerm->addMetadata(LLVMContext::MD_prof, BranchWeights);
-}
-
 DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ElementCount BestVF, unsigned BestUF, VPlan &BestVPlan,
     InnerLoopVectorizer &ILV, DominatorTree *DT, bool VectorizingEpilogue) {
@@ -7321,8 +7303,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan,
                                             *Legal->getWidestInductionType());
-
-  addBranchWeightToMiddleTerminator(BestVPlan, BestVF, OrigLoop);
+  // Retrieve and store the middle block before dissolving regions. Regions are
+  // dissolved after optimizing for VF and UF, which completely removes unneeded
+  // loop regions first.
+  VPBasicBlock *MiddleVPBB =
+      BestVPlan.getVectorLoopRegion() ? BestVPlan.getMiddleBlock() : nullptr;
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
@@ -7464,6 +7449,20 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   ILV.fixVectorizedLoop(State);
 
   ILV.printDebugTracesAtEnd();
+
+  // 4. Adjust branch weight of the branch in the middle block.
+  if (HeaderVPBB) {
+    auto *MiddleTerm =
+        cast<BranchInst>(State.CFG.VPBB2IRBB[MiddleVPBB]->getTerminator());
+    if (MiddleTerm->isConditional() &&
+        hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
+      // Assume that `Count % VectorTripCount` is equally distributed.
+      unsigned TripCount = BestVPlan.getUF() * State.VF.getKnownMinValue();
+      assert(TripCount > 0 && "trip count should not be zero");
+      const uint32_t Weights[] = {1, TripCount - 1};
+      setBranchWeights(*MiddleTerm, Weights, /*IsExpected=*/false);
+    }
+  }
 
   return ExpandedSCEVs;
 }
