@@ -3081,9 +3081,8 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
         Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
                                 nullptr, "wide.masked.gather");
   } else {
-    NewLI =
-        Builder.CreateIntrinsic(DataTy, Intrinsic::vp_load, {Addr, Mask, EVL},
-                                nullptr, "vp.op.load");
+    NewLI = Builder.CreateIntrinsic(DataTy, Intrinsic::vp_load,
+                                    {Addr, Mask, EVL}, nullptr, "vp.op.load");
   }
   NewLI->addParamAttr(
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));

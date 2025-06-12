@@ -1343,8 +1343,7 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   assert(VPReductionIntrinsic::isVPReduction(VPID) &&
          "No VPIntrinsic for this reduction");
   auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
-  Value *Iden =
-      getRecurrenceIdentity(Kind, EltTy, Builder.getFastMathFlags());
+  Value *Iden = getRecurrenceIdentity(Kind, EltTy, Builder.getFastMathFlags());
   Value *Ops[] = {Iden, Src, Mask, EVL};
   return Builder.CreateIntrinsic(EltTy, VPID, Ops);
 }
