@@ -1,4 +1,4 @@
-; RUN: llc -mattr=mul < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=mul < %s -mtriple=avr | FileCheck %s
 
 declare float @dsin(float)
 declare float @dcos(float)

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr -no-integrated-as | FileCheck %s
+; RUN: llc < %s -mtriple=avr -no-integrated-as | FileCheck %s
 
 ; CHECK-LABEL: foo
 define void @foo(i16 %a) {

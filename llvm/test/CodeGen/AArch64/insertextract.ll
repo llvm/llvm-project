@@ -271,7 +271,7 @@ define <3 x float> @insert_v3f32_2(<3 x float> %a, float %b, i32 %c) {
 ;
 ; CHECK-GI-LABEL: insert_v3f32_2:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov s2, v0.s[0]
 ; CHECK-GI-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    mov v2.s[2], v1.s[0]
@@ -630,7 +630,7 @@ define <8 x i8> @insert_v8i8_c(<8 x i8> %a, i8 %b, i32 %c) {
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    str d0, [sp, #8]
 ; CHECK-GI-NEXT:    and x9, x9, #0x7
-; CHECK-GI-NEXT:    mul x8, x9, x8
+; CHECK-GI-NEXT:    umull x8, w9, w8
 ; CHECK-GI-NEXT:    add x9, sp, #8
 ; CHECK-GI-NEXT:    strb w0, [x9, x8]
 ; CHECK-GI-NEXT:    ldr d0, [sp, #8]
@@ -682,7 +682,7 @@ define <16 x i8> @insert_v16i8_c(<16 x i8> %a, i8 %b, i32 %c) {
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    and x9, x9, #0xf
-; CHECK-GI-NEXT:    mul x8, x9, x8
+; CHECK-GI-NEXT:    umull x8, w9, w8
 ; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    strb w0, [x9, x8]
 ; CHECK-GI-NEXT:    ldr q0, [sp], #16
@@ -964,21 +964,13 @@ entry:
 }
 
 define <3 x i32> @insert_v3i32_0(<3 x i32> %a, i32 %b, i32 %c) {
-; CHECK-SD-LABEL: insert_v3i32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov s1, w0
-; CHECK-SD-NEXT:    mov v1.s[1], v0.s[1]
-; CHECK-SD-NEXT:    mov v1.s[2], v0.s[2]
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: insert_v3i32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v1.s[0], w0
-; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
-; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
-; CHECK-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: insert_v3i32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
 entry:
   %d = insertelement <3 x i32> %a, i32 %b, i32 0
   ret <3 x i32> %d
@@ -992,7 +984,7 @@ define <3 x i32> @insert_v3i32_2(<3 x i32> %a, i32 %b, i32 %c) {
 ;
 ; CHECK-GI-LABEL: insert_v3i32_2:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov s1, v0.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    mov v1.s[2], w0
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b

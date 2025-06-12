@@ -48,12 +48,14 @@ Sections:
         Flags:      0
         VersionNdx: 0
         Hash:       0
+        VDAux:      20
         Names:
           - VERSION_0
 ## An entry with arbitrary values.
       - Flags:      2
         VersionNdx: 2
         Hash:       108387921
+        VDAux:      [[VDAUX=20]]
         Names:
           - VERSION_1
 ## Another entry with arbitrary values and version predecessors.
@@ -81,3 +83,9 @@ DynamicSymbols: []
 # RUN:   FileCheck %s -DFILE=%t.version --check-prefix=VERSION-ERR
 
 # VERSION-ERR: Error reading file: [[FILE]]: invalid SHT_GNU_verdef section version: 2
+
+# RUN: yaml2obj %s -DVDAUX=100 -o %t.vdaux
+# RUN: not obj2yaml %t.vdaux 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.vdaux --check-prefix=VDAUX-ERR
+
+# VDAUX-ERR: Error reading file: [[FILE]]: corrupted section: vd_aux value 100 in section verdef points past end of the section

@@ -11,10 +11,12 @@
 ; two vector registers using one vperm each, which gives a cost of 2 + 4 = 6.
 ;
 ; CHECK: LV: Checking a loop in 'fun0'
-; CHECK: LV: Found an estimated cost of 6 for VF 4 For instruction:   %ld0 = load i16
-; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %ld1 = load i16
-; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %ld2 = load i16
-; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %ld3 = load i16
+; CHECK: Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 4 at %ld0, vp<%next.gep>
+; CHECK:   ir<%ld0> = load from index 0
+; CHECK:   ir<%ld1> = load from index 1
+; CHECK:   ir<%ld2> = load from index 2
+; CHECK:   ir<%ld3> = load from index 3
+
 define void @fun0(ptr %ptr, ptr %dst) {
 entry:
   br label %for.body
@@ -48,7 +50,8 @@ for.end:
 ; which gives a cost of 5.
 ;
 ; CHECK: LV: Checking a loop in 'fun1'
-; CHECK: LV: Found an estimated cost of 5 for VF 16 For instruction:   %ld0 = load i8
+; CHECK: Cost of 5 for VF 16: INTERLEAVE-GROUP with factor 3 at %ld0, vp<%next.gep>
+; CHECK:   ir<%ld0> = load from index 0
 define void @fun1(ptr %ptr, ptr %dst) {
 entry:
   br label %for.body
@@ -73,10 +76,11 @@ for.end:
 ; produce the vector values, which gives a cost of 6.
 ;
 ; CHECK: LV: Checking a loop in 'fun2'
-; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction:   %ld0 = load i8
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %ld1 = load i8
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %ld2 = load i8
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %ld3 = load i8
+; CHECK: Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 32 at %ld0, vp<%next.gep>
+; CHECK:   ir<%ld0> = load from index 0
+; CHECK:   ir<%ld1> = load from index 1
+; CHECK:   ir<%ld2> = load from index 2
+; CHECK:   ir<%ld3> = load from index 3
 define void @fun2(ptr %ptr, ptr %dst) {
 entry:
   br label %for.body
@@ -112,10 +116,11 @@ for.end:
 ; vector register boundary.
 ;
 ; CHECK: LV: Checking a loop in 'fun3'
-; CHECK: LV: Found an estimated cost of 7 for VF 2 For instruction:   %ld0 = load i8
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %ld1 = load i8
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %ld2 = load i8
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %ld3 = load i8
+; CHECK: Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 30 at %ld0, vp<%next.gep>
+; CHECK:   ir<%ld0> = load from index 0
+; CHECK:   ir<%ld1> = load from index 1
+; CHECK:   ir<%ld2> = load from index 2
+; CHECK:   ir<%ld3> = load from index 3
 define void @fun3(ptr %ptr, ptr %dst) {
 entry:
   br label %for.body

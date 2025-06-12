@@ -54,18 +54,24 @@ namespace LookupFilter {
   template<typename U> using S = S<U>*; // ok
 }
 
-namespace InFunctions {
+namespace UnexpandedPack {
   template<typename...T> struct S0 {
     template<typename Z> using U = T*; // expected-error {{declaration type contains unexpanded parameter pack 'T'}}
     U<char> u;
   };
+}
 
+namespace InvalidType {
   template<typename Z> using T1 = int;
   template<typename Z> using T2 = int[-1]; // expected-error {{array size is negative}}
+}
+
+namespace ShadowTemplateParam {
   template<typename...T> struct S3 { // expected-note {{template parameter is declared here}}
     template<typename Z> using T = int; // expected-error {{declaration of 'T' shadows template parameter}}
   };
-  template<typename Z> using Z = Z;
+  template<typename Z> // expected-note {{template parameter is declared here}}
+  using Z = Z; // expected-error {{declaration of 'Z' shadows template parameter}}
 }
 
 namespace ClassNameRedecl {

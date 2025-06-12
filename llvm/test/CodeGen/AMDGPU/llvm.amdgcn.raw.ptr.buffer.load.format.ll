@@ -11,7 +11,7 @@ main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) %0, i32 0, i32 0, i32 0)
   %data_glc = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) %0, i32 0, i32 0, i32 1)
   %data_slc = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) %0, i32 0, i32 0, i32 2)
-  %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>} undef, <4 x float> %data, 0
+  %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>} poison, <4 x float> %data, 0
   %r1 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r0, <4 x float> %data_glc, 1
   %r2 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r1, <4 x float> %data_slc, 2
   ret {<4 x float>, <4 x float>, <4 x float>} %r2

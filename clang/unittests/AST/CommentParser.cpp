@@ -33,16 +33,14 @@ const bool MY_DEBUG = true;
 class CommentParserTest : public ::testing::Test {
 protected:
   CommentParserTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      Traits(Allocator, CommentOptions()) {
-  }
+      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
+        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), Traits(Allocator, CommentOptions()) {}
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   llvm::BumpPtrAllocator Allocator;
@@ -1065,9 +1063,10 @@ TEST_F(CommentParserTest, InlineCommand5) {
 
 TEST_F(CommentParserTest, HTML1) {
   const char *Sources[] = {
-    "// <a",
-    "// <a>",
-    "// <a >"
+      "// <a",
+      "// <a>",
+      "// <a >",
+      "// <a\n// >",
   };
 
   for (size_t i = 0, e = std::size(Sources); i != e; i++) {
@@ -1088,8 +1087,9 @@ TEST_F(CommentParserTest, HTML1) {
 
 TEST_F(CommentParserTest, HTML2) {
   const char *Sources[] = {
-    "// <br/>",
-    "// <br />"
+      "// <br/>",
+      "// <br />",
+      "// <br \n// />",
   };
 
   for (size_t i = 0, e = std::size(Sources); i != e; i++) {
@@ -1110,10 +1110,8 @@ TEST_F(CommentParserTest, HTML2) {
 
 TEST_F(CommentParserTest, HTML3) {
   const char *Sources[] = {
-    "// <a href",
-    "// <a href ",
-    "// <a href>",
-    "// <a href >",
+      "// <a href",   "// <a href ",       "// <a href>",
+      "// <a href >", "// <a \n// href >",
   };
 
   for (size_t i = 0, e = std::size(Sources); i != e; i++) {
@@ -1134,8 +1132,9 @@ TEST_F(CommentParserTest, HTML3) {
 
 TEST_F(CommentParserTest, HTML4) {
   const char *Sources[] = {
-    "// <a href=\"bbb\"",
-    "// <a href=\"bbb\">",
+      "// <a href=\"bbb\"",
+      "// <a href=\"bbb\">",
+      "// <a \n// href=\"bbb\">",
   };
 
   for (size_t i = 0, e = std::size(Sources); i != e; i++) {

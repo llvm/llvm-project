@@ -259,8 +259,8 @@ ThreadSP OperatingSystemPython::CreateThreadFromThreadInfo(
   if (!thread_sp) {
     if (did_create_ptr)
       *did_create_ptr = true;
-    thread_sp = std::make_shared<ThreadMemory>(*m_process, tid, name, queue,
-                                               reg_data_addr);
+    thread_sp = std::make_shared<ThreadMemoryProvidingNameAndQueue>(
+        *m_process, tid, name, queue, reg_data_addr);
   }
 
   if (core_number < core_thread_list.GetSize(false)) {
@@ -384,6 +384,14 @@ lldb::ThreadSP OperatingSystemPython::CreateThread(lldb::tid_t tid,
     }
   }
   return ThreadSP();
+}
+
+bool OperatingSystemPython::DoesPluginReportAllThreads() {
+  // If the python plugin has a "DoesPluginReportAllThreads" method, use it.
+  if (std::optional<bool> plugin_answer =
+          m_operating_system_interface_sp->DoesPluginReportAllThreads())
+    return *plugin_answer;
+  return m_process->GetOSPluginReportsAllThreads();
 }
 
 #endif // #if LLDB_ENABLE_PYTHON

@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin %s -o - -filetype=obj | llvm-dwarfdump - | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-apple-darwin %s -o - -filetype=obj | llvm-dwarfdump - | FileCheck %s
 
 ; CHECK: 0x00000[[G:.*]]:     DW_TAG_variable
 ; CHECK-NEXT:                DW_AT_name	("g")

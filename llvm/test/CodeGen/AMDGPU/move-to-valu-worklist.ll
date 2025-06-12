@@ -13,12 +13,12 @@
 ; GCN-NEXT: v_and_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @in_worklist_once() #0 {
 bb:
-	%tmp = load i64, ptr addrspace(5) undef
+	%tmp = load i64, ptr addrspace(5) poison
 br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb
-	%tmp2 = phi i64 [ undef, %bb ], [ %tmp16, %bb1 ]
-	%tmp3 = phi i64 [ %tmp, %bb ], [ undef, %bb1 ]
+	%tmp2 = phi i64 [ poison, %bb ], [ %tmp16, %bb1 ]
+	%tmp3 = phi i64 [ %tmp, %bb ], [ poison, %bb1 ]
 	%tmp11 = shl i64 %tmp2, 14
 	%tmp13 = xor i64 %tmp11, %tmp2
 	%tmp15 = and i64 %tmp3, %tmp13

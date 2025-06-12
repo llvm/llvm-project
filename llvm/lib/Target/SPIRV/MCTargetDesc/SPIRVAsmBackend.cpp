@@ -10,7 +10,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/Support/EndianStream.h"
+#include "llvm/MC/MCSPIRVObjectWriter.h"
 
 using namespace llvm;
 
@@ -20,25 +20,14 @@ class SPIRVAsmBackend : public MCAsmBackend {
 public:
   SPIRVAsmBackend(llvm::endianness Endian) : MCAsmBackend(Endian) {}
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override {}
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
-    return createSPIRVObjectTargetWriter();
+    return std::make_unique<MCSPIRVObjectTargetWriter>();
   }
-
-  unsigned getNumFixupKinds() const override { return 1; }
-
-  bool mayNeedRelaxation(const MCInst &Inst,
-                         const MCSubtargetInfo &STI) const override {
-    return false;
-  }
-
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override {}
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override {

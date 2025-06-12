@@ -22,7 +22,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/TargetParser/SubtargetFeature.h"
 
 using namespace llvm;
 

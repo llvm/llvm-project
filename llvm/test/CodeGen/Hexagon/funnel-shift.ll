@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: f0:
 ; CHECK: r[[R00:[0-9]+]]:[[R01:[0-9]+]] = combine(r0,r1)

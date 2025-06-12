@@ -263,7 +263,6 @@ void AppleDWARFIndex::GetTypes(
     m_module.LogMessage(log, "FindByNameAndTag()");
   const dw_tag_t expected_tag = context[0].tag;
   SearchFor(*m_apple_types_up, expected_name, callback, expected_tag);
-  return;
 }
 
 void AppleDWARFIndex::GetNamespaces(

@@ -3,6 +3,7 @@
 
 subroutine s1
   use iso_fortran_env
+  save
   type(team_type) :: t
   complex :: x[*]
   real :: y[*]
@@ -22,7 +23,7 @@ end
 subroutine s2
   use iso_fortran_env
   type(team_type) :: t
-  real :: y[10,*], y2[*], x[*]
+  real, save :: y[10,*], y2[*], x[*]
   ! C1113
   !ERROR: The codimensions of 'x' have already been declared
   change team(t, x[10,*] => y, x[*] => y2)

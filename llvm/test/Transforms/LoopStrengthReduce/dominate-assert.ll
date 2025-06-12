@@ -4,13 +4,13 @@
 declare ptr @_Znwm()
 declare i32 @__gxx_personality_v0(...)
 declare void @g()
-define void @f() personality ptr @__gxx_personality_v0 {
+define void @f(i1 %arg) personality ptr @__gxx_personality_v0 {
 bb0:
   br label %bb1
 bb1:
   %v0 = phi i64 [ 0, %bb0 ], [ %v1, %bb1 ]
   %v1 = add nsw i64 %v0, 1
-  br i1 undef, label %bb2, label %bb1
+  br i1 %arg, label %bb2, label %bb1
 bb2:
   %v2 = icmp eq i64 %v0, 0
   br i1 %v2, label %bb6, label %bb3
@@ -69,34 +69,34 @@ bb7:
 }
 
 ; PR17425
-define void @i() {
+define void @i(i1 %arg) {
 entry:
   br label %while.cond
 
 while.cond:                                       ; preds = %while.cond, %entry
   %c.0 = phi ptr [ undef, %entry ], [ %incdec.ptr, %while.cond ]
   %incdec.ptr = getelementptr inbounds i16, ptr %c.0, i64 1
-  br i1 undef, label %while.cond1, label %while.cond
+  br i1 %arg, label %while.cond1, label %while.cond
 
 while.cond1:                                      ; preds = %while.cond1, %while.cond
   %c.1 = phi ptr [ %incdec.ptr5, %while.cond1 ], [ %c.0, %while.cond ]
   %incdec.ptr5 = getelementptr inbounds i16, ptr %c.1, i64 1
-  br i1 undef, label %while.cond7, label %while.cond1
+  br i1 %arg, label %while.cond7, label %while.cond1
 
 while.cond7:                                      ; preds = %while.cond7, %while.cond1
   %0 = phi ptr [ %incdec.ptr10, %while.cond7 ], [ %c.1, %while.cond1 ]
   %incdec.ptr10 = getelementptr inbounds i16, ptr %0, i64 1
-  br i1 undef, label %while.cond12.preheader, label %while.cond7
+  br i1 %arg, label %while.cond12.preheader, label %while.cond7
 
 while.cond12.preheader:                           ; preds = %while.cond7
-  br i1 undef, label %while.end16, label %while.body13.lr.ph
+  br i1 %arg, label %while.end16, label %while.body13.lr.ph
 
 while.body13:                                     ; preds = %if.else, %while.body13.lr.ph
   %1 = phi ptr [ %2, %while.body13.lr.ph ], [ %incdec.ptr15, %if.else ]
-  br i1 undef, label %while.cond12.outer.loopexit, label %if.else
+  br i1 %arg, label %while.cond12.outer.loopexit, label %if.else
 
 while.cond12.outer.loopexit:                      ; preds = %while.body13
-  br i1 undef, label %while.end16, label %while.body13.lr.ph
+  br i1 %arg, label %while.end16, label %while.body13.lr.ph
 
 while.body13.lr.ph:                               ; preds = %while.cond12.outer.loopexit, %while.cond12.preheader
   %2 = phi ptr [ %1, %while.cond12.outer.loopexit ], [ undef, %while.cond12.preheader ]

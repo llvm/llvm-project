@@ -61,11 +61,6 @@ private:
     Value = std::move(V);
     Kind = RValue;
   }
-  void setPointer(const Pointer P) {
-    assert(empty());
-    Value = P;
-    Kind = LValue;
-  }
   void setFunctionPointer(const FunctionPointer &P) {
     assert(empty());
     Value = P;
@@ -88,6 +83,7 @@ public:
   bool isInvalid() const { return Kind == Invalid; }
   bool isLValue() const { return Kind == LValue; }
   bool isRValue() const { return Kind == RValue; }
+  bool isPointer() const { return std::holds_alternative<Pointer>(Value); }
 
   /// Returns an APValue for the evaluation result. The returned
   /// APValue might be an LValue or RValue.

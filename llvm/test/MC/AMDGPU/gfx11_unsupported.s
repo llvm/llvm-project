@@ -322,6 +322,9 @@ image_sample_cd_o v252, v[1:4], s[8:15], s[12:15] dmask:0x1
 image_sample_cd_o_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+s_alloc_vgpr s0
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 s_atomic_add flat_scratch_hi, s[2:3], s0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
@@ -2063,4 +2066,10 @@ ds_subrev_u64 v1, v[2:3]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 ds_subrev_rtn_u64 v[5:6], v1, v[2:3]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot2c_f32_bf16 v5, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_bpermute_fi_b32 v5, v1, v2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

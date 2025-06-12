@@ -1,0 +1,60 @@
+; REQUIRES: x86-registered-target
+
+; For the given test case:
+
+;  1 // Template Template parameters.
+;  2 // Simple template class
+;  3 template <typename T> class Foo { T Member; };
+;  4
+;  5 // Template template class
+;  6 template <template <typename T> class TemplateType>
+;  7 class Bar {
+;  8   TemplateType<int> Int;
+;  9 };
+; 10
+; 11 template <template <template <typename> class> class TemplateTemplateType>
+; 12 class Baz {
+; 13   TemplateTemplateType<Foo> Foo;
+; 14 };
+; 15
+; 16 typedef Baz<Bar> Example;
+; 17
+; 18 Example TT;
+
+; The llvm-debuginfo-analyzer did not support the DW_AT_GNU_template_name
+; attribute. When using '--attribute=encoded' and the template argument is
+; another template, it would show:
+;   {Encoded} <>
+
+; The object file is generated using the following commands:
+;
+; clang++ -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes
+;         -fno-discard-value-names -emit-llvm -S -g -O0
+;         DW_AT_GNU_template_name.cpp -o DW_AT_GNU_template_name.ll
+; llc --filetype=obj DW_AT_GNU_template_name.ll -o DW_AT_GNU_template_name.o
+;
+; llvm-debuginfo-analyzer --attribute=encoded --print=symbols
+;                         DW_AT_GNU_template_name.o
+
+; RUN: llc --filetype=obj \
+; RUN:     %p/Inputs/DW_AT_GNU_template_name.ll -o %t.DW_AT_GNU_template_name.o
+
+; RUN: llvm-debuginfo-analyzer --attribute=encoded \
+; RUN:                         --print=symbols \
+; RUN:                         %t.DW_AT_GNU_template_name.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace %s
+
+; CHECK: Logical View:
+; CHECK:            {File} '{{.*}}dw_at_gnu_template_name.o'
+; CHECK-EMPTY:
+; CHECK:              {CompileUnit} 'dw_at_gnu_template_name.cpp'
+; CHECK:      3         {Class} 'Foo<int>'
+; CHECK:                  {Encoded} <int>
+; CHECK:      3           {Member} private 'Member' -> 'int'
+; CHECK:      7         {Class} 'Bar<Foo>'
+; CHECK:                  {Encoded} <Foo>
+; CHECK:      8           {Member} private 'Int' -> 'Foo<int>'
+; CHECK:     12         {Class} 'Baz<Bar>'
+; CHECK:                  {Encoded} <Bar>
+; CHECK:     13           {Member} private 'Foo' -> 'Bar<Foo>'
+; CHECK:     18         {Variable} extern 'TT' -> 'Example'

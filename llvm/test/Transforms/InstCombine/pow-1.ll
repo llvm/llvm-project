@@ -97,7 +97,7 @@ define float @test_simplify1_noerrno(float %x) {
 define <2 x float> @test_simplify1v(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_simplify1v(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> splat (float 1.000000e+00)
 ;
   %retval = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 1.0, float 1.0>, <2 x float> %x)
   ret <2 x float> %retval
@@ -134,7 +134,7 @@ define double @test_simplify2_noerrno(double %x) {
 define <2 x double> @test_simplify2v(<2 x double> %x) {
 ; CHECK-LABEL: define <2 x double> @test_simplify2v(
 ; CHECK-SAME: <2 x double> [[X:%.*]]) {
-; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
 ;
   %retval = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 1.0, double 1.0>, <2 x double> %x)
   ret <2 x double> %retval
@@ -253,22 +253,22 @@ define <2 x float> @test_simplify3v(<2 x float> %x) {
 ;
 ; VC32-LABEL: define <2 x float> @test_simplify3v(
 ; VC32-SAME: <2 x float> [[X:%.*]]) {
-; VC32-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 2.000000e+00, float 2.000000e+00>, <2 x float> [[X]])
+; VC32-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> splat (float 2.000000e+00), <2 x float> [[X]])
 ; VC32-NEXT:    ret <2 x float> [[RETVAL]]
 ;
 ; VC19-LABEL: define <2 x float> @test_simplify3v(
 ; VC19-SAME: <2 x float> [[X:%.*]]) {
-; VC19-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 2.000000e+00, float 2.000000e+00>, <2 x float> [[X]])
+; VC19-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> splat (float 2.000000e+00), <2 x float> [[X]])
 ; VC19-NEXT:    ret <2 x float> [[RETVAL]]
 ;
 ; VC64-LABEL: define <2 x float> @test_simplify3v(
 ; VC64-SAME: <2 x float> [[X:%.*]]) {
-; VC64-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 2.000000e+00, float 2.000000e+00>, <2 x float> [[X]])
+; VC64-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> splat (float 2.000000e+00), <2 x float> [[X]])
 ; VC64-NEXT:    ret <2 x float> [[RETVAL]]
 ;
 ; NOLIB-LABEL: define <2 x float> @test_simplify3v(
 ; NOLIB-SAME: <2 x float> [[X:%.*]]) {
-; NOLIB-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 2.000000e+00, float 2.000000e+00>, <2 x float> [[X]])
+; NOLIB-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> splat (float 2.000000e+00), <2 x float> [[X]])
 ; NOLIB-NEXT:    ret <2 x float> [[RETVAL]]
 ;
   %retval = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 2.0, float 2.0>, <2 x float> %x)
@@ -279,28 +279,28 @@ define <2 x float> @test_simplify3v(<2 x float> %x) {
 define <2 x double> @test_simplify3vn(<2 x double> %x) {
 ; ANY-LABEL: define <2 x double> @test_simplify3vn(
 ; ANY-SAME: <2 x double> [[X:%.*]]) {
-; ANY-NEXT:    [[MUL:%.*]] = fmul <2 x double> [[X]], <double 2.000000e+00, double 2.000000e+00>
+; ANY-NEXT:    [[MUL:%.*]] = fmul <2 x double> [[X]], splat (double 2.000000e+00)
 ; ANY-NEXT:    [[EXP2:%.*]] = call <2 x double> @llvm.exp2.v2f64(<2 x double> [[MUL]])
 ; ANY-NEXT:    ret <2 x double> [[EXP2]]
 ;
 ; VC32-LABEL: define <2 x double> @test_simplify3vn(
 ; VC32-SAME: <2 x double> [[X:%.*]]) {
-; VC32-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 4.000000e+00, double 4.000000e+00>, <2 x double> [[X]])
+; VC32-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> splat (double 4.000000e+00), <2 x double> [[X]])
 ; VC32-NEXT:    ret <2 x double> [[RETVAL]]
 ;
 ; VC19-LABEL: define <2 x double> @test_simplify3vn(
 ; VC19-SAME: <2 x double> [[X:%.*]]) {
-; VC19-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 4.000000e+00, double 4.000000e+00>, <2 x double> [[X]])
+; VC19-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> splat (double 4.000000e+00), <2 x double> [[X]])
 ; VC19-NEXT:    ret <2 x double> [[RETVAL]]
 ;
 ; VC64-LABEL: define <2 x double> @test_simplify3vn(
 ; VC64-SAME: <2 x double> [[X:%.*]]) {
-; VC64-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 4.000000e+00, double 4.000000e+00>, <2 x double> [[X]])
+; VC64-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> splat (double 4.000000e+00), <2 x double> [[X]])
 ; VC64-NEXT:    ret <2 x double> [[RETVAL]]
 ;
 ; NOLIB-LABEL: define <2 x double> @test_simplify3vn(
 ; NOLIB-SAME: <2 x double> [[X:%.*]]) {
-; NOLIB-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 4.000000e+00, double 4.000000e+00>, <2 x double> [[X]])
+; NOLIB-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> splat (double 4.000000e+00), <2 x double> [[X]])
 ; NOLIB-NEXT:    ret <2 x double> [[RETVAL]]
 ;
   %retval = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 4.0, double 4.0>, <2 x double> %x)
@@ -450,22 +450,22 @@ define <2 x double> @test_simplify4v(<2 x double> %x) {
 ;
 ; VC32-LABEL: define <2 x double> @test_simplify4v(
 ; VC32-SAME: <2 x double> [[X:%.*]]) {
-; VC32-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double> [[X]])
+; VC32-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> splat (double 2.000000e+00), <2 x double> [[X]])
 ; VC32-NEXT:    ret <2 x double> [[RETVAL]]
 ;
 ; VC19-LABEL: define <2 x double> @test_simplify4v(
 ; VC19-SAME: <2 x double> [[X:%.*]]) {
-; VC19-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double> [[X]])
+; VC19-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> splat (double 2.000000e+00), <2 x double> [[X]])
 ; VC19-NEXT:    ret <2 x double> [[RETVAL]]
 ;
 ; VC64-LABEL: define <2 x double> @test_simplify4v(
 ; VC64-SAME: <2 x double> [[X:%.*]]) {
-; VC64-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double> [[X]])
+; VC64-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> splat (double 2.000000e+00), <2 x double> [[X]])
 ; VC64-NEXT:    ret <2 x double> [[RETVAL]]
 ;
 ; NOLIB-LABEL: define <2 x double> @test_simplify4v(
 ; NOLIB-SAME: <2 x double> [[X:%.*]]) {
-; NOLIB-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double> [[X]])
+; NOLIB-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> splat (double 2.000000e+00), <2 x double> [[X]])
 ; NOLIB-NEXT:    ret <2 x double> [[RETVAL]]
 ;
   %retval = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 2.0, double 2.0>, <2 x double> %x)
@@ -482,22 +482,22 @@ define <2 x float> @test_simplify4vn(<2 x float> %x) {
 ;
 ; VC32-LABEL: define <2 x float> @test_simplify4vn(
 ; VC32-SAME: <2 x float> [[X:%.*]]) {
-; VC32-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 5.000000e-01, float 5.000000e-01>, <2 x float> [[X]])
+; VC32-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> splat (float 5.000000e-01), <2 x float> [[X]])
 ; VC32-NEXT:    ret <2 x float> [[RETVAL]]
 ;
 ; VC19-LABEL: define <2 x float> @test_simplify4vn(
 ; VC19-SAME: <2 x float> [[X:%.*]]) {
-; VC19-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 5.000000e-01, float 5.000000e-01>, <2 x float> [[X]])
+; VC19-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> splat (float 5.000000e-01), <2 x float> [[X]])
 ; VC19-NEXT:    ret <2 x float> [[RETVAL]]
 ;
 ; VC64-LABEL: define <2 x float> @test_simplify4vn(
 ; VC64-SAME: <2 x float> [[X:%.*]]) {
-; VC64-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 5.000000e-01, float 5.000000e-01>, <2 x float> [[X]])
+; VC64-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> splat (float 5.000000e-01), <2 x float> [[X]])
 ; VC64-NEXT:    ret <2 x float> [[RETVAL]]
 ;
 ; NOLIB-LABEL: define <2 x float> @test_simplify4vn(
 ; NOLIB-SAME: <2 x float> [[X:%.*]]) {
-; NOLIB-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 5.000000e-01, float 5.000000e-01>, <2 x float> [[X]])
+; NOLIB-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> splat (float 5.000000e-01), <2 x float> [[X]])
 ; NOLIB-NEXT:    ret <2 x float> [[RETVAL]]
 ;
   %retval = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 0.5, float 0.5>, <2 x float> %x)
@@ -573,7 +573,7 @@ define float @test_simplify5_noerrno(float %x) {
 define <2 x float> @test_simplify5v(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_simplify5v(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> splat (float 1.000000e+00)
 ;
   %retval = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> <float 0.0, float 0.0>)
   ret <2 x float> %retval
@@ -610,7 +610,7 @@ define double @test_simplify6_noerrno(double %x) {
 define <2 x double> @test_simplify6v(<2 x double> %x) {
 ; CHECK-LABEL: define <2 x double> @test_simplify6v(
 ; CHECK-SAME: <2 x double> [[X:%.*]]) {
-; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
 ;
   %retval = call <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double 0.0, double 0.0>)
   ret <2 x double> %retval
@@ -1317,7 +1317,7 @@ define float @pow_neg1_strict_noerrno(float %x) {
 define <2 x float> @pow_neg1_strictv(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @pow_neg1_strictv(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[X]]
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv <2 x float> splat (float 1.000000e+00), [[X]]
 ; CHECK-NEXT:    ret <2 x float> [[RECIPROCAL]]
 ;
   %r = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> <float -1.0, float -1.0>)
@@ -1357,7 +1357,7 @@ define double @pow_neg1_double_fast_noerrno(double %x) {
 define <2 x double> @pow_neg1_double_fastv(<2 x double> %x) {
 ; CHECK-LABEL: define <2 x double> @pow_neg1_double_fastv(
 ; CHECK-SAME: <2 x double> [[X:%.*]]) {
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv fast <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[X]]
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv fast <2 x double> splat (double 1.000000e+00), [[X]]
 ; CHECK-NEXT:    ret <2 x double> [[RECIPROCAL]]
 ;
   %r = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -1.0, double -1.0>)
@@ -1533,7 +1533,7 @@ define bfloat @test_pow_10_bf16(bfloat %x) {
 define <2 x half> @test_pow_10_v2f16(<2 x half> %x) {
 ; CHECK-LABEL: define <2 x half> @test_pow_10_v2f16(
 ; CHECK-SAME: <2 x half> [[X:%.*]]) {
-; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x half> @llvm.pow.v2f16(<2 x half> <half 0xH4900, half 0xH4900>, <2 x half> [[X]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x half> @llvm.pow.v2f16(<2 x half> splat (half 0xH4900), <2 x half> [[X]])
 ; CHECK-NEXT:    ret <2 x half> [[RETVAL]]
 ;
   %retval = call <2 x half> @llvm.pow.v2f16(<2 x half> <half 10.0, half 10.0>, <2 x half> %x)
@@ -1543,7 +1543,7 @@ define <2 x half> @test_pow_10_v2f16(<2 x half> %x) {
 define <2 x float> @test_pow_10_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_pow_10_v2f32(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 1.000000e+01, float 1.000000e+01>, <2 x float> [[X]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> splat (float 1.000000e+01), <2 x float> [[X]])
 ; CHECK-NEXT:    ret <2 x float> [[RETVAL]]
 ;
   %retval = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 10.0, float 10.0>, <2 x float> %x)
@@ -1553,7 +1553,7 @@ define <2 x float> @test_pow_10_v2f32(<2 x float> %x) {
 define <2 x double> @test_pow_10_v2f64(<2 x double> %x) {
 ; CHECK-LABEL: define <2 x double> @test_pow_10_v2f64(
 ; CHECK-SAME: <2 x double> [[X:%.*]]) {
-; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 1.000000e+01, double 1.000000e+01>, <2 x double> [[X]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> splat (double 1.000000e+01), <2 x double> [[X]])
 ; CHECK-NEXT:    ret <2 x double> [[RETVAL]]
 ;
   %retval = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 10.0, double 10.0>, <2 x double> %x)
@@ -1563,7 +1563,7 @@ define <2 x double> @test_pow_10_v2f64(<2 x double> %x) {
 define <2 x bfloat> @test_pow_10_v2bf16(<2 x bfloat> %x) {
 ; CHECK-LABEL: define <2 x bfloat> @test_pow_10_v2bf16(
 ; CHECK-SAME: <2 x bfloat> [[X:%.*]]) {
-; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x bfloat> @llvm.pow.v2bf16(<2 x bfloat> <bfloat 0xR4120, bfloat 0xR4120>, <2 x bfloat> [[X]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x bfloat> @llvm.pow.v2bf16(<2 x bfloat> splat (bfloat 0xR4120), <2 x bfloat> [[X]])
 ; CHECK-NEXT:    ret <2 x bfloat> [[RETVAL]]
 ;
   %retval = call <2 x bfloat> @llvm.pow.v2bf16(<2 x bfloat> <bfloat 10.0, bfloat 10.0>, <2 x bfloat> %x)

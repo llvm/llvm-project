@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Parser/tools.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/indirection.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
@@ -17,6 +16,8 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <set>
@@ -50,6 +51,12 @@ const Scope &GetTopLevelUnitContaining(const Symbol &symbol) {
 const Scope *FindModuleContaining(const Scope &start) {
   return FindScopeContaining(
       start, [](const Scope &scope) { return scope.IsModule(); });
+}
+
+const Scope *FindModuleOrSubmoduleContaining(const Scope &start) {
+  return FindScopeContaining(start, [](const Scope &scope) {
+    return scope.IsModule() || scope.IsSubmodule();
+  });
 }
 
 const Scope *FindModuleFileContaining(const Scope &start) {
@@ -131,19 +138,15 @@ Tristate IsDefinedAssignment(
   if (!lhsType || !rhsType) {
     return Tristate::No; // error or rhs is untyped
   }
-  if (lhsType->IsUnlimitedPolymorphic()) {
-    return Tristate::No;
-  }
-  if (rhsType->IsUnlimitedPolymorphic()) {
-    return Tristate::Maybe;
-  }
   TypeCategory lhsCat{lhsType->category()};
   TypeCategory rhsCat{rhsType->category()};
   if (rhsRank > 0 && lhsRank != rhsRank) {
     return Tristate::Yes;
   } else if (lhsCat != TypeCategory::Derived) {
     return ToTristate(lhsCat != rhsCat &&
-        (!IsNumericTypeCategory(lhsCat) || !IsNumericTypeCategory(rhsCat)));
+        (!IsNumericTypeCategory(lhsCat) || !IsNumericTypeCategory(rhsCat) ||
+            lhsCat == TypeCategory::Unsigned ||
+            rhsCat == TypeCategory::Unsigned));
   } else if (MightBeSameDerivedType(lhsType, rhsType)) {
     return Tristate::Maybe; // TYPE(t) = TYPE(t) can be defined or intrinsic
   } else {
@@ -159,7 +162,9 @@ bool IsIntrinsicRelational(common::RelationalOperator opr,
   } else {
     auto cat0{type0.category()};
     auto cat1{type1.category()};
-    if (IsNumericTypeCategory(cat0) && IsNumericTypeCategory(cat1)) {
+    if (cat0 == TypeCategory::Unsigned || cat1 == TypeCategory::Unsigned) {
+      return cat0 == cat1;
+    } else if (IsNumericTypeCategory(cat0) && IsNumericTypeCategory(cat1)) {
       // numeric types: EQ/NE always ok, others ok for non-complex
       return opr == common::RelationalOperator::EQ ||
           opr == common::RelationalOperator::NE ||
@@ -305,69 +310,6 @@ bool IsBindCProcedure(const Scope &scope) {
   } else {
     return false;
   }
-}
-
-static const Symbol *FindPointerComponent(
-    const Scope &scope, std::set<const Scope *> &visited) {
-  if (!scope.IsDerivedType()) {
-    return nullptr;
-  }
-  if (!visited.insert(&scope).second) {
-    return nullptr;
-  }
-  // If there's a top-level pointer component, return it for clearer error
-  // messaging.
-  for (const auto &pair : scope) {
-    const Symbol &symbol{*pair.second};
-    if (IsPointer(symbol)) {
-      return &symbol;
-    }
-  }
-  for (const auto &pair : scope) {
-    const Symbol &symbol{*pair.second};
-    if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if (const DeclTypeSpec * type{details->type()}) {
-        if (const DerivedTypeSpec * derived{type->AsDerived()}) {
-          if (const Scope * nested{derived->scope()}) {
-            if (const Symbol *
-                pointer{FindPointerComponent(*nested, visited)}) {
-              return pointer;
-            }
-          }
-        }
-      }
-    }
-  }
-  return nullptr;
-}
-
-const Symbol *FindPointerComponent(const Scope &scope) {
-  std::set<const Scope *> visited;
-  return FindPointerComponent(scope, visited);
-}
-
-const Symbol *FindPointerComponent(const DerivedTypeSpec &derived) {
-  if (const Scope * scope{derived.scope()}) {
-    return FindPointerComponent(*scope);
-  } else {
-    return nullptr;
-  }
-}
-
-const Symbol *FindPointerComponent(const DeclTypeSpec &type) {
-  if (const DerivedTypeSpec * derived{type.AsDerived()}) {
-    return FindPointerComponent(*derived);
-  } else {
-    return nullptr;
-  }
-}
-
-const Symbol *FindPointerComponent(const DeclTypeSpec *type) {
-  return type ? FindPointerComponent(*type) : nullptr;
-}
-
-const Symbol *FindPointerComponent(const Symbol &symbol) {
-  return IsPointer(symbol) ? &symbol : FindPointerComponent(symbol.GetType());
 }
 
 // C1594 specifies several ways by which an object might be globally visible.
@@ -540,9 +482,7 @@ const Symbol *FindOverriddenBinding(
           if (const Symbol *
               overridden{parentScope->FindComponent(symbol.name())}) {
             // 7.5.7.3 p1: only accessible bindings are overridden
-            if (!overridden->attrs().test(Attr::PRIVATE) ||
-                FindModuleContaining(overridden->owner()) ==
-                    FindModuleContaining(symbol.owner())) {
+            if (IsAccessible(*overridden, symbol.owner())) {
               return overridden;
             } else if (overridden->attrs().test(Attr::DEFERRED)) {
               isInaccessibleDeferred = true;
@@ -631,9 +571,9 @@ const EquivalenceSet *FindEquivalenceSet(const Symbol &symbol) {
 }
 
 bool IsOrContainsEventOrLockComponent(const Symbol &original) {
-  const Symbol &symbol{ResolveAssociations(original)};
-  if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (const DeclTypeSpec * type{details->type()}) {
+  const Symbol &symbol{ResolveAssociations(original, /*stopAtTypeGuard=*/true)};
+  if (evaluate::IsVariable(symbol)) {
+    if (const DeclTypeSpec * type{symbol.GetType()}) {
       if (const DerivedTypeSpec * derived{type->AsDerived()}) {
         return IsEventTypeOrLockType(derived) ||
             FindEventOrLockPotentialComponent(*derived);
@@ -847,7 +787,7 @@ static const Symbol *HasImpureFinal(
 }
 
 const Symbol *HasImpureFinal(const Symbol &original, std::optional<int> rank) {
-  const Symbol &symbol{ResolveAssociations(original)};
+  const Symbol &symbol{ResolveAssociations(original, /*stopAtTypeGuard=*/true)};
   if (symbol.has<ObjectEntityDetails>()) {
     if (const DeclTypeSpec * symType{symbol.GetType()}) {
       if (const DerivedTypeSpec * derived{symType->AsDerived()}) {
@@ -1116,23 +1056,31 @@ std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *symbol) {
   return object ? object->cudaDataAttr() : std::nullopt;
 }
 
+bool IsAccessible(const Symbol &original, const Scope &scope) {
+  const Symbol &ultimate{original.GetUltimate()};
+  if (ultimate.attrs().test(Attr::PRIVATE)) {
+    const Scope *module{FindModuleContaining(ultimate.owner())};
+    return !module || module->Contains(scope);
+  } else {
+    return true;
+  }
+}
+
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     const Scope &scope, const Symbol &symbol) {
-  if (symbol.attrs().test(Attr::PRIVATE)) {
-    if (FindModuleFileContaining(scope)) {
-      // Don't enforce component accessibility checks in module files;
-      // there may be forward-substituted named constants of derived type
-      // whose structure constructors reference private components.
-    } else if (const Scope *
-        moduleScope{FindModuleContaining(symbol.owner())}) {
-      if (!moduleScope->Contains(scope)) {
-        return parser::MessageFormattedText{
-            "PRIVATE name '%s' is only accessible within module '%s'"_err_en_US,
-            symbol.name(), moduleScope->GetName().value()};
-      }
-    }
+  if (IsAccessible(symbol, scope)) {
+    return std::nullopt;
+  } else if (FindModuleFileContaining(scope)) {
+    // Don't enforce component accessibility checks in module files;
+    // there may be forward-substituted named constants of derived type
+    // whose structure constructors reference private components.
+    return std::nullopt;
+  } else {
+    return parser::MessageFormattedText{
+        "PRIVATE name '%s' is accessible only within module '%s'"_err_en_US,
+        symbol.name(),
+        DEREF(FindModuleContaining(symbol.owner())).GetName().value()};
   }
-  return std::nullopt;
 }
 
 SymbolVector OrderParameterNames(const Symbol &typeSymbol) {
@@ -1349,12 +1297,22 @@ void ComponentIterator<componentKind>::const_iterator::Increment() {
 }
 
 template <ComponentKind componentKind>
+SymbolVector
+ComponentIterator<componentKind>::const_iterator::GetComponentPath() const {
+  SymbolVector result;
+  for (const auto &node : componentPath_) {
+    result.push_back(DEREF(node.component()));
+  }
+  return result;
+}
+
+template <ComponentKind componentKind>
 std::string
 ComponentIterator<componentKind>::const_iterator::BuildResultDesignatorName()
     const {
   std::string designator;
-  for (const auto &node : componentPath_) {
-    designator += "%"s + DEREF(node.component()).name().ToString();
+  for (const Symbol &component : GetComponentPath()) {
+    designator += "%"s + component.name().ToString();
   }
   return designator;
 }
@@ -1365,6 +1323,19 @@ template class ComponentIterator<ComponentKind::Ultimate>;
 template class ComponentIterator<ComponentKind::Potential>;
 template class ComponentIterator<ComponentKind::Scope>;
 template class ComponentIterator<ComponentKind::PotentialAndPointer>;
+
+PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
+    const DerivedTypeSpec &derived) {
+  PotentialComponentIterator potentials{derived};
+  return std::find_if(potentials.begin(), potentials.end(),
+      [](const Symbol &symbol) { return evaluate::IsCoarray(symbol); });
+}
+
+PotentialAndPointerComponentIterator::const_iterator
+FindPointerPotentialComponent(const DerivedTypeSpec &derived) {
+  PotentialAndPointerComponentIterator potentials{derived};
+  return std::find_if(potentials.begin(), potentials.end(), IsPointer);
+}
 
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &derived) {
@@ -1380,16 +1351,29 @@ UltimateComponentIterator::const_iterator FindPointerUltimateComponent(
 }
 
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
-    const DerivedTypeSpec &derived) {
+    const DerivedTypeSpec &derived, bool ignoreCoarrays) {
   PotentialComponentIterator potentials{derived};
-  return std::find_if(
-      potentials.begin(), potentials.end(), [](const Symbol &component) {
-        if (const auto *details{component.detailsIf<ObjectEntityDetails>()}) {
-          const DeclTypeSpec *type{details->type()};
-          return type && IsEventTypeOrLockType(type->AsDerived());
+  auto iter{potentials.begin()};
+  for (auto end{potentials.end()}; iter != end; ++iter) {
+    const Symbol &component{*iter};
+    if (const auto *object{component.detailsIf<ObjectEntityDetails>()}) {
+      if (const DeclTypeSpec * type{object->type()}) {
+        if (IsEventTypeOrLockType(type->AsDerived())) {
+          if (!ignoreCoarrays) {
+            break; // found one
+          }
+          auto path{iter.GetComponentPath()};
+          path.pop_back();
+          if (std::find_if(path.begin(), path.end(), [](const Symbol &sym) {
+                return evaluate::IsCoarray(sym);
+              }) == path.end()) {
+            break; // found one not in a coarray
+          }
         }
-        return false;
-      });
+      }
+    }
+  }
+  return iter;
 }
 
 UltimateComponentIterator::const_iterator FindAllocatableUltimateComponent(
@@ -1580,7 +1564,8 @@ const std::optional<parser::Name> &MaybeGetNodeName(
 
 std::optional<ArraySpec> ToArraySpec(
     evaluate::FoldingContext &context, const evaluate::Shape &shape) {
-  if (auto extents{evaluate::AsConstantExtents(context, shape)}) {
+  if (auto extents{evaluate::AsConstantExtents(context, shape)};
+      extents && !evaluate::HasNegativeExtent(*extents)) {
     ArraySpec result;
     for (const auto &extent : *extents) {
       result.emplace_back(ShapeSpec::MakeExplicit(Bound{extent}));
@@ -1747,9 +1732,23 @@ bool HadUseError(
           symbol ? symbol->detailsIf<UseErrorDetails>() : nullptr}) {
     auto &msg{context.Say(
         at, "Reference to '%s' is ambiguous"_err_en_US, symbol->name())};
-    for (const auto &[location, module] : details->occurrences()) {
-      msg.Attach(location, "'%s' was use-associated from module '%s'"_en_US, at,
-          module->GetName().value());
+    for (const auto &[location, sym] : details->occurrences()) {
+      const Symbol &ultimate{sym->GetUltimate()};
+      if (sym->owner().IsModule()) {
+        auto &attachment{msg.Attach(location,
+            "'%s' was use-associated from module '%s'"_en_US, at,
+            sym->owner().GetName().value())};
+        if (&*sym != &ultimate) {
+          // For incompatible definitions where one comes from a hermetic
+          // module file's incorporated dependences and the other from another
+          // module of the same name.
+          attachment.Attach(ultimate.name(),
+              "ultimately from '%s' in module '%s'"_en_US, ultimate.name(),
+              ultimate.owner().GetName().value());
+        }
+      } else {
+        msg.Attach(sym->name(), "declared here"_en_US);
+      }
     }
     context.SetError(*symbol);
     return true;
@@ -1758,4 +1757,332 @@ bool HadUseError(
   }
 }
 
+bool CheckForSymbolMatch(const SomeExpr *lhs, const SomeExpr *rhs) {
+  if (lhs && rhs) {
+    if (SymbolVector lhsSymbols{evaluate::GetSymbolVector(*lhs)};
+        !lhsSymbols.empty()) {
+      const Symbol &first{*lhsSymbols.front()};
+      for (const Symbol &symbol : evaluate::GetSymbolVector(*rhs)) {
+        if (first == symbol) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+namespace operation {
+template <typename T> //
+SomeExpr asSomeExpr(const T &x) {
+  auto copy{x};
+  return AsGenericExpr(std::move(copy));
+}
+
+template <bool IgnoreResizingConverts> //
+struct ArgumentExtractor
+    : public evaluate::Traverse<ArgumentExtractor<IgnoreResizingConverts>,
+          std::pair<operation::Operator, std::vector<SomeExpr>>, false> {
+  using Arguments = std::vector<SomeExpr>;
+  using Result = std::pair<operation::Operator, Arguments>;
+  using Base = evaluate::Traverse<ArgumentExtractor<IgnoreResizingConverts>,
+      Result, false>;
+  static constexpr auto IgnoreResizes = IgnoreResizingConverts;
+  static constexpr auto Logical = common::TypeCategory::Logical;
+  ArgumentExtractor() : Base(*this) {}
+
+  Result Default() const { return {}; }
+
+  using Base::operator();
+
+  template <int Kind> //
+  Result operator()(
+      const evaluate::Constant<evaluate::Type<Logical, Kind>> &x) const {
+    if (const auto &val{x.GetScalarValue()}) {
+      return val->IsTrue()
+          ? std::make_pair(operation::Operator::True, Arguments{})
+          : std::make_pair(operation::Operator::False, Arguments{});
+    }
+    return Default();
+  }
+
+  template <typename R> //
+  Result operator()(const evaluate::FunctionRef<R> &x) const {
+    Result result{operation::OperationCode(x.proc()), {}};
+    for (size_t i{0}, e{x.arguments().size()}; i != e; ++i) {
+      if (auto *e{x.UnwrapArgExpr(i)}) {
+        result.second.push_back(*e);
+      }
+    }
+    return result;
+  }
+
+  template <typename D, typename R, typename... Os>
+  Result operator()(const evaluate::Operation<D, R, Os...> &x) const {
+    if constexpr (std::is_same_v<D, evaluate::Parentheses<R>>) {
+      // Ignore top-level parentheses.
+      return (*this)(x.template operand<0>());
+    }
+    if constexpr (IgnoreResizes &&
+        std::is_same_v<D, evaluate::Convert<R, R::category>>) {
+      // Ignore conversions within the same category.
+      // Atomic operations on int(kind=1) may be implicitly widened
+      // to int(kind=4) for example.
+      return (*this)(x.template operand<0>());
+    } else {
+      return std::make_pair(operation::OperationCode(x),
+          OperationArgs(x, std::index_sequence_for<Os...>{}));
+    }
+  }
+
+  template <typename T> //
+  Result operator()(const evaluate::Designator<T> &x) const {
+    return {operation::Operator::Identity, {asSomeExpr(x)}};
+  }
+
+  template <typename T> //
+  Result operator()(const evaluate::Constant<T> &x) const {
+    return {operation::Operator::Identity, {asSomeExpr(x)}};
+  }
+
+  template <typename... Rs> //
+  Result Combine(Result &&result, Rs &&...results) const {
+    // There shouldn't be any combining needed, since we're stopping the
+    // traversal at the top-level operation, but implement one that picks
+    // the first non-empty result.
+    if constexpr (sizeof...(Rs) == 0) {
+      return std::move(result);
+    } else {
+      if (!result.second.empty()) {
+        return std::move(result);
+      } else {
+        return Combine(std::move(results)...);
+      }
+    }
+  }
+
+private:
+  template <typename D, typename R, typename... Os, size_t... Is>
+  Arguments OperationArgs(const evaluate::Operation<D, R, Os...> &x,
+      std::index_sequence<Is...>) const {
+    return Arguments{SomeExpr(x.template operand<Is>())...};
+  }
+};
+} // namespace operation
+
+std::string operation::ToString(operation::Operator op) {
+  switch (op) {
+  case Operator::Unknown:
+    return "??";
+  case Operator::Add:
+    return "+";
+  case Operator::And:
+    return "AND";
+  case Operator::Associated:
+    return "ASSOCIATED";
+  case Operator::Call:
+    return "function-call";
+  case Operator::Constant:
+    return "constant";
+  case Operator::Convert:
+    return "type-conversion";
+  case Operator::Div:
+    return "/";
+  case Operator::Eq:
+    return "==";
+  case Operator::Eqv:
+    return "EQV";
+  case Operator::False:
+    return ".FALSE.";
+  case Operator::Ge:
+    return ">=";
+  case Operator::Gt:
+    return ">";
+  case Operator::Identity:
+    return "identity";
+  case Operator::Intrinsic:
+    return "intrinsic";
+  case Operator::Le:
+    return "<=";
+  case Operator::Lt:
+    return "<";
+  case Operator::Max:
+    return "MAX";
+  case Operator::Min:
+    return "MIN";
+  case Operator::Mul:
+    return "*";
+  case Operator::Ne:
+    return "/=";
+  case Operator::Neqv:
+    return "NEQV/EOR";
+  case Operator::Not:
+    return "NOT";
+  case Operator::Or:
+    return "OR";
+  case Operator::Pow:
+    return "**";
+  case Operator::Resize:
+    return "resize";
+  case Operator::Sub:
+    return "-";
+  case Operator::True:
+    return ".TRUE.";
+  }
+  llvm_unreachable("Unhandler operator");
+}
+
+operation::Operator operation::OperationCode(
+    const evaluate::ProcedureDesignator &proc) {
+  Operator code = llvm::StringSwitch<Operator>(proc.GetName())
+                      .Case("associated", Operator::Associated)
+                      .Case("min", Operator::Min)
+                      .Case("max", Operator::Max)
+                      .Case("iand", Operator::And)
+                      .Case("ior", Operator::Or)
+                      .Case("ieor", Operator::Neqv)
+                      .Default(Operator::Call);
+  if (code == Operator::Call && proc.GetSpecificIntrinsic()) {
+    return Operator::Intrinsic;
+  }
+  return code;
+}
+
+std::pair<operation::Operator, std::vector<SomeExpr>> GetTopLevelOperation(
+    const SomeExpr &expr) {
+  return operation::ArgumentExtractor<true>{}(expr);
+}
+
+namespace operation {
+struct ConvertCollector
+    : public evaluate::Traverse<ConvertCollector,
+          std::pair<MaybeExpr, std::vector<evaluate::DynamicType>>, false> {
+  using Result = std::pair<MaybeExpr, std::vector<evaluate::DynamicType>>;
+  using Base = evaluate::Traverse<ConvertCollector, Result, false>;
+  ConvertCollector() : Base(*this) {}
+
+  Result Default() const { return {}; }
+
+  using Base::operator();
+
+  template <typename T> //
+  Result operator()(const evaluate::Designator<T> &x) const {
+    return {asSomeExpr(x), {}};
+  }
+
+  template <typename T> //
+  Result operator()(const evaluate::FunctionRef<T> &x) const {
+    return {asSomeExpr(x), {}};
+  }
+
+  template <typename T> //
+  Result operator()(const evaluate::Constant<T> &x) const {
+    return {asSomeExpr(x), {}};
+  }
+
+  template <typename D, typename R, typename... Os>
+  Result operator()(const evaluate::Operation<D, R, Os...> &x) const {
+    if constexpr (std::is_same_v<D, evaluate::Parentheses<R>>) {
+      // Ignore parentheses.
+      return (*this)(x.template operand<0>());
+    } else if constexpr (is_convert_v<D>) {
+      // Convert should always have a typed result, so it should be safe to
+      // dereference x.GetType().
+      return Combine(
+          {std::nullopt, {*x.GetType()}}, (*this)(x.template operand<0>()));
+    } else if constexpr (is_complex_constructor_v<D>) {
+      // This is a conversion iff the imaginary operand is 0.
+      if (IsZero(x.template operand<1>())) {
+        return Combine(
+            {std::nullopt, {*x.GetType()}}, (*this)(x.template operand<0>()));
+      } else {
+        return {asSomeExpr(x.derived()), {}};
+      }
+    } else {
+      return {asSomeExpr(x.derived()), {}};
+    }
+  }
+
+  template <typename... Rs> //
+  Result Combine(Result &&result, Rs &&...results) const {
+    Result v(std::move(result));
+    auto setValue{[](MaybeExpr &x, MaybeExpr &&y) {
+      assert((!x.has_value() || !y.has_value()) && "Multiple designators");
+      if (!x.has_value()) {
+        x = std::move(y);
+      }
+    }};
+    auto moveAppend{[](auto &accum, auto &&other) {
+      for (auto &&s : other) {
+        accum.push_back(std::move(s));
+      }
+    }};
+    (setValue(v.first, std::move(results).first), ...);
+    (moveAppend(v.second, std::move(results).second), ...);
+    return v;
+  }
+
+private:
+  template <typename T> //
+  static bool IsZero(const T &x) {
+    return false;
+  }
+  template <typename T> //
+  static bool IsZero(const evaluate::Expr<T> &x) {
+    return common::visit([](auto &&s) { return IsZero(s); }, x.u);
+  }
+  template <typename T> //
+  static bool IsZero(const evaluate::Constant<T> &x) {
+    if (auto &&maybeScalar{x.GetScalarValue()}) {
+      return maybeScalar->IsZero();
+    } else {
+      return false;
+    }
+  }
+
+  template <typename T> //
+  struct is_convert {
+    static constexpr bool value{false};
+  };
+  template <typename T, common::TypeCategory C> //
+  struct is_convert<evaluate::Convert<T, C>> {
+    static constexpr bool value{true};
+  };
+  template <int K> //
+  struct is_convert<evaluate::ComplexComponent<K>> {
+    // Conversion from complex to real.
+    static constexpr bool value{true};
+  };
+  template <typename T> //
+  static constexpr bool is_convert_v = is_convert<T>::value;
+
+  template <typename T> //
+  struct is_complex_constructor {
+    static constexpr bool value{false};
+  };
+  template <int K> //
+  struct is_complex_constructor<evaluate::ComplexConstructor<K>> {
+    static constexpr bool value{true};
+  };
+  template <typename T> //
+  static constexpr bool is_complex_constructor_v =
+      is_complex_constructor<T>::value;
+};
+} // namespace operation
+
+MaybeExpr GetConvertInput(const SomeExpr &x) {
+  // This returns SomeExpr(x) when x is a designator/functionref/constant.
+  return operation::ConvertCollector{}(x).first;
+}
+
+bool IsSameOrConvertOf(const SomeExpr &expr, const SomeExpr &x) {
+  // Check if expr is same as x, or a sequence of Convert operations on x.
+  if (expr == x) {
+    return true;
+  } else if (auto maybe{GetConvertInput(expr)}) {
+    return *maybe == x;
+  } else {
+    return false;
+  }
+}
 } // namespace Fortran::semantics

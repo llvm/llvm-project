@@ -1,0 +1,21 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+module devptr
+  real, device, pointer, dimension(:) :: dev_ptr
+end module
+
+use devptr
+real, device, target, dimension(4) :: a_dev
+a_dev = 42.0
+dev_ptr => a_dev
+
+dev_ptr => null()
+
+nullify(dev_ptr)
+end
+
+! CHECK: fir.global @_QMdevptrEdev_ptr {data_attr = #cuf.cuda<device>} : !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK-LABEL: func.func @_QQmain()
+! CHECK: fir.embox
+! CHECK: fir.store
+! CHECK-COUNT-3: cuf.sync_descriptor @_QMdevptrEdev_ptr

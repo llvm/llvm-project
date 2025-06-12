@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/NVPTXInstPrinter.h"
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXUtilities.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -22,7 +22,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/FormattedStream.h"
 #include <cctype>
 using namespace llvm;
 
@@ -85,7 +84,7 @@ void NVPTXInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                     raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     printRegName(O, Reg);
   } else if (Op.isImm()) {
     markup(O, Markup::Immediate) << formatImm(Op.getImm());
@@ -96,10 +95,9 @@ void NVPTXInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 }
 
 void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum, raw_ostream &O,
-                                    const char *M) {
+                                    StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int64_t Imm = MO.getImm();
-  llvm::StringRef Modifier(M);
 
   if (Modifier == "ftz") {
     // FTZ flag
@@ -156,10 +154,9 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum, raw_ostream &O,
 }
 
 void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
-                                    const char *M) {
+                                    StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int64_t Imm = MO.getImm();
-  llvm::StringRef Modifier(M);
 
   if (Modifier == "ftz") {
     // FTZ flag
@@ -230,8 +227,7 @@ void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
 }
 
 void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
-                                     raw_ostream &O, const char *M) {
-  llvm::StringRef Modifier(M);
+                                     raw_ostream &O, StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int Imm = (int)MO.getImm();
   if (Modifier == "sem") {
@@ -289,6 +285,7 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
     case NVPTX::AddressSpace::Global:
     case NVPTX::AddressSpace::Const:
     case NVPTX::AddressSpace::Shared:
+    case NVPTX::AddressSpace::SharedCluster:
     case NVPTX::AddressSpace::Param:
     case NVPTX::AddressSpace::Local:
       O << "." << A;
@@ -314,26 +311,14 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
     default:
       llvm_unreachable("Unknown register type");
     }
-  } else if (Modifier == "vec") {
-    switch (Imm) {
-    case NVPTX::PTXLdStInstCode::V2:
-      O << ".v2";
-      return;
-    case NVPTX::PTXLdStInstCode::V4:
-      O << ".v4";
-      return;
-    }
-    // TODO: evaluate whether cases not covered by this switch are bugs
-    return;
   }
   llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
 }
 
 void NVPTXInstPrinter::printMmaCode(const MCInst *MI, int OpNum, raw_ostream &O,
-                                    const char *M) {
+                                    StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int Imm = (int)MO.getImm();
-  llvm::StringRef Modifier(M);
   if (Modifier.empty() || Modifier == "version") {
     O << Imm; // Just print out PTX version
     return;
@@ -347,9 +332,8 @@ void NVPTXInstPrinter::printMmaCode(const MCInst *MI, int OpNum, raw_ostream &O,
 }
 
 void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
-                                       raw_ostream &O, const char *M) {
+                                       raw_ostream &O, StringRef Modifier) {
   printOperand(MI, OpNum, O);
-  llvm::StringRef Modifier(M);
 
   if (Modifier == "add") {
     O << ", ";
@@ -364,7 +348,7 @@ void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
 }
 
 void NVPTXInstPrinter::printOffseti32imm(const MCInst *MI, int OpNum,
-                                         raw_ostream &O, const char *Modifier) {
+                                         raw_ostream &O) {
   auto &Op = MI->getOperand(OpNum);
   assert(Op.isImm() && "Invalid operand");
   if (Op.getImm() != 0) {
@@ -373,8 +357,14 @@ void NVPTXInstPrinter::printOffseti32imm(const MCInst *MI, int OpNum,
   }
 }
 
+void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
+                                      raw_ostream &O) {
+  int64_t Imm = MI->getOperand(OpNum).getImm();
+  O << formatHex(Imm) << "U";
+}
+
 void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,
-                                       raw_ostream &O, const char *Modifier) {
+                                       raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
   assert(Op.isExpr() && "Call prototype is not an MCExpr?");
   const MCExpr *Expr = Op.getExpr();
@@ -383,7 +373,7 @@ void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,
 }
 
 void NVPTXInstPrinter::printPrmtMode(const MCInst *MI, int OpNum,
-                                     raw_ostream &O, const char *Modifier) {
+                                     raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int64_t Imm = MO.getImm();
 
@@ -411,4 +401,39 @@ void NVPTXInstPrinter::printPrmtMode(const MCInst *MI, int OpNum,
     O << ".rc16";
     return;
   }
+}
+
+void NVPTXInstPrinter::printTmaReductionMode(const MCInst *MI, int OpNum,
+                                             raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  using RedTy = nvvm::TMAReductionOp;
+
+  switch (static_cast<RedTy>(MO.getImm())) {
+  case RedTy::ADD:
+    O << ".add";
+    return;
+  case RedTy::MIN:
+    O << ".min";
+    return;
+  case RedTy::MAX:
+    O << ".max";
+    return;
+  case RedTy::INC:
+    O << ".inc";
+    return;
+  case RedTy::DEC:
+    O << ".dec";
+    return;
+  case RedTy::AND:
+    O << ".and";
+    return;
+  case RedTy::OR:
+    O << ".or";
+    return;
+  case RedTy::XOR:
+    O << ".xor";
+    return;
+  }
+  llvm_unreachable(
+      "Invalid Reduction Op in printCpAsyncBulkTensorReductionMode");
 }

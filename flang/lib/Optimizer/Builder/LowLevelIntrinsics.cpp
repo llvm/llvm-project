@@ -21,36 +21,6 @@
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 
-mlir::func::FuncOp fir::factory::getLlvmMemcpy(fir::FirOpBuilder &builder) {
-  auto ptrTy = builder.getRefType(builder.getIntegerType(8));
-  llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
-                                        builder.getI1Type()};
-  auto memcpyTy =
-      mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
-  return builder.createFunction(builder.getUnknownLoc(),
-                                "llvm.memcpy.p0.p0.i64", memcpyTy);
-}
-
-mlir::func::FuncOp fir::factory::getLlvmMemmove(fir::FirOpBuilder &builder) {
-  auto ptrTy = builder.getRefType(builder.getIntegerType(8));
-  llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
-                                        builder.getI1Type()};
-  auto memmoveTy =
-      mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
-  return builder.createFunction(builder.getUnknownLoc(),
-                                "llvm.memmove.p0.p0.i64", memmoveTy);
-}
-
-mlir::func::FuncOp fir::factory::getLlvmMemset(fir::FirOpBuilder &builder) {
-  auto ptrTy = builder.getRefType(builder.getIntegerType(8));
-  llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
-                                        builder.getI1Type()};
-  auto memsetTy =
-      mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
-  return builder.createFunction(builder.getUnknownLoc(),
-                                "llvm.memset.p0.p0.i64", memsetTy);
-}
-
 mlir::func::FuncOp fir::factory::getRealloc(fir::FirOpBuilder &builder) {
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
   llvm::SmallVector<mlir::Type> args = {ptrTy, builder.getI64Type()};
