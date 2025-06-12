@@ -131,6 +131,12 @@ TEST(EmbeddingTest, SubtractVectors) {
   EXPECT_THAT(E2, ElementsAre(0.5, 1.5, -1.0));
 }
 
+TEST(EmbeddingTest, ScaleVector) {
+  Embedding E1 = {1.0, 2.0, 3.0};
+  E1 *= 0.5f;
+  EXPECT_THAT(E1, ElementsAre(0.5, 1.0, 1.5));
+}
+
 TEST(EmbeddingTest, AddScaledVector) {
   Embedding E1 = {1.0, 2.0, 3.0};
   Embedding E2 = {2.0, 0.5, -1.0};
@@ -281,7 +287,7 @@ TEST(IR2VecTest, IR2VecVocabResultValidity) {
   EXPECT_EQ(validResult.getDimension(), 2u);
 }
 
-// Fixture for IR2Vec tests requiring IR setup and weight management.
+// Fixture for IR2Vec tests requiring IR setup.
 class IR2VecTestFixture : public ::testing::Test {
 protected:
   Vocab V;
@@ -298,8 +304,8 @@ protected:
 
   void SetUp() override {
     V = {{"add", {1.0, 2.0}},
-         {"integerTy", {0.5, 0.5}},
-         {"constant", {0.2, 0.3}},
+         {"integerTy", {0.25, 0.25}},
+         {"constant", {0.04, 0.06}},
          {"variable", {0.0, 0.0}},
          {"unknownTy", {0.0, 0.0}}};
 
@@ -315,19 +321,6 @@ protected:
 
     AddInst = BinaryOperator::CreateAdd(Arg, Const, "add", BB);
     RetInst = ReturnInst::Create(Ctx, AddInst, BB);
-  }
-
-  void setWeights(float OpcWeight, float TypeWeight, float ArgWeight) {
-    ::OpcWeight = OpcWeight;
-    ::TypeWeight = TypeWeight;
-    ::ArgWeight = ArgWeight;
-  }
-
-  void TearDown() override {
-    // Restore original global weights
-    ::OpcWeight = OriginalOpcWeight;
-    ::TypeWeight = OriginalTypeWeight;
-    ::ArgWeight = OriginalArgWeight;
   }
 };
 
@@ -395,23 +388,6 @@ TEST_F(IR2VecTestFixture, GetFunctionVector) {
   // Function vector should match BB vector (only one BB): {1.29, 2.31}
   EXPECT_THAT(FuncVec,
               ElementsAre(DoubleNear(1.29, 1e-6), DoubleNear(2.31, 1e-6)));
-}
-
-TEST_F(IR2VecTestFixture, GetFunctionVectorWithCustomWeights) {
-  setWeights(1.0, 1.0, 1.0);
-
-  auto Result = Embedder::create(IR2VecKind::Symbolic, *F, V);
-  ASSERT_TRUE(static_cast<bool>(Result));
-  auto Emb = std::move(*Result);
-
-  const auto &FuncVec = Emb->getFunctionVector();
-
-  EXPECT_EQ(FuncVec.size(), 2u);
-
-  // Expected: 1*([1.0 2.0] + [0.0 0.0]) + 1*([0.5 0.5] + [0.0 0.0]) + 1*([0.2
-  // 0.3] + [0.0 0.0])
-  EXPECT_THAT(FuncVec,
-              ElementsAre(DoubleNear(1.7, 1e-6), DoubleNear(2.8, 1e-6)));
 }
 
 TEST(IR2VecTest, IR2VecVocabAnalysisWithPrepopulatedVocab) {
