@@ -387,11 +387,9 @@ def WeightedBranchOpInterface : OpInterface<"WeightedBranchOpInterface"> {
     This interface provides methods for getting/setting integer non-negative
     weight of each branch. The probability of executing a branch
     is computed as the ratio between the branch's weight and the total
-    sum of the weights.
+    sum of the weights (which cannot be zero).
     The weights are optional. If they are provided, then their number
-    must match the number of successors of the operation,
-    with one exception for CallOpInterface operations, which may only
-    have one weight when they do not have any successors.
+    must match the number of successors of the operation.
 
     The default implementations of the methods expect the operation
     to have an attribute of type DenseI32ArrayAttr named branch_weights.
@@ -445,7 +443,7 @@ def WeightedRegionBranchOpInterface
     This interface provides methods for getting/setting integer non-negative
     weight of each branch. The probability of executing a region is computed
     as the ratio between the region branch's weight and the total sum
-    of the weights.
+    of the weights (which cannot be zero).
     The weights are optional. If they are provided, then their number
     must match the number of regions held by the operation
     (including empty regions).

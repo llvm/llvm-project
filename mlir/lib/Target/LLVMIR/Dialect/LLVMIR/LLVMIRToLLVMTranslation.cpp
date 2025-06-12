@@ -147,7 +147,14 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
   }
 
   if (auto iface = dyn_cast<WeightedBranchOpInterface>(op)) {
-    iface.setWeights(branchWeights);
+    // LLVM allows attaching a single weight to call instructions.
+    // This is used for carrying the execution count information
+    // in PGO modes. MLIR WeightedBranchOpInterface does not allow this,
+    // so we drop the metadata in this case.
+    // LLVM should probably use the VP form of MD_prof metadata
+    // for such cases.
+    if (op->getNumSuccessors() != 0)
+      iface.setWeights(branchWeights);
     return success();
   }
   return failure();
