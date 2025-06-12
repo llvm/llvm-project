@@ -998,11 +998,7 @@ define i64 @multiple_geps_inbounds_nuw(ptr %base, i64 %idx, i64 %idx2) {
 
 define <2 x i64> @splat_geps(ptr %base, <2 x i64> %idx1, <2 x i64> %idx2) {
 ; CHECK-LABEL: @splat_geps(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], <2 x i64> [[IDX1:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[BASE]], <2 x i64> [[IDX2:%.*]]
-; CHECK-NEXT:    [[GEP1_INT:%.*]] = ptrtoint <2 x ptr> [[GEP1]] to <2 x i64>
-; CHECK-NEXT:    [[GEP2_INT:%.*]] = ptrtoint <2 x ptr> [[GEP2]] to <2 x i64>
-; CHECK-NEXT:    [[D:%.*]] = sub <2 x i64> [[GEP2_INT]], [[GEP1_INT]]
+; CHECK-NEXT:    [[D:%.*]] = sub nsw <2 x i64> [[IDX2:%.*]], [[IDX1:%.*]]
 ; CHECK-NEXT:    ret <2 x i64> [[D]]
 ;
   %gep1 = getelementptr inbounds i8, ptr %base, <2 x i64> %idx1
@@ -1015,12 +1011,10 @@ define <2 x i64> @splat_geps(ptr %base, <2 x i64> %idx1, <2 x i64> %idx2) {
 
 define <2 x i64> @splat_geps_multiple(ptr %base, i64 %idx0, <2 x i64> %idx1, <2 x i64> %idx2) {
 ; CHECK-LABEL: @splat_geps_multiple(
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 [[IDX0:%.*]]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[GEP0]], <2 x i64> [[IDX1:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[BASE]], <2 x i64> [[IDX2:%.*]]
-; CHECK-NEXT:    [[GEP1_INT:%.*]] = ptrtoint <2 x ptr> [[GEP1]] to <2 x i64>
-; CHECK-NEXT:    [[GEP2_INT:%.*]] = ptrtoint <2 x ptr> [[GEP2]] to <2 x i64>
-; CHECK-NEXT:    [[D:%.*]] = sub <2 x i64> [[GEP2_INT]], [[GEP1_INT]]
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[IDX0:%.*]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[DOTSPLAT]], [[IDX1:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sub nsw <2 x i64> [[IDX2:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i64> [[D]]
 ;
   %gep0 = getelementptr inbounds i8, ptr %base, i64 %idx0

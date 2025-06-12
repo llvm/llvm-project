@@ -2088,8 +2088,6 @@ CommonPointerBase CommonPointerBase::compute(Value *LHS, Value *RHS) {
   // Find common base and collect RHS GEPs.
   while (true) {
     if (Ptrs.contains(RHS)) {
-      if (LHS->getType() != RHS->getType())
-        return Base;
       Base.Ptr = RHS;
       break;
     }
@@ -2132,12 +2130,15 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
   // TODO: We should probably do this even if there is only one GEP.
   bool RewriteGEPs = !Base.LHSGEPs.empty() && !Base.RHSGEPs.empty();
 
-  Type *IdxTy = DL.getIndexType(Base.Ptr->getType());
+  Type *IdxTy = DL.getIndexType(LHS->getType());
   auto EmitOffsetFromBase = [&](ArrayRef<GEPOperator *> GEPs,
                                 GEPNoWrapFlags NW) -> Value * {
     Value *Sum = nullptr;
     for (GEPOperator *GEP : reverse(GEPs)) {
       Value *Offset = EmitGEPOffset(GEP, RewriteGEPs);
+      if (Offset->getType() != IdxTy)
+        Offset = Builder.CreateVectorSplat(
+            cast<VectorType>(IdxTy)->getElementCount(), Offset);
       if (Sum)
         Sum = Builder.CreateAdd(Sum, Offset, "", NW.hasNoUnsignedWrap(),
                                 NW.isInBounds());
