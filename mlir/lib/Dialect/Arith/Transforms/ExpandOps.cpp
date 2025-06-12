@@ -34,6 +34,18 @@ static Value createConst(Location loc, Type type, int value,
   return rewriter.create<arith::ConstantOp>(loc, attr);
 }
 
+/// Create an float constant.
+static Value createFloatConst(Location loc, Type type, float value,
+                         PatternRewriter &rewriter) {
+  auto attr = rewriter.getFloatAttr(getElementTypeOrSelf(type), value);
+  if (auto shapedTy = dyn_cast<ShapedType>(type)) {
+    return rewriter.create<arith::ConstantOp>(
+        loc, DenseElementsAttr::get(shapedTy, attr));
+  }
+
+  return rewriter.create<arith::ConstantOp>(loc, attr);
+}
+
 /// Creates shapedType using shape from cloneFrom and base type from cloneTo
 static Type cloneToShapedType(Type cloneFrom, Type cloneTo) {
   if (auto shapedTy = dyn_cast<ShapedType>(cloneFrom)) {
@@ -439,6 +451,13 @@ Note: x is sign bit
 | x111   | 6.0
 
 Conversion procedure: 
+
+Step 1: Clamp to max f4 value
+
+Step 2: convert exponent, if signed int comparison <= 0, set 0
+
+Step 3: if mantissa[1:] greater than 1000000, add 1
+
 Let M_0 = f32 mantissa, M_1 = f4 mantissa, Let E_0 = f32 exp, let E_1 = f4 exp
 Create bias adjusted exponent, E_1 <- E_0 - 126
 If E_0 <= 0111 1110
@@ -485,32 +504,66 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
 
     // Constants
     Value c0x1 = createConst(op->getLoc(), i4Ty, 1, rewriter);
-    Value c0x1 = createConst(op->getLoc(), i4Ty, 1, rewriter);
     Value c0x7e = createConst(op.getLoc(), i8Ty, 0x7e, rewriter);
+    Value c0x0000007e = createConst(op.getLoc(), i32Ty, 0x7e, rewriter);
+    
     Value c0x00000009 = createConst(op->getLoc(), i32Ty, 9, rewriter);
+    Value c0x00000016 = createConst(op->getLoc(), i32Ty, 22, rewriter);
     Value c0x00000017 = createConst(op->getLoc(), i32Ty, 23, rewriter);
+    Value c0x0000001f = createConst(op->getLoc(), i32Ty, 31, rewriter);
     Value c0x00200000 = createConst(op.getLoc(), i32Ty, 0x200000, rewriter);
     Value c0x00400000 = createConst(op.getLoc(), i32Ty, 0x400000, rewriter);
     Value c0x00600000 = createConst(op.getLoc(), i32Ty, 0x600000, rewriter);
+    Value c0x003fffff = createConst(op->getLoc(), i32Ty, 0x3fffff, rewriter);
     Value c0x007fffff = createConst(op->getLoc(), i32Ty, 0x7fffff, rewriter);
-    
-    Value f32Bits = b.create<arith::BitcastOp>(i32Ty, operand);
-  
     Value cF32MantissaWidth = c0x00000017; // 23
-    Value cF4MantissaWidth = c0x1; // 1
-    Value cF32SignExpWidth = c0x00000009; // 9
+    Value cF4MantissaWidth = c0x1;         // 1
+    Value cF32SignExpWidth = c0x00000009;  // 9
+    Value cF32FirstBitMask = c0x00400000;
+    Value cF32Last22BitMask = c0x003fffff;
     Value cF32MantissaMask = c0x007fffff;
+
+    // Step 1: Clamp to bounds.
+    Value cHigherBound = createFloatConst(op->getLoc(), f32Ty, 6.0, rewriter);
+    Value cLowerBound = createFloatConst(op->getLoc(), f32Ty, -6.0, rewriter);
+    Value clampHigh = b.create<arith::CmpFOp>(arith::CmpFPredicate::UGT, operand, cHigherBound);
+    Value clampLow = b.create<arith::CmpFOp>(arith::CmpFPredicate::ULT, operand, cLowerBound);
+    Value operandClamped = b.create<arith::SelectOp>(clampHigh, cHigherBound, operand);
+    operandClamped = b.create<arith::SelectOp>(clampLow, cLowerBound, operandClamped);
+    Value f32Bits = b.create<arith::BitcastOp>(i32Ty, operandClamped);
+  
+    // Step 2: Convert exponent by adjusting bias.
     Value f32SignExp = b.create<arith::ShRUIOp>(f32Bits, cF32MantissaWidth);
-    Value man23Bits = b.create<arith::AndIOp>(f32Bits, cF32MantissaMask);
-    Value exp8Bits = b.create<arith::TruncIOp>(i8Ty, f32SignExp);
+    Value biasAdjustment = c0x0000007e; // 126
+    Value biasAdjustedSignExp = b.create<arith::SubIOp>(f32SignExp, biasAdjustment);
+    Value f4SignExp = b.create<arith::TruncIOp>(i4Ty, biasAdjustedSignExp);
+    f4SignExp = b.create<arith::ShLIOp>(f4SignExp, cF4MantissaWidth);
     
-    Value cSubnormalExp = c0x7e; // 126
+    // Step 0: Special consideration for conversion to 0.5.
+    Value cSubnormalLowerBound = createFloatConst(op->getLoc(), f32Ty, 0.25, rewriter);
+    Value cSubnormalHigherBound = createFloatConst(op->getLoc(), f32Ty, 0.75, rewriter);
+    Value cLowerBound = createConst(op->getLoc(), f32Ty, -6.0, rewriter);
+    Value isSubnormal =
+        b.create<arith::CmpIOp>(arith::CmpIPredicate::uge, man22Bits, cRound);
+
+    // Step 3: Set mantissa to first bit.
+    Value man23Bits = b.create<arith::AndIOp>(f32Bits, cF32FirstBitMask);
+    Value man1Bit = b.create<arith::ShRUIOp>(man23Bits, c0x00000016);
+    Value f4Man = b.create<arith::TruncIOp>(i4Ty, man1Bit);
+    Value f4Bits = b.create<arith::AddIOp>(f4SignExp, f4Man);
+
+    // Step 4: Round up if necessary.
+    Value cRound = c0x00200000; // 010 0000...
+    Value man22Bits = b.create<arith::AndIOp>(f32Bits, cF32Last22BitMask);
+    Value shouldRound =
+        b.create<arith::CmpIOp>(arith::CmpIPredicate::uge, man22Bits, cRound);
+    Value roundedF4Bits = b.create<arith::AddIOp>(f4Bits, c0x1);
+    f4Bits = b.create<arith::SelectOp>(shouldRound, roundedF4Bits, f4Bits);
 
     // Regular case
-    Value biasAdjustment = c0x7e; // 126
-    Value cRoundUp = c0x00600000; // 110 0000...
-    Value cRoundDown = c0x00200000; // 010 0000...
-    Value biasAdjustedExp = b.create<arith::SubIOp>(exp8Bits, biasAdjustment);
+
+    
+
     Value f4Exp = b.create<arith::TruncIOp>(i4Ty, biasAdjustedExp);
     Value f4ExpRounded = b.create<arith::AddIOp>(f4Exp, c0x1);
     // If we round up or down to even, set mantissa to 0
