@@ -106,7 +106,7 @@ define <4 x float> @combine_vpermil2ps_blend_with_zero(<4 x float> %a0, <4 x flo
 ; CHECK-LABEL: combine_vpermil2ps_blend_with_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res0 = call <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 8, i32 1, i32 2, i32 3>, i8 2)
   ret <4 x float> %res0
