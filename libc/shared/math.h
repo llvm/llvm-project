@@ -1,4 +1,4 @@
-//===-- Single-precision e^x function -------------------------------------===//
+//===-- Floating point math functions ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/expf.h"
-#include "src/__support/math/expf.h"
+#ifndef LLVM_LIBC_SHARED_MATH_H
+#define LLVM_LIBC_SHARED_MATH_H
 
-namespace LIBC_NAMESPACE_DECL {
+#include "libc_common.h"
 
-LLVM_LIBC_FUNCTION(float, expf, (float x)) { return math::expf(x); }
+#include "math/expf.h"
 
-} // namespace LIBC_NAMESPACE_DECL
+#endif // LLVM_LIBC_SHARED_MATH_H
