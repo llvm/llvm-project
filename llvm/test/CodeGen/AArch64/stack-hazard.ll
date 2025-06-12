@@ -3703,11 +3703,10 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK64-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
 ; CHECK64-NEXT:    stp x9, x28, [sp, #80] // 16-byte Folded Spill
 ; CHECK64-NEXT:    stp x27, x26, [sp, #96] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x20, x19, [sp, #112] // 16-byte Folded Spill
+; CHECK64-NEXT:    str x19, [sp, #112] // 8-byte Folded Spill
 ; CHECK64-NEXT:    add x29, sp, #64
 ; CHECK64-NEXT:    .cfi_def_cfa w29, 64
-; CHECK64-NEXT:    .cfi_offset w19, -8
-; CHECK64-NEXT:    .cfi_offset w20, -16
+; CHECK64-NEXT:    .cfi_offset w19, -16
 ; CHECK64-NEXT:    .cfi_offset w26, -24
 ; CHECK64-NEXT:    .cfi_offset w27, -32
 ; CHECK64-NEXT:    .cfi_offset w28, -40
@@ -3752,21 +3751,20 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 128 - 64 * VG
 ; CHECK64-NEXT:    sub x9, sp, #1088
 ; CHECK64-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK64-NEXT:    mov x19, sp
 ; CHECK64-NEXT:    mov w2, w1
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
 ; CHECK64-NEXT:    bl __arm_sme_state
-; CHECK64-NEXT:    and x20, x0, #0x1
+; CHECK64-NEXT:    and x19, x0, #0x1
 ; CHECK64-NEXT:    .cfi_offset vg, -48
-; CHECK64-NEXT:    tbz w20, #0, .LBB36_2
+; CHECK64-NEXT:    tbz w19, #0, .LBB36_2
 ; CHECK64-NEXT:  // %bb.1: // %entry
 ; CHECK64-NEXT:    smstop sm
 ; CHECK64-NEXT:  .LBB36_2: // %entry
-; CHECK64-NEXT:    add x0, x19, #0
+; CHECK64-NEXT:    mov x0, sp
 ; CHECK64-NEXT:    mov w1, #45 // =0x2d
 ; CHECK64-NEXT:    bl memset
-; CHECK64-NEXT:    tbz w20, #0, .LBB36_4
+; CHECK64-NEXT:    tbz w19, #0, .LBB36_4
 ; CHECK64-NEXT:  // %bb.3: // %entry
 ; CHECK64-NEXT:    smstart sm
 ; CHECK64-NEXT:  .LBB36_4: // %entry
@@ -3813,14 +3811,12 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK64-NEXT:    .cfi_restore z15
 ; CHECK64-NEXT:    sub sp, x29, #64
 ; CHECK64-NEXT:    .cfi_def_cfa wsp, 128
-; CHECK64-NEXT:    ldp x20, x19, [sp, #112] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldr x28, [sp, #88] // 8-byte Folded Reload
-; CHECK64-NEXT:    ldp x27, x26, [sp, #96] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp x26, x19, [sp, #104] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp x28, x27, [sp, #88] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
 ; CHECK64-NEXT:    add sp, sp, #128
 ; CHECK64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK64-NEXT:    .cfi_restore w19
-; CHECK64-NEXT:    .cfi_restore w20
 ; CHECK64-NEXT:    .cfi_restore w26
 ; CHECK64-NEXT:    .cfi_restore w27
 ; CHECK64-NEXT:    .cfi_restore w28
@@ -3839,12 +3835,10 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK1024-NEXT:    str x28, [sp, #1048] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x27, [sp, #1056] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x26, [sp, #1064] // 8-byte Folded Spill
-; CHECK1024-NEXT:    str x20, [sp, #1072] // 8-byte Folded Spill
-; CHECK1024-NEXT:    str x19, [sp, #1080] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x19, [sp, #1072] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    add x29, sp, #1024
 ; CHECK1024-NEXT:    .cfi_def_cfa w29, 64
-; CHECK1024-NEXT:    .cfi_offset w19, -8
-; CHECK1024-NEXT:    .cfi_offset w20, -16
+; CHECK1024-NEXT:    .cfi_offset w19, -16
 ; CHECK1024-NEXT:    .cfi_offset w26, -24
 ; CHECK1024-NEXT:    .cfi_offset w27, -32
 ; CHECK1024-NEXT:    .cfi_offset w28, -40
@@ -3889,21 +3883,20 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 1088 - 64 * VG
 ; CHECK1024-NEXT:    sub x9, sp, #2048
 ; CHECK1024-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK1024-NEXT:    mov x19, sp
 ; CHECK1024-NEXT:    mov w2, w1
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
 ; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    and x20, x0, #0x1
+; CHECK1024-NEXT:    and x19, x0, #0x1
 ; CHECK1024-NEXT:    .cfi_offset vg, -48
-; CHECK1024-NEXT:    tbz w20, #0, .LBB36_2
+; CHECK1024-NEXT:    tbz w19, #0, .LBB36_2
 ; CHECK1024-NEXT:  // %bb.1: // %entry
 ; CHECK1024-NEXT:    smstop sm
 ; CHECK1024-NEXT:  .LBB36_2: // %entry
-; CHECK1024-NEXT:    add x0, x19, #0
+; CHECK1024-NEXT:    mov x0, sp
 ; CHECK1024-NEXT:    mov w1, #45 // =0x2d
 ; CHECK1024-NEXT:    bl memset
-; CHECK1024-NEXT:    tbz w20, #0, .LBB36_4
+; CHECK1024-NEXT:    tbz w19, #0, .LBB36_4
 ; CHECK1024-NEXT:  // %bb.3: // %entry
 ; CHECK1024-NEXT:    smstart sm
 ; CHECK1024-NEXT:  .LBB36_4: // %entry
@@ -3950,8 +3943,7 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK1024-NEXT:    .cfi_restore z15
 ; CHECK1024-NEXT:    sub sp, x29, #1024
 ; CHECK1024-NEXT:    .cfi_def_cfa wsp, 1088
-; CHECK1024-NEXT:    ldr x19, [sp, #1080] // 8-byte Folded Reload
-; CHECK1024-NEXT:    ldr x20, [sp, #1072] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x19, [sp, #1072] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x26, [sp, #1064] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x27, [sp, #1056] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x28, [sp, #1048] // 8-byte Folded Reload
@@ -3960,7 +3952,6 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK1024-NEXT:    add sp, sp, #1088
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK1024-NEXT:    .cfi_restore w19
-; CHECK1024-NEXT:    .cfi_restore w20
 ; CHECK1024-NEXT:    .cfi_restore w26
 ; CHECK1024-NEXT:    .cfi_restore w27
 ; CHECK1024-NEXT:    .cfi_restore w28

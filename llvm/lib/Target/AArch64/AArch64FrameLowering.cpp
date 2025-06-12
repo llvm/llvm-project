@@ -2286,6 +2286,21 @@ static bool isFuncletReturnInstr(const MachineInstr &MI) {
   }
 }
 
+/// Find a GPR restored in the epilogue that is not reserved.
+static Register findRestoredCalleeSaveGPR(const MachineFunction &MF) {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+  for (auto &CS : CSI) {
+    Register Reg = CS.getReg();
+    if (!CS.isRestored() || MRI.isReserved(Reg) ||
+        !AArch64::GPR64RegClass.contains(Reg))
+      continue;
+    return Reg;
+  }
+  return AArch64::NoRegister;
+}
+
 void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
@@ -2553,11 +2568,11 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
           Register CalleeSaveBase = AArch64::FP;
           if (int64_t CalleeSaveBaseOffset =
                   AFI->getCalleeSaveBaseToFrameRecordOffset()) {
-            assert(RegInfo->hasBasePointer(MF) && "Expected base pointer!");
-            // NOTE: This base pointer is clobbered from this point on! The next
-            // step in eplilogue emission restoring callee-saves, so it should
-            // not be used after this point anyway.
-            CalleeSaveBase = RegInfo->getBaseRegister();
+            // This will find a GPR that is about to be restored -- so safe
+            // to clobber. SVE functions have a "big stack" so always spill at
+            // least one GPR (as a scratch register).
+            CalleeSaveBase = findRestoredCalleeSaveGPR(MF);
+            assert(CalleeSaveBase != AArch64::NoRegister);
             emitFrameOffset(MBB, RestoreBegin, DL, CalleeSaveBase, AArch64::FP,
                             StackOffset::getFixed(-CalleeSaveBaseOffset), TII,
                             MachineInstr::FrameDestroy);
