@@ -1123,6 +1123,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // Compare/branch metadata may alter the behavior of passes like
     // SimplifyCFG.
     EarlyFPM.addPass(LowerExpectIntrinsicPass());
+    // We need to run CorrelatedValuePropagationPass before the first
+    // SimplifyCFG, because that can obscure branch conditions by converting
+    // branches into `select`.
+    if (Level.getSpeedupLevel() > 1 || Level.getSizeLevel() > 0)
+      EarlyFPM.addPass(CorrelatedValuePropagationPass());
     EarlyFPM.addPass(SimplifyCFGPass());
     EarlyFPM.addPass(SROAPass(SROAOptions::ModifyCFG));
     EarlyFPM.addPass(EarlyCSEPass());
