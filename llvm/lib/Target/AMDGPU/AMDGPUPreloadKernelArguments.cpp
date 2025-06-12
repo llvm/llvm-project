@@ -134,7 +134,6 @@ private:
 
     NF->copyAttributesFrom(&F);
     NF->copyMetadata(&F, 0);
-    NF->setIsNewDbgInfoFormat(F.IsNewDbgInfoFormat);
 
     F.getParent()->getFunctionList().insert(F.getIterator(), NF);
     NF->takeName(&F);
@@ -229,18 +228,16 @@ public:
     // If we fail to preload any implicit argument we know we don't have SGPRs
     // to preload any subsequent ones with larger offsets. Find the first
     // argument that we cannot preload.
-    auto *PreloadEnd =
-        std::find_if(ImplicitArgLoads.begin(), ImplicitArgLoads.end(),
-                     [&](const std::pair<LoadInst *, unsigned> &Load) {
-                       unsigned LoadSize =
-                           DL.getTypeStoreSize(Load.first->getType());
-                       unsigned LoadOffset = Load.second;
-                       if (!canPreloadKernArgAtOffset(LoadOffset + LoadSize +
-                                                      ImplicitArgsBaseOffset))
-                         return true;
+    auto *PreloadEnd = llvm::find_if(
+        ImplicitArgLoads, [&](const std::pair<LoadInst *, unsigned> &Load) {
+          unsigned LoadSize = DL.getTypeStoreSize(Load.first->getType());
+          unsigned LoadOffset = Load.second;
+          if (!canPreloadKernArgAtOffset(LoadOffset + LoadSize +
+                                         ImplicitArgsBaseOffset))
+            return true;
 
-                       return false;
-                     });
+          return false;
+        });
 
     if (PreloadEnd == ImplicitArgLoads.begin())
       return;

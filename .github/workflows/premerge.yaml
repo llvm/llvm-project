@@ -16,7 +16,6 @@ on:
       - closed
   push:
     branches:
-      - 'main'
       - 'release/**'
 
 concurrency:
@@ -25,7 +24,7 @@ concurrency:
 
 jobs:
   premerge-checks-linux:
-    name: Build and Test Linux (Test Only - Please Ignore Results)
+    name: Build and Test Linux
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
@@ -43,9 +42,6 @@ jobs:
         # Mark the job as a success even if the step fails so that people do
         # not get notified while the new premerge pipeline is in an
         # experimental state.
-        # TODO(boomanaiden154): Remove this once the pipeline is stable and we
-        # are ready for people to start recieving notifications.
-        continue-on-error: true
         run: |
           git config --global --add safe.directory '*'
 
@@ -74,7 +70,7 @@ jobs:
           include-hidden-files: 'true'
 
   premerge-checks-windows:
-    name: Build and Test Windows (Test Only - Please Ignore Results)
+    name: Build and Test Windows
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
@@ -110,9 +106,6 @@ jobs:
         # Mark the job as a success even if the step fails so that people do
         # not get notified while the new premerge pipeline is in an
         # experimental state.
-        # TODO(boomanaiden154): Remove this once the pipeline is stable and we
-        # are ready for people to start recieving notifications.
-        continue-on-error: true
         if: ${{ steps.vars.outputs.windows-projects != '' }}
         shell: cmd
         run: |

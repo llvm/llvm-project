@@ -26,8 +26,30 @@
 
 #include "gtest/gtest.h"
 
+#include <cstdlib>
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
+
+/// Custom deleter to use with unique_ptr.
+///
+/// Usage:
+/// \code{.cpp}
+///
+/// auto OB =
+///     std::unique_ptr<TrackingOutputBuffer, TrackingOutputBufferDeleter>(
+///         new TrackingOutputBuffer());
+///
+/// \endcode
+struct TrackingOutputBufferDeleter {
+  void operator()(TrackingOutputBuffer *TOB) {
+    if (!TOB)
+      return;
+    std::free(TOB->getBuffer());
+    delete TOB;
+  }
+};
 
 TEST(MangledTest, ResultForValidName) {
   ConstString MangledName("_ZN1a1b1cIiiiEEvm");
@@ -414,110 +436,112 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
     // clang-format off
    { "_ZNVKO3BarIN2ns3QuxIiEEE1CIPFi3FooIS_IiES6_EEE6methodIS6_EENS5_IT_SC_E5InnerIiEESD_SD_",
      { /*.BasenameRange=*/{92, 98}, /*.ScopeRange=*/{36, 92}, /*.ArgumentsRange=*/{ 108, 158 },
-       /*.QualifiersRange=*/{158, 176} },
+       /*.QualifiersRange=*/{158, 176}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"method",
      /*.scope=*/"Bar<ns::Qux<int>>::C<int (*)(Foo<Bar<int>, Bar<int>>)>::",
      /*.qualifiers=*/" const volatile &&"
    },
    { "_Z7getFuncIfEPFiiiET_",
-     { /*.BasenameRange=*/{6, 13}, /*.ScopeRange=*/{6, 6}, /*.ArgumentsRange=*/{ 20, 27 }, /*.QualifiersRange=*/{38, 38} },
+     { /*.BasenameRange=*/{6, 13}, /*.ScopeRange=*/{6, 6}, /*.ArgumentsRange=*/{ 20, 27 },
+       /*.QualifiersRange=*/{38, 38}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"getFunc",
      /*.scope=*/"",
      /*.qualifiers=*/""
    },
    { "_ZN1f1b1c1gEv",
      { /*.BasenameRange=*/{9, 10}, /*.ScopeRange=*/{0, 9}, /*.ArgumentsRange=*/{ 10, 12 },
-       /*.QualifiersRange=*/{12, 12} },
+       /*.QualifiersRange=*/{12, 12}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"g",
      /*.scope=*/"f::b::c::",
      /*.qualifiers=*/""
    },
    { "_ZN5test73fD1IiEEDTcmtlNS_1DEL_ZNS_1bEEEcvT__EES2_",
      { /*.BasenameRange=*/{45, 48}, /*.ScopeRange=*/{38, 45}, /*.ArgumentsRange=*/{ 53, 58 },
-       /*.QualifiersRange=*/{58, 58} },
+       /*.QualifiersRange=*/{58, 58}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"fD1",
      /*.scope=*/"test7::",
      /*.qualifiers=*/""
    },
    { "_ZN5test73fD1IiEEDTcmtlNS_1DEL_ZNS_1bINDT1cE1dEEEEEcvT__EES2_",
      { /*.BasenameRange=*/{61, 64}, /*.ScopeRange=*/{54, 61}, /*.ArgumentsRange=*/{ 69, 79 },
-       /*.QualifiersRange=*/{79, 79} },
+       /*.QualifiersRange=*/{79, 79}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"fD1",
      /*.scope=*/"test7::",
      /*.qualifiers=*/""
    },
    { "_ZN5test7INDT1cE1dINDT1cE1dEEEE3fD1INDT1cE1dINDT1cE1dEEEEEDTcmtlNS_1DEL_ZNS_1bINDT1cE1dEEEEEcvT__EES2_",
      { /*.BasenameRange=*/{120, 123}, /*.ScopeRange=*/{81, 120}, /*.ArgumentsRange=*/{ 155, 168 },
-       /*.QualifiersRange=*/{168, 168} },
+       /*.QualifiersRange=*/{168, 168}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"fD1",
      /*.scope=*/"test7<decltype(c)::d<decltype(c)::d>>::",
      /*.qualifiers=*/""
    },
    { "_ZN8nlohmann16json_abi_v3_11_310basic_jsonINSt3__13mapENS2_6vectorENS2_12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEEbxydS8_NS0_14adl_serializerENS4_IhNS8_IhEEEEvE5parseIRA29_KcEESE_OT_NS2_8functionIFbiNS0_6detail13parse_event_tERSE_EEEbb",
      { /*.BasenameRange=*/{687, 692}, /*.ScopeRange=*/{343, 687}, /*.ArgumentsRange=*/{ 713, 1174 },
-       /*.QualifiersRange=*/{1174, 1174} },
+       /*.QualifiersRange=*/{1174, 1174}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"parse",
      /*.scope=*/"nlohmann::json_abi_v3_11_3::basic_json<std::__1::map, std::__1::vector, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>, bool, long long, unsigned long long, double, std::__1::allocator, nlohmann::json_abi_v3_11_3::adl_serializer, std::__1::vector<unsigned char, std::__1::allocator<unsigned char>>, void>::",
      /*.qualifiers=*/""
    },
    { "_ZN8nlohmann16json_abi_v3_11_310basic_jsonINSt3__13mapENS2_6vectorENS2_12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEEbxydS8_NS0_14adl_serializerENS4_IhNS8_IhEEEEvEC1EDn",
      { /*.BasenameRange=*/{344, 354}, /*.ScopeRange=*/{0, 344}, /*.ArgumentsRange=*/{ 354, 370 },
-       /*.QualifiersRange=*/{370, 370} },
+       /*.QualifiersRange=*/{370, 370}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"basic_json",
      /*.scope=*/"nlohmann::json_abi_v3_11_3::basic_json<std::__1::map, std::__1::vector, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>, bool, long long, unsigned long long, double, std::__1::allocator, nlohmann::json_abi_v3_11_3::adl_serializer, std::__1::vector<unsigned char, std::__1::allocator<unsigned char>>, void>::",
      /*.qualifiers=*/""
    },
    { "_Z3fppIiEPFPFvvEiEf",
-     { /*.BasenameRange=*/{10, 13}, /*.ScopeRange=*/{10, 10}, /*.ArgumentsRange=*/{ 18, 25 }, /*.QualifiersRange=*/{34,34} },
+     { /*.BasenameRange=*/{10, 13}, /*.ScopeRange=*/{10, 10}, /*.ArgumentsRange=*/{ 18, 25 },
+      /*.QualifiersRange=*/{34,34}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"fpp",
      /*.scope=*/"",
      /*.qualifiers=*/""
    },
    { "_Z3fppIiEPFPFvvEN2ns3FooIiEEEf",
      { /*.BasenameRange=*/{10, 13}, /*.ScopeRange=*/{10, 10}, /*.ArgumentsRange=*/{ 18, 25 },
-       /*.QualifiersRange=*/{43, 43} },
+       /*.QualifiersRange=*/{43, 43}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"fpp",
      /*.scope=*/"",
      /*.qualifiers=*/""
    },
    { "_Z3fppIiEPFPFvPFN2ns3FooIiEENS2_3BarIfE3QuxEEEPFS2_S2_EEf",
      { /*.BasenameRange=*/{10, 13}, /*.ScopeRange=*/{10, 10}, /*.ArgumentsRange=*/{ 18, 25 },
-       /*.QualifiersRange=*/{108, 108} },
+       /*.QualifiersRange=*/{108, 108}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"fpp",
      /*.scope=*/"",
      /*.qualifiers=*/""
    },
    { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvvEiEf",
      { /*.BasenameRange=*/{64, 67}, /*.ScopeRange=*/{10, 64}, /*.ArgumentsRange=*/{ 72, 79 },
-       /*.QualifiersRange=*/{88, 88} },
+       /*.QualifiersRange=*/{88, 88}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"fpp",
      /*.scope=*/"ns::HasFuncs<ns::Foo<ns::Foo<int>::Bar<float>::Qux>>::",
      /*.qualifiers=*/""
    },
    { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvvES2_Ef",
      { /*.BasenameRange=*/{64, 67}, /*.ScopeRange=*/{10, 64}, /*.ArgumentsRange=*/{ 72, 79 },
-       /*.QualifiersRange=*/{97, 97} },
+       /*.QualifiersRange=*/{97, 97}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"fpp",
      /*.scope=*/"ns::HasFuncs<ns::Foo<ns::Foo<int>::Bar<float>::Qux>>::",
      /*.qualifiers=*/"",
    },
    { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvPFS2_S5_EEPFS2_S2_EEf",
      { /*.BasenameRange=*/{64, 67}, /*.ScopeRange=*/{10, 64}, /*.ArgumentsRange=*/{ 72, 79 },
-       /*.QualifiersRange=*/{162, 162} },
+       /*.QualifiersRange=*/{162, 162}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"fpp",
      /*.scope=*/"ns::HasFuncs<ns::Foo<ns::Foo<int>::Bar<float>::Qux>>::",
      /*.qualifiers=*/"",
    },
    { "_ZNKO2ns3ns23Bar3fooIiEEPFPFNS0_3FooIiEEiENS3_IfEEEi",
      { /*.BasenameRange=*/{37, 40}, /*.ScopeRange=*/{23, 37}, /*.ArgumentsRange=*/{ 45, 50 },
-       /*.QualifiersRange=*/{78, 87} },
+       /*.QualifiersRange=*/{78, 87}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"foo",
      /*.scope=*/"ns::ns2::Bar::",
      /*.qualifiers=*/" const &&",
    },
    { "_ZTV11ImageLoader",
      { /*.BasenameRange=*/{0, 0}, /*.ScopeRange=*/{0, 0}, /*.ArgumentsRange=*/{ 0, 0 },
-       /*.QualifiersRange=*/{0, 0} },
+       /*.QualifiersRange=*/{0, 0}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"",
      /*.scope=*/"",
      /*.qualifiers=*/"",
@@ -525,28 +549,28 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
    },
    { "___ZNK5dyld313MachOAnalyzer18forEachInitializerER11DiagnosticsRKNS0_15VMAddrConverterEU13block_pointerFvjEPKv_block_invoke.204",
      { /*.BasenameRange=*/{55, 73}, /*.ScopeRange=*/{33, 55}, /*.ArgumentsRange=*/{ 73, 181 },
-       /*.QualifiersRange=*/{181, 187} },
+       /*.QualifiersRange=*/{181, 187}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"forEachInitializer",
      /*.scope=*/"dyld3::MachOAnalyzer::",
      /*.qualifiers=*/" const",
    },
    { "_ZZN5dyld45startEPNS_10KernelArgsEPvS2_ENK3$_1clEv",
      { /*.BasenameRange=*/{53, 63}, /*.ScopeRange=*/{0, 53}, /*.ArgumentsRange=*/{ 63, 65 },
-       /*.QualifiersRange=*/{65, 71} },
+       /*.QualifiersRange=*/{65, 71}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"operator()",
      /*.scope=*/"dyld4::start(dyld4::KernelArgs*, void*, void*)::$_1::",
      /*.qualifiers=*/" const",
    },
    { "_ZZNK5dyld46Loader38runInitializersBottomUpPlusUpwardLinksERNS_12RuntimeStateEENK3$_0clEv",
      { /*.BasenameRange=*/{88, 98}, /*.ScopeRange=*/{0, 88}, /*.ArgumentsRange=*/{ 98, 100 },
-       /*.QualifiersRange=*/{100, 106} },
+       /*.QualifiersRange=*/{100, 106}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"operator()",
      /*.scope=*/"dyld4::Loader::runInitializersBottomUpPlusUpwardLinks(dyld4::RuntimeState&) const::$_0::",
      /*.qualifiers=*/" const",
    },
    { "_ZZNK5dyld46Loader38runInitializersBottomUpPlusUpwardLinksERNS_12RuntimeStateEENK3$_0clEv.cold",
      { /*.BasenameRange=*/{88, 98}, /*.ScopeRange=*/{0, 88}, /*.ArgumentsRange=*/{ 98, 100 },
-       /*.QualifiersRange=*/{100, 106} },
+       /*.QualifiersRange=*/{100, 106}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
      /*.basename=*/"operator()",
      /*.scope=*/"dyld4::Loader::runInitializersBottomUpPlusUpwardLinks(dyld4::RuntimeState&) const::$_0::",
      /*.qualifiers=*/" const",
@@ -587,26 +611,90 @@ TEST_P(DemanglingPartsTestFixture, DemanglingParts) {
 
   ASSERT_NE(nullptr, Root);
 
-  TrackingOutputBuffer OB;
-  Root->print(OB);
-  auto demangled = std::string_view(OB);
+  auto OB = std::unique_ptr<TrackingOutputBuffer, TrackingOutputBufferDeleter>(
+      new TrackingOutputBuffer());
+  Root->print(*OB);
+  auto demangled = std::string_view(*OB);
 
-  ASSERT_EQ(OB.NameInfo.hasBasename(), valid_basename);
+  ASSERT_EQ(OB->NameInfo.hasBasename(), valid_basename);
 
-  EXPECT_EQ(OB.NameInfo.BasenameRange, info.BasenameRange);
-  EXPECT_EQ(OB.NameInfo.ScopeRange, info.ScopeRange);
-  EXPECT_EQ(OB.NameInfo.ArgumentsRange, info.ArgumentsRange);
-  EXPECT_EQ(OB.NameInfo.QualifiersRange, info.QualifiersRange);
+  EXPECT_EQ(OB->NameInfo.BasenameRange, info.BasenameRange);
+  EXPECT_EQ(OB->NameInfo.ScopeRange, info.ScopeRange);
+  EXPECT_EQ(OB->NameInfo.ArgumentsRange, info.ArgumentsRange);
+  EXPECT_EQ(OB->NameInfo.QualifiersRange, info.QualifiersRange);
 
   auto get_part = [&](const std::pair<size_t, size_t> &loc) {
     return demangled.substr(loc.first, loc.second - loc.first);
   };
 
-  EXPECT_EQ(get_part(OB.NameInfo.BasenameRange), basename);
-  EXPECT_EQ(get_part(OB.NameInfo.ScopeRange), scope);
-  EXPECT_EQ(get_part(OB.NameInfo.QualifiersRange), qualifiers);
-  std::free(OB.getBuffer());
+  EXPECT_EQ(get_part(OB->NameInfo.BasenameRange), basename);
+  EXPECT_EQ(get_part(OB->NameInfo.ScopeRange), scope);
+  EXPECT_EQ(get_part(OB->NameInfo.QualifiersRange), qualifiers);
 }
 
 INSTANTIATE_TEST_SUITE_P(DemanglingPartsTests, DemanglingPartsTestFixture,
                          ::testing::ValuesIn(g_demangling_parts_test_cases));
+
+struct DemanglingInfoCorrectnessTestCase {
+  const char *mangled;
+  const char *demangled;
+};
+
+DemanglingInfoCorrectnessTestCase g_demangling_correctness_test_cases[] = {
+#include "llvm/Testing/Demangle/DemangleTestCases.inc"
+};
+
+struct DemanglingInfoCorrectnessTestFixutre
+    : public ::testing::TestWithParam<DemanglingInfoCorrectnessTestCase> {};
+
+TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
+  auto [mangled, demangled] = GetParam();
+
+  llvm::itanium_demangle::ManglingParser<TestAllocator> Parser(
+      mangled, mangled + ::strlen(mangled));
+
+  const auto *Root = Parser.parse();
+
+  ASSERT_NE(nullptr, Root);
+
+  auto OB = std::unique_ptr<TrackingOutputBuffer, TrackingOutputBufferDeleter>(
+      new TrackingOutputBuffer());
+  Root->print(*OB);
+
+  // Filter out cases which would never show up in frames. We only care about
+  // function names.
+  if (Root->getKind() !=
+          llvm::itanium_demangle::Node::Kind::KFunctionEncoding &&
+      Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix)
+    return;
+
+  ASSERT_TRUE(OB->NameInfo.hasBasename());
+
+  auto tracked_name = llvm::StringRef(*OB);
+
+  auto return_left = tracked_name.slice(0, OB->NameInfo.ScopeRange.first);
+  auto scope = tracked_name.slice(OB->NameInfo.ScopeRange.first,
+                                  OB->NameInfo.ScopeRange.second);
+  auto basename = tracked_name.slice(OB->NameInfo.BasenameRange.first,
+                                     OB->NameInfo.BasenameRange.second);
+  auto template_args = tracked_name.slice(OB->NameInfo.BasenameRange.second,
+                                          OB->NameInfo.ArgumentsRange.first);
+  auto args = tracked_name.slice(OB->NameInfo.ArgumentsRange.first,
+                                 OB->NameInfo.ArgumentsRange.second);
+  auto return_right = tracked_name.slice(OB->NameInfo.ArgumentsRange.second,
+                                         OB->NameInfo.QualifiersRange.first);
+  auto qualifiers = tracked_name.slice(OB->NameInfo.QualifiersRange.first,
+                                       OB->NameInfo.QualifiersRange.second);
+  auto suffix = tracked_name.slice(OB->NameInfo.QualifiersRange.second,
+                                   llvm::StringRef::npos);
+
+  auto reconstructed_name =
+      llvm::join_items("", return_left, scope, basename, template_args, args,
+                       return_right, qualifiers, suffix);
+
+  EXPECT_EQ(reconstructed_name, demangled);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    DemanglingInfoCorrectnessTests, DemanglingInfoCorrectnessTestFixutre,
+    ::testing::ValuesIn(g_demangling_correctness_test_cases));

@@ -173,7 +173,7 @@ class PragmaCommentDecl final
                     PragmaMSCommentKind CommentKind)
       : Decl(PragmaComment, TU, CommentLoc), CommentKind(CommentKind) {}
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   static PragmaCommentDecl *Create(const ASTContext &C, TranslationUnitDecl *DC,
@@ -185,7 +185,7 @@ public:
 
   PragmaMSCommentKind getCommentKind() const { return CommentKind; }
 
-  StringRef getArg() const { return getTrailingObjects<char>(); }
+  StringRef getArg() const { return getTrailingObjects(); }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -207,7 +207,7 @@ class PragmaDetectMismatchDecl final
                            size_t ValueStart)
       : Decl(PragmaDetectMismatch, TU, Loc), ValueStart(ValueStart) {}
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   static PragmaDetectMismatchDecl *Create(const ASTContext &C,
@@ -217,8 +217,8 @@ public:
   static PragmaDetectMismatchDecl *
   CreateDeserialized(ASTContext &C, GlobalDeclID ID, unsigned NameValueSize);
 
-  StringRef getName() const { return getTrailingObjects<char>(); }
-  StringRef getValue() const { return getTrailingObjects<char>() + ValueStart; }
+  StringRef getName() const { return getTrailingObjects(); }
+  StringRef getValue() const { return getTrailingObjects() + ValueStart; }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -1991,7 +1991,7 @@ public:
     /// Get the unqualified lookup results that should be used in this
     /// defaulted function definition.
     ArrayRef<DeclAccessPair> getUnqualifiedLookups() const {
-      return {getTrailingObjects<DeclAccessPair>(), NumLookups};
+      return getTrailingObjects<DeclAccessPair>(NumLookups);
     }
 
     StringLiteral *getDeletedMessage() const {
@@ -4490,18 +4490,18 @@ private:
 };
 
 class FileScopeAsmDecl : public Decl {
-  StringLiteral *AsmString;
+  Expr *AsmString;
   SourceLocation RParenLoc;
 
-  FileScopeAsmDecl(DeclContext *DC, StringLiteral *asmstring,
-                   SourceLocation StartL, SourceLocation EndL)
-    : Decl(FileScopeAsm, DC, StartL), AsmString(asmstring), RParenLoc(EndL) {}
+  FileScopeAsmDecl(DeclContext *DC, Expr *asmstring, SourceLocation StartL,
+                   SourceLocation EndL)
+      : Decl(FileScopeAsm, DC, StartL), AsmString(asmstring), RParenLoc(EndL) {}
 
   virtual void anchor();
 
 public:
-  static FileScopeAsmDecl *Create(ASTContext &C, DeclContext *DC,
-                                  StringLiteral *Str, SourceLocation AsmLoc,
+  static FileScopeAsmDecl *Create(ASTContext &C, DeclContext *DC, Expr *Str,
+                                  SourceLocation AsmLoc,
                                   SourceLocation RParenLoc);
 
   static FileScopeAsmDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
@@ -4513,9 +4513,11 @@ public:
     return SourceRange(getAsmLoc(), getRParenLoc());
   }
 
-  const StringLiteral *getAsmString() const { return AsmString; }
-  StringLiteral *getAsmString() { return AsmString; }
-  void setAsmString(StringLiteral *Asm) { AsmString = Asm; }
+  const Expr *getAsmStringExpr() const { return AsmString; }
+  Expr *getAsmStringExpr() { return AsmString; }
+  void setAsmString(Expr *Asm) { AsmString = Asm; }
+
+  std::string getAsmString() const;
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == FileScopeAsm; }
@@ -4780,13 +4782,9 @@ private:
 
   explicit OutlinedFunctionDecl(DeclContext *DC, unsigned NumParams);
 
-  ImplicitParamDecl *const *getParams() const {
-    return getTrailingObjects<ImplicitParamDecl *>();
-  }
+  ImplicitParamDecl *const *getParams() const { return getTrailingObjects(); }
 
-  ImplicitParamDecl **getParams() {
-    return getTrailingObjects<ImplicitParamDecl *>();
-  }
+  ImplicitParamDecl **getParams() { return getTrailingObjects(); }
 
 public:
   friend class ASTDeclReader;
@@ -4857,13 +4855,9 @@ private:
 
   explicit CapturedDecl(DeclContext *DC, unsigned NumParams);
 
-  ImplicitParamDecl *const *getParams() const {
-    return getTrailingObjects<ImplicitParamDecl *>();
-  }
+  ImplicitParamDecl *const *getParams() const { return getTrailingObjects(); }
 
-  ImplicitParamDecl **getParams() {
-    return getTrailingObjects<ImplicitParamDecl *>();
-  }
+  ImplicitParamDecl **getParams() { return getTrailingObjects(); }
 
 public:
   friend class ASTDeclReader;
@@ -5032,7 +5026,7 @@ public:
 ///   export void foo();
 /// \endcode
 class ExportDecl final : public Decl, public DeclContext {
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 private:
   friend class ASTDeclReader;
@@ -5187,12 +5181,10 @@ class HLSLRootSignatureDecl final
 
   unsigned NumElems;
 
-  llvm::hlsl::rootsig::RootElement *getElems() {
-    return getTrailingObjects<llvm::hlsl::rootsig::RootElement>();
-  }
+  llvm::hlsl::rootsig::RootElement *getElems() { return getTrailingObjects(); }
 
   const llvm::hlsl::rootsig::RootElement *getElems() const {
-    return getTrailingObjects<llvm::hlsl::rootsig::RootElement>();
+    return getTrailingObjects();
   }
 
   HLSLRootSignatureDecl(DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,

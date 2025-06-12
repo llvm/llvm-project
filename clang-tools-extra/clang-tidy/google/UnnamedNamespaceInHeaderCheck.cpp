@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnnamedNamespaceInHeaderCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
@@ -22,8 +21,8 @@ UnnamedNamespaceInHeaderCheck::UnnamedNamespaceInHeaderCheck(
 
 void UnnamedNamespaceInHeaderCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-    Finder->addMatcher(namespaceDecl(isAnonymous()).bind("anonymousNamespace"),
-                       this);
+  Finder->addMatcher(namespaceDecl(isAnonymous()).bind("anonymousNamespace"),
+                     this);
 }
 
 void UnnamedNamespaceInHeaderCheck::check(

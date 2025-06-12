@@ -312,10 +312,17 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   SmallVector<Value> inputOperands;
   SmallVector<Value> inputOperandsFromUnpackedSource;
   SmallVector<AffineMap> indexingMaps;
+  auto hasEquivalentTiles = [](PackOp packOp, UnPackOp unPackOp) {
+    return packOp.getOuterDimsPerm() == unPackOp.getOuterDimsPerm() &&
+           packOp.getInnerDimsPos() == unPackOp.getInnerDimsPos() &&
+           llvm::equal(packOp.getMixedTiles(), unPackOp.getMixedTiles());
+  };
   for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
     auto [packedOperand, packedIndexingMap] = getOrCreatePackedViewOfOperand(
         rewriter, loc, packInfo, genericOp, inputOperand);
-    if (auto unpackOp = inputOperand->get().getDefiningOp<linalg::UnPackOp>()) {
+    auto unpackOp = inputOperand->get().getDefiningOp<linalg::UnPackOp>();
+    auto packOp = packedOperand.getDefiningOp<linalg::PackOp>();
+    if (packOp && unpackOp && hasEquivalentTiles(packOp, unpackOp)) {
       inputOperandsFromUnpackedSource.push_back(unpackOp.getSource());
     } else {
       inputOperandsFromUnpackedSource.push_back(packedOperand);
@@ -324,14 +331,16 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
     indexingMaps.push_back(packedIndexingMap);
   }
 
-  // If the pack and unpack op can be folded:
-  // 1) use unpack op source op for operand to fold unpack -> pack sequence.
-  // 2) init tensor of the generic op can be replaced by the destination of the
-  // pack op.
+  // If the unpack->pack sequences can be folded, replace use the sources of
+  // the unpack ops in any unpack->pack chains on the generic op operands.
   if (isFoldableUnpackPack) {
     inputOperands = inputOperandsFromUnpackedSource;
-    if (auto destPack = dest.getDefiningOp<linalg::PackOp>())
-      dest = destPack.getDest();
+    if (auto destPack = dest.getDefiningOp<linalg::PackOp>()) {
+      auto destUnPack = destPack.getSource().getDefiningOp<linalg::UnPackOp>();
+      if (destUnPack && hasEquivalentTiles(destPack, destUnPack)) {
+        dest = destUnPack.getSource();
+      }
+    }
   }
 
   int64_t numInnerLoops = packInfo.getNumTiledLoops();
@@ -867,11 +876,8 @@ public:
       return failure();
     }
     // Currently only support static inner tile sizes.
-    if (llvm::any_of(packOp.getStaticTiles(), [](int64_t size) {
-          return ShapedType::isDynamic(size);
-        })) {
+    if (llvm::any_of(packOp.getStaticTiles(), ShapedType::isDynamic))
       return failure();
-    }
 
     // User controlled propagation function.
     if (!controlFn(&packOp.getSourceMutable()))
@@ -993,11 +999,8 @@ public:
       return failure();
     }
     // Currently only support static inner tile sizes.
-    if (llvm::any_of(unPackOp.getStaticTiles(), [](int64_t size) {
-          return ShapedType::isDynamic(size);
-        })) {
+    if (llvm::any_of(unPackOp.getStaticTiles(), ShapedType::isDynamic))
       return failure();
-    }
 
     Operation *consumerOp = *result.user_begin();
     return TypeSwitch<Operation *, LogicalResult>(consumerOp)

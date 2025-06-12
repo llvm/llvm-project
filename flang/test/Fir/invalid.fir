@@ -972,8 +972,16 @@ func.func @rec_to_rec(%arg0: !fir.type<t1{i:i32, f:f32}>) -> !fir.type<t2{f:f32,
 // -----
 
 func.func @bad_box_offset(%not_a_box : !fir.ref<i32>) {
-  // expected-error@+1{{'fir.box_offset' op box_ref operand must have !fir.ref<!fir.box<T>> type}}
+  // expected-error@+1{{'fir.box_offset' op box_ref operand must have !fir.ref<!fir.box<T>> or !fir.ref<!fir.boxchar<k>> type}}
   %addr1 = fir.box_offset %not_a_box base_addr : (!fir.ref<i32>) -> !fir.llvm_ptr<!fir.ref<i32>>
+  return
+}
+
+// -----
+
+func.func @bad_box_offset(%boxchar : !fir.ref<!fir.boxchar<1>>) {
+  // expected-error@+1{{'fir.box_offset' op cannot address derived_type field of a fir.boxchar}}
+  %addr1 = fir.box_offset %boxchar derived_type : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
   return
 }
 
@@ -1260,7 +1268,7 @@ func.func @dc_invalid_reduction(%arg0: index, %arg1: index) {
 
 // Should fail when volatility changes from a fir.convert
 func.func @bad_convert_volatile(%arg0: !fir.ref<i32>) -> !fir.ref<i32, volatile> {
-  // expected-error@+1 {{'fir.convert' op cannot convert between volatile and non-volatile types, use fir.volatile_cast instead}}
+  // expected-error@+1 {{op this conversion does not preserve volatility}}
   %0 = fir.convert %arg0 : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
   return %0 : !fir.ref<i32, volatile>
 }
@@ -1269,7 +1277,7 @@ func.func @bad_convert_volatile(%arg0: !fir.ref<i32>) -> !fir.ref<i32, volatile>
 
 // Should fail when volatility changes from a fir.convert
 func.func @bad_convert_volatile2(%arg0: !fir.ref<i32, volatile>) -> !fir.ref<i32> {
-  // expected-error@+1 {{'fir.convert' op cannot convert between volatile and non-volatile types, use fir.volatile_cast instead}}
+  // expected-error@+1 {{op this conversion does not preserve volatility}}
   %0 = fir.convert %arg0 : (!fir.ref<i32, volatile>) -> !fir.ref<i32>
   return %0 : !fir.ref<i32>
 }

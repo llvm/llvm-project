@@ -925,8 +925,9 @@ void RISCVISAInfo::updateImpliedLengths() {
   assert(FLen == 0 && MaxELenFp == 0 && MaxELen == 0 && MinVLen == 0 &&
          "Expected lengths to be initialied to zero");
 
-  // TODO: Handle q extension.
-  if (Exts.count("d"))
+  if (Exts.count("q"))
+    FLen = 128;
+  else if (Exts.count("d"))
     FLen = 64;
   else if (Exts.count("f"))
     FLen = 32;

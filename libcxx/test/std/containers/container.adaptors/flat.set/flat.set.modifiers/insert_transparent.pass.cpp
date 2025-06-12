@@ -123,6 +123,14 @@ void test() {
     ASSERT_SAME_TYPE(decltype(m.insert(m.begin(), Evil())), M::iterator);
     ASSERT_SAME_TYPE(decltype(m.insert(m.begin(), m.end())), void);
   }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_set<std::string, std::less<>>;
+    M m{"alpha", "beta", "epsilon", "eta", "gamma"};
+    auto [iter, inserted] = m.insert("beta");
+    assert(!inserted);
+    assert(iter == m.begin() + 1);
+  }
 }
 
 void test_exception() {

@@ -122,8 +122,9 @@ struct WmmaLoadOpToNVVMLowering
 
     // Create nvvm.mma_load op according to the operand types.
     Value dataPtr = getStridedElementPtr(
-        loc, cast<MemRefType>(subgroupMmaLoadMatrixOp.getSrcMemref().getType()),
-        adaptor.getSrcMemref(), adaptor.getIndices(), rewriter);
+        rewriter, loc,
+        cast<MemRefType>(subgroupMmaLoadMatrixOp.getSrcMemref().getType()),
+        adaptor.getSrcMemref(), adaptor.getIndices());
 
     Value leadingDim = rewriter.create<LLVM::ConstantOp>(
         loc, rewriter.getI32Type(),
@@ -177,9 +178,9 @@ struct WmmaStoreOpToNVVMLowering
     }
 
     Value dataPtr = getStridedElementPtr(
-        loc,
+        rewriter, loc,
         cast<MemRefType>(subgroupMmaStoreMatrixOp.getDstMemref().getType()),
-        adaptor.getDstMemref(), adaptor.getIndices(), rewriter);
+        adaptor.getDstMemref(), adaptor.getIndices());
     Value leadingDim = rewriter.create<LLVM::ConstantOp>(
         loc, rewriter.getI32Type(),
         subgroupMmaStoreMatrixOp.getLeadDimensionAttr());

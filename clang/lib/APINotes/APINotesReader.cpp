@@ -16,10 +16,8 @@
 #include "APINotesFormat.h"
 #include "clang/APINotes/Types.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/DJB.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
 
 namespace clang {
@@ -2048,8 +2046,8 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
     : Results(std::move(R)) {
 
   assert(!Results.empty());
-  assert(std::is_sorted(
-      Results.begin(), Results.end(),
+  assert(llvm::is_sorted(
+      Results,
       [](const std::pair<llvm::VersionTuple, T> &left,
          const std::pair<llvm::VersionTuple, T> &right) -> bool {
         // The comparison function should be reflective, and with expensive

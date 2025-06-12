@@ -37,9 +37,10 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/ModuleToBinary.cpp
   Transforms/NVVMAttachTarget.cpp
   Transforms/ParallelLoopMapper.cpp
+  Transforms/PromoteShuffleToAMDGPU.cpp
   Transforms/ROCDLAttachTarget.cpp
-  Transforms/ShuffleRewriter.cpp
   Transforms/SPIRVAttachTarget.cpp
+  Transforms/ShuffleRewriter.cpp
   Transforms/SubgroupIdRewriter.cpp
   Transforms/SubgroupReduceLowering.cpp
 
@@ -53,8 +54,8 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRParallelLoopMapperEnumsGen
 
   LINK_LIBS PUBLIC
-  MLIRAffineUtils
   MLIRAMDGPUDialect
+  MLIRAffineUtils
   MLIRArithDialect
   MLIRAsyncDialect
   MLIRBufferizationDialect
@@ -68,12 +69,12 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRMemRefDialect
   MLIRNVVMTarget
   MLIRPass
-  MLIRSCFDialect
-  MLIRSideEffectInterfaces
-  MLIRSPIRVTarget
-  MLIRSupport
   MLIRROCDLDialect
   MLIRROCDLTarget
+  MLIRSCFDialect
+  MLIRSPIRVTarget
+  MLIRSideEffectInterfaces
+  MLIRSupport
   MLIRTransformUtils
   MLIRVectorDialect
   )

@@ -498,6 +498,24 @@ getDynamicCustomAssemblyFormatAttr(TestDialect *testDialect) {
 }
 
 //===----------------------------------------------------------------------===//
+// SlashAttr
+//===----------------------------------------------------------------------===//
+
+Attribute SlashAttr::parse(AsmParser &parser, Type type) {
+  int lhs, rhs;
+
+  if (parser.parseLess() || parser.parseInteger(lhs) || parser.parseSlash() ||
+      parser.parseInteger(rhs) || parser.parseGreater())
+    return Attribute();
+
+  return SlashAttr::get(parser.getContext(), lhs, rhs);
+}
+
+void SlashAttr::print(AsmPrinter &printer) const {
+  printer << "<" << getLhs() << " / " << getRhs() << ">";
+}
+
+//===----------------------------------------------------------------------===//
 // TestDialect
 //===----------------------------------------------------------------------===//
 

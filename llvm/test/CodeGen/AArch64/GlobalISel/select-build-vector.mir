@@ -15,23 +15,24 @@ body:             |
 
     ; CHECK-LABEL: name: test_f32
     ; CHECK: liveins: $s0, $s1, $s2, $s3
-    ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-    ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY $s2
-    ; CHECK: [[COPY3:%[0-9]+]]:fpr32 = COPY $s3
-    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.ssub
-    ; CHECK: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY1]], %subreg.ssub
-    ; CHECK: [[INSvi32lane:%[0-9]+]]:fpr128 = INSvi32lane [[INSERT_SUBREG]], 1, [[INSERT_SUBREG1]], 0
-    ; CHECK: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[COPY2]], %subreg.ssub
-    ; CHECK: [[INSvi32lane1:%[0-9]+]]:fpr128 = INSvi32lane [[INSvi32lane]], 2, [[INSERT_SUBREG2]], 0
-    ; CHECK: [[DEF3:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG3:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF3]], [[COPY3]], %subreg.ssub
-    ; CHECK: [[INSvi32lane2:%[0-9]+]]:fpr128 = INSvi32lane [[INSvi32lane1]], 3, [[INSERT_SUBREG3]], 0
-    ; CHECK: $q0 = COPY [[INSvi32lane2]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr32 = COPY $s3
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.ssub
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY1]], %subreg.ssub
+    ; CHECK-NEXT: [[INSvi32lane:%[0-9]+]]:fpr128 = INSvi32lane [[INSERT_SUBREG]], 1, [[INSERT_SUBREG1]], 0
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[COPY2]], %subreg.ssub
+    ; CHECK-NEXT: [[INSvi32lane1:%[0-9]+]]:fpr128 = INSvi32lane [[INSvi32lane]], 2, [[INSERT_SUBREG2]], 0
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF3]], [[COPY3]], %subreg.ssub
+    ; CHECK-NEXT: [[INSvi32lane2:%[0-9]+]]:fpr128 = INSvi32lane [[INSvi32lane1]], 3, [[INSERT_SUBREG3]], 0
+    ; CHECK-NEXT: $q0 = COPY [[INSvi32lane2]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr(s32) = COPY $s0
     %1:fpr(s32) = COPY $s1
     %2:fpr(s32) = COPY $s2
@@ -56,15 +57,16 @@ body:             |
 
     ; CHECK-LABEL: name: test_f64
     ; CHECK: liveins: $d0, $d1, $d2, $d3
-    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
-    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
-    ; CHECK: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY1]], %subreg.dsub
-    ; CHECK: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG]], 1, [[INSERT_SUBREG1]], 0
-    ; CHECK: $q0 = COPY [[INSvi64lane]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY1]], %subreg.dsub
+    ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG]], 1, [[INSERT_SUBREG1]], 0
+    ; CHECK-NEXT: $q0 = COPY [[INSvi64lane]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr(s64) = COPY $d0
     %1:fpr(s64) = COPY $d1
     %4:fpr(<2 x s64>) = G_BUILD_VECTOR %0(s64), %1(s64)
@@ -87,17 +89,18 @@ body:             |
 
     ; CHECK-LABEL: name: test_i32
     ; CHECK: liveins: $w0, $w1, $w2, $w3
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32all = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
-    ; CHECK: [[COPY3:%[0-9]+]]:gpr32 = COPY $w3
-    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.ssub
-    ; CHECK: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG]], 1, [[COPY1]]
-    ; CHECK: [[INSvi32gpr1:%[0-9]+]]:fpr128 = INSvi32gpr [[INSvi32gpr]], 2, [[COPY2]]
-    ; CHECK: [[INSvi32gpr2:%[0-9]+]]:fpr128 = INSvi32gpr [[INSvi32gpr1]], 3, [[COPY3]]
-    ; CHECK: $q0 = COPY [[INSvi32gpr2]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32all = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY $w3
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.ssub
+    ; CHECK-NEXT: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG]], 1, [[COPY1]]
+    ; CHECK-NEXT: [[INSvi32gpr1:%[0-9]+]]:fpr128 = INSvi32gpr [[INSvi32gpr]], 2, [[COPY2]]
+    ; CHECK-NEXT: [[INSvi32gpr2:%[0-9]+]]:fpr128 = INSvi32gpr [[INSvi32gpr1]], 3, [[COPY3]]
+    ; CHECK-NEXT: $q0 = COPY [[INSvi32gpr2]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = COPY $w1
     %2:gpr(s32) = COPY $w2
@@ -122,13 +125,14 @@ body:             |
 
     ; CHECK-LABEL: name: test_i64
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
-    ; CHECK: [[INSvi64gpr:%[0-9]+]]:fpr128 = INSvi64gpr [[INSERT_SUBREG]], 1, [[COPY1]]
-    ; CHECK: $q0 = COPY [[INSvi64gpr]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
+    ; CHECK-NEXT: [[INSvi64gpr:%[0-9]+]]:fpr128 = INSvi64gpr [[INSERT_SUBREG]], 1, [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[INSvi64gpr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %4:fpr(<2 x s64>) = G_BUILD_VECTOR %0(s64), %1(s64)
@@ -151,13 +155,14 @@ body:             |
 
     ; CHECK-LABEL: name: test_p0
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
-    ; CHECK: [[INSvi64gpr:%[0-9]+]]:fpr128 = INSvi64gpr [[INSERT_SUBREG]], 1, [[COPY1]]
-    ; CHECK: $q0 = COPY [[INSvi64gpr]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
+    ; CHECK-NEXT: [[INSvi64gpr:%[0-9]+]]:fpr128 = INSvi64gpr [[INSERT_SUBREG]], 1, [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[INSvi64gpr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:gpr(p0) = COPY $x0
     %1:gpr(p0) = COPY $x1
     %4:fpr(<2 x p0>) = G_BUILD_VECTOR %0(p0), %1(p0)
@@ -181,9 +186,10 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4s32_zero
     ; CHECK: liveins: $x0
-    ; CHECK: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
-    ; CHECK: $q0 = COPY [[MOVIv2d_ns]]
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
+    ; CHECK-NEXT: $q0 = COPY [[MOVIv2d_ns]]
+    ; CHECK-NEXT: RET_ReallyLR
     %0:gpr(p0) = COPY $x0
     %2:gpr(s32) = G_CONSTANT i32 0
     %3:fpr(s32) = COPY %2(s32)
@@ -210,10 +216,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8s8_zero
     ; CHECK: liveins: $x0
-    ; CHECK: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY [[MOVIv2d_ns]].dsub
-    ; CHECK: $d0 = COPY [[COPY]]
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY [[MOVIv2d_ns]].dsub
+    ; CHECK-NEXT: $d0 = COPY [[COPY]]
+    ; CHECK-NEXT: RET_ReallyLR
     %0:gpr(p0) = COPY $x0
     %2:gpr(s8) = G_CONSTANT i8 0
     %3:fpr(s8) = COPY %2(s8)
@@ -241,10 +248,11 @@ body:             |
 
     ; CHECK-LABEL: name: undef_elts_to_subreg_to_reg
     ; CHECK: liveins: $s0
-    ; CHECK: %val:fpr32 = COPY $s0
-    ; CHECK: %bv:fpr128 = SUBREG_TO_REG 0, %val, %subreg.ssub
-    ; CHECK: $q0 = COPY %bv
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val:fpr32 = COPY $s0
+    ; CHECK-NEXT: %bv:fpr128 = SUBREG_TO_REG 0, %val, %subreg.ssub
+    ; CHECK-NEXT: $q0 = COPY %bv
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %val:fpr(s32) = COPY $s0
     %undef:fpr(s32) = G_IMPLICIT_DEF
     %bv:fpr(<4 x s32>) = G_BUILD_VECTOR %val(s32), %undef(s32), %undef(s32), %undef(s32)
@@ -265,11 +273,12 @@ body:             |
 
     ; CHECK-LABEL: name: undef_elts_different_regbanks
     ; CHECK: liveins: $w0
-    ; CHECK: %val:gpr32all = COPY $w0
-    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: %bv:fpr128 = INSERT_SUBREG [[DEF]], %val, %subreg.ssub
-    ; CHECK: $q0 = COPY %bv
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val:gpr32all = COPY $w0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: %bv:fpr128 = INSERT_SUBREG [[DEF]], %val, %subreg.ssub
+    ; CHECK-NEXT: $q0 = COPY %bv
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %val:gpr(s32) = COPY $w0
     %undef:gpr(s32) = G_IMPLICIT_DEF
     %bv:fpr(<4 x s32>) = G_BUILD_VECTOR %val(s32), %undef(s32), %undef(s32), %undef(s32)

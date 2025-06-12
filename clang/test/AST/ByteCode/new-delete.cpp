@@ -682,17 +682,16 @@ namespace OperatorNewDelete {
   }
   static_assert(zeroAlloc());
 
-  /// FIXME: This is broken in the current interpreter.
   constexpr int arrayAlloc() {
     int *F = std::allocator<int>().allocate(2);
-    F[0] = 10; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+    F[0] = 10; // both-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
     F[1] = 13;
     int Res = F[1] + F[0];
     std::allocator<int>().deallocate(F);
     return Res;
   }
-  static_assert(arrayAlloc() == 23); // ref-error {{not an integral constant expression}} \
-                                     // ref-note {{in call to}}
+  static_assert(arrayAlloc() == 23); // both-error {{not an integral constant expression}} \
+                                     // both-note {{in call to}}
 
   struct S {
     int i;

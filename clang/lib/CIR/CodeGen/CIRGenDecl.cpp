@@ -50,8 +50,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
   // A normal fixed sized variable becomes an alloca in the entry block,
   mlir::Type allocaTy = convertTypeForMem(ty);
   // Create the temp alloca and declare variable using it.
-  address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
-                             /*insertIntoFnEntryBlock=*/false);
+  address = createTempAlloca(allocaTy, alignment, loc, d.getName());
   declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()), alignment);
 
   emission.Addr = address;
@@ -322,6 +321,8 @@ void CIRGenFunction::emitDecl(const Decl &d) {
   case Decl::ObjCTypeParam:
   case Decl::Binding:
   case Decl::UnresolvedUsingIfExists:
+  case Decl::HLSLBuffer:
+  case Decl::HLSLRootSignature:
     llvm_unreachable("Declaration should not be in declstmts!");
 
   case Decl::Function:     // void X();
@@ -374,7 +375,6 @@ void CIRGenFunction::emitDecl(const Decl &d) {
     return;
   }
   case Decl::ImplicitConceptSpecialization:
-  case Decl::HLSLBuffer:
   case Decl::TopLevelStmt:
   case Decl::UsingPack:
   case Decl::Decomposition: // This could be moved to join Decl::Var

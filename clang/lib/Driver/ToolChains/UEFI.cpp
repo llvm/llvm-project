@@ -7,21 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "UEFI.h"
-#include "CommonArgs.h"
-#include "Darwin.h"
-#include "clang/Basic/CharInfo.h"
-#include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 

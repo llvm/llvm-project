@@ -24,24 +24,20 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/Version.h"
-#include "clang/Basic/Visibility.h"
 #include "clang/Basic/XRayInstr.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
-#include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
-#include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
@@ -49,9 +45,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/FloatingPointMode.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -87,7 +81,6 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
-#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
@@ -125,21 +118,14 @@ static Expected<std::optional<uint32_t>> parseToleranceOption(StringRef Arg) {
 // Initialization.
 //===----------------------------------------------------------------------===//
 
-namespace {
 template <class T> std::shared_ptr<T> make_shared_copy(const T &X) {
   return std::make_shared<T>(X);
 }
 
-template <class T>
-llvm::IntrusiveRefCntPtr<T> makeIntrusiveRefCntCopy(const T &X) {
-  return llvm::makeIntrusiveRefCnt<T>(X);
-}
-} // namespace
-
 CompilerInvocationBase::CompilerInvocationBase()
     : LangOpts(std::make_shared<LangOptions>()),
       TargetOpts(std::make_shared<TargetOptions>()),
-      DiagnosticOpts(llvm::makeIntrusiveRefCnt<DiagnosticOptions>()),
+      DiagnosticOpts(std::make_shared<DiagnosticOptions>()),
       HSOpts(std::make_shared<HeaderSearchOptions>()),
       PPOpts(std::make_shared<PreprocessorOptions>()),
       AnalyzerOpts(std::make_shared<AnalyzerOptions>()),
@@ -156,7 +142,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
   if (this != &X) {
     LangOpts = make_shared_copy(X.getLangOpts());
     TargetOpts = make_shared_copy(X.getTargetOpts());
-    DiagnosticOpts = makeIntrusiveRefCntCopy(X.getDiagnosticOpts());
+    DiagnosticOpts = make_shared_copy(X.getDiagnosticOpts());
     HSOpts = make_shared_copy(X.getHeaderSearchOpts());
     PPOpts = make_shared_copy(X.getPreprocessorOpts());
     AnalyzerOpts = make_shared_copy(X.getAnalyzerOpts());
@@ -202,21 +188,12 @@ CompilerInvocation::operator=(const CowCompilerInvocation &X) {
   return *this;
 }
 
-namespace {
 template <typename T>
 T &ensureOwned(std::shared_ptr<T> &Storage) {
   if (Storage.use_count() > 1)
     Storage = std::make_shared<T>(*Storage);
   return *Storage;
 }
-
-template <typename T>
-T &ensureOwned(llvm::IntrusiveRefCntPtr<T> &Storage) {
-  if (Storage.useCount() > 1)
-    Storage = llvm::makeIntrusiveRefCnt<T>(*Storage);
-  return *Storage;
-}
-} // namespace
 
 LangOptions &CowCompilerInvocation::getMutLangOpts() {
   return ensureOwned(LangOpts);
@@ -844,7 +821,8 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
   };
 
   // Setup a dummy DiagnosticsEngine.
-  DiagnosticsEngine DummyDiags(new DiagnosticIDs(), new DiagnosticOptions());
+  DiagnosticOptions DummyDiagOpts;
+  DiagnosticsEngine DummyDiags(new DiagnosticIDs(), DummyDiagOpts);
   DummyDiags.setClient(new TextDiagnosticBuffer());
 
   // Run the first parse on the original arguments with the dummy invocation and
@@ -2055,8 +2033,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   // The memory profile runtime appends the pid to make this name more unique.
   const char *MemProfileBasename = "memprof.profraw";
   if (Args.hasArg(OPT_fmemory_profile_EQ)) {
-    SmallString<128> Path(
-        std::string(Args.getLastArgValue(OPT_fmemory_profile_EQ)));
+    SmallString<128> Path(Args.getLastArgValue(OPT_fmemory_profile_EQ));
     llvm::sys::path::append(Path, MemProfileBasename);
     Opts.MemoryProfileOutput = std::string(Path);
   } else if (Args.hasArg(OPT_fmemory_profile))
@@ -2664,9 +2641,11 @@ clang::CreateAndPopulateDiagOpts(ArrayRef<const char *> Argv) {
 bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
                                 DiagnosticsEngine *Diags,
                                 bool DefaultDiagColor) {
+  std::optional<DiagnosticOptions> IgnoringDiagOpts;
   std::optional<DiagnosticsEngine> IgnoringDiags;
   if (!Diags) {
-    IgnoringDiags.emplace(new DiagnosticIDs(), new DiagnosticOptions(),
+    IgnoringDiagOpts.emplace();
+    IgnoringDiags.emplace(new DiagnosticIDs(), *IgnoringDiagOpts,
                           new IgnoringDiagConsumer());
     Diags = &*IgnoringDiags;
   }
@@ -3112,9 +3091,11 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (const Arg *A = Args.getLastArg(OPT_code_completion_at)) {
     Opts.CodeCompletionAt =
       ParsedSourceLocation::FromString(A->getValue());
-    if (Opts.CodeCompletionAt.FileName.empty())
+    if (Opts.CodeCompletionAt.FileName.empty()) {
       Diags.Report(diag::err_drv_invalid_value)
-        << A->getAsString(Args) << A->getValue();
+          << A->getAsString(Args) << A->getValue();
+      Diags.Report(diag::note_command_line_code_loc_requirement);
+    }
   }
 
   Opts.Plugins = Args.getAllArgValues(OPT_load);

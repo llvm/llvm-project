@@ -6,6 +6,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,X64-AVX,AVX1,X64-AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512dq,+avx512vl | FileCheck %s --check-prefixes=AVX,X64-AVX,AVX512,X64-AVX512
 
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mattr=+sse2 -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s --check-prefixes=SSE,X86-SSE
+
 ; Tests for SSE2 and below, without SSE3+.
 
 define void @test1(ptr %r, ptr %A, double %B) nounwind  {
@@ -668,7 +670,7 @@ define <4 x i32> @PR19721(<4 x i32> %i) {
 ; AVX-LABEL: PR19721:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    ret{{[l|q]}}
 ;
 ; X64-SSE-LABEL: PR19721:

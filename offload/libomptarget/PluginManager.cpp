@@ -286,16 +286,16 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   }
   PM->RTLsMtx.unlock();
 
-  bool UseAutoZeroCopy = Plugins.size() > 0;
+  bool UseAutoZeroCopy = false;
 
   auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
-  for (const auto &Device : *ExclusiveDevicesAccessor)
-    UseAutoZeroCopy &= Device->useAutoZeroCopy();
+  // APUs are homogeneous set of GPUs. Check the first device for
+  // configuring Auto Zero-Copy.
+  if (ExclusiveDevicesAccessor->size() > 0) {
+    auto &Device = *(*ExclusiveDevicesAccessor)[0];
+    UseAutoZeroCopy = Device.useAutoZeroCopy();
+  }
 
-  // Auto Zero-Copy can only be currently triggered when the system is an
-  // homogeneous APU architecture without attached discrete GPUs.
-  // If all devices suggest to use it, change requirement flags to trigger
-  // zero-copy behavior when mapping memory.
   if (UseAutoZeroCopy)
     addRequirements(OMPX_REQ_AUTO_ZERO_COPY);
 
@@ -538,9 +538,9 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
   {
     auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
     if (DeviceNo >= ExclusiveDevicesAccessor->size())
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Device number '%i' out of range, only %i devices available",
+      return error::createOffloadError(
+          error::ErrorCode::INVALID_VALUE,
+          "device number '%i' out of range, only %i devices available",
           DeviceNo, ExclusiveDevicesAccessor->size());
 
     DevicePtr = &*(*ExclusiveDevicesAccessor)[DeviceNo];
@@ -549,8 +549,8 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
   // Check whether global data has been mapped for this device
   if (DevicePtr->hasPendingImages())
     if (loadImagesOntoDevice(*DevicePtr) != OFFLOAD_SUCCESS)
-      return createStringError(inconvertibleErrorCode(),
-                               "Failed to load images on device '%i'",
-                               DeviceNo);
+      return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
+                                       "failed to load images on device '%i'",
+                                       DeviceNo);
   return *DevicePtr;
 }

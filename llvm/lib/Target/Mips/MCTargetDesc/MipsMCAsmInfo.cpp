@@ -53,5 +53,7 @@ MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo() {
 
   ExceptionsType = ExceptionHandling::WinEH;
 
+  PrivateGlobalPrefix = ".L";
+  PrivateLabelPrefix = ".L";
   AllowAtInName = true;
 }

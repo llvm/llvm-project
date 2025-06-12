@@ -55,6 +55,13 @@ static LogicalResult customTypeResultConstraint(PatternRewriter &rewriter,
   return failure();
 }
 
+// Custom constraint that always returns failure
+static LogicalResult customConstraintFailure(PatternRewriter & /*rewriter*/,
+                                             PDLResultList & /*results*/,
+                                             ArrayRef<PDLValue> /*args*/) {
+  return failure();
+}
+
 // Custom constraint that returns a type range of variable length if the op is
 // named test.success_op
 static LogicalResult customTypeRangeResultConstraint(PatternRewriter &rewriter,
@@ -150,6 +157,8 @@ struct TestPDLByteCodePass
                                           customValueResultConstraint);
     pdlPattern.registerConstraintFunction("op_constr_return_type",
                                           customTypeResultConstraint);
+    pdlPattern.registerConstraintFunction("op_multiple_returns_failure",
+                                          customConstraintFailure);
     pdlPattern.registerConstraintFunction("op_constr_return_type_range",
                                           customTypeRangeResultConstraint);
     pdlPattern.registerRewriteFunction("creator", customCreate);

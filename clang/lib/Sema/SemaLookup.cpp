@@ -927,13 +927,25 @@ bool Sema::LookupBuiltin(LookupResult &R) {
       NameKind == Sema::LookupRedeclarationWithLinkage) {
     IdentifierInfo *II = R.getLookupName().getAsIdentifierInfo();
     if (II) {
-      if (getLangOpts().CPlusPlus && NameKind == Sema::LookupOrdinaryName) {
-#define BuiltinTemplate(BIName)                                                \
+      if (NameKind == Sema::LookupOrdinaryName) {
+        if (getLangOpts().CPlusPlus) {
+#define BuiltinTemplate(BIName)
+#define CPlusPlusBuiltinTemplate(BIName)                                       \
   if (II == getASTContext().get##BIName##Name()) {                             \
     R.addDecl(getASTContext().get##BIName##Decl());                            \
     return true;                                                               \
   }
 #include "clang/Basic/BuiltinTemplates.inc"
+        }
+        if (getLangOpts().HLSL) {
+#define BuiltinTemplate(BIName)
+#define HLSLBuiltinTemplate(BIName)                                            \
+  if (II == getASTContext().get##BIName##Name()) {                             \
+    R.addDecl(getASTContext().get##BIName##Decl());                            \
+    return true;                                                               \
+  }
+#include "clang/Basic/BuiltinTemplates.inc"
+        }
       }
 
       // Check if this is an OpenCL Builtin, and if so, insert its overloads.
@@ -946,7 +958,8 @@ bool Sema::LookupBuiltin(LookupResult &R) {
         }
       }
 
-      if (RISCV().DeclareRVVBuiltins || RISCV().DeclareSiFiveVectorBuiltins) {
+      if (RISCV().DeclareRVVBuiltins || RISCV().DeclareSiFiveVectorBuiltins ||
+          RISCV().DeclareAndesVectorBuiltins) {
         if (!RISCV().IntrinsicManager)
           RISCV().IntrinsicManager = CreateRISCVIntrinsicManager(*this);
 
@@ -1965,6 +1978,8 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   if (D->isModulePrivate())
     return false;
 
+  Module *DeclTopModule = DeclModule->getTopLevelModule();
+
   // [module.reach]/p1
   //   A translation unit U is necessarily reachable from a point P if U is a
   //   module interface unit on which the translation unit containing P has an
@@ -1983,17 +1998,28 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   //
   // Here we only check for the first condition. Since we couldn't see
   // DeclModule if it isn't (transitively) imported.
-  if (DeclModule->getTopLevelModule()->isModuleInterfaceUnit())
+  if (DeclTopModule->isModuleInterfaceUnit())
     return true;
 
-  // [module.reach]/p2
+  // [module.reach]/p1,2
+  //   A translation unit U is necessarily reachable from a point P if U is a
+  //   module interface unit on which the translation unit containing P has an
+  //   interface dependency, or the translation unit containing P imports U, in
+  //   either case prior to P
+  //
   //   Additional translation units on
   //   which the point within the program has an interface dependency may be
   //   considered reachable, but it is unspecified which are and under what
   //   circumstances.
-  //
-  // The decision here is to treat all additional tranditional units as
-  // unreachable.
+  Module *CurrentM = SemaRef.getCurrentModule();
+
+  // Directly imported module are necessarily reachable.
+  // Since we can't export import a module implementation partition unit, we
+  // don't need to count for Exports here.
+  if (CurrentM && CurrentM->getTopLevelModule()->Imports.count(DeclTopModule))
+    return true;
+
+  // Then we treat all module implementation partition unit as unreachable.
   return false;
 }
 
@@ -3269,6 +3295,11 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
 
     case Type::HLSLAttributedResource:
       T = cast<HLSLAttributedResourceType>(T)->getWrappedType().getTypePtr();
+      break;
+
+    // Inline SPIR-V types are treated as fundamental types.
+    case Type::HLSLInlineSpirv:
+      break;
     }
 
     if (Queue.empty())

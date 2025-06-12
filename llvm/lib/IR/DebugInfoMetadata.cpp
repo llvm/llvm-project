@@ -22,6 +22,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 #include <numeric>
 #include <optional>
@@ -36,7 +37,7 @@ cl::opt<bool> EnableFSDiscriminator(
 
 // When true, preserves line and column number by picking one of the merged
 // location info in a deterministic manner to assist sample based PGO.
-cl::opt<bool> PickMergedSourceLocations(
+LLVM_ABI cl::opt<bool> PickMergedSourceLocations(
     "pick-merged-source-locations", cl::init(false), cl::Hidden,
     cl::desc("Preserve line and column number when merging locations."));
 } // namespace llvm

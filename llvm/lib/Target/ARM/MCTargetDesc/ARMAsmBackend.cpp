@@ -20,7 +20,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -206,19 +205,6 @@ MCFixupKindInfo ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
               : InfosBE)[Kind - FirstTargetFixupKind];
 }
 
-void ARMAsmBackend::handleAssemblerFlag(MCAssemblerFlag Flag) {
-  switch (Flag) {
-  default:
-    break;
-  case MCAF_Code16:
-    setIsThumb(true);
-    break;
-  case MCAF_Code32:
-    setIsThumb(false);
-    break;
-  }
-}
-
 unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op,
                                          const MCSubtargetInfo &STI) const {
   bool HasThumb2 = STI.hasFeature(ARM::FeatureThumb2);
@@ -354,13 +340,12 @@ static bool needsInterworking(const MCAssembler &Asm, const MCSymbol *Sym,
   return false;
 }
 
-bool ARMAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                                 const MCFixup &Fixup,
+bool ARMAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                  const MCValue &Target,
                                                  uint64_t Value,
                                                  bool Resolved) const {
   const MCSymbol *Sym = Target.getAddSym();
-  if (needsInterworking(Asm, Sym, Fixup.getTargetKind()))
+  if (needsInterworking(*Asm, Sym, Fixup.getTargetKind()))
     return true;
 
   if (!Resolved)
@@ -405,7 +390,7 @@ bool ARMAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   const uint16_t Thumb2_16bitNopEncoding = 0xbf00; // NOP
   const uint32_t ARMv4_NopEncoding = 0xe1a00000;   // using MOV r0,r0
   const uint32_t ARMv6T2_NopEncoding = 0xe320f000; // NOP
-  if (isThumb()) {
+  if (STI->hasFeature(ARM::ModeThumb)) {
     const uint16_t nopEncoding =
         hasNOP(STI) ? Thumb2_16bitNopEncoding : Thumb1_16bitNopEncoding;
     uint64_t NumNops = Count / 2;
@@ -488,7 +473,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   // Other relocation types don't want this bit though (branches couldn't encode
   // it if it *was* present, and no other relocations exist) and it can
   // interfere with checking valid expressions.
-  bool IsMachO = Asm.getContext().getObjectFileType() == MCContext::IsMachO;
+  bool IsMachO = getContext().getObjectFileType() == MCContext::IsMachO;
   if (const auto *SA = Target.getAddSym()) {
     if (IsMachO && Asm.isThumbFunc(SA) && SA->isExternal() &&
         (Kind == FK_Data_4 || Kind == ARM::fixup_arm_movw_lo16 ||
@@ -634,7 +619,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     // Offset by 8 just as above.
     if (const MCSymbolRefExpr *SRE =
             dyn_cast<MCSymbolRefExpr>(Fixup.getValue()))
-      if (getSpecifier(SRE) == ARMMCExpr::VK_TLSCALL)
+      if (SRE->getSpecifier() == ARMMCExpr::VK_TLSCALL)
         return 0;
     return 0xffffff & (Value >> 2);
   case ARM::fixup_t2_uncondbranch: {
@@ -761,7 +746,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     uint32_t offset = (Value - 4) >> 2;
     if (const MCSymbolRefExpr *SRE =
             dyn_cast<MCSymbolRefExpr>(Fixup.getValue()))
-      if (getSpecifier(SRE) == ARMMCExpr::VK_TLSCALL)
+      if (SRE->getSpecifier() == ARMMCExpr::VK_TLSCALL)
         offset = 0;
     uint32_t signBit = (offset & 0x400000) >> 22;
     uint32_t I1Bit = (offset & 0x200000) >> 21;
@@ -982,10 +967,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   }
 }
 
-bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                          const MCFixup &Fixup,
-                                          const MCValue &Target,
-                                          const MCSubtargetInfo *STI) {
+bool ARMAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
+                                          const MCValue &Target) {
   const MCSymbol *Sym = Target.getAddSym();
   const unsigned FixupKind = Fixup.getKind();
   if (FixupKind == ARM::fixup_arm_thumb_bl) {
@@ -1001,7 +984,7 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   }
   // Create relocations for unconditional branches to function symbols with
   // different execution mode in ELF binaries.
-  if (needsInterworking(Asm, Sym, Fixup.getTargetKind()))
+  if (needsInterworking(*Asm, Sym, Fixup.getTargetKind()))
     return true;
   // We must always generate a relocation for BL/BLX instructions if we have
   // a symbol to reference, as the linker relies on knowing the destination
@@ -1141,16 +1124,16 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
   }
 }
 
-void ARMAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void ARMAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved,
-                               const MCSubtargetInfo* STI) const {
+                               bool IsResolved) {
   auto Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
-  MCContext &Ctx = Asm.getContext();
-  Value = adjustFixupValue(Asm, Fixup, Target, Value, IsResolved, Ctx, STI);
+  MCContext &Ctx = getContext();
+  Value = adjustFixupValue(*Asm, Fixup, Target, Value, IsResolved, Ctx,
+                           getSubtargetInfo(F));
   if (!Value)
     return; // Doesn't change encoding.
   const unsigned NumBytes = getFixupKindNumBytes(Kind);
@@ -1407,14 +1390,13 @@ static MCAsmBackend *createARMAsmBackend(const Target &T,
     return new ARMAsmBackendDarwin(T, STI, MRI);
   case Triple::COFF:
     assert(TheTriple.isOSWindows() && "non-Windows ARM COFF is not supported");
-    return new ARMAsmBackendWinCOFF(T, STI.getTargetTriple().isThumb());
+    return new ARMAsmBackendWinCOFF(T);
   case Triple::ELF:
     assert(TheTriple.isOSBinFormatELF() && "using ELF for non-ELF target");
     uint8_t OSABI = Options.FDPIC
                         ? static_cast<uint8_t>(ELF::ELFOSABI_ARM_FDPIC)
                         : MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
-    return new ARMAsmBackendELF(T, STI.getTargetTriple().isThumb(), OSABI,
-                                Endian);
+    return new ARMAsmBackendELF(T, OSABI, Endian);
   }
 }
 

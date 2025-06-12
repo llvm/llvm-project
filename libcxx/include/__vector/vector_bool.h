@@ -512,7 +512,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_t __hash_code() const _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI size_t __hash_code() const _NOEXCEPT;
 
   friend class __bit_reference<vector>;
   friend class __bit_const_reference<vector>;
@@ -1093,7 +1093,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool vector<bool, _Allocator>::__invariants() cons
 }
 
 template <class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 size_t vector<bool, _Allocator>::__hash_code() const _NOEXCEPT {
+size_t vector<bool, _Allocator>::__hash_code() const _NOEXCEPT {
   size_t __h = 0;
   // do middle whole words
   size_type __n         = __size_;
@@ -1110,8 +1110,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 size_t vector<bool, _Allocator>::__hash_code() con
 
 template <class _Allocator>
 struct hash<vector<bool, _Allocator> > : public __unary_function<vector<bool, _Allocator>, size_t> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_t
-  operator()(const vector<bool, _Allocator>& __vec) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const vector<bool, _Allocator>& __vec) const _NOEXCEPT {
     return __vec.__hash_code();
   }
 };

@@ -23,10 +23,10 @@ define void @ld_st_shared_f32(i32 %i, float %v) {
   ; load cast
   %1 = load float, ptr addrspacecast (ptr addrspace(3) @scalar to ptr), align 4
   call void @use(float %1)
-; PTX: ld.shared.b32 %f{{[0-9]+}}, [scalar];
+; PTX: ld.shared.b32 %r{{[0-9]+}}, [scalar];
   ; store cast
   store float %v, ptr addrspacecast (ptr addrspace(3) @scalar to ptr), align 4
-; PTX: st.shared.b32 [scalar], %f{{[0-9]+}};
+; PTX: st.shared.b32 [scalar], %r{{[0-9]+}};
   ; use syncthreads to disable optimizations across components
   call void @llvm.nvvm.barrier0()
 ; PTX: bar.sync 0;
@@ -35,20 +35,20 @@ define void @ld_st_shared_f32(i32 %i, float %v) {
   %2 = addrspacecast ptr addrspace(3) @scalar to ptr
   %3 = load float, ptr %2, align 4
   call void @use(float %3)
-; PTX: ld.shared.b32 %f{{[0-9]+}}, [scalar];
+; PTX: ld.shared.b32 %r{{[0-9]+}}, [scalar];
   ; cast; store
   store float %v, ptr %2, align 4
-; PTX: st.shared.b32 [scalar], %f{{[0-9]+}};
+; PTX: st.shared.b32 [scalar], %r{{[0-9]+}};
   call void @llvm.nvvm.barrier0()
 ; PTX: bar.sync 0;
 
   ; load gep cast
   %4 = load float, ptr getelementptr inbounds ([10 x float], ptr addrspacecast (ptr addrspace(3) @array to ptr), i32 0, i32 5), align 4
   call void @use(float %4)
-; PTX: ld.shared.b32 %f{{[0-9]+}}, [array+20];
+; PTX: ld.shared.b32 %r{{[0-9]+}}, [array+20];
   ; store gep cast
   store float %v, ptr getelementptr inbounds ([10 x float], ptr addrspacecast (ptr addrspace(3) @array to ptr), i32 0, i32 5), align 4
-; PTX: st.shared.b32 [array+20], %f{{[0-9]+}};
+; PTX: st.shared.b32 [array+20], %r{{[0-9]+}};
   call void @llvm.nvvm.barrier0()
 ; PTX: bar.sync 0;
 
@@ -56,10 +56,10 @@ define void @ld_st_shared_f32(i32 %i, float %v) {
   %5 = getelementptr inbounds [10 x float], ptr addrspacecast (ptr addrspace(3) @array to ptr), i32 0, i32 5
   %6 = load float, ptr %5, align 4
   call void @use(float %6)
-; PTX: ld.shared.b32 %f{{[0-9]+}}, [array+20];
+; PTX: ld.shared.b32 %r{{[0-9]+}}, [array+20];
   ; gep cast; store
   store float %v, ptr %5, align 4
-; PTX: st.shared.b32 [array+20], %f{{[0-9]+}};
+; PTX: st.shared.b32 [array+20], %r{{[0-9]+}};
   call void @llvm.nvvm.barrier0()
 ; PTX: bar.sync 0;
 
@@ -68,10 +68,10 @@ define void @ld_st_shared_f32(i32 %i, float %v) {
   %8 = getelementptr inbounds [10 x float], ptr %7, i32 0, i32 %i
   %9 = load float, ptr %8, align 4
   call void @use(float %9)
-; PTX: ld.shared.b32 %f{{[0-9]+}}, [%{{(r|rl|rd)[0-9]+}}];
+; PTX: ld.shared.b32 %r{{[0-9]+}}, [%{{(r|rl|rd)[0-9]+}}];
   ; cast; gep; store
   store float %v, ptr %8, align 4
-; PTX: st.shared.b32 [%{{(r|rl|rd)[0-9]+}}], %f{{[0-9]+}};
+; PTX: st.shared.b32 [%{{(r|rl|rd)[0-9]+}}], %r{{[0-9]+}};
   call void @llvm.nvvm.barrier0()
 ; PTX: bar.sync 0;
 

@@ -25,25 +25,43 @@ class CIRGenFunction;
 
 /// Abstract information about a function or function prototype.
 class CIRGenCalleeInfo {
+  const clang::FunctionProtoType *calleeProtoTy;
   clang::GlobalDecl calleeDecl;
 
 public:
-  explicit CIRGenCalleeInfo() : calleeDecl() {}
+  explicit CIRGenCalleeInfo() : calleeProtoTy(nullptr), calleeDecl() {}
+  CIRGenCalleeInfo(const clang::FunctionProtoType *calleeProtoTy,
+                   clang::GlobalDecl calleeDecl)
+      : calleeProtoTy(calleeProtoTy), calleeDecl(calleeDecl) {}
   CIRGenCalleeInfo(clang::GlobalDecl calleeDecl) : calleeDecl(calleeDecl) {}
+
+  const clang::FunctionProtoType *getCalleeFunctionProtoType() const {
+    return calleeProtoTy;
+  }
+  clang::GlobalDecl getCalleeDecl() const { return calleeDecl; }
 };
 
 class CIRGenCallee {
   enum class SpecialKind : uintptr_t {
     Invalid,
+    Builtin,
 
-    Last = Invalid,
+    Last = Builtin,
+  };
+
+  struct BuiltinInfoStorage {
+    const clang::FunctionDecl *decl;
+    unsigned id;
   };
 
   SpecialKind kindOrFunctionPtr;
 
   union {
     CIRGenCalleeInfo abstractInfo;
+    BuiltinInfoStorage builtinInfo;
   };
+
+  explicit CIRGenCallee(SpecialKind kind) : kindOrFunctionPtr(kind) {}
 
 public:
   CIRGenCallee() : kindOrFunctionPtr(SpecialKind::Invalid) {}
@@ -58,6 +76,25 @@ public:
   forDirect(mlir::Operation *funcPtr,
             const CIRGenCalleeInfo &abstractInfo = CIRGenCalleeInfo()) {
     return CIRGenCallee(abstractInfo, funcPtr);
+  }
+
+  bool isBuiltin() const { return kindOrFunctionPtr == SpecialKind::Builtin; }
+
+  const clang::FunctionDecl *getBuiltinDecl() const {
+    assert(isBuiltin());
+    return builtinInfo.decl;
+  }
+  unsigned getBuiltinID() const {
+    assert(isBuiltin());
+    return builtinInfo.id;
+  }
+
+  static CIRGenCallee forBuiltin(unsigned builtinID,
+                                 const clang::FunctionDecl *builtinDecl) {
+    CIRGenCallee result(SpecialKind::Builtin);
+    result.builtinInfo.decl = builtinDecl;
+    result.builtinInfo.id = builtinID;
+    return result;
   }
 
   bool isOrdinary() const {
@@ -109,6 +146,18 @@ public:
 class CallArgList : public llvm::SmallVector<CallArg, 8> {
 public:
   void add(RValue rvalue, clang::QualType type) { emplace_back(rvalue, type); }
+
+  /// Add all the arguments from another CallArgList to this one. After doing
+  /// this, the old CallArgList retains its list of arguments, but must not
+  /// be used to emit a call.
+  void addFrom(const CallArgList &other) {
+    insert(end(), other.begin(), other.end());
+    // Classic codegen has handling for these here. We may not need it here for
+    // CIR, but if not we should implement equivalent handling in lowering.
+    assert(!cir::MissingFeatures::writebacks());
+    assert(!cir::MissingFeatures::cleanupsToDeactivate());
+    assert(!cir::MissingFeatures::stackBase());
+  }
 };
 
 /// Contains the address where the return value of a function can be stored, and

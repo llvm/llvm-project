@@ -39,7 +39,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -1667,8 +1666,12 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
         // Don't warn about omitted unavailable EnumConstantDecls.
         switch (EI->second->getAvailability()) {
         case AR_Deprecated:
-          // Omitting a deprecated constant is ok; it should never materialize.
+          // Deprecated enumerators need to be handled: they may be deprecated,
+          // but can still occur.
+          break;
+
         case AR_Unavailable:
+          // Omitting an unavailable enumerator is ok; it should never occur.
           continue;
 
         case AR_NotYetIntroduced:
@@ -1738,57 +1741,65 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
 void
 Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
                              Expr *SrcExpr) {
+
+  const auto *ET = DstType->getAs<EnumType>();
+  if (!ET)
+    return;
+
+  if (!SrcType->isIntegerType() ||
+      Context.hasSameUnqualifiedType(SrcType, DstType))
+    return;
+
+  if (SrcExpr->isTypeDependent() || SrcExpr->isValueDependent())
+    return;
+
+  const EnumDecl *ED = ET->getDecl();
+  if (!ED->isClosed())
+    return;
+
   if (Diags.isIgnored(diag::warn_not_in_enum_assignment, SrcExpr->getExprLoc()))
     return;
 
-  if (const EnumType *ET = DstType->getAs<EnumType>())
-    if (!Context.hasSameUnqualifiedType(SrcType, DstType) &&
-        SrcType->isIntegerType()) {
-      if (!SrcExpr->isTypeDependent() && !SrcExpr->isValueDependent() &&
-          SrcExpr->isIntegerConstantExpr(Context)) {
-        // Get the bitwidth of the enum value before promotions.
-        unsigned DstWidth = Context.getIntWidth(DstType);
-        bool DstIsSigned = DstType->isSignedIntegerOrEnumerationType();
+  std::optional<llvm::APSInt> RHSVal = SrcExpr->getIntegerConstantExpr(Context);
+  if (!RHSVal)
+    return;
 
-        llvm::APSInt RhsVal = SrcExpr->EvaluateKnownConstInt(Context);
-        AdjustAPSInt(RhsVal, DstWidth, DstIsSigned);
-        const EnumDecl *ED = ET->getDecl();
+  // Get the bitwidth of the enum value before promotions.
+  unsigned DstWidth = Context.getIntWidth(DstType);
+  bool DstIsSigned = DstType->isSignedIntegerOrEnumerationType();
+  AdjustAPSInt(*RHSVal, DstWidth, DstIsSigned);
 
-        if (!ED->isClosed())
-          return;
+  if (ED->hasAttr<FlagEnumAttr>()) {
+    if (!IsValueInFlagEnum(ED, *RHSVal, /*AllowMask=*/true))
+      Diag(SrcExpr->getExprLoc(), diag::warn_not_in_enum_assignment)
+          << DstType.getUnqualifiedType();
+    return;
+  }
 
-        if (ED->hasAttr<FlagEnumAttr>()) {
-          if (!IsValueInFlagEnum(ED, RhsVal, true))
-            Diag(SrcExpr->getExprLoc(), diag::warn_not_in_enum_assignment)
-              << DstType.getUnqualifiedType();
-        } else {
-          typedef SmallVector<std::pair<llvm::APSInt, EnumConstantDecl *>, 64>
-              EnumValsTy;
-          EnumValsTy EnumVals;
+  typedef SmallVector<std::pair<llvm::APSInt, EnumConstantDecl *>, 64>
+      EnumValsTy;
+  EnumValsTy EnumVals;
 
-          // Gather all enum values, set their type and sort them,
-          // allowing easier comparison with rhs constant.
-          for (auto *EDI : ED->enumerators()) {
-            llvm::APSInt Val = EDI->getInitVal();
-            AdjustAPSInt(Val, DstWidth, DstIsSigned);
-            EnumVals.push_back(std::make_pair(Val, EDI));
-          }
-          if (EnumVals.empty())
-            return;
-          llvm::stable_sort(EnumVals, CmpEnumVals);
-          EnumValsTy::iterator EIend = llvm::unique(EnumVals, EqEnumVals);
+  // Gather all enum values, set their type and sort them,
+  // allowing easier comparison with rhs constant.
+  for (auto *EDI : ED->enumerators()) {
+    llvm::APSInt Val = EDI->getInitVal();
+    AdjustAPSInt(Val, DstWidth, DstIsSigned);
+    EnumVals.emplace_back(Val, EDI);
+  }
+  if (EnumVals.empty())
+    return;
+  llvm::stable_sort(EnumVals, CmpEnumVals);
+  EnumValsTy::iterator EIend = llvm::unique(EnumVals, EqEnumVals);
 
-          // See which values aren't in the enum.
-          EnumValsTy::const_iterator EI = EnumVals.begin();
-          while (EI != EIend && EI->first < RhsVal)
-            EI++;
-          if (EI == EIend || EI->first != RhsVal) {
-            Diag(SrcExpr->getExprLoc(), diag::warn_not_in_enum_assignment)
-                << DstType.getUnqualifiedType();
-          }
-        }
-      }
-    }
+  // See which values aren't in the enum.
+  EnumValsTy::const_iterator EI = EnumVals.begin();
+  while (EI != EIend && EI->first < *RHSVal)
+    EI++;
+  if (EI == EIend || EI->first != *RHSVal) {
+    Diag(SrcExpr->getExprLoc(), diag::warn_not_in_enum_assignment)
+        << DstType.getUnqualifiedType();
+  }
 }
 
 StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
@@ -2204,15 +2215,15 @@ namespace {
     // Return when there is nothing to check.
     if (!Body || !Third) return;
 
-    if (S.Diags.isIgnored(diag::warn_redundant_loop_iteration,
-                          Third->getBeginLoc()))
-      return;
-
     // Get the last statement from the loop body.
     CompoundStmt *CS = dyn_cast<CompoundStmt>(Body);
     if (!CS || CS->body_empty()) return;
     Stmt *LastStmt = CS->body_back();
     if (!LastStmt) return;
+
+    if (S.Diags.isIgnored(diag::warn_redundant_loop_iteration,
+                          Third->getBeginLoc()))
+      return;
 
     bool LoopIncrement, LastIncrement;
     DeclRefExpr *LoopDRE, *LastDRE;
@@ -3169,13 +3180,11 @@ static void DiagnoseForRangeVariableCopies(Sema &SemaRef,
   if (SemaRef.inTemplateInstantiation())
     return;
 
+  SourceLocation Loc = ForStmt->getBeginLoc();
   if (SemaRef.Diags.isIgnored(
-          diag::warn_for_range_const_ref_binds_temp_built_from_ref,
-          ForStmt->getBeginLoc()) &&
-      SemaRef.Diags.isIgnored(diag::warn_for_range_ref_binds_ret_temp,
-                              ForStmt->getBeginLoc()) &&
-      SemaRef.Diags.isIgnored(diag::warn_for_range_copy,
-                              ForStmt->getBeginLoc())) {
+          diag::warn_for_range_const_ref_binds_temp_built_from_ref, Loc) &&
+      SemaRef.Diags.isIgnored(diag::warn_for_range_ref_binds_ret_temp, Loc) &&
+      SemaRef.Diags.isIgnored(diag::warn_for_range_copy, Loc)) {
     return;
   }
 
@@ -4302,13 +4311,8 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
   const llvm::Triple &T = Context.getTargetInfo().getTriple();
   const bool IsOpenMPGPUTarget =
       getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
-  // Don't report an error if 'try' is used in system headers or in an OpenMP
-  // target region compiled for a GPU architecture.
-  if (!IsOpenMPGPUTarget && !getLangOpts().CXXExceptions &&
-      !getSourceManager().isInSystemHeader(TryLoc) && !getLangOpts().CUDA) {
-    // Delay error emission for the OpenMP device code.
-    targetDiag(TryLoc, diag::err_exceptions_disabled) << "try";
-  }
+
+  DiagnoseExceptionUse(TryLoc, /* IsTry= */ true);
 
   // In OpenMP target regions, we assume that catch is never reached on GPU
   // targets.
@@ -4408,6 +4412,23 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
 
   return CXXTryStmt::Create(Context, TryLoc, cast<CompoundStmt>(TryBlock),
                             Handlers);
+}
+
+void Sema::DiagnoseExceptionUse(SourceLocation Loc, bool IsTry) {
+  const llvm::Triple &T = Context.getTargetInfo().getTriple();
+  const bool IsOpenMPGPUTarget =
+      getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
+
+  // Don't report an error if 'try' is used in system headers or in an OpenMP
+  // target region compiled for a GPU architecture.
+  if (IsOpenMPGPUTarget || getLangOpts().CUDA)
+    // Delay error emission for the OpenMP device code.
+    return;
+
+  if (!getLangOpts().CXXExceptions &&
+      !getSourceManager().isInSystemHeader(Loc) &&
+      !CurContext->isDependentContext())
+    targetDiag(Loc, diag::err_exceptions_disabled) << (IsTry ? "try" : "throw");
 }
 
 StmtResult Sema::ActOnSEHTryBlock(bool IsCXXTry, SourceLocation TryLoc,

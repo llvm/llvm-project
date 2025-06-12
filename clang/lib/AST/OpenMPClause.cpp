@@ -374,7 +374,7 @@ void OMPOrderedClause::setLoopNumIterations(unsigned NumLoop,
 }
 
 ArrayRef<Expr *> OMPOrderedClause::getLoopNumIterations() const {
-  return llvm::ArrayRef(getTrailingObjects<Expr *>(), NumberOfLoops);
+  return getTrailingObjects<Expr *>(NumberOfLoops);
 }
 
 void OMPOrderedClause::setLoopCounter(unsigned NumLoop, Expr *Counter) {
