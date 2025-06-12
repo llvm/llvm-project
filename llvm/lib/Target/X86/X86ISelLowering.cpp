@@ -47785,13 +47785,19 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                                                            DL, DAG, Subtarget))
       return V;
 
-  // Convert vselects with constant condition into shuffles.
-  if (CondConstantVector && DCI.isBeforeLegalizeOps() &&
-      (N->getOpcode() == ISD::VSELECT || N->getOpcode() == X86ISD::BLENDV)) {
+  if (N->getOpcode() == ISD::VSELECT || N->getOpcode() == X86ISD::BLENDV) {
     SmallVector<int, 64> Mask;
     if (createShuffleMaskFromVSELECT(Mask, Cond,
-                                     N->getOpcode() == X86ISD::BLENDV))
-      return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
+                                     N->getOpcode() == X86ISD::BLENDV)) {
+      // Convert vselects with constant condition into shuffles.
+      if (DCI.isBeforeLegalizeOps())
+        return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
+
+      // Attempt to combine as shuffle.
+      SDValue Op(N, 0);
+      if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
+        return Res;
+    }
   }
 
   // fold vselect(cond, pshufb(x), pshufb(y)) -> or (pshufb(x), pshufb(y))

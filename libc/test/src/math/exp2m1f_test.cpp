@@ -9,7 +9,7 @@
 #include "hdr/math_macros.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/exp2m1f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -38,7 +38,7 @@ TEST_F(LlvmLibcExp2m1fTest, TrickyInputs) {
   };
 
   for (float x : INPUTS) {
-    LIBC_NAMESPACE::libc_errno = 0;
+    libc_errno = 0;
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2m1, x,
                                    LIBC_NAMESPACE::exp2m1f(x), 0.5);
   }
@@ -51,15 +51,14 @@ TEST_F(LlvmLibcExp2m1fTest, InFloatRange) {
     float x = FPBits(v).get_val();
     if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
-    LIBC_NAMESPACE::libc_errno = 0;
+    libc_errno = 0;
     float result = LIBC_NAMESPACE::exp2m1f(x);
 
     // If the computation resulted in an error or did not produce valid result
     // in the single-precision floating point range, then ignore comparing with
     // MPFR result as MPFR can still produce valid results because of its
     // wider precision.
-    if (FPBits(result).is_nan() || FPBits(result).is_inf() ||
-        LIBC_NAMESPACE::libc_errno != 0)
+    if (FPBits(result).is_nan() || FPBits(result).is_inf() || libc_errno != 0)
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2m1, x,
                                    LIBC_NAMESPACE::exp2m1f(x), 0.5);
