@@ -267,6 +267,11 @@ public:
   // Make sure that this type is translated.
   void updateCompletedType(const clang::TagDecl *td);
 
+  // Produce code for this constructor/destructor. This method doesn't try to
+  // apply any ABI rules about which other constructors/destructors are needed
+  // or if they are alias to each other.
+  cir::FuncOp codegenCXXStructor(clang::GlobalDecl gd);
+
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 

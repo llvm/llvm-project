@@ -162,6 +162,47 @@ arrangeCIRFunctionInfo(CIRGenTypes &cgt, SmallVectorImpl<CanQualType> &prefix,
   return cgt.arrangeCIRFunctionInfo(resultType, prefix, required);
 }
 
+void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
+                                         const VarDecl *param,
+                                         SourceLocation loc) {
+  // StartFunction converted the ABI-lowered parameter(s) into a local alloca.
+  // We need to turn that into an r-value suitable for emitCall
+  Address local = getAddrOfLocalVar(param);
+
+  QualType type = param->getType();
+
+  if (const auto *rd = type->getAsCXXRecordDecl()) {
+    cgm.errorNYI(param->getSourceRange(),
+                 "emitDelegateCallArg: record argument");
+    return;
+  }
+
+  // GetAddrOfLocalVar returns a pointer-to-pointer for references, but the
+  // argument needs to be the original pointer.
+  if (type->isReferenceType()) {
+    args.add(
+        RValue::get(builder.createLoad(getLoc(param->getSourceRange()), local)),
+        type);
+  } else if (getLangOpts().ObjCAutoRefCount) {
+    cgm.errorNYI(param->getSourceRange(),
+                 "emitDelegateCallArg: ObjCAutoRefCount");
+    // For the most part, we just need to load the alloca, except that aggregate
+    // r-values are actually pointers to temporaries.
+  } else {
+    cgm.errorNYI(param->getSourceRange(),
+                 "emitDelegateCallArg: convertTempToRValue");
+  }
+
+  // Deactivate the cleanup for the callee-destructed param that was pushed.
+  assert(!cir::MissingFeatures::thunks());
+  if (type->isRecordType() &&
+      type->castAs<RecordType>()->getDecl()->isParamDestroyedInCallee() &&
+      param->needsDestruction(getContext())) {
+    cgm.errorNYI(param->getSourceRange(),
+                 "emitDelegateCallArg: callee-destructed param");
+  }
+}
+
 static const CIRGenFunctionInfo &
 arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
                             const CallArgList &args,
