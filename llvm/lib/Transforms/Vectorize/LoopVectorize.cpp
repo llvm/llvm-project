@@ -7289,6 +7289,8 @@ static void addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
   if (!MiddleTerm)
     return;
 
+  assert(MiddleTerm->getOpcode() == VPInstruction::BranchOnCond &&
+         "must have a BranchOnCond");
   // Assume that `Count % VectorTripCount` is equally distributed.
   unsigned TripCount = Plan.getUF() * VF.getKnownMinValue();
   assert(TripCount > 0 && "trip count should not be zero");
