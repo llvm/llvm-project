@@ -2401,6 +2401,36 @@ public:
 } // end namespace SelfLockingTest
 
 
+namespace ExcludeImplementation {
+
+class LOCKABLE Mutex2 {
+public:
+  // We don't require EXCLUSIVE_(UN)LOCK_FUNCTION(impl) on these methods.
+  void Lock() EXCLUSIVE_LOCK_FUNCTION() { impl.Lock(); }
+  void Unlock() EXCLUSIVE_UNLOCK_FUNCTION() { impl.Unlock(); }
+
+  void LockAlt() EXCLUSIVE_LOCK_FUNCTION(this) { impl.Lock(); }
+  void UnlockAlt() EXCLUSIVE_UNLOCK_FUNCTION(this) { impl.Unlock(); }
+
+private:
+  Mutex impl;
+};
+
+struct LOCKABLE Mutex3 {
+  Mutex impl;
+};
+
+void Lock(Mutex3* mu) EXCLUSIVE_LOCK_FUNCTION(mu) {
+  mu->impl.Lock();
+}
+
+void Unlock(Mutex3* mu) EXCLUSIVE_UNLOCK_FUNCTION(mu) {
+  mu->impl.Unlock();
+}
+
+} // namespace ExcludeImplementation
+
+
 namespace InvalidNonstatic {
 
 // Forward decl here causes bogus "invalid use of non-static data member"
