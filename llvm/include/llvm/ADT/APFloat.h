@@ -1523,6 +1523,7 @@ public:
   friend int ilogb(const APFloat &Arg) { return ilogb(Arg.getIEEE()); }
   friend APFloat scalbn(APFloat X, int Exp, roundingMode RM);
   friend APFloat frexp(const APFloat &X, int &Exp, roundingMode RM);
+  friend APFloat exp(const APFloat &X, roundingMode RM);
   friend IEEEFloat;
   friend DoubleAPFloat;
 };
@@ -1657,6 +1658,10 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
     return A.isNegative() ? B : A;
   return A < B ? B : A;
 }
+
+/// Implement IEEE 754-2019 exp functions.
+LLVM_READONLY
+APFloat exp(const APFloat &X, RoundingMode RM);
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
   V.print(OS);

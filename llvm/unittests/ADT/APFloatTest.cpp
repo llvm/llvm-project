@@ -8356,4 +8356,23 @@ TEST(APFloatTest, hasSignBitInMSB) {
   EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E8M0FNU()));
 }
 
+#ifdef LLVM_INTEGRATE_LIBC
+TEST(APFloatTest, expf) {
+  EXPECT_EQ(
+      1.0f,
+      llvm::exp(APFloat(0.0f), APFloat::rmNearestTiesToEven).convertToFloat());
+  EXPECT_EQ(
+      0x1.5bf0a8p1f,
+      llvm::exp(APFloat(1.0f), APFloat::rmNearestTiesToEven).convertToFloat());
+  EXPECT_EQ(
+      0x1.5bf0aap1f,
+      llvm::exp(APFloat(1.0f), APFloat::rmTowardPositive).convertToFloat());
+  EXPECT_EQ(
+      0x1.5bf0a8p1f,
+      llvm::exp(APFloat(1.0f), APFloat::rmTowardNegative).convertToFloat());
+  EXPECT_EQ(0x1.5bf0a8p1f,
+            llvm::exp(APFloat(1.0f), APFloat::rmTowardZero).convertToFloat());
+}
+#endif // LLVM_INTEGRATE_LIBC
+
 } // namespace
