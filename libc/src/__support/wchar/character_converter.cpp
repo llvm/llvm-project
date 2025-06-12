@@ -9,6 +9,7 @@
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
 #include "src/__support/CPP/bit.h"
+#include "src/__support/error_or.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/utf_ret.h"
 
@@ -73,14 +74,12 @@ int CharacterConverter::push(char8_t utf8_byte) {
   return -1;
 }
 
-utf_ret<char32_t> CharacterConverter::pop_utf32() {
-  utf_ret<char32_t> utf32;
-  utf32.error = 0;
-  utf32.out = state->partial;
+ErrorOr<char32_t> CharacterConverter::pop_utf32() {
+  char32_t utf32;
+  utf32 = state->partial;
   // if pop is called too early
   if (!isComplete()) {
-    utf32.error = -1;
-    return utf32;
+    return Error(-1);
   }
   // reset if successful pop
   state->bytes_processed = 0;
