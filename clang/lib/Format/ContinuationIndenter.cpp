@@ -328,7 +328,7 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
   // Force a lambda onto a new line so that we don't create a 'hanging' indent
   // if there are multiple blocks in a single statement and we are aligning
   // lambda blocks to their signatures.
-  if (Previous.is(tok::l_brace) && State.Stack.size() > 2 &&
+  if (Previous.is(tok::l_brace) && State.Stack.size() > 1 &&
       State.Stack[State.Stack.size() - 2].NestedBlockInlined &&
       State.Stack[State.Stack.size() - 2].HasMultipleNestedBlocks &&
       Style.LambdaBodyIndentation == FormatStyle::LBI_Signature) {
@@ -344,9 +344,10 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     // indent. Otherwise, based on the ContinuationIndentWidth, we could end up
     // more indented than we would've been. To avoid odd looking breaks, make
     // sure we save at least IndentWidth.
-    if (State.Stack[State.Stack.size() - 3].Indent +
-            Style.ContinuationIndentWidth + Style.IndentWidth <
-        State.Stack[State.Stack.size() - 2].Indent) {
+    if (State.Stack.size() > 2 &&
+        State.Stack[State.Stack.size() - 3].Indent +
+                Style.ContinuationIndentWidth + Style.IndentWidth <
+            State.Stack[State.Stack.size() - 2].Indent) {
       return false;
     }
   }
