@@ -60,6 +60,7 @@ public:
                        Attribute metadata = Attribute());
 
   // Types.
+  FloatType getF8E8M0Type();
   FloatType getBF16Type();
   FloatType getF16Type();
   FloatType getTF32Type();

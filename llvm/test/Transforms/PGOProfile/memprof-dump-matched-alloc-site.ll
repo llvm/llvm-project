@@ -23,6 +23,7 @@
 ;
 ; Here we expect to match the allocation site to encompass 3 frames.
 
+; REQUIRES: x86_64-linux
 ; RUN: split-file %s %t
 ; RUN: llvm-profdata merge %t/memprof-dump-matched-alloc-site.yaml -o %t/memprof-dump-matched-alloc-site.memprofdata
 ; RUN: opt < %t/memprof-dump-matched-alloc-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-alloc-site.memprofdata>' -memprof-print-match-info -S 2>&1 | FileCheck %s

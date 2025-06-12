@@ -1,5 +1,7 @@
 ;; Tests option to discard small noncold contexts.
 
+;; Avoid failures on big-endian systems that can't read the profile properly
+; REQUIRES: x86_64-linux
 
 ;; Generate the profile and the IR.
 ; RUN: split-file %s %t

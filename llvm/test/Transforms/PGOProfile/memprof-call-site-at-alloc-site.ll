@@ -2,6 +2,7 @@
 ; allocation call stack but does not call one of the memory allocation
 ; functions.
 
+; REQUIRES: x86_64-linux
 ; RUN: split-file %s %t
 ; RUN: llvm-profdata merge %t/memprof-call-site-at-alloc-site.yaml -o %t/memprof-call-site-at-alloc-site.memprofdata
 ; RUN: opt < %t/memprof-call-site-at-alloc-site.ll -passes='memprof-use<profile-filename=%t/memprof-call-site-at-alloc-site.memprofdata>' -memprof-print-match-info -S 2>&1 | FileCheck %s

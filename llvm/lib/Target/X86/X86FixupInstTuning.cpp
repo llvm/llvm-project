@@ -234,18 +234,10 @@ bool X86FixupInstTuningPass::processInstruction(
   };
 
   switch (Opc) {
-  case X86::VBLENDPSrri: {
-    int Imm = MI.getOperand(NumOperands - 1).getImm();
-    if (Imm != 1)
-      return false;
+  case X86::VBLENDPSrri:
     return ProcessBLENDToMOV(X86::VMOVSSrr);
-  }
-  case X86::VBLENDPDrri: {
-    int Imm = MI.getOperand(NumOperands - 1).getImm();
-    if (Imm != 1)
-      return false;
+  case X86::VBLENDPDrri:
     return ProcessBLENDToMOV(X86::VMOVSDrr);
-  }
   case X86::VPERMILPDri:
     return ProcessVPERMILPDri(X86::VSHUFPDrri);
   case X86::VPERMILPDYri:
