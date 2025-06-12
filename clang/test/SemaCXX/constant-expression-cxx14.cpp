@@ -250,7 +250,7 @@ namespace subobject {
 namespace lifetime {
   constexpr int &&id(int &&n) { return static_cast<int&&>(n); }
   constexpr int &&dead() { return id(0); } // expected-note {{temporary created here}}
-  constexpr int bad() { int &&n = dead(); n = 1; return n; } // expected-note {{read of temporary whose lifetime has ended}}
+  constexpr int bad() { int &&n = dead(); n = 1; return n; } // expected-note {{binding a reference to temporary whose lifetime has ended}}
   static_assert(bad(), ""); // expected-error {{constant expression}} expected-note {{in call}}
 }
 
@@ -1325,20 +1325,45 @@ constexpr bool check = different_in_loop();
 namespace GH48665 {
 constexpr bool foo(int *i) {
     int &j = *i;
-    // expected-note@-1 {{read of dereferenced null pointer is not allowed in a constant expression}}
+    // expected-note@-1 {{binding a reference to dereferenced null pointer is not allowed in a constant expression}}
     return true;
 }
 
 static_assert(foo(nullptr), ""); // expected-note {{in call to 'foo(nullptr)'}}
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
 
-int arr[3]; // expected-note 2{{declared here}}
+int arr[3]; // expected-note {{declared here}}
 constexpr bool f() { // cxx14_20-error {{constexpr function never produces a constant expression}}
-  int &r  = arr[3]; // cxx14_20-note {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}} \
-                    // expected-warning {{array index 3 is past the end of the array}}\
-                    // expected-note {{initializer of 'arr' is unknown}}
+  int &r  = arr[3]; // cxx14_20-note {{binding a reference to dereferenced one-past-the-end pointer is not allowed in a constant expression}} \
+                    // expected-note {{binding a reference to dereferenced one-past-the-end pointer is not allowed in a constant expression}} \
+                    // expected-warning {{array index 3 is past the end of the array}}
   return true;
 }
 static_assert(f(), ""); // expected-note {{in call to 'f()'}}
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+
+struct Aggregate {
+   int &r;
+};
+constexpr bool test_agg(int *i) {
+   Aggregate a{*i}; //expected-note {{binding a reference to dereferenced null pointer is not allowed in a constant expression}}
+   return true;
+}
+static_assert(test_agg(nullptr), ""); // expected-note {{in call to 'test_agg(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+struct B {
+  constexpr B(int *p) : r{*p} {}  // expected-note {{binding a reference to dereferenced null pointer is not allowed in a constant expression}}
+  int &r;
+};
+
+constexpr bool test_ctr(int *i) {
+    B b(i); // expected-note {{in call to 'B(nullptr)'}}
+    return true;
+}
+
+static_assert(test_ctr(nullptr), ""); // expected-note {{in call to 'test_ctr(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
 }

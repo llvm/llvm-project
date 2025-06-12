@@ -178,7 +178,7 @@ def access_kind
     : TextSubstitution<
           "%select{read of|read of|assignment to|increment of|decrement of|"
           "member call on|dynamic_cast of|typeid applied to|construction of|"
-          "destruction of|read of|read of}0">;
+          "destruction of|read of|binding a reference to}0">;
 def access_kind_subobject : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to|"
