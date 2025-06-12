@@ -681,7 +681,7 @@ define i32 @test28() nounwind  {
 ; CHECK-LABEL: @test28(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ORIENTATIONS:%.*]] = alloca [1 x [1 x %struct.x]], align 8
-; CHECK-NEXT:    [[T3:%.*]] = call i32 @puts(ptr noundef nonnull dereferenceable(1) @.str) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[T3:%.*]] = call i32 @puts(ptr noundef nonnull dereferenceable(1) @.str) #[[ATTR0]]
 ; CHECK-NEXT:    [[T45:%.*]] = getelementptr inbounds nuw i8, ptr [[ORIENTATIONS]], i64 1
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
@@ -1341,7 +1341,7 @@ declare noalias ptr @malloc(i64) nounwind allockind("alloc,uninitialized") alloc
 define i32 @test_gep_bitcast_malloc(ptr %a, ptr %call) {
 ; CHECK-LABEL: @test_gep_bitcast_malloc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i8, ptr [[CALL:%.*]], i64 12
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr i8, ptr [[CALL:%.*]], i64 12
 ; CHECK-NEXT:    [[A_C:%.*]] = load i32, ptr [[G3]], align 4
 ; CHECK-NEXT:    ret i32 [[A_C]]
 ;
