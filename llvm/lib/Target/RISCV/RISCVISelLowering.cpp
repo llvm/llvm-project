@@ -16212,12 +16212,14 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   EVT OpVT = N0.getValueType();
 
-  // Looking for an equality compare.
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  if (ISD::isIntEqualitySetCC(Cond))
-    if (SDValue V = combineVectorSizedSetCCEquality(VT, N0, N1, Cond, dl, DAG,
-                                                    Subtarget))
-      return V;
+  // Looking for an equality compare.
+  if (!isIntEqualitySetCC(Cond))
+    return SDValue();
+
+  if (SDValue V =
+          combineVectorSizedSetCCEquality(VT, N0, N1, Cond, dl, DAG, Subtarget))
+    return V;
 
   if (OpVT != MVT::i64 || !Subtarget.is64Bit())
     return SDValue();
@@ -16231,9 +16233,6 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
   if (N0.getOpcode() != ISD::AND || !N0.hasOneUse() ||
       !isa<ConstantSDNode>(N0.getOperand(1)) ||
       N0.getConstantOperandVal(1) != UINT64_C(0xffffffff))
-    return SDValue();
-
-  if (!isIntEqualitySetCC(Cond))
     return SDValue();
 
   // Don't do this if the sign bit is provably zero, it will be turned back into
