@@ -122,7 +122,8 @@ std::vector<Message> DAPTestBase::DrainOutput() {
   std::vector<Message> msgs;
   output.CloseWriteFileDescriptor();
   while (true) {
-    Expected<Message> next = from_dap->Read(std::chrono::milliseconds(1));
+    Expected<Message> next =
+        from_dap->Read<protocol::Message>(std::chrono::milliseconds(1));
     if (!next) {
       consumeError(next.takeError());
       break;
