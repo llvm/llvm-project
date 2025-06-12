@@ -12575,12 +12575,21 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    auto HandleAS = [&](unsigned AS) {
+    assert(getAssociatedType()->isPtrOrPtrVectorTy() &&
+           "Associated value is not a pointer");
+
+    if (!A.getInfoCache().getFlatAddressSpace().has_value()) {
+      indicatePessimisticFixpoint();
+      return;
+    }
+
+    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
+    unsigned AS = getAssociatedType()->getPointerAddressSpace();
+    if (AS != FlatAS) {
       [[maybe_unused]] bool R = takeAddressSpace(AS);
       assert(R && "The take should happen");
-    };
-
-    baseInit(A, nullptr, HandleAS);
+      indicateOptimisticFixpoint();
+    }
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
@@ -12619,12 +12628,13 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
       return takeAddressSpace(FlatAS);
     };
 
-    auto CheckChange = [&]() {
-      return OldAddressSpace == AssumedAddressSpace ? ChangeStatus::UNCHANGED
-                                                    : ChangeStatus::CHANGED;
-    };
+    auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
+                                                        DepClassTy::REQUIRED);
+    if (!AUO->forallUnderlyingObjects(CheckAddressSpace))
+      return indicatePessimisticFixpoint();
 
-    return baseUpdate(A, CheckAddressSpace, CheckChange);
+    return OldAddressSpace == AssumedAddressSpace ? ChangeStatus::UNCHANGED
+                                                  : ChangeStatus::CHANGED;
   }
 
   /// See AbstractAttribute::manifest(...).
@@ -12786,11 +12796,24 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
       : AANoAliasAddrSpace(IRP, A) {}
 
   void initialize(Attributor &A) override {
+    assert(getAssociatedType()->isPtrOrPtrVectorTy() &&
+           "Associated value is not a pointer");
+
     resetASRanges(A);
 
-    auto Handler = [&](unsigned AS) { removeAS(AS); };
+    std::optional<unsigned> FlatAS = A.getInfoCache().getFlatAddressSpace();
+    if (!FlatAS.has_value()) {
+      indicatePessimisticFixpoint();
+      return;
+    }
 
-    baseInit(A, Handler, Handler);
+    removeAS(*FlatAS);
+
+    unsigned AS = getAssociatedType()->getPointerAddressSpace();
+    if (AS != *FlatAS) {
+      removeAS(AS);
+      indicateOptimisticFixpoint();
+    }
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
@@ -12809,12 +12832,13 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
       return true;
     };
 
-    auto CheckChange = [&]() {
-      return OldAssumed == getAssumed() ? ChangeStatus::UNCHANGED
-                                        : ChangeStatus::CHANGED;
-    };
+    const AAUnderlyingObjects *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(
+        getIRPosition(), this, DepClassTy::REQUIRED);
+    if (!AUO->forallUnderlyingObjects(CheckAddressSpace))
+      return indicatePessimisticFixpoint();
 
-    return baseUpdate(A, CheckAddressSpace, CheckChange);
+    return OldAssumed == getAssumed() ? ChangeStatus::UNCHANGED
+                                      : ChangeStatus::CHANGED;
   }
 
   /// See AbstractAttribute::manifest(...).
