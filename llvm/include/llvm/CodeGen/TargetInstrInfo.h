@@ -2184,15 +2184,6 @@ public:
                                        MachineBasicBlock::iterator &MIT,
                                        unsigned Flags) const;
 
-  /// Remove all Linker Optimization Hints (LOH) associated with instructions in
-  /// \p MIs and \return the number of hints removed. This is useful in
-  /// transformations that cause these hints to be illegal, like in the machine
-  /// outliner.
-  virtual size_t clearLinkerOptimizationHints(
-      const SmallPtrSetImpl<MachineInstr *> &MIs) const {
-    return 0;
-  }
-
   /// Optional target hook that returns true if \p MBB is safe to outline from,
   /// and returns any target-specific information in \p Flags.
   virtual bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,

@@ -67,6 +67,7 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
@@ -77,6 +78,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SuffixTree.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <tuple>
 #include <vector>
@@ -427,6 +429,7 @@ struct MachineOutliner : public ModulePass {
   static char ID;
 
   MachineModuleInfo *MMI = nullptr;
+  const TargetMachine *TM = nullptr;
 
   /// Set to true if the outliner should consider functions with
   /// linkonceodr linkage.
@@ -462,6 +465,7 @@ struct MachineOutliner : public ModulePass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineModuleInfoWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
     AU.addPreserved<MachineModuleInfoWrapperPass>();
     AU.addUsedIfAvailable<ImmutableModuleSummaryIndexWrapperPass>();
     AU.setPreservesAll();
@@ -1081,10 +1085,9 @@ bool MachineOutliner::outline(
     // the outlined function.
     SmallPtrSet<MachineInstr *, 2> MIs;
     for (Candidate &C : OF->Candidates) {
-      const TargetInstrInfo &TII = *C.getMF()->getSubtarget().getInstrInfo();
       for (MachineInstr &MI : C)
         MIs.insert(&MI);
-      NumRemovedLOHs += TII.clearLinkerOptimizationHints(MIs);
+      NumRemovedLOHs += TM->clearLinkerOptimizationHints(MIs);
       MIs.clear();
     }
 
@@ -1399,6 +1402,7 @@ bool MachineOutliner::runOnModule(Module &M) {
   initializeOutlinerMode(M);
 
   MMI = &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+  TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
 
   // Number to append to the current outlined function.
   unsigned OutlinedFunctionNum = 0;
