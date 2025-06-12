@@ -77,12 +77,6 @@ TEST_F(HTTPDelimitedJSONTransportTest, Read) {
       HasValue(testing::FieldsAre(/*str=*/"foo")));
 }
 
-TEST_F(HTTPDelimitedJSONTransportTest, ReadWithTimeout) {
-  ASSERT_THAT_EXPECTED(
-      transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
-      Failed<TransportTimeoutError>());
-}
-
 TEST_F(HTTPDelimitedJSONTransportTest, ReadWithEOF) {
   input.CloseWriteFileDescriptor();
   ASSERT_THAT_EXPECTED(
@@ -135,12 +129,6 @@ TEST_F(JSONRPCTransportTest, Read) {
       HasValue(testing::FieldsAre(/*str=*/"foo")));
 }
 
-TEST_F(JSONRPCTransportTest, ReadWithTimeout) {
-  ASSERT_THAT_EXPECTED(
-      transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
-      Failed<TransportTimeoutError>());
-}
-
 TEST_F(JSONRPCTransportTest, ReadWithEOF) {
   input.CloseWriteFileDescriptor();
   ASSERT_THAT_EXPECTED(
@@ -172,3 +160,17 @@ TEST_F(JSONRPCTransportTest, InvalidTransport) {
       transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
       Failed<TransportInvalidError>());
 }
+
+#ifndef _WIN32
+TEST_F(HTTPDelimitedJSONTransportTest, ReadWithTimeout) {
+  ASSERT_THAT_EXPECTED(
+      transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
+      Failed<TransportTimeoutError>());
+}
+
+TEST_F(JSONRPCTransportTest, ReadWithTimeout) {
+  ASSERT_THAT_EXPECTED(
+      transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
+      Failed<TransportTimeoutError>());
+}
+#endif
