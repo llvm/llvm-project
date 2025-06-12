@@ -686,3 +686,23 @@ TEST(ProtocolTypesTest, CapabilitiesEventBody) {
   // Validate toJSON
   EXPECT_EQ(json, pp(body));
 }
+
+TEST(ProtocolTypesTest, StepInTarget) {
+  StepInTarget target;
+  target.id = 230;
+  target.label = "the_function_name";
+  target.line = 2;
+  target.column = 320;
+  target.endLine = 32;
+  target.endColumn = 23;
+
+  llvm::Expected<StepInTarget> deserialized_target = roundtrip(target);
+  ASSERT_THAT_EXPECTED(deserialized_target, llvm::Succeeded());
+
+  EXPECT_EQ(target.id, deserialized_target->id);
+  EXPECT_EQ(target.label, deserialized_target->label);
+  EXPECT_EQ(target.line, deserialized_target->line);
+  EXPECT_EQ(target.column, deserialized_target->column);
+  EXPECT_EQ(target.endLine, deserialized_target->endLine);
+  EXPECT_EQ(target.endColumn, deserialized_target->endColumn);
+}
