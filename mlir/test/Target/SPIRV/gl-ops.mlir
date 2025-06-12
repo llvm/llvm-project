@@ -96,7 +96,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     spirv.Return
   }
 
-spirv.func @vector(%arg0 : f32, %arg1 : vector<3xf32>, %arg2 : vector<3xf32>) "None" {
+  spirv.func @vector(%arg0 : f32, %arg1 : vector<3xf32>, %arg2 : vector<3xf32>) "None" {
     // CHECK: {{%.*}} = spirv.GL.Cross {{%.*}}, {{%.*}} : vector<3xf32>
     %0 = spirv.GL.Cross %arg1, %arg2 : vector<3xf32>
     // CHECK: {{%.*}} = spirv.GL.Normalize {{%.*}} : f32
@@ -114,5 +114,11 @@ spirv.func @vector(%arg0 : f32, %arg1 : vector<3xf32>, %arg2 : vector<3xf32>) "N
     spirv.Return
   }
 
-
+  spirv.func @pack_half_2x16(%arg0 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.GL.UnpackHalf2x16 {{%.*}} : i32 -> vector<2xf32>
+    %0 = spirv.GL.UnpackHalf2x16 %arg0 : i32 -> vector<2xf32>
+    // CHECK: {{%.*}} = spirv.GL.PackHalf2x16 {{%.*}} : vector<2xf32> -> i32
+    %1 = spirv.GL.PackHalf2x16 %0 : vector<2xf32> -> i32
+    spirv.Return
+  }
 }
