@@ -197,7 +197,10 @@ static bool parseDescriptorRange(LLVMContext *Ctx,
           .Case("UAV", llvm::to_underlying(dxbc::DescriptorRangeType::UAV))
           .Case("Sampler",
                 llvm::to_underlying(dxbc::DescriptorRangeType::Sampler))
-          .Default(llvm::to_underlying(dxbc::DescriptorRangeType::ERROR));
+          .Default(-1u);
+
+  if (Range.RangeType == -1u)
+    return reportError(Ctx, "Invalid Descriptor Range type: " + *ElementText);
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 1))
     Range.NumDescriptors = *Val;
@@ -349,15 +352,18 @@ static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
   const bool IsSampler =
       (Type == llvm::to_underlying(dxbc::DescriptorRangeType::Sampler));
 
+  if (Version == 1) {
+    if (IsSampler)
+      return Flags == FlagT::NONE;
+    return Flags == FlagT::DESCRIPTORS_VOLATILE;
+  }
+
   // The data-specific flags are mutually exclusive.
   FlagT DataFlags = FlagT::DATA_VOLATILE | FlagT::DATA_STATIC |
                     FlagT::DATA_STATIC_WHILE_SET_AT_EXECUTE;
 
   if (popcount(llvm::to_underlying(Flags & DataFlags)) > 1)
     return false;
-
-  if (popcount(llvm::to_underlying(Flags & DataFlags)) == 1)
-    return true;
 
   // For volatile descriptors, DATA_STATIC is never valid.
   if ((Flags & FlagT::DESCRIPTORS_VOLATILE) == FlagT::DESCRIPTORS_VOLATILE) {
@@ -369,15 +375,21 @@ static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
     return (Flags & ~Mask) == FlagT::NONE;
   }
 
-  // For default (static) or "STATIC_KEEPING_BUFFER_BOUNDS_CHECKS" descriptors,
+  // For "STATIC_KEEPING_BUFFER_BOUNDS_CHECKS" descriptors,
   // the other data-specific flags may all be set.
-  FlagT Mask = FlagT::DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS;
-  if (!IsSampler) {
-    Mask |= FlagT::DATA_VOLATILE;
-    Mask |= FlagT::DATA_STATIC;
-    Mask |= FlagT::DATA_STATIC_WHILE_SET_AT_EXECUTE;
+  if ((Flags & FlagT::DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS) ==
+      FlagT::DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS) {
+    FlagT Mask = FlagT::DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS;
+    if (!IsSampler) {
+      Mask |= FlagT::DATA_VOLATILE;
+      Mask |= FlagT::DATA_STATIC;
+      Mask |= FlagT::DATA_STATIC_WHILE_SET_AT_EXECUTE;
+    }
+    return (Flags & ~Mask) == FlagT::NONE;
   }
-  return (Flags & ~Mask) == FlagT::NONE;
+
+  // When no descriptor flag is set, any data flag is allowed.
+  return (Flags & ~DataFlags) == FlagT::NONE;
 }
 
 static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
