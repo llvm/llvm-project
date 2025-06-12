@@ -154,7 +154,9 @@ utf_ret<char8_t> CharacterConverter::pop_utf8() {
   return {.out = 0, .error = -1};
 }
 
-utf_ret<char32_t> CharacterConverter::pop_utf32() { return {0, -1}; }
+utf_ret<char32_t> CharacterConverter::pop_utf32() {
+  return {.out = 0, .error = -1};
+}
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
