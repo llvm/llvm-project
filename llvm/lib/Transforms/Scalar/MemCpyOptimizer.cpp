@@ -1370,6 +1370,7 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
 static bool hadUndefContentsBefore(MemorySSA *MSSA, BatchAAResults &BAA,
                                    Value *V, MemoryAccess *Clobber,
                                    MemoryLocation Loc, Value *Size) {
+  Value *VBase = getUnderlyingObject(V);
   while (1) {
     Clobber = MSSA->getWalker()->getClobberingMemoryAccess(Clobber, Loc, BAA);
     MemoryDef *Def = dyn_cast<MemoryDef>(Clobber);
@@ -1377,11 +1378,17 @@ static bool hadUndefContentsBefore(MemorySSA *MSSA, BatchAAResults &BAA,
       return false;
 
     if (MSSA->isLiveOnEntryDef(Def))
-      return isa<AllocaInst>(getUnderlyingObject(V));
+      return isa<AllocaInst>(VBase);
 
     if (auto *II = dyn_cast_or_null<IntrinsicInst>(Def->getMemoryInst())) {
       if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
         auto *LTSize = cast<ConstantInt>(II->getArgOperand(0));
+
+        // Check if the SSA Walk ended early due to heuristics or actually
+        // reached a lifetime instruction for this pointer.
+        Value *IIBase = getUnderlyingObject(II->getArgOperand(1));
+        if (VBase != IIBase)
+          return false;
 
         if (Size)
           if (auto CSize = dyn_cast<ConstantInt>(Size))
@@ -1393,8 +1400,8 @@ static bool hadUndefContentsBefore(MemorySSA *MSSA, BatchAAResults &BAA,
         // does) and we're querying a pointer based on that alloca, then we know
         // the memory is definitely undef, regardless of how exactly we alias.
         // The size also doesn't matter, as an out-of-bounds access would be UB.
-        if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V))) {
-          if (getUnderlyingObject(II->getArgOperand(1)) == Alloca) {
+        if (auto *Alloca = dyn_cast<AllocaInst>(VBase)) {
+          if (IIBase == Alloca) {
             const DataLayout &DL = Alloca->getDataLayout();
             if (std::optional<TypeSize> AllocaSize =
                     Alloca->getAllocationSize(DL))
@@ -1405,6 +1412,11 @@ static bool hadUndefContentsBefore(MemorySSA *MSSA, BatchAAResults &BAA,
         Clobber = Def->getDefiningAccess();
         continue;
       } else if (II->getIntrinsicID() == Intrinsic::lifetime_end) {
+        // Check if the SSA Walk ended early due to heuristics or actually
+        // reached a lifetime instruction for this pointer.
+        Value *IIBase = getUnderlyingObject(II->getArgOperand(1));
+        if (VBase != IIBase)
+          return false;
         Clobber = Def->getDefiningAccess();
         continue;
       }
