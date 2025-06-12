@@ -3310,11 +3310,6 @@ static bool isAllocSiteRemovable(Instruction *AI,
           }
         }
 
-        if (isRemovableWrite(*cast<CallBase>(I), PI, TLI)) {
-          Users.emplace_back(I);
-          continue;
-        }
-
         if (Family && getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
           Users.emplace_back(I);
@@ -3325,6 +3320,12 @@ static bool isAllocSiteRemovable(Instruction *AI,
             getAllocationFamily(I, &TLI) == Family) {
           Users.emplace_back(I);
           Worklist.push_back(I);
+          continue;
+        }
+
+        if (!isRefSet(Access) && isRemovableWrite(*cast<CallBase>(I), PI, TLI)) {
+          Access |= ModRefInfo::Mod;
+          Users.emplace_back(I);
           continue;
         }
 
@@ -3343,7 +3344,7 @@ static bool isAllocSiteRemovable(Instruction *AI,
 
       case Instruction::Load: {
         LoadInst *LI = cast<LoadInst>(I);
-        if (LI->isVolatile() || LI->getPointerOperand() != LI)
+        if (LI->isVolatile() || LI->getPointerOperand() != PI)
           return false;
         if (isModSet(Access))
           return false;

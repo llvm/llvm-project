@@ -112,11 +112,7 @@ declare i1 @fn5(ptr byval({ i32, i32 }) align 4 %r)
 
 define i1 @test5() {
 ; CHECK-LABEL: define i1 @test5() {
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca { i32, i32 }, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i32 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @fn5(i32 [[TMP2]], i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @fn5(i32 undef, i32 undef)
 ; CHECK-NEXT:    ret i1 [[TMP5]]
 ;
   %1 = alloca { i32, i32 }, align 4

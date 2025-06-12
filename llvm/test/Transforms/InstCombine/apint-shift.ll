@@ -564,7 +564,7 @@ define i40 @test26(i40 %A) {
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=9880
 define i177 @ossfuzz_9880(i177 %X) {
 ; CHECK-LABEL: @ossfuzz_9880(
-; CHECK-NEXT:    ret i177 0
+; CHECK-NEXT:    ret i177 poison
 ;
   %A = alloca i177
   %L1 = load i177, ptr %A
