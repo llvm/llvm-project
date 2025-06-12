@@ -35,9 +35,9 @@ StringRef getNormalizedPPCTuneCPU(const Triple &T, StringRef CPUName = "");
 
 // For PPC, there are some cpu names for same CPU, like pwr10 and power10,
 // normalize them.
-StringRef normalizeCPUName(StringRef CPUName);
+LLVM_ABI StringRef normalizeCPUName(StringRef CPUName);
 
-std::optional<llvm::StringMap<bool>>
+LLVM_ABI std::optional<llvm::StringMap<bool>>
 getPPCDefaultTargetFeatures(const Triple &T, StringRef CPUName);
 } // namespace PPC
 } // namespace llvm
