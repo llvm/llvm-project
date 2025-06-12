@@ -37,6 +37,7 @@
 #include "flang/Runtime/pointer.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "llvm/Support/CommandLine.h"
 
 /// By default fir memory operation fir::AllocMemOp/fir::FreeMemOp are used.
@@ -174,11 +175,34 @@ static void genRuntimeInitCharacter(fir::FirOpBuilder &builder,
   builder.create<fir::CallOp>(loc, callee, convertedArgs);
 }
 
+/// Check if region is nested in omp.target or
+/// region nested in function with declare target
+bool isRegionNestedInOmpTarget(mlir::Region &region) {
+  mlir::Operation *parentOp = region.getParentOp();
+  while (parentOp) {
+    if (auto declareTargetOp =
+            llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(parentOp)) {
+      if (declareTargetOp.isDeclareTarget())
+        return true;
+    }
+    if (llvm::isa<mlir::omp::TargetOp>(parentOp))
+      return true;
+    mlir::Region *parentRegion = parentOp->getParentRegion();
+    if (!parentRegion)
+      break;
+    parentOp = parentRegion->getParentOp();
+  }
+
+  return false;
+}
+
 /// Generate a runtime call to set allocator idx of descriptor for target amd.
 static void genAMDRuntimeDescriptorSetAllocIdx(fir::FirOpBuilder &builder,
                                                mlir::Location loc,
                                                const fir::MutableBoxValue &box,
                                                int allocatorId) {
+  if (isRegionNestedInOmpTarget(builder.getRegion()))
+    return;
   auto *context = builder.getContext();
   mlir::Type descriptorTy = box.getAddr().getType();
   mlir::IntegerType posTy = builder.getI32Type();
