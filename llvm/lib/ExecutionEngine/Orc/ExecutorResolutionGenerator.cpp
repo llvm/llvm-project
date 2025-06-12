@@ -71,7 +71,8 @@ Error ExecutorResolutionGenerator::tryToGenerate(
           const auto &Sym = *Syms++;
           if (Sym && Sym->getAddress())
             NewSyms[Name] = *Sym;
-          else if (LLVM_UNLIKELY(!Sym && Flags == SymbolLookupFlags::RequiredSymbol))
+          else if (LLVM_UNLIKELY(!Sym &&
+                                 Flags == SymbolLookupFlags::RequiredSymbol))
             MissingSymbols.insert(Name);
         }
 
