@@ -349,6 +349,15 @@ Changes to the RISC-V Backend
   extension.
 * Added ``Sdext`` and ``Sdtrig`` extensions.
 
+Changes to the SystemZ Backend
+------------------------------
+
+* Added support for the IBM z17 processor and the arch15 cpu architecture.
+* Added support for `__builtin_setjump` and `__builtin_longjmp`.
+* Improve inlining heuristics to fix compile time explosion in certain cases.
+* Improve various cost functions.
+* Improve compatibility of the assembler parser with the GNU assembler.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
