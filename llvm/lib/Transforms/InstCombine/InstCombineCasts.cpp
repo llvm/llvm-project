@@ -815,6 +815,13 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       return new ICmpInst(ICmpInst::ICMP_EQ, X, CmpC);
     }
 
+    if (match(Src, m_AShr(m_Value(X), m_SpecificInt(SrcWidth - 1))) ||
+        match(Src, m_LShr(m_Value(X), m_SpecificInt(SrcWidth - 1)))) {
+      // trunc (ashr X, BW-1) to i1 --> icmp slt X, 0
+      // trunc (lshr X, BW-1) to i1 --> icmp slt X, 0
+      return new ICmpInst(ICmpInst::ICMP_SLT, X, Zero);
+    }
+
     Constant *C;
     if (match(Src, m_OneUse(m_LShr(m_Value(X), m_ImmConstant(C))))) {
       // trunc (lshr X, C) to i1 --> icmp ne (and X, C'), 0
@@ -822,13 +829,6 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       Value *MaskC = Builder.CreateShl(One, C);
       Value *And = Builder.CreateAnd(X, MaskC);
       return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
-    }
-
-    if (match(Src, m_AShr(m_Value(X), m_SpecificInt(SrcWidth - 1))) ||
-        match(Src, m_LShr(m_Value(X), m_SpecificInt(SrcWidth - 1)))) {
-      // trunc (ashr X, BW-1) to i1 --> icmp slt X, 0
-      // trunc (lshr X, BW-1) to i1 --> icmp slt X, 0
-      return new ICmpInst(ICmpInst::ICMP_SLT, X, Zero);
     }
 
     if (match(Src, m_OneUse(m_c_Or(m_LShr(m_Value(X), m_ImmConstant(C)),
