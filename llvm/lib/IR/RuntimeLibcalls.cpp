@@ -21,13 +21,17 @@ static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
   if (TT.isWindowsArm64EC()) {
     // FIXME: are there calls we need to exclude from this?
 #define HANDLE_LIBCALL(code, name)                                             \
-  {                                                                            \
+  if (sizeof(name) != 1) {                                                     \
     const char *libcallName = Info.getLibcallName(RTLIB::code);                \
-    if (libcallName && libcallName[0] != '#')                                  \
-      Info.setLibcallName(RTLIB::code, "#" #name);                             \
+    if (libcallName && libcallName[0] != '#') {                                \
+      assert(strcmp(libcallName, name) == 0 && "Unexpected name");             \
+      Info.setLibcallName(RTLIB::code, "#" name);                              \
+    }                                                                          \
   }
+#define LIBCALL_NO_NAME ""
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
+#undef LIBCALL_NO_NAME
   }
 }
 
@@ -223,8 +227,10 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
             nullptr);
 
 #define HANDLE_LIBCALL(code, name) setLibcallName(RTLIB::code, name);
+#define LIBCALL_NO_NAME nullptr
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
+#undef LIBCALL_NO_NAME
 
   // Initialize calling conventions to their default.
   for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
@@ -462,7 +468,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
   }
 
   // Setup Windows compiler runtime calls.
-  if (TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()) {
+  if (TT.getArch() == Triple::x86 &&
+      (TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment())) {
     static const struct {
       const RTLIB::Libcall Op;
       const char *const Name;
