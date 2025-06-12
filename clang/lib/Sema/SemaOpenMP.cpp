@@ -7565,6 +7565,7 @@ void SemaOpenMP::ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(
       getASTContext(), VariantFuncRef, DVScope.TI,
       /*NothingArgs=*/nullptr, /*NothingArgsSize=*/0,
       /*NeedDevicePtrArgs=*/nullptr, /*NeedDevicePtrArgsSize=*/0,
+      /*NeedDeviceAddrArgs=*/nullptr, /*NeedDeviceAddrArgsSize=*/0,
       /*AppendArgs=*/nullptr, /*AppendArgsSize=*/0);
   for (FunctionDecl *BaseFD : Bases)
     BaseFD->addAttr(OMPDeclareVariantA);
@@ -7996,6 +7997,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     FunctionDecl *FD, Expr *VariantRef, OMPTraitInfo &TI,
     ArrayRef<Expr *> AdjustArgsNothing,
     ArrayRef<Expr *> AdjustArgsNeedDevicePtr,
+    ArrayRef<Expr *> AdjustArgsNeedDeviceAddr,
     ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
     SourceLocation AppendArgsLoc, SourceRange SR) {
 
@@ -8007,6 +8009,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
   SmallVector<Expr *, 8> AllAdjustArgs;
   llvm::append_range(AllAdjustArgs, AdjustArgsNothing);
   llvm::append_range(AllAdjustArgs, AdjustArgsNeedDevicePtr);
+  llvm::append_range(AllAdjustArgs, AdjustArgsNeedDeviceAddr);
 
   if (!AllAdjustArgs.empty() || !AppendArgs.empty()) {
     VariantMatchInfo VMI;
@@ -8057,6 +8060,8 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
       const_cast<Expr **>(AdjustArgsNothing.data()), AdjustArgsNothing.size(),
       const_cast<Expr **>(AdjustArgsNeedDevicePtr.data()),
       AdjustArgsNeedDevicePtr.size(),
+      const_cast<Expr **>(AdjustArgsNeedDeviceAddr.data()),
+      AdjustArgsNeedDeviceAddr.size(),
       const_cast<OMPInteropInfo *>(AppendArgs.data()), AppendArgs.size(), SR);
   FD->addAttr(NewAttr);
 }
