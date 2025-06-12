@@ -10,8 +10,8 @@
 #include "hdr/time_macros.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 
 #include <stdint.h>      // For int64_t.
 #include <sys/syscall.h> // For syscall numbers.

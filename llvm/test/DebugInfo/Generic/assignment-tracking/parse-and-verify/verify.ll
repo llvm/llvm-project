@@ -8,7 +8,7 @@
 
 define dso_local void @fun2() !dbg !15 {
   ;; DIAssignID copied here from @fun() where it is used by intrinsics.
-  ; CHECK: dbg.assign not in same function as inst
+  ; CHECK: DVRAssign not in same function as inst
   %x = alloca i32, align 4, !DIAssignID !14
   ret void
 }
@@ -17,24 +17,24 @@ define dso_local void @fun() !dbg !7 {
 entry:
   %a = alloca i32, align 4, !DIAssignID !14
   ;; Here something other than a dbg.assign intrinsic is using a DIAssignID.
-  ; CHECK: !DIAssignID should only be used by llvm.dbg.assign intrinsics
+  ; CHECK: !DIAssignID should only be used by Assign DVRs
   call void @llvm.dbg.value(metadata !14, metadata !10, metadata !DIExpression()), !dbg !13
 
   ;; Each following dbg.assign has an argument of the incorrect type.
-  ; CHECK: invalid llvm.dbg.assign intrinsic address/value
+  ; CHECK: invalid #dbg record address/value
   call void @llvm.dbg.assign(metadata !3, metadata !10, metadata !DIExpression(), metadata !14, metadata ptr undef, metadata !DIExpression()), !dbg !13
-  ; CHECK: invalid llvm.dbg.assign intrinsic variable
+  ; CHECK: invalid #dbg record variable
   call void @llvm.dbg.assign(metadata i32 0, metadata !2, metadata !DIExpression(), metadata !14, metadata ptr undef, metadata !DIExpression()), !dbg !13
-  ; CHECK: invalid llvm.dbg.assign intrinsic expression
+  ; CHECK: invalid #dbg record expression
   call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !2, metadata !14, metadata ptr undef, metadata !DIExpression()), !dbg !13
-  ; CHECK: invalid llvm.dbg.assign intrinsic DIAssignID
+  ; CHECK: invalid #dbg_assign DIAssignID
   call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !2, metadata ptr undef, metadata !DIExpression()), !dbg !13
-  ; CHECK: invalid llvm.dbg.assign intrinsic address
+  ; CHECK: invalid #dbg_assign address
   call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !14, metadata !3, metadata !DIExpression()), !dbg !13
   ;; Empty metadata debug operands are allowed.
-  ; CHECK-NOT: invalid llvm.dbg.assign
+  ; CHECK-NOT: invalid #dbg record
   call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !14, metadata !2, metadata !DIExpression()), !dbg !13
-  ; CHECK: invalid llvm.dbg.assign intrinsic address expression
+  ; CHECK: invalid #dbg_assign address expression
   call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !14, metadata ptr undef, metadata !2), !dbg !13
   ret void
 }

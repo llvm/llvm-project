@@ -79,16 +79,16 @@ subroutine pointers_in_atomic_capture()
 !CHECK: %[[VAL_A_BOX_ADDR:.*]] = fir.box_addr %[[VAL_A_LOADED]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 !CHECK: %[[VAL_B_LOADED:.*]] = fir.load %[[VAL_B_DECLARE]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK: %[[VAL_B_BOX_ADDR:.*]] = fir.box_addr %[[VAL_B_LOADED]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+!CHECK: %[[VAL_B:.*]] = fir.load %[[VAL_B_BOX_ADDR]] : !fir.ptr<i32>
 !CHECK: %[[VAL_B_LOADED_2:.*]] = fir.load %[[VAL_B_DECLARE]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK: %[[VAL_B_BOX_ADDR_2:.*]] = fir.box_addr %[[VAL_B_LOADED_2]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
-!CHECK: %[[VAL_B:.*]] = fir.load %[[VAL_B_BOX_ADDR_2]] : !fir.ptr<i32>
 !CHECK: omp.atomic.capture {
 !CHECK: omp.atomic.update %[[VAL_A_BOX_ADDR]] : !fir.ptr<i32> {
 !CHECK: ^bb0(%[[ARG:.*]]: i32):
 !CHECK: %[[TEMP:.*]] = arith.addi %[[ARG]], %[[VAL_B]] : i32
 !CHECK: omp.yield(%[[TEMP]] : i32)
 !CHECK: }
-!CHECK: omp.atomic.read %[[VAL_B_BOX_ADDR]] = %[[VAL_A_BOX_ADDR]] : !fir.ptr<i32>, !fir.ptr<i32>, i32
+!CHECK: omp.atomic.read %[[VAL_B_BOX_ADDR_2]] = %[[VAL_A_BOX_ADDR]] : !fir.ptr<i32>, !fir.ptr<i32>, i32
 !CHECK: }
 !CHECK: return
 !CHECK: }
