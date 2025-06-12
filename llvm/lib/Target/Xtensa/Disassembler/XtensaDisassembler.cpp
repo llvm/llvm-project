@@ -171,7 +171,7 @@ static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
 
       // Handle special case. The INTERRUPT/INTSET registers use the same
       // encoding, but INTERRUPT used for read and INTSET for write.
-      if ((Reg == Xtensa::INTERRUPT) && (RAType == Xtensa::REGISTER_WRITE)) {
+      if (Reg == Xtensa::INTERRUPT && RAType == Xtensa::REGISTER_WRITE) {
         Reg = Xtensa::INTSET;
       }
 
