@@ -29,16 +29,20 @@ extern "C" {
 
 /* 7 SYNCHRONIZATION, BARRIER AND HINT INTRINSICS */
 /* 7.3 Memory barriers */
+/*
 void __dmb(unsigned int);
 void __dsb(unsigned int);
 void __isb(unsigned int);
+*/
 
 /* 7.4 Hints */
+/*
 void __wfi(void);
 void __wfe(void);
 void __sev(void);
 void __sevl(void);
 void __yield(void);
+*/
 
 #if defined(__ARM_32BIT_STATE) && __ARM_32BIT_STATE
 #define __dbg(t) __builtin_arm_dbg(t)
