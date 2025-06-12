@@ -886,9 +886,10 @@ protected:
 #include "CommandOptions.inc"
 
 static llvm::Error CopyExpressionResult(ValueObject &result,
-                                        DataBufferHeap &buffer) {
+                                        DataBufferHeap &buffer,
+                                        ExecutionContextScope *scope) {
   uint64_t value = result.GetValueAsUnsigned(0);
-  auto size_or_err = result.GetCompilerType().GetByteSize(nullptr);
+  auto size_or_err = result.GetCompilerType().GetByteSize(scope);
   if (!size_or_err)
     return size_or_err.takeError();
 
@@ -927,6 +928,11 @@ EvaluateExpression(llvm::StringRef expression, StackFrame &frame,
   if (status != eExpressionCompleted || !result_sp)
     return llvm::createStringError(
         "expression evaluation failed. pass a string instead");
+
+  result_sp = result_sp->GetQualifiedRepresentationIfAvailable(
+      result_sp->GetDynamicValueType(), /*synthValue=*/true);
+  if (!result_sp)
+    return llvm::createStringError("failed to get dynamic result type");
 
   return result_sp;
 }
@@ -1082,7 +1088,8 @@ protected:
 
       ValueObjectSP result_sp = *result_or_err;
 
-      if (auto err = CopyExpressionResult(*result_sp, buffer)) {
+      if (auto err = CopyExpressionResult(*result_sp, buffer,
+                                          m_exe_ctx.GetFramePtr())) {
         result.AppendError(llvm::toString(std::move(err)));
         return;
       }
