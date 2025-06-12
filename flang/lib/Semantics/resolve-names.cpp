@@ -2830,7 +2830,8 @@ Scope &ScopeHandler::NonDerivedTypeScope() {
 
 static void SetImplicitCUDADevice(Symbol &symbol) {
   if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (!object->cudaDataAttr() && !IsValue(symbol) && !IsFunctionResult(symbol)) {
+    if (!object->cudaDataAttr() && !IsValue(symbol) &&
+        !IsFunctionResult(symbol)) {
       // Implicitly set device attribute if none is set in device context.
       object->set_cudaDataAttr(common::CUDADataAttr::Device);
     }
