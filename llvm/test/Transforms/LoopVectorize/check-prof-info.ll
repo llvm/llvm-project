@@ -8,7 +8,6 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @b = global [1024 x i32] zeroinitializer, align 16
 
 ; Check correctness of profile info for vectorization without epilog.
-; Function Attrs: nofree norecurse nounwind uwtable
 define void @_Z3foov() {
 ; CHECK-LABEL: @_Z3foov(
 ; CHECK:  entry:
@@ -58,11 +57,10 @@ for.body:                                         ; preds = %for.body, %entry
   store i32 %add, ptr %arrayidx2, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond, label %for.cond.cleanup, label %for.body, !prof !6
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body, !prof !0
 }
 
 ; Check correctness of profile info for vectorization with epilog.
-; Function Attrs: nofree norecurse nounwind uwtable
 define void @_Z3foo2v() {
 ; CHECK-LABEL: @_Z3foo2v(
 ; CHECK:  entry:
@@ -112,9 +110,9 @@ for.body:                                         ; preds = %for.body, %entry
   store i32 %add, ptr %arrayidx2, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, 1027
-  br i1 %exitcond, label %for.cond.cleanup, label %for.body, !prof !7
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body, !prof !1
 }
 
 
-!6 = !{!"branch_weights", i32 1, i32 1023}
-!7 = !{!"branch_weights", i32 1, i32 1026}
+!0 = !{!"branch_weights", i32 1, i32 1023}
+!1 = !{!"branch_weights", i32 1, i32 1026}
