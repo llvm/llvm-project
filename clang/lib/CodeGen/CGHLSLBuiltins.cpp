@@ -299,9 +299,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // (llvm/llvm-project#135452)
     Value *NonUniform =
         llvm::ConstantInt::get(llvm::Type::getInt1Ty(getLLVMContext()), false);
-    return Builder.CreateIntrinsic(
-        HandleTy, CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic(),
-        ArrayRef<Value *>{SpaceOp, RegisterOp, RangeOp, IndexOp, NonUniform});
+
+    auto [IntrinsicID, HasNameArg] =
+        CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
+    SmallVector<Value *> Args{SpaceOp, RegisterOp, RangeOp, IndexOp,
+                              NonUniform};
+    if (HasNameArg)
+      Args.push_back(EmitScalarExpr(E->getArg(5)));
+    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
   }
   case Builtin::BI__builtin_hlsl_resource_handlefromimplicitbinding: {
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
@@ -313,10 +318,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // (llvm/llvm-project#135452)
     Value *NonUniform =
         llvm::ConstantInt::get(llvm::Type::getInt1Ty(getLLVMContext()), false);
-    return Builder.CreateIntrinsic(
-        HandleTy,
-        CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic(),
-        ArrayRef<Value *>{OrderID, SpaceOp, RangeOp, IndexOp, NonUniform});
+
+    auto [IntrinsicID, HasNameArg] =
+        CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
+    SmallVector<Value *> Args{OrderID, SpaceOp, RangeOp, IndexOp, NonUniform};
+    if (HasNameArg)
+      Args.push_back(EmitScalarExpr(E->getArg(5)));
+    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
   }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -366,7 +374,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/OpX->getType(), Intr,
         ArrayRef<Value *>{OpX, OpMin, OpMax}, nullptr, "hlsl.clamp");
   }
-  case Builtin::BI__builtin_hlsl_cross: {
+  case Builtin::BI__builtin_hlsl_crossf16:
+  case Builtin::BI__builtin_hlsl_crossf32: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&

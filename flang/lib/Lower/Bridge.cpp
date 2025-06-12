@@ -12,6 +12,7 @@
 
 #include "flang/Lower/Bridge.h"
 
+#include "OpenMP/DataSharingProcessor.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
@@ -61,6 +62,7 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Flags.h"
 #include "flang/Support/Version.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -1142,6 +1144,14 @@ public:
     return name;
   }
 
+  /// Find the symbol in the inner-most level of the local map or return null.
+  Fortran::lower::SymbolBox
+  shallowLookupSymbol(const Fortran::semantics::Symbol &sym) override {
+    if (Fortran::lower::SymbolBox v = localSymbols.shallowLookupSymbol(sym))
+      return v;
+    return {};
+  }
+
 private:
   FirConverter() = delete;
   FirConverter(const FirConverter &) = delete;
@@ -1212,14 +1222,6 @@ private:
       return {};
     }
     if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
-      return v;
-    return {};
-  }
-
-  /// Find the symbol in the inner-most level of the local map or return null.
-  Fortran::lower::SymbolBox
-  shallowLookupSymbol(const Fortran::semantics::Symbol &sym) {
-    if (Fortran::lower::SymbolBox v = localSymbols.shallowLookupSymbol(sym))
       return v;
     return {};
   }
@@ -2027,9 +2029,43 @@ private:
   void handleLocalitySpecs(const IncrementLoopInfo &info) {
     Fortran::semantics::SemanticsContext &semanticsContext =
         bridge.getSemanticsContext();
-    for (const Fortran::semantics::Symbol *sym : info.localSymList)
+    fir::LocalitySpecifierOperands privateClauseOps;
+    auto doConcurrentLoopOp =
+        mlir::dyn_cast_if_present<fir::DoConcurrentLoopOp>(info.loopOp);
+    // TODO Promote to using `enableDelayedPrivatization` (which is enabled by
+    // default unlike the staging flag) once the implementation of this is more
+    // complete.
+    bool useDelayedPriv =
+        enableDelayedPrivatizationStaging && doConcurrentLoopOp;
+    llvm::SetVector<const Fortran::semantics::Symbol *> allPrivatizedSymbols;
+
+    for (const Fortran::semantics::Symbol *sym : info.localSymList) {
+      if (useDelayedPriv) {
+        Fortran::lower::privatizeSymbol<fir::LocalitySpecifierOp>(
+            *this, this->getFirOpBuilder(), localSymbols,
+            [this](fir::LocalitySpecifierOp result, mlir::Type argType) {
+              TODO(this->toLocation(),
+                   "Localizers that need init regions are not supported yet.");
+            },
+            allPrivatizedSymbols, sym, &privateClauseOps);
+        continue;
+      }
+
       createHostAssociateVarClone(*sym, /*skipDefaultInit=*/false);
+    }
+
     for (const Fortran::semantics::Symbol *sym : info.localInitSymList) {
+      if (useDelayedPriv) {
+        Fortran::lower::privatizeSymbol<fir::LocalitySpecifierOp>(
+            *this, this->getFirOpBuilder(), localSymbols,
+            [this](fir::LocalitySpecifierOp result, mlir::Type argType) {
+              TODO(this->toLocation(),
+                   "Localizers that need init regions are not supported yet.");
+            },
+            allPrivatizedSymbols, sym, &privateClauseOps);
+        continue;
+      }
+
       createHostAssociateVarClone(*sym, /*skipDefaultInit=*/true);
       const auto *hostDetails =
           sym->detailsIf<Fortran::semantics::HostAssocDetails>();
@@ -2048,6 +2084,24 @@ private:
           sym->detailsIf<Fortran::semantics::HostAssocDetails>();
       copySymbolBinding(hostDetails->symbol(), *sym);
     }
+
+    if (useDelayedPriv) {
+      doConcurrentLoopOp.getLocalVarsMutable().assign(
+          privateClauseOps.privateVars);
+      doConcurrentLoopOp.setLocalSymsAttr(
+          builder->getArrayAttr(privateClauseOps.privateSyms));
+
+      for (auto [sym, privateVar] : llvm::zip_equal(
+               allPrivatizedSymbols, privateClauseOps.privateVars)) {
+        auto arg = doConcurrentLoopOp.getRegion().begin()->addArgument(
+            privateVar.getType(), doConcurrentLoopOp.getLoc());
+        bindSymbol(*sym, hlfir::translateToExtendedValue(
+                             privateVar.getLoc(), *builder, hlfir::Entity{arg},
+                             /*contiguousHint=*/true)
+                             .first);
+      }
+    }
+
     // Note that allocatable, types with ultimate components, and type
     // requiring finalization are forbidden in LOCAL/LOCAL_INIT (F2023 C1130),
     // so no clean-up needs to be generated for these entities.

@@ -2127,7 +2127,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         TA = S.Context.getTypeDeclType(MPA->getMostRecentCXXRecordDecl());
       } else {
         NestedNameSpecifier *QA = MPA->getQualifier();
-        TA = QualType(QA->translateToType(S.Context), 0);
+        TA = QualType(QA->translateToType(S.Context), 0).getUnqualifiedType();
       }
       assert(!TA.isNull() && "member pointer with non-type class");
       return DeduceTemplateArgumentsByTypeMatch(
@@ -2474,6 +2474,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::Pipe:
     case Type::ArrayParameter:
     case Type::HLSLAttributedResource:
+    case Type::HLSLInlineSpirv:
       // No template argument deduction for these types
       return TemplateDeductionResult::Success;
 
@@ -2946,6 +2947,7 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
       LocalInstantiationScope Scope(S);
       MultiLevelTemplateArgumentList Args(Template, CTAI.SugaredConverted,
                                           /*Final=*/true);
+      Sema::ArgPackSubstIndexRAII OnlySubstNonPackExpansion(S, std::nullopt);
 
       if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
         Sema::InstantiatingTemplate Inst(S, Template->getLocation(), Template,
@@ -6992,6 +6994,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   case Type::UnresolvedUsing:
   case Type::Pipe:
   case Type::BitInt:
+  case Type::HLSLInlineSpirv:
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define DEPENDENT_TYPE(Class, Base)

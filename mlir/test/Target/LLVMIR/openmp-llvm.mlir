@@ -358,6 +358,94 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
 
 // -----
 
+// CHECK-LABEL: wsloop_linear
+
+// CHECK: {{.*}} = alloca i32, i64 1, align 4
+// CHECK: %[[Y:.*]] = alloca i32, i64 1, align 4
+// CHECK: %[[X:.*]] = alloca i32, i64 1, align 4
+
+// CHECK: entry:
+// CHECK: %[[LINEAR_VAR:.*]] = alloca i32, align 4
+// CHECK: %[[LINEAR_RESULT:.*]] = alloca i32, align 4
+// CHECK: br label %omp_loop.preheader
+
+// CHECK: omp_loop.preheader:
+// CHECK: %[[LOAD:.*]] = load i32, ptr %[[X]], align 4
+// CHECK: store i32 %[[LOAD]], ptr %[[LINEAR_VAR]], align 4
+// CHECK: %omp_global_thread_num = call i32 @__kmpc_global_thread_num(ptr @2)
+// CHECK: call void @__kmpc_barrier(ptr @1, i32 %omp_global_thread_num)
+
+// CHECK: omp_loop.body:
+// CHECK: %[[LOOP_IV:.*]] = add i32 %omp_loop.iv, {{.*}}
+// CHECK: %[[LINEAR_LOAD:.*]] = load i32, ptr %[[LINEAR_VAR]], align 4
+// CHECK: %[[MUL:.*]] = mul i32 %[[LOOP_IV]], 1
+// CHECK: %[[ADD:.*]] = add i32 %[[LINEAR_LOAD]], %[[MUL]]
+// CHECK: store i32 %[[ADD]], ptr %[[LINEAR_RESULT]], align 4
+// CHECK: br label %omp.loop_nest.region
+
+// CHECK: omp.loop_nest.region:
+// CHECK: %[[LINEAR_LOAD:.*]] = load i32, ptr %[[LINEAR_RESULT]], align 4
+// CHECK: %[[ADD:.*]] = add i32 %[[LINEAR_LOAD]], 2
+// CHECK: store i32 %[[ADD]], ptr %[[Y]], align 4
+
+// CHECK: omp_loop.exit:
+// CHECK: call void @__kmpc_for_static_fini(ptr @2, i32 %omp_global_thread_num4)
+// CHECK: %omp_global_thread_num5 = call i32 @__kmpc_global_thread_num(ptr @2)
+// CHECK: call void @__kmpc_barrier(ptr @3, i32 %omp_global_thread_num5)
+// CHECK: br label %omp_loop.linear_finalization
+
+// CHECK: omp_loop.linear_finalization:
+// CHECK: %[[LAST_ITER:.*]] = load i32, ptr %p.lastiter, align 4
+// CHECK: %[[CMP:.*]] = icmp ne i32 %[[LAST_ITER]], 0
+// CHECK: br i1 %[[CMP]], label %omp_loop.linear_lastiter_exit, label %omp_loop.linear_exit
+
+// CHECK: omp_loop.linear_lastiter_exit:
+// CHECK: %[[LINEAR_RESULT_LOAD:.*]] = load i32, ptr %[[LINEAR_RESULT]], align 4
+// CHECK: store i32 %[[LINEAR_RESULT_LOAD]], ptr %[[X]], align 4
+// CHECK: br label %omp_loop.linear_exit
+
+// CHECK: omp_loop.linear_exit:
+// CHECK: %omp_global_thread_num6 = call i32 @__kmpc_global_thread_num(ptr @2)
+// CHECK: call void @__kmpc_barrier(ptr @1, i32 %omp_global_thread_num6)
+// CHECK: br label %omp_loop.after
+
+llvm.func @wsloop_linear() {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 {bindc_name = "i", pinned} : (i64) -> !llvm.ptr
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  %3 = llvm.alloca %2 x i32 {bindc_name = "y"} : (i64) -> !llvm.ptr
+  %4 = llvm.mlir.constant(1 : i64) : i64
+  %5 = llvm.alloca %4 x i32 {bindc_name = "x"} : (i64) -> !llvm.ptr
+  %6 = llvm.mlir.constant(1 : i64) : i64
+  %7 = llvm.alloca %6 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
+  %8 = llvm.mlir.constant(2 : i32) : i32
+  %9 = llvm.mlir.constant(10 : i32) : i32
+  %10 = llvm.mlir.constant(1 : i32) : i32
+  %11 = llvm.mlir.constant(1 : i64) : i64
+  %12 = llvm.mlir.constant(1 : i64) : i64
+  %13 = llvm.mlir.constant(1 : i64) : i64
+  %14 = llvm.mlir.constant(1 : i64) : i64
+  omp.wsloop linear(%5 = %10 : !llvm.ptr) {
+    omp.loop_nest (%arg0) : i32 = (%10) to (%9) inclusive step (%10) {
+      llvm.store %arg0, %1 : i32, !llvm.ptr
+      %15 = llvm.load %5 : !llvm.ptr -> i32
+      %16 = llvm.add %15, %8 : i32
+      llvm.store %16, %3 : i32, !llvm.ptr
+      %17 = llvm.add %arg0, %10 : i32
+      %18 = llvm.icmp "sgt" %17, %9 : i32
+      llvm.cond_br %18, ^bb1, ^bb2
+    ^bb1:  // pred: ^bb0
+      llvm.store %17, %1 : i32, !llvm.ptr
+      llvm.br ^bb2
+    ^bb2:  // 2 preds: ^bb0, ^bb1
+      omp.yield
+     }
+   }
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @wsloop_inclusive_1
 llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr) {
   %0 = llvm.mlir.constant(42 : index) : i64

@@ -76,7 +76,7 @@ void LoongArchDAGToDAGISel::Select(SDNode *Node) {
         Result = CurDAG->getMachineNode(
             Inst.Opc, DL, GRLenVT,
             {SrcReg, SrcReg,
-             CurDAG->getTargetConstant(Inst.Imm >> 32, DL, GRLenVT),
+             CurDAG->getSignedTargetConstant(Inst.Imm >> 32, DL, GRLenVT),
              CurDAG->getTargetConstant(Inst.Imm & 0xFF, DL, GRLenVT)});
         break;
       default:
@@ -233,7 +233,7 @@ bool LoongArchDAGToDAGISel::SelectAddrConstant(SDValue Addr, SDValue &Base,
   if (!isInt<12>(CVal))
     return false;
   Base = CurDAG->getRegister(LoongArch::R0, VT);
-  Offset = CurDAG->getTargetConstant(SignExtend64<12>(CVal), DL, VT);
+  Offset = CurDAG->getSignedTargetConstant(SignExtend64<12>(CVal), DL, VT);
   return true;
 }
 
@@ -255,7 +255,7 @@ bool LoongArchDAGToDAGISel::SelectAddrRegImm12(SDValue Addr, SDValue &Base,
     int64_t Imm = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
     if (isInt<12>(Imm)) {
       Base = Addr.getOperand(0);
-      Offset = CurDAG->getTargetConstant(SignExtend64<12>(Imm), DL, VT);
+      Offset = CurDAG->getSignedTargetConstant(SignExtend64<12>(Imm), DL, VT);
       return true;
     }
   }
@@ -398,8 +398,8 @@ bool LoongArchDAGToDAGISel::selectVSplatImm(SDValue N, SDValue &SplatVal) {
   if (selectVSplat(N.getNode(), ImmValue, EltTy.getSizeInBits()) &&
       ImmValue.getBitWidth() == EltTy.getSizeInBits()) {
     if (IsSigned && ImmValue.isSignedIntN(ImmBitSize)) {
-      SplatVal = CurDAG->getTargetConstant(ImmValue.getSExtValue(), SDLoc(N),
-                                           Subtarget->getGRLenVT());
+      SplatVal = CurDAG->getSignedTargetConstant(
+          ImmValue.getSExtValue(), SDLoc(N), Subtarget->getGRLenVT());
       return true;
     }
     if (!IsSigned && ImmValue.isIntN(ImmBitSize)) {
@@ -425,7 +425,7 @@ bool LoongArchDAGToDAGISel::selectVSplatUimmInvPow2(SDValue N,
     int32_t Log2 = (~ImmValue).exactLogBase2();
 
     if (Log2 != -1) {
-      SplatImm = CurDAG->getTargetConstant(Log2, SDLoc(N), EltTy);
+      SplatImm = CurDAG->getSignedTargetConstant(Log2, SDLoc(N), EltTy);
       return true;
     }
   }
@@ -446,7 +446,7 @@ bool LoongArchDAGToDAGISel::selectVSplatUimmPow2(SDValue N,
     int32_t Log2 = ImmValue.exactLogBase2();
 
     if (Log2 != -1) {
-      SplatImm = CurDAG->getTargetConstant(Log2, SDLoc(N), EltTy);
+      SplatImm = CurDAG->getSignedTargetConstant(Log2, SDLoc(N), EltTy);
       return true;
     }
   }

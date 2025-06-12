@@ -82,7 +82,6 @@
 
 #include <cstdio>
 
-#include <mutex>
 #include <optional>
 
 using namespace lldb;
@@ -680,8 +679,9 @@ void TypeSystemClang::CreateASTContext() {
       file_system_options, FileSystem::Instance().GetVirtualFileSystem());
 
   llvm::IntrusiveRefCntPtr<DiagnosticIDs> diag_id_sp(new DiagnosticIDs());
+  m_diagnostic_options_up = std::make_unique<DiagnosticOptions>();
   m_diagnostics_engine_up =
-      std::make_unique<DiagnosticsEngine>(diag_id_sp, new DiagnosticOptions());
+      std::make_unique<DiagnosticsEngine>(diag_id_sp, *m_diagnostic_options_up);
 
   m_source_manager_up = std::make_unique<clang::SourceManager>(
       *m_diagnostics_engine_up, *m_file_manager_up);
@@ -1135,7 +1135,7 @@ CompilerType TypeSystemClang::GetCStringType(bool is_const) {
 
 bool TypeSystemClang::AreTypesSame(CompilerType type1, CompilerType type2,
                                    bool ignore_qualifiers) {
-  auto ast = type1.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto ast = type1.GetTypeSystem<TypeSystemClang>();
   if (!ast || type1.GetTypeSystem() != type2.GetTypeSystem())
     return false;
 
@@ -4261,6 +4261,8 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::HLSLAttributedResource:
     break;
+  case clang::Type::HLSLInlineSpirv:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eTypeClassOther;
@@ -5028,7 +5030,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
 
     // ARM -- Scalable Vector Extension
 #define SVE_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
       break;
 
     // RISC-V V builtin types.
@@ -5126,6 +5128,8 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     break;
 
   case clang::Type::HLSLAttributedResource:
+    break;
+  case clang::Type::HLSLInlineSpirv:
     break;
   }
   count = 0;
@@ -5291,21 +5295,19 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::HLSLAttributedResource:
     break;
+  case clang::Type::HLSLInlineSpirv:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eFormatBytes;
 }
 
-static bool ObjCDeclHasIVars(clang::ObjCInterfaceDecl *class_interface_decl,
-                             bool check_superclass) {
+static bool ObjCDeclHasIVars(clang::ObjCInterfaceDecl *class_interface_decl) {
   while (class_interface_decl) {
     if (class_interface_decl->ivar_size() > 0)
       return true;
 
-    if (check_superclass)
-      class_interface_decl = class_interface_decl->getSuperClass();
-    else
-      break;
+    class_interface_decl = class_interface_decl->getSuperClass();
   }
   return false;
 }
@@ -5380,7 +5382,7 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
               class_interface_decl->getSuperClass();
           if (superclass_interface_decl) {
             if (omit_empty_base_classes) {
-              if (ObjCDeclHasIVars(superclass_interface_decl, true))
+              if (ObjCDeclHasIVars(superclass_interface_decl))
                 ++num_children;
             } else
               ++num_children;
@@ -6834,7 +6836,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
               if (ivar_decl->getName() == name_sref) {
                 if ((!omit_empty_base_classes && superclass_interface_decl) ||
                     (omit_empty_base_classes &&
-                     ObjCDeclHasIVars(superclass_interface_decl, true)))
+                     ObjCDeclHasIVars(superclass_interface_decl)))
                   ++child_idx;
 
                 child_indexes.push_back(child_idx);
@@ -6990,7 +6992,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
               if (ivar_decl->getName() == name) {
                 if ((!omit_empty_base_classes && superclass_interface_decl) ||
                     (omit_empty_base_classes &&
-                     ObjCDeclHasIVars(superclass_interface_decl, true)))
+                     ObjCDeclHasIVars(superclass_interface_decl)))
                   ++child_idx;
 
                 return child_idx;
@@ -7333,8 +7335,7 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
     uint32_t bitfield_bit_size) {
   if (!type.IsValid() || !field_clang_type.IsValid())
     return nullptr;
-  auto ts = type.GetTypeSystem();
-  auto ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto ast = type.GetTypeSystem<TypeSystemClang>();
   if (!ast)
     return nullptr;
   clang::ASTContext &clang_ast = ast->getASTContext();
@@ -7437,8 +7438,7 @@ void TypeSystemClang::BuildIndirectFields(const CompilerType &type) {
   if (!type)
     return;
 
-  auto ts = type.GetTypeSystem();
-  auto ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto ast = type.GetTypeSystem<TypeSystemClang>();
   if (!ast)
     return;
 
@@ -7544,8 +7544,7 @@ void TypeSystemClang::BuildIndirectFields(const CompilerType &type) {
 
 void TypeSystemClang::SetIsPacked(const CompilerType &type) {
   if (type) {
-    auto ts = type.GetTypeSystem();
-    auto ast = ts.dyn_cast_or_null<TypeSystemClang>();
+    auto ast = type.GetTypeSystem<TypeSystemClang>();
     if (ast) {
       clang::RecordDecl *record_decl = GetAsRecordDecl(type);
 
@@ -7564,8 +7563,7 @@ clang::VarDecl *TypeSystemClang::AddVariableToRecordType(
   if (!type.IsValid() || !var_type.IsValid())
     return nullptr;
 
-  auto ts = type.GetTypeSystem();
-  auto ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto ast = type.GetTypeSystem<TypeSystemClang>();
   if (!ast)
     return nullptr;
 
@@ -7890,8 +7888,7 @@ bool TypeSystemClang::TransferBaseClasses(
 
 bool TypeSystemClang::SetObjCSuperClass(
     const CompilerType &type, const CompilerType &superclass_clang_type) {
-  auto ts = type.GetTypeSystem();
-  auto ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto ast = type.GetTypeSystem<TypeSystemClang>();
   if (!ast)
     return false;
   clang::ASTContext &clang_ast = ast->getASTContext();
@@ -7919,8 +7916,7 @@ bool TypeSystemClang::AddObjCClassProperty(
   if (!type || !property_clang_type.IsValid() || property_name == nullptr ||
       property_name[0] == '\0')
     return false;
-  auto ts = type.GetTypeSystem();
-  auto ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto ast = type.GetTypeSystem<TypeSystemClang>();
   if (!ast)
     return false;
   clang::ASTContext &clang_ast = ast->getASTContext();
@@ -8117,14 +8113,6 @@ bool TypeSystemClang::AddObjCClassProperty(
   return true;
 }
 
-bool TypeSystemClang::IsObjCClassTypeAndHasIVars(const CompilerType &type,
-                                                 bool check_superclass) {
-  clang::ObjCInterfaceDecl *class_interface_decl = GetAsObjCInterfaceDecl(type);
-  if (class_interface_decl)
-    return ObjCDeclHasIVars(class_interface_decl, check_superclass);
-  return false;
-}
-
 clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
     const CompilerType &type,
     const char *name, // the full symbol name as seen in the symbol table
@@ -8139,8 +8127,7 @@ clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
 
   if (class_interface_decl == nullptr)
     return nullptr;
-  auto ts = type.GetTypeSystem();
-  auto lldb_ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto lldb_ast = type.GetTypeSystem<TypeSystemClang>();
   if (lldb_ast == nullptr)
     return nullptr;
   clang::ASTContext &ast = lldb_ast->getASTContext();
@@ -8344,8 +8331,7 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
   if (qual_type.isNull())
     return false;
 
-  auto ts = type.GetTypeSystem();
-  auto lldb_ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto lldb_ast = type.GetTypeSystem<TypeSystemClang>();
   if (lldb_ast == nullptr)
     return false;
 
@@ -8489,8 +8475,7 @@ TypeSystemClang::CreateMemberPointerType(const CompilerType &type,
                                          const CompilerType &pointee_type) {
   if (type && pointee_type.IsValid() &&
       type.GetTypeSystem() == pointee_type.GetTypeSystem()) {
-    auto ts = type.GetTypeSystem();
-    auto ast = ts.dyn_cast_or_null<TypeSystemClang>();
+    auto ast = type.GetTypeSystem<TypeSystemClang>();
     if (!ast)
       return CompilerType();
     return ast->GetType(ast->getASTContext().getMemberPointerType(
@@ -8639,10 +8624,9 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
   // Sort in reverse order of the number of the population count,  so that in
   // `enum {A, B, ALL = A|B }` we visit ALL first. Use a stable sort so that
   // A | C where A is declared before C is displayed in this order.
-  std::stable_sort(values.begin(), values.end(),
-                   [](const auto &a, const auto &b) {
-                     return llvm::popcount(a.first) > llvm::popcount(b.first);
-                   });
+  llvm::stable_sort(values, [](const auto &a, const auto &b) {
+    return llvm::popcount(a.first) > llvm::popcount(b.first);
+  });
 
   for (const auto &val : values) {
     if ((remaining_value & val.first) != val.first)
@@ -9554,7 +9538,7 @@ void TypeSystemClang::RequireCompleteType(CompilerType type) {
   lldbassert(started && "Unable to start a class type definition.");
   TypeSystemClang::CompleteTagDeclarationDefinition(type);
   const clang::TagDecl *td = ClangUtil::GetAsTagDecl(type);
-  auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto ts = type.GetTypeSystem<TypeSystemClang>();
   if (ts)
     ts->SetDeclIsForcefullyCompleted(td);
 }

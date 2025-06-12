@@ -94,6 +94,14 @@ bool isEqual(const Fortran::lower::SomeExpr *x,
              const Fortran::lower::SomeExpr *y);
 bool isEqual(const Fortran::lower::ExplicitIterSpace::ArrayBases &x,
              const Fortran::lower::ExplicitIterSpace::ArrayBases &y);
+
+template <typename OpType, typename OperandsStructType>
+void privatizeSymbol(
+    lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
+    lower::SymMap &symTable, std::function<void(OpType, mlir::Type)> initGen,
+    llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
+    const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps);
+
 } // end namespace Fortran::lower
 
 // DenseMapInfo for pointers to Fortran::lower::SomeExpr.

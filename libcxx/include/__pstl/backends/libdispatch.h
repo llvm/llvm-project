@@ -51,13 +51,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
 
 namespace __libdispatch {
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 // ::dispatch_apply is marked as __attribute__((nothrow)) because it doesn't let exceptions propagate, and neither do
 // we.
 // TODO: Do we want to add [[_Clang::__callback__(__func, __context, __)]]?
 _LIBCPP_EXPORTED_FROM_ABI void
 __dispatch_apply(size_t __chunk_count, void* __context, void (*__func)(void* __context, size_t __chunk)) noexcept;
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Func>
 _LIBCPP_HIDE_FROM_ABI void __dispatch_apply(size_t __chunk_count, _Func __func) noexcept {
@@ -72,9 +70,7 @@ struct __chunk_partitions {
   ptrdiff_t __first_chunk_size_;
 };
 
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 [[__gnu__::__const__]] _LIBCPP_EXPORTED_FROM_ABI __chunk_partitions __partition_chunks(ptrdiff_t __size) noexcept;
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _RandomAccessIterator, class _Functor>
 _LIBCPP_HIDE_FROM_ABI optional<__empty>

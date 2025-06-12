@@ -2143,10 +2143,15 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   // mismatch).
   if (getNumIndices() == 0 && getVector().getType() == getResult().getType())
     return getVector();
+  if (auto res = foldPoisonSrcExtractOp(adaptor.getVector()))
+    return res;
+  // Fold `arith.constant` indices into the `vector.extract` operation. Make
+  // sure that patterns requiring constant indices are added after this fold.
+  SmallVector<Value> operands = {getVector()};
+  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
+    return val;
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
-    return res;
-  if (auto res = foldPoisonSrcExtractOp(adaptor.getVector()))
     return res;
   if (auto res = foldDenseElementsAttrSrcExtractOp(*this, adaptor.getVector()))
     return res;
@@ -2165,9 +2170,6 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   if (auto val = foldExtractStridedOpFromInsertChain(*this))
     return val;
   if (auto val = foldScalarExtractFromFromElements(*this))
-    return val;
-  SmallVector<Value> operands = {getVector()};
-  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
     return val;
   return OpFoldResult();
 }
@@ -3145,6 +3147,8 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   // (type mismatch).
   if (getNumIndices() == 0 && getValueToStoreType() == getType())
     return getValueToStore();
+  // Fold `arith.constant` indices into the `vector.insert` operation. Make
+  // sure that patterns requiring constant indices are added after this fold.
   SmallVector<Value> operands = {getValueToStore(), getDest()};
   if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
     return val;
@@ -6201,7 +6205,7 @@ public:
     bool inputIsScalar = !inputType;
     if (inputIsScalar) {
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
-                                                       transpose.getVector());
+                                                       broadcast.getSource());
       return success();
     }
 
@@ -6227,6 +6231,7 @@ public:
                 transpose, "permutation not local to group");
           }
         }
+        low = high;
       }
     }
 
@@ -6241,7 +6246,7 @@ public:
            "not broadcastable directly to transpose output");
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
-                                                     transpose.getVector());
+                                                     broadcast.getSource());
 
     return success();
   }
@@ -6516,9 +6521,15 @@ ParseResult MaskOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.resolveOperand(mask, maskType, result.operands))
     return failure();
 
-  if (parsePassthru.succeeded())
+  if (parsePassthru.succeeded()) {
+    if (resultTypes.empty())
+      return parser.emitError(
+          parser.getNameLoc(),
+          "expects a result if passthru operand is provided");
+
     if (parser.resolveOperand(passthru, resultTypes[0], result.operands))
       return failure();
+  }
 
   return success();
 }
@@ -6543,29 +6554,33 @@ void mlir::vector::MaskOp::print(OpAsmPrinter &p) {
 }
 
 void MaskOp::ensureTerminator(Region &region, Builder &builder, Location loc) {
-  OpTrait::SingleBlockImplicitTerminator<vector::YieldOp>::Impl<
-      MaskOp>::ensureTerminator(region, builder, loc);
-  // Keep the default yield terminator if the number of masked operations is not
-  // the expected. This case will trigger a verification failure.
+  // 1. For an empty `vector.mask`, create a default terminator.
+  if (region.empty() || region.front().empty()) {
+    OpTrait::SingleBlockImplicitTerminator<vector::YieldOp>::Impl<
+        MaskOp>::ensureTerminator(region, builder, loc);
+    return;
+  }
+
+  // 2. For a non-empty `vector.mask` with an explicit terminator, do nothing.
   Block &block = region.front();
-  if (block.getOperations().size() != 2)
+  if (isa<vector::YieldOp>(block.back()))
     return;
 
-  // Replace default yield terminator with a new one that returns the results
-  // from the masked operation.
+  // 3. For a non-empty `vector.mask` without an explicit terminator:
+
+  // Create default terminator if the number of masked operations is not
+  // one. This case will trigger a verification failure.
+  if (block.getOperations().size() != 1) {
+    OpTrait::SingleBlockImplicitTerminator<vector::YieldOp>::Impl<
+        MaskOp>::ensureTerminator(region, builder, loc);
+    return;
+  }
+
+  // Create a terminator that yields the results from the masked operation.
   OpBuilder opBuilder(builder.getContext());
   Operation *maskedOp = &block.front();
-  Operation *oldYieldOp = &block.back();
-  assert(isa<vector::YieldOp>(oldYieldOp) && "Expected vector::YieldOp");
-
-  // Empty vector.mask op.
-  if (maskedOp == oldYieldOp)
-    return;
-
-  opBuilder.setInsertionPoint(oldYieldOp);
+  opBuilder.setInsertionPointToEnd(&block);
   opBuilder.create<vector::YieldOp>(loc, maskedOp->getResults());
-  oldYieldOp->dropAllReferences();
-  oldYieldOp->erase();
 }
 
 LogicalResult MaskOp::verify() {
@@ -6600,6 +6615,10 @@ LogicalResult MaskOp::verify() {
     return emitOpError("expects number of results to match maskable operation "
                        "number of results");
 
+  if (!llvm::equal(maskableOp->getResults(), terminator.getOperands()))
+    return emitOpError("expects all the results from the MaskableOpInterface "
+                       "to match all the values returned by the terminator");
+
   if (!llvm::equal(maskableOp->getResultTypes(), getResultTypes()))
     return emitOpError(
         "expects result type to match maskable operation result type");
@@ -6631,13 +6650,43 @@ LogicalResult MaskOp::verify() {
   return success();
 }
 
-/// Folds vector.mask ops with an all-true mask.
-LogicalResult MaskOp::fold(FoldAdaptor adaptor,
-                           SmallVectorImpl<OpFoldResult> &results) {
-  MaskFormat maskFormat = getMaskFormat(getMask());
-  if (isEmpty())
+/// Folds empty `vector.mask` with no passthru operand and with or without
+/// return values. For example:
+///
+///   %0 = vector.mask %mask { vector.yield %a : vector<8xf32> } :
+///     vector<8xi1> -> vector<8xf32>
+///   %1 = user_op %0 : vector<8xf32>
+///
+/// becomes:
+///
+///   %0 = user_op %a : vector<8xf32>
+///
+/// Empty `vector.mask` with passthru operand are handled by the canonicalizer
+/// as it requires creating new operations.
+
+static LogicalResult foldEmptyMaskOp(MaskOp maskOp, MaskOp::FoldAdaptor adaptor,
+                                     SmallVectorImpl<OpFoldResult> &results) {
+  if (!maskOp.isEmpty() || maskOp.hasPassthru())
     return failure();
 
+  Block *block = maskOp.getMaskBlock();
+  auto terminator = cast<vector::YieldOp>(block->front());
+  if (terminator.getNumOperands() == 0) {
+    // `vector.mask` has no results, just remove the `vector.mask`.
+    return success();
+  }
+
+  // `vector.mask` has results, propagate the results.
+  llvm::append_range(results, terminator.getOperands());
+  return success();
+}
+
+LogicalResult MaskOp::fold(FoldAdaptor adaptor,
+                           SmallVectorImpl<OpFoldResult> &results) {
+  if (succeeded(foldEmptyMaskOp(*this, adaptor, results)))
+    return success();
+
+  MaskFormat maskFormat = getMaskFormat(getMask());
   if (maskFormat != MaskFormat::AllTrue)
     return failure();
 
@@ -6650,27 +6699,37 @@ LogicalResult MaskOp::fold(FoldAdaptor adaptor,
   return success();
 }
 
-// Elides empty vector.mask operations with or without return values. Propagates
-// the yielded values by the vector.yield terminator, if any, or erases the op,
-// otherwise.
-class ElideEmptyMaskOp : public OpRewritePattern<MaskOp> {
+/// Canonialize empty `vector.mask` operations that can't be handled in
+/// `VectorMask::fold` as they require creating new operations.
+///
+/// Example 1: Empty `vector.mask` with passthru operand.
+///
+///   %0 = vector.mask %mask, %passthru { vector.yield %a : vector<8xf32> } :
+///     vector<8xi1> -> vector<8xf32>
+///
+/// becomes:
+///
+///   %0 = arith.select %mask, %a, %passthru : vector<8xf32>
+///
+class CanonializeEmptyMaskOp : public OpRewritePattern<MaskOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(MaskOp maskOp,
                                 PatternRewriter &rewriter) const override {
-    auto maskingOp = cast<MaskingOpInterface>(maskOp.getOperation());
-    if (maskingOp.getMaskableOp())
+    if (!maskOp.isEmpty())
       return failure();
 
-    if (!maskOp.isEmpty())
+    if (!maskOp.hasPassthru())
       return failure();
 
     Block *block = maskOp.getMaskBlock();
     auto terminator = cast<vector::YieldOp>(block->front());
-    if (terminator.getNumOperands() == 0)
-      rewriter.eraseOp(maskOp);
-    else
-      rewriter.replaceOp(maskOp, terminator.getOperands());
+    assert(terminator.getNumOperands() == 1 &&
+           "expected one result when passthru is provided");
+
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(
+        maskOp, maskOp.getResultTypes(), maskOp.getMask(),
+        terminator.getOperand(0), maskOp.getPassthru());
 
     return success();
   }
@@ -6678,7 +6737,7 @@ class ElideEmptyMaskOp : public OpRewritePattern<MaskOp> {
 
 void MaskOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<ElideEmptyMaskOp>(context);
+  results.add<CanonializeEmptyMaskOp>(context);
 }
 
 // MaskingOpInterface definitions.

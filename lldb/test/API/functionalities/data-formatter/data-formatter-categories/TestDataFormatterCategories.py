@@ -335,5 +335,7 @@ class CategoriesDataFormatterTestCase(TestBase):
 
         # and also validate that one can print formatters for a language
         self.expect(
-            "type summary list -l c++", substrs=["vector", "map", "list", "string"]
+            "type summary list -l c++",
+            substrs=["vector", "map", "list", "string"],
+            ordered=False,
         )
