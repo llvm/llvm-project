@@ -22,6 +22,23 @@ define i32 @andn_i32(i32 %a, i32 %b) nounwind {
   ret i32 %and
 }
 
+define i32 @andn_i32_from_sub(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: andn_i32_from_sub:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a2, -1
+; RV32I-NEXT:    sub a2, a2, a1
+; RV32I-NEXT:    and a0, a2, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: andn_i32_from_sub:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    andn a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:    ret
+  %neg = sub i32 -1, %b
+  %and = and i32 %neg, %a
+  ret i32 %and
+}
+
 define i64 @andn_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: andn_i64:
 ; RV32I:       # %bb.0:
@@ -37,6 +54,32 @@ define i64 @andn_i64(i64 %a, i64 %b) nounwind {
 ; RV32ZBB-ZBKB-NEXT:    andn a1, a1, a3
 ; RV32ZBB-ZBKB-NEXT:    ret
   %neg = xor i64 %b, -1
+  %and = and i64 %neg, %a
+  ret i64 %and
+}
+
+define i64 @andn_i64_from_sub(i64 %a, i64 %b) nounwind {
+; RV32I-LABEL: andn_i64_from_sub:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a4, -1
+; RV32I-NEXT:    sub a5, a4, a2
+; RV32I-NEXT:    sltu a2, a4, a2
+; RV32I-NEXT:    sub a4, a4, a3
+; RV32I-NEXT:    sub a4, a4, a2
+; RV32I-NEXT:    and a0, a5, a0
+; RV32I-NEXT:    and a1, a4, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: andn_i64_from_sub:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    li a4, -1
+; RV32ZBB-ZBKB-NEXT:    sltu a5, a4, a2
+; RV32ZBB-ZBKB-NEXT:    sub a4, a4, a3
+; RV32ZBB-ZBKB-NEXT:    sub a4, a4, a5
+; RV32ZBB-ZBKB-NEXT:    andn a0, a0, a2
+; RV32ZBB-ZBKB-NEXT:    and a1, a4, a1
+; RV32ZBB-ZBKB-NEXT:    ret
+  %neg = sub i64 -1, %b
   %and = and i64 %neg, %a
   ret i64 %and
 }
@@ -140,46 +183,46 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a6, a2, 63
 ; CHECK-NEXT:    li a4, 32
-; CHECK-NEXT:    bltu a6, a4, .LBB7_2
+; CHECK-NEXT:    bltu a6, a4, .LBB9_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a3, 0
 ; CHECK-NEXT:    sll a7, a0, a6
-; CHECK-NEXT:    j .LBB7_3
-; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:    j .LBB9_3
+; CHECK-NEXT:  .LBB9_2:
 ; CHECK-NEXT:    sll a3, a0, a2
 ; CHECK-NEXT:    neg a5, a6
 ; CHECK-NEXT:    srl a5, a0, a5
 ; CHECK-NEXT:    sll a7, a1, a2
 ; CHECK-NEXT:    or a7, a5, a7
-; CHECK-NEXT:  .LBB7_3:
+; CHECK-NEXT:  .LBB9_3:
 ; CHECK-NEXT:    neg a5, a2
 ; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    beqz a6, .LBB7_5
+; CHECK-NEXT:    beqz a6, .LBB9_5
 ; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    mv a2, a7
-; CHECK-NEXT:  .LBB7_5:
+; CHECK-NEXT:  .LBB9_5:
 ; CHECK-NEXT:    andi a6, a5, 63
-; CHECK-NEXT:    bltu a6, a4, .LBB7_7
+; CHECK-NEXT:    bltu a6, a4, .LBB9_7
 ; CHECK-NEXT:  # %bb.6:
 ; CHECK-NEXT:    srl a7, a1, a6
-; CHECK-NEXT:    bnez a6, .LBB7_8
-; CHECK-NEXT:    j .LBB7_9
-; CHECK-NEXT:  .LBB7_7:
+; CHECK-NEXT:    bnez a6, .LBB9_8
+; CHECK-NEXT:    j .LBB9_9
+; CHECK-NEXT:  .LBB9_7:
 ; CHECK-NEXT:    srl a7, a0, a5
 ; CHECK-NEXT:    neg t0, a6
 ; CHECK-NEXT:    sll t0, a1, t0
 ; CHECK-NEXT:    or a7, a7, t0
-; CHECK-NEXT:    beqz a6, .LBB7_9
-; CHECK-NEXT:  .LBB7_8:
+; CHECK-NEXT:    beqz a6, .LBB9_9
+; CHECK-NEXT:  .LBB9_8:
 ; CHECK-NEXT:    mv a0, a7
-; CHECK-NEXT:  .LBB7_9:
-; CHECK-NEXT:    bltu a6, a4, .LBB7_11
+; CHECK-NEXT:  .LBB9_9:
+; CHECK-NEXT:    bltu a6, a4, .LBB9_11
 ; CHECK-NEXT:  # %bb.10:
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    j .LBB7_12
-; CHECK-NEXT:  .LBB7_11:
+; CHECK-NEXT:    j .LBB9_12
+; CHECK-NEXT:  .LBB9_11:
 ; CHECK-NEXT:    srl a1, a1, a5
-; CHECK-NEXT:  .LBB7_12:
+; CHECK-NEXT:  .LBB9_12:
 ; CHECK-NEXT:    or a0, a3, a0
 ; CHECK-NEXT:    or a1, a2, a1
 ; CHECK-NEXT:    ret
@@ -216,47 +259,47 @@ define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a5, a2, 63
 ; CHECK-NEXT:    li a4, 32
-; CHECK-NEXT:    bltu a5, a4, .LBB9_2
+; CHECK-NEXT:    bltu a5, a4, .LBB11_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    srl a6, a1, a5
 ; CHECK-NEXT:    mv a3, a0
-; CHECK-NEXT:    bnez a5, .LBB9_3
-; CHECK-NEXT:    j .LBB9_4
-; CHECK-NEXT:  .LBB9_2:
+; CHECK-NEXT:    bnez a5, .LBB11_3
+; CHECK-NEXT:    j .LBB11_4
+; CHECK-NEXT:  .LBB11_2:
 ; CHECK-NEXT:    srl a3, a0, a2
 ; CHECK-NEXT:    neg a6, a5
 ; CHECK-NEXT:    sll a6, a1, a6
 ; CHECK-NEXT:    or a6, a3, a6
 ; CHECK-NEXT:    mv a3, a0
-; CHECK-NEXT:    beqz a5, .LBB9_4
-; CHECK-NEXT:  .LBB9_3:
+; CHECK-NEXT:    beqz a5, .LBB11_4
+; CHECK-NEXT:  .LBB11_3:
 ; CHECK-NEXT:    mv a3, a6
-; CHECK-NEXT:  .LBB9_4:
+; CHECK-NEXT:  .LBB11_4:
 ; CHECK-NEXT:    neg a6, a2
-; CHECK-NEXT:    bltu a5, a4, .LBB9_7
+; CHECK-NEXT:    bltu a5, a4, .LBB11_7
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    andi a5, a6, 63
-; CHECK-NEXT:    bgeu a5, a4, .LBB9_8
-; CHECK-NEXT:  .LBB9_6:
+; CHECK-NEXT:    bgeu a5, a4, .LBB11_8
+; CHECK-NEXT:  .LBB11_6:
 ; CHECK-NEXT:    sll a4, a0, a6
 ; CHECK-NEXT:    neg a7, a5
 ; CHECK-NEXT:    srl a0, a0, a7
 ; CHECK-NEXT:    sll a6, a1, a6
 ; CHECK-NEXT:    or a0, a0, a6
-; CHECK-NEXT:    bnez a5, .LBB9_9
-; CHECK-NEXT:    j .LBB9_10
-; CHECK-NEXT:  .LBB9_7:
+; CHECK-NEXT:    bnez a5, .LBB11_9
+; CHECK-NEXT:    j .LBB11_10
+; CHECK-NEXT:  .LBB11_7:
 ; CHECK-NEXT:    srl a2, a1, a2
 ; CHECK-NEXT:    andi a5, a6, 63
-; CHECK-NEXT:    bltu a5, a4, .LBB9_6
-; CHECK-NEXT:  .LBB9_8:
+; CHECK-NEXT:    bltu a5, a4, .LBB11_6
+; CHECK-NEXT:  .LBB11_8:
 ; CHECK-NEXT:    li a4, 0
 ; CHECK-NEXT:    sll a0, a0, a5
-; CHECK-NEXT:    beqz a5, .LBB9_10
-; CHECK-NEXT:  .LBB9_9:
+; CHECK-NEXT:    beqz a5, .LBB11_10
+; CHECK-NEXT:  .LBB11_9:
 ; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:  .LBB9_10:
+; CHECK-NEXT:  .LBB11_10:
 ; CHECK-NEXT:    or a0, a3, a4
 ; CHECK-NEXT:    or a1, a2, a1
 ; CHECK-NEXT:    ret
