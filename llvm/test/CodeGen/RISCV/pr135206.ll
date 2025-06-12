@@ -44,7 +44,7 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:    lui a0, 8
 ; CHECK-NEXT:    addiw a0, a0, 32
 ; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    addiw a0, a1, 1622
 ; CHECK-NEXT:    vse8.v v8, (s0)
 ; CHECK-NEXT:    vse8.v v8, (s1)
@@ -56,7 +56,7 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:    lui a0, 8
 ; CHECK-NEXT:    addiw a0, a0, 32
 ; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (s0)
 ; CHECK-NEXT:    vse8.v v8, (s1)
