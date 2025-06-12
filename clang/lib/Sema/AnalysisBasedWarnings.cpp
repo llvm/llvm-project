@@ -2869,7 +2869,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 
   DEBUG_WITH_TYPE(
-      "ExperimentalLifetimeAnalysis", if (S.getLangOpts().CPlusPlus) {
+      "ExperimentalLifetimeAnalysis",
+      // TODO: Enable for other languages once the analysis is stable.
+      if (S.getLangOpts().CPlusPlus) {
         if (CFG *cfg = AC.getCFG()) {
           runLifetimeAnalysis(*cast<DeclContext>(D), *cfg, AC);
         }

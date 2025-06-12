@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -mllvm -debug-only=ExperimentalLifetimeAnalysis,LifetimeFacts,LifetimeDataflow -Wreturn-stack-address-cfg %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -mllvm -debug-only=ExperimentalLifetimeAnalysis,LifetimeFacts,LifetimeDataflow %s 2>&1 | FileCheck %s
 
 struct MyObj {
   int id;
@@ -19,7 +19,6 @@ MyObj* return_local_addr() {
 // CHECK:   Expire (LoanID: [[L_X]])
 }
 // CHECK: Dataflow results:
-
 // CHECK-DAG: Origin [[O_ADDR_X]] contains Loan [[L_X]]
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_X]]
 // CHECK-DAG: Origin [[O_RET_VAL]] contains Loan [[L_X]]
@@ -48,7 +47,6 @@ MyObj* assign_and_return_local_addr() {
 // CHECK: Expire (LoanID: [[L_Y]])
 }
 // CHECK: Dataflow results:
-
 // CHECK-DAG: Origin [[O_ADDR_Y]] contains Loan [[L_Y]]
 // CHECK-DAG: Origin [[O_PTR1]] contains Loan [[L_Y]]
 // CHECK-DAG: Origin [[O_PTR2]] contains Loan [[L_Y]]
@@ -67,7 +65,6 @@ int return_int_val() {
 }
 // CHECK-NEXT: End of Block
 // CHECK: Dataflow results:
-
 // CHECK:  <empty>
 
 
@@ -82,7 +79,6 @@ void loan_expires_cpp() {
 // CHECK: Expire (LoanID: [[L_OBJ]])
 }
 // CHECK: Dataflow results:
-
 // CHECK-DAG: Origin [[O_ADDR_OBJ]] contains Loan [[L_OBJ]]
 // CHECK-DAG: Origin [[O_POBJ]] contains Loan [[L_OBJ]]
 
@@ -100,7 +96,6 @@ void loan_expires_trivial() {
   // FIXME: Add check for Expire once trivial destructors are handled for expiration.
 }
 // CHECK: Dataflow results:
-
 // CHECK-DAG: Origin [[O_ADDR_TRIVIAL_OBJ]] contains Loan [[L_TRIVIAL_OBJ]]
 // CHECK-DAG: Origin [[O_PTOBJ]] contains Loan [[L_TRIVIAL_OBJ]]
 
@@ -119,13 +114,17 @@ void conditional(bool condition) {
     p = &b;
   // CHECK: Issue (LoanID: [[L_B:[0-9]+]], OriginID: [[O_ADDR_B:[0-9]+]])
   // CHECK: AssignOrigin (DestID: [[O_P]], SrcID: [[O_ADDR_B]])
+  int *q = p;
+  // CHECK: AssignOrigin (DestID: [[O_P_RVAL:[0-9]+]], SrcID: [[O_P]])
+  // CHECK: AssignOrigin (DestID: [[O_Q:[0-9]+]], SrcID: [[O_P_RVAL]])
 }
 // CHECK: Dataflow results:
-
 // CHECK-DAG: Origin [[O_ADDR_A]] contains Loan [[L_A]]
-// CHECK-DAG: Origin [[O_P]] contains Loan [[L_A]]
 // CHECK-DAG: Origin [[O_ADDR_B]] contains Loan [[L_B]]
+// CHECK-DAG: Origin [[O_P]] contains Loan [[L_A]]
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_B]]
+// CHECK-DAG: Origin [[O_Q]] contains Loan [[L_A]]
+// CHECK-DAG: Origin [[O_Q]] contains Loan [[L_B]]
 
 
 // CHECK-LABEL: Function: pointers_in_a_cycle
@@ -164,7 +163,6 @@ void pointers_in_a_cycle(bool condition) {
 // At the end of the analysis, the origins for the pointers involved in the cycle
 // (p1, p2, p3, temp) should all contain the loans from v1, v2, and v3 at the fixed point.
 // CHECK: Dataflow results:
-
 // CHECK-DAG: Origin [[O_P1]] contains Loan [[L_V1]]
 // CHECK-DAG: Origin [[O_P1]] contains Loan [[L_V2]]
 // CHECK-DAG: Origin [[O_P1]] contains Loan [[L_V3]]
@@ -197,7 +195,6 @@ void overwrite_origin() {
 // CHECK:   Expire (LoanID: [[L_S1]])
 }
 // CHECK: Dataflow results:
-
 // CHECK:     Origin [[O_P]] contains Loan [[L_S2]]
 // CHECK-NOT: Origin [[O_P]] contains Loan [[L_S1]]
 
@@ -216,7 +213,6 @@ void reassign_to_null() {
 // FIXME: Have a better representation for nullptr than just an empty origin. 
 //        It should be a separate loan and origin kind.
 // CHECK: Dataflow results:
-
 // CHECK: Origin [[O_P]] contains no loans
 
 
@@ -239,7 +235,6 @@ void reassign_in_if(bool condition) {
 // CHECK:   Expire (LoanID: [[L_S1]])
 }
 // CHECK: Dataflow results:
-
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_S1]]
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_S2]]
 // CHECK-DAG: Origin [[O_ADDR_S1]] contains Loan [[L_S1]]
@@ -253,7 +248,8 @@ void assign_in_switch(int mode) {
   MyObj s3;
   MyObj* p = nullptr;
 // CHECK: Block B{{[0-9]+}}:
-// CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_NULLPTR_CAST:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR_CAST]])
   switch (mode) {
     case 1:
       p = &s1;
@@ -291,7 +287,8 @@ void assign_in_switch(int mode) {
 // CHECK-LABEL: Function: loan_in_loop
 void loan_in_loop(bool condition) {
   MyObj* p = nullptr;
-  // CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
+  // CHECK:   AssignOrigin (DestID: [[O_NULLPTR_CAST:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
+  // CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR_CAST]])
   while (condition) {
     MyObj inner;
     p = &inner;
@@ -339,7 +336,8 @@ void loop_with_break(int count) {
 void nested_scopes() {
   MyObj* p = nullptr;
 // CHECK: Block B{{[0-9]+}}:
-// CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_NULLPTR_CAST:[0-9]+]], SrcID: [[O_NULLPTR:[0-9]+]])
+// CHECK:   AssignOrigin (DestID: [[O_P:[0-9]+]], SrcID: [[O_NULLPTR_CAST]])
   {
     MyObj outer;
     p = &outer;
