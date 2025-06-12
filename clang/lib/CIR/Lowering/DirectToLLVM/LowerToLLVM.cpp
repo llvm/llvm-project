@@ -901,6 +901,10 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
       rewriter.eraseOp(op);
       return mlir::success();
     }
+  } else if (const auto vecTy = mlir::dyn_cast<cir::VectorType>(op.getType())) {
+    rewriter.replaceOp(op, lowerCirAttrAsValue(op, op.getValue(), rewriter,
+                                               getTypeConverter()));
+    return mlir::success();
   } else {
     return op.emitError() << "unsupported constant type " << op.getType();
   }

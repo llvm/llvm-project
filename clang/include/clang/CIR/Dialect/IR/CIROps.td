@@ -2059,6 +2059,7 @@ def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
