@@ -1793,14 +1793,21 @@ struct DarwinPlatform {
     case TargetArg:
     case MTargetOSArg:
     case OSVersionArg:
-    case InferredFromSDK:
-    case InferredFromArch:
       assert(Arg && "OS version argument not yet inferred");
       return Arg->getAsString(Args);
     case DeploymentTargetEnv:
       return (llvm::Twine(EnvVarName) + "=" + OSVersionStr).str();
+    case InferredFromSDK:
+    case InferredFromArch:
+      llvm_unreachable("Cannot print arguments for inferred OS version");
     }
     llvm_unreachable("Unsupported Darwin Source Kind");
+  }
+
+  // Returns the inferred source of how the OS version was resolved.
+  std::string getInferredSource() {
+    assert(!isExplicitlySpecified() && "OS version was not inferred");
+    return InferredSource.str();
   }
 
   void setEnvironment(llvm::Triple::EnvironmentType EnvType,
@@ -1876,7 +1883,8 @@ struct DarwinPlatform {
     Result.EnvVarName = EnvVarName;
     return Result;
   }
-  static DarwinPlatform createFromSDK(DarwinPlatformKind Platform,
+  static DarwinPlatform createFromSDK(StringRef SDKRoot,
+                                      DarwinPlatformKind Platform,
                                       StringRef Value,
                                       bool IsSimulator = false) {
     DarwinPlatform Result(InferredFromSDK, Platform,
@@ -1884,11 +1892,15 @@ struct DarwinPlatform {
     if (IsSimulator)
       Result.Environment = DarwinEnvironmentKind::Simulator;
     Result.InferSimulatorFromArch = false;
+    Result.InferredSource = SDKRoot;
     return Result;
   }
-  static DarwinPlatform createFromArch(llvm::Triple::OSType OS,
+  static DarwinPlatform createFromArch(StringRef Arch, llvm::Triple::OSType OS,
                                        VersionTuple Version) {
-    return DarwinPlatform(InferredFromArch, getPlatformFromOS(OS), Version);
+    auto Result =
+        DarwinPlatform(InferredFromArch, getPlatformFromOS(OS), Version);
+    Result.InferredSource = Arch;
+    return Result;
   }
 
   /// Constructs an inferred SDKInfo value based on the version inferred from
@@ -1975,6 +1987,9 @@ private:
   bool InferSimulatorFromArch = true;
   std::pair<Arg *, std::string> Arguments;
   StringRef EnvVarName;
+  // If the DarwinPlatform information is derived from an inferred source, this
+  // captures what that source input was for error reporting.
+  StringRef InferredSource;
   // When compiling for a zippered target, this value represents the target
   // triple encoded in the target variant.
   std::optional<llvm::Triple> TargetVariantTriple;
@@ -2143,26 +2158,27 @@ inferDeploymentTargetFromSDK(DerivedArgList &Args,
       [&](StringRef SDK) -> std::optional<DarwinPlatform> {
     if (SDK.starts_with("iPhoneOS") || SDK.starts_with("iPhoneSimulator"))
       return DarwinPlatform::createFromSDK(
-          Darwin::IPhoneOS, Version,
+          isysroot, Darwin::IPhoneOS, Version,
           /*IsSimulator=*/SDK.starts_with("iPhoneSimulator"));
     else if (SDK.starts_with("MacOSX"))
-      return DarwinPlatform::createFromSDK(Darwin::MacOS,
+      return DarwinPlatform::createFromSDK(isysroot, Darwin::MacOS,
                                            getSystemOrSDKMacOSVersion(Version));
     else if (SDK.starts_with("WatchOS") || SDK.starts_with("WatchSimulator"))
       return DarwinPlatform::createFromSDK(
-          Darwin::WatchOS, Version,
+          isysroot, Darwin::WatchOS, Version,
           /*IsSimulator=*/SDK.starts_with("WatchSimulator"));
     else if (SDK.starts_with("AppleTVOS") ||
              SDK.starts_with("AppleTVSimulator"))
       return DarwinPlatform::createFromSDK(
-          Darwin::TvOS, Version,
+          isysroot, Darwin::TvOS, Version,
           /*IsSimulator=*/SDK.starts_with("AppleTVSimulator"));
     else if (SDK.starts_with("XR"))
       return DarwinPlatform::createFromSDK(
-          Darwin::XROS, Version,
+          isysroot, Darwin::XROS, Version,
           /*IsSimulator=*/SDK.contains("Simulator"));
     else if (SDK.starts_with("DriverKit"))
-      return DarwinPlatform::createFromSDK(Darwin::DriverKit, Version);
+      return DarwinPlatform::createFromSDK(isysroot, Darwin::DriverKit,
+                                           Version);
     return std::nullopt;
   };
   if (auto Result = CreatePlatformFromSDKName(SDK))
@@ -2236,7 +2252,7 @@ inferDeploymentTargetFromArch(DerivedArgList &Args, const Darwin &Toolchain,
   if (OSTy == llvm::Triple::UnknownOS)
     return std::nullopt;
   return DarwinPlatform::createFromArch(
-      OSTy, getInferredOSVersion(OSTy, Triple, TheDriver));
+      MachOArchName, OSTy, getInferredOSVersion(OSTy, Triple, TheDriver));
 }
 
 /// Returns the deployment target that's specified using the -target option.
@@ -2455,9 +2471,15 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   }
 
   assert(PlatformAndVersion && "Unable to infer Darwin variant");
-  if (!PlatformAndVersion->isValidOSVersion())
-    getDriver().Diag(diag::err_drv_invalid_version_number)
-        << PlatformAndVersion->getAsString(Args, Opts);
+  if (!PlatformAndVersion->isValidOSVersion()) {
+    if (PlatformAndVersion->isExplicitlySpecified())
+      getDriver().Diag(diag::err_drv_invalid_version_number)
+          << PlatformAndVersion->getAsString(Args, Opts);
+    else
+      getDriver().Diag(diag::err_drv_invalid_version_number_inferred)
+          << PlatformAndVersion->getOSVersion().getAsString()
+          << PlatformAndVersion->getInferredSource();
+  }
   // After the deployment OS version has been resolved, set it to the canonical
   // version before further error detection and converting to a proper target
   // triple.

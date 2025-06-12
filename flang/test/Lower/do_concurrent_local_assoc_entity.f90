@@ -1,6 +1,5 @@
-! XFAIL: *
 ! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
-
+! XFAIL: *
 subroutine local_assoc
   implicit none
   integer  i

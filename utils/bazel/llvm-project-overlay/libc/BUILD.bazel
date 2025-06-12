@@ -1617,12 +1617,17 @@ libc_header_library(
 ############################### errno ########################################
 
 libc_support_library(
+    name = "__support_libc_errno",
+    hdrs = ["src/__support/libc_errno.h"],
+)
+
+libc_support_library(
     name = "errno",
     srcs = ["src/errno/libc_errno.cpp"],
-    hdrs = ["src/__support/libc_errno.h"],
     deps = [
         ":__support_common",
         ":__support_cpp_atomic",
+        ":__support_libc_errno",
         ":__support_macros_attributes",
         ":__support_macros_properties_architectures",
         ":hdr_errno_macros",
@@ -1970,6 +1975,29 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_exp_float_constants",
+    hdrs = ["src/__support/math/exp_float_constants.h"],
+)
+
+libc_support_library(
+    name = "__support_math_expf",
+    hdrs = ["src/__support/math/expf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_exp_float_constants",
     ],
 )
 
@@ -2570,13 +2598,8 @@ libc_math_function(
 libc_math_function(
     name = "expf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":common_constants",
+        ":__support_math_expf",
+        ":errno",
     ],
 )
 
