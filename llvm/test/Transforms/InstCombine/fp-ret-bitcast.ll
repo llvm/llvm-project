@@ -15,10 +15,8 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 define void @bork() nounwind  {
 ; CHECK-LABEL: @bork(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COLOR:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    [[TMP103:%.*]] = load ptr, ptr [[COLOR]], align 4
 ; CHECK-NEXT:    [[TMP105:%.*]] = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_81", align 4
-; CHECK-NEXT:    [[TMP107:%.*]] = call float @objc_msgSend_fpret(ptr [[TMP103]], ptr [[TMP105]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[TMP107:%.*]] = call float @objc_msgSend_fpret(ptr undef, ptr [[TMP105]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

@@ -7,12 +7,7 @@ target triple = "x86_64-grtev4-linux-gnu"
 define i32 @test_plain(i1 %f) {
 ; CHECK-LABEL: @test_plain(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A]], align 8
-; CHECK-NEXT:    [[B_VAL:%.*]] = load i32, ptr [[B]], align 8
-; CHECK-NEXT:    [[L:%.*]] = select i1 [[F:%.*]], i32 [[A_VAL]], i32 [[B_VAL]]
-; CHECK-NEXT:    ret i32 [[L]]
+; CHECK-NEXT:    ret i32 undef
 ;
 entry:
   %a = alloca i32, align 8
@@ -85,12 +80,7 @@ entry:
 define i32 @test_msan(i1 %f) sanitize_memory {
 ; CHECK-LABEL: @test_msan(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A]], align 8
-; CHECK-NEXT:    [[B_VAL:%.*]] = load i32, ptr [[B]], align 8
-; CHECK-NEXT:    [[L:%.*]] = select i1 [[F:%.*]], i32 [[A_VAL]], i32 [[B_VAL]]
-; CHECK-NEXT:    ret i32 [[L]]
+; CHECK-NEXT:    ret i32 undef
 ;
 entry:
   %a = alloca i32, align 8

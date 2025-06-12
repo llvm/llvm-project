@@ -17,13 +17,11 @@ define i32 @foo() nounwind {
 define ptr @bar() nounwind {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RETVAL:%.*]] = alloca ptr, align 4
 ; CHECK-NEXT:    br i1 true, label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    ret ptr [[TMP0]]
+; CHECK-NEXT:    ret ptr undef
 ; CHECK:       cond.false:
-; CHECK-NEXT:    ret ptr poison
+; CHECK-NEXT:    ret ptr undef
 ;
 entry:
   %retval = alloca ptr
