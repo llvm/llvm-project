@@ -74,15 +74,6 @@ int CharacterConverter::push(char8_t utf8_byte) {
   return -1;
 }
 
-int CharacterConverter::push(char32_t utf32) { return utf32; }
-
-utf_ret<char8_t> CharacterConverter::pop_utf8() {
-  utf_ret<char8_t> utf8;
-  utf8.error = 0;
-  utf8.out = 0;
-  return utf8;
-}
-
 utf_ret<char32_t> CharacterConverter::pop_utf32() {
   utf_ret<char32_t> utf32;
   utf32.error = 0;
