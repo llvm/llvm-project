@@ -247,7 +247,7 @@ template <typename T> static T check(ErrorOr<T> E, std::string Msg) {
 }
 
 static int usage() {
-  errs() << "Available subcommands: dump-symtab run\n";
+  errs() << "Available subcommands: dump-symtab run print-guid\n";
   return 1;
 }
 
@@ -610,5 +610,7 @@ int main(int argc, char **argv) {
     return dumpSymtab(argc - 1, argv + 1);
   if (Subcommand == "run")
     return run(argc - 1, argv + 1);
+  if (Subcommand == "print-guid" && argc > 2)
+    outs() << GlobalValue::getGUIDAssumingExternalLinkage(argv[2]);
   return usage();
 }
