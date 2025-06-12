@@ -735,6 +735,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Expected<DeviceImageTy *>
   loadBinaryImpl(const __tgt_device_image *TgtImage, int32_t ImageId) = 0;
 
+  /// Unload a previously loaded Image from the device
+  Error unloadBinary(DeviceImageTy *Image);
+  virtual Error unloadBinaryImpl(DeviceImageTy *Image) = 0;
+
   /// Setup the device environment if needed. Notice this setup may not be run
   /// on some plugins. By default, it will be executed, but plugins can change
   /// this behavior by overriding the shouldSetupDeviceEnvironment function.
