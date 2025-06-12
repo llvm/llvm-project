@@ -30,7 +30,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/IR/VectorBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -2525,7 +2524,6 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
   Value *EVL = State.get(getEVL(), VPLane(0));
 
   Value *Mask;
-  // TODO: move the all-true mask generation into VectorBuilder.
   if (VPValue *CondOp = getCondOp())
     Mask = State.get(CondOp);
   else
