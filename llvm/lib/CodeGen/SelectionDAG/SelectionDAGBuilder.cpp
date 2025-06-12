@@ -3461,6 +3461,10 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
   MachineBasicBlock *CallBrMBB = FuncInfo.MBB;
 
   if (I.isInlineAsm()) {
+    if (I.hasOperandBundlesOtherThan(
+            {LLVMContext::OB_deopt, LLVMContext::OB_funclet}))
+      reportFatalUsageError(
+          "cannot lower callbrs with arbitrary operand bundles!");
     visitInlineAsm(I);
   } else if (I.getIntrinsicID() != Intrinsic::not_intrinsic) {
     visitCallBrIntrinsic(I);

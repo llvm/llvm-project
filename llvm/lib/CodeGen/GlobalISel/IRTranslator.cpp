@@ -3035,8 +3035,13 @@ bool IRTranslator::translateCallBr(const User &U,
   MachineBasicBlock *CallBrMBB = &MIRBuilder.getMBB();
 
   // FIXME: inline asm not yet supported
-  if (I.isInlineAsm())
+  if (I.isInlineAsm()) {
+    if (I.hasOperandBundlesOtherThan(
+            {LLVMContext::OB_deopt, LLVMContext::OB_funclet}))
+      reportFatalUsageError(
+          "cannot lower callbrs with arbitrary operand bundles!");
     return false;
+  }
   if (I.getIntrinsicID() == Intrinsic::not_intrinsic)
     return false;
   if (!translateTargetIntrinsic(I, I.getIntrinsicID(), MIRBuilder))
