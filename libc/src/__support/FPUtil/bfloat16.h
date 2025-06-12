@@ -27,21 +27,20 @@ namespace LIBC_NAMESPACE_DECL {
 struct BFloat16 {
   uint16_t bits;
 
-  constexpr BFloat16() : bits(0) {}
+  BFloat16() = default;
 
-  explicit BFloat16(float x = 0.0f) {
-    if (x == 0.0f) {
-      bits = 0;
-    } else {
-      bits = 1;
-    }
-  }
+  constexpr explicit BFloat16(uint16_t bits) : bits(bits) {}
+
+  // fputil::cast<bfloat16>(T) only works for T = floating point type
+  // TODO: integer to bfloat16 conversion
+  template <typename T>
+  constexpr explicit BFloat16(T x) : bits(fputil::cast<bfloat16>(x).bits) {}
 
   constexpr bool operator==(const BFloat16 other) const {
     return bits == other.bits;
   }
 
-  float as_float() const {
+  constexpr float as_float() const {
     uint32_t x_bits = static_cast<uint32_t>(bits) << 16U;
     return cpp::bit_cast<float>(x_bits);
   }
