@@ -10,6 +10,7 @@
 // iterators in std::span and std::string_view, for historical reasons.
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_BOUNDED_ITERATORS
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <version>
 
