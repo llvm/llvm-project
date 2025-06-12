@@ -808,7 +808,7 @@ define <2 x i64> @or_and_v2i64(<2 x i64> %a0) {
 ; AVX512-LABEL: or_and_v2i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [7,7]
-; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 & (xmm0 | mem)
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 & (xmm0 | m64bcst)
 ; AVX512-NEXT:    retq
   %1 = and <2 x i64> %a0, <i64 7, i64 7>
   %2 = or <2 x i64> %1, <i64 3, i64 3>
