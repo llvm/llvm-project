@@ -197,7 +197,7 @@ def write_lit_test(test_path, test_visibility):
         for i, batch in enumerate(batched):
             # Example run line: "// RUN: not %clang -cc1 -A ... -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CC1OptionCHECK0 %s"
             run_cmd = (
-                f"\n{comment_str}RUN: not " + driver_data.lit_cmd_prefix
+                f"\n{comment_str}RUN: not " + driver_data.lit_cmd_prefix + " "
             )  # "// RUN: not %clang -cc1 "
 
             # // RUN: <command up to this point> \
@@ -208,6 +208,7 @@ def write_lit_test(test_path, test_visibility):
 
             run_cmd += (
                 driver_data.lit_cmd_options  # "-x c++"
+                + " "
                 + driver_data.lit_cmd_end  # " - < /dev/null 2>&1 | FileCheck -check-prefix=CC1OptionCHECK"
                 + str(i)  # "0"
                 + " %s\n\n"  # " %s"
@@ -306,58 +307,58 @@ options_dictionary = json.loads(options_json_str.stdout.decode("utf-8"))
 
 # Establish the dataclass objects for each driver
 driver_cc1as = DriverData(
-    "%clang -cc1as ",
+    "%clang -cc1as",
     "",
     VISIBILITY_CC1AS,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_",
+    f"- < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_",
     "unknown argument",
     "CHECK_CC1AS_",
 )
 driver_cc1 = DriverData(
-    "%clang -cc1 ",
+    "%clang -cc1",
     " -x c++",
     VISIBILITY_CC1,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_",
+    f"- < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_",
     "unknown argument",
     "CHECK_CC1_",
 )
 driver_cl = DriverData(
-    "%clang_cl ",
+    "%clang_cl",
     " -### /c /WX -Werror",
     VISIBILITY_CL,
-    f" 2>&1 | FileCheck -check-prefix=CHECK_CL_",
+    f"2>&1 | FileCheck -check-prefix=CHECK_CL_",
     "unknown argument ignored in clang-cl",
     "CHECK_CL_",
 )
 driver_dxc = DriverData(
-    "%clang_dxc ",
+    "%clang_dxc",
     " -### /T lib_6_7",
     VISIBILITY_DXC,
-    f" 2>&1 | FileCheck -check-prefix=CHECK_DXC_",
+    f"2>&1 | FileCheck -check-prefix=CHECK_DXC_",
     "unknown argument",
     "CHECK_DXC_",
 )
 driver_default = DriverData(
-    "%clang ",
+    "%clang",
     " -### -x c++ -c",
     VISIBILITY_DEFAULT,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CLANG_",
+    f"- < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CLANG_",
     "unknown argument",
     "CHECK_CLANG_",
 )
 driver_fc1 = DriverData(
-    "%flang_fc1 ",
+    "%flang_fc1",
     "",
     VISIBILITY_FC1,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_",
+    f"- < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_",
     "unknown argument",
     "CHECK_FC1_",
 )
 driver_flang = DriverData(
-    "%clang --driver-mode=flang ",
+    "%clang --driver-mode=flang",
     " -### -x c++ -c",
     VISIBILITY_FLANG,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_",
+    f"- < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_",
     "unknown argument",
     "CHECK_FLANG_",
 )
