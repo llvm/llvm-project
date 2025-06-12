@@ -29,8 +29,8 @@ class SBModuleSeparateDebugInfoCase(TestBase):
         self.assertEqual(len(file_specs), 1)
         self.assertTrue(file_specs[0].GetFilename().endswith(".dwo"))
 
-    @skipIf(debug_info=no_match("oso"))
-    def test_get_separate_debug_info_files_oso(self):
+    @skipIf(debug_info=no_match("dsym"))
+    def test_get_separate_debug_info_files_dsym(self):
         """Test the SBModule::GetSeparateDebugInfoFiles"""
         self.build()
         exe = self.getBuildArtifact("a.out")
