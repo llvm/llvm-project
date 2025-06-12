@@ -2326,14 +2326,13 @@ public:
     MatrixTy A = getMatrix(OpA, Shape, Builder);
     MatrixTy B = getMatrix(OpB, Shape, Builder);
 
-    Value *CondV[2];
+    SmallVector<Value*> CondV;
     if (isa<FixedVectorType>(Cond->getType())) {
       MatrixTy C = getMatrix(Cond, Shape, Builder);
-      CondV[0] = C.getVector(0);
-      CondV[1] = C.getVector(1);
+      llvm::copy(C.vectors(), std::back_inserter(CondV));
     } else {
-      CondV[0] = Cond;
-      CondV[1] = Cond;
+      CondV.resize(A.getNumVectors());
+      std::fill(CondV.begin(), CondV.end(), Cond);
     }
 
     for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors()))
