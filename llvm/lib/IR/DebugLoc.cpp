@@ -143,6 +143,27 @@ DebugLoc DebugLoc::appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
   return Last;
 }
 
+DebugLoc DebugLoc::getMergedLocations(ArrayRef<DebugLoc> Locs) {
+  if (Locs.empty())
+    return DebugLoc();
+  if (Locs.size() == 1)
+    return Locs[0];
+  DebugLoc Merged = Locs[0];
+  for (const DebugLoc &DL : llvm::drop_begin(Locs)) {
+    Merged = getMergedLocation(Merged, DL);
+    if (!Merged)
+      break;
+  }
+  return Merged;
+}
+DebugLoc DebugLoc::getMergedLocation(DebugLoc LocA, DebugLoc LocB) {
+  if (!LocA)
+    return LocA;
+  if (!LocB)
+    return LocB;
+  return DILocation::getMergedLocation(LocA, LocB);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void DebugLoc::dump() const { print(dbgs()); }
 #endif
