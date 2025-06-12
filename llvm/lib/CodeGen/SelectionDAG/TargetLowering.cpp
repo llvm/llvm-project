@@ -11432,7 +11432,7 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
   }
 
   if (VT.isScalableVector())
-    report_fatal_error(
+    reportFatalInternalError(
         "Expanding reductions for scalable vectors is undefined.");
 
   EVT EltVT = VT.getVectorElementType();

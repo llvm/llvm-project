@@ -188,7 +188,12 @@ class VectorLegalizer {
   void PromoteSETCC(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
   void PromoteSTRICT(SDNode *Node, SmallVectorImpl<SDValue> &Results);
-  void PromoteVECREDUCE(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+
+  /// Calculate the reduction using a type of higher precision and round the
+  /// result to match the original type. Setting NonArithmetic signifies the
+  /// rounding of the result does not affect its value.
+  void PromoteFloatVECREDUCE(SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                             bool NonArithmetic);
 
 public:
   VectorLegalizer(SelectionDAG& dag) :
@@ -683,8 +688,9 @@ void VectorLegalizer::PromoteSTRICT(SDNode *Node,
   Results.push_back(Round.getValue(1));
 }
 
-void VectorLegalizer::PromoteVECREDUCE(SDNode *Node,
-                                       SmallVectorImpl<SDValue> &Results) {
+void VectorLegalizer::PromoteFloatVECREDUCE(SDNode *Node,
+                                            SmallVectorImpl<SDValue> &Results,
+                                            bool NonArithmetic) {
   MVT OpVT = Node->getOperand(0).getSimpleValueType();
   assert(OpVT.isFloatingPoint() && "Expected floating point reduction!");
   MVT NewOpVT = TLI.getTypeToPromoteTo(Node->getOpcode(), OpVT);
@@ -694,8 +700,9 @@ void VectorLegalizer::PromoteVECREDUCE(SDNode *Node,
   SDValue Rdx =
       DAG.getNode(Node->getOpcode(), DL, NewOpVT.getVectorElementType(), NewOp,
                   Node->getFlags());
-  SDValue Res = DAG.getNode(ISD::FP_ROUND, DL, Node->getValueType(0), Rdx,
-                            DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+  SDValue Res =
+      DAG.getNode(ISD::FP_ROUND, DL, Node->getValueType(0), Rdx,
+                  DAG.getIntPtrConstant(NonArithmetic, DL, /*isTarget=*/true));
   Results.push_back(Res);
 }
 
@@ -731,11 +738,13 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     PromoteSTRICT(Node, Results);
     return;
   case ISD::VECREDUCE_FADD:
+    PromoteFloatVECREDUCE(Node, Results, /*NonArithmetic=*/false);
+    return;
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMINIMUM:
-    PromoteVECREDUCE(Node, Results);
+    PromoteFloatVECREDUCE(Node, Results, /*NonArithmetic=*/true);
     return;
   case ISD::FP_ROUND:
   case ISD::FP_EXTEND:
