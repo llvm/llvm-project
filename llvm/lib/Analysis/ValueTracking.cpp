@@ -9072,7 +9072,7 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
     switch (Opcode) {
     default:
       continue;
-    // TODO: Expand list -- xor, gep, uadd.sat etc.
+    // TODO: Expand list -- gep, uadd.sat etc.
     case Instruction::LShr:
     case Instruction::AShr:
     case Instruction::Shl:
@@ -9082,7 +9082,9 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
     case Instruction::URem:
     case Instruction::And:
     case Instruction::Or:
+    case Instruction::Xor:
     case Instruction::Mul:
+    case Instruction::FAdd:
     case Instruction::FMul: {
       Value *LL = LU->getOperand(0);
       Value *LR = LU->getOperand(1);
