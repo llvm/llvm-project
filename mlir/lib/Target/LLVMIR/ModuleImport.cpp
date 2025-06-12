@@ -1429,6 +1429,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   }
   if (globalVar->hasSection())
     globalOp.setSection(globalVar->getSection());
+  if (globalVar->hasPartition())
+    globalOp.setPartition(globalVar->getPartition());
   globalOp.setVisibility_(
       convertVisibilityFromLLVM(globalVar->getVisibility()));
 
@@ -2874,6 +2876,9 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
   if (func->hasSection())
     funcOp.setSection(StringRef(func->getSection()));
+
+  if (func->hasPartition())
+    funcOp.setPartition(StringRef(func->getPartition()));
 
   funcOp.setVisibility_(convertVisibilityFromLLVM(func->getVisibility()));
 
