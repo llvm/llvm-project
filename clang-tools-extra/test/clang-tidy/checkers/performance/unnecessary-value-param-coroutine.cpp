@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++20-or-later %s performance-unnecessary-value-param %t -- -fix-errors
 // RUN: %check_clang_tidy -std=c++20-or-later %s performance-unnecessary-value-param %t -- \
 // RUN:   -config='{CheckOptions: {performance-unnecessary-value-param.IsAllowedInCoroutines: false}}' -fix-errors
-// RUN: not %check_clang_tidy -std=c++20-or-later %s performance-unnecessary-value-param %t -- \
+// RUN: %check_clang_tidy -check-suffix=ALLOWED -std=c++20-or-later %s performance-unnecessary-value-param %t -- \
 // RUN:   -config='{CheckOptions: {performance-unnecessary-value-param.IsAllowedInCoroutines: true}}' -fix-errors
 
 namespace std {
@@ -40,6 +40,7 @@ struct suspend_never {
 struct ReturnObject {
     struct promise_type {
         ReturnObject get_return_object() { return {}; }
+        ReturnObject return_void() { return {}; }
         std::suspend_always initial_suspend() { return {}; }
         std::suspend_always final_suspend() noexcept { return {}; }
         void unhandled_exception() {}
@@ -51,8 +52,14 @@ struct A {
   A(const A&);
 };
 
-ReturnObject evaluateModels(const A timeMachineId) {
-// No change for non-coroutine function expected because it is not safe.
-// CHECK-FIXES: ReturnObject evaluateModels(const A timeMachineId) {
+ReturnObject foo_coroutine(const A a) {
+// CHECK-MESSAGES-ALLOWED: [[@LINE-1]]:36: warning: the const qualified parameter 'a'
+// CHECK-FIXES: ReturnObject foo_coroutine(const A a) {
   co_return;
+}
+
+ReturnObject foo_not_coroutine(const A a) {
+// CHECK-MESSAGES: [[@LINE-1]]:40: warning: the const qualified parameter 'a'
+// CHECK-MESSAGES-ALLOWED: [[@LINE-2]]:40: warning: the const qualified parameter 'a'
+  return ReturnObject{};
 }

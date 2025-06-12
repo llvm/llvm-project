@@ -78,5 +78,6 @@ Options
 .. option:: IsAllowedInCoroutines
 
    A boolean specifying whether the check should suggest passing parameters by
-   reference in coroutines. The default is `false`. Passing parameters by reference
-   in coroutines may not be safe.
+   reference in coroutines. Passing parameters by reference in coroutines may
+	 not be safe, please see :doc:`cppcoreguidelines-avoid-reference-coroutine-parameters <../cppcoreguidelines/avoid-reference-coroutine-parameters>`
+	 for more information. Default is `false`.

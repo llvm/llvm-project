@@ -54,6 +54,7 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
       IsAllowedInCoroutines(Options.get("IsAllowedInCoroutines", false)) {}
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
+  using StmtMatcher = ast_matchers::internal::BindableMatcher<Stmt>;
   const auto ExpensiveValueParamDecl = parmVarDecl(
       hasType(qualType(
           hasCanonicalType(matchers::isExpensiveToCopy()),
@@ -64,7 +65,11 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
           TK_AsIs,
-          functionDecl(hasBody(stmt()), isDefinition(), unless(isImplicit()),
+          functionDecl(hasBody(IsAllowedInCoroutines
+                                   ? stmt()
+                                   : static_cast<StmtMatcher>(
+                                         unless(coroutineBodyStmt()))),
+                       isDefinition(), unless(isImplicit()),
                        unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
                        has(typeLoc(forEach(ExpensiveValueParamDecl))),
                        decl().bind("functionDecl"))),
@@ -74,10 +79,6 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
 void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Param = Result.Nodes.getNodeAs<ParmVarDecl>("param");
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("functionDecl");
-  if (!IsAllowedInCoroutines) {
-    if (auto Body = Function->getBody(); Body && isa<CoroutineBodyStmt>(Body))
-      return;
-  }
 
   TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
