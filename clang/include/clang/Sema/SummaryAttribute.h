@@ -24,7 +24,8 @@ public:
   SummaryAttributeKind getKind() { return Kind; }
 
   virtual bool infer(const FunctionDecl *FD) const = 0;
-  virtual bool merge(const FunctionSummary &Summary) const = 0;
+  virtual bool merge(const FunctionSummary &Caller,
+                     const FunctionSummary &Callee) const = 0;
 
   virtual std::string serialize() const { return std::string(Serialzed); };
   virtual bool parse(std::string_view input) const {
@@ -45,7 +46,8 @@ public:
   NoWriteGlobalAttr() : SummaryAttribute(NO_WRITE_GLOBAL, "no_write_global") {}
 
   bool infer(const FunctionDecl *FD) const override final;
-  bool merge(const FunctionSummary &Summary) const override final;
+  bool merge(const FunctionSummary &Caller,
+             const FunctionSummary &Callee) const override final;
 };
 } // namespace clang
 

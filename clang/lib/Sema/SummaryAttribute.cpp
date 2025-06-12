@@ -26,7 +26,9 @@ bool NoWriteGlobalAttr::infer(const FunctionDecl *FD) const {
   return !CB.WriteGlobal;
 }
 
-bool NoWriteGlobalAttr::merge(const FunctionSummary &Summary) const {
-  return Summary.getAttributes().count(this);
+bool NoWriteGlobalAttr::merge(const FunctionSummary &Caller,
+                              const FunctionSummary &Callee) const {
+  return Caller.getAttributes().count(this) &&
+         Callee.getAttributes().count(this);
 }
 } // namespace clang

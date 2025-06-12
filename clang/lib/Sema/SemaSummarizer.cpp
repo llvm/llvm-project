@@ -73,6 +73,7 @@ SummaryManager::GetSummary(const FunctionDecl *FD) const {
 
 void SummaryManager::SummarizeFunctionBody(const FunctionDecl *FD) {
   std::set<const SummaryAttribute *> Attrs;
+
   for (auto &&Attr : Attributes) {
     if (Attr->infer(FD))
       Attrs.emplace(Attr.get());
@@ -122,9 +123,9 @@ bool SummaryManager::ReduceFunctionSummary(FunctionSummary &Function) {
 
     const FunctionSummary *callSummary = IDToSummary[call];
 
-    for (auto &&Attr : Function.getAttributes()) {
-      if (Attr->merge(*callSummary))
-        reducedAttrs.emplace(Attr);
+    for (auto &&Attr : Attributes) {
+      if (Attr->merge(Function, *callSummary))
+        reducedAttrs.emplace(Attr.get());
     }
 
     if (reducedAttrs != Function.getAttributes()) {
