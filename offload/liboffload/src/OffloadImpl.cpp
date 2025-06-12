@@ -399,7 +399,7 @@ ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
 }
 
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
-                    ol_device_handle_t DstDevice, void *SrcPtr,
+                    ol_device_handle_t DstDevice, const void *SrcPtr,
                     ol_device_handle_t SrcDevice, size_t Size,
                     ol_event_handle_t *EventOut) {
   if (DstDevice == HostDevice() && SrcDevice == HostDevice()) {
@@ -499,12 +499,12 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
   KernelArgsTy LaunchArgs{};
-  LaunchArgs.NumTeams[0] = LaunchSizeArgs->NumGroupsX;
-  LaunchArgs.NumTeams[1] = LaunchSizeArgs->NumGroupsY;
-  LaunchArgs.NumTeams[2] = LaunchSizeArgs->NumGroupsZ;
-  LaunchArgs.ThreadLimit[0] = LaunchSizeArgs->GroupSizeX;
-  LaunchArgs.ThreadLimit[1] = LaunchSizeArgs->GroupSizeY;
-  LaunchArgs.ThreadLimit[2] = LaunchSizeArgs->GroupSizeZ;
+  LaunchArgs.NumTeams[0] = LaunchSizeArgs->NumGroups.x;
+  LaunchArgs.NumTeams[1] = LaunchSizeArgs->NumGroups.y;
+  LaunchArgs.NumTeams[2] = LaunchSizeArgs->NumGroups.z;
+  LaunchArgs.ThreadLimit[0] = LaunchSizeArgs->GroupSize.x;
+  LaunchArgs.ThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
+  LaunchArgs.ThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
   LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
 
   KernelLaunchParamsTy Params;

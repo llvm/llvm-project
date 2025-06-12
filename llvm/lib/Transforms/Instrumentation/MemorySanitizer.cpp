@@ -316,14 +316,22 @@ static cl::opt<bool> ClEagerChecks(
 
 static cl::opt<bool> ClDumpStrictInstructions(
     "msan-dump-strict-instructions",
-    cl::desc("print out instructions with default strict semantics"),
+    cl::desc("print out instructions with default strict semantics i.e.,"
+             "check that all the inputs are fully initialized, and mark "
+             "the output as fully initialized. These semantics are applied "
+             "to instructions that could not be handled explicitly nor "
+             "heuristically."),
     cl::Hidden, cl::init(false));
 
-static cl::opt<bool> ClDumpStrictIntrinsics(
-    "msan-dump-strict-intrinsics",
-    cl::desc("Prints 'unknown' intrinsics that were handled heuristically. "
-             "Use -msan-dump-strict-instructions to print intrinsics that "
-             "could not be handled exactly nor heuristically."),
+// Currently, all the heuristically handled instructions are specifically
+// IntrinsicInst. However, we use the broader "HeuristicInstructions" name
+// to parallel 'msan-dump-strict-instructions', and to keep the door open to
+// handling non-intrinsic instructions heuristically.
+static cl::opt<bool> ClDumpHeuristicInstructions(
+    "msan-dump-heuristic-instructions",
+    cl::desc("Prints 'unknown' instructions that were handled heuristically. "
+             "Use -msan-dump-strict-instructions to print instructions that "
+             "could not be handled explicitly nor heuristically."),
     cl::Hidden, cl::init(false));
 
 static cl::opt<int> ClInstrumentationWithCallThreshold(
@@ -2077,6 +2085,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(ShadowPtr && "Could not find shadow for an argument");
       return ShadowPtr;
     }
+
+    // TODO: Partially undefined vectors are handled by the fall-through case
+    //       below (see partial-poison.ll); this causes false negatives.
+
     // For everything else the shadow is zero.
     return getCleanShadow(V);
   }
@@ -3197,10 +3209,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   bool handleUnknownIntrinsic(IntrinsicInst &I) {
     if (handleUnknownIntrinsicUnlogged(I)) {
-      if (ClDumpStrictIntrinsics)
+      if (ClDumpHeuristicInstructions)
         dumpInst(I);
 
-      LLVM_DEBUG(dbgs() << "UNKNOWN INTRINSIC HANDLED HEURISTICALLY: " << I
+      LLVM_DEBUG(dbgs() << "UNKNOWN INSTRUCTION HANDLED HEURISTICALLY: " << I
                         << "\n");
       return true;
     } else

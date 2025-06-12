@@ -17,6 +17,7 @@ include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Attrs
@@ -273,6 +274,50 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 
   let assemblyFormat = [{
     `<` custom<ConstPtr>($value) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ConstComplexAttr
+//===----------------------------------------------------------------------===//
+
+def ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex",
+                                [TypedAttrInterface]> {
+  let summary = "An attribute that contains a constant complex value";
+  let description = [{
+    The `#cir.const_complex` attribute contains a constant value of complex
+    number type. The `real` parameter gives the real part of the complex number
+    and the `imag` parameter gives the imaginary part of the complex number.
+
+    The `real` and `imag` parameters must both reference the same type and must
+    be either IntAttr or FPAttr.
+
+    ```mlir
+    %ci = #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i>
+        : !cir.complex<!s32i>
+    %cf = #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float,
+        #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let parameters = (ins
+    AttributeSelfTypeParameter<"", "cir::ComplexType">:$type,
+    CIR_AnyIntOrFloatAttr:$real,
+    CIR_AnyIntOrFloatAttr:$imag
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::ComplexType":$type,
+                                        "mlir::TypedAttr":$real,
+                                        "mlir::TypedAttr":$imag), [{
+      return $_get(type.getContext(), type, real, imag);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+
+  let assemblyFormat = [{
+    `<` qualified($real) `,` qualified($imag) `>`
   }];
 }
 

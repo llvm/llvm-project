@@ -395,7 +395,7 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
       LLVM_DEBUG(dbgs() << "Failed to create new discriminator: "
                         << DIL->getFilename() << " Line: " << DIL->getLine());
   } else
-    Builder.SetCurrentDebugLocation(DIL);
+    Builder.SetCurrentDebugLocation(DL);
 }
 
 void VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
@@ -1015,8 +1015,6 @@ void VPlan::execute(VPTransformState *State) {
   // successor blocks including the middle, exit and scalar preheader blocks.
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
-
-  State->CFG.DTU.flush();
 
   VPBasicBlock *Header = vputils::getFirstLoopHeader(*this, State->VPDT);
   if (!Header)

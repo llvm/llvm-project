@@ -978,7 +978,9 @@ bool AMDGPUTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 
 unsigned AMDGPUTargetMachine::getAssumedAddrSpace(const Value *V) const {
   if (auto *Arg = dyn_cast<Argument>(V);
-      Arg && AMDGPU::isKernelCC(Arg->getParent()) && !Arg->hasByRefAttr())
+      Arg &&
+      AMDGPU::isModuleEntryFunctionCC(Arg->getParent()->getCallingConv()) &&
+      !Arg->hasByRefAttr())
     return AMDGPUAS::GLOBAL_ADDRESS;
 
   const auto *LD = dyn_cast<LoadInst>(V);

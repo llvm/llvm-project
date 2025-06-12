@@ -83,27 +83,6 @@ int enablezOSAutoConversion(int FD) {
   return fcntl(FD, F_CONTROL_CVT, &Query);
 }
 
-std::error_code llvm::disablezOSAutoConversion(int FD) {
-  if (::disablezOSAutoConversion(FD) == -1)
-    return errnoAsErrorCode();
-
-  return std::error_code();
-}
-
-std::error_code llvm::enablezOSAutoConversion(int FD) {
-  if (::enablezOSAutoConversion(FD) == -1)
-    return errnoAsErrorCode();
-
-  return std::error_code();
-}
-
-std::error_code llvm::restorezOSStdHandleAutoConversion(int FD) {
-  if (::restorezOSStdHandleAutoConversion(FD) == -1)
-    return errnoAsErrorCode();
-
-  return std::error_code();
-}
-
 std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool Text) {
   assert((!Text || (CCSID != FT_UNTAGGED && CCSID != FT_BINARY)) &&
          "FT_UNTAGGED and FT_BINARY are not allowed for text files");

@@ -29,9 +29,17 @@ private:
   /// as a complete object.
   cir::RecordType completeObjectType;
 
+  /// The CIR type for the non-virtual part of this record layout; used when
+  /// laying it out as a base subobject.
+  cir::RecordType baseSubobjectType;
+
   /// Map from (non-bit-field) record field to the corresponding cir record type
   /// field no. This info is populated by the record builder.
   llvm::DenseMap<const clang::FieldDecl *, unsigned> fieldIdxMap;
+
+  // FIXME: Maybe we could use CXXBaseSpecifier as the key and use a single map
+  // for both virtual and non-virtual bases.
+  llvm::DenseMap<const clang::CXXRecordDecl *, unsigned> nonVirtualBases;
 
   /// False if any direct or indirect subobject of this class, when considered
   /// as a complete object, requires a non-zero bitpattern when
@@ -45,15 +53,21 @@ private:
   unsigned zeroInitializableAsBase : 1;
 
 public:
-  CIRGenRecordLayout(cir::RecordType completeObjectType, bool zeroInitializable,
+  CIRGenRecordLayout(cir::RecordType completeObjectType,
+                     cir::RecordType baseSubobjectType, bool zeroInitializable,
                      bool zeroInitializableAsBase)
       : completeObjectType(completeObjectType),
+        baseSubobjectType(baseSubobjectType),
         zeroInitializable(zeroInitializable),
         zeroInitializableAsBase(zeroInitializableAsBase) {}
 
   /// Return the "complete object" LLVM type associated with
   /// this record.
   cir::RecordType getCIRType() const { return completeObjectType; }
+
+  /// Return the "base subobject" LLVM type associated with
+  /// this record.
+  cir::RecordType getBaseSubobjectCIRType() const { return baseSubobjectType; }
 
   /// Return cir::RecordType element number that corresponds to the field FD.
   unsigned getCIRFieldNo(const clang::FieldDecl *fd) const {
