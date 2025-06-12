@@ -6907,9 +6907,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_mstackrealign,
                     options::OPT_mno_stackrealign);
 
-  if (Args.hasArg(options::OPT_mstack_alignment)) {
-    StringRef alignment = Args.getLastArgValue(options::OPT_mstack_alignment);
-    CmdArgs.push_back(Args.MakeArgString("-mstack-alignment=" + alignment));
+  if (const Arg *A = Args.getLastArg(options::OPT_mstack_alignment)) {
+    StringRef Value = A->getValue();
+    int64_t Alignment = 0;
+    if (Value.getAsInteger(10, Alignment) || Alignment < 0)
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << Value << A->getOption().getName();
+    else if (Alignment & (Alignment - 1))
+      D.Diag(diag::err_drv_alignment_not_power_of_two)
+          << A->getAsString(Args) << Value;
+    else
+      CmdArgs.push_back(Args.MakeArgString("-mstack-alignment=" + Value));
   }
 
   if (Args.hasArg(options::OPT_mstack_probe_size)) {
