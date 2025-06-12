@@ -18980,11 +18980,7 @@ SDValue DAGCombiner::visitFABS(SDNode *N) {
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::FABS, DL, VT, {N0}))
     return C;
 
-  // fold (fabs (fabs x)) -> (fabs x)
-  if (N0.getOpcode() == ISD::FABS)
-    return N->getOperand(0);
-
-  if (SimplifyDemandedBits(N0))
+  if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
   if (SDValue Cast = foldSignChangeInBitcast(N))

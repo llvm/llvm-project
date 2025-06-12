@@ -1515,7 +1515,7 @@ define amdgpu_kernel void @v_udiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     MULADD_IEEE T1.W, -PV.W, T0.Y, T0.X,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     SETGE * T1.W, |PV.W|, |T0.Y|,
+; EG-NEXT:     SETGE * T1.W, |PV.W|, T0.Y,
 ; EG-NEXT:     CNDE T1.W, PV.W, 0.0, literal.x,
 ; EG-NEXT:     FLT_TO_UINT * T0.X, T0.W,
 ; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
@@ -1658,7 +1658,7 @@ define amdgpu_kernel void @v_udiv_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     MULADD_IEEE T1.W, -PV.W, T0.Y, T0.X,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     SETGE * T1.W, |PV.W|, |T0.Y|,
+; EG-NEXT:     SETGE * T1.W, |PV.W|, T0.Y,
 ; EG-NEXT:     CNDE T1.W, PV.W, 0.0, literal.x,
 ; EG-NEXT:     FLT_TO_UINT * T0.X, T0.W,
 ; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
@@ -1858,7 +1858,7 @@ define amdgpu_kernel void @v_udiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     MULADD_IEEE T1.W, -PV.W, T0.X, T0.Z,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     SETGE * T1.W, |PV.W|, |T0.X|,
+; EG-NEXT:     SETGE * T1.W, |PV.W|, T0.X,
 ; EG-NEXT:     CNDE T1.W, PV.W, 0.0, literal.x,
 ; EG-NEXT:     FLT_TO_UINT * T0.X, T0.W,
 ; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
