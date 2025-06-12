@@ -141,6 +141,9 @@ protected:
   /// This is appended to emitted labels.  Defaults to ":"
   const char *LabelSuffix;
 
+  /// Use .set instead of = to equate a symbol to an expression.
+  bool UsesSetToEquateSymbol = false;
+
   // Print the EH begin symbol with an assignment. Defaults to false.
   bool UseAssignmentForEHBegin = false;
 
@@ -525,6 +528,7 @@ public:
   bool shouldAllowAdditionalComments() const { return AllowAdditionalComments; }
   const char *getLabelSuffix() const { return LabelSuffix; }
 
+  bool usesSetToEquateSymbol() const { return UsesSetToEquateSymbol; }
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }
   StringRef getPrivateGlobalPrefix() const { return PrivateGlobalPrefix; }
