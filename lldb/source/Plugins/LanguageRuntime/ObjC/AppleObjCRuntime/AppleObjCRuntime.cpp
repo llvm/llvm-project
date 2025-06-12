@@ -549,11 +549,11 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
        idx++) {
     ValueObjectSP dict_entry = reserved_dict->GetChildAtIndex(idx);
 
-    DataExtractor data;
+    auto data_or_err = llvm::expectedToOptional(dict_entry->GetData());
+    if (!data_or_err)
+      return ThreadSP();
+    auto data = std::move(*data_or_err);
     data.SetAddressByteSize(dict_entry->GetProcessSP()->GetAddressByteSize());
-    Status error;
-    dict_entry->GetData(data, error);
-    if (error.Fail()) return ThreadSP();
 
     lldb::offset_t data_offset = 0;
     auto dict_entry_key = data.GetAddress(&data_offset);
