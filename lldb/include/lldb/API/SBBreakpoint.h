@@ -165,6 +165,15 @@ public:
 
   SBStructuredData SerializeToStructuredData();
 
+  /// Set the "kind" description for a breakpoint.  If the breakpoint is hit
+  /// the stop info will show this "kind" description instead of the
+  /// breakpoint number.  Mostly useful for internal breakpoints, where the
+  /// breakpoint number doesn't have meaning to the user.
+  ///
+  /// \param[in] kind
+  ///     New "kind" description.
+  void SetBreakpointKind(const char *kind);
+
 private:
   friend class SBBreakpointList;
   friend class SBBreakpointLocation;

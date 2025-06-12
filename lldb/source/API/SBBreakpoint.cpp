@@ -811,6 +811,17 @@ lldb::SBError SBBreakpoint::SetIsHardware(bool is_hardware) {
 
 BreakpointSP SBBreakpoint::GetSP() const { return m_opaque_wp.lock(); }
 
+void SBBreakpoint::SetBreakpointKind(const char *kind) {
+  LLDB_INSTRUMENT_VA(this);
+
+  BreakpointSP bkpt_sp = GetSP();
+  if (!bkpt_sp)
+    return;
+  std::lock_guard<std::recursive_mutex> guard(
+      bkpt_sp->GetTarget().GetAPIMutex());
+  bkpt_sp->SetBreakpointKind(kind);
+}
+
 // This is simple collection of breakpoint id's and their target.
 class SBBreakpointListImpl {
 public:
