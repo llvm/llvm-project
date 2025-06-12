@@ -41,22 +41,27 @@ define void @gep_bitcast(ptr %p) {
 
 ; These tests serve to verify code changes when underlying gep ptr is alloca.
 ; This test is to verify 'inbounds' is added when it's valid to accumulate constant offset.
-define i32 @gep_alloca_inbounds_vscale_zero() {
-; CHECK-LABEL: @gep_alloca_inbounds_vscale_zero(
-; CHECK-NEXT:    ret i32 undef
+define i32 @gep_alloca_inbounds_vscale_zero(ptr %a) {
+; CHECK-LABEL: @gep_alloca_inbounds_vscale_zero(ptr %a) {
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[TMP]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
-  %a = alloca <vscale x 4 x i32>
   %tmp = getelementptr <vscale x 4 x i32>, ptr %a, i32 0, i32 2
   %load = load i32, ptr %tmp
   ret i32 %load
 }
 
 ; This test is to verify 'inbounds' is not added when a constant offset can not be determined at compile-time.
-define i32 @gep_alloca_inbounds_vscale_nonzero() {
-; CHECK-LABEL: @gep_alloca_inbounds_vscale_nonzero(
-; CHECK-NEXT:    ret i32 undef
+define i32 @gep_alloca_inbounds_vscale_nonzero(ptr %a) {
+; CHECK-LABEL: @gep_alloca_inbounds_vscale_nonzero(ptr %a) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[TMP]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
-  %a = alloca <vscale x 4 x i32>
   %tmp = getelementptr <vscale x 4 x i32>, ptr %a, i32 1, i32 2
   %load = load i32, ptr %tmp
   ret i32 %load
