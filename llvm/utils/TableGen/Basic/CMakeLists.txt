@@ -18,6 +18,7 @@ add_llvm_library(LLVMTableGenBasic OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_LINK_LLV
   SDNodeProperties.cpp
   TableGen.cpp
   VTEmitter.cpp
+  EmitTargetFeature.cpp
 )
 
 # Users may include its headers as "Basic/*.h"
