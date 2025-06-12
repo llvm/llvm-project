@@ -3279,8 +3279,7 @@ static bool isRemovableWrite(CallBase &CB, Value *UsedV,
 
 static bool isAllocSiteRemovable(Instruction *AI,
                                  SmallVectorImpl<WeakTrackingVH> &Users,
-                                 const TargetLibraryInfo &TLI,
-                                 bool KnowInit) {
+                                 const TargetLibraryInfo &TLI, bool KnowInit) {
   SmallVector<Instruction*, 4> Worklist;
   const std::optional<StringRef> Family = getAllocationFamily(AI, &TLI);
   Worklist.push_back(AI);
@@ -3349,12 +3348,14 @@ static bool isAllocSiteRemovable(Instruction *AI,
             MemIntrinsic *MI = cast<MemIntrinsic>(II);
             if (MI->isVolatile())
               return false;
-            // Note: this could also be ModRef, but we can still interpret that as just Mod in that case.
-            ModRefInfo NewAccess = MI->getRawDest() == PI ? ModRefInfo::Mod : ModRefInfo::Ref;
+            // Note: this could also be ModRef, but we can still interpret that
+            // as just Mod in that case.
+            ModRefInfo NewAccess =
+                MI->getRawDest() == PI ? ModRefInfo::Mod : ModRefInfo::Ref;
             if ((Access & ~NewAccess) != ModRefInfo::NoModRef)
               return false;
             Access |= NewAccess;
-            }
+          }
             [[fallthrough]];
           case Intrinsic::assume:
           case Intrinsic::invariant_start:
@@ -3385,7 +3386,8 @@ static bool isAllocSiteRemovable(Instruction *AI,
           continue;
         }
 
-        if (!isRefSet(Access) && isRemovableWrite(*cast<CallBase>(I), PI, TLI)) {
+        if (!isRefSet(Access) &&
+            isRemovableWrite(*cast<CallBase>(I), PI, TLI)) {
           Access |= ModRefInfo::Mod;
           Users.emplace_back(I);
           continue;
@@ -3447,11 +3449,13 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     DIB.reset(new DIBuilder(*MI.getModule(), /*AllowUnresolved=*/false));
   }
 
-  // Determine what getInitialValueOfAllocation would return without actually allocating the result.
+  // Determine what getInitialValueOfAllocation would return without actually
+  // allocating the result.
   bool KnowInitUndef = isa<AllocaInst>(MI);
   bool KnowInitZero = false;
   if (!KnowInitUndef) {
-    Constant *Init = getInitialValueOfAllocation(&MI, &TLI, Type::getInt8Ty(MI.getContext()));
+    Constant *Init = getInitialValueOfAllocation(
+        &MI, &TLI, Type::getInt8Ty(MI.getContext()));
     if (Init) {
       if (isa<UndefValue>(Init))
         KnowInitUndef = true;
@@ -3484,10 +3488,10 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
           if (KnowInitZero && getUnderlyingObject(MTI->getRawDest()) != &MI) {
             IRBuilderBase::InsertPointGuard Guard(Builder);
             Builder.SetInsertPoint(MTI);
-            auto *M = Builder.CreateMemSet(MTI->getRawDest(),
-                    ConstantInt::get(Type::getInt8Ty(MI.getContext()), 0),
-                    MTI->getLength(),
-                    MTI->getDestAlign());
+            auto *M = Builder.CreateMemSet(
+                MTI->getRawDest(),
+                ConstantInt::get(Type::getInt8Ty(MI.getContext()), 0),
+                MTI->getLength(), MTI->getDestAlign());
             M->copyMetadata(*MTI, LLVMContext::MD_DIAssignID);
           }
         }
@@ -3516,7 +3520,8 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
         Constant *Replace;
         if (isa<LoadInst>(I)) {
           assert(KnowInitZero || KnowInitUndef);
-          Replace = KnowInitUndef ? UndefValue::get(I->getType()) : Constant::getNullValue(I->getType());
+          Replace = KnowInitUndef ? UndefValue::get(I->getType())
+                                  : Constant::getNullValue(I->getType());
         } else
           Replace = PoisonValue::get(I->getType());
         replaceInstUsesWith(*I, Replace);
