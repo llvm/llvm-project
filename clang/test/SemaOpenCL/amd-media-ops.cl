@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header %s
-// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header -fdeclare-opencl-builtins %s
+// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+cl_amd_media_ops,+cl_amd_media_ops2 -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header
+// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+cl_amd_media_ops,+cl_amd_media_ops2 -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header -fdeclare-opencl-builtins
 // expected-no-diagnostics
 
 #define TEST_1ARG_BUILTIN_WITH_TYPE(builtin, ret, type) \
