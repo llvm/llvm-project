@@ -635,7 +635,15 @@ lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {
 
 lldb::SBFileSpecList SBModule::GetSeparateDebugInfoFiles() { 
   lldb::SBFileSpecList sb_filespeclist;
-  
+  ModuleSP module_sp(GetSP());
+  if (module_sp) {
+    llvm::StringMap<lldb_private::FileSpec> debug_info_files = module_sp->GetSeparateDebugInfoFiles();
+    for (auto &&[_, debug_info_file] : debug_info_files) {
+      sb_filespeclist.Append(debug_info_file);
+    }
+  }
+
+  return sb_filespeclist;
 }
 
 lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {
