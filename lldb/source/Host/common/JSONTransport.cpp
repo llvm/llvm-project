@@ -92,7 +92,7 @@ void JSONTransport::Log(llvm::StringRef message) {
 Expected<std::string>
 HTTPDelimitedJSONTransport::ReadImpl(const std::chrono::microseconds &timeout) {
   if (!m_input || !m_input->IsValid())
-    return createStringError("transport output is closed");
+    return llvm::make_error<TransportClosedError>();
 
   IOObject *input = m_input.get();
   Expected<std::string> message_header =
@@ -138,6 +138,35 @@ Error HTTPDelimitedJSONTransport::WriteImpl(const std::string &message) {
   std::string Output;
   raw_string_ostream OS(Output);
   OS << kHeaderContentLength << message.length() << kHeaderSeparator << message;
+  size_t num_bytes = Output.size();
+  return m_output->Write(Output.data(), num_bytes).takeError();
+}
+
+Expected<std::string>
+JSONRPCTransport::ReadImpl(const std::chrono::microseconds &timeout) {
+  if (!m_input || !m_input->IsValid())
+    return make_error<TransportClosedError>();
+
+  IOObject *input = m_input.get();
+  Expected<std::string> raw_json =
+      ReadUntil(*input, kMessageSeparator, timeout);
+  if (!raw_json)
+    return raw_json.takeError();
+
+  Log(llvm::formatv("--> {0}", *raw_json).str());
+
+  return *raw_json;
+}
+
+Error JSONRPCTransport::WriteImpl(const std::string &message) {
+  if (!m_output || !m_output->IsValid())
+    return llvm::make_error<TransportClosedError>();
+
+  Log(llvm::formatv("<-- {0}", message).str());
+
+  std::string Output;
+  llvm::raw_string_ostream OS(Output);
+  OS << message << kMessageSeparator;
   size_t num_bytes = Output.size();
   return m_output->Write(Output.data(), num_bytes).takeError();
 }
