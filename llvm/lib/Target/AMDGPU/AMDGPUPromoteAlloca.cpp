@@ -869,18 +869,16 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   }
 
   unsigned ElementSizeInBits = DL->getTypeSizeInBits(ElemTy);
-  if (ElementSizeInBits == 0) {
-    LLVM_DEBUG(dbgs() << "  Cannot create vector of zero-sized elements.");
-    return false;
-  }
   if (ElementSizeInBits != DL->getTypeAllocSizeInBits(ElemTy)) {
     LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
                          "does not match the type's size\n");
     return false;
   }
   unsigned ElementSize = ElementSizeInBits / 8;
-  if (ElementSize == 0)
+  if (ElementSize == 0) {
+    LLVM_DEBUG(dbgs() << "  Cannot create vector of zero-sized elements\n");
     return false;
+  }
 
   // Calculate the size of the corresponding vector, accounting for padding of
   // inner types, e.g., odd-sized subvectors. Storage size of new vector must
@@ -889,11 +887,12 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   unsigned AllocaSize = DL->getTypeStoreSize(AllocaTy);
   unsigned NumElems = AllocaSize / ElementSize;
   if (NumElems == 0) {
-    LLVM_DEBUG(dbgs() << "  Cannot vectorize an empty aggregate type.");
+    LLVM_DEBUG(dbgs() << "  Cannot vectorize an empty aggregate type\n");
     return false;
   }
   if (NumElems * ElementSize != AllocaSize) {
-    LLVM_DEBUG(dbgs() << "  Cannot convert type into vector of the same size.");
+    LLVM_DEBUG(
+        dbgs() << "  Cannot convert type into vector of the same size\n");
     return false;
   }
   auto *VectorTy = FixedVectorType::get(ElemTy, NumElems);
