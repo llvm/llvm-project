@@ -2546,6 +2546,8 @@ void PruneThreadPlans();
   ProcessRunLock &GetRunLock();
 
   bool CurrentThreadIsPrivateStateThread();
+  
+  bool CurrentThreadPosesAsPrivateStateThread();
 
   virtual Status SendEventData(const char *data) {
     return Status::FromErrorString(
