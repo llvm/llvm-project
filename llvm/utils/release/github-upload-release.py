@@ -42,18 +42,27 @@ def create_release(repo, release, tag=None, name=None, message=None):
         name = "LLVM {}".format(release)
 
     if not message:
+        # Note that these lines are not length limited because if we do so, GitHub
+        # assumes that should be how it is laid out on the page. We want GitHub to
+        # do the reflowing for us instead.
         message = dedent(
             """\
-            LLVM {} Release
+LLVM {release} Release
 
-            # A note on binaries
+# Package Types
 
-            Volunteers make binaries for the LLVM project, which will be uploaded
-            when they have had time to test and build these binaries. They might
-            not be available directly or not at all for each release. We suggest
-            you use the binaries from your distribution or build your own if you
-            rely on a specific platform or configuration."""
-        ).format(release)
+Each platform has one binary release package. The file name starts with either `LLVM-` or `clang+llvm-` and ends with the platform's name. For example, `LLVM-{release}-Linux-ARM64.tar.xz` contains LLVM binaries for Arm64 Linux.
+
+Except for Windows. Where `LLVM-*.exe` is an installer intended for using LLVM as a toolchain and `clang+llvm-` contains the contents of the installer, plus libraries and tools not normally used in a toolchain. You most likely want the `LLVM-` installer, unless you are developing software which itself uses LLVM, in which case choose `clang+llvm-`.
+
+If you do not find a release package for your platform, you may be able to find a community built package on the LLVM Discourse forum thread for this release. Remember that these are built by volunteers and may not always be available.
+
+If you rely on a platform or configuration that is not one of the defaults, we suggest you use the binaries that your platform provides, or build your own release packages.
+
+In addition, source archives are available:
+* `<sub-project>*.src.tar.xz` are archives of the sources of specific sub-projects of `llvm-project` (except for `test-suite` which is an archive of the [LLVM Test Suite](https://github.com/llvm/llvm-test-suite)).
+* To get all the `llvm-project` source code for this release, choose the one of the `Source Code` archives."""
+        ).format(release=release)
 
     prerelease = True if "rc" in release else False
 
