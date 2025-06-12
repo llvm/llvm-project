@@ -253,6 +253,7 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
         Features.push_back("+lsx");
     } else /*-mno-lsx*/ {
       Features.push_back("-lsx");
+      Features.push_back("-lasx");
     }
   }
 
