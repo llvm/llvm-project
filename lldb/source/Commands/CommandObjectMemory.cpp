@@ -932,7 +932,7 @@ EvaluateExpression(llvm::StringRef expression, StackFrame &frame,
   result_sp = result_sp->GetQualifiedRepresentationIfAvailable(
       result_sp->GetDynamicValueType(), /*synthValue=*/true);
   if (!result_sp)
-    return llvm::createStringError("failed to unwrap expression result type");
+    return llvm::createStringError("failed to get dynamic result type");
 
   return result_sp;
 }
