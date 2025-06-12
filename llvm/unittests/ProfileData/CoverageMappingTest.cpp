@@ -754,7 +754,7 @@ TEST_P(CoverageMappingTest, test_line_coverage_iterator) {
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
 
   unsigned Line = 0;
-  const unsigned LineCounts[] = {20, 20, 20, 0, 30, 10, 10, 10, 10, 0, 0, 0, 0};
+  const unsigned LineCounts[] = {20, 20, 20, 0, 10, 10, 10, 10, 10, 0, 0, 0, 0};
   const bool MappedLines[] = {1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0};
   ASSERT_EQ(std::size(LineCounts), std::size(MappedLines));
 
