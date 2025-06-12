@@ -1140,10 +1140,11 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   if (MForwardOffset != 0 || MDep->getLength() != CopyLength) {
     auto *MDepLen = dyn_cast<ConstantInt>(MDep->getLength());
     auto *MLen = dyn_cast<ConstantInt>(CopyLength);
+    // This could be converted to a runtime test (%CopyLength =
+    // min(max(0, MDepLen - MForwardOffset), MLen)), but it is
+    // unclear if that is useful
     if (!MDepLen || !MLen)
-      return false; // This could be converted to a runtime test (%CopyLength =
-                    // min(max(0, MDepLen - MForwardOffset), MLen)), but it is
-                    // unclear if that is useful
+      return false;
     if (MDepLen->getZExtValue() < MLen->getZExtValue() + MForwardOffset) {
       if (!overreadUndefContents(MSSA, M, MDep, BAA))
         return false;
@@ -1172,7 +1173,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   auto MCopyLoc = MemoryLocation::getForSource(MDep);
   // Truncate the size of the MDep access to just the bytes read
   if (MDep->getLength() != CopyLength) {
-    auto ConstLength = cast<ConstantInt>(CopyLength);
+    auto *ConstLength = cast<ConstantInt>(CopyLength);
     MCopyLoc = MCopyLoc.getWithNewSize(
         LocationSize::precise(ConstLength->getZExtValue()));
   }

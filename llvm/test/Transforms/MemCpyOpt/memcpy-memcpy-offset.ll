@@ -134,7 +134,7 @@ define void @forward_offset_memcpy_inline(ptr %src, ptr %dest) {
   ret void
 }
 
-; We cannot forward `memcpy` because it exceeds the size of `memcpy` it depends on.
+; We can forward `memcpy` by shrinking it to the size of the `memcpy` it depends on.
 define void @forward_oversize_offset(ptr %src, ptr %dest) {
 ; CHECK-LABEL: define void @forward_oversize_offset(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DEST:%.*]]) {
@@ -218,14 +218,14 @@ define void @pr98675(ptr noalias %p1, ptr noalias %p2) {
 define void @over_offset_cpy(ptr %src) {
 ; CHECK-LABEL: define void @over_offset_cpy(
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
-; CHECK-NEXT:    [[TMP:%.*]] = alloca i8, i64 2, align 1
-; CHECK-NEXT:    [[DST:%.*]] = alloca i8, i64 1, align 1
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [2 x i8], align 1
+; CHECK-NEXT:    [[DST:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP]], ptr align 8 [[SRC]], i64 1, i1 false)
 ; CHECK-NEXT:    [[TMP_OFFSET:%.*]] = getelementptr inbounds i8, ptr [[TMP]], i64 1
 ; CHECK-NEXT:    ret void
 ;
-  %tmp = alloca i8, i64 2
-  %dst = alloca i8, i64 1
+  %tmp = alloca [2 x i8]
+  %dst = alloca i8
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %tmp, ptr align 8 %src, i64 1, i1 false)
   %tmp_offset = getelementptr inbounds i8, ptr %tmp, i64 1
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %tmp_offset, i64 1, i1 false)
