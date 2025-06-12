@@ -17,13 +17,7 @@
 #include <__functional/binary_function.h>
 #include <__functional/invoke.h>
 #include <__functional/unary_function.h>
-#include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
-#include <__memory/allocator.h>
-#include <__memory/allocator_destructor.h>
-#include <__memory/allocator_traits.h>
-#include <__memory/compressed_pair.h>
-#include <__memory/unique_ptr.h>
 #include <__type_traits/aligned_storage.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_core_convertible.h>
@@ -34,9 +28,7 @@
 #include <__type_traits/strip_signature.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
-#include <__verbose_abort>
 #include <tuple>
 #include <typeinfo>
 
@@ -133,70 +125,8 @@ _LIBCPP_HIDE_FROM_ABI bool __not_null(_Rp (^__p)(_Args...)) {
 
 namespace __function {
 
-// __alloc_func holds a functor and an allocator.
-
-template <class _Fp, class _Ap, class _FB>
-class __alloc_func;
 template <class _Fp, class _FB>
 class __default_alloc_func;
-
-template <class _Fp, class _Ap, class _Rp, class... _ArgTypes>
-class __alloc_func<_Fp, _Ap, _Rp(_ArgTypes...)> {
-  _LIBCPP_COMPRESSED_PAIR(_Fp, __func_, _Ap, __alloc_);
-
-public:
-  using _Target _LIBCPP_NODEBUG = _Fp;
-  using _Alloc _LIBCPP_NODEBUG  = _Ap;
-
-  _LIBCPP_HIDE_FROM_ABI const _Target& __target() const { return __func_; }
-
-  // WIN32 APIs may define __allocator, so use __get_allocator instead.
-  _LIBCPP_HIDE_FROM_ABI const _Alloc& __get_allocator() const { return __alloc_; }
-
-  _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(_Target&& __f) : __func_(std::move(__f)), __alloc_() {}
-
-  _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(const _Target& __f, const _Alloc& __a) : __func_(__f), __alloc_(__a) {}
-
-  _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(const _Target& __f, _Alloc&& __a)
-      : __func_(__f), __alloc_(std::move(__a)) {}
-
-  _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(_Target&& __f, _Alloc&& __a)
-      : __func_(std::move(__f)), __alloc_(std::move(__a)) {}
-
-  _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes&&... __arg) {
-    return std::__invoke_r<_Rp>(__func_, std::forward<_ArgTypes>(__arg)...);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI __alloc_func* __clone() const {
-    typedef allocator_traits<_Alloc> __alloc_traits;
-    typedef __rebind_alloc<__alloc_traits, __alloc_func> _AA;
-    _AA __a(__alloc_);
-    typedef __allocator_destructor<_AA> _Dp;
-    unique_ptr<__alloc_func, _Dp> __hold(__a.allocate(1), _Dp(__a, 1));
-    ::new ((void*)__hold.get()) __alloc_func(__func_, _Alloc(__a));
-    return __hold.release();
-  }
-
-  _LIBCPP_HIDE_FROM_ABI void destroy() _NOEXCEPT {
-    __func_.~_Fp();
-    __alloc_.~_Alloc();
-  }
-
-  _LIBCPP_HIDE_FROM_ABI static void __destroy_and_delete(__alloc_func* __f) {
-    typedef allocator_traits<_Alloc> __alloc_traits;
-    typedef __rebind_alloc<__alloc_traits, __alloc_func> _FunAlloc;
-    _FunAlloc __a(__f->__get_allocator());
-    __f->destroy();
-    __a.deallocate(__f, 1);
-  }
-};
-
-template <class _Tp>
-struct __deallocating_deleter {
-  _LIBCPP_HIDE_FROM_ABI void operator()(void* __p) const {
-    std::__libcpp_deallocate<_Tp>(static_cast<_Tp*>(__p), __element_count(1));
-  }
-};
 
 template <class _Fp, class _Rp, class... _ArgTypes>
 class __default_alloc_func<_Fp, _Rp(_ArgTypes...)> {
@@ -215,20 +145,9 @@ public:
     return std::__invoke_r<_Rp>(__f_, std::forward<_ArgTypes>(__arg)...);
   }
 
-  _LIBCPP_HIDE_FROM_ABI __default_alloc_func* __clone() const {
-    using _Self = __default_alloc_func;
-    unique_ptr<_Self, __deallocating_deleter<_Self>> __hold(std::__libcpp_allocate<_Self>(__element_count(1)));
-    _Self* __res = ::new ((void*)__hold.get()) _Self(__f_);
-    (void)__hold.release();
-    return __res;
-  }
+  _LIBCPP_HIDE_FROM_ABI __default_alloc_func* __clone() const { return new __default_alloc_func(__f_); }
 
   _LIBCPP_HIDE_FROM_ABI void destroy() _NOEXCEPT { __f_.~_Target(); }
-
-  _LIBCPP_HIDE_FROM_ABI static void __destroy_and_delete(__default_alloc_func* __f) {
-    __f->destroy();
-    std::__libcpp_deallocate<__default_alloc_func>(__f, __element_count(1));
-  }
 };
 
 // __base provides an abstract interface for copyable functors.
@@ -257,83 +176,37 @@ public:
 
 // __func implements __base for a given functor type.
 
-template <class _FD, class _Alloc, class _FB>
+template <class _FD, class _FB>
 class __func;
 
-template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-class __func<_Fp, _Alloc, _Rp(_ArgTypes...)> : public __base<_Rp(_ArgTypes...)> {
-  __alloc_func<_Fp, _Alloc, _Rp(_ArgTypes...)> __f_;
+template <class _Fp, class _Rp, class... _ArgTypes>
+class __func<_Fp, _Rp(_ArgTypes...)> : public __base<_Rp(_ArgTypes...)> {
+  _Fp __func_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __func(_Fp&& __f) : __f_(std::move(__f)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __func(_Fp&& __f) : __func_(std::move(__f)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __func(const _Fp& __f) : __func_(__f) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit __func(const _Fp& __f, const _Alloc& __a) : __f_(__f, __a) {}
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL __base<_Rp(_ArgTypes...)>* __clone() const override { return new __func(__func_); }
 
-  _LIBCPP_HIDE_FROM_ABI explicit __func(const _Fp& __f, _Alloc&& __a) : __f_(__f, std::move(__a)) {}
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __clone(__base<_Rp(_ArgTypes...)>* __p) const override {
+    ::new ((void*)__p) __func(__func_);
+  }
 
-  _LIBCPP_HIDE_FROM_ABI explicit __func(_Fp&& __f, _Alloc&& __a) : __f_(std::move(__f), std::move(__a)) {}
-
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual __base<_Rp(_ArgTypes...)>* __clone() const;
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __clone(__base<_Rp(_ArgTypes...)>*) const;
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy() _NOEXCEPT;
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy_deallocate() _NOEXCEPT;
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual _Rp operator()(_ArgTypes&&... __arg);
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void destroy() _NOEXCEPT override { __func_.~_Fp(); }
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void destroy_deallocate() _NOEXCEPT override { delete this; }
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL _Rp operator()(_ArgTypes&&... __arg) override {
+    return std::__invoke_r<_Rp>(__func_, std::forward<_ArgTypes>(__arg)...);
+  }
 #  if _LIBCPP_HAS_RTTI
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual const void* target(const type_info&) const _NOEXCEPT;
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual const std::type_info& target_type() const _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL const void* target(const type_info& __ti) const _NOEXCEPT override {
+    if (__ti == typeid(_Fp))
+      return std::addressof(__func_);
+    return nullptr;
+  }
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL const std::type_info& target_type() const _NOEXCEPT override { return typeid(_Fp); }
 #  endif // _LIBCPP_HAS_RTTI
 };
-
-template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-__base<_Rp(_ArgTypes...)>* __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::__clone() const {
-  typedef allocator_traits<_Alloc> __alloc_traits;
-  typedef __rebind_alloc<__alloc_traits, __func> _Ap;
-  _Ap __a(__f_.__get_allocator());
-  typedef __allocator_destructor<_Ap> _Dp;
-  unique_ptr<__func, _Dp> __hold(__a.allocate(1), _Dp(__a, 1));
-  ::new ((void*)__hold.get()) __func(__f_.__target(), _Alloc(__a));
-  return __hold.release();
-}
-
-template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-void __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::__clone(__base<_Rp(_ArgTypes...)>* __p) const {
-  ::new ((void*)__p) __func(__f_.__target(), __f_.__get_allocator());
-}
-
-template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-void __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::destroy() _NOEXCEPT {
-  __f_.destroy();
-}
-
-template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-void __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::destroy_deallocate() _NOEXCEPT {
-  typedef allocator_traits<_Alloc> __alloc_traits;
-  typedef __rebind_alloc<__alloc_traits, __func> _Ap;
-  _Ap __a(__f_.__get_allocator());
-  __f_.destroy();
-  __a.deallocate(this, 1);
-}
-
-template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-_Rp __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::operator()(_ArgTypes&&... __arg) {
-  return __f_(std::forward<_ArgTypes>(__arg)...);
-}
-
-#  if _LIBCPP_HAS_RTTI
-
-template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-const void* __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::target(const type_info& __ti) const _NOEXCEPT {
-  if (__ti == typeid(_Fp))
-    return std::addressof(__f_.__target());
-  return nullptr;
-}
-
-template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-const std::type_info& __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::target_type() const _NOEXCEPT {
-  return typeid(_Fp);
-}
-
-#  endif // _LIBCPP_HAS_RTTI
 
 // __value_func creates a value-type from a __func.
 
@@ -354,28 +227,18 @@ class __value_func<_Rp(_ArgTypes...)> {
 public:
   _LIBCPP_HIDE_FROM_ABI __value_func() _NOEXCEPT : __f_(nullptr) {}
 
-  template <class _Fp, class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI __value_func(_Fp&& __f, const _Alloc& __a) : __f_(nullptr) {
-    typedef allocator_traits<_Alloc> __alloc_traits;
-    typedef __function::__func<_Fp, _Alloc, _Rp(_ArgTypes...)> _Fun;
-    typedef __rebind_alloc<__alloc_traits, _Fun> _FunAlloc;
+  template <class _Fp, __enable_if_t<!is_same<__decay_t<_Fp>, __value_func>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI explicit __value_func(_Fp&& __f) : __f_(nullptr) {
+    typedef __function::__func<_Fp, _Rp(_ArgTypes...)> _Fun;
 
     if (__function::__not_null(__f)) {
-      _FunAlloc __af(__a);
-      if (sizeof(_Fun) <= sizeof(__buf_) && is_nothrow_copy_constructible<_Fp>::value &&
-          is_nothrow_copy_constructible<_FunAlloc>::value) {
-        __f_ = ::new ((void*)&__buf_) _Fun(std::move(__f), _Alloc(__af));
+      if (sizeof(_Fun) <= sizeof(__buf_) && is_nothrow_copy_constructible<_Fp>::value) {
+        __f_ = ::new (std::addressof(__buf_)) _Fun(std::move(__f));
       } else {
-        typedef __allocator_destructor<_FunAlloc> _Dp;
-        unique_ptr<__func, _Dp> __hold(__af.allocate(1), _Dp(__af, 1));
-        ::new ((void*)__hold.get()) _Fun(std::move(__f), _Alloc(__a));
-        __f_ = __hold.release();
+        __f_ = new _Fun(std::move(__f));
       }
     }
   }
-
-  template <class _Fp, __enable_if_t<!is_same<__decay_t<_Fp>, __value_func>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI explicit __value_func(_Fp&& __f) : __value_func(std::forward<_Fp>(__f), allocator<_Fp>()) {}
 
   _LIBCPP_HIDE_FROM_ABI __value_func(const __value_func& __f) {
     if (__f.__f_ == nullptr)
@@ -544,7 +407,7 @@ private:
 
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static void __large_destroy(void* __s) {
-    _Fun::__destroy_and_delete(static_cast<_Fun*>(__s));
+    delete static_cast<_Fun*>(__s);
   }
 
   template <typename _Fun>
@@ -583,7 +446,7 @@ private:
 template <typename _Tp>
 using __fast_forward _LIBCPP_NODEBUG = __conditional_t<is_scalar<_Tp>::value, _Tp, _Tp&&>;
 
-// __policy_invoker calls an instance of __alloc_func held in __policy_storage.
+// __policy_invoker calls an instance of __default_alloc_func held in __policy_storage.
 
 template <class _Fp>
 struct __policy_invoker;
@@ -641,28 +504,6 @@ class __policy_func<_Rp(_ArgTypes...)> {
 public:
   _LIBCPP_HIDE_FROM_ABI __policy_func() : __policy_(__policy::__create_empty()) {}
 
-  template <class _Fp, class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI __policy_func(_Fp&& __f, const _Alloc& __a) : __policy_(__policy::__create_empty()) {
-    typedef __alloc_func<_Fp, _Alloc, _Rp(_ArgTypes...)> _Fun;
-    typedef allocator_traits<_Alloc> __alloc_traits;
-    typedef __rebind_alloc<__alloc_traits, _Fun> _FunAlloc;
-
-    if (__function::__not_null(__f)) {
-      __invoker_ = __invoker::template __create<_Fun>();
-      __policy_  = __policy::__create<_Fun>();
-
-      _FunAlloc __af(__a);
-      if (__use_small_storage<_Fun>()) {
-        ::new ((void*)&__buf_.__small) _Fun(std::move(__f), _Alloc(__af));
-      } else {
-        typedef __allocator_destructor<_FunAlloc> _Dp;
-        unique_ptr<_Fun, _Dp> __hold(__af.allocate(1), _Dp(__af, 1));
-        ::new ((void*)__hold.get()) _Fun(std::move(__f), _Alloc(__af));
-        __buf_.__large = __hold.release();
-      }
-    }
-  }
-
   template <class _Fp, __enable_if_t<!is_same<__decay_t<_Fp>, __policy_func>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit __policy_func(_Fp&& __f) : __policy_(__policy::__create_empty()) {
     typedef __default_alloc_func<_Fp, _Rp(_ArgTypes...)> _Fun;
@@ -673,9 +514,7 @@ public:
       if (__use_small_storage<_Fun>()) {
         ::new ((void*)&__buf_.__small) _Fun(std::move(__f));
       } else {
-        unique_ptr<_Fun, __deallocating_deleter<_Fun>> __hold(std::__libcpp_allocate<_Fun>(__element_count(1)));
-        __buf_.__large = ::new ((void*)__hold.get()) _Fun(std::move(__f));
-        (void)__hold.release();
+        __buf_.__large = ::new _Fun(std::move(__f));
       }
     }
   }
@@ -750,8 +589,8 @@ public:
 extern "C" void* _Block_copy(const void*);
 extern "C" void _Block_release(const void*);
 
-template <class _Rp1, class... _ArgTypes1, class _Alloc, class _Rp, class... _ArgTypes>
-class __func<_Rp1 (^)(_ArgTypes1...), _Alloc, _Rp(_ArgTypes...)> : public __base<_Rp(_ArgTypes...)> {
+template <class _Rp1, class... _ArgTypes1, class _Rp, class... _ArgTypes>
+class __func<_Rp1 (^)(_ArgTypes1...), _Rp(_ArgTypes...)> : public __base<_Rp(_ArgTypes...)> {
   typedef _Rp1 (^__block_type)(_ArgTypes1...);
   __block_type __f_;
 
@@ -766,15 +605,6 @@ public:
   }
 
   // [TODO] add && to save on a retain
-
-  _LIBCPP_HIDE_FROM_ABI explicit __func(__block_type __f, const _Alloc& /* unused */)
-#    if __has_feature(objc_arc)
-      : __f_(__f)
-#    else
-      : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
-#    endif
-  {
-  }
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual __base<_Rp(_ArgTypes...)>* __clone() const {
     _LIBCPP_ASSERT_INTERNAL(
@@ -954,7 +784,7 @@ function<_Rp(_ArgTypes...)>::function(_Fp __f) : __f_(std::move(__f)) {}
 #  if _LIBCPP_STD_VER <= 14
 template <class _Rp, class... _ArgTypes>
 template <class _Fp, class _Alloc, class>
-function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc& __a, _Fp __f) : __f_(std::move(__f), __a) {}
+function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&, _Fp __f) : __f_(std::move(__f)) {}
 #  endif
 
 template <class _Rp, class... _ArgTypes>
