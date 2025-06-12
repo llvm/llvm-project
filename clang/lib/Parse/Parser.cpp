@@ -16,7 +16,6 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/DiagnosticParse.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -1872,6 +1871,11 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
   if (SS.isNotEmpty())
     AnnotateScopeToken(SS, !WasScopeAnnotation);
   return AnnotatedNameKind::Unresolved;
+}
+
+SourceLocation Parser::getEndOfPreviousToken() const {
+  SourceLocation TokenEndLoc = PP.getLocForEndOfToken(PrevTokLocation);
+  return TokenEndLoc.isValid() ? TokenEndLoc : Tok.getLocation();
 }
 
 bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {

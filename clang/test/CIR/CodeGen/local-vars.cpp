@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t-cir.ll
+// RUN: FileCheck -input-file=%t-cir.ll %s
 
 void test() {
   int i = 1;
@@ -40,26 +41,26 @@ void test() {
 // CHECK:    %[[UID_PTR:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["uid"] {alignment = 8 : i64}
 // CHECK:    %[[UIB_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["uib"] {alignment = 1 : i64}
 // CHECK:    %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CHECK:    cir.store %[[ONE]], %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    cir.store align(4) %[[ONE]], %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
 // CHECK:    %[[TWO:.*]] = cir.const #cir.int<2> : !s64i
-// CHECK:    cir.store %[[TWO]], %[[L_PTR]] : !s64i, !cir.ptr<!s64i>
+// CHECK:    cir.store align(8) %[[TWO]], %[[L_PTR]] : !s64i, !cir.ptr<!s64i>
 // CHECK:    %[[THREE:.*]] = cir.const #cir.fp<3.0{{.*}}> : !cir.float
-// CHECK:    cir.store %[[THREE]], %[[F_PTR]] : !cir.float, !cir.ptr<!cir.float>
+// CHECK:    cir.store align(4) %[[THREE]], %[[F_PTR]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK:    %[[FOUR:.*]] = cir.const #cir.fp<4.0{{.*}}> : !cir.double
-// CHECK:    cir.store %[[FOUR]], %[[D_PTR]] : !cir.double, !cir.ptr<!cir.double>
+// CHECK:    cir.store align(8) %[[FOUR]], %[[D_PTR]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK:    %[[TRUE:.*]] = cir.const #true
-// CHECK:    cir.store %[[TRUE]], %[[B1_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
+// CHECK:    cir.store align(1) %[[TRUE]], %[[B1_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:    %[[FALSE:.*]] = cir.const #false
-// CHECK:    cir.store %[[FALSE]], %[[B2_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
+// CHECK:    cir.store align(1) %[[FALSE]], %[[B2_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:    %[[ONEC:.*]] = cir.const #cir.int<1> : !s32i
-// CHECK:    cir.store %[[ONEC]], %[[CI_PTR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    cir.store align(4) %[[ONEC]], %[[CI_PTR]] : !s32i, !cir.ptr<!s32i>
 // CHECK:    %[[TWOC:.*]] = cir.const #cir.int<2> : !s64i
-// CHECK:    cir.store %[[TWOC]], %[[CL_PTR]] : !s64i, !cir.ptr<!s64i>
+// CHECK:    cir.store align(8) %[[TWOC]], %[[CL_PTR]] : !s64i, !cir.ptr<!s64i>
 // CHECK:    %[[THREEC:.*]] = cir.const #cir.fp<3.0{{.*}}> : !cir.float
-// CHECK:    cir.store %[[THREEC]], %[[CF_PTR]] : !cir.float, !cir.ptr<!cir.float>
+// CHECK:    cir.store align(4) %[[THREEC]], %[[CF_PTR]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK:    %[[FOURC:.*]] = cir.const #cir.fp<4.0{{.*}}> : !cir.double
-// CHECK:    cir.store %[[FOURC]], %[[CD_PTR]] : !cir.double, !cir.ptr<!cir.double>
+// CHECK:    cir.store align(8) %[[FOURC]], %[[CD_PTR]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK:    %[[TRUEC:.*]] = cir.const #true
-// CHECK:    cir.store %[[TRUEC]], %[[CB1_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
+// CHECK:    cir.store align(1) %[[TRUEC]], %[[CB1_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:    %[[FALSEC:.*]] = cir.const #false
-// CHECK:    cir.store %[[FALSEC]], %[[CB2_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
+// CHECK:    cir.store align(1) %[[FALSEC]], %[[CB2_PTR]] : !cir.bool, !cir.ptr<!cir.bool>

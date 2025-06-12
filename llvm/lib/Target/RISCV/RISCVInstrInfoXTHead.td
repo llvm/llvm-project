@@ -660,10 +660,12 @@ def : Pat<(i32 (sub GPR:$rd, (mul (sexti16 (i32 GPR:$rs1)),
           (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasVendorXTHeadMac, IsRV32]
 
+let Predicates = [HasVendorXTHeadVdot] in {
 defm PseudoTHVdotVMAQA      : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQAU     : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQASU    : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQAUS    : VPseudoVMAQA_VX;
+}
 
 let Predicates = [HasVendorXTHeadVdot] in {
 defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqa",  "PseudoTHVdotVMAQA",

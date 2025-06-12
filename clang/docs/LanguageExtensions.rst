@@ -497,7 +497,7 @@ __const, __const__, __volatile, __volatile__, __restrict, __restrict__
 ----------------------------------------------------------------------
 
 These are alternate spellings for their non-underscore counterparts, but are
-available in all langauge modes.
+available in all language modes.
 
 __decltype
 ----------
@@ -526,7 +526,7 @@ __typeof, __typeof__, __typeof_unqual, __typeof_unqual__
 --------------------------------------------------------
 
 ``__typeof`` and ``__typeof__`` are alternate spellings for ``typeof``, but are
-available in all langauge modes. These spellings result in the operand,
+available in all language modes. These spellings result in the operand,
 retaining all qualifiers.
 
 ``__typeof_unqual`` and ``__typeof_unqual__`` are alternate spellings for the
@@ -1001,6 +1001,7 @@ to ``float``; see below for more information on this emulation.
   * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
   * RISC-V (natively if Zfh or Zhinx is available)
   * SystemZ (emulated)
+  * LoongArch (emulated)
 
 * ``__bf16`` is supported on the following targets (currently never natively):
 
@@ -1008,6 +1009,7 @@ to ``float``; see below for more information on this emulation.
   * 64-bit ARM (AArch64)
   * RISC-V
   * X86 (when SSE2 is available)
+  * LoongArch
 
 (For X86, SSE2 is available on 64-bit and all recent 32-bit processors.)
 
@@ -2042,8 +2044,19 @@ references can be used instead of numeric references.
       return -1;
   }
 
+ASM Goto versus Branch Target Enforcement
+=========================================
 
-Constexpr strings in GNU ASM statememts
+Some target architectures implement branch target enforcement, by requiring
+indirect (register-controlled) branch instructions to jump only to locations
+marked by a special instruction (such as AArch64 ``bti``).
+
+The assembler code inside an ``asm goto`` statement is expected not to use a
+branch instruction of that kind to transfer control to any of its destination
+labels. Therefore, using a label in an ``asm goto`` statement does not cause
+clang to put a ``bti`` or equivalent instruction at the label.
+
+Constexpr strings in GNU ASM statements
 =======================================
 
 In C++11 mode (and greater), Clang supports specifying the template,
@@ -3061,6 +3074,41 @@ following way:
   to the builtin.
 
 Query for this feature with ``__has_builtin(__builtin_offsetof)``.
+
+``__builtin_get_vtable_pointer``
+--------------------------------
+
+``__builtin_get_vtable_pointer`` loads and authenticates the primary vtable
+pointer from an instance of a polymorphic C++ class. This builtin is needed
+for directly loading the vtable pointer when on platforms using
+:doc:`PointerAuthentication`.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  __builtin_get_vtable_pointer(PolymorphicClass*)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  struct PolymorphicClass {
+    virtual ~PolymorphicClass();
+  };
+
+  PolymorphicClass anInstance;
+  const void* vtablePointer = __builtin_get_vtable_pointer(&anInstance);
+
+**Description**:
+
+The ``__builtin_get_vtable_pointer`` builtin loads the primary vtable
+pointer from a polymorphic C++ type. If the target platform authenticates
+vtable pointers, this builtin will perform the authentication and produce
+the underlying raw pointer. The object being queried must be polymorphic,
+and so must also be a complete type.
+
+Query for this feature with ``__has_builtin(__builtin_get_vtable_pointer)``.
 
 ``__builtin_call_with_static_chain``
 ------------------------------------
@@ -4412,7 +4460,7 @@ It is undefined behavior to call this function on an already initialized
 A builtin function for the target-specific ``va_start`` function-like macro,
 available only in C23 and later. The builtin accepts zero or one argument for
 the ellipsis (``...``). If such an argument is provided, it should be the name
-of the parameter preceeding the ellipsis, which is used for compatibility with
+of the parameter preceding the ellipsis, which is used for compatibility with
 C versions before C23. It is an error to provide two or more variadic arguments.
 This function initializes the given ``__builtin_va_list`` object. It is
 undefined behavior to call this function on an already initialized
@@ -6454,3 +6502,77 @@ qualifications.
 Note, Clang does not allow an ``_Atomic`` function type because
 of explicit constraints against atomically qualified (arrays and) function
 types.
+
+
+Underspecified Object Declarations in C
+=======================================
+
+C23 introduced the notion of `underspecified object declarations <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
+(note, the final standards text is different from WG14 N3006 due to changes
+during national body comment review). When an object is declared with the
+``constexpr`` storage class specifier or has a deduced type (with the ``auto``
+specifier), it is said to be "underspecified". Underspecified declarations have
+different requirements than non-underspecified declarations. In particular, the
+identifier being declared cannot be used in its initialization. e.g.,
+
+.. code-block:: c
+
+  auto x = x; // Invalid
+  constexpr int y = y; // Invalid
+
+The standard leaves it implementation-defined whether an underspecified
+declaration may introduce additional identifiers as part of the declaration.
+
+Clang allows additional identifiers to be declared in the following cases:
+
+* A compound literal may introduce a new type. e.g.,
+
+.. code-block:: c
+
+  auto x = (struct S { int x, y; }){ 1, 2 };      // Accepted by Clang
+  constexpr int i = (struct T { int x; }){ 1 }.x; // Accepted by Clang
+
+* The type specifier for a ``constexpr`` declaration may define a new type.
+  e.g.,
+
+.. code-block:: c
+
+  constexpr struct S { int x; } s = { 1 }; // Accepted by Clang
+
+* A function declarator may be declared with parameters, including parameters
+  which introduce a new type. e.g.,
+
+.. code-block:: c
+
+  constexpr int (*fp)(int x) = nullptr;              // Accepted by Clang
+  auto f = (void (*)(struct S { int x; } s))nullptr; // Accepted by Clang
+
+* The initializer may contain a GNU statement expression which defines new
+  types or objects. e.g.,
+
+.. code-block:: c
+
+  constexpr int i = ({                              // Accepted by Clang
+    constexpr int x = 12;
+    constexpr struct S { int x; } s = { x };
+    s.x;
+  });
+  auto x = ({ struct S { int x; } s = { 0 }; s; }); // Accepted by Clang
+
+Clang intentionally does not implement the changed scoping rules from C23
+for underspecified declarations. Doing so would significantly complicate the
+implementation in order to get reasonable diagnostic behavior and also means
+Clang fails to reject some code that should be rejected. e.g.,
+
+.. code-block:: c
+
+  // This should be rejected because 'x' is not in scope within the initializer
+  // of an underspecified declaration. Clang accepts because it treats the scope
+  // of the identifier as beginning immediately after the declarator, same as with
+  // a non-underspecified declaration.
+  constexpr int x = sizeof(x);
+
+  // Clang rejects this code with a diagnostic about using the variable within its
+  // own initializer rather than rejecting the code with an undeclared identifier
+  // diagnostic.
+  auto x = x;

@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
@@ -31,7 +32,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -642,8 +642,10 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
   // in that case. stlport does so too.
   // Look for std::__debug for libstdc++, and for std:: for stlport.
   // This is effectively a compiler-side implementation of LWG2193.
-  if (!InitSeq && EmptyInitList && InitSeq.getFailureKind() ==
-          InitializationSequence::FK_ExplicitConstructor) {
+  if (!InitSeq && EmptyInitList &&
+      InitSeq.getFailureKind() ==
+          InitializationSequence::FK_ExplicitConstructor &&
+      SemaRef.getPreprocessor().NeedsStdLibCxxWorkaroundBefore(2014'04'22)) {
     OverloadCandidateSet::iterator Best;
     OverloadingResult O =
         InitSeq.getFailedCandidateSet()
@@ -1976,6 +1978,8 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
         typeCode = "s";
       else if (elementType->isUnsignedIntegerType())
         typeCode = "u";
+      else if (elementType->isMFloat8Type())
+        typeCode = "mf";
       else
         llvm_unreachable("Invalid element type!");
 
@@ -2789,16 +2793,20 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     // initializer list that the child calls see, so that we don't try
     // to re-process the designator.
     unsigned OldIndex = Index;
-    IList->setInit(OldIndex, DIE->getInit());
+    auto *OldDIE =
+        dyn_cast_if_present<DesignatedInitExpr>(IList->getInit(OldIndex));
+    if (!OldDIE)
+      OldDIE = DIE;
+    IList->setInit(OldIndex, OldDIE->getInit());
 
     CheckSubElementType(Entity, IList, CurrentObjectType, Index, StructuredList,
                         StructuredIndex, /*DirectlyDesignated=*/true);
 
     // Restore the designated initializer expression in the syntactic
     // form of the initializer list.
-    if (IList->getInit(OldIndex) != DIE->getInit())
-      DIE->setInit(IList->getInit(OldIndex));
-    IList->setInit(OldIndex, DIE);
+    if (IList->getInit(OldIndex) != OldDIE->getInit())
+      OldDIE->setInit(IList->getInit(OldIndex));
+    IList->setInit(OldIndex, OldDIE);
 
     return hadError && !prevHadError;
   }
@@ -6405,9 +6413,9 @@ static bool TryOCLSamplerInitialization(Sema &S,
   return true;
 }
 
-static bool IsZeroInitializer(Expr *Initializer, Sema &S) {
-  return Initializer->isIntegerConstantExpr(S.getASTContext()) &&
-    (Initializer->EvaluateKnownConstInt(S.getASTContext()) == 0);
+static bool IsZeroInitializer(const Expr *Init, ASTContext &Ctx) {
+  std::optional<llvm::APSInt> Value = Init->getIntegerConstantExpr(Ctx);
+  return Value && Value->isZero();
 }
 
 static bool TryOCLZeroOpaqueTypeInitialization(Sema &S,
@@ -6426,7 +6434,7 @@ static bool TryOCLZeroOpaqueTypeInitialization(Sema &S,
   // event should be zero.
   //
   if (DestType->isEventT() || DestType->isQueueT()) {
-    if (!IsZeroInitializer(Initializer, S))
+    if (!IsZeroInitializer(Initializer, S.getASTContext()))
       return false;
 
     Sequence.AddOCLZeroOpaqueTypeStep(DestType);
@@ -6442,7 +6450,7 @@ static bool TryOCLZeroOpaqueTypeInitialization(Sema &S,
     if (DestType->isOCLIntelSubgroupAVCMcePayloadType() ||
         DestType->isOCLIntelSubgroupAVCMceResultType())
       return false;
-    if (!IsZeroInitializer(Initializer, S))
+    if (!IsZeroInitializer(Initializer, S.getASTContext()))
       return false;
 
     Sequence.AddOCLZeroOpaqueTypeStep(DestType);
@@ -6511,6 +6519,15 @@ static bool canPerformArrayCopy(const InitializedEntity &Entity) {
 static const FieldDecl *getConstField(const RecordDecl *RD) {
   assert(!isa<CXXRecordDecl>(RD) && "Only expect to call this in C mode");
   for (const FieldDecl *FD : RD->fields()) {
+    // If the field is a flexible array member, we don't want to consider it
+    // as a const field because there's no way to initialize the FAM anyway.
+    const ASTContext &Ctx = FD->getASTContext();
+    if (Decl::isFlexibleArrayMemberLike(
+            Ctx, FD, FD->getType(),
+            Ctx.getLangOpts().getStrictFlexArraysLevel(),
+            /*IgnoreTemplateOrMacroSubstitution=*/true))
+      continue;
+
     QualType QT = FD->getType();
     if (QT.isConstQualified())
       return FD;
@@ -6600,8 +6617,10 @@ void InitializationSequence::InitializeFrom(Sema &S,
       }
       // If the record has any members which are const (recursively checked),
       // then we want to diagnose those as being uninitialized if there is no
-      // initializer present.
-      if (!Initializer) {
+      // initializer present. However, we only do this for structure types, not
+      // union types, because an unitialized field in a union is generally
+      // reasonable, especially in C where unions can be used for type punning.
+      if (Var && !Initializer && !Rec->isUnion() && !Rec->isInvalidDecl()) {
         if (const FieldDecl *FD = getConstField(Rec)) {
           unsigned DiagID = diag::warn_default_init_const_field_unsafe;
           if (Var->getStorageDuration() == SD_Static ||
@@ -9851,7 +9870,6 @@ static void CheckC23ConstexprInitStringLiteral(const StringLiteral *SE,
       return;
     }
   }
-  return;
 }
 
 //===----------------------------------------------------------------------===//

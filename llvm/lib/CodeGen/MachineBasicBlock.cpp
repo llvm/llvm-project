@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -1575,7 +1574,7 @@ MachineBasicBlock::findBranchDebugLoc() {
     DL = TI->getDebugLoc();
     for (++TI ; TI != end() ; ++TI)
       if (TI->isBranch())
-        DL = DILocation::getMergedLocation(DL, TI->getDebugLoc());
+        DL = DebugLoc::getMergedLocation(DL, TI->getDebugLoc());
   }
   return DL;
 }
@@ -1776,17 +1775,15 @@ void MachineBasicBlock::clearLiveIns(
 }
 
 MachineBasicBlock::livein_iterator MachineBasicBlock::livein_begin() const {
-  assert(getParent()->getProperties().hasProperty(
-      MachineFunctionProperties::Property::TracksLiveness) &&
-      "Liveness information is accurate");
+  assert(getParent()->getProperties().hasTracksLiveness() &&
+         "Liveness information is accurate");
   return LiveIns.begin();
 }
 
 MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   const MachineFunction &MF = *getParent();
-  assert(MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::TracksLiveness) &&
-      "Liveness information is accurate");
+  assert(MF.getProperties().hasTracksLiveness() &&
+         "Liveness information is accurate");
 
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
   MCRegister ExceptionPointer, ExceptionSelector;

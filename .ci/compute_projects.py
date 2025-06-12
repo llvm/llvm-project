@@ -57,6 +57,13 @@ DEPENDENTS_TO_TEST = {
     ".ci": {"llvm", "clang", "lld", "lldb"},
 }
 
+# This mapping describes runtimes that should be enabled for a specific project,
+# but not necessarily run for testing. The only case of this currently is lldb
+# which needs some runtimes enabled for tests.
+DEPENDENT_RUNTIMES_TO_BUILD = {"lldb": {"libcxx", "libcxxabi", "libunwind"}}
+
+# This mapping describes runtimes that should be tested when the key project is
+# touched.
 DEPENDENT_RUNTIMES_TO_TEST = {"clang": {"libcxx", "libcxxabi", "libunwind"}}
 
 EXCLUDE_LINUX = {
@@ -180,16 +187,20 @@ def _compute_project_check_targets(projects_to_test: Set[str]) -> Set[str]:
 def _compute_runtimes_to_test(projects_to_test: Set[str]) -> Set[str]:
     runtimes_to_test = set()
     for project_to_test in projects_to_test:
-        if project_to_test not in DEPENDENT_RUNTIMES_TO_TEST:
-            continue
-        runtimes_to_test.update(DEPENDENT_RUNTIMES_TO_TEST[project_to_test])
+        if project_to_test in DEPENDENT_RUNTIMES_TO_TEST:
+            runtimes_to_test.update(DEPENDENT_RUNTIMES_TO_TEST[project_to_test])
+        if project_to_test in DEPENDENT_RUNTIMES_TO_BUILD:
+            runtimes_to_test.update(DEPENDENT_RUNTIMES_TO_BUILD[project_to_test])
     return runtimes_to_test
 
 
-def _compute_runtime_check_targets(runtimes_to_test: Set[str]) -> Set[str]:
+def _compute_runtime_check_targets(projects_to_test: Set[str]) -> Set[str]:
     check_targets = set()
-    for runtime_to_test in runtimes_to_test:
-        check_targets.add(PROJECT_CHECK_TARGETS[runtime_to_test])
+    for project_to_test in projects_to_test:
+        if project_to_test not in DEPENDENT_RUNTIMES_TO_TEST:
+            continue
+        for runtime_to_test in DEPENDENT_RUNTIMES_TO_TEST[project_to_test]:
+            check_targets.add(PROJECT_CHECK_TARGETS[runtime_to_test])
     return check_targets
 
 
@@ -216,8 +227,8 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     projects_to_test = _compute_projects_to_test(modified_projects, platform)
     projects_to_build = _compute_projects_to_build(projects_to_test)
     projects_check_targets = _compute_project_check_targets(projects_to_test)
-    runtimes_to_test = _compute_runtimes_to_test(projects_to_test)
-    runtimes_check_targets = _compute_runtime_check_targets(runtimes_to_test)
+    runtimes_to_build = _compute_runtimes_to_test(projects_to_test)
+    runtimes_check_targets = _compute_runtime_check_targets(projects_to_test)
     # We use a semicolon to separate the projects/runtimes as they get passed
     # to the CMake invocation and thus we need to use the CMake list separator
     # (;). We use spaces to separate the check targets as they end up getting
@@ -225,7 +236,7 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     return {
         "projects_to_build": ";".join(sorted(projects_to_build)),
         "project_check_targets": " ".join(sorted(projects_check_targets)),
-        "runtimes_to_build": ";".join(sorted(runtimes_to_test)),
+        "runtimes_to_build": ";".join(sorted(runtimes_to_build)),
         "runtimes_check_targets": " ".join(sorted(runtimes_check_targets)),
     }
 

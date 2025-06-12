@@ -6092,15 +6092,15 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_mov_b32_e32 v8, 0
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    s_add_u32 s0, s6, 48
-; TONGA-NEXT:    s_addc_u32 s1, s7, 0
-; TONGA-NEXT:    s_add_u32 s2, s6, 32
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s6
-; TONGA-NEXT:    s_addc_u32 s3, s7, 0
-; TONGA-NEXT:    v_mov_b32_e32 v2, s2
+; TONGA-NEXT:    s_addc_u32 s1, s7, 0
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s7
-; TONGA-NEXT:    v_mov_b32_e32 v3, s3
-; TONGA-NEXT:    flat_load_dwordx4 v[10:13], v[2:3]
+; TONGA-NEXT:    s_add_u32 s2, s6, 32
 ; TONGA-NEXT:    flat_load_dwordx4 v[14:17], v[0:1]
+; TONGA-NEXT:    s_addc_u32 s3, s7, 0
+; TONGA-NEXT:    v_mov_b32_e32 v0, s2
+; TONGA-NEXT:    v_mov_b32_e32 v1, s3
+; TONGA-NEXT:    flat_load_dwordx4 v[10:13], v[0:1]
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s0
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s1
 ; TONGA-NEXT:    s_add_u32 s0, s6, 16

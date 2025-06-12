@@ -34,6 +34,18 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %15 = spirv.GL.FMix %arg0 : f32, %arg1 : f32, %arg0 : f32 -> f32
     // CHECK: {{%.*}} = spirv.GL.Fract {{%.*}} : f32
     %16 = spirv.GL.Fract %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Asinh {{%.*}} : f32
+    %17 = spirv.GL.Asinh %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Acosh {{%.*}} : f32
+    %18 = spirv.GL.Acosh %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Atanh {{%.*}} : f32
+    %19 = spirv.GL.Atanh %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Log2 {{%.*}} : f32
+    %20 = spirv.GL.Log2 %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Tanh {{%.*}} : f32
+    %21 = spirv.GL.Tanh %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Exp2 {{%.*}} : f32
+    %22 = spirv.GL.Exp2 %arg0 : f32
     spirv.Return
   }
 
@@ -84,7 +96,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     spirv.Return
   }
 
-spirv.func @vector(%arg0 : f32, %arg1 : vector<3xf32>, %arg2 : vector<3xf32>) "None" {
+  spirv.func @vector(%arg0 : f32, %arg1 : vector<3xf32>, %arg2 : vector<3xf32>) "None" {
     // CHECK: {{%.*}} = spirv.GL.Cross {{%.*}}, {{%.*}} : vector<3xf32>
     %0 = spirv.GL.Cross %arg1, %arg2 : vector<3xf32>
     // CHECK: {{%.*}} = spirv.GL.Normalize {{%.*}} : f32
@@ -102,5 +114,11 @@ spirv.func @vector(%arg0 : f32, %arg1 : vector<3xf32>, %arg2 : vector<3xf32>) "N
     spirv.Return
   }
 
-
+  spirv.func @pack_half_2x16(%arg0 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.GL.UnpackHalf2x16 {{%.*}} : i32 -> vector<2xf32>
+    %0 = spirv.GL.UnpackHalf2x16 %arg0 : i32 -> vector<2xf32>
+    // CHECK: {{%.*}} = spirv.GL.PackHalf2x16 {{%.*}} : vector<2xf32> -> i32
+    %1 = spirv.GL.PackHalf2x16 %0 : vector<2xf32> -> i32
+    spirv.Return
+  }
 }
