@@ -2068,21 +2068,8 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
   return nullptr;
 }
 
-struct CommonBase {
-  /// Common base pointer.
-  Value *Ptr = nullptr;
-  /// LHS GEPs until common base.
-  SmallVector<GEPOperator *> LHSGEPs;
-  /// RHS GEPs until common base.
-  SmallVector<GEPOperator *> RHSGEPs;
-  /// LHS GEP NoWrapFlags until common base.
-  GEPNoWrapFlags LHSNW = GEPNoWrapFlags::all();
-  /// RHS GEP NoWrapFlags until common base.
-  GEPNoWrapFlags RHSNW = GEPNoWrapFlags::all();
-};
-
-static CommonBase computeCommonBase(Value *LHS, Value *RHS) {
-  CommonBase Base;
+CommonPointerBase CommonPointerBase::compute(Value *LHS, Value *RHS) {
+  CommonPointerBase Base;
 
   if (LHS->getType() != RHS->getType())
     return Base;
@@ -2136,7 +2123,7 @@ static CommonBase computeCommonBase(Value *LHS, Value *RHS) {
 /// operands to the ptrtoint instructions for the LHS/RHS of the subtract.
 Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
                                                    Type *Ty, bool IsNUW) {
-  CommonBase Base = computeCommonBase(LHS, RHS);
+  CommonPointerBase Base = CommonPointerBase::compute(LHS, RHS);
   if (!Base.Ptr)
     return nullptr;
 
