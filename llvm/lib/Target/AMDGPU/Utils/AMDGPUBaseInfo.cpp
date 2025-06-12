@@ -556,9 +556,9 @@ bool getMAIIsDGEMM(unsigned Opc) {
   return Info && Info->is_dgemm;
 }
 
-bool getMAIIsGFX940XDL(unsigned Opc) {
+bool getMAIIsSGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
-  return Info && Info->is_gfx940_xdl;
+  return Info && Info->is_sgemm;
 }
 
 uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
