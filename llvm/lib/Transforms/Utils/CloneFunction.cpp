@@ -544,7 +544,7 @@ void PruningFunctionCloner::CloneBlock(
   // Keep a cursor pointing at the last place we cloned debug-info records from.
   BasicBlock::const_iterator DbgCursor = StartingInst;
   auto CloneDbgRecordsToHere =
-      [NewBB, &DbgCursor](Instruction *NewInst, BasicBlock::const_iterator II) {
+      [&DbgCursor](Instruction *NewInst, BasicBlock::const_iterator II) {
         // Clone debug-info records onto this instruction. Iterate through any
         // source-instructions we've cloned and then subsequently optimised
         // away, so that their debug-info doesn't go missing.
