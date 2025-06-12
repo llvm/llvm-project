@@ -12,8 +12,6 @@ import time
 import traceback
 
 import lit.Test
-import lit.util
-
 
 _lit_config = None
 _parallelism_semaphores = None
