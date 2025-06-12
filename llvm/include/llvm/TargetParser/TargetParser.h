@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -164,27 +165,27 @@ enum FeatureError : uint32_t {
   UNSUPPORTED_TARGET_FEATURE
 };
 
-StringRef getArchFamilyNameAMDGCN(GPUKind AK);
+LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
 
-StringRef getArchNameAMDGCN(GPUKind AK);
-StringRef getArchNameR600(GPUKind AK);
-StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
-GPUKind parseArchAMDGCN(StringRef CPU);
-GPUKind parseArchR600(StringRef CPU);
-unsigned getArchAttrAMDGCN(GPUKind AK);
-unsigned getArchAttrR600(GPUKind AK);
+LLVM_ABI StringRef getArchNameAMDGCN(GPUKind AK);
+LLVM_ABI StringRef getArchNameR600(GPUKind AK);
+LLVM_ABI StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
+LLVM_ABI GPUKind parseArchAMDGCN(StringRef CPU);
+LLVM_ABI GPUKind parseArchR600(StringRef CPU);
+LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
+LLVM_ABI unsigned getArchAttrR600(GPUKind AK);
 
-void fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values);
-void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI void fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
 
-IsaVersion getIsaVersion(StringRef GPU);
+LLVM_ABI IsaVersion getIsaVersion(StringRef GPU);
 
 /// Fills Features map with default values for given target GPU
-void fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
-                          StringMap<bool> &Features);
+LLVM_ABI void fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
+                                   StringMap<bool> &Features);
 
 /// Inserts wave size feature for given GPU into features map
-std::pair<FeatureError, StringRef>
+LLVM_ABI std::pair<FeatureError, StringRef>
 insertWaveSizeFeature(StringRef GPU, const Triple &T,
                       StringMap<bool> &Features);
 

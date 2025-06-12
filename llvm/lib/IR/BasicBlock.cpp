@@ -31,33 +31,7 @@ using namespace llvm;
 #define DEBUG_TYPE "ir"
 STATISTIC(NumInstrRenumberings, "Number of renumberings across all blocks");
 
-// This cl-opt exists to control whether variable-location information is
-// produced using intrinsics, or whether DbgRecords are produced. However,
-// it's imminently being phased out, so give it a flag-name that is very
-// unlikely to be used anywhere.
-//
-// If you find yourself needing to use this flag for any period longer than
-// five minutes, please revert the patch making this change, and make contact
-// in this discourse post, where we can discuss any further transition work
-// that might be needed to remove debug intrinsics.
-//
-// https://discourse.llvm.org/t/psa-ir-output-changing-from-debug-intrinsics-to-debug-records/79578
-LLVM_ABI cl::opt<bool>
-    UseNewDbgInfoFormat("dont-pass-this-flag-please-experimental-debuginfo",
-                        cl::Hidden, cl::init(true));
-
-// This cl-opt collects the --experimental-debuginfo-iterators flag and then
-// does nothing with it (because the it gets stored into an otherwise unused
-// cl-opt), so that we can disable debug-intrinsic production without
-// immediately modifying lots of tests. If your tests break because of this
-// change, please see the next comment up.
-static cl::opt<bool> DeliberatelyUnseenDbgInfoFlag(
-    "experimental-debuginfo-iterators", cl::Hidden,
-    cl::init(true));
-
 DbgMarker *BasicBlock::createMarker(Instruction *I) {
-  assert(IsNewDbgInfoFormat &&
-         "Tried to create a marker in a non new debug-info block!");
   if (I->DebugMarker)
     return I->DebugMarker;
   DbgMarker *Marker = new DbgMarker();
@@ -67,8 +41,6 @@ DbgMarker *BasicBlock::createMarker(Instruction *I) {
 }
 
 DbgMarker *BasicBlock::createMarker(InstListType::iterator It) {
-  assert(IsNewDbgInfoFormat &&
-         "Tried to create a marker in a non new debug-info block!");
   if (It != end())
     return createMarker(&*It);
   DbgMarker *DM = getTrailingDbgRecords();
@@ -88,7 +60,6 @@ void BasicBlock::convertToNewDbgValues() {
   // instruction.
   SmallVector<DbgRecord *, 4> DbgVarRecs;
   for (Instruction &I : make_early_inc_range(InstList)) {
-    assert(!I.DebugMarker && "DebugMarker already set on old-format instrs?");
     if (DbgVariableIntrinsic *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
       // Convert this dbg.value to a DbgVariableRecord.
       DbgVariableRecord *Value = new DbgVariableRecord(DVI);
@@ -187,7 +158,7 @@ template class llvm::SymbolTableListTraits<
 BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
                        BasicBlock *InsertBefore)
     : Value(Type::getLabelTy(C), Value::BasicBlockVal),
-      IsNewDbgInfoFormat(UseNewDbgInfoFormat), Parent(nullptr) {
+      IsNewDbgInfoFormat(true), Parent(nullptr) {
 
   if (NewParent)
     insertInto(NewParent, InsertBefore);

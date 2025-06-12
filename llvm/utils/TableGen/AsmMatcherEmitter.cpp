@@ -1330,8 +1330,7 @@ void AsmMatcherInfo::buildRegisterClasses(
   for (const RegisterSet &RS : RegisterSets) {
     ClassInfo *CI = RegisterSetClasses[RS];
     for (const RegisterSet &RS2 : RegisterSets)
-      if (RS != RS2 && std::includes(RS2.begin(), RS2.end(), RS.begin(),
-                                     RS.end(), LessRecordByID()))
+      if (RS != RS2 && llvm::includes(RS2, RS, LessRecordByID()))
         CI->SuperClasses.push_back(RegisterSetClasses[RS2]);
   }
 

@@ -51,3 +51,52 @@ public:
 
 int use(Derived *d) { return d->b; }
 
+// CIR: cir.func @_Z3useP7Derived(%[[ARG0:.*]]: !cir.ptr<!rec_Derived>
+// CIR:  %[[D_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>, ["d", init]
+// CIR:  cir.store %[[ARG0]], %[[D_ADDR]]
+// CIR:  %[[D_PTR:.*]] = cir.load align(8) %0
+// CIR:  %[[D_B_ADDR:.*]] = cir.get_member %[[D_PTR]][1] {name = "b"}
+// CIR:  %[[D_B:.*]] = cir.load align(4) %[[D_B_ADDR]]
+
+// LLVM: define{{.*}} i32 @_Z3useP7Derived
+// LLVM:   getelementptr %class.Derived, ptr %{{.*}}, i32 0, i32 1
+
+// OGCG: define{{.*}} i32 @_Z3useP7Derived
+// OGCG:   getelementptr inbounds nuw %class.Derived, ptr %{{.*}}, i32 0, i32 1
+
+int use_base() {
+  Derived d;
+  return d.a;
+}
+
+// CIR: cir.func @_Z8use_basev
+// CIR:   %[[D_ADDR:.*]] = cir.alloca !rec_Derived, !cir.ptr<!rec_Derived>, ["d"]
+// CIR:   %[[BASE_ADDR:.*]] cir.base_class_addr %[[D_ADDR]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[D_A_ADDR:.*]] = cir.get_member %2[0] {name = "a"} : !cir.ptr<!rec_Base> -> !cir.ptr<!s32i>
+// CIR:   %[[D_A:.*]] = cir.load align(4) %3 : !cir.ptr<!s32i>, !s32i
+
+// LLVM: define{{.*}} i32 @_Z8use_basev
+// LLVM:   %[[D:.*]] = alloca %class.Derived
+// LLVM:   %[[D_A_ADDR:.*]] = getelementptr %class.Base, ptr %[[D]], i32 0, i32 0
+
+// OGCG: define{{.*}} i32 @_Z8use_basev
+// OGCG:   %[[D:.*]] = alloca %class.Derived
+// OGCG:   %[[D_A_ADDR:.*]] = getelementptr inbounds nuw %class.Base, ptr %[[D]], i32 0, i32 0
+
+int use_base_via_pointer(Derived *d) {
+  return d->a;
+}
+
+// CIR: cir.func @_Z20use_base_via_pointerP7Derived(%[[ARG0:.*]]: !cir.ptr<!rec_Derived>
+// CIR:   %[[D_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>, ["d", init]
+// CIR:   cir.store %[[ARG0]], %[[D_ADDR]]
+// CIR:   %[[D:.*]] = cir.load align(8) %[[D_ADDR]]
+// CIR:   %[[BASE_ADDR:.*]] = cir.base_class_addr %[[D]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[D_A_ADDR:.*]] = cir.get_member %[[BASE_ADDR]][0] {name = "a"}
+// CIR:   %[[D_A:.*]] = cir.load align(4) %[[D_A_ADDR]]
+
+// LLVM: define{{.*}} i32 @_Z20use_base_via_pointerP7Derived
+// LLVM:   %[[D_A_ADDR:.*]] = getelementptr %class.Base, ptr %{{.*}}, i32 0, i32 0
+
+// OGCG: define{{.*}} i32 @_Z20use_base_via_pointerP7Derived
+// OGCG:   %[[D_A_ADDR:.*]] = getelementptr inbounds nuw %class.Base, ptr %{{.*}}, i32 0, i32 0

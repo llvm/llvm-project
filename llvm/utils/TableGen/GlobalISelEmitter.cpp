@@ -2019,7 +2019,7 @@ const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClass(
 
   // Use the information we found above to find a minimal register class which
   // supports the subregister and type we want.
-  return Target.getSuperRegForSubReg(Ty.getValueTypeByHwMode(), CGRegs, SubIdx,
+  return CGRegs.getSuperRegForSubReg(Ty.getValueTypeByHwMode(), SubIdx,
                                      /*MustBeAllocatable=*/true);
 }
 
@@ -2314,7 +2314,8 @@ void GlobalISelEmitter::emitLeafPredicateFns(raw_ostream &OS) {
       OS,
       "  const auto &Operands = State.RecordedOperands;\n"
       "  Register Reg = MO.getReg();\n"
-      "  (void)Operands;",
+      "  (void)Operands;\n"
+      "  (void)Reg;",
       ArrayRef<const Record *>(MatchedRecords), &getPatFragPredicateEnumName,
       [](const Record *R) {
         return R->getValueAsString("GISelLeafPredicateCode");

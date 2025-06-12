@@ -76,6 +76,7 @@ add_lldb_library(lldbDAP
   Handler/VariablesRequestHandler.cpp
 
   Protocol/ProtocolBase.cpp
+  Protocol/ProtocolEvents.cpp
   Protocol/ProtocolTypes.cpp
   Protocol/ProtocolRequests.cpp
 
