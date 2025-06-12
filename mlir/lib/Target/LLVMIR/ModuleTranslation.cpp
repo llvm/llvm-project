@@ -1547,6 +1547,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto tuneCpu = func.getTuneCpu())
     llvmFunc->addFnAttr("tune-cpu", *tuneCpu);
 
+  if (auto reciprocalEstimates = func.getReciprocalEstimates())
+    llvmFunc->addFnAttr("reciprocal-estimates", *reciprocalEstimates);
+
   if (auto preferVectorWidth = func.getPreferVectorWidth())
     llvmFunc->addFnAttr("prefer-vector-width", *preferVectorWidth);
 
@@ -2228,9 +2231,6 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
                   StringRef name) {
   m->getContext()->getOrLoadDialect<LLVM::LLVMDialect>();
   auto llvmModule = std::make_unique<llvm::Module>(name, llvmContext);
-  // ModuleTranslation can currently only construct modules in the old debug
-  // info format, so set the flag accordingly.
-  llvmModule->setNewDbgInfoFormatFlag(false);
   if (auto dataLayoutAttr =
           m->getDiscardableAttr(LLVM::LLVMDialect::getDataLayoutAttrName())) {
     llvmModule->setDataLayout(cast<StringAttr>(dataLayoutAttr).getValue());
@@ -2326,7 +2326,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // Once we've finished constructing elements in the module, we should convert
   // it to use the debug info format desired by LLVM.
   // See https://llvm.org/docs/RemoveDIsDebugInfo.html
-  translator.llvmModule->setIsNewDbgInfoFormat(true);
+  translator.llvmModule->convertToNewDbgValues();
 
   // Add the necessary debug info module flags, if they were not encoded in MLIR
   // beforehand.

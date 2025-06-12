@@ -127,9 +127,12 @@ for_j.body:
   %gepB7 = getelementptr inbounds i8, ptr %gepB6, i64 0
   %gepB8 = getelementptr inbounds i8, ptr %gepB7, i64 0
   %gepB9 = getelementptr inbounds i8, ptr %gepB8, i64 0
+  %gepB10 = getelementptr inbounds i8, ptr %gepB9, i64 0
+  %gepB11 = getelementptr inbounds i8, ptr %gepB10, i64 0
+  %gepB12 = getelementptr inbounds i8, ptr %gepB11, i64 0
 
   %loadPrev = load i8, ptr %gepPrev, align 1
-  %loadB = load i8, ptr %gepB9, align 1
+  %loadB = load i8, ptr %gepB12, align 1
 
   %mul = mul i8 %loadPrev, %loadB
 

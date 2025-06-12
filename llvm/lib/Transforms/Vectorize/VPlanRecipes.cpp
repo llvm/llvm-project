@@ -604,6 +604,20 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateVectorSplat(
         State.VF, State.get(getOperand(0), /*IsScalar*/ true), "broadcast");
   }
+  case VPInstruction::ReductionStartVector: {
+    if (State.VF.isScalar())
+      return State.get(getOperand(0), true);
+    IRBuilderBase::FastMathFlagGuard FMFG(Builder);
+    Builder.setFastMathFlags(getFastMathFlags());
+    // If this start vector is scaled then it should produce a vector with fewer
+    // elements than the VF.
+    ElementCount VF = State.VF.divideCoefficientBy(
+        cast<ConstantInt>(getOperand(2)->getLiveInIRValue())->getZExtValue());
+    auto *Iden = Builder.CreateVectorSplat(VF, State.get(getOperand(1), true));
+    Constant *Zero = Builder.getInt32(0);
+    return Builder.CreateInsertElement(Iden, State.get(getOperand(0), true),
+                                       Zero);
+  }
   case VPInstruction::ComputeAnyOfResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
     // and will be removed by breaking up the recipe further.
@@ -899,6 +913,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::PtrAdd:
   case VPInstruction::WideIVStep:
   case VPInstruction::StepVector:
+  case VPInstruction::ReductionStartVector:
     return false;
   default:
     return true;
@@ -929,6 +944,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::ReductionStartVector:
     return true;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
@@ -1033,6 +1049,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::FirstActiveLane:
     O << "first-active-lane";
+    break;
+  case VPInstruction::ReductionStartVector:
+    O << "reduction-start-vector";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
@@ -1617,6 +1636,7 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
            Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
            Opcode == Instruction::FCmp || Opcode == Instruction::Select ||
            Opcode == VPInstruction::WideIVStep ||
+           Opcode == VPInstruction::ReductionStartVector ||
            Opcode == VPInstruction::ComputeReductionResult;
   case OperationType::NonNegOp:
     return Opcode == Instruction::ZExt;
@@ -3274,21 +3294,13 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   // Scalable vectors cannot use arbitrary shufflevectors (only splats), so
   // must use intrinsics to interleave.
   if (VecTy->isScalableTy()) {
-    assert(isPowerOf2_32(Factor) && "Unsupported interleave factor for "
-                                    "scalable vectors, must be power of 2");
-    SmallVector<Value *> InterleavingValues(Vals);
-    // When interleaving, the number of values will be shrunk until we have the
-    // single final interleaved value.
-    auto *InterleaveTy = cast<VectorType>(InterleavingValues[0]->getType());
-    for (unsigned Midpoint = Factor / 2; Midpoint > 0; Midpoint /= 2) {
-      InterleaveTy = VectorType::getDoubleElementsVectorType(InterleaveTy);
-      for (unsigned I = 0; I < Midpoint; ++I)
-        InterleavingValues[I] = Builder.CreateIntrinsic(
-            InterleaveTy, Intrinsic::vector_interleave2,
-            {InterleavingValues[I], InterleavingValues[Midpoint + I]},
-            /*FMFSource=*/nullptr, Name);
-    }
-    return InterleavingValues[0];
+    assert(Factor <= 8 && "Unsupported interleave factor for scalable vectors");
+    VectorType *InterleaveTy =
+        VectorType::get(VecTy->getElementType(),
+                        VecTy->getElementCount().multiplyCoefficientBy(Factor));
+    return Builder.CreateIntrinsic(InterleaveTy,
+                                   getInterleaveIntrinsicID(Factor), Vals,
+                                   /*FMFSource=*/nullptr, Name);
   }
 
   // Fixed length. Start by concatenating all vectors into a wide vector.
@@ -3374,7 +3386,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
                           &InterleaveFactor](Value *MaskForGaps) -> Value * {
     if (State.VF.isScalable()) {
       assert(!MaskForGaps && "Interleaved groups with gaps are not supported.");
-      assert(isPowerOf2_32(InterleaveFactor) &&
+      assert(InterleaveFactor <= 8 &&
              "Unsupported deinterleave factor for scalable vectors");
       auto *ResBlockInMask = State.get(BlockInMask);
       SmallVector<Value *> Ops(InterleaveFactor, ResBlockInMask);
@@ -3418,43 +3430,18 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     ArrayRef<VPValue *> VPDefs = definedValues();
     const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
     if (VecTy->isScalableTy()) {
-      assert(isPowerOf2_32(InterleaveFactor) &&
-             "Unsupported deinterleave factor for scalable vectors");
-
       // Scalable vectors cannot use arbitrary shufflevectors (only splats),
       // so must use intrinsics to deinterleave.
-      SmallVector<Value *> DeinterleavedValues(InterleaveFactor);
-      DeinterleavedValues[0] = NewLoad;
-      // For the case of InterleaveFactor > 2, we will have to do recursive
-      // deinterleaving, because the current available deinterleave intrinsic
-      // supports only Factor of 2, otherwise it will bailout after first
-      // iteration.
-      // When deinterleaving, the number of values will double until we
-      // have "InterleaveFactor".
-      for (unsigned NumVectors = 1; NumVectors < InterleaveFactor;
-           NumVectors *= 2) {
-        // Deinterleave the elements within the vector
-        SmallVector<Value *> TempDeinterleavedValues(NumVectors);
-        for (unsigned I = 0; I < NumVectors; ++I) {
-          auto *DiTy = DeinterleavedValues[I]->getType();
-          TempDeinterleavedValues[I] = State.Builder.CreateIntrinsic(
-              Intrinsic::vector_deinterleave2, DiTy, DeinterleavedValues[I],
-              /*FMFSource=*/nullptr, "strided.vec");
-        }
-        // Extract the deinterleaved values:
-        for (unsigned I = 0; I < 2; ++I)
-          for (unsigned J = 0; J < NumVectors; ++J)
-            DeinterleavedValues[NumVectors * I + J] =
-                State.Builder.CreateExtractValue(TempDeinterleavedValues[J], I);
-      }
+      assert(InterleaveFactor <= 8 &&
+             "Unsupported deinterleave factor for scalable vectors");
+      Value *Deinterleave = State.Builder.CreateIntrinsic(
+          getDeinterleaveIntrinsicID(InterleaveFactor), NewLoad->getType(),
+          NewLoad,
+          /*FMFSource=*/nullptr, "strided.vec");
 
-#ifndef NDEBUG
-      for (Value *Val : DeinterleavedValues)
-        assert(Val && "NULL Deinterleaved Value");
-#endif
       for (unsigned I = 0, J = 0; I < InterleaveFactor; ++I) {
         Instruction *Member = Group->getMember(I);
-        Value *StridedVec = DeinterleavedValues[I];
+        Value *StridedVec = State.Builder.CreateExtractValue(Deinterleave, I);
         if (!Member) {
           // This value is not needed as it's not used
           cast<Instruction>(StridedVec)->eraseFromParent();
@@ -3847,17 +3834,19 @@ void VPFirstOrderRecurrencePHIRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPReductionPHIRecipe::execute(VPTransformState &State) {
-  // If this phi is fed by a scaled reduction then it should output a
-  // vector with fewer elements than the VF.
-  ElementCount VF = State.VF.divideCoefficientBy(VFScaleFactor);
+  // Reductions do not have to start at zero. They can start with
+  // any loop invariant values.
+  VPValue *StartVPV = getStartValue();
 
   // In order to support recurrences we need to be able to vectorize Phi nodes.
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
   // stage #1: We create a new vector PHI node with no incoming edges. We'll use
   // this value when we vectorize all of the instructions that use the PHI.
-  auto *ScalarTy = State.TypeAnalysis.inferScalarType(this);
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
   bool ScalarPHI = State.VF.isScalar() || IsInLoop;
-  Type *VecTy = ScalarPHI ? ScalarTy : VectorType::get(ScalarTy, VF);
+  Value *StartV = State.get(StartVPV, ScalarPHI);
+  Type *VecTy = StartV->getType();
 
   BasicBlock *HeaderBB = State.CFG.PrevBB;
   assert(State.CurrentParentLoop->getHeader() == HeaderBB &&
@@ -3866,49 +3855,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   Phi->insertBefore(HeaderBB->getFirstInsertionPt());
   State.set(this, Phi, IsInLoop);
 
-  BasicBlock *VectorPH =
-      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
-  // Create start and identity vector values for the reduction in the preheader.
-  // TODO: Introduce recipes in VPlan preheader to create initial values.
-  IRBuilderBase::InsertPointGuard IPBuilder(State.Builder);
-  State.Builder.SetInsertPoint(VectorPH->getTerminator());
-
-  // Reductions do not have to start at zero. They can start with
-  // any loop invariant values.
-  VPValue *StartVPV = getStartValue();
-  RecurKind RK = RdxDesc.getRecurrenceKind();
-  if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
-    // [I|F]FindLastIV will use a sentinel value to initialize the reduction
-    // phi or the resume value from the main vector loop when vectorizing the
-    // epilogue loop. In the exit block, ComputeReductionResult will generate
-    // checks to verify if the reduction result is the sentinel value. If the
-    // result is the sentinel value, it will be corrected back to the start
-    // value.
-    // TODO: The sentinel value is not always necessary. When the start value is
-    // a constant, and smaller than the start value of the induction variable,
-    // the start value can be directly used to initialize the reduction phi.
-    Phi->addIncoming(State.get(StartVPV, ScalarPHI), VectorPH);
-    return;
-  }
-
-  Value *Iden = getRecurrenceIdentity(RK, VecTy->getScalarType(),
-                                      RdxDesc.getFastMathFlags());
-  unsigned CurrentPart = getUnrollPart(*this);
-  Value *StartV = StartVPV->getLiveInIRValue();
-  if (!ScalarPHI) {
-    if (CurrentPart == 0) {
-      Iden = State.Builder.CreateVectorSplat(VF, Iden);
-      Constant *Zero = State.Builder.getInt32(0);
-      StartV = State.Builder.CreateInsertElement(Iden, StartV, Zero);
-    } else {
-      Iden = State.Builder.CreateVectorSplat(VF, Iden);
-    }
-  }
-
-  Value *StartVal = (CurrentPart == 0) ? StartV : Iden;
-  Phi->addIncoming(StartVal, VectorPH);
+  Phi->addIncoming(StartV, VectorPH);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

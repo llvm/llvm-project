@@ -18,6 +18,7 @@
 #include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/Support/Compiler.h"
 
 #include <functional>
 #include <optional>
@@ -87,7 +88,7 @@ private:
 } // namespace memprof
 
 // Write the MemProf data to OS.
-Error writeMemProf(
+LLVM_ABI Error writeMemProf(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
     std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData,

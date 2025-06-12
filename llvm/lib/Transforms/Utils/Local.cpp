@@ -71,6 +71,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -1546,9 +1547,9 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
     return PrefAlign;
   }
 
-  if (auto *GO = dyn_cast<GlobalObject>(V)) {
+  if (auto *GV = dyn_cast<GlobalVariable>(V)) {
     // TODO: as above, this shouldn't be necessary.
-    Align CurrentAlign = GO->getPointerAlignment(DL);
+    Align CurrentAlign = GV->getPointerAlignment(DL);
     if (PrefAlign <= CurrentAlign)
       return CurrentAlign;
 
@@ -1556,16 +1557,16 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
     // of the global.  If the memory we set aside for the global may not be the
     // memory used by the final program then it is impossible for us to reliably
     // enforce the preferred alignment.
-    if (!GO->canIncreaseAlignment())
+    if (!GV->canIncreaseAlignment())
       return CurrentAlign;
 
-    if (GO->isThreadLocal()) {
-      unsigned MaxTLSAlign = GO->getParent()->getMaxTLSAlignment() / CHAR_BIT;
+    if (GV->isThreadLocal()) {
+      unsigned MaxTLSAlign = GV->getParent()->getMaxTLSAlignment() / CHAR_BIT;
       if (MaxTLSAlign && PrefAlign > Align(MaxTLSAlign))
         PrefAlign = Align(MaxTLSAlign);
     }
 
-    GO->setAlignment(PrefAlign);
+    GV->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
@@ -3126,7 +3127,8 @@ static bool markAliveBlocks(Function &F,
           BasicBlock *UnreachableNormalDest = BasicBlock::Create(
               Ctx, OrigNormalDest->getName() + ".unreachable",
               II->getFunction(), OrigNormalDest);
-          new UnreachableInst(Ctx, UnreachableNormalDest);
+          auto *UI = new UnreachableInst(Ctx, UnreachableNormalDest);
+          UI->setDebugLoc(DebugLoc::getTemporary());
           II->setNormalDest(UnreachableNormalDest);
           if (DTU)
             DTU->applyUpdates(

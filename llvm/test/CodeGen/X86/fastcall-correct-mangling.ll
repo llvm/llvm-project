@@ -33,5 +33,5 @@ define private x86_fastcallcc void @dontCrash() {
 }
 
 @alias = alias void(i64, i8, i8, i16), ptr @func
-; CHECK32-LABEL: {{^}}.set @alias@20, @func@20
-; CHECK64-LABEL: {{^}}.set alias, func
+; CHECK32-LABEL: {{^}}@alias@20 = @func@20
+; CHECK64-LABEL: {{^}}alias = func

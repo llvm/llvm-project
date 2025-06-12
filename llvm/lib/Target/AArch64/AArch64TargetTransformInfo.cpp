@@ -1167,7 +1167,7 @@ struct SVEIntrinsicInfo {
   }
 
   // NOTE: Whilst not limited to only inactive lanes, the common use case is:
-  // inactiveLanesAreZerod =
+  // inactiveLanesAreZeroed =
   //     resultIsZeroInitialized() && inactiveLanesAreUnused()
   bool resultIsZeroInitialized() const { return ResultIsZeroInitialized; }
 
@@ -2051,10 +2051,10 @@ instCombineSVECntElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts) {
   const auto Pattern = cast<ConstantInt>(II.getArgOperand(0))->getZExtValue();
 
   if (Pattern == AArch64SVEPredPattern::all) {
-    Constant *StepVal = ConstantInt::get(II.getType(), NumElts);
-    auto *VScale = IC.Builder.CreateVScale(StepVal);
-    VScale->takeName(&II);
-    return IC.replaceInstUsesWith(II, VScale);
+    Value *Cnt = IC.Builder.CreateElementCount(
+        II.getType(), ElementCount::getScalable(NumElts));
+    Cnt->takeName(&II);
+    return IC.replaceInstUsesWith(II, Cnt);
   }
 
   unsigned MinNumElts = getNumElementsFromSVEPredPattern(Pattern);
@@ -3958,7 +3958,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     scalarization of the division operation.
     2. Constant divisors, either negative in whole or partially, don't result in
     significantly different codegen as compared to positive constant divisors.
-    So, we don't consider negative divisors seperately.
+    So, we don't consider negative divisors separately.
     3. If the codegen is significantly different with SVE, it has been indicated
     using comments at appropriate places.
 
@@ -3980,7 +3980,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
     other sdiv/srem cases:
     -------------------------------------------------------------------------
-    commom codegen            | + srem     | + sdiv     | pow-of-2  | Type
+    common codegen            | + srem     | + sdiv     | pow-of-2  | Type
     -------------------------------------------------------------------------
     smulh + asr + add + add   | -          | -          | N         | i64
     smull + lsr + add + add   | -          | -          | N         | i32
@@ -4005,7 +4005,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       // have similar cost.
       auto VT = TLI->getValueType(DL, Ty);
       if (VT.isScalarInteger() && VT.getSizeInBits() <= 64) {
-        if (Op2Info.isPowerOf2()) {
+        if (Op2Info.isPowerOf2() || Op2Info.isNegatedPowerOf2()) {
+          // Neg can be folded into the asr instruction.
           return ISD == ISD::SDIV ? (3 * AddCost + AsrCost)
                                   : (3 * AsrCost + AddCost);
         } else {
@@ -4013,17 +4014,24 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
         }
       } else if (VT.isVector()) {
         InstructionCost UsraCost = 2 * AsrCost;
-        if (Op2Info.isPowerOf2()) {
+        if (Op2Info.isPowerOf2() || Op2Info.isNegatedPowerOf2()) {
           // Division with scalable types corresponds to native 'asrd'
           // instruction when SVE is available.
           // e.g. %1 = sdiv <vscale x 4 x i32> %a, splat (i32 8)
+
+          // One more for the negation in SDIV
+          InstructionCost Cost =
+              (Op2Info.isNegatedPowerOf2() && ISD == ISD::SDIV) ? AsrCost : 0;
           if (Ty->isScalableTy() && ST->hasSVE())
-            return 2 * AsrCost;
-          return UsraCost +
-                 (ISD == ISD::SDIV
-                      ? (LT.second.getScalarType() == MVT::i64 ? 1 : 2) *
-                            AsrCost
-                      : 2 * AddCost);
+            Cost += 2 * AsrCost;
+          else {
+            Cost +=
+                UsraCost +
+                (ISD == ISD::SDIV
+                     ? (LT.second.getScalarType() == MVT::i64 ? 1 : 2) * AsrCost
+                     : 2 * AddCost);
+          }
+          return Cost;
         } else if (LT.second == MVT::v2i64) {
           return VT.getVectorNumElements() *
                  getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind,
@@ -4573,6 +4581,13 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
   auto *VecVTy = cast<VectorType>(VecTy);
 
   if (VecTy->isScalableTy() && !ST->hasSVE())
+    return InstructionCost::getInvalid();
+
+  // Scalable VFs will emit vector.[de]interleave intrinsics, and currently we
+  // only have lowering for power-of-2 factors.
+  // TODO: Add lowering for vector.[de]interleave3 intrinsics and support in
+  // InterleavedAccessPass for ld3/st3
+  if (VecTy->isScalableTy() && !isPowerOf2_32(Factor))
     return InstructionCost::getInvalid();
 
   // Vectorization for masked interleaved accesses is only enabled for scalable
@@ -5921,7 +5936,7 @@ static bool areExtractShuffleVectors(Value *Op1, Value *Op2,
       !match(Op2, m_Shuffle(m_Value(S2Op1), m_Undef(), m_Mask(M2))))
     return false;
 
-  // If we allow splats, set S1Op1/S2Op1 to nullptr for the relavant arg so that
+  // If we allow splats, set S1Op1/S2Op1 to nullptr for the relevant arg so that
   // it is not checked as an extract below.
   if (AllowSplat && isSplatShuffle(Op1))
     S1Op1 = nullptr;

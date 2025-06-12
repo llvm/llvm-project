@@ -14,13 +14,13 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include <unistd.h>
 
 TEST(LlvmLibcRemoveTest, CreateAndRemoveFile) {
   // The test strategy is to create a file and remove it, and also verify that
   // it was removed.
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
@@ -39,7 +39,7 @@ TEST(LlvmLibcRemoveTest, CreateAndRemoveFile) {
 TEST(LlvmLibcRemoveTest, CreateAndRemoveDir) {
   // The test strategy is to create a dir and remove it, and also verify that
   // it was removed.
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *FILENAME = "remove.test.dir";

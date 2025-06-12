@@ -12,7 +12,7 @@ define double @long_to_double_rr(i64 %a) {
 ;
 ; AVX-LABEL: long_to_double_rr:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2sd %rdi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %rdi, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %0 = sitofp i64 %a to double
@@ -27,7 +27,7 @@ define double @long_to_double_rm(ptr %a) {
 ;
 ; AVX-LABEL: long_to_double_rm:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2sdq (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sdq (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %0 = load i64, ptr %a
@@ -43,7 +43,7 @@ define double @long_to_double_rm_optsize(ptr %a) optsize {
 ;
 ; AVX-LABEL: long_to_double_rm_optsize:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2sdq (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sdq (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %0 = load i64, ptr %a
@@ -59,7 +59,7 @@ define float @long_to_float_rr(i64 %a) {
 ;
 ; AVX-LABEL: long_to_float_rr:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %0 = sitofp i64 %a to float
@@ -74,7 +74,7 @@ define float @long_to_float_rm(ptr %a) {
 ;
 ; AVX-LABEL: long_to_float_rm:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2ssq (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ssq (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %0 = load i64, ptr %a
@@ -90,7 +90,7 @@ define float @long_to_float_rm_optsize(ptr %a) optsize {
 ;
 ; AVX-LABEL: long_to_float_rm_optsize:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2ssq (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ssq (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %0 = load i64, ptr %a
