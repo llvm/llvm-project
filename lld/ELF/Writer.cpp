@@ -285,7 +285,6 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
 static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Demote symbols");
   DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
-  bool maybePreemptible = ctx.sharedFiles.size() || ctx.arg.shared;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (auto *d = dyn_cast<Defined>(sym)) {
       if (d->section && !d->section->isLive())
@@ -301,9 +300,8 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
       }
     }
 
-    if (maybePreemptible)
-      sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
-                           computeIsPreemptible(ctx, *sym);
+    sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
+                         computeIsPreemptible(ctx, *sym);
   }
 }
 
