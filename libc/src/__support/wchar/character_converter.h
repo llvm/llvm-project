@@ -22,11 +22,6 @@ class CharacterConverter {
 private:
   mbstate *state;
 
-  utf_ret<char8_t> pop_utf8_seqlength1();
-  utf_ret<char8_t> pop_utf8_seqlength2();
-  utf_ret<char8_t> pop_utf8_seqlength3();
-  utf_ret<char8_t> pop_utf8_seqlength4();
-
 public:
   CharacterConverter(mbstate *mbstate);
 

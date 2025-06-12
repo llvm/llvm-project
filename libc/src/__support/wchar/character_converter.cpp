@@ -37,119 +37,36 @@ int CharacterConverter::push(char32_t utf32) {
       break;
     }
   }
-  if (state->total_bytes == 0) {
+  if (state->total_bytes == 0)
     return -1;
-  }
 
   return 0;
 }
 
-utf_ret<char8_t> CharacterConverter::pop_utf8_seqlength1() {
-  utf_ret<char8_t> result;
-  result.error = 0;
-
-  // 0xxxxxxx
-  switch (state->bytes_processed) {
-  case 0:
-    result.out = (char8_t)(state->partial);
-    break;
-  default:
-    result.error = -1;
-    return result;
-  }
-
-  state->bytes_processed++;
-  return result;
-}
-
-utf_ret<char8_t> CharacterConverter::pop_utf8_seqlength2() {
-  utf_ret<char8_t> result;
-  result.error = 0;
-
-  // 110xxxxx 10xxxxxx
-  char32_t utf32 = state->partial;
-  switch (state->bytes_processed) {
-  case 0:
-    result.out = (char8_t)(0xC0 | (utf32 >> 6));
-    break;
-  case 1:
-    result.out = (char8_t)(0x80 | (utf32 & 0x3f));
-    break;
-  default:
-    result.error = -1;
-    return result;
-  }
-
-  state->bytes_processed++;
-  return result;
-}
-
-utf_ret<char8_t> CharacterConverter::pop_utf8_seqlength3() {
-  utf_ret<char8_t> result;
-  result.error = 0;
-
-  // 1110xxxx 10xxxxxx 10xxxxxx
-  char32_t utf32 = state->partial;
-  switch (state->bytes_processed) {
-  case 0:
-    result.out = (char8_t)(0xE0 | (utf32 >> 12));
-    break;
-  case 1:
-    result.out = (char8_t)(0x80 | ((utf32 >> 6) & 0x3f));
-    break;
-  case 2:
-    result.out = (char8_t)(0x80 | (utf32 & 0x3f));
-    break;
-  default:
-    result.error = -1;
-    return result;
-  }
-
-  state->bytes_processed++;
-  return result;
-}
-
-utf_ret<char8_t> CharacterConverter::pop_utf8_seqlength4() {
-  utf_ret<char8_t> result;
-  result.error = 0;
-
-  // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-  char32_t utf32 = state->partial;
-  switch (state->bytes_processed) {
-  case 0:
-    result.out = (char8_t)(0xF0 | (utf32 >> 18));
-    break;
-  case 1:
-    result.out = (char8_t)(0x80 | ((utf32 >> 12) & 0x3f));
-    break;
-  case 2:
-    result.out = (char8_t)(0x80 | ((utf32 >> 6) & 0x3f));
-    break;
-  case 3:
-    result.out = (char8_t)(0x80 | (utf32 & 0x3f));
-    break;
-  default:
-    result.error = -1;
-    return result;
-  }
-
-  state->bytes_processed++;
-  return result;
-}
-
 utf_ret<char8_t> CharacterConverter::pop_utf8() {
-  switch (state->total_bytes) {
-  case 1:
-    return pop_utf8_seqlength1();
-  case 2:
-    return pop_utf8_seqlength2();
-  case 3:
-    return pop_utf8_seqlength3();
-  case 4:
-    return pop_utf8_seqlength4();
+  if (state->bytes_processed >= state->total_bytes)
+    return {.out = 0, .error = -1};
+
+  char8_t first_byte_headers[] = {0, 0xC0, 0xE0, 0xF0};
+  char32_t utf32 = state->partial;
+  char32_t tb = state->total_bytes;
+  char32_t bp = state->bytes_processed;
+  char32_t output;
+  if (state->bytes_processed == 0) {
+    /*
+      Choose the correct set of most significant bits to encode the length
+      of the utf8 sequence. The remaining bits contain the most significant
+      bits of the unicode value of the character.
+    */
+    output = first_byte_headers[tb - 1] | (utf32 >> ((tb - 1) * 6));
+  } else {
+    // Get the next 6 bits and format it like so: 10xxxxxx
+    const char32_t shift_amount = (tb - bp - 1) * 6;
+    output = 0x80 | ((utf32 >> shift_amount) & 0x3f);
   }
 
-  return {.out = 0, .error = -1};
+  state->bytes_processed++;
+  return {.out = (char8_t)output, .error = 0};
 }
 
 } // namespace internal
