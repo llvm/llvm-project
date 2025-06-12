@@ -8,7 +8,7 @@
 
 #include "src/stdio/perror.h"
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
 // The standard says perror prints directly to stderr and returns nothing. This
