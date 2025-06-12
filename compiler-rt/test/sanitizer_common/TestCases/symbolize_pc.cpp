@@ -3,6 +3,9 @@
 //
 // Tests __sanitizer_symbolize_pc.
 
+// FIXME: llvm-symbolizer on AIX can't resolve line number for the global
+// XFAIL: target={{.*-aix.*}}
+
 // FIXME: Investigate why it does not print GLOBAL_VAR_ABC.
 // XFAIL: hwasan && target=aarch64{{.*}}
 // LSan tests fail on Darwin
@@ -72,12 +75,12 @@ int main() {
   // CHECK: PARTIAL '0x{{.*}}'
   SymbolizeSmallBuffer();
 
-  // CHECK: FIRST_FORMAT 0x{{.*}} in main symbolize_pc.cpp:[[@LINE+2]]
-  // CHECK: SECOND_FORMAT FUNC:main LINE:[[@LINE+1]] FILE:symbolize_pc.cpp
+  // CHECK: FIRST_FORMAT 0x{{.*}} in {{\.?main}} symbolize_pc.cpp:[[@LINE+2]]
+  // CHECK: SECOND_FORMAT FUNC:{{\.?main}} LINE:[[@LINE+1]] FILE:symbolize_pc.cpp
   SymbolizeCaller();
 
   struct s s;
-  // CHECK: SRET: FUNC:main LINE:[[@LINE+1]] FILE:symbolize_pc.cpp
+  // CHECK: SRET: FUNC:{{\.?main}} LINE:[[@LINE+1]] FILE:symbolize_pc.cpp
   s = SymbolizeSRet();
 
   // CHECK: GLOBAL: GLOBAL_VAR_ABC

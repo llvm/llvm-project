@@ -15,6 +15,9 @@
 // FIXME: Something wrong with MADV_FREE or MAP_NORESERVE there.
 // UNSUPPORTED: target={{.*solaris.*}}
 
+// Large calloc causes AIX kill all bash processes.
+// UNSUPPORTED: target={{.*aix.*}}
+
 void *p;
 
 int main(int argc, char **argv) {

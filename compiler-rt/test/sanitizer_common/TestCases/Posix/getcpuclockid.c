@@ -1,6 +1,7 @@
 // RUN: %clang -pthread %s -Wl,-as-needed -o %t && %run %t
 //
-// UNSUPPORTED: darwin, target={{.*solaris.*}}
+// as-needed is not a supported linker option on AIX.
+// UNSUPPORTED: darwin, target={{.*(solaris|aix).*}}
 
 #include <time.h>
 #include <unistd.h>

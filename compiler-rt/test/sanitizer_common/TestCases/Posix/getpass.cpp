@@ -6,7 +6,8 @@
 // XFAIL: android && asan
 
 // No libutil.
-// UNSUPPORTED: target={{.*solaris.*}}
+// AIX does not have util.h
+// UNSUPPORTED: target={{.*(solaris|aix).*}}
 
 #include <assert.h>
 #include <stdio.h>
