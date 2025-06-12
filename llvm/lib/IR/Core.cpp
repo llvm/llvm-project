@@ -431,9 +431,7 @@ void LLVMAddModuleFlag(LLVMModuleRef M, LLVMModuleFlagBehavior Behavior,
                            {Key, KeyLen}, unwrap(Val));
 }
 
-LLVMBool LLVMIsNewDbgInfoFormat(LLVMModuleRef M) {
-  return true;
-}
+LLVMBool LLVMIsNewDbgInfoFormat(LLVMModuleRef M) { return true; }
 
 void LLVMSetIsNewDbgInfoFormat(LLVMModuleRef M, LLVMBool UseNewFormat) {
   if (!UseNewFormat)
