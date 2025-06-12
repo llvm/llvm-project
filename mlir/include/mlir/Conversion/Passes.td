@@ -1161,6 +1161,7 @@ def TosaToArithPass : Pass<"tosa-to-arith"> {
   let summary = "Lower TOSA to the Arith dialect";
   let dependentDialects = [
     "arith::ArithDialect",
+    "shape::ShapeDialect"
   ];
   let description = [{
     Pass that converts TOSA operations to the equivalent operations using the

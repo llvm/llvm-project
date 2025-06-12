@@ -227,8 +227,9 @@ Error PGOCtxProfileReader::loadFlatProfileList(CtxProfFlatProfile &P) {
   while (canEnterBlockWithID(PGOCtxProfileBlockIDs::FlatProfileBlockID)) {
     EXPECT_OR_RET(E, readProfile(PGOCtxProfileBlockIDs::FlatProfileBlockID));
     auto Guid = E->second.guid();
-    if (!P.insert({Guid, std::move(E->second.counters())}).second)
-      return wrongValue("Duplicate flat profile entries");
+    if (!P.insert({Guid, std::move(E->second.counters())}).second) {
+      errs() << "Duplicate flat profile entries: " << Guid << "\n";
+    }
   }
   return Error::success();
 }
