@@ -33,9 +33,11 @@
 # RUN: ld.lld a.o b.o -o ab -z undefs
 # RUN: llvm-readelf -r -x .data ab | FileCheck %s --check-prefix=STATIC1
 # RUN: ld.lld a.o b.o s.so -o abs -z undefs
-# RUN: llvm-readelf -r -x .data abs | FileCheck %s --check-prefix=DYN1
-# RUN: ld.lld a.o b.o -o abs.pie -pie -z undefs
-# RUN: llvm-readelf -r -x .data abs.pie | FileCheck %s --check-prefix=STATIC1
+# RUN: llvm-readelf -r -x .data abs | FileCheck %s --check-prefix=STATIC1
+# RUN: ld.lld a.o b.o -o ab.pie -pie -z undefs
+# RUN: llvm-readelf -r -x .data ab.pie | FileCheck %s --check-prefix=STATIC1
+# RUN: ld.lld a.o b.o s.so -o abs.pie -pie -z undefs
+# RUN: llvm-readelf -r -x .data abs.pie | FileCheck %s --check-prefix=DYN1
 
 # STATIC1:      no relocations
 # STATIC1:      Hex dump of section '.data':
@@ -43,9 +45,9 @@
 # STATIC1-NEXT: {{.*}} 05000000 00000000                   .
 # STATIC1-EMPTY:
 
-# DYN1:        Relocation section '.rela.dyn' {{.*}} contains 1
+# DYN1:        Relocation section '.rela.dyn' {{.*}} contains 3
 # DYN1:        Hex dump of section '.data':
-# DYN1-NEXT:   {{.*}} 00000000 00000000 03000000 00000000 .
+# DYN1-NEXT:   {{.*}} 00000000 00000000 00000000 00000000 .
 # DYN1-NEXT:   {{.*}} 00000000 00000000                   .
 # DYN1-EMPTY:
 
