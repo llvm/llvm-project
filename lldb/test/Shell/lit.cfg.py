@@ -8,6 +8,7 @@ import shutil
 import site
 import subprocess
 
+import lit.util
 from lit.llvm import llvm_config
 
 site.addsitedir(os.path.dirname(__file__))
