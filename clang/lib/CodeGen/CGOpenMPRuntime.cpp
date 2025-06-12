@@ -18,25 +18,32 @@
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "TargetInfo.h"
+#include "clang-c/Index.h"
 #include "clang/AST/APValue.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/CodeGen/CodeGenABITypes.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -6755,6 +6762,51 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
   return NumThreadsVal;
 }
 
+class EffectiveBaseMapKey {
+  llvm::FoldingSetNodeID ID;
+  bool Indirect = false;
+
+public:
+  EffectiveBaseMapKey(ASTContext &Ctx, const Expr *EB, bool Ind) {
+    EB->Profile(ID, Ctx, /*Canonical=*/true);
+    Indirect = Ind;
+  }
+
+  EffectiveBaseMapKey(llvm::FoldingSetNodeID FromID) : ID(FromID) { }
+
+  llvm::FoldingSetNodeID getID() const { return ID; }
+  bool getIndirect() const { return Indirect; }
+};
+
+template <> struct llvm::DenseMapInfo<EffectiveBaseMapKey> {
+
+  static EffectiveBaseMapKey getEmptyKey() {
+    llvm::FoldingSetNodeID ID;
+    ID.AddInteger(std::numeric_limits<unsigned>::max());
+    return EffectiveBaseMapKey(ID);
+  }
+
+  static EffectiveBaseMapKey getTombstoneKey() {
+    llvm::FoldingSetNodeID ID;
+    for (unsigned I = 0; I < sizeof(ID) / sizeof(unsigned); ++I) {
+      ID.AddInteger(std::numeric_limits<unsigned>::max());
+    }
+    return EffectiveBaseMapKey(ID);
+  }
+
+  static unsigned getHashValue(const EffectiveBaseMapKey &Val) {
+    auto ID = Val.getID();
+    ID.AddBoolean(Val.getIndirect());
+    return ID.ComputeHash();
+  }
+
+  static bool isEqual(const EffectiveBaseMapKey &LHS,
+                      const EffectiveBaseMapKey &RHS) {
+    return LHS.getID() == RHS.getID() &&
+           LHS.getIndirect() == RHS.getIndirect();
+  }
+};
+
 namespace {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
@@ -6787,7 +6839,6 @@ public:
   public:
     MappingExprInfo(const ValueDecl *MapDecl, const Expr *MapExpr = nullptr)
         : MapDecl(MapDecl), MapExpr(MapExpr) {}
-
     const ValueDecl *getMapDecl() const { return MapDecl; }
     const Expr *getMapExpr() const { return MapExpr; }
   };
@@ -6825,21 +6876,49 @@ public:
     }
   };
 
+  struct MappableExprMetadata {
+    OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
+    const MapData *MD = nullptr;
+    bool CompleteExpression = false;
+    Address Base = Address::invalid();
+    Address Pointer = Address::invalid();
+  
+    //MappableExprMetadata() {}
+
+    /*MappableExprMetadata(OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
+                         const MapData *MD, bool CompleteExpression)
+        : Components(Components), MD(MD),
+          CompleteExpression(CompleteExpression) {}
+    
+    MappableExprMetadata(MappableExprMetadata &Other) {
+
+    }*/
+  };
+
+  using ExprComponentMap = llvm::MapVector<EffectiveBaseMapKey, MappableExprMetadata>;
+
   /// Map between a struct and the its lowest & highest elements which have been
   /// mapped.
   /// [ValueDecl *] --> {LE(FieldIndex, Pointer),
   ///                    HE(FieldIndex, Pointer)}
   struct StructRangeInfoTy {
-    MapCombinedInfoTy PreliminaryMapData;
+    //MapCombinedInfoTy PreliminaryMapData;
+    const Expr *BaseExpr = nullptr;
+    ExprComponentMap ChildComponents;
+    unsigned MemberDepth = -1u;
     std::pair<unsigned /*FieldIndex*/, Address /*Pointer*/> LowestElem = {
         0, Address::invalid()};
     std::pair<unsigned /*FieldIndex*/, Address /*Pointer*/> HighestElem = {
         0, Address::invalid()};
     Address Base = Address::invalid();
+    Address BaseAddr = Address::invalid();
     Address LB = Address::invalid();
     bool IsArraySection = false;
-    bool HasCompleteRecord = false;
+    const MapData *ContainingStructMap = nullptr;
   };
+
+  // A map from effective base addresses to struct range info for that base.
+  using PartialStructMap = llvm::DenseMap<EffectiveBaseMapKey, StructRangeInfoTy>;
 
 private:
   /// Kind that defines how a device pointer has to be returned.
@@ -7113,15 +7192,19 @@ private:
 
     void processField(
         const OMPClauseMappableExprCommon::MappableComponent &MC,
+        llvm::DenseMap<const FieldDecl *, uint64_t> &Layout,
         const FieldDecl *FD,
         llvm::function_ref<LValue(CodeGenFunction &, const MemberExpr *)>
             EmitMemberExprBase) {
-      const RecordDecl *RD = FD->getParent();
-      const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(RD);
-      uint64_t FieldOffset = RL.getFieldOffset(FD->getFieldIndex());
+      uint64_t FieldOffset = CGF.getContext().toBits(CharUnits::fromQuantity(Layout[FD]));
       uint64_t FieldSize =
           CGF.getContext().getTypeSize(FD->getType().getCanonicalType());
       Address ComponentLB = Address::invalid();
+
+      fprintf(stderr, "Process field: ");
+      MC.getAssociatedExpression()->dumpPretty(CGF.getContext());
+      fprintf(stderr, "  offset: %d  index: %d  cursor: %d\n", (int) FieldOffset, (int) FD->getFieldIndex(),
+              (int) Cursor);
 
       if (FD->getType()->isLValueReferenceType()) {
         const auto *ME = cast<MemberExpr>(MC.getAssociatedExpression());
@@ -7133,8 +7216,6 @@ private:
             CGF.EmitOMPSharedLValue(MC.getAssociatedExpression()).getAddress();
       }
 
-      if (!LastParent)
-        LastParent = RD;
       if (FD->getParent() == LastParent) {
         if (FD->getFieldIndex() != LastIndex + 1)
           copyUntilField(FD, ComponentLB);
@@ -7156,13 +7237,11 @@ private:
       copySizedChunk(LBPtr, Size);
     }
 
-    void copyUntilEnd(Address HB) {
-      if (LastParent) {
-        const ASTRecordLayout &RL =
-            CGF.getContext().getASTRecordLayout(LastParent);
-        if ((uint64_t)CGF.getContext().toBits(RL.getSize()) <= Cursor)
-          return;
-      }
+    void copyUntilEnd(Address HB, CharUnits TypeSize) {
+      fprintf(stderr, "copyUntilEnd: Cursor=%d  TypeSize=%d\n",
+              (int) Cursor, (int) CGF.getContext().toBits(TypeSize));
+      if ((uint64_t)CGF.getContext().toBits(TypeSize) <= Cursor)
+        return;
       llvm::Value *LBPtr = LB.emitRawPointer(CGF);
       llvm::Value *Size = CGF.Builder.CreatePtrDiff(
           CGF.Int8Ty, CGF.Builder.CreateConstGEP(HB, 1).emitRawPointer(CGF),
@@ -7184,6 +7263,544 @@ private:
     }
   };
 
+  /// Given a MemberExpr \c ME, find the containing structure as understood by
+  /// OpenMP (OpenMP 6.0, "2 Glossary").
+  const Expr *getEffectiveBase(const MemberExpr *ME, const MemberExpr **IME, bool &Ind) const {
+    const Expr *Base = ME->getBase()->IgnoreParenImpCasts();
+
+    Ind = false;
+
+    /*fprintf(stderr, "getEffectiveBase, input=");
+    ME->dumpPretty(CGF.getContext());
+    fprintf(stderr, "\nbase=");
+    Base->dumpPretty(CGF.getContext());
+    fprintf(stderr, "\n");*/
+
+    // Strip off any outer "." member accesses first
+    while (const auto *MEB = dyn_cast<MemberExpr>(Base)) {
+      if (ME->isArrow() || Base->getType()->isReferenceType()) {
+        break;
+      } else {
+        ME = MEB;
+        if (IME)
+          *IME = ME;
+        Base = ME->getBase()->IgnoreParenImpCasts();
+      }
+    }
+
+    /*fprintf(stderr, "now base=");
+    Base->dumpPretty(CGF.getContext());
+    fprintf(stderr, "\n");*/
+
+    if (ME->isArrow() || Base->getType()->isReferenceType()) {
+      Ind = true;
+      return Base;
+    }
+
+    return indirectOnce(Base, Ind);
+  }
+
+  // Iterate a component list from the base of an expression to the complete
+  // expression.  Components which are references are visited twice: firstly
+  // as the pointer, second as the pointee.
+  struct ComponentListRefPtrPteeIterator {
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = const OMPClauseMappableExprCommon::MappableComponent;
+    using difference_type = std::ptrdiff_t;
+    using pointer = const OMPClauseMappableExprCommon::MappableComponent*;
+    using reference = const OMPClauseMappableExprCommon::MappableComponent&;
+
+    std::reverse_iterator<const OMPClauseMappableExprCommon::MappableComponent *> Pos;
+    bool RefPtee = false;
+    const ValueDecl *BaseDecl = nullptr;
+    // We repeat on references -- this is the position in the underlying list.
+    unsigned ComponentPos = 0;
+    
+    ComponentListRefPtrPteeIterator(std::reverse_iterator<const OMPClauseMappableExprCommon::MappableComponent *> From) : Pos(From)
+    { }
+
+    reference operator*() const { return *Pos; }
+    pointer operator->() { return &*Pos; }
+
+    void setBaseDecl(const ValueDecl *Decl) {
+      BaseDecl = Decl;
+    }
+
+    bool isRefPtee() {
+      return RefPtee;
+    }
+
+    bool isRef() {
+      const OMPClauseMappableExprCommon::MappableComponent *Comp = &*Pos;
+      if (isa<MemberExpr>(Pos->getAssociatedExpression())) {
+        const ValueDecl *MapDecl = Comp->getAssociatedDeclaration();
+        assert(MapDecl && "Expected associated declaration for member expr");
+        return MapDecl->getType()->isLValueReferenceType();
+      }
+      return false;
+    }
+
+    bool isPointer(bool AllowDeref) {
+      const OMPClauseMappableExprCommon::MappableComponent *Comp = &*Pos;
+      const Expr *AE = Comp->getAssociatedExpression();
+      const auto *OASE = dyn_cast<ArraySectionExpr>(AE);
+      bool IsPointer =
+          isa<OMPArrayShapingExpr>(AE) ||
+          (OASE && ArraySectionExpr::getBaseOriginalType(OASE).getCanonicalType()->isAnyPointerType()) ||
+          AE->getType()->isAnyPointerType();
+      
+      if (AllowDeref)
+        return IsPointer;
+      else if (!IsPointer)
+        return false;
+
+      if (const auto *UO = dyn_cast<UnaryOperator>(AE))
+        return UO->getOpcode() != UO_Deref;
+
+      return !isa<BinaryOperator>(AE);
+    }
+
+    unsigned getComponentPos() {
+      return ComponentPos;
+    }
+
+    ComponentListRefPtrPteeIterator& operator++() {
+      if (isRef()) {
+        if (!RefPtee)
+          RefPtee = true;
+        else {
+          RefPtee = false;
+          ++Pos;
+        }
+      } else {
+        RefPtee = false;
+        // This could skip to outermost MemberExprs (over ".").
+        ++Pos;
+        ++ComponentPos;
+        /*while (auto ME = dyn_cast<MemberExpr>(Pos->getAssociatedExpression()->IgnoreParenImpCasts())) {
+          if (ME->isArrow() || ME->getBase()->getType()->isReferenceType())
+            break;
+          else
+            ++Pos;
+        }*/
+      }
+      return *this;
+    }
+
+    ComponentListRefPtrPteeIterator operator++(int) {
+      ComponentListRefPtrPteeIterator tmp = *this;
+      ++(*this);
+      return tmp;
+    }
+
+    friend bool operator==(const ComponentListRefPtrPteeIterator& a,
+                           const ComponentListRefPtrPteeIterator& b) {
+      return a.Pos == b.Pos && a.RefPtee == b.RefPtee;
+    }
+
+    friend bool operator!=(const ComponentListRefPtrPteeIterator &a,
+                           const ComponentListRefPtrPteeIterator &b) {
+      return a.Pos != b.Pos || a.RefPtee != b.RefPtee;
+    }
+  };
+
+  bool exprsEqual(Expr *One, Expr *Two) const {
+    if (One == nullptr || Two == nullptr)
+      return One == Two;
+
+    if (One->getStmtClass() != Two->getStmtClass())
+      return false;
+
+    llvm::FoldingSetNodeID ProfOne, ProfTwo;
+    One->Profile(ProfOne, CGF.getContext(), true);
+    Two->Profile(ProfTwo, CGF.getContext(), true);
+
+    return ProfOne == ProfTwo;
+  }
+
+  const Expr *indirectOnce(const Expr *E, bool &Ind) const {
+    Ind = false;
+
+    // Treat (*foo).bar the same as foo->bar
+    if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
+      if (UO->getOpcode() == UO_Deref) {
+        Ind = true;
+        return UO->getSubExpr()->IgnoreParenImpCasts();
+      }
+    }
+
+    // Treat foo[0].bar the same as foo->bar
+    while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      const Expr *ArrayBase = ASE->getBase()->IgnoreParenImpCasts();
+      const Expr *Index = ASE->getIdx();
+      Expr::EvalResult Result;
+      if (!Index->EvaluateAsInt(Result, CGF.getContext())) {
+        return E;
+      }
+      llvm::APSInt ConstIndex = Result.Val.getInt();
+      if (ConstIndex == 0) {
+        Ind = true;
+        E = ArrayBase;
+      }
+      if (!E->getType()->isArrayType())
+        break;
+    }
+
+    // Treat foo[:1].bar & foo[0:1].bar the same as foo->bar
+    if (const auto *ASecE = dyn_cast<ArraySectionExpr>(E)) {
+      const Expr *ArrayBase = ASecE->getBase()->IgnoreParenImpCasts();
+      const Expr *LB = ASecE->getLowerBound();
+      const Expr *Len = ASecE->getLength();
+      bool LBZero = false, LenOne = false;
+      Expr::EvalResult Result;
+      if (!LB) {
+        LBZero = true;
+      } else if (LB->EvaluateAsInt(Result, CGF.getContext())) {
+        llvm::APSInt ConstLB = Result.Val.getInt();
+        if (ConstLB == 0)
+          LBZero = true;
+      }
+      if (Len && Len->EvaluateAsInt(Result, CGF.getContext())) {
+        llvm::APSInt ConstLen = Result.Val.getInt();
+        if (ConstLen == 1) {
+          LenOne = true;
+        }
+      }
+      if (LBZero && LenOne) {
+        Ind = true;
+        return ArrayBase;
+      }
+    }
+
+    return E;
+  }
+
+  bool componentsEqual(const OMPClauseMappableExprCommon::MappableComponent &One,
+                       const OMPClauseMappableExprCommon::MappableComponent &Two) const {
+    if (One.isNonContiguous() != Two.isNonContiguous())
+      return false;
+
+    ValueDecl *DeclOne = One.getAssociatedDeclaration();
+    ValueDecl *DeclTwo = Two.getAssociatedDeclaration();
+    
+    if (DeclOne == nullptr || DeclTwo == nullptr)
+      return DeclOne == DeclTwo;
+
+    if (DeclOne->getCanonicalDecl() != DeclTwo->getCanonicalDecl())
+      return false;
+
+    return exprsEqual(One.getAssociatedExpression(),
+                      Two.getAssociatedExpression());
+  }
+
+  bool hasMemberExpr(const OMPClauseMappableExprCommon::MappableExprComponentListRef Components) const {
+    return llvm::any_of(Components, [](const OMPClauseMappableExprCommon::MappableComponent &M) {
+                          return isa<MemberExpr>(M.getAssociatedExpression());
+                        });
+  }
+
+  void gatherStructDataForComponentList(const MapData &MD, OpenMPMapClauseKind MapType, ArrayRef<OpenMPMapModifierKind> MapModifiers,
+                                        OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
+                                        MapCombinedInfoTy &CombinedInfo, PartialStructMap &PartialStructs,
+                                        bool IsImplicit, const ValueDecl *Mapper = nullptr,
+                                        const ValueDecl *BaseDecl = nullptr, const Expr *MapExpr = nullptr) const {
+    // Scan the components from the base to the complete expression.
+    auto CI = ComponentListRefPtrPteeIterator(Components.rbegin());
+    auto CE = ComponentListRefPtrPteeIterator(Components.rend());
+    auto I = CI;
+
+    I.setBaseDecl(BaseDecl);
+
+    Address BPP = Address::invalid();
+    Address BP = Address::invalid();
+
+    const Expr *AssocExpr = I->getAssociatedExpression();
+    /*const auto *AE = dyn_cast<ArraySubscriptExpr>(AssocExpr);
+    const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
+    const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);*/
+  
+    auto &&EmitMemberExprBase = [](CodeGenFunction &CGF,
+                                   const MemberExpr *E) {
+      const Expr *BaseExpr = E->getBase();
+      // If this is s.x, emit s as an lvalue.  If it is s->x, emit s as a
+      // scalar.
+      LValue BaseLV;
+      if (E->isArrow()) {
+        LValueBaseInfo BaseInfo;
+        TBAAAccessInfo TBAAInfo;
+        Address Addr =
+            CGF.EmitPointerWithAlignment(BaseExpr, &BaseInfo, &TBAAInfo);
+        QualType PtrTy = BaseExpr->getType()->getPointeeType();
+        BaseLV = CGF.MakeAddrLValue(Addr, PtrTy, BaseInfo, TBAAInfo);
+      } else {
+        BaseLV = CGF.EmitOMPSharedLValue(BaseExpr);
+      }
+      return BaseLV;
+    };
+
+    if (!hasMemberExpr(Components))
+      return;
+
+    /*
+    if (isa<MemberExpr>(AssocExpr)) {
+      // The base is the 'this' pointer. The content of the pointer is going
+      // to be the base of the field being mapped.
+      BP = CGF.LoadCXXThisAddress();
+    } else if ((AE && isa<CXXThisExpr>(AE->getBase()->IgnoreParenImpCasts())) ||
+               (OASE &&
+                isa<CXXThisExpr>(OASE->getBase()->IgnoreParenImpCasts()))) {
+      BP = CGF.EmitOMPSharedLValue(AssocExpr).getAddress();
+    } else if (OAShE &&
+               isa<CXXThisExpr>(OAShE->getBase()->IgnoreParenCasts())) {
+      BP = Address(
+          CGF.EmitScalarExpr(OAShE->getBase()),
+          CGF.ConvertTypeForMem(OAShE->getBase()->getType()->getPointeeType()),
+          CGF.getContext().getTypeAlignInChars(OAShE->getBase()->getType()));
+    } else {*/
+      // The base is the reference to the variable.
+      // BP = &Var.
+      fprintf(stderr, "Init new BP from ");
+      AssocExpr->dumpPretty(CGF.getContext());
+      fprintf(stderr, "\n");
+      BP = CGF.EmitOMPSharedLValue(AssocExpr).getAddress();
+      BPP = Address::invalid();
+      QualType Ty = CI->getAssociatedDeclaration()->getType().getNonReferenceType();
+      if (Ty->isAnyPointerType()) {
+        BPP = BP;
+        BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
+      }
+    //}
+
+    bool IsNonContiguous = CombinedInfo.NonContigInfo.IsNonContiguous;
+    // Maybe this needs to be "number of indirections".  We want something
+    // similar to topological sort, but simpler.
+    unsigned MemberDepth = 0;
+
+    MemberExpr *FirstMemberExpr = nullptr;
+    MemberExpr *LastMemberExpr = nullptr;
+
+    for (; I != CE; ++I) {
+      StructRangeInfoTy *PartialStruct = nullptr;
+      bool Indirected = false;
+
+      //auto Next = std::next(I);
+      if (auto ME = dyn_cast<MemberExpr>(I->getAssociatedExpression()->IgnoreParenImpCasts())) {
+        /*if (!FirstMemberExpr) {
+          QualType Ty = CI->getAssociatedDeclaration()->getType().getNonReferenceType();
+          if (Ty->isAnyPointerType()) {
+            BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
+            Indirected = true;
+          }
+          FirstMemberExpr = ME;
+        }*/
+        ++MemberDepth;
+      }
+
+      // Peek at the next outer expression to see if it's a "." member access
+      if (auto ME = dyn_cast<MemberExpr>(I->getAssociatedExpression()->IgnoreParenImpCasts())) {
+        auto Next = std::next(I);
+        if (Next != CE) {
+          if (auto NME = dyn_cast<MemberExpr>(Next->getAssociatedExpression()->IgnoreParenImpCasts())) {
+            if (!NME->isArrow())
+              continue;
+          }
+        }
+        /*QualType Ty = I->getAssociatedDeclaration()->getType().getNonReferenceType();
+        fprintf(stderr, "expr: ");
+        I->getAssociatedExpression()->dumpPretty(CGF.getContext());
+        fprintf(stderr, "\n");
+        bool Ind;
+        const Expr *EB = getEffectiveBase(ME, nullptr, Ind);
+        if (Ind) {
+          BPP = BP;
+          BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
+        } else {
+          BPP = Address::invalid();
+        }*/
+      }
+
+      bool LastIter = std::next(I) == CE;
+
+      const auto *OASE =
+        dyn_cast<ArraySectionExpr>(I->getAssociatedExpression());
+      const auto *OAShE =
+        dyn_cast<OMPArrayShapingExpr>(I->getAssociatedExpression());
+      const auto *UO =
+        dyn_cast<UnaryOperator>(I->getAssociatedExpression());
+      bool IsDeref = UO && UO->getOpcode() == UO_Deref;
+
+      // A final array section, is one whose length can't be proved to be one.
+      // If the map item is non-contiguous then we don't treat any array section
+      // as final array section.
+      bool IsFinalArraySection =
+          !IsNonContiguous &&
+          isFinalArraySectionExpression(I->getAssociatedExpression());
+
+          // If we have a declaration for the mapping use that, otherwise use
+      // the base declaration of the map clause.
+      const ValueDecl *MapDecl = (I->getAssociatedDeclaration())
+                                     ? I->getAssociatedDeclaration()
+                                     : BaseDecl;
+
+      //if (OASE)
+      //  ++DimSize;
+
+      if (LastIter || I.isRef() || I.isPointer(false) || IsFinalArraySection) {
+        Address LB = Address::invalid();
+        //Address LowestElem = Address::invalid();
+
+        if (OAShE) {
+          /*LowestElem = */LB =
+              Address(CGF.EmitScalarExpr(OAShE->getBase()),
+                      CGF.ConvertTypeForMem(OAShE->getBase()->getType()->getPointeeType()),
+                        CGF.getContext().getTypeAlignInChars(
+                            OAShE->getBase()->getType()));
+        } else if (I.isRef()) {
+          const auto *ME = cast<MemberExpr>(I->getAssociatedExpression());
+          LValue BaseLVal = EmitMemberExprBase(CGF, ME);
+          /*LowestElem =*/
+          LB = CGF.EmitLValueForFieldInitialization(
+                              BaseLVal, cast<FieldDecl>(MapDecl))
+                            .getAddress();
+          if (I.isRefPtee())
+            LB = CGF.EmitLoadOfReferenceLValue(LB, MapDecl->getType())
+                      .getAddress();
+        } else {
+          /*LowestElem = */LB =
+              CGF.EmitOMPSharedLValue(I->getAssociatedExpression())
+                  .getAddress();
+          fprintf(stderr, "Calculated LB from: ");
+          I->getAssociatedExpression()->dumpPretty(CGF.getContext());
+          fprintf(stderr, "\n");
+        }
+
+        if (MemberExpr *ME = dyn_cast<MemberExpr>(I->getAssociatedExpression())) {
+          const MemberExpr *IME = ME;
+          bool Ind;
+          const Expr *EB = getEffectiveBase(ME, &IME, Ind);
+          EffectiveBaseMapKey EBKey(CGF.getContext(), EB, Ind);
+          if (PartialStructs.find(EBKey) == PartialStructs.end()) {
+            PartialStructs[EBKey] = StructRangeInfoTy{};
+          }
+          PartialStruct = &PartialStructs[EBKey];
+          if (PartialStruct->MemberDepth == -1u)
+            PartialStruct->MemberDepth = MemberDepth;
+          else {
+            if (PartialStruct->MemberDepth > MemberDepth) {
+              fprintf(stderr, "Member depth changed! %u->%u\n",
+                      PartialStruct->MemberDepth, MemberDepth);
+            }
+          }
+          const auto *FD = cast<FieldDecl>(IME->getMemberDecl());
+          unsigned FieldIndex = FD->getFieldIndex();
+
+          // FIXME: Inadequate.
+          //if (MemberDepth > 1) {
+          //  QualType Ty = ME->getBase()->getType().getNonReferenceType();
+          //  if (Ty->isAnyPointerType()) {
+          //    fprintf(stderr, "Indirect BP\n");
+          //    BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
+          //  }
+         // }
+
+          // Update info about the lowest and highest elements for this struct
+          if (!PartialStruct->Base.isValid()) {
+            PartialStruct->LowestElem = {FieldIndex, LB/*LowestElem*/};
+            if (IsFinalArraySection && OASE) {
+              Address HB =
+                CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/false)
+                    .getAddress();
+              PartialStruct->HighestElem = {FieldIndex, HB};
+            } else {
+              PartialStruct->HighestElem = {FieldIndex, LB/*LowestElem*/};
+            }
+            // This gets overridden (to the beginning of the struct) in the
+            // second pass, when we know if we're also mapping the whole struct.
+            PartialStruct->LB = LB;
+            fprintf(stderr, "Set partial struct base to BP\n");
+            PartialStruct->Base = BP;
+            PartialStruct->BaseAddr = BPP;
+            PartialStruct->BaseExpr = EB;
+          } else if (FieldIndex < PartialStruct->LowestElem.first) {
+            PartialStruct->LowestElem = {FieldIndex, LB/*LowestElem*/};
+          } else if (FieldIndex > PartialStruct->HighestElem.first) {
+            if (IsFinalArraySection && OASE) {
+              Address HB =
+                  CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/false)
+                      .getAddress();
+              PartialStruct->HighestElem = {FieldIndex, HB};
+            } else {
+              PartialStruct->HighestElem = {FieldIndex, LB/*LowestElem*/};
+            }
+          }
+          LastMemberExpr = ME;
+        }
+
+          /*auto Next = std::next(I);
+          if (Next != CE) {
+            const Expr *NE = Next->getAssociatedExpression();
+            bool Ind;
+            const Expr *INE = indirectOnce(NE, Ind);
+            if (Ind) {
+              fprintf(stderr, "Indirected once, from: ");
+              NE->dumpPretty(CGF.getContext());
+              fprintf(stderr, "\nto: ");
+              INE->dumpPretty(CGF.getContext());
+              fprintf(stderr, "\n");
+              if (isa<MemberExpr>(INE) ||
+                  isa<DeclRefExpr>(INE)) {
+                fprintf(stderr, "continuing\n");
+                continue;
+              } else {
+                fprintf(stderr, "breaking\n");
+                break;
+              }
+            }
+          }*/
+
+        do {
+          if (isa<MemberExpr>(I->getAssociatedExpression()) || LastIter) {
+            EffectiveBaseMapKey IKey(CGF.getContext(), I->getAssociatedExpression(), false);
+            if (!PartialStruct) {
+              assert(LastIter && "only expected null PartialStruct on last iter");
+              if (!LastMemberExpr)
+                break;
+              bool Ind;
+              const Expr *EB = getEffectiveBase(LastMemberExpr, nullptr, Ind);
+              EffectiveBaseMapKey EBKey(CGF.getContext(), EB, Ind);
+              PartialStruct = &PartialStructs[EBKey];
+            }
+            if (PartialStruct->ChildComponents.find(IKey) == PartialStruct->ChildComponents.end()) {
+              int CutElems = Components.size() - I.getComponentPos() - 1;
+              ArrayRef<OMPClauseMappableExprCommon::MappableComponent> Tmp = 
+                Components.drop_front(CutElems);
+              bool CompleteExpr = CutElems == 0;
+              auto CI = Tmp.rbegin();
+              auto CE = Tmp.rend();
+              auto I = CI;
+              fprintf(stderr, "Made a chopped list:\n");
+              for (; I != CE; ++I) {
+                I->getAssociatedExpression()->dumpPretty(CGF.getContext());
+                fprintf(stderr, "\n");
+              }
+              PartialStruct->ChildComponents[IKey] = {Tmp, &MD, CompleteExpr, BP, LB};
+            }
+          }
+        } while (false);
+
+        fprintf(stderr, "copy LB to BP\n");
+        BPP = LB;
+        QualType Ty = I->getAssociatedExpression()->getType().getCanonicalType();
+        if (Ty->isAnyPointerType()) {
+          BP = CGF.EmitLoadOfPointer(BPP, Ty->castAs<PointerType>());
+        } else {
+          fprintf(stderr, "Non-pointer BPP\n");
+          BP = BPP;
+        }
+      }
+    }
+  }
+
   /// Generate the base pointers, section pointers, sizes, map type bits, and
   /// user-defined mappers (all included in \a CombinedInfo) for the provided
   /// map type, map or motion modifiers, and expression components.
@@ -7193,12 +7810,12 @@ private:
       OpenMPMapClauseKind MapType, ArrayRef<OpenMPMapModifierKind> MapModifiers,
       ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
-      MapCombinedInfoTy &CombinedInfo, StructRangeInfoTy &PartialStruct,
+      MapCombinedInfoTy &CombinedInfo, PartialStructMap &PartialStructs,
       bool IsFirstComponentList, bool IsImplicit,
       const ValueDecl *Mapper = nullptr, bool ForDeviceAddr = false,
       const ValueDecl *BaseDecl = nullptr, const Expr *MapExpr = nullptr,
-      ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
-          OverlappedElements = {},
+      /*ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
+          OverlappedElements = {},*/
       bool AreBothBasePtrAndPteeMapped = false) const {
     // The following summarizes what has to be generated for each map and the
     // types below. The generated information is expressed in this order:
@@ -7388,8 +8005,8 @@ private:
     bool RequiresReference = false;
 
     // Scan the components from the base to the complete expression.
-    auto CI = Components.rbegin();
-    auto CE = Components.rend();
+    auto CI = ComponentListRefPtrPteeIterator(Components.rbegin());
+    auto CE = ComponentListRefPtrPteeIterator(Components.rend());
     auto I = CI;
 
     // Track if the map information being generated is the first for a list of
@@ -7402,22 +8019,35 @@ private:
     const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
     const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);
 
+    fprintf(stderr, "generateInfoForComponentList\n");
+    //fprintf(stderr, "Preliminary data length: %d\n",
+    //        (int) PartialStruct.PreliminaryMapData.Exprs.size());
+    fprintf(stderr, "Combined info length: %d\n",
+            (int) CombinedInfo.Exprs.size());
+
+   /* fprintf(stderr, "last component list entry:\n");
+    std::prev(CE)->getAssociatedExpression()->dumpPretty(CGF.getContext());
+    fprintf(stderr, "\n");*/
+
     if (AreBothBasePtrAndPteeMapped && std::next(I) == CE)
       return;
     if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
       // to be the base of the field being mapped.
       BP = CGF.LoadCXXThisAddress();
+      assert(false && "unreachable 1");
     } else if ((AE && isa<CXXThisExpr>(AE->getBase()->IgnoreParenImpCasts())) ||
                (OASE &&
                 isa<CXXThisExpr>(OASE->getBase()->IgnoreParenImpCasts()))) {
       BP = CGF.EmitOMPSharedLValue(AssocExpr).getAddress();
+      assert(false && "unreachable 2");
     } else if (OAShE &&
                isa<CXXThisExpr>(OAShE->getBase()->IgnoreParenCasts())) {
       BP = Address(
           CGF.EmitScalarExpr(OAShE->getBase()),
           CGF.ConvertTypeForMem(OAShE->getBase()->getType()->getPointeeType()),
           CGF.getContext().getTypeAlignInChars(OAShE->getBase()->getType()));
+      assert(false && "unreachable 3");
     } else {
       // The base is the reference to the variable.
       // BP = &Var.
@@ -7488,8 +8118,8 @@ private:
     bool IsNonContiguous = CombinedInfo.NonContigInfo.IsNonContiguous;
     bool IsPrevMemberReference = false;
 
-    bool IsPartialMapped =
-        !PartialStruct.PreliminaryMapData.BasePointers.empty();
+    //bool IsPartialMapped =
+    //    !PartialStruct.PreliminaryMapData.BasePointers.empty();
 
     for (; I != CE; ++I) {
       // If the current component is member of a struct (parent struct) mark it.
@@ -7623,54 +8253,7 @@ private:
              (IsPrevMemberReference && !IsPointer) ||
              (IsMemberReference && Next != CE &&
               !Next->getAssociatedExpression()->getType()->isPointerType()));
-        if (!OverlappedElements.empty() && Next == CE) {
-          // Handle base element with the info for overlapped elements.
-          assert(!PartialStruct.Base.isValid() && "The base element is set.");
-          assert(!IsPointer &&
-                 "Unexpected base element with the pointer type.");
-          // Mark the whole struct as the struct that requires allocation on the
-          // device.
-          PartialStruct.LowestElem = {0, LowestElem};
-          CharUnits TypeSize = CGF.getContext().getTypeSizeInChars(
-              I->getAssociatedExpression()->getType());
-          Address HB = CGF.Builder.CreateConstGEP(
-              CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                  LowestElem, CGF.VoidPtrTy, CGF.Int8Ty),
-              TypeSize.getQuantity() - 1);
-          PartialStruct.HighestElem = {
-              std::numeric_limits<decltype(
-                  PartialStruct.HighestElem.first)>::max(),
-              HB};
-          PartialStruct.Base = BP;
-          PartialStruct.LB = LB;
-          assert(
-              PartialStruct.PreliminaryMapData.BasePointers.empty() &&
-              "Overlapped elements must be used only once for the variable.");
-          std::swap(PartialStruct.PreliminaryMapData, CombinedInfo);
-          // Emit data for non-overlapped data.
-          OpenMPOffloadMappingFlags Flags =
-              OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF |
-              getMapTypeBits(MapType, MapModifiers, MotionModifiers, IsImplicit,
-                             /*AddPtrFlag=*/false,
-                             /*AddIsTargetParamFlag=*/false, IsNonContiguous);
-          CopyOverlappedEntryGaps CopyGaps(CGF, CombinedInfo, Flags, MapDecl,
-                                           MapExpr, BP, LB, IsNonContiguous,
-                                           DimSize);
-          // Do bitcopy of all non-overlapped structure elements.
-          for (OMPClauseMappableExprCommon::MappableExprComponentListRef
-                   Component : OverlappedElements) {
-            for (const OMPClauseMappableExprCommon::MappableComponent &MC :
-                 Component) {
-              if (const ValueDecl *VD = MC.getAssociatedDeclaration()) {
-                if (const auto *FD = dyn_cast<FieldDecl>(VD)) {
-                  CopyGaps.processField(MC, FD, EmitMemberExprBase);
-                }
-              }
-            }
-          }
-          CopyGaps.copyUntilEnd(HB);
-          break;
-        }
+
         llvm::Value *Size = getExprTypeSize(I->getAssociatedExpression());
         // Skip adding an entry in the CurInfo of this combined entry if the
         // whole struct is currently being mapped. The struct needs to be added
@@ -7678,7 +8261,7 @@ private:
         // mapped.
         // Skip adding an entry in the CurInfo of this combined entry if the
         // PartialStruct.PreliminaryMapData.BasePointers has been mapped.
-        if ((!IsMemberPointerOrAddr && !IsPartialMapped) ||
+        if ((!IsMemberPointerOrAddr /*&& !IsPartialMapped*/) ||
             (Next == CE && MapType != OMPC_MAP_unknown)) {
             CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
             CombinedInfo.BasePointers.push_back(BP.emitRawPointer(CGF));
@@ -7728,6 +8311,7 @@ private:
           CombinedInfo.Types.push_back(Flags);
         }
 
+#if 0
         // If we have encountered a member expression so far, keep track of the
         // mapped member. If the parent is "*this", then the value declaration
         // is nullptr.
@@ -7761,10 +8345,11 @@ private:
             }
           }
         }
+#endif
 
         // Need to emit combined struct for array sections.
-        if (IsFinalArraySection || IsNonContiguous)
-          PartialStruct.IsArraySection = true;
+        //if (IsFinalArraySection || IsNonContiguous)
+        //  PartialStruct.IsArraySection = true;
 
         // If we have a final array section, we are done with this expression.
         if (IsFinalArraySection)
@@ -7773,7 +8358,7 @@ private:
         // The pointer becomes the base for the next element.
         if (Next != CE)
           BP = IsMemberReference ? LowestElem : LB;
-        if (!IsPartialMapped)
+        if (true /*!IsPartialMapped*/)
           IsExpressionFirstInfo = false;
         IsCaptureFirstInfo = false;
         FirstPointerInComplexData = false;
@@ -7789,8 +8374,8 @@ private:
     }
     // If ran into the whole component - allocate the space for the whole
     // record.
-    if (!EncounteredME)
-      PartialStruct.HasCompleteRecord = true;
+    //if (!EncounteredME)
+    //  PartialStruct.HasCompleteRecord = true;
 
     if (!IsNonContiguous)
       return;
@@ -8065,6 +8650,93 @@ private:
     }
   }
 
+  void getFieldOffsets(const CXXRecordDecl *RD,
+                       llvm::DenseMap<const FieldDecl *, uint64_t> &Layout,
+                       llvm::SmallPtrSetImpl<const CXXRecordDecl *> &Processed,
+                       uint64_t ParentOffset,
+                       bool AsBase) const {
+    const CGRecordLayout &RL = CGF.getTypes().getCGRecordLayout(RD);
+
+    fprintf(stderr, "Getting field offsets for decl:\n");
+    RD->dump();
+
+    llvm::StructType *St =
+        AsBase ? RL.getBaseSubobjectLLVMType() : RL.getLLVMType();
+    auto &DL = CGF.CGM.getDataLayout();
+    const llvm::StructLayout *SL =
+        DL.getStructLayout(St);
+
+    Processed.insert(RD);
+
+    unsigned NumElements = St->getNumElements();
+    llvm::SmallVector<
+        llvm::PointerUnion<const CXXRecordDecl *, const FieldDecl *>, 4>
+        RecordLayout(NumElements * 2);
+
+    // Fill bases.
+    for (const auto &I : RD->bases()) {
+      if (I.isVirtual())
+        continue;
+
+      QualType BaseTy = I.getType();
+      const auto *Base = BaseTy->getAsCXXRecordDecl();
+      // Ignore empty bases.
+      if (isEmptyRecordForLayout(CGF.getContext(), BaseTy) ||
+          CGF.getContext()
+              .getASTRecordLayout(Base)
+              .getNonVirtualSize()
+              .isZero())
+        continue;
+
+      unsigned FieldIndex = RL.getNonVirtualBaseLLVMFieldNo(Base);
+      RecordLayout[FieldIndex] = Base;
+    }
+    assert(RD->vbases().empty() && "FIXME, virtual bases");
+    // Fill in all the fields.
+    assert(!RD->isUnion() && "Unexpected union.");
+    for (const auto *Field : RD->fields()) {
+      // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
+      // will fill in later.)
+      if (!Field->isBitField() &&
+          !isEmptyFieldForLayout(CGF.getContext(), Field)) {
+        unsigned FieldIndex = RL.getLLVMFieldNo(Field);
+        RecordLayout[FieldIndex] = Field;
+        if (Field->getType().getCanonicalType().getTypePtr()->isRecordType()) {
+          const CXXRecordDecl *RD2 = Field->getType().getCanonicalType().getTypePtr()->getAsCXXRecordDecl();
+          if (!Processed.contains(RD2)) {
+            llvm::TypeSize Offset = SL->getElementOffset(FieldIndex);
+            getFieldOffsets(RD2, Layout, Processed, ParentOffset + Offset, /*AsBase=*/true);
+          }
+        }
+      }
+    }
+    for (const llvm::PointerUnion<const CXXRecordDecl *, const FieldDecl *>
+             &Data : RecordLayout) {
+      if (Data.isNull())
+        continue;
+      if (const auto *Base = dyn_cast<const CXXRecordDecl *>(Data)) {
+        if (RL.hasNonVirtualBaseLLVMField(Base)) {
+          unsigned FieldNo = RL.getNonVirtualBaseLLVMFieldNo(Base);
+          llvm::TypeSize Offset = SL->getElementOffset(FieldNo);
+          getFieldOffsets(Base, Layout, Processed, Offset, /*AsBase=*/true);
+        } else {
+          assert(false && "Unhandled virtual base");
+        }
+      } else {
+        const auto *FD = cast<const FieldDecl *>(Data);
+        //const auto *RD = FD->getParent();
+        unsigned FieldNo = RL.getLLVMFieldNo(FD);
+        llvm::TypeSize FieldOffset = SL->getElementOffset(FieldNo);
+        if (Layout.find(FD) == Layout.end()) {
+          Layout[FD] = ParentOffset + FieldOffset;
+        } else {
+          fprintf(stderr, "FD already in layout?\n");
+        }
+      }
+    }
+    fprintf(stderr, "Returning...\n");
+  }
+
   /// Generate all the base pointers, section pointers, sizes, map types, and
   /// mappers for the extracted mappable expressions (all included in \a
   /// CombinedInfo). Also, for each item that relates with a device pointer, a
@@ -8082,6 +8754,8 @@ private:
     llvm::MapVector<CanonicalDeclPtr<const Decl>,
                     SmallVector<SmallVector<MapInfo, 8>, 4>>
         Info;
+
+    fprintf(stderr, "generateAllInfoForClauses\n");
 
     // Helper function to fill the information map for the different supported
     // clauses.
@@ -8316,7 +8990,7 @@ private:
     }
 
     for (const auto &Data : Info) {
-      StructRangeInfoTy PartialStruct;
+      PartialStructMap PartialStructs;
       // Temporary generated information.
       MapCombinedInfoTy CurInfo;
       const Decl *D = Data.first;
@@ -8345,12 +9019,12 @@ private:
           unsigned CurrentBasePointersIdx = CurInfo.BasePointers.size();
           CurInfo.NonContigInfo.IsNonContiguous =
               L.Components.back().isNonContiguous();
+          fprintf(stderr, "*** From generateAllInfoForClauses...\n");
           generateInfoForComponentList(
               L.MapType, L.MapModifiers, L.MotionModifiers, L.Components,
-              CurInfo, PartialStruct, /*IsFirstComponentList=*/false,
-              L.IsImplicit, /*GenerateAllInfoForClauses*/ true, L.Mapper,
-              L.ForDeviceAddr, VD, L.VarRef, /*OverlappedElements*/ {},
-              HasMapBasePtr && HasMapArraySec);
+              CurInfo, PartialStructs, /*IsFirstComponentList=*/false,
+              L.IsImplicit, L.Mapper, L.ForDeviceAddr, VD, L.VarRef,
+              /*OverlappedElements {},*/ HasMapBasePtr && HasMapArraySec);
 
           // If this entry relates with a device pointer, set the relevant
           // declaration and add the 'return pointer' flag.
@@ -8415,12 +9089,12 @@ private:
         }
       }
       // If there is an entry in PartialStruct it means we have a struct with
-      // individual members mapped. Emit an extra combined entry.
-      if (PartialStruct.Base.isValid()) {
-        CurInfo.NonContigInfo.Dims.push_back(0);
-        emitCombinedEntry(CombinedInfo, CurInfo.Types, PartialStruct,
-                          /*IsMapThis*/ !VD, OMPBuilder, VD);
-      }
+      // individual members mapped. Emit an extra combined entry.  FIXME.
+      //if (PartialStruct.Base.isValid()) {
+      //  CurInfo.NonContigInfo.Dims.push_back(0);
+      //  emitCombinedEntry(CombinedInfo, CurInfo.Types, PartialStruct,
+      //                    /*IsMapThis*/ !VD, OMPBuilder, VD);
+     // }
 
       // We need to append the results of this capture to what we already
       // have.
@@ -8489,7 +9163,8 @@ public:
                          llvm::OpenMPIRBuilder &OMPBuilder,
                          const ValueDecl *VD = nullptr,
                          unsigned OffsetForMemberOfFlag = 0,
-                         bool NotTargetParams = true) const {
+                         OpenMPOffloadMappingFlags Flags = OpenMPOffloadMappingFlags::OMP_MAP_NONE) const {
+    fprintf(stderr, "emitCombinedEntry\n");
     if (CurTypes.size() == 1 &&
         ((CurTypes.back() & OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) !=
          OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) &&
@@ -8497,13 +9172,16 @@ public:
       return;
     Address LBAddr = PartialStruct.LowestElem.second;
     Address HBAddr = PartialStruct.HighestElem.second;
-    if (PartialStruct.HasCompleteRecord) {
+    if (PartialStruct.ContainingStructMap) {
       LBAddr = PartialStruct.LB;
       HBAddr = PartialStruct.LB;
     }
     CombinedInfo.Exprs.push_back(VD);
     // Base is the base of the struct
-    CombinedInfo.BasePointers.push_back(PartialStruct.Base.emitRawPointer(CGF));
+    if (Flags == OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ)
+      CombinedInfo.BasePointers.push_back(PartialStruct.BaseAddr.emitRawPointer(CGF));
+    else
+      CombinedInfo.BasePointers.push_back(PartialStruct.Base.emitRawPointer(CGF));
     CombinedInfo.DevicePtrDecls.push_back(nullptr);
     CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
     // Pointer is the address of the lowest element
@@ -8542,11 +9220,11 @@ public:
     }
     CombinedInfo.Mappers.push_back(nullptr);
     // Map type is always TARGET_PARAM, if generate info for captures.
-    CombinedInfo.Types.push_back(
-        NotTargetParams ? OpenMPOffloadMappingFlags::OMP_MAP_NONE
-        : !PartialStruct.PreliminaryMapData.BasePointers.empty()
-            ? OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ
-            : OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM);
+    CombinedInfo.Types.push_back(Flags);
+        //NotTargetParams ? OpenMPOffloadMappingFlags::OMP_MAP_NONE
+        //: /*!PartialStruct.PreliminaryMapData.BasePointers.empty()
+        //    ? OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ
+        //    :*/ OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM);
     // If any element has the present modifier, then make sure the runtime
     // doesn't attempt to allocate the struct.
     if (CurTypes.end() !=
@@ -8591,6 +9269,7 @@ public:
       MapCombinedInfoTy &CombinedInfo, llvm::OpenMPIRBuilder &OMPBuilder,
       const llvm::DenseSet<CanonicalDeclPtr<const Decl>> &SkipVarSet =
           llvm::DenseSet<CanonicalDeclPtr<const Decl>>()) const {
+    fprintf(stderr, "generateAllInfo\n");
     assert(isa<const OMPExecutableDirective *>(CurDir) &&
            "Expect a executable directive");
     const auto *CurExecDir = cast<const OMPExecutableDirective *>(CurDir);
@@ -8725,7 +9404,8 @@ public:
   /// \a CurCaptureVarInfo).
   void generateInfoForCaptureFromClauseInfo(
       const CapturedStmt::Capture *Cap, llvm::Value *Arg,
-      MapCombinedInfoTy &CurCaptureVarInfo, llvm::OpenMPIRBuilder &OMPBuilder,
+      MapCombinedInfoTy &CurCaptureVarInfo, PartialStructMap &PartialStructs,
+      llvm::OpenMPIRBuilder &OMPBuilder,
       unsigned OffsetForMemberOfFlag) const {
     assert(!Cap->capturesVariableArrayType() &&
            "Not expecting to generate map info for a variable array type!");
@@ -8739,6 +9419,8 @@ public:
     // generateDefaultMapInfo
     if (LambdasMap.count(VD))
       return;
+
+    fprintf(stderr, "generateInfoForCapture\n");
 
     // If this declaration appears in a is_device_ptr clause we just have to
     // pass the pointer by value. If it is a reference to a declaration, we just
@@ -8821,27 +9503,26 @@ public:
         [&](ArrayRef<MapData> DeclComponentLists,
             bool IsEligibleForTargetParamFlag) {
           MapCombinedInfoTy CurInfoForComponentLists;
-          StructRangeInfoTy PartialStruct;
 
           if (DeclComponentLists.empty())
             return;
 
           generateInfoForCaptureFromComponentLists(
-              VD, DeclComponentLists, CurInfoForComponentLists, PartialStruct,
+              OMPBuilder, VD, DeclComponentLists, CurInfoForComponentLists, PartialStructs,
               IsEligibleForTargetParamFlag,
               /*AreBothBasePtrAndPteeMapped=*/HasMapBasePtr && HasMapArraySec);
 
           // If there is an entry in PartialStruct it means we have a
           // struct with individual members mapped. Emit an extra combined
           // entry.
-          if (PartialStruct.Base.isValid()) {
-            CurCaptureVarInfo.append(PartialStruct.PreliminaryMapData);
-            emitCombinedEntry(
-                CurCaptureVarInfo, CurInfoForComponentLists.Types,
-                PartialStruct, Cap->capturesThis(), OMPBuilder, nullptr,
-                OffsetForMemberOfFlag,
-                /*NotTargetParams*/ !IsEligibleForTargetParamFlag);
-          }
+          //if (PartialStruct.Base.isValid()) {
+          //  CurCaptureVarInfo.append(PartialStruct.PreliminaryMapData);
+          //  emitCombinedEntry(
+          //      CurCaptureVarInfo, CurInfoForComponentLists.Types,
+          //      PartialStruct, Cap->capturesThis(), OMPBuilder, nullptr,
+          //      OffsetForMemberOfFlag,
+          //      /*NotTargetParams*/ !IsEligibleForTargetParamFlag);
+         // }
 
           // Return if we didn't add any entries.
           if (CurInfoForComponentLists.BasePointers.empty())
@@ -8858,10 +9539,11 @@ public:
   /// mappers associated to \a DeclComponentLists for a given capture
   /// \a VD (all included in \a CurComponentListInfo).
   void generateInfoForCaptureFromComponentLists(
-      const ValueDecl *VD, ArrayRef<MapData> DeclComponentLists,
-      MapCombinedInfoTy &CurComponentListInfo, StructRangeInfoTy &PartialStruct,
+      llvm::OpenMPIRBuilder &OMPBuilder, const ValueDecl *VD, ArrayRef<MapData> DeclComponentLists,
+      MapCombinedInfoTy &CurComponentListInfo, PartialStructMap &PartialStructs,
       bool IsListEligibleForTargetParamFlag,
       bool AreBothBasePtrAndPteeMapped = false) const {
+#if 0
     // Find overlapping elements (including the offset from the base element).
     llvm::SmallDenseMap<
         const MapData *,
@@ -8982,11 +9664,421 @@ public:
             return *It == FD1;
           });
     }
+    #endif
 
+    fprintf(stderr, "Gather structs, pass 1\n");
+
+    // Pass 1: Gather data about structs (effective bases, low-high ranges)
+    for (const MapData &L : DeclComponentLists) {
+      OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
+      OpenMPMapClauseKind MapType;
+      ArrayRef<OpenMPMapModifierKind> MapModifiers;
+      bool IsImplicit;
+      const ValueDecl *Mapper;
+      const Expr *MapExpr;
+      std::tie(Components, MapType, MapModifiers, IsImplicit, Mapper, MapExpr) =
+          L;
+      gatherStructDataForComponentList(L, MapType, MapModifiers, Components,
+                                       CurComponentListInfo, PartialStructs,
+                                       IsImplicit, Mapper, VD, MapExpr);
+    }
+
+    fprintf(stderr, "Gather structs, pass 2\n");
+
+    llvm::SmallPtrSet<const MapData *, 8> ProcessedMappings;
+
+    // Pass 2: Find whole-struct mappings which overlap with member accesses.
+    // This only handles fairly simple cases, and will fail for things like:
+    //  map(tofrom: arr[5]) map(tofrom: arr[5].x)
+    // That could probably be improved a bit.
+    for (const MapData &L : DeclComponentLists) {
+      OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
+      OpenMPMapClauseKind MapType;
+      ArrayRef<OpenMPMapModifierKind> MapModifiers;
+      bool IsImplicit;
+      const ValueDecl *Mapper;
+      const Expr *MapExpr;
+      std::tie(Components, MapType, MapModifiers, IsImplicit, Mapper, MapExpr) =
+          L;
+      const Expr *MapExprOrig = MapExpr;
+      if (const auto *UO = dyn_cast<UnaryOperator>(MapExpr)) {
+        if (UO->getOpcode() == UO_Deref) {
+          MapExpr = UO->getSubExpr()->IgnoreParenImpCasts();
+        }
+      } else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(MapExpr)) {
+        const Expr *ArrayBase = ASE->getBase()->IgnoreParenImpCasts();
+        const Expr *Index = ASE->getIdx();
+        Expr::EvalResult Result;
+        if (Index->EvaluateAsInt(Result, CGF.getContext())) {
+          llvm::APSInt ConstIndex = Result.Val.getInt();
+          if (ConstIndex == 0) {
+            MapExpr = ArrayBase;
+          }
+        }
+      } else if (const auto *ASecE = dyn_cast<ArraySectionExpr>(MapExpr)) {
+        const Expr *ArrayBase = ASecE->getBase()->IgnoreParenImpCasts();
+        // In general, we can't tell if we're mapping the whole struct here,
+        // so this is somewhat best-effort.
+        // Maybe this should be a compile-time warning, or we should arrange
+        // so the runtime does the right thing regardless (e.g. with
+        // potentially redundant mappings).
+        bool CheckLength = false;
+        if (!ASecE->getLowerBound())
+          CheckLength = true;
+        else {
+          const Expr *Lower = ASecE->getLowerBound();
+          Expr::EvalResult Result;
+          if (Lower->EvaluateAsInt(Result, CGF.getContext())) {
+            llvm::APSInt ConstLow = Result.Val.getInt();
+            if (ConstLow == 0) {
+              CheckLength = true;
+            }
+          }
+        }
+        if (CheckLength) {
+          if (ArrayBase->getType()->isArrayType() &&
+              !ASecE->getLength()) {
+            MapExpr = ArrayBase;
+          } else if (ASecE->getLength()) {
+            const Expr *Upper = ASecE->getLength();
+            Expr::EvalResult Result;
+            if (Upper->EvaluateAsInt(Result, CGF.getContext())) {
+              llvm::APSInt ConstLength = Result.Val.getInt();
+              if (ConstLength != 0) {
+                MapExpr = ArrayBase;
+              }
+            }
+          }
+        }
+      }
+      if (MapExpr == MapExprOrig && MapExpr->getType()->isPointerType()) {
+        // It's just a base pointer, ignore it here.
+        continue;
+      }
+      bool Indirect = MapExpr->getType()->isPointerType();
+      // The only things used as keys in PartialStructs are known to be used
+      // as the base expressions of MemberExprs, so this is safer than it looks.
+      EffectiveBaseMapKey EBKey(CGF.getContext(), MapExpr, Indirect);
+      if (PartialStructs.find(EBKey) != PartialStructs.end()) {
+        StructRangeInfoTy *PartialStruct = &PartialStructs[EBKey];
+        fprintf(stderr, "Mapped whole of struct, marking: ");
+        MapExprOrig->dumpPretty(CGF.getContext());
+        fprintf(stderr, "\n");
+        PartialStruct->ContainingStructMap = &L;
+        QualType Ty = PartialStruct->BaseExpr->getType().getCanonicalType();
+        fprintf(stderr, "BaseExpr Type:\n");
+        Ty.dump();
+        //if (PartialStruct->MemberDepth > 1) {
+        //  PartialStruct->LB =
+        //      CGF.EmitLoadOfPointer(PartialStruct->Base, Ty->castAs<PointerType>());
+        //} else {
+          // The first one is indirected already.
+          PartialStruct->LB = CGF.EmitLoadOfPointer(PartialStruct->BaseAddr, Ty->castAs<PointerType>());
+          ProcessedMappings.insert(&L);
+        //} else {
+       // }
+      }
+    }
+
+    fprintf(stderr, "Sorting partial structs, pass 3:\n");
+    for (auto &PS : PartialStructs) {
+      auto &PartialStruct = PS.getSecond();
+
+      llvm::DenseMap<const FieldDecl *, uint64_t> Layout;
+
+      const Type *BaseType = PartialStruct.BaseExpr->getType().getCanonicalType().getTypePtr();
+      const Type *OrigType = BaseType->getPointeeOrArrayElementType();
+
+      while (BaseType != OrigType) {
+        BaseType = OrigType->getCanonicalTypeInternal().getTypePtr();
+        OrigType = BaseType->getPointeeOrArrayElementType();
+      }
+
+      if (const auto *CRD = BaseType->getAsCXXRecordDecl()) {
+        llvm::SmallPtrSet<const CXXRecordDecl *, 4> Processed;
+        getFieldOffsets(CRD, Layout, Processed, 0, /*AsBase=*/false);
+      } else {
+        assert(false && "Not CXX record decl");
+      }
+
+      llvm::stable_sort(PartialStruct.ChildComponents,
+                        [this, &Layout](auto &a, auto &b) {
+        OMPClauseMappableExprCommon::MappableExprComponentListRef First = a.second.Components;
+        OMPClauseMappableExprCommon::MappableExprComponentListRef Second = b.second.Components;
+
+        auto CI = First.begin();
+        auto CE = First.end();
+        auto SI = Second.begin();
+        auto SE = Second.end();
+
+        // We may have a member expression, or an ArraySectionExpr. Find the
+        // outermost member expression.
+        while (CI != CE) {
+          if (isa<MemberExpr>(CI->getAssociatedExpression()))
+            break;
+          else
+            ++CI;
+        }
+
+        if (CI == CE)
+          return false;
+
+        while (SI != SE) {
+          if (isa<MemberExpr>(SI->getAssociatedExpression()))
+            break;
+          else
+            ++SI;
+        }
+
+        if (SI == SE)
+          return false;
+
+        fprintf(stderr, "Compare CI expr: ");
+        CI->getAssociatedExpression()->dumpPretty(CGF.getContext());
+        fprintf(stderr, "\nwith SI expr: ");
+        SI->getAssociatedExpression()->dumpPretty(CGF.getContext());
+        fprintf(stderr, "\n");
+
+        const auto *FD1 = cast<FieldDecl>(CI->getAssociatedDeclaration());
+        const auto *FD2 = cast<FieldDecl>(SI->getAssociatedDeclaration());
+
+        /*while (auto *ME = dyn_cast<MemberExpr>(CI->getAssociatedExpression())) {
+          if (ME->isArrow())
+            break;
+          auto *Next = std::next(CI);
+          if (Next == CE)
+            break;
+          if (isa<MemberExpr>(Next->getAssociatedExpression()))
+            ++CI;
+          else
+            break;
+        }
+
+        while (auto *ME = dyn_cast<MemberExpr>(SI->getAssociatedExpression())) {
+          if (ME->isArrow())
+            break;
+          auto *Next = std::next(SI);
+          if (Next == SE)
+            break;
+          if (isa<MemberExpr>(Next->getAssociatedExpression()))
+            ++SI;
+          else
+            break;
+        }
+
+        const RecordDecl *RD = FD1->getParent();
+        const RecordDecl *RD2 = FD2->getParent();
+
+        assert(RD == RD2 && "expected the same record decl");
+
+        const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(RD);*/
+        uint64_t FieldOffset1 = Layout[FD1];
+        uint64_t FieldOffset2 = Layout[FD2];
+
+        fprintf(stderr, "Field offset 1: %llu\n", (unsigned long long) FieldOffset1);
+        fprintf(stderr, "Field offset 2: %llu\n", (unsigned long long) FieldOffset2);
+
+        return FieldOffset2 > FieldOffset1;
+      });
+    }
+
+    // FIXME
+    bool IsNonContiguous = false;
+    int DimSize = 1;
+
+    std::vector<EffectiveBaseMapKey> StructOrder;
+
+    for (auto &PS : PartialStructs) {
+      StructOrder.push_back(PS.getFirst());
+    }
+
+    llvm::stable_sort(StructOrder, [&PartialStructs](auto First, auto Second) {
+      auto FirstInfo = PartialStructs[First];
+      auto SecondInfo = PartialStructs[Second];
+      return FirstInfo.MemberDepth < SecondInfo.MemberDepth;
+    });
+
+    auto &&EmitMemberExprBase = [](CodeGenFunction &CGF,
+                                    const MemberExpr *E) {
+      const Expr *BaseExpr = E->getBase();
+      // If this is s.x, emit s as an lvalue.  If it is s->x, emit s as a
+      // scalar.
+      LValue BaseLV;
+      if (E->isArrow()) {
+        LValueBaseInfo BaseInfo;
+        TBAAAccessInfo TBAAInfo;
+        Address Addr =
+            CGF.EmitPointerWithAlignment(BaseExpr, &BaseInfo, &TBAAInfo);
+        QualType PtrTy = BaseExpr->getType()->getPointeeType();
+        BaseLV = CGF.MakeAddrLValue(Addr, PtrTy, BaseInfo, TBAAInfo);
+      } else {
+        BaseLV = CGF.EmitOMPSharedLValue(BaseExpr);
+      }
+      return BaseLV;
+    };
+
+    bool ParamFlag = true;
+
+    fprintf(stderr, "Emit partial struct nodes, pass 4:\n");
+    for (auto &Ord : StructOrder) {
+      auto &PartialStruct = PartialStructs[Ord];
+      MapCombinedInfoTy CombinedInfo;
+
+      fprintf(stderr, "A partial struct (depth %d):\n", PartialStruct.MemberDepth);
+      if (PartialStruct.Base.isValid()) {
+        llvm::dbgs() << "Base expr: ";
+        PartialStruct.BaseExpr->dumpPretty(CGF.getContext());
+        fprintf(stderr, "\n");
+        llvm::dbgs() << "Name: " << PartialStruct.Base.getName() << "\n";
+        llvm::dbgs() << "Is valid: " << (PartialStruct.Base.isValid() ? "true" : "false") << "\n";
+      } else {
+        llvm::dbgs() << "(no base set)\n";
+      }
+      llvm::dbgs() << "Lo elem: " << PartialStruct.LowestElem.first << "\n";
+      llvm::dbgs() << "Hi elem: " << PartialStruct.HighestElem.first << "\n";
+      //CombinedInfo.append(PartialStruct.PreliminaryMapData);
+      fprintf(stderr, "Child components:\n");
+      for (auto &CC : PartialStruct.ChildComponents) {
+        auto Comp = CC.second.Components;
+        Comp[0].getAssociatedExpression()->dumpPretty(CGF.getContext());
+        fprintf(stderr, "\n");
+      }
+      fprintf(stderr, "Map whole struct: %s\n", PartialStruct.ContainingStructMap ? "yes" : "no");
+
+      if (PartialStruct.ContainingStructMap) {
+        OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
+        OpenMPMapClauseKind MapType;
+        ArrayRef<OpenMPMapModifierKind> MapModifiers;
+        bool IsImplicit;
+        const ValueDecl *Mapper;
+        const Expr *MapExpr;
+        std::tie(Components, MapType, MapModifiers, IsImplicit, Mapper, MapExpr) =
+            *PartialStruct.ContainingStructMap;
+        const Type *BaseType = PartialStruct.BaseExpr->getType().getCanonicalType().getTypePtr();
+        const Type *OrigType = BaseType->getPointeeOrArrayElementType();
+
+        while (BaseType != OrigType) {
+          BaseType = OrigType->getCanonicalTypeInternal().getTypePtr();
+          OrigType = BaseType->getPointeeOrArrayElementType();
+        }
+
+        fprintf(stderr, "Base expr type:\n");
+        BaseType->dump();
+
+        CharUnits TypeSize = CGF.getContext().getTypeSizeInChars(BaseType);
+        Address HB = CGF.Builder.CreateConstGEP(
+            CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                PartialStruct.Base, CGF.VoidPtrTy, CGF.Int8Ty),
+            TypeSize.getQuantity() - 1);
+        PartialStruct.HighestElem = {
+            std::numeric_limits<decltype(
+                PartialStruct.HighestElem.first)>::max(),
+            HB};
+        OpenMPOffloadMappingFlags Flags =
+            OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF |
+            getMapTypeBits(MapType, MapModifiers, {}, IsImplicit,
+                            /*AddPtrFlag=*/false,
+                            /*AddIsTargetParamFlag=*/false, IsNonContiguous);
+        fprintf(stderr, "Starting CopyGaps...\n");
+        CopyOverlappedEntryGaps CopyGaps(CGF, CombinedInfo, Flags, nullptr,
+                                         PartialStruct.BaseExpr, PartialStruct.Base,
+                                         PartialStruct.LB, IsNonContiguous, DimSize);
+
+        llvm::DenseMap<const FieldDecl *, uint64_t> Layout;
+
+        if (const auto *CRD = BaseType->getAsCXXRecordDecl()) {
+          llvm::SmallPtrSet<const CXXRecordDecl *, 4> Processed;
+          getFieldOffsets(CRD, Layout, Processed, 0, /*AsBase=*/false);
+        } else {
+          assert(false && "Not CXX record decl");
+        }
+
+        for (auto &CC : PartialStruct.ChildComponents) {
+          const OMPClauseMappableExprCommon::MappableComponent &MC = CC.second.Components.front();
+          if (const ValueDecl *VD = MC.getAssociatedDeclaration()) {
+            if (const auto *FD = dyn_cast<FieldDecl>(VD)) {
+              CopyGaps.processField(MC, Layout, FD, EmitMemberExprBase);
+            }
+          }
+        }
+        CopyGaps.copyUntilEnd(HB, TypeSize);
+      }
+
+      for (auto &CC : PartialStruct.ChildComponents) {
+        MappableExprMetadata Metadata = CC.second;
+        auto Field = Metadata.Components.front().getAssociatedExpression();
+       // Address Ptr = CGF.EmitOMPSharedLValue(Field).getAddress();
+        llvm::Value *Size = getExprTypeSize(Field);
+
+        fprintf(stderr, "Emitting expr: ");
+        Field->dumpPretty(CGF.getContext());
+        fprintf(stderr, "\n");
+
+        if (Metadata.CompleteExpression || PartialStruct.ContainingStructMap) {
+          OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
+          OpenMPMapClauseKind MapType;
+          ArrayRef<OpenMPMapModifierKind> MapModifiers;
+          bool IsImplicit;
+          const ValueDecl *Mapper;
+          const Expr *MapExpr;
+          //if (PartialStruct.ContainingStructMap) {
+          //  std::tie(Components, MapType, MapModifiers, IsImplicit, Mapper, MapExpr) =
+          //    *PartialStruct.ContainingStructMap;
+          //} else {
+            std::tie(Components, MapType, MapModifiers, IsImplicit, Mapper, MapExpr) =
+              *Metadata.MD;
+          //}
+
+          CombinedInfo.Exprs.push_back(nullptr);
+          CombinedInfo.BasePointers.push_back(Metadata.Base.emitRawPointer(CGF));
+          CombinedInfo.DevicePtrDecls.push_back(nullptr);
+          CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
+          CombinedInfo.Pointers.push_back(Metadata.Pointer.emitRawPointer(CGF));
+          CombinedInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
+              Size, CGF.Int64Ty, /*isSigned=*/true));
+          CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize : 1);
+          CombinedInfo.Mappers.push_back(nullptr);
+
+          bool PointerAndObj = false;
+          if (isa<ArraySectionExpr>(Field) ||
+              isa<ArraySubscriptExpr>(Field) ||
+              isa<OMPArrayShapingExpr>(Field) ||
+              isa<UnaryOperator>(Field))
+            PointerAndObj = true;
+
+          OpenMPOffloadMappingFlags Flags =
+              getMapTypeBits(MapType, MapModifiers, {}, IsImplicit, PointerAndObj, false, IsNonContiguous);
+          Flags |= OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
+
+          CombinedInfo.Types.push_back(Flags);
+
+          fprintf(stderr, "Marking %p as processed\n", (void*) Metadata.MD);
+          ProcessedMappings.insert(Metadata.MD);
+        }
+      }
+
+      if (ParamFlag || !PartialStruct.ContainingStructMap) {
+        OpenMPOffloadMappingFlags Flags = ParamFlag ? OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM
+                                        : OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
+        emitCombinedEntry(CurComponentListInfo, CombinedInfo.Types, PartialStruct,
+                          false, OMPBuilder, VD, 0, Flags);
+      } else {
+        OpenMPOffloadMappingFlags MemberOfFlag = OMPBuilder.getMemberOfFlag(
+            CurComponentListInfo.BasePointers.size() - 1);
+        for (auto &M : CombinedInfo.Types)
+          OMPBuilder.setCorrectMemberOfFlag(M, MemberOfFlag);
+      }
+
+      CurComponentListInfo.append(CombinedInfo);
+      ParamFlag = false;
+    }
+    fprintf(stderr, "That's all\n");
+
+    #if 0
     // Associated with a capture, because the mapping flags depend on it.
     // Go through all of the elements with the overlapped elements.
     bool AddTargetParamFlag = IsListEligibleForTargetParamFlag;
-    MapCombinedInfoTy StructBaseCombinedInfo;
+    //MapCombinedInfoTy StructBaseCombinedInfo;
     for (const auto &Pair : OverlappedData) {
       const MapData &L = *Pair.getFirst();
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
@@ -8999,15 +10091,26 @@ public:
           L;
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
           OverlappedComponents = Pair.getSecond();
+      fprintf(stderr, "*** From generateInfoForCaptureFromComponentLists (overlapped)...\n");
       generateInfoForComponentList(
           MapType, MapModifiers, {}, Components, CurComponentListInfo,
-          StructBaseCombinedInfo, PartialStruct, AddTargetParamFlag, IsImplicit,
-          /*GenerateAllInfoForClauses*/ false, Mapper,
+          PartialStructs, AddTargetParamFlag, IsImplicit, Mapper,
           /*ForDeviceAddr=*/false, VD, VarRef, OverlappedComponents);
       AddTargetParamFlag = false;
     }
+    #endif
+
+    // FIXME: Check this.
+    bool AddTargetParamFlag = IsListEligibleForTargetParamFlag;
+
     // Go through other elements without overlapped elements.
     for (const MapData &L : DeclComponentLists) {
+      if (ProcessedMappings.contains(&L)) {
+        fprintf(stderr, "Already processed map data for %p, skipping\n",
+                (void*) &L);
+        continue;
+      }
+
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
       OpenMPMapClauseKind MapType;
       ArrayRef<OpenMPMapModifierKind> MapModifiers;
@@ -9016,14 +10119,17 @@ public:
       const Expr *VarRef;
       std::tie(Components, MapType, MapModifiers, IsImplicit, Mapper, VarRef) =
           L;
-      auto It = OverlappedData.find(&L);
-      if (It == OverlappedData.end())
+      //auto It = OverlappedData.find(&L);
+      //if (It == OverlappedData.end()) {
+        fprintf(stderr, "*** From generateInfoForCaptureFromComponentLists (non-overlapped)...\n");
+#if 1
         generateInfoForComponentList(
             MapType, MapModifiers, {}, Components, CurComponentListInfo,
-            StructBaseCombinedInfo, PartialStruct, AddTargetParamFlag,
-            IsImplicit, /*GenerateAllInfoForClauses*/ false, Mapper,
+            PartialStructs, AddTargetParamFlag, IsImplicit, Mapper,
             /*ForDeviceAddr=*/false, VD, VarRef,
-            /*OverlappedElements*/ {}, AreBothBasePtrAndPteeMapped);
+            /*OverlappedElements {},*/ AreBothBasePtrAndPteeMapped);
+#endif
+      //}
       AddTargetParamFlag = false;
     }
   }
@@ -9110,6 +10216,7 @@ public:
     CombinedInfo.Mappers.push_back(nullptr);
   }
 };
+
 } // anonymous namespace
 
 // Try to extract the base declaration from a `this->x` expression if possible.
@@ -9496,6 +10603,8 @@ static void genMapInfoForCaptures(
     llvm::DenseSet<CanonicalDeclPtr<const Decl>> &MappedVarSet,
     MappableExprsHandler::MapCombinedInfoTy &CombinedInfo) {
 
+  fprintf(stderr, "genMapInfoForCaptures\n");
+
   llvm::DenseMap<llvm::Value *, llvm::Value *> LambdaPointers;
   auto RI = CS.getCapturedRecordDecl()->field_begin();
   auto *CV = CapturedVars.begin();
@@ -9503,6 +10612,18 @@ static void genMapInfoForCaptures(
                                             CE = CS.capture_end();
        CI != CE; ++CI, ++RI, ++CV) {
     MappableExprsHandler::MapCombinedInfoTy CurInfo;
+    MappableExprsHandler::PartialStructMap PartialStructs;
+
+    auto V = CI->getCapturedVar();
+    llvm::dbgs() << "var:\n";
+    V->dump();
+    llvm::dbgs() << "\ncaptured by:\n";
+    switch (CI->getCaptureKind()) {
+    case CapturedStmt::VCK_This: llvm::dbgs() << "this\n"; break;
+    case CapturedStmt::VCK_ByRef: llvm::dbgs() << "byref\n"; break;
+    case CapturedStmt::VCK_ByCopy: llvm::dbgs() << "bycopy\n"; break;
+    case CapturedStmt::VCK_VLAType: llvm::dbgs() << "vlatype\n"; break;
+    }
 
     // VLA sizes are passed to the outlined region by copy and do not have map
     // information associated.
@@ -9524,15 +10645,14 @@ static void genMapInfoForCaptures(
       // If we have any information in the map clause, we use it, otherwise we
       // just do a default mapping.
       MEHandler.generateInfoForCaptureFromClauseInfo(
-          CI, *CV, CurInfo, OMPBuilder,
+          CI, *CV, CurInfo, PartialStructs, OMPBuilder,
           /*OffsetForMemberOfFlag=*/CombinedInfo.BasePointers.size());
 
       if (!CI->capturesThis())
         MappedVarSet.insert(CI->getCapturedVar());
       else
         MappedVarSet.insert(nullptr);
-
-      if (CurInfo.BasePointers.empty())
+      if (CurInfo.BasePointers.empty() && PartialStructs.empty())
         MEHandler.generateDefaultMapInfo(*CI, **RI, *CV, CurInfo);
 
       // Generate correct mapping for variables captured by reference in
@@ -9549,6 +10669,32 @@ static void genMapInfoForCaptures(
            CurInfo.BasePointers.size() == CurInfo.Types.size() &&
            CurInfo.BasePointers.size() == CurInfo.Mappers.size() &&
            "Inconsistent map information sizes!");
+
+    // If there is an entry in PartialStruct it means we have a struct with
+    // individual members mapped. Emit an extra combined entry.  FIXME.
+    //if (PartialStruct.Base.isValid()) {
+    //  CombinedInfo.append(PartialStruct.PreliminaryMapData);
+    //  MEHandler.emitCombinedEntry(CombinedInfo, CurInfo.Types, PartialStruct,
+    //                              CI->capturesThis(), OMPBuilder, nullptr,
+    //                              /*NotTargetParams*/ false);
+    //}
+
+#if 0
+    fprintf(stderr, "Gathered up partial structs (2):\n");
+    for (auto &PS : PartialStructs) {
+      auto &PartialStruct = PS.getSecond();
+      fprintf(stderr, "A partial struct:\n");
+      llvm::dbgs() << "Name: " << PartialStruct.Base.getName() << "\n";
+      llvm::dbgs() << "Is valid: " << (PartialStruct.Base.isValid() ? "true" : "false") << "\n";
+      llvm::dbgs() << "Lo elem: " << PartialStruct.LowestElem.first << "\n";
+      llvm::dbgs() << "Hi elem: " << PartialStruct.HighestElem.first << "\n";
+      //CombinedInfo.append(PartialStruct.PreliminaryMapData);
+      //MEHandler.emitCombinedEntry(CombinedInfo, CurInfo.Types, PartialStruct,
+      //                            CI->capturesThis(), OMPBuilder, nullptr,
+      //                            /*NotTargetParams*/ false);
+    }
+#endif
+    fprintf(stderr, "That's all\n");
 
     // We need to append the results of this capture to what we already have.
     CombinedInfo.append(CurInfo);
