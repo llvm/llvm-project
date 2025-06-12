@@ -156,6 +156,7 @@ static ClangTidyModuleRegistry::Add<CppCoreGuidelinesModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the CppCoreGuidelinesModule.
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int CppCoreGuidelinesModuleAnchorSource = 0;
 
 } // namespace clang::tidy
