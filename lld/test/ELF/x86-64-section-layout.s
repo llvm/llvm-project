@@ -173,6 +173,7 @@ SECTIONS {
 }
 
 #--- c.s
+## Test .ltext layout
 .section .ltext,"axl",@progbits
 .globl f
 f:
