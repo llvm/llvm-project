@@ -4388,7 +4388,6 @@ llvm::StringMap<lldb_private::FileSpec> SymbolFileDWARF::GetSeparateDebugInfoFil
     if (!dwarf_cu->GetDWOId().has_value())
       continue;
 
-          
     SymbolFile *dwo_symfile = dwarf_cu->GetDwoSymbolFile();
     if (!dwo_symfile)
       continue;
