@@ -323,9 +323,11 @@ computeShapeInfoForInst(Instruction *I,
       return OpShape->second;
   }
 
-  if (isUniformShape(I)) {
+  if (isUniformShape(I) || isa<SelectInst>(I)) {
+    auto Ops = I->operands();
+    auto ShapedOps = isa<SelectInst>(I) ? drop_begin(Ops) : Ops;
     // Find the first operand that has a known shape and use that.
-    for (auto &Op : I->operands()) {
+    for (auto &Op : ShapedOps) {
       auto OpShape = ShapeMap.find(Op.get());
       if (OpShape != ShapeMap.end())
         return OpShape->second;
@@ -701,7 +703,8 @@ public:
       default:
         return isUniformShape(II);
       }
-    return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V);
+    return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V) ||
+           isa<SelectInst>(V);
   }
 
   /// Propagate the shape information of instructions to their users.
@@ -788,10 +791,12 @@ public:
       } else if (isa<StoreInst>(V)) {
         // Nothing to do.  We forward-propagated to this so we would just
         // backward propagate to an instruction with an already known shape.
-      } else if (isUniformShape(V)) {
+      } else if (isUniformShape(V) || isa<SelectInst>(V)) {
+        auto Ops = cast<Instruction>(V)->operands();
+        auto ShapedOps = isa<SelectInst>(V) ? drop_begin(Ops) : Ops;
         // Propagate to all operands.
         ShapeInfo Shape = ShapeMap[V];
-        for (Use &U : cast<Instruction>(V)->operands()) {
+        for (Use &U : ShapedOps) {
           if (setShapeInfo(U.get(), Shape))
             pushInstruction(U.get(), WorkList);
         }
@@ -1148,6 +1153,8 @@ public:
         Result = VisitUnaryOperator(UnOp, SI);
       else if (auto *Intr = dyn_cast<IntrinsicInst>(Inst))
         Result = VisitIntrinsicInst(Intr, SI);
+      else if (auto *Select = dyn_cast<SelectInst>(Inst))
+        Result = VisitSelectInst(Select, SI);
       else if (match(Inst, m_Load(m_Value(Op1))))
         Result = VisitLoad(cast<LoadInst>(Inst), SI, Op1);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
@@ -2302,6 +2309,36 @@ public:
 
     for (auto &Vector : M.vectors())
       Result.addVector(Builder.CreateCast(Inst->getOpcode(), Vector, NewVTy));
+
+    return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
+                                   Result.getNumVectors());
+  }
+
+  /// Lower selects.
+  MatrixTy VisitSelectInst(SelectInst *Inst, const ShapeInfo &Shape) {
+    Value *Cond = Inst->getOperand(0);
+    Value *OpA = Inst->getOperand(1);
+    Value *OpB = Inst->getOperand(2);
+
+    IRBuilder<> Builder(Inst);
+
+    MatrixTy Result;
+    MatrixTy A = getMatrix(OpA, Shape, Builder);
+    MatrixTy B = getMatrix(OpB, Shape, Builder);
+
+    Value *CondV[2];
+    if (isa<FixedVectorType>(Cond->getType())) {
+      MatrixTy C = getMatrix(Cond, Shape, Builder);
+      CondV[0] = C.getVector(0);
+      CondV[1] = C.getVector(1);
+    } else {
+      CondV[0] = Cond;
+      CondV[1] = Cond;
+    }
+
+    for (unsigned I = 0, E = Shape.getNumVectors(); I != E; ++I)
+      Result.addVector(
+          Builder.CreateSelect(CondV[I], A.getVector(I), B.getVector(I)));
 
     return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                    Result.getNumVectors());
