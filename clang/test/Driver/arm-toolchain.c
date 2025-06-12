@@ -10,12 +10,12 @@
 // LLD-ARM-BAREMETAL: "-isysroot" "{{.*}}Inputs/basic_arm_gcc_tree/armv6m-none-eabi"
 // LLD-ARM-BAREMETAL: "-internal-isystem" "{{.*}}Inputs/basic_arm_gcc_tree/armv6m-none-eabi/include"
 // LLD-ARM-BAREMETAL: "{{.*}}/Inputs/lld/ld.lld"
-// LLD-ARM-BAREMETAL: "{{.*}}.o" "-Bstatic" "-EL"
+// LLD-ARM-BAREMETAL: "-Bstatic" "-EL"
 // LLD-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/lib/crt0.o"
 // LLD-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtbegin.o"
 // LLD-ARM-BAREMETAL: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1"
 // LLD-ARM-BAREMETAL: "-L{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/lib"
-// LLD-ARM-BAREMETAL: "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// LLD-ARM-BAREMETAL: "{{.*}}.o" "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
 // LLD-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
@@ -28,12 +28,12 @@
 // C-ARM-BAREMETAL: "-isysroot" "{{.*}}Inputs/basic_arm_gcc_tree/armv6m-none-eabi"
 // C-ARM-BAREMETAL: "-internal-isystem" "{{.*}}Inputs/basic_arm_gcc_tree/armv6m-none-eabi/include"
 // C-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../bin/armv6m-none-eabi-ld"
-// C-ARM-BAREMETAL: "{{.*}}.o" "-Bstatic" "-EL"
+// C-ARM-BAREMETAL: "-Bstatic" "-EL"
 // C-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/lib/crt0.o"
 // C-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtbegin.o"
 // C-ARM-BAREMETAL: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1"
 // C-ARM-BAREMETAL: "-L{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/lib"
-// C-ARM-BAREMETAL: "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// C-ARM-BAREMETAL: "{{.*}}.o" "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
 // C-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
@@ -45,12 +45,12 @@
 // C-ARM-BAREMETAL-NOSYSROOT: "-cc1" "-triple" "thumbv6m-unknown-none-eabi"
 // C-ARM-BAREMETAL-NOSYSROOT: "-internal-isystem" "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../armv6m-none-eabi/include"
 // C-ARM-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../bin/armv6m-none-eabi-ld"
-// C-ARM-BAREMETAL-NOSYSROOT: "{{.*}}.o" "-Bstatic" "-EL"
+// C-ARM-BAREMETAL-NOSYSROOT: "-Bstatic" "-EL"
 // C-ARM-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../armv6m-none-eabi/lib/crt0.o"
 // C-ARM-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtbegin.o"
 // C-ARM-BAREMETAL-NOSYSROOT: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1"
 // C-ARM-BAREMETAL-NOSYSROOT: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../armv6m-none-eabi/lib"
-// C-ARM-BAREMETAL-NOSYSROOT: "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// C-ARM-BAREMETAL-NOSYSROOT: "{{.*}}.o" "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
 // C-ARM-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
@@ -65,12 +65,12 @@
 // CXX-ARM-BAREMETAL: "-internal-isystem" "{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/include/c++/8.2.1"
 // CXX-ARM-BAREMETAL: "-internal-isystem" "{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/include"
 // CXX-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../bin/armv6m-none-eabi-ld"
-// CXX-ARM-BAREMETAL: "{{.*}}.o" "-Bstatic" "-EL"
+// CXX-ARM-BAREMETAL: "-Bstatic" "-EL"
 // CXX-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/lib/crt0.o"
 // CXX-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtbegin.o"
 // CXX-ARM-BAREMETAL: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1"
 // CXX-ARM-BAREMETAL: "-L{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/lib"
-// CXX-ARM-BAREMETAL: "-lstdc++" "-lm" "--start-group" "-lgcc_s" "-lgcc" "-lc" "-lgloss" "--end-group"
+// CXX-ARM-BAREMETAL: "{{.*}}.o" "-lstdc++" "-lm" "--start-group" "-lgcc_s" "-lgcc" "-lc" "-lgloss" "--end-group"
 // CXX-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 
@@ -85,12 +85,12 @@
 // CXX-ARM-BAREMETAL-NOSYSROOT: "-internal-isystem" "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../armv6m-none-eabi/include/c++/8.2.1"
 // CXX-ARM-BAREMETAL-NOSYSROOT: "-internal-isystem" "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../armv6m-none-eabi/include"
 // CXX-ARM-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../bin/armv6m-none-eabi-ld"
-// CXX-ARM-BAREMETAL-NOSYSROOT: "{{.*}}.o" "-Bstatic" "-EL"
+// CXX-ARM-BAREMETAL-NOSYSROOT: "-Bstatic" "-EL"
 // CXX-ARM-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../armv6m-none-eabi/lib/crt0.o"
 // CXX-ARM-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtbegin.o"
 // CXX-ARM-BAREMETAL-NOSYSROOT: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1"
 // CXX-ARM-BAREMETAL-NOSYSROOT: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../armv6m-none-eabi/lib"
-// CXX-ARM-BAREMETAL-NOSYSROOT: "-lstdc++" "-lm" "--start-group" "-lgcc_s" "-lgcc" "-lc" "-lgloss" "--end-group"
+// CXX-ARM-BAREMETAL-NOSYSROOT: "{{.*}}.o" "-lstdc++" "-lm" "--start-group" "-lgcc_s" "-lgcc" "-lc" "-lgloss" "--end-group"
 // CXX-ARM-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
@@ -103,12 +103,12 @@
 // CXX-ARM-BAREMETAL-LIBCXX: "-internal-isystem" "{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/include/c++/v1"
 // CXX-ARM-BAREMETAL-LIBCXX: "-internal-isystem" "{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/include"
 // CXX-ARM-BAREMETAL-LIBCXX: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../bin/armv6m-none-eabi-ld"
-// CXX-ARM-BAREMETAL-LIBCXX: "{{.*}}.o" "-Bstatic" "-EL"
+// CXX-ARM-BAREMETAL-LIBCXX: "-Bstatic" "-EL"
 // CXX-ARM-BAREMETAL-LIBCXX: "{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/lib/crt0.o"
 // CXX-ARM-BAREMETAL-LIBCXX: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtbegin.o"
 // CXX-ARM-BAREMETAL-LIBCXX: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1"
 // CXX-ARM-BAREMETAL-LIBCXX: "-L{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/lib"
-// CXX-ARM-BAREMETAL-LIBCXX: "-lc++" "-lm" "--start-group" "-lgcc_s" "-lgcc" "-lc" "-lgloss" "--end-group"
+// CXX-ARM-BAREMETAL-LIBCXX: "{{.*}}.o" "-lc++" "-lm" "--start-group" "-lgcc_s" "-lgcc" "-lc" "-lgloss" "--end-group"
 // CXX-ARM-BAREMETAL-LIBCXX: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
@@ -120,12 +120,12 @@
 // CXX-ARM-BAREMETAL-NOSYSROOT-LIBCXX: "-internal-isystem" "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../armv6m-none-eabi/include/c++/v1"
 // CXX-ARM-BAREMETAL-NOSYSROOT-LIBCXX: "-internal-isystem" "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../armv6m-none-eabi/include"
 // CXX-ARM-BAREMETAL-NOSYSROOT-LIBCXX: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../bin/armv6m-none-eabi-ld"
-// CXX-ARM-BAREMETAL-NOSYSROOT-LIBCXX: "{{.*}}.o" "-Bstatic" "-EL"
+// CXX-ARM-BAREMETAL-NOSYSROOT-LIBCXX: "-Bstatic" "-EL"
 // CXX-ARM-BAREMETAL-NOSYSROOT-LIBCXX: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../armv6m-none-eabi/lib/crt0.o"
 // CXX-ARM-BAREMETAL-NOSYSROOT-LIBCXX: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtbegin.o"
 // CXX-ARM-BAREMETAL-NOSYSROOT-LIBCXX: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1"
 // CXX-ARM-BAREMETAL-NOSYSROOT-LIBCXX: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../armv6m-none-eabi/lib"
-// CXX-ARM-BAREMETAL-NOSYSROOT-LIBCXX: "-lc++" "-lm" "--start-group" "-lgcc_s" "-lgcc" "-lc" "-lgloss" "--end-group"
+// CXX-ARM-BAREMETAL-NOSYSROOT-LIBCXX: "{{.*}}.o" "-lc++" "-lm" "--start-group" "-lgcc_s" "-lgcc" "-lc" "-lgloss" "--end-group"
 // CXX-ARM-BAREMETAL-NOSYSROOT-LIBCXX: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
