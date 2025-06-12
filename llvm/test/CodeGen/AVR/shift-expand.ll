@@ -5,7 +5,7 @@
 ; amount to a loop. These loops avoid generating a (non-existing) builtin such
 ; as __ashlsi3.
 
-target datalayout = "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8"
+target datalayout = "e-P1-p0:16:8-p1:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8"
 target triple = "avr"
 
 define i16 @shl16(i16 %value, i16 %amount) addrspace(1) {
