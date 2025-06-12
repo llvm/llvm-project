@@ -3774,9 +3774,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                    /*NSW=*/true, /*NUW=*/true))
       return R;
 
-    // (!(A & N) ? 0 : N * C) + (!(A & M) ? 0 : M * C) -> A & (N + M) * C
-    // This also accepts the equivalent mul form of (A & N) ? 0 : N * C)
-    // expressions i.e. (A & N) * C
+    // (A & N) * C + (A & M) * C -> (A & (N + M)) & C
+    // This also accepts the equivalent select form of (A & N) * C
+    // expressions i.e. !(A & N) ? 0 : N * C)
     CombinedBitmaskMul Decomp1 = matchCombinedBitmaskMul(I.getOperand(1));
     auto BMDecomp1 = Decomp1.first;
 
