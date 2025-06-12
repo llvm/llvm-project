@@ -223,6 +223,10 @@ public:
     return m_sym_file_impl->SetDebugInfoHadFrameVariableErrors();
   }
 
+  llvm::StringMap<lldb_private::FileSpec> GetSeparateDebugInfoFiles() override {
+    return m_sym_file_impl->GetSeparateDebugInfoFiles();
+  }
+
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
                             bool errors_only) override {
     return m_sym_file_impl->GetSeparateDebugInfo(d, errors_only);
