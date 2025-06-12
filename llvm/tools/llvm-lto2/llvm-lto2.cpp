@@ -610,7 +610,9 @@ int main(int argc, char **argv) {
     return dumpSymtab(argc - 1, argv + 1);
   if (Subcommand == "run")
     return run(argc - 1, argv + 1);
-  if (Subcommand == "print-guid" && argc > 2)
-    outs() << GlobalValue::getGUIDAssumingExternalLinkage(argv[2]);
+  if (Subcommand == "print-guid" && argc > 2) {
+    outs() << GlobalValue::getGUIDAssumingExternalLinkage(argv[2]) << '\n';
+    return 0;
+  }
   return usage();
 }
