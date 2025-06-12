@@ -89,6 +89,8 @@ cl::list<LVAttributeKind> cmdline::AttributeOptions(
                       "Element referenced across Compile Units."),
            clEnumValN(LVAttributeKind::Inserted, "inserted",
                       "Generated inlined abstract references."),
+           clEnumValN(LVAttributeKind::Language, "language",
+                      "Source language name."),
            clEnumValN(LVAttributeKind::Level, "level",
                       "Lexical scope level (File=0, Compile Unit=1)."),
            clEnumValN(LVAttributeKind::Linkage, "linkage", "Linkage name."),

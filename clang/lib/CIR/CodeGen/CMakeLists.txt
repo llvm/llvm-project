@@ -10,8 +10,11 @@ add_clang_library(clangCIR
   CIRGenerator.cpp
   CIRGenBuilder.cpp
   CIRGenCall.cpp
+  CIRGenClass.cpp
+  CIRGenCXX.cpp
   CIRGenCXXABI.cpp
   CIRGenCXXExpr.cpp
+  CIRGenBuiltin.cpp
   CIRGenDecl.cpp
   CIRGenDeclOpenACC.cpp
   CIRGenExpr.cpp
@@ -42,4 +45,5 @@ add_clang_library(clangCIR
   CIROpenACCSupport
   MLIRCIR
   MLIRCIRInterfaces
+  MLIRTargetLLVMIRImport
 )

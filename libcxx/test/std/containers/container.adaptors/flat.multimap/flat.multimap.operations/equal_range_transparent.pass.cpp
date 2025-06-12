@@ -18,6 +18,7 @@
 #include <cassert>
 #include <deque>
 #include <flat_map>
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -104,6 +105,14 @@ int main(int, char**) {
     assert(p.first == m.begin() + 2);
     assert(p.second == m.end());
     assert(transparent_used);
+  }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_multimap<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"beta", 1}, {"eta", 3}, {"gamma", 3}};
+    auto [first, last] = m.equal_range("beta");
+    assert(first == m.begin() + 1);
+    assert(last == m.begin() + 3);
   }
 
   return 0;

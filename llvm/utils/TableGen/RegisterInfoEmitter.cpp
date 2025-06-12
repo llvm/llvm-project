@@ -1403,10 +1403,10 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     for (const auto &RC : RegisterClasses) {
       if (!RC.AltOrderSelect.empty()) {
         OS << "\nstatic inline unsigned " << RC.getName()
-           << "AltOrderSelect(const MachineFunction &MF) {" << RC.AltOrderSelect
-           << "}\n\n"
+           << "AltOrderSelect(const MachineFunction &MF, bool Rev) {"
+           << RC.AltOrderSelect << "}\n\n"
            << "static ArrayRef<MCPhysReg> " << RC.getName()
-           << "GetRawAllocationOrder(const MachineFunction &MF) {\n";
+           << "GetRawAllocationOrder(const MachineFunction &MF, bool Rev) {\n";
         for (unsigned oi = 1, oe = RC.getNumOrders(); oi != oe; ++oi) {
           ArrayRef<const Record *> Elems = RC.getOrder(oi);
           if (!Elems.empty()) {
@@ -1426,8 +1426,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
           else
             OS << "),\n    ArrayRef(AltOrder" << oi;
         OS << ")\n  };\n  const unsigned Select = " << RC.getName()
-           << "AltOrderSelect(MF);\n  assert(Select < " << RC.getNumOrders()
-           << ");\n  return Order[Select];\n}\n";
+           << "AltOrderSelect(MF, Rev);\n  assert(Select < "
+           << RC.getNumOrders() << ");\n  return Order[Select];\n}\n";
       }
     }
 

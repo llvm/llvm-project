@@ -10,9 +10,15 @@
 #include "LLDBUtils.h"
 
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBFormat.h"
+#include "lldb/API/SBMutex.h"
+#include "lldb/API/SBStream.h"
 #include "lldb/API/SBTarget.h"
+#include "lldb/API/SBThread.h"
 #include "lldb/Host/PosixApi.h" // Adds PATH_MAX for windows
+#include <optional>
 
+using namespace lldb_dap::protocol;
 namespace lldb_dap {
 
 static bool ShouldDisplayAssemblySource(
@@ -108,6 +114,51 @@ bool IsAssemblySource(const protocol::Source &source) {
 
 std::string GetLoadAddressString(const lldb::addr_t addr) {
   return "0x" + llvm::utohexstr(addr, false, 16);
+}
+
+protocol::Thread CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
+  std::string name;
+  lldb::SBStream stream;
+  if (format && thread.GetDescriptionWithFormat(format, stream).Success()) {
+    name = stream.GetData();
+  } else {
+    llvm::StringRef thread_name(thread.GetName());
+    llvm::StringRef queue_name(thread.GetQueueName());
+
+    if (!thread_name.empty()) {
+      name = thread_name.str();
+    } else if (!queue_name.empty()) {
+      auto kind = thread.GetQueue().GetKind();
+      std::string queue_kind_label = "";
+      if (kind == lldb::eQueueKindSerial)
+        queue_kind_label = " (serial)";
+      else if (kind == lldb::eQueueKindConcurrent)
+        queue_kind_label = " (concurrent)";
+
+      name = llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
+                           queue_name, queue_kind_label)
+                 .str();
+    } else {
+      name = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
+    }
+  }
+  return protocol::Thread{thread.GetThreadID(), name};
+}
+
+std::vector<protocol::Thread> GetThreads(lldb::SBProcess process,
+                                         lldb::SBFormat &format) {
+  lldb::SBMutex lock = process.GetTarget().GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
+  std::vector<protocol::Thread> threads;
+
+  const uint32_t num_threads = process.GetNumThreads();
+  threads.reserve(num_threads);
+  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+    lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
+    threads.emplace_back(CreateThread(thread, format));
+  }
+  return threads;
 }
 
 } // namespace lldb_dap

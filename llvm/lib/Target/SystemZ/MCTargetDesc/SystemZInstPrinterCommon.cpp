@@ -185,7 +185,7 @@ void SystemZInstPrinterCommon::printPCRelTLSOperand(const MCInst *MI,
   if ((unsigned)OpNum + 1 < MI->getNumOperands()) {
     const MCOperand &MO = MI->getOperand(OpNum + 1);
     const MCSymbolRefExpr &refExp = cast<MCSymbolRefExpr>(*MO.getExpr());
-    switch (getSpecifier(&refExp)) {
+    switch (refExp.getSpecifier()) {
     case SystemZMCExpr::VK_TLSGD:
       O << ":tls_gdcall:";
       break;

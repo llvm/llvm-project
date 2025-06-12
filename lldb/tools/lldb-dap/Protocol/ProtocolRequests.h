@@ -482,6 +482,16 @@ struct SourceResponseBody {
 };
 llvm::json::Value toJSON(const SourceResponseBody &);
 
+/// Arguments for the `threads` request, no arguments.
+using ThreadsArguments = EmptyArguments;
+
+/// Response to `threads` request.
+struct ThreadsResponseBody {
+  /// All threads.
+  std::vector<Thread> threads;
+};
+llvm::json::Value toJSON(const ThreadsResponseBody &);
+
 /// Arguments for `next` request.
 struct NextArguments {
   /// Specifies the thread for which to resume execution for one step (of the
@@ -522,21 +532,6 @@ bool fromJSON(const llvm::json::Value &, StepInArguments &, llvm::json::Path);
 /// Response to `stepIn` request. This is just an acknowledgement, so no
 /// body field is required.
 using StepInResponse = VoidResponse;
-
-/// Arguments for `stepInTargets` request.
-struct StepInTargetsArguments {
-  /// The stack frame for which to retrieve the possible step-in targets.
-  uint64_t frameId = LLDB_INVALID_FRAME_ID;
-};
-bool fromJSON(const llvm::json::Value &, StepInTargetsArguments &,
-              llvm::json::Path);
-
-/// Response to `stepInTargets` request.
-struct StepInTargetsResponseBody {
-  /// The possible step-in targets of the specified source location.
-  std::vector<StepInTarget> targets;
-};
-llvm::json::Value toJSON(const StepInTargetsResponseBody &);
 
 /// Arguments for `stepOut` request.
 struct StepOutArguments {

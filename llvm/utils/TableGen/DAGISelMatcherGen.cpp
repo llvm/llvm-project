@@ -730,7 +730,6 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
       // 7 bit and we cannot use StringInteger.
       if (RB.getSubRegIndices().size() > 127) {
         const CodeGenSubRegIndex *I = RB.findSubRegIdx(Def);
-        assert(I && "Cannot find subreg index by name!");
         if (I->EnumValue > 127) {
           AddMatcher(new EmitIntegerMatcher(I->EnumValue, MVT::i32,
                                             NextRecordedOperandNo));
