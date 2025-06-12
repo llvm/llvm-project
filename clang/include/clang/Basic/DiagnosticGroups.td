@@ -532,6 +532,9 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingInitializerList,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
+
+def LifetimeSafety : DiagGroup<"experimental-lifetime-safety">;
+
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def DllexportExplicitInstantiationDecl : DiagGroup<"dllexport-explicit-instantiation-decl">;
 def ExcessInitializers : DiagGroup<"excess-initializers">;

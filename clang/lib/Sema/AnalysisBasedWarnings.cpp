@@ -2868,14 +2868,14 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     }
   }
 
-  DEBUG_WITH_TYPE(
-      "ExperimentalLifetimeAnalysis",
-      // TODO: Enable for other languages once the analysis is stable.
-      if (S.getLangOpts().CPlusPlus) {
-        if (CFG *cfg = AC.getCFG()) {
-          runLifetimeAnalysis(*cast<DeclContext>(D), *cfg, AC);
-        }
-      });
+  // TODO: Enable lifetime safety analysis for other languages once it is
+  // stable.
+  if (!Diags.isIgnored(diag::warn_experimental_lifetime_safety_dummy_warning,
+                       D->getBeginLoc()) &&
+      S.getLangOpts().CPlusPlus) {
+    if (CFG *cfg = AC.getCFG())
+      runLifetimeAnalysis(*cast<DeclContext>(D), *cfg, AC);
+  }
   // Check for violations of "called once" parameter properties.
   if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&
       shouldAnalyzeCalledOnceParameters(Diags, D->getBeginLoc())) {
