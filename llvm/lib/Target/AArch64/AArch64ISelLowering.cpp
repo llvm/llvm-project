@@ -12263,12 +12263,11 @@ parseSVERegAsConstraint(StringRef Constraint) {
   if (Constraint.getAsInteger(10, V) || V > 31)
     return std::nullopt;
 
-  if (!IsPredicate)
-    return std::make_pair(AArch64::Z0 + V, &AArch64::ZPRRegClass);
-  else if (IsPredicateAsCount)
+  if (IsPredicateAsCount)
     return std::make_pair(AArch64::PN0 + V, &AArch64::PNRRegClass);
-  else
+  if (IsPredicate)
     return std::make_pair(AArch64::P0 + V, &AArch64::PPRRegClass);
+  return std::make_pair(AArch64::Z0 + V, &AArch64::ZPRRegClass);
 }
 
 static std::optional<PredicateConstraint>
@@ -12523,12 +12522,10 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
       // still observe clobbers of Z-registers by clobbering
       // the lower 128bits of those registers.
       if (AArch64::ZPRRegClass.hasSubClassEq(P->second) &&
-          !Subtarget->hasSVE() && Subtarget->hasSME() &&
-          !Subtarget->isStreaming())
+          !Subtarget->isSVEorStreamingSVEAvailable())
         return std::make_pair(TRI->getSubReg(P->first, AArch64::zsub),
                               &AArch64::FPR128RegClass);
-      else
-        return *P;
+      return *P;
     }
     if (const auto PC = parsePredicateConstraint(Constraint))
       if (const auto *RegClass = getPredicateRegisterClass(*PC, VT))
