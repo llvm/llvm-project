@@ -1366,80 +1366,56 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
 
 /// Determine whether the pointer V had only undefined content (due to Def) up
 /// to the given Size, either because it was freshly alloca'd or started its
-/// lifetime by walking the MSSA graph.
-static bool hadUndefContentsBefore(MemorySSA *MSSA, BatchAAResults &BAA,
-                                   Value *V, MemoryAccess *Clobber,
-                                   MemoryLocation Loc, Value *Size) {
-  Value *VBase = getUnderlyingObject(V);
-  while (1) {
-    Clobber = MSSA->getWalker()->getClobberingMemoryAccess(Clobber, Loc, BAA);
-    MemoryDef *Def = dyn_cast<MemoryDef>(Clobber);
-    if (!Def)
-      return false;
+/// lifetime.
+static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
+                             MemoryDef *Def, Value *Size) {
+  if (MSSA->isLiveOnEntryDef(Def))
+    return isa<AllocaInst>(getUnderlyingObject(V));
 
-    if (MSSA->isLiveOnEntryDef(Def))
-      return isa<AllocaInst>(VBase);
+  if (auto *II = dyn_cast_or_null<IntrinsicInst>(Def->getMemoryInst())) {
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
+      auto *LTSize = cast<ConstantInt>(II->getArgOperand(0));
 
-    if (auto *II = dyn_cast_or_null<IntrinsicInst>(Def->getMemoryInst())) {
-      if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
-        auto *LTSize = cast<ConstantInt>(II->getArgOperand(0));
+      if (auto *CSize = dyn_cast<ConstantInt>(Size)) {
+        if (AA.isMustAlias(V, II->getArgOperand(1)) &&
+            LTSize->getZExtValue() >= CSize->getZExtValue())
+          return true;
+      }
 
-        // Check if the SSA Walk ended early due to heuristics or actually
-        // reached a lifetime instruction for this pointer.
-        Value *IIBase = getUnderlyingObject(II->getArgOperand(1));
-        if (VBase != IIBase)
-          return false;
-
-        if (Size)
-          if (auto CSize = dyn_cast<ConstantInt>(Size))
-            if (BAA.isMustAlias(V, II->getArgOperand(1)) &&
-                LTSize->getZExtValue() >= CSize->getZExtValue())
+      // If the lifetime.start covers a whole alloca (as it almost always
+      // does) and we're querying a pointer based on that alloca, then we know
+      // the memory is definitely undef, regardless of how exactly we alias.
+      // The size also doesn't matter, as an out-of-bounds access would be UB.
+      if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V))) {
+        if (getUnderlyingObject(II->getArgOperand(1)) == Alloca) {
+          const DataLayout &DL = Alloca->getDataLayout();
+          if (std::optional<TypeSize> AllocaSize =
+                  Alloca->getAllocationSize(DL))
+            if (*AllocaSize == LTSize->getValue())
               return true;
-
-        // If the lifetime.start covers a whole alloca (as it almost always
-        // does) and we're querying a pointer based on that alloca, then we know
-        // the memory is definitely undef, regardless of how exactly we alias.
-        // The size also doesn't matter, as an out-of-bounds access would be UB.
-        if (auto *Alloca = dyn_cast<AllocaInst>(VBase)) {
-          if (IIBase == Alloca) {
-            const DataLayout &DL = Alloca->getDataLayout();
-            if (std::optional<TypeSize> AllocaSize =
-                    Alloca->getAllocationSize(DL))
-              if (*AllocaSize == LTSize->getValue())
-                return true;
-          }
         }
-        Clobber = Def->getDefiningAccess();
-        continue;
-      } else if (II->getIntrinsicID() == Intrinsic::lifetime_end) {
-        // Check if the SSA Walk ended early due to heuristics or actually
-        // reached a lifetime instruction for this pointer.
-        Value *IIBase = getUnderlyingObject(II->getArgOperand(1));
-        if (VBase != IIBase)
-          return false;
-        Clobber = Def->getDefiningAccess();
-        continue;
       }
     }
-
-    return false;
   }
+
+  return false;
 }
 
 // If the memcpy is larger than the previous, but the memory was undef prior to
 // that, we can just ignore the tail. Technically we're only interested in the
 // bytes from 0..MemSrcOffset and MemSrcLength+MemSrcOffset..CopySize here, but
-// as we can't easily represent this location (hadUndefContentsBefore uses
-// mustAlias which cannot deal with offsets), we use the full 0..CopySize range.
+// as we can't easily represent this location (hasUndefContents uses mustAlias
+// which cannot deal with offsets), we use the full 0..CopySize range.
 static bool overreadUndefContents(MemorySSA *MSSA, MemCpyInst *MemCpy,
                                   MemIntrinsic *MemSrc, BatchAAResults &BAA) {
   Value *CopySize = MemCpy->getLength();
-  MemoryLocation LoadLoc = MemoryLocation::getForSource(MemCpy);
-  MemoryAccess *MemSrcAccess =
-      MSSA->getMemoryAccess(MemSrc)->getDefiningAccess();
-  if (hadUndefContentsBefore(MSSA, BAA, MemCpy->getSource(), MemSrcAccess,
-                             LoadLoc, CopySize))
-    return true;
+  MemoryLocation MemCpyLoc = MemoryLocation::getForSource(MemCpy);
+  MemoryUseOrDef *MemSrcAccess = MSSA->getMemoryAccess(MemSrc);
+  MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
+      MemSrcAccess->getDefiningAccess(), MemCpyLoc, BAA);
+  if (auto *MD = dyn_cast<MemoryDef>(Clobber))
+    if (hasUndefContents(MSSA, BAA, MemCpy->getSource(), MD, CopySize))
+      return true;
   return false;
 }
 
@@ -1805,9 +1781,8 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
         if (processMemSetMemCpyDependence(M, MDep, BAA))
           return true;
 
-  MemoryLocation SrcLoc = MemoryLocation::getForSource(M);
-  MemoryAccess *SrcClobber =
-      MSSA->getWalker()->getClobberingMemoryAccess(AnyClobber, SrcLoc, BAA);
+  MemoryAccess *SrcClobber = MSSA->getWalker()->getClobberingMemoryAccess(
+      AnyClobber, MemoryLocation::getForSource(M), BAA);
 
   // There are five possible optimizations we can do for memcpy:
   //   a) memcpy-memcpy xform which exposes redundance for DSE.
@@ -1847,8 +1822,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       }
     }
 
-    if (hadUndefContentsBefore(MSSA, BAA, M->getSource(), AnyClobber, SrcLoc,
-                               M->getLength())) {
+    if (hasUndefContents(MSSA, BAA, M->getSource(), MD, M->getLength())) {
       LLVM_DEBUG(dbgs() << "Removed memcpy from undef\n");
       eraseInstruction(M);
       ++NumMemCpyInstr;

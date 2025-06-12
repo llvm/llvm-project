@@ -96,6 +96,7 @@ define void @test_lifetime_partial_alias_3(ptr noalias %dst) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr [[A]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[GEP]], i64 4, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [16 x i8]
@@ -111,6 +112,7 @@ define void @test_lifetime_partial_alias_4(ptr noalias %dst) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr [[A]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[GEP]], i64 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [16 x i8]
