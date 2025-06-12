@@ -82,8 +82,8 @@ typedef unsigned long long uint64_t;
 // AMDGCNSPIRV-NEXT:    [[CONV5_I:%.*]] = zext nneg i8 [[TMP0]] to i64
 // AMDGCNSPIRV-NEXT:    [[ADD_I:%.*]] = add i64 [[MUL_I]], -48
 // AMDGCNSPIRV-NEXT:    [[SUB_I:%.*]] = add i64 [[ADD_I]], [[CONV5_I]]
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_IDX:%.*]] = zext i1 [[OR_COND_I]] to i64
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I]], i64 [[__TAGP_ADDR_1_I_IDX]]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_IDX_I:%.*]] = zext i1 [[OR_COND_I]] to i64
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I]], i64 [[__TAGP_ADDR_1_IDX_I]]
 // AMDGCNSPIRV-NEXT:    [[__R_1_I]] = select i1 [[OR_COND_I]], i64 [[SUB_I]], i64 [[__R_0_I]]
 // AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I]], label [[WHILE_COND_I]], label [[_ZL21__MAKE_MANTISSA_BASE8PKC_EXIT]], !llvm.loop [[LOOP8:![0-9]+]]
 // AMDGCNSPIRV:       _ZL21__make_mantissa_base8PKc.exit:
@@ -138,8 +138,8 @@ extern "C" __device__ uint64_t test___make_mantissa_base8(const char *p) {
 // AMDGCNSPIRV-NEXT:    [[CONV5_I:%.*]] = zext nneg i8 [[TMP0]] to i64
 // AMDGCNSPIRV-NEXT:    [[ADD_I:%.*]] = add i64 [[MUL_I]], -48
 // AMDGCNSPIRV-NEXT:    [[SUB_I:%.*]] = add i64 [[ADD_I]], [[CONV5_I]]
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_IDX:%.*]] = zext i1 [[OR_COND_I]] to i64
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I]], i64 [[__TAGP_ADDR_1_I_IDX]]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_IDX_I:%.*]] = zext i1 [[OR_COND_I]] to i64
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I]], i64 [[__TAGP_ADDR_1_IDX_I]]
 // AMDGCNSPIRV-NEXT:    [[__R_1_I]] = select i1 [[OR_COND_I]], i64 [[SUB_I]], i64 [[__R_0_I]]
 // AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I]], label [[WHILE_COND_I]], label [[_ZL22__MAKE_MANTISSA_BASE10PKC_EXIT]], !llvm.loop [[LOOP11:![0-9]+]]
 // AMDGCNSPIRV:       _ZL22__make_mantissa_base10PKc.exit:
@@ -325,26 +325,26 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // AMDGCNSPIRV-NEXT:  entry:
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[P:%.*]], align 1, !tbaa [[TBAA5]]
 // AMDGCNSPIRV-NEXT:    [[CMP_I:%.*]] = icmp eq i8 [[TMP0]], 48
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_I]], label [[IF_THEN_I:%.*]], label [[WHILE_COND_I14_I:%.*]]
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_I]], label [[IF_THEN_I:%.*]], label [[WHILE_COND_I27_I:%.*]]
 // AMDGCNSPIRV:       if.then.i:
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[P]], i64 1
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I]], align 1, !tbaa [[TBAA5]]
-// AMDGCNSPIRV-NEXT:    switch i8 [[TMP1]], label [[WHILE_COND_I_I:%.*]] [
-// AMDGCNSPIRV-NEXT:      i8 120, label [[WHILE_COND_I28_I_PREHEADER:%.*]]
-// AMDGCNSPIRV-NEXT:      i8 88, label [[WHILE_COND_I28_I_PREHEADER]]
+// AMDGCNSPIRV-NEXT:    switch i8 [[TMP1]], label [[WHILE_COND_I14_I:%.*]] [
+// AMDGCNSPIRV-NEXT:      i8 120, label [[WHILE_COND_I_I_PREHEADER:%.*]]
+// AMDGCNSPIRV-NEXT:      i8 88, label [[WHILE_COND_I_I_PREHEADER]]
 // AMDGCNSPIRV-NEXT:    ]
-// AMDGCNSPIRV:       while.cond.i28.i.preheader:
-// AMDGCNSPIRV-NEXT:    br label [[WHILE_COND_I28_I:%.*]]
-// AMDGCNSPIRV:       while.cond.i28.i:
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I29_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I34_I:%.*]], [[CLEANUP_I_I:%.*]] ], [ [[INCDEC_PTR_I]], [[WHILE_COND_I28_I_PREHEADER]] ]
-// AMDGCNSPIRV-NEXT:    [[__R_0_I30_I:%.*]] = phi i64 [ [[__R_2_I_I:%.*]], [[CLEANUP_I_I]] ], [ 0, [[WHILE_COND_I28_I_PREHEADER]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I29_I]], align 1, !tbaa [[TBAA5]]
-// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I:%.*]] = icmp eq i8 [[TMP2]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I]], label [[_ZL15__MAKE_MANTISSAPKC_EXIT:%.*]], label [[WHILE_BODY_I32_I:%.*]]
-// AMDGCNSPIRV:       while.body.i32.i:
+// AMDGCNSPIRV:       while.cond.i.i.preheader:
+// AMDGCNSPIRV-NEXT:    br label [[WHILE_COND_I_I:%.*]]
+// AMDGCNSPIRV:       while.cond.i.i:
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I_I:%.*]], [[CLEANUP_I_I:%.*]] ], [ [[INCDEC_PTR_I]], [[WHILE_COND_I_I_PREHEADER]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I_I:%.*]] = phi i64 [ [[__R_2_I_I:%.*]], [[CLEANUP_I_I]] ], [ 0, [[WHILE_COND_I_I_PREHEADER]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I]], align 1, !tbaa [[TBAA5]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I_I:%.*]] = icmp eq i8 [[TMP2]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I_I]], label [[_ZL15__MAKE_MANTISSAPKC_EXIT:%.*]], label [[WHILE_BODY_I_I:%.*]]
+// AMDGCNSPIRV:       while.body.i.i:
 // AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = add i8 [[TMP2]], -48
-// AMDGCNSPIRV-NEXT:    [[OR_COND_I33_I:%.*]] = icmp ult i8 [[TMP3]], 10
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I33_I]], label [[IF_END31_I_I:%.*]], label [[IF_ELSE_I_I:%.*]]
+// AMDGCNSPIRV-NEXT:    [[OR_COND_I_I:%.*]] = icmp ult i8 [[TMP3]], 10
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I_I]], label [[IF_END31_I_I:%.*]], label [[IF_ELSE_I_I:%.*]]
 // AMDGCNSPIRV:       if.else.i.i:
 // AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = add i8 [[TMP2]], -97
 // AMDGCNSPIRV-NEXT:    [[OR_COND33_I_I:%.*]] = icmp ult i8 [[TMP4]], 6
@@ -354,54 +354,54 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // AMDGCNSPIRV-NEXT:    [[OR_COND34_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
 // AMDGCNSPIRV-NEXT:    br i1 [[OR_COND34_I_I]], label [[IF_END31_I_I]], label [[CLEANUP_I_I]]
 // AMDGCNSPIRV:       if.end31.i.i:
-// AMDGCNSPIRV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I32_I]] ], [ -87, [[IF_ELSE_I_I]] ], [ -55, [[IF_ELSE17_I_I]] ]
-// AMDGCNSPIRV-NEXT:    [[MUL24_I_I:%.*]] = shl i64 [[__R_0_I30_I]], 4
+// AMDGCNSPIRV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I_I]] ], [ -87, [[IF_ELSE_I_I]] ], [ -55, [[IF_ELSE17_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[MUL24_I_I:%.*]] = shl i64 [[__R_0_I_I]], 4
 // AMDGCNSPIRV-NEXT:    [[CONV25_I_I:%.*]] = zext nneg i8 [[TMP2]] to i64
 // AMDGCNSPIRV-NEXT:    [[ADD26_I_I:%.*]] = add i64 [[MUL24_I_I]], [[DOTSINK]]
 // AMDGCNSPIRV-NEXT:    [[ADD28_I_I:%.*]] = add i64 [[ADD26_I_I]], [[CONV25_I_I]]
-// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I37_I:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I29_I]], i64 1
+// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I]], i64 1
 // AMDGCNSPIRV-NEXT:    br label [[CLEANUP_I_I]]
 // AMDGCNSPIRV:       cleanup.i.i:
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I34_I]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I37_I]], [[IF_END31_I_I]] ], [ [[__TAGP_ADDR_0_I29_I]], [[IF_ELSE17_I_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__R_2_I_I]] = phi i64 [ [[ADD28_I_I]], [[IF_END31_I_I]] ], [ [[__R_0_I30_I]], [[IF_ELSE17_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I_I]], [[IF_END31_I_I]] ], [ [[__TAGP_ADDR_0_I_I]], [[IF_ELSE17_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_2_I_I]] = phi i64 [ [[ADD28_I_I]], [[IF_END31_I_I]] ], [ [[__R_0_I_I]], [[IF_ELSE17_I_I]] ]
 // AMDGCNSPIRV-NEXT:    [[COND_I_I:%.*]] = phi i1 [ true, [[IF_END31_I_I]] ], [ false, [[IF_ELSE17_I_I]] ]
-// AMDGCNSPIRV-NEXT:    br i1 [[COND_I_I]], label [[WHILE_COND_I28_I]], label [[_ZL15__MAKE_MANTISSAPKC_EXIT]], !llvm.loop [[LOOP12]]
-// AMDGCNSPIRV:       while.cond.i.i:
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I_I:%.*]], [[WHILE_BODY_I_I:%.*]] ], [ [[INCDEC_PTR_I]], [[IF_THEN_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__R_0_I_I:%.*]] = phi i64 [ [[__R_1_I_I:%.*]], [[WHILE_BODY_I_I]] ], [ 0, [[IF_THEN_I]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP6:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I]], align 1, !tbaa [[TBAA5]]
-// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I_I:%.*]] = icmp eq i8 [[TMP6]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I_I]], label [[_ZL15__MAKE_MANTISSAPKC_EXIT]], label [[WHILE_BODY_I_I]]
-// AMDGCNSPIRV:       while.body.i.i:
-// AMDGCNSPIRV-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -8
-// AMDGCNSPIRV-NEXT:    [[OR_COND_I_I:%.*]] = icmp eq i8 [[TMP7]], 48
-// AMDGCNSPIRV-NEXT:    [[MUL_I_I:%.*]] = shl i64 [[__R_0_I_I]], 3
-// AMDGCNSPIRV-NEXT:    [[CONV5_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
-// AMDGCNSPIRV-NEXT:    [[ADD_I_I:%.*]] = add i64 [[MUL_I_I]], -48
-// AMDGCNSPIRV-NEXT:    [[SUB_I_I:%.*]] = add i64 [[ADD_I_I]], [[CONV5_I_I]]
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I_IDX:%.*]] = zext i1 [[OR_COND_I_I]] to i64
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I]], i64 [[__TAGP_ADDR_1_I_I_IDX]]
-// AMDGCNSPIRV-NEXT:    [[__R_1_I_I]] = select i1 [[OR_COND_I_I]], i64 [[SUB_I_I]], i64 [[__R_0_I_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I_I]], label [[WHILE_COND_I_I]], label [[_ZL15__MAKE_MANTISSAPKC_EXIT]], !llvm.loop [[LOOP8]]
+// AMDGCNSPIRV-NEXT:    br i1 [[COND_I_I]], label [[WHILE_COND_I_I]], label [[_ZL15__MAKE_MANTISSAPKC_EXIT]], !llvm.loop [[LOOP12]]
 // AMDGCNSPIRV:       while.cond.i14.i:
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I15_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I25_I:%.*]], [[WHILE_BODY_I18_I:%.*]] ], [ [[P]], [[ENTRY:%.*]] ]
-// AMDGCNSPIRV-NEXT:    [[__R_0_I16_I:%.*]] = phi i64 [ [[__R_1_I26_I:%.*]], [[WHILE_BODY_I18_I]] ], [ 0, [[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I]], align 1, !tbaa [[TBAA5]]
-// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I17_I:%.*]] = icmp eq i8 [[TMP8]], 0
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I15_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I24_I:%.*]], [[WHILE_BODY_I18_I:%.*]] ], [ [[INCDEC_PTR_I]], [[IF_THEN_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I16_I:%.*]] = phi i64 [ [[__R_1_I25_I:%.*]], [[WHILE_BODY_I18_I]] ], [ 0, [[IF_THEN_I]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP6:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I]], align 1, !tbaa [[TBAA5]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I17_I:%.*]] = icmp eq i8 [[TMP6]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I17_I]], label [[_ZL15__MAKE_MANTISSAPKC_EXIT]], label [[WHILE_BODY_I18_I]]
 // AMDGCNSPIRV:       while.body.i18.i:
-// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = add i8 [[TMP8]], -48
-// AMDGCNSPIRV-NEXT:    [[OR_COND_I19_I:%.*]] = icmp ult i8 [[TMP9]], 10
-// AMDGCNSPIRV-NEXT:    [[MUL_I20_I:%.*]] = mul i64 [[__R_0_I16_I]], 10
-// AMDGCNSPIRV-NEXT:    [[CONV5_I21_I:%.*]] = zext nneg i8 [[TMP8]] to i64
+// AMDGCNSPIRV-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -8
+// AMDGCNSPIRV-NEXT:    [[OR_COND_I19_I:%.*]] = icmp eq i8 [[TMP7]], 48
+// AMDGCNSPIRV-NEXT:    [[MUL_I20_I:%.*]] = shl i64 [[__R_0_I16_I]], 3
+// AMDGCNSPIRV-NEXT:    [[CONV5_I21_I:%.*]] = zext nneg i8 [[TMP6]] to i64
 // AMDGCNSPIRV-NEXT:    [[ADD_I22_I:%.*]] = add i64 [[MUL_I20_I]], -48
 // AMDGCNSPIRV-NEXT:    [[SUB_I23_I:%.*]] = add i64 [[ADD_I22_I]], [[CONV5_I21_I]]
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I25_I_IDX:%.*]] = zext i1 [[OR_COND_I19_I]] to i64
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I25_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I]], i64 [[__TAGP_ADDR_1_I25_I_IDX]]
-// AMDGCNSPIRV-NEXT:    [[__R_1_I26_I]] = select i1 [[OR_COND_I19_I]], i64 [[SUB_I23_I]], i64 [[__R_0_I16_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I19_I]], label [[WHILE_COND_I14_I]], label [[_ZL15__MAKE_MANTISSAPKC_EXIT]], !llvm.loop [[LOOP11]]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_IDX_I_I:%.*]] = zext i1 [[OR_COND_I19_I]] to i64
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I24_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I]], i64 [[__TAGP_ADDR_1_IDX_I_I]]
+// AMDGCNSPIRV-NEXT:    [[__R_1_I25_I]] = select i1 [[OR_COND_I19_I]], i64 [[SUB_I23_I]], i64 [[__R_0_I16_I]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I19_I]], label [[WHILE_COND_I14_I]], label [[_ZL15__MAKE_MANTISSAPKC_EXIT]], !llvm.loop [[LOOP8]]
+// AMDGCNSPIRV:       while.cond.i27.i:
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I28_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I38_I:%.*]], [[WHILE_BODY_I31_I:%.*]] ], [ [[P]], [[ENTRY:%.*]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I29_I:%.*]] = phi i64 [ [[__R_1_I39_I:%.*]], [[WHILE_BODY_I31_I]] ], [ 0, [[ENTRY]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I28_I]], align 1, !tbaa [[TBAA5]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I30_I:%.*]] = icmp eq i8 [[TMP8]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I30_I]], label [[_ZL15__MAKE_MANTISSAPKC_EXIT]], label [[WHILE_BODY_I31_I]]
+// AMDGCNSPIRV:       while.body.i31.i:
+// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = add i8 [[TMP8]], -48
+// AMDGCNSPIRV-NEXT:    [[OR_COND_I32_I:%.*]] = icmp ult i8 [[TMP9]], 10
+// AMDGCNSPIRV-NEXT:    [[MUL_I33_I:%.*]] = mul i64 [[__R_0_I29_I]], 10
+// AMDGCNSPIRV-NEXT:    [[CONV5_I34_I:%.*]] = zext nneg i8 [[TMP8]] to i64
+// AMDGCNSPIRV-NEXT:    [[ADD_I35_I:%.*]] = add i64 [[MUL_I33_I]], -48
+// AMDGCNSPIRV-NEXT:    [[SUB_I36_I:%.*]] = add i64 [[ADD_I35_I]], [[CONV5_I34_I]]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_IDX_I37_I:%.*]] = zext i1 [[OR_COND_I32_I]] to i64
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I38_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I28_I]], i64 [[__TAGP_ADDR_1_IDX_I37_I]]
+// AMDGCNSPIRV-NEXT:    [[__R_1_I39_I]] = select i1 [[OR_COND_I32_I]], i64 [[SUB_I36_I]], i64 [[__R_0_I29_I]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I32_I]], label [[WHILE_COND_I27_I]], label [[_ZL15__MAKE_MANTISSAPKC_EXIT]], !llvm.loop [[LOOP11]]
 // AMDGCNSPIRV:       _ZL15__make_mantissaPKc.exit:
-// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 0, [[WHILE_BODY_I_I]] ], [ [[__R_0_I_I]], [[WHILE_COND_I_I]] ], [ 0, [[CLEANUP_I_I]] ], [ [[__R_0_I30_I]], [[WHILE_COND_I28_I]] ], [ 0, [[WHILE_BODY_I18_I]] ], [ [[__R_0_I16_I]], [[WHILE_COND_I14_I]] ]
+// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 0, [[WHILE_BODY_I18_I]] ], [ [[__R_0_I16_I]], [[WHILE_COND_I14_I]] ], [ 0, [[CLEANUP_I_I]] ], [ [[__R_0_I_I]], [[WHILE_COND_I_I]] ], [ 0, [[WHILE_BODY_I31_I]] ], [ [[__R_0_I29_I]], [[WHILE_COND_I27_I]] ]
 // AMDGCNSPIRV-NEXT:    ret i64 [[RETVAL_0_I]]
 //
 extern "C" __device__ uint64_t test___make_mantissa(const char *p) {
@@ -1075,7 +1075,6 @@ extern "C" __device__ double test_cospi(double x) {
   return cospi(x);
 }
 
-//
 // DEFAULT-LABEL: @test_cyl_bessel_i0f(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_i0_f32(float noundef [[X:%.*]]) #[[ATTR14]]
@@ -1124,7 +1123,6 @@ extern "C" __device__ double test_cyl_bessel_i0(double x) {
   return cyl_bessel_i0(x);
 }
 
-//
 // DEFAULT-LABEL: @test_cyl_bessel_i1f(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_i1_f32(float noundef [[X:%.*]]) #[[ATTR14]]
@@ -1749,7 +1747,6 @@ extern "C" __device__ double test_fmax(double x, double y) {
   return fmax(x, y);
 }
 
-//
 // DEFAULT-LABEL: @test_fminf(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
@@ -2352,30 +2349,30 @@ extern "C" __device__ double test_j1(double x) {
 // AMDGCNSPIRV-NEXT:      i32 1, label [[IF_THEN2_I:%.*]]
 // AMDGCNSPIRV-NEXT:    ]
 // AMDGCNSPIRV:       if.then.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_j0_f32(float noundef [[Y:%.*]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_j0_f32(float noundef [[Y:%.*]]) #[[ATTR14]]
 // AMDGCNSPIRV-NEXT:    br label [[_ZL3JNFIF_EXIT:%.*]]
 // AMDGCNSPIRV:       if.then2.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_j1_f32(float noundef [[Y]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_j1_f32(float noundef [[Y]]) #[[ATTR14]]
 // AMDGCNSPIRV-NEXT:    br label [[_ZL3JNFIF_EXIT]]
 // AMDGCNSPIRV:       if.end4.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_j0_f32(float noundef [[Y]]) #[[ATTR14]]
-// AMDGCNSPIRV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_j1_f32(float noundef [[Y]]) #[[ATTR14]]
-// AMDGCNSPIRV-NEXT:    [[CMP7_I1:%.*]] = icmp sgt i32 [[X]], 1
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP7_I1]], label [[FOR_BODY_I:%.*]], label [[_ZL3JNFIF_EXIT]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_j0_f32(float noundef [[Y]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_j1_f32(float noundef [[Y]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CMP723_I:%.*]] = icmp sgt i32 [[X]], 1
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP723_I]], label [[FOR_BODY_I:%.*]], label [[_ZL3JNFIF_EXIT]]
 // AMDGCNSPIRV:       for.body.i:
-// AMDGCNSPIRV-NEXT:    [[__I_0_I4:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__X1_0_I3:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__X0_0_I2:%.*]] = phi float [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
-// AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
+// AMDGCNSPIRV-NEXT:    [[__I_026_I:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__X1_025_I:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__X0_024_I:%.*]] = phi float [ [[__X1_025_I]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
+// AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_026_I]], 1
 // AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = uitofp nneg i32 [[MUL_I]] to float
 // AMDGCNSPIRV-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[CONV_I]], [[Y]]
-// AMDGCNSPIRV-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_0_I3]], [[DIV_I]]
-// AMDGCNSPIRV-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
-// AMDGCNSPIRV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
-// AMDGCNSPIRV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT]], label [[_ZL3JNFIF_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP15:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_025_I]], [[DIV_I]]
+// AMDGCNSPIRV-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_024_I]]
+// AMDGCNSPIRV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_026_I]], 1
+// AMDGCNSPIRV-NEXT:    [[EXITCOND_NOT_I:%.*]] = icmp eq i32 [[INC_I]], [[X]]
+// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT_I]], label [[_ZL3JNFIF_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP15:![0-9]+]]
 // AMDGCNSPIRV:       _ZL3jnfif.exit:
-// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
+// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I_I]], [[IF_THEN_I]] ], [ [[CALL_I20_I]], [[IF_THEN2_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
 // AMDGCNSPIRV-NEXT:    ret float [[RETVAL_0_I]]
 //
 extern "C" __device__ float test_jnf(int x, float y) {
@@ -2488,30 +2485,30 @@ extern "C" __device__ float test_jnf(int x, float y) {
 // AMDGCNSPIRV-NEXT:      i32 1, label [[IF_THEN2_I:%.*]]
 // AMDGCNSPIRV-NEXT:    ]
 // AMDGCNSPIRV:       if.then.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_j0_f64(double noundef [[Y:%.*]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_j0_f64(double noundef [[Y:%.*]]) #[[ATTR14]]
 // AMDGCNSPIRV-NEXT:    br label [[_ZL2JNID_EXIT:%.*]]
 // AMDGCNSPIRV:       if.then2.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_j1_f64(double noundef [[Y]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_j1_f64(double noundef [[Y]]) #[[ATTR14]]
 // AMDGCNSPIRV-NEXT:    br label [[_ZL2JNID_EXIT]]
 // AMDGCNSPIRV:       if.end4.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_j0_f64(double noundef [[Y]]) #[[ATTR14]]
-// AMDGCNSPIRV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_j1_f64(double noundef [[Y]]) #[[ATTR14]]
-// AMDGCNSPIRV-NEXT:    [[CMP7_I1:%.*]] = icmp sgt i32 [[X]], 1
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP7_I1]], label [[FOR_BODY_I:%.*]], label [[_ZL2JNID_EXIT]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_j0_f64(double noundef [[Y]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_j1_f64(double noundef [[Y]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CMP723_I:%.*]] = icmp sgt i32 [[X]], 1
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP723_I]], label [[FOR_BODY_I:%.*]], label [[_ZL2JNID_EXIT]]
 // AMDGCNSPIRV:       for.body.i:
-// AMDGCNSPIRV-NEXT:    [[__I_0_I4:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__X1_0_I3:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__X0_0_I2:%.*]] = phi double [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
-// AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
+// AMDGCNSPIRV-NEXT:    [[__I_026_I:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__X1_025_I:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__X0_024_I:%.*]] = phi double [ [[__X1_025_I]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
+// AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_026_I]], 1
 // AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = uitofp nneg i32 [[MUL_I]] to double
 // AMDGCNSPIRV-NEXT:    [[DIV_I:%.*]] = fdiv contract double [[CONV_I]], [[Y]]
-// AMDGCNSPIRV-NEXT:    [[MUL8_I:%.*]] = fmul contract double [[__X1_0_I3]], [[DIV_I]]
-// AMDGCNSPIRV-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
-// AMDGCNSPIRV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
-// AMDGCNSPIRV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT]], label [[_ZL2JNID_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP16:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    [[MUL8_I:%.*]] = fmul contract double [[__X1_025_I]], [[DIV_I]]
+// AMDGCNSPIRV-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_024_I]]
+// AMDGCNSPIRV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_026_I]], 1
+// AMDGCNSPIRV-NEXT:    [[EXITCOND_NOT_I:%.*]] = icmp eq i32 [[INC_I]], [[X]]
+// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT_I]], label [[_ZL2JNID_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP16:![0-9]+]]
 // AMDGCNSPIRV:       _ZL2jnid.exit:
-// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
+// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I_I]], [[IF_THEN_I]] ], [ [[CALL_I20_I]], [[IF_THEN2_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
 // AMDGCNSPIRV-NEXT:    ret double [[RETVAL_0_I]]
 //
 extern "C" __device__ double test_jn(int x, double y) {
@@ -3342,26 +3339,26 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // AMDGCNSPIRV-NEXT:  entry:
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[TAG:%.*]], align 1, !tbaa [[TBAA5]]
 // AMDGCNSPIRV-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP0]], 48
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_I_I]], label [[IF_THEN_I_I:%.*]], label [[WHILE_COND_I14_I_I:%.*]]
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_I_I]], label [[IF_THEN_I_I:%.*]], label [[WHILE_COND_I27_I_I:%.*]]
 // AMDGCNSPIRV:       if.then.i.i:
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TAG]], i64 1
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I_I]], align 1, !tbaa [[TBAA5]]
-// AMDGCNSPIRV-NEXT:    switch i8 [[TMP1]], label [[WHILE_COND_I_I_I:%.*]] [
-// AMDGCNSPIRV-NEXT:      i8 120, label [[WHILE_COND_I28_I_I_PREHEADER:%.*]]
-// AMDGCNSPIRV-NEXT:      i8 88, label [[WHILE_COND_I28_I_I_PREHEADER]]
+// AMDGCNSPIRV-NEXT:    switch i8 [[TMP1]], label [[WHILE_COND_I14_I_I:%.*]] [
+// AMDGCNSPIRV-NEXT:      i8 120, label [[WHILE_COND_I_I_I_PREHEADER:%.*]]
+// AMDGCNSPIRV-NEXT:      i8 88, label [[WHILE_COND_I_I_I_PREHEADER]]
 // AMDGCNSPIRV-NEXT:    ]
-// AMDGCNSPIRV:       while.cond.i28.i.i.preheader:
-// AMDGCNSPIRV-NEXT:    br label [[WHILE_COND_I28_I_I:%.*]]
-// AMDGCNSPIRV:       while.cond.i28.i.i:
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I29_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I34_I_I:%.*]], [[CLEANUP_I_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[WHILE_COND_I28_I_I_PREHEADER]] ]
-// AMDGCNSPIRV-NEXT:    [[__R_0_I30_I_I:%.*]] = phi i64 [ [[__R_2_I_I_I:%.*]], [[CLEANUP_I_I_I]] ], [ 0, [[WHILE_COND_I28_I_I_PREHEADER]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I29_I_I]], align 1, !tbaa [[TBAA5]]
-// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I_I:%.*]] = icmp eq i8 [[TMP2]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I_I]], label [[_ZL4NANFPKC_EXIT:%.*]], label [[WHILE_BODY_I32_I_I:%.*]]
-// AMDGCNSPIRV:       while.body.i32.i.i:
+// AMDGCNSPIRV:       while.cond.i.i.i.preheader:
+// AMDGCNSPIRV-NEXT:    br label [[WHILE_COND_I_I_I:%.*]]
+// AMDGCNSPIRV:       while.cond.i.i.i:
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I_I_I:%.*]], [[CLEANUP_I_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[WHILE_COND_I_I_I_PREHEADER]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I_I_I:%.*]] = phi i64 [ [[__R_2_I_I_I:%.*]], [[CLEANUP_I_I_I]] ], [ 0, [[WHILE_COND_I_I_I_PREHEADER]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[TBAA5]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP2]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label [[_ZL4NANFPKC_EXIT:%.*]], label [[WHILE_BODY_I_I_I:%.*]]
+// AMDGCNSPIRV:       while.body.i.i.i:
 // AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = add i8 [[TMP2]], -48
-// AMDGCNSPIRV-NEXT:    [[OR_COND_I33_I_I:%.*]] = icmp ult i8 [[TMP3]], 10
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I33_I_I]], label [[IF_END31_I_I_I:%.*]], label [[IF_ELSE_I_I_I:%.*]]
+// AMDGCNSPIRV-NEXT:    [[OR_COND_I_I_I:%.*]] = icmp ult i8 [[TMP3]], 10
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I_I_I]], label [[IF_END31_I_I_I:%.*]], label [[IF_ELSE_I_I_I:%.*]]
 // AMDGCNSPIRV:       if.else.i.i.i:
 // AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = add i8 [[TMP2]], -97
 // AMDGCNSPIRV-NEXT:    [[OR_COND33_I_I_I:%.*]] = icmp ult i8 [[TMP4]], 6
@@ -3371,54 +3368,54 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // AMDGCNSPIRV-NEXT:    [[OR_COND34_I_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
 // AMDGCNSPIRV-NEXT:    br i1 [[OR_COND34_I_I_I]], label [[IF_END31_I_I_I]], label [[CLEANUP_I_I_I]]
 // AMDGCNSPIRV:       if.end31.i.i.i:
-// AMDGCNSPIRV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I32_I_I]] ], [ -87, [[IF_ELSE_I_I_I]] ], [ -55, [[IF_ELSE17_I_I_I]] ]
-// AMDGCNSPIRV-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I30_I_I]], 4
+// AMDGCNSPIRV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I_I_I]] ], [ -87, [[IF_ELSE_I_I_I]] ], [ -55, [[IF_ELSE17_I_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I_I_I]], 4
 // AMDGCNSPIRV-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP2]] to i64
 // AMDGCNSPIRV-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // AMDGCNSPIRV-NEXT:    [[ADD28_I_I_I:%.*]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
-// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I37_I_I:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I29_I_I]], i64 1
+// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I_I_I:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], i64 1
 // AMDGCNSPIRV-NEXT:    br label [[CLEANUP_I_I_I]]
 // AMDGCNSPIRV:       cleanup.i.i.i:
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I34_I_I]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I37_I_I]], [[IF_END31_I_I_I]] ], [ [[__TAGP_ADDR_0_I29_I_I]], [[IF_ELSE17_I_I_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__R_2_I_I_I]] = phi i64 [ [[ADD28_I_I_I]], [[IF_END31_I_I_I]] ], [ [[__R_0_I30_I_I]], [[IF_ELSE17_I_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I_I]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I_I_I]], [[IF_END31_I_I_I]] ], [ [[__TAGP_ADDR_0_I_I_I]], [[IF_ELSE17_I_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_2_I_I_I]] = phi i64 [ [[ADD28_I_I_I]], [[IF_END31_I_I_I]] ], [ [[__R_0_I_I_I]], [[IF_ELSE17_I_I_I]] ]
 // AMDGCNSPIRV-NEXT:    [[COND_I_I_I:%.*]] = phi i1 [ true, [[IF_END31_I_I_I]] ], [ false, [[IF_ELSE17_I_I_I]] ]
-// AMDGCNSPIRV-NEXT:    br i1 [[COND_I_I_I]], label [[WHILE_COND_I28_I_I]], label [[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP12]]
-// AMDGCNSPIRV:       while.cond.i.i.i:
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I_I_I:%.*]], [[WHILE_BODY_I_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[IF_THEN_I_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__R_0_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], [[WHILE_BODY_I_I_I]] ], [ 0, [[IF_THEN_I_I]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP6:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[TBAA5]]
-// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP6]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label [[_ZL4NANFPKC_EXIT]], label [[WHILE_BODY_I_I_I]]
-// AMDGCNSPIRV:       while.body.i.i.i:
-// AMDGCNSPIRV-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -8
-// AMDGCNSPIRV-NEXT:    [[OR_COND_I_I_I:%.*]] = icmp eq i8 [[TMP7]], 48
-// AMDGCNSPIRV-NEXT:    [[MUL_I_I_I:%.*]] = shl i64 [[__R_0_I_I_I]], 3
-// AMDGCNSPIRV-NEXT:    [[CONV5_I_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
-// AMDGCNSPIRV-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
-// AMDGCNSPIRV-NEXT:    [[SUB_I_I_I:%.*]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I_I_IDX:%.*]] = zext i1 [[OR_COND_I_I_I]] to i64
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], i64 [[__TAGP_ADDR_1_I_I_I_IDX]]
-// AMDGCNSPIRV-NEXT:    [[__R_1_I_I_I]] = select i1 [[OR_COND_I_I_I]], i64 [[SUB_I_I_I]], i64 [[__R_0_I_I_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I_I_I]], label [[WHILE_COND_I_I_I]], label [[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP8]]
+// AMDGCNSPIRV-NEXT:    br i1 [[COND_I_I_I]], label [[WHILE_COND_I_I_I]], label [[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP12]]
 // AMDGCNSPIRV:       while.cond.i14.i.i:
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I15_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I25_I_I:%.*]], [[WHILE_BODY_I18_I_I:%.*]] ], [ [[TAG]], [[ENTRY:%.*]] ]
-// AMDGCNSPIRV-NEXT:    [[__R_0_I16_I_I:%.*]] = phi i64 [ [[__R_1_I26_I_I:%.*]], [[WHILE_BODY_I18_I_I]] ], [ 0, [[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], align 1, !tbaa [[TBAA5]]
-// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I15_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I24_I_I:%.*]], [[WHILE_BODY_I18_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[IF_THEN_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I16_I_I:%.*]] = phi i64 [ [[__R_1_I25_I_I:%.*]], [[WHILE_BODY_I18_I_I]] ], [ 0, [[IF_THEN_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP6:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], align 1, !tbaa [[TBAA5]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP6]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label [[_ZL4NANFPKC_EXIT]], label [[WHILE_BODY_I18_I_I]]
 // AMDGCNSPIRV:       while.body.i18.i.i:
-// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = add i8 [[TMP8]], -48
-// AMDGCNSPIRV-NEXT:    [[OR_COND_I19_I_I:%.*]] = icmp ult i8 [[TMP9]], 10
-// AMDGCNSPIRV-NEXT:    [[MUL_I20_I_I:%.*]] = mul i64 [[__R_0_I16_I_I]], 10
-// AMDGCNSPIRV-NEXT:    [[CONV5_I21_I_I:%.*]] = zext nneg i8 [[TMP8]] to i64
+// AMDGCNSPIRV-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -8
+// AMDGCNSPIRV-NEXT:    [[OR_COND_I19_I_I:%.*]] = icmp eq i8 [[TMP7]], 48
+// AMDGCNSPIRV-NEXT:    [[MUL_I20_I_I:%.*]] = shl i64 [[__R_0_I16_I_I]], 3
+// AMDGCNSPIRV-NEXT:    [[CONV5_I21_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
 // AMDGCNSPIRV-NEXT:    [[ADD_I22_I_I:%.*]] = add i64 [[MUL_I20_I_I]], -48
 // AMDGCNSPIRV-NEXT:    [[SUB_I23_I_I:%.*]] = add i64 [[ADD_I22_I_I]], [[CONV5_I21_I_I]]
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I25_I_I_IDX:%.*]] = zext i1 [[OR_COND_I19_I_I]] to i64
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I25_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], i64 [[__TAGP_ADDR_1_I25_I_I_IDX]]
-// AMDGCNSPIRV-NEXT:    [[__R_1_I26_I_I]] = select i1 [[OR_COND_I19_I_I]], i64 [[SUB_I23_I_I]], i64 [[__R_0_I16_I_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[WHILE_COND_I14_I_I]], label [[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP11]]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_IDX_I_I_I:%.*]] = zext i1 [[OR_COND_I19_I_I]] to i64
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I24_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], i64 [[__TAGP_ADDR_1_IDX_I_I_I]]
+// AMDGCNSPIRV-NEXT:    [[__R_1_I25_I_I]] = select i1 [[OR_COND_I19_I_I]], i64 [[SUB_I23_I_I]], i64 [[__R_0_I16_I_I]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[WHILE_COND_I14_I_I]], label [[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP8]]
+// AMDGCNSPIRV:       while.cond.i27.i.i:
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I28_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I38_I_I:%.*]], [[WHILE_BODY_I31_I_I:%.*]] ], [ [[TAG]], [[ENTRY:%.*]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I29_I_I:%.*]] = phi i64 [ [[__R_1_I39_I_I:%.*]], [[WHILE_BODY_I31_I_I]] ], [ 0, [[ENTRY]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I28_I_I]], align 1, !tbaa [[TBAA5]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label [[_ZL4NANFPKC_EXIT]], label [[WHILE_BODY_I31_I_I]]
+// AMDGCNSPIRV:       while.body.i31.i.i:
+// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = add i8 [[TMP8]], -48
+// AMDGCNSPIRV-NEXT:    [[OR_COND_I32_I_I:%.*]] = icmp ult i8 [[TMP9]], 10
+// AMDGCNSPIRV-NEXT:    [[MUL_I33_I_I:%.*]] = mul i64 [[__R_0_I29_I_I]], 10
+// AMDGCNSPIRV-NEXT:    [[CONV5_I34_I_I:%.*]] = zext nneg i8 [[TMP8]] to i64
+// AMDGCNSPIRV-NEXT:    [[ADD_I35_I_I:%.*]] = add i64 [[MUL_I33_I_I]], -48
+// AMDGCNSPIRV-NEXT:    [[SUB_I36_I_I:%.*]] = add i64 [[ADD_I35_I_I]], [[CONV5_I34_I_I]]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_IDX_I37_I_I:%.*]] = zext i1 [[OR_COND_I32_I_I]] to i64
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I38_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I28_I_I]], i64 [[__TAGP_ADDR_1_IDX_I37_I_I]]
+// AMDGCNSPIRV-NEXT:    [[__R_1_I39_I_I]] = select i1 [[OR_COND_I32_I_I]], i64 [[SUB_I36_I_I]], i64 [[__R_0_I29_I_I]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I32_I_I]], label [[WHILE_COND_I27_I_I]], label [[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP11]]
 // AMDGCNSPIRV:       _ZL4nanfPKc.exit:
-// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, [[WHILE_BODY_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_COND_I_I_I]] ], [ 0, [[CLEANUP_I_I_I]] ], [ [[__R_0_I30_I_I]], [[WHILE_COND_I28_I_I]] ], [ 0, [[WHILE_BODY_I18_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_COND_I14_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, [[WHILE_BODY_I18_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_COND_I14_I_I]] ], [ 0, [[CLEANUP_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_COND_I_I_I]] ], [ 0, [[WHILE_BODY_I31_I_I]] ], [ [[__R_0_I29_I_I]], [[WHILE_COND_I27_I_I]] ]
 // AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
 // AMDGCNSPIRV-NEXT:    [[BF_VALUE_I:%.*]] = and i32 [[CONV_I]], 4194303
 // AMDGCNSPIRV-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i32 [[BF_VALUE_I]], 2143289344
@@ -3625,26 +3622,26 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // AMDGCNSPIRV-NEXT:  entry:
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[TAG:%.*]], align 1, !tbaa [[TBAA5]]
 // AMDGCNSPIRV-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP0]], 48
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_I_I]], label [[IF_THEN_I_I:%.*]], label [[WHILE_COND_I14_I_I:%.*]]
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_I_I]], label [[IF_THEN_I_I:%.*]], label [[WHILE_COND_I27_I_I:%.*]]
 // AMDGCNSPIRV:       if.then.i.i:
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TAG]], i64 1
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I_I]], align 1, !tbaa [[TBAA5]]
-// AMDGCNSPIRV-NEXT:    switch i8 [[TMP1]], label [[WHILE_COND_I_I_I:%.*]] [
-// AMDGCNSPIRV-NEXT:      i8 120, label [[WHILE_COND_I28_I_I_PREHEADER:%.*]]
-// AMDGCNSPIRV-NEXT:      i8 88, label [[WHILE_COND_I28_I_I_PREHEADER]]
+// AMDGCNSPIRV-NEXT:    switch i8 [[TMP1]], label [[WHILE_COND_I14_I_I:%.*]] [
+// AMDGCNSPIRV-NEXT:      i8 120, label [[WHILE_COND_I_I_I_PREHEADER:%.*]]
+// AMDGCNSPIRV-NEXT:      i8 88, label [[WHILE_COND_I_I_I_PREHEADER]]
 // AMDGCNSPIRV-NEXT:    ]
-// AMDGCNSPIRV:       while.cond.i28.i.i.preheader:
-// AMDGCNSPIRV-NEXT:    br label [[WHILE_COND_I28_I_I:%.*]]
-// AMDGCNSPIRV:       while.cond.i28.i.i:
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I29_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I34_I_I:%.*]], [[CLEANUP_I_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[WHILE_COND_I28_I_I_PREHEADER]] ]
-// AMDGCNSPIRV-NEXT:    [[__R_0_I30_I_I:%.*]] = phi i64 [ [[__R_2_I_I_I:%.*]], [[CLEANUP_I_I_I]] ], [ 0, [[WHILE_COND_I28_I_I_PREHEADER]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I29_I_I]], align 1, !tbaa [[TBAA5]]
-// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I_I:%.*]] = icmp eq i8 [[TMP2]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I_I]], label [[_ZL3NANPKC_EXIT:%.*]], label [[WHILE_BODY_I32_I_I:%.*]]
-// AMDGCNSPIRV:       while.body.i32.i.i:
+// AMDGCNSPIRV:       while.cond.i.i.i.preheader:
+// AMDGCNSPIRV-NEXT:    br label [[WHILE_COND_I_I_I:%.*]]
+// AMDGCNSPIRV:       while.cond.i.i.i:
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I_I_I:%.*]], [[CLEANUP_I_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[WHILE_COND_I_I_I_PREHEADER]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I_I_I:%.*]] = phi i64 [ [[__R_2_I_I_I:%.*]], [[CLEANUP_I_I_I]] ], [ 0, [[WHILE_COND_I_I_I_PREHEADER]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[TBAA5]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP2]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label [[_ZL3NANPKC_EXIT:%.*]], label [[WHILE_BODY_I_I_I:%.*]]
+// AMDGCNSPIRV:       while.body.i.i.i:
 // AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = add i8 [[TMP2]], -48
-// AMDGCNSPIRV-NEXT:    [[OR_COND_I33_I_I:%.*]] = icmp ult i8 [[TMP3]], 10
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I33_I_I]], label [[IF_END31_I_I_I:%.*]], label [[IF_ELSE_I_I_I:%.*]]
+// AMDGCNSPIRV-NEXT:    [[OR_COND_I_I_I:%.*]] = icmp ult i8 [[TMP3]], 10
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I_I_I]], label [[IF_END31_I_I_I:%.*]], label [[IF_ELSE_I_I_I:%.*]]
 // AMDGCNSPIRV:       if.else.i.i.i:
 // AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = add i8 [[TMP2]], -97
 // AMDGCNSPIRV-NEXT:    [[OR_COND33_I_I_I:%.*]] = icmp ult i8 [[TMP4]], 6
@@ -3654,54 +3651,54 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // AMDGCNSPIRV-NEXT:    [[OR_COND34_I_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
 // AMDGCNSPIRV-NEXT:    br i1 [[OR_COND34_I_I_I]], label [[IF_END31_I_I_I]], label [[CLEANUP_I_I_I]]
 // AMDGCNSPIRV:       if.end31.i.i.i:
-// AMDGCNSPIRV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I32_I_I]] ], [ -87, [[IF_ELSE_I_I_I]] ], [ -55, [[IF_ELSE17_I_I_I]] ]
-// AMDGCNSPIRV-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I30_I_I]], 4
+// AMDGCNSPIRV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I_I_I]] ], [ -87, [[IF_ELSE_I_I_I]] ], [ -55, [[IF_ELSE17_I_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I_I_I]], 4
 // AMDGCNSPIRV-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP2]] to i64
 // AMDGCNSPIRV-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // AMDGCNSPIRV-NEXT:    [[ADD28_I_I_I:%.*]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
-// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I37_I_I:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I29_I_I]], i64 1
+// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I_I_I:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], i64 1
 // AMDGCNSPIRV-NEXT:    br label [[CLEANUP_I_I_I]]
 // AMDGCNSPIRV:       cleanup.i.i.i:
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I34_I_I]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I37_I_I]], [[IF_END31_I_I_I]] ], [ [[__TAGP_ADDR_0_I29_I_I]], [[IF_ELSE17_I_I_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__R_2_I_I_I]] = phi i64 [ [[ADD28_I_I_I]], [[IF_END31_I_I_I]] ], [ [[__R_0_I30_I_I]], [[IF_ELSE17_I_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I_I]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I_I_I]], [[IF_END31_I_I_I]] ], [ [[__TAGP_ADDR_0_I_I_I]], [[IF_ELSE17_I_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_2_I_I_I]] = phi i64 [ [[ADD28_I_I_I]], [[IF_END31_I_I_I]] ], [ [[__R_0_I_I_I]], [[IF_ELSE17_I_I_I]] ]
 // AMDGCNSPIRV-NEXT:    [[COND_I_I_I:%.*]] = phi i1 [ true, [[IF_END31_I_I_I]] ], [ false, [[IF_ELSE17_I_I_I]] ]
-// AMDGCNSPIRV-NEXT:    br i1 [[COND_I_I_I]], label [[WHILE_COND_I28_I_I]], label [[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP12]]
-// AMDGCNSPIRV:       while.cond.i.i.i:
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I_I_I:%.*]], [[WHILE_BODY_I_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[IF_THEN_I_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__R_0_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], [[WHILE_BODY_I_I_I]] ], [ 0, [[IF_THEN_I_I]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP6:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[TBAA5]]
-// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP6]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label [[_ZL3NANPKC_EXIT]], label [[WHILE_BODY_I_I_I]]
-// AMDGCNSPIRV:       while.body.i.i.i:
-// AMDGCNSPIRV-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -8
-// AMDGCNSPIRV-NEXT:    [[OR_COND_I_I_I:%.*]] = icmp eq i8 [[TMP7]], 48
-// AMDGCNSPIRV-NEXT:    [[MUL_I_I_I:%.*]] = shl i64 [[__R_0_I_I_I]], 3
-// AMDGCNSPIRV-NEXT:    [[CONV5_I_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
-// AMDGCNSPIRV-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
-// AMDGCNSPIRV-NEXT:    [[SUB_I_I_I:%.*]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I_I_IDX:%.*]] = zext i1 [[OR_COND_I_I_I]] to i64
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], i64 [[__TAGP_ADDR_1_I_I_I_IDX]]
-// AMDGCNSPIRV-NEXT:    [[__R_1_I_I_I]] = select i1 [[OR_COND_I_I_I]], i64 [[SUB_I_I_I]], i64 [[__R_0_I_I_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I_I_I]], label [[WHILE_COND_I_I_I]], label [[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP8]]
+// AMDGCNSPIRV-NEXT:    br i1 [[COND_I_I_I]], label [[WHILE_COND_I_I_I]], label [[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP12]]
 // AMDGCNSPIRV:       while.cond.i14.i.i:
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I15_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I25_I_I:%.*]], [[WHILE_BODY_I18_I_I:%.*]] ], [ [[TAG]], [[ENTRY:%.*]] ]
-// AMDGCNSPIRV-NEXT:    [[__R_0_I16_I_I:%.*]] = phi i64 [ [[__R_1_I26_I_I:%.*]], [[WHILE_BODY_I18_I_I]] ], [ 0, [[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], align 1, !tbaa [[TBAA5]]
-// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I15_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I24_I_I:%.*]], [[WHILE_BODY_I18_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[IF_THEN_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I16_I_I:%.*]] = phi i64 [ [[__R_1_I25_I_I:%.*]], [[WHILE_BODY_I18_I_I]] ], [ 0, [[IF_THEN_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP6:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], align 1, !tbaa [[TBAA5]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP6]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label [[_ZL3NANPKC_EXIT]], label [[WHILE_BODY_I18_I_I]]
 // AMDGCNSPIRV:       while.body.i18.i.i:
-// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = add i8 [[TMP8]], -48
-// AMDGCNSPIRV-NEXT:    [[OR_COND_I19_I_I:%.*]] = icmp ult i8 [[TMP9]], 10
-// AMDGCNSPIRV-NEXT:    [[MUL_I20_I_I:%.*]] = mul i64 [[__R_0_I16_I_I]], 10
-// AMDGCNSPIRV-NEXT:    [[CONV5_I21_I_I:%.*]] = zext nneg i8 [[TMP8]] to i64
+// AMDGCNSPIRV-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -8
+// AMDGCNSPIRV-NEXT:    [[OR_COND_I19_I_I:%.*]] = icmp eq i8 [[TMP7]], 48
+// AMDGCNSPIRV-NEXT:    [[MUL_I20_I_I:%.*]] = shl i64 [[__R_0_I16_I_I]], 3
+// AMDGCNSPIRV-NEXT:    [[CONV5_I21_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
 // AMDGCNSPIRV-NEXT:    [[ADD_I22_I_I:%.*]] = add i64 [[MUL_I20_I_I]], -48
 // AMDGCNSPIRV-NEXT:    [[SUB_I23_I_I:%.*]] = add i64 [[ADD_I22_I_I]], [[CONV5_I21_I_I]]
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I25_I_I_IDX:%.*]] = zext i1 [[OR_COND_I19_I_I]] to i64
-// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I25_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], i64 [[__TAGP_ADDR_1_I25_I_I_IDX]]
-// AMDGCNSPIRV-NEXT:    [[__R_1_I26_I_I]] = select i1 [[OR_COND_I19_I_I]], i64 [[SUB_I23_I_I]], i64 [[__R_0_I16_I_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[WHILE_COND_I14_I_I]], label [[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP11]]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_IDX_I_I_I:%.*]] = zext i1 [[OR_COND_I19_I_I]] to i64
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I24_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], i64 [[__TAGP_ADDR_1_IDX_I_I_I]]
+// AMDGCNSPIRV-NEXT:    [[__R_1_I25_I_I]] = select i1 [[OR_COND_I19_I_I]], i64 [[SUB_I23_I_I]], i64 [[__R_0_I16_I_I]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[WHILE_COND_I14_I_I]], label [[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP8]]
+// AMDGCNSPIRV:       while.cond.i27.i.i:
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I28_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I38_I_I:%.*]], [[WHILE_BODY_I31_I_I:%.*]] ], [ [[TAG]], [[ENTRY:%.*]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I29_I_I:%.*]] = phi i64 [ [[__R_1_I39_I_I:%.*]], [[WHILE_BODY_I31_I_I]] ], [ 0, [[ENTRY]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I28_I_I]], align 1, !tbaa [[TBAA5]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label [[_ZL3NANPKC_EXIT]], label [[WHILE_BODY_I31_I_I]]
+// AMDGCNSPIRV:       while.body.i31.i.i:
+// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = add i8 [[TMP8]], -48
+// AMDGCNSPIRV-NEXT:    [[OR_COND_I32_I_I:%.*]] = icmp ult i8 [[TMP9]], 10
+// AMDGCNSPIRV-NEXT:    [[MUL_I33_I_I:%.*]] = mul i64 [[__R_0_I29_I_I]], 10
+// AMDGCNSPIRV-NEXT:    [[CONV5_I34_I_I:%.*]] = zext nneg i8 [[TMP8]] to i64
+// AMDGCNSPIRV-NEXT:    [[ADD_I35_I_I:%.*]] = add i64 [[MUL_I33_I_I]], -48
+// AMDGCNSPIRV-NEXT:    [[SUB_I36_I_I:%.*]] = add i64 [[ADD_I35_I_I]], [[CONV5_I34_I_I]]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_IDX_I37_I_I:%.*]] = zext i1 [[OR_COND_I32_I_I]] to i64
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I38_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I28_I_I]], i64 [[__TAGP_ADDR_1_IDX_I37_I_I]]
+// AMDGCNSPIRV-NEXT:    [[__R_1_I39_I_I]] = select i1 [[OR_COND_I32_I_I]], i64 [[SUB_I36_I_I]], i64 [[__R_0_I29_I_I]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I32_I_I]], label [[WHILE_COND_I27_I_I]], label [[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP11]]
 // AMDGCNSPIRV:       _ZL3nanPKc.exit:
-// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, [[WHILE_BODY_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_COND_I_I_I]] ], [ 0, [[CLEANUP_I_I_I]] ], [ [[__R_0_I30_I_I]], [[WHILE_COND_I28_I_I]] ], [ 0, [[WHILE_BODY_I18_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_COND_I14_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, [[WHILE_BODY_I18_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_COND_I14_I_I]] ], [ 0, [[CLEANUP_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_COND_I_I_I]] ], [ 0, [[WHILE_BODY_I31_I_I]] ], [ [[__R_0_I29_I_I]], [[WHILE_COND_I27_I_I]] ]
 // AMDGCNSPIRV-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
 // AMDGCNSPIRV-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i64 [[BF_VALUE_I]], 9221120237041090560
 // AMDGCNSPIRV-NEXT:    [[TMP10:%.*]] = bitcast i64 [[BF_SET9_I]] to double
@@ -4141,22 +4138,22 @@ extern "C" __device__ double test_normcdfinv(double x) {
 //
 // AMDGCNSPIRV-LABEL: @test_normf(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I1:%.*]] = icmp eq i32 [[X:%.*]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I1]], label [[_ZL5NORMFIPKF_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
+// AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT5_I:%.*]] = icmp eq i32 [[X:%.*]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT5_I]], label [[_ZL5NORMFIPKF_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
 // AMDGCNSPIRV:       while.body.i:
-// AMDGCNSPIRV-NEXT:    [[__R_0_I4:%.*]] = phi float [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-// AMDGCNSPIRV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__A_ADDR_0_I3]], align 4, !tbaa [[TBAA17]]
+// AMDGCNSPIRV-NEXT:    [[__R_08_I:%.*]] = phi float [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+// AMDGCNSPIRV-NEXT:    [[__A_ADDR_07_I:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
+// AMDGCNSPIRV-NEXT:    [[__DIM_ADDR_06_I:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
+// AMDGCNSPIRV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_06_I]], -1
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__A_ADDR_07_I]], align 4, !tbaa [[TBAA17]]
 // AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
-// AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
-// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_0_I3]], i64 4
+// AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract float [[__R_08_I]], [[MUL_I]]
+// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_07_I]], i64 4
 // AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
 // AMDGCNSPIRV:       _ZL5normfiPKf.exit:
-// AMDGCNSPIRV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = tail call contract noundef addrspace(4) float @llvm.sqrt.f32(float [[__R_0_I_LCSSA]])
+// AMDGCNSPIRV-NEXT:    [[__R_0_LCSSA_I:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = tail call contract noundef addrspace(4) float @llvm.sqrt.f32(float [[__R_0_LCSSA_I]])
 // AMDGCNSPIRV-NEXT:    ret float [[TMP1]]
 //
 extern "C" __device__ float test_normf(int x, const float *y) {
@@ -4225,22 +4222,22 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 //
 // AMDGCNSPIRV-LABEL: @test_norm(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I1:%.*]] = icmp eq i32 [[X:%.*]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I1]], label [[_ZL4NORMIPKD_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
+// AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT5_I:%.*]] = icmp eq i32 [[X:%.*]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT5_I]], label [[_ZL4NORMIPKD_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
 // AMDGCNSPIRV:       while.body.i:
-// AMDGCNSPIRV-NEXT:    [[__R_0_I4:%.*]] = phi double [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-// AMDGCNSPIRV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__A_ADDR_0_I3]], align 8, !tbaa [[TBAA19]]
+// AMDGCNSPIRV-NEXT:    [[__R_08_I:%.*]] = phi double [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+// AMDGCNSPIRV-NEXT:    [[__A_ADDR_07_I:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
+// AMDGCNSPIRV-NEXT:    [[__DIM_ADDR_06_I:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
+// AMDGCNSPIRV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_06_I]], -1
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__A_ADDR_07_I]], align 8, !tbaa [[TBAA19]]
 // AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
-// AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
-// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_0_I3]], i64 8
+// AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract double [[__R_08_I]], [[MUL_I]]
+// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_07_I]], i64 8
 // AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
 // AMDGCNSPIRV:       _ZL4normiPKd.exit:
-// AMDGCNSPIRV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = tail call contract noundef addrspace(4) double @llvm.sqrt.f64(double [[__R_0_I_LCSSA]])
+// AMDGCNSPIRV-NEXT:    [[__R_0_LCSSA_I:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = tail call contract noundef addrspace(4) double @llvm.sqrt.f64(double [[__R_0_LCSSA_I]])
 // AMDGCNSPIRV-NEXT:    ret double [[TMP1]]
 //
 extern "C" __device__ double test_norm(int x, const double *y) {
@@ -4687,22 +4684,22 @@ extern "C" __device__ double test_rint(double x) {
 //
 // AMDGCNSPIRV-LABEL: @test_rnormf(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I1:%.*]] = icmp eq i32 [[X:%.*]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I1]], label [[_ZL6RNORMFIPKF_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
+// AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT5_I:%.*]] = icmp eq i32 [[X:%.*]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT5_I]], label [[_ZL6RNORMFIPKF_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
 // AMDGCNSPIRV:       while.body.i:
-// AMDGCNSPIRV-NEXT:    [[__R_0_I4:%.*]] = phi float [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-// AMDGCNSPIRV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__A_ADDR_0_I3]], align 4, !tbaa [[TBAA17]]
+// AMDGCNSPIRV-NEXT:    [[__R_08_I:%.*]] = phi float [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+// AMDGCNSPIRV-NEXT:    [[__A_ADDR_07_I:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
+// AMDGCNSPIRV-NEXT:    [[__DIM_ADDR_06_I:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
+// AMDGCNSPIRV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_06_I]], -1
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__A_ADDR_07_I]], align 4, !tbaa [[TBAA17]]
 // AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
-// AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
-// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_0_I3]], i64 4
+// AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract float [[__R_08_I]], [[MUL_I]]
+// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_07_I]], i64 4
 // AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL6RNORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
 // AMDGCNSPIRV:       _ZL6rnormfiPKf.exit:
-// AMDGCNSPIRV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_rsqrt_f32(float noundef [[__R_0_I_LCSSA]]) #[[ATTR13]]
+// AMDGCNSPIRV-NEXT:    [[__R_0_LCSSA_I:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
+// AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_rsqrt_f32(float noundef [[__R_0_LCSSA_I]]) #[[ATTR13]]
 // AMDGCNSPIRV-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_rnormf(int x, const float* y) {
@@ -4771,22 +4768,22 @@ extern "C" __device__ float test_rnormf(int x, const float* y) {
 //
 // AMDGCNSPIRV-LABEL: @test_rnorm(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I1:%.*]] = icmp eq i32 [[X:%.*]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I1]], label [[_ZL5RNORMIPKD_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
+// AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT5_I:%.*]] = icmp eq i32 [[X:%.*]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT5_I]], label [[_ZL5RNORMIPKD_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
 // AMDGCNSPIRV:       while.body.i:
-// AMDGCNSPIRV-NEXT:    [[__R_0_I4:%.*]] = phi double [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-// AMDGCNSPIRV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__A_ADDR_0_I3]], align 8, !tbaa [[TBAA19]]
+// AMDGCNSPIRV-NEXT:    [[__R_08_I:%.*]] = phi double [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+// AMDGCNSPIRV-NEXT:    [[__A_ADDR_07_I:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
+// AMDGCNSPIRV-NEXT:    [[__DIM_ADDR_06_I:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
+// AMDGCNSPIRV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_06_I]], -1
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__A_ADDR_07_I]], align 8, !tbaa [[TBAA19]]
 // AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
-// AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
-// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_0_I3]], i64 8
+// AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract double [[__R_08_I]], [[MUL_I]]
+// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_07_I]], i64 8
 // AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5RNORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
 // AMDGCNSPIRV:       _ZL5rnormiPKd.exit:
-// AMDGCNSPIRV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_rsqrt_f64(double noundef [[__R_0_I_LCSSA]]) #[[ATTR13]]
+// AMDGCNSPIRV-NEXT:    [[__R_0_LCSSA_I:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
+// AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_rsqrt_f64(double noundef [[__R_0_LCSSA_I]]) #[[ATTR13]]
 // AMDGCNSPIRV-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_rnorm(int x, const double* y) {
@@ -5929,30 +5926,30 @@ extern "C" __device__ double test_y1(double x) {
 // AMDGCNSPIRV-NEXT:      i32 1, label [[IF_THEN2_I:%.*]]
 // AMDGCNSPIRV-NEXT:    ]
 // AMDGCNSPIRV:       if.then.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_y0_f32(float noundef [[Y:%.*]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_y0_f32(float noundef [[Y:%.*]]) #[[ATTR14]]
 // AMDGCNSPIRV-NEXT:    br label [[_ZL3YNFIF_EXIT:%.*]]
 // AMDGCNSPIRV:       if.then2.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_y1_f32(float noundef [[Y]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_y1_f32(float noundef [[Y]]) #[[ATTR14]]
 // AMDGCNSPIRV-NEXT:    br label [[_ZL3YNFIF_EXIT]]
 // AMDGCNSPIRV:       if.end4.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_y0_f32(float noundef [[Y]]) #[[ATTR14]]
-// AMDGCNSPIRV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_y1_f32(float noundef [[Y]]) #[[ATTR14]]
-// AMDGCNSPIRV-NEXT:    [[CMP7_I1:%.*]] = icmp sgt i32 [[X]], 1
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP7_I1]], label [[FOR_BODY_I:%.*]], label [[_ZL3YNFIF_EXIT]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_y0_f32(float noundef [[Y]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_y1_f32(float noundef [[Y]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CMP723_I:%.*]] = icmp sgt i32 [[X]], 1
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP723_I]], label [[FOR_BODY_I:%.*]], label [[_ZL3YNFIF_EXIT]]
 // AMDGCNSPIRV:       for.body.i:
-// AMDGCNSPIRV-NEXT:    [[__I_0_I4:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__X1_0_I3:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__X0_0_I2:%.*]] = phi float [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
-// AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
+// AMDGCNSPIRV-NEXT:    [[__I_026_I:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__X1_025_I:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__X0_024_I:%.*]] = phi float [ [[__X1_025_I]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
+// AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_026_I]], 1
 // AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = uitofp nneg i32 [[MUL_I]] to float
 // AMDGCNSPIRV-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[CONV_I]], [[Y]]
-// AMDGCNSPIRV-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_0_I3]], [[DIV_I]]
-// AMDGCNSPIRV-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
-// AMDGCNSPIRV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
-// AMDGCNSPIRV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT]], label [[_ZL3YNFIF_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP25:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_025_I]], [[DIV_I]]
+// AMDGCNSPIRV-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_024_I]]
+// AMDGCNSPIRV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_026_I]], 1
+// AMDGCNSPIRV-NEXT:    [[EXITCOND_NOT_I:%.*]] = icmp eq i32 [[INC_I]], [[X]]
+// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT_I]], label [[_ZL3YNFIF_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP25:![0-9]+]]
 // AMDGCNSPIRV:       _ZL3ynfif.exit:
-// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
+// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I_I]], [[IF_THEN_I]] ], [ [[CALL_I20_I]], [[IF_THEN2_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
 // AMDGCNSPIRV-NEXT:    ret float [[RETVAL_0_I]]
 //
 extern "C" __device__ float test_ynf(int x, float y) {
@@ -6065,30 +6062,30 @@ extern "C" __device__ float test_ynf(int x, float y) {
 // AMDGCNSPIRV-NEXT:      i32 1, label [[IF_THEN2_I:%.*]]
 // AMDGCNSPIRV-NEXT:    ]
 // AMDGCNSPIRV:       if.then.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_y0_f64(double noundef [[Y:%.*]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_y0_f64(double noundef [[Y:%.*]]) #[[ATTR14]]
 // AMDGCNSPIRV-NEXT:    br label [[_ZL2YNID_EXIT:%.*]]
 // AMDGCNSPIRV:       if.then2.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_y1_f64(double noundef [[Y]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_y1_f64(double noundef [[Y]]) #[[ATTR14]]
 // AMDGCNSPIRV-NEXT:    br label [[_ZL2YNID_EXIT]]
 // AMDGCNSPIRV:       if.end4.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_y0_f64(double noundef [[Y]]) #[[ATTR14]]
-// AMDGCNSPIRV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_y1_f64(double noundef [[Y]]) #[[ATTR14]]
-// AMDGCNSPIRV-NEXT:    [[CMP7_I1:%.*]] = icmp sgt i32 [[X]], 1
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP7_I1]], label [[FOR_BODY_I:%.*]], label [[_ZL2YNID_EXIT]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_y0_f64(double noundef [[Y]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_y1_f64(double noundef [[Y]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CMP723_I:%.*]] = icmp sgt i32 [[X]], 1
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP723_I]], label [[FOR_BODY_I:%.*]], label [[_ZL2YNID_EXIT]]
 // AMDGCNSPIRV:       for.body.i:
-// AMDGCNSPIRV-NEXT:    [[__I_0_I4:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__X1_0_I3:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
-// AMDGCNSPIRV-NEXT:    [[__X0_0_I2:%.*]] = phi double [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
-// AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
+// AMDGCNSPIRV-NEXT:    [[__I_026_I:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__X1_025_I:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__X0_024_I:%.*]] = phi double [ [[__X1_025_I]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
+// AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_026_I]], 1
 // AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = uitofp nneg i32 [[MUL_I]] to double
 // AMDGCNSPIRV-NEXT:    [[DIV_I:%.*]] = fdiv contract double [[CONV_I]], [[Y]]
-// AMDGCNSPIRV-NEXT:    [[MUL8_I:%.*]] = fmul contract double [[__X1_0_I3]], [[DIV_I]]
-// AMDGCNSPIRV-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
-// AMDGCNSPIRV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
-// AMDGCNSPIRV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT]], label [[_ZL2YNID_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP26:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    [[MUL8_I:%.*]] = fmul contract double [[__X1_025_I]], [[DIV_I]]
+// AMDGCNSPIRV-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_024_I]]
+// AMDGCNSPIRV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_026_I]], 1
+// AMDGCNSPIRV-NEXT:    [[EXITCOND_NOT_I:%.*]] = icmp eq i32 [[INC_I]], [[X]]
+// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT_I]], label [[_ZL2YNID_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP26:![0-9]+]]
 // AMDGCNSPIRV:       _ZL2ynid.exit:
-// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
+// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I_I]], [[IF_THEN_I]] ], [ [[CALL_I20_I]], [[IF_THEN2_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
 // AMDGCNSPIRV-NEXT:    ret double [[RETVAL_0_I]]
 //
 extern "C" __device__ double test_yn(int x, double y) {
@@ -6585,10 +6582,10 @@ extern "C" __device__ float test___sinf(float x) {
 //
 // AMDGCNSPIRV-LABEL: @test___tanf(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[CALL_I3_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_native_sin_f32(float noundef [[X:%.*]]) #[[ATTR14]]
-// AMDGCNSPIRV-NEXT:    [[CALL_I_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_native_cos_f32(float noundef [[X]]) #[[ATTR14]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract addrspace(4) float @llvm.amdgcn.rcp.f32(float [[CALL_I_I]])
-// AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[CALL_I3_I]], [[TMP0]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_native_sin_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[CALL_I3_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_native_cos_f32(float noundef [[X]]) #[[ATTR14]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract addrspace(4) float @llvm.amdgcn.rcp.f32(float [[CALL_I3_I]])
+// AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[CALL_I_I]], [[TMP0]]
 // AMDGCNSPIRV-NEXT:    ret float [[MUL_I]]
 //
 extern "C" __device__ float test___tanf(float x) {
