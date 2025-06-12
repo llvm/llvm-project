@@ -1615,6 +1615,7 @@ bool AArch64TargetInfo::validateAsmConstraint(
     if (const unsigned Len = matchAsmCCConstraint(Name)) {
       Name += Len - 1;
       Info.setAllowsRegister();
+      Info.setFlagOutputCCUpperBound(2);
       return true;
     }
   }

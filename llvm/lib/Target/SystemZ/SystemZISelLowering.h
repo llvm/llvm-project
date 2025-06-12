@@ -530,6 +530,18 @@ public:
   bool shouldExpandCmpUsingSelects(EVT VT) const override { return true; }
 
   const char *getTargetNodeName(unsigned Opcode) const override;
+
+  // This function currently returns cost for srl/ipm/cc sequence for merging.
+  CondMergingParams
+  getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
+                                const Value *Rhs) const override;
+
+  // Handle Lowering flag assembly outputs.
+  SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Flag,
+                                      const SDLoc &DL,
+                                      const AsmOperandInfo &Constraint,
+                                      SelectionDAG &DAG) const override;
+
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
@@ -783,6 +795,7 @@ private:
   SDValue combineSETCC(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineSELECT_CC_CCIPMMask(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineShiftToMulAddHigh(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineMUL(SDNode *N, DAGCombinerInfo &DCI) const;
