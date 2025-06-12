@@ -89,10 +89,8 @@ class SubtargetEmitter {
 
   FeatureMapTy enumeration(raw_ostream &OS);
   void emitSubtargetInfoMacroCalls(raw_ostream &OS);
-  unsigned featureKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap,
-                            bool IsEmitBasic = false);
-  unsigned cpuKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap,
-                        bool IsEmitBasic = false);
+  unsigned featureKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
+  unsigned cpuKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
   unsigned cpuNames(raw_ostream &OS);
   void formItineraryStageString(const std::string &Names,
                                 const Record *ItinData, std::string &ItinString,
@@ -256,8 +254,7 @@ void SubtargetEmitter::emitSubtargetInfoMacroCalls(raw_ostream &OS) {
 // command line.
 //
 unsigned SubtargetEmitter::featureKeyValues(raw_ostream &OS,
-                                            const FeatureMapTy &FeatureMap,
-                                            bool IsEmitBasic) {
+                                            const FeatureMapTy &FeatureMap) {
   std::vector<const Record *> FeatureList =
       Records.getAllDerivedDefinitions("SubtargetFeature");
 
@@ -273,8 +270,7 @@ unsigned SubtargetEmitter::featureKeyValues(raw_ostream &OS,
 
   // Begin feature table.
   OS << "// Sorted (by key) array of values for CPU features.\n"
-     << "extern const llvm::" << (IsEmitBasic ? "Basic" : "")
-     << "SubtargetFeatureKV " << (IsEmitBasic ? "Basic" : "") << Target
+     << "extern const llvm::SubtargetFeatureKV " << Target
      << "FeatureKV[] = {\n";
 
   for (const Record *Feature : FeatureList) {
@@ -285,11 +281,9 @@ unsigned SubtargetEmitter::featureKeyValues(raw_ostream &OS,
 
     // Emit as { "feature", "description", { featureEnum }, { i1 , i2 , ... , in
     // } }
-    OS << "  { " << "\"" << CommandLineName << "\", ";
-    if (!IsEmitBasic)
-      OS << "\"" << Desc << "\", ";
-
-    OS << Target << "::" << Name << ", ";
+    OS << "  { "
+       << "\"" << CommandLineName << "\", "
+       << "\"" << Desc << "\", " << Target << "::" << Name << ", ";
 
     ConstRecVec ImpliesList = Feature->getValueAsListOfDefs("Implies");
 
@@ -367,8 +361,7 @@ static void checkDuplicateCPUFeatures(StringRef CPUName,
 // line.
 //
 unsigned SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
-                                        const FeatureMapTy &FeatureMap,
-                                        bool IsEmitBasic) {
+                                        const FeatureMapTy &FeatureMap) {
   // Gather and sort processor information
   std::vector<const Record *> ProcessorList =
       Records.getAllDerivedDefinitions("Processor");
@@ -381,8 +374,7 @@ unsigned SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
 
   // Begin processor table.
   OS << "// Sorted (by key) array of values for CPU subtype.\n"
-     << "extern const llvm::" << (IsEmitBasic ? "Basic" : "")
-     << "SubtargetSubTypeKV " << (IsEmitBasic ? "Basic" : "") << Target
+     << "extern const llvm::SubtargetSubTypeKV " << Target
      << "SubTypeKV[] = {\n";
 
   for (const Record *Processor : ProcessorList) {
@@ -400,17 +392,13 @@ unsigned SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
        << "\"" << Name << "\", ";
 
     printFeatureMask(OS, FeatureList, FeatureMap);
+    OS << ", ";
+    printFeatureMask(OS, TuneFeatureList, FeatureMap);
 
-    if (!IsEmitBasic) {
-      OS << ", ";
-      printFeatureMask(OS, TuneFeatureList, FeatureMap);
-
-      // Emit the scheduler model pointer.
-      const std::string &ProcModelName =
-          SchedModels.getModelForProc(Processor).ModelName;
-      OS << ", &" << ProcModelName;
-    }
-    OS << " },\n";
+    // Emit the scheduler model pointer.
+    const std::string &ProcModelName =
+        SchedModels.getModelForProc(Processor).ModelName;
+    OS << ", &" << ProcModelName << " },\n";
   }
 
   // End processor table.
@@ -2051,14 +2039,6 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   auto FeatureMap = enumeration(OS);
   OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_SUBTARGETINFO_ENUM\n\n";
-
-  OS << "\n#ifdef GET_SUBTARGETFEATURES_KV\n";
-  OS << "#undef GET_SUBTARGETFEATURES_KV\n\n";
-  OS << "namespace llvm {\n";
-  featureKeyValues(OS, FeatureMap, true);
-  cpuKeyValues(OS, FeatureMap, true);
-  OS << "} // end namespace llvm\n\n";
-  OS << "#endif // GET_SUBTARGETFEATURES_KV\n\n";
 
   emitSubtargetInfoMacroCalls(OS);
 
