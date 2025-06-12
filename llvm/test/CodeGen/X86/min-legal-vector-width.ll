@@ -1993,21 +1993,21 @@ define <32 x i8> @splatconstant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-v
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-SKX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-SKX-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; CHECK-SKX-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; CHECK-SKX-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: splatconstant_rotate_v32i8:
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-AVX512-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; CHECK-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; CHECK-AVX512-NEXT:    retq
 ;
 ; CHECK-VBMI1-LABEL: splatconstant_rotate_v32i8:
 ; CHECK-VBMI1:       # %bb.0:
 ; CHECK-VBMI1-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-VBMI1-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-VBMI1-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; CHECK-VBMI1-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; CHECK-VBMI1-NEXT:    retq
 ;
 ; CHECK-GFNI-LABEL: splatconstant_rotate_v32i8:
@@ -2025,7 +2025,7 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-SKX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-SKX-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; CHECK-SKX-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; CHECK-SKX-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-SKX-NEXT:    retq
 ;
@@ -2033,7 +2033,7 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-AVX512-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; CHECK-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    retq
 ;
@@ -2041,7 +2041,7 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
 ; CHECK-VBMI1:       # %bb.0:
 ; CHECK-VBMI1-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-VBMI1-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-VBMI1-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; CHECK-VBMI1-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; CHECK-VBMI1-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-VBMI1-NEXT:    retq
 ;
