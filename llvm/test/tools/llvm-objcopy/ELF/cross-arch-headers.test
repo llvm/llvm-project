@@ -127,6 +127,7 @@ FileHeader:
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
   # Arbitrary values that do not match any value we convert to via --output-format.
+  Machine:         EM_NONE
   OSABI:           ELFOSABI_STANDALONE
 Sections:
   - Name:            .text
