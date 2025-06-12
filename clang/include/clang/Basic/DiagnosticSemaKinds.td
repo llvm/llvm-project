@@ -1800,7 +1800,8 @@ def note_unsatisfied_trait_reason
            "%UnionWithUserDeclaredSMF{is a union with a user-declared "
            "%sub{select_special_member_kind}1}|"
            "%FunctionType{is a function type}|"
-           "%CVVoidType{is a cv void type}"
+           "%CVVoidType{is a cv void type}|"
+           "%IncompleteArrayType{is an incomplete array type}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<

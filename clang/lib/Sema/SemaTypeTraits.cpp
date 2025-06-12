@@ -2263,27 +2263,20 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
 static void DiagnoseNonConstructibleReason(
     Sema &SemaRef, SourceLocation Loc,
     const llvm::SmallVector<clang::QualType, 1> &Ts) {
-  bool CompleteTypes = true;
   for (const auto &ArgTy : Ts) {
-    if (ArgTy->isVoidType() || ArgTy->isIncompleteArrayType())
-      continue;
-    if (ArgTy->isIncompleteType()) {
-      SemaRef.Diag(Loc, diag::err_incomplete_type_used_in_type_trait_expr)
-          << ArgTy;
-      CompleteTypes = false;
-    }
+    if (ArgTy->isVoidType())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::CVVoidType;
   }
-  if (!CompleteTypes)
-    return;
 
   QualType T = Ts[0];
   if (T->isFunctionType())
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::FunctionType;
 
-  if (T->isVoidType())
+  if (T->isIncompleteArrayType())
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::CVVoidType;
+        << diag::TraitNotSatisfiedReason::IncompleteArrayType;
 
   const CXXRecordDecl *D = T->getAsCXXRecordDecl();
   if (!D || D->isInvalidDecl() || !D->hasDefinition())

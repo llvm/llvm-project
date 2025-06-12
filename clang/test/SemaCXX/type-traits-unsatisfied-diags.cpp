@@ -490,6 +490,19 @@ static_assert(__is_constructible(S2, float));
 // expected-note@#cc-S2 {{candidate constructor not viable: requires 3 arguments, but 1 was provided}} \
 // expected-note@#c-S2 {{'S2' defined here}}
 
+static_assert(__is_constructible(S2, float, void));
+// expected-error@-1 {{static assertion failed due to requirement '__is_constructible(constructible::S2, float, void)'}} \
+// expected-note@#c-S2 {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 2 were provided}} \
+// expected-note@#c-S2 {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 2 were provided}} \
+// expected-note@-1{{because it is a cv void type}} \
+// expected-error@-1 {{no matching constructor for initialization of 'S2'}} \
+// expected-note@#cc-S2 {{candidate constructor not viable: requires 3 arguments, but 2 were provided}} \
+// expected-note@#c-S2 {{'S2' defined here}}
+
+static_assert(__is_constructible(int[]));
+// expected-error@-1 {{static assertion failed due to requirement '__is_constructible(int[])'}} \
+// expected-note@-1 {{because it is an incomplete array type}}
+
 static_assert(__is_constructible(void));
 // expected-error@-1 {{static assertion failed due to requirement '__is_constructible(void)'}} \
 // expected-note@-1 {{because it is a cv void type}}
