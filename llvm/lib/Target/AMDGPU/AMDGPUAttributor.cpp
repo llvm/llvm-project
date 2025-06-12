@@ -1424,19 +1424,18 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     }
 
     for (auto &I : instructions(F)) {
-      Value *Ptr = nullptr;
-      if (auto *LI = dyn_cast<LoadInst>(&I))
-        Ptr = LI->getPointerOperand();
-      else if (auto *SI = dyn_cast<StoreInst>(&I))
-        Ptr = SI->getPointerOperand();
-      else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
-        Ptr = RMW->getPointerOperand();
-      else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I))
-        Ptr = CmpX->getPointerOperand();
-
-      if (Ptr) {
-        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
-        A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*LI->getPointerOperand()));
+      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*SI->getPointerOperand()));
+      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*RMW->getPointerOperand()));
+      } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*CmpX->getPointerOperand()));
       }
     }
   }
