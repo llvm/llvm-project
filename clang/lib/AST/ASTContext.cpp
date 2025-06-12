@@ -1687,22 +1687,56 @@ void ASTContext::getOverriddenMethods(
   Overridden.append(OverDecls.begin(), OverDecls.end());
 }
 
-std::optional<ASTContext::TypeRelocationInfo>
+std::optional<ASTContext::CXXRecordDeclRelocationInfo>
 ASTContext::getRelocationInfoForCXXRecord(const CXXRecordDecl *RD) const {
   assert(RD);
   CXXRecordDecl *D = RD->getDefinition();
-  auto it = RelocationInfo.find(D);
-  if (it != RelocationInfo.end())
+  auto it = RelocatableClasses.find(D);
+  if (it != RelocatableClasses.end())
     return it->getSecond();
   return std::nullopt;
 }
 
-void ASTContext::setRelocationInfoForCXXRecord(const CXXRecordDecl *RD,
-                                               TypeRelocationInfo Info) {
+void ASTContext::setRelocationInfoForCXXRecord(
+    const CXXRecordDecl *RD, const CXXRecordDeclRelocationInfo &Info) {
   assert(RD);
   CXXRecordDecl *D = RD->getDefinition();
-  assert(RelocationInfo.find(D) == RelocationInfo.end());
-  RelocationInfo.insert({D, Info});
+  assert(RelocatableClasses.find(D) == RelocatableClasses.end());
+  RelocatableClasses.insert({D, Info});
+}
+
+bool ASTContext::containsAddressDiscriminatedPointerAuth(QualType T) {
+  if (!LangOpts.PointerAuthCalls && !LangOpts.PointerAuthIntrinsics)
+    return false;
+
+  T = T.getCanonicalType();
+  if (T.hasAddressDiscriminatedPointerAuth())
+    return true;
+  const RecordDecl *RD = T->getAsRecordDecl();
+  if (!RD)
+    return false;
+
+  auto SaveReturn = [this, RD](bool Result) {
+    RecordContainsAddressDiscriminatedPointerAuth.insert({RD, Result});
+    return Result;
+  };
+  if (auto Existing = RecordContainsAddressDiscriminatedPointerAuth.find(RD);
+      Existing != RecordContainsAddressDiscriminatedPointerAuth.end())
+    return Existing->second;
+  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    if (CXXRD->isPolymorphic() &&
+        hasAddressDiscriminatedVTableAuthentication(CXXRD))
+      return SaveReturn(true);
+    for (auto Base : CXXRD->bases()) {
+      if (containsAddressDiscriminatedPointerAuth(Base.getType()))
+        return SaveReturn(true);
+    }
+  }
+  for (auto *FieldDecl : RD->fields()) {
+    if (containsAddressDiscriminatedPointerAuth(FieldDecl->getType()))
+      return SaveReturn(true);
+  }
+  return SaveReturn(false);
 }
 
 void ASTContext::addedLocalImportDecl(ImportDecl *Import) {

@@ -620,61 +620,25 @@ private:
   ParameterIndexTable ParamIndices;
 
 public:
-  struct TypeRelocationInfo {
-    static TypeRelocationInfo invalid() {
-      TypeRelocationInfo Result;
-      Result.IsRelocatable = false;
-      Result.IsReplaceable = false;
-      return Result;
+  struct CXXRecordDeclRelocationInfo {
+    static CXXRecordDeclRelocationInfo NonRelocatable() {
+      return {false, false};
     }
 
-    TypeRelocationInfo() {}
-    TypeRelocationInfo(bool IsRelocatable, bool IsReplaceable,
-                       bool HasAddressDiscriminatedValues)
-        : IsUnion(false), IsRelocatable(IsRelocatable),
-          IsReplaceable(IsReplaceable),
-          HasAddressDiscriminatedValues(HasAddressDiscriminatedValues) {}
-
-    void setIsUnion(bool Union) {
-      IsUnion = Union;
-      normalizeState();
-    }
-    void updateRelocatable(bool Relocatable) { IsRelocatable &= Relocatable; }
-    void updateReplaceable(bool Replaceable) { IsReplaceable &= Replaceable; }
-    void
-    updateContainsAddressDiscriminatedValues(bool AddressDiscriminatedValues) {
-      HasAddressDiscriminatedValues |= AddressDiscriminatedValues;
-      normalizeState();
-    }
-    void mergeWithSiblingMember(bool IsUnion, const TypeRelocationInfo &Other) {
-      updateRelocatable(Other.IsRelocatable);
-      updateReplaceable(Other.IsReplaceable);
-      normalizeState();
-    }
-    bool isRelocatable() const { return IsRelocatable; }
-    bool isReplaceable() const { return IsReplaceable; }
-    bool hasAddressDiscriminatedPointerAuth() const {
-      return HasAddressDiscriminatedValues;
-    }
-
-  private:
-    void normalizeState() {
-      if (!IsUnion || !HasAddressDiscriminatedValues)
-        return;
-      IsRelocatable = false;
-      IsReplaceable = false;
-    }
-    bool IsUnion = false;
-    bool IsRelocatable = true;
-    bool IsReplaceable = true;
-    bool HasAddressDiscriminatedValues = false;
+    unsigned IsRelocatable;
+    unsigned IsReplaceable;
   };
-  std::optional<TypeRelocationInfo>
+  std::optional<CXXRecordDeclRelocationInfo>
   getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
-  void setRelocationInfoForCXXRecord(const CXXRecordDecl *, TypeRelocationInfo);
+  void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
+                                     const CXXRecordDeclRelocationInfo &);
+  bool containsAddressDiscriminatedPointerAuth(QualType T);
 
 private:
-  llvm::DenseMap<const CXXRecordDecl *, TypeRelocationInfo> RelocationInfo;
+  llvm::DenseMap<const CXXRecordDecl *, CXXRecordDeclRelocationInfo>
+      RelocatableClasses;
+  llvm::DenseMap<const RecordDecl *, bool>
+      RecordContainsAddressDiscriminatedPointerAuth;
 
   ImportDecl *FirstLocalImport = nullptr;
   ImportDecl *LastLocalImport = nullptr;

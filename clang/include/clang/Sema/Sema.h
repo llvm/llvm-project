@@ -4343,10 +4343,10 @@ public:
   void ActOnTagFinishDefinition(Scope *S, Decl *TagDecl,
                                 SourceRange BraceRange);
 
-  ASTContext::TypeRelocationInfo
-  GetCXX2CTypeRelocationInfo(const clang::CXXRecordDecl *D);
-
-  ASTContext::TypeRelocationInfo GetCXX2CTypeRelocationInfo(QualType T);
+  using CXXRecordDeclRelocationInfo = ASTContext::CXXRecordDeclRelocationInfo;
+  CXXRecordDeclRelocationInfo
+  CheckCXX2CRelocatableAndReplaceable(const clang::CXXRecordDecl *D);
+  CXXRecordDeclRelocationInfo CheckCXX2CRelocatableAndReplaceable(QualType T);
 
   void ActOnTagFinishSkippedDefinition(SkippedDefinitionContext Context);
 
