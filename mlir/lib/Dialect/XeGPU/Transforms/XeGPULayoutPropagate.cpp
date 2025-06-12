@@ -19,6 +19,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
@@ -341,9 +342,6 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       .Case<xegpu::PrefetchNdOp>([&](auto prefetchNdOp) {
         visitPrefetchNdOp(prefetchNdOp, operands, results);
       })
-      // No need to propagate the layout to operands in CreateNdDescOp because
-      // they are scalars (offsets, sizes, etc.).
-      .Case<xegpu::CreateNdDescOp>([&](auto createNdDescOp) {})
       .Case<vector::TransposeOp>([&](auto transposeOp) {
         visitTransposeOp(transposeOp, operands, results);
       })
@@ -355,12 +353,18 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       })
       // All other ops.
       .Default([&](Operation *op) {
-        for (const LayoutInfoLattice *r : results) {
-          if (r->getValue().isAssigned()) {
-            for (LayoutInfoLattice *operand : operands) {
-              // Propagate the layout of the result to the operand.
-              meet(operand, *r);
-            }
+        for (const LayoutInfoLattice *resultInfo : results) {
+          if (!resultInfo->getValue().isAssigned())
+            continue;
+          for (auto [operandInfo, operand] :
+               llvm::zip(operands, op->getOpOperands())) {
+            // If the operand type is not a vector or tensor descriptor, skip
+            // it.
+            if (!isa<xegpu::TensorDescType, VectorType>(
+                    operand.get().getType()))
+              continue;
+            // Propagate the result layout to the operand.
+            meet(operandInfo, *resultInfo);
           }
         }
       });
@@ -456,7 +460,8 @@ void LayoutInfoPropagation::visitLoadNdOp(
     return;
   LayoutInfo tensorDescLayout = valueLayout;
   // LoadNdOp has the transpose effect. However, at the stage of this analysis
-  // this effect is not expected and should be abstracted away. Emit a warning.
+  // this effect is not expected and should be abstracted away. Emit a
+  // warning.
   if (auto transpose = load.getTranspose()) {
     load.emitWarning("Transpose effect is not expected for LoadNdOp at "
                      "LayoutInfoPropagation stage.");
@@ -495,8 +500,8 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
   int outElemTyBitWidth =
       bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
 
-  // NOTE: We do not expect widening or narrowing bitcasts at this stage. Emit a
-  // warning and return.
+  // NOTE: We do not expect widening or narrowing bitcasts at this stage. Emit
+  // a warning and return.
   if (inElemTyBitWidth != outElemTyBitWidth) {
     bitcast.emitWarning("Widening or narrowing bitcasts are not expected at "
                         "layout propagation stage.");
@@ -583,7 +588,6 @@ void LayoutInfoPropagation::visitStoreScatterOp(
 }
 
 namespace {
-
 //===----------------------------------------------------------------------===//
 // RunLayoutInfoPropagation
 //===----------------------------------------------------------------------===//
@@ -679,7 +683,6 @@ using GetLayoutFnTy = function_ref<xegpu::LayoutAttr(Value)>;
 /// attribute.
 static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
                      GetLayoutFnTy getLayoutOfValue) {
-
   // Iterate over all the results.
   for (OpResult result : op->getResults()) {
     Type resultType = result.getType();
@@ -872,7 +875,6 @@ static void updateFunctionOpInterface(mlir::OpBuilder &builder,
 }
 
 namespace {
-
 struct XeGPULayoutPropagatePass final
     : public xegpu::impl::XeGPULayoutPropagateBase<XeGPULayoutPropagatePass> {
   void runOnOperation() override;

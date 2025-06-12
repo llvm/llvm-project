@@ -812,7 +812,7 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
 }
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
-  // Step 1: Attach layout to op operands.
+  // Step 1: Attach layouts to op operands.
   // TODO: Following assumptions are made:
   // 1) It is assumed that there are no layout conflicts.
   // 2) Any existing layout attributes attached to the operands are ignored.
@@ -853,7 +853,7 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       }
     });
   }
-  // Step 3: Finally, Apply subgroup to workitem distribution patterns.
+  // Step 3: Apply subgroup to workitem distribution patterns.
   RewritePatternSet patterns(&getContext());
   xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
   // TODO: distributionFn and shuffleFn are not used at this point.
@@ -874,9 +874,9 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     return;
   }
 
-  // Step 4: Clean up UnrealizedConversionCastOps that were inserted due to
-  // tensor desc type mismatches created by using upstream distribution patterns
-  // (scf.for)
+  // Step 4: Finllay, clean up UnrealizedConversionCastOps that were inserted
+  // due to tensor desc type mismatches created by using upstream distribution
+  // patterns (scf.for)
   getOperation()->walk([&](mlir::UnrealizedConversionCastOp op) {
     // We are only interested in UnrealizedConversionCastOps there were added
     // for resolving SIMT type mismatches.
