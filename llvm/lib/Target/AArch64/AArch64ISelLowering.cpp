@@ -7126,59 +7126,81 @@ static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
 
 SDValue AArch64TargetLowering::LowerADJUST_TRAMPOLINE(SDValue Op,
                                                       SelectionDAG &DAG) const {
-  // Note: x18 cannot be used for the Nest parameter on Windows and macOS.
-  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindows())
-    report_fatal_error(
-        "ADJUST_TRAMPOLINE operation is only supported on Linux.");
-
   return Op.getOperand(0);
 }
 
 SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
                                                     SelectionDAG &DAG) const {
-
-  // Note: x18 cannot be used for the Nest parameter on Windows and macOS.
-  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindows())
-    report_fatal_error("INIT_TRAMPOLINE operation is only supported on Linux.");
-
   SDValue Chain = Op.getOperand(0);
-  SDValue Trmp = Op.getOperand(1); // trampoline
+  SDValue Trmp = Op.getOperand(1); // trampoline, >=32 bytes
   SDValue FPtr = Op.getOperand(2); // nested function
   SDValue Nest = Op.getOperand(3); // 'nest' parameter value
+
+  const Value *TrmpAddr = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
+
+  // ldr NestReg, .+16
+  // ldr x17, .+20
+  // br x17
+  // .word 0
+  // .nest: .qword nest
+  // .fptr: .qword fptr
+  SDValue OutChains[5];
+
+  const Function *Func =
+      cast<Function>(cast<SrcValueSDNode>(Op.getOperand(5))->getValue());
+  CallingConv::ID CC = Func->getCallingConv();
+  unsigned NestReg;
+
+  switch (CC) {
+  default:
+    NestReg = 0x0f; // X15
+    LLVM_FALLTHROUGH;
+  case CallingConv::ARM64EC_Thunk_Native:
+  case CallingConv::ARM64EC_Thunk_X64:
+    // Must be kept in sync with AArch64CallingConv.td
+    NestReg = 0x04; // X4
+    break;
+  }
+
+  const char FptrReg = 0x11; // X17
+
+  SDValue Addr = Trmp;
+
   SDLoc dl(Op);
+  OutChains[0] = DAG.getStore(
+      Chain, dl, DAG.getConstant(0x58000080u | NestReg, dl, MVT::i32), Addr,
+      MachinePointerInfo(TrmpAddr));
 
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
-  Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                     DAG.getConstant(4, dl, MVT::i64));
+  OutChains[1] = DAG.getStore(
+      Chain, dl, DAG.getConstant(0x580000b0u | FptrReg, dl, MVT::i32), Addr,
+      MachinePointerInfo(TrmpAddr, 4));
 
-  TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
+  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                     DAG.getConstant(8, dl, MVT::i64));
+  OutChains[2] =
+      DAG.getStore(Chain, dl, DAG.getConstant(0xd61f0220u, dl, MVT::i32), Addr,
+                   MachinePointerInfo(TrmpAddr, 8));
 
-  Entry.Ty = IntPtrTy;
-  Entry.Node = Trmp;
-  Args.push_back(Entry);
+  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                     DAG.getConstant(16, dl, MVT::i64));
+  OutChains[3] =
+      DAG.getStore(Chain, dl, Nest, Addr, MachinePointerInfo(TrmpAddr, 16));
 
-  if (auto *FI = dyn_cast<FrameIndexSDNode>(Trmp.getNode())) {
-    MachineFunction &MF = DAG.getMachineFunction();
-    MachineFrameInfo &MFI = MF.getFrameInfo();
-    Entry.Node =
-        DAG.getConstant(MFI.getObjectSize(FI->getIndex()), dl, MVT::i64);
-  } else
-    Entry.Node = DAG.getConstant(36, dl, MVT::i64);
+  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                     DAG.getConstant(24, dl, MVT::i64));
+  OutChains[4] =
+      DAG.getStore(Chain, dl, FPtr, Addr, MachinePointerInfo(TrmpAddr, 24));
 
-  Args.push_back(Entry);
-  Entry.Node = FPtr;
-  Args.push_back(Entry);
-  Entry.Node = Nest;
-  Args.push_back(Entry);
+  SDValue StoreToken = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 
-  // Lower to a call to __trampoline_setup(Trmp, TrampSize, FPtr, ctx_reg)
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl).setChain(Chain).setLibCallee(
-      CallingConv::C, Type::getVoidTy(*DAG.getContext()),
-      DAG.getExternalSymbol("__trampoline_setup", PtrVT), std::move(Args));
+  SDValue EndOfTrmp = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                                  DAG.getConstant(12, dl, MVT::i64));
 
-  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
-  return CallResult.second;
+  // Call clear cache on the trampoline instructions.
+  return DAG.getNode(ISD::CLEAR_CACHE, dl, MVT::Other, StoreToken, Trmp,
+                     EndOfTrmp);
 }
 
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
@@ -29429,6 +29451,30 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
   assert(OpVT.isScalableVector() &&
          "Expected scalable vector in LowerVECTOR_DEINTERLEAVE.");
 
+  // Are multi-register uzp instructions available?
+  if (Subtarget->hasSME2() && Subtarget->isStreaming() &&
+      OpVT.getVectorElementType() != MVT::i1) {
+    Intrinsic::ID IntID;
+    switch (Op->getNumOperands()) {
+    default:
+      return SDValue();
+    case 2:
+      IntID = Intrinsic::aarch64_sve_uzp_x2;
+      break;
+    case 4:
+      if (Subtarget->getMinSVEVectorSizeInBits() < 256 &&
+          OpVT.getScalarSizeInBits() == 64)
+        return SDValue();
+      IntID = Intrinsic::aarch64_sve_uzp_x4;
+      break;
+    }
+
+    SmallVector<SDValue, 5> Ops;
+    Ops.push_back(DAG.getTargetConstant(IntID, DL, MVT::i64));
+    Ops.append(Op->op_values().begin(), Op->op_values().end());
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op->getVTList(), Ops);
+  }
+
   if (Op->getNumOperands() != 2)
     return SDValue();
 
@@ -29445,6 +29491,30 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
   EVT OpVT = Op.getValueType();
   assert(OpVT.isScalableVector() &&
          "Expected scalable vector in LowerVECTOR_INTERLEAVE.");
+
+  // Are multi-register zip instructions available?
+  if (Subtarget->hasSME2() && Subtarget->isStreaming() &&
+      OpVT.getVectorElementType() != MVT::i1) {
+    Intrinsic::ID IntID;
+    switch (Op->getNumOperands()) {
+    default:
+      return SDValue();
+    case 2:
+      IntID = Intrinsic::aarch64_sve_zip_x2;
+      break;
+    case 4:
+      if (Subtarget->getMinSVEVectorSizeInBits() < 256 &&
+          OpVT.getScalarSizeInBits() == 64)
+        return SDValue();
+      IntID = Intrinsic::aarch64_sve_zip_x4;
+      break;
+    }
+
+    SmallVector<SDValue, 5> Ops;
+    Ops.push_back(DAG.getTargetConstant(IntID, DL, MVT::i64));
+    Ops.append(Op->op_values().begin(), Op->op_values().end());
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op->getVTList(), Ops);
+  }
 
   if (Op->getNumOperands() != 2)
     return SDValue();
