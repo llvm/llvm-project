@@ -8143,10 +8143,7 @@ static SDValue foldMaskedMerge(SDNode *Node, SelectionDAG &DAG,
     return SDValue();
 
   SDValue M, X, Y;
-  if (sd_match(Node, m_Or(m_OneUse(m_And(m_Value(M), m_Value(X))),
-                          m_OneUse(m_And(m_OneUse(m_Not(m_Deferred(M))),
-                                         m_Value(Y))))) ||
-      sd_match(Node,
+  if (sd_match(Node,
                m_Or(m_OneUse(m_And(m_OneUse(m_Not(m_Value(M))), m_Value(Y))),
                     m_OneUse(m_And(m_Deferred(M), m_Value(X)))))) {
     EVT VT = M.getValueType();
