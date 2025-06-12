@@ -507,6 +507,10 @@ static_assert(__is_constructible(void));
 // expected-error@-1 {{static assertion failed due to requirement '__is_constructible(void)'}} \
 // expected-note@-1 {{because it is a cv void type}}
 
+static_assert(__is_constructible(void, void));
+// expected-error@-1 {{static assertion failed due to requirement '__is_constructible(void, void)'}} \
+// expected-note@-1 {{because it is a cv void type}}
+
 static_assert(__is_constructible(const void));
 // expected-error@-1 {{static assertion failed due to requirement '__is_constructible(const void)'}} \
 // expected-note@-1 {{because it is a cv void type}}

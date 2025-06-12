@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -1986,9 +1987,11 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
       if (Arg.getKind() == TemplateArgument::ArgKind::Pack) {
         for (const auto &InnerArg : Arg.pack_elements())
           Args.push_back(InnerArg.getAsType());
-      }
-      if (Arg.getKind() == TemplateArgument::ArgKind::Type)
+      } else if (Arg.getKind() == TemplateArgument::ArgKind::Type)
         Args.push_back(Arg.getAsType());
+      assert((Arg.getKind() == TemplateArgument::ArgKind::Type ||
+              Arg.getKind() == TemplateArgument::ArgKind::Pack) &&
+             "Unexpected kind");
     }
     return {{Trait.value(), std::move(Args)}};
   }
@@ -2263,11 +2266,18 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
 static void DiagnoseNonConstructibleReason(
     Sema &SemaRef, SourceLocation Loc,
     const llvm::SmallVector<clang::QualType, 1> &Ts) {
-  for (const auto &ArgTy : Ts) {
-    if (ArgTy->isVoidType())
-      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::CVVoidType;
+  if (Ts.empty()) {
+    return;
   }
+
+  bool ContainsVoid = false;
+  for (const QualType &ArgTy : Ts) {
+    ContainsVoid |= ArgTy->isVoidType();
+  }
+
+  if (ContainsVoid)
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::CVVoidType;
 
   QualType T = Ts[0];
   if (T->isFunctionType())
