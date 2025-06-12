@@ -30,17 +30,18 @@ define i32 @masked_merge0(i32 %a0, i32 %a1, i32 %a2) {
 define i16 @masked_merge1(i16 %a0, i16 %a1, i16 %a2) {
 ; NOBMI-LABEL: masked_merge1:
 ; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    movl %esi, %eax
-; NOBMI-NEXT:    xorl %edx, %eax
-; NOBMI-NEXT:    andl %edi, %eax
-; NOBMI-NEXT:    xorl %edx, %eax
+; NOBMI-NEXT:    movl %edi, %eax
+; NOBMI-NEXT:    andl %edi, %esi
+; NOBMI-NEXT:    notl %eax
+; NOBMI-NEXT:    andl %edx, %eax
+; NOBMI-NEXT:    orl %esi, %eax
 ; NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NOBMI-NEXT:    retq
 ;
 ; BMI-LABEL: masked_merge1:
 ; BMI:       # %bb.0:
-; BMI-NEXT:    andnl %edx, %edi, %eax
 ; BMI-NEXT:    andl %edi, %esi
+; BMI-NEXT:    andnl %edx, %edi, %eax
 ; BMI-NEXT:    orl %esi, %eax
 ; BMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; BMI-NEXT:    retq
@@ -52,11 +53,20 @@ define i16 @masked_merge1(i16 %a0, i16 %a1, i16 %a2) {
 }
 
 define i8 @masked_merge2(i8 %a0, i8 %a1, i8 %a2) {
-; CHECK-LABEL: masked_merge2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
+; NOBMI-LABEL: masked_merge2:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    movl %esi, %eax
+; NOBMI-NEXT:    # kill: def $al killed $al killed $eax
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: masked_merge2:
+; BMI:       # %bb.0:
+; BMI-NEXT:    movl %edi, %eax
+; BMI-NEXT:    notb %al
+; BMI-NEXT:    andb %sil, %al
+; BMI-NEXT:    andb %dil, %sil
+; BMI-NEXT:    orb %sil, %al
+; BMI-NEXT:    retq
   %not = xor i8 %a0, -1
   %and0 = and i8 %not, %a1
   %and1 = and i8 %a1, %a0
