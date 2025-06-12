@@ -42,7 +42,7 @@ if(APPLE_EMBEDDED)
   endif()
 endif()
 
-if(DEFINED ROCM_PATH AND EXISTS ${ROCM_PATH})
+if(DEFINED ROCM_PATH)
   add_definitions(-DLLDB_ENABLE_AMDGPU_PLUGIN=1)
   list(APPEND LLDB_PLUGINS lldbServerPluginAMDGPU)
 else()

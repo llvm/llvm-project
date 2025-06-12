@@ -496,6 +496,8 @@ bool LLDBServerPluginAMDGPU::SetGPUBreakpoint(uint64_t addr,
   bp.gpu_breakpoint_id =
       std::nullopt; // No GPU breakpoint ID for ptrace version
 
+  // TODO: use memory read/write API from native process instead of ptrace
+  // directly.
   auto pid = GetNativeProcess()->GetID();
   // Read original bytes word by word
   std::vector<long> original_words;
@@ -522,19 +524,10 @@ bool LLDBServerPluginAMDGPU::SetGPUBreakpoint(uint64_t addr,
 }
 
 bool LLDBServerPluginAMDGPU::CreateGPUBreakpoint(uint64_t addr) {
-  // First get the architecture ID for this process
-  amd_dbgapi_architecture_id_t arch_id;
-  amd_dbgapi_status_t status = amd_dbgapi_get_architecture(0x02C, &arch_id);
-  if (status != AMD_DBGAPI_STATUS_SUCCESS) {
-    // Handle error
-    LLDB_LOGF(GetLog(GDBRLog::Plugin), "amd_dbgapi_get_architecture failed");
-    return false;
-  }
-
   // Get breakpoint instruction
   const uint8_t *bp_instruction;
-  status = amd_dbgapi_architecture_get_info(
-      arch_id, AMD_DBGAPI_ARCHITECTURE_INFO_BREAKPOINT_INSTRUCTION,
+  amd_dbgapi_status_t status = amd_dbgapi_architecture_get_info(
+      m_architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_BREAKPOINT_INSTRUCTION,
       sizeof(bp_instruction), &bp_instruction);
   if (status != AMD_DBGAPI_STATUS_SUCCESS) {
     LLDB_LOGF(GetLog(GDBRLog::Plugin),
@@ -545,8 +538,9 @@ bool LLDBServerPluginAMDGPU::CreateGPUBreakpoint(uint64_t addr) {
   // Get breakpoint instruction size
   size_t bp_size;
   status = amd_dbgapi_architecture_get_info(
-      arch_id, AMD_DBGAPI_ARCHITECTURE_INFO_BREAKPOINT_INSTRUCTION_SIZE,
-      sizeof(bp_size), &bp_size);
+      m_architecture_id,
+      AMD_DBGAPI_ARCHITECTURE_INFO_BREAKPOINT_INSTRUCTION_SIZE, sizeof(bp_size),
+      &bp_size);
   if (status != AMD_DBGAPI_STATUS_SUCCESS) {
     LLDB_LOGF(
         GetLog(GDBRLog::Plugin),

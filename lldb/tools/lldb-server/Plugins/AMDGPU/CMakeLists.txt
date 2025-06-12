@@ -1,9 +1,6 @@
 
-# Set ROCM paths
-set(ROCM_PATH "" CACHE PATH "Path to ROCm installation")
-
 message(STATUS "ROCM_PATH is set to: '${ROCM_PATH}'")
-if(NOT ROCM_PATH OR ROCM_PATH STREQUAL "")
+if(NOT ROCM_PATH)
     message(FATAL_ERROR "ROCM_PATH must be specified. Use -DROCM_PATH=/path/to/rocm")
 endif()
 
