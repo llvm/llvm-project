@@ -284,8 +284,9 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInstInGEPChainBase(
                                      {Builder.getInt32(0), FlatIndex}, FlatName,
                                      GEP.getNoWrapFlags());
 
-  // Store the new GEP in the map before replacing uses to avoid circular
-  // references
+  // Note: Old gep will become an invalid instruction after replaceAllUsesWith.
+  // Erase the old GEP in the map before to avoid invalid instructions
+  // and circular references.
   GEPChainMap.erase(&GEP);
 
   GEP.replaceAllUsesWith(FlatGEP);
