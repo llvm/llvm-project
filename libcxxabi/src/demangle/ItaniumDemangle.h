@@ -1766,6 +1766,8 @@ public:
 
   template<typename Fn> void match(Fn F) const { F(Basename, IsDtor, Variant); }
 
+  int getVariant() const { return Variant; }
+
   void printLeft(OutputBuffer &OB) const override {
     if (IsDtor)
       OB += "~";

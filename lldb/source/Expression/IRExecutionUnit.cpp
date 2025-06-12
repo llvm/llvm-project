@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/ABI.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/IR/Constants.h"
@@ -13,8 +15,13 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include "Plugins/SymbolFile/DWARF/DWARFBaseDIE.h"
+#include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
@@ -36,8 +43,10 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/lldb-defines.h"
 
 #include <optional>
+#include <variant>
 
 using namespace lldb_private;
 
@@ -769,6 +778,180 @@ private:
   lldb::addr_t m_best_internal_load_address = LLDB_INVALID_ADDRESS;
 };
 
+using namespace lldb_private::plugin::dwarf;
+
+struct StructorVariant {
+  std::variant<clang::CXXCtorType, clang::CXXDtorType> m_variant;
+};
+
+static llvm::Expected<StructorVariant>
+MakeStructorVariant(llvm::StringRef variant_num) {
+  if (variant_num.consume_front("D")) {
+    std::underlying_type_t<clang::CXXDtorType> dtor_type;
+    if (variant_num.consumeInteger(10, dtor_type))
+      return llvm::createStringError("Invalid ctor variant code.");
+
+    return StructorVariant{.m_variant =
+                               static_cast<clang::CXXDtorType>(dtor_type)};
+  }
+
+  if (variant_num.consume_front("C")) {
+    std::underlying_type_t<clang::CXXCtorType> ctor_type;
+    if (variant_num.consumeInteger(10, ctor_type))
+      return llvm::createStringError("Invalid dtor variant code.");
+
+    return StructorVariant{.m_variant =
+                               static_cast<clang::CXXCtorType>(ctor_type)};
+  }
+
+  return llvm::createStringError("Incorrect structor variant prefix.");
+}
+
+static int GetItaniumVariantCode(StructorVariant structor) {
+  if (auto const *ctor = std::get_if<clang::CXXCtorType>(&structor.m_variant)) {
+    switch (*ctor) {
+    case clang::CXXCtorType::Ctor_Complete:
+      return 1;
+    case clang::CXXCtorType::Ctor_Base:
+      return 2;
+    default:
+      llvm_unreachable("Unimplemented");
+    }
+  } else {
+    switch (std::get<clang::CXXDtorType>(structor.m_variant)) {
+    case clang::CXXDtorType::Dtor_Complete:
+      return 1;
+    case clang::CXXDtorType::Dtor_Base:
+      return 2;
+    default:
+      llvm_unreachable("Unimplemented");
+    }
+  }
+}
+
+// TODO:
+// 1. MS-ABI
+// 2. GCC-style dtor/ctor declarations
+// 3. Inheriting ctors
+// 4. Regular functions
+static std::string FindStructorLinkageName(DWARFDIE die,
+                                           StructorVariant structor_variant) {
+  auto *dwarf = die.GetDWARF();
+  assert(dwarf);
+
+  // Note, GCC only puts DW_AT_linkage_name (not DW_AT_name) on constructor
+  // decls Will those cases still work?
+  ConstString func_name(die.GetName());
+  assert(func_name);
+
+  SymbolContextList sc_list;
+  Module::LookupInfo lookup_info(
+      func_name,
+      lldb::FunctionNameType::eFunctionNameTypeMethod |
+          lldb::FunctionNameType::eFunctionNameTypeFull,
+      lldb::LanguageType::eLanguageTypeUnknown);
+  dwarf->FindFunctions(lookup_info, {}, true, sc_list);
+
+  llvm::DenseMap<int, std::string> variants;
+
+  for (auto const &sc : sc_list.SymbolContexts()) {
+    if (!sc.function)
+      continue;
+
+    auto func_die = dwarf->GetDIE(sc.function->GetID());
+    if (!func_die.IsValid())
+      continue;
+
+    auto spec_die = func_die.GetAttributeValueAsReferenceDIE(
+        llvm::dwarf::DW_AT_specification);
+    if (!spec_die.IsValid() || spec_die != die)
+      continue;
+
+    llvm::ItaniumPartialDemangler D;
+    if (D.partialDemangle(func_die.GetMangledName()))
+      continue;
+
+    const auto maybe_structor_kind = D.getCtorDtorVariant();
+    // TODO: this need not be true
+    assert(maybe_structor_kind);
+
+    variants.insert({*maybe_structor_kind, func_die.GetMangledName()});
+  }
+
+  auto itanium_code = GetItaniumVariantCode(structor_variant);
+  auto it = variants.find(itanium_code);
+  if (it != variants.end())
+    return it->second;
+
+  // If only C2 was emitted but we tried calling C1,
+  // we can probably (?) safely call C2.
+  if (itanium_code == 1 && variants.size() == 1)
+    if (auto retry = variants.find(2); retry != variants.end())
+      return retry->second;
+
+  return {};
+}
+
+static lldb::addr_t FindSpecialLinkageName(
+        LoadAddressResolver &resolver,ConstString name, llvm::StringRef symbol) {
+  uintptr_t module_ptr;
+  if (symbol.consumeInteger(0, module_ptr))
+    return LLDB_INVALID_ADDRESS;
+  
+  if (module_ptr == 0) {
+    // TODO: log this case. We should ever be putting a null module pointer
+    // here
+    return LLDB_INVALID_ADDRESS;
+  }
+  
+  auto *mod = (lldb_private::Module *)module_ptr;
+  assert(mod);
+  auto *sym = mod->GetSymbolFile();
+  assert(sym);
+  
+  if (!symbol.consume_front(":"))
+    return LLDB_INVALID_ADDRESS;
+  
+  lldb::user_id_t die_id;
+  if (symbol.consumeInteger(10, die_id))
+    return LLDB_INVALID_ADDRESS;
+  
+  auto *dwarf = llvm::dyn_cast<plugin::dwarf::SymbolFileDWARF>(sym);
+  if (!dwarf)
+    return LLDB_INVALID_ADDRESS;
+  
+  auto die = dwarf->GetDIE(die_id);
+  if (!die.IsValid())
+    return LLDB_INVALID_ADDRESS;
+  
+  // TODO: account for MS-ABI (where there are no ctor variants in the
+  // mangling)
+  if (!symbol.consume_front(":"))
+    return LLDB_INVALID_ADDRESS;
+  
+  auto structor_variant_or_err = MakeStructorVariant(symbol);
+  if (!structor_variant_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions),
+                   structor_variant_or_err.takeError(),
+                   "Failed to parse structor variant encoding for {1}: {0}",
+                   name.GetStringRef());
+    return LLDB_INVALID_ADDRESS;
+  }
+  
+  ConstString mangled(
+      FindStructorLinkageName(die, *structor_variant_or_err));
+  
+  Module::LookupInfo lookup_info(
+      mangled, lldb::FunctionNameType::eFunctionNameTypeAny,
+      lldb::LanguageType::eLanguageTypeC_plus_plus);
+  SymbolContextList sc_list;
+  dwarf->FindFunctions(lookup_info, {}, false, sc_list);
+  if (auto load_addr = resolver.Resolve(sc_list))
+    return *load_addr;
+
+  return LLDB_INVALID_ADDRESS;
+}
+
 lldb::addr_t
 IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
                                const lldb_private::SymbolContext &sc,
@@ -795,6 +978,9 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   function_options.include_inlines = false;
 
   for (const ConstString &name : names) {
+    if (auto ref = name.GetStringRef(); ref.consume_front("$__lldb_func_"))
+      return FindSpecialLinkageName(resolver, name, ref);
+
     // The lookup order here is as follows:
     // 1) Functions in `sc.module_sp`
     // 2) Functions in the preferred modules list
