@@ -3565,12 +3565,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                                              OldBinOp, OldBinOp->getName(),
                                              II->getIterator()));
       }
-      // rev(binop BO0Splat, rev(Y)) --> binop BO0Splat, Y
-      if (match(BO1, m_VecReverse(m_Value(Y))) && isSplatValue(BO0))
-        return replaceInstUsesWith(CI,
-                                   BinaryOperator::CreateWithCopiedFlags(
-                                       OldBinOp->getOpcode(), BO0, Y, OldBinOp,
-                                       OldBinOp->getName(), II->getIterator()));
     }
     // rev(unop rev(X)) --> unop X
     if (match(Vec, m_OneUse(m_UnOp(m_VecReverse(m_Value(X)))))) {
