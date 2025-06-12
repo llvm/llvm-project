@@ -5242,25 +5242,25 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   }
 
   // Extract constant bits from a subvector's source.
-  if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
-    // TODO - support extract_subvector through bitcasts.
-    if (EltSizeInBits != VT.getScalarSizeInBits())
-      return false;
+  if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      getTargetConstantBitsFromNode(Op.getOperand(0), EltSizeInBits, UndefElts,
+                                    EltBits, AllowWholeUndefs,
+                                    AllowPartialUndefs)) {
+    EVT SrcVT = Op.getOperand(0).getValueType();
+    unsigned NumSrcElts = SrcVT.getSizeInBits() / EltSizeInBits;
+    unsigned NumSubElts = VT.getSizeInBits() / EltSizeInBits;
+    unsigned BaseOfs = Op.getConstantOperandVal(1) * VT.getScalarSizeInBits();
+    unsigned BaseIdx = BaseOfs / EltSizeInBits;
+    assert((SrcVT.getSizeInBits() % EltSizeInBits) == 0 &&
+           (VT.getSizeInBits() % EltSizeInBits) == 0 &&
+           (BaseOfs % EltSizeInBits) == 0 && "Bad subvector index");
 
-    if (getTargetConstantBitsFromNode(Op.getOperand(0), EltSizeInBits,
-                                      UndefElts, EltBits, AllowWholeUndefs,
-                                      AllowPartialUndefs)) {
-      EVT SrcVT = Op.getOperand(0).getValueType();
-      unsigned NumSrcElts = SrcVT.getVectorNumElements();
-      unsigned NumSubElts = VT.getVectorNumElements();
-      unsigned BaseIdx = Op.getConstantOperandVal(1);
-      UndefElts = UndefElts.extractBits(NumSubElts, BaseIdx);
-      if ((BaseIdx + NumSubElts) != NumSrcElts)
-        EltBits.erase(EltBits.begin() + BaseIdx + NumSubElts, EltBits.end());
-      if (BaseIdx != 0)
-        EltBits.erase(EltBits.begin(), EltBits.begin() + BaseIdx);
-      return true;
-    }
+    UndefElts = UndefElts.extractBits(NumSubElts, BaseIdx);
+    if ((BaseIdx + NumSubElts) != NumSrcElts)
+      EltBits.erase(EltBits.begin() + BaseIdx + NumSubElts, EltBits.end());
+    if (BaseIdx != 0)
+      EltBits.erase(EltBits.begin(), EltBits.begin() + BaseIdx);
+    return true;
   }
 
   // Extract constant bits from shuffle node sources.
