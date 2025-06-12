@@ -48,9 +48,6 @@ int CharacterConverter::push(char8_t utf8_byte) {
     }
     // Invalid byte -> reset mbstate
     else {
-      state->partial = static_cast<char32_t>(0);
-      state->bytes_processed = 0;
-      state->total_bytes = 0;
       return -1;
     }
     state->partial = static_cast<char32_t>(utf8_byte);
@@ -78,8 +75,12 @@ utf_ret<char32_t> CharacterConverter::pop_utf32() {
   utf_ret<char32_t> utf32;
   utf32.error = 0;
   utf32.out = state->partial;
-  if (!isComplete())
+  // if pop is called too early
+  if (!isComplete()) {
     utf32.error = -1;
+    return utf32;
+  }
+  // reset if successful pop
   state->bytes_processed = 0;
   state->total_bytes = 0;
   state->partial = static_cast<char32_t>(0);

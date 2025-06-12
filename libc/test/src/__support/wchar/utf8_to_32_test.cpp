@@ -174,3 +174,20 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoValidTwoBytes) {
   ASSERT_EQ(wch.error, 0);
   ASSERT_EQ(static_cast<int>(wch.out), 460);
 }
+
+TEST(LlvmLibcCharacterConverterUTF8To32Test, InvlaidPop) {
+  LIBC_NAMESPACE::internal::mbstate state;
+  state.bytes_processed = 0;
+  state.total_bytes = 0;
+  LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
+  const char ch[2] = {static_cast<char>(0xC2), static_cast<char>(0x8E)};
+  int err = char_conv.push(static_cast<char8_t>(ch[0]));
+  ASSERT_EQ(err, 0);
+  LIBC_NAMESPACE::internal::utf_ret<char32_t> wch = char_conv.pop_utf32();
+  ASSERT_EQ(wch.error, -1); // Should fail since we have not read enough bytes
+  err = char_conv.push(static_cast<char8_t>(ch[1]));
+  ASSERT_EQ(err, 0);
+  wch = char_conv.pop_utf32();
+  ASSERT_EQ(wch.error, 0); 
+  ASSERT_EQ(static_cast<int>(wch.out), 142);
+}
