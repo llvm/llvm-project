@@ -96,6 +96,104 @@ TEST_F(AArch64GISelMITest, TestFPClassCstVecNegZero) {
   EXPECT_EQ(true, Known.SignBit);
 }
 
+TEST_F(AArch64GISelMITest, TestFPClassCstZeroFPExt) {
+  StringRef MIRString = R"(
+   %c0:_(s32) = G_FCONSTANT float 0.0
+   %ext:_(s64) = nnan ninf G_FPEXT %c0
+   %copy_vector:_(s64) = COPY %ext
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcZero | fcNormal, Known.KnownFPClasses);
+  EXPECT_EQ(std::nullopt, Known.SignBit);
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassCstVecZeroFPExt) {
+  StringRef MIRString = R"(
+   %c0:_(s32) = G_FCONSTANT float 0.0
+   %c1:_(s32) = G_FCONSTANT float 0.0
+   %c2:_(s32) = G_FCONSTANT float 0.0
+   %vector:_(<3 x s32>) = G_BUILD_VECTOR %c0, %c1, %c2
+   %ext:_(<3 x s64>) = nnan ninf G_FPEXT %vector
+   %copy_vector:_(<3 x s64>) = COPY %ext
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcZero | fcNormal, Known.KnownFPClasses);
+  EXPECT_EQ(std::nullopt, Known.SignBit);
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassCstZeroFPTrunc) {
+  StringRef MIRString = R"(
+   %c0:_(s64) = G_FCONSTANT double 0.0
+   %trunc:_(s32) = nnan ninf G_FPTRUNC %c0
+   %copy_vector:_(s32) = COPY %trunc
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcZero | fcPosSubnormal | fcPosNormal, Known.KnownFPClasses);
+  EXPECT_EQ(false, Known.SignBit);
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassCstVecZeroFPTrunc) {
+  StringRef MIRString = R"(
+   %c0:_(s64) = G_FCONSTANT double 0.0
+   %c1:_(s64) = G_FCONSTANT double 0.0
+   %c2:_(s64) = G_FCONSTANT double 0.0
+   %vector:_(<3 x s64>) = G_BUILD_VECTOR %c0, %c1, %c2
+   %trunc:_(<3 x s32>) = nnan ninf G_FPTRUNC %vector
+   %copy_vector:_(<3 x s32>) = COPY %trunc
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcZero | fcPosSubnormal | fcPosNormal, Known.KnownFPClasses);
+  EXPECT_EQ(false, Known.SignBit);
+}
+
 TEST_F(AArch64GISelMITest, TestFPClassSelectPos0) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF

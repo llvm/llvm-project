@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -std=c++11 -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -std=c++11 \
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 \
 // RUN:  -DNO_INTEROP_T_DEF -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -std=c++11 -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -Wno-strict-prototypes -DC -x c -o - %s
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -Wno-strict-prototypes -DC -x c -o - %s
 // RUN: %clang_cc1 -verify -triple x86_64-pc-windows-msvc -fms-compatibility \
-// RUN:  -fopenmp -Wno-strict-prototypes -DC -DWIN -x c -o - %s
+// RUN:  -fopenmp -fopenmp-version=60 -Wno-strict-prototypes -DC -DWIN -x c -o - %s
 
 #ifdef NO_INTEROP_T_DEF
 void foo_v1(float *, void *);
@@ -114,6 +114,16 @@ void vararg_bar2(const char *fmt) { return; }
    match(construct={dispatch}, device={arch(ppc)}),          \
    adjust_args(need_device_ptr:AAA) adjust_args(nothing:AAA)
 
+// expected-error@+3 {{'adjust_arg' argument 'AAA' used in multiple clauses}}
+#pragma omp declare variant(foo_v1)                          \
+   match(construct={dispatch}, device={arch(arm)})           \
+   adjust_args(need_device_ptr:AAA,BBB) adjust_args(need_device_addr:AAA)
+
+// expected-error@+3 {{'adjust_arg' argument 'AAA' used in multiple clauses}}
+#pragma omp declare variant(foo_v1)                          \
+   match(construct={dispatch}, device={arch(ppc)}),          \
+   adjust_args(need_device_addr:AAA) adjust_args(nothing:AAA)
+
 // expected-error@+2 {{use of undeclared identifier 'J'}}
 #pragma omp declare variant(foo_v1)                          \
    adjust_args(nothing:J)                                    \
@@ -186,12 +196,12 @@ void vararg_bar2(const char *fmt) { return; }
 // expected-error@+1 {{variant in '#pragma omp declare variant' with type 'void (float *, float *, int *, omp_interop_t)' (aka 'void (float *, float *, int *, void *)') is incompatible with type 'void (float *, float *, int *)'}}
 #pragma omp declare variant(foo_v4) match(construct={dispatch})
 
-// expected-error@+3 {{incorrect adjust_args type, expected 'need_device_ptr' or 'nothing'}}
+// expected-error@+3 {{incorrect 'adjust_args' type, expected 'need_device_ptr', 'need_device_addr', or 'nothing'}}
 #pragma omp declare variant(foo_v1)                        \
    match(construct={dispatch}, device={arch(arm)})         \
    adjust_args(badaaop:AAA,BBB)
 
-// expected-error@+3 {{incorrect adjust_args type, expected 'need_device_ptr' or 'nothing'}}
+// expected-error@+3 {{incorrect 'adjust_args' type, expected 'need_device_ptr', 'need_device_addr', or 'nothing'}}
 #pragma omp declare variant(foo_v1)                        \
    match(construct={dispatch}, device={arch(arm)})         \
    adjust_args(badaaop AAA,BBB)

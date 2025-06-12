@@ -34,6 +34,12 @@ namespace {
 class ScalarExprEmitter;
 } // namespace
 
+namespace mlir {
+namespace acc {
+class LoopOp;
+} // namespace acc
+} // namespace mlir
+
 namespace clang::CIRGen {
 
 class CIRGenFunction : public CIRGenTypeCache {
@@ -665,6 +671,8 @@ private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
                               clang::CharUnits alignment);
 
+  CIRGenCallee emitDirectCallee(const GlobalDecl &gd);
+
 public:
   Address emitAddrOfFieldStorage(Address base, const FieldDecl *field,
                                  llvm::StringRef fieldName,
@@ -710,6 +718,9 @@ public:
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
+
+  RValue emitBuiltinExpr(const clang::GlobalDecl &gd, unsigned builtinID,
+                         const clang::CallExpr *e, ReturnValueSlot returnValue);
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
@@ -1076,6 +1087,12 @@ private:
   void emitOpenACCClauses(ComputeOp &op, LoopOp &loopOp,
                           OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
                           ArrayRef<const OpenACCClause *> clauses);
+
+  // The OpenACC LoopOp requires that we have auto, seq, or independent on all
+  // LoopOp operations for the 'none' device type case. This function checks if
+  // the LoopOp has one, else it updates it to have one.
+  void updateLoopOpParallelism(mlir::acc::LoopOp &op, bool isOrphan,
+                               OpenACCDirectiveKind dk);
 
 public:
   mlir::LogicalResult

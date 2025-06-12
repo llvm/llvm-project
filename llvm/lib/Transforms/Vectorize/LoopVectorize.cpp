@@ -505,9 +505,6 @@ public:
   /// Fix the vectorized code, taking care of header phi's, and more.
   void fixVectorizedLoop(VPTransformState &State);
 
-  // Return true if any runtime check is added.
-  bool areSafetyChecksAdded() { return AddedSafetyChecks; }
-
   /// Fix the non-induction PHIs in \p Plan.
   void fixNonInductionPHIs(VPTransformState &State);
 
@@ -619,9 +616,6 @@ protected:
 
   /// The profitablity analysis.
   LoopVectorizationCostModel *Cost;
-
-  // Record whether runtime checks are added.
-  bool AddedSafetyChecks = false;
 
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
@@ -772,7 +766,7 @@ protected:
 /// Look for a meaningful debug location on the instruction or its operands.
 static DebugLoc getDebugLocFromInstOrOperands(Instruction *I) {
   if (!I)
-    return DebugLoc();
+    return DebugLoc::getUnknown();
 
   DebugLoc Empty;
   if (I->getDebugLoc() != Empty)
@@ -1777,6 +1771,9 @@ class GeneratedRTChecks {
   /// they have been used.
   Value *MemRuntimeCheckCond = nullptr;
 
+  /// True if any checks have been added.
+  bool AddedAnyChecks = false;
+
   DominatorTree *DT;
   LoopInfo *LI;
   TargetTransformInfo *TTI;
@@ -1881,13 +1878,15 @@ public:
     if (SCEVCheckBlock) {
       SCEVCheckBlock->getTerminator()->moveBefore(
           Preheader->getTerminator()->getIterator());
-      new UnreachableInst(Preheader->getContext(), SCEVCheckBlock);
+      auto *UI = new UnreachableInst(Preheader->getContext(), SCEVCheckBlock);
+      UI->setDebugLoc(DebugLoc::getTemporary());
       Preheader->getTerminator()->eraseFromParent();
     }
     if (MemCheckBlock) {
       MemCheckBlock->getTerminator()->moveBefore(
           Preheader->getTerminator()->getIterator());
-      new UnreachableInst(Preheader->getContext(), MemCheckBlock);
+      auto *UI = new UnreachableInst(Preheader->getContext(), MemCheckBlock);
+      UI->setDebugLoc(DebugLoc::getTemporary());
       Preheader->getTerminator()->eraseFromParent();
     }
 
@@ -2036,9 +2035,9 @@ public:
     if (AddBranchWeights)
       setBranchWeights(BI, SCEVCheckBypassWeights, /*IsExpected=*/false);
     ReplaceInstWithInst(SCEVCheckBlock->getTerminator(), &BI);
-
     // Mark the check as used, to prevent it from being removed during cleanup.
     SCEVCheckCond = nullptr;
+    AddedAnyChecks = true;
     return SCEVCheckBlock;
   }
 
@@ -2068,8 +2067,12 @@ public:
 
     // Mark the check as used, to prevent it from being removed during cleanup.
     MemRuntimeCheckCond = nullptr;
+    AddedAnyChecks = true;
     return MemCheckBlock;
   }
+
+  /// Return true if any runtime checks have been added
+  bool hasChecks() const { return AddedAnyChecks; }
 };
 } // namespace
 
@@ -2457,7 +2460,6 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
   assert((!Cost->OptForSize ||
           Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled) &&
          "Cannot SCEV check stride or overflow when optimizing for size");
-  AddedSafetyChecks = true;
 
   introduceCheckBlockInVPlan(SCEVCheckBlock);
   return SCEVCheckBlock;
@@ -2491,9 +2493,6 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
                 "(e.g., adding 'restrict').";
     });
   }
-
-
-  AddedSafetyChecks = true;
 
   introduceCheckBlockInVPlan(MemCheckBlock);
   return MemCheckBlock;
@@ -3167,10 +3166,9 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   if (hasIrregularType(ScalarTy, DL))
     return false;
 
-  // For scalable vectors, the only interleave factor currently supported
-  // must be power of 2 since we require the (de)interleave2 intrinsics
-  // instead of shufflevectors.
-  if (VF.isScalable() && !isPowerOf2_32(InterleaveFactor))
+  // For scalable vectors, the interleave factors must be <= 8 since we require
+  // the (de)interleaveN intrinsics instead of shufflevectors.
+  if (VF.isScalable() && InterleaveFactor > 8)
     return false;
 
   // If the group involves a non-integral pointer, we may not be able to
@@ -8709,10 +8707,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       bool Result = (VF.isVector() && // Query is illegal for VF == 1
                      CM.getWideningDecision(IG->getInsertPos(), VF) ==
                          LoopVectorizationCostModel::CM_Interleave);
-      // For scalable vectors, the only interleave factor currently supported
-      // must be power of 2 since we require the (de)interleave2 intrinsics
-      // instead of shufflevectors.
-      assert((!Result || !VF.isScalable() || isPowerOf2_32(IG->getFactor())) &&
+      // For scalable vectors, the interleave factors must be <= 8 since we
+      // require the (de)interleaveN intrinsics instead of shufflevectors.
+      assert((!Result || !VF.isScalable() || IG->getFactor() <= 8) &&
              "Unsupported interleave factor for scalable vectors");
       return Result;
     };
@@ -10285,7 +10282,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         }
         ++LoopsEpilogueVectorized;
 
-        if (!MainILV.areSafetyChecksAdded())
+        if (!Checks.hasChecks())
           DisableRuntimeUnroll = true;
       } else {
         InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
@@ -10297,7 +10294,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         // Add metadata to disable runtime unrolling a scalar loop when there
         // are no runtime checks about strides and memory. A scalar loop that is
         // rarely used is not worth unrolling.
-        if (!LB.areSafetyChecksAdded())
+        if (!Checks.hasChecks())
           DisableRuntimeUnroll = true;
       }
       // Report the vectorization decision.
