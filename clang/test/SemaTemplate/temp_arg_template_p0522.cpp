@@ -7,7 +7,8 @@
 template<template<int> typename> struct Ti; // #Ti
 template<template<int...> typename> struct TPi; // #TPi
 template<template<int, int...> typename> struct TiPi;
-template<template<int..., int...> typename> struct TPiPi; // FIXME: Why is this not ill-formed?
+template<template<int..., int...> typename> struct TPiPi;
+// expected-error@-1 {{template parameter pack must be the last template parameter}}
 
 template<typename T, template<T> typename> struct tT0; // #tT0
 template<template<typename T, T> typename> struct Tt0; // #Tt0

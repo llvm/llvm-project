@@ -26,8 +26,8 @@ for.body:                                         ; preds = %for.body, %for.body
   %3 = load i32, ptr addrspace(1) %add.ptr2, align 4
   %add.ptr3 = getelementptr inbounds i8, ptr addrspace(1) %main.addr.011, i32 %add.ptr4.sum
   %4 = load i32, ptr addrspace(1) %add.ptr3, align 4
-  %add.ptr6 = getelementptr inbounds i8, ptr addrspace(1) %main.addr.011, i32 undef
-  br i1 undef, label %for.end, label %for.body
+  %add.ptr6 = getelementptr inbounds i8, ptr addrspace(1) %main.addr.011, i32 0
+  br i1 poison, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body, %entry
   ret void
@@ -57,20 +57,20 @@ for.body:                                         ; preds = %for.body, %for.body
   %3 = load i32, ptr addrspace(1) %add.ptr2, align 4
   %add.ptr3 = getelementptr inbounds i8, ptr addrspace(1) %main.addr.011, i32 %add.ptr4.sum
   %4 = load i32, ptr addrspace(1) %add.ptr3, align 4
-  %add.ptr6 = getelementptr inbounds i8, ptr addrspace(1) %main.addr.011, i32 undef
-  br i1 undef, label %for.end, label %for.body
+  %add.ptr6 = getelementptr inbounds i8, ptr addrspace(1) %main.addr.011, i32 0
+  br i1 poison, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-; COMMON-LABEL: {{^}}branch_undef:
+; COMMON-LABEL: {{^}}branch_poison:
 ; SI: s_cbranch_scc1
 ; SI: s_cbranch_scc1
 ; SI: s_endpgm
-define amdgpu_kernel void @branch_undef(ptr addrspace(1) nocapture %main, i32 %main_stride) #0 {
+define amdgpu_kernel void @branch_poison(ptr addrspace(1) nocapture %main, i32 %main_stride) #0 {
 entry:
-  br i1 undef, label %for.end, label %for.body.lr.ph
+  br i1 poison, label %for.end, label %for.body.lr.ph
 
 for.body.lr.ph:                                   ; preds = %entry
   %add.ptr.sum = shl i32 %main_stride, 1
@@ -89,8 +89,8 @@ for.body:                                         ; preds = %for.body, %for.body
   %3 = load i32, ptr addrspace(1) %add.ptr2, align 4
   %add.ptr3 = getelementptr inbounds i8, ptr addrspace(1) %main.addr.011, i32 %add.ptr4.sum
   %4 = load i32, ptr addrspace(1) %add.ptr3, align 4
-  %add.ptr6 = getelementptr inbounds i8, ptr addrspace(1) %main.addr.011, i32 undef
-  br i1 undef, label %for.end, label %for.body
+  %add.ptr6 = getelementptr inbounds i8, ptr addrspace(1) %main.addr.011, i32 0
+  br i1 poison, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body, %entry
   ret void

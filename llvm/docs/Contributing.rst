@@ -129,16 +129,10 @@ review by 'ping'ing the GitHub PR with "Ping" in a comment. The common courtesy 
 is once a week. Please remember that you are asking for valuable time from
 other professional developers.
 
-After your PR is approved, ensure that:
-
-  * The PR title and description describe the final changes. These will be used
-    as the title and message of the final squashed commit. The titles and
-    messages of commits in the PR will **not** be used.
-  * You have set a valid email address in your GitHub account, see :ref:`github-email-address`.
-
-Now you can merge your PR. If you do not have the ability to merge the PR, ask your
-reviewers to merge it on your behalf. You must do this explicitly, as reviewers'
-default assumption is that you are able to merge your own PR.
+After your PR is approved, you can merge it. If you do not have the ability to
+merge the PR, ask your reviewers to merge it on your behalf. You must do this
+explicitly, as reviewers' default assumption is that you are able to merge your
+own PR.
 
 For more information on LLVM's code-review process, please see
 :doc:`CodeReview`.
@@ -147,6 +141,10 @@ For more information on LLVM's code-review process, please see
 
 For developers to commit changes from Git
 -----------------------------------------
+
+.. note::
+   See also :ref:`GitHub <github-reviews>` for more details on merging your changes
+   into LLVM project monorepo.
 
 Once a patch is reviewed, you can select the "Squash and merge" button in the
 GitHub web interface.

@@ -17,7 +17,7 @@ end function
 ! CHECK-NEXT:    %[[A_GT_B:.*]] = arith.cmpi sgt, %[[A_LD]], %[[B_LD]] : i32
 ! CHECK-NEXT:    %[[SELECT:.*]] = arith.select %[[A_GT_B]], %[[A_LD]], %[[B_LD]] : i32
 ! CHECK-NEXT:    hlfir.assign %[[SELECT]] to %[[RES_DECL]]#0 : i32, !fir.ref<i32>
-! CHECK-NEXT:    %[[RES_LD:.*]] = fir.load %[[RES_DECL]]#1 : !fir.ref<i32>
+! CHECK-NEXT:    %[[RES_LD:.*]] = fir.load %[[RES_DECL]]#0 : !fir.ref<i32>
 ! CHECK-NEXT:    return %[[RES_LD]] : i32
 ! CHECK-NEXT:  }
 
@@ -49,7 +49,7 @@ end function
 ! CHECK:             fir.result %[[VAL_12]] : i32
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_17:.*]] to %[[VAL_7]]#0 : i32, !fir.ref<i32>
-! CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_7]]#1 : !fir.ref<i32>
+! CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<i32>
 ! CHECK:           return %[[VAL_18]] : i32
 ! CHECK:         }
 
@@ -92,7 +92,7 @@ end function
 ! CHECK:             fir.result %[[VAL_25:.*]] : i32
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_26:.*]] to %[[VAL_9]]#0 : i32, !fir.ref<i32>
-! CHECK:           %[[VAL_27:.*]] = fir.load %[[VAL_9]]#1 : !fir.ref<i32>
+! CHECK:           %[[VAL_27:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i32>
 ! CHECK:           return %[[VAL_27]] : i32
 ! CHECK:         }
 
@@ -125,7 +125,7 @@ end function
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_20:.*]] to %[[VAL_11]]#0 : !hlfir.expr<42xi32>, !fir.ref<!fir.array<42xi32>>
 ! CHECK:           hlfir.destroy %[[VAL_20]] : !hlfir.expr<42xi32>
-! CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_11]]#1 : !fir.ref<!fir.array<42xi32>>
+! CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<!fir.array<42xi32>>
 ! CHECK:           return %[[VAL_21]] : !fir.array<42xi32>
 ! CHECK:         }
 
@@ -170,7 +170,7 @@ end function
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_28:.*]] to %[[VAL_13]]#0 : !hlfir.expr<10xi32>, !fir.ref<!fir.array<10xi32>>
 ! CHECK:           hlfir.destroy %[[VAL_28]] : !hlfir.expr<10xi32>
-! CHECK:           %[[VAL_29:.*]] = fir.load %[[VAL_13]]#1 : !fir.ref<!fir.array<10xi32>>
+! CHECK:           %[[VAL_29:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<!fir.array<10xi32>>
 ! CHECK:           return %[[VAL_29]] : !fir.array<10xi32>
 ! CHECK:         }
 
@@ -190,7 +190,7 @@ end function
 ! CHECK:           %[[VAL_8:.*]] = arith.cmpi slt, %[[VAL_6]], %[[VAL_7]] : i32
 ! CHECK:           %[[VAL_9:.*]] = arith.select %[[VAL_8]], %[[VAL_6]], %[[VAL_7]] : i32
 ! CHECK:           hlfir.assign %[[VAL_9]] to %[[VAL_5]]#0 : i32, !fir.ref<i32>
-! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<i32>
+! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:           return %[[VAL_10]] : i32
 ! CHECK:         }
 
@@ -222,7 +222,7 @@ end function
 ! CHECK:             fir.result %[[VAL_12]] : i32
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_17:.*]] to %[[VAL_7]]#0 : i32, !fir.ref<i32>
-! CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_7]]#1 : !fir.ref<i32>
+! CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<i32>
 ! CHECK:           return %[[VAL_18]] : i32
 ! CHECK:         }
 
@@ -265,7 +265,7 @@ end function
 ! CHECK:             fir.result %[[VAL_25:.*]] : i32
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_26:.*]] to %[[VAL_9]]#0 : i32, !fir.ref<i32>
-! CHECK:           %[[VAL_27:.*]] = fir.load %[[VAL_9]]#1 : !fir.ref<i32>
+! CHECK:           %[[VAL_27:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i32>
 ! CHECK:           return %[[VAL_27]] : i32
 ! CHECK:         }
 
@@ -298,7 +298,7 @@ end function
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_20:.*]] to %[[VAL_11]]#0 : !hlfir.expr<42xi32>, !fir.ref<!fir.array<42xi32>>
 ! CHECK:           hlfir.destroy %[[VAL_20]] : !hlfir.expr<42xi32>
-! CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_11]]#1 : !fir.ref<!fir.array<42xi32>>
+! CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<!fir.array<42xi32>>
 ! CHECK:           return %[[VAL_21]] : !fir.array<42xi32>
 ! CHECK:         }
 
@@ -343,7 +343,7 @@ end function
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_28:.*]] to %[[VAL_13]]#0 : !hlfir.expr<10xi32>, !fir.ref<!fir.array<10xi32>>
 ! CHECK:           hlfir.destroy %[[VAL_28]] : !hlfir.expr<10xi32>
-! CHECK:           %[[VAL_29:.*]] = fir.load %[[VAL_13]]#1 : !fir.ref<!fir.array<10xi32>>
+! CHECK:           %[[VAL_29:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<!fir.array<10xi32>>
 ! CHECK:           return %[[VAL_29]] : !fir.array<10xi32>
 ! CHECK:         }
 
@@ -357,14 +357,14 @@ end function
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.logical<4> {bindc_name = "associated_simple", uniq_name = "_QFassociated_simpleEassociated_simple"}
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFassociated_simpleEassociated_simple"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassociated_simpleEpointer"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
-! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:           %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.ptr<i32>) -> i64
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_8:.*]] = arith.cmpi ne, %[[VAL_6]], %[[VAL_7]] : i64
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i1) -> !fir.logical<4>
 ! CHECK:           hlfir.assign %[[VAL_9]] to %[[VAL_2]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
-! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_2]]#1 : !fir.ref<!fir.logical<4>>
+! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:           return %[[VAL_10]] : !fir.logical<4>
 ! CHECK:         }
 
@@ -381,14 +381,14 @@ end function
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFassociated_targetEassociated_target"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassociated_targetEpointer"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFassociated_targetEtarget"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_6:.*]] = fir.embox %[[VAL_5]]#1 : (!fir.ref<i32>) -> !fir.box<i32>
-! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_4]]#1 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:           %[[VAL_6:.*]] = fir.embox %[[VAL_5]]#0 : (!fir.ref<i32>) -> !fir.box<i32>
+! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.ptr<i32>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_6]] : (!fir.box<i32>) -> !fir.box<none>
 ! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranAPointerIsAssociatedWith(%[[VAL_8]], %[[VAL_9]]) fastmath<contract> : (!fir.box<none>, !fir.box<none>) -> i1
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i1) -> !fir.logical<4>
 ! CHECK:           hlfir.assign %[[VAL_11]] to %[[VAL_3]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
-! CHECK:           %[[VAL_12:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.logical<4>>
+! CHECK:           %[[VAL_12:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:           return %[[VAL_12]] : !fir.logical<4>
 ! CHECK:         }
 
@@ -405,14 +405,14 @@ end function
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFassociated_pointerEassociated_pointer"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassociated_pointerEpointer"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassociated_pointerEtarget"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
-! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<!fir.box<!fir.ptr<i32>>>
-! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_4]]#1 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.ptr<i32>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.ptr<i32>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranAPointerIsAssociatedWith(%[[VAL_8]], %[[VAL_9]]) fastmath<contract> : (!fir.box<none>, !fir.box<none>) -> i1
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i1) -> !fir.logical<4>
 ! CHECK:           hlfir.assign %[[VAL_11]] to %[[VAL_3]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
-! CHECK:           %[[VAL_12:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.logical<4>>
+! CHECK:           %[[VAL_12:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:           return %[[VAL_12]] : !fir.logical<4>
 ! CHECK:         }
 
@@ -429,14 +429,14 @@ end function
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFassociated_arrayEassociated_array"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassociated_arrayEpointer"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassociated_arrayEtarget"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_4]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranAPointerIsAssociatedWith(%[[VAL_8]], %[[VAL_9]]) fastmath<contract> : (!fir.box<none>, !fir.box<none>) -> i1
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i1) -> !fir.logical<4>
 ! CHECK:           hlfir.assign %[[VAL_11]] to %[[VAL_3]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
-! CHECK:           %[[VAL_12:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.logical<4>>
+! CHECK:           %[[VAL_12:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:           return %[[VAL_12]] : !fir.logical<4>
 ! CHECK:         }
 
@@ -486,7 +486,7 @@ end function
 ! CHECK:           %[[VAL_38:.*]] = arith.ori %[[VAL_37]], %[[VAL_36]] : i32
 ! CHECK:           %[[VAL_39:.*]] = arith.select %[[VAL_21]], %[[VAL_8]], %[[VAL_38]] : i32
 ! CHECK:           hlfir.assign %[[VAL_39]] to %[[VAL_5]]#0 : i32, !fir.ref<i32>
-! CHECK:           %[[VAL_40:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<i32>
+! CHECK:           %[[VAL_40:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:           return %[[VAL_40]] : i32
 ! CHECK:         }
 
@@ -544,7 +544,7 @@ end function
 ! CHECK:           %[[VAL_42:.*]] = arith.ori %[[VAL_41]], %[[VAL_40]] : i32
 ! CHECK:           %[[VAL_43:.*]] = arith.select %[[VAL_25]], %[[VAL_8]], %[[VAL_42]] : i32
 ! CHECK:           hlfir.assign %[[VAL_43]] to %[[VAL_5]]#0 : i32, !fir.ref<i32>
-! CHECK:           %[[VAL_44:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<i32>
+! CHECK:           %[[VAL_44:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:           return %[[VAL_44]] : i32
 ! CHECK:         }
 
@@ -610,7 +610,7 @@ end function
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_53:.*]] to %[[VAL_9]]#0 : !hlfir.expr<42xi32>, !fir.ref<!fir.array<42xi32>>
 ! CHECK:           hlfir.destroy %[[VAL_53]] : !hlfir.expr<42xi32>
-! CHECK:           %[[VAL_54:.*]] = fir.load %[[VAL_9]]#1 : !fir.ref<!fir.array<42xi32>>
+! CHECK:           %[[VAL_54:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<!fir.array<42xi32>>
 ! CHECK:           return %[[VAL_54]] : !fir.array<42xi32>
 ! CHECK:         }
 
@@ -678,7 +678,7 @@ end function
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_51:.*]] to %[[VAL_9]]#0 : !hlfir.expr<42xi32>, !fir.ref<!fir.array<42xi32>>
 ! CHECK:           hlfir.destroy %[[VAL_51]] : !hlfir.expr<42xi32>
-! CHECK:           %[[VAL_52:.*]] = fir.load %[[VAL_9]]#1 : !fir.ref<!fir.array<42xi32>>
+! CHECK:           %[[VAL_52:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<!fir.array<42xi32>>
 ! CHECK:           return %[[VAL_52]] : !fir.array<42xi32>
 ! CHECK:         }
 
@@ -726,7 +726,7 @@ end subroutine
 ! CHECK:           %[[VAL_27:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_20]], %[[VAL_23]], %[[VAL_26]] {fir.must_be_heap = true, uniq_name = "_QFallocatables_testEa.alloc"}
 ! CHECK:           %[[VAL_28:.*]] = fir.shape %[[VAL_20]], %[[VAL_23]], %[[VAL_26]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[VAL_29:.*]] = fir.embox %[[VAL_27]](%[[VAL_28]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
-! CHECK:           fir.store %[[VAL_29]] to %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
+! CHECK:           fir.store %[[VAL_29]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
 ! CHECK:           %[[VAL_30:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (i32) -> index
 ! CHECK:           %[[VAL_32:.*]] = arith.constant 2 : i32
@@ -745,7 +745,7 @@ end subroutine
 ! CHECK:           %[[VAL_45:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_38]], %[[VAL_41]], %[[VAL_44]] {fir.must_be_heap = true, uniq_name = "_QFallocatables_testEb.alloc"}
 ! CHECK:           %[[VAL_46:.*]] = fir.shape %[[VAL_38]], %[[VAL_41]], %[[VAL_44]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[VAL_47:.*]] = fir.embox %[[VAL_45]](%[[VAL_46]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
-! CHECK:           fir.store %[[VAL_47]] to %[[VAL_4]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
+! CHECK:           fir.store %[[VAL_47]] to %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
 ! CHECK:           %[[VAL_48:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_49:.*]] = fir.convert %[[VAL_48]] : (i32) -> index
 ! CHECK:           %[[VAL_50:.*]] = arith.constant 2 : i32
@@ -764,8 +764,8 @@ end subroutine
 ! CHECK:           %[[VAL_63:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_56]], %[[VAL_59]], %[[VAL_62]] {fir.must_be_heap = true, uniq_name = "_QFallocatables_testEc.alloc"}
 ! CHECK:           %[[VAL_64:.*]] = fir.shape %[[VAL_56]], %[[VAL_59]], %[[VAL_62]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[VAL_65:.*]] = fir.embox %[[VAL_63]](%[[VAL_64]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
-! CHECK:           fir.store %[[VAL_65]] to %[[VAL_5]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
-! CHECK:           %[[VAL_66:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
+! CHECK:           fir.store %[[VAL_65]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
+! CHECK:           %[[VAL_66:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
 ! CHECK:           %[[VAL_67:.*]] = fir.box_addr %[[VAL_66]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>) -> !fir.heap<!fir.array<?x?x?xi32>>
 ! CHECK:           %[[VAL_68:.*]] = fir.convert %[[VAL_67]] : (!fir.heap<!fir.array<?x?x?xi32>>) -> i64
 ! CHECK:           %[[VAL_69:.*]] = arith.constant 0 : i64

@@ -19,7 +19,7 @@
 # GFX9-NEXT: DS_READ2_B32_gfx9 killed %10, 16, 24,
 
 --- |
-  @0 = internal unnamed_addr addrspace(3) global [256 x float] undef, align 4
+  @0 = internal unnamed_addr addrspace(3) global [256 x float] poison, align 4
 
   define amdgpu_kernel void @ds_combine_base_offset() {
     bb.0:

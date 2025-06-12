@@ -2,7 +2,7 @@
 ; Test 128-bit addition in vector registers on z13 and later
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch15 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z17 | FileCheck %s
 
 define i128 @f1(i128 %a, i128 %b) {
 ; CHECK-LABEL: f1:

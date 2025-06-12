@@ -87,7 +87,7 @@ def find_compilation_database(path: str) -> str:
 
 
 def get_tidy_invocation(
-    f: str,
+    f: Optional[str],
     clang_tidy_binary: str,
     checks: str,
     tmpdir: Optional[str],
@@ -147,7 +147,8 @@ def get_tidy_invocation(
         start.append(f"--warnings-as-errors={warnings_as_errors}")
     if allow_no_checks:
         start.append("--allow-no-checks")
-    start.append(f)
+    if f:
+        start.append(f)
     return start
 
 
@@ -490,7 +491,7 @@ async def main() -> None:
 
     try:
         invocation = get_tidy_invocation(
-            "",
+            None,
             clang_tidy_binary,
             args.checks,
             None,

@@ -98,10 +98,11 @@ MachineFunctionInfo *ARCTargetMachine::createMachineFunctionInfo(
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCTarget() {
   RegisterTargetMachine<ARCTargetMachine> X(getTheARCTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeARCAsmPrinterPass(PR);
   initializeARCDAGToDAGISelLegacyPass(PR);
 }
 
 TargetTransformInfo
 ARCTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(ARCTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<ARCTTIImpl>(this, F));
 }

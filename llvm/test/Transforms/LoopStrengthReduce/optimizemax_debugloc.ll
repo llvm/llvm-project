@@ -1,5 +1,4 @@
 ; RUN: opt < %s -loop-reduce -S 2>&1 | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators < %s -loop-reduce -S 2>&1 | FileCheck %s
 ;; This test case checks that whether the new icmp instruction preserves
 ;; the debug location of the original instruction for %exitcond
 ; CHECK: icmp uge i32 %indvar.next, %n, !dbg ![[DBGLOC:[0-9]+]]

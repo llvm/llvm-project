@@ -8,7 +8,7 @@ set(LLVM_LINK_COMPONENTS
 set(LIBS
   CUFDialect
   FIRBuilder
-  FIRCodeGen
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport

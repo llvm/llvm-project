@@ -131,6 +131,20 @@ define float @fadd_ftz(float %a, float %b) #1 {
 declare float @llvm.sin.f32(float)
 declare float @llvm.cos.f32(float)
 
+; CHECK-LABEL: fsin_approx_afn
+; CHECK:       sin.approx.f32
+define float @fsin_approx_afn(float %a) {
+  %r = tail call afn float @llvm.sin.f32(float %a)
+  ret float %r
+}
+
+; CHECK-LABEL: fcos_approx_afn
+; CHECK:       cos.approx.f32
+define float @fcos_approx_afn(float %a) {
+  %r = tail call afn float @llvm.cos.f32(float %a)
+  ret float %r
+}
+
 ; CHECK-LABEL: fsin_approx
 ; CHECK:       sin.approx.f32
 define float @fsin_approx(float %a) #0 {

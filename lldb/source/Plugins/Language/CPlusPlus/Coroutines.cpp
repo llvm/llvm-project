@@ -32,8 +32,7 @@ static lldb::addr_t GetCoroFramePtrFromHandle(ValueObjectSP valobj_sp) {
   if (!ptr_sp->GetCompilerType().IsPointerType())
     return LLDB_INVALID_ADDRESS;
 
-  AddressType addr_type;
-  lldb::addr_t frame_ptr_addr = ptr_sp->GetPointerValue(&addr_type);
+  auto [frame_ptr_addr, addr_type] = ptr_sp->GetPointerValue();
   if (!frame_ptr_addr || frame_ptr_addr == LLDB_INVALID_ADDRESS)
     return LLDB_INVALID_ADDRESS;
   lldbassert(addr_type == AddressType::eAddressTypeLoad);
@@ -141,8 +140,7 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   if (frame_ptr_addr == 0 || frame_ptr_addr == LLDB_INVALID_ADDRESS)
     return lldb::ChildCacheState::eRefetch;
 
-  auto ts = valobj_sp->GetCompilerType().GetTypeSystem();
-  auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto ast_ctx = valobj_sp->GetCompilerType().GetTypeSystem<TypeSystemClang>();
   if (!ast_ctx)
     return lldb::ChildCacheState::eRefetch;
 
@@ -152,8 +150,9 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   lldb::ProcessSP process_sp = target_sp->GetProcessSP();
   auto ptr_size = process_sp->GetAddressByteSize();
   CompilerType void_type = ast_ctx->GetBasicType(lldb::eBasicTypeVoid);
+  std::array<CompilerType, 1> args{void_type};
   CompilerType coro_func_type = ast_ctx->CreateFunctionType(
-      /*result_type=*/void_type, /*args=*/&void_type, /*num_args=*/1,
+      /*result_type=*/void_type, args,
       /*is_variadic=*/false, /*qualifiers=*/0);
   CompilerType coro_func_ptr_type = coro_func_type.GetPointerType();
   m_resume_ptr_sp = CreateValueObjectFromAddress(
@@ -199,10 +198,12 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
+llvm::Expected<size_t>
+StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   if (!m_resume_ptr_sp || !m_destroy_ptr_sp)
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
 
   if (name == ConstString("resume"))
     return 0;
@@ -211,7 +212,8 @@ size_t StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
   if (name == ConstString("promise_ptr") && m_promise_ptr_sp)
     return 2;
 
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *

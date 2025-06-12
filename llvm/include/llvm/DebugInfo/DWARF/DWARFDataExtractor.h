@@ -11,6 +11,7 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 
 namespace llvm {
@@ -50,7 +51,7 @@ public:
   /// 64-bit length. Returns the actual length, and the DWARF format which is
   /// encoded in the field. In case of errors, it returns {0, DWARF32} and
   /// leaves the offset unchanged.
-  std::pair<uint64_t, dwarf::DwarfFormat>
+  LLVM_ABI std::pair<uint64_t, dwarf::DwarfFormat>
   getInitialLength(uint64_t *Off, Error *Err = nullptr) const;
 
   std::pair<uint64_t, dwarf::DwarfFormat> getInitialLength(Cursor &C) const {
@@ -59,9 +60,9 @@ public:
 
   /// Extracts a value and applies a relocation to the result if
   /// one exists for the given offset.
-  uint64_t getRelocatedValue(uint32_t Size, uint64_t *Off,
-                             uint64_t *SectionIndex = nullptr,
-                             Error *Err = nullptr) const;
+  LLVM_ABI uint64_t getRelocatedValue(uint32_t Size, uint64_t *Off,
+                                      uint64_t *SectionIndex = nullptr,
+                                      Error *Err = nullptr) const;
   uint64_t getRelocatedValue(Cursor &C, uint32_t Size,
                              uint64_t *SectionIndex = nullptr) const {
     return getRelocatedValue(Size, &getOffset(C), SectionIndex, &getError(C));
@@ -81,8 +82,9 @@ public:
   /// There is a DWARF encoding that uses a PC-relative adjustment.
   /// For these values, \p AbsPosOffset is used to fix them, which should
   /// reflect the absolute address of this pointer.
-  std::optional<uint64_t> getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
-                                            uint64_t AbsPosOffset = 0) const;
+  LLVM_ABI std::optional<uint64_t>
+  getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
+                    uint64_t AbsPosOffset = 0) const;
 };
 
 } // end namespace llvm

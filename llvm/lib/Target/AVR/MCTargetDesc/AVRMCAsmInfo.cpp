@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AVRMCAsmInfo.h"
-
+#include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/Triple.h"
 
-namespace llvm {
+using namespace llvm;
 
 AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   CodePointerSize = 2;
@@ -26,5 +26,3 @@ AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
 }
-
-} // end of namespace llvm

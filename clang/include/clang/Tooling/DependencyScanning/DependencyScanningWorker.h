@@ -68,7 +68,7 @@ class DependencyActionController {
 public:
   virtual ~DependencyActionController();
 
-  virtual std::string lookupModuleOutput(const ModuleID &ID,
+  virtual std::string lookupModuleOutput(const ModuleDeps &MD,
                                          ModuleOutputKind Kind) = 0;
 };
 

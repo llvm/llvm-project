@@ -18,6 +18,8 @@
 
 #if defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/stdio/ferror.h"
+#include "src/stdio/getc.h"
+#include "src/stdio/ungetc.h"
 #endif
 
 #include "hdr/types/FILE.h"
@@ -38,6 +40,10 @@ LIBC_INLINE void funlockfile(::FILE *) { return; }
 
 LIBC_INLINE int ferror_unlocked(::FILE *f) { return LIBC_NAMESPACE::ferror(f); }
 
+LIBC_INLINE int getc(::FILE *f) { return LIBC_NAMESPACE::getc(f); }
+
+LIBC_INLINE void ungetc(int c, ::FILE *f) { LIBC_NAMESPACE::ungetc(c, f); }
+
 #elif !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
 
 LIBC_INLINE void flockfile(FILE *f) {
@@ -52,6 +58,21 @@ LIBC_INLINE int ferror_unlocked(FILE *f) {
   return reinterpret_cast<LIBC_NAMESPACE::File *>(f)->error_unlocked();
 }
 
+LIBC_INLINE int getc(FILE *f) {
+  unsigned char c;
+  auto result =
+      reinterpret_cast<LIBC_NAMESPACE::File *>(f)->read_unlocked(&c, 1);
+  size_t r = result.value;
+  if (result.has_error() || r != 1)
+    return '\0';
+
+  return c;
+}
+
+LIBC_INLINE void ungetc(int c, FILE *f) {
+  reinterpret_cast<LIBC_NAMESPACE::File *>(f)->ungetc_unlocked(c);
+}
+
 #else // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
 
 // Since ungetc_unlocked isn't always available, we don't acquire the lock for
@@ -62,17 +83,35 @@ LIBC_INLINE void funlockfile(::FILE *) { return; }
 
 LIBC_INLINE int ferror_unlocked(::FILE *f) { return ::ferror(f); }
 
+LIBC_INLINE int getc(::FILE *f) { return ::getc(f); }
+
+LIBC_INLINE void ungetc(int c, ::FILE *f) { ::ungetc(c, f); }
+
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
 } // namespace internal
 
 namespace scanf_core {
 
+class StreamReader : public Reader<StreamReader> {
+  ::FILE *stream;
+
+public:
+  LIBC_INLINE StreamReader(::FILE *stream) : stream(stream) {}
+
+  LIBC_INLINE char getc() {
+    return static_cast<char>(internal::getc(static_cast<FILE *>(stream)));
+  }
+  LIBC_INLINE void ungetc(int c) {
+    internal::ungetc(c, static_cast<FILE *>(stream));
+  }
+};
+
 LIBC_INLINE int vfscanf_internal(::FILE *__restrict stream,
                                  const char *__restrict format,
                                  internal::ArgList &args) {
   internal::flockfile(stream);
-  scanf_core::Reader reader(stream);
+  scanf_core::StreamReader reader(stream);
   int retval = scanf_core::scanf_main(&reader, format, args);
   if (retval == 0 && internal::ferror_unlocked(stream))
     retval = EOF;

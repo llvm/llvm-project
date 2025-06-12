@@ -29,20 +29,6 @@ operator==(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __
   return __sz == __y.size() && std::equal(__x.begin(), __x.end(), __y.begin());
 }
 
-// FIXME: Remove this `vector<bool>` overload once #126369 is resolved, reverting to the generic `operator==`
-// with `std::equal` for better performance.
-template <class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI bool
-operator==(const vector<bool, _Allocator>& __x, const vector<bool, _Allocator>& __y) {
-  const typename vector<bool, _Allocator>::size_type __sz = __x.size();
-  if (__sz != __y.size())
-    return false;
-  for (typename vector<bool, _Allocator>::size_type __i = 0; __i < __sz; ++__i)
-    if (__x[__i] != __y[__i])
-      return false;
-  return true;
-}
-
 #if _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Allocator>

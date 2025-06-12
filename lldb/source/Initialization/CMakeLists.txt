@@ -11,12 +11,12 @@ add_lldb_library(lldbInitialization
   SystemInitializer.cpp
   SystemLifetimeManager.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbHost
     lldbPluginProcessGDBRemote
     ${EXTRA_PLUGINS}
     ${LLDB_SYSTEM_LIBS}
-  LINK_COMPONENTS
-    Support
   )

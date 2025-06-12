@@ -35,7 +35,7 @@ static const char *dynoStatsOptName(const bolt::DynoStats::Category C) {
 
   OptNames[C] = bolt::DynoStats::Description(C);
 
-  std::replace(OptNames[C].begin(), OptNames[C].end(), ' ', '-');
+  llvm::replace(OptNames[C], ' ', '-');
 
   return OptNames[C].c_str();
 }
@@ -1269,8 +1269,10 @@ Error SimplifyRODataLoads::runOnFunctions(BinaryContext &BC) {
 
 Error AssignSections::runOnFunctions(BinaryContext &BC) {
   for (BinaryFunction *Function : BC.getInjectedBinaryFunctions()) {
-    Function->setCodeSectionName(BC.getInjectedCodeSectionName());
-    Function->setColdCodeSectionName(BC.getInjectedColdCodeSectionName());
+    if (!Function->isPatch()) {
+      Function->setCodeSectionName(BC.getInjectedCodeSectionName());
+      Function->setColdCodeSectionName(BC.getInjectedColdCodeSectionName());
+    }
   }
 
   // In non-relocation mode functions have pre-assigned section names.
@@ -1285,6 +1287,8 @@ Error AssignSections::runOnFunctions(BinaryContext &BC) {
     if (opts::isHotTextMover(Function)) {
       Function.setCodeSectionName(BC.getHotTextMoverSectionName());
       Function.setColdCodeSectionName(BC.getHotTextMoverSectionName());
+      // TODO: find a better place to mark a function as a mover.
+      Function.setHotTextMover(true);
       continue;
     }
 
@@ -1443,7 +1447,7 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     if (!Function.hasProfile())
       continue;
 
-    uint64_t SampleCount = Function.getRawBranchCount();
+    uint64_t SampleCount = Function.getRawSampleCount();
     TotalSampleCount += SampleCount;
 
     if (Function.hasValidProfile()) {

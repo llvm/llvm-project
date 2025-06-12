@@ -6,14 +6,14 @@ add_lldb_library(lldbHostMacOSXObjCXX NO_PLUGIN_DEPENDENCIES
   Host.mm
   HostInfoMacOSX.mm
   HostThreadMacOSX.mm
-
-  LINK_LIBS
-    lldbUtility
-    ${EXTRA_LIBS}
+  MemoryMonitorMacOSX.mm
 
   LINK_COMPONENTS
     Support
     TargetParser
+  LINK_LIBS
+    lldbUtility
+    ${EXTRA_LIBS}
   )
 
 target_compile_options(lldbHostMacOSXObjCXX PRIVATE

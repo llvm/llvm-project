@@ -785,7 +785,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   // fields confilicts with each other.
   unsigned UnknownTypeNum = 0;
   for (unsigned Index = 0; Index < FrameTy->getNumElements(); Index++) {
-    if (!OffsetCache.contains(Index))
+    auto OCIt = OffsetCache.find(Index);
+    if (OCIt == OffsetCache.end())
       continue;
 
     std::string Name;
@@ -797,8 +798,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
     Type *Ty = FrameTy->getElementType(Index);
     assert(Ty->isSized() && "We can't handle type which is not sized.\n");
     SizeInBits = Layout.getTypeSizeInBits(Ty).getFixedValue();
-    AlignInBits = OffsetCache[Index].first * 8;
-    OffsetInBits = OffsetCache[Index].second * 8;
+    AlignInBits = OCIt->second.first * 8;
+    OffsetInBits = OCIt->second.second * 8;
 
     if (auto It = NameCache.find(Index); It != NameCache.end()) {
       Name = It->second.str();
@@ -1214,11 +1215,17 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   for (const auto &A : FrameData.Allocas) {
     AllocaInst *Alloca = A.Alloca;
     UsersToUpdate.clear();
-    for (User *U : Alloca->users()) {
+    for (User *U : make_early_inc_range(Alloca->users())) {
       auto *I = cast<Instruction>(U);
-      if (DT.dominates(Shape.CoroBegin, I))
+      // It is meaningless to retain the lifetime intrinsics refer for the
+      // member of coroutine frames and the meaningless lifetime intrinsics
+      // are possible to block further optimizations.
+      if (I->isLifetimeStartOrEnd())
+        I->eraseFromParent();
+      else if (DT.dominates(Shape.CoroBegin, I))
         UsersToUpdate.push_back(I);
     }
+
     if (UsersToUpdate.empty())
       continue;
     auto *G = GetFramePointer(Alloca);
@@ -1232,17 +1239,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     for (auto *DVR : DbgVariableRecords)
       DVR->replaceVariableLocationOp(Alloca, G);
 
-    for (Instruction *I : UsersToUpdate) {
-      // It is meaningless to retain the lifetime intrinsics refer for the
-      // member of coroutine frames and the meaningless lifetime intrinsics
-      // are possible to block further optimizations.
-      if (I->isLifetimeStartOrEnd()) {
-        I->eraseFromParent();
-        continue;
-      }
-
+    for (Instruction *I : UsersToUpdate)
       I->replaceUsesOfWith(Alloca, G);
-    }
   }
   Builder.SetInsertPoint(&*Shape.getInsertPtAfterFramePtr());
   for (const auto &A : FrameData.Allocas) {

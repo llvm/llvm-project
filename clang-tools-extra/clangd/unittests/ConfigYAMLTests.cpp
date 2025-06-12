@@ -217,6 +217,19 @@ Completion:
   EXPECT_THAT(Results[0].Completion.AllScopes, testing::Eq(std::nullopt));
 }
 
+TEST(ParseYAML, CodePatterns) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+    Completion:
+      CodePatterns: None
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Completion.CodePatterns, llvm::ValueIs(val("None")));
+}
+
 TEST(ParseYAML, ShowAKA) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(

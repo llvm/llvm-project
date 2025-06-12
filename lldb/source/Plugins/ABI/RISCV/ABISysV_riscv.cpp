@@ -621,7 +621,8 @@ ABISysV_riscv::GetReturnValueObjectSimple(Thread &thread,
   value.SetCompilerType(compiler_type);
 
   const uint32_t type_flags = compiler_type.GetTypeInfo();
-  const size_t byte_size = compiler_type.GetByteSize(&thread).value_or(0);
+  const size_t byte_size =
+      llvm::expectedToOptional(compiler_type.GetByteSize(&thread)).value_or(0);
   const ArchSpec arch = thread.GetProcess()->GetTarget().GetArchitecture();
   const llvm::Triple::ArchType machine = arch.GetMachine();
 
@@ -723,16 +724,16 @@ UnwindPlanSP ABISysV_riscv::CreateFunctionEntryUnwindPlan() {
   uint32_t sp_reg_num = riscv_dwarf::dwarf_gpr_sp;
   uint32_t ra_reg_num = riscv_dwarf::dwarf_gpr_ra;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Define CFA as the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
   // Previous frame's pc is in ra
-  row->SetRegisterLocationToRegister(pc_reg_num, ra_reg_num, true);
+  row.SetRegisterLocationToRegister(pc_reg_num, ra_reg_num, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("riscv function-entry unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;
@@ -742,11 +743,10 @@ UnwindPlanSP ABISysV_riscv::CreateDefaultUnwindPlan() {
   uint32_t pc_reg_num = LLDB_REGNUM_GENERIC_PC;
   uint32_t fp_reg_num = LLDB_REGNUM_GENERIC_FP;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Define the CFA as the current frame pointer value.
-  row->GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 0);
-  row->SetOffset(0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 0);
 
   int reg_size = 4;
   if (m_is_rv64)
@@ -754,11 +754,11 @@ UnwindPlanSP ABISysV_riscv::CreateDefaultUnwindPlan() {
 
   // Assume the ra reg (return pc) and caller's frame pointer 
   // have been spilled to stack already.
-  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("riscv default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);

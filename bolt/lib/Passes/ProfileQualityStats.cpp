@@ -24,12 +24,12 @@ using namespace bolt;
 
 namespace opts {
 extern cl::opt<unsigned> Verbosity;
-cl::opt<unsigned> TopFunctionsForProfileQualityCheck(
+static cl::opt<unsigned> TopFunctionsForProfileQualityCheck(
     "top-functions-for-profile-quality-check",
     cl::desc("number of hottest functions to print aggregated "
              "profile quality stats of."),
     cl::init(1000), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
-cl::opt<unsigned> PercentileForProfileQualityCheck(
+static cl::opt<unsigned> PercentileForProfileQualityCheck(
     "percentile-for-profile-quality-check",
     cl::desc("Percentile of profile quality distributions over hottest "
              "functions to report."),
@@ -51,6 +51,16 @@ struct FlowInfo {
   TotalFlowMapTy TotalMinCountMaps;
   FunctionFlowMapTy CallGraphIncomingFlows;
 };
+
+// When reporting exception handling stats, we only consider functions with at
+// least MinLPECSum counts in landing pads to avoid false positives due to
+// sampling noise
+const uint16_t MinLPECSum = 50;
+
+// When reporting CFG flow conservation stats, we only consider blocks with
+// execution counts > MinBlockCount when reporting the distribution of worst
+// gaps.
+const uint16_t MinBlockCount = 500;
 
 template <typename T>
 void printDistribution(raw_ostream &OS, std::vector<T> &values,
@@ -91,8 +101,12 @@ void printCFGContinuityStats(raw_ostream &OS,
   std::vector<double> FractionECUnreachables;
 
   for (const BinaryFunction *Function : Functions) {
-    if (Function->size() <= 1)
+    if (Function->size() <= 1) {
+      NumUnreachables.push_back(0);
+      SumECUnreachables.push_back(0);
+      FractionECUnreachables.push_back(0.0);
       continue;
+    }
 
     // Compute the sum of all BB execution counts (ECs).
     size_t NumPosECBBs = 0;
@@ -142,8 +156,10 @@ void printCFGContinuityStats(raw_ostream &OS,
     const size_t NumPosECBBsUnreachableFromEntry =
         NumPosECBBs - NumReachableBBs;
     const size_t SumUnreachableBBEC = SumAllBBEC - SumReachableBBEC;
-    const double FractionECUnreachable =
-        (double)SumUnreachableBBEC / SumAllBBEC;
+
+    double FractionECUnreachable = 0.0;
+    if (SumAllBBEC > 0)
+      FractionECUnreachable = (double)SumUnreachableBBEC / SumAllBBEC;
 
     if (opts::Verbosity >= 2 && FractionECUnreachable >= 0.05) {
       OS << "Non-trivial CFG discontinuity observed in function "
@@ -156,9 +172,6 @@ void printCFGContinuityStats(raw_ostream &OS,
     SumECUnreachables.push_back(SumUnreachableBBEC);
     FractionECUnreachables.push_back(FractionECUnreachable);
   }
-
-  if (FractionECUnreachables.empty())
-    return;
 
   llvm::sort(FractionECUnreachables);
   const int Rank = int(FractionECUnreachables.size() *
@@ -187,8 +200,10 @@ void printCallGraphFlowConservationStats(
   std::vector<double> CallGraphGaps;
 
   for (const BinaryFunction *Function : Functions) {
-    if (Function->size() <= 1 || !Function->isSimple())
+    if (Function->size() <= 1 || !Function->isSimple()) {
+      CallGraphGaps.push_back(0.0);
       continue;
+    }
 
     const uint64_t FunctionNum = Function->getFunctionNumber();
     std::vector<uint64_t> &IncomingFlows =
@@ -199,60 +214,63 @@ void printCallGraphFlowConservationStats(
         TotalFlowMap.CallGraphIncomingFlows;
 
     // Only consider functions that are not a program entry.
-    if (CallGraphIncomingFlows.find(FunctionNum) !=
+    if (CallGraphIncomingFlows.find(FunctionNum) ==
         CallGraphIncomingFlows.end()) {
-      uint64_t EntryInflow = 0;
-      uint64_t EntryOutflow = 0;
-      uint32_t NumConsideredEntryBlocks = 0;
+      CallGraphGaps.push_back(0.0);
+      continue;
+    }
 
-      Function->forEachEntryPoint([&](uint64_t Offset, const MCSymbol *Label) {
-        const BinaryBasicBlock *EntryBB =
-            Function->getBasicBlockAtOffset(Offset);
-        if (!EntryBB || EntryBB->succ_size() == 0)
-          return true;
-        NumConsideredEntryBlocks++;
-        EntryInflow += IncomingFlows[EntryBB->getLayoutIndex()];
-        EntryOutflow += OutgoingFlows[EntryBB->getLayoutIndex()];
+    uint64_t EntryInflow = 0;
+    uint64_t EntryOutflow = 0;
+    uint32_t NumConsideredEntryBlocks = 0;
+
+    Function->forEachEntryPoint([&](uint64_t Offset, const MCSymbol *Label) {
+      const BinaryBasicBlock *EntryBB = Function->getBasicBlockAtOffset(Offset);
+      if (!EntryBB || EntryBB->succ_size() == 0)
         return true;
-      });
+      NumConsideredEntryBlocks++;
+      EntryInflow += IncomingFlows[EntryBB->getLayoutIndex()];
+      EntryOutflow += OutgoingFlows[EntryBB->getLayoutIndex()];
+      return true;
+    });
 
-      uint64_t NetEntryOutflow = 0;
-      if (EntryOutflow < EntryInflow) {
-        if (opts::Verbosity >= 2) {
-          // We expect entry blocks' CFG outflow >= inflow, i.e., it has a
-          // non-negative net outflow. If this is not the case, then raise a
-          // warning if requested.
-          OS << "BOLT WARNING: unexpected entry block CFG outflow < inflow "
-                "in function "
-             << Function->getPrintName() << "\n";
-          if (opts::Verbosity >= 3)
-            Function->dump();
-        }
-      } else {
-        NetEntryOutflow = EntryOutflow - EntryInflow;
+    uint64_t NetEntryOutflow = 0;
+    if (EntryOutflow < EntryInflow) {
+      if (opts::Verbosity >= 2) {
+        // We expect entry blocks' CFG outflow >= inflow, i.e., it has a
+        // non-negative net outflow. If this is not the case, then raise a
+        // warning if requested.
+        OS << "BOLT WARNING: unexpected entry block CFG outflow < inflow "
+              "in function "
+           << Function->getPrintName() << "\n";
+        if (opts::Verbosity >= 3)
+          Function->dump();
       }
-      if (NumConsideredEntryBlocks > 0) {
-        const uint64_t CallGraphInflow =
-            TotalFlowMap.CallGraphIncomingFlows[Function->getFunctionNumber()];
-        const uint64_t Min = std::min(NetEntryOutflow, CallGraphInflow);
-        const uint64_t Max = std::max(NetEntryOutflow, CallGraphInflow);
-        const double CallGraphGap = 1 - (double)Min / Max;
+    } else {
+      NetEntryOutflow = EntryOutflow - EntryInflow;
+    }
+    if (NumConsideredEntryBlocks > 0) {
+      const uint64_t CallGraphInflow =
+          TotalFlowMap.CallGraphIncomingFlows[Function->getFunctionNumber()];
+      const uint64_t Min = std::min(NetEntryOutflow, CallGraphInflow);
+      const uint64_t Max = std::max(NetEntryOutflow, CallGraphInflow);
+      double CallGraphGap = 0.0;
+      if (Max > 0)
+        CallGraphGap = 1 - (double)Min / Max;
 
-        if (opts::Verbosity >= 2 && CallGraphGap >= 0.5) {
-          OS << "Nontrivial call graph gap of size "
-             << formatv("{0:P}", CallGraphGap) << " observed in function "
-             << Function->getPrintName() << "\n";
-          if (opts::Verbosity >= 3)
-            Function->dump();
-        }
-
-        CallGraphGaps.push_back(CallGraphGap);
+      if (opts::Verbosity >= 2 && CallGraphGap >= 0.5) {
+        OS << "Non-trivial call graph gap of size "
+           << formatv("{0:P}", CallGraphGap) << " observed in function "
+           << Function->getPrintName() << "\n";
+        if (opts::Verbosity >= 3)
+          Function->dump();
       }
+
+      CallGraphGaps.push_back(CallGraphGap);
+    } else {
+      CallGraphGaps.push_back(0.0);
     }
   }
-
-  if (CallGraphGaps.empty())
-    return;
 
   llvm::sort(CallGraphGaps);
   const int Rank =
@@ -265,18 +283,19 @@ void printCallGraphFlowConservationStats(
   }
 }
 
-void printCFGFlowConservationStats(raw_ostream &OS,
+void printCFGFlowConservationStats(const BinaryContext &BC, raw_ostream &OS,
                                    iterator_range<function_iterator> &Functions,
                                    FlowInfo &TotalFlowMap) {
   std::vector<double> CFGGapsWeightedAvg;
   std::vector<double> CFGGapsWorst;
   std::vector<uint64_t> CFGGapsWorstAbs;
-  // We only consider blocks with execution counts > MinBlockCount when
-  // reporting the distribution of worst gaps.
-  const uint16_t MinBlockCount = 500;
   for (const BinaryFunction *Function : Functions) {
-    if (Function->size() <= 1 || !Function->isSimple())
+    if (Function->size() <= 1 || !Function->isSimple()) {
+      CFGGapsWeightedAvg.push_back(0.0);
+      CFGGapsWorst.push_back(0.0);
+      CFGGapsWorstAbs.push_back(0);
       continue;
+    }
 
     const uint64_t FunctionNum = Function->getFunctionNumber();
     std::vector<uint64_t> &MaxCountMaps =
@@ -295,12 +314,34 @@ void printCFGFlowConservationStats(raw_ostream &OS,
       if (BB.isEntryPoint() || BB.succ_size() == 0)
         continue;
 
+      if (BB.getKnownExecutionCount() == 0 || BB.getNumNonPseudos() == 0)
+        continue;
+
+      // We don't consider blocks that is a landing pad or has a
+      // positive-execution-count landing pad
+      if (BB.isLandingPad())
+        continue;
+
+      if (llvm::any_of(BB.landing_pads(),
+                       std::mem_fn(&BinaryBasicBlock::getKnownExecutionCount)))
+        continue;
+
+      // We don't consider blocks that end with a recursive call instruction
+      const MCInst *Inst = BB.getLastNonPseudoInstr();
+      if (BC.MIB->isCall(*Inst)) {
+        const MCSymbol *DstSym = BC.MIB->getTargetSymbol(*Inst);
+        const BinaryFunction *DstFunc =
+            DstSym ? BC.getFunctionForSymbol(DstSym) : nullptr;
+        if (DstFunc == Function)
+          continue;
+      }
+
       const uint64_t Max = MaxCountMaps[BB.getLayoutIndex()];
       const uint64_t Min = MinCountMaps[BB.getLayoutIndex()];
-      const double Gap = 1 - (double)Min / Max;
+      double Gap = 0.0;
+      if (Max > 0)
+        Gap = 1 - (double)Min / Max;
       double Weight = BB.getKnownExecutionCount() * BB.getNumNonPseudos();
-      if (Weight == 0)
-        continue;
       // We use log to prevent the stats from being dominated by extremely hot
       // blocks
       Weight = log(Weight);
@@ -316,39 +357,36 @@ void printCFGFlowConservationStats(raw_ostream &OS,
         BBWorstGapAbs = &BB;
       }
     }
-    if (WeightSum > 0) {
-      const double WeightedGap = WeightedGapSum / WeightSum;
-      if (opts::Verbosity >= 2 && (WeightedGap >= 0.1 || WorstGap >= 0.9)) {
-        OS << "Nontrivial CFG gap observed in function "
-           << Function->getPrintName() << "\n"
-           << "Weighted gap: " << formatv("{0:P}", WeightedGap) << "\n";
-        if (BBWorstGap)
-          OS << "Worst gap: " << formatv("{0:P}", WorstGap)
-             << " at BB with input offset: 0x"
-             << Twine::utohexstr(BBWorstGap->getInputOffset()) << "\n";
-        if (BBWorstGapAbs)
-          OS << "Worst gap (absolute value): " << WorstGapAbs << " at BB with "
-             << "input offset 0x"
-             << Twine::utohexstr(BBWorstGapAbs->getInputOffset()) << "\n";
-        if (opts::Verbosity >= 3)
-          Function->dump();
-      }
-
-      CFGGapsWeightedAvg.push_back(WeightedGap);
-      CFGGapsWorst.push_back(WorstGap);
-      CFGGapsWorstAbs.push_back(WorstGapAbs);
+    double WeightedGap = WeightedGapSum;
+    if (WeightSum > 0)
+      WeightedGap /= WeightSum;
+    if (opts::Verbosity >= 2 && WorstGap >= 0.9) {
+      OS << "Non-trivial CFG gap observed in function "
+         << Function->getPrintName() << "\n"
+         << "Weighted gap: " << formatv("{0:P}", WeightedGap) << "\n";
+      if (BBWorstGap)
+        OS << "Worst gap: " << formatv("{0:P}", WorstGap)
+           << " at BB with input offset: 0x"
+           << Twine::utohexstr(BBWorstGap->getInputOffset()) << "\n";
+      if (BBWorstGapAbs)
+        OS << "Worst gap (absolute value): " << WorstGapAbs << " at BB with "
+           << "input offset 0x"
+           << Twine::utohexstr(BBWorstGapAbs->getInputOffset()) << "\n";
+      if (opts::Verbosity >= 3)
+        Function->dump();
     }
+    CFGGapsWeightedAvg.push_back(WeightedGap);
+    CFGGapsWorst.push_back(WorstGap);
+    CFGGapsWorstAbs.push_back(WorstGapAbs);
   }
 
-  if (CFGGapsWeightedAvg.empty())
-    return;
   llvm::sort(CFGGapsWeightedAvg);
   const int RankWA = int(CFGGapsWeightedAvg.size() *
                          opts::PercentileForProfileQualityCheck / 100);
   llvm::sort(CFGGapsWorst);
   const int RankW =
       int(CFGGapsWorst.size() * opts::PercentileForProfileQualityCheck / 100);
-  OS << formatv("CFG flow conservation gap {0:P} (weighted) {1:P} (worst)\n",
+  OS << formatv("CFG flow conservation gap {0:P} (weighted) {1:P} (worst); ",
                 CFGGapsWeightedAvg[RankWA], CFGGapsWorst[RankW]);
   if (opts::Verbosity >= 1) {
     OS << "distribution of weighted CFG flow conservation gaps\n";
@@ -362,6 +400,74 @@ void printCFGFlowConservationStats(raw_ostream &OS,
           "value) per function\n";
     llvm::sort(CFGGapsWorstAbs);
     printDistribution(OS, CFGGapsWorstAbs, /*Fraction=*/false);
+  }
+}
+
+void printExceptionHandlingStats(const BinaryContext &BC, raw_ostream &OS,
+                                 iterator_range<function_iterator> &Functions) {
+  std::vector<double> LPCountFractionsOfTotalBBEC;
+  std::vector<double> LPCountFractionsOfTotalInvokeEC;
+  for (const BinaryFunction *Function : Functions) {
+    size_t LPECSum = 0;
+    size_t BBECSum = 0;
+    size_t InvokeECSum = 0;
+    for (BinaryBasicBlock &BB : *Function) {
+      const size_t BBEC = BB.getKnownExecutionCount();
+      BBECSum += BBEC;
+      if (BB.isLandingPad())
+        LPECSum += BBEC;
+      for (const MCInst &Inst : BB) {
+        if (!BC.MIB->isInvoke(Inst))
+          continue;
+        const std::optional<MCPlus::MCLandingPad> EHInfo =
+            BC.MIB->getEHInfo(Inst);
+        if (EHInfo->first)
+          InvokeECSum += BBEC;
+      }
+    }
+
+    if (LPECSum <= MinLPECSum) {
+      LPCountFractionsOfTotalBBEC.push_back(0.0);
+      LPCountFractionsOfTotalInvokeEC.push_back(0.0);
+      continue;
+    }
+    double FracTotalBBEC = 0.0;
+    if (BBECSum > 0)
+      FracTotalBBEC = (double)LPECSum / BBECSum;
+    double FracTotalInvokeEC = 0.0;
+    if (InvokeECSum > 0)
+      FracTotalInvokeEC = (double)LPECSum / InvokeECSum;
+    LPCountFractionsOfTotalBBEC.push_back(FracTotalBBEC);
+    LPCountFractionsOfTotalInvokeEC.push_back(FracTotalInvokeEC);
+
+    if (opts::Verbosity >= 2 && FracTotalInvokeEC >= 0.05) {
+      OS << "Non-trivial usage of exception handling observed in function "
+         << Function->getPrintName() << "\n"
+         << formatv(
+                "Fraction of total InvokeEC that goes to landing pads: {0:P}\n",
+                FracTotalInvokeEC);
+      if (opts::Verbosity >= 3)
+        Function->dump();
+    }
+  }
+
+  llvm::sort(LPCountFractionsOfTotalBBEC);
+  const int RankBBEC = int(LPCountFractionsOfTotalBBEC.size() *
+                           opts::PercentileForProfileQualityCheck / 100);
+  llvm::sort(LPCountFractionsOfTotalInvokeEC);
+  const int RankInvoke = int(LPCountFractionsOfTotalInvokeEC.size() *
+                             opts::PercentileForProfileQualityCheck / 100);
+  OS << formatv("exception handling usage {0:P} (of total BBEC) {1:P} (of "
+                "total InvokeEC)\n",
+                LPCountFractionsOfTotalBBEC[RankBBEC],
+                LPCountFractionsOfTotalInvokeEC[RankInvoke]);
+  if (opts::Verbosity >= 1) {
+    OS << "distribution of exception handling usage as a fraction of total "
+          "BBEC of each function\n";
+    printDistribution(OS, LPCountFractionsOfTotalBBEC, /*Fraction=*/true);
+    OS << "distribution of exception handling usage as a fraction of total "
+          "InvokeEC of each function\n";
+    printDistribution(OS, LPCountFractionsOfTotalInvokeEC, /*Fraction=*/true);
   }
 }
 
@@ -519,8 +625,8 @@ void printAll(BinaryContext &BC, FunctionListType &ValidFunctions,
                       100 - opts::PercentileForProfileQualityCheck);
   printCFGContinuityStats(BC.outs(), Functions);
   printCallGraphFlowConservationStats(BC.outs(), Functions, TotalFlowMap);
-  printCFGFlowConservationStats(BC.outs(), Functions, TotalFlowMap);
-
+  printCFGFlowConservationStats(BC, BC.outs(), Functions, TotalFlowMap);
+  printExceptionHandlingStats(BC, BC.outs(), Functions);
   // Print more detailed bucketed stats if requested.
   if (opts::Verbosity >= 1 && RealNumTopFunctions >= 5) {
     const size_t PerBucketSize = RealNumTopFunctions / 5;
@@ -550,7 +656,8 @@ void printAll(BinaryContext &BC, FunctionListType &ValidFunctions,
                        MaxFunctionExecutionCount);
       printCFGContinuityStats(BC.outs(), Functions);
       printCallGraphFlowConservationStats(BC.outs(), Functions, TotalFlowMap);
-      printCFGFlowConservationStats(BC.outs(), Functions, TotalFlowMap);
+      printCFGFlowConservationStats(BC, BC.outs(), Functions, TotalFlowMap);
+      printExceptionHandlingStats(BC, BC.outs(), Functions);
     }
   }
 }

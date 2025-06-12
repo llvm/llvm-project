@@ -197,7 +197,7 @@ end subroutine char_return
 ! CHECK:             %[[VAL_35:.*]] = hlfir.apply %[[VAL_36:.*]], %[[VAL_33]] typeparams %[[VAL_16]] : (!hlfir.expr<?x!fir.char<1,3>>, index, index) -> !hlfir.expr<!fir.char<1,3>>
 ! CHECK:             %[[VAL_37:.*]]:3 = hlfir.associate %[[VAL_35]] typeparams %[[VAL_16]] {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>, i1)
 ! CHECK:             %[[VAL_38:.*]] = fir.convert %[[VAL_34]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
-! CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_37]]#1 : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
+! CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_37]]#0 : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_9]] : (index) -> i64
 ! CHECK:             %[[VAL_41:.*]] = fir.convert %[[VAL_16]] : (index) -> i64
 ! CHECK:             %[[VAL_42:.*]] = fir.call @_FortranACharacterCompareScalar1(%[[VAL_38]], %[[VAL_39]], %[[VAL_40]], %[[VAL_41]]) fastmath<contract> : (!fir.ref<i8>, !fir.ref<i8>, i64, i64) -> i32

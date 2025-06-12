@@ -129,7 +129,8 @@ llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
 llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const Symbol &symbol,
     std::optional<parser::CharBlock> name = std::nullopt) {
   const auto &renamings{symbol.owner().context().moduleFileOutputRenamings()};
-  if (auto iter{renamings.find(&symbol)}; iter != renamings.end()) {
+  if (auto iter{renamings.find(&symbol.GetUltimate())};
+      iter != renamings.end()) {
     return o << iter->second.ToString();
   } else if (name) {
     return o << name->ToString();
@@ -722,24 +723,8 @@ llvm::raw_ostream &ArrayRef::AsFortran(llvm::raw_ostream &o) const {
 }
 
 llvm::raw_ostream &CoarrayRef::AsFortran(llvm::raw_ostream &o) const {
-  bool first{true};
-  for (const Symbol &part : base_) {
-    if (first) {
-      first = false;
-    } else {
-      o << '%';
-    }
-    EmitVar(o, part);
-  }
-  char separator{'('};
-  for (const auto &sscript : subscript_) {
-    EmitVar(o << separator, sscript);
-    separator = ',';
-  }
-  if (separator == ',') {
-    o << ')';
-  }
-  separator = '[';
+  base().AsFortran(o);
+  char separator{'['};
   for (const auto &css : cosubscript_) {
     EmitVar(o << separator, css);
     separator = ',';
@@ -749,8 +734,10 @@ llvm::raw_ostream &CoarrayRef::AsFortran(llvm::raw_ostream &o) const {
     separator = ',';
   }
   if (team_) {
-    EmitVar(
-        o << separator, team_, teamIsTeamNumber_ ? "TEAM_NUMBER=" : "TEAM=");
+    EmitVar(o << separator, team_,
+        std::holds_alternative<Expr<SomeInteger>>(team_->value().u)
+            ? "TEAM_NUMBER="
+            : "TEAM=");
   }
   return o << ']';
 }

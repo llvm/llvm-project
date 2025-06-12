@@ -171,10 +171,8 @@ bool FunctionCaller::WriteFunctionArguments(
     m_wrapper_args_addrs.push_back(args_addr_ref);
   } else {
     // Make sure this is an address that we've already handed out.
-    if (find(m_wrapper_args_addrs.begin(), m_wrapper_args_addrs.end(),
-             args_addr_ref) == m_wrapper_args_addrs.end()) {
+    if (!llvm::is_contained(m_wrapper_args_addrs, args_addr_ref))
       return false;
-    }
   }
 
   // TODO: verify fun_addr needs to be a callable address

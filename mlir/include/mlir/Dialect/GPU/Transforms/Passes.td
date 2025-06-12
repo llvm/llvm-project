@@ -11,29 +11,35 @@
 
 include "mlir/Pass/PassBase.td"
 
-def GpuLaunchSinkIndexComputations : Pass<"gpu-launch-sink-index-computations"> {
+def GpuLaunchSinkIndexComputationsPass
+    : Pass<"gpu-launch-sink-index-computations"> {
   let summary = "Sink index computations into gpu.launch body";
-  let constructor = "mlir::createGpuLauchSinkIndexComputationsPass()";
   let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
-def GpuKernelOutlining : Pass<"gpu-kernel-outlining", "ModuleOp"> {
+def GpuKernelOutliningPass : Pass<"gpu-kernel-outlining", "ModuleOp"> {
   let summary = "Outline gpu.launch bodies to kernel functions";
-  let constructor = "mlir::createGpuKernelOutliningPass()";
   let dependentDialects = ["mlir::DLTIDialect", "cf::ControlFlowDialect"];
+  let options = [Option<"dataLayoutStr", "data-layout-str", "std::string",
+                        /*default=*/"",
+                        "String description of the data layout">];
 }
 
 def GpuAsyncRegionPass : Pass<"gpu-async-region", "func::FuncOp"> {
   let summary = "Make GPU ops async";
-  let constructor = "mlir::createGpuAsyncRegionPass()";
   let dependentDialects = ["async::AsyncDialect"];
 }
 
 def GpuMapParallelLoopsPass
     : Pass<"gpu-map-parallel-loops", "mlir::func::FuncOp"> {
   let summary = "Greedily maps loops to GPU hardware dimensions.";
-  let constructor = "mlir::createGpuMapParallelLoopsPass()";
-  let description = "Greedily maps loops to GPU hardware dimensions.";
+  let description = [{
+    Maps the parallel loops found in the given function to workgroups. The first
+    loop encountered will be mapped to the global workgroup and the second loop
+    encountered to the local workgroup. Within each mapping, the first three
+    dimensions are mapped to x/y/z hardware ids and all following dimensions are
+    mapped to sequential loops.
+  }];
   let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
@@ -66,7 +72,6 @@ def GpuDecomposeMemrefsPass : Pass<"gpu-decompose-memrefs"> {
     and sizes/strides for dynamically-sized memrefs are not available inside
     `gpu.launch`.
   }];
-  let constructor = "mlir::createGpuDecomposeMemrefsPass()";
   let dependentDialects = [
     "mlir::gpu::GPUDialect", "mlir::memref::MemRefDialect",
     "mlir::affine::AffineDialect"
@@ -181,7 +186,7 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
            /*default=*/"\"\"",
            "Target features.">,
     Option<"abiVersion", "abi", "std::string",
-           /*default=*/"\"500\"",
+           /*default=*/"\"600\"",
            "ABI version.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",

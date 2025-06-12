@@ -125,11 +125,13 @@ typedef __SIZE_TYPE__ size_t;
 #pragma push_macro("uint64_t")
 #pragma push_macro("CHAR_BIT")
 #pragma push_macro("INT_MAX")
+#pragma push_macro("INT_MIN")
 #define NULL (void *)0
 #define uint32_t __UINT32_TYPE__
 #define uint64_t __UINT64_TYPE__
 #define CHAR_BIT __CHAR_BIT__
 #define INT_MAX __INTMAX_MAX__
+#define INT_MIN (-__INT_MAX__ - 1)
 #endif // __HIPCC_RTC__
 
 #include <__clang_hip_libdevice_declares.h>
@@ -154,6 +156,7 @@ typedef __SIZE_TYPE__ size_t;
 #pragma pop_macro("uint64_t")
 #pragma pop_macro("CHAR_BIT")
 #pragma pop_macro("INT_MAX")
+#pragma pop_macro("INT_MIN")
 #endif // __HIPCC_RTC__
 #endif // __HIP__
 #endif // __CLANG_HIP_RUNTIME_WRAPPER_H__
