@@ -142,10 +142,7 @@ line_entry_helper(Target &target, const SymbolContext &sc, Symbol *symbol,
 
   CPPLanguageRuntime::LibCppStdFunctionCallableInfo optional_info;
 
-  AddressRange range;
-  sc.GetAddressRange(eSymbolContextEverything, 0, false, range);
-
-  Address address = range.GetBaseAddress();
+  Address address = sc.GetFunctionOrSymbolAddress();
 
   Address addr;
   if (target.ResolveLoadAddress(address.GetCallableLoadAddress(&target),
@@ -266,21 +263,20 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
 
   Target &target = process->GetTarget();
 
-  if (target.GetSectionLoadList().IsEmpty())
+  if (!target.HasLoadedSections())
     return optional_info;
 
   Address vtable_first_entry_resolved;
 
-  if (!target.GetSectionLoadList().ResolveLoadAddress(
-          vtable_address_first_entry, vtable_first_entry_resolved))
+  if (!target.ResolveLoadAddress(vtable_address_first_entry,
+                                 vtable_first_entry_resolved))
     return optional_info;
 
   Address vtable_addr_resolved;
   SymbolContext sc;
   Symbol *symbol = nullptr;
 
-  if (!target.GetSectionLoadList().ResolveLoadAddress(vtable_address,
-                                                      vtable_addr_resolved))
+  if (!target.ResolveLoadAddress(vtable_address, vtable_addr_resolved))
     return optional_info;
 
   target.GetImages().ResolveSymbolContextForAddress(
@@ -322,8 +318,8 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   // Setup for cases 2, 4 and 5 we have a pointer to a function after the
   // vtable. We will use a process of elimination to drop through each case
   // and obtain the data we need.
-  if (target.GetSectionLoadList().ResolveLoadAddress(
-          possible_function_address, function_address_resolved)) {
+  if (target.ResolveLoadAddress(possible_function_address,
+                                function_address_resolved)) {
     target.GetImages().ResolveSymbolContextForAddress(
         function_address_resolved, eSymbolContextEverything, sc);
     symbol = sc.symbol;
@@ -418,15 +414,14 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
 
   TargetSP target_sp(thread.CalculateTarget());
 
-  if (target_sp->GetSectionLoadList().IsEmpty())
+  if (!target_sp->HasLoadedSections())
     return ret_plan_sp;
 
   Address pc_addr_resolved;
   SymbolContext sc;
   Symbol *symbol;
 
-  if (!target_sp->GetSectionLoadList().ResolveLoadAddress(curr_pc,
-                                                          pc_addr_resolved))
+  if (!target_sp->ResolveLoadAddress(curr_pc, pc_addr_resolved))
     return ret_plan_sp;
 
   target_sp->GetImages().ResolveSymbolContextForAddress(
@@ -480,4 +475,15 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   }
 
   return ret_plan_sp;
+}
+
+bool CPPLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
+  llvm::StringRef mangled_name =
+      symbol.GetMangled().GetMangledName().GetStringRef();
+  // Virtual function overriding from a non-virtual base use a "Th" prefix.
+  // Virtual function overriding from a virtual base must use a "Tv" prefix.
+  // Virtual function overriding thunks with covariant returns use a "Tc"
+  // prefix.
+  return mangled_name.starts_with("_ZTh") || mangled_name.starts_with("_ZTv") ||
+         mangled_name.starts_with("_ZTc");
 }

@@ -22,13 +22,11 @@ body:             |
     ; RV32I-MO-LABEL: name: func1
     ; RV32I-MO: liveins: $x10, $x11
     ; RV32I-MO-NEXT: {{  $}}
-    ; RV32I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
-    ; RV32I-MO-NEXT: PseudoRET
+    ; RV32I-MO-NEXT: PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
     ; RV64I-MO-LABEL: name: func1
     ; RV64I-MO: liveins: $x10, $x11
     ; RV64I-MO-NEXT: {{  $}}
-    ; RV64I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
-    ; RV64I-MO-NEXT: PseudoRET
+    ; RV64I-MO-NEXT: PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
     $x10 = ORI $x10, 1023
     CFI_INSTRUCTION offset $x1, 0
     $x11 = ORI $x11, 1023
@@ -49,13 +47,11 @@ body:             |
     ; RV32I-MO-LABEL: name: func2
     ; RV32I-MO: liveins: $x10, $x11
     ; RV32I-MO-NEXT: {{  $}}
-    ; RV32I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
-    ; RV32I-MO-NEXT: PseudoRET
+    ; RV32I-MO-NEXT: PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
     ; RV64I-MO-LABEL: name: func2
     ; RV64I-MO: liveins: $x10, $x11
     ; RV64I-MO-NEXT: {{  $}}
-    ; RV64I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
-    ; RV64I-MO-NEXT: PseudoRET
+    ; RV64I-MO-NEXT: PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
     $x10 = ORI $x10, 1023
     CFI_INSTRUCTION offset $x1, 0
     $x11 = ORI $x11, 1023
@@ -76,13 +72,11 @@ body:             |
     ; RV32I-MO-LABEL: name: func3
     ; RV32I-MO: liveins: $x10, $x11
     ; RV32I-MO-NEXT: {{  $}}
-    ; RV32I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
-    ; RV32I-MO-NEXT: PseudoRET
+    ; RV32I-MO-NEXT: PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
     ; RV64I-MO-LABEL: name: func3
     ; RV64I-MO: liveins: $x10, $x11
     ; RV64I-MO-NEXT: {{  $}}
-    ; RV64I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
-    ; RV64I-MO-NEXT: PseudoRET
+    ; RV64I-MO-NEXT: PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
     $x10 = ORI $x10, 1023
     CFI_INSTRUCTION offset $x1, -12
     $x11 = ORI $x11, 1023
@@ -96,11 +90,11 @@ body:             |
 
 
 # OUTLINED-LABEL: name: OUTLINED_FUNCTION_0
-# OUTLINED: liveins: $x11, $x10, $x5
+# OUTLINED: liveins: $x11, $x10
 # OUTLINED-NEXT: {{  $}}
 # OUTLINED-NEXT: $x10 = ORI $x10, 1023
 # OUTLINED-NEXT: $x11 = ORI $x11, 1023
 # OUTLINED-NEXT: $x12 = ADDI $x10, 17
 # OUTLINED-NEXT: $x11 = AND $x12, $x11
 # OUTLINED-NEXT: $x10 = SUB $x10, $x11
-# OUTLINED-NEXT: $x0 = JALR $x5, 0
+# OUTLINED-NEXT: PseudoRET

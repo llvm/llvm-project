@@ -9,10 +9,10 @@ define void @test(ptr noalias %0, ptr noalias %1) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[TMP9]], align 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x double>, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <6 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP10]], <6 x i32> <i32 2, i32 4, i32 0, i32 3, i32 5, i32 1>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP10]], <6 x i32> <i32 2, i32 4, i32 0, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> [[TMP7]], <6 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 5>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <6 x double> [[TMP12]], <6 x double> [[TMP14]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 10, i32 11>
 ; CHECK-NEXT:    store <6 x double> [[TMP13]], ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP0]], i64 40
 ; CHECK-NEXT:    [[TMP22:%.*]] = load double, ptr [[TMP21]], align 8

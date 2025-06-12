@@ -1,4 +1,4 @@
-; RUN: not llc -march=mips < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=mips < %s 2>&1 | FileCheck %s
 
 declare ptr @llvm.frameaddress(i32) nounwind readnone
 

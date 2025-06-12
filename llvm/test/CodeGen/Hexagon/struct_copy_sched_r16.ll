@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-small-data-threshold=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=0 < %s | FileCheck %s
 ; Disable small-data, or the test will need to be modified to account for g0
 ; being placed there.
 

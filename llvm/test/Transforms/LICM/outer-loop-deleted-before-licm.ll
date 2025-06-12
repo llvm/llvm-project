@@ -39,7 +39,7 @@ for.body467.for.body467_crit_edge:                ; preds = %for.body467
   br i1 false, label %for.end539, label %for.body467
 
 for.end539:                                       ; preds = %for.body467
-  br i1 undef, label %for.body43, label %for.end547
+  br i1 false, label %for.body43, label %for.end547
 
 for.end547:                                       ; preds = %for.body43
   ret void

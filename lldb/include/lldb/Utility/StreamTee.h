@@ -85,7 +85,7 @@ public:
     return result;
   }
 
-  lldb::StreamSP GetStreamAtIndex(uint32_t idx) {
+  lldb::StreamSP GetStreamAtIndex(uint32_t idx) const {
     lldb::StreamSP stream_sp;
     std::lock_guard<std::recursive_mutex> guard(m_streams_mutex);
     if (idx < m_streams.size())

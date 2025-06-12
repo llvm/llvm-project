@@ -280,11 +280,11 @@ define i1 @cmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[MUL]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x double> [[TMP7]], <double 0x3EB0C6F7A0B5ED8D, double 0x3EB0C6F7A0B5ED8D>
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x double> [[TMP7]], splat (double 0x3EB0C6F7A0B5ED8D)
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x i1> [[TMP8]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP9:%.*]] = and <2 x i1> [[TMP8]], [[SHIFT]]
 ; CHECK-NEXT:    [[OR_COND:%.*]] = extractelement <2 x i1> [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[SHIFT2:%.*]] = shufflevector <2 x i1> [[TMP10]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i1> [[TMP10]], [[SHIFT2]]
 ; CHECK-NEXT:    [[OR_COND1_NOT:%.*]] = extractelement <2 x i1> [[TMP11]], i64 0
@@ -324,4 +324,54 @@ if.end:
 cleanup:
   %retval.0 = phi i1 [ false, %if.then ], [ true, %if.end ]
   ret i1 %retval.0
+}
+
+; From https://github.com/llvm/llvm-project/issues/139050.
+; FIXME: This should be vectorized.
+define i8 @masked_min_reduction(ptr %data, ptr %mask) {
+; CHECK-LABEL: @masked_min_reduction(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i8 [ -1, [[ENTRY]] ], [ [[TMP21:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[DATA:%.*]] = getelementptr i8, ptr [[DATA1:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[DATA]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[MASK:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[M:%.*]] = load i8, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[M]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.umin.i8(i8 [[ACC]], i8 [[VAL]])
+; CHECK-NEXT:    [[TMP21]] = select i1 [[COND]], i8 [[TMP0]], i8 [[ACC]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP20]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i8 [[TMP21]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %next, %loop ]
+  %acc = phi i8 [ 255, %entry ], [ %acc_next, %loop ]
+
+  %ptr_i = getelementptr i8, ptr %data, i64 %i
+  %val = load i8, ptr %ptr_i, align 1
+
+  %mask_ptr = getelementptr i8, ptr %mask, i64 %i
+  %m = load i8, ptr %mask_ptr, align 1
+  %cond = icmp eq i8 %m, 0
+
+  ; Use select to implement masking
+  %masked_val = select i1 %cond, i8 %val, i8 255
+
+  ; min reduction
+  %acc_next = call i8 @llvm.umin.i8(i8 %acc, i8 %masked_val)
+
+  %next = add i64 %i, 1
+  %cmp = icmp ult i64 %next, 1024
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i8 %acc_next
 }

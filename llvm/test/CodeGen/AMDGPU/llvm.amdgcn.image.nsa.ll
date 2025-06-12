@@ -1,12 +1,12 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-nsa-encoding -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX10-NONSA %s
+; RUN: llc -amdgpu-nsa-threshold=3 -mtriple=amdgcn -mcpu=gfx1010 -mattr=-nsa-encoding -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX10-NONSA %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -amdgpu-nsa-threshold=32 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX10-NONSA %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -amdgpu-nsa-threshold=2 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T2 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T3,GFX1010-NSA %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T3,GFX1030-NSA %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-nsa-encoding -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX11-NONSA %s
+; RUN: llc -amdgpu-nsa-threshold=3 -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T3,GFX1010-NSA %s
+; RUN: llc -amdgpu-nsa-threshold=3 -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T3,GFX1030-NSA %s
+; RUN: llc -amdgpu-nsa-threshold=3 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-nsa-encoding -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX11-NONSA %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-nsa-threshold=32 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX11-NONSA %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-nsa-threshold=2 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T2 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T3,GFX11-NSA %s
+; RUN: llc -amdgpu-nsa-threshold=3 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T3,GFX11-NSA %s
 
 ; Default NSA threshold is 3 addresses
 ; GCN-LABEL: {{^}}sample_2d:
@@ -54,7 +54,7 @@ define amdgpu_ps <2 x float> @sample_contig_nsa(<8 x i32> inreg %rsrc, <4 x i32>
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   %v2 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %s2, float %t2, float %r2, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %r.0 = insertelement <2 x float> undef, float %v1, i32 0
+  %r.0 = insertelement <2 x float> poison, float %v1, i32 0
   %r = insertelement <2 x float> %r.0, float %v2, i32 1
   ret <2 x float> %r
 }
@@ -70,7 +70,7 @@ define amdgpu_ps <2 x float> @sample_nsa_nsa(<8 x i32> inreg %rsrc, <4 x i32> in
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   %v2 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %s2, float %t2, float %r2, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %r.0 = insertelement <2 x float> undef, float %v1, i32 0
+  %r.0 = insertelement <2 x float> poison, float %v1, i32 0
   %r = insertelement <2 x float> %r.0, float %v2, i32 1
   ret <2 x float> %r
 }
@@ -86,7 +86,7 @@ define amdgpu_ps <2 x float> @sample_nsa_contig(<8 x i32> inreg %rsrc, <4 x i32>
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   %v2 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %s2, float %t2, float %r2, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %r.0 = insertelement <2 x float> undef, float %v1, i32 0
+  %r.0 = insertelement <2 x float> poison, float %v1, i32 0
   %r = insertelement <2 x float> %r.0, float %v2, i32 1
   ret <2 x float> %r
 }
@@ -106,7 +106,7 @@ define amdgpu_ps <2 x float> @sample_contig_contig(<8 x i32> inreg %rsrc, <4 x i
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   %v2 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %s2, float %t2, float %r2, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %r.0 = insertelement <2 x float> undef, float %v1, i32 0
+  %r.0 = insertelement <2 x float> poison, float %v1, i32 0
   %r = insertelement <2 x float> %r.0, float %v2, i32 1
   ret <2 x float> %r
 }
@@ -116,7 +116,7 @@ main_body:
 ; GCN-LABEL: {{^}}sample_undef_undef_undef_undef:
 ; GCN: image_sample_c_b v0, v[0:3], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D_ARRAY
 define amdgpu_ps float @sample_undef_undef_undef_undef(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp) {
-  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float undef, float undef, float undef, float undef, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float poison, float poison, float poison, float poison, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   ret float %r
 }
 
@@ -125,7 +125,7 @@ define amdgpu_ps float @sample_undef_undef_undef_undef(<8 x i32> inreg %rsrc, <4
 ; NONSA: image_sample_c_b v0, v[0:3], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D_ARRAY
 ; NSA: image_sample_c_b v0, [v0, v0, v0, v0], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D_ARRAY
 define amdgpu_ps float @sample_undef_undef_undef_def(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %layer) {
-  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float undef, float undef, float undef, float %layer, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float poison, float poison, float poison, float %layer, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   ret float %r
 }
 
@@ -134,7 +134,7 @@ define amdgpu_ps float @sample_undef_undef_undef_def(<8 x i32> inreg %rsrc, <4 x
 ; GCN: image_sample_c_b v0, v[0:3], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D_ARRAY
 define amdgpu_ps float @sample_undef_undef_undef_def_rnd(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %layer) {
   %layer_rnd = call float @llvm.rint.f32(float %layer)
-  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float undef, float undef, float undef, float %layer_rnd, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float poison, float poison, float poison, float %layer_rnd, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   ret float %r
 }
 
@@ -147,7 +147,7 @@ define amdgpu_ps float @sample_def_undef_undef_undef(<8 x i32> inreg %rsrc, <4 x
   ; eliminated in the presence of undef, just add an arbitrary intermediate
   ; computation.
   %c0 = fadd float %z0, 1.0
-  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float %c0, float undef, float undef, float undef, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float %c0, float poison, float poison, float poison, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   ret float %r
 }
 

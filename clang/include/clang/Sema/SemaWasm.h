@@ -29,6 +29,7 @@ public:
                                            CallExpr *TheCall);
 
   bool BuiltinWasmRefNullExtern(CallExpr *TheCall);
+  bool BuiltinWasmRefIsNullExtern(CallExpr *TheCall);
   bool BuiltinWasmRefNullFunc(CallExpr *TheCall);
   bool BuiltinWasmTableGet(CallExpr *TheCall);
   bool BuiltinWasmTableSet(CallExpr *TheCall);

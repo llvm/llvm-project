@@ -26,19 +26,20 @@ public:
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    mlir::ModuleOp mod = builder.create<mlir::ModuleOp>(loc);
-    mlir::func::FuncOp func = mlir::func::FuncOp::create(
+    moduleOp = builder.create<mlir::ModuleOp>(loc);
+    builder.setInsertionPointToStart(moduleOp->getBody());
+    mlir::func::FuncOp func = builder.create<mlir::func::FuncOp>(
         loc, "func1", builder.getFunctionType(std::nullopt, std::nullopt));
     auto *entryBlock = func.addEntryBlock();
-    mod.push_back(mod);
     builder.setInsertionPointToStart(entryBlock);
 
-    firBuilder = std::make_unique<fir::FirOpBuilder>(mod, *kindMap);
+    firBuilder = std::make_unique<fir::FirOpBuilder>(builder, *kindMap);
   }
 
   fir::FirOpBuilder &getBuilder() { return *firBuilder; }
 
   mlir::MLIRContext context;
+  mlir::OwningOpRef<mlir::ModuleOp> moduleOp;
   std::unique_ptr<fir::KindMapping> kindMap;
   std::unique_ptr<fir::FirOpBuilder> firBuilder;
 };

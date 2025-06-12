@@ -307,82 +307,83 @@ define arm_aapcs_vfpcc <4 x i32> @ext_ops_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK-NEXT:    vmov.f32 s10, s7
 ; CHECK-NEXT:    vmov r10, s8
 ; CHECK-NEXT:    vmov.f32 s8, s6
-; CHECK-NEXT:    vmov r7, s2
-; CHECK-NEXT:    vmov.f32 s2, s1
 ; CHECK-NEXT:    vmov.f32 s6, s5
 ; CHECK-NEXT:    vmov r2, s8
 ; CHECK-NEXT:    asr.w r0, r10, #31
-; CHECK-NEXT:    asrs r5, r7, #31
-; CHECK-NEXT:    adds.w r4, r10, r2
-; CHECK-NEXT:    eor.w r6, r10, r2
+; CHECK-NEXT:    adds.w r6, r10, r2
+; CHECK-NEXT:    eor.w r7, r10, r2
 ; CHECK-NEXT:    adc r3, r0, #0
-; CHECK-NEXT:    asrl r4, r3, r2
-; CHECK-NEXT:    subs r0, r4, r2
+; CHECK-NEXT:    asrl r6, r3, r2
+; CHECK-NEXT:    subs r0, r6, r2
+; CHECK-NEXT:    vmov r6, s2
 ; CHECK-NEXT:    sbc lr, r3, #0
 ; CHECK-NEXT:    vmov r3, s10
+; CHECK-NEXT:    vmov.f32 s2, s1
 ; CHECK-NEXT:    umull r0, r8, r0, r2
-; CHECK-NEXT:    adds r4, r7, r3
-; CHECK-NEXT:    eor.w r1, r7, r3
+; CHECK-NEXT:    asrs r5, r6, #31
+; CHECK-NEXT:    adds r4, r6, r3
 ; CHECK-NEXT:    adc r5, r5, #0
+; CHECK-NEXT:    eor.w r1, r6, r3
 ; CHECK-NEXT:    asrl r4, r5, r3
 ; CHECK-NEXT:    subs r4, r4, r3
 ; CHECK-NEXT:    sbc r5, r5, #0
-; CHECK-NEXT:    orrs.w r6, r6, r10, asr #31
+; CHECK-NEXT:    orrs.w r7, r7, r10, asr #31
 ; CHECK-NEXT:    umull r4, r12, r4, r3
 ; CHECK-NEXT:    csetm r9, eq
-; CHECK-NEXT:    orrs.w r1, r1, r7, asr #31
-; CHECK-NEXT:    mov.w r6, #0
+; CHECK-NEXT:    orrs.w r1, r1, r6, asr #31
+; CHECK-NEXT:    mov.w r7, #0
 ; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r6, r9, #0, #8
+; CHECK-NEXT:    bfi r7, r9, #0, #8
 ; CHECK-NEXT:    mla r5, r5, r3, r12
-; CHECK-NEXT:    bfi r6, r1, #8, #8
-; CHECK-NEXT:    rsbs r1, r7, #0
+; CHECK-NEXT:    bfi r7, r1, #8, #8
+; CHECK-NEXT:    rsbs r1, r6, #0
+; CHECK-NEXT:    vmsr p0, r7
 ; CHECK-NEXT:    mla r7, lr, r2, r8
 ; CHECK-NEXT:    lsll r4, r5, r1
 ; CHECK-NEXT:    rsb.w r1, r10, #0
+; CHECK-NEXT:    lsll r4, r5, r3
 ; CHECK-NEXT:    lsll r0, r7, r1
-; CHECK-NEXT:    vmov lr, s2
+; CHECK-NEXT:    vmov r3, s2
 ; CHECK-NEXT:    vmov r1, s6
 ; CHECK-NEXT:    lsll r0, r7, r2
-; CHECK-NEXT:    lsll r4, r5, r3
-; CHECK-NEXT:    vmsr p0, r6
 ; CHECK-NEXT:    vmov q3[2], q3[0], r0, r4
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    vpsel q2, q3, q2
-; CHECK-NEXT:    adds.w r2, lr, r1
-; CHECK-NEXT:    asr.w r0, lr, #31
-; CHECK-NEXT:    adc r3, r0, #0
-; CHECK-NEXT:    asrl r2, r3, r1
+; CHECK-NEXT:    adds r2, r3, r1
+; CHECK-NEXT:    asr.w r0, r3, #31
+; CHECK-NEXT:    adc r5, r0, #0
+; CHECK-NEXT:    asrl r2, r5, r1
 ; CHECK-NEXT:    subs r0, r2, r1
 ; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    sbc r7, r3, #0
-; CHECK-NEXT:    vmov r3, s4
-; CHECK-NEXT:    umull r0, r6, r0, r1
-; CHECK-NEXT:    asrs r5, r2, #31
-; CHECK-NEXT:    adds r4, r2, r3
-; CHECK-NEXT:    adc r5, r5, #0
-; CHECK-NEXT:    asrl r4, r5, r3
-; CHECK-NEXT:    subs r4, r4, r3
 ; CHECK-NEXT:    sbc r8, r5, #0
-; CHECK-NEXT:    mla r5, r7, r1, r6
-; CHECK-NEXT:    eor.w r6, lr, r1
-; CHECK-NEXT:    orrs.w r6, r6, lr, asr #31
-; CHECK-NEXT:    eor.w r7, r2, r3
+; CHECK-NEXT:    umull r4, lr, r0, r1
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    asrs r5, r2, #31
+; CHECK-NEXT:    adds r6, r2, r0
+; CHECK-NEXT:    adc r7, r5, #0
+; CHECK-NEXT:    mla r5, r8, r1, lr
+; CHECK-NEXT:    asrl r6, r7, r0
+; CHECK-NEXT:    subs.w r8, r6, r0
+; CHECK-NEXT:    eor.w r6, r2, r0
+; CHECK-NEXT:    sbc lr, r7, #0
+; CHECK-NEXT:    eor.w r7, r3, r1
+; CHECK-NEXT:    orrs.w r6, r6, r2, asr #31
+; CHECK-NEXT:    orr.w r7, r7, r3, asr #31
 ; CHECK-NEXT:    csetm r6, eq
-; CHECK-NEXT:    orrs.w r7, r7, r2, asr #31
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    rsb.w lr, lr, #0
-; CHECK-NEXT:    bfi r12, r7, #0, #8
-; CHECK-NEXT:    lsll r0, r5, lr
+; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    bfi r12, r6, #0, #8
+; CHECK-NEXT:    csetm r6, eq
 ; CHECK-NEXT:    bfi r12, r6, #8, #8
-; CHECK-NEXT:    umull r4, r6, r4, r3
-; CHECK-NEXT:    lsll r0, r5, r1
-; CHECK-NEXT:    rsbs r1, r2, #0
+; CHECK-NEXT:    umull r6, r7, r8, r0
+; CHECK-NEXT:    rsb.w r8, r3, #0
+; CHECK-NEXT:    lsll r4, r5, r8
 ; CHECK-NEXT:    vmsr p0, r12
-; CHECK-NEXT:    mla r7, r8, r3, r6
-; CHECK-NEXT:    lsll r4, r7, r1
-; CHECK-NEXT:    lsll r4, r7, r3
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r0
+; CHECK-NEXT:    mla r3, lr, r0, r7
+; CHECK-NEXT:    lsll r4, r5, r1
+; CHECK-NEXT:    rsbs r1, r2, #0
+; CHECK-NEXT:    lsll r6, r3, r1
+; CHECK-NEXT:    lsll r6, r3, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov.f32 s1, s2
 ; CHECK-NEXT:    vmov.f32 s2, s8

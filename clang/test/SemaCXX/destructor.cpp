@@ -58,7 +58,7 @@ struct D {
 
 struct D2 {
   void ~D2() { } //                          \
-  // expected-error{{destructor cannot have a return type}}  
+  // expected-error{{destructor cannot have a return type}}
 };
 
 
@@ -86,7 +86,7 @@ struct G {
 G::~G() { }
 
 struct H {
-  ~H(void) { } 
+  ~H(void) { }
 };
 
 struct X {};
@@ -103,7 +103,7 @@ namespace PR6421 {
     template<typename U>
     void foo(T t) // expected-error{{variable has incomplete type}}
     { }
-    
+
     void disconnect()
     {
       T* t;
@@ -364,7 +364,7 @@ struct __is_destructor_wellformed {
                        decltype(_Tp1().~_Tp1())>::type);
   template <typename _Tp1>
   static __two __test (...);
-              
+
   static const bool value = sizeof(__test<_Tp>(12)) == sizeof(char);
 };
 
@@ -584,6 +584,52 @@ struct X {
 };
 struct Y : X {} y1{ }; // expected-error {{call to implicitly-deleted default constructor of 'struct Y'}} \
                        // expected-note {{default constructor of 'Y' is implicitly deleted because base class 'X' has no destructor}}
+}
+
+namespace GH121706 {
+struct A {
+  *&~A(); // expected-error {{invalid destructor declaration}}
+};
+
+struct B {
+  *&&~B(); // expected-error {{invalid destructor declaration}}
+};
+
+struct C {
+  *const ~C(); // expected-error {{invalid destructor declaration}}
+};
+
+struct D {
+  *const * ~D(); // expected-error {{invalid destructor declaration}}
+};
+
+struct E {
+  *E::*~E(); // expected-error {{invalid destructor declaration}}
+};
+
+struct F {
+  *F::*const ~F(); // expected-error {{invalid destructor declaration}}
+};
+
+struct G {
+  ****~G(); // expected-error {{invalid destructor declaration}}
+};
+
+struct H {
+  **~H(); // expected-error {{invalid destructor declaration}}
+};
+
+struct I {
+  *~I(); // expected-error {{invalid destructor declaration}}
+};
+
+struct J {
+  *&~J(); // expected-error {{invalid destructor declaration}}
+};
+
+struct K {
+  **&&~K(); // expected-error {{invalid destructor declaration}}
+};
 }
 
 #endif // BE_THE_HEADER

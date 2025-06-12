@@ -50,14 +50,10 @@ llvm_config.with_system_environment(
 )
 
 # Enable sanitizer runtime flags.
-if "Address" in config.llvm_use_sanitizer:
+if config.llvm_use_sanitizer:
     config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
-    if platform.system() == "Darwin":
-        config.environment["MallocNanoZone"] = "0"
-
-if "Thread" in config.llvm_use_sanitizer:
     config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
-
+    config.environment["MallocNanoZone"] = "0"
 
 if config.lldb_platform_url and config.cmake_sysroot and config.enable_remote:
     if re.match(r".*-linux.*", config.target_triple):
@@ -72,6 +68,9 @@ toolchain.use_support_substitutions(config)
 
 if re.match(r"^arm(hf.*-linux)|(.*-linux-gnuabihf)", config.target_triple):
     config.available_features.add("armhf-linux")
+
+if re.match(r".*-(windows|mingw32)", config.target_triple):
+    config.available_features.add("target-windows")
 
 if re.match(r".*-(windows-msvc)$", config.target_triple):
     config.available_features.add("windows-msvc")
@@ -199,3 +198,8 @@ if platform.system() == "Darwin":
             config.available_features.add("ld_new-bug")
     except:
         pass
+
+# Some shell tests dynamically link with python.dll and need to know the
+# location of the Python libraries. This ensures that we use the same
+# version of Python that was used to build lldb to run our tests.
+config.environment["PYTHONHOME"] = config.python_root_dir

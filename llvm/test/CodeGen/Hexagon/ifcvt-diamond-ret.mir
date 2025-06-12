@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass if-converter %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass if-converter %s -o - | FileCheck %s
 
 # Make sure this gets if-converted and it doesn't crash.
 # CHECK-LABEL: bb.0

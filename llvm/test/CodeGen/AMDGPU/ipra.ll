@@ -33,9 +33,9 @@ define hidden void @func() #1 {
 ; GCN: ; TotalNumSgprs: 37
 ; GCN: ; NumVgprs: 9
 define amdgpu_kernel void @kernel_call() #0 {
-  %vgpr = load volatile i32, ptr addrspace(1) undef
+  %vgpr = load volatile i32, ptr addrspace(1) poison
   tail call void @func()
-  store volatile i32 %vgpr, ptr addrspace(1) undef
+  store volatile i32 %vgpr, ptr addrspace(1) poison
   ret void
 }
 
@@ -51,9 +51,9 @@ define amdgpu_kernel void @kernel_call() #0 {
 ; GCN: ; TotalNumSgprs: 34
 ; GCN: ; NumVgprs: 10
 define void @func_regular_call() #1 {
-  %vgpr = load volatile i32, ptr addrspace(1) undef
+  %vgpr = load volatile i32, ptr addrspace(1) poison
   tail call void @func()
-  store volatile i32 %vgpr, ptr addrspace(1) undef
+  store volatile i32 %vgpr, ptr addrspace(1) poison
   ret void
 }
 
@@ -64,7 +64,7 @@ define void @func_regular_call() #1 {
 ; GCN-NEXT: s_addc_u32 s17,
 ; GCN-NEXT: s_setpc_b64 s[16:17]
 
-; GCN: ; TotalNumSgprs: 32
+; GCN: ; TotalNumSgprs: 18
 ; GCN: ; NumVgprs: 8
 define void @func_tail_call() #1 {
   tail call void @func()
@@ -80,9 +80,9 @@ define void @func_tail_call() #1 {
 ; GCN: ; TotalNumSgprs: 34
 ; GCN: ; NumVgprs: 10
 define void @func_call_tail_call() #1 {
-  %vgpr = load volatile i32, ptr addrspace(1) undef
+  %vgpr = load volatile i32, ptr addrspace(1) poison
   tail call void @func()
-  store volatile i32 %vgpr, ptr addrspace(1) undef
+  store volatile i32 %vgpr, ptr addrspace(1) poison
   tail call void @func()
   ret void
 }

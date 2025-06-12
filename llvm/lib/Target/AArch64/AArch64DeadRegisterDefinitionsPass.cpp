@@ -14,7 +14,6 @@
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -41,10 +40,7 @@ private:
   void processMachineBasicBlock(MachineBasicBlock &MBB);
 public:
   static char ID; // Pass identification, replacement for typeid.
-  AArch64DeadRegisterDefinitions() : MachineFunctionPass(ID) {
-    initializeAArch64DeadRegisterDefinitionsPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AArch64DeadRegisterDefinitions() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
@@ -68,10 +64,10 @@ static bool usesFrameIndex(const MachineInstr &MI) {
   return false;
 }
 
-// Instructions that lose their 'read' operation for a subesquent fence acquire
+// Instructions that lose their 'read' operation for a subsequent fence acquire
 // (DMB LD) once the zero register is used.
 //
-// WARNING: The aquire variants of the instructions are also affected, but they
+// WARNING: The acquire variants of the instructions are also affected, but they
 // are split out into `atomicBarrierDroppedOnZero()` to support annotations on
 // assembly.
 static bool atomicReadDroppedOnZero(unsigned Opcode) {

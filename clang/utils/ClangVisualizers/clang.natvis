@@ -1069,7 +1069,7 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::LookupResult">
-    <DisplayString Condition="ResultKind == clang::LookupResult::Ambiguous">{Ambiguity,en}: {Decls}</DisplayString>
+    <DisplayString Condition="ResultKind == clang::LookupResultKind::Ambiguous">{Ambiguity,en}: {Decls}</DisplayString>
     <DisplayString>{ResultKind,en}: {Decls}</DisplayString>
   </Type>
   <Type Name="clang::ActionResult&lt;*, 0&gt;">

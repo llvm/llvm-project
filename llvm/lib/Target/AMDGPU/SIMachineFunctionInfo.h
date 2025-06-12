@@ -289,6 +289,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   unsigned PSInputAddr = 0;
   unsigned PSInputEnable = 0;
+  unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
 
   SIMode Mode;
   std::optional<FrameIndex> ScavengeFI;
@@ -297,6 +298,8 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue LongBranchReservedReg;
 
   bool HasInitWholeWave = false;
+
+  unsigned ScratchReservedForDynamicVGPRs = 0;
 
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
@@ -333,6 +336,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("argumentInfo", MFI.ArgInfo);
     YamlIO.mapOptional("psInputAddr", MFI.PSInputAddr, 0u);
     YamlIO.mapOptional("psInputEnable", MFI.PSInputEnable, 0u);
+    YamlIO.mapOptional("maxMemoryClusterDWords", MFI.MaxMemoryClusterDWords,
+                       DefaultMemoryClusterDWordsLimit);
     YamlIO.mapOptional("mode", MFI.Mode, SIMode());
     YamlIO.mapOptional("highBitsOf32BitAddress",
                        MFI.HighBitsOf32BitAddress, 0u);
@@ -347,6 +352,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
+    YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
+                       MFI.ScratchReservedForDynamicVGPRs, 0);
   }
 };
 
@@ -379,6 +386,16 @@ public:
   Register getReg() const { return Reg; }
   int getIndex() const { return Index; }
   SGPRSaveKind getKind() const { return Kind; }
+};
+
+struct VGPRBlock2IndexFunctor {
+  using argument_type = Register;
+  unsigned operator()(Register Reg) const {
+    assert(AMDGPU::VReg_1024RegClass.contains(Reg) && "Expecting a VGPR block");
+
+    const MCRegister FirstVGPRBlock = AMDGPU::VReg_1024RegClass.getRegister(0);
+    return Reg - FirstVGPRBlock;
+  }
 };
 
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
@@ -452,6 +469,10 @@ private:
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
 
+  // The size in bytes of the scratch space reserved for the CWSR trap handler
+  // to spill some of the dynamic VGPRs.
+  unsigned ScratchReservedForDynamicVGPRs = 0;
+
   // Tracks information about user SGPRs that will be setup by hardware which
   // will apply to all wavefronts of the grid.
   GCNUserSGPRUsageInfo UserSGPRInfo;
@@ -487,7 +508,9 @@ private:
   // Current recorded maximum possible occupancy.
   unsigned Occupancy;
 
-  mutable std::optional<bool> UsesAGPRs;
+  // Maximum number of dwords that can be clusterred during instruction
+  // scheduler stage.
+  unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
 
   MCPhysReg getNextUserSGPR() const;
 
@@ -561,6 +584,11 @@ private:
   // frame, so save it here and add it to the RegScavenger later.
   std::optional<int> ScavengeFI;
 
+  // Map each VGPR CSR to the mask needed to save and restore it using block
+  // load/store instructions. Only used if the subtarget feature for VGPR block
+  // load/store is enabled.
+  IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
+
 private:
   Register VGPRForAGPRCopy;
 
@@ -581,6 +609,19 @@ public:
 
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
 
+  void setMaskForVGPRBlockOps(Register RegisterBlock, uint32_t Mask) {
+    MaskForVGPRBlockOps.grow(RegisterBlock);
+    MaskForVGPRBlockOps[RegisterBlock] = Mask;
+  }
+
+  uint32_t getMaskForVGPRBlockOps(Register RegisterBlock) const {
+    return MaskForVGPRBlockOps[RegisterBlock];
+  }
+
+  bool hasMaskForVGPRBlockOps(Register RegisterBlock) const {
+    return MaskForVGPRBlockOps.inBounds(RegisterBlock);
+  }
+
 public:
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;
   SIMachineFunctionInfo(const Function &F, const GCNSubtarget *STI);
@@ -596,6 +637,10 @@ public:
                                 SMDiagnostic &Error, SMRange &SourceRange);
 
   void reserveWWMRegister(Register Reg) { WWMReservedRegs.insert(Reg); }
+  bool isWWMReg(Register Reg) const {
+    return Reg.isVirtual() ? checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG)
+                           : WWMReservedRegs.contains(Reg);
+  }
 
   void updateNonWWMRegMask(BitVector &RegMask) { NonWWMRegMask = RegMask; }
   BitVector getNonWWMRegMask() const { return NonWWMRegMask; }
@@ -616,6 +661,10 @@ public:
 
   const WWMSpillsMap &getWWMSpills() const { return WWMSpills; }
   const ReservedRegSet &getWWMReservedRegs() const { return WWMReservedRegs; }
+
+  bool isWWMReservedRegister(Register Reg) const {
+    return WWMReservedRegs.contains(Reg);
+  }
 
   ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
     assert(is_sorted(PrologEpilogSGPRSpills, llvm::less_first()));
@@ -771,6 +820,15 @@ public:
     BytesInStackArgArea = Bytes;
   }
 
+  // This is only used if we need to save any dynamic VGPRs in scratch.
+  unsigned getScratchReservedForDynamicVGPRs() const {
+    return ScratchReservedForDynamicVGPRs;
+  }
+
+  void setScratchReservedForDynamicVGPRs(unsigned SizeInBytes) {
+    ScratchReservedForDynamicVGPRs = SizeInBytes;
+  }
+
   // Add user SGPRs.
   Register addPrivateSegmentBuffer(const SIRegisterInfo &TRI);
   Register addDispatchPtr(const SIRegisterInfo &TRI);
@@ -912,8 +970,23 @@ public:
     return NumUserSGPRs;
   }
 
+  // Get the number of preloaded SGPRs for compute kernels.
   unsigned getNumPreloadedSGPRs() const {
     return NumUserSGPRs + NumSystemSGPRs;
+  }
+
+  // Get the number of preloaded VGPRs for compute kernels.
+  unsigned getNumPreloadedVGPRs() const {
+    if (hasWorkItemIDZ())
+      return ArgInfo.WorkItemIDZ.getRegister() - AMDGPU::VGPR0 + 1;
+
+    if (hasWorkItemIDY())
+      return ArgInfo.WorkItemIDY.getRegister() - AMDGPU::VGPR0 + 1;
+
+    if (hasWorkItemIDX())
+      return ArgInfo.WorkItemIDX.getRegister() - AMDGPU::VGPR0 + 1;
+
+    return 0;
   }
 
   unsigned getNumKernargPreloadedSGPRs() const {
@@ -1105,6 +1178,8 @@ public:
     limitOccupancy(MF);
   }
 
+  unsigned getMaxMemoryClusterDWords() const { return MaxMemoryClusterDWords; }
+
   bool mayNeedAGPRs() const {
     return MayNeedAGPRs;
   }
@@ -1112,9 +1187,6 @@ public:
   // \returns true if a function has a use of AGPRs via inline asm or
   // has a call which may use it.
   bool mayUseAGPRs(const Function &F) const;
-
-  // \returns true if a function needs or may need AGPRs.
-  bool usesAGPRs(const MachineFunction &MF) const;
 
   /// \returns Default/requested number of work groups for this function.
   SmallVector<unsigned> getMaxNumWorkGroups() const { return MaxNumWorkGroups; }

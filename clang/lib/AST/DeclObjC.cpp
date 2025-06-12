@@ -24,9 +24,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -931,8 +929,8 @@ void ObjCMethodDecl::setParamsAndSelLocs(ASTContext &C,
   unsigned Size = sizeof(ParmVarDecl *) * NumParams +
                   sizeof(SourceLocation) * SelLocs.size();
   ParamsAndSelLocs = C.Allocate(Size);
-  std::uninitialized_copy(Params.begin(), Params.end(), getParams());
-  std::uninitialized_copy(SelLocs.begin(), SelLocs.end(), getStoredSelLocs());
+  llvm::uninitialized_copy(Params, getParams());
+  llvm::uninitialized_copy(SelLocs, getStoredSelLocs());
 }
 
 void ObjCMethodDecl::getSelectorLocs(

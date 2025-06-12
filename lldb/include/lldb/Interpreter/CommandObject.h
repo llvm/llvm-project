@@ -35,18 +35,18 @@ namespace lldb_private {
 
 template <typename ValueType>
 int AddNamesMatchingPartialString(
-    const std::map<std::string, ValueType> &in_map, llvm::StringRef cmd_str,
-    StringList &matches, StringList *descriptions = nullptr) {
+    const std::map<std::string, ValueType, std::less<>> &in_map,
+    llvm::StringRef cmd_str, StringList &matches,
+    StringList *descriptions = nullptr) {
   int number_added = 0;
 
-  const bool add_all = cmd_str.empty();
-
-  for (auto iter = in_map.begin(), end = in_map.end(); iter != end; iter++) {
-    if (add_all || (iter->first.find(std::string(cmd_str), 0) == 0)) {
+  for (const auto &[name, cmd] : in_map) {
+    llvm::StringRef cmd_name = name;
+    if (cmd_name.starts_with(cmd_str)) {
       ++number_added;
-      matches.AppendString(iter->first.c_str());
+      matches.AppendString(name);
       if (descriptions)
-        descriptions->AppendString(iter->second->GetHelp());
+        descriptions->AppendString(cmd->GetHelp());
     }
   }
 
@@ -54,7 +54,8 @@ int AddNamesMatchingPartialString(
 }
 
 template <typename ValueType>
-size_t FindLongestCommandWord(std::map<std::string, ValueType> &dict) {
+size_t
+FindLongestCommandWord(std::map<std::string, ValueType, std::less<>> &dict) {
   auto end = dict.end();
   size_t max_len = 0;
 
@@ -107,7 +108,7 @@ public:
   typedef std::vector<CommandArgumentData>
       CommandArgumentEntry; // Used to build individual command argument lists
 
-  typedef std::map<std::string, lldb::CommandObjectSP> CommandMap;
+  typedef std::map<std::string, lldb::CommandObjectSP, std::less<>> CommandMap;
 
   CommandObject(CommandInterpreter &interpreter, llvm::StringRef name,
     llvm::StringRef help = "", llvm::StringRef syntax = "",

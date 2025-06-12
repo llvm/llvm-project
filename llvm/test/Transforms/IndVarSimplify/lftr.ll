@@ -43,7 +43,7 @@ define i32 @pre_to_post_sub() {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 1000, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = sub nsw i32 [[I]], 1
 ; CHECK-NEXT:    store i32 [[I]], ptr @A, align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[I]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp samesign ugt i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    ret i32 0
@@ -270,7 +270,7 @@ define void @use_before_branch() {
 ; CHECK-NEXT:    br label [[LOOPENTRY_0:%.*]]
 ; CHECK:       loopentry.0:
 ; CHECK-NEXT:    [[MB_Y_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[T152:%.*]], [[LOOPENTRY_1:%.*]] ]
-; CHECK-NEXT:    [[T14:%.*]] = icmp ule i32 [[MB_Y_0]], 3
+; CHECK-NEXT:    [[T14:%.*]] = icmp samesign ule i32 [[MB_Y_0]], 3
 ; CHECK-NEXT:    br i1 [[T14]], label [[LOOPENTRY_1]], label [[LOOPEXIT_0:%.*]]
 ; CHECK:       loopentry.1:
 ; CHECK-NEXT:    [[T152]] = add nuw nsw i32 [[MB_Y_0]], 2
@@ -309,7 +309,7 @@ define i64 @no_undef_counter() nounwind {
 ; CHECK-NEXT:    [[UNDEF:%.*]] = phi i64 [ [[NEXT_UNDEF:%.*]], [[BLOCK9]] ], [ undef, [[FUNC_START:%.*]] ]
 ; CHECK-NEXT:    [[ITER:%.*]] = phi i64 [ [[NEXT_ITER:%.*]], [[BLOCK9]] ], [ 1, [[FUNC_START]] ]
 ; CHECK-NEXT:    [[NEXT_ITER]] = add nuw nsw i64 [[ITER]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 (ptr, ...) @printf(ptr noalias nocapture @.str3, i64 [[NEXT_ITER]], i64 [[UNDEF]])
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 (ptr, ...) @printf(ptr noalias captures(none) @.str3, i64 [[NEXT_ITER]], i64 [[UNDEF]])
 ; CHECK-NEXT:    [[NEXT_UNDEF]] = add nsw i64 [[UNDEF]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[NEXT_ITER]], 100
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BLOCK9]], label [[EXIT:%.*]]

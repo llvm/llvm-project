@@ -1284,7 +1284,7 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
 
     bool fromSparseConst = false;
     if (auto constOp = op.getSource().getDefiningOp<arith::ConstantOp>())
-      if (dyn_cast<SparseElementsAttr>(constOp.getValue()))
+      if (isa<SparseElementsAttr>(constOp.getValue()))
         fromSparseConst = true;
 
     const AffineMapAttr foreachOrder =

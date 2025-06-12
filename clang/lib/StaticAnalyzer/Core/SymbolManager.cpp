@@ -14,7 +14,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
@@ -22,9 +21,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
-#include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -80,9 +76,52 @@ void UnarySymExpr::dumpToStream(raw_ostream &os) const {
     os << ')';
 }
 
+const Stmt *SymbolConjured::getStmt() const {
+  // Sometimes the CFG element is invalid, avoid dereferencing it.
+  if (Elem.getParent() == nullptr ||
+      Elem.getIndexInBlock() >= Elem.getParent()->size())
+    return nullptr;
+  switch (Elem->getKind()) {
+  case CFGElement::Initializer:
+    if (const auto *Init = Elem->castAs<CFGInitializer>().getInitializer()) {
+      return Init->getInit();
+    }
+    return nullptr;
+  case CFGElement::ScopeBegin:
+    return Elem->castAs<CFGScopeBegin>().getTriggerStmt();
+  case CFGElement::ScopeEnd:
+    return Elem->castAs<CFGScopeEnd>().getTriggerStmt();
+  case CFGElement::NewAllocator:
+    return Elem->castAs<CFGNewAllocator>().getAllocatorExpr();
+  case CFGElement::LifetimeEnds:
+    return Elem->castAs<CFGLifetimeEnds>().getTriggerStmt();
+  case CFGElement::LoopExit:
+    return Elem->castAs<CFGLoopExit>().getLoopStmt();
+  case CFGElement::Statement:
+    return Elem->castAs<CFGStmt>().getStmt();
+  case CFGElement::Constructor:
+    return Elem->castAs<CFGConstructor>().getStmt();
+  case CFGElement::CXXRecordTypedCall:
+    return Elem->castAs<CFGCXXRecordTypedCall>().getStmt();
+  case CFGElement::AutomaticObjectDtor:
+    return Elem->castAs<CFGAutomaticObjDtor>().getTriggerStmt();
+  case CFGElement::DeleteDtor:
+    return Elem->castAs<CFGDeleteDtor>().getDeleteExpr();
+  case CFGElement::BaseDtor:
+    return nullptr;
+  case CFGElement::MemberDtor:
+    return nullptr;
+  case CFGElement::TemporaryDtor:
+    return Elem->castAs<CFGTemporaryDtor>().getBindTemporaryExpr();
+  case CFGElement::CleanupFunction:
+    return nullptr;
+  }
+  return nullptr;
+}
+
 void SymbolConjured::dumpToStream(raw_ostream &os) const {
   os << getKindStr() << getSymbolID() << '{' << T << ", LC" << LCtx->getID();
-  if (S)
+  if (auto *S = getStmt())
     os << ", S" << S->getID(LCtx->getDecl()->getASTContext());
   else
     os << ", no stmt";
@@ -161,168 +200,6 @@ void SymExpr::symbol_iterator::expand() {
     }
   }
   llvm_unreachable("unhandled expansion case");
-}
-
-const SymbolRegionValue*
-SymbolManager::getRegionValueSymbol(const TypedValueRegion* R) {
-  llvm::FoldingSetNodeID profile;
-  SymbolRegionValue::Profile(profile, R);
-  void *InsertPos;
-  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
-  if (!SD) {
-    SD = new (BPAlloc) SymbolRegionValue(SymbolCounter, R);
-    DataSet.InsertNode(SD, InsertPos);
-    ++SymbolCounter;
-  }
-
-  return cast<SymbolRegionValue>(SD);
-}
-
-const SymbolConjured* SymbolManager::conjureSymbol(const Stmt *E,
-                                                   const LocationContext *LCtx,
-                                                   QualType T,
-                                                   unsigned Count,
-                                                   const void *SymbolTag) {
-  llvm::FoldingSetNodeID profile;
-  SymbolConjured::Profile(profile, E, T, Count, LCtx, SymbolTag);
-  void *InsertPos;
-  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
-  if (!SD) {
-    SD = new (BPAlloc) SymbolConjured(SymbolCounter, E, LCtx, T, Count, SymbolTag);
-    DataSet.InsertNode(SD, InsertPos);
-    ++SymbolCounter;
-  }
-
-  return cast<SymbolConjured>(SD);
-}
-
-const SymbolDerived*
-SymbolManager::getDerivedSymbol(SymbolRef parentSymbol,
-                                const TypedValueRegion *R) {
-  llvm::FoldingSetNodeID profile;
-  SymbolDerived::Profile(profile, parentSymbol, R);
-  void *InsertPos;
-  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
-  if (!SD) {
-    SD = new (BPAlloc) SymbolDerived(SymbolCounter, parentSymbol, R);
-    DataSet.InsertNode(SD, InsertPos);
-    ++SymbolCounter;
-  }
-
-  return cast<SymbolDerived>(SD);
-}
-
-const SymbolExtent*
-SymbolManager::getExtentSymbol(const SubRegion *R) {
-  llvm::FoldingSetNodeID profile;
-  SymbolExtent::Profile(profile, R);
-  void *InsertPos;
-  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
-  if (!SD) {
-    SD = new (BPAlloc) SymbolExtent(SymbolCounter, R);
-    DataSet.InsertNode(SD, InsertPos);
-    ++SymbolCounter;
-  }
-
-  return cast<SymbolExtent>(SD);
-}
-
-const SymbolMetadata *
-SymbolManager::getMetadataSymbol(const MemRegion* R, const Stmt *S, QualType T,
-                                 const LocationContext *LCtx,
-                                 unsigned Count, const void *SymbolTag) {
-  llvm::FoldingSetNodeID profile;
-  SymbolMetadata::Profile(profile, R, S, T, LCtx, Count, SymbolTag);
-  void *InsertPos;
-  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
-  if (!SD) {
-    SD = new (BPAlloc) SymbolMetadata(SymbolCounter, R, S, T, LCtx, Count, SymbolTag);
-    DataSet.InsertNode(SD, InsertPos);
-    ++SymbolCounter;
-  }
-
-  return cast<SymbolMetadata>(SD);
-}
-
-const SymbolCast*
-SymbolManager::getCastSymbol(const SymExpr *Op,
-                             QualType From, QualType To) {
-  llvm::FoldingSetNodeID ID;
-  SymbolCast::Profile(ID, Op, From, To);
-  void *InsertPos;
-  SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
-  if (!data) {
-    data = new (BPAlloc) SymbolCast(Op, From, To);
-    DataSet.InsertNode(data, InsertPos);
-  }
-
-  return cast<SymbolCast>(data);
-}
-
-const SymIntExpr *SymbolManager::getSymIntExpr(const SymExpr *lhs,
-                                               BinaryOperator::Opcode op,
-                                               const llvm::APSInt& v,
-                                               QualType t) {
-  llvm::FoldingSetNodeID ID;
-  SymIntExpr::Profile(ID, lhs, op, v, t);
-  void *InsertPos;
-  SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
-
-  if (!data) {
-    data = new (BPAlloc) SymIntExpr(lhs, op, v, t);
-    DataSet.InsertNode(data, InsertPos);
-  }
-
-  return cast<SymIntExpr>(data);
-}
-
-const IntSymExpr *SymbolManager::getIntSymExpr(const llvm::APSInt& lhs,
-                                               BinaryOperator::Opcode op,
-                                               const SymExpr *rhs,
-                                               QualType t) {
-  llvm::FoldingSetNodeID ID;
-  IntSymExpr::Profile(ID, lhs, op, rhs, t);
-  void *InsertPos;
-  SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
-
-  if (!data) {
-    data = new (BPAlloc) IntSymExpr(lhs, op, rhs, t);
-    DataSet.InsertNode(data, InsertPos);
-  }
-
-  return cast<IntSymExpr>(data);
-}
-
-const SymSymExpr *SymbolManager::getSymSymExpr(const SymExpr *lhs,
-                                               BinaryOperator::Opcode op,
-                                               const SymExpr *rhs,
-                                               QualType t) {
-  llvm::FoldingSetNodeID ID;
-  SymSymExpr::Profile(ID, lhs, op, rhs, t);
-  void *InsertPos;
-  SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
-
-  if (!data) {
-    data = new (BPAlloc) SymSymExpr(lhs, op, rhs, t);
-    DataSet.InsertNode(data, InsertPos);
-  }
-
-  return cast<SymSymExpr>(data);
-}
-
-const UnarySymExpr *SymbolManager::getUnarySymExpr(const SymExpr *Operand,
-                                                   UnaryOperator::Opcode Opc,
-                                                   QualType T) {
-  llvm::FoldingSetNodeID ID;
-  UnarySymExpr::Profile(ID, Operand, Opc, T);
-  void *InsertPos;
-  SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
-  if (!data) {
-    data = new (BPAlloc) UnarySymExpr(Operand, Opc, T);
-    DataSet.InsertNode(data, InsertPos);
-  }
-
-  return cast<UnarySymExpr>(data);
 }
 
 QualType SymbolConjured::getType() const {

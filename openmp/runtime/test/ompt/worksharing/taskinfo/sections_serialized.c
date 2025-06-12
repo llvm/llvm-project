@@ -27,14 +27,14 @@ int main()
 
   // region 0
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin
-  // CHECK-SAME: parent_task_frame.exit=[[NULL]], parent_task_frame.reenter=[[INITIAL_TASK_FRAME_ENTER:0x[0-f]+]],
+  // CHECK-SAME: parent_task_frame.exit=[[NULL]], parent_task_frame.reenter=[[INITIAL_TASK_FRAME_ENTER:(0x)?[0-f]+]],
   // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]]
 
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID:[0-9]+]]
 
   // information about implicit task (exit frame should be set, while enter should be NULL)
   // CHECK: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID]]
-  // CHECK-SAME: exit_frame={{0x[0-f]+}}
+  // CHECK-SAME: exit_frame={{(0x)?[0-f]+}}
   // CHECK-SAME: reenter_frame=[[NULL]]
   // CHECK-SAME: task_type=ompt_task_implicit
 

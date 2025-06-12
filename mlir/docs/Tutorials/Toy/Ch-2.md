@@ -262,7 +262,7 @@ class ConstantOp : public mlir::Op<
                      mlir::OpTrait::OneResult,
                      /// We also provide a utility `getType` accessor that
                      /// returns the TensorType of the single result.
-                     mlir::OpTraits::OneTypedResult<TensorType>::Impl> {
+                     mlir::OpTrait::OneTypedResult<TensorType>::Impl> {
 
  public:
   /// Inherit the constructors from the base Op class.

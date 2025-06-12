@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=60 -x c++ -std=c++11 -ast-print %s | FileCheck %s
 // expected-no-diagnostics
 
 extern void bar();
@@ -8,6 +8,14 @@ void foo()
 {
   #pragma omp assume no_openmp_routines
   // CHECK: omp assume no_openmp_routines
+  {
+    #pragma omp assume no_parallelism
+    // CHECK: omp assume no_parallelism
+    {}
+  }
+
+  #pragma omp assume no_openmp_constructs
+  // CHECK: omp assume no_openmp_constructs
   {
     #pragma omp assume no_parallelism
     // CHECK: omp assume no_parallelism

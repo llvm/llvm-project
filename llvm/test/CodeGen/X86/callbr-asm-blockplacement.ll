@@ -50,7 +50,7 @@ define i32 @foo(i32 %arg, ptr %arg3) nounwind {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.4: # %bb17
 ; CHECK-NEXT:    callq widget@PLT
-; CHECK-NEXT:  .LBB0_5: # Block address taken
+; CHECK-NEXT:  .LBB0_5: # Inline asm indirect target
 ; CHECK-NEXT:    # %bb18
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movw $0, 14(%r14)

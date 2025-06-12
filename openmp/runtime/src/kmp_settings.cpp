@@ -3767,7 +3767,7 @@ static void __kmp_stg_parse_allocator(char const *name, char const *value,
       if (__kmp_match_str("omp_high_bw_mem_alloc", scan, &next)) {
         SKIP_WS(next);
         if (is_memalloc) {
-          if (__kmp_memkind_available) {
+          if (__kmp_hwloc_available || __kmp_memkind_available) {
             __kmp_def_allocator = omp_high_bw_mem_alloc;
             return;
           } else {
@@ -3780,7 +3780,7 @@ static void __kmp_stg_parse_allocator(char const *name, char const *value,
       } else if (__kmp_match_str("omp_large_cap_mem_alloc", scan, &next)) {
         SKIP_WS(next);
         if (is_memalloc) {
-          if (__kmp_memkind_available) {
+          if (__kmp_hwloc_available || __kmp_memkind_available) {
             __kmp_def_allocator = omp_large_cap_mem_alloc;
             return;
           } else {

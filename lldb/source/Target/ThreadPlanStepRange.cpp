@@ -197,9 +197,11 @@ bool ThreadPlanStepRange::InRange() {
 bool ThreadPlanStepRange::InSymbol() {
   lldb::addr_t cur_pc = GetThread().GetRegisterContext()->GetPC();
   if (m_addr_context.function != nullptr) {
-    return m_addr_context.function->GetAddressRange().ContainsLoadAddress(
-        cur_pc, &GetTarget());
-  } else if (m_addr_context.symbol && m_addr_context.symbol->ValueIsAddress()) {
+    AddressRange unused_range;
+    return m_addr_context.function->GetRangeContainingLoadAddress(
+        cur_pc, GetTarget(), unused_range);
+  }
+  if (m_addr_context.symbol && m_addr_context.symbol->ValueIsAddress()) {
     AddressRange range(m_addr_context.symbol->GetAddressRef(),
                        m_addr_context.symbol->GetByteSize());
     return range.ContainsLoadAddress(cur_pc, &GetTarget());
@@ -266,9 +268,11 @@ InstructionList *ThreadPlanStepRange::GetInstructionsForAddress(
         // Disassemble the address range given:
         const char *plugin_name = nullptr;
         const char *flavor = nullptr;
+        const char *cpu = nullptr;
+        const char *features = nullptr;
         m_instruction_ranges[i] = Disassembler::DisassembleRange(
-            GetTarget().GetArchitecture(), plugin_name, flavor, GetTarget(),
-            m_address_ranges[i]);
+            GetTarget().GetArchitecture(), plugin_name, flavor, cpu, features,
+            GetTarget(), m_address_ranges[i]);
       }
       if (!m_instruction_ranges[i])
         return nullptr;

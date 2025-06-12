@@ -511,6 +511,35 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
         if (auto EditsNearCursor = Completion->getBoolean("editsNearCursor"))
           R.CompletionFixes |= *EditsNearCursor;
       }
+      if (auto *References = TextDocument->getObject("references")) {
+        if (auto ContainerSupport = References->getBoolean("container")) {
+          R.ReferenceContainer |= *ContainerSupport;
+        }
+      }
+      if (auto *Diagnostics = TextDocument->getObject("publishDiagnostics")) {
+        if (auto CodeActions = Diagnostics->getBoolean("codeActionsInline")) {
+          R.DiagnosticFixes |= *CodeActions;
+        }
+      }
+      if (auto *InactiveRegions =
+              TextDocument->getObject("inactiveRegionsCapabilities")) {
+        if (auto InactiveRegionsSupport =
+                InactiveRegions->getBoolean("inactiveRegions")) {
+          R.InactiveRegions |= *InactiveRegionsSupport;
+        }
+      }
+    }
+    if (auto *Window = Experimental->getObject("window")) {
+      if (auto Implicit =
+              Window->getBoolean("implicitWorkDoneProgressCreate")) {
+        R.ImplicitProgressCreation |= *Implicit;
+      }
+    }
+    if (auto *OffsetEncoding = Experimental->get("offsetEncoding")) {
+      R.offsetEncoding.emplace();
+      if (!fromJSON(*OffsetEncoding, *R.offsetEncoding,
+                    P.field("offsetEncoding")))
+        return false;
     }
   }
 
@@ -643,6 +672,15 @@ bool fromJSON(const llvm::json::Value &Params, DocumentRangeFormattingParams &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
   return O && O.map("textDocument", R.textDocument) && O.map("range", R.range);
+  ;
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              DocumentRangesFormattingParams &R, llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("textDocument", R.textDocument) &&
+         O.map("ranges", R.ranges);
+  ;
 }
 
 bool fromJSON(const llvm::json::Value &Params,

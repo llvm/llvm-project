@@ -3,6 +3,8 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
+; RUN: llc -mtriple=riscv64 -mattr=+xmipscmov -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV64I-CCMOV %s
 
 ;; There are a few different ways to lower (select (or A, B), X, Y). This test
 ;; ensures that we do so with as few branches as possible.
@@ -27,6 +29,12 @@ define signext i32 @select_of_or(i1 zeroext %a, i1 zeroext %b, i32 signext %c, i
 ; RV64I-NEXT:    mv a0, a3
 ; RV64I-NEXT:  .LBB0_2:
 ; RV64I-NEXT:    ret
+;
+; RV64I-CCMOV-LABEL: select_of_or:
+; RV64I-CCMOV:       # %bb.0:
+; RV64I-CCMOV-NEXT:    or a0, a0, a1
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a0, a2, a3
+; RV64I-CCMOV-NEXT:    ret
   %1 = or i1 %a, %b
   %2 = select i1 %1, i32 %c, i32 %d
   ret i32 %2
@@ -69,6 +77,23 @@ define signext i32 @if_of_or(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV64I-CCMOV-LABEL: if_of_or:
+; RV64I-CCMOV:       # %bb.0:
+; RV64I-CCMOV-NEXT:    addi sp, sp, -16
+; RV64I-CCMOV-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-CCMOV-NEXT:    bnez a0, .LBB1_3
+; RV64I-CCMOV-NEXT:  # %bb.1:
+; RV64I-CCMOV-NEXT:    bnez a1, .LBB1_3
+; RV64I-CCMOV-NEXT:  # %bb.2: # %if.else
+; RV64I-CCMOV-NEXT:    call neither
+; RV64I-CCMOV-NEXT:    j .LBB1_4
+; RV64I-CCMOV-NEXT:  .LBB1_3: # %if.then
+; RV64I-CCMOV-NEXT:    call either
+; RV64I-CCMOV-NEXT:  .LBB1_4: # %if.end
+; RV64I-CCMOV-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-CCMOV-NEXT:    addi sp, sp, 16
+; RV64I-CCMOV-NEXT:    ret
   %1 = or i1 %a, %b
   br i1 %1, label %if.then, label %if.else
 

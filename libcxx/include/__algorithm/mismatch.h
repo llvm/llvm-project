@@ -27,7 +27,6 @@
 #include <__type_traits/is_integral.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <__utility/unreachable.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
