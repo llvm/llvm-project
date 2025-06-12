@@ -2085,6 +2085,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(ShadowPtr && "Could not find shadow for an argument");
       return ShadowPtr;
     }
+
+    // TODO: partially undefined vectors are not correctly handled
+    //       (see partial-poison.ll)
+
     // For everything else the shadow is zero.
     return getCleanShadow(V);
   }
