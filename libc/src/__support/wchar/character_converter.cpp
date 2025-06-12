@@ -19,15 +19,11 @@ namespace internal {
 
 CharacterConverter::CharacterConverter(mbstate *mbstate) { state = mbstate; }
 
-bool CharacterConverter::isComplete() {
-  return state->bits_processed / 8 == state->total_bytes;
-}
-
 int CharacterConverter::push(char8_t utf8_byte) { return utf8_byte; }
 
 int CharacterConverter::push(char32_t utf32) {
   state->partial = utf32;
-  state->bits_processed = 0;
+  state->bytes_processed = 0;
   state->total_bytes = 0;
 
   // determine number of utf-8 bytes needed to represent this utf32 value
@@ -51,7 +47,7 @@ utf_ret<char8_t> CharacterConverter::pop_utf8_seqlength1() {
   result.error = 0;
 
   // 0xxxxxxx
-  switch (state->bits_processed) {
+  switch (state->bytes_processed) {
   case 0:
     result.out = (char8_t)(state->partial);
     break;
@@ -60,7 +56,7 @@ utf_ret<char8_t> CharacterConverter::pop_utf8_seqlength1() {
     return result;
   }
 
-  state->bits_processed += 8;
+  state->bytes_processed++;
   return result;
 }
 
@@ -70,11 +66,11 @@ utf_ret<char8_t> CharacterConverter::pop_utf8_seqlength2() {
 
   // 110xxxxx 10xxxxxx
   char32_t utf32 = state->partial;
-  switch (state->bits_processed) {
+  switch (state->bytes_processed) {
   case 0:
     result.out = (char8_t)(0xC0 | (utf32 >> 6));
     break;
-  case 8:
+  case 1:
     result.out = (char8_t)(0x80 | (utf32 & 0x3f));
     break;
   default:
@@ -82,7 +78,7 @@ utf_ret<char8_t> CharacterConverter::pop_utf8_seqlength2() {
     return result;
   }
 
-  state->bits_processed += 8;
+  state->bytes_processed++;
   return result;
 }
 
@@ -92,14 +88,14 @@ utf_ret<char8_t> CharacterConverter::pop_utf8_seqlength3() {
 
   // 1110xxxx 10xxxxxx 10xxxxxx
   char32_t utf32 = state->partial;
-  switch (state->bits_processed) {
+  switch (state->bytes_processed) {
   case 0:
     result.out = (char8_t)(0xE0 | (utf32 >> 12));
     break;
-  case 8:
+  case 1:
     result.out = (char8_t)(0x80 | ((utf32 >> 6) & 0x3f));
     break;
-  case 16:
+  case 2:
     result.out = (char8_t)(0x80 | (utf32 & 0x3f));
     break;
   default:
@@ -107,7 +103,7 @@ utf_ret<char8_t> CharacterConverter::pop_utf8_seqlength3() {
     return result;
   }
 
-  state->bits_processed += 8;
+  state->bytes_processed++;
   return result;
 }
 
@@ -117,17 +113,17 @@ utf_ret<char8_t> CharacterConverter::pop_utf8_seqlength4() {
 
   // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
   char32_t utf32 = state->partial;
-  switch (state->bits_processed) {
+  switch (state->bytes_processed) {
   case 0:
     result.out = (char8_t)(0xF0 | (utf32 >> 18));
     break;
-  case 8:
+  case 1:
     result.out = (char8_t)(0x80 | ((utf32 >> 12) & 0x3f));
     break;
-  case 16:
+  case 2:
     result.out = (char8_t)(0x80 | ((utf32 >> 6) & 0x3f));
     break;
-  case 24:
+  case 3:
     result.out = (char8_t)(0x80 | (utf32 & 0x3f));
     break;
   default:
@@ -135,7 +131,7 @@ utf_ret<char8_t> CharacterConverter::pop_utf8_seqlength4() {
     return result;
   }
 
-  state->bits_processed += 8;
+  state->bytes_processed++;
   return result;
 }
 
