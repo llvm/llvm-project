@@ -832,7 +832,6 @@
 ! RUN:   -gno-record-gcc-switches \
 ! RUN:   -miphoneos-version-min= \
 ! RUN:   -miphonesimulator-version-min= \
-! RUN:   -mmacosx-version-min= \
 ! RUN:   -nocudainc \
 ! RUN:   -nocudalib \
 ! RUN:   -print-multiarch \
@@ -916,7 +915,8 @@
 ! RUN:   -cl-fast-relaxed-math \
 ! RUN:   -cl-finite-math-only \
 ! RUN:   -cl-fp32-correctly-rounded-divide-sqrt \
-! RUN:   -cl-kernel-arg-info -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_4 %s
+! RUN:   -cl-kernel-arg-info \
+! RUN:   -cl-mad-enable -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_4 %s
 
 ! CHECK_FLANG_4: {{(unknown argument).*}}-analyzer-viz-egraph-graphviz
 ! CHECK_FLANG_4: {{(unknown argument).*}}-analyzer-werror
@@ -933,7 +933,6 @@
 ! CHECK_FLANG_4: {{(unknown argument).*}}-gno-record-gcc-switches
 ! CHECK_FLANG_4: {{(unknown argument).*}}-miphoneos-version-min=
 ! CHECK_FLANG_4: {{(unknown argument).*}}-miphonesimulator-version-min=
-! CHECK_FLANG_4: {{(unknown argument).*}}-mmacosx-version-min=
 ! CHECK_FLANG_4: {{(unknown argument).*}}-nocudainc
 ! CHECK_FLANG_4: {{(unknown argument).*}}-nocudalib
 ! CHECK_FLANG_4: {{(unknown argument).*}}-print-multiarch
@@ -1018,9 +1017,9 @@
 ! CHECK_FLANG_4: {{(unknown argument).*}}-cl-finite-math-only
 ! CHECK_FLANG_4: {{(unknown argument).*}}-cl-fp32-correctly-rounded-divide-sqrt
 ! CHECK_FLANG_4: {{(unknown argument).*}}-cl-kernel-arg-info
+! CHECK_FLANG_4: {{(unknown argument).*}}-cl-mad-enable
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -cl-mad-enable \
 ! RUN:   -cl-no-signed-zeros \
 ! RUN:   -cl-no-stdinc \
 ! RUN:   -cl-opt-disable \
@@ -1119,9 +1118,9 @@
 ! RUN:   -dylinker \
 ! RUN:   -dylinker_install_name \
 ! RUN:   -dynamic \
-! RUN:   -dynamiclib -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_5 %s
+! RUN:   -dynamiclib \
+! RUN:   -e -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_5 %s
 
-! CHECK_FLANG_5: {{(unknown argument).*}}-cl-mad-enable
 ! CHECK_FLANG_5: {{(unknown argument).*}}-cl-no-signed-zeros
 ! CHECK_FLANG_5: {{(unknown argument).*}}-cl-no-stdinc
 ! CHECK_FLANG_5: {{(unknown argument).*}}-cl-opt-disable
@@ -1221,9 +1220,9 @@
 ! CHECK_FLANG_5: {{(unknown argument).*}}-dylinker_install_name
 ! CHECK_FLANG_5: {{(unknown argument).*}}-dynamic
 ! CHECK_FLANG_5: {{(unknown argument).*}}-dynamiclib
+! CHECK_FLANG_5: {{(unknown argument).*}}-e
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -e \
 ! RUN:   -ehcontguard \
 ! RUN:   --embed-dir= \
 ! RUN:   -emit-ast \
@@ -1322,9 +1321,9 @@
 ! RUN:   -fbasic-block-address-map \
 ! RUN:   -fbasic-block-sections= \
 ! RUN:   -fbfloat16-excess-precision= \
-! RUN:   -fbinutils-version= -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_6 %s
+! RUN:   -fbinutils-version= \
+! RUN:   -fblas-matmul-limit= -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_6 %s
 
-! CHECK_FLANG_6: {{(unknown argument).*}}-e
 ! CHECK_FLANG_6: {{(unknown argument).*}}-ehcontguard
 ! CHECK_FLANG_6: {{(unknown argument).*}}--embed-dir=
 ! CHECK_FLANG_6: {{(unknown argument).*}}-emit-ast
@@ -1424,9 +1423,9 @@
 ! CHECK_FLANG_6: {{(unknown argument).*}}-fbasic-block-sections=
 ! CHECK_FLANG_6: {{(unknown argument).*}}-fbfloat16-excess-precision=
 ! CHECK_FLANG_6: {{(unknown argument).*}}-fbinutils-version=
+! CHECK_FLANG_6: {{(unknown argument).*}}-fblas-matmul-limit=
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -fblas-matmul-limit= \
 ! RUN:   -fblocks \
 ! RUN:   -fblocks-runtime-optional \
 ! RUN:   -fbootclasspath= \
@@ -1525,9 +1524,9 @@
 ! RUN:   -fdebug-pass-manager \
 ! RUN:   -fdebug-pass-structure \
 ! RUN:   -fdebug-pre-fir-tree \
-! RUN:   -fdebug-prefix-map= -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_7 %s
+! RUN:   -fdebug-prefix-map= \
+! RUN:   -fdebug-ranges-base-address -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_7 %s
 
-! CHECK_FLANG_7: {{(unknown argument).*}}-fblas-matmul-limit=
 ! CHECK_FLANG_7: {{(unknown argument).*}}-fblocks
 ! CHECK_FLANG_7: {{(unknown argument).*}}-fblocks-runtime-optional
 ! CHECK_FLANG_7: {{(unknown argument).*}}-fbootclasspath=
@@ -1627,9 +1626,9 @@
 ! CHECK_FLANG_7: {{(unknown argument).*}}-fdebug-pass-structure
 ! CHECK_FLANG_7: {{(unknown argument).*}}-fdebug-pre-fir-tree
 ! CHECK_FLANG_7: {{(unknown argument).*}}-fdebug-prefix-map=
+! CHECK_FLANG_7: {{(unknown argument).*}}-fdebug-ranges-base-address
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -fdebug-ranges-base-address \
 ! RUN:   -fdebug-types-section \
 ! RUN:   -fdebug-unparse \
 ! RUN:   -fdebug-unparse-no-sema \
@@ -1728,9 +1727,9 @@
 ! RUN:   -fextend-variable-liveness= \
 ! RUN:   -fexternal-blas \
 ! RUN:   -fexternc-nounwind \
-! RUN:   -ff2c -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_8 %s
+! RUN:   -ff2c \
+! RUN:   -ffake-address-space-map -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_8 %s
 
-! CHECK_FLANG_8: {{(unknown argument).*}}-fdebug-ranges-base-address
 ! CHECK_FLANG_8: {{(unknown argument).*}}-fdebug-types-section
 ! CHECK_FLANG_8: {{(unknown argument).*}}-fdebug-unparse
 ! CHECK_FLANG_8: {{(unknown argument).*}}-fdebug-unparse-no-sema
@@ -1830,9 +1829,9 @@
 ! CHECK_FLANG_8: {{(unknown argument).*}}-fexternal-blas
 ! CHECK_FLANG_8: {{(unknown argument).*}}-fexternc-nounwind
 ! CHECK_FLANG_8: {{(unknown argument).*}}-ff2c
+! CHECK_FLANG_8: {{(unknown argument).*}}-ffake-address-space-map
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -ffake-address-space-map \
 ! RUN:   -ffat-lto-objects \
 ! RUN:   -ffile-compilation-dir= \
 ! RUN:   -ffile-prefix-map= \
@@ -1931,9 +1930,9 @@
 ! RUN:   -ffp-model= \
 ! RUN:   -ffpe-trap= \
 ! RUN:   -ffree-line-length- \
-! RUN:   -ffreestanding -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_9 %s
+! RUN:   -ffreestanding \
+! RUN:   -ffriend-injection -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_9 %s
 
-! CHECK_FLANG_9: {{(unknown argument).*}}-ffake-address-space-map
 ! CHECK_FLANG_9: {{(unknown argument).*}}-ffat-lto-objects
 ! CHECK_FLANG_9: {{(unknown argument).*}}-ffile-compilation-dir=
 ! CHECK_FLANG_9: {{(unknown argument).*}}-ffile-prefix-map=
@@ -2033,9 +2032,9 @@
 ! CHECK_FLANG_9: {{(unknown argument).*}}-ffpe-trap=
 ! CHECK_FLANG_9: {{(unknown argument).*}}-ffree-line-length-
 ! CHECK_FLANG_9: {{(unknown argument).*}}-ffreestanding
+! CHECK_FLANG_9: {{(unknown argument).*}}-ffriend-injection
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -ffriend-injection \
 ! RUN:   -ffrontend-optimize \
 ! RUN:   -ffuchsia-api-level= \
 ! RUN:   -ffunction-attribute-list \
@@ -2134,9 +2133,9 @@
 ! RUN:   -fmcdc-max-test-vectors= \
 ! RUN:   -fmemory-profile \
 ! RUN:   -fmemory-profile= \
-! RUN:   -fmemory-profile-use= -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_10 %s
+! RUN:   -fmemory-profile-use= \
+! RUN:   -fmerge-all-constants -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_10 %s
 
-! CHECK_FLANG_10: {{(unknown argument).*}}-ffriend-injection
 ! CHECK_FLANG_10: {{(unknown argument).*}}-ffrontend-optimize
 ! CHECK_FLANG_10: {{(unknown argument).*}}-ffuchsia-api-level=
 ! CHECK_FLANG_10: {{(unknown argument).*}}-ffunction-attribute-list
@@ -2236,9 +2235,9 @@
 ! CHECK_FLANG_10: {{(unknown argument).*}}-fmemory-profile
 ! CHECK_FLANG_10: {{(unknown argument).*}}-fmemory-profile=
 ! CHECK_FLANG_10: {{(unknown argument).*}}-fmemory-profile-use=
+! CHECK_FLANG_10: {{(unknown argument).*}}-fmerge-all-constants
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -fmerge-all-constants \
 ! RUN:   -fmerge-constants \
 ! RUN:   -fmerge-functions \
 ! RUN:   -fmessage-length= \
@@ -2337,9 +2336,9 @@
 ! RUN:   -fno-atomic-fine-grained-memory \
 ! RUN:   -fno-atomic-ignore-denormal-mode \
 ! RUN:   -fno-atomic-remote-memory \
-! RUN:   -fno-auto-import -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_11 %s
+! RUN:   -fno-auto-import \
+! RUN:   -fno-auto-profile -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_11 %s
 
-! CHECK_FLANG_11: {{(unknown argument).*}}-fmerge-all-constants
 ! CHECK_FLANG_11: {{(unknown argument).*}}-fmerge-constants
 ! CHECK_FLANG_11: {{(unknown argument).*}}-fmerge-functions
 ! CHECK_FLANG_11: {{(unknown argument).*}}-fmessage-length=
@@ -2439,9 +2438,9 @@
 ! CHECK_FLANG_11: {{(unknown argument).*}}-fno-atomic-ignore-denormal-mode
 ! CHECK_FLANG_11: {{(unknown argument).*}}-fno-atomic-remote-memory
 ! CHECK_FLANG_11: {{(unknown argument).*}}-fno-auto-import
+! CHECK_FLANG_11: {{(unknown argument).*}}-fno-auto-profile
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -fno-auto-profile \
 ! RUN:   -fno-auto-profile-accurate \
 ! RUN:   -fno-autolink \
 ! RUN:   -fno-backtrace \
@@ -2540,9 +2539,9 @@
 ! RUN:   -fno-force-dwarf-frame \
 ! RUN:   -fno-force-emit-vtables \
 ! RUN:   -fno-force-enable-int128 \
-! RUN:   -fno-friend-injection -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_12 %s
+! RUN:   -fno-friend-injection \
+! RUN:   -fno-frontend-optimize -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_12 %s
 
-! CHECK_FLANG_12: {{(unknown argument).*}}-fno-auto-profile
 ! CHECK_FLANG_12: {{(unknown argument).*}}-fno-auto-profile-accurate
 ! CHECK_FLANG_12: {{(unknown argument).*}}-fno-autolink
 ! CHECK_FLANG_12: {{(unknown argument).*}}-fno-backtrace
@@ -2642,9 +2641,9 @@
 ! CHECK_FLANG_12: {{(unknown argument).*}}-fno-force-emit-vtables
 ! CHECK_FLANG_12: {{(unknown argument).*}}-fno-force-enable-int128
 ! CHECK_FLANG_12: {{(unknown argument).*}}-fno-friend-injection
+! CHECK_FLANG_12: {{(unknown argument).*}}-fno-frontend-optimize
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -fno-frontend-optimize \
 ! RUN:   -fno-function-attribute-list \
 ! RUN:   -fno-function-sections \
 ! RUN:   -fno-gcse \
@@ -2743,9 +2742,9 @@
 ! RUN:   -fno-openmp-cuda-mode \
 ! RUN:   -fno-openmp-extensions \
 ! RUN:   -fno-openmp-new-driver \
-! RUN:   -fno-openmp-optimistic-collapse -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_13 %s
+! RUN:   -fno-openmp-optimistic-collapse \
+! RUN:   -fno-openmp-simd -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_13 %s
 
-! CHECK_FLANG_13: {{(unknown argument).*}}-fno-frontend-optimize
 ! CHECK_FLANG_13: {{(unknown argument).*}}-fno-function-attribute-list
 ! CHECK_FLANG_13: {{(unknown argument).*}}-fno-function-sections
 ! CHECK_FLANG_13: {{(unknown argument).*}}-fno-gcse
@@ -2845,9 +2844,9 @@
 ! CHECK_FLANG_13: {{(unknown argument).*}}-fno-openmp-extensions
 ! CHECK_FLANG_13: {{(unknown argument).*}}-fno-openmp-new-driver
 ! CHECK_FLANG_13: {{(unknown argument).*}}-fno-openmp-optimistic-collapse
+! CHECK_FLANG_13: {{(unknown argument).*}}-fno-openmp-simd
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -fno-openmp-simd \
 ! RUN:   -fno-openmp-target-jit \
 ! RUN:   -fno-openmp-target-new-runtime \
 ! RUN:   -fno-operator-names \
@@ -2946,9 +2945,9 @@
 ! RUN:   -fno-sanitize-stats \
 ! RUN:   -fno-sanitize-thread-atomics \
 ! RUN:   -fno-sanitize-thread-func-entry-exit \
-! RUN:   -fno-sanitize-thread-memory-access -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_14 %s
+! RUN:   -fno-sanitize-thread-memory-access \
+! RUN:   -fno-sanitize-trap -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_14 %s
 
-! CHECK_FLANG_14: {{(unknown argument).*}}-fno-openmp-simd
 ! CHECK_FLANG_14: {{(unknown argument).*}}-fno-openmp-target-jit
 ! CHECK_FLANG_14: {{(unknown argument).*}}-fno-openmp-target-new-runtime
 ! CHECK_FLANG_14: {{(unknown argument).*}}-fno-operator-names
@@ -3048,9 +3047,9 @@
 ! CHECK_FLANG_14: {{(unknown argument).*}}-fno-sanitize-thread-atomics
 ! CHECK_FLANG_14: {{(unknown argument).*}}-fno-sanitize-thread-func-entry-exit
 ! CHECK_FLANG_14: {{(unknown argument).*}}-fno-sanitize-thread-memory-access
+! CHECK_FLANG_14: {{(unknown argument).*}}-fno-sanitize-trap
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -fno-sanitize-trap \
 ! RUN:   -fno-sanitize-trap= \
 ! RUN:   -fno-sanitize-undefined-trap-on-error \
 ! RUN:   -fno-schedule-insns \
@@ -3149,9 +3148,9 @@
 ! RUN:   -fnoopenmp-relocatable-target \
 ! RUN:   -fnoopenmp-use-tls \
 ! RUN:   -fobjc-abi-version= \
-! RUN:   -fobjc-arc -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_15 %s
+! RUN:   -fobjc-arc \
+! RUN:   -fobjc-arc-cxxlib= -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_15 %s
 
-! CHECK_FLANG_15: {{(unknown argument).*}}-fno-sanitize-trap
 ! CHECK_FLANG_15: {{(unknown argument).*}}-fno-sanitize-trap=
 ! CHECK_FLANG_15: {{(unknown argument).*}}-fno-sanitize-undefined-trap-on-error
 ! CHECK_FLANG_15: {{(unknown argument).*}}-fno-schedule-insns
@@ -3251,9 +3250,9 @@
 ! CHECK_FLANG_15: {{(unknown argument).*}}-fnoopenmp-use-tls
 ! CHECK_FLANG_15: {{(unknown argument).*}}-fobjc-abi-version=
 ! CHECK_FLANG_15: {{(unknown argument).*}}-fobjc-arc
+! CHECK_FLANG_15: {{(unknown argument).*}}-fobjc-arc-cxxlib=
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -fobjc-arc-cxxlib= \
 ! RUN:   -fobjc-arc-exceptions \
 ! RUN:   -fobjc-atdefs \
 ! RUN:   -fobjc-avoid-heapify-local-blocks \
@@ -3352,9 +3351,9 @@
 ! RUN:   -fprofile-instr-generate \
 ! RUN:   -fprofile-instr-generate= \
 ! RUN:   -fprofile-instr-use \
-! RUN:   -fprofile-instr-use= -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_16 %s
+! RUN:   -fprofile-instr-use= \
+! RUN:   -fprofile-instrument= -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_16 %s
 
-! CHECK_FLANG_16: {{(unknown argument).*}}-fobjc-arc-cxxlib=
 ! CHECK_FLANG_16: {{(unknown argument).*}}-fobjc-arc-exceptions
 ! CHECK_FLANG_16: {{(unknown argument).*}}-fobjc-atdefs
 ! CHECK_FLANG_16: {{(unknown argument).*}}-fobjc-avoid-heapify-local-blocks
@@ -3454,9 +3453,9 @@
 ! CHECK_FLANG_16: {{(unknown argument).*}}-fprofile-instr-generate=
 ! CHECK_FLANG_16: {{(unknown argument).*}}-fprofile-instr-use
 ! CHECK_FLANG_16: {{(unknown argument).*}}-fprofile-instr-use=
+! CHECK_FLANG_16: {{(unknown argument).*}}-fprofile-instrument=
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -fprofile-instrument= \
 ! RUN:   -fprofile-instrument-path= \
 ! RUN:   -fprofile-instrument-use-path= \
 ! RUN:   -fprofile-list= \
@@ -3555,9 +3554,9 @@
 ! RUN:   -fsanitize-link-c++-runtime \
 ! RUN:   -fsanitize-link-runtime \
 ! RUN:   -fsanitize-memory-param-retval \
-! RUN:   -fsanitize-memory-track-origins -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_17 %s
+! RUN:   -fsanitize-memory-track-origins \
+! RUN:   -fsanitize-memory-track-origins= -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_17 %s
 
-! CHECK_FLANG_17: {{(unknown argument).*}}-fprofile-instrument=
 ! CHECK_FLANG_17: {{(unknown argument).*}}-fprofile-instrument-path=
 ! CHECK_FLANG_17: {{(unknown argument).*}}-fprofile-instrument-use-path=
 ! CHECK_FLANG_17: {{(unknown argument).*}}-fprofile-list=
@@ -3657,9 +3656,9 @@
 ! CHECK_FLANG_17: {{(unknown argument).*}}-fsanitize-link-runtime
 ! CHECK_FLANG_17: {{(unknown argument).*}}-fsanitize-memory-param-retval
 ! CHECK_FLANG_17: {{(unknown argument).*}}-fsanitize-memory-track-origins
+! CHECK_FLANG_17: {{(unknown argument).*}}-fsanitize-memory-track-origins=
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -fsanitize-memory-track-origins= \
 ! RUN:   -fsanitize-memory-use-after-dtor \
 ! RUN:   -fsanitize-memtag-mode= \
 ! RUN:   -fsanitize-merge \
@@ -3758,9 +3757,9 @@
 ! RUN:   -ftrapv \
 ! RUN:   -ftrapv-handler \
 ! RUN:   -ftrapv-handler= \
-! RUN:   -ftree-dce -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_18 %s
+! RUN:   -ftree-dce \
+! RUN:   -ftree-salias -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_18 %s
 
-! CHECK_FLANG_18: {{(unknown argument).*}}-fsanitize-memory-track-origins=
 ! CHECK_FLANG_18: {{(unknown argument).*}}-fsanitize-memory-use-after-dtor
 ! CHECK_FLANG_18: {{(unknown argument).*}}-fsanitize-memtag-mode=
 ! CHECK_FLANG_18: {{(unknown argument).*}}-fsanitize-merge
@@ -3860,9 +3859,9 @@
 ! CHECK_FLANG_18: {{(unknown argument).*}}-ftrapv-handler
 ! CHECK_FLANG_18: {{(unknown argument).*}}-ftrapv-handler=
 ! CHECK_FLANG_18: {{(unknown argument).*}}-ftree-dce
+! CHECK_FLANG_18: {{(unknown argument).*}}-ftree-salias
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -ftree-salias \
 ! RUN:   -ftree-ter \
 ! RUN:   -ftree-vectorizer-verbose \
 ! RUN:   -ftree-vrp \
@@ -3961,9 +3960,9 @@
 ! RUN:   -gen-reproducer \
 ! RUN:   -gen-reproducer= \
 ! RUN:   -gfull \
-! RUN:   -ggdb -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_19 %s
+! RUN:   -ggdb \
+! RUN:   -ggdb0 -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_19 %s
 
-! CHECK_FLANG_19: {{(unknown argument).*}}-ftree-salias
 ! CHECK_FLANG_19: {{(unknown argument).*}}-ftree-ter
 ! CHECK_FLANG_19: {{(unknown argument).*}}-ftree-vectorizer-verbose
 ! CHECK_FLANG_19: {{(unknown argument).*}}-ftree-vrp
@@ -4063,9 +4062,9 @@
 ! CHECK_FLANG_19: {{(unknown argument).*}}-gen-reproducer=
 ! CHECK_FLANG_19: {{(unknown argument).*}}-gfull
 ! CHECK_FLANG_19: {{(unknown argument).*}}-ggdb
+! CHECK_FLANG_19: {{(unknown argument).*}}-ggdb0
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -ggdb0 \
 ! RUN:   -ggdb1 \
 ! RUN:   -ggdb2 \
 ! RUN:   -ggdb3 \
@@ -4164,9 +4163,9 @@
 ! RUN:   -m68030 \
 ! RUN:   -m68040 \
 ! RUN:   -m68060 \
-! RUN:   -m68881 -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_20 %s
+! RUN:   -m68881 \
+! RUN:   -m80387 -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_20 %s
 
-! CHECK_FLANG_20: {{(unknown argument).*}}-ggdb0
 ! CHECK_FLANG_20: {{(unknown argument).*}}-ggdb1
 ! CHECK_FLANG_20: {{(unknown argument).*}}-ggdb2
 ! CHECK_FLANG_20: {{(unknown argument).*}}-ggdb3
@@ -4266,9 +4265,9 @@
 ! CHECK_FLANG_20: {{(unknown argument).*}}-m68040
 ! CHECK_FLANG_20: {{(unknown argument).*}}-m68060
 ! CHECK_FLANG_20: {{(unknown argument).*}}-m68881
+! CHECK_FLANG_20: {{(unknown argument).*}}-m80387
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -m80387 \
 ! RUN:   -mseses \
 ! RUN:   -mabicalls \
 ! RUN:   -mabs= \
@@ -4367,9 +4366,9 @@
 ! RUN:   -mcx16 \
 ! RUN:   -mdaz-ftz \
 ! RUN:   -mdebug-pass \
-! RUN:   -mdefault-build-attributes -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_21 %s
+! RUN:   -mdefault-build-attributes \
+! RUN:   -mdefault-visibility-export-mapping= -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_21 %s
 
-! CHECK_FLANG_21: {{(unknown argument).*}}-m80387
 ! CHECK_FLANG_21: {{(unknown argument).*}}-mseses
 ! CHECK_FLANG_21: {{(unknown argument).*}}-mabicalls
 ! CHECK_FLANG_21: {{(unknown argument).*}}-mabs=
@@ -4469,9 +4468,9 @@
 ! CHECK_FLANG_21: {{(unknown argument).*}}-mdaz-ftz
 ! CHECK_FLANG_21: {{(unknown argument).*}}-mdebug-pass
 ! CHECK_FLANG_21: {{(unknown argument).*}}-mdefault-build-attributes
+! CHECK_FLANG_21: {{(unknown argument).*}}-mdefault-visibility-export-mapping=
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -mdefault-visibility-export-mapping= \
 ! RUN:   -mdirect-move \
 ! RUN:   -mdll \
 ! RUN:   -mdouble= \
@@ -4570,9 +4569,9 @@
 ! RUN:   -mips4 \
 ! RUN:   -mips5 \
 ! RUN:   -mips64 \
-! RUN:   -mips64r2 -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_22 %s
+! RUN:   -mips64r2 \
+! RUN:   -mips64r3 -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_22 %s
 
-! CHECK_FLANG_22: {{(unknown argument).*}}-mdefault-visibility-export-mapping=
 ! CHECK_FLANG_22: {{(unknown argument).*}}-mdirect-move
 ! CHECK_FLANG_22: {{(unknown argument).*}}-mdll
 ! CHECK_FLANG_22: {{(unknown argument).*}}-mdouble=
@@ -4672,9 +4671,9 @@
 ! CHECK_FLANG_22: {{(unknown argument).*}}-mips5
 ! CHECK_FLANG_22: {{(unknown argument).*}}-mips64
 ! CHECK_FLANG_22: {{(unknown argument).*}}-mips64r2
+! CHECK_FLANG_22: {{(unknown argument).*}}-mips64r3
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -mips64r3 \
 ! RUN:   -mips64r5 \
 ! RUN:   -mips64r6 \
 ! RUN:   -misel \
@@ -4698,7 +4697,6 @@
 ! RUN:   -mlvi-hardening \
 ! RUN:   -mlwp \
 ! RUN:   -mlzcnt \
-! RUN:   -mmacos-version-min= \
 ! RUN:   -mmadd4 \
 ! RUN:   -mmapsyms=implicit \
 ! RUN:   -mmark-bti-property \
@@ -4773,9 +4771,10 @@
 ! RUN:   -mno-bmi2 \
 ! RUN:   -mno-branch-likely \
 ! RUN:   -mno-bti-at-return-twice \
-! RUN:   -mno-bulk-memory -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_23 %s
+! RUN:   -mno-bulk-memory \
+! RUN:   -mno-bulk-memory-opt \
+! RUN:   -mno-call-indirect-overlong -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_23 %s
 
-! CHECK_FLANG_23: {{(unknown argument).*}}-mips64r3
 ! CHECK_FLANG_23: {{(unknown argument).*}}-mips64r5
 ! CHECK_FLANG_23: {{(unknown argument).*}}-mips64r6
 ! CHECK_FLANG_23: {{(unknown argument).*}}-misel
@@ -4799,7 +4798,6 @@
 ! CHECK_FLANG_23: {{(unknown argument).*}}-mlvi-hardening
 ! CHECK_FLANG_23: {{(unknown argument).*}}-mlwp
 ! CHECK_FLANG_23: {{(unknown argument).*}}-mlzcnt
-! CHECK_FLANG_23: {{(unknown argument).*}}-mmacos-version-min=
 ! CHECK_FLANG_23: {{(unknown argument).*}}-mmadd4
 ! CHECK_FLANG_23: {{(unknown argument).*}}-mmapsyms=implicit
 ! CHECK_FLANG_23: {{(unknown argument).*}}-mmark-bti-property
@@ -4875,10 +4873,10 @@
 ! CHECK_FLANG_23: {{(unknown argument).*}}-mno-branch-likely
 ! CHECK_FLANG_23: {{(unknown argument).*}}-mno-bti-at-return-twice
 ! CHECK_FLANG_23: {{(unknown argument).*}}-mno-bulk-memory
+! CHECK_FLANG_23: {{(unknown argument).*}}-mno-bulk-memory-opt
+! CHECK_FLANG_23: {{(unknown argument).*}}-mno-call-indirect-overlong
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -mno-bulk-memory-opt \
-! RUN:   -mno-call-indirect-overlong \
 ! RUN:   -mno-check-zero-division \
 ! RUN:   -mno-cldemote \
 ! RUN:   -mno-clflushopt \
@@ -4976,10 +4974,10 @@
 ! RUN:   -mno-omit-leaf-frame-pointer \
 ! RUN:   -mno-outline \
 ! RUN:   -mno-packed-stack \
-! RUN:   -mno-packets -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_24 %s
+! RUN:   -mno-packets \
+! RUN:   -mno-pascal-strings \
+! RUN:   -mno-pclmul -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_24 %s
 
-! CHECK_FLANG_24: {{(unknown argument).*}}-mno-bulk-memory-opt
-! CHECK_FLANG_24: {{(unknown argument).*}}-mno-call-indirect-overlong
 ! CHECK_FLANG_24: {{(unknown argument).*}}-mno-check-zero-division
 ! CHECK_FLANG_24: {{(unknown argument).*}}-mno-cldemote
 ! CHECK_FLANG_24: {{(unknown argument).*}}-mno-clflushopt
@@ -5078,10 +5076,10 @@
 ! CHECK_FLANG_24: {{(unknown argument).*}}-mno-outline
 ! CHECK_FLANG_24: {{(unknown argument).*}}-mno-packed-stack
 ! CHECK_FLANG_24: {{(unknown argument).*}}-mno-packets
+! CHECK_FLANG_24: {{(unknown argument).*}}-mno-pascal-strings
+! CHECK_FLANG_24: {{(unknown argument).*}}-mno-pclmul
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -mno-pascal-strings \
-! RUN:   -mno-pclmul \
 ! RUN:   -mno-pconfig \
 ! RUN:   -mno-pcrel \
 ! RUN:   -mno-pic-data-is-text-relative \
@@ -5179,10 +5177,10 @@
 ! RUN:   -mno-xcoff-roptr \
 ! RUN:   -mno-xgot \
 ! RUN:   -mno-xop \
-! RUN:   -mno-xsave -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_25 %s
+! RUN:   -mno-xsave \
+! RUN:   -mno-xsavec \
+! RUN:   -mno-xsaveopt -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_25 %s
 
-! CHECK_FLANG_25: {{(unknown argument).*}}-mno-pascal-strings
-! CHECK_FLANG_25: {{(unknown argument).*}}-mno-pclmul
 ! CHECK_FLANG_25: {{(unknown argument).*}}-mno-pconfig
 ! CHECK_FLANG_25: {{(unknown argument).*}}-mno-pcrel
 ! CHECK_FLANG_25: {{(unknown argument).*}}-mno-pic-data-is-text-relative
@@ -5281,10 +5279,10 @@
 ! CHECK_FLANG_25: {{(unknown argument).*}}-mno-xgot
 ! CHECK_FLANG_25: {{(unknown argument).*}}-mno-xop
 ! CHECK_FLANG_25: {{(unknown argument).*}}-mno-xsave
+! CHECK_FLANG_25: {{(unknown argument).*}}-mno-xsavec
+! CHECK_FLANG_25: {{(unknown argument).*}}-mno-xsaveopt
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -mno-xsavec \
-! RUN:   -mno-xsaveopt \
 ! RUN:   -mno-xsaves \
 ! RUN:   -mno-zvector \
 ! RUN:   -mnocrc \
@@ -5382,10 +5380,10 @@
 ! RUN:   -mspeculative-load-hardening \
 ! RUN:   -msse \
 ! RUN:   -msse2 \
-! RUN:   -msse2avx -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_26 %s
+! RUN:   -msse2avx \
+! RUN:   -msse3 \
+! RUN:   -msse4 -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_26 %s
 
-! CHECK_FLANG_26: {{(unknown argument).*}}-mno-xsavec
-! CHECK_FLANG_26: {{(unknown argument).*}}-mno-xsaveopt
 ! CHECK_FLANG_26: {{(unknown argument).*}}-mno-xsaves
 ! CHECK_FLANG_26: {{(unknown argument).*}}-mno-zvector
 ! CHECK_FLANG_26: {{(unknown argument).*}}-mnocrc
@@ -5484,10 +5482,10 @@
 ! CHECK_FLANG_26: {{(unknown argument).*}}-msse
 ! CHECK_FLANG_26: {{(unknown argument).*}}-msse2
 ! CHECK_FLANG_26: {{(unknown argument).*}}-msse2avx
+! CHECK_FLANG_26: {{(unknown argument).*}}-msse3
+! CHECK_FLANG_26: {{(unknown argument).*}}-msse4
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -msse3 \
-! RUN:   -msse4 \
 ! RUN:   -msse4.1 \
 ! RUN:   -msse4.2 \
 ! RUN:   -msse4a \
@@ -5585,10 +5583,10 @@
 ! RUN:   -mzos-sys-include= \
 ! RUN:   -mzos-target= \
 ! RUN:   -mzvector \
-! RUN:   -n -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_27 %s
+! RUN:   -n \
+! RUN:   -new-struct-path-tbaa \
+! RUN:   -no_dead_strip_inits_and_terms -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_27 %s
 
-! CHECK_FLANG_27: {{(unknown argument).*}}-msse3
-! CHECK_FLANG_27: {{(unknown argument).*}}-msse4
 ! CHECK_FLANG_27: {{(unknown argument).*}}-msse4.1
 ! CHECK_FLANG_27: {{(unknown argument).*}}-msse4.2
 ! CHECK_FLANG_27: {{(unknown argument).*}}-msse4a
@@ -5687,10 +5685,10 @@
 ! CHECK_FLANG_27: {{(unknown argument).*}}-mzos-target=
 ! CHECK_FLANG_27: {{(unknown argument).*}}-mzvector
 ! CHECK_FLANG_27: {{(unknown argument).*}}-n
+! CHECK_FLANG_27: {{(unknown argument).*}}-new-struct-path-tbaa
+! CHECK_FLANG_27: {{(unknown argument).*}}-no_dead_strip_inits_and_terms
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -new-struct-path-tbaa \
-! RUN:   -no_dead_strip_inits_and_terms \
 ! RUN:   -no-canonical-prefixes \
 ! RUN:   -no-clear-ast-before-backend \
 ! RUN:   -no-code-completion-globals \
@@ -5788,10 +5786,10 @@
 ! RUN:   -relaxed-aliasing \
 ! RUN:   -relocatable-pch \
 ! RUN:   -remap \
-! RUN:   -remap-file -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_28 %s
+! RUN:   -remap-file \
+! RUN:   -res-may-alias \
+! RUN:   -rewrite-legacy-objc -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_28 %s
 
-! CHECK_FLANG_28: {{(unknown argument).*}}-new-struct-path-tbaa
-! CHECK_FLANG_28: {{(unknown argument).*}}-no_dead_strip_inits_and_terms
 ! CHECK_FLANG_28: {{(unknown argument).*}}-no-canonical-prefixes
 ! CHECK_FLANG_28: {{(unknown argument).*}}-no-clear-ast-before-backend
 ! CHECK_FLANG_28: {{(unknown argument).*}}-no-code-completion-globals
@@ -5890,10 +5888,10 @@
 ! CHECK_FLANG_28: {{(unknown argument).*}}-relocatable-pch
 ! CHECK_FLANG_28: {{(unknown argument).*}}-remap
 ! CHECK_FLANG_28: {{(unknown argument).*}}-remap-file
+! CHECK_FLANG_28: {{(unknown argument).*}}-res-may-alias
+! CHECK_FLANG_28: {{(unknown argument).*}}-rewrite-legacy-objc
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -res-may-alias \
-! RUN:   -rewrite-legacy-objc \
 ! RUN:   -rewrite-macros \
 ! RUN:   -rewrite-objc \
 ! RUN:   -rewrite-test \
@@ -5991,10 +5989,10 @@
 ! RUN:   -verify-ignore-unexpected \
 ! RUN:   -verify-ignore-unexpected= \
 ! RUN:   -verify-pch \
-! RUN:   -vfsoverlay -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_29 %s
+! RUN:   -vfsoverlay \
+! RUN:   -via-file-asm \
+! RUN:   -vtordisp-mode= -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_29 %s
 
-! CHECK_FLANG_29: {{(unknown argument).*}}-res-may-alias
-! CHECK_FLANG_29: {{(unknown argument).*}}-rewrite-legacy-objc
 ! CHECK_FLANG_29: {{(unknown argument).*}}-rewrite-macros
 ! CHECK_FLANG_29: {{(unknown argument).*}}-rewrite-objc
 ! CHECK_FLANG_29: {{(unknown argument).*}}-rewrite-test
@@ -6093,10 +6091,10 @@
 ! CHECK_FLANG_29: {{(unknown argument).*}}-verify-ignore-unexpected=
 ! CHECK_FLANG_29: {{(unknown argument).*}}-verify-pch
 ! CHECK_FLANG_29: {{(unknown argument).*}}-vfsoverlay
+! CHECK_FLANG_29: {{(unknown argument).*}}-via-file-asm
+! CHECK_FLANG_29: {{(unknown argument).*}}-vtordisp-mode=
 
 ! RUN: not %clang --driver-mode=flang  \
-! RUN:   -via-file-asm \
-! RUN:   -vtordisp-mode= \
 ! RUN:   --warning-suppression-mappings= \
 ! RUN:   --wasm-opt \
 ! RUN:   -weak_framework \
@@ -6111,8 +6109,6 @@
 ! RUN:   -y \
 ! RUN:   -z -### -x c++ -c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_30 %s
 
-! CHECK_FLANG_30: {{(unknown argument).*}}-via-file-asm
-! CHECK_FLANG_30: {{(unknown argument).*}}-vtordisp-mode=
 ! CHECK_FLANG_30: {{(unknown argument).*}}--warning-suppression-mappings=
 ! CHECK_FLANG_30: {{(unknown argument).*}}--wasm-opt
 ! CHECK_FLANG_30: {{(unknown argument).*}}-weak_framework

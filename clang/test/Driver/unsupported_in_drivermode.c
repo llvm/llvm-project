@@ -7487,7 +7487,6 @@
 // RUN:   -miphoneos-version-min= \
 // RUN:   -miphonesimulator-version-min= \
 // RUN:   -mllvm= \
-// RUN:   -mmacosx-version-min= \
 // RUN:   -nocudainc \
 // RUN:   -nocudalib \
 // RUN:   -print-multiarch \
@@ -7539,7 +7538,8 @@
 // RUN:   -c \
 // RUN:   -canonical-prefixes \
 // RUN:   -ccc- \
-// RUN:   -ccc-gcc-name -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_3 %s
+// RUN:   -ccc-gcc-name \
+// RUN:   -ccc-install-dir -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_3 %s
 
 // CHECK_CC1_3: {{(unknown argument).*}}--print-diagnostic-categories
 // CHECK_CC1_3: {{(unknown argument).*}}--print-file-name
@@ -7588,7 +7588,6 @@
 // CHECK_CC1_3: {{(unknown argument).*}}-miphoneos-version-min=
 // CHECK_CC1_3: {{(unknown argument).*}}-miphonesimulator-version-min=
 // CHECK_CC1_3: {{(unknown argument).*}}-mllvm=
-// CHECK_CC1_3: {{(unknown argument).*}}-mmacosx-version-min=
 // CHECK_CC1_3: {{(unknown argument).*}}-nocudainc
 // CHECK_CC1_3: {{(unknown argument).*}}-nocudalib
 // CHECK_CC1_3: {{(unknown argument).*}}-print-multiarch
@@ -7641,9 +7640,9 @@
 // CHECK_CC1_3: {{(unknown argument).*}}-canonical-prefixes
 // CHECK_CC1_3: {{(unknown argument).*}}-ccc-
 // CHECK_CC1_3: {{(unknown argument).*}}-ccc-gcc-name
+// CHECK_CC1_3: {{(unknown argument).*}}-ccc-install-dir
 
 // RUN: not %clang -cc1  \
-// RUN:   -ccc-install-dir \
 // RUN:   -ccc-print-bindings \
 // RUN:   -ccc-print-phases \
 // RUN:   -cl-denorms-are-zero \
@@ -7742,9 +7741,9 @@
 // RUN:   -fbounds-check \
 // RUN:   -fbracket-depth= \
 // RUN:   -fbranch-count-reg \
-// RUN:   -fbuild-session-file= -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_4 %s
+// RUN:   -fbuild-session-file= \
+// RUN:   -fbuiltin -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_4 %s
 
-// CHECK_CC1_4: {{(unknown argument).*}}-ccc-install-dir
 // CHECK_CC1_4: {{(unknown argument).*}}-ccc-print-bindings
 // CHECK_CC1_4: {{(unknown argument).*}}-ccc-print-phases
 // CHECK_CC1_4: {{(unknown argument).*}}-cl-denorms-are-zero
@@ -7844,9 +7843,9 @@
 // CHECK_CC1_4: {{(unknown argument).*}}-fbracket-depth=
 // CHECK_CC1_4: {{(unknown argument).*}}-fbranch-count-reg
 // CHECK_CC1_4: {{(unknown argument).*}}-fbuild-session-file=
+// CHECK_CC1_4: {{(unknown argument).*}}-fbuiltin
 
 // RUN: not %clang -cc1  \
-// RUN:   -fbuiltin \
 // RUN:   -fbuiltin-module-map \
 // RUN:   -fcall-saved-x10 \
 // RUN:   -fcall-saved-x11 \
@@ -7945,9 +7944,9 @@
 // RUN:   -fextdirs= \
 // RUN:   -fexternal-blas \
 // RUN:   -ff2c \
-// RUN:   -ffile-compilation-dir= -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_5 %s
+// RUN:   -ffile-compilation-dir= \
+// RUN:   -ffile-prefix-map= -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_5 %s
 
-// CHECK_CC1_5: {{(unknown argument).*}}-fbuiltin
 // CHECK_CC1_5: {{(unknown argument).*}}-fbuiltin-module-map
 // CHECK_CC1_5: {{(unknown argument).*}}-fcall-saved-x10
 // CHECK_CC1_5: {{(unknown argument).*}}-fcall-saved-x11
@@ -8047,9 +8046,9 @@
 // CHECK_CC1_5: {{(unknown argument).*}}-fexternal-blas
 // CHECK_CC1_5: {{(unknown argument).*}}-ff2c
 // CHECK_CC1_5: {{(unknown argument).*}}-ffile-compilation-dir=
+// CHECK_CC1_5: {{(unknown argument).*}}-ffile-prefix-map=
 
 // RUN: not %clang -cc1  \
-// RUN:   -ffile-prefix-map= \
 // RUN:   -finline-limit \
 // RUN:   -ffixed-a0 \
 // RUN:   -ffixed-a1 \
@@ -8148,9 +8147,9 @@
 // RUN:   -fgnu \
 // RUN:   -fgnu-inline-asm \
 // RUN:   -fgnu-runtime \
-// RUN:   -fgpu-flush-denormals-to-zero -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_6 %s
+// RUN:   -fgpu-flush-denormals-to-zero \
+// RUN:   -fgpu-inline-threshold= -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_6 %s
 
-// CHECK_CC1_6: {{(unknown argument).*}}-ffile-prefix-map=
 // CHECK_CC1_6: {{(unknown argument).*}}-finline-limit
 // CHECK_CC1_6: {{(unknown argument).*}}-ffixed-a0
 // CHECK_CC1_6: {{(unknown argument).*}}-ffixed-a1
@@ -8250,9 +8249,9 @@
 // CHECK_CC1_6: {{(unknown argument).*}}-fgnu-inline-asm
 // CHECK_CC1_6: {{(unknown argument).*}}-fgnu-runtime
 // CHECK_CC1_6: {{(unknown argument).*}}-fgpu-flush-denormals-to-zero
+// CHECK_CC1_6: {{(unknown argument).*}}-fgpu-inline-threshold=
 
 // RUN: not %clang -cc1  \
-// RUN:   -fgpu-inline-threshold= \
 // RUN:   -fgpu-sanitize \
 // RUN:   -fheinous-gnu-extensions \
 // RUN:   -fhermetic-module-files \
@@ -8351,9 +8350,9 @@
 // RUN:   -fno-atomic-remote-memory \
 // RUN:   -fno-auto-profile \
 // RUN:   -fno-auto-profile-accurate \
-// RUN:   -fno-automatic -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_7 %s
+// RUN:   -fno-automatic \
+// RUN:   -fno-backslash -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_7 %s
 
-// CHECK_CC1_7: {{(unknown argument).*}}-fgpu-inline-threshold=
 // CHECK_CC1_7: {{(unknown argument).*}}-fgpu-sanitize
 // CHECK_CC1_7: {{(unknown argument).*}}-fheinous-gnu-extensions
 // CHECK_CC1_7: {{(unknown argument).*}}-fhermetic-module-files
@@ -8453,9 +8452,9 @@
 // CHECK_CC1_7: {{(unknown argument).*}}-fno-auto-profile
 // CHECK_CC1_7: {{(unknown argument).*}}-fno-auto-profile-accurate
 // CHECK_CC1_7: {{(unknown argument).*}}-fno-automatic
+// CHECK_CC1_7: {{(unknown argument).*}}-fno-backslash
 
 // RUN: not %clang -cc1  \
-// RUN:   -fno-backslash \
 // RUN:   -fno-backtrace \
 // RUN:   -fno-basic-block-address-map \
 // RUN:   -fno-blocks \
@@ -8554,9 +8553,9 @@
 // RUN:   -fno-lax-vector-conversions \
 // RUN:   -fno-limit-debug-info \
 // RUN:   -fno-logical-abbreviations \
-// RUN:   -fno-version-loops-for-stride -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_8 %s
+// RUN:   -fno-version-loops-for-stride \
+// RUN:   -fno-math-errno -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_8 %s
 
-// CHECK_CC1_8: {{(unknown argument).*}}-fno-backslash
 // CHECK_CC1_8: {{(unknown argument).*}}-fno-backtrace
 // CHECK_CC1_8: {{(unknown argument).*}}-fno-basic-block-address-map
 // CHECK_CC1_8: {{(unknown argument).*}}-fno-blocks
@@ -8656,9 +8655,9 @@
 // CHECK_CC1_8: {{(unknown argument).*}}-fno-limit-debug-info
 // CHECK_CC1_8: {{(unknown argument).*}}-fno-logical-abbreviations
 // CHECK_CC1_8: {{(unknown argument).*}}-fno-version-loops-for-stride
+// CHECK_CC1_8: {{(unknown argument).*}}-fno-math-errno
 
 // RUN: not %clang -cc1  \
-// RUN:   -fno-math-errno \
 // RUN:   -fno-max-identifier-length \
 // RUN:   -fno-max-type-align \
 // RUN:   -fno-coverage-mcdc \
@@ -8757,9 +8756,9 @@
 // RUN:   -fno-safe-buffer-usage-suggestions \
 // RUN:   -fno-save-main-program \
 // RUN:   -fno-save-optimization-record \
-// RUN:   -fno-schedule-insns -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_9 %s
+// RUN:   -fno-schedule-insns \
+// RUN:   -fno-schedule-insns2 -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_9 %s
 
-// CHECK_CC1_9: {{(unknown argument).*}}-fno-math-errno
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-max-identifier-length
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-max-type-align
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-coverage-mcdc
@@ -8859,9 +8858,9 @@
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-save-main-program
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-save-optimization-record
 // CHECK_CC1_9: {{(unknown argument).*}}-fno-schedule-insns
+// CHECK_CC1_9: {{(unknown argument).*}}-fno-schedule-insns2
 
 // RUN: not %clang -cc1  \
-// RUN:   -fno-schedule-insns2 \
 // RUN:   -fno-second-underscore \
 // RUN:   -fno-see \
 // RUN:   -fno-semantic-interposition \
@@ -8960,9 +8959,9 @@
 // RUN:   -foperator-names \
 // RUN:   -foptimization-record-file= \
 // RUN:   -foptimization-record-passes= \
-// RUN:   -foptimize-sibling-calls -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_10 %s
+// RUN:   -foptimize-sibling-calls \
+// RUN:   -force_cpusubtype_ALL -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_10 %s
 
-// CHECK_CC1_10: {{(unknown argument).*}}-fno-schedule-insns2
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-second-underscore
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-see
 // CHECK_CC1_10: {{(unknown argument).*}}-fno-semantic-interposition
@@ -9062,9 +9061,9 @@
 // CHECK_CC1_10: {{(unknown argument).*}}-foptimization-record-file=
 // CHECK_CC1_10: {{(unknown argument).*}}-foptimization-record-passes=
 // CHECK_CC1_10: {{(unknown argument).*}}-foptimize-sibling-calls
+// CHECK_CC1_10: {{(unknown argument).*}}-force_cpusubtype_ALL
 
 // RUN: not %clang -cc1  \
-// RUN:   -force_cpusubtype_ALL \
 // RUN:   -force_flat_namespace \
 // RUN:   -force_load \
 // RUN:   -fforce-addr \
@@ -9163,9 +9162,9 @@
 // RUN:   -fstrict-aliasing \
 // RUN:   -fstrict-float-cast-overflow \
 // RUN:   -fstrict-overflow \
-// RUN:   -fstrict-return -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_11 %s
+// RUN:   -fstrict-return \
+// RUN:   -fstruct-path-tbaa -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_11 %s
 
-// CHECK_CC1_11: {{(unknown argument).*}}-force_cpusubtype_ALL
 // CHECK_CC1_11: {{(unknown argument).*}}-force_flat_namespace
 // CHECK_CC1_11: {{(unknown argument).*}}-force_load
 // CHECK_CC1_11: {{(unknown argument).*}}-fforce-addr
@@ -9265,9 +9264,9 @@
 // CHECK_CC1_11: {{(unknown argument).*}}-fstrict-float-cast-overflow
 // CHECK_CC1_11: {{(unknown argument).*}}-fstrict-overflow
 // CHECK_CC1_11: {{(unknown argument).*}}-fstrict-return
+// CHECK_CC1_11: {{(unknown argument).*}}-fstruct-path-tbaa
 
 // RUN: not %clang -cc1  \
-// RUN:   -fstruct-path-tbaa \
 // RUN:   -fsycl \
 // RUN:   -fsycl-device-only \
 // RUN:   -fsycl-host-only \
@@ -9366,9 +9365,9 @@
 // RUN:   -gsimple-template-names \
 // RUN:   -gsplit-dwarf \
 // RUN:   -gsplit-dwarf= \
-// RUN:   -gstabs -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_12 %s
+// RUN:   -gstabs \
+// RUN:   -gtoggle -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_12 %s
 
-// CHECK_CC1_12: {{(unknown argument).*}}-fstruct-path-tbaa
 // CHECK_CC1_12: {{(unknown argument).*}}-fsycl
 // CHECK_CC1_12: {{(unknown argument).*}}-fsycl-device-only
 // CHECK_CC1_12: {{(unknown argument).*}}-fsycl-host-only
@@ -9468,9 +9467,9 @@
 // CHECK_CC1_12: {{(unknown argument).*}}-gsplit-dwarf
 // CHECK_CC1_12: {{(unknown argument).*}}-gsplit-dwarf=
 // CHECK_CC1_12: {{(unknown argument).*}}-gstabs
+// CHECK_CC1_12: {{(unknown argument).*}}-gtoggle
 
 // RUN: not %clang -cc1  \
-// RUN:   -gtoggle \
 // RUN:   -gused \
 // RUN:   -gvms \
 // RUN:   -gxcoff \
@@ -9569,9 +9568,9 @@
 // RUN:   -mavx512ifma \
 // RUN:   -mavx512vbmi \
 // RUN:   -mavx512vbmi2 \
-// RUN:   -mavx512vl -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_13 %s
+// RUN:   -mavx512vl \
+// RUN:   -mavx512vnni -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_13 %s
 
-// CHECK_CC1_13: {{(unknown argument).*}}-gtoggle
 // CHECK_CC1_13: {{(unknown argument).*}}-gused
 // CHECK_CC1_13: {{(unknown argument).*}}-gvms
 // CHECK_CC1_13: {{(unknown argument).*}}-gxcoff
@@ -9671,9 +9670,9 @@
 // CHECK_CC1_13: {{(unknown argument).*}}-mavx512vbmi
 // CHECK_CC1_13: {{(unknown argument).*}}-mavx512vbmi2
 // CHECK_CC1_13: {{(unknown argument).*}}-mavx512vl
+// CHECK_CC1_13: {{(unknown argument).*}}-mavx512vnni
 
 // RUN: not %clang -cc1  \
-// RUN:   -mavx512vnni \
 // RUN:   -mavx512vp2intersect \
 // RUN:   -mavx512vpopcntdq \
 // RUN:   -mavxifma \
@@ -9772,9 +9771,9 @@
 // RUN:   -mhtm \
 // RUN:   -mhwdiv= \
 // RUN:   -mhwmult= \
-// RUN:   -miamcu -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_14 %s
+// RUN:   -miamcu \
+// RUN:   -mieee-fp -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_14 %s
 
-// CHECK_CC1_14: {{(unknown argument).*}}-mavx512vnni
 // CHECK_CC1_14: {{(unknown argument).*}}-mavx512vp2intersect
 // CHECK_CC1_14: {{(unknown argument).*}}-mavx512vpopcntdq
 // CHECK_CC1_14: {{(unknown argument).*}}-mavxifma
@@ -9874,9 +9873,9 @@
 // CHECK_CC1_14: {{(unknown argument).*}}-mhwdiv=
 // CHECK_CC1_14: {{(unknown argument).*}}-mhwmult=
 // CHECK_CC1_14: {{(unknown argument).*}}-miamcu
+// CHECK_CC1_14: {{(unknown argument).*}}-mieee-fp
 
 // RUN: not %clang -cc1  \
-// RUN:   -mieee-fp \
 // RUN:   -mieee-rnd-near \
 // RUN:   -mimplicit-float \
 // RUN:   -mimplicit-it= \
@@ -9921,7 +9920,6 @@
 // RUN:   -mlvi-hardening \
 // RUN:   -mlwp \
 // RUN:   -mlzcnt \
-// RUN:   -mmacos-version-min= \
 // RUN:   -mmadd4 \
 // RUN:   -mmark-bti-property \
 // RUN:   -mmcu= \
@@ -9975,9 +9973,10 @@
 // RUN:   -mno-avx512cd \
 // RUN:   -mno-avx512dq \
 // RUN:   -mno-avx512f \
-// RUN:   -mno-avx512fp16 -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_15 %s
+// RUN:   -mno-avx512fp16 \
+// RUN:   -mno-avx512ifma \
+// RUN:   -mno-avx512vbmi -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_15 %s
 
-// CHECK_CC1_15: {{(unknown argument).*}}-mieee-fp
 // CHECK_CC1_15: {{(unknown argument).*}}-mieee-rnd-near
 // CHECK_CC1_15: {{(unknown argument).*}}-mimplicit-float
 // CHECK_CC1_15: {{(unknown argument).*}}-mimplicit-it=
@@ -10022,7 +10021,6 @@
 // CHECK_CC1_15: {{(unknown argument).*}}-mlvi-hardening
 // CHECK_CC1_15: {{(unknown argument).*}}-mlwp
 // CHECK_CC1_15: {{(unknown argument).*}}-mlzcnt
-// CHECK_CC1_15: {{(unknown argument).*}}-mmacos-version-min=
 // CHECK_CC1_15: {{(unknown argument).*}}-mmadd4
 // CHECK_CC1_15: {{(unknown argument).*}}-mmark-bti-property
 // CHECK_CC1_15: {{(unknown argument).*}}-mmcu=
@@ -10077,10 +10075,10 @@
 // CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512dq
 // CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512f
 // CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512fp16
+// CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512ifma
+// CHECK_CC1_15: {{(unknown argument).*}}-mno-avx512vbmi
 
 // RUN: not %clang -cc1  \
-// RUN:   -mno-avx512ifma \
-// RUN:   -mno-avx512vbmi \
 // RUN:   -mno-avx512vbmi2 \
 // RUN:   -mno-avx512vl \
 // RUN:   -mno-avx512vnni \
@@ -10178,10 +10176,10 @@
 // RUN:   -mno-mmx \
 // RUN:   -mno-movbe \
 // RUN:   -mno-movdir64b \
-// RUN:   -mno-movdiri -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_16 %s
+// RUN:   -mno-movdiri \
+// RUN:   -mno-movrs \
+// RUN:   -mno-movt -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_16 %s
 
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-avx512ifma
-// CHECK_CC1_16: {{(unknown argument).*}}-mno-avx512vbmi
 // CHECK_CC1_16: {{(unknown argument).*}}-mno-avx512vbmi2
 // CHECK_CC1_16: {{(unknown argument).*}}-mno-avx512vl
 // CHECK_CC1_16: {{(unknown argument).*}}-mno-avx512vnni
@@ -10280,10 +10278,10 @@
 // CHECK_CC1_16: {{(unknown argument).*}}-mno-movbe
 // CHECK_CC1_16: {{(unknown argument).*}}-mno-movdir64b
 // CHECK_CC1_16: {{(unknown argument).*}}-mno-movdiri
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-movrs
+// CHECK_CC1_16: {{(unknown argument).*}}-mno-movt
 
 // RUN: not %clang -cc1  \
-// RUN:   -mno-movrs \
-// RUN:   -mno-movt \
 // RUN:   -mno-mpx \
 // RUN:   -mno-ms-bitfields \
 // RUN:   -mno-msa \
@@ -10381,10 +10379,10 @@
 // RUN:   -mno-vx \
 // RUN:   -mno-vzeroupper \
 // RUN:   -mno-waitpkg \
-// RUN:   -mno-warn-nonportable-cfstrings -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_17 %s
+// RUN:   -mno-warn-nonportable-cfstrings \
+// RUN:   -mno-wavefrontsize64 \
+// RUN:   -mno-wbnoinvd -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_17 %s
 
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-movrs
-// CHECK_CC1_17: {{(unknown argument).*}}-mno-movt
 // CHECK_CC1_17: {{(unknown argument).*}}-mno-mpx
 // CHECK_CC1_17: {{(unknown argument).*}}-mno-ms-bitfields
 // CHECK_CC1_17: {{(unknown argument).*}}-mno-msa
@@ -10483,10 +10481,10 @@
 // CHECK_CC1_17: {{(unknown argument).*}}-mno-vzeroupper
 // CHECK_CC1_17: {{(unknown argument).*}}-mno-waitpkg
 // CHECK_CC1_17: {{(unknown argument).*}}-mno-warn-nonportable-cfstrings
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-wavefrontsize64
+// CHECK_CC1_17: {{(unknown argument).*}}-mno-wbnoinvd
 
 // RUN: not %clang -cc1  \
-// RUN:   -mno-wavefrontsize64 \
-// RUN:   -mno-wbnoinvd \
 // RUN:   -mno-wide-arithmetic \
 // RUN:   -mno-widekl \
 // RUN:   -mno-x87 \
@@ -10584,10 +10582,10 @@
 // RUN:   -mtgsplit \
 // RUN:   -mthreads \
 // RUN:   -mthumb \
-// RUN:   -mtls-dialect= -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_18 %s
+// RUN:   -mtls-dialect= \
+// RUN:   -mtls-direct-seg-refs \
+// RUN:   -mtp= -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_18 %s
 
-// CHECK_CC1_18: {{(unknown argument).*}}-mno-wavefrontsize64
-// CHECK_CC1_18: {{(unknown argument).*}}-mno-wbnoinvd
 // CHECK_CC1_18: {{(unknown argument).*}}-mno-wide-arithmetic
 // CHECK_CC1_18: {{(unknown argument).*}}-mno-widekl
 // CHECK_CC1_18: {{(unknown argument).*}}-mno-x87
@@ -10686,10 +10684,10 @@
 // CHECK_CC1_18: {{(unknown argument).*}}-mthreads
 // CHECK_CC1_18: {{(unknown argument).*}}-mthumb
 // CHECK_CC1_18: {{(unknown argument).*}}-mtls-dialect=
+// CHECK_CC1_18: {{(unknown argument).*}}-mtls-direct-seg-refs
+// CHECK_CC1_18: {{(unknown argument).*}}-mtp=
 
 // RUN: not %clang -cc1  \
-// RUN:   -mtls-direct-seg-refs \
-// RUN:   -mtp= \
 // RUN:   -mtsxldtrk \
 // RUN:   -mtune= \
 // RUN:   -mtvos-simulator-version-min= \
@@ -10787,10 +10785,10 @@
 // RUN:   -noprofilelib \
 // RUN:   -noseglinkedit \
 // RUN:   -nostartfiles \
-// RUN:   -nostdinc -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_19 %s
+// RUN:   -nostdinc \
+// RUN:   -nostdlib \
+// RUN:   -nostdlibinc -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_19 %s
 
-// CHECK_CC1_19: {{(unknown argument).*}}-mtls-direct-seg-refs
-// CHECK_CC1_19: {{(unknown argument).*}}-mtp=
 // CHECK_CC1_19: {{(unknown argument).*}}-mtsxldtrk
 // CHECK_CC1_19: {{(unknown argument).*}}-mtune=
 // CHECK_CC1_19: {{(unknown argument).*}}-mtvos-simulator-version-min=
@@ -10889,10 +10887,10 @@
 // CHECK_CC1_19: {{(unknown argument).*}}-noseglinkedit
 // CHECK_CC1_19: {{(unknown argument).*}}-nostartfiles
 // CHECK_CC1_19: {{(unknown argument).*}}-nostdinc
+// CHECK_CC1_19: {{(unknown argument).*}}-nostdlib
+// CHECK_CC1_19: {{(unknown argument).*}}-nostdlibinc
 
 // RUN: not %clang -cc1  \
-// RUN:   -nostdlib \
-// RUN:   -nostdlibinc \
 // RUN:   -nostdlib++ \
 // RUN:   --nvptx-arch-tool= \
 // RUN:   -fexperimental-openacc-macro-override= \
@@ -10990,10 +10988,10 @@
 // RUN:   -traditional \
 // RUN:   -trigraphs \
 // RUN:   -twolevel_namespace \
-// RUN:   -twolevel_namespace_hints -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_20 %s
+// RUN:   -twolevel_namespace_hints \
+// RUN:   -u \
+// RUN:   -umbrella -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_20 %s
 
-// CHECK_CC1_20: {{(unknown argument).*}}-nostdlib
-// CHECK_CC1_20: {{(unknown argument).*}}-nostdlibinc
 // CHECK_CC1_20: {{(unknown argument).*}}-nostdlib++
 // CHECK_CC1_20: {{(unknown argument).*}}--nvptx-arch-tool=
 // CHECK_CC1_20: {{(unknown argument).*}}-fexperimental-openacc-macro-override=
@@ -11092,10 +11090,10 @@
 // CHECK_CC1_20: {{(unknown argument).*}}-trigraphs
 // CHECK_CC1_20: {{(unknown argument).*}}-twolevel_namespace
 // CHECK_CC1_20: {{(unknown argument).*}}-twolevel_namespace_hints
+// CHECK_CC1_20: {{(unknown argument).*}}-u
+// CHECK_CC1_20: {{(unknown argument).*}}-umbrella
 
 // RUN: not %clang -cc1  \
-// RUN:   -u \
-// RUN:   -umbrella \
 // RUN:   -undefined \
 // RUN:   -unexported_symbols_list \
 // RUN:   --verify-debug-info \
@@ -11111,8 +11109,6 @@
 // RUN:   -y \
 // RUN:   -z -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_21 %s
 
-// CHECK_CC1_21: {{(unknown argument).*}}-u
-// CHECK_CC1_21: {{(unknown argument).*}}-umbrella
 // CHECK_CC1_21: {{(unknown argument).*}}-undefined
 // CHECK_CC1_21: {{(unknown argument).*}}-unexported_symbols_list
 // CHECK_CC1_21: {{(unknown argument).*}}--verify-debug-info

@@ -860,7 +860,6 @@
 ! RUN:   -miphoneos-version-min= \
 ! RUN:   -miphonesimulator-version-min= \
 ! RUN:   -mllvm= \
-! RUN:   -mmacosx-version-min= \
 ! RUN:   -nocudainc \
 ! RUN:   -nocudalib \
 ! RUN:   -print-multiarch \
@@ -916,7 +915,8 @@
 ! RUN:   -ast-dump= \
 ! RUN:   -ast-dump-all \
 ! RUN:   -ast-dump-all= \
-! RUN:   -ast-dump-decl-types - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_4 %s
+! RUN:   -ast-dump-decl-types \
+! RUN:   -ast-dump-filter - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_4 %s
 
 ! CHECK_FC1_4: {{(unknown argument).*}}-analyzer-config-help
 ! CHECK_FC1_4: {{(unknown argument).*}}-analyzer-constraints
@@ -961,7 +961,6 @@
 ! CHECK_FC1_4: {{(unknown argument).*}}-miphoneos-version-min=
 ! CHECK_FC1_4: {{(unknown argument).*}}-miphonesimulator-version-min=
 ! CHECK_FC1_4: {{(unknown argument).*}}-mllvm=
-! CHECK_FC1_4: {{(unknown argument).*}}-mmacosx-version-min=
 ! CHECK_FC1_4: {{(unknown argument).*}}-nocudainc
 ! CHECK_FC1_4: {{(unknown argument).*}}-nocudalib
 ! CHECK_FC1_4: {{(unknown argument).*}}-print-multiarch
@@ -1018,9 +1017,9 @@
 ! CHECK_FC1_4: {{(unknown argument).*}}-ast-dump-all
 ! CHECK_FC1_4: {{(unknown argument).*}}-ast-dump-all=
 ! CHECK_FC1_4: {{(unknown argument).*}}-ast-dump-decl-types
+! CHECK_FC1_4: {{(unknown argument).*}}-ast-dump-filter
 
 ! RUN: not %flang_fc1  \
-! RUN:   -ast-dump-filter \
 ! RUN:   -ast-dump-filter= \
 ! RUN:   -ast-dump-lookups \
 ! RUN:   -ast-list \
@@ -1119,9 +1118,9 @@
 ! RUN:   -detailed-preprocessing-record \
 ! RUN:   -diagnostic-log-file \
 ! RUN:   -serialize-diagnostic-file \
-! RUN:   -disable-O0-optnone - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_5 %s
+! RUN:   -disable-O0-optnone \
+! RUN:   -disable-free - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_5 %s
 
-! CHECK_FC1_5: {{(unknown argument).*}}-ast-dump-filter
 ! CHECK_FC1_5: {{(unknown argument).*}}-ast-dump-filter=
 ! CHECK_FC1_5: {{(unknown argument).*}}-ast-dump-lookups
 ! CHECK_FC1_5: {{(unknown argument).*}}-ast-list
@@ -1221,9 +1220,9 @@
 ! CHECK_FC1_5: {{(unknown argument).*}}-diagnostic-log-file
 ! CHECK_FC1_5: {{(unknown argument).*}}-serialize-diagnostic-file
 ! CHECK_FC1_5: {{(unknown argument).*}}-disable-O0-optnone
+! CHECK_FC1_5: {{(unknown argument).*}}-disable-free
 
 ! RUN: not %flang_fc1  \
-! RUN:   -disable-free \
 ! RUN:   -disable-lifetime-markers \
 ! RUN:   -disable-llvm-optzns \
 ! RUN:   -disable-llvm-passes \
@@ -1322,9 +1321,9 @@
 ! RUN:   -faltivec \
 ! RUN:   -fandroid-pad-segment \
 ! RUN:   -fkeep-inline-functions \
-! RUN:   -funit-at-a-time - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_6 %s
+! RUN:   -funit-at-a-time \
+! RUN:   -fansi-escape-codes - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_6 %s
 
-! CHECK_FC1_6: {{(unknown argument).*}}-disable-free
 ! CHECK_FC1_6: {{(unknown argument).*}}-disable-lifetime-markers
 ! CHECK_FC1_6: {{(unknown argument).*}}-disable-llvm-optzns
 ! CHECK_FC1_6: {{(unknown argument).*}}-disable-llvm-passes
@@ -1424,9 +1423,9 @@
 ! CHECK_FC1_6: {{(unknown argument).*}}-fandroid-pad-segment
 ! CHECK_FC1_6: {{(unknown argument).*}}-fkeep-inline-functions
 ! CHECK_FC1_6: {{(unknown argument).*}}-funit-at-a-time
+! CHECK_FC1_6: {{(unknown argument).*}}-fansi-escape-codes
 
 ! RUN: not %flang_fc1  \
-! RUN:   -fansi-escape-codes \
 ! RUN:   -fapinotes \
 ! RUN:   -fapinotes-modules \
 ! RUN:   -fapinotes-swift-version= \
@@ -1525,9 +1524,9 @@
 ! RUN:   -fcrash-diagnostics \
 ! RUN:   -fcrash-diagnostics= \
 ! RUN:   -fcrash-diagnostics-dir= \
-! RUN:   -fcray-pointer - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_7 %s
+! RUN:   -fcray-pointer \
+! RUN:   -fcreate-profile - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_7 %s
 
-! CHECK_FC1_7: {{(unknown argument).*}}-fansi-escape-codes
 ! CHECK_FC1_7: {{(unknown argument).*}}-fapinotes
 ! CHECK_FC1_7: {{(unknown argument).*}}-fapinotes-modules
 ! CHECK_FC1_7: {{(unknown argument).*}}-fapinotes-swift-version=
@@ -1627,9 +1626,9 @@
 ! CHECK_FC1_7: {{(unknown argument).*}}-fcrash-diagnostics=
 ! CHECK_FC1_7: {{(unknown argument).*}}-fcrash-diagnostics-dir=
 ! CHECK_FC1_7: {{(unknown argument).*}}-fcray-pointer
+! CHECK_FC1_7: {{(unknown argument).*}}-fcreate-profile
 
 ! RUN: not %flang_fc1  \
-! RUN:   -fcreate-profile \
 ! RUN:   -fcs-profile-generate \
 ! RUN:   -fcs-profile-generate= \
 ! RUN:   -fctor-dtor-return-this \
@@ -1728,9 +1727,9 @@
 ! RUN:   -fexcess-precision= \
 ! RUN:   -fexec-charset= \
 ! RUN:   -fexperimental-assignment-tracking= \
-! RUN:   -fexperimental-isel - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_8 %s
+! RUN:   -fexperimental-isel \
+! RUN:   -fexperimental-late-parse-attributes - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_8 %s
 
-! CHECK_FC1_8: {{(unknown argument).*}}-fcreate-profile
 ! CHECK_FC1_8: {{(unknown argument).*}}-fcs-profile-generate
 ! CHECK_FC1_8: {{(unknown argument).*}}-fcs-profile-generate=
 ! CHECK_FC1_8: {{(unknown argument).*}}-fctor-dtor-return-this
@@ -1830,9 +1829,9 @@
 ! CHECK_FC1_8: {{(unknown argument).*}}-fexec-charset=
 ! CHECK_FC1_8: {{(unknown argument).*}}-fexperimental-assignment-tracking=
 ! CHECK_FC1_8: {{(unknown argument).*}}-fexperimental-isel
+! CHECK_FC1_8: {{(unknown argument).*}}-fexperimental-late-parse-attributes
 
 ! RUN: not %flang_fc1  \
-! RUN:   -fexperimental-late-parse-attributes \
 ! RUN:   -fexperimental-library \
 ! RUN:   -fexperimental-max-bitint-width= \
 ! RUN:   -fexperimental-new-constant-interpreter \
@@ -1931,9 +1930,9 @@
 ! RUN:   -ffixed-x3 \
 ! RUN:   -ffixed-x30 \
 ! RUN:   -ffixed-x31 \
-! RUN:   -ffixed-x4 - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_9 %s
+! RUN:   -ffixed-x4 \
+! RUN:   -ffixed-x5 - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_9 %s
 
-! CHECK_FC1_9: {{(unknown argument).*}}-fexperimental-late-parse-attributes
 ! CHECK_FC1_9: {{(unknown argument).*}}-fexperimental-library
 ! CHECK_FC1_9: {{(unknown argument).*}}-fexperimental-max-bitint-width=
 ! CHECK_FC1_9: {{(unknown argument).*}}-fexperimental-new-constant-interpreter
@@ -2033,9 +2032,9 @@
 ! CHECK_FC1_9: {{(unknown argument).*}}-ffixed-x30
 ! CHECK_FC1_9: {{(unknown argument).*}}-ffixed-x31
 ! CHECK_FC1_9: {{(unknown argument).*}}-ffixed-x4
+! CHECK_FC1_9: {{(unknown argument).*}}-ffixed-x5
 
 ! RUN: not %flang_fc1  \
-! RUN:   -ffixed-x5 \
 ! RUN:   -ffixed-x6 \
 ! RUN:   -ffixed-x7 \
 ! RUN:   -ffixed-x8 \
@@ -2134,9 +2133,9 @@
 ! RUN:   -flax-vector-conversions \
 ! RUN:   -flax-vector-conversions= \
 ! RUN:   -flimit-debug-info \
-! RUN:   -flimited-precision= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_10 %s
+! RUN:   -flimited-precision= \
+! RUN:   -flto-jobs= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_10 %s
 
-! CHECK_FC1_10: {{(unknown argument).*}}-ffixed-x5
 ! CHECK_FC1_10: {{(unknown argument).*}}-ffixed-x6
 ! CHECK_FC1_10: {{(unknown argument).*}}-ffixed-x7
 ! CHECK_FC1_10: {{(unknown argument).*}}-ffixed-x8
@@ -2236,9 +2235,9 @@
 ! CHECK_FC1_10: {{(unknown argument).*}}-flax-vector-conversions=
 ! CHECK_FC1_10: {{(unknown argument).*}}-flimit-debug-info
 ! CHECK_FC1_10: {{(unknown argument).*}}-flimited-precision=
+! CHECK_FC1_10: {{(unknown argument).*}}-flto-jobs=
 
 ! RUN: not %flang_fc1  \
-! RUN:   -flto-jobs= \
 ! RUN:   -flto-partitions= \
 ! RUN:   -flto-unit \
 ! RUN:   -flto-visibility-public-std \
@@ -2337,9 +2336,9 @@
 ! RUN:   -fno-align-jumps \
 ! RUN:   -fno-align-labels \
 ! RUN:   -fno-align-loops \
-! RUN:   -fno-aligned-allocation - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_11 %s
+! RUN:   -fno-aligned-allocation \
+! RUN:   -fno-all-intrinsics - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_11 %s
 
-! CHECK_FC1_11: {{(unknown argument).*}}-flto-jobs=
 ! CHECK_FC1_11: {{(unknown argument).*}}-flto-partitions=
 ! CHECK_FC1_11: {{(unknown argument).*}}-flto-unit
 ! CHECK_FC1_11: {{(unknown argument).*}}-flto-visibility-public-std
@@ -2439,9 +2438,9 @@
 ! CHECK_FC1_11: {{(unknown argument).*}}-fno-align-labels
 ! CHECK_FC1_11: {{(unknown argument).*}}-fno-align-loops
 ! CHECK_FC1_11: {{(unknown argument).*}}-fno-aligned-allocation
+! CHECK_FC1_11: {{(unknown argument).*}}-fno-all-intrinsics
 
 ! RUN: not %flang_fc1  \
-! RUN:   -fno-all-intrinsics \
 ! RUN:   -fno-allow-editor-placeholders \
 ! RUN:   -fno-altivec \
 ! RUN:   -fno-android-pad-segment \
@@ -2540,9 +2539,9 @@
 ! RUN:   -fno-eliminate-unused-debug-types \
 ! RUN:   -fno-emit-compact-unwind-non-canonical \
 ! RUN:   -fno-emulated-tls \
-! RUN:   -fno-escaping-block-tail-calls - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_12 %s
+! RUN:   -fno-escaping-block-tail-calls \
+! RUN:   -fno-exceptions - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_12 %s
 
-! CHECK_FC1_12: {{(unknown argument).*}}-fno-all-intrinsics
 ! CHECK_FC1_12: {{(unknown argument).*}}-fno-allow-editor-placeholders
 ! CHECK_FC1_12: {{(unknown argument).*}}-fno-altivec
 ! CHECK_FC1_12: {{(unknown argument).*}}-fno-android-pad-segment
@@ -2642,9 +2641,9 @@
 ! CHECK_FC1_12: {{(unknown argument).*}}-fno-emit-compact-unwind-non-canonical
 ! CHECK_FC1_12: {{(unknown argument).*}}-fno-emulated-tls
 ! CHECK_FC1_12: {{(unknown argument).*}}-fno-escaping-block-tail-calls
+! CHECK_FC1_12: {{(unknown argument).*}}-fno-exceptions
 
 ! RUN: not %flang_fc1  \
-! RUN:   -fno-exceptions \
 ! RUN:   -fno-experimental-isel \
 ! RUN:   -fno-experimental-late-parse-attributes \
 ! RUN:   -fno-experimental-library \
@@ -2743,9 +2742,9 @@
 ! RUN:   -fno-modules-skip-header-search-paths \
 ! RUN:   -fno-strict-modules-decluse \
 ! RUN:   -fno_modules-validate-input-files-content \
-! RUN:   -fno-modules-validate-system-headers - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_13 %s
+! RUN:   -fno-modules-validate-system-headers \
+! RUN:   -fno-modules-validate-textual-header-includes - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_13 %s
 
-! CHECK_FC1_13: {{(unknown argument).*}}-fno-exceptions
 ! CHECK_FC1_13: {{(unknown argument).*}}-fno-experimental-isel
 ! CHECK_FC1_13: {{(unknown argument).*}}-fno-experimental-late-parse-attributes
 ! CHECK_FC1_13: {{(unknown argument).*}}-fno-experimental-library
@@ -2845,9 +2844,9 @@
 ! CHECK_FC1_13: {{(unknown argument).*}}-fno-strict-modules-decluse
 ! CHECK_FC1_13: {{(unknown argument).*}}-fno_modules-validate-input-files-content
 ! CHECK_FC1_13: {{(unknown argument).*}}-fno-modules-validate-system-headers
+! CHECK_FC1_13: {{(unknown argument).*}}-fno-modules-validate-textual-header-includes
 
 ! RUN: not %flang_fc1  \
-! RUN:   -fno-modules-validate-textual-header-includes \
 ! RUN:   -fno-modulo-sched \
 ! RUN:   -fno-modulo-sched-allow-regmoves \
 ! RUN:   -fno-ms-compatibility \
@@ -2946,9 +2945,9 @@
 ! RUN:   -fno-ripa \
 ! RUN:   -fno-ropi \
 ! RUN:   -fno-rounding-math \
-! RUN:   -fno-rtlib-add-rpath - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_14 %s
+! RUN:   -fno-rtlib-add-rpath \
+! RUN:   -fno-rtlib-defaultlib - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_14 %s
 
-! CHECK_FC1_14: {{(unknown argument).*}}-fno-modules-validate-textual-header-includes
 ! CHECK_FC1_14: {{(unknown argument).*}}-fno-modulo-sched
 ! CHECK_FC1_14: {{(unknown argument).*}}-fno-modulo-sched-allow-regmoves
 ! CHECK_FC1_14: {{(unknown argument).*}}-fno-ms-compatibility
@@ -3048,9 +3047,9 @@
 ! CHECK_FC1_14: {{(unknown argument).*}}-fno-ropi
 ! CHECK_FC1_14: {{(unknown argument).*}}-fno-rounding-math
 ! CHECK_FC1_14: {{(unknown argument).*}}-fno-rtlib-add-rpath
+! CHECK_FC1_14: {{(unknown argument).*}}-fno-rtlib-defaultlib
 
 ! RUN: not %flang_fc1  \
-! RUN:   -fno-rtlib-defaultlib \
 ! RUN:   -fno-rtti \
 ! RUN:   -fno-rtti-data \
 ! RUN:   -fno-rwpi \
@@ -3149,9 +3148,9 @@
 ! RUN:   -fno-unsigned-char \
 ! RUN:   -fno-unswitch-loops \
 ! RUN:   -fno-unwind-tables \
-! RUN:   -fno-use-ctor-homing - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_15 %s
+! RUN:   -fno-use-ctor-homing \
+! RUN:   -fno-use-cxa-atexit - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_15 %s
 
-! CHECK_FC1_15: {{(unknown argument).*}}-fno-rtlib-defaultlib
 ! CHECK_FC1_15: {{(unknown argument).*}}-fno-rtti
 ! CHECK_FC1_15: {{(unknown argument).*}}-fno-rtti-data
 ! CHECK_FC1_15: {{(unknown argument).*}}-fno-rwpi
@@ -3251,9 +3250,9 @@
 ! CHECK_FC1_15: {{(unknown argument).*}}-fno-unswitch-loops
 ! CHECK_FC1_15: {{(unknown argument).*}}-fno-unwind-tables
 ! CHECK_FC1_15: {{(unknown argument).*}}-fno-use-ctor-homing
+! CHECK_FC1_15: {{(unknown argument).*}}-fno-use-cxa-atexit
 
 ! RUN: not %flang_fc1  \
-! RUN:   -fno-use-cxa-atexit \
 ! RUN:   -fno-use-init-array \
 ! RUN:   -fno-use-line-directives \
 ! RUN:   -fno-use-linker-plugin \
@@ -3352,9 +3351,9 @@
 ! RUN:   -fpadding-on-unsigned-fixed-point \
 ! RUN:   -fparse-all-comments \
 ! RUN:   -fpascal-strings \
-! RUN:   -fpass-by-value-is-noalias - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_16 %s
+! RUN:   -fpass-by-value-is-noalias \
+! RUN:   -fpatchable-function-entry= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_16 %s
 
-! CHECK_FC1_16: {{(unknown argument).*}}-fno-use-cxa-atexit
 ! CHECK_FC1_16: {{(unknown argument).*}}-fno-use-init-array
 ! CHECK_FC1_16: {{(unknown argument).*}}-fno-use-line-directives
 ! CHECK_FC1_16: {{(unknown argument).*}}-fno-use-linker-plugin
@@ -3454,9 +3453,9 @@
 ! CHECK_FC1_16: {{(unknown argument).*}}-fparse-all-comments
 ! CHECK_FC1_16: {{(unknown argument).*}}-fpascal-strings
 ! CHECK_FC1_16: {{(unknown argument).*}}-fpass-by-value-is-noalias
+! CHECK_FC1_16: {{(unknown argument).*}}-fpatchable-function-entry=
 
 ! RUN: not %flang_fc1  \
-! RUN:   -fpatchable-function-entry= \
 ! RUN:   -fpatchable-function-entry-offset= \
 ! RUN:   -fpatchable-function-entry-section= \
 ! RUN:   -fpcc-struct-return \
@@ -3555,9 +3554,9 @@
 ! RUN:   -frtlib-add-rpath \
 ! RUN:   -frtlib-defaultlib \
 ! RUN:   -frtti \
-! RUN:   -frtti-data - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_17 %s
+! RUN:   -frtti-data \
+! RUN:   -frwpi - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_17 %s
 
-! CHECK_FC1_17: {{(unknown argument).*}}-fpatchable-function-entry=
 ! CHECK_FC1_17: {{(unknown argument).*}}-fpatchable-function-entry-offset=
 ! CHECK_FC1_17: {{(unknown argument).*}}-fpatchable-function-entry-section=
 ! CHECK_FC1_17: {{(unknown argument).*}}-fpcc-struct-return
@@ -3657,9 +3656,9 @@
 ! CHECK_FC1_17: {{(unknown argument).*}}-frtlib-defaultlib
 ! CHECK_FC1_17: {{(unknown argument).*}}-frtti
 ! CHECK_FC1_17: {{(unknown argument).*}}-frtti-data
+! CHECK_FC1_17: {{(unknown argument).*}}-frwpi
 
 ! RUN: not %flang_fc1  \
-! RUN:   -frwpi \
 ! RUN:   -fsafe-buffer-usage-suggestions \
 ! RUN:   -fsample-profile-use-profi \
 ! RUN:   -fsanitize= \
@@ -3758,9 +3757,9 @@
 ! RUN:   -fsplit-machine-functions \
 ! RUN:   -fsplit-stack \
 ! RUN:   -fspv-extension= \
-! RUN:   -fspv-target-env= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_18 %s
+! RUN:   -fspv-target-env= \
+! RUN:   -fstack-check - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_18 %s
 
-! CHECK_FC1_18: {{(unknown argument).*}}-frwpi
 ! CHECK_FC1_18: {{(unknown argument).*}}-fsafe-buffer-usage-suggestions
 ! CHECK_FC1_18: {{(unknown argument).*}}-fsample-profile-use-profi
 ! CHECK_FC1_18: {{(unknown argument).*}}-fsanitize=
@@ -3860,9 +3859,9 @@
 ! CHECK_FC1_18: {{(unknown argument).*}}-fsplit-stack
 ! CHECK_FC1_18: {{(unknown argument).*}}-fspv-extension=
 ! CHECK_FC1_18: {{(unknown argument).*}}-fspv-target-env=
+! CHECK_FC1_18: {{(unknown argument).*}}-fstack-check
 
 ! RUN: not %flang_fc1  \
-! RUN:   -fstack-check \
 ! RUN:   -fstack-clash-protection \
 ! RUN:   -fstack-protector \
 ! RUN:   -fstack-protector-all \
@@ -3961,9 +3960,9 @@
 ! RUN:   -fvisibility-global-new-delete-hidden \
 ! RUN:   -fvisibility-inlines-hidden \
 ! RUN:   -fvisibility-inlines-hidden-static-local-var \
-! RUN:   -fvisibility-ms-compat - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_19 %s
+! RUN:   -fvisibility-ms-compat \
+! RUN:   -fvisibility-nodllstorageclass= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_19 %s
 
-! CHECK_FC1_19: {{(unknown argument).*}}-fstack-check
 ! CHECK_FC1_19: {{(unknown argument).*}}-fstack-clash-protection
 ! CHECK_FC1_19: {{(unknown argument).*}}-fstack-protector
 ! CHECK_FC1_19: {{(unknown argument).*}}-fstack-protector-all
@@ -4063,9 +4062,9 @@
 ! CHECK_FC1_19: {{(unknown argument).*}}-fvisibility-inlines-hidden
 ! CHECK_FC1_19: {{(unknown argument).*}}-fvisibility-inlines-hidden-static-local-var
 ! CHECK_FC1_19: {{(unknown argument).*}}-fvisibility-ms-compat
+! CHECK_FC1_19: {{(unknown argument).*}}-fvisibility-nodllstorageclass=
 
 ! RUN: not %flang_fc1  \
-! RUN:   -fvisibility-nodllstorageclass= \
 ! RUN:   -fwarn-stack-size= \
 ! RUN:   -fwasm-exceptions \
 ! RUN:   -fwchar-type= \
@@ -4164,9 +4163,9 @@
 ! RUN:   -gsplit-dwarf= \
 ! RUN:   -gsrc-hash= \
 ! RUN:   -gstabs \
-! RUN:   -gstrict-dwarf - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_20 %s
+! RUN:   -gstrict-dwarf \
+! RUN:   -gtemplate-alias - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_20 %s
 
-! CHECK_FC1_20: {{(unknown argument).*}}-fvisibility-nodllstorageclass=
 ! CHECK_FC1_20: {{(unknown argument).*}}-fwarn-stack-size=
 ! CHECK_FC1_20: {{(unknown argument).*}}-fwasm-exceptions
 ! CHECK_FC1_20: {{(unknown argument).*}}-fwchar-type=
@@ -4266,9 +4265,9 @@
 ! CHECK_FC1_20: {{(unknown argument).*}}-gsrc-hash=
 ! CHECK_FC1_20: {{(unknown argument).*}}-gstabs
 ! CHECK_FC1_20: {{(unknown argument).*}}-gstrict-dwarf
+! CHECK_FC1_20: {{(unknown argument).*}}-gtemplate-alias
 
 ! RUN: not %flang_fc1  \
-! RUN:   -gtemplate-alias \
 ! RUN:   -gtoggle \
 ! RUN:   -gused \
 ! RUN:   -gvms \
@@ -4367,9 +4366,9 @@
 ! RUN:   -mamx-complex \
 ! RUN:   -mamx-fp16 \
 ! RUN:   -mamx-fp8 \
-! RUN:   -mamx-int8 - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_21 %s
+! RUN:   -mamx-int8 \
+! RUN:   -mamx-movrs - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_21 %s
 
-! CHECK_FC1_21: {{(unknown argument).*}}-gtemplate-alias
 ! CHECK_FC1_21: {{(unknown argument).*}}-gtoggle
 ! CHECK_FC1_21: {{(unknown argument).*}}-gused
 ! CHECK_FC1_21: {{(unknown argument).*}}-gvms
@@ -4469,9 +4468,9 @@
 ! CHECK_FC1_21: {{(unknown argument).*}}-mamx-fp16
 ! CHECK_FC1_21: {{(unknown argument).*}}-mamx-fp8
 ! CHECK_FC1_21: {{(unknown argument).*}}-mamx-int8
+! CHECK_FC1_21: {{(unknown argument).*}}-mamx-movrs
 
 ! RUN: not %flang_fc1  \
-! RUN:   -mamx-movrs \
 ! RUN:   -mamx-tf32 \
 ! RUN:   -mamx-tile \
 ! RUN:   -mamx-transpose \
@@ -4570,9 +4569,9 @@
 ! RUN:   -mexec-model= \
 ! RUN:   -mexecute-only \
 ! RUN:   -mextended-const \
-! RUN:   -mextern-sdata - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_22 %s
+! RUN:   -mextern-sdata \
+! RUN:   -mf16c - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_22 %s
 
-! CHECK_FC1_22: {{(unknown argument).*}}-mamx-movrs
 ! CHECK_FC1_22: {{(unknown argument).*}}-mamx-tf32
 ! CHECK_FC1_22: {{(unknown argument).*}}-mamx-tile
 ! CHECK_FC1_22: {{(unknown argument).*}}-mamx-transpose
@@ -4672,9 +4671,9 @@
 ! CHECK_FC1_22: {{(unknown argument).*}}-mexecute-only
 ! CHECK_FC1_22: {{(unknown argument).*}}-mextended-const
 ! CHECK_FC1_22: {{(unknown argument).*}}-mextern-sdata
+! CHECK_FC1_22: {{(unknown argument).*}}-mf16c
 
 ! RUN: not %flang_fc1  \
-! RUN:   -mf16c \
 ! RUN:   -mfancy-math-387 \
 ! RUN:   -mfentry \
 ! RUN:   -mfix4300 \
@@ -4773,9 +4772,9 @@
 ! RUN:   -mlong-calls \
 ! RUN:   -mlong-double-128 \
 ! RUN:   -mlong-double-64 \
-! RUN:   -mlong-double-80 - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_23 %s
+! RUN:   -mlong-double-80 \
+! RUN:   -mlongcall - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_23 %s
 
-! CHECK_FC1_23: {{(unknown argument).*}}-mf16c
 ! CHECK_FC1_23: {{(unknown argument).*}}-mfancy-math-387
 ! CHECK_FC1_23: {{(unknown argument).*}}-mfentry
 ! CHECK_FC1_23: {{(unknown argument).*}}-mfix4300
@@ -4875,9 +4874,9 @@
 ! CHECK_FC1_23: {{(unknown argument).*}}-mlong-double-128
 ! CHECK_FC1_23: {{(unknown argument).*}}-mlong-double-64
 ! CHECK_FC1_23: {{(unknown argument).*}}-mlong-double-80
+! CHECK_FC1_23: {{(unknown argument).*}}-mlongcall
 
 ! RUN: not %flang_fc1  \
-! RUN:   -mlongcall \
 ! RUN:   -mlr-for-calls-only \
 ! RUN:   -mlsx \
 ! RUN:   -mlvi-cfi \
@@ -4976,9 +4975,9 @@
 ! RUN:   -mno-crbits \
 ! RUN:   -mno-crc \
 ! RUN:   -mno-crc32 \
-! RUN:   -mno-cumode - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_24 %s
+! RUN:   -mno-cumode \
+! RUN:   -mno-cx16 - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_24 %s
 
-! CHECK_FC1_24: {{(unknown argument).*}}-mlongcall
 ! CHECK_FC1_24: {{(unknown argument).*}}-mlr-for-calls-only
 ! CHECK_FC1_24: {{(unknown argument).*}}-mlsx
 ! CHECK_FC1_24: {{(unknown argument).*}}-mlvi-cfi
@@ -5078,9 +5077,9 @@
 ! CHECK_FC1_24: {{(unknown argument).*}}-mno-crc
 ! CHECK_FC1_24: {{(unknown argument).*}}-mno-crc32
 ! CHECK_FC1_24: {{(unknown argument).*}}-mno-cumode
+! CHECK_FC1_24: {{(unknown argument).*}}-mno-cx16
 
 ! RUN: not %flang_fc1  \
-! RUN:   -mno-cx16 \
 ! RUN:   -mno-daz-ftz \
 ! RUN:   -mno-default-build-attributes \
 ! RUN:   -mno-div32 \
@@ -5179,9 +5178,9 @@
 ! RUN:   -mno-pconfig \
 ! RUN:   -mno-pcrel \
 ! RUN:   -mno-pic-data-is-text-relative \
-! RUN:   -mno-pku - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_25 %s
+! RUN:   -mno-pku \
+! RUN:   -mno-popc - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_25 %s
 
-! CHECK_FC1_25: {{(unknown argument).*}}-mno-cx16
 ! CHECK_FC1_25: {{(unknown argument).*}}-mno-daz-ftz
 ! CHECK_FC1_25: {{(unknown argument).*}}-mno-default-build-attributes
 ! CHECK_FC1_25: {{(unknown argument).*}}-mno-div32
@@ -5281,9 +5280,9 @@
 ! CHECK_FC1_25: {{(unknown argument).*}}-mno-pcrel
 ! CHECK_FC1_25: {{(unknown argument).*}}-mno-pic-data-is-text-relative
 ! CHECK_FC1_25: {{(unknown argument).*}}-mno-pku
+! CHECK_FC1_25: {{(unknown argument).*}}-mno-popc
 
 ! RUN: not %flang_fc1  \
-! RUN:   -mno-popc \
 ! RUN:   -mno-popcnt \
 ! RUN:   -mno-popcntd \
 ! RUN:   -mno-power10-vector \
@@ -5382,9 +5381,9 @@
 ! RUN:   -mno-xsaveopt \
 ! RUN:   -mno-xsaves \
 ! RUN:   -mno-zvector \
-! RUN:   -mnocrc - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_26 %s
+! RUN:   -mnocrc \
+! RUN:   -mno-direct-move - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_26 %s
 
-! CHECK_FC1_26: {{(unknown argument).*}}-mno-popc
 ! CHECK_FC1_26: {{(unknown argument).*}}-mno-popcnt
 ! CHECK_FC1_26: {{(unknown argument).*}}-mno-popcntd
 ! CHECK_FC1_26: {{(unknown argument).*}}-mno-power10-vector
@@ -5484,9 +5483,9 @@
 ! CHECK_FC1_26: {{(unknown argument).*}}-mno-xsaves
 ! CHECK_FC1_26: {{(unknown argument).*}}-mno-zvector
 ! CHECK_FC1_26: {{(unknown argument).*}}-mnocrc
+! CHECK_FC1_26: {{(unknown argument).*}}-mno-direct-move
 
 ! RUN: not %flang_fc1  \
-! RUN:   -mno-direct-move \
 ! RUN:   -mnontrapping-fptoint \
 ! RUN:   -mnop-mcount \
 ! RUN:   -mno-paired-vector-memops \
@@ -5585,9 +5584,9 @@
 ! RUN:   -msse3 \
 ! RUN:   -msse4 \
 ! RUN:   -msse4.1 \
-! RUN:   -msse4.2 - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_27 %s
+! RUN:   -msse4.2 \
+! RUN:   -msse4a - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_27 %s
 
-! CHECK_FC1_27: {{(unknown argument).*}}-mno-direct-move
 ! CHECK_FC1_27: {{(unknown argument).*}}-mnontrapping-fptoint
 ! CHECK_FC1_27: {{(unknown argument).*}}-mnop-mcount
 ! CHECK_FC1_27: {{(unknown argument).*}}-mno-paired-vector-memops
@@ -5687,9 +5686,9 @@
 ! CHECK_FC1_27: {{(unknown argument).*}}-msse4
 ! CHECK_FC1_27: {{(unknown argument).*}}-msse4.1
 ! CHECK_FC1_27: {{(unknown argument).*}}-msse4.2
+! CHECK_FC1_27: {{(unknown argument).*}}-msse4a
 
 ! RUN: not %flang_fc1  \
-! RUN:   -msse4a \
 ! RUN:   -mssse3 \
 ! RUN:   -mstack-alignment= \
 ! RUN:   -mstack-arg-probe \
@@ -5788,9 +5787,9 @@
 ! RUN:   -new-struct-path-tbaa \
 ! RUN:   -no_dead_strip_inits_and_terms \
 ! RUN:   -no-canonical-prefixes \
-! RUN:   -no-clear-ast-before-backend - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_28 %s
+! RUN:   -no-clear-ast-before-backend \
+! RUN:   -no-code-completion-globals - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_28 %s
 
-! CHECK_FC1_28: {{(unknown argument).*}}-msse4a
 ! CHECK_FC1_28: {{(unknown argument).*}}-mssse3
 ! CHECK_FC1_28: {{(unknown argument).*}}-mstack-alignment=
 ! CHECK_FC1_28: {{(unknown argument).*}}-mstack-arg-probe
@@ -5890,9 +5889,9 @@
 ! CHECK_FC1_28: {{(unknown argument).*}}-no_dead_strip_inits_and_terms
 ! CHECK_FC1_28: {{(unknown argument).*}}-no-canonical-prefixes
 ! CHECK_FC1_28: {{(unknown argument).*}}-no-clear-ast-before-backend
+! CHECK_FC1_28: {{(unknown argument).*}}-no-code-completion-globals
 
 ! RUN: not %flang_fc1  \
-! RUN:   -no-code-completion-globals \
 ! RUN:   -no-code-completion-ns-level-decls \
 ! RUN:   -no-cpp-precomp \
 ! RUN:   --no-cuda-gpu-arch= \
@@ -5991,9 +5990,9 @@
 ! RUN:   -reexport_library \
 ! RUN:   -regcall4 \
 ! RUN:   -relaxed-aliasing \
-! RUN:   -relocatable-pch - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_29 %s
+! RUN:   -relocatable-pch \
+! RUN:   -remap - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_29 %s
 
-! CHECK_FC1_29: {{(unknown argument).*}}-no-code-completion-globals
 ! CHECK_FC1_29: {{(unknown argument).*}}-no-code-completion-ns-level-decls
 ! CHECK_FC1_29: {{(unknown argument).*}}-no-cpp-precomp
 ! CHECK_FC1_29: {{(unknown argument).*}}--no-cuda-gpu-arch=
@@ -6093,9 +6092,9 @@
 ! CHECK_FC1_29: {{(unknown argument).*}}-regcall4
 ! CHECK_FC1_29: {{(unknown argument).*}}-relaxed-aliasing
 ! CHECK_FC1_29: {{(unknown argument).*}}-relocatable-pch
+! CHECK_FC1_29: {{(unknown argument).*}}-remap
 
 ! RUN: not %flang_fc1  \
-! RUN:   -remap \
 ! RUN:   -remap-file \
 ! RUN:   -loader-replaceable-function= \
 ! RUN:   -res-may-alias \
@@ -6194,9 +6193,9 @@
 ! RUN:   -undef \
 ! RUN:   -undefined \
 ! RUN:   -unexported_symbols_list \
-! RUN:   -funique-source-file-identifier= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_30 %s
+! RUN:   -funique-source-file-identifier= \
+! RUN:   -unwindlib= - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_30 %s
 
-! CHECK_FC1_30: {{(unknown argument).*}}-remap
 ! CHECK_FC1_30: {{(unknown argument).*}}-remap-file
 ! CHECK_FC1_30: {{(unknown argument).*}}-loader-replaceable-function=
 ! CHECK_FC1_30: {{(unknown argument).*}}-res-may-alias
@@ -6296,9 +6295,9 @@
 ! CHECK_FC1_30: {{(unknown argument).*}}-undefined
 ! CHECK_FC1_30: {{(unknown argument).*}}-unexported_symbols_list
 ! CHECK_FC1_30: {{(unknown argument).*}}-funique-source-file-identifier=
+! CHECK_FC1_30: {{(unknown argument).*}}-unwindlib=
 
 ! RUN: not %flang_fc1  \
-! RUN:   -unwindlib= \
 ! RUN:   -v \
 ! RUN:   -verify \
 ! RUN:   -verify= \
@@ -6323,7 +6322,6 @@
 ! RUN:   -y \
 ! RUN:   -z - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_31 %s
 
-! CHECK_FC1_31: {{(unknown argument).*}}-unwindlib=
 ! CHECK_FC1_31: {{(unknown argument).*}}-v
 ! CHECK_FC1_31: {{(unknown argument).*}}-verify
 ! CHECK_FC1_31: {{(unknown argument).*}}-verify=
