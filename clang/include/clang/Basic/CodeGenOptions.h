@@ -80,16 +80,6 @@ public:
     SRCK_InRegs    // Small structs in registers (-freg-struct-return).
   };
 
-  enum ProfileInstrKind {
-    ProfileNone,       // Profile instrumentation is turned off.
-    ProfileClangInstr, // Clang instrumentation to generate execution counts
-                       // to use with PGO.
-    ProfileIRInstr,    // IR level PGO instrumentation in LLVM.
-    ProfileCSIRInstr, // IR level PGO context sensitive instrumentation in LLVM.
-    ProfileIRSampleColdCov, // IR level sample pgo based cold function coverage
-                            // instrumentation in LLVM.
-  };
-
   enum EmbedBitcodeKind {
     Embed_Off,      // No embedded bitcode.
     Embed_All,      // Embed both bitcode and commandline in the output.
