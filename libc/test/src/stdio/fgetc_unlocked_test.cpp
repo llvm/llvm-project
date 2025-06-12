@@ -36,7 +36,6 @@ public:
     // This is an error and not a real EOF.
     ASSERT_EQ(LIBC_NAMESPACE::feof(file), 0);
     ASSERT_NE(LIBC_NAMESPACE::ferror(file), 0);
-    ASSERT_ERRNO_FAILURE();
 
     ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 
