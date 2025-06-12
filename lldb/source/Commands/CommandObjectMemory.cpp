@@ -908,14 +908,11 @@ static llvm::Error CopyExpressionResult(ValueObject &result,
   case 8: {
     buffer.CopyData(&value, 8);
   } break;
-  case 3:
-  case 5:
-  case 6:
-  case 7:
-    return llvm::createStringError("unknown type. pass a string instead");
   default:
     return llvm::createStringError(
-        "result size larger than 8 bytes. pass a string instead");
+        "Only expressions resulting in 1, 2, 4, or 8-byte-sized values are "
+        "supported. For other pattern sizes the --string (-s) option may be "
+        "used.");
   }
 
   return llvm::Error::success();
