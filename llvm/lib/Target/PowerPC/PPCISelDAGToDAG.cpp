@@ -392,6 +392,7 @@ namespace {
         errs() << "ConstraintID: "
                << InlineAsm::getMemConstraintName(ConstraintID) << "\n";
         llvm_unreachable("Unexpected asm memory constraint");
+      case InlineAsm::ConstraintCode::a:
       case InlineAsm::ConstraintCode::es:
       case InlineAsm::ConstraintCode::m:
       case InlineAsm::ConstraintCode::o:
