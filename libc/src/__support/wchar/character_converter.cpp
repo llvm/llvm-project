@@ -22,13 +22,75 @@ bool CharacterConverter::isComplete() {
   return state->bytes_processed == state->total_bytes;
 }
 
-int CharacterConverter::push(char8_t utf8_byte) {}
+int CharacterConverter::push(char8_t utf8_byte) {
+  // Checking the first byte if first push
+  if (state->bytes_processed == 0 && state->total_bytes == 0) {
+    // 1 byte total
+    if ((utf8_byte & 128) == 0) {
+      state->total_bytes = 1;
+      state->bytes_processed = 1;
+      state->partial = static_cast<char32_t>(utf8_byte);
+      return 0;
+    }
+    // 2 bytes total
+    else if ((utf8_byte & 0xE0) == 0xC0) {
+      state->total_bytes = 2;
+      state->bytes_processed = 1;
+      utf8_byte &= 0x1F;
+      state->partial = static_cast<char32_t>(utf8_byte);
+      return 0;
+    }
+    // 3 bytes total
+    else if ((utf8_byte & 0xF0) == 0xE0) {
+      state->total_bytes = 3;
+      state->bytes_processed = 1;
+      utf8_byte &= 0x0F;
+      state->partial = static_cast<char32_t>(utf8_byte);
+      return 0;
+    }
+    // 4 bytes total
+    else if ((utf8_byte & 0xF8) == 0xF0) {
+      state->total_bytes = 4;
+      state->bytes_processed = 1;
+      utf8_byte &= 0x07;
+      state->partial = static_cast<char32_t>(utf8_byte);
+      return 0;
+    }
+    // Invalid
+    else {
+        state->bytes_processed++;
+        return -1;
+    }
+  }
+  // Any subsequent push
+  if ((utf8_byte & 0xC0) == 0x80) {
+    state->partial = state->partial << 6;
+    char32_t byte = utf8_byte & 0x3F;
+    state->partial |= byte;
+    state->bytes_processed++;
+    return 0;
+  }
+  state->bytes_processed++;
+  return -1;
+}
 
-int CharacterConverter::push(char32_t utf32) {}
+int CharacterConverter::push(char32_t utf32) { 
+    return utf32; 
+}
 
-utf_ret<char8_t> CharacterConverter::pop_utf8() {}
+utf_ret<char8_t> CharacterConverter::pop_utf8() {
+  utf_ret<char8_t> utf8;
+  utf8.error = 0;
+  utf8.out = 0;
+  return utf8;
+}
 
-utf_ret<char32_t> CharacterConverter::pop_utf32() {}
+utf_ret<char32_t> CharacterConverter::pop_utf32() {
+  utf_ret<char32_t> utf32;
+  utf32.error = 0;
+  utf32.out = state->partial;
+  return utf32;
+}
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
