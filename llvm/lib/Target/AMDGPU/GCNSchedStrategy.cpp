@@ -2246,8 +2246,8 @@ void PreRARematStage::finalizeGCNSchedStage() {
 void GCNScheduleDAGMILive::updateRegionBoundaries(
     RegionBoundaries &RegionBounds, MachineBasicBlock::iterator MI,
     MachineInstr *NewMI) {
-  assert(!NewMI ||
-         NewMI != RegionBounds.second && "cannot remove at region end");
+  assert((!NewMI || NewMI != RegionBounds.second) &&
+         "cannot remove at region end");
 
   if (RegionBounds.first == RegionBounds.second) {
     assert(NewMI && "cannot remove from an empty region");

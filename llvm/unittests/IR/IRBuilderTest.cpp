@@ -888,14 +888,9 @@ TEST_F(IRBuilderTest, DIBuilder) {
   };
 
   auto ExpectOrder = [&](DbgInstPtr First, BasicBlock::iterator Second) {
-    if (M->IsNewDbgInfoFormat) {
-      EXPECT_TRUE(isa<DbgRecord *>(First));
-      EXPECT_FALSE(Second->getDbgRecordRange().empty());
-      EXPECT_EQ(GetLastDbgRecord(&*Second), cast<DbgRecord *>(First));
-    } else {
-      EXPECT_TRUE(isa<Instruction *>(First));
-      EXPECT_EQ(&*std::prev(Second), cast<Instruction *>(First));
-    }
+    EXPECT_TRUE(isa<DbgRecord *>(First));
+    EXPECT_FALSE(Second->getDbgRecordRange().empty());
+    EXPECT_EQ(GetLastDbgRecord(&*Second), cast<DbgRecord *>(First));
   };
 
   auto RunTest = [&]() {
@@ -1003,18 +998,8 @@ TEST_F(IRBuilderTest, DIBuilder) {
     EXPECT_TRUE(verifyModule(*M));
   };
 
-  // Test in new-debug mode.
-  EXPECT_TRUE(M->IsNewDbgInfoFormat);
   RunTest();
-
-  // Test in old-debug mode.
-  // Reset the test then call convertFromNewDbgValues to flip the flag
-  // on the test's Module, Function and BasicBlock.
   TearDown();
-  SetUp();
-  M->convertFromNewDbgValues();
-  EXPECT_FALSE(M->IsNewDbgInfoFormat);
-  RunTest();
 }
 
 TEST_F(IRBuilderTest, createArtificialSubprogram) {
