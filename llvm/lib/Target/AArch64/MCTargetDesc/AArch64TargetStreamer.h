@@ -102,16 +102,16 @@ public:
 
   /// Build attributes implementation
   virtual void
-  emitAtributesSubsection(StringRef VendorName,
+  emitAttributesSubsection(StringRef VendorName,
                           AArch64BuildAttributes::SubsectionOptional IsOptional,
                           AArch64BuildAttributes::SubsectionType ParameterType);
   virtual void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
                              std::string String);
-  void activateAtributesSubsection(StringRef VendorName);
+  void activateAttributesSubsection(StringRef VendorName);
   std::unique_ptr<MCELFStreamer::AttributeSubSection>
-  getActiveAtributesSubsection();
+  getActiveAttributesSubsection();
   std::unique_ptr<MCELFStreamer::AttributeSubSection>
-  getAtributesSubsectionByName(StringRef Name);
+  getAttributesSubsectionByName(StringRef Name);
   void
   insertAttributeInPlace(const MCELFStreamer::AttributeItem &Attr,
                          MCELFStreamer::AttributeSubSection &AttSubSection);
@@ -129,7 +129,7 @@ private:
   MCSection *AttributeSection = nullptr;
 
   /// Build attributes implementation
-  void emitAtributesSubsection(
+  void emitAttributesSubsection(
       StringRef VendorName,
       AArch64BuildAttributes::SubsectionOptional IsOptional,
       AArch64BuildAttributes::SubsectionType ParameterType) override;

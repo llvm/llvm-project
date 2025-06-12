@@ -125,6 +125,8 @@ add_lldb_library(liblldb SHARED ${option_framework}
   ${lldb_python_wrapper}
   ${lldb_lua_wrapper}
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/API
   DEPENDS
     lldb-sbapi-dwarf-enums
 
@@ -310,7 +312,7 @@ foreach(header
     # unifdef returns 0 when the file is unchanged and 1 if something was changed.
     # That means if we successfully remove SWIG code, the build system believes
     # that the command has failed and stops. This is undesirable.
-    set(copy_command ${unifdef_EXECUTABLE} -USWIG -o ${staged_header} ${header} || (exit 0))
+    set(copy_command ${unifdef_EXECUTABLE} -USWIG ${header} > ${staged_header} || (exit 0))
   else()
     set(copy_command ${CMAKE_COMMAND} -E copy ${header} ${staged_header})
   endif()

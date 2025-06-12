@@ -135,6 +135,10 @@ class Source(object):
         return source_dict
 
 
+class NotSupportedError(KeyError):
+    """Raised if a feature is not supported due to its capabilities."""
+
+
 class DebugCommunication(object):
     def __init__(
         self,
@@ -153,7 +157,7 @@ class DebugCommunication(object):
         self.recv_thread = threading.Thread(target=self._read_packet_thread)
         self.process_event_body = None
         self.exit_status: Optional[int] = None
-        self.initialize_body: dict[str, Any] = {}
+        self.capabilities: dict[str, Any] = {}
         self.progress_events: list[Event] = []
         self.reverse_requests = []
         self.sequence = 1
@@ -301,8 +305,8 @@ class DebugCommunication(object):
                 # Breakpoint events are sent when a breakpoint is resolved
                 self._update_verified_breakpoints([body["breakpoint"]])
             elif event == "capabilities":
-                # update the capabilities with new ones from the event.
-                self.initialize_body.update(body["capabilities"])
+                # Update the capabilities with new ones from the event.
+                self.capabilities.update(body["capabilities"])
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":
@@ -311,7 +315,6 @@ class DebugCommunication(object):
         return keepGoing
 
     def _process_continued(self, all_threads_continued: bool):
-        self.threads = None
         self.frame_scopes = {}
         if all_threads_continued:
             self.thread_stop_reasons = {}
@@ -491,13 +494,13 @@ class DebugCommunication(object):
             raise ValueError("didn't get terminated event")
         return event_dict
 
-    def get_initialize_value(self, key):
+    def get_capability(self, key):
         """Get a value for the given key if it there is a key/value pair in
-        the "initialize" request response body.
+        the capabilities reported by the adapter.
         """
-        if self.initialize_body and key in self.initialize_body:
-            return self.initialize_body[key]
-        raise ValueError(f"no value for key: {key} in {self.initialize_body}")
+        if key in self.capabilities:
+            return self.capabilities[key]
+        raise NotSupportedError(key)
 
     def get_threads(self):
         if self.threads is None:
@@ -763,6 +766,9 @@ class DebugCommunication(object):
         return response
 
     def request_restart(self, restartArguments=None):
+        if self.exit_status is not None:
+            raise ValueError("request_restart called after process exited")
+        self.get_capability("supportsRestartRequest")
         command_dict = {
             "command": "restart",
             "type": "request",
@@ -870,7 +876,7 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
         if response:
             if "body" in response:
-                self.initialize_body = response["body"]
+                self.capabilities = response["body"]
         return response
 
     def request_launch(
@@ -975,6 +981,7 @@ class DebugCommunication(object):
     def request_stepInTargets(self, frameId):
         if self.exit_status is not None:
             raise ValueError("request_stepInTargets called after process exited")
+        self.get_capability("supportsStepInTargetsRequest")
         args_dict = {"frameId": frameId}
         command_dict = {
             "command": "stepInTargets",
@@ -1183,6 +1190,9 @@ class DebugCommunication(object):
         with information about all threads"""
         command_dict = {"command": "threads", "type": "request", "arguments": {}}
         response = self.send_recv(command_dict)
+        if not response["success"]:
+            self.threads = None
+            return response
         body = response["body"]
         # Fill in "self.threads" correctly so that clients that call
         # self.get_threads() or self.get_thread_id(...) can get information
