@@ -2828,11 +2828,9 @@ Scope &ScopeHandler::NonDerivedTypeScope() {
   return currScope_->IsDerivedType() ? currScope_->parent() : *currScope_;
 }
 
-static void SetImplicitCUDADevice(bool inDeviceSubprogram, Symbol &symbol) {
-  if (inDeviceSubprogram && symbol.has<ObjectEntityDetails>()) {
-    auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-    if (!object->cudaDataAttr() && !IsValue(symbol) &&
-        !IsFunctionResult(symbol)) {
+static void SetImplicitCUDADevice(Symbol &symbol) {
+  if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (!object->cudaDataAttr() && !IsValue(symbol) && !IsFunctionResult(symbol)) {
       // Implicitly set device attribute if none is set in device context.
       object->set_cudaDataAttr(common::CUDADataAttr::Device);
     }
@@ -2879,9 +2877,9 @@ void ScopeHandler::PopScope() {
   // assumed to be objects.
   // TODO: Statement functions
   bool inDeviceSubprogram{false};
-  Symbol *scopeSym{currScope().symbol()};
+  const Symbol *scopeSym{currScope().GetSymbol()};
   if (currScope().kind() == Scope::Kind::BlockConstruct) {
-    scopeSym = currScope().parent().symbol();
+    scopeSym = GetProgramUnitContaining(currScope()).GetSymbol();
   }
   if (scopeSym) {
     if (auto *details{scopeSym->detailsIf<SubprogramDetails>()}) {
@@ -2898,12 +2896,15 @@ void ScopeHandler::PopScope() {
   }
   for (auto &pair : currScope()) {
     ConvertToObjectEntity(*pair.second);
-    if (currScope_->kind() == Scope::Kind::BlockConstruct) {
-      // Only look for specification in BlockConstruct. Other cases are done in
-      // ResolveSpecificationParts.
-      SetImplicitCUDADevice(inDeviceSubprogram, *pair.second);
+  }
+
+  // Apply CUDA device attributes if in a device subprogram
+  if (inDeviceSubprogram && currScope().kind() == Scope::Kind::BlockConstruct) {
+    for (auto &pair : currScope()) {
+      SetImplicitCUDADevice(*pair.second);
     }
   }
+
   funcResultStack_.Pop();
   // If popping back into a global scope, pop back to the top scope.
   Scope *hermetic{context().currentHermeticModuleFileScope()};
@@ -10187,7 +10188,9 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
     }
     ApplyImplicitRules(symbol);
     // Apply CUDA implicit attributes if needed.
-    SetImplicitCUDADevice(inDeviceSubprogram, symbol);
+    if (inDeviceSubprogram) {
+      SetImplicitCUDADevice(symbol);
+    }
     // Main program local objects usually don't have an implied SAVE attribute,
     // as one might think, but in the exceptional case of a derived type
     // local object that contains a coarray, we have to mark it as an
