@@ -1987,11 +1987,11 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
       if (Arg.getKind() == TemplateArgument::ArgKind::Pack) {
         for (const auto &InnerArg : Arg.pack_elements())
           Args.push_back(InnerArg.getAsType());
-      } else if (Arg.getKind() == TemplateArgument::ArgKind::Type)
+      } else if (Arg.getKind() == TemplateArgument::ArgKind::Type) {
         Args.push_back(Arg.getAsType());
-      assert((Arg.getKind() == TemplateArgument::ArgKind::Type ||
-              Arg.getKind() == TemplateArgument::ArgKind::Pack) &&
-             "Unexpected kind");
+      } else {
+        llvm_unreachable("Unexpected kind");
+      }
     }
     return {{Trait.value(), std::move(Args)}};
   }
