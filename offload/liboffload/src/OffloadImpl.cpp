@@ -97,6 +97,7 @@ struct AllocInfo {
 // Global shared state for liboffload
 struct OffloadContext;
 static OffloadContext *OffloadContextVal;
+std::mutex OffloadContextValMutex;
 struct OffloadContext {
   OffloadContext(OffloadContext &) = delete;
   OffloadContext(OffloadContext &&) = delete;
@@ -107,6 +108,7 @@ struct OffloadContext {
   bool ValidationEnabled = true;
   DenseMap<void *, AllocInfo> AllocInfoMap{};
   SmallVector<ol_platform_impl_t, 4> Platforms{};
+  size_t RefCount;
 
   ol_device_handle_t HostDevice() {
     // The host platform is always inserted last
@@ -191,18 +193,41 @@ Error initPlugins() {
   return Plugin::success();
 }
 
-// TODO: We can properly reference count here and manage the resources in a more
-// clever way
 Error olInit_impl() {
-  static std::once_flag InitFlag;
-  std::optional<Error> InitResult{};
-  std::call_once(InitFlag, [&] { InitResult = initPlugins(); });
+  std::lock_guard<std::mutex> Lock{OffloadContextValMutex};
+
+  std::optional<Error> InitResult;
+  if (!isOffloadInitialized())
+    InitResult = initPlugins();
+
+  OffloadContext::get().RefCount++;
 
   if (InitResult)
     return std::move(*InitResult);
   return Error::success();
 }
-Error olShutDown_impl() { return Error::success(); }
+
+Error olShutDown_impl() {
+  std::lock_guard<std::mutex> Lock{OffloadContextValMutex};
+
+  if (--OffloadContext::get().RefCount != 0)
+    return Error::success();
+
+  llvm::Error Result = Error::success();
+
+  for (auto &P : OffloadContext::get().Platforms) {
+    // Host plugin is nullptr and has no deinit
+    if (!P.Plugin)
+      continue;
+
+    if (auto Res = P.Plugin->deinit())
+      Result = llvm::joinErrors(std::move(Result), std::move(Res));
+  }
+  delete OffloadContextVal;
+  OffloadContextVal = nullptr;
+
+  return Result;
+}
 
 Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
                                   ol_platform_info_t PropName, size_t PropSize,
