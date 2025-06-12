@@ -7219,6 +7219,17 @@ Sema::ActOnCompoundLiteral(SourceLocation LParenLoc, ParsedType Ty,
   return BuildCompoundLiteralExpr(LParenLoc, TInfo, RParenLoc, InitExpr);
 }
 
+static bool IsInsideFunction(Scope *S) {
+  while (S) {
+    if (S->isFunctionScope())
+      return true;
+
+    S = S->getParent();
+  }
+
+  return false;
+}
+
 ExprResult
 Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
                                SourceLocation RParenLoc, Expr *LiteralExpr) {
@@ -7281,6 +7292,7 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
   //   void func(char *para[(int [1]){ 0 }[0]);
   const Scope *S = getCurScope();
   bool IsFileScope = !CurContext->isFunctionOrMethod() &&
+                     !IsInsideFunction(getCurScope()) &&
                      (!S || !S->isFunctionPrototypeScope());
 
   // In C, compound literals are l-values for some reason.
