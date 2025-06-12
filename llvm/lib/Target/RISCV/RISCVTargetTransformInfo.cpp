@@ -1505,6 +1505,9 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     auto SrcLT = getTypeLegalizationCost(SrcTy);
     auto DstLT = getTypeLegalizationCost(RetTy);
+    if (!SrcTy->isVectorTy())
+      break;
+
     if (!SrcLT.first.isValid() || !DstLT.first.isValid())
       return InstructionCost::getInvalid();
 
