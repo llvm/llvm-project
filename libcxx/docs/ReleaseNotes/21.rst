@@ -99,6 +99,11 @@ Potentially breaking changes
 
 - User-defined specializations of ``std::common_reference`` are diagnosed now. To customize the common reference type, ``std::basic_common_reference`` should be specialized instead.
 
+- ``std::function`` used to have allocator support, which was removed from the Standard by `http://wg21.link/p0302r1`
+  due to issues with its design and inconsistent support from implementations. Previously, libc++ would provide
+  allocator-aware APIs in ``std::function`` in C++11 and C++14, but ignores the allocator argument in all places but
+  one. Starting in this release, the allocator argument is always ignored.
+
 Announcements About Future Releases
 -----------------------------------
 
