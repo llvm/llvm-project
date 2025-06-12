@@ -58,8 +58,6 @@ using MessageFormattedText = parser::MessageFormattedText;
 class ResolveNamesVisitor;
 class ScopeHandler;
 
-void SetImplicitCUDADevice(bool inDeviceSubprogram, Symbol &symbol);
-
 // ImplicitRules maps initial character of identifier to the DeclTypeSpec
 // representing the implicit type; std::nullopt if none.
 // It also records the presence of IMPLICIT NONE statements.
@@ -2828,6 +2826,17 @@ Scope *ScopeHandler::GetHostProcedure() {
 
 Scope &ScopeHandler::NonDerivedTypeScope() {
   return currScope_->IsDerivedType() ? currScope_->parent() : *currScope_;
+}
+
+static void SetImplicitCUDADevice(bool inDeviceSubprogram, Symbol &symbol) {
+  if (inDeviceSubprogram && symbol.has<ObjectEntityDetails>()) {
+    auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+    if (!object->cudaDataAttr() && !IsValue(symbol) &&
+        !IsFunctionResult(symbol)) {
+      // Implicitly set device attribute if none is set in device context.
+      object->set_cudaDataAttr(common::CUDADataAttr::Device);
+    }
+  }
 }
 
 void ScopeHandler::PushScope(Scope::Kind kind, Symbol *symbol) {
@@ -9578,17 +9587,6 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
     }
   }
   info.Resolve(&MakeSymbol(symbolName, Attrs{}, std::move(genericDetails)));
-}
-
-void SetImplicitCUDADevice(bool inDeviceSubprogram, Symbol &symbol) {
-  if (inDeviceSubprogram && symbol.has<ObjectEntityDetails>()) {
-    auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-    if (!object->cudaDataAttr() && !IsValue(symbol) &&
-        !IsFunctionResult(symbol)) {
-      // Implicitly set device attribute if none is set in device context.
-      object->set_cudaDataAttr(common::CUDADataAttr::Device);
-    }
-  }
 }
 
 void ResolveNamesVisitor::FinishSpecificationPart(
