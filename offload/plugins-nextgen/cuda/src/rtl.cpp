@@ -362,13 +362,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
     assert(Context && "Invalid CUDA context");
 
     // Each image has its own module.
-    for (DeviceImageTy *Image : LoadedImages) {
-      CUDADeviceImageTy &CUDAImage = static_cast<CUDADeviceImageTy &>(*Image);
+    CUDADeviceImageTy &CUDAImage = static_cast<CUDADeviceImageTy &>(*Image);
 
-      // Unload the module of the image.
-      if (auto Err = CUDAImage.unloadModule())
-        return Err;
-    }
+    // Unload the module of the image.
+    if (auto Err = CUDAImage.unloadModule())
+      return Err;
 
     return Plugin::success();
   }
