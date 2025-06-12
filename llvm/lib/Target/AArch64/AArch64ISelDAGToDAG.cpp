@@ -4606,7 +4606,33 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
     return false;
   }
 
-  if (!Subtarget->hasSHA3())
+  // We have Neon SHA3 XAR operation for v2i64 but for types
+  // v4i32, v8i16, v16i8 we can use SVE operations when SVE2-SHA3
+  // is available.
+  EVT SVT;
+  switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::v4i32:
+  case MVT::v2i32:
+    SVT = MVT::nxv4i32;
+    break;
+  case MVT::v8i16:
+  case MVT::v4i16:
+    SVT = MVT::nxv8i16;
+    break;
+  case MVT::v16i8:
+  case MVT::v8i8:
+    SVT = MVT::nxv16i8;
+    break;
+  case MVT::v2i64:
+  case MVT::v1i64:
+    SVT = Subtarget->hasSHA3() ? MVT::v2i64 : MVT::nxv2i64;
+    break;
+  default:
+    return false;
+  }
+
+  if ((!SVT.isScalableVector() && !Subtarget->hasSHA3()) ||
+      (SVT.isScalableVector() && !Subtarget->hasSVE2()))
     return false;
 
   if (N0->getOpcode() != AArch64ISD::VSHL ||
@@ -4632,7 +4658,8 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
   SDValue Imm = CurDAG->getTargetConstant(
       ShAmt, DL, N0.getOperand(1).getValueType(), false);
 
-  if (ShAmt + HsAmt != 64)
+  unsigned VTSizeInBits = VT.getScalarSizeInBits();
+  if (ShAmt + HsAmt != VTSizeInBits)
     return false;
 
   if (!IsXOROperand) {
@@ -4640,33 +4667,76 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
     SDNode *MOV =
         CurDAG->getMachineNode(AArch64::MOVIv2d_ns, DL, MVT::v2i64, Zero);
     SDValue MOVIV = SDValue(MOV, 0);
+
     R1 = N1->getOperand(0);
     R2 = MOVIV;
   }
 
-  // If the input is a v1i64, widen to a v2i64 to use XAR.
-  assert((VT == MVT::v1i64 || VT == MVT::v2i64) && "Unexpected XAR type!");
-  if (VT == MVT::v1i64) {
-    EVT SVT = MVT::v2i64;
+  if (SVT != VT) {
     SDValue Undef =
-        SDValue(CurDAG->getMachineNode(AArch64::IMPLICIT_DEF, DL, SVT), 0);
-    SDValue DSub = CurDAG->getTargetConstant(AArch64::dsub, DL, MVT::i32);
+        SDValue(CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, SVT), 0);
+
+    if (SVT.isScalableVector() && VT.is64BitVector()) {
+      EVT QVT = VT.getDoubleNumVectorElementsVT(*CurDAG->getContext());
+
+      SDValue UndefQ = SDValue(
+          CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, QVT), 0);
+      SDValue DSub = CurDAG->getTargetConstant(AArch64::dsub, DL, MVT::i32);
+
+      R1 = SDValue(CurDAG->getMachineNode(AArch64::INSERT_SUBREG, DL, QVT,
+                                          UndefQ, R1, DSub),
+                   0);
+      if (R2.getValueType() == VT)
+        R2 = SDValue(CurDAG->getMachineNode(AArch64::INSERT_SUBREG, DL, QVT,
+                                            UndefQ, R2, DSub),
+                     0);
+    }
+
+    SDValue SubReg = CurDAG->getTargetConstant(
+        (SVT.isScalableVector() ? AArch64::zsub : AArch64::dsub), DL, MVT::i32);
+
     R1 = SDValue(CurDAG->getMachineNode(AArch64::INSERT_SUBREG, DL, SVT, Undef,
-                                        R1, DSub),
+                                        R1, SubReg),
                  0);
-    if (R2.getValueType() == MVT::v1i64)
+
+    if (SVT.isScalableVector() || R2.getValueType() != SVT)
       R2 = SDValue(CurDAG->getMachineNode(AArch64::INSERT_SUBREG, DL, SVT,
-                                          Undef, R2, DSub),
+                                          Undef, R2, SubReg),
                    0);
   }
 
   SDValue Ops[] = {R1, R2, Imm};
-  SDNode *XAR = CurDAG->getMachineNode(AArch64::XAR, DL, MVT::v2i64, Ops);
+  SDNode *XAR = nullptr;
 
-  if (VT == MVT::v1i64) {
-    SDValue DSub = CurDAG->getTargetConstant(AArch64::dsub, DL, MVT::i32);
-    XAR = CurDAG->getMachineNode(AArch64::EXTRACT_SUBREG, DL, VT,
-                                 SDValue(XAR, 0), DSub);
+  if (SVT.isScalableVector()) {
+    if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::Int>(
+            SVT, {AArch64::XAR_ZZZI_B, AArch64::XAR_ZZZI_H, AArch64::XAR_ZZZI_S,
+                  AArch64::XAR_ZZZI_D}))
+      XAR = CurDAG->getMachineNode(Opc, DL, SVT, Ops);
+  } else {
+    XAR = CurDAG->getMachineNode(AArch64::XAR, DL, SVT, Ops);
+  }
+
+  assert(XAR && "Unexpected NULL value for XAR instruction in DAG");
+
+  if (SVT != VT) {
+    if (VT.is64BitVector() && SVT.isScalableVector()) {
+      EVT QVT = VT.getDoubleNumVectorElementsVT(*CurDAG->getContext());
+
+      SDValue ZSub = CurDAG->getTargetConstant(AArch64::zsub, DL, MVT::i32);
+      SDNode *Q = CurDAG->getMachineNode(AArch64::EXTRACT_SUBREG, DL, QVT,
+                                         SDValue(XAR, 0), ZSub);
+
+      SDValue DSub = CurDAG->getTargetConstant(AArch64::dsub, DL, MVT::i32);
+      XAR = CurDAG->getMachineNode(AArch64::EXTRACT_SUBREG, DL, VT,
+                                   SDValue(Q, 0), DSub);
+    } else {
+      SDValue SubReg = CurDAG->getTargetConstant(
+          (SVT.isScalableVector() ? AArch64::zsub : AArch64::dsub), DL,
+          MVT::i32);
+      XAR = CurDAG->getMachineNode(AArch64::EXTRACT_SUBREG, DL, VT,
+                                   SDValue(XAR, 0), SubReg);
+    }
   }
   ReplaceNode(N, XAR);
   return true;
