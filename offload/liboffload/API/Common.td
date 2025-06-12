@@ -148,6 +148,16 @@ def : Struct {
   ];
 }
 
+def : Struct {
+  let name = "ol_dimensions_t";
+  let desc = "A three element vector";
+  let members = [
+    StructMember<"uint32_t", "x", "X">,
+    StructMember<"uint32_t", "y", "Y">,
+    StructMember<"uint32_t", "z", "Z">,
+  ];
+}
+
 def : Function {
   let name = "olInit";
   let desc = "Perform initialization of the Offload library and plugins";

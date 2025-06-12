@@ -2246,6 +2246,14 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     // device_types. This is for the case where there is no expression specified
     // in a 'gang'.
     void addEmptyGang(MLIRContext *, llvm::ArrayRef<DeviceType>);
+
+    // Return whether this LoopOp has an auto, seq, or independent for the
+    // specified device-type.
+    bool hasParallelismFlag(DeviceType);
+
+    // Return whether this LoopOp has a gang, worker, or vector applying to the
+    // 'default'/None device-type.
+    bool hasDefaultGangWorkerVector();
   }];
 
   let hasCustomAssemblyFormat = 1;

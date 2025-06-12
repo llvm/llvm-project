@@ -742,6 +742,7 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   I.ReturnType = getTypeInfoForType(D->getReturnType(), LO);
   I.Prototype = getFunctionPrototype(D);
   parseParameters(I, D);
+  I.IsStatic = D->isStatic();
 
   populateTemplateParameters(I.Template, D);
 

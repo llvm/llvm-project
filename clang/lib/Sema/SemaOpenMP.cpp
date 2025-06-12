@@ -7122,6 +7122,7 @@ void SemaOpenMP::ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(
       getASTContext(), VariantFuncRef, DVScope.TI,
       /*NothingArgs=*/nullptr, /*NothingArgsSize=*/0,
       /*NeedDevicePtrArgs=*/nullptr, /*NeedDevicePtrArgsSize=*/0,
+      /*NeedDeviceAddrArgs=*/nullptr, /*NeedDeviceAddrArgsSize=*/0,
       /*AppendArgs=*/nullptr, /*AppendArgsSize=*/0);
   for (FunctionDecl *BaseFD : Bases)
     BaseFD->addAttr(OMPDeclareVariantA);
@@ -7553,6 +7554,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     FunctionDecl *FD, Expr *VariantRef, OMPTraitInfo &TI,
     ArrayRef<Expr *> AdjustArgsNothing,
     ArrayRef<Expr *> AdjustArgsNeedDevicePtr,
+    ArrayRef<Expr *> AdjustArgsNeedDeviceAddr,
     ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
     SourceLocation AppendArgsLoc, SourceRange SR) {
 
@@ -7564,6 +7566,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
   SmallVector<Expr *, 8> AllAdjustArgs;
   llvm::append_range(AllAdjustArgs, AdjustArgsNothing);
   llvm::append_range(AllAdjustArgs, AdjustArgsNeedDevicePtr);
+  llvm::append_range(AllAdjustArgs, AdjustArgsNeedDeviceAddr);
 
   if (!AllAdjustArgs.empty() || !AppendArgs.empty()) {
     VariantMatchInfo VMI;
@@ -7614,6 +7617,8 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
       const_cast<Expr **>(AdjustArgsNothing.data()), AdjustArgsNothing.size(),
       const_cast<Expr **>(AdjustArgsNeedDevicePtr.data()),
       AdjustArgsNeedDevicePtr.size(),
+      const_cast<Expr **>(AdjustArgsNeedDeviceAddr.data()),
+      AdjustArgsNeedDeviceAddr.size(),
       const_cast<OMPInteropInfo *>(AppendArgs.data()), AppendArgs.size(), SR);
   FD->addAttr(NewAttr);
 }
@@ -19047,34 +19052,14 @@ static bool actOnOMPReductionKindClause(
         reportOriginalDsa(S, Stack, D, DVar);
         continue;
       }
-      // OpenMP 6.0 [ 7.6.10 ]
-      // Support Reduction over private variables with reduction clause.
-      // A list item in a reduction clause can now be private in the enclosing
-      // context. For orphaned constructs it is assumed to be shared unless the
-      // original(private) modifier appears in the clause.
-      DVar = Stack->getImplicitDSA(D, true);
-      bool IsOrphaned = false;
-      OpenMPDirectiveKind CurrDir = Stack->getCurrentDirective();
-      OpenMPDirectiveKind ParentDir = Stack->getParentDirective();
-      // Check if the construct is orphaned (has no enclosing OpenMP context)
-      IsOrphaned = ParentDir == OMPD_unknown;
-      // OpenMP 6.0: Private DSA check
-      IsPrivate =
-          (S.getLangOpts().OpenMP > 52) &&
-          ((isOpenMPPrivate(DVar.CKind) && DVar.CKind != OMPC_reduction &&
-            isOpenMPWorksharingDirective(CurrDir) &&
-            !isOpenMPParallelDirective(CurrDir) &&
-            !isOpenMPTeamsDirective(CurrDir) &&
-            !isOpenMPSimdDirective(ParentDir)) ||
-           (IsOrphaned && DVar.CKind == OMPC_unknown) ||
-           RD.OrigSharingModifier != OMPC_ORIGINAL_SHARING_shared);
 
       // OpenMP [2.14.3.6, Restrictions, p.1]
       //  A list item that appears in a reduction clause of a worksharing
       //  construct must be shared in the parallel regions to which any of the
       //  worksharing regions arising from the worksharing construct bind.
 
-      if (!IsPrivate && isOpenMPWorksharingDirective(CurrDir) &&
+      if (S.getLangOpts().OpenMP <= 52 &&
+          isOpenMPWorksharingDirective(CurrDir) &&
           !isOpenMPParallelDirective(CurrDir) &&
           !isOpenMPTeamsDirective(CurrDir)) {
         DVar = Stack->getImplicitDSA(D, true);
@@ -19085,6 +19070,23 @@ static bool actOnOMPReductionKindClause(
           reportOriginalDsa(S, Stack, D, DVar);
           continue;
         }
+      } else if (isOpenMPWorksharingDirective(CurrDir) &&
+                 !isOpenMPParallelDirective(CurrDir) &&
+                 !isOpenMPTeamsDirective(CurrDir)) {
+        // OpenMP 6.0 [ 7.6.10 ]
+        // Support Reduction over private variables with reduction clause.
+        // A list item in a reduction clause can now be private in the enclosing
+        // context. For orphaned constructs it is assumed to be shared unless
+        // the original(private) modifier appears in the clause.
+        DVar = Stack->getImplicitDSA(D, true);
+        // Determine if the variable should be considered private
+        IsPrivate = DVar.CKind != OMPC_shared;
+        bool IsOrphaned = false;
+        OpenMPDirectiveKind ParentDir = Stack->getParentDirective();
+        IsOrphaned = ParentDir == OMPD_unknown;
+        if ((IsOrphaned &&
+             RD.OrigSharingModifier == OMPC_ORIGINAL_SHARING_private))
+          IsPrivate = true;
       }
     } else {
       // Threadprivates cannot be shared between threads, so dignose if the base
@@ -22060,20 +22062,34 @@ static void checkMappableExpressionList(
         Type.getCanonicalType(), UnresolvedMapper);
     if (ER.isInvalid())
       continue;
-    if (!ER.get() && isa<ArraySectionExpr>(VE)) {
-      // Create implicit mapper as needed.
-      QualType BaseType = VE->getType().getCanonicalType();
-      if (BaseType->isSpecificBuiltinType(BuiltinType::ArraySection)) {
-        const auto *OASE = cast<ArraySectionExpr>(VE->IgnoreParenImpCasts());
-        QualType BType = ArraySectionExpr::getBaseOriginalType(OASE->getBase());
-        QualType ElemType;
-        if (const auto *ATy = BType->getAsArrayTypeUnsafe())
-          ElemType = ATy->getElementType();
-        else
-          ElemType = BType->getPointeeType();
+
+    // If no user-defined mapper is found, we need to create an implicit one for
+    // arrays/array-sections on structs that have members that have
+    // user-defined mappers. This is needed to ensure that the mapper for the
+    // member is invoked when mapping each element of the array/array-section.
+    if (!ER.get()) {
+      QualType BaseType;
+
+      if (isa<ArraySectionExpr>(VE)) {
+        BaseType = VE->getType().getCanonicalType();
+        if (BaseType->isSpecificBuiltinType(BuiltinType::ArraySection)) {
+          const auto *OASE = cast<ArraySectionExpr>(VE->IgnoreParenImpCasts());
+          QualType BType =
+              ArraySectionExpr::getBaseOriginalType(OASE->getBase());
+          QualType ElemType;
+          if (const auto *ATy = BType->getAsArrayTypeUnsafe())
+            ElemType = ATy->getElementType();
+          else
+            ElemType = BType->getPointeeType();
+          BaseType = ElemType.getCanonicalType();
+        }
+      } else if (VE->getType()->isArrayType()) {
+        const ArrayType *AT = VE->getType()->getAsArrayTypeUnsafe();
+        const QualType ElemType = AT->getElementType();
         BaseType = ElemType.getCanonicalType();
       }
-      if (BaseType->getAsRecordDecl() &&
+
+      if (!BaseType.isNull() && BaseType->getAsRecordDecl() &&
           isImplicitMapperNeeded(SemaRef, DSAS, BaseType, VE)) {
         ER = buildImplicitMapper(SemaRef, BaseType, DSAS);
       }
