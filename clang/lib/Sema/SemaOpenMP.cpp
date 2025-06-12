@@ -22057,20 +22057,34 @@ static void checkMappableExpressionList(
         Type.getCanonicalType(), UnresolvedMapper);
     if (ER.isInvalid())
       continue;
-    if (!ER.get() && isa<ArraySectionExpr>(VE)) {
-      // Create implicit mapper as needed.
-      QualType BaseType = VE->getType().getCanonicalType();
-      if (BaseType->isSpecificBuiltinType(BuiltinType::ArraySection)) {
-        const auto *OASE = cast<ArraySectionExpr>(VE->IgnoreParenImpCasts());
-        QualType BType = ArraySectionExpr::getBaseOriginalType(OASE->getBase());
-        QualType ElemType;
-        if (const auto *ATy = BType->getAsArrayTypeUnsafe())
-          ElemType = ATy->getElementType();
-        else
-          ElemType = BType->getPointeeType();
+
+    // If no user-defined mapper is found, we need to create an implicit one for
+    // arrays/array-sections on structs that have members that have
+    // user-defined mappers. This is needed to ensure that the mapper for the
+    // member is invoked when mapping each element of the array/array-section.
+    if (!ER.get()) {
+      QualType BaseType;
+
+      if (isa<ArraySectionExpr>(VE)) {
+        BaseType = VE->getType().getCanonicalType();
+        if (BaseType->isSpecificBuiltinType(BuiltinType::ArraySection)) {
+          const auto *OASE = cast<ArraySectionExpr>(VE->IgnoreParenImpCasts());
+          QualType BType =
+              ArraySectionExpr::getBaseOriginalType(OASE->getBase());
+          QualType ElemType;
+          if (const auto *ATy = BType->getAsArrayTypeUnsafe())
+            ElemType = ATy->getElementType();
+          else
+            ElemType = BType->getPointeeType();
+          BaseType = ElemType.getCanonicalType();
+        }
+      } else if (VE->getType()->isArrayType()) {
+        const ArrayType *AT = VE->getType()->getAsArrayTypeUnsafe();
+        const QualType ElemType = AT->getElementType();
         BaseType = ElemType.getCanonicalType();
       }
-      if (BaseType->getAsRecordDecl() &&
+
+      if (!BaseType.isNull() && BaseType->getAsRecordDecl() &&
           isImplicitMapperNeeded(SemaRef, DSAS, BaseType, VE)) {
         ER = buildImplicitMapper(SemaRef, BaseType, DSAS);
       }
