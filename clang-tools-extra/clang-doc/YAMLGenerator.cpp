@@ -109,15 +109,15 @@ template <unsigned U> struct ScalarTraits<SmallString<U>> {
   static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
 };
 
-template <> struct ScalarTraits<std::array<unsigned char, 20>> {
+template <> struct ScalarTraits<SymbolID> {
 
-  static void output(const std::array<unsigned char, 20> &S, void *,
+  static void output(const SymbolID &S, void *,
                      llvm::raw_ostream &OS) {
     OS << toHex(toStringRef(S));
   }
 
   static StringRef input(StringRef Scalar, void *,
-                         std::array<unsigned char, 20> &Value) {
+                         SymbolID &Value) {
     if (Scalar.size() != 40)
       return "Error: Incorrect scalar size for USR.";
     Value = stringToSymbol(Scalar);
