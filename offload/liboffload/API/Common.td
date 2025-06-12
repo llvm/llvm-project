@@ -152,9 +152,9 @@ def : Struct {
   let name = "ol_dimensions_t";
   let desc = "A three element vector";
   let members = [
-    StructMember<"size_t", "x", "X">,
-    StructMember<"size_t", "y", "Y">,
-    StructMember<"size_t", "z", "Z">,
+    StructMember<"uint32_t", "x", "X">,
+    StructMember<"uint32_t", "y", "Y">,
+    StructMember<"uint32_t", "z", "Z">,
   ];
 }
 
