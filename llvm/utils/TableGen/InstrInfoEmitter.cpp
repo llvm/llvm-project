@@ -1199,6 +1199,8 @@ void InstrInfoEmitter::emitRecord(
     OS << "|(1ULL<<MCID::VariadicOpsAreDefs)";
   if (Inst.isAuthenticated)
     OS << "|(1ULL<<MCID::Authenticated)";
+  if (Inst.hasNoSchedulingInfo)
+    OS << "|(1ULL<<MCID::HasNoSchedulingInfo)";
 
   // Emit all of the target-specific flags...
   const BitsInit *TSF = Inst.TheDef->getValueAsBitsInit("TSFlags");
