@@ -9998,13 +9998,13 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   SDLoc dl(Op);
 
   const auto &DL = DAG.getDataLayout();
-
-  const char *Name = nullptr;
+  RTLIB::Libcall LC;
   if (Signed)
-    Name = (VT == MVT::i32) ? "__rt_sdiv" : "__rt_sdiv64";
+    LC = VT == MVT::i32 ? RTLIB::SDIVREM_I32 : RTLIB::SDIVREM_I64;
   else
-    Name = (VT == MVT::i32) ? "__rt_udiv" : "__rt_udiv64";
+    LC = VT == MVT::i32 ? RTLIB::UDIVREM_I32 : RTLIB::UDIVREM_I64;
 
+  const char *Name = getLibcallName(LC);
   SDValue ES = DAG.getExternalSymbol(Name, getPointerTy(DL));
 
   ARMTargetLowering::ArgListTy Args;
