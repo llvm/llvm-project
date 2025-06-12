@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Interfaces/CallInterfaces.h"
@@ -252,6 +253,9 @@ bool MemRefDependenceGraph::init() {
   // Create graph nodes.
   DenseMap<Operation *, unsigned> forToNodeMap;
   for (Operation &op : block) {
+    bool hasUnsupportedRegion =
+        op.getNumRegions() != 0 &&
+        !isa<RegionBranchOpInterface, linalg::LinalgOp>(op);
     if (auto forOp = dyn_cast<AffineForOp>(op)) {
       Node *node = addNodeToMDG(&op, *this, memrefAccesses);
       if (!node)
@@ -277,8 +281,7 @@ bool MemRefDependenceGraph::init() {
       Node *node = addNodeToMDG(&op, *this, memrefAccesses);
       if (!node)
         return false;
-    } else if (!isMemoryEffectFree(&op) &&
-               (op.getNumRegions() == 0 || isa<RegionBranchOpInterface>(op))) {
+    } else if (!isMemoryEffectFree(&op) && !hasUnsupportedRegion) {
       // Create graph node for top-level op unless it is known to be
       // memory-effect free. This covers all unknown/unregistered ops,
       // non-affine ops with memory effects, and region-holding ops with a
@@ -287,7 +290,7 @@ bool MemRefDependenceGraph::init() {
       Node *node = addNodeToMDG(&op, *this, memrefAccesses);
       if (!node)
         return false;
-    } else if (op.getNumRegions() != 0 && !isa<RegionBranchOpInterface>(op)) {
+    } else if (hasUnsupportedRegion) {
       // Return false if non-handled/unknown region-holding ops are found. We
       // won't know what such ops do or what its regions mean; for e.g., it may
       // not be an imperative op.
