@@ -2027,10 +2027,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     AMDGPUDeviceImageTy &AMDImage = static_cast<AMDGPUDeviceImageTy &>(*Image);
 
     // Unload the executable of the image.
-    if (auto Err = AMDImage.unloadExecutable())
-      return Err;
-
-    return Plugin::success();
+    return AMDImage.unloadExecutable();
   }
 
   /// Deinitialize the device and release its resources.
