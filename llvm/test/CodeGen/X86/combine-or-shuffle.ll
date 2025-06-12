@@ -86,10 +86,20 @@ define <4 x i32> @test4(<4 x i32> %a, <4 x i32> %b) {
 ; SSE4-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; SSE4-NEXT:    retq
 ;
-; AVX-LABEL: test4:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX-NEXT:    retq
+; AVX1-LABEL: test4:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test4:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test4:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512-NEXT:    retq
   %shuf1 = shufflevector <4 x i32> %a, <4 x i32> zeroinitializer, <4 x i32><i32 0, i32 4, i32 4, i32 4>
   %shuf2 = shufflevector <4 x i32> %b, <4 x i32> zeroinitializer, <4 x i32><i32 4, i32 1, i32 2, i32 3>
   %or = or <4 x i32> %shuf1, %shuf2
@@ -108,10 +118,20 @@ define <4 x i32> @test5(<4 x i32> %a, <4 x i32> %b) {
 ; SSE4-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE4-NEXT:    retq
 ;
-; AVX-LABEL: test5:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX-NEXT:    retq
+; AVX1-LABEL: test5:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test5:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test5:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX512-NEXT:    retq
   %shuf1 = shufflevector <4 x i32> %a, <4 x i32> zeroinitializer, <4 x i32><i32 4, i32 1, i32 2, i32 3>
   %shuf2 = shufflevector <4 x i32> %b, <4 x i32> zeroinitializer, <4 x i32><i32 0, i32 4, i32 4, i32 4>
   %or = or <4 x i32> %shuf1, %shuf2
@@ -241,10 +261,20 @@ define <4 x i32> @test11(<4 x i32> %a, <4 x i32> %b) {
 ; SSE4-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; SSE4-NEXT:    retq
 ;
-; AVX-LABEL: test11:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX-NEXT:    retq
+; AVX1-LABEL: test11:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test11:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test11:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512-NEXT:    retq
   %and1 = and <4 x i32> %a, <i32 -1, i32 0, i32 0, i32 0>
   %and2 = and <4 x i32> %b, <i32 0, i32 -1, i32 -1, i32 -1>
   %or = or <4 x i32> %and1, %and2
@@ -263,10 +293,20 @@ define <4 x i32> @test12(<4 x i32> %a, <4 x i32> %b) {
 ; SSE4-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE4-NEXT:    retq
 ;
-; AVX-LABEL: test12:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX-NEXT:    retq
+; AVX1-LABEL: test12:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test12:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test12:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX512-NEXT:    retq
   %and1 = and <4 x i32> %a, <i32 0, i32 -1, i32 -1, i32 -1>
   %and2 = and <4 x i32> %b, <i32 -1, i32 0, i32 0, i32 0>
   %or = or <4 x i32> %and1, %and2
@@ -395,18 +435,18 @@ define <4 x i32> @test18(<4 x i32> %a, <4 x i32> %b) {
 ; AVX1-LABEL: test18:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,1,1]
-; AVX1-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
+; AVX1-NEXT:    vmovss {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX1-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test18:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX2-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,1,1]
-; AVX2-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
+; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX2-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
