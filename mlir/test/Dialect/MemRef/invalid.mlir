@@ -214,16 +214,6 @@ func.func @memref_reinterpret_cast_no_map_but_offset(%in: memref<?xf32>) {
          : memref<?xf32> to memref<10xf32>
   return
 }
-
-// -----
-
-func.func @memref_reinterpret_cast_offset_mismatch_dynamic(%in: memref<?xf32>, %offset : index) {
-  // expected-error @+1 {{expected result type with offset = dynamic instead of 0}}
-  %out = memref.reinterpret_cast %in to offset: [%offset], sizes: [10], strides: [1]
-         : memref<?xf32> to memref<10xf32>
-  return
-}
-
 // -----
 
 func.func @memref_reinterpret_cast_no_map_but_stride(%in: memref<?xf32>) {
@@ -245,6 +235,43 @@ func.func @memref_reinterpret_cast_no_map_but_strides(%in: memref<?x?xf32>) {
 
 // -----
 
+func.func @memref_reinterpret_cast_static_dynamic_size_mismatch(%in: memref<1x?x2x1xf32>) {
+  // expected-error@+1 {{expected size is static, but result type dimension is dynamic }}
+  %out = memref.reinterpret_cast %in to
+         offset: [0], sizes: [1, 4672, 1, 1], strides: [4672, 8, 8, 1]
+       : memref<1x?x2x1xf32> to memref<1x4672x?x1xf32> 
+}
+
+// -----
+
+func.func @memref_reinterpret_cast_dynamic_static_size_mismatch(%in: memref<1x?x2x1xf32>, %size: index) {
+  // expected-error@+1 {{expected size is dynamic, but result type dimension is static }}
+  %out = memref.reinterpret_cast %in to
+         offset: [0], sizes: [1, %size, 1, 1], strides: [4672, 8, 8, 1]
+       : memref<1x?x2x1xf32> to memref<1x4672x2x1xf32>
+  return
+}
+
+// -----
+
+func.func @memref_reinterpret_cast_static_dynamic_offset_mismatch(%in: memref<?xf32>) {
+  // expected-error@+1 {{expected offset is static, but result type offset is dynamic}}
+  %out = memref.reinterpret_cast %in to
+         offset: [0], sizes: [10], strides: [1]
+       : memref<?xf32> to memref<10xf32, strided<[1], offset: ?>> 
+}
+
+// -----
+
+func.func @memref_reinterpret_cast_dynamic_static_offset_mismatch(%in: memref<?xf32>, %offset: index) {
+  // expected-error@+1 {{expected offset is dynamic, but result type offset is static}}
+  %out = memref.reinterpret_cast %in to
+         offset: [%offset], sizes: [10], strides: [1]
+       : memref<?xf32> to memref<10xf32, strided<[1], offset: 0>> 
+  return
+}
+
+// -----
 func.func @memref_reshape_element_type_mismatch(
        %buf: memref<*xf32>, %shape: memref<1xi32>) {
   // expected-error @+1 {{element types of source and destination memref types should be the same}}
