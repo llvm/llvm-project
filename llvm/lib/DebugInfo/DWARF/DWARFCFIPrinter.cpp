@@ -24,20 +24,7 @@
 using namespace llvm;
 using namespace dwarf;
 
-void CFIPrinter::print(const CFIProgram &P, raw_ostream &OS,
-                       DIDumpOptions &DumpOpts, unsigned IndentLevel,
-                       std::optional<uint64_t> Address) {
-  for (const auto &Instr : P) {
-    uint8_t Opcode = Instr.Opcode;
-    OS.indent(2 * IndentLevel);
-    OS << P.callFrameString(Opcode) << ":";
-    for (size_t i = 0; i < Instr.Ops.size(); ++i)
-      printOperand(OS, DumpOpts, P, Instr, i, Instr.Ops[i], Address);
-    OS << '\n';
-  }
-}
-
-static void printRegister(raw_ostream &OS, DIDumpOptions &DumpOpts,
+static void printRegister(raw_ostream &OS, const DIDumpOptions &DumpOpts,
                           unsigned RegNum) {
   if (DumpOpts.GetNameForDWARFReg) {
     auto RegName = DumpOpts.GetNameForDWARFReg(RegNum, DumpOpts.IsEH);
@@ -50,11 +37,11 @@ static void printRegister(raw_ostream &OS, DIDumpOptions &DumpOpts,
 }
 
 /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
-void CFIPrinter::printOperand(raw_ostream &OS, DIDumpOptions &DumpOpts,
-                              const CFIProgram &P,
-                              const CFIProgram::Instruction &Instr,
-                              unsigned OperandIdx, uint64_t Operand,
-                              std::optional<uint64_t> &Address) {
+static void printOperand(raw_ostream &OS, const DIDumpOptions &DumpOpts,
+                         const CFIProgram &P,
+                         const CFIProgram::Instruction &Instr,
+                         unsigned OperandIdx, uint64_t Operand,
+                         std::optional<uint64_t> &Address) {
   assert(OperandIdx < CFIProgram::MaxOperands);
   uint8_t Opcode = Instr.Opcode;
   CFIProgram::OperandType Type = P.getOperandTypes()[Opcode][OperandIdx];
@@ -116,5 +103,19 @@ void CFIPrinter::printOperand(raw_ostream &OS, DIDumpOptions &DumpOpts,
     DWARFExpressionPrinter::print(&Instr.Expression.value(), OS, DumpOpts,
                                   nullptr);
     break;
+  }
+}
+
+void llvm::dwarf::printCFIProgram(const CFIProgram &P, raw_ostream &OS,
+                                  const DIDumpOptions &DumpOpts,
+                                  unsigned IndentLevel,
+                                  std::optional<uint64_t> Address) {
+  for (const auto &Instr : P) {
+    uint8_t Opcode = Instr.Opcode;
+    OS.indent(2 * IndentLevel);
+    OS << P.callFrameString(Opcode) << ":";
+    for (size_t i = 0; i < Instr.Ops.size(); ++i)
+      printOperand(OS, DumpOpts, P, Instr, i, Instr.Ops[i], Address);
+    OS << '\n';
   }
 }

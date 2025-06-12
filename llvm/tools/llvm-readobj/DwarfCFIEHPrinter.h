@@ -229,8 +229,8 @@ void PrinterContext<ELFT>::printEHFrame(const Elf_Shdr *EHFrameShdr) const {
     W.indent();
     auto DumpOpts = DIDumpOptions();
     DumpOpts.IsEH = true;
-    dwarf::CFIPrinter::print(Entry.cfis(), W.getOStream(), DumpOpts,
-                             W.getIndentLevel(), InitialLocation);
+    printCFIProgram(Entry.cfis(), W.getOStream(), DumpOpts, W.getIndentLevel(),
+                    InitialLocation);
     W.unindent();
     W.unindent();
     W.getOStream() << "\n";

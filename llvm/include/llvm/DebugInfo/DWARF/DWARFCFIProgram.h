@@ -25,8 +25,6 @@ namespace llvm {
 
 namespace dwarf {
 
-class CFIPrinter;
-
 /// Represent a sequence of Call Frame Information instructions that, when read
 /// in order, construct a table mapping PC to frame state. This can also be
 /// referred to as "CFI rules" in DWARF literature to avoid confusion with

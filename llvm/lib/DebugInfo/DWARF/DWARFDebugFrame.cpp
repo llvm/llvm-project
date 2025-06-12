@@ -603,8 +603,8 @@ void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     OS << "\n";
   }
   OS << "\n";
-  CFIPrinter::print(CFIs, OS, DumpOpts, /*IndentLevel=*/1,
-                    /*InitialLocation=*/{});
+  printCFIProgram(CFIs, OS, DumpOpts, /*IndentLevel=*/1,
+                  /*InitialLocation=*/{});
   OS << "\n";
 
   if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
@@ -632,7 +632,7 @@ void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   OS << "  Format:       " << FormatString(IsDWARF64) << "\n";
   if (LSDAAddress)
     OS << format("  LSDA Address: %016" PRIx64 "\n", *LSDAAddress);
-  CFIPrinter::print(CFIs, OS, DumpOpts, /*IndentLevel=*/1, InitialLocation);
+  printCFIProgram(CFIs, OS, DumpOpts, /*IndentLevel=*/1, InitialLocation);
   OS << "\n";
 
   if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
