@@ -215,6 +215,13 @@ def FamilyXMEGA3 : Family<"xmega3",
                            FeatureMultiplication, FeatureMOVW, FeatureLPMX,
                            FeatureBREAK, FeatureLowByteFirst]>;
 
+def FamilyXMEGA4 : Family<"xmega4",
+                          [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
+                           FeatureADDSUBIW, FeatureSRAM, FeatureJMPCALL,
+                           FeatureMultiplication, FeatureMOVW, FeatureLPMX,
+                           FeatureEIJMPCALL, FeatureELPM,
+                           FeatureBREAK, FeatureLowByteFirst]>;
+
 def FamilyXMEGA : Family<"xmega",
                          [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
                           FeatureADDSUBIW, FeatureSRAM, FeatureJMPCALL,
@@ -575,3 +582,48 @@ def : Device<"atmega3208", FamilyXMEGA3, ELFArchXMEGA3>;
 def : Device<"atmega3209", FamilyXMEGA3, ELFArchXMEGA3>;
 def : Device<"atmega4808", FamilyXMEGA3, ELFArchXMEGA3>;
 def : Device<"atmega4809", FamilyXMEGA3, ELFArchXMEGA3>;
+
+// Additions from gcc 14:
+
+def : Device<"avr16dd20", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr16dd28", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr16dd32", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr16du14", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr16du20", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr16du28", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr16du32", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32da28", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32da32", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32da48", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32db28", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32db32", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32db48", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32dd14", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32dd20", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32dd28", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32dd32", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32du14", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32du20", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32du28", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32du32", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr16eb14", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr16eb20", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr16eb28", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr16eb32", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr16ea28", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr16ea32", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr16ea48", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32ea28", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32ea32", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32ea48", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32sd20", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32sd28", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr32sd32", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"avr128da28", FamilyXMEGA4, ELFArchXMEGA4>;
+def : Device<"avr128da32", FamilyXMEGA4, ELFArchXMEGA4>;
+def : Device<"avr128da48", FamilyXMEGA4, ELFArchXMEGA4>;
+def : Device<"avr128da64", FamilyXMEGA4, ELFArchXMEGA4>;
+def : Device<"avr128db28", FamilyXMEGA4, ELFArchXMEGA4>;
+def : Device<"avr128db32", FamilyXMEGA4, ELFArchXMEGA4>;
+def : Device<"avr128db48", FamilyXMEGA4, ELFArchXMEGA4>;
+def : Device<"avr128db64", FamilyXMEGA4, ELFArchXMEGA4>;
