@@ -474,6 +474,9 @@ public:
 
   bool shouldNullCheckClassCastValue(const CastExpr *ce);
 
+  RValue convertTempToRValue(Address addr, clang::QualType type,
+                             clang::SourceLocation loc);
+
   static bool
   isConstructorDelegationValid(const clang::CXXConstructorDecl *ctor);
 
@@ -796,6 +799,16 @@ public:
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
+
+  void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
+                        clang::CXXCtorType ctorType, FunctionArgList &args);
+
+  // It's important not to confuse this and emitDelegateCXXConstructorCall.
+  // Delegating constructors are the C++11 feature. The constructor delegate
+  // optimization is used to reduce duplication in the base and complete
+  // constructors where they are substantially the same.
+  void emitDelegatingCXXConstructorCall(const CXXConstructorDecl *ctor,
+                                        const FunctionArgList &args);
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
