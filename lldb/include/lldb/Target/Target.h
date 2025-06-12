@@ -1349,6 +1349,20 @@ public:
   llvm::Expected<lldb::DisassemblerSP>
   ReadInstructions(const Address &start_addr, uint32_t count,
                    const char *flavor_string = nullptr);
+  /// Sends a breakpoint notification event if any listener is registered.
+  /// \param[in] bp
+  ///     The breakpoint that was hit.
+  /// \param[in] eventKind
+  ///     The kind of event that occurred.
+  void NotifyBreakpointChanged(Breakpoint &bp,
+                               lldb::BreakpointEventType eventKind);
+  /// Sends a breakpoint notification event if any listener is registered.
+  /// \param[in] bp
+  ///     The breakpoint that was hit.
+  /// \param[in] data
+  ///     The data associated with the event.
+  void NotifyBreakpointChanged(Breakpoint &bp,
+                               const lldb::EventDataSP &breakpoint_data_sp);
 
   // Target Stop Hooks
   class StopHook : public UserID {
