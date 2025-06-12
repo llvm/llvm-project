@@ -45,7 +45,6 @@ Symbols:
 # INVALID-NEXT:   Class: ELFCLASS32
 # INVALID-NEXT:   Data:  ELFDATA2MSB
 # INVALID-NEXT:   Type:  ET_DYN
-# INVALID-NEXT:   Flags: [ ]
 # INVALID-NEXT: Sections:
 # INVALID-NEXT:   - Name: .empty
 # INVALID-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE

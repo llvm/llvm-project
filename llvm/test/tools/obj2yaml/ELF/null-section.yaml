@@ -9,7 +9,6 @@
 # FIRST-SEC-NEXT:   Class: ELFCLASS64
 # FIRST-SEC-NEXT:   Data:  ELFDATA2LSB
 # FIRST-SEC-NEXT:   Type:  ET_REL
-# FIRST-SEC-NEXT:   Flags: [ ]
 # FIRST-SEC-NEXT: Sections:
 # FIRST-SEC-NEXT:   - Type:         SHT_NULL
 # FIRST-SEC-NEXT:     Flags:        [ SHF_ALLOC ]
@@ -51,7 +50,6 @@ Sections:
 # SECOND-SEC-NEXT:   Class: ELFCLASS64
 # SECOND-SEC-NEXT:   Data:  ELFDATA2LSB
 # SECOND-SEC-NEXT:   Type:  ET_REL
-# SECOND-SEC-NEXT:   Flags: [ ]
 # SECOND-SEC-NEXT: Sections:
 # SECOND-SEC-NEXT:   - Name:         .foo
 # SECOND-SEC-NEXT:     Type:         SHT_PROGBITS
@@ -94,7 +92,6 @@ Sections:
 # NULL-SEC-NEXT:   Class: ELFCLASS64
 # NULL-SEC-NEXT:   Data:  ELFDATA2LSB
 # NULL-SEC-NEXT:   Type:  ET_REL
-# NULL-SEC-NEXT:   Flags: [ ]
 # NULL-SEC-NEXT: Sections:
 # NULL-SEC-NEXT:   - Name: .foo
 # NULL-SEC-NEXT:     Type: SHT_PROGBITS
@@ -121,7 +118,6 @@ Sections:
 # NULL-SEC-MIDDLE-NEXT:   Class: ELFCLASS64
 # NULL-SEC-MIDDLE-NEXT:   Data:  ELFDATA2LSB
 # NULL-SEC-MIDDLE-NEXT:   Type:  ET_REL
-# NULL-SEC-MIDDLE-NEXT:   Flags: [ ]
 # NULL-SEC-MIDDLE-NEXT: Sections:
 # NULL-SEC-MIDDLE-NEXT:   - Name: .foo
 # NULL-SEC-MIDDLE-NEXT:     Type: SHT_PROGBITS

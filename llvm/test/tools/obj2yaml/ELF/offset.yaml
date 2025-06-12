@@ -10,7 +10,6 @@
 #   BASIC-NEXT:   Class: ELFCLASS64
 #   BASIC-NEXT:   Data:  ELFDATA2LSB
 #   BASIC-NEXT:   Type:  ET_REL
-#   BASIC-NEXT:   Flags: [ ]
 #   BASIC-NEXT: Sections:
 #   BASIC-NEXT:   - Name:         .foo1
 #   BASIC-NEXT:     Type:         SHT_PROGBITS

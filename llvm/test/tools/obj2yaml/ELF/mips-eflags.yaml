@@ -258,7 +258,7 @@ FileHeader:
 # RUN: yaml2obj --docnum=25 %s -o %t-arch-1b
 # RUN: obj2yaml %t-arch-1b | FileCheck %s --check-prefix=ARCH-1
 
-# ARCH-1-NOT: Flags: [ ]
+# ARCH-1-NOT: Flags:
 
 --- !ELF
 FileHeader:
@@ -274,7 +274,6 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_REL
   Machine: EM_MIPS
-  Flags:   [ ]
 
 # RUN: yaml2obj --docnum=26 %s -o %t-arch-2
 # RUN: obj2yaml %t-arch-2 | FileCheck %s -DARCH=EF_MIPS_ARCH_2 --check-prefix=ARCH

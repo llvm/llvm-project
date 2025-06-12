@@ -10,7 +10,6 @@
 # CHECK-NEXT:   Data:    ELFDATA2LSB
 # CHECK-NEXT:   Type:    ET_REL
 # CHECK-NEXT:   Machine: EM_X86_64
-# CHECK-NEXT:   Flags:   [ ]
 # CHECK-NEXT: Sections:
 # CHECK-NEXT:   - Name:    .text
 # CHECK-NEXT:     Type:    SHT_PROGBITS

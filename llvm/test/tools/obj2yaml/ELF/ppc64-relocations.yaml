@@ -9,7 +9,6 @@
 # CHECK-NEXT:   Data:    ELFDATA2MSB
 # CHECK-NEXT:   Type:    ET_REL
 # CHECK-NEXT:   Machine: EM_PPC64
-# CHECK-NEXT:   Flags:   [ ]
 # CHECK-NEXT: Sections:
 # CHECK-NEXT:   - Name: .rela.text
 # CHECK-NEXT:     Type: SHT_RELA

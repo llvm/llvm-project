@@ -11,7 +11,6 @@
 # VALID-NEXT:   Class: ELFCLASS64
 # VALID-NEXT:   Data:  ELFDATA2LSB
 # VALID-NEXT:   Type:  ET_EXEC
-# VALID-NEXT:   Flags: [ ]
 # VALID-NEXT: Sections:
 # VALID-NEXT:   - Name: .stack_sizes
 # VALID-NEXT:     Type: SHT_PROGBITS
@@ -42,7 +41,6 @@ Sections:
 # INVALID-NEXT:   Class: ELFCLASS64
 # INVALID-NEXT:   Data:  ELFDATA2LSB
 # INVALID-NEXT:   Type:  ET_EXEC
-# INVALID-NEXT:   Flags: [ ]
 # INVALID-NEXT: Sections:
 # INVALID-NEXT:   - Name:    .stack_sizes
 # INVALID-NEXT:     Type:    SHT_PROGBITS
@@ -68,7 +66,6 @@ Sections:
 # EMPTY-NEXT:   Class: ELFCLASS64
 # EMPTY-NEXT:   Data:  ELFDATA2LSB
 # EMPTY-NEXT:   Type:  ET_EXEC
-# EMPTY-NEXT:   Flags: [ ]
 # EMPTY-NEXT: Sections:
 # EMPTY-NEXT:   - Name:    .stack_sizes
 # EMPTY-NEXT:     Type:    SHT_PROGBITS
@@ -94,7 +91,6 @@ Sections:
 # MULTI-NEXT:   Class: ELFCLASS64
 # MULTI-NEXT:   Data:  ELFDATA2LSB
 # MULTI-NEXT:   Type:  ET_EXEC
-# MULTI-NEXT:   Flags: [ ]
 # MULTI-NEXT: Sections:
 # MULTI-NEXT:   - Name:    .stack_sizes
 # MULTI-NEXT:     Type:    SHT_PROGBITS
