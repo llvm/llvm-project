@@ -267,6 +267,8 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
       ol_dimensions_t Out{0, 0, 0};
       auto Level = Iter->Level + 1;
 
+      // Check the "children" of the current info for x/y/z components.
+      // We ignore any components that don't match.
       while ((++Iter)->Level == Level) {
         switch (Iter->Key[0]) {
         case 'x':
@@ -278,9 +280,6 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
         case 'z':
           Out.z = std::stoi(Iter->Value);
           break;
-        default:
-          // Ignore any extra values
-          (void)0;
         }
       }
 
