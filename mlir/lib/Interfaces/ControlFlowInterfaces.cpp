@@ -103,20 +103,17 @@ static LogicalResult verifyWeights(Operation *op,
     if (weight < 0)
       return op->emitError() << "weight #" << index << " must be non-negative";
 
+  if (llvm::all_of(weights, [](int32_t value) { return value == 0; }))
+    return op->emitError() << "branch weights cannot all be zero";
+
   return success();
 }
 
 LogicalResult detail::verifyBranchWeights(Operation *op) {
   llvm::ArrayRef<int32_t> weights =
       cast<WeightedBranchOpInterface>(op).getWeights();
-  unsigned successorsNum = op->getNumSuccessors();
-  // CallOpInterface operations without successors may only have
-  // one weight, though it seems to be redundant and indicate
-  // 100% probability of calling the callee(s).
-  // TODO: maybe we should disallow weights for calls without successors.
-  std::size_t weightsNum =
-      (successorsNum == 0 && isa<CallOpInterface>(op)) ? 1 : successorsNum;
-  return verifyWeights(op, weights, weightsNum, "branch", "successors");
+  return verifyWeights(op, weights, op->getNumSuccessors(), "branch",
+                       "successors");
 }
 
 //===----------------------------------------------------------------------===//

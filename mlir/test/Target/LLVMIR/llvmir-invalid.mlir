@@ -448,3 +448,23 @@ llvm.mlir.global external constant @const() {addr_space = 0 : i32, dso_local} : 
 }
 
 llvm.func extern_weak @extern_func()
+
+// -----
+
+llvm.func @fn()
+
+llvm.func @call_branch_weights() {
+  // expected-error @below{{expects number of branch weights to match number of successors: 1 vs 0}}
+  llvm.call @fn() {branch_weights = array<i32 : 42>} : () -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @fn() -> i32
+
+llvm.func @call_branch_weights() {
+  // expected-error @below{{expects number of branch weights to match number of successors: 1 vs 0}}
+  %res = llvm.call @fn() {branch_weights = array<i32 : 42>} : () -> i32
+  llvm.return
+}
