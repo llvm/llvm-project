@@ -104,8 +104,6 @@ const ArchSpec &ProcessAMDGPU::GetArchitecture() const {
 // Breakpoint functions
 Status ProcessAMDGPU::SetBreakpoint(lldb::addr_t addr, uint32_t size,
                                     bool hardware) {
-  // TODO: fix the race condition of GPU module load, client lldb setting
-  // breakpoint then resume GPU connection.
   bool success = m_debugger->CreateGPUBreakpoint(addr);
   if (!success) {
     return Status::FromErrorString("CreateGPUBreakpoint failed");
@@ -190,7 +188,6 @@ ProcessAMDGPU::GetGPUDynamicLoaderLibraryInfos(
 
   GPUDynamicLoaderResponse response;
 
-  // Access the GPU modules using the GetGPUModules() method
   const auto &gpu_modules = m_gpu_modules;
 
   LLDB_LOGF(log, "ProcessAMDGPU::%s() found %zu GPU modules", __FUNCTION__,
@@ -233,49 +230,6 @@ ProcessAMDGPU::GetGPUDynamicLoaderLibraryInfos(
   }
 
   return response;
-}
-
-llvm::Expected<std::vector<SVR4LibraryInfo>>
-ProcessAMDGPU::GetLoadedSVR4Libraries() {
-  std::vector<SVR4LibraryInfo> libraries;
-
-  // Check if we have a valid debugger instance
-  if (!m_debugger) {
-    return libraries; // Return empty vector if no debugger
-  }
-
-  // Access the GPU modules using the GetGPUModules() method
-  const auto &gpu_modules = GetGPUModules();
-
-  // Convert each GPU module to an SVR4LibraryInfo object
-  for (const auto &[addr, module] : gpu_modules) {
-    if (module.is_loaded) {
-      SVR4LibraryInfo lib_info;
-      std::string path;
-      for (char c : module.path) {
-        if (c == '#')
-          path += "%23";
-        else if (c == '$')
-          path += "%24";
-        else if (c == '}')
-          path += "%7D";
-        else if (c == '&')
-          path += "&amp;";
-        else
-          path += c;
-      }
-      lib_info.name = path;
-      lib_info.link_map = addr;
-      lib_info.base_addr = module.base_address;
-      lib_info.ld_addr =
-          module.size;   // Using size as ld_addr as in handleLibrariesSvr4Read
-      lib_info.next = 0; // No next link in our implementation
-
-      libraries.push_back(lib_info);
-    }
-  }
-
-  return libraries;
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>

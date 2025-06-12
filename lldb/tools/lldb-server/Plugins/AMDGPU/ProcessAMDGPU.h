@@ -82,9 +82,6 @@ public:
   // Custom accessors
   void SetLaunchInfo(ProcessLaunchInfo &launch_info);
 
-  llvm::Expected<std::vector<SVR4LibraryInfo>>
-  GetLoadedSVR4Libraries() override;
-
   std::optional<GPUDynamicLoaderResponse> 
   GetGPUDynamicLoaderLibraryInfos(const GPUDynamicLoaderArgs &args) override;
 
