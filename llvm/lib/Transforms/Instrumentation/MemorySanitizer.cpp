@@ -269,6 +269,14 @@ static cl::opt<bool> ClPoisonUndef("msan-poison-undef",
                                    cl::desc("poison undef temps"), cl::Hidden,
                                    cl::init(true));
 
+static cl::opt<bool> ClPoisonUndefVectors(
+    "msan-poison-undef-vectors",
+    cl::desc("Precisely poison partially undefined constant vectors. "
+             "If false (legacy behavior), the entire vector is "
+             "considered fully initialized, which may lead to false "
+             "negatives."),
+    cl::Hidden, cl::init(true));
+
 static cl::opt<bool>
     ClHandleICmp("msan-handle-icmp",
                  cl::desc("propagate shadow through ICmpEQ and ICmpNE"),
@@ -1181,6 +1189,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   bool PropagateShadow;
   bool PoisonStack;
   bool PoisonUndef;
+  bool PoisonUndefVectors;
 
   struct ShadowOriginAndInsertPoint {
     Value *Shadow;
@@ -1207,6 +1216,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     PropagateShadow = SanitizeFunction;
     PoisonStack = SanitizeFunction && ClPoisonStack;
     PoisonUndef = SanitizeFunction && ClPoisonUndef;
+    PoisonUndefVectors = SanitizeFunction && ClPoisonUndefVectors;
 
     // In the presence of unreachable blocks, we may see Phi nodes with
     // incoming nodes from such blocks. Since InstVisitor skips unreachable
@@ -2088,11 +2098,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       return ShadowPtr;
     }
 
-    // Check for partially undefined constant vectors
+    // Check for partially-undefined constant vectors
     // TODO: scalable vectors (this is hard because we do not have IRBuilder)
     if (isa<FixedVectorType>(V->getType()) && isa<Constant>(V) &&
         (cast<Constant>(V))->containsUndefOrPoisonElement() &&
-        PropagateShadow && PoisonUndef) {
+        PropagateShadow && PoisonUndefVectors) {
       unsigned NumElems =
           (cast<FixedVectorType>(V->getType()))->getNumElements();
       SmallVector<Constant *, 32> ShadowVector(NumElems);
@@ -2108,6 +2118,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
       return ShadowConstant;
     }
+
+    // TODO: partially-undefined constant arrays, structures, and nested types
 
     // For everything else the shadow is zero.
     return getCleanShadow(V);
