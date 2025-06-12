@@ -2086,8 +2086,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       return ShadowPtr;
     }
 
-    // TODO: partially undefined vectors are not correctly handled
-    //       (see partial-poison.ll)
+    // TODO: Partially undefined vectors are handled by the fall-through case
+    //       below (see partial-poison.ll); this causes false negatives.
 
     // For everything else the shadow is zero.
     return getCleanShadow(V);
