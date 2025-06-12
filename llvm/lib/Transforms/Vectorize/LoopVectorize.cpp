@@ -3166,10 +3166,9 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   if (hasIrregularType(ScalarTy, DL))
     return false;
 
-  // For scalable vectors, the only interleave factor currently supported
-  // must be power of 2 since we require the (de)interleave2 intrinsics
-  // instead of shufflevectors.
-  if (VF.isScalable() && !isPowerOf2_32(InterleaveFactor))
+  // For scalable vectors, the interleave factors must be <= 8 since we require
+  // the (de)interleaveN intrinsics instead of shufflevectors.
+  if (VF.isScalable() && InterleaveFactor > 8)
     return false;
 
   // If the group involves a non-integral pointer, we may not be able to
@@ -7273,6 +7272,33 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
       BypassBlock, MainResumePhi->getIncomingValueForBlock(BypassBlock));
 }
 
+/// Add branch weight metadata, if the \p Plan's middle block is terminated by a
+/// BranchOnCond recipe.
+static void addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
+                                              Loop *OrigLoop) {
+  // 4. Adjust branch weight of the branch in the middle block.
+  Instruction *LatchTerm = OrigLoop->getLoopLatch()->getTerminator();
+  if (!hasBranchWeightMD(*LatchTerm))
+    return;
+
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+  auto *MiddleTerm =
+      dyn_cast_or_null<VPInstruction>(MiddleVPBB->getTerminator());
+  // Only add branch metadata if there is a (conditional) terminator.
+  if (!MiddleTerm)
+    return;
+
+  assert(MiddleTerm->getOpcode() == VPInstruction::BranchOnCond &&
+         "must have a BranchOnCond");
+  // Assume that `Count % VectorTripCount` is equally distributed.
+  unsigned TripCount = Plan.getUF() * VF.getKnownMinValue();
+  assert(TripCount > 0 && "trip count should not be zero");
+  MDBuilder MDB(LatchTerm->getContext());
+  MDNode *BranchWeights =
+      MDB.createBranchWeights({1, TripCount - 1}, /*IsExpected=*/false);
+  MiddleTerm->addMetadata(LLVMContext::MD_prof, BranchWeights);
+}
+
 DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ElementCount BestVF, unsigned BestUF, VPlan &BestVPlan,
     InnerLoopVectorizer &ILV, DominatorTree *DT, bool VectorizingEpilogue) {
@@ -7295,11 +7321,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan,
                                             *Legal->getWidestInductionType());
-  // Retrieve and store the middle block before dissolving regions. Regions are
-  // dissolved after optimizing for VF and UF, which completely removes unneeded
-  // loop regions first.
-  VPBasicBlock *MiddleVPBB =
-      BestVPlan.getVectorLoopRegion() ? BestVPlan.getMiddleBlock() : nullptr;
+
+  addBranchWeightToMiddleTerminator(BestVPlan, BestVF, OrigLoop);
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
@@ -7441,20 +7464,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   ILV.fixVectorizedLoop(State);
 
   ILV.printDebugTracesAtEnd();
-
-  // 4. Adjust branch weight of the branch in the middle block.
-  if (HeaderVPBB) {
-    auto *MiddleTerm =
-        cast<BranchInst>(State.CFG.VPBB2IRBB[MiddleVPBB]->getTerminator());
-    if (MiddleTerm->isConditional() &&
-        hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
-      // Assume that `Count % VectorTripCount` is equally distributed.
-      unsigned TripCount = BestVPlan.getUF() * State.VF.getKnownMinValue();
-      assert(TripCount > 0 && "trip count should not be zero");
-      const uint32_t Weights[] = {1, TripCount - 1};
-      setBranchWeights(*MiddleTerm, Weights, /*IsExpected=*/false);
-    }
-  }
 
   return ExpandedSCEVs;
 }
@@ -8708,10 +8717,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       bool Result = (VF.isVector() && // Query is illegal for VF == 1
                      CM.getWideningDecision(IG->getInsertPos(), VF) ==
                          LoopVectorizationCostModel::CM_Interleave);
-      // For scalable vectors, the only interleave factor currently supported
-      // must be power of 2 since we require the (de)interleave2 intrinsics
-      // instead of shufflevectors.
-      assert((!Result || !VF.isScalable() || isPowerOf2_32(IG->getFactor())) &&
+      // For scalable vectors, the interleave factors must be <= 8 since we
+      // require the (de)interleaveN intrinsics instead of shufflevectors.
+      assert((!Result || !VF.isScalable() || IG->getFactor() <= 8) &&
              "Unsupported interleave factor for scalable vectors");
       return Result;
     };
