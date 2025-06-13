@@ -769,7 +769,7 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
          "Foldable unmasked pseudo should have a policy op already");
 
   // Make sure the mask dominates True, otherwise move down True so it does.
-  // VL will always dominate because if its a register they need to be the same.
+  // VL will always dominate since if it's a register they need to be the same.
   if (!ensureDominates(MaskOp, True))
     return false;
 
@@ -777,13 +777,15 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
 
   // Insert the mask operand.
   // TODO: Increment MaskOpIdx by number of explicit defs?
-  True.insert(&True.getOperand(Info->MaskOpIdx + True.getNumExplicitDefs()),
+  True.insert(True.operands_begin() + Info->MaskOpIdx +
+                  True.getNumExplicitDefs(),
               MachineOperand::CreateReg(MaskOp.getReg(), false));
 
   // Update the passthru, AVL and policy.
   True.getOperand(True.getNumExplicitDefs()).setReg(FalseReg);
   True.removeOperand(RISCVII::getVLOpNum(True.getDesc()));
-  True.insert(&True.getOperand(RISCVII::getVLOpNum(True.getDesc())), MinVL);
+  True.insert(True.operands_begin() + RISCVII::getVLOpNum(True.getDesc()),
+              MinVL);
   True.getOperand(RISCVII::getVecPolicyOpNum(True.getDesc())).setImm(Policy);
 
   MRI->replaceRegWith(True.getOperand(0).getReg(), MI.getOperand(0).getReg());
