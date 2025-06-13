@@ -332,6 +332,18 @@ public:
     return Address(baseAddr, destType, addr.getAlignment());
   }
 
+  /// Cast the element type of the given address to a different type,
+  /// preserving information like the alignment.
+  Address createElementBitCast(mlir::Location loc, Address addr,
+                               mlir::Type destType) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    auto ptrTy = getPointerTo(destType);
+    return Address(createBitcast(loc, addr.getPointer(), ptrTy), destType,
+                   addr.getAlignment());
+  }
+
   cir::LoadOp createLoad(mlir::Location loc, Address addr,
                          bool isVolatile = false) {
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());

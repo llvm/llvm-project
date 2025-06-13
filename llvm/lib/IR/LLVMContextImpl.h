@@ -310,36 +310,33 @@ template <> struct MDNodeKeyImpl<MDTuple> : MDNodeOpsKey {
 
 /// DenseMapInfo for DILocation.
 template <> struct MDNodeKeyImpl<DILocation> {
-  unsigned Line;
-  uint16_t Column;
   Metadata *Scope;
   Metadata *InlinedAt;
-  bool ImplicitCode;
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
   uint64_t AtomGroup : 61;
   uint64_t AtomRank : 3;
 #endif
+  unsigned Line;
+  uint16_t Column;
+  bool ImplicitCode;
 
   MDNodeKeyImpl(unsigned Line, uint16_t Column, Metadata *Scope,
                 Metadata *InlinedAt, bool ImplicitCode, uint64_t AtomGroup,
                 uint8_t AtomRank)
-      : Line(Line), Column(Column), Scope(Scope), InlinedAt(InlinedAt),
-        ImplicitCode(ImplicitCode)
+      : Scope(Scope), InlinedAt(InlinedAt),
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-        ,
-        AtomGroup(AtomGroup), AtomRank(AtomRank)
+        AtomGroup(AtomGroup), AtomRank(AtomRank),
 #endif
-  {
+        Line(Line), Column(Column), ImplicitCode(ImplicitCode) {
   }
 
   MDNodeKeyImpl(const DILocation *L)
-      : Line(L->getLine()), Column(L->getColumn()), Scope(L->getRawScope()),
-        InlinedAt(L->getRawInlinedAt()), ImplicitCode(L->isImplicitCode())
+      : Scope(L->getRawScope()), InlinedAt(L->getRawInlinedAt()),
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-        ,
-        AtomGroup(L->getAtomGroup()), AtomRank(L->getAtomRank())
+        AtomGroup(L->getAtomGroup()), AtomRank(L->getAtomRank()),
 #endif
-  {
+        Line(L->getLine()), Column(L->getColumn()),
+        ImplicitCode(L->isImplicitCode()) {
   }
 
   bool isKeyOf(const DILocation *RHS) const {

@@ -2857,15 +2857,15 @@ static void readSecurityNotes(Ctx &ctx) {
   StringRef referenceFileName;
   if (ctx.arg.emachine == EM_AARCH64) {
     auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
-      return !f->aarch64PauthAbiCoreInfo.empty();
+      return f->aarch64PauthAbiCoreInfo.has_value();
     });
     if (it != ctx.objectFiles.end()) {
       ctx.aarch64PauthAbiCoreInfo = (*it)->aarch64PauthAbiCoreInfo;
       referenceFileName = (*it)->getName();
     }
   }
-  bool hasValidPauthAbiCoreInfo = llvm::any_of(
-      ctx.aarch64PauthAbiCoreInfo, [](uint8_t c) { return c != 0; });
+  bool hasValidPauthAbiCoreInfo =
+      ctx.aarch64PauthAbiCoreInfo && ctx.aarch64PauthAbiCoreInfo->isValid();
 
   auto report = [&](ReportPolicy policy) -> ELFSyncStream {
     return {ctx, toDiagLevel(policy)};
@@ -2952,10 +2952,10 @@ static void readSecurityNotes(Ctx &ctx) {
     }
     ctx.arg.andFeatures &= features;
 
-    if (ctx.aarch64PauthAbiCoreInfo.empty())
+    if (!ctx.aarch64PauthAbiCoreInfo)
       continue;
 
-    if (f->aarch64PauthAbiCoreInfo.empty()) {
+    if (!f->aarch64PauthAbiCoreInfo) {
       report(ctx.arg.zPauthReport)
           << f
           << ": -z pauth-report: file does not have AArch64 "
@@ -2965,11 +2965,18 @@ static void readSecurityNotes(Ctx &ctx) {
     }
 
     if (ctx.aarch64PauthAbiCoreInfo != f->aarch64PauthAbiCoreInfo)
-      Err(ctx) << "incompatible values of AArch64 PAuth core info found\n>>> "
-               << referenceFileName << ": 0x"
-               << toHex(ctx.aarch64PauthAbiCoreInfo, /*LowerCase=*/true)
-               << "\n>>> " << f << ": 0x"
-               << toHex(f->aarch64PauthAbiCoreInfo, /*LowerCase=*/true);
+      Err(ctx)
+          << "incompatible values of AArch64 PAuth core info found\n"
+          << "platform:\n"
+          << ">>> " << referenceFileName << ": 0x"
+          << toHex(ctx.aarch64PauthAbiCoreInfo->platform, /*LowerCase=*/true)
+          << "\n>>> " << f << ": 0x"
+          << toHex(f->aarch64PauthAbiCoreInfo->platform, /*LowerCase=*/true)
+          << "\nversion:\n"
+          << ">>> " << referenceFileName << ": 0x"
+          << toHex(ctx.aarch64PauthAbiCoreInfo->version, /*LowerCase=*/true)
+          << "\n>>> " << f << ": 0x"
+          << toHex(f->aarch64PauthAbiCoreInfo->version, /*LowerCase=*/true);
   }
 
   // Force enable Shadow Stack.
