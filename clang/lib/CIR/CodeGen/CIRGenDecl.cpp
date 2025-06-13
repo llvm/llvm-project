@@ -275,23 +275,20 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   assert(ty->isConstantSizeType() && "VLAs can't be static");
 
   // Use the label if the variable is renamed with the asm-label extension.
-  std::string name;
   if (d.hasAttr<AsmLabelAttr>())
     errorNYI(d.getSourceRange(), "getOrCreateStaticVarDecl: asm label");
-  else
-    name = getStaticDeclName(*this, d);
+
+  std::string name = getStaticDeclName(*this, d);
 
   mlir::Type lty = getTypes().convertTypeForMem(ty);
   assert(!cir::MissingFeatures::addressSpace());
 
-  // OpenCL variables in local address space and CUDA shared
-  // variables cannot have an initializer.
-  mlir::Attribute init = nullptr;
-  if (d.hasAttr<LoaderUninitializedAttr>())
+  if (d.hasAttr<LoaderUninitializedAttr>() || d.hasAttr<CUDASharedAttr>())
     errorNYI(d.getSourceRange(),
              "getOrCreateStaticVarDecl: LoaderUninitializedAttr");
+  assert(!cir::MissingFeatures::addressSpace());
 
-  init = builder.getZeroInitAttr(convertType(ty));
+  mlir::Attribute init = builder.getZeroInitAttr(convertType(ty));
 
   cir::GlobalOp gv = builder.createVersionedGlobal(
       getModule(), getLoc(d.getLocation()), name, lty, linkage);
@@ -443,26 +440,10 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
 
   var.setAlignment(alignment.getAsAlign().value());
 
-  if (d.hasAttr<AnnotateAttr>())
-    cgm.errorNYI(d.getSourceRange(), "static var annotation");
-
-  if (d.getAttr<PragmaClangBSSSectionAttr>())
-    cgm.errorNYI(d.getSourceRange(), "static var BSS section attribute");
-  if (d.getAttr<PragmaClangDataSectionAttr>())
-    cgm.errorNYI(d.getSourceRange(), "static var Data section attribute");
-  if (d.getAttr<PragmaClangRodataSectionAttr>())
-    cgm.errorNYI(d.getSourceRange(), "static var Rodata section attribute");
-  if (d.getAttr<PragmaClangRelroSectionAttr>())
-    cgm.errorNYI(d.getSourceRange(), "static var Relro section attribute");
-
-  if (d.getAttr<SectionAttr>())
-    cgm.errorNYI(d.getSourceRange(),
-                 "static var object file section attribute");
-
-  if (d.hasAttr<RetainAttr>())
-    cgm.errorNYI(d.getSourceRange(), "static var retain attribute");
-  else if (d.hasAttr<UsedAttr>())
-    cgm.errorNYI(d.getSourceRange(), "static var used attribute");
+  // There are a lot of attributes that need to be handled here. Until
+  // we start to support them, we just report an error if there are any.
+  if (d.hasAttrs())
+    cgm.errorNYI(d.getSourceRange(), "static var with attrs");
 
   if (cgm.getCodeGenOpts().KeepPersistentStorageVariables)
     cgm.errorNYI(d.getSourceRange(), "static var keep persistent storage");

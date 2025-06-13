@@ -194,11 +194,13 @@ public:
     return create<cir::StoreOp>(loc, val, dst, align);
   }
 
-  [[nodiscard]] cir::GlobalOp
-  createGlobal(mlir::ModuleOp module, mlir::Location loc, mlir::StringRef name,
-               mlir::Type type, cir::GlobalLinkageKind linkage) {
+  [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
+                                           mlir::Location loc,
+                                           mlir::StringRef name,
+                                           mlir::Type type,
+                                           cir::GlobalLinkageKind linkage) {
     mlir::OpBuilder::InsertionGuard guard(*this);
-    setInsertionPointToStart(module.getBody());
+    setInsertionPointToStart(mlirModule.getBody());
     return create<cir::GlobalOp>(loc, name, type, linkage);
   }
 
