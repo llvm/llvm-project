@@ -3506,6 +3506,7 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
+        ":SCFTransforms",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorTransforms",
