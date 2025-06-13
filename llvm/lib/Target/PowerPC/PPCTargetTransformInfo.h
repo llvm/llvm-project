@@ -148,12 +148,6 @@ public:
                            const Function *Callee) const override;
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
                              const ArrayRef<Type *> &Types) const override;
-  bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
-                             Align Alignment) const override;
-  InstructionCost
-  getVPMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                    unsigned AddressSpace, TTI::TargetCostKind CostKind,
-                    const Instruction *I = nullptr) const override;
   bool supportsTailCallFor(const CallBase *CB) const override;
 
 private:
