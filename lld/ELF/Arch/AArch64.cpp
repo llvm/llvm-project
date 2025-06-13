@@ -1043,8 +1043,7 @@ AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
   // instructions.
 
   if (ctx.arg.zPacPlt) {
-    if (llvm::any_of(ctx.aarch64PauthAbiCoreInfo,
-                     [](uint8_t c) { return c != 0; }))
+    if (ctx.aarch64PauthAbiCoreInfo && ctx.aarch64PauthAbiCoreInfo->isValid())
       pacEntryKind = PEK_Auth;
     else
       pacEntryKind = PEK_AuthHint;
