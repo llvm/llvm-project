@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v2 | FileCheck %s --check-prefixes=X64,SSE,SSE4
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=X64,AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=X64,AVX,AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+zu | FileCheck %s --check-prefix=ZU
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
 
 define i8 @scmp.8.8(i8 %x, i8 %y) nounwind {
@@ -13,6 +14,14 @@ define i8 @scmp.8.8(i8 %x, i8 %y) nounwind {
 ; X64-NEXT:    setg %al
 ; X64-NEXT:    subb %cl, %al
 ; X64-NEXT:    retq
+;
+; ZU-LABEL: scmp.8.8:
+; ZU:       # %bb.0:
+; ZU-NEXT:    cmpb %sil, %dil
+; ZU-NEXT:    setzul %cl
+; ZU-NEXT:    setzug %al
+; ZU-NEXT:    subb %cl, %al
+; ZU-NEXT:    retq
 ;
 ; X86-LABEL: scmp.8.8:
 ; X86:       # %bb.0:
@@ -35,6 +44,14 @@ define i8 @scmp.8.16(i16 %x, i16 %y) nounwind {
 ; X64-NEXT:    subb %cl, %al
 ; X64-NEXT:    retq
 ;
+; ZU-LABEL: scmp.8.16:
+; ZU:       # %bb.0:
+; ZU-NEXT:    cmpw %si, %di
+; ZU-NEXT:    setzul %cl
+; ZU-NEXT:    setzug %al
+; ZU-NEXT:    subb %cl, %al
+; ZU-NEXT:    retq
+;
 ; X86-LABEL: scmp.8.16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
@@ -56,6 +73,14 @@ define i8 @scmp.8.32(i32 %x, i32 %y) nounwind {
 ; X64-NEXT:    subb %cl, %al
 ; X64-NEXT:    retq
 ;
+; ZU-LABEL: scmp.8.32:
+; ZU:       # %bb.0:
+; ZU-NEXT:    cmpl %esi, %edi
+; ZU-NEXT:    setzul %cl
+; ZU-NEXT:    setzug %al
+; ZU-NEXT:    subb %cl, %al
+; ZU-NEXT:    retq
+;
 ; X86-LABEL: scmp.8.32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -76,6 +101,14 @@ define i8 @scmp.8.64(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    setg %al
 ; X64-NEXT:    subb %cl, %al
 ; X64-NEXT:    retq
+;
+; ZU-LABEL: scmp.8.64:
+; ZU:       # %bb.0:
+; ZU-NEXT:    cmpq %rsi, %rdi
+; ZU-NEXT:    setzul %cl
+; ZU-NEXT:    setzug %al
+; ZU-NEXT:    subb %cl, %al
+; ZU-NEXT:    retq
 ;
 ; X86-LABEL: scmp.8.64:
 ; X86:       # %bb.0:
@@ -114,6 +147,18 @@ define i8 @scmp.8.128(i128 %x, i128 %y) nounwind {
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    subb %r8b, %al
 ; X64-NEXT:    retq
+;
+; ZU-LABEL: scmp.8.128:
+; ZU:       # %bb.0:
+; ZU-NEXT:    cmpq %rdx, %rdi
+; ZU-NEXT:    movq %rsi, %rax
+; ZU-NEXT:    sbbq %rcx, %rax
+; ZU-NEXT:    setzul %r8b
+; ZU-NEXT:    cmpq %rdi, %rdx
+; ZU-NEXT:    sbbq %rsi, %rcx
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    subb %r8b, %al
+; ZU-NEXT:    retq
 ;
 ; X86-LABEL: scmp.8.128:
 ; X86:       # %bb.0:
@@ -161,6 +206,15 @@ define i32 @scmp.32.32(i32 %x, i32 %y) nounwind {
 ; X64-NEXT:    movsbl %cl, %eax
 ; X64-NEXT:    retq
 ;
+; ZU-LABEL: scmp.32.32:
+; ZU:       # %bb.0:
+; ZU-NEXT:    cmpl %esi, %edi
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movsbl %cl, %eax
+; ZU-NEXT:    retq
+;
 ; X86-LABEL: scmp.32.32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -183,6 +237,15 @@ define i32 @scmp.32.64(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    subb %al, %cl
 ; X64-NEXT:    movsbl %cl, %eax
 ; X64-NEXT:    retq
+;
+; ZU-LABEL: scmp.32.64:
+; ZU:       # %bb.0:
+; ZU-NEXT:    cmpq %rsi, %rdi
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movsbl %cl, %eax
+; ZU-NEXT:    retq
 ;
 ; X86-LABEL: scmp.32.64:
 ; X86:       # %bb.0:
@@ -219,6 +282,15 @@ define i64 @scmp.64.64(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    subb %al, %cl
 ; X64-NEXT:    movsbq %cl, %rax
 ; X64-NEXT:    retq
+;
+; ZU-LABEL: scmp.64.64:
+; ZU:       # %bb.0:
+; ZU-NEXT:    cmpq %rsi, %rdi
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movsbq %cl, %rax
+; ZU-NEXT:    retq
 ;
 ; X86-LABEL: scmp.64.64:
 ; X86:       # %bb.0:
@@ -257,6 +329,14 @@ define i4 @scmp_narrow_result(i32 %x, i32 %y) nounwind {
 ; X64-NEXT:    subb %cl, %al
 ; X64-NEXT:    retq
 ;
+; ZU-LABEL: scmp_narrow_result:
+; ZU:       # %bb.0:
+; ZU-NEXT:    cmpl %esi, %edi
+; ZU-NEXT:    setzul %cl
+; ZU-NEXT:    setzug %al
+; ZU-NEXT:    subb %cl, %al
+; ZU-NEXT:    retq
+;
 ; X86-LABEL: scmp_narrow_result:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -281,6 +361,18 @@ define i8 @scmp_narrow_op(i62 %x, i62 %y) nounwind {
 ; X64-NEXT:    setg %al
 ; X64-NEXT:    subb %cl, %al
 ; X64-NEXT:    retq
+;
+; ZU-LABEL: scmp_narrow_op:
+; ZU:       # %bb.0:
+; ZU-NEXT:    shlq $2, %rsi
+; ZU-NEXT:    sarq $2, %rsi
+; ZU-NEXT:    shlq $2, %rdi
+; ZU-NEXT:    sarq $2, %rdi
+; ZU-NEXT:    cmpq %rsi, %rdi
+; ZU-NEXT:    setzul %cl
+; ZU-NEXT:    setzug %al
+; ZU-NEXT:    subb %cl, %al
+; ZU-NEXT:    retq
 ;
 ; X86-LABEL: scmp_narrow_op:
 ; X86:       # %bb.0:
@@ -325,6 +417,19 @@ define i141 @scmp_wide_result(i32 %x, i32 %y) nounwind {
 ; X64-NEXT:    andl $8191, %ecx # imm = 0x1FFF
 ; X64-NEXT:    retq
 ;
+; ZU-LABEL: scmp_wide_result:
+; ZU:       # %bb.0:
+; ZU-NEXT:    cmpl %esi, %edi
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movsbq %cl, %rax
+; ZU-NEXT:    movq %rax, %rdx
+; ZU-NEXT:    sarq $63, %rdx
+; ZU-NEXT:    movl %edx, %ecx
+; ZU-NEXT:    andl $8191, %ecx # imm = 0x1FFF
+; ZU-NEXT:    retq
+;
 ; X86-LABEL: scmp_wide_result:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -362,6 +467,22 @@ define i8 @scmp_wide_op(i109 %x, i109 %y) nounwind {
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    subb %r8b, %al
 ; X64-NEXT:    retq
+;
+; ZU-LABEL: scmp_wide_op:
+; ZU:       # %bb.0:
+; ZU-NEXT:    shlq $19, %rcx
+; ZU-NEXT:    sarq $19, %rcx
+; ZU-NEXT:    shlq $19, %rsi
+; ZU-NEXT:    sarq $19, %rsi
+; ZU-NEXT:    cmpq %rdx, %rdi
+; ZU-NEXT:    movq %rsi, %rax
+; ZU-NEXT:    sbbq %rcx, %rax
+; ZU-NEXT:    setzul %r8b
+; ZU-NEXT:    cmpq %rdi, %rdx
+; ZU-NEXT:    sbbq %rsi, %rcx
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    subb %r8b, %al
+; ZU-NEXT:    retq
 ;
 ; X86-LABEL: scmp_wide_op:
 ; X86:       # %bb.0:
@@ -417,6 +538,19 @@ define i41 @scmp_uncommon_types(i7 %x, i7 %y) nounwind {
 ; X64-NEXT:    movsbq %cl, %rax
 ; X64-NEXT:    retq
 ;
+; ZU-LABEL: scmp_uncommon_types:
+; ZU:       # %bb.0:
+; ZU-NEXT:    addb %sil, %sil
+; ZU-NEXT:    sarb %sil
+; ZU-NEXT:    addb %dil, %dil
+; ZU-NEXT:    sarb %dil
+; ZU-NEXT:    cmpb %sil, %dil
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movsbq %cl, %rax
+; ZU-NEXT:    retq
+;
 ; X86-LABEL: scmp_uncommon_types:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
@@ -462,6 +596,15 @@ define <4 x i32> @scmp_normal_vectors(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
 ; AVX512-NEXT:    retq
+;
+; ZU-LABEL: scmp_normal_vectors:
+; ZU:       # %bb.0:
+; ZU-NEXT:    movdqa %xmm0, %xmm2
+; ZU-NEXT:    pcmpgtd %xmm1, %xmm2
+; ZU-NEXT:    pcmpgtd %xmm0, %xmm1
+; ZU-NEXT:    psubd %xmm2, %xmm1
+; ZU-NEXT:    movdqa %xmm1, %xmm0
+; ZU-NEXT:    retq
 ;
 ; X86-LABEL: scmp_normal_vectors:
 ; X86:       # %bb.0:
@@ -620,6 +763,51 @@ define <4 x i8> @scmp_narrow_vec_result(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; AVX-NEXT:    vpinsrb $3, %ecx, %xmm2, %xmm0
 ; AVX-NEXT:    retq
 ;
+; ZU-LABEL: scmp_narrow_vec_result:
+; ZU:       # %bb.0:
+; ZU-NEXT:    movd %xmm1, %eax
+; ZU-NEXT:    movd %xmm0, %ecx
+; ZU-NEXT:    cmpl %eax, %ecx
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
+; ZU-NEXT:    movd %xmm2, %ecx
+; ZU-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
+; ZU-NEXT:    movd %xmm2, %edx
+; ZU-NEXT:    cmpl %ecx, %edx
+; ZU-NEXT:    setzul %cl
+; ZU-NEXT:    setzug %dl
+; ZU-NEXT:    subb %cl, %dl
+; ZU-NEXT:    movzbl %dl, %ecx
+; ZU-NEXT:    shll $8, %ecx
+; ZU-NEXT:    orl %eax, %ecx
+; ZU-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
+; ZU-NEXT:    movd %xmm2, %eax
+; ZU-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; ZU-NEXT:    movd %xmm2, %edx
+; ZU-NEXT:    cmpl %eax, %edx
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %dl
+; ZU-NEXT:    subb %al, %dl
+; ZU-NEXT:    movzbl %dl, %eax
+; ZU-NEXT:    shll $16, %eax
+; ZU-NEXT:    orl %ecx, %eax
+; ZU-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,3,3,3]
+; ZU-NEXT:    movd %xmm1, %ecx
+; ZU-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; ZU-NEXT:    movd %xmm0, %edx
+; ZU-NEXT:    cmpl %ecx, %edx
+; ZU-NEXT:    setzul %cl
+; ZU-NEXT:    setzug %dl
+; ZU-NEXT:    subb %cl, %dl
+; ZU-NEXT:    movzbl %dl, %ecx
+; ZU-NEXT:    shll $24, %ecx
+; ZU-NEXT:    orl %eax, %ecx
+; ZU-NEXT:    movd %ecx, %xmm0
+; ZU-NEXT:    retq
+;
 ; X86-LABEL: scmp_narrow_vec_result:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
@@ -704,6 +892,21 @@ define <4 x i32> @scmp_narrow_vec_op(<4 x i8> %x, <4 x i8> %y) nounwind {
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
 ; AVX512-NEXT:    retq
+;
+; ZU-LABEL: scmp_narrow_vec_op:
+; ZU:       # %bb.0:
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
+; ZU-NEXT:    psrad $24, %xmm1
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; ZU-NEXT:    psrad $24, %xmm0
+; ZU-NEXT:    movdqa %xmm0, %xmm2
+; ZU-NEXT:    pcmpgtd %xmm1, %xmm2
+; ZU-NEXT:    pcmpgtd %xmm0, %xmm1
+; ZU-NEXT:    psubd %xmm2, %xmm1
+; ZU-NEXT:    movdqa %xmm1, %xmm0
+; ZU-NEXT:    retq
 ;
 ; X86-LABEL: scmp_narrow_vec_op:
 ; X86:       # %bb.0:
@@ -851,6 +1054,48 @@ define <16 x i32> @scmp_wide_vec_result(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
+;
+; ZU-LABEL: scmp_wide_vec_result:
+; ZU:       # %bb.0:
+; ZU-NEXT:    movdqa %xmm1, %xmm2
+; ZU-NEXT:    movdqa %xmm0, %xmm3
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; ZU-NEXT:    psrad $24, %xmm0
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3],xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; ZU-NEXT:    psrad $24, %xmm5
+; ZU-NEXT:    movdqa %xmm5, %xmm6
+; ZU-NEXT:    pcmpgtd %xmm0, %xmm6
+; ZU-NEXT:    pcmpgtd %xmm5, %xmm0
+; ZU-NEXT:    psubd %xmm6, %xmm0
+; ZU-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; ZU-NEXT:    psrad $24, %xmm1
+; ZU-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4,4,5,5,6,6,7,7]
+; ZU-NEXT:    psrad $24, %xmm4
+; ZU-NEXT:    movdqa %xmm4, %xmm5
+; ZU-NEXT:    pcmpgtd %xmm1, %xmm5
+; ZU-NEXT:    pcmpgtd %xmm4, %xmm1
+; ZU-NEXT:    psubd %xmm5, %xmm1
+; ZU-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm2[8],xmm4[9],xmm2[9],xmm4[10],xmm2[10],xmm4[11],xmm2[11],xmm4[12],xmm2[12],xmm4[13],xmm2[13],xmm4[14],xmm2[14],xmm4[15],xmm2[15]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
+; ZU-NEXT:    psrad $24, %xmm2
+; ZU-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm3[8],xmm5[9],xmm3[9],xmm5[10],xmm3[10],xmm5[11],xmm3[11],xmm5[12],xmm3[12],xmm5[13],xmm3[13],xmm5[14],xmm3[14],xmm5[15],xmm3[15]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3]
+; ZU-NEXT:    psrad $24, %xmm3
+; ZU-NEXT:    movdqa %xmm3, %xmm6
+; ZU-NEXT:    pcmpgtd %xmm2, %xmm6
+; ZU-NEXT:    pcmpgtd %xmm3, %xmm2
+; ZU-NEXT:    psubd %xmm6, %xmm2
+; ZU-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
+; ZU-NEXT:    psrad $24, %xmm3
+; ZU-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
+; ZU-NEXT:    psrad $24, %xmm4
+; ZU-NEXT:    movdqa %xmm4, %xmm5
+; ZU-NEXT:    pcmpgtd %xmm3, %xmm5
+; ZU-NEXT:    pcmpgtd %xmm4, %xmm3
+; ZU-NEXT:    psubd %xmm5, %xmm3
+; ZU-NEXT:    retq
 ;
 ; X86-LABEL: scmp_wide_vec_result:
 ; X86:       # %bb.0:
@@ -1503,6 +1748,146 @@ define <16 x i8> @scmp_wide_vec_op(<16 x i64> %x, <16 x i64> %y) nounwind {
 ; AVX512-NEXT:    vpinsrb $15, %ecx, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
+;
+; ZU-LABEL: scmp_wide_vec_op:
+; ZU:       # %bb.0:
+; ZU-NEXT:    movq %xmm7, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm8
+; ZU-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[2,3,2,3]
+; ZU-NEXT:    movq %xmm7, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm7
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm8 = xmm8[0],xmm7[0],xmm8[1],xmm7[1],xmm8[2],xmm7[2],xmm8[3],xmm7[3],xmm8[4],xmm7[4],xmm8[5],xmm7[5],xmm8[6],xmm7[6],xmm8[7],xmm7[7]
+; ZU-NEXT:    movq %xmm6, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm7
+; ZU-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[2,3,2,3]
+; ZU-NEXT:    movq %xmm6, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm6
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm7 = xmm7[0],xmm6[0],xmm7[1],xmm6[1],xmm7[2],xmm6[2],xmm7[3],xmm6[3],xmm7[4],xmm6[4],xmm7[5],xmm6[5],xmm7[6],xmm6[6],xmm7[7],xmm6[7]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm7 = xmm7[0],xmm8[0],xmm7[1],xmm8[1],xmm7[2],xmm8[2],xmm7[3],xmm8[3]
+; ZU-NEXT:    movq %xmm5, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm6
+; ZU-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[2,3,2,3]
+; ZU-NEXT:    movq %xmm5, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm5
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3],xmm6[4],xmm5[4],xmm6[5],xmm5[5],xmm6[6],xmm5[6],xmm6[7],xmm5[7]
+; ZU-NEXT:    movq %xmm4, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm5
+; ZU-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,3,2,3]
+; ZU-NEXT:    movq %xmm4, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm4
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3],xmm5[4],xmm4[4],xmm5[5],xmm4[5],xmm5[6],xmm4[6],xmm5[7],xmm4[7]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[1],xmm6[1],xmm5[2],xmm6[2],xmm5[3],xmm6[3]
+; ZU-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm7[0],xmm5[1],xmm7[1]
+; ZU-NEXT:    movq %xmm3, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm4
+; ZU-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
+; ZU-NEXT:    movq %xmm3, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm3
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3],xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
+; ZU-NEXT:    movq %xmm2, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm3
+; ZU-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
+; ZU-NEXT:    movq %xmm2, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm2
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3]
+; ZU-NEXT:    movq %xmm1, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm2
+; ZU-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; ZU-NEXT:    movq %xmm1, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm1
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; ZU-NEXT:    movq %xmm0, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm1
+; ZU-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; ZU-NEXT:    movq %xmm0, %rax
+; ZU-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %cl
+; ZU-NEXT:    subb %al, %cl
+; ZU-NEXT:    movzbl %cl, %eax
+; ZU-NEXT:    movd %eax, %xmm0
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; ZU-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; ZU-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm5[0]
+; ZU-NEXT:    movdqa %xmm1, %xmm0
+; ZU-NEXT:    retq
 ;
 ; X86-LABEL: scmp_wide_vec_op:
 ; X86:       # %bb.0:
@@ -2215,6 +2600,163 @@ define <7 x i117> @scmp_uncommon_vectors(<7 x i7> %x, <7 x i7> %y) nounwind {
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
 ;
+; ZU-LABEL: scmp_uncommon_vectors:
+; ZU:       # %bb.0:
+; ZU-NEXT:    pushq %rbp
+; ZU-NEXT:    pushq %r15
+; ZU-NEXT:    pushq %r14
+; ZU-NEXT:    pushq %r13
+; ZU-NEXT:    pushq %r12
+; ZU-NEXT:    pushq %rbx
+; ZU-NEXT:    movq %rdi, %rax
+; ZU-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; ZU-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
+; ZU-NEXT:    movzbl {{[0-9]+}}(%rsp), %r11d
+; ZU-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebx
+; ZU-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebp
+; ZU-NEXT:    movzbl {{[0-9]+}}(%rsp), %r14d
+; ZU-NEXT:    movzbl {{[0-9]+}}(%rsp), %r15d
+; ZU-NEXT:    addb %r15b, %r15b
+; ZU-NEXT:    sarb %r15b
+; ZU-NEXT:    addb %sil, %sil
+; ZU-NEXT:    sarb %sil
+; ZU-NEXT:    cmpb %r15b, %sil
+; ZU-NEXT:    setzul %sil
+; ZU-NEXT:    setzug %r15b
+; ZU-NEXT:    subb %sil, %r15b
+; ZU-NEXT:    movsbq %r15b, %rsi
+; ZU-NEXT:    movq %rsi, (%rax)
+; ZU-NEXT:    movq %rsi, %xmm0
+; ZU-NEXT:    sarq $63, %rsi
+; ZU-NEXT:    addb %r14b, %r14b
+; ZU-NEXT:    sarb %r14b
+; ZU-NEXT:    movzbl {{[0-9]+}}(%rsp), %r15d
+; ZU-NEXT:    addb %r15b, %r15b
+; ZU-NEXT:    sarb %r15b
+; ZU-NEXT:    cmpb %r14b, %r15b
+; ZU-NEXT:    setzul %r14b
+; ZU-NEXT:    setzug %r15b
+; ZU-NEXT:    subb %r14b, %r15b
+; ZU-NEXT:    movsbq %r15b, %r14
+; ZU-NEXT:    movq %r14, %r15
+; ZU-NEXT:    sarq $63, %r15
+; ZU-NEXT:    addb %bpl, %bpl
+; ZU-NEXT:    sarb %bpl
+; ZU-NEXT:    addb %dl, %dl
+; ZU-NEXT:    sarb %dl
+; ZU-NEXT:    cmpb %bpl, %dl
+; ZU-NEXT:    setzul %dl
+; ZU-NEXT:    setzug %bpl
+; ZU-NEXT:    subb %dl, %bpl
+; ZU-NEXT:    movsbq %bpl, %rdx
+; ZU-NEXT:    movq %rdx, %r12
+; ZU-NEXT:    sarq $63, %r12
+; ZU-NEXT:    addb %bl, %bl
+; ZU-NEXT:    sarb %bl
+; ZU-NEXT:    addb %cl, %cl
+; ZU-NEXT:    sarb %cl
+; ZU-NEXT:    cmpb %bl, %cl
+; ZU-NEXT:    setzul %cl
+; ZU-NEXT:    setzug %bl
+; ZU-NEXT:    subb %cl, %bl
+; ZU-NEXT:    movsbq %bl, %rbx
+; ZU-NEXT:    movq %rbx, %rcx
+; ZU-NEXT:    sarq $63, %rcx
+; ZU-NEXT:    addb %r11b, %r11b
+; ZU-NEXT:    sarb %r11b
+; ZU-NEXT:    addb %r8b, %r8b
+; ZU-NEXT:    sarb %r8b
+; ZU-NEXT:    cmpb %r11b, %r8b
+; ZU-NEXT:    setzul %r8b
+; ZU-NEXT:    setzug %r11b
+; ZU-NEXT:    subb %r8b, %r11b
+; ZU-NEXT:    movsbq %r11b, %r8
+; ZU-NEXT:    movq %r8, %r11
+; ZU-NEXT:    sarq $63, %r11
+; ZU-NEXT:    addb %r10b, %r10b
+; ZU-NEXT:    sarb %r10b
+; ZU-NEXT:    addb %r9b, %r9b
+; ZU-NEXT:    sarb %r9b
+; ZU-NEXT:    cmpb %r10b, %r9b
+; ZU-NEXT:    setzul %r9b
+; ZU-NEXT:    setzug %r10b
+; ZU-NEXT:    subb %r9b, %r10b
+; ZU-NEXT:    movsbq %r10b, %r9
+; ZU-NEXT:    movq %r9, %r10
+; ZU-NEXT:    sarq $63, %r10
+; ZU-NEXT:    addb %dil, %dil
+; ZU-NEXT:    sarb %dil
+; ZU-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebp
+; ZU-NEXT:    addb %bpl, %bpl
+; ZU-NEXT:    sarb %bpl
+; ZU-NEXT:    cmpb %dil, %bpl
+; ZU-NEXT:    setzul %dil
+; ZU-NEXT:    setzug %bpl
+; ZU-NEXT:    subb %dil, %bpl
+; ZU-NEXT:    movsbq %bpl, %rdi
+; ZU-NEXT:    movq %rdi, %r13
+; ZU-NEXT:    sarq $63, %r13
+; ZU-NEXT:    movl %r13d, 96(%rax)
+; ZU-NEXT:    movabsq $2251799813685247, %rbp # imm = 0x7FFFFFFFFFFFF
+; ZU-NEXT:    andq %r13, %rbp
+; ZU-NEXT:    shldq $62, %rdi, %r13
+; ZU-NEXT:    movq %r13, 88(%rax)
+; ZU-NEXT:    movq %r10, %r13
+; ZU-NEXT:    shldq $20, %r9, %r13
+; ZU-NEXT:    movq %r13, 64(%rax)
+; ZU-NEXT:    movq %r11, %r13
+; ZU-NEXT:    shldq $31, %r8, %r13
+; ZU-NEXT:    movq %r13, 48(%rax)
+; ZU-NEXT:    movq %rcx, %r13
+; ZU-NEXT:    shldq $42, %rbx, %r13
+; ZU-NEXT:    movq %r13, 32(%rax)
+; ZU-NEXT:    movabsq $9007199254738944, %r13 # imm = 0x1FFFFFFFFFF800
+; ZU-NEXT:    andq %r12, %r13
+; ZU-NEXT:    shldq $53, %rdx, %r12
+; ZU-NEXT:    movq %r12, 16(%rax)
+; ZU-NEXT:    movq %rbp, %r12
+; ZU-NEXT:    shrq $48, %r12
+; ZU-NEXT:    movb %r12b, 102(%rax)
+; ZU-NEXT:    shrq $32, %rbp
+; ZU-NEXT:    movw %bp, 100(%rax)
+; ZU-NEXT:    movabsq $9007199254740991, %r12 # imm = 0x1FFFFFFFFFFFFF
+; ZU-NEXT:    andq %r12, %r15
+; ZU-NEXT:    shldq $9, %r14, %r15
+; ZU-NEXT:    shlq $62, %rdi
+; ZU-NEXT:    orq %r15, %rdi
+; ZU-NEXT:    movq %rdi, 80(%rax)
+; ZU-NEXT:    shlq $42, %rbx
+; ZU-NEXT:    shrq $11, %r13
+; ZU-NEXT:    orq %rbx, %r13
+; ZU-NEXT:    movq %r13, 24(%rax)
+; ZU-NEXT:    shlq $9, %r14
+; ZU-NEXT:    andl $511, %r10d # imm = 0x1FF
+; ZU-NEXT:    orq %r14, %r10
+; ZU-NEXT:    movq %r10, 72(%rax)
+; ZU-NEXT:    shlq $20, %r9
+; ZU-NEXT:    andl $1048575, %r11d # imm = 0xFFFFF
+; ZU-NEXT:    orq %r9, %r11
+; ZU-NEXT:    movq %r11, 56(%rax)
+; ZU-NEXT:    shlq $31, %r8
+; ZU-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
+; ZU-NEXT:    orq %r8, %rcx
+; ZU-NEXT:    movq %rcx, 40(%rax)
+; ZU-NEXT:    movq %rsi, %xmm1
+; ZU-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; ZU-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; ZU-NEXT:    movq %xmm0, %rcx
+; ZU-NEXT:    andq %r12, %rcx
+; ZU-NEXT:    shlq $53, %rdx
+; ZU-NEXT:    orq %rcx, %rdx
+; ZU-NEXT:    movq %rdx, 8(%rax)
+; ZU-NEXT:    popq %rbx
+; ZU-NEXT:    popq %r12
+; ZU-NEXT:    popq %r13
+; ZU-NEXT:    popq %r14
+; ZU-NEXT:    popq %r15
+; ZU-NEXT:    popq %rbp
+; ZU-NEXT:    retq
+;
 ; X86-LABEL: scmp_uncommon_vectors:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -2427,6 +2969,18 @@ define <1 x i3> @scmp_scalarize(<1 x i33> %x, <1 x i33> %y) nounwind {
 ; X64-NEXT:    subb %cl, %al
 ; X64-NEXT:    retq
 ;
+; ZU-LABEL: scmp_scalarize:
+; ZU:       # %bb.0:
+; ZU-NEXT:    shlq $31, %rsi
+; ZU-NEXT:    sarq $31, %rsi
+; ZU-NEXT:    shlq $31, %rdi
+; ZU-NEXT:    sarq $31, %rdi
+; ZU-NEXT:    cmpq %rsi, %rdi
+; ZU-NEXT:    setzul %cl
+; ZU-NEXT:    setzug %al
+; ZU-NEXT:    subb %cl, %al
+; ZU-NEXT:    retq
+;
 ; X86-LABEL: scmp_scalarize:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
@@ -2574,6 +3128,37 @@ define <2 x i8> @scmp_bool_operands(<2 x i1> %x, <2 x i1> %y) nounwind {
 ; AVX512-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
 ;
+; ZU-LABEL: scmp_bool_operands:
+; ZU:       # %bb.0:
+; ZU-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
+; ZU-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; ZU-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; ZU-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; ZU-NEXT:    andb $1, %al
+; ZU-NEXT:    negb %al
+; ZU-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; ZU-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
+; ZU-NEXT:    andb $1, %dl
+; ZU-NEXT:    negb %dl
+; ZU-NEXT:    cmpb %al, %dl
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %dl
+; ZU-NEXT:    subb %al, %dl
+; ZU-NEXT:    movzbl %dl, %eax
+; ZU-NEXT:    andb $1, %cl
+; ZU-NEXT:    negb %cl
+; ZU-NEXT:    andb $1, %sil
+; ZU-NEXT:    negb %sil
+; ZU-NEXT:    cmpb %cl, %sil
+; ZU-NEXT:    setzul %cl
+; ZU-NEXT:    setzug %dl
+; ZU-NEXT:    subb %cl, %dl
+; ZU-NEXT:    movzbl %dl, %ecx
+; ZU-NEXT:    shll $8, %ecx
+; ZU-NEXT:    orl %eax, %ecx
+; ZU-NEXT:    movd %ecx, %xmm0
+; ZU-NEXT:    retq
+;
 ; X86-LABEL: scmp_bool_operands:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
@@ -2663,6 +3248,28 @@ define <2 x i16> @scmp_ret_wider_than_operands(<2 x i8> %x, <2 x i8> %y) nounwin
 ; AVX-NEXT:    vmovd %ecx, %xmm0
 ; AVX-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; ZU-LABEL: scmp_ret_wider_than_operands:
+; ZU:       # %bb.0:
+; ZU-NEXT:    movd %xmm1, %eax
+; ZU-NEXT:    movl %eax, %ecx
+; ZU-NEXT:    shrl $8, %ecx
+; ZU-NEXT:    movd %xmm0, %edx
+; ZU-NEXT:    movl %edx, %esi
+; ZU-NEXT:    shrl $8, %esi
+; ZU-NEXT:    cmpb %cl, %sil
+; ZU-NEXT:    setzul %cl
+; ZU-NEXT:    setzug %sil
+; ZU-NEXT:    subb %cl, %sil
+; ZU-NEXT:    movsbl %sil, %ecx
+; ZU-NEXT:    cmpb %al, %dl
+; ZU-NEXT:    setzul %al
+; ZU-NEXT:    setzug %dl
+; ZU-NEXT:    subb %al, %dl
+; ZU-NEXT:    movsbl %dl, %eax
+; ZU-NEXT:    movd %eax, %xmm0
+; ZU-NEXT:    pinsrw $1, %ecx, %xmm0
+; ZU-NEXT:    retq
 ;
 ; X86-LABEL: scmp_ret_wider_than_operands:
 ; X86:       # %bb.0:

@@ -122,8 +122,8 @@ bool X86FixupSetCCPass::runOnMachineFunction(MachineFunction &MF) {
       // register.
       Register ZeroReg = MRI->createVirtualRegister(RC);
       if (ST->hasZU()) {
-        if (MI.getOpcode() != X86::SETZUCCr)
-          MI.setDesc(TII->get(X86::SETZUCCr));
+        assert((MI.getOpcode() == X86::SETZUCCr) &&
+               "Expect setzucc instruction!");
         BuildMI(*ZExt->getParent(), ZExt, ZExt->getDebugLoc(),
                 TII->get(TargetOpcode::IMPLICIT_DEF), ZeroReg);
       } else {

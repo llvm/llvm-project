@@ -137,7 +137,7 @@ let Predicates = [HasCMOV, HasCF] in {
 }
 
 // SetCC instructions.
-let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1, Predicates = [NoNDD] in {
+let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1, Predicates = [NoZU] in {
   def SETCCr : I<0x90, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
                 "set${cond}\t$dst",
                 [(set GR8:$dst, (X86setcc timm:$cond, EFLAGS))]>,
@@ -153,7 +153,7 @@ let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1 in {
 
 // SetZUCC and promoted SetCC instructions.
 let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1,
-  hasSideEffects = 0, Predicates = [In64BitMode], Predicates = [HasNDD] in {
+  hasSideEffects = 0, Predicates = [In64BitMode], Predicates = [HasZU] in {
   def SETZUCCr : I<0x40, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
                 "setzu${cond}\t$dst",
                 [(set GR8:$dst, (X86setcc timm:$cond, EFLAGS))]>,

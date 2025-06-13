@@ -758,7 +758,7 @@ define i1 @add64ri_reloc(i16 %k) {
 ; CHECK-NEXT:    addq %rax, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xc0]
 ; CHECK-NEXT:    addq $val, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x05,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: val, kind: reloc_signed_4byte
-; CHECK-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: add64ri_reloc:
@@ -768,7 +768,7 @@ define i1 @add64ri_reloc(i16 %k) {
 ; NF-NEXT:    addq %rax, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xc0]
 ; NF-NEXT:    addq $val, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x05,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: val, kind: reloc_signed_4byte
-; NF-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; NF-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
 ; NF-NEXT:    retq # encoding: [0xc3]
   %g = getelementptr inbounds i16, ptr @val, i16 %k
   %cmp = icmp ne ptr %g, null

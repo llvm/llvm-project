@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+ndd -verify-machineinstrs --show-mc-encoding | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+ndd,nf -verify-machineinstrs --show-mc-encoding | FileCheck --check-prefix=NF %s
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+ndd,nf -x86-enable-apx-for-relocation=true -verify-machineinstrs --show-mc-encoding | FileCheck --check-prefix=NF %s
+; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+zu -verify-machineinstrs --show-mc-encoding | FileCheck %s --check-prefix=ZU
 
 define i8 @and8rr(i8 noundef %a, i8 noundef %b) {
 ; CHECK-LABEL: and8rr:
@@ -15,6 +16,13 @@ define i8 @and8rr(i8 noundef %a, i8 noundef %b) {
 ; NF-NEXT:    {nf} andl %esi, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x21,0xf7]
 ; NF-NEXT:    # kill: def $al killed $al killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and8rr:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU-NEXT:    andl %esi, %eax # encoding: [0x21,0xf0]
+; ZU-NEXT:    # kill: def $al killed $al killed $eax
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i8 %a, %b
     ret i8 %and
@@ -32,6 +40,13 @@ define i16 @and16rr(i16 noundef %a, i16 noundef %b) {
 ; NF-NEXT:    {nf} andl %esi, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x21,0xf7]
 ; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and16rr:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU-NEXT:    andl %esi, %eax # encoding: [0x21,0xf0]
+; ZU-NEXT:    # kill: def $ax killed $ax killed $eax
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i16 %a, %b
     ret i16 %and
@@ -47,6 +62,12 @@ define i32 @and32rr(i32 noundef %a, i32 noundef %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andl %esi, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x21,0xf7]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and32rr:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU-NEXT:    andl %esi, %eax # encoding: [0x21,0xf0]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i32 %a, %b
     ret i32 %and
@@ -62,6 +83,12 @@ define i64 @and64rr(i64 noundef %a, i64 noundef %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andq %rsi, %rdi, %rax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0xfc,0x1c,0x21,0xf7]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and64rr:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; ZU-NEXT:    andq %rsi, %rax # encoding: [0x48,0x21,0xf0]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i64 %a, %b
     ret i64 %and
@@ -77,6 +104,13 @@ define i8 @and8rm(i8 noundef %a, ptr %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andb (%rsi), %dil, %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x22,0x3e]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and8rm:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU-NEXT:    andb (%rsi), %al # encoding: [0x22,0x06]
+; ZU-NEXT:    # kill: def $al killed $al killed $eax
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %t = load i8, ptr %b
     %and = and i8 %a, %t
@@ -93,6 +127,13 @@ define i16 @and16rm(i16 noundef %a, ptr %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andw (%rsi), %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x23,0x3e]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and16rm:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU-NEXT:    andw (%rsi), %ax # encoding: [0x66,0x23,0x06]
+; ZU-NEXT:    # kill: def $ax killed $ax killed $eax
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %t = load i16, ptr %b
     %and = and i16 %a, %t
@@ -109,6 +150,12 @@ define i32 @and32rm(i32 noundef %a, ptr %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andl (%rsi), %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x23,0x3e]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and32rm:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU-NEXT:    andl (%rsi), %eax # encoding: [0x23,0x06]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %t = load i32, ptr %b
     %and = and i32 %a, %t
@@ -125,6 +172,12 @@ define i64 @and64rm(i64 noundef %a, ptr %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andq (%rsi), %rdi, %rax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0xfc,0x1c,0x23,0x3e]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and64rm:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; ZU-NEXT:    andq (%rsi), %rax # encoding: [0x48,0x23,0x06]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %t = load i64, ptr %b
     %and = and i64 %a, %t
@@ -141,6 +194,13 @@ define i16 @and16ri8(i16 noundef %a) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andw $123, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x83,0xe7,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and16ri8:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU-NEXT:    andl $123, %eax # encoding: [0x83,0xe0,0x7b]
+; ZU-NEXT:    # kill: def $ax killed $ax killed $eax
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i16 %a, 123
     ret i16 %and
@@ -156,6 +216,12 @@ define i32 @and32ri8(i32 noundef %a) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andl $123, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x83,0xe7,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and32ri8:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU-NEXT:    andl $123, %eax # encoding: [0x83,0xe0,0x7b]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i32 %a, 123
     ret i32 %and
@@ -171,6 +237,12 @@ define i64 @and64ri8(i64 noundef %a) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andl $123, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x83,0xe7,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and64ri8:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; ZU-NEXT:    andl $123, %eax # encoding: [0x83,0xe0,0x7b]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i64 %a, 123
     ret i64 %and
@@ -186,6 +258,13 @@ define i8 @and8ri(i8 noundef %a) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andb $123, %dil, %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x80,0xe7,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and8ri:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU-NEXT:    andb $123, %al # encoding: [0x24,0x7b]
+; ZU-NEXT:    # kill: def $al killed $al killed $eax
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i8 %a, 123
     ret i8 %and
@@ -203,6 +282,14 @@ define i16 @and16ri(i16 noundef %a) {
 ; NF-NEXT:    {nf} andw $1234, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x81,0xe7,0xd2,0x04]
 ; NF-NEXT:    # imm = 0x4D2
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and16ri:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU-NEXT:    andl $1234, %eax # encoding: [0x25,0xd2,0x04,0x00,0x00]
+; ZU-NEXT:    # imm = 0x4D2
+; ZU-NEXT:    # kill: def $ax killed $ax killed $eax
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i16 %a, 1234
     ret i16 %and
@@ -220,6 +307,13 @@ define i32 @and32ri(i32 noundef %a) {
 ; NF-NEXT:    {nf} andl $123456, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and32ri:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU-NEXT:    andl $123456, %eax # encoding: [0x25,0x40,0xe2,0x01,0x00]
+; ZU-NEXT:    # imm = 0x1E240
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i32 %a, 123456
     ret i32 %and
@@ -237,6 +331,13 @@ define i64 @and64ri(i64 noundef %a) {
 ; NF-NEXT:    {nf} andl $123456, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and64ri:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; ZU-NEXT:    andl $123456, %eax # encoding: [0x25,0x40,0xe2,0x01,0x00]
+; ZU-NEXT:    # imm = 0x1E240
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i64 %a, 123456
     ret i64 %and
@@ -252,6 +353,13 @@ define i8 @and8mr(ptr %a, i8 noundef %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andb (%rdi), %sil, %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x22,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and8mr:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; ZU-NEXT:    andb (%rdi), %al # encoding: [0x22,0x07]
+; ZU-NEXT:    # kill: def $al killed $al killed $eax
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i8, ptr %a
   %and = and i8 %t, %b
@@ -268,6 +376,13 @@ define i16 @and16mr(ptr %a, i16 noundef %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andw (%rdi), %si, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x23,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and16mr:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; ZU-NEXT:    andw (%rdi), %ax # encoding: [0x66,0x23,0x07]
+; ZU-NEXT:    # kill: def $ax killed $ax killed $eax
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
   %and = and i16 %t, %b
@@ -284,6 +399,12 @@ define i32 @and32mr(ptr %a, i32 noundef %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andl (%rdi), %esi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x23,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and32mr:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; ZU-NEXT:    andl (%rdi), %eax # encoding: [0x23,0x07]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i32, ptr %a
   %and = and i32 %t, %b
@@ -300,6 +421,12 @@ define i64 @and64mr(ptr %a, i64 noundef %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andq (%rdi), %rsi, %rax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0xfc,0x1c,0x23,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and64mr:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
+; ZU-NEXT:    andq (%rdi), %rax # encoding: [0x48,0x23,0x07]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i64, ptr %a
   %and = and i64 %t, %b
@@ -316,6 +443,13 @@ define i16 @and16mi8(ptr %a) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andw $123, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x83,0x27,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and16mi8:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
+; ZU-NEXT:    andl $123, %eax # encoding: [0x83,0xe0,0x7b]
+; ZU-NEXT:    # kill: def $ax killed $ax killed $eax
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
   %and = and i16 %t, 123
@@ -332,6 +466,12 @@ define i32 @and32mi8(ptr %a) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andl $123, (%rdi), %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x83,0x27,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and32mi8:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
+; ZU-NEXT:    andl $123, %eax # encoding: [0x83,0xe0,0x7b]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i32, ptr %a
   %and = and i32 %t, 123
@@ -350,6 +490,12 @@ define i64 @and64mi8(ptr %a) {
 ; NF-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
 ; NF-NEXT:    andl $123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xe0,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and64mi8:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
+; ZU-NEXT:    andl $123, %eax # encoding: [0x83,0xe0,0x7b]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i64, ptr %a
   %and = and i64 %t, 123
@@ -366,6 +512,12 @@ define i8 @and8mi(ptr %a) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    {nf} andb $123, (%rdi), %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x80,0x27,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and8mi:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movzbl (%rdi), %eax # encoding: [0x0f,0xb6,0x07]
+; ZU-NEXT:    andb $123, %al # encoding: [0x24,0x7b]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i8, ptr %a
   %and = and i8 %t, 123
@@ -384,6 +536,14 @@ define i16 @and16mi(ptr %a) {
 ; NF-NEXT:    {nf} andw $1234, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x81,0x27,0xd2,0x04]
 ; NF-NEXT:    # imm = 0x4D2
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and16mi:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
+; ZU-NEXT:    andl $1234, %eax # encoding: [0x25,0xd2,0x04,0x00,0x00]
+; ZU-NEXT:    # imm = 0x4D2
+; ZU-NEXT:    # kill: def $ax killed $ax killed $eax
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
   %and = and i16 %t, 1234
@@ -402,6 +562,13 @@ define i32 @and32mi(ptr %a) {
 ; NF-NEXT:    {nf} andl $123456, (%rdi), %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x81,0x27,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and32mi:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movl $123456, %eax # encoding: [0xb8,0x40,0xe2,0x01,0x00]
+; ZU-NEXT:    # imm = 0x1E240
+; ZU-NEXT:    andl (%rdi), %eax # encoding: [0x23,0x07]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i32, ptr %a
   %and = and i32 %t, 123456
@@ -422,6 +589,13 @@ define i64 @and64mi(ptr %a) {
 ; NF-NEXT:    andl $123456, %eax # EVEX TO LEGACY Compression encoding: [0x25,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and64mi:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
+; ZU-NEXT:    andl $123456, %eax # encoding: [0x25,0x40,0xe2,0x01,0x00]
+; ZU-NEXT:    # imm = 0x1E240
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i64, ptr %a
   %and = and i64 %t, 123456
@@ -435,7 +609,7 @@ define i1 @andflag8rr(i8 %a, i8 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notb %sil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xf6,0xd6]
 ; CHECK-NEXT:    andb %al, %dil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x20,0xc7]
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -444,10 +618,19 @@ define i1 @andflag8rr(i8 %a, i8 %b) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    notb %sil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xf6,0xd6]
 ; NF-NEXT:    andb %al, %dil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x20,0xc7]
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag8rr:
+; ZU:       # %bb.0:
+; ZU-NEXT:    notb %sil # encoding: [0x40,0xf6,0xd6]
+; ZU-NEXT:    andb %dil, %sil # encoding: [0x40,0x20,0xfe]
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movb %sil, d64(%rip) # encoding: [0x40,0x88,0x35,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %xor = xor i8 %b, -1
   %v0 = and i8 %a, %xor  ; 0xff << 50
   %v1 = icmp eq i8 %v0, 0
@@ -460,7 +643,7 @@ define i1 @andflag16rr(i16 %a, i16 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; CHECK-NEXT:    andw %ax, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x21,0xc7]
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -469,10 +652,19 @@ define i1 @andflag16rr(i16 %a, i16 %b) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; NF-NEXT:    andw %ax, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x21,0xc7]
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag16rr:
+; ZU:       # %bb.0:
+; ZU-NEXT:    notl %esi # encoding: [0xf7,0xd6]
+; ZU-NEXT:    andw %di, %si # encoding: [0x66,0x21,0xfe]
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movw %si, d64(%rip) # encoding: [0x66,0x89,0x35,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %xor = xor i16 %b, -1
   %v0 = and i16 %a, %xor  ; 0xff << 50
   %v1 = icmp eq i16 %v0, 0
@@ -484,7 +676,7 @@ define i1 @andflag32rr(i32 %a, i32 %b) {
 ; CHECK-LABEL: andflag32rr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x21,0xfe]
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -492,10 +684,18 @@ define i1 @andflag32rr(i32 %a, i32 %b) {
 ; NF-LABEL: andflag32rr:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x21,0xfe]
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag32rr:
+; ZU:       # %bb.0:
+; ZU-NEXT:    andl %esi, %edi # encoding: [0x21,0xf7]
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i32 %a, %b  ; 0xff << 50
   %v1 = icmp eq i32 %v0, 0
   store i32 %v0, ptr @d64
@@ -506,7 +706,7 @@ define i1 @andflag64rr(i64 %a, i64 %b) {
 ; CHECK-LABEL: andflag64rr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andq %rdi, %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x21,0xfe]
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -514,10 +714,18 @@ define i1 @andflag64rr(i64 %a, i64 %b) {
 ; NF-LABEL: andflag64rr:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andq %rdi, %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x21,0xfe]
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag64rr:
+; ZU:       # %bb.0:
+; ZU-NEXT:    andq %rsi, %rdi # encoding: [0x48,0x21,0xf7]
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, %b  ; 0xff << 50
   %v1 = icmp eq i64 %v0, 0
   store i64 %v0, ptr @d64
@@ -529,7 +737,7 @@ define i1 @andflag8rm(ptr %ptr, i8 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notb %sil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xf6,0xd6]
 ; CHECK-NEXT:    andb (%rdi), %al, %cl # encoding: [0x62,0xf4,0x74,0x18,0x22,0x07]
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -538,10 +746,19 @@ define i1 @andflag8rm(ptr %ptr, i8 %b) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    notb %sil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xf6,0xd6]
 ; NF-NEXT:    andb (%rdi), %al, %cl # encoding: [0x62,0xf4,0x74,0x18,0x22,0x07]
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag8rm:
+; ZU:       # %bb.0:
+; ZU-NEXT:    notb %sil # encoding: [0x40,0xf6,0xd6]
+; ZU-NEXT:    andb (%rdi), %sil # encoding: [0x40,0x22,0x37]
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movb %sil, d64(%rip) # encoding: [0x40,0x88,0x35,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %a = load i8, ptr %ptr
   %xor = xor i8 %b, -1
   %v0 = and i8 %a, %xor  ; 0xff << 50
@@ -555,7 +772,7 @@ define i1 @andflag16rm(ptr %ptr, i16 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; CHECK-NEXT:    andw (%rdi), %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x23,0x07]
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -564,10 +781,19 @@ define i1 @andflag16rm(ptr %ptr, i16 %b) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; NF-NEXT:    andw (%rdi), %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x23,0x07]
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag16rm:
+; ZU:       # %bb.0:
+; ZU-NEXT:    notl %esi # encoding: [0xf7,0xd6]
+; ZU-NEXT:    andw (%rdi), %si # encoding: [0x66,0x23,0x37]
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movw %si, d64(%rip) # encoding: [0x66,0x89,0x35,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %a = load i16, ptr %ptr
   %xor = xor i16 %b, -1
   %v0 = and i16 %a, %xor  ; 0xff << 50
@@ -580,7 +806,7 @@ define i1 @andflag32rm(ptr %ptr, i32 %b) {
 ; CHECK-LABEL: andflag32rm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl (%rdi), %esi # EVEX TO LEGACY Compression encoding: [0x23,0x37]
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -588,10 +814,18 @@ define i1 @andflag32rm(ptr %ptr, i32 %b) {
 ; NF-LABEL: andflag32rm:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andl (%rdi), %esi # EVEX TO LEGACY Compression encoding: [0x23,0x37]
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag32rm:
+; ZU:       # %bb.0:
+; ZU-NEXT:    andl (%rdi), %esi # encoding: [0x23,0x37]
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %a = load i32, ptr %ptr
   %v0 = and i32 %a, %b  ; 0xff << 50
   %v1 = icmp eq i32 %v0, 0
@@ -603,7 +837,7 @@ define i1 @andflag64rm(ptr %ptr, i64 %b) {
 ; CHECK-LABEL: andflag64rm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andq (%rdi), %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x23,0x37]
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -611,10 +845,18 @@ define i1 @andflag64rm(ptr %ptr, i64 %b) {
 ; NF-LABEL: andflag64rm:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andq (%rdi), %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x23,0x37]
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag64rm:
+; ZU:       # %bb.0:
+; ZU-NEXT:    andq (%rdi), %rsi # encoding: [0x48,0x23,0x37]
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %a = load i64, ptr %ptr
   %v0 = and i64 %a, %b  ; 0xff << 50
   %v1 = icmp eq i64 %v0, 0
@@ -626,7 +868,7 @@ define i1 @andflag8ri(i8 %a) {
 ; CHECK-LABEL: andflag8ri:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andb $-124, %dil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x80,0xe7,0x84]
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -634,10 +876,18 @@ define i1 @andflag8ri(i8 %a) {
 ; NF-LABEL: andflag8ri:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andb $-124, %dil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x80,0xe7,0x84]
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag8ri:
+; ZU:       # %bb.0:
+; ZU-NEXT:    andb $-124, %dil # encoding: [0x40,0x80,0xe7,0x84]
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movb %dil, d64(%rip) # encoding: [0x40,0x88,0x3d,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %xor = xor i8 123, -1
   %v0 = and i8 %a, %xor  ; 0xff << 50
   %v1 = icmp eq i8 %v0, 0
@@ -650,7 +900,7 @@ define i1 @andflag16ri(i16 %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andw $-1235, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x81,0xe7,0x2d,0xfb]
 ; CHECK-NEXT:    # imm = 0xFB2D
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -659,10 +909,19 @@ define i1 @andflag16ri(i16 %a) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    andw $-1235, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x81,0xe7,0x2d,0xfb]
 ; NF-NEXT:    # imm = 0xFB2D
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag16ri:
+; ZU:       # %bb.0:
+; ZU-NEXT:    andw $-1235, %di # encoding: [0x66,0x81,0xe7,0x2d,0xfb]
+; ZU-NEXT:    # imm = 0xFB2D
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movw %di, d64(%rip) # encoding: [0x66,0x89,0x3d,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %xor = xor i16 1234, -1
   %v0 = and i16 %a, %xor  ; 0xff << 50
   %v1 = icmp eq i16 %v0, 0
@@ -675,7 +934,7 @@ define i1 @andflag32ri(i32 %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $123456, %edi # EVEX TO LEGACY Compression encoding: [0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -684,10 +943,19 @@ define i1 @andflag32ri(i32 %a) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    andl $123456, %edi # EVEX TO LEGACY Compression encoding: [0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag32ri:
+; ZU:       # %bb.0:
+; ZU-NEXT:    andl $123456, %edi # encoding: [0x81,0xe7,0x40,0xe2,0x01,0x00]
+; ZU-NEXT:    # imm = 0x1E240
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i32 %a, 123456  ; 0xff << 50
   %v1 = icmp eq i32 %v0, 0
   store i32 %v0, ptr @d64
@@ -699,7 +967,7 @@ define i1 @andflag64ri(i64 %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andq $123456, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -708,10 +976,19 @@ define i1 @andflag64ri(i64 %a) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    andq $123456, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag64ri:
+; ZU:       # %bb.0:
+; ZU-NEXT:    andq $123456, %rdi # encoding: [0x48,0x81,0xe7,0x40,0xe2,0x01,0x00]
+; ZU-NEXT:    # imm = 0x1E240
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 123456  ; 0xff << 50
   %v1 = icmp eq i64 %v0, 0
   store i64 %v0, ptr @d64
@@ -722,7 +999,7 @@ define i1 @andflag16ri8(i16 %a) {
 ; CHECK-LABEL: andflag16ri8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andw $-124, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xe7,0x84]
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -730,10 +1007,18 @@ define i1 @andflag16ri8(i16 %a) {
 ; NF-LABEL: andflag16ri8:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andw $-124, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xe7,0x84]
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag16ri8:
+; ZU:       # %bb.0:
+; ZU-NEXT:    andw $-124, %di # encoding: [0x66,0x83,0xe7,0x84]
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movw %di, d64(%rip) # encoding: [0x66,0x89,0x3d,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %xor = xor i16 123, -1
   %v0 = and i16 %a, %xor  ; 0xff << 50
   %v1 = icmp eq i16 %v0, 0
@@ -745,7 +1030,7 @@ define i1 @andflag32ri8(i32 %a) {
 ; CHECK-LABEL: andflag32ri8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $123, %edi # EVEX TO LEGACY Compression encoding: [0x83,0xe7,0x7b]
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -753,10 +1038,18 @@ define i1 @andflag32ri8(i32 %a) {
 ; NF-LABEL: andflag32ri8:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andl $123, %edi # EVEX TO LEGACY Compression encoding: [0x83,0xe7,0x7b]
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag32ri8:
+; ZU:       # %bb.0:
+; ZU-NEXT:    andl $123, %edi # encoding: [0x83,0xe7,0x7b]
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i32 %a, 123  ; 0xff << 50
   %v1 = icmp eq i32 %v0, 0
   store i32 %v0, ptr @d64
@@ -767,7 +1060,7 @@ define i1 @andflag64ri8(i64 %a) {
 ; CHECK-LABEL: andflag64ri8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andq $123, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xe7,0x7b]
-; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -775,10 +1068,18 @@ define i1 @andflag64ri8(i64 %a) {
 ; NF-LABEL: andflag64ri8:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andq $123, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xe7,0x7b]
-; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: andflag64ri8:
+; ZU:       # %bb.0:
+; ZU-NEXT:    andq $123, %rdi # encoding: [0x48,0x83,0xe7,0x7b]
+; ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; ZU-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
+; ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 123  ; 0xff << 50
   %v1 = icmp eq i64 %v0, 0
   store i64 %v0, ptr @d64
@@ -795,6 +1096,11 @@ define void @and8mr_legacy(ptr %a, i8 noundef %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    andb %sil, (%rdi) # encoding: [0x40,0x20,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and8mr_legacy:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    andb %sil, (%rdi) # encoding: [0x40,0x20,0x37]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i8, ptr %a
   %and = and i8 %t, %b
@@ -812,6 +1118,11 @@ define void @and16mr_legacy(ptr %a, i16 noundef %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    andw %si, (%rdi) # encoding: [0x66,0x21,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and16mr_legacy:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    andw %si, (%rdi) # encoding: [0x66,0x21,0x37]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
   %and = and i16 %t, %b
@@ -829,6 +1140,11 @@ define void @and32mr_legacy(ptr %a, i32 noundef %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    andl %esi, (%rdi) # encoding: [0x21,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and32mr_legacy:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    andl %esi, (%rdi) # encoding: [0x21,0x37]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i32, ptr %a
   %and = and i32 %t, %b
@@ -846,6 +1162,11 @@ define void @and64mr_legacy(ptr %a, i64 noundef %b) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    andq %rsi, (%rdi) # encoding: [0x48,0x21,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and64mr_legacy:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    andq %rsi, (%rdi) # encoding: [0x48,0x21,0x37]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i64, ptr %a
   %and = and i64 %t, %b
@@ -863,6 +1184,11 @@ define void @and8mi_legacy(ptr %a) {
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    andb $123, (%rdi) # encoding: [0x80,0x27,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and8mi_legacy:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    andb $123, (%rdi) # encoding: [0x80,0x27,0x7b]
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i8, ptr %a
   %and = and i8 %t, 123
@@ -882,6 +1208,12 @@ define void @and16mi_legacy(ptr %a) {
 ; NF-NEXT:    andw $1234, (%rdi) # encoding: [0x66,0x81,0x27,0xd2,0x04]
 ; NF-NEXT:    # imm = 0x4D2
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and16mi_legacy:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    andw $1234, (%rdi) # encoding: [0x66,0x81,0x27,0xd2,0x04]
+; ZU-NEXT:    # imm = 0x4D2
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
   %and = and i16 %t, 1234
@@ -901,6 +1233,12 @@ define void @and32mi_legacy(ptr %a) {
 ; NF-NEXT:    andl $123456, (%rdi) # encoding: [0x81,0x27,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and32mi_legacy:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    andl $123456, (%rdi) # encoding: [0x81,0x27,0x40,0xe2,0x01,0x00]
+; ZU-NEXT:    # imm = 0x1E240
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i32, ptr %a
   %and = and i32 %t, 123456
@@ -920,6 +1258,12 @@ define void @and64mi_legacy(ptr %a) {
 ; NF-NEXT:    andq $123456, (%rdi) # encoding: [0x48,0x81,0x27,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
 ; NF-NEXT:    retq # encoding: [0xc3]
+;
+; ZU-LABEL: and64mi_legacy:
+; ZU:       # %bb.0: # %entry
+; ZU-NEXT:    andq $123456, (%rdi) # encoding: [0x48,0x81,0x27,0x40,0xe2,0x01,0x00]
+; ZU-NEXT:    # imm = 0x1E240
+; ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i64, ptr %a
   %and = and i64 %t, 123456
