@@ -4191,6 +4191,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // We apply the same permutation (argument index 1) to the shadows.
   void handleAVXVpermil2var(IntrinsicInst &I) {
     assert(I.arg_size() == 3);
+    assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
+    assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
+    assert(isa<FixedVectorType>(I.getArgOperand(2)->getType()));
+    [[maybe_unused]] auto ArgVectorSize =
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
+    assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
+               ->getNumElements() == ArgVectorSize);
+    assert(cast<FixedVectorType>(I.getArgOperand(2)->getType())
+               ->getNumElements() == ArgVectorSize);
     assert(I.getArgOperand(0)->getType() == I.getArgOperand(2)->getType());
     assert(I.getType() == I.getArgOperand(0)->getType());
     assert(I.getArgOperand(1)->getType()->isIntOrIntVectorTy());
