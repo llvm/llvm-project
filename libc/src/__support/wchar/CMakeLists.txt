@@ -15,12 +15,6 @@ add_object_library(
   DEPENDS
     libc.hdr.types.char8_t
     libc.hdr.types.char32_t
+    libc.src.__support.error_or
     .mbstate
-    .utf_ret
-)
-
-add_header_library(
-  utf_ret
-  HDRS
-    utf_ret.h
 )
