@@ -604,6 +604,7 @@ foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
 
   let Latency = 4 in {
     defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVRGatherVI", [SMX60_VIEU], mx, IsWorstCase>;
   }
 }
 
@@ -624,6 +625,7 @@ foreach mx = ["M2", "M4", "M8"] in {
 
   let Latency = !mul(LMulLat, 2) in {
     defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVRGatherVI", [SMX60_VIEU], mx, IsWorstCase>;
   }
 }
 
@@ -635,13 +637,6 @@ foreach mx = ["M2", "M4", "M8"] in {
     defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SMX60_VIEU], mx, sew, IsWorstCase>;
   }
-}
-
-// Simple Vrgather.vi
-foreach mx = SchedMxList in {
-  defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
-
-  defm "" : LMULWriteResMX<"WriteVRGatherVI", [SMX60_VIEU], mx, IsWorstCase>;
 }
 
 // Others
