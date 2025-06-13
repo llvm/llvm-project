@@ -2694,7 +2694,11 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM(8)
         CASE_OPERAND_UIMM(10)
         CASE_OPERAND_UIMM(12)
+        CASE_OPERAND_UIMM(16)
         CASE_OPERAND_UIMM(20)
+        CASE_OPERAND_UIMM(32)
+        CASE_OPERAND_UIMM(48)
+        CASE_OPERAND_UIMM(64)
           // clang-format on
         case RISCVOp::OPERAND_UIMM2_LSB0:
           Ok = isShiftedUInt<1, 1>(Imm);
@@ -4562,11 +4566,6 @@ RISCV::isRVVSpillForZvlsseg(unsigned Opcode) {
   case RISCV::PseudoVRELOAD8_M1:
     return std::make_pair(8u, 1u);
   }
-}
-
-bool RISCV::isFaultFirstLoad(const MachineInstr &MI) {
-  return MI.getNumExplicitDefs() == 2 &&
-         MI.modifiesRegister(RISCV::VL, /*TRI=*/nullptr) && !MI.isInlineAsm();
 }
 
 bool RISCV::hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2) {

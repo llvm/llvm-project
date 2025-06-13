@@ -60,6 +60,13 @@ CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
   return *this;
 }
 
+/// Returns the canonical formal type of the given C++ method.
+static CanQual<FunctionProtoType> getFormalType(const CXXMethodDecl *md) {
+  return md->getType()
+      ->getCanonicalTypeUnqualified()
+      .getAs<FunctionProtoType>();
+}
+
 /// Adds the formal parameters in FPT to the given prefix. If any parameter in
 /// FPT has pass_object_size_attrs, then we'll add parameters for those, too.
 /// TODO(cir): this should be shared with LLVM codegen
@@ -74,6 +81,48 @@ static void appendParameterTypes(const CIRGenTypes &cgt,
   }
 
   cgt.getCGModule().errorNYI("appendParameterTypes: hasExtParameterInfos");
+}
+
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
+  auto *md = cast<CXXMethodDecl>(gd.getDecl());
+
+  llvm::SmallVector<CanQualType, 16> argTypes;
+  argTypes.push_back(deriveThisType(md->getParent(), md));
+
+  bool passParams = true;
+
+  if (auto *cd = dyn_cast<CXXConstructorDecl>(md)) {
+    // A base class inheriting constructor doesn't get forwarded arguments
+    // needed to construct a virtual base (or base class thereof)
+    if (cd->getInheritedConstructor())
+      cgm.errorNYI(cd->getSourceRange(),
+                   "arrangeCXXStructorDeclaration: inheriting constructor");
+  }
+
+  CanQual<FunctionProtoType> fpt = getFormalType(md);
+
+  if (passParams)
+    appendParameterTypes(*this, argTypes, fpt);
+
+  assert(!cir::MissingFeatures::implicitConstructorArgs());
+
+  RequiredArgs required =
+      (passParams && md->isVariadic() ? RequiredArgs(argTypes.size())
+                                      : RequiredArgs::All);
+
+  CanQualType resultType = theCXXABI.hasThisReturn(gd) ? argTypes.front()
+                           : theCXXABI.hasMostDerivedReturn(gd)
+                               ? astContext.VoidPtrTy
+                               : astContext.VoidTy;
+
+  assert(!theCXXABI.hasThisReturn(gd) &&
+         "Please send PR with a test and remove this");
+
+  assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
+  assert(!cir::MissingFeatures::opCallFnInfoOpts());
+
+  return arrangeCIRFunctionInfo(resultType, argTypes, required);
 }
 
 /// Derives the 'this' type for CIRGen purposes, i.e. ignoring method CVR
@@ -103,14 +152,54 @@ CanQualType CIRGenTypes::deriveThisType(const CXXRecordDecl *rd,
 /// top of any implicit parameters already stored.
 static const CIRGenFunctionInfo &
 arrangeCIRFunctionInfo(CIRGenTypes &cgt, SmallVectorImpl<CanQualType> &prefix,
-                       CanQual<FunctionProtoType> ftp) {
+                       CanQual<FunctionProtoType> fpt) {
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   RequiredArgs required =
-      RequiredArgs::getFromProtoWithExtraSlots(ftp, prefix.size());
+      RequiredArgs::getFromProtoWithExtraSlots(fpt, prefix.size());
   assert(!cir::MissingFeatures::opCallExtParameterInfo());
-  appendParameterTypes(cgt, prefix, ftp);
-  CanQualType resultType = ftp->getReturnType().getUnqualifiedType();
+  appendParameterTypes(cgt, prefix, fpt);
+  CanQualType resultType = fpt->getReturnType().getUnqualifiedType();
   return cgt.arrangeCIRFunctionInfo(resultType, prefix, required);
+}
+
+void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
+                                         const VarDecl *param,
+                                         SourceLocation loc) {
+  // StartFunction converted the ABI-lowered parameter(s) into a local alloca.
+  // We need to turn that into an r-value suitable for emitCall
+  Address local = getAddrOfLocalVar(param);
+
+  QualType type = param->getType();
+
+  if (type->getAsCXXRecordDecl()) {
+    cgm.errorNYI(param->getSourceRange(),
+                 "emitDelegateCallArg: record argument");
+    return;
+  }
+
+  // GetAddrOfLocalVar returns a pointer-to-pointer for references, but the
+  // argument needs to be the original pointer.
+  if (type->isReferenceType()) {
+    args.add(
+        RValue::get(builder.createLoad(getLoc(param->getSourceRange()), local)),
+        type);
+  } else if (getLangOpts().ObjCAutoRefCount) {
+    cgm.errorNYI(param->getSourceRange(),
+                 "emitDelegateCallArg: ObjCAutoRefCount");
+    // For the most part, we just need to load the alloca, except that aggregate
+    // r-values are actually pointers to temporaries.
+  } else {
+    args.add(convertTempToRValue(local, type, loc), type);
+  }
+
+  // Deactivate the cleanup for the callee-destructed param that was pushed.
+  assert(!cir::MissingFeatures::thunks());
+  if (type->isRecordType() &&
+      type->castAs<RecordType>()->getDecl()->isParamDestroyedInCallee() &&
+      param->needsDestruction(getContext())) {
+    cgm.errorNYI(param->getSourceRange(),
+                 "emitDelegateCallArg: callee-destructed param");
+  }
 }
 
 static const CIRGenFunctionInfo &
@@ -139,6 +228,44 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   return cgt.arrangeCIRFunctionInfo(retType, argTypes, required);
+}
+
+/// Arrange a call to a C++ method, passing the given arguments.
+///
+/// passProtoArgs indicates whether `args` has args for the parameters in the
+/// given CXXConstructorDecl.
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
+    const CallArgList &args, const CXXConstructorDecl *d, CXXCtorType ctorKind,
+    bool passProtoArgs) {
+
+  // FIXME: Kill copy.
+  llvm::SmallVector<CanQualType, 16> argTypes;
+  for (const auto &arg : args)
+    argTypes.push_back(astContext.getCanonicalParamType(arg.ty));
+
+  assert(!cir::MissingFeatures::implicitConstructorArgs());
+  // +1 for implicit this, which should always be args[0]
+  unsigned totalPrefixArgs = 1;
+
+  CanQual<FunctionProtoType> fpt = getFormalType(d);
+  RequiredArgs required =
+      passProtoArgs
+          ? RequiredArgs::getFromProtoWithExtraSlots(fpt, totalPrefixArgs)
+          : RequiredArgs::All;
+
+  GlobalDecl gd(d, ctorKind);
+  if (theCXXABI.hasThisReturn(gd))
+    cgm.errorNYI(d->getSourceRange(),
+                 "arrangeCXXConstructorCall: hasThisReturn");
+  if (theCXXABI.hasMostDerivedReturn(gd))
+    cgm.errorNYI(d->getSourceRange(),
+                 "arrangeCXXConstructorCall: hasMostDerivedReturn");
+  CanQualType resultType = astContext.VoidTy;
+
+  assert(!cir::MissingFeatures::opCallFnInfoOpts());
+  assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
+
+  return arrangeCIRFunctionInfo(resultType, argTypes, required);
 }
 
 /// Arrange a call to a C++ method, passing the given arguments.
@@ -198,7 +325,7 @@ CIRGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *md) {
 /// constructor or destructor.
 const CIRGenFunctionInfo &
 CIRGenTypes::arrangeCXXMethodType(const CXXRecordDecl *rd,
-                                  const FunctionProtoType *ftp,
+                                  const FunctionProtoType *fpt,
                                   const CXXMethodDecl *md) {
   llvm::SmallVector<CanQualType, 16> argTypes;
 
@@ -208,7 +335,7 @@ CIRGenTypes::arrangeCXXMethodType(const CXXRecordDecl *rd,
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   return ::arrangeCIRFunctionInfo(
       *this, argTypes,
-      ftp->getCanonicalTypeUnqualified().getAs<FunctionProtoType>());
+      fpt->getCanonicalTypeUnqualified().getAs<FunctionProtoType>());
 }
 
 /// Arrange the argument and result information for the declaration or

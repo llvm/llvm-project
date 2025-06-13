@@ -36,7 +36,7 @@ def InstB : TestInstruction {
 // CHECK-NEXT: /* 5 */       MCD::OPC_ExtractField, 5, 3,  // Inst{7-5} ...
 // CHECK-NEXT: /* 8 */       MCD::OPC_FilterValueOrFail, 0
 // CHECK-NEXT: /* 10 */      MCD::OPC_CheckField, 0, 2, 3, 6, 0, // Skip to: 22
-// CHECK-NEXT: /* 16 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0, 0, 0, // Opcode: InstB, Skip to: 22
+// CHECK-NEXT: /* 16 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0, 0, 0, // Opcode: InstB, DecodeIdx: {{[0-9]+}}, Skip to: 22
 // CHECK-NEXT: /* 22 */      MCD::OPC_CheckFieldOrFail, 3, 2, 0,
 // CHECK-NEXT: /* 26 */      MCD::OPC_TryDecodeOrFail, {{[0-9]+}}, {{[0-9]+}}, 1,
 // CHECK-NEXT: /* 30 */      MCD::OPC_Fail,
@@ -49,7 +49,7 @@ def InstB : TestInstruction {
 // CHECK-LARGE-NEXT: /* 5 */       MCD::OPC_ExtractField, 5, 3,  // Inst{7-5} ...
 // CHECK-LARGE-NEXT: /* 8 */       MCD::OPC_FilterValueOrFail, 0,
 // CHECK-LARGE-NEXT: /* 10 */      MCD::OPC_CheckField, 0, 2, 3, 7, 0, 0, // Skip to: 24
-// CHECK-LARGE-NEXT: /* 17 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0, 0, 0, 0, // Opcode: InstB, Skip to: 24
+// CHECK-LARGE-NEXT: /* 17 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0, 0, 0, 0, // Opcode: InstB, DecodeIdx: {{[0-9]+}}, Skip to: 24
 // CHECK-LARGE-NEXT: /* 24 */      MCD::OPC_CheckFieldOrFail, 3, 2, 0,
 // CHECK-LARGE-NEXT: /* 28 */      MCD::OPC_TryDecodeOrFail, {{[0-9]+}}, {{[0-9]+}}, 1,
 // CHECK-LARGE-NEXT: /* 32 */      MCD::OPC_Fail,

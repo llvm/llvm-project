@@ -654,293 +654,484 @@ merge:
 
 define i32 @test_phi_to_zext(i8 noundef %0) {
 ; CHECK-LABEL: @test_phi_to_zext(
-; CHECK-NEXT:  start:
-; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[BB2:%.*]] [
-; CHECK-NEXT:      i8 -1, label [[BB3:%.*]]
-; CHECK-NEXT:      i8 0, label [[BB4:%.*]]
-; CHECK-NEXT:      i8 1, label [[BB1:%.*]]
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[SW_255:%.*]]
+; CHECK-NEXT:      i8 0, label [[SW_0:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       bb2:
+; CHECK:       default:
 ; CHECK-NEXT:    unreachable
-; CHECK:       bb3:
-; CHECK-NEXT:    br label [[BB5:%.*]]
-; CHECK:       bb4:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB1]] ], [ 0, [[BB4]] ], [ 255, [[BB3]] ]
+; CHECK:       sw.255:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       sw.0:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       sw.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[SW_1]] ], [ 0, [[SW_0]] ], [ 255, [[SW_255]] ]
 ; CHECK-NEXT:    ret i32 [[DOT0]]
 ;
-start:
-  switch i8 %0, label %bb2 [
-  i8 -1, label %bb3
-  i8 0, label %bb4
-  i8 1, label %bb1
+entry:
+  switch i8 %0, label %default [
+  i8 255, label %sw.255
+  i8 0, label %sw.0
+  i8 1, label %sw.1
   ]
 
-bb2:                                              ; preds = %start
+default:
   unreachable
 
-bb3:                                              ; preds = %start
-  br label %bb5
+sw.255:
+  br label %merge
 
-bb4:                                              ; preds = %start
-  br label %bb5
+sw.0:
+  br label %merge
 
-bb1:                                              ; preds = %start
-  br label %bb5
+sw.1:
+  br label %merge
 
-bb5:                                              ; preds = %bb1, %bb4, %bb3
-  %.0 = phi i32 [ 1, %bb1 ], [ 0, %bb4 ], [ 255, %bb3 ]
+merge:
+  %.0 = phi i32 [ 1, %sw.1 ], [ 0, %sw.0 ], [ 255, %sw.255 ]
   ret i32 %.0
+}
+
+define i32 @test_phi_to_zext_inverted(i8 noundef %0) {
+; CHECK-LABEL: @test_phi_to_zext_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[SW_255:%.*]]
+; CHECK-NEXT:      i8 0, label [[SW_0:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    unreachable
+; CHECK:       sw.255:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       sw.0:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       sw.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ -256, [[SW_255]] ], [ -2, [[SW_1]] ], [ -1, [[SW_0]] ]
+; CHECK-NEXT:    ret i32 [[DOT0]]
+;
+entry:
+  switch i8 %0, label %default [
+  i8 255, label %sw.255
+  i8 0, label %sw.0
+  i8 1, label %sw.1
+  ]
+
+default:
+  unreachable
+
+sw.255:
+  br label %merge
+
+sw.0:
+  br label %merge
+
+sw.1:
+  br label %merge
+
+merge:
+  %.0 = phi i32  [ -256, %sw.255 ], [ -2, %sw.1 ], [ -1, %sw.0 ]
+  ret i32 %.0
+}
+
+define i8 @test_multiple_predecessors_phi_to_zext(i1 %cond, i1 %cond2) {
+; CHECK-LABEL: @test_multiple_predecessors_phi_to_zext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF2_TRUE:%.*]], label [[IF2_FALSE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if2.true:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       if2.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ 0, [[IF_FALSE]] ], [ 1, [[IF2_TRUE]] ], [ 1, [[IF2_FALSE]] ]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br i1 %cond2, label %if2.true, label %if2.false
+
+if.false:
+  br label %merge
+
+if2.true:
+  br label %merge
+
+if2.false:
+  br label %merge
+
+merge:
+  %ret = phi i8 [ 0, %if.false ], [ 1, %if2.true ], [ 1, %if2.false ]
+  ret i8 %ret
 }
 
 define i32 @test_phi_to_sext(i8 noundef %0) {
 ; CHECK-LABEL: @test_phi_to_sext(
-; CHECK-NEXT:  start:
-; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[BB2:%.*]] [
-; CHECK-NEXT:      i8 -1, label [[BB3:%.*]]
-; CHECK-NEXT:      i8 0, label [[BB4:%.*]]
-; CHECK-NEXT:      i8 1, label [[BB1:%.*]]
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[SW_255:%.*]]
+; CHECK-NEXT:      i8 0, label [[SW_0:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       bb2:
+; CHECK:       default:
 ; CHECK-NEXT:    unreachable
-; CHECK:       bb3:
-; CHECK-NEXT:    br label [[BB5:%.*]]
-; CHECK:       bb4:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB1]] ], [ 0, [[BB4]] ], [ -1, [[BB3]] ]
+; CHECK:       sw.255:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       sw.0:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       sw.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[SW_1]] ], [ 0, [[SW_0]] ], [ -1, [[SW_255]] ]
 ; CHECK-NEXT:    ret i32 [[DOT0]]
 ;
-start:
-  switch i8 %0, label %bb2 [
-  i8 -1, label %bb3
-  i8 0, label %bb4
-  i8 1, label %bb1
+entry:
+  switch i8 %0, label %default [
+  i8 255, label %sw.255
+  i8 0, label %sw.0
+  i8 1, label %sw.1
   ]
 
-bb2:                                              ; preds = %start
+default:
   unreachable
 
-bb3:                                              ; preds = %start
-  br label %bb5
+sw.255:
+  br label %merge
 
-bb4:                                              ; preds = %start
-  br label %bb5
+sw.0:
+  br label %merge
 
-bb1:                                              ; preds = %start
-  br label %bb5
+sw.1:
+  br label %merge
 
-bb5:                                              ; preds = %bb1, %bb4, %bb3
-  %.0 = phi i32 [ 1, %bb1 ], [ 0, %bb4 ], [ -1, %bb3 ]
+merge:
+  %.0 = phi i32 [ 1, %sw.1 ], [ 0, %sw.0 ], [ -1, %sw.255 ]
   ret i32 %.0
 }
 
 define i32 @test_phi_to_sext_inverted(i8 noundef %0) {
 ; CHECK-LABEL: @test_phi_to_sext_inverted(
-; CHECK-NEXT:  start:
-; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[BB2:%.*]] [
-; CHECK-NEXT:      i8 -1, label [[BB3:%.*]]
-; CHECK-NEXT:      i8 0, label [[BB4:%.*]]
-; CHECK-NEXT:      i8 1, label [[BB1:%.*]]
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[SW_255:%.*]]
+; CHECK-NEXT:      i8 0, label [[SW_0:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       bb2:
+; CHECK:       default:
 ; CHECK-NEXT:    unreachable
-; CHECK:       bb3:
-; CHECK-NEXT:    br label [[BB5:%.*]]
-; CHECK:       bb4:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ -2, [[BB1]] ], [ -1, [[BB4]] ], [ 0, [[BB3]] ]
+; CHECK:       sw.255:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       sw.0:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       sw.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ -2, [[SW_1]] ], [ -1, [[SW_0]] ], [ 0, [[SW_255]] ]
 ; CHECK-NEXT:    ret i32 [[DOT0]]
 ;
-start:
-  switch i8 %0, label %bb2 [
-  i8 -1, label %bb3
-  i8 0, label %bb4
-  i8 1, label %bb1
+entry:
+  switch i8 %0, label %default [
+  i8 255, label %sw.255
+  i8 0, label %sw.0
+  i8 1, label %sw.1
   ]
 
-bb2:                                              ; preds = %start
+default:
   unreachable
 
-bb3:                                              ; preds = %start
-  br label %bb5
+sw.255:
+  br label %merge
 
-bb4:                                              ; preds = %start
-  br label %bb5
+sw.0:
+  br label %merge
 
-bb1:                                              ; preds = %start
-  br label %bb5
+sw.1:
+  br label %merge
 
-bb5:                                              ; preds = %bb1, %bb4, %bb3
-  %.0 = phi i32 [ -2, %bb1 ], [ -1, %bb4 ], [ 0, %bb3 ]
+merge:
+  %.0 = phi i32 [ -2, %sw.1 ], [ -1, %sw.0 ], [ 0, %sw.255 ]
   ret i32 %.0
+}
+
+define i8 @test_multiple_predecessors_phi_to_sext(i1 %cond, i1 %cond2) {
+; CHECK-LABEL: @test_multiple_predecessors_phi_to_sext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF2_TRUE:%.*]], label [[IF2_FALSE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if2.true:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       if2.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ 0, [[IF_FALSE]] ], [ -1, [[IF2_TRUE]] ], [ -1, [[IF2_FALSE]] ]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br i1 %cond2, label %if2.true, label %if2.false
+
+if.false:
+  br label %merge
+
+if2.true:
+  br label %merge
+
+if2.false:
+  br label %merge
+
+merge:
+  %ret = phi i8 [ 0, %if.false ], [ -1, %if2.true ], [ -1, %if2.false ]
+  ret i8 %ret
 }
 
 define i32 @test_neg_value_not_possible_to_zext_or_sext(i8 noundef %0) {
 ; CHECK-LABEL: @test_neg_value_not_possible_to_zext_or_sext(
-; CHECK-NEXT:  start:
-; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[BB2:%.*]] [
-; CHECK-NEXT:      i8 -1, label [[BB3:%.*]]
-; CHECK-NEXT:      i8 0, label [[BB4:%.*]]
-; CHECK-NEXT:      i8 1, label [[BB1:%.*]]
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[SW_255:%.*]]
+; CHECK-NEXT:      i8 0, label [[SW_0:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       bb2:
+; CHECK:       default:
 ; CHECK-NEXT:    unreachable
-; CHECK:       bb3:
-; CHECK-NEXT:    br label [[BB5:%.*]]
-; CHECK:       bb4:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB1]] ], [ 0, [[BB4]] ], [ 511, [[BB3]] ]
+; CHECK:       sw.255:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       sw.0:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       sw.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[SW_1]] ], [ 0, [[SW_0]] ], [ 511, [[SW_255]] ]
 ; CHECK-NEXT:    ret i32 [[DOT0]]
 ;
-start:
-  switch i8 %0, label %bb2 [
-  i8 -1, label %bb3
-  i8 0, label %bb4
-  i8 1, label %bb1
+entry:
+  switch i8 %0, label %default [
+  i8 255, label %sw.255
+  i8 0, label %sw.0
+  i8 1, label %sw.1
   ]
 
-bb2:                                              ; preds = %start
+default:
   unreachable
 
-bb3:                                              ; preds = %start
-  br label %bb5
+sw.255:
+  br label %merge
 
-bb4:                                              ; preds = %start
-  br label %bb5
+sw.0:
+  br label %merge
 
-bb1:                                              ; preds = %start
-  br label %bb5
+sw.1:
+  br label %merge
 
-bb5:                                              ; preds = %bb1, %bb4, %bb3
-  %.0 = phi i32 [ 1, %bb1 ], [ 0, %bb4 ], [ 511, %bb3 ]
+merge:
+  %.0 = phi i32 [ 1, %sw.1 ], [ 0, %sw.0 ], [ 511, %sw.255 ]
   ret i32 %.0
+}
+
+define i8 @test_neg_multiple_predecessors_value_not_possible_to_zext_or_sext(i1 %cond, i1 %cond2) {
+; CHECK-LABEL: @test_neg_multiple_predecessors_value_not_possible_to_zext_or_sext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF2_TRUE:%.*]], label [[IF2_FALSE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if2.true:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       if2.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ 0, [[IF_FALSE]] ], [ 1, [[IF2_TRUE]] ], [ -1, [[IF2_FALSE]] ]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br i1 %cond2, label %if2.true, label %if2.false
+
+if.false:
+  br label %merge
+
+if2.true:
+  br label %merge
+
+if2.false:
+  br label %merge
+
+merge:
+  %ret = phi i8 [ 0, %if.false ], [ 1, %if2.true ], [ -1, %if2.false ]
+  ret i8 %ret
 }
 
 define i8 @test_phi_to_trunc(i32 %0) {
 ; CHECK-LABEL: @test_phi_to_trunc(
-; CHECK-NEXT:  start:
-; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[BB2:%.*]] [
-; CHECK-NEXT:      i32 0, label [[BB5:%.*]]
-; CHECK-NEXT:      i32 1, label [[BB4:%.*]]
-; CHECK-NEXT:      i32 255, label [[BB1:%.*]]
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[MERGE:%.*]]
+; CHECK-NEXT:      i32 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i32 255, label [[SW_255:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       bb2:
+; CHECK:       default:
 ; CHECK-NEXT:    unreachable
-; CHECK:       bb4:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ -1, [[BB1]] ], [ 1, [[BB4]] ], [ 0, [[START:%.*]] ]
+; CHECK:       sw.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       sw.255:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ -1, [[SW_255]] ], [ 1, [[SW_1]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[DOT0]]
 ;
-start:
-  switch i32 %0, label %bb2 [
-  i32 0, label %bb5
-  i32 1, label %bb4
-  i32 255, label %bb1
+entry:
+  switch i32 %0, label %default [
+  i32 0, label %merge
+  i32 1, label %sw.1
+  i32 255, label %sw.255
   ]
 
-bb2:                                              ; preds = %start
+default:
   unreachable
 
-bb4:                                              ; preds = %start
-  br label %bb5
+sw.1:
+  br label %merge
 
-bb1:                                              ; preds = %start
-  br label %bb5
+sw.255:
+  br label %merge
 
-bb5:                                              ; preds = %start, %bb1, %bb4
-  %.0 = phi i8 [ -1, %bb1 ], [ 1, %bb4 ], [ 0, %start ]
+merge:
+  %.0 = phi i8 [ -1, %sw.255 ], [ 1, %sw.1 ], [ 0, %entry ]
   ret i8 %.0
 }
 
 define i8 @test_phi_to_trunc_inverted(i32 %0) {
 ; CHECK-LABEL: @test_phi_to_trunc_inverted(
-; CHECK-NEXT:  start:
-; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[BB2:%.*]] [
-; CHECK-NEXT:      i32 0, label [[BB5:%.*]]
-; CHECK-NEXT:      i32 1, label [[BB4:%.*]]
-; CHECK-NEXT:      i32 255, label [[BB1:%.*]]
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[MERGE:%.*]]
+; CHECK-NEXT:      i32 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i32 255, label [[SW_255:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       bb2:
+; CHECK:       default:
 ; CHECK-NEXT:    unreachable
-; CHECK:       bb4:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ 0, [[BB1]] ], [ -2, [[BB4]] ], [ -1, [[START:%.*]] ]
+; CHECK:       sw.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       sw.255:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ 0, [[SW_255]] ], [ -2, [[SW_1]] ], [ -1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[DOT0]]
 ;
-start:
-  switch i32 %0, label %bb2 [
-  i32 0, label %bb5
-  i32 1, label %bb4
-  i32 255, label %bb1
+entry:
+  switch i32 %0, label %default [
+  i32 0, label %merge
+  i32 1, label %sw.1
+  i32 255, label %sw.255
   ]
 
-bb2:                                              ; preds = %start
+default:
   unreachable
 
-bb4:                                              ; preds = %start
-  br label %bb5
+sw.1:
+  br label %merge
 
-bb1:                                              ; preds = %start
-  br label %bb5
+sw.255:
+  br label %merge
 
-bb5:                                              ; preds = %start, %bb1, %bb4
-  %.0 = phi i8 [ 0, %bb1 ], [ -2, %bb4 ], [ -1, %start ]
+merge:
+  %.0 = phi i8 [ 0, %sw.255 ], [ -2, %sw.1 ], [ -1, %entry ]
   ret i8 %.0
 }
 
-define i8 @test_neg_value_not_possible_to_trunc(i32 %0) {
-; CHECK-LABEL: @test_neg_value_not_possible_to_trunc(
-; CHECK-NEXT:  start:
-; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[BB2:%.*]] [
-; CHECK-NEXT:      i32 0, label [[BB5:%.*]]
-; CHECK-NEXT:      i32 1, label [[BB4:%.*]]
-; CHECK-NEXT:      i32 511, label [[BB1:%.*]]
+define i8 @test_neg_phi_to_trunc(i32 %0) {
+; CHECK-LABEL: @test_neg_phi_to_trunc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[MERGE:%.*]]
+; CHECK-NEXT:      i32 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i32 511, label [[SW_511:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       bb2:
+; CHECK:       default:
 ; CHECK-NEXT:    unreachable
-; CHECK:       bb4:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ -1, [[BB1]] ], [ 1, [[BB4]] ], [ 0, [[START:%.*]] ]
+; CHECK:       sw.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       sw.511:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ 2, [[SW_511]] ], [ 1, [[SW_1]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[DOT0]]
 ;
-start:
-  switch i32 %0, label %bb2 [
-  i32 0, label %bb5
-  i32 1, label %bb4
-  i32 511, label %bb1
+entry:
+  switch i32 %0, label %default [
+  i32 0, label %merge
+  i32 1, label %sw.1
+  i32 511, label %sw.511
   ]
 
-bb2:                                              ; preds = %start
+default:
   unreachable
 
-bb4:                                              ; preds = %start
-  br label %bb5
+sw.1:
+  br label %merge
 
-bb1:                                              ; preds = %start
-  br label %bb5
+sw.511:
+  br label %merge
 
-bb5:                                              ; preds = %start, %bb1, %bb4
-  %.0 = phi i8 [ 255, %bb1 ], [ 1, %bb4 ], [ 0, %start ]
+merge:
+  %.0 = phi i8 [ 2, %sw.511 ], [ 1, %sw.1 ], [ 0, %entry ]
+  ret i8 %.0
+}
+
+define i8 @test_neg_phi_to_trunc_multiple_values_trunc_to_same_value(i32 %0) {
+; CHECK-LABEL: @test_neg_phi_to_trunc_multiple_values_trunc_to_same_value(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[MERGE:%.*]]
+; CHECK-NEXT:      i32 255, label [[SW_255:%.*]]
+; CHECK-NEXT:      i32 511, label [[SW_511:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    unreachable
+; CHECK:       sw.255:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       sw.511:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ -1, [[SW_255]] ], [ -1, [[SW_511]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i8 [[DOT0]]
+;
+entry:
+  switch i32 %0, label %default [
+  i32 0, label %merge
+  i32 255, label %sw.255
+  i32 511, label %sw.511
+  ]
+
+default:
+  unreachable
+
+sw.255:
+  br label %merge
+
+sw.511:
+  br label %merge
+
+merge:
+  %.0 = phi i8 [ -1, %sw.255 ], [ -1, %sw.511 ], [ 0, %entry ]
   ret i8 %.0
 }
