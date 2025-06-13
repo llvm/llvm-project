@@ -201,6 +201,25 @@ define <2 x float> @sqrt_exp_vec(<2 x float> %x) {
   ret <2 x float> %res
 }
 
+define dso_local fp128 @sqrt_exp_long_double(fp128 %x, fp128 %y) {
+; CHECK-LABEL: @sqrt_exp_long_double(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MERGED_SQRT:%.*]] = fmul fast fp128 [[X:%.*]], 0xL00000000000000003FFE000000000000
+; CHECK-NEXT:    [[TMP0:%.*]] = call fast fp128 @llvm.exp.f128(fp128 [[MERGED_SQRT]])
+; CHECK-NEXT:    [[MERGED_SQRT1:%.*]] = fmul fast fp128 [[Y:%.*]], 0xL00000000000000003FFE000000000000
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast fp128 @llvm.exp2.f128(fp128 [[MERGED_SQRT1]])
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast fp128 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    ret fp128 [[ADD]]
+;
+entry:
+  %0 = call fast fp128 @llvm.exp.f128(fp128 %x)
+  %1 = call fast fp128 @llvm.sqrt.f128(fp128 %0)
+  %2 = call fast fp128 @llvm.exp2.f128(fp128 %y)
+  %3 = call fast fp128 @llvm.sqrt.f128(fp128 %2)
+  %add = fadd fast fp128 %1, %3
+  ret fp128 %add
+}
+
 declare i32 @foo(double)
 declare double @sqrt(double) readnone
 declare float @sqrtf(float)
@@ -212,3 +231,6 @@ declare double @exp2(double)
 declare double @exp10(double)
 declare <2 x float> @llvm.exp.v2f32(<2 x float>)
 declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)
+declare fp128 @llvm.exp.f128(fp128)
+declare fp128 @llvm.sqrt.f128(fp128)
+declare fp128 @llvm.exp2.f128(fp128)
