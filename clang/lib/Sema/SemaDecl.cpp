@@ -13518,8 +13518,28 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
 
   // If the object isn't hidden, the dynamic linker will prevent duplication.
   clang::LinkageInfo Lnk = Target->getLinkageAndVisibility();
-  if (Lnk.getVisibility() != HiddenVisibility)
+
+  // The target is "hidden" (from the dynamic linker) if:
+  // 1. On posix, it has hidden visibility, or
+  // 2. On windows, it has no import/export annotation
+  if (Context.getTargetInfo().shouldDLLImportComdatSymbols()) {
+    if (Target->hasAttr<DLLExportAttr>() || Target->hasAttr<DLLImportAttr>())
+      return false;
+
+    // If the variable isn't directly annotated, check to see if it's a member
+    // of an annotated class.
+    const VarDecl *VD = dyn_cast<VarDecl>(Target);
+
+    if (VD && VD->isStaticDataMember()) {
+      const CXXRecordDecl *Ctx = dyn_cast<CXXRecordDecl>(VD->getDeclContext());
+      if (Ctx &&
+          (Ctx->hasAttr<DLLExportAttr>() || Ctx->hasAttr<DLLImportAttr>()))
+        return false;
+    }
+  } else if (Lnk.getVisibility() != HiddenVisibility) {
+    // Posix case
     return false;
+  }
 
   // If the obj doesn't have external linkage, it's supposed to be duplicated.
   if (!isExternalFormalLinkage(Lnk.getLinkage()))
@@ -13550,19 +13570,16 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
   // duplicated when built into a shared library, which causes problems if it's
   // mutable (since the copies won't be in sync) or its initialization has side
   // effects (since it will run once per copy instead of once globally).
-  // FIXME: Windows uses dllexport/dllimport instead of visibility, and we don't
-  // handle that yet. Disable the warning on Windows for now.
 
   // Don't diagnose if we're inside a template, because it's not practical to
   // fix the warning in most cases.
-  if (!Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
-      !VD->isTemplated() &&
+  if (!VD->isTemplated() &&
       GloballyUniqueObjectMightBeAccidentallyDuplicated(VD)) {
 
     QualType Type = VD->getType();
     if (looksMutable(Type, VD->getASTContext())) {
       Diag(VD->getLocation(), diag::warn_possible_object_duplication_mutable)
-          << VD;
+          << VD << Context.getTargetInfo().shouldDLLImportComdatSymbols();
     }
 
     // To keep false positives low, only warn if we're certain that the
@@ -13575,7 +13592,7 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
                              /*IncludePossibleEffects=*/false) &&
         !isa<CXXNewExpr>(Init->IgnoreParenImpCasts())) {
       Diag(Init->getExprLoc(), diag::warn_possible_object_duplication_init)
-          << VD;
+          << VD << Context.getTargetInfo().shouldDLLImportComdatSymbols();
     }
   }
 }
