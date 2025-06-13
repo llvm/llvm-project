@@ -3716,6 +3716,18 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
+  if (Index == TargetTransformInfo::LastIndex) {
+    if (isa<ScalableVectorType>(Val)) {
+      // This typically requires both while and lastb instructions in order
+      // to extract the last element. If this is in a loop the while
+      // instruction can at least be hoisted out, although it will consume a
+      // predicate register. The cost should be more expensive than the base
+      // extract cost, which is 2 for most CPUs.
+      return CostKind == TTI::TCK_CodeSize ? 2 : 3;
+    }
+    Index = cast<FixedVectorType>(Val)->getNumElements() - 1;
+  }
+
   if (TargetTransformInfo::isKnownVectorIndex(Index)) {
     // Legalize the type.
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);

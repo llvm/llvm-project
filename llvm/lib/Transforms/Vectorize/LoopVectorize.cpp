@@ -5342,17 +5342,16 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
   StoreInst *SI = cast<StoreInst>(I);
 
   bool IsLoopInvariantStoreValue = Legal->isInvariant(SI->getValueOperand());
-  // TODO: We have existing tests that request the cost of extracting element
-  // VF.getKnownMinValue() - 1 from a scalable vector. This does not represent
-  // the actual generated code, which involves extracting the last element of
-  // a scalable vector where the lane to extract is unknown at compile time.
-  return TTI.getAddressComputationCost(ValTy) +
-         TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS,
-                             CostKind) +
-         (IsLoopInvariantStoreValue
-              ? 0
-              : TTI.getVectorInstrCost(Instruction::ExtractElement, VectorTy,
-                                       CostKind, VF.getKnownMinValue() - 1));
+  InstructionCost Cost =
+      TTI.getAddressComputationCost(ValTy) +
+      TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS, CostKind) +
+      (IsLoopInvariantStoreValue
+           ? 0
+           : TTI.getVectorInstrCost(
+                 Instruction::ExtractElement, VectorTy, CostKind,
+                 VF.isScalable() ? TargetTransformInfo::LastIndex
+                                 : VF.getKnownMinValue() - 1));
+  return Cost;
 }
 
 InstructionCost

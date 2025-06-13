@@ -1467,7 +1467,7 @@ public:
 
   enum : int {
     UnknownIndex = -1,
-    // This will be expanded in a future patch.
+    LastIndex = -2,
   };
 
   static inline bool isKnownVectorIndex(int Index) { return Index >= 0; }
