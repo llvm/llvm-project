@@ -2446,42 +2446,6 @@ Sema::DecomposeUnqualifiedId(const UnqualifiedId &Id,
   }
 }
 
-static void emitEmptyLookupTypoDiagnostic(const TypoCorrection &TC,
-                                          Sema &SemaRef, const CXXScopeSpec &SS,
-                                          DeclarationName Typo,
-                                          SourceRange TypoRange,
-                                          unsigned DiagnosticID,
-                                          unsigned DiagnosticSuggestID) {
-  DeclContext *Ctx =
-      SS.isEmpty() ? nullptr : SemaRef.computeDeclContext(SS, false);
-  if (!TC) {
-    // Emit a special diagnostic for failed member lookups.
-    // FIXME: computing the declaration context might fail here (?)
-    if (Ctx)
-      SemaRef.Diag(TypoRange.getBegin(), diag::err_no_member)
-          << Typo << Ctx << TypoRange;
-    else
-      SemaRef.Diag(TypoRange.getBegin(), DiagnosticID) << Typo << TypoRange;
-    return;
-  }
-
-  std::string CorrectedStr = TC.getAsString(SemaRef.getLangOpts());
-  bool DroppedSpecifier =
-      TC.WillReplaceSpecifier() && Typo.getAsString() == CorrectedStr;
-  unsigned NoteID = TC.getCorrectionDeclAs<ImplicitParamDecl>()
-                        ? diag::note_implicit_param_decl
-                        : diag::note_previous_decl;
-  if (!Ctx)
-    SemaRef.diagnoseTypo(
-        TC, SemaRef.PDiag(DiagnosticSuggestID) << Typo << TypoRange,
-        SemaRef.PDiag(NoteID));
-  else
-    SemaRef.diagnoseTypo(TC,
-                         SemaRef.PDiag(diag::err_no_member_suggest)
-                             << Typo << Ctx << DroppedSpecifier << TypoRange,
-                         SemaRef.PDiag(NoteID));
-}
-
 bool Sema::DiagnoseDependentMemberLookup(const LookupResult &R) {
   // During a default argument instantiation the CurContext points
   // to a CXXMethodDecl; but we can't apply a this-> fixit inside a
@@ -2544,8 +2508,7 @@ bool Sema::DiagnoseDependentMemberLookup(const LookupResult &R) {
 bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
                                CorrectionCandidateCallback &CCC,
                                TemplateArgumentListInfo *ExplicitTemplateArgs,
-                               ArrayRef<Expr *> Args, DeclContext *LookupCtx,
-                               TypoExpr **Out) {
+                               ArrayRef<Expr *> Args, DeclContext *LookupCtx) {
   DeclarationName Name = R.getLookupName();
   SourceRange NameRange = R.getLookupNameInfo().getSourceRange();
 
@@ -2604,21 +2567,9 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
 
   // We didn't find anything, so try to correct for a typo.
   TypoCorrection Corrected;
-  if (S && Out) {
-    assert(!ExplicitTemplateArgs &&
-           "Diagnosing an empty lookup with explicit template args!");
-    *Out = CorrectTypoDelayed(
-        R.getLookupNameInfo(), R.getLookupKind(), S, &SS, CCC,
-        [=](const TypoCorrection &TC) {
-          emitEmptyLookupTypoDiagnostic(TC, *this, SS, Name, NameRange,
-                                        diagnostic, diagnostic_suggest);
-        },
-        nullptr, CorrectTypoKind::ErrorRecovery, LookupCtx);
-    if (*Out)
-      return true;
-  } else if (S && (Corrected = CorrectTypo(
-                       R.getLookupNameInfo(), R.getLookupKind(), S, &SS, CCC,
-                       CorrectTypoKind::ErrorRecovery, LookupCtx))) {
+  if (S && (Corrected =
+                CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, &SS,
+                            CCC, CorrectTypoKind::ErrorRecovery, LookupCtx))) {
     std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
     bool DroppedSpecifier =
         Corrected.WillReplaceSpecifier() && Name.getAsString() == CorrectedStr;
@@ -2880,7 +2831,6 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
 
     // If this name wasn't predeclared and if this is not a function
     // call, diagnose the problem.
-    TypoExpr *TE = nullptr;
     DefaultFilterCCC DefaultValidator(II, SS.isValid() ? SS.getScopeRep()
                                                        : nullptr);
     DefaultValidator.IsAddressOfOperand = IsAddressOfOperand;
@@ -2896,29 +2846,8 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // a template name, but we happen to have always already looked up the name
     // before we get here if it must be a template name.
     if (DiagnoseEmptyLookup(S, SS, R, CCC ? *CCC : DefaultValidator, nullptr,
-                            {}, nullptr, &TE)) {
-      if (TE && KeywordReplacement) {
-        auto &State = getTypoExprState(TE);
-        auto BestTC = State.Consumer->getNextCorrection();
-        if (BestTC.isKeyword()) {
-          auto *II = BestTC.getCorrectionAsIdentifierInfo();
-          if (State.DiagHandler)
-            State.DiagHandler(BestTC);
-          KeywordReplacement->startToken();
-          KeywordReplacement->setKind(II->getTokenID());
-          KeywordReplacement->setIdentifierInfo(II);
-          KeywordReplacement->setLocation(BestTC.getCorrectionRange().getBegin());
-          // Clean up the state associated with the TypoExpr, since it has
-          // now been diagnosed (without a call to CorrectDelayedTyposInExpr).
-          clearDelayedTypo(TE);
-          // Signal that a correction to a keyword was performed by returning a
-          // valid-but-null ExprResult.
-          return (Expr*)nullptr;
-        }
-        State.Consumer->resetCorrectionStream();
-      }
-      return TE ? TE : ExprError();
-    }
+                            {}, nullptr))
+      return ExprError();
 
     assert(!R.empty() &&
            "DiagnoseEmptyLookup returned false but added no results");
@@ -7009,40 +6938,6 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
                          CurFPFeatureOverrides(), NumParams, UsesADL);
   }
 
-  if (!Context.isDependenceAllowed()) {
-    // Forget about the nulled arguments since typo correction
-    // do not handle them well.
-    TheCall->shrinkNumArgs(Args.size());
-    // C cannot always handle TypoExpr nodes in builtin calls and direct
-    // function calls as their argument checking don't necessarily handle
-    // dependent types properly, so make sure any TypoExprs have been
-    // dealt with.
-    ExprResult Result = CorrectDelayedTyposInExpr(TheCall);
-    if (!Result.isUsable()) return ExprError();
-    CallExpr *TheOldCall = TheCall;
-    TheCall = dyn_cast<CallExpr>(Result.get());
-    bool CorrectedTypos = TheCall != TheOldCall;
-    if (!TheCall) return Result;
-    Args = llvm::ArrayRef(TheCall->getArgs(), TheCall->getNumArgs());
-
-    // A new call expression node was created if some typos were corrected.
-    // However it may not have been constructed with enough storage. In this
-    // case, rebuild the node with enough storage. The waste of space is
-    // immaterial since this only happens when some typos were corrected.
-    if (CorrectedTypos && Args.size() < NumParams) {
-      if (Config)
-        TheCall = CUDAKernelCallExpr::Create(
-            Context, Fn, cast<CallExpr>(Config), Args, ResultTy, VK_PRValue,
-            RParenLoc, CurFPFeatureOverrides(), NumParams);
-      else
-        TheCall =
-            CallExpr::Create(Context, Fn, Args, ResultTy, VK_PRValue, RParenLoc,
-                             CurFPFeatureOverrides(), NumParams, UsesADL);
-    }
-    // We can now handle the nulled arguments for the default arguments.
-    TheCall->setNumArgsUnsafe(std::max<unsigned>(Args.size(), NumParams));
-  }
-
   // Bail out early if calling a builtin with custom type checking.
   if (BuiltinID && Context.BuiltinInfo.hasCustomTypechecking(BuiltinID)) {
     ExprResult E = CheckBuiltinFunctionCall(FDecl, BuiltinID, TheCall);
@@ -7933,12 +7828,6 @@ Sema::ActOnCastExpr(Scope *S, SourceLocation LParenLoc,
   if (getLangOpts().CPlusPlus) {
     // Check that there are no default arguments (C++ only).
     CheckExtraCXXDefaultArguments(D);
-  } else {
-    // Make sure any TypoExprs have been dealt with.
-    ExprResult Res = CorrectDelayedTyposInExpr(CastExpr);
-    if (!Res.isUsable())
-      return ExprError();
-    CastExpr = Res.get();
   }
 
   checkUnusedDeclAttributes(D);
@@ -8984,30 +8873,6 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
                                     SourceLocation ColonLoc,
                                     Expr *CondExpr, Expr *LHSExpr,
                                     Expr *RHSExpr) {
-  if (!Context.isDependenceAllowed()) {
-    // C cannot handle TypoExpr nodes in the condition because it
-    // doesn't handle dependent types properly, so make sure any TypoExprs have
-    // been dealt with before checking the operands.
-    ExprResult CondResult = CorrectDelayedTyposInExpr(CondExpr);
-    ExprResult LHSResult = CorrectDelayedTyposInExpr(LHSExpr);
-    ExprResult RHSResult = CorrectDelayedTyposInExpr(RHSExpr);
-
-    if (!CondResult.isUsable())
-      return ExprError();
-
-    if (LHSExpr) {
-      if (!LHSResult.isUsable())
-        return ExprError();
-    }
-
-    if (!RHSResult.isUsable())
-      return ExprError();
-
-    CondExpr = CondResult.get();
-    LHSExpr = LHSResult.get();
-    RHSExpr = RHSResult.get();
-  }
-
   // If this is the gnu "x ?: y" extension, analyze the types as though the LHS
   // was the condition.
   OpaqueValueExpr *opaqueValue = nullptr;
@@ -15021,18 +14886,6 @@ static void checkObjCPointerIntrospection(Sema &S, ExprResult &L, ExprResult &R,
   }
 }
 
-static NamedDecl *getDeclFromExpr(Expr *E) {
-  if (!E)
-    return nullptr;
-  if (auto *DRE = dyn_cast<DeclRefExpr>(E))
-    return DRE->getDecl();
-  if (auto *ME = dyn_cast<MemberExpr>(E))
-    return ME->getMemberDecl();
-  if (auto *IRE = dyn_cast<ObjCIvarRefExpr>(E))
-    return IRE->getDecl();
-  return nullptr;
-}
-
 // This helper function promotes a binary operator's operands (which are of a
 // half vector type) to a vector of floats and then truncates the result to
 // a vector of either half or short.
@@ -15066,28 +14919,6 @@ static ExprResult convertHalfVecBinOp(Sema &S, ExprResult LHS, ExprResult RHS,
   auto *BO = BinaryOperator::Create(Context, LHS.get(), RHS.get(), Opc,
                                     BinOpResTy, VK, OK, OpLoc, FPFeatures);
   return convertVector(BO, ResultTy->castAs<VectorType>()->getElementType(), S);
-}
-
-static std::pair<ExprResult, ExprResult>
-CorrectDelayedTyposInBinOp(Sema &S, BinaryOperatorKind Opc, Expr *LHSExpr,
-                           Expr *RHSExpr) {
-  ExprResult LHS = LHSExpr, RHS = RHSExpr;
-  if (!S.Context.isDependenceAllowed()) {
-    // C cannot handle TypoExpr nodes on either side of a binop because it
-    // doesn't handle dependent types properly, so make sure any TypoExprs have
-    // been dealt with before checking the operands.
-    LHS = S.CorrectDelayedTyposInExpr(LHS);
-    RHS = S.CorrectDelayedTyposInExpr(
-        RHS, /*InitDecl=*/nullptr, /*RecoverUncorrectedTypos=*/false,
-        [Opc, LHS](Expr *E) {
-          if (Opc != BO_Assign)
-            return ExprResult(E);
-          // Avoid correcting the RHS to the same Expr as the LHS.
-          Decl *D = getDeclFromExpr(E);
-          return (D && D == getDeclFromExpr(LHS.get())) ? ExprError() : E;
-        });
-  }
-  return std::make_pair(LHS, RHS);
 }
 
 /// Returns true if conversion between vectors of halfs and vectors of floats
@@ -15146,7 +14977,6 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   ExprObjectKind OK = OK_Ordinary;
   bool ConvertHalfVec = false;
 
-  std::tie(LHS, RHS) = CorrectDelayedTyposInBinOp(*this, Opc, LHSExpr, RHSExpr);
   if (!LHS.isUsable() || !RHS.isUsable())
     return ExprError();
 
@@ -15662,12 +15492,8 @@ static ExprResult BuildOverloadedBinOp(Sema &S, Scope *Sc, SourceLocation OpLoc,
 ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
                             BinaryOperatorKind Opc, Expr *LHSExpr,
                             Expr *RHSExpr, bool ForFoldExpression) {
-  ExprResult LHS, RHS;
-  std::tie(LHS, RHS) = CorrectDelayedTyposInBinOp(*this, Opc, LHSExpr, RHSExpr);
-  if (!LHS.isUsable() || !RHS.isUsable())
+  if (!LHSExpr || !RHSExpr)
     return ExprError();
-  LHSExpr = LHS.get();
-  RHSExpr = RHS.get();
 
   // We want to end up calling one of SemaPseudoObject::checkAssignment
   // (if the LHS is a pseudo-object), BuildOverloadedBinOp (if
@@ -18194,8 +18020,6 @@ HandleImmediateInvocations(Sema &SemaRef,
 
 void Sema::PopExpressionEvaluationContext() {
   ExpressionEvaluationContextRecord& Rec = ExprEvalContexts.back();
-  unsigned NumTypos = Rec.NumTypos;
-
   if (!Rec.Lambdas.empty()) {
     using ExpressionKind = ExpressionEvaluationContextRecord::ExpressionKind;
     if (!getLangOpts().CPlusPlus20 &&
@@ -18263,9 +18087,6 @@ void Sema::PopExpressionEvaluationContext() {
 
   // Pop the current expression evaluation context off the stack.
   ExprEvalContexts.pop_back();
-
-  // The global expression evaluation context record is never popped.
-  ExprEvalContexts.back().NumTypos += NumTypos;
 }
 
 void Sema::DiscardCleanupsInEvaluationContext() {
@@ -20023,8 +19844,6 @@ ExprResult Sema::CheckLValueToRValueConversionOperand(Expr *E) {
 }
 
 ExprResult Sema::ActOnConstantExpression(ExprResult Res) {
-  Res = CorrectDelayedTyposInExpr(Res);
-
   if (!Res.isUsable())
     return Res;
 
@@ -21350,15 +21169,6 @@ static ExprResult diagnoseUnknownAnyExpr(Sema &S, Expr *E) {
 }
 
 ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
-  if (!Context.isDependenceAllowed()) {
-    // C cannot handle TypoExpr nodes on either side of a binop because it
-    // doesn't handle dependent types properly, so make sure any TypoExprs have
-    // been dealt with before checking the operands.
-    ExprResult Result = CorrectDelayedTyposInExpr(E);
-    if (!Result.isUsable()) return ExprError();
-    E = Result.get();
-  }
-
   const BuiltinType *placeholderType = E->getType()->getAsPlaceholderType();
   if (!placeholderType) return E;
 

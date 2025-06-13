@@ -267,23 +267,71 @@ class AggValueSlot {
   Address addr;
   clang::Qualifiers quals;
 
+  /// This is set to true if some external code is responsible for setting up a
+  /// destructor for the slot.  Otherwise the code which constructs it should
+  /// push the appropriate cleanup.
+  LLVM_PREFERRED_TYPE(bool)
+  LLVM_ATTRIBUTE_UNUSED unsigned destructedFlag : 1;
+
   /// This is set to true if the memory in the slot is known to be zero before
   /// the assignment into it.  This means that zero fields don't need to be set.
-  bool zeroedFlag : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned zeroedFlag : 1;
+
+  /// This is set to true if the slot might be aliased and it's not undefined
+  /// behavior to access it through such an alias.  Note that it's always
+  /// undefined behavior to access a C++ object that's under construction
+  /// through an alias derived from outside the construction process.
+  ///
+  /// This flag controls whether calls that produce the aggregate
+  /// value may be evaluated directly into the slot, or whether they
+  /// must be evaluated into an unaliased temporary and then memcpy'ed
+  /// over.  Since it's invalid in general to memcpy a non-POD C++
+  /// object, it's important that this flag never be set when
+  /// evaluating an expression which constructs such an object.
+  LLVM_PREFERRED_TYPE(bool)
+  LLVM_ATTRIBUTE_UNUSED unsigned aliasedFlag : 1;
+
+  /// This is set to true if the tail padding of this slot might overlap
+  /// another object that may have already been initialized (and whose
+  /// value must be preserved by this initialization). If so, we may only
+  /// store up to the dsize of the type. Otherwise we can widen stores to
+  /// the size of the type.
+  LLVM_PREFERRED_TYPE(bool)
+  LLVM_ATTRIBUTE_UNUSED unsigned overlapFlag : 1;
 
 public:
+  enum IsDestructed_t { IsNotDestructed, IsDestructed };
   enum IsZeroed_t { IsNotZeroed, IsZeroed };
+  enum IsAliased_t { IsNotAliased, IsAliased };
+  enum Overlap_t { MayOverlap, DoesNotOverlap };
 
-  AggValueSlot(Address addr, clang::Qualifiers quals, bool zeroedFlag)
-      : addr(addr), quals(quals), zeroedFlag(zeroedFlag) {}
-
-  static AggValueSlot forAddr(Address addr, clang::Qualifiers quals,
-                              IsZeroed_t isZeroed = IsNotZeroed) {
-    return AggValueSlot(addr, quals, isZeroed);
+  /// Returns an aggregate value slot indicating that the aggregate
+  /// value is being ignored.
+  static AggValueSlot ignored() {
+    return forAddr(Address::invalid(), clang::Qualifiers(), IsNotDestructed,
+                   IsNotAliased, DoesNotOverlap);
   }
 
-  static AggValueSlot forLValue(const LValue &lv) {
-    return forAddr(lv.getAddress(), lv.getQuals());
+  AggValueSlot(Address addr, clang::Qualifiers quals, bool destructedFlag,
+               bool zeroedFlag, bool aliasedFlag, bool overlapFlag)
+      : addr(addr), quals(quals), destructedFlag(destructedFlag),
+        zeroedFlag(zeroedFlag), aliasedFlag(aliasedFlag),
+        overlapFlag(overlapFlag) {}
+
+  static AggValueSlot forAddr(Address addr, clang::Qualifiers quals,
+                              IsDestructed_t isDestructed,
+                              IsAliased_t isAliased, Overlap_t mayOverlap,
+                              IsZeroed_t isZeroed = IsNotZeroed) {
+    return AggValueSlot(addr, quals, isDestructed, isZeroed, isAliased,
+                        mayOverlap);
+  }
+
+  static AggValueSlot forLValue(const LValue &LV, IsDestructed_t isDestructed,
+                                IsAliased_t isAliased, Overlap_t mayOverlap,
+                                IsZeroed_t isZeroed = IsNotZeroed) {
+    return forAddr(LV.getAddress(), LV.getQuals(), isDestructed, isAliased,
+                   mayOverlap, isZeroed);
   }
 
   clang::Qualifiers getQualifiers() const { return quals; }
@@ -292,7 +340,16 @@ public:
 
   bool isIgnored() const { return !addr.isValid(); }
 
+  mlir::Value getPointer() const { return addr.getPointer(); }
+
   IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
+
+  RValue asRValue() const {
+    if (isIgnored())
+      return RValue::getIgnored();
+    assert(!cir::MissingFeatures::aggValueSlot());
+    return RValue::getAggregate(getAddress());
+  }
 };
 
 } // namespace clang::CIRGen

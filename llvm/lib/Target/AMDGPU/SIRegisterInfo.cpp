@@ -4055,20 +4055,6 @@ SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
   return 0;
 }
 
-unsigned
-SIRegisterInfo::getNumDefinedPhysRegs(const MachineRegisterInfo &MRI,
-                                      const TargetRegisterClass &RC) const {
-  for (MCPhysReg Reg : reverse(RC.getRegisters())) {
-    for (MCRegAliasIterator AI(Reg, this, true); AI.isValid(); ++AI) {
-      if (llvm::any_of(MRI.def_instructions(*AI), [](const MachineInstr &MI) {
-            return !MI.isImplicitDef();
-          }))
-        return getHWRegIndex(Reg) + 1;
-    }
-  }
-  return 0;
-}
-
 SmallVector<StringLiteral>
 SIRegisterInfo::getVRegFlagsOfReg(Register Reg,
                                   const MachineFunction &MF) const {
