@@ -9,6 +9,7 @@
 #include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
 #include "gtest/gtest.h"
 
+using namespace llvm::dxil;
 using namespace llvm::hlsl::rootsig;
 
 namespace {
@@ -56,7 +57,7 @@ TEST(HLSLRootSignatureTest, DescriptorUAVClauseDump) {
   Clause.NumDescriptors = 3298;
   Clause.Space = 932847;
   Clause.Offset = 1;
-  Clause.Flags = DescriptorRangeFlags::ValidFlags;
+  Clause.Flags = DescriptorRangeFlags(0x1000f); // Valid flags
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -80,7 +81,7 @@ TEST(HLSLRootSignatureTest, DescriptorSamplerClauseDump) {
   Clause.NumDescriptors = 2;
   Clause.Space = 42;
   Clause.Offset = DescriptorTableOffsetAppend;
-  Clause.Flags = DescriptorRangeFlags::ValidSamplerFlags;
+  Clause.Flags = DescriptorRangeFlags::DescriptorsVolatile;
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);

@@ -11,6 +11,7 @@
 #include "clang/Lex/LiteralSupport.h"
 
 using namespace llvm::hlsl::rootsig;
+using namespace llvm::dxil;
 
 namespace clang {
 namespace hlsl {
@@ -983,8 +984,7 @@ std::optional<float> RootSignatureParser::parseFloatParam() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::ShaderVisibility>
-RootSignatureParser::parseShaderVisibility() {
+std::optional<ShaderVisibility> RootSignatureParser::parseShaderVisibility() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1009,8 +1009,7 @@ RootSignatureParser::parseShaderVisibility() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::SamplerFilter>
-RootSignatureParser::parseSamplerFilter() {
+std::optional<SamplerFilter> RootSignatureParser::parseSamplerFilter() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1035,7 +1034,7 @@ RootSignatureParser::parseSamplerFilter() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::TextureAddressMode>
+std::optional<TextureAddressMode>
 RootSignatureParser::parseTextureAddressMode() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -1061,8 +1060,7 @@ RootSignatureParser::parseTextureAddressMode() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::ComparisonFunc>
-RootSignatureParser::parseComparisonFunc() {
+std::optional<ComparisonFunc> RootSignatureParser::parseComparisonFunc() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1087,8 +1085,7 @@ RootSignatureParser::parseComparisonFunc() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::StaticBorderColor>
-RootSignatureParser::parseStaticBorderColor() {
+std::optional<StaticBorderColor> RootSignatureParser::parseStaticBorderColor() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1113,7 +1110,7 @@ RootSignatureParser::parseStaticBorderColor() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::RootDescriptorFlags>
+std::optional<RootDescriptorFlags>
 RootSignatureParser::parseRootDescriptorFlags() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -1152,7 +1149,7 @@ RootSignatureParser::parseRootDescriptorFlags() {
   return Flags;
 }
 
-std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
+std::optional<DescriptorRangeFlags>
 RootSignatureParser::parseDescriptorRangeFlags() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");

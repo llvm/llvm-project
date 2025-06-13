@@ -47,7 +47,7 @@ public:
 
 private:
   /// Define the various builders for the different metadata types
-  MDNode *BuildRootFlags(const RootFlags &Flags);
+  MDNode *BuildRootFlags(const dxil::RootFlags &Flags);
   MDNode *BuildRootConstants(const RootConstants &Constants);
   MDNode *BuildRootDescriptor(const RootDescriptor &Descriptor);
   MDNode *BuildDescriptorTable(const DescriptorTable &Table);
