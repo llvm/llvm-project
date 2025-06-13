@@ -427,8 +427,8 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
             VRegMaskPair VMP(U, TRI, MRI);
             if (!isCoveredActive(VMP, Active)) {
               Register NewVReg = reloadAtEnd(MBB, VMP);
-              U.setReg(NewVReg);
-              U.setSubReg(AMDGPU::NoRegister);
+              // U.setReg(NewVReg);
+              // U.setSubReg(AMDGPU::NoRegister);
 
               // The code below is commented out because of the BUG in
               // MachineSSAUpdater. In case the register class of a PHI operand
@@ -445,10 +445,10 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
               // %146:vreg_64 = PHI %158:vreg_64.sub0, %bb.3, %144:vgpr_32,
               // %bb.1 %158:vreg_64 = COPY %157
 
-              // MachineSSAUpdater SSAUpddater(*MBB.getParent());
-              // SSAUpddater.Initialize(U.getReg());
-              // SSAUpddater.AddAvailableValue(&MBB, NewVReg);
-              // SSAUpddater.RewriteUse(U);
+              MachineSSAUpdater SSAUpddater(*MBB.getParent());
+              SSAUpddater.Initialize(U.getReg());
+              SSAUpddater.AddAvailableValue(&MBB, NewVReg);
+              SSAUpddater.RewriteUse(U);
             }
           }
         }
