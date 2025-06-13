@@ -234,10 +234,16 @@ bool X86FixupInstTuningPass::processInstruction(
   };
 
   switch (Opc) {
-  case X86::VBLENDPSrri:
-    return ProcessBLENDToMOV(X86::VMOVSSrr);
+  case X86::BLENDPDrri:
+    return ProcessBLENDToMOV(X86::MOVSDrr);
   case X86::VBLENDPDrri:
     return ProcessBLENDToMOV(X86::VMOVSDrr);
+
+  case X86::BLENDPSrri:
+    return ProcessBLENDToMOV(X86::MOVSSrr);
+  case X86::VBLENDPSrri:
+    return ProcessBLENDToMOV(X86::VMOVSSrr);
+
   case X86::VPERMILPDri:
     return ProcessVPERMILPDri(X86::VSHUFPDrri);
   case X86::VPERMILPDYri:
