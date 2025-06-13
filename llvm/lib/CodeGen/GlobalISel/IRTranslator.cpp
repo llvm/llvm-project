@@ -3332,11 +3332,14 @@ bool IRTranslator::translateShuffleVector(const User &U,
   else
     Mask = cast<ConstantExpr>(U).getShuffleMask();
 
+  // As GISel does not represent <1 x > vectors as a separate type from scalars,
+  // we transform shuffle_vector with a scalar output to an
+  // ExtractVectorElement. If the input type is also scalar it becomes a Copy.
   unsigned DstElts = cast<FixedVectorType>(U.getType())->getNumElements();
   unsigned SrcElts =
       cast<FixedVectorType>(U.getOperand(0)->getType())->getNumElements();
   if (DstElts == 1) {
-    int M = Mask[0];
+    unsigned M = Mask[0];
     if (SrcElts == 1) {
       if (M == 0 || M == 1) {
         return translateCopy(U, *U.getOperand(M), MIRBuilder);
@@ -3357,15 +3360,16 @@ bool IRTranslator::translateShuffleVector(const User &U,
     }
   }
 
+  // A single element src is transformed to a build_vector.
   if (SrcElts == 1) {
     SmallVector<Register> Ops;
+    Register Undef = 0;
     for (int M : Mask) {
-      Register Undef = 0;
       LLT SrcTy = getLLTForType(*U.getOperand(0)->getType(), *DL);
       if (M == 0 || M == 1) {
         Ops.push_back(getOrCreateVReg(*U.getOperand(M)));
       } else {
-        if (Undef.isValid()) {
+        if (!Undef.isValid()) {
           Undef = MRI->createGenericVirtualRegister(SrcTy);
           MIRBuilder.buildUndef(Undef);
         }

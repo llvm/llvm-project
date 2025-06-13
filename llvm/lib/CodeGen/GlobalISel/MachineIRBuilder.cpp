@@ -788,6 +788,7 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleVector(const DstOp &Res,
   const LLT ElemTy1 = Src1Ty.getScalarType();
   const LLT ElemTy2 = Src2Ty.getScalarType();
   assert(DstElemTy == ElemTy1 && DstElemTy == ElemTy2);
+  assert(Mask.size() > 1 && "Scalar G_SHUFFLE_VECTOR are not supported");
   (void)DstElemTy;
   (void)ElemTy1;
   (void)ElemTy2;
