@@ -48,10 +48,10 @@ int CharacterConverter::push(char8_t utf8_byte) {
   }
   // Any subsequent push
   // Adding 6 more bits so need to left shift
-  const int shift_amount = 6;
+  const int BITS_PER_UTF8 = 6;
   if (cpp::countl_one(utf8_byte) == 1 && !isComplete()) {
     char32_t byte = utf8_byte & 0x3F;
-    state->partial = state->partial << shift_amount;
+    state->partial = state->partial << BITS_PER_UTF8;
     state->partial |= byte;
     state->bytes_processed++;
     return 0;
