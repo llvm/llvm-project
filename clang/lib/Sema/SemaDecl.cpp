@@ -13584,7 +13584,6 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // If there is no declaration, there was an error parsing it.  Just ignore
   // the initializer.
   if (!RealDecl) {
-    CorrectDelayedTyposInExpr(Init, dyn_cast_or_null<VarDecl>(RealDecl));
     return;
   }
 
@@ -13607,12 +13606,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   }
 
   if (VDecl->isInvalidDecl()) {
-    ExprResult Res = CorrectDelayedTyposInExpr(Init, VDecl);
-    SmallVector<Expr *> SubExprs;
-    if (Res.isUsable())
-      SubExprs.push_back(Res.get());
     ExprResult Recovery =
-        CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), SubExprs);
+        CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), {Init});
     if (Expr *E = Recovery.get())
       VDecl->setInit(E);
     return;
@@ -13627,23 +13622,12 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 
   // C++11 [decl.spec.auto]p6. Deduce the type which 'auto' stands in for.
   if (VDecl->getType()->isUndeducedType()) {
-    // Attempt typo correction early so that the type of the init expression can
-    // be deduced based on the chosen correction if the original init contains a
-    // TypoExpr.
-    ExprResult Res = CorrectDelayedTyposInExpr(Init, VDecl);
-    if (!Res.isUsable()) {
-      // There are unresolved typos in Init, just drop them.
-      // FIXME: improve the recovery strategy to preserve the Init.
-      RealDecl->setInvalidDecl();
-      return;
-    }
-    if (Res.get()->containsErrors()) {
+    if (Init->containsErrors()) {
       // Invalidate the decl as we don't know the type for recovery-expr yet.
       RealDecl->setInvalidDecl();
-      VDecl->setInit(Res.get());
+      VDecl->setInit(Init);
       return;
     }
-    Init = Res.get();
 
     if (DeduceVariableDeclarationType(VDecl, DirectInit, Init))
       return;
@@ -13788,23 +13772,6 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       Args = CXXDirectInit->getInitExprs();
       InitializedFromParenListExpr = true;
     }
-
-    // Try to correct any TypoExprs in the initialization arguments.
-    for (size_t Idx = 0; Idx < Args.size(); ++Idx) {
-      ExprResult Res = CorrectDelayedTyposInExpr(
-          Args[Idx], VDecl, /*RecoverUncorrectedTypos=*/true,
-          [this, Entity, Kind](Expr *E) {
-            InitializationSequence Init(*this, Entity, Kind, MultiExprArg(E));
-            return Init.Failed() ? ExprError() : E;
-          });
-      if (!Res.isUsable()) {
-        VDecl->setInvalidDecl();
-      } else if (Res.get() != Args[Idx]) {
-        Args[Idx] = Res.get();
-      }
-    }
-    if (VDecl->isInvalidDecl())
-      return;
 
     InitializationSequence InitSeq(*this, Entity, Kind, Args,
                                    /*TopLevelOfInitList=*/false,
