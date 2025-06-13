@@ -9,6 +9,9 @@
 // UNSUPPORTED: no-exceptions
 // UNSUPPORTED: sanitizer-new-delete
 
+// GCC warns about allocating numeric_limits<size_t>::max() being too large (which we test here)
+// ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-alloc-size-larger-than
+
 // Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
 // XFAIL: target={{.+}}-zos{{.*}}

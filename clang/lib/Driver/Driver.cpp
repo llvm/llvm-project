@@ -1596,28 +1596,27 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       A->claim();
 
       if (Args.hasArg(options::OPT_spirv)) {
+        const llvm::StringMap<llvm::Triple::SubArchType> ValidTargets = {
+            {"vulkan1.2", llvm::Triple::SPIRVSubArch_v15},
+            {"vulkan1.3", llvm::Triple::SPIRVSubArch_v16}};
         llvm::Triple T(TargetTriple);
-        T.setArch(llvm::Triple::spirv);
-        T.setOS(llvm::Triple::Vulkan);
 
-        // Set specific Vulkan version if applicable.
+        // Set specific Vulkan version. Default to vulkan1.3.
+        auto TargetInfo = ValidTargets.find("vulkan1.3");
+        assert(TargetInfo != ValidTargets.end());
         if (const Arg *A = Args.getLastArg(options::OPT_fspv_target_env_EQ)) {
-          const llvm::StringMap<llvm::Triple::SubArchType> ValidTargets = {
-              {"vulkan1.2", llvm::Triple::SPIRVSubArch_v15},
-              {"vulkan1.3", llvm::Triple::SPIRVSubArch_v16}};
-
-          auto TargetInfo = ValidTargets.find(A->getValue());
-          if (TargetInfo != ValidTargets.end()) {
-            T.setOSName(TargetInfo->getKey());
-            T.setArch(llvm::Triple::spirv, TargetInfo->getValue());
-          } else {
+          TargetInfo = ValidTargets.find(A->getValue());
+          if (TargetInfo == ValidTargets.end()) {
             Diag(diag::err_drv_invalid_value)
                 << A->getAsString(Args) << A->getValue();
           }
           A->claim();
         }
-
-        TargetTriple = T.str();
+        if (TargetInfo != ValidTargets.end()) {
+          T.setOSName(TargetInfo->getKey());
+          T.setArch(llvm::Triple::spirv, TargetInfo->getValue());
+          TargetTriple = T.str();
+        }
       }
     } else {
       Diag(diag::err_drv_dxc_missing_target_profile);
@@ -4424,6 +4423,10 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
                    options::OPT_no_offload_new_driver,
                    C.isOffloadingHostKind(Action::OFK_Cuda));
 
+  bool HIPNoRDC =
+      C.isOffloadingHostKind(Action::OFK_HIP) &&
+      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
+
   // Builder to be used to build offloading actions.
   std::unique_ptr<OffloadingActionBuilder> OffloadBuilder =
       !UseNewOffloadingDriver
@@ -4557,7 +4560,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     // Check if this Linker Job should emit a static library.
     if (ShouldEmitStaticLibrary(Args)) {
       LA = C.MakeAction<StaticLibJobAction>(LinkerInputs, types::TY_Image);
-    } else if (UseNewOffloadingDriver ||
+    } else if ((UseNewOffloadingDriver && !HIPNoRDC) ||
                Args.hasArg(options::OPT_offload_link)) {
       LA = C.MakeAction<LinkerWrapperJobAction>(LinkerInputs, types::TY_Image);
       LA->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
@@ -4868,10 +4871,31 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
                                        const InputTy &Input, StringRef CUID,
                                        Action *HostAction) const {
   // Don't build offloading actions if explicitly disabled or we do not have a
-  // valid source input and compile action to embed it in. If preprocessing only
-  // ignore embedding.
-  if (offloadHostOnly() || !types::isSrcFile(Input.first) ||
-      !(isa<CompileJobAction>(HostAction) ||
+  // valid source input.
+  if (offloadHostOnly() || !types::isSrcFile(Input.first))
+    return HostAction;
+
+  bool HIPNoRDC =
+      C.isOffloadingHostKind(Action::OFK_HIP) &&
+      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
+
+  // For HIP non-rdc non-device-only compilation, create a linker wrapper
+  // action for each host object to link, bundle and wrap device files in
+  // it.
+  if ((isa<AssembleJobAction>(HostAction) ||
+       (isa<BackendJobAction>(HostAction) &&
+        HostAction->getType() == types::TY_LTO_BC)) &&
+      HIPNoRDC && !offloadDeviceOnly()) {
+    ActionList AL{HostAction};
+    HostAction = C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_Object);
+    HostAction->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
+                                         /*BoundArch=*/nullptr);
+    return HostAction;
+  }
+
+  // Don't build offloading actions if we do not have a compile action. If
+  // preprocessing only ignore embedding.
+  if (!(isa<CompileJobAction>(HostAction) ||
         getFinalPhase(Args) == phases::Preprocess))
     return HostAction;
 
@@ -4967,12 +4991,12 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       }
     }
 
-    // Compiling HIP in non-RDC mode requires linking each action individually.
+    // Compiling HIP in device-only non-RDC mode requires linking each action
+    // individually.
     for (Action *&A : DeviceActions) {
       if ((A->getType() != types::TY_Object &&
            A->getType() != types::TY_LTO_BC) ||
-          Kind != Action::OFK_HIP ||
-          Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false))
+          !HIPNoRDC || !offloadDeviceOnly())
         continue;
       ActionList LinkerInput = {A};
       A = C.MakeAction<LinkJobAction>(LinkerInput, types::TY_Image);
@@ -4996,12 +5020,12 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     }
   }
 
-  // HIP code in non-RDC mode will bundle the output if it invoked the linker.
+  // HIP code in device-only non-RDC mode will bundle the output if it invoked
+  // the linker.
   bool ShouldBundleHIP =
-      C.isOffloadingHostKind(Action::OFK_HIP) &&
+      HIPNoRDC && offloadDeviceOnly() &&
       Args.hasFlag(options::OPT_gpu_bundle_output,
                    options::OPT_no_gpu_bundle_output, true) &&
-      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false) &&
       !llvm::any_of(OffloadActions,
                     [](Action *A) { return A->getType() != types::TY_Image; });
 
@@ -5021,11 +5045,9 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
         C.MakeAction<LinkJobAction>(OffloadActions, types::TY_CUDA_FATBIN);
     DDep.add(*FatbinAction, *C.getSingleOffloadToolChain<Action::OFK_Cuda>(),
              nullptr, Action::OFK_Cuda);
-  } else if (C.isOffloadingHostKind(Action::OFK_HIP) &&
-             !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                           false)) {
-    // If we are not in RDC-mode we just emit the final HIP fatbinary for each
-    // translation unit, linking each input individually.
+  } else if (HIPNoRDC && offloadDeviceOnly()) {
+    // If we are in device-only non-RDC-mode we just emit the final HIP
+    // fatbinary for each translation unit, linking each input individually.
     Action *FatbinAction =
         C.MakeAction<LinkJobAction>(OffloadActions, types::TY_HIP_FATBIN);
     DDep.add(*FatbinAction, *C.getSingleOffloadToolChain<Action::OFK_HIP>(),
@@ -5178,8 +5200,11 @@ Action *Driver::ConstructPhaseAction(
         (((Input->getOffloadingToolChain() &&
            Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
           TargetDeviceOffloadKind == Action::OFK_HIP) &&
-         (Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                       false) ||
+         ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                        false) ||
+           (Args.hasFlag(options::OPT_offload_new_driver,
+                         options::OPT_no_offload_new_driver, false) &&
+            !offloadDeviceOnly())) ||
           TargetDeviceOffloadKind == Action::OFK_OpenMP))) {
       types::ID Output =
           Args.hasArg(options::OPT_S) &&

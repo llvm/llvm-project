@@ -254,20 +254,20 @@ public:
   /// support for these atomic instructions, and also have different options
   /// w.r.t. what they should expand to.
   enum class AtomicExpansionKind {
-    None,    // Don't expand the instruction.
-    CastToInteger,    // Cast the atomic instruction to another type, e.g. from
-                      // floating-point to integer type.
+    None,          // Don't expand the instruction.
+    CastToInteger, // Cast the atomic instruction to another type, e.g. from
+                   // floating-point to integer type.
     LLSC,    // Expand the instruction into loadlinked/storeconditional; used
-             // by ARM/AArch64.
+             // by ARM/AArch64/PowerPC.
     LLOnly,  // Expand the (load) instruction into just a load-linked, which has
              // greater atomic guarantees than a normal load.
     CmpXChg, // Expand the instruction into cmpxchg; used by at least X86.
-    MaskedIntrinsic,  // Use a target-specific intrinsic for the LL/SC loop.
-    BitTestIntrinsic, // Use a target-specific intrinsic for special bit
-                      // operations; used by X86.
-    CmpArithIntrinsic,// Use a target-specific intrinsic for special compare
-                      // operations; used by X86.
-    Expand,           // Generic expansion in terms of other atomic operations.
+    MaskedIntrinsic,   // Use a target-specific intrinsic for the LL/SC loop.
+    BitTestIntrinsic,  // Use a target-specific intrinsic for special bit
+                       // operations; used by X86.
+    CmpArithIntrinsic, // Use a target-specific intrinsic for special compare
+                       // operations; used by X86.
+    Expand,            // Generic expansion in terms of other atomic operations.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
     // environment.
