@@ -18,9 +18,22 @@
 ## gABI leaves the behavior of weak undefined references implementation defined.
 ## We choose to resolve them statically for static linking and produce dynamic relocations
 ## for dynamic linking (-shared or at least one input DSO).
-##
-## Note: Some ports of GNU ld support -z nodynamic-undefined-weak that we don't
-## implement.
+
+## -z dynamic-undefined-weak is ignored if .dynsym is absent (-no-pie without DSO)
+# RUN: ld.lld a.o -o a.d -z dynamic-undefined-weak 2>&1 | count 0
+# RUN: llvm-readelf -r --hex-dump=.data a.d | FileCheck %s --check-prefix=STATIC
+
+## Currently no effect for S+A relocations.
+# RUN: ld.lld a.o s.so -o as.d -z dynamic-undefined-weak
+# RUN: llvm-readelf -r --hex-dump=.data as.d | FileCheck %s --check-prefix=STATIC
+
+## -z dynamic-undefined-weak forces dynamic relocations if .dynsym is present.
+# RUN: ld.lld a.o -o a.pie.d -pie -z dynamic-undefined-weak
+# RUN: llvm-readelf -r a.pie.d | FileCheck %s --check-prefix=DYN
+
+## -z nodynamic-undefined-weak suppresses dynamic relocations.
+# RUN: ld.lld a.o -o a.so.n -shared -z dynamic-undefined-weak -z nodynamic-undefined-weak
+# RUN: llvm-readelf -r --hex-dump=.data a.so.n | FileCheck %s --check-prefix=STATIC
 
 # STATIC:      no relocations
 # STATIC:      Hex dump of section '.data':

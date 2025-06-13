@@ -1978,6 +1978,8 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   if (D->isModulePrivate())
     return false;
 
+  Module *DeclTopModule = DeclModule->getTopLevelModule();
+
   // [module.reach]/p1
   //   A translation unit U is necessarily reachable from a point P if U is a
   //   module interface unit on which the translation unit containing P has an
@@ -1996,17 +1998,28 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   //
   // Here we only check for the first condition. Since we couldn't see
   // DeclModule if it isn't (transitively) imported.
-  if (DeclModule->getTopLevelModule()->isModuleInterfaceUnit())
+  if (DeclTopModule->isModuleInterfaceUnit())
     return true;
 
-  // [module.reach]/p2
+  // [module.reach]/p1,2
+  //   A translation unit U is necessarily reachable from a point P if U is a
+  //   module interface unit on which the translation unit containing P has an
+  //   interface dependency, or the translation unit containing P imports U, in
+  //   either case prior to P
+  //
   //   Additional translation units on
   //   which the point within the program has an interface dependency may be
   //   considered reachable, but it is unspecified which are and under what
   //   circumstances.
-  //
-  // The decision here is to treat all additional tranditional units as
-  // unreachable.
+  Module *CurrentM = SemaRef.getCurrentModule();
+
+  // Directly imported module are necessarily reachable.
+  // Since we can't export import a module implementation partition unit, we
+  // don't need to count for Exports here.
+  if (CurrentM && CurrentM->getTopLevelModule()->Imports.count(DeclTopModule))
+    return true;
+
+  // Then we treat all module implementation partition unit as unreachable.
   return false;
 }
 

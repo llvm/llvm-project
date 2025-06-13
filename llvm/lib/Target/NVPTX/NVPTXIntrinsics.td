@@ -578,10 +578,14 @@ class G2S_STRINGS<int dim, string mode, bit mc, bit ch, bit is_shared32 = 0> {
                      # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
 }
 
+def CTAGroupFlags : Operand<i32> {
+  let PrintMethod = "printCTAGroup";
+}
+
 multiclass CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, bit is_shared32, string mode> {
   defvar dims_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "d" # i));
   defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
-  defvar asm_str_default = " [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
+  defvar asm_str_default = "$cg [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
   defvar rc = !if(is_shared32, Int32Regs, Int64Regs);
 
   defvar num_im2col = !if(!ge(dim, 3), !add(dim, -2), 0);
@@ -595,19 +599,22 @@ multiclass CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, bit is_shared32, string mode> 
     !strconcat(asm_str_default, im2col_asm_str), asm_str_default);
 
   def "" : NVPTXInst<(outs),
-            !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag),
+            !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins CTAGroupFlags:$cg)),
             !strconcat(G2S_STRINGS<dim, mode, 0, 0>.inst_name, asm_str, ";"), []>,
             Requires<[hasPTX<80>, hasSM<90>]>;
   def _MC : NVPTXInst<(outs),
-                  !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc)),
+                  !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag,
+                       (ins Int16Regs:$mc, CTAGroupFlags:$cg)),
                   !strconcat(G2S_STRINGS<dim, mode, 1, 0>.inst_name, asm_str, ", $mc;"), []>,
                   Requires<[hasPTX<80>, hasSM<90>]>;
   def _CH : NVPTXInst<(outs),
-                  !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int64Regs:$ch)),
+                  !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag,
+                       (ins Int64Regs:$ch, CTAGroupFlags:$cg)),
                   !strconcat(G2S_STRINGS<dim, mode, 0, 1>.inst_name, asm_str, ", $ch;"), []>,
                   Requires<[hasPTX<80>, hasSM<90>]>;
   def _MC_CH : NVPTXInst<(outs),
-                     !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc, Int64Regs:$ch)),
+                     !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag,
+                          (ins Int16Regs:$mc, Int64Regs:$ch, CTAGroupFlags:$cg)),
                      !strconcat(G2S_STRINGS<dim, mode, 1, 1>.inst_name, asm_str, ", $mc, $ch;"), []>,
                      Requires<[hasPTX<80>, hasSM<90>]>;
 }
@@ -1513,15 +1520,18 @@ def INT_NVVM_SQRT_RZ_D : F_MATH_1<"sqrt.rz.f64", F64RT, F64RT, int_nvvm_sqrt_rz_
 def INT_NVVM_SQRT_RM_D : F_MATH_1<"sqrt.rm.f64", F64RT, F64RT, int_nvvm_sqrt_rm_d>;
 def INT_NVVM_SQRT_RP_D : F_MATH_1<"sqrt.rp.f64", F64RT, F64RT, int_nvvm_sqrt_rp_d>;
 
+def fsqrt_approx : PatFrags<(ops node:$a),
+                            [(fsqrt node:$a),
+                             (int_nvvm_sqrt_f node:$a)], [{
+  return !usePrecSqrtF32(N);
+}]>;
+
 // nvvm_sqrt intrinsic
-def : Pat<(int_nvvm_sqrt_f f32:$a),
-          (INT_NVVM_SQRT_RN_FTZ_F $a)>, Requires<[doF32FTZ, do_SQRTF32_RN]>;
-def : Pat<(int_nvvm_sqrt_f f32:$a),
-          (INT_NVVM_SQRT_RN_F $a)>, Requires<[do_SQRTF32_RN]>;
-def : Pat<(int_nvvm_sqrt_f f32:$a),
-          (INT_NVVM_SQRT_APPROX_FTZ_F $a)>, Requires<[doF32FTZ]>;
-def : Pat<(int_nvvm_sqrt_f f32:$a),
-          (INT_NVVM_SQRT_APPROX_F $a)>;
+def : Pat<(int_nvvm_sqrt_f f32:$a), (INT_NVVM_SQRT_RN_FTZ_F $a)>, Requires<[doF32FTZ]>;
+def : Pat<(int_nvvm_sqrt_f f32:$a), (INT_NVVM_SQRT_RN_F $a)>;
+
+def : Pat<(fsqrt_approx f32:$a), (INT_NVVM_SQRT_APPROX_FTZ_F $a)>, Requires<[doF32FTZ]>;
+def : Pat<(fsqrt_approx f32:$a), (INT_NVVM_SQRT_APPROX_F $a)>;
 
 //
 // Rsqrt
@@ -1544,20 +1554,14 @@ def: Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_f f32:$a)),
 def: Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_ftz_f f32:$a)),
          (INT_NVVM_RSQRT_APPROX_FTZ_F $a)>,
          Requires<[doRsqrtOpt]>;
-// same for int_nvvm_sqrt_f when non-precision sqrt is requested
-def: Pat<(fdiv f32imm_1, (int_nvvm_sqrt_f f32:$a)),
-         (INT_NVVM_RSQRT_APPROX_F $a)>,
-         Requires<[doRsqrtOpt, do_SQRTF32_APPROX, doNoF32FTZ]>;
-def: Pat<(fdiv f32imm_1, (int_nvvm_sqrt_f f32:$a)),
-         (INT_NVVM_RSQRT_APPROX_FTZ_F $a)>,
-         Requires<[doRsqrtOpt, do_SQRTF32_APPROX, doF32FTZ]>;
 
-def: Pat<(fdiv f32imm_1, (fsqrt f32:$a)),
+// same for int_nvvm_sqrt_f when non-precision sqrt is requested
+def: Pat<(fdiv f32imm_1, (fsqrt_approx f32:$a)),
          (INT_NVVM_RSQRT_APPROX_F $a)>,
-         Requires<[doRsqrtOpt, do_SQRTF32_APPROX, doNoF32FTZ]>;
-def: Pat<(fdiv f32imm_1, (fsqrt f32:$a)),
+         Requires<[doRsqrtOpt, doNoF32FTZ]>;
+def: Pat<(fdiv f32imm_1, (fsqrt_approx f32:$a)),
          (INT_NVVM_RSQRT_APPROX_FTZ_F $a)>,
-         Requires<[doRsqrtOpt, do_SQRTF32_APPROX, doF32FTZ]>;
+         Requires<[doRsqrtOpt, doF32FTZ]>;
 //
 // Add
 //
