@@ -32,8 +32,8 @@ public:
   bool usesPreprocessorOnly() const override { return false; }
 };
 
-/// Preprocessor-based frontend action that also loads PCH files.
-class ReadPCHAndPreprocessAction : public FrontendAction {
+/// Preprocessor-based frontend action that is used for dependency scanning.
+class DependencyScanningFrontendAction : public FrontendAction {
   void ExecuteAction() override;
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
