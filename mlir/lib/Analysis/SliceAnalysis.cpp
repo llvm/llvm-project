@@ -109,6 +109,8 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
         if (parentOp->getNumRegions() == 1 &&
             llvm::hasSingleElement(parentOp->getRegion(0).getBlocks())) {
           return getBackwardSliceImpl(parentOp, backwardSlice, options);
+        } else {
+          return failure();
         }
       }
     } else {
