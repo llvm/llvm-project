@@ -174,6 +174,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR   %8 = or i1 %7, %mul.overflow
 ; CHECK-NEXT:    IR   %9 = icmp ugt i64 %3, 4294967295
 ; CHECK-NEXT:    IR   %10 = or i1 %8, %9
+; CHECK-NEXT:    EMIT branch-on-cond ir<%10>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.memcheck>:
@@ -182,6 +183,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR   %13 = mul i64 %12, 4
 ; CHECK-NEXT:    IR   %14 = sub i64 %B1, %A2
 ; CHECK-NEXT:    IR   %diff.check = icmp ult i64 %14, %13
+; CHECK-NEXT:    EMIT branch-on-cond ir<%diff.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.ph>:
@@ -422,6 +424,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR   %8 = or i1 %7, %mul.overflow
 ; CHECK-NEXT:    IR   %9 = icmp ugt i64 %3, 4294967295
 ; CHECK-NEXT:    IR   %10 = or i1 %8, %9
+; CHECK-NEXT:    EMIT branch-on-cond ir<%10>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.memcheck>:
@@ -430,6 +433,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR   %13 = mul i64 %12, 4
 ; CHECK-NEXT:    IR   %14 = sub i64 %B1, %A2
 ; CHECK-NEXT:    IR   %diff.check = icmp ult i64 %14, %13
+; CHECK-NEXT:    EMIT branch-on-cond ir<%diff.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.ph>:
