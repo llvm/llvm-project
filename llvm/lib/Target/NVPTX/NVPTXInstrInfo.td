@@ -1621,6 +1621,10 @@ let hasSideEffects = false in {
 
 }
 
+// PRMT folding patterns
+def : Pat<(fshr i32:$hi, i32:$lo, (shl i32:$amt, (i32 3))),
+          (PRMT_B32rrr $lo, $hi, $amt, PrmtF4E)>;
+
 
 // byte extraction + signed/unsigned extension to i32.
 def : Pat<(i32 (sext_inreg (bfe i32:$s, i32:$o, 8), i8)),
