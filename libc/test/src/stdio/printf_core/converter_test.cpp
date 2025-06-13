@@ -124,7 +124,7 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionSimple) {
 TEST_F(LlvmLibcPrintfConverterTest, StringConversionPrecisionHigh) {
   LIBC_NAMESPACE::printf_core::FormatSection high_precision_conv;
   high_precision_conv.has_conv = true;
-  high_precision_conv.raw_string = "%4s";
+  high_precision_conv.raw_string = "%.4s";
   high_precision_conv.conv_name = 's';
   high_precision_conv.precision = 4;
   high_precision_conv.conv_val_ptr = const_cast<char *>("456");
@@ -254,4 +254,34 @@ TEST_F(LlvmLibcPrintfConverterTest, OctConversion) {
   wb.buff[wb.buff_cur] = '\0';
   ASSERT_STREQ(str, "1234");
   ASSERT_EQ(writer.get_chars_written(), 4);
+}
+
+TEST_F(LlvmLibcPrintfConverterTest, FloatConversionSimple) {
+
+  LIBC_NAMESPACE::printf_core::FormatSection section;
+  section.has_conv = true;
+  section.raw_string = "%f";
+  section.conv_name = 'f';
+  section.conv_val_raw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(1.234567);
+  LIBC_NAMESPACE::printf_core::convert(&writer, section);
+
+  wb.buff[wb.buff_cur] = '\0';
+  ASSERT_STREQ(str, "1.234567");
+  ASSERT_EQ(writer.get_chars_written(), 8);
+}
+
+TEST_F(LlvmLibcPrintfConverterTest, FloatConversionPrecisionHigh) {
+
+  LIBC_NAMESPACE::printf_core::FormatSection section;
+  section.has_conv = true;
+  section.raw_string = "%12.3f";
+  section.conv_name = 'f';
+  section.min_width = 12;
+  section.precision = 3;
+  section.conv_val_raw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(0.000123);
+  LIBC_NAMESPACE::printf_core::convert(&writer, section);
+
+  wb.buff[wb.buff_cur] = '\0';
+  ASSERT_STREQ(str, "       0.000");
+  ASSERT_EQ(writer.get_chars_written(), 12);
 }
