@@ -244,11 +244,6 @@ static bool checkAMDGPUWavesPerEUArguments(Sema &S, Expr *MinExpr,
   if (MaxExpr && !S.checkUInt32Argument(Attr, MaxExpr, Max, 1))
     return true;
 
-  if (Min == 0 && Max != 0) {
-    S.Diag(Attr.getLocation(), diag::err_attribute_argument_invalid)
-        << &Attr << 0;
-    return true;
-  }
   if (Max != 0 && Min > Max) {
     S.Diag(Attr.getLocation(), diag::err_attribute_argument_invalid)
         << &Attr << 1;
