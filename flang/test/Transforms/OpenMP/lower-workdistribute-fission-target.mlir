@@ -1,6 +1,6 @@
 // RUN: fir-opt --lower-workdistribute %s | FileCheck %s
 
-// CHECK-LABEL:   func.func @x
+// CHECK-LABEL:   func.func @x(
 // CHECK:           %[[VAL_0:.*]] = fir.alloca index {bindc_name = "lb"}
 // CHECK:           fir.store %[[ARG0:.*]] to %[[VAL_0]] : !fir.ref<index>
 // CHECK:           %[[VAL_1:.*]] = fir.alloca index {bindc_name = "ub"}
@@ -19,28 +19,26 @@
 // CHECK:             %[[VAL_11:.*]] = fir.alloca !fir.heap<index>
 // CHECK:             %[[VAL_12:.*]] = omp.map.info var_ptr(%[[VAL_11]] : !fir.ref<!fir.heap<index>>, !fir.heap<index>) map_clauses(from) capture(ByRef) -> !fir.ref<!fir.heap<index>> {name = "__flang_workdistribute_from"}
 // CHECK:             %[[VAL_13:.*]] = omp.map.info var_ptr(%[[VAL_11]] : !fir.ref<!fir.heap<index>>, !fir.heap<index>) map_clauses(to) capture(ByRef) -> !fir.ref<!fir.heap<index>> {name = "__flang_workdistribute_to"}
-// CHECK:             omp.target map_entries(%[[VAL_7]] -> %[[VAL_14:.*]], %[[VAL_8]] -> %[[VAL_15:.*]], %[[VAL_9]] -> %[[VAL_16:.*]], %[[VAL_10]] -> %[[VAL_17:.*]], %[[VAL_12]] -> %[[VAL_18:.*]] : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<!fir.heap<index>>) {
-// CHECK:               %[[VAL_19:.*]] = arith.constant 1 : index
-// CHECK:               %[[VAL_20:.*]] = fir.load %[[VAL_14]] : !fir.ref<index>
-// CHECK:               %[[VAL_21:.*]] = fir.load %[[VAL_15]] : !fir.ref<index>
-// CHECK:               %[[VAL_22:.*]] = fir.load %[[VAL_16]] : !fir.ref<index>
-// CHECK:               %[[VAL_23:.*]] = arith.addi %[[VAL_21]], %[[VAL_21]] : index
-// CHECK:               %[[VAL_24:.*]] = fir.allocmem index, %[[VAL_19]] {uniq_name = "dev_buf"}
-// CHECK:               fir.store %[[VAL_24]] to %[[VAL_18]] : !fir.llvm_ptr<!fir.heap<index>>
-// CHECK:               omp.terminator
-// CHECK:             }
-// CHECK:             omp.target map_entries(%[[VAL_7]] -> %[[VAL_25:.*]], %[[VAL_8]] -> %[[VAL_26:.*]], %[[VAL_9]] -> %[[VAL_27:.*]], %[[VAL_10]] -> %[[VAL_28:.*]], %[[VAL_13]] -> %[[VAL_29:.*]] : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<!fir.heap<index>>) {
-// CHECK:               %[[VAL_30:.*]] = fir.load %[[VAL_29]] : !fir.llvm_ptr<!fir.heap<index>>
-// CHECK:               %[[VAL_31:.*]] = fir.load %[[VAL_25]] : !fir.ref<index>
-// CHECK:               %[[VAL_32:.*]] = fir.load %[[VAL_26]] : !fir.ref<index>
-// CHECK:               %[[VAL_33:.*]] = fir.load %[[VAL_27]] : !fir.ref<index>
-// CHECK:               %[[VAL_34:.*]] = arith.addi %[[VAL_32]], %[[VAL_32]] : index
+// CHECK:             %[[VAL_14:.*]] = arith.constant 1 : index
+// CHECK:             %[[VAL_15:.*]] = fir.load %[[VAL_0]] : !fir.ref<index>
+// CHECK:             %[[VAL_16:.*]] = fir.load %[[VAL_1]] : !fir.ref<index>
+// CHECK:             %[[VAL_17:.*]] = fir.load %[[VAL_2]] : !fir.ref<index>
+// CHECK:             %[[VAL_18:.*]] = arith.addi %[[VAL_16]], %[[VAL_16]] : index
+// CHECK:             %[[VAL_19:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:             %[[VAL_20:.*]] = "fir.omp_target_allocmem"(%[[VAL_19]], %[[VAL_14]]) <{in_type = index, operandSegmentSizes = array<i32: 1, 0, 1>, uniq_name = "dev_buf"}> : (i32, index) -> !fir.heap<index>
+// CHECK:             fir.store %[[VAL_20]] to %[[VAL_11]] : !fir.ref<!fir.heap<index>>
+// CHECK:             omp.target map_entries(%[[VAL_7]] -> %[[VAL_21:.*]], %[[VAL_8]] -> %[[VAL_22:.*]], %[[VAL_9]] -> %[[VAL_23:.*]], %[[VAL_10]] -> %[[VAL_24:.*]], %[[VAL_13]] -> %[[VAL_25:.*]] : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<!fir.heap<index>>) {
+// CHECK:               %[[VAL_26:.*]] = fir.load %[[VAL_25]] : !fir.llvm_ptr<!fir.heap<index>>
+// CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_21]] : !fir.ref<index>
+// CHECK:               %[[VAL_28:.*]] = fir.load %[[VAL_22]] : !fir.ref<index>
+// CHECK:               %[[VAL_29:.*]] = fir.load %[[VAL_23]] : !fir.ref<index>
+// CHECK:               %[[VAL_30:.*]] = arith.addi %[[VAL_28]], %[[VAL_28]] : index
 // CHECK:               omp.teams {
 // CHECK:                 omp.parallel {
 // CHECK:                   omp.distribute {
 // CHECK:                     omp.wsloop {
-// CHECK:                       omp.loop_nest (%[[VAL_35:.*]]) : index = (%[[VAL_31]]) to (%[[VAL_32]]) inclusive step (%[[VAL_33]]) {
-// CHECK:                         fir.store %[[VAL_34]] to %[[VAL_30]] : !fir.heap<index>
+// CHECK:                       omp.loop_nest (%[[VAL_31:.*]]) : index = (%[[VAL_27]]) to (%[[VAL_28]]) inclusive step (%[[VAL_29]]) {
+// CHECK:                         fir.store %[[VAL_30]] to %[[VAL_26]] : !fir.heap<index>
 // CHECK:                         omp.yield
 // CHECK:                       }
 // CHECK:                     } {omp.composite}
@@ -51,16 +49,14 @@
 // CHECK:               }
 // CHECK:               omp.terminator
 // CHECK:             }
-// CHECK:             omp.target map_entries(%[[VAL_7]] -> %[[VAL_36:.*]], %[[VAL_8]] -> %[[VAL_37:.*]], %[[VAL_9]] -> %[[VAL_38:.*]], %[[VAL_10]] -> %[[VAL_39:.*]], %[[VAL_13]] -> %[[VAL_40:.*]] : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<!fir.heap<index>>) {
-// CHECK:               %[[VAL_41:.*]] = fir.load %[[VAL_40]] : !fir.llvm_ptr<!fir.heap<index>>
-// CHECK:               %[[VAL_42:.*]] = fir.load %[[VAL_36]] : !fir.ref<index>
-// CHECK:               %[[VAL_43:.*]] = fir.load %[[VAL_37]] : !fir.ref<index>
-// CHECK:               %[[VAL_44:.*]] = fir.load %[[VAL_38]] : !fir.ref<index>
-// CHECK:               %[[VAL_45:.*]] = arith.addi %[[VAL_43]], %[[VAL_43]] : index
-// CHECK:               fir.store %[[VAL_42]] to %[[VAL_41]] : !fir.heap<index>
-// CHECK:               fir.freemem %[[VAL_41]] : !fir.heap<index>
-// CHECK:               omp.terminator
-// CHECK:             }
+// CHECK:             %[[VAL_32:.*]] = fir.load %[[VAL_11]] : !fir.ref<!fir.heap<index>>
+// CHECK:             %[[VAL_33:.*]] = fir.load %[[VAL_0]] : !fir.ref<index>
+// CHECK:             %[[VAL_34:.*]] = fir.load %[[VAL_1]] : !fir.ref<index>
+// CHECK:             %[[VAL_35:.*]] = fir.load %[[VAL_2]] : !fir.ref<index>
+// CHECK:             %[[VAL_36:.*]] = arith.addi %[[VAL_34]], %[[VAL_34]] : index
+// CHECK:             fir.store %[[VAL_33]] to %[[VAL_32]] : !fir.heap<index>
+// CHECK:             %[[VAL_37:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:             "fir.omp_target_freemem"(%[[VAL_37]], %[[VAL_32]]) : (i32, !fir.heap<index>) -> ()
 // CHECK:             omp.terminator
 // CHECK:           }
 // CHECK:           return
@@ -79,10 +75,10 @@ func.func @x(%lb : index, %ub : index, %step : index, %addr : !fir.ref<index>) {
   %step_map = omp.map.info var_ptr(%step_ref : !fir.ref<index>, index) map_clauses(to) capture(ByRef) -> !fir.ref<index> {name = "step"}
   %addr_map = omp.map.info var_ptr(%addr : !fir.ref<index>, index) map_clauses(tofrom) capture(ByRef) -> !fir.ref<index> {name = "addr"}
 
-  omp.target map_entries(%lb_map -> %arg0, %ub_map -> %arg1, %step_map -> %arg2, %addr_map -> %arg3 : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>) {
-    %lb_val = fir.load %arg0 : !fir.ref<index>
-    %ub_val = fir.load %arg1 : !fir.ref<index>
-    %step_val = fir.load %arg2 : !fir.ref<index>
+  omp.target map_entries(%lb_map -> %ARG0, %ub_map -> %ARG1, %step_map -> %ARG2, %addr_map -> %ARG3 : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>) {
+    %lb_val = fir.load %ARG0 : !fir.ref<index>
+    %ub_val = fir.load %ARG1 : !fir.ref<index>
+    %step_val = fir.load %ARG2 : !fir.ref<index>
     %one = arith.constant 1 : index
 
     %20 = arith.addi %ub_val, %ub_val : index
