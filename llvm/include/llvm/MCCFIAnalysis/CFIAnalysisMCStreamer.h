@@ -14,6 +14,12 @@
 
 namespace llvm {
 
+// TODO Now the design is that the streamer, make instances of the analysis and
+// TODO run the analysis on the instruction, but instead the streamer should
+// TODO divide the program into function units, and then emit the function units
+// TODO one by one. Also in each function unit, an instruction with associated
+// TODO directives should be emitted. The analysis should be run by the
+// TODO receiver.
 class CFIAnalysisMCStreamer : public MCStreamer {
   MCInstrInfo const &MCII;
   std::unique_ptr<MCInstrAnalysis> MCIA;

@@ -138,6 +138,7 @@ public:
     return *AddrSpace;
   }
   int32_t getConstant() const { return Offset; }
+  bool getDereference() const { return Dereference; }
   /// Some opcodes will modify the CFA location's register only, so we need
   /// to be able to modify the CFA register when evaluating DWARF Call Frame
   /// Information opcodes.
@@ -334,6 +335,7 @@ public:
     assert(Index < size());
     return Rows[Index];
   }
+  void insertRow(UnwindRow Row) { Rows.push_back(Row); }
 
   /// Dump the UnwindTable to the stream.
   ///
@@ -372,12 +374,6 @@ public:
   /// machine errors, or a valid UnwindTable otherwise.
   LLVM_ABI static Expected<UnwindTable> create(const FDE *Fde);
 
-private:
-  RowContainer Rows;
-  /// The end address when data is extracted from a FDE. This value will be
-  /// invalid when a UnwindTable is extracted from a CIE.
-  std::optional<uint64_t> EndAddress;
-
   /// Parse the information in the CFIProgram and update the CurrRow object
   /// that the state machine describes.
   ///
@@ -395,6 +391,12 @@ private:
   /// DW_CFA_restore and DW_CFA_restore_extended opcodes.
   Error parseRows(const CFIProgram &CFIP, UnwindRow &CurrRow,
                   const RegisterLocations *InitialLocs);
+private:
+  RowContainer Rows;
+  /// The end address when data is extracted from a FDE. This value will be
+  /// invalid when a UnwindTable is extracted from a CIE.
+  std::optional<uint64_t> EndAddress;
+
 };
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindTable &Rows);

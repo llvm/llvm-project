@@ -1,25 +1,88 @@
 // TODO check what includes to keep and what to remove
 #include "llvm/MCCFIAnalysis/CFIState.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cassert>
-#include <cstdint>
 #include <optional>
-#include <string>
 
 using namespace llvm;
 
-dwarf::CFIProgram llvm::convertMC2DWARF(MCContext &Context,
-                                        MCCFIInstruction CFIDirective,
-                                        int64_t CFAOffset) {
+CFIState::CFIState(const CFIState &Other) : Context(Other.Context) {
+  // TODO maybe remove it
+  State = Other.State;
+}
+
+CFIState &CFIState::operator=(const CFIState &Other) {
+  // TODO maybe remove it
+  if (this != &Other) {
+    State = Other.State;
+    Context = Other.Context;
+  }
+
+  return *this;
+}
+
+std::optional<DWARFRegType>
+CFIState::getReferenceRegisterForCallerValueOfRegister(DWARFRegType Reg) const {
+  // TODO maybe move it the Location class
+  auto LastRow = getLastRow();
+  assert(LastRow && "The state is empty.");
+
+  auto UnwinLoc = LastRow->getRegisterLocations().getRegisterLocation(Reg);
+  assert(UnwinLoc &&
+         "The register should be tracked inside the register states");
+
+  switch (UnwinLoc->getLocation()) {
+  case dwarf::UnwindLocation::Location::Undefined:
+  case dwarf::UnwindLocation::Location::Constant:
+  case dwarf::UnwindLocation::Location::Unspecified:
+    // TODO here should look into expr and find the registers, but for now it's
+    // TODO like this:
+  case dwarf::UnwindLocation::Location::DWARFExpr:
+    return std::nullopt;
+  case dwarf::UnwindLocation::Location::Same:
+    return Reg;
+  case dwarf::UnwindLocation::Location::RegPlusOffset:
+    return UnwinLoc->getRegister();
+  case dwarf::UnwindLocation::Location::CFAPlusOffset:
+    // TODO check if it's ok to assume CFA is always depending on other
+    // TODO register, if yes assert it here!
+    return LastRow->getCFAValue().getRegister();
+  }
+}
+
+void CFIState::apply(const MCCFIInstruction &CFIDirective) {
+  auto DwarfOperations = convertMC2DWARF(CFIDirective);
+  if (!DwarfOperations) {
+    Context->reportError(
+        CFIDirective.getLoc(),
+        "couldn't apply this directive to the unwinding information state");
+  }
+
+  auto &&LastRow = getLastRow();
+  dwarf::UnwindRow Row = LastRow ? LastRow.value() : dwarf::UnwindRow();
+  if (Error Err = State.parseRows(DwarfOperations.value(), Row, nullptr)) {
+    // ! FIXME what should I do with this error?
+    Context->reportError(
+        CFIDirective.getLoc(),
+        formatv("could not parse this CFI directive due to: {0}",
+                toString(std::move(Err))));
+    assert(false);
+  }
+  State.insertRow(Row);
+}
+
+std::optional<dwarf::CFIProgram>
+CFIState::convertMC2DWARF(MCCFIInstruction CFIDirective) {
   //! FIXME, this way of instantiating CFI program does not look right, either
   //! refactor CFIProgram to not depend on the Code/Data Alignment or add a new
   //! type that is independent from this and is also feedable to UnwindTable.
-  auto DwarfOperations =
-      dwarf::CFIProgram(0, 0, Context.getTargetTriple().getArch());
+  auto DwarfOperations = dwarf::CFIProgram(
+      1 /* TODO */, 1 /* TODO */, Context->getTargetTriple().getArch());
 
   switch (CFIDirective.getOperation()) {
   case MCCFIInstruction::OpSameValue:
@@ -42,7 +105,7 @@ dwarf::CFIProgram llvm::convertMC2DWARF(MCContext &Context,
                                    CFIDirective.getRegister());
     break;
   case MCCFIInstruction::OpDefCfaRegister:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_def_cfa,
+    DwarfOperations.addInstruction(dwarf::DW_CFA_def_cfa_register,
                                    CFIDirective.getRegister());
     break;
   case MCCFIInstruction::OpDefCfaOffset:
@@ -55,13 +118,20 @@ dwarf::CFIProgram llvm::convertMC2DWARF(MCContext &Context,
                                    CFIDirective.getOffset());
     break;
   case MCCFIInstruction::OpRelOffset:
-    DwarfOperations.addInstruction(dwarf::DW_CFA_offset,
-                                   CFIDirective.getRegister(),
-                                   CFIDirective.getOffset() - CFAOffset);
+    if (!getLastRow()) // TODO maybe replace it with assert
+      return std::nullopt;
+
+    DwarfOperations.addInstruction(
+        dwarf::DW_CFA_offset, CFIDirective.getRegister(),
+        CFIDirective.getOffset() - getLastRow()->getCFAValue().getOffset());
     break;
   case MCCFIInstruction::OpAdjustCfaOffset:
+    if (!getLastRow()) // TODO maybe replace it with assert
+      return std::nullopt;
+
     DwarfOperations.addInstruction(dwarf::DW_CFA_def_cfa_offset,
-                                   CFIDirective.getOffset() + CFAOffset);
+                                   CFIDirective.getOffset() +
+                                       getLastRow()->getCFAValue().getOffset());
     break;
   case MCCFIInstruction::OpEscape:
     // TODO It's now feasible but for now, I ignore it
@@ -107,187 +177,11 @@ dwarf::CFIProgram llvm::convertMC2DWARF(MCContext &Context,
   return DwarfOperations;
 }
 
-using DWARFRegType = int64_t;
-
-std::string RegisterCFIState::dump() {
-  switch (RetrieveApproach) {
-  case Undefined:
-    return "undefined";
-  case SameValue:
-    return "same value";
-  case AnotherRegister:
-    return formatv("stored in another register, which is reg#{0}",
-                   Info.Register);
-  case OffsetFromCFAAddr:
-    return formatv("offset {0} from CFA", Info.OffsetFromCFA);
-  case OffsetFromCFAVal:
-    return formatv("CFA value + {0}", Info.OffsetFromCFA);
-  case Other:
-    return "other";
-  }
-}
-
-bool RegisterCFIState::operator==(const RegisterCFIState &OtherState) const {
-  if (RetrieveApproach != OtherState.RetrieveApproach)
-    return false;
-
-  switch (RetrieveApproach) {
-  case Undefined:
-  case SameValue:
-  case Other:
-    return true;
-  case AnotherRegister:
-    return Info.Register == OtherState.Info.Register;
-  case OffsetFromCFAAddr:
-  case OffsetFromCFAVal:
-    return Info.OffsetFromCFA == OtherState.Info.OffsetFromCFA;
-  }
-}
-
-bool RegisterCFIState::operator!=(const RegisterCFIState &OtherState) const {
-  return !(*this == OtherState);
-}
-
-RegisterCFIState RegisterCFIState::createUndefined() {
-  RegisterCFIState State;
-  State.RetrieveApproach = Undefined;
-
-  return State;
-}
-
-RegisterCFIState RegisterCFIState::createSameValue() {
-  RegisterCFIState State;
-  State.RetrieveApproach = SameValue;
-
-  return State;
-}
-
-RegisterCFIState
-RegisterCFIState::createAnotherRegister(DWARFRegType Register) {
-  RegisterCFIState State;
-  State.RetrieveApproach = AnotherRegister;
-  State.Info.Register = Register;
-
-  return State;
-}
-
-RegisterCFIState RegisterCFIState::createOffsetFromCFAAddr(int OffsetFromCFA) {
-  RegisterCFIState State;
-  State.RetrieveApproach = OffsetFromCFAAddr;
-  State.Info.OffsetFromCFA = OffsetFromCFA;
-
-  return State;
-}
-
-RegisterCFIState RegisterCFIState::createOffsetFromCFAVal(int OffsetFromCFA) {
-  RegisterCFIState State;
-  State.RetrieveApproach = OffsetFromCFAVal;
-  State.Info.OffsetFromCFA = OffsetFromCFA;
-
-  return State;
-}
-
-RegisterCFIState RegisterCFIState::createOther() {
-  RegisterCFIState State;
-  State.RetrieveApproach = Other;
-
-  return State;
-}
-
-CFIState::CFIState() : CFARegister(-1), CFAOffset(-1) {}
-
-CFIState::CFIState(const CFIState &Other) {
-  CFARegister = Other.CFARegister;
-  CFAOffset = Other.CFAOffset;
-  RegisterCFIStates = Other.RegisterCFIStates;
-}
-
-CFIState &CFIState::operator=(const CFIState &Other) {
-  if (this != &Other) {
-    CFARegister = Other.CFARegister;
-    CFAOffset = Other.CFAOffset;
-    RegisterCFIStates = Other.RegisterCFIStates;
-  }
-
-  return *this;
-}
-
-CFIState::CFIState(DWARFRegType CFARegister, int CFIOffset)
-    : CFARegister(CFARegister), CFAOffset(CFIOffset) {}
-
-std::optional<DWARFRegType>
-CFIState::getReferenceRegisterForCallerValueOfRegister(DWARFRegType Reg) const {
-  assert(RegisterCFIStates.count(Reg) &&
-         "The register should be tracked inside the register states");
-  auto &&RegState = RegisterCFIStates.at(Reg);
-  switch (RegState.RetrieveApproach) {
-  case RegisterCFIState::Undefined:
-  case RegisterCFIState::Other:
+std::optional<dwarf::UnwindRow> CFIState::getLastRow() const {
+  if (!State.size())
     return std::nullopt;
-  case RegisterCFIState::SameValue:
-    return Reg;
-  case RegisterCFIState::AnotherRegister:
-    return RegState.Info.Register;
-  case RegisterCFIState::OffsetFromCFAAddr:
-  case RegisterCFIState::OffsetFromCFAVal:
-    return CFARegister;
-  }
-}
 
-bool CFIState::apply(const MCCFIInstruction &CFIDirective) {
-  switch (CFIDirective.getOperation()) {
-  case MCCFIInstruction::OpDefCfaRegister:
-    CFARegister = CFIDirective.getRegister();
-    break;
-  case MCCFIInstruction::OpDefCfaOffset:
-    CFAOffset = CFIDirective.getOffset();
-    break;
-  case MCCFIInstruction::OpAdjustCfaOffset:
-    CFAOffset += CFIDirective.getOffset();
-    break;
-  case MCCFIInstruction::OpDefCfa:
-    CFARegister = CFIDirective.getRegister();
-    CFAOffset = CFIDirective.getOffset();
-    break;
-  case MCCFIInstruction::OpOffset:
-    RegisterCFIStates[CFIDirective.getRegister()] =
-        RegisterCFIState::createOffsetFromCFAAddr(CFIDirective.getOffset());
-    break;
-  case MCCFIInstruction::OpRegister:
-    RegisterCFIStates[CFIDirective.getRegister()] =
-        RegisterCFIState::createAnotherRegister(CFIDirective.getRegister2());
-    break;
-  case MCCFIInstruction::OpRelOffset:
-    RegisterCFIStates[CFIDirective.getRegister()] =
-        RegisterCFIState::createOffsetFromCFAAddr(CFIDirective.getOffset() -
-                                                  CFAOffset);
-    break;
-  case MCCFIInstruction::OpUndefined:
-    RegisterCFIStates[CFIDirective.getRegister()] =
-        RegisterCFIState::createUndefined();
-    break;
-  case MCCFIInstruction::OpSameValue:
-    RegisterCFIStates[CFIDirective.getRegister()] =
-        RegisterCFIState::createSameValue();
-    break;
-  case MCCFIInstruction::OpValOffset:
-    RegisterCFIStates[CFIDirective.getRegister()] =
-        RegisterCFIState::createOffsetFromCFAVal(CFIDirective.getOffset());
-    break;
-  case MCCFIInstruction::OpRestoreState:
-  case MCCFIInstruction::OpRememberState:
-  case MCCFIInstruction::OpLLVMDefAspaceCfa:
-  case MCCFIInstruction::OpRestore:
-  case MCCFIInstruction::OpEscape:
-  case MCCFIInstruction::OpWindowSave:
-  case MCCFIInstruction::OpNegateRAState:
-  case MCCFIInstruction::OpNegateRAStateWithPC:
-  case MCCFIInstruction::OpGnuArgsSize:
-  case MCCFIInstruction::OpLabel:
-    // These instructions are not supported.
-    return false;
-    break;
-  }
-
-  return true;
+  //! FIXME too dirty
+  auto &&it = State.end();
+  return *--it;
 }

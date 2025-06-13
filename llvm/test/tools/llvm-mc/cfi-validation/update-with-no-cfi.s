@@ -12,16 +12,16 @@ f:
         .cfi_same_value %rdx
 
         movq $10, %rax
-        # CHECK: error: Reg#51 caller's value is in reg#51 which is changed by this instruction, but not changed in CFI directives
+        # CHECK: error: This instruction changes %RAX, that %RAX unwinding rule uses, but there is no CFI directives about it
 
         movq $10, %rbx
-        # CHECK: error: Reg#53 caller's value is in reg#53 which is changed by this instruction, but not changed in CFI directives
+        # CHECK: error: This instruction changes %RBX, that %RBX unwinding rule uses, but there is no CFI directives about it
 
         movq $10, %rcx
-        # CHECK: error: Reg#54 caller's value is in reg#54 which is changed by this instruction, but not changed in CFI directives
+        # CHECK: error: This instruction changes %RCX, that %RCX unwinding rule uses, but there is no CFI directives about it
 
         movq $10, %rdx
-        # CHECK: error: Reg#56 caller's value is in reg#56 which is changed by this instruction, but not changed in CFI directives
+        # CHECK: error: This instruction changes %RDX, that %RDX unwinding rule uses, but there is no CFI directives about it
 
         retq
 

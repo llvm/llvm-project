@@ -11,10 +11,11 @@
 
 namespace llvm {
 
+// TODO remove this class entirely
 class ExtendedMCInstrAnalysis {
 private:
 public:
-  ExtendedMCInstrAnalysis(MCContext &Context, MCInstrInfo const &MCII,
+  ExtendedMCInstrAnalysis(MCContext *Context, MCInstrInfo const &MCII,
                           MCInstrAnalysis *MCIA) {}
 
   /// Extra semantic information needed from MC layer:
