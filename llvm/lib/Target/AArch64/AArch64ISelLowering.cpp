@@ -13430,6 +13430,28 @@ static bool isUZP_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
   return true;
 }
 
+/// isDUPQMask - matches a splat of equivalent lanes within 128b segments
+static bool isDUPQMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
+  WhichResult = (unsigned)M[0];
+  unsigned Segments = VT.getFixedSizeInBits() / 128;
+  unsigned SegmentElts = VT.getVectorNumElements() / Segments;
+  if (SegmentElts * Segments != M.size())
+    return false;
+
+  for (unsigned I = 0; I < Segments; ++I) {
+    unsigned Broadcast = (unsigned)M[I * SegmentElts];
+    if (Broadcast - (I * SegmentElts) > SegmentElts)
+      return false;
+    for (unsigned J = 0; J < SegmentElts; ++J) {
+      int Idx = M[(I * SegmentElts) + J];
+      if ((unsigned)Idx != Broadcast)
+        return false;
+    }
+  }
+
+  return true;
+}
+
 /// isTRN_v_undef_Mask - Special case of isTRNMask for canonical form of
 /// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
 /// Mask is e.g., <0, 0, 2, 2> instead of <0, 4, 2, 6>.
@@ -30012,6 +30034,32 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
       unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
       return convertFromScalableVector(
           DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));
+    }
+
+    if (Subtarget->hasSVE2p1()) {
+      if (isDUPQMask(ShuffleMask, VT, WhichResult)) {
+        unsigned DupOp;
+        switch (VT.getScalarSizeInBits()) {
+        default:
+          llvm_unreachable("Unsupported scalar size");
+        case 8:
+          DupOp = AArch64ISD::DUPLANEQ8;
+          break;
+        case 16:
+          DupOp = AArch64ISD::DUPLANEQ16;
+          break;
+        case 32:
+          DupOp = AArch64ISD::DUPLANEQ32;
+          break;
+        case 64:
+          DupOp = AArch64ISD::DUPLANEQ64;
+          break;
+        }
+        return convertFromScalableVector(
+          DAG, VT, DAG.getNode(DupOp, DL, ContainerVT, Op1,
+                               DAG.getConstant(WhichResult, DL, MVT::i32,
+                                               /*isTarget=*/true)));
+      }
     }
   }
 

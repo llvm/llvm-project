@@ -4,13 +4,9 @@
 define void @dupq_i8_256b(ptr %addr) #0 {
 ; CHECK-LABEL: dupq_i8_256b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI0_0
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
-; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x8]
-; CHECK-NEXT:    tbl z0.b, { z0.b }, z1.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    dupq z0.b, z0.b[11]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %load = load <32 x i8>, ptr %addr
   %splat.lanes = shufflevector <32 x i8> %load, <32 x i8> poison, <32 x i32> <i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11,
@@ -22,13 +18,9 @@ define void @dupq_i8_256b(ptr %addr) #0 {
 define void @dupq_i16_256b(ptr %addr) #0 {
 ; CHECK-LABEL: dupq_i16_256b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl16
-; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI1_0
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x8]
-; CHECK-NEXT:    tbl z0.h, { z0.h }, z1.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    dupq z0.h, z0.h[2]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %load = load <16 x i16>, ptr %addr
   %splat.lanes = shufflevector <16 x i16> %load, <16 x i16> poison, <16 x i32> <i32  2, i32  2, i32  2, i32  2, i32  2, i32  2, i32  2, i32  2,
@@ -40,13 +32,9 @@ define void @dupq_i16_256b(ptr %addr) #0 {
 define void @dupq_i32_256b(ptr %addr) #0 {
 ; CHECK-LABEL: dupq_i32_256b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI2_0
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x8]
-; CHECK-NEXT:    tbl z0.s, { z0.s }, z1.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    dupq z0.s, z0.s[3]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %load = load <8 x i32>, ptr %addr
   %splat.lanes = shufflevector <8 x i32> %load, <8 x i32> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3,
@@ -58,10 +46,9 @@ define void @dupq_i32_256b(ptr %addr) #0 {
 define void @dupq_i64_256b(ptr %addr) #0 {
 ; CHECK-LABEL: dupq_i64_256b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    trn1 z0.d, z0.d, z0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %load = load <4 x i64>, ptr %addr
   %splat.lanes = shufflevector <4 x i64> %load, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
@@ -72,13 +59,9 @@ define void @dupq_i64_256b(ptr %addr) #0 {
 define void @dupq_f16_256b(ptr %addr) #0 {
 ; CHECK-LABEL: dupq_f16_256b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl16
-; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI4_0
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x8]
-; CHECK-NEXT:    tbl z0.h, { z0.h }, z1.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    dupq z0.h, z0.h[2]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %load = load <16 x half>, ptr %addr
   %splat.lanes = shufflevector <16 x half> %load, <16 x half> poison, <16 x i32> <i32  2, i32  2, i32  2, i32  2, i32  2, i32  2, i32  2, i32  2,
@@ -105,13 +88,9 @@ define void @dupq_bf16_256b(ptr %addr) #0 {
 define void @dupq_f32_256b(ptr %addr) #0 {
 ; CHECK-LABEL: dupq_f32_256b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    adrp x8, .LCPI6_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI6_0
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x8]
-; CHECK-NEXT:    tbl z0.s, { z0.s }, z1.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    dupq z0.s, z0.s[3]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %load = load <8 x float>, ptr %addr
   %splat.lanes = shufflevector <8 x float> %load, <8 x float> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3,
@@ -123,10 +102,9 @@ define void @dupq_f32_256b(ptr %addr) #0 {
 define void @dupq_f64_256b(ptr %addr) #0 {
 ; CHECK-LABEL: dupq_f64_256b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    trn1 z0.d, z0.d, z0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %load = load <4 x double>, ptr %addr
   %splat.lanes = shufflevector <4 x double> %load, <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
