@@ -18,11 +18,11 @@ typedef unsigned long uint64_t;
 typedef unsigned int uint32_t;
 
 static inline uint32_t __warpSize(void) {
-  #ifdef __OMPX_TARGET_IS_GPU
-    return __gpu_num_lanes();
-  #else
-    __builtin_trap();
-  #endif
+#ifdef __OMPX_TARGET_IS_GPU
+  return __gpu_num_lanes();
+#else
+  __builtin_trap();
+#endif
 }
 
 #ifdef __cplusplus
