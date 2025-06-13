@@ -7192,7 +7192,7 @@ static Function *emitTargetTaskProxyFunction(
     StructType *PrivatesTy, StructType *TaskWithPrivatesTy,
     const size_t NumOffloadingArrays, const int SharedArgsOperandNo) {
 
-  // if NumOffloadingArrays is non-zero, PrivatesTy better not be nullptr
+  // If NumOffloadingArrays is non-zero, PrivatesTy better not be nullptr.
   // This is because PrivatesTy is the type of the structure in which
   // we pass the offloading arrays to the deferred target task.
   assert((!NumOffloadingArrays || PrivatesTy) &&
