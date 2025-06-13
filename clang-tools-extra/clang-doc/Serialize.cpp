@@ -388,7 +388,8 @@ std::string serialize(std::unique_ptr<Info> &I) {
     return serialize(*static_cast<EnumInfo *>(I.get()));
   case InfoType::IT_function:
     return serialize(*static_cast<FunctionInfo *>(I.get()));
-  default:
+  case InfoType::IT_typedef:
+  case InfoType::IT_default:
     return "";
   }
 }
@@ -525,9 +526,13 @@ static std::unique_ptr<Info> makeAndInsertIntoParent(ChildType Child) {
     InsertChild(ParentRec->Children, std::forward<ChildType>(Child));
     return ParentRec;
   }
-  default:
-    llvm_unreachable("Invalid reference type for parent namespace");
+  case InfoType::IT_default:
+  case InfoType::IT_enum:
+  case InfoType::IT_function:
+  case InfoType::IT_typedef:
+    break;
   }
+  llvm_unreachable("Invalid reference type for parent namespace");
 }
 
 // There are two uses for this function.
