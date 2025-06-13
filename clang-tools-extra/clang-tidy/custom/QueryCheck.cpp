@@ -67,7 +67,7 @@ QueryCheck::QueryCheck(llvm::StringRef Name,
     case query::QK_NoOp:
     case query::QK_Quit:
     case query::QK_SetBool: {
-      Context->configurationDiag("unsupported querry kind");
+      Context->configurationDiag("unsupported query kind");
     }
     }
     QueryStringRef = Q->RemainingContent;
