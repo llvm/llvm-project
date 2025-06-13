@@ -347,16 +347,19 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_f_owner_ex",
     hdrs = ["hdr/types/struct_f_owner_ex.h"],
+    deps = [":hdr_fcntl_overlay"],
 )
 
 libc_support_library(
     name = "types_struct_flock",
     hdrs = ["hdr/types/struct_flock.h"],
+    deps = [":hdr_fcntl_overlay"],
 )
 
 libc_support_library(
     name = "types_struct_flock64",
     hdrs = ["hdr/types/struct_flock64.h"],
+    deps = [":hdr_fcntl_overlay"],
 )
 
 libc_support_library(
