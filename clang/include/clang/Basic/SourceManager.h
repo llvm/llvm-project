@@ -1854,7 +1854,14 @@ public:
   SourceLocation getTopMacroCallerLoc(SourceLocation Loc) const;
 
   /// Retrieve the name of a file suitable for diagnostics.
-  StringRef getNameForDiagnostic(StringRef Filename) const;
+  // FIXME: Passing in the DiagnosticOptions here is a workaround for the
+  // fact that installapi does some weird things with DiagnosticsEngines,
+  // which causes the 'Diag' member of SourceManager (or at least the
+  // DiagnosticsOptions member thereof) to be a dangling reference
+  // sometimes. We should probably fix that or decouple the two classes
+  // to avoid this issue entirely.
+  StringRef getNameForDiagnostic(StringRef Filename,
+                                 const DiagnosticOptions &Opts) const;
 
 private:
   friend class ASTReader;

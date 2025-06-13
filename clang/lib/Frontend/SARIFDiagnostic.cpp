@@ -163,7 +163,7 @@ SARIFDiagnostic::addDiagnosticLevelToRule(SarifRule Rule,
 
 llvm::StringRef SARIFDiagnostic::emitFilename(StringRef Filename,
                                               const SourceManager &SM) {
-  return SM.getNameForDiagnostic(Filename);
+  return SM.getNameForDiagnostic(Filename, DiagOpts);
 }
 
 /// Print out the file/line/column information and include trace.

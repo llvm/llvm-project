@@ -738,7 +738,7 @@ void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
 }
 
 void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
-  OS << SM.getNameForDiagnostic(Filename);
+  OS << SM.getNameForDiagnostic(Filename, DiagOpts);
 }
 
 /// Print out the file/line/column information and include trace.

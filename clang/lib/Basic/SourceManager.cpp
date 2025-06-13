@@ -2404,19 +2404,36 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
   SourceMgr->setMainFileID(ID);
 }
 
-StringRef SourceManager::getNameForDiagnostic(StringRef Filename) const {
+StringRef
+SourceManager::getNameForDiagnostic(StringRef Filename,
+                                    const DiagnosticOptions &Opts) const {
   OptionalFileEntryRef File = getFileManager().getOptionalFileRef(Filename);
   if (!File)
     return Filename;
 
-  // Try to simplify paths that contain '..' in any case since paths to
-  // standard library headers especially tend to get quite long otherwise.
-  // Only do that for local filesystems though to avoid slowing down
-  // compilation too much.
-  bool Absolute = Diag.getDiagnosticOptions().AbsolutePath;
-  bool AlwaysSimplify = File->getName().contains("..") &&
-                        llvm::sys::fs::is_local(File->getName());
-  if (!Absolute && !AlwaysSimplify)
+  bool SimplifyPath = [&] {
+    if (Opts.AbsolutePath)
+      return true;
+
+    // Try to simplify paths that contain '..' in any case since paths to
+    // standard library headers especially tend to get quite long otherwise.
+    // Only do that for local filesystems though to avoid slowing down
+    // compilation too much.
+    if (!File->getName().contains(".."))
+      return false;
+
+    // If we're not on Windows, check if we're on a network file system and
+    // avoid simplifying the path in that case since that can be slow. On
+    // Windows, the check for a local filesystem is already slow, so skip it.
+#ifndef _WIN32
+    if (!llvm::sys::fs::is_local(File->getName()))
+      return false;
+#endif
+
+    return true;
+  }();
+
+  if (!SimplifyPath)
     return Filename;
 
   // This may involve computing canonical names, so cache the result.
@@ -2451,7 +2468,7 @@ StringRef SourceManager::getNameForDiagnostic(StringRef Filename) const {
   // In some cases, the resolved path may actually end up being longer (e.g.
   // if it was originally a relative path), so just retain whichever one
   // ends up being shorter.
-  if (!Absolute && TempBuf.size() > Filename.size())
+  if (!Opts.AbsolutePath && TempBuf.size() > Filename.size())
     CacheEntry = Filename;
   else
     CacheEntry = TempBuf.str().copy(DiagNameAlloc);
