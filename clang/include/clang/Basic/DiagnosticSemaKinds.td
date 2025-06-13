@@ -1794,6 +1794,7 @@ def note_unsatisfied_trait_reason
            "%MultipleDataBase{has multiple base classes with data members}|"
            "%VirtualFunction{has virtual functions}|"
            "%NonStdLayoutMember{has a non-standard-layout member %1 of type %2}|"
+           "%IndirectBaseWithFields{has an indirect base %1 with data members}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"

@@ -621,6 +621,7 @@ struct BaseC: BaseB { int c; };                               // #sl-BaseC
 static_assert(__is_standard_layout(BaseC));
 // expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::BaseC)'}} \
 // expected-note@-1 {{'BaseC' is not standard-layout}} \
+// expected-note@-1 {{because it has an indirect base 'BaseA' with data members}} \
 // expected-note@#sl-BaseC {{'BaseC' defined here}} \
 
 // Multiple direct base classes with no data members --> standard layout

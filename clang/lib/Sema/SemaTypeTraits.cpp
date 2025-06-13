@@ -2407,6 +2407,37 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
           << Field->getType() << Field->getSourceRange();
     }
   }
+
+  //  if this class and an indirect base
+  // both have non-static data members, grab the first such base.
+  if (D->hasDirectFields()) {
+    SmallVector<const CXXRecordDecl *, 4> Records;
+
+    // Recursive lambda to collect all bases that declare fields
+    std::function<void(const CXXRecordDecl *)> collect =
+        [&](const CXXRecordDecl *R) {
+          for (const CXXBaseSpecifier &B : R->bases()) {
+            const auto *BR = B.getType()->getAsCXXRecordDecl();
+            if (!BR || !BR->hasDefinition())
+              continue;
+            if (BR->hasDirectFields())
+              Records.push_back(BR);
+            // Recurse into the base class.
+            collect(BR);
+          }
+        };
+
+    // Collect all bases that declare fields.
+    collect(D);
+
+    // If more than one record has fields, then the layout is non-standard.
+    if (!Records.empty()) {
+      const CXXRecordDecl *Indirect = Records.front();
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::IndirectBaseWithFields << Indirect
+          << Indirect->getSourceRange();
+    }
+  }
 }
 
 static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,

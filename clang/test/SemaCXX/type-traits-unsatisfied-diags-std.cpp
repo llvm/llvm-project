@@ -217,7 +217,6 @@ namespace test_namespace {
 }
 
 
-
 namespace concepts {
 template <typename T>
 requires std::is_trivially_relocatable<T>::value void f();  // #cand1
@@ -288,5 +287,3 @@ static_assert(std::is_replaceable_v<int&>);
 // expected-error@-1 {{static assertion failed due to requirement 'std::is_replaceable_v<int &>'}} \
 // expected-note@-1 {{'int &' is not replaceable}} \
 // expected-note@-1 {{because it is a reference type}}
-
-
