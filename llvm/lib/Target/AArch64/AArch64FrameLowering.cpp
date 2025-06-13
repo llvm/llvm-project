@@ -2543,22 +2543,22 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       if (AFI->isStackRealigned())
         return AArch64::FP;
       // With variable sized objects on the stack, we can use the BP or FP to
-      // restore the SVE callee saves. If there are no SVE locals the BP will
-      // be more efficient (a single ADD).
+      // restore the SVE callee saves.
       if (MFI.hasVarSizedObjects()) {
         if (DeallocateBefore && !AFI->hasStackHazardSlotIndex()) {
           // If there's SVE locals and no hazard padding we can do:
           //  ADDVL SP, FP, #(-SVECalleeSavedSize)
           return AArch64::FP;
         }
-        // If there's SVE locals and hazard padding we can choose between:
+        // Otherwise, we can choose between:
         //  SUB TMP, FP, #(-CalleeSaveBaseOffset)
         //  ADDVL SP, TMP, #(-SVECalleeSavedSize)
         // OR:
         //  ADD SP, BP, #NumBytes
         //  ADDVL SP, SP, #DeallocateBefore
-        // This chooses the latter as the "ADDVL" can be omitted if there's no
-        // SVE locals.
+        // Here we choose the latter as the "ADDVL" can be omitted if there's no
+        // SVE locals (and if we're here we either don't have SVE locals or have
+        // hazard padding).
         assert(RegInfo->hasBasePointer(MF) && "Expected base pointer!");
         return RegInfo->getBaseRegister();
       }
