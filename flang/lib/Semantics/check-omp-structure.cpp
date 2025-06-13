@@ -475,8 +475,7 @@ void OmpStructureChecker::HasInvalidDistributeNesting(
       violation = true;
     } else {
       // `distribute` region has to be strictly nested inside `teams`
-      if (!OmpDirectiveSet{llvm::omp::OMPD_teams, llvm::omp::OMPD_target_teams}
-              .test(GetContextParent().directive)) {
+      if (!llvm::omp::bottomTeamsSet.test(GetContextParent().directive)) {
         violation = true;
       }
     }
@@ -506,8 +505,7 @@ void OmpStructureChecker::HasInvalidLoopBinding(
 
   if (llvm::omp::Directive::OMPD_loop == beginDir.v &&
       CurrentDirectiveIsNested() &&
-      OmpDirectiveSet{llvm::omp::OMPD_teams, llvm::omp::OMPD_target_teams}.test(
-          GetContextParent().directive)) {
+      llvm::omp::bottomTeamsSet.test(GetContextParent().directive)) {
     teamsBindingChecker(
         "`BIND(TEAMS)` must be specified since the `LOOP` region is "
         "strictly nested inside a `TEAMS` region."_err_en_US);
@@ -698,7 +696,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   HasInvalidDistributeNesting(x);
   HasInvalidLoopBinding(x);
   if (CurrentDirectiveIsNested() &&
-      llvm::omp::topTeamsSet.test(GetContextParent().directive)) {
+      llvm::omp::bottomTeamsSet.test(GetContextParent().directive)) {
     HasInvalidTeamsNesting(beginDir.v, beginDir.source);
   }
   if ((beginDir.v == llvm::omp::Directive::OMPD_distribute_parallel_do_simd) ||
@@ -1141,7 +1139,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   }
 
   if (CurrentDirectiveIsNested()) {
-    if (llvm::omp::topTeamsSet.test(GetContextParent().directive)) {
+    if (llvm::omp::bottomTeamsSet.test(GetContextParent().directive)) {
       HasInvalidTeamsNesting(beginDir.v, beginDir.source);
     }
     if (GetContext().directive == llvm::omp::Directive::OMPD_master) {
