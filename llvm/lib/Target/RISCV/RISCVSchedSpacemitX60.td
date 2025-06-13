@@ -318,13 +318,21 @@ foreach mx = SchedMxList in {
   }
 }
 
-
 // Whole register move/load/store
+// TODO
 foreach LMul = [1, 2, 4, 8] in {
   def : WriteRes<!cast<SchedWrite>("WriteVLD" # LMul # "R"), [SMX60_VLS]>;
   def : WriteRes<!cast<SchedWrite>("WriteVST" # LMul # "R"), [SMX60_VLS]>;
+}
 
-  def : WriteRes<!cast<SchedWrite>("WriteVMov" # LMul # "V"), [SMX60_VIEU]>;
+let Latency = 4 in {
+  def : WriteRes<!cast<SchedWrite>("WriteVMov1V"), [SMX60_VIEU]>;
+  def : WriteRes<!cast<SchedWrite>("WriteVMov2V"), [SMX60_VIEU]>;
+}
+foreach LMul = [4, 8] in {
+  let Latency = !mul(LMul, 2) in {
+    def : WriteRes<!cast<SchedWrite>("WriteVMov" # LMul # "V"), [SMX60_VIEU]>;
+  }
 }
 
 // 11. Vector Integer Arithmetic Instructions
