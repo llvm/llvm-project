@@ -4760,7 +4760,7 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
 
   // Don't move to the position of a debug intrinsic.
   if (isa<DbgInfoIntrinsic>(MoveBefore))
-    MoveBefore = MoveBefore->getNextNonDebugInstruction()->getIterator();
+    MoveBefore = MoveBefore->getNextNode()->getIterator();
   // Re-point iterator to come after any debug-info records, if we're
   // running in "RemoveDIs" mode
   MoveBefore.setHeadBit(false);

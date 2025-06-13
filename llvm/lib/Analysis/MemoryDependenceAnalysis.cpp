@@ -356,7 +356,7 @@ static bool canSkipClobberingStore(const StoreInst *SI,
   if (BatchAA.alias(MemoryLocation::get(LI), MemLoc) != AliasResult::MustAlias)
     return false;
   unsigned NumVisitedInsts = 0;
-  for (const Instruction *I = LI; I != SI; I = I->getNextNonDebugInstruction())
+  for (const Instruction *I = LI; I != SI; I = I->getNextNode())
     if (++NumVisitedInsts > ScanLimit ||
         isModSet(BatchAA.getModRefInfo(I, MemLoc)))
       return false;

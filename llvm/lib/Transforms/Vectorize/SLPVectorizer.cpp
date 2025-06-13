@@ -16164,7 +16164,7 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
     // debug location to Front.
     Builder.SetInsertPoint(
         LastInst->getParent(),
-        LastInst->getNextNonDebugInstruction()->getIterator());
+        LastInst->getNextNode()->getIterator());
   }
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
 }
@@ -18886,7 +18886,7 @@ Value *BoUpSLP::vectorizeTree(
                   Builder.SetInsertPoint(
                       IVec->getParent()->getFirstNonPHIOrDbgOrLifetime());
               } else if (auto *IVec = dyn_cast<Instruction>(Vec)) {
-                Builder.SetInsertPoint(IVec->getNextNonDebugInstruction());
+                Builder.SetInsertPoint(IVec->getNextNode());
               }
               Vec = Builder.CreateIntCast(
                   Vec,
@@ -19864,7 +19864,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
         Instruction *PickedInst = BundleMember->getInst();
         if (!Scheduled.insert(PickedInst).second)
           continue;
-        if (PickedInst->getNextNonDebugInstruction() != LastScheduledInst)
+        if (PickedInst->getNextNode() != LastScheduledInst)
           PickedInst->moveAfter(LastScheduledInst->getPrevNode());
         LastScheduledInst = PickedInst;
       }
@@ -19873,7 +19873,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
     } else {
       auto *SD = cast<ScheduleData>(Picked);
       Instruction *PickedInst = SD->getInst();
-      if (PickedInst->getNextNonDebugInstruction() != LastScheduledInst)
+      if (PickedInst->getNextNode() != LastScheduledInst)
         PickedInst->moveAfter(LastScheduledInst->getPrevNode());
       LastScheduledInst = PickedInst;
     }

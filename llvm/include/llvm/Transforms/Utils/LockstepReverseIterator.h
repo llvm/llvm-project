@@ -133,7 +133,7 @@ public:
       return *this;
     SmallVector<Instruction *, 4> NewInsts;
     for (Instruction *Inst : Insts) {
-      Instruction *Next = Inst->getNextNonDebugInstruction();
+      Instruction *Next = Inst->getNextNode();
       // Already at end of block.
       if (!Next) {
         Fail = true;

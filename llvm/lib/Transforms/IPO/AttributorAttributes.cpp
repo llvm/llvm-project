@@ -1774,7 +1774,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
         do {
           if (FromI->mayWriteToMemory() && !IsAssumption(*FromI))
             return true;
-          FromI = FromI->getNextNonDebugInstruction();
+          FromI = FromI->getNextNode();
         } while (FromI && FromI != ToI);
         return false;
       };
@@ -1785,7 +1785,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
           return false;
         BasicBlock *IntrBB = IntrI.getParent();
         if (IntrI.getParent() == BB) {
-          if (IsImpactedInRange(LoadI->getNextNonDebugInstruction(), &IntrI))
+          if (IsImpactedInRange(LoadI->getNextNode(), &IntrI))
             return false;
         } else {
           auto PredIt = pred_begin(IntrBB);
@@ -1802,7 +1802,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
               continue;
             return false;
           }
-          if (IsImpactedInRange(LoadI->getNextNonDebugInstruction(),
+          if (IsImpactedInRange(LoadI->getNextNode(),
                                 BB->getTerminator()))
             return false;
           if (IsImpactedInRange(&IntrBB->front(), &IntrI))
