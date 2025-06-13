@@ -36,7 +36,7 @@ namespace bolt {
 static bool PassFailed = false;
 
 void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
-  if (PassFailed)
+  if (PassFailed || BF.isIgnored())
     return;
 
   BinaryContext &BC = BF.getBinaryContext();
