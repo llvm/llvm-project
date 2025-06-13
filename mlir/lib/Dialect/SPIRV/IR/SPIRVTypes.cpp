@@ -18,8 +18,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <iterator>
+#include <numeric>
 
 using namespace mlir;
 using namespace mlir::spirv;
@@ -96,7 +98,7 @@ bool CompositeType::classof(Type type) {
     return isValid(vectorType);
   return llvm::isa<spirv::ArrayType, spirv::CooperativeMatrixType,
                    spirv::MatrixType, spirv::RuntimeArrayType,
-                   spirv::StructType>(type);
+                   spirv::StructType, spirv::TensorArmType>(type);
 }
 
 bool CompositeType::isValid(VectorType type) {
@@ -107,8 +109,8 @@ bool CompositeType::isValid(VectorType type) {
 
 Type CompositeType::getElementType(unsigned index) const {
   return TypeSwitch<Type, Type>(*this)
-      .Case<ArrayType, CooperativeMatrixType, RuntimeArrayType, VectorType>(
-          [](auto type) { return type.getElementType(); })
+      .Case<ArrayType, CooperativeMatrixType, RuntimeArrayType, VectorType,
+            TensorArmType>([](auto type) { return type.getElementType(); })
       .Case<MatrixType>([](MatrixType type) { return type.getColumnType(); })
       .Case<StructType>(
           [index](StructType type) { return type.getElementType(index); })
@@ -125,6 +127,8 @@ unsigned CompositeType::getNumElements() const {
     return structType.getNumElements();
   if (auto vectorType = llvm::dyn_cast<VectorType>(*this))
     return vectorType.getNumElements();
+  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(*this))
+    return tensorArmType.getNumElements();
   if (llvm::isa<CooperativeMatrixType>(*this)) {
     llvm_unreachable(
         "invalid to query number of elements of spirv Cooperative Matrix type");
@@ -151,6 +155,14 @@ void CompositeType::getExtensions(
         return llvm::cast<ScalarType>(type.getElementType())
             .getExtensions(extensions, storage);
       })
+      .Case<TensorArmType>([&](TensorArmType type) {
+        static const Extension exts[] = {Extension::SPV_ARM_tensors};
+        ArrayRef<Extension> ref(exts, std::size(exts));
+        extensions.push_back(ref);
+        return llvm::cast<ScalarType>(type.getElementType())
+            .getExtensions(extensions, storage);
+      })
+
       .Default([](Type) { llvm_unreachable("invalid composite type"); });
 }
 
@@ -171,6 +183,13 @@ void CompositeType::getCapabilities(
         return llvm::cast<ScalarType>(type.getElementType())
             .getCapabilities(capabilities, storage);
       })
+      .Case<TensorArmType>([&](TensorArmType type) {
+        static const Capability caps[] = {Capability::TensorsARM};
+        ArrayRef<Capability> ref(caps, std::size(caps));
+        capabilities.push_back(ref);
+        return llvm::cast<ScalarType>(type.getElementType())
+            .getCapabilities(capabilities, storage);
+      })
       .Default([](Type) { llvm_unreachable("invalid composite type"); });
 }
 
@@ -185,6 +204,13 @@ std::optional<int64_t> CompositeType::getSizeInBytes() {
     if (!elementSize)
       return std::nullopt;
     return *elementSize * vectorType.getNumElements();
+  }
+  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(*this)) {
+    std::optional<int64_t> elementSize =
+        llvm::cast<ScalarType>(tensorArmType.getElementType()).getSizeInBytes();
+    if (!elementSize)
+      return std::nullopt;
+    return *elementSize * tensorArmType.getNumElements();
   }
   return std::nullopt;
 }
@@ -691,6 +717,9 @@ bool SPIRVType::classof(Type type) {
     return true;
   if (auto vectorType = llvm::dyn_cast<VectorType>(type))
     return CompositeType::isValid(vectorType);
+  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(type)) {
+    return llvm::isa<ScalarType>(tensorArmType.getElementType());
+  }
   return false;
 }
 
@@ -712,6 +741,8 @@ void SPIRVType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
     matrixType.getExtensions(extensions, storage);
   } else if (auto ptrType = llvm::dyn_cast<PointerType>(*this)) {
     ptrType.getExtensions(extensions, storage);
+  } else if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(*this)) {
+    tensorArmType.getExtensions(extensions, storage);
   } else {
     llvm_unreachable("invalid SPIR-V Type to getExtensions");
   }
@@ -732,6 +763,8 @@ void SPIRVType::getCapabilities(
     matrixType.getCapabilities(capabilities, storage);
   } else if (auto ptrType = llvm::dyn_cast<PointerType>(*this)) {
     ptrType.getCapabilities(capabilities, storage);
+  } else if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(*this)) {
+    tensorArmType.getCapabilities(capabilities, storage);
   } else {
     llvm_unreachable("invalid SPIR-V Type to getCapabilities");
   }
@@ -1204,10 +1237,93 @@ void MatrixType::getCapabilities(
 }
 
 //===----------------------------------------------------------------------===//
+// TensorArmType
+//===----------------------------------------------------------------------===//
+
+struct spirv::detail::TensorArmTypeStorage final : TypeStorage {
+  using KeyTy = std::tuple<ArrayRef<int64_t>, Type>;
+
+  static TensorArmTypeStorage *construct(TypeStorageAllocator &allocator,
+                                         const KeyTy &key) {
+    auto shape = std::get<0>(key);
+    auto elementType = std::get<1>(key);
+    shape = allocator.copyInto(shape);
+    return new (allocator.allocate<TensorArmTypeStorage>())
+        TensorArmTypeStorage(std::move(shape), std::move(elementType));
+  }
+
+  static llvm::hash_code hashKey(const KeyTy &key) {
+    return llvm::hash_combine(std::get<0>(key), std::get<1>(key));
+  }
+
+  bool operator==(const KeyTy &key) const {
+    return key == KeyTy(shape, elementType);
+  }
+
+  TensorArmTypeStorage(ArrayRef<int64_t> shape, Type elementType)
+      : shape(std::move(shape)), elementType(std::move(elementType)) {}
+
+  ArrayRef<int64_t> shape;
+  Type elementType;
+};
+
+TensorArmType TensorArmType::get(ArrayRef<int64_t> shape, Type elementType) {
+  return Base::get(elementType.getContext(), shape, elementType);
+}
+
+TensorArmType TensorArmType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                                       Type elementType) const {
+  return TensorArmType::get(shape.value_or(getShape()), elementType);
+}
+
+Type TensorArmType::getElementType() const { return getImpl()->elementType; }
+ArrayRef<int64_t> TensorArmType::getShape() const { return getImpl()->shape; }
+
+unsigned TensorArmType::getNumElements() const {
+  auto shape = getShape();
+  return std::accumulate(shape.begin(), shape.end(), unsigned(1),
+                         std::multiplies<unsigned>());
+}
+
+void TensorArmType::getExtensions(
+    SPIRVType::ExtensionArrayRefVector &extensions,
+    std::optional<StorageClass> storage) {
+
+  llvm::cast<SPIRVType>(getElementType()).getExtensions(extensions, storage);
+  static constexpr Extension exts[] = {Extension::SPV_ARM_tensors};
+  extensions.push_back(exts);
+}
+
+void TensorArmType::getCapabilities(
+    SPIRVType::CapabilityArrayRefVector &capabilities,
+    std::optional<StorageClass> storage) {
+  llvm::cast<SPIRVType>(getElementType())
+      .getCapabilities(capabilities, storage);
+  static constexpr Capability caps[] = {Capability::TensorsARM};
+  capabilities.push_back(caps);
+}
+
+LogicalResult
+TensorArmType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                                ArrayRef<int64_t> shape, Type elementType) {
+  if (std::any_of(shape.begin(), shape.end(),
+                  [](int64_t dim) { return dim == 0; }))
+    return emitError() << "arm.tensor do not support dimensions = 0";
+  if (std::any_of(shape.begin(), shape.end(),
+                  [](int64_t dim) { return dim < 0; }) &&
+      std::any_of(shape.begin(), shape.end(),
+                  [](int64_t dim) { return dim > 0; }))
+    return emitError()
+           << "arm.tensor shape dimensions must be either fully dynamic or "
+              "completed shaped";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // SPIR-V Dialect
 //===----------------------------------------------------------------------===//
 
 void SPIRVDialect::registerTypes() {
   addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType, PointerType,
-           RuntimeArrayType, SampledImageType, StructType>();
+           RuntimeArrayType, SampledImageType, StructType, TensorArmType>();
 }
