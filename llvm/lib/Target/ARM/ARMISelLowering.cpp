@@ -708,36 +708,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     }
   }
 
-  if (Subtarget->isTargetWindows()) {
-    static const struct {
-      const RTLIB::Libcall Op;
-      const char * const Name;
-      const CallingConv::ID CC;
-    } LibraryCalls[] = {
-      { RTLIB::FPTOSINT_F32_I64, "__stoi64", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::FPTOSINT_F64_I64, "__dtoi64", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::FPTOUINT_F32_I64, "__stou64", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::FPTOUINT_F64_I64, "__dtou64", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::SINTTOFP_I64_F32, "__i64tos", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::SINTTOFP_I64_F64, "__i64tod", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::UINTTOFP_I64_F32, "__u64tos", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::UINTTOFP_I64_F64, "__u64tod", CallingConv::ARM_AAPCS_VFP },
-    };
-
-    for (const auto &LC : LibraryCalls) {
-      setLibcallName(LC.Op, LC.Name);
-      setLibcallCallingConv(LC.Op, LC.CC);
-    }
-  }
-
-  // Use divmod compiler-rt calls for iOS 5.0 and later.
-  if (Subtarget->isTargetMachO() &&
-      !(Subtarget->isTargetIOS() &&
-        Subtarget->getTargetTriple().isOSVersionLT(5, 0))) {
-    setLibcallName(RTLIB::SDIVREM_I32, "__divmodsi4");
-    setLibcallName(RTLIB::UDIVREM_I32, "__udivmodsi4");
-  }
-
   // The half <-> float conversion functions are always soft-float on
   // non-watchos platforms, but are needed for some targets which use a
   // hard-float calling convention by default.
@@ -2718,8 +2688,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         unsigned RegBegin, RegEnd;
         CCInfo.getInRegsParamInfo(CurByValIdx, RegBegin, RegEnd);
 
-        EVT PtrVT =
-            DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+        EVT PtrVT = getPointerTy(DAG.getDataLayout());
         unsigned int i, j;
         for (i = 0, j = RegBegin; j < RegEnd; i++, j++) {
           SDValue Const = DAG.getConstant(4*i, dl, MVT::i32);
@@ -5054,7 +5023,7 @@ ARMTargetLowering::getARMXALUOOp(SDValue Op, SelectionDAG &DAG,
 SDValue
 ARMTargetLowering::LowerSignedALUO(SDValue Op, SelectionDAG &DAG) const {
   // Let legalize expand this if it isn't a legal type yet.
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(Op.getValueType()))
+  if (!isTypeLegal(Op.getValueType()))
     return SDValue();
 
   SDValue Value, OverflowCmp;
@@ -5100,7 +5069,7 @@ static SDValue ConvertCarryFlagToBooleanCarry(SDValue Flags, EVT VT,
 SDValue ARMTargetLowering::LowerUnsignedALUO(SDValue Op,
                                              SelectionDAG &DAG) const {
   // Let legalize expand this if it isn't a legal type yet.
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(Op.getValueType()))
+  if (!isTypeLegal(Op.getValueType()))
     return SDValue();
 
   SDValue LHS = Op.getOperand(0);
@@ -5198,7 +5167,7 @@ SDValue ARMTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (Cond.getResNo() == 1 &&
       (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
        Opc == ISD::USUBO)) {
-    if (!DAG.getTargetLoweringInfo().isTypeLegal(Cond->getValueType(0)))
+    if (!isTypeLegal(Cond->getValueType(0)))
       return SDValue();
 
     SDValue Value, OverflowCmp;
@@ -5560,8 +5529,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (isUnsupportedFloatingType(LHS.getValueType())) {
-    DAG.getTargetLoweringInfo().softenSetCCOperands(
-        DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS);
+    softenSetCCOperands(DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS);
 
     // If softenSetCCOperands only returned one value, we should compare it to
     // zero.
@@ -5766,7 +5734,7 @@ SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
        Opc == ISD::USUBO || OptimizeMul)) {
     // Only lower legal XALUO ops.
-    if (!DAG.getTargetLoweringInfo().isTypeLegal(Cond->getValueType(0)))
+    if (!isTypeLegal(Cond->getValueType(0)))
       return SDValue();
 
     // The actual operation with overflow check.
@@ -5796,8 +5764,7 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
 
   if (isUnsupportedFloatingType(LHS.getValueType())) {
-    DAG.getTargetLoweringInfo().softenSetCCOperands(
-        DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS);
+    softenSetCCOperands(DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS);
 
     // If softenSetCCOperands only returned one value, we should compare it to
     // zero.
@@ -5817,7 +5784,7 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
        Opc == ISD::USUBO || OptimizeMul) &&
       (CC == ISD::SETEQ || CC == ISD::SETNE)) {
     // Only lower legal XALUO ops.
-    if (!DAG.getTargetLoweringInfo().isTypeLegal(LHS->getValueType(0)))
+    if (!isTypeLegal(LHS->getValueType(0)))
       return SDValue();
 
     // The actual operation with overflow check.
@@ -6285,7 +6252,6 @@ static SDValue CombineVMOVDRRCandidateWithVecOp(const SDNode *BC,
 /// vectors), since the legalizer won't know what to do with that.
 SDValue ARMTargetLowering::ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
                                          const ARMSubtarget *Subtarget) const {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc dl(N);
   SDValue Op = N->getOperand(0);
 
@@ -6312,7 +6278,7 @@ SDValue ARMTargetLowering::ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Turn i64->f64 into VMOVDRR.
-  if (SrcVT == MVT::i64 && TLI.isTypeLegal(DstVT)) {
+  if (SrcVT == MVT::i64 && isTypeLegal(DstVT)) {
     // Do not force values to GPRs (this is what VMOVDRR does for the inputs)
     // if we can combine the bitcast with its source.
     if (SDValue Val = CombineVMOVDRRCandidateWithVecOp(N, DAG))
@@ -6324,7 +6290,7 @@ SDValue ARMTargetLowering::ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
   }
 
   // Turn f64->i64 into VMOVRRD.
-  if (DstVT == MVT::i64 && TLI.isTypeLegal(SrcVT)) {
+  if (DstVT == MVT::i64 && isTypeLegal(SrcVT)) {
     SDValue Cvt;
     if (DAG.getDataLayout().isBigEndian() && SrcVT.isVector() &&
         SrcVT.getVectorNumElements() > 1)
@@ -9961,7 +9927,6 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Pair of floats / doubles used to pass the result.
   Type *RetTy = StructType::get(ArgTy, ArgTy);
@@ -9975,7 +9940,7 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
     const uint64_t ByteSize = DL.getTypeAllocSize(RetTy);
     const Align StackAlign = DL.getPrefTypeAlign(RetTy);
     int FrameIdx = MFI.CreateStackObject(ByteSize, StackAlign, false);
-    SRet = DAG.getFrameIndex(FrameIdx, TLI.getPointerTy(DL));
+    SRet = DAG.getFrameIndex(FrameIdx, getPointerTy(DL));
 
     ArgListEntry Entry;
     Entry.Node = SRet;
@@ -10033,15 +9998,14 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   SDLoc dl(Op);
 
   const auto &DL = DAG.getDataLayout();
-  const auto &TLI = DAG.getTargetLoweringInfo();
-
-  const char *Name = nullptr;
+  RTLIB::Libcall LC;
   if (Signed)
-    Name = (VT == MVT::i32) ? "__rt_sdiv" : "__rt_sdiv64";
+    LC = VT == MVT::i32 ? RTLIB::SDIVREM_I32 : RTLIB::SDIVREM_I64;
   else
-    Name = (VT == MVT::i32) ? "__rt_udiv" : "__rt_udiv64";
+    LC = VT == MVT::i32 ? RTLIB::UDIVREM_I32 : RTLIB::UDIVREM_I64;
 
-  SDValue ES = DAG.getExternalSymbol(Name, TLI.getPointerTy(DL));
+  const char *Name = getLibcallName(LC);
+  SDValue ES = DAG.getExternalSymbol(Name, getPointerTy(DL));
 
   ARMTargetLowering::ArgListTy Args;
 
@@ -10131,7 +10095,6 @@ void ARMTargetLowering::ExpandDIV_Windows(
     SDValue Op, SelectionDAG &DAG, bool Signed,
     SmallVectorImpl<SDValue> &Results) const {
   const auto &DL = DAG.getDataLayout();
-  const auto &TLI = DAG.getTargetLoweringInfo();
 
   assert(Op.getValueType() == MVT::i64 &&
          "unexpected type for custom lowering DIV");
@@ -10143,7 +10106,7 @@ void ARMTargetLowering::ExpandDIV_Windows(
 
   SDValue Lower = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Result);
   SDValue Upper = DAG.getNode(ISD::SRL, dl, MVT::i64, Result,
-                              DAG.getConstant(32, dl, TLI.getPointerTy(DL)));
+                              DAG.getConstant(32, dl, getPointerTy(DL)));
   Upper = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Upper);
 
   Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lower, Upper));
@@ -10555,8 +10518,8 @@ SDValue ARMTargetLowering::LowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
   // If we don't have instructions of this float type then soften to a libcall
   // and use SETCC instead.
   if (isUnsupportedFloatingType(LHS.getValueType())) {
-    DAG.getTargetLoweringInfo().softenSetCCOperands(
-      DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS, Chain, IsSignaling);
+    softenSetCCOperands(DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS,
+                        Chain, IsSignaling);
     if (!RHS.getNode()) {
       RHS = DAG.getConstant(0, dl, LHS.getValueType());
       CC = ISD::SETNE;
