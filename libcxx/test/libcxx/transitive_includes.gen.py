@@ -90,8 +90,6 @@ else:
 // TODO: Figure out why <stdatomic.h> doesn't work on FreeBSD
 // UNSUPPORTED: LIBCXX-FREEBSD-FIXME
 
-// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
-
 // RUN: mkdir %t
 // RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} --trace-includes -fshow-skipped-includes --preprocess > /dev/null 2> %t/trace-includes.txt
 // RUN: %{{python}} %{{libcxx-dir}}/test/libcxx/transitive_includes/to_csv.py %t/trace-includes.txt > %t/actual_transitive_includes.csv
