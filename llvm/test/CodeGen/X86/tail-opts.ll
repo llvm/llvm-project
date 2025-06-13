@@ -245,11 +245,9 @@ define fastcc void @c_expand_expr_stmt(ptr %expr) nounwind {
 ; CHECK-NEXT:    jne .LBB3_9
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    movzbl 0, %ebx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB3_8
 ; CHECK-NEXT:  # %bb.2: # %bb.i
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB3_8
 ; CHECK-NEXT:  # %bb.3: # %lvalue_p.exit
@@ -519,7 +517,6 @@ define dso_local void @two() nounwind optsize {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB7_1
 ; CHECK-NEXT:  # %bb.2: # %return
@@ -560,7 +557,6 @@ define dso_local void @two_pgso() nounwind !prof !14 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB8_1
 ; CHECK-NEXT:  # %bb.2: # %return
@@ -603,7 +599,6 @@ define dso_local void @two_minsize() nounwind minsize {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB9_1
 ; CHECK-NEXT:  # %bb.2: # %return
