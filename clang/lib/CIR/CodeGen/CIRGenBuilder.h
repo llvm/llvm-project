@@ -139,8 +139,9 @@ public:
   }
 
   bool isSized(mlir::Type ty) {
-    if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType,
-                  cir::IntType>(ty))
+    if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType, cir::IntType,
+                  cir::CIRFPTypeInterface, cir::ComplexType, cir::RecordType>(
+            ty))
       return true;
 
     if (const auto vt = mlir::dyn_cast<cir::VectorType>(ty))
