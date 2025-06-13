@@ -75,7 +75,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
 ; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:      SINGLE-SCALAR ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, vp<[[VF]]>
 ; CHECK-NEXT:      WIDEN ir<%1> = load vp<[[VEC_PTR]]>
@@ -199,7 +199,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
 ; CHECK-NEXT:    vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
-; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:    SINGLE-SCALAR ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, ir<[[VF]]>
 ; CHECK-NEXT:    WIDEN ir<[[L:%.+]]> = load vp<[[VEC_PTR]]>
@@ -323,7 +323,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
 ; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:      SINGLE-SCALAR ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, vp<[[VF]]>
 ; CHECK-NEXT:      WIDEN ir<%1> = load vp<[[VEC_PTR]]>
@@ -447,7 +447,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
 ; CHECK-NEXT:    vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
-; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:    SINGLE-SCALAR ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, ir<[[VF]]>
 ; CHECK-NEXT:    WIDEN ir<[[L:%.+]]> = load vp<[[VEC_PTR]]>

@@ -177,8 +177,8 @@ public:
                               Type *ResultTy, const VPIRFlags &Flags = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
-    return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Operands, ResultTy, Flags, DL, Name));
+    return tryInsertInstruction(new VPInstructionWithType(
+        Opcode, Operands, ResultTy, Flags, DL, /*IsSingleScalar=*/false, Name));
   }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
@@ -274,8 +274,8 @@ public:
 
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL) {
-    return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Op, ResultTy, {}, DL));
+    return tryInsertInstruction(new VPInstructionWithType(
+        Opcode, Op, ResultTy, {}, DL, /*IsSingleScalar=*/true));
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
