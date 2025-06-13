@@ -5172,10 +5172,11 @@ bool Sema::CheckTemplateTypeArgument(
   }
   default: {
     // We allow instantiating a template with template argument packs when
-    // building deduction guides.
+    // building deduction guides or mapping constraint template parameters.
     if (Arg.getKind() == TemplateArgument::Pack &&
-        CodeSynthesisContexts.back().Kind ==
-            Sema::CodeSynthesisContext::BuildingDeductionGuides) {
+        (CodeSynthesisContexts.back().Kind ==
+             Sema::CodeSynthesisContext::BuildingDeductionGuides ||
+         inParameterMappingSubstitution())) {
       SugaredConverted.push_back(Arg);
       CanonicalConverted.push_back(Arg);
       return false;

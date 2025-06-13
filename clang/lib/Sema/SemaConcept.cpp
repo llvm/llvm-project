@@ -351,7 +351,11 @@ static std::optional<MultiLevelTemplateArgumentList>
 SubstitutionInTemplateArguments(
     Sema &S, const NormalizedConstraintWithParamMapping &Constraint,
     const NamedDecl *Template, MultiLevelTemplateArgumentList MLTAL,
-    llvm::SmallVector<TemplateArgument> &SubstitutedOuterMost) {
+    llvm::SmallVector<TemplateArgument> &SubstitutedOuterMost,
+    // FIXME: Having both PackSubstitutionIndex and
+    // NormalizedConstraintWithParamMapping::getPackSubstitutionIndex is
+    // confusing
+    UnsignedOrNone PackSubstitutionIndex) {
 
   Sema::InstantiatingTemplate Inst(
       S, Constraint.getBeginLoc(),
@@ -369,7 +373,9 @@ SubstitutionInTemplateArguments(
   TemplateArgumentListInfo SubstArgs;
   if (Constraint.hasParameterMapping()) {
     Sema::ArgPackSubstIndexRAII SubstIndex(
-        S, Constraint.getPackSubstitutionIndex());
+        S, Constraint.getPackSubstitutionIndex()
+               ? Constraint.getPackSubstitutionIndex()
+               : PackSubstitutionIndex);
     if (S.SubstTemplateArgumentsInParameterMapping(
             Constraint.getParameterMapping(), MLTAL, SubstArgs) ||
         Trap.hasErrorOccurred())
@@ -405,11 +411,12 @@ static bool calculateConstraintSatisfaction(
   llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
       SubstitutionInTemplateArguments(S, Constraint, Template, MLTAL,
-                                      SubstitutedOuterMost);
+                                      SubstitutedOuterMost,
+                                      PackSubstitutionIndex);
   if (!SubstitutedArgs)
     return false;
 
-  Sema::ArgPackSubstIndexRAII(S, PackSubstitutionIndex);
+  Sema::ArgPackSubstIndexRAII SubstIndex(S, PackSubstitutionIndex);
   ExprResult SubstitutedAtomicExpr =
       EvaluateAtomicConstraint(S, Constraint.getConstraintExpr(), Template,
                                TemplateNameLoc, *SubstitutedArgs, Satisfaction);
@@ -526,7 +533,8 @@ static bool calculateConstraintSatisfaction(
           S,
           static_cast<const NormalizedConstraintWithParamMapping &>(
               FE.getNormalizedPattern()),
-          Template, MLTAL, SubstitutedOuterMost);
+          // FIXME: Is PackSubstitutionIndex correct?
+          Template, MLTAL, SubstitutedOuterMost, S.ArgPackSubstIndex);
   if (!SubstitutedArgs)
     return false;
 
@@ -548,7 +556,9 @@ static bool calculateConstraintSatisfaction(
     bool Success = calculateConstraintSatisfaction(
         S, FE.getNormalizedPattern(), Template, TemplateNameLoc,
         *SubstitutedArgs, Satisfaction, UnsignedOrNone(I));
-    if (!Success)
+    // SFINAE errors shouldn't prevent disjunction from evaluating
+    // FIXME: Does !Success == SFINAE errors occurred?
+    if (!Success && Conjunction)
       return false;
     if (!Conjunction && Satisfaction.IsSatisfied) {
       Satisfaction.Details.erase(Satisfaction.Details.begin() + EffectiveDetailEndIndex,
@@ -556,6 +566,10 @@ static bool calculateConstraintSatisfaction(
       break;
     }
   }
+  // Satisfaction.IsSatisfied might be overwritten.
+  // How to handle errors here ?? Shall we substitute into the concept?
+  if (Satisfaction.Details.size() != EffectiveDetailEndIndex)
+    Satisfaction.IsSatisfied = false;
   return true;
 }
 
@@ -568,11 +582,6 @@ static bool calculateConstraintSatisfaction(
   Sema::ContextRAII CurContext(
       S, Constraint.getConceptId()->getNamedConcept()->getDeclContext(),
       /*NewThisContext=*/false);
-
-  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
-  std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
-      SubstitutionInTemplateArguments(S, Constraint, Template, MLTAL,
-                                      SubstitutedOuterMost);
 
   Sema::InstantiatingTemplate Tpl(
       S, Constraint.getConceptId()->getBeginLoc(),
@@ -587,6 +596,12 @@ static bool calculateConstraintSatisfaction(
       Satisfaction, PackSubstitutionIndex);
 
   if (Size != Satisfaction.Details.size()) {
+
+    llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+    std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
+        SubstitutionInTemplateArguments(S, Constraint, Template, MLTAL,
+                                        SubstitutedOuterMost,
+                                        PackSubstitutionIndex);
 
     if (!SubstitutedArgs)
       return Ok;
@@ -633,7 +648,7 @@ static bool calculateConstraintSatisfaction(
             SubstitutedConceptId.getAs<ConceptSpecializationExpr>()
                 ->getConceptReference()));
 
-    Satisfaction.Details.push_back(nullptr);
+    // Satisfaction.Details.push_back(nullptr);
   }
   return Ok;
 }
@@ -1790,11 +1805,11 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
         return nullptr;
 
       if (FE->isRightFold())
-        RHS = FoldExpandedConstraint::Create(S.getASTContext(),
-                                             FE->getPattern(), Kind, RHS);
-      else
         LHS = FoldExpandedConstraint::Create(S.getASTContext(),
                                              FE->getPattern(), Kind, LHS);
+      else
+        RHS = FoldExpandedConstraint::Create(S.getASTContext(),
+                                             FE->getPattern(), Kind, RHS);
 
       return CompoundConstraint::Create(
           S.getASTContext(), LHS,

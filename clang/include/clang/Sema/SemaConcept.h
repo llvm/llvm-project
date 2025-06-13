@@ -78,7 +78,7 @@ protected:
     unsigned Kind : 5;
     LLVM_PREFERRED_TYPE(FoldOperatorKind)
     unsigned FoldOperator : 1;
-    unsigned : 26;
+    unsigned Placeholder : 26;
     OccurenceList Indexes;
     TemplateArgumentLoc *Args;
     const Expr *Pattern;
@@ -125,6 +125,7 @@ protected:
                        NormalizedConstraint *Constraint)
       : FoldExpanded{llvm::to_underlying(ConstraintKind::FoldExpanded),
                      llvm::to_underlying(OpKind),
+                     /*Placeholder=*/0,
                      /*Indexes=*/{},
                      /*Args=*/nullptr,
                      Pattern,

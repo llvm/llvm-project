@@ -158,6 +158,7 @@ static_assert(And1<int, S>() == 1); // expected-error {{no matching function for
 
 static_assert(And2<S>() == 2);
 static_assert(And2<S, S>() == 2);
+// FIXME: Should it compile??
 static_assert(And2<int>() == 2);
 
 static_assert(And2<int, int>() == 2);  // expected-error {{no matching function for call to 'And2'}}
