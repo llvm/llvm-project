@@ -12,6 +12,10 @@ from lldbsuite.test import lldbutil
 class TestMultipleSimultaneousDebuggers(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    # Times out on heavily loaded Linux buildbots, don't want to get into tweaking
+    # the timeout per bot. Does work when run alone. See:
+    # https://github.com/llvm/llvm-project/issues/101162
+    @skipIfLinux
     @skipIfNoSBHeaders
     @skipIfWindows
     @skipIfHostIncompatibleWithTarget
