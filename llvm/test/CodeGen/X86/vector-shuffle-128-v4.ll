@@ -2222,7 +2222,7 @@ define <4 x i32> @insert_mem_lo_v4i32(ptr %ptr, <4 x i32> %b) {
 ; SSE41-LABEL: insert_mem_lo_v4i32:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; SSE41-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_mem_lo_v4i32:
@@ -2295,7 +2295,7 @@ define <4 x float> @insert_reg_lo_v4f32(double %a, <4 x float> %b) {
 ;
 ; AVX-LABEL: insert_reg_lo_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
   %a.cast = bitcast double %a to <2 x float>
   %v = shufflevector <2 x float> %a.cast, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
@@ -2489,7 +2489,7 @@ define <4 x float> @shuffle_mem_v4f32_4523(<4 x float> %a, ptr %pb) {
 ; SSE41-LABEL: shuffle_mem_v4f32_4523:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movups (%rdi), %xmm1
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; SSE41-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_mem_v4f32_4523:
