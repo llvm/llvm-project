@@ -719,15 +719,13 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
 
   // We require that either passthru and false are the same, or that passthru
   // is undefined.
-  if (PassthruReg != RISCV::NoRegister &&
-      !isKnownSameDefs(PassthruReg, FalseReg))
+  if (PassthruReg && !isKnownSameDefs(PassthruReg, FalseReg))
     return false;
 
   // If True has a passthru operand then it needs to be the same as vmerge's
   // False, since False will be used for the result's passthru operand.
   Register TruePassthru = True.getOperand(True.getNumExplicitDefs()).getReg();
-  if (RISCVII::isFirstDefTiedToFirstUse(True.getDesc()) &&
-      TruePassthru != RISCV::NoRegister &&
+  if (RISCVII::isFirstDefTiedToFirstUse(True.getDesc()) && TruePassthru &&
       !isKnownSameDefs(TruePassthru, FalseReg))
     return false;
 
@@ -764,7 +762,7 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   // to the tail. In that case we always need to use tail undisturbed to
   // preserve them.
   uint64_t Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
-  if (PassthruReg == RISCV::NoRegister && RISCV::isVLKnownLE(VMergeVL, MinVL))
+  if (!PassthruReg && RISCV::isVLKnownLE(VMergeVL, MinVL))
     Policy |= RISCVVType::TAIL_AGNOSTIC;
 
   assert(RISCVII::hasVecPolicyOp(True.getDesc().TSFlags) &&
