@@ -5330,3 +5330,15 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fbfloat16
 )
+
+add_fp_unittest(
+  fabsbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fabsbf16_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.math.fabsbf16
+)

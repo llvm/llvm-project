@@ -558,3 +558,5 @@ add_math_entrypoint_object(ufromfpxf128)
 
 # BFloat16 functions
 add_math_entrypoint_object(fbfloat16)
+
+add_math_entrypoint_object(fabsbf16)
