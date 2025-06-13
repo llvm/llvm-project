@@ -229,7 +229,7 @@ void DXILFlattenArraysVisitor::collectIndicesAndDimsFromGEP(
     GetElementPtrInst &GEP, SmallVectorImpl<Value *> &Indices,
     SmallVectorImpl<uint64_t> &Dims, bool &AllIndicesAreConstInt) {
 
-  // Skip the first index (which is ptr index ie always start at 0 for arrays)
+  // Skip the first index which is array ptr
   // and collect all subsequent indices
   Type *CurrentType = GEP.getSourceElementType();
   for (unsigned I = 1; I < GEP.getNumIndices(); ++I) {
