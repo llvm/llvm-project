@@ -82,8 +82,7 @@ bool X86FixupSetCCPass::runOnMachineFunction(MachineFunction &MF) {
       // Find a setcc/setzucc (if ZU is enabled) that is used by a zext.
       // This doesn't have to be the only use, the transformation is safe
       // regardless.
-      if (MI.getOpcode() != X86::SETCCr &&
-          (!ST->hasZU() || MI.getOpcode() != X86::SETZUCCr))
+      if (MI.getOpcode() != X86::SETCCr && MI.getOpcode() != X86::SETZUCCr)
         continue;
 
       MachineInstr *ZExt = nullptr;
