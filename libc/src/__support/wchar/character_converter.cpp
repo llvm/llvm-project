@@ -78,7 +78,7 @@ ErrorOr<char32_t> CharacterConverter::pop_utf32() {
   // if pop is called too early
   if (!isComplete())
     return Error(-1);
-    
+
   char32_t utf32 = state->partial;
 
   // reset if successful pop
