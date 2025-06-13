@@ -488,3 +488,83 @@ static_assert(__is_trivially_copyable(S12));
 // expected-note@-1 {{'S12' is not trivially copyable}} \
 // expected-note@#tc-S12 {{'S12' defined here}}
 }
+
+namespace standard_layout_tests {
+struct WithVirtual { // #sl-Virtual
+    virtual void foo();
+};
+static_assert(__is_standard_layout(WithVirtual));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::WithVirtual)'}} \
+// expected-note@-1 {{'WithVirtual' is not standard-layout}} \
+// expected-note@-1 {{because it has virtual functions}} \
+// expected-note@#sl-Virtual {{'WithVirtual' defined here}}
+
+struct MixedAccess { // #sl-Mixed
+public:
+    int a;
+private:
+    int b;
+};
+static_assert(__is_standard_layout(MixedAccess));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::MixedAccess)'}} \
+// expected-note@-1 {{'MixedAccess' is not standard-layout}} \
+// expected-note@-1 {{because it has mixed access specifiers}} \
+// expected-note@#sl-Mixed {{'MixedAccess' defined here}}
+
+struct VirtualBase { virtual ~VirtualBase(); };               // #sl-VirtualBase
+struct VB : virtual VirtualBase {};                            // #sl-VB
+static_assert(__is_standard_layout(VB));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::VB)'}} \
+// expected-note@-1 {{'VB' is not standard-layout}} \
+// expected-note@-1 {{because it has a virtual base 'VirtualBase'}} \
+// expected-note@-1 {{because it has a non-standard-layout base 'VirtualBase'}} \
+// expected-note@-1 {{because it has virtual functions}}
+// expected-note@#sl-VB {{'VB' defined here}}
+
+union U {      // #sl-U
+public:
+    int x;
+private:
+    int y;
+};                                                       
+static_assert(__is_standard_layout(U));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::U)'}} \
+// expected-note@-1 {{'U' is not standard-layout}} \
+// expected-note@-1 {{because it has mixed access specifiers}}
+// expected-note@#sl-U {{'U' defined here}}
+
+// Single base class is OK
+struct BaseClass{ int a; };                                   // #sl-BaseClass
+struct DerivedOK : BaseClass {};                                // #sl-DerivedOK
+static_assert(__is_standard_layout(DerivedOK));    
+
+// Primitive types should be standard layout
+static_assert(__is_standard_layout(int));                     // #sl-Int
+static_assert(__is_standard_layout(float));                   // #sl-Float
+
+// Multi-level inheritance: Non-standard layout
+struct Base1 { int a; };                                      // #sl-Base1
+struct Base2 { int b; };                                      // #sl-Base2
+struct DerivedClass : Base1, Base2 {};                        // #sl-DerivedClass
+static_assert(__is_standard_layout(DerivedClass));               
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::DerivedClass)'}} \
+// expected-note@-1 {{'DerivedClass' is not standard-layout}} \
+// expected-note@-1 {{because it has multiple base classes with data members}} \
+// expected-note@#sl-DerivedClass {{'DerivedClass' defined here}} 
+
+// Inheritance hierarchy with multiple classes having data members
+struct BaseA { int a; };                                      // #sl-BaseA
+struct BaseB : BaseA {};                                      // inherits BaseA, has no new members
+struct BaseC: BaseB { int c; };                               // #sl-BaseC
+static_assert(__is_standard_layout(BaseC));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::BaseC)'}} \
+// expected-note@-1 {{'BaseC' is not standard-layout}} \
+// expected-note@-1 {{because it has an indirect base 'BaseA' with data members}} \
+// expected-note@#sl-BaseC {{'BaseC' defined here}} \
+// Multiple direct base classes with no data members --> standard layout
+struct BaseX {};                                              // #sl-BaseX
+struct BaseY {};                                              // #sl-BaseY
+struct MultiBase : BaseX, BaseY {};                          // #sl-MultiBase
+static_assert(__is_standard_layout(MultiBase));
+
+ }
