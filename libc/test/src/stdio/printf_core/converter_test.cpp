@@ -255,4 +255,3 @@ TEST_F(LlvmLibcPrintfConverterTest, OctConversion) {
   ASSERT_STREQ(str, "1234");
   ASSERT_EQ(writer.get_chars_written(), 4);
 }
-
