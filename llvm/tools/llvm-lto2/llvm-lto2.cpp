@@ -611,6 +611,8 @@ int main(int argc, char **argv) {
   if (Subcommand == "run")
     return run(argc - 1, argv + 1);
   if (Subcommand == "print-guid" && argc > 2) {
+    // Note the name of the function we're calling: this won't return the right
+    // answer for internal linkage symbols.
     outs() << GlobalValue::getGUIDAssumingExternalLinkage(argv[2]) << '\n';
     return 0;
   }
