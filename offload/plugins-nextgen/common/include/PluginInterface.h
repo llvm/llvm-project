@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "ExclusiveAccess.h"
+#include "OpenMP/InteropAPI.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
@@ -937,6 +938,21 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   bool useAutoZeroCopy();
   virtual bool useAutoZeroCopyImpl() { return false; }
 
+  virtual omp_interop_val_t *createInterop(int32_t InteropType,
+                                           interop_spec_t &InteropSpec) {
+    return nullptr;
+  }
+
+  virtual int32_t releaseInterop(omp_interop_val_t *Interop) {
+    return OFFLOAD_SUCCESS;
+  }
+
+  virtual interop_spec_t selectInteropPreference(int32_t InteropType,
+                                                 int32_t NumPrefers,
+                                                 interop_spec_t *Prefers) {
+    return interop_spec_t{omp_fr_none, {false, 0}, 0};
+  }
+
   /// Allocate and construct a kernel object.
   virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
 
@@ -1341,6 +1357,45 @@ public:
   /// Look up a kernel function in the given binary.
   int32_t get_function(__tgt_device_binary Binary, const char *Name,
                        void **KernelPtr);
+
+  /// Return the interop specification that the plugin supports
+  /// It might not be one of the user specified ones.
+  interop_spec_t select_interop_preference(int32_t ID, int32_t InteropType,
+                                           int32_t NumPrefers,
+                                           interop_spec_t *Prefers) {
+    auto &Device = getDevice(ID);
+    return Device.selectInteropPreference(InteropType, NumPrefers, Prefers);
+  }
+
+  /// Create OpenMP interop with the given interop context
+  omp_interop_val_t *create_interop(int32_t ID, int32_t InteropContext,
+                                    interop_spec_t *InteropSpec) {
+    auto &Device = getDevice(ID);
+    return Device.createInterop(InteropContext, *InteropSpec);
+  }
+
+  /// Release OpenMP interop object
+  int32_t release_interop(int32_t ID, omp_interop_val_t *Interop) {
+    auto &Device = getDevice(ID);
+    return Device.releaseInterop(Interop);
+  }
+
+  /// Flush the queue associated with the interop object if necessary
+  virtual int32_t flush_queue(omp_interop_val_t *Interop) {
+    return OFFLOAD_SUCCESS;
+  }
+
+  /// Queue a synchronous barrier in the queue associated with the interop
+  /// object and wait for it to complete.
+  virtual int32_t sync_barrier(omp_interop_val_t *Interop) {
+    return OFFLOAD_FAIL;
+  }
+
+  /// Queue an asynchronous barrier in the queue associated with the interop
+  /// object and return immediately.
+  virtual int32_t async_barrier(omp_interop_val_t *Interop) {
+    return OFFLOAD_FAIL;
+  }
 
 private:
   /// Indicates if the platform runtime has been fully initialized.
