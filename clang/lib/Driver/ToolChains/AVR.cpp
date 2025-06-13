@@ -334,6 +334,27 @@ constexpr struct {
 
     // gcc 14 additions:
 
+    {"avr64da28", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64da32", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64da48", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64da64", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64db28", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64db32", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64db48", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64db64", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64dd14", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64dd20", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64dd28", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64dd32", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64du28", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64du32", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64ea28", "avrxmega2", "avrxmega2", 0x806800},
+    {"avr64ea32", "avrxmega2", "avrxmega2", 0x806800},
+    {"avr64ea48", "avrxmega2", "avrxmega2", 0x806800},
+    {"avr64sd28", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64sd32", "avrxmega2", "avrxmega2", 0x806000},
+    {"avr64sd48", "avrxmega2", "avrxmega2", 0x806000},
+
     {"avr16dd20", "avrxmega3", "avrxmega3", 0x807800},
     {"avr16dd28", "avrxmega3", "avrxmega3", 0x807800},
     {"avr16dd32", "avrxmega3", "avrxmega3", 0x807800},

@@ -588,6 +588,27 @@ def : Device<"atmega4809", FamilyXMEGA3, ELFArchXMEGA3>;
 
 // Additions from gcc 14:
 
+def : Device<"avr64da28", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64da32", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64da48", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64da64", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64db28", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64db32", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64db48", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64db64", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64dd14", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64dd20", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64dd28", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64dd32", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64du28", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64du32", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64ea28", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64ea32", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64ea48", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64sd28", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64sd32", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64sd48", FamilyXMEGA2, ELFArchXMEGA2>;
+
 def : Device<"avr16dd20", FamilyXMEGA3, ELFArchXMEGA3>;
 def : Device<"avr16dd28", FamilyXMEGA3, ELFArchXMEGA3>;
 def : Device<"avr16dd32", FamilyXMEGA3, ELFArchXMEGA3>;

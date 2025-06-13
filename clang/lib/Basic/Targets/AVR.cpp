@@ -350,6 +350,27 @@ static MCUInfo AVRMcus[] = {
 
     // gcc 14 additions:
 
+    {"avr64da28", "__AVR_AVR64DA28__", "102", 1},
+    {"avr64da32", "__AVR_AVR64DA32__", "102", 1},
+    {"avr64da48", "__AVR_AVR64DA48__", "102", 1},
+    {"avr64da64", "__AVR_AVR64DA64__", "102", 1},
+    {"avr64db28", "__AVR_AVR64DB28__", "102", 1},
+    {"avr64db32", "__AVR_AVR64DB32__", "102", 1},
+    {"avr64db48", "__AVR_AVR64DB48__", "102", 1},
+    {"avr64db64", "__AVR_AVR64DB64__", "102", 1},
+    {"avr64dd14", "__AVR_AVR64DD14__", "102", 1},
+    {"avr64dd20", "__AVR_AVR64DD20__", "102", 1},
+    {"avr64dd28", "__AVR_AVR64DD28__", "102", 1},
+    {"avr64dd32", "__AVR_AVR64DD32__", "102", 1},
+    {"avr64du28", "__AVR_AVR64DU28__", "102", 1},
+    {"avr64du32", "__AVR_AVR64DU32__", "102", 1},
+    {"avr64ea28", "__AVR_AVR64EA28__", "102", 1},
+    {"avr64ea32", "__AVR_AVR64EA32__", "102", 1},
+    {"avr64ea48", "__AVR_AVR64EA48__", "102", 1},
+    {"avr64sd28", "__AVR_AVR64SD28__", "102", 1},
+    {"avr64sd32", "__AVR_AVR64SD32__", "102", 1},
+    {"avr64sd48", "__AVR_AVR64SD48__", "102", 1},
+
     {"avr16dd20", "__AVR_AVR16DD20__", "103", 1},
     {"avr16dd28", "__AVR_AVR16DD28__", "103", 1},
     {"avr16dd32", "__AVR_AVR16DD32__", "103", 1},
