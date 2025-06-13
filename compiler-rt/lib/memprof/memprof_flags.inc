@@ -42,3 +42,5 @@ MEMPROF_FLAG(bool, print_terse, false,
              "if print_text = true.")
 MEMPROF_FLAG(bool, dump_at_exit, true,
              "If set, dump profiles when the program terminates.")
+MEMPROF_FLAG(bool, dump_binary_access_profile_only, false,
+             "Dump the binary access MemProf format only.")
