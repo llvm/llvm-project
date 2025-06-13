@@ -744,7 +744,10 @@
 // CHECK-SMEB16B16: __ARM_FEATURE_SME2 1
 // CHECK-SMEB16B16: __ARM_FEATURE_SME_B16B16 1
 // CHECK-SMEB16B16: __ARM_FEATURE_SVE_B16B16 1
-//
+
+// RUN: %clang --target=aarch64 -march=armv9-a+cssc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CSSC %s
+// CHECK-CSSC: __ARM_FEATURE_CSSC 1
+
 //  RUN: %clang --target=aarch64 -march=armv9-a+fp8 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FP8 %s
 // CHECK-FP8: __ARM_FEATURE_FP8 1
 

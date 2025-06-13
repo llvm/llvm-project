@@ -17,6 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -147,4 +148,8 @@ std::optional<uint32_t> MCAsmInfo::getSpecifierForName(StringRef Name) const {
   if (It != NameToSpecifier.end())
     return It->second;
   return {};
+}
+
+void MCAsmInfo::printExpr(raw_ostream &OS, const MCExpr &Expr) const {
+  Expr.print(OS, this);
 }

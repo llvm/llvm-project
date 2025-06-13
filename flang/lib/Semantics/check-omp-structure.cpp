@@ -11,6 +11,7 @@
 #include "resolve-names-utils.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
@@ -6524,6 +6525,29 @@ void OmpStructureChecker::CheckDependList(const parser::DataRef &d) {
 void OmpStructureChecker::CheckArraySection(
     const parser::ArrayElement &arrayElement, const parser::Name &name,
     const llvm::omp::Clause clause) {
+  // Sometimes substring operations are incorrectly parsed as array accesses.
+  // Detect this by looking for array accesses on character variables which are
+  // not arrays.
+  bool isSubstring{false};
+  evaluate::ExpressionAnalyzer ea{context_};
+  if (MaybeExpr expr = ea.Analyze(arrayElement.base)) {
+    std::optional<evaluate::Shape> shape = evaluate::GetShape(expr);
+    // Not an array: rank 0
+    if (shape && shape->size() == 0) {
+      if (std::optional<evaluate::DynamicType> type = expr->GetType()) {
+        if (type->category() == evaluate::TypeCategory::Character) {
+          // Substrings are explicitly denied by the standard [6.0:163:9-11].
+          // This is supported as an extension. This restriction was added in
+          // OpenMP 5.2.
+          isSubstring = true;
+          context_.Say(GetContext().clauseSource,
+              "The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2."_port_en_US);
+        } else {
+          llvm_unreachable("Array indexing on a variable that isn't an array");
+        }
+      }
+    }
+  }
   if (!arrayElement.subscripts.empty()) {
     for (const auto &subscript : arrayElement.subscripts) {
       if (const auto *triplet{
@@ -6540,6 +6564,10 @@ void OmpStructureChecker::CheckArraySection(
                   "'%s' in %s clause must have a positive stride"_err_en_US,
                   name.ToString(),
                   parser::ToUpperCaseLetters(getClauseName(clause).str()));
+            }
+            if (isSubstring) {
+              context_.Say(GetContext().clauseSource,
+                  "Cannot specify a step for a substring"_err_en_US);
             }
           }
           const auto &lower{std::get<0>(triplet->t)};
@@ -6563,6 +6591,12 @@ void OmpStructureChecker::CheckArraySection(
               }
             }
           }
+        }
+      } else if (std::get_if<parser::IntExpr>(&subscript.u)) {
+        // base(n) is valid as an array index but not as a substring operation
+        if (isSubstring) {
+          context_.Say(GetContext().clauseSource,
+              "Substrings must be in the form parent-string(lb:ub)"_err_en_US);
         }
       }
     }
