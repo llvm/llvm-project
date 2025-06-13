@@ -63,15 +63,10 @@ define <2 x double> @combine_pshufb_as_movsd(<2 x double> %a0, <2 x double> %a1)
 }
 
 define <4 x float> @combine_pshufb_as_movss(<4 x float> %a0, <4 x float> %a1) {
-; SSSE3-LABEL: combine_pshufb_as_movss:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: combine_pshufb_as_movss:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; SSE41-NEXT:    retq
+; SSE-LABEL: combine_pshufb_as_movss:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_pshufb_as_movss:
 ; AVX:       # %bb.0:
