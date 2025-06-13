@@ -284,7 +284,6 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-
 // -----
 
 func.func @invalid_options_as_str() {
