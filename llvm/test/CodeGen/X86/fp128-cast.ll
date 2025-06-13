@@ -1139,19 +1139,19 @@ define dso_local i32 @TestBits128(fp128 %ld) nounwind {
 ; X86-NEXT:    subl $20, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    pushl %edi
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    pushl %ecx
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    pushl %ecx
-; X86-NEXT:    pushl %eax
 ; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %edi
 ; X86-NEXT:    calll __multf3
 ; X86-NEXT:    addl $44, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
