@@ -198,7 +198,7 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func private @valid_array_attr_as_list_option()
 module {
-  func.func @valid_array_attr_param_as_list_option() {
+  func.func @valid_array_attr_as_list_option() {
     return
   }
 

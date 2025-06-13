@@ -792,16 +792,12 @@ transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
   std::string options;
   llvm::raw_string_ostream optionsStream(options); // For "printing" attrs.
   std::function<void(Attribute)> appendValueAttr = [&](Attribute valueAttr) {
-    if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
-      for (auto [idx, eltAttr] : llvm::enumerate(arrayAttr)) {
-        appendValueAttr(eltAttr);
-        optionsStream << ",";
-      }
-    } else if (auto strAttr = dyn_cast<StringAttr>(valueAttr)) {
+    if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr))
+      llvm::interleave(arrayAttr, optionsStream, appendValueAttr, ",");
+    else if (auto strAttr = dyn_cast<StringAttr>(valueAttr))
       optionsStream << strAttr.getValue().str();
-    } else {
+    else
       valueAttr.print(optionsStream, /*elideType=*/true);
-    }
   };
 
   OperandRange dynamicOptions = getDynamicOptions();
@@ -822,11 +818,7 @@ transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
       ArrayRef<Attribute> dynamicOption =
           state.getParams(dynamicOptions[dynamicOptionIdx]);
       // Append all attributes associated to the param, separated by commas.
-      for (auto [idx, associatedAttr] : llvm::enumerate(dynamicOption)) {
-        if (idx > 0)
-          optionsStream << ",";
-        appendValueAttr(associatedAttr);
-      }
+      llvm::interleave(dynamicOption, optionsStream, appendValueAttr, ",");
     } else {
       // Value is a static attribute.
       appendValueAttr(namedAttribute.getValue());
