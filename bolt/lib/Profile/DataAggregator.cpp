@@ -1583,12 +1583,10 @@ std::error_code DataAggregator::parseBranchEvents() {
                "mode may be limited)\n";
       else
         errs()
-            << "PERF2BOLT-WARNING: all recorded samples for this binary lack "
-               "SPE brstack entries. The minimum required version of "
-               "Linux-perf is v6.14 or higher for brstack support. "
-               "With an older Linux-perf you may get zero samples. "
-               "Plese also make sure about you recorded profile with: "
-               "perf record -e 'arm_spe_0/branch_filter=1/'.";
+            << "PERF2BOLT-WARNING: All recorded samples for this binary lack "
+               "SPE brstack entries. Make sure you are running Linux perf 6.14 "
+               "or later, otherwise you get zero samples. Record the profile with:"
+               "perf record -e 'arm_spe_0/branch_filter=1/'."
     } else {
       printBranchStacksDiagnostics(NumTotalSamples - NumSamples);
     }
