@@ -54,7 +54,6 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
       IsAllowedInCoroutines(Options.get("IsAllowedInCoroutines", false)) {}
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
-  using StmtMatcher = ast_matchers::internal::BindableMatcher<Stmt>;
   const auto ExpensiveValueParamDecl = parmVarDecl(
       hasType(qualType(
           hasCanonicalType(matchers::isExpensiveToCopy()),
@@ -67,8 +66,7 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
           TK_AsIs,
           functionDecl(hasBody(IsAllowedInCoroutines
                                    ? stmt()
-                                   : static_cast<StmtMatcher>(
-                                         unless(coroutineBodyStmt()))),
+                                   : stmt(unless(coroutineBodyStmt()))),
                        isDefinition(), unless(isImplicit()),
                        unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
                        has(typeLoc(forEach(ExpensiveValueParamDecl))),
