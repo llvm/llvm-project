@@ -127,7 +127,7 @@ define <4 x i32> @test7(<4 x i32> %A) {
 ; SSE-LABEL: test7:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test7:

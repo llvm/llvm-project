@@ -1653,7 +1653,7 @@ define <2 x double> @floor_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 
 ; AVX-NEXT:    jne LBB59_1
 ; AVX-NEXT:  ## %bb.2:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ; AVX-NEXT:  LBB59_1:
 ; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
@@ -2643,7 +2643,7 @@ define <2 x double> @ceil_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 %
 ; AVX-NEXT:    jne LBB85_1
 ; AVX-NEXT:  ## %bb.2:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ; AVX-NEXT:  LBB85_1:
 ; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0

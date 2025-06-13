@@ -21,19 +21,14 @@ define <4 x float> @insert_f32_firstelt(<4 x float> %x, float %s) {
 }
 
 define <2 x double> @insert_f64_firstelt(<2 x double> %x, double %s) {
-; SSE2-LABEL: insert_f64_firstelt:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: insert_f64_firstelt:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; SSE41-NEXT:    retq
+; SSE-LABEL: insert_f64_firstelt:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_f64_firstelt:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; AVX-NEXT:    retq
   %i0 = insertelement <2 x double> %x, double %s, i32 0
   ret <2 x double> %i0

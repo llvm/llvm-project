@@ -30,13 +30,13 @@ define <2 x double> @insert_v2f64_z1(<2 x double> %a) {
 ; SSE41-LABEL: insert_v2f64_z1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    xorps %xmm1, %xmm1
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; SSE41-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_v2f64_z1:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; AVX-NEXT:    retq
   %1 = insertelement <2 x double> %a, double 0.0, i32 0
   ret <2 x double> %1
@@ -68,7 +68,7 @@ define <4 x double> @insert_v4f64_0zz3(<4 x double> %a) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_v4f64_0zz3:
@@ -103,7 +103,7 @@ define <2 x i64> @insert_v2i64_z1(<2 x i64> %a) {
 ; SSE41-LABEL: insert_v2i64_z1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    xorps %xmm1, %xmm1
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; SSE41-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_v2i64_z1:
@@ -137,7 +137,7 @@ define <4 x i64> @insert_v4i64_01z3(<4 x i64> %a) {
 ; SSE41-LABEL: insert_v4i64_01z3:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_v4i64_01z3:
