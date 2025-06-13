@@ -19,8 +19,8 @@ namespace scudo {
 class ScopedString {
 public:
   explicit ScopedString() { String.push_back('\0'); }
-  uptr length() { return String.size() - 1; }
-  const char *data() { return String.data(); }
+  uptr length() const { return String.size() - 1; }
+  const char *data() const { return String.data(); }
   void clear() {
     String.clear();
     String.push_back('\0');
@@ -44,6 +44,14 @@ private:
 };
 
 void Printf(const char *Format, ...) FORMAT(1, 2);
+
+// Copies the string to the buffer, truncating if necessary.
+// Null-terminates the output if output_length is greater than zero.
+// Returns the original string's size (including null).
+// This can be called with a null buffer or zero size for buffer
+// sizing purposes.
+size_t CopyToBuffer(const ScopedString &input, char *output_base,
+                    size_t output_length);
 
 } // namespace scudo
 
