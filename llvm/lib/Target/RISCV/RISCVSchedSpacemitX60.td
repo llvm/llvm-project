@@ -400,15 +400,33 @@ foreach mx = SchedMxList in {
 }
 
 // Narrowing Shift and Clips
-foreach mx = SchedMxListW in {
+foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
+  defvar ALULat = SMX60GetVIALULatency<mx>.c;
 
-  defm "" : LMULWriteResMX<"WriteVNShiftV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVNShiftX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVNShiftI", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVNClipV",  [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVNClipX",  [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVNClipI",  [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = ALULat in {
+    defm "" : LMULWriteResMX<"WriteVNShiftV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNShiftX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNShiftI", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNClipV",  [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNClipX",  [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNClipI",  [SMX60_VIEU], mx, IsWorstCase>;
+  }
+}
+
+// Complex Slide
+foreach mx = ["M2", "M4"] in {
+  defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
+  defvar ALULat = SMX60GetVIALULatency<mx>.c;
+
+  let Latency = !mul(ALULat, 2) in {
+    defm "" : LMULWriteResMX<"WriteVNShiftV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNShiftX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNShiftI", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNClipV",  [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNClipX",  [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNClipI",  [SMX60_VIEU], mx, IsWorstCase>;
+  }
 }
 
 // 12. Vector Fixed-Point Arithmetic Instructions
