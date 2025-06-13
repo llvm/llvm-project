@@ -112,6 +112,9 @@ LIBC_INLINE static constexpr float expf(float x) {
 // Directional rounding version of expf.
 LIBC_INLINE static float expf(float x, int rounding_mode) {
   int current_rounding_mode = fputil::get_round();
+  if (rounding_mode == current_rounding_mode)
+    return expf(x);
+
   fputil::set_round(rounding_mode);
   float result = expf(x);
   fputil::set_round(current_rounding_mode);
