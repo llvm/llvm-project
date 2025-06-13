@@ -403,10 +403,9 @@ struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
     Location loc = op.getLoc();
     xegpu::TensorDescType tdescTy = op.getType();
 
-    //check if the tensor descriptor type is a 1d vector type
-    if (tdescTy.getRank() > 1) {
+    // check if the tensor descriptor type is a 1d vector type
+    if (tdescTy.getRank() > 1)
       return failure();
-    }
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
     if (!targetShape)
@@ -444,10 +443,9 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getValue().getType());
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    //check if the tensor descriptor type is a 1d vector type
-    if (tdescTy.getRank() > 1) {
+    // check if the tensor descriptor type is a 1d vector type
+    if (tdescTy.getRank() > 1)
       return failure();
-    }
 
     VectorType maskTy = llvm::dyn_cast<VectorType>(op.getMask().getType());
 
@@ -490,10 +488,9 @@ struct UnrollPrefetchOp : public UnrollPattern<xegpu::PrefetchOp> {
     Location loc = op.getLoc();
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    //check if the tensor descriptor type is a 1d vector type
-    if (tdescTy.getRank() > 1) {
+    // check if the tensor descriptor type is a 1d vector type
+    if (tdescTy.getRank() > 1)
       return failure();
-    }
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
     if (!targetShape)
@@ -521,10 +518,9 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getValue().getType());
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    //check if the tensor descriptor type is a 1d vector type
-    if (tdescTy.getRank() > 1) {
+    // check if the tensor descriptor type is a 1d vector type
+    if (tdescTy.getRank() > 1)
       return failure();
-    }
 
     VectorType maskTy = llvm::dyn_cast<VectorType>(op.getMask().getType());
 
@@ -543,9 +539,9 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
         op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
 
     SmallVector<Type> convertedMaskTypes =
-          getUnrolledTypes(maskTy, *targetShape);
+        getUnrolledTypes(maskTy, *targetShape);
     SmallVector<Value> convertedMasks =
-          pack(op.getMask(), convertedMaskTypes, *targetShape, loc, rewriter);
+        pack(op.getMask(), convertedMaskTypes, *targetShape, loc, rewriter);
 
     for (size_t i = 0; i < convertedValues.size(); ++i) {
       Value v = convertedValues[i];
@@ -568,10 +564,9 @@ struct UnrollUpdateOffsetOp : public UnrollPattern<xegpu::UpdateOffsetOp> {
     Location loc = op.getLoc();
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    //check if the tensor descriptor type is a 1d vector type
-    if (tdescTy.getRank() > 1) {
+    // check if the tensor descriptor type is a 1d vector type
+    if (tdescTy.getRank() > 1)
       return failure();
-    }
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
     if (!targetShape)
