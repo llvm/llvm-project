@@ -413,6 +413,25 @@ public:
   lldb::SBError SetSectionLoadAddress(lldb::SBSection section,
                                       lldb::addr_t section_base_addr);
 
+  /// Set the base load address for a module section.
+  ///
+  /// \param[in] section
+  ///     The section whose base load address will be set within this
+  ///     target.
+  ///
+  /// \param[in] section_base_addr
+  ///     The base address for the section.
+  ///
+  /// \param[in] should_flush
+  ///     Controls whether process should be flushed after adddress is set.
+  ///
+  /// \return
+  ///      An error to indicate success, fail, and any reason for
+  ///     failure.
+  lldb::SBError SetSectionLoadAddress(lldb::SBSection section,
+                                      lldb::addr_t section_base_addr,
+                                      bool should_flush);
+
   /// Clear the base load address for a module section.
   ///
   /// \param[in] section
