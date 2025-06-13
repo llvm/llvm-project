@@ -316,6 +316,10 @@ public:
     ~SourceLocRAIIObject() { restore(); }
   };
 
+  /// Hold counters for incrementally naming temporaries
+  unsigned counterAggTmp = 0;
+  std::string getCounterAggTmpAsString();
+
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
   mlir::Location getLoc(clang::SourceLocation srcLoc);
   mlir::Location getLoc(clang::SourceRange srcLoc);
@@ -695,6 +699,8 @@ public:
                          mlir::OpBuilder::InsertPoint ip,
                          mlir::Value arraySize = nullptr);
 
+  void emitAggregateStore(mlir::Value value, Address dest);
+
   void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
 
   LValue emitAggExprToLValue(const Expr *e);
@@ -703,7 +709,8 @@ public:
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
   /// should be returned.
-  RValue emitAnyExpr(const clang::Expr *e);
+  RValue emitAnyExpr(const clang::Expr *e,
+                     AggValueSlot aggSlot = AggValueSlot::ignored());
 
   /// Similarly to emitAnyExpr(), however, the result will always be accessible
   /// even if no aggregate location is provided.
@@ -1151,6 +1158,17 @@ public:
 
   void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
   void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
+
+  /// Create a temporary memory object for the given aggregate type.
+  AggValueSlot createAggTemp(QualType ty, mlir::Location loc,
+                             const Twine &name = "tmp",
+                             Address *alloca = nullptr) {
+    assert(!cir::MissingFeatures::aggValueSlot());
+    return AggValueSlot::forAddr(
+        createMemTemp(ty, loc, name, alloca), ty.getQualifiers(),
+        AggValueSlot::IsNotDestructed, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap);
+  }
 
 private:
   QualType getVarArgType(const Expr *arg);

@@ -173,6 +173,10 @@ struct MissingFeatures {
   static bool stackSaveOp() { return false; }
   static bool aggValueSlot() { return false; }
   static bool aggValueSlotMayOverlap() { return false; }
+  static bool aggValueSlotVolatile() { return false; }
+  static bool aggValueSlotDestructedFlag() { return false; }
+  static bool aggValueSlotAlias() { return false; }
+  static bool aggValueSlotGC() { return false; }
   static bool generateDebugInfo() { return false; }
   static bool pointerOverflowSanitizer() { return false; }
   static bool fpConstraints() { return false; }
@@ -230,6 +234,8 @@ struct MissingFeatures {
   static bool attributeNoBuiltin() { return false; }
   static bool thunks() { return false; }
   static bool runCleanupsScope() { return false; }
+  static bool lowerAggregateLoadStore() { return false; }
+  static bool dataLayoutTypeAllocSize() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
