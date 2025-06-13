@@ -18,7 +18,6 @@
 #include "clang/Basic/SimpleTypoCorrection.h"
 #include "clang/Basic/TargetInfo.h"
 
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;
@@ -211,6 +210,7 @@ getScopeFromNormalizedScopeName(StringRef ScopeName) {
       .Case("gnu", AttributeCommonInfo::Scope::GNU)
       .Case("gsl", AttributeCommonInfo::Scope::GSL)
       .Case("hlsl", AttributeCommonInfo::Scope::HLSL)
+      .Case("vk", AttributeCommonInfo::Scope::VK)
       .Case("msvc", AttributeCommonInfo::Scope::MSVC)
       .Case("omp", AttributeCommonInfo::Scope::OMP)
       .Case("riscv", AttributeCommonInfo::Scope::RISCV);

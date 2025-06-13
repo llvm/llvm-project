@@ -8,12 +8,11 @@
 
 #include "Flang.h"
 #include "Arch/RISCV.h"
-#include "CommonArgs.h"
 
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
@@ -695,6 +694,10 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     // If we handled this option claim it
     A->claim();
   }
+
+  StringRef Recip = parseMRecipOption(D.getDiags(), Args);
+  if (!Recip.empty())
+    CmdArgs.push_back(Args.MakeArgString("-mrecip=" + Recip));
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&

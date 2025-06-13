@@ -378,6 +378,7 @@ cc_library(
     hdrs = glob(["include/llvm/TableGen/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":FrontendDirective",
         ":Support",
         ":config",
     ],
@@ -960,7 +961,10 @@ cc_library(
         "include/llvm/Analysis/WithCache.h",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
-    textual_hdrs = glob(["include/llvm/IR/*.def"]),
+    textual_hdrs = glob([
+        "include/llvm/IR/*.def",
+        "lib/IR/*.def",
+    ]),
     deps = [
         ":BinaryFormat",
         ":Demangle",
@@ -1627,6 +1631,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Analysis",
+        ":Support",
         ":TargetParser",
     ],
 )
@@ -1727,6 +1732,7 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendAtomic",
+        ":FrontendDirective",
         ":FrontendOffloading",
         ":MC",
         ":Scalar",
@@ -1763,6 +1769,13 @@ gentbl_filegroup(
 )
 
 cc_library(
+    name = "FrontendDirective",
+    srcs = glob(["lib/Frontend/Directive/*.cpp"]),
+    hdrs = glob(["include/llvm/Frontend/Directive/*.h"]),
+    deps = [":Support"],
+)
+
+cc_library(
     name = "FrontendOpenACC",
     srcs = glob([
         "lib/Frontend/OpenACC/*.cpp",
@@ -1774,6 +1787,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":FrontendDirective",
         ":Support",
         ":TransformUtils",
     ],
@@ -2108,10 +2122,10 @@ llvm_target_lib_list = [lib for lib in [
                 "-combiners=AArch64PostLegalizerLowering",
             ],
             "lib/Target/AArch64/AArch64GenCallingConv.inc": ["-gen-callingconv"],
+            "lib/Target/AArch64/AArch64GenSDNodeInfo.inc": ["-gen-sd-node-info"],
             "lib/Target/AArch64/AArch64GenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/AArch64/AArch64GenDisassemblerTables.inc": [
                 "-gen-disassembler",
-                "--large-decoder-table",
             ],
             "lib/Target/AArch64/AArch64GenSystemOperands.inc": ["-gen-searchable-tables"],
             "lib/Target/AArch64/AArch64GenExegesis.inc": ["-gen-exegesis"],
@@ -5160,6 +5174,13 @@ cc_library(
         ":Support",
         "//third-party/unittest:gmock",
     ],
+)
+
+cc_library(
+    name = "TestingDemangle",
+    testonly = True,
+    copts = llvm_copts,
+    textual_hdrs = glob(["include/llvm/Testing/Demangle/*.inc"]),
 )
 
 cc_library(

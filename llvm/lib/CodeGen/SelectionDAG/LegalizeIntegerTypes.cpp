@@ -166,6 +166,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
     Res = PromoteIntRes_PARTIAL_REDUCE_MLA(N);
     break;
 
@@ -2088,8 +2089,12 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(N, OpNo);
     break;
+  case ISD::GET_ACTIVE_LANE_MASK:
+    Res = PromoteIntOp_GET_ACTIVE_LANE_MASK(N);
+    break;
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
     Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
     break;
   }
@@ -2874,14 +2879,30 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N,
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntOp_GET_ACTIVE_LANE_MASK(SDNode *N) {
+  SmallVector<SDValue, 1> NewOps(N->ops());
+  NewOps[0] = ZExtPromotedInteger(N->getOperand(0));
+  NewOps[1] = ZExtPromotedInteger(N->getOperand(1));
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N) {
   SmallVector<SDValue, 1> NewOps(N->ops());
-  if (N->getOpcode() == ISD::PARTIAL_REDUCE_SMLA) {
+  switch (N->getOpcode()) {
+  case ISD::PARTIAL_REDUCE_SMLA:
     NewOps[1] = SExtPromotedInteger(N->getOperand(1));
     NewOps[2] = SExtPromotedInteger(N->getOperand(2));
-  } else {
+    break;
+  case ISD::PARTIAL_REDUCE_UMLA:
     NewOps[1] = ZExtPromotedInteger(N->getOperand(1));
     NewOps[2] = ZExtPromotedInteger(N->getOperand(2));
+    break;
+  case ISD::PARTIAL_REDUCE_SUMLA:
+    NewOps[1] = SExtPromotedInteger(N->getOperand(1));
+    NewOps[2] = ZExtPromotedInteger(N->getOperand(2));
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
   }
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }

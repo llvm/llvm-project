@@ -94,7 +94,15 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
       Res.emplace_back(RISCV::LUI, Hi20);
 
     if (Lo12 || Hi20 == 0) {
-      unsigned AddiOpc = (IsRV64 && Hi20) ? RISCV::ADDIW : RISCV::ADDI;
+      unsigned AddiOpc = RISCV::ADDI;
+      if (IsRV64 && Hi20) {
+        // Use ADDIW rather than ADDI only when necessary for correctness. As
+        // noted in RISCVOptWInstrs, this helps reduce test differences vs
+        // RV32 without being a pessimization.
+        int64_t LuiRes = SignExtend64<32>(Hi20 << 12);
+        if (!isInt<32>(LuiRes + Lo12))
+          AddiOpc = RISCV::ADDIW;
+      }
       Res.emplace_back(AddiOpc, Lo12);
     }
     return;
@@ -352,6 +360,13 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
         Hi &= (Hi - 1); // Clear lowest set bit.
       } while (Hi != 0);
       Res = TmpSeq;
+    }
+
+    // Fold LI 1 + SLLI into BSETI.
+    if (Res[0].getOpcode() == RISCV::ADDI && Res[0].getImm() == 1 &&
+        Res[1].getOpcode() == RISCV::SLLI) {
+      Res.erase(Res.begin());                                 // Remove ADDI.
+      Res.front() = Inst(RISCV::BSETI, Res.front().getImm()); // Patch SLLI.
     }
   }
 

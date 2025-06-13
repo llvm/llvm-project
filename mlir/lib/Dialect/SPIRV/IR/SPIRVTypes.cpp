@@ -194,8 +194,21 @@ std::optional<int64_t> CompositeType::getSizeInBytes() {
 //===----------------------------------------------------------------------===//
 
 struct spirv::detail::CooperativeMatrixTypeStorage final : TypeStorage {
+  // In the specification dimensions of the Cooperative Matrix are 32-bit
+  // integers --- the initial implementation kept those values as such. However,
+  // the `ShapedType` expects the shape to be `int64_t`. We could keep the shape
+  // as 32-bits and expose it as int64_t through `getShape`, however, this
+  // method returns an `ArrayRef`, so returning `ArrayRef<int64_t>` having two
+  // 32-bits integers would require an extra logic and storage. So, we diverge
+  // from the spec and internally represent the dimensions as 64-bit integers,
+  // so we can easily return an `ArrayRef` from `getShape` without any extra
+  // logic. Alternatively, we could store both rows and columns (both 32-bits)
+  // and shape (64-bits), assigning rows and columns to shape whenever
+  // `getShape` is called. This would be at the cost of extra logic and storage.
+  // Note: Because `ArrayRef` is returned we cannot construct an object in
+  // `getShape` on the fly.
   using KeyTy =
-      std::tuple<Type, uint32_t, uint32_t, Scope, CooperativeMatrixUseKHR>;
+      std::tuple<Type, int64_t, int64_t, Scope, CooperativeMatrixUseKHR>;
 
   static CooperativeMatrixTypeStorage *
   construct(TypeStorageAllocator &allocator, const KeyTy &key) {
@@ -204,17 +217,17 @@ struct spirv::detail::CooperativeMatrixTypeStorage final : TypeStorage {
   }
 
   bool operator==(const KeyTy &key) const {
-    return key == KeyTy(elementType, rows, columns, scope, use);
+    return key == KeyTy(elementType, shape[0], shape[1], scope, use);
   }
 
   CooperativeMatrixTypeStorage(const KeyTy &key)
-      : elementType(std::get<0>(key)), rows(std::get<1>(key)),
-        columns(std::get<2>(key)), scope(std::get<3>(key)),
+      : elementType(std::get<0>(key)),
+        shape({std::get<1>(key), std::get<2>(key)}), scope(std::get<3>(key)),
         use(std::get<4>(key)) {}
 
   Type elementType;
-  uint32_t rows;
-  uint32_t columns;
+  // [#rows, #columns]
+  std::array<int64_t, 2> shape;
   Scope scope;
   CooperativeMatrixUseKHR use;
 };
@@ -231,10 +244,18 @@ Type CooperativeMatrixType::getElementType() const {
   return getImpl()->elementType;
 }
 
-uint32_t CooperativeMatrixType::getRows() const { return getImpl()->rows; }
+uint32_t CooperativeMatrixType::getRows() const {
+  assert(getImpl()->shape[0] != ShapedType::kDynamic);
+  return static_cast<uint32_t>(getImpl()->shape[0]);
+}
 
 uint32_t CooperativeMatrixType::getColumns() const {
-  return getImpl()->columns;
+  assert(getImpl()->shape[1] != ShapedType::kDynamic);
+  return static_cast<uint32_t>(getImpl()->shape[1]);
+}
+
+ArrayRef<int64_t> CooperativeMatrixType::getShape() const {
+  return getImpl()->shape;
 }
 
 Scope CooperativeMatrixType::getScope() const { return getImpl()->scope; }

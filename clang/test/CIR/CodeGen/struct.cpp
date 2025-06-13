@@ -9,7 +9,7 @@ struct IncompleteS;
 IncompleteS *p;
 
 // CIR: cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteS>
-// LLVM: @p = dso_local global ptr null
+// LLVM: @p = global ptr null
 // OGCG: @p = global ptr null, align 8
 
 struct CompleteS {
@@ -20,7 +20,7 @@ struct CompleteS {
 CompleteS cs;
 
 // CIR:       cir.global external @cs = #cir.zero : !rec_CompleteS
-// LLVM-DAG:  @cs = dso_local global %struct.CompleteS zeroinitializer
+// LLVM-DAG:  @cs = global %struct.CompleteS zeroinitializer
 // OGCG-DAG:  @cs = global %struct.CompleteS zeroinitializer, align 4
 
 void f(void) {
@@ -65,3 +65,31 @@ char f2(CompleteS &s) {
 // OGCG:   %[[S_REF:.*]] = load ptr, ptr %[[S_ADDR]]
 // OGCG:   %[[S_ADDR2:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[S_REF]], i32 0, i32 1
 // OGCG:   %[[S_B:.*]] = load i8, ptr %[[S_ADDR2]]
+
+struct Inner {
+  int n;
+};
+
+struct Outer {
+  Inner i;
+};
+
+void f3() {
+  Outer o;
+  o.i.n;
+}
+
+// CIR: cir.func @_Z2f3v()
+// CIR:   %[[O:.*]] = cir.alloca !rec_Outer, !cir.ptr<!rec_Outer>, ["o"]
+// CIR:   %[[O_I:.*]] = cir.get_member %[[O]][0] {name = "i"}
+// CIR:   %[[O_I_N:.*]] = cir.get_member %[[O_I]][0] {name = "n"}
+
+// LLVM: define{{.*}} void @_Z2f3v()
+// LLVM:   %[[O:.*]] = alloca %struct.Outer, i64 1, align 4
+// LLVM:   %[[O_I:.*]] = getelementptr %struct.Outer, ptr %[[O]], i32 0, i32 0
+// LLVM:   %[[O_I_N:.*]] = getelementptr %struct.Inner, ptr %[[O_I]], i32 0, i32 0
+
+// OGCG: define{{.*}} void @_Z2f3v()
+// OGCG:   %[[O:.*]] = alloca %struct.Outer, align 4
+// OGCG:   %[[O_I:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 0
+// OGCG:   %[[O_I_N:.*]] = getelementptr inbounds nuw %struct.Inner, ptr %[[O_I]], i32 0, i32 0

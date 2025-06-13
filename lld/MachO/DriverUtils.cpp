@@ -9,8 +9,6 @@
 #include "Config.h"
 #include "Driver.h"
 #include "InputFiles.h"
-#include "ObjC.h"
-#include "Target.h"
 
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"

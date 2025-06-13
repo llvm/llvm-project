@@ -240,13 +240,13 @@ Interpreter::Visit(const IdentifierNode *node) {
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const UnaryOpNode *node) {
   Status error;
-  auto rhs_or_err = Evaluate(node->operand());
+  auto rhs_or_err = Evaluate(node->GetOperand());
   if (!rhs_or_err)
     return rhs_or_err;
 
   lldb::ValueObjectSP rhs = *rhs_or_err;
 
-  switch (node->kind()) {
+  switch (node->GetKind()) {
   case UnaryOpKind::Deref: {
     lldb::ValueObjectSP dynamic_rhs = rhs->GetDynamicValue(m_use_dynamic);
     if (dynamic_rhs)
@@ -381,6 +381,53 @@ Interpreter::Visit(const MemberOfNode *node) {
                     base_type.GetFullyUnqualifiedType().TypeDescription());
   return llvm::make_error<DILDiagnosticError>(
       m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const ArraySubscriptNode *node) {
+  auto lhs_or_err = Evaluate(node->GetBase());
+  if (!lhs_or_err)
+    return lhs_or_err;
+  lldb::ValueObjectSP base = *lhs_or_err;
+
+  // Check to see if 'base' has a synthetic value; if so, try using that.
+  uint64_t child_idx = node->GetIndex();
+  if (lldb::ValueObjectSP synthetic = base->GetSyntheticValue()) {
+    llvm::Expected<uint32_t> num_children =
+        synthetic->GetNumChildren(child_idx + 1);
+    if (!num_children)
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, toString(num_children.takeError()), node->GetLocation());
+    if (child_idx >= *num_children) {
+      std::string message = llvm::formatv(
+          "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+          base->GetTypeName().AsCString("<invalid type>"),
+          base->GetName().AsCString());
+      return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                  node->GetLocation());
+    }
+    if (lldb::ValueObjectSP child_valobj_sp =
+            synthetic->GetChildAtIndex(child_idx))
+      return child_valobj_sp;
+  }
+
+  auto base_type = base->GetCompilerType().GetNonReferenceType();
+  if (!base_type.IsPointerType() && !base_type.IsArrayType())
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "subscripted value is not an array or pointer",
+        node->GetLocation());
+  if (base_type.IsPointerToVoid())
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "subscript of pointer to incomplete type 'void'",
+        node->GetLocation());
+
+  if (base_type.IsArrayType()) {
+    if (lldb::ValueObjectSP child_valobj_sp = base->GetChildAtIndex(child_idx))
+      return child_valobj_sp;
+  }
+
+  int64_t signed_child_idx = node->GetIndex();
+  return base->GetSyntheticArrayMember(signed_child_idx, true);
 }
 
 } // namespace lldb_private::dil

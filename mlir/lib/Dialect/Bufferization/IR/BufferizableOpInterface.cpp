@@ -165,7 +165,8 @@ Operation *bufferization::getOwnerOfValue(Value value) {
 /// allocated.
 FailureOr<Value> bufferization::allocateTensorForShapedValue(
     OpBuilder &b, Location loc, Value shapedValue,
-    const BufferizationOptions &options, bool copy) {
+    const BufferizationOptions &options, const BufferizationState &state,
+    bool copy) {
   Value tensor;
   if (llvm::isa<RankedTensorType>(shapedValue.getType())) {
     tensor = shapedValue;
@@ -210,7 +211,8 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   // Add 'memory_space' attribute. Not needed if 'copy' operand is specified.
   if (copy)
     return allocTensorOp.getResult();
-  FailureOr<BaseMemRefType> copyBufferType = getBufferType(tensor, options);
+  FailureOr<BaseMemRefType> copyBufferType =
+      getBufferType(tensor, options, state);
   if (failed(copyBufferType))
     return failure();
   std::optional<Attribute> memorySpace = copyBufferType->getMemorySpace();
@@ -222,7 +224,8 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
 }
 
 LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
-    RewriterBase &rewriter, const AnalysisState &state) {
+    RewriterBase &rewriter, const AnalysisState &analysisState,
+    const BufferizationState &bufferizationState) {
   OpBuilder::InsertionGuard g(rewriter);
   Operation *op = getOperation();
   SmallVector<OpOperand *> outOfPlaceOpOperands;
@@ -235,16 +238,18 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
     Type operandType = opOperand.get().getType();
     if (!llvm::isa<TensorType>(operandType))
       continue;
-    if (state.isInPlace(opOperand))
+    if (analysisState.isInPlace(opOperand))
       continue;
     if (llvm::isa<UnrankedTensorType>(operandType))
       return op->emitError("copying of unranked tensors is not implemented");
 
-    AliasingValueList aliasingValues = state.getAliasingValues(opOperand);
+    AliasingValueList aliasingValues =
+        analysisState.getAliasingValues(opOperand);
     if (aliasingValues.getNumAliases() == 1 &&
         isa<OpResult>(aliasingValues.getAliases()[0].value) &&
-        !state.bufferizesToMemoryWrite(opOperand) &&
-        state.getAliasingOpOperands(aliasingValues.getAliases()[0].value)
+        !analysisState.bufferizesToMemoryWrite(opOperand) &&
+        analysisState
+                .getAliasingOpOperands(aliasingValues.getAliases()[0].value)
                 .getNumAliases() == 1 &&
         !isa<UnrankedTensorType>(
             aliasingValues.getAliases()[0].value.getType())) {
@@ -256,12 +261,12 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
       // cannot be copied at the moment).
       Value value = aliasingValues.getAliases()[0].value;
       outOfPlaceValues.push_back(value);
-      if (!state.canOmitTensorCopy(opOperand))
+      if (!analysisState.canOmitTensorCopy(opOperand))
         copiedOpValues.insert(value);
     } else {
       // In all other cases, make a copy of the OpOperand.
       outOfPlaceOpOperands.push_back(&opOperand);
-      if (!state.canOmitTensorCopy(opOperand))
+      if (!analysisState.canOmitTensorCopy(opOperand))
         copiedOpOperands.insert(&opOperand);
     }
   }
@@ -270,8 +275,8 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
   rewriter.setInsertionPoint(op);
   for (OpOperand *opOperand : outOfPlaceOpOperands) {
     FailureOr<Value> copy = allocateTensorForShapedValue(
-        rewriter, op->getLoc(), opOperand->get(), state.getOptions(),
-        copiedOpOperands.contains(opOperand));
+        rewriter, op->getLoc(), opOperand->get(), analysisState.getOptions(),
+        bufferizationState, copiedOpOperands.contains(opOperand));
     if (failed(copy))
       return failure();
     rewriter.modifyOpInPlace(op, [&]() { opOperand->set(*copy); });
@@ -281,8 +286,8 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
   rewriter.setInsertionPointAfter(op);
   for (Value value : outOfPlaceValues) {
     FailureOr<Value> copy = allocateTensorForShapedValue(
-        rewriter, op->getLoc(), value, state.getOptions(),
-        copiedOpValues.count(value));
+        rewriter, op->getLoc(), value, analysisState.getOptions(),
+        bufferizationState, copiedOpValues.count(value));
     if (failed(copy))
       return failure();
     SmallVector<OpOperand *> uses = llvm::to_vector(
@@ -665,7 +670,8 @@ static void ensureToBufferOpIsValid(Value tensor, Type memrefType) {
 }
 
 FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
-                                          const BufferizationOptions &options) {
+                                          const BufferizationOptions &options,
+                                          const BufferizationState &state) {
 #ifndef NDEBUG
   auto tensorType = llvm::dyn_cast<TensorType>(value.getType());
   assert(tensorType && "unexpected non-tensor type");
@@ -678,7 +684,7 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
   // Insert to_buffer op.
   OpBuilder::InsertionGuard g(rewriter);
   setInsertionPointAfter(rewriter, value);
-  FailureOr<BaseMemRefType> memrefType = getBufferType(value, options);
+  FailureOr<BaseMemRefType> memrefType = getBufferType(value, options, state);
   if (failed(memrefType))
     return failure();
   ensureToBufferOpIsValid(value, *memrefType);
@@ -689,14 +695,16 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
 
 /// Return the buffer type for a given Value (tensor) after bufferization.
 FailureOr<BaseMemRefType>
-bufferization::getBufferType(Value value, const BufferizationOptions &options) {
+bufferization::getBufferType(Value value, const BufferizationOptions &options,
+                             const BufferizationState &state) {
   SmallVector<Value> invocationStack;
-  return getBufferType(value, options, invocationStack);
+  return getBufferType(value, options, state, invocationStack);
 }
 
 /// Return the buffer type for a given Value (tensor) after bufferization.
 FailureOr<BaseMemRefType>
 bufferization::getBufferType(Value value, const BufferizationOptions &options,
+                             const BufferizationState &state,
                              SmallVector<Value> &invocationStack) {
   assert(llvm::isa<TensorType>(value.getType()) &&
          "unexpected non-tensor type");
@@ -708,7 +716,7 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
   Operation *op = getOwnerOfValue(value);
   auto bufferizableOp = options.dynCastBufferizableOp(op);
   if (bufferizableOp)
-    return bufferizableOp.getBufferType(value, options, invocationStack);
+    return bufferizableOp.getBufferType(value, options, state, invocationStack);
 
   // Op is not bufferizable.
   auto memSpace =
@@ -944,6 +952,7 @@ AliasingOpOperandList bufferization::detail::defaultGetAliasingOpOperands(
 
 FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
     Value value, const BufferizationOptions &options,
+    const BufferizationState &bufferizationState,
     SmallVector<Value> &invocationStack) {
   assert(llvm::isa<TensorType>(value.getType()) && "expected tensor type");
 
@@ -954,14 +963,15 @@ FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
   // Value is an OpResult.
   Operation *op = getOwnerOfValue(value);
   auto opResult = llvm::cast<OpResult>(value);
-  AnalysisState state(options);
-  AliasingOpOperandList aliases = state.getAliasingOpOperands(opResult);
+  AnalysisState analysisState(options);
+  AliasingOpOperandList aliases = analysisState.getAliasingOpOperands(opResult);
   if (aliases.getNumAliases() > 0 &&
       aliases.getAliases()[0].relation == BufferRelation::Equivalent) {
     // If the OpResult has an equivalent OpOperand, both OpResult and
     // OpOperand bufferize to the exact same buffer type.
     Value equivalentOperand = aliases.getAliases().front().opOperand->get();
-    return getBufferType(equivalentOperand, options, invocationStack);
+    return getBufferType(equivalentOperand, options, bufferizationState,
+                         invocationStack);
   }
 
   // If we do not know the memory space and there is no default memory space,

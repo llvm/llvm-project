@@ -51,8 +51,8 @@ bool MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   return &SecA == &SecB;
 }
 
-void MCObjectWriter::addFileName(MCAssembler &Asm, StringRef FileName) {
-  FileNames.emplace_back(std::string(FileName), Asm.Symbols.size());
+void MCObjectWriter::addFileName(StringRef FileName) {
+  FileNames.emplace_back(std::string(FileName), Asm->Symbols.size());
 }
 
 MCContext &MCObjectTargetWriter::getContext() const {

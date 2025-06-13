@@ -12,9 +12,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "systemzmcexpr"
 
-const SystemZMCExpr *SystemZMCExpr::create(SystemZMCExpr::Specifier Kind,
+const SystemZMCExpr *SystemZMCExpr::create(MCSpecifierExpr::Spec S,
                                            const MCExpr *Expr, MCContext &Ctx) {
-  return new (Ctx) SystemZMCExpr(Kind, Expr);
+  return new (Ctx) SystemZMCExpr(Expr, S);
 }
 
 StringRef SystemZMCExpr::getVariantKindName() const {

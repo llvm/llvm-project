@@ -17,6 +17,19 @@ namespace llvm {
 using MachineFloatingPointPredicateUtils =
     GenericFloatingPointPredicateUtils<MachineSSAContext>;
 
+template <>
+DenormalMode
+MachineFloatingPointPredicateUtils::queryDenormalMode(const MachineFunction &MF,
+                                                      Register Val);
+
+template <>
+bool MachineFloatingPointPredicateUtils::lookThroughFAbs(
+    const MachineFunction &MF, Register LHS, Register &Src);
+
+template <>
+std::optional<APFloat> MachineFloatingPointPredicateUtils::matchConstantFloat(
+    const MachineFunction &MF, Register Val);
+
 /// Compute the possible floating-point classes that \p LHS could be based on
 /// fcmp \Pred \p LHS, \p RHS.
 ///

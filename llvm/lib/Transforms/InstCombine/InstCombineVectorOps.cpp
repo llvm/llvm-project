@@ -1115,7 +1115,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   bool FoundSrcAgg = false;
   for (BasicBlock *Pred : Preds) {
     std::pair<decltype(SourceAggregates)::iterator, bool> IV =
-        SourceAggregates.insert({Pred, nullptr});
+        SourceAggregates.try_emplace(Pred);
     // Did we already evaluate this predecessor?
     if (!IV.second)
       continue;
@@ -2244,7 +2244,7 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
   // have preserved the exact NaN bit-pattern.
   // Avoid the folding if X can have NaN elements.
   if (Shuf.getType()->getElementType()->isFloatingPointTy() &&
-      !isKnownNeverNaN(X, 0, SQ))
+      !isKnownNeverNaN(X, SQ))
     return nullptr;
 
   // Shuffle identity constants into the lanes that return the original value.

@@ -349,7 +349,7 @@ bool SelectionDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
 
   // Do some sanity-checking on the command-line options.
   if (EnableFastISelAbort && !Selector->TM.Options.EnableFastISel)
-    report_fatal_error("-fast-isel-abort > 0 requires -fast-isel");
+    reportFatalUsageError("-fast-isel-abort > 0 requires -fast-isel");
 
   // Decide what flavour of variable location debug-info will be used, before
   // we change the optimisation level.
@@ -386,10 +386,7 @@ SelectionDAGISel::SelectionDAGISel(TargetMachine &tm, CodeGenOptLevel OL)
   initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-SelectionDAGISel::~SelectionDAGISel() {
-  delete CurDAG;
-  delete SwiftError;
-}
+SelectionDAGISel::~SelectionDAGISel() { delete CurDAG; }
 
 void SelectionDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   CodeGenOptLevel OptLevel = Selector->OptLevel;
@@ -424,7 +421,7 @@ SelectionDAGISelPass::run(MachineFunction &MF,
 
   // Do some sanity-checking on the command-line options.
   if (EnableFastISelAbort && !Selector->TM.Options.EnableFastISel)
-    report_fatal_error("-fast-isel-abort > 0 requires -fast-isel");
+    reportFatalUsageError("-fast-isel-abort > 0 requires -fast-isel");
 
   // Decide what flavour of variable location debug-info will be used, before
   // we change the optimisation level.
@@ -797,7 +794,7 @@ static void reportFastISelFailure(MachineFunction &MF,
     R << (" (in function: " + MF.getName() + ")").str();
 
   if (ShouldAbort)
-    report_fatal_error(Twine(R.getMsg()));
+    reportFatalUsageError(Twine(R.getMsg()));
 
   ORE.emit(R);
   LLVM_DEBUG(dbgs() << R.getMsg() << "\n");
@@ -1880,7 +1877,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
     if (SP->shouldEmitSDCheck(*LLVMBB)) {
       bool FunctionBasedInstrumentation =
-          TLI->getSSPStackGuardCheck(*Fn.getParent());
+          TLI->getSSPStackGuardCheck(*Fn.getParent()) && Fn.hasMinSize();
       SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->getMBB(LLVMBB),
                                    FunctionBasedInstrumentation);
     }
@@ -1953,8 +1950,7 @@ SelectionDAGISel::FinishBasicBlock() {
 
     // Add load and check to the basicblock.
     FuncInfo->MBB = ParentMBB;
-    FuncInfo->InsertPt =
-        findSplitPointForStackProtector(ParentMBB, *TII);
+    FuncInfo->InsertPt = findSplitPointForStackProtector(ParentMBB, *TII);
     SDB->visitSPDescriptorParent(SDB->SPDescriptor, ParentMBB);
     CurDAG->setRoot(SDB->getRoot());
     SDB->clear();
@@ -1976,8 +1972,7 @@ SelectionDAGISel::FinishBasicBlock() {
         findSplitPointForStackProtector(ParentMBB, *TII);
 
     // Splice the terminator of ParentMBB into SuccessMBB.
-    SuccessMBB->splice(SuccessMBB->end(), ParentMBB,
-                       SplitPoint,
+    SuccessMBB->splice(SuccessMBB->end(), ParentMBB, SplitPoint,
                        ParentMBB->end());
 
     // Add compare/jump on neq/jump to the parent BB.

@@ -773,7 +773,11 @@ enumerators at all.
 **Limitations**
 
 This checker does not accept the coding pattern where an enum type is used to
-store combinations of flag values:
+store combinations of flag values.
+Such enums should be annotated with the `__attribute__((flag_enum))` or by the
+`[[clang::flag_enum]]` attribute to signal this intent. Refer to the
+`documentation <https://clang.llvm.org/docs/AttributeReference.html#flag-enum>`_
+of this Clang attribute.
 
 .. code-block:: cpp
 

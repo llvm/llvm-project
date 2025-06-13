@@ -53,7 +53,63 @@ class raw_ostream;
 enum class IR2VecKind { Symbolic };
 
 namespace ir2vec {
-using Embedding = std::vector<double>;
+/// Embedding is a datatype that wraps std::vector<double>. It provides
+/// additional functionality for arithmetic and comparison operations.
+/// It is meant to be used *like* std::vector<double> but is more restrictive
+/// in the sense that it does not allow the user to change the size of the
+/// embedding vector. The dimension of the embedding is fixed at the time of
+/// construction of Embedding object. But the elements can be modified in-place.
+struct Embedding {
+private:
+  std::vector<double> Data;
+
+public:
+  Embedding() = default;
+  Embedding(const std::vector<double> &V) : Data(V) {}
+  Embedding(std::vector<double> &&V) : Data(std::move(V)) {}
+  Embedding(std::initializer_list<double> IL) : Data(IL) {}
+
+  explicit Embedding(size_t Size) : Data(Size) {}
+  Embedding(size_t Size, double InitialValue) : Data(Size, InitialValue) {}
+
+  size_t size() const { return Data.size(); }
+  bool empty() const { return Data.empty(); }
+
+  double &operator[](size_t Itr) {
+    assert(Itr < Data.size() && "Index out of bounds");
+    return Data[Itr];
+  }
+
+  const double &operator[](size_t Itr) const {
+    assert(Itr < Data.size() && "Index out of bounds");
+    return Data[Itr];
+  }
+
+  using iterator = typename std::vector<double>::iterator;
+  using const_iterator = typename std::vector<double>::const_iterator;
+
+  iterator begin() { return Data.begin(); }
+  iterator end() { return Data.end(); }
+  const_iterator begin() const { return Data.begin(); }
+  const_iterator end() const { return Data.end(); }
+  const_iterator cbegin() const { return Data.cbegin(); }
+  const_iterator cend() const { return Data.cend(); }
+
+  const std::vector<double> &getData() const { return Data; }
+
+  /// Arithmetic operators
+  Embedding &operator+=(const Embedding &RHS);
+  Embedding &operator-=(const Embedding &RHS);
+
+  /// Adds Src Embedding scaled by Factor with the called Embedding.
+  /// Called_Embedding += Src * Factor
+  Embedding &scaleAndAdd(const Embedding &Src, float Factor);
+
+  /// Returns true if the embedding is approximately equal to the RHS embedding
+  /// within the specified tolerance.
+  bool approximatelyEquals(const Embedding &RHS, double Tolerance = 1e-6) const;
+};
+
 using InstEmbeddingsMap = DenseMap<const Instruction *, Embedding>;
 using BBEmbeddingsMap = DenseMap<const BasicBlock *, Embedding>;
 // FIXME: Current the keys are strings. This can be changed to
@@ -61,8 +117,8 @@ using BBEmbeddingsMap = DenseMap<const BasicBlock *, Embedding>;
 using Vocab = std::map<std::string, Embedding>;
 
 /// Embedder provides the interface to generate embeddings (vector
-/// representations) for instructions, basic blocks, and functions. The vector
-/// representations are generated using IR2Vec algorithms.
+/// representations) for instructions, basic blocks, and functions. The
+/// vector representations are generated using IR2Vec algorithms.
 ///
 /// The Embedder class is an abstract class and it is intended to be
 /// subclassed for different IR2Vec algorithms like Symbolic and Flow-aware.
@@ -80,50 +136,49 @@ protected:
 
   // Utility maps - these are used to store the vector representations of
   // instructions, basic blocks and functions.
-  Embedding FuncVector;
-  BBEmbeddingsMap BBVecMap;
-  InstEmbeddingsMap InstVecMap;
+  mutable Embedding FuncVector;
+  mutable BBEmbeddingsMap BBVecMap;
+  mutable InstEmbeddingsMap InstVecMap;
 
-  Embedder(const Function &F, const Vocab &Vocabulary, unsigned Dimension);
+  Embedder(const Function &F, const Vocab &Vocabulary);
+
+  /// Helper function to compute embeddings. It generates embeddings for all
+  /// the instructions and basic blocks in the function F. Logic of computing
+  /// the embeddings is specific to the kind of embeddings being computed.
+  virtual void computeEmbeddings() const = 0;
+
+  /// Helper function to compute the embedding for a given basic block.
+  /// Specific to the kind of embeddings being computed.
+  virtual void computeEmbeddings(const BasicBlock &BB) const = 0;
 
   /// Lookup vocabulary for a given Key. If the key is not found, it returns a
   /// zero vector.
   Embedding lookupVocab(const std::string &Key) const;
 
-  /// Adds two vectors: Dst += Src
-  static void addVectors(Embedding &Dst, const Embedding &Src);
-
-  /// Adds Src vector scaled by Factor to Dst vector: Dst += Src * Factor
-  static void addScaledVector(Embedding &Dst, const Embedding &Src,
-                              float Factor);
-
 public:
   virtual ~Embedder() = default;
 
-  /// Top level function to compute embeddings. It generates embeddings for all
-  /// the instructions and basic blocks in the function F. Logic of computing
-  /// the embeddings is specific to the kind of embeddings being computed.
-  virtual void computeEmbeddings() = 0;
-
   /// Factory method to create an Embedder object.
-  static Expected<std::unique_ptr<Embedder>> create(IR2VecKind Mode,
-                                                    const Function &F,
-                                                    const Vocab &Vocabulary,
-                                                    unsigned Dimension);
+  static Expected<std::unique_ptr<Embedder>>
+  create(IR2VecKind Mode, const Function &F, const Vocab &Vocabulary);
 
-  /// Returns a map containing instructions and the corresponding vector
-  /// representations for a given module corresponding to the IR2Vec
-  /// algorithm.
-  const InstEmbeddingsMap &getInstVecMap() const { return InstVecMap; }
+  /// Returns a map containing instructions and the corresponding embeddings for
+  /// the function F if it has been computed. If not, it computes the embeddings
+  /// for the function and returns the map.
+  const InstEmbeddingsMap &getInstVecMap() const;
 
-  /// Returns a map containing basic block and the corresponding vector
-  /// representations for a given module corresponding to the IR2Vec
-  /// algorithm.
-  const BBEmbeddingsMap &getBBVecMap() const { return BBVecMap; }
+  /// Returns a map containing basic block and the corresponding embeddings for
+  /// the function F if it has been computed. If not, it computes the embeddings
+  /// for the function and returns the map.
+  const BBEmbeddingsMap &getBBVecMap() const;
 
-  /// Returns the vector representation for a given function corresponding to
-  /// the IR2Vec algorithm.
-  const Embedding &getFunctionVector() const { return FuncVector; }
+  /// Returns the embedding for a given basic block in the function F if it has
+  /// been computed. If not, it computes the embedding for the basic block and
+  /// returns it.
+  const Embedding &getBBVector(const BasicBlock &BB) const;
+
+  /// Computes and returns the embedding for the current function.
+  const Embedding &getFunctionVector() const;
 };
 
 /// Class for computing the Symbolic embeddings of IR2Vec.
@@ -131,24 +186,20 @@ public:
 /// representations obtained from the Vocabulary.
 class SymbolicEmbedder : public Embedder {
 private:
-  /// Utility function to compute the vector representation for a given basic
-  /// block.
-  Embedding computeBB2Vec(const BasicBlock &BB);
-
-  /// Utility function to compute the vector representation for a given type.
+  /// Utility function to compute the embedding for a given type.
   Embedding getTypeEmbedding(const Type *Ty) const;
 
-  /// Utility function to compute the vector representation for a given
-  /// operand.
+  /// Utility function to compute the embedding for a given operand.
   Embedding getOperandEmbedding(const Value *Op) const;
 
+  void computeEmbeddings() const override;
+  void computeEmbeddings(const BasicBlock &BB) const override;
+
 public:
-  SymbolicEmbedder(const Function &F, const Vocab &Vocabulary,
-                   unsigned Dimension)
-      : Embedder(F, Vocabulary, Dimension) {
+  SymbolicEmbedder(const Function &F, const Vocab &Vocabulary)
+      : Embedder(F, Vocabulary) {
     FuncVector = Embedding(Dimension, 0);
   }
-  void computeEmbeddings() override;
 };
 
 } // namespace ir2vec

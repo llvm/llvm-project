@@ -193,11 +193,11 @@ public:
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
 
-  std::string
-  getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
-               const SmallVectorImpl<ISD::OutputArg> &, MaybeAlign retAlignment,
-               std::optional<std::pair<unsigned, const APInt &>> VAInfo,
-               const CallBase &CB, unsigned UniqueCallSite) const;
+  std::string getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
+                           const SmallVectorImpl<ISD::OutputArg> &,
+                           MaybeAlign RetAlign,
+                           std::optional<unsigned> FirstVAArg,
+                           const CallBase &CB, unsigned UniqueCallSite) const;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -225,7 +225,8 @@ public:
 
   // Get whether we should use a precise or approximate 32-bit floating point
   // sqrt instruction.
-  bool usePrecSqrtF32() const;
+  bool usePrecSqrtF32(const MachineFunction &MF,
+                      const SDNode *N = nullptr) const;
 
   // Get whether we should use instructions that flush floating-point denormals
   // to sign-preserving zero.

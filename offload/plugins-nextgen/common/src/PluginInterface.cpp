@@ -858,13 +858,12 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
   for (auto *Image : LoadedImages) {
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    if (!Handler.hasProfilingGlobals(*this, *Image))
-      continue;
-
-    GPUProfGlobals profdata;
     auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
     if (!ProfOrErr)
       return ProfOrErr.takeError();
+
+    if (ProfOrErr->empty())
+      continue;
 
     // Dump out profdata
     if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==

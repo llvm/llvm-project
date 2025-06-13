@@ -62,7 +62,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -8790,7 +8789,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
         FunctionDecl *FD = getCurFunctionDecl();
         // OpenCL v1.1 s6.5.2 and s6.5.3: no local or constant variables
         // in functions.
-        if (FD && !FD->hasAttr<OpenCLKernelAttr>()) {
+        if (FD && !FD->hasAttr<DeviceKernelAttr>()) {
           if (T.getAddressSpace() == LangAS::opencl_constant)
             Diag(NewVD->getLocation(), diag::err_opencl_function_variable)
                 << 0 /*non-kernel only*/ << "constant";
@@ -8802,7 +8801,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
         }
         // OpenCL v2.0 s6.5.2 and s6.5.3: local and constant variables must be
         // in the outermost scope of a kernel function.
-        if (FD && FD->hasAttr<OpenCLKernelAttr>()) {
+        if (FD && FD->hasAttr<DeviceKernelAttr>()) {
           if (!getCurScope()->isFunctionScope()) {
             if (T.getAddressSpace() == LangAS::opencl_constant)
               Diag(NewVD->getLocation(), diag::err_opencl_addrspace_scope)
@@ -10931,9 +10930,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   MarkUnusedFileScopedDecl(NewFD);
 
-
-
-  if (getLangOpts().OpenCL && NewFD->hasAttr<OpenCLKernelAttr>()) {
+  if (getLangOpts().OpenCL && NewFD->hasAttr<DeviceKernelAttr>()) {
     // OpenCL v1.2 s6.8 static is invalid for kernel functions.
     if (SC == SC_Static) {
       Diag(D.getIdentifierLoc(), diag::err_static_kernel);
@@ -12438,7 +12435,7 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
 
   if (getLangOpts().OpenCL) {
     Diag(FD->getLocation(), diag::err_opencl_no_main)
-        << FD->hasAttr<OpenCLKernelAttr>();
+        << FD->hasAttr<DeviceKernelAttr>();
     FD->setInvalidDecl();
     return;
   }
@@ -13775,7 +13772,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   }
 
   // Perform the initialization.
-  ParenListExpr *CXXDirectInit = dyn_cast<ParenListExpr>(Init);
+  bool InitializedFromParenListExpr = false;
   bool IsParenListInit = false;
   if (!VDecl->isInvalidDecl()) {
     InitializedEntity Entity = InitializedEntity::InitializeVariable(VDecl);
@@ -13783,9 +13780,14 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
         VDecl->getLocation(), DirectInit, Init);
 
     MultiExprArg Args = Init;
-    if (CXXDirectInit)
-      Args = MultiExprArg(CXXDirectInit->getExprs(),
-                          CXXDirectInit->getNumExprs());
+    if (auto *CXXDirectInit = dyn_cast<ParenListExpr>(Init)) {
+      Args =
+          MultiExprArg(CXXDirectInit->getExprs(), CXXDirectInit->getNumExprs());
+      InitializedFromParenListExpr = true;
+    } else if (auto *CXXDirectInit = dyn_cast<CXXParenListInitExpr>(Init)) {
+      Args = CXXDirectInit->getInitExprs();
+      InitializedFromParenListExpr = true;
+    }
 
     // Try to correct any TypoExprs in the initialization arguments.
     for (size_t Idx = 0; Idx < Args.size(); ++Idx) {
@@ -14083,10 +14085,9 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // special case code.
 
   // C++ 8.5p11:
-  // The form of initialization (using parentheses or '=') is generally
-  // insignificant, but does matter when the entity being initialized has a
-  // class type.
-  if (CXXDirectInit) {
+  // The form of initialization (using parentheses or '=') matters
+  // when the entity being initialized has class type.
+  if (InitializedFromParenListExpr) {
     assert(DirectInit && "Call-style initializer must be direct init.");
     VDecl->setInitStyle(IsParenListInit ? VarDecl::ParenListInit
                                         : VarDecl::CallInit);
@@ -14414,6 +14415,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
 
     // Handle HLSL uninitialized decls
     if (getLangOpts().HLSL && HLSL().ActOnUninitializedVarDecl(Var))
+      return;
+
+    // HLSL input variables are expected to be externally initialized, even
+    // when marked `static`.
+    if (getLangOpts().HLSL &&
+        Var->getType().getAddressSpace() == LangAS::hlsl_input)
       return;
 
     // C++03 [dcl.init]p9:
@@ -15704,7 +15711,7 @@ ShouldWarnAboutMissingPrototype(const FunctionDecl *FD,
     return false;
 
   // Don't warn for OpenCL kernels.
-  if (FD->hasAttr<OpenCLKernelAttr>())
+  if (FD->hasAttr<DeviceKernelAttr>())
     return false;
 
   // Don't warn on explicitly deleted functions.
@@ -20507,14 +20514,11 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
     CheckAlignasUnderalignment(Enum);
 }
 
-Decl *Sema::ActOnFileScopeAsmDecl(Expr *expr,
-                                  SourceLocation StartLoc,
+Decl *Sema::ActOnFileScopeAsmDecl(Expr *expr, SourceLocation StartLoc,
                                   SourceLocation EndLoc) {
-  StringLiteral *AsmString = cast<StringLiteral>(expr);
 
-  FileScopeAsmDecl *New = FileScopeAsmDecl::Create(Context, CurContext,
-                                                   AsmString, StartLoc,
-                                                   EndLoc);
+  FileScopeAsmDecl *New =
+      FileScopeAsmDecl::Create(Context, CurContext, expr, StartLoc, EndLoc);
   CurContext->addDecl(New);
   return New;
 }
@@ -20598,7 +20602,7 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
 
   // SYCL functions can be template, so we check if they have appropriate
   // attribute prior to checking if it is a template.
-  if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelAttr>())
+  if (LangOpts.SYCLIsDevice && FD->hasAttr<DeviceKernelAttr>())
     return FunctionEmissionStatus::Emitted;
 
   // Templates are emitted when they're instantiated.

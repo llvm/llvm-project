@@ -4263,10 +4263,9 @@ same *vendor-name*.
                                                                   wavefront for
                                                                   GFX6-GFX9. A register
                                                                   is required if it is
-                                                                  used explicitly, or
+                                                                  written to, or
                                                                   if a higher numbered
-                                                                  register is used
-                                                                  explicitly. This
+                                                                  register is written to. This
                                                                   includes the special
                                                                   SGPRs for VCC, Flat
                                                                   Scratch (GFX7-GFX9)
@@ -4284,10 +4283,10 @@ same *vendor-name*.
                                                                   each work-item for
                                                                   GFX6-GFX9. A register
                                                                   is required if it is
-                                                                  used explicitly, or
+                                                                  written to, or
                                                                   if a higher numbered
-                                                                  register is used
-                                                                  explicitly.
+                                                                  register is
+                                                                  written to.
      ".agpr_count"                       integer        Required  Number of accumulator
                                                                   registers required by
                                                                   each work-item for
@@ -18436,8 +18435,8 @@ Additional Documentation
 .. [AMD-RADEON-HD-5000] `AMD Evergreen shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-6000] `AMD Cayman/Trinity shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_HD_6900_Series_Instruction_Set_Architecture.pdf>`__
 .. [AMD-ROCm] `AMD ROCm™ Platform <https://rocmdocs.amd.com/>`__
-.. [AMD-ROCm-github] `AMD ROCm™ github <http://github.com/RadeonOpenCompute>`__
-.. [AMD-ROCm-Release-Notes] `AMD ROCm Release Notes <https://github.com/RadeonOpenCompute/ROCm>`__
+.. [AMD-ROCm-github] `AMD ROCm™ github <http://github.com/ROCm>`__
+.. [AMD-ROCm-Release-Notes] `AMD ROCm Release Notes <https://github.com/ROCm/ROCm>`__
 .. [CLANG-ATTR] `Attributes in Clang <https://clang.llvm.org/docs/AttributeReference.html>`__
 .. [DWARF] `DWARF Debugging Information Format <http://dwarfstd.org/>`__
 .. [ELF] `Executable and Linkable Format (ELF) <http://www.sco.com/developers/gabi/>`__

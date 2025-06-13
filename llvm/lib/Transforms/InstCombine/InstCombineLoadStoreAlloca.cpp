@@ -918,7 +918,7 @@ static bool canReplaceGEPIdxWithZero(InstCombinerImpl &IC,
   // first non-zero index.
   auto IsAllNonNegative = [&]() {
     for (unsigned i = Idx+1, e = GEPI->getNumOperands(); i != e; ++i) {
-      KnownBits Known = IC.computeKnownBits(GEPI->getOperand(i), 0, MemI);
+      KnownBits Known = IC.computeKnownBits(GEPI->getOperand(i), MemI);
       if (Known.isNonNegative())
         continue;
       return false;
@@ -1581,8 +1581,8 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   // Insert a PHI node now if we need it.
   Value *MergedVal = OtherStore->getValueOperand();
   // The debug locations of the original instructions might differ. Merge them.
-  DebugLoc MergedLoc = DILocation::getMergedLocation(SI.getDebugLoc(),
-                                                     OtherStore->getDebugLoc());
+  DebugLoc MergedLoc =
+      DebugLoc::getMergedLocation(SI.getDebugLoc(), OtherStore->getDebugLoc());
   if (MergedVal != SI.getValueOperand()) {
     PHINode *PN =
         PHINode::Create(SI.getValueOperand()->getType(), 2, "storemerge");

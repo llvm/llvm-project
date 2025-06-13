@@ -49,7 +49,6 @@
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -2753,8 +2752,7 @@ CXXBaseSpecifier *Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
       std::string Quals =
           BaseType.getQualifiers().getAsString(Context.getPrintingPolicy());
       Diag(BaseLoc, diag::warn_qual_base_type)
-          << Quals << std::count(Quals.begin(), Quals.end(), ' ') + 1
-          << BaseType;
+          << Quals << llvm::count(Quals, ' ') + 1 << BaseType;
       Diag(BaseLoc, diag::note_base_class_specified_here) << BaseType;
     }
 
@@ -10573,29 +10571,6 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
     RD.dropAttr<TrivialABIAttr>();
   };
 
-  // Ill-formed if the copy and move constructors are deleted.
-  auto HasNonDeletedCopyOrMoveConstructor = [&]() {
-    // If the type is dependent, then assume it might have
-    // implicit copy or move ctor because we won't know yet at this point.
-    if (RD.isDependentType())
-      return true;
-    if (RD.needsImplicitCopyConstructor() &&
-        !RD.defaultedCopyConstructorIsDeleted())
-      return true;
-    if (RD.needsImplicitMoveConstructor() &&
-        !RD.defaultedMoveConstructorIsDeleted())
-      return true;
-    for (const CXXConstructorDecl *CD : RD.ctors())
-      if (CD->isCopyOrMoveConstructor() && !CD->isDeleted())
-        return true;
-    return false;
-  };
-
-  if (!HasNonDeletedCopyOrMoveConstructor()) {
-    PrintDiagAndRemoveAttr(0);
-    return;
-  }
-
   // Ill-formed if the struct has virtual functions.
   if (RD.isPolymorphic()) {
     PrintDiagAndRemoveAttr(1);
@@ -10638,6 +10613,32 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
         PrintDiagAndRemoveAttr(5);
         return;
       }
+  }
+
+  if (IsCXXTriviallyRelocatableType(RD))
+    return;
+
+  // Ill-formed if the copy and move constructors are deleted.
+  auto HasNonDeletedCopyOrMoveConstructor = [&]() {
+    // If the type is dependent, then assume it might have
+    // implicit copy or move ctor because we won't know yet at this point.
+    if (RD.isDependentType())
+      return true;
+    if (RD.needsImplicitCopyConstructor() &&
+        !RD.defaultedCopyConstructorIsDeleted())
+      return true;
+    if (RD.needsImplicitMoveConstructor() &&
+        !RD.defaultedMoveConstructorIsDeleted())
+      return true;
+    for (const CXXConstructorDecl *CD : RD.ctors())
+      if (CD->isCopyOrMoveConstructor() && !CD->isDeleted())
+        return true;
+    return false;
+  };
+
+  if (!HasNonDeletedCopyOrMoveConstructor()) {
+    PrintDiagAndRemoveAttr(0);
+    return;
   }
 }
 
@@ -13199,6 +13200,7 @@ NamedDecl *Sema::BuildUsingDeclaration(
     if (getLangOpts().CPlusPlus14 && II && II->isStr("gets") &&
         CurContext->isStdNamespace() &&
         isa<TranslationUnitDecl>(LookupContext) &&
+        PP.NeedsStdLibCxxWorkaroundBefore(2016'12'21) &&
         getSourceManager().isInSystemHeader(UsingLoc))
       return nullptr;
     UsingValidatorCCC CCC(HasTypenameKeyword, IsInstantiation, SS.getScopeRep(),

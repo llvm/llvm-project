@@ -1,5 +1,4 @@
 #include "llvm/ProfileData/DataAccessProf.h"
-#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Compression.h"
@@ -8,7 +7,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
-#include <sys/types.h>
 
 namespace llvm {
 namespace memprof {

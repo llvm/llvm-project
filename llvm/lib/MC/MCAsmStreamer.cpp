@@ -566,6 +566,11 @@ void MCAsmStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
 
 void MCAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCStreamer::emitLabel(Symbol, Loc);
+  // FIXME: Fix CodeGen/AArch64/arm64ec-varargs.ll. emitLabel is followed by
+  // setVariableValue, leading to an assertion failure if setOffset(0) is
+  // called.
+  if (getContext().getObjectFileType() != MCContext::IsCOFF)
+    Symbol->setOffset(0);
 
   Symbol->print(OS, MAI);
   OS << MAI->getLabelSuffix();
@@ -690,9 +695,11 @@ void MCAsmStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
     if (E->inlineAssignedExpr())
       EmitSet = false;
   if (EmitSet) {
-    OS << ".set ";
+    bool UseSet = MAI->usesSetToEquateSymbol();
+    if (UseSet)
+      OS << ".set ";
     Symbol->print(OS, MAI);
-    OS << ", ";
+    OS << (UseSet ? ", " : " = ");
     Value->print(OS, MAI);
 
     EmitEOL();

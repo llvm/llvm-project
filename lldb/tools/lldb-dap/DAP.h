@@ -152,7 +152,7 @@ struct DAP {
   llvm::DenseSet<ClientFeature> clientFeatures;
 
   /// The initial thread list upon attaching.
-  std::optional<llvm::json::Array> initial_thread_list;
+  std::vector<protocol::Thread> initial_thread_list;
 
   /// Keep track of all the modules our client knows about: either through the
   /// modules request or the module events.

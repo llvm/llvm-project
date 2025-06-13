@@ -1763,23 +1763,38 @@ def err_user_defined_msg_constexpr : Error<
   "constant expression">;
 
 // Type traits explanations
-def note_unsatisfied_trait : Note<"%0 is not %enum_select<TraitName>{"
-                                  "%TriviallyRelocatable{trivially relocatable}"
-                                  "}1">;
+def note_unsatisfied_trait
+    : Note<"%0 is not %enum_select<TraitName>{"
+           "%TriviallyRelocatable{trivially relocatable}|"
+           "%Replaceable{replaceable}|"
+           "%TriviallyCopyable{trivially copyable}"
+           "}1">;
 
 def note_unsatisfied_trait_reason
     : Note<"because it "
            "%enum_select<TraitNotSatisfiedReason>{"
            "%Ref{is a reference type}|"
+           "%Const{is const}|"
+           "%Volatile{is volatile}|"
            "%HasArcLifetime{has an ARC lifetime qualifier}|"
            "%VLA{is a variably-modified type}|"
            "%VBase{has a virtual base %1}|"
-           "%NRBase{has a non-trivially-relocatable base %1}|"
-           "%NRField{has a non-trivially-relocatable member %1 of type %2}|"
+           "%NotScalarOrClass{not %select{a|an array of objects of}1 scalar or "
+           "class type}|"
+           "%NTRBase{has a non-trivially-relocatable base %1}|"
+           "%NTRField{has a non-trivially-relocatable member %1 of type %2}|"
+           "%NonReplaceableBase{has a non-replaceable base %1}|"
+           "%NonReplaceableField{has a non-replaceable member %1 of type %2}|"
+           "%NTCBase{has a non-trivially-copyable base %1}|"
+           "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"
+           "%DeletedCtr{has a deleted %select{copy|move}1 "
+           "constructor}|"
            "%UserProvidedAssign{has a user provided %select{copy|move}1 "
+           "assignment operator}|"
+           "%DeletedAssign{has a deleted %select{copy|move}1 "
            "assignment operator}|"
            "%UnionWithUserDeclaredSMF{is a union with a user-declared "
            "%sub{select_special_member_kind}1}"
@@ -3105,8 +3120,6 @@ def err_reference_to_function_with_unsatisfied_constraints : Error<
   "invalid reference to function %0: constraints not satisfied">;
 def err_requires_expr_local_parameter_default_argument : Error<
   "default arguments not allowed for parameters of a requires expression">;
-def err_requires_expr_parameter_referenced_in_evaluated_context : Error<
-  "constraint variable %0 cannot be used in an evaluated context">;
 def note_expr_requirement_expr_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid: %2">;
 def note_expr_requirement_expr_unknown_substitution_error : Note<
@@ -4050,6 +4063,9 @@ def warn_at_available_unchecked_use : Warning<
   "%select{@available|__builtin_available}0 does not guard availability here; "
   "use if (%select{@available|__builtin_available}0) instead">,
   InGroup<DiagGroup<"unsupported-availability-guard">>;
+def warn_availability_invalid_os_version
+    : Warning<"invalid %1 version '%0' in availability attribute">, InGroup<DiagGroup<"invalid-version-availability">>;
+def note_availability_invalid_os_version_adjusted: Note<"implicitly treating version as '%0'">;
 
 def warn_missing_sdksettings_for_availability_checking : Warning<
   "%0 availability is ignored without a valid 'SDKSettings.json' in the SDK">,
@@ -4082,6 +4098,9 @@ def warn_thread_attribute_not_on_scoped_lockable_param : Warning<
   "%0 attribute applies to function parameters only if their type is a "
   "reference to a 'scoped_lockable'-annotated type">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
+def warn_thread_attribute_requires_preceded : Warning<
+  "%0 attribute on %1 must be preceded by %2 attribute">,
+  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def err_attribute_argument_out_of_bounds_extra_info : Error<
   "%0 attribute parameter %1 is out of bounds: "
   "%plural{0:no parameters to index into|"
@@ -4105,10 +4124,10 @@ def warn_expecting_locked : Warning<
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 // FIXME: improve the error message about locks not in scope
 def warn_lock_some_predecessors : Warning<
-  "%0 '%1' is not held on every path through here">,
+  "%0 '%1' is not held on every path through here%select{| with equal reentrancy depth}2">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_expecting_lock_held_on_loop : Warning<
-  "expecting %0 '%1' to be held at start of each loop">,
+  "expecting %0 '%1' to be held at start of each loop%select{| with equal reentrancy depth}2">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def note_locked_here : Note<"%0 acquired here">;
 def note_unlocked_here : Note<"%0 released here">;
@@ -4285,6 +4304,9 @@ def warn_impcast_integer_sign_conditional : Warning<
 def warn_impcast_integer_precision : Warning<
   "implicit conversion loses integer precision: %0 to %1">,
   InGroup<ImplicitIntConversion>, DefaultIgnore;
+def warn_impcast_integer_precision_on_negation : Warning<
+  "implicit conversion loses integer precision: %0 to %1 on negation">,
+  InGroup<ImplicitIntConversionOnNegation>, DefaultIgnore;
 def warn_impcast_high_order_zero_bits : Warning<
   "higher order bits are zeroes after implicit conversion">,
   InGroup<ImplicitIntConversion>, DefaultIgnore;
@@ -4676,7 +4698,7 @@ def err_attribute_preferred_name_arg_invalid : Error<
   "argument %0 to 'preferred_name' attribute is not a typedef for "
   "a specialization of %1">;
 def err_attribute_builtin_alias : Error<
-  "%0 attribute can only be applied to a ARM, HLSL or RISC-V builtin">;
+  "%0 attribute can only be applied to a ARM, HLSL, SPIR-V or RISC-V builtin">;
 
 // called-once attribute diagnostics.
 def err_called_once_attribute_wrong_type : Error<
@@ -6062,7 +6084,7 @@ def err_undeclared_use : Error<"use of undeclared %0">;
 def warn_deprecated : Warning<"%0 is deprecated">,
     InGroup<DeprecatedDeclarations>;
 def warn_deprecated_switch_case : Warning<warn_deprecated.Summary>,
-    InGroup<DeprecatedSwitchCase>;
+    InGroup<DeprecatedDeclarationsSwitchCase>;
 def note_from_diagnose_if : Note<"from 'diagnose_if' attribute on %0:">;
 def warn_property_method_deprecated :
     Warning<"property access is using %0 method which is deprecated">,
@@ -9413,6 +9435,8 @@ def err_cuda_host_shared : Error<
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
 def err_cuda_nonstatic_constdev: Error<"__constant__, __device__, and "
     "__managed__ are not allowed on non-static local variables">;
+def err_cuda_address_space_gpuvar: Error<"__constant__, __device__, and "
+    "__shared__ variables must use default address space">;
 def err_cuda_grid_constant_not_allowed : Error<
   "__grid_constant__ is only allowed on const-qualified kernel parameters">;
 def err_cuda_ovl_target : Error<
@@ -12705,6 +12729,11 @@ def warn_noderef_on_non_pointer_or_array : Warning<
 def warn_noderef_to_dereferenceable_pointer : Warning<
   "casting to dereferenceable pointer removes 'noderef' attribute">, InGroup<NoDeref>;
 
+def warn_cast_discards_cfi_unchecked_callee
+    : Warning<"implicit conversion from %0 to %1 discards "
+              "'cfi_unchecked_callee' attribute">,
+      InGroup<DiagGroup<"cfi-unchecked-callee">>;
+
 def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
@@ -12797,6 +12826,14 @@ def err_bit_cast_non_trivially_copyable : Error<
 def err_bit_cast_type_size_mismatch : Error<
   "size of '__builtin_bit_cast' source type %0 does not match destination type %1 (%2 vs %3 bytes)">;
 
+def err_get_vtable_pointer_incorrect_type
+    : Error<"__builtin_get_vtable_pointer requires an argument of%select{| "
+            "polymorphic}0 class pointer type"
+            ", but %1 %select{was provided|has no virtual methods}0">;
+def err_get_vtable_pointer_requires_complete_type
+    : Error<"__builtin_get_vtable_pointer requires an argument with a complete "
+            "type, but %0 is incomplete">;
+
 // SYCL-specific diagnostics
 def warn_sycl_kernel_num_of_template_params : Warning<
   "'sycl_kernel' attribute only applies to a function template with at least"
@@ -12875,6 +12912,16 @@ def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
 def err_bit_int_max_size : Error<"%select{signed|unsigned}0 _BitInt of bit "
                                  "sizes greater than %1 not supported">;
 
+// SPIR-V builtins diagnostics
+def err_spirv_invalid_target : Error<
+   "builtin requires %select{spirv|spirv32 or spirv64}0 target">;
+def err_spirv_builtin_generic_cast_invalid_arg : Error<
+  "expecting a pointer argument to the generic address space">;
+def err_spirv_enum_not_int : Error<
+   "%0{storage class} argument for SPIR-V builtin is not a 32-bits integer">;
+def err_spirv_enum_not_valid : Error<
+   "invalid value for %select{storage class}0 argument">;
+
 // errors of expect.with.probability
 def err_probability_not_constant_float : Error<
    "probability argument to __builtin_expect_with_probability must be constant "
@@ -12939,7 +12986,7 @@ def warn_hlsl_deprecated_register_type_i: Warning<"binding type 'i' ignored. The
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
 def err_hlsl_space_on_global_constant : Error<"register space cannot be specified on global constants">;
-def warn_hlsl_implicit_binding : Warning<"resource has implicit register binding">, InGroup<HLSLImplicitBinding>, DefaultError;
+def warn_hlsl_implicit_binding : Warning<"resource has implicit register binding">, InGroup<HLSLImplicitBinding>, DefaultIgnore;
 def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">,
     InGroup<HLSLMixPackOffset>;
 def err_hlsl_packoffset_overlap : Error<"packoffset overlap between %0, %1">;
@@ -12994,6 +13041,9 @@ def err_hlsl_expect_arg_const_int_one_or_neg_one: Error<
   "argument %0 must be constant integer 1 or -1">;
 def err_invalid_hlsl_resource_type: Error<
   "invalid __hlsl_resource_t type attributes">;
+
+def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
+def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

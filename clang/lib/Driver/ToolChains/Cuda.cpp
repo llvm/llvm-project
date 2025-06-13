@@ -7,21 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "Cuda.h"
-#include "CommonArgs.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatAdapters.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"

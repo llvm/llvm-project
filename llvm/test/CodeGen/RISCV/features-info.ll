@@ -6,6 +6,7 @@
 ; CHECK-NEXT:   32bit                            - Implements RV32.
 ; CHECK-NEXT:   64bit                            - Implements RV64.
 ; CHECK-NEXT:   a                                - 'A' (Atomic Instructions).
+; CHECK-NEXT:   andes45                          - Andes 45-Series processors.
 ; CHECK-NEXT:   auipc-addi-fusion                - Enable AUIPC+ADDI macrofusion.
 ; CHECK-NEXT:   b                                - 'B' (the collection of the Zba, Zbb, Zbs extensions).
 ; CHECK-NEXT:   c                                - 'C' (Compressed Instructions).
@@ -124,6 +125,7 @@
 ; CHECK-NEXT:   shcounterenw                     - 'Shcounterenw' (Support writeable hcounteren enable bit for any hpmcounter that is not read-only zero).
 ; CHECK-NEXT:   shgatpa                          - 'Shgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare).
 ; CHECK-NEXT:   shifted-zextw-fusion             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
+; CHECK-NEXT:   shlcofideleg                     - 'Shlcofideleg' (Delegating LCOFI Interrupts to VS-mode).
 ; CHECK-NEXT:   short-forward-branch-opt         - Enable short forward branch optimization.
 ; CHECK-NEXT:   shtvala                          - 'Shtvala' (htval provides all needed values).
 ; CHECK-NEXT:   shvsatpa                         - 'Shvsatpa' (vsatp supports all modes supported by satp).

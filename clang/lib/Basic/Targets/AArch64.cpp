@@ -17,7 +17,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
@@ -240,15 +239,15 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   // Make __builtin_ms_va_list available.
   HasBuiltinMSVaList = true;
 
-  // Make the SVE types available.  Note that this deliberately doesn't
-  // depend on SveMode, since in principle it should be possible to turn
+  // Make the Neon ACLE and SVE types available.  Note that this deliberately
+  // doesn't depend on SveMode, since in principle it should be possible to turn
   // SVE on and off within a translation unit.  It should also be possible
   // to compile the global declaration:
   //
   // __SVInt8_t *ptr;
   //
   // even without SVE.
-  HasAArch64SVETypes = true;
+  HasAArch64ACLETypes = true;
 
   // {} in inline assembly are neon specifiers, not assembly variant
   // specifiers.
@@ -596,6 +595,33 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSMEB16B16)
     Builder.defineMacro("__ARM_FEATURE_SME_B16B16", "1");
 
+  if (HasFP8)
+    Builder.defineMacro("__ARM_FEATURE_FP8", "1");
+
+  if (HasFP8FMA)
+    Builder.defineMacro("__ARM_FEATURE_FP8FMA", "1");
+
+  if (HasFP8DOT2)
+    Builder.defineMacro("__ARM_FEATURE_FP8DOT2", "1");
+
+  if (HasFP8DOT4)
+    Builder.defineMacro("__ARM_FEATURE_FP8DOT4", "1");
+
+  if (HasSSVE_FP8DOT2)
+    Builder.defineMacro("__ARM_FEATURE_SSVE_FP8DOT2", "1");
+
+  if (HasSSVE_FP8DOT4)
+    Builder.defineMacro("__ARM_FEATURE_SSVE_FP8DOT4", "1");
+
+  if (HasSSVE_FP8FMA)
+    Builder.defineMacro("__ARM_FEATURE_SSVE_FP8FMA", "1");
+
+  if (HasSME_F8F32)
+    Builder.defineMacro("__ARM_FEATURE_SME_F8F32", "1");
+
+  if (HasSME_F8F16)
+    Builder.defineMacro("__ARM_FEATURE_SME_F8F16", "1");
+
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
 
@@ -885,6 +911,15 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Cases("ls64", "ls64_v", "ls64_accdata", HasLS64)
       .Case("wfxt", HasWFxT)
       .Case("rcpc3", HasRCPC3)
+      .Case("fp8", HasFP8)
+      .Case("fp8fma", HasFP8FMA)
+      .Case("fp8dot2", HasFP8DOT2)
+      .Case("fp8dot4", HasFP8DOT4)
+      .Case("ssve-fp8dot2", HasSSVE_FP8DOT2)
+      .Case("ssve-fp8dot4", HasSSVE_FP8DOT4)
+      .Case("ssve-fp8fma", HasSSVE_FP8FMA)
+      .Case("sme-f8f32", HasSME_F8F32)
+      .Case("sme-f8f16", HasSME_F8F16)
       .Default(false);
 }
 
@@ -1046,6 +1081,25 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSVEB16B16 = true;
       HasSMEB16B16 = true;
     }
+
+    if (Feature == "+fp8")
+      HasFP8 = true;
+    if (Feature == "+fp8fma")
+      HasFP8FMA = true;
+    if (Feature == "+fp8dot2")
+      HasFP8DOT2 = true;
+    if (Feature == "+fp8dot4")
+      HasFP8DOT4 = true;
+    if (Feature == "+ssve-fp8dot2")
+      HasSSVE_FP8DOT2 = true;
+    if (Feature == "+ssve-fp8dot4")
+      HasSSVE_FP8DOT4 = true;
+    if (Feature == "+ssve-fp8fma")
+      HasSSVE_FP8FMA = true;
+    if (Feature == "+sme-f8f32")
+      HasSME_F8F32 = true;
+    if (Feature == "+sme-f8f16")
+      HasSME_F8F16 = true;
     if (Feature == "+sb")
       HasSB = true;
     if (Feature == "+predres")
@@ -1346,7 +1400,7 @@ AArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_PreserveNone:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
   case CC_AArch64VectorCall:
   case CC_AArch64SVEPCS:
   case CC_Win64:
@@ -1704,7 +1758,7 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86FastCall:
     return CCCR_Ignore;
   case CC_C:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_PreserveNone:
