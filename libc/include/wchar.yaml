@@ -112,6 +112,14 @@ functions:
       - type: __restrict wchar_t *
       - type: const __restrict wchar_t *
       - type: size_t
+  - name: wmemmove
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: wchar_t *
+      - type: const wchar_t *
+      - type: size_t
   - name: wcsncpy
     standards:
       - stdc
