@@ -30,7 +30,7 @@ Configuration
     - Message: message to be reported.
     - Level: severity of the diagnostic, the possible values are `Note`, `Warning`.
 
-CustomChecks can be configured by `Checks` option in the configuration file.
+`CustomChecks` can be configured by `Checks` option in the configuration file.
 
 Example
 =======
