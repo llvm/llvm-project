@@ -468,7 +468,7 @@ template <class _CharT>
   if (auto __only_first_arg = __fmt == _LIBCPP_STATICALLY_WIDEN(_CharT, "{}");
       __builtin_constant_p(__only_first_arg) && __only_first_arg) {
     if (auto __arg = __args.get(0); __builtin_constant_p(__arg.__type_)) {
-      return std::__visit_format_arg(
+      return std::__visit_format_arg<__format::__directly_visit_i128::__yes>(
           []<class _Tp>(_Tp&& __argument) -> optional<basic_string<_CharT>> {
             if constexpr (is_same_v<remove_cvref_t<_Tp>, basic_string_view<_CharT>>) {
               return basic_string<_CharT>{__argument};
