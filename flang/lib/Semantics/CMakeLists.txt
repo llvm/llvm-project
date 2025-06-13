@@ -40,7 +40,6 @@ add_flang_library(FortranSemantics
   resolve-directives.cpp
   resolve-names-utils.cpp
   resolve-names.cpp
-  rewrite-directives.cpp
   rewrite-parse-tree.cpp
   runtime-type-info.cpp
   scope.cpp
