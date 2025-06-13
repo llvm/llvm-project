@@ -818,6 +818,39 @@ static BasicBlock::iterator skipToNonAllocaInsertPt(BasicBlock &BB,
   return I;
 }
 
+/// Get the underlying type of a homogeneous aggregate type, or nullptr if the
+/// type is non-homogeneous.
+static Type *getHomogeneousType(Type *Ty) {
+  Type *ElemTy = nullptr;
+  SmallVector<Type *> WorkList;
+  WorkList.push_back(Ty);
+  while (!WorkList.empty()) {
+    Type *CurTy = WorkList.pop_back_val();
+
+    // Check if the current type is an aggregate type.
+    if (auto *VectorTy = dyn_cast<FixedVectorType>(CurTy)) {
+      WorkList.push_back(VectorTy->getElementType());
+      continue;
+    }
+    if (auto *ArrayTy = dyn_cast<ArrayType>(CurTy)) {
+      WorkList.push_back(ArrayTy->getElementType());
+      continue;
+    }
+    if (auto *StructTy = dyn_cast<StructType>(CurTy)) {
+      WorkList.append(StructTy->element_begin(), StructTy->element_end());
+      continue;
+    }
+
+    // If not, it must be the same as all other non-aggregate types.
+    if (!ElemTy)
+      ElemTy = CurTy;
+    else if (ElemTy != CurTy)
+      return nullptr;
+  }
+
+  return ElemTy;
+}
+
 // FIXME: Should try to pick the most likely to be profitable allocas first.
 bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   LLVM_DEBUG(dbgs() << "Trying to promote to vector: " << Alloca << '\n');
@@ -828,42 +861,42 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   }
 
   Type *AllocaTy = Alloca.getAllocatedType();
-  auto *VectorTy = dyn_cast<FixedVectorType>(AllocaTy);
-  if (auto *ArrayTy = dyn_cast<ArrayType>(AllocaTy)) {
-    uint64_t NumElems = 1;
-    Type *ElemTy;
-    do {
-      NumElems *= ArrayTy->getNumElements();
-      ElemTy = ArrayTy->getElementType();
-    } while ((ArrayTy = dyn_cast<ArrayType>(ElemTy)));
+  Type *ElemTy = getHomogeneousType(AllocaTy);
 
-    // Check for array of vectors
-    auto *InnerVectorTy = dyn_cast<FixedVectorType>(ElemTy);
-    if (InnerVectorTy) {
-      NumElems *= InnerVectorTy->getNumElements();
-      ElemTy = InnerVectorTy->getElementType();
-    }
-
-    if (VectorType::isValidElementType(ElemTy) && NumElems > 0) {
-      unsigned ElementSize = DL->getTypeSizeInBits(ElemTy) / 8;
-      if (ElementSize > 0) {
-        unsigned AllocaSize = DL->getTypeStoreSize(AllocaTy);
-        // Expand vector if required to match padding of inner type,
-        // i.e. odd size subvectors.
-        // Storage size of new vector must match that of alloca for correct
-        // behaviour of byte offsets and GEP computation.
-        if (NumElems * ElementSize != AllocaSize)
-          NumElems = AllocaSize / ElementSize;
-        if (NumElems > 0 && (AllocaSize % ElementSize) == 0)
-          VectorTy = FixedVectorType::get(ElemTy, NumElems);
-      }
-    }
-  }
-
-  if (!VectorTy) {
+  if (!ElemTy || !VectorType::isValidElementType(ElemTy)) {
     LLVM_DEBUG(dbgs() << "  Cannot convert type to vector\n");
     return false;
   }
+
+  unsigned ElementSizeInBits = DL->getTypeSizeInBits(ElemTy);
+  if (ElementSizeInBits != DL->getTypeAllocSizeInBits(ElemTy)) {
+    LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
+                         "does not match the type's size\n");
+    return false;
+  }
+  unsigned ElementSize = ElementSizeInBits / 8;
+  if (ElementSize == 0) {
+    LLVM_DEBUG(dbgs() << "  Cannot create vector of zero-sized elements\n");
+    return false;
+  }
+
+  // Calculate the size of the corresponding vector, accounting for padding of
+  // inner types, e.g., odd-sized subvectors. Storage size of new vector must
+  // match that of alloca for correct behaviour of byte offsets and GEP
+  // computation.
+  unsigned AllocaSize = DL->getTypeStoreSize(AllocaTy);
+  unsigned NumElems = AllocaSize / ElementSize;
+  if (NumElems == 0) {
+    LLVM_DEBUG(dbgs() << "  Cannot vectorize an empty aggregate type\n");
+    return false;
+  }
+  if (NumElems * ElementSize != AllocaSize) {
+    LLVM_DEBUG(
+        dbgs() << "  Cannot convert type into vector of the same size\n");
+    return false;
+  }
+  auto *VectorTy = FixedVectorType::get(ElemTy, NumElems);
+  assert(VectorTy && "Failed to create vector type.");
 
   const unsigned MaxElements =
       (MaxVectorRegs * 32) / DL->getTypeSizeInBits(VectorTy->getElementType());
@@ -895,15 +928,6 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
 
   LLVM_DEBUG(dbgs() << "  Attempting promotion to: " << *VectorTy << "\n");
 
-  Type *VecEltTy = VectorTy->getElementType();
-  unsigned ElementSizeInBits = DL->getTypeSizeInBits(VecEltTy);
-  if (ElementSizeInBits != DL->getTypeAllocSizeInBits(VecEltTy)) {
-    LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
-                         "does not match the type's size\n");
-    return false;
-  }
-  unsigned ElementSize = ElementSizeInBits / 8;
-  assert(ElementSize > 0);
   for (auto *U : Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());
 
@@ -943,7 +967,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
     if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
       // If we can't compute a vector index from this GEP, then we can't
       // promote this alloca to vector.
-      Value *Index = GEPToVectorIndex(GEP, &Alloca, VecEltTy, *DL, NewGEPInsts);
+      Value *Index = GEPToVectorIndex(GEP, &Alloca, ElemTy, *DL, NewGEPInsts);
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
 

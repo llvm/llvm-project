@@ -437,3 +437,22 @@ void NVPTXInstPrinter::printTmaReductionMode(const MCInst *MI, int OpNum,
   llvm_unreachable(
       "Invalid Reduction Op in printCpAsyncBulkTensorReductionMode");
 }
+
+void NVPTXInstPrinter::printCTAGroup(const MCInst *MI, int OpNum,
+                                     raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  using CGTy = nvvm::CTAGroupKind;
+
+  switch (static_cast<CGTy>(MO.getImm())) {
+  case CGTy::CG_NONE:
+    O << "";
+    return;
+  case CGTy::CG_1:
+    O << ".cta_group::1";
+    return;
+  case CGTy::CG_2:
+    O << ".cta_group::2";
+    return;
+  }
+  llvm_unreachable("Invalid cta_group in printCTAGroup");
+}
