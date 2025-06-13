@@ -5621,8 +5621,7 @@ static constexpr int getFEnvRoundingMode(llvm::RoundingMode rm) {
   };
 }
 
-APFloat exp(const APFloat &X,
-            RoundingMode rounding_mode = APFloat::rmNearestTiesToEven) {
+APFloat exp(const APFloat &X, RoundingMode rounding_mode) {
   assert((&X.getSemantics() == (const llvm::fltSemantics *)&semIEEEsingle) &&
          "Float semantics is not IEEEsingle");
   if (&X.getSemantics() == (const llvm::fltSemantics *)&semIEEEsingle) {
