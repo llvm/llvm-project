@@ -98,7 +98,7 @@ function(add_gen_header target_name)
   set(dep_file "${out_file}.d")
   set(yaml_file ${CMAKE_SOURCE_DIR}/${ADD_GEN_HDR_YAML_FILE})
   
-  if(LIBC_CONF_OUTPUT_ALL_HEADERS)
+  if(LLVM_LIBC_ALL_HEADERS)
     set(entry_points "")
   else()
     set(entry_points "${TARGET_ENTRYPOINT_NAME_LIST}")
