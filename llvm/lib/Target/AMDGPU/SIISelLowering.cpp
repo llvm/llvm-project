@@ -61,7 +61,7 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
     cl::desc("Use indirect register addressing for divergent indexes"),
     cl::init(false));
 
-// TODO This option should be removed once we switch to always using PTRADD in
+// TODO: This option should be removed once we switch to always using PTRADD in
 // the SelectionDAG.
 static cl::opt<bool> UseSelectionDAGPTRADD(
     "amdgpu-use-sdag-ptradd", cl::Hidden,
