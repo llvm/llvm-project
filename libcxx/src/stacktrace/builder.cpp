@@ -19,6 +19,9 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+// Explicitly instantiate this template class
+template class std::allocator<std::stacktrace_entry>;
+
 namespace __stacktrace {
 
 _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void builder::build_stacktrace(size_t skip, size_t max_depth) {
