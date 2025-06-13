@@ -172,8 +172,23 @@ def form_duplane : GICombineRule <
   (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
-def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn, fullrev,
-                                              form_duplane, shuf_to_ins]>;
+// Clean up G_UNMERGE(G_DUPLANE16) -> G_DUPLANE16
+class unmerge_duplane<Instruction Op> : GICombineRule <
+  (defs root:$root),
+  (match (Op $a, $src, $c),
+         (G_UNMERGE_VALUES $d1, $d2, $a):$root,
+         [{ return MRI.getType(${d1}.getReg()).getSizeInBits() == 64; }]),
+  (apply (GIReplaceReg $d2, $d1), (Op $d1, $src, $c))
+>;
+def unmerge_duplane8 : unmerge_duplane<G_DUPLANE8>;
+def unmerge_duplane16 : unmerge_duplane<G_DUPLANE16>;
+def unmerge_duplane32 : unmerge_duplane<G_DUPLANE32>;
+// G_DUPLANE64 is not included as the result in scalar.
+def unmerge_duplanes : GICombineGroup<[unmerge_duplane8, unmerge_duplane16,
+                                       unmerge_duplane32]>;
+
+def shuffle_vector_lowering : GICombineGroup<[dup, form_duplane, rev, ext, zip,
+                                              uzp, trn, fullrev, shuf_to_ins]>;
 
 // Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
 def vector_unmerge_lowering : GICombineRule <
@@ -325,7 +340,8 @@ def AArch64PostLegalizerLowering
                         lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mulv2s64,
-                        vector_unmerge_lowering, insertelt_nonconst]> {
+                        vector_unmerge_lowering, insertelt_nonconst,
+                        unmerge_duplanes]> {
 }
 
 // Post-legalization combines which are primarily optimizations.
@@ -345,7 +361,7 @@ def AArch64PostLegalizerCombiner
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
                         select_to_minmax, or_to_bsp, combine_concat_vector,
-                        commute_constant_to_rhs,
+                        commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
                         combine_mul_cmlt, combine_use_vector_truncate, extmultomull]> {
 }

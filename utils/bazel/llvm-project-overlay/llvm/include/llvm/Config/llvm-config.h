@@ -125,7 +125,7 @@
 #define LLVM_ENABLE_DIA_SDK 0
 
 /* Define if plugins enabled */
-#define LLVM_ENABLE_PLUGINS
+/* LLVM_ENABLE_PLUGINS defined in Bazel */
 
 /* Define if building LLVM with LLVM_ENABLE_TELEMETRY */
 #define LLVM_ENABLE_TELEMETRY 1

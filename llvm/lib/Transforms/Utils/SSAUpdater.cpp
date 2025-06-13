@@ -318,6 +318,11 @@ public:
                                SSAUpdater *Updater) {
     PHINode *PHI =
         PHINode::Create(Updater->ProtoType, NumPreds, Updater->ProtoName);
+    // FIXME: Ordinarily we don't care about or try to assign DebugLocs to PHI
+    // nodes, but loop optimizations may try to use a PHI node as a DebugLoc
+    // source (e.g. if this is an induction variable), and it's not clear what
+    // location we could attach here, so mark this unknown for now.
+    PHI->setDebugLoc(DebugLoc::getUnknown());
     PHI->insertBefore(BB->begin());
     return PHI;
   }

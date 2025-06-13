@@ -395,7 +395,7 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
       LLVM_DEBUG(dbgs() << "Failed to create new discriminator: "
                         << DIL->getFilename() << " Line: " << DIL->getLine());
   } else
-    Builder.SetCurrentDebugLocation(DIL);
+    Builder.SetCurrentDebugLocation(DL);
 }
 
 void VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,

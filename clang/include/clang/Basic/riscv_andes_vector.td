@@ -30,7 +30,7 @@ multiclass RVVFPMAD {
   }
 }
 
-let RequiredFeatures = ["Xandesvpackfph"],
+let RequiredFeatures = ["xandesvpackfph"],
     UnMaskedPolicyScheme = HasPassthruOperand in {
 let ManualCodegen = [{
   {
@@ -86,7 +86,7 @@ let ManualCodegen = [{
 
 multiclass RVVD4DOT<list<list<string>> i_suffixes_prototypes,
                     list<list<string>> l_suffixes_prototypes> {
-  let RequiredFeatures = ["Xandesvdot"],
+  let RequiredFeatures = ["xandesvdot"],
       UnMaskedPolicyScheme = HasPolicyOperand,
       HasMaskedOffOperand = false,
       Log2LMUL = [-1, 0, 1, 2, 3],

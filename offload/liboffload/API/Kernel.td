@@ -29,12 +29,8 @@ def : Struct {
     let desc = "Size-related arguments for a kernel launch.";
     let members = [
         StructMember<"size_t", "Dimensions", "Number of work dimensions">,
-        StructMember<"size_t", "NumGroupsX", "Number of work groups on the X dimension">,
-        StructMember<"size_t", "NumGroupsY", "Number of work groups on the Y dimension">,
-        StructMember<"size_t", "NumGroupsZ", "Number of work groups on the Z dimension">,
-        StructMember<"size_t", "GroupSizeX", "Size of a work group on the X dimension.">,
-        StructMember<"size_t", "GroupSizeY", "Size of a work group on the Y dimension.">,
-        StructMember<"size_t", "GroupSizeZ", "Size of a work group on the Z dimension.">,
+        StructMember<"struct ol_dimensions_t", "NumGroups", "Number of work groups in each dimension">,
+        StructMember<"struct ol_dimensions_t", "GroupSize", "Size of a work group in each dimension">,
         StructMember<"size_t", "DynSharedMemory", "Size of dynamic shared memory in bytes.">
     ];
 }

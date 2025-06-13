@@ -319,35 +319,10 @@ typedef __char32_t char32_t;
 
 #  define _LIBCPP_PREFERRED_ALIGNOF(_Tp) __alignof(_Tp)
 
-// Objective-C++ features (opt-in)
-#  if __has_feature(objc_arc)
-#    define _LIBCPP_HAS_OBJC_ARC 1
-#  else
-#    define _LIBCPP_HAS_OBJC_ARC 0
-#  endif
-
-#  if __has_feature(objc_arc_weak)
-#    define _LIBCPP_HAS_OBJC_ARC_WEAK 1
-#  else
-#    define _LIBCPP_HAS_OBJC_ARC_WEAK 0
-#  endif
-
-#  if __has_extension(blocks)
-#    define _LIBCPP_HAS_EXTENSION_BLOCKS 1
-#  else
-#    define _LIBCPP_HAS_EXTENSION_BLOCKS 0
-#  endif
-
-#  if _LIBCPP_HAS_EXTENSION_BLOCKS && defined(__APPLE__)
+#  if __has_extension(blocks) && defined(__APPLE__)
 #    define _LIBCPP_HAS_BLOCKS_RUNTIME 1
 #  else
 #    define _LIBCPP_HAS_BLOCKS_RUNTIME 0
-#  endif
-
-#  if __has_feature(address_sanitizer)
-#    define _LIBCPP_HAS_ASAN 1
-#  else
-#    define _LIBCPP_HAS_ASAN 0
 #  endif
 
 #  define _LIBCPP_ALWAYS_INLINE __attribute__((__always_inline__))

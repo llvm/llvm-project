@@ -215,11 +215,6 @@ private:
 /// @name Constructors
 /// @{
 public:
-  /// Is this Module using intrinsics to record the position of debugging
-  /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
-  /// \ref BasicBlock.
-  bool IsNewDbgInfoFormat;
-
   /// Used when printing this module in the new debug info format; removes all
   /// declarations of debug intrinsics that are replaced by non-intrinsic
   /// records in the new format.
@@ -230,7 +225,6 @@ public:
     for (auto &F : *this) {
       F.convertToNewDbgValues();
     }
-    IsNewDbgInfoFormat = true;
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
@@ -238,20 +232,6 @@ public:
     for (auto &F : *this) {
       F.convertFromNewDbgValues();
     }
-    IsNewDbgInfoFormat = false;
-  }
-
-  void setIsNewDbgInfoFormat(bool UseNewFormat) {
-    if (UseNewFormat && !IsNewDbgInfoFormat)
-      convertToNewDbgValues();
-    else if (!UseNewFormat && IsNewDbgInfoFormat)
-      convertFromNewDbgValues();
-  }
-  void setNewDbgInfoFormatFlag(bool NewFlag) {
-    for (auto &F : *this) {
-      F.setNewDbgInfoFormatFlag(NewFlag);
-    }
-    IsNewDbgInfoFormat = NewFlag;
   }
 
   /// The Module constructor. Note that there is no default constructor. You

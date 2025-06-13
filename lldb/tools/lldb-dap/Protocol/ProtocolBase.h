@@ -17,8 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_H
-#define LLDB_TOOLS_LLDB_DAP_PROTOCOL_H
+#ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_BASE_H
+#define LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_BASE_H
 
 #include "llvm/Support/JSON.h"
 #include <cstdint>

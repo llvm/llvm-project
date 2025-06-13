@@ -1428,39 +1428,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setTargetDAGCombine({ISD::TRUNCATE, ISD::SETCC, ISD::SELECT_CC});
   }
 
-  setLibcallName(RTLIB::LOG_F128, "logf128");
-  setLibcallName(RTLIB::LOG2_F128, "log2f128");
-  setLibcallName(RTLIB::LOG10_F128, "log10f128");
-  setLibcallName(RTLIB::EXP_F128, "expf128");
-  setLibcallName(RTLIB::EXP2_F128, "exp2f128");
-  setLibcallName(RTLIB::SIN_F128, "sinf128");
-  setLibcallName(RTLIB::COS_F128, "cosf128");
-  setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
-  setLibcallName(RTLIB::POW_F128, "powf128");
-  setLibcallName(RTLIB::FMIN_F128, "fminf128");
-  setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
-  setLibcallName(RTLIB::REM_F128, "fmodf128");
-  setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
-  setLibcallName(RTLIB::CEIL_F128, "ceilf128");
-  setLibcallName(RTLIB::FLOOR_F128, "floorf128");
-  setLibcallName(RTLIB::TRUNC_F128, "truncf128");
-  setLibcallName(RTLIB::ROUND_F128, "roundf128");
-  setLibcallName(RTLIB::LROUND_F128, "lroundf128");
-  setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
-  setLibcallName(RTLIB::RINT_F128, "rintf128");
-  setLibcallName(RTLIB::LRINT_F128, "lrintf128");
-  setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
-  setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
-  setLibcallName(RTLIB::FMA_F128, "fmaf128");
-  setLibcallName(RTLIB::FREXP_F128, "frexpf128");
-
-  if (Subtarget.isAIXABI()) {
-    setLibcallName(RTLIB::MEMCPY, isPPC64 ? "___memmove64" : "___memmove");
-    setLibcallName(RTLIB::MEMMOVE, isPPC64 ? "___memmove64" : "___memmove");
-    setLibcallName(RTLIB::MEMSET, isPPC64 ? "___memset64" : "___memset");
-    setLibcallName(RTLIB::BZERO, isPPC64 ? "___bzero64" : "___bzero");
-  }
-
   // With 32 condition bits, we don't need to sink (and duplicate) compares
   // aggressively in CodeGenPrep.
   if (Subtarget.useCRBits()) {
@@ -1476,7 +1443,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   setMinFunctionAlignment(Align(4));
 
-  switch (Subtarget.getCPUDirective()) {
+  auto CPUDirective = Subtarget.getCPUDirective();
+  switch (CPUDirective) {
   default: break;
   case PPC::DIR_970:
   case PPC::DIR_A2:
@@ -1508,15 +1476,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // The Freescale cores do better with aggressive inlining of memcpy and
   // friends. GCC uses same threshold of 128 bytes (= 32 word stores).
-  if (Subtarget.getCPUDirective() == PPC::DIR_E500mc ||
-      Subtarget.getCPUDirective() == PPC::DIR_E5500) {
+  if (CPUDirective == PPC::DIR_E500mc || CPUDirective == PPC::DIR_E5500) {
     MaxStoresPerMemset = 32;
     MaxStoresPerMemsetOptSize = 16;
     MaxStoresPerMemcpy = 32;
     MaxStoresPerMemcpyOptSize = 8;
     MaxStoresPerMemmove = 32;
     MaxStoresPerMemmoveOptSize = 8;
-  } else if (Subtarget.getCPUDirective() == PPC::DIR_A2) {
+  } else if (CPUDirective == PPC::DIR_A2) {
     // The A2 also benefits from (very) aggressive inlining of memcpy and
     // friends. The overhead of a the function call, even when warm, can be
     // over one hundred cycles.
@@ -1528,6 +1495,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     MaxLoadsPerMemcmp = 8;
     MaxLoadsPerMemcmpOptSize = 4;
   }
+
+  // Enable generation of STXVP instructions by default for mcpu=future.
+  if (CPUDirective == PPC::DIR_PWR_FUTURE &&
+      DisableAutoPairedVecSt.getNumOccurrences() == 0)
+    DisableAutoPairedVecSt = false;
 
   IsStrictFPEnabled = true;
 
@@ -9667,7 +9639,24 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     }
   }
 
-  if (!BVNIsConstantSplat || SplatBitSize > 32) {
+  bool IsSplat64 = false;
+  uint64_t SplatBits = 0;
+  int32_t SextVal = 0;
+  if (BVNIsConstantSplat && SplatBitSize <= 64) {
+    SplatBits = APSplatBits.getZExtValue();
+    if (SplatBitSize <= 32) {
+      SextVal = SignExtend32(SplatBits, SplatBitSize);
+    } else if (SplatBitSize == 64 && Subtarget.hasP8Altivec()) {
+      int64_t Splat64Val = static_cast<int64_t>(SplatBits);
+      bool P9Vector = Subtarget.hasP9Vector();
+      int32_t Hi = P9Vector ? 127 : 15;
+      int32_t Lo = P9Vector ? -128 : -16;
+      IsSplat64 = Splat64Val >= Lo && Splat64Val <= Hi;
+      SextVal = static_cast<int32_t>(SplatBits);
+    }
+  }
+
+  if (!BVNIsConstantSplat || (SplatBitSize > 32 && !IsSplat64)) {
     unsigned NewOpcode = PPCISD::LD_SPLAT;
 
     // Handle load-and-splat patterns as we have instructions that will do this
@@ -9753,7 +9742,6 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     return SDValue();
   }
 
-  uint64_t SplatBits = APSplatBits.getZExtValue();
   uint64_t SplatUndef = APSplatUndef.getZExtValue();
   unsigned SplatSize = SplatBitSize / 8;
 
@@ -9788,12 +9776,42 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                   dl);
 
   // If the sign extended value is in the range [-16,15], use VSPLTI[bhw].
-  int32_t SextVal = SignExtend32(SplatBits, SplatBitSize);
-  if (SextVal >= -16 && SextVal <= 15)
-    return getCanonicalConstSplat(SextVal, SplatSize, Op.getValueType(), DAG,
-                                  dl);
+  // Use VSPLTIW/VUPKLSW for v2i64 in range [-16,15].
+  if (SextVal >= -16 && SextVal <= 15) {
+    // SplatSize may be 1, 2, 4, or 8. Use size 4 instead of 8 for the splat to
+    // generate a splat word with extend for size 8.
+    unsigned UseSize = SplatSize == 8 ? 4 : SplatSize;
+    SDValue Res =
+        getCanonicalConstSplat(SextVal, UseSize, Op.getValueType(), DAG, dl);
+    if (SplatSize != 8)
+      return Res;
+    return BuildIntrinsicOp(Intrinsic::ppc_altivec_vupklsw, Res, DAG, dl);
+  }
 
   // Two instruction sequences.
+
+  if (Subtarget.hasP9Vector() && SextVal >= -128 && SextVal <= 127) {
+    SDValue C = DAG.getConstant((unsigned char)SextVal, dl, MVT::i32);
+    SmallVector<SDValue, 16> Ops(16, C);
+    SDValue BV = DAG.getBuildVector(MVT::v16i8, dl, Ops);
+    unsigned IID;
+    switch (SplatSize) {
+    default:
+      llvm_unreachable("Unexpected type for vector constant.");
+    case 2:
+      IID = Intrinsic::ppc_altivec_vupklsb;
+      break;
+    case 4:
+      IID = Intrinsic::ppc_altivec_vextsb2w;
+      break;
+    case 8:
+      IID = Intrinsic::ppc_altivec_vextsb2d;
+      break;
+    }
+    SDValue Extend = BuildIntrinsicOp(IID, BV, DAG, dl);
+    return DAG.getBitcast(Op->getValueType(0), Extend);
+  }
+  assert(!IsSplat64 && "Unhandled 64-bit splat pattern");
 
   // If this value is in the range [-32,30] and is even, use:
   //     VSPLTI[bhw](val/2) + VSPLTI[bhw](val/2)

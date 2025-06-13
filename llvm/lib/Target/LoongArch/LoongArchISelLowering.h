@@ -314,6 +314,12 @@ public:
   bool isFPImmVLDILegal(const APFloat &Imm, EVT VT) const;
   LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op, const APInt &DemandedBits,
+                                         const APInt &DemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth) const override;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
@@ -373,6 +379,8 @@ private:
   SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBF16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;

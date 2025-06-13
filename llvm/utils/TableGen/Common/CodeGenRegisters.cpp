@@ -933,9 +933,7 @@ bool CodeGenRegisterClass::Key::operator<(
 static bool testSubClass(const CodeGenRegisterClass *A,
                          const CodeGenRegisterClass *B) {
   return A->RSI.isSubClassOf(B->RSI) &&
-         std::includes(A->getMembers().begin(), A->getMembers().end(),
-                       B->getMembers().begin(), B->getMembers().end(),
-                       deref<std::less<>>());
+         llvm::includes(A->getMembers(), B->getMembers(), deref<std::less<>>());
 }
 
 /// Sorting predicate for register classes.  This provides a topological
@@ -1849,26 +1847,21 @@ static void computeUberWeights(MutableArrayRef<UberRegSet> UberSets,
   // Skip the first unallocatable set.
   for (UberRegSet &S : UberSets.drop_front()) {
     // Initialize all unit weights in this set, and remember the max units/reg.
-    const CodeGenRegister *Reg = nullptr;
-    unsigned MaxWeight = 0, Weight = 0;
-    for (RegUnitIterator UnitI(S.Regs); UnitI.isValid(); ++UnitI) {
-      if (Reg != UnitI.getReg()) {
-        if (Weight > MaxWeight)
-          MaxWeight = Weight;
-        Reg = UnitI.getReg();
-        Weight = 0;
-      }
-      if (!RegBank.getRegUnit(*UnitI).Artificial) {
-        unsigned UWeight = RegBank.getRegUnit(*UnitI).Weight;
-        if (!UWeight) {
-          UWeight = 1;
-          RegBank.increaseRegUnitWeight(*UnitI, UWeight);
+    unsigned MaxWeight = 0;
+    for (const CodeGenRegister *R : S.Regs) {
+      unsigned Weight = 0;
+      for (unsigned U : R->getRegUnits()) {
+        if (!RegBank.getRegUnit(U).Artificial) {
+          unsigned UWeight = RegBank.getRegUnit(U).Weight;
+          if (!UWeight) {
+            UWeight = 1;
+            RegBank.increaseRegUnitWeight(U, UWeight);
+          }
+          Weight += UWeight;
         }
-        Weight += UWeight;
       }
+      MaxWeight = std::max(MaxWeight, Weight);
     }
-    if (Weight > MaxWeight)
-      MaxWeight = Weight;
     if (S.Weight != MaxWeight) {
       LLVM_DEBUG({
         dbgs() << "UberSet " << &S - UberSets.begin() << " Weight "
@@ -1995,8 +1988,7 @@ findRegUnitSet(const std::vector<RegUnitSet> &UniqueSets,
 // Return true if the RUSubSet is a subset of RUSuperSet.
 static bool isRegUnitSubSet(const std::vector<unsigned> &RUSubSet,
                             const std::vector<unsigned> &RUSuperSet) {
-  return std::includes(RUSuperSet.begin(), RUSuperSet.end(), RUSubSet.begin(),
-                       RUSubSet.end());
+  return llvm::includes(RUSuperSet, RUSubSet);
 }
 
 /// Iteratively prune unit sets. Prune subsets that are close to the superset,
@@ -2621,6 +2613,55 @@ CodeGenRegBank::getMinimalPhysRegClass(const Record *RegRecord,
 
   assert(BestRC && "Couldn't find the register class");
   return BestRC;
+}
+
+const CodeGenRegisterClass *
+CodeGenRegBank::getSuperRegForSubReg(const ValueTypeByHwMode &ValueTy,
+                                     const CodeGenSubRegIndex *SubIdx,
+                                     bool MustBeAllocatable) const {
+  std::vector<const CodeGenRegisterClass *> Candidates;
+  auto &RegClasses = getRegClasses();
+
+  // Try to find a register class which supports ValueTy, and also contains
+  // SubIdx.
+  for (const CodeGenRegisterClass &RC : RegClasses) {
+    // Is there a subclass of this class which contains this subregister index?
+    const CodeGenRegisterClass *SubClassWithSubReg =
+        RC.getSubClassWithSubReg(SubIdx);
+    if (!SubClassWithSubReg)
+      continue;
+
+    // We have a class. Check if it supports this value type.
+    if (!llvm::is_contained(SubClassWithSubReg->VTs, ValueTy))
+      continue;
+
+    // If necessary, check that it is allocatable.
+    if (MustBeAllocatable && !SubClassWithSubReg->Allocatable)
+      continue;
+
+    // We have a register class which supports both the value type and
+    // subregister index. Remember it.
+    Candidates.push_back(SubClassWithSubReg);
+  }
+
+  // If we didn't find anything, we're done.
+  if (Candidates.empty())
+    return nullptr;
+
+  // Find and return the largest of our candidate classes.
+  llvm::stable_sort(Candidates, [&](const CodeGenRegisterClass *A,
+                                    const CodeGenRegisterClass *B) {
+    if (A->getMembers().size() > B->getMembers().size())
+      return true;
+
+    if (A->getMembers().size() < B->getMembers().size())
+      return false;
+
+    // Order by name as a tie-breaker.
+    return StringRef(A->getName()) < B->getName();
+  });
+
+  return Candidates[0];
 }
 
 BitVector

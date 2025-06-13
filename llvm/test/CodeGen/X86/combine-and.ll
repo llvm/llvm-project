@@ -37,7 +37,7 @@ define <4 x i32> @test1(<4 x i32> %A) {
 ; AVX-LABEL: test1:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
   %1 = and <4 x i32> %A, <i32 -1, i32 0, i32 0, i32 0>
   ret <4 x i32> %1
@@ -195,7 +195,7 @@ define <4 x i32> @test11(<4 x i32> %A) {
 ; AVX-LABEL: test11:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    retq
   %1 = and <4 x i32> %A, <i32 0, i32 -1, i32 -1, i32 -1>
   ret <4 x i32> %1

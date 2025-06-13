@@ -5151,7 +5151,8 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     SourceLocation RParen) {
   ASTContext &Context = getASTContext();
   auto FindSpecVersion =
-      [&](StringRef Platform) -> std::optional<VersionTuple> {
+      [&](StringRef Platform,
+          const llvm::Triple::OSType &OS) -> std::optional<VersionTuple> {
     auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
       return Spec.getPlatform() == Platform;
     });
@@ -5164,12 +5165,16 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     }
     if (Spec == AvailSpecs.end())
       return std::nullopt;
-    return Spec->getVersion();
+
+    return llvm::Triple::getCanonicalVersionForOS(
+        OS, Spec->getVersion(),
+        llvm::Triple::isValidVersionForOS(OS, Spec->getVersion()));
   };
 
   VersionTuple Version;
   if (auto MaybeVersion =
-          FindSpecVersion(Context.getTargetInfo().getPlatformName()))
+          FindSpecVersion(Context.getTargetInfo().getPlatformName(),
+                          Context.getTargetInfo().getTriple().getOS()))
     Version = *MaybeVersion;
 
   // The use of `@available` in the enclosing context should be analyzed to

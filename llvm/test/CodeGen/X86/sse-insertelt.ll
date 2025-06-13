@@ -19,7 +19,7 @@ define <4 x float> @insert_f32_firstelt(<4 x float> %x, float %s) {
 ;
 ; AVX-LABEL: insert_f32_firstelt:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    retq
   %i0 = insertelement <4 x float> %x, float %s, i32 0
   ret <4 x float> %i0

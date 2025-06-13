@@ -670,7 +670,7 @@ define <4 x i32> @PR19721(<4 x i32> %i) {
 ; AVX-LABEL: PR19721:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    ret{{[l|q]}}
 ;
 ; X64-SSE-LABEL: PR19721:

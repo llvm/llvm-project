@@ -311,7 +311,7 @@ template <> struct MDNodeKeyImpl<MDTuple> : MDNodeOpsKey {
 /// DenseMapInfo for DILocation.
 template <> struct MDNodeKeyImpl<DILocation> {
   unsigned Line;
-  unsigned Column;
+  uint16_t Column;
   Metadata *Scope;
   Metadata *InlinedAt;
   bool ImplicitCode;
@@ -320,7 +320,7 @@ template <> struct MDNodeKeyImpl<DILocation> {
   uint64_t AtomRank : 3;
 #endif
 
-  MDNodeKeyImpl(unsigned Line, unsigned Column, Metadata *Scope,
+  MDNodeKeyImpl(unsigned Line, uint16_t Column, Metadata *Scope,
                 Metadata *InlinedAt, bool ImplicitCode, uint64_t AtomGroup,
                 uint8_t AtomRank)
       : Line(Line), Column(Column), Scope(Scope), InlinedAt(InlinedAt),
@@ -355,13 +355,19 @@ template <> struct MDNodeKeyImpl<DILocation> {
   }
 
   unsigned getHashValue() const {
-    return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-                        ,
-                        AtomGroup, (uint8_t)AtomRank);
-#else
-    );
+    // Hashing AtomGroup and AtomRank substantially impacts performance whether
+    // Key Instructions is enabled or not. We can't detect whether it's enabled
+    // here cheaply; avoiding hashing zero values is a good approximation. This
+    // affects Key Instruction builds too, but any potential costs incurred by
+    // messing with the hash distribution* appear to still be massively
+    // outweighed by the overall compile time savings by performing this check.
+    // * (hash_combine(x) != hash_combine(x, 0))
+    if (AtomGroup || AtomRank)
+      return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode,
+                          AtomGroup, (uint8_t)AtomRank);
 #endif
+    return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode);
   }
 };
 

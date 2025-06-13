@@ -79,6 +79,13 @@ clementval@gmail.com (email), clementval (GitHub), clementval (Discourse)
 Abid Qadeer \
 haqadeer@amd.com (email), abidh (GitHub), abidh (Discourse)
 
+### Platform maintainers
+These maintainers are responsible for particular platforms that Flang supports
+
+#### Windows
+David Truby \
+david.truby@arm.com (email), davidtruby (GitHub), davidtruby (Discourse), truby (Discord)
+
 ## Inactive Maintainers
 ### Lead Maintainers
 #### Backend : (Lowering, FIR, Codegen)

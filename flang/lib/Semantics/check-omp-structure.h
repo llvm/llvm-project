@@ -48,6 +48,7 @@ static const OmpDirectiveSet noWaitClauseNotAllowedSet{
 } // namespace llvm
 
 namespace Fortran::semantics {
+struct AnalyzedCondStmt;
 
 // Mapping from 'Symbol' to 'Source' to keep track of the variables
 // used in multiple clauses
@@ -144,15 +145,6 @@ public:
   void Leave(const parser::OmpClauseList &);
   void Enter(const parser::OmpClause &);
 
-  void Enter(const parser::OmpAtomicRead &);
-  void Leave(const parser::OmpAtomicRead &);
-  void Enter(const parser::OmpAtomicWrite &);
-  void Leave(const parser::OmpAtomicWrite &);
-  void Enter(const parser::OmpAtomicUpdate &);
-  void Leave(const parser::OmpAtomicUpdate &);
-  void Enter(const parser::OmpAtomicCapture &);
-  void Leave(const parser::OmpAtomic &);
-
   void Enter(const parser::DoConstruct &);
   void Leave(const parser::DoConstruct &);
 
@@ -192,8 +184,6 @@ private:
   void CheckAllowedMapTypes(const parser::OmpMapType::Value &,
       const std::list<parser::OmpMapType::Value> &);
 
-  std::optional<evaluate::DynamicType> GetDynamicType(
-      const common::Indirection<parser::Expr> &);
   const std::list<parser::OmpTraitProperty> &GetTraitPropertyList(
       const parser::OmpTraitSelector &);
   std::optional<llvm::omp::Clause> GetClauseFromProperty(
@@ -265,14 +255,44 @@ private:
   void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   template <typename T, typename D> bool IsOperatorValid(const T &, const D &);
-  void CheckAtomicMemoryOrderClause(
-      const parser::OmpAtomicClauseList *, const parser::OmpAtomicClauseList *);
-  void CheckAtomicUpdateStmt(const parser::AssignmentStmt &);
-  void CheckAtomicCaptureStmt(const parser::AssignmentStmt &);
-  void CheckAtomicWriteStmt(const parser::AssignmentStmt &);
-  void CheckAtomicCaptureConstruct(const parser::OmpAtomicCapture &);
-  void CheckAtomicCompareConstruct(const parser::OmpAtomicCompare &);
-  void CheckAtomicConstructStructure(const parser::OpenMPAtomicConstruct &);
+
+  void CheckStorageOverlap(const evaluate::Expr<evaluate::SomeType> &,
+      llvm::ArrayRef<evaluate::Expr<evaluate::SomeType>>, parser::CharBlock);
+  void ErrorShouldBeVariable(const MaybeExpr &expr, parser::CharBlock source);
+  void CheckAtomicType(
+      SymbolRef sym, parser::CharBlock source, std::string_view name);
+  void CheckAtomicVariable(
+      const evaluate::Expr<evaluate::SomeType> &, parser::CharBlock);
+  std::pair<const parser::ExecutionPartConstruct *,
+      const parser::ExecutionPartConstruct *>
+  CheckUpdateCapture(const parser::ExecutionPartConstruct *ec1,
+      const parser::ExecutionPartConstruct *ec2, parser::CharBlock source);
+  void CheckAtomicCaptureAssignment(const evaluate::Assignment &capture,
+      const SomeExpr &atom, parser::CharBlock source);
+  void CheckAtomicReadAssignment(
+      const evaluate::Assignment &read, parser::CharBlock source);
+  void CheckAtomicWriteAssignment(
+      const evaluate::Assignment &write, parser::CharBlock source);
+  void CheckAtomicUpdateAssignment(
+      const evaluate::Assignment &update, parser::CharBlock source);
+  void CheckAtomicConditionalUpdateAssignment(const SomeExpr &cond,
+      parser::CharBlock condSource, const evaluate::Assignment &assign,
+      parser::CharBlock assignSource);
+  void CheckAtomicConditionalUpdateStmt(
+      const AnalyzedCondStmt &update, parser::CharBlock source);
+  void CheckAtomicUpdateOnly(const parser::OpenMPAtomicConstruct &x,
+      const parser::Block &body, parser::CharBlock source);
+  void CheckAtomicConditionalUpdate(const parser::OpenMPAtomicConstruct &x,
+      const parser::Block &body, parser::CharBlock source);
+  void CheckAtomicUpdateCapture(const parser::OpenMPAtomicConstruct &x,
+      const parser::Block &body, parser::CharBlock source);
+  void CheckAtomicConditionalUpdateCapture(
+      const parser::OpenMPAtomicConstruct &x, const parser::Block &body,
+      parser::CharBlock source);
+  void CheckAtomicRead(const parser::OpenMPAtomicConstruct &x);
+  void CheckAtomicWrite(const parser::OpenMPAtomicConstruct &x);
+  void CheckAtomicUpdate(const parser::OpenMPAtomicConstruct &x);
+
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
@@ -324,7 +344,6 @@ private:
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
   int GetDirectiveNest(const int index) { return directiveNest_[index]; }
-  template <typename D> void CheckHintClause(D *, D *, std::string_view);
   inline void ErrIfAllocatableVariable(const parser::Variable &);
   inline void ErrIfLHSAndRHSSymbolsMatch(
       const parser::Variable &, const parser::Expr &);

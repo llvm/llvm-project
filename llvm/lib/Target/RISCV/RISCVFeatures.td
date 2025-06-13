@@ -75,7 +75,8 @@ def FeatureStdExtI
       RISCVExtensionBitmask<0, 8>;
 
 def FeatureStdExtE
-    : RISCVExtension<2, 0, "Embedded Instruction Set with 16 GPRs">;
+    : RISCVExtension<2, 0, "Embedded Instruction Set with 16 GPRs">,
+      RISCVExtensionBitmask<0, 4>;
 
 def FeatureStdExtZic64b
     : RISCVExtension<1, 0, "Cache Block Size Is 64 Bytes">;
@@ -510,7 +511,8 @@ def HasStdExtZbs : Predicate<"Subtarget->hasStdExtZbs()">,
 
 def FeatureStdExtB
     : RISCVExtension<1, 0, "the collection of the Zba, Zbb, Zbs extensions",
-                     [FeatureStdExtZba, FeatureStdExtZbb, FeatureStdExtZbs]>;
+                     [FeatureStdExtZba, FeatureStdExtZbb, FeatureStdExtZbs]>,
+      RISCVExtensionBitmask<0, 1>;
 
 def FeatureStdExtZbkb
     : RISCVExtension<1, 0, "Bitmanip instructions for Cryptography">,
@@ -887,8 +889,8 @@ def HasVInstructionsFullMultiply : Predicate<"Subtarget->hasVInstructionsFullMul
 
 // Hypervisor Extensions
 
-def FeatureStdExtH : RISCVExtension<1, 0, "Hypervisor">;
-
+def FeatureStdExtH : RISCVExtension<1, 0, "Hypervisor">,
+                     RISCVExtensionBitmask<0, 7>;
 def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
                  AssemblerPredicate<(all_of FeatureStdExtH),
                                     "'H' (Hypervisor)">;

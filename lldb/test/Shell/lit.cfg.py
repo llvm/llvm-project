@@ -7,12 +7,9 @@ import re
 import shutil
 import site
 import subprocess
-import sys
 
-import lit.formats
+import lit.util
 from lit.llvm import llvm_config
-from lit.llvm.subst import FindTool
-from lit.llvm.subst import ToolSubst
 
 site.addsitedir(os.path.dirname(__file__))
 from helper import toolchain
@@ -198,3 +195,8 @@ if platform.system() == "Darwin":
             config.available_features.add("ld_new-bug")
     except:
         pass
+
+# Some shell tests dynamically link with python.dll and need to know the
+# location of the Python libraries. This ensures that we use the same
+# version of Python that was used to build lldb to run our tests.
+config.environment["PYTHONHOME"] = config.python_root_dir

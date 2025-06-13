@@ -591,6 +591,7 @@ static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
   args::getZOptionValue(args, OPT_z, "max-page-size", 0);
   args::getZOptionValue(args, OPT_z, "common-page-size", 0);
   getZFlag(args, "rel", "rela", false);
+  getZFlag(args, "dynamic-undefined-weak", "nodynamic-undefined-weak", false);
   for (auto *arg : args.filtered(OPT_z))
     if (!arg->isClaimed())
       Warn(ctx) << "unknown -z value: " << StringRef(arg->getValue());
@@ -3057,6 +3058,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Create dynamic sections for dynamic linking and static PIE.
   ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
   ctx.arg.exportDynamic &= ctx.hasDynsym;
+
+  // Preemptibility of undefined symbols when ctx.hasDynsym is true. Default is
+  // true for dynamic linking.
+  ctx.arg.zDynamicUndefined =
+      getZFlag(args, "dynamic-undefined-weak", "nodynamic-undefined-weak",
+               ctx.sharedFiles.size() || ctx.arg.shared) &&
+      ctx.hasDynsym;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))
