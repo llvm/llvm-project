@@ -191,6 +191,10 @@ if have_host_jit_feature_support('jit'):
 
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')
+    hosttriple = run_clang_repl("--host-jit-triple")
+    config.substitutions.append(
+        ("%host-jit-triple",  hosttriple.strip())
+    )
 
     if have_host_out_of_process_jit_feature_support():
         config.available_features.add("host-supports-out-of-process-jit")
