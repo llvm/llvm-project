@@ -5607,28 +5607,27 @@ float APFloat::convertToFloat() const {
 }
 
 #ifdef LLVM_INTEGRATE_LIBC
-APFloat exp(const APFloat &X, RoundingMode rounding_mode) {
+static constexpr int getFEnvRoundingMode(llvm::RoundingMode rm) {
+  switch (rm) {
+  case APFloat::rmTowardPositive:
+    return FE_UPWARD;
+  case APFloat::rmTowardNegative:
+    return FE_DOWNWARD;
+  case APFloat::rmTowardZero:
+    return FE_TOWARDZERO;
+  default:
+    // TODO: fix rmNearestTiesToAway for platform without FE_TONEARESTFROMZERO.
+    return FE_TONEAREST;
+  };
+}
+
+APFloat exp(const APFloat &X,
+            RoundingMode rounding_mode = APFloat::rmNearestTiesToEven) {
   assert((&X.getSemantics() == (const llvm::fltSemantics *)&semIEEEsingle) &&
          "Float semantics is not IEEEsingle");
   if (&X.getSemantics() == (const llvm::fltSemantics *)&semIEEEsingle) {
-    int current_rounding_mode = fegetround();
-    switch (rounding_mode) {
-    case APFloat::rmNearestTiesToEven:
-      fesetround(FE_TONEAREST);
-      break;
-    case APFloat::rmTowardPositive:
-      fesetround(FE_UPWARD);
-      break;
-    case APFloat::rmTowardNegative:
-      fesetround(FE_DOWNWARD);
-      break;
-    case APFloat::rmTowardZero:
-      fesetround(FE_TOWARDZERO);
-      break;
-    default:
-    }
-    float result = LIBC_NAMESPACE::shared::expf(X.convertToFloat());
-    fesetround(current_rounding_mode);
+    float result = LIBC_NAMESPACE::shared::expf(
+        X.convertToFloat(), getFEnvRoundingMode(rounding_mode));
     return APFloat(result);
   }
   llvm_unreachable("Unexpected semantics");
