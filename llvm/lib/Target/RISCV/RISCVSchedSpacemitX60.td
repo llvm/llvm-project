@@ -616,10 +616,9 @@ let Latency = 6 in {
 }
 let Latency = 4 in {
   def : WriteRes<WriteVMovSX, [SMX60_VIEU]>;
+  def : WriteRes<WriteVMovFS, [SMX60_VIEU]>;
+  def : WriteRes<WriteVMovSF, [SMX60_VIEU]>;
 }
-
-def : WriteRes<WriteVMovFS, [SMX60_VIEU]>;
-def : WriteRes<WriteVMovSF, [SMX60_VIEU]>;
 
 // Simple Gather and Compress
 foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
