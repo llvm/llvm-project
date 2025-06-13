@@ -560,20 +560,20 @@ define { ptr, ptr } @test_struct( { ptr, ptr } %a, { ptr, ptr } %b, i1 %c) {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction:   ret { ptr, ptr } %sel
 ;
 ; AVX1-LABEL: 'test_struct'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %sel = select i1 %c, { ptr, ptr } %a, { ptr, ptr } %b
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction:   ret { ptr, ptr } %sel
+; AVX1-NEXT:  Cost Model: Found costs of 1 for:   %sel = select i1 %c, { ptr, ptr } %a, { ptr, ptr } %b
+; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for:   ret { ptr, ptr } %sel
 ;
 ; AVX2-LABEL: 'test_struct'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %sel = select i1 %c, { ptr, ptr } %a, { ptr, ptr } %b
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction:   ret { ptr, ptr } %sel
+; AVX2-NEXT:  Cost Model: Found costs of 1 for:   %sel = select i1 %c, { ptr, ptr } %a, { ptr, ptr } %b
+; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for:   ret { ptr, ptr } %sel
 ;
 ; AVX512-LABEL: 'test_struct'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %sel = select i1 %c, { ptr, ptr } %a, { ptr, ptr } %b
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction:   ret { ptr, ptr } %sel
+; AVX512-NEXT:  Cost Model: Found costs of 1 for:   %sel = select i1 %c, { ptr, ptr } %a, { ptr, ptr } %b
+; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for:   ret { ptr, ptr } %sel
 ;
 ; SLM-LABEL: 'test_struct'
-; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %sel = select i1 %c, { ptr, ptr } %a, { ptr, ptr } %b
-; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction:   ret { ptr, ptr } %sel
+; SLM-NEXT:  Cost Model: Found costs of 1 for:   %sel = select i1 %c, { ptr, ptr } %a, { ptr, ptr } %b
+; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for:   ret { ptr, ptr } %sel
 ;
   %sel = select i1 %c, { ptr, ptr } %a, { ptr, ptr } %b
   ret { ptr, ptr } %sel
