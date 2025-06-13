@@ -75,7 +75,8 @@ def FeatureStdExtI
       RISCVExtensionBitmask<0, 8>;
 
 def FeatureStdExtE
-    : RISCVExtension<2, 0, "Embedded Instruction Set with 16 GPRs">;
+    : RISCVExtension<2, 0, "Embedded Instruction Set with 16 GPRs">,
+      RISCVExtensionBitmask<0, 4>;
 
 def FeatureStdExtZic64b
     : RISCVExtension<1, 0, "Cache Block Size Is 64 Bytes">;
@@ -510,7 +511,8 @@ def HasStdExtZbs : Predicate<"Subtarget->hasStdExtZbs()">,
 
 def FeatureStdExtB
     : RISCVExtension<1, 0, "the collection of the Zba, Zbb, Zbs extensions",
-                     [FeatureStdExtZba, FeatureStdExtZbb, FeatureStdExtZbs]>;
+                     [FeatureStdExtZba, FeatureStdExtZbb, FeatureStdExtZbs]>,
+      RISCVExtensionBitmask<0, 1>;
 
 def FeatureStdExtZbkb
     : RISCVExtension<1, 0, "Bitmanip instructions for Cryptography">,
@@ -887,8 +889,8 @@ def HasVInstructionsFullMultiply : Predicate<"Subtarget->hasVInstructionsFullMul
 
 // Hypervisor Extensions
 
-def FeatureStdExtH : RISCVExtension<1, 0, "Hypervisor">;
-
+def FeatureStdExtH : RISCVExtension<1, 0, "Hypervisor">,
+                     RISCVExtensionBitmask<0, 7>;
 def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
                  AssemblerPredicate<(all_of FeatureStdExtH),
                                     "'H' (Hypervisor)">;
@@ -906,6 +908,10 @@ def FeatureStdExtShvsatpa
     : RISCVExtension<1, 0,
                      "vsatp supports all modes supported by satp">;
 
+def FeatureStdExtShlcofideleg
+    : RISCVExtension<1, 0,
+                     "Delegating LCOFI Interrupts to VS-mode">;
+
 def FeatureStdExtSmaia
     : RISCVExtension<1, 0,
                      "Advanced Interrupt Architecture Machine Level">;
@@ -922,9 +928,9 @@ def FeatureStdExtSscsrind
     : RISCVExtension<1, 0, "Indirect CSR Access Supervisor Level">;
 
 def FeatureStdExtSmdbltrp
-    : RISCVExtension<1, 0, "Double Trap Machine Level">;
+    : RISCVExtension<1, 0, "Double Trap Machine Level", [FeatureStdExtZicsr]>;
 def FeatureStdExtSsdbltrp
-    : RISCVExtension<1, 0, "Double Trap Supervisor Level">;
+    : RISCVExtension<1, 0, "Double Trap Supervisor Level", [FeatureStdExtZicsr]>;
 
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
@@ -1204,6 +1210,73 @@ def FeatureVendorXSfvcp
 def HasVendorXSfvcp : Predicate<"Subtarget->hasVendorXSfvcp()">,
                       AssemblerPredicate<(all_of FeatureVendorXSfvcp),
                           "'XSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions)">;
+
+def FeatureVendorXSfmmbase
+    : RISCVExtension<0, 6,
+                     "All non arithmetic instructions for all TEWs and sf.vtzero",
+                     [FeatureStdExtZve32x]>;
+def HasVendorXSfmmbase : Predicate<"Subtarget->hasVendorXSfmmbase()">,
+                         AssemblerPredicate<(all_of FeatureVendorXSfmmbase),
+                             "'XSfmmbase' (All non arithmetic instructions for all TEWs and sf.vtzero)">;
+
+def FeatureVendorXSfmm32a8f
+    : RISCVExtension<0, 6,
+                     "TEW=32-bit accumulation, operands - float: fp8",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZve32f]>;
+def HasVendorXSfmm32a8f : Predicate<"Subtarget->hasVendorXSfmm32a8f()">,
+                          AssemblerPredicate<(all_of FeatureVendorXSfmm32a8f),
+                              "'XSfmm32a8f' (TEW=32-bit accumulation, operands - float: fp8)">;
+
+def FeatureVendorXSfmm32a16f
+    : RISCVExtension<0, 6,
+                     "TEW=32-bit accumulation, operands - float: 16b, widen=2 (IEEE, BF)",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZve32f]>;
+
+def FeatureVendorXSfmm32a32f
+    : RISCVExtension<0, 6,
+                     "TEW=32-bit accumulation, operands - float: 32b",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZve32f]>;
+
+def FeatureVendorXSfmm32a8i
+    : RISCVExtension<0, 6,
+                     "TEW=32-bit accumulation, operands - int: 8b",
+                     [FeatureVendorXSfmmbase]>;
+def HasVendorXSfmm32a8i : Predicate<"Subtarget->hasVendorXSfmm32a8i()">,
+                          AssemblerPredicate<(all_of FeatureVendorXSfmm32a8i),
+                              "'XSfmm32a8i' (TEW=32-bit accumulation, operands - int: 8b)">;
+
+def FeatureVendorXSfmm64a64f
+    : RISCVExtension<0, 6,
+                     "TEW=64-bit accumulation, operands - float: fp64",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZve64d]>;
+def HasVendorXSfmm32a16fOrXSfmm32a32fOrXSfmm64a64f
+    : Predicate<"Subtarget->hasVendorXSfmm32a16fOrXSfmm32a32fOrXSfmm64a64f()">,
+                AssemblerPredicate<(any_of FeatureVendorXSfmm32a16f,
+                                           FeatureVendorXSfmm32a32f,
+                                           FeatureVendorXSfmm64a64f),
+                    "'XSfmm32a16f' (TEW=32-bit accumulation, operands - float: 16b, widen=2 (IEEE, BF)), or "
+                    "'XSfmm32a32f' (TEW=32-bit accumulation, operands - float: 32b), or "
+                    "'XSfmm64a64f' (TEW=64-bit accumulation, operands - float: fp64)">;
+
+def FeatureVendorXSfmm16t
+    : RISCVExtension<0, 6,
+                     "TE=16 configuration",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZvl64b], "XSfmmTE", "16">;
+
+def FeatureVendorXSfmm32t
+    : RISCVExtension<0, 6,
+                     "TE=32 configuration",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZvl128b], "XSfmmTE", "32">;
+
+def FeatureVendorXSfmm64t
+    : RISCVExtension<0, 6,
+                     "TE=64 configuration",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZvl256b], "XSfmmTE", "64">;
+
+def FeatureVendorXSfmm128t
+    : RISCVExtension<0, 6,
+                     "TE=128 configuration",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZvl512b], "XSfmmTE", "128">;
 
 def FeatureVendorXSfvqmaccdod
     : RISCVExtension<1, 0,

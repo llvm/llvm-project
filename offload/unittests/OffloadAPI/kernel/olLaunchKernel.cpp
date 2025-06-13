@@ -10,22 +10,17 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-struct olLaunchKernelTest : OffloadQueueTest {
-  void SetUp() override {
+struct LaunchKernelTestBase : OffloadQueueTest {
+  void SetUpKernel(const char *kernel) {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
-    ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
+    ASSERT_TRUE(TestEnvironment::loadDeviceBinary(kernel, Device, DeviceBin));
     ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
     ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
-    ASSERT_SUCCESS(olGetKernel(Program, "foo", &Kernel));
+    ASSERT_SUCCESS(olGetKernel(Program, kernel, &Kernel));
     LaunchArgs.Dimensions = 1;
-    LaunchArgs.GroupSizeX = 64;
-    LaunchArgs.GroupSizeY = 1;
-    LaunchArgs.GroupSizeZ = 1;
-
-    LaunchArgs.NumGroupsX = 1;
-    LaunchArgs.NumGroupsY = 1;
-    LaunchArgs.NumGroupsZ = 1;
+    LaunchArgs.GroupSize = {64, 1, 1};
+    LaunchArgs.NumGroups = {1, 1, 1};
 
     LaunchArgs.DynSharedMemory = 0;
   }
@@ -43,11 +38,24 @@ struct olLaunchKernelTest : OffloadQueueTest {
   ol_kernel_launch_size_args_t LaunchArgs{};
 };
 
+struct olLaunchKernelTest : LaunchKernelTestBase {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(LaunchKernelTestBase::SetUpKernel("foo"));
+  }
+};
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchKernelTest);
+
+struct olLaunchKernelNoArgsTest : LaunchKernelTestBase {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(LaunchKernelTestBase::SetUpKernel("noargs"));
+  }
+};
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchKernelNoArgsTest);
 
 TEST_P(olLaunchKernelTest, Success) {
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, 64, &Mem));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+                            LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
   struct {
     void *Mem;
   } Args{Mem};
@@ -57,7 +65,7 @@ TEST_P(olLaunchKernelTest, Success) {
 
   ASSERT_SUCCESS(olWaitQueue(Queue));
 
-  int *Data = (int *)Mem;
+  uint32_t *Data = (uint32_t *)Mem;
   for (int i = 0; i < 64; i++) {
     ASSERT_EQ(Data[i], i);
   }
@@ -65,9 +73,17 @@ TEST_P(olLaunchKernelTest, Success) {
   ASSERT_SUCCESS(olMemFree(Mem));
 }
 
+TEST_P(olLaunchKernelNoArgsTest, Success) {
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs, nullptr));
+
+  ASSERT_SUCCESS(olWaitQueue(Queue));
+}
+
 TEST_P(olLaunchKernelTest, SuccessSynchronous) {
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, 64, &Mem));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+                            LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
 
   struct {
     void *Mem;
@@ -76,7 +92,7 @@ TEST_P(olLaunchKernelTest, SuccessSynchronous) {
   ASSERT_SUCCESS(olLaunchKernel(nullptr, Device, Kernel, &Args, sizeof(Args),
                                 &LaunchArgs, nullptr));
 
-  int *Data = (int *)Mem;
+  uint32_t *Data = (uint32_t *)Mem;
   for (int i = 0; i < 64; i++) {
     ASSERT_EQ(Data[i], i);
   }

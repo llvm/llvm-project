@@ -2339,9 +2339,9 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_exp_compr:
     if (!STI.hasCompressedExport()) {
       Function &F = I.getMF()->getFunction();
-      DiagnosticInfoUnsupported NoFpRet(
-          F, "intrinsic not supported on subtarget", I.getDebugLoc(), DS_Error);
-      F.getContext().diagnose(NoFpRet);
+      F.getContext().diagnose(
+          DiagnosticInfoUnsupported(F, "intrinsic not supported on subtarget",
+                                    I.getDebugLoc(), DS_Error));
       return false;
     }
     break;

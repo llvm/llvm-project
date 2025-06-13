@@ -2125,7 +2125,7 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather"> {
 
   let arguments = (ins
     Tosa_Tensor3D:$values,
-    TosaTensorRankOf<[Tosa_Int32], [2]>:$indices
+    Tosa_Int32Tensor2D:$indices
   );
 
   let results = (outs
@@ -2159,7 +2159,7 @@ def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter"> {
 
   let arguments = (ins
     Tosa_Tensor3D:$values_in,
-    TosaTensorRankOf<[Tosa_Int32], [2]>:$indices,
+    Tosa_Int32Tensor2D:$indices,
     Tosa_Tensor3D:$input
   );
 

@@ -105,6 +105,40 @@ def dump_dap_log(log_file):
     print("========= END =========", file=sys.stderr)
 
 
+class Source(object):
+    def __init__(
+        self, path: Optional[str] = None, source_reference: Optional[int] = None
+    ):
+        self._name = None
+        self._path = None
+        self._source_reference = None
+
+        if path is not None:
+            self._name = os.path.basename(path)
+            self._path = path
+        elif source_reference is not None:
+            self._source_reference = source_reference
+        else:
+            raise ValueError("Either path or source_reference must be provided")
+
+    def __str__(self):
+        return f"Source(name={self.name}, path={self.path}), source_reference={self.source_reference})"
+
+    def as_dict(self):
+        source_dict = {}
+        if self._name is not None:
+            source_dict["name"] = self._name
+        if self._path is not None:
+            source_dict["path"] = self._path
+        if self._source_reference is not None:
+            source_dict["sourceReference"] = self._source_reference
+        return source_dict
+
+
+class NotSupportedError(KeyError):
+    """Raised if a feature is not supported due to its capabilities."""
+
+
 class DebugCommunication(object):
     def __init__(
         self,
@@ -123,7 +157,7 @@ class DebugCommunication(object):
         self.recv_thread = threading.Thread(target=self._read_packet_thread)
         self.process_event_body = None
         self.exit_status: Optional[int] = None
-        self.initialize_body = None
+        self.capabilities: dict[str, Any] = {}
         self.progress_events: list[Event] = []
         self.reverse_requests = []
         self.sequence = 1
@@ -136,6 +170,7 @@ class DebugCommunication(object):
         self.initialized = False
         self.frame_scopes = {}
         self.init_commands = init_commands
+        self.resolved_breakpoints = {}
 
     @classmethod
     def encode_content(cls, s: str) -> bytes:
@@ -266,6 +301,12 @@ class DebugCommunication(object):
                 # and 'progressEnd' events. Keep these around in case test
                 # cases want to verify them.
                 self.progress_events.append(packet)
+            elif event == "breakpoint":
+                # Breakpoint events are sent when a breakpoint is resolved
+                self._update_verified_breakpoints([body["breakpoint"]])
+            elif event == "capabilities":
+                # Update the capabilities with new ones from the event.
+                self.capabilities.update(body["capabilities"])
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":
@@ -274,10 +315,16 @@ class DebugCommunication(object):
         return keepGoing
 
     def _process_continued(self, all_threads_continued: bool):
-        self.threads = None
         self.frame_scopes = {}
         if all_threads_continued:
             self.thread_stop_reasons = {}
+
+    def _update_verified_breakpoints(self, breakpoints: list[Event]):
+        for breakpoint in breakpoints:
+            if "id" in breakpoint:
+                self.resolved_breakpoints[str(breakpoint["id"])] = breakpoint.get(
+                    "verified", False
+                )
 
     def send_packet(self, command_dict: Request, set_sequence=True):
         """Take the "command_dict" python dictionary and encode it as a JSON
@@ -424,6 +471,17 @@ class DebugCommunication(object):
             breakpoint_events.append(event)
         return breakpoint_events
 
+    def wait_for_breakpoints_to_be_verified(
+        self, breakpoint_ids: list[str], timeout: Optional[float] = None
+    ):
+        """Wait for all breakpoints to be verified. Return all unverified breakpoints."""
+        while any(id not in self.resolved_breakpoints for id in breakpoint_ids):
+            breakpoint_event = self.wait_for_event("breakpoint", timeout=timeout)
+            if breakpoint_event is None:
+                break
+
+        return [id for id in breakpoint_ids if id not in self.resolved_breakpoints]
+
     def wait_for_exited(self, timeout: Optional[float] = None):
         event_dict = self.wait_for_event("exited", timeout=timeout)
         if event_dict is None:
@@ -436,13 +494,13 @@ class DebugCommunication(object):
             raise ValueError("didn't get terminated event")
         return event_dict
 
-    def get_initialize_value(self, key):
+    def get_capability(self, key):
         """Get a value for the given key if it there is a key/value pair in
-        the "initialize" request response body.
+        the capabilities reported by the adapter.
         """
-        if self.initialize_body and key in self.initialize_body:
-            return self.initialize_body[key]
-        return None
+        if key in self.capabilities:
+            return self.capabilities[key]
+        raise NotSupportedError(key)
 
     def get_threads(self):
         if self.threads is None:
@@ -708,6 +766,9 @@ class DebugCommunication(object):
         return response
 
     def request_restart(self, restartArguments=None):
+        if self.exit_status is not None:
+            raise ValueError("request_restart called after process exited")
+        self.get_capability("supportsRestartRequest")
         command_dict = {
             "command": "restart",
             "type": "request",
@@ -815,7 +876,7 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
         if response:
             if "body" in response:
-                self.initialize_body = response["body"]
+                self.capabilities = response["body"]
         return response
 
     def request_launch(
@@ -826,7 +887,7 @@ class DebugCommunication(object):
         cwd: Optional[str] = None,
         env: Optional[dict[str, str]] = None,
         stopOnEntry=False,
-        disableASLR=True,
+        disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
         runInTerminal=False,
@@ -920,6 +981,7 @@ class DebugCommunication(object):
     def request_stepInTargets(self, frameId):
         if self.exit_status is not None:
             raise ValueError("request_stepInTargets called after process exited")
+        self.get_capability("supportsStepInTargetsRequest")
         args_dict = {"frameId": frameId}
         command_dict = {
             "command": "stepInTargets",
@@ -949,15 +1011,13 @@ class DebugCommunication(object):
         command_dict = {"command": "scopes", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
-    def request_setBreakpoints(self, file_path, line_array, data=None):
+    def request_setBreakpoints(self, source: Source, line_array, data=None):
         """data is array of parameters for breakpoints in line_array.
         Each parameter object is 1:1 mapping with entries in line_entry.
         It contains optional location/hitCondition/logMessage parameters.
         """
-        (dir, base) = os.path.split(file_path)
-        source_dict = {"name": base, "path": file_path}
         args_dict = {
-            "source": source_dict,
+            "source": source.as_dict(),
             "sourceModified": False,
         }
         if line_array is not None:
@@ -985,7 +1045,10 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        response = self.send_recv(command_dict)
+        if response["success"]:
+            self._update_verified_breakpoints(response["body"]["breakpoints"])
+        return response
 
     def request_setExceptionBreakpoints(self, filters):
         args_dict = {"filters": filters}
@@ -1011,7 +1074,10 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        response = self.send_recv(command_dict)
+        if response["success"]:
+            self._update_verified_breakpoints(response["body"]["breakpoints"])
+        return response
 
     def request_dataBreakpointInfo(
         self, variablesReference, name, frameIndex=0, threadId=None
@@ -1124,6 +1190,9 @@ class DebugCommunication(object):
         with information about all threads"""
         command_dict = {"command": "threads", "type": "request", "arguments": {}}
         response = self.send_recv(command_dict)
+        if not response["success"]:
+            self.threads = None
+            return response
         body = response["body"]
         # Fill in "self.threads" correctly so that clients that call
         # self.get_threads() or self.get_thread_id(...) can get information
@@ -1382,7 +1451,7 @@ def run_vscode(dbg, args, options):
                 else:
                     source_to_lines[path] = [int(line)]
         for source in source_to_lines:
-            dbg.request_setBreakpoints(source, source_to_lines[source])
+            dbg.request_setBreakpoints(Source(source), source_to_lines[source])
     if options.funcBreakpoints:
         dbg.request_setFunctionBreakpoints(options.funcBreakpoints)
 

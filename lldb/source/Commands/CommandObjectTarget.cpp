@@ -649,8 +649,6 @@ protected:
     result.GetOutputStream().Printf("%u targets deleted.\n",
                                     (uint32_t)num_targets_to_delete);
     result.SetStatus(eReturnStatusSuccessFinishResult);
-
-    return;
   }
 
   OptionGroupOptions m_option_group;
@@ -2237,10 +2235,22 @@ public:
       : CommandObjectTargetModulesModuleAutoComplete(
             interpreter, "target modules dump ast",
             "Dump the clang ast for a given module's symbol file.",
-            //"target modules dump ast [<file1> ...]")
-            nullptr, eCommandRequiresTarget) {}
+            "target modules dump ast [--filter <name>] [<file1> ...]",
+            eCommandRequiresTarget),
+        m_filter(LLDB_OPT_SET_1, false, "filter", 'f', 0, eArgTypeName,
+                 "Dump only the decls whose names contain the specified filter "
+                 "string.",
+                 /*default_value=*/"") {
+    m_option_group.Append(&m_filter, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
+    m_option_group.Finalize();
+  }
+
+  Options *GetOptions() override { return &m_option_group; }
 
   ~CommandObjectTargetModulesDumpClangAST() override = default;
+
+  OptionGroupOptions m_option_group;
+  OptionGroupString m_filter;
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
@@ -2253,6 +2263,8 @@ protected:
       return;
     }
 
+    llvm::StringRef filter = m_filter.GetOptionValue().GetCurrentValueAsRef();
+
     if (command.GetArgumentCount() == 0) {
       // Dump all ASTs for all modules images
       result.GetOutputStream().Format("Dumping clang ast for {0} modules.\n",
@@ -2261,7 +2273,7 @@ protected:
         if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted dumping clang ast"))
           break;
         if (SymbolFile *sf = module_sp->GetSymbolFile())
-          sf->DumpClangAST(result.GetOutputStream());
+          sf->DumpClangAST(result.GetOutputStream(), filter);
       }
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return;
@@ -2290,7 +2302,7 @@ protected:
 
         Module *m = module_list.GetModulePointerAtIndex(i);
         if (SymbolFile *sf = m->GetSymbolFile())
-          sf->DumpClangAST(result.GetOutputStream());
+          sf->DumpClangAST(result.GetOutputStream(), filter);
       }
     }
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -4873,9 +4885,9 @@ public:
 Command Based stop-hooks:
 -------------------------
   Stop hooks can run a list of lldb commands by providing one or more
-  --one-line-command options.  The commands will get run in the order they are
-  added.  Or you can provide no commands, in which case you will enter a
-  command editor where you can enter the commands to be run.
+  --one-liner options.  The commands will get run in the order they are added.
+  Or you can provide no commands, in which case you will enter a command editor
+  where you can enter the commands to be run.
 
 Python Based Stop Hooks:
 ------------------------
@@ -5274,7 +5286,7 @@ protected:
     // Go over every scratch TypeSystem and dump to the command output.
     for (lldb::TypeSystemSP ts : GetTarget().GetScratchTypeSystems())
       if (ts)
-        ts->Dump(result.GetOutputStream().AsRawOstream());
+        ts->Dump(result.GetOutputStream().AsRawOstream(), "");
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }

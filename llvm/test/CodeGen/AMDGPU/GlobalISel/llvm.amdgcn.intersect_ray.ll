@@ -1023,12 +1023,12 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray
 ; GFX11-NEXT:    s_mov_b32 s10, 0x45004800
 ; GFX11-NEXT:    v_mov_b32_e32 v6, 0xb36211c6
 ; GFX11-NEXT:    v_bfrev_b32_e32 v7, 4.0
-; GFX11-NEXT:    v_mov_b32_e32 v3, s8
-; GFX11-NEXT:    v_dual_mov_b32 v5, s10 :: v_dual_mov_b32 v4, s9
+; GFX11-NEXT:    v_dual_mov_b32 v3, s8 :: v_dual_mov_b32 v4, s9
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
+; GFX11-NEXT:    v_dual_mov_b32 v5, s10 :: v_dual_mov_b32 v0, s6
+; GFX11-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX11-NEXT:    s_mov_b32 s6, 2.0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    flat_load_b32 v8, v[0:1]

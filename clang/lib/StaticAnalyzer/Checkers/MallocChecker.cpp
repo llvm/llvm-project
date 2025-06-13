@@ -76,10 +76,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -3100,8 +3098,7 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   // Generate leak node.
   ExplodedNode *N = C.getPredecessor();
   if (!Errors.empty()) {
-    static CheckerProgramPointTag Tag("MallocChecker", "DeadSymbolsLeak");
-    N = C.generateNonFatalErrorNode(C.getState(), &Tag);
+    N = C.generateNonFatalErrorNode(C.getState());
     if (N) {
       for (SymbolRef Sym : Errors) {
         HandleLeak(Sym, N, C);

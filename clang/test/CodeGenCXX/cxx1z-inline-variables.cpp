@@ -5,7 +5,7 @@ template <typename T> struct InlineAuto {
 };
 int inlineauto = InlineAuto<int>::var<int>;
 // CHECK: @_ZN10InlineAutoIiE3varIiEE = {{.*}}i32 5{{.*}}comdat
-//
+
 template <typename> struct PartialInlineAuto {
   template <typename, typename> inline static auto var = 6;
   template <typename T> inline static auto var<int, T> = 7;

@@ -314,7 +314,6 @@ void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
                                              newShardOp.getSharding(),
                                              /*annotate_for_users*/ true);
   rewriter.replaceAllUsesExcept(newShardOp, newShardOp2, newShardOp2);
-  return;
 }
 
 void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,

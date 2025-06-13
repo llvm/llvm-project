@@ -115,7 +115,7 @@ static void reportTranslationError(MachineFunction &MF,
                                    const TargetPassConfig &TPC,
                                    OptimizationRemarkEmitter &ORE,
                                    OptimizationRemarkMissed &R) {
-  MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+  MF.getProperties().setFailedISel();
 
   // Print the function name explicitly if we don't have a debug location (which
   // makes the diagnostic less useful) or if we're going to emit a raw error.
@@ -2847,8 +2847,9 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
       MPI = MachinePointerInfo(Info.ptrVal, Info.offset);
     else if (Info.fallbackAddressSpace)
       MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
-    MIB.addMemOperand(
-        MF->getMachineMemOperand(MPI, Info.flags, MemTy, Alignment, CI.getAAMetadata()));
+    MIB.addMemOperand(MF->getMachineMemOperand(
+        MPI, Info.flags, MemTy, Alignment, CI.getAAMetadata(),
+        /*Ranges=*/nullptr, Info.ssid, Info.order, Info.failureOrder));
   }
 
   if (CI.isConvergent()) {

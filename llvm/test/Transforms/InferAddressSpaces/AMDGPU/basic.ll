@@ -66,7 +66,9 @@ define amdgpu_kernel void @store_global_from_flat(ptr %generic_scalar) #0 {
 define amdgpu_kernel void @store_group_from_flat(ptr %generic_scalar) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @store_group_from_flat(
 ; CHECK-SAME: ptr [[GENERIC_SCALAR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[_TMP0:%.*]] = addrspacecast ptr [[GENERIC_SCALAR]] to ptr addrspace(3)
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[GENERIC_SCALAR]] to ptr addrspace(1)
+; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(1) [[TMP1]] to ptr
+; CHECK-NEXT:    [[_TMP0:%.*]] = addrspacecast ptr [[TMP2]] to ptr addrspace(3)
 ; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(3) [[_TMP0]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -78,7 +80,9 @@ define amdgpu_kernel void @store_group_from_flat(ptr %generic_scalar) #0 {
 define amdgpu_kernel void @store_private_from_flat(ptr %generic_scalar) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @store_private_from_flat(
 ; CHECK-SAME: ptr [[GENERIC_SCALAR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[_TMP0:%.*]] = addrspacecast ptr [[GENERIC_SCALAR]] to ptr addrspace(5)
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[GENERIC_SCALAR]] to ptr addrspace(1)
+; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(1) [[TMP1]] to ptr
+; CHECK-NEXT:    [[_TMP0:%.*]] = addrspacecast ptr [[TMP2]] to ptr addrspace(5)
 ; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[_TMP0]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -136,8 +140,10 @@ define amdgpu_kernel void @load_store_private(ptr addrspace(5) nocapture %input,
 define amdgpu_kernel void @load_store_flat(ptr nocapture %input, ptr nocapture %output) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @load_store_flat(
 ; CHECK-SAME: ptr captures(none) [[INPUT:%.*]], ptr captures(none) [[OUTPUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[INPUT]], align 4
-; CHECK-NEXT:    store i32 [[VAL]], ptr [[OUTPUT]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[INPUT]] to ptr addrspace(1)
+; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[OUTPUT]] to ptr addrspace(1)
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[TMP1]], align 4
+; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[TMP2]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %val = load i32, ptr %input, align 4

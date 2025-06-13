@@ -76,6 +76,17 @@ def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
   ];
 }
 
+def FIRToSCFPass : Pass<"fir-to-scf"> {
+  let summary = "Convert FIR structured control flow ops to SCF dialect.";
+  let description = [{
+    Convert FIR structured control flow ops to SCF dialect.
+  }];
+  let constructor = "::fir::createFIRToSCFPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::scf::SCFDialect"
+  ];
+}
+
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
   let summary = "Annotate constant operands to all FIR operations";
   let description = [{
@@ -285,7 +296,9 @@ def StackArrays : Pass<"stack-arrays", "mlir::func::FuncOp"> {
     Convert heap allocations for arrays, even those of unknown size, into stack
     allocations.
   }];
-  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect"
+  ];
 }
 
 def StackReclaim : Pass<"stack-reclaim"> {
@@ -416,8 +429,21 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               "module.">,
        Option<"unsafeFPMath", "unsafe-fp-math", "bool", /*default=*/"false",
               "Set the unsafe-fp-math attribute on functions in the module.">,
+       Option<"reciprocals", "mrecip", "std::string", /*default=*/"",
+              "Set the reciprocal-estimates attribute on functions in the "
+              "module.">,
+       Option<"preferVectorWidth", "prefer-vector-width", "std::string",
+              /*default=*/"",
+              "Set the prefer-vector-width attribute on functions in the "
+              "module.">,
        Option<"tuneCPU", "tune-cpu", "std::string", /*default=*/"",
               "Set the tune-cpu attribute on functions in the module.">,
+       Option<"setNoCapture", "set-nocapture", "bool", /*default=*/"false",
+              "Set LLVM nocapture attribute on function arguments, "
+              "if possible">,
+       Option<"setNoAlias", "set-noalias", "bool", /*default=*/"false",
+              "Set LLVM noalias attribute on function arguments, "
+              "if possible">,
   ];
 }
 

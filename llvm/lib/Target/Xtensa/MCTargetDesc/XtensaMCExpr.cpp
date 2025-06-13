@@ -40,18 +40,6 @@ void XtensaMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     OS << ')';
 }
 
-bool XtensaMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                             const MCAssembler *Asm) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-  Res.setSpecifier(specifier);
-  return !Res.getSubSym();
-}
-
-void XtensaMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
-}
-
 XtensaMCExpr::Specifier XtensaMCExpr::parseSpecifier(StringRef name) {
   return StringSwitch<XtensaMCExpr::Specifier>(name).Default(VK_None);
 }

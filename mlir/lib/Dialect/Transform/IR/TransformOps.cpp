@@ -53,6 +53,13 @@
 
 using namespace mlir;
 
+static ParseResult parseApplyRegisteredPassOptions(
+    OpAsmParser &parser, DictionaryAttr &options,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &dynamicOptions);
+static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
+                                            Operation *op,
+                                            DictionaryAttr options,
+                                            ValueRange dynamicOptions);
 static ParseResult parseSequenceOpOperands(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &root,
     Type &rootType,
@@ -766,17 +773,62 @@ void transform::ApplyLoopInvariantCodeMotionOp::getEffects(
 // ApplyRegisteredPassOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure transform::ApplyRegisteredPassOp::applyToOne(
-    transform::TransformRewriter &rewriter, Operation *target,
-    ApplyToEachResultList &results, transform::TransformState &state) {
-  // Make sure that this transform is not applied to itself. Modifying the
-  // transform IR while it is being interpreted is generally dangerous. Even
-  // more so when applying passes because they may perform a wide range of IR
-  // modifications.
-  DiagnosedSilenceableFailure payloadCheck =
-      ensurePayloadIsSeparateFromTransform(*this, target);
-  if (!payloadCheck.succeeded())
-    return payloadCheck;
+void transform::ApplyRegisteredPassOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getDynamicOptionsMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
+  modifiesPayload(effects);
+}
+
+DiagnosedSilenceableFailure
+transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
+                                        transform::TransformResults &results,
+                                        transform::TransformState &state) {
+  // Obtain a single options-string to pass to the pass(-pipeline) from options
+  // passed in as a dictionary of keys mapping to values which are either
+  // attributes or param-operands pointing to attributes.
+
+  std::string options;
+  llvm::raw_string_ostream optionsStream(options); // For "printing" attrs.
+
+  OperandRange dynamicOptions = getDynamicOptions();
+  for (auto [idx, namedAttribute] : llvm::enumerate(getOptions())) {
+    if (idx > 0)
+      optionsStream << " "; // Interleave options separator.
+    optionsStream << namedAttribute.getName().str(); // Append the key.
+    optionsStream << "="; // And the key-value separator.
+
+    Attribute valueAttrToAppend;
+    if (auto paramOperandIndex =
+            dyn_cast<transform::ParamOperandAttr>(namedAttribute.getValue())) {
+      // The corresponding value attribute is passed in via a param.
+      // Obtain the param-operand via its specified index.
+      size_t dynamicOptionIdx = paramOperandIndex.getIndex().getInt();
+      assert(dynamicOptionIdx < dynamicOptions.size() &&
+             "number of dynamic option markers (UnitAttr) in options ArrayAttr "
+             "should be the same as the number of options passed as params");
+      ArrayRef<Attribute> dynamicOption =
+          state.getParams(dynamicOptions[dynamicOptionIdx]);
+      if (dynamicOption.size() != 1)
+        return emitSilenceableError()
+               << "options passed as a param must have "
+                  "a single value associated, param "
+               << dynamicOptionIdx << " associates " << dynamicOption.size();
+      valueAttrToAppend = dynamicOption[0];
+    } else {
+      // Value is a static attribute.
+      valueAttrToAppend = namedAttribute.getValue();
+    }
+
+    // Append string representation of value attribute.
+    if (auto strAttr = dyn_cast<StringAttr>(valueAttrToAppend)) {
+      optionsStream << strAttr.getValue().str();
+    } else {
+      valueAttrToAppend.print(optionsStream, /*elideType=*/true);
+    }
+  }
+  optionsStream.flush();
 
   // Get pass or pass pipeline from registry.
   const PassRegistryEntry *info = PassPipelineInfo::lookup(getPassName());
@@ -786,9 +838,9 @@ DiagnosedSilenceableFailure transform::ApplyRegisteredPassOp::applyToOne(
     return emitDefiniteFailure()
            << "unknown pass or pass pipeline: " << getPassName();
 
-  // Create pass manager and run the pass or pass pipeline.
+  // Create pass manager and add the pass or pass pipeline.
   PassManager pm(getContext());
-  if (failed(info->addToPipeline(pm, getOptions(), [&](const Twine &msg) {
+  if (failed(info->addToPipeline(pm, options, [&](const Twine &msg) {
         emitError(msg);
         return failure();
       }))) {
@@ -796,14 +848,149 @@ DiagnosedSilenceableFailure transform::ApplyRegisteredPassOp::applyToOne(
            << "failed to add pass or pass pipeline to pipeline: "
            << getPassName();
   }
-  if (failed(pm.run(target))) {
-    auto diag = emitSilenceableError() << "pass pipeline failed";
-    diag.attachNote(target->getLoc()) << "target op";
-    return diag;
+
+  auto targets = SmallVector<Operation *>(state.getPayloadOps(getTarget()));
+  for (Operation *target : targets) {
+    // Make sure that this transform is not applied to itself. Modifying the
+    // transform IR while it is being interpreted is generally dangerous. Even
+    // more so when applying passes because they may perform a wide range of IR
+    // modifications.
+    DiagnosedSilenceableFailure payloadCheck =
+        ensurePayloadIsSeparateFromTransform(*this, target);
+    if (!payloadCheck.succeeded())
+      return payloadCheck;
+
+    // Run the pass or pass pipeline on the current target operation.
+    if (failed(pm.run(target))) {
+      auto diag = emitSilenceableError() << "pass pipeline failed";
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
   }
 
-  results.push_back(target);
+  // The applied pass will have directly modified the payload IR(s).
+  results.set(llvm::cast<OpResult>(getResult()), targets);
   return DiagnosedSilenceableFailure::success();
+}
+
+static ParseResult parseApplyRegisteredPassOptions(
+    OpAsmParser &parser, DictionaryAttr &options,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &dynamicOptions) {
+  // Construct the options DictionaryAttr per a `{ key = value, ... }` syntax.
+  SmallVector<NamedAttribute> keyValuePairs;
+
+  size_t dynamicOptionsIdx = 0;
+  auto parseKeyValuePair = [&]() -> ParseResult {
+    // Parse items of the form `key = value` where `key` is a bare identifier or
+    // a string and `value` is either an attribute or an operand.
+
+    std::string key;
+    Attribute valueAttr;
+    if (parser.parseOptionalKeywordOrString(&key))
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected key to either be an identifier or a string";
+    if (key.empty())
+      return failure();
+
+    if (parser.parseEqual())
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected '=' after key in key-value pair";
+
+    // Parse the value, which can be either an attribute or an operand.
+    OptionalParseResult parsedValueAttr =
+        parser.parseOptionalAttribute(valueAttr);
+    if (!parsedValueAttr.has_value()) {
+      OpAsmParser::UnresolvedOperand operand;
+      ParseResult parsedOperand = parser.parseOperand(operand);
+      if (failed(parsedOperand))
+        return parser.emitError(parser.getCurrentLocation())
+               << "expected a valid attribute or operand as value associated "
+               << "to key '" << key << "'";
+      // To make use of the operand, we need to store it in the options dict.
+      // As SSA-values cannot occur in attributes, what we do instead is store
+      // an attribute in its place that contains the index of the param-operand,
+      // so that an attr-value associated to the param can be resolved later on.
+      dynamicOptions.push_back(operand);
+      auto wrappedIndex = IntegerAttr::get(
+          IntegerType::get(parser.getContext(), 64), dynamicOptionsIdx++);
+      valueAttr =
+          transform::ParamOperandAttr::get(parser.getContext(), wrappedIndex);
+    } else if (failed(parsedValueAttr.value())) {
+      return failure(); // NB: Attempted parse should have output error message.
+    } else if (isa<transform::ParamOperandAttr>(valueAttr)) {
+      return parser.emitError(parser.getCurrentLocation())
+             << "the param_operand attribute is a marker reserved for "
+             << "indicating a value will be passed via params and is only used "
+             << "in the generic print format";
+    }
+
+    keyValuePairs.push_back(NamedAttribute(key, valueAttr));
+    return success();
+  };
+
+  if (parser.parseCommaSeparatedList(AsmParser::Delimiter::Braces,
+                                     parseKeyValuePair,
+                                     " in options dictionary"))
+    return failure(); // NB: Attempted parse should have output error message.
+
+  if (DictionaryAttr::findDuplicate(
+          keyValuePairs, /*isSorted=*/false) // Also sorts the keyValuePairs.
+          .has_value())
+    return parser.emitError(parser.getCurrentLocation())
+           << "duplicate keys found in options dictionary";
+
+  options = DictionaryAttr::getWithSorted(parser.getContext(), keyValuePairs);
+
+  return success();
+}
+
+static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
+                                            Operation *op,
+                                            DictionaryAttr options,
+                                            ValueRange dynamicOptions) {
+  if (options.empty())
+    return;
+
+  printer << "{";
+  llvm::interleaveComma(options, printer, [&](NamedAttribute namedAttribute) {
+    printer << namedAttribute.getName() << " = ";
+    Attribute value = namedAttribute.getValue();
+    if (auto indexAttr = dyn_cast<transform::ParamOperandAttr>(value)) {
+      // Resolve index of param-operand to its actual SSA-value and print that.
+      printer.printOperand(dynamicOptions[indexAttr.getIndex().getInt()]);
+    } else {
+      printer.printAttribute(value);
+    }
+  });
+  printer << "}";
+}
+
+LogicalResult transform::ApplyRegisteredPassOp::verify() {
+  // Check that there is a one-to-one correspondence between param operands
+  // and references to dynamic options in the options dictionary.
+
+  auto dynamicOptions = SmallVector<Value>(getDynamicOptions());
+  for (NamedAttribute namedAttr : getOptions())
+    if (auto paramOperand =
+            dyn_cast<transform::ParamOperandAttr>(namedAttr.getValue())) {
+      size_t dynamicOptionIdx = paramOperand.getIndex().getInt();
+      if (dynamicOptionIdx < 0 || dynamicOptionIdx >= dynamicOptions.size())
+        return emitOpError()
+               << "dynamic option index " << dynamicOptionIdx
+               << " is out of bounds for the number of dynamic options: "
+               << dynamicOptions.size();
+      if (dynamicOptions[dynamicOptionIdx] == nullptr)
+        return emitOpError() << "dynamic option index " << dynamicOptionIdx
+                             << " is already used in options";
+      dynamicOptions[dynamicOptionIdx] = nullptr; // Mark this option as used.
+    }
+
+  for (Value dynamicOption : dynamicOptions)
+    if (dynamicOption)
+      return emitOpError() << "a param operand does not have a corresponding "
+                           << "param_operand attr in the options dict";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

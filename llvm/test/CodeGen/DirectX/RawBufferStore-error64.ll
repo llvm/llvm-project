@@ -10,7 +10,7 @@ target triple = "dxil-pc-shadermodel6.2-compute"
 define void @storev4f64_byte(i32 %offset, <4 x double> %data) "hlsl.export" {
   %buffer = call target("dx.RawBuffer", i8, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false)
+          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
 
   call void @llvm.dx.resource.store.rawbuffer.v4i64(
       target("dx.RawBuffer", i8, 1, 0, 0) %buffer,
