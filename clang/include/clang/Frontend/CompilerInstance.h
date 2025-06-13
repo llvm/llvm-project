@@ -774,7 +774,7 @@ public:
   /// Create the Sema object to be used for parsing.
   void createSema(TranslationUnitKind TUKind,
                   CodeCompleteConsumer *CompletionConsumer,
-                  SummaryConsumer *SummaryConsumer);
+                  SummaryConsumer *SummaryConsumer = nullptr);
 
   /// Create the frontend timer and replace any existing one with it.
   void createFrontendTimer();
