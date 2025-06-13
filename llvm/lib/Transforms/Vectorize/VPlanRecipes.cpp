@@ -647,8 +647,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // each part of the reduction.
     unsigned UF = getNumOperands() - 2;
     Value *ReducedPartRdx = State.get(getOperand(2));
+    auto MinMaxOp = RecurrenceDescriptor::isSignedRecurrenceKind(RK)
+                        ? RecurKind::SMax
+                        : RecurKind::UMax;
     for (unsigned Part = 1; Part < UF; ++Part) {
-      ReducedPartRdx = createMinMaxOp(Builder, RecurKind::SMax, ReducedPartRdx,
+      ReducedPartRdx = createMinMaxOp(Builder, MinMaxOp, ReducedPartRdx,
                                       State.get(getOperand(2 + Part)));
     }
 
