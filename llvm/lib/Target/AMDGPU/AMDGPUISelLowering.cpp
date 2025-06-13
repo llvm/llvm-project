@@ -4765,6 +4765,11 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
+bool isFnegOrFabs(SDValue &V) {
+  unsigned Opcode = V.getOpcode();
+  return Opcode == ISD::FNEG || Opcode == ISD::FABS;
+}
+
 SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   if (SDValue Folded = foldFreeOpFromSelect(DCI, SDValue(N, 0)))
@@ -4782,29 +4787,45 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
   SDValue True = N->getOperand(1);
   SDValue False = N->getOperand(2);
 
-  if (Cond.hasOneUse()) { // TODO: Look for multiple select uses.
+  int ShouldSwap = 0;
+  for (auto *User : Cond->users()) {
+
+    if (User->getOpcode() != ISD::SELECT) {
+      ShouldSwap = 0;
+      break;
+    }
+
+    auto Op1 = User->getOperand(1);
+    auto Op2 = User->getOperand(2);
+
+    // if the operand is defined by fneg or fabs it means the instruction
+    // will have source modifiers and therefore can't be shrinked to vop2
+    if (isFnegOrFabs(Op1) || isFnegOrFabs(Op2))
+      continue;
+
+    ShouldSwap += Op2->isDivergent() - Op1->isDivergent();
+  }
+
+  if (ShouldSwap > 0) {
     SelectionDAG &DAG = DCI.DAG;
-    if (DAG.isConstantValueOfAnyType(True) &&
-        !DAG.isConstantValueOfAnyType(False)) {
-      // Swap cmp + select pair to move constant to false input.
-      // This will allow using VOPC cndmasks more often.
-      // select (setcc x, y), k, x -> select (setccinv x, y), x, k
+    // Swap cmp + select pair to move constant to false input.
+    // This will allow using VOPC cndmasks more often.
+    // select (setcc x, y), k, x -> select (setccinv x, y), x, k
 
-      SDLoc SL(N);
-      ISD::CondCode NewCC =
-          getSetCCInverse(cast<CondCodeSDNode>(CC)->get(), LHS.getValueType());
+    SDLoc SL(N);
+    ISD::CondCode NewCC =
+        getSetCCInverse(cast<CondCodeSDNode>(CC)->get(), LHS.getValueType());
 
-      SDValue NewCond = DAG.getSetCC(SL, Cond.getValueType(), LHS, RHS, NewCC);
-      return DAG.getNode(ISD::SELECT, SL, VT, NewCond, False, True);
-    }
+    SDValue NewCond = DAG.getSetCC(SL, Cond.getValueType(), LHS, RHS, NewCC);
+    return DAG.getNode(ISD::SELECT, SL, VT, NewCond, False, True);
+  }
 
-    if (VT == MVT::f32 && Subtarget->hasFminFmaxLegacy()) {
-      SDValue MinMax
-        = combineFMinMaxLegacy(SDLoc(N), VT, LHS, RHS, True, False, CC, DCI);
-      // Revisit this node so we can catch min3/max3/med3 patterns.
-      //DCI.AddToWorklist(MinMax.getNode());
-      return MinMax;
-    }
+  if (Cond->hasOneUse() && (VT == MVT::f32 && Subtarget->hasFminFmaxLegacy())) {
+    SDValue MinMax =
+        combineFMinMaxLegacy(SDLoc(N), VT, LHS, RHS, True, False, CC, DCI);
+    // Revisit this node so we can catch min3/max3/med3 patterns.
+    // DCI.AddToWorklist(MinMax.getNode());
+    return MinMax;
   }
 
   // There's no reason to not do this if the condition has other uses.

@@ -914,12 +914,12 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $vgpr3 = V_OR_B32_e32 killed $vgpr11, killed $vgpr19, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr2 = V_OR_B32_e32 killed $vgpr3, killed $vgpr2, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX90A-NEXT:   renamable $vcc = V_CMP_EQ_U32_sdwa 0, killed $vgpr53, 0, $vgpr3, 0, 0, 6, implicit $exec
-  ; GFX90A-NEXT:   renamable $vgpr2 = V_CNDMASK_B32_e64 0, 0, 0, killed $vgpr2, killed $vcc, implicit $exec
+  ; GFX90A-NEXT:   renamable $sgpr20_sgpr21 = V_CMP_NE_U32_sdwa 0, killed $vgpr53, 0, $vgpr3, 0, 0, 6, implicit $exec
+  ; GFX90A-NEXT:   renamable $vgpr2 = V_CNDMASK_B32_e64 0, killed $vgpr2, 0, 0, killed $sgpr20_sgpr21, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr10 = V_OR_B32_e32 killed $vgpr52, killed $vgpr13, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr2 = V_OR_B32_e32 killed $vgpr10, killed $vgpr2, implicit $exec
-  ; GFX90A-NEXT:   renamable $vcc = V_CMP_EQ_U32_sdwa 0, killed $vgpr17, 0, $vgpr3, 0, 0, 6, implicit $exec
-  ; GFX90A-NEXT:   renamable $vgpr2 = V_CNDMASK_B32_e64 0, 0, 0, killed $vgpr2, killed $vcc, implicit $exec
+  ; GFX90A-NEXT:   renamable $sgpr20_sgpr21 = V_CMP_NE_U32_sdwa 0, killed $vgpr17, 0, $vgpr3, 0, 0, 6, implicit $exec
+  ; GFX90A-NEXT:   renamable $vgpr2 = V_CNDMASK_B32_e64 0, killed $vgpr2, 0, 0, killed $sgpr20_sgpr21, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr2 = V_OR_B32_e32 killed $vgpr2, killed $vgpr15, implicit $exec
   ; GFX90A-NEXT:   DS_WRITE2_B32_gfx9 killed renamable $vgpr3, killed renamable $vgpr2, renamable $vgpr3, 0, 1, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, align 4, addrspace 3)
   ; GFX90A-NEXT:   S_BRANCH %bb.65
