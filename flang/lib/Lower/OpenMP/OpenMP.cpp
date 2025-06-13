@@ -2674,6 +2674,7 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
            semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
            mlir::Location loc, const ConstructQueue &queue,
            ConstructQueue::const_iterator item) {
+  lower::SymMapScope scope(symTable);
   mlir::omp::TeamsOperands clauseOps;
   llvm::SmallVector<const semantics::Symbol *> reductionSyms;
   genTeamsClauses(converter, semaCtx, stmtCtx, item->clauses, loc, clauseOps,
@@ -2981,6 +2982,7 @@ static mlir::omp::ParallelOp genStandaloneParallel(
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
     const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+  lower::SymMapScope scope(symTable);
   mlir::omp::ParallelOperands parallelClauseOps;
   llvm::SmallVector<const semantics::Symbol *> parallelReductionSyms;
   genParallelClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
@@ -4027,13 +4029,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
           parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(clause.id));
       TODO(clauseLocation, name + " clause is not implemented yet");
     }
-
-    if (std::holds_alternative<clause::Private>(clause.u) &&
-        origDirective == llvm::omp::Directive::OMPD_target_teams)
-      TODO(clauseLocation, "TARGET TEAMS PRIVATE is not implemented yet");
-    if (std::holds_alternative<clause::Private>(clause.u) &&
-        origDirective == llvm::omp::Directive::OMPD_target_parallel)
-      TODO(clauseLocation, "TARGET PARALLEL PRIVATE is not implemented yet");
   }
 
   llvm::omp::Directive directive =
