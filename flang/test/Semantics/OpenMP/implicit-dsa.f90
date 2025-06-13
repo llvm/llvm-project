@@ -244,3 +244,25 @@ common /tcom/ tm3a
 !REF: /implicit_dsa_test_12/tm3a
 print *,tm3a
 end subroutine
+
+! Test static duration variables with DSA set in the enclosing scope do not default to shared DSA
+!DEF: /implicit_dsa_test_13_mod Module
+module implicit_dsa_test_13_mod
+  !DEF: /implicit_dsa_test_13_mod/a PUBLIC ObjectEntity INTEGER(4)
+  integer::a=5
+contains
+  !DEF: /implicit_dsa_test_13_mod/implicit_dsa_test_13 PUBLIC (Subroutine) Subprogram
+  subroutine implicit_dsa_test_13
+    !DEF: /implicit_dsa_test_13_mod/implicit_dsa_test_13/i ObjectEntity INTEGER(4)
+    integer i
+    !$omp do private(a)
+      !DEF: /implicit_dsa_test_13_mod/implicit_dsa_test_13/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+      do i=0,10
+        !$omp task
+        !DEF: /implicit_dsa_test_13_mod/implicit_dsa_test_13/OtherConstruct1/OtherConstruct1/a (OmpFirstPrivate, OmpImplicit) HostAssoc INTEGER(4)
+        !DEF: /implicit_dsa_test_13_mod/implicit_dsa_test_13/OtherConstruct1/OtherConstruct1/i (OmpFirstPrivate, OmpImplicit) HostAssoc INTEGER(4)
+        a=a+i
+        !$omp end task
+      end do
+  end subroutine implicit_dsa_test_13
+end module implicit_dsa_test_13_mod

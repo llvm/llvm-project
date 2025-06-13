@@ -268,7 +268,7 @@ define <7 x half> @fma_v7f16(<7 x half> %a, <7 x half> %b, <7 x half> %c) {
 ; CHECK-GI-NOFP16-NEXT:    mov v6.h[2], v0.h[6]
 ; CHECK-GI-NOFP16-NEXT:    mov v3.h[2], v1.h[6]
 ; CHECK-GI-NOFP16-NEXT:    mov v4.h[2], v2.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov h0, v5.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v5.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v6.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v3.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v4.4h
@@ -873,7 +873,7 @@ define <7 x half> @fmuladd_v7f16(<7 x half> %a, <7 x half> %b, <7 x half> %c) {
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v3.4h, v0.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v5.h[2], v2.h[6]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-GI-NOFP16-NEXT:    mov h0, v3.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v3.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v5.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v3.h[1]
@@ -1358,7 +1358,7 @@ define <7 x half> @fmul_v7f16(<7 x half> %a, <7 x half> %b, <7 x half> %c) {
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v3.4h, v0.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v5.h[2], v2.h[6]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-GI-NOFP16-NEXT:    mov h0, v3.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v3.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v5.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v3.h[1]

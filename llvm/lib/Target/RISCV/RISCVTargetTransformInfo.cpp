@@ -305,8 +305,7 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
   if (!ST->hasStdExtZvqdotq() || ST->getELen() < 64 ||
       Opcode != Instruction::Add || !BinOp || *BinOp != Instruction::Mul ||
       InputTypeA != InputTypeB || !InputTypeA->isIntegerTy(8) ||
-      OpAExtend != OpBExtend || !AccumType->isIntegerTy(32) ||
-      !VF.isKnownMultipleOf(4))
+      !AccumType->isIntegerTy(32) || !VF.isKnownMultipleOf(4))
     return InstructionCost::getInvalid();
 
   Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
@@ -2952,6 +2951,23 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   } else {
     Options.LoadSizes = {4, 2, 1};
     Options.AllowedTailExpansions = {3};
+  }
+
+  if (IsZeroCmp && ST->hasVInstructions()) {
+    unsigned RealMinVLen = ST->getRealMinVLen();
+    // Support Fractional LMULs if the lengths are larger than XLen.
+    // TODO: Support non-power-of-2 types.
+    for (unsigned FLMUL = 8; FLMUL >= 2; FLMUL /= 2) {
+      unsigned Len = RealMinVLen / FLMUL;
+      if (Len > ST->getXLen())
+        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
+    }
+    for (unsigned LMUL = 1; LMUL <= ST->getMaxLMULForFixedLengthVectors();
+         LMUL *= 2) {
+      unsigned Len = RealMinVLen * LMUL;
+      if (Len > ST->getXLen())
+        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
+    }
   }
   return Options;
 }

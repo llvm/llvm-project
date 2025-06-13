@@ -611,7 +611,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
 
   MachineInstr *Src = MRI->getVRegDef(MI.getOperand(2).getReg());
   if (!Src || Src->hasUnmodeledSideEffects() ||
-      Src->getParent() != MI.getParent() || Src->getNumDefs() != 1 ||
+      Src->getParent() != MI.getParent() ||
       !RISCVII::isFirstDefTiedToFirstUse(Src->getDesc()) ||
       !RISCVII::hasVLOp(Src->getDesc().TSFlags) ||
       !RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags))
@@ -622,7 +622,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
     return false;
 
   // Src needs to have the same passthru as VMV_V_V
-  MachineOperand &SrcPassthru = Src->getOperand(1);
+  MachineOperand &SrcPassthru = Src->getOperand(Src->getNumExplicitDefs());
   if (SrcPassthru.getReg() != RISCV::NoRegister &&
       SrcPassthru.getReg() != Passthru.getReg())
     return false;
@@ -643,7 +643,8 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
     // If Src is masked then its passthru needs to be in VRNoV0.
     if (Passthru.getReg() != RISCV::NoRegister)
       MRI->constrainRegClass(Passthru.getReg(),
-                             TII->getRegClass(Src->getDesc(), 1, TRI,
+                             TII->getRegClass(Src->getDesc(),
+                                              SrcPassthru.getOperandNo(), TRI,
                                               *Src->getParent()->getParent()));
   }
 

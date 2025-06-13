@@ -56,3 +56,11 @@ VEELFMCAsmInfo::VEELFMCAsmInfo(const Triple &TheTriple) {
 
   initializeVariantKinds(variantKindDescs);
 }
+
+void VEELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                        const MCSpecifierExpr &Expr) const {
+  printExpr(OS, *Expr.getSubExpr());
+  auto specifier = Expr.getSpecifier();
+  if (specifier && specifier != VEMCExpr::VK_REFLONG)
+    OS << '@' << getSpecifierName(specifier);
+}

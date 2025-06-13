@@ -838,6 +838,34 @@ def SPIRV_GLAtanhOp : SPIRV_GLUnaryArithmeticOp<"Atanh", 24, SPIRV_Float16or32> 
 
 // -----
 
+def SPIRV_GLExp2Op : SPIRV_GLUnaryArithmeticOp<"Exp2", 29, SPIRV_Float16or32> {
+  let summary = "Result is 2 raised to the x power";
+
+  let description = [{
+    Result is 2 raised to the x power; 2**x.
+
+    ```
+    exp2(Inf) = Inf.
+    exp2(-Inf) = +0.
+    ```
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Exp2 %0 : f32
+    %3 = spirv.GL.Exp2 %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_GLLog2Op : SPIRV_GLUnaryArithmeticOp<"Log2", 30, SPIRV_Float16or32> {
   let summary = "Result is the base-2 logarithm of x";
 
@@ -1246,6 +1274,41 @@ def SPIRV_GLReflectOp : SPIRV_GLBinaryArithmeticOp<"Reflect", 71, SPIRV_Float> {
 
 // ----
 
+def SPIRV_GLFindILsbOp : SPIRV_GLUnaryArithmeticOp<"FindILsb", 73, SPIRV_Integer> {
+  let summary = "Integer least-significant bit";
+
+  let description = [{
+    Results in the bit number of the least-significant 1-bit in the binary
+    representation of Value. If Value is 0, the result is -1.
+
+    Result Type and the type of Value must both be integer scalar or
+    integer vector types. Result Type and operand types must have the
+    same number of components with the same component width. Results are
+    computed per component.
+  }];
+}
+
+// ----
+
+def SPIRV_GLFindSMsbOp : SPIRV_GLUnaryArithmeticOp<"FindSMsb", 74, SPIRV_Int32> {
+  let summary = "Signed-integer most-significant bit, with Value interpreted as a signed integer";
+
+  let description = [{
+    For positive numbers, the result will be the bit number of the most significant
+    1-bit. For negative numbers, the result will be the bit number of the most
+    significant 0-bit. For a Value of 0 or -1, the result is -1.
+
+    Result Type and the type of Value must both be integer scalar or
+    integer vector types. Result Type and operand types must have the
+    same number of components with the same component width. Results are
+    computed per component.
+
+    This instruction is currently limited to 32-bit width components.
+  }];
+}
+
+// ----
+
 def SPIRV_GLFindUMsbOp : SPIRV_GLUnaryArithmeticOp<"FindUMsb", 75, SPIRV_Int32> {
   let summary = "Unsigned-integer most-significant bit";
 
@@ -1287,6 +1350,90 @@ def SPIRV_GLFractOp : SPIRV_GLUnaryArithmeticOp<"Fract", 10, SPIRV_Float> {
     %result = spirv.GL.Sqrt %x : vector<3xf16>
     ```
   }];
+}
+
+// -----
+
+def SPIRV_GLPackHalf2x16Op : SPIRV_GLOp<"PackHalf2x16", 58, [Pure]> {
+  let summary = "Pack two-component vector of 32-bit floats into a 32-bit integer";
+
+  let description = [{
+    Result is the unsigned integer obtained by converting the components of a
+    two-component floating-point vector to the 16-bit OpTypeFloat, and then packing
+    these two 16-bit integers into a 32-bit unsigned integer. The first vector
+    component specifies the 16 least-significant bits of the result; the second
+    component specifies the 16 most-significant bits.
+
+    The RelaxedPrecision Decoration only affects the conversion step of the instruction.
+
+    The v operand must be a vector of 2 components whose type is a 32-bit floating-point.
+
+    Result Type must be a 32-bit integer type.
+
+    #### Example:
+
+    ```mlir
+    %1 = spirv.GL.PackHalf2x16 %0 : vector<2xf32> -> i32
+    ```
+  }];
+
+  let arguments = (ins
+    VectorOfLengthAndType<[2], [SPIRV_Float32]>:$operand
+  );
+
+  let results = (outs
+    SPIRV_Int32:$result
+  );
+
+  let assemblyFormat = [{
+    attr-dict $operand `:` type($operand) `->` type($result)
+  }];
+
+  let hasVerifier = 0;
+}
+
+// -----
+
+def SPIRV_GLUnpackHalf2x16Op : SPIRV_GLOp<"UnpackHalf2x16", 62, [Pure]> {
+  let summary = "Unpack 32-bit integer into two-component vector of 32-bit floats";
+
+  let description = [{
+    Result is the two-component floating-point vector with components obtained by
+    unpacking a 32-bit unsigned integer into a pair of 16-bit values, interpreting
+    those values as 16-bit floating-point numbers according to the OpenGL
+    Specification, and converting them to 32-bit floating-point values. Subnormal
+    numbers are either preserved or flushed to zero, consistently within an
+    implementation.
+
+    The first component of the vector is obtained from the 16 least-significant bits
+    of v; the second component is obtained from the 16 most-significant bits of v.
+
+    The RelaxedPrecision Decoration only affects the conversion step of the instruction.
+
+    The v operand must be a scalar with 32-bit integer type.
+
+    Result Type must be a vector of 2 components whose type is 32-bit floating point.
+
+    #### Example:
+
+    ```mlir
+    %1 = spirv.GL.UnpackHalf2x16 %0 : i32 -> vector<2xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Int32:$operand
+  );
+
+  let results = (outs
+    VectorOfLengthAndType<[2], [SPIRV_Float32]>:$result
+  );
+
+  let assemblyFormat = [{
+    attr-dict $operand `:` type($operand) `->` type($result)
+  }];
+
+  let hasVerifier = 0;
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_GL_OPS

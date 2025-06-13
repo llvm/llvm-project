@@ -5553,6 +5553,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
   case ISD::SPLAT_VECTOR:
+  case ISD::VSELECT:
     return false;
 
   case ISD::SELECT_CC:

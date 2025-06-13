@@ -54,10 +54,11 @@
 using namespace mlir;
 
 static ParseResult parseApplyRegisteredPassOptions(
-    OpAsmParser &parser, ArrayAttr &options,
+    OpAsmParser &parser, DictionaryAttr &options,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &dynamicOptions);
 static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
-                                            Operation *op, ArrayAttr options,
+                                            Operation *op,
+                                            DictionaryAttr options,
                                             ValueRange dynamicOptions);
 static ParseResult parseSequenceOpOperands(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &root,
@@ -784,41 +785,50 @@ DiagnosedSilenceableFailure
 transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
                                         transform::TransformResults &results,
                                         transform::TransformState &state) {
-  // Obtain a single options-string from options passed statically as
-  // string attributes as well as "dynamically" through params.
-  std::string options;
-  OperandRange dynamicOptions = getDynamicOptions();
-  size_t dynamicOptionsIdx = 0;
-  for (auto [idx, optionAttr] : llvm::enumerate(getOptions())) {
-    if (idx > 0)
-      options += " "; // Interleave options seperator.
+  // Obtain a single options-string to pass to the pass(-pipeline) from options
+  // passed in as a dictionary of keys mapping to values which are either
+  // attributes or param-operands pointing to attributes.
 
-    if (auto strAttr = dyn_cast<StringAttr>(optionAttr)) {
-      options += strAttr.getValue();
-    } else if (isa<UnitAttr>(optionAttr)) {
-      assert(dynamicOptionsIdx < dynamicOptions.size() &&
+  std::string options;
+  llvm::raw_string_ostream optionsStream(options); // For "printing" attrs.
+
+  OperandRange dynamicOptions = getDynamicOptions();
+  for (auto [idx, namedAttribute] : llvm::enumerate(getOptions())) {
+    if (idx > 0)
+      optionsStream << " "; // Interleave options separator.
+    optionsStream << namedAttribute.getName().str(); // Append the key.
+    optionsStream << "="; // And the key-value separator.
+
+    Attribute valueAttrToAppend;
+    if (auto paramOperandIndex =
+            dyn_cast<transform::ParamOperandAttr>(namedAttribute.getValue())) {
+      // The corresponding value attribute is passed in via a param.
+      // Obtain the param-operand via its specified index.
+      size_t dynamicOptionIdx = paramOperandIndex.getIndex().getInt();
+      assert(dynamicOptionIdx < dynamicOptions.size() &&
              "number of dynamic option markers (UnitAttr) in options ArrayAttr "
              "should be the same as the number of options passed as params");
       ArrayRef<Attribute> dynamicOption =
-          state.getParams(dynamicOptions[dynamicOptionsIdx++]);
+          state.getParams(dynamicOptions[dynamicOptionIdx]);
       if (dynamicOption.size() != 1)
-        return emitSilenceableError() << "options passed as a param must have "
-                                         "a single value associated, param "
-                                      << dynamicOptionsIdx - 1 << " associates "
-                                      << dynamicOption.size();
-
-      if (auto dynamicOptionStr = dyn_cast<StringAttr>(dynamicOption[0])) {
-        options += dynamicOptionStr.getValue();
-      } else {
         return emitSilenceableError()
-               << "options passed as a param must be a string, got "
-               << dynamicOption[0];
-      }
+               << "options passed as a param must have "
+                  "a single value associated, param "
+               << dynamicOptionIdx << " associates " << dynamicOption.size();
+      valueAttrToAppend = dynamicOption[0];
     } else {
-      llvm_unreachable(
-          "expected options element to be either StringAttr or UnitAttr");
+      // Value is a static attribute.
+      valueAttrToAppend = namedAttribute.getValue();
+    }
+
+    // Append string representation of value attribute.
+    if (auto strAttr = dyn_cast<StringAttr>(valueAttrToAppend)) {
+      optionsStream << strAttr.getValue().str();
+    } else {
+      valueAttrToAppend.print(optionsStream, /*elideType=*/true);
     }
   }
+  optionsStream.flush();
 
   // Get pass or pass pipeline from registry.
   const PassRegistryEntry *info = PassPipelineInfo::lookup(getPassName());
@@ -864,84 +874,121 @@ transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
 }
 
 static ParseResult parseApplyRegisteredPassOptions(
-    OpAsmParser &parser, ArrayAttr &options,
+    OpAsmParser &parser, DictionaryAttr &options,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &dynamicOptions) {
-  auto dynamicOptionMarker = UnitAttr::get(parser.getContext());
-  SmallVector<Attribute> optionsArray;
+  // Construct the options DictionaryAttr per a `{ key = value, ... }` syntax.
+  SmallVector<NamedAttribute> keyValuePairs;
 
-  auto parseOperandOrString = [&]() -> OptionalParseResult {
-    OpAsmParser::UnresolvedOperand operand;
-    OptionalParseResult parsedOperand = parser.parseOptionalOperand(operand);
-    if (parsedOperand.has_value()) {
-      if (failed(parsedOperand.value()))
-        return failure();
+  size_t dynamicOptionsIdx = 0;
+  auto parseKeyValuePair = [&]() -> ParseResult {
+    // Parse items of the form `key = value` where `key` is a bare identifier or
+    // a string and `value` is either an attribute or an operand.
 
+    std::string key;
+    Attribute valueAttr;
+    if (parser.parseOptionalKeywordOrString(&key))
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected key to either be an identifier or a string";
+    if (key.empty())
+      return failure();
+
+    if (parser.parseEqual())
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected '=' after key in key-value pair";
+
+    // Parse the value, which can be either an attribute or an operand.
+    OptionalParseResult parsedValueAttr =
+        parser.parseOptionalAttribute(valueAttr);
+    if (!parsedValueAttr.has_value()) {
+      OpAsmParser::UnresolvedOperand operand;
+      ParseResult parsedOperand = parser.parseOperand(operand);
+      if (failed(parsedOperand))
+        return parser.emitError(parser.getCurrentLocation())
+               << "expected a valid attribute or operand as value associated "
+               << "to key '" << key << "'";
+      // To make use of the operand, we need to store it in the options dict.
+      // As SSA-values cannot occur in attributes, what we do instead is store
+      // an attribute in its place that contains the index of the param-operand,
+      // so that an attr-value associated to the param can be resolved later on.
       dynamicOptions.push_back(operand);
-      optionsArray.push_back(
-          dynamicOptionMarker); // Placeholder for knowing where to
-                                // inject the dynamic option-as-param.
-      return success();
+      auto wrappedIndex = IntegerAttr::get(
+          IntegerType::get(parser.getContext(), 64), dynamicOptionsIdx++);
+      valueAttr =
+          transform::ParamOperandAttr::get(parser.getContext(), wrappedIndex);
+    } else if (failed(parsedValueAttr.value())) {
+      return failure(); // NB: Attempted parse should have output error message.
+    } else if (isa<transform::ParamOperandAttr>(valueAttr)) {
+      return parser.emitError(parser.getCurrentLocation())
+             << "the param_operand attribute is a marker reserved for "
+             << "indicating a value will be passed via params and is only used "
+             << "in the generic print format";
     }
 
-    StringAttr stringAttr;
-    OptionalParseResult parsedStringAttr =
-        parser.parseOptionalAttribute(stringAttr);
-    if (parsedStringAttr.has_value()) {
-      if (failed(parsedStringAttr.value()))
-        return failure();
-      optionsArray.push_back(stringAttr);
-      return success();
-    }
-
-    return std::nullopt;
+    keyValuePairs.push_back(NamedAttribute(key, valueAttr));
+    return success();
   };
 
-  OptionalParseResult parsedOptionsElement = parseOperandOrString();
-  while (parsedOptionsElement.has_value()) {
-    if (failed(parsedOptionsElement.value()))
-      return failure();
-    parsedOptionsElement = parseOperandOrString();
-  }
+  if (parser.parseCommaSeparatedList(AsmParser::Delimiter::Braces,
+                                     parseKeyValuePair,
+                                     " in options dictionary"))
+    return failure(); // NB: Attempted parse should have output error message.
 
-  if (optionsArray.empty()) {
+  if (DictionaryAttr::findDuplicate(
+          keyValuePairs, /*isSorted=*/false) // Also sorts the keyValuePairs.
+          .has_value())
     return parser.emitError(parser.getCurrentLocation())
-           << "expected at least one option (either a string or a param)";
-  }
-  options = parser.getBuilder().getArrayAttr(optionsArray);
+           << "duplicate keys found in options dictionary";
+
+  options = DictionaryAttr::getWithSorted(parser.getContext(), keyValuePairs);
+
   return success();
 }
 
 static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
-                                            Operation *op, ArrayAttr options,
+                                            Operation *op,
+                                            DictionaryAttr options,
                                             ValueRange dynamicOptions) {
-  size_t currentDynamicOptionIdx = 0;
-  for (auto [idx, optionAttr] : llvm::enumerate(options)) {
-    if (idx > 0)
-      printer << " "; // Interleave options separator.
+  if (options.empty())
+    return;
 
-    if (isa<UnitAttr>(optionAttr))
-      printer.printOperand(dynamicOptions[currentDynamicOptionIdx++]);
-    else if (auto strAttr = dyn_cast<StringAttr>(optionAttr))
-      printer.printAttribute(strAttr);
-    else
-      llvm_unreachable("each option should be either a StringAttr or UnitAttr");
-  }
+  printer << "{";
+  llvm::interleaveComma(options, printer, [&](NamedAttribute namedAttribute) {
+    printer << namedAttribute.getName() << " = ";
+    Attribute value = namedAttribute.getValue();
+    if (auto indexAttr = dyn_cast<transform::ParamOperandAttr>(value)) {
+      // Resolve index of param-operand to its actual SSA-value and print that.
+      printer.printOperand(dynamicOptions[indexAttr.getIndex().getInt()]);
+    } else {
+      printer.printAttribute(value);
+    }
+  });
+  printer << "}";
 }
 
 LogicalResult transform::ApplyRegisteredPassOp::verify() {
-  size_t numUnitsInOptions = 0;
-  for (Attribute optionsElement : getOptions()) {
-    if (isa<UnitAttr>(optionsElement))
-      numUnitsInOptions++;
-    else if (!isa<StringAttr>(optionsElement))
-      return emitOpError() << "expected each option to be either a StringAttr "
-                           << "or a UnitAttr, got " << optionsElement;
-  }
+  // Check that there is a one-to-one correspondence between param operands
+  // and references to dynamic options in the options dictionary.
 
-  if (getDynamicOptions().size() != numUnitsInOptions)
-    return emitOpError()
-           << "expected the same number of options passed as params as "
-           << "UnitAttr elements in options ArrayAttr";
+  auto dynamicOptions = SmallVector<Value>(getDynamicOptions());
+  for (NamedAttribute namedAttr : getOptions())
+    if (auto paramOperand =
+            dyn_cast<transform::ParamOperandAttr>(namedAttr.getValue())) {
+      size_t dynamicOptionIdx = paramOperand.getIndex().getInt();
+      if (dynamicOptionIdx < 0 || dynamicOptionIdx >= dynamicOptions.size())
+        return emitOpError()
+               << "dynamic option index " << dynamicOptionIdx
+               << " is out of bounds for the number of dynamic options: "
+               << dynamicOptions.size();
+      if (dynamicOptions[dynamicOptionIdx] == nullptr)
+        return emitOpError() << "dynamic option index " << dynamicOptionIdx
+                             << " is already used in options";
+      dynamicOptions[dynamicOptionIdx] = nullptr; // Mark this option as used.
+    }
+
+  for (Value dynamicOption : dynamicOptions)
+    if (dynamicOption)
+      return emitOpError() << "a param operand does not have a corresponding "
+                           << "param_operand attr in the options dict";
 
   return success();
 }

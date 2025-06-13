@@ -28,10 +28,12 @@ namespace llvm {
 class MCContext;
 class MCCFIInstruction;
 class MCExpr;
+class MCSpecifierExpr;
 class MCSection;
 class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
+class raw_ostream;
 
 namespace WinEH {
 
@@ -140,6 +142,9 @@ protected:
 
   /// This is appended to emitted labels.  Defaults to ":"
   const char *LabelSuffix;
+
+  /// Use .set instead of = to equate a symbol to an expression.
+  bool UsesSetToEquateSymbol = false;
 
   // Print the EH begin symbol with an assignment. Defaults to false.
   bool UseAssignmentForEHBegin = false;
@@ -525,6 +530,7 @@ public:
   bool shouldAllowAdditionalComments() const { return AllowAdditionalComments; }
   const char *getLabelSuffix() const { return LabelSuffix; }
 
+  bool usesSetToEquateSymbol() const { return UsesSetToEquateSymbol; }
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }
   StringRef getPrivateGlobalPrefix() const { return PrivateGlobalPrefix; }
@@ -705,6 +711,9 @@ public:
 
   StringRef getSpecifierName(uint32_t S) const;
   std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
+
+  void printExpr(raw_ostream &, const MCExpr &) const;
+  virtual void printSpecifierExpr(raw_ostream &, const MCSpecifierExpr &) const;
 };
 
 } // end namespace llvm

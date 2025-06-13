@@ -378,6 +378,10 @@ private:
   }
 
   Value *EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP = false);
+  /// Emit sum of multiple GEP offsets. The GEPs are processed in reverse
+  /// order.
+  Value *EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs, GEPNoWrapFlags NW,
+                        Type *IdxTy, bool RewriteGEPs);
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
   Instruction *foldBitcastExtElt(ExtractElementInst &ExtElt);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);
@@ -767,6 +771,8 @@ public:
                             Value *A, Value *B, Instruction &Outer,
                             SelectPatternFlavor SPF2, Value *C);
   Instruction *foldSelectInstWithICmp(SelectInst &SI, ICmpInst *ICI);
+  Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
+                                      Value *FalseVal);
   Instruction *foldSelectValueEquivalence(SelectInst &SI, CmpInst &CI);
   bool replaceInInstruction(Value *V, Value *Old, Value *New,
                             unsigned Depth = 0);
@@ -860,6 +866,21 @@ public:
   /// otherwise returns negated value.
   [[nodiscard]] static Value *Negate(bool LHSIsZero, bool IsNSW, Value *Root,
                                      InstCombinerImpl &IC);
+};
+
+struct CommonPointerBase {
+  /// Common base pointer.
+  Value *Ptr = nullptr;
+  /// LHS GEPs until common base.
+  SmallVector<GEPOperator *> LHSGEPs;
+  /// RHS GEPs until common base.
+  SmallVector<GEPOperator *> RHSGEPs;
+  /// LHS GEP NoWrapFlags until common base.
+  GEPNoWrapFlags LHSNW = GEPNoWrapFlags::all();
+  /// RHS GEP NoWrapFlags until common base.
+  GEPNoWrapFlags RHSNW = GEPNoWrapFlags::all();
+
+  static CommonPointerBase compute(Value *LHS, Value *RHS);
 };
 
 } // end namespace llvm

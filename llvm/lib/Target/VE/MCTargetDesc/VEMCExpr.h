@@ -50,7 +50,6 @@ public:
   static const VEMCExpr *create(Specifier Kind, const MCExpr *Expr,
                                 MCContext &Ctx);
 
-  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res,
                                  const MCAssembler *Asm) const override;
 

@@ -655,9 +655,7 @@ define i32 @ctpop_into_extract(ptr %p) {
 ; CHECKO0-NEXT:    // implicit-def: $d2
 ; CHECKO0-NEXT:    fmov s2, w8
 ; CHECKO0-NEXT:    ldr d0, [x0]
-; CHECKO0-NEXT:    // implicit-def: $q1
-; CHECKO0-NEXT:    fmov d1, d0
-; CHECKO0-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECKO0-NEXT:    fmov s1, s0
 ; CHECKO0-NEXT:    fmov w8, s1
 ; CHECKO0-NEXT:    fmov s1, w8
 ; CHECKO0-NEXT:    // kill: def $d1 killed $s1
@@ -727,9 +725,7 @@ define i32 @ctpop_into_extract(ptr %p) {
 ; GISELO0-NEXT:    // implicit-def: $d2
 ; GISELO0-NEXT:    fmov s2, w8
 ; GISELO0-NEXT:    ldr d0, [x0]
-; GISELO0-NEXT:    // implicit-def: $q1
-; GISELO0-NEXT:    fmov d1, d0
-; GISELO0-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; GISELO0-NEXT:    fmov s1, s0
 ; GISELO0-NEXT:    fmov w8, s1
 ; GISELO0-NEXT:    fmov s1, w8
 ; GISELO0-NEXT:    // kill: def $d1 killed $s1

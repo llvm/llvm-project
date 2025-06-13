@@ -27,14 +27,6 @@ const VEMCExpr *VEMCExpr::create(Specifier S, const MCExpr *Expr,
   return new (Ctx) VEMCExpr(Expr, S);
 }
 
-void VEMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-
-  const MCExpr *Expr = getSubExpr();
-  Expr->print(OS, MAI);
-  if (specifier != VK_None && specifier != VK_REFLONG)
-    OS << '@' << MAI->getSpecifierName(specifier);
-}
-
 VE::Fixups VEMCExpr::getFixupKind(MCSpecifierExpr::Spec S) {
   switch (S) {
   default:

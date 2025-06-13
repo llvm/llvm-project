@@ -1175,7 +1175,7 @@ void ASTContext::setCurrentNamedModule(Module *M) {
   CurrentCXXNamedModule = M;
 }
 
-bool ASTContext::isInSameModule(const Module *M1, const Module *M2) {
+bool ASTContext::isInSameModule(const Module *M1, const Module *M2) const {
   if (!M1 != !M2)
     return false;
 
@@ -7428,6 +7428,12 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
   if (!declaresSameEntity(cast<Decl>(X->getDeclContext()->getRedeclContext()),
                           cast<Decl>(Y->getDeclContext()->getRedeclContext())))
     return false;
+
+  // If either X or Y are local to the owning module, they are only possible to
+  // be the same entity if they are in the same module.
+  if (X->isModuleLocal() || Y->isModuleLocal())
+    if (!isInSameModule(X->getOwningModule(), Y->getOwningModule()))
+      return false;
 
   // Two typedefs refer to the same entity if they have the same underlying
   // type.

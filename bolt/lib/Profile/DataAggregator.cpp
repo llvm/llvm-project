@@ -61,6 +61,12 @@ FilterMemProfile("filter-mem-profile",
   cl::init(true),
   cl::cat(AggregatorCategory));
 
+static cl::opt<bool> ParseMemProfile(
+    "parse-mem-profile",
+    cl::desc("enable memory profile parsing if it's present in the input data, "
+             "on by default unless `--itrace` is set."),
+    cl::init(true), cl::cat(AggregatorCategory));
+
 static cl::opt<unsigned long long>
 FilterPID("pid",
   cl::desc("only use samples from process with specified PID"),
@@ -181,6 +187,10 @@ void DataAggregator::start() {
                       "script -F pid,event,ip",
                       /*Wait = */false);
   } else if (!opts::ITraceAggregation.empty()) {
+    // Disable parsing memory profile from trace data, unless requested by user.
+    if (!opts::ParseMemProfile.getNumOccurrences())
+      opts::ParseMemProfile = false;
+
     std::string ItracePerfScriptArgs = llvm::formatv(
         "script -F pid,brstack --itrace={0}", opts::ITraceAggregation);
     launchPerfProcess("branch events with itrace", MainEventsPPI,
@@ -191,12 +201,9 @@ void DataAggregator::start() {
                       /*Wait = */ false);
   }
 
-  // Note: we launch script for mem events regardless of the option, as the
-  //       command fails fairly fast if mem events were not collected.
-  launchPerfProcess("mem events",
-                    MemEventsPPI,
-                    "script -F pid,event,addr,ip",
-                    /*Wait = */false);
+  if (opts::ParseMemProfile)
+    launchPerfProcess("mem events", MemEventsPPI, "script -F pid,event,addr,ip",
+                      /*Wait = */ false);
 
   launchPerfProcess("process events", MMapEventsPPI,
                     "script --show-mmap-events --no-itrace",
@@ -217,7 +224,8 @@ void DataAggregator::abort() {
   sys::Wait(TaskEventsPPI.PI, 1, &Error);
   sys::Wait(MMapEventsPPI.PI, 1, &Error);
   sys::Wait(MainEventsPPI.PI, 1, &Error);
-  sys::Wait(MemEventsPPI.PI, 1, &Error);
+  if (opts::ParseMemProfile)
+    sys::Wait(MemEventsPPI.PI, 1, &Error);
 
   deleteTempFiles();
 
@@ -506,7 +514,8 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     errs() << "PERF2BOLT: failed to parse samples\n";
 
   // Special handling for memory events
-  if (!prepareToParse("mem events", MemEventsPPI, MemEventsErrorCallback))
+  if (opts::ParseMemProfile &&
+      !prepareToParse("mem events", MemEventsPPI, MemEventsErrorCallback))
     if (const std::error_code EC = parseMemEvents())
       errs() << "PERF2BOLT: failed to parse memory events: " << EC.message()
              << '\n';
@@ -2255,6 +2264,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       YamlBF.Id = BF->getFunctionNumber();
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
+      YamlBF.ExternEntryCount = BF->getExternEntryCount();
       YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
       const BoltAddressTranslation::BBHashMapTy &BlockMap =
           BAT->getBBHashMap(FuncAddress);

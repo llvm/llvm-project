@@ -2068,21 +2068,8 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
   return nullptr;
 }
 
-struct CommonBase {
-  /// Common base pointer.
-  Value *Ptr = nullptr;
-  /// LHS GEPs until common base.
-  SmallVector<GEPOperator *> LHSGEPs;
-  /// RHS GEPs until common base.
-  SmallVector<GEPOperator *> RHSGEPs;
-  /// LHS GEP NoWrapFlags until common base.
-  GEPNoWrapFlags LHSNW = GEPNoWrapFlags::all();
-  /// RHS GEP NoWrapFlags until common base.
-  GEPNoWrapFlags RHSNW = GEPNoWrapFlags::all();
-};
-
-static CommonBase computeCommonBase(Value *LHS, Value *RHS) {
-  CommonBase Base;
+CommonPointerBase CommonPointerBase::compute(Value *LHS, Value *RHS) {
+  CommonPointerBase Base;
 
   if (LHS->getType() != RHS->getType())
     return Base;
@@ -2101,8 +2088,6 @@ static CommonBase computeCommonBase(Value *LHS, Value *RHS) {
   // Find common base and collect RHS GEPs.
   while (true) {
     if (Ptrs.contains(RHS)) {
-      if (LHS->getType() != RHS->getType())
-        return Base;
       Base.Ptr = RHS;
       break;
     }
@@ -2136,7 +2121,7 @@ static CommonBase computeCommonBase(Value *LHS, Value *RHS) {
 /// operands to the ptrtoint instructions for the LHS/RHS of the subtract.
 Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
                                                    Type *Ty, bool IsNUW) {
-  CommonBase Base = computeCommonBase(LHS, RHS);
+  CommonPointerBase Base = CommonPointerBase::compute(LHS, RHS);
   if (!Base.Ptr)
     return nullptr;
 
@@ -2145,25 +2130,9 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
   // TODO: We should probably do this even if there is only one GEP.
   bool RewriteGEPs = !Base.LHSGEPs.empty() && !Base.RHSGEPs.empty();
 
-  Type *IdxTy = DL.getIndexType(Base.Ptr->getType());
-  auto EmitOffsetFromBase = [&](ArrayRef<GEPOperator *> GEPs,
-                                GEPNoWrapFlags NW) -> Value * {
-    Value *Sum = nullptr;
-    for (GEPOperator *GEP : reverse(GEPs)) {
-      Value *Offset = EmitGEPOffset(GEP, RewriteGEPs);
-      if (Sum)
-        Sum = Builder.CreateAdd(Sum, Offset, "", NW.hasNoUnsignedWrap(),
-                                NW.isInBounds());
-      else
-        Sum = Offset;
-    }
-    if (!Sum)
-      return Constant::getNullValue(IdxTy);
-    return Sum;
-  };
-
-  Value *Result = EmitOffsetFromBase(Base.LHSGEPs, Base.LHSNW);
-  Value *Offset2 = EmitOffsetFromBase(Base.RHSGEPs, Base.RHSNW);
+  Type *IdxTy = DL.getIndexType(LHS->getType());
+  Value *Result = EmitGEPOffsets(Base.LHSGEPs, Base.LHSNW, IdxTy, RewriteGEPs);
+  Value *Offset2 = EmitGEPOffsets(Base.RHSGEPs, Base.RHSNW, IdxTy, RewriteGEPs);
 
   // If this is a single inbounds GEP and the original sub was nuw,
   // then the final multiplication is also nuw.
@@ -2857,8 +2826,14 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
   // Fold negation into constant operand.
   // -(X * C) --> X * (-C)
   if (match(FNegOp, m_FMul(m_Value(X), m_Constant(C))))
-    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
-      return BinaryOperator::CreateFMulFMF(X, NegC, &I);
+    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)) {
+      FastMathFlags FNegF = I.getFastMathFlags();
+      FastMathFlags OpF = FNegOp->getFastMathFlags();
+      FastMathFlags FMF = FastMathFlags::unionValue(FNegF, OpF) |
+                          FastMathFlags::intersectRewrite(FNegF, OpF);
+      FMF.setNoInfs(FNegF.noInfs() && OpF.noInfs());
+      return BinaryOperator::CreateFMulFMF(X, NegC, FMF);
+    }
   // -(X / C) --> X / (-C)
   if (match(FNegOp, m_FDiv(m_Value(X), m_Constant(C))))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))

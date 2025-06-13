@@ -82,6 +82,7 @@ public:
   /// \name Utility Methods
   /// @{
 
+  // TODO: Make this private. Users should call MCAsmInfo::printExpr instead.
   LLVM_ABI void print(raw_ostream &OS, const MCAsmInfo *MAI,
                       int SurroundingPrec = 0) const;
   LLVM_ABI void dump() const;
@@ -509,7 +510,7 @@ protected:
   // Target-specific relocation specifier code
   const Spec specifier;
 
-protected:
+public:
   explicit MCSpecifierExpr(const MCExpr *Expr, Spec S)
       : MCExpr(Specifier, SMLoc()), Expr(Expr), specifier(S) {}
   virtual ~MCSpecifierExpr() = default;
@@ -518,7 +519,9 @@ public:
   Spec getSpecifier() const { return specifier; }
   const MCExpr *getSubExpr() const { return Expr; }
 
-  virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const = 0;
+  virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
+    llvm_unreachable("Replace MCExpr::print calls with MCAsmInfo::printExpr");
+  }
   virtual bool evaluateAsRelocatableImpl(MCValue &Res,
                                          const MCAssembler *Asm) const;
 

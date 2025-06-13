@@ -1772,7 +1772,7 @@ def fmcdc_max_test_vectors_EQ : Joined<["-"], "fmcdc-max-test-vectors=">,
   HelpText<"Maximum number of test vectors in MC/DC coverage">,
   MarshallingInfoInt<CodeGenOpts<"MCDCMaxTVs">, "0x7FFFFFFE">;
 def fprofile_generate : Flag<["-"], "fprofile-generate">,
-    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    Group<f_Group>, Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fprofile_generate_EQ : Joined<["-"], "fprofile-generate=">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
@@ -1789,7 +1789,7 @@ def fprofile_use : Flag<["-"], "fprofile-use">, Group<f_Group>,
     Visibility<[ClangOption, CLOption]>, Alias<fprofile_instr_use>;
 def fprofile_use_EQ : Joined<["-"], "fprofile-use=">,
     Group<f_Group>,
-    Visibility<[ClangOption, CLOption]>,
+    Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>,
     MetaVarName<"<pathname>">,
     HelpText<"Use instrumentation data for profile-guided optimization. If pathname is a directory, it reads from <pathname>/default.profdata. Otherwise, it reads from file <pathname>.">;
 def fno_profile_instr_generate : Flag<["-"], "fno-profile-instr-generate">,
@@ -4927,8 +4927,10 @@ def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
   HelpText<"Set Fuchsia API level">,
   MarshallingInfoInt<LangOpts<"FuchsiaAPILevel">>;
 def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
+  Visibility<[ClangOption, CC1Option, FlangOption]>,
   Group<m_Group>, HelpText<"Set macOS deployment target">;
 def : Joined<["-"], "mmacosx-version-min=">,
+  Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
   Group<m_Group>, Alias<mmacos_version_min_EQ>;
 def mms_bitfields : Flag<["-"], "mms-bitfields">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -5054,9 +5056,10 @@ def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify the size in bits of an RVV vector register">,
   DocBrief<!strconcat(
-    "Defaults to the vector length agnostic value of \"scalable\". "
-    "Accepts power of 2 values between 64 and 65536. Also accepts "
-    "\"zvl\" to use the value implied by -march/-mcpu.",
+    "Specify the size in bits of an RVV vector register. Defaults to the "
+    "vector length agnostic value of \"scalable\". Accepts power of 2 values "
+    "between 64 and 65536. Also accepts \"zvl\" to use the value implied by "
+    "-march/-mcpu.",
     !cond(
       // Flang does not set the preprocessor define.
       !eq(GlobalDocumentation.Program, "Flang") : "",
@@ -7759,7 +7762,7 @@ def fpatchable_function_entry_section_EQ
       MarshallingInfoString<CodeGenOpts<"PatchableFunctionEntrySection">>;
 def fprofile_instrument_EQ : Joined<["-"], "fprofile-instrument=">,
     HelpText<"Enable PGO instrumentation">, Values<"none,clang,llvm,csllvm,sample-coldcov">,
-    NormalizedValuesScope<"CodeGenOptions">,
+    NormalizedValuesScope<"llvm::driver::ProfileInstrKind">,
     NormalizedValues<["ProfileNone", "ProfileClangInstr", "ProfileIRInstr", "ProfileCSIRInstr", "ProfileIRSampleColdCov"]>,
     MarshallingInfoEnum<CodeGenOpts<"ProfileInstr">, "ProfileNone">;
 def fprofile_instrument_path_EQ : Joined<["-"], "fprofile-instrument-path=">,

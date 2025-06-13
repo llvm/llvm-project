@@ -82,7 +82,7 @@ public:
 static MCOperand createSparcMCOperand(uint16_t Kind, MCSymbol *Sym,
                                       MCContext &OutContext) {
   const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(Sym, OutContext);
-  const SparcMCExpr *expr = SparcMCExpr::create(Kind, MCSym, OutContext);
+  const SparcMCExpr *expr = Sparc::createSpecifierExpr(OutContext, MCSym, Kind);
   return MCOperand::createExpr(expr);
 }
 static MCOperand createPCXCallOP(MCSymbol *Label,
@@ -101,7 +101,7 @@ static MCOperand createPCXRelExprOp(uint16_t Spec, MCSymbol *GOTLabel,
 
   const MCBinaryExpr *Sub = MCBinaryExpr::createSub(Cur, Start, OutContext);
   const MCBinaryExpr *Add = MCBinaryExpr::createAdd(GOT, Sub, OutContext);
-  const SparcMCExpr *expr = SparcMCExpr::create(Spec, Add, OutContext);
+  const SparcMCExpr *expr = Sparc::createSpecifierExpr(OutContext, Add, Spec);
   return MCOperand::createExpr(expr);
 }
 
@@ -302,7 +302,7 @@ MCOperand SparcAsmPrinter::lowerOperand(const MachineOperand &MO) const {
 
     const MCExpr *expr = MCSymbolRefExpr::create(Symbol, OutContext);
     if (RelType)
-      expr = SparcMCExpr::create(RelType, expr, OutContext);
+      expr = Sparc::createSpecifierExpr(OutContext, expr, RelType);
     return MCOperand::createExpr(expr);
   }
 
@@ -374,7 +374,7 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   const MachineOperand &MO = MI->getOperand (opNum);
   auto TF = MO.getTargetFlags();
 
-  StringRef Spec = SparcMCExpr::getSpecifierName(TF);
+  StringRef Spec = Sparc::getSpecifierName(TF);
   O << Spec;
   switch (MO.getType()) {
   case MachineOperand::MO_Register:

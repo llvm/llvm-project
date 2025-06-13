@@ -1763,7 +1763,7 @@ define <64 x i8> @PR110875(<32 x i8> %a0, <32 x i8> %a1, i64 %a2) {
 ; AVX512F-NEXT:    vpcmpeqb %ymm3, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = mem ^ (zmm0 & (zmm1 ^ mem))
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = m32bcst ^ (zmm0 & (zmm1 ^ m32bcst))
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: PR110875:
@@ -1780,7 +1780,7 @@ define <64 x i8> @PR110875(<32 x i8> %a0, <32 x i8> %a1, i64 %a2) {
 ; AVX512VL-NEXT:    vpcmpeqb %ymm3, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 = mem ^ (zmm0 & (zmm1 ^ mem))
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 = m32bcst ^ (zmm0 & (zmm1 ^ m32bcst))
 ; AVX512VL-NEXT:    retq
 ;
 ; XOP-LABEL: PR110875:

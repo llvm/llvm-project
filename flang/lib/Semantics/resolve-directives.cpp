@@ -2382,7 +2382,9 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
       dsa = prevDSA;
     } else if (taskGenDir) {
       // TODO 5) dummy arg in orphaned taskgen construct -> firstprivate
-      if (prevDSA.test(Symbol::Flag::OmpShared) || isStaticStorageDuration) {
+      if (prevDSA.test(Symbol::Flag::OmpShared) ||
+          (isStaticStorageDuration &&
+              (prevDSA & dataSharingAttributeFlags).none())) {
         // 6) shared in enclosing context -> shared
         dsa = {Symbol::Flag::OmpShared};
         makeSymbol(dsa);
@@ -3021,10 +3023,14 @@ void OmpAttributeVisitor::CheckSourceLabel(const parser::Label &label) {
 void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
     const parser::CharBlock target, std::optional<DirContext> sourceContext,
     std::optional<DirContext> targetContext) {
+  auto dirContextsSame = [](DirContext &lhs, DirContext &rhs) -> bool {
+    // Sometimes nested constructs share a scope but are different contexts
+    return (lhs.scope == rhs.scope) && (lhs.directive == rhs.directive);
+  };
   unsigned version{context_.langOptions().OpenMPVersion};
   if (targetContext &&
       (!sourceContext ||
-          (sourceContext->scope != targetContext->scope &&
+          (!dirContextsSame(*targetContext, *sourceContext) &&
               !DoesScopeContain(
                   &targetContext->scope, sourceContext->scope)))) {
     context_
@@ -3036,7 +3042,7 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
   }
   if (sourceContext &&
       (!targetContext ||
-          (sourceContext->scope != targetContext->scope &&
+          (!dirContextsSame(*sourceContext, *targetContext) &&
               !DoesScopeContain(
                   &sourceContext->scope, targetContext->scope)))) {
     context_

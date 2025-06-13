@@ -247,6 +247,48 @@ define i32 @extu_from_and_i32(i32 %x) {
   ret i32 %a
 }
 
+define i32 @no_extu_from_and_i32(i32 %x) {
+; RV32I-LABEL: no_extu_from_and_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 31
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: no_extu_from_and_i32:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    andi a0, a0, 31
+; RV32XQCIBM-NEXT:    ret
+  %a = and i32 %x, 31
+  ret i32 %a
+}
+
+define i32 @extu_from_and_i32_simm12_lb(i32 %x) {
+; RV32I-LABEL: extu_from_and_i32_simm12_lb:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 63
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: extu_from_and_i32_simm12_lb:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.extu a0, a0, 6, 0
+; RV32XQCIBM-NEXT:    ret
+  %a = and i32 %x, 63
+  ret i32 %a
+}
+
+define i32 @extu_from_and_i32_simm12_ub(i32 %x) {
+; RV32I-LABEL: extu_from_and_i32_simm12_ub:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 2047
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: extu_from_and_i32_simm12_ub:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.extu a0, a0, 11, 0
+; RV32XQCIBM-NEXT:    ret
+  %a = and i32 %x, 2047
+  ret i32 %a
+}
+
 define i64 @extu_from_and_i64(i64 %x) {
 ; RV32I-LABEL: extu_from_and_i64:
 ; RV32I:       # %bb.0:

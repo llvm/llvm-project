@@ -320,6 +320,29 @@ static_assert(__builtin_is_cpp_trivially_relocatable(UnionOfPolymorphic));
 
 }
 
+struct GH143599 {  // expected-note 2 {{'GH143599' defined here}}
+    ~GH143599 ();
+     GH143599(const GH143599&);
+     GH143599& operator=(const GH143599&);
+};
+GH143599::~GH143599 () = default;
+GH143599::GH143599 (const GH143599&) = default;
+GH143599& GH143599::operator=(const GH143599&) = default;
+
+static_assert (__builtin_is_cpp_trivially_relocatable(GH143599));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_cpp_trivially_relocatable(GH143599)'}} \
+// expected-note@-1 {{'GH143599' is not trivially relocatable}} \
+// expected-note@-1 {{because it has a user provided copy constructor}} \
+// expected-note@-1 {{because it has a user provided copy assignment operator}} \
+// expected-note@-1 {{because it has a user-provided destructor}}
+
+static_assert (__builtin_is_replaceable(GH143599));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(GH143599)'}} \
+// expected-note@-1 {{'GH143599' is not replaceable}} \
+// expected-note@-1 {{because it has a user provided copy constructor}} \
+// expected-note@-1 {{because it has a user provided copy assignment operator}} \
+// expected-note@-1 {{because it has a user-provided destructor}}
+
 namespace trivially_copyable {
 struct B {
  virtual ~B();

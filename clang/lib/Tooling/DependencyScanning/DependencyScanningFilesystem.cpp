@@ -173,7 +173,7 @@ DependencyScanningFilesystemSharedCache::CacheShard::getOrEmplaceEntryForUID(
     llvm::sys::fs::UniqueID UID, llvm::vfs::Status Stat,
     std::unique_ptr<llvm::MemoryBuffer> Contents) {
   std::lock_guard<std::mutex> LockGuard(CacheLock);
-  auto [It, Inserted] = EntriesByUID.insert({UID, nullptr});
+  auto [It, Inserted] = EntriesByUID.try_emplace(UID);
   auto &CachedEntry = It->getSecond();
   if (Inserted) {
     CachedFileContents *StoredContents = nullptr;

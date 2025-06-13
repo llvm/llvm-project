@@ -77,6 +77,7 @@ public:
 
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
+  bool trySignedBitfieldInsertInSign(SDNode *Node);
   bool tryUnsignedBitfieldExtract(SDNode *Node, const SDLoc &DL, MVT VT,
                                   SDValue X, unsigned Msb, unsigned Lsb);
   bool tryUnsignedBitfieldInsertInZero(SDNode *Node, const SDLoc &DL, MVT VT,

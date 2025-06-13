@@ -16,13 +16,11 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
@@ -33,6 +31,8 @@ using namespace ir2vec;
 STATISTIC(VocabMissCounter,
           "Number of lookups to entites not present in the vocabulary");
 
+namespace llvm {
+namespace ir2vec {
 static cl::OptionCategory IR2VecCategory("IR2Vec Options");
 
 // FIXME: Use a default vocab when not specified
@@ -40,20 +40,64 @@ static cl::opt<std::string>
     VocabFile("ir2vec-vocab-path", cl::Optional,
               cl::desc("Path to the vocabulary file for IR2Vec"), cl::init(""),
               cl::cat(IR2VecCategory));
-static cl::opt<float> OpcWeight("ir2vec-opc-weight", cl::Optional,
-                                cl::init(1.0),
-                                cl::desc("Weight for opcode embeddings"),
-                                cl::cat(IR2VecCategory));
-static cl::opt<float> TypeWeight("ir2vec-type-weight", cl::Optional,
-                                 cl::init(0.5),
-                                 cl::desc("Weight for type embeddings"),
-                                 cl::cat(IR2VecCategory));
-static cl::opt<float> ArgWeight("ir2vec-arg-weight", cl::Optional,
-                                cl::init(0.2),
-                                cl::desc("Weight for argument embeddings"),
-                                cl::cat(IR2VecCategory));
+cl::opt<float> OpcWeight("ir2vec-opc-weight", cl::Optional, cl::init(1.0),
+                         cl::desc("Weight for opcode embeddings"),
+                         cl::cat(IR2VecCategory));
+cl::opt<float> TypeWeight("ir2vec-type-weight", cl::Optional, cl::init(0.5),
+                          cl::desc("Weight for type embeddings"),
+                          cl::cat(IR2VecCategory));
+cl::opt<float> ArgWeight("ir2vec-arg-weight", cl::Optional, cl::init(0.2),
+                         cl::desc("Weight for argument embeddings"),
+                         cl::cat(IR2VecCategory));
+} // namespace ir2vec
+} // namespace llvm
 
 AnalysisKey IR2VecVocabAnalysis::Key;
+
+namespace llvm::json {
+inline bool fromJSON(const llvm::json::Value &E, Embedding &Out,
+                     llvm::json::Path P) {
+  std::vector<double> TempOut;
+  if (!llvm::json::fromJSON(E, TempOut, P))
+    return false;
+  Out = Embedding(std::move(TempOut));
+  return true;
+}
+} // namespace llvm::json
+
+// ==----------------------------------------------------------------------===//
+// Embedding
+//===----------------------------------------------------------------------===//
+
+Embedding &Embedding::operator+=(const Embedding &RHS) {
+  assert(this->size() == RHS.size() && "Vectors must have the same dimension");
+  std::transform(this->begin(), this->end(), RHS.begin(), this->begin(),
+                 std::plus<double>());
+  return *this;
+}
+
+Embedding &Embedding::operator-=(const Embedding &RHS) {
+  assert(this->size() == RHS.size() && "Vectors must have the same dimension");
+  std::transform(this->begin(), this->end(), RHS.begin(), this->begin(),
+                 std::minus<double>());
+  return *this;
+}
+
+Embedding &Embedding::scaleAndAdd(const Embedding &Src, float Factor) {
+  assert(this->size() == Src.size() && "Vectors must have the same dimension");
+  for (size_t Itr = 0; Itr < this->size(); ++Itr)
+    (*this)[Itr] += Src[Itr] * Factor;
+  return *this;
+}
+
+bool Embedding::approximatelyEquals(const Embedding &RHS,
+                                    double Tolerance) const {
+  assert(this->size() == RHS.size() && "Vectors must have the same dimension");
+  for (size_t Itr = 0; Itr < this->size(); ++Itr)
+    if (std::abs((*this)[Itr] - RHS[Itr]) > Tolerance)
+      return false;
+  return true;
+}
 
 // ==----------------------------------------------------------------------===//
 // Embedder and its subclasses
@@ -71,20 +115,6 @@ Embedder::create(IR2VecKind Mode, const Function &F, const Vocab &Vocabulary) {
     return std::make_unique<SymbolicEmbedder>(F, Vocabulary);
   }
   return make_error<StringError>("Unknown IR2VecKind", errc::invalid_argument);
-}
-
-void Embedder::addVectors(Embedding &Dst, const Embedding &Src) {
-  assert(Dst.size() == Src.size() && "Vectors must have the same dimension");
-  std::transform(Dst.begin(), Dst.end(), Src.begin(), Dst.begin(),
-                 std::plus<double>());
-}
-
-void Embedder::addScaledVector(Embedding &Dst, const Embedding &Src,
-                               float Factor) {
-  assert(Dst.size() == Src.size() && "Vectors must have the same dimension");
-  for (size_t i = 0; i < Dst.size(); ++i) {
-    Dst[i] += Src[i] * Factor;
-  }
 }
 
 // FIXME: Currently lookups are string based. Use numeric Keys
@@ -164,20 +194,20 @@ void SymbolicEmbedder::computeEmbeddings(const BasicBlock &BB) const {
     Embedding InstVector(Dimension, 0);
 
     const auto OpcVec = lookupVocab(I.getOpcodeName());
-    addScaledVector(InstVector, OpcVec, OpcWeight);
+    InstVector.scaleAndAdd(OpcVec, OpcWeight);
 
     // FIXME: Currently lookups are string based. Use numeric Keys
     // for efficiency.
     const auto Type = I.getType();
     const auto TypeVec = getTypeEmbedding(Type);
-    addScaledVector(InstVector, TypeVec, TypeWeight);
+    InstVector.scaleAndAdd(TypeVec, TypeWeight);
 
     for (const auto &Op : I.operands()) {
       const auto OperandVec = getOperandEmbedding(Op.get());
-      addScaledVector(InstVector, OperandVec, ArgWeight);
+      InstVector.scaleAndAdd(OperandVec, ArgWeight);
     }
     InstVecMap[&I] = InstVector;
-    addVectors(BBVector, InstVector);
+    BBVector += InstVector;
   }
   BBVecMap[&BB] = BBVector;
 }
@@ -187,7 +217,7 @@ void SymbolicEmbedder::computeEmbeddings() const {
     return;
   for (const auto &BB : F) {
     computeEmbeddings(BB);
-    addVectors(FuncVector, BBVecMap[&BB]);
+    FuncVector += BBVecMap[&BB];
   }
 }
 
@@ -220,9 +250,9 @@ bool IR2VecVocabResult::invalidate(
 // by auto-generating a default vocabulary during the build time.
 Error IR2VecVocabAnalysis::readVocabulary() {
   auto BufOrError = MemoryBuffer::getFileOrSTDIN(VocabFile, /*IsText=*/true);
-  if (!BufOrError) {
+  if (!BufOrError)
     return createFileError(VocabFile, BufOrError.getError());
-  }
+
   auto Content = BufOrError.get()->getBuffer();
   json::Path::Root Path("");
   Expected<json::Value> ParsedVocabValue = json::parse(Content);
@@ -230,39 +260,60 @@ Error IR2VecVocabAnalysis::readVocabulary() {
     return ParsedVocabValue.takeError();
 
   bool Res = json::fromJSON(*ParsedVocabValue, Vocabulary, Path);
-  if (!Res) {
+  if (!Res)
     return createStringError(errc::illegal_byte_sequence,
                              "Unable to parse the vocabulary");
-  }
-  assert(Vocabulary.size() > 0 && "Vocabulary is empty");
+
+  if (Vocabulary.empty())
+    return createStringError(errc::illegal_byte_sequence,
+                             "Vocabulary is empty");
 
   unsigned Dim = Vocabulary.begin()->second.size();
-  assert(Dim > 0 && "Dimension of vocabulary is zero");
-  (void)Dim;
-  assert(std::all_of(Vocabulary.begin(), Vocabulary.end(),
-                     [Dim](const std::pair<StringRef, Embedding> &Entry) {
-                       return Entry.second.size() == Dim;
-                     }) &&
-         "All vectors in the vocabulary are not of the same dimension");
+  if (Dim == 0)
+    return createStringError(errc::illegal_byte_sequence,
+                             "Dimension of vocabulary is zero");
+
+  if (!std::all_of(Vocabulary.begin(), Vocabulary.end(),
+                   [Dim](const std::pair<StringRef, Embedding> &Entry) {
+                     return Entry.second.size() == Dim;
+                   }))
+    return createStringError(
+        errc::illegal_byte_sequence,
+        "All vectors in the vocabulary are not of the same dimension");
+
   return Error::success();
+}
+
+IR2VecVocabAnalysis::IR2VecVocabAnalysis(const Vocab &Vocabulary)
+    : Vocabulary(Vocabulary) {}
+
+IR2VecVocabAnalysis::IR2VecVocabAnalysis(Vocab &&Vocabulary)
+    : Vocabulary(std::move(Vocabulary)) {}
+
+void IR2VecVocabAnalysis::emitError(Error Err, LLVMContext &Ctx) {
+  handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
+    Ctx.emitError("Error reading vocabulary: " + EI.message());
+  });
 }
 
 IR2VecVocabAnalysis::Result
 IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   auto Ctx = &M.getContext();
+  // FIXME: Scale the vocabulary once. This would avoid scaling per use later.
+  // If vocabulary is already populated by the constructor, use it.
+  if (!Vocabulary.empty())
+    return IR2VecVocabResult(std::move(Vocabulary));
+
+  // Otherwise, try to read from the vocabulary file.
   if (VocabFile.empty()) {
     // FIXME: Use default vocabulary
     Ctx->emitError("IR2Vec vocabulary file path not specified");
     return IR2VecVocabResult(); // Return invalid result
   }
   if (auto Err = readVocabulary()) {
-    handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
-      Ctx->emitError("Error reading vocabulary: " + EI.message());
-    });
+    emitError(std::move(Err), *Ctx);
     return IR2VecVocabResult();
   }
-  // FIXME: Scale the vocabulary here once. This would avoid scaling per use
-  // later.
   return IR2VecVocabResult(std::move(Vocabulary));
 }
 

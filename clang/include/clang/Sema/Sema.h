@@ -6713,10 +6713,6 @@ public:
     /// this expression evaluation context.
     unsigned NumCleanupObjects;
 
-    /// The number of typos encountered during this expression evaluation
-    /// context (i.e. the number of TypoExprs created).
-    unsigned NumTypos;
-
     MaybeODRUseExprSet SavedMaybeODRUseExprs;
 
     /// The lambdas that are present within this context, if it
@@ -6813,7 +6809,7 @@ public:
                                       Decl *ManglingContextDecl,
                                       ExpressionKind ExprContext)
         : Context(Context), ParentCleanup(ParentCleanup),
-          NumCleanupObjects(NumCleanupObjects), NumTypos(0),
+          NumCleanupObjects(NumCleanupObjects),
           ManglingContextDecl(ManglingContextDecl), ExprContext(ExprContext),
           InDiscardedStatement(false), InImmediateFunctionContext(false),
           InImmediateEscalatingFunctionContext(false) {}
@@ -7146,8 +7142,7 @@ public:
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
                       ArrayRef<Expr *> Args = {},
-                      DeclContext *LookupCtx = nullptr,
-                      TypoExpr **Out = nullptr);
+                      DeclContext *LookupCtx = nullptr);
 
   /// If \p D cannot be odr-used in the current expression evaluation context,
   /// return a reason explaining why. Otherwise, return NOUR_None.
@@ -8748,40 +8743,6 @@ public:
 
   ExprResult CheckUnevaluatedOperand(Expr *E);
 
-  /// Process any TypoExprs in the given Expr and its children,
-  /// generating diagnostics as appropriate and returning a new Expr if there
-  /// were typos that were all successfully corrected and ExprError if one or
-  /// more typos could not be corrected.
-  ///
-  /// \param E The Expr to check for TypoExprs.
-  ///
-  /// \param InitDecl A VarDecl to avoid because the Expr being corrected is its
-  /// initializer.
-  ///
-  /// \param RecoverUncorrectedTypos If true, when typo correction fails, it
-  /// will rebuild the given Expr with all TypoExprs degraded to RecoveryExprs.
-  ///
-  /// \param Filter A function applied to a newly rebuilt Expr to determine if
-  /// it is an acceptable/usable result from a single combination of typo
-  /// corrections. As long as the filter returns ExprError, different
-  /// combinations of corrections will be tried until all are exhausted.
-  ExprResult CorrectDelayedTyposInExpr(
-      Expr *E, VarDecl *InitDecl = nullptr,
-      bool RecoverUncorrectedTypos = false,
-      llvm::function_ref<ExprResult(Expr *)> Filter =
-          [](Expr *E) -> ExprResult { return E; });
-
-  ExprResult CorrectDelayedTyposInExpr(
-      ExprResult ER, VarDecl *InitDecl = nullptr,
-      bool RecoverUncorrectedTypos = false,
-      llvm::function_ref<ExprResult(Expr *)> Filter =
-          [](Expr *E) -> ExprResult { return E; }) {
-    return ER.isInvalid()
-               ? ER
-               : CorrectDelayedTyposInExpr(ER.get(), InitDecl,
-                                           RecoverUncorrectedTypos, Filter);
-  }
-
   IfExistsResult
   CheckMicrosoftIfExistsSymbol(Scope *S, CXXScopeSpec &SS,
                                const DeclarationNameInfo &TargetNameInfo);
@@ -9283,12 +9244,6 @@ public:
   /// for C++ records.
   llvm::FoldingSet<SpecialMemberOverloadResultEntry> SpecialMemberCache;
 
-  /// Holds TypoExprs that are created from `createDelayedTypo`. This is used by
-  /// `TransformTypos` in order to keep track of any TypoExprs that are created
-  /// recursively during typo correction and wipe them away if the correction
-  /// fails.
-  llvm::SmallVector<TypoExpr *, 2> TypoExprs;
-
   enum class AcceptableKind { Visible, Reachable };
 
   // Members have to be NamespaceDecl* or TranslationUnitDecl*.
@@ -9375,10 +9330,6 @@ public:
   LookupSpecialMember(CXXRecordDecl *D, CXXSpecialMemberKind SM, bool ConstArg,
                       bool VolatileArg, bool RValueThis, bool ConstThis,
                       bool VolatileThis);
-
-  typedef std::function<void(const TypoCorrection &)> TypoDiagnosticGenerator;
-  typedef std::function<ExprResult(Sema &, TypoExpr *, TypoCorrection)>
-      TypoRecoveryCallback;
 
   RedeclarationKind forRedeclarationInCurContext() const;
 
@@ -9733,51 +9684,6 @@ public:
                              const ObjCObjectPointerType *OPT = nullptr,
                              bool RecordFailure = true);
 
-  /// Try to "correct" a typo in the source code by finding
-  /// visible declarations whose names are similar to the name that was
-  /// present in the source code.
-  ///
-  /// \param TypoName the \c DeclarationNameInfo structure that contains
-  /// the name that was present in the source code along with its location.
-  ///
-  /// \param LookupKind the name-lookup criteria used to search for the name.
-  ///
-  /// \param S the scope in which name lookup occurs.
-  ///
-  /// \param SS the nested-name-specifier that precedes the name we're
-  /// looking for, if present.
-  ///
-  /// \param CCC A CorrectionCandidateCallback object that provides further
-  /// validation of typo correction candidates. It also provides flags for
-  /// determining the set of keywords permitted.
-  ///
-  /// \param TDG A TypoDiagnosticGenerator functor that will be used to print
-  /// diagnostics when the actual typo correction is attempted.
-  ///
-  /// \param TRC A TypoRecoveryCallback functor that will be used to build an
-  /// Expr from a typo correction candidate.
-  ///
-  /// \param MemberContext if non-NULL, the context in which to look for
-  /// a member access expression.
-  ///
-  /// \param EnteringContext whether we're entering the context described by
-  /// the nested-name-specifier SS.
-  ///
-  /// \param OPT when non-NULL, the search for visible declarations will
-  /// also walk the protocols in the qualified interfaces of \p OPT.
-  ///
-  /// \returns a new \c TypoExpr that will later be replaced in the AST with an
-  /// Expr representing the result of performing typo correction, or nullptr if
-  /// typo correction is not possible. If nullptr is returned, no diagnostics
-  /// will be emitted and it is the responsibility of the caller to emit any
-  /// that are needed.
-  TypoExpr *CorrectTypoDelayed(
-      const DeclarationNameInfo &Typo, Sema::LookupNameKind LookupKind,
-      Scope *S, CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
-      TypoDiagnosticGenerator TDG, TypoRecoveryCallback TRC,
-      CorrectTypoKind Mode, DeclContext *MemberContext = nullptr,
-      bool EnteringContext = false, const ObjCObjectPointerType *OPT = nullptr);
-
   /// Kinds of missing import. Note, the values of these enumerators correspond
   /// to %select values in diagnostics.
   enum class MissingImportKind {
@@ -9795,20 +9701,6 @@ public:
   void diagnoseMissingImport(SourceLocation Loc, const NamedDecl *Decl,
                              SourceLocation DeclLoc, ArrayRef<Module *> Modules,
                              MissingImportKind MIK, bool Recover);
-
-  struct TypoExprState {
-    std::unique_ptr<TypoCorrectionConsumer> Consumer;
-    TypoDiagnosticGenerator DiagHandler;
-    TypoRecoveryCallback RecoveryHandler;
-    TypoExprState();
-    TypoExprState(TypoExprState &&other) noexcept;
-    TypoExprState &operator=(TypoExprState &&other) noexcept;
-  };
-
-  const TypoExprState &getTypoExprState(TypoExpr *TE) const;
-
-  /// Clears the state of the given TypoExpr.
-  void clearDelayedTypo(TypoExpr *TE);
 
   /// Called on #pragma clang __debug dump II
   void ActOnPragmaDump(Scope *S, SourceLocation Loc, IdentifierInfo *II);
@@ -9832,22 +9724,14 @@ private:
   /// Determine if we could use all the declarations in the module.
   bool isUsableModule(const Module *M);
 
-  /// Helper for CorrectTypo and CorrectTypoDelayed used to create and
-  /// populate a new TypoCorrectionConsumer. Returns nullptr if typo correction
-  /// should be skipped entirely.
+  /// Helper for CorrectTypo used to create and populate a new
+  /// TypoCorrectionConsumer. Returns nullptr if typo correction should be
+  /// skipped entirely.
   std::unique_ptr<TypoCorrectionConsumer> makeTypoCorrectionConsumer(
       const DeclarationNameInfo &Typo, Sema::LookupNameKind LookupKind,
       Scope *S, CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
       DeclContext *MemberContext, bool EnteringContext,
       const ObjCObjectPointerType *OPT, bool ErrorRecovery);
-
-  /// The set of unhandled TypoExprs and their associated state.
-  llvm::MapVector<TypoExpr *, TypoExprState> DelayedTypos;
-
-  /// Creates a new TypoExpr AST node.
-  TypoExpr *createDelayedTypo(std::unique_ptr<TypoCorrectionConsumer> TCC,
-                              TypoDiagnosticGenerator TDG,
-                              TypoRecoveryCallback TRC, SourceLocation TypoLoc);
 
   /// Cache for module units which is usable for current module.
   llvm::DenseSet<const Module *> UsableModuleUnitsCache;

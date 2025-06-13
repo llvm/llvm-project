@@ -1533,6 +1533,16 @@ LogicalResult cir::GetMemberOp::verify() {
 // VecCreateOp
 //===----------------------------------------------------------------------===//
 
+OpFoldResult cir::VecCreateOp::fold(FoldAdaptor adaptor) {
+  if (llvm::any_of(getElements(), [](mlir::Value value) {
+        return !mlir::isa<cir::ConstantOp>(value.getDefiningOp());
+      }))
+    return {};
+
+  return cir::ConstVectorAttr::get(
+      getType(), mlir::ArrayAttr::get(getContext(), adaptor.getElements()));
+}
+
 LogicalResult cir::VecCreateOp::verify() {
   // Verify that the number of arguments matches the number of elements in the
   // vector, and that the type of all the arguments matches the type of the
@@ -1633,6 +1643,15 @@ LogicalResult cir::VecShuffleOp::verify() {
                          << " and " << getResult().getType() << " don't match";
   }
 
+  const uint64_t maxValidIndex =
+      getVec1().getType().getSize() + getVec2().getType().getSize() - 1;
+  if (llvm::any_of(
+          getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
+            return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;
+          })) {
+    return emitOpError() << ": index for __builtin_shufflevector must be "
+                            "less than the total number of vector elements";
+  }
   return success();
 }
 

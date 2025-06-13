@@ -142,6 +142,51 @@ namespace llvm {
     static inline DebugLoc getDropped() { return DebugLoc(); }
 #endif // LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
 
+    /// When two instructions are combined into a single instruction we also
+    /// need to combine the original locations into a single location.
+    /// When the locations are the same we can use either location.
+    /// When they differ, we need a third location which is distinct from
+    /// either. If they share a common scope, use this scope and compare the
+    /// line/column pair of the locations with the common scope:
+    /// * if both match, keep the line and column;
+    /// * if only the line number matches, keep the line and set the column as
+    /// 0;
+    /// * otherwise set line and column as 0.
+    /// If they do not share a common scope the location is ambiguous and can't
+    /// be represented in a line entry. In this case, set line and column as 0
+    /// and use the scope of any location.
+    ///
+    /// \p LocA \p LocB: The locations to be merged.
+    LLVM_ABI static DebugLoc getMergedLocation(DebugLoc LocA, DebugLoc LocB);
+
+    /// Try to combine the vector of locations passed as input in a single one.
+    /// This function applies getMergedLocation() repeatedly left-to-right.
+    ///
+    /// \p Locs: The locations to be merged.
+    LLVM_ABI static DebugLoc getMergedLocations(ArrayRef<DebugLoc> Locs);
+
+    /// If this DebugLoc is non-empty, returns this DebugLoc; otherwise, selects
+    /// \p Other.
+    /// In coverage-tracking builds, this also accounts for whether this or
+    /// \p Other have an annotative DebugLocKind applied, such that if both are
+    /// empty but exactly one has an annotation, we prefer that annotated
+    /// location.
+    DebugLoc orElse(DebugLoc Other) const {
+      if (*this)
+        return *this;
+#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+      if (Other)
+        return Other;
+      if (getKind() != DebugLocKind::Normal)
+        return *this;
+      if (Other.getKind() != DebugLocKind::Normal)
+        return Other;
+      return *this;
+#else
+      return Other;
+#endif // LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+    }
+
     /// Get the underlying \a DILocation.
     ///
     /// \pre !*this or \c isa<DILocation>(getAsMDNode()).

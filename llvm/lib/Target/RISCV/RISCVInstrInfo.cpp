@@ -4568,11 +4568,6 @@ RISCV::isRVVSpillForZvlsseg(unsigned Opcode) {
   }
 }
 
-bool RISCV::isFaultFirstLoad(const MachineInstr &MI) {
-  return MI.getNumExplicitDefs() == 2 &&
-         MI.modifiesRegister(RISCV::VL, /*TRI=*/nullptr) && !MI.isInlineAsm();
-}
-
 bool RISCV::hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2) {
   int16_t MI1FrmOpIdx =
       RISCV::getNamedOperandIdx(MI1.getOpcode(), RISCV::OpName::frm);
