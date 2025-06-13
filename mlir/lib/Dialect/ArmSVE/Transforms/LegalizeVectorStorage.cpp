@@ -309,7 +309,7 @@ struct LegalizeSVEMaskLoadConversion : public OpRewritePattern<memref::LoadOp> {
 ///   {in_bounds = [false, true, true, true]}
 ///   : memref<?x?x2x8xi8>, vector<2x[4]x2x8xi8>
 /// ```
-/// is rewriten to
+/// is rewritten to
 /// ```
 /// %collapse_shape = memref.collapse_shape %M [[0], [1, 2, 3]]
 ///   : memref<?x?x2x8xi8> into memref<?x?xi8>
@@ -323,6 +323,21 @@ struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
+
+    // Do not try to transform masked reads. For example, if we have a transfer
+    // to a `vector<[4]x4xi8>` we could have a mask like
+    //    1 1 1 0
+    //    1 1 1 0
+    //    1 1 1 0
+    //    0 0 0 0
+    // Flattening this mask would look like
+    //    1 1 1 0 1 1 1 0 1 1 1 0 0 0 0 0
+    // and we have not yet figured out an efficient way to build such a mask,
+    // neither from the mask operand, nor from the original `vector.create_mask`
+    // operation (if visible at all).
+    if (readOp.isMasked() || readOp.getMask())
+      return rewriter.notifyMatchFailure(readOp,
+                                         "masked transfers not-supported");
 
     if (!readOp.getPermutationMap().isMinorIdentity())
       return rewriter.notifyMatchFailure(readOp, "non-identity permutation");

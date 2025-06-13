@@ -224,3 +224,39 @@ func.func @negative_test_bcast_transp(%i : index, %j : index, %M : memref<?x?x?x
 
   return %A : vector<[4]x8xi8>
 }
+
+// -----
+
+// CHECK-LABEL: @negative_test_vector_mask
+// CHECK-NOT: memref.collapse
+
+func.func @negative_test_vector_mask(
+  %i : index, %j : index,
+  %M : memref<?x?x?x8xi8>, %mask : vector<[4]x8xi1>) -> vector<[4]x8xi8> {
+  
+  %c0 = arith.constant 0 : index
+  %c0_i8 = arith.constant 0 : i8
+
+  %A = vector.mask %mask {
+    vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8 {in_bounds = [true, true] } : memref<?x?x?x8xi8>, vector<[4]x8xi8>
+  } : vector<[4]x8xi1> -> vector<[4]x8xi8>
+
+  return %A : vector<[4]x8xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @negative_test_mask_operand
+// CHECK-NOT: memref.collapse
+
+func.func @negative_test_mask_operand(
+  %i : index, %j : index,
+  %M : memref<?x?x?x8xi8>, %mask : vector<[4]x8xi1>) -> vector<[4]x8xi8> {
+  
+  %c0 = arith.constant 0 : index
+  %c0_i8 = arith.constant 0 : i8
+
+  %A = vector.transfer_read %M[%i, %j, %c0, %c0], %c0_i8, %mask {in_bounds = [true, true] } : memref<?x?x?x8xi8>, vector<[4]x8xi8>
+
+  return %A : vector<[4]x8xi8>
+}
