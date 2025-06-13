@@ -617,7 +617,8 @@ void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
         for (const auto &r : *ranges)
           debug_aranges->AppendRange(GetOffset(), r.LowPC, r.HighPC);
       } else {
-        LLDB_LOG_ERRORV(log, ranges.takeError(), "DIE({1:x}): {0}", GetOffset());
+        LLDB_LOG_ERRORV(log, ranges.takeError(), "DIE({1:x}): {0}",
+                        GetOffset());
       }
     }
 
