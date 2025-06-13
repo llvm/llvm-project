@@ -170,8 +170,8 @@ public:
   virtual ~Embedder() = default;
 
   /// Factory method to create an Embedder object.
-  static Expected<std::unique_ptr<Embedder>>
-  create(IR2VecKind Mode, const Function &F, const Vocab &Vocabulary);
+  static std::unique_ptr<Embedder> create(IR2VecKind Mode, const Function &F,
+                                          const Vocab &Vocabulary);
 
   /// Returns a map containing instructions and the corresponding embeddings for
   /// the function F if it has been computed. If not, it computes the embeddings

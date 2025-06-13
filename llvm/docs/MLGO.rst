@@ -482,14 +482,9 @@ embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
 
       // Assuming F is an llvm::Function&
       // For example, using IR2VecKind::Symbolic:
-      Expected<std::unique_ptr<ir2vec::Embedder>> EmbOrErr =
+      std::unique_ptr<ir2vec::Embedder> Emb =
           ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
 
-      if (auto Err = EmbOrErr.takeError()) {
-        // Handle error in embedder creation
-        return;
-      }
-      std::unique_ptr<ir2vec::Embedder> Emb = std::move(*EmbOrErr);
 
 3. **Compute and Access Embeddings**:
    Call ``getFunctionVector()`` to get the embedding for the function. 
