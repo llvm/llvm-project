@@ -86,6 +86,66 @@ define void @test_boring_case_2x2bit_mask(i64 %i, i64 %n) #0 {
     ret void
 }
 
+define void @test_legal_4x2bit_mask(i64 %i, i64 %n) #0 {
+; CHECK-SVE-LABEL: test_legal_4x2bit_mask:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE-NEXT:    punpkhi p1.h, p0.b
+; CHECK-SVE-NEXT:    punpklo p4.h, p0.b
+; CHECK-SVE-NEXT:    punpkhi p3.h, p1.b
+; CHECK-SVE-NEXT:    punpklo p2.h, p1.b
+; CHECK-SVE-NEXT:    punpklo p0.h, p4.b
+; CHECK-SVE-NEXT:    punpkhi p1.h, p4.b
+; CHECK-SVE-NEXT:    b use
+;
+; CHECK-SVE2p1-SME2-LABEL: test_legal_4x2bit_mask:
+; CHECK-SVE2p1-SME2:       // %bb.0:
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p1.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    punpklo p4.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p3.h, p1.b
+; CHECK-SVE2p1-SME2-NEXT:    punpklo p2.h, p1.b
+; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p4.b
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p1.h, p4.b
+; CHECK-SVE2p1-SME2-NEXT:    b use
+  %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 %i, i64 %n)
+  %v0 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 6)
+  %v1 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 4)
+  %v2 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 2)
+  %v3 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 0)
+  tail call void @use(<vscale x 2 x i1> %v3, <vscale x 2 x i1> %v2, <vscale x 2 x i1> %v1, <vscale x 2 x i1> %v0)
+  ret void
+}
+
+; Negative test where the extract types are correct but we are not extracting all parts of the mask
+define void @test_partial_extract_correct_types(i64 %i, i64 %n) #0 {
+; CHECK-SVE-LABEL: test_partial_extract_correct_types:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE-NEXT:    punpklo p1.h, p0.b
+; CHECK-SVE-NEXT:    punpkhi p2.h, p0.b
+; CHECK-SVE-NEXT:    punpklo p0.h, p1.b
+; CHECK-SVE-NEXT:    punpkhi p1.h, p1.b
+; CHECK-SVE-NEXT:    punpkhi p2.h, p2.b
+; CHECK-SVE-NEXT:    b use
+;
+; CHECK-SVE2p1-SME2-LABEL: test_partial_extract_correct_types:
+; CHECK-SVE2p1-SME2:       // %bb.0:
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    punpklo p1.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p2.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p1.b
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p1.h, p1.b
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p2.h, p2.b
+; CHECK-SVE2p1-SME2-NEXT:    b use
+  %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 %i, i64 %n)
+  %v0 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 0)
+  %v1 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 2)
+  %v2 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 6)
+  tail call void @use(<vscale x 2 x i1> %v0, <vscale x 2 x i1> %v1, <vscale x 2 x i1> %v2)
+  ret void
+}
+
 ; Negative test for when not extracting exactly two halves of the source vector
 define void @test_partial_extract(i64 %i, i64 %n) #0 {
 ; CHECK-SVE-LABEL: test_partial_extract:
@@ -165,6 +225,35 @@ define void @test_fixed_extract(i64 %i, i64 %n) #0 {
     %v1 = call <2 x i1> @llvm.vector.extract.v2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 4)
     tail call void @use(<2 x i1> %v0, <2 x i1> %v1)
     ret void
+}
+
+; Negative test where the number of extracts is right, but they cannot be combined because
+; there is not an extract for each part
+define void @test_2x2bit_2x4bit_mask(i64 %i, i64 %n) #0 {
+; CHECK-SVE-LABEL: test_2x2bit_2x4bit_mask:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE-NEXT:    punpklo p2.h, p0.b
+; CHECK-SVE-NEXT:    punpkhi p3.h, p0.b
+; CHECK-SVE-NEXT:    punpklo p0.h, p2.b
+; CHECK-SVE-NEXT:    punpkhi p1.h, p2.b
+; CHECK-SVE-NEXT:    b use
+;
+; CHECK-SVE2p1-SME2-LABEL: test_2x2bit_2x4bit_mask:
+; CHECK-SVE2p1-SME2:       // %bb.0:
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    punpklo p2.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p3.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p2.b
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p1.h, p2.b
+; CHECK-SVE2p1-SME2-NEXT:    b use
+  %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 %i, i64 %n)
+  %v0 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 0)
+  %v1 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 2)
+  %v2 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 0)
+  %v3 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 4)
+  tail call void @use(<vscale x 2 x i1> %v0, <vscale x 2 x i1> %v1, <vscale x 4 x i1> %v2, <vscale x 4 x i1> %v3)
+  ret void
 }
 
 ; Illegal Types
