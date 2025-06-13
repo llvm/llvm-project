@@ -7535,25 +7535,12 @@ BasicBlock *
 EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
                                                     bool ForEpilogue) {
   assert(Bypass && "Expected valid bypass basic block.");
-  ElementCount VFactor = ForEpilogue ? EPI.EpilogueVF : VF;
-  unsigned UFactor = ForEpilogue ? EPI.EpilogueUF : UF;
   Value *Count = getTripCount();
-  // Reuse existing vector loop preheader for TC checks.
-  // Note that new preheader block is generated for vector loop.
+  MinProfitableTripCount = ElementCount::getFixed(0);
+  Value *CheckMinIters = createIterationCountCheck(
+      ForEpilogue ? EPI.EpilogueVF : VF, ForEpilogue ? EPI.EpilogueUF : UF);
+
   BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
-  IRBuilder<> Builder(TCCheckBlock->getTerminator());
-
-  // Generate code to check if the loop's trip count is less than VF * UF of the
-  // main vector loop.
-  auto P = Cost->requiresScalarEpilogue(ForEpilogue ? EPI.EpilogueVF.isVector()
-                                                    : VF.isVector())
-               ? ICmpInst::ICMP_ULE
-               : ICmpInst::ICMP_ULT;
-
-  Value *CheckMinIters = Builder.CreateICmp(
-      P, Count, createStepForVF(Builder, Count->getType(), VFactor, UFactor),
-      "min.iters.check");
-
   if (!ForEpilogue)
     TCCheckBlock->setName("vector.main.loop.iter.check");
 
