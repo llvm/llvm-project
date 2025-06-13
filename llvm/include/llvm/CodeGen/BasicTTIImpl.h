@@ -777,6 +777,10 @@ public:
     return BaseT::preferPredicateOverEpilogue(TFI);
   }
 
+  bool preferFlattenControlFlow() const override {
+    return thisT()->preferFlattenControlFlow();
+  }
+
   TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const override {
     return BaseT::getPreferredTailFoldingStyle(IVUpdateMayOverflow);
