@@ -57,7 +57,7 @@
 // RUN:     | FileCheck --strict-whitespace --implicit-check-not=FEAT_ %s --check-prefix=DISABLE_VIA_XCLANG
 
 // However, sve2 is actually enabled in clang but disabled for MC.
-// RUN: %clang --target=aarch64 -march=armv8-a+sve2 -c %s \
+// RUN: %clang --target=aarch64 -march=armv8-a+sve2 -c %s -o %t \
 // RUN:     -Xclang -target-feature -Xclang -sve \
 // RUN:     -Xclang -verify -Xclang -verify-ignore-unexpected=note
 

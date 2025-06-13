@@ -11322,9 +11322,9 @@ OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
                                                            SourceLocation Loc,
                                                            iterator &Best) {
 
-  assert(shouldDeferTemplateArgumentDeduction(S.getLangOpts()) ||
-         DeferredCandidatesCount == 0 &&
-             "Unexpected deferred template candidates");
+  assert((shouldDeferTemplateArgumentDeduction(S.getLangOpts()) ||
+          DeferredCandidatesCount == 0) &&
+         "Unexpected deferred template candidates");
 
   bool TwoPhaseResolution =
       DeferredCandidatesCount != 0 && !ResolutionByPerfectCandidateIsDisabled;
@@ -14055,8 +14055,10 @@ FunctionDecl *Sema::ResolveSingleFunctionTemplateSpecialization(
     //   specified and it, along with any default template arguments,
     //   identifies a single function template specialization, then the
     //   template-id is an lvalue for the function template specialization.
-    FunctionTemplateDecl *FunctionTemplate
-      = cast<FunctionTemplateDecl>((*I)->getUnderlyingDecl());
+    FunctionTemplateDecl *FunctionTemplate =
+        dyn_cast<FunctionTemplateDecl>((*I)->getUnderlyingDecl());
+    if (!FunctionTemplate)
+      continue;
 
     // C++ [over.over]p2:
     //   If the name is a function template, template argument deduction is

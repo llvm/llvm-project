@@ -2314,12 +2314,6 @@ void ASTStmtWriter::VisitOpaqueValueExpr(OpaqueValueExpr *E) {
   Code = serialization::EXPR_OPAQUE_VALUE;
 }
 
-void ASTStmtWriter::VisitTypoExpr(TypoExpr *E) {
-  VisitExpr(E);
-  // TODO: Figure out sane writer behavior for a TypoExpr, if necessary
-  llvm_unreachable("Cannot write TypoExpr nodes");
-}
-
 //===----------------------------------------------------------------------===//
 // CUDA Expressions and Statements.
 //===----------------------------------------------------------------------===//

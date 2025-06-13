@@ -139,8 +139,9 @@ public:
   }
 
   bool isSized(mlir::Type ty) {
-    if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType,
-                  cir::IntType>(ty))
+    if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType, cir::IntType,
+                  cir::CIRFPTypeInterface, cir::ComplexType, cir::RecordType>(
+            ty))
       return true;
 
     if (const auto vt = mlir::dyn_cast<cir::VectorType>(ty))
@@ -330,6 +331,18 @@ public:
     auto baseAddr = create<cir::BaseClassAddrOp>(
         loc, ptrTy, addr.getPointer(), mlir::APInt(64, offset), assumeNotNull);
     return Address(baseAddr, destType, addr.getAlignment());
+  }
+
+  /// Cast the element type of the given address to a different type,
+  /// preserving information like the alignment.
+  Address createElementBitCast(mlir::Location loc, Address addr,
+                               mlir::Type destType) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    auto ptrTy = getPointerTo(destType);
+    return Address(createBitcast(loc, addr.getPointer(), ptrTy), destType,
+                   addr.getAlignment());
   }
 
   cir::LoadOp createLoad(mlir::Location loc, Address addr,

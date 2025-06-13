@@ -1440,7 +1440,7 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   int64_t MOffset = 0;
   const DataLayout &DL = MemCpy->getModule()->getDataLayout();
   // We can only transforms memcpy's where the dest of one is the source of the
-  // other, or the memory transfer has a known offset from the memset.
+  // other, or they have a known offset.
   if (MemCpy->getSource() != MemSet->getDest()) {
     std::optional<int64_t> Offset =
         MemCpy->getSource()->getPointerOffsetFrom(MemSet->getDest(), DL);
@@ -1451,28 +1451,28 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
 
   if (MOffset != 0 || MemSetSize != CopySize) {
     // Make sure the memcpy doesn't read any more than what the memset wrote,
-    // other than undef. Don't worry about sizes larger than i64. A known memset
-    // size is required.
+    // other than undef. Don't worry about sizes larger than i64.
     auto *CMemSetSize = dyn_cast<ConstantInt>(MemSetSize);
-    if (!CMemSetSize)
-      return false;
-
-    // A known memcpy size is also required.
     auto *CCopySize = dyn_cast<ConstantInt>(CopySize);
-    if (!CCopySize)
-      return false;
-    if (CCopySize->getZExtValue() + MOffset > CMemSetSize->getZExtValue()) {
+    if (!CMemSetSize || !CCopySize ||
+        CCopySize->getZExtValue() + MOffset > CMemSetSize->getZExtValue()) {
       if (!overreadUndefContents(MSSA, MemCpy, MemSet, BAA))
         return false;
-      // Clip the memcpy to the bounds of the memset
-      if (MOffset == 0)
-        CopySize = MemSetSize;
-      else
-        CopySize =
-            ConstantInt::get(CopySize->getType(),
-                             CMemSetSize->getZExtValue() <= (uint64_t)MOffset
-                                 ? 0
-                                 : CMemSetSize->getZExtValue() - MOffset);
+
+      if (CMemSetSize && CCopySize) {
+        // If both have constant sizes and offsets, clip the memcpy to the
+        // bounds of the memset if applicable.
+        assert(CCopySize->getZExtValue() + MOffset >
+               CMemSetSize->getZExtValue());
+        if (MOffset == 0)
+          CopySize = MemSetSize;
+        else
+          CopySize =
+              ConstantInt::get(CopySize->getType(),
+                               CMemSetSize->getZExtValue() <= (uint64_t)MOffset
+                                   ? 0
+                                   : CMemSetSize->getZExtValue() - MOffset);
+      }
     }
   }
 

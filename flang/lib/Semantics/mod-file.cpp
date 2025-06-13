@@ -143,18 +143,22 @@ void ModFileWriter::Write(const Symbol &symbol) {
   std::string path{context_.moduleDirectory() + '/' +
       ModFileName(symbol.name(), ancestorName, context_.moduleFileSuffix())};
 
-  UnorderedSymbolSet hermeticModules;
-  hermeticModules.insert(symbol);
+  std::set<std::string> hermeticModuleNames;
+  hermeticModuleNames.insert(symbol.name().ToString());
   UnorderedSymbolSet additionalModules;
   PutSymbols(DEREF(symbol.scope()),
       hermeticModuleFileOutput_ ? &additionalModules : nullptr);
   auto asStr{GetAsString(symbol)};
   while (!additionalModules.empty()) {
-    for (auto ref : UnorderedSymbolSet{std::move(additionalModules)}) {
-      if (hermeticModules.insert(*ref).second &&
-          !ref->owner().IsIntrinsicModules()) {
-        PutSymbols(DEREF(ref->scope()), &additionalModules);
-        asStr += GetAsString(*ref);
+    UnorderedSymbolSet nextPass{std::move(additionalModules)};
+    additionalModules.clear();
+    for (const Symbol &modSym : nextPass) {
+      if (!modSym.owner().IsIntrinsicModules() &&
+          hermeticModuleNames.find(modSym.name().ToString()) ==
+              hermeticModuleNames.end()) {
+        hermeticModuleNames.insert(modSym.name().ToString());
+        PutSymbols(DEREF(modSym.scope()), &additionalModules);
+        asStr += GetAsString(modSym);
       }
     }
   }
