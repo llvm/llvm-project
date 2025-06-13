@@ -71,8 +71,8 @@ NVPTXDAGToDAGISel::getDivF32Level(const SDNode *N) const {
   return Subtarget->getTargetLowering()->getDivF32Level(*MF, *N);
 }
 
-bool NVPTXDAGToDAGISel::usePrecSqrtF32() const {
-  return Subtarget->getTargetLowering()->usePrecSqrtF32();
+bool NVPTXDAGToDAGISel::usePrecSqrtF32(const SDNode *N) const {
+  return Subtarget->getTargetLowering()->usePrecSqrtF32(*MF, N);
 }
 
 bool NVPTXDAGToDAGISel::useF32FTZ() const {

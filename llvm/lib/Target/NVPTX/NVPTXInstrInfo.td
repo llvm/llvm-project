@@ -151,9 +151,6 @@ def doRsqrtOpt : Predicate<"doRsqrtOpt()">;
 
 def doMulWide      : Predicate<"doMulWide">;
 
-def do_SQRTF32_APPROX : Predicate<"!usePrecSqrtF32()">;
-def do_SQRTF32_RN : Predicate<"usePrecSqrtF32()">;
-
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
@@ -1623,6 +1620,10 @@ let hasSideEffects = false in {
                 [(set i32:$d, (prmt i32:$a, imm:$b, i32:$c, imm:$mode))]>;
 
 }
+
+// PRMT folding patterns
+def : Pat<(fshr i32:$hi, i32:$lo, (shl i32:$amt, (i32 3))),
+          (PRMT_B32rrr $lo, $hi, $amt, PrmtF4E)>;
 
 
 // byte extraction + signed/unsigned extension to i32.

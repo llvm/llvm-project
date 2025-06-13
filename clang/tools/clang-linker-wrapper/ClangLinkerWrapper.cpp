@@ -311,7 +311,7 @@ Error relocateOffloadSection(const ArgList &Args, StringRef Output) {
   ObjcopyArgs.emplace_back("--remove-section");
   ObjcopyArgs.emplace_back(".llvm.offloading");
   StringRef Prefix = "llvm";
-  auto Section = (Prefix + "llvm_offload_entries").str();
+  auto Section = (Prefix + "_offload_entries").str();
   // Rename the offloading entires to make them private to this link unit.
   ObjcopyArgs.emplace_back("--rename-section");
   ObjcopyArgs.emplace_back(
