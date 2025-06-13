@@ -312,17 +312,15 @@ def testApplyRegisteredPassOp(module: Module):
             transform.AnyOpType.get(),
             mod,
             "symbol-privatize",
-            options={ "exclude": ("a", "b") },
+            options={"exclude": ("a", "b")},
         )
         # CHECK:   %[[SYMBOL_A:.+]] = transform.param.constant
         symbol_a = transform.param_constant(
-            transform.AnyParamType.get(),
-            StringAttr.get("a")
+            transform.AnyParamType.get(), StringAttr.get("a")
         )
         # CHECK:   %[[SYMBOL_B:.+]] = transform.param.constant
         symbol_b = transform.param_constant(
-            transform.AnyParamType.get(),
-            StringAttr.get("b")
+            transform.AnyParamType.get(), StringAttr.get("b")
         )
         # CHECK:   %{{.*}} = apply_registered_pass "symbol-privatize"
         # CHECK-SAME:    with options = {"exclude" = [%[[SYMBOL_A]], %[[SYMBOL_B]]]}
@@ -331,6 +329,6 @@ def testApplyRegisteredPassOp(module: Module):
             transform.AnyOpType.get(),
             mod,
             "symbol-privatize",
-            options={ "exclude": (symbol_a, symbol_b) },
+            options={"exclude": (symbol_a, symbol_b)},
         )
         transform.YieldOp()
