@@ -6530,15 +6530,18 @@ void OmpStructureChecker::CheckArraySection(
   // not arrays.
   bool isSubstring{false};
   evaluate::ExpressionAnalyzer ea{context_};
-  MaybeExpr expr = ea.Analyze(arrayElement.base);
-  if (expr) {
+  if (MaybeExpr expr = ea.Analyze(arrayElement.base)) {
     std::optional<evaluate::Shape> shape = evaluate::GetShape(expr);
     // Not an array: rank 0
     if (shape && shape->size() == 0) {
-      std::optional<evaluate::DynamicType> type = expr->GetType();
-      if (type) {
+      if (std::optional<evaluate::DynamicType> type = expr->GetType()) {
         if (type->category() == evaluate::TypeCategory::Character) {
+          // Substrings are explicitly denied by the standard [6.0:163:9-11].
+          // This is supported as an extension. This restriction was added in
+          // OpenMP 5.2.
           isSubstring = true;
+          context_.Say(GetContext().clauseSource,
+              "The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2."_port_en_US);
         } else {
           llvm_unreachable("Array indexing on a variable that isn't an array");
         }
