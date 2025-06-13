@@ -98,3 +98,22 @@ module {
   // CHECK: "live.user"() {uses = [@unknown_symbol]} : () -> ()
   "live.user"() {uses = [@unknown_symbol]} : () -> ()
 }
+
+// -----
+
+// Check that we don't DCE nested symbols if they are used even if nested inside
+// an unnamed region.
+// CHECK-LABEL: module attributes {test.nested_unnamed_region}
+module attributes {test.nested_unnamed_region} {
+  "test.one_region_op"() ({
+    "test.symbol_scope"() ({
+      // CHECK: func @nested_function
+      func.func @nested_function() {
+        return
+      }
+      func.call @nested_function() : () -> ()
+      "test.finish"() : () -> ()
+    }) : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+}
