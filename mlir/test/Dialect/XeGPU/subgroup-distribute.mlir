@@ -166,8 +166,8 @@ gpu.module @test {
 }
 
 // -----
-// TODO: gemm does not use update_nd_offset because of an issue in vector distribution. PR141853 tracks this issue.
-// CHECK-LABEL: gpu.func @gemm_loop
+// TODO: gemm does not use update_nd_offset because of an issue in scf-for distribution.
+// CHECK-LABEL: gpu.func @gemm
 // CHECK: (%[[ARG0:[0-9a-zA-Z]+]]: memref<1024x1024xbf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<1024x1024xbf16>, %[[ARG2:[0-9a-zA-Z]+]]: memref<1024x1024xf32>) {
 // CHECK-DAG: %[[BLOCK_ID_X:.*]] = gpu.block_id x
 // CHECK-DAG: %[[BLOCK_ID_Y:.*]] = gpu.block_id y
@@ -189,7 +189,7 @@ gpu.module @test {
 // CHECK-NEXT: %[[T9:.*]] = vector.shape_cast %[[T5]] : vector<8x1xf32> to vector<8xf32>
 // CHECK-NEXT: xegpu.store_nd %[[T9]], %[[T2]] : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
 gpu.module @test {
-gpu.func @gemm_loop(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x1024xbf16>, %arg2: memref<1024x1024xf32>){
+gpu.func @gemm(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x1024xbf16>, %arg2: memref<1024x1024xf32>){
   %c0 = arith.constant 0 : index
   %c16 = arith.constant 16 : index
   %c8 = arith.constant 8 : index

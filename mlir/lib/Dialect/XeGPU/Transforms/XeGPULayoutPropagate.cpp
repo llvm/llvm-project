@@ -444,9 +444,8 @@ void LayoutInfoPropagation::visitStoreNdOp(
     ArrayRef<const LayoutInfoLattice *> results) {
   LayoutInfo storeLayout = getDefaultSIMTLayoutInfo(store.getValueType());
   // Both operands should have the same layout
-  for (LayoutInfoLattice *operand : operands) {
+  for (LayoutInfoLattice *operand : operands)
     propagateIfChanged(operand, operand->meet(storeLayout));
-  }
 }
 
 /// Propagate the layout of the value to the tensor descriptor operand in
@@ -659,20 +658,18 @@ RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
 
   SmallVector<FunctionOpInterface> funcOps;
   if (auto modOp = dyn_cast<ModuleOp>(target)) {
-    for (auto funcOp : modOp.getOps<FunctionOpInterface>()) {
+    for (auto funcOp : modOp.getOps<FunctionOpInterface>())
       funcOps.push_back(funcOp);
-    }
+
     // Collect all GpuFuncOps in the module.
     for (auto gpuModOp : modOp.getOps<gpu::GPUModuleOp>()) {
-      for (auto gpuFuncOp : gpuModOp.getOps<FunctionOpInterface>()) {
+      for (auto gpuFuncOp : gpuModOp.getOps<FunctionOpInterface>())
         funcOps.push_back(gpuFuncOp);
-      }
     }
   }
   // Print the analysis result for each function.
-  for (FunctionOpInterface funcOp : funcOps) {
+  for (FunctionOpInterface funcOp : funcOps)
     printFunctionResult(funcOp);
-  }
 }
 
 using GetLayoutFnTy = function_ref<xegpu::LayoutAttr(Value)>;
@@ -706,7 +703,6 @@ static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     }
     // If the result is a vector type, add a temporary layout attribute to the
     // op.
-    std::string resultLayoutName = xegpu::getLayoutName(result);
     xegpu::setLayoutAttr(result, layout);
   }
 }
@@ -717,6 +713,7 @@ static void updateBranchTerminatorOpInterface(
     mlir::OpBuilder &builder,
     mlir::RegionBranchTerminatorOpInterface terminator,
     GetLayoutFnTy getLayoutOfValue) {
+  // Only process if the terminator is inside a region branch op.
   if (!mlir::isa<mlir::RegionBranchOpInterface>(terminator->getParentOp()))
     return;
 
@@ -729,9 +726,10 @@ static void updateBranchTerminatorOpInterface(
     if (!successor.isParent())
       continue;
 
-    mlir::OperandRange operands = terminator.getSuccessorOperands(successor);
-    mlir::ValueRange inputs = successor.getSuccessorInputs();
-    for (auto [operand, input] : llvm::zip(operands, inputs)) {
+    mlir::OperandRange forwardedOperands =
+        terminator.getSuccessorOperands(successor);
+    mlir::ValueRange regionArgs = successor.getSuccessorInputs();
+    for (auto [operand, input] : llvm::zip(forwardedOperands, regionArgs)) {
       // print arg and inp
       // llvm::errs() << "arg: " << operand << ", inp: " << input << "\n";
       Type inputType = input.getType();
@@ -773,38 +771,43 @@ static void updateBranchOpInterface(mlir::OpBuilder &builder,
   llvm::SmallVector<mlir::RegionSuccessor> successors;
   llvm::SmallVector<mlir::Attribute> operands(op->getNumOperands(), nullptr);
   branch.getEntrySuccessorRegions(operands, successors);
-  DenseMap<Value, xegpu::LayoutAttr> resultToLayouts;
+  DenseMap<Value, xegpu::LayoutAttr>
+      resultToLayouts; // This map keeps track of layouts of any unused results
+                       // of the branch op.
   mlir::ValueRange results = op->getResults();
 
   for (mlir::RegionSuccessor &successor : successors) {
+    // Only interested in successor regions that are contained within the op.
     if (successor.isParent())
       continue;
 
-    mlir::OperandRange operands = branch.getEntrySuccessorOperands(successor);
-    mlir::ValueRange inputs = successor.getSuccessorInputs();
+    mlir::OperandRange forwardedOperands =
+        branch.getEntrySuccessorOperands(successor);
+    mlir::ValueRange regionArgs = successor.getSuccessorInputs();
 
-    for (auto [operand, input, result] : llvm::zip(operands, inputs, results)) {
-      Type inputType = input.getType();
+    for (auto [forwardedOperand, regionArg, result] :
+         llvm::zip(forwardedOperands, regionArgs, results)) {
+      Type inputType = regionArg.getType();
       if (!isa<xegpu::TensorDescType>(inputType))
         continue;
-      xegpu::LayoutAttr inputLayout = getLayoutOfValue(input);
-      xegpu::LayoutAttr operandLayout = getLayoutOfValue(operand);
+      xegpu::LayoutAttr inputLayout = getLayoutOfValue(regionArg);
+      xegpu::LayoutAttr operandLayout = getLayoutOfValue(forwardedOperand);
 
       if (!inputLayout || !operandLayout) {
-        LLVM_DEBUG(DBGS() << "No layout assigned for block arg: " << input
-                          << " or init arg: " << operand << "\n");
+        LLVM_DEBUG(DBGS() << "No layout assigned for block arg: " << regionArg
+                          << " or init arg: " << forwardedOperand << "\n");
         continue;
       }
 
       // TODO: We expect these two to match.
       assert(inputLayout == operandLayout &&
-             "Expexing block arg and init arg to have the same layout.");
+             "Expecting block arg and init arg to have the same layout.");
       // Get tensor descriptor type with the layout.
       auto tdescTy = dyn_cast<xegpu::TensorDescType>(inputType);
       auto newTdescTy = xegpu::TensorDescType::get(
           tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
           tdescTy.getEncoding(), inputLayout);
-      input.setType(newTdescTy);
+      regionArg.setType(newTdescTy);
       // Store the layout for the result.
       if (resultToLayouts.count(result) != 0 &&
           resultToLayouts[result] != inputLayout) {
@@ -837,7 +840,6 @@ static void updateBranchOpInterface(mlir::OpBuilder &builder,
     }
     // If the result is a vector type, add a temporary layout attribute to
     // the op.
-    std::string resultLayoutName = xegpu::getLayoutName(r);
     xegpu::setLayoutAttr(r, layout);
   }
 }
@@ -865,7 +867,6 @@ static void updateFunctionOpInterface(mlir::OpBuilder &builder,
           tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
       arg.setType(newTdescTy);
       newArgTypes.back() = newTdescTy;
-      continue;
     }
   }
   // Update the function type with the new argument types.
@@ -887,9 +888,9 @@ void XeGPULayoutPropagatePass::runOnOperation() {
   // Helper to convert LayoutInfo to xegpu::LayoutAttr.
   auto getXeGPULayoutForValue = [&](Value val) -> xegpu::LayoutAttr {
     LayoutInfo layout = analyis.getLayoutInfo(val);
-    if (!layout.isAssigned()) {
+    if (!layout.isAssigned())
       return {};
-    }
+
     SmallVector<int, 2> laneLayout, laneData;
     for (auto [layout, data] : llvm::zip_equal(layout.getLayoutAsArrayRef(),
                                                layout.getDataAsArrayRef())) {

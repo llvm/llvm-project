@@ -97,9 +97,9 @@ getDistVecTypeBasedOnLaneLayout(xegpu::LayoutAttr layout,
   // dimensions are not distributed.
   unsigned distributionStart = originalType.getRank() - laneLayout.size();
   for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
-    if (i < distributionStart) {
+    if (i < distributionStart)
       continue;
-    }
+
     // Check if the dimension can be distributed evenly.
     if (dim % laneLayout[i - distributionStart] != 0)
       return failure();
@@ -848,9 +848,8 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     // GPU index ops, scalar constants, etc.). This will simplify the
     // later lowering and avoid custom patterns for these ops.
     getOperation()->walk([&](Operation *op) {
-      if (auto warpOp = dyn_cast<gpu::WarpExecuteOnLane0Op>(op)) {
+      if (auto warpOp = dyn_cast<gpu::WarpExecuteOnLane0Op>(op))
         vector::moveScalarUniformCode(warpOp);
-      }
     });
   }
   // Step 3: Apply subgroup to workitem distribution patterns.
