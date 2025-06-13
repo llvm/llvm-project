@@ -1086,7 +1086,7 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
         return nullptr;
 
       // TODO: Do we need to thread more context in here?
-      KnownBits Known = computeKnownBits(MaskOp, DL, 0, nullptr, II);
+      KnownBits Known = computeKnownBits(MaskOp, DL, nullptr, II);
       if (Known.countMinLeadingOnes() < 32)
         return nullptr;
 

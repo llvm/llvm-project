@@ -528,8 +528,7 @@ chooseSpillUsingHeuristics(OverlappingRangesIterator overlappingRanges,
            a.end() < b.end();
   };
   LiveRange &latestEndingLiveRange =
-      *std::max_element(overlappingRanges.begin(), overlappingRanges.end(),
-                        isSmallerTileTypeOrEndsEarlier);
+      *llvm::max_element(overlappingRanges, isSmallerTileTypeOrEndsEarlier);
   if (!isSmallerTileTypeOrEndsEarlier(latestEndingLiveRange, *newRange))
     return &latestEndingLiveRange;
   return newRange;

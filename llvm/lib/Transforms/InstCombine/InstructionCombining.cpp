@@ -217,6 +217,26 @@ Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
   return Offset;
 }
 
+Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
+                                        GEPNoWrapFlags NW, Type *IdxTy,
+                                        bool RewriteGEPs) {
+  Value *Sum = nullptr;
+  for (GEPOperator *GEP : reverse(GEPs)) {
+    Value *Offset = EmitGEPOffset(GEP, RewriteGEPs);
+    if (Offset->getType() != IdxTy)
+      Offset = Builder.CreateVectorSplat(
+          cast<VectorType>(IdxTy)->getElementCount(), Offset);
+    if (Sum)
+      Sum = Builder.CreateAdd(Sum, Offset, "", NW.hasNoUnsignedWrap(),
+                              NW.isInBounds());
+    else
+      Sum = Offset;
+  }
+  if (!Sum)
+    return Constant::getNullValue(IdxTy);
+  return Sum;
+}
+
 /// Legal integers and common types are considered desirable. This is used to
 /// avoid creating instructions with types that may not be supported well by the
 /// the backend.
@@ -1729,7 +1749,8 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   if (auto *CI = dyn_cast<FCmpInst>(SI->getCondition())) {
     if (CI->hasOneUse()) {
       Value *Op0 = CI->getOperand(0), *Op1 = CI->getOperand(1);
-      if ((TV == Op0 && FV == Op1) || (FV == Op0 && TV == Op1))
+      if (((TV == Op0 && FV == Op1) || (FV == Op0 && TV == Op1)) &&
+          !CI->isCommutative())
         return nullptr;
     }
   }
@@ -2100,8 +2121,8 @@ static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
 ///
 /// A 1-to-1 mapping is not required. Example:
 /// ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <poison,5,6,poison>
-static Constant *unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
-                                   VectorType *NewCTy) {
+Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
+                                              VectorType *NewCTy) {
   if (isa<ScalableVectorType>(NewCTy)) {
     Constant *Splat = C->getSplatValue();
     if (!Splat)
@@ -3620,7 +3641,7 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
 
   KnownFPClass KnownClass;
   Value *Simplified =
-      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, 0, &RI);
+      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, &RI);
   if (!Simplified)
     return nullptr;
 
@@ -3957,7 +3978,7 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
       return replaceOperand(SI, 0, V);
   }
 
-  KnownBits Known = computeKnownBits(Cond, 0, &SI);
+  KnownBits Known = computeKnownBits(Cond, &SI);
   unsigned LeadingKnownZeros = Known.countMinLeadingZeros();
   unsigned LeadingKnownOnes = Known.countMinLeadingOnes();
 
@@ -5339,8 +5360,7 @@ bool InstCombinerImpl::run() {
         // We copy the old instruction's DebugLoc to the new instruction, unless
         // InstCombine already assigned a DebugLoc to it, in which case we
         // should trust the more specifically selected DebugLoc.
-        if (!Result->getDebugLoc())
-          Result->setDebugLoc(I->getDebugLoc());
+        Result->setDebugLoc(Result->getDebugLoc().orElse(I->getDebugLoc()));
         // We also copy annotation metadata to the new instruction.
         Result->copyMetadata(*I, LLVMContext::MD_annotation);
         // Everything uses the new instruction now.

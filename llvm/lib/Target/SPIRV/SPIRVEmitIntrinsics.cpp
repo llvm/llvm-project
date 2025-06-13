@@ -1961,10 +1961,16 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
           GR->buildAssignPtr(B, ElemTy ? ElemTy : deduceElementType(Op, true),
                              Op);
         } else {
+          Value *OpTyVal = Op;
+          if (OpTy->isTargetExtTy()) {
+            // We need to do this in order to be consistent with how target ext
+            // types are handled in `processInstrAfterVisit`
+            OpTyVal = getNormalizedPoisonValue(OpTy);
+          }
           CallInst *AssignCI =
               buildIntrWithMD(Intrinsic::spv_assign_type, {OpTy},
-                              getNormalizedPoisonValue(OpTy), Op, {}, B);
-          GR->addAssignPtrTypeInstr(Op, AssignCI);
+                              getNormalizedPoisonValue(OpTy), OpTyVal, {}, B);
+          GR->addAssignPtrTypeInstr(OpTyVal, AssignCI);
         }
       }
     }
@@ -2075,22 +2081,14 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       BPrepared = true;
     }
     Type *OpTy = Op->getType();
-    Value *OpTyVal = Op;
-    if (OpTy->isTargetExtTy())
-      OpTyVal = getNormalizedPoisonValue(OpTy);
     Type *OpElemTy = GR->findDeducedElementType(Op);
     Value *NewOp = Op;
     if (OpTy->isTargetExtTy()) {
+      // Since this value is replaced by poison, we need to do the same in
+      // `insertAssignTypeIntrs`.
+      Value *OpTyVal = getNormalizedPoisonValue(OpTy);
       NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
                               {OpTy, OpTyVal->getType()}, Op, OpTyVal, {}, B);
-      if (isPointerTy(OpTy)) {
-        if (OpElemTy) {
-          GR->buildAssignPtr(B, OpElemTy, NewOp);
-        } else {
-          insertTodoType(NewOp);
-          GR->buildAssignPtr(B, OpTy, NewOp);
-        }
-      }
     }
     if (!IsConstComposite && isPointerTy(OpTy) && OpElemTy != nullptr &&
         OpElemTy != IntegerType::getInt8Ty(I->getContext())) {

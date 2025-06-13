@@ -816,7 +816,7 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
   /// Try to avoid chasing pointees, esp. structure pointees which may
   /// unnecessary bring in a lot of types.
   if (CheckPointer && !SeenPointer) {
-    SeenPointer = Tag == dwarf::DW_TAG_pointer_type;
+    SeenPointer = Tag == dwarf::DW_TAG_pointer_type && !DTy->getAnnotations();
   }
 
   if (CheckPointer && SeenPointer) {
@@ -916,7 +916,8 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
           if (DIToIdMap.find(BaseTy) != DIToIdMap.end()) {
             DTy = dyn_cast<DIDerivedType>(BaseTy);
           } else {
-            if (CheckPointer && DTy->getTag() == dwarf::DW_TAG_pointer_type) {
+            if (CheckPointer && DTy->getTag() == dwarf::DW_TAG_pointer_type &&
+                !DTy->getAnnotations()) {
               SeenPointer = true;
               if (IsForwardDeclCandidate(BaseTy))
                 break;
@@ -1437,7 +1438,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     // constant with private linkage and if it won't be in .rodata.str<#>
     // and .rodata.cst<#> sections.
     if (SecName == ".rodata" && Global.hasPrivateLinkage() &&
-        DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
+        DataSecEntries.find(SecName) == DataSecEntries.end()) {
       // skip .rodata.str<#> and .rodata.cst<#> sections
       if (!GVKind->isMergeableCString() && !GVKind->isMergeableConst()) {
         DataSecEntries[std::string(SecName)] =

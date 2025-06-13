@@ -488,8 +488,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// if possible.
   ///
   /// Not serialized intentionally.
-  llvm::StringMap<const Module *> PrimaryModuleNameMap;
-  llvm::DenseMap<const Module *, const Module *> SameModuleLookupSet;
+  mutable llvm::StringMap<const Module *> PrimaryModuleNameMap;
+  mutable llvm::DenseMap<const Module *, const Module *> SameModuleLookupSet;
 
   static constexpr unsigned ConstantArrayTypesLog2InitSize = 8;
   static constexpr unsigned GeneralTypesLog2InitSize = 9;
@@ -1151,7 +1151,7 @@ public:
   ///
   /// FIXME: The signature may be confusing since `clang::Module` means to
   /// a module fragment or a module unit but not a C++20 module.
-  bool isInSameModule(const Module *M1, const Module *M2);
+  bool isInSameModule(const Module *M1, const Module *M2) const;
 
   TranslationUnitDecl *getTranslationUnitDecl() const {
     return TUDecl->getMostRecentDecl();
@@ -1219,7 +1219,7 @@ public:
 #include "clang/Basic/OpenCLExtensionTypes.def"
 #define SVE_TYPE(Name, Id, SingletonId) \
   CanQualType SingletonId;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   CanQualType Id##Ty;
 #include "clang/Basic/PPCTypes.def"

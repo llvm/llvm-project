@@ -26,6 +26,7 @@ namespace bufferization {
 
 class AnalysisState;
 struct BufferizationOptions;
+class BufferizationState;
 class OpFilter;
 
 /// Bufferization statistics for debugging. These can be printed after running

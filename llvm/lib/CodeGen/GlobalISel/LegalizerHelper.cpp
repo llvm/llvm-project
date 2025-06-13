@@ -8446,10 +8446,10 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
     }
   }
 
-  if (DstTy.isScalar())
-    MIRBuilder.buildCopy(DstReg, BuildVec[0]);
-  else
+  if (DstTy.isVector())
     MIRBuilder.buildBuildVector(DstReg, BuildVec);
+  else
+    MIRBuilder.buildCopy(DstReg, BuildVec[0]);
   MI.eraseFromParent();
   return Legalized;
 }

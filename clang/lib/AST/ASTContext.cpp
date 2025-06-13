@@ -875,8 +875,7 @@ ASTContext::insertCanonicalTemplateTemplateParmDeclInternal(
 bool ASTContext::isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
                                           const QualType &Ty) const {
   std::string TyName = Ty.getUnqualifiedType().getAsString(getPrintingPolicy());
-  return NoSanitizeL->containsType(Mask, TyName) &&
-         !NoSanitizeL->containsType(Mask, TyName, "sanitize");
+  return NoSanitizeL->containsType(Mask, TyName);
 }
 
 TargetCXXABI::Kind ASTContext::getCXXABIKind() const {
@@ -1176,7 +1175,7 @@ void ASTContext::setCurrentNamedModule(Module *M) {
   CurrentCXXNamedModule = M;
 }
 
-bool ASTContext::isInSameModule(const Module *M1, const Module *M2) {
+bool ASTContext::isInSameModule(const Module *M1, const Module *M2) const {
   if (!M1 != !M2)
     return false;
 
@@ -1448,11 +1447,11 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/HLSLIntangibleTypes.def"
   }
 
-  if (Target.hasAArch64SVETypes() ||
-      (AuxTarget && AuxTarget->hasAArch64SVETypes())) {
-#define SVE_TYPE(Name, Id, SingletonId) \
-    InitBuiltinType(SingletonId, BuiltinType::Id);
-#include "clang/Basic/AArch64SVEACLETypes.def"
+  if (Target.hasAArch64ACLETypes() ||
+      (AuxTarget && AuxTarget->hasAArch64ACLETypes())) {
+#define SVE_TYPE(Name, Id, SingletonId)                                        \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/AArch64ACLETypes.def"
   }
 
   if (Target.getTriple().isPPC64()) {
@@ -2303,7 +2302,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Width = Bits;                                                              \
     Align = Bits;                                                              \
     break;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
   case BuiltinType::Id:                                                        \
     Width = Size;                                                              \
@@ -3473,7 +3472,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #define SVE_TYPE(Name, Id, SingletonId)                                        \
   case BuiltinType::Id:                                                        \
     return;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   case BuiltinType::Id:                                                        \
     return;
@@ -4491,8 +4490,7 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   case BuiltinType::Id:                                                        \
     return {BoolTy, llvm::ElementCount::getScalable(NumEls), NF};
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 
 #define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
                             IsSigned)                                          \
@@ -4531,7 +4529,7 @@ QualType ASTContext::getWebAssemblyExternrefType() const {
 /// type.
 QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
                                            unsigned NumFields) const {
-  if (Target->hasAArch64SVETypes()) {
+  if (Target->hasAArch64ACLETypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
 
 #define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
@@ -4562,8 +4560,7 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   if (EltTy->isBooleanType() && NumElts == (NumEls * NF) && NumFields == 1)    \
     return SingletonId;
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
@@ -5219,7 +5216,7 @@ QualType ASTContext::getTypedefType(const TypedefNameDecl *Decl,
     if (Underlying.isNull())
       Underlying = Decl->getUnderlyingType();
     auto *NewType = new (*this, alignof(TypedefType)) TypedefType(
-        Type::Typedef, Decl, QualType(), getCanonicalType(Underlying));
+        Type::Typedef, Decl, Underlying, /*HasTypeDifferentFromDecl=*/false);
     Decl->TypeForDecl = NewType;
     Types.push_back(NewType);
     return QualType(NewType, 0);
@@ -5241,7 +5238,7 @@ QualType ASTContext::getTypedefType(const TypedefNameDecl *Decl,
   void *Mem = Allocate(TypedefType::totalSizeToAlloc<QualType>(true),
                        alignof(TypedefType));
   auto *NewType = new (Mem) TypedefType(Type::Typedef, Decl, Underlying,
-                                        getCanonicalType(Underlying));
+                                        /*HasTypeDifferentFromDecl=*/true);
   TypedefTypes.InsertNode(NewType, InsertPos);
   Types.push_back(NewType);
   return QualType(NewType, 0);
@@ -7432,6 +7429,12 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
                           cast<Decl>(Y->getDeclContext()->getRedeclContext())))
     return false;
 
+  // If either X or Y are local to the owning module, they are only possible to
+  // be the same entity if they are in the same module.
+  if (X->isModuleLocal() || Y->isModuleLocal())
+    if (!isInSameModule(X->getOwningModule(), Y->getOwningModule()))
+      return false;
+
   // Two typedefs refer to the same entity if they have the same underlying
   // type.
   if (const auto *TypedefX = dyn_cast<TypedefNameDecl>(X))
@@ -9019,7 +9022,7 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 
 #define SVE_TYPE(Name, Id, SingletonId) \
     case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
@@ -10165,6 +10168,11 @@ TypedefDecl *ASTContext::getBuiltinMSVaListDecl() const {
 bool ASTContext::canBuiltinBeRedeclared(const FunctionDecl *FD) const {
   // Allow redecl custom type checking builtin for HLSL.
   if (LangOpts.HLSL && FD->getBuiltinID() != Builtin::NotBuiltin &&
+      BuiltinInfo.hasCustomTypechecking(FD->getBuiltinID()))
+    return true;
+  // Allow redecl custom type checking builtin for SPIR-V.
+  if (getTargetInfo().getTriple().isSPIROrSPIRV() &&
+      BuiltinInfo.isTSBuiltin(FD->getBuiltinID()) &&
       BuiltinInfo.hasCustomTypechecking(FD->getBuiltinID()))
     return true;
   return BuiltinInfo.canBeRedeclared(FD->getBuiltinID());

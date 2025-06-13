@@ -50,27 +50,27 @@ void SanitizerSpecialCaseList::createSanitizerSections() {
 #undef SANITIZER
 #undef SANITIZER_GROUP
 
-    SanitizerSections.emplace_back(Mask, S.Entries);
+    SanitizerSections.emplace_back(Mask, S.Entries, S.FileIdx);
   }
 }
 
 bool SanitizerSpecialCaseList::inSection(SanitizerMask Mask, StringRef Prefix,
                                          StringRef Query,
                                          StringRef Category) const {
-  return inSectionBlame(Mask, Prefix, Query, Category);
+  return inSectionBlame(Mask, Prefix, Query, Category) != NotFound;
 }
 
-unsigned SanitizerSpecialCaseList::inSectionBlame(SanitizerMask Mask,
-                                                  StringRef Prefix,
-                                                  StringRef Query,
-                                                  StringRef Category) const {
+std::pair<unsigned, unsigned>
+SanitizerSpecialCaseList::inSectionBlame(SanitizerMask Mask, StringRef Prefix,
+                                         StringRef Query,
+                                         StringRef Category) const {
   for (const auto &S : llvm::reverse(SanitizerSections)) {
     if (S.Mask & Mask) {
-      unsigned lineNum =
+      unsigned LineNum =
           SpecialCaseList::inSectionBlame(S.Entries, Prefix, Query, Category);
-      if (lineNum > 0)
-        return lineNum;
+      if (LineNum > 0)
+        return {S.FileIdx, LineNum};
     }
   }
-  return 0;
+  return NotFound;
 }

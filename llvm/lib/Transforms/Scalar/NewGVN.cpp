@@ -1530,11 +1530,12 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
   }
 
   if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
-    auto *LifetimePtr = II->getOperand(1);
-    if (II->getIntrinsicID() == Intrinsic::lifetime_start &&
-        (LoadPtr == lookupOperandLeader(LifetimePtr) ||
-         AA->isMustAlias(LoadPtr, LifetimePtr)))
-      return createConstantExpression(UndefValue::get(LoadType));
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
+      auto *LifetimePtr = II->getOperand(1);
+      if (LoadPtr == lookupOperandLeader(LifetimePtr) ||
+          AA->isMustAlias(LoadPtr, LifetimePtr))
+        return createConstantExpression(UndefValue::get(LoadType));
+    }
   }
 
   // All of the below are only true if the loaded pointer is produced

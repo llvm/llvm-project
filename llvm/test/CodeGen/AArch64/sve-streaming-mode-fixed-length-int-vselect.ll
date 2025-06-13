@@ -288,12 +288,12 @@ define <16 x i8> @select_v16i8(<16 x i8> %op1, <16 x i8> %op2, <16 x i1> %mask) 
 define void @select_v32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z0.b
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    sel z0.b, p1, z0.b, z1.b
+; CHECK-NEXT:    mov z0.b, p1/m, z1.b
 ; CHECK-NEXT:    sel z1.b, p0, z2.b, z3.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
@@ -692,12 +692,12 @@ define <8 x i16> @select_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) {
 define void @select_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    cmpeq p1.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z0.h
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
-; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
+; CHECK-NEXT:    mov z0.h, p1/m, z1.h
 ; CHECK-NEXT:    sel z1.h, p0, z2.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
@@ -906,12 +906,12 @@ define <4 x i32> @select_v4i32(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %mask) {
 define void @select_v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    cmpeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z3.s
-; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
+; CHECK-NEXT:    mov z0.s, p1/m, z1.s
 ; CHECK-NEXT:    sel z1.s, p0, z2.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
@@ -930,16 +930,16 @@ define void @select_v8i32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    cmp w10, w9
 ; NONEON-NOSVE-NEXT:    csel w9, w10, w9, eq
 ; NONEON-NOSVE-NEXT:    cmp w13, w12
-; NONEON-NOSVE-NEXT:    ldp w15, w16, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldp w10, w16, [sp, #48]
 ; NONEON-NOSVE-NEXT:    csel w12, w13, w12, eq
 ; NONEON-NOSVE-NEXT:    cmp w14, w11
-; NONEON-NOSVE-NEXT:    ldp w10, w13, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldp w15, w13, [sp, #32]
 ; NONEON-NOSVE-NEXT:    csel w11, w14, w11, eq
 ; NONEON-NOSVE-NEXT:    ldp w17, w14, [sp, #56]
 ; NONEON-NOSVE-NEXT:    ldp w18, w1, [sp, #40]
-; NONEON-NOSVE-NEXT:    cmp w10, w15
+; NONEON-NOSVE-NEXT:    cmp w15, w10
 ; NONEON-NOSVE-NEXT:    stp w12, w11, [sp, #72]
-; NONEON-NOSVE-NEXT:    csel w10, w10, w15, eq
+; NONEON-NOSVE-NEXT:    csel w10, w15, w10, eq
 ; NONEON-NOSVE-NEXT:    cmp w13, w16
 ; NONEON-NOSVE-NEXT:    ldr w15, [sp]
 ; NONEON-NOSVE-NEXT:    csel w13, w13, w16, eq
@@ -1039,12 +1039,12 @@ define <2 x i64> @select_v2i64(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %mask) {
 define void @select_v4i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, z1.d
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z1.d, z0.d
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z2.d, z3.d
-; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, p1/m, z1.d
 ; CHECK-NEXT:    sel z1.d, p0, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
@@ -1057,13 +1057,13 @@ define void @select_v4i64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    stp q2, q3, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr x9, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldp x8, x11, [sp, #24]
+; NONEON-NOSVE-NEXT:    ldp x8, x10, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr x13, [sp, #40]
-; NONEON-NOSVE-NEXT:    ldp x10, x12, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldp x11, x12, [sp, #48]
 ; NONEON-NOSVE-NEXT:    cmp x9, x8
 ; NONEON-NOSVE-NEXT:    csel x8, x9, x8, eq
-; NONEON-NOSVE-NEXT:    cmp x11, x10
-; NONEON-NOSVE-NEXT:    csel x9, x11, x10, eq
+; NONEON-NOSVE-NEXT:    cmp x10, x11
+; NONEON-NOSVE-NEXT:    csel x9, x10, x11, eq
 ; NONEON-NOSVE-NEXT:    ldr x10, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr x11, [sp]
 ; NONEON-NOSVE-NEXT:    cmp x13, x12

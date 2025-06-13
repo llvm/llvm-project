@@ -109,11 +109,18 @@ struct __common_ref {};
 // Note C: For the common_reference trait applied to a parameter pack [...]
 
 template <class...>
-struct common_reference;
+struct _LIBCPP_NO_SPECIALIZATIONS common_reference;
 
 template <class... _Types>
 using common_reference_t = typename common_reference<_Types...>::type;
 
+template <class, class, template <class> class, template <class> class>
+struct basic_common_reference {};
+
+_LIBCPP_DIAGNOSTIC_PUSH
+#  if __has_warning("-Winvalid-specialization")
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winvalid-specialization")
+#  endif
 // bullet 1 - sizeof...(T) == 0
 template <>
 struct common_reference<> {};
@@ -145,9 +152,6 @@ struct __common_reference_sub_bullet1<_Tp, _Up> {
 
 // sub-bullet 2 - Otherwise, if basic_common_reference<remove_cvref_t<T1>, remove_cvref_t<T2>, XREF(T1), XREF(T2)>::type
 // is well-formed, then the member typedef `type` denotes that type.
-template <class, class, template <class> class, template <class> class>
-struct basic_common_reference {};
-
 template <class _Tp, class _Up>
 using __basic_common_reference_t _LIBCPP_NODEBUG =
     typename basic_common_reference<remove_cvref_t<_Tp>,
@@ -180,10 +184,11 @@ struct __common_reference_sub_bullet3 : common_type<_Tp, _Up> {};
 template <class _Tp, class _Up, class _Vp, class... _Rest>
   requires requires { typename common_reference_t<_Tp, _Up>; }
 struct common_reference<_Tp, _Up, _Vp, _Rest...> : common_reference<common_reference_t<_Tp, _Up>, _Vp, _Rest...> {};
+_LIBCPP_DIAGNOSTIC_POP
 
 // bullet 5 - Otherwise, there shall be no member `type`.
 template <class...>
-struct common_reference {};
+struct _LIBCPP_NO_SPECIALIZATIONS common_reference {};
 
 #endif // _LIBCPP_STD_VER >= 20
 

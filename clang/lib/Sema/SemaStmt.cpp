@@ -535,12 +535,7 @@ Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
     return ER;
   };
 
-  ExprResult Converted = CorrectDelayedTyposInExpr(
-      Val, /*InitDecl=*/nullptr, /*RecoverUncorrectedTypos=*/false,
-      CheckAndFinish);
-  if (Converted.get() == Val.get())
-    Converted = CheckAndFinish(Val.get());
-  return Converted;
+  return CheckAndFinish(Val.get());
 }
 
 StmtResult
@@ -2215,15 +2210,15 @@ namespace {
     // Return when there is nothing to check.
     if (!Body || !Third) return;
 
-    if (S.Diags.isIgnored(diag::warn_redundant_loop_iteration,
-                          Third->getBeginLoc()))
-      return;
-
     // Get the last statement from the loop body.
     CompoundStmt *CS = dyn_cast<CompoundStmt>(Body);
     if (!CS || CS->body_empty()) return;
     Stmt *LastStmt = CS->body_back();
     if (!LastStmt) return;
+
+    if (S.Diags.isIgnored(diag::warn_redundant_loop_iteration,
+                          Third->getBeginLoc()))
+      return;
 
     bool LoopIncrement, LastIncrement;
     DeclRefExpr *LoopDRE, *LastDRE;
@@ -2344,7 +2339,7 @@ StmtResult Sema::ActOnForEachLValueExpr(Expr *E) {
 static bool FinishForRangeVarDecl(Sema &SemaRef, VarDecl *Decl, Expr *Init,
                                   SourceLocation Loc, int DiagID) {
   if (Decl->getType()->isUndeducedType()) {
-    ExprResult Res = SemaRef.CorrectDelayedTyposInExpr(Init);
+    ExprResult Res = Init;
     if (!Res.isUsable()) {
       Decl->setInvalidDecl();
       return true;
@@ -3845,10 +3840,7 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
 StmtResult
 Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                       Scope *CurScope) {
-  // Correct typos, in case the containing function returns 'auto' and
-  // RetValExp should determine the deduced type.
-  ExprResult RetVal = CorrectDelayedTyposInExpr(
-      RetValExp, nullptr, /*RecoverUncorrectedTypos=*/true);
+  ExprResult RetVal = RetValExp;
   if (RetVal.isInvalid())
     return StmtError();
 
@@ -4311,13 +4303,8 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
   const llvm::Triple &T = Context.getTargetInfo().getTriple();
   const bool IsOpenMPGPUTarget =
       getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
-  // Don't report an error if 'try' is used in system headers or in an OpenMP
-  // target region compiled for a GPU architecture.
-  if (!IsOpenMPGPUTarget && !getLangOpts().CXXExceptions &&
-      !getSourceManager().isInSystemHeader(TryLoc) && !getLangOpts().CUDA) {
-    // Delay error emission for the OpenMP device code.
-    targetDiag(TryLoc, diag::err_exceptions_disabled) << "try";
-  }
+
+  DiagnoseExceptionUse(TryLoc, /* IsTry= */ true);
 
   // In OpenMP target regions, we assume that catch is never reached on GPU
   // targets.
@@ -4417,6 +4404,23 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
 
   return CXXTryStmt::Create(Context, TryLoc, cast<CompoundStmt>(TryBlock),
                             Handlers);
+}
+
+void Sema::DiagnoseExceptionUse(SourceLocation Loc, bool IsTry) {
+  const llvm::Triple &T = Context.getTargetInfo().getTriple();
+  const bool IsOpenMPGPUTarget =
+      getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
+
+  // Don't report an error if 'try' is used in system headers or in an OpenMP
+  // target region compiled for a GPU architecture.
+  if (IsOpenMPGPUTarget || getLangOpts().CUDA)
+    // Delay error emission for the OpenMP device code.
+    return;
+
+  if (!getLangOpts().CXXExceptions &&
+      !getSourceManager().isInSystemHeader(Loc) &&
+      !CurContext->isDependentContext())
+    targetDiag(Loc, diag::err_exceptions_disabled) << (IsTry ? "try" : "throw");
 }
 
 StmtResult Sema::ActOnSEHTryBlock(bool IsCXXTry, SourceLocation TryLoc,

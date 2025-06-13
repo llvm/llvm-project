@@ -1387,6 +1387,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
     SplitVecRes_PARTIAL_REDUCE_MLA(N, Lo, Hi);
     break;
   case ISD::GET_ACTIVE_LANE_MASK:
@@ -3473,6 +3474,7 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
     Res = SplitVecOp_PARTIAL_REDUCE_MLA(N);
     break;
   }
@@ -6634,8 +6636,12 @@ SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
     InOp1 = GetWidenedVector(InOp1);
     InOp2 = GetWidenedVector(InOp2);
   } else {
-    InOp1 = DAG.WidenVector(InOp1, SDLoc(N));
-    InOp2 = DAG.WidenVector(InOp2, SDLoc(N));
+    SDValue Poison = DAG.getPOISON(WidenInVT);
+    SDValue ZeroIdx = DAG.getVectorIdxConstant(0, SDLoc(N));
+    InOp1 = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), WidenInVT, Poison,
+                        InOp1, ZeroIdx);
+    InOp2 = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), WidenInVT, Poison,
+                        InOp2, ZeroIdx);
   }
 
   // Assume that the input and output will be widen appropriately.  If not,

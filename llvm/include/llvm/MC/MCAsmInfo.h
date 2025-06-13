@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {
@@ -55,7 +56,7 @@ enum LCOMMType { NoAlignment, ByteAlignment, Log2Alignment };
 
 /// This class is intended to be used as a base class for asm
 /// properties and features specific to the target.
-class MCAsmInfo {
+class LLVM_ABI MCAsmInfo {
 public:
   /// Assembly character literal syntax types.
   enum AsmCharLiteralSyntax {
@@ -139,6 +140,9 @@ protected:
 
   /// This is appended to emitted labels.  Defaults to ":"
   const char *LabelSuffix;
+
+  /// Use .set instead of = to equate a symbol to an expression.
+  bool UsesSetToEquateSymbol = false;
 
   // Print the EH begin symbol with an assignment. Defaults to false.
   bool UseAssignmentForEHBegin = false;
@@ -427,6 +431,10 @@ public:
   explicit MCAsmInfo();
   virtual ~MCAsmInfo();
 
+  // Explicitly non-copyable.
+  MCAsmInfo(MCAsmInfo const &) = delete;
+  MCAsmInfo &operator=(MCAsmInfo const &) = delete;
+
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
 
@@ -520,6 +528,7 @@ public:
   bool shouldAllowAdditionalComments() const { return AllowAdditionalComments; }
   const char *getLabelSuffix() const { return LabelSuffix; }
 
+  bool usesSetToEquateSymbol() const { return UsesSetToEquateSymbol; }
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }
   StringRef getPrivateGlobalPrefix() const { return PrivateGlobalPrefix; }
