@@ -31,10 +31,14 @@ struct BFloat16 {
 
   constexpr explicit BFloat16(uint16_t bits) : bits(bits) {}
 
-  // fputil::cast<bfloat16>(T) only works for T = floating point type
-  // TODO: integer to bfloat16 conversion
-  template <typename T>
-  constexpr explicit BFloat16(T x) : bits(fputil::cast<bfloat16>(x).bits) {}
+  // TODO: verify this if correct for integers and similar types.
+  template <typename T> constexpr explicit BFloat16(T value) {
+    if constexpr (cpp::is_floating_point_v<T>) {
+      bits = fputil::cast<bfloat16>(value).bits;
+    } else {
+      bits = fputil::cast<bfloat16>(static_cast<float>(value)).bits;
+    }
+  }
 
   constexpr bool operator==(const BFloat16 other) const {
     return bits == other.bits;
