@@ -17,8 +17,8 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -119,7 +119,11 @@ static bool noDuplicateRules(ArrayRef<RuleTy> Rules) {
 
 static void printDepMatrix(CharMatrix &DepMatrix) {
   for (auto &Row : DepMatrix) {
-    for (auto D : Row)
+    ArrayRef<char> RowRef(Row);
+
+    // Drop the last element because it is a flag indicating whether the row is
+    // "lexically forward", which doesn't affect the legality check.
+    for (auto D : RowRef.drop_back())
       LLVM_DEBUG(dbgs() << D << " ");
     LLVM_DEBUG(dbgs() << "\n");
   }
@@ -167,7 +171,20 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
     return false;
   }
   ValueVector::iterator I, IE, J, JE;
-  StringSet<> Seen;
+
+  // Manage direction vectors that are already seen. Map each direction vector
+  // to an index of DepMatrix at which it is stored.
+  StringMap<unsigned> Seen;
+
+  // The i-th element is set iff all dependencies corresponding to the i-th
+  // direction vector in DepMatrix are "lexically forward". The notion
+  // "lexically forward" aligns with what is defined in LAA
+  // (LoopAccessAnalysis).
+  //
+  // We deem a dependence lexically forward if we can prove that the
+  // destination instruction is always executed after the source instruction
+  // within each iteration.
+  BitVector IsForwardFlags;
 
   for (I = MemInstr.begin(), IE = MemInstr.end(); I != IE; ++I) {
     for (J = I, JE = MemInstr.end(); J != JE; ++J) {
@@ -180,10 +197,22 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       // Track Output, Flow, and Anti dependencies.
       if (auto D = DI->depends(Src, Dst)) {
         assert(D->isOrdered() && "Expected an output, flow or anti dep.");
+        bool IsForward = true;
+
+        // If Src and Dst are in the same BB, Src is always executed before Dst
+        // in the same loop iteration. If not, we must check whether one BB
+        // dominates the other to determine if Src and Dst are executed in this
+        // order. At the moment, we don't perform such check.
+        if (Src->getParent() != Dst->getParent())
+          IsForward = false;
+
         // If the direction vector is negative, normalize it to
         // make it non-negative.
-        if (D->normalize(SE))
+        bool Normalized = D->normalize(SE);
+        if (Normalized) {
           LLVM_DEBUG(dbgs() << "Negative dependence vector normalized.\n");
+          IsForward = false;
+        }
         LLVM_DEBUG(StringRef DepType =
                        D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
                    dbgs() << "Found " << DepType
@@ -221,12 +250,27 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
           Dep.push_back('I');
         }
 
+        auto [Ite, Inserted] = Seen.try_emplace(
+            StringRef(Dep.data(), Dep.size()), DepMatrix.size());
+
         // Make sure we only add unique entries to the dependency matrix.
-        if (Seen.insert(StringRef(Dep.data(), Dep.size())).second)
+        if (Inserted) {
           DepMatrix.push_back(Dep);
+          IsForwardFlags.push_back(true);
+        }
+        if (!IsForward)
+          IsForwardFlags.reset(Ite->second);
       }
     }
   }
+
+  assert(DepMatrix.size() == IsForwardFlags.size() &&
+         "Dependency matrix and IsForwardVec should have the same size.");
+
+  // If all dependencies corresponding to a direction vector are forward, encode
+  // it to '<', otherwise to '*'.
+  for (unsigned I = 0; I != DepMatrix.size(); I++)
+    DepMatrix[I].push_back(IsForwardFlags[I] ? '<' : '*');
 
   return true;
 }
@@ -276,11 +320,12 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
       continue;
 
     // Check if the direction vector is lexicographically positive (or zero)
-    // for both before/after exchanged.
-    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
+    // for both before/after exchanged. Ignore the last element because it
+    // doesn't affect the legality.
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size() - 1) == false)
       return false;
     std::swap(Cur[InnerLoopId], Cur[OuterLoopId]);
-    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size() - 1) == false)
       return false;
   }
   return true;
@@ -1222,21 +1267,33 @@ LoopInterchangeProfitability::isProfitablePerInstrOrderCost() {
 static bool canVectorize(const CharMatrix &DepMatrix, unsigned LoopId) {
   for (unsigned I = 0; I != DepMatrix.size(); I++) {
     char Dir = DepMatrix[I][LoopId];
-    if (Dir != 'I' && Dir != '=')
-      return false;
+    char DepType = DepMatrix[I].back();
+    assert((DepType == '<' || DepType == '*') &&
+           "Unexpected element in dependency vector");
+
+    // There are no loop-carried dependencies.
+    if (Dir == '=' || Dir == 'I')
+      continue;
+
+    // If both Dir and DepType are '<', it means that the all dependencies are
+    // lexically forward. Such dependencies don't prevent vectorization.
+    if (Dir == '<' && DepType == '<')
+      continue;
+
+    // We cannot prove that the loop is vectorizable.
+    return false;
   }
   return true;
 }
 
 std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
     unsigned InnerLoopId, unsigned OuterLoopId, CharMatrix &DepMatrix) {
-  // If the outer loop is not loop independent it is not profitable to move
-  // this to inner position, since doing so would not enable inner loop
-  // parallelism.
+  // If the outer loop cannot be vectorized, it is not profitable to move this
+  // to inner position.
   if (!canVectorize(DepMatrix, OuterLoopId))
     return false;
 
-  // If inner loop has dependence and outer loop is loop independent then it is
+  // If inner loop cannot be vectorized and outer loop can be then it is
   // profitable to interchange to enable inner loop parallelism.
   if (!canVectorize(DepMatrix, InnerLoopId))
     return true;
