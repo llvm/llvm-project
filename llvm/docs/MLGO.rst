@@ -448,7 +448,10 @@ downstream tasks, including ML-guided compiler optimizations.
 
 The core components are:
   - **Vocabulary**: A mapping from IR entities (opcodes, types, etc.) to their
-    vector representations. This is managed by ``IR2VecVocabAnalysis``.
+    vector representations. This is managed by ``IR2VecVocabAnalysis``. The 
+    vocabulary (.json file) contains three sections -- Opcodes, Types, and 
+    Arguments, each containing the representations of the corresponding 
+    entities.
   - **Embedder**: A class (``ir2vec::Embedder``) that uses the vocabulary to
     compute embeddings for instructions, basic blocks, and functions.
 

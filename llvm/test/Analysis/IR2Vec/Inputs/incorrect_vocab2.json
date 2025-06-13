@@ -6,9 +6,6 @@
         "add": [10, 11, 12],
         "mul": [13, 14, 15]
     },
-    "Types": {
-        "dummyTy": [1, 1, 1]
-    },
     "Arguments": {
         "dummyArg": [1, 1, 1]
     }
