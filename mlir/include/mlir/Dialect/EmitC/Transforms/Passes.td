@@ -28,6 +28,9 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
     to a new `execute` method within the class.
   }];
   let dependentDialects = ["emitc::EmitCDialect"];
+  let options = [Option<
+      "namedAttribute", "named-attribute", "std::string", "\"\"",
+      "Name of the attribute to look for field names on function arguments">];
 }
 
 #endif // MLIR_DIALECT_EMITC_TRANSFORMS_PASSES

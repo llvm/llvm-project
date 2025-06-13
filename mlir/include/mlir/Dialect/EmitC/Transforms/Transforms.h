@@ -29,7 +29,8 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder);
 void populateExpressionPatterns(RewritePatternSet &patterns);
 
 /// Populates 'patterns' with func-related patterns.
-void populateFuncPatterns(RewritePatternSet &patterns);
+void populateFuncPatterns(RewritePatternSet &patterns,
+                          const std::string &namedAttribute);
 
 } // namespace emitc
 } // namespace mlir
