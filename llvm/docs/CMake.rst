@@ -588,7 +588,7 @@ enabled sub-projects. Nearly all of these variable names begin with
 
   The full list is:
 
-  ``bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl``
+  ``bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly``
 
   .. note::
     Some projects listed here can also go in ``LLVM_ENABLE_RUNTIMES``. They
@@ -610,7 +610,7 @@ enabled sub-projects. Nearly all of these variable names begin with
 
   The full list is:
 
-  ``libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload``
+  ``libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload``
 
   To enable all of them, use:
 
