@@ -259,12 +259,9 @@ void NVVMReflect::replaceReflectCalls(
         // a conditional branch is turned into a direct branch.
         if (ConstantFoldTerminator(BB)) {
           for (BasicBlock *Succ : Succs) {
-            if (pred_empty(Succ) &&
-                Succ != &Succ->getParent()->getEntryBlock()) {
-              SetVector<BasicBlock *> TransitivelyDead =
-                  findTransitivelyDeadBlocks(Succ);
-              DeadBlocks.insert(TransitivelyDead.begin(),
-                                TransitivelyDead.end());
+            if (pred_empty(Succ) && Succ != &Succ->getParent()->getEntryBlock()) {
+              SetVector<BasicBlock *> TransitivelyDead = findTransitivelyDeadBlocks(Succ);
+              DeadBlocks.insert(TransitivelyDead.begin(), TransitivelyDead.end());
             }
           }
         }
@@ -284,7 +281,7 @@ void NVVMReflect::replaceReflectCalls(
             for (auto *U : PHI.users())
               if (auto *UI = dyn_cast<Instruction>(U))
                 Worklist.push_back(UI);
-    // Delete all dead blocks in order
+    // Delete all dead blocks
     for (BasicBlock *DeadBB : DeadBlocks)
       DeleteDeadBlock(DeadBB);
 
