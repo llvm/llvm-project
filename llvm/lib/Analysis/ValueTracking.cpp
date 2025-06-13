@@ -9058,6 +9058,7 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
   // Handle the case of a simple two-predecessor recurrence PHI.
   // There's a lot more that could theoretically be done here, but
   // this is sufficient to catch some interesting cases.
+  // TODO: Expand list -- gep, uadd.sat etc.
   if (P->getNumIncomingValues() != 2)
     return false;
 
@@ -9068,37 +9069,16 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
     if (!LU)
       continue;
     unsigned Opcode = LU->getOpcode();
+    Value *LL = LU->getOperand(0);
+    Value *LR = LU->getOperand(1);
 
-    switch (Opcode) {
-    default:
-      continue;
-    // TODO: Expand list -- gep, uadd.sat etc.
-    case Instruction::LShr:
-    case Instruction::AShr:
-    case Instruction::Shl:
-    case Instruction::Add:
-    case Instruction::Sub:
-    case Instruction::UDiv:
-    case Instruction::URem:
-    case Instruction::And:
-    case Instruction::Or:
-    case Instruction::Xor:
-    case Instruction::Mul:
-    case Instruction::FAdd:
-    case Instruction::FMul: {
-      Value *LL = LU->getOperand(0);
-      Value *LR = LU->getOperand(1);
-      // Find a recurrence.
-      if (LL == P)
-        L = LR;
-      else if (LR == P)
-        L = LL;
-      else
-        continue; // Check for recurrence with L and R flipped.
-
-      break; // Match!
-    }
-    };
+    // Find a recurrence.
+    if (LL == P)
+      L = LR;
+    else if (LR == P)
+      L = LL;
+    else
+      continue; // Check for recurrence with L and R flipped.
 
     // We have matched a recurrence of the form:
     //   %iv = [R, %entry], [%iv.next, %backedge]
