@@ -7911,6 +7911,35 @@ The attributes in this metadata is added to all followup loops of the
 loop distribution pass. See
 :ref:`Transformation Metadata <transformation-metadata>` for details.
 
+'``llvm.loop.estimated_trip_count``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata records the loop's estimated trip count.  The first
+operand is the string ``llvm.loop.estimated_trip_count`` and the
+second operand is an integer specifying the count.  For example:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.estimated_trip_count", i32 8}
+
+A loop's estimated trip count is an estimate of the average number of
+loop iterations (specifically, the number of times the loop's header
+executes) each time execution reaches the loop.  It is usually only an
+estimate based on, for example, profile data.  The actual number of
+iterations might vary widely.
+
+The estimated trip count serves as a parameter for various loop
+transformations and typically helps estimate transformation cost.  For
+example, it can help determine how many iterations to peel or how
+aggressively to unroll.
+
+If this metadata is not present, such passes compute the estimated
+trip count from any ``branch_weights`` metadata attached to the latch
+block's branch instruction.  Thus, this metadata frees loop
+transformations to compute latch branch weights solely for the purpose
+of maintaining accurate block frequencies instead of requiring the
+branch weights to always serve both roles.
+
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
