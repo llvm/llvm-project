@@ -430,34 +430,43 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     existingCastOps.push_back(castOp.getOperation());
   });
 
-  TypeConverter converter;
-  converter.addConversion([&](Type type) -> Type { return type; });
-  converter.addConversion(
-      [&](RankedTensorType type,
-          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
-        Type elemTy = type.getElementType();
-        ArrayRef<int64_t> shape = type.getShape();
+  {
+    // Step 1: Apply SCFStructuralTypeConversions to SCF operations with
+    // VectorType operands. This first converts such operands to
+    // RankedTensorType, propagates the layout attribute into the encoding
+    // attribute, and finally converts the RankedTensorType to VectorType based
+    // on the encoding.
 
-        int count;
-        SmallVector<int64_t> subShape;
-        std::tie(subShape, count) = getSgShapeAndCount(
-            shape, dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding()));
+    TypeConverter converter;
+    converter.addConversion([&](Type type) -> Type { return type; });
+    converter.addConversion(
+        [&](RankedTensorType type,
+            SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+          Type elemTy = type.getElementType();
+          ArrayRef<int64_t> shape = type.getShape();
 
-        auto newTy = VectorType::get(subShape, elemTy);
-        result.append(count, newTy);
-        return success();
-      });
+          int count;
+          SmallVector<int64_t> subShape;
+          std::tie(subShape, count) = getSgShapeAndCount(
+              shape,
+              dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding()));
 
-  // Step 1: Apply SCFStructuralTypeConversions to SCF operations with
-  // VectorType operands. This first converts such operands to RankedTensorType,
-  // propagates the layout attribute into the encoding attribute, and finally
-  // converts the RankedTensorType to VectorType based on the encoding.
-  xegpu::doSCFStructuralTypeConversionWithTensorType(getOperation(), converter);
+          auto newTy = VectorType::get(subShape, elemTy);
+          result.append(count, newTy);
+          return success();
+        });
 
+    xegpu::doSCFStructuralTypeConversionWithTensorType(getOperation(),
+                                                       converter);
+  }
+
+  // Step 2: Perform workgroup to subgroup distribution for TensorDesc values,
+  // as well as XeGPU, Arith, and Vector operations.
   MLIRContext *ctx = &getContext();
   RewritePatternSet patterns(ctx);
   ConversionTarget target(*ctx);
-
+  TypeConverter converter;
+  converter.addConversion([&](Type type) -> Type { return type; });
   converter.addConversion(
       [&](xegpu::TensorDescType type,
           SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
@@ -516,8 +525,6 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
-  // Step 2: Perform workgroup to subgroup distribution for TensorDesc values,
-  // as well as XeGPU, Arith, and Vector operations.
   scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                        target);
   xegpu::populateXeGPUWgToSgDistributePatterns(patterns);
