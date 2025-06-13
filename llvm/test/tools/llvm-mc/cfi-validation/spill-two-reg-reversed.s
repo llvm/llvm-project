@@ -11,31 +11,35 @@ _start:
         .cfi_same_value %rsi
 
         pushq   %rbp
+        # CHECK: warning: Unknown change happened to %RBP unwinding rule
         .cfi_adjust_cfa_offset 8
         .cfi_offset %rbp, -16
 
         movq    %rsp, %rbp
 
         pushq   %rdi
+        # CHECK: warning: Unknown change happened to %RDI unwinding rule
         .cfi_adjust_cfa_offset 8
         .cfi_rel_offset %rdi, 0
 
         pushq   %rsi
+        # CHECK: warning: Unknown change happened to %RSI unwinding rule
         .cfi_adjust_cfa_offset 8
         .cfi_rel_offset %rsi, 0
         
         popq    %rsi
-        # CHECK: warning: The reg#55 CFI state is changed
+        # CHECK: warning: Unknown change happened to %RDI unwinding rule
         .cfi_adjust_cfa_offset -8
         .cfi_same_value %rdi
 
         popq    %rdi
-        # CHECK: warning: The reg#60 CFI state is changed
-        # CHECK: Reg#55 caller's value is in reg#55 which is changed by this instruction, but not changed in CFI directives
+        # CHECK: error: This instruction changes %RDI, that %RDI unwinding rule uses, but there is no CFI directives about it
+        # CHECK: warning: Unknown change happened to %RSI unwinding rule
         .cfi_adjust_cfa_offset -8
         .cfi_same_value %rsi
 
         popq    %rbp
+        # CHECK: warning: Unknown change happened to %RBP unwinding rule
         .cfi_adjust_cfa_offset -8
         .cfi_same_value %rbp
 

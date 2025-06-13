@@ -71,7 +71,7 @@ void CFIAnalysisMCStreamer::feedCFIA() {
 
     CFIAs.back().update(LastInstruction.value(), CFIDirectives);
   } else {
-    CFIAs.emplace_back(getContext(), MCII, MCIA.get(), CFIDirectives);
+    CFIAs.emplace_back(&getContext(), MCII, MCIA.get(), CFIDirectives);
   }
 }
 

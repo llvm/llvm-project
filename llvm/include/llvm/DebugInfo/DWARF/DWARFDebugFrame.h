@@ -138,6 +138,7 @@ public:
     return *AddrSpace;
   }
   int32_t getConstant() const { return Offset; }
+  bool getDereference() const { return Dereference; }
   /// Some opcodes will modify the CFA location's register only, so we need
   /// to be able to modify the CFA register when evaluating DWARF Call Frame
   /// Information opcodes.
@@ -333,6 +334,7 @@ public:
     assert(Index < size());
     return Rows[Index];
   }
+  void insertRow(UnwindRow Row) { Rows.push_back(Row); }
 
   /// Dump the UnwindTable to the stream.
   ///

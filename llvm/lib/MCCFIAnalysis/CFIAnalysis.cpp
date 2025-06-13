@@ -3,6 +3,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
@@ -14,10 +15,12 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/MCCFIAnalysis/CFIState.h"
 #include "llvm/MCCFIAnalysis/ExtendedMCInstrAnalysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <set>
@@ -63,10 +66,11 @@ MCPhysReg CFIAnalysis::getSuperReg(MCPhysReg Reg) {
   llvm_unreachable("Should either be a super reg, or have a super reg");
 }
 
-CFIAnalysis::CFIAnalysis(MCContext &Context, MCInstrInfo const &MCII,
+CFIAnalysis::CFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
                          MCInstrAnalysis *MCIA,
                          ArrayRef<MCCFIInstruction> PrologueCFIDirectives)
-    : Context(Context), MCII(MCII), MCRI(Context.getRegisterInfo()) {
+    : Context(Context), MCII(MCII), MCRI(Context->getRegisterInfo()),
+      State(Context) {
   EMCIA.reset(new ExtendedMCInstrAnalysis(Context, MCII, MCIA));
 
   // TODO check what should be passed as EH? I am putting false everywhere.
@@ -75,27 +79,34 @@ CFIAnalysis::CFIAnalysis(MCContext &Context, MCInstrInfo const &MCII,
       continue;
 
     DWARFRegType DwarfReg = MCRI->getDwarfRegNum(Reg, false);
-    State.RegisterCFIStates[DwarfReg] = RegisterCFIState::createSameValue();
+    // TODO is it OK to create fake CFI directives for doing this?
+    State.apply(MCCFIInstruction::createSameValue(nullptr, DwarfReg));
   }
 
   for (auto &&InitialFrameStateCFIDirective :
-       Context.getAsmInfo()->getInitialFrameState()) {
+       Context->getAsmInfo()->getInitialFrameState()) {
     State.apply(InitialFrameStateCFIDirective);
   }
 
   // TODO these are temporay added to make things work.
   // Setup the basic information:
-  State.RegisterCFIStates[MCRI->getDwarfRegNum(MCRI->getProgramCounter(),
-                                               false)] =
-      RegisterCFIState::createUndefined(); // TODO for now, we don't care
-                                           // about the PC
-  State.RegisterCFIStates[MCRI->getDwarfRegNum(State.CFARegister,
-                                               false)] =
-      RegisterCFIState::createOffsetFromCFAVal(0); // sp's old value is CFA
+  State.apply(MCCFIInstruction::createUndefined(
+      nullptr,
+      MCRI->getDwarfRegNum(MCRI->getProgramCounter(),
+                           false))); // TODO for now, we don't care about the PC
+  // TODO
+  auto LastRow = State.getLastRow();
+  assert(LastRow && "there should be at least one row");
+  // TODO assert that CFA is there, and based on register.
+  // TODO
 
-  // State.RegisterCFIStates[MCRI->getDwarfRegNum(EMCIA->getFlagsReg(), false)]
-  // =
-  //     RegisterCFIState::createUndefined(); // Flags cannot be caller-saved
+  State.apply(MCCFIInstruction::createOffset(
+      nullptr, LastRow->getCFAValue().getRegister(),
+      0)); // sp's old value is CFA
+
+  State.apply(MCCFIInstruction::createUndefined(
+      nullptr, MCRI->getDwarfRegNum(EMCIA->getFlagsReg(),
+                                    false))); // Flags cannot be caller-saved
 
   // Applying the prologue after default assumptions to overwrite them.
   for (auto &&PrologueCFIDirective : PrologueCFIDirectives) {
@@ -108,11 +119,13 @@ void CFIAnalysis::update(const MCInst &Inst,
   const MCInstrDesc &MCInstInfo = MCII.get(Inst.getOpcode());
   CFIState AfterState(State);
   for (auto &&CFIDirective : CFIDirectives)
-    if (!AfterState.apply(CFIDirective))
-      Context.reportWarning(
-          CFIDirective.getLoc(),
-          "I don't support this CFI directive, I assume this does nothing "
-          "(which will probably break other things)");
+    AfterState.apply(CFIDirective);
+
+  //! if (!AfterState.apply(CFIDirective))
+  //!     Context->reportWarning(
+  //!         CFIDirective.getLoc(),
+  //!         "I don't support this CFI directive, I assume this does nothing "
+  //!         "(which will probably break other things)");
 
   std::set<DWARFRegType> Writes, Reads;
   for (unsigned I = 0; I < MCInstInfo.NumImplicitUses; I++)
@@ -136,29 +149,45 @@ void CFIAnalysis::update(const MCInst &Inst,
 
   checkCFADiff(Inst, State, AfterState, Reads, Writes);
 
-  for (auto &&[Reg, RegState] : State.RegisterCFIStates) {
-    assert(AfterState.RegisterCFIStates.count(Reg) &&
-           "Registers' state should not be deleted by CFI instruction.");
-    checkRegDiff(Inst, Reg, State, AfterState, RegState,
-                 AfterState.RegisterCFIStates[Reg], Reads, Writes);
+  for (auto [LLVMReg, _] : getAllSuperRegs()) {
+    DWARFRegType Reg = MCRI->getDwarfRegNum(LLVMReg, false);
+
+    auto PrevUnwindLoc =
+        State.getLastRow()->getRegisterLocations().getRegisterLocation(Reg);
+    auto NextUnwindLoc =
+        AfterState.getLastRow()->getRegisterLocations().getRegisterLocation(
+            Reg);
+
+    // TODO think more if these assertions are OK
+    // TODO maybe change them to error messages.
+    if (!PrevUnwindLoc) {
+      assert(
+          !NextUnwindLoc &&
+          "A CFI directive should not define a new register out of thin air.");
+      continue;
+    }
+    assert(NextUnwindLoc &&
+           "A CFI directive should not delete a register state.");
+
+    checkRegDiff(Inst, Reg, State, AfterState, PrevUnwindLoc.value(),
+                 NextUnwindLoc.value(), Reads, Writes);
   }
 
   State = AfterState;
 }
 
-void CFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegType Reg,
-                               const CFIState &PrevState,
-                               const CFIState &NextState,
-                               const RegisterCFIState &PrevRegState,
-                               const RegisterCFIState &NextRegState,
-                               const std::set<DWARFRegType> &Reads,
-                               const std::set<DWARFRegType> &Writes) {
+void CFIAnalysis::checkRegDiff(
+    const MCInst &Inst, DWARFRegType Reg, const CFIState &PrevState,
+    const CFIState &NextState,
+    const dwarf::UnwindLocation &PrevRegState, // TODO maybe re-name
+    const dwarf::UnwindLocation &NextRegState, // TODO maybe re-name
+    const std::set<DWARFRegType> &Reads, const std::set<DWARFRegType> &Writes) {
   auto RegLLVMOpt = MCRI->getLLVMRegNum(Reg, false);
   if (RegLLVMOpt == std::nullopt) {
     assert(PrevRegState == NextRegState);
     return;
   }
-  MCPhysReg RegLLVM = RegLLVMOpt.value();
+  const char *RegLLVMName = MCRI->getName(RegLLVMOpt.value());
 
   auto &&PrevRefReg =
       PrevState.getReferenceRegisterForCallerValueOfRegister(Reg);
@@ -174,35 +203,50 @@ void CFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegType Reg,
                  MCRI->getLLVMRegNum(PrevRefReg.value(), false).value())
            : std::nullopt);
 
+  // TODO Again getting CFA register out of UnwindRow
+  // TODO consider either making it a help function.
+  // TODO Also, again you have to re-look in the assumption
+  // TODO that CFA is depending on another register, maybe
+  // TODO it's not true. And if it's always true, consider
+  // TODO asserting it (maybe in the helper function).
   MCPhysReg PrevStateCFARegLLVM =
-      MCRI->getLLVMRegNum(PrevState.CFARegister, false).value();
+      MCRI->getLLVMRegNum(PrevState.getLastRow()->getCFAValue().getRegister(),
+                          false)
+          .value();
 
   { // try generate
     // Widen
-    std::vector<RegisterCFIState> PossibleNextRegStates;
+    std::vector<dwarf::UnwindLocation> PossibleNextRegStates;
 
     { // stay the same
-      bool CanStayTheSame = false;
+      bool CanStayTheSame = true;
 
-      switch (PrevRegState.RetrieveApproach) {
-      case RegisterCFIState::Undefined:
-      case RegisterCFIState::OffsetFromCFAVal:
-        CanStayTheSame = true;
-        break;
-      case RegisterCFIState::SameValue:
-      case RegisterCFIState::AnotherRegister:
-        CanStayTheSame = !Writes.count(PrevRefReg.value());
-        break;
-      case RegisterCFIState::OffsetFromCFAAddr:
-      case RegisterCFIState::Other:
-        // cannot be sure
-        break;
+      // TODO make sure it has meaning in `Undefined` or `Unspecified` case.
+      // TODO make it smarter, if it's in the memory and the instruction does
+      // TODO not store anything and the register (if any) to access that part
+      // TODO is not changed, then it's OK.
+      if (PrevRegState.getDereference())
+        CanStayTheSame = false;
+
+      if (PrevRefReg && Writes.count(PrevRefReg.value())) {
+        CanStayTheSame = false;
+      }
+
+      if (PrevRegState.getLocation() == dwarf::UnwindLocation::DWARFExpr) {
+        // TODO this can be solved more precise, by looking into the expression,
+        // TODO finding registers that are used and checking if the instruction
+        // TODO is changing them or not.
+        CanStayTheSame = false;
       }
 
       if (CanStayTheSame)
         PossibleNextRegStates.push_back(PrevRegState);
     }
 
+    // TODO In this stage of program, there is not possible next stages, it's
+    // TODO either the same or nothing. The maybe I have to refactor it back to
+    // TODO the primitive design. And when got the semantic info, get back to
+    // TODO this code.
     for (auto &&PossibleNextRegState : PossibleNextRegStates) {
       if (PossibleNextRegState == NextRegState) {
         // Everything is ok
@@ -211,19 +255,19 @@ void CFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegType Reg,
     }
 
     for (auto &&PossibleNextRegState : PossibleNextRegStates) {
-      if (PossibleNextRegState.RetrieveApproach !=
-          NextRegState.RetrieveApproach)
+      if (PossibleNextRegState.getLocation() != NextRegState.getLocation())
         continue;
 
-      if (PossibleNextRegState.RetrieveApproach ==
-          RegisterCFIState::OffsetFromCFAAddr) {
-        Context.reportError(
+      // TODO again, as said above, does this happen in the current primitive
+      // TODO design?
+      if (PossibleNextRegState.getLocation() ==
+          dwarf::UnwindLocation::CFAPlusOffset) {
+        Context->reportError(
             Inst.getLoc(),
-            formatv(
-                "Expected caller's value of reg#{0} should be at offset {1} "
-                "of CFA but the CFI directives say it's in {2}",
-                RegLLVM, PossibleNextRegState.Info.OffsetFromCFA,
-                NextRegState.Info.OffsetFromCFA));
+            formatv("Expected %{0} unwinding rule should be [CFA + {1}] but "
+                    "based CFI directives are [CFA + {2}]",
+                    RegLLVMName, PossibleNextRegState.getOffset(),
+                    NextRegState.getOffset()));
       }
     }
   }
@@ -232,18 +276,19 @@ void CFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegType Reg,
   // it falls back into read/write checks.
 
   if (PrevRegState == NextRegState) {
-    switch (PrevRegState.RetrieveApproach) {
-    case RegisterCFIState::SameValue:
-    case RegisterCFIState::AnotherRegister:
+    switch (PrevRegState.getLocation()) {
+    case dwarf::UnwindLocation::Same:
+    case dwarf::UnwindLocation::RegPlusOffset:
       if (Writes.count(PrevRefReg.value())) {
-        Context.reportError(
+        Context->reportError(
             Inst.getLoc(),
-            formatv("Reg#{0} caller's value is in reg#{1} which is changed "
-                    "by this instruction, but not changed in CFI directives",
-                    RegLLVM, PrevRefRegLLVM.value()));
+            formatv("This instruction changes %{1}, that %{0} unwinding rule "
+                    "uses, but there is no CFI directives about it",
+                    RegLLVMName, MCRI->getName(PrevRefRegLLVM.value())));
         return;
       }
       break;
+      // TODO think about what to do with expressions here.
     default:
       // Everything may be ok
       break;
@@ -251,22 +296,21 @@ void CFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegType Reg,
     return;
   }
 
-  if (PrevRegState.RetrieveApproach == NextRegState.RetrieveApproach) {
+  if (PrevRegState.getLocation() == NextRegState.getLocation()) {
     // Everything may be ok
     return;
   }
 
-  if (PrevRegState.RetrieveApproach == RegisterCFIState::Undefined) {
-    Context.reportError(Inst.getLoc(),
-                        "Cannot change a register CFI information from "
-                        "undefined to something else.");
+  if (PrevRegState.getLocation() == dwarf::UnwindLocation::Undefined) {
+    Context->reportError(
+        Inst.getLoc(),
+        "Changed %{0} unwinding rule from `undefined` to something else");
     return;
   }
 
-  Context.reportWarning(Inst.getLoc(),
-                        formatv("The reg#{0} CFI state is changed, but I "
-                                "don't have any idea how.",
-                                RegLLVM));
+  Context->reportWarning(
+      Inst.getLoc(),
+      formatv("Unknown change happened to %{0} unwinding rule", RegLLVMName));
   // Everything may be ok
   return;
 }
@@ -275,16 +319,27 @@ void CFIAnalysis::checkCFADiff(const MCInst &Inst, const CFIState &PrevState,
                                const CFIState &NextState,
                                const std::set<DWARFRegType> &Reads,
                                const std::set<DWARFRegType> &Writes) {
-  const char *PrevCFARegName =
-      MCRI->getName(MCRI->getLLVMRegNum(PrevState.CFARegister, false).value());
+  // TODO again getting the CFA register in the bad way.
+  const DWARFRegType PrevCFAReg =
+      PrevState.getLastRow()->getCFAValue().getRegister();
+  const int32_t PrevCFAOffset =
+      PrevState.getLastRow()->getCFAValue().getOffset();
 
-  if (PrevState.CFARegister == NextState.CFARegister) {
-    if (PrevState.CFAOffset == NextState.CFAOffset) {
-      if (Writes.count(PrevState.CFARegister)) {
-        Context.reportError(
+  const DWARFRegType NextCFAReg =
+      NextState.getLastRow()->getCFAValue().getRegister();
+  const int32_t NextCFAOffset =
+      NextState.getLastRow()->getCFAValue().getOffset();
+
+  const char *PrevCFARegName =
+      MCRI->getName(MCRI->getLLVMRegNum(PrevCFAReg, false /* TODO */).value());
+
+  if (PrevCFAReg == NextCFAReg) {
+    if (PrevCFAOffset == NextCFAOffset) {
+      if (Writes.count(PrevCFAReg)) {
+        Context->reportError(
             Inst.getLoc(),
-            formatv("Missing CFI directive for the CFA offset adjustment. CFA "
-                    "register ({0}) is modified by this instruction.",
+            formatv("This instruction modifies CFA register (%{0}) "
+                    "but CFA rule is not changed",
                     PrevCFARegName));
         return;
       }
@@ -294,11 +349,11 @@ void CFIAnalysis::checkCFADiff(const MCInst &Inst, const CFIState &PrevState,
     }
     // The offset is changed.
 
-    if (!Writes.count(PrevState.CFARegister)) {
-      Context.reportError(
+    if (!Writes.count(PrevCFAReg)) {
+      Context->reportError(
           Inst.getLoc(),
-          formatv("Wrong adjustment to CFA offset. CFA register ({0}) is not "
-                  "modified by this instruction.",
+          formatv("This instruction does not modifies CFA register (%{0}) "
+                  "but CFA rule is changed",
                   PrevCFARegName));
     }
 

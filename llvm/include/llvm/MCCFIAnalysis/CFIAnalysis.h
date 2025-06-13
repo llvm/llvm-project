@@ -5,6 +5,7 @@
 #include "ExtendedMCInstrAnalysis.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
@@ -21,7 +22,7 @@
 namespace llvm {
 
 class CFIAnalysis {
-  MCContext &Context;
+  MCContext *Context;
   MCInstrInfo const &MCII;
   MCRegisterInfo const *MCRI;
   std::unique_ptr<ExtendedMCInstrAnalysis> EMCIA;
@@ -42,19 +43,22 @@ private:
   MCPhysReg getSuperReg(MCPhysReg Reg);
 
 public:
-  CFIAnalysis(MCContext &Context, MCInstrInfo const &MCII,
+  CFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
               MCInstrAnalysis *MCIA,
               ArrayRef<MCCFIInstruction> PrologueCFIDirectives);
 
   void update(const MCInst &Inst, ArrayRef<MCCFIInstruction> CFIDirectives);
 
 private:
-  void checkRegDiff(const MCInst &Inst, DWARFRegType Reg,
-                    const CFIState &PrevState, const CFIState &NextState,
-                    const RegisterCFIState &PrevRegState,
-                    const RegisterCFIState &NextRegState,
-                    const std::set<DWARFRegType> &Reads,
-                    const std::set<DWARFRegType> &Writes);
+  void checkRegDiff(
+      const MCInst &Inst, DWARFRegType Reg, const CFIState &PrevState,
+      const CFIState &NextState,
+      const dwarf::UnwindLocation
+          &PrevRegState, // TODO maybe should get them from prev next state
+      const dwarf::UnwindLocation
+          &NextRegState, // TODO themselves instead of by arguments.
+      const std::set<DWARFRegType> &Reads,
+      const std::set<DWARFRegType> &Writes);
 
   void checkCFADiff(const MCInst &Inst, const CFIState &PrevState,
                     const CFIState &NextState,

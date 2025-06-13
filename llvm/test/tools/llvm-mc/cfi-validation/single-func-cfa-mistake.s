@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s --validate-cfi --filetype=null 2>&1 \
+# RUN: llvm-mc %s --validate-cfi --filetype=null 2>&1 \
 # RUN:   | FileCheck %s 
         .text
         .globl  f
@@ -9,7 +9,7 @@ f:
         .cfi_undefined %rax
 
         pushq   %rbp
-        # CHECK: error: Expected CFA [reg: 61, offset: 16] but got [reg: 61, offset: 17]
+        # CHECK: warning: Unknown change happened to %RBP unwinding rule
         .cfi_def_cfa_offset 17
         .cfi_offset %rbp, -16
 

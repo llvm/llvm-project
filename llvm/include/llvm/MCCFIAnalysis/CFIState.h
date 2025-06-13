@@ -1,65 +1,37 @@
 #ifndef LLVM_TOOLS_LLVM_MC_CFI_STATE_H
 #define LLVM_TOOLS_LLVM_MC_CFI_STATE_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include <optional>
-#include <string>
 namespace llvm {
 
 using DWARFRegType = int64_t;
 
-dwarf::CFIProgram convertMC2DWARF(MCContext &Context,
-                                  MCCFIInstruction CFIDirective,
-                                  int64_t CFAOffset);
+class CFIState {
+private:
+  MCContext *Context;
+  // TODO the choice is questionable, should the state be the Table? or just a
+  // TODO row? In the current code we are using only the last row.
+  dwarf::UnwindTable State;
 
-struct RegisterCFIState {
-  enum Approach {
-    Undefined,
-    SameValue,
-    AnotherRegister,
-    OffsetFromCFAAddr,
-    OffsetFromCFAVal,
-    Other,
-  } RetrieveApproach;
+public:
+  std::optional<dwarf::UnwindRow>
+  getLastRow() const; // TODO maybe move it UnwindRow
 
-  union {
-    int OffsetFromCFA;
-    DWARFRegType Register;
-  } Info;
-
-  // TODO change it to be like other dump methods
-  std::string dump();
-
-  bool operator==(const RegisterCFIState &OtherState) const;
-  bool operator!=(const RegisterCFIState &OtherState) const;
-
-  static RegisterCFIState createUndefined();
-  static RegisterCFIState createSameValue();
-  static RegisterCFIState createAnotherRegister(DWARFRegType Register);
-  static RegisterCFIState createOffsetFromCFAAddr(int OffsetFromCFA);
-  static RegisterCFIState createOffsetFromCFAVal(int OffsetFromCFA);
-  static RegisterCFIState createOther();
-};
-
-struct CFIState {
-  DenseMap<DWARFRegType, RegisterCFIState> RegisterCFIStates;
-  DWARFRegType CFARegister;
-  int CFAOffset;
-
-  CFIState();
+  CFIState(MCContext *Context) : Context(Context) {};
   CFIState(const CFIState &Other);
-
   CFIState &operator=(const CFIState &Other);
-
-  CFIState(DWARFRegType CFARegister, int CFIOffset);
 
   std::optional<DWARFRegType>
   getReferenceRegisterForCallerValueOfRegister(DWARFRegType Reg) const;
 
-  bool apply(const MCCFIInstruction &CFIDirective);
+  void apply(const MCCFIInstruction &CFIDirective);
+
+private:
+  std::optional<dwarf::CFIProgram> convertMC2DWARF(
+      MCCFIInstruction CFIDirective); // TODO maybe move it somewhere else
 };
 } // namespace llvm
 
