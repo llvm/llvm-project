@@ -5024,10 +5024,10 @@ struct OpenMPBlockConstruct {
 struct OpenMPLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
   OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
-    : t({std::move(a), std::nullopt, std::nullopt, std::nullopt}) {}
+      : t({std::move(a), std::nullopt, std::nullopt, std::nullopt}) {}
   std::tuple<OmpBeginLoopDirective, std::optional<DoConstruct>,
-             std::optional<common::Indirection<OpenMPLoopConstruct>>,
-             std::optional<OmpEndLoopDirective>>
+      std::optional<common::Indirection<OpenMPLoopConstruct>>,
+      std::optional<OmpEndLoopDirective>>
       t;
 };
 
