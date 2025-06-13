@@ -5079,6 +5079,23 @@ bool Sema::MergeCompatibleFunctionDecls(FunctionDecl *New, FunctionDecl *Old,
   if (getLangOpts().CPlusPlus)
     return MergeCXXFunctionDecl(New, Old, S);
 
+  // In BoundsSafety, we allow merging bounds attributes between function decls
+  // if the old decl is implicit. This enables us to add bounds attributes to a
+  // function decl if the old one is implicit without causing 'incompatible
+  // function decl' error. For example, we can redeclare the implicit decl of
+  // `memcmp`, and add `__sized_by()` attributes to its parameters.
+  // In attribute-only mode, those attributes are sugars though, and will be
+  // dropped by `Context.mergeTypes()` below. If both canonical types are the
+  // same, we can keep the new type to retain sugars.
+  if (getLangOpts().BoundsSafetyAttributes) {
+    if (Old->isImplicit() &&
+        Old->getType().getCanonicalType() ==
+            New->getType().getCanonicalType() &&
+        !Context.mergeTypes(Old->getType(), New->getType()).isNull()) {
+      return false;
+    }
+  }
+
   // Merge the function types so the we get the composite types for the return
   // and argument types. Per C11 6.2.7/4, only update the type if the old decl
   // was visible.
