@@ -55,7 +55,8 @@ int CharacterConverter::push(char8_t utf8_byte) {
   // Adding 6 more bits so need to left shift
   constexpr size_t ENCODED_BITS_PER_UTF8 = 6;
   if (cpp::countl_one(utf8_byte) == 1 && !isComplete()) {
-    char32_t byte = utf8_byte & mask_trailing_ones<uint32_t, ENCODED_BITS_PER_UTF8>();
+    char32_t byte =
+        utf8_byte & mask_trailing_ones<uint32_t, ENCODED_BITS_PER_UTF8>();
     state->partial = state->partial << ENCODED_BITS_PER_UTF8;
     state->partial |= byte;
     state->bytes_processed++;
