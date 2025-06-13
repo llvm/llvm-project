@@ -122,16 +122,14 @@ def have_host_out_of_process_jit_feature_support():
     if not clang_repl_exe:
         return False
 
-    testcode = b'\n'.join([
-        b"int i = 0;",
-        b"%quit"
-    ])
+    testcode = b"\n".join([b"int i = 0;", b"%quit"])
 
     try:
         clang_repl_cmd = subprocess.run(
             [clang_repl_exe, "-orc-runtime", "-oop-executor"],
-             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-             input=testcode
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            input=testcode,
         )
     except OSError:
         return False
@@ -194,7 +192,7 @@ if have_host_jit_feature_support('jit'):
         config.available_features.add('host-supports-cuda')
 
     if have_host_out_of_process_jit_feature_support():
-        config.available_features.add('host-supports-out-of-process-jit')
+        config.available_features.add("host-supports-out-of-process-jit")
 
 if config.clang_staticanalyzer:
     config.available_features.add("staticanalyzer")
