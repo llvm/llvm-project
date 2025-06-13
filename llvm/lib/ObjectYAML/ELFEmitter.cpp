@@ -1502,6 +1502,7 @@ void ELFState<ELFT>::writeSectionContent(
         SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset);
         SHeader.sh_size += CBA.writeULEB128(BBE.Size);
         SHeader.sh_size += CBA.writeULEB128(BBE.Metadata);
+        SHeader.sh_size += CBA.writeULEB128(BBE.Hash);
       }
     }
     if (!PGOAnalyses)
