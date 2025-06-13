@@ -67,3 +67,49 @@ void bar() {
 // CHECK-NEXT:    %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
 // CHECK-NEXT:    cir.call @_ZN13VariadicStrukC1Eiz(%[[S_ADDR]], %[[ONE]], %[[TWO]], %[[THREE]])
 // CHECK-NEXT:    cir.return
+
+struct DelegatingStruk {
+  int a;
+  DelegatingStruk(int n) { a = n; }
+  DelegatingStruk() : DelegatingStruk(0) {}
+};
+
+void bam() {
+  DelegatingStruk s;
+}
+
+// CHECK:       cir.func @_ZN15DelegatingStrukC2Ei(%arg0: !cir.ptr<!rec_DelegatingStruk>
+// CHECK-SAME:                                     %arg1: !s32i
+// CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CHECK-NEXT:   %[[N_ADDR:.*]] = cir.alloca {{.*}} ["n", init]
+// CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
+// CHECK-NEXT:   cir.store %arg1, %[[N_ADDR]]
+// CHECK-NEXT:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
+// CHECK-NEXT:   %[[N:.*]] = cir.load{{.*}} %[[N_ADDR]]
+// CHECK-NEXT:   %[[A_ADDR:.*]] = cir.get_member %[[THIS]][0] {name = "a"}
+// CHECK-NEXT:   cir.store{{.*}} %[[N]], %[[A_ADDR]]
+// CHECK-NEXT:   cir.return
+
+// CHECK:       cir.func @_ZN15DelegatingStrukC1Ei(%arg0: !cir.ptr<!rec_DelegatingStruk>
+// CHECK-SAME:                                     %arg1: !s32i
+// CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CHECK-NEXT:   %[[N_ADDR:.*]] = cir.alloca {{.*}} ["n", init]
+// CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
+// CHECK-NEXT:   cir.store %arg1, %[[N_ADDR]]
+// CHECK-NEXT:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
+// CHECK-NEXT:   %[[N:.*]] = cir.load{{.*}} %[[N_ADDR]]
+// CHECK-NEXT:   cir.call @_ZN15DelegatingStrukC2Ei(%[[THIS]], %[[N]])
+// CHECK-NEXT:   cir.return
+
+// CHECK: cir.func @_ZN15DelegatingStrukC1Ev(%arg0: !cir.ptr<!rec_DelegatingStruk>
+// CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
+// CHECK-NEXT:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
+// CHECK-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK-NEXT:   cir.call @_ZN15DelegatingStrukC1Ei(%[[THIS]], %[[ZERO]])
+// CHECK-NEXT:   cir.return
+
+// CHECK: cir.func @_Z3bamv
+// CHECK-NEXT:    %[[S_ADDR:.*]] = cir.alloca {{.*}} ["s", init]
+// CHECK-NEXT:    cir.call @_ZN15DelegatingStrukC1Ev(%[[S_ADDR]])
+// CHECK-NEXT:    cir.return

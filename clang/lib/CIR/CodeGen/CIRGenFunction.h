@@ -316,6 +316,10 @@ public:
     ~SourceLocRAIIObject() { restore(); }
   };
 
+  /// Hold counters for incrementally naming temporaries
+  unsigned counterAggTmp = 0;
+  std::string getCounterAggTmpAsString();
+
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
   mlir::Location getLoc(clang::SourceLocation srcLoc);
   mlir::Location getLoc(clang::SourceRange srcLoc);
@@ -465,6 +469,10 @@ public:
   /// compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *e);
 
+  cir::GlobalOp addInitializerToStaticVarDecl(const VarDecl &d,
+                                              cir::GlobalOp gv,
+                                              cir::GetGlobalOp gvAddr);
+
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
     assert(!localDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
@@ -473,6 +481,9 @@ public:
   }
 
   bool shouldNullCheckClassCastValue(const CastExpr *ce);
+
+  RValue convertTempToRValue(Address addr, clang::QualType type,
+                             clang::SourceLocation loc);
 
   static bool
   isConstructorDelegationValid(const clang::CXXConstructorDecl *ctor);
@@ -692,6 +703,8 @@ public:
                          mlir::OpBuilder::InsertPoint ip,
                          mlir::Value arraySize = nullptr);
 
+  void emitAggregateStore(mlir::Value value, Address dest);
+
   void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
 
   LValue emitAggExprToLValue(const Expr *e);
@@ -700,7 +713,8 @@ public:
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
   /// should be returned.
-  RValue emitAnyExpr(const clang::Expr *e);
+  RValue emitAnyExpr(const clang::Expr *e,
+                     AggValueSlot aggSlot = AggValueSlot::ignored());
 
   /// Similarly to emitAnyExpr(), however, the result will always be accessible
   /// even if no aggregate location is provided.
@@ -796,6 +810,16 @@ public:
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
+
+  void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
+                        clang::CXXCtorType ctorType, FunctionArgList &args);
+
+  // It's important not to confuse this and emitDelegateCXXConstructorCall.
+  // Delegating constructors are the C++11 feature. The constructor delegate
+  // optimization is used to reduce duplication in the base and complete
+  // constructors where they are substantially the same.
+  void emitDelegatingCXXConstructorCall(const CXXConstructorDecl *ctor,
+                                        const FunctionArgList &args);
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
@@ -934,6 +958,8 @@ public:
 
   void emitScalarInit(const clang::Expr *init, mlir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
+
+  void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
                          clang::QualType ty, bool isInit = false,
@@ -1138,6 +1164,17 @@ public:
 
   void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
   void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
+
+  /// Create a temporary memory object for the given aggregate type.
+  AggValueSlot createAggTemp(QualType ty, mlir::Location loc,
+                             const Twine &name = "tmp",
+                             Address *alloca = nullptr) {
+    assert(!cir::MissingFeatures::aggValueSlot());
+    return AggValueSlot::forAddr(
+        createMemTemp(ty, loc, name, alloca), ty.getQualifiers(),
+        AggValueSlot::IsNotDestructed, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap);
+  }
 
 private:
   QualType getVarArgType(const Expr *arg);
