@@ -4,7 +4,7 @@
 # below show be morphed into an ADD32mi by the register allocator, making it
 # load-operate-store to %stack.2.
 #
-# CHECK: MOV32mi %stack.2
+# CHECK: ADD32mi %stack.2
 --- |
 
   define fastcc void @add32ri_nd_2_add32mi(i1 %arg, i1 %arg1, i1 %arg2, ptr %arg3, ptr %arg4, i1 %arg5, i8 %arg6) #0 {
