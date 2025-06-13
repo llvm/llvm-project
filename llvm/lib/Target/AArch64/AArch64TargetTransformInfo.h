@@ -73,7 +73,7 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCostHelper(
-      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, int Index,
       bool HasRealUse, const Instruction *I = nullptr, Value *Scalar = nullptr,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx = {}) const;
 
@@ -197,15 +197,15 @@ public:
 
   InstructionCost
   getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
-                           unsigned Index,
+                           int Index,
                            TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr) const override;
 
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
+                                     TTI::TargetCostKind CostKind, int Index,
+                                     const Value *Op0,
                                      const Value *Op1) const override;
 
   /// \param ScalarUserAndIdx encodes the information about extracts from a
@@ -213,14 +213,14 @@ public:
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Scalar,
+                                     TTI::TargetCostKind CostKind, int Index,
+                                     Value *Scalar,
                                      ArrayRef<std::tuple<Value *, User *, int>>
                                          ScalarUserAndIdx) const override;
 
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index) const override;
+                                     int Index) const override;
 
   InstructionCost
   getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,

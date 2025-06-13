@@ -834,7 +834,7 @@ GCNTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
 
 InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                                TTI::TargetCostKind CostKind,
-                                               unsigned Index, const Value *Op0,
+                                               int Index, const Value *Op0,
                                                const Value *Op1) const {
   switch (Opcode) {
   case Instruction::ExtractElement:
@@ -853,7 +853,7 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     // operations, and we don't have to copy into a different register class.
 
     // Dynamic indexing isn't free and is best avoided.
-    return Index == ~0u ? 2 : 0;
+    return TargetTransformInfo::isKnownVectorIndex(Index) ? 0 : 2;
   }
   default:
     return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1);

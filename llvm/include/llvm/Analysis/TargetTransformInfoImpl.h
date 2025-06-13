@@ -758,7 +758,7 @@ public:
 
   virtual InstructionCost
   getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
-                           unsigned Index, TTI::TargetCostKind CostKind) const {
+                           int Index, TTI::TargetCostKind CostKind) const {
     return 1;
   }
 
@@ -781,7 +781,7 @@ public:
 
   virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                              TTI::TargetCostKind CostKind,
-                                             unsigned Index, const Value *Op0,
+                                             int Index, const Value *Op0,
                                              const Value *Op1) const {
     return 1;
   }
@@ -791,7 +791,7 @@ public:
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   virtual InstructionCost getVectorInstrCost(
-      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, int Index,
       Value *Scalar,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
     return 1;
@@ -799,7 +799,7 @@ public:
 
   virtual InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                              TTI::TargetCostKind CostKind,
-                                             unsigned Index) const {
+                                             int Index) const {
     return 1;
   }
 
@@ -1522,7 +1522,7 @@ public:
       auto *IE = dyn_cast<InsertElementInst>(U);
       if (!IE)
         return TTI::TCC_Basic; // FIXME
-      unsigned Idx = -1;
+      int Idx = TargetTransformInfo::UnknownIndex;
       if (auto *CI = dyn_cast<ConstantInt>(Operands[2]))
         if (CI->getValue().getActiveBits() <= 32)
           Idx = CI->getZExtValue();
@@ -1641,7 +1641,7 @@ public:
       auto *EEI = dyn_cast<ExtractElementInst>(U);
       if (!EEI)
         return TTI::TCC_Basic; // FIXME
-      unsigned Idx = -1;
+      int Idx = TargetTransformInfo::UnknownIndex;
       if (auto *CI = dyn_cast<ConstantInt>(Operands[1]))
         if (CI->getValue().getActiveBits() <= 32)
           Idx = CI->getZExtValue();

@@ -1194,8 +1194,7 @@ InstructionCost SystemZTTIImpl::getCmpSelInstrCost(
 
 InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    TTI::TargetCostKind CostKind,
-                                                   unsigned Index,
-                                                   const Value *Op0,
+                                                   int Index, const Value *Op0,
                                                    const Value *Op1) const {
   if (Opcode == Instruction::InsertElement) {
     // Vector Element Load.
@@ -1205,8 +1204,11 @@ InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     // vlvgp will insert two grs into a vector register, so count half the
     // number of instructions as an estimate when we don't have the full
     // picture (as in getScalarizationOverhead()).
-    if (Val->isIntOrIntVectorTy(64))
+    if (Val->isIntOrIntVectorTy(64)) {
+      if (!TargetTransformInfo::isKnownVectorIndex(Index))
+        return 0;
       return ((Index % 2 == 0) ? 1 : 0);
+    }
   }
 
   if (Opcode == Instruction::ExtractElement) {

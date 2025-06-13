@@ -63,8 +63,8 @@ public:
                                  const Instruction *I = nullptr) const override;
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
+                                     TTI::TargetCostKind CostKind, int Index,
+                                     const Value *Op0,
                                      const Value *Op1) const override;
 };
 

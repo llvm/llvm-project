@@ -4767,7 +4767,7 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
 InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                TTI::TargetCostKind CostKind,
-                                               unsigned Index, const Value *Op0,
+                                               int Index, const Value *Op0,
                                                const Value *Op1) const {
   static const CostTblEntry SLMCostTbl[] = {
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i8,      4 },
@@ -4782,8 +4782,9 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
   // Non-immediate extraction/insertion can be handled as a sequence of
   // aliased loads+stores via the stack.
-  if (Index == -1U && (Opcode == Instruction::ExtractElement ||
-                       Opcode == Instruction::InsertElement)) {
+  if (!TargetTransformInfo::isKnownVectorIndex(Index) &&
+      (Opcode == Instruction::ExtractElement ||
+       Opcode == Instruction::InsertElement)) {
     // TODO: On some SSE41+ targets, we expand to cmp+splat+select patterns:
     // inselt N0, N1, N2 --> select (SplatN2 == {0,1,2...}) ? SplatN1 : N0.
 
@@ -4807,8 +4808,9 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     }
   }
 
-  if (Index != -1U && (Opcode == Instruction::ExtractElement ||
-                       Opcode == Instruction::InsertElement)) {
+  if (TargetTransformInfo::isKnownVectorIndex(Index) &&
+      (Opcode == Instruction::ExtractElement ||
+       Opcode == Instruction::InsertElement)) {
     // Extraction of vXi1 elements are now efficiently handled by MOVMSK.
     if (Opcode == Instruction::ExtractElement &&
         ScalarType->getScalarSizeInBits() == 1 &&

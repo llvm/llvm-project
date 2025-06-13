@@ -183,13 +183,13 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
 }
 
 InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
-    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, int Index,
     const Value *Op0, const Value *Op1) const {
   InstructionCost Cost = BasicTTIImplBase::getVectorInstrCost(
       Opcode, Val, CostKind, Index, Op0, Op1);
 
   // SIMD128's insert/extract currently only take constant indices.
-  if (Index == -1u)
+  if (!TargetTransformInfo::isKnownVectorIndex(Index))
     return Cost + 25 * TargetTransformInfo::TCC_Expensive;
 
   return Cost;

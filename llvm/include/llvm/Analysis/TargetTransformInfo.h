@@ -1443,7 +1443,7 @@ public:
   /// Index = -1 to indicate that there is no information about the index value.
   LLVM_ABI InstructionCost
   getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
-                           unsigned Index, TTI::TargetCostKind CostKind) const;
+                           int Index, TTI::TargetCostKind CostKind) const;
 
   /// \return The expected cost of control-flow related instructions such as
   /// Phi, Ret, Br, Switch.
@@ -1465,6 +1465,13 @@ public:
       OperandValueInfo Op2Info = {OK_AnyValue, OP_None},
       const Instruction *I = nullptr) const;
 
+  enum : int {
+    UnknownIndex = -1,
+    // This will be expanded in a future patch.
+  };
+
+  static inline bool isKnownVectorIndex(int Index) { return Index >= 0; }
+
   /// \return The expected cost of vector Insert and Extract.
   /// Use -1 to indicate that there is no information on the index value.
   /// This is used when the instruction is not available; a typical use
@@ -1472,7 +1479,7 @@ public:
   /// vectorizer passes.
   LLVM_ABI InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                               TTI::TargetCostKind CostKind,
-                                              unsigned Index = -1,
+                                              int Index = UnknownIndex,
                                               const Value *Op0 = nullptr,
                                               const Value *Op1 = nullptr) const;
 
@@ -1486,7 +1493,7 @@ public:
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   LLVM_ABI InstructionCost getVectorInstrCost(
-      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, int Index,
       Value *Scalar,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const;
 
@@ -1498,7 +1505,7 @@ public:
   /// exists (e.g., from basic blocks during transformation).
   LLVM_ABI InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                               TTI::TargetCostKind CostKind,
-                                              unsigned Index = -1) const;
+                                              int Index = UnknownIndex) const;
 
   /// \return The expected cost of aggregate inserts and extracts. This is
   /// used when the instruction is not available; a typical use case is to

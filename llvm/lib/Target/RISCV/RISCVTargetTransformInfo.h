@@ -244,8 +244,8 @@ public:
 
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
+                                     TTI::TargetCostKind CostKind, int Index,
+                                     const Value *Op0,
                                      const Value *Op1) const override;
 
   InstructionCost getArithmeticInstrCost(
