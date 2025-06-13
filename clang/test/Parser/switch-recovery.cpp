@@ -236,6 +236,9 @@ namespace GH143216 {
 int f(int x) {
   switch (x) {
   case FOO // expected-error {{expected ':' after 'case'}}
+           // CHECK: {{^}}  case FOO
+           // CHECK: {{^}}          ^
+           // CHECK: {{^}}          :
     return 0;
   default:
     return 1;
