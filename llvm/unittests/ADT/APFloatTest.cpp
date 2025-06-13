@@ -8409,7 +8409,7 @@ TEST(APFloatTest, expf) {
   EXPECT_EQ(1.0f, llvm::exp(APFloat::getSmallest(APFloat::IEEEsingle(), false),
                             APFloat::rmNearestTiesToEven)
                       .convertToFloat());
-  EXPECT_EQ(0x1.000002p0,
+  EXPECT_EQ(0x1.000002p0f,
             llvm::exp(APFloat::getSmallest(APFloat::IEEEsingle(), false),
                       APFloat::rmTowardPositive)
                 .convertToFloat());
@@ -8419,6 +8419,17 @@ TEST(APFloatTest, expf) {
   EXPECT_EQ(1.0f, llvm::exp(APFloat::getSmallest(APFloat::IEEEsingle(), false),
                             APFloat::rmTowardZero)
                       .convertToFloat());
+  // Default rounding mode.
+  // exp(-1)
+  EXPECT_EQ(0x1.78b564p-2f, llvm::exp(APFloat(-1.0f)).convertToFloat());
+  EXPECT_EQ(
+      0x1.78b564p-2f,
+      llvm::exp(APFloat(-1.0f), APFloat::rmTowardPositive).convertToFloat());
+  EXPECT_EQ(
+      0x1.78b562p-2f,
+      llvm::exp(APFloat(-1.0f), APFloat::rmTowardNegative).convertToFloat());
+  EXPECT_EQ(0x1.78b562p-2f,
+            llvm::exp(APFloat(-1.0f), APFloat::rmTowardZero).convertToFloat());
 }
 #endif // LLVM_INTEGRATE_LIBC
 
