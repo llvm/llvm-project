@@ -258,7 +258,7 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
   if (vectorType.isScalable())
     return false;
 
-  // Ignore a leading contiguous sequence of unit dimensions in the vector.
+  // Ignore a leading sequence of adjacent unit dimensions in the vector.
   ArrayRef<int64_t> vectorShape =
       vectorType.getShape().drop_while([](auto v) { return v == 1; });
   auto vecRank = vectorShape.size();

@@ -47,7 +47,9 @@ Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
 /// on a 2D slice. Otherwise, returns a failure.
 FailureOr<std::pair<int, int>> isTranspose2DSlice(vector::TransposeOp op);
 
-/// Return true if `vectorType` is a contiguous slice of `memrefType`.
+/// Return true if `vectorType` is a contiguous slice of `memrefType`,
+/// in the sense that it can be read/written from/to a contiguous area
+/// of the memref.
 ///
 /// The leading unit dimensions of the vector type are ignored as they
 /// are not relevant to the result. Let N be the number of the vector
