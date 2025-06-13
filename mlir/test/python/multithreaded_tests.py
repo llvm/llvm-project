@@ -40,6 +40,7 @@ import gc
 import importlib.util
 import os
 import sys
+import textwrap
 import threading
 import tempfile
 import unittest
@@ -510,6 +511,51 @@ class TestAllMultiThreaded(unittest.TestCase):
 
             with InsertionPoint(module.body), Location.name("c"):
                 arith.constant(dtype, py_values[2])
+
+
+    def test_check_pyoperation_race(self):
+        # Regression test for a race where:
+        # * one thread is in the process of destroying a PyOperation,
+        # * while simultaneously another thread looks up the PyOperation is
+        #   the liveOperations map and attempts to increase its reference count.
+        # It is illegal to attempt to revive an object that is in the process of
+        # being deleted, and this was producing races and heap use-after-frees.
+        num_workers = 40
+        num_runs = 20
+
+        barrier = threading.Barrier(num_workers)
+
+        def walk_operations(op):
+            _ = op.operation.name
+            for region in op.operation.regions:
+                for block in region:
+                    for op in block:
+                        walk_operations(op)
+
+        with Context():
+            mlir_module = Module.parse(
+                textwrap.dedent(
+                    """
+                    module @m {
+                      func.func public @main(%arg0: tensor<f32>) -> (tensor<f32>) {
+                        return %arg0 : tensor<f32>
+                      }
+                    }
+                    """
+                )
+            )
+
+        def closure():
+            barrier.wait()
+
+            for _ in range(num_runs):
+                walk_operations(mlir_module)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+            futures = []
+            for i in range(num_workers):
+                futures.append(executor.submit(closure))
+            assert len(list(f.result() for f in futures)) == num_workers
 
 
 if __name__ == "__main__":
