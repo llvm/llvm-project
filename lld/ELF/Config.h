@@ -368,6 +368,7 @@ struct Config {
   bool writeAddends;
   bool zCombreloc;
   bool zCopyreloc;
+  bool zDynamicUndefined;
   bool zForceBti;
   bool zForceIbt;
   bool zGlobal;
