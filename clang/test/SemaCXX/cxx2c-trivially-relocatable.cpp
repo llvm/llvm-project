@@ -388,3 +388,24 @@ void do_test__builtin_trivially_relocate() {
     // expected-note@-1 {{'test__builtin_trivially_relocate<S *, S *, int>' requested here}}
     // expected-error@#reloc1 {{first argument to '__builtin_trivially_relocate' must be relocatable}}
 }
+
+
+namespace GH143599 {
+struct A { ~A (); };
+A::~A () = default;
+
+static_assert (!__builtin_is_cpp_trivially_relocatable(A));
+static_assert (!__builtin_is_replaceable(A));
+
+struct B { B(const B&); };
+B::B (const B&) = default;
+
+static_assert (!__builtin_is_cpp_trivially_relocatable(B));
+static_assert (!__builtin_is_replaceable(B));
+
+struct C { C& operator=(const C&); };
+C& C::operator=(const C&) = default;
+
+static_assert (!__builtin_is_cpp_trivially_relocatable(C));
+static_assert (!__builtin_is_replaceable(C));
+}
