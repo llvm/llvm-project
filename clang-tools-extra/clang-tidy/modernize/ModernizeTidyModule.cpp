@@ -111,7 +111,8 @@ public:
         "modernize-use-default-member-init");
     CheckFactories.registerCheck<UseEmplaceCheck>("modernize-use-emplace");
     CheckFactories.registerCheck<UseEnumClassCheck>("modernize-use-enum-class");
-    CheckFactories.registerCheck<UseEqualsDefaultCheck>("modernize-use-equals-default");
+    CheckFactories.registerCheck<UseEqualsDefaultCheck>(
+        "modernize-use-equals-default");
     CheckFactories.registerCheck<UseEqualsDeleteCheck>(
         "modernize-use-equals-delete");
     CheckFactories.registerCheck<UseNodiscardCheck>("modernize-use-nodiscard");

@@ -141,7 +141,7 @@ New checks
 
   Finds unscoped (non-class) ``enum`` declarations and suggests using
   ``enum class`` instead.
-  
+
 - New :doc:`portability-avoid-pragma-once
   <clang-tidy/checks/portability/avoid-pragma-once>` check.
 
@@ -244,7 +244,7 @@ Changes in existing checks
   diagnosing designated initializers for ``std::array`` initializations.
 
 - Improved :doc:`modernize-use-ranges
-  <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
+  <clang-tidy/checks/modernize/use-ranges>` check by updating suppress
   warnings logic for ``nullptr`` in ``std::find``.
 
 - Improved :doc:`modernize-use-starts-ends-with
