@@ -492,9 +492,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case Instruction::ExtractElement: {
     assert(State.VF.isVector() && "Only extract elements from vectors");
-    Value *Vec = State.get(getOperand(0));
-    Value *Idx = State.get(getOperand(1), /*IsScalar=*/true);
-    return Builder.CreateExtractElement(Vec, Idx, Name);
+    unsigned IdxToExtract =
+        cast<ConstantInt>(getOperand(1)->getLiveInIRValue())->getZExtValue();
+    return State.get(getOperand(0), VPLane(IdxToExtract));
   }
   case Instruction::Freeze: {
     Value *Op = State.get(getOperand(0), vputils::onlyFirstLaneUsed(this));
@@ -602,6 +602,35 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::Broadcast: {
     return Builder.CreateVectorSplat(
         State.VF, State.get(getOperand(0), /*IsScalar*/ true), "broadcast");
+  }
+  case VPInstruction::BuildStructVector: {
+    // For struct types, we need to build a new 'wide' struct type, where each
+    // element is widened.
+    auto *StructTy =
+        cast<StructType>(State.TypeAnalysis.inferScalarType(getOperand(0)));
+    auto NumOfElements = ElementCount::getFixed(getNumOperands());
+    Value *Res = PoisonValue::get(toVectorizedTy(StructTy, NumOfElements));
+    assert(NumOfElements.getKnownMinValue() == StructTy->getNumElements() &&
+           "number of operands must match number of elements in StructTy");
+    for (const auto &[Idx, Op] : enumerate(operands())) {
+      for (unsigned I = 0; I != NumOfElements.getKnownMinValue(); I++) {
+        Value *ScalarValue = Builder.CreateExtractValue(State.get(Op, true), I);
+        Value *VectorValue = Builder.CreateExtractValue(Res, I);
+        VectorValue =
+            Builder.CreateInsertElement(VectorValue, ScalarValue, Idx);
+        Res = Builder.CreateInsertValue(Res, VectorValue, I);
+      }
+    }
+    return Res;
+  }
+  case VPInstruction::BuildVector: {
+    auto *ScalarTy = State.TypeAnalysis.inferScalarType(getOperand(0));
+    auto NumOfElements = ElementCount::getFixed(getNumOperands());
+    Value *Res = PoisonValue::get(toVectorizedTy(ScalarTy, NumOfElements));
+    for (const auto &[Idx, Op] : enumerate(operands()))
+      Res = State.Builder.CreateInsertElement(Res, State.get(Op, true),
+                                              State.Builder.getInt32(Idx));
+    return Res;
   }
   case VPInstruction::ReductionStartVector: {
     if (State.VF.isScalar())
@@ -884,10 +913,11 @@ void VPInstruction::execute(VPTransformState &State) {
   if (!hasResult())
     return;
   assert(GeneratedValue && "generate must produce a value");
-  assert(
-      (GeneratedValue->getType()->isVectorTy() == !GeneratesPerFirstLaneOnly ||
-       State.VF.isScalar()) &&
-      "scalar value but not only first lane defined");
+  assert((((GeneratedValue->getType()->isVectorTy() ||
+            GeneratedValue->getType()->isStructTy()) ==
+           !GeneratesPerFirstLaneOnly) ||
+          State.VF.isScalar()) &&
+         "scalar value but not only first lane defined");
   State.set(this, GeneratedValue,
             /*IsScalar*/ GeneratesPerFirstLaneOnly);
 }
@@ -901,6 +931,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case Instruction::ICmp:
   case Instruction::Select:
   case VPInstruction::AnyOf:
+  case VPInstruction::BuildStructVector:
+  case VPInstruction::BuildVector:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExtractLastElement:
@@ -1021,6 +1053,12 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::Broadcast:
     O << "broadcast";
+    break;
+  case VPInstruction::BuildStructVector:
+    O << "buildstructvector";
+    break;
+  case VPInstruction::BuildVector:
+    O << "buildvector";
     break;
   case VPInstruction::ExtractLastElement:
     O << "extract-last-element";
@@ -2753,44 +2791,29 @@ static void scalarizeInstruction(const Instruction *Instr,
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
   Instruction *UI = getUnderlyingInstr();
-  if (State.Lane) { // Generate a single instance.
-    assert((State.VF.isScalar() || !isSingleScalar()) &&
-           "uniform recipe shouldn't be predicated");
-    assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
-    scalarizeInstruction(UI, this, *State.Lane, State);
-    // Insert scalar instance packing it into a vector.
-    if (State.VF.isVector() && shouldPack()) {
-      // If we're constructing lane 0, initialize to start from poison.
-      if (State.Lane->isFirstLane()) {
-        assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
-        Value *Poison =
-            PoisonValue::get(VectorType::get(UI->getType(), State.VF));
-        State.set(this, Poison);
-      }
-      State.packScalarIntoVectorizedValue(this, *State.Lane);
-    }
-    return;
-  }
 
-  if (IsSingleScalar) {
-    // Uniform within VL means we need to generate lane 0.
+  if (!State.Lane) {
+    assert(IsSingleScalar &&
+           "VPReplicateRecipes outside replicate regions must be unrolled");
     scalarizeInstruction(UI, this, VPLane(0), State);
     return;
   }
 
-  // A store of a loop varying value to a uniform address only needs the last
-  // copy of the store.
-  if (isa<StoreInst>(UI) && vputils::isSingleScalar(getOperand(1))) {
-    auto Lane = VPLane::getLastLaneForVF(State.VF);
-    scalarizeInstruction(UI, this, VPLane(Lane), State);
-    return;
-  }
-
-  // Generate scalar instances for all VF lanes.
+  assert((State.VF.isScalar() || !isSingleScalar()) &&
+         "uniform recipe shouldn't be predicated");
   assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
-  const unsigned EndLane = State.VF.getKnownMinValue();
-  for (unsigned Lane = 0; Lane < EndLane; ++Lane)
-    scalarizeInstruction(UI, this, VPLane(Lane), State);
+  scalarizeInstruction(UI, this, *State.Lane, State);
+  // Insert scalar instance packing it into a vector.
+  if (State.VF.isVector() && shouldPack()) {
+    // If we're constructing lane 0, initialize to start from poison.
+    if (State.Lane->isFirstLane()) {
+      assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
+      Value *Poison =
+          PoisonValue::get(VectorType::get(UI->getType(), State.VF));
+      State.set(this, Poison);
+    }
+    State.packScalarIntoVectorizedValue(this, *State.Lane);
+  }
 }
 
 bool VPReplicateRecipe::shouldPack() const {
