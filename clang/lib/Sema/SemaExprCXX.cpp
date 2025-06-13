@@ -7647,51 +7647,6 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   CurrentLSI->clearPotentialCaptures();
 }
 
-static ExprResult attemptRecovery(Sema &SemaRef,
-                                  const TypoCorrectionConsumer &Consumer,
-                                  const TypoCorrection &TC) {
-  LookupResult R(SemaRef, Consumer.getLookupResult().getLookupNameInfo(),
-                 Consumer.getLookupResult().getLookupKind());
-  const CXXScopeSpec *SS = Consumer.getSS();
-  CXXScopeSpec NewSS;
-
-  // Use an approprate CXXScopeSpec for building the expr.
-  if (auto *NNS = TC.getCorrectionSpecifier())
-    NewSS.MakeTrivial(SemaRef.Context, NNS, TC.getCorrectionRange());
-  else if (SS && !TC.WillReplaceSpecifier())
-    NewSS = *SS;
-
-  if (auto *ND = TC.getFoundDecl()) {
-    R.setLookupName(ND->getDeclName());
-    R.addDecl(ND);
-    if (ND->isCXXClassMember()) {
-      // Figure out the correct naming class to add to the LookupResult.
-      CXXRecordDecl *Record = nullptr;
-      if (auto *NNS = TC.getCorrectionSpecifier())
-        Record = NNS->getAsType()->getAsCXXRecordDecl();
-      if (!Record)
-        Record =
-            dyn_cast<CXXRecordDecl>(ND->getDeclContext()->getRedeclContext());
-      if (Record)
-        R.setNamingClass(Record);
-
-      // Detect and handle the case where the decl might be an implicit
-      // member.
-      if (SemaRef.isPotentialImplicitMemberAccess(
-              NewSS, R, Consumer.isAddressOfOperand()))
-        return SemaRef.BuildPossibleImplicitMemberExpr(
-            NewSS, /*TemplateKWLoc*/ SourceLocation(), R,
-            /*TemplateArgs*/ nullptr, /*S*/ nullptr);
-    } else if (auto *Ivar = dyn_cast<ObjCIvarDecl>(ND)) {
-      return SemaRef.ObjC().LookupInObjCMethod(R, Consumer.getScope(),
-                                               Ivar->getIdentifier());
-    }
-  }
-
-  return SemaRef.BuildDeclarationNameExpr(NewSS, R, /*NeedsADL*/ false,
-                                          /*AcceptInvalidDecl*/ true);
-}
-
 ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
                                      bool DiscardedValue, bool IsConstexpr,
                                      bool IsTemplateArgument) {
