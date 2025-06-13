@@ -286,15 +286,47 @@ ProgramStateRef ExprEngine::handleLValueBitCast(
 void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
                            ExplodedNode *Pred, ExplodedNodeSet &Dst) {
 
-  ExplodedNodeSet dstPreStmt;
-  getCheckerManager().runCheckersForPreStmt(dstPreStmt, Pred, CastE, *this);
+  ExplodedNodeSet DstPreStmt;
+  getCheckerManager().runCheckersForPreStmt(DstPreStmt, Pred, CastE, *this);
 
-  if (CastE->getCastKind() == CK_LValueToRValue ||
-      CastE->getCastKind() == CK_LValueToRValueBitCast) {
-    for (ExplodedNode *subExprNode : dstPreStmt) {
-      ProgramStateRef state = subExprNode->getState();
-      const LocationContext *LCtx = subExprNode->getLocationContext();
-      evalLoad(Dst, CastE, CastE, subExprNode, state, state->getSVal(Ex, LCtx));
+  if (CastE->getCastKind() == CK_LValueToRValue) {
+    for (ExplodedNode *Node : DstPreStmt) {
+      ProgramStateRef State = Node->getState();
+      const LocationContext *LCtx = Node->getLocationContext();
+      evalLoad(Dst, CastE, CastE, Node, State, State->getSVal(Ex, LCtx));
+    }
+    return;
+  }
+  if (CastE->getCastKind() == CK_LValueToRValueBitCast) {
+    // Handle `__builtin_bit_cast`:
+    ExplodedNodeSet DstEvalLoc;
+
+    // Simulate the lvalue-to-rvalue conversion on `Ex`:
+    for (ExplodedNode *Node : DstPreStmt) {
+      ProgramStateRef State = Node->getState();
+      const LocationContext *LCtx = Node->getLocationContext();
+      evalLocation(DstEvalLoc, CastE, Ex, Node, State, State->getSVal(Ex, LCtx),
+                   true);
+    }
+    // Simulate the operation that actually casts the original value to a new
+    // value of the destination type :
+    StmtNodeBuilder Bldr(DstEvalLoc, Dst, *currBldrCtx);
+
+    for (ExplodedNode *Node : DstEvalLoc) {
+      ProgramStateRef State = Node->getState();
+      const LocationContext *LCtx = Node->getLocationContext();
+      // Although `Ex` is an lvalue, it could have `Loc::ConcreteInt` kind
+      // (e.g., `(int *)123456`).  In such cases, there is no MemRegion
+      // available and we can't get the value to be casted.
+      SVal CastedV = UnknownVal();
+
+      if (const MemRegion *MR = State->getSVal(Ex, LCtx).getAsRegion()) {
+        SVal OrigV = State->getSVal(MR);
+        CastedV = svalBuilder.evalCast(svalBuilder.simplifySVal(State, OrigV),
+                                       CastE->getType(), Ex->getType());
+      }
+      State = State->BindExpr(CastE, LCtx, CastedV);
+      Bldr.generateNode(CastE, Node, State);
     }
     return;
   }
@@ -306,8 +338,8 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
   if (const ExplicitCastExpr *ExCast=dyn_cast_or_null<ExplicitCastExpr>(CastE))
     T = ExCast->getTypeAsWritten();
 
-  StmtNodeBuilder Bldr(dstPreStmt, Dst, *currBldrCtx);
-  for (ExplodedNode *Pred : dstPreStmt) {
+  StmtNodeBuilder Bldr(DstPreStmt, Dst, *currBldrCtx);
+  for (ExplodedNode *Pred : DstPreStmt) {
     ProgramStateRef state = Pred->getState();
     const LocationContext *LCtx = Pred->getLocationContext();
 
@@ -679,9 +711,10 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
   }
 
   ExplodedNode *N = Pred;
-  while (!N->getLocation().getAs<BlockEntrance>()) {
+  while (!N->getLocation().getAs<BlockEdge>()) {
     ProgramPoint P = N->getLocation();
-    assert(P.getAs<PreStmt>()|| P.getAs<PreStmtPurgeDeadSymbols>());
+    assert(P.getAs<PreStmt>() || P.getAs<PreStmtPurgeDeadSymbols>() ||
+           P.getAs<BlockEntrance>());
     (void) P;
     if (N->pred_size() != 1) {
       // We failed to track back where we came from.
@@ -697,7 +730,6 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
     return;
   }
 
-  N = *N->pred_begin();
   BlockEdge BE = N->getLocation().castAs<BlockEdge>();
   SVal X;
 

@@ -1119,8 +1119,8 @@ static Instruction *processUGT_ADDCST_ADD(ICmpInst &I, Value *A, Value *B,
   // This is only really a signed overflow check if the inputs have been
   // sign-extended; check for that condition. For example, if CI2 is 2^31 and
   // the operands of the add are 64 bits wide, we need at least 33 sign bits.
-  if (IC.ComputeMaxSignificantBits(A, 0, &I) > NewWidth ||
-      IC.ComputeMaxSignificantBits(B, 0, &I) > NewWidth)
+  if (IC.ComputeMaxSignificantBits(A, &I) > NewWidth ||
+      IC.ComputeMaxSignificantBits(B, &I) > NewWidth)
     return nullptr;
 
   // In order to replace the original add with a narrower
@@ -1183,7 +1183,7 @@ Instruction *InstCombinerImpl::foldIRemByPowerOfTwoToBitTest(ICmpInst &I) {
   if (!match(&I, m_ICmp(Pred, m_OneUse(m_IRem(m_Value(X), m_Value(Y))),
                         m_CombineAnd(m_Zero(), m_Value(Zero)))))
     return nullptr;
-  if (!isKnownToBeAPowerOfTwo(Y, /*OrZero*/ true, 0, &I))
+  if (!isKnownToBeAPowerOfTwo(Y, /*OrZero*/ true, &I))
     return nullptr;
   // This may increase instruction count, we don't enforce that Y is a constant.
   Value *Mask = Builder.CreateAdd(Y, Constant::getAllOnesValue(Y->getType()));
@@ -1250,8 +1250,8 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
   Value *X, *Y;
   if (match(Cmp.getOperand(0), m_URem(m_Value(X), m_Value(Y))) &&
       ICmpInst::isEquality(Pred)) {
-    KnownBits XKnown = computeKnownBits(X, 0, &Cmp);
-    KnownBits YKnown = computeKnownBits(Y, 0, &Cmp);
+    KnownBits XKnown = computeKnownBits(X, &Cmp);
+    KnownBits YKnown = computeKnownBits(Y, &Cmp);
     if (XKnown.countMaxPopulation() == 1 && YKnown.countMinPopulation() >= 2)
       return new ICmpInst(Pred, X, Cmp.getOperand(1));
   }
@@ -1261,13 +1261,13 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
   if (match(Cmp.getOperand(0), m_Mul(m_Value(X), m_Value(Y))) &&
       ICmpInst::isEquality(Pred)) {
 
-    KnownBits XKnown = computeKnownBits(X, 0, &Cmp);
+    KnownBits XKnown = computeKnownBits(X, &Cmp);
     // if X % 2 != 0
     //    (icmp eq/ne Y)
     if (XKnown.countMaxTrailingZeros() == 0)
       return new ICmpInst(Pred, Y, Cmp.getOperand(1));
 
-    KnownBits YKnown = computeKnownBits(Y, 0, &Cmp);
+    KnownBits YKnown = computeKnownBits(Y, &Cmp);
     // if Y % 2 != 0
     //    (icmp eq/ne X)
     if (YKnown.countMaxTrailingZeros() == 0)
@@ -1487,7 +1487,7 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
 
     // Simplify icmp eq (trunc x to i8), 42 -> icmp eq x, 42|highbits if all
     // of the high bits truncated out of x are known.
-    KnownBits Known = computeKnownBits(X, 0, &Cmp);
+    KnownBits Known = computeKnownBits(X, &Cmp);
 
     // If all the high bits are known, we can do this xform.
     if ((Known.Zero | Known.One).countl_one() >= SrcBits - DstBits) {
@@ -1808,7 +1808,7 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
     }
 
     APInt NewC2 = *C2;
-    KnownBits Know = computeKnownBits(And->getOperand(0), 0, And);
+    KnownBits Know = computeKnownBits(And->getOperand(0), And);
     // Set high zeros of C2 to allow matching negated power-of-2.
     NewC2 = *C2 | APInt::getHighBitsSet(C2->getBitWidth(),
                                         Know.countMinLeadingZeros());
@@ -1964,30 +1964,6 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
     auto NewPred =
         Pred == CmpInst::ICMP_EQ ? CmpInst::ICMP_UGT : CmpInst::ICMP_ULE;
     return new ICmpInst(NewPred, X, SubOne(cast<Constant>(Cmp.getOperand(1))));
-  }
-
-  // If we are testing the intersection of 2 select-of-nonzero-constants with no
-  // common bits set, it's the same as checking if exactly one select condition
-  // is set:
-  // ((A ? TC : FC) & (B ? TC : FC)) == 0 --> xor A, B
-  // ((A ? TC : FC) & (B ? TC : FC)) != 0 --> not(xor A, B)
-  // TODO: Generalize for non-constant values.
-  // TODO: Handle signed/unsigned predicates.
-  // TODO: Handle other bitwise logic connectors.
-  // TODO: Extend to handle a non-zero compare constant.
-  if (C.isZero() && (Pred == CmpInst::ICMP_EQ || And->hasOneUse())) {
-    assert(Cmp.isEquality() && "Not expecting non-equality predicates");
-    Value *A, *B;
-    const APInt *TC, *FC;
-    if (match(X, m_Select(m_Value(A), m_APInt(TC), m_APInt(FC))) &&
-        match(Y,
-              m_Select(m_Value(B), m_SpecificInt(*TC), m_SpecificInt(*FC))) &&
-        !TC->isZero() && !FC->isZero() && !TC->intersects(*FC)) {
-      Value *R = Builder.CreateXor(A, B);
-      if (Pred == CmpInst::ICMP_NE)
-        R = Builder.CreateNot(R);
-      return replaceInstUsesWith(Cmp, R);
-    }
   }
 
   // ((zext i1 X) & Y) == 0 --> !((trunc Y) & X)
@@ -3110,6 +3086,44 @@ static Value *createLogicFromTable(const std::bitset<4> &Table, Value *Op0,
   return nullptr;
 }
 
+Instruction *InstCombinerImpl::foldICmpBinOpWithConstantViaTruthTable(
+    ICmpInst &Cmp, BinaryOperator *BO, const APInt &C) {
+  Value *A, *B;
+  Constant *C1, *C2, *C3, *C4;
+  if (!(match(BO->getOperand(0),
+              m_Select(m_Value(A), m_Constant(C1), m_Constant(C2)))) ||
+      !match(BO->getOperand(1),
+             m_Select(m_Value(B), m_Constant(C3), m_Constant(C4))) ||
+      Cmp.getType() != A->getType())
+    return nullptr;
+
+  std::bitset<4> Table;
+  auto ComputeTable = [&](bool First, bool Second) -> std::optional<bool> {
+    Constant *L = First ? C1 : C2;
+    Constant *R = Second ? C3 : C4;
+    if (auto *Res = ConstantFoldBinaryOpOperands(BO->getOpcode(), L, R, DL)) {
+      auto *Val = Res->getType()->isVectorTy() ? Res->getSplatValue() : Res;
+      if (auto *CI = dyn_cast_or_null<ConstantInt>(Val))
+        return ICmpInst::compare(CI->getValue(), C, Cmp.getPredicate());
+    }
+    return std::nullopt;
+  };
+
+  for (unsigned I = 0; I < 4; ++I) {
+    bool First = (I >> 1) & 1;
+    bool Second = I & 1;
+    if (auto Res = ComputeTable(First, Second))
+      Table[I] = *Res;
+    else
+      return nullptr;
+  }
+
+  // Synthesize optimal logic.
+  if (auto *Cond = createLogicFromTable(Table, A, B, Builder, BO->hasOneUse()))
+    return replaceInstUsesWith(Cmp, Cond);
+  return nullptr;
+}
+
 /// Fold icmp (add X, Y), C.
 Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
                                                    BinaryOperator *Add,
@@ -3756,8 +3770,7 @@ static Instruction *foldCtpopPow2Test(ICmpInst &I, IntrinsicInst *CtpopLhs,
   if (((I.isEquality() || Pred == ICmpInst::ICMP_UGT) && CRhs == 1) ||
       (Pred == ICmpInst::ICMP_ULT && CRhs == 2)) {
     Value *Op = CtpopLhs->getArgOperand(0);
-    KnownBits OpKnown = computeKnownBits(Op, Q.DL,
-                                         /*Depth*/ 0, Q.AC, Q.CxtI, Q.DT);
+    KnownBits OpKnown = computeKnownBits(Op, Q.DL, Q.AC, Q.CxtI, Q.DT);
     // No need to check for count > 1, that should be already constant folded.
     if (OpKnown.countMinPopulation() == 1) {
       Value *And = Builder.CreateAnd(
@@ -4014,7 +4027,13 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
   }
 
   // TODO: These folds could be refactored to be part of the above calls.
-  return foldICmpBinOpEqualityWithConstant(Cmp, BO, C);
+  if (Instruction *I = foldICmpBinOpEqualityWithConstant(Cmp, BO, C))
+    return I;
+
+  // Fall back to handling `icmp pred (select A ? C1 : C2) binop (select B ? C3
+  // : C4), C5` pattern, by computing a truth table of the four constant
+  // variants.
+  return foldICmpBinOpWithConstantViaTruthTable(Cmp, BO, C);
 }
 
 static Instruction *
@@ -4421,13 +4440,13 @@ static bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
     // Pow2 - 1 is a Mask.
     if (!Not && match(I->getOperand(1), m_AllOnes()))
       return isKnownToBeAPowerOfTwo(I->getOperand(0), Q.DL, /*OrZero*/ true,
-                                    Depth, Q.AC, Q.CxtI, Q.DT);
+                                    Q.AC, Q.CxtI, Q.DT, Depth);
     break;
   case Instruction::Sub:
     // -Pow2 is a ~Mask.
     if (Not && match(I->getOperand(0), m_Zero()))
       return isKnownToBeAPowerOfTwo(I->getOperand(1), Q.DL, /*OrZero*/ true,
-                                    Depth, Q.AC, Q.CxtI, Q.DT);
+                                    Q.AC, Q.CxtI, Q.DT, Depth);
     break;
   case Instruction::Call: {
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
@@ -4988,7 +5007,7 @@ static Instruction *foldICmpAndXX(ICmpInst &I, const SimplifyQuery &Q,
   if (!ICmpInst::isSigned(Pred))
     return nullptr;
 
-  KnownBits KnownY = IC.computeKnownBits(A, /*Depth=*/0, &I);
+  KnownBits KnownY = IC.computeKnownBits(A, &I);
   // (X & NegY) spred X --> (X & NegY) upred X
   if (KnownY.isNegative())
     return new ICmpInst(ICmpInst::getUnsignedPredicate(Pred), Op0, Op1);
@@ -5420,7 +5439,7 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
          match(Op1, m_c_Mul(m_Specific(Z), m_Value(Y))))) {
       if (ICmpInst::isSigned(Pred)) {
         if (Op0HasNSW && Op1HasNSW) {
-          KnownBits ZKnown = computeKnownBits(Z, 0, &I);
+          KnownBits ZKnown = computeKnownBits(Z, &I);
           if (ZKnown.isStrictlyPositive())
             return new ICmpInst(Pred, X, Y);
           if (ZKnown.isNegative())
@@ -5443,7 +5462,7 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
               isKnownNonEqual(X, Y, SQ))
             return new ICmpInst(Pred, Z, Constant::getNullValue(Z->getType()));
 
-          KnownBits ZKnown = computeKnownBits(Z, 0, &I);
+          KnownBits ZKnown = computeKnownBits(Z, &I);
           // if Z % 2 != 0
           //    X * Z eq/ne Y * Z -> X eq/ne Y
           if (ZKnown.countMaxTrailingZeros() == 0)
@@ -6124,12 +6143,12 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   // 1. A & B_Pow2 != B_Pow2 -> A & B_Pow2 == 0
   // 2. A & B_Pow2 == B_Pow2 -> A & B_Pow2 != 0
   if (match(Op0, m_c_And(m_Specific(Op1), m_Value())) &&
-      isKnownToBeAPowerOfTwo(Op1, /* OrZero */ false, 0, &I))
+      isKnownToBeAPowerOfTwo(Op1, /* OrZero */ false, &I))
     return new ICmpInst(CmpInst::getInversePredicate(Pred), Op0,
                         ConstantInt::getNullValue(Op0->getType()));
 
   if (match(Op1, m_c_And(m_Specific(Op0), m_Value())) &&
-      isKnownToBeAPowerOfTwo(Op0, /* OrZero */ false, 0, &I))
+      isKnownToBeAPowerOfTwo(Op0, /* OrZero */ false, &I))
     return new ICmpInst(CmpInst::getInversePredicate(Pred), Op1,
                         ConstantInt::getNullValue(Op1->getType()));
 
@@ -6167,7 +6186,7 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
                    m_ICmp(m_OneUse(m_c_And(m_Value(A), m_Matcher)), m_Zero())))
       IsZero = true;
 
-    if (IsZero && isKnownToBeAPowerOfTwo(A, /* OrZero */ true, /*Depth*/ 0, &I))
+    if (IsZero && isKnownToBeAPowerOfTwo(A, /* OrZero */ true, &I))
       // (icmp eq/ne (and (add/sub/xor X, P2), P2), P2)
       //    -> (icmp eq/ne (and X, P2), 0)
       // (icmp eq/ne (and (add/sub/xor X, P2), P2), 0)
@@ -6820,11 +6839,10 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
     // (especially IndVarSimplify) may not be able to reliably undo.
     SimplifyQuery Q = SQ.getWithoutDomCondCache().getWithInstruction(&I);
     if (SimplifyDemandedBits(&I, 0, getDemandedBitsLHSMask(I, BitWidth),
-                             Op0Known, /*Depth=*/0, Q))
+                             Op0Known, Q))
       return &I;
 
-    if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known,
-                             /*Depth=*/0, Q))
+    if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known, Q))
       return &I;
   }
 
@@ -7058,7 +7076,7 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
         // icmp eq X, (zext (icmp ne X, 0)) --> X == 0 || X == 1
         // icmp ne X, (zext (icmp ne X, 0)) --> X != 0 && X != 1
         // icmp eq X, (sext (icmp ne X, 0)) --> X == 0 || X == -1
-        // icmp ne X, (sext (icmp ne X, 0)) --> X != 0 && X == -1
+        // icmp ne X, (sext (icmp ne X, 0)) --> X != 0 && X != -1
         return CreateRangeCheck();
       }
     } else if (IsSExt ? C->isAllOnes() : C->isOne()) {
@@ -7735,7 +7753,7 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     // and       (X & ~Y) != 0 --> (X & Y) == 0
     // if A is a power of 2.
     if (match(Op0, m_And(m_Value(X), m_Not(m_Value(Y)))) &&
-        match(Op1, m_Zero()) && isKnownToBeAPowerOfTwo(X, false, 0, &I) &&
+        match(Op1, m_Zero()) && isKnownToBeAPowerOfTwo(X, false, &I) &&
         I.isEquality())
       return new ICmpInst(I.getInversePredicate(), Builder.CreateAnd(X, Y),
                           Op1);
@@ -8358,10 +8376,9 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
     // flag then we can assume we do not have that case. Otherwise we might be
     // able to prove that either X or Y is not infinity.
     if (!LHSI->hasNoNaNs() && !LHSI->hasNoInfs() &&
-        !isKnownNeverInfinity(Y, /*Depth=*/0,
+        !isKnownNeverInfinity(Y,
                               CI.getSimplifyQuery().getWithInstruction(&I)) &&
-        !isKnownNeverInfinity(X, /*Depth=*/0,
-                              CI.getSimplifyQuery().getWithInstruction(&I)))
+        !isKnownNeverInfinity(X, CI.getSimplifyQuery().getWithInstruction(&I)))
       break;
 
     [[fallthrough]];
@@ -8511,11 +8528,11 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // then canonicalize the operand to 0.0.
   if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
     if (!match(Op0, m_PosZeroFP()) &&
-        isKnownNeverNaN(Op0, 0, getSimplifyQuery().getWithInstruction(&I)))
+        isKnownNeverNaN(Op0, getSimplifyQuery().getWithInstruction(&I)))
       return replaceOperand(I, 0, ConstantFP::getZero(OpType));
 
     if (!match(Op1, m_PosZeroFP()) &&
-        isKnownNeverNaN(Op1, 0, getSimplifyQuery().getWithInstruction(&I)))
+        isKnownNeverNaN(Op1, getSimplifyQuery().getWithInstruction(&I)))
       return replaceOperand(I, 1, ConstantFP::getZero(OpType));
   }
 

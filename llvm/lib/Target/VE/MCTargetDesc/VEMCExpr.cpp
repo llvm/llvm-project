@@ -12,22 +12,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "VEMCExpr.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
-#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "vemcexpr"
 
-const VEMCExpr *VEMCExpr::create(Specifier Kind, const MCExpr *Expr,
+const VEMCExpr *VEMCExpr::create(Specifier S, const MCExpr *Expr,
                                  MCContext &Ctx) {
-  return new (Ctx) VEMCExpr(Kind, Expr);
+  return new (Ctx) VEMCExpr(Expr, S);
 }
 
 void VEMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
@@ -38,7 +35,7 @@ void VEMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     OS << '@' << MAI->getSpecifierName(specifier);
 }
 
-VE::Fixups VEMCExpr::getFixupKind(VEMCExpr::Specifier S) {
+VE::Fixups VEMCExpr::getFixupKind(MCSpecifierExpr::Spec S) {
   switch (S) {
   default:
     llvm_unreachable("Unhandled VEMCExpr::Specifier");
@@ -81,8 +78,4 @@ bool VEMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
     return false;
   Res.setSpecifier(specifier);
   return true;
-}
-
-void VEMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
 }

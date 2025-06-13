@@ -28,6 +28,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScaledNumber.h"
@@ -72,7 +73,8 @@ struct CalleeInfo {
   uint32_t Hotness : 3;
 
   // True if at least one of the calls to the callee is a tail call.
-  bool HasTailCall : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  uint32_t HasTailCall : 1;
 
   /// The value stored in RelBlockFreq has to be interpreted as the digits of
   /// a scaled number with a scale of \p -ScaleShift.
@@ -247,14 +249,14 @@ struct ValueInfo {
   /// Returns the most constraining visibility among summaries. The
   /// visibilities, ordered from least to most constraining, are: default,
   /// protected and hidden.
-  GlobalValue::VisibilityTypes getELFVisibility() const;
+  LLVM_ABI GlobalValue::VisibilityTypes getELFVisibility() const;
 
   /// Checks if all summaries are DSO local (have the flag set). When DSOLocal
   /// propagation has been done, set the parameter to enable fast check.
-  bool isDSOLocal(bool WithDSOLocalPropagation = false) const;
+  LLVM_ABI bool isDSOLocal(bool WithDSOLocalPropagation = false) const;
 
   /// Checks if all copies are eligible for auto-hiding (have flag set).
-  bool canAutoHide() const;
+  LLVM_ABI bool canAutoHide() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ValueInfo &VI) {
@@ -871,7 +873,7 @@ public:
   }
 
   /// A dummy node to reference external functions that aren't in the index
-  static FunctionSummary ExternalNode;
+  LLVM_ABI static FunctionSummary ExternalNode;
 
 private:
   /// Number of instructions (ignoring debug instructions, e.g.) computed
@@ -941,7 +943,7 @@ public:
       Allocs = std::make_unique<AllocsTy>(std::move(AllocList));
   }
   // Gets the number of readonly and writeonly refs in RefEdgeList
-  std::pair<unsigned, unsigned> specialRefCounts() const;
+  LLVM_ABI std::pair<unsigned, unsigned> specialRefCounts() const;
 
   /// Check if this is a function summary.
   static bool classof(const GlobalValueSummary *GVS) {
@@ -1525,8 +1527,8 @@ public:
 
   bool haveGVs() const { return HaveGVs; }
 
-  uint64_t getFlags() const;
-  void setFlags(uint64_t Flags);
+  LLVM_ABI uint64_t getFlags() const;
+  LLVM_ABI void setFlags(uint64_t Flags);
 
   uint64_t getBlockCount() const { return BlockCount; }
   void addBlockCount(uint64_t C) { BlockCount += C; }
@@ -1670,7 +1672,7 @@ public:
   bool isGlobalValueLive(const GlobalValueSummary *GVS) const {
     return !WithGlobalValueDeadStripping || GVS->isLive();
   }
-  bool isGUIDLive(GlobalValue::GUID GUID) const;
+  LLVM_ABI bool isGUIDLive(GlobalValue::GUID GUID) const;
 
   /// Return a ValueInfo for the index value_type (convenient when iterating
   /// index).
@@ -1794,8 +1796,9 @@ public:
   /// Returns the first GlobalValueSummary for \p ValueGUID, asserting that
   /// there
   /// is only one if \p PerModuleIndex.
-  GlobalValueSummary *getGlobalValueSummary(GlobalValue::GUID ValueGUID,
-                                            bool PerModuleIndex = true) const;
+  LLVM_ABI GlobalValueSummary *
+  getGlobalValueSummary(GlobalValue::GUID ValueGUID,
+                        bool PerModuleIndex = true) const;
 
   /// Table of modules, containing module hash and id.
   const StringMap<ModuleHash> &modulePaths() const {
@@ -1923,8 +1926,9 @@ public:
 
   /// Collect for the given module the list of functions it defines
   /// (GUID -> Summary).
-  void collectDefinedFunctionsForModule(StringRef ModulePath,
-                                        GVSummaryMapTy &GVSummaryMap) const;
+  LLVM_ABI void
+  collectDefinedFunctionsForModule(StringRef ModulePath,
+                                   GVSummaryMapTy &GVSummaryMap) const;
 
   /// Collect for each module the list of Summaries it defines (GUID ->
   /// Summary).
@@ -1940,29 +1944,31 @@ public:
   }
 
   /// Print to an output stream.
-  void print(raw_ostream &OS, bool IsForDebug = false) const;
+  LLVM_ABI void print(raw_ostream &OS, bool IsForDebug = false) const;
 
   /// Dump to stderr (for debugging).
-  void dump() const;
+  LLVM_ABI void dump() const;
 
   /// Export summary to dot file for GraphViz.
-  void
+  LLVM_ABI void
   exportToDot(raw_ostream &OS,
               const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) const;
 
   /// Print out strongly connected components for debugging.
-  void dumpSCCs(raw_ostream &OS);
+  LLVM_ABI void dumpSCCs(raw_ostream &OS);
 
   /// Do the access attribute and DSOLocal propagation in combined index.
-  void propagateAttributes(const DenseSet<GlobalValue::GUID> &PreservedSymbols);
+  LLVM_ABI void
+  propagateAttributes(const DenseSet<GlobalValue::GUID> &PreservedSymbols);
 
   /// Checks if we can import global variable from another module.
-  bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs) const;
+  LLVM_ABI bool canImportGlobalVar(const GlobalValueSummary *S,
+                                   bool AnalyzeRefs) const;
 
   /// Same as above but checks whether the global var is importable as a
   /// declaration.
-  bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs,
-                          bool &CanImportDecl) const;
+  LLVM_ABI bool canImportGlobalVar(const GlobalValueSummary *S,
+                                   bool AnalyzeRefs, bool &CanImportDecl) const;
 };
 
 /// GraphTraits definition to build SCC for the index

@@ -64,7 +64,7 @@ LanaiMCInstLower::GetConstantPoolIndexSymbol(const MachineOperand &MO) const {
 
 MCOperand LanaiMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
                                                MCSymbol *Sym) const {
-  LanaiMCExpr::VariantKind Kind;
+  LanaiMCExpr::Spec Kind;
 
   switch (MO.getTargetFlags()) {
   case LanaiII::MO_NO_FLAG:

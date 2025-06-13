@@ -43,6 +43,18 @@ enum CondCode {
   COND_GEU,
   COND_CV_BEQIMM,
   COND_CV_BNEIMM,
+  COND_QC_BEQI,
+  COND_QC_BNEI,
+  COND_QC_BLTI,
+  COND_QC_BGEI,
+  COND_QC_BLTUI,
+  COND_QC_BGEUI,
+  COND_QC_E_BEQI,
+  COND_QC_E_BNEI,
+  COND_QC_E_BLTI,
+  COND_QC_E_BGEI,
+  COND_QC_E_BLTUI,
+  COND_QC_E_BGEUI,
   COND_INVALID
 };
 
@@ -344,8 +356,6 @@ bool isRVVSpill(const MachineInstr &MI);
 
 std::optional<std::pair<unsigned, unsigned>>
 isRVVSpillForZvlsseg(unsigned Opcode);
-
-bool isFaultFirstLoad(const MachineInstr &MI);
 
 // Return true if both input instructions have equal rounding mode. If at least
 // one of the instructions does not have rounding mode, false will be returned.

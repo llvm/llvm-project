@@ -581,7 +581,7 @@ bool PatFrag::checkSemantics() {
 
   StringSet<> SeenOps;
   for (const auto &Op : in_params()) {
-    if (SeenOps.count(Op.Name)) {
+    if (SeenOps.contains(Op.Name)) {
       PrintError("duplicate parameter '" + Op.Name + "'");
       return false;
     }
@@ -609,7 +609,7 @@ bool PatFrag::checkSemantics() {
       return false;
     }
 
-    if (SeenOps.count(Op.Name)) {
+    if (SeenOps.contains(Op.Name)) {
       PrintError("duplicate parameter '" + Op.Name + "'");
       return false;
     }

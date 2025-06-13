@@ -432,44 +432,50 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
                                                   /*bound_ctrl=*/false);
       res = vector::makeArithReduction(
           rewriter, loc, gpu::convertReductionKind(mode), res, dpp);
-      if (ci.subgroupSize == 32) {
-        Value lane0 = rewriter.create<arith::ConstantOp>(
-            loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(0));
-        res =
-            rewriter.create<ROCDL::ReadlaneOp>(loc, res.getType(), res, lane0);
-      }
     } else {
       return rewriter.notifyMatchFailure(
           op, "Subgroup reduce lowering to DPP not currently supported for "
               "this device.");
+    }
+    if (ci.subgroupSize == 32) {
+      Value lane31 = rewriter.create<arith::ConstantOp>(
+          loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(31));
+      res = rewriter.create<ROCDL::ReadlaneOp>(loc, res.getType(), res, lane31);
     }
   }
   if (ci.clusterSize >= 64) {
     if (chipset.majorVersion <= 9) {
       // Broadcast 31st lane value to rows 2 and 3.
-      // Use row mask to avoid polluting rows 0 and 1.
       dpp = rewriter.create<amdgpu::DPPOp>(
           loc, res.getType(), res, res, amdgpu::DPPPerm::row_bcast_31,
-          rewriter.getUnitAttr(), 0xc, allBanks,
-          /*bound_ctrl*/ false);
+          rewriter.getUnitAttr(), 0xf, allBanks,
+          /*bound_ctrl*/ true);
+      res = vector::makeArithReduction(
+          rewriter, loc, gpu::convertReductionKind(mode), dpp, res);
+      // Obtain reduction from last rows, the previous rows are polluted.
+      Value lane63 = rewriter.create<arith::ConstantOp>(
+          loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(63));
+      res = rewriter.create<ROCDL::ReadlaneOp>(loc, res.getType(), res, lane63);
 
     } else if (chipset.majorVersion <= 12) {
       // Assume reduction across 32 lanes has been done.
       // Perform final reduction manually by summing values in lane 0 and
       // lane 32.
-      Value lane0 = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(0));
-      Value lane32 = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(32));
-      dpp = rewriter.create<ROCDL::ReadlaneOp>(loc, res.getType(), res, lane32);
-      res = rewriter.create<ROCDL::ReadlaneOp>(loc, res.getType(), res, lane0);
+      Value lane31 = rewriter.create<arith::ConstantOp>(
+          loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(31));
+      Value lane63 = rewriter.create<arith::ConstantOp>(
+          loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(63));
+      lane31 =
+          rewriter.create<ROCDL::ReadlaneOp>(loc, res.getType(), res, lane31);
+      lane63 =
+          rewriter.create<ROCDL::ReadlaneOp>(loc, res.getType(), res, lane63);
+      res = vector::makeArithReduction(
+          rewriter, loc, gpu::convertReductionKind(mode), lane31, lane63);
     } else {
       return rewriter.notifyMatchFailure(
           op, "Subgroup reduce lowering to DPP not currently supported for "
               "this device.");
     }
-    res = vector::makeArithReduction(rewriter, loc,
-                                     gpu::convertReductionKind(mode), res, dpp);
   }
   assert(res.getType() == input.getType());
   return res;

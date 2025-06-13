@@ -49,3 +49,13 @@ void foo() {
       ;
   #endif
   }
+
+namespace GH139665 {
+void f(){
+#pragma omp metadirective( // expected-error {{expected at least one clause on '#pragma omp metadirective' directive}}
+}
+
+void g() {
+#pragma omp metadirective align // expected-error {{expected '(' after 'align'}}
+}
+} // namespace GH139665

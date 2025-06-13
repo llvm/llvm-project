@@ -137,7 +137,7 @@ public:
                                             "' has empty " +
                                             "`ValueCols' field!");
 
-    for (const Init *I : ColValList->getValues()) {
+    for (const Init *I : ColValList->getElements()) {
       const auto *ColI = cast<ListInit>(I);
 
       // Make sure that all the sub-lists in 'ValueCols' have same number of
@@ -228,7 +228,7 @@ void MapTableEmitter::buildRowInstrMap() {
   for (const Record *CurInstr : InstrDefs) {
     std::vector<const Init *> KeyValue;
     const ListInit *RowFields = InstrMapDesc.getRowFields();
-    for (const Init *RowField : RowFields->getValues()) {
+    for (const Init *RowField : RowFields->getElements()) {
       const RecordVal *RecVal = CurInstr->getValue(RowField);
       if (RecVal == nullptr)
         PrintFatalError(CurInstr->getLoc(),
@@ -303,7 +303,7 @@ const Record *MapTableEmitter::getInstrForColumn(const Record *KeyInstr,
   std::vector<const Init *> KeyValue;
 
   // Construct KeyValue using KeyInstr's values for RowFields.
-  for (const Init *RowField : RowFields->getValues()) {
+  for (const Init *RowField : RowFields->getElements()) {
     const Init *KeyInstrVal = KeyInstr->getValue(RowField)->getValue();
     KeyValue.push_back(KeyInstrVal);
   }
@@ -475,7 +475,7 @@ void MapTableEmitter::emitTablesWithFunc(raw_ostream &OS) {
   OS << "// " << InstrMapDesc.getName() << "\nLLVM_READONLY\n";
   OS << "int " << InstrMapDesc.getName() << "(uint16_t Opcode";
   if (ValueCols.size() > 1) {
-    for (const Init *CF : ColFields->getValues()) {
+    for (const Init *CF : ColFields->getElements()) {
       std::string ColName = CF->getAsUnquotedString();
       OS << ", enum " << ColName << " in" << ColName;
     }

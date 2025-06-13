@@ -263,8 +263,6 @@ protected:
   // Cache the DataLayout since we use it a lot.
   const DataLayout &DL;
 
-  DominatorTree DT;
-
   /// The OptimizationRemarkEmitter available for this compilation.
   OptimizationRemarkEmitter *ORE;
 
@@ -1688,66 +1686,51 @@ bool CallAnalyzer::simplifyCmpInstForRecCall(CmpInst &Cmp) {
   if (!isa<Argument>(Cmp.getOperand(0)) || !isa<Constant>(Cmp.getOperand(1)))
     return false;
   auto *CmpOp = Cmp.getOperand(0);
-  Function *F = Cmp.getFunction();
-  // Iterate over the users of the function to check if it's a recursive
-  // function:
-  for (auto *U : F->users()) {
-    CallInst *Call = dyn_cast<CallInst>(U);
-    if (!Call || Call->getFunction() != F || Call->getCalledFunction() != F)
-      continue;
-    auto *CallBB = Call->getParent();
-    auto *Predecessor = CallBB->getSinglePredecessor();
-    // Only handle the case when the callsite has a single predecessor:
-    if (!Predecessor)
-      continue;
+  // Make sure that the callsite is recursive:
+  if (CandidateCall.getCaller() != &F)
+    return false;
+  // Only handle the case when the callsite has a single predecessor:
+  auto *CallBB = CandidateCall.getParent();
+  auto *Predecessor = CallBB->getSinglePredecessor();
+  if (!Predecessor)
+    return false;
+  // Check if the callsite is guarded by the same Cmp instruction:
+  auto *Br = dyn_cast<BranchInst>(Predecessor->getTerminator());
+  if (!Br || Br->isUnconditional() || Br->getCondition() != &Cmp)
+    return false;
 
-    auto *Br = dyn_cast<BranchInst>(Predecessor->getTerminator());
-    if (!Br || Br->isUnconditional())
-      continue;
-    // Check if the Br condition is the same Cmp instr we are investigating:
-    if (Br->getCondition() != &Cmp)
-      continue;
-    // Check if there are any arg of the recursive callsite is affecting the cmp
-    // instr:
-    bool ArgFound = false;
-    Value *FuncArg = nullptr, *CallArg = nullptr;
-    for (unsigned ArgNum = 0;
-         ArgNum < F->arg_size() && ArgNum < Call->arg_size(); ArgNum++) {
-      FuncArg = F->getArg(ArgNum);
-      CallArg = Call->getArgOperand(ArgNum);
-      if (FuncArg == CmpOp && CallArg != CmpOp) {
-        ArgFound = true;
-        break;
-      }
+  // Check if there is any arg of the recursive callsite is affecting the cmp
+  // instr:
+  bool ArgFound = false;
+  Value *FuncArg = nullptr, *CallArg = nullptr;
+  for (unsigned ArgNum = 0;
+       ArgNum < F.arg_size() && ArgNum < CandidateCall.arg_size(); ArgNum++) {
+    FuncArg = F.getArg(ArgNum);
+    CallArg = CandidateCall.getArgOperand(ArgNum);
+    if (FuncArg == CmpOp && CallArg != CmpOp) {
+      ArgFound = true;
+      break;
     }
-    if (!ArgFound)
-      continue;
-    // Now we have a recursive call that is guarded by a cmp instruction.
-    // Check if this cmp can be simplified:
-    SimplifyQuery SQ(DL, dyn_cast<Instruction>(CallArg));
-    DomConditionCache DC;
-    DC.registerBranch(Br);
-    SQ.DC = &DC;
-    if (DT.root_size() == 0) {
-      // Dominator tree was never constructed for any function yet.
-      DT.recalculate(*F);
-    } else if (DT.getRoot()->getParent() != F) {
-      // Dominator tree was constructed for a different function, recalculate
-      // it for the current function.
-      DT.recalculate(*F);
-    }
-    SQ.DT = &DT;
-    Value *SimplifiedInstruction = llvm::simplifyInstructionWithOperands(
-        cast<CmpInst>(&Cmp), {CallArg, Cmp.getOperand(1)}, SQ);
-    if (auto *ConstVal = dyn_cast_or_null<ConstantInt>(SimplifiedInstruction)) {
-      bool IsTrueSuccessor = CallBB == Br->getSuccessor(0);
-      // Make sure that the BB of the recursive call is NOT the next successor
-      // of the icmp. In other words, make sure that the recursion depth is 1.
-      if ((ConstVal->isOne() && !IsTrueSuccessor) ||
-          (ConstVal->isZero() && IsTrueSuccessor)) {
-        SimplifiedValues[&Cmp] = ConstVal;
-        return true;
-      }
+  }
+  if (!ArgFound)
+    return false;
+
+  // Now we have a recursive call that is guarded by a cmp instruction.
+  // Check if this cmp can be simplified:
+  SimplifyQuery SQ(DL, dyn_cast<Instruction>(CallArg));
+  CondContext CC(&Cmp);
+  CC.Invert = (CallBB != Br->getSuccessor(0));
+  SQ.CC = &CC;
+  CC.AffectedValues.insert(FuncArg);
+  Value *SimplifiedInstruction = llvm::simplifyInstructionWithOperands(
+      cast<CmpInst>(&Cmp), {CallArg, Cmp.getOperand(1)}, SQ);
+  if (auto *ConstVal = dyn_cast_or_null<ConstantInt>(SimplifiedInstruction)) {
+    // Make sure that the BB of the recursive call is NOT the true successor
+    // of the icmp. In other words, make sure that the recursion depth is 1.
+    if ((ConstVal->isOne() && CC.Invert) ||
+        (ConstVal->isZero() && !CC.Invert)) {
+      SimplifiedValues[&Cmp] = ConstVal;
+      return true;
     }
   }
   return false;

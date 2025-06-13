@@ -1,7 +1,4 @@
 from __future__ import absolute_import
-import errno
-import io
-import itertools
 import getopt
 import os, signal, subprocess, sys
 import re
@@ -12,10 +9,7 @@ import shlex
 import shutil
 import tempfile
 import threading
-import typing
 from typing import Optional, Tuple
-
-import io
 
 try:
     from StringIO import StringIO
@@ -2292,7 +2286,9 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     if err:
         output += """Command Output (stderr):\n--\n%s\n--\n""" % (err,)
 
-    return lit.Test.Result(status, output)
+    return lit.Test.Result(
+        status, output, attempts=i + 1, max_allowed_attempts=attempts
+    )
 
 
 def executeShTest(

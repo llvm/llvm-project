@@ -1942,13 +1942,14 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
   if (DIE *StaticMemberDIE = getDIE(DT))
     return StaticMemberDIE;
 
+  DwarfUnit *ContextUnit = static_cast<DwarfUnit *>(ContextDIE->getUnit());
   DIE &StaticMemberDIE = createAndAddDIE(DT->getTag(), *ContextDIE, DT);
 
   const DIType *Ty = DT->getBaseType();
 
   addString(StaticMemberDIE, dwarf::DW_AT_name, DT->getName());
   addType(StaticMemberDIE, Ty);
-  addSourceLine(StaticMemberDIE, DT);
+  ContextUnit->addSourceLine(StaticMemberDIE, DT);
   addFlag(StaticMemberDIE, dwarf::DW_AT_external);
   addFlag(StaticMemberDIE, dwarf::DW_AT_declaration);
 

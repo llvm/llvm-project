@@ -26,8 +26,8 @@ entry:
 ; CHECK: ld.param.b64 %rd[[A_REG:[0-9]+]], [kernel_func_param_0]
 ; CHECK: cvta.to.global.u64 %rd[[A1_REG:[0-9]+]], %rd[[A_REG]]
 ; CHECK: add.u64 %rd[[SP_REG:[0-9]+]], %SP, 0
-; CHECK: ld.global.b32 %f[[A0_REG:[0-9]+]], [%rd[[A1_REG]]]
-; CHECK: st.local.b32 [{{%rd[0-9]+}}], %f[[A0_REG]]
+; CHECK: ld.global.b32 %r[[A0_REG:[0-9]+]], [%rd[[A1_REG]]]
+; CHECK: st.local.b32 [{{%rd[0-9]+}}], %r[[A0_REG]]
 
   %0 = load float, ptr %a, align 4
   store float %0, ptr %buf, align 4

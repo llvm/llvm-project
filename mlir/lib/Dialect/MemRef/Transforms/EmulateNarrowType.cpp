@@ -229,7 +229,7 @@ struct ConvertMemRefAssumeAlignment final
     }
 
     rewriter.replaceOpWithNewOp<memref::AssumeAlignmentOp>(
-        op, adaptor.getMemref(), adaptor.getAlignmentAttr());
+        op, newTy, adaptor.getMemref(), adaptor.getAlignmentAttr());
     return success();
   }
 };

@@ -264,11 +264,11 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   typedef SmallVector<SmallString<2>, 2> PrefixKeyT;
   typedef std::map<PrefixKeyT, unsigned> PrefixesT;
   PrefixesT Prefixes;
-  Prefixes.insert({PrefixKeyT(), 0});
+  Prefixes.try_emplace(PrefixKeyT(), 0);
   for (const Record &R : llvm::make_pointee_range(Opts)) {
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     PrefixKeyT PrefixKey(RPrefixes.begin(), RPrefixes.end());
-    Prefixes.insert({PrefixKey, 0});
+    Prefixes.try_emplace(PrefixKey, 0);
   }
 
   DenseSet<StringRef> PrefixesUnionSet;
@@ -501,7 +501,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     for (const Record *VisibilityHelp :
          R.getValueAsListOfDefs("HelpTextsForVariants")) {
       ArrayRef<const Init *> Visibilities =
-          VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
+          VisibilityHelp->getValueAsListInit("Visibilities")->getElements();
 
       std::vector<std::string> VisibilityNames;
       for (const Init *Visibility : Visibilities)
@@ -523,11 +523,10 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", ";
     if (!isa<UnsetInit>(R.getValueInit("Values")))
       writeCstring(OS, R.getValueAsString("Values"));
-    else if (!isa<UnsetInit>(R.getValueInit("ValuesCode"))) {
+    else if (!isa<UnsetInit>(R.getValueInit("ValuesCode")))
       OS << getOptionName(R) << "_Values";
-    } else {
+    else
       OS << "nullptr";
-    }
   };
 
   auto IsMarshallingOption = [](const Record &R) {

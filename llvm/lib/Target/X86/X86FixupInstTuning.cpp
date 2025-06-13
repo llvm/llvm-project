@@ -49,8 +49,7 @@ public:
 
   // This pass runs after regalloc and doesn't support VReg operands.
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -223,7 +222,22 @@ bool X86FixupInstTuningPass::processInstruction(
     return ProcessUNPCKToIntDomain(NewOpc);
   };
 
+  auto ProcessBLENDToMOV = [&](unsigned MovOpc) -> bool {
+    if (MI.getOperand(NumOperands - 1).getImm() != 1)
+      return false;
+    bool Force = MF.getFunction().hasOptSize();
+    if (!Force && !NewOpcPreferable(MovOpc))
+      return false;
+    MI.setDesc(TII->get(MovOpc));
+    MI.removeOperand(NumOperands - 1);
+    return true;
+  };
+
   switch (Opc) {
+  case X86::VBLENDPSrri:
+    return ProcessBLENDToMOV(X86::VMOVSSrr);
+  case X86::VBLENDPDrri:
+    return ProcessBLENDToMOV(X86::VMOVSDrr);
   case X86::VPERMILPDri:
     return ProcessVPERMILPDri(X86::VSHUFPDrri);
   case X86::VPERMILPDYri:

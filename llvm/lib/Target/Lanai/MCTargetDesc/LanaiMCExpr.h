@@ -14,38 +14,19 @@
 
 namespace llvm {
 
-class LanaiMCExpr : public MCTargetExpr {
+class LanaiMCExpr : public MCSpecifierExpr {
 public:
-  enum VariantKind { VK_Lanai_None, VK_Lanai_ABS_HI, VK_Lanai_ABS_LO };
+  using Spec = MCSpecifierExpr::Spec;
+  enum { VK_Lanai_None, VK_Lanai_ABS_HI, VK_Lanai_ABS_LO };
 
 private:
-  const VariantKind specifier;
-  const MCExpr *Expr;
-
-  explicit LanaiMCExpr(VariantKind Kind, const MCExpr *Expr)
-      : specifier(Kind), Expr(Expr) {}
+  explicit LanaiMCExpr(const MCExpr *Expr, Spec S) : MCSpecifierExpr(Expr, S) {}
 
 public:
-  static const LanaiMCExpr *create(VariantKind Kind, const MCExpr *Expr,
+  static const LanaiMCExpr *create(Spec Kind, const MCExpr *Expr,
                                    MCContext &Ctx);
 
-  // Returns the kind of this expression.
-  VariantKind getKind() const { return specifier; }
-
-  // Returns the child of this expression.
-  const MCExpr *getSubExpr() const { return Expr; }
-
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAssembler *Asm) const override;
-  void visitUsedExpr(MCStreamer &Streamer) const override;
-  MCFragment *findAssociatedFragment() const override {
-    return getSubExpr()->findAssociatedFragment();
-  }
-
-  static bool classof(const MCExpr *E) {
-    return E->getKind() == MCExpr::Target;
-  }
 };
 } // end namespace llvm
 

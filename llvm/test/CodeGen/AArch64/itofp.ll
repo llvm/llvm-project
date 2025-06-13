@@ -2243,46 +2243,46 @@ entry:
 define <32 x double> @stofp_v32i32_v32f64(<32 x i32> %a) {
 ; CHECK-SD-LABEL: stofp_v32i32_v32f64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sshll2 v16.2d, v7.4s, #0
-; CHECK-SD-NEXT:    sshll v7.2d, v7.2s, #0
 ; CHECK-SD-NEXT:    sshll2 v17.2d, v6.4s, #0
 ; CHECK-SD-NEXT:    sshll v6.2d, v6.2s, #0
-; CHECK-SD-NEXT:    sshll2 v19.2d, v4.4s, #0
+; CHECK-SD-NEXT:    sshll2 v16.2d, v7.4s, #0
+; CHECK-SD-NEXT:    sshll v19.2d, v3.2s, #0
+; CHECK-SD-NEXT:    sshll v7.2d, v7.2s, #0
+; CHECK-SD-NEXT:    sshll2 v3.2d, v3.4s, #0
+; CHECK-SD-NEXT:    sshll2 v20.2d, v4.4s, #0
 ; CHECK-SD-NEXT:    sshll v4.2d, v4.2s, #0
 ; CHECK-SD-NEXT:    sshll2 v18.2d, v5.4s, #0
-; CHECK-SD-NEXT:    sshll v5.2d, v5.2s, #0
-; CHECK-SD-NEXT:    scvtf v16.2d, v16.2d
-; CHECK-SD-NEXT:    scvtf v7.2d, v7.2d
 ; CHECK-SD-NEXT:    scvtf v17.2d, v17.2d
 ; CHECK-SD-NEXT:    scvtf v6.2d, v6.2d
-; CHECK-SD-NEXT:    scvtf v4.2d, v4.2d
-; CHECK-SD-NEXT:    scvtf v18.2d, v18.2d
-; CHECK-SD-NEXT:    scvtf v5.2d, v5.2d
-; CHECK-SD-NEXT:    stp q7, q16, [x8, #224]
-; CHECK-SD-NEXT:    sshll2 v16.2d, v3.4s, #0
-; CHECK-SD-NEXT:    sshll v3.2d, v3.2s, #0
-; CHECK-SD-NEXT:    scvtf v7.2d, v19.2d
-; CHECK-SD-NEXT:    stp q6, q17, [x8, #192]
-; CHECK-SD-NEXT:    sshll2 v17.2d, v2.4s, #0
-; CHECK-SD-NEXT:    sshll v2.2d, v2.2s, #0
-; CHECK-SD-NEXT:    stp q5, q18, [x8, #160]
-; CHECK-SD-NEXT:    scvtf v6.2d, v16.2d
+; CHECK-SD-NEXT:    scvtf v16.2d, v16.2d
+; CHECK-SD-NEXT:    scvtf v7.2d, v7.2d
 ; CHECK-SD-NEXT:    scvtf v3.2d, v3.2d
-; CHECK-SD-NEXT:    sshll2 v16.2d, v1.4s, #0
-; CHECK-SD-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-SD-NEXT:    scvtf v5.2d, v17.2d
-; CHECK-SD-NEXT:    stp q4, q7, [x8, #128]
+; CHECK-SD-NEXT:    sshll2 v21.2d, v2.4s, #0
+; CHECK-SD-NEXT:    scvtf v20.2d, v20.2d
+; CHECK-SD-NEXT:    scvtf v4.2d, v4.2d
+; CHECK-SD-NEXT:    sshll v5.2d, v5.2s, #0
+; CHECK-SD-NEXT:    sshll v2.2d, v2.2s, #0
+; CHECK-SD-NEXT:    scvtf v18.2d, v18.2d
+; CHECK-SD-NEXT:    stp q6, q17, [x8, #192]
+; CHECK-SD-NEXT:    scvtf v17.2d, v19.2d
+; CHECK-SD-NEXT:    stp q7, q16, [x8, #224]
 ; CHECK-SD-NEXT:    sshll2 v7.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-SD-NEXT:    stp q4, q20, [x8, #128]
+; CHECK-SD-NEXT:    scvtf v16.2d, v21.2d
+; CHECK-SD-NEXT:    scvtf v5.2d, v5.2d
 ; CHECK-SD-NEXT:    scvtf v2.2d, v2.2d
-; CHECK-SD-NEXT:    scvtf v4.2d, v16.2d
-; CHECK-SD-NEXT:    stp q3, q6, [x8, #96]
-; CHECK-SD-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-SD-NEXT:    scvtf v3.2d, v7.2d
+; CHECK-SD-NEXT:    stp q17, q3, [x8, #96]
+; CHECK-SD-NEXT:    sshll2 v3.2d, v1.4s, #0
+; CHECK-SD-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-SD-NEXT:    scvtf v4.2d, v7.2d
 ; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-SD-NEXT:    stp q2, q5, [x8, #64]
-; CHECK-SD-NEXT:    stp q1, q4, [x8, #32]
-; CHECK-SD-NEXT:    stp q0, q3, [x8]
+; CHECK-SD-NEXT:    stp q5, q18, [x8, #160]
+; CHECK-SD-NEXT:    stp q2, q16, [x8, #64]
+; CHECK-SD-NEXT:    scvtf v3.2d, v3.2d
+; CHECK-SD-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-SD-NEXT:    stp q0, q4, [x8]
+; CHECK-SD-NEXT:    stp q1, q3, [x8, #32]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: stofp_v32i32_v32f64:
@@ -2336,46 +2336,46 @@ entry:
 define <32 x double> @utofp_v32i32_v32f64(<32 x i32> %a) {
 ; CHECK-SD-LABEL: utofp_v32i32_v32f64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll2 v16.2d, v7.4s, #0
-; CHECK-SD-NEXT:    ushll v7.2d, v7.2s, #0
 ; CHECK-SD-NEXT:    ushll2 v17.2d, v6.4s, #0
 ; CHECK-SD-NEXT:    ushll v6.2d, v6.2s, #0
-; CHECK-SD-NEXT:    ushll2 v19.2d, v4.4s, #0
+; CHECK-SD-NEXT:    ushll2 v16.2d, v7.4s, #0
+; CHECK-SD-NEXT:    ushll v19.2d, v3.2s, #0
+; CHECK-SD-NEXT:    ushll v7.2d, v7.2s, #0
+; CHECK-SD-NEXT:    ushll2 v3.2d, v3.4s, #0
+; CHECK-SD-NEXT:    ushll2 v20.2d, v4.4s, #0
 ; CHECK-SD-NEXT:    ushll v4.2d, v4.2s, #0
 ; CHECK-SD-NEXT:    ushll2 v18.2d, v5.4s, #0
-; CHECK-SD-NEXT:    ushll v5.2d, v5.2s, #0
-; CHECK-SD-NEXT:    ucvtf v16.2d, v16.2d
-; CHECK-SD-NEXT:    ucvtf v7.2d, v7.2d
 ; CHECK-SD-NEXT:    ucvtf v17.2d, v17.2d
 ; CHECK-SD-NEXT:    ucvtf v6.2d, v6.2d
-; CHECK-SD-NEXT:    ucvtf v4.2d, v4.2d
-; CHECK-SD-NEXT:    ucvtf v18.2d, v18.2d
-; CHECK-SD-NEXT:    ucvtf v5.2d, v5.2d
-; CHECK-SD-NEXT:    stp q7, q16, [x8, #224]
-; CHECK-SD-NEXT:    ushll2 v16.2d, v3.4s, #0
-; CHECK-SD-NEXT:    ushll v3.2d, v3.2s, #0
-; CHECK-SD-NEXT:    ucvtf v7.2d, v19.2d
-; CHECK-SD-NEXT:    stp q6, q17, [x8, #192]
-; CHECK-SD-NEXT:    ushll2 v17.2d, v2.4s, #0
-; CHECK-SD-NEXT:    ushll v2.2d, v2.2s, #0
-; CHECK-SD-NEXT:    stp q5, q18, [x8, #160]
-; CHECK-SD-NEXT:    ucvtf v6.2d, v16.2d
+; CHECK-SD-NEXT:    ucvtf v16.2d, v16.2d
+; CHECK-SD-NEXT:    ucvtf v7.2d, v7.2d
 ; CHECK-SD-NEXT:    ucvtf v3.2d, v3.2d
-; CHECK-SD-NEXT:    ushll2 v16.2d, v1.4s, #0
-; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-SD-NEXT:    ucvtf v5.2d, v17.2d
-; CHECK-SD-NEXT:    stp q4, q7, [x8, #128]
+; CHECK-SD-NEXT:    ushll2 v21.2d, v2.4s, #0
+; CHECK-SD-NEXT:    ucvtf v20.2d, v20.2d
+; CHECK-SD-NEXT:    ucvtf v4.2d, v4.2d
+; CHECK-SD-NEXT:    ushll v5.2d, v5.2s, #0
+; CHECK-SD-NEXT:    ushll v2.2d, v2.2s, #0
+; CHECK-SD-NEXT:    ucvtf v18.2d, v18.2d
+; CHECK-SD-NEXT:    stp q6, q17, [x8, #192]
+; CHECK-SD-NEXT:    ucvtf v17.2d, v19.2d
+; CHECK-SD-NEXT:    stp q7, q16, [x8, #224]
 ; CHECK-SD-NEXT:    ushll2 v7.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-SD-NEXT:    stp q4, q20, [x8, #128]
+; CHECK-SD-NEXT:    ucvtf v16.2d, v21.2d
+; CHECK-SD-NEXT:    ucvtf v5.2d, v5.2d
 ; CHECK-SD-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-SD-NEXT:    ucvtf v4.2d, v16.2d
-; CHECK-SD-NEXT:    stp q3, q6, [x8, #96]
-; CHECK-SD-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-SD-NEXT:    ucvtf v3.2d, v7.2d
+; CHECK-SD-NEXT:    stp q17, q3, [x8, #96]
+; CHECK-SD-NEXT:    ushll2 v3.2d, v1.4s, #0
+; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-SD-NEXT:    ucvtf v4.2d, v7.2d
 ; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-SD-NEXT:    stp q2, q5, [x8, #64]
-; CHECK-SD-NEXT:    stp q1, q4, [x8, #32]
-; CHECK-SD-NEXT:    stp q0, q3, [x8]
+; CHECK-SD-NEXT:    stp q5, q18, [x8, #160]
+; CHECK-SD-NEXT:    stp q2, q16, [x8, #64]
+; CHECK-SD-NEXT:    ucvtf v3.2d, v3.2d
+; CHECK-SD-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-SD-NEXT:    stp q0, q4, [x8]
+; CHECK-SD-NEXT:    stp q1, q3, [x8, #32]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: utofp_v32i32_v32f64:
@@ -2863,7 +2863,7 @@ define <32 x double> @stofp_v32i16_v32f64(<32 x i16> %a) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sshll2 v4.4s, v3.8h, #0
 ; CHECK-SD-NEXT:    sshll2 v5.4s, v2.8h, #0
-; CHECK-SD-NEXT:    sshll2 v7.4s, v1.8h, #0
+; CHECK-SD-NEXT:    sshll2 v16.4s, v1.8h, #0
 ; CHECK-SD-NEXT:    sshll2 v17.4s, v0.8h, #0
 ; CHECK-SD-NEXT:    sshll v3.4s, v3.4h, #0
 ; CHECK-SD-NEXT:    sshll v1.4s, v1.4h, #0
@@ -2871,43 +2871,43 @@ define <32 x double> @stofp_v32i16_v32f64(<32 x i16> %a) {
 ; CHECK-SD-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    sshll2 v6.2d, v4.4s, #0
 ; CHECK-SD-NEXT:    sshll v4.2d, v4.2s, #0
-; CHECK-SD-NEXT:    sshll2 v16.2d, v5.4s, #0
+; CHECK-SD-NEXT:    sshll2 v7.2d, v5.4s, #0
 ; CHECK-SD-NEXT:    sshll v5.2d, v5.2s, #0
-; CHECK-SD-NEXT:    sshll2 v18.2d, v7.4s, #0
-; CHECK-SD-NEXT:    sshll v7.2d, v7.2s, #0
+; CHECK-SD-NEXT:    sshll2 v18.2d, v16.4s, #0
+; CHECK-SD-NEXT:    sshll v16.2d, v16.2s, #0
 ; CHECK-SD-NEXT:    sshll2 v19.2d, v17.4s, #0
 ; CHECK-SD-NEXT:    scvtf v6.2d, v6.2d
 ; CHECK-SD-NEXT:    scvtf v4.2d, v4.2d
-; CHECK-SD-NEXT:    scvtf v16.2d, v16.2d
-; CHECK-SD-NEXT:    scvtf v5.2d, v5.2d
 ; CHECK-SD-NEXT:    scvtf v7.2d, v7.2d
+; CHECK-SD-NEXT:    scvtf v5.2d, v5.2d
+; CHECK-SD-NEXT:    scvtf v16.2d, v16.2d
 ; CHECK-SD-NEXT:    stp q4, q6, [x8, #224]
 ; CHECK-SD-NEXT:    sshll v6.2d, v17.2s, #0
 ; CHECK-SD-NEXT:    scvtf v17.2d, v18.2d
-; CHECK-SD-NEXT:    sshll2 v4.2d, v3.4s, #0
-; CHECK-SD-NEXT:    stp q5, q16, [x8, #160]
+; CHECK-SD-NEXT:    stp q5, q7, [x8, #160]
+; CHECK-SD-NEXT:    sshll2 v7.2d, v3.4s, #0
 ; CHECK-SD-NEXT:    sshll v3.2d, v3.2s, #0
-; CHECK-SD-NEXT:    scvtf v16.2d, v19.2d
+; CHECK-SD-NEXT:    scvtf v4.2d, v19.2d
 ; CHECK-SD-NEXT:    scvtf v5.2d, v6.2d
 ; CHECK-SD-NEXT:    sshll2 v6.2d, v2.4s, #0
 ; CHECK-SD-NEXT:    sshll v2.2d, v2.2s, #0
-; CHECK-SD-NEXT:    scvtf v4.2d, v4.2d
+; CHECK-SD-NEXT:    scvtf v7.2d, v7.2d
 ; CHECK-SD-NEXT:    scvtf v3.2d, v3.2d
-; CHECK-SD-NEXT:    stp q7, q17, [x8, #96]
-; CHECK-SD-NEXT:    sshll2 v7.2d, v1.4s, #0
+; CHECK-SD-NEXT:    stp q16, q17, [x8, #96]
+; CHECK-SD-NEXT:    sshll2 v16.2d, v1.4s, #0
 ; CHECK-SD-NEXT:    sshll v1.2d, v1.2s, #0
 ; CHECK-SD-NEXT:    scvtf v6.2d, v6.2d
 ; CHECK-SD-NEXT:    scvtf v2.2d, v2.2d
-; CHECK-SD-NEXT:    stp q5, q16, [x8, #32]
-; CHECK-SD-NEXT:    sshll2 v5.2d, v0.4s, #0
+; CHECK-SD-NEXT:    stp q5, q4, [x8, #32]
+; CHECK-SD-NEXT:    sshll2 v4.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-SD-NEXT:    scvtf v7.2d, v7.2d
-; CHECK-SD-NEXT:    stp q3, q4, [x8, #192]
+; CHECK-SD-NEXT:    scvtf v5.2d, v16.2d
+; CHECK-SD-NEXT:    stp q3, q7, [x8, #192]
 ; CHECK-SD-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-SD-NEXT:    scvtf v3.2d, v5.2d
+; CHECK-SD-NEXT:    scvtf v3.2d, v4.2d
 ; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-SD-NEXT:    stp q2, q6, [x8, #128]
-; CHECK-SD-NEXT:    stp q1, q7, [x8, #64]
+; CHECK-SD-NEXT:    stp q1, q5, [x8, #64]
 ; CHECK-SD-NEXT:    stp q0, q3, [x8]
 ; CHECK-SD-NEXT:    ret
 ;
@@ -2972,7 +2972,7 @@ define <32 x double> @utofp_v32i16_v32f64(<32 x i16> %a) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ushll2 v4.4s, v3.8h, #0
 ; CHECK-SD-NEXT:    ushll2 v5.4s, v2.8h, #0
-; CHECK-SD-NEXT:    ushll2 v7.4s, v1.8h, #0
+; CHECK-SD-NEXT:    ushll2 v16.4s, v1.8h, #0
 ; CHECK-SD-NEXT:    ushll2 v17.4s, v0.8h, #0
 ; CHECK-SD-NEXT:    ushll v3.4s, v3.4h, #0
 ; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
@@ -2980,43 +2980,43 @@ define <32 x double> @utofp_v32i16_v32f64(<32 x i16> %a) {
 ; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    ushll2 v6.2d, v4.4s, #0
 ; CHECK-SD-NEXT:    ushll v4.2d, v4.2s, #0
-; CHECK-SD-NEXT:    ushll2 v16.2d, v5.4s, #0
+; CHECK-SD-NEXT:    ushll2 v7.2d, v5.4s, #0
 ; CHECK-SD-NEXT:    ushll v5.2d, v5.2s, #0
-; CHECK-SD-NEXT:    ushll2 v18.2d, v7.4s, #0
-; CHECK-SD-NEXT:    ushll v7.2d, v7.2s, #0
+; CHECK-SD-NEXT:    ushll2 v18.2d, v16.4s, #0
+; CHECK-SD-NEXT:    ushll v16.2d, v16.2s, #0
 ; CHECK-SD-NEXT:    ushll2 v19.2d, v17.4s, #0
 ; CHECK-SD-NEXT:    ucvtf v6.2d, v6.2d
 ; CHECK-SD-NEXT:    ucvtf v4.2d, v4.2d
-; CHECK-SD-NEXT:    ucvtf v16.2d, v16.2d
-; CHECK-SD-NEXT:    ucvtf v5.2d, v5.2d
 ; CHECK-SD-NEXT:    ucvtf v7.2d, v7.2d
+; CHECK-SD-NEXT:    ucvtf v5.2d, v5.2d
+; CHECK-SD-NEXT:    ucvtf v16.2d, v16.2d
 ; CHECK-SD-NEXT:    stp q4, q6, [x8, #224]
 ; CHECK-SD-NEXT:    ushll v6.2d, v17.2s, #0
 ; CHECK-SD-NEXT:    ucvtf v17.2d, v18.2d
-; CHECK-SD-NEXT:    ushll2 v4.2d, v3.4s, #0
-; CHECK-SD-NEXT:    stp q5, q16, [x8, #160]
+; CHECK-SD-NEXT:    stp q5, q7, [x8, #160]
+; CHECK-SD-NEXT:    ushll2 v7.2d, v3.4s, #0
 ; CHECK-SD-NEXT:    ushll v3.2d, v3.2s, #0
-; CHECK-SD-NEXT:    ucvtf v16.2d, v19.2d
+; CHECK-SD-NEXT:    ucvtf v4.2d, v19.2d
 ; CHECK-SD-NEXT:    ucvtf v5.2d, v6.2d
 ; CHECK-SD-NEXT:    ushll2 v6.2d, v2.4s, #0
 ; CHECK-SD-NEXT:    ushll v2.2d, v2.2s, #0
-; CHECK-SD-NEXT:    ucvtf v4.2d, v4.2d
+; CHECK-SD-NEXT:    ucvtf v7.2d, v7.2d
 ; CHECK-SD-NEXT:    ucvtf v3.2d, v3.2d
-; CHECK-SD-NEXT:    stp q7, q17, [x8, #96]
-; CHECK-SD-NEXT:    ushll2 v7.2d, v1.4s, #0
+; CHECK-SD-NEXT:    stp q16, q17, [x8, #96]
+; CHECK-SD-NEXT:    ushll2 v16.2d, v1.4s, #0
 ; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-SD-NEXT:    ucvtf v6.2d, v6.2d
 ; CHECK-SD-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-SD-NEXT:    stp q5, q16, [x8, #32]
-; CHECK-SD-NEXT:    ushll2 v5.2d, v0.4s, #0
+; CHECK-SD-NEXT:    stp q5, q4, [x8, #32]
+; CHECK-SD-NEXT:    ushll2 v4.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-SD-NEXT:    ucvtf v7.2d, v7.2d
-; CHECK-SD-NEXT:    stp q3, q4, [x8, #192]
+; CHECK-SD-NEXT:    ucvtf v5.2d, v16.2d
+; CHECK-SD-NEXT:    stp q3, q7, [x8, #192]
 ; CHECK-SD-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-SD-NEXT:    ucvtf v3.2d, v5.2d
+; CHECK-SD-NEXT:    ucvtf v3.2d, v4.2d
 ; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-SD-NEXT:    stp q2, q6, [x8, #128]
-; CHECK-SD-NEXT:    stp q1, q7, [x8, #64]
+; CHECK-SD-NEXT:    stp q1, q5, [x8, #64]
 ; CHECK-SD-NEXT:    stp q0, q3, [x8]
 ; CHECK-SD-NEXT:    ret
 ;
@@ -3315,11 +3315,11 @@ define <3 x double> @stofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-GI-NEXT:    smov x8, v0.h[0]
 ; CHECK-GI-NEXT:    smov x9, v0.h[1]
-; CHECK-GI-NEXT:    mov v1.d[0], x8
+; CHECK-GI-NEXT:    fmov d1, x8
 ; CHECK-GI-NEXT:    smov x8, v0.h[2]
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    smov x9, v0.h[3]
-; CHECK-GI-NEXT:    mov v2.d[0], x8
+; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    scvtf v0.2d, v1.2d
 ; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
@@ -3360,11 +3360,11 @@ define <3 x double> @utofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-GI-NEXT:    umov w9, v0.h[1]
-; CHECK-GI-NEXT:    mov v1.d[0], x8
+; CHECK-GI-NEXT:    fmov d1, x8
 ; CHECK-GI-NEXT:    umov w8, v0.h[2]
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    umov w9, v0.h[3]
-; CHECK-GI-NEXT:    mov v2.d[0], x8
+; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    ucvtf v0.2d, v1.2d
 ; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
@@ -3443,10 +3443,10 @@ define <8 x double> @stofp_v8i8_v8f64(<8 x i8> %a) {
 ; CHECK-SD-LABEL: stofp_v8i8_v8f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    mov v1.b[0], v0.b[0]
-; CHECK-SD-NEXT:    mov v2.b[0], v0.b[2]
-; CHECK-SD-NEXT:    mov v3.b[0], v0.b[4]
-; CHECK-SD-NEXT:    mov v4.b[0], v0.b[6]
+; CHECK-SD-NEXT:    mov b1, v0.b[0]
+; CHECK-SD-NEXT:    mov b2, v0.b[2]
+; CHECK-SD-NEXT:    mov b3, v0.b[4]
+; CHECK-SD-NEXT:    mov b4, v0.b[6]
 ; CHECK-SD-NEXT:    mov v1.b[4], v0.b[1]
 ; CHECK-SD-NEXT:    mov v2.b[4], v0.b[3]
 ; CHECK-SD-NEXT:    mov v3.b[4], v0.b[5]
@@ -3492,10 +3492,10 @@ define <8 x double> @utofp_v8i8_v8f64(<8 x i8> %a) {
 ; CHECK-SD-LABEL: utofp_v8i8_v8f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-SD-NEXT:    mov v3.b[0], v0.b[2]
-; CHECK-SD-NEXT:    mov v4.b[0], v0.b[4]
-; CHECK-SD-NEXT:    mov v5.b[0], v0.b[6]
+; CHECK-SD-NEXT:    mov b2, v0.b[0]
+; CHECK-SD-NEXT:    mov b3, v0.b[2]
+; CHECK-SD-NEXT:    mov b4, v0.b[4]
+; CHECK-SD-NEXT:    mov b5, v0.b[6]
 ; CHECK-SD-NEXT:    movi d1, #0x0000ff000000ff
 ; CHECK-SD-NEXT:    mov v2.b[4], v0.b[1]
 ; CHECK-SD-NEXT:    mov v3.b[4], v0.b[3]
@@ -3538,14 +3538,14 @@ define <16 x double> @stofp_v16i8_v16f64(<16 x i8> %a) {
 ; CHECK-SD-LABEL: stofp_v16i8_v16f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-SD-NEXT:    mov v3.b[0], v0.b[2]
-; CHECK-SD-NEXT:    mov v4.b[0], v0.b[4]
-; CHECK-SD-NEXT:    mov v5.b[0], v0.b[6]
-; CHECK-SD-NEXT:    mov v6.b[0], v1.b[0]
-; CHECK-SD-NEXT:    mov v7.b[0], v1.b[2]
-; CHECK-SD-NEXT:    mov v16.b[0], v1.b[4]
-; CHECK-SD-NEXT:    mov v17.b[0], v1.b[6]
+; CHECK-SD-NEXT:    mov b2, v0.b[0]
+; CHECK-SD-NEXT:    mov b3, v0.b[2]
+; CHECK-SD-NEXT:    mov b4, v0.b[4]
+; CHECK-SD-NEXT:    mov b5, v0.b[6]
+; CHECK-SD-NEXT:    mov b6, v1.b[0]
+; CHECK-SD-NEXT:    mov b7, v1.b[2]
+; CHECK-SD-NEXT:    mov b16, v1.b[4]
+; CHECK-SD-NEXT:    mov b17, v1.b[6]
 ; CHECK-SD-NEXT:    mov v2.b[4], v0.b[1]
 ; CHECK-SD-NEXT:    mov v3.b[4], v0.b[3]
 ; CHECK-SD-NEXT:    mov v4.b[4], v0.b[5]
@@ -3622,15 +3622,15 @@ define <16 x double> @utofp_v16i8_v16f64(<16 x i8> %a) {
 ; CHECK-SD-LABEL: utofp_v16i8_v16f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    mov v3.b[0], v0.b[0]
-; CHECK-SD-NEXT:    mov v4.b[0], v0.b[2]
-; CHECK-SD-NEXT:    mov v5.b[0], v0.b[4]
-; CHECK-SD-NEXT:    mov v6.b[0], v0.b[6]
+; CHECK-SD-NEXT:    mov b3, v0.b[0]
+; CHECK-SD-NEXT:    mov b4, v0.b[2]
+; CHECK-SD-NEXT:    mov b5, v0.b[4]
+; CHECK-SD-NEXT:    mov b6, v0.b[6]
 ; CHECK-SD-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-SD-NEXT:    mov v7.b[0], v2.b[0]
-; CHECK-SD-NEXT:    mov v16.b[0], v2.b[2]
-; CHECK-SD-NEXT:    mov v17.b[0], v2.b[4]
-; CHECK-SD-NEXT:    mov v18.b[0], v2.b[6]
+; CHECK-SD-NEXT:    mov b7, v2.b[0]
+; CHECK-SD-NEXT:    mov b16, v2.b[2]
+; CHECK-SD-NEXT:    mov b17, v2.b[4]
+; CHECK-SD-NEXT:    mov b18, v2.b[6]
 ; CHECK-SD-NEXT:    mov v3.b[4], v0.b[1]
 ; CHECK-SD-NEXT:    mov v4.b[4], v0.b[3]
 ; CHECK-SD-NEXT:    mov v5.b[4], v0.b[5]
@@ -3699,18 +3699,18 @@ define <32 x double> @stofp_v32i8_v32f64(<32 x i8> %a) {
 ; CHECK-SD-LABEL: stofp_v32i8_v32f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    mov v5.b[0], v1.b[6]
-; CHECK-SD-NEXT:    mov v17.b[0], v1.b[4]
-; CHECK-SD-NEXT:    mov v20.b[0], v1.b[2]
-; CHECK-SD-NEXT:    mov v21.b[0], v1.b[0]
-; CHECK-SD-NEXT:    mov v18.b[0], v0.b[0]
-; CHECK-SD-NEXT:    mov v19.b[0], v0.b[6]
-; CHECK-SD-NEXT:    mov v22.b[0], v0.b[4]
+; CHECK-SD-NEXT:    mov b5, v1.b[6]
+; CHECK-SD-NEXT:    mov b17, v1.b[4]
+; CHECK-SD-NEXT:    mov b20, v1.b[2]
+; CHECK-SD-NEXT:    mov b21, v1.b[0]
+; CHECK-SD-NEXT:    mov b18, v0.b[0]
+; CHECK-SD-NEXT:    mov b19, v0.b[6]
+; CHECK-SD-NEXT:    mov b22, v0.b[4]
 ; CHECK-SD-NEXT:    ext v16.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    mov v2.b[0], v3.b[0]
-; CHECK-SD-NEXT:    mov v4.b[0], v3.b[2]
-; CHECK-SD-NEXT:    mov v6.b[0], v3.b[4]
-; CHECK-SD-NEXT:    mov v7.b[0], v3.b[6]
+; CHECK-SD-NEXT:    mov b2, v3.b[0]
+; CHECK-SD-NEXT:    mov b4, v3.b[2]
+; CHECK-SD-NEXT:    mov b6, v3.b[4]
+; CHECK-SD-NEXT:    mov b7, v3.b[6]
 ; CHECK-SD-NEXT:    mov v5.b[4], v1.b[7]
 ; CHECK-SD-NEXT:    mov v17.b[4], v1.b[5]
 ; CHECK-SD-NEXT:    mov v20.b[4], v1.b[3]
@@ -3718,16 +3718,16 @@ define <32 x double> @stofp_v32i8_v32f64(<32 x i8> %a) {
 ; CHECK-SD-NEXT:    mov v19.b[4], v0.b[7]
 ; CHECK-SD-NEXT:    mov v22.b[4], v0.b[5]
 ; CHECK-SD-NEXT:    mov v18.b[4], v0.b[1]
-; CHECK-SD-NEXT:    mov v23.b[0], v16.b[0]
+; CHECK-SD-NEXT:    mov b23, v16.b[0]
 ; CHECK-SD-NEXT:    mov v2.b[4], v3.b[1]
 ; CHECK-SD-NEXT:    mov v4.b[4], v3.b[3]
 ; CHECK-SD-NEXT:    mov v6.b[4], v3.b[5]
 ; CHECK-SD-NEXT:    mov v7.b[4], v3.b[7]
-; CHECK-SD-NEXT:    mov v3.b[0], v0.b[2]
+; CHECK-SD-NEXT:    mov b3, v0.b[2]
 ; CHECK-SD-NEXT:    shl v5.2s, v5.2s, #24
 ; CHECK-SD-NEXT:    shl v17.2s, v17.2s, #24
 ; CHECK-SD-NEXT:    shl v20.2s, v20.2s, #24
-; CHECK-SD-NEXT:    mov v24.b[0], v16.b[4]
+; CHECK-SD-NEXT:    mov b24, v16.b[4]
 ; CHECK-SD-NEXT:    mov v23.b[4], v16.b[1]
 ; CHECK-SD-NEXT:    shl v18.2s, v18.2s, #24
 ; CHECK-SD-NEXT:    shl v19.2s, v19.2s, #24
@@ -3739,10 +3739,10 @@ define <32 x double> @stofp_v32i8_v32f64(<32 x i8> %a) {
 ; CHECK-SD-NEXT:    shl v0.2s, v21.2s, #24
 ; CHECK-SD-NEXT:    shl v4.2s, v6.2s, #24
 ; CHECK-SD-NEXT:    shl v6.2s, v7.2s, #24
-; CHECK-SD-NEXT:    mov v7.b[0], v16.b[2]
+; CHECK-SD-NEXT:    mov b7, v16.b[2]
 ; CHECK-SD-NEXT:    sshll v5.2d, v5.2s, #0
 ; CHECK-SD-NEXT:    sshr v20.2s, v20.2s, #24
-; CHECK-SD-NEXT:    mov v21.b[0], v16.b[6]
+; CHECK-SD-NEXT:    mov b21, v16.b[6]
 ; CHECK-SD-NEXT:    sshll v17.2d, v17.2s, #0
 ; CHECK-SD-NEXT:    sshr v0.2s, v0.2s, #24
 ; CHECK-SD-NEXT:    shl v22.2s, v22.2s, #24
@@ -3869,25 +3869,25 @@ entry:
 define <32 x double> @utofp_v32i8_v32f64(<32 x i8> %a) {
 ; CHECK-SD-LABEL: utofp_v32i8_v32f64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov v6.b[0], v1.b[6]
-; CHECK-SD-NEXT:    mov v7.b[0], v1.b[4]
+; CHECK-SD-NEXT:    mov b6, v1.b[6]
+; CHECK-SD-NEXT:    mov b7, v1.b[4]
 ; CHECK-SD-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    mov v16.b[0], v1.b[2]
-; CHECK-SD-NEXT:    mov v17.b[0], v1.b[0]
-; CHECK-SD-NEXT:    mov v19.b[0], v0.b[6]
-; CHECK-SD-NEXT:    mov v20.b[0], v0.b[4]
+; CHECK-SD-NEXT:    mov b16, v1.b[2]
+; CHECK-SD-NEXT:    mov b17, v1.b[0]
+; CHECK-SD-NEXT:    mov b19, v0.b[6]
+; CHECK-SD-NEXT:    mov b20, v0.b[4]
 ; CHECK-SD-NEXT:    movi d5, #0x0000ff000000ff
-; CHECK-SD-NEXT:    mov v24.b[0], v0.b[2]
-; CHECK-SD-NEXT:    mov v25.b[0], v0.b[0]
+; CHECK-SD-NEXT:    mov b24, v0.b[2]
+; CHECK-SD-NEXT:    mov b25, v0.b[0]
 ; CHECK-SD-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    mov v6.b[4], v1.b[7]
 ; CHECK-SD-NEXT:    mov v7.b[4], v1.b[5]
-; CHECK-SD-NEXT:    mov v18.b[0], v3.b[0]
-; CHECK-SD-NEXT:    mov v21.b[0], v3.b[2]
-; CHECK-SD-NEXT:    mov v23.b[0], v3.b[4]
+; CHECK-SD-NEXT:    mov b18, v3.b[0]
+; CHECK-SD-NEXT:    mov b21, v3.b[2]
+; CHECK-SD-NEXT:    mov b23, v3.b[4]
 ; CHECK-SD-NEXT:    mov v16.b[4], v1.b[3]
 ; CHECK-SD-NEXT:    mov v17.b[4], v1.b[1]
-; CHECK-SD-NEXT:    mov v1.b[0], v3.b[6]
+; CHECK-SD-NEXT:    mov b1, v3.b[6]
 ; CHECK-SD-NEXT:    mov v19.b[4], v0.b[7]
 ; CHECK-SD-NEXT:    mov v20.b[4], v0.b[5]
 ; CHECK-SD-NEXT:    mov v24.b[4], v0.b[3]
@@ -3905,15 +3905,15 @@ define <32 x double> @utofp_v32i8_v32f64(<32 x i8> %a) {
 ; CHECK-SD-NEXT:    ushll v7.2d, v7.2s, #0
 ; CHECK-SD-NEXT:    and v20.8b, v20.8b, v5.8b
 ; CHECK-SD-NEXT:    ushll v16.2d, v16.2s, #0
-; CHECK-SD-NEXT:    mov v4.b[0], v2.b[0]
-; CHECK-SD-NEXT:    mov v22.b[0], v2.b[2]
+; CHECK-SD-NEXT:    mov b4, v2.b[0]
+; CHECK-SD-NEXT:    mov b22, v2.b[2]
 ; CHECK-SD-NEXT:    ushll v17.2d, v17.2s, #0
 ; CHECK-SD-NEXT:    ushll v0.2d, v3.2s, #0
-; CHECK-SD-NEXT:    mov v19.b[0], v2.b[4]
+; CHECK-SD-NEXT:    mov b19, v2.b[4]
 ; CHECK-SD-NEXT:    ucvtf v6.2d, v6.2d
 ; CHECK-SD-NEXT:    ucvtf v3.2d, v7.2d
 ; CHECK-SD-NEXT:    ushll v20.2d, v20.2s, #0
-; CHECK-SD-NEXT:    mov v7.b[0], v2.b[6]
+; CHECK-SD-NEXT:    mov b7, v2.b[6]
 ; CHECK-SD-NEXT:    ucvtf v16.2d, v16.2d
 ; CHECK-SD-NEXT:    and v24.8b, v24.8b, v5.8b
 ; CHECK-SD-NEXT:    ucvtf v17.2d, v17.2d
@@ -4143,11 +4143,11 @@ entry:
 define <3 x float> @stofp_v3i128_v3f32(<3 x i128> %a) {
 ; CHECK-SD-LABEL: stofp_v3i128_v3f32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-NEXT:    sub sp, sp, #80
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w20, -16
 ; CHECK-SD-NEXT:    .cfi_offset w21, -24
@@ -4155,31 +4155,31 @@ define <3 x float> @stofp_v3i128_v3f32(<3 x i128> %a) {
 ; CHECK-SD-NEXT:    .cfi_offset w30, -48
 ; CHECK-SD-NEXT:    mov x21, x1
 ; CHECK-SD-NEXT:    mov x22, x0
-; CHECK-SD-NEXT:    mov x0, x2
-; CHECK-SD-NEXT:    mov x1, x3
-; CHECK-SD-NEXT:    mov x19, x5
-; CHECK-SD-NEXT:    mov x20, x4
+; CHECK-SD-NEXT:    mov x0, x4
+; CHECK-SD-NEXT:    mov x1, x5
+; CHECK-SD-NEXT:    mov x19, x3
+; CHECK-SD-NEXT:    mov x20, x2
 ; CHECK-SD-NEXT:    bl __floattisf
 ; CHECK-SD-NEXT:    mov x0, x22
 ; CHECK-SD-NEXT:    mov x1, x21
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floattisf
-; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    mov x0, x20
 ; CHECK-SD-NEXT:    mov x1, x19
-; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floattisf
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-SD-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    mov v1.s[1], v0.s[0]
+; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
-; CHECK-SD-NEXT:    add sp, sp, #64
+; CHECK-SD-NEXT:    add sp, sp, #80
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: stofp_v3i128_v3f32:
@@ -4227,11 +4227,11 @@ entry:
 define <3 x float> @utofp_v3i128_v3f32(<3 x i128> %a) {
 ; CHECK-SD-LABEL: utofp_v3i128_v3f32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-NEXT:    sub sp, sp, #80
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w20, -16
 ; CHECK-SD-NEXT:    .cfi_offset w21, -24
@@ -4239,31 +4239,31 @@ define <3 x float> @utofp_v3i128_v3f32(<3 x i128> %a) {
 ; CHECK-SD-NEXT:    .cfi_offset w30, -48
 ; CHECK-SD-NEXT:    mov x21, x1
 ; CHECK-SD-NEXT:    mov x22, x0
-; CHECK-SD-NEXT:    mov x0, x2
-; CHECK-SD-NEXT:    mov x1, x3
-; CHECK-SD-NEXT:    mov x19, x5
-; CHECK-SD-NEXT:    mov x20, x4
+; CHECK-SD-NEXT:    mov x0, x4
+; CHECK-SD-NEXT:    mov x1, x5
+; CHECK-SD-NEXT:    mov x19, x3
+; CHECK-SD-NEXT:    mov x20, x2
 ; CHECK-SD-NEXT:    bl __floatuntisf
 ; CHECK-SD-NEXT:    mov x0, x22
 ; CHECK-SD-NEXT:    mov x1, x21
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floatuntisf
-; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    mov x0, x20
 ; CHECK-SD-NEXT:    mov x1, x19
-; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floatuntisf
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-SD-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    mov v1.s[1], v0.s[0]
+; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
-; CHECK-SD-NEXT:    add sp, sp, #64
+; CHECK-SD-NEXT:    add sp, sp, #80
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: utofp_v3i128_v3f32:
@@ -6035,11 +6035,11 @@ entry:
 define <3 x half> @stofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-SD-NOFP16-LABEL: stofp_v3i128_v3f16:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
-; CHECK-SD-NOFP16-NEXT:    sub sp, sp, #64
-; CHECK-SD-NOFP16-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-SD-NOFP16-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-SD-NOFP16-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-SD-NOFP16-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-NOFP16-NEXT:    sub sp, sp, #80
+; CHECK-SD-NOFP16-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-SD-NOFP16-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK-SD-NOFP16-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-SD-NOFP16-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-SD-NOFP16-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NOFP16-NEXT:    .cfi_offset w20, -16
 ; CHECK-SD-NOFP16-NEXT:    .cfi_offset w21, -24
@@ -6047,40 +6047,41 @@ define <3 x half> @stofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-SD-NOFP16-NEXT:    .cfi_offset w30, -48
 ; CHECK-SD-NOFP16-NEXT:    mov x21, x1
 ; CHECK-SD-NOFP16-NEXT:    mov x22, x0
-; CHECK-SD-NOFP16-NEXT:    mov x0, x2
-; CHECK-SD-NOFP16-NEXT:    mov x1, x3
-; CHECK-SD-NOFP16-NEXT:    mov x19, x5
-; CHECK-SD-NOFP16-NEXT:    mov x20, x4
+; CHECK-SD-NOFP16-NEXT:    mov x0, x4
+; CHECK-SD-NOFP16-NEXT:    mov x1, x5
+; CHECK-SD-NOFP16-NEXT:    mov x19, x3
+; CHECK-SD-NOFP16-NEXT:    mov x20, x2
 ; CHECK-SD-NOFP16-NEXT:    bl __floattisf
 ; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-SD-NOFP16-NEXT:    mov x0, x22
 ; CHECK-SD-NOFP16-NEXT:    mov x1, x21
+; CHECK-SD-NOFP16-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-SD-NOFP16-NEXT:    bl __floattisf
+; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
+; CHECK-SD-NOFP16-NEXT:    mov x0, x20
+; CHECK-SD-NOFP16-NEXT:    mov x1, x19
 ; CHECK-SD-NOFP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NOFP16-NEXT:    bl __floattisf
 ; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-SD-NOFP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-SD-NOFP16-NEXT:    mov x0, x20
-; CHECK-SD-NOFP16-NEXT:    mov x1, x19
-; CHECK-SD-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-SD-NOFP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-SD-NOFP16-NEXT:    bl __floattisf
-; CHECK-SD-NOFP16-NEXT:    fcvt h1, s0
-; CHECK-SD-NOFP16-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-SD-NOFP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-SD-NOFP16-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-SD-NOFP16-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-SD-NOFP16-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-SD-NOFP16-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-SD-NOFP16-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-SD-NOFP16-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-SD-NOFP16-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[2], v0.h[0]
+; CHECK-SD-NOFP16-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NOFP16-NEXT:    add sp, sp, #64
+; CHECK-SD-NOFP16-NEXT:    add sp, sp, #80
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: stofp_v3i128_v3f16:
 ; CHECK-SD-FP16:       // %bb.0: // %entry
-; CHECK-SD-FP16-NEXT:    sub sp, sp, #64
-; CHECK-SD-FP16-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-SD-FP16-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-SD-FP16-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-SD-FP16-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-FP16-NEXT:    sub sp, sp, #80
+; CHECK-SD-FP16-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-SD-FP16-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK-SD-FP16-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-SD-FP16-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-SD-FP16-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-FP16-NEXT:    .cfi_offset w20, -16
 ; CHECK-SD-FP16-NEXT:    .cfi_offset w21, -24
@@ -6088,31 +6089,32 @@ define <3 x half> @stofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-SD-FP16-NEXT:    .cfi_offset w30, -48
 ; CHECK-SD-FP16-NEXT:    mov x21, x1
 ; CHECK-SD-FP16-NEXT:    mov x22, x0
-; CHECK-SD-FP16-NEXT:    mov x0, x2
-; CHECK-SD-FP16-NEXT:    mov x1, x3
-; CHECK-SD-FP16-NEXT:    mov x19, x5
-; CHECK-SD-FP16-NEXT:    mov x20, x4
+; CHECK-SD-FP16-NEXT:    mov x0, x4
+; CHECK-SD-FP16-NEXT:    mov x1, x5
+; CHECK-SD-FP16-NEXT:    mov x19, x3
+; CHECK-SD-FP16-NEXT:    mov x20, x2
 ; CHECK-SD-FP16-NEXT:    bl __floattihf
 ; CHECK-SD-FP16-NEXT:    mov x0, x22
 ; CHECK-SD-FP16-NEXT:    mov x1, x21
 ; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-SD-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-FP16-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-FP16-NEXT:    bl __floattihf
-; CHECK-SD-FP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    mov x0, x20
 ; CHECK-SD-FP16-NEXT:    mov x1, x19
-; CHECK-SD-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-FP16-NEXT:    bl __floattihf
 ; CHECK-SD-FP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-SD-FP16-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-SD-FP16-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-SD-FP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-SD-FP16-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; CHECK-SD-FP16-NEXT:    mov v1.h[2], v0.h[0]
-; CHECK-SD-FP16-NEXT:    fmov d0, d1
-; CHECK-SD-FP16-NEXT:    add sp, sp, #64
+; CHECK-SD-FP16-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-FP16-NEXT:    add sp, sp, #80
 ; CHECK-SD-FP16-NEXT:    ret
 ;
 ; CHECK-GI-NOFP16-LABEL: stofp_v3i128_v3f16:
@@ -6200,11 +6202,11 @@ entry:
 define <3 x half> @utofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-SD-NOFP16-LABEL: utofp_v3i128_v3f16:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
-; CHECK-SD-NOFP16-NEXT:    sub sp, sp, #64
-; CHECK-SD-NOFP16-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-SD-NOFP16-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-SD-NOFP16-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-SD-NOFP16-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-NOFP16-NEXT:    sub sp, sp, #80
+; CHECK-SD-NOFP16-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-SD-NOFP16-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK-SD-NOFP16-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-SD-NOFP16-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-SD-NOFP16-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NOFP16-NEXT:    .cfi_offset w20, -16
 ; CHECK-SD-NOFP16-NEXT:    .cfi_offset w21, -24
@@ -6212,40 +6214,41 @@ define <3 x half> @utofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-SD-NOFP16-NEXT:    .cfi_offset w30, -48
 ; CHECK-SD-NOFP16-NEXT:    mov x21, x1
 ; CHECK-SD-NOFP16-NEXT:    mov x22, x0
-; CHECK-SD-NOFP16-NEXT:    mov x0, x2
-; CHECK-SD-NOFP16-NEXT:    mov x1, x3
-; CHECK-SD-NOFP16-NEXT:    mov x19, x5
-; CHECK-SD-NOFP16-NEXT:    mov x20, x4
+; CHECK-SD-NOFP16-NEXT:    mov x0, x4
+; CHECK-SD-NOFP16-NEXT:    mov x1, x5
+; CHECK-SD-NOFP16-NEXT:    mov x19, x3
+; CHECK-SD-NOFP16-NEXT:    mov x20, x2
 ; CHECK-SD-NOFP16-NEXT:    bl __floatuntisf
 ; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-SD-NOFP16-NEXT:    mov x0, x22
 ; CHECK-SD-NOFP16-NEXT:    mov x1, x21
+; CHECK-SD-NOFP16-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-SD-NOFP16-NEXT:    bl __floatuntisf
+; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
+; CHECK-SD-NOFP16-NEXT:    mov x0, x20
+; CHECK-SD-NOFP16-NEXT:    mov x1, x19
 ; CHECK-SD-NOFP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NOFP16-NEXT:    bl __floatuntisf
 ; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-SD-NOFP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-SD-NOFP16-NEXT:    mov x0, x20
-; CHECK-SD-NOFP16-NEXT:    mov x1, x19
-; CHECK-SD-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-SD-NOFP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-SD-NOFP16-NEXT:    bl __floatuntisf
-; CHECK-SD-NOFP16-NEXT:    fcvt h1, s0
-; CHECK-SD-NOFP16-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-SD-NOFP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-SD-NOFP16-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-SD-NOFP16-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-SD-NOFP16-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-SD-NOFP16-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-SD-NOFP16-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-SD-NOFP16-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-SD-NOFP16-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[2], v0.h[0]
+; CHECK-SD-NOFP16-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NOFP16-NEXT:    add sp, sp, #64
+; CHECK-SD-NOFP16-NEXT:    add sp, sp, #80
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: utofp_v3i128_v3f16:
 ; CHECK-SD-FP16:       // %bb.0: // %entry
-; CHECK-SD-FP16-NEXT:    sub sp, sp, #64
-; CHECK-SD-FP16-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-SD-FP16-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-SD-FP16-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-SD-FP16-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-FP16-NEXT:    sub sp, sp, #80
+; CHECK-SD-FP16-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-SD-FP16-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK-SD-FP16-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-SD-FP16-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-SD-FP16-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-FP16-NEXT:    .cfi_offset w20, -16
 ; CHECK-SD-FP16-NEXT:    .cfi_offset w21, -24
@@ -6253,31 +6256,32 @@ define <3 x half> @utofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-SD-FP16-NEXT:    .cfi_offset w30, -48
 ; CHECK-SD-FP16-NEXT:    mov x21, x1
 ; CHECK-SD-FP16-NEXT:    mov x22, x0
-; CHECK-SD-FP16-NEXT:    mov x0, x2
-; CHECK-SD-FP16-NEXT:    mov x1, x3
-; CHECK-SD-FP16-NEXT:    mov x19, x5
-; CHECK-SD-FP16-NEXT:    mov x20, x4
+; CHECK-SD-FP16-NEXT:    mov x0, x4
+; CHECK-SD-FP16-NEXT:    mov x1, x5
+; CHECK-SD-FP16-NEXT:    mov x19, x3
+; CHECK-SD-FP16-NEXT:    mov x20, x2
 ; CHECK-SD-FP16-NEXT:    bl __floatuntihf
 ; CHECK-SD-FP16-NEXT:    mov x0, x22
 ; CHECK-SD-FP16-NEXT:    mov x1, x21
 ; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-SD-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-FP16-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-FP16-NEXT:    bl __floatuntihf
-; CHECK-SD-FP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    mov x0, x20
 ; CHECK-SD-FP16-NEXT:    mov x1, x19
-; CHECK-SD-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-FP16-NEXT:    bl __floatuntihf
 ; CHECK-SD-FP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-SD-FP16-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-SD-FP16-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-SD-FP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-SD-FP16-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; CHECK-SD-FP16-NEXT:    mov v1.h[2], v0.h[0]
-; CHECK-SD-FP16-NEXT:    fmov d0, d1
-; CHECK-SD-FP16-NEXT:    add sp, sp, #64
+; CHECK-SD-FP16-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-FP16-NEXT:    add sp, sp, #80
 ; CHECK-SD-FP16-NEXT:    ret
 ;
 ; CHECK-GI-NOFP16-LABEL: utofp_v3i128_v3f16:
