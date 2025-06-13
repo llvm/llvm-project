@@ -1482,10 +1482,12 @@ fir::BaseBoxType fir::BaseBoxType::getBoxTypeWithNewAttr(
     break;
   }
   return llvm::TypeSwitch<fir::BaseBoxType, fir::BaseBoxType>(*this)
-      .Case<fir::BoxType>(
-          [baseType](auto) { return fir::BoxType::get(baseType); })
-      .Case<fir::ClassType>(
-          [baseType](auto) { return fir::ClassType::get(baseType); });
+      .Case<fir::BoxType>([baseType](auto b) {
+        return fir::BoxType::get(baseType, b.isVolatile());
+      })
+      .Case<fir::ClassType>([baseType](auto b) {
+        return fir::ClassType::get(baseType, b.isVolatile());
+      });
 }
 
 bool fir::BaseBoxType::isAssumedRank() const {
@@ -1499,7 +1501,12 @@ bool fir::BaseBoxType::isPointer() const {
   return llvm::isa<fir::PointerType>(getEleTy());
 }
 
+bool fir::BaseBoxType::isPointerOrAllocatable() const {
+  return llvm::isa<fir::PointerType, fir::HeapType>(getEleTy());
+}
+
 bool BaseBoxType::isVolatile() const { return fir::isa_volatile_type(*this); }
+
 //===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//

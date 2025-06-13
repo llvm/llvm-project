@@ -1873,6 +1873,11 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
   return AnnotatedNameKind::Unresolved;
 }
 
+SourceLocation Parser::getEndOfPreviousToken() const {
+  SourceLocation TokenEndLoc = PP.getLocForEndOfToken(PrevTokLocation);
+  return TokenEndLoc.isValid() ? TokenEndLoc : Tok.getLocation();
+}
+
 bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {
   assert(Tok.isNot(tok::identifier));
   Diag(Tok, diag::ext_keyword_as_ident)

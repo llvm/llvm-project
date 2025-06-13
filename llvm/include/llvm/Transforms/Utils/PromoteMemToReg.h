@@ -27,7 +27,7 @@ class AssumptionCache;
 /// (transitively) using this alloca. This also enforces that there is only
 /// ever one layer of bitcasts or GEPs between the alloca and the lifetime
 /// markers.
-bool isAllocaPromotable(const AllocaInst *AI);
+LLVM_ABI bool isAllocaPromotable(const AllocaInst *AI);
 
 /// Promote the specified list of alloca instructions into scalar
 /// registers, inserting PHI nodes as appropriate.
@@ -36,8 +36,8 @@ bool isAllocaPromotable(const AllocaInst *AI);
 /// does not modify the CFG of the function at all.  All allocas must be from
 /// the same function.
 ///
-void PromoteMemToReg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
-                     AssumptionCache *AC = nullptr);
+LLVM_ABI void PromoteMemToReg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
+                              AssumptionCache *AC = nullptr);
 
 } // End llvm namespace
 

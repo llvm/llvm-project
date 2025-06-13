@@ -6144,8 +6144,6 @@ defm PseudoVSUX : VPseudoIStore<Ordered=false>;
 // 7.7. Unit-stride Fault-Only-First Loads
 //===----------------------------------------------------------------------===//
 
-// vleff may update VL register
-let Defs = [VL] in
 defm PseudoVL : VPseudoFFLoad;
 
 //===----------------------------------------------------------------------===//
@@ -6159,11 +6157,7 @@ defm PseudoVSSEG : VPseudoUSSegStore;
 defm PseudoVSSSEG : VPseudoSSegStore;
 defm PseudoVSOXSEG : VPseudoISegStore<Ordered=true>;
 defm PseudoVSUXSEG : VPseudoISegStore<Ordered=false>;
-
-// vlseg<nf>e<eew>ff.v may update VL register
-let Defs = [VL] in {
 defm PseudoVLSEG : VPseudoUSSegLoadFF;
-}
 
 //===----------------------------------------------------------------------===//
 // 11. Vector Integer Arithmetic Instructions

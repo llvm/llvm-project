@@ -695,6 +695,10 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     A->claim();
   }
 
+  StringRef Recip = parseMRecipOption(D.getDiags(), Args);
+  if (!Recip.empty())
+    CmdArgs.push_back(Args.MakeArgString("-mrecip=" + Recip));
+
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
       (FPContract == "fast" || FPContract.empty())) {
