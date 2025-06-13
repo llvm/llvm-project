@@ -24,21 +24,12 @@ using namespace llvm;
 
 const SparcMCExpr *Sparc::createSpecifierExpr(MCContext &Ctx,
                                               const MCExpr *Expr, uint16_t S) {
-  return new (Ctx) SparcMCExpr(Expr, S);
+  return new (Ctx) MCSpecifierExpr(Expr, S);
 }
 
 const SparcMCExpr *Sparc::createSpecifierExpr(MCContext &Ctx,
                                               const MCSymbol *Sym, uint16_t S) {
-  return new (Ctx) SparcMCExpr(MCSymbolRefExpr::create(Sym, Ctx), S);
-}
-
-void SparcMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  StringRef S = Sparc::getSpecifierName(specifier);
-  if (!S.empty())
-    OS << '%' << S << '(';
-  getSubExpr()->print(OS, MAI);
-  if (!S.empty())
-    OS << ')';
+  return new (Ctx) MCSpecifierExpr(MCSymbolRefExpr::create(Sym, Ctx), S);
 }
 
 StringRef Sparc::getSpecifierName(uint16_t S) {

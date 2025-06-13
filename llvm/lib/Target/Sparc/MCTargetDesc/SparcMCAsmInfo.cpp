@@ -66,3 +66,13 @@ SparcELFMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
   }
   return MCAsmInfo::getExprForFDESymbol(Sym, Encoding, Streamer);
 }
+
+void SparcELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                           const MCSpecifierExpr &Expr) const {
+  StringRef S = Sparc::getSpecifierName(Expr.getSpecifier());
+  if (!S.empty())
+    OS << '%' << S << '(';
+  printExpr(OS, *Expr.getSubExpr());
+  if (!S.empty())
+    OS << ')';
+}

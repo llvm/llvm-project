@@ -151,5 +151,15 @@ std::optional<uint32_t> MCAsmInfo::getSpecifierForName(StringRef Name) const {
 }
 
 void MCAsmInfo::printExpr(raw_ostream &OS, const MCExpr &Expr) const {
-  Expr.print(OS, this);
+  if (auto *SE = dyn_cast<MCSpecifierExpr>(&Expr))
+    printSpecifierExpr(OS, *SE);
+  else
+    Expr.print(OS, this);
+}
+
+void MCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                   const MCSpecifierExpr &Expr) const {
+  // TODO: Switch to unreachable after all targets that use MCSpecifierExpr
+  // migrate to MCAsmInfo::printSpecifierExpr.
+  Expr.printImpl(OS, this);
 }

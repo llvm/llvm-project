@@ -28,6 +28,7 @@ namespace llvm {
 class MCContext;
 class MCCFIInstruction;
 class MCExpr;
+class MCSpecifierExpr;
 class MCSection;
 class MCStreamer;
 class MCSubtargetInfo;
@@ -712,6 +713,7 @@ public:
   std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
 
   void printExpr(raw_ostream &, const MCExpr &) const;
+  virtual void printSpecifierExpr(raw_ostream &, const MCSpecifierExpr &) const;
 };
 
 } // end namespace llvm
