@@ -10,10 +10,9 @@
 #define _LIBCPP___TYPE_TRAITS_MAKE_32_64_OR_128_BIT_H
 
 #include <__config>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/is_signed.h>
-#include <__type_traits/is_unsigned.h>
 #include <__type_traits/make_unsigned.h>
 #include <cstdint>
 

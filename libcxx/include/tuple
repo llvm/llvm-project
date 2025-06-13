@@ -240,7 +240,6 @@ template <class... Types>
 #  include <__type_traits/disjunction.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/invoke.h>
-#  include <__type_traits/is_arithmetic.h>
 #  include <__type_traits/is_assignable.h>
 #  include <__type_traits/is_constructible.h>
 #  include <__type_traits/is_convertible.h>

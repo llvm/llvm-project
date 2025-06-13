@@ -782,6 +782,7 @@ set(files
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
+  __type_traits/arithmetic_traits.h
   __type_traits/can_extract_key.h
   __type_traits/common_reference.h
   __type_traits/common_type.h
@@ -800,14 +801,12 @@ set(files
   __type_traits/extent.h
   __type_traits/has_unique_object_representation.h
   __type_traits/has_virtual_destructor.h
-  __type_traits/integer_traits.h
   __type_traits/integral_constant.h
   __type_traits/invoke.h
   __type_traits/is_abstract.h
   __type_traits/is_aggregate.h
   __type_traits/is_allocator.h
   __type_traits/is_always_bitcastable.h
-  __type_traits/is_arithmetic.h
   __type_traits/is_array.h
   __type_traits/is_assignable.h
   __type_traits/is_base_of.h
@@ -827,12 +826,10 @@ set(files
   __type_traits/is_equality_comparable.h
   __type_traits/is_execution_policy.h
   __type_traits/is_final.h
-  __type_traits/is_floating_point.h
   __type_traits/is_function.h
   __type_traits/is_fundamental.h
   __type_traits/is_implicit_lifetime.h
   __type_traits/is_implicitly_default_constructible.h
-  __type_traits/is_integral.h
   __type_traits/is_literal_type.h
   __type_traits/is_member_pointer.h
   __type_traits/is_nothrow_assignable.h
@@ -850,7 +847,6 @@ set(files
   __type_traits/is_replaceable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
-  __type_traits/is_signed.h
   __type_traits/is_specialization.h
   __type_traits/is_standard_layout.h
   __type_traits/is_swappable.h
@@ -863,7 +859,6 @@ set(files
   __type_traits/is_trivially_relocatable.h
   __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
-  __type_traits/is_unsigned.h
   __type_traits/is_valid_expansion.h
   __type_traits/is_void.h
   __type_traits/is_volatile.h

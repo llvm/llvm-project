@@ -10,9 +10,7 @@
 #define _LIBCPP___CONCEPTS_ARITHMETIC_H
 
 #include <__config>
-#include <__type_traits/is_floating_point.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_signed.h>
+#include <__type_traits/arithmetic_traits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -10,11 +10,10 @@
 #define _LIBCPP___TYPE_TRAITS_IS_EQUALITY_COMPARABLE_H
 
 #include <__config>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/is_signed.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/void_t.h>

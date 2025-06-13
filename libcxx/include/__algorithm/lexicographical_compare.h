@@ -22,7 +22,6 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_equality_comparable.h>
-#include <__type_traits/is_integral.h>
 #include <__type_traits/is_trivially_lexicographically_comparable.h>
 #include <__type_traits/is_volatile.h>
 

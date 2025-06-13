@@ -10,8 +10,7 @@
 #define _LIBCPP___UTILITY_CMP_H
 
 #include <__config>
-#include <__type_traits/integer_traits.h>
-#include <__type_traits/is_signed.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/make_unsigned.h>
 #include <limits>
 

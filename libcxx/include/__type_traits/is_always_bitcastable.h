@@ -10,7 +10,7 @@
 #define _LIBCPP___TYPE_TRAITS_IS_ALWAYS_BITCASTABLE_H
 
 #include <__config>
-#include <__type_traits/is_integral.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/remove_cv.h>

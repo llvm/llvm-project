@@ -11,9 +11,9 @@
 
 #include <__config>
 #include <__fwd/byte.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/is_unsigned.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>

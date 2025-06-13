@@ -11,7 +11,7 @@
 
 #include <__bit/bit_log2.h>
 #include <__config>
-#include <__type_traits/integer_traits.h>
+#include <__type_traits/arithmetic_traits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
