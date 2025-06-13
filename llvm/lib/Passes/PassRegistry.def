@@ -63,7 +63,8 @@ MODULE_PASS("coro-early", CoroEarlyPass())
 MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
 MODULE_PASS("ctx-instr-gen",
             PGOInstrumentationGen(PGOInstrumentationType::CTXPROF))
-MODULE_PASS("ctx-prof-flatten", PGOCtxProfFlatteningPass(/*IsPreThinlink=*/false))
+MODULE_PASS("ctx-prof-flatten",
+            PGOCtxProfFlatteningPass(/*IsPreThinlink=*/false))
 MODULE_PASS("ctx-prof-flatten-prethinlink",
             PGOCtxProfFlatteningPass(/*IsPreThinlink=*/true))
 MODULE_PASS("noinline-nonprevailing", NoinlineNonPrevailing())
@@ -74,7 +75,8 @@ MODULE_PASS("dot-callgraph", CallGraphDOTPrinterPass())
 MODULE_PASS("dxil-upgrade", DXILUpgradePass())
 MODULE_PASS("elim-avail-extern", EliminateAvailableExternallyPass())
 MODULE_PASS("extract-blocks", BlockExtractorPass({}, false))
-MODULE_PASS("expand-variadics", ExpandVariadicsPass(ExpandVariadicsMode::Disable))
+MODULE_PASS("expand-variadics",
+            ExpandVariadicsPass(ExpandVariadicsMode::Disable))
 MODULE_PASS("forceattrs", ForceFunctionAttrsPass())
 MODULE_PASS("function-import", FunctionImportPass())
 MODULE_PASS("global-merge-func", GlobalMergeFuncPass())
@@ -104,7 +106,10 @@ MODULE_PASS("lower-ifunc", LowerIFuncPass())
 MODULE_PASS("simplify-type-tests", SimplifyTypeTestsPass())
 MODULE_PASS("lowertypetests", LowerTypeTestsPass())
 MODULE_PASS("fatlto-cleanup", FatLtoCleanup())
-MODULE_PASS("pgo-force-function-attrs", PGOForceFunctionAttrsPass(PGOOpt ? PGOOpt->ColdOptType : PGOOptions::ColdFuncOpt::Default))
+MODULE_PASS("pgo-force-function-attrs",
+            PGOForceFunctionAttrsPass(PGOOpt
+                                          ? PGOOpt->ColdOptType
+                                          : PGOOptions::ColdFuncOpt::Default))
 MODULE_PASS("memprof-context-disambiguation", MemProfContextDisambiguation())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("mergefunc", MergeFunctionsPass())
@@ -178,7 +183,7 @@ MODULE_PASS_WITH_PARAMS(
     parseASanPassOptions, "kernel")
 MODULE_PASS_WITH_PARAMS(
     "cg-profile", "CGProfilePass",
-    [](bool InLTOPostLink) { return CGProfilePass(InLTOPostLink);},
+    [](bool InLTOPostLink) { return CGProfilePass(InLTOPostLink); },
     parseCGProfilePassOptions, "in-lto-post-link")
 MODULE_PASS_WITH_PARAMS(
     "global-merge", "GlobalMergePass",
@@ -287,7 +292,8 @@ CGSCC_PASS_WITH_PARAMS(
 FUNCTION_ANALYSIS("aa", AAManager())
 FUNCTION_ANALYSIS("access-info", LoopAccessAnalysis())
 FUNCTION_ANALYSIS("assumptions", AssumptionAnalysis())
-FUNCTION_ANALYSIS("bb-sections-profile-reader", BasicBlockSectionsProfileReaderAnalysis(TM))
+FUNCTION_ANALYSIS("bb-sections-profile-reader",
+                  BasicBlockSectionsProfileReaderAnalysis(TM))
 FUNCTION_ANALYSIS("block-freq", BlockFrequencyAnalysis())
 FUNCTION_ANALYSIS("branch-prob", BranchProbabilityAnalysis())
 FUNCTION_ANALYSIS("cycles", CycleAnalysis())
@@ -377,7 +383,7 @@ FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM))
 FUNCTION_PASS("expand-fp", ExpandFpPass(TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(TM))
 FUNCTION_PASS("extra-vector-passes",
-                  ExtraFunctionPassManager<ShouldRunExtraVectorPasses>())
+              ExtraFunctionPassManager<ShouldRunExtraVectorPasses>())
 FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
 FUNCTION_PASS("flatten-cfg", FlattenCFGPass())
 FUNCTION_PASS("float2int", Float2IntPass())
@@ -548,8 +554,7 @@ FUNCTION_PASS_WITH_PARAMS(
     "max-iterations=N")
 FUNCTION_PASS_WITH_PARAMS(
     "lint", "LintPass",
-    [](bool AbortOnError) { return LintPass(AbortOnError); },
-    parseLintOptions,
+    [](bool AbortOnError) { return LintPass(AbortOnError); }, parseLintOptions,
     "abort-on-error")
 FUNCTION_PASS_WITH_PARAMS(
     "loop-unroll", "LoopUnrollPass",
@@ -576,7 +581,8 @@ FUNCTION_PASS_WITH_PARAMS(
     "normalize", "IRNormalizerPass",
     [](IRNormalizerOptions Options) { return IRNormalizerPass(Options); },
     parseIRNormalizerPassOptions,
-    "no-preserve-order;preserve-order;no-rename-all;rename-all;no-fold-all;fold-all;no-reorder-operands;reorder-operands")
+    "no-preserve-order;preserve-order;no-rename-all;rename-all;no-fold-all;"
+    "fold-all;no-reorder-operands;reorder-operands")
 FUNCTION_PASS_WITH_PARAMS(
     "mldst-motion", "MergedLoadStoreMotionPass",
     [](MergedLoadStoreMotionOptions Opts) {
@@ -590,7 +596,7 @@ FUNCTION_PASS_WITH_PARAMS(
     },
     [](StringRef Params) {
       return PassBuilder::parseSinglePassOption(Params, "allow-partial",
-						"LoopAccessInfoPrinterPass");
+                                                "LoopAccessInfoPrinterPass");
     },
     "allow-partial")
 FUNCTION_PASS_WITH_PARAMS(
@@ -640,11 +646,11 @@ FUNCTION_PASS_WITH_PARAMS(
     [](SROAOptions PreserveCFG) { return SROAPass(PreserveCFG); },
     parseSROAOptions, "preserve-cfg;modify-cfg")
 FUNCTION_PASS_WITH_PARAMS(
-  "structurizecfg", "StructurizeCFG",
-  [](bool SkipUniformRegions) {
-    return StructurizeCFGPass(SkipUniformRegions);
-  },
-  parseStructurizeCFGPassOptions, "skip-uniform-regions")
+    "structurizecfg", "StructurizeCFG",
+    [](bool SkipUniformRegions) {
+      return StructurizeCFGPass(SkipUniformRegions);
+    },
+    parseStructurizeCFGPassOptions, "skip-uniform-regions")
 FUNCTION_PASS_WITH_PARAMS(
     "win-eh-prepare", "WinEHPreparePass",
     [](bool DemoteCatchSwitchPHIOnly) {
@@ -677,7 +683,7 @@ LOOP_ANALYSIS("iv-users", IVUsersAnalysis())
 LOOP_ANALYSIS("no-op-loop", NoOpLoopAnalysis())
 LOOP_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 LOOP_ANALYSIS("should-run-extra-simple-loop-unswitch",
-                  ShouldRunExtraSimpleLoopUnswitch())
+              ShouldRunExtraSimpleLoopUnswitch())
 
 #undef LOOP_ANALYSIS
 
@@ -689,7 +695,7 @@ LOOP_PASS("dot-ddg", DDGDotPrinterPass())
 LOOP_PASS("evl-iv-simplify", EVLIndVarSimplifyPass())
 LOOP_PASS("guard-widening", GuardWideningPass())
 LOOP_PASS("extra-simple-loop-unswitch-passes",
-              ExtraLoopPassManager<ShouldRunExtraSimpleLoopUnswitch>())
+          ExtraLoopPassManager<ShouldRunExtraSimpleLoopUnswitch>())
 LOOP_PASS("indvars", IndVarSimplifyPass())
 LOOP_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 LOOP_PASS("loop-bound-split", LoopBoundSplitPass())
