@@ -4,9 +4,11 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
-; Test a scenario when the address cannot be recreated in the current basic block
-
+@globalptr = external global ptr
 declare ptr @get_ptr(i64)
+
+; Can't recreate invoke instruction
+
 define void @addr_from_invoke() personality ptr null {
 ; CHECK-LABEL: define void @addr_from_invoke() personality ptr null {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -37,6 +39,68 @@ ehcleanup:
 
 body.1:
   %gep = getelementptr { i32 }, ptr %ptr, i64 0, i32 0
+  store <4 x i32> zeroinitializer, ptr %gep, align 4
+  br label %body.2
+}
+
+define void @addr_from_arg(ptr %ptr, i1 %p) {
+; CHECK-LABEL: define void @addr_from_arg(
+; CHECK-SAME: ptr [[PTR:%.*]], i1 [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[P]], label %[[BODY_1:.*]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[BODY_1]]:
+; CHECK-NEXT:    [[SUNKADDR:%.*]] = bitcast ptr [[PTR]] to ptr
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[UNUSED:%.*]] = load <4 x i32>, ptr [[PTR]], align 4
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[PTR]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %p, label %body.1, label %exit
+
+body.2:
+  %unused = load <4 x i32>, ptr %gep, align 4
+  store <4 x i32> zeroinitializer, ptr %gep, align 4
+  ret void
+
+exit:
+  ret void
+
+body.1:
+  %gep = getelementptr { i32 }, ptr %ptr, i64 0, i32 0
+  store <4 x i32> zeroinitializer, ptr %gep, align 4
+  br label %body.2
+}
+
+define void @addr_from_global(i1 %p) {
+; CHECK-LABEL: define void @addr_from_global(
+; CHECK-SAME: i1 [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[P]], label %[[BODY_1:.*]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[BODY_1]]:
+; CHECK-NEXT:    [[GEP1:%.*]] = bitcast ptr @globalptr to ptr
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[UNUSED:%.*]] = load <4 x i32>, ptr @globalptr, align 4
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @globalptr, align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %p, label %body.1, label %exit
+
+body.2:
+  %unused = load <4 x i32>, ptr %gep, align 4
+  store <4 x i32> zeroinitializer, ptr %gep, align 4
+  ret void
+
+exit:
+  ret void
+
+body.1:
+  %gep = getelementptr { i32 }, ptr @globalptr, i64 0, i32 0
   store <4 x i32> zeroinitializer, ptr %gep, align 4
   br label %body.2
 }
