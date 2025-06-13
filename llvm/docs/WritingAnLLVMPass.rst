@@ -442,6 +442,23 @@ in certain circumstances (such as calling the ``Pass::dump()`` from a
 debugger), so it should only be used to enhance debug output, it should not be
 depended on.
 
+Scheduling a MachineFunctionPass
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Backends create a ``TargetPassConfig`` and use ``addPass`` to schedule
+``MachineFunctionPass``\ es. External plugins can register a callback to modify
+and insert additional passes:
+
+.. code-block:: c++
+
+  TargetMachine::registerTargetPassConfigCallback(
+    [](TargetMachine &TM, PassManager &PM, TargetPassConfig *TPC) {
+      TPC->insertPass(/* ... */);
+      TPC->substitutePass(/* ... */);
+    }
+  );
+
+
 .. _writing-an-llvm-pass-interaction:
 
 Specifying interactions between passes

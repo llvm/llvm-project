@@ -332,3 +332,6 @@ std::pair<int, int> TargetMachine::parseBinutilsVersion(StringRef Version) {
     Version.consumeInteger(10, Ret.second);
   return Ret;
 }
+
+// TargetPassConfig callbacks
+ManagedStatic<SmallVector<PassConfigCallback, 1>> TargetMachine::TargetPassConfigCallbacks{};
