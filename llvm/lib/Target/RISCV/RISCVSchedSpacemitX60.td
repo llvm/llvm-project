@@ -49,18 +49,6 @@ class SMX60GetVIALULatency<string mx> {
   );
 }
 
-class SMX60GetVCompressLatency<string mx> {
-  int c = !cond(
-    !eq(mx, "M1") : 4,
-    !eq(mx, "M2") : 10,
-    !eq(mx, "M4") : 36,
-    !eq(mx, "M8") : 136,
-    !eq(mx, "MF2") : 4,
-    !eq(mx, "MF4") : 4,
-    !eq(mx, "MF8") : 4
-   );
- }
-
 def SpacemitX60Model : SchedMachineModel {
   let IssueWidth        = 2; // dual-issue
   let MicroOpBufferSize = 0; // in-order
@@ -640,21 +628,16 @@ foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
   let Latency = 4 in {
     defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVRGatherVI", [SMX60_VIEU], mx, IsWorstCase>;
-  }
-}
 
-foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
-  foreach sew = SchedSEWSet<mx>.val in {
-    defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
-
-    let Latency = 4 in {
+    foreach sew = SchedSEWSet<mx>.val in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
   }
 }
 
-// Complex Gather
+// Complex Gather and Compress
 foreach mx = ["M2", "M4", "M8"] in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
   defvar LMulLat = SMX60GetLMulCycles<mx>.c;
@@ -663,29 +646,19 @@ foreach mx = ["M2", "M4", "M8"] in {
     defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVRGatherVI", [SMX60_VIEU], mx, IsWorstCase>;
   }
-}
 
-foreach mx = ["M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx>.val in {
-    defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
-    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
+    defvar IsWorstCaseSEW = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
     defvar GatherLat = !cond(!eq(mx, "M2"): 16, !eq(mx, "M4"): 64, /* mx=M8 */ true: 256);
+    defvar CompressLat = !cond(!eq(mx, "M2"): 10, !eq(mx, "M4"): 36, /* mx=M8 */ true: 136);
 
     let Latency = GatherLat in {
-      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SMX60_VIEU], mx, sew, IsWorstCase>;
-      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
-  }
-}
-
-// Compress
-foreach mx = SchedMxList in {
-  foreach sew = SchedSEWSet<mx>.val in {
-    defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
-    defvar CompressLat = SMX60GetVCompressLatency<mx>.c;
 
     let Latency = CompressLat in {
-      defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
   }
 }
