@@ -809,7 +809,7 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
         auto module = runtimeCall->getParentOfType<ModuleOp>();
         auto callee = cast<func::FuncOp>(
             module.lookupSymbol(runtimeCall.getCalleeAttr()));
-        std::string newCalleeName = (callee.getName()).str();
+        std::string newCalleeName = (callee.getName() + "_omp").str();
         mlir::OpBuilder moduleBuilder(module.getBodyRegion());
         func::FuncOp newCallee =
             cast_or_null<func::FuncOp>(module.lookupSymbol(newCalleeName));

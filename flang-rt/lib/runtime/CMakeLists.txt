@@ -21,6 +21,7 @@ set(supported_sources
   allocatable.cpp
   array-constructor.cpp
   assign.cpp
+  assign_omp.cpp
   buffer.cpp
   character.cpp
   connection.cpp
@@ -99,6 +100,7 @@ set(gpu_sources
   allocatable.cpp
   array-constructor.cpp
   assign.cpp
+  assign_omp.cpp
   buffer.cpp
   character.cpp
   connection.cpp

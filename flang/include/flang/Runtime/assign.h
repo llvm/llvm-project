@@ -56,6 +56,8 @@ extern "C" {
 // API for lowering assignment
 void RTDECL(Assign)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);
+void RTDECL(Assign_omp)(Descriptor &to, const Descriptor &from,
+    const char *sourceFile = nullptr, int sourceLine = 0, int32_t omp_device = 0);
 // This variant has no finalization, defined assignment, or allocatable
 // reallocation.
 void RTDECL(AssignTemporary)(Descriptor &to, const Descriptor &from,
