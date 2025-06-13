@@ -815,8 +815,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       return new ICmpInst(ICmpInst::ICMP_EQ, X, CmpC);
     }
 
-    if (match(Src, m_AShr(m_Value(X), m_SpecificInt(SrcWidth - 1))) ||
-        match(Src, m_LShr(m_Value(X), m_SpecificInt(SrcWidth - 1)))) {
+    if (match(Src, m_Shr(m_Value(X), m_SpecificInt(SrcWidth - 1)))) {
       // trunc (ashr X, BW-1) to i1 --> icmp slt X, 0
       // trunc (lshr X, BW-1) to i1 --> icmp slt X, 0
       return new ICmpInst(ICmpInst::ICMP_SLT, X, Zero);
