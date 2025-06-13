@@ -5056,9 +5056,10 @@ def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify the size in bits of an RVV vector register">,
   DocBrief<!strconcat(
-    "Defaults to the vector length agnostic value of \"scalable\". "
-    "Accepts power of 2 values between 64 and 65536. Also accepts "
-    "\"zvl\" to use the value implied by -march/-mcpu.",
+    "Specify the size in bits of an RVV vector register. Defaults to the "
+    "vector length agnostic value of \"scalable\". Accepts power of 2 values "
+    "between 64 and 65536. Also accepts \"zvl\" to use the value implied by "
+    "-march/-mcpu.",
     !cond(
       // Flang does not set the preprocessor define.
       !eq(GlobalDocumentation.Program, "Flang") : "",
