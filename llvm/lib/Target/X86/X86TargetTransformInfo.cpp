@@ -123,7 +123,7 @@ std::optional<unsigned> X86TTIImpl::getCacheSize(
     //   - Broadwell
     //   - Skylake
     //   - Kabylake
-    return 32 * 1024;  //  32 KByte
+    return 32 * 1024;  //  32 KiB
   case TargetTransformInfo::CacheLevel::L2D:
     //   - Penryn
     //   - Nehalem
@@ -134,7 +134,7 @@ std::optional<unsigned> X86TTIImpl::getCacheSize(
     //   - Broadwell
     //   - Skylake
     //   - Kabylake
-    return 256 * 1024; // 256 KByte
+    return 256 * 1024; // 256 KiB
   }
 
   llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
