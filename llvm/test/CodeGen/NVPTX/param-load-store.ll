@@ -345,9 +345,11 @@ define <3 x i16> @test_v3i16(<3 x i16> %a) {
 ; CHECK: .func  (.param .align 8 .b8 func_retval0[8])
 ; CHECK-LABEL: test_v4i16(
 ; CHECK-NEXT: .param .align 8 .b8 test_v4i16_param_0[8]
-; CHECK:      ld.param.v2.b32 {[[E0:%r[0-9]+]], [[E1:%r[0-9]+]]}, [test_v4i16_param_0]
+; CHECK-DAG:  ld.param.v4.b16 {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]], [[E2:%rs[0-9]+]], [[E3:%rs[0-9]+]]}, [test_v4i16_param_0]
+; CHECK-DAG:  mov.b32 [[E01:%r[0-9]+]], {[[E0]], [[E1]]}
+; CHECK-DAG:  mov.b32 [[E23:%r[0-9]+]], {[[E2]], [[E3]]}
 ; CHECK:      .param .align 8 .b8 param0[8];
-; CHECK:      st.param.v2.b32 [param0], {[[E0]], [[E1]]};
+; CHECK:      st.param.v2.b32 [param0], {[[E01]], [[E23]]};
 ; CHECK:      .param .align 8 .b8 retval0[8];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT: test_v4i16,
@@ -474,7 +476,9 @@ define <3 x half> @test_v3f16(<3 x half> %a) {
 ; CHECK:.func  (.param .align 8 .b8 func_retval0[8])
 ; CHECK-LABEL: test_v4f16(
 ; CHECK:      .param .align 8 .b8 test_v4f16_param_0[8]
-; CHECK:      ld.param.v2.b32 {[[R01:%r[0-9]+]], [[R23:%r[0-9]+]]}, [test_v4f16_param_0];
+; CHECK-DAG:  ld.param.v4.b16 {[[R0:%rs[0-9]+]], [[R1:%rs[0-9]+]], [[R2:%rs[0-9]+]], [[R3:%rs[0-9]+]]}, [test_v4f16_param_0];
+; CHECK-DAG:  mov.b32 [[R01:%r[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  mov.b32 [[R23:%r[0-9]+]], {[[R2]], [[R3]]}
 ; CHECK:      .param .align 8 .b8 param0[8];
 ; CHECK:      st.param.v2.b32 [param0], {[[R01]], [[R23]]};
 ; CHECK:      .param .align 8 .b8 retval0[8];

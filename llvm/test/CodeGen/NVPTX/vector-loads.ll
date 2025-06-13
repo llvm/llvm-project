@@ -101,18 +101,18 @@ define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(1342177
 define void @extv8f16_global_a16(ptr addrspace(1) noalias readonly align 16 %dst, ptr addrspace(1) noalias readonly align 16 %src) #0 {
 ; CHECK: ld.global.v4.b32 {%r
   %v = load <8 x half>, ptr addrspace(1) %src, align 16
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: mov.b32 {%rs
+; CHECK-DAG: mov.b32 {%rs
+; CHECK-DAG: mov.b32 {%rs
+; CHECK-DAG: mov.b32 {%rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
   %ext = fpext <8 x half> %v to <8 x float>
 ; CHECK: st.global.v4.b32
 ; CHECK: st.global.v4.b32
@@ -151,18 +151,18 @@ define void @extv8f16_global_a4(ptr addrspace(1) noalias readonly align 16 %dst,
 define void @extv8f16_generic_a16(ptr noalias readonly align 16 %dst, ptr noalias readonly align 16 %src) #0 {
 ; CHECK: ld.v4.b32 {%r
   %v = load <8 x half>, ptr %src, align 16
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: mov.b32 {%rs
+; CHECK-DAG: mov.b32 {%rs
+; CHECK-DAG: mov.b32 {%rs
+; CHECK-DAG: mov.b32 {%rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, %rs
   %ext = fpext <8 x half> %v to <8 x float>
 ; CHECK: st.v4.b32
 ; CHECK: st.v4.b32

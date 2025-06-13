@@ -10,7 +10,8 @@ define void @test_v2f32(<2 x float> %input, ptr %output) {
 ; CHECK-LABEL: @test_v2f32
   %call = tail call <2 x float> @barv(<2 x float> %input)
 ; CHECK: .param .align 8 .b8 retval0[8];
-; CHECK: ld.param.v2.b32 {[[E0:%r[0-9]+]], [[E1:%r[0-9]+]]}, [retval0];
+; CHECK: ld.param.b64 [[E0_1:%rd[0-9]+]], [retval0];
+; CHECK: mov.b64 {[[E0:%r[0-9]+]], [[E1:%r[0-9]+]]}, [[E0_1]]
   store <2 x float> %call, ptr %output, align 8
 ; CHECK: st.v2.b32 [{{%rd[0-9]+}}], {[[E0]], [[E1]]}
   ret void
@@ -27,9 +28,7 @@ define void @test_v3f32(<3 x float> %input, ptr %output) {
 ; CHECK-NOT: ld.param.b32 [[E3:%r[0-9]+]], [retval0+12];
   store <3 x float> %call, ptr %output, align 8
 ; CHECK-DAG: st.b32 [{{%rd[0-9]}}+8],
-; -- This is suboptimal. We should do st.v2.f32 instead
-;    of combining 2xf32 info i64.
-; CHECK-DAG: st.b64 [{{%rd[0-9]}}],
+; CHECK-DAG: st.v2.b32 [{{%rd[0-9]}}],
 ; CHECK: ret;
   ret void
 }
