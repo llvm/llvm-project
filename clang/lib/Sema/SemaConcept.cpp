@@ -647,8 +647,6 @@ static bool calculateConstraintSatisfaction(
         UnsatisfiedConstraintRecord(
             SubstitutedConceptId.getAs<ConceptSpecializationExpr>()
                 ->getConceptReference()));
-
-    // Satisfaction.Details.push_back(nullptr);
   }
   return Ok;
 }
@@ -1385,10 +1383,6 @@ static void DiagnoseUnsatisfiedConstraint(
     Sema &S, ArrayRef<UnsatisfiedConstraintRecord> Records, SourceLocation Loc,
     bool First = true, concepts::NestedRequirement *Req = nullptr) {
   for (auto &Record : Records) {
-      if (Record.isNull()) {
-      First = false;
-        continue;
-      }
     diagnoseUnsatisfiedConstraintExpr(S, Record, Loc, First, Req);
     Loc = {};
     First = isa<const ConceptReference *>(Record);
