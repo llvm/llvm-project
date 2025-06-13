@@ -143,24 +143,31 @@ public:
     llvm_unreachable("Illegal empty element");
   }
 
-  /// find_next - Returns the index of the next set bit starting from the
-  /// "Curr" bit. Returns -1 if the next set bit is not found.
-  int find_next(int Curr) const {
-    assert(Curr >= 0 && Curr < BITS_PER_ELEMENT);
+  /// find_next - Sets Curr to the index of the next set bit starting after the
+  /// Curr bit and returns false, or sets Curr to ~0U and returns true if no
+  /// next bit is found.
+  bool find_next(unsigned &Curr) const {
+    assert(Curr < BITS_PER_ELEMENT);
 
     unsigned WordPos = Curr / BITWORD_SIZE;
     unsigned BitPos = Curr % BITWORD_SIZE;
 
     // Mask off previous bits.
     BitWord Copy = Bits[WordPos] & ~1UL << BitPos;
-    if (Copy != 0)
-      return WordPos * BITWORD_SIZE + llvm::countr_zero(Copy);
+    if (Copy != 0) {
+      Curr = WordPos * BITWORD_SIZE + llvm::countr_zero(Copy);
+      return false;
+    }
 
     // Check subsequent words.
-    for (unsigned i = WordPos+1; i < BITWORDS_PER_ELEMENT; ++i)
-      if (Bits[i] != 0)
-        return i * BITWORD_SIZE + llvm::countr_zero(Bits[i]);
-    return -1;
+    for (unsigned i = WordPos + 1; i < BITWORDS_PER_ELEMENT; ++i) {
+      if (Bits[i] != 0) {
+        Curr = i * BITWORD_SIZE + llvm::countr_zero(Bits[i]);
+        return false;
+      }
+    }
+    Curr = ~0U;
+    return true;
   }
 
   // Union this element with RHS and return true if this one changed.
@@ -312,9 +319,9 @@ class SparseBitVector {
   // Iterator to walk set bits in the bitvector.
   class SparseBitVectorIterator {
   private:
-    // Current bit number within the current element, or -1 if we are at the
+    // Current bit number within the current element, or ~0U if we are at the
     // end.
-    int BitPos = -1;
+    unsigned BitPos = ~0U;
 
     // Iterators to the current element and the end of the bitvector. These are
     // only valid when BitPos >= 0.
@@ -334,8 +341,7 @@ class SparseBitVector {
 
     // Preincrement.
     inline SparseBitVectorIterator& operator++() {
-      BitPos = Iter->find_next(BitPos);
-      if (BitPos < 0 && ++Iter != End)
+      if (Iter->find_next(BitPos) && ++Iter != End)
         BitPos = Iter->find_first();
       return *this;
     }
@@ -349,7 +355,7 @@ class SparseBitVector {
 
     // Return the current set bit number.
     unsigned operator*() const {
-      assert(BitPos >= 0);
+      assert(BitPos != ~0U);
       return Iter->index() * ElementSize + BitPos;
     }
 
