@@ -618,6 +618,7 @@ namespace {
     bool onlyUsesZeroFlag(SDValue Flags) const;
     bool hasNoSignFlagUses(SDValue Flags) const;
     bool hasNoCarryFlagUses(SDValue Flags) const;
+    bool checkTCRetRegUsage(SDNode *N, LoadSDNode *Load) const;
   };
 
   class X86DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
@@ -890,6 +891,12 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
       LD->getExtensionType() != ISD::NON_EXTLOAD)
     return false;
 
+  // If the load's outgoing chain has more than one use, we can't (currently)
+  // move the load since we'd most likely create a loop. TODO: Maybe it could
+  // work if moveBelowOrigChain() updated *all* the chain users.
+  if (!Callee.getValue(1).hasOneUse())
+    return false;
+
   // Now let's find the callseq_start.
   while (HasCallSeq && Chain.getOpcode() != ISD::CALLSEQ_START) {
     if (!Chain.hasOneUse())
@@ -897,20 +904,39 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
     Chain = Chain.getOperand(0);
   }
 
-  if (!Chain.getNumOperands())
+  while (true) {
+    if (!Chain.getNumOperands())
+      return false;
+
+    // It's not safe to move the callee (a load) across e.g. a store.
+    // Conservatively abort if the chain contains a node other than the ones
+    // below.
+    switch (Chain.getNode()->getOpcode()) {
+    case ISD::CALLSEQ_START:
+    case ISD::CopyToReg:
+    case ISD::LOAD:
+      break;
+    default:
+      return false;
+    }
+
+    if (Chain.getOperand(0).getNode() == Callee.getNode())
+      return true;
+    if (Chain.getOperand(0).getOpcode() == ISD::TokenFactor &&
+        Chain.getOperand(0).getValue(0).hasOneUse() &&
+        Callee.getValue(1).isOperandOf(Chain.getOperand(0).getNode()) &&
+        Callee.getValue(1).hasOneUse())
+      return true;
+
+    // Look past CopyToRegs. We only walk one path, so the chain mustn't branch.
+    if (Chain.getOperand(0).getOpcode() == ISD::CopyToReg &&
+        Chain.getOperand(0).getValue(0).hasOneUse()) {
+      Chain = Chain.getOperand(0);
+      continue;
+    }
+
     return false;
-  // Since we are not checking for AA here, conservatively abort if the chain
-  // writes to memory. It's not safe to move the callee (a load) across a store.
-  if (isa<MemSDNode>(Chain.getNode()) &&
-      cast<MemSDNode>(Chain.getNode())->writeMem())
-    return false;
-  if (Chain.getOperand(0).getNode() == Callee.getNode())
-    return true;
-  if (Chain.getOperand(0).getOpcode() == ISD::TokenFactor &&
-      Callee.getValue(1).isOperandOf(Chain.getOperand(0).getNode()) &&
-      Callee.getValue(1).hasOneUse())
-    return true;
-  return false;
+  }
 }
 
 static bool isEndbrImm64(uint64_t Imm) {
@@ -1353,6 +1379,11 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
          (N->getOpcode() == X86ISD::TC_RETURN &&
           (Subtarget->is64Bit() ||
            !getTargetMachine().isPositionIndependent())))) {
+
+      if (N->getOpcode() == X86ISD::TC_RETURN &&
+          !checkTCRetRegUsage(N, nullptr))
+        continue;
+
       /// Also try moving call address load from outside callseq_start to just
       /// before the call to allow it to be folded.
       ///
@@ -3484,6 +3515,47 @@ static bool mayUseCarryFlag(X86::CondCode CC) {
     if (mayUseCarryFlag(CC))
       return false;
   }
+  return true;
+}
+
+bool X86DAGToDAGISel::checkTCRetRegUsage(SDNode *N, LoadSDNode *Load) const {
+  const X86RegisterInfo *RI = Subtarget->getRegisterInfo();
+  const TargetRegisterClass *TailCallGPRs = RI->getGPRsForTailCall(*MF);
+  unsigned MaxGPRs = TailCallGPRs->getNumRegs();
+  if (Subtarget->is64Bit()) {
+    assert(TailCallGPRs->contains(X86::RSP));
+    assert(TailCallGPRs->contains(X86::RIP));
+    MaxGPRs -= 2; // Can't use RSP or RIP for the address in general.
+  } else {
+    assert(TailCallGPRs->contains(X86::ESP));
+    MaxGPRs -= 1; // Can't use ESP for the address in general.
+  }
+
+  // The load's base and index potentially need two registers.
+  unsigned LoadGPRs = 2;
+
+  if (Load) {
+    // But not if it's loading from a frame slot or global.
+    // XXX: Couldn't we be indexing off of the global though?
+    const SDValue &BasePtr = Load->getBasePtr();
+    if (isa<FrameIndexSDNode>(BasePtr)) {
+      LoadGPRs = 0;
+    } else if (BasePtr->getNumOperands() &&
+               isa<GlobalAddressSDNode>(BasePtr->getOperand(0)))
+      LoadGPRs = 0;
+  }
+
+  unsigned TCGPRs = 0;
+  // X86tcret args: (*chain, ptr, imm, regs..., glue)
+  for (unsigned I = 3, E = N->getNumOperands(); I != E; ++I) {
+    if (const auto *RN = dyn_cast<RegisterSDNode>(N->getOperand(I))) {
+      if (!RI->isGeneralPurposeRegister(*MF, RN->getReg()))
+        continue;
+      if (++TCGPRs + LoadGPRs > MaxGPRs)
+        return false;
+    }
+  }
+
   return true;
 }
 
