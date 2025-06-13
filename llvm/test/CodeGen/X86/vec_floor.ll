@@ -1361,7 +1361,7 @@ define <4 x float> @floor_mask_ss(<4 x float> %x, <4 x float> %y, <4 x float> %w
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundss $9, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB52_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1402,7 +1402,7 @@ define <4 x float> @floor_maskz_ss(<4 x float> %x, <4 x float> %y, i8 %k) nounwi
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundss $9, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB53_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1441,7 +1441,7 @@ define <2 x double> @floor_mask_sd(<2 x double> %x, <2 x double> %y, <2 x double
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundsd $9, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB54_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1482,7 +1482,7 @@ define <2 x double> @floor_maskz_sd(<2 x double> %x, <2 x double> %y, i8 %k) nou
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundsd $9, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB55_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1521,7 +1521,7 @@ define <4 x float> @floor_mask_ss_trunc(<4 x float> %x, <4 x float> %y, <4 x flo
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundss $9, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB56_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1562,7 +1562,7 @@ define <4 x float> @floor_maskz_ss_trunc(<4 x float> %x, <4 x float> %y, i16 %k)
 ; SSE41-NEXT:  LBB57_1:
 ; SSE41-NEXT:    roundss $9, %xmm0, %xmm0
 ; SSE41-NEXT:  LBB57_3:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1602,7 +1602,7 @@ define <2 x double> @floor_mask_sd_trunc(<2 x double> %x, <2 x double> %y, <2 x 
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundsd $9, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB58_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1643,7 +1643,7 @@ define <2 x double> @floor_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 
 ; SSE41-NEXT:  LBB59_1:
 ; SSE41-NEXT:    roundsd $9, %xmm0, %xmm0
 ; SSE41-NEXT:  LBB59_3:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2351,7 +2351,7 @@ define <4 x float> @ceil_mask_ss(<4 x float> %x, <4 x float> %y, <4 x float> %w,
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundss $10, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB78_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2392,7 +2392,7 @@ define <4 x float> @ceil_maskz_ss(<4 x float> %x, <4 x float> %y, i8 %k) nounwin
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundss $10, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB79_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2431,7 +2431,7 @@ define <2 x double> @ceil_mask_sd(<2 x double> %x, <2 x double> %y, <2 x double>
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundsd $10, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB80_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2472,7 +2472,7 @@ define <2 x double> @ceil_maskz_sd(<2 x double> %x, <2 x double> %y, i8 %k) noun
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundsd $10, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB81_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2511,7 +2511,7 @@ define <4 x float> @ceil_mask_ss_trunc(<4 x float> %x, <4 x float> %y, <4 x floa
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundss $10, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB82_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2552,7 +2552,7 @@ define <4 x float> @ceil_maskz_ss_trunc(<4 x float> %x, <4 x float> %y, i16 %k) 
 ; SSE41-NEXT:  LBB83_1:
 ; SSE41-NEXT:    roundss $10, %xmm0, %xmm0
 ; SSE41-NEXT:  LBB83_3:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2592,7 +2592,7 @@ define <2 x double> @ceil_mask_sd_trunc(<2 x double> %x, <2 x double> %y, <2 x d
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundsd $10, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB84_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2633,7 +2633,7 @@ define <2 x double> @ceil_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 %
 ; SSE41-NEXT:  LBB85_1:
 ; SSE41-NEXT:    roundsd $10, %xmm0, %xmm0
 ; SSE41-NEXT:  LBB85_3:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
