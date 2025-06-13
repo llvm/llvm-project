@@ -259,7 +259,12 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
     return;
   }
   case cir::TEK_Aggregate:
-    emitAggExpr(init, AggValueSlot::forLValue(lvalue));
+    // The overlap flag here should be calculated.
+    assert(!cir::MissingFeatures::aggValueSlotMayOverlap());
+    emitAggExpr(init,
+                AggValueSlot::forLValue(lvalue, AggValueSlot::IsDestructed,
+                                        AggValueSlot::IsNotAliased,
+                                        AggValueSlot::MayOverlap));
     return;
   }
   llvm_unreachable("bad evaluation kind");

@@ -23,27 +23,18 @@ namespace {
 /// Generic one-to-one conversion of simply mappable operations into calls
 /// to their respective LLVM intrinsics.
 struct X86IntrinsicOpConversion
-    : public OpInterfaceConversionPattern<x86vector::X86IntrinsicOp> {
-  using OpInterfaceConversionPattern<
-      x86vector::X86IntrinsicOp>::OpInterfaceConversionPattern;
-
-  X86IntrinsicOpConversion(const LLVMTypeConverter &typeConverter,
-                           PatternBenefit benefit = 1)
-      : OpInterfaceConversionPattern(typeConverter, &typeConverter.getContext(),
-                                     benefit),
-        typeConverter(typeConverter) {}
+    : public ConvertOpInterfaceToLLVMPattern<x86vector::X86IntrinsicOp> {
+  using ConvertOpInterfaceToLLVMPattern::ConvertOpInterfaceToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(x86vector::X86IntrinsicOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
+    const LLVMTypeConverter &typeConverter = *getTypeConverter();
     return LLVM::detail::intrinsicRewrite(
         op, rewriter.getStringAttr(op.getIntrinsicName()),
         op.getIntrinsicOperands(operands, typeConverter, rewriter),
         typeConverter, rewriter);
   }
-
-private:
-  const LLVMTypeConverter &typeConverter;
 };
 
 } // namespace
