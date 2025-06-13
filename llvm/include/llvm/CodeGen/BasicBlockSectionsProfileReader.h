@@ -167,7 +167,7 @@ class BasicBlockSectionsProfileReaderAnalysis
 public:
   static AnalysisKey Key;
   typedef BasicBlockSectionsProfileReader Result;
-  BasicBlockSectionsProfileReaderAnalysis(const TargetMachine *TM) : TM(TM) {}
+  BasicBlockSectionsProfileReaderAnalysis(const TargetMachine &TM) : TM(&TM) {}
 
   Result run(Function &F, FunctionAnalysisManager &AM);
 

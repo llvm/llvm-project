@@ -42,7 +42,7 @@ public:
                              FunctionAnalysisManager::Invalidator &);
   };
 
-  MachineFunctionAnalysis(const TargetMachine *TM) : TM(TM) {};
+  MachineFunctionAnalysis(const TargetMachine &TM) : TM(&TM) {};
   LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
