@@ -41,9 +41,9 @@ static AvailableValsTy &getAvailableVals(void *AV) {
 }
 
 MachineSSAUpdater::MachineSSAUpdater(MachineFunction &MF,
-                                     SmallVectorImpl<MachineInstr*> *NewPHI)
-  : InsertedPHIs(NewPHI), TII(MF.getSubtarget().getInstrInfo()),
-    MRI(&MF.getRegInfo()) {}
+                                     SmallVectorImpl<MachineInstr *> *NewPHI)
+    : InsertedPHIs(NewPHI), TII(MF.getSubtarget().getInstrInfo()),
+      MRI(&MF.getRegInfo()), TRI(MF.getSubtarget().getRegisterInfo()) {}
 
 MachineSSAUpdater::~MachineSSAUpdater() {
   delete static_cast<AvailableValsTy*>(AV);
@@ -236,23 +236,21 @@ void MachineSSAUpdater::RewriteUse(MachineOperand &U) {
     NewVR = GetValueInMiddleOfBlock(UseMI->getParent());
   }
 
-  // Insert a COPY if needed to satisfy register class constraints for the using
-  // MO. Or, if possible, just constrain the class for NewVR to avoid the need
-  // for a COPY.
+  unsigned SubRegIndex = U.getSubReg();
+
   if (NewVR) {
     const TargetRegisterClass *UseRC =
         dyn_cast_or_null<const TargetRegisterClass *>(RegAttrs.RCOrRB);
-    if (UseRC && !MRI->constrainRegClass(NewVR, UseRC)) {
-      MachineBasicBlock *UseBB = UseMI->getParent();
-      MachineInstr *InsertedCopy =
-          InsertNewDef(TargetOpcode::COPY, UseBB, UseBB->getFirstNonPHI(),
-                       RegAttrs, MRI, TII)
-              .addReg(NewVR);
-      NewVR = InsertedCopy->getOperand(0).getReg();
-      LLVM_DEBUG(dbgs() << "  Inserted COPY: " << *InsertedCopy);
+    const TargetRegisterClass *NewRC = MRI->getRegClass(NewVR);
+    if (SubRegIndex) {
+      const TargetRegisterClass *SubRC =
+          TRI->getSubRegisterClass(UseRC, SubRegIndex);
+      if (NewRC == SubRC)
+        SubRegIndex = 0;
     }
   }
   U.setReg(NewVR);
+  U.setSubReg(SubRegIndex);
 }
 
 namespace llvm {
