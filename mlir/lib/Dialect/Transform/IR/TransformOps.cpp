@@ -791,11 +791,17 @@ transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
 
   std::string options;
   llvm::raw_string_ostream optionsStream(options); // For "printing" attrs.
-  auto appendValueAttr = [&](Attribute valueAttr) {
-    if (auto strAttr = dyn_cast<StringAttr>(valueAttr))
+  std::function<void(Attribute)> appendValueAttr = [&](Attribute valueAttr) {
+    if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
+      for (auto [idx, eltAttr] : llvm::enumerate(arrayAttr)) {
+        appendValueAttr(eltAttr);
+        optionsStream << ",";
+      }
+    } else if (auto strAttr = dyn_cast<StringAttr>(valueAttr)) {
       optionsStream << strAttr.getValue().str();
-    else
+    } else {
       valueAttr.print(optionsStream, /*elideType=*/true);
+    }
   };
 
   OperandRange dynamicOptions = getDynamicOptions();
