@@ -8,9 +8,7 @@
 //
 // Test the "test_macros.h" header.
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
-#include <__config>
+#include <__cxx03/__config>
 #include "test_macros.h"
 
 #ifndef TEST_STD_VER

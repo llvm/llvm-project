@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
-#include <__utility/no_destroy.h>
+#include <__cxx03/__utility/no_destroy.h>
 #include <cassert>
 
 #include "test_macros.h"
