@@ -19,9 +19,37 @@
   affine_map<(d0, d1, d2) -> (d0, d1)>
 ]
 
-func.func private @setArmVLBits(%bits : i32)
-func.func private @printMemrefI32(%ptr : memref<*xi32>)
+//
+// Test the lowering of `vector.contract` using the `LowerContractionToSVEI8MMPattern`
+//
+// The operation that the `vector.contract` in this test performs is matrix
+// multiplication with accumulate
+//     OUT = ACC + LHS * RHS
+// of two 8-bit integer matrices LHS and RHS, and a 32-bit integer matrix ACC
+// into a 32-bit integer matrix OUT. The LHS and RHS can be sign- or zero- extended,
+// this test covers all the possible variants.
+//
+// Tested are calculations as well as that the relevant `ArmSVE` dialect
+// operations ('arm_sve.smmla`, arm_sve.ummla`, etc) are emitted.
+//
+// That pattern above handles (therefore this test prepares) input/output vectors with
+// specific shapes:
+//   * LHS:      vector<Mx8xi8>
+//   * RHS:      vector<[N]x8xi8>
+//   * ACC, OUT: vector<Mx[N]xi32>
+// Note that the RHS is transposed.
+// See mlir/lib/Dialect/ArmSVE/Transforms/LowerContractionToSVEI8MMPattern.cpp
+// for more information and rationale about these shapes.
+//
+// In this specific test we use M == 4 and N == 4
+//
 
+// Allocate and initialise a memref containing test data for use as the ACC
+// operand. The memref has one dynamic dimension whose extent depends on the
+// runtime value of VSCALE.
+//
+// The input parameter `%in` is a vector that is replicated VSCALE times
+// across the columns of the memref.
 func.func private @prepareAccTestData(%in: vector<4x4xi32>) -> memref<4x?xi32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -39,6 +67,9 @@ func.func private @prepareAccTestData(%in: vector<4x4xi32>) -> memref<4x?xi32> {
   return %mem : memref<4x?xi32>
 }
 
+// Allocate and initialise a memref containing test data for use as the LHS
+// operand. This function just writes the parameter `%in` into the memref.
+// The size of the LHS does not depends on VSCALE.
 func.func private @prepareLHSTestData(%in: vector<4x8xi8>) -> memref<4x8xi8> {
   %c0 = arith.constant 0 : index
   %c0_i8 = arith.constant 0 : i8
@@ -49,6 +80,15 @@ func.func private @prepareLHSTestData(%in: vector<4x8xi8>) -> memref<4x8xi8> {
   return %mem : memref<4x8xi8>
 }
 
+// Allocate and initialise a memref containing test data for use as the RHS
+// operand. The memref has one dynamic dimension whose extent depends on the
+// runtime value of VSCALE.
+//
+// The input parameter `%in` is a vector that is replicated VSCALE times
+// across the rows of the memref.
+//
+// For convenience, flatten the memref, since the RHS vector is read first as a
+// single-dimensional scalable vector and then cast into [N]x8 shape.
 func.func private @prepareRHSTestData(%in: vector<4x8xi8>) -> memref<?xi8> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -67,6 +107,9 @@ func.func private @prepareRHSTestData(%in: vector<4x8xi8>) -> memref<?xi8> {
   return %mem_out : memref<?xi8>
 }
 
+// Test the operation where both LHS and RHS are interpreted as signed, hence
+// we ultimately emit and execute the `smmla` instruction.
+
 // CHECK-IR-LABEL: llvm.func @test_smmla
 // CHECK-IR-COUNT-4: arm_sve.intr.smmla
 func.func @test_smmla() {
@@ -84,7 +127,7 @@ func.func @test_smmla() {
   %acc_mem = func.call @prepareAccTestData(%acc_cst) : (vector<4x4xi32>) -> memref<4x?xi32>
   %acc = vector.transfer_read %acc_mem[%c0, %c0], %c0_i32 {in_bounds = [true, true]} : memref<4x?xi32>, vector<4x[4]xi32>
 
-  // Workaround for a crash, see https://github.com/llvm/llvm-project/issues/143670
+  // FIXME: Workaround for a crash, see https://github.com/llvm/llvm-project/issues/143670
   %acc_cast = memref.cast %acc_mem : memref<4x?xi32> to memref<*xi32>
   call @printMemrefI32(%acc_cast) : (memref<*xi32>) -> ()
 
@@ -126,8 +169,16 @@ func.func @test_smmla() {
   vector.print %u2 : vector<[4]xi32>
   vector.print %u3 : vector<[4]xi32>
 
+  // Deallocate the buffers.
+  memref.dealloc %acc_mem : memref<4x?xi32>
+  memref.dealloc %lhs_mem : memref<4x8xi8>
+  memref.dealloc %rhs_mem : memref<?xi8>
+
   return
 }
+
+// Test the operation where both LHS and RHS are interpreted as unsigned, hence
+// we ultimately emit and execute the `ummla` instruction.
 
 // CHECK-IR-LABEL: llvm.func @test_ummla
 // CHECK-IR-COUNT-4: arm_sve.intr.ummla
@@ -184,8 +235,17 @@ func.func @test_ummla() {
   vector.print %u2 : vector<[4]xi32>
   vector.print %u3 : vector<[4]xi32>
 
+  // Deallocate the buffers.
+  memref.dealloc %acc_mem : memref<4x?xi32>
+  memref.dealloc %lhs_mem : memref<4x8xi8>
+  memref.dealloc %rhs_mem : memref<?xi8>
+
   return
 }
+
+// Test the operation where LHS is interpreted as unsigned and RHS is
+// interpreted as signed, hence we ultimately emit and execute the `usmmla`
+// instruction.
 
 // CHECK-IR-LABEL: llvm.func @test_usmmla
 // CHECK-IR-COUNT-4: arm_sve.intr.usmmla
@@ -242,8 +302,18 @@ func.func @test_usmmla() {
   vector.print %u2 : vector<[4]xi32>
   vector.print %u3 : vector<[4]xi32>
 
+  // Deallocate the buffers.
+  memref.dealloc %acc_mem : memref<4x?xi32>
+  memref.dealloc %lhs_mem : memref<4x8xi8>
+  memref.dealloc %rhs_mem : memref<?xi8>
+
   return
 }
+
+// Test the operation where LHS is interpreted as signed and RHS is interpreted
+// as unsigned. In this test we ultimately emit end execute the `usmmla`
+// instruction with reversed operands, see `LowerContractionToSVEI8MMPattern.cpp`
+// for more details.
 
 // CHECK-IR-LABEL: llvm.func @test_summla
 // CHECK-IR-COUNT-4: arm_sve.intr.usmmla
@@ -300,8 +370,19 @@ func.func @test_summla() {
   vector.print %u2 : vector<[4]xi32>
   vector.print %u3 : vector<[4]xi32>
 
+  // Deallocate the buffers.
+  memref.dealloc %acc_mem : memref<4x?xi32>
+  memref.dealloc %lhs_mem : memref<4x8xi8>
+  memref.dealloc %rhs_mem : memref<?xi8>
+
   return
 }
+
+// Perform each test with SVE vector lengths 128 bits and 256 bits (i.e. VSCALEs
+// 1 and 2, respectively). The vector length is set via the `setArmVLBits`
+// function. The effect of setting a different vector length is that the tests
+// allocate and operate on different sized buffers (see `prepare<X>TestData`
+// functions).
 
 func.func @main() {
   %c128 = arith.constant 128 : i32
@@ -373,3 +454,6 @@ func.func @main() {
 
   return
 }
+
+func.func private @setArmVLBits(%bits : i32)
+func.func private @printMemrefI32(%ptr : memref<*xi32>)
