@@ -1,5 +1,4 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
-! XFAIL: *
 ! CHECK: func.func @_QPatomic_implicit_cast_read() {
 subroutine atomic_implicit_cast_read
 ! CHECK: %[[ALLOCA7:.*]] = fir.alloca complex<f64>
