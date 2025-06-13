@@ -203,16 +203,13 @@ public:
           // dialect ops.
           assert(region.hasOneBlock() &&
                  "Expected localizer region to have a single block.");
-          mlir::Block *beforeLocalizerRegion = rewriter.getInsertionBlock();
-          mlir::Block *afterLocalizerRegion =
-              rewriter.splitBlock(rewriter.getInsertionBlock(), insertionPoint);
-          rewriter.cloneRegionBefore(region, afterLocalizerRegion);
-          mlir::Block *localizerRegion = beforeLocalizerRegion->getNextNode();
-
-          rewriter.eraseOp(localizerRegion->getTerminator());
-          rewriter.mergeBlocks(afterLocalizerRegion, localizerRegion);
-          rewriter.mergeBlocks(localizerRegion, beforeLocalizerRegion,
-                               regionArgs);
+          mlir::OpBuilder::InsertionGuard guard(rewriter);
+          rewriter.setInsertionPoint(rewriter.getInsertionBlock(),
+                                     insertionPoint);
+          mlir::IRMapping mapper;
+          mapper.map(region.getArguments(), regionArgs);
+          for (mlir::Operation &op : region.front().without_terminator())
+            (void)rewriter.clone(op, mapper);
         };
 
         if (!localizer.getInitRegion().empty())
