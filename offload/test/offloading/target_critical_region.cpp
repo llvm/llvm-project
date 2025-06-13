@@ -3,6 +3,7 @@
 // REQUIRES: gpu
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+// UNSUPPORTED: nvptx64-nvidia-cuda-mpi
 // UNSUPPORTED: amdgcn-amd-amdhsa
 
 #include <omp.h>
