@@ -97,7 +97,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidMultiByte) {
   state.total_bytes = 0;
   const char ch[4] = {
       static_cast<char>(0x80), static_cast<char>(0x00), static_cast<char>(0x80),
-      static_cast<char>(0x00)}; // first, third, and last bytes are invalid
+      static_cast<char>(0x00)}; // first and third bytes are invalid
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   int err = char_conv.push(static_cast<char8_t>(ch[0]));
@@ -108,7 +108,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidMultiByte) {
   err = char_conv.push(static_cast<char8_t>(ch[2]));
   ASSERT_EQ(err, -1);
   err = char_conv.push(static_cast<char8_t>(ch[3]));
-  ASSERT_EQ(err, -1);
+  ASSERT_EQ(err, 0);
 }
 
 TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidLastByte) {
@@ -147,10 +147,9 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, ValidTwoByteWithExtraRead) {
   err = char_conv.push(static_cast<char8_t>(ch[2]));
   ASSERT_EQ(err, -1);
 
+  // Should produce an error since mbstate was reset
   auto wch = char_conv.pop_utf32();
-  ASSERT_TRUE(wch.has_value());
-  // Should still output the correct result.
-  ASSERT_EQ(static_cast<int>(wch.value()), 142);
+  ASSERT_FALSE(wch.has_value());
 }
 
 TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoValidTwoBytes) {
