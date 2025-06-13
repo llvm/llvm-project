@@ -3883,16 +3883,16 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
 
   auto MaybeInvertible = [&](Value *Cond) -> std::optional<InvertFn> {
     if (match(Cond, m_Add(m_Value(Op0), m_APInt(CondOpC))))
-      // Change 'switch (X+C) case A:' into 'switch (X) case C-A'.
-      return [](const APInt &C, const APInt &Case) { return C - Case; };
+      // Change 'switch (X+C) case Case:' into 'switch (X) case Case-C'.
+      return [](const APInt &Case, const APInt &C) { return Case - C; };
 
     if (match(Cond, m_Sub(m_APInt(CondOpC), m_Value(Op0))))
-      // Change 'switch (C-X) case A:' into 'switch (X) case A-C'.
-      return [](const APInt &C, const APInt &Case) { return Case - C; };
+      // Change 'switch (C-X) case Case:' into 'switch (X) case C-Case'.
+      return [](const APInt &Case, const APInt &C) { return C - Case; };
 
     if (match(Cond, m_Xor(m_Value(Op0), m_APInt(CondOpC))))
-      // Change 'switch (X^C) case A:' into 'switch (X) case A^C'.
-      return [](const APInt &C, const APInt &Case) { return C ^ Case; };
+      // Change 'switch (X^C) case Case:' into 'switch (X) case Case^C'.
+      return [](const APInt &Case, const APInt &C) { return Case ^ C; };
 
     return std::nullopt;
   };
