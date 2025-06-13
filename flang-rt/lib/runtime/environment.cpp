@@ -143,10 +143,6 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
-  if (auto *x{std::getenv("FLANG_RT_DEBUG")}) {
-    internalDebugging = std::strtol(x, nullptr, 10);
-  }
-
   if (auto *x{std::getenv("ACC_OFFLOAD_STACK_SIZE")}) {
     char *end;
     auto n{std::strtoul(x, &end, 10)};

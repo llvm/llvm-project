@@ -44,12 +44,12 @@ define <4 x float> @insert_f32(float %a0, <4 x float> %a1) {
 ;
 ; AVX-LABEL: insert_f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: insert_f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512-NEXT:    retq
  %1 = insertelement <4 x float> %a1, float %a0, i32 0
  ret <4 x float> %1
