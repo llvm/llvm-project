@@ -241,11 +241,11 @@ bool X86FixupInstTuningPass::processInstruction(
     return ProcessBLENDToMOV(X86::VMOVSDrr, 0x3, 0x1);
 
   case X86::BLENDPSrri:
-    return ProcessBLENDToMOV(X86::MOVSSrr, 0xFF, 0x1) ||
-           ProcessBLENDToMOV(X86::MOVSDrr, 0xFF, 0x3);
+    return ProcessBLENDToMOV(X86::MOVSSrr, 0xF, 0x1) ||
+           ProcessBLENDToMOV(X86::MOVSDrr, 0xF, 0x3);
   case X86::VBLENDPSrri:
-    return ProcessBLENDToMOV(X86::VMOVSSrr, 0xFF, 0x1) ||
-           ProcessBLENDToMOV(X86::VMOVSDrr, 0xFF, 0x3);
+    return ProcessBLENDToMOV(X86::VMOVSSrr, 0xF, 0x1) ||
+           ProcessBLENDToMOV(X86::VMOVSDrr, 0xF, 0x3);
 
   case X86::VPERMILPDri:
     return ProcessVPERMILPDri(X86::VSHUFPDrri);
