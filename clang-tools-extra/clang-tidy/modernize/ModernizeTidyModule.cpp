@@ -110,7 +110,6 @@ public:
     CheckFactories.registerCheck<UseDefaultMemberInitCheck>(
         "modernize-use-default-member-init");
     CheckFactories.registerCheck<UseEmplaceCheck>("modernize-use-emplace");
-    CheckFactories.registerCheck<UseEnumClassCheck>("modernize-use-enum-class");
     CheckFactories.registerCheck<UseEqualsDefaultCheck>(
         "modernize-use-equals-default");
     CheckFactories.registerCheck<UseEqualsDeleteCheck>(
