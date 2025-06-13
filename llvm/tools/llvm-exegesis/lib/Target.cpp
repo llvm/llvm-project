@@ -45,8 +45,8 @@ ExegesisTarget::getIgnoredOpcodeReasonOrNull(const LLVMState &State,
     return "Unsupported opcode: isBranch/isIndirectBranch";
   if (InstrDesc.isCall() || InstrDesc.isReturn())
     return "Unsupported opcode: isCall/isReturn";
-  if (InstrDesc.hasNoSchedulingInfo())
-    return "Unsupported opcode: hasNoSchedulingInfo";
+  if (InstrDesc.getSchedClass() == 0)
+    return "Unsupported opcode: No Sched Class";
   return nullptr;
 }
 

@@ -188,7 +188,6 @@ enum Flag {
   Trap,
   VariadicOpsAreDefs,
   Authenticated,
-  HasNoSchedulingInfo,
 };
 } // namespace MCID
 
@@ -429,11 +428,6 @@ public:
   /// operating on an invalid signed pointer.
   bool isAuthenticated() const {
     return Flags & (1ULL << MCID::Authenticated);
-  }
-
-  /// Return true if this instruction has no scheduling info.
-  bool hasNoSchedulingInfo() const {
-    return Flags & (1ULL << MCID::HasNoSchedulingInfo);
   }
 
   //===--------------------------------------------------------------------===//
