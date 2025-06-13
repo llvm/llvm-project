@@ -23,7 +23,7 @@ char32_t c32foo[3] = U"fo\0"; // cxx-error {{initializer-string for char array i
 // In C, the following examples are fine:
 typedef unsigned short char16_t;
 typedef unsigned int char32_t;
-typedef unsigned int wchar_t;
+typedef __WCHAR_TYPE__ wchar_t;
 
 char foo3[3] = "fo\0";
 char foo1[1] = "\0";
