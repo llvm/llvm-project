@@ -22,12 +22,12 @@
 #include <cassert>
 #include <format>
 #include <type_traits>
-#include <variant>
 
 #include "constexpr_char_traits.h"
 #include "make_string.h"
 #include "min_allocator.h"
 #include "test_macros.h"
+#include "visitors.h
 
 // The expected result type shouldn't matter,therefore use a hardcoded value for simplicity.
 using ExpectedResultType = bool;
@@ -117,28 +117,6 @@ void test_string_view(From value, ExpectedR expectedValue) {
 
   assert(result == expectedValue);
 }
-
-template <class Context>
-struct limited_int_visitor {
-  using CharT = Context::char_type;
-
-  int operator()(std::monostate) const { return 1; }
-  int operator()(bool) const { return 2; }
-  int operator()(CharT) const { return 3; }
-  int operator()(int) const { return 4; }
-  int operator()(unsigned int) const { return 5; }
-  int operator()(long long) const { return 6; }
-  int operator()(unsigned long long) const { return 7; }
-  int operator()(float) const { return 8; }
-  int operator()(double) const { return 9; }
-  int operator()(long double) const { return 10; }
-  int operator()(const CharT*) const { return 11; }
-  int operator()(std::basic_string_view<CharT>) const { return 12; }
-  int operator()(const void*) const { return 13; }
-  int operator()(const std::basic_format_arg<Context>::handle&) const { return 14; }
-
-  void operator()(auto) const = delete;
-};
 
 // https://github.com/llvm/llvm-project/issues/139582
 template <class Context, class ExpectedR, class From>

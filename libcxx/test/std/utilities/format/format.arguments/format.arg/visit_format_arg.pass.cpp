@@ -19,38 +19,16 @@
 #include <cassert>
 #include <limits>
 #include <type_traits>
-#include <variant>
 
 #include "constexpr_char_traits.h"
 #include "test_macros.h"
 #include "make_string.h"
 #include "min_allocator.h"
+#include "visitors.h"
 
 #if TEST_STD_VER >= 26 && defined(TEST_HAS_EXPLICIT_THIS_PARAMETER)
 TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
 #endif
-
-template <class Context>
-struct limited_visitor {
-  using CharT = Context::char_type;
-
-  void operator()(std::monostate) const {}
-  void operator()(bool) const {}
-  void operator()(CharT) const {}
-  void operator()(int) const {}
-  void operator()(unsigned int) const {}
-  void operator()(long long) const {}
-  void operator()(unsigned long long) const {}
-  void operator()(float) const {}
-  void operator()(double) const {}
-  void operator()(long double) const {}
-  void operator()(const CharT*) const {}
-  void operator()(std::basic_string_view<CharT>) const {}
-  void operator()(const void*) const {}
-  void operator()(const std::basic_format_arg<Context>::handle&) const {}
-
-  void operator()(auto) const = delete;
-};
 
 template <class Context, class To, class From>
 void test(From value) {

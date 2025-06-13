@@ -83,26 +83,21 @@ __parse_arg_id(_Iterator __begin, _Iterator __end, _ParseContext& __ctx) {
 
 template <class _Context>
 _LIBCPP_HIDE_FROM_ABI constexpr uint32_t __substitute_arg_id(basic_format_arg<_Context> __format_arg) {
-  // [format.string.std]/8
-  //   If the corresponding formatting argument is not of integral type...
-  // This wording allows char and bool too. LWG-3720 changes the wording to
-  //    If the corresponding formatting argument is not of standard signed or
-  //    unsigned integer type,
-  // This means the 128-bit will not be valid anymore.
-  // TODO FMT Verify this resolution is accepted and add a test to verify
-  //          128-bit integrals fail and switch to visit_format_arg.
-  return std::__visit_format_arg<__format::__directly_visit_i128::__yes>(
+  // [format.string.std]/10
+  //   [...] The option is valid only if the corresponding formatting argument is of standard signed or unsigned integer
+  //   type. [...]
+  // This means 128-bit extented integer types are invalid here.
+  return std::__visit_format_arg<__format::__directly_visit_i128::__no>(
       [](auto __arg) -> uint32_t {
         using _Type = decltype(__arg);
         if constexpr (same_as<_Type, monostate>)
           std::__throw_format_error("The argument index value is too large for the number of arguments supplied");
 
-        // [format.string.std]/8
-        // If { arg-idopt } is used in a width or precision, the value of the
-        // corresponding formatting argument is used in its place. If the
-        // corresponding formatting argument is not of standard signed or unsigned
-        // integer type, or its value is negative for precision or non-positive for
-        // width, an exception of type format_error is thrown.
+        // [format.string.std]/10
+        // If { arg-idopt } is used in a width or precision option, the value of the corresponding formatting argument
+        // is used as the value of the option. The option is valid only if the corresponding formatting argument is of
+        // standard signed or unsigned integer type. If its value is negative, an exception of type format_error is
+        // thrown.
         //
         // When an integral is used in a format function, it is stored as one of
         // the types checked below. Other integral types are promoted. For example,

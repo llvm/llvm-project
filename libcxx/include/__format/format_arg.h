@@ -96,6 +96,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr __arg_t __get_packed_type(uint64_t __types, size
   return static_cast<__format::__arg_t>(__types & __packed_arg_t_mask);
 }
 
+// Per [format.arg], the variant alternative types are fully specified, so we need to avoid direct visitation of 128-bit
+// extended integer types when the visitor is user-provided.
+// However, when the visitor is controlled by the libc++ itself, we can still perform direct visitation. See also
+// https://reviews.llvm.org/D138052.
 enum class __directly_visit_i128 : bool { __no, __yes };
 
 } // namespace __format
