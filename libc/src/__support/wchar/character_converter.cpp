@@ -53,7 +53,7 @@ ErrorOr<char8_t> CharacterConverter::pop_utf8() {
 
   // the number of bits per utf-8 byte that actually encode character
   // information not metadata (# of bits excluding the byte headers)
-  const int ENCODED_BITS_PER_BYTE = 6;
+  constexpr size_t ENCODED_BITS_PER_UTF8 = 6;
   const int MASK_ENCODED_BITS =
       mask_trailing_ones<unsigned int, ENCODED_BITS_PER_BYTE>();
 
