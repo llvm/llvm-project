@@ -4969,7 +4969,7 @@ multiclass VPatBinaryV_VX_INT<string intrinsic, string instruction,
 multiclass VPatBinaryV_VI<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist, Operand imm_type> {
   foreach vti = vtilist in
-    let Predicates = GetVTypeMinimalPredicates<vti>.Predicates in
+    let Predicates = GetVTypePredicates<vti>.Predicates in
     defm : VPatBinary<intrinsic, instruction # "_VI_" # vti.LMul.MX,
                       vti.Vector, vti.Vector, XLenVT, vti.Mask,
                       vti.Log2SEW, vti.RegClass,
@@ -4986,6 +4986,16 @@ multiclass VPatBinaryV_VI_RM<string intrinsic, string instruction,
                                   vti.Vector, vti.Vector, XLenVT, vti.Mask,
                                   vti.Log2SEW, vti.RegClass,
                                   vti.RegClass, imm_type>;
+}
+
+multiclass VPatBinaryV_VI_INT<string intrinsic, string instruction,
+                              list<VTypeInfo> vtilist, Operand imm_type> {
+  foreach vti = vtilist in
+    let Predicates = GetVTypeMinimalPredicates<vti>.Predicates in
+    defm : VPatBinary<intrinsic, instruction # "_VI_" # vti.LMul.MX,
+                      vti.Vector, vti.Vector, XLenVT, vti.Mask,
+                      vti.Log2SEW, vti.RegClass,
+                      vti.RegClass, imm_type>;
 }
 
 multiclass VPatBinaryM_MM<string intrinsic, string instruction> {
@@ -5718,7 +5728,7 @@ multiclass VPatBinaryV_VV_VX_VI_INT<string intrinsic, string instruction,
                                     list<VTypeInfo> vtilist, Operand ImmType>
     : VPatBinaryV_VV_INT<intrinsic#"_vv", instruction, vtilist>,
       VPatBinaryV_VX_INT<intrinsic#"_vx", instruction, vtilist>,
-      VPatBinaryV_VI<intrinsic#"_vx", instruction, vtilist, ImmType>;
+      VPatBinaryV_VI_INT<intrinsic#"_vx", instruction, vtilist, ImmType>;
 
 multiclass VPatReductionV_VS<string intrinsic, string instruction, bit IsFloat = 0> {
   foreach vti = !if(IsFloat, NoGroupFloatVectors, NoGroupIntegerVectors) in {
