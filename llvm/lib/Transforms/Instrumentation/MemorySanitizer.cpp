@@ -280,7 +280,7 @@ static cl::opt<bool> ClPoisonUndefVectors(
              "considered fully initialized, which may lead to false "
              "negatives. Fully undefined constant vectors are "
              "unaffected by this flag (see -msan-poison-undef)."),
-    cl::Hidden, cl::init(true));
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
     ClHandleICmp("msan-handle-icmp",
