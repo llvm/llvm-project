@@ -806,7 +806,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
 
     auto visit_pack_element = [&](CompilerType pack_element_type,
                                   unsigned idx) {
-      auto get_name = [&]() {
+      auto get_name = [&]() -> std::string {
         std::string name;
         llvm::raw_string_ostream os(name);
         os << '.' << idx;
@@ -859,13 +859,13 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
           std::optional<TypeSystemSwift::TupleElement> tuple,
           bool hide_existentials, bool is_enum,
           unsigned depth = 0) -> llvm::Expected<unsigned> {
-    auto get_name = [&]() {
+    auto get_name = [&]() -> std::string {
       return tuple ? tuple->element_name.GetStringRef().str() : field.Name;
     };
     // SwiftASTContext hardcodes the members of protocols as raw
     // pointers. Remote Mirrors reports them as UnknownObject instead.
     if (hide_existentials && ts.IsExistentialType(m_type.GetOpaqueQualType())) {
-      auto get_info = [&]() {
+      auto get_info = [&]() -> llvm::Expected<ChildInfo> {
         ChildInfo child;
         child.byte_size = field.TI.getSize();
         child.byte_offset = field.Offset;
@@ -888,7 +888,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
       if (!field_type)
         field_type = GetTypeFromTypeRef(ts, field.TR);
     }
-    auto get_info = [&]() {
+    auto get_info = [&]() -> llvm::Expected<ChildInfo> {
       ChildInfo child;
       child.byte_size = field.TI.getSize();
       // Bug-for-bug compatibility. See comment in
@@ -943,7 +943,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
       auto visit_existential = [&](unsigned idx) -> llvm::Expected<unsigned> {
         // Compatibility with SwiftASTContext.
         if (idx < 3) {
-          auto get_name = [&]() {
+          auto get_name = [&]() -> std::string {
             std::string child_name = "payload_data_";
             child_name += ('0' + idx);
             return child_name;
@@ -987,7 +987,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
       if (count_only)
         return children.size();
       auto visit_existential = [&](ExistentialSyntheticChild c, unsigned idx) {
-        auto get_name = [&]() { return c.name; };
+        auto get_name = [&]() -> std::string { return c.name; };
         auto get_info = [&]() -> llvm::Expected<ChildInfo> {
           ChildInfo child;
           child.byte_size = ts.GetPointerByteSize();
@@ -1039,7 +1039,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
       if (count_only)
         return children.size();
       auto visit_existential = [&](ExistentialSyntheticChild c, unsigned idx) {
-        auto get_name = [&]() { return c.name; };
+        auto get_name = [&]() -> std::string { return c.name; };
         auto get_info = [&]() -> llvm::Expected<ChildInfo> {
           ChildInfo child;
           child.byte_size = ts.GetPointerByteSize();
@@ -1125,7 +1125,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
                         *tr, ts.GetDescriptorFinder()))
                   if (auto error = visit_callback(
                           GetTypeFromTypeRef(ts, super_tr), depth,
-                          []() { return "<base class>"; },
+                          []() -> std::string { return "<base class>"; },
                           []() -> llvm::Expected<ChildInfo> {
                             return ChildInfo();
                           })) {
@@ -1153,7 +1153,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
         }
         if (auto *super_tr = reflection_ctx->LookupSuperclass(
                 *tr, ts.GetDescriptorFinder())) {
-          auto get_name = []() { return "<base class>"; };
+          auto get_name = []() -> std::string { return "<base class>"; };
           auto get_info = []() -> llvm::Expected<ChildInfo> {
             return ChildInfo();
           };
@@ -1267,7 +1267,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
           // base class gets injected. Its parent will be a nested
           // field in the base class.
           if (!type_ref) {
-            auto get_name = [&]() { return "<base class>"; };
+            auto get_name = [&]() -> std::string { return "<base class>"; };
             auto get_info = [&]() -> llvm::Expected<ChildInfo> {
               return ChildInfo();
             };
@@ -1279,7 +1279,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
           }
 
           CompilerType super_type = GetTypeFromTypeRef(ts, type_ref);
-          auto get_name = [&]() {
+          auto get_name = [&]() -> std::string {
             auto child_name = super_type.GetTypeName().GetStringRef().str();
             // FIXME: This should be fixed in GetDisplayTypeName instead!
             if (child_name == "__C.NSObject")
@@ -1361,8 +1361,8 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
     CompilerType type =
         ts.RemangleAsType(dem, dem_array_type->getChild(1), flavor);
 
-    auto visit_element = [&](unsigned idx) {
-      auto get_name = [&]() {
+    auto visit_element = [&](unsigned idx) -> llvm::Error {
+      auto get_name = [&]() -> std::string {
         std::string child_name;
         llvm::raw_string_ostream(child_name) << idx;
         return child_name;
@@ -1409,8 +1409,8 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
     if (count_only)
       return 0;
     if (auto err = visit_callback(
-            CompilerType(), 0, []() { return ""; },
-            []() { return ChildInfo(); }))
+            CompilerType(), 0, []() -> std::string { return ""; },
+            []() -> llvm::Expected<ChildInfo> { return ChildInfo(); }))
       return err;
     return success;
   }
