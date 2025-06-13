@@ -530,6 +530,9 @@ protected:
   /// Returns (and creates if needed) the trip count of the widened loop.
   Value *getOrCreateVectorTripCount(BasicBlock *InsertBlock);
 
+  // Create a check to see if the vector loop should be executed
+  Value *createIterationCountCheck(ElementCount VF, unsigned UF) const;
+
   /// Emit a bypass check to see if the vector trip count is zero, including if
   /// it overflows.
   void emitIterationCountCheck(BasicBlock *Bypass);
@@ -2370,13 +2373,8 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
   }
 }
 
-void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
-  Value *Count = getTripCount();
-  // Reuse existing vector loop preheader for TC checks.
-  // Note that new preheader block is generated for vector loop.
-  BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
-  IRBuilder<> Builder(TCCheckBlock->getTerminator());
-
+Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
+                                                      unsigned UF) const {
   // Generate code to check if the loop's trip count is less than VF * UF, or
   // equal to it in case a scalar epilogue is required; this implies that the
   // vector trip count is zero. This check also covers the case where adding one
@@ -2385,7 +2383,13 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   auto P = Cost->requiresScalarEpilogue(VF.isVector()) ? ICmpInst::ICMP_ULE
                                                        : ICmpInst::ICMP_ULT;
 
+  // Reuse existing vector loop preheader for TC checks.
+  // Note that new preheader block is generated for vector loop.
+  BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
+  IRBuilder<> Builder(TCCheckBlock->getTerminator());
+
   // If tail is to be folded, vector loop takes care of all iterations.
+  Value *Count = getTripCount();
   Type *CountTy = Count->getType();
   Value *CheckMinIters = Builder.getFalse();
   auto CreateStep = [&]() -> Value * {
@@ -2434,7 +2438,12 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
     // Don't execute the vector loop if (UMax - n) < (VF * UF).
     CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, CreateStep());
   }
+  return CheckMinIters;
+}
 
+void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
+  BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
+  Value *CheckMinIters = createIterationCountCheck(VF, UF);
   // Create new preheader for vector loop.
   LoopVectorPreHeader = SplitBlock(TCCheckBlock, TCCheckBlock->getTerminator(),
                                    static_cast<DominatorTree *>(nullptr), LI,
