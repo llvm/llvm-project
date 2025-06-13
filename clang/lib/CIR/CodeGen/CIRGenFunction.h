@@ -469,6 +469,10 @@ public:
   /// compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *e);
 
+  cir::GlobalOp addInitializerToStaticVarDecl(const VarDecl &d,
+                                              cir::GlobalOp gv,
+                                              cir::GetGlobalOp gvAddr);
+
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
     assert(!localDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
@@ -954,6 +958,8 @@ public:
 
   void emitScalarInit(const clang::Expr *init, mlir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
+
+  void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
                          clang::QualType ty, bool isInit = false,
