@@ -1,0 +1,102 @@
+//===- BPF.cpp ------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/ABI/ABIInfo.h"
+#include "llvm/ABI/Types.h"
+#include "llvm/Support/Alignment.h"
+#include "llvm/Support/Casting.h"
+
+namespace llvm::abi {
+
+class BPFABIInfo : public ABIInfo {
+private:
+  TypeBuilder &TB;
+
+  bool isAggregateType(const Type *Ty) const {
+    return Ty->isStruct() || Ty->isUnion() || Ty->isArray() ||
+           (Ty->isVector() && !isSimpleVector(dyn_cast<VectorType>(Ty)));
+  }
+
+  bool isSimpleVector(const VectorType *VecTy) const {
+    const Type *ElemTy = VecTy->getElementType();
+
+    if (!ElemTy->isInteger() && !ElemTy->isFloat())
+      return false;
+
+    auto VecSizeInBits = VecTy->getSizeInBits().getFixedValue();
+    return VecSizeInBits <= 128;
+  }
+
+  bool isPromotableIntegerType(const IntegerType *IntTy) const {
+    auto BitWidth = IntTy->getSizeInBits().getFixedValue();
+    return BitWidth > 0 && BitWidth < 32;
+  }
+
+public:
+  BPFABIInfo(TypeBuilder &TypeBuilder) : TB(TypeBuilder) {}
+
+  ABIArgInfo classifyReturnType(const Type *RetTy) const override {
+    if (RetTy->isVoid())
+      return ABIArgInfo::getIgnore();
+
+    if (isAggregateType(RetTy)) {
+      auto SizeInBits = RetTy->getSizeInBits().getFixedValue();
+
+      if (SizeInBits == 0)
+        return ABIArgInfo::getIgnore();
+
+      return ABIArgInfo::getIndirect(RetTy->getAlignment().value());
+    }
+
+    if (const auto *IntTy = dyn_cast<IntegerType>(RetTy)) {
+      if (IntTy->getSizeInBits().getFixedValue() > 128) {
+        return ABIArgInfo::getIndirect(RetTy->getAlignment().value());
+      }
+    }
+
+    return ABIArgInfo::getDirect();
+  }
+
+  ABIArgInfo classifyArgumentType(const Type *ArgTy) const override {
+    if (isAggregateType(ArgTy)) {
+      auto SizeInBits = ArgTy->getSizeInBits().getFixedValue();
+
+      if (SizeInBits == 0)
+        return ABIArgInfo::getIgnore();
+
+      if (SizeInBits <= 128) {
+        const Type *CoerceTy;
+        if (SizeInBits <= 64) {
+          auto AlignedBits = alignTo(SizeInBits, 8);
+          CoerceTy = TB.getIntegerType(AlignedBits, Align(8), false);
+        } else {
+          const Type *RegTy = TB.getIntegerType(64, Align(8), false);
+          CoerceTy = TB.getArrayType(RegTy, 2);
+        }
+        return ABIArgInfo::getDirect(CoerceTy);
+      }
+      return ABIArgInfo::getIndirect(ArgTy->getAlignment().value());
+    }
+
+    if (const auto *IntTy = dyn_cast<IntegerType>(ArgTy)) {
+      auto BitWidth = IntTy->getSizeInBits().getFixedValue();
+      if (BitWidth > 128)
+        return ABIArgInfo::getIndirect(ArgTy->getAlignment().value());
+      if (isPromotableIntegerType(IntTy)) {
+        const Type *PromotedTy =
+            TB.getIntegerType(32, Align(4), IntTy->isSigned());
+        return ABIArgInfo::getDirect(
+            PromotedTy); // change to getExtend when implemented
+      }
+    }
+
+    return ABIArgInfo::getDirect();
+  }
+};
+
+} // namespace llvm::abi
