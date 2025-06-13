@@ -1165,7 +1165,7 @@ static bool isLifetimeStart(const Instruction *Inst) {
 /// Assuming To can be reached from both From and Between, does Between lie on
 /// every path from From to To?
 static bool liesBetween(const Instruction *From, Instruction *Between,
-                        const Instruction *To, DominatorTree *DT) {
+                        const Instruction *To, const DominatorTree *DT) {
   if (From->getParent() == Between->getParent())
     return DT->dominates(From, Between);
   SmallSet<BasicBlock *, 1> Exclusion;
@@ -1173,20 +1173,15 @@ static bool liesBetween(const Instruction *From, Instruction *Between,
   return !isPotentiallyReachable(From, To, &Exclusion, DT);
 }
 
-/// Try to locate the three instruction involved in a missed
-/// load-elimination case that is due to an intervening store.
-static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
-                                   DominatorTree *DT,
-                                   OptimizationRemarkEmitter *ORE) {
-  using namespace ore;
+static const Instruction *findMayClobberedPtrAccess(LoadInst *Load,
+                                                    const DominatorTree *DT) {
+  Value *PtrOp = Load->getPointerOperand();
+  if (!PtrOp->hasUseList())
+    return nullptr;
 
   Instruction *OtherAccess = nullptr;
 
-  OptimizationRemarkMissed R(DEBUG_TYPE, "LoadClobbered", Load);
-  R << "load of type " << NV("Type", Load->getType()) << " not eliminated"
-    << setExtraArgs();
-
-  for (auto *U : Load->getPointerOperand()->users()) {
+  for (auto *U : PtrOp->users()) {
     if (U != Load && (isa<LoadInst>(U) || isa<StoreInst>(U))) {
       auto *I = cast<Instruction>(U);
       if (I->getFunction() == Load->getFunction() && DT->dominates(I, Load)) {
@@ -1202,32 +1197,48 @@ static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
     }
   }
 
-  if (!OtherAccess) {
-    // There is no dominating use, check if we can find a closest non-dominating
-    // use that lies between any other potentially available use and Load.
-    for (auto *U : Load->getPointerOperand()->users()) {
-      if (U != Load && (isa<LoadInst>(U) || isa<StoreInst>(U))) {
-        auto *I = cast<Instruction>(U);
-        if (I->getFunction() == Load->getFunction() &&
-            isPotentiallyReachable(I, Load, nullptr, DT)) {
-          if (OtherAccess) {
-            if (liesBetween(OtherAccess, I, Load, DT)) {
-              OtherAccess = I;
-            } else if (!liesBetween(I, OtherAccess, Load, DT)) {
-              // These uses are both partially available at Load were it not for
-              // the clobber, but neither lies strictly after the other.
-              OtherAccess = nullptr;
-              break;
-            } // else: keep current OtherAccess since it lies between U and
-              // Load.
-          } else {
+  if (OtherAccess)
+    return OtherAccess;
+
+  // There is no dominating use, check if we can find a closest non-dominating
+  // use that lies between any other potentially available use and Load.
+  for (auto *U : PtrOp->users()) {
+    if (U != Load && (isa<LoadInst>(U) || isa<StoreInst>(U))) {
+      auto *I = cast<Instruction>(U);
+      if (I->getFunction() == Load->getFunction() &&
+          isPotentiallyReachable(I, Load, nullptr, DT)) {
+        if (OtherAccess) {
+          if (liesBetween(OtherAccess, I, Load, DT)) {
             OtherAccess = I;
-          }
+          } else if (!liesBetween(I, OtherAccess, Load, DT)) {
+            // These uses are both partially available at Load were it not for
+            // the clobber, but neither lies strictly after the other.
+            OtherAccess = nullptr;
+            break;
+          } // else: keep current OtherAccess since it lies between U and
+          // Load.
+        } else {
+          OtherAccess = I;
         }
       }
     }
   }
 
+  return OtherAccess;
+}
+
+/// Try to locate the three instruction involved in a missed
+/// load-elimination case that is due to an intervening store.
+static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
+                                   const DominatorTree *DT,
+                                   OptimizationRemarkEmitter *ORE) {
+  using namespace ore;
+
+  OptimizationRemarkMissed R(DEBUG_TYPE, "LoadClobbered", Load);
+  R << "load of type " << NV("Type", Load->getType()) << " not eliminated"
+    << setExtraArgs();
+
+  const Instruction *OtherAccess = findMayClobberedPtrAccess(Load, DT);
   if (OtherAccess)
     R << " in favor of " << NV("OtherAccess", OtherAccess);
 
