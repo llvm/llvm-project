@@ -579,8 +579,10 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVMALUV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVMSFSV", [SMX60_VIEU], mx, IsWorstCase>;
   }
-  defm "" : LMULWriteResMX<"WriteVMPopV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVMFFSV", [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = 6 in  {
+    defm "" : LMULWriteResMX<"WriteVMPopV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVMFFSV", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 
   defm "" : LMULWriteResMX<"WriteVIotaV", [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVIdxV", [SMX60_VIEU], mx, IsWorstCase>;
