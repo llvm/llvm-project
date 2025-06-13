@@ -90,12 +90,11 @@ template <typename T> LIBC_INLINE size_t string_length(const T *src) {
   // string a block at a time.
   if constexpr (cpp::is_same_v<T, char>)
     return string_length_wide_read<unsigned int>(src);
-#else
+#endif
   size_t length;
   for (length = 0; *src; ++src, ++length)
     ;
   return length;
-#endif
 }
 
 template <typename Word>
