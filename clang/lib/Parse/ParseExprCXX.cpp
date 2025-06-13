@@ -972,8 +972,6 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
           SourceLocation StartLoc = Tok.getLocation();
           InMessageExpressionRAIIObject MaybeInMessageExpression(*this, true);
           Init = ParseInitializer();
-          if (!Init.isInvalid())
-            Init = Actions.CorrectDelayedTyposInExpr(Init.get());
 
           if (Tok.getLocation() != StartLoc) {
             // Back out the lexing of the token after the initializer.
@@ -1065,8 +1063,6 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
     // enclosing the lambda-expression, rather than in the context of the
     // lambda-expression itself.
     ParsedType InitCaptureType;
-    if (Init.isUsable())
-      Init = Actions.CorrectDelayedTyposInExpr(Init.get());
     if (Init.isUsable()) {
       NonTentativeAction([&] {
         // Get the pointer and store it in an lvalue, so we can use it as an
@@ -3202,8 +3198,7 @@ ExprResult Parser::ParseRequiresExpression() {
         //             cv-qualifier-seq[opt] abstract-declarator[opt]
         BalancedDelimiterTracker ExprBraces(*this, tok::l_brace);
         ExprBraces.consumeOpen();
-        ExprResult Expression =
-            Actions.CorrectDelayedTyposInExpr(ParseExpression());
+        ExprResult Expression = ParseExpression();
         if (!Expression.isUsable()) {
           ExprBraces.skipToEnd();
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
@@ -3306,8 +3301,7 @@ ExprResult Parser::ParseRequiresExpression() {
             // C++ [expr.prim.req.nested]
             //     nested-requirement:
             //         'requires' constraint-expression ';'
-            ExprResult ConstraintExpr =
-                Actions.CorrectDelayedTyposInExpr(ParseConstraintExpression());
+            ExprResult ConstraintExpr = ParseConstraintExpression();
             if (ConstraintExpr.isInvalid() || !ConstraintExpr.isUsable()) {
               SkipUntil(tok::semi, tok::r_brace,
                         SkipUntilFlags::StopBeforeMatch);
@@ -3373,8 +3367,7 @@ ExprResult Parser::ParseRequiresExpression() {
         //     simple-requirement:
         //         expression ';'
         SourceLocation StartLoc = Tok.getLocation();
-        ExprResult Expression =
-            Actions.CorrectDelayedTyposInExpr(ParseExpression());
+        ExprResult Expression = ParseExpression();
         if (!Expression.isUsable()) {
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
           break;

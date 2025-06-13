@@ -13121,12 +13121,6 @@ TreeTransform<Derived>::TransformOpaqueValueExpr(OpaqueValueExpr *E) {
   return E;
 }
 
-template<typename Derived>
-ExprResult
-TreeTransform<Derived>::TransformTypoExpr(TypoExpr *E) {
-  return E;
-}
-
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformRecoveryExpr(RecoveryExpr *E) {
   llvm::SmallVector<Expr *, 8> Children;

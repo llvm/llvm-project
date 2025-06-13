@@ -782,11 +782,10 @@ ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
 ExprResult Sema::BuildCXXAssumeExpr(Expr *Assumption,
                                     const IdentifierInfo *AttrName,
                                     SourceRange Range) {
-  ExprResult Res = CorrectDelayedTyposInExpr(Assumption);
-  if (Res.isInvalid())
+  if (!Assumption)
     return ExprError();
 
-  Res = CheckPlaceholderExpr(Res.get());
+  ExprResult Res = CheckPlaceholderExpr(Assumption);
   if (Res.isInvalid())
     return ExprError();
 
