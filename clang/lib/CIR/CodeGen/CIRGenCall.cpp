@@ -60,6 +60,23 @@ CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
   return *this;
 }
 
+void CIRGenFunction::emitAggregateStore(mlir::Value value, Address dest) {
+  // In classic codegen:
+  // Function to store a first-class aggregate into memory. We prefer to
+  // store the elements rather than the aggregate to be more friendly to
+  // fast-isel.
+  // In CIR codegen:
+  // Emit the most simple cir.store possible (e.g. a store for a whole
+  // record), which can later be broken down in other CIR levels (or prior
+  // to dialect codegen).
+
+  // Stored result for the callers of this function expected to be in the same
+  // scope as the value, don't make assumptions about current insertion point.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(value.getDefiningOp());
+  builder.createStore(*currSrcLoc, value, dest);
+}
+
 /// Returns the canonical formal type of the given C++ method.
 static CanQual<FunctionProtoType> getFormalType(const CXXMethodDecl *md) {
   return md->getType()
@@ -439,8 +456,49 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       assert(!cir::MissingFeatures::opCallBitcastArg());
       cirCallArgs[argNo] = v;
     } else {
-      assert(!cir::MissingFeatures::opCallAggregateArgs());
-      cgm.errorNYI("emitCall: aggregate function call argument");
+      Address src = Address::invalid();
+      if (!arg.isAggregate())
+        cgm.errorNYI(loc, "emitCall: non-aggregate call argument");
+      else
+        src = arg.hasLValue() ? arg.getKnownLValue().getAddress()
+                              : arg.getKnownRValue().getAggregateAddress();
+
+      // Fast-isel and the optimizer generally like scalar values better than
+      // FCAs, so we flatten them if this is safe to do for this argument.
+      auto argRecordTy = cast<cir::RecordType>(argType);
+      mlir::Type srcTy = src.getElementType();
+      // FIXME(cir): get proper location for each argument.
+      mlir::Location argLoc = loc;
+
+      // If the source type is smaller than the destination type of the
+      // coerce-to logic, copy the source value into a temp alloca the size
+      // of the destination type to allow loading all of it. The bits past
+      // the source value are left undef.
+      // FIXME(cir): add data layout info and compare sizes instead of
+      // matching the types.
+      //
+      // uint64_t SrcSize = CGM.getDataLayout().getTypeAllocSize(SrcTy);
+      // uint64_t DstSize = CGM.getDataLayout().getTypeAllocSize(STy);
+      // if (SrcSize < DstSize) {
+      assert(!cir::MissingFeatures::dataLayoutTypeAllocSize());
+      if (srcTy != argRecordTy) {
+        cgm.errorNYI(loc, "emitCall: source type does not match argument type");
+      } else {
+        // FIXME(cir): this currently only runs when the types are exactly the
+        // same, but should be when alloc sizes are the same, fix this as soon
+        // as datalayout gets introduced.
+        assert(!cir::MissingFeatures::dataLayoutTypeAllocSize());
+      }
+
+      // assert(NumCIRArgs == STy.getMembers().size());
+      // In LLVMGen: Still only pass the struct without any gaps but mark it
+      // as such somehow.
+      //
+      // In CIRGen: Emit a load from the "whole" struct,
+      // which shall be broken later by some lowering step into multiple
+      // loads.
+      assert(!cir::MissingFeatures::lowerAggregateLoadStore());
+      cirCallArgs[argNo] = builder.createLoad(argLoc, src);
     }
   }
 
@@ -479,6 +537,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
 
   assert(!cir::MissingFeatures::opCallAttrs());
 
+  mlir::Location callLoc = loc;
   cir::CIRCallOpInterface theCall = emitCallLikeOp(
       *this, loc, indirectFuncTy, indirectFuncVal, directFuncOp, cirCallArgs);
 
@@ -492,6 +551,19 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   if (isa<cir::VoidType>(retCIRTy))
     return getUndefRValue(retTy);
   switch (getEvaluationKind(retTy)) {
+  case cir::TEK_Aggregate: {
+    Address destPtr = returnValue.getValue();
+
+    if (!destPtr.isValid())
+      destPtr = createMemTemp(retTy, callLoc, getCounterAggTmpAsString());
+
+    mlir::ResultRange results = theCall->getOpResults();
+    assert(results.size() <= 1 && "multiple returns from a call");
+
+    SourceLocRAIIObject loc{*this, callLoc};
+    emitAggregateStore(results[0], destPtr);
+    return RValue::getAggregate(destPtr);
+  }
   case cir::TEK_Scalar: {
     mlir::ResultRange results = theCall->getOpResults();
     assert(results.size() == 1 && "unexpected number of returns");
@@ -508,7 +580,6 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     return RValue::get(results[0]);
   }
   case cir::TEK_Complex:
-  case cir::TEK_Aggregate:
     cgm.errorNYI(loc, "unsupported evaluation kind of function call result");
     return getUndefRValue(retTy);
   }
@@ -527,10 +598,21 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
 
   bool hasAggregateEvalKind = hasAggregateEvaluationKind(argType);
 
-  if (hasAggregateEvalKind) {
-    assert(!cir::MissingFeatures::opCallAggregateArgs());
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCallArg: aggregate function call argument");
+  // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
+  // However, we still have to push an EH-only cleanup in case we unwind before
+  // we make it to the call.
+  if (argType->isRecordType() &&
+      argType->castAs<RecordType>()->getDecl()->isParamDestroyedInCallee()) {
+    assert(!cir::MissingFeatures::msabi());
+    cgm.errorNYI(e->getSourceRange(), "emitCallArg: msabi is NYI");
+  }
+
+  if (hasAggregateEvalKind && isa<ImplicitCastExpr>(e) &&
+      cast<CastExpr>(e)->getCastKind() == CK_LValueToRValue) {
+    LValue lv = emitLValue(cast<CastExpr>(e)->getSubExpr());
+    assert(lv.isSimple());
+    args.addUncopiedAggregate(lv, argType);
+    return;
   }
 
   args.add(emitAnyExprToTemp(e), argType);
@@ -551,12 +633,13 @@ QualType CIRGenFunction::getVarArgType(const Expr *arg) {
 /// Similar to emitAnyExpr(), however, the result will always be accessible
 /// even if no aggregate location is provided.
 RValue CIRGenFunction::emitAnyExprToTemp(const Expr *e) {
-  assert(!cir::MissingFeatures::opCallAggregateArgs());
+  AggValueSlot aggSlot = AggValueSlot::ignored();
 
   if (hasAggregateEvaluationKind(e->getType()))
-    cgm.errorNYI(e->getSourceRange(), "emit aggregate value to temp");
+    aggSlot = createAggTemp(e->getType(), getLoc(e->getSourceRange()),
+                            getCounterAggTmpAsString());
 
-  return emitAnyExpr(e);
+  return emitAnyExpr(e, aggSlot);
 }
 
 void CIRGenFunction::emitCallArgs(
