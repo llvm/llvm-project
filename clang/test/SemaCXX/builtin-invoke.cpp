@@ -72,6 +72,14 @@ private:
   InvalidSpecialization2& get(); // expected-note 2 {{declared private here}}
 };
 
+struct Incomplete; // expected-note {{forward declaration}}
+struct Incomplete2;
+
+void incomplete_test(Incomplete& incomplete) {
+  __builtin_invoke((int (Incomplete2::*)){}, incomplete); // expected-error {{incomplete type 'Incomplete' used in type trait expression}} \
+                                                             expected-error {{indirection requires pointer operand ('Incomplete' invalid)}}
+}
+
 void call() {
   __builtin_invoke(func);
   __builtin_invoke(nfunc);
