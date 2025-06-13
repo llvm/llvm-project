@@ -255,6 +255,54 @@ func.func @coshvec(%arg0 : vector<3xf16>) -> () {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Asinh
+//===----------------------------------------------------------------------===//
+
+func.func @asinh(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Asinh {{%.*}} : f32
+  %2 = spirv.GL.Asinh %arg0 : f32
+  return
+}
+
+func.func @asinhvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Asinh {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Asinh %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Acosh
+//===----------------------------------------------------------------------===//
+
+func.func @acosh(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Acosh {{%.*}} : f32
+  %2 = spirv.GL.Acosh %arg0 : f32
+  return
+}
+
+func.func @acoshvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Acosh {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Acosh %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Atanh
+//===----------------------------------------------------------------------===//
+
+func.func @atanh(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Atanh {{%.*}} : f32
+  %2 = spirv.GL.Atanh %arg0 : f32
+  return
+}
+
+func.func @atanhvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Atanh {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Atanh %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Pow
 //===----------------------------------------------------------------------===//
 
@@ -519,7 +567,71 @@ func.func @fmix_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>, %arg2 : vec
 // -----
 
 //===----------------------------------------------------------------------===//
-// spirv.GL.Exp
+// spirv.GL.FindILsb
+//===----------------------------------------------------------------------===//
+
+func.func @findimsb_scalar_i32(%arg0 : i32) -> () {
+  // CHECK: spirv.GL.FindILsb {{%.*}} : i32
+  %2 = spirv.GL.FindILsb %arg0 : i32
+  return
+}
+
+func.func @findimsb_vector_i32(%arg0 : vector<3xi32>) -> () {
+  // CHECK: spirv.GL.FindILsb {{%.*}} : vector<3xi32>
+  %2 = spirv.GL.FindILsb %arg0 : vector<3xi32>
+  return
+}
+
+func.func @findimsb_scalar_i16(%arg0 : i16) -> () {
+  // CHECK: spirv.GL.FindILsb {{%.*}} : i16
+  %2 = spirv.GL.FindILsb %arg0 : i16
+  return
+}
+
+func.func @findimsb_vector_i64(%arg0 : vector<3xi64>) -> () {
+  // CHECK: spirv.GL.FindILsb {{%.*}} : vector<3xi64>
+  %2 = spirv.GL.FindILsb %arg0 : vector<3xi64>
+  return
+}
+
+// -----
+
+func.func @findimsb_error_scalar_float(%arg0 : f32) -> () {
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4/8/1}}
+  %2 = spirv.GL.FindILsb %arg0 : f32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.FindSMsb
+//===----------------------------------------------------------------------===//
+
+func.func @findsmsb_scalar(%arg0 : i32) -> () {
+  // CHECK: spirv.GL.FindSMsb {{%.*}} : i32
+  %2 = spirv.GL.FindSMsb %arg0 : i32
+  return
+}
+
+func.func @findsmsb_vector(%arg0 : vector<3xi32>) -> () {
+  // CHECK: spirv.GL.FindSMsb {{%.*}} : vector<3xi32>
+  %2 = spirv.GL.FindSMsb %arg0 : vector<3xi32>
+  return
+}
+
+// -----
+
+func.func @findsmsb_error_scalar_i64(%arg0 : i64) -> () {
+  // expected-error @+1 {{operand #0 must be Int32 or vector of Int32}}
+  %2 = spirv.GL.FindSMsb %arg0 : i64
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.FindUMsb
 //===----------------------------------------------------------------------===//
 
 func.func @findumsb(%arg0 : i32) -> () {
@@ -661,5 +773,213 @@ func.func @reflect_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>) {
 func.func @reflect_invalid_type(%arg0 : i32, %arg1 : i32) {
   // expected-error @+1 {{'spirv.GL.Reflect' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
   %0 = spirv.GL.Reflect %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Fract
+//===----------------------------------------------------------------------===//
+
+func.func @fract(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Fract {{%.*}} : f32
+  %0 = spirv.GL.Fract %arg0 : f32
+  return
+}
+
+func.func @fractvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Fract {{%.*}} : vector<3xf16>
+  %0 = spirv.GL.Fract %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @fract_invalid_type(%arg0 : i32) {
+  // expected-error @+1 {{'spirv.GL.Fract' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.GL.Fract %arg0 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Log2
+//===----------------------------------------------------------------------===//
+
+func.func @log2(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Log2 {{%.*}} : f32
+  %0 = spirv.GL.Log2 %arg0 : f32
+  return
+}
+
+func.func @log2vec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Log2 {{%.*}} : vector<3xf16>
+  %0 = spirv.GL.Log2 %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @log2_invalid_type(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values}}
+  %0 = spirv.GL.Log2 %arg0 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Tanh
+//===----------------------------------------------------------------------===//
+
+func.func @tanh(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Tanh {{%.*}} : f32
+  %0 = spirv.GL.Tanh %arg0 : f32
+  return
+}
+
+func.func @tanhvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Tanh {{%.*}} : vector<3xf16>
+  %0 = spirv.GL.Tanh %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @tanh_invalid_type(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values}}
+  %0 = spirv.GL.Tanh %arg0 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Exp2
+//===----------------------------------------------------------------------===//
+
+func.func @exp2(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Exp2 {{%.*}} : f32
+  %0 = spirv.GL.Exp2 %arg0 : f32
+  return
+}
+
+func.func @exp2vec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Exp2 {{%.*}} : vector<3xf16>
+  %0 = spirv.GL.Exp2 %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @exp2_invalid_type(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values}}
+  %0 = spirv.GL.Exp2 %arg0 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.PackHalf2x16 
+//===----------------------------------------------------------------------===//
+
+func.func @pack_half_2x16(%arg0 : vector<2xf32>) -> () {
+  // CHECK: spirv.GL.PackHalf2x16 {{%.*}} : vector<2xf32> -> i32
+  %0 = spirv.GL.PackHalf2x16 %arg0 : vector<2xf32> -> i32
+  return
+}
+
+// -----
+
+func.func @pack_half_2x16_i16_output(%arg0 : vector<2xf32>) -> () {
+  // expected-error @+1 {{op result #0 must be Int32, but got 'i16'}}
+  %0 = spirv.GL.PackHalf2x16 %arg0 : vector<2xf32> -> i16
+  return
+}
+
+// -----
+
+func.func @pack_half_2x16_wrong_vec_size(%arg0 : vector<3xf32>) -> () {
+  // expected-error @+1 {{op operand #0 must be vector of Float32 values of length 2, but got 'vector<3xf32>'}}
+  %0 = spirv.GL.PackHalf2x16 %arg0 : vector<3xf32> -> i32
+  return
+}
+
+// -----
+
+func.func @pack_half_2x16_wrong_vec_type(%arg0 : vector<2xi32>) -> () {
+  // expected-error @+1 {{op operand #0 must be vector of Float32 values of length 2, but got 'vector<2xi32>'}}
+  %0 = spirv.GL.PackHalf2x16 %arg0 : vector<2xi32> -> i32
+  return
+}
+
+// -----
+
+func.func @pack_half_2x16_scalar_in(%arg0 : f32) -> () {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
+  %0 = spirv.GL.PackHalf2x16 %arg0 : f32 -> i32
+  return
+}
+
+// -----
+
+func.func @unpack_half_2x16_vector_out(%arg0 : vector<2xf32>) -> () {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.integer, but found 'vector<2xf32>'}}
+  %0 = spirv.GL.UnpackHalf2x16 %arg0 : vector<2xf32> -> vector<2xi32>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.UnpackHalf2x16 
+//===----------------------------------------------------------------------===//
+
+func.func @unpack_half_2x16(%arg0 : i32) -> () {
+  // CHECK: spirv.GL.UnpackHalf2x16 {{%.*}} : i32 -> vector<2xf32>
+  %0 = spirv.GL.UnpackHalf2x16 %arg0 : i32 -> vector<2xf32>
+  return
+}
+
+// -----
+
+func.func @unpack_half_2x16_i16_input(%arg0 : i16) -> () {
+  // expected-error @+1 {{op operand #0 must be Int32, but got 'i16'}}
+  %0 = spirv.GL.UnpackHalf2x16 %arg0 : i16 -> vector<2xf32>
+  return
+}
+
+// -----
+
+func.func @unpack_half_2x16_wrong_vec_size(%arg0 : i32) -> () {
+  // expected-error @+1 {{op result #0 must be vector of Float32 values of length 2, but got 'vector<3xf32>'}}
+  %0 = spirv.GL.UnpackHalf2x16 %arg0 : i32 -> vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @unpack_half_2x16_wrong_vec_type(%arg0 : i32) -> () {
+  // expected-error @+1 {{op result #0 must be vector of Float32 values of length 2, but got 'vector<2xi32>'}}
+  %0 = spirv.GL.UnpackHalf2x16 %arg0 : i32 -> vector<2xi32>
+  return
+}
+
+// -----
+
+func.func @unpack_half_2x16_vec_in(%arg0 : vector<2xf32>) -> () {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.integer, but found 'vector<2xf32>'}}
+  %0 = spirv.GL.UnpackHalf2x16 %arg0 : vector<2xf32> -> vector<2xf32>
+  return
+}
+
+// -----
+
+func.func @unpack_half_2x16_scalar_out(%arg0 : i32) -> () {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
+  %0 = spirv.GL.UnpackHalf2x16 %arg0 : i32 -> f32
   return
 }

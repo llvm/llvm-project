@@ -17,18 +17,8 @@
 // CHECK-LABEL: Testing : "_QQmain"
 // CHECK-DAG:   ptrA#0 <-> ArrayA#0: MayAlias
 
-omp.private {type = private} @_QFEi_private_ref_i32 : !fir.ref<i32> alloc {
-^bb0(%arg0: !fir.ref<i32>):
-  %0 = fir.alloca i32 {bindc_name = "i", pinned, uniq_name = "_QFEi"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  omp.yield(%1#0 : !fir.ref<i32>)
-}
-omp.private {type = firstprivate} @_QFEptra_firstprivate_ref_box_ptr_Uxi32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> alloc {
-^bb0(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>):
-  %0 = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> {bindc_name = "ptra", pinned, uniq_name = "_QFEptra"}
-  %1:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEptra"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-  omp.yield(%1#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-} copy {
+omp.private {type = private} @_QFEi_private_ref_i32 : i32
+omp.private {type = firstprivate} @_QFEptra_firstprivate_ref_box_ptr_Uxi32 : !fir.box<!fir.ptr<!fir.array<?xi32>>> copy {
 ^bb0(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, %arg1: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>):
   %0 = fir.load %arg0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   fir.store %0 to %arg1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>

@@ -428,8 +428,8 @@ define float @struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__vgpr_rsrc__vgpr_v
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[3:4]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s1, vcc_lo, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s1, s1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_atomic_min_f32 v0, v[5:6], s[4:7], s0 idxen offen offset:256 glc
@@ -456,10 +456,8 @@ define float @struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__vgpr_rsrc__vgpr_v
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v4
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[3:4]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s1, vcc_lo, s1
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_and_saveexec_b32 s1, s1
@@ -578,10 +576,9 @@ define float @struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__sgpr_rsrc__vgpr_v
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[3:4]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s1, s3, v7
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, s0, s1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
@@ -613,10 +610,8 @@ define float @struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__sgpr_rsrc__vgpr_v
 ; GFX12-NEXT:    v_readfirstlane_b32 s3, v7
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[3:4]
 ; GFX12-NEXT:    v_cmp_eq_u32_e64 s1, s3, v7
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_and_b32 s0, s0, s1

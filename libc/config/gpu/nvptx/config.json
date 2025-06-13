@@ -19,6 +19,9 @@
     },
     "LIBC_CONF_PRINTF_DISABLE_STRERROR": {
       "value": true
+    },
+    "LIBC_CONF_PRINTF_RUNTIME_DISPATCH": {
+      "value": false
     }
   },
   "scanf": {

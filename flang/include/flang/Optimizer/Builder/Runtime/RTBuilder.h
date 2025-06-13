@@ -17,19 +17,21 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_RTBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_RTBUILDER_H
 
-#include "flang/Common/Fortran.h"
 #include "flang/Common/uint128.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Runtime/io-api.h"
 #include "flang/Runtime/reduce.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cstdint>
 #include <functional>
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 // On Windows* OS GetCurrentProcessId returns DWORD aka uint32_t
 typedef std::uint32_t pid_t;
 #endif
@@ -401,6 +403,13 @@ constexpr TypeBuilderFunc getModel<bool &>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc getModel<bool *>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    TypeBuilderFunc f{getModel<bool>()};
+    return fir::ReferenceType::get(f(context));
+  };
+}
+template <>
 constexpr TypeBuilderFunc getModel<unsigned short>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(
@@ -576,6 +585,33 @@ template <>
 constexpr TypeBuilderFunc getModel<void>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::NoneType::get(context);
+  };
+}
+
+// Define additional runtime type models specific to IO.
+template <>
+constexpr TypeBuilderFunc getModel<Fortran::runtime::io::IoStatementState *>() {
+  return getModel<char *>();
+}
+template <>
+constexpr TypeBuilderFunc getModel<Fortran::runtime::io::Iostat>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context,
+                                  8 * sizeof(Fortran::runtime::io::Iostat));
+  };
+}
+template <>
+constexpr TypeBuilderFunc
+getModel<const Fortran::runtime::io::NamelistGroup &>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ReferenceType::get(mlir::TupleType::get(context));
+  };
+}
+template <>
+constexpr TypeBuilderFunc
+getModel<const Fortran::runtime::io::NonTbpDefinedIoTable *>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ReferenceType::get(mlir::TupleType::get(context));
   };
 }
 
@@ -771,43 +807,41 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
 /// argument is intended to be of the form: <mkRTKey(runtime function name)>.
 template <typename RuntimeEntry>
 static mlir::func::FuncOp getRuntimeFunc(mlir::Location loc,
-                                         fir::FirOpBuilder &builder) {
+                                         fir::FirOpBuilder &builder,
+                                         bool isIO = false) {
   using namespace Fortran::runtime;
   auto name = RuntimeEntry::name;
   auto func = builder.getNamedFunction(name);
   if (func)
     return func;
   auto funTy = RuntimeEntry::getTypeModel()(builder.getContext());
-  func = builder.createFunction(loc, name, funTy);
-  func->setAttr(FIROpsDialect::getFirRuntimeAttrName(), builder.getUnitAttr());
-  return func;
+  return builder.createRuntimeFunction(loc, name, funTy, isIO);
 }
 
-namespace helper {
-template <int N, typename A>
-void createArguments(llvm::SmallVectorImpl<mlir::Value> &result,
-                     fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::FunctionType fTy, A arg) {
-  result.emplace_back(builder.createConvert(loc, fTy.getInput(N), arg));
+/// Get (or generate) the MLIR FuncOp for a given IO runtime function.
+template <typename E>
+static mlir::func::FuncOp getIORuntimeFunc(mlir::Location loc,
+                                           fir::FirOpBuilder &builder) {
+  return getRuntimeFunc<E>(loc, builder, /*isIO=*/true);
 }
 
-template <int N, typename A, typename... As>
-void createArguments(llvm::SmallVectorImpl<mlir::Value> &result,
-                     fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::FunctionType fTy, A arg, As... args) {
-  result.emplace_back(builder.createConvert(loc, fTy.getInput(N), arg));
-  createArguments<N + 1>(result, builder, loc, fTy, args...);
+inline llvm::SmallVector<mlir::Value>
+createArguments(fir::FirOpBuilder &builder, mlir::Location loc,
+                mlir::FunctionType fTy, llvm::ArrayRef<mlir::Value> args) {
+  return llvm::map_to_vector(llvm::zip_equal(fTy.getInputs(), args),
+                             [&](const auto &pair) -> mlir::Value {
+                               auto [type, argument] = pair;
+                               return builder.createConvertWithVolatileCast(
+                                   loc, type, argument);
+                             });
 }
-} // namespace helper
 
 /// Create a SmallVector of arguments for a runtime call.
 template <typename... As>
 llvm::SmallVector<mlir::Value>
 createArguments(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::FunctionType fTy, As... args) {
-  llvm::SmallVector<mlir::Value> result;
-  helper::createArguments<0>(result, builder, loc, fTy, args...);
-  return result;
+  return createArguments(builder, loc, fTy, {args...});
 }
 
 } // namespace fir::runtime

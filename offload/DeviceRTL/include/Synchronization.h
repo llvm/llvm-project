@@ -15,14 +15,12 @@
 #include "DeviceTypes.h"
 #include "DeviceUtils.h"
 
-#pragma omp begin declare target device_type(nohost)
-
 namespace ompx {
 namespace atomic {
 
 enum OrderingTy {
   relaxed = __ATOMIC_RELAXED,
-  aquire = __ATOMIC_ACQUIRE,
+  acquire = __ATOMIC_ACQUIRE,
   release = __ATOMIC_RELEASE,
   acq_rel = __ATOMIC_ACQ_REL,
   seq_cst = __ATOMIC_SEQ_CST,
@@ -61,7 +59,11 @@ V add(Ty *Address, V Val, atomic::OrderingTy Ordering,
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 V load(Ty *Address, atomic::OrderingTy Ordering,
        MemScopeTy MemScope = MemScopeTy::device) {
+#ifdef __NVPTX__
+  return __scoped_atomic_fetch_add(Address, V(0), Ordering, MemScope);
+#else
   return __scoped_atomic_load_n(Address, Ordering, MemScope);
+#endif
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
@@ -219,7 +221,5 @@ void system(atomic::OrderingTy Ordering);
 } // namespace fence
 
 } // namespace ompx
-
-#pragma omp end declare target
 
 #endif

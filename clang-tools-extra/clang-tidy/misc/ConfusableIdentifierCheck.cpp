@@ -9,7 +9,6 @@
 
 #include "ConfusableIdentifierCheck.h"
 
-#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -66,9 +65,9 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
     }
 
     StringRef Key(Prev, Curr - Prev);
-    auto Where = llvm::lower_bound(ConfusableEntries, CodePoint,
-                                   [](decltype(ConfusableEntries[0]) x,
-                                      UTF32 y) { return x.codepoint < y; });
+    auto *Where = llvm::lower_bound(ConfusableEntries, CodePoint,
+                                    [](decltype(ConfusableEntries[0]) X,
+                                       UTF32 Y) { return X.codepoint < Y; });
     if (Where == std::end(ConfusableEntries) || CodePoint != Where->codepoint) {
       Skeleton.append(Prev, Curr);
     } else {

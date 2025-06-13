@@ -21,11 +21,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_standard_layout : public integral_constant<bool, __is_standard_layout(_Tp)> {};
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_standard_layout_v = __is_standard_layout(_Tp);
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_STANDARD_LAYOUT_H

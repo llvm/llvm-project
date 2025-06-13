@@ -103,8 +103,8 @@ void REPL::IOHandlerActivated(IOHandler &io_handler, bool interactive) {
   lldb::ProcessSP process_sp = m_target.GetProcessSP();
   if (process_sp && process_sp->IsAlive())
     return;
-  lldb::StreamFileSP error_sp(io_handler.GetErrorStreamFileSP());
-  error_sp->Printf("REPL requires a running target process.\n");
+  LockedStreamFile locked_stream = io_handler.GetErrorStreamFileSP()->Lock();
+  locked_stream.Printf("REPL requires a running target process.\n");
   io_handler.SetIsDone(true);
 }
 
@@ -219,8 +219,10 @@ static bool ReadCode(const std::string &path, std::string &code,
 }
 
 void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
-  lldb::StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-  lldb::StreamFileSP error_sp(io_handler.GetErrorStreamFileSP());
+  lldb::StreamFileSP output_sp = std::make_shared<StreamFile>(
+      io_handler.GetOutputStreamFileSP()->GetUnlockedFileSP());
+  lldb::StreamFileSP error_sp = std::make_shared<StreamFile>(
+      io_handler.GetErrorStreamFileSP()->GetUnlockedFileSP());
   bool extra_line = false;
   bool did_quit = false;
 

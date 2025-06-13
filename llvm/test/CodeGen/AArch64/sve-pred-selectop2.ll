@@ -2954,9 +2954,9 @@ define <vscale x 4 x i32> @mul_use_nxv4i32_x(<vscale x 4 x i32> %x, <vscale x 4 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mul z1.s, z0.s, z1.s
-; CHECK-NEXT:    cmpgt p1.s, p0/z, z2.s, #0
-; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
-; CHECK-NEXT:    mov z0.s, p1/m, z1.s
+; CHECK-NEXT:    cmpgt p0.s, p0/z, z2.s, #0
+; CHECK-NEXT:    str z1, [x0]
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer

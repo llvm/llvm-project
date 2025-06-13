@@ -15,8 +15,14 @@ static_library("RISCV") {
 
     # Exegesis reaches inside the Target/RISCV tablegen internals and must
     # depend on these Target/RISCV-internal build targets.
+    "//llvm/lib/Target/RISCV:RISCVGenMacroFusion",
+    "//llvm/lib/Target/RISCV:RISCVGenRegisterBank",
     "//llvm/lib/Target/RISCV/MCTargetDesc",
   ]
-  sources = [ "Target.cpp" ]
+  sources = [
+    "RISCVExegesisPostprocessing.cpp",
+    "RISCVExegesisPreprocessing.cpp",
+    "Target.cpp",
+  ]
   include_dirs = [ "//llvm/lib/Target/RISCV" ]
 }

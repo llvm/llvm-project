@@ -54,6 +54,7 @@ program main
   n2 = 10
   !$omp target teams map(to:a)
   !PORTABILITY: If TARGET DATA directive is nested inside TARGET region, the behaviour is unspecified
+  !ERROR: Only `DISTRIBUTE`, `PARALLEL`, or `LOOP` regions are allowed to be strictly nested inside `TEAMS` region.
   !$omp target data map(n1,n2)
   do i=1, n1
      do j=1, n2
@@ -65,6 +66,7 @@ program main
 
   !$omp target teams map(to:a) map(from:n1,n2)
   !PORTABILITY: If TARGET TEAMS DISTRIBUTE PARALLEL DO directive is nested inside TARGET region, the behaviour is unspecified
+  !ERROR: Only `DISTRIBUTE`, `PARALLEL`, or `LOOP` regions are allowed to be strictly nested inside `TEAMS` region.
   !$omp target teams distribute parallel do
   do i=1, n1
      do j=1, n2

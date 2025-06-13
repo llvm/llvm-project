@@ -835,7 +835,7 @@ define <16 x i1> @strict_vector_fptosi_v16f32_to_v16i1(<16 x float> %a) #0 {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vcvttps2dq %zmm0, %zmm0
 ; AVX512VL-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    ret{{[l|q]}}
@@ -859,7 +859,7 @@ define <16 x i1> @strict_vector_fptoui_v16f32_to_v16i1(<16 x float> %a) #0 {
 ; AVX512VL-NEXT:    vcvttps2dq %zmm0, %zmm0
 ; AVX512VL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512VL-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    ret{{[l|q]}}

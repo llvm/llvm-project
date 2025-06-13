@@ -15,7 +15,7 @@ def : Enum {
   ];
 }
 
-// CHECK: inline std::ostream &operator<<(std::ostream &os, enum my_enum_t value)
+// CHECK: inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, enum my_enum_t value)
 // CHECK: switch (value) {
 // CHECK: case MY_ENUM_VALUE_ONE:
 // CHECK:   os << "MY_ENUM_VALUE_ONE";

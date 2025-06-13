@@ -10,8 +10,8 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 
-namespace llvm {
-namespace objcopy {
+using namespace llvm;
+using namespace llvm::objcopy;
 
 Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
   if (!Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
@@ -107,6 +107,3 @@ Expected<const XCOFFConfig &> ConfigManager::getXCOFFConfig() const {
 
   return XCOFF;
 }
-
-} // end namespace objcopy
-} // end namespace llvm

@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
-@lds = addrspace(3) global [512 x float] undef, align 4
-@lds.f64 = addrspace(3) global [512 x double] undef, align 8
+@lds = addrspace(3) global [512 x float] poison, align 4
+@lds.f64 = addrspace(3) global [512 x double] poison, align 8
 
 
 ; GCN-LABEL: @simple_read2st64_f32_0_1

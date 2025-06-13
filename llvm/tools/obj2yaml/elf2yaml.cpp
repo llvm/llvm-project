@@ -1266,8 +1266,7 @@ ELFDumper<ELFT>::dumpSymtabShndxSection(const Elf_Shdr *Shdr) {
     return EntriesOrErr.takeError();
 
   S->Entries.emplace();
-  for (const Elf_Word &E : *EntriesOrErr)
-    S->Entries->push_back(E);
+  llvm::append_range(*S->Entries, *EntriesOrErr);
   return S.release();
 }
 
@@ -1490,8 +1489,7 @@ ELFDumper<ELFT>::dumpSymverSection(const Elf_Shdr *Shdr) {
     return VersionsOrErr.takeError();
 
   S->Entries.emplace();
-  for (const Elf_Half &E : *VersionsOrErr)
-    S->Entries->push_back(E);
+  llvm::append_range(*S->Entries, *VersionsOrErr);
 
   return S.release();
 }

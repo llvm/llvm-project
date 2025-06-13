@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple=x86_64-pc-win32 -fms-compatibility -emit-pch -o %t -verify %s
 // RUN: %clang_cc1 -triple=x86_64-pc-win32 -fms-compatibility -include-pch %t %s -ast-print -o - | FileCheck %s
 // RUN: %clang_cc1 -fdeclspec -fsyntax-only -verify %s -std=c++23
+// expected-no-diagnostics
 
 #ifndef HEADER
 #define HEADER
@@ -103,7 +104,6 @@ struct X {
 void f() {
   (void) get_x().imp;
   (void) get_x().st;
-  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
 #if __cplusplus >= 202302L
   (void) get_x().exp;
 #endif

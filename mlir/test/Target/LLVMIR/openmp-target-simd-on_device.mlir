@@ -1,8 +1,8 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 module attributes {omp.is_target_device = true} {
-  omp.private {type = private} @simd_privatizer : !llvm.ptr alloc {
-  ^bb0(%arg0: !llvm.ptr):
+  omp.private {type = private} @simd_privatizer : !llvm.ptr init {
+  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     omp.yield(%arg0 : !llvm.ptr)
   }
 

@@ -9,8 +9,6 @@ import shutil
 import subprocess
 import sys
 
-import lit.formats
-
 # name: The name of this test suite.
 config.name = "lldb-api"
 
@@ -179,6 +177,9 @@ if lldb_use_simulator:
     elif lldb_use_simulator == "tvos":
         lit_config.note("Running API tests on tvOS simulator")
         config.available_features.add("lldb-simulator-tvos")
+    elif lldb_use_simulator == "qemu-user":
+        lit_config.note("Running API tests on qemu-user simulator")
+        config.available_features.add("lldb-simulator-qemu-user")
     else:
         lit_config.error("Unknown simulator id '{}'".format(lldb_use_simulator))
 
@@ -268,6 +269,9 @@ if is_configured("lldb_libs_dir"):
 if is_configured("lldb_framework_dir"):
     dotest_cmd += ["--framework", config.lldb_framework_dir]
 
+if is_configured("cmake_build_type"):
+    dotest_cmd += ["--cmake-build-type", config.cmake_build_type]
+
 if "lldb-simulator-ios" in config.available_features:
     dotest_cmd += ["--apple-sdk", "iphonesimulator", "--platform-name", "ios-simulator"]
 elif "lldb-simulator-watchos" in config.available_features:
@@ -284,6 +288,9 @@ elif "lldb-simulator-tvos" in config.available_features:
         "--platform-name",
         "tvos-simulator",
     ]
+
+if "lldb-simulator-qemu-user" in config.available_features:
+    dotest_cmd += ["--platform-name", "qemu-user"]
 
 if is_configured("enabled_plugins"):
     for plugin in config.enabled_plugins:

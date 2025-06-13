@@ -1601,11 +1601,11 @@ define void @infiniteloop2() "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:  @ %bb.1: @ %if.then
 ; ARM-ENABLE-NEXT:    sub r1, sp, #16
 ; ARM-ENABLE-NEXT:    mov sp, r1
+; ARM-ENABLE-NEXT:  LBB10_2: @ %for.body
+; ARM-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
 ; ARM-ENABLE-NEXT:    mov r2, #0
 ; ARM-ENABLE-NEXT:    @ InlineAsm End
-; ARM-ENABLE-NEXT:  LBB10_2: @ %for.body
-; ARM-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ARM-ENABLE-NEXT:    add r0, r2, r0
 ; ARM-ENABLE-NEXT:    str r0, [r1]
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
@@ -1629,11 +1629,11 @@ define void @infiniteloop2() "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:  @ %bb.1: @ %if.then
 ; ARM-DISABLE-NEXT:    sub r1, sp, #16
 ; ARM-DISABLE-NEXT:    mov sp, r1
+; ARM-DISABLE-NEXT:  LBB10_2: @ %for.body
+; ARM-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
 ; ARM-DISABLE-NEXT:    mov r2, #0
 ; ARM-DISABLE-NEXT:    @ InlineAsm End
-; ARM-DISABLE-NEXT:  LBB10_2: @ %for.body
-; ARM-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ARM-DISABLE-NEXT:    add r0, r2, r0
 ; ARM-DISABLE-NEXT:    str r0, [r1]
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
@@ -1657,11 +1657,11 @@ define void @infiniteloop2() "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:    sub.w r0, sp, #16
 ; THUMB-ENABLE-NEXT:    mov sp, r0
 ; THUMB-ENABLE-NEXT:    movs r1, #0
+; THUMB-ENABLE-NEXT:  LBB10_2: @ %for.body
+; THUMB-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
 ; THUMB-ENABLE-NEXT:    mov.w r2, #0
 ; THUMB-ENABLE-NEXT:    @ InlineAsm End
-; THUMB-ENABLE-NEXT:  LBB10_2: @ %for.body
-; THUMB-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; THUMB-ENABLE-NEXT:    add r1, r2
 ; THUMB-ENABLE-NEXT:    str r1, [r0]
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
@@ -1686,11 +1686,11 @@ define void @infiniteloop2() "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:    sub.w r0, sp, #16
 ; THUMB-DISABLE-NEXT:    mov sp, r0
 ; THUMB-DISABLE-NEXT:    movs r1, #0
+; THUMB-DISABLE-NEXT:  LBB10_2: @ %for.body
+; THUMB-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
 ; THUMB-DISABLE-NEXT:    mov.w r2, #0
 ; THUMB-DISABLE-NEXT:    @ InlineAsm End
-; THUMB-DISABLE-NEXT:  LBB10_2: @ %for.body
-; THUMB-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; THUMB-DISABLE-NEXT:    add r1, r2
 ; THUMB-DISABLE-NEXT:    str r1, [r0]
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
@@ -2017,8 +2017,8 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; ARM-DISABLE-NEXT:    sub r4, sp, #24
 ; ARM-DISABLE-NEXT:    bfc r4, #0, #4
 ; ARM-DISABLE-NEXT:    mov sp, r4
-; ARM-DISABLE-NEXT:    tst r2, #1
 ; ARM-DISABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
+; ARM-DISABLE-NEXT:    tst r2, #1
 ; ARM-DISABLE-NEXT:    vstr d10, [r4, #16]
 ; ARM-DISABLE-NEXT:    beq LBB12_2
 ; ARM-DISABLE-NEXT:  @ %bb.1: @ %bb3
@@ -2123,8 +2123,8 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; THUMB-DISABLE-NEXT:    sub.w r4, sp, #24
 ; THUMB-DISABLE-NEXT:    bfc r4, #0, #4
 ; THUMB-DISABLE-NEXT:    mov sp, r4
-; THUMB-DISABLE-NEXT:    lsls r1, r2, #31
 ; THUMB-DISABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
+; THUMB-DISABLE-NEXT:    lsls r1, r2, #31
 ; THUMB-DISABLE-NEXT:    vstr d10, [r4, #16]
 ; THUMB-DISABLE-NEXT:    beq LBB12_2
 ; THUMB-DISABLE-NEXT:  @ %bb.1: @ %bb3

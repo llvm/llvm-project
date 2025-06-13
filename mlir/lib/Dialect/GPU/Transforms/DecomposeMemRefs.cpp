@@ -238,7 +238,3 @@ void mlir::populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns) {
   patterns.insert<FlattenLoad, FlattenStore, FlattenSubview>(
       patterns.getContext());
 }
-
-std::unique_ptr<Pass> mlir::createGpuDecomposeMemrefsPass() {
-  return std::make_unique<GpuDecomposeMemrefsPass>();
-}

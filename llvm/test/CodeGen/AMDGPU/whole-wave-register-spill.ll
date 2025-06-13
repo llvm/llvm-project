@@ -127,7 +127,7 @@ define void @test() #0 {
 ; GCN-O0-NEXT:    s_setpc_b64 s[30:31]
   %sgpr = call i32 asm sideeffect "; def $0", "=s" () #0
   call void @ext_func()
-  store volatile i32 %sgpr, ptr addrspace(1) undef
+  store volatile i32 %sgpr, ptr addrspace(1) poison
   ret void
 }
 

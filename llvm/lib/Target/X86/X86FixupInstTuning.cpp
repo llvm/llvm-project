@@ -49,8 +49,7 @@ public:
 
   // This pass runs after regalloc and doesn't support VReg operands.
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -82,6 +81,7 @@ bool X86FixupInstTuningPass::processInstruction(
   MachineInstr &MI = *I;
   unsigned Opc = MI.getOpcode();
   unsigned NumOperands = MI.getDesc().getNumOperands();
+  bool OptSize = MF.getFunction().hasOptSize();
 
   auto GetInstTput = [&](unsigned Opcode) -> std::optional<double> {
     // We already checked that SchedModel exists in `NewOpcPreferable`.
@@ -223,7 +223,30 @@ bool X86FixupInstTuningPass::processInstruction(
     return ProcessUNPCKToIntDomain(NewOpc);
   };
 
+  auto ProcessBLENDToMOV = [&](unsigned MovOpc, unsigned Mask,
+                               unsigned MovImm) -> bool {
+    if ((MI.getOperand(NumOperands - 1).getImm() & Mask) != MovImm)
+      return false;
+    if (!OptSize && !NewOpcPreferable(MovOpc))
+      return false;
+    MI.setDesc(TII->get(MovOpc));
+    MI.removeOperand(NumOperands - 1);
+    return true;
+  };
+
   switch (Opc) {
+  case X86::BLENDPDrri:
+    return ProcessBLENDToMOV(X86::MOVSDrr, 0x3, 0x1);
+  case X86::VBLENDPDrri:
+    return ProcessBLENDToMOV(X86::VMOVSDrr, 0x3, 0x1);
+
+  case X86::BLENDPSrri:
+    return ProcessBLENDToMOV(X86::MOVSSrr, 0xF, 0x1) ||
+           ProcessBLENDToMOV(X86::MOVSDrr, 0xF, 0x3);
+  case X86::VBLENDPSrri:
+    return ProcessBLENDToMOV(X86::VMOVSSrr, 0xF, 0x1) ||
+           ProcessBLENDToMOV(X86::VMOVSDrr, 0xF, 0x3);
+
   case X86::VPERMILPDri:
     return ProcessVPERMILPDri(X86::VSHUFPDrri);
   case X86::VPERMILPDYri:

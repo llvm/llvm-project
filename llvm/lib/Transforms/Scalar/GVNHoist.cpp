@@ -564,21 +564,20 @@ unsigned int GVNHoist::rank(const Value *V) const {
 }
 
 bool GVNHoist::hasEH(const BasicBlock *BB) {
-  auto It = BBSideEffects.find(BB);
-  if (It != BBSideEffects.end())
+  auto [It, Inserted] = BBSideEffects.try_emplace(BB);
+  if (!Inserted)
     return It->second;
 
   if (BB->isEHPad() || BB->hasAddressTaken()) {
-    BBSideEffects[BB] = true;
+    It->second = true;
     return true;
   }
 
   if (BB->getTerminator()->mayThrow()) {
-    BBSideEffects[BB] = true;
+    It->second = true;
     return true;
   }
 
-  BBSideEffects[BB] = false;
   return false;
 }
 

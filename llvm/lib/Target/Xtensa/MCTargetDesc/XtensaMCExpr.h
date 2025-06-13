@@ -20,37 +20,23 @@
 namespace llvm {
 
 class StringRef;
-class XtensaMCExpr : public MCTargetExpr {
+class XtensaMCExpr : public MCSpecifierExpr {
 public:
-  enum VariantKind { VK_Xtensa_None, VK_Xtensa_Invalid };
+  using Specifier = uint16_t;
+  enum { VK_None, VK_TPOFF };
 
 private:
-  const MCExpr *Expr;
-  const VariantKind Kind;
-
-  explicit XtensaMCExpr(const MCExpr *Expr, VariantKind Kind)
-      : Expr(Expr), Kind(Kind) {}
+  explicit XtensaMCExpr(const MCExpr *Expr, Specifier S)
+      : MCSpecifierExpr(Expr, S) {}
 
 public:
-  static const XtensaMCExpr *create(const MCExpr *Expr, VariantKind Kind,
+  static const XtensaMCExpr *create(const MCExpr *Expr, Specifier,
                                     MCContext &Ctx);
 
-  VariantKind getKind() const { return Kind; }
-
-  const MCExpr *getSubExpr() const { return Expr; }
-
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
-  void visitUsedExpr(MCStreamer &Streamer) const override;
-  MCFragment *findAssociatedFragment() const override {
-    return getSubExpr()->findAssociatedFragment();
-  }
 
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
-
-  static VariantKind getVariantKindForName(StringRef name);
-  static StringRef getVariantKindName(VariantKind Kind);
+  static Specifier parseSpecifier(StringRef name);
+  static StringRef getSpecifierName(Specifier Kind);
 };
 
 } // end namespace llvm.

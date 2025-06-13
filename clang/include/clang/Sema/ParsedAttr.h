@@ -40,7 +40,6 @@ class LangOptions;
 class Sema;
 class Stmt;
 class TargetInfo;
-struct IdentifierLoc;
 
 /// Represents information about a change in availability for
 /// an entity, which is part of the encoding of the 'availability'
@@ -99,15 +98,6 @@ struct PropertyData {
 
 } // namespace detail
 
-/// Wraps an identifier and optional source location for the identifier.
-struct IdentifierLoc {
-  SourceLocation Loc;
-  IdentifierInfo *Ident;
-
-  static IdentifierLoc *create(ASTContext &Ctx, SourceLocation Loc,
-                               IdentifierInfo *Ident);
-};
-
 /// A union of the various pointer types that can be passed to an
 /// ParsedAttr as an argument.
 using ArgsUnion = llvm::PointerUnion<Expr *, IdentifierLoc *>;
@@ -139,9 +129,6 @@ class ParsedAttr final
   }
   size_t numTrailingObjects(OverloadToken<ParsedType>) const {
     return HasParsedType;
-  }
-  size_t numTrailingObjects(OverloadToken<detail::PropertyData>) const {
-    return IsProperty;
   }
 
 private:
@@ -970,6 +957,14 @@ public:
     pool.takeAllFrom(Other.pool);
   }
 
+  void takeAllAtEndFrom(ParsedAttributes &Other) {
+    assert(&Other != this &&
+           "ParsedAttributes can't take attributes from itself");
+    addAllAtEnd(Other.begin(), Other.end());
+    Other.clearListOnly();
+    pool.takeAllFrom(Other.pool);
+  }
+
   void takeOneFrom(ParsedAttributes &Other, ParsedAttr *PA) {
     assert(&Other != this &&
            "ParsedAttributes can't take attribute from itself");
@@ -1067,10 +1062,11 @@ private:
   mutable AttributePool pool;
 };
 
-/// Consumes the attributes from `First` and `Second` and concatenates them into
-/// `Result`. Sets `Result.Range` to the combined range of `First` and `Second`.
-void takeAndConcatenateAttrs(ParsedAttributes &First, ParsedAttributes &Second,
-                             ParsedAttributes &Result);
+/// Consumes the attributes from `Second` and concatenates them
+/// at the end of `First`. Sets `First.Range`
+/// to the combined range of `First` and `Second`.
+void takeAndConcatenateAttrs(ParsedAttributes &First,
+                             ParsedAttributes &&Second);
 
 /// These constants match the enumerated choices of
 /// err_attribute_argument_n_type and err_attribute_argument_type.

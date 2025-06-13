@@ -296,8 +296,9 @@ class MxMOVEMEncoding<MxEncMemOp opnd_enc, bit size, bit direction,
 
 let mayStore = 1 in
 class MxMOVEM_MR<MxType TYPE, bit SIZE_ENC,
-                 MxOperand MEMOp, MxEncMemOp MEM_ENC>
-    : MxInst<(outs), (ins MEMOp:$dst, MxMoveMask:$mask),
+                 MxOperand MEMOp, MxEncMemOp MEM_ENC,
+                 MxOp MASKOp>
+    : MxInst<(outs), (ins MEMOp:$dst, MASKOp:$mask),
              "movem."#TYPE.Prefix#"\t$mask, $dst", []> {
   let Inst = MxMOVEMEncoding<MEM_ENC, SIZE_ENC, MxMOVEM_MR, "mask">.Value;
 }
@@ -307,13 +308,15 @@ foreach AM = MxMoveSupportedAMs in {
   def MOVM # TYPE.Size # AM # m # TYPE.Postfix
       : MxMOVEM_MR<TYPE, !if(!eq(TYPE, MxType16), MxMOVEM_W, MxMOVEM_L),
                    !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM).Op,
-                   !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM)>;
+                   !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM),
+                   !if(!eq(AM, "e"), MxInverseMoveMask, MxMoveMask)>;
 } // foreach AM
 
 let mayLoad = 1 in
 class MxMOVEM_RM<MxType TYPE, bit SIZE_ENC,
-                 MxOperand MEMOp, MxEncMemOp MEM_ENC>
-    : MxInst<(outs), (ins MxMoveMask:$mask, MEMOp:$src),
+                 MxOperand MEMOp, MxEncMemOp MEM_ENC,
+                 MxOp MASKOp>
+    : MxInst<(outs), (ins MASKOp:$mask, MEMOp:$src),
              "movem."#TYPE.Prefix#"\t$src, $mask", []> {
   let Inst = MxMOVEMEncoding<MEM_ENC, SIZE_ENC, MxMOVEM_RM, "mask">.Value;
 }
@@ -323,7 +326,8 @@ foreach AM = MxMoveSupportedAMs in {
   def MOVM # TYPE.Size # m # AM # TYPE.Postfix
       : MxMOVEM_RM<TYPE, !if(!eq(TYPE, MxType16), MxMOVEM_W, MxMOVEM_L),
                    !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM).Op,
-                   !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
+                   !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM),
+                   !if(!eq(AM, "e"), MxInverseMoveMask, MxMoveMask)>;
 } // foreach AM
 
 // Pseudo versions. These a required by virtual register spill/restore since
@@ -337,20 +341,16 @@ class MxMOVEM_RM_Pseudo<MxType TYPE, MxOperand MEMOp>
     : MxPseudo<(outs TYPE.ROp:$dst), (ins MEMOp:$src)>;
 
 // Mem <- Reg
-def MOVM8jm_P  : MxMOVEM_MR_Pseudo<MxType8d,  MxType8.JOp>;
 def MOVM16jm_P : MxMOVEM_MR_Pseudo<MxType16r, MxType16.JOp>;
 def MOVM32jm_P : MxMOVEM_MR_Pseudo<MxType32r, MxType32.JOp>;
 
-def MOVM8pm_P  : MxMOVEM_MR_Pseudo<MxType8d,  MxType8.POp>;
 def MOVM16pm_P : MxMOVEM_MR_Pseudo<MxType16r, MxType16.POp>;
 def MOVM32pm_P : MxMOVEM_MR_Pseudo<MxType32r, MxType32.POp>;
 
 // Reg <- Mem
-def MOVM8mj_P  : MxMOVEM_RM_Pseudo<MxType8d,  MxType8.JOp>;
 def MOVM16mj_P : MxMOVEM_RM_Pseudo<MxType16r, MxType16.JOp>;
 def MOVM32mj_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.JOp>;
 
-def MOVM8mp_P  : MxMOVEM_RM_Pseudo<MxType8d,  MxType8.POp>;
 def MOVM16mp_P : MxMOVEM_RM_Pseudo<MxType16r, MxType16.POp>;
 def MOVM32mp_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.POp>;
 

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -ast-print | FileCheck %s
-// RUN: %clang -emit-ast -o %t.ast %s
+// RUN: %clang_cc1 -emit-pch -o %t.ast %s
 // RUN: %clang_cc1 %t.ast -ast-print | FileCheck %s
 
 // CHECK: void *aa() __attribute__((assume_aligned(64)));
@@ -91,3 +91,8 @@ ANNOTATE_ATTR NONNULL_ATTR void fn_non_null_annotated_attr(int *) __attribute__(
 
 [[gnu::nonnull(1)]] [[gnu::always_inline]] void cxx11_attr(int*) ANNOTATE_ATTR;
 // CHECK: {{\[\[}}gnu::nonnull(1)]] {{\[\[}}gnu::always_inline]] void cxx11_attr(int *) __attribute__((annotate("Annotated")));
+
+struct Foo;
+
+// CHECK: void as_member_fn_ptr(int *(Foo::*member)(int) __attribute__((alloc_size(1))));
+void as_member_fn_ptr(int* (Foo::*member)(int)  __attribute__((alloc_size(1))));

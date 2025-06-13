@@ -134,7 +134,7 @@ public:
       LocNoCount = LocNoVec.size();
       if (LocNoCount > 0) {
         LocNos = std::make_unique<unsigned[]>(LocNoCount);
-        std::copy(LocNoVec.begin(), LocNoVec.end(), loc_nos_begin());
+        llvm::copy(LocNoVec, loc_nos_begin());
       }
     } else {
       LLVM_DEBUG(dbgs() << "Found debug value with 64+ unique machine "
@@ -587,7 +587,7 @@ class LiveDebugVariables::LDVImpl {
   SmallVector<std::unique_ptr<UserLabel>, 2> userLabels;
 
   /// Map virtual register to eq class leader.
-  using VRMap = DenseMap<unsigned, UserValue *>;
+  using VRMap = DenseMap<Register, UserValue *>;
   VRMap virtRegToEqClass;
 
   /// Map to find existing UserValue instances.
@@ -1127,7 +1127,6 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
     SlotIndex Idx = Defs[i].first;
     DbgVariableValue DbgValue = Defs[i].second;
     SmallDenseMap<unsigned, std::pair<LiveRange *, const VNInfo *>> LIs;
-    SmallVector<const VNInfo *, 4> VNIs;
     bool ShouldExtendDef = false;
     for (unsigned LocNo : DbgValue.loc_nos()) {
       const MachineOperand &LocMO = locations[LocNo];

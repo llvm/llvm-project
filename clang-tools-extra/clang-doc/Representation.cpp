@@ -20,11 +20,67 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Representation.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
 namespace clang {
 namespace doc {
+
+CommentKind stringToCommentKind(llvm::StringRef KindStr) {
+  static const llvm::StringMap<CommentKind> KindMap = {
+      {"FullComment", CommentKind::CK_FullComment},
+      {"ParagraphComment", CommentKind::CK_ParagraphComment},
+      {"TextComment", CommentKind::CK_TextComment},
+      {"InlineCommandComment", CommentKind::CK_InlineCommandComment},
+      {"HTMLStartTagComment", CommentKind::CK_HTMLStartTagComment},
+      {"HTMLEndTagComment", CommentKind::CK_HTMLEndTagComment},
+      {"BlockCommandComment", CommentKind::CK_BlockCommandComment},
+      {"ParamCommandComment", CommentKind::CK_ParamCommandComment},
+      {"TParamCommandComment", CommentKind::CK_TParamCommandComment},
+      {"VerbatimBlockComment", CommentKind::CK_VerbatimBlockComment},
+      {"VerbatimBlockLineComment", CommentKind::CK_VerbatimBlockLineComment},
+      {"VerbatimLineComment", CommentKind::CK_VerbatimLineComment},
+  };
+
+  auto It = KindMap.find(KindStr);
+  if (It != KindMap.end()) {
+    return It->second;
+  }
+  return CommentKind::CK_Unknown;
+}
+
+llvm::StringRef commentKindToString(CommentKind Kind) {
+  switch (Kind) {
+  case CommentKind::CK_FullComment:
+    return "FullComment";
+  case CommentKind::CK_ParagraphComment:
+    return "ParagraphComment";
+  case CommentKind::CK_TextComment:
+    return "TextComment";
+  case CommentKind::CK_InlineCommandComment:
+    return "InlineCommandComment";
+  case CommentKind::CK_HTMLStartTagComment:
+    return "HTMLStartTagComment";
+  case CommentKind::CK_HTMLEndTagComment:
+    return "HTMLEndTagComment";
+  case CommentKind::CK_BlockCommandComment:
+    return "BlockCommandComment";
+  case CommentKind::CK_ParamCommandComment:
+    return "ParamCommandComment";
+  case CommentKind::CK_TParamCommandComment:
+    return "TParamCommandComment";
+  case CommentKind::CK_VerbatimBlockComment:
+    return "VerbatimBlockComment";
+  case CommentKind::CK_VerbatimBlockLineComment:
+    return "VerbatimBlockLineComment";
+  case CommentKind::CK_VerbatimLineComment:
+    return "VerbatimLineComment";
+  case CommentKind::CK_Unknown:
+    return "Unknown";
+  }
+  llvm_unreachable("Unhandled CommentKind");
+}
 
 namespace {
 
@@ -200,7 +256,7 @@ void Info::mergeBase(Info &&Other) {
   std::move(Other.Description.begin(), Other.Description.end(),
             std::back_inserter(Description));
   llvm::sort(Description);
-  auto Last = std::unique(Description.begin(), Description.end());
+  auto Last = llvm::unique(Description);
   Description.erase(Last, Description.end());
 }
 
@@ -215,7 +271,7 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
   // Unconditionally extend the list of locations, since we want all of them.
   std::move(Other.Loc.begin(), Other.Loc.end(), std::back_inserter(Loc));
   llvm::sort(Loc);
-  auto Last = std::unique(Loc.begin(), Loc.end());
+  auto *Last = llvm::unique(Loc);
   Loc.erase(Last, Loc.end());
   mergeBase(std::move(Other));
 }
@@ -368,9 +424,12 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef ProjectName, bool PublicOnly,
                                  StringRef OutDirectory, StringRef SourceRoot,
                                  StringRef RepositoryUrl,
-                                 std::vector<std::string> UserStylesheets)
+                                 StringRef RepositoryLinePrefix, StringRef Base,
+                                 std::vector<std::string> UserStylesheets,
+                                 bool FTimeTrace)
     : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
-      OutDirectory(OutDirectory), UserStylesheets(UserStylesheets) {
+      FTimeTrace(FTimeTrace), OutDirectory(OutDirectory),
+      UserStylesheets(UserStylesheets), Base(Base) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default
@@ -381,6 +440,9 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
     if (!RepositoryUrl.empty() && !RepositoryUrl.starts_with("http://") &&
         !RepositoryUrl.starts_with("https://"))
       this->RepositoryUrl->insert(0, "https://");
+
+    if (!RepositoryLinePrefix.empty())
+      this->RepositoryLinePrefix = std::string(RepositoryLinePrefix);
   }
 }
 
