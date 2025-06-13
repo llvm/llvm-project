@@ -791,6 +791,12 @@ transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
 
   std::string options;
   llvm::raw_string_ostream optionsStream(options); // For "printing" attrs.
+  auto appendValueAttr = [&](Attribute valueAttr) {
+    if (auto strAttr = dyn_cast<StringAttr>(valueAttr))
+      optionsStream << strAttr.getValue().str();
+    else
+      valueAttr.print(optionsStream, /*elideType=*/true);
+  };
 
   OperandRange dynamicOptions = getDynamicOptions();
   for (auto [idx, namedAttribute] : llvm::enumerate(getOptions())) {
@@ -799,7 +805,6 @@ transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
     optionsStream << namedAttribute.getName().str(); // Append the key.
     optionsStream << "="; // And the key-value separator.
 
-    Attribute valueAttrToAppend;
     if (auto paramOperandIndex =
             dyn_cast<transform::ParamOperandAttr>(namedAttribute.getValue())) {
       // The corresponding value attribute is passed in via a param.
@@ -810,22 +815,15 @@ transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
              "should be the same as the number of options passed as params");
       ArrayRef<Attribute> dynamicOption =
           state.getParams(dynamicOptions[dynamicOptionIdx]);
-      if (dynamicOption.size() != 1)
-        return emitSilenceableError()
-               << "options passed as a param must have "
-                  "a single value associated, param "
-               << dynamicOptionIdx << " associates " << dynamicOption.size();
-      valueAttrToAppend = dynamicOption[0];
+      // Append all attributes associated to the param, separated by commas.
+      for (auto [idx, associatedAttr] : llvm::enumerate(dynamicOption)) {
+        if (idx > 0)
+          optionsStream << ",";
+        appendValueAttr(associatedAttr);
+      }
     } else {
       // Value is a static attribute.
-      valueAttrToAppend = namedAttribute.getValue();
-    }
-
-    // Append string representation of value attribute.
-    if (auto strAttr = dyn_cast<StringAttr>(valueAttrToAppend)) {
-      optionsStream << strAttr.getValue().str();
-    } else {
-      valueAttrToAppend.print(optionsStream, /*elideType=*/true);
+      appendValueAttr(namedAttribute.getValue());
     }
   }
   optionsStream.flush();
