@@ -3897,7 +3897,9 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
     return std::nullopt;
   };
 
-  if (auto InvertFn = MaybeInvertible(Cond)) {
+  // Attempt to invert and simplify the switch condition, as long as the
+  // condition is not used further, as it may be unprofitable otherwise.
+  if (auto InvertFn = MaybeInvertible(Cond); InvertFn && Cond->hasOneUse()) {
     for (auto &Case : SI.cases()) {
       const APInt &New = (*InvertFn)(Case.getCaseValue()->getValue(), *CondOpC);
       Case.setValue(ConstantInt::get(SI.getContext(), New));

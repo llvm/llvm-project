@@ -57,3 +57,36 @@ sw.bb:
 sw.default:
   ret i1 false
 }
+
+define i1 @test_switch_with_xor_condition_multiple_uses(i32 %x) {
+; CHECK-LABEL: define i1 @test_switch_with_xor_condition_multiple_uses(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], 2
+; CHECK-NEXT:    call void @opaque(i32 [[XOR]])
+; CHECK-NEXT:    switch i32 [[XOR]], label %[[SW_DEFAULT:.*]] [
+; CHECK-NEXT:      i32 1, label %[[SW_BB:.*]]
+; CHECK-NEXT:      i32 2, label %[[SW_BB]]
+; CHECK-NEXT:      i32 3, label %[[SW_BB]]
+; CHECK-NEXT:    ]
+; CHECK:       [[SW_BB]]:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       [[SW_DEFAULT]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %xor = xor i32 %x, 2
+  call void @opaque(i32 %xor)
+  switch i32 %xor, label %sw.default [
+  i32 1, label %sw.bb
+  i32 2, label %sw.bb
+  i32 3, label %sw.bb
+  ]
+
+sw.bb:
+  ret i1 true
+sw.default:
+  ret i1 false
+}
+
+declare void @opaque(i32)
