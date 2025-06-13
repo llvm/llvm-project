@@ -2132,7 +2132,7 @@ static bool mayFoldConstrained(ConstrainedFPIntrinsic *CI,
 
   // If evaluation raised FP exception, the result can depend on rounding
   // mode. If the latter is unknown, folding is not possible.
-  if (ORM && *ORM == RoundingMode::Dynamic)
+  if (ORM == RoundingMode::Dynamic)
     return false;
 
   // If FP exceptions are ignored, fold the call, even if such exception is
@@ -2418,7 +2418,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         if (IntrinsicID == Intrinsic::experimental_constrained_rint &&
             St == APFloat::opInexact) {
           std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
-          if (EB && *EB == fp::ebStrict)
+          if (EB == fp::ebStrict)
             return nullptr;
         }
       } else if (U.isSignaling()) {
