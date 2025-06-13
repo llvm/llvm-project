@@ -1338,14 +1338,13 @@ define ptr @D98588(ptr %c1, i64 %offset) {
 
 declare noalias ptr @malloc(i64) nounwind allockind("alloc,uninitialized") allocsize(0)
 
-define i32 @test_gep_bitcast_malloc(ptr %a, ptr %call) {
+define i32 @test_gep_bitcast_malloc(ptr %a) {
 ; CHECK-LABEL: @test_gep_bitcast_malloc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr i8, ptr [[CALL:%.*]], i64 12
-; CHECK-NEXT:    [[A_C:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    ret i32 [[A_C]]
+; CHECK-NEXT:    ret i32 undef
 ;
 entry:
+  %call = call noalias ptr @malloc(i64 16) #2
   %g3 = getelementptr %struct.A, ptr %call, i32 0, i32 2
   %a_c = load i32, ptr %g3, align 4
   ret i32 %a_c

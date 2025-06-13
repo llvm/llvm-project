@@ -362,23 +362,13 @@ define <2 x i1> @and_ne_with_diff_one_splatvec(<2 x i32> %x) {
 ; on an 'and' that should have been killed. It's not obvious
 ; why, but removing anything hides the bug, hence the long test.
 
-define void @simplify_before_foldAndOfICmps(ptr %p, ptr %A8) {
+define void @simplify_before_foldAndOfICmps(ptr %p) {
 ; CHECK-LABEL: @simplify_before_foldAndOfICmps(
-; CHECK-NEXT:    [[L7:%.*]] = load i16, ptr [[A8:%.*]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[L7]], -1
-; CHECK-NEXT:    [[B11:%.*]] = zext i1 [[TMP1]] to i16
-; CHECK-NEXT:    [[C10:%.*]] = icmp ugt i16 [[L7]], [[B11]]
-; CHECK-NEXT:    [[C7:%.*]] = icmp slt i16 [[L7]], 0
-; CHECK-NEXT:    [[C3:%.*]] = and i1 [[C7]], [[C10]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[C10]], true
-; CHECK-NEXT:    [[C18:%.*]] = or i1 [[C7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C3]] to i64
-; CHECK-NEXT:    [[G26:%.*]] = getelementptr i1, ptr null, i64 [[TMP3]]
-; CHECK-NEXT:    store i16 [[L7]], ptr [[P:%.*]], align 2
-; CHECK-NEXT:    store i1 [[C18]], ptr [[P]], align 1
-; CHECK-NEXT:    store ptr [[G26]], ptr [[P]], align 8
+; CHECK-NEXT:    store i1 true, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    store ptr null, ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
+  %A8 = alloca i16
   %L7 = load i16, ptr %A8
   %G21 = getelementptr i16, ptr %A8, i8 -1
   %B11 = udiv i16 %L7, -1
