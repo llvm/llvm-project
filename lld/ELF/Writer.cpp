@@ -653,15 +653,17 @@ enum RankFlags {
   RF_NOT_ADDR_SET = 1 << 27,
   RF_NOT_ALLOC = 1 << 26,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
+  RF_LARGE_EXEC_WRITE = 1 << 16,
   RF_LARGE_ALT = 1 << 15,
   RF_WRITE = 1 << 14,
   RF_EXEC_WRITE = 1 << 13,
   RF_EXEC = 1 << 12,
   RF_RODATA = 1 << 11,
-  RF_LARGE = 1 << 10,
-  RF_NOT_RELRO = 1 << 9,
-  RF_NOT_TLS = 1 << 8,
-  RF_BSS = 1 << 7,
+  RF_LARGE_EXEC = 1 << 10,
+  RF_LARGE = 1 << 9,
+  RF_NOT_RELRO = 1 << 8,
+  RF_NOT_TLS = 1 << 7,
+  RF_BSS = 1 << 6,
 };
 
 unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
@@ -691,6 +693,7 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
   // places.
   bool isExec = osec.flags & SHF_EXECINSTR;
   bool isWrite = osec.flags & SHF_WRITE;
+  bool isLarge = osec.flags & SHF_X86_64_LARGE && ctx.arg.emachine == EM_X86_64;
 
   if (!isWrite && !isExec) {
     // Among PROGBITS sections, place .lrodata further from .text.
@@ -698,7 +701,7 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
     // layout has one extra PT_LOAD, but alleviates relocation overflow
     // pressure for absolute relocations referencing small data from -fno-pic
     // relocatable files.
-    if (osec.flags & SHF_X86_64_LARGE && ctx.arg.emachine == EM_X86_64)
+    if (isLarge)
       rank |= ctx.arg.zLrodataAfterBss ? RF_LARGE_ALT : 0;
     else
       rank |= ctx.arg.zLrodataAfterBss ? 0 : RF_LARGE;
@@ -722,7 +725,13 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
     else
       rank |= RF_RODATA;
   } else if (isExec) {
-    rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
+    // Place readonly .ltext before .lrodata and writable .ltext after .lbss to
+    // keep writable and readonly segments separate.
+    if (isLarge) {
+      rank |= isWrite ? RF_LARGE_EXEC_WRITE : RF_LARGE_EXEC;
+    } else {
+      rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
+    }
   } else {
     rank |= RF_WRITE;
     // The TLS initialization block needs to be a single contiguous block. Place
@@ -737,7 +746,7 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
     // alleviates relocation overflow pressure.
     // For -z lrodata-after-bss, place .lbss/.lrodata/.ldata after .bss.
     // .bss/.lbss being adjacent reuses the NOBITS size optimization.
-    if (osec.flags & SHF_X86_64_LARGE && ctx.arg.emachine == EM_X86_64) {
+    if (isLarge) {
       rank |= ctx.arg.zLrodataAfterBss
                   ? (osec.type == SHT_NOBITS ? 1 : RF_LARGE_ALT)
                   : RF_LARGE;
