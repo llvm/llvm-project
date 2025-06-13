@@ -77,3 +77,13 @@ subroutine s9()
   do concurrent(i=1:5) reduce(+:i)
   end do
 end subroutine s9
+
+subroutine s10()
+! Cannot have variable inside of a NAMELIST in a REDUCE locality spec
+  integer :: k
+  namelist /nlist1/ k
+!ERROR: NAMELIST variable 'k' not allowed in a REDUCE locality-spec
+  do concurrent(i=1:5) reduce(+:k)
+     k = k + i
+  end do
+end subroutine s10

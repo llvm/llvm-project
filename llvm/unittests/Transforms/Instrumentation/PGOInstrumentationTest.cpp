@@ -137,7 +137,7 @@ struct PGOInstrumentationGenTest
 
     // A failure here means that the test itself is buggy.
     if (!M)
-      report_fatal_error(OS.str().c_str());
+      report_fatal_error(ErrMsg.c_str());
   }
 };
 

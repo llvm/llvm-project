@@ -435,6 +435,46 @@ private:
   /// \return The bytes that represent the string table data or \c std::nullopt
   ///         if an error occured.
   std::optional<lldb_private::DataExtractor> GetDynstrData();
+
+  /// Read the bytes pointed to by the \a dyn dynamic entry.
+  ///
+  /// ELFDynamic::d_ptr values contain file addresses if we load the ELF file
+  /// form a file on disk, or they contain load addresses if they were read
+  /// from memory. This function will correctly extract the data in both cases
+  /// if it is available.
+  ///
+  /// \param[in] dyn The dynamic entry to use to fetch the data from.
+  ///
+  /// \param[in] length The number of bytes to read.
+  ///
+  /// \param[in] offset The number of bytes to skip after the d_ptr value
+  ///                   before reading data.
+  ///
+  /// \return The bytes that represent the dynanic entries data or
+  ///         \c std::nullopt if an error occured or the data is not available.
+  std::optional<lldb_private::DataExtractor>
+  ReadDataFromDynamic(const elf::ELFDynamic *dyn, uint64_t length,
+                      uint64_t offset = 0);
+
+  /// Get the bytes that represent the dynamic symbol table from the .dynamic
+  /// section from process memory.
+  ///
+  /// This functon uses the DT_SYMTAB value from the .dynamic section to read
+  /// the symbols table data from process memory. The number of symbols in the
+  /// symbol table is calculated by looking at the DT_HASH or DT_GNU_HASH
+  /// values as the symbol count isn't stored in the .dynamic section.
+  ///
+  /// \return The bytes that represent the symbol table data from the .dynamic
+  ///         section or section headers or \c std::nullopt if an error
+  ///         occured or if there is no dynamic symbol data available.
+  std::optional<lldb_private::DataExtractor>
+  GetDynsymDataFromDynamic(uint32_t &num_symbols);
+
+  /// Get the number of symbols from the DT_HASH dynamic entry.
+  std::optional<uint32_t> GetNumSymbolsFromDynamicHash();
+
+  /// Get the number of symbols from the DT_GNU_HASH dynamic entry.
+  std::optional<uint32_t> GetNumSymbolsFromDynamicGnuHash();
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H

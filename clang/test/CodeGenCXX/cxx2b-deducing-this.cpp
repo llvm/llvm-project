@@ -31,7 +31,6 @@ void test_lambda() {
 //CHECK: define dso_local void @{{.*}}test_lambda{{.*}}() #0 {
 //CHECK: entry:
 //CHECK:  %agg.tmp = alloca %class.anon, align 1
-//CHECK:  %ref.tmp = alloca %class.anon, align 1
 //CHECK:  %call = call noundef i32 @"_ZZ11test_lambdavENH3$_0clIS_EEiT_"()
 //CHECK:  ret void
 //CHECK: }

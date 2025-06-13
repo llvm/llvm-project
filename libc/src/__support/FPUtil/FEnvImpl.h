@@ -17,7 +17,7 @@
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
 
-#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP)
 #if defined(__APPLE__)
 #include "aarch64/fenv_darwin_impl.h"
 #else
@@ -31,7 +31,7 @@
 #include "x86_64/FEnvImpl.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ARM) && defined(__ARM_FP)
 #include "arm/FEnvImpl.h"
-#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV) && defined(__riscv_flen)
 #include "riscv/FEnvImpl.h"
 #else
 

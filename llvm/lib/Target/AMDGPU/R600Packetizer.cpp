@@ -122,12 +122,9 @@ private:
 
   void substitutePV(MachineInstr &MI, const DenseMap<unsigned, unsigned> &PVs)
       const {
-    unsigned Ops[] = {
-      R600::OpName::src0,
-      R600::OpName::src1,
-      R600::OpName::src2
-    };
-    for (unsigned Op : Ops) {
+    const R600::OpName Ops[] = {R600::OpName::src0, R600::OpName::src1,
+                                R600::OpName::src2};
+    for (R600::OpName Op : Ops) {
       int OperandIdx = TII->getOperandIdx(MI.getOpcode(), Op);
       if (OperandIdx < 0)
         continue;

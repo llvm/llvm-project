@@ -9,7 +9,7 @@
 // all the OpenMP constructs and clauses and which line they're located on.
 //
 // The plugin may be invoked as:
-// ./bin/flang-new -fc1 -load lib/flangOmpReport.so -plugin flang-omp-report
+// ./bin/flang -fc1 -load lib/flangOmpReport.so -plugin flang-omp-report
 // -fopenmp
 //
 //===----------------------------------------------------------------------===//

@@ -23,6 +23,40 @@ using namespace mlir;
 namespace mlir {
 namespace memref {
 namespace {
+/// Generate a runtime check for lb <= value < ub.
+Value generateInBoundsCheck(OpBuilder &builder, Location loc, Value value,
+                            Value lb, Value ub) {
+  Value inBounds1 = builder.createOrFold<arith::CmpIOp>(
+      loc, arith::CmpIPredicate::sge, value, lb);
+  Value inBounds2 = builder.createOrFold<arith::CmpIOp>(
+      loc, arith::CmpIPredicate::slt, value, ub);
+  Value inBounds =
+      builder.createOrFold<arith::AndIOp>(loc, inBounds1, inBounds2);
+  return inBounds;
+}
+
+struct AssumeAlignmentOpInterface
+    : public RuntimeVerifiableOpInterface::ExternalModel<
+          AssumeAlignmentOpInterface, AssumeAlignmentOp> {
+  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
+                                   Location loc) const {
+    auto assumeOp = cast<AssumeAlignmentOp>(op);
+    Value ptr = builder.create<ExtractAlignedPointerAsIndexOp>(
+        loc, assumeOp.getMemref());
+    Value rest = builder.create<arith::RemUIOp>(
+        loc, ptr,
+        builder.create<arith::ConstantIndexOp>(loc, assumeOp.getAlignment()));
+    Value isAligned = builder.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::eq, rest,
+        builder.create<arith::ConstantIndexOp>(loc, 0));
+    builder.create<cf::AssertOp>(
+        loc, isAligned,
+        RuntimeVerifiableOpInterface::generateErrorMessage(
+            op, "memref is not aligned to " +
+                    std::to_string(assumeOp.getAlignment())));
+  }
+};
+
 struct CastOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<CastOpInterface,
                                                          CastOp> {
@@ -91,7 +125,7 @@ struct CastOpInterface
     // Get result offset and strides.
     int64_t resultOffset;
     SmallVector<int64_t> resultStrides;
-    if (failed(getStridesAndOffset(resultType, resultStrides, resultOffset)))
+    if (failed(resultType.getStridesAndOffset(resultStrides, resultOffset)))
       return;
 
     // Check offset.
@@ -128,6 +162,65 @@ struct CastOpInterface
   }
 };
 
+struct CopyOpInterface
+    : public RuntimeVerifiableOpInterface::ExternalModel<CopyOpInterface,
+                                                         CopyOp> {
+  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
+                                   Location loc) const {
+    auto copyOp = cast<CopyOp>(op);
+    BaseMemRefType sourceType = copyOp.getSource().getType();
+    BaseMemRefType targetType = copyOp.getTarget().getType();
+    auto rankedSourceType = dyn_cast<MemRefType>(sourceType);
+    auto rankedTargetType = dyn_cast<MemRefType>(targetType);
+
+    // TODO: Verification for unranked memrefs is not supported yet.
+    if (!rankedSourceType || !rankedTargetType)
+      return;
+
+    assert(sourceType.getRank() == targetType.getRank() && "rank mismatch");
+    for (int64_t i = 0, e = sourceType.getRank(); i < e; ++i) {
+      // Fully static dimensions in both source and target operand are already
+      // verified by the op verifier.
+      if (!rankedSourceType.isDynamicDim(i) &&
+          !rankedTargetType.isDynamicDim(i))
+        continue;
+      auto getDimSize = [&](Value memRef, MemRefType type,
+                            int64_t dim) -> Value {
+        return type.isDynamicDim(dim)
+                   ? builder.create<DimOp>(loc, memRef, dim).getResult()
+                   : builder
+                         .create<arith::ConstantIndexOp>(loc,
+                                                         type.getDimSize(dim))
+                         .getResult();
+      };
+      Value sourceDim = getDimSize(copyOp.getSource(), rankedSourceType, i);
+      Value targetDim = getDimSize(copyOp.getTarget(), rankedTargetType, i);
+      Value sameDimSize = builder.create<arith::CmpIOp>(
+          loc, arith::CmpIPredicate::eq, sourceDim, targetDim);
+      builder.create<cf::AssertOp>(
+          loc, sameDimSize,
+          RuntimeVerifiableOpInterface::generateErrorMessage(
+              op, "size of " + std::to_string(i) +
+                      "-th source/target dim does not match"));
+    }
+  }
+};
+
+struct DimOpInterface
+    : public RuntimeVerifiableOpInterface::ExternalModel<DimOpInterface,
+                                                         DimOp> {
+  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
+                                   Location loc) const {
+    auto dimOp = cast<DimOp>(op);
+    Value rank = builder.create<RankOp>(loc, dimOp.getSource());
+    Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+    builder.create<cf::AssertOp>(
+        loc, generateInBoundsCheck(builder, loc, dimOp.getIndex(), zero, rank),
+        RuntimeVerifiableOpInterface::generateErrorMessage(
+            op, "index is out of bounds"));
+  }
+};
+
 /// Verifies that the indices on load/store ops are in-bounds of the memref's
 /// index space: 0 <= index#i < dim#i
 template <typename LoadStoreOp>
@@ -148,19 +241,12 @@ struct LoadStoreOpInterface
     auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
     Value assertCond;
     for (auto i : llvm::seq<int64_t>(0, rank)) {
-      auto index = indices[i];
-
-      auto dimOp = builder.createOrFold<memref::DimOp>(loc, memref, i);
-
-      auto geLow = builder.createOrFold<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::sge, index, zero);
-      auto ltHigh = builder.createOrFold<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::slt, index, dimOp);
-      auto andOp = builder.createOrFold<arith::AndIOp>(loc, geLow, ltHigh);
-
+      Value dimOp = builder.createOrFold<memref::DimOp>(loc, memref, i);
+      Value inBounds =
+          generateInBoundsCheck(builder, loc, indices[i], zero, dimOp);
       assertCond =
-          i > 0 ? builder.createOrFold<arith::AndIOp>(loc, assertCond, andOp)
-                : andOp;
+          i > 0 ? builder.createOrFold<arith::AndIOp>(loc, assertCond, inBounds)
+                : inBounds;
     }
     builder.create<cf::AssertOp>(
         loc, assertCond,
@@ -169,119 +255,52 @@ struct LoadStoreOpInterface
   }
 };
 
-/// Compute the linear index for the provided strided layout and indices.
-Value computeLinearIndex(OpBuilder &builder, Location loc, OpFoldResult offset,
-                         ArrayRef<OpFoldResult> strides,
-                         ArrayRef<OpFoldResult> indices) {
-  auto [expr, values] = computeLinearIndex(offset, strides, indices);
-  auto index =
-      affine::makeComposedFoldedAffineApply(builder, loc, expr, values);
-  return getValueOrCreateConstantIndexOp(builder, loc, index);
-}
-
-/// Returns two Values representing the bounds of the provided strided layout
-/// metadata. The bounds are returned as a half open interval -- [low, high).
-std::pair<Value, Value> computeLinearBounds(OpBuilder &builder, Location loc,
-                                            OpFoldResult offset,
-                                            ArrayRef<OpFoldResult> strides,
-                                            ArrayRef<OpFoldResult> sizes) {
-  auto zeros = SmallVector<int64_t>(sizes.size(), 0);
-  auto indices = getAsIndexOpFoldResult(builder.getContext(), zeros);
-  auto lowerBound = computeLinearIndex(builder, loc, offset, strides, indices);
-  auto upperBound = computeLinearIndex(builder, loc, offset, strides, sizes);
-  return {lowerBound, upperBound};
-}
-
-/// Returns two Values representing the bounds of the memref. The bounds are
-/// returned as a half open interval -- [low, high).
-std::pair<Value, Value> computeLinearBounds(OpBuilder &builder, Location loc,
-                                            TypedValue<BaseMemRefType> memref) {
-  auto runtimeMetadata = builder.create<ExtractStridedMetadataOp>(loc, memref);
-  auto offset = runtimeMetadata.getConstifiedMixedOffset();
-  auto strides = runtimeMetadata.getConstifiedMixedStrides();
-  auto sizes = runtimeMetadata.getConstifiedMixedSizes();
-  return computeLinearBounds(builder, loc, offset, strides, sizes);
-}
-
-/// Verifies that the linear bounds of a reinterpret_cast op are within the
-/// linear bounds of the base memref: low >= baseLow && high <= baseHigh
-struct ReinterpretCastOpInterface
-    : public RuntimeVerifiableOpInterface::ExternalModel<
-          ReinterpretCastOpInterface, ReinterpretCastOp> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
-    auto reinterpretCast = cast<ReinterpretCastOp>(op);
-    auto baseMemref = reinterpretCast.getSource();
-    auto resultMemref =
-        cast<TypedValue<BaseMemRefType>>(reinterpretCast.getResult());
-
-    builder.setInsertionPointAfter(op);
-
-    // Compute the linear bounds of the base memref
-    auto [baseLow, baseHigh] = computeLinearBounds(builder, loc, baseMemref);
-
-    // Compute the linear bounds of the resulting memref
-    auto [low, high] = computeLinearBounds(builder, loc, resultMemref);
-
-    // Check low >= baseLow
-    auto geLow = builder.createOrFold<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::sge, low, baseLow);
-
-    // Check high <= baseHigh
-    auto leHigh = builder.createOrFold<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::sle, high, baseHigh);
-
-    auto assertCond = builder.createOrFold<arith::AndIOp>(loc, geLow, leHigh);
-
-    builder.create<cf::AssertOp>(
-        loc, assertCond,
-        RuntimeVerifiableOpInterface::generateErrorMessage(
-            op,
-            "result of reinterpret_cast is out-of-bounds of the base memref"));
-  }
-};
-
-/// Verifies that the linear bounds of a subview op are within the linear bounds
-/// of the base memref: low >= baseLow && high <= baseHigh
-/// TODO: This is not yet a full runtime verification of subview. For example,
-/// consider:
-///   %m = memref.alloc(%c10, %c10) : memref<10x10xf32>
-///   memref.subview %m[%c0, %c0][%c20, %c2][%c1, %c1]
-///      : memref<?x?xf32> to memref<?x?xf32>
-/// The subview is in-bounds of the entire base memref but the first dimension
-/// is out-of-bounds. Future work would verify the bounds on a per-dimension
-/// basis.
 struct SubViewOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<SubViewOpInterface,
                                                          SubViewOp> {
   void generateRuntimeVerification(Operation *op, OpBuilder &builder,
                                    Location loc) const {
     auto subView = cast<SubViewOp>(op);
-    auto baseMemref = cast<TypedValue<BaseMemRefType>>(subView.getSource());
-    auto resultMemref = cast<TypedValue<BaseMemRefType>>(subView.getResult());
+    MemRefType sourceType = subView.getSource().getType();
 
-    builder.setInsertionPointAfter(op);
+    // For each dimension, assert that:
+    // 0 <= offset < dim_size
+    // 0 <= offset + (size - 1) * stride < dim_size
+    Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+    Value one = builder.create<arith::ConstantIndexOp>(loc, 1);
+    auto metadataOp =
+        builder.create<ExtractStridedMetadataOp>(loc, subView.getSource());
+    for (int64_t i = 0, e = sourceType.getRank(); i < e; ++i) {
+      Value offset = getValueOrCreateConstantIndexOp(
+          builder, loc, subView.getMixedOffsets()[i]);
+      Value size = getValueOrCreateConstantIndexOp(builder, loc,
+                                                   subView.getMixedSizes()[i]);
+      Value stride = getValueOrCreateConstantIndexOp(
+          builder, loc, subView.getMixedStrides()[i]);
 
-    // Compute the linear bounds of the base memref
-    auto [baseLow, baseHigh] = computeLinearBounds(builder, loc, baseMemref);
+      // Verify that offset is in-bounds.
+      Value dimSize = metadataOp.getSizes()[i];
+      Value offsetInBounds =
+          generateInBoundsCheck(builder, loc, offset, zero, dimSize);
+      builder.create<cf::AssertOp>(
+          loc, offsetInBounds,
+          RuntimeVerifiableOpInterface::generateErrorMessage(
+              op, "offset " + std::to_string(i) + " is out-of-bounds"));
 
-    // Compute the linear bounds of the resulting memref
-    auto [low, high] = computeLinearBounds(builder, loc, resultMemref);
-
-    // Check low >= baseLow
-    auto geLow = builder.createOrFold<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::sge, low, baseLow);
-
-    // Check high <= baseHigh
-    auto leHigh = builder.createOrFold<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::sle, high, baseHigh);
-
-    auto assertCond = builder.createOrFold<arith::AndIOp>(loc, geLow, leHigh);
-
-    builder.create<cf::AssertOp>(
-        loc, assertCond,
-        RuntimeVerifiableOpInterface::generateErrorMessage(
-            op, "subview is out-of-bounds of the base memref"));
+      // Verify that slice does not run out-of-bounds.
+      Value sizeMinusOne = builder.create<arith::SubIOp>(loc, size, one);
+      Value sizeMinusOneTimesStride =
+          builder.create<arith::MulIOp>(loc, sizeMinusOne, stride);
+      Value lastPos =
+          builder.create<arith::AddIOp>(loc, offset, sizeMinusOneTimesStride);
+      Value lastPosInBounds =
+          generateInBoundsCheck(builder, loc, lastPos, zero, dimSize);
+      builder.create<cf::AssertOp>(
+          loc, lastPosInBounds,
+          RuntimeVerifiableOpInterface::generateErrorMessage(
+              op, "subview runs out-of-bounds along dimension " +
+                      std::to_string(i)));
+    }
   }
 };
 
@@ -334,12 +353,18 @@ struct ExpandShapeOpInterface
 void mlir::memref::registerRuntimeVerifiableOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+    AssumeAlignmentOp::attachInterface<AssumeAlignmentOpInterface>(*ctx);
+    AtomicRMWOp::attachInterface<LoadStoreOpInterface<AtomicRMWOp>>(*ctx);
     CastOp::attachInterface<CastOpInterface>(*ctx);
+    CopyOp::attachInterface<CopyOpInterface>(*ctx);
+    DimOp::attachInterface<DimOpInterface>(*ctx);
     ExpandShapeOp::attachInterface<ExpandShapeOpInterface>(*ctx);
+    GenericAtomicRMWOp::attachInterface<
+        LoadStoreOpInterface<GenericAtomicRMWOp>>(*ctx);
     LoadOp::attachInterface<LoadStoreOpInterface<LoadOp>>(*ctx);
-    ReinterpretCastOp::attachInterface<ReinterpretCastOpInterface>(*ctx);
     StoreOp::attachInterface<LoadStoreOpInterface<StoreOp>>(*ctx);
     SubViewOp::attachInterface<SubViewOpInterface>(*ctx);
+    // Note: There is nothing to verify for ReinterpretCastOp.
 
     // Load additional dialects of which ops may get created.
     ctx->loadDialect<affine::AffineDialect, arith::ArithDialect,

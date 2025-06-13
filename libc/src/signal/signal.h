@@ -10,13 +10,10 @@
 #define LLVM_LIBC_SRC_SIGNAL_SIGNAL_H
 
 #include "src/__support/macros/config.h"
-#include <signal.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-using sighandler_t = __sighandler_t;
-
-sighandler_t signal(int signum, sighandler_t handler);
+void (*signal(int signum, void (*handler)(int)))(int);
 
 } // namespace LIBC_NAMESPACE_DECL
 

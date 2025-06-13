@@ -36,24 +36,20 @@ entry:
   ; CHECK-NEXT: %[[LAB8:[0-9]+]] = and i32 %[[TEMP]], 7
   ; CHECK-NEXT: %[[LAB9:[0-9]+]] = trunc i32 %[[LAB8]] to i8
   ; CHECK-NEXT: %[[LAB10:[0-9]+]] = shl i8 1, %[[LAB9]]
-  ; CHECK-NEXT: call void @[[RMW_OR:.+]](ptr %[[LAB7]], i8 %[[LAB10]])
+  ; CHECK-NEXT: %[[BITS:.+]] = load i8, ptr %[[LAB7]], align 1
+  ; ATOMIC-NEXT: %[[MASKED:.+]] = and i8 %[[BITS]], %[[LAB10]]
+  ; ATOMIC-NEXT: %[[SHOULDWRITE:.+]] = icmp ne i8 %[[MASKED]], %[[LAB10]]
+  ; ATOMIC-NEXT: br i1 %[[SHOULDWRITE]], label %[[WRITE:.+]], label %[[SKIP:.+]], !prof ![[MDPROF:[0-9]+]]
+  ; ATOMIC: [[WRITE]]:
+  ; BASIC-NEXT: %[[LAB11:[0-9]+]] = or i8 %[[BITS]], %[[LAB10]]
+  ; RELOC-NEXT: %[[LAB11:[0-9]+]] = or i8 %[[BITS]], %[[LAB10]]
+  ; BASIC-NEXT: store i8 %[[LAB11]], ptr %[[LAB7]], align 1
+  ; RELOC-NEXT: store i8 %[[LAB11]], ptr %[[LAB7]], align 1
+  ; ATOMIC-NEXT: %{{.+}} = atomicrmw or ptr %[[LAB7]], i8 %[[LAB10]] monotonic, align 1
+  ; ATOMIC: [[SKIP]]:
   ret void
+  ; CHECK-NEXT: ret void
 }
-
-; CHECK: define private void @[[RMW_OR]](ptr %[[ARGPTR:.+]], i8 %[[ARGVAL:.+]])
-; CHECK:      %[[BITS:.+]] = load i8, ptr %[[ARGPTR]], align 1
-; BASIC-NEXT: %[[LAB11:[0-9]+]] = or i8 %[[BITS]], %[[ARGVAL]]
-; RELOC-NEXT: %[[LAB11:[0-9]+]] = or i8 %[[BITS]], %[[ARGVAL]]
-; BASIC-NEXT: store i8 %[[LAB11]], ptr %[[ARGPTR]], align 1
-; RELOC-NEXT: store i8 %[[LAB11]], ptr %[[ARGPTR]], align 1
-; ATOMIC-NEXT: %[[MASKED:.+]] = and i8 %[[BITS]], %[[ARGVAL]]
-; ATOMIC-NEXT: %[[SHOULDWRITE:.+]] = icmp ne i8 %[[MASKED]], %[[ARGVAL]]
-; ATOMIC-NEXT: br i1 %[[SHOULDWRITE]], label %[[WRITE:.+]], label %[[SKIP:.+]], !prof ![[MDPROF:[0-9]+]]
-; ATOMIC: [[WRITE]]:
-; ATOMIC-NEXT: %{{.+}} = atomicrmw or ptr %[[ARGPTR]], i8 %[[ARGVAL]] monotonic, align 1
-; ATOMIC-NEXT: ret void
-; ATOMIC: [[SKIP]]:
-; CHECK-NEXT: ret void
 
 ; ATOMIC: ![[MDPROF]] = !{!"branch_weights", i32 1, i32 1048575}
 

@@ -268,10 +268,6 @@ def parseOptionsAndInitTestdirs():
 
     if args.make:
         configuration.make_path = args.make
-    elif platform_system == "FreeBSD" or platform_system == "NetBSD":
-        configuration.make_path = "gmake"
-    else:
-        configuration.make_path = "make"
 
     if args.dsymutil:
         configuration.dsymutil = args.dsymutil
@@ -280,6 +276,7 @@ def parseOptionsAndInitTestdirs():
             "xcrun -find -toolchain default dsymutil"
         )
     if args.llvm_tools_dir:
+        configuration.llvm_tools_dir = args.llvm_tools_dir
         configuration.filecheck = shutil.which("FileCheck", path=args.llvm_tools_dir)
         configuration.yaml2obj = shutil.which("yaml2obj", path=args.llvm_tools_dir)
 
@@ -300,6 +297,7 @@ def parseOptionsAndInitTestdirs():
     configuration.libcxx_include_dir = args.libcxx_include_dir
     configuration.libcxx_include_target_dir = args.libcxx_include_target_dir
     configuration.libcxx_library_dir = args.libcxx_library_dir
+    configuration.cmake_build_type = args.cmake_build_type.lower()
 
     if args.channels:
         lldbtest_config.channels = args.channels
@@ -422,6 +420,8 @@ def parseOptionsAndInitTestdirs():
         configuration.lldb_platform_url = args.lldb_platform_url
     if args.lldb_platform_working_dir:
         configuration.lldb_platform_working_dir = args.lldb_platform_working_dir
+    if args.lldb_platform_available_ports:
+        configuration.lldb_platform_available_ports = args.lldb_platform_available_ports
     if platform_system == "Darwin" and args.apple_sdk:
         configuration.apple_sdk = args.apple_sdk
     if args.test_build_dir:

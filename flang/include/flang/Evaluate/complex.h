@@ -61,10 +61,11 @@ public:
 
   template <typename INT>
   static ValueWithRealFlags<Complex> FromInteger(const INT &n,
+      bool isUnsigned = false,
       Rounding rounding = TargetCharacteristics::defaultRounding) {
     ValueWithRealFlags<Complex> result;
-    result.value.re_ =
-        Part::FromInteger(n, rounding).AccumulateFlags(result.flags);
+    result.value.re_ = Part::FromInteger(n, isUnsigned, rounding)
+                           .AccumulateFlags(result.flags);
     return result;
   }
 

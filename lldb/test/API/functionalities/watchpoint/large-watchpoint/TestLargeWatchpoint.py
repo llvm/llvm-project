@@ -27,7 +27,6 @@ class UnalignedWatchpointTestCase(TestBase):
 
     # debugserver only gained the ability to watch larger regions
     # with this patch.
-    @skipIfOutOfTreeDebugserver
     def test_large_watchpoint(self):
         """Test watchpoint that covers a large region of memory."""
         self.build()

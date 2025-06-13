@@ -1,28 +1,28 @@
 // RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
 
-// CHECK: cmpnbxadd dword ptr [rip], ecx, eax
+// CHECK: cmpaexadd dword ptr [rip], ecx, eax
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe3,0x0d,0x00,0x00,0x00,0x00]
-          cmpaexadd dword ptr [rip], ecx, eax
+          cmpnbxadd dword ptr [rip], ecx, eax
 
-// CHECK: cmpzxadd dword ptr [rip], ecx, eax
+// CHECK: cmpexadd dword ptr [rip], ecx, eax
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe4,0x0d,0x00,0x00,0x00,0x00]
-          cmpexadd dword ptr [rip], ecx, eax
+          cmpzxadd dword ptr [rip], ecx, eax
 
-// CHECK: cmpnzxadd dword ptr [rip], ecx, eax
+// CHECK: cmpnexadd dword ptr [rip], ecx, eax
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe5,0x0d,0x00,0x00,0x00,0x00]
-          cmpnexadd dword ptr [rip], ecx, eax
+          cmpnzxadd dword ptr [rip], ecx, eax
 
-// CHECK: cmpnbexadd dword ptr [rip], ecx, eax
+// CHECK: cmpaxadd dword ptr [rip], ecx, eax
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe7,0x0d,0x00,0x00,0x00,0x00]
-          cmpaxadd dword ptr [rip], ecx, eax
+          cmpnbexadd dword ptr [rip], ecx, eax
 
-// CHECK: cmpnlxadd dword ptr [rip], ecx, eax
+// CHECK: cmpgexadd dword ptr [rip], ecx, eax
 // CHECK: encoding: [0xc4,0xe2,0x79,0xed,0x0d,0x00,0x00,0x00,0x00]
-          cmpgexadd dword ptr [rip], ecx, eax
+          cmpnlxadd dword ptr [rip], ecx, eax
 
-// CHECK: cmpnlexadd dword ptr [rip], ecx, eax
+// CHECK: cmpgxadd dword ptr [rip], ecx, eax
 // CHECK: encoding: [0xc4,0xe2,0x79,0xef,0x0d,0x00,0x00,0x00,0x00]
-          cmpgxadd dword ptr [rip], ecx, eax
+          cmpnlexadd dword ptr [rip], ecx, eax
 
 // CHECK: cmpbxadd  dword ptr [rip], ecx, eax
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe2,0x0d,0x00,0x00,0x00,0x00]
@@ -32,7 +32,7 @@
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe2,0x0d,0x00,0x00,0x00,0x00]
           cmpnaexadd  dword ptr [rip], ecx, eax
 
-// CHECK: cmpnbxadd  dword ptr [rip], ecx, eax
+// CHECK: cmpaexadd  dword ptr [rip], ecx, eax
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe3,0x0d,0x00,0x00,0x00,0x00]
           cmpncxadd  dword ptr [rip], ecx, eax
 

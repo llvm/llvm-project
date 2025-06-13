@@ -382,7 +382,7 @@ bool CodeGenInstructionPattern::hasVariadicDefs() const {
   if (I.variadicOpsAreDefs)
     return true;
 
-  DagInit *OutOps = I.TheDef->getValueAsDag("OutOperandList");
+  const DagInit *OutOps = I.TheDef->getValueAsDag("OutOperandList");
   if (OutOps->arg_empty())
     return false;
 
@@ -840,8 +840,9 @@ bool PatFragPattern::mapInputCodeExpansions(const CodeExpansions &ParentCEs,
       if (It == ParentCEs.end()) {
         if (!PF.handleUnboundInParam(ParamName, ArgName, DiagLoc))
           return false;
-      } else
+      } else {
         PatFragCEs.declare(ParamName, It->second);
+      }
       continue;
     }
 

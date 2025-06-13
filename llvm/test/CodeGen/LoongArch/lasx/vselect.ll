@@ -72,8 +72,7 @@ define void @select_v4i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI4_0)
-; CHECK-NEXT:    addi.d $a1, $a1, %pc_lo12(.LCPI4_0)
-; CHECK-NEXT:    xvld $xr2, $a1, 0
+; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI4_0)
 ; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret

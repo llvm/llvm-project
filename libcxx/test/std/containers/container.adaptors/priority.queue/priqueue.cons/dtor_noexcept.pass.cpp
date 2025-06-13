@@ -14,16 +14,16 @@
 
 #include <queue>
 #include <cassert>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "MoveOnly.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::priority_queue<MoveOnly> C;
-        static_assert(std::is_nothrow_destructible<C>::value, "");
-    }
+int main(int, char**) {
+  {
+    typedef std::priority_queue<MoveOnly> C;
+    static_assert(std::is_nothrow_destructible<C>::value, "");
+  }
 
   return 0;
 }

@@ -26,12 +26,15 @@ class ThinLTOBitcodeWriterPass
     : public PassInfoMixin<ThinLTOBitcodeWriterPass> {
   raw_ostream &OS;
   raw_ostream *ThinLinkOS;
+  const bool ShouldPreserveUseListOrder;
 
 public:
   // Writes bitcode to OS. Also write thin link file to ThinLinkOS, if
   // it's not nullptr.
-  ThinLTOBitcodeWriterPass(raw_ostream &OS, raw_ostream *ThinLinkOS)
-      : OS(OS), ThinLinkOS(ThinLinkOS) {}
+  ThinLTOBitcodeWriterPass(raw_ostream &OS, raw_ostream *ThinLinkOS,
+                           bool ShouldPreserveUseListOrder = false)
+      : OS(OS), ThinLinkOS(ThinLinkOS),
+        ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 

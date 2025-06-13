@@ -20,8 +20,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMap.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -379,9 +379,9 @@ void DynamicTypePropagation::checkPostCall(const CallEvent &Call,
         // aggregates, and in such case no top-frame constructor will be called.
         // Figure out if we need to do anything in this case.
         // FIXME: Instead of relying on the ParentMap, we should have the
-        // trigger-statement (InitListExpr in this case) available in this
-        // callback, ideally as part of CallEvent.
-        if (isa_and_nonnull<InitListExpr>(
+        // trigger-statement (InitListExpr or CXXParenListInitExpr in this case)
+        // available in this callback, ideally as part of CallEvent.
+        if (isa_and_nonnull<InitListExpr, CXXParenListInitExpr>(
                 LCtx->getParentMap().getParent(Ctor->getOriginExpr())))
           return;
 
@@ -711,10 +711,10 @@ static bool isObjCTypeParamDependent(QualType Type) {
   // an Objective-C type can only be dependent on a type parameter when the type
   // parameter structurally present in the type itself.
   class IsObjCTypeParamDependentTypeVisitor
-      : public RecursiveASTVisitor<IsObjCTypeParamDependentTypeVisitor> {
+      : public DynamicRecursiveASTVisitor {
   public:
     IsObjCTypeParamDependentTypeVisitor() = default;
-    bool VisitObjCTypeParamType(const ObjCTypeParamType *Type) {
+    bool VisitObjCTypeParamType(ObjCTypeParamType *Type) override {
       if (isa<ObjCTypeParamDecl>(Type->getDecl())) {
         Result = true;
         return false;

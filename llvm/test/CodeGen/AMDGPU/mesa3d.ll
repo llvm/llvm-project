@@ -1,14 +1,15 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX11PLUS %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX11PLUS %s
 
 ; SPI_TMPRING_SIZE.WAVESIZE = 5
 ; GFX10: .long 165608
 ; GFX10-NEXT: .long 20480
 
 ; SPI_TMPRING_SIZE.WAVESIZE = 17
-; GFX11: .long 165608
-; GFX11-NEXT: .long 69632
+; GFX11PLUS: .long 165608
+; GFX11PLUS-NEXT: .long 69632
 
 ; GCN-LABEL: {{^}}scratch_ps:
 ; GCN: s_load_dwordx2 s[4:5], s[0:1], 0x0{{$}}

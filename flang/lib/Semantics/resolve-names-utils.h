@@ -51,11 +51,6 @@ parser::MessageFixedText WithSeverity(
 bool IsIntrinsicOperator(const SemanticsContext &, const SourceName &);
 bool IsLogicalConstant(const SemanticsContext &, const SourceName &);
 
-// Some intrinsic operators have more than one name (e.g. `operator(.eq.)` and
-// `operator(==)`). GetAllNames() returns them all, including symbolName.
-std::forward_list<std::string> GetAllNames(
-    const SemanticsContext &, const SourceName &);
-
 template <typename T>
 MaybeIntExpr EvaluateIntExpr(SemanticsContext &context, const T &expr) {
   if (MaybeExpr maybeExpr{

@@ -451,6 +451,18 @@ static bool AsanInitInternal() {
 
   DisableCoreDumperIfNecessary();
 
+#if SANITIZER_POSIX
+  if (StackSizeIsUnlimited()) {
+    VPrintf(1,
+            "WARNING: Unlimited stack size detected. This may affect "
+            "compatibility with the shadow mappings.\n");
+    // MSan and TSan re-exec with a fixed size stack. We don't do that because
+    // it may break the program. InitializeShadowMemory() will, if needed,
+    // re-exec without ASLR, which solves most shadow mapping compatibility
+    // issues.
+  }
+#endif  // SANITIZER_POSIX
+
   InitializeShadowMemory();
 
   AsanTSDInit(PlatformTSDDtor);
@@ -477,9 +489,6 @@ static bool AsanInitInternal() {
   // necessary, so that it can be re-activated when requested.
   if (flags()->start_deactivated)
     AsanDeactivate();
-
-  // interceptors
-  InitTlsSize();
 
   // Create main thread.
   AsanThread *main_thread = CreateMainThread();
@@ -580,10 +589,8 @@ static void UnpoisonDefaultStack() {
   } else {
     CHECK(!SANITIZER_FUCHSIA);
     // If we haven't seen this thread, try asking the OS for stack bounds.
-    uptr tls_addr, tls_size, stack_size;
-    GetThreadStackAndTls(/*main=*/false, &bottom, &stack_size, &tls_addr,
-                         &tls_size);
-    top = bottom + stack_size;
+    uptr tls_begin, tls_end;
+    GetThreadStackAndTls(/*main=*/false, &bottom, &top, &tls_begin, &tls_end);
   }
 
   UnpoisonStack(bottom, top, "default");

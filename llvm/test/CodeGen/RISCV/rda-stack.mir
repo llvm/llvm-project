@@ -1,0 +1,191 @@
+# RUN: llc %s -mtriple=riscv64 -run-pass=reaching-defs-analysis -print-all-reaching-defs -o - 2>&1 | FileCheck %s
+
+---
+name:            test0
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  ; CHECK-LABEL: RDA results for test0
+  ; CHECK-NEXT: %stack.0:{ }
+  ; CHECK-NEXT:0: $x10 = LD %stack.0, 0 :: (load (s64))
+  ; CHECK-EMPTY:
+  ; CHECK-NEXT: implicit $x10:{ 0 }
+  ; CHECK-NEXT:1: PseudoRET implicit $x10
+
+  bb.0.entry:
+    $x10 = LD %stack.0, 0 :: (load (s64))
+    PseudoRET implicit $x10
+
+...
+---
+name:            test1
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  ; CHECK-LABEL: RDA results for test1
+  ; CHECK-NEXT: %stack.0:{ }
+  ; CHECK-NEXT: 0: $x10 = LD %stack.0, 0 :: (load (s64))
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: %stack.1:{ }
+  ; CHECK-NEXT: 1: $x11 = LD %stack.1, 0 :: (load (s64))
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: $x10:{ 0 }
+  ; CHECK-NEXT: $x11:{ 1 }
+  ; CHECK-NEXT: 2: $x10 = ADD $x10, $x11
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: implicit $x10:{ 2 }
+  ; CHECK-NEXT: 3: PseudoRET implicit $x10
+
+  bb.0.entry:
+    $x10 = LD %stack.0, 0 :: (load (s64))
+    $x11 = LD %stack.1, 0 :: (load (s64))
+    $x10 = ADD $x10, $x11
+    PseudoRET implicit $x10
+
+...
+---
+name:            test2
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  ; CHECK-LABEL: RDA results for test2
+  ; CHECK-NEXT: %stack.0:{ }
+  ; CHECK-NEXT: 0: $x10 = LD %stack.0, 0 :: (load (s64))
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: %stack.1:{ }
+  ; CHECK-NEXT: 1: $x11 = LD %stack.1, 0 :: (load (s64))
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: $x10:{ 0 }
+  ; CHECK-NEXT: $x11:{ 1 }
+  ; CHECK-NEXT: 2: $x10 = ADD $x10, $x11
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: $x10:{ 2 }
+  ; CHECK-NEXT: %stack.0:{ }
+  ; CHECK-NEXT: 3: SD $x10, %stack.0, 0 :: (store (s64))
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: %stack.0:{ 3 }
+  ; CHECK-NEXT: 4: $x10 = LD %stack.0, 0 :: (load (s64))
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: implicit $x10:{ 4 }
+  ; CHECK-NEXT: 5: PseudoRET implicit $x10
+
+  bb.0.entry:
+    $x10 = LD %stack.0, 0 :: (load (s64))
+    $x11 = LD %stack.1, 0 :: (load (s64))
+    $x10 = ADD $x10, $x11
+    SD $x10, %stack.0, 0 :: (store (s64))
+    $x10 = LD %stack.0, 0 :: (load (s64))
+    PseudoRET implicit $x10
+
+...
+---
+name:            test3
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  ; CHECK-LABEL: RDA results for test3
+  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: $x0:{ }
+  ; CHECK-NEXT: 0: BEQ $x10, $x0, %bb.2
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: 1: $x10 = ADDI $x10, 1
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: $x10:{ 1 }
+  ; CHECK-NEXT: %stack.0:{ }
+  ; CHECK-NEXT: 2: SD $x10, %stack.0, 0 :: (store (s64))
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: $x0:{ }
+  ; CHECK-NEXT: $x0:{ }
+  ; CHECK-NEXT: 3: BEQ $x0, $x0, %bb.3
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: $x10:{ 1 }
+  ; CHECK-NEXT: 4: $x10 = ADDI $x10, 2
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: $x10:{ 4 }
+  ; CHECK-NEXT: %stack.0:{ 2 }
+  ; CHECK-NEXT: 5: SD $x10, %stack.0, 0 :: (store (s64))
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: %stack.0:{ 2 5 }
+  ; CHECK-NEXT: 6: $x10 = LD %stack.0, 0 :: (load (s64))
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: implicit $x10:{ 6 }
+  ; CHECK-NEXT: 7: PseudoRET implicit $x10
+
+  bb.0.entry:
+    liveins: $x10
+    BEQ $x10, $x0, %bb.2
+
+  bb.1:
+    liveins: $x10
+    $x10 = ADDI $x10, 1
+    SD $x10, %stack.0, 0 :: (store (s64))
+    BEQ $x0, $x0, %bb.3
+
+  bb.2:
+    liveins: $x10
+    $x10 = ADDI $x10, 2
+    SD $x10, %stack.0, 0 :: (store (s64))
+
+  bb.3:
+    $x10 = LD %stack.0, 0 :: (load (s64))
+    PseudoRET implicit $x10
+...
+---
+name:            test4
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, type: default, offset: 0, size: 4, alignment: 16,
+      isImmutable: true, isAliased: false }
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  ; CHECK: RDA results for test4
+  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: %stack.0:{ }
+  ; CHECK-NEXT: 0: SD $x10, %stack.0, 0 :: (store (s64))
+  ; CHECK-EMPTY:
+  ; CHECK-NEXT: $x11:{ }
+  ; CHECK-NEXT: %stack.0:{ 0 }
+  ; CHECK-NEXT: 1: SD $x11, %stack.0, 0 :: (store (s64))
+  ; CHECK-EMPTY:
+  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: %stack.1:{ }
+  ; CHECK-NEXT: 2: SD $x10, %stack.1, 0 :: (store (s64))
+  ; CHECK-EMPTY:
+  ; CHECK-NEXT: $x11:{ }
+  ; CHECK-NEXT: %stack.1:{ 2 }
+  ; CHECK-NEXT: 3: SD $x11, %stack.1, 0 :: (store (s64))
+  ; CHECK-EMPTY:
+  ; CHECK-NEXT: 4: PseudoRET
+  bb.0.entry:
+    liveins: $x10, $x11
+    SD $x10, %stack.0, 0 :: (store (s64))
+    SD $x11, %stack.0, 0 :: (store (s64))
+    SD $x10, %stack.1, 0 :: (store (s64))
+    SD $x11, %stack.1, 0 :: (store (s64))
+    PseudoRET
+...

@@ -51,7 +51,7 @@ define i64 @sel_sext(i32 %a, i1 %cmp) {
 define <4 x i64> @sel_sext_vec(<4 x i32> %a, <4 x i1> %cmp) {
 ; CHECK-LABEL: @sel_sext_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i32> [[A:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[EXT:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i64> [[TMP1]], <4 x i64> <i64 42, i64 42, i64 42, i64 42>
+; CHECK-NEXT:    [[EXT:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i64> [[TMP1]], <4 x i64> splat (i64 42)
 ; CHECK-NEXT:    ret <4 x i64> [[EXT]]
 ;
   %sel = select <4 x i1> %cmp, <4 x i32> %a, <4 x i32> <i32 42, i32 42, i32 42, i32 42>
@@ -73,7 +73,7 @@ define i64 @sel_zext(i32 %a, i1 %cmp) {
 define <4 x i64> @sel_zext_vec(<4 x i32> %a, <4 x i1> %cmp) {
 ; CHECK-LABEL: @sel_zext_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i32> [[A:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[EXT:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i64> [[TMP1]], <4 x i64> <i64 42, i64 42, i64 42, i64 42>
+; CHECK-NEXT:    [[EXT:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i64> [[TMP1]], <4 x i64> splat (i64 42)
 ; CHECK-NEXT:    ret <4 x i64> [[EXT]]
 ;
   %sel = select <4 x i1> %cmp, <4 x i32> %a, <4 x i32> <i32 42, i32 42, i32 42, i32 42>
@@ -152,8 +152,8 @@ define i32 @trunc_sel_equal_sext(i32 %a, i1 %cmp) {
 
 define <2 x i32> @trunc_sel_equal_sext_vec(<2 x i32> %a, <2 x i1> %cmp) {
 ; CHECK-LABEL: @trunc_sel_equal_sext_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[A:%.*]], <i32 16, i32 16>
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr exact <2 x i32> [[TMP1]], <i32 16, i32 16>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[A:%.*]], splat (i32 16)
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr exact <2 x i32> [[TMP1]], splat (i32 16)
 ; CHECK-NEXT:    [[EXT:%.*]] = select <2 x i1> [[CMP:%.*]], <2 x i32> [[TMP2]], <2 x i32> <i32 42, i32 43>
 ; CHECK-NEXT:    ret <2 x i32> [[EXT]]
 ;
@@ -178,7 +178,7 @@ define i64 @trunc_sel_larger_zext(i32 %a, i1 %cmp) {
 
 define <2 x i64> @trunc_sel_larger_zext_vec(<2 x i32> %a, <2 x i1> %cmp) {
 ; CHECK-LABEL: @trunc_sel_larger_zext_vec(
-; CHECK-NEXT:    [[TRUNC_MASK:%.*]] = and <2 x i32> [[A:%.*]], <i32 65535, i32 65535>
+; CHECK-NEXT:    [[TRUNC_MASK:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 65535)
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg <2 x i32> [[TRUNC_MASK]] to <2 x i64>
 ; CHECK-NEXT:    [[EXT:%.*]] = select <2 x i1> [[CMP:%.*]], <2 x i64> [[TMP1]], <2 x i64> <i64 42, i64 43>
 ; CHECK-NEXT:    ret <2 x i64> [[EXT]]
@@ -205,7 +205,7 @@ define i32 @trunc_sel_smaller_zext(i64 %a, i1 %cmp) {
 define <2 x i32> @trunc_sel_smaller_zext_vec(<2 x i64> %a, <2 x i1> %cmp) {
 ; CHECK-LABEL: @trunc_sel_smaller_zext_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 65535, i32 65535>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], splat (i32 65535)
 ; CHECK-NEXT:    [[EXT:%.*]] = select <2 x i1> [[CMP:%.*]], <2 x i32> [[TMP2]], <2 x i32> <i32 42, i32 43>
 ; CHECK-NEXT:    ret <2 x i32> [[EXT]]
 ;
@@ -229,7 +229,7 @@ define i32 @trunc_sel_equal_zext(i32 %a, i1 %cmp) {
 
 define <2 x i32> @trunc_sel_equal_zext_vec(<2 x i32> %a, <2 x i1> %cmp) {
 ; CHECK-LABEL: @trunc_sel_equal_zext_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 65535, i32 65535>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 65535)
 ; CHECK-NEXT:    [[EXT:%.*]] = select <2 x i1> [[CMP:%.*]], <2 x i32> [[TMP1]], <2 x i32> <i32 42, i32 43>
 ; CHECK-NEXT:    ret <2 x i32> [[EXT]]
 ;
@@ -578,7 +578,7 @@ define i32 @sext_true_val_must_be_all_ones(i1 %x) {
 
 define <2 x i32> @sext_true_val_must_be_all_ones_vec(<2 x i1> %x) {
 ; CHECK-LABEL: @sext_true_val_must_be_all_ones_vec(
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[X:%.*]], <2 x i32> <i32 -1, i32 -1>, <2 x i32> <i32 42, i32 12>, !prof [[PROF0]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[X:%.*]], <2 x i32> splat (i32 -1), <2 x i32> <i32 42, i32 12>, !prof [[PROF0]]
 ; CHECK-NEXT:    ret <2 x i32> [[SEL]]
 ;
   %ext = sext <2 x i1> %x to <2 x i32>
@@ -598,7 +598,7 @@ define i32 @zext_true_val_must_be_one(i1 %x) {
 
 define <2 x i32> @zext_true_val_must_be_one_vec(<2 x i1> %x) {
 ; CHECK-LABEL: @zext_true_val_must_be_one_vec(
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[X:%.*]], <2 x i32> <i32 1, i32 1>, <2 x i32> <i32 42, i32 12>, !prof [[PROF0]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[X:%.*]], <2 x i32> splat (i32 1), <2 x i32> <i32 42, i32 12>, !prof [[PROF0]]
 ; CHECK-NEXT:    ret <2 x i32> [[SEL]]
 ;
   %ext = zext <2 x i1> %x to <2 x i32>

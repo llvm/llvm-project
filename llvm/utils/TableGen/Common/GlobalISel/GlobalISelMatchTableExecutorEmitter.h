@@ -42,7 +42,7 @@ class GlobalISelMatchTableExecutorEmitter {
   /// Emits an enum + an array that stores references to
   /// \p ComplexOperandMatchers.
   void emitComplexPredicates(raw_ostream &OS,
-                             ArrayRef<Record *> ComplexOperandMatchers);
+                             ArrayRef<const Record *> ComplexOperandMatchers);
 
   /// Emits an enum + an array that stores references to
   /// \p CustomOperandRenderers.
@@ -206,7 +206,7 @@ public:
   void emitExecutorImpl(raw_ostream &OS, const gi::MatchTable &Table,
                         ArrayRef<gi::LLTCodeGen> TypeObjects,
                         ArrayRef<gi::RuleMatcher> Rules,
-                        ArrayRef<Record *> ComplexOperandMatchers,
+                        ArrayRef<const Record *> ComplexOperandMatchers,
                         ArrayRef<StringRef> CustomOperandRenderers,
                         StringRef IfDefName);
   void emitPredicateBitset(raw_ostream &OS, StringRef IfDefName);

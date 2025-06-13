@@ -1,7 +1,8 @@
-import lldb
 import json
 import os
 import re
+
+import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -81,7 +82,7 @@ class TestCase(TestBase):
     def test_expressions_frame_var_counts(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.c")
+            self, "// break here", lldb.SBFileSpec("main.cpp")
         )
 
         self.expect("expr patatino", substrs=["27"])
@@ -158,6 +159,8 @@ class TestCase(TestBase):
         """
         self.build()
         target = self.createTestTarget()
+
+        # Verify top-level keys.
         debug_stats = self.get_stats()
         debug_stat_keys = [
             "memory",
@@ -167,6 +170,8 @@ class TestCase(TestBase):
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
             "totalSymbolTablesSavedToCache",
+            "totalSymbolTableSymbolCount",
+            "totalSymbolTablesLoaded",
             "totalDebugInfoByteSize",
             "totalDebugInfoIndexTime",
             "totalDebugInfoIndexLoadedFromCache",
@@ -174,16 +179,58 @@ class TestCase(TestBase):
             "totalDebugInfoParseTime",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
-        stats = debug_stats["targets"][0]
-        keys_exist = [
+        if self.getPlatform() != "windows":
+            self.assertGreater(debug_stats["totalSymbolTableSymbolCount"], 0)
+            self.assertGreater(debug_stats["totalSymbolTablesLoaded"], 0)
+
+        # Verify target stats keys.
+        target_stats = debug_stats["targets"][0]
+        target_stat_keys_exist = [
             "expressionEvaluation",
             "frameVariable",
             "moduleIdentifiers",
             "targetCreateTime",
         ]
-        keys_missing = ["firstStopTime", "launchOrAttachTime"]
-        self.verify_keys(stats, '"stats"', keys_exist, keys_missing)
-        self.assertGreater(stats["targetCreateTime"], 0.0)
+        target_stat_keys_missing = ["firstStopTime", "launchOrAttachTime"]
+        self.verify_keys(
+            target_stats,
+            '"target_stats"',
+            target_stat_keys_exist,
+            target_stat_keys_missing,
+        )
+        self.assertGreater(target_stats["targetCreateTime"], 0.0)
+
+        # Verify module stats keys.
+        for module_stats in debug_stats["modules"]:
+            module_stat_keys_exist = [
+                "symbolTableSymbolCount",
+            ]
+            self.verify_keys(
+                module_stats, '"module_stats"', module_stat_keys_exist, None
+            )
+            if self.getPlatform() != "windows":
+                self.assertGreater(module_stats["symbolTableSymbolCount"], 0)
+
+    def test_default_no_run_no_preload_symbols(self):
+        """Test "statistics dump" without running the target and without
+        preloading symbols.
+
+        Checks that symbol count are zero.
+        """
+        # Make sure symbols will not be preloaded.
+        self.runCmd("settings set target.preload-symbols false")
+
+        # Build and load the target
+        self.build()
+        self.createTestTarget()
+
+        # Get statistics
+        debug_stats = self.get_stats()
+
+        # No symbols should be loaded in the main module.
+        main_module_stats = debug_stats["modules"][0]
+        if self.getPlatform() != "windows":
+            self.assertEqual(main_module_stats["symbolTableSymbolCount"], 0)
 
     def test_default_with_run(self):
         """Test "statistics dump" when running the target to a breakpoint.
@@ -224,7 +271,7 @@ class TestCase(TestBase):
         self.build()
         target = self.createTestTarget()
         lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.c")
+            self, "// break here", lldb.SBFileSpec("main.cpp")
         )
         debug_stats = self.get_stats()
         debug_stat_keys = [
@@ -250,6 +297,7 @@ class TestCase(TestBase):
             "launchOrAttachTime",
             "moduleIdentifiers",
             "targetCreateTime",
+            "summaryProviderStatistics",
         ]
         self.verify_keys(stats, '"stats"', keys_exist, None)
         self.assertGreater(stats["firstStopTime"], 0.0)
@@ -447,6 +495,7 @@ class TestCase(TestBase):
             "targetCreateTime",
             "moduleIdentifiers",
             "totalBreakpointResolveTime",
+            "summaryProviderStatistics",
         ]
         self.verify_keys(target_stats, '"stats"', keys_exist, None)
         self.assertGreater(target_stats["totalBreakpointResolveTime"], 0.0)
@@ -538,7 +587,7 @@ class TestCase(TestBase):
         # in the stats.
         self.runCmd("b main.cpp:7")
 
-        debug_stats = self.get_stats()
+        debug_stats = self.get_stats("--all-targets")
 
         exe_stats = self.find_module_in_metrics(exe, debug_stats)
         # If we don't have a dSYM file, there should not be a key/value pair in
@@ -918,3 +967,104 @@ class TestCase(TestBase):
                 debug_stats_1,
                 f"The order of options '{options[0]}' and '{options[1]}' should not matter",
             )
+
+    @skipIfWindows
+    def test_summary_statistics_providers(self):
+        """
+        Test summary timing statistics is included in statistics dump when
+        a type with a summary provider exists, and is evaluated.
+        """
+
+        self.build()
+        target = self.createTestTarget()
+        lldbutil.run_to_source_breakpoint(
+            self, "// stop here", lldb.SBFileSpec("main.cpp")
+        )
+        self.expect("frame var", substrs=["hello world"])
+        stats = self.get_target_stats(self.get_stats())
+        self.assertIn("summaryProviderStatistics", stats)
+        summary_providers = stats["summaryProviderStatistics"]
+        # We don't want to take a dependency on the type name, so we just look
+        # for string and that it was called once.
+        summary_provider_str = str(summary_providers)
+        self.assertIn("string", summary_provider_str)
+        self.assertIn("'count': 1", summary_provider_str)
+        self.assertIn("'totalTime':", summary_provider_str)
+        # We may hit the std::string C++ provider, or a summary provider string
+        self.assertIn("'type':", summary_provider_str)
+        self.assertTrue(
+            "c++" in summary_provider_str or "string" in summary_provider_str
+        )
+
+        self.runCmd("continue")
+        self.runCmd("command script import BoxFormatter.py")
+        self.expect("frame var", substrs=["box = [27]"])
+        stats = self.get_target_stats(self.get_stats())
+        self.assertIn("summaryProviderStatistics", stats)
+        summary_providers = stats["summaryProviderStatistics"]
+        summary_provider_str = str(summary_providers)
+        self.assertIn("BoxFormatter.summary", summary_provider_str)
+        self.assertIn("'count': 1", summary_provider_str)
+        self.assertIn("'totalTime':", summary_provider_str)
+        self.assertIn("'type': 'python'", summary_provider_str)
+
+    @skipIfWindows
+    def test_summary_statistics_providers_vec(self):
+        """
+        Test summary timing statistics is included in statistics dump when
+        a type with a summary provider exists, and is evaluated. This variation
+        tests that vector recurses into it's child type.
+        """
+        self.build()
+        target = self.createTestTarget()
+        lldbutil.run_to_source_breakpoint(
+            self, "// stop vector", lldb.SBFileSpec("main.cpp")
+        )
+        self.expect(
+            "frame var", substrs=["int_vec", "double_vec", "[0] = 1", "[7] = 8"]
+        )
+        stats = self.get_target_stats(self.get_stats())
+        self.assertIn("summaryProviderStatistics", stats)
+        summary_providers = stats["summaryProviderStatistics"]
+        summary_provider_str = str(summary_providers)
+        self.assertIn("'count': 2", summary_provider_str)
+        self.assertIn("'totalTime':", summary_provider_str)
+        self.assertIn("'type':", summary_provider_str)
+        # We may hit the std::vector C++ provider, or a summary provider string
+        if "c++" in summary_provider_str:
+            self.assertIn("std::vector", summary_provider_str)
+
+    @skipIfWindows
+    def test_multiple_targets(self):
+        """
+        Test statistics dump only reports the stats from current target and
+        "statistics dump --all-targets" includes all target stats.
+        """
+        da = {"CXX_SOURCES": "main.cpp", "EXE": self.getBuildArtifact("a.out")}
+        self.build(dictionary=da)
+        self.addTearDownCleanup(dictionary=da)
+
+        db = {"CXX_SOURCES": "second.cpp", "EXE": self.getBuildArtifact("second.out")}
+        self.build(dictionary=db)
+        self.addTearDownCleanup(dictionary=db)
+
+        main_exe = self.getBuildArtifact("a.out")
+        second_exe = self.getBuildArtifact("second.out")
+
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp"), None, "a.out"
+        )
+        debugger_stats1 = self.get_stats()
+        self.assertIsNotNone(self.find_module_in_metrics(main_exe, debugger_stats1))
+        self.assertIsNone(self.find_module_in_metrics(second_exe, debugger_stats1))
+
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("second.cpp"), None, "second.out"
+        )
+        debugger_stats2 = self.get_stats()
+        self.assertIsNone(self.find_module_in_metrics(main_exe, debugger_stats2))
+        self.assertIsNotNone(self.find_module_in_metrics(second_exe, debugger_stats2))
+
+        all_targets_stats = self.get_stats("--all-targets")
+        self.assertIsNotNone(self.find_module_in_metrics(main_exe, all_targets_stats))
+        self.assertIsNotNone(self.find_module_in_metrics(second_exe, all_targets_stats))

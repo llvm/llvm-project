@@ -15,8 +15,8 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; After that we have:
 ;   updated: 416B   %vreg18<def> = ISEL8 %vreg5, %vreg5, %vreg15<undef>;
 
-; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -ppc-gen-isel=true < %s | FileCheck %s --check-prefix=CHECK-GEN-ISEL-TRUE
-; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -ppc-gen-isel=false < %s | FileCheck %s --implicit-check-not isel
+; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -mattr=+isel < %s | FileCheck %s --check-prefix=CHECK-GEN-ISEL-TRUE
+; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -mattr=-isel < %s | FileCheck %s --implicit-check-not isel
 %"struct.pov::ot_block_struct" = type { ptr, [3 x double], [3 x double], float, float, float, float, float, float, float, float, float, [3 x float], float, float, [3 x double], i16 }
 %"struct.pov::ot_node_struct" = type { %"struct.pov::ot_id_struct", ptr, [8 x ptr] }
 %"struct.pov::ot_id_struct" = type { i32, i32, i32, i32 }

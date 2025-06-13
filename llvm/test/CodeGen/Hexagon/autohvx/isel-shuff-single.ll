@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Perfect shuffle with single input vector. Half of it first needs to be
 ; transposed into the other vector before the generated shuffles can take

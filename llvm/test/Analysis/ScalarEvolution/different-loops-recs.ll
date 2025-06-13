@@ -7,7 +7,7 @@
 ; Check that we can evaluate a sum of phis from two different loops in any
 ; order.
 
-define void @test_00() {
+define void @test_00(i1 %arg) {
 ; CHECK-LABEL: 'test_00'
 ; CHECK-NEXT:  Classifying expressions for: @test_00
 ; CHECK-NEXT:    %phi1 = phi i32 [ 10, %entry ], [ %phi1.inc, %loop1 ]
@@ -383,7 +383,7 @@ exit:
 
 ; Another mix of previous use cases that demonstrates that incorrect picking of
 ; a loop for a recurrence may cause a crash of SCEV analysis.
-define void @test_04() {
+define void @test_04(i1 %arg) {
 ; CHECK-LABEL: 'test_04'
 ; CHECK-NEXT:  Classifying expressions for: @test_04
 ; CHECK-NEXT:    %tmp = phi i64 [ 2, %bb ], [ %tmp4, %bb3 ]
@@ -425,7 +425,7 @@ bb:
 loop1:
   %tmp = phi i64 [ 2, %bb ], [ %tmp4, %bb3 ]
   %tmp2 = trunc i64 %tmp to i32
-  br i1 undef, label %loop2, label %bb3
+  br i1 %arg, label %loop2, label %bb3
 
 bb3:
   %tmp4 = add nuw nsw i64 %tmp, 1
@@ -457,7 +457,7 @@ define void @test_05(i32 %N) {
 ; CHECK-NEXT:    %"alloca point" = bitcast i32 0 to i32
 ; CHECK-NEXT:    --> 0 U: [0,1) S: [0,1)
 ; CHECK-NEXT:    %tmp = getelementptr [1000 x i32], ptr @A, i32 0, i32 %i.0
-; CHECK-NEXT:    --> {(8 + @A)<nuw><nsw>,+,4}<nw><%bb3> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: (408 + @A) LoopDispositions: { %bb3: Computable }
+; CHECK-NEXT:    --> {(8 + @A)<nuw><nsw>,+,4}<nw><%bb3> U: [40,-3623) S: [-9223372036854775808,9223372036854775805) Exits: (408 + @A)<nuw> LoopDispositions: { %bb3: Computable }
 ; CHECK-NEXT:    %tmp2 = add i32 %i.0, 1
 ; CHECK-NEXT:    --> {3,+,1}<nuw><nsw><%bb3> U: [3,104) S: [3,104) Exits: 103 LoopDispositions: { %bb3: Computable }
 ; CHECK-NEXT:    %i.0 = phi i32 [ 2, %entry ], [ %tmp2, %bb ]

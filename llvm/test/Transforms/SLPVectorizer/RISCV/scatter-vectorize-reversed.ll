@@ -5,12 +5,12 @@ define <4 x i32> @test(<2 x i64> %v, ptr %p) {
 ; CHECK-LABEL: define <4 x i32> @test(
 ; CHECK-SAME: <2 x i64> [[V:%.*]], ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[V]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[P]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x ptr> [[TMP0]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, <2 x ptr> [[TMP1]], <2 x i64> [[V]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr> [[TMP2]], i32 2, <2 x i1> <i1 true, i1 true>, <2 x i16> poison)
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i16> [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, <2 x ptr> [[TMP1]], <2 x i64> [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr> [[TMP2]], i32 2, <2 x i1> splat (i1 true), <2 x i16> poison)
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i16> [[TMP3]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> zeroinitializer, <4 x i32> [[TMP6]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP5]]

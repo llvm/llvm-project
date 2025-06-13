@@ -7,7 +7,7 @@ declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #0
 ; SI-LABEL: {{^}}foo:
 ; SI: .section	.AMDGPU.csdata
 ; SI: ; Kernel info:
-; SI: ; NumSgprs: {{[0-9]+}}
+; SI: ; TotalNumSgprs: {{[0-9]+}}
 ; SI: ; NumVgprs: {{[0-9]+}}
 define amdgpu_kernel void @foo(ptr addrspace(1) noalias %out, ptr addrspace(1) %abase, ptr addrspace(1) %bbase) nounwind {
   %mbcnt.lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0);
@@ -24,7 +24,9 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias %out, ptr addrspace(1) %
 
 ; SI-LABEL: {{^}}one_vgpr_used:
 ; SI: NumVgprs: 1
-define amdgpu_kernel void @one_vgpr_used(ptr addrspace(1) %out, i32 %x) nounwind {
+define amdgpu_kernel void @one_vgpr_used(ptr addrspace(1) %out, i32 %x) #0 {
   store i32 %x, ptr addrspace(1) %out, align 4
   ret void
 }
+
+attributes #0 = { nounwind noinline "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

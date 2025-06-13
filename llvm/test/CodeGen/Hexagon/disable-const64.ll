@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv67t < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv67t < %s | FileCheck %s
 
 target triple = "hexagon"
 

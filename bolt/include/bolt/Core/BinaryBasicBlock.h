@@ -19,6 +19,7 @@
 #include "bolt/Core/MCPlus.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorOr.h"
@@ -817,6 +818,9 @@ public:
   std::pair<uint64_t, uint64_t> getOutputAddressRange() const {
     return OutputAddressRange;
   }
+
+  uint64_t getOutputStartAddress() const { return OutputAddressRange.first; }
+  uint64_t getOutputEndAddress() const { return OutputAddressRange.second; }
 
   bool hasLocSyms() const { return LocSyms != nullptr; }
 

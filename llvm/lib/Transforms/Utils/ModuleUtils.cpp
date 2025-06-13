@@ -29,7 +29,6 @@ using namespace llvm;
 static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
                                 int Priority, Constant *Data) {
   IRBuilder<> IRB(M.getContext());
-  FunctionType *FnTy = FunctionType::get(IRB.getVoidTy(), false);
 
   // Get the current set of static global constructors and add the new ctor
   // to the list.
@@ -45,9 +44,9 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
     }
     GVCtor->eraseFromParent();
   } else {
-    EltTy = StructType::get(IRB.getInt32Ty(),
-                            PointerType::get(FnTy, F->getAddressSpace()),
-                            IRB.getPtrTy());
+    EltTy = StructType::get(
+        IRB.getInt32Ty(),
+        PointerType::get(M.getContext(), F->getAddressSpace()), IRB.getPtrTy());
   }
 
   // Build a 3 field global_ctor entry.  We don't take a comdat key.
@@ -205,11 +204,13 @@ void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   // Matches CodeGenModule::CreateKCFITypeId in Clang.
   LLVMContext &Ctx = M.getContext();
   MDBuilder MDB(Ctx);
-  F.setMetadata(
-      LLVMContext::MD_kcfi_type,
-      MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
-                           Type::getInt32Ty(Ctx),
-                           static_cast<uint32_t>(xxHash64(MangledType))))));
+  std::string Type = MangledType.str();
+  if (M.getModuleFlag("cfi-normalize-integers"))
+    Type += ".normalized";
+  F.setMetadata(LLVMContext::MD_kcfi_type,
+                MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                                     Type::getInt32Ty(Ctx),
+                                     static_cast<uint32_t>(xxHash64(Type))))));
   // If the module was compiled with -fpatchable-function-entry, ensure
   // we use the same patchable-function-prefix.
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
@@ -266,7 +267,7 @@ std::pair<Function *, FunctionCallee> llvm::createSanitizerCtorAndInitFunctions(
         BasicBlock::Create(M.getContext(), "callfunc", Ctor, RetBB);
     auto *InitFn = cast<Function>(InitFunction.getCallee());
     auto *InitFnPtr =
-        PointerType::get(InitFn->getType(), InitFn->getAddressSpace());
+        PointerType::get(M.getContext(), InitFn->getAddressSpace());
     IRB.SetInsertPoint(EntryBB);
     Value *InitNotNull =
         IRB.CreateICmpNE(InitFn, ConstantPointerNull::get(InitFnPtr));
@@ -344,27 +345,25 @@ void llvm::filterDeadComdatFunctions(
 
 std::string llvm::getUniqueModuleId(Module *M) {
   MD5 Md5;
-  bool ExportsSymbols = false;
-  auto AddGlobal = [&](GlobalValue &GV) {
-    if (GV.isDeclaration() || GV.getName().starts_with("llvm.") ||
-        !GV.hasExternalLinkage() || GV.hasComdat())
-      return;
-    ExportsSymbols = true;
-    Md5.update(GV.getName());
-    Md5.update(ArrayRef<uint8_t>{0});
-  };
 
-  for (auto &F : *M)
-    AddGlobal(F);
-  for (auto &GV : M->globals())
-    AddGlobal(GV);
-  for (auto &GA : M->aliases())
-    AddGlobal(GA);
-  for (auto &IF : M->ifuncs())
-    AddGlobal(IF);
+  auto *UniqueSourceFileNames = mdconst::extract_or_null<ConstantInt>(
+      M->getModuleFlag("Unique Source File Names"));
+  if (UniqueSourceFileNames && UniqueSourceFileNames->getZExtValue()) {
+    Md5.update(M->getSourceFileName());
+  } else {
+    bool ExportsSymbols = false;
+    for (auto &GV : M->global_values()) {
+      if (GV.isDeclaration() || GV.getName().starts_with("llvm.") ||
+          !GV.hasExternalLinkage() || GV.hasComdat())
+        continue;
+      ExportsSymbols = true;
+      Md5.update(GV.getName());
+      Md5.update(ArrayRef<uint8_t>{0});
+    }
 
-  if (!ExportsSymbols)
-    return "";
+    if (!ExportsSymbols)
+      return "";
+  }
 
   MD5::MD5Result R;
   Md5.final(R);

@@ -95,6 +95,7 @@ program sample
     !$omp end critical (name)
 
     !ERROR: Hint clause must have non-negative constant integer expression
+    !ERROR: Must have INTEGER type, but is REAL(4)
     !$omp critical (name) hint(1.0) 
         y = 2
     !$omp end critical (name)

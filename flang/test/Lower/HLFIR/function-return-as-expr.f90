@@ -70,7 +70,7 @@ end subroutine test4
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = ".tmp.func_result"} : (!fir.class<!fir.heap<none>>) -> (!fir.class<!fir.heap<none>>, !fir.class<!fir.heap<none>>)
 ! CHECK:           hlfir.assign %[[VAL_7]]#0 to %{{.*}}#0 realloc : !fir.class<!fir.heap<none>>, !fir.ref<!fir.class<!fir.heap<none>>>
 ! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.box<none>
-! CHECK:           fir.call @_FortranADestroy(%[[VAL_10]]) fastmath<contract> : (!fir.box<none>) -> none
+! CHECK:           fir.call @_FortranADestroy(%[[VAL_10]]) fastmath<contract> : (!fir.box<none>) -> ()
 
 subroutine test4b
   class(*), allocatable :: p(:, :)
@@ -85,7 +85,7 @@ end subroutine test4b
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = ".tmp.func_result"} : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> (!fir.class<!fir.heap<!fir.array<?x?xnone>>>, !fir.class<!fir.heap<!fir.array<?x?xnone>>>)
 ! CHECK:           hlfir.assign %[[VAL_7]]#0 to %{{.*}}#0 realloc : !fir.class<!fir.heap<!fir.array<?x?xnone>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
 ! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>) -> !fir.box<none>
-! CHECK:           fir.call @_FortranADestroy(%[[VAL_10]]) fastmath<contract> : (!fir.box<none>) -> none
+! CHECK:           fir.call @_FortranADestroy(%[[VAL_10]]) fastmath<contract> : (!fir.box<none>) -> ()
 
 subroutine test5
   use types
@@ -146,5 +146,5 @@ contains
 end subroutine test8
 ! CHECK-LABEL:   func.func @_QPtest8() {
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
-! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
+! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>

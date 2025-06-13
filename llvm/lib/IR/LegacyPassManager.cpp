@@ -21,6 +21,7 @@
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -31,7 +32,7 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
+LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
 // See PassManagers.h for Pass Manager infrastructure overview.
 
 //===----------------------------------------------------------------------===//
@@ -104,15 +105,13 @@ void PMDataManager::emitInstrCountChangedRemark(
       [&FunctionToInstrCount](Function &MaybeChangedFn) {
         // Update the total module count.
         unsigned FnSize = MaybeChangedFn.getInstructionCount();
-        auto It = FunctionToInstrCount.find(MaybeChangedFn.getName());
 
         // If we created a new function, then we need to add it to the map and
         // say that it changed from 0 instructions to FnSize.
-        if (It == FunctionToInstrCount.end()) {
-          FunctionToInstrCount[MaybeChangedFn.getName()] =
-              std::pair<unsigned, unsigned>(0, FnSize);
+        auto [It, Inserted] = FunctionToInstrCount.try_emplace(
+            MaybeChangedFn.getName(), 0, FnSize);
+        if (Inserted)
           return;
-        }
         // Insert the new function size into the second member of the pair. This
         // tells us whether or not this function changed in size.
         It->second.second = FnSize;
@@ -608,7 +607,7 @@ PMTopLevelManager::setLastUser(ArrayRef<Pass*> AnalysisPasses, Pass *P) {
     auto &LastUsedByAP = InversedLastUser[AP];
     for (Pass *L : LastUsedByAP)
       LastUser[L] = P;
-    InversedLastUser[P].insert(LastUsedByAP.begin(), LastUsedByAP.end());
+    InversedLastUser[P].insert_range(LastUsedByAP);
     LastUsedByAP.clear();
   }
 }

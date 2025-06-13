@@ -37,6 +37,11 @@ class BF16(ctypes.Structure):
 
     _fields_ = [("bf16", ctypes.c_int16)]
 
+class F8E5M2(ctypes.Structure):
+    """A ctype representation for MLIR's Float8E5M2."""
+
+    _fields_ = [("f8E5M2", ctypes.c_int8)]
+
 
 # https://stackoverflow.com/questions/26921836/correct-way-to-test-for-numpy-dtype
 def as_ctype(dtp):
@@ -49,6 +54,8 @@ def as_ctype(dtp):
         return F16
     if ml_dtypes is not None and dtp == ml_dtypes.bfloat16:
         return BF16
+    if ml_dtypes is not None and dtp == ml_dtypes.float8_e5m2:
+        return F8E5M2
     return np.ctypeslib.as_ctypes_type(dtp)
 
 
@@ -65,6 +72,11 @@ def to_numpy(array):
     ), f"bfloat16 requires the ml_dtypes package, please run:\n\npip install ml_dtypes\n"
     if array.dtype == BF16:
         return array.view("bfloat16")
+    assert not (
+        array.dtype == F8E5M2 and ml_dtypes is None
+    ), f"float8_e5m2 requires the ml_dtypes package, please run:\n\npip install ml_dtypes\n"
+    if array.dtype == F8E5M2:
+        return array.view("float8_e5m2")
     return array
 
 

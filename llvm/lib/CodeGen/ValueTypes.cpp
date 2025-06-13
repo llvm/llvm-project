@@ -162,6 +162,12 @@ TypeSize EVT::getExtendedSizeInBits() const {
 std::string EVT::getEVTString() const {
   switch (V.SimpleTy) {
   default:
+    if (isRISCVVectorTuple()) {
+      unsigned Sz = getSizeInBits().getKnownMinValue();
+      unsigned NF = getRISCVVectorTupleNumFields();
+      unsigned MinNumElts = Sz / (NF * 8);
+      return "riscv_nxv" + utostr(MinNumElts) + "i8x" + utostr(NF);
+    }
     if (isVector())
       return (isScalableVector() ? "nxv" : "v") +
              utostr(getVectorElementCount().getKnownMinValue()) +
@@ -188,6 +194,12 @@ std::string EVT::getEVTString() const {
     return "aarch64svcount";
   case MVT::spirvbuiltin:
     return "spirvbuiltin";
+  case MVT::amdgpuBufferFatPointer:
+    return "amdgpuBufferFatPointer";
+  case MVT::amdgpuBufferStridedPointer:
+    return "amdgpuBufferStridedPointer";
+  case MVT::aarch64mfp8:
+    return "aarch64mfp8";
   }
 }
 
@@ -211,8 +223,12 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::x86mmx:  return llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
   case MVT::aarch64svcount:
     return TargetExtType::get(Context, "aarch64.svcount");
+  case MVT::aarch64mfp8:
+    return FixedVectorType::get(IntegerType::get(Context, 8), 1);
   case MVT::x86amx:  return Type::getX86_AMXTy(Context);
   case MVT::i64x8:   return IntegerType::get(Context, 512);
+  case MVT::amdgpuBufferFatPointer:  return IntegerType::get(Context, 160);
+  case MVT::amdgpuBufferStridedPointer:  return IntegerType::get(Context, 192);
   case MVT::externref: return Type::getWasm_ExternrefTy(Context);
   case MVT::funcref: return Type::getWasm_FuncrefTy(Context);
   case MVT::Metadata: return Type::getMetadataTy(Context);
@@ -250,6 +266,14 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
       return MVT(MVT::aarch64svcount);
     else if (TargetExtTy->getName().starts_with("spirv."))
       return MVT(MVT::spirvbuiltin);
+    if (TargetExtTy->getName() == "riscv.vector.tuple") {
+      unsigned Sz = cast<ScalableVectorType>(TargetExtTy->getTypeParameter(0))
+                        ->getMinNumElements() *
+                    8;
+      unsigned NF = TargetExtTy->getIntParameter(0);
+
+      return MVT::getRISCVVectorTupleVT(Sz * NF, NF);
+    }
     if (HandleUnknown)
       return MVT(MVT::Other);
     llvm_unreachable("Unknown target ext type!");

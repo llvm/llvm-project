@@ -747,7 +747,7 @@ body:             |
     ; GFX9-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr
     ; GFX9: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr0_sgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX9-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
@@ -758,7 +758,7 @@ body:             |
     ; GFX10-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr
     ; GFX10: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
@@ -854,7 +854,7 @@ body:             |
     ; GFX9-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr_offset_4095
     ; GFX9: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr0_sgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX9-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
@@ -865,7 +865,7 @@ body:             |
     ; GFX10-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr_offset_4095
     ; GFX10: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1

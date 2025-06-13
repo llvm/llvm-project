@@ -104,7 +104,7 @@ public:
 
   StaticInitGVIterator(Module &M)
       : I(M.global_values().begin()), E(M.global_values().end()),
-        ObjFmt(Triple(M.getTargetTriple()).getObjectFormat()) {
+        ObjFmt(M.getTargetTriple().getObjectFormat()) {
     if (I != E) {
       if (!isStaticInitGlobal(*I))
         moveToNextStaticInitGlobal();
@@ -268,10 +268,37 @@ private:
 /// the containing object being added to the JITDylib.
 class StaticLibraryDefinitionGenerator : public DefinitionGenerator {
 public:
-  // Interface builder function for objects loaded from this archive.
+  /// Interface builder function for objects loaded from this archive.
   using GetObjectFileInterface =
       unique_function<Expected<MaterializationUnit::Interface>(
           ExecutionSession &ES, MemoryBufferRef ObjBuffer)>;
+
+  /// Callback for visiting archive members at construction time. Can be used
+  /// to pre-load members.
+  ///
+  /// Callbacks are provided with a reference to the underlying archive, a
+  /// MemoryBufferRef covering the bytes for the given member, and the index of
+  /// the given member.
+  ///
+  /// Implementations should return true if the given member file should be
+  /// loadable via the generator, false if it should not, and an Error if the
+  /// member is malformed in a way that renders the archive itself invalid.
+  ///
+  /// Note: Linkers typically ignore invalid files within archives, so it's
+  ///       expected that implementations will usually return `false` (i.e.
+  ///       not-loadable) for malformed buffers, and will only return an
+  ///       Error in exceptional circumstances.
+  using VisitMembersFunction = unique_function<Expected<bool>(
+      object::Archive &, MemoryBufferRef, size_t)>;
+
+  /// A VisitMembersFunction that unconditionally loads all object files from
+  /// the archive.
+  /// Archive members that are not valid object files will be skipped.
+  static VisitMembersFunction loadAllObjectFileMembers(ObjectLayer &L,
+                                                       JITDylib &JD);
+
+  static std::unique_ptr<MemoryBuffer>
+  createMemberBuffer(object::Archive &A, MemoryBufferRef BufRef, size_t Index);
 
   /// Try to create a StaticLibraryDefinitionGenerator from the given path.
   ///
@@ -280,6 +307,7 @@ public:
   /// with the ExecutionSession's triple. Otherwise it will return an error.
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Load(ObjectLayer &L, const char *FileName,
+       VisitMembersFunction VisitMembers = VisitMembersFunction(),
        GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
 
   /// Try to create a StaticLibrarySearchGenerator from the given memory buffer
@@ -287,6 +315,7 @@ public:
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
          std::unique_ptr<object::Archive> Archive,
+         VisitMembersFunction VisitMembers = VisitMembersFunction(),
          GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
 
   /// Try to create a StaticLibrarySearchGenerator from the given memory buffer.
@@ -298,37 +327,25 @@ public:
   /// with the ExecutionSession's triple. Otherwise it will return an error.
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+         VisitMembersFunction VisitMembers = VisitMembersFunction(),
          GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
-
-  /// Returns a list of filenames of dynamic libraries that this archive has
-  /// imported. This class does not load these libraries by itself. User is
-  /// responsible for making sure these libraries are avaliable to the JITDylib.
-  const std::set<std::string> &getImportedDynamicLibraries() const {
-    return ImportedDynamicLibraries;
-  }
 
   Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
                       JITDylibLookupFlags JDLookupFlags,
                       const SymbolLookupSet &Symbols) override;
 
 private:
-  StaticLibraryDefinitionGenerator(ObjectLayer &L,
-                                   std::unique_ptr<MemoryBuffer> ArchiveBuffer,
-                                   std::unique_ptr<object::Archive> Archive,
-                                   GetObjectFileInterface GetObjFileInterface,
-                                   Error &Err);
-  Error buildObjectFilesMap();
-
-  static Expected<std::pair<size_t, size_t>>
-  getSliceRangeForArch(object::MachOUniversalBinary &UB, const Triple &TT);
+  StaticLibraryDefinitionGenerator(
+      ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+      std::unique_ptr<object::Archive> Archive,
+      GetObjectFileInterface GetObjFileInterface,
+      DenseMap<SymbolStringPtr, size_t> SymbolToMemberIndexMap);
 
   ObjectLayer &L;
   GetObjectFileInterface GetObjFileInterface;
-  std::set<std::string> ImportedDynamicLibraries;
   std::unique_ptr<MemoryBuffer> ArchiveBuffer;
   std::unique_ptr<object::Archive> Archive;
-  DenseMap<SymbolStringPtr, MemoryBufferRef> ObjectFilesMap;
-  BumpPtrAllocator ObjFileNameStorage;
+  DenseMap<SymbolStringPtr, size_t> SymbolToMemberIndexMap;
 };
 
 /// A utility class to create COFF dllimport GOT symbols (__imp_*) and PLT

@@ -17,6 +17,6 @@
 #include <deque>
 
 void f() {
-    std::deque<int> c;
-    c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::deque<int> c;
+  c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

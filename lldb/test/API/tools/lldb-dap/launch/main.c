@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _WIN32
+#include <direct.h>
+#else
 #include <unistd.h>
+#endif
 
 int main(int argc, char const *argv[], char const *envp[]) {
   for (int i = 0; i < argc; ++i)

@@ -1,0 +1,119 @@
+# RUN: llc -mtriple=wasm32-unknown-unknown -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
+
+--- |
+  target triple = "wasm32-unknown-unknown"
+
+  declare i32 @__gxx_wasm_personality_v0(...)
+  declare void @foo()
+  define void @rethrow_arg_test() personality ptr @__gxx_wasm_personality_v0 {
+    ret void
+  }
+  define i32 @fix_end_function_test() personality ptr @__gxx_wasm_personality_v0 {
+    ret i32 0
+  }
+...
+
+---
+# CHECK-LABEL: name: rethrow_arg_test
+name: rethrow_arg_test
+liveins:
+  - { reg: '$arguments' }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.3
+    ; CHECK: bb.0:
+    ; CHECK: TRY
+    EH_LABEL <mcsymbol .Ltmp0>
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    EH_LABEL <mcsymbol .Ltmp1>
+    BR %bb.3, implicit-def dead $arguments
+
+  bb.1 (landing-pad):
+    successors: %bb.2
+    ; CHECK: bb.1 (landing-pad):
+    ; CHECK: CATCH_LEGACY
+    ; CHECK: TRY
+    ; This RETHROW rethrows the exception caught by this BB's CATCH_LEGACY, but
+    ; after CFGStackify a TRY is placed between the CATCH_LEGACY and this
+    ; RETHROW, so after CFGStackify its immediate argument should become not 0,
+    ; but 1.
+    ; CHECK: RETHROW 1
+    EH_LABEL <mcsymbol .Ltmp2>
+    %0:i32 = CATCH_LEGACY &__cpp_exception, implicit-def dead $arguments
+    RETHROW %bb.1, implicit-def dead $arguments
+
+  bb.2 (landing-pad):
+    successors: %bb.3
+    ; CHECK: bb.2 (landing-pad):
+    ; CHECK: CATCH_LEGACY
+    ; CHECK: RETHROW 0
+    EH_LABEL <mcsymbol .Ltmp3>
+    %1:i32 = CATCH_LEGACY &__cpp_exception, implicit-def dead $arguments
+    RETHROW %bb.2, implicit-def dead $arguments
+
+  bb.3:
+    ; CHECK: bb.3:
+    ; CHECK: END_TRY
+    ; CHECK: END_TRY
+    RETURN implicit-def dead $arguments
+...
+
+---
+# This function has i32 return type and the end of the function is unreachable,
+# so CFGStackify's fixEndsAtEndOfFunction() propagates the return type while
+# they encounter 'end' or 'delegate'. This is a regression test for a bug that
+# we only handled 'end' but not 'delegate'.
+# CHECK-LABEL: name: fix_end_function_test
+name: fix_end_function_test
+liveins:
+  - { reg: '$arguments' }
+machineFunctionInfo:
+  params:          [  ]
+  results:         [ i32 ]
+  wasmEHFuncInfo:
+    3:               4
+body: |
+  ; CHECK: TRY 127
+  ; CHECK:   TRY 127
+  ; CHECK:     CALL @foo
+  ; CHECK:     TRY 64
+  ; CHECK:       CALL @foo
+  ; CHECK:     DELEGATE
+  ; CHECK:     RETURN
+  ; CHECK:   CATCH_LEGACY
+  ;; This TRY should have the return type i32 (127)
+  ; CHECK:     TRY 127
+  ; CHECK:       RETHROW
+  ; CHECK:     DELEGATE
+  ; CHECK:   END_TRY
+  ; CHECK: CATCH_LEGACY
+  ; CHECK:   RETHROW
+  ; CHECK: END_TRY
+  bb.0:
+    successors: %bb.1, %bb.3
+    EH_LABEL <mcsymbol .Ltmp0>
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    EH_LABEL <mcsymbol .Ltmp1>
+
+  bb.1:
+    successors: %bb.2, %bb.4
+    EH_LABEL <mcsymbol .Ltmp2>
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    EH_LABEL <mcsymbol .Ltmp3>
+
+  bb.2:
+    %0:i32 = CONST_I32 3, implicit-def dead $arguments
+    RETURN %0:i32, implicit-def dead $arguments
+
+  bb.3 (landing-pad):
+    successors:
+    EH_LABEL <mcsymbol .Ltmp4>
+    %0:i32 = CATCH_LEGACY &__cpp_exception, implicit-def dead $arguments
+    RETHROW %bb.3, implicit-def dead $arguments
+
+  bb.4 (landing-pad):
+    successors:
+    EH_LABEL <mcsymbol .Ltmp5>
+    %1:i32 = CATCH_LEGACY &__cpp_exception, implicit-def dead $arguments
+    RETHROW %bb.4, implicit-def dead $arguments
+...

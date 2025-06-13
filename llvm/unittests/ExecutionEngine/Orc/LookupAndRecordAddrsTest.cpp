@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OrcTestCommon.h"
-
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
+#include "OrcTestCommon.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Testing/Support/Error.h"
 

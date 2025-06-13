@@ -32,7 +32,7 @@ CommandObjectMultiword::GetSubcommandSPExact(llvm::StringRef sub_cmd) {
   if (m_subcommand_dict.empty())
     return {};
 
-  auto pos = m_subcommand_dict.find(std::string(sub_cmd));
+  auto pos = m_subcommand_dict.find(sub_cmd);
   if (pos == m_subcommand_dict.end())
     return {};
 
@@ -64,7 +64,7 @@ CommandObjectSP CommandObjectMultiword::GetSubcommandSP(llvm::StringRef sub_cmd,
     // function, since I now know I have an exact match...
 
     sub_cmd = matches->GetStringAtIndex(0);
-    pos = m_subcommand_dict.find(std::string(sub_cmd));
+    pos = m_subcommand_dict.find(sub_cmd);
     if (pos != m_subcommand_dict.end())
       return_cmd_sp = pos->second;
   }
@@ -84,16 +84,7 @@ bool CommandObjectMultiword::LoadSubCommand(llvm::StringRef name,
     lldbassert((&GetCommandInterpreter() == &cmd_obj_sp->GetCommandInterpreter()) &&
            "tried to add a CommandObject from a different interpreter");
 
-  CommandMap::iterator pos;
-  bool success = true;
-
-  pos = m_subcommand_dict.find(std::string(name));
-  if (pos == m_subcommand_dict.end()) {
-    m_subcommand_dict[std::string(name)] = cmd_obj_sp;
-  } else
-    success = false;
-
-  return success;
+  return m_subcommand_dict.try_emplace(std::string(name), cmd_obj_sp).second;
 }
 
 llvm::Error CommandObjectMultiword::LoadUserSubcommand(
@@ -111,11 +102,9 @@ llvm::Error CommandObjectMultiword::LoadUserSubcommand(
 
   std::string str_name(name);
 
-  auto pos = m_subcommand_dict.find(str_name);
-  if (pos == m_subcommand_dict.end()) {
-    m_subcommand_dict[str_name] = cmd_obj_sp;
+  auto [pos, inserted] = m_subcommand_dict.try_emplace(str_name, cmd_obj_sp);
+  if (inserted)
     return llvm::Error::success();
-  }
 
   const char *error_str = nullptr;
   if (!can_replace)
@@ -126,7 +115,7 @@ llvm::Error CommandObjectMultiword::LoadUserSubcommand(
   if (error_str) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(), error_str);
   }
-  m_subcommand_dict[str_name] = cmd_obj_sp;
+  pos->second = cmd_obj_sp;
   return llvm::Error::success();
 }
 
@@ -194,26 +183,52 @@ void CommandObjectMultiword::Execute(const char *args_string,
 
   std::string error_msg;
   const size_t num_subcmd_matches = matches.GetSize();
-  if (num_subcmd_matches > 0)
-    error_msg.assign("ambiguous command ");
-  else
-    error_msg.assign("invalid command ");
-
-  error_msg.append("'");
-  error_msg.append(std::string(GetCommandName()));
-  error_msg.append(" ");
-  error_msg.append(std::string(sub_command));
-  error_msg.append("'.");
-
   if (num_subcmd_matches > 0) {
+    error_msg.assign("ambiguous command ");
+    error_msg.append("'");
+    error_msg.append(std::string(GetCommandName()));
+    error_msg.append(" ");
+    error_msg.append(std::string(sub_command));
+    error_msg.append("'.");
+
     error_msg.append(" Possible completions:");
     for (const std::string &match : matches) {
       error_msg.append("\n\t");
       error_msg.append(match);
     }
+  } else {
+    // Try to offer some alternatives to help correct the command.
+    error_msg.assign(
+        llvm::Twine("\"" + sub_command + "\" is not a valid subcommand of \"" +
+                    GetCommandName() + "\"." + GetSubcommandsHintText() +
+                    " Use \"help " + GetCommandName() + "\" to find out more.")
+            .str());
   }
   error_msg.append("\n");
   result.AppendRawError(error_msg.c_str());
+}
+
+std::string CommandObjectMultiword::GetSubcommandsHintText() {
+  if (m_subcommand_dict.empty())
+    return "";
+  const size_t maxCount = 5;
+  size_t i = 0;
+  std::string buffer = " Valid subcommand";
+  buffer.append(m_subcommand_dict.size() > 1 ? "s are:" : " is");
+  CommandMap::iterator pos;
+  for (pos = m_subcommand_dict.begin();
+       pos != m_subcommand_dict.end() && i < maxCount; ++pos, ++i) {
+    buffer.append(" ");
+    buffer.append(pos->first);
+    buffer.append(",");
+  }
+  if (i < m_subcommand_dict.size())
+    buffer.append(" and others");
+  else
+    buffer.pop_back();
+
+  buffer.append(".");
+  return buffer;
 }
 
 void CommandObjectMultiword::GenerateHelpText(Stream &output_stream) {

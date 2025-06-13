@@ -31,7 +31,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -457,7 +456,7 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
   if (!V)
     return;
 
-  uint64_t NumberKind = V->getValue().getLimitedValue();
+  uint64_t NumberKind = V->getValue()->getLimitedValue();
   std::optional<uint64_t> OptCFNumberSize = GetCFNumberSize(Ctx, NumberKind);
 
   // FIXME: In some cases we can emit an error.

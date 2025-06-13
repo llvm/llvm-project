@@ -2454,7 +2454,7 @@ define i1 @ashr_00_00_ashr_extra_use(i8 %x, ptr %ptr) {
 
 define <4 x i1> @ashr_00_00_vec(<4 x i8> %x) {
 ; CHECK-LABEL: @ashr_00_00_vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp ult <4 x i8> [[X:%.*]], <i8 88, i8 88, i8 88, i8 88>
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <4 x i8> [[X:%.*]], splat (i8 88)
 ; CHECK-NEXT:    ret <4 x i1> [[C]]
 ;
   %s = ashr exact <4 x i8> %x, <i8 3,i8 3, i8 3, i8 3>

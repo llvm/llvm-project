@@ -5,14 +5,14 @@
 @b = external local_unnamed_addr global i64
 @e = external local_unnamed_addr global i64
 
-define void @patatino() {
+define void @patatino(i1 %arg) {
 ; CHECK-LABEL: @patatino(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_END24:%.*]], label [[FOR_COND16:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_END24:%.*]], label [[FOR_COND16:%.*]]
 ; CHECK:       for.cond2thread-pre-split:
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY:%.*]], label [[FOR_COND8_PREHEADER:%.*]]
 ; CHECK:       for.cond8.preheader:
-; CHECK-NEXT:    br i1 undef, label [[L1:%.*]], label [[FOR_COND11THREAD_PRE_SPLIT_LR_PH:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[L1:%.*]], label [[FOR_COND11THREAD_PRE_SPLIT_LR_PH:%.*]]
 ; CHECK:       for.cond11thread-pre-split.lr.ph:
 ; CHECK-NEXT:    br label [[L1]]
 ; CHECK:       for.body:
@@ -32,7 +32,7 @@ define void @patatino() {
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       for.cond16:
 ; CHECK-NEXT:    [[J_0:%.*]] = phi ptr [ @f, [[ENTRY:%.*]] ], [ poison, [[FOR_COND20:%.*]] ], [ @e, [[FOR_COND16]] ]
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND20]], label [[FOR_COND16]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_COND20]], label [[FOR_COND16]]
 ; CHECK:       for.cond20:
 ; CHECK-NEXT:    [[J_2:%.*]] = phi ptr [ [[J_0]], [[FOR_COND16]] ], [ poison, [[IF_END24]] ]
 ; CHECK-NEXT:    br i1 true, label [[IF_END24]], label [[FOR_COND16]]
@@ -43,13 +43,13 @@ define void @patatino() {
 ; CHECK-NEXT:    br label [[L1]]
 ;
 entry:
-  br i1 undef, label %if.end24, label %for.cond16
+  br i1 %arg, label %if.end24, label %for.cond16
 
 for.cond2thread-pre-split:
   br i1 false, label %for.body, label %for.cond8.preheader
 
 for.cond8.preheader:
-  br i1 undef, label %l1, label %for.cond11thread-pre-split.lr.ph
+  br i1 %arg, label %l1, label %for.cond11thread-pre-split.lr.ph
 
 for.cond11thread-pre-split.lr.ph:
   br label %l1
@@ -76,7 +76,7 @@ l1:
 
 for.cond16:
   %j.0 = phi ptr [ @f, %entry ], [ %j.2, %for.cond20 ], [ @e, %for.cond16 ]
-  br i1 undef, label %for.cond20, label %for.cond16
+  br i1 %arg, label %for.cond20, label %for.cond16
 
 for.cond20:
   %j.2 = phi ptr [ %j.0, %for.cond16 ], [ %j.3, %if.end24 ]

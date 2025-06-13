@@ -10,6 +10,7 @@
 
 // UNSUPPORTED: c++03
 
+#include <cstdint>
 #include <iterator>
 #include <string>
 

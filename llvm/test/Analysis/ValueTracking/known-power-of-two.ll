@@ -16,8 +16,8 @@ declare i16 @llvm.umax.i16(i16, i16)
 define i32 @pr25900(i32 %d) {
 ; CHECK-LABEL: define i32 @pr25900
 ; CHECK-SAME: (i32 [[D:%.*]]) {
-; CHECK-NEXT:    [[AND:%.*]] = ashr i32 [[D]], 31
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 4, [[AND]]
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i32 [[D]], 31
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 4, [[ASHR]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
   %and = and i32 %d, -2147483648
@@ -37,7 +37,7 @@ define i8 @trunc_is_pow2_or_zero(i16 %x, i8 %y) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 4, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = trunc i16 [[XP2]] to i8
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[XX]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %xp2 = shl i16 4, %x
@@ -67,7 +67,7 @@ define i1 @trunc_is_pow2_fail(i16 %x, i8 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 4, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = trunc i16 [[XP2]] to i8
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], [[XX]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -85,7 +85,7 @@ define i16 @bswap_is_pow2_or_zero(i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 4, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.bswap.i16(i16 [[XP2]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[XX]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %xp2 = shl i16 4, %x
@@ -115,7 +115,7 @@ define i1 @bswap_is_pow2(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl nuw i16 1, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.bswap.i16(i16 [[XP2]])
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -132,7 +132,7 @@ define i1 @bswap_is_pow2_fail(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 2, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.bswap.i16(i16 [[XP2]])
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -150,7 +150,7 @@ define i16 @bitreverse_is_pow2_or_zero(i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 4, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[XP2]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i16 [[XX]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %xp2 = shl i16 4, %x
@@ -180,7 +180,7 @@ define i1 @bitreverse_is_pow2(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl nuw i16 1, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[XP2]])
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -197,7 +197,7 @@ define i1 @bitreverse_is_pow2_fail(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 2, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[XP2]])
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -215,7 +215,7 @@ define i16 @fshl_is_pow2_or_zero(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 4, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.fshl.i16(i16 [[XP2]], i16 [[XP2]], i16 [[Z]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[XX]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %xp2 = shl i16 4, %x
@@ -262,7 +262,7 @@ define i1 @fshl_is_pow2(i16 %x, i16 %y, i16 %z) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]], i16 [[Z:%.*]]) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl nuw i16 1, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.fshl.i16(i16 [[XP2]], i16 [[XP2]], i16 [[Z]])
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -279,7 +279,7 @@ define i1 @fshl_is_pow2_fail(i16 %x, i16 %y, i16 %z) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]], i16 [[Z:%.*]]) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 2, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.fshl.i16(i16 [[XP2]], i16 [[XP2]], i16 [[Z]])
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -297,7 +297,7 @@ define i16 @fshr_is_pow2_or_zero(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 4, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.fshr.i16(i16 [[XP2]], i16 [[XP2]], i16 [[Z]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[XX]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %xp2 = shl i16 4, %x
@@ -344,7 +344,7 @@ define i1 @fshr_is_pow2(i16 %x, i16 %y, i16 %z) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]], i16 [[Z:%.*]]) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl nuw i16 1, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.fshr.i16(i16 [[XP2]], i16 [[XP2]], i16 [[Z]])
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -361,7 +361,7 @@ define i1 @fshr_is_pow2_fail(i16 %x, i16 %y, i16 %z) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]], i16 [[Z:%.*]]) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 2, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.fshr.i16(i16 [[XP2]], i16 [[XP2]], i16 [[Z]])
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -380,7 +380,7 @@ define i16 @mul_is_pow2_or_zero(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:    [[ZP2:%.*]] = shl i16 2, [[Z]]
 ; CHECK-NEXT:    [[XX:%.*]] = mul i16 [[XP2]], [[ZP2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[XX]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %xp2 = shl i16 4, %x
@@ -416,7 +416,7 @@ define i1 @mul_is_pow2(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:    [[ZP2:%.*]] = shl nuw nsw i16 2, [[ZSMALL]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i16 [[XSMALL]], 2
 ; CHECK-NEXT:    [[XX:%.*]] = shl nuw nsw i16 [[ZP2]], [[TMP1]]
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -439,7 +439,7 @@ define i1 @mul_is_pow2_fail(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:    [[ZP2:%.*]] = shl nuw nsw i16 2, [[ZSMALL]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i16 [[XSMALL]], 2
 ; CHECK-NEXT:    [[XX:%.*]] = shl i16 [[ZP2]], [[TMP1]]
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -462,7 +462,7 @@ define i1 @mul_is_pow2_fail2(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl nuw nsw i16 3, [[XSMALL]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i16 [[ZSMALL]], 1
 ; CHECK-NEXT:    [[XX:%.*]] = shl nuw nsw i16 [[XP2]], [[TMP1]]
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -482,7 +482,7 @@ define i1 @shl_is_pow2(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XSMALL:%.*]] = and i16 [[X]], 7
 ; CHECK-NEXT:    [[XX:%.*]] = shl nuw nsw i16 4, [[XSMALL]]
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -499,7 +499,7 @@ define i1 @shl_is_pow2_fail(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XSMALL:%.*]] = and i16 [[X]], 7
 ; CHECK-NEXT:    [[XX:%.*]] = shl i16 512, [[XSMALL]]
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -516,7 +516,7 @@ define i1 @shl_is_pow2_fail2(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XSMALL:%.*]] = and i16 [[X]], 7
 ; CHECK-NEXT:    [[XX:%.*]] = shl nuw nsw i16 5, [[XSMALL]]
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -533,7 +533,7 @@ define i1 @lshr_is_pow2(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XSMALL:%.*]] = and i16 [[X]], 7
 ; CHECK-NEXT:    [[XX:%.*]] = lshr exact i16 512, [[XSMALL]]
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -550,7 +550,7 @@ define i1 @lshr_is_pow2_fail(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XSMALL:%.*]] = and i16 [[X]], 7
 ; CHECK-NEXT:    [[XX:%.*]] = lshr i16 4, [[XSMALL]]
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -567,7 +567,7 @@ define i1 @lshr_is_pow2_fail2(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XSMALL:%.*]] = and i16 [[X]], 7
 ; CHECK-NEXT:    [[XX:%.*]] = lshr i16 513, [[XSMALL]]
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -584,7 +584,7 @@ define i1 @and_is_pow2(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XNZ:%.*]] = or i16 [[X]], 4
 ; CHECK-NEXT:    [[X_NEG:%.*]] = sub nsw i16 0, [[XNZ]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[X_NEG]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[Y]], [[X_NEG]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i16 [[TMP1]], [[XNZ]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -602,8 +602,8 @@ define i1 @and_is_pow2_fail(i16 %x, i16 %y) {
 ; CHECK-LABEL: define i1 @and_is_pow2_fail
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_NEG:%.*]] = sub i16 0, [[X]]
-; CHECK-NEXT:    [[XX:%.*]] = and i16 [[X_NEG]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[XX:%.*]] = and i16 [[X]], [[X_NEG]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -619,7 +619,7 @@ define i16 @i1_is_pow2_or_zero(i1 %x, i16 %y) {
 ; CHECK-LABEL: define i16 @i1_is_pow2_or_zero
 ; CHECK-SAME: (i1 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XX:%.*]] = zext i1 [[X]] to i16
-; CHECK-NEXT:    [[R:%.*]] = or i16 [[XX]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = or i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %xx = zext i1 %x to i16

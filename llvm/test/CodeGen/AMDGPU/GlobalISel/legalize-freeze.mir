@@ -171,12 +171,8 @@ body: |
 
     ; CHECK-LABEL: name: test_freeze_s448
     ; CHECK: [[COPY:%[0-9]+]]:_(s512) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s448) = G_TRUNC [[COPY]](s512)
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s448) = G_FREEZE [[TRUNC]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64), [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64), [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64), [[UV6:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FREEZE]](s448)
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s512) = G_MERGE_VALUES [[UV]](s64), [[UV1]](s64), [[UV2]](s64), [[UV3]](s64), [[UV4]](s64), [[UV5]](s64), [[UV6]](s64), [[DEF]](s64)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[MV]](s512)
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s512) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[FREEZE]](s512)
     %0:_(s512) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     %1:_(s448) = G_TRUNC %0
     %2:_(s448) = G_FREEZE %1
@@ -399,14 +395,12 @@ body: |
   bb.0:
 
     ; CHECK-LABEL: name: test_freeze_v33s32
-    ; CHECK: [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[DEF:%[0-9]+]]:_(<32 x s32>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[DEF]]
-    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[DEF]]
-    ; CHECK-NEXT: [[FREEZE2:%[0-9]+]]:_(s32) = G_FREEZE [[DEF1]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[FREEZE]](<16 x s32>)
-    ; CHECK-NEXT: [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[FREEZE1]](<16 x s32>)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<33 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32), [[UV4]](s32), [[UV5]](s32), [[UV6]](s32), [[UV7]](s32), [[UV8]](s32), [[UV9]](s32), [[UV10]](s32), [[UV11]](s32), [[UV12]](s32), [[UV13]](s32), [[UV14]](s32), [[UV15]](s32), [[UV16]](s32), [[UV17]](s32), [[UV18]](s32), [[UV19]](s32), [[UV20]](s32), [[UV21]](s32), [[UV22]](s32), [[UV23]](s32), [[UV24]](s32), [[UV25]](s32), [[UV26]](s32), [[UV27]](s32), [[UV28]](s32), [[UV29]](s32), [[UV30]](s32), [[UV31]](s32), [[FREEZE2]](s32)
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<32 x s32>) = G_FREEZE [[DEF]]
+    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:_(s32) = G_FREEZE [[DEF1]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[FREEZE]](<32 x s32>)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<33 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32), [[UV4]](s32), [[UV5]](s32), [[UV6]](s32), [[UV7]](s32), [[UV8]](s32), [[UV9]](s32), [[UV10]](s32), [[UV11]](s32), [[UV12]](s32), [[UV13]](s32), [[UV14]](s32), [[UV15]](s32), [[UV16]](s32), [[UV17]](s32), [[UV18]](s32), [[UV19]](s32), [[UV20]](s32), [[UV21]](s32), [[UV22]](s32), [[UV23]](s32), [[UV24]](s32), [[UV25]](s32), [[UV26]](s32), [[UV27]](s32), [[UV28]](s32), [[UV29]](s32), [[UV30]](s32), [[UV31]](s32), [[FREEZE1]](s32)
     ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<33 x s32>)
     %0:_(<33 x s32>) = G_IMPLICIT_DEF
     %1:_(<33 x s32>) = G_FREEZE %0
@@ -419,12 +413,10 @@ body: |
   bb.0:
 
     ; CHECK-LABEL: name: test_freeze_v64s32
-    ; CHECK: [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[DEF]]
-    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[DEF]]
-    ; CHECK-NEXT: [[FREEZE2:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[DEF]]
-    ; CHECK-NEXT: [[FREEZE3:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[DEF]]
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<64 x s32>) = G_CONCAT_VECTORS [[FREEZE]](<16 x s32>), [[FREEZE1]](<16 x s32>), [[FREEZE2]](<16 x s32>), [[FREEZE3]](<16 x s32>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<32 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<32 x s32>) = G_FREEZE [[DEF]]
+    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:_(<32 x s32>) = G_FREEZE [[DEF]]
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<64 x s32>) = G_CONCAT_VECTORS [[FREEZE]](<32 x s32>), [[FREEZE1]](<32 x s32>)
     ; CHECK-NEXT: S_NOP 0, implicit [[CONCAT_VECTORS]](<64 x s32>)
     %0:_(<64 x s32>) = G_IMPLICIT_DEF
     %1:_(<64 x s32>) = G_FREEZE %0

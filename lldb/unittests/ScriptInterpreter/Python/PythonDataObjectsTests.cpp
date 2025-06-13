@@ -760,10 +760,6 @@ class NewStyle(object):
     EXPECT_EQ(arginfo.get().max_positional_args, 3u);
   }
 
-#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
-
-  // the old implementation of GetArgInfo just doesn't work on builtins.
-
   {
     auto builtins = PythonModule::BuiltinsModule();
     auto hex = As<PythonCallable>(builtins.GetAttribute("hex"));
@@ -772,8 +768,6 @@ class NewStyle(object):
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().max_positional_args, 1u);
   }
-
-#endif
 }
 
 TEST_F(PythonDataObjectsTest, TestScript) {

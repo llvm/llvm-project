@@ -255,7 +255,7 @@ However, when optimizations are enabled, the printed result changes drastically:
   {__resume_fn = 0x401280 <coro_task(int)>, __destroy_fn = 0x401390 <coro_task(int)>, __promise = {count = 1}, __int_32_0 = 43, __coro_index = 1 '\001'}
 
 Unused values are optimized out, as well as the name of the local variable `a`.
-The only information remained is the value of a 32 bit integer. In this simple
+The only information remained is the value of a 32-bit integer. In this simple
 case, it seems to be pretty clear that `__int_32_0` represents `a`. However, it
 is not true.
 
@@ -513,7 +513,7 @@ So we can use the ``continuation`` field to construct the asynchronous stack:
           self.coro_frame = coro_frame
           self.resume_func = dereference(self.coro_frame.resume_addr)
           self.resume_func_block = gdb.block_for_pc(self.resume_func)
-          if self.resume_func_block == None:
+          if self.resume_func_block is None:
               raise Exception('Not stackless coroutine.')
           self.line_info = gdb.find_pc_line(self.resume_func)
 
@@ -543,8 +543,8 @@ So we can use the ``continuation`` field to construct the asynchronous stack:
           self.function_name = f
 
       def __str__(self, shift = 2):
-          addr = "" if self.address() == None else '%#x' % self.address() + " in "
-          location = "" if self.filename() == None else " at " + self.filename() + ":" + str(self.line())
+          addr = "" if self.address() is None else '%#x' % self.address() + " in "
+          location = "" if self.filename() is None else " at " + self.filename() + ":" + str(self.line())
           return addr + self.function() + " " + str([str(args) for args in self.frame_args()]) + location
 
   class CoroutineFilter:
@@ -598,7 +598,7 @@ So we can use the ``continuation`` field to construct the asynchronous stack:
 
           addr = int(argv[0], 16)
           block = gdb.block_for_pc(long(cast_addr2long_pointer(addr).dereference()))
-          if block == None:
+          if block is None:
               print "block " + str(addr) + "  is none."
               return
 

@@ -49,7 +49,7 @@ import tempfile
 import time
 import traceback
 from types import ModuleType
-from typing import Any, Awaitable, Callable, List, Optional, Tuple, TypeVar
+from typing import Any, Awaitable, Callable, List, Optional, TypeVar
 
 
 yaml: Optional[ModuleType] = None
@@ -87,7 +87,7 @@ def find_compilation_database(path: str) -> str:
 
 
 def get_tidy_invocation(
-    f: str,
+    f: Optional[str],
     clang_tidy_binary: str,
     checks: str,
     tmpdir: Optional[str],
@@ -147,7 +147,8 @@ def get_tidy_invocation(
         start.append(f"--warnings-as-errors={warnings_as_errors}")
     if allow_no_checks:
         start.append("--allow-no-checks")
-    start.append(f)
+    if f:
+        start.append(f)
     return start
 
 
@@ -490,7 +491,7 @@ async def main() -> None:
 
     try:
         invocation = get_tidy_invocation(
-            "",
+            None,
             clang_tidy_binary,
             args.checks,
             None,
@@ -511,12 +512,10 @@ async def main() -> None:
         )
         invocation.append("-list-checks")
         invocation.append("-")
-        if args.quiet:
-            # Even with -quiet we still want to check if we can call clang-tidy.
-            with open(os.devnull, "w") as dev_null:
-                subprocess.check_call(invocation, stdout=dev_null)
-        else:
-            subprocess.check_call(invocation)
+        # Even with -quiet we still want to check if we can call clang-tidy.
+        subprocess.check_call(
+            invocation, stdout=subprocess.DEVNULL if args.quiet else None
+        )
     except:
         print("Unable to run clang-tidy.", file=sys.stderr)
         sys.exit(1)
@@ -623,4 +622,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass

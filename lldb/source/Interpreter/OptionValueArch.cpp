@@ -33,6 +33,14 @@ void OptionValueArch::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
+llvm::json::Value
+OptionValueArch::ToJSON(const ExecutionContext *exe_ctx) const {
+  if (m_current_value.IsValid())
+    return llvm::json::Value(m_current_value.GetArchitectureName());
+
+  return {};
+}
+
 Status OptionValueArch::SetValueFromString(llvm::StringRef value,
                                            VarSetOperationType op) {
   Status error;
@@ -49,8 +57,8 @@ Status OptionValueArch::SetValueFromString(llvm::StringRef value,
       m_value_was_set = true;
       NotifyValueChanged();
     } else
-      error.SetErrorStringWithFormat("unsupported architecture '%s'",
-                                     value_str.c_str());
+      error = Status::FromErrorStringWithFormat("unsupported architecture '%s'",
+                                                value_str.c_str());
     break;
   }
   case eVarSetOperationInsertBefore:

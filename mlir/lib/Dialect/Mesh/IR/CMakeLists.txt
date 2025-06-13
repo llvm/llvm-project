@@ -13,4 +13,5 @@ add_mlir_dialect_library(MLIRMeshDialect
   MLIRIR
   MLIRSupport
   MLIRViewLikeInterface
+  MLIRDestinationStyleOpInterface
 )

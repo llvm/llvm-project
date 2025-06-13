@@ -20,11 +20,13 @@ using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcSinTest, TrickyInputs) {
   constexpr double INPUTS[] = {
-      0x1.940c877fb7dacp-7,    0x1.fffffffffdb6p24,    0x1.fd4da4ef37075p29,
-      0x1.b951f1572eba5p+31,   0x1.55202aefde314p+31,  0x1.85fc0f04c0128p101,
-      0x1.7776c2343ba4ep101,   0x1.678309fa50d58p110,  0x1.fffffffffef4ep199,
-      -0x1.ab514bfc61c76p+7,   -0x1.f7898d5a756ddp+2,  -0x1.f42fb19b5b9b2p-6,
-      0x1.5f09cad750ab1p+3,    -0x1.14823229799c2p+7,  -0x1.0285070f9f1bcp-5,
+      0x1.5f09cad750ab1p+3,    0x1.fff781921b61fp15,   -0x1.f635b70b92407p-21,
+      -0x1.3ecf146c39c0cp-20,  0x1.6ac5b262ca1ffp849,  0x1.6c6cbc45dc8dep5,
+      0x1.921fb5443p-7,        0x1.940c877fb7dacp-7,   0x1.fffffffffdb6p24,
+      0x1.fd4da4ef37075p29,    0x1.b951f1572eba5p+31,  0x1.55202aefde314p+31,
+      0x1.85fc0f04c0128p101,   0x1.7776c2343ba4ep101,  0x1.678309fa50d58p110,
+      0x1.fffffffffef4ep199,   -0x1.ab514bfc61c76p+7,  -0x1.f7898d5a756ddp+2,
+      -0x1.f42fb19b5b9b2p-6,   -0x1.14823229799c2p+7,  -0x1.0285070f9f1bcp-5,
       0x1.23f40dccdef72p+0,    0x1.43cf16358c9d7p+0,   0x1.addf3b9722265p+0,
       0x1.48ff1782ca91dp+8,    0x1.a211877de55dbp+4,   0x1.dcbfda0c7559ep+8,
       0x1.1ffb509f3db15p+5,    0x1.2345d1e090529p+5,   0x1.ae945054939c2p+10,
