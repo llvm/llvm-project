@@ -66,6 +66,7 @@ public:
   ImplicitParamDecl *cxxabiThisDecl = nullptr;
   mlir::Value cxxabiThisValue = nullptr;
   mlir::Value cxxThisValue = nullptr;
+  clang::CharUnits cxxThisAlignment;
 
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
@@ -473,6 +474,12 @@ public:
 
   bool shouldNullCheckClassCastValue(const CastExpr *ce);
 
+  RValue convertTempToRValue(Address addr, clang::QualType type,
+                             clang::SourceLocation loc);
+
+  static bool
+  isConstructorDelegationValid(const clang::CXXConstructorDecl *ctor);
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
 
   /// Construct an address with the natural alignment of T. If a pointer to T
@@ -517,6 +524,7 @@ public:
     assert(cxxThisValue && "no 'this' value for this function");
     return cxxThisValue;
   }
+  Address loadCXXThisAddress();
 
   /// Get an appropriate 'undef' rvalue for the given type.
   /// TODO: What's the equivalent for MLIR? Currently we're only using this for
@@ -753,6 +761,8 @@ public:
 
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
 
+  void emitConstructorBody(FunctionArgList &args);
+
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
 
   void emitCXXConstructExpr(const clang::CXXConstructExpr *e,
@@ -789,6 +799,16 @@ public:
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
+
+  void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
+                        clang::CXXCtorType ctorType, FunctionArgList &args);
+
+  // It's important not to confuse this and emitDelegateCXXConstructorCall.
+  // Delegating constructors are the C++11 feature. The constructor delegate
+  // optimization is used to reduce duplication in the base and complete
+  // constructors where they are substantially the same.
+  void emitDelegatingCXXConstructorCall(const CXXConstructorDecl *ctor,
+                                        const FunctionArgList &args);
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
@@ -840,6 +860,17 @@ public:
   mlir::LogicalResult emitDefaultStmt(const clang::DefaultStmt &s,
                                       mlir::Type condType,
                                       bool buildingTopLevelCase);
+
+  void emitDelegateCXXConstructorCall(const clang::CXXConstructorDecl *ctor,
+                                      clang::CXXCtorType ctorType,
+                                      const FunctionArgList &args,
+                                      clang::SourceLocation loc);
+
+  /// We are performing a delegate call; that is, the current function is
+  /// delegating to another one. Produce a r-value suitable for passing the
+  /// given parameter.
+  void emitDelegateCallArg(CallArgList &args, const clang::VarDecl *param,
+                           clang::SourceLocation loc);
 
   /// Emit an `if` on a boolean condition to the specified blocks.
   /// FIXME: Based on the condition, this might try to simplify the codegen of
