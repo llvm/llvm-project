@@ -39,7 +39,7 @@ AST_MATCHER_P(QualType, isSharedPointer,
   return false;
 }
 
-}  // namespace
+} // namespace
 
 MoveSharedPointerContentsCheck::MoveSharedPointerContentsCheck(
     StringRef Name, ClangTidyContext *Context)
