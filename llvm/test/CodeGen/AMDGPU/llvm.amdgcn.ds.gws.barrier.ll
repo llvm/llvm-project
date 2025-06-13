@@ -189,6 +189,7 @@ define amdgpu_kernel void @gws_barrier_fence_before(i32 %val, ptr addrspace(1) %
 ; NOLOOP: s_mov_b32 m0, 0{{$}}
 ; NOLOOP: ds_gws_barrier v{{[0-9]+}} offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT: v_mov
 ; NOLOOP-NEXT: load_{{dword|b32}}
 
 define amdgpu_kernel void @gws_barrier_fence_after(i32 %val, ptr addrspace(1) %ptr) #0 {
