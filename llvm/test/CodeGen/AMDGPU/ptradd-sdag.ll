@@ -25,20 +25,12 @@ define ptr @gep_as0(ptr %p, i64 %offset) {
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX942_PTRADD-LABEL: gep_as0:
-; GFX942_PTRADD:       ; %bb.0: ; %entry
-; GFX942_PTRADD-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942_PTRADD-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
-; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3]
-; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, 5
-; GFX942_PTRADD-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX942_LEGACY-LABEL: gep_as0:
-; GFX942_LEGACY:       ; %bb.0: ; %entry
-; GFX942_LEGACY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942_LEGACY-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 2, v[0:1]
-; GFX942_LEGACY-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, 5
-; GFX942_LEGACY-NEXT:    s_setpc_b64 s[30:31]
+; GFX942-LABEL: gep_as0:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 2, v[0:1]
+; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, 5
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: gep_as0:
 ; GFX10:       ; %bb.0: ; %entry
@@ -187,20 +179,12 @@ define ptr @multi_gep_as0(ptr %p, i64 %offset) {
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX942_PTRADD-LABEL: multi_gep_as0:
-; GFX942_PTRADD:       ; %bb.0: ; %entry
-; GFX942_PTRADD-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942_PTRADD-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
-; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3]
-; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, 5
-; GFX942_PTRADD-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX942_LEGACY-LABEL: multi_gep_as0:
-; GFX942_LEGACY:       ; %bb.0: ; %entry
-; GFX942_LEGACY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942_LEGACY-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 2, v[0:1]
-; GFX942_LEGACY-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, 5
-; GFX942_LEGACY-NEXT:    s_setpc_b64 s[30:31]
+; GFX942-LABEL: multi_gep_as0:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 2, v[0:1]
+; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, 5
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: multi_gep_as0:
 ; GFX10:       ; %bb.0: ; %entry
@@ -535,3 +519,5 @@ entry:
 ; GFX12_PTRADD: {{.*}}
 ; GFX8_LEGACY: {{.*}}
 ; GFX8_PTRADD: {{.*}}
+; GFX942_LEGACY: {{.*}}
+; GFX942_PTRADD: {{.*}}
