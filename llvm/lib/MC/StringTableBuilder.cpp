@@ -144,27 +144,17 @@ void StringTableBuilder::finalizeStringTable(bool Optimize) {
     for (StringPair &P : StringIndexMap)
       Strings.push_back(&P);
 
-    auto getStringPriority = [this](const CachedHashStringRef Str) -> uint8_t {
-      if (StringPriorityMap.contains(Str))
-        return StringPriorityMap[Str];
-      return 0;
-    };
-
     size_t RangeBegin = 0;
     MutableArrayRef<StringPair *> StringsRef(Strings);
     if (StringPriorityMap.size()) {
       llvm::sort(Strings,
                  [&](const StringPair *LHS, const StringPair *RHS) -> bool {
-                   return getStringPriority(LHS->first) >
-                          getStringPriority(RHS->first);
+                   return StringPriorityMap.lookup(LHS->first) >
+                          StringPriorityMap.lookup(RHS->first);
                  });
-      // Make sure ArrayRef is valid. Although std::sort implementaion is
-      // normally in-place , it is not guaranteed by standard.
-      StringsRef = Strings;
-
-      uint8_t RangePriority = getStringPriority(Strings[0]->first);
+      uint8_t RangePriority = StringPriorityMap.lookup(Strings[0]->first);
       for (size_t I = 1, E = Strings.size(); I != E && RangePriority; ++I) {
-        uint8_t Priority = getStringPriority(Strings[I]->first);
+        uint8_t Priority = StringPriorityMap.lookup(Strings[I]->first);
         if (Priority != RangePriority) {
           multikeySort(StringsRef.slice(RangeBegin, I - RangeBegin), 0);
           RangePriority = Priority;
