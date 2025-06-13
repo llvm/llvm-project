@@ -20,6 +20,7 @@
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -35,6 +36,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -7317,11 +7319,63 @@ static bool getMiscPatterns(MachineInstr &Root,
   return false;
 }
 
+/// Search for patterns where we use LD1i32 instructions to load into
+/// 4 separate lanes of a 128 bit Neon register. We can increase ILP
+/// by loading into 2 Neon registers instead.
+static bool getLoadPatterns(MachineInstr &Root,
+                            SmallVectorImpl<unsigned> &Patterns) {
+  const MachineRegisterInfo &MRI = Root.getMF()->getRegInfo();
+  const TargetRegisterInfo *TRI =
+      Root.getMF()->getSubtarget().getRegisterInfo();
+  // Enable this only on Darwin targets, where it should be profitable. Other
+  // targets can remove this check if it is profitable there as well.
+  if (!Root.getMF()->getTarget().getTargetTriple().isOSDarwin())
+    return false;
+
+  // The pattern searches for loads into single lanes.
+  if (Root.getOpcode() != AArch64::LD1i32)
+    return false;
+
+  // The root of the pattern must load into the last lane of the vector.
+  if (Root.getOperand(2).getImm() != 3)
+    return false;
+
+  // Check that we have load into all lanes except lane 0.
+  auto *CurrInstr = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
+  SmallSet<unsigned, 4> RemainingLanes({1, 2});
+  while (RemainingLanes.begin() != RemainingLanes.end() &&
+         CurrInstr->getOpcode() == AArch64::LD1i32 &&
+         MRI.hasOneNonDBGUse(CurrInstr->getOperand(0).getReg())) {
+    RemainingLanes.erase(CurrInstr->getOperand(2).getImm());
+    CurrInstr = MRI.getUniqueVRegDef(CurrInstr->getOperand(1).getReg());
+  }
+
+  if (!RemainingLanes.empty())
+    return false;
+
+  // Match the SUBREG_TO_REG sequence.
+  if (CurrInstr->getOpcode() != TargetOpcode::SUBREG_TO_REG)
+    return false;
+
+  // Verify that the subreg to reg loads an i32 into the first lane.
+  auto Lane0LoadReg = CurrInstr->getOperand(2).getReg();
+  if (TRI->getRegSizeInBits(Lane0LoadReg, MRI) != 32)
+    return false;
+
+  // Verify that it also has a single non debug use.
+  if (!MRI.hasOneNonDBGUse(Lane0LoadReg))
+    return false;
+
+  Patterns.push_back(AArch64MachineCombinerPattern::SPLIT_LD);
+  return true;
+}
+
 CombinerObjective
 AArch64InstrInfo::getCombinerObjective(unsigned Pattern) const {
   switch (Pattern) {
   case AArch64MachineCombinerPattern::SUBADD_OP1:
   case AArch64MachineCombinerPattern::SUBADD_OP2:
+  case AArch64MachineCombinerPattern::SPLIT_LD:
     return CombinerObjective::MustReduceDepth;
   default:
     return TargetInstrInfo::getCombinerObjective(Pattern);
@@ -7349,6 +7403,10 @@ bool AArch64InstrInfo::getMachineCombinerPatterns(
 
   // Other patterns
   if (getMiscPatterns(Root, Patterns))
+    return true;
+
+  // Load patterns
+  if (getLoadPatterns(Root, Patterns))
     return true;
 
   return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
@@ -8680,6 +8738,66 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
   case AArch64MachineCombinerPattern::FNMADD: {
     MUL = genFNegatedMAD(MF, MRI, TII, Root, InsInstrs);
     break;
+  }
+  case AArch64MachineCombinerPattern::SPLIT_LD: {
+    // Gather the initial load instructions, we will use them later to build the
+    // pattern.
+    MachineInstr *Lane2Load = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
+    MachineInstr *Lane1Load =
+        MRI.getUniqueVRegDef(Lane2Load->getOperand(1).getReg());
+    MachineInstr *SubregToReg =
+        MRI.getUniqueVRegDef(Lane1Load->getOperand(1).getReg());
+    const TargetRegisterClass *FPR128RegClass =
+        MRI.getRegClass(Root.getOperand(0).getReg());
+
+    auto LoadLaneToRegister = [&](MachineInstr *OriginalInstr,
+                                  Register SrcRegister, unsigned Lane,
+                                  Register OffsetRegister) {
+      auto NewRegister = MRI.createVirtualRegister(FPR128RegClass);
+      MachineInstrBuilder LoadIndexIntoRegister =
+          BuildMI(MF, MIMetadata(*OriginalInstr), TII->get(Root.getOpcode()),
+                  NewRegister)
+              .addReg(SrcRegister)
+              .addImm(Lane)
+              .addReg(OffsetRegister, getKillRegState(true));
+      InstrIdxForVirtReg.insert(std::make_pair(NewRegister, InsInstrs.size()));
+      InsInstrs.push_back(LoadIndexIntoRegister);
+      return NewRegister;
+    };
+
+    // To rewrite the pattern, we first need define a new register to
+    // load our results into.
+    auto ImplicitDefForReg1 = MRI.createVirtualRegister(FPR128RegClass);
+    auto DefInstr =
+        BuildMI(MF, MIMetadata(Root), TII->get(TargetOpcode::IMPLICIT_DEF),
+                ImplicitDefForReg1);
+    InstrIdxForVirtReg.insert(
+        std::make_pair(ImplicitDefForReg1, InsInstrs.size()));
+    InsInstrs.push_back(DefInstr);
+
+    // Load index 1 into register 1 lane 0.
+    Register Index1LoadReg = LoadLaneToRegister(
+        Lane1Load, ImplicitDefForReg1, 0, Lane1Load->getOperand(3).getReg());
+    DelInstrs.push_back(Lane1Load);
+
+    // Load index 2 into register 0 lane 1.
+    auto Index2LoadReg =
+        LoadLaneToRegister(Lane2Load, SubregToReg->getOperand(0).getReg(), 1,
+                           Lane2Load->getOperand(3).getReg());
+    DelInstrs.push_back(Lane2Load);
+
+    // Load index 3 into register 1 lane 1.
+    auto Index3LoadReg = LoadLaneToRegister(&Root, Index1LoadReg, 1,
+                                            Root.getOperand(3).getReg());
+    // Root will be deleted after this pattern is applied
+
+    // Create the zip instruction.
+    MachineInstrBuilder ZipInstr =
+        BuildMI(MF, MIMetadata(Root), TII->get(AArch64::ZIP1v2i64),
+                Root.getOperand(0).getReg())
+            .addReg(Index2LoadReg)
+            .addReg(Index3LoadReg);
+    InsInstrs.push_back(ZipInstr);
   }
 
   } // end switch (Pattern)
