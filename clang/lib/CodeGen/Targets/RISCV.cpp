@@ -680,20 +680,22 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     if (const auto *ED = Ty->getAsEnumDecl())
       Ty = ED->getIntegerType();
 
-    // All integral types are promoted to XLen width
-    if (Size < XLen && Ty->isIntegralOrEnumerationType()) {
-      return extendType(Ty, CGT.ConvertType(Ty));
-    }
-
     if (const auto *EIT = Ty->getAs<BitIntType>()) {
-      if (EIT->getNumBits() < XLen)
-        return extendType(Ty, CGT.ConvertType(Ty));
+      // FIXME: Maybe we should treat 32 as a special case and wait for
+      // the SPEC to decide.
+      if (EIT->getNumBits() <= 2*XLen)
+        return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
       if (EIT->getNumBits() > 128 ||
           (!getContext().getTargetInfo().hasInt128Type() &&
            EIT->getNumBits() > 64))
         return getNaturalAlignIndirect(
             Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
             /*ByVal=*/false);
+    }
+
+    // All integral types are promoted to XLen width
+    if (Size < XLen && Ty->isIntegralOrEnumerationType()) {
+      return extendType(Ty, CGT.ConvertType(Ty));
     }
 
     return ABIArgInfo::getDirect();
