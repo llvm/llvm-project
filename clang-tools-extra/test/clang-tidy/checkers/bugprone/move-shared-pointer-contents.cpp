@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-move-shared-pointer-contents %t -- -config="{CheckOptions: {bugprone-move-shared-pointer-contents.SharedPointerClasses: '::std::shared_ptr;my::OtherSharedPtr;'}}" -- -I %S/../modernize/Inputs/smart-ptr
+// RUN: %check_clang_tidy %s bugprone-move-shared-pointer-contents %t -- -config="{CheckOptions: {bugprone-move-shared-pointer-contents.SharedPointerClasses: '::std::shared_ptr;my::OtherSharedPtr;'}}" -- -I %S/../modernize/Inputs/smart-ptr -fno-delayed-template-parsing
 
 // Some dummy definitions we'll need.
 
