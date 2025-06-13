@@ -124,7 +124,7 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
                             CLANG_VERSION_MAJOR_STRING);
     if (SystemTriple.isOSBinFormatELF())
       OrcRuntimePath =
-          BasePath.str().str() + "lib/x86_64-unknown-linux-gnu/liborc_rt.a";
+          BasePath.str().str() + "/lib/x86_64-unknown-linux-gnu/liborc_rt.a";
     else if (SystemTriple.isOSBinFormatMachO())
       OrcRuntimePath = BasePath.str().str() + "/lib/darwin/liborc_rt_osx.a";
     else
