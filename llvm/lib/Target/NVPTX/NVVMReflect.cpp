@@ -259,9 +259,12 @@ void NVVMReflect::replaceReflectCalls(
         // a conditional branch is turned into a direct branch.
         if (ConstantFoldTerminator(BB)) {
           for (BasicBlock *Succ : Succs) {
-            if (pred_empty(Succ) && Succ != &Succ->getParent()->getEntryBlock()) {
-              SetVector<BasicBlock *> TransitivelyDead = findTransitivelyDeadBlocks(Succ);
-              DeadBlocks.insert(TransitivelyDead.begin(), TransitivelyDead.end());
+            if (pred_empty(Succ) &&
+                Succ != &Succ->getParent()->getEntryBlock()) {
+              SetVector<BasicBlock *> TransitivelyDead =
+                  findTransitivelyDeadBlocks(Succ);
+              DeadBlocks.insert(TransitivelyDead.begin(),
+                                TransitivelyDead.end());
             }
           }
         }
