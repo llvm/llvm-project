@@ -44,7 +44,7 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   bool doMulWide;
 
   NVPTX::DivPrecisionLevel getDivF32Level(const SDNode *N) const;
-  bool usePrecSqrtF32() const;
+  bool usePrecSqrtF32(const SDNode *N) const;
   bool useF32FTZ() const;
   bool allowFMA() const;
   bool allowUnsafeFPMath() const;
