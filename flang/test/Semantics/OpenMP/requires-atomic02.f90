@@ -12,7 +12,7 @@ program requires
 
   ! CHECK-LABEL: OpenMPAtomicConstruct
   ! CHECK: OmpClause -> Read
-  ! CHECK: OmpClause -> AcqRel
+  ! CHECK: OmpClause -> Acquire
   !$omp atomic read
   i = j
 
@@ -36,7 +36,7 @@ program requires
 
   ! CHECK-LABEL: OpenMPAtomicConstruct
   ! CHECK: OmpClause -> Write
-  ! CHECK: OmpClause -> AcqRel
+  ! CHECK: OmpClause -> Release
   !$omp atomic write
   i = j
 
@@ -60,7 +60,7 @@ program requires
 
   ! CHECK-LABEL: OpenMPAtomicConstruct
   ! CHECK: OmpClause -> Update
-  ! CHECK: OmpClause -> AcqRel
+  ! CHECK: OmpClause -> Release
   !$omp atomic update
   i = i + j
 
@@ -79,7 +79,7 @@ program requires
   i = i + j
 
   ! CHECK-LABEL: OpenMPAtomicConstruct
-  ! CHECK: OmpClause -> AcqRel
+  ! CHECK: OmpClause -> Release
   !$omp atomic
   i = i + j
 
