@@ -360,3 +360,36 @@ func.func @prefetch_1d(%arg0: memref<256xf16>){
   xegpu.prefetch_nd %0 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: !xegpu.tensor_desc<16xf16>
   return
 }
+
+// -----
+// CHECK-LABEL: func.func @test_scf_while_and_condition(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<256xf32>, %[[ARG1:[0-9a-zA-Z]+]]: memref<256xf32>) {
+// CHECK: %{{.*}}:3 = scf.while ({{.*}}) : (vector<16xf32>, i32, !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>)
+// CHECK-SAME: -> (vector<16xf32>, i32, !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>) {
+// CHECK:       scf.condition(%{{.*}}) {{.*}} : vector<16xf32>, i32, !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
+// CHECK-NEXT: } do {
+// CHECK-NEXT: ^bb0(%{{.*}}: vector<16xf32>, %{{.*}}: i32, %{{.*}}: !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>):
+// CHECK:     scf.yield {{.*}} : vector<16xf32>, i32, !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
+// CHECK-NEXT: } attributes {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+func.func @test_scf_while_and_condition(%arg0: memref<256xf32>, %arg1: memref<256xf32>) {
+  %c0 = arith.constant 0 : i32
+  %c16 = arith.constant 16 : i32
+  %c256 = arith.constant 256 : i32
+  %0 = xegpu.create_nd_tdesc %arg0[0] : memref<256xf32> -> !xegpu.tensor_desc<16xf32>
+  %1 = xegpu.load_nd %0  : !xegpu.tensor_desc<16xf32> -> vector<16xf32>
+  %2 = xegpu.create_nd_tdesc %arg1[0] : memref<256xf32> -> !xegpu.tensor_desc<16xf32>
+
+  %3:3 = scf.while (%arg2 = %1, %arg3 = %c0, %arg4 = %0) : (vector<16xf32>, i32, !xegpu.tensor_desc<16xf32>)
+    -> (vector<16xf32>, i32, !xegpu.tensor_desc<16xf32>) {
+    %4 = arith.cmpi slt, %arg3, %c256 : i32
+    scf.condition(%4) %arg2, %arg3, %arg4 : vector<16xf32>, i32, !xegpu.tensor_desc<16xf32>
+  } do {
+  ^bb0(%arg2: vector<16xf32>, %arg3: i32, %arg4: !xegpu.tensor_desc<16xf32>):
+    xegpu.store_nd %arg2, %2  : vector<16xf32>, !xegpu.tensor_desc<16xf32>
+    %4 = arith.addi %arg3, %c16 : i32
+    %5 = xegpu.update_nd_offset %arg4, [16] : !xegpu.tensor_desc<16xf32>
+    %6 = xegpu.load_nd %5  : !xegpu.tensor_desc<16xf32> -> vector<16xf32>
+    scf.yield %6, %4, %5 : vector<16xf32>, i32, !xegpu.tensor_desc<16xf32>
+  }
+  return
+}

@@ -725,9 +725,6 @@ static LogicalResult updateBranchTerminatorOpInterface(
   terminator.getSuccessorRegions(operands, successors);
 
   for (mlir::RegionSuccessor &successor : successors) {
-    if (!successor.isParent())
-      continue;
-
     mlir::OperandRange forwardedOperands =
         terminator.getSuccessorOperands(successor);
     mlir::ValueRange regionArgs = successor.getSuccessorInputs();
@@ -781,12 +778,12 @@ updateBranchOpInterface(mlir::OpBuilder &builder,
                         mlir::RegionBranchOpInterface branch,
                         GetLayoutFnTy getLayoutOfValue) {
   mlir::Operation *op = branch.getOperation();
-  llvm::SmallVector<mlir::RegionSuccessor> successors;
+  llvm::SmallVector<mlir::RegionSuccessor> entrySuccessors;
   llvm::SmallVector<mlir::Attribute> operands(op->getNumOperands(), nullptr);
-  branch.getEntrySuccessorRegions(operands, successors);
+  branch.getEntrySuccessorRegions(operands, entrySuccessors);
   mlir::ValueRange results = op->getResults();
 
-  for (mlir::RegionSuccessor &successor : successors) {
+  for (mlir::RegionSuccessor &successor : entrySuccessors) {
     // Only interested in successor regions that are contained within the op.
     if (successor.isParent())
       continue;
