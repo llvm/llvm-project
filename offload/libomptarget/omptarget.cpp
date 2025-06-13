@@ -198,6 +198,30 @@ static int32_t getParentIndex(int64_t Type) {
   return ((Type & OMP_TGT_MAPTYPE_MEMBER_OF) >> 48) - 1;
 }
 
+int checkTargetAddressMapping(const void *Ptr, size_t Size, int DeviceNum,
+                              const char *Name) {
+  if (!Ptr) {
+    DP("Call to %s with NULL ptr, returning false\n", Name);
+    return false;
+  }
+
+  if (DeviceNum == omp_get_initial_device()) {
+    DP("Call to %s on host, returning true\n", Name);
+    return true;
+  }
+
+  auto DeviceOrErr = PM->getDevice(DeviceNum);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
+
+  TargetPointerResultTy TPR = DeviceOrErr->getMappingInfo().getTgtPtrBegin(
+      const_cast<void *>(Ptr), Size, false, false);
+
+  int Rc = TPR.isPresent();
+  DP("Call to %s returns %d\n", Name, Rc);
+  return Rc;
+}
+
 void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                           const char *Name) {
   DP("Call to %s for device %d requesting %zu bytes\n", Name, DeviceNum, Size);
