@@ -2579,6 +2579,13 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::SPIRV, Triple("spirv32-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv64-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::DXContainer, Triple("dxil-apple-macosx").getObjectFormat());
+
+  EXPECT_EQ(Triple::MachO, Triple("aarch64-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::MachO, Triple("x86_64-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::MachO, Triple("aarch64-apple").getObjectFormat());
+  EXPECT_EQ(Triple::MachO, Triple("x86_64-apple").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("aarch64").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("x86_64").getObjectFormat());
 }
 
 TEST(TripleTest, NormalizeWindows) {
