@@ -1332,6 +1332,14 @@ constexpr bool foo(int *i) {
 static_assert(foo(nullptr), ""); // expected-note {{in call to 'foo(nullptr)'}}
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
 
+constexpr bool foo_rvalue(int *i) {
+    int &&j = (int&&)*i;
+    // expected-note@-1 {{binding a reference to dereferenced null pointer is not allowed in a constant expression}}
+    return true;
+}
+static_assert(foo_rvalue(nullptr), ""); // expected-note {{in call to 'foo_rvalue(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
 int arr[3]; // expected-note {{declared here}}
 constexpr bool f() { // cxx14_20-error {{constexpr function never produces a constant expression}}
   int &r  = arr[3]; // cxx14_20-note {{binding a reference to dereferenced one-past-the-end pointer is not allowed in a constant expression}} \
