@@ -135,7 +135,7 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   assert(MO.isExpr());
   const MCExpr *Expr = MO.getExpr();
   if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Expr)) {
-    Fixups.push_back(MCFixup::create(0, Expr, SExpr->getFixupKind()));
+    Fixups.push_back(MCFixup::create(0, Expr, SExpr->getSpecifier()));
     return 0;
   }
 
@@ -165,7 +165,7 @@ unsigned SparcMCCodeEmitter::getSImm5OpValue(const MCInst &MI, unsigned OpNo,
     return CE->getValue();
 
   if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Expr)) {
-    Fixups.push_back(MCFixup::create(0, Expr, SExpr->getFixupKind()));
+    Fixups.push_back(MCFixup::create(0, Expr, SExpr->getSpecifier()));
     return 0;
   }
   Fixups.push_back(MCFixup::create(0, Expr, ELF::R_SPARC_5));
@@ -191,7 +191,7 @@ SparcMCCodeEmitter::getSImm13OpValue(const MCInst &MI, unsigned OpNo,
     return CE->getValue();
 
   if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Expr)) {
-    Fixups.push_back(MCFixup::create(0, Expr, SExpr->getFixupKind()));
+    Fixups.push_back(MCFixup::create(0, Expr, SExpr->getSpecifier()));
     return 0;
   }
   Fixups.push_back(MCFixup::create(0, Expr, Sparc::fixup_sparc_13));
