@@ -81,6 +81,7 @@ bool X86FixupInstTuningPass::processInstruction(
   MachineInstr &MI = *I;
   unsigned Opc = MI.getOpcode();
   unsigned NumOperands = MI.getDesc().getNumOperands();
+  bool OptSize = MF.getFunction().hasOptSize();
 
   auto GetInstTput = [&](unsigned Opcode) -> std::optional<double> {
     // We already checked that SchedModel exists in `NewOpcPreferable`.
@@ -226,8 +227,7 @@ bool X86FixupInstTuningPass::processInstruction(
                                unsigned MovImm) -> bool {
     if ((MI.getOperand(NumOperands - 1).getImm() & Mask) != MovImm)
       return false;
-    bool Force = MF.getFunction().hasOptSize();
-    if (!Force && !NewOpcPreferable(MovOpc))
+    if (!OptSize && !NewOpcPreferable(MovOpc))
       return false;
     MI.setDesc(TII->get(MovOpc));
     MI.removeOperand(NumOperands - 1);
