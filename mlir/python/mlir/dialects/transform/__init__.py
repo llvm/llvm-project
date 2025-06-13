@@ -224,13 +224,13 @@ class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
     def __init__(
         self,
         result: Type,
-        pass_name: Union[str, StringAttr],
         target: Union[Operation, Value, OpView],
+        pass_name: Union[str, StringAttr],
         *,
         options: Optional[
             Dict[
                 Union[str, StringAttr],
-                Union[Attribute, Value, Operation, OpView],
+                Union[Attribute, Value, Operation, OpView, str, int, bool],
             ]
         ] = None,
         loc=None,
@@ -253,17 +253,21 @@ class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
                 cur_param_operand_idx += 1
             elif isinstance(value, Attribute):
                 options_dict[key] = value
+            # The following cases auto-convert Python values to attributes.
+            elif isinstance(value, bool):
+                options_dict[key] = BoolAttr.get(value)
+            elif isinstance(value, int):
+                default_int_type = IntegerType.get_signless(64, context)
+                options_dict[key] = IntegerAttr.get(default_int_type, value)
             elif isinstance(value, str):
                 options_dict[key] = StringAttr.get(value)
             else:
                 raise TypeError(f"Unsupported option type: {type(value)}")
-        if len(options_dict) > 0:
-            print(options_dict, cur_param_operand_idx)
         super().__init__(
             result,
+            _get_op_result_or_value(target),
             pass_name,
             dynamic_options,
-            target=_get_op_result_or_value(target),
             options=DictAttr.get(options_dict),
             loc=loc,
             ip=ip,
@@ -272,13 +276,13 @@ class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
 
 def apply_registered_pass(
     result: Type,
-    pass_name: Union[str, StringAttr],
     target: Union[Operation, Value, OpView],
+    pass_name: Union[str, StringAttr],
     *,
     options: Optional[
         Dict[
             Union[str, StringAttr],
-            Union[Attribute, Value, Operation, OpView],
+            Union[Attribute, Value, Operation, OpView, str, int, bool],
         ]
     ] = None,
     loc=None,

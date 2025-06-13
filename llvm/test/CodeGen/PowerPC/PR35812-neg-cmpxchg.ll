@@ -15,50 +15,57 @@ define signext i32 @main() nounwind {
 ; CHECK-NEXT:    stdu 1, -48(1)
 ; CHECK-NEXT:    li 3, -32477
 ; CHECK-NEXT:    std 0, 64(1)
-; CHECK-NEXT:    li 4, 234
-; CHECK-NEXT:    addi 6, 1, 46
 ; CHECK-NEXT:    sth 3, 46(1)
-; CHECK-NEXT:    lis 3, 0
+; CHECK-NEXT:    addi 3, 1, 46
+; CHECK-NEXT:    lharx 4, 0, 3
+; CHECK-NEXT:    clrlwi  4, 4, 16
+; CHECK-NEXT:    cmplwi  4, 33059
+; CHECK-NEXT:    bne     0, .LBB0_4
+; CHECK-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:    ori 3, 3, 33059
-; CHECK-NEXT:  .LBB0_1: # %L.entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lharx 5, 0, 6
-; CHECK-NEXT:    cmpw 5, 3
-; CHECK-NEXT:    bne 0, .LBB0_3
-; CHECK-NEXT:  # %bb.2: # %L.entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    sthcx. 4, 0, 6
-; CHECK-NEXT:    bne 0, .LBB0_1
-; CHECK-NEXT:  .LBB0_3: # %L.entry
-; CHECK-NEXT:    cmplwi 5, 33059
+; CHECK-NEXT:    li 4, 234
+; CHECK-NEXT:    .p2align        5
+; CHECK-NEXT:  .LBB0_2:                                # %cmpxchg.trystore
+; CHECK-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    sthcx. 4, 0, 3
+; CHECK-NEXT:    beq     0, .LBB0_7
+; CHECK-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
+; CHECK-NEXT:                                          #   in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    lharx 5, 0, 3
+; CHECK-NEXT:    clrlwi  5, 5, 16
+; CHECK-NEXT:    cmplwi  5, 33059
+; CHECK-NEXT:    beq     0, .LBB0_2
+; CHECK-NEXT:  .LBB0_4:                                # %cmpxchg.nostore
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    bne 0, .LBB0_6
-; CHECK-NEXT:  # %bb.4: # %L.B0000
+; CHECK-NEXT:    b .LBB0_8
+; CHECK-NEXT:  .LBB0_5:                                # %L.B0000
 ; CHECK-NEXT:    lhz 3, 46(1)
-; CHECK-NEXT:    cmplwi 3, 234
-; CHECK-NEXT:    bne 0, .LBB0_7
-; CHECK-NEXT:  # %bb.5: # %L.B0001
+; CHECK-NEXT:    cmplwi  3, 234
+; CHECK-NEXT:    bne     0, .LBB0_9
+; CHECK-NEXT:  # %bb.6:                                # %L.B0001
 ; CHECK-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
 ; CHECK-NEXT:    bl puts
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    b .LBB0_9
-; CHECK-NEXT:  .LBB0_6: # %L.B0003
+; CHECK-NEXT:    b .LBB0_11
+; CHECK-NEXT:  .LBB0_7:                                # %cmpxchg.success
+; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    b .LBB0_5
+; CHECK-NEXT:  .LBB0_8:                                # %L.B0003
 ; CHECK-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
 ; CHECK-NEXT:    addi 3, 3, 16
-; CHECK-NEXT:    b .LBB0_8
-; CHECK-NEXT:  .LBB0_7: # %L.B0005
+; CHECK-NEXT:    b .LBB0_10
+; CHECK-NEXT:  .LBB0_9:                                # %L.B0005
 ; CHECK-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
 ; CHECK-NEXT:    addi 3, 3, 64
-; CHECK-NEXT:  .LBB0_8: # %L.B0003
+; CHECK-NEXT:  .LBB0_10:                               # %L.B0003
 ; CHECK-NEXT:    bl puts
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:  .LBB0_9: # %L.B0003
+; CHECK-NEXT:  .LBB0_11:                               # %L.B0003
 ; CHECK-NEXT:    addi 1, 1, 48
 ; CHECK-NEXT:    ld 0, 16(1)
 ; CHECK-NEXT:    mtlr 0
@@ -69,64 +76,69 @@ define signext i32 @main() nounwind {
 ; CHECK-P7-NEXT:    mflr 0
 ; CHECK-P7-NEXT:    stdu 1, -48(1)
 ; CHECK-P7-NEXT:    li 3, -32477
-; CHECK-P7-NEXT:    std 0, 64(1)
 ; CHECK-P7-NEXT:    addi 4, 1, 46
-; CHECK-P7-NEXT:    li 6, 234
+; CHECK-P7-NEXT:    std 0, 64(1)
 ; CHECK-P7-NEXT:    sth 3, 46(1)
-; CHECK-P7-NEXT:    lis 3, 0
+; CHECK-P7-NEXT:    rldicr 3, 4, 0, 61
+; CHECK-P7-NEXT:    rlwinm 4, 4, 3, 27, 27
+; CHECK-P7-NEXT:    lwarx 5, 0, 3
+; CHECK-P7-NEXT:    srw 6, 5, 4
+; CHECK-P7-NEXT:    clrlwi  6, 6, 16
+; CHECK-P7-NEXT:    cmplwi  6, 33059
+; CHECK-P7-NEXT:    bne     0, .LBB0_4
+; CHECK-P7-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
+; CHECK-P7-NEXT:    lis 6, 0
+; CHECK-P7-NEXT:    li 7, 234
 ; CHECK-P7-NEXT:    sync
-; CHECK-P7-NEXT:    ori 5, 3, 33059
-; CHECK-P7-NEXT:    rlwinm 3, 4, 3, 27, 27
-; CHECK-P7-NEXT:    rldicr 4, 4, 0, 61
-; CHECK-P7-NEXT:    slw 7, 5, 3
-; CHECK-P7-NEXT:    li 5, 0
-; CHECK-P7-NEXT:    slw 6, 6, 3
-; CHECK-P7-NEXT:    ori 5, 5, 65535
-; CHECK-P7-NEXT:    slw 5, 5, 3
-; CHECK-P7-NEXT:    and 6, 6, 5
-; CHECK-P7-NEXT:    and 7, 7, 5
-; CHECK-P7-NEXT:  .LBB0_1: # %L.entry
-; CHECK-P7-NEXT:    #
-; CHECK-P7-NEXT:    lwarx 9, 0, 4
-; CHECK-P7-NEXT:    and 8, 9, 5
-; CHECK-P7-NEXT:    cmpw 8, 7
-; CHECK-P7-NEXT:    bne 0, .LBB0_3
-; CHECK-P7-NEXT:  # %bb.2: # %L.entry
-; CHECK-P7-NEXT:    #
-; CHECK-P7-NEXT:    andc 9, 9, 5
-; CHECK-P7-NEXT:    or 9, 9, 6
-; CHECK-P7-NEXT:    stwcx. 9, 0, 4
-; CHECK-P7-NEXT:    bne 0, .LBB0_1
-; CHECK-P7-NEXT:  .LBB0_3: # %L.entry
-; CHECK-P7-NEXT:    srw 3, 8, 3
+; CHECK-P7-NEXT:    ori 6, 6, 65535
+; CHECK-P7-NEXT:    slw 7, 7, 4
+; CHECK-P7-NEXT:    slw 6, 6, 4
+; CHECK-P7-NEXT:    not     6, 6
+; CHECK-P7-NEXT:    .p2align        4
+; CHECK-P7-NEXT:  .LBB0_2:                                # %cmpxchg.trystore
+; CHECK-P7-NEXT:                                        # =>This Inner Loop Header: Depth=1
+; CHECK-P7-NEXT:    and 5, 5, 6
+; CHECK-P7-NEXT:    or 5, 5, 7
+; CHECK-P7-NEXT:    stwcx. 5, 0, 3
+; CHECK-P7-NEXT:    beq     0, .LBB0_7
+; CHECK-P7-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
+; CHECK-P7-NEXT:                                        #   in Loop: Header=BB0_2 Depth=1
+; CHECK-P7-NEXT:    lwarx 5, 0, 3
+; CHECK-P7-NEXT:    srw 8, 5, 4
+; CHECK-P7-NEXT:    clrlwi  8, 8, 16
+; CHECK-P7-NEXT:    cmplwi  8, 33059
+; CHECK-P7-NEXT:    beq     0, .LBB0_2
+; CHECK-P7-NEXT:  .LBB0_4:                                # %cmpxchg.nostore
 ; CHECK-P7-NEXT:    lwsync
-; CHECK-P7-NEXT:    cmplwi 3, 33059
-; CHECK-P7-NEXT:    bne 0, .LBB0_6
-; CHECK-P7-NEXT:  # %bb.4: # %L.B0000
+; CHECK-P7-NEXT:    b .LBB0_8
+; CHECK-P7-NEXT:  .LBB0_5:                                # %L.B0000
 ; CHECK-P7-NEXT:    lhz 3, 46(1)
-; CHECK-P7-NEXT:    cmplwi 3, 234
-; CHECK-P7-NEXT:    bne 0, .LBB0_7
-; CHECK-P7-NEXT:  # %bb.5: # %L.B0001
+; CHECK-P7-NEXT:    cmplwi  3, 234
+; CHECK-P7-NEXT:    bne     0, .LBB0_9
+; CHECK-P7-NEXT:  # %bb.6:                                # %L.B0001
 ; CHECK-P7-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
 ; CHECK-P7-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
 ; CHECK-P7-NEXT:    bl puts
 ; CHECK-P7-NEXT:    nop
 ; CHECK-P7-NEXT:    li 3, 0
-; CHECK-P7-NEXT:    b .LBB0_9
-; CHECK-P7-NEXT:  .LBB0_6: # %L.B0003
+; CHECK-P7-NEXT:    b .LBB0_11
+; CHECK-P7-NEXT:  .LBB0_7:                                # %cmpxchg.success
+; CHECK-P7-NEXT:    lwsync
+; CHECK-P7-NEXT:    b .LBB0_5
+; CHECK-P7-NEXT:  .LBB0_8:                                # %L.B0003
 ; CHECK-P7-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
 ; CHECK-P7-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
 ; CHECK-P7-NEXT:    addi 3, 3, 16
-; CHECK-P7-NEXT:    b .LBB0_8
-; CHECK-P7-NEXT:  .LBB0_7: # %L.B0005
+; CHECK-P7-NEXT:    b .LBB0_10
+; CHECK-P7-NEXT:  .LBB0_9:                                # %L.B0005
 ; CHECK-P7-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
 ; CHECK-P7-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
 ; CHECK-P7-NEXT:    addi 3, 3, 64
-; CHECK-P7-NEXT:  .LBB0_8: # %L.B0003
+; CHECK-P7-NEXT:  .LBB0_10:                               # %L.B0003
 ; CHECK-P7-NEXT:    bl puts
 ; CHECK-P7-NEXT:    nop
 ; CHECK-P7-NEXT:    li 3, 1
-; CHECK-P7-NEXT:  .LBB0_9: # %L.B0003
+; CHECK-P7-NEXT:  .LBB0_11:                               # %L.B0003
 ; CHECK-P7-NEXT:    addi 1, 1, 48
 ; CHECK-P7-NEXT:    ld 0, 16(1)
 ; CHECK-P7-NEXT:    mtlr 0

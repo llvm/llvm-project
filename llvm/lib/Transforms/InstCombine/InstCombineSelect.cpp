@@ -3631,6 +3631,28 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
   if (!LHS->getType()->isIntOrIntVectorTy())
     return nullptr;
 
+  // If there is no -1, 0 or 1 at TV, then invert the select statement and try
+  // to canonicalize to one of the forms above
+  if (!isa<Constant>(TV)) {
+    if (!isa<Constant>(FV))
+      return nullptr;
+    Pred = ICmpInst::getInverseCmpPredicate(Pred);
+    std::swap(TV, FV);
+  }
+
+  if (ICmpInst::isNonStrictPredicate(Pred)) {
+    if (Constant *C = dyn_cast<Constant>(RHS)) {
+      auto FlippedPredAndConst =
+          getFlippedStrictnessPredicateAndConstant(Pred, C);
+      if (!FlippedPredAndConst)
+        return nullptr;
+      Pred = FlippedPredAndConst->first;
+      RHS = FlippedPredAndConst->second;
+    } else {
+      return nullptr;
+    }
+  }
+
   // Try to swap operands and the predicate. We need to be careful when doing
   // so because two of the patterns have opposite predicates, so use the
   // constant inside select to determine if swapping operands would be
