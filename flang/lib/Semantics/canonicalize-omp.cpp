@@ -8,7 +8,7 @@
 
 #include "canonicalize-omp.h"
 #include "flang/Parser/parse-tree-visitor.h"
-# include <stack>
+#include <stack>
 // After Loop Canonicalization, rewrite OpenMP parse tree to make OpenMP
 // Constructs more structured which provide explicit scopes for later
 // structural checks and semantic analysis.
@@ -137,7 +137,7 @@ private:
       std::stack<parser::OpenMPLoopConstruct *> loops;
       loops.push(&x);
       if (auto *innerConstruct{
-          GetConstructIf<parser::OpenMPConstruct>(*nextIt)}) {
+              GetConstructIf<parser::OpenMPConstruct>(*nextIt)}) {
         if (auto *innerOmpLoop{
                 std::get_if<parser::OpenMPLoopConstruct>(&innerConstruct->u)}) {
           auto &innerBeginDir{

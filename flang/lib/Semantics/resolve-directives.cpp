@@ -2061,7 +2061,8 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     innerMostLoop = &innerLoop.value().value();
   }
 
-  const auto &outer{std::get<std::optional<parser::DoConstruct>>(innerMostLoop->t)};
+  const auto &outer{
+      std::get<std::optional<parser::DoConstruct>>(innerMostLoop->t)};
   if (outer.has_value()) {
     for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
       // go through all the nested do-loops and resolve index variables
