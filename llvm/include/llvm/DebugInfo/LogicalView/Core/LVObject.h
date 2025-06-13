@@ -313,7 +313,7 @@ public:
   virtual void printExtra(raw_ostream &OS, bool Full = true) const {}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  virtual void dump() const { print(dbgs()); }
+  void dump() const { print(dbgs()); }
 #endif
 
   uint64_t getID() const {
