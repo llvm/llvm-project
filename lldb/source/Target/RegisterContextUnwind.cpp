@@ -1520,65 +1520,8 @@ RegisterContextUnwind::SavedLocationForRegister(
 
   ExecutionContext exe_ctx(m_thread.shared_from_this());
   Process *process = exe_ctx.GetProcessPtr();
-<<<<<<< HEAD
-  if (!have_unwindplan_regloc) {
-    // If the UnwindPlan failed to give us an unwind location for this
-    // register, we may be able to fall back to some ABI-defined default.  For
-    // example, some ABIs allow to determine the caller's SP via the CFA. Also,
-    // the ABI may set volatile registers to the undefined state.
-    ABI *abi = process ? process->GetABI().get() : nullptr;
-    if (abi) {
-      const RegisterInfo *reg_info =
-          GetRegisterInfoAtIndex(regnum.GetAsKind(eRegisterKindLLDB));
-      if (reg_info &&
-          abi->GetFallbackRegisterLocation(reg_info, unwindplan_regloc)) {
-        UnwindLogMsg(
-            "supplying caller's saved %s (%d)'s location using ABI default",
-            regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
-        have_unwindplan_regloc = true;
-      }
-    }
-  }
-
-  if (!have_unwindplan_regloc) {
-    if (IsFrameZero()) {
-      // This is frame 0 - we should return the actual live register context
-      // value
-      lldb_private::UnwindLLDB::ConcreteRegisterLocation new_regloc;
-      new_regloc.type =
-          UnwindLLDB::ConcreteRegisterLocation::eRegisterInLiveRegisterContext;
-      new_regloc.location.register_number = regnum.GetAsKind(eRegisterKindLLDB);
-#ifdef _AIX
-      if (UGLY_HACK_NULL_TOPFRAME && new_regloc.location.register_number == 0x20) {
-        new_regloc.location.register_number = 0x24;
-      }
-#endif
-      m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = new_regloc;
-      regloc = new_regloc;
-      UnwindLogMsg("supplying caller's register %s (%d) from the live "
-                   "RegisterContext at frame 0",
-                   regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
-      return UnwindLLDB::RegisterSearchResult::eRegisterFound;
-    } else {
-      std::string unwindplan_name;
-      if (m_full_unwind_plan_sp) {
-        unwindplan_name += "via '";
-        unwindplan_name += m_full_unwind_plan_sp->GetSourceName().AsCString();
-        unwindplan_name += "'";
-      }
-      UnwindLogMsg("no save location for %s (%d) %s", regnum.GetName(),
-                   regnum.GetAsKind(eRegisterKindLLDB),
-                   unwindplan_name.c_str());
-    }
-    return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
-  }
-
-  // unwindplan_regloc has valid contents about where to retrieve the register
-  if (unwindplan_regloc.IsUnspecified()) {
-=======
   // abs_regloc has valid contents about where to retrieve the register
   if (abs_regloc->IsUnspecified()) {
->>>>>>> upstream/main
     lldb_private::UnwindLLDB::ConcreteRegisterLocation new_regloc = {};
     new_regloc.type = UnwindLLDB::ConcreteRegisterLocation::eRegisterNotSaved;
     m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = new_regloc;
