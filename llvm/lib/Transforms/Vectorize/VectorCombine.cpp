@@ -1715,8 +1715,8 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
   if (!match(&I, m_ZExt(m_Value())))
     return false;
 
-  // Try to convert a vector zext feeding only extracts to a set of scalar (Src
-  // << ExtIdx *Size) & (Size -1), if profitable.
+  // Try to convert a vector zext feeding only extracts to a set of scalar
+  // (Src << ExtIdx *Size) & (Size -1), if profitable.
   auto *Ext = cast<ZExtInst>(&I);
   auto *SrcTy = dyn_cast<FixedVectorType>(Ext->getOperand(0)->getType());
   if (!SrcTy)
@@ -1743,8 +1743,11 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
     VectorCost += TTI.getVectorInstrCost(Instruction::ExtractElement, DstTy,
                                          CostKind, Idx->getZExtValue(), U);
   }
-
+  Type *ScalarTy =
+      IntegerType::get(SrcTy->getContext(), DL->getTypeSizeInBits(SrcTy));
   InstructionCost ScalarCost =
+      TTI.getCastInstrCost(Instruction::BitCast, SrcTy, ScalarTy,
+                           TTI::CastContextHint::None, CostKind) +
       ExtCnt * TTI.getArithmeticInstrCost(
                    Instruction::And, ScalarDstTy, CostKind,
                    {TTI::OK_AnyValue, TTI::OP_None},
@@ -1760,9 +1763,7 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
   Value *ScalarV = Ext->getOperand(0);
   if (!isGuaranteedNotToBePoison(ScalarV, &AC))
     ScalarV = Builder.CreateFreeze(ScalarV);
-  ScalarV = Builder.CreateBitCast(
-      ScalarV,
-      IntegerType::get(SrcTy->getContext(), DL->getTypeSizeInBits(SrcTy)));
+  ScalarV = Builder.CreateBitCast(ScalarV, ScalarTy);
   unsigned SrcEltSizeInBits = DL->getTypeSizeInBits(SrcTy->getElementType());
   Value *EltBitMask =
       ConstantInt::get(ScalarV->getType(), (1ull << SrcEltSizeInBits) - 1);
