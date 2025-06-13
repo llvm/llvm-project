@@ -2286,21 +2286,6 @@ static bool isFuncletReturnInstr(const MachineInstr &MI) {
   }
 }
 
-/// Find a GPR restored in the epilogue that is not reserved.
-static Register findRestoredCalleeSaveGPR(const MachineFunction &MF) {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
-  for (auto &CS : CSI) {
-    Register Reg = CS.getReg();
-    if (!CS.isRestored() || MRI.isReserved(Reg) ||
-        !AArch64::GPR64RegClass.contains(Reg))
-      continue;
-    return Reg;
-  }
-  return AArch64::NoRegister;
-}
-
 void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
@@ -2550,49 +2535,69 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                     DeallocateAfter, TII, MachineInstr::FrameDestroy, false,
                     NeedsWinCFI, &HasWinCFI);
   } else if (SVEStackSize) {
-    // If we have stack realignment or variable sized objects on the stack,
-    // restore the stack pointer from the frame pointer prior to SVE CSR
-    // restoration.
-    if (AFI->isStackRealigned() || MFI.hasVarSizedObjects()) {
-      if (int64_t SVECalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
-        // Set SP to start of SVE callee-save area from which they can
-        // be reloaded.
-        const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
-        if (!AFI->isStackRealigned() && RegInfo->hasBasePointer(MF)) {
-          // If the stack is not realigned we can use the base pointer to find
-          // the start of the SVE callee-saves (and deallocate locals).
-          emitFrameOffset(
-              MBB, RestoreBegin, DL, AArch64::SP, RegInfo->getBaseRegister(),
-              StackOffset::getFixed(NumBytes), TII, MachineInstr::FrameDestroy);
-        } else {
-          Register CalleeSaveBase = AArch64::FP;
-          if (int64_t CalleeSaveBaseOffset =
-                  AFI->getCalleeSaveBaseToFrameRecordOffset()) {
-            // This will find a GPR that is about to be restored -- so safe
-            // to clobber. SVE functions have a "big stack" so always spill at
-            // least one GPR (as a scratch register).
-            CalleeSaveBase = findRestoredCalleeSaveGPR(MF);
-            assert(CalleeSaveBase != AArch64::NoRegister);
-            emitFrameOffset(MBB, RestoreBegin, DL, CalleeSaveBase, AArch64::FP,
-                            StackOffset::getFixed(-CalleeSaveBaseOffset), TII,
-                            MachineInstr::FrameDestroy);
-          }
-          // The code below will deallocate the stack space space by moving the
-          // SP to the start of the SVE callee-save area.
-          emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, CalleeSaveBase,
-                          StackOffset::getScalable(-SVECalleeSavedSize), TII,
-                          MachineInstr::FrameDestroy);
+    const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+    int64_t SVECalleeSavedSize = AFI->getSVECalleeSavedStackSize();
+    Register BaseForSVERestore = [&]() -> Register {
+      // With stack realignment we must use the FP to restore SVE CSRs (as both
+      // the SP and BP can't be used due to the unknown alignment padding).
+      if (AFI->isStackRealigned())
+        return AArch64::FP;
+      // With variable sized objects on the stack, we can use the BP or FP to
+      // restore the SVE callee saves. If there are no SVE locals the BP will
+      // be more efficient (a single ADD).
+      if (MFI.hasVarSizedObjects()) {
+        if (DeallocateBefore && !AFI->hasStackHazardSlotIndex()) {
+          // If there's SVE locals and no hazard padding we can do:
+          //  ADDVL SP, X29, #(-SVECalleeSavedSize)
+          return AArch64::FP;
         }
+        // If there's SVE locals and hazard padding we can choose between:
+        //  SUB TMP, X29, #(-CalleeSaveBaseOffset)
+        //  ADDVL SP, TMP, #(-SVECalleeSavedSize)
+        // OR:
+        //  ADD SP, BP, #NumBytes
+        //  ADDVL SP, SP, #DeallocateBefore
+        // This chooses the latter as the "ADDVL" can be omitted if there's no
+        // SVE locals.
+        assert(RegInfo->hasBasePointer(MF) && "Expected base pointer!");
+        return RegInfo->getBaseRegister();
       }
-    } else {
-      if (AFI->getSVECalleeSavedStackSize()) {
+      // In the standard case we use the SP.
+      return AArch64::SP;
+    }();
+
+    if (SVECalleeSavedSize && BaseForSVERestore == AArch64::FP) {
+      Register CalleeSaveBase = AArch64::FP;
+      if (int64_t CalleeSaveBaseOffset =
+              AFI->getCalleeSaveBaseToFrameRecordOffset()) {
+        // If we have have an non-zero offset to the non-SVE CS base we need to
+        // compute the base address by subtracting the offest in a temporary
+        // register. SVE functions have a "big stack" so there should be at
+        // least one scratch register available.
+        RegScavenger RS;
+        RS.enterBasicBlockEnd(MBB);
+        RS.backward(MBBI);
+        CalleeSaveBase = RS.FindUnusedReg(&AArch64::GPR64commonRegClass);
+        assert(CalleeSaveBase != AArch64::NoRegister);
+        emitFrameOffset(MBB, RestoreBegin, DL, CalleeSaveBase, AArch64::FP,
+                        StackOffset::getFixed(-CalleeSaveBaseOffset), TII,
+                        MachineInstr::FrameDestroy);
+      }
+      // The code below will deallocate the stack space space by moving the
+      // SP to the start of the SVE callee-save area.
+      emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, CalleeSaveBase,
+                      StackOffset::getScalable(-SVECalleeSavedSize), TII,
+                      MachineInstr::FrameDestroy);
+    } else if (BaseForSVERestore == AArch64::SP || SVECalleeSavedSize) {
+      if (SVECalleeSavedSize) {
         // Deallocate the non-SVE locals first before we can deallocate (and
         // restore callee saves) from the SVE area.
         emitFrameOffset(
-            MBB, RestoreBegin, DL, AArch64::SP, AArch64::SP,
+            MBB, RestoreBegin, DL, AArch64::SP, BaseForSVERestore,
             StackOffset::getFixed(NumBytes), TII, MachineInstr::FrameDestroy,
             false, NeedsWinCFI, &HasWinCFI, EmitCFI && !hasFP(MF),
             SVEStackSize + StackOffset::getFixed(NumBytes + PrologueSaveSize));
+
         NumBytes = 0;
       }
 
@@ -2602,11 +2607,16 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                       SVEStackSize +
                           StackOffset::getFixed(NumBytes + PrologueSaveSize));
 
-      emitFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
-                      DeallocateAfter, TII, MachineInstr::FrameDestroy, false,
-                      NeedsWinCFI, &HasWinCFI, EmitCFI && !hasFP(MF),
-                      DeallocateAfter +
-                          StackOffset::getFixed(NumBytes + PrologueSaveSize));
+      if (BaseForSVERestore == AArch64::SP) {
+        // Note: If the base is not SP it is the base pointer, in which case the
+        // SVE CSs will be implicitly deallocated by setting the SP to the FP to
+        // restore the non-SVE CSs.
+        emitFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
+                        DeallocateAfter, TII, MachineInstr::FrameDestroy, false,
+                        NeedsWinCFI, &HasWinCFI, EmitCFI && !hasFP(MF),
+                        DeallocateAfter +
+                            StackOffset::getFixed(NumBytes + PrologueSaveSize));
+      }
     }
     if (EmitCFI)
       emitCalleeSavedSVERestores(MBB, RestoreEnd);
