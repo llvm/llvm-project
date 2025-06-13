@@ -1371,6 +1371,19 @@ void MallocChecker::checkIfFreeNameIndex(ProgramStateRef State,
   C.addTransition(State);
 }
 
+bool isVoidStar(QualType T) {
+  return !T.isNull() && T->isPointerType() && T->getPointeeType()->isVoidType();
+}
+
+const Expr* getPlacementNewBufferArg(const CallExpr *CE, const FunctionDecl *FD) {
+  if (CE->getNumArgs() == 1)
+    return nullptr;
+  // Second argument of placement new must be void*
+  if (!isVoidStar(FD->getParamDecl(1)->getType()))
+    return nullptr;
+  return CE->getArg(1);
+}
+
 void MallocChecker::checkCXXNewOrCXXDelete(ProgramStateRef State,
                                            const CallEvent &Call,
                                            CheckerContext &C) const {
@@ -1386,6 +1399,14 @@ void MallocChecker::checkCXXNewOrCXXDelete(ProgramStateRef State,
   // processed by the checkPostStmt callbacks for CXXNewExpr and
   // CXXDeleteExpr.
   const FunctionDecl *FD = C.getCalleeDecl(CE);
+  if (const auto *BufArg = getPlacementNewBufferArg(CE, FD)) {
+    // Placement new does not allocate memory
+    auto RetVal = State->getSVal(BufArg, Call.getLocationContext());
+    State = State->BindExpr(CE, C.getLocationContext(), RetVal);
+    C.addTransition(State);
+    return;
+  }
+
   switch (FD->getOverloadedOperator()) {
   case OO_New:
     State = MallocMemAux(C, Call, CE->getArg(0), UndefinedVal(), State,
