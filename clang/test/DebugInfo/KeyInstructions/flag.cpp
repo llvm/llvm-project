@@ -8,8 +8,14 @@
 // HELP-NOT: key-instructions
 
 // KEY-INSTRUCTIONS: "-gkey-instructions"
-// KEY-INSTRUCTIONS: "-mllvm" "-dwarf-use-key-instructions"
 
 // NO-KEY-INSTRUCTIONS-NOT: key-instructions
 
-//// TODO: Add smoke test once some functionality has been added.
+// RUN %clang %s | FileCheck %s --check-prefix=SMOKETEST-OFF
+void f() {}
+// SMOKETEST-OFF-NOT: keyInstructions
+// SMOKETEST-OFF-NOT: atomGroup
+
+// RUN %clang %s -gkey-instructions | FileCheck %s --check-prefix=SMOKETEST-ON
+// SMOKETEST-ON: keyInstructions: true
+// SMOKETEST-ON: atomGroup: 1
