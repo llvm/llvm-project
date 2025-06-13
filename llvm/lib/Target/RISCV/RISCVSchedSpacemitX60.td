@@ -574,6 +574,7 @@ foreach mx = SchedMxListFWRed in {
 // 15. Vector Mask Instructions
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
+  defvar ALULat = SMX60GetVIALULatency<mx>.c;
 
   let Latency = 4 in  {
     defm "" : LMULWriteResMX<"WriteVMALUV", [SMX60_VIEU], mx, IsWorstCase>;
@@ -583,9 +584,10 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVMPopV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVMFFSV", [SMX60_VIEU], mx, IsWorstCase>;
   }
-
-  defm "" : LMULWriteResMX<"WriteVIotaV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIdxV", [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = ALULat in {
+    defm "" : LMULWriteResMX<"WriteVIotaV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIdxV", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 }
 
 // 16. Vector Permutation Instructions
