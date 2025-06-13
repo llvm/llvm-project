@@ -24,8 +24,9 @@ static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
   {                                                                            \
     const char *libcallName = Info.getLibcallName(RTLIB::code);                \
     if (libcallName && libcallName[0] != '#')                                  \
-      Info.setLibcallName(RTLIB::code, "#" #name);                             \
+      Info.setLibcallName(RTLIB::code, "#" name);                              \
   }
+#define HANDLE_NAMELESS_LIBCALL(code)
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
   }
