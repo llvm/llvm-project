@@ -214,6 +214,37 @@ bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
   return true;
 }
 
+bool AMDGPUMCExpr::isSymbolUsedInExpression(const MCSymbol *Sym,
+                                            const MCExpr *E) {
+  switch (E->getKind()) {
+  case MCExpr::Constant:
+    return false;
+  case MCExpr::Unary:
+    return isSymbolUsedInExpression(
+        Sym, static_cast<const MCUnaryExpr *>(E)->getSubExpr());
+  case MCExpr::Binary: {
+    const MCBinaryExpr *BE = static_cast<const MCBinaryExpr *>(E);
+    return isSymbolUsedInExpression(Sym, BE->getLHS()) ||
+           isSymbolUsedInExpression(Sym, BE->getRHS());
+  }
+  case MCExpr::SymbolRef: {
+    const MCSymbol &S = static_cast<const MCSymbolRefExpr *>(E)->getSymbol();
+    if (S.isVariable())
+      return isSymbolUsedInExpression(Sym, S.getVariableValue());
+    return &S == Sym;
+  }
+  case MCExpr::Specifier:
+  case MCExpr::Target: {
+    auto *TE = static_cast<const AMDGPUMCExpr *>(E);
+    for (const MCExpr *E : TE->getArgs())
+      if (isSymbolUsedInExpression(Sym, E))
+        return true;
+    return false;
+  }
+  }
+  llvm_unreachable("Unknown expr kind!");
+}
+
 bool AMDGPUMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                              const MCAssembler *Asm) const {
   std::optional<int64_t> Total;
@@ -301,14 +332,6 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(unsigned InitOcc,
                  CreateExpr(TargetTotalNumVGPRs), CreateExpr(Generation),
                  CreateExpr(InitOcc), NumSGPRs, NumVGPRs},
                 Ctx);
-}
-
-bool AMDGPUMCExpr::isSymbolUsedInExpression(const MCSymbol *Sym) const {
-  for (const MCExpr *E : getArgs()) {
-    if (E->isSymbolUsedInExpression(Sym))
-      return true;
-  }
-  return false;
 }
 
 static KnownBits fromOptionalToKnownBits(std::optional<bool> CompareResult) {

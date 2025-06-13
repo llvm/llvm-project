@@ -357,8 +357,6 @@ bool isRVVSpill(const MachineInstr &MI);
 std::optional<std::pair<unsigned, unsigned>>
 isRVVSpillForZvlsseg(unsigned Opcode);
 
-bool isFaultFirstLoad(const MachineInstr &MI);
-
 // Return true if both input instructions have equal rounding mode. If at least
 // one of the instructions does not have rounding mode, false will be returned.
 bool hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2);

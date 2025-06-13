@@ -565,7 +565,7 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   MCExpr::ExprKind Kind = Expr->getKind();
   unsigned FixupKind = RISCV::fixup_riscv_invalid;
   bool RelaxCandidate = false;
-  if (Kind == MCExpr::Target) {
+  if (Kind == MCExpr::Specifier) {
     const RISCVMCExpr *RVExpr = cast<RISCVMCExpr>(Expr);
     FixupKind = RVExpr->getSpecifier();
     switch (RVExpr->getSpecifier()) {

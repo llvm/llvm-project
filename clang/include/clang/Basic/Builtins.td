@@ -4909,6 +4909,12 @@ def HLSLWaveReadLaneAt : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLWaveGetLaneCount : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_get_lane_count"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "unsigned int()";
+}
+
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clamp"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];

@@ -140,7 +140,9 @@ public:
 
   // l-values
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e) {
-    assert(!cir::MissingFeatures::tryEmitAsConstant());
+    if (CIRGenFunction::ConstantEmission constant = cgf.tryEmitAsConstant(e))
+      return cgf.emitScalarConstant(constant, e);
+
     return emitLoadOfLValue(e);
   }
 
@@ -1776,6 +1778,14 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return builder.createCast(cgf.getLoc(ce->getSourceRange()),
                               cir::CastKind::member_ptr_to_bool, memPtr,
                               cgf.convertType(destTy));
+  }
+
+  case CK_VectorSplat: {
+    // Create a vector object and fill all elements with the same scalar value.
+    assert(destTy->isVectorType() && "CK_VectorSplat to non-vector type");
+    return builder.create<cir::VecSplatOp>(
+        cgf.getLoc(subExpr->getSourceRange()), cgf.convertType(destTy),
+        Visit(subExpr));
   }
 
   default:

@@ -399,7 +399,8 @@ define <3 x ptr> @shufflevector_v3p0(<3 x ptr> %a, <3 x ptr> %b) {
 ; CHECK-GI-NEXT:    fmov x9, d4
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
-; CHECK-GI-NEXT:    fmov d2, d5
+; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-GI-NEXT:    dup v2.2d, v5.d[0]
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    mov v3.d[1], x9
 ; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v3.16b, #8

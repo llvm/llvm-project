@@ -81,9 +81,9 @@ struct MissingFeatures {
   static bool opFuncCPUAndFeaturesAttributes() { return false; }
   static bool opFuncSection() { return false; }
   static bool opFuncSetComdat() { return false; }
+  static bool opFuncAttributesForDefinition() { return false; }
 
   // CallOp handling
-  static bool opCallBuiltinFunc() { return false; }
   static bool opCallPseudoDtor() { return false; }
   static bool opCallAggregateArgs() { return false; }
   static bool opCallPaddingArgs() { return false; }
@@ -151,6 +151,11 @@ struct MissingFeatures {
   static bool cxxabiAppleARM64CXXABI() { return false; }
   static bool cxxabiStructorImplicitParam() { return false; }
 
+  // Address class
+  static bool addressOffset() { return false; }
+  static bool addressIsKnownNonNull() { return false; }
+  static bool addressPointerAuthInfo() { return false; }
+
   // Misc
   static bool cirgenABIInfo() { return false; }
   static bool abiArgInfo() { return false; }
@@ -167,6 +172,7 @@ struct MissingFeatures {
   static bool astVarDeclInterface() { return false; }
   static bool stackSaveOp() { return false; }
   static bool aggValueSlot() { return false; }
+  static bool aggValueSlotMayOverlap() { return false; }
   static bool generateDebugInfo() { return false; }
   static bool pointerOverflowSanitizer() { return false; }
   static bool fpConstraints() { return false; }
@@ -217,6 +223,13 @@ struct MissingFeatures {
   static bool instrumentation() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
   static bool cxxRecordStaticMembers() { return false; }
+  static bool isMemcpyEquivalentSpecialMember() { return false; }
+  static bool isTrivialCtorOrDtor() { return false; }
+  static bool implicitConstructorArgs() { return false; }
+  static bool intrinsics() { return false; }
+  static bool attributeNoBuiltin() { return false; }
+  static bool thunks() { return false; }
+  static bool runCleanupsScope() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

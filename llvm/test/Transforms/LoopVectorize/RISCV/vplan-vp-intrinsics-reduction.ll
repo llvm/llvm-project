@@ -37,13 +37,14 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT: Successor(s): scalar.ph, vector.ph
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: vector.ph:
+; IF-EVL-OUTLOOP-NEXT:  EMIT vp<[[RDX_START:%.]]> = reduction-start-vector ir<%start>, ir<0>, ir<1>
 ; IF-EVL-OUTLOOP-NEXT: Successor(s): vector loop
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: <x1> vector loop: {
 ; IF-EVL-OUTLOOP-NEXT:  vector.body:
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-OUTLOOP-NEXT:    EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
-; IF-EVL-OUTLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi ir<%start>, vp<[[RDX_SELECT:%.+]]>
+; IF-EVL-OUTLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi vp<[[RDX_START]]>, vp<[[RDX_SELECT:%.+]]>
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[AVL:%.+]]> = sub ir<%n>, vp<[[EVL_PHI]]>
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-OUTLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>, vp<[[VF]]>
@@ -77,13 +78,14 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT: Live-in ir<%n> = original trip-count
 ; IF-EVL-INLOOP-EMPTY:
 ; IF-EVL-INLOOP:      vector.ph:
+; IF-EVL-INLOOP-NEXT:   EMIT vp<[[RDX_START:%.]]> = reduction-start-vector ir<%start>, ir<0>, ir<1>
 ; IF-EVL-INLOOP-NEXT: Successor(s): vector loop
 ; IF-EVL-INLOOP-EMPTY:
 ; IF-EVL-INLOOP-NEXT: <x1> vector loop: {
 ; IF-EVL-INLOOP-NEXT:  vector.body:
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-INLOOP-NEXT:    EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
-; IF-EVL-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi ir<%start>, ir<[[RDX_NEXT:%.+]]>
+; IF-EVL-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi vp<[[RDX_START]]>, ir<[[RDX_NEXT:%.+]]>
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[AVL:%.+]]> = sub ir<%n>, vp<[[EVL_PHI]]>
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-INLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>, vp<[[VF]]>
@@ -116,12 +118,13 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT: Live-in ir<%n> = original trip-count
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP:      vector.ph:
+; NO-VP-OUTLOOP-NEXT:   EMIT vp<[[RDX_START:%.]]> = reduction-start-vector ir<%start>, ir<0>, ir<1>
 ; NO-VP-OUTLOOP-NEXT: Successor(s): vector loop
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: <x1> vector loop: {
 ; NO-VP-OUTLOOP-NEXT:  vector.body:
 ; NO-VP-OUTLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
-; NO-VP-OUTLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi ir<%start>, ir<[[RDX_NEXT:%.+]]>
+; NO-VP-OUTLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi vp<[[RDX_START]]>, ir<[[RDX_NEXT:%.+]]>
 ; NO-VP-OUTLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>
 ; NO-VP-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; NO-VP-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
@@ -164,12 +167,13 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT: Live-in ir<%n> = original trip-count
 ; NO-VP-INLOOP-EMPTY:
 ; NO-VP-INLOOP:      vector.ph:
+; NO-VP-INLOOP-NEXT:   EMIT vp<[[RDX_START:%.]]> = reduction-start-vector ir<%start>, ir<0>, ir<1>
 ; NO-VP-INLOOP-NEXT: Successor(s): vector loop
 ; NO-VP-INLOOP-EMPTY:
 ; NO-VP-INLOOP-NEXT: <x1> vector loop: {
 ; NO-VP-INLOOP-NEXT:  vector.body:
 ; NO-VP-INLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
-; NO-VP-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi ir<%start>, ir<[[RDX_NEXT:%.+]]>
+; NO-VP-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi vp<[[RDX_START]]>, ir<[[RDX_NEXT:%.+]]>
 ; NO-VP-INLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>
 ; NO-VP-INLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; NO-VP-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>

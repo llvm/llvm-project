@@ -1101,7 +1101,7 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   if (RISCVII::hasRoundModeOp(TSFlags))
     --NumOps;
 
-  bool hasVLOutput = RISCV::isFaultFirstLoad(*MI);
+  bool hasVLOutput = RISCVInstrInfo::isFaultOnlyFirstLoad(*MI);
   for (unsigned OpNo = 0; OpNo != NumOps; ++OpNo) {
     const MachineOperand &MO = MI->getOperand(OpNo);
     // Skip vl output. It should be the second output.

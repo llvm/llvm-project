@@ -48,7 +48,6 @@ RISCVELFObjectWriter::~RISCVELFObjectWriter() = default;
 unsigned RISCVELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                             const MCValue &Target,
                                             bool IsPCRel) const {
-  const MCExpr *Expr = Fixup.getValue();
   unsigned Kind = Fixup.getTargetKind();
   auto Spec = RISCVMCExpr::Specifier(Target.getSpecifier());
   switch (Spec) {
@@ -119,14 +118,11 @@ unsigned RISCVELFObjectWriter::getRelocType(const MCFixup &Fixup,
     reportError(Fixup.getLoc(), "2-byte data relocations not supported");
     return ELF::R_RISCV_NONE;
   case FK_Data_4:
-    if (Expr->getKind() == MCExpr::Target) {
-      auto Spec = cast<RISCVMCExpr>(Expr)->getSpecifier();
-      switch (Spec) {
-      case ELF::R_RISCV_32_PCREL:
-      case ELF::R_RISCV_GOT32_PCREL:
-      case ELF::R_RISCV_PLT32:
-        return Spec;
-      }
+    switch (Spec) {
+    case ELF::R_RISCV_32_PCREL:
+    case ELF::R_RISCV_GOT32_PCREL:
+    case ELF::R_RISCV_PLT32:
+      return Spec;
     }
     return ELF::R_RISCV_32;
   case FK_Data_8:

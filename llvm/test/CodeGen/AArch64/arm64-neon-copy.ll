@@ -807,46 +807,28 @@ define <2 x i64> @test_vdupq_lane_s64(<1 x i64> %v1) #0 {
 }
 
 define <8 x i8> @test_vdup_laneq_s8(<16 x i8> %v1) #0 {
-; CHECK-SD-LABEL: test_vdup_laneq_s8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    dup v0.8b, v0.b[5]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vdup_laneq_s8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    dup v0.16b, v0.b[5]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vdup_laneq_s8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.8b, v0.b[5]
+; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i8> %v1, <16 x i8> undef, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
   ret <8 x i8> %shuffle
 }
 
 define <4 x i16> @test_vdup_laneq_s16(<8 x i16> %v1) #0 {
-; CHECK-SD-LABEL: test_vdup_laneq_s16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    dup v0.4h, v0.h[2]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vdup_laneq_s16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    dup v0.8h, v0.h[2]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vdup_laneq_s16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.4h, v0.h[2]
+; CHECK-NEXT:    ret
   %shuffle = shufflevector <8 x i16> %v1, <8 x i16> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   ret <4 x i16> %shuffle
 }
 
 define <2 x i32> @test_vdup_laneq_s32(<4 x i32> %v1) #0 {
-; CHECK-SD-LABEL: test_vdup_laneq_s32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    dup v0.2s, v0.s[1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vdup_laneq_s32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    dup v0.4s, v0.s[1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vdup_laneq_s32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.2s, v0.s[1]
+; CHECK-NEXT:    ret
   %shuffle = shufflevector <4 x i32> %v1, <4 x i32> undef, <2 x i32> <i32 1, i32 1>
   ret <2 x i32> %shuffle
 }

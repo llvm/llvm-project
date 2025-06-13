@@ -191,6 +191,16 @@ Changes in existing checks
   <clang-tidy/checks/concurrency/mt-unsafe>` check by fixing a false positive
   where ``strerror`` was flagged as MT-unsafe.
 
+- Improved :doc:`google-readability-namespace-comments
+  <clang-tidy/checks/google/readability-namespace-comments>` check by adding
+  the option `AllowOmittingNamespaceComments` to accept if a namespace comment
+  is omitted entirely.
+
+- Improved :doc:`llvm-namespace-comment
+  <clang-tidy/checks/llvm/namespace-comment>` check by adding the option
+  `AllowOmittingNamespaceComments` to accept if a namespace comment is omitted
+  entirely.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
@@ -255,6 +265,10 @@ Changes in existing checks
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
+
+- Improved :doc:`readability-convert-member-functions-to-static
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
+  fixing false positives on member functions with an explicit object parameter.
 
 - Improved :doc:`readability-math-missing-parentheses
   <clang-tidy/checks/readability/math-missing-parentheses>` check by fixing

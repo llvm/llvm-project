@@ -1,0 +1,22 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Check insertion of runtime checks
+
+interface
+  subroutine foo(a)
+    real, device, dimension(:,:) :: a
+  end subroutine
+end interface
+
+  real, device, allocatable, dimension(:,:) :: a
+  allocate(a(10,10))
+  call foo(a(1:10,1:10:2))
+end
+
+subroutine foo(a)
+  real, device, dimension(:,:) :: a
+end subroutine
+
+! CHECK-LABEL: func.func @_QQmain()
+! CHECK: fir.call @_FortranACUFDescriptorCheckSection
+! CHECK: fir.call @_QPfoo
