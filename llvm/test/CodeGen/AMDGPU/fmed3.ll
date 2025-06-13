@@ -1032,10 +1032,10 @@ define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(ptr addrspace(1) %out, 
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; VI-GISEL-NEXT:    v_add_f32_e32 v2, 1.0, v3
-; VI-GISEL-NEXT:    v_cmp_nlt_f32_e32 vcc, 2.0, v2
-; VI-GISEL-NEXT:    v_cndmask_b32_e64 v2, v2, 2.0, vcc
-; VI-GISEL-NEXT:    v_cmp_ngt_f32_e32 vcc, 4.0, v2
-; VI-GISEL-NEXT:    v_cndmask_b32_e64 v2, v2, 4.0, vcc
+; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, 2.0, v2
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v2, 2.0, v2, vcc
+; VI-GISEL-NEXT:    v_cmp_gt_f32_e32 vcc, 4.0, v2
+; VI-GISEL-NEXT:    v_cndmask_b32_e32 v2, 4.0, v2, vcc
 ; VI-GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; VI-GISEL-NEXT:    s_endpgm
 ;
@@ -1059,10 +1059,10 @@ define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(ptr addrspace(1) %out, 
 ; GFX9-GISEL-NEXT:    global_load_dword v1, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    v_add_f32_e32 v1, 1.0, v1
-; GFX9-GISEL-NEXT:    v_cmp_nlt_f32_e32 vcc, 2.0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, v1, 2.0, vcc
-; GFX9-GISEL-NEXT:    v_cmp_ngt_f32_e32 vcc, 4.0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, v1, 4.0, vcc
+; GFX9-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, 2.0, v1
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, 2.0, v1, vcc
+; GFX9-GISEL-NEXT:    v_cmp_gt_f32_e32 vcc, 4.0, v1
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, 4.0, v1, vcc
 ; GFX9-GISEL-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
 ;
@@ -1090,11 +1090,11 @@ define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(ptr addrspace(1) %out, 
 ; GFX11-GISEL-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_f32_e32 v1, 1.0, v1
-; GFX11-GISEL-NEXT:    v_cmp_nlt_f32_e32 vcc_lo, 2.0, v1
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, v1, 2.0, vcc_lo
+; GFX11-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 2.0, v1
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v1, 2.0, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, 4.0, v1
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, v1, 4.0, vcc_lo
+; GFX11-GISEL-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 4.0, v1
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v1, 4.0, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
