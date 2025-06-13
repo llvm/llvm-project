@@ -7715,7 +7715,6 @@ TEST_F(OpenMPIRBuilderTest, createCallbackMetadata) {
   FunctionCallee TaskAlloc = OMPBuilder.getOrCreateRuntimeFunction(
       *M, llvm::omp::RuntimeFunction::OMPRTL___kmpc_omp_task_alloc);
 
-  M->dump();
   for (auto [FC, VarArg, ArgNo] :
        zip(SmallVector<FunctionCallee>(
                {ForkCall, ForkCallIf, ForkTeam, TaskAlloc}),
@@ -7725,8 +7724,6 @@ TEST_F(OpenMPIRBuilderTest, createCallbackMetadata) {
         cast<Function>(FC.getCallee())->getMetadata(LLVMContext::MD_callback);
     EXPECT_NE(CallbackMD, nullptr);
     unsigned Num = 0;
-    CallbackMD->dump();
-    M->dump();
     for (const MDOperand &Op : CallbackMD->operands()) {
       Num++;
       MDNode *OpMD = cast<MDNode>(Op.get());
