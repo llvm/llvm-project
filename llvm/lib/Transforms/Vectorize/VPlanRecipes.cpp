@@ -645,16 +645,16 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     // The recipe's operands are the reduction phi, followed by one operand for
     // each part of the reduction.
-    unsigned UF = getNumOperands() - 2;
-    Value *ReducedPartRdx = State.get(getOperand(2));
+    unsigned UF = getNumOperands() - 3;
+    Value *ReducedPartRdx = State.get(getOperand(3));
     for (unsigned Part = 1; Part < UF; ++Part) {
       ReducedPartRdx = createMinMaxOp(Builder, RecurKind::SMax, ReducedPartRdx,
-                                      State.get(getOperand(2 + Part)));
+                                      State.get(getOperand(3 + Part)));
     }
 
     return createFindLastIVReduction(Builder, ReducedPartRdx,
                                      State.get(getOperand(1), true),
-                                     RdxDesc.getSentinelValue());
+                                     getOperand(2)->getLiveInIRValue());
   }
   case VPInstruction::ComputeReductionResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
