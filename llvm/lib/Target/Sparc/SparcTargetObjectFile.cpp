@@ -39,8 +39,7 @@ const MCExpr *SparcELFTargetObjectFile::getTTypeGlobalReference(
     }
 
     MCContext &Ctx = getContext();
-    return SparcMCExpr::create(ELF::R_SPARC_DISP32,
-                               MCSymbolRefExpr::create(SSym, Ctx), Ctx);
+    return Sparc::createSpecifierExpr(Ctx, SSym, ELF::R_SPARC_DISP32);
   }
 
   return TargetLoweringObjectFileELF::getTTypeGlobalReference(GV, Encoding, TM,
