@@ -588,8 +588,12 @@ foreach mx = ["M2", "M4", "M8"] in {
   defm "" : LMULWriteResMX<"WriteVSlideDownX", [SMX60_VIEU], mx, IsWorstCase>;
 }
 
-def : WriteRes<WriteVMovXS, [SMX60_VIEU]>;
-def : WriteRes<WriteVMovSX, [SMX60_VIEU]>;
+let Latency = 6 in {
+  def : WriteRes<WriteVMovXS, [SMX60_VIEU]>;
+}
+let Latency = 4 in {
+  def : WriteRes<WriteVMovSX, [SMX60_VIEU]>;
+}
 
 def : WriteRes<WriteVMovFS, [SMX60_VIEU]>;
 def : WriteRes<WriteVMovSF, [SMX60_VIEU]>;
