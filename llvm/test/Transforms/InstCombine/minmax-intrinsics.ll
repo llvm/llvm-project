@@ -2511,6 +2511,21 @@ define <3 x i8> @smin_unary_shuffle_ops_uses(<3 x i8> %x, <3 x i8> %y) {
   ret <3 x i8> %r
 }
 
+; negative test - too many uses
+
+define <3 x i8> @smin_unary_shuffle_ops_uses_const(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @smin_unary_shuffle_ops_uses_const(
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    call void @use_vec(<3 x i8> [[SX]])
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[SX]], <3 x i8> <i8 1, i8 2, i8 3>)
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %sx = shufflevector <3 x i8> %x, <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  call void @use_vec(<3 x i8> %sx)
+  %r = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %sx, <3 x i8> <i8 1, i8 2, i8 3>)
+  ret <3 x i8> %r
+}
+
 ; This would assert/crash because we tried to zext to i1.
 
 @g = external dso_local global i32, align 4
