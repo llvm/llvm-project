@@ -2896,17 +2896,13 @@ bool AMDGPUAsmParser::ParseRegRange(unsigned &Num, unsigned &RegWidth,
   }
 
   if (RegHi == RegLo) {
-    StringRef RegSuffix;
-    SMLoc RegSuffixLoc = getLoc();
-    if (parseId(RegSuffix)) {
-      if (RegSuffix.consume_back(".l")) {
-        SubReg = AMDGPU::lo16;
-      } else if (RegSuffix.consume_back(".h")) {
-        SubReg = AMDGPU::hi16;
-      } else {
-        Error(RegSuffixLoc, "invalid register suffix");
-        return false;
-      }
+    StringRef RegSuffix = getTokenStr();
+    if (RegSuffix == ".l") {
+      SubReg = AMDGPU::lo16;
+      lex();
+    } else if (RegSuffix == ".h") {
+      SubReg = AMDGPU::hi16;
+      lex();
     }
   }
 
