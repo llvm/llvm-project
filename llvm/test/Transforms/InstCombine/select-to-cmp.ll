@@ -6,10 +6,7 @@
 define i32 @scmp_x_0_inverted(i32 %x) {
 ; CHECK-LABEL: define i32 @scmp_x_0_inverted(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[X]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 0)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %2 = icmp ne i32 %x, 0
@@ -23,10 +20,7 @@ define i32 @scmp_x_0_inverted(i32 %x) {
 define i32 @scmp_x_0_inverted_const_neg10(i32 %x) {
 ; CHECK-LABEL: define i32 @scmp_x_0_inverted_const_neg10(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[X]], -10
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[X]], -11
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 -10)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = icmp ne i32 %x, -10
@@ -40,10 +34,7 @@ define i32 @scmp_x_0_inverted_const_neg10(i32 %x) {
 define i8 @scmp_x_0_inverted_i8(i8 %x) {
 ; CHECK-LABEL: define i8 @scmp_x_0_inverted_i8(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i8 [[X]], 7
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP4]] to i8
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i8 [[X]], 6
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP3]], i8 [[TMP2]], i8 -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[X]], i8 7)
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %1 = icmp ne i8 %x, 7
@@ -57,10 +48,8 @@ define i8 @scmp_x_0_inverted_i8(i8 %x) {
 define i32 @scmp_x_0_inverted_i64_neq(i32 %x) {
 ; CHECK-LABEL: define i32 @scmp_x_0_inverted_i64_neq(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[X]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[CMP1]] to i32
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP2]], i32 [[TMP1]], i32 -1
+; CHECK-NEXT:    [[SEL:%.*]] = call i64 @llvm.scmp.i64.i32(i32 [[X]], i32 0)
+; CHECK-NEXT:    [[RET:%.*]] = trunc i64 [[SEL]] to i32
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %x64 = sext i32 %x to i64
@@ -76,10 +65,8 @@ define i32 @scmp_x_0_inverted_i64_neq(i32 %x) {
 define i32 @scmp_x_0_inverted_i64_sgt(i32 %x) {
 ; CHECK-LABEL: define i32 @scmp_x_0_inverted_i64_sgt(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[X]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[X]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[CMP1]] to i32
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP2]], i32 [[TMP1]], i32 -1
+; CHECK-NEXT:    [[SEL:%.*]] = call i64 @llvm.scmp.i64.i32(i32 [[X]], i32 0)
+; CHECK-NEXT:    [[RET:%.*]] = trunc i64 [[SEL]] to i32
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %x64 = sext i32 %x to i64
@@ -95,10 +82,7 @@ define i32 @scmp_x_0_inverted_i64_sgt(i32 %x) {
 define i32 @scmp_x_0_inverted_const_neg1000(i32 %x) {
 ; CHECK-LABEL: define i32 @scmp_x_0_inverted_const_neg1000(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[X]], -1000
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[X]], -1001
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 -1000)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = icmp sgt i32 %x, -1000
@@ -112,10 +96,7 @@ define i32 @scmp_x_0_inverted_const_neg1000(i32 %x) {
 define i32 @scmp_x_0_inverted_const_1729_sgt(i32 %x) {
 ; CHECK-LABEL: define i32 @scmp_x_0_inverted_const_1729_sgt(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[X]], 1729
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[X]], 1728
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 1729)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = icmp sgt i32 %x, 1729
@@ -129,10 +110,7 @@ define i32 @scmp_x_0_inverted_const_1729_sgt(i32 %x) {
 define i32 @ucmp_x_10_inverted(i32 %x) {
 ; CHECK-LABEL: define i32 @ucmp_x_10_inverted(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[X]], 10
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[X]], 9
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ucmp.i32.i32(i32 [[X]], i32 10)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = icmp ne i32 %x, 10
@@ -146,10 +124,7 @@ define i32 @ucmp_x_10_inverted(i32 %x) {
 define i32 @ucmp_x_neg1_inverted(i32 %x) {
 ; CHECK-LABEL: define i32 @ucmp_x_neg1_inverted(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[X]], -3
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[X]], -4
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ucmp.i32.i32(i32 [[X]], i32 -3)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = icmp ne i32 %x, -3
@@ -163,10 +138,7 @@ define i32 @ucmp_x_neg1_inverted(i32 %x) {
 define i8 @ucmp_x_neg4_i8_ugt(i8 %x) {
 ; CHECK-LABEL: define i8 @ucmp_x_neg4_i8_ugt(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i8 [[X]], -4
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP4]] to i8
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i8 [[X]], -5
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP3]], i8 [[TMP2]], i8 -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[X]], i8 -4)
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %1 = icmp ugt i8 %x, -4
@@ -182,10 +154,7 @@ define i8 @ucmp_x_neg4_i8_ugt(i8 %x) {
 define <4 x i32> @scmp_x_0_inverted_splat_vec(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i32> @scmp_x_0_inverted_splat_vec(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[X]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i32> [[X]], splat (i32 -1)
-; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> [[X]], <4 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %2 = icmp ne <4 x i32> %x, zeroinitializer
@@ -199,10 +168,8 @@ define <4 x i32> @scmp_x_0_inverted_splat_vec(<4 x i32> %x) {
 define <4 x i32> @non_splat_vec_scmp_diff_bitwidth(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i32> @non_splat_vec_scmp_diff_bitwidth(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <4 x i32> [[X]], <i32 0, i32 1, i32 -1, i32 5>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <4 x i32> [[X]], <i32 1, i32 2, i32 0, i32 6>
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i1> [[CMP1]] to <4 x i32>
-; CHECK-NEXT:    [[RET:%.*]] = select <4 x i1> [[CMP2]], <4 x i32> [[TMP1]], <4 x i32> splat (i32 1)
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i64> @llvm.scmp.v4i64.v4i32(<4 x i32> [[X]], <4 x i32> <i32 0, i32 1, i32 -1, i32 5>)
+; CHECK-NEXT:    [[RET:%.*]] = trunc <4 x i64> [[SEL]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[RET]]
 ;
   %x64 = sext <4 x i32> %x to <4 x i64>
