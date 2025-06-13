@@ -27,7 +27,7 @@
 #include "make_string.h"
 #include "min_allocator.h"
 #include "test_macros.h"
-#include "visitors.h
+#include "visitors.h"
 
 // The expected result type shouldn't matter,therefore use a hardcoded value for simplicity.
 using ExpectedResultType = bool;
