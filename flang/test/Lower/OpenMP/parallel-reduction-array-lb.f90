@@ -12,11 +12,13 @@ print *,i
 
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3x2xi32 : !fir.ref<!fir.box<!fir.array<3x2xi32>>> init {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>):
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3x2xi32 : !fir.ref<!fir.box<!fir.array<3x2xi32>>> alloc {
+! CHECK:           %[[VAL_15:.*]] = fir.alloca !fir.box<!fir.array<3x2xi32>>
+! CHECK:           omp.yield(%[[VAL_15]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>)
+! CHECK-LABEL:   } init {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
-! CHECK:           %[[VAL_15:.*]] = fir.alloca !fir.box<!fir.array<3x2xi32>>
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_3]], %[[VAL_4]] : (index, index) -> !fir.shape<2>
@@ -30,22 +32,21 @@ end program
 ! CHECK:           %[[VAL_13:.*]] = fir.shape_shift %[[VAL_10]]#0, %[[VAL_10]]#1, %[[VAL_12]]#0, %[[VAL_12]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 ! CHECK:           %[[VAL_14:.*]] = fir.embox %[[VAL_8]]#0(%[[VAL_13]]) : (!fir.heap<!fir.array<3x2xi32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<3x2xi32>>
 ! CHECK:           hlfir.assign %[[VAL_1]] to %[[VAL_14]] : i32, !fir.box<!fir.array<3x2xi32>>
-! CHECK:           fir.store %[[VAL_14]] to %[[VAL_15]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
-! CHECK:           omp.yield(%[[VAL_15]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>)
+! CHECK:           fir.store %[[VAL_14]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
+! CHECK:           omp.yield(%[[ALLOC]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>)
 ! CHECK:         } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>):
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
-! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_4]] : (!fir.box<!fir.array<3x2xi32>>, index) -> (index, index, index)
-! CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_6]] : (!fir.box<!fir.array<3x2xi32>>, index) -> (index, index, index)
-! CHECK:           %[[VAL_8:.*]] = fir.shape_shift %[[VAL_5]]#0, %[[VAL_5]]#1, %[[VAL_7]]#0, %[[VAL_7]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
-! CHECK:           %[[VAL_9:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_9]] to %[[VAL_7]]#1 step %[[VAL_9]] unordered {
-! CHECK:             fir.do_loop %[[VAL_11:.*]] = %[[VAL_9]] to %[[VAL_5]]#1 step %[[VAL_9]] unordered {
-! CHECK:               %[[VAL_12:.*]] = fir.array_coor %[[VAL_2]](%[[VAL_8]]) %[[VAL_11]], %[[VAL_10]] : (!fir.box<!fir.array<3x2xi32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<i32>
-! CHECK:               %[[VAL_13:.*]] = fir.array_coor %[[VAL_3]](%[[VAL_8]]) %[[VAL_11]], %[[VAL_10]] : (!fir.box<!fir.array<3x2xi32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<i32>
+! CHECK:           %[[C1:.*]] = arith.constant 1 : index
+! CHECK:           %[[C3:.*]] = arith.constant 3 : index
+! CHECK:           %[[C2:.*]] = arith.constant 2 : index
+! CHECK:           %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[C1]], %[[C3]], %[[C1]], %[[C2]] : (index, index, index, index) -> !fir.shapeshift<2>
+! CHECK:           %[[C1_0:.*]] = arith.constant 1 : index
+! CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[C1_0]] to %[[C2]] step %[[C1_0]] unordered {
+! CHECK:             fir.do_loop %[[VAL_11:.*]] = %[[C1_0]] to %[[C3]] step %[[C1_0]] unordered {
+! CHECK:               %[[VAL_12:.*]] = fir.array_coor %[[VAL_2]](%[[SHAPE_SHIFT]]) %[[VAL_11]], %[[VAL_10]] : (!fir.box<!fir.array<3x2xi32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<i32>
+! CHECK:               %[[VAL_13:.*]] = fir.array_coor %[[VAL_3]](%[[SHAPE_SHIFT]]) %[[VAL_11]], %[[VAL_10]] : (!fir.box<!fir.array<3x2xi32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<i32>
 ! CHECK:               %[[VAL_14:.*]] = fir.load %[[VAL_12]] : !fir.ref<i32>
 ! CHECK:               %[[VAL_15:.*]] = fir.load %[[VAL_13]] : !fir.ref<i32>
 ! CHECK:               %[[VAL_16:.*]] = arith.addi %[[VAL_14]], %[[VAL_15]] : i32

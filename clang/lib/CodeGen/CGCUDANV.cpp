@@ -40,8 +40,6 @@ class CGNVCUDARuntime : public CGCUDARuntime {
 
   /// The prefix used for function calls and section names (CUDA, HIP, LLVM)
   StringRef Prefix;
-  /// TODO: We should transition the OpenMP section to LLVM/Offload
-  StringRef SectionPrefix;
 
 private:
   llvm::IntegerType *IntTy, *SizeTy;
@@ -234,13 +232,12 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   VoidTy = CGM.VoidTy;
   PtrTy = CGM.UnqualPtrTy;
 
-  if (CGM.getLangOpts().OffloadViaLLVM) {
+  if (CGM.getLangOpts().OffloadViaLLVM)
     Prefix = "llvm";
-    SectionPrefix = "omp";
-  } else if (CGM.getLangOpts().HIP)
-    SectionPrefix = Prefix = "hip";
+  else if (CGM.getLangOpts().HIP)
+    Prefix = "hip";
   else
-    SectionPrefix = Prefix = "cuda";
+    Prefix = "cuda";
 }
 
 llvm::FunctionCallee CGNVCUDARuntime::getSetupArgumentFn() const {
@@ -840,8 +837,10 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
       FatBinStr = new llvm::GlobalVariable(
           CGM.getModule(), CGM.Int8Ty,
           /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, nullptr,
-          "__hip_fatbin_" + CGM.getContext().getCUIDHash(), nullptr,
-          llvm::GlobalVariable::NotThreadLocal);
+          "__hip_fatbin" + (CGM.getLangOpts().CUID.empty()
+                                ? ""
+                                : "_" + CGM.getContext().getCUIDHash()),
+          nullptr, llvm::GlobalVariable::NotThreadLocal);
       cast<llvm::GlobalVariable>(FatBinStr)->setSection(FatbinConstantName);
     }
 
@@ -894,8 +893,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   // thread safety of the loaded program. Therefore we can assume sequential
   // execution of constructor functions here.
   if (IsHIP) {
-    auto Linkage = CudaGpuBinary ? llvm::GlobalValue::InternalLinkage
-                                 : llvm::GlobalValue::ExternalLinkage;
+    auto Linkage = RelocatableDeviceCode ? llvm::GlobalValue::ExternalLinkage
+                                         : llvm::GlobalValue::InternalLinkage;
     llvm::BasicBlock *IfBlock =
         llvm::BasicBlock::Create(Context, "if", ModuleCtorFunc);
     llvm::BasicBlock *ExitBlock =
@@ -905,10 +904,11 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     GpuBinaryHandle = new llvm::GlobalVariable(
         TheModule, PtrTy, /*isConstant=*/false, Linkage,
         /*Initializer=*/
-        CudaGpuBinary ? llvm::ConstantPointerNull::get(PtrTy) : nullptr,
-        CudaGpuBinary
-            ? "__hip_gpubin_handle"
-            : "__hip_gpubin_handle_" + CGM.getContext().getCUIDHash());
+        !RelocatableDeviceCode ? llvm::ConstantPointerNull::get(PtrTy)
+                               : nullptr,
+        "__hip_gpubin_handle" + (CGM.getLangOpts().CUID.empty()
+                                     ? ""
+                                     : "_" + CGM.getContext().getCUIDHash()));
     GpuBinaryHandle->setAlignment(CGM.getPointerAlign().getAsAlign());
     // Prevent the weak symbol in different shared libraries being merged.
     if (Linkage != llvm::GlobalValue::InternalLinkage)
@@ -1194,15 +1194,19 @@ void CGNVCUDARuntime::transformManagedVars() {
 // registered. The linker will provide a pointer to this section so we can
 // register the symbols with the linked device image.
 void CGNVCUDARuntime::createOffloadingEntries() {
-  SmallVector<char, 32> Out;
-  StringRef Section = (SectionPrefix + "_offloading_entries").toStringRef(Out);
+  llvm::object::OffloadKind Kind = CGM.getLangOpts().HIP
+                                       ? llvm::object::OffloadKind::OFK_HIP
+                                       : llvm::object::OffloadKind::OFK_Cuda;
+  // For now, just spoof this as OpenMP because that's the runtime it uses.
+  if (CGM.getLangOpts().OffloadViaLLVM)
+    Kind = llvm::object::OffloadKind::OFK_OpenMP;
 
   llvm::Module &M = CGM.getModule();
   for (KernelInfo &I : EmittedKernels)
     llvm::offloading::emitOffloadingEntry(
-        M, KernelHandles[I.Kernel->getName()],
+        M, Kind, KernelHandles[I.Kernel->getName()],
         getDeviceSideName(cast<NamedDecl>(I.D)), /*Flags=*/0, /*Data=*/0,
-        llvm::offloading::OffloadGlobalEntry, Section);
+        llvm::offloading::OffloadGlobalEntry);
 
   for (VarInfo &I : DeviceVars) {
     uint64_t VarSize =
@@ -1218,22 +1222,32 @@ void CGNVCUDARuntime::createOffloadingEntries() {
              ? static_cast<int32_t>(llvm::offloading::OffloadGlobalNormalized)
              : 0);
     if (I.Flags.getKind() == DeviceVarFlags::Variable) {
-      llvm::offloading::emitOffloadingEntry(
-          M, I.Var, getDeviceSideName(I.D), VarSize,
-          (I.Flags.isManaged() ? llvm::offloading::OffloadGlobalManagedEntry
-                               : llvm::offloading::OffloadGlobalEntry) |
-              Flags,
-          /*Data=*/0, Section);
+      if (I.Flags.isManaged()) {
+        assert(I.Var->getName().ends_with(".managed") &&
+               "HIP managed variables not transformed");
+
+        auto *ManagedVar = M.getNamedGlobal(
+            I.Var->getName().drop_back(StringRef(".managed").size()));
+        llvm::offloading::emitOffloadingEntry(
+            M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
+            llvm::offloading::OffloadGlobalManagedEntry | Flags,
+            /*Data=*/I.Var->getAlignment(), ManagedVar);
+      } else {
+        llvm::offloading::emitOffloadingEntry(
+            M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
+            llvm::offloading::OffloadGlobalEntry | Flags,
+            /*Data=*/0);
+      }
     } else if (I.Flags.getKind() == DeviceVarFlags::Surface) {
       llvm::offloading::emitOffloadingEntry(
-          M, I.Var, getDeviceSideName(I.D), VarSize,
+          M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
           llvm::offloading::OffloadGlobalSurfaceEntry | Flags,
-          I.Flags.getSurfTexType(), Section);
+          I.Flags.getSurfTexType());
     } else if (I.Flags.getKind() == DeviceVarFlags::Texture) {
       llvm::offloading::emitOffloadingEntry(
-          M, I.Var, getDeviceSideName(I.D), VarSize,
+          M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
           llvm::offloading::OffloadGlobalTextureEntry | Flags,
-          I.Flags.getSurfTexType(), Section);
+          I.Flags.getSurfTexType());
     }
   }
 }
@@ -1266,7 +1280,8 @@ llvm::Function *CGNVCUDARuntime::finalizeModule() {
     return nullptr;
   }
   if (CGM.getLangOpts().OffloadViaLLVM ||
-      (CGM.getLangOpts().OffloadingNewDriver && RelocatableDeviceCode))
+      (CGM.getLangOpts().OffloadingNewDriver &&
+       (CGM.getLangOpts().HIP || RelocatableDeviceCode)))
     createOffloadingEntries();
   else
     return makeModuleCtorFunction();

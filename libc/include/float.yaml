@@ -1,0 +1,9 @@
+header: float.h
+header_template: float.h.def
+standards:
+  - stdc
+macros: []
+types: []
+enums: []
+objects: []
+functions: []

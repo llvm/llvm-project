@@ -16,7 +16,7 @@ for.body.lr.ph:                                   ; preds = %entry
 for.body:                                         ; preds = %for.inc, %for.body.lr.ph
   %i.02 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
   %add = add nsw i32 %i.02, 50, !dbg !16
-  call void @llvm.dbg.value(metadata i32 %add, i64 0, metadata !18, metadata !19), !dbg !20
+  tail call void @llvm.dbg.value(metadata i32 %add, i64 0, metadata !18, metadata !19), !dbg !20
   %idxprom = sext i32 %add to i64, !dbg !21
 
 ; CHECK:  %idxprom = sext i32 %add to i64

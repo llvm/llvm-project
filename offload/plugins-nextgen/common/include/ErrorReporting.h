@@ -80,8 +80,10 @@ class ErrorReporter {
   /// Print \p Format, instantiated with \p Args to stderr.
   /// TODO: Allow redirection into a file stream.
   template <typename... ArgsTy>
-  [[gnu::format(__printf__, 1, 2)]] static void print(const char *Format,
-                                                      ArgsTy &&...Args) {
+#ifdef __clang__ // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77958
+  [[gnu::format(__printf__, 1, 2)]]
+#endif
+  static void print(const char *Format, ArgsTy &&...Args) {
     raw_fd_ostream OS(STDERR_FILENO, false);
     OS << llvm::format(Format, Args...);
   }
@@ -89,8 +91,10 @@ class ErrorReporter {
   /// Print \p Format, instantiated with \p Args to stderr, but colored.
   /// TODO: Allow redirection into a file stream.
   template <typename... ArgsTy>
-  [[gnu::format(__printf__, 2, 3)]] static void
-  print(ColorTy Color, const char *Format, ArgsTy &&...Args) {
+#ifdef __clang__ // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77958
+  [[gnu::format(__printf__, 2, 3)]]
+#endif
+  static void print(ColorTy Color, const char *Format, ArgsTy &&...Args) {
     raw_fd_ostream OS(STDERR_FILENO, false);
     WithColor(OS, HighlightColor(Color)) << llvm::format(Format, Args...);
   }
@@ -99,8 +103,10 @@ class ErrorReporter {
   /// a banner.
   /// TODO: Allow redirection into a file stream.
   template <typename... ArgsTy>
-  [[gnu::format(__printf__, 1, 2)]] static void reportError(const char *Format,
-                                                            ArgsTy &&...Args) {
+#ifdef __clang__ // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77958
+  [[gnu::format(__printf__, 1, 2)]]
+#endif
+  static void reportError(const char *Format, ArgsTy &&...Args) {
     print(BoldRed, "%s", ErrorBanner);
     print(BoldRed, Format, Args...);
     print("\n");
@@ -157,10 +163,13 @@ class ErrorReporter {
 
     if (ATI->HostPtr)
       print(BoldLightPurple,
-            "Last allocation of size %lu for host pointer %p:\n", ATI->Size,
-            ATI->HostPtr);
+            "Last allocation of size %lu for host pointer %p -> device pointer "
+            "%p:\n",
+            ATI->Size, ATI->HostPtr, ATI->DevicePtr);
     else
-      print(BoldLightPurple, "Last allocation of size %lu:\n", ATI->Size);
+      print(BoldLightPurple,
+            "Last allocation of size %lu -> device pointer %p:\n", ATI->Size,
+            ATI->DevicePtr);
     reportStackTrace(ATI->AllocationTrace);
     if (!ATI->LastAllocationInfo)
       return;
@@ -174,10 +183,13 @@ class ErrorReporter {
             ATI->Size);
       reportStackTrace(ATI->DeallocationTrace);
       if (ATI->HostPtr)
-        print(BoldLightPurple, " #%u Prior allocation for host pointer %p:\n",
-              I, ATI->HostPtr);
+        print(
+            BoldLightPurple,
+            " #%u Prior allocation for host pointer %p -> device pointer %p:\n",
+            I, ATI->HostPtr, ATI->DevicePtr);
       else
-        print(BoldLightPurple, " #%u Prior allocation:\n", I);
+        print(BoldLightPurple, " #%u Prior allocation -> device pointer %p:\n",
+              I, ATI->DevicePtr);
       reportStackTrace(ATI->AllocationTrace);
       ++I;
     }
@@ -217,6 +229,55 @@ public:
                        getAllocTyName(Kind).data(),
                        getAllocTyName(ATI->Kind).data(), DevicePtr);
 #undef DEALLOCATION_ERROR
+  }
+
+  static void reportMemoryAccessError(GenericDeviceTy &Device, void *DevicePtr,
+                                      std::string &ErrorStr, bool Abort) {
+    reportError(ErrorStr.c_str());
+
+    if (!Device.OMPX_TrackAllocationTraces) {
+      print(Yellow, "Use '%s=true' to track device allocations\n",
+            Device.OMPX_TrackAllocationTraces.getName().data());
+      if (Abort)
+        abortExecution();
+      return;
+    }
+    uintptr_t Distance = false;
+    auto *ATI =
+        Device.getClosestAllocationTraceInfoForAddr(DevicePtr, Distance);
+    if (!ATI) {
+      print(Cyan,
+            "No host-issued allocations; device pointer %p might be "
+            "a global, stack, or shared location\n",
+            DevicePtr);
+      if (Abort)
+        abortExecution();
+      return;
+    }
+    if (!Distance) {
+      print(Cyan, "Device pointer %p points into%s host-issued allocation:\n",
+            DevicePtr, ATI->DeallocationTrace.empty() ? "" : " prior");
+      reportAllocationInfo(ATI);
+      if (Abort)
+        abortExecution();
+      return;
+    }
+
+    bool IsClose = Distance < (1L << 29L /*512MB=*/);
+    print(Cyan,
+          "Device pointer %p does not point into any (current or prior) "
+          "host-issued allocation%s.\n",
+          DevicePtr,
+          IsClose ? "" : " (might be a global, stack, or shared location)");
+    if (IsClose) {
+      print(Cyan,
+            "Closest host-issued allocation (distance %" PRIuPTR
+            " byte%s; might be by page):\n",
+            Distance, Distance > 1 ? "s" : "");
+      reportAllocationInfo(ATI);
+    }
+    if (Abort)
+      abortExecution();
   }
 
   /// Report that a kernel encountered a trap instruction.

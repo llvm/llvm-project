@@ -415,7 +415,7 @@ int includeFixerMain(int argc, const char **argv) {
       llvm::errs() << llvm::toString(InsertStyle.takeError()) << "\n";
       return 1;
     }
-    auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
+    auto Buffer = llvm::MemoryBuffer::getFile(FilePath, /*IsText=*/true);
     if (!Buffer) {
       errs() << "Couldn't open file: " + FilePath.str() + ": "
              << Buffer.getError().message() + "\n";
@@ -455,9 +455,9 @@ int includeFixerMain(int argc, const char **argv) {
   }
 
   // Set up a new source manager for applying the resulting replacements.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
-  DiagnosticsEngine Diagnostics(new DiagnosticIDs, &*DiagOpts);
-  TextDiagnosticPrinter DiagnosticPrinter(outs(), &*DiagOpts);
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diagnostics(new DiagnosticIDs, DiagOpts);
+  TextDiagnosticPrinter DiagnosticPrinter(outs(), DiagOpts);
   SourceManager SM(Diagnostics, tool.getFiles());
   Diagnostics.setClient(&DiagnosticPrinter, false);
 

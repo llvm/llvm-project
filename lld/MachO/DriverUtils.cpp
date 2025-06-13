@@ -9,8 +9,6 @@
 #include "Config.h"
 #include "Driver.h"
 #include "InputFiles.h"
-#include "ObjC.h"
-#include "Target.h"
 
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
@@ -34,13 +32,14 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
-// Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+// Create prefix string literals used in Options.td
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 // Create table mapping all options defined in Options.td
 static constexpr OptTable::Info optInfo[] = {
@@ -65,32 +64,36 @@ static constexpr OptTable::Info optInfo[] = {
 #undef OPTION
 };
 
-MachOOptTable::MachOOptTable() : GenericOptTable(optInfo) {}
+MachOOptTable::MachOOptTable()
+    : GenericOptTable(OptionStrTable, OptionPrefixesTable, optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
-static void handleColorDiagnostics(InputArgList &args) {
+static void handleColorDiagnostics(CommonLinkerContext &ctx,
+                                   InputArgList &args) {
   const Arg *arg =
       args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
                       OPT_no_color_diagnostics);
   if (!arg)
     return;
+  auto &errs = ctx.e.errs();
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    lld::errs().enable_colors(true);
+    errs.enable_colors(true);
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    lld::errs().enable_colors(false);
+    errs.enable_colors(false);
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      lld::errs().enable_colors(true);
+      errs.enable_colors(true);
     else if (s == "never")
-      lld::errs().enable_colors(false);
+      errs.enable_colors(false);
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }
 }
 
-InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
+InputArgList MachOOptTable::parse(CommonLinkerContext &ctx,
+                                  ArrayRef<const char *> argv) {
   // Make InputArgList from string vectors.
   unsigned missingIndex;
   unsigned missingCount;
@@ -109,7 +112,7 @@ InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   if (missingCount)
     error(Twine(args.getArgString(missingIndex)) + ": missing argument");
 
-  handleColorDiagnostics(args);
+  handleColorDiagnostics(ctx, args);
 
   for (const Arg *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
@@ -122,11 +125,12 @@ InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   return args;
 }
 
-void MachOOptTable::printHelp(const char *argv0, bool showHidden) const {
-  OptTable::printHelp(lld::outs(),
-                      (std::string(argv0) + " [options] file...").c_str(),
+void MachOOptTable::printHelp(CommonLinkerContext &ctx, const char *argv0,
+                              bool showHidden) const {
+  auto &outs = ctx.e.outs();
+  OptTable::printHelp(outs, (std::string(argv0) + " [options] file...").c_str(),
                       "LLVM Linker", showHidden);
-  lld::outs() << "\n";
+  outs << '\n';
 }
 
 static std::string rewritePath(StringRef s) {
@@ -231,6 +235,23 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
     return file;
   }
 
+  // Frameworks can be found from different symlink paths, so resolve
+  // symlinks and look up in the dylib cache.
+  DylibFile *&realfile = file;
+  SmallString<128> realPath;
+  std::error_code err = fs::real_path(mbref.getBufferIdentifier(), realPath);
+  if (!err) {
+    CachedHashStringRef resolvedPath(uniqueSaver().save(StringRef(realPath)));
+    realfile = loadedDylibs[resolvedPath];
+    if (realfile) {
+      if (explicitlyLinked)
+        realfile->setExplicitlyLinked();
+
+      file = realfile;
+      return realfile;
+    }
+  }
+
   DylibFile *newFile;
   file_magic magic = identify_magic(mbref.getBuffer());
   if (magic == file_magic::tapi_file) {
@@ -242,6 +263,7 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
     }
     file =
         make<DylibFile>(**result, umbrella, isBundleLoader, explicitlyLinked);
+    realfile = file;
 
     // parseReexports() can recursively call loadDylib(). That's fine since
     // we wrote the DylibFile we just loaded to the loadDylib cache via the
@@ -257,12 +279,32 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
            magic == file_magic::macho_executable ||
            magic == file_magic::macho_bundle);
     file = make<DylibFile>(mbref, umbrella, isBundleLoader, explicitlyLinked);
+    realfile = file;
 
     // parseLoadCommands() can also recursively call loadDylib(). See comment
     // in previous block for why this means we must copy `file` here.
     newFile = file;
     if (newFile->exportingFile)
       newFile->parseLoadCommands(mbref);
+  }
+
+  if (explicitlyLinked && !newFile->allowableClients.empty()) {
+    bool allowed =
+        llvm::any_of(newFile->allowableClients, [&](StringRef allowableClient) {
+          // We only do a prefix match to match LD64's behaviour.
+          return allowableClient.starts_with(config->clientName);
+        });
+
+    // TODO: This behaviour doesn't quite match the latest available source
+    // release of LD64 (ld64-951.9), which allows "parents" and "siblings"
+    // to link to libraries even when they're not explicitly named as
+    // allowable clients. However, behaviour around this seems to have
+    // changed in the latest release of Xcode (ld64-1115.7.3), so it's not
+    // clear what the correct thing to do is yet.
+    if (!allowed)
+      error("cannot link directly with '" +
+            sys::path::filename(newFile->installName) + "' because " +
+            config->clientName + " is not an allowed client");
   }
   return newFile;
 }

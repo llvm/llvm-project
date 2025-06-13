@@ -42,8 +42,8 @@ TEST_F(ClangHostTest, ComputeClangResourceDirectory) {
 #else
   std::string path_to_liblldb = "C:\\foo\\bar\\lib\\";
 #endif
-  std::string path_to_clang_dir = clang::driver::Driver::GetResourcesPath(
-      path_to_liblldb + "liblldb", CLANG_RESOURCE_DIR);
+  std::string path_to_clang_dir =
+      clang::driver::Driver::GetResourcesPath(path_to_liblldb + "liblldb");
   llvm::SmallString<256> path_to_clang_lib_dir_real;
   llvm::sys::fs::real_path(path_to_clang_dir, path_to_clang_lib_dir_real);
 

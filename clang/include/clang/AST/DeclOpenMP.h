@@ -34,7 +34,7 @@ template <typename U> class OMPDeclarativeDirective : public U {
   /// Get the clauses storage.
   MutableArrayRef<OMPClause *> getClauses() {
     if (!Data)
-      return std::nullopt;
+      return {};
     return Data->getClauses();
   }
 
@@ -90,7 +90,7 @@ public:
 
   ArrayRef<OMPClause *> clauses() const {
     if (!Data)
-      return std::nullopt;
+      return {};
     return Data->getClauses();
   }
 };
@@ -110,7 +110,7 @@ public:
 class OMPThreadPrivateDecl final : public OMPDeclarativeDirective<Decl> {
   friend class OMPDeclarativeDirective<Decl>;
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
   OMPThreadPrivateDecl(DeclContext *DC = nullptr,
                        SourceLocation L = SourceLocation())
@@ -418,7 +418,7 @@ class OMPRequiresDecl final : public OMPDeclarativeDirective<Decl> {
   friend class OMPDeclarativeDirective<Decl>;
   friend class ASTDeclReader;
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
   OMPRequiresDecl(DeclContext *DC, SourceLocation L)
       : OMPDeclarativeDirective<Decl>(OMPRequires, DC, L) {}
@@ -475,7 +475,7 @@ class OMPAllocateDecl final : public OMPDeclarativeDirective<Decl> {
   friend class OMPDeclarativeDirective<Decl>;
   friend class ASTDeclReader;
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
   OMPAllocateDecl(DeclContext *DC, SourceLocation L)
       : OMPDeclarativeDirective<Decl>(OMPAllocate, DC, L) {}

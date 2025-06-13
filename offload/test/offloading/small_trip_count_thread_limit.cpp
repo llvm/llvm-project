@@ -25,4 +25,4 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-// CHECK: Launching kernel {{.*}} with 4 blocks and 256 threads in SPMD mode
+// CHECK: Launching kernel {{.*}} with [4,1,1] blocks and [256,1,1] threads in SPMD mode

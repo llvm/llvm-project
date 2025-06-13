@@ -1,0 +1,34 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+# ATT:   tdpbf8ps %tmm4, %tmm5, %tmm6
+# INTEL: tdpbf8ps tmm6, tmm5, tmm4
+0xc4,0xe5,0x58,0xfd,0xf5
+
+# ATT:   tdpbf8ps %tmm1, %tmm2, %tmm3
+# INTEL: tdpbf8ps tmm3, tmm2, tmm1
+0xc4,0xe5,0x70,0xfd,0xda
+
+# ATT:   tdpbhf8ps %tmm4, %tmm5, %tmm6
+# INTEL: tdpbhf8ps tmm6, tmm5, tmm4
+0xc4,0xe5,0x5b,0xfd,0xf5
+
+# ATT:   tdpbhf8ps %tmm1, %tmm2, %tmm3
+# INTEL: tdpbhf8ps tmm3, tmm2, tmm1
+0xc4,0xe5,0x73,0xfd,0xda
+
+# ATT:   tdphbf8ps %tmm4, %tmm5, %tmm6
+# INTEL: tdphbf8ps tmm6, tmm5, tmm4
+0xc4,0xe5,0x5a,0xfd,0xf5
+
+# ATT:   tdphbf8ps %tmm1, %tmm2, %tmm3
+# INTEL: tdphbf8ps tmm3, tmm2, tmm1
+0xc4,0xe5,0x72,0xfd,0xda
+
+# ATT:   tdphf8ps %tmm4, %tmm5, %tmm6
+# INTEL: tdphf8ps tmm6, tmm5, tmm4
+0xc4,0xe5,0x59,0xfd,0xf5
+
+# ATT:   tdphf8ps %tmm1, %tmm2, %tmm3
+# INTEL: tdphf8ps tmm3, tmm2, tmm1
+0xc4,0xe5,0x71,0xfd,0xda

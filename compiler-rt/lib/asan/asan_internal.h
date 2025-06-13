@@ -82,6 +82,7 @@ void ReplaceSystemMalloc();
 uptr FindDynamicShadowStart();
 void AsanCheckDynamicRTPrereqs();
 void AsanCheckIncompatibleRT();
+void TryReExecWithoutASLR();
 
 // Unpoisons platform-specific stacks.
 // Returns true if all stacks have been unpoisoned.

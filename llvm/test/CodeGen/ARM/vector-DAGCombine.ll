@@ -50,9 +50,9 @@ define void @test_pr22678() {
 define <4 x i32> @test_vmovrrd_combine() nounwind {
 ; CHECK-LABEL: test_vmovrrd_combine:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    @ implicit-def: $q8
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    @ implicit-def: $q8
 ; CHECK-NEXT:    bne .LBB3_2
 ; CHECK-NEXT:  @ %bb.1: @ %bb1.preheader
 ; CHECK-NEXT:    vmov.i32 q8, #0x0

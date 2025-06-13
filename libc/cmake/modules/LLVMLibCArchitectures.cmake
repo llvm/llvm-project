@@ -33,14 +33,14 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
   # value.
   if(target_arch MATCHES "^mips")
     set(target_arch "mips")
-  elseif(target_arch MATCHES "^arm")
-    # TODO(lntue): Shall we separate `arm64`?  It is currently recognized as
-    # `arm` here.
-    set(target_arch "arm")
-  elseif(target_arch MATCHES "^aarch64")
+  elseif(target_arch MATCHES "^aarch64|^arm64")
     set(target_arch "aarch64")
-  elseif(target_arch MATCHES "(x86_64)|(AMD64|amd64)|(^i.86$)")
+  elseif(target_arch MATCHES "^arm")
+    set(target_arch "arm")
+  elseif(target_arch MATCHES "(x86_64)|(AMD64|amd64)")
     set(target_arch "x86_64")
+  elseif(target_arch MATCHES "(^i.86$)")
+    set(target_arch "i386")
   elseif(target_arch MATCHES "^(powerpc|ppc)")
     set(target_arch "power")
   elseif(target_arch MATCHES "^riscv32")
@@ -51,6 +51,8 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
     set(target_arch "amdgpu")
   elseif(target_arch MATCHES "^nvptx64")
     set(target_arch "nvptx")
+  elseif(target_arch MATCHES "^spirv64")
+    set(target_arch "spirv64")
   else()
     return()
   endif()
@@ -84,7 +86,7 @@ if(NOT (libc_compiler_info_result EQUAL "0"))
   message(FATAL_ERROR "libc build: error querying compiler info from the "
                       "compiler: ${libc_compiler_info}")
 endif()
-string(REGEX MATCH "Target: [-_a-z0-9.]+[ \r\n]+"
+string(REGEX MATCH "Target: [-_a-zA-Z0-9.]+[ \r\n]+"
        libc_compiler_target_info ${libc_compiler_info})
 if(NOT libc_compiler_target_info)
   message(FATAL_ERROR "libc build: could not read compiler target info from:\n"
@@ -147,6 +149,8 @@ if(LIBC_TARGET_ARCHITECTURE STREQUAL "arm")
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "aarch64")
   set(LIBC_TARGET_ARCHITECTURE_IS_AARCH64 TRUE)
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
+  set(LIBC_TARGET_ARCHITECTURE_IS_X86_64 TRUE)
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "i386")
   set(LIBC_TARGET_ARCHITECTURE_IS_X86 TRUE)
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "riscv64")
   set(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 TRUE)
@@ -158,6 +162,8 @@ elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "amdgpu")
   set(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU TRUE)
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "nvptx")
   set(LIBC_TARGET_ARCHITECTURE_IS_NVPTX TRUE)
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "spirv64")
+  set(LIBC_TARGET_ARCHITECTURE_IS_SPIRV TRUE)
 else()
   message(FATAL_ERROR
           "Unsupported libc target architecture ${LIBC_TARGET_ARCHITECTURE}")
@@ -183,6 +189,8 @@ elseif(LIBC_TARGET_OS STREQUAL "windows")
   set(LIBC_TARGET_OS_IS_WINDOWS TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "gpu")
   set(LIBC_TARGET_OS_IS_GPU TRUE)
+elseif(LIBC_TARGET_OS STREQUAL "uefi")
+  set(LIBC_TARGET_OS_IS_UEFI TRUE)
 else()
   message(FATAL_ERROR
           "Unsupported libc target operating system ${LIBC_TARGET_OS}")
@@ -206,5 +214,13 @@ if(explicit_target_triple AND
   endif()
 endif()
 
+
+# Windows does not support full mode build.
+if (LIBC_TARGET_OS_IS_WINDOWS AND LLVM_LIBC_FULL_BUILD)
+  message(FATAL_ERROR "Windows does not support full mode build.")
+endif ()
+
+
 message(STATUS
-        "Building libc for ${LIBC_TARGET_ARCHITECTURE} on ${LIBC_TARGET_OS}")
+        "Building libc for ${LIBC_TARGET_ARCHITECTURE} on ${LIBC_TARGET_OS} with
+        LIBC_COMPILE_OPTIONS_DEFAULT: ${LIBC_COMPILE_OPTIONS_DEFAULT}")

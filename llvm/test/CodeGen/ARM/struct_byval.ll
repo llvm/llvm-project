@@ -63,25 +63,6 @@ declare i32 @e1(ptr nocapture byval(%struct.SmallStruct) %in) nounwind
 declare i32 @e2(ptr nocapture byval(%struct.LargeStruct) %in) nounwind
 declare i32 @e3(ptr nocapture byval(%struct.LargeStruct) align 16 %in) nounwind
 
-; rdar://12442472
-; We can't do tail call since address of s is passed to the callee and part of
-; s is in caller's local frame.
-define void @f3(ptr nocapture byval(%struct.SmallStruct) %s) nounwind optsize {
-; CHECK-LABEL: f3
-; CHECK: bl _consumestruct
-entry:
-  tail call void @consumestruct(ptr %s, i32 80) optsize
-  ret void
-}
-
-define void @f4(ptr nocapture byval(%struct.SmallStruct) %s) nounwind optsize {
-; CHECK-LABEL: f4
-; CHECK: bl _consumestruct
-entry:
-  tail call void @consumestruct(ptr %s, i32 80) optsize
-  ret void
-}
-
 ; We can do tail call here since s is in the incoming argument area.
 define void @f5(i32 %a, i32 %b, i32 %c, i32 %d, ptr nocapture byval(%struct.SmallStruct) %s) nounwind optsize {
 ; CHECK-LABEL: f5

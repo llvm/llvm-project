@@ -51,6 +51,16 @@ LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
                            LLVMPassBuilderOptionsRef Options);
 
 /**
+ * Construct and run a set of passes over a function.
+ *
+ * This function behaves the same as LLVMRunPasses, but operates on a single
+ * function instead of an entire module.
+ */
+LLVMErrorRef LLVMRunPassesOnFunction(LLVMValueRef F, const char *Passes,
+                                     LLVMTargetMachineRef TM,
+                                     LLVMPassBuilderOptionsRef Options);
+
+/**
  * Create a new set of options for a PassBuilder
  *
  * Ownership of the returned instance is given to the client, and they are

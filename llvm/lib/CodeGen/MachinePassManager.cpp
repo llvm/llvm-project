@@ -14,6 +14,8 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManagerImpl.h"
 
 using namespace llvm;
@@ -152,6 +154,7 @@ PassManager<MachineFunction>::run(MachineFunction &MF,
     PI.runAfterPass(*Pass, MF, PassPA);
     PA.intersect(std::move(PassPA));
   }
+  PA.preserveSet<AllAnalysesOn<MachineFunction>>();
   return PA;
 }
 

@@ -15,7 +15,7 @@
 namespace clang {
 namespace doc {
 
-std::unique_ptr<Generator> getYAMLGenerator() {
+static std::unique_ptr<Generator> getYAMLGenerator() {
   auto G = doc::findGeneratorByName("yaml");
   if (!G)
     return nullptr;
@@ -84,8 +84,8 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   I.IsTypeDef = true;
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp");
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
 
@@ -207,8 +207,8 @@ TEST(YAMLGeneratorTest, emitFunctionYAML) {
   I.Name = "f";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp");
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   I.Access = AccessSpecifier::AS_none;
 
@@ -272,8 +272,8 @@ TEST(YAMLGeneratorTest, emitSimpleEnumYAML) {
   I.Name = "e";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp");
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   I.Members.emplace_back("X");
   I.Scoped = false;
@@ -368,7 +368,7 @@ IsUsing:         true
 TEST(YAMLGeneratorTest, emitCommentYAML) {
   FunctionInfo I;
   I.Name = "f";
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp");
   I.ReturnType = TypeInfo("void");
   I.Params.emplace_back(TypeInfo("int"), "I");
   I.Params.emplace_back(TypeInfo("int"), "J");

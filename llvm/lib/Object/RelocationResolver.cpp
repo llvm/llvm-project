@@ -17,7 +17,6 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Casting.h"
@@ -47,7 +46,6 @@ static bool supportsX86_64(uint64_t Type) {
   case ELF::R_X86_64_PC64:
   case ELF::R_X86_64_32:
   case ELF::R_X86_64_32S:
-  case ELF::R_X86_64_GLOB_DAT:
     return true;
   default:
     return false;
@@ -69,8 +67,6 @@ static uint64_t resolveX86_64(uint64_t Type, uint64_t Offset, uint64_t S,
   case ELF::R_X86_64_32:
   case ELF::R_X86_64_32S:
     return (S + Addend) & 0xFFFFFFFF;
-  case ELF::R_X86_64_GLOB_DAT:
-    return S;
   default:
     llvm_unreachable("Invalid relocation type");
   }
@@ -892,7 +888,8 @@ uint64_t resolveRelocation(RelocationResolver Resolver, const RelocationRef &R,
         return Elf64BEObj->getRelSection(R.getRawDataRefImpl())->sh_type;
       };
 
-      if (GetRelSectionType() == ELF::SHT_RELA) {
+      if (GetRelSectionType() == ELF::SHT_RELA ||
+          GetRelSectionType() == ELF::SHT_CREL) {
         Addend = getELFAddend(R);
         // LoongArch and RISCV relocations use both LocData and Addend.
         if (Obj->getArch() != Triple::loongarch32 &&

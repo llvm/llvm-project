@@ -57,7 +57,7 @@ struct SparseAssembler : public impl::SparseAssemblerBase<SparseAssembler> {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populateSparseAssembler(patterns, directOut);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -73,7 +73,7 @@ struct SparseReinterpretMap
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populateSparseReinterpretMap(patterns, scope);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -87,7 +87,7 @@ struct PreSparsificationRewritePass
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populatePreSparsificationRewriting(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -110,7 +110,7 @@ struct SparsificationPass
     RewritePatternSet patterns(ctx);
     populateSparsificationPatterns(patterns, options);
     scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -122,7 +122,7 @@ struct StageSparseOperationsPass
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populateStageSparseOperationsPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -141,7 +141,7 @@ struct LowerSparseOpsToForeachPass
     RewritePatternSet patterns(ctx);
     populateLowerSparseOpsToForeachPatterns(patterns, enableRuntimeLibrary,
                                             enableConvert);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -154,7 +154,7 @@ struct LowerForeachToSCFPass
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populateLowerForeachToSCFPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -172,11 +172,16 @@ struct LowerSparseIterationToSCFPass
     ConversionTarget target(*ctx);
 
     // The actual conversion.
-    target.addIllegalOp<ExtractIterSpaceOp, IterateOp>();
+    target.addLegalDialect<arith::ArithDialect, linalg::LinalgDialect,
+                           memref::MemRefDialect, scf::SCFDialect,
+                           sparse_tensor::SparseTensorDialect>();
+    target.addIllegalOp<CoIterateOp, ExtractIterSpaceOp, ExtractValOp,
+                        IterateOp>();
+    target.addLegalOp<UnrealizedConversionCastOp>();
     populateLowerSparseIterationToSCFPatterns(converter, patterns);
 
-    if (failed(applyPartialOneToNConversion(getOperation(), converter,
-                                            std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };
@@ -329,7 +334,7 @@ struct SparseBufferRewritePass
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populateSparseBufferRewriting(patterns, enableBufferInitialization);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -351,7 +356,7 @@ struct SparseVectorizationPass
     populateSparseVectorizationPatterns(
         patterns, vectorLength, enableVLAVectorization, enableSIMDIndex32);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -371,7 +376,7 @@ struct SparseGPUCodegenPass
       populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary);
     else
       populateSparseGPUCodegenPatterns(patterns, numThreads);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 

@@ -15,7 +15,6 @@
 #include "FormatToken.h"
 #include "ContinuationIndenter.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Debug.h"
 #include <climits>
 
 namespace clang {
@@ -42,11 +41,10 @@ static SmallVector<StringRef> CppNonKeywordTypes = {
 };
 
 bool FormatToken::isTypeName(const LangOptions &LangOpts) const {
-  const bool IsCpp = LangOpts.CXXOperatorNames;
-  return is(TT_TypeName) || Tok.isSimpleTypeSpecifier(LangOpts) ||
-         (IsCpp && is(tok::identifier) &&
-          std::binary_search(CppNonKeywordTypes.begin(),
-                             CppNonKeywordTypes.end(), TokenText));
+  if (is(TT_TypeName) || Tok.isSimpleTypeSpecifier(LangOpts))
+    return true;
+  return (LangOpts.CXXOperatorNames || LangOpts.C11) && is(tok::identifier) &&
+         llvm::binary_search(CppNonKeywordTypes, TokenText);
 }
 
 bool FormatToken::isTypeOrIdentifier(const LangOptions &LangOpts) const {
@@ -174,7 +172,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // have many items (20 or more) or we allow bin-packing of function call
   // arguments.
   if (Style.Cpp11BracedListStyle && !Style.BinPackArguments &&
-      Commas.size() < 19) {
+      (Commas.size() < 19 || !Style.BinPackLongBracedList)) {
     return;
   }
 
@@ -320,6 +318,23 @@ CommaSeparatedList::getColumnFormat(unsigned RemainingCharacters) const {
     }
   }
   return BestFormat;
+}
+
+bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style) {
+  assert(Current.Previous);
+  const auto &Previous = *Current.Previous;
+  if (Current.is(TT_CtorInitializerComma) &&
+      Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma) {
+    return true;
+  }
+  if (Style.Language == FormatStyle::LK_Proto && Current.is(TT_SelectorName))
+    return true;
+  return Previous.is(tok::comma) && !Current.isTrailingComment() &&
+         ((Previous.isNot(TT_CtorInitializerComma) ||
+           Style.BreakConstructorInitializers !=
+               FormatStyle::BCIS_BeforeComma) &&
+          (Previous.isNot(TT_InheritanceComma) ||
+           Style.BreakInheritanceList != FormatStyle::BILS_BeforeComma));
 }
 
 } // namespace format

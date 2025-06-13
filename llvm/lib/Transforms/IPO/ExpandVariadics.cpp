@@ -145,9 +145,10 @@ public:
 // function here in the meantime to decouple from that discussion.
 Function *getPreexistingDeclaration(Module *M, Intrinsic::ID Id,
                                     ArrayRef<Type *> Tys = {}) {
+  if (Tys.empty())
+    return Intrinsic::getDeclarationIfExists(M, Id);
   auto *FT = Intrinsic::getType(M->getContext(), Id, Tys);
-  return M->getFunction(Tys.empty() ? Intrinsic::getName(Id)
-                                    : Intrinsic::getName(Id, Tys, M, FT));
+  return Intrinsic::getDeclarationIfExists(M, Id, Tys, FT);
 }
 
 class ExpandVariadics : public ModulePass {
@@ -603,9 +604,7 @@ ExpandVariadics::defineVariadicWrapper(Module &M, IRBuilder<> &Builder,
   Builder.CreateIntrinsic(Intrinsic::vastart, {DL.getAllocaPtrType(Ctx)},
                           {VaListInstance});
 
-  SmallVector<Value *> Args;
-  for (Argument &A : F.args())
-    Args.push_back(&A);
+  SmallVector<Value *> Args(llvm::make_pointer_range(F.args()));
 
   Type *ParameterType = ABI->vaListParameterType(M);
   if (ABI->vaListPassedInSSARegister())
@@ -748,10 +747,10 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   // This is an awkward way to guess whether there is a known stack alignment
   // without hitting an assert in DL.getStackAlignment, 1024 is an arbitrary
   // number likely to be greater than the natural stack alignment.
-  // TODO: DL.getStackAlignment could return a MaybeAlign instead of assert
   Align AllocaAlign = MaxFieldAlign;
-  if (DL.exceedsNaturalStackAlignment(Align(1024)))
-    AllocaAlign = std::max(AllocaAlign, DL.getStackAlignment());
+  if (MaybeAlign StackAlign = DL.getStackAlignment();
+      StackAlign && *StackAlign > AllocaAlign)
+    AllocaAlign = *StackAlign;
 
   // Put the alloca to hold the variadic args in the entry basic block.
   Builder.SetInsertPointPastAllocas(CBF);

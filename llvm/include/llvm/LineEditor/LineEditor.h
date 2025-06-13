@@ -41,6 +41,7 @@ public:
 
   void saveHistory();
   void loadHistory();
+  void setHistorySize(int size);
 
   static std::string getDefaultHistoryPath(StringRef ProgName);
 

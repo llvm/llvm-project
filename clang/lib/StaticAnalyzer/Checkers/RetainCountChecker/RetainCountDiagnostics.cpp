@@ -635,8 +635,9 @@ public:
 };
 } // namespace
 
-Bindings getAllVarBindingsForSymbol(ProgramStateManager &Manager,
-                                    const ExplodedNode *Node, SymbolRef Sym) {
+static Bindings getAllVarBindingsForSymbol(ProgramStateManager &Manager,
+                                           const ExplodedNode *Node,
+                                           SymbolRef Sym) {
   Bindings Result;
   VarBindingsCollector Collector{Sym, Result};
   while (Result.empty() && Node) {
@@ -689,7 +690,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
       const MemRegion *R = FB.getRegion();
       // Do not show local variables belonging to a function other than
       // where the error is reported.
-      if (auto MR = dyn_cast<StackSpaceRegion>(R->getMemorySpace()))
+      if (const auto *MR = R->getMemorySpaceAs<StackSpaceRegion>(St))
         if (MR->getStackFrame() == LeakContext->getStackFrame())
           FirstBinding = R;
     }
@@ -961,10 +962,8 @@ void RefLeakReport::findBindingToReport(CheckerContext &Ctx,
   // `AllocFirstBinding` to be one of them.  In situations like this,
   // it would still be the easiest case to explain to our users.
   if (!AllVarBindings.empty() &&
-      llvm::count_if(AllVarBindings,
-                     [this](const std::pair<const MemRegion *, SVal> Binding) {
-                       return Binding.first == AllocFirstBinding;
-                     }) == 0) {
+      !llvm::is_contained(llvm::make_first_range(AllVarBindings),
+                          AllocFirstBinding)) {
     // Let's pick one of them at random (if there is something to pick from).
     AllocBindingToReport = AllVarBindings[0].first;
 

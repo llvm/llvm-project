@@ -8,15 +8,15 @@
 # RUN: %clang %cflags -fPIC -pie %t.o -o %t.rela.exe -nostdlib \
 # RUN:   -Wl,-q -Wl,-z,notext
 # RUN: llvm-bolt %t.rela.exe -o %t.rela.bolt --use-old-text=0 --lite=0
-# RUN: llvm-objdump -j .text -d --show-all-symbols %t.rela.bolt | FileCheck %s
+# RUN: llvm-objdump -j .text -d -z --show-all-symbols %t.rela.bolt | FileCheck %s
 # RUN: llvm-readelf -rsW %t.rela.bolt | FileCheck --check-prefix=ELFCHECK %s
 // .relr.dyn
 # RUN: %clang %cflags -fPIC -pie %t.o -o %t.relr.exe -nostdlib \
 # RUN:   -Wl,-q -Wl,-z,notext -Wl,--pack-dyn-relocs=relr
 # RUN: llvm-objcopy --remove-section .rela.mytext %t.relr.exe
 # RUN: llvm-bolt %t.relr.exe -o %t.relr.bolt --use-old-text=0 --lite=0
-# RUN: llvm-objdump -j .text -d --show-all-symbols %t.relr.bolt | FileCheck %s
-# RUN: llvm-objdump -j .text -d %t.relr.bolt | \
+# RUN: llvm-objdump -j .text -d -z --show-all-symbols %t.relr.bolt | FileCheck %s
+# RUN: llvm-objdump -j .text -d -z %t.relr.bolt | \
 # RUN:   FileCheck %s --check-prefix=ADDENDCHECK
 # RUN: llvm-readelf -rsW %t.relr.bolt | FileCheck --check-prefix=RELRELFCHECK %s
 # RUN: llvm-readelf -SW %t.relr.bolt | FileCheck --check-prefix=RELRSZCHECK %s

@@ -9,12 +9,14 @@ add_libc_unittest(
   SRCS
     getrlimit_setrlimit_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.fcntl
     libc.include.sys_resource
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.resource.getrlimit
     libc.src.sys.resource.setrlimit
     libc.src.unistd.close
     libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

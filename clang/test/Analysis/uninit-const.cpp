@@ -68,11 +68,11 @@ int& f6_1_sub(int &p) {
 
 void f6_1(void) {
   int t;               // expected-note{{'t' declared without an initial value}}
-  int p = f6_1_sub(t); //expected-warning {{Assigned value is garbage or undefined}}
+  int p = f6_1_sub(t); //expected-warning {{Assigned value is uninitialized}}
                        //expected-note@-1 {{Passing value via 1st parameter 'p'}}
                        //expected-note@-2 {{Calling 'f6_1_sub'}}
                        //expected-note@-3 {{Returning from 'f6_1_sub'}}
-                       //expected-note@-4 {{Assigned value is garbage or undefined}}
+                       //expected-note@-4 {{Assigned value is uninitialized}}
   int q = p;
   doStuff6(q);
 }

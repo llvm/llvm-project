@@ -165,7 +165,7 @@ define void @foo_nosize(i32 inreg %dns) {
 ; SLOW-LABEL: foo_nosize:
 ; SLOW:       # %bb.0: # %entry
 ; SLOW-NEXT:    movw $-1, %cx
-; SLOW-NEXT:    .p2align 4, 0x90
+; SLOW-NEXT:    .p2align 4
 ; SLOW-NEXT:  .LBB6_1: # %for.body
 ; SLOW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SLOW-NEXT:    movzwl %cx, %edx
@@ -178,7 +178,7 @@ define void @foo_nosize(i32 inreg %dns) {
 ; FAST-LABEL: foo_nosize:
 ; FAST:       # %bb.0: # %entry
 ; FAST-NEXT:    movw $-1, %cx
-; FAST-NEXT:    .p2align 4, 0x90
+; FAST-NEXT:    .p2align 4
 ; FAST-NEXT:  .LBB6_1: # %for.body
 ; FAST-NEXT:    # =>This Inner Loop Header: Depth=1
 ; FAST-NEXT:    movzwl %cx, %edx
@@ -205,7 +205,7 @@ define void @bar_nosize(i32 inreg %dns) {
 ; SLOW-LABEL: bar_nosize:
 ; SLOW:       # %bb.0: # %entry
 ; SLOW-NEXT:    movw $1, %cx
-; SLOW-NEXT:    .p2align 4, 0x90
+; SLOW-NEXT:    .p2align 4
 ; SLOW-NEXT:  .LBB7_1: # %for.body
 ; SLOW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SLOW-NEXT:    movzwl %cx, %edx
@@ -218,7 +218,7 @@ define void @bar_nosize(i32 inreg %dns) {
 ; FAST-LABEL: bar_nosize:
 ; FAST:       # %bb.0: # %entry
 ; FAST-NEXT:    movw $1, %cx
-; FAST-NEXT:    .p2align 4, 0x90
+; FAST-NEXT:    .p2align 4
 ; FAST-NEXT:  .LBB7_1: # %for.body
 ; FAST-NEXT:    # =>This Inner Loop Header: Depth=1
 ; FAST-NEXT:    movzwl %cx, %edx

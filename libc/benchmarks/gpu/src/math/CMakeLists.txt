@@ -43,3 +43,22 @@ add_benchmark(
   LOADER_ARGS
     --threads 64
 )
+
+add_benchmark(
+  atan2_benchmark
+  SUITE
+    libc-gpu-math-benchmarks
+  SRCS
+    atan2_benchmark.cpp
+  DEPENDS
+    libc.src.math.atan2
+    libc.src.stdlib.srand
+    libc.src.stdlib.rand
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.array
+  COMPILE_OPTIONS
+    ${math_benchmark_flags}
+  LOADER_ARGS
+    --threads 64
+)

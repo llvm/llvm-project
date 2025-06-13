@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -enable-pipeliner-opt-size \
+; RUN: llc -mtriple=hexagon -enable-pipeliner -enable-pipeliner-opt-size \
 ; RUN:     -verify-machineinstrs -hexagon-initial-cfg-cleanup=0 \
 ; RUN:     -enable-aa-sched-mi=false -hexagon-expand-condsets=0 \
 ; RUN:     < %s -pipeliner-experimental-cg=true | FileCheck %s
@@ -61,7 +61,7 @@ b6:                                               ; preds = %b5
   ret void
 }
 
-attributes #0 = { nounwind optsize "target-cpu"="hexagonv55" }
+attributes #0 = { null_pointer_is_valid nounwind optsize "target-cpu"="hexagonv55" }
 
 !0 = !{!1, !1, i64 0}
 !1 = !{!"short", !2}

@@ -2,7 +2,7 @@
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda | %ptxas-verify %}
 
 ; CHECK: .target sm_{{[0-9]+$}}
-; CHECK: .section .debug_loc { }
+; CHECK: .section .debug_macinfo { }
 ; CHECK-NOT: }
 
 !llvm.dbg.cu = !{!0}

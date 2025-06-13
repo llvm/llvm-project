@@ -1,10 +1,15 @@
 // REQUIRES: aarch64, x86
+/// Link against a DSO to ensure that sections are not discarded by --gc-sections.
+// RUN: llvm-mc %S/Inputs/shared.s -o %ts.o -filetype=obj --triple=x86_64
+// RUN: ld.lld -shared -soname=ts %ts.o -o %ts.so
 // RUN: llvm-mc %s -o %t.o -filetype=obj --triple=x86_64-unknown-linux
-// RUN: ld.lld %t.o -o %t --export-dynamic --gc-sections -z max-page-size=65536
+// RUN: ld.lld %t.o %ts.so -o %t --export-dynamic --gc-sections -z max-page-size=65536
 // RUN: llvm-readelf -S -s %t | FileCheck %s
 
-// RUN: llvm-mc %s -o %t.o -filetype=obj --triple=aarch64
-// RUN: ld.lld %t.o -o %t --export-dynamic --gc-sections
+// RUN: llvm-mc %S/Inputs/shared.s -o %ts.o -filetype=obj --triple=aarch64
+// RUN: ld.lld -shared -soname=ts %ts.o -o %ts.so
+// RUN: llvm-mc %s -o %t.o -filetype=obj --triple=aarch64 --crel
+// RUN: ld.lld %t.o %ts.so -o %t --export-dynamic --gc-sections
 // RUN: llvm-readelf -S -s %t | FileCheck %s
 
 // This is basically lld/docs/partitions.dot in object file form.

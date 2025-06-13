@@ -11,7 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/IndexedMap.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/ConvertEBCDIC.h"
@@ -237,11 +236,9 @@ void GOFFState::writeHeader(GOFFYAML::FileHeader &FileHdr) {
   if (ModPropLen) {
     GW << binaryBe(ModPropLen) << zeros(6);
     if (ModPropLen >= 2)
-      GW << binaryBe(FileHdr.InternalCCSID ? *FileHdr.InternalCCSID : 0);
+      GW << binaryBe(FileHdr.InternalCCSID.value_or(0));
     if (ModPropLen >= 3)
-      GW << binaryBe(FileHdr.TargetSoftwareEnvironment
-                         ? *FileHdr.TargetSoftwareEnvironment
-                         : 0);
+      GW << binaryBe(FileHdr.TargetSoftwareEnvironment.value_or(0));
   }
 }
 

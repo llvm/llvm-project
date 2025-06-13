@@ -18,13 +18,12 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
-void AMDGPUInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void AMDGPUInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   // FIXME: The current implementation of
   // AsmParser::parseRegisterOrRegisterNumber in MC implies we either emit this
   // as an integer or we provide a name which represents a physical register.
@@ -161,7 +160,7 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
     O << " dlc";
   if ((Imm & CPol::SCC) && AMDGPU::isGFX90A(STI))
     O << (AMDGPU::isGFX940(STI) ? " sc1" : " scc");
-  if (Imm & ~CPol::ALL)
+  if (Imm & ~CPol::ALL_pregfx12)
     O << " /* unexpected cache policy bit */";
 }
 
@@ -207,9 +206,9 @@ void AMDGPUInstPrinter::printTH(const MCInst *MI, int64_t TH, int64_t Scope,
       case AMDGPU::CPol::TH_HT:
         O << "HT";
         break;
-      case AMDGPU::CPol::TH_BYPASS: // or LU or RT_WB
+      case AMDGPU::CPol::TH_BYPASS: // or LU or WB
         O << (Scope == AMDGPU::CPol::SCOPE_SYS ? "BYPASS"
-                                               : (IsStore ? "RT_WB" : "LU"));
+                                               : (IsStore ? "WB" : "LU"));
         break;
       case AMDGPU::CPol::TH_NT_RT:
         O << "NT_RT";
@@ -244,8 +243,6 @@ void AMDGPUInstPrinter::printScope(int64_t Scope, raw_ostream &O) {
     O << "SCOPE_SYS";
   else
     llvm_unreachable("unexpected scope policy value");
-
-  return;
 }
 
 void AMDGPUInstPrinter::printDim(const MCInst *MI, unsigned OpNo,
@@ -315,10 +312,10 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
   }
 }
 
-void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
+void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
                                         const MCRegisterInfo &MRI) {
 #if !defined(NDEBUG)
-  switch (RegNo) {
+  switch (Reg.id()) {
   case AMDGPU::FP_REG:
   case AMDGPU::SP_REG:
   case AMDGPU::PRIVATE_RSRC_REG:
@@ -328,7 +325,7 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   }
 #endif
 
-  O << getRegisterName(RegNo);
+  O << getRegisterName(Reg);
 }
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
@@ -513,20 +510,17 @@ void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm, uint8_t OpType,
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
     if (printImmediateFloat32(Imm, STI, O))
       return;
     break;
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
     if (isUInt<16>(Imm) &&
         printImmediateFP16(static_cast<uint16_t>(Imm), STI, O))
       return;
     break;
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2BF16:
     if (isUInt<16>(Imm) &&
         printImmediateBFloat16(static_cast<uint16_t>(Imm), STI, O))
       return;
@@ -652,9 +646,9 @@ void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
                                                raw_ostream &O) {
   if (!FirstOperand)
     O << ", ";
-  printRegOperand(STI.hasFeature(AMDGPU::FeatureWavefrontSize64)
-                      ? AMDGPU::VCC
-                      : AMDGPU::VCC_LO,
+  printRegOperand(STI.hasFeature(AMDGPU::FeatureWavefrontSize32)
+                      ? AMDGPU::VCC_LO
+                      : AMDGPU::VCC,
                   O, MRI);
   if (FirstOperand)
     O << ", ";
@@ -721,15 +715,12 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     switch (OpTy) {
     case AMDGPU::OPERAND_REG_IMM_INT32:
     case AMDGPU::OPERAND_REG_IMM_FP32:
-    case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
     case AMDGPU::OPERAND_REG_INLINE_C_INT32:
     case AMDGPU::OPERAND_REG_INLINE_C_FP32:
     case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
     case AMDGPU::OPERAND_REG_IMM_V2INT32:
     case AMDGPU::OPERAND_REG_IMM_V2FP32:
-    case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
-    case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
     case MCOI::OPERAND_IMMEDIATE:
     case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
       printImmediate32(Op.getImm(), STI, O);
@@ -744,31 +735,23 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       printImmediate64(Op.getImm(), STI, O, true);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
     case AMDGPU::OPERAND_REG_IMM_INT16:
       printImmediateInt16(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_FP16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
     case AMDGPU::OPERAND_REG_IMM_FP16:
-    case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
       printImmediateF16(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_BF16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_BF16:
     case AMDGPU::OPERAND_REG_IMM_BF16:
-    case AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED:
       printImmediateBF16(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_IMM_V2INT16:
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2FP16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_V2BF16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
       printImmediateV216(Op.getImm(), OpTy, STI, O);
       break;
     case MCOI::OPERAND_UNKNOWN:
@@ -1208,7 +1191,7 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
   int NumOps = 0;
   int Ops[3];
 
-  std::pair<int, int> MOps[] = {
+  std::pair<AMDGPU::OpName, AMDGPU::OpName> MOps[] = {
       {AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src0},
       {AMDGPU::OpName::src1_modifiers, AMDGPU::OpName::src1},
       {AMDGPU::OpName::src2_modifiers, AMDGPU::OpName::src2}};
@@ -1223,13 +1206,17 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
         (ModIdx != -1) ? MI->getOperand(ModIdx).getImm() : DefaultValue;
   }
 
+  const bool HasDst =
+      (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst) != -1) ||
+      (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::sdst) != -1);
+
   // Print three values of neg/opsel for wmma instructions (prints 0 when there
   // is no src_modifier operand instead of not printing anything).
   if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::IsSWMMAC ||
       MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::IsWMMA) {
     NumOps = 0;
     int DefaultValue = Mod == SISrcMods::OP_SEL_1;
-    for (int OpName :
+    for (AMDGPU::OpName OpName :
          {AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src1_modifiers,
           AMDGPU::OpName::src2_modifiers}) {
       int Idx = AMDGPU::getNamedOperandIdx(Opc, OpName);
@@ -1241,9 +1228,8 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
   }
 
   const bool HasDstSel =
-    NumOps > 0 &&
-    Mod == SISrcMods::OP_SEL_0 &&
-    MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::VOP3_OPSEL;
+      HasDst && NumOps > 0 && Mod == SISrcMods::OP_SEL_0 &&
+      MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::VOP3_OPSEL;
 
   const bool IsPacked =
     MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::IsPacked;
@@ -1503,8 +1489,21 @@ void AMDGPUInstPrinter::printSwizzle(const MCInst *MI, unsigned OpNo,
 
   O << " offset:";
 
-  if ((Imm & QUAD_PERM_ENC_MASK) == QUAD_PERM_ENC) {
+  // Rotate and FFT modes
+  if (Imm >= ROTATE_MODE_LO && AMDGPU::isGFX9Plus(STI)) {
+    if (Imm >= FFT_MODE_LO) {
+      O << "swizzle(" << IdSymbolic[ID_FFT] << ',' << (Imm & FFT_SWIZZLE_MASK)
+        << ')';
+    } else if (Imm >= ROTATE_MODE_LO) {
+      O << "swizzle(" << IdSymbolic[ID_ROTATE] << ','
+        << ((Imm >> ROTATE_DIR_SHIFT) & ROTATE_DIR_MASK) << ','
+        << ((Imm >> ROTATE_SIZE_SHIFT) & ROTATE_SIZE_MASK) << ')';
+    }
+    return;
+  }
 
+  // Basic mode
+  if ((Imm & QUAD_PERM_ENC_MASK) == QUAD_PERM_ENC) {
     O << "swizzle(" << IdSymbolic[ID_QUAD_PERM];
     for (unsigned I = 0; I < LANE_NUM; ++I) {
       O << ",";
@@ -1702,6 +1701,20 @@ void AMDGPUInstPrinter::printNamedInt(const MCInst *MI, unsigned OpNo,
   int64_t V = MI->getOperand(OpNo).getImm();
   if (AlwaysPrint || V != 0)
     O << ' ' << Prefix << ':' << (PrintInHex ? formatHex(V) : formatDec(V));
+}
+
+void AMDGPUInstPrinter::printBitOp3(const MCInst *MI, unsigned OpNo,
+                                    const MCSubtargetInfo &STI,
+                                    raw_ostream &O) {
+  uint8_t Imm = MI->getOperand(OpNo).getImm();
+  if (!Imm)
+    return;
+
+  O << " bitop3:";
+  if (Imm <= 10)
+    O << formatDec(Imm);
+  else
+    O << formatHex(static_cast<uint64_t>(Imm));
 }
 
 #include "AMDGPUGenAsmWriter.inc"

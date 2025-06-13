@@ -19,10 +19,19 @@ define i128 @on_stack(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i128 %a5) {
   ret i128 %a5
 }
 
+define i128 @on_stack2(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i128 %a5, i128 %a6) {
+; CHECK-LABEL: on_stack2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq 24(%rsp), %rax
+; CHECK-NEXT:    movq 32(%rsp), %rdx
+; CHECK-NEXT:    retq
+  ret i128 %a6
+}
+
 define i64 @trailing_arg_on_stack(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i128 %a5, i64 %a6) {
 ; CHECK-LABEL: trailing_arg_on_stack:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq 24(%rsp), %rax
+; CHECK-NEXT:    movq %r9, %rax
 ; CHECK-NEXT:    retq
   ret i64 %a6
 }
@@ -69,20 +78,18 @@ define void @call_trailing_arg_on_stack(i128 %x, i64 %y) nounwind {
 ; CHECK-LABEL: call_trailing_arg_on_stack:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movq %rdx, %rax
-; CHECK-NEXT:    movq %rsi, %r9
+; CHECK-NEXT:    movq %rdx, %r9
+; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    movq %rdi, %r10
-; CHECK-NEXT:    subq $8, %rsp
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    movl $2, %edx
 ; CHECK-NEXT:    movl $3, %ecx
 ; CHECK-NEXT:    movl $4, %r8d
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    pushq %r9
 ; CHECK-NEXT:    pushq %r10
 ; CHECK-NEXT:    callq trailing_arg_on_stack@PLT
-; CHECK-NEXT:    addq $32, %rsp
+; CHECK-NEXT:    addq $16, %rsp
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
   call i128 @trailing_arg_on_stack(i64 0, i64 1, i64 2, i64 3, i64 4, i128 %x, i64 %y)

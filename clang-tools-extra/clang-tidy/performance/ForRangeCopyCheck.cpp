@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ForRangeCopyCheck.h"
-#include "../utils/DeclRefExprUtils.h"
 #include "../utils/FixItHintUtils.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
@@ -91,7 +90,7 @@ bool ForRangeCopyCheck::handleConstValueCopy(const VarDecl &LoopVar,
       << utils::fixit::changeVarDeclToReference(LoopVar, Context);
   if (!LoopVar.getType().isConstQualified()) {
     if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
-            LoopVar, Context, DeclSpec::TQ::TQ_const))
+            LoopVar, Context, Qualifiers::Const))
       Diagnostic << *Fix;
   }
   return true;
@@ -129,7 +128,7 @@ bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
         "making it a const reference");
 
     if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
-            LoopVar, Context, DeclSpec::TQ::TQ_const))
+            LoopVar, Context, Qualifiers::Const))
       Diag << *Fix << utils::fixit::changeVarDeclToReference(LoopVar, Context);
 
     return true;

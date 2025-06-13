@@ -10,7 +10,9 @@
 #include "Representation.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 using namespace llvm;
@@ -50,20 +52,26 @@ static void writeHeader(const Twine &Text, unsigned int Num, raw_ostream &OS) {
   OS << std::string(Num, '#') + " " + Text << "\n\n";
 }
 
-static void writeFileDefinition(const ClangDocContext &CDCtx, const Location &L,
-                                raw_ostream &OS) {
+static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
+                               raw_ostream &OS) {
 
   if (!CDCtx.RepositoryUrl) {
-    OS << "*Defined at " << L.Filename << "#" << std::to_string(L.LineNumber)
-       << "*";
+    OS << "*Defined at " << L.Filename << "#"
+       << std::to_string(L.StartLineNumber) << "*";
   } else {
-    OS << "*Defined at [" << L.Filename << "#" << std::to_string(L.LineNumber)
-       << "](" << StringRef{*CDCtx.RepositoryUrl}
-       << llvm::sys::path::relative_path(L.Filename) << "#"
-       << std::to_string(L.LineNumber) << ")"
-       << "*";
+
+    OS << formatv("*Defined at [#{0}{1}{2}](#{0}{1}{3})*",
+                  CDCtx.RepositoryLinePrefix.value_or(""), L.StartLineNumber,
+                  L.Filename, *CDCtx.RepositoryUrl);
   }
   OS << "\n\n";
+}
+
+static void maybeWriteSourceFileRef(llvm::raw_ostream &OS,
+                                    const ClangDocContext &CDCtx,
+                                    const std::optional<Location> &DefLoc) {
+  if (DefLoc)
+    writeSourceFileRef(CDCtx, *DefLoc, OS);
 }
 
 static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
@@ -142,8 +150,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
     for (const auto &N : I.Members)
       Members << "| " << N.Name << " |\n";
   writeLine(Members.str(), OS);
-  if (I.DefLoc)
-    writeFileDefinition(CDCtx, *I.DefLoc, OS);
+
+  maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
 
   for (const auto &C : I.Description)
     writeDescription(C, OS);
@@ -157,21 +165,18 @@ static void genMarkdown(const ClangDocContext &CDCtx, const FunctionInfo &I,
   for (const auto &N : I.Params) {
     if (!First)
       Stream << ", ";
-    Stream << N.Type.Name + " " + N.Name;
+    Stream << N.Type.QualName + " " + N.Name;
     First = false;
   }
   writeHeader(I.Name, 3, OS);
-  std::string Access = getAccessSpelling(I.Access).str();
-  if (Access != "")
-    writeLine(genItalic(Access + " " + I.ReturnType.Type.Name + " " + I.Name +
-                        "(" + Stream.str() + ")"),
-              OS);
-  else
-    writeLine(genItalic(I.ReturnType.Type.Name + " " + I.Name + "(" +
-                        Stream.str() + ")"),
-              OS);
-  if (I.DefLoc)
-    writeFileDefinition(CDCtx, *I.DefLoc, OS);
+  StringRef Access = getAccessSpelling(I.Access);
+  writeLine(genItalic(Twine(Access) + (!Access.empty() ? " " : "") +
+                      (I.IsStatic ? "static " : "") +
+                      I.ReturnType.Type.QualName.str() + " " + I.Name.str() +
+                      "(" + Twine(Stream.str()) + ")"),
+            OS);
+
+  maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
 
   for (const auto &C : I.Description)
     writeDescription(C, OS);
@@ -230,8 +235,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const NamespaceInfo &I,
 static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
                         llvm::raw_ostream &OS) {
   writeHeader(getTagType(I.TagType) + " " + I.Name, 1, OS);
-  if (I.DefLoc)
-    writeFileDefinition(CDCtx, *I.DefLoc, OS);
+
+  maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
 
   if (!I.Description.empty()) {
     for (const auto &C : I.Description)
@@ -254,11 +259,11 @@ static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
   if (!I.Members.empty()) {
     writeHeader("Members", 2, OS);
     for (const auto &Member : I.Members) {
-      std::string Access = getAccessSpelling(Member.Access).str();
-      if (Access != "")
-        writeLine(Access + " " + Member.Type.Name + " " + Member.Name, OS);
-      else
-        writeLine(Member.Type.Name + " " + Member.Name, OS);
+      StringRef Access = getAccessSpelling(Member.Access);
+      writeLine(Twine(Access) + (Access.empty() ? "" : " ") +
+                    (Member.IsStatic ? "static " : "") +
+                    Member.Type.Name.str() + " " + Member.Name.str(),
+                OS);
     }
     writeNewLine(OS);
   }
@@ -300,7 +305,7 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   llvm::SmallString<128> FilePath;
   llvm::sys::path::native(CDCtx.OutDirectory, FilePath);
   llvm::sys::path::append(FilePath, "all_files.md");
-  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_Text);
   if (FileErr)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "error creating index file: " +
@@ -323,7 +328,7 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
   llvm::SmallString<128> FilePath;
   llvm::sys::path::native(CDCtx.OutDirectory, FilePath);
   llvm::sys::path::append(FilePath, "index.md");
-  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_Text);
   if (FileErr)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "error creating index file: " +
@@ -407,7 +412,7 @@ MDGenerator::generateDocs(StringRef RootDir,
   for (const auto &Group : FileToInfos) {
     std::error_code FileErr;
     llvm::raw_fd_ostream InfoOS(Group.getKey(), FileErr,
-                                llvm::sys::fs::OF_None);
+                                llvm::sys::fs::OF_Text);
     if (FileErr) {
       return llvm::createStringError(FileErr, "Error opening file '%s'",
                                      Group.getKey().str().c_str());

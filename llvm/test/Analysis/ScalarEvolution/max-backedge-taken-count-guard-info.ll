@@ -220,146 +220,6 @@ exit:
   ret void
 }
 
-define void @test_multiple_const_guards_order1(ptr nocapture %a, i64 %i) {
-; CHECK-LABEL: 'test_multiple_const_guards_order1'
-; CHECK-NEXT:  Classifying expressions for: @test_multiple_const_guards_order1
-; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,10) S: [0,10) Exits: %i LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %i) + %a) LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,11) S: [1,11) Exits: (1 + %i) LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_const_guards_order1
-; CHECK-NEXT:  Loop %loop: backedge-taken count is %i
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 9
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %i
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
-;
-entry:
-  %c.1 = icmp ult i64 %i, 16
-  br i1 %c.1, label %guardbb, label %exit
-
-guardbb:
-  %c.2 = icmp ult i64 %i, 10
-  br i1 %c.2, label %loop, label %exit
-
-loop:
-  %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
-  %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-  store i32 1, ptr %idx, align 4
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv, %i
-  br i1 %exitcond, label %exit, label %loop
-
-exit:
-  ret void
-}
-
-define void @test_multiple_const_guards_order2(ptr nocapture %a, i64 %i) {
-; CHECK-LABEL: 'test_multiple_const_guards_order2'
-; CHECK-NEXT:  Classifying expressions for: @test_multiple_const_guards_order2
-; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,10) S: [0,10) Exits: %i LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %i) + %a) LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,11) S: [1,11) Exits: (1 + %i) LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_const_guards_order2
-; CHECK-NEXT:  Loop %loop: backedge-taken count is %i
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 9
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %i
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
-;
-entry:
-  %c.1 = icmp ult i64 %i, 10
-  br i1 %c.1, label %guardbb, label %exit
-
-guardbb:
-  %c.2 = icmp ult i64 %i, 16
-  br i1 %c.2, label %loop, label %exit
-
-loop:
-  %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
-  %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-  store i32 1, ptr %idx, align 4
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv, %i
-  br i1 %exitcond, label %exit, label %loop
-
-exit:
-  ret void
-}
-
-define void @test_multiple_var_guards_order1(ptr nocapture %a, i64 %i, i64 %N) {
-; CHECK-LABEL: 'test_multiple_var_guards_order1'
-; CHECK-NEXT:  Classifying expressions for: @test_multiple_var_guards_order1
-; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,11) S: [0,11) Exits: %i LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %i) + %a) LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,12) S: [1,12) Exits: (1 + %i) LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_var_guards_order1
-; CHECK-NEXT:  Loop %loop: backedge-taken count is %i
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 10
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %i
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
-;
-entry:
-  %c.1 = icmp ult i64 %N, 12
-  br i1 %c.1, label %guardbb, label %exit
-
-guardbb:
-  %c.2 = icmp ult i64 %i, %N
-  br i1 %c.2, label %loop, label %exit
-
-loop:
-  %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
-  %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-  store i32 1, ptr %idx, align 4
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv, %i
-  br i1 %exitcond, label %exit, label %loop
-
-exit:
-  ret void
-}
-
-define void @test_multiple_var_guards_order2(ptr nocapture %a, i64 %i, i64 %N) {
-; CHECK-LABEL: 'test_multiple_var_guards_order2'
-; CHECK-NEXT:  Classifying expressions for: @test_multiple_var_guards_order2
-; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,11) S: [0,11) Exits: %i LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %i) + %a) LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,12) S: [1,12) Exits: (1 + %i) LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_var_guards_order2
-; CHECK-NEXT:  Loop %loop: backedge-taken count is %i
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 10
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %i
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
-;
-entry:
-  %c.1 = icmp ult i64 %i, %N
-  br i1 %c.1, label %guardbb, label %exit
-
-guardbb:
-  %c.2 = icmp ult i64 %N, 12
-  br i1 %c.2, label %loop, label %exit
-
-loop:
-  %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
-  %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-  store i32 1, ptr %idx, align 4
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv, %i
-  br i1 %exitcond, label %exit, label %loop
-
-exit:
-  ret void
-}
-
 ; The guards here reference each other in a cycle.
 define void @test_multiple_var_guards_cycle(ptr nocapture %a, i64 %i, i64 %N) {
 ; CHECK-LABEL: 'test_multiple_var_guards_cycle'
@@ -1470,77 +1330,6 @@ exit:
   ret void
 }
 
-define i32 @sle_sgt_ult_umax_to_smax(i32 %num) {
-; CHECK-LABEL: 'sle_sgt_ult_umax_to_smax'
-; CHECK-NEXT:  Classifying expressions for: @sle_sgt_ult_umax_to_smax
-; CHECK-NEXT:    %iv = phi i32 [ 0, %guard.3 ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,4}<nuw><nsw><%loop> U: [0,25) S: [0,25) Exits: (4 * ((-4 + %num) /u 4))<nuw> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %iv.next = add nuw i32 %iv, 4
-; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,29) S: [4,29) Exits: (4 + (4 * ((-4 + %num) /u 4))<nuw>) LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @sle_sgt_ult_umax_to_smax
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + %num) /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 6
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + %num) /u 4)
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
-;
-guard.1:
-  %cmp.1 = icmp sle i32 %num, 0
-  br i1 %cmp.1, label %exit, label %guard.2
-
-guard.2:
-  %cmp.2 = icmp sgt i32 %num, 28
-  br i1 %cmp.2, label %exit, label %guard.3
-
-guard.3:
-  %cmp.3 = icmp ult i32 %num, 4
-  br i1 %cmp.3, label %exit, label %loop
-
-loop:
-  %iv = phi i32 [ 0, %guard.3 ], [ %iv.next, %loop ]
-  %iv.next = add nuw i32 %iv, 4
-  %ec = icmp eq i32 %iv.next, %num
-  br i1 %ec, label %exit, label %loop
-
-exit:
-  ret i32 0
-}
-
-; Similar to @sle_sgt_ult_umax_to_smax but with different predicate order.
-define i32 @ult_sle_sgt_umax_to_smax(i32 %num) {
-; CHECK-LABEL: 'ult_sle_sgt_umax_to_smax'
-; CHECK-NEXT:  Classifying expressions for: @ult_sle_sgt_umax_to_smax
-; CHECK-NEXT:    %iv = phi i32 [ 0, %guard.3 ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,4}<nuw><%loop> U: [0,-3) S: [-2147483648,2147483645) Exits: (4 * ((-4 + %num) /u 4))<nuw> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %iv.next = add nuw i32 %iv, 4
-; CHECK-NEXT:    --> {4,+,4}<nuw><%loop> U: [4,-3) S: [-2147483648,2147483645) Exits: (4 + (4 * ((-4 + %num) /u 4))<nuw>) LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @ult_sle_sgt_umax_to_smax
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + %num) /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1073741823
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + %num) /u 4)
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
-;
-guard.1:
-  %cmp.1 = icmp ult i32 %num, 4
-  br i1 %cmp.1, label %exit, label %guard.2
-
-guard.2:
-  %cmp.2 = icmp sgt i32 %num, 28
-  br i1 %cmp.2, label %exit, label %guard.3
-
-guard.3:
-  %cmp.3 = icmp sle i32 %num, 0
-  br i1 %cmp.3, label %exit, label %loop
-
-loop:
-  %iv = phi i32 [ 0, %guard.3 ], [ %iv.next, %loop ]
-  %iv.next = add nuw i32 %iv, 4
-  %ec = icmp eq i32 %iv.next, %num
-  br i1 %ec, label %exit, label %loop
-
-exit:
-  ret i32 0
-}
-
 define i32 @ptr_induction_ult_1(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'ptr_induction_ult_1'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult_1
@@ -1568,31 +1357,271 @@ exit:
   ret i32 0
 }
 
-
-define i32 @ptr_induction_ult_2(ptr %a, ptr %b) {
-; CHECK-LABEL: 'ptr_induction_ult_2'
-; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult_2
+define void @ptr_induction_eq_1(ptr %a, ptr %b) {
+; CHECK-LABEL: 'ptr_induction_eq_1'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_eq_1
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
-; CHECK-NEXT:    --> {(4 + %a),+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult_2
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+; CHECK-NEXT:    --> {(8 + %a),+,8}<nuw><%loop> U: full-set S: full-set Exits: (8 + (8 * ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_eq_1
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
-  %cmp.6 = icmp ult ptr %a, %b
-  br i1 %cmp.6, label %loop, label %exit
+  %cmp = icmp eq ptr %a, %b
+  br i1 %cmp, label %exit, label %loop
 
 loop:
   %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-  %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
-  %exitcond = icmp eq ptr %ptr.iv, %b
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+  %exitcond = icmp eq ptr %ptr.iv.next, %b
   br i1 %exitcond, label %exit, label %loop
 
 exit:
-  ret i32 0
+  ret void
+}
+
+define void @ptr_induction_eq_2(ptr %a, i64 %n) {
+; CHECK-LABEL: 'ptr_induction_eq_2'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_eq_2
+; CHECK-NEXT:    %b = getelementptr inbounds ptr, ptr %a, i64 %n
+; CHECK-NEXT:    --> ((8 * %n)<nsw> + %a) U: full-set S: full-set
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
+; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * ((-8 + (8 * %n)<nsw>) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+; CHECK-NEXT:    --> {(8 + %a),+,8}<nuw><%loop> U: full-set S: full-set Exits: (8 + (8 * ((-8 + (8 * %n)<nsw>) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_eq_2
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (8 * %n)<nsw>) /u 8)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (8 * %n)<nsw>) /u 8)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %b = getelementptr inbounds ptr, ptr %a, i64 %n
+  %cmp = icmp eq ptr %a, %b
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+  %exitcond = icmp eq ptr %ptr.iv.next, %b
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @ptr_induction_early_exit_eq_1_with_align_on_load(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: 'ptr_induction_early_exit_eq_1_with_align_on_load'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1_with_align_on_load
+; CHECK-NEXT:    %a_ = load ptr, ptr %a, align 8, !align !0
+; CHECK-NEXT:    --> %a_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    %b_ = load ptr, ptr %b, align 8, !align !0
+; CHECK-NEXT:    --> %b_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
+; CHECK-NEXT:    --> {%a_,+,8}<nuw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ld1 = load ptr, ptr %ptr.iv, align 8
+; CHECK-NEXT:    --> %ld1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+; CHECK-NEXT:    --> {(8 + %a_),+,8}<nw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_with_align_on_load
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+;
+entry:
+  %a_ = load ptr, ptr %a, !align !{i64 8}
+  %b_ = load ptr, ptr %b, !align !{i64 8}
+  %cmp = icmp eq ptr %a_, %b_
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
+  %ld1 = load ptr, ptr %ptr.iv, align 8
+  %earlyexitcond = icmp eq ptr %ld1, %c
+  br i1 %earlyexitcond, label %exit, label %loop.inc
+
+loop.inc:
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+  %exitcond = icmp eq ptr %ptr.iv.next, %b_
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @ptr_induction_early_exit_eq_1_with_align_on_arguments(ptr align 8 %a, ptr align 8 %b, ptr %c) {
+; CHECK-LABEL: 'ptr_induction_early_exit_eq_1_with_align_on_arguments'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1_with_align_on_arguments
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a, %entry ]
+; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ld1 = load ptr, ptr %ptr.iv, align 8
+; CHECK-NEXT:    --> %ld1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+; CHECK-NEXT:    --> {(8 + %a),+,8}<nw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_with_align_on_arguments
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+;
+entry:
+  %cmp = icmp eq ptr %a, %b
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a, %entry ]
+  %ld1 = load ptr, ptr %ptr.iv, align 8
+  %earlyexitcond = icmp eq ptr %ld1, %c
+  br i1 %earlyexitcond, label %exit, label %loop.inc
+
+loop.inc:
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+  %exitcond = icmp eq ptr %ptr.iv.next, %b
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @ptr_induction_early_exit_eq_1_align_assumption_1(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: 'ptr_induction_early_exit_eq_1_align_assumption_1'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1_align_assumption_1
+; CHECK-NEXT:    %a_ = load ptr, ptr %a, align 8
+; CHECK-NEXT:    --> %a_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    %b_ = load ptr, ptr %b, align 8
+; CHECK-NEXT:    --> %b_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
+; CHECK-NEXT:    --> {%a_,+,8}<nuw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ld1 = load ptr, ptr %ptr.iv, align 8
+; CHECK-NEXT:    --> %ld1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+; CHECK-NEXT:    --> {(8 + %a_),+,8}<nw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_align_assumption_1
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+;
+entry:
+  %a_ = load ptr, ptr %a
+  call void @llvm.assume(i1 true) [ "align"(ptr %a_, i64 8) ]
+  %b_ = load ptr, ptr %b
+  call void @llvm.assume(i1 true) [ "align"(ptr %b_, i64 8) ]
+  %cmp = icmp eq ptr %a_, %b_
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
+  %ld1 = load ptr, ptr %ptr.iv, align 8
+  %earlyexitcond = icmp eq ptr %ld1, %c
+  br i1 %earlyexitcond, label %exit, label %loop.inc
+
+loop.inc:
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+  %exitcond = icmp eq ptr %ptr.iv.next, %b_
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @ptr_induction_early_exit_eq_1_align_assumption_2(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: 'ptr_induction_early_exit_eq_1_align_assumption_2'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1_align_assumption_2
+; CHECK-NEXT:    %a_ = load ptr, ptr %a, align 8
+; CHECK-NEXT:    --> %a_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    %b_ = load ptr, ptr %b, align 8
+; CHECK-NEXT:    --> %b_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
+; CHECK-NEXT:    --> {%a_,+,8}<nuw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ld1 = load ptr, ptr %ptr.iv, align 8
+; CHECK-NEXT:    --> %ld1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+; CHECK-NEXT:    --> {(8 + %a_),+,8}<nw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_align_assumption_2
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+;
+entry:
+  %a_ = load ptr, ptr %a
+  %b_ = load ptr, ptr %b
+  call void @llvm.assume(i1 true) [ "align"(ptr %a_, i64 8) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %b_, i64 8) ]
+  %cmp = icmp eq ptr %a_, %b_
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
+  %ld1 = load ptr, ptr %ptr.iv, align 8
+  %earlyexitcond = icmp eq ptr %ld1, %c
+  br i1 %earlyexitcond, label %exit, label %loop.inc
+
+loop.inc:
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+  %exitcond = icmp eq ptr %ptr.iv.next, %b_
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @ptr_induction_early_exit_eq_2(ptr %a, i64 %n, ptr %c) {
+; CHECK-LABEL: 'ptr_induction_early_exit_eq_2'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_2
+; CHECK-NEXT:    %b = getelementptr inbounds ptr, ptr %a, i64 %n
+; CHECK-NEXT:    --> ((8 * %n)<nsw> + %a) U: full-set S: full-set
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a, %entry ]
+; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ld1 = load ptr, ptr %ptr.iv, align 8
+; CHECK-NEXT:    --> %ld1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+; CHECK-NEXT:    --> {(8 + %a),+,8}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_2
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (8 * %n)<nsw>) /u 8)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (8 * %n)<nsw>) /u 8)
+; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (8 * %n)<nsw>) /u 8)
+;
+entry:
+  %b = getelementptr inbounds ptr, ptr %a, i64 %n
+  %cmp = icmp eq ptr %a, %b
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a, %entry ]
+  %ld1 = load ptr, ptr %ptr.iv, align 8
+  %earlyexitcond = icmp eq ptr %ld1, %c
+  br i1 %earlyexitcond, label %exit, label %loop.inc
+
+loop.inc:
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+  %exitcond = icmp eq ptr %ptr.iv.next, %b
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
 }
 
 define void @gep_addrec_nw(ptr %a) {

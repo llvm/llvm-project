@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <iterator>
 
 #include "test_macros.h"

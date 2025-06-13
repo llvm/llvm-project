@@ -38,9 +38,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <iterator>
 #include <vector>
 
@@ -390,7 +388,7 @@ void ProcessSwitchInst(SwitchInst *SI,
   ConstantInt *UpperBound = nullptr;
   bool DefaultIsUnreachableFromSwitch = false;
 
-  if (isa<UnreachableInst>(Default->getFirstNonPHIOrDbg())) {
+  if (SI->defaultDestUnreachable()) {
     // Make the bounds tightly fitted around the case value range, because we
     // know that the value passed to the switch must be exactly one of the case
     // values.

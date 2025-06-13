@@ -39,3 +39,14 @@ set(LIBUNWIND_IS_BAREMETAL ON CACHE BOOL "")
 set(LIBUNWIND_REMEMBER_HEAP_ALLOC ON CACHE BOOL "")
 set(LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
 find_program(QEMU_SYSTEM_ARM qemu-system-arm REQUIRED)
+
+# On embedded platforms that don't support shared library targets, CMake implicitly changes shared
+# library targets to be static library targets. This results in duplicate definitions of the static
+# library targets even though we might not ever build the shared library target, which breaks the
+# build. To work around this, we change the output name of the  shared library target so that it
+# can't conflict with the static library target.
+#
+# This is tracked by https://gitlab.kitware.com/cmake/cmake/-/issues/25759.
+set(LIBCXX_SHARED_OUTPUT_NAME "c++-shared" CACHE STRING "")
+set(LIBCXXABI_SHARED_OUTPUT_NAME "c++abi-shared" CACHE STRING "")
+set(LIBUNWIND_SHARED_OUTPUT_NAME "unwind-shared" CACHE STRING "")

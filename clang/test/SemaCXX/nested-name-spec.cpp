@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++98 -verify -fblocks %s 
+// RUN: %clang_cc1 -fsyntax-only -std=c++98 -verify -fblocks %s
 namespace A {
   struct C {
     static int cx;
@@ -25,7 +25,7 @@ int A::C::cx = 17;
 
 static int A::C::cx2 = 17; // expected-error{{'static' can}}
 
-class C2 {
+class C2 { // #defined-here-C2
   void m(); // expected-note{{member declaration does not match because it is not const qualified}}
 
   void f(const int& parm); // expected-note{{type of 1st parameter of member declaration does not match definition ('const int &' vs 'int')}}
@@ -36,8 +36,10 @@ class C2 {
 };
 
 void C2::m() const { } // expected-error{{out-of-line definition of 'm' does not match any declaration in 'C2'}}
+                       // expected-note@#defined-here-C2{{defined here}}
 
 void C2::f(int) { } // expected-error{{out-of-line definition of 'f' does not match any declaration in 'C2'}}
+                    // expected-note@#defined-here-C2{{defined here}}
 
 void C2::m() {
   x = 0;
@@ -109,7 +111,7 @@ void A2::CC::NC::m(); // expected-error{{out-of-line declaration of a member mus
 
 namespace E {
   int X = 5;
-  
+
   namespace Nested {
     enum E {
       X = 0
@@ -122,12 +124,13 @@ namespace E {
 }
 
 
-class Operators {
+class Operators { // #defined-here-Operators
   Operators operator+(const Operators&) const; // expected-note{{member declaration does not match because it is const qualified}}
   operator bool();
 };
 
 Operators Operators::operator+(const Operators&) { // expected-error{{out-of-line definition of 'operator+' does not match any declaration in 'Operators'}}
+                                                   // expected-note@#defined-here-Operators{{defined here}}
   Operators ops;
   return ops;
 }
@@ -143,15 +146,16 @@ Operators::operator bool() {
 
 namespace A {
   void g(int&); // expected-note{{type of 1st parameter of member declaration does not match definition ('int &' vs 'const int &')}}
-} 
+}
 
 void A::f() {} // expected-error-re{{out-of-line definition of 'f' does not match any declaration in namespace 'A'{{$}}}}
 
 void A::g(const int&) { } // expected-error{{out-of-line definition of 'g' does not match any declaration in namespace 'A'}}
 
-struct Struct { };
+struct Struct { }; // #defined-here-Struct
 
 void Struct::f() { } // expected-error{{out-of-line definition of 'f' does not match any declaration in 'Struct'}}
+                     // expected-note@#defined-here-Struct{{defined here}}
 
 void global_func(int);
 void global_func2(int);
@@ -482,3 +486,11 @@ struct x; // expected-note {{template is declared here}}
 template <typename T>
 int issue55962 = x::a; // expected-error {{use of class template 'x' requires template arguments}} \
                        // expected-warning {{variable templates are a C++14 extension}}
+
+namespace ForwardDeclared {
+  typedef class A B;
+  struct A {
+    enum C {};
+    void F(B::C);
+  };
+}

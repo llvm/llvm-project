@@ -154,3 +154,33 @@ func.func @dont_propagate_across_infinite_loop() -> index {
   return %2 : index
 }
 
+// CHECK-LABEL: @propagate_from_block_to_iterarg
+func.func @propagate_from_block_to_iterarg(%arg0: index, %arg1: i1) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = scf.if %arg1 -> (index) {
+    %1 = scf.if %arg1 -> (index) {
+      scf.yield %arg0 : index
+    } else {
+      scf.yield %arg0 : index
+    }
+    scf.yield %1 : index
+  } else {
+    scf.yield %c1 : index
+  }
+  scf.for %arg2 = %c0 to %arg0 step %c1 {
+    scf.if %arg1 {
+      %1 = arith.subi %0, %c1 : index
+      %2 = arith.muli %0, %1 : index
+      %3 = arith.addi %2, %c1 : index
+      scf.for %arg3 = %c0 to %3 step %c1 {
+        %4 = arith.cmpi uge, %arg3, %c1 : index
+        // CHECK-NOT: scf.if %false
+        scf.if %4 {
+          "test.foo"() : () -> ()
+        }
+      }
+    }
+  }
+  return
+}

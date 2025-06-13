@@ -2,7 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,GFX8 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-FAKE16 %s
 ; FIXME: promotion not handled without f16 insts
 
 define half @v_constained_fadd_f16_fpexcept_strict(half %x, half %y) #0 {
@@ -12,11 +13,23 @@ define half @v_constained_fadd_f16_fpexcept_strict(half %x, half %y) #0 {
 ; GCN-NEXT:    v_add_f16_e32 v0, v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10PLUS-LABEL: v_constained_fadd_f16_fpexcept_strict:
-; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    v_add_f16_e32 v0, v0, v1
-; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constained_fadd_f16_fpexcept_strict:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_constained_fadd_f16_fpexcept_strict:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constained_fadd_f16_fpexcept_strict:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fadd.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %val
 }
@@ -28,11 +41,23 @@ define half @v_constained_fadd_f16_fpexcept_ignore(half %x, half %y) #0 {
 ; GCN-NEXT:    v_add_f16_e32 v0, v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10PLUS-LABEL: v_constained_fadd_f16_fpexcept_ignore:
-; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    v_add_f16_e32 v0, v0, v1
-; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constained_fadd_f16_fpexcept_ignore:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_constained_fadd_f16_fpexcept_ignore:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constained_fadd_f16_fpexcept_ignore:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fadd.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret half %val
 }
@@ -44,11 +69,23 @@ define half @v_constained_fadd_f16_fpexcept_maytrap(half %x, half %y) #0 {
 ; GCN-NEXT:    v_add_f16_e32 v0, v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10PLUS-LABEL: v_constained_fadd_f16_fpexcept_maytrap:
-; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    v_add_f16_e32 v0, v0, v1
-; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constained_fadd_f16_fpexcept_maytrap:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_constained_fadd_f16_fpexcept_maytrap:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constained_fadd_f16_fpexcept_maytrap:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fadd.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret half %val
 }
@@ -142,12 +179,26 @@ define <3 x half> @v_constained_fadd_v3f16_fpexcept_strict(<3 x half> %x, <3 x h
 ; GFX8-NEXT:    v_add_f16_e32 v1, v1, v3
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10PLUS-LABEL: v_constained_fadd_v3f16_fpexcept_strict:
-; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    v_pk_add_f16 v0, v0, v2
-; GFX10PLUS-NEXT:    v_add_f16_e32 v1, v1, v3
-; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constained_fadd_v3f16_fpexcept_strict:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_pk_add_f16 v0, v0, v2
+; GFX10-NEXT:    v_add_f16_e32 v1, v1, v3
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_constained_fadd_v3f16_fpexcept_strict:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, v0, v2
+; GFX11-TRUE16-NEXT:    v_add_f16_e32 v1.l, v1.l, v3.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constained_fadd_v3f16_fpexcept_strict:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, v0, v2
+; GFX11-FAKE16-NEXT:    v_add_f16_e32 v1, v1, v3
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %val = call <3 x half> @llvm.experimental.constrained.fadd.v3f16(<3 x half> %x, <3 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <3 x half> %val
 }
@@ -188,20 +239,29 @@ define <4 x half> @v_constained_fadd_v4f16_fpexcept_strict(<4 x half> %x, <4 x h
 ; GFX10-NEXT:    v_perm_b32 v1, v4, v1, 0x5040100
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_constained_fadd_v4f16_fpexcept_strict:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
-; GFX11-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX11-NEXT:    v_add_f16_e32 v1, v1, v3
-; GFX11-NEXT:    v_add_f16_e32 v0, v0, v2
-; GFX11-NEXT:    v_add_f16_e32 v2, v6, v5
-; GFX11-NEXT:    v_add_f16_e32 v3, v7, v4
-; GFX11-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX11-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: v_constained_fadd_v4f16_fpexcept_strict:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_add_f16_e32 v1.h, v1.h, v3.h
+; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.h, v0.h, v2.h
+; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v2.l
+; GFX11-TRUE16-NEXT:    v_add_f16_e32 v1.l, v1.l, v3.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constained_fadd_v4f16_fpexcept_strict:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
+; GFX11-FAKE16-NEXT:    v_add_f16_e32 v1, v1, v3
+; GFX11-FAKE16-NEXT:    v_add_f16_e32 v0, v0, v2
+; GFX11-FAKE16-NEXT:    v_add_f16_e32 v2, v6, v5
+; GFX11-FAKE16-NEXT:    v_add_f16_e32 v3, v7, v4
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
+; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %val = call <4 x half> @llvm.experimental.constrained.fadd.v4f16(<4 x half> %x, <4 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <4 x half> %val
 }
@@ -213,10 +273,20 @@ define amdgpu_ps half @s_constained_fadd_f16_fpexcept_strict(half inreg %x, half
 ; GCN-NEXT:    v_add_f16_e32 v0, s2, v0
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: s_constained_fadd_f16_fpexcept_strict:
-; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    v_add_f16_e64 v0, s2, s3
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: s_constained_fadd_f16_fpexcept_strict:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_add_f16_e64 v0, s2, s3
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-TRUE16-LABEL: s_constained_fadd_f16_fpexcept_strict:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_add_f16_e64 v0.l, s2, s3
+; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX11-FAKE16-LABEL: s_constained_fadd_f16_fpexcept_strict:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    v_add_f16_e64 v0, s2, s3
+; GFX11-FAKE16-NEXT:    ; return to shader part epilog
   %val = call half @llvm.experimental.constrained.fadd.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %val
 }
@@ -255,3 +325,5 @@ declare <4 x half> @llvm.experimental.constrained.fadd.v4f16(<4 x half>, <4 x ha
 
 attributes #0 = { strictfp }
 attributes #1 = { inaccessiblememonly nounwind willreturn }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX11: {{.*}}

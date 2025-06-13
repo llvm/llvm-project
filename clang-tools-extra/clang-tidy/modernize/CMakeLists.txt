@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_library(clangTidyModernizeModule
+add_clang_library(clangTidyModernizeModule STATIC
   AvoidBindCheck.cpp
   AvoidCArraysCheck.cpp
   ConcatNestedNamespacesCheck.cpp
@@ -36,6 +36,7 @@ add_clang_library(clangTidyModernizeModule
   UseEmplaceCheck.cpp
   UseEqualsDefaultCheck.cpp
   UseEqualsDeleteCheck.cpp
+  UseIntegerSignComparisonCheck.cpp
   UseNodiscardCheck.cpp
   UseNoexceptCheck.cpp
   UseNullptrCheck.cpp

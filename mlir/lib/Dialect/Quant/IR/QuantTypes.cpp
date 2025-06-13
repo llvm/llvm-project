@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Quant/QuantTypes.h"
+#include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "TypeDetail.h"
-#include "mlir/Dialect/Quant/QuantOps.h"
+#include "mlir/Dialect/Quant/IR/Quant.h"
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
@@ -20,12 +20,28 @@ using namespace mlir;
 using namespace mlir::quant;
 using namespace mlir::quant::detail;
 
+namespace {
+
+// Return the minimum scale representable in a given float type
+double getMinScale(Type expressedType) {
+  auto floatType = cast<FloatType>(expressedType);
+  return APFloat::getSmallest(floatType.getFloatSemantics()).convertToDouble();
+}
+
+// Return the maximum scale representable in a given float type
+double getMaxScale(Type expressedType) {
+  auto floatType = cast<FloatType>(expressedType);
+  return APFloat::getLargest(floatType.getFloatSemantics()).convertToDouble();
+}
+
+} // namespace
+
 unsigned QuantizedType::getFlags() const {
   return static_cast<ImplType *>(impl)->flags;
 }
 
 bool QuantizedType::classof(Type type) {
-  return llvm::isa<QuantizationDialect>(type.getDialect());
+  return llvm::isa<QuantDialect>(type.getDialect());
 }
 
 LogicalResult
@@ -71,6 +87,17 @@ int64_t QuantizedType::getStorageTypeMin() const {
 
 int64_t QuantizedType::getStorageTypeMax() const {
   return static_cast<ImplType *>(impl)->storageTypeMax;
+}
+
+bool QuantizedType::hasStorageTypeBounds() const {
+  unsigned int integralWidth = getStorageTypeIntegralWidth();
+  bool isSignedInteger = isSigned();
+  int64_t defaultIntegerMin =
+      getDefaultMinimumForInteger(isSignedInteger, integralWidth);
+  int64_t defaultIntegerMax =
+      getDefaultMaximumForInteger(isSignedInteger, integralWidth);
+  return defaultIntegerMin != getStorageTypeMin() ||
+         defaultIntegerMax != getStorageTypeMax();
 }
 
 unsigned QuantizedType::getStorageTypeIntegralWidth() const {
@@ -293,8 +320,11 @@ LogicalResult UniformQuantizedType::verifyInvariants(
     return emitError() << "expressed type must be floating point";
 
   // Verify scale.
-  if (scale <= 0.0 || std::isinf(scale) || std::isnan(scale))
-    return emitError() << "illegal scale: " << scale;
+  double minScale = getMinScale(expressedType);
+  double maxScale = getMaxScale(expressedType);
+  if (scale < minScale || scale > maxScale)
+    return emitError() << "scale out of expressed type range [" << minScale
+                       << ", " << maxScale << "]";
 
   return success();
 }
@@ -353,10 +383,17 @@ LogicalResult UniformQuantizedPerAxisType::verifyInvariants(
                        << scales.size() << ", " << zeroPoints.size();
 
   // Verify scale.
+  double minScale = getMinScale(expressedType);
+  double maxScale = getMaxScale(expressedType);
   for (double scale : scales) {
-    if (scale <= 0.0 || std::isinf(scale) || std::isnan(scale))
-      return emitError() << "illegal scale: " << scale;
+    if (scale < minScale || scale > maxScale)
+      return emitError() << "scale out of expressed type range [" << minScale
+                         << ", " << maxScale << "]";
   }
+
+  // Verify quantized dimension.
+  if (quantizedDimension < 0)
+    return emitError() << "illegal quantized dimension: " << quantizedDimension;
 
   return success();
 }
@@ -371,6 +408,123 @@ ArrayRef<int64_t> UniformQuantizedPerAxisType::getZeroPoints() const {
 
 int32_t UniformQuantizedPerAxisType::getQuantizedDimension() const {
   return getImpl()->quantizedDimension;
+}
+
+UniformQuantizedSubChannelType UniformQuantizedSubChannelType::get(
+    unsigned flags, Type storageType, Type expressedType,
+    DenseElementsAttr scales, DenseElementsAttr zeroPoints,
+    ArrayRef<int32_t> quantizedDimensions, ArrayRef<int64_t> blockSizes,
+    int64_t storageTypeMin, int64_t storageTypeMax) {
+  return Base::get(storageType.getContext(), flags, storageType, expressedType,
+                   scales, zeroPoints, quantizedDimensions, blockSizes,
+                   storageTypeMin, storageTypeMax);
+}
+
+UniformQuantizedSubChannelType UniformQuantizedSubChannelType::getChecked(
+    function_ref<InFlightDiagnostic()> emitError, unsigned flags,
+    Type storageType, Type expressedType, DenseElementsAttr scales,
+    DenseElementsAttr zeroPoints, ArrayRef<int32_t> quantizedDimensions,
+    ArrayRef<int64_t> blockSizes, int64_t storageTypeMin,
+    int64_t storageTypeMax) {
+  return Base::getChecked(emitError, storageType.getContext(), flags,
+                          storageType, expressedType, scales, zeroPoints,
+                          quantizedDimensions, blockSizes, storageTypeMin,
+                          storageTypeMax);
+}
+
+LogicalResult UniformQuantizedSubChannelType::verifyInvariants(
+    function_ref<InFlightDiagnostic()> emitError, unsigned flags,
+    Type storageType, Type expressedType, DenseElementsAttr scales,
+    DenseElementsAttr zeroPoints, ArrayRef<int32_t> quantizedDimensions,
+    ArrayRef<int64_t> blockSizes, int64_t storageTypeMin,
+    int64_t storageTypeMax) {
+  if (failed(QuantizedType::verifyInvariants(emitError, flags, storageType,
+                                             expressedType, storageTypeMin,
+                                             storageTypeMax))) {
+    return failure();
+  }
+
+  // Uniform quantization requires fully expressed parameters, including
+  // expressed type.
+  if (!expressedType)
+    return emitError() << "uniform quantization requires expressed type";
+
+  // Verify that the expressed type is floating point.
+  // If this restriction is ever eliminated, the parser/printer must be
+  // extended.
+  if (!llvm::isa<FloatType>(expressedType))
+    return emitError() << "expressed type must be floating point";
+
+  // Verify scale type to match expressedType.
+  if (scales.getType().getElementType() != expressedType) {
+    return emitError() << "type of scale values "
+                       << scales.getType().getElementType()
+                       << " must match the expressed type " << expressedType;
+  }
+
+  // Verify zero-point type to match storageType.
+  if (zeroPoints.getType().getElementType() != storageType) {
+    return emitError() << "type of zero point values "
+                       << zeroPoints.getType().getElementType()
+                       << " must match the storage type " << storageType;
+  }
+
+  // Ensure that the shape of scales and zeroPoints match.
+  if (scales.getType().getShape() != zeroPoints.getType().getShape())
+    return emitError() << "shape of scales and zeroPoints ("
+                       << scales.getType().getShape() << " vs "
+                       << zeroPoints.getType().getShape() << ") does not match";
+
+  // Ensure that the number of quantized-dimensions and block-sizes match.
+  if (quantizedDimensions.size() != blockSizes.size())
+    return emitError() << "number of quantized dimensions and block sizes ("
+                       << scales.size() << " vs " << zeroPoints.size()
+                       << ") does not match";
+
+  // Verify quantized dimension.
+  for (auto quantizedDimension : quantizedDimensions) {
+    if (quantizedDimension < 0)
+      return emitError() << "illegal quantized dimension: "
+                         << quantizedDimension;
+  }
+
+  // Verify block sizes.
+  for (auto blockSize : blockSizes) {
+    if (blockSize <= 0)
+      return emitError() << "illegal block size: " << blockSize;
+  }
+
+  return success();
+}
+
+DenseElementsAttr UniformQuantizedSubChannelType::getScales() const {
+  return getImpl()->getScales();
+}
+
+DenseElementsAttr UniformQuantizedSubChannelType::getZeroPoints() const {
+  return getImpl()->getZeroPoints();
+}
+
+ArrayRef<int32_t>
+UniformQuantizedSubChannelType::getQuantizedDimensions() const {
+  return getImpl()->getQuantizedDimensions();
+}
+
+ArrayRef<int64_t> UniformQuantizedSubChannelType::getBlockSizes() const {
+  return getImpl()->getBlockSizes();
+}
+
+const SmallVector<std::pair<int32_t, int64_t>>
+UniformQuantizedSubChannelType::getBlockSizeInfo() const {
+  SmallVector<std::pair<int32_t, int64_t>> result;
+  result.reserve(getQuantizedDimensions().size());
+
+  for (auto [dim, size] :
+       llvm::zip(getQuantizedDimensions(), getBlockSizes())) {
+    result.push_back({dim, size});
+  }
+
+  return result;
 }
 
 CalibratedQuantizedType CalibratedQuantizedType::get(Type expressedType,

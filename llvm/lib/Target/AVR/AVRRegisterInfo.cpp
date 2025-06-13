@@ -16,9 +16,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
-#include "llvm/IR/Function.h"
 
 #include "AVR.h"
 #include "AVRInstrInfo.h"
@@ -171,15 +169,12 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
     // Copy the frame pointer.
     if (STI.hasMOVW()) {
-      BuildMI(MBB, MI, dl, TII.get(AVR::MOVWRdRr), DstReg)
-          .addReg(AVR::R29R28);
+      BuildMI(MBB, MI, dl, TII.get(AVR::MOVWRdRr), DstReg).addReg(AVR::R29R28);
     } else {
       Register DstLoReg, DstHiReg;
       splitReg(DstReg, DstLoReg, DstHiReg);
-      BuildMI(MBB, MI, dl, TII.get(AVR::MOVRdRr), DstLoReg)
-          .addReg(AVR::R28);
-      BuildMI(MBB, MI, dl, TII.get(AVR::MOVRdRr), DstHiReg)
-          .addReg(AVR::R29);
+      BuildMI(MBB, MI, dl, TII.get(AVR::MOVRdRr), DstLoReg).addReg(AVR::R28);
+      BuildMI(MBB, MI, dl, TII.get(AVR::MOVRdRr), DstHiReg).addReg(AVR::R29);
     }
 
     assert(Offset > 0 && "Invalid offset");

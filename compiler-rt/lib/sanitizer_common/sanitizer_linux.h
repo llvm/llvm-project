@@ -14,7 +14,7 @@
 
 #include "sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
+    SANITIZER_SOLARIS || SANITIZER_HAIKU
 #  include "sanitizer_common.h"
 #  include "sanitizer_internal_defs.h"
 #  include "sanitizer_platform_limits_freebsd.h"
@@ -31,6 +31,11 @@ namespace __sanitizer {
 // the one in <dirent.h>, which is used by readdir().
 struct linux_dirent;
 
+#  if SANITIZER_HAIKU
+struct MemoryMappingLayoutData {
+  long signed int cookie;
+};
+#  else
 struct ProcSelfMapsBuff {
   char *data;
   uptr mmaped_size;
@@ -43,6 +48,7 @@ struct MemoryMappingLayoutData {
 };
 
 void ReadProcMaps(ProcSelfMapsBuff *proc_maps);
+#  endif  // SANITIZER_HAIKU
 
 // Syscall wrappers.
 uptr internal_getdents(fd_t fd, struct linux_dirent *dirp, unsigned int count);
@@ -97,19 +103,19 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg);
 class ThreadLister {
  public:
   explicit ThreadLister(pid_t pid);
-  ~ThreadLister();
   enum Result {
     Error,
     Incomplete,
     Ok,
   };
   Result ListThreads(InternalMmapVector<tid_t> *threads);
+  const char *LoadStatus(tid_t tid);
 
  private:
-  bool IsAlive(int tid);
+  bool IsAlive(tid_t tid);
 
-  pid_t pid_;
-  int descriptor_ = -1;
+  InternalScopedString task_path_;
+  InternalScopedString status_path_;
   InternalMmapVector<char> buffer_;
 };
 

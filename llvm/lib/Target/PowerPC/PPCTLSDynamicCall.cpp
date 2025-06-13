@@ -21,14 +21,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPC.h"
-#include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -39,9 +37,7 @@ using namespace llvm;
 namespace {
   struct PPCTLSDynamicCall : public MachineFunctionPass {
     static char ID;
-    PPCTLSDynamicCall() : MachineFunctionPass(ID) {
-      initializePPCTLSDynamicCallPass(*PassRegistry::getPassRegistry());
-    }
+    PPCTLSDynamicCall() : MachineFunctionPass(ID) {}
 
     const PPCInstrInfo *TII;
 

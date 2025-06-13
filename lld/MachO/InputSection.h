@@ -117,7 +117,8 @@ public:
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
   void writeTo(uint8_t *buf);
 
-  void foldIdentical(ConcatInputSection *redundant);
+  void foldIdentical(ConcatInputSection *redundant,
+                     Symbol::ICFFoldKind foldKind = Symbol::ICFFoldKind::Body);
   ConcatInputSection *canonical() override {
     return replacement ? replacement : this;
   }
@@ -338,6 +339,7 @@ constexpr const char const_[] = "__const";
 constexpr const char lazySymbolPtr[] = "__la_symbol_ptr";
 constexpr const char lazyBinding[] = "__lazy_binding";
 constexpr const char literals[] = "__literals";
+constexpr const char functionMap[] = "__llvm_merge";
 constexpr const char moduleInitFunc[] = "__mod_init_func";
 constexpr const char moduleTermFunc[] = "__mod_term_func";
 constexpr const char nonLazySymbolPtr[] = "__nl_symbol_ptr";
@@ -353,6 +355,7 @@ constexpr const char objcMethname[] = "__objc_methname";
 constexpr const char objcNonLazyCatList[] = "__objc_nlcatlist";
 constexpr const char objcNonLazyClassList[] = "__objc_nlclslist";
 constexpr const char objcProtoList[] = "__objc_protolist";
+constexpr const char outlinedHashTree[] = "__llvm_outline";
 constexpr const char pageZero[] = "__pagezero";
 constexpr const char pointers[] = "__pointers";
 constexpr const char rebase[] = "__rebase";

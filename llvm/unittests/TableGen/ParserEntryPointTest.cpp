@@ -33,7 +33,7 @@ TEST(Parser, SanityTest) {
   bool ProcessResult = TableGenParseFile(SrcMgr, Records);
   EXPECT_FALSE(ProcessResult);
 
-  Record *Foo = Records.getDef("Foo");
+  const Record *Foo = Records.getDef("Foo");
   std::optional<StringRef> Field = Foo->getValueAsOptionalString("strField");
   EXPECT_TRUE(Field.has_value());
   EXPECT_EQ(*Field, "value");

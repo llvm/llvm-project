@@ -35,6 +35,35 @@ void foo1() {
 }
 
 
+// PRINT-LABEL: void foo2(
+// DUMP-LABEL:  FunctionDecl {{.*}} foo2
+void foo2(int start1, int start2, int start3, int end1, int end2, int end3) {
+  // PRINT:     #pragma omp interchange permutation(2, 3, 1)
+  // DUMP:      OMPInterchangeDirective
+  // DUMP-NEXT:   OMPPermutationClause
+  // DUMP-NEXT:     ConstantExpr
+  // DUMP-NEXT:       value: Int 2
+  // DUMP-NEXT:       IntegerLiteral {{.*}} 2
+  // DUMP-NEXT:     ConstantExpr
+  // DUMP-NEXT:       value: Int 3
+  // DUMP-NEXT:       IntegerLiteral {{.*}} 3
+  // DUMP-NEXT:     ConstantExpr
+  // DUMP-NEXT:       value: Int 1
+  // DUMP-NEXT:       IntegerLiteral {{.*}} 1
+ #pragma omp interchange permutation(2,3,1)
+  // PRINT: for (int i = start1; i < end1; i += 1)
+  // DUMP-NEXT: ForStmt
+  for (int i = start1; i < end1; i += 1)
+    // PRINT: for (int j = start2; j < end2; j += 1)
+    // DUMP:  ForStmt
+    for (int j = start2; j < end2; j += 1)
+    // PRINT: for (int k = start3; k < end3; k += 1)
+    // DUMP:  ForStmt
+      for (int k = start3; k < end3; k += 1)
+      // PRINT: body(i, j, k);
+      // DUMP:  CallExpr
+      body(i, j, k);
+}
 
 
 // PRINT-LABEL: void foo3(
@@ -64,6 +93,75 @@ void foo3() {
         // PRINT: body(i, j, k);
         // DUMP:  CallExpr
         body(i, j, k);
+}
+
+
+// PRINT-LABEL: void foo4(
+// DUMP-LABEL:  FunctionDecl {{.*}} foo4
+void foo4(int start, int end, int step) {
+  // PRINT: #pragma omp for collapse(3)
+  // DUMP:      OMPForDirective
+  // DUMP-NEXT:   OMPCollapseClause
+  // DUMP-NEXT:    ConstantExpr
+  // DUMP-NEXT:      value: Int 3
+  // DUMP-NEXT:    IntegerLiteral {{.*}} 3
+  // DUMP-NEXT:  CapturedStmt
+  // DUMP-NEXT:    CapturedDecl
+  #pragma omp for collapse(3)
+  // PRINT:     for (int i = 7; i < 17; i += 1)
+  // DUMP-NEXT: ForStmt
+  for (int i = 7; i < 17; i += 1)
+    // PRINT:     #pragma omp interchange permutation(1)
+    // DUMP:      OMPInterchangeDirective
+    // DUMP-NEXT:   OMPPermutationClause
+    // DUMP-NEXT:     ConstantExpr
+    // DUMP-NEXT:       value: Int 1
+    // DUMP-NEXT:       IntegerLiteral {{.*}} 1
+    #pragma omp interchange permutation(1)
+    // PRINT:     for (int j = 7; j < 17; j += 1)
+    // DUMP-NEXT: ForStmt
+    for (int j = 7; j < 17; j += 1)
+      // PRINT: for (int k = 7; k < 17; k += 1)
+      // DUMP:  ForStmt
+      for (int k = 7; k < 17; k += 1)
+        // PRINT: body(i, j, k);
+        // DUMP:  CallExpr
+        body(i, j, k);
+}
+
+
+// PRINT-LABEL: void foo5(
+// DUMP-LABEL: FunctionTemplateDecl {{.*}} foo5
+template<typename T, T P>
+void foo5(T start, T end) {
+  // PRINT: #pragma omp for
+  // DUMP:  OMPForDirective
+  #pragma omp for
+    // PRINT:     #pragma omp interchange permutation(P + 1, 2 - P)
+    // DUMP:      OMPInterchangeDirective
+    // DUMP-NEXT:   OMPPermutationClause
+    // DUMP-NEXT:     BinaryOperator {{.*}} '+'
+    // DUMP-NEXT:       DeclRefExpr {{.*}} 'P' 'T'
+    // DUMP-NEXT:       IntegerLiteral {{.*}} 'int' 1
+    // DUMP-NEXT:     BinaryOperator {{.*}} '-'
+    // DUMP-NEXT:       IntegerLiteral {{.*}} 'int' 2
+    // DUMP-NEXT:       DeclRefExpr {{.*}} 'P' 'T'
+    #pragma omp interchange permutation(P + 1, 2 - P)
+    // PRINT-NEXT: for (T i = start; i < end; i += 2)
+    // DUMP-NEXT:  ForStmt
+    for (T i = start; i < end; i += 2)
+      // PRINT-NEXT: for (T j = start; j < end; j += 2)
+      // DUMP:       ForStmt
+      for (T j = start; j < end; j += 2)
+        // PRINT-NEXT: body(i, j);
+        // DUMP:       CallExpr
+        body(i,j);
+}
+
+// Also test instantiating the template.
+void tfoo5() {
+  foo5<int,0>(0, 42);
+  foo5<int,1>(0, 42);
 }
 
 

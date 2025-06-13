@@ -22,6 +22,7 @@
 #ifndef LLVM_BINARYFORMAT_COFF_H
 #define LLVM_BINARYFORMAT_COFF_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 
@@ -415,6 +416,24 @@ enum RelocationTypesARM64 : unsigned {
   IMAGE_REL_ARM64_BRANCH19 = 0x000F,
   IMAGE_REL_ARM64_BRANCH14 = 0x0010,
   IMAGE_REL_ARM64_REL32 = 0x0011,
+};
+
+enum RelocationTypesMips : unsigned {
+  IMAGE_REL_MIPS_ABSOLUTE = 0x0000,
+  IMAGE_REL_MIPS_REFHALF = 0x0001,
+  IMAGE_REL_MIPS_REFWORD = 0x0002,
+  IMAGE_REL_MIPS_JMPADDR = 0x0003,
+  IMAGE_REL_MIPS_REFHI = 0x0004,
+  IMAGE_REL_MIPS_REFLO = 0x0005,
+  IMAGE_REL_MIPS_GPREL = 0x0006,
+  IMAGE_REL_MIPS_LITERAL = 0x0007,
+  IMAGE_REL_MIPS_SECTION = 0x000A,
+  IMAGE_REL_MIPS_SECREL = 0x000B,
+  IMAGE_REL_MIPS_SECRELLO = 0x000C,
+  IMAGE_REL_MIPS_SECRELHI = 0x000D,
+  IMAGE_REL_MIPS_JMPADDR16 = 0x0010,
+  IMAGE_REL_MIPS_REFWORDNB = 0x0022,
+  IMAGE_REL_MIPS_PAIR = 0x0025,
 };
 
 enum DynamicRelocationType : unsigned {
@@ -833,7 +852,7 @@ inline bool isReservedSectionNumber(int32_t SectionNumber) {
 
 /// Encode section name based on string table offset.
 /// The size of Out must be at least COFF::NameSize.
-bool encodeSectionName(char *Out, uint64_t Offset);
+LLVM_ABI bool encodeSectionName(char *Out, uint64_t Offset);
 
 } // End namespace COFF.
 } // End namespace llvm.

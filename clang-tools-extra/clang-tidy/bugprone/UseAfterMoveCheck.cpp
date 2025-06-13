@@ -315,9 +315,10 @@ void UseAfterMoveFinder::getReinits(
           "::std::unordered_map", "::std::unordered_multiset",
           "::std::unordered_multimap"))))));
 
-  auto StandardSmartPointerTypeMatcher = hasType(hasUnqualifiedDesugaredType(
-      recordType(hasDeclaration(cxxRecordDecl(hasAnyName(
-          "::std::unique_ptr", "::std::shared_ptr", "::std::weak_ptr"))))));
+  auto StandardResettableOwnerTypeMatcher = hasType(
+      hasUnqualifiedDesugaredType(recordType(hasDeclaration(cxxRecordDecl(
+          hasAnyName("::std::unique_ptr", "::std::shared_ptr",
+                     "::std::weak_ptr", "::std::optional", "::std::any"))))));
 
   // Matches different types of reinitialization.
   auto ReinitMatcher =
@@ -340,7 +341,7 @@ void UseAfterMoveFinder::getReinits(
                    callee(cxxMethodDecl(hasAnyName("clear", "assign")))),
                // reset() on standard smart pointers.
                cxxMemberCallExpr(
-                   on(expr(DeclRefMatcher, StandardSmartPointerTypeMatcher)),
+                   on(expr(DeclRefMatcher, StandardResettableOwnerTypeMatcher)),
                    callee(cxxMethodDecl(hasName("reset")))),
                // Methods that have the [[clang::reinitializes]] attribute.
                cxxMemberCallExpr(

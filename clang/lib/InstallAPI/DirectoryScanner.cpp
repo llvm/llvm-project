@@ -277,7 +277,8 @@ llvm::Error DirectoryScanner::scanForFrameworks(StringRef Directory) {
   // Expect a certain directory structure and naming convention to find
   // frameworks.
   static const char *SubDirectories[] = {"System/Library/Frameworks/",
-                                         "System/Library/PrivateFrameworks/"};
+                                         "System/Library/PrivateFrameworks/",
+                                         "System/Library/SubFrameworks"};
 
   // Check if the directory is already a framework.
   if (isFramework(Directory)) {

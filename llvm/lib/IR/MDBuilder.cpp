@@ -66,9 +66,7 @@ MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights,
   return MDNode::get(Context, Vals);
 }
 
-MDNode *MDBuilder::createUnpredictable() {
-  return MDNode::get(Context, std::nullopt);
-}
+MDNode *MDBuilder::createUnpredictable() { return MDNode::get(Context, {}); }
 
 MDNode *MDBuilder::createFunctionEntryCount(
     uint64_t Count, bool Synthetic,
@@ -89,9 +87,9 @@ MDNode *MDBuilder::createFunctionEntryCount(
   return MDNode::get(Context, Ops);
 }
 
-MDNode *MDBuilder::createFunctionSectionPrefix(StringRef Prefix) {
-  return MDNode::get(
-      Context, {createString("function_section_prefix"), createString(Prefix)});
+MDNode *MDBuilder::createGlobalObjectSectionPrefix(StringRef Prefix) {
+  return MDNode::get(Context,
+                     {createString("section_prefix"), createString(Prefix)});
 }
 
 MDNode *MDBuilder::createRange(const APInt &Lo, const APInt &Hi) {

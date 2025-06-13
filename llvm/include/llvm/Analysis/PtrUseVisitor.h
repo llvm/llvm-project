@@ -34,7 +34,6 @@
 
 namespace llvm {
 class DataLayout;
-class Use;
 
 namespace detail {
 
@@ -53,57 +52,68 @@ public:
   /// analysis and whether the visit completed or aborted early.
   class PtrInfo {
   public:
-    PtrInfo() : AbortedInfo(nullptr, false), EscapedInfo(nullptr, false) {}
-
     /// Reset the pointer info, clearing all state.
     void reset() {
-      AbortedInfo.setPointer(nullptr);
-      AbortedInfo.setInt(false);
-      EscapedInfo.setPointer(nullptr);
-      EscapedInfo.setInt(false);
+      AbortedInfo = nullptr;
+      EscapedInfo = nullptr;
     }
 
     /// Did we abort the visit early?
-    bool isAborted() const { return AbortedInfo.getInt(); }
+    bool isAborted() const { return AbortedInfo != nullptr; }
 
     /// Is the pointer escaped at some point?
-    bool isEscaped() const { return EscapedInfo.getInt(); }
+    bool isEscaped() const { return EscapedInfo != nullptr; }
+
+    /// Is the pointer escaped into a read-only nocapture call at some point?
+    bool isEscapedReadOnly() const { return EscapedReadOnly != nullptr; }
 
     /// Get the instruction causing the visit to abort.
     /// \returns a pointer to the instruction causing the abort if one is
     /// available; otherwise returns null.
-    Instruction *getAbortingInst() const { return AbortedInfo.getPointer(); }
+    Instruction *getAbortingInst() const { return AbortedInfo; }
 
     /// Get the instruction causing the pointer to escape.
     /// \returns a pointer to the instruction which escapes the pointer if one
     /// is available; otherwise returns null.
-    Instruction *getEscapingInst() const { return EscapedInfo.getPointer(); }
+    Instruction *getEscapingInst() const { return EscapedInfo; }
+
+    /// Get the instruction causing the pointer to escape which is a read-only
+    /// nocapture call.
+    Instruction *getEscapedReadOnlyInst() const { return EscapedReadOnly; }
 
     /// Mark the visit as aborted. Intended for use in a void return.
     /// \param I The instruction which caused the visit to abort, if available.
-    void setAborted(Instruction *I = nullptr) {
-      AbortedInfo.setInt(true);
-      AbortedInfo.setPointer(I);
+    void setAborted(Instruction *I) {
+      assert(I && "Expected a valid pointer in setAborted");
+      AbortedInfo = I;
     }
 
     /// Mark the pointer as escaped. Intended for use in a void return.
     /// \param I The instruction which escapes the pointer, if available.
-    void setEscaped(Instruction *I = nullptr) {
-      EscapedInfo.setInt(true);
-      EscapedInfo.setPointer(I);
+    void setEscaped(Instruction *I) {
+      assert(I && "Expected a valid pointer in setEscaped");
+      EscapedInfo = I;
+    }
+
+    /// Mark the pointer as escaped into a readonly-nocapture call.
+    void setEscapedReadOnly(Instruction *I) {
+      assert(I && "Expected a valid pointer in setEscapedReadOnly");
+      EscapedReadOnly = I;
     }
 
     /// Mark the pointer as escaped, and the visit as aborted. Intended
     /// for use in a void return.
     /// \param I The instruction which both escapes the pointer and aborts the
     /// visit, if available.
-    void setEscapedAndAborted(Instruction *I = nullptr) {
+    void setEscapedAndAborted(Instruction *I) {
       setEscaped(I);
       setAborted(I);
     }
 
   private:
-    PointerIntPair<Instruction *, 1, bool> AbortedInfo, EscapedInfo;
+    Instruction *AbortedInfo = nullptr;
+    Instruction *EscapedInfo = nullptr;
+    Instruction *EscapedReadOnly = nullptr;
   };
 
 protected:
@@ -158,7 +168,7 @@ protected:
   ///
   /// This will visit the users with the same offset of the current visit
   /// (including an unknown offset if that is the current state).
-  void enqueueUsers(Instruction &I);
+  void enqueueUsers(Value &I);
 
   /// Walk the operands of a GEP and adjust the offset as appropriate.
   ///
@@ -209,11 +219,14 @@ public:
 
   /// Recursively visit the uses of the given pointer.
   /// \returns An info struct about the pointer. See \c PtrInfo for details.
-  PtrInfo visitPtr(Instruction &I) {
+  /// We may also need to process Argument pointers, so the input uses is
+  /// a common Value type.
+  PtrInfo visitPtr(Value &I) {
     // This must be a pointer type. Get an integer type suitable to hold
     // offsets on this pointer.
     // FIXME: Support a vector of pointers.
     assert(I.getType()->isPointerTy());
+    assert(isa<Instruction>(I) || isa<Argument>(I));
     IntegerType *IntIdxTy = cast<IntegerType>(DL.getIndexType(I.getType()));
     IsOffsetKnown = true;
     Offset = APInt(IntIdxTy->getBitWidth(), 0);
@@ -278,6 +291,12 @@ protected:
     switch (II.getIntrinsicID()) {
     default:
       return Base::visitIntrinsicInst(II);
+
+    // We escape pointers used by a fake_use to prevent SROA from transforming
+    // them.
+    case Intrinsic::fake_use:
+      PI.setEscaped(&II);
+      return;
 
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:

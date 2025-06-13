@@ -7,7 +7,7 @@ define void @HUF_writeCTable_wksp()  {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $2, %eax
 ; CHECK-NEXT:    movb $-2, %cl
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    leal 1(%rcx), %edx

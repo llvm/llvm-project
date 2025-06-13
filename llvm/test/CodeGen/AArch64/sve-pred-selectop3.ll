@@ -1832,11 +1832,11 @@ define <vscale x 4 x i32> @mul_nxv4i32_multiuse_x(<vscale x 4 x i32> %x, <vscale
 ; CHECK-LABEL: mul_nxv4i32_multiuse_x:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmpgt p1.s, p0/z, z2.s, #0
+; CHECK-NEXT:    cmpgt p0.s, p0/z, z2.s, #0
 ; CHECK-NEXT:    mov z2.s, #1 // =0x1
-; CHECK-NEXT:    sel z1.s, p1, z1.s, z2.s
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
 ; CHECK-NEXT:    mul z0.s, z1.s, z0.s
-; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
+; CHECK-NEXT:    str z1, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer

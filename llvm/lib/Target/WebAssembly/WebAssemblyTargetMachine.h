@@ -16,12 +16,12 @@
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYTARGETMACHINE_H
 
 #include "WebAssemblySubtarget.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include <optional>
 
 namespace llvm {
 
-class WebAssemblyTargetMachine final : public LLVMTargetMachine {
+class WebAssemblyTargetMachine final : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<WebAssemblySubtarget>> SubtargetMap;
   bool UsesMultivalueABI = false;

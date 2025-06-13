@@ -1,6 +1,6 @@
 # RUN: llc -filetype=obj -o %t.o %S/Inputs/main-ret-0.ll
 # RUN: llvm-jitlink -noexec \
-# RUN:   -sectcreate __data,%S/Inputs/sectcreate-data.txt@foo=0 \
+# RUN:   -sectcreate __data,%S/Inputs/sect@create/sectcreate-data.txt@foo=0 \
 # RUN:   %t.o
 #
 # Use -sectcreate to create a section from a data file.

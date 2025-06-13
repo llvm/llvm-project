@@ -11,11 +11,11 @@ define i16 @pr100298() {
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ -15, %[[ENTRY]] ], [ [[MASK:%.*]], %[[FOR_INC]] ]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[INDVAR]], 9
 ; CHECK-NEXT:    [[MASK]] = and i32 [[ADD]], 65535
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[MASK]], 5
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ugt i32 [[MASK]], 5
 ; CHECK-NEXT:    br i1 [[CMP1]], label %[[FOR_INC]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[ADD]] to i16
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[MASK]], 3
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i32 [[MASK]], 3
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i16 [[CONV]], 14
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP2]], i16 [[CONV]], i16 [[SHL]]
 ; CHECK-NEXT:    ret i16 [[RES]]
