@@ -16,6 +16,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "gtest/gtest.h"
 #include <cmath>
+#include <limits>
 #include <ostream>
 #include <string>
 #include <tuple>
@@ -8358,9 +8359,24 @@ TEST(APFloatTest, hasSignBitInMSB) {
 
 #ifdef LLVM_INTEGRATE_LIBC
 TEST(APFloatTest, expf) {
-  EXPECT_EQ(
-      1.0f,
-      llvm::exp(APFloat(0.0f), APFloat::rmNearestTiesToEven).convertToFloat());
+  std::array<llvm::RoundingMode, 4> allRoundingModes = {
+      APFloat::rmNearestTiesToEven, APFloat::rmTowardPositive,
+      APFloat::rmTowardNegative, APFloat::rmTowardZero};
+  for (auto rm : allRoundingModes) {
+    // exp(+-0) = 1 for all rounding modes.
+    EXPECT_EQ(1.0f, llvm::exp(APFloat(0.0f), rm).convertToFloat());
+    EXPECT_EQ(1.0f, llvm::exp(APFloat(-0.0f), rm).convertToFloat());
+    // exp(+Inf) = +Inf for all rounding modes.
+    EXPECT_EQ(std::numeric_limits<float>::infinity(),
+              llvm::exp(APFloat::getInf(APFloat::IEEEsingle(), false), rm)
+                  .convertToFloat());
+    // exp(-Inf) = 0 for all rounding modes.
+    EXPECT_EQ(0.0f, llvm::exp(APFloat::getInf(APFloat::IEEEsingle(), true), rm)
+                        .convertToFloat());
+    // exp(NaN) = NaN for all rounding modes.
+    EXPECT_TRUE(llvm::exp(APFloat::getNaN(APFloat::IEEEsingle()), rm).isNaN());
+  }
+  // exp(1)
   EXPECT_EQ(
       0x1.5bf0a8p1f,
       llvm::exp(APFloat(1.0f), APFloat::rmNearestTiesToEven).convertToFloat());
@@ -8372,6 +8388,37 @@ TEST(APFloatTest, expf) {
       llvm::exp(APFloat(1.0f), APFloat::rmTowardNegative).convertToFloat());
   EXPECT_EQ(0x1.5bf0a8p1f,
             llvm::exp(APFloat(1.0f), APFloat::rmTowardZero).convertToFloat());
+  // exp(float max)
+  EXPECT_EQ(std::numeric_limits<float>::infinity(),
+            llvm::exp(APFloat::getLargest(APFloat::IEEEsingle(), false),
+                      APFloat::rmNearestTiesToEven)
+                .convertToFloat());
+  EXPECT_EQ(std::numeric_limits<float>::infinity(),
+            llvm::exp(APFloat::getLargest(APFloat::IEEEsingle(), false),
+                      APFloat::rmTowardPositive)
+                .convertToFloat());
+  EXPECT_EQ(std::numeric_limits<float>::max(),
+            llvm::exp(APFloat::getLargest(APFloat::IEEEsingle(), false),
+                      APFloat::rmTowardNegative)
+                .convertToFloat());
+  EXPECT_EQ(std::numeric_limits<float>::max(),
+            llvm::exp(APFloat::getLargest(APFloat::IEEEsingle(), false),
+                      APFloat::rmTowardZero)
+                .convertToFloat());
+  // exp(min_denormal)
+  EXPECT_EQ(1.0f, llvm::exp(APFloat::getSmallest(APFloat::IEEEsingle(), false),
+                            APFloat::rmNearestTiesToEven)
+                      .convertToFloat());
+  EXPECT_EQ(0x1.000002p0,
+            llvm::exp(APFloat::getSmallest(APFloat::IEEEsingle(), false),
+                      APFloat::rmTowardPositive)
+                .convertToFloat());
+  EXPECT_EQ(1.0f, llvm::exp(APFloat::getSmallest(APFloat::IEEEsingle(), false),
+                            APFloat::rmTowardNegative)
+                      .convertToFloat());
+  EXPECT_EQ(1.0f, llvm::exp(APFloat::getSmallest(APFloat::IEEEsingle(), false),
+                            APFloat::rmTowardZero)
+                      .convertToFloat());
 }
 #endif // LLVM_INTEGRATE_LIBC
 

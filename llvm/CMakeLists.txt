@@ -659,7 +659,7 @@ endif()
 
 set(LLVM_ENABLE_Z3_SOLVER_DEFAULT "${Z3_FOUND}")
 
-set(LLVM_INTEGRATE_LIBC "OFF" CACHE STRING "Use LLVM libc codes directly if available.")
+set(LLVM_INTEGRATE_LIBC "OFF" CACHE STRING "Use LLVM libc code directly if available.")
 
 if(LLVM_INTEGRATE_LIBC)
   message(STATUS "LLVM_INTEGRATE_LIBC is ${LLVM_INTEGRATE_LIBC}")
