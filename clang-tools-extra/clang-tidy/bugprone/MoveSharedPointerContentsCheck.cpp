@@ -125,7 +125,8 @@ void MoveSharedPointerContentsCheck::check(
     }
   }
 
-  if (Call == nullptr || !Call->getBeginLoc().isValid()) return;
+  if (Call == nullptr || !Call->getBeginLoc().isValid())
+    return;
 
   diag(Call->getBeginLoc(),
        "don't move the contents out of a shared pointer, as other accessors "
