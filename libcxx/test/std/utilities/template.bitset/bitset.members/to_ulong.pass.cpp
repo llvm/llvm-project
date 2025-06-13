@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-exceptions
-
 // unsigned long to_ulong() const; // constexpr since C++23
 
 #include <bitset>
@@ -59,6 +57,7 @@ TEST_CONSTEXPR_CXX23 bool test() {
   test_to_ulong<65>();
   test_to_ulong<1000>();
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
   if (!TEST_IS_CONSTANT_EVALUATED) {
     // bitset has true bits beyond the size of unsigned long
     std::bitset<std::numeric_limits<unsigned long>::digits + 1> q(0);
@@ -72,6 +71,7 @@ TEST_CONSTEXPR_CXX23 bool test() {
       assert(false);
     }
   }
+#endif // TEST_HAS_NO_EXCEPTIONS
 
   return true;
 }
