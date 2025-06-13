@@ -1030,7 +1030,9 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
     }
 
     // Replace dummy operands of new `vector.insert_strided_slice` ops with
-    // their corresponding new function arguments.
+    // their corresponding new function arguments. The new
+    // `vector.insert_strided_slice` ops are inserted only into the entry block,
+    // so iterating over that block is sufficient.
     size_t unrolledInputIdx = 0;
     for (auto [count, op] : enumerate(entryBlock.getOperations())) {
       Operation &curOp = op;
