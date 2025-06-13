@@ -1253,7 +1253,7 @@ void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
     return;
   }
 
-  if (RISCV::isFaultFirstLoad(MI)) {
+  if (RISCVInstrInfo::isFaultOnlyFirstLoad(MI)) {
     // Update AVL to vl-output of the fault first load.
     assert(MI.getOperand(1).getReg().isVirtual());
     if (LIS) {
@@ -1756,7 +1756,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
 void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
   for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
     MachineInstr &MI = *I++;
-    if (RISCV::isFaultFirstLoad(MI)) {
+    if (RISCVInstrInfo::isFaultOnlyFirstLoad(MI)) {
       Register VLOutput = MI.getOperand(1).getReg();
       assert(VLOutput.isVirtual());
       if (!MI.getOperand(1).isDead()) {
@@ -1774,6 +1774,7 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
       }
       // We don't use the vl output of the VLEFF/VLSEGFF anymore.
       MI.getOperand(1).setReg(RISCV::X0);
+      MI.addRegisterDefined(RISCV::VL, MRI->getTargetRegisterInfo());
     }
   }
 }

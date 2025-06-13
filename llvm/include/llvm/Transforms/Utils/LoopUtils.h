@@ -16,7 +16,6 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/VectorBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
@@ -423,8 +422,9 @@ LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
                                       RecurKind RdxKind);
 /// Overloaded function to generate vector-predication intrinsics for
 /// reduction.
-LLVM_ABI Value *createSimpleReduction(VectorBuilder &VB, Value *Src,
-                                      RecurKind RdxKind);
+LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
+                                      RecurKind RdxKind, Value *Mask,
+                                      Value *EVL);
 
 /// Create a reduction of the given vector \p Src for a reduction of kind
 /// RecurKind::AnyOf. The start value of the reduction is \p InitVal.
@@ -442,8 +442,9 @@ LLVM_ABI Value *createOrderedReduction(IRBuilderBase &B, RecurKind RdxKind,
                                        Value *Src, Value *Start);
 /// Overloaded function to generate vector-predication intrinsics for ordered
 /// reduction.
-LLVM_ABI Value *createOrderedReduction(VectorBuilder &VB, RecurKind RdxKind,
-                                       Value *Src, Value *Start);
+LLVM_ABI Value *createOrderedReduction(IRBuilderBase &B, RecurKind RdxKind,
+                                       Value *Src, Value *Start, Value *Mask,
+                                       Value *EVL);
 
 /// Get the intersection (logical and) of all of the potential IR flags
 /// of each scalar operation (VL) that will be converted into a vector (I).

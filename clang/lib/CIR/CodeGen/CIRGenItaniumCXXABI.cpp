@@ -20,7 +20,9 @@
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
@@ -35,8 +37,13 @@ public:
     assert(!cir::MissingFeatures::cxxabiUseARMGuardVarABI());
   }
 
-  void emitInstanceFunctionProlog(SourceLocation Loc,
-                                  CIRGenFunction &CGF) override;
+  bool needsVTTParameter(clang::GlobalDecl gd) override;
+
+  void emitInstanceFunctionProlog(SourceLocation loc,
+                                  CIRGenFunction &cgf) override;
+
+  void emitCXXConstructors(const clang::CXXConstructorDecl *d) override;
+  void emitCXXStructor(clang::GlobalDecl gd) override;
 };
 
 } // namespace
@@ -70,6 +77,60 @@ void CIRGenItaniumCXXABI::emitInstanceFunctionProlog(SourceLocation loc,
     cgf.cgm.errorNYI(cgf.curFuncDecl->getLocation(),
                      "emitInstanceFunctionProlog: hasThisReturn");
   }
+}
+
+void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
+  auto *md = cast<CXXMethodDecl>(gd.getDecl());
+  auto *cd = dyn_cast<CXXConstructorDecl>(md);
+
+  if (!cd) {
+    cgm.errorNYI(md->getSourceRange(), "CXCABI emit destructor");
+    return;
+  }
+
+  if (cgm.getCodeGenOpts().CXXCtorDtorAliases)
+    cgm.errorNYI(md->getSourceRange(), "Ctor/Dtor aliases");
+
+  auto fn = cgm.codegenCXXStructor(gd);
+
+  cgm.maybeSetTrivialComdat(*md, fn);
+}
+
+void CIRGenItaniumCXXABI::emitCXXConstructors(const CXXConstructorDecl *d) {
+  // Just make sure we're in sync with TargetCXXABI.
+  assert(cgm.getTarget().getCXXABI().hasConstructorVariants());
+
+  // The constructor used for constructing this as a base class;
+  // ignores virtual bases.
+  cgm.emitGlobal(GlobalDecl(d, Ctor_Base));
+
+  // The constructor used for constructing this as a complete class;
+  // constructs the virtual bases, then calls the base constructor.
+  if (!d->getParent()->isAbstract()) {
+    // We don't need to emit the complete ctro if the class is abstract.
+    cgm.emitGlobal(GlobalDecl(d, Ctor_Complete));
+  }
+}
+
+/// Return whether the given global decl needs a VTT (virtual table table)
+/// parameter, which it does if it's a base constructor or destructor with
+/// virtual bases.
+bool CIRGenItaniumCXXABI::needsVTTParameter(GlobalDecl gd) {
+  auto *md = cast<CXXMethodDecl>(gd.getDecl());
+
+  // We don't have any virtual bases, just return early.
+  if (!md->getParent()->getNumVBases())
+    return false;
+
+  // Check if we have a base constructor.
+  if (isa<CXXConstructorDecl>(md) && gd.getCtorType() == Ctor_Base)
+    return true;
+
+  // Check if we have a base destructor.
+  if (isa<CXXDestructorDecl>(md) && gd.getDtorType() == Dtor_Base)
+    return true;
+
+  return false;
 }
 
 CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {

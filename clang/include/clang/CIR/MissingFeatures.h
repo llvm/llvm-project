@@ -81,6 +81,7 @@ struct MissingFeatures {
   static bool opFuncCPUAndFeaturesAttributes() { return false; }
   static bool opFuncSection() { return false; }
   static bool opFuncSetComdat() { return false; }
+  static bool opFuncAttributesForDefinition() { return false; }
 
   // CallOp handling
   static bool opCallPseudoDtor() { return false; }
@@ -171,6 +172,7 @@ struct MissingFeatures {
   static bool astVarDeclInterface() { return false; }
   static bool stackSaveOp() { return false; }
   static bool aggValueSlot() { return false; }
+  static bool aggValueSlotMayOverlap() { return false; }
   static bool generateDebugInfo() { return false; }
   static bool pointerOverflowSanitizer() { return false; }
   static bool fpConstraints() { return false; }
@@ -226,6 +228,8 @@ struct MissingFeatures {
   static bool implicitConstructorArgs() { return false; }
   static bool intrinsics() { return false; }
   static bool attributeNoBuiltin() { return false; }
+  static bool thunks() { return false; }
+  static bool runCleanupsScope() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
