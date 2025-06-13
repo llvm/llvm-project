@@ -108,11 +108,10 @@
 #endif
 
 // Core feature in CL 2.0, but not supported on nvptx
-#ifdef cl_khr_3d_image_writes
-#error "Incorrect cl_khr_3d_image_writes define"
+#ifndef cl_khr_3d_image_writes
+#error "Missing cl_khr_3d_image_writes define"
 #endif
 #pragma OPENCL EXTENSION cl_khr_3d_image_writes: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_3d_image_writes' - ignoring}}
 
 #ifdef cl_khr_gl_msaa_sharing
 #error "Incorrect cl_khr_gl_msaa_sharing define"
