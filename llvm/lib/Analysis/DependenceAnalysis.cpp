@@ -3642,6 +3642,16 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
 
   Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *DstPtr = getLoadStorePointerOperand(Dst);
+
+  if (GetElementPtrInst *SrcGEP = dyn_cast<GetElementPtrInst>(SrcPtr)) {
+    if (GetElementPtrInst *DstGEP = dyn_cast<GetElementPtrInst>(DstPtr)) {
+      if (SrcGEP->getSourceElementType() != DstGEP->getSourceElementType()) {
+        LLVM_DEBUG(dbgs() << "can't analyze GEPs with different types\n");
+        return std::make_unique<Dependence>(Src, Dst,
+                                            SCEVUnionPredicate(Assume, *SE));
+      }
+    }
+  }
   const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
   const SCEV *DstSCEV = SE->getSCEV(DstPtr);
   LLVM_DEBUG(dbgs() << "    SrcSCEV = " << *SrcSCEV << "\n");
