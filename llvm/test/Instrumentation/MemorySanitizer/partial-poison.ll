@@ -76,7 +76,7 @@ define <2 x i64> @full_undef(ptr %add.ptr) sanitize_memory {
 ; CHECK-LABEL: define <2 x i64> @full_undef(
 ; CHECK-SAME: ptr [[ADD_PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK:    store <2 x i64> splat (i64 -1), ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> splat (i64 -1), ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> undef
 ;
   ret <2 x i64> <i64 undef, i64 undef>
