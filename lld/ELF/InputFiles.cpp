@@ -21,6 +21,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Support/AArch64AttributeParser.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Endian.h"
@@ -537,6 +538,51 @@ uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &sym) const {
       this);
 }
 
+template <class ELFT>
+static void
+handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx, bool hasGP,
+                                const AArch64BuildAttrSubsections &baInfo,
+                                const GnuPropertiesInfo &gpInfo) {
+  if (hasGP) {
+    // Check for data mismatch
+    if (gpInfo.pauthAbiCoreInfo) {
+      if (baInfo.Pauth.TagPlatform != gpInfo.pauthAbiCoreInfo->platform ||
+          baInfo.Pauth.TagSchema != gpInfo.pauthAbiCoreInfo->version)
+        Err(ctx)
+            << file
+            << " Pauth Data mismatch: file contains both GNU properties and "
+               "AArch64 build attributes sections with different Pauth data";
+    }
+    if (baInfo.AndFeatures != gpInfo.andFeatures)
+      Err(ctx) << file
+               << " Features Data mismatch: file contains both GNU "
+                  "properties and AArch64 build attributes sections with "
+                  "different And Features data";
+  } else {
+    // Write missing data
+    // We can only know when Pauth is missing.
+    // Unlike AArch64 Build Attributes, GNU properties does not give a way to
+    // distinguish between no-value given to value of '0' given.
+    if (baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema) {
+      // According to the BuildAttributes specification Build Attributes
+      // default to a value of 0 when not present. A (TagPlatform, TagSchema) of
+      // (0, 0) maps to 'no PAuth property present'. A (TagPlatform, TagSchema)
+      // of (0, 1) maps to an explicit PAuth property of platform = 0, version =
+      // 0 ('Invalid').
+      if (baInfo.Pauth.TagPlatform == 0 && baInfo.Pauth.TagSchema == 1) {
+        file->aarch64PauthAbiCoreInfo = {0, 0};
+      }
+      file->aarch64PauthAbiCoreInfo = {baInfo.Pauth.TagPlatform,
+                                       baInfo.Pauth.TagSchema};
+    }
+    file->andFeatures = baInfo.AndFeatures;
+  }
+}
+
+template <typename ELFT>
+static GnuPropertiesInfo readGnuProperty(Ctx &, const InputSection &,
+                                         ObjFile<ELFT> &);
+
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   object::ELFFile<ELFT> obj = this->getObj();
   // Read a section table. justSymbols is usually false.
@@ -552,8 +598,31 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
   sections.resize(size);
+
+  // For handling AArch64 Build attributes and GNU properties
+  AArch64BuildAttrSubsections aarch64BAsubSections;
+  GnuPropertiesInfo gnuProperty;
+  bool hasAArch64BuildAttributes = false;
+  bool hasGNUProperties = false;
+
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
+    // Object files that use processor features such as Intel Control-Flow
+    // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
+    // .note.gnu.property section containing a bitfield of feature bits like the
+    // GNU_PROPERTY_X86_FEATURE_1_IBT flag. Read a bitmap containing the flag.
+    if (check(obj.getSectionName(sec, shstrtab)) == ".note.gnu.property") {
+      gnuProperty = readGnuProperty(
+          ctx,
+          InputSection(*this, sec, check(obj.getSectionName(sec, shstrtab))),
+          *this);
+      hasGNUProperties = true;
+      // Since we merge bitmaps from multiple object files to create a new
+      // .note.gnu.property containing a single AND'ed bitmap, we discard an
+      // input file's .note.gnu.property section.
+      sections[i] = &InputSection::discarded;
+    }
+
     if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
       continue;
     if (LLVM_LIKELY(sec.sh_type == SHT_GROUP)) {
@@ -637,13 +706,27 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       }
       break;
     case EM_AARCH64:
-      // FIXME: BuildAttributes have been implemented in llvm, but not yet in
-      // lld. Remove the section so that it does not accumulate in the output
-      // file. When support is implemented we expect not to output a build
-      // attributes section in files of type ET_EXEC or ET_SHARED, but ld -r
-      // ouptut will need a single merged attributes section.
-      if (sec.sh_type == SHT_AARCH64_ATTRIBUTES)
+      // At this stage AArch64 Build Attributes does not replace GNU Properties.
+      // When both exists, their values must match.
+      // When both exists and contain different attributes, they complement each
+      // other. Currently attributes are represented in the linked object file
+      // as GNU properties, which are already supported by the Linux kernel and
+      // the dynamic loader. In the future, when relocatable linking (`-r` flag)
+      // is performed, a single merged AArch64 Build Attributes section will be
+      // emitted.
+      if (sec.sh_type == SHT_AARCH64_ATTRIBUTES) {
+        ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
+        AArch64AttributeParser attributes;
+        StringRef name = check(obj.getSectionName(sec, shstrtab));
+        InputSection isec(*this, sec, name);
+        if (Error e = attributes.parse(contents, ELFT::Endianness)) {
+          Warn(ctx) << &isec << ": " << std::move(e);
+        } else {
+          aarch64BAsubSections = extractBuildAttributesSubsections(attributes);
+          hasAArch64BuildAttributes = true;
+        }
         sections[i] = &InputSection::discarded;
+      }
       // Producing a static binary with MTE globals is not currently supported,
       // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
       // medatada, and we don't want them to end up in the output file for
@@ -653,6 +736,14 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         sections[i] = &InputSection::discarded;
       break;
     }
+  }
+
+  if (hasAArch64BuildAttributes) {
+    // Handle AArch64 Build Attributes and GNU properties:
+    // - Err on mismatched values.
+    // - Store missing values as GNU properties.
+    handleAArch64BAAndGnuProperties<ELFT>(this, ctx, hasGNUProperties,
+                                          aarch64BAsubSections, gnuProperty);
   }
 
   // Read a symbol table.
@@ -948,7 +1039,7 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
     } else if (ctx.arg.emachine == EM_AARCH64 &&
                type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
       ArrayRef<uint8_t> contents = data ? *data : desc;
-      if (!f.aarch64PauthAbiCoreInfo.empty()) {
+      if (f.aarch64PauthAbiCoreInfo) {
         return void(
             err(contents.data())
             << "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
@@ -959,7 +1050,9 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
                        "is invalid: expected 16 bytes, but got "
                     << size);
       }
-      f.aarch64PauthAbiCoreInfo = desc;
+      f.aarch64PauthAbiCoreInfo = {
+          support::endian::read64<ELFT::Endianness>(&desc[0]),
+          support::endian::read64<ELFT::Endianness>(&desc[8])};
     }
 
     // Padding is present in the note descriptor, if necessary.
@@ -972,8 +1065,8 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
 //   hardware-assisted call flow control;
 // - AArch64 PAuth ABI core info (16 bytes).
 template <class ELFT>
-static void readGnuProperty(Ctx &ctx, const InputSection &sec,
-                            ObjFile<ELFT> &f) {
+static GnuPropertiesInfo readGnuProperty(Ctx &ctx, const InputSection &sec,
+                                         ObjFile<ELFT> &f) {
   using Elf_Nhdr = typename ELFT::Nhdr;
   using Elf_Note = typename ELFT::Note;
 
@@ -1005,7 +1098,7 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
     auto *nhdr = reinterpret_cast<const Elf_Nhdr *>(data.data());
     if (data.size() < sizeof(Elf_Nhdr) ||
         data.size() < nhdr->getSize(sec.addralign))
-      return void(err(data.data()) << "data is too short");
+      return (err(data.data()) << "data is too short", GnuPropertiesInfo{});
 
     Elf_Note note(*nhdr);
     if (nhdr->n_type != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU") {
@@ -1021,6 +1114,7 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
     // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
     data = data.slice(nhdr->getSize(sec.addralign));
   }
+  return GnuPropertiesInfo{f.andFeatures, f.aarch64PauthAbiCoreInfo};
 }
 
 template <class ELFT>

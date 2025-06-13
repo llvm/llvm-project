@@ -241,7 +241,12 @@ public:
   StringRef sourceFile;
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
-  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
+  std::optional<AArch64PauthAbiCoreInfo> aarch64PauthAbiCoreInfo;
+};
+
+struct GnuPropertiesInfo {
+  uint32_t andFeatures = 0;
+  std::optional<AArch64PauthAbiCoreInfo> pauthAbiCoreInfo;
 };
 
 // .o file.
