@@ -37,6 +37,18 @@ class SMX60GetLMulCycles<string mx> {
   );
 }
 
+class SMX60GetVIALULatency<string mx> {
+  int c = !cond(
+    !eq(mx, "M1") : 4,
+    !eq(mx, "M2") : 4,
+    !eq(mx, "M4") : 8,
+    !eq(mx, "M8") : 16,
+    !eq(mx, "MF2") : 4,
+    !eq(mx, "MF4") : 4,
+    !eq(mx, "MF8") : 4
+  );
+}
+
 class SMX60GetVCompressLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 4,
@@ -273,6 +285,7 @@ let Latency = 4 in {
 }
 
 // 7. Vector Loads and Stores
+// TODO
 def : WriteRes<WriteVSETVLI, [SMX60_IEUA]>;
 def : WriteRes<WriteVSETIVLI, [SMX60_IEUA]>;
 def : WriteRes<WriteVSETVL, [SMX60_IEUA]>;
@@ -337,13 +350,15 @@ foreach LMul = [4, 8] in {
 
 // 11. Vector Integer Arithmetic Instructions
 foreach mx = SchedMxList in {
-  defvar LMulLat = SMX60GetLMulCycles<mx>.c;
+  defvar ALULat = SMX60GetVIALULatency<mx>.c;
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
   defm "" : LMULWriteResMX<"WriteVIALUV",    [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVIALUX",    [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVIALUI",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVExtV",     [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = ALULat in {
+    defm "" : LMULWriteResMX<"WriteVExtV",     [SMX60_VIEU], mx, IsWorstCase>;
+  }
   defm "" : LMULWriteResMX<"WriteVICALUV",   [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVICALUX",   [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVICALUI",   [SMX60_VIEU], mx, IsWorstCase>;
