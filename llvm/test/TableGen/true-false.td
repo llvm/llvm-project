@@ -67,7 +67,7 @@ def rec7 {
   bits<3> flags = { true, false, true };
 }
 
-// `!and` and `!or` should be short-circuit such that any of the `!head` or
+// `!and` and `!or` should be short-circuited such that any of the `!head` or
 // `!tail` on empty list below will never be evaluated.
 // CHECK: def rec8
 // CHECK:   bit v = 0;
