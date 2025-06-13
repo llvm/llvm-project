@@ -429,9 +429,10 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
               if (innerOptional.has_value()) {
                 const auto &innerLoopDirective = innerOptional.value().value();
                 const auto &innerBegin =
-                  std::get<parser::OmpBeginLoopDirective>(innerLoopDirective.t);
+                    std::get<parser::OmpBeginLoopDirective>(
+                        innerLoopDirective.t);
                 const auto &innerDirective =
-                  std::get<parser::OmpLoopDirective>(innerBegin.t);
+                    std::get<parser::OmpLoopDirective>(innerBegin.t);
                 if (innerDirective.v == llvm::omp::Directive::OMPD_tile) {
                   middleClauseList =
                       &std::get<parser::OmpClauseList>(innerBegin.t);
@@ -2180,11 +2181,13 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
   auto cli = canonLoop.getCli();
   mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
 
-static mlir::omp::LoopOp
-genTiledLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
-          semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-          mlir::Location loc, const ConstructQueue &queue,
-          ConstructQueue::const_iterator item) {
+static mlir::omp::LoopOp genTiledLoopOp(lower::AbstractConverter &converter,
+                                        lower::SymMap &symTable,
+                                        semantics::SemanticsContext &semaCtx,
+                                        lower::pft::Evaluation &eval,
+                                        mlir::Location loc,
+                                        const ConstructQueue &queue,
+                                        ConstructQueue::const_iterator item) {
   mlir::omp::LoopOperands loopClauseOps;
   llvm::SmallVector<const semantics::Symbol *> loopReductionSyms;
   genLoopClauses(converter, semaCtx, item->clauses, loc, loopClauseOps,
@@ -3445,7 +3448,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     break;
   case llvm::omp::Directive::OMPD_tile:
     newOp =
-      genTiledLoopOp(converter, symTable, semaCtx, eval, loc, queue, item);
+        genTiledLoopOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_unroll:
     genUnrollOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
@@ -3892,13 +3895,15 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   List<Clause> clauses = makeClauses(
       std::get<parser::OmpClauseList>(beginLoopDirective.t), semaCtx);
 
-  const auto &innerOptional = std::get<std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(loopConstruct.t);
+  const auto &innerOptional =
+      std::get<std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(
+          loopConstruct.t);
   if (innerOptional.has_value()) {
     const auto &innerLoopDirective = innerOptional.value().value();
     const auto &innerBegin =
-      std::get<parser::OmpBeginLoopDirective>(innerLoopDirective.t);
+        std::get<parser::OmpBeginLoopDirective>(innerLoopDirective.t);
     const auto &innerDirective =
-      std::get<parser::OmpLoopDirective>(innerBegin.t);
+        std::get<parser::OmpLoopDirective>(innerBegin.t);
     if (innerDirective.v == llvm::omp::Directive::OMPD_tile) {
       clauses.append(
           makeClauses(std::get<parser::OmpClauseList>(innerBegin.t), semaCtx));

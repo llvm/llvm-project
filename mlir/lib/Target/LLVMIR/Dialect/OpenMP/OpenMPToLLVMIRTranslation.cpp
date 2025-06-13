@@ -2972,7 +2972,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 /// Converts an OpenMP loop nest into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
-                        LLVM::ModuleTranslation &moduleTranslation) {
+                   LLVM::ModuleTranslation &moduleTranslation) {
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto loopOp = cast<omp::LoopNestOp>(opInst);
   // Set up the source location value for OpenMP runtime.
@@ -3042,7 +3042,7 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
 
   //  llvm::OpenMPIRBuilder::InsertPointTy afterIP = builder.saveIP();
   llvm::OpenMPIRBuilder::InsertPointTy afterIP =
-    loopInfos.front()->getAfterIP();
+      loopInfos.front()->getAfterIP();
 
   // Initialize the new loop info to the current one, in case there
   // are no loop transformations done.
@@ -3054,12 +3054,12 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
     SmallVector<llvm::Value *> TileSizes;
 
     for (auto tile : tiles.value()) {
-      llvm::Value *TileVal =  llvm::ConstantInt::get(IVType, tile);
+      llvm::Value *TileVal = llvm::ConstantInt::get(IVType, tile);
       TileSizes.push_back(TileVal);
     }
 
-    std::vector<llvm::CanonicalLoopInfo*> NewLoops =
-      ompBuilder->tileLoops(ompLoc.DL, loopInfos, TileSizes);
+    std::vector<llvm::CanonicalLoopInfo *> NewLoops =
+        ompBuilder->tileLoops(ompLoc.DL, loopInfos, TileSizes);
 
     // Collapse loops. Store the insertion point because LoopInfos may get
     // invalidated.
@@ -3070,7 +3070,7 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
 
     // Update the loop infos
     loopInfos.clear();
-    for (const auto& newLoop : NewLoops) {
+    for (const auto &newLoop : NewLoops) {
       loopInfos.push_back(newLoop);
     }
   } // Tiling done

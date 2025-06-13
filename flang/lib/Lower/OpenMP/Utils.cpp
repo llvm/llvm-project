@@ -52,8 +52,7 @@ int64_t getCollapseValue(const List<Clause> &clauses) {
   }
 
   collapseValue = collapseValue - numTileSizes;
-  int64_t result =
-    collapseValue > numTileSizes ? collapseValue : numTileSizes;
+  int64_t result = collapseValue > numTileSizes ? collapseValue : numTileSizes;
   return result;
 }
 
