@@ -288,8 +288,8 @@ static ParsedType buildNamedType(Sema &S, const CXXScopeSpec *SS, QualType T,
   case Type::ObjCTypeParam:
   case Type::TemplateTypeParm:
     return ParsedType::make(T);
-  default:
-    llvm_unreachable("Unexpected Type Class");
+  //default:
+    //llvm_unreachable("Unexpected Type Class");
   }
 
   if (!SS || SS->isEmpty())
