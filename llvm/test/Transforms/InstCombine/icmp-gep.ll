@@ -658,13 +658,11 @@ define i1 @test_scalable_ij(ptr %foo, i64 %i, i64 %j) {
 
 define i1 @gep_nuw(ptr %p, i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-LABEL: @gep_nuw(
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nuw i64 [[A:%.*]], 2
-; CHECK-NEXT:    [[GEP1_IDX1:%.*]] = shl nuw i64 [[B:%.*]], 1
-; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nuw i64 [[GEP1_IDX]], [[GEP1_IDX1]]
-; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl nuw i64 [[C:%.*]], 3
-; CHECK-NEXT:    [[GEP2_IDX2:%.*]] = shl nuw i64 [[D:%.*]], 2
-; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add nuw i64 [[GEP2_IDX]], [[GEP2_IDX2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
+; CHECK-NEXT:    [[GEP1_SPLIT:%.*]] = getelementptr nuw [2 x i16], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw [2 x i16], ptr [[GEP1_SPLIT]], i64 0, i64 [[B:%.*]]
+; CHECK-NEXT:    [[GEP2_SPLIT:%.*]] = getelementptr nuw [2 x i32], ptr [[P]], i64 [[C:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nuw [2 x i32], ptr [[GEP2_SPLIT]], i64 0, i64 [[D:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP1]], [[GEP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr nuw [2 x i16], ptr %p, i64 %a, i64 %b
@@ -675,13 +673,11 @@ define i1 @gep_nuw(ptr %p, i64 %a, i64 %b, i64 %c, i64 %d) {
 
 define i1 @gep_nusw(ptr %p, i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-LABEL: @gep_nusw(
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i64 [[A:%.*]], 2
-; CHECK-NEXT:    [[GEP1_IDX1:%.*]] = shl nsw i64 [[B:%.*]], 1
-; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nsw i64 [[GEP1_IDX]], [[GEP1_IDX1]]
-; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl nsw i64 [[C:%.*]], 3
-; CHECK-NEXT:    [[GEP2_IDX2:%.*]] = shl nsw i64 [[D:%.*]], 2
-; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add nsw i64 [[GEP2_IDX]], [[GEP2_IDX2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
+; CHECK-NEXT:    [[GEP1_SPLIT:%.*]] = getelementptr nusw [2 x i16], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nusw [2 x i16], ptr [[GEP1_SPLIT]], i64 0, i64 [[B:%.*]]
+; CHECK-NEXT:    [[GEP2_SPLIT:%.*]] = getelementptr nusw [2 x i32], ptr [[P]], i64 [[C:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nusw [2 x i32], ptr [[GEP2_SPLIT]], i64 0, i64 [[D:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP1]], [[GEP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr nusw [2 x i16], ptr %p, i64 %a, i64 %b
