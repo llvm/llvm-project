@@ -24,8 +24,9 @@ protocol::Breakpoint ExceptionBreakpoint::SetBreakpoint(StringRef condition) {
   std::lock_guard<lldb::SBMutex> guard(lock);
 
   if (!m_bp.IsValid()) {
-    m_bp = m_dap.target.BreakpointCreateForException(m_language, m_is_catch,
-                                                     m_is_throw);
+    m_bp = m_dap.target.BreakpointCreateForException(
+        m_language, m_kind == eExceptionKindCatch,
+        m_kind == eExceptionKindThrow);
     m_bp.AddName(BreakpointBase::kDAPBreakpointLabel);
   }
 

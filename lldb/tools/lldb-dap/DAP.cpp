@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "DAPLog.h"
 #include "EventHelper.h"
+#include "ExceptionBreakpoint.h"
 #include "Handler/RequestHandler.h"
 #include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
@@ -131,28 +132,28 @@ void DAP::PopulateExceptionBreakpoints() {
   if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
     exception_breakpoints.emplace_back(*this, "cpp_catch", "C++ Catch",
                                        lldb::eLanguageTypeC_plus_plus,
-                                       /*is_throw=*/false, /*is_catch=*/true);
+                                       eExceptionKindCatch);
     exception_breakpoints.emplace_back(*this, "cpp_throw", "C++ Throw",
                                        lldb::eLanguageTypeC_plus_plus,
-                                       /*is_throw=*/true, /*is_catch=*/false);
+                                       eExceptionKindThrow);
   }
 
   if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeObjC)) {
     exception_breakpoints.emplace_back(*this, "objc_catch", "Objective-C Catch",
                                        lldb::eLanguageTypeObjC,
-                                       /*is_throw=*/false, /*is_catch=*/true);
+                                       eExceptionKindCatch);
     exception_breakpoints.emplace_back(*this, "objc_throw", "Objective-C Throw",
                                        lldb::eLanguageTypeObjC,
-                                       /*is_throw=*/true, /*is_catch=*/false);
+                                       eExceptionKindThrow);
   }
 
   if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeSwift)) {
     exception_breakpoints.emplace_back(*this, "swift_catch", "Swift Catch",
                                        lldb::eLanguageTypeSwift,
-                                       /*is_throw=*/false, /*is_catch=*/true);
+                                       eExceptionKindCatch);
     exception_breakpoints.emplace_back(*this, "swift_throw", "Swift Throw",
                                        lldb::eLanguageTypeSwift,
-                                       /*is_throw=*/true, /*is_catch=*/false);
+                                       eExceptionKindThrow);
   }
 
   // Besides handling the hardcoded list of languages from above, we try to find
@@ -184,7 +185,7 @@ void DAP::PopulateExceptionBreakpoints() {
       exception_breakpoints.emplace_back(
           *this, raw_lang_name + "_" + throw_keyword,
           capitalized_lang_name + " " + capitalize(throw_keyword), lang,
-          /*is_throw=*/true, /*is_catch=*/false);
+          eExceptionKindThrow);
     }
 
     if (lldb::SBLanguageRuntime::SupportsExceptionBreakpointsOnCatch(lang)) {
@@ -196,7 +197,7 @@ void DAP::PopulateExceptionBreakpoints() {
       exception_breakpoints.emplace_back(
           *this, raw_lang_name + "_" + catch_keyword,
           capitalized_lang_name + " " + capitalize(catch_keyword), lang,
-          /*is_throw=*/true, /*is_catch=*/false);
+          eExceptionKindCatch);
     }
   }
 }

@@ -19,12 +19,17 @@
 
 namespace lldb_dap {
 
+enum ExceptionKind : unsigned {
+  eExceptionKindCatch,
+  eExceptionKindThrow,
+};
+
 class ExceptionBreakpoint {
 public:
   ExceptionBreakpoint(DAP &d, std::string f, std::string l,
-                      lldb::LanguageType lang, bool is_throw, bool is_catch)
+                      lldb::LanguageType lang, ExceptionKind kind)
       : m_dap(d), m_filter(std::move(f)), m_label(std::move(l)),
-        m_language(lang), m_is_throw(is_throw), m_is_catch(is_catch), m_bp() {}
+        m_language(lang), m_kind(kind), m_bp() {}
 
   protocol::Breakpoint SetBreakpoint() { return SetBreakpoint(""); };
   protocol::Breakpoint SetBreakpoint(llvm::StringRef condition);
@@ -41,8 +46,7 @@ protected:
   std::string m_filter;
   std::string m_label;
   lldb::LanguageType m_language;
-  bool m_is_throw;
-  bool m_is_catch;
+  ExceptionKind m_kind;
   lldb::SBBreakpoint m_bp;
 };
 
