@@ -29,7 +29,7 @@ int CharacterConverter::push(char32_t utf32) {
   state->total_bytes = 0;
 
   // determine number of utf-8 bytes needed to represent this utf32 value
-  char32_t ranges[] = {0x7f, 0x7ff, 0xffff, 0x10ffff};
+  const char32_t ranges[] = {0x7f, 0x7ff, 0xffff, 0x10ffff};
   const int num_ranges = 4;
   for (uint8_t i = 0; i < num_ranges; i++) {
     if (state->partial <= ranges[i]) {
@@ -47,24 +47,31 @@ ErrorOr<char8_t> CharacterConverter::pop_utf8() {
   if (state->bytes_processed >= state->total_bytes)
     return Error(-1);
 
-  const char8_t first_byte_headers[] = {0, 0xC0, 0xE0, 0xF0};
-  const char32_t utf32 = state->partial;
-  const char32_t tot_bytes = state->total_bytes;
-  const char32_t bytes_proc = state->bytes_processed;
+  const char8_t FIRST_BYTE_HEADERS[] = {0, 0xC0, 0xE0, 0xF0};
+  const char8_t CONTINUING_BYTE_HEADER = 0x80;
+
+  // the number of bits per utf-8 byte that actually encode character
+  // information not metadata (# of bits excluding the byte headers)
+  const int ENCODED_BITS_PER_BYTE = 6;
+  const int MASK_LOWER_SIX = 0x3f;
 
   char32_t output;
+
   // Shift to get the next 6 bits from the utf32 encoding
-  const char32_t shift_amount = (tot_bytes - bytes_proc - 1) * 6;
+  const char32_t shift_amount =
+      (state->total_bytes - state->bytes_processed - 1) * ENCODED_BITS_PER_BYTE;
   if (state->bytes_processed == 0) {
     /*
       Choose the correct set of most significant bits to encode the length
       of the utf8 sequence. The remaining bits contain the most significant
       bits of the unicode value of the character.
     */
-    output = first_byte_headers[tot_bytes - 1] | (utf32 >> shift_amount);
+    output = FIRST_BYTE_HEADERS[state->total_bytes - 1] |
+             (state->partial >> shift_amount);
   } else {
     // Get the next 6 bits and format it like so: 10xxxxxx
-    output = 0x80 | ((utf32 >> shift_amount) & 0x3f);
+    output = CONTINUING_BYTE_HEADER |
+             ((state->partial >> shift_amount) & MASK_LOWER_SIX);
   }
 
   state->bytes_processed++;
