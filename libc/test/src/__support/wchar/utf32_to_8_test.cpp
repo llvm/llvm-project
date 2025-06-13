@@ -162,3 +162,19 @@ TEST(LlvmLibcCharacterConverterUTF32To8Test, FourByte) {
   popped = cr.pop_utf8();
   ASSERT_FALSE(popped.has_value());
 }
+
+TEST(LlvmLibcCharacterConverterUTF32To8Test, CantPushMidConversion) {
+  LIBC_NAMESPACE::internal::mbstate state;
+  LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
+  cr.clear();
+
+  // testing utf32: 0x12121 -> utf8: 0xf0 0x92 0x84 0xa1
+  char32_t utf32 = 0x12121;
+  ASSERT_EQ(cr.push(utf32), 0);
+  auto popped = cr.pop_utf8();
+  ASSERT_TRUE(popped.has_value());
+
+  // can't push a utf32 without finishing popping the utf8 bytes out
+  int err = cr.push(utf32);
+  ASSERT_EQ(err, -1);
+}

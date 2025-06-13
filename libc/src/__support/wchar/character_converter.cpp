@@ -31,27 +31,31 @@ bool CharacterConverter::isComplete() {
 }
 
 int CharacterConverter::push(char32_t utf32) {
-  state->partial = utf32;
-  state->bytes_processed = 0;
-  state->total_bytes = 0;
-
-  // determine number of utf-8 bytes needed to represent this utf32 value
-  constexpr char32_t ranges[] = {0x7f, 0x7ff, 0xffff, 0x10ffff};
-  constexpr int num_ranges = 4;
-  for (uint8_t i = 0; i < num_ranges; i++) {
-    if (state->partial <= ranges[i]) {
-      state->total_bytes = i + 1;
-      break;
-    }
-  }
-  if (state->total_bytes == 0)
+  // we can't be partially through a conversion when pushing a utf32 value
+  if (!isComplete())
     return -1;
 
-  return 0;
+  state->partial = utf32;
+  state->bytes_processed = 0;
+
+  // determine number of utf-8 bytes needed to represent this utf32 value
+  constexpr char32_t MAX_VALUE_PER_UTF8_LEN[] = {0x7f, 0x7ff, 0xffff, 0x10ffff};
+  constexpr int NUM_RANGES = 4;
+  for (uint8_t i = 0; i < NUM_RANGES; i++) {
+    if (state->partial <= MAX_VALUE_PER_UTF8_LEN[i]) {
+      state->total_bytes = i + 1;
+      return 0;
+    }
+  }
+
+  // `utf32` contains a value that is too large to actually represent a valid
+  // unicode character
+  clear();
+  return -1;
 }
 
 ErrorOr<char8_t> CharacterConverter::pop_utf8() {
-  if (state->bytes_processed >= state->total_bytes)
+  if (isComplete())
     return Error(-1);
 
   constexpr char8_t FIRST_BYTE_HEADERS[] = {0, 0xC0, 0xE0, 0xF0};
