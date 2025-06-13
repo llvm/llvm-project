@@ -13,8 +13,9 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcCharacterConverterUTF32To8Test, OneByte) {
-  LIBC_NAMESPACE::internal::mbstate state{0, 0, 0};
+  LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
+  cr.clear();
 
   // utf8 1-byte encodings are identical to their utf32 representations
   char32_t utf32_A = 0x41; // 'A'
@@ -37,8 +38,9 @@ TEST(LlvmLibcCharacterConverterUTF32To8Test, OneByte) {
 }
 
 TEST(LlvmLibcCharacterConverterUTF32To8Test, TwoByte) {
-  LIBC_NAMESPACE::internal::mbstate state{0, 0, 0};
+  LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
+  cr.clear();
 
   // testing utf32: 0xff -> utf8: 0xc3 0xbf
   char32_t utf32 = 0xff;
@@ -70,8 +72,9 @@ TEST(LlvmLibcCharacterConverterUTF32To8Test, TwoByte) {
 }
 
 TEST(LlvmLibcCharacterConverterUTF32To8Test, ThreeByte) {
-  LIBC_NAMESPACE::internal::mbstate state{0, 0, 0};
+  LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
+  cr.clear();
 
   // testing utf32: 0xac15 -> utf8: 0xea 0xb0 0x95
   char32_t utf32 = 0xac15;
@@ -111,8 +114,9 @@ TEST(LlvmLibcCharacterConverterUTF32To8Test, ThreeByte) {
 }
 
 TEST(LlvmLibcCharacterConverterUTF32To8Test, FourByte) {
-  LIBC_NAMESPACE::internal::mbstate state{0, 0, 0};
+  LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
+  cr.clear();
 
   // testing utf32: 0x1f921 -> utf8: 0xf0 0x9f 0xa4 0xa1
   char32_t utf32 = 0x1f921;

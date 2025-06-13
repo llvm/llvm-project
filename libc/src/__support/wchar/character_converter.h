@@ -25,6 +25,7 @@ private:
 public:
   CharacterConverter(mbstate *mbstate);
 
+  void clear();
   bool isComplete();
 
   int push(char8_t utf8_byte);

@@ -20,6 +20,12 @@ namespace internal {
 
 CharacterConverter::CharacterConverter(mbstate *mbstate) { state = mbstate; }
 
+void CharacterConverter::clear() {
+  state->partial = 0;
+  state->bytes_processed = 0;
+  state->total_bytes = 0;
+}
+
 bool CharacterConverter::isComplete() {
   return state->bytes_processed == state->total_bytes;
 }
