@@ -59,7 +59,7 @@
   },
   "string": {
     "LIBC_CONF_STRING_UNSAFE_WIDE_READ": {
-      "value": false,
+      "value": true,
       "doc": "Read more than a byte at a time to perform byte-string operations like strlen."
     },
     "LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING": {
