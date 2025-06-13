@@ -15108,22 +15108,20 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
     SDValue X = N0;
     SDValue Y = N1.getOperand(0);
     SDValue Z = N1.getOperand(1);
-    bool N1OneUse = N1.hasOneUse();
-    bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
-    bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
-    if ((ZIsConstant != YIsConstant) && N1OneUse) {
-      SDNodeFlags Flags;
-      // If both additions in the original were NUW, the new ones are as well.
-      if (N->getFlags().hasNoUnsignedWrap() &&
-          N1->getFlags().hasNoUnsignedWrap())
-        Flags |= SDNodeFlags::NoUnsignedWrap;
+    if (N1.hasOneUse()) {
+      bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
+      bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
+      if (ZIsConstant != YIsConstant) {
+        // If both additions in the original were NUW, the new ones are as well.
+        SDNodeFlags Flags =
+            (N->getFlags() & N1->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+        if (YIsConstant)
+          std::swap(Y, Z);
 
-      if (YIsConstant)
-        std::swap(Y, Z);
-
-      SDValue Inner = DAG.getMemBasePlusOffset(X, Y, DL, Flags);
-      DCI.AddToWorklist(Inner.getNode());
-      return DAG.getMemBasePlusOffset(Inner, Z, DL, Flags);
+        SDValue Inner = DAG.getMemBasePlusOffset(X, Y, DL, Flags);
+        DCI.AddToWorklist(Inner.getNode());
+        return DAG.getMemBasePlusOffset(Inner, Z, DL, Flags);
+      }
     }
   }
 

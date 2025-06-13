@@ -2686,7 +2686,7 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
     return N0;
 
   // fold (ptradd 0, x) -> x
-  if (isNullConstant(N0) && PtrVT == IntVT)
+  if (PtrVT == IntVT && isNullConstant(N0))
     return N1;
 
   if (N0.getOpcode() != ISD::PTRADD ||
@@ -2704,10 +2704,9 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
   //   * y is a constant and (ptradd x, y) has one use; or
   //   * y and z are both constants.
   if ((YIsConstant && N0OneUse) || (YIsConstant && ZIsConstant)) {
-    SDNodeFlags Flags;
     // If both additions in the original were NUW, the new ones are as well.
-    if (N->getFlags().hasNoUnsignedWrap() && N0->getFlags().hasNoUnsignedWrap())
-      Flags |= SDNodeFlags::NoUnsignedWrap;
+    SDNodeFlags Flags =
+        (N->getFlags() & N0->getFlags()) & SDNodeFlags::NoUnsignedWrap;
     SDValue Add = DAG.getNode(ISD::ADD, DL, IntVT, {Y, Z}, Flags);
     AddToWorklist(Add.getNode());
     return DAG.getMemBasePlusOffset(X, Add, DL, Flags);
