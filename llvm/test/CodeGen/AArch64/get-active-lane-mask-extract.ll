@@ -100,13 +100,11 @@ define void @test_legal_4x2bit_mask(i64 %i, i64 %n) #0 {
 ;
 ; CHECK-SVE2p1-SME2-LABEL: test_legal_4x2bit_mask:
 ; CHECK-SVE2p1-SME2:       // %bb.0:
-; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.h, x0, x1
-; CHECK-SVE2p1-SME2-NEXT:    punpkhi p1.h, p0.b
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p4.h, p0.b
-; CHECK-SVE2p1-SME2-NEXT:    punpkhi p3.h, p1.b
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p2.h, p1.b
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p4.b
-; CHECK-SVE2p1-SME2-NEXT:    punpkhi p1.h, p4.b
+; CHECK-SVE2p1-SME2-NEXT:    cntd x8
+; CHECK-SVE2p1-SME2-NEXT:    adds x8, x0, x8
+; CHECK-SVE2p1-SME2-NEXT:    csinv x8, x8, xzr, lo
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.d, p1.d }, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p2.d, p3.d }, x8, x1
 ; CHECK-SVE2p1-SME2-NEXT:    b use
   %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 %i, i64 %n)
   %v0 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 6)
