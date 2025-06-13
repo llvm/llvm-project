@@ -4419,9 +4419,6 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       return CompleteObject();
     }
 
-    // if(AK == clang::AK_ReferenceInitialization)
-    //     return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
-
     bool IsConstant = BaseType.isConstant(Info.Ctx);
     bool ConstexprVar = false;
     if (const auto *VD = dyn_cast_if_present<VarDecl>(
@@ -4429,7 +4426,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       ConstexprVar = VD->isConstexpr();
 
     // Unless we're looking at a local variable or argument in a constexpr call,
-    // the variable we're reading must be const.
+    // the variable we're reading must be const (unless we are binding to a
+    // reference).
     if (AK != clang::AK_ReferenceInitialization && !Frame) {
       if (IsAccess && isa<ParmVarDecl>(VD)) {
         // Access of a parameter that's not associated with a frame isn't going
@@ -4494,6 +4492,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       }
     }
 
+    // When binding to a reference, the variable does not need to be constexpr
+    // or have constant initalization.
     if (AK != clang::AK_ReferenceInitialization &&
         !evaluateVarDeclInit(Info, E, VD, Frame, LVal.getLValueVersion(),
                              BaseVal))
@@ -4506,10 +4506,13 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     }
     return CompleteObject(LVal.Base, &(*Alloc)->Value,
                           LVal.Base.getDynamicAllocType());
-  } else {
+  }
+  // When binding to a reference, the variable does not need to be
+  // within its lifetime.
+  else if (AK != clang::AK_ReferenceInitialization) {
     const Expr *Base = LVal.Base.dyn_cast<const Expr*>();
 
-    if (AK != clang::AK_ReferenceInitialization && !Frame) {
+    if (!Frame) {
       if (const MaterializeTemporaryExpr *MTE =
               dyn_cast_or_null<MaterializeTemporaryExpr>(Base)) {
         assert(MTE->getStorageDuration() == SD_Static &&
@@ -5229,22 +5232,32 @@ enum EvalStmtResult {
 };
 }
 
+/// Evaluates the initializer of a reference.
 static bool EvaluateInitForDeclOfReferenceType(EvalInfo &Info,
                                                const ValueDecl *D,
                                                const Expr *Init, LValue &Result,
                                                APValue &Val) {
   assert(Init->isGLValue() && D->getType()->isReferenceType());
+  // A reference is an lvalue
   if (!EvaluateLValue(Init, Result, Info))
     return false;
+  // [C++26][decl.ref]
+  // The object designated by such a glvalue can be outside its lifetime
+  // Because a null pointer value or a pointer past the end of an object
+  // does not point to an object, a reference in a well-defined program cannot
+  // refer to such things;
   CompleteObject Obj = findCompleteObject(
       Info, Init, AK_ReferenceInitialization, Result, Init->getType());
+  if (!Obj)
+    return false;
   if (!Result.Designator.Invalid && Result.Designator.isOnePastTheEnd()) {
     Info.FFDiag(Init, diag::note_constexpr_access_past_end)
         << AK_ReferenceInitialization;
     return false;
   }
+  // save the result
   Result.moveInto(Val);
-  return !!Obj;
+  return true;
 }
 
 static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
