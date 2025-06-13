@@ -602,7 +602,9 @@ def : WriteRes<WriteVMovSF, [SMX60_VIEU]>;
 foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = 4 in {
+    defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 }
 
 foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
@@ -618,8 +620,11 @@ foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
 // Complex Gather and Compress
 foreach mx = ["M2", "M4", "M8"] in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
+  defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
-  defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = !mul(LMulLat, 2) in {
+    defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 }
 
 foreach mx = ["M2", "M4", "M8"] in {
