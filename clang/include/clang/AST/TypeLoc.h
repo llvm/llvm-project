@@ -2767,6 +2767,10 @@ class DependentBitIntTypeLoc final
     : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, DependentBitIntTypeLoc,
                                        DependentBitIntType> {};
 
+class PredefinedSugarTypeLoc final
+    : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, PredefinedSugarTypeLoc,
+                                       PredefinedSugarType> {};
+
 class ObjCProtocolLoc {
   ObjCProtocolDecl *Protocol = nullptr;
   SourceLocation Loc = SourceLocation();

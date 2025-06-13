@@ -30,6 +30,7 @@
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtSYCL.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Sema/Designator.h"
@@ -1276,6 +1277,9 @@ public:
 
   /// Build a dependent bit-precise int given its value type.
   QualType RebuildDependentBitIntType(bool IsUnsigned, Expr *NumBitsExpr,
+                                      SourceLocation Loc);
+
+  QualType RebuildPredefinedSugarType(uint32_t K, QualType Underlying,
                                       SourceLocation Loc);
 
   /// Build a new template name given a nested name specifier, a flag
@@ -7243,6 +7247,24 @@ QualType TreeTransform<Derived>::TransformDependentBitIntType(
     BitIntTypeLoc NewTL = TLB.push<BitIntTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
   }
+  return Result;
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformPredefinedSugarType(
+    TypeLocBuilder &TLB, PredefinedSugarTypeLoc TL) {
+  const PredefinedSugarType *EIT = TL.getTypePtr();
+  QualType Result = TL.getType();
+
+  if (getDerived().AlwaysRebuild()) {
+    Result = getDerived().RebuildPredefinedSugarType(
+        EIT->getKind(), EIT->desugar(), TL.getNameLoc());
+    if (Result.isNull())
+      return QualType();
+  }
+
+  PredefinedSugarTypeLoc NewTL = TLB.push<PredefinedSugarTypeLoc>(Result);
+  NewTL.setNameLoc(TL.getNameLoc());
   return Result;
 }
 
@@ -17430,6 +17452,12 @@ template <typename Derived>
 QualType TreeTransform<Derived>::RebuildDependentBitIntType(
     bool IsUnsigned, Expr *NumBitsExpr, SourceLocation Loc) {
   return SemaRef.BuildBitIntType(IsUnsigned, NumBitsExpr, Loc);
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildPredefinedSugarType(
+    uint32_t K, QualType Underlying, SourceLocation Loc) {
+  return SemaRef.Context.getPredefinedSugarType(K, Underlying);
 }
 
 template<typename Derived>
