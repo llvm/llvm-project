@@ -1585,8 +1585,8 @@ std::error_code DataAggregator::parseBranchEvents() {
         errs()
             << "PERF2BOLT-WARNING: All recorded samples for this binary lack "
                "SPE brstack entries. Make sure you are running Linux perf 6.14 "
-               "or later, otherwise you get zero samples. Record the profile with:"
-               "perf record -e 'arm_spe_0/branch_filter=1/'."
+               "or later, otherwise you get zero samples. Record the profile "
+               "with: perf record -e 'arm_spe_0/branch_filter=1/'.";
     } else {
       printBranchStacksDiagnostics(NumTotalSamples - NumSamples);
     }
