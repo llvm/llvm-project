@@ -134,14 +134,23 @@ NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
   return NVPTX::DivPrecisionLevel::IEEE754;
 }
 
-bool NVPTXTargetLowering::usePrecSqrtF32() const {
-  if (UsePrecSqrtF32.getNumOccurrences() > 0) {
-    // If nvptx-prec-sqrtf32 is used on the command-line, always honor it
+bool NVPTXTargetLowering::usePrecSqrtF32(const MachineFunction &MF,
+                                         const SDNode *N) const {
+  // If nvptx-prec-sqrtf32 is used on the command-line, always honor it
+  if (UsePrecSqrtF32.getNumOccurrences() > 0)
     return UsePrecSqrtF32;
-  } else {
-    // Otherwise, use sqrt.approx if fast math is enabled
-    return !getTargetMachine().Options.UnsafeFPMath;
+
+  // Otherwise, use sqrt.approx if fast math is enabled
+  if (allowUnsafeFPMath(MF))
+    return false;
+
+  if (N) {
+    const SDNodeFlags Flags = N->getFlags();
+    if (Flags.hasApproximateFuncs())
+      return false;
   }
+
+  return true;
 }
 
 bool NVPTXTargetLowering::useF32FTZ(const MachineFunction &MF) const {
@@ -1134,7 +1143,8 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
                                              bool &UseOneConst,
                                              bool Reciprocal) const {
   if (!(Enabled == ReciprocalEstimate::Enabled ||
-        (Enabled == ReciprocalEstimate::Unspecified && !usePrecSqrtF32())))
+        (Enabled == ReciprocalEstimate::Unspecified &&
+         !usePrecSqrtF32(DAG.getMachineFunction()))))
     return SDValue();
 
   if (ExtraSteps == ReciprocalEstimate::Unspecified)
