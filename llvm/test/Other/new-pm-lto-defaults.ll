@@ -166,9 +166,7 @@
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 
 ; Make sure we get the IR back out without changes when we print the module.
-; CHECK-O23SZ: ; Function Attrs: norecurse
-; CHECK-O1-LABEL: define void @foo(i32 %n) local_unnamed_addr {
-; CHECK-O23SZ-LABEL: define void @foo(i32 %n) local_unnamed_addr #0 {
+; CHECK-O-LABEL: define void @foo(i32 %n) local_unnamed_addr {
 ; CHECK-O-NEXT: entry:
 ; CHECK-O-NEXT:   br label %loop
 ; CHECK-O:      loop:
@@ -180,7 +178,6 @@
 ; CHECK-O:      exit:
 ; CHECK-O-NEXT:   ret void
 ; CHECK-O-NEXT: }
-; CHECK-O23SZ: attributes #0 = { norecurse }
 ;
 
 declare void @bar() local_unnamed_addr
