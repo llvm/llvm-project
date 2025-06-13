@@ -37,5 +37,5 @@ body:             |
     ; GCN: v_mul_f32_e64 v0, -v1, |v2| ; encoding: [0x00,0x02,0x08,0xd5,0x01,0x05,0x02,0x20]
     $vgpr0 = V_MUL_F32_e64 1, $vgpr1, 2, $vgpr2, 0, 0, implicit $exec, implicit $mode
 
-    ; GCN: NumVgprs: 260
+    ; GCN: NumVgprs: 512
 ...
