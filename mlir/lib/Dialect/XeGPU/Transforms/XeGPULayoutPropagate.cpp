@@ -34,6 +34,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InterleavedRange.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
@@ -678,23 +679,23 @@ using GetLayoutFnTy = function_ref<xegpu::LayoutAttr(Value)>;
 /// result type is a tensor descriptor type, the type is updated with the layout
 /// attribute. The users of the result are also updated with the layout
 /// attribute.
-static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
-                     GetLayoutFnTy getLayoutOfValue) {
+static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
+                              GetLayoutFnTy getLayoutOfValue) {
   // Iterate over all the results.
   for (OpResult result : op->getResults()) {
     Type resultType = result.getType();
     // Layouts are needed only for vector and tensor descriptor types.
     if (!isa<VectorType, xegpu::TensorDescType>(resultType))
       continue;
-    // If the result has any users, we expect it to have a layout.
+    // If the result has any users, emit a warning and continue.
     xegpu::LayoutAttr layout = getLayoutOfValue(result);
     if (!layout && result.getNumUses() > 0) {
-      LLVM_DEBUG(DBGS() << "Expecting layout for result: " << result
-                        << " but got none.\n");
+      op->emitWarning("op has users but no layout assigned for its result");
       continue;
     }
+    // If the result is a tensor descriptor type, update the tensor desc type
+    // with layout.
     if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType)) {
-      // TODO: Handle error.
       auto typeWithLayout = xegpu::TensorDescType::get(
           tensorDescTy.getContext(), tensorDescTy.getShape(),
           tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
@@ -705,17 +706,18 @@ static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     // op.
     xegpu::setLayoutAttr(result, layout);
   }
+  return success();
 }
 
 /// Update the types of successor regions of a branch terminator op (scf.yield)
 /// with assigned layouts.
-static void updateBranchTerminatorOpInterface(
+static LogicalResult updateBranchTerminatorOpInterface(
     mlir::OpBuilder &builder,
     mlir::RegionBranchTerminatorOpInterface terminator,
     GetLayoutFnTy getLayoutOfValue) {
   // Only process if the terminator is inside a region branch op.
   if (!mlir::isa<mlir::RegionBranchOpInterface>(terminator->getParentOp()))
-    return;
+    return success();
 
   llvm::SmallVector<mlir::RegionSuccessor> successors;
   llvm::SmallVector<mlir::Attribute> operands(terminator->getNumOperands(),
@@ -729,51 +731,59 @@ static void updateBranchTerminatorOpInterface(
     mlir::OperandRange forwardedOperands =
         terminator.getSuccessorOperands(successor);
     mlir::ValueRange regionArgs = successor.getSuccessorInputs();
-    for (auto [operand, input] : llvm::zip(forwardedOperands, regionArgs)) {
-      // print arg and inp
-      // llvm::errs() << "arg: " << operand << ", inp: " << input << "\n";
-      Type inputType = input.getType();
-      if (!isa<xegpu::TensorDescType>(inputType))
+    for (auto [forwardedOperand, regionArg] :
+         llvm::zip(forwardedOperands, regionArgs)) {
+      Type inputType = regionArg.getType();
+      // We only need to operate on tensor descriptor or vector types.
+      if (!isa<xegpu::TensorDescType, VectorType>(inputType))
         continue;
-      xegpu::LayoutAttr inputLayout = getLayoutOfValue(input);
-      xegpu::LayoutAttr operandLayout = getLayoutOfValue(operand);
+      xegpu::LayoutAttr argLayout = getLayoutOfValue(regionArg);
+      xegpu::LayoutAttr operandLayout = getLayoutOfValue(forwardedOperand);
 
+      // If either of the layouts is not assigned, we cannot proceed.
       if (!operandLayout) {
-        LLVM_DEBUG(DBGS() << "Expecting layout for region successor operand : "
-                          << operand << " but got none.\n");
-        continue;
-      }
-
-      if (inputLayout && inputLayout != operandLayout) {
         LLVM_DEBUG(
             DBGS()
-            << "Conflicting layouts for region successor operand and input: "
-            << inputLayout << " vs " << operandLayout << "\n");
-        continue;
+            << "No layout assigned for forwarded operand in branch terminator: "
+            << forwardedOperand << "\n");
+        return failure();
+      }
+      // We expect the layouts to match.
+      if (argLayout && argLayout != operandLayout) {
+        LLVM_DEBUG(DBGS() << "Conflicting layouts for region argument and "
+                             "operand forwarded as the argument: "
+                          << argLayout << " vs " << operandLayout << "\n");
+        return failure();
       }
       // Get tensor descriptor type with the layout.
-      auto tdescTy = dyn_cast<xegpu::TensorDescType>(inputType);
-      auto newTdescTy = xegpu::TensorDescType::get(
-          tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
-          tdescTy.getEncoding(), operandLayout);
-      input.setType(newTdescTy);
+      if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(inputType)) {
+        auto newTdescTy = xegpu::TensorDescType::get(
+            tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
+            tdescTy.getEncoding(), operandLayout);
+        regionArg.setType(newTdescTy);
+        continue;
+      }
+      // If the type is a vector type and this region argument is an OpResult,
+      // set the layout attribute on the OpResult.
+      if (auto result = dyn_cast<OpResult>(regionArg))
+        xegpu::setLayoutAttr(result, operandLayout);
     }
   }
+  return success();
 }
 
 /// Some operations contain multiple regions (like scf.for) each of which have
 /// block arguments. This function updates the block arguments types of such
-/// regions with the assigned layouts.
-static void updateBranchOpInterface(mlir::OpBuilder &builder,
-                                    mlir::RegionBranchOpInterface branch,
-                                    GetLayoutFnTy getLayoutOfValue) {
+/// regions with the assigned layouts. Note that results of the region op is
+/// updated by the branch terminator op interface.
+static LogicalResult
+updateBranchOpInterface(mlir::OpBuilder &builder,
+                        mlir::RegionBranchOpInterface branch,
+                        GetLayoutFnTy getLayoutOfValue) {
   mlir::Operation *op = branch.getOperation();
   llvm::SmallVector<mlir::RegionSuccessor> successors;
   llvm::SmallVector<mlir::Attribute> operands(op->getNumOperands(), nullptr);
   branch.getEntrySuccessorRegions(operands, successors);
-  DenseMap<Value, xegpu::LayoutAttr>
-      resultToLayouts; // This map keeps track of layouts of any unused results
-                       // of the branch op.
   mlir::ValueRange results = op->getResults();
 
   for (mlir::RegionSuccessor &successor : successors) {
@@ -788,66 +798,41 @@ static void updateBranchOpInterface(mlir::OpBuilder &builder,
     for (auto [forwardedOperand, regionArg, result] :
          llvm::zip(forwardedOperands, regionArgs, results)) {
       Type inputType = regionArg.getType();
+      // Only update tensor descriptor types in region args.
       if (!isa<xegpu::TensorDescType>(inputType))
         continue;
-      xegpu::LayoutAttr inputLayout = getLayoutOfValue(regionArg);
+      xegpu::LayoutAttr argLayout = getLayoutOfValue(regionArg);
       xegpu::LayoutAttr operandLayout = getLayoutOfValue(forwardedOperand);
 
-      if (!inputLayout || !operandLayout) {
-        LLVM_DEBUG(DBGS() << "No layout assigned for block arg: " << regionArg
-                          << " or init arg: " << forwardedOperand << "\n");
-        continue;
+      if (!argLayout || !operandLayout) {
+        LLVM_DEBUG(DBGS() << "No layout assigned for region arg: " << regionArg
+                          << " or forwarded operand to that arg: "
+                          << forwardedOperand << "\n");
+        return failure();
       }
 
-      // TODO: We expect these two to match.
-      assert(inputLayout == operandLayout &&
-             "Expecting block arg and init arg to have the same layout.");
+      // We expect the layouts to match.
+      if (argLayout != operandLayout) {
+        LLVM_DEBUG(DBGS() << "Conflicting layouts for region argument and "
+                             "operand forwarded as the argument: "
+                          << argLayout << " vs " << operandLayout << "\n");
+        return failure();
+      }
       // Get tensor descriptor type with the layout.
       auto tdescTy = dyn_cast<xegpu::TensorDescType>(inputType);
       auto newTdescTy = xegpu::TensorDescType::get(
           tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
-          tdescTy.getEncoding(), inputLayout);
+          tdescTy.getEncoding(), argLayout);
       regionArg.setType(newTdescTy);
-      // Store the layout for the result.
-      if (resultToLayouts.count(result) != 0 &&
-          resultToLayouts[result] != inputLayout) {
-        LLVM_DEBUG(DBGS() << "Conflicting layouts for result: " << result
-                          << " - " << resultToLayouts[result] << " vs "
-                          << inputLayout << "\n");
-      } else {
-        resultToLayouts[result] = inputLayout;
-      }
     }
   }
-  for (auto [i, r] : llvm::enumerate(op->getResults())) {
-    Type resultType = r.getType();
-    if (!isa<xegpu::TensorDescType, VectorType>(resultType))
-      continue;
-    xegpu::LayoutAttr layout = getLayoutOfValue(r);
-    if (!layout)
-      layout = resultToLayouts[r];
-    if (!layout) {
-      LLVM_DEBUG(DBGS() << "No layout assigned for vector/tensor desc result:"
-                        << r << "\n");
-      continue;
-    }
-    if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType)) {
-      auto newTdescTy = xegpu::TensorDescType::get(
-          tensorDescTy.getContext(), tensorDescTy.getShape(),
-          tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
-      r.setType(newTdescTy);
-      continue;
-    }
-    // If the result is a vector type, add a temporary layout attribute to
-    // the op.
-    xegpu::setLayoutAttr(r, layout);
-  }
+  return success();
 }
 
 /// Update the function arguments and results with the layouts.
-static void updateFunctionOpInterface(mlir::OpBuilder &builder,
-                                      mlir::FunctionOpInterface funcOp,
-                                      GetLayoutFnTy getLayoutOfValue) {
+static LogicalResult updateFunctionOpInterface(mlir::OpBuilder &builder,
+                                               mlir::FunctionOpInterface funcOp,
+                                               GetLayoutFnTy getLayoutOfValue) {
   SmallVector<Type> newArgTypes;
   // Update the function arguments.
   for (BlockArgument arg : funcOp.getArguments()) {
@@ -859,7 +844,7 @@ static void updateFunctionOpInterface(mlir::OpBuilder &builder,
     if (!layout) {
       LLVM_DEBUG(DBGS() << "Expecting layout for function argument: " << arg
                         << " but got none.\n");
-      continue;
+      return failure();
     }
     if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(argType)) {
       auto newTdescTy = xegpu::TensorDescType::get(
@@ -873,6 +858,7 @@ static void updateFunctionOpInterface(mlir::OpBuilder &builder,
   // NOTE: We assume that function results are not expected to have layouts.
   funcOp.setType(FunctionType::get(funcOp.getContext(), newArgTypes,
                                    funcOp.getResultTypes()));
+  return success();
 }
 
 namespace {
@@ -902,27 +888,37 @@ void XeGPULayoutPropagatePass::runOnOperation() {
 
   mlir::OpBuilder builder(&getContext());
   Operation *op = getOperation();
-  op->walk([&](mlir::Block *block) {
+  auto walkResult = op->walk([&](mlir::Block *block) -> WalkResult {
     for (mlir::Operation &op : llvm::reverse(block->getOperations())) {
+      LogicalResult r = success();
       TypeSwitch<Operation *>(&op)
           .Case<mlir::RegionBranchTerminatorOpInterface>(
               [&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
-                updateBranchTerminatorOpInterface(builder, branchTermOp,
-                                                  getXeGPULayoutForValue);
+                r = updateBranchTerminatorOpInterface(builder, branchTermOp,
+                                                      getXeGPULayoutForValue);
               })
           .Case<mlir::RegionBranchOpInterface>(
               [&](mlir::RegionBranchOpInterface regionBrOp) {
-                updateBranchOpInterface(builder, regionBrOp,
-                                        getXeGPULayoutForValue);
+                r = updateBranchOpInterface(builder, regionBrOp,
+                                            getXeGPULayoutForValue);
               })
           .Case<mlir::FunctionOpInterface>(
               [&](mlir::FunctionOpInterface funcOp) {
-                updateFunctionOpInterface(builder, funcOp,
-                                          getXeGPULayoutForValue);
+                r = updateFunctionOpInterface(builder, funcOp,
+                                              getXeGPULayoutForValue);
               })
           .Default([&](Operation *op) {
-            updateOp(builder, op, getXeGPULayoutForValue);
+            r = updateOp(builder, op, getXeGPULayoutForValue);
           });
+      if (failed(r)) {
+        op.emitError("Failed to update operation with the layout.");
+        return WalkResult::interrupt();
+      }
     }
+    return WalkResult::advance();
   });
+  if (walkResult.wasInterrupted()) {
+    signalPassFailure();
+    return;
+  }
 }
