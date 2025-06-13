@@ -578,10 +578,14 @@ class G2S_STRINGS<int dim, string mode, bit mc, bit ch, bit is_shared32 = 0> {
                      # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
 }
 
+def CTAGroupFlags : Operand<i32> {
+  let PrintMethod = "printCTAGroup";
+}
+
 multiclass CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, bit is_shared32, string mode> {
   defvar dims_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "d" # i));
   defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
-  defvar asm_str_default = " [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
+  defvar asm_str_default = "$cg [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
   defvar rc = !if(is_shared32, Int32Regs, Int64Regs);
 
   defvar num_im2col = !if(!ge(dim, 3), !add(dim, -2), 0);
@@ -595,19 +599,22 @@ multiclass CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, bit is_shared32, string mode> 
     !strconcat(asm_str_default, im2col_asm_str), asm_str_default);
 
   def "" : NVPTXInst<(outs),
-            !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag),
+            !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins CTAGroupFlags:$cg)),
             !strconcat(G2S_STRINGS<dim, mode, 0, 0>.inst_name, asm_str, ";"), []>,
             Requires<[hasPTX<80>, hasSM<90>]>;
   def _MC : NVPTXInst<(outs),
-                  !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc)),
+                  !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag,
+                       (ins Int16Regs:$mc, CTAGroupFlags:$cg)),
                   !strconcat(G2S_STRINGS<dim, mode, 1, 0>.inst_name, asm_str, ", $mc;"), []>,
                   Requires<[hasPTX<80>, hasSM<90>]>;
   def _CH : NVPTXInst<(outs),
-                  !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int64Regs:$ch)),
+                  !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag,
+                       (ins Int64Regs:$ch, CTAGroupFlags:$cg)),
                   !strconcat(G2S_STRINGS<dim, mode, 0, 1>.inst_name, asm_str, ", $ch;"), []>,
                   Requires<[hasPTX<80>, hasSM<90>]>;
   def _MC_CH : NVPTXInst<(outs),
-                     !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc, Int64Regs:$ch)),
+                     !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag,
+                          (ins Int16Regs:$mc, Int64Regs:$ch, CTAGroupFlags:$cg)),
                      !strconcat(G2S_STRINGS<dim, mode, 1, 1>.inst_name, asm_str, ", $mc, $ch;"), []>,
                      Requires<[hasPTX<80>, hasSM<90>]>;
 }

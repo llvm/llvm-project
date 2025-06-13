@@ -19,6 +19,7 @@
 
 #include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -323,9 +324,11 @@ computeShapeInfoForInst(Instruction *I,
       return OpShape->second;
   }
 
-  if (isUniformShape(I)) {
+  if (isUniformShape(I) || isa<SelectInst>(I)) {
+    auto Ops = I->operands();
+    auto ShapedOps = isa<SelectInst>(I) ? drop_begin(Ops) : Ops;
     // Find the first operand that has a known shape and use that.
-    for (auto &Op : I->operands()) {
+    for (auto &Op : ShapedOps) {
       auto OpShape = ShapeMap.find(Op.get());
       if (OpShape != ShapeMap.end())
         return OpShape->second;
@@ -701,7 +704,8 @@ public:
       default:
         return isUniformShape(II);
       }
-    return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V);
+    return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V) ||
+           isa<SelectInst>(V);
   }
 
   /// Propagate the shape information of instructions to their users.
@@ -788,10 +792,12 @@ public:
       } else if (isa<StoreInst>(V)) {
         // Nothing to do.  We forward-propagated to this so we would just
         // backward propagate to an instruction with an already known shape.
-      } else if (isUniformShape(V)) {
+      } else if (isUniformShape(V) || isa<SelectInst>(V)) {
+        auto Ops = cast<Instruction>(V)->operands();
+        auto ShapedOps = isa<SelectInst>(V) ? drop_begin(Ops) : Ops;
         // Propagate to all operands.
         ShapeInfo Shape = ShapeMap[V];
-        for (Use &U : cast<Instruction>(V)->operands()) {
+        for (Use &U : ShapedOps) {
           if (setShapeInfo(U.get(), Shape))
             pushInstruction(U.get(), WorkList);
         }
@@ -1148,6 +1154,8 @@ public:
         Result = VisitUnaryOperator(UnOp, SI);
       else if (auto *Intr = dyn_cast<IntrinsicInst>(Inst))
         Result = VisitIntrinsicInst(Intr, SI);
+      else if (auto *Select = dyn_cast<SelectInst>(Inst))
+        Result = VisitSelectInst(Select, SI);
       else if (match(Inst, m_Load(m_Value(Op1))))
         Result = VisitLoad(cast<LoadInst>(Inst), SI, Op1);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
@@ -1216,7 +1224,7 @@ public:
       MatrixTy M = getMatrix(Inst->getOperand(0), SI, Builder);
       Builder.setFastMathFlags(getFastMathFlags(Inst));
 
-      for (auto &Vector : M.vectors()) {
+      for (auto *Vector : M.vectors()) {
         switch (Inst->getIntrinsicID()) {
         case Intrinsic::abs:
           Result.addVector(Builder.CreateBinaryIntrinsic(Intrinsic::abs, Vector,
@@ -2249,9 +2257,8 @@ public:
 
     Builder.setFastMathFlags(getFastMathFlags(Inst));
 
-    for (unsigned I = 0; I < SI.getNumVectors(); ++I)
-      Result.addVector(Builder.CreateBinOp(Inst->getOpcode(), A.getVector(I),
-                                           B.getVector(I)));
+    for (auto [AV, BV] : llvm::zip_equal(A.vectors(), B.vectors()))
+      Result.addVector(Builder.CreateBinOp(Inst->getOpcode(), AV, BV));
 
     return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                    Result.getNumVectors());
@@ -2278,8 +2285,8 @@ public:
       }
     };
 
-    for (unsigned I = 0; I < SI.getNumVectors(); ++I)
-      Result.addVector(BuildVectorOp(M.getVector(I)));
+    for (auto *Vector : M.vectors())
+      Result.addVector(BuildVectorOp(Vector));
 
     return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                    Result.getNumVectors());
@@ -2300,8 +2307,36 @@ public:
     auto *NewVTy = VectorType::get(OrigVTy->getElementType(),
                                    ElementCount::getFixed(M.getStride()));
 
-    for (auto &Vector : M.vectors())
+    for (auto *Vector : M.vectors())
       Result.addVector(Builder.CreateCast(Inst->getOpcode(), Vector, NewVTy));
+
+    return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
+                                   Result.getNumVectors());
+  }
+
+  /// Lower selects.
+  MatrixTy VisitSelectInst(SelectInst *Inst, const ShapeInfo &Shape) {
+    Value *Cond = Inst->getOperand(0);
+    Value *OpA = Inst->getOperand(1);
+    Value *OpB = Inst->getOperand(2);
+
+    IRBuilder<> Builder(Inst);
+
+    MatrixTy Result;
+    MatrixTy A = getMatrix(OpA, Shape, Builder);
+    MatrixTy B = getMatrix(OpB, Shape, Builder);
+
+    SmallVector<Value*> CondV;
+    if (isa<FixedVectorType>(Cond->getType())) {
+      MatrixTy C = getMatrix(Cond, Shape, Builder);
+      llvm::copy(C.vectors(), std::back_inserter(CondV));
+    } else {
+      CondV.resize(A.getNumVectors());
+      std::fill(CondV.begin(), CondV.end(), Cond);
+    }
+
+    for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors()))
+      Result.addVector(Builder.CreateSelect(CV, AV, BV));
 
     return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                    Result.getNumVectors());

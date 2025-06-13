@@ -63,9 +63,6 @@ class BasicBlock final : public Value, // Basic blocks are data objects also
 public:
   using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
                                        ilist_parent<BasicBlock>>;
-  /// Flag recording whether or not this block stores debug-info in the form
-  /// of intrinsic instructions (false) or non-instruction records (true).
-  bool IsNewDbgInfoFormat;
 
 private:
   // Allow Function to renumber blocks.
@@ -94,12 +91,6 @@ public:
   /// DbgRecords into the dbg.value intrinsic representation. Sets
   /// IsNewDbgInfoFormat = false.
   LLVM_ABI void convertFromNewDbgValues();
-
-  /// Ensure the block is in "old" dbg.value format (\p NewFlag == false) or
-  /// in the new format (\p NewFlag == true), converting to the desired format
-  /// if necessary.
-  LLVM_ABI void setIsNewDbgInfoFormat(bool NewFlag);
-  LLVM_ABI void setNewDbgInfoFormatFlag(bool NewFlag);
 
   unsigned getNumber() const {
     assert(getParent() && "only basic blocks in functions have valid numbers");

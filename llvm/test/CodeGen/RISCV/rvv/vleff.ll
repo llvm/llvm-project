@@ -3016,12 +3016,9 @@ entry:
   ret void
 }
 
-; Test with both outputs dead. Make sure the vleff isn't deleted.
 define void @intrinsic_vleff_dead_all(ptr %0, iXLen %1, ptr %2) nounwind {
 ; CHECK-LABEL: intrinsic_vleff_dead_all:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
   %a = call { <vscale x 1 x double>, iXLen } @llvm.riscv.vleff.nxv1f64(
@@ -3034,8 +3031,6 @@ entry:
 define void @intrinsic_vleff_mask_dead_all(<vscale x 1 x double> %0, ptr %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vleff_mask_dead_all:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
-; CHECK-NEXT:    vle64ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call { <vscale x 1 x double>, iXLen } @llvm.riscv.vleff.mask.nxv1f64(

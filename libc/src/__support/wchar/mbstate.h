@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_MBSTATE_H
 
 #include "hdr/types/char32_t.h"
+#include "src/__support/common.h"
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
@@ -17,7 +18,7 @@ namespace internal {
 
 struct mbstate {
   char32_t partial;
-  uint8_t bits_processed;
+  uint8_t bytes_processed;
   uint8_t total_bytes;
 };
 

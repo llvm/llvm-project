@@ -18,7 +18,9 @@ namespace internal {
 
 CharacterConverter::CharacterConverter(mbstate *mbstate) { state = mbstate; }
 
-bool CharacterConverter::isComplete() {}
+bool CharacterConverter::isComplete() {
+  return state->bytes_processed == state->total_bytes;
+}
 
 int CharacterConverter::push(char8_t utf8_byte) {}
 

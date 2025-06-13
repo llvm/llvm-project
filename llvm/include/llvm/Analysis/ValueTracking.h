@@ -47,7 +47,7 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
 
 /// The max limit of the search depth in DecomposeGEPExpression() and
 /// getUnderlyingObject().
-constexpr unsigned MaxLookupSearchDepth = 6;
+constexpr unsigned MaxLookupSearchDepth = 10;
 
 /// Determine which bits of V are known to be either zero or one and return
 /// them in the KnownZero/KnownOne bit sets.

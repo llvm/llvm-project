@@ -17,18 +17,17 @@
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"
 #include "src/stdio/fwrite.h"
-#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/stdio_macros.h"
+#include "src/__support/libc_errno.h"
 
-using LlvmLibcFILETest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::EQ;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::NE;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::returns;
 
-TEST_F(LlvmLibcFILETest, SimpleFileOperations) {
+TEST(LlvmLibcFILETest, SimpleFileOperations) {
   constexpr char FILENAME[] = "testdata/simple_operations.test";
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -42,6 +41,7 @@ TEST_F(LlvmLibcFILETest, SimpleFileOperations) {
   ASSERT_THAT(LIBC_NAMESPACE::fread(read_data, 1, sizeof(CONTENT), file),
               returns(EQ(size_t(0))).with_errno(NE(0)));
   ASSERT_NE(LIBC_NAMESPACE::ferror(file), 0);
+  libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr(file);
   ASSERT_EQ(LIBC_NAMESPACE::ferror(file), 0);
@@ -72,6 +72,7 @@ TEST_F(LlvmLibcFILETest, SimpleFileOperations) {
   ASSERT_THAT(LIBC_NAMESPACE::fwrite(CONTENT, 1, sizeof(CONTENT), file),
               returns(EQ(size_t(0))).with_errno(NE(0)));
   ASSERT_NE(LIBC_NAMESPACE::ferror(file), 0);
+  libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr(file);
 
@@ -79,12 +80,15 @@ TEST_F(LlvmLibcFILETest, SimpleFileOperations) {
   ASSERT_THAT(LIBC_NAMESPACE::fputs(CONTENT, file),
               returns(EQ(EOF)).with_errno(NE(0)));
   ASSERT_NE(LIBC_NAMESPACE::ferror(file), 0);
+  libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr(file);
   ASSERT_EQ(LIBC_NAMESPACE::ferror(file), 0);
 
+  libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::fwrite("nothing", 1, 1, file),
               returns(EQ(size_t(0))).with_errno(NE(0)));
+  libc_errno = 0;
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 
@@ -99,8 +103,10 @@ TEST_F(LlvmLibcFILETest, SimpleFileOperations) {
   ASSERT_EQ(LIBC_NAMESPACE::ferror(file), 0);
 
   // This is not a readable file.
+  libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::fread(data, 1, 1, file),
               returns(EQ(0)).with_errno(NE(0)));
+  libc_errno = 0;
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 
@@ -115,18 +121,21 @@ TEST_F(LlvmLibcFILETest, SimpleFileOperations) {
 
   // Check that the other functions correctly set libc_errno.
 
+  // libc_errno = 0;
   // ASSERT_NE(LIBC_NAMESPACE::fseek(file, 0, SEEK_SET), 0);
   // ASSERT_ERRNO_FAILURE();
 
+  // libc_errno = 0;
   // ASSERT_NE(LIBC_NAMESPACE::fclose(file), 0);
   // ASSERT_ERRNO_FAILURE();
 
+  // libc_errno = 0;
   // ASSERT_EQ(LIBC_NAMESPACE::fopen("INVALID FILE NAME", "r"),
   //           static_cast<FILE *>(nullptr));
   // ASSERT_ERRNO_FAILURE();
 }
 
-TEST_F(LlvmLibcFILETest, FFlush) {
+TEST(LlvmLibcFILETest, FFlush) {
   constexpr char FILENAME[] = "testdata/fflush.test";
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
@@ -147,7 +156,7 @@ TEST_F(LlvmLibcFILETest, FFlush) {
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
 
-TEST_F(LlvmLibcFILETest, FOpenFWriteSizeGreaterThanOne) {
+TEST(LlvmLibcFILETest, FOpenFWriteSizeGreaterThanOne) {
   using MyStruct = struct {
     char c;
     unsigned long long i;
@@ -156,6 +165,7 @@ TEST_F(LlvmLibcFILETest, FOpenFWriteSizeGreaterThanOne) {
   constexpr size_t WRITE_NMEMB = sizeof(WRITE_DATA) / sizeof(MyStruct);
   constexpr char FILENAME[] = "testdata/fread_fwrite.test";
 
+  libc_errno = 0;
   FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(size_t(0), LIBC_NAMESPACE::fwrite(WRITE_DATA, 0, 1, file));

@@ -40,7 +40,7 @@ significantly.
 ``_LIBCPP_ABI_NO_ITERATOR_BASES``
 ---------------------------------
 This removes the ``iterator`` base class from ``back_insert_iterator``, ``front_insert_iterator``, ``insert_iterator``,
-``istream_iterator``, ``ostream_iterator``, ``ostreambuf_itreator``, ``reverse_iterator``, and ``raw_storage_iterator``.
+``istream_iterator``, ``ostream_iterator``, ``ostreambuf_iterator``, ``reverse_iterator``, and ``raw_storage_iterator``.
 This doesn't directly affect the layout of these types in most cases, but may result in more padding being used when
 they are used in combination, for example ``reverse_iterator<reverse_iterator<T>>``.
 
@@ -63,7 +63,7 @@ removes these workarounds for platforms that don't care about ABI compatibility.
 
 ``_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING``
 ------------------------------------------
-This removes artifical padding from ``_LIBCPP_COMPRESSED_PAIR`` and ``_LIBCPP_COMPRESSED_TRIPLE``.
+This removes artificial padding from ``_LIBCPP_COMPRESSED_PAIR`` and ``_LIBCPP_COMPRESSED_TRIPLE``.
 
 These macros are used inside the associative and unordered containers, ``deque``, ``forward_list``, ``future``,
 ``list``, ``basic_string``, ``function``, ``shared_ptr``, ``unique_ptr``, and ``vector`` to stay ABI compatible with the
@@ -83,7 +83,7 @@ flag removes that artificial padding.
 
 Linking TUs which have been compiled against different releases of libc++
 =========================================================================
-libc++ supports linking TUs which have beeen compiled against different releases of libc++ by marking symbols with
+libc++ supports linking TUs which have been compiled against different releases of libc++ by marking symbols with
 hidden visibility and changing the mangling of header-only functions in every release.
 
 
@@ -104,7 +104,7 @@ behave as the flags say.
 
 Availability of symbols in the built library (both static and shared)
 =====================================================================
-In general, libc++ does not make any guarantees about forwards-compability. That is, a TU compiled against new headers
+In general, libc++ does not make any guarantees about forwards-compatibility. That is, a TU compiled against new headers
 may not work with an older library. Vendors who require such support can leverage availability markup. On the other
 hand, backwards compatibility is generally guaranteed.
 
@@ -166,7 +166,7 @@ There are multiple ABI flags which change which type an alias references:
 
 ``_LIBCPP_ABI_INCOMPLETE_TYPES_IN_DEQUE``
 -----------------------------------------
-This changes ``deque::iterator`` to avoid requring complete types for ``deque``.
+This changes ``deque::iterator`` to avoid requiring complete types for ``deque``.
 
 ``_LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE``
 -------------------------------------------------
@@ -198,7 +198,7 @@ This changes the value of ``regex_constants::syntax_option-type::ECMAScript`` to
 ``_LIBCPP_ABI_FIX_CITYHASH_IMPLEMENTATION``
 -------------------------------------------
 This flag fixes the implementation of CityHash used for ``hash<fundamental-type>``. The incorrect implementation of
-CityHash has the roblem that it drops some bits on the floor. Fixing the implementation changes the hash of values,
+CityHash has the problem that it drops some bits on the floor. Fixing the implementation changes the hash of values,
 resulting in an ABI break.
 
 inline namespaces

@@ -862,6 +862,21 @@ public:
                                      InstCombinerImpl &IC);
 };
 
+struct CommonPointerBase {
+  /// Common base pointer.
+  Value *Ptr = nullptr;
+  /// LHS GEPs until common base.
+  SmallVector<GEPOperator *> LHSGEPs;
+  /// RHS GEPs until common base.
+  SmallVector<GEPOperator *> RHSGEPs;
+  /// LHS GEP NoWrapFlags until common base.
+  GEPNoWrapFlags LHSNW = GEPNoWrapFlags::all();
+  /// RHS GEP NoWrapFlags until common base.
+  GEPNoWrapFlags RHSNW = GEPNoWrapFlags::all();
+
+  static CommonPointerBase compute(Value *LHS, Value *RHS);
+};
+
 } // end namespace llvm
 
 #undef DEBUG_TYPE

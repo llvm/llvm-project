@@ -237,10 +237,6 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-designated-initializers>` check by avoiding
   diagnosing designated initializers for ``std::array`` initializations.
 
-- Improved :doc:`modernize-use-integer-sign-comparison
-  <clang-tidy/checks/modernize/use-integer-sign-comparison>` check by matching
-  valid integer expressions not directly wrapped around an implicit cast.
-
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress
   warnings logic for ``nullptr`` in ``std::find``.
