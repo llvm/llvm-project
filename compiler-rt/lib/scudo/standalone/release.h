@@ -536,8 +536,8 @@ struct PageReleaseContext {
     return true;
   }
 
-  template <class TransferBatchT, typename DecompactPtrT>
-  bool markFreeBlocksInRegion(const IntrusiveList<TransferBatchT> &FreeList,
+  template <class BatchT, typename DecompactPtrT>
+  bool markFreeBlocksInRegion(const IntrusiveList<BatchT> &FreeList,
                               DecompactPtrT DecompactPtr, const uptr Base,
                               const uptr RegionIndex, const uptr RegionSize,
                               bool MayContainLastBlockInRegion) {

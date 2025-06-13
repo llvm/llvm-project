@@ -392,8 +392,8 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
         auto Pair = V.back();
         Cache.deallocate(Pair.first, Pair.second);
         V.pop_back();
-        // This increases the chance of having non-full TransferBatches and it
-        // will jump into the code path of merging TransferBatches.
+        // This increases the chance of having non-full Batches and it
+        // will jump into the code path of merging Batches.
         if (std::rand() % 8 == 0)
           Cache.drain();
       }
