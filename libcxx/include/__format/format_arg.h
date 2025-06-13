@@ -182,7 +182,7 @@ _LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<
   case __format::__arg_t::__i128:
 #    if _LIBCPP_HAS_INT128
   {
-    typename __basic_format_arg_value<_Context>::__handle __h{__arg.__value_.__u128_};
+    typename __basic_format_arg_value<_Context>::__handle __h{__arg.__value_.__i128_};
     return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), typename basic_format_arg<_Context>::handle{__h});
   }
 #    else
