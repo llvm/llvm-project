@@ -1635,6 +1635,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_umin:
   case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fmax:
   case Intrinsic::vector_extract:
   case Intrinsic::vector_insert:
   case Intrinsic::vector_interleave2:
@@ -2020,6 +2022,27 @@ Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
   // TODO: Handle undef.
   if (!isa<ConstantVector>(Op) && !isa<ConstantDataVector>(Op))
     return nullptr;
+
+  // Try to fold floating point reductions
+  if (auto *EltC = dyn_cast<ConstantFP>(Op->getAggregateElement(0U))) {
+    APFloat Res(EltC->getValueAPF());
+    for (unsigned I = 1, E = VT->getNumElements(); I != E; ++I) {
+      if (!(EltC = dyn_cast<ConstantFP>(Op->getAggregateElement(I))))
+        return nullptr;
+
+      switch (IID) {
+      case Intrinsic::vector_reduce_fmin:
+        Res = minnum(Res, EltC->getValueAPF());
+        break;
+      case Intrinsic::vector_reduce_fmax:
+        Res = maxnum(Res, EltC->getValueAPF());
+        break;
+      default:
+        return nullptr;
+      }
+    }
+    return ConstantFP::get(VT->getElementType(), Res);
+  }
 
   auto *EltC = dyn_cast<ConstantInt>(Op->getAggregateElement(0U));
   if (!EltC)
@@ -2826,6 +2849,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
   case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_umin:
   case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fmax:
     if (Constant *C = constantFoldVectorReduce(IntrinsicID, Operands[0]))
       return C;
     break;
