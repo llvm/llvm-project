@@ -28,29 +28,18 @@ int CharacterConverter::push(char8_t utf8_byte) {
   // Checking the first byte if first push
   if (state->bytes_processed == 0 && state->total_bytes == 0) {
     state->partial = static_cast<char32_t>(0);
-    int numOnes = cpp::countl_one(utf8_byte);
-    switch (numOnes) {
+    uint8_t numOnes = static_cast<uint8_t>(cpp::countl_one(utf8_byte));
     // 1 byte total
-    case 0:
+    if (numOnes == 0) {
       state->total_bytes = 1;
-      break;
-    // 2 bytes total
-    case 2:
-      state->total_bytes = 2;
-      utf8_byte &= 0x1F;
-      break;
-    // 3 bytes total
-    case 3:
-      state->total_bytes = 3;
-      utf8_byte &= 0x0F;
-      break;
-    // 4 bytes total
-    case 4:
-      state->total_bytes = 4;
-      utf8_byte &= 0x07;
-      break;
+    }
+    // 2 through 4 bytes total
+    else if (numOnes >= 2 && numOnes <= 4) {
+      state->total_bytes = numOnes;
+      utf8_byte &= (0x7F >> numOnes);
+    }
     // Invalid first byte
-    default:
+    else {
       return -1;
     }
     state->partial = static_cast<char32_t>(utf8_byte);
@@ -58,9 +47,11 @@ int CharacterConverter::push(char8_t utf8_byte) {
     return 0;
   }
   // Any subsequent push
+  // Adding 6 more bits so need to left shift
+  const int shift_amount = 6;
   if (cpp::countl_one(utf8_byte) == 1 && !isComplete()) {
     char32_t byte = utf8_byte & 0x3F;
-    state->partial = state->partial << 6;
+    state->partial = state->partial << shift_amount;
     state->partial |= byte;
     state->bytes_processed++;
     return 0;
