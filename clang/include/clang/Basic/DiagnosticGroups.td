@@ -827,8 +827,7 @@ The warning can be resolved by removing one of the conditions above. In rough
 order of preference, this may be done by:
 1. Marking the object ``const`` (if possible)
 2. Moving the object's definition to a source file
-3. Making the object visible using ``__attribute((visibility("default")))``,
-   ``__declspec(dllimport)``, or ``__declspec(dllexport)``.
+3. Making the object visible using ``__attribute((visibility("default")))``, ``__declspec(dllimport)``, or ``__declspec(dllexport)``.
 
 When annotating an object with ``__declspec(dllimport)`` or ``__declspec(dllexport)``,
 take care to ensure that the object is only exported from one dll, and is imported
