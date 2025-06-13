@@ -12,14 +12,13 @@
 #include "mlir/Dialect/EmitC/Transforms/Transforms.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
-#include "mlir/IR/ValueRange.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/LogicalResult.h"
 
 namespace mlir {
 namespace emitc {
@@ -31,12 +30,13 @@ namespace {
 
 struct WrapFuncInClassPass
     : public impl::WrapFuncInClassPassBase<WrapFuncInClassPass> {
+  using WrapFuncInClassPassBase::WrapFuncInClassPassBase;
   void runOnOperation() override {
     Operation *rootOp = getOperation();
     MLIRContext *context = rootOp->getContext();
 
     RewritePatternSet patterns(context);
-    populateFuncPatterns(patterns);
+    populateFuncPatterns(patterns, namedAttribute);
 
     if (failed(applyPatternsGreedily(rootOp, std::move(patterns))))
       return signalPassFailure();
@@ -54,16 +54,13 @@ struct WrapFuncInClassPass
 using namespace mlir;
 using namespace mlir::emitc;
 
-static bool validOp(Operation &opToClone) {
-  return isa<emitc::ConstantOp>(opToClone) ||
-         isa<emitc::SubscriptOp>(opToClone) || isa<emitc::LoadOp>(opToClone) ||
-         isa<emitc::AddOp>(opToClone) || isa<emitc::AssignOp>(opToClone) ||
-         isa<emitc::ReturnOp>(opToClone);
-}
-
 class WrapFuncInClass : public OpRewritePattern<emitc::FuncOp> {
+private:
+  std::string attributeName;
+
 public:
-  using OpRewritePattern<emitc::FuncOp>::OpRewritePattern;
+  WrapFuncInClass(MLIRContext *context, const std::string &attrName)
+      : OpRewritePattern<emitc::FuncOp>(context), attributeName(attrName) {}
 
   LogicalResult matchAndRewrite(emitc::FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
@@ -79,23 +76,25 @@ public:
     rewriter.setInsertionPointToStart(&newClassOp.getBody().front());
 
     auto argAttrs = funcOp.getArgAttrs();
+    if (argAttrs) {
+      for (const auto &[arg, val] :
+           llvm::zip(*argAttrs, funcOp.getArguments())) {
+        if (auto namedAttr =
+                dyn_cast<mlir::DictionaryAttr>(arg).getNamed(attributeName)) {
+          Attribute nv = namedAttr->getValue();
+          StringAttr fieldName =
+              cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(nv)[0]);
+          TypeAttr typeAttr = TypeAttr::get(val.getType());
+          fields.push_back({fieldName, typeAttr});
 
-    for (const auto &[arg, val] : (zip(*argAttrs, funcOp.getArguments()))) {
-      // FIXME:How can we avoid hardcoding this name?
-      // Should we loop through the dictionary and check for each named
-      // attribute if attr.getName().getValue().contains("tf_saved_model")
-      if (auto namedAttr = dyn_cast<mlir::DictionaryAttr>(arg).getNamed(
-              "tf_saved_model.index_path")) {
-        Attribute nv = namedAttr->getValue();
-        StringAttr fieldName =
-            cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(nv)[0]);
-        TypeAttr typeAttr = TypeAttr::get(val.getType());
-        fields.push_back({fieldName, typeAttr});
-
-        rewriter.create<emitc::FieldOp>(funcOp.getLoc(), fieldName, typeAttr,
-                                        /* attributes*/ arg);
-      } else
-        funcOp->emitOpError("Only Covers TF models");
+          rewriter.create<emitc::FieldOp>(funcOp.getLoc(), fieldName, typeAttr,
+                                          /* attributes*/ arg);
+        }
+      }
+    } else {
+      funcOp->emitOpError("arguments should have attributes so we can "
+                          "initialize class fields.");
+      return failure();
     }
 
     rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());
@@ -107,8 +106,10 @@ public:
     FuncOp newFuncOp = rewriter.create<emitc::FuncOp>(
         loc, rewriter.getStringAttr("execute"), funcType);
 
-    rewriter.setInsertionPointToStart(newFuncOp.addEntryBlock());
+    rewriter.createBlock(&newFuncOp.getBody());
+    newFuncOp.getBody().takeBody(funcOp.getBody());
 
+    rewriter.setInsertionPointToStart(&newFuncOp.getBody().front());
     std::vector<Value> newArguments;
     for (auto [fieldName, attr] : fields) {
       auto arg =
@@ -116,10 +117,9 @@ public:
       newArguments.push_back(arg);
     }
 
-    IRMapping mapper;
     for (auto [oldArg, newArg] :
-         llvm::zip(funcOp.getArguments(), newArguments)) {
-      mapper.map(oldArg, newArg);
+         llvm::zip(newFuncOp.getArguments(), newArguments)) {
+      rewriter.replaceAllUsesWith(oldArg, newArg);
     }
 
     while (!newFuncOp.getArguments().empty()) {
@@ -128,23 +128,12 @@ public:
       }
     }
 
-    // TODO: The mapper is easier to use but cloning is more expensive than
-    // moving the body. Working on changing this portion to move the body
-    // instead
-    auto body = llvm::make_early_inc_range(funcOp.getBody().front());
-    for (Operation &opToClone : body) {
-      if (validOp(opToClone)) {
-        rewriter.clone(opToClone, mapper);
-      } else {
-        opToClone.emitOpError("Unsupported operation found");
-      }
-    }
-
     rewriter.replaceOp(funcOp, newClassOp);
     return funcOp->use_empty() ? success() : failure();
   }
 };
 
-void mlir::emitc::populateFuncPatterns(RewritePatternSet &patterns) {
-  patterns.add<WrapFuncInClass>(patterns.getContext());
+void mlir::emitc::populateFuncPatterns(RewritePatternSet &patterns,
+                                       const std::string &namedAttribute) {
+  patterns.add<WrapFuncInClass>(patterns.getContext(), namedAttribute);
 }
