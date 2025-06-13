@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
 #include "SwiftLanguageRuntime.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
@@ -1497,4 +1499,30 @@ SwiftLanguageRuntime::GetGenericSignature(llvm::StringRef function_name,
   return signature;
 }
 
+std::string SwiftLanguageRuntime::GetParentNameIfClosure(StringRef name) {
+  using Kind = Node::Kind;
+  swift::Demangle::Context ctx;
+  auto *node = SwiftLanguageRuntime::DemangleSymbolAsNode(name, ctx);
+  if (!node || node->getKind() != Node::Kind::Global)
+    return "";
+
+  // Replace the top level closure node with the child function-like node, and
+  // attempt to remangle. If successful, this produces the parent function-like
+  // entity.
+  static const auto closure_kinds = {Kind::ImplicitClosure,
+                                     Kind::ExplicitClosure};
+  static const auto function_kinds = {Kind::ImplicitClosure,
+                                      Kind::ExplicitClosure, Kind::Function};
+  auto *closure_node = swift_demangle::GetFirstChildOfKind(node, closure_kinds);
+  auto *parent_func_node =
+      swift_demangle::GetFirstChildOfKind(closure_node, function_kinds);
+  if (!parent_func_node)
+    return "";
+  swift_demangle::ReplaceChildWith(*node, *closure_node, *parent_func_node);
+
+  if (ManglingErrorOr<std::string> mangled = swift::Demangle::mangleNode(node);
+      mangled.isSuccess())
+    return mangled.result();
+  return "";
+}
 } // namespace lldb_private

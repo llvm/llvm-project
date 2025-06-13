@@ -22,6 +22,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -473,6 +474,31 @@ VariableList *StackFrame::GetVariableList(bool get_file_globals,
   return m_variable_list_sp.get();
 }
 
+// BEGIN SWIFT
+// Implement LanguageCPlusPlus::GetParentNameIfClosure and upstream this.
+// rdar://152321823
+
+/// If `sc` represents a "closure-like" function according to `lang`, and
+/// `missing_var_name` can be found in a parent context, create a diagnostic
+/// explaining that this variable is available but not captured by the closure.
+static std::string
+GetVariableNotCapturedDiagnostic(SymbolContext &sc, SourceLanguage lang,
+                                 ConstString missing_var_name) {
+  Language *lang_plugin = Language::FindPlugin(lang.AsLanguageType());
+  if (lang_plugin == nullptr)
+    return "";
+  Function *parent_func =
+      lang_plugin->FindParentOfClosureWithVariable(missing_var_name, sc);
+  if (!parent_func)
+    return "";
+  return llvm::formatv("A variable named '{0}' existed in function '{1}', but "
+                       "it was not captured in the closure.\nHint: the "
+                       "variable may be available in a parent frame.",
+                       missing_var_name,
+                       parent_func->GetDisplayName().GetStringRef());
+}
+// END SWIFT
+
 VariableListSP
 StackFrame::GetInScopeVariableList(bool get_file_globals,
                                    bool must_have_valid_location) {
@@ -674,6 +700,15 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
       return valobj_sp;
   }
   if (!valobj_sp) {
+    // BEGIN SWIFT
+    // Implement LanguageCPlusPlus::GetParentNameIfClosure and upstream this.
+    // rdar://152321823
+    if (std::string message = GetVariableNotCapturedDiagnostic(
+            m_sc, GetLanguage(), name_const_string);
+        !message.empty())
+      error = Status::FromErrorString(message.c_str());
+    else
+    // END SWIFT
     error = Status::FromErrorStringWithFormatv(
         "no variable named '{0}' found in this frame", name_const_string);
     return ValueObjectSP();
