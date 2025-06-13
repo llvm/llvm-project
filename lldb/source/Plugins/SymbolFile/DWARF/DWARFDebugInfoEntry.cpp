@@ -611,7 +611,8 @@ void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
     DWARFUnit *cu, DWARFDebugAranges *debug_aranges) const {
   Log *log = GetLog(DWARFLog::DebugInfo);
   if (m_tag) {
-    if (m_tag == DW_TAG_subprogram) {
+    if (m_tag == DW_TAG_subprogram &&
+        !GetAttributeValueAsOptionalUnsigned(cu, DW_AT_declaration)) {
       if (llvm::Expected<llvm::DWARFAddressRangesVector> ranges =
               GetAttributeAddressRanges(cu, /*check_hi_lo_pc=*/true)) {
         for (const auto &r : *ranges)

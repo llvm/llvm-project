@@ -1,0 +1,25 @@
+# Test that we don't try to determine address range
+# information of forward declaration DIEs which have
+# no DW_AT_low_pc/DW_AT_high_pc in DWARF.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -c -g -gdwarf %t/main.cpp -o %t.o
+# RUN: %lldb -x -b -s %t/commands.input %t.o -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.cpp
+
+struct Foo {
+  void func() {}
+} foo;
+
+void baz() {
+  foo.func();
+}
+
+#--- commands.input
+
+log enable -v dwarf info
+target modules lookup -n func
+
+# CHECK-NOT: DIE has no address range information
