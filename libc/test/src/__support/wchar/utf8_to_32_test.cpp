@@ -104,7 +104,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidMultiByte) {
   ASSERT_EQ(err, -1);
   err = char_conv.push(static_cast<char8_t>(ch[1]));
   ASSERT_EQ(err, 0);
-  // Prev byte was single byte so trying to read another should error.
+  // Prev byte was single byte so trying to push another should error.
   err = char_conv.push(static_cast<char8_t>(ch[2]));
   ASSERT_EQ(err, -1);
   err = char_conv.push(static_cast<char8_t>(ch[3]));
@@ -115,9 +115,10 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidLastByte) {
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_processed = 0;
   state.total_bytes = 0;
+  // Last byte is invalid since it does not have correct starting sequence.
+  // 0xC0 --> 11000000 starting sequence should be 10xxxxxx
   const char ch[4] = {static_cast<char>(0xF1), static_cast<char>(0x80),
-                      static_cast<char>(0x80),
-                      static_cast<char>(0xC0)}; // invalid last byte
+                      static_cast<char>(0x80), static_cast<char>(0xC0)};
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   int err = char_conv.push(static_cast<char8_t>(ch[0]));
