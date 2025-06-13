@@ -3586,10 +3586,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *BO0, *BO1, *X, *Y;
     Value *Vec = II->getArgOperand(0);
     Value *Mask = II->getArgOperand(1);
+    if (!match(Mask, m_AllOnes()))
+      break;
     Value *EVL = II->getArgOperand(2);
     auto m_VPReverse = [&](Value *&Vec) {
       return m_Intrinsic<Intrinsic::experimental_vp_reverse>(
-          m_Value(Vec), m_Specific(Mask), m_Specific(EVL));
+          m_Value(Vec), m_AllOnes(), m_Specific(EVL));
     };
     if (match(Vec, m_OneUse(m_BinOp(m_Value(BO0), m_Value(BO1))))) {
       auto *OldBinOp = cast<BinaryOperator>(Vec);

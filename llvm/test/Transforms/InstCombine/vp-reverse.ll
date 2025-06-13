@@ -13,10 +13,15 @@ define <vscale x 4 x i32> @binop_reverse_elim(<vscale x 4 x i32> %a, <vscale x 4
   ret <vscale x 4 x i32> %add.rev
 }
 
-define <vscale x 4 x i32> @binop_reverse_elim2(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %m, i32 %evl) {
-; CHECK-LABEL: @binop_reverse_elim2(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw <vscale x 4 x i32> [[A_REV:%.*]], [[B_REV:%.*]]
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
+; Negative test - the mask needs to be reversed between the inner and
+; the outer to be correct.
+define <vscale x 4 x i32> @binop_reverse_elim_samemask(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %m, i32 %evl) {
+; CHECK-LABEL: @binop_reverse_elim_samemask(
+; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i1> [[M:%.*]], i32 [[EVL:%.*]])
+; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]], <vscale x 4 x i1> [[M]], i32 [[EVL]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw <vscale x 4 x i32> [[A_REV]], [[B_REV]]
+; CHECK-NEXT:    [[ADD_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[ADD]], <vscale x 4 x i1> [[M]], i32 [[EVL]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD_REV]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> %a, <vscale x 4 x i1> %m, i32 %evl)
   %b.rev = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> %b, <vscale x 4 x i1> %m, i32 %evl)
