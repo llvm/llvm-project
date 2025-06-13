@@ -2024,6 +2024,7 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
             *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), &SS,
             false, NextToken().is(tok::period), nullptr,
             /*IsCtorOrDtorName=*/false,
+            /*IsOperatorName=*/false,
             /*NonTrivialTypeSourceInfo=*/true,
             /*IsClassTemplateDeductionContext=*/true, AllowImplicitTypename)) {
       SourceLocation BeginLoc = Tok.getLocation();
@@ -2267,7 +2268,8 @@ bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
                          /*ObjectHadErrors=*/false, /*EnteringContext*/ false,
                          /*AllowDestructorName*/ true,
                          /*AllowConstructorName*/ true,
-                         /*AllowDeductionGuide*/ false, &TemplateKWLoc,
+                         /*AllowDeductionGuide*/ false,
+                         /*ForPostfixExpression=*/false, &TemplateKWLoc,
                          Result.Name)) {
     T.skipToEnd();
     return true;

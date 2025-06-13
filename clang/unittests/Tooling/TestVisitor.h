@@ -253,8 +253,8 @@ private:
 ///
 /// Visits template instantiations and implicit code by default.
 ///
-/// For post-order traversal etc. use CTRPTestVisitor from
-/// CTRPTestVisitor.h instead.
+/// For post-order traversal etc. use CRTPTestVisitor from
+/// CRTPTestVisitor.h instead.
 class TestVisitor : public DynamicRecursiveASTVisitor,
                     public detail::TestVisitorHelper {
 public:
@@ -273,8 +273,8 @@ public:
 /// and allows simple creation of test visitors running matches on only a small
 /// subset of the Visit* methods.
 ///
-/// For post-order traversal etc. use CTRPExpectedLocationVisitor from
-/// CTRPTestVisitor.h instead.
+/// For post-order traversal etc. use CRTPExpectedLocationVisitor from
+/// CRTPTestVisitor.h instead.
 class ExpectedLocationVisitor : public TestVisitor,
                                 public detail::ExpectedLocationVisitorHelper {
   ASTContext *getASTContext() override { return Context; }

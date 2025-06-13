@@ -604,7 +604,8 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
             /*AllowDestructorName=*/true,
             /*AllowConstructorName=*/
             !(Tok.is(tok::identifier) && NextToken().is(tok::equal)),
-            /*AllowDeductionGuide=*/false, nullptr, D.Name))
+            /*AllowDeductionGuide=*/false, /*ForPostfixExpression=*/false,
+            nullptr, D.Name))
       return true;
   }
 
@@ -641,7 +642,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
     }
     CXXScopeSpec SS;
     if (ParseOptionalCXXScopeSpecifier(SS, /*ParsedType=*/nullptr,
-                                       /*ObectHasErrors=*/false,
+                                       /*ObjectHasErrors=*/false,
                                        /*EnteringConttext=*/false,
                                        /*MayBePseudoDestructor=*/nullptr,
                                        /*IsTypename=*/true,
@@ -670,6 +671,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
           *IdentInfo, IdentLoc, getCurScope(), &SS, /*isClassName=*/true,
           /*HasTrailingDot=*/false,
           /*ObjectType=*/nullptr, /*IsCtorOrDtorName=*/false,
+          /*IsOperatorName=*/false,
           /*WantNontrivialTypeSourceInfo=*/true);
 
       UED = Actions.ActOnUsingEnumDeclaration(
@@ -1399,6 +1401,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   ParsedType Type = Actions.getTypeName(
       *Id, IdLoc, getCurScope(), &SS, /*isClassName=*/true, false, nullptr,
       /*IsCtorOrDtorName=*/false,
+      /*IsOperatorName=*/false,
       /*WantNontrivialTypeSourceInfo=*/true,
       /*IsClassTemplateDeductionContext=*/false, ImplicitTypenameContext::No,
       &CorrectedII);
@@ -2750,7 +2753,8 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
       UnqualifiedId Name;
       if (ParseUnqualifiedId(SS, /*ObjectType=*/nullptr,
                              /*ObjectHadErrors=*/false, false, true, true,
-                             false, &TemplateKWLoc, Name)) {
+                             false, /*ForPostfixExpression=*/false,
+                             &TemplateKWLoc, Name)) {
         SkipUntil(tok::semi);
         return nullptr;
       }
