@@ -416,8 +416,8 @@ static Value *rewriteGlobalVariablesInConstant(
     Value *OldValue = C->getOperand(OpIndex);
     Value *ReplacedValue = nullptr;
     if (Constant *OldConstant = dyn_cast<Constant>(OldValue)) {
-      ReplacedValue = rewriteGlobalVariablesInConstant(
-          OldConstant, GVLoadMap, IRBuilderAtEntry);
+      ReplacedValue = rewriteGlobalVariablesInConstant(OldConstant, GVLoadMap,
+                                                       IRBuilderAtEntry);
     }
     // Do not use short-circuiting, here. We need to traverse the whole tree.
     ReplacedAnyOperands |= ReplacedValue != nullptr;
