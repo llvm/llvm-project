@@ -293,9 +293,12 @@ void Instrumentation::instrumentIndirectTarget(BinaryBasicBlock &BB,
                                                BinaryBasicBlock::iterator &Iter,
                                                BinaryFunction &FromFunction,
                                                uint32_t From) {
-  auto L = FromFunction.getBinaryContext().scopeLock();
-  const size_t IndCallSiteID = Summary->IndCallDescriptions.size();
-  createIndCallDescription(FromFunction, From);
+  size_t IndCallSiteID;
+  {
+    auto L = FromFunction.getBinaryContext().scopeLock();
+    IndCallSiteID = Summary->IndCallDescriptions.size();
+    createIndCallDescription(FromFunction, From);
+  }
 
   BinaryContext &BC = FromFunction.getBinaryContext();
   bool IsTailCall = BC.MIB->isTailCall(*Iter);
@@ -305,9 +308,12 @@ void Instrumentation::instrumentIndirectTarget(BinaryBasicBlock &BB,
                  : IndCallHandlerExitBBFunction->getSymbol(),
       IndCallSiteID, &*BC.Ctx);
 
-  Iter = BB.eraseInstruction(Iter);
-  Iter = insertInstructions(CounterInstrs, BB, Iter);
-  --Iter;
+  if (!BC.isAArch64()) {
+    Iter = BB.eraseInstruction(Iter);
+    Iter = insertInstructions(CounterInstrs, BB, Iter);
+    --Iter;
+  } else
+    Iter = insertInstructions(CounterInstrs, BB, Iter);
 }
 
 bool Instrumentation::instrumentOneTarget(
