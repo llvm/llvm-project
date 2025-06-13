@@ -487,7 +487,10 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
   protocol::ExceptionBreakpointsFilter filter;
   filter.filter = bp.GetFilter();
   filter.label = bp.GetLabel();
+  filter.description = bp.GetLabel();
   filter.defaultState = ExceptionBreakpoint::kDefaultValue;
+  filter.supportsCondition = true;
+  filter.conditionDescription = "";
   return filter;
 }
 
