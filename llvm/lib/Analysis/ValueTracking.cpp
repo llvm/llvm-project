@@ -1375,8 +1375,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
       KnownBits KnownSrc(SubBitWidth);
       for (unsigned i = 0; i != SubScale; ++i) {
-        computeKnownBits(I->getOperand(0), SubDemandedElts.shl(i), KnownSrc,
-                         Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), SubDemandedElts.shl(i), KnownSrc, Q,
+                         Depth + 1);
         unsigned ShiftElt = IsLE ? i : SubScale - 1 - i;
         Known.insertBits(KnownSrc, ShiftElt * SubBitWidth);
       }
@@ -1388,8 +1388,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
       KnownBits KnownSrc(SubBitWidth);
       APInt SubDemandedElts =
           APIntOps::ScaleBitMask(DemandedElts, NumElts / SubScale);
-      computeKnownBits(I->getOperand(0), SubDemandedElts, KnownSrc, Depth + 1,
-                       Q);
+      computeKnownBits(I->getOperand(0), SubDemandedElts, KnownSrc, Q,
+                       Depth + 1);
 
       Known.Zero.setAllBits();
       Known.One.setAllBits();
