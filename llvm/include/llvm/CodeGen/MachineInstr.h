@@ -122,7 +122,8 @@ public:
     Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
     NoUSWrap = 1 << 20,      // Instruction supports geps
                              // no unsigned signed wrap.
-    SameSign = 1 << 21       // Both operands have the same sign.
+    SameSign = 1 << 21,      // Both operands have the same sign.
+    LRSplit = 1 << 22        // Instruction for live range split.
   };
 
 private:
