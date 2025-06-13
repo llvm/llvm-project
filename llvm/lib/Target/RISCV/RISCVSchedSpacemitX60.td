@@ -327,14 +327,15 @@ foreach LMul = [1, 2, 4, 8] in {
 }
 
 let Latency = 4 in {
+  def : WriteRes<WriteVMovSX, [SMX60_VIEU]>;
+  def : WriteRes<WriteVMovFS, [SMX60_VIEU]>;
+  def : WriteRes<WriteVMovSF, [SMX60_VIEU]>;
   def : WriteRes<!cast<SchedWrite>("WriteVMov1V"), [SMX60_VIEU]>;
   def : WriteRes<!cast<SchedWrite>("WriteVMov2V"), [SMX60_VIEU]>;
 }
-foreach LMul = [4, 8] in {
-  let Latency = !mul(LMul, 2) in {
-    def : WriteRes<!cast<SchedWrite>("WriteVMov" # LMul # "V"), [SMX60_VIEU]>;
-  }
-}
+def : WriteRes<WriteVMovXS, [SMX60_VIEU]> { let Latency = 6; }
+def : WriteRes<!cast<SchedWrite>("WriteVMov4V"), [SMX60_VIEU]> { let Latency = 8; }
+def : WriteRes<!cast<SchedWrite>("WriteVMov8V"), [SMX60_VIEU]> { let Latency = 16; }
 
 // 11. Vector Integer Arithmetic Instructions
 foreach mx = SchedMxList in {
@@ -615,15 +616,6 @@ foreach mx = ["M2", "M4", "M8"] in {
   defm "" : LMULWriteResMX<"WriteVSlideUpX", [SMX60_VIEU], mx, IsWorstCase>;
 
   defm "" : LMULWriteResMX<"WriteVSlideDownX", [SMX60_VIEU], mx, IsWorstCase>;
-}
-
-let Latency = 6 in {
-  def : WriteRes<WriteVMovXS, [SMX60_VIEU]>;
-}
-let Latency = 4 in {
-  def : WriteRes<WriteVMovSX, [SMX60_VIEU]>;
-  def : WriteRes<WriteVMovFS, [SMX60_VIEU]>;
-  def : WriteRes<WriteVMovSF, [SMX60_VIEU]>;
 }
 
 // Simple Gather and Compress
