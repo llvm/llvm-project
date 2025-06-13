@@ -1528,7 +1528,7 @@ public:
 
 #ifdef LLVM_INTEGRATE_LIBC
   friend APFloat exp(const APFloat &X, roundingMode RM);
-#endif // LLVM_INTEGRATE_LIBC)
+#endif // LLVM_INTEGRATE_LIBC
 };
 
 static_assert(sizeof(APFloat) == sizeof(detail::IEEEFloat),
