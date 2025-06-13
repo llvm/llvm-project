@@ -10613,6 +10613,23 @@ multiclass sve2p1_dupq<string mnemonic, SDPatternOperator Op> {
   def : SVE_2_Op_Imm_Pat<nxv4f32, Op, nxv4f32, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Imm_Pat<nxv2f64, Op, nxv2f64, i32, VectorIndexD32b_timm, !cast<Instruction>(NAME # _D)>;
   def : SVE_2_Op_Imm_Pat<nxv8bf16, Op, nxv8bf16, i32, VectorIndexH32b_timm, !cast<Instruction>(NAME # _H)>;
+
+  def : Pat<(nxv16i8 (AArch64duplaneq8 nxv16i8:$Op1, VectorIndexB32b_timm:$imm)),
+            (!cast<Instruction>(NAME # _B) $Op1, $imm)>;
+  def : Pat<(nxv8i16 (AArch64duplaneq16 nxv8i16:$Op1, VectorIndexH32b_timm:$imm)),
+            (!cast<Instruction>(NAME # _H) $Op1, $imm)>;
+  def : Pat<(nxv4i32 (AArch64duplaneq32 nxv4i32:$Op1, VectorIndexS32b_timm:$imm)),
+            (!cast<Instruction>(NAME # _S) $Op1, $imm)>;
+  def : Pat<(nxv2i64 (AArch64duplaneq64 nxv2i64:$Op1, VectorIndexD32b_timm:$imm)),
+            (!cast<Instruction>(NAME # _D) $Op1, $imm)>;
+  def : Pat<(nxv8f16 (AArch64duplaneq16 nxv8f16:$Op1, VectorIndexH32b_timm:$imm)),
+            (!cast<Instruction>(NAME # _H) $Op1, $imm)>;
+  def : Pat<(nxv4f32 (AArch64duplaneq32 nxv4f32:$Op1, VectorIndexS32b_timm:$imm)),
+            (!cast<Instruction>(NAME # _S) $Op1, $imm)>;
+  def : Pat<(nxv2f64 (AArch64duplaneq64 nxv2f64:$Op1, VectorIndexD32b_timm:$imm)),
+            (!cast<Instruction>(NAME # _D) $Op1, $imm)>;
+  def : Pat<(nxv8bf16 (AArch64duplaneq16 nxv8bf16:$Op1, VectorIndexH32b_timm:$imm)),
+            (!cast<Instruction>(NAME # _H) $Op1, $imm)>;
 }
 
 
