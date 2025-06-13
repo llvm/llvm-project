@@ -145,7 +145,6 @@ template <> struct BlockScalarTraits<MultiLineString> {
 
 template <> struct ScalarEnumerationTraits<clang::DiagnosticIDs::Level> {
   static void enumeration(IO &IO, clang::DiagnosticIDs::Level &Level) {
-    IO.enumCase(Level, "Error", clang::DiagnosticIDs::Level::Error);
     IO.enumCase(Level, "Warning", clang::DiagnosticIDs::Level::Warning);
     IO.enumCase(Level, "Note", clang::DiagnosticIDs::Level::Note);
   }

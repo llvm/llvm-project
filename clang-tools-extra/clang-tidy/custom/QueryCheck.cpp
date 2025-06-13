@@ -43,18 +43,18 @@ QueryCheck::QueryCheck(llvm::StringRef Name,
     query::QueryRef Q = query::QueryParser::parse(QueryStringRef, QS);
     switch (Q->Kind) {
     case query::QK_Match: {
-      const auto &MatchQuerry = llvm::cast<query::MatchQuery>(*Q);
-      Matchers.push_back(MatchQuerry.Matcher);
+      const auto &MatchQuery = llvm::cast<query::MatchQuery>(*Q);
+      Matchers.push_back(MatchQuery.Matcher);
       break;
     }
     case query::QK_Let: {
-      const auto &LetQuerry = llvm::cast<query::LetQuery>(*Q);
-      LetQuerry.run(llvm::errs(), QS);
+      const auto &LetQuery = llvm::cast<query::LetQuery>(*Q);
+      LetQuery.run(llvm::errs(), QS);
       break;
     }
     case query::QK_Invalid: {
-      const auto &InvalidQuerry = llvm::cast<query::InvalidQuery>(*Q);
-      Context->configurationDiag(InvalidQuerry.ErrStr);
+      const auto &InvalidQuery = llvm::cast<query::InvalidQuery>(*Q);
+      Context->configurationDiag(InvalidQuery.ErrStr);
       break;
     }
     // FIXME: TODO

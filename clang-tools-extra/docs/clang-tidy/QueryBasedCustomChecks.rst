@@ -22,9 +22,9 @@ Configuration
   - Name: check name can been used in `-checks` option.
   - Query: query string
   - Diagnostic: list of diagnostics to be reported.
-     - BindName: name of the node to be bound in `Query`.
-     - Message: message to be reported.
-     - Level: severity of the diagnostic, the possible values are `Note`, `Warning`, `Error`.
+    - BindName: name of the node to be bound in `Query`.
+    - Message: message to be reported.
+    - Level: severity of the diagnostic, the possible values are `Note`, `Warning`.
 
 Example
 =======
