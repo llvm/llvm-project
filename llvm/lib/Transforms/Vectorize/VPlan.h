@@ -525,14 +525,13 @@ public:
 
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPDefID()) {
+    case VPRecipeBase::VPBundleSC:
     case VPRecipeBase::VPDerivedIVSC:
     case VPRecipeBase::VPEVLBasedIVPHISC:
     case VPRecipeBase::VPExpandSCEVSC:
     case VPRecipeBase::VPInstructionSC:
     case VPRecipeBase::VPReductionEVLSC:
     case VPRecipeBase::VPReductionSC:
-    case VPRecipeBase::VPMulAccumulateReductionSC:
-    case VPRecipeBase::VPExtendedReductionSC:
     case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
     case VPRecipeBase::VPVectorPointerSC:
@@ -852,9 +851,7 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
            R->getVPDefID() == VPRecipeBase::VPVectorEndPointerSC ||
-           R->getVPDefID() == VPRecipeBase::VPVectorPointerSC ||
-           R->getVPDefID() == VPRecipeBase::VPExtendedReductionSC ||
-           R->getVPDefID() == VPRecipeBase::VPMulAccumulateReductionSC;
+           R->getVPDefID() == VPRecipeBase::VPVectorPointerSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2431,29 +2428,6 @@ protected:
     }
     setUnderlyingValue(I);
   }
-
-  /// For VPExtendedReductionRecipe.
-  /// Note that the debug location is from the extend.
-  VPReductionRecipe(const unsigned char SC, const RecurKind RdxKind,
-                    ArrayRef<VPValue *> Operands, VPValue *CondOp,
-                    bool IsOrdered, DebugLoc DL)
-      : VPRecipeWithIRFlags(SC, Operands, DL), RdxKind(RdxKind),
-        IsOrdered(IsOrdered), IsConditional(CondOp) {
-    if (CondOp)
-      addOperand(CondOp);
-  }
-
-  /// For VPMulAccumulateReductionRecipe.
-  /// Note that the NUW/NSW flags and the debug location are from the Mul.
-  VPReductionRecipe(const unsigned char SC, const RecurKind RdxKind,
-                    ArrayRef<VPValue *> Operands, VPValue *CondOp,
-                    bool IsOrdered, WrapFlagsTy WrapFlags, DebugLoc DL)
-      : VPRecipeWithIRFlags(SC, Operands, WrapFlags, DL), RdxKind(RdxKind),
-        IsOrdered(IsOrdered), IsConditional(CondOp) {
-    if (CondOp)
-      addOperand(CondOp);
-  }
-
 public:
   VPReductionRecipe(RecurKind RdxKind, FastMathFlags FMFs, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
@@ -2479,9 +2453,7 @@ public:
 
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPReductionSC ||
-           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
-           R->getVPDefID() == VPRecipeBase::VPExtendedReductionSC ||
-           R->getVPDefID() == VPRecipeBase::VPMulAccumulateReductionSC;
+           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2620,190 +2592,6 @@ public:
   }
 };
 
-/// A recipe to represent inloop extended reduction operations, performing a
-/// reduction on a extended vector operand into a scalar value, and adding the
-/// result to a chain. This recipe is abstract and needs to be lowered to
-/// concrete recipes before codegen. The operands are {ChainOp, VecOp,
-/// [Condition]}.
-class VPExtendedReductionRecipe : public VPReductionRecipe {
-  /// Opcode of the extend for VecOp.
-  Instruction::CastOps ExtOp;
-
-  /// The scalar type after extending.
-  Type *ResultTy;
-
-  /// For cloning VPExtendedReductionRecipe.
-  VPExtendedReductionRecipe(VPExtendedReductionRecipe *ExtRed)
-      : VPReductionRecipe(
-            VPDef::VPExtendedReductionSC, ExtRed->getRecurrenceKind(),
-            {ExtRed->getChainOp(), ExtRed->getVecOp()}, ExtRed->getCondOp(),
-            ExtRed->isOrdered(), ExtRed->getDebugLoc()),
-        ExtOp(ExtRed->getExtOpcode()), ResultTy(ExtRed->getResultType()) {
-    transferFlags(*ExtRed);
-    setUnderlyingValue(ExtRed->getUnderlyingValue());
-  }
-
-public:
-  VPExtendedReductionRecipe(VPReductionRecipe *R, VPWidenCastRecipe *Ext)
-      : VPReductionRecipe(VPDef::VPExtendedReductionSC, R->getRecurrenceKind(),
-                          {R->getChainOp(), Ext->getOperand(0)}, R->getCondOp(),
-                          R->isOrdered(), Ext->getDebugLoc()),
-        ExtOp(Ext->getOpcode()), ResultTy(Ext->getResultType()) {
-    assert((ExtOp == Instruction::CastOps::ZExt ||
-            ExtOp == Instruction::CastOps::SExt) &&
-           "VPExtendedReductionRecipe only supports zext and sext.");
-
-    transferFlags(*Ext);
-    setUnderlyingValue(R->getUnderlyingValue());
-  }
-
-  ~VPExtendedReductionRecipe() override = default;
-
-  VPExtendedReductionRecipe *clone() override {
-    return new VPExtendedReductionRecipe(this);
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPExtendedReductionSC);
-
-  void execute(VPTransformState &State) override {
-    llvm_unreachable("VPExtendedReductionRecipe should be transform to "
-                     "VPExtendedRecipe + VPReductionRecipe before execution.");
-  };
-
-  /// Return the cost of VPExtendedReductionRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
-  /// The scalar type after extending.
-  Type *getResultType() const { return ResultTy; }
-
-  /// Is the extend ZExt?
-  bool isZExt() const { return getExtOpcode() == Instruction::ZExt; }
-
-  /// Get the opcode of the extend for VecOp.
-  Instruction::CastOps getExtOpcode() const { return ExtOp; }
-};
-
-/// A recipe to represent inloop MulAccumulateReduction operations,  multiplying
-/// the vector operands (which may be extended), performing a reduction.add on
-/// the result, and adding the scalar result to a chain. This recipe is abstract
-/// and needs to be lowered to concrete recipes before codegen. The operands are
-/// {ChainOp, VecOp1, VecOp2, [Condition]}.
-class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
-  /// Opcode of the extend for VecOp1 and VecOp2.
-  Instruction::CastOps ExtOp;
-
-  /// Non-neg flag of the extend recipe.
-  bool IsNonNeg = false;
-
-  /// The scalar type after extending.
-  Type *ResultTy = nullptr;
-
-  /// For cloning VPMulAccumulateReductionRecipe.
-  VPMulAccumulateReductionRecipe(VPMulAccumulateReductionRecipe *MulAcc)
-      : VPReductionRecipe(
-            VPDef::VPMulAccumulateReductionSC, MulAcc->getRecurrenceKind(),
-            {MulAcc->getChainOp(), MulAcc->getVecOp0(), MulAcc->getVecOp1()},
-            MulAcc->getCondOp(), MulAcc->isOrdered(),
-            WrapFlagsTy(MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap()),
-            MulAcc->getDebugLoc()),
-        ExtOp(MulAcc->getExtOpcode()), IsNonNeg(MulAcc->isNonNeg()),
-        ResultTy(MulAcc->getResultType()) {
-    transferFlags(*MulAcc);
-    setUnderlyingValue(MulAcc->getUnderlyingValue());
-  }
-
-public:
-  VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul,
-                                 VPWidenCastRecipe *Ext0,
-                                 VPWidenCastRecipe *Ext1, Type *ResultTy)
-      : VPReductionRecipe(
-            VPDef::VPMulAccumulateReductionSC, R->getRecurrenceKind(),
-            {R->getChainOp(), Ext0->getOperand(0), Ext1->getOperand(0)},
-            R->getCondOp(), R->isOrdered(),
-            WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
-            R->getDebugLoc()),
-        ExtOp(Ext0->getOpcode()), ResultTy(ResultTy) {
-    assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind()) ==
-               Instruction::Add &&
-           "The reduction instruction in MulAccumulateteReductionRecipe must "
-           "be Add");
-    assert((ExtOp == Instruction::CastOps::ZExt ||
-            ExtOp == Instruction::CastOps::SExt) &&
-           "VPMulAccumulateReductionRecipe only supports zext and sext.");
-    setUnderlyingValue(R->getUnderlyingValue());
-    // Only set the non-negative flag if the original recipe contains.
-    if (Ext0->hasNonNegFlag())
-      IsNonNeg = Ext0->isNonNeg();
-  }
-
-  VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul,
-                                 Type *ResultTy)
-      : VPReductionRecipe(
-            VPDef::VPMulAccumulateReductionSC, R->getRecurrenceKind(),
-            {R->getChainOp(), Mul->getOperand(0), Mul->getOperand(1)},
-            R->getCondOp(), R->isOrdered(),
-            WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
-            R->getDebugLoc()),
-        ExtOp(Instruction::CastOps::CastOpsEnd), ResultTy(ResultTy) {
-    assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind()) ==
-               Instruction::Add &&
-           "The reduction instruction in MulAccumulateReductionRecipe must be "
-           "Add");
-    setUnderlyingValue(R->getUnderlyingValue());
-  }
-
-  ~VPMulAccumulateReductionRecipe() override = default;
-
-  VPMulAccumulateReductionRecipe *clone() override {
-    return new VPMulAccumulateReductionRecipe(this);
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPMulAccumulateReductionSC);
-
-  void execute(VPTransformState &State) override {
-    llvm_unreachable("VPMulAccumulateReductionRecipe should transform to "
-                     "VPWidenCastRecipe + "
-                     "VPWidenRecipe + VPReductionRecipe before execution");
-  }
-
-  /// Return the cost of VPMulAccumulateReductionRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
-  Type *getResultType() const { return ResultTy; }
-
-  /// The first vector value to be extended and reduced.
-  VPValue *getVecOp0() const { return getOperand(1); }
-
-  /// The second vector value to be extended and reduced.
-  VPValue *getVecOp1() const { return getOperand(2); }
-
-  /// Return true if this recipe contains extended operands.
-  bool isExtended() const { return ExtOp != Instruction::CastOps::CastOpsEnd; }
-
-  /// Return the opcode of the extends for the operands.
-  Instruction::CastOps getExtOpcode() const { return ExtOp; }
-
-  /// Return if the operands are zero-extended.
-  bool isZExt() const { return ExtOp == Instruction::CastOps::ZExt; }
-
-  /// Return true if the operand extends have the non-negative flag.
-  bool isNonNeg() const { return IsNonNeg; }
-};
-
 /// VPReplicateRecipe replicates a given instruction producing multiple scalar
 /// copies of the original scalar type, one per lane, instead of producing a
 /// single copy of widened type for all lanes. If the instruction is known to be
@@ -2920,6 +2708,123 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
+};
+
+/// A recipe to combine multiple recipes into a 'bundle' recipe, which should be
+/// considered as single entity for cost-modeling and transforms. The recipe
+/// needs to be 'unbundled', i.e. replaced by its individual recipes before
+/// execute.
+class VPBundleRecipe : public VPSingleDefRecipe {
+  enum class BundleTypes {
+    ExtendedReduction,
+    MulAccumulateReduction,
+  };
+
+  /// Recipes bundled together in this VPBundleRecipe.
+  SmallVector<VPSingleDefRecipe *> BundledOps;
+
+  /// Temporary VPValues used for external operands of the bundle, i.e. operands
+  /// not defined by recipes in the bundle.
+  SmallVector<VPValue *> TmpValues;
+
+  /// Type of the bundle.
+  BundleTypes BundleType;
+
+  VPBundleRecipe(BundleTypes BundleType, ArrayRef<VPSingleDefRecipe *> ToBundle)
+      : VPSingleDefRecipe(VPDef::VPBundleSC, {}, {}), BundledOps(ToBundle),
+        BundleType(BundleType) {
+    // Bundle up the operand recipes.
+    SmallPtrSet<VPUser *, 4> BundledUsers;
+    for (auto *R : ToBundle)
+      BundledUsers.insert(R);
+
+    // Recipes in the bundle, expect the last one, must only be used inside the
+    // bundle. If there other external users, clone the recipes for the bundle.
+    for (const auto &[Idx, R] : enumerate(drop_end(ToBundle))) {
+      if (all_of(R->users(), [&BundledUsers](VPUser *U) {
+            return BundledUsers.contains(U);
+          })) {
+        if (R->getParent())
+          R->removeFromParent();
+        continue;
+      }
+      // There users external to the bundle. Clone the recipe for use in the
+      // bundle and update all its in-bundle users.
+      this->BundledOps[Idx] = R->clone();
+      BundledUsers.insert(this->BundledOps[Idx]);
+      R->replaceUsesWithIf(this->BundledOps[Idx],
+                           [&BundledUsers](VPUser &U, unsigned) {
+                             return BundledUsers.contains(&U);
+                           });
+    }
+    BundledOps.back()->removeFromParent();
+
+    // Internalize all external operands to the bundled operations. To do so,
+    // create new temporary VPValues for all operands not defined by recipe in
+    // the bundle. The original operands are added as operands of the
+    // VPBundleRecipe.
+    for (auto *R : this->BundledOps) {
+      for (const auto &[Idx, Op] : enumerate(R->operands())) {
+        auto *Def = Op->getDefiningRecipe();
+        if (Def && BundledUsers.contains(Def))
+          continue;
+        addOperand(Op);
+        TmpValues.push_back(new VPValue());
+        R->setOperand(Idx, TmpValues.back());
+      }
+    }
+  }
+
+public:
+  VPBundleRecipe(VPWidenCastRecipe *Ext, VPReductionRecipe *Red)
+      : VPBundleRecipe(BundleTypes::ExtendedReduction, {Ext, Red}) {}
+  VPBundleRecipe(VPWidenRecipe *Mul, VPReductionRecipe *Red)
+      : VPBundleRecipe(BundleTypes::MulAccumulateReduction, {Mul, Red}) {}
+  VPBundleRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
+                 VPWidenRecipe *Mul, VPReductionRecipe *Red)
+      : VPBundleRecipe(BundleTypes::MulAccumulateReduction,
+                       {Ext0, Ext1, Mul, Red}) {}
+  VPBundleRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
+                 VPWidenRecipe *Mul, VPWidenCastRecipe *Ext2,
+                 VPReductionRecipe *Red)
+      : VPBundleRecipe(BundleTypes::MulAccumulateReduction,
+                       {Ext0, Ext1, Mul, Ext2, Red}) {}
+
+  ~VPBundleRecipe() override {
+    SmallPtrSet<VPRecipeBase *, 4> Seen;
+    for (auto *R : reverse(BundledOps))
+      if (Seen.insert(R).second)
+        delete R;
+    for (VPValue *T : TmpValues)
+      delete T;
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPBundleSC)
+
+  VPBundleRecipe *clone() override {
+    return new VPBundleRecipe(BundleType, BundledOps);
+  }
+
+  /// Return the VPSingleDefRecipe producing the final result of the bundled
+  /// recipe.
+  VPSingleDefRecipe *getResultOp() const { return BundledOps.back(); }
+
+  void unbundle();
+
+  /// Generate the extraction of the appropriate bit from the block mask and the
+  /// conditional branch.
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("recipe must be removed before execute");
+  }
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// VPPredInstPHIRecipe is a recipe for generating the phi nodes needed when

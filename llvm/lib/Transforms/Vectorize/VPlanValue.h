@@ -32,6 +32,7 @@ namespace llvm {
 // Forward declarations.
 class raw_ostream;
 class Value;
+class VPBundleRecipe;
 class VPDef;
 struct VPDoubleValueDef;
 class VPSlotTracker;
@@ -49,6 +50,7 @@ class VPValue {
   friend struct VPDoubleValueDef;
   friend class VPInterleaveRecipe;
   friend class VPlan;
+  friend class VPBundleRecipe;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -328,6 +330,7 @@ public:
   /// type identification.
   using VPRecipeTy = enum {
     VPBranchOnMaskSC,
+    VPBundleSC,
     VPDerivedIVSC,
     VPExpandSCEVSC,
     VPIRInstructionSC,
@@ -335,8 +338,6 @@ public:
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,
-    VPMulAccumulateReductionSC,
-    VPExtendedReductionSC,
     VPPartialReductionSC,
     VPReplicateSC,
     VPScalarIVStepsSC,
