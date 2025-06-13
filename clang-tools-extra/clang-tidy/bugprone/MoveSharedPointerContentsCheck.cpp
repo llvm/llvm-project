@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <iostream>
-
 #include "MoveSharedPointerContentsCheck.h"
 #include "../ClangTidyCheck.h"
 #include "../utils/Matchers.h"
@@ -20,9 +18,9 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 namespace {
 
-// Reports whether the QualType matches the inner matcher, which is expected to be
-// matchesAnyListedName. The QualType is expected to either point to a RecordDecl
-// (for concrete types) or an ElaboratedType (for dependent ones).
+// Reports whether the QualType matches the inner matcher, which is expected to
+// be matchesAnyListedName. The QualType is expected to either point to a
+// RecordDecl (for concrete types) or an ElaboratedType (for dependent ones).
 AST_MATCHER_P(QualType, isSharedPointer,
               clang::ast_matchers::internal::Matcher<NamedDecl>, InnerMatcher) {
   if (const auto *RD = Node.getTypePtr()->getAsCXXRecordDecl(); RD != nullptr) {
@@ -41,16 +39,18 @@ AST_MATCHER_P(QualType, isSharedPointer,
   return false;
 }
 
-} // namespace
+}  // namespace
 
 MoveSharedPointerContentsCheck::MoveSharedPointerContentsCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       SharedPointerClasses(utils::options::parseStringList(
-          Options.get("SharedPointerClasses", "::std::shared_ptr;::boost::shared_pointer"))) {}
+          Options.get("SharedPointerClasses",
+                      "::std::shared_ptr;::boost::shared_pointer"))) {}
 
 void MoveSharedPointerContentsCheck::registerMatchers(MatchFinder *Finder) {
-  auto isStdMove = callee(functionDecl(hasAnyName("::std::move", "::std::forward")));
+  auto isStdMove =
+      callee(functionDecl(hasAnyName("::std::move", "::std::forward")));
 
   auto resolvedType = callExpr(anyOf(
       // Resolved type, direct move.
