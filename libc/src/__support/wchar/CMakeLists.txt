@@ -16,5 +16,6 @@ add_object_library(
     libc.hdr.types.char8_t
     libc.hdr.types.char32_t
     libc.src.__support.error_or
+    libc.src.__support.math_extras
     .mbstate
 )

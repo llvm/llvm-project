@@ -10,6 +10,7 @@
 #include "hdr/types/char8_t.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
+#include "src/__support/math_extras.h"
 #include "src/__support/wchar/mbstate.h"
 
 #include "character_converter.h"
@@ -53,7 +54,8 @@ ErrorOr<char8_t> CharacterConverter::pop_utf8() {
   // the number of bits per utf-8 byte that actually encode character
   // information not metadata (# of bits excluding the byte headers)
   const int ENCODED_BITS_PER_BYTE = 6;
-  const int MASK_LOWER_SIX = 0x3f;
+  const int MASK_LOWER_SIX =
+      mask_trailing_ones<unsigned int, ENCODED_BITS_PER_BYTE>();
 
   char32_t output;
 
