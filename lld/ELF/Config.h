@@ -139,6 +139,23 @@ enum class GcsPolicy { Implicit, Never, Always };
 // For some options that resemble -z bti-report={none,warning,error}
 enum class ReportPolicy { None, Warning, Error };
 
+// Describes the signing schema for a file using the PAuth ABI extension.
+// Two files are considered compatible when both `platform` and `version` match.
+// The pair (0, 0) is reserved to indicate incompatibility with the PAuth ABI.
+struct AArch64PauthAbiCoreInfo {
+  uint64_t platform;
+  uint64_t version;
+  // Returns true if the core info is not the reserved (0, 0) value.
+  bool isValid() const { return platform || version; }
+  static constexpr size_t size() { return sizeof(platform) + sizeof(version); }
+  bool operator==(const AArch64PauthAbiCoreInfo &other) const {
+    return platform == other.platform && version == other.version;
+  }
+  bool operator!=(const AArch64PauthAbiCoreInfo &other) const {
+    return !(*this == other);
+  }
+};
+
 struct SymbolVersion {
   llvm::StringRef name;
   bool isExternCpp;
@@ -699,7 +716,7 @@ struct Ctx : CommonLinkerContext {
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 
-  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
+  std::optional<AArch64PauthAbiCoreInfo> aarch64PauthAbiCoreInfo;
 };
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
