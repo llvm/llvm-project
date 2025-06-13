@@ -378,6 +378,10 @@ private:
   }
 
   Value *EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP = false);
+  /// Emit sum of multiple GEP offsets. The GEPs are processed in reverse
+  /// order.
+  Value *EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs, GEPNoWrapFlags NW,
+                        Type *IdxTy, bool RewriteGEPs);
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
   Instruction *foldBitcastExtElt(ExtractElementInst &ExtElt);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);
