@@ -21,7 +21,7 @@ using namespace llvm::logicalview;
 
 #define DEBUG_TYPE "Object"
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
 uint64_t LVObject::GID = 0;
 #endif
 

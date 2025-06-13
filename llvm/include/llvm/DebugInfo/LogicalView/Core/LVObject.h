@@ -15,6 +15,7 @@
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVOBJECT_H
 
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Config/abi-breaking.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSupport.h"
@@ -155,7 +156,7 @@ class LLVM_ABI LVObject {
   // copy constructor to create that object; it is used to print a reference
   // to another object and in the case of templates, to print its encoded args.
   LVObject(const LVObject &Object) {
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
     incID();
 #endif
     Properties = Object.Properties;
@@ -166,7 +167,7 @@ class LLVM_ABI LVObject {
     Parent = Object.Parent;
   }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   // This is an internal ID used for debugging logical elements. It is used
   // for cases where an unique offset within the binary input file is not
   // available.
@@ -194,7 +195,7 @@ protected:
 
 public:
   LVObject() {
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
     incID();
 #endif
   };
@@ -318,7 +319,7 @@ public:
 
   uint64_t getID() const {
     return
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
         ID;
 #else
         0;
