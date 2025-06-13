@@ -230,6 +230,7 @@ struct MissingFeatures {
   static bool attributeNoBuiltin() { return false; }
   static bool thunks() { return false; }
   static bool runCleanupsScope() { return false; }
+  static bool asmLabelAttr() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
