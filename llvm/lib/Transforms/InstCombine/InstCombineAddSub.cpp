@@ -2131,27 +2131,8 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
   bool RewriteGEPs = !Base.LHSGEPs.empty() && !Base.RHSGEPs.empty();
 
   Type *IdxTy = DL.getIndexType(LHS->getType());
-  auto EmitOffsetFromBase = [&](ArrayRef<GEPOperator *> GEPs,
-                                GEPNoWrapFlags NW) -> Value * {
-    Value *Sum = nullptr;
-    for (GEPOperator *GEP : reverse(GEPs)) {
-      Value *Offset = EmitGEPOffset(GEP, RewriteGEPs);
-      if (Offset->getType() != IdxTy)
-        Offset = Builder.CreateVectorSplat(
-            cast<VectorType>(IdxTy)->getElementCount(), Offset);
-      if (Sum)
-        Sum = Builder.CreateAdd(Sum, Offset, "", NW.hasNoUnsignedWrap(),
-                                NW.isInBounds());
-      else
-        Sum = Offset;
-    }
-    if (!Sum)
-      return Constant::getNullValue(IdxTy);
-    return Sum;
-  };
-
-  Value *Result = EmitOffsetFromBase(Base.LHSGEPs, Base.LHSNW);
-  Value *Offset2 = EmitOffsetFromBase(Base.RHSGEPs, Base.RHSNW);
+  Value *Result = EmitGEPOffsets(Base.LHSGEPs, Base.LHSNW, IdxTy, RewriteGEPs);
+  Value *Offset2 = EmitGEPOffsets(Base.RHSGEPs, Base.RHSNW, IdxTy, RewriteGEPs);
 
   // If this is a single inbounds GEP and the original sub was nuw,
   // then the final multiplication is also nuw.
