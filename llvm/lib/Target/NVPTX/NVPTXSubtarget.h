@@ -120,9 +120,9 @@ public:
   // TMA G2S copy with cta_group::1/2 support
   bool hasCpAsyncBulkTensorCTAGroupSupport() const {
     // TODO: Update/tidy-up after the family-conditional support arrives
-    return ((FullSmVersion == 1001 || FullSmVersion == 1011) &&
+    return ((FullSmVersion == 10011 || FullSmVersion == 10111) &&
             PTXVersion >= 86) ||
-           (FullSmVersion == 1031 && PTXVersion >= 88);
+           (FullSmVersion == 10311 && PTXVersion >= 88);
   }
 
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction

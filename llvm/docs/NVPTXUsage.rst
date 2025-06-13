@@ -150,7 +150,7 @@ Example: 64-bit PTX for CUDA Driver API: ``nvptx64-nvidia-cuda``
 .. _nvptx_arch_hierarchy:
 
 NVPTX Architecture Hierarchy and Ordering
-========================================
+=========================================
 
 GPU architectures: sm_2Y/sm_3Y/sm_5Y/sm_6Y/sm_7Y/sm_8Y/sm_9Y/sm_10Y/sm_12Y
 ('Y' represents version within the architecture)
