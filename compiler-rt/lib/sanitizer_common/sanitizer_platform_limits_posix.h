@@ -102,8 +102,10 @@ const unsigned struct_kernel_stat_sz = SANITIZER_ANDROID
                                            ? FIRST_32_SECOND_64(104, 128)
 #      if defined(_ABIN32) && _MIPS_SIM == _ABIN32
                                            : FIRST_32_SECOND_64(176, 216);
-#      else
+#      elif !SANITIZER_MUSL
                                            : FIRST_32_SECOND_64(160, 216);
+#      else
+                                           : FIRST_32_SECOND_64(160, 208);
 #      endif
 const unsigned struct_kernel_stat64_sz = 104;
 #elif defined(__s390__) && !defined(__s390x__)
