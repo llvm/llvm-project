@@ -257,12 +257,6 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
       set(LLVM_LINKER_IS_GNULD YES CACHE INTERNAL "")
       message(STATUS "Linker detection: GNU ld")
-    elseif("${stderr}" MATCHES "(illumos)" OR
-           "${stdout}" MATCHES "(illumos)")
-      set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
-      set(LLVM_LINKER_IS_SOLARISLD YES CACHE INTERNAL "")
-      set(LLVM_LINKER_IS_SOLARISLD_ILLUMOS YES CACHE INTERNAL "")
-      message(STATUS "Linker detection: Solaris ld (illumos)")
     elseif("${stderr}" MATCHES "Solaris Link Editors" OR
            "${stdout}" MATCHES "Solaris Link Editors")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
@@ -296,6 +290,7 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
 endif()
 
 function(add_link_opts target_name)
+  include(CheckLinkerFlag)
   get_llvm_distribution(${target_name} in_distribution in_distribution_var)
   if(NOT in_distribution)
     # Don't LTO optimize targets that aren't part of any distribution.
@@ -327,7 +322,6 @@ function(add_link_opts target_name)
       elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
         # Support for ld -z discard-unused=sections was only added in
         # Solaris 11.4.  GNU ld ignores it, but warns every time.
-        include(CheckLinkerFlag)
         check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
         if (LINKER_SUPPORTS_Z_DISCARD_UNUSED)
           set_property(TARGET ${target_name} APPEND_STRING PROPERTY
@@ -355,6 +349,12 @@ function(add_link_opts target_name)
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-brtl")
   endif()
+
+  # Check for existence of symbolic functions flag. Not supported
+  # by the older BFD linker (such as on some OpenBSD archs), the
+  # MinGW driver for LLD, and the Solaris native linker.
+  check_linker_flag(CXX "-Wl,-Bsymbolic-functions"
+                    LLVM_LINKER_SUPPORTS_B_SYMBOLIC_FUNCTIONS)
 endfunction(add_link_opts)
 
 # Set each output directory according to ${CMAKE_CONFIGURATION_TYPES}.
@@ -750,7 +750,7 @@ function(llvm_add_library name)
       set(library_name ${output_name}-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX})
       set(api_name ${output_name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
       set_target_properties(${name} PROPERTIES OUTPUT_NAME ${library_name})
-      if(UNIX)
+      if(UNIX AND NOT CYGWIN)
         llvm_install_library_symlink(${api_name} ${library_name} SHARED
           COMPONENT ${name})
         llvm_install_library_symlink(${output_name} ${library_name} SHARED
@@ -932,7 +932,7 @@ endfunction()
 
 macro(add_llvm_library name)
   cmake_parse_arguments(ARG
-    "SHARED;BUILDTREE_ONLY;MODULE;INSTALL_WITH_TOOLCHAIN"
+    "SHARED;BUILDTREE_ONLY;MODULE;INSTALL_WITH_TOOLCHAIN;NO_EXPORT"
     ""
     ""
     ${ARGN})
@@ -967,7 +967,11 @@ macro(add_llvm_library name)
         set(umbrella)
       endif()
 
-      get_target_export_arg(${name} LLVM export_to_llvmexports ${umbrella})
+      if(ARG_NO_EXPORT)
+        set(export_to_llvmexports)
+      else()
+        get_target_export_arg(${name} LLVM export_to_llvmexports ${umbrella})
+      endif()
       install(TARGETS ${name}
               ${export_to_llvmexports}
               LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
@@ -980,7 +984,9 @@ macro(add_llvm_library name)
                                  COMPONENT ${name})
       endif()
     endif()
-    set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
+    if(NOT ARG_NO_EXPORT)
+      set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
+    endif()
   endif()
 
   get_subproject_title(subproject_title)
@@ -1214,9 +1220,9 @@ function(add_llvm_pass_plugin name)
     endif()
     set_property(GLOBAL APPEND PROPERTY LLVM_STATIC_EXTENSIONS ${name})
   elseif(NOT ARG_NO_MODULE)
-    add_llvm_library(${name} MODULE ${ARG_UNPARSED_ARGUMENTS})
+    add_llvm_library(${name} MODULE NO_EXPORT ${ARG_UNPARSED_ARGUMENTS})
   else()
-    add_llvm_library(${name} OBJECT ${ARG_UNPARSED_ARGUMENTS})
+    add_llvm_library(${name} OBJECT NO_EXPORT ${ARG_UNPARSED_ARGUMENTS})
   endif()
   message(STATUS "Registering ${name} as a pass plugin (static build: ${LLVM_${name_upper}_LINK_INTO_TOOLS})")
 
@@ -1466,6 +1472,9 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
   if (LLVM_ENABLE_LIBXML2)
     list(APPEND LLVM_TOOLCHAIN_TOOLS llvm-mt)
   endif()
+  if (LLVM_TOOL_LLVM_DRIVER_BUILD)
+    list(APPEND LLVM_TOOLCHAIN_TOOLS llvm-driver)
+  endif()
 endif()
 
 macro(llvm_add_tool project name)
@@ -1489,6 +1498,11 @@ macro(llvm_add_tool project name)
                 ${export_to_llvmexports}
                 RUNTIME DESTINATION ${${project}_TOOLS_INSTALL_DIR}
                 COMPONENT ${name})
+        if (LLVM_ENABLE_PDB)
+          install(FILES $<TARGET_PDB_FILE:${name}> 
+                DESTINATION "${${project}_TOOLS_INSTALL_DIR}" COMPONENT ${name} 
+                OPTIONAL)
+        endif()
 
         if (NOT LLVM_ENABLE_IDE)
           add_llvm_install_targets(install-${name}
@@ -1519,6 +1533,11 @@ macro(add_llvm_example name)
   add_llvm_executable(${name} EXPORT_SYMBOLS ${ARGN})
   if( LLVM_BUILD_EXAMPLES )
     install(TARGETS ${name} RUNTIME DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}")
+    if (LLVM_ENABLE_PDB)
+      install(FILES $<TARGET_PDB_FILE:${name}> 
+              DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}" COMPONENT ${name} 
+              OPTIONAL)
+    endif()
   endif()
   get_subproject_title(subproject_title)
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Examples")
@@ -1553,6 +1572,11 @@ macro(add_llvm_utility name)
               ${export_to_llvmexports}
               RUNTIME DESTINATION ${LLVM_UTILS_INSTALL_DIR}
               COMPONENT ${name})
+      if (LLVM_ENABLE_PDB)
+        install(FILES $<TARGET_PDB_FILE:${name}> 
+                DESTINATION "${LLVM_UTILS_INSTALL_DIR}" COMPONENT ${name} 
+                OPTIONAL)
+      endif()
 
       if (NOT LLVM_ENABLE_IDE)
         add_llvm_install_targets(install-${name}
@@ -2235,7 +2259,7 @@ function(llvm_install_library_symlink name dest type)
   endif()
 
   set(output_dir lib${LLVM_LIBDIR_SUFFIX})
-  if(WIN32 AND "${type}" STREQUAL "SHARED")
+  if((WIN32 OR CYGWIN) AND "${type}" STREQUAL "SHARED")
     set(output_dir "${CMAKE_INSTALL_BINDIR}")
   endif()
 

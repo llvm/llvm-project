@@ -146,10 +146,10 @@ public:
 };
 
 template <class _Ptr>
-struct _LIBCPP_TEMPLATE_VIS pointer_traits : __pointer_traits_impl<_Ptr> {};
+struct pointer_traits : __pointer_traits_impl<_Ptr> {};
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS pointer_traits<_Tp*> {
+struct pointer_traits<_Tp*> {
   typedef _Tp* pointer;
   typedef _Tp element_type;
   typedef ptrdiff_t difference_type;
@@ -176,10 +176,10 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _From, class _To>
-using __rebind_pointer_t = typename pointer_traits<_From>::template rebind<_To>;
+using __rebind_pointer_t _LIBCPP_NODEBUG = typename pointer_traits<_From>::template rebind<_To>;
 #else
 template <class _From, class _To>
-using __rebind_pointer_t = typename pointer_traits<_From>::template rebind<_To>::other;
+using __rebind_pointer_t _LIBCPP_NODEBUG = typename pointer_traits<_From>::template rebind<_To>::other;
 #endif
 
 // to_address
@@ -245,8 +245,8 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr auto to_address(_Tp* __p) noexcept {
 }
 
 template <class _Pointer>
-inline _LIBCPP_HIDE_FROM_ABI constexpr auto
-to_address(const _Pointer& __p) noexcept -> decltype(std::__to_address(__p)) {
+inline _LIBCPP_HIDE_FROM_ABI constexpr auto to_address(const _Pointer& __p) noexcept
+    -> decltype(std::__to_address(__p)) {
   return std::__to_address(__p);
 }
 #endif
@@ -259,24 +259,24 @@ struct __pointer_of {};
 template <class _Tp>
   requires(__has_pointer<_Tp>::value)
 struct __pointer_of<_Tp> {
-  using type = typename _Tp::pointer;
+  using type _LIBCPP_NODEBUG = typename _Tp::pointer;
 };
 
 template <class _Tp>
   requires(!__has_pointer<_Tp>::value && __has_element_type<_Tp>::value)
 struct __pointer_of<_Tp> {
-  using type = typename _Tp::element_type*;
+  using type _LIBCPP_NODEBUG = typename _Tp::element_type*;
 };
 
 template <class _Tp>
   requires(!__has_pointer<_Tp>::value && !__has_element_type<_Tp>::value &&
            __has_element_type<pointer_traits<_Tp>>::value)
 struct __pointer_of<_Tp> {
-  using type = typename pointer_traits<_Tp>::element_type*;
+  using type _LIBCPP_NODEBUG = typename pointer_traits<_Tp>::element_type*;
 };
 
 template <typename _Tp>
-using __pointer_of_t = typename __pointer_of<_Tp>::type;
+using __pointer_of_t _LIBCPP_NODEBUG = typename __pointer_of<_Tp>::type;
 
 template <class _Tp, class _Up>
 struct __pointer_of_or {
@@ -290,7 +290,7 @@ struct __pointer_of_or<_Tp, _Up> {
 };
 
 template <typename _Tp, typename _Up>
-using __pointer_of_or_t = typename __pointer_of_or<_Tp, _Up>::type;
+using __pointer_of_or_t _LIBCPP_NODEBUG = typename __pointer_of_or<_Tp, _Up>::type;
 
 template <class _Smart>
 concept __resettable_smart_pointer = requires(_Smart __s) { __s.reset(); };
@@ -301,6 +301,18 @@ concept __resettable_smart_pointer_with_args = requires(_Smart __s, _Pointer __p
 };
 
 #endif
+
+// This function ensures safe conversions between fancy pointers at compile-time, where we avoid casts from/to
+// `__void_pointer` by obtaining the underlying raw pointer from the fancy pointer using `std::to_address`,
+// then dereferencing it to retrieve the pointed-to object, and finally constructing the target fancy pointer
+// to that object using the `std::pointer_traits<>::pinter_to` function.
+template <class _PtrTo, class _PtrFrom>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _PtrTo __static_fancy_pointer_cast(const _PtrFrom& __p) {
+  using __ptr_traits   = pointer_traits<_PtrTo>;
+  using __element_type = typename __ptr_traits::element_type;
+  return __p ? __ptr_traits::pointer_to(*static_cast<__element_type*>(std::addressof(*__p)))
+             : static_cast<_PtrTo>(nullptr);
+}
 
 _LIBCPP_END_NAMESPACE_STD
 

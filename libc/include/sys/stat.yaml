@@ -1,4 +1,5 @@
-header: sys-stat.h
+header: sys/stat.h
+header_template: stat.h.def
 macros: []
 types:
   - type_name: blkcnt_t

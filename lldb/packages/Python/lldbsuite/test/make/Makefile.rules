@@ -207,8 +207,16 @@ else
 		override ARCH :=
 		override ARCHFLAG :=
 	endif
+	ifeq "$(ARCH)" "riscv"
+		override ARCH :=
+		override ARCHFLAG :=
+	endif
 	ifeq "$(findstring mips,$(ARCH))" "mips"
 		override ARCHFLAG := -
+	endif
+	ifeq "$(findstring loongarch,$(ARCH))" "loongarch"
+		override ARCH :=
+		override ARCHFLAG :=
 	endif
 
 	ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"

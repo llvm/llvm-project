@@ -1,36 +1,28 @@
+import argparse
 import subprocess
+import sys
 import unittest
 from pathlib import Path
-import os
-import argparse
-import sys
 
 
 class TestHeaderGenIntegration(unittest.TestCase):
     def setUp(self):
-        self.output_dir = Path(
-            args.output_dir if args.output_dir else "libc/utils/hdrgen/tests/output"
-        )
+        self.output_dir = TestHeaderGenIntegration.output_dir
+        self.source_dir = Path(__file__).parent
+        self.main_script = self.source_dir.parent / "main.py"
+        self.maxDiff = 80 * 100
 
-        self.maxDiff = None
-
-        self.source_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
-
-    def run_script(self, yaml_file, h_def_file, output_dir, entry_points):
-        yaml_file = self.source_dir / yaml_file
-        h_def_file = self.source_dir / h_def_file
+    def run_script(self, yaml_file, output_file, entry_points=[], switches=[]):
         command = [
             "python3",
-            str(self.source_dir / "libc/utils/hdrgen/yaml_to_classes.py"),
+            str(self.main_script),
             str(yaml_file),
-            "--h_def_file",
-            str(h_def_file),
-            "--output_dir",
-            str(output_dir),
-        ]
+            "--output",
+            str(output_file),
+        ] + switches
 
         for entry_point in entry_points:
-            command.extend(["--e", entry_point])
+            command.extend(["--entry-point", entry_point])
 
         result = subprocess.run(
             command,
@@ -51,26 +43,39 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.assertEqual(gen_content, exp_content)
 
     def test_generate_header(self):
-        yaml_file = "libc/utils/hdrgen/tests/input/test_small.yaml"
-        h_def_file = "libc/utils/hdrgen/tests/input/test_small.h.def"
-        expected_output_file = (
-            self.source_dir / "libc/utils/hdrgen/tests/expected_output/test_header.h"
-        )
+        yaml_file = self.source_dir / "input/test_small.yaml"
+        expected_output_file = self.source_dir / "expected_output/test_header.h"
         output_file = self.output_dir / "test_small.h"
         entry_points = {"func_b", "func_a", "func_c", "func_d", "func_e"}
 
-        if not self.output_dir.exists():
-            self.output_dir.mkdir(parents=True)
+        self.run_script(yaml_file, output_file, entry_points)
 
-        self.run_script(yaml_file, h_def_file, self.output_dir, entry_points)
+        self.compare_files(output_file, expected_output_file)
+
+    def test_generate_subdir_header(self):
+        yaml_file = self.source_dir / "input" / "subdir" / "test.yaml"
+        expected_output_file = self.source_dir / "expected_output" / "subdir" / "test.h"
+        output_file = self.output_dir / "subdir" / "test.h"
+        self.run_script(yaml_file, output_file)
+        self.compare_files(output_file, expected_output_file)
+
+    def test_generate_json(self):
+        yaml_file = self.source_dir / "input/test_small.yaml"
+        expected_output_file = self.source_dir / "expected_output/test_small.json"
+        output_file = self.output_dir / "test_small.json"
+
+        self.run_script(yaml_file, output_file, switches=["--json"])
 
         self.compare_files(output_file, expected_output_file)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="TestHeaderGenIntegration arguments")
     parser.add_argument(
-        "--output_dir", type=str, help="Output directory for generated headers"
+        "--output_dir",
+        type=Path,
+        help="Output directory for generated headers",
+        required=True,
     )
     args, remaining_argv = parser.parse_known_args()
 
@@ -79,3 +84,7 @@ if __name__ == "__main__":
     sys.argv[1:] = remaining_argv
 
     unittest.main()
+
+
+if __name__ == "__main__":
+    main()

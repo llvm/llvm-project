@@ -331,9 +331,9 @@ Expected<SimpleSegmentAlloc> ELFDebugObject::finalizeWorkingMemory() {
   size_t Size = Buffer->getBufferSize();
 
   // Allocate working memory for debug object in read-only segment.
-  auto Alloc =
-      SimpleSegmentAlloc::Create(MemMgr, ES.getSymbolStringPool(), JD,
-                                 {{MemProt::Read, {Size, Align(PageSize)}}});
+  auto Alloc = SimpleSegmentAlloc::Create(
+      MemMgr, ES.getSymbolStringPool(), ES.getTargetTriple(), JD,
+      {{MemProt::Read, {Size, Align(PageSize)}}});
   if (!Alloc)
     return Alloc;
 
@@ -475,8 +475,9 @@ Error DebugObjectManagerPlugin::notifyEmitted(
         FinalizePromise.set_value(MR.withResourceKeyDo([&](ResourceKey K) {
           assert(PendingObjs.count(&MR) && "We still hold PendingObjsLock");
           std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
-          RegisteredObjs[K].push_back(std::move(PendingObjs[&MR]));
-          PendingObjs.erase(&MR);
+          auto It = PendingObjs.find(&MR);
+          RegisteredObjs[K].push_back(std::move(It->second));
+          PendingObjs.erase(It);
         }));
       });
 

@@ -22,6 +22,7 @@
 // in the same machine basic block into one machine instruction.
 //===----------------------------------------------------------------------===//
 
+#include "Lanai.h"
 #include "LanaiAluCode.h"
 #include "LanaiTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
@@ -44,10 +45,6 @@ static llvm::cl::opt<bool> DisableMemAluCombiner(
     llvm::cl::desc("Do not combine ALU and memory operators"),
     llvm::cl::Hidden);
 
-namespace llvm {
-void initializeLanaiMemAluCombinerPass(PassRegistry &);
-} // namespace llvm
-
 namespace {
 typedef MachineBasicBlock::iterator MbbIterator;
 typedef MachineFunction::iterator MfIterator;
@@ -55,9 +52,7 @@ typedef MachineFunction::iterator MfIterator;
 class LanaiMemAluCombiner : public MachineFunctionPass {
 public:
   static char ID;
-  explicit LanaiMemAluCombiner() : MachineFunctionPass(ID) {
-    initializeLanaiMemAluCombinerPass(*PassRegistry::getPassRegistry());
-  }
+  explicit LanaiMemAluCombiner() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Lanai load / store optimization pass";
@@ -66,8 +61,7 @@ public:
   bool runOnMachineFunction(MachineFunction &F) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:

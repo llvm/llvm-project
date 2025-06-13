@@ -71,9 +71,8 @@ private:
   UnresolvedSetImpl(const UnresolvedSetImpl &) = default;
   UnresolvedSetImpl &operator=(const UnresolvedSetImpl &) = default;
 
-  // FIXME: Switch these to "= default" once MSVC supports generating move ops
-  UnresolvedSetImpl(UnresolvedSetImpl &&) {}
-  UnresolvedSetImpl &operator=(UnresolvedSetImpl &&) { return *this; }
+  UnresolvedSetImpl(UnresolvedSetImpl &&) = default;
+  UnresolvedSetImpl &operator=(UnresolvedSetImpl &&) = default;
 
 public:
   // We don't currently support assignment through this iterator, so we might

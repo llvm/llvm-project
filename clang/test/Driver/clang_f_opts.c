@@ -45,6 +45,13 @@
 // CHECK-UNROLL-LOOPS: "-funroll-loops"
 // CHECK-NO-UNROLL-LOOPS: "-fno-unroll-loops"
 
+// RUN: %clang -### -S -floop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-INTERCHANGE-LOOPS %s
+// RUN: %clang -### -S -fno-loop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-NO-INTERCHANGE-LOOPS %s
+// RUN: %clang -### -S -fno-loop-interchange -floop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-INTERCHANGE-LOOPS %s
+// RUN: %clang -### -S -floop-interchange -fno-loop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-NO-INTERCHANGE-LOOPS %s
+// CHECK-INTERCHANGE-LOOPS: "-floop-interchange"
+// CHECK-NO-INTERCHANGE-LOOPS: "-fno-loop-interchange"
+
 // RUN: %clang -### -S -fprofile-sample-accurate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-SAMPLE-ACCURATE %s
 // CHECK-PROFILE-SAMPLE-ACCURATE: "-fprofile-sample-accurate"
 
@@ -103,8 +110,6 @@
 // RUN: %clang -### -S -fcoverage-mapping -fno-coverage-mapping %s 2>&1 | FileCheck -check-prefix=CHECK-DISABLE-COVERAGE %s
 // RUN: %clang -### -S -fprofile-instr-generate -fcoverage-mapping -fno-coverage-mapping %s 2>&1 | FileCheck -check-prefix=CHECK-DISABLE-COVERAGE %s
 // RUN: %clang -### -S -fprofile-remapping-file=foo/bar.txt %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-REMAP %s
-// RUN: %clang -### -S -forder-file-instrumentation %s 2>&1 | FileCheck -check-prefix=CHECK-ORDERFILE-INSTR %s
-// RUN: %clang -### --target=x86_64-linux-gnu -flto -forder-file-instrumentation %s 2>&1 | FileCheck -check-prefix=CHECK-ORDERFILE-INSTR-LTO %s
 // CHECK-PROFILE-GENERATE: "-fprofile-instrument=clang"
 // CHECK-PROFILE-GENERATE-LLVM: "-fprofile-instrument=llvm"
 // CHECK-PROFILE-GENERATE-DIR: "-fprofile-instrument-path=/some/dir{{/|\\\\}}{{.*}}"
@@ -116,10 +121,6 @@
 // CHECK-COVERAGE-AND-GEN: '-fcoverage-mapping' only allowed with '-fprofile-instr-generate'
 // CHECK-DISABLE-COVERAGE-NOT: "-fcoverage-mapping"
 // CHECK-PROFILE-REMAP: "-fprofile-remapping-file=foo/bar.txt"
-// CHECK-ORDERFILE-INSTR: "-forder-file-instrumentation"
-// CHECK-ORDERFILE-INSTR: "-enable-order-file-instrumentation"
-// CHECK-ORDERFILE-INSTR-LTO: "-forder-file-instrumentation"
-// CHECK-ORDERFILE-INSTR-LTO-NOT: "-enable-order-file-instrumentation"
 
 // RUN: %clang -### -S -fprofile-use %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE %s
 // RUN: %clang -### -S -fprofile-instr-use %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE %s
@@ -541,19 +542,6 @@
 // CHECK-RECORD-GCC-SWITCHES: "-record-command-line"
 // CHECK-NO-RECORD-GCC-SWITCHES-NOT: "-record-command-line"
 // CHECK-RECORD-GCC-SWITCHES-ERROR: error: unsupported option '-frecord-command-line' for target
-// Test when clang is in a path containing a space.
-// The initial `rm` is a workaround for https://openradar.appspot.com/FB8914243
-// (Scenario: Run tests once, `clang` gets copied and run at new location and signature
-// is cached at the new clang's inode, then clang is changed, tests run again, old signature
-// is still cached with old clang's inode, so it won't execute this time. Removing the dir
-// first guarantees a new inode without old cache entries.)
-// RUN: rm -rf "%t.r/with spaces"
-// RUN: mkdir -p "%t.r/with spaces"
-// RUN: cp %clang "%t.r/with spaces/clang"
-// RUN: "%t.r/with spaces/clang" -### -S --target=x86_64-unknown-linux -frecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES-ESCAPED %s
-// CHECK-RECORD-GCC-SWITCHES-ESCAPED: "-record-command-line" "{{.+}}with\\ spaces{{.+}}"
-// Clean up copy of large binary copied into temp directory to avoid bloat.
-// RUN: rm -f "%t.r/with spaces/clang" || true
 
 // RUN: %clang -### -S -ftrivial-auto-var-init=uninitialized %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-UNINIT %s
 // RUN: %clang -### -S -ftrivial-auto-var-init=pattern %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN %s

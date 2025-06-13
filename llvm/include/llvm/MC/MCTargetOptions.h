@@ -10,6 +10,7 @@
 #define LLVM_MC_MCTARGETOPTIONS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include <string>
 #include <vector>
@@ -105,6 +106,9 @@ public:
   /// integrated assembler.
   std::vector<std::string> IASSearchPaths;
 
+  // InstPrinter options.
+  std::vector<std::string> InstPrinterOptions;
+
   // Whether to emit compact-unwind for non-canonical personality
   // functions on Darwins.
   bool EmitCompactUnwindNonCanonical : 1;
@@ -112,17 +116,17 @@ public:
   // Whether or not to use full register names on PowerPC.
   bool PPCUseFullRegisterNames : 1;
 
-  MCTargetOptions();
+  LLVM_ABI MCTargetOptions();
 
   /// getABIName - If this returns a non-empty string this represents the
   /// textual name of the ABI that we want the backend to use, e.g. o32, or
   /// aapcs-linux.
-  StringRef getABIName() const;
+  LLVM_ABI StringRef getABIName() const;
 
   /// getAssemblyLanguage - If this returns a non-empty string this represents
   /// the textual name of the assembly language that we will use for this
   /// target, e.g. masm.
-  StringRef getAssemblyLanguage() const;
+  LLVM_ABI StringRef getAssemblyLanguage() const;
 };
 
 } // end namespace llvm

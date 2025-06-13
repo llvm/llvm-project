@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 
@@ -48,14 +49,6 @@ mlir::reifyResultShapes(OpBuilder &b, Operation *op,
     assert(shapedType.getRank() ==
                static_cast<int64_t>(reifiedReturnShapes[resultIdx].size()) &&
            "incorrect implementation of ReifyRankedShapedTypeOpInterface");
-    for (int64_t dim = 0; dim < shapedType.getRank(); ++dim) {
-      // reifyResultShapes must return:
-      // * Attribute for static dimensions
-      // * Value for dynamic dimensions
-      assert(shapedType.isDynamicDim(dim) ==
-                 isa<Value>(reifiedReturnShapes[resultIdx][dim]) &&
-             "incorrect implementation of ReifyRankedShapedTypeOpInterface");
-    }
     ++resultIdx;
   }
   // Assert that every shaped value result was reified.
@@ -184,9 +177,8 @@ void ShapeAdaptor::dump() const {
       return "?";
     return llvm::formatv("{0}", dim).str();
   });
-  llvm::errs() << "rank = " << getRank() << " dims = [";
-  llvm::interleave(mapped, llvm::errs(), "x");
-  llvm::errs() << "]\n";
+  llvm::errs() << "rank = " << getRank()
+               << " dims = " << llvm::interleaved_array(mapped, "x") << "\n";
 }
 
 ShapeAdaptor ValueShapeRange::getValueAsShape(int index) {
@@ -251,13 +243,12 @@ LogicalResult mlir::detail::verifyInferredResultTypes(Operation *op) {
 void mlir::detail::reportFatalInferReturnTypesError(OperationState &state) {
   std::string buffer;
   llvm::raw_string_ostream os(buffer);
-  os << "Failed to infer result type(s):\n";
-  os << "\"" << state.name << "\"(...) ";
-  os << state.attributes.getDictionary(state.location.getContext());
-  os << " : (";
-  llvm::interleaveComma(state.operands, os,
-                        [&](Value val) { os << val.getType(); });
-  os << ") -> ( ??? )";
+  os << "Failed to infer result type(s):\n"
+     << "\"" << state.name << "\"(...) "
+     << state.attributes.getDictionary(state.location.getContext()) << " : ("
+     << llvm::interleaved(llvm::map_range(
+            state.operands, [](Value val) { return val.getType(); }))
+     << ") -> ( ??? )";
   emitRemark(state.location, "location of op");
   llvm::report_fatal_error(llvm::StringRef(buffer));
 }

@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmParser/WebAssemblyAsmTypeCheck.h"
+#include "MCTargetDesc/WebAssemblyMCExpr.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
@@ -22,7 +23,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCSectionWasm.h"
@@ -204,7 +205,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
 
 // Perhaps this should go somewhere common.
 static wasm::WasmLimits defaultLimits() {
-  return {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
+  return {wasm::WASM_LIMITS_FLAG_NONE, 0, 0, 0};
 }
 
 static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
@@ -225,7 +226,7 @@ static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
 
 class WebAssemblyAsmParser final : public MCTargetAsmParser {
   MCAsmParser &Parser;
-  MCAsmLexer &Lexer;
+  AsmLexer &Lexer;
 
   // Order of labels, directives and instructions in a .s file have no
   // syntactical enforcement. This class is a callback from the actual parser,
@@ -700,8 +701,8 @@ public:
       auto *WasmSym = cast<MCSymbolWasm>(Sym);
       WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-      const MCExpr *Expr = MCSymbolRefExpr::create(
-          WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
+      const MCExpr *Expr =
+          MCSymbolRefExpr::create(WasmSym, WebAssembly::S_TYPEINDEX, Ctx);
       Operands.push_back(std::make_unique<WebAssemblyOperand>(
           Loc.getLoc(), Loc.getEndLoc(), WebAssemblyOperand::SymOp{Expr}));
     }
@@ -1246,7 +1247,7 @@ public:
     if (Group)
       WasmSym->setComdat(true);
     auto *WS = getContext().getWasmSection(SecName, SectionKind::getText(), 0,
-                                           Group, MCContext::GenericSectionID);
+                                           Group, MCSection::NonUniqueID);
     getStreamer().switchSection(WS);
     // Also generate DWARF for this section if requested.
     if (getContext().getGenDwarfForAssembly())

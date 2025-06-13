@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
 #include <type_traits>
@@ -108,6 +109,10 @@ public:
     return (Top == I || Top->comesBefore(I)) &&
            (I == Bottom || I->comesBefore(Bottom));
   }
+  /// \Returns true if \p Elm is right before the top or right after the bottom.
+  bool touches(T *Elm) const {
+    return Top == Elm->getNextNode() || Bottom == Elm->getPrevNode();
+  }
   T *top() const { return Top; }
   T *bottom() const { return Bottom; }
 
@@ -136,13 +141,7 @@ public:
     return bottom()->comesBefore(Other.top());
   }
   /// \Returns true if this and \p Other have nothing in common.
-  bool disjoint(const Interval &Other) const {
-    if (Other.empty())
-      return true;
-    if (empty())
-      return true;
-    return Other.Bottom->comesBefore(Top) || Bottom->comesBefore(Other.Top);
-  }
+  bool disjoint(const Interval &Other) const;
   /// \Returns the intersection between this and \p Other.
   // Example:
   // |----|   this
@@ -232,26 +231,13 @@ public:
   }
 
 #ifndef NDEBUG
-  void print(raw_ostream &OS) const {
-    auto *Top = top();
-    auto *Bot = bottom();
-    OS << "Top: ";
-    if (Top != nullptr)
-      OS << *Top;
-    else
-      OS << "nullptr";
-    OS << "\n";
-
-    OS << "Bot: ";
-    if (Bot != nullptr)
-      OS << *Bot;
-    else
-      OS << "nullptr";
-    OS << "\n";
-  }
+  void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif
 };
+
+// Defined in Transforms/Vectorize/SandboxVectorizer/Interval.cpp
+extern template class LLVM_TEMPLATE_ABI Interval<Instruction>;
 
 } // namespace llvm::sandboxir
 

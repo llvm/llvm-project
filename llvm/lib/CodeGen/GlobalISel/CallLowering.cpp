@@ -96,7 +96,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              Register SwiftErrorVReg,
                              std::optional<PtrAuthInfo> PAI,
                              Register ConvergenceCtrlToken,
-                             std::function<unsigned()> GetCalleeReg) const {
+                             std::function<Register()> GetCalleeReg) const {
   CallLoweringInfo Info;
   const DataLayout &DL = MIRBuilder.getDataLayout();
   MachineFunction &MF = MIRBuilder.getMF();
@@ -354,7 +354,7 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   int NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
 
   SmallVector<Register, 8> PadDstRegs(NumDst);
-  std::copy(DstRegs.begin(), DstRegs.end(), PadDstRegs.begin());
+  llvm::copy(DstRegs, PadDstRegs.begin());
 
   // Create the excess dead defs for the unmerge.
   for (int I = DstRegs.size(); I != NumDst; ++I)
@@ -1054,7 +1054,7 @@ void CallLowering::insertSRetIncomingArgument(
   DemoteReg = MRI.createGenericVirtualRegister(
       LLT::pointer(AS, DL.getPointerSizeInBits(AS)));
 
-  Type *PtrTy = PointerType::get(F.getReturnType(), AS);
+  Type *PtrTy = PointerType::get(F.getContext(), AS);
 
   SmallVector<EVT, 1> ValueVTs;
   ComputeValueVTs(*TLI, DL, PtrTy, ValueVTs);
@@ -1081,7 +1081,7 @@ void CallLowering::insertSRetOutgoingArgument(MachineIRBuilder &MIRBuilder,
       DL.getTypeAllocSize(RetTy), DL.getPrefTypeAlign(RetTy), false);
 
   Register DemoteReg = MIRBuilder.buildFrameIndex(FramePtrTy, FI).getReg(0);
-  ArgInfo DemoteArg(DemoteReg, PointerType::get(RetTy, AS),
+  ArgInfo DemoteArg(DemoteReg, PointerType::get(RetTy->getContext(), AS),
                     ArgInfo::NoArgIndex);
   setArgFlags(DemoteArg, AttributeList::ReturnIndex, DL, CB);
   DemoteArg.Flags[0].setSRet();

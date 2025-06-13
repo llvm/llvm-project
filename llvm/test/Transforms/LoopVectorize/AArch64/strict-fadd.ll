@@ -401,8 +401,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-ORDERED: br i1 %[[EXTRACT]], label %pred.load.if, label %pred.load.continue
 ; CHECK-ORDERED: pred.load.continue6
 ; CHECK-ORDERED: %[[PHI1:.*]] = phi <4 x float> [ %[[PHI0:.*]], %pred.load.continue4 ], [ %[[INS_ELT:.*]], %pred.load.if5 ]
-; CHECK-ORDERED: %[[XOR:.*]] =  xor <4 x i1> %[[FCMP1]], splat (i1 true)
-; CHECK-ORDERED: %[[PRED:.*]] = select <4 x i1> %[[XOR]], <4 x float> splat (float 3.000000e+00), <4 x float> %[[PHI1]]
+; CHECK-ORDERED: %[[PRED:.*]] = select <4 x i1> %[[FCMP1]], <4 x float> %[[PHI1]], <4 x float> splat (float 3.000000e+00)
 ; CHECK-ORDERED: %[[RDX]] = call float @llvm.vector.reduce.fadd.v4f32(float %[[PHI]], <4 x float> %[[PRED]])
 ; CHECK-ORDERED: for.body
 ; CHECK-ORDERED: %[[RES_PHI:.*]] = phi float [ %[[MERGE_RDX:.*]], %scalar.ph ], [ %[[FADD:.*]], %for.inc ]
@@ -427,8 +426,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-UNORDERED: %[[EXTRACT:.*]] = extractelement <4 x i1> %[[FCMP1]], i32 0
 ; CHECK-UNORDERED: br i1 %[[EXTRACT]], label %pred.load.if, label %pred.load.continue
 ; CHECK-UNORDERED: pred.load.continue6
-; CHECK-UNORDERED: %[[XOR:.*]] =  xor <4 x i1> %[[FCMP1]], splat (i1 true)
-; CHECK-UNORDERED: %[[PRED:.*]] = select <4 x i1> %[[XOR]], <4 x float> splat (float 3.000000e+00), <4 x float> %[[PRED_PHI:.*]]
+; CHECK-UNORDERED: %[[PRED:.*]] = select <4 x i1> %[[FCMP1]], <4 x float> %[[PRED_PHI:.*]], <4 x float> splat (float 3.000000e+00)
 ; CHECK-UNORDERED: %[[VEC_FADD]] = fadd <4 x float> %[[PHI]], %[[PRED]]
 ; CHECK-UNORDERED-NOT: call float @llvm.vector.reduce.fadd
 ; CHECK-UNORDERED: middle.block
@@ -972,7 +970,7 @@ loop:
   %red.next = fadd double %for, %red
   %for.next = sitofp i32 %iv to double
   %iv.next = add nsw i32 %iv, 1
-  %ec = icmp eq i32 %iv.next, 0
+  %ec = icmp eq i32 %iv.next, 1024
   br i1 %ec, label %exit, label %loop, !llvm.loop !13
 
 exit:

@@ -114,6 +114,7 @@ public:
   void addEntry(const Symbol &sym);
   void addAuthEntry(const Symbol &sym);
   bool addTlsDescEntry(const Symbol &sym);
+  void addTlsDescAuthEntry();
   bool addDynTlsEntry(const Symbol &sym);
   bool addTlsIndex();
   uint32_t getTlsDescOffset(const Symbol &sym) const;
@@ -1323,7 +1324,7 @@ public:
                   std::optional<uint64_t> addr = std::nullopt)
       : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
   static const size_t size{ACLESESYM_SIZE};
-  const std::optional<uint64_t> getAddr() const { return entAddr; };
+  std::optional<uint64_t> getAddr() const { return entAddr; };
 
   Symbol *sym;
   Symbol *acleSeSym;

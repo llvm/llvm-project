@@ -81,17 +81,8 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_SME_F64);
   if (hwcap2 & HWCAP2_MOPS)
     setCPUFeature(FEAT_MOPS);
-  if (hwcap & HWCAP_CPUID) {
-    unsigned long ftr;
-
-    getCPUFeature(ID_AA64ISAR1_EL1, ftr);
-    /* ID_AA64ISAR1_EL1.SPECRES >= 0b0001  */
-    if (extractBits(ftr, 40, 4) >= 0x1)
-      setCPUFeature(FEAT_PREDRES);
-    /* ID_AA64ISAR1_EL1.LS64 >= 0b0011  */
-    if (extractBits(ftr, 60, 4) >= 0x3)
-      setCPUFeature(FEAT_LS64_ACCDATA);
-  }
+  if (hwcap2 & HWCAP2_CSSC)
+    setCPUFeature(FEAT_CSSC);
   if (hwcap & HWCAP_FP) {
     setCPUFeature(FEAT_FP);
     // FP and AdvSIMD fields have the same value

@@ -1,4 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-emitc %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -convert-to-emitc="filter-dialects=scf" %s | FileCheck %s
 
 // CHECK-LABEL:   func.func @switch_no_result(
 // CHECK-SAME:                                %[[ARG_0:.*]]: index) {
@@ -6,11 +7,11 @@
 // CHECK:           emitc.switch %[[VAL_0]]
 // CHECK:           case 2 {
 // CHECK:             %[[VAL_1:.*]] = arith.constant 10 : i32
-// CHECK:             emitc.yield
+// CHECK:             yield
 // CHECK:           }
 // CHECK:           case 5 {
 // CHECK:             %[[VAL_2:.*]] = arith.constant 20 : i32
-// CHECK:             emitc.yield
+// CHECK:             yield
 // CHECK:           }
 // CHECK:           default {
 // CHECK:             %[[VAL_3:.*]] = arith.constant 30 : i32
@@ -40,17 +41,17 @@ func.func @switch_no_result(%arg0 : index) {
 // CHECK:           emitc.switch %[[VAL_0]]
 // CHECK:           case 2 {
 // CHECK:             %[[VAL_2:.*]] = arith.constant 10 : i32
-// CHECK:             emitc.assign %[[VAL_2]] : i32 to %[[VAL_1]] : <i32>
-// CHECK:             emitc.yield
+// CHECK:             assign %[[VAL_2]] : i32 to %[[VAL_1]] : <i32>
+// CHECK:             yield
 // CHECK:           }
 // CHECK:           case 5 {
 // CHECK:             %[[VAL_3:.*]] = arith.constant 20 : i32
-// CHECK:             emitc.assign %[[VAL_3]] : i32 to %[[VAL_1]] : <i32>
-// CHECK:             emitc.yield
+// CHECK:             assign %[[VAL_3]] : i32 to %[[VAL_1]] : <i32>
+// CHECK:             yield
 // CHECK:           }
 // CHECK:           default {
 // CHECK:             %[[VAL_4:.*]] = arith.constant 30 : i32
-// CHECK:             emitc.assign %[[VAL_4]] : i32 to %[[VAL_1]] : <i32>
+// CHECK:             assign %[[VAL_4]] : i32 to %[[VAL_1]] : <i32>
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
@@ -80,22 +81,22 @@ func.func @switch_one_result(%arg0 : index) {
 // CHECK:           case 2 {
 // CHECK:             %[[VAL_3:.*]] = arith.constant 10 : i32
 // CHECK:             %[[VAL_4:.*]] = arith.constant 1.200000e+00 : f32
-// CHECK:             emitc.assign %[[VAL_3]] : i32 to %[[VAL_1]] : <i32>
-// CHECK:             emitc.assign %[[VAL_4]] : f32 to %[[VAL_2]] : <f32>
-// CHECK:             emitc.yield
+// CHECK:             assign %[[VAL_3]] : i32 to %[[VAL_1]] : <i32>
+// CHECK:             assign %[[VAL_4]] : f32 to %[[VAL_2]] : <f32>
+// CHECK:             yield
 // CHECK:           }
 // CHECK:           case 5 {
 // CHECK:             %[[VAL_5:.*]] = arith.constant 20 : i32
 // CHECK:             %[[VAL_6:.*]] = arith.constant 2.400000e+00 : f32
-// CHECK:             emitc.assign %[[VAL_5]] : i32 to %[[VAL_1]] : <i32>
-// CHECK:             emitc.assign %[[VAL_6]] : f32 to %[[VAL_2]] : <f32>
-// CHECK:             emitc.yield
+// CHECK:             assign %[[VAL_5]] : i32 to %[[VAL_1]] : <i32>
+// CHECK:             assign %[[VAL_6]] : f32 to %[[VAL_2]] : <f32>
+// CHECK:             yield
 // CHECK:           }
 // CHECK:           default {
 // CHECK:             %[[VAL_7:.*]] = arith.constant 30 : i32
 // CHECK:             %[[VAL_8:.*]] = arith.constant 3.600000e+00 : f32
-// CHECK:             emitc.assign %[[VAL_7]] : i32 to %[[VAL_1]] : <i32>
-// CHECK:             emitc.assign %[[VAL_8]] : f32 to %[[VAL_2]] : <f32>
+// CHECK:             assign %[[VAL_7]] : i32 to %[[VAL_1]] : <i32>
+// CHECK:             assign %[[VAL_8]] : f32 to %[[VAL_2]] : <f32>
 // CHECK:           }
 // CHECK:           %[[RES_1:.*]] = emitc.load %[[VAL_1]] : <i32>
 // CHECK:           %[[RES_2:.*]] = emitc.load %[[VAL_2]] : <f32>

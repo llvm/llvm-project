@@ -12,6 +12,14 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
     message(STATUS "Setting native build dir to " ${${project_name}_${target_name}_BUILD})
   endif(NOT DEFINED ${project_name}_${target_name}_BUILD)
 
+  if(NOT DEFINED ${project_name}_${target_name}_STAMP)
+    set(${project_name}_${target_name}_STAMP
+      "${CMAKE_CURRENT_BINARY_DIR}/${target_name}-stamps")
+    set(${project_name}_${target_name}_STAMP
+      ${${project_name}_${target_name}_STAMP} PARENT_SCOPE)
+    message(STATUS "Setting native stamp dir to " ${${project_name}_${target_name}_STAMP})
+  endif(NOT DEFINED ${project_name}_${target_name}_STAMP)
+
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/cmake/platforms/${toolchain}.cmake)
     set(CROSS_TOOLCHAIN_FLAGS_INIT
       -DCMAKE_TOOLCHAIN_FILE=\"${LLVM_MAIN_SRC_DIR}/cmake/platforms/${toolchain}.cmake\")
@@ -75,9 +83,9 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
 
   add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
-        -DCMAKE_MAKE_PROGRAM="${CMAKE_MAKE_PROGRAM}"
-        -DCMAKE_C_COMPILER_LAUNCHER="${CMAKE_C_COMPILER_LAUNCHER}"
-        -DCMAKE_CXX_COMPILER_LAUNCHER="${CMAKE_CXX_COMPILER_LAUNCHER}"
+        "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+        "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}"
+        "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}"
         ${CROSS_TOOLCHAIN_FLAGS_${target_name}} ${CMAKE_CURRENT_SOURCE_DIR}
         ${CROSS_TOOLCHAIN_FLAGS_${project_name}_${target_name}}
         -DLLVM_TARGET_IS_CROSSCOMPILE_HOST=TRUE
@@ -92,6 +100,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
         -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN="${LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN}"
         -DLLVM_INCLUDE_BENCHMARKS=OFF
         -DLLVM_INCLUDE_TESTS=OFF
+        -DLLVM_TABLEGEN_FLAGS="${LLVM_TABLEGEN_FLAGS}"
         ${build_type_flags} ${linker_flag} ${external_clang_dir} ${libc_flags}
         ${ARGN}
     WORKING_DIRECTORY ${${project_name}_${target_name}_BUILD}
@@ -130,13 +139,16 @@ function(build_native_tool target output_path_var)
     set_property(GLOBAL APPEND PROPERTY ${PROJECT_NAME}_HOST_TARGETS ${output_path})
   endif()
 
-  llvm_ExternalProject_BuildCmd(build_cmd ${target} ${${PROJECT_NAME}_NATIVE_BUILD}
+  llvm_ExternalProject_BuildCmd(build_cmd ${target}
+                                ${${PROJECT_NAME}_NATIVE_BUILD}
+                                ${${PROJECT_NAME}_NATIVE_STAMP}
                                 CONFIGURATION Release)
   add_custom_command(OUTPUT "${output_path}"
                      COMMAND ${build_cmd}
                      DEPENDS CONFIGURE_${PROJECT_NAME}_NATIVE ${ARG_DEPENDS} ${host_targets}
                      WORKING_DIRECTORY "${${PROJECT_NAME}_NATIVE_BUILD}"
                      COMMENT "Building native ${target}..."
-                     USES_TERMINAL)
+                     USES_TERMINAL
+                     VERBATIM)
   set(${output_path_var} "${output_path}" PARENT_SCOPE)
 endfunction()

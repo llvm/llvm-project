@@ -11,6 +11,7 @@
 #define MLIR_BINDINGS_PYTHON_IRMODULES_H
 
 #include <optional>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -22,9 +23,10 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Transforms.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/ThreadPool.h"
 
 namespace mlir {
 namespace python {
@@ -158,6 +160,29 @@ private:
   FrameKind frameKind;
 };
 
+/// Wrapper around MlirLlvmThreadPool
+/// Python object owns the C++ thread pool
+class PyThreadPool {
+public:
+  PyThreadPool() {
+    ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
+  }
+  PyThreadPool(const PyThreadPool &) = delete;
+  PyThreadPool(PyThreadPool &&) = delete;
+
+  int getMaxConcurrency() const { return ownedThreadPool->getMaxConcurrency(); }
+  MlirLlvmThreadPool get() { return wrap(ownedThreadPool.get()); }
+
+  std::string _mlir_thread_pool_ptr() const {
+    std::stringstream ss;
+    ss << ownedThreadPool.get();
+    return ss.str();
+  }
+
+private:
+  std::unique_ptr<llvm::ThreadPoolInterface> ownedThreadPool;
+};
+
 /// Wrapper around MlirContext.
 using PyMlirContextRef = PyObjectRef<PyMlirContext>;
 class PyMlirContext {
@@ -260,6 +285,7 @@ private:
   // Note that this holds a handle, which does not imply ownership.
   // Mappings will be removed when the context is destructed.
   using LiveContextMap = llvm::DenseMap<void *, PyMlirContext *>;
+  static nanobind::ft_mutex live_contexts_mutex;
   static LiveContextMap &getLiveContexts();
 
   // Interns all live modules associated with this context. Modules tracked
@@ -276,6 +302,9 @@ private:
   // attempt to access it will raise an error.
   using LiveOperationMap =
       llvm::DenseMap<void *, std::pair<nanobind::handle, PyOperation *>>;
+  nanobind::ft_mutex liveOperationsMutex;
+
+  // Guarded by liveOperationsMutex in free-threading mode.
   LiveOperationMap liveOperations;
 
   bool emitErrorDiagnostics = false;
@@ -572,15 +601,16 @@ public:
   /// Implements the bound 'print' method and helps with others.
   void print(std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
-             bool assumeVerified, nanobind::object fileObject, bool binary,
-             bool skipRegions);
+             bool useNameLocAsPrefix, bool assumeVerified,
+             nanobind::object fileObject, bool binary, bool skipRegions);
   void print(PyAsmState &state, nanobind::object fileObject, bool binary);
 
   nanobind::object getAsm(bool binary,
                           std::optional<int64_t> largeElementsLimit,
                           bool enableDebugInfo, bool prettyDebugInfo,
                           bool printGenericOpForm, bool useLocalScope,
-                          bool assumeVerified, bool skipRegions);
+                          bool useNameLocAsPrefix, bool assumeVerified,
+                          bool skipRegions);
 
   // Implement the bound 'writeBytecode' method.
   void writeBytecode(const nanobind::object &fileObject,
@@ -681,8 +711,8 @@ public:
 
   /// Creates an operation. See corresponding python docstring.
   static nanobind::object
-  create(const std::string &name, std::optional<std::vector<PyType *>> results,
-         std::optional<std::vector<PyValue *>> operands,
+  create(std::string_view name, std::optional<std::vector<PyType *>> results,
+         llvm::ArrayRef<MlirValue> operands,
          std::optional<nanobind::dict> attributes,
          std::optional<std::vector<PyBlock *>> successors, int regions,
          DefaultingPyLocation location, const nanobind::object &ip,
@@ -701,8 +731,9 @@ public:
   /// Clones this operation.
   nanobind::object clone(const nanobind::object &ip);
 
-private:
   PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
+
+private:
   static PyOperationRef createInstance(PyMlirContextRef contextRef,
                                        MlirOperation operation,
                                        nanobind::object parentKeepAlive);
@@ -735,12 +766,16 @@ public:
 
   nanobind::object getOperationObject() { return operationObject; }
 
-  static nanobind::object buildGeneric(
-      const nanobind::object &cls, std::optional<nanobind::list> resultTypeList,
-      nanobind::list operandList, std::optional<nanobind::dict> attributes,
-      std::optional<std::vector<PyBlock *>> successors,
-      std::optional<int> regions, DefaultingPyLocation location,
-      const nanobind::object &maybeIp);
+  static nanobind::object
+  buildGeneric(std::string_view name, std::tuple<int, bool> opRegionSpec,
+               nanobind::object operandSegmentSpecObj,
+               nanobind::object resultSegmentSpecObj,
+               std::optional<nanobind::list> resultTypeList,
+               nanobind::list operandList,
+               std::optional<nanobind::dict> attributes,
+               std::optional<std::vector<PyBlock *>> successors,
+               std::optional<int> regions, DefaultingPyLocation location,
+               const nanobind::object &maybeIp);
 
   /// Construct an instance of a class deriving from OpView, bypassing its
   /// `__init__` method. The derived class will typically define a constructor

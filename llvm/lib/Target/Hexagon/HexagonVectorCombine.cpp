@@ -43,6 +43,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Local.h"
 
+#include "Hexagon.h"
 #include "HexagonSubtarget.h"
 #include "HexagonTargetMachine.h"
 
@@ -342,7 +343,8 @@ private:
   MoveList createLoadGroups(const AddrList &Group) const;
   MoveList createStoreGroups(const AddrList &Group) const;
   bool moveTogether(MoveGroup &Move) const;
-  template <typename T> InstMap cloneBefore(Instruction *To, T &&Insts) const;
+  template <typename T>
+  InstMap cloneBefore(BasicBlock::iterator To, T &&Insts) const;
 
   void realignLoadGroup(IRBuilderBase &Builder, const ByteSpan &VSpan,
                         int ScLen, Value *AlignVal, Value *AlignAddr) const;
@@ -985,7 +987,7 @@ auto AlignVectors::createStoreGroups(const AddrList &Group) const -> MoveList {
     assert(!Move.Main.empty() && "Move group should have non-empty Main");
     if (Move.Main.size() >= SizeLimit)
       return false;
-    // For stores with return values we'd have to collect downward depenencies.
+    // For stores with return values we'd have to collect downward dependencies.
     // There are no such stores that we handle at the moment, so omit that.
     assert(Info.Inst->getType()->isVoidTy() &&
            "Not handling stores with return values");
@@ -1046,7 +1048,7 @@ auto AlignVectors::moveTogether(MoveGroup &Move) const -> bool {
   if (Move.IsLoad) {
     // Move all the loads (and dependencies) to where the first load is.
     // Clone all deps to before Where, keeping order.
-    Move.Clones = cloneBefore(Where, Move.Deps);
+    Move.Clones = cloneBefore(Where->getIterator(), Move.Deps);
     // Move all main instructions to after Where, keeping order.
     ArrayRef<Instruction *> Main(Move.Main);
     for (Instruction *M : Main) {
@@ -1067,7 +1069,7 @@ auto AlignVectors::moveTogether(MoveGroup &Move) const -> bool {
     // Move all main instructions to before Where, inverting order.
     ArrayRef<Instruction *> Main(Move.Main);
     for (Instruction *M : Main.drop_front(1)) {
-      M->moveBefore(Where);
+      M->moveBefore(Where->getIterator());
       Where = M;
     }
   }
@@ -1076,7 +1078,8 @@ auto AlignVectors::moveTogether(MoveGroup &Move) const -> bool {
 }
 
 template <typename T>
-auto AlignVectors::cloneBefore(Instruction *To, T &&Insts) const -> InstMap {
+auto AlignVectors::cloneBefore(BasicBlock::iterator To, T &&Insts) const
+    -> InstMap {
   InstMap Map;
 
   for (Instruction *I : Insts) {
@@ -1172,8 +1175,8 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
   for (const ByteSpan::Block &B : VSpan) {
     ByteSpan ASection = ASpan.section(B.Pos, B.Seg.Size);
     for (const ByteSpan::Block &S : ASection) {
-      EarliestUser[S.Seg.Val] = std::min(
-          EarliestUser[S.Seg.Val], earliestUser(B.Seg.Val->uses()), isEarlier);
+      auto &EU = EarliestUser[S.Seg.Val];
+      EU = std::min(EU, earliestUser(B.Seg.Val->uses()), isEarlier);
     }
   }
 
@@ -1200,10 +1203,10 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
                             VSpan.section(Start, Width).values());
   };
 
-  auto moveBefore = [this](Instruction *In, Instruction *To) {
+  auto moveBefore = [this](BasicBlock::iterator In, BasicBlock::iterator To) {
     // Move In and its upward dependencies to before To.
     assert(In->getParent() == To->getParent());
-    DepList Deps = getUpwardDeps(In, To);
+    DepList Deps = getUpwardDeps(&*In, &*To);
     In->moveBefore(To);
     // DepList is sorted with respect to positions in the basic block.
     InstMap Map = cloneBefore(In, Deps);
@@ -1236,7 +1239,7 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
       // in order to check legality.
       if (auto *Load = dyn_cast<Instruction>(Loads[Index])) {
         if (!HVC.isSafeToMoveBeforeInBB(*Load, BasePos))
-          moveBefore(Load, &*BasePos);
+          moveBefore(Load->getIterator(), BasePos);
       }
       LLVM_DEBUG(dbgs() << "Loads[" << Index << "]:" << *Loads[Index] << '\n');
     }
@@ -2315,9 +2318,9 @@ auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
   assert(0 <= Where && Where + Length <= DstLen);
 
   int P2Len = PowerOf2Ceil(SrcLen | DstLen);
-  auto *Undef = UndefValue::get(getByteTy());
-  Value *P2Src = vresize(Builder, Src, P2Len, Undef);
-  Value *P2Dst = vresize(Builder, Dst, P2Len, Undef);
+  auto *Poison = PoisonValue::get(getByteTy());
+  Value *P2Src = vresize(Builder, Src, P2Len, Poison);
+  Value *P2Dst = vresize(Builder, Dst, P2Len, Poison);
 
   SmallVector<int, 256> SMask(P2Len);
   for (int i = 0; i != P2Len; ++i) {
@@ -2328,7 +2331,7 @@ auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
   }
 
   Value *P2Insert = Builder.CreateShuffleVector(P2Dst, P2Src, SMask, "shf");
-  return vresize(Builder, P2Insert, DstLen, Undef);
+  return vresize(Builder, P2Insert, DstLen, Poison);
 }
 
 auto HexagonVectorCombine::vlalignb(IRBuilderBase &Builder, Value *Lo,
@@ -2390,7 +2393,7 @@ auto HexagonVectorCombine::vralignb(IRBuilderBase &Builder, Value *Lo,
     Type *Int64Ty = Type::getInt64Ty(F.getContext());
     Value *Lo64 = Builder.CreateBitCast(Lo, Int64Ty, "cst");
     Value *Hi64 = Builder.CreateBitCast(Hi, Int64Ty, "cst");
-    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb, {},
+    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb,
                                           {Hi64, Lo64, Amt},
                                           /*FMFSource=*/nullptr, "cup");
     return Builder.CreateBitCast(Call, Lo->getType(), "cst");
@@ -2826,13 +2829,13 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
 auto HexagonVectorCombine::getNumSignificantBits(const Value *V,
                                                  const Instruction *CtxI) const
     -> unsigned {
-  return ComputeMaxSignificantBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT);
+  return ComputeMaxSignificantBits(V, DL, &AC, CtxI, &DT);
 }
 
 auto HexagonVectorCombine::getKnownBits(const Value *V,
                                         const Instruction *CtxI) const
     -> KnownBits {
-  return computeKnownBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT);
+  return computeKnownBits(V, DL, &AC, CtxI, &DT);
 }
 
 auto HexagonVectorCombine::isSafeToClone(const Instruction &In) const -> bool {
@@ -2928,11 +2931,6 @@ auto HexagonVectorCombine::getElementRange(IRBuilderBase &Builder, Value *Lo,
 }
 
 // Pass management.
-
-namespace llvm {
-void initializeHexagonVectorCombineLegacyPass(PassRegistry &);
-FunctionPass *createHexagonVectorCombineLegacyPass();
-} // namespace llvm
 
 namespace {
 class HexagonVectorCombineLegacy : public FunctionPass {

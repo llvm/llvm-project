@@ -52,7 +52,7 @@ ValueName *ValueSymbolTable::makeUniqueName(Value *V,
     // identifiers. This breaks ABI demangling but at least ptxas accepts and
     // compiles the program.
     const Module *M = GV->getParent();
-    if (!(M && Triple(M->getTargetTriple()).isNVPTX()))
+    if (!(M && M->getTargetTriple().isNVPTX()))
       AppenDot = true;
   }
 

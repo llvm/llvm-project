@@ -27,6 +27,7 @@ DEFINE_OPCODE(0x06, "rot",  rot)
 DEFINE_OPCODE(0x10, "{", begin)
 DEFINE_OPCODE(0x11, "if", if)
 DEFINE_OPCODE(0x12, "ifelse", ifelse)
+DEFINE_OPCODE(0x13, "return", return)
 
 DEFINE_OPCODE(0x20, nullptr, lit_uint)
 DEFINE_OPCODE(0x21, nullptr, lit_int)

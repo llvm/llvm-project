@@ -14,8 +14,11 @@
 #define LLVM_EXECUTIONENGINE_JITLINK_LOONGARCH_H
 
 #include "TableManager.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/LEB128.h"
 
 namespace llvm {
 namespace jitlink {
@@ -225,11 +228,102 @@ enum EdgeKind_loongarch : Edge::Kind {
   ///     out-of-range error will be returned.
   ///
   Call36PCRel,
+
+  /// low 6 bits label addition
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (*{1}Fixup + (Target + Addend) & 0x3f) : int8
+  ///
+  Add6,
+
+  /// 8 bits label addition
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (*{1}Fixup + Target + Addend) : int8
+  ///
+  Add8,
+
+  /// 16 bits label addition
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (*{2}Fixup + Target + Addend) : int16
+  ///
+  Add16,
+
+  /// 32 bits label addition
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (*{4}Fixup + Target + Addend) : int32
+  ///
+  Add32,
+
+  /// 64 bits label addition
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (*{8}Fixup + Target + Addend) : int64
+  ///
+  Add64,
+
+  /// ULEB128 bits label addition
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Fixup + Target + Addend) : uleb128
+  ///
+  AddUleb128,
+
+  /// low 6 bits label subtraction
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (*{1}Fixup - (Target + Addend) & 0x3f) : int8
+  ///
+  Sub6,
+
+  /// 8 bits label subtraction
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (*{1}Fixup - Target - Addend) : int8
+  ///
+  Sub8,
+
+  /// 16 bits label subtraction
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (*{2}Fixup - Target - Addend) : int16
+  ///
+  Sub16,
+
+  /// 32 bits label subtraction
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (*{4}Fixup - Target - Addend) : int32
+  ///
+  Sub32,
+
+  /// 64 bits label subtraction
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (*{8}Fixup - Target - Addend) : int64
+  ///
+  Sub64,
+
+  /// ULEB128 bits label subtraction
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Fixup - Target - Addend) : uleb128
+  ///
+  SubUleb128,
+
+  /// Alignment requirement used by linker relaxation.
+  ///
+  /// Linker relaxation will use this to ensure all code sequences are properly
+  /// aligned and then remove these edges from the graph.
+  ///
+  AlignRelaxable,
 };
 
 /// Returns a string name for the given loongarch edge. For debugging purposes
 /// only.
-const char *getEdgeKindName(Edge::Kind K);
+LLVM_ABI const char *getEdgeKindName(Edge::Kind K);
 
 // Returns extract bits Val[Hi:Lo].
 inline uint32_t extractBits(uint64_t Val, unsigned Hi, unsigned Lo) {
@@ -362,6 +456,103 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     *(little32_t *)(FixupPtr + 4) = Jirl | Lo16;
     break;
   }
+  case Add6: {
+    int64_t Value = *(reinterpret_cast<const int8_t *>(FixupPtr));
+    Value += ((TargetAddress + Addend) & 0x3f);
+    *FixupPtr = (*FixupPtr & 0xc0) | (static_cast<int8_t>(Value) & 0x3f);
+    break;
+  }
+  case Add8: {
+    int64_t Value =
+        TargetAddress + *(reinterpret_cast<const int8_t *>(FixupPtr)) + Addend;
+    *FixupPtr = static_cast<int8_t>(Value);
+    break;
+  }
+  case Add16: {
+    int64_t Value =
+        TargetAddress + support::endian::read16le(FixupPtr) + Addend;
+    *(little16_t *)FixupPtr = static_cast<int16_t>(Value);
+    break;
+  }
+  case Add32: {
+    int64_t Value =
+        TargetAddress + support::endian::read32le(FixupPtr) + Addend;
+    *(little32_t *)FixupPtr = static_cast<int32_t>(Value);
+    break;
+  }
+  case Add64: {
+    int64_t Value =
+        TargetAddress + support::endian::read64le(FixupPtr) + Addend;
+    *(little64_t *)FixupPtr = static_cast<int64_t>(Value);
+    break;
+  }
+  case AddUleb128: {
+    const uint32_t Maxcount = 1 + 64 / 7;
+    uint32_t Count;
+    const char *Error = nullptr;
+    uint64_t Orig = decodeULEB128((reinterpret_cast<const uint8_t *>(FixupPtr)),
+                                  &Count, nullptr, &Error);
+
+    if (Count > Maxcount || (Count == Maxcount && Error))
+      return make_error<JITLinkError>(
+          "0x" + llvm::utohexstr(orc::ExecutorAddr(FixupAddress).getValue()) +
+          ": extra space for uleb128");
+
+    uint64_t Mask = Count < Maxcount ? (1ULL << 7 * Count) - 1 : -1ULL;
+    encodeULEB128((Orig + TargetAddress + Addend) & Mask,
+                  (reinterpret_cast<uint8_t *>(FixupPtr)), Count);
+    break;
+  }
+  case Sub6: {
+    int64_t Value = *(reinterpret_cast<const int8_t *>(FixupPtr));
+    Value -= ((TargetAddress + Addend) & 0x3f);
+    *FixupPtr = (*FixupPtr & 0xc0) | (static_cast<int8_t>(Value) & 0x3f);
+    break;
+  }
+  case Sub8: {
+    int64_t Value =
+        *(reinterpret_cast<const int8_t *>(FixupPtr)) - TargetAddress - Addend;
+    *FixupPtr = static_cast<int8_t>(Value);
+    break;
+  }
+  case Sub16: {
+    int64_t Value =
+        support::endian::read16le(FixupPtr) - TargetAddress - Addend;
+    *(little16_t *)FixupPtr = static_cast<int16_t>(Value);
+    break;
+  }
+  case Sub32: {
+    int64_t Value =
+        support::endian::read32le(FixupPtr) - TargetAddress - Addend;
+    *(little32_t *)FixupPtr = static_cast<int32_t>(Value);
+    break;
+  }
+  case Sub64: {
+    int64_t Value =
+        support::endian::read64le(FixupPtr) - TargetAddress - Addend;
+    *(little64_t *)FixupPtr = static_cast<int64_t>(Value);
+    break;
+  }
+  case SubUleb128: {
+    const uint32_t Maxcount = 1 + 64 / 7;
+    uint32_t Count;
+    const char *Error = nullptr;
+    uint64_t Orig = decodeULEB128((reinterpret_cast<const uint8_t *>(FixupPtr)),
+                                  &Count, nullptr, &Error);
+
+    if (Count > Maxcount || (Count == Maxcount && Error))
+      return make_error<JITLinkError>(
+          "0x" + llvm::utohexstr(orc::ExecutorAddr(FixupAddress).getValue()) +
+          ": extra space for uleb128");
+
+    uint64_t Mask = Count < Maxcount ? (1ULL << 7 * Count) - 1 : -1ULL;
+    encodeULEB128((Orig - TargetAddress - Addend) & Mask,
+                  (reinterpret_cast<uint8_t *>(FixupPtr)), Count);
+    break;
+  }
+  case AlignRelaxable:
+    // Ignore when the relaxation pass did not run
+    break;
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
@@ -372,7 +563,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
 }
 
 /// loongarch null pointer content.
-extern const char NullPointerContent[8];
+LLVM_ABI extern const char NullPointerContent[8];
 inline ArrayRef<char> getGOTEntryBlockContent(LinkGraph &G) {
   return {reinterpret_cast<const char *>(NullPointerContent),
           G.getPointerSize()};
@@ -386,8 +577,8 @@ inline ArrayRef<char> getGOTEntryBlockContent(LinkGraph &G) {
 ///   ld.[w/d]  $t8, %pageoff12(ptr)
 ///   jr        $t8
 constexpr size_t StubEntrySize = 12;
-extern const uint8_t LA64StubContent[StubEntrySize];
-extern const uint8_t LA32StubContent[StubEntrySize];
+LLVM_ABI extern const uint8_t LA64StubContent[StubEntrySize];
+LLVM_ABI extern const uint8_t LA32StubContent[StubEntrySize];
 inline ArrayRef<char> getStubBlockContent(LinkGraph &G) {
   auto StubContent =
       G.getPointerSize() == 8 ? LA64StubContent : LA32StubContent;

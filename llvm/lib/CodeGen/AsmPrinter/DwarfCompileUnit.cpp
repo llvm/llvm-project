@@ -33,6 +33,7 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -43,7 +44,7 @@
 using namespace llvm;
 
 /// Query value using AddLinkageNamesToDeclCallOriginsForTuning.
-cl::opt<cl::boolOrDefault> AddLinkageNamesToDeclCallOrigins(
+static cl::opt<cl::boolOrDefault> AddLinkageNamesToDeclCallOrigins(
     "add-linkage-names-to-declaration-call-origins", cl::Hidden,
     cl::desc("Add DW_AT_linkage_name to function declaration DIEs "
              "referenced by DW_AT_call_origin attributes. Enabled by default "
@@ -73,6 +74,26 @@ static dwarf::Tag GetCompileUnitType(UnitKind Kind, DwarfDebug *DW) {
     return dwarf::DW_TAG_skeleton_unit;
 
   return dwarf::DW_TAG_compile_unit;
+}
+
+/// Translate NVVM IR address space code to DWARF correspondent value
+static unsigned translateToNVVMDWARFAddrSpace(unsigned AddrSpace) {
+  switch (AddrSpace) {
+  case NVPTXAS::ADDRESS_SPACE_GENERIC:
+    return NVPTXAS::DWARF_ADDR_generic_space;
+  case NVPTXAS::ADDRESS_SPACE_GLOBAL:
+    return NVPTXAS::DWARF_ADDR_global_space;
+  case NVPTXAS::ADDRESS_SPACE_SHARED:
+    return NVPTXAS::DWARF_ADDR_shared_space;
+  case NVPTXAS::ADDRESS_SPACE_CONST:
+    return NVPTXAS::DWARF_ADDR_const_space;
+  case NVPTXAS::ADDRESS_SPACE_LOCAL:
+    return NVPTXAS::DWARF_ADDR_local_space;
+  default:
+    llvm_unreachable(
+        "Cannot translate unknown address space to DWARF address space");
+    return AddrSpace;
+  }
 }
 
 DwarfCompileUnit::DwarfCompileUnit(unsigned UID, const DICompileUnit *Node,
@@ -264,14 +285,11 @@ void DwarfCompileUnit::addLocationAttribute(
     }
 
     if (Expr) {
-      // According to
-      // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
-      // cuda-gdb requires DW_AT_address_class for all variables to be able to
-      // correctly interpret address space of the variable address.
+      // cuda-gdb special requirement. See NVPTXAS::DWARF_AddressSpace
       // Decode DW_OP_constu <DWARF Address Space> DW_OP_swap DW_OP_xderef
-      // sequence for the NVPTX + gdb target.
-      unsigned LocalNVPTXAddressSpace;
+      // sequence to specify corresponding address space.
       if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
+        unsigned LocalNVPTXAddressSpace;
         const DIExpression *NewExpr =
             DIExpression::extractAddressClass(Expr, LocalNVPTXAddressSpace);
         if (NewExpr != Expr) {
@@ -363,6 +381,10 @@ void DwarfCompileUnit::addLocationAttribute(
         DD->addArangeLabel(SymbolCU(this, Sym));
         addOpAddress(*Loc, Sym);
       }
+      if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB() &&
+          !NVPTXAddressSpace)
+        NVPTXAddressSpace =
+            translateToNVVMDWARFAddrSpace(Global->getType()->getAddressSpace());
     }
     // Global variables attached to symbols are memory locations.
     // It would be better if this were unconditional, but malformed input that
@@ -373,13 +395,9 @@ void DwarfCompileUnit::addLocationAttribute(
     DwarfExpr->addExpression(Expr);
   }
   if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
-    // According to
-    // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
-    // cuda-gdb requires DW_AT_address_class for all variables to be able to
-    // correctly interpret address space of the variable address.
-    const unsigned NVPTX_ADDR_global_space = 5;
+    // cuda-gdb special requirement. See NVPTXAS::DWARF_AddressSpace
     addUInt(*VariableDIE, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
-            NVPTXAddressSpace.value_or(NVPTX_ADDR_global_space));
+            NVPTXAddressSpace.value_or(NVPTXAS::DWARF_ADDR_global_space));
   }
   if (Loc)
     addBlock(*VariableDIE, dwarf::DW_AT_location, DwarfExpr->finalize());
@@ -764,6 +782,8 @@ DIE *DwarfCompileUnit::constructLexicalScopeDIE(LexicalScope *Scope) {
     assert(!LexicalBlockDIEs.count(DS) &&
            "Concrete out-of-line DIE for this scope exists!");
     LexicalBlockDIEs[DS] = ScopeDIE;
+  } else {
+    InlinedLocalScopeDIEs[DS].push_back(ScopeDIE);
   }
 
   attachRangesOrLowHighPC(*ScopeDIE, Scope->getRanges());
@@ -793,10 +813,10 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
   const DbgValueLoc *DVal = &Single.getValueLoc();
   if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB() &&
       !Single.getExpr()) {
-    // Lack of expression means it is a register.  Registers for PTX need to
-    // be marked with DW_AT_address_class = 2.  See
-    // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
-    addUInt(VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1, 2);
+    // cuda-gdb special requirement. See NVPTXAS::DWARF_AddressSpace
+    // Lack of expression means it is a register.
+    addUInt(VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
+            NVPTXAS::DWARF_ADDR_reg_space);
   }
   if (!DVal->isVariadic()) {
     const DbgValueLocEntry *Entry = DVal->getLocEntries().begin();
@@ -922,14 +942,11 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
     SmallVector<uint64_t, 8> Ops;
     TRI->getOffsetOpcodes(Offset, Ops);
 
-    // According to
-    // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
-    // cuda-gdb requires DW_AT_address_class for all variables to be
-    // able to correctly interpret address space of the variable
-    // address. Decode DW_OP_constu <DWARF Address Space> DW_OP_swap
-    // DW_OP_xderef sequence for the NVPTX + gdb target.
-    unsigned LocalNVPTXAddressSpace;
+    // cuda-gdb special requirement. See NVPTXAS::DWARF_AddressSpace.
+    // Decode DW_OP_constu <DWARF Address Space> DW_OP_swap
+    // DW_OP_xderef sequence to specify address space.
     if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
+      unsigned LocalNVPTXAddressSpace;
       const DIExpression *NewExpr =
           DIExpression::extractAddressClass(Expr, LocalNVPTXAddressSpace);
       if (NewExpr != Expr) {
@@ -949,14 +966,9 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
     DwarfExpr.addExpression(std::move(Cursor));
   }
   if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
-    // According to
-    // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
-    // cuda-gdb requires DW_AT_address_class for all variables to be
-    // able to correctly interpret address space of the variable
-    // address.
-    const unsigned NVPTX_ADDR_local_space = 6;
+    // cuda-gdb special requirement. See NVPTXAS::DWARF_AddressSpace.
     addUInt(VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
-            NVPTXAddressSpace.value_or(NVPTX_ADDR_local_space));
+            NVPTXAddressSpace.value_or(NVPTXAS::DWARF_ADDR_local_space));
   }
   addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
   if (DwarfExpr.TagOffset)
@@ -1160,7 +1172,7 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
   // should be emitted for subprograms in this CU.
   if (!includeMinimalInlineScopes() && !Scope->getInlinedAt()) {
     auto &LocalDecls = DD->getLocalDeclsForScope(Scope->getScopeNode());
-    DeferredLocalDecls.insert(LocalDecls.begin(), LocalDecls.end());
+    DeferredLocalDecls.insert_range(LocalDecls);
   }
 
   // Emit inner lexical scopes.
@@ -1481,6 +1493,19 @@ void DwarfCompileUnit::finishEntityDefinition(const DbgEntity *Entity) {
     getDwarfDebug().addAccelName(*this, CUNode->getNameTableKind(), Name, *Die);
 }
 
+void DwarfCompileUnit::attachLexicalScopesAbstractOrigins() {
+  auto AttachAO = [&](const DILocalScope *LS, DIE *ScopeDIE) {
+    if (auto *AbsLSDie = getAbstractScopeDIEs().lookup(LS))
+      addDIEEntry(*ScopeDIE, dwarf::DW_AT_abstract_origin, *AbsLSDie);
+  };
+
+  for (auto [LScope, ScopeDIE] : LexicalBlockDIEs)
+    AttachAO(LScope, ScopeDIE);
+  for (auto &[LScope, ScopeDIEs] : InlinedLocalScopeDIEs)
+    for (auto *ScopeDIE : ScopeDIEs)
+      AttachAO(LScope, ScopeDIE);
+}
+
 DbgEntity *DwarfCompileUnit::getExistingAbstractEntity(const DINode *Node) {
   auto &AbstractEntities = getAbstractEntities();
   auto I = AbstractEntities.find(Node);
@@ -1747,8 +1772,11 @@ void DwarfCompileUnit::createBaseTypeDIEs() {
 DIE *DwarfCompileUnit::getLexicalBlockDIE(const DILexicalBlock *LB) {
   // Assume if there is an abstract tree all the DIEs are already emitted.
   bool isAbstract = getAbstractScopeDIEs().count(LB->getSubprogram());
-  if (isAbstract && getAbstractScopeDIEs().count(LB))
-    return getAbstractScopeDIEs()[LB];
+  if (isAbstract) {
+    auto &DIEs = getAbstractScopeDIEs();
+    if (auto It = DIEs.find(LB); It != DIEs.end())
+      return It->second;
+  }
   assert(!isAbstract && "Missed lexical block DIE in abstract tree!");
 
   // Return a concrete DIE if it exists or nullptr otherwise.
@@ -1764,8 +1792,9 @@ DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
 
     // Otherwise the context must be a DISubprogram.
     auto *SPScope = cast<DISubprogram>(Context);
-    if (getAbstractScopeDIEs().count(SPScope))
-      return getAbstractScopeDIEs()[SPScope];
+    const auto &DIEs = getAbstractScopeDIEs();
+    if (auto It = DIEs.find(SPScope); It != DIEs.end())
+      return It->second;
   }
   return DwarfUnit::getOrCreateContextDIE(Context);
 }

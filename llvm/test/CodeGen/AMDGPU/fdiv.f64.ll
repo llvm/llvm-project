@@ -128,7 +128,7 @@ define amdgpu_kernel void @s_fdiv_v4f64(ptr addrspace(1) %out, <4 x double> %num
 ; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, 0.5
 ; GCN: buffer_store_dwordx2 [[MUL]]
 define amdgpu_kernel void @div_fast_2_x_pat_f64(ptr addrspace(1) %out) #1 {
-  %x = load double, ptr addrspace(1) undef
+  %x = load double, ptr addrspace(1) poison
   %rcp = fdiv fast double %x, 2.0
   store double %rcp, ptr addrspace(1) %out, align 4
   ret void
@@ -140,7 +140,7 @@ define amdgpu_kernel void @div_fast_2_x_pat_f64(ptr addrspace(1) %out) #1 {
 ; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, v[[[K_LO]]:[[K_HI]]]
 ; GCN: buffer_store_dwordx2 [[MUL]]
 define amdgpu_kernel void @div_fast_k_x_pat_f64(ptr addrspace(1) %out) #1 {
-  %x = load double, ptr addrspace(1) undef
+  %x = load double, ptr addrspace(1) poison
   %rcp = fdiv fast double %x, 10.0
   store double %rcp, ptr addrspace(1) %out, align 4
   ret void
@@ -152,7 +152,7 @@ define amdgpu_kernel void @div_fast_k_x_pat_f64(ptr addrspace(1) %out) #1 {
 ; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, v[[[K_LO]]:[[K_HI]]]
 ; GCN: buffer_store_dwordx2 [[MUL]]
 define amdgpu_kernel void @div_fast_neg_k_x_pat_f64(ptr addrspace(1) %out) #1 {
-  %x = load double, ptr addrspace(1) undef
+  %x = load double, ptr addrspace(1) poison
   %rcp = fdiv fast double %x, -10.0
   store double %rcp, ptr addrspace(1) %out, align 4
   ret void

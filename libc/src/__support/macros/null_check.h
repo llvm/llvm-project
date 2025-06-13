@@ -14,18 +14,22 @@
 #include "src/__support/macros/sanitizer.h"
 
 #if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
-// Use volatile to prevent undefined behavior of dereferencing nullptr.
-// Intentionally crashing with SIGSEGV.
-#define LIBC_CRASH_ON_NULLPTR(PTR)                                             \
+#define LIBC_CRASH_ON_NULLPTR(ptr)                                             \
   do {                                                                         \
-    if (LIBC_UNLIKELY(PTR == nullptr)) {                                       \
-      volatile auto *crashing = PTR;                                           \
-      [[maybe_unused]] volatile auto crash = *crashing;                        \
+    if (LIBC_UNLIKELY((ptr) == nullptr))                                       \
       __builtin_trap();                                                        \
-    }                                                                          \
   } while (0)
+#define LIBC_CRASH_ON_VALUE(var, value)                                        \
+  do {                                                                         \
+    if (LIBC_UNLIKELY((var) == (value)))                                       \
+      __builtin_trap();                                                        \
+  } while (0)
+
 #else
 #define LIBC_CRASH_ON_NULLPTR(ptr)                                             \
+  do {                                                                         \
+  } while (0)
+#define LIBC_CRASH_ON_VALUE(var, value)                                        \
   do {                                                                         \
   } while (0)
 #endif

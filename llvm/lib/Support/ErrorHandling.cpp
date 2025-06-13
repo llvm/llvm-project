@@ -33,7 +33,7 @@
 #if defined(HAVE_UNISTD_H)
 # include <unistd.h>
 #endif
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 # include <io.h>
 # include <fcntl.h>
 #endif
@@ -124,6 +124,25 @@ void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
     abort();
   else
     exit(1);
+}
+
+void llvm::reportFatalInternalError(const char *reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/true);
+}
+void llvm::reportFatalInternalError(StringRef reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/true);
+}
+void llvm::reportFatalInternalError(const Twine &reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/true);
+}
+void llvm::reportFatalUsageError(const char *reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/false);
+}
+void llvm::reportFatalUsageError(StringRef reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/false);
+}
+void llvm::reportFatalUsageError(const Twine &reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/false);
 }
 
 void llvm::install_bad_alloc_error_handler(fatal_error_handler_t handler,

@@ -16,7 +16,6 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 
 #include <cstdint>
 
@@ -31,14 +30,14 @@ AST_MATCHER_P(QualType, hasAnyType, std::vector<StringRef>, Names) {
     return false;
 
   std::string Name = Node.getLocalUnqualifiedType().getAsString();
-  return llvm::any_of(Names, [&Name](StringRef Ref) { return Ref == Name; });
+  return llvm::is_contained(Names, Name);
 }
 
 AST_MATCHER(FieldDecl, hasIntBitwidth) {
   assert(Node.isBitField());
   const ASTContext &Ctx = Node.getASTContext();
   unsigned IntBitWidth = Ctx.getIntWidth(Ctx.IntTy);
-  unsigned CurrentBitWidth = Node.getBitWidthValue(Ctx);
+  unsigned CurrentBitWidth = Node.getBitWidthValue();
   return IntBitWidth == CurrentBitWidth;
 }
 
@@ -513,7 +512,9 @@ void NarrowingConversionsCheck::handleFloatingCast(const ASTContext &Context,
       return;
     }
     const BuiltinType *FromType = getBuiltinType(Rhs);
-    if (ToType->getKind() < FromType->getKind())
+    if (!llvm::APFloatBase::isRepresentableBy(
+            Context.getFloatTypeSemantics(FromType->desugar()),
+            Context.getFloatTypeSemantics(ToType->desugar())))
       diagNarrowType(SourceLoc, Lhs, Rhs);
   }
 }

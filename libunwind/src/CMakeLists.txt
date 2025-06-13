@@ -20,7 +20,12 @@ set(LIBUNWIND_C_SOURCES
     )
 set_source_files_properties(${LIBUNWIND_C_SOURCES}
                             PROPERTIES
-                              COMPILE_FLAGS "-std=c99")
+                              # We need to set `-fexceptions` here so that key
+                              # unwinding functions, like
+                              # _UNWIND_RaiseException, are not marked as
+                              # `nounwind`, which breaks LTO builds of
+                              # libunwind.  See #56825 and #120657 for context.
+                              COMPILE_FLAGS "-std=c99 -fexceptions")
 
 set(LIBUNWIND_ASM_SOURCES
     UnwindRegistersRestore.S
@@ -31,7 +36,6 @@ set(LIBUNWIND_HEADERS
     AddressSpace.hpp
     assembly.h
     CompactUnwinder.hpp
-    cet_unwind.h
     config.h
     dwarf2.h
     DwarfInstructions.hpp
@@ -41,6 +45,7 @@ set(LIBUNWIND_HEADERS
     libunwind_ext.h
     Registers.hpp
     RWMutex.hpp
+    shadow_stack_unwind.h
     Unwind-EHABI.h
     UnwindCursor.hpp
     ../include/libunwind.h
@@ -66,18 +71,6 @@ set(LIBUNWIND_SOURCES
     ${LIBUNWIND_ASM_SOURCES})
 
 # Generate library list.
-if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-  add_link_flags_if_supported(-nostdlib++)
-else()
-  if (LIBUNWIND_USE_COMPILER_RT)
-    add_library_flags("${LIBUNWIND_BUILTINS_LIBRARY}")
-  else()
-    add_library_flags_if(LIBUNWIND_HAS_GCC_S_LIB gcc_s)
-    add_library_flags_if(LIBUNWIND_HAS_GCC_LIB gcc)
-  endif()
-  add_library_flags_if(LIBUNWIND_HAS_C_LIB c)
-endif()
-
 if (NOT APPLE)
   add_library_flags_if(LIBUNWIND_HAS_DL_LIB dl)
 endif()
@@ -113,22 +106,6 @@ if (HAIKU)
 
   add_compile_flags("-D_DEFAULT_SOURCE")
   add_compile_flags("-DPT_GNU_EH_FRAME=PT_EH_FRAME")
-
-  find_path(LIBUNWIND_HAIKU_PRIVATE_HEADERS
-            "commpage_defs.h"
-            PATHS ${CMAKE_SYSTEM_INCLUDE_PATH}
-            PATH_SUFFIXES "/private/system"
-            NO_DEFAULT_PATH
-            REQUIRED)
-
-  include_directories(SYSTEM "${LIBUNWIND_HAIKU_PRIVATE_HEADERS}")
-  if (LIBUNWIND_TARGET_TRIPLE)
-    if (${LIBUNWIND_TARGET_TRIPLE} MATCHES "^x86_64")
-      include_directories(SYSTEM "${LIBUNWIND_HAIKU_PRIVATE_HEADERS}/arch/x86_64")
-    endif()
-  else()
-    include_directories(SYSTEM "${LIBUNWIND_HAIKU_PRIVATE_HEADERS}/arch/${CMAKE_SYSTEM_PROCESSOR}")
-  endif()
 endif ()
 
 string(REPLACE ";" " " LIBUNWIND_COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}")

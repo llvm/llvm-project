@@ -478,7 +478,7 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
                             const api_notes::FunctionInfo &Info,
                             VersionedInfoMetadata Metadata) {
   // Find the declaration itself.
-  FunctionDecl *FD = AnyFunc.dyn_cast<FunctionDecl *>();
+  FunctionDecl *FD = dyn_cast<FunctionDecl *>(AnyFunc);
   Decl *D = FD;
   ObjCMethodDecl *MD = nullptr;
   if (!D) {
@@ -643,6 +643,9 @@ static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
   if (auto ReleaseOp = Info.SwiftReleaseOp)
     D->addAttr(
         SwiftAttrAttr::Create(S.Context, "release:" + ReleaseOp.value()));
+  if (auto DefaultOwnership = Info.SwiftDefaultOwnership)
+    D->addAttr(SwiftAttrAttr::Create(
+        S.Context, "returned_as_" + DefaultOwnership.value() + "_by_default"));
 
   if (auto ConformsTo = Info.SwiftConformance)
     D->addAttr(

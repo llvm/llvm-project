@@ -342,12 +342,24 @@ public:
   uint32_t GetAddressByteSize();
 
   const char *GetTriple();
-  
+
   const char *GetABIName();
 
   const char *GetLabel() const;
 
   SBError SetLabel(const char *label);
+
+  /// Architecture opcode byte size width accessor
+  ///
+  /// \return
+  /// The minimum size in 8-bit (host) bytes of an opcode.
+  uint32_t GetMinimumOpcodeByteSize() const;
+
+  /// Architecture opcode byte size width accessor
+  ///
+  /// \return
+  /// The maximum size in 8-bit (host) bytes of an opcode.
+  uint32_t GetMaximumOpcodeByteSize() const;
 
   /// Architecture data byte width accessor
   ///
@@ -946,6 +958,8 @@ public:
   ///     An error if a Trace already exists or the trace couldn't be created.
   lldb::SBTrace CreateTrace(SBError &error);
 
+  lldb::SBMutex GetAPIMutex() const;
+
 protected:
   friend class SBAddress;
   friend class SBAddressRange;
@@ -964,6 +978,7 @@ protected:
   friend class SBSection;
   friend class SBSourceManager;
   friend class SBSymbol;
+  friend class SBType;
   friend class SBTypeStaticField;
   friend class SBValue;
   friend class SBVariablesOptions;

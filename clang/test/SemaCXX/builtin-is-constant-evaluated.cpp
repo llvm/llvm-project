@@ -143,3 +143,14 @@ namespace fold_initializer {
   const float A::f = __builtin_is_constant_evaluated();
   static_assert(fold(A::f == 1.0f));
 }
+
+namespace narrowing {
+  struct X { unsigned u; };
+  constexpr int f(X x) {return x.u;}
+  void g() {
+    static_assert(f({0xFFFFFFFFLL + __builtin_is_constant_evaluated()}) == 0);
+    f({0x100000000LL - __builtin_is_constant_evaluated()}); // expected-error {{constant expression evaluates to 4294967296}} \
+    // expected-warning {{implicit conversion}} \
+    // expected-note {{insert an explicit cast to silence this issue}}
+  }
+}

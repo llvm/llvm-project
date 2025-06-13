@@ -56,6 +56,10 @@ public:
     // Avoid 0-D vectors and 1-D rhs:
     if (!lhsType.hasRank() || !rhsType.hasRank() || rhsType.getRank() < 2)
       return failure();
+    // This codegen does not work for scalable vectors. Return failure so this
+    // pattern is not accidentally chosen over patterns that lower to ArmSVE.
+    if (lhsType.isScalable() || rhsType.isScalable())
+      return failure();
     auto dimM = lhsType.getRank() == 1 ? 1 : lhsType.getDimSize(0);
     auto dimN = rhsType.getDimSize(0);
     auto dimK = rhsType.getDimSize(1);
@@ -126,8 +130,8 @@ public:
         loc, op.getResultType(), rewriter.getZeroAttr(op.getResultType()));
 
     SmallVector<int64_t> unrolledSize = *op.getShapeForUnroll();
-    SmallVector<int64_t> smmlaShape{2, 8};
-    SmallVector<int64_t> loopOrder{0, 1};
+    SmallVector<int64_t> smmlaShape = {2, 8};
+    SmallVector<int64_t> loopOrder = {0, 1};
     if (unrolledSize.size() == 3) {
       smmlaShape.insert(smmlaShape.begin(), isVecmat ? 1 : 2);
       loopOrder.push_back(2);
@@ -238,5 +242,5 @@ public:
 void mlir::arm_neon::populateLowerContractionToSMMLAPatternPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
-  patterns.add<LowerContractionToSMMLAPattern>(context, /*benefit=*/1);
+  patterns.add<LowerContractionToSMMLAPattern>(context, /*benefit=*/2);
 }

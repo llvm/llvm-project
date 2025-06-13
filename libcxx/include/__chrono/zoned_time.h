@@ -14,7 +14,7 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #  include <__chrono/calendar.h>
 #  include <__chrono/duration.h>
@@ -66,7 +66,7 @@ class zoned_time {
   // Using these constraints in the code causes the compiler to give an
   // error that the constraint depends on itself. To avoid that issue use
   // the fact it is possible to create this object from a _TimeZonePtr.
-  using __traits = zoned_traits<_TimeZonePtr>;
+  using __traits _LIBCPP_NODEBUG = zoned_traits<_TimeZonePtr>;
 
 public:
   using duration = common_type_t<_Duration, seconds>;
@@ -186,7 +186,7 @@ template <class _Duration>
 zoned_time(sys_time<_Duration>) -> zoned_time<common_type_t<_Duration, seconds>>;
 
 template <class _TimeZonePtrOrName>
-using __time_zone_representation =
+using __time_zone_representation _LIBCPP_NODEBUG =
     conditional_t<is_convertible_v<_TimeZonePtrOrName, string_view>,
                   const time_zone*,
                   remove_cvref_t<_TimeZonePtrOrName>>;
@@ -223,6 +223,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #endif // _LIBCPP___CHRONO_ZONED_TIME_H

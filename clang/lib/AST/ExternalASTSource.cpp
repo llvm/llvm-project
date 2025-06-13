@@ -38,6 +38,10 @@ ExternalASTSource::hasExternalDefinitions(const Decl *D) {
   return EK_ReplyHazy;
 }
 
+bool ExternalASTSource::wasThisDeclarationADefinition(const FunctionDecl *FD) {
+  return false;
+}
+
 void ExternalASTSource::FindFileRegionDecls(FileID File, unsigned Offset,
                                             unsigned Length,
                                             SmallVectorImpl<Decl *> &Decls) {}
@@ -90,9 +94,9 @@ ExternalASTSource::GetExternalCXXBaseSpecifiers(uint64_t Offset) {
   return nullptr;
 }
 
-bool
-ExternalASTSource::FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                                  DeclarationName Name) {
+bool ExternalASTSource::FindExternalVisibleDeclsByName(
+    const DeclContext *DC, DeclarationName Name,
+    const DeclContext *OriginalDC) {
   return false;
 }
 
@@ -125,7 +129,7 @@ uint32_t ExternalASTSource::incrementGeneration(ASTContext &C) {
     // FIXME: Only bump the generation counter if the current generation number
     // has been observed?
     if (!++CurrentGeneration)
-      llvm::report_fatal_error("generation counter overflowed", false);
+      llvm::reportFatalUsageError("generation counter overflowed");
   }
 
   return OldGeneration;

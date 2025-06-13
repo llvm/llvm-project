@@ -1,4 +1,5 @@
-header: sys-socket.h
+header: sys/socket.h
+header_template: socket.h.def
 macros: []
 types:
   - type_name: struct_sockaddr_un

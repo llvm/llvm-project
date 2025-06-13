@@ -176,6 +176,17 @@ Status ProcessElfCore::DoLoadCore() {
     return error;
   }
 
+  // Even if the architecture is set in the target, we need to override it to
+  // match the core file which is always single arch.
+  ArchSpec arch(m_core_module_sp->GetArchitecture());
+
+  ArchSpec target_arch = GetTarget().GetArchitecture();
+  ArchSpec core_arch(m_core_module_sp->GetArchitecture());
+  target_arch.MergeFrom(core_arch);
+  GetTarget().SetArchitecture(target_arch, /*set_platform*/ true);
+
+  SetUnixSignals(UnixSignals::Create(GetArchitecture()));
+
   SetCanJIT(false);
 
   m_thread_data_valid = true;
@@ -216,23 +227,12 @@ Status ProcessElfCore::DoLoadCore() {
     m_core_tag_ranges.Sort();
   }
 
-  // Even if the architecture is set in the target, we need to override it to
-  // match the core file which is always single arch.
-  ArchSpec arch(m_core_module_sp->GetArchitecture());
-
-  ArchSpec target_arch = GetTarget().GetArchitecture();
-  ArchSpec core_arch(m_core_module_sp->GetArchitecture());
-  target_arch.MergeFrom(core_arch);
-  GetTarget().SetArchitecture(target_arch);
-
-  SetUnixSignals(UnixSignals::Create(GetArchitecture()));
-
   // Ensure we found at least one thread that was stopped on a signal.
   bool siginfo_signal_found = false;
   bool prstatus_signal_found = false;
   // Check we found a signal in a SIGINFO note.
   for (const auto &thread_data : m_thread_data) {
-    if (thread_data.siginfo.si_signo != 0)
+    if (!thread_data.siginfo_bytes.empty() || thread_data.signo != 0)
       siginfo_signal_found = true;
     if (thread_data.prstatus_sig != 0)
       prstatus_signal_found = true;
@@ -242,10 +242,10 @@ Status ProcessElfCore::DoLoadCore() {
     // PRSTATUS note.
     if (prstatus_signal_found) {
       for (auto &thread_data : m_thread_data)
-        thread_data.siginfo.si_signo = thread_data.prstatus_sig;
+        thread_data.signo = thread_data.prstatus_sig;
     } else if (m_thread_data.size() > 0) {
       // If all else fails force the first thread to be SIGSTOP
-      m_thread_data.begin()->siginfo.si_signo =
+      m_thread_data.begin()->signo =
           GetUnixSignals()->GetSignalNumberFromName("SIGSTOP");
     }
   }
@@ -289,7 +289,7 @@ void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
 UUID ProcessElfCore::FindModuleUUID(const llvm::StringRef path) {
   // Returns the gnu uuid from matched NT_FILE entry
   for (NT_FILE_Entry &entry : m_nt_file_entries)
-    if (path == entry.path)
+    if (path == entry.path && entry.uuid.IsValid())
       return entry.uuid;
   return UUID();
 }
@@ -506,7 +506,7 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data,
   else
     offset += 16;
 
-  thread_data.siginfo.si_signo = data.GetU32(&offset); // pr_cursig
+  thread_data.signo = data.GetU32(&offset); // pr_cursig
   thread_data.tid = data.GetU32(&offset);   // pr_pid
   if (lp64)
     offset += 4;
@@ -589,7 +589,7 @@ static void ParseOpenBSDProcInfo(ThreadData &thread_data,
     return;
 
   offset += 4;
-  thread_data.siginfo.si_signo = data.GetU32(&offset);
+  thread_data.signo = data.GetU32(&offset);
 }
 
 llvm::Expected<std::vector<CoreNote>>
@@ -827,7 +827,7 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   // Signal targeted at the whole process.
   if (siglwp == 0) {
     for (auto &data : m_thread_data)
-      data.siginfo.si_signo = signo;
+      data.signo = signo;
   }
   // Signal destined for a particular LWP.
   else {
@@ -835,7 +835,7 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
 
     for (auto &data : m_thread_data) {
       if (data.tid == siglwp) {
-        data.siginfo.si_signo = signo;
+        data.signo = signo;
         passed = true;
         break;
       }
@@ -938,12 +938,11 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       break;
     }
     case ELF::NT_SIGINFO: {
-      const lldb_private::UnixSignals &unix_signals = *GetUnixSignals();
-      ELFLinuxSigInfo siginfo;
-      Status status = siginfo.Parse(note.data, arch, unix_signals);
-      if (status.Fail())
-        return status.ToError();
-      thread_data.siginfo = siginfo;
+      lldb::offset_t size = note.data.GetByteSize();
+      lldb::offset_t offset = 0;
+      const char *bytes =
+          static_cast<const char *>(note.data.GetData(&offset, size));
+      thread_data.siginfo_bytes = llvm::StringRef(bytes, size);
       break;
     }
     case ELF::NT_FILE: {
@@ -1031,6 +1030,8 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
 
   std::vector<uint8_t> ph_bytes;
   ph_bytes.resize(elf_header.e_phentsize);
+  lldb::addr_t base_addr = 0;
+  bool found_first_load_segment = false;
   for (unsigned int i = 0; i < elf_header.e_phnum; ++i) {
     byte_read = ReadMemory(ph_addr + i * elf_header.e_phentsize,
                            ph_bytes.data(), elf_header.e_phentsize, error);
@@ -1041,6 +1042,11 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
     offset = 0;
     elf::ELFProgramHeader program_header;
     program_header.Parse(program_header_data, &offset);
+    if (program_header.p_type == llvm::ELF::PT_LOAD &&
+        !found_first_load_segment) {
+      base_addr = program_header.p_vaddr;
+      found_first_load_segment = true;
+    }
     if (program_header.p_type != llvm::ELF::PT_NOTE)
       continue;
 
@@ -1049,7 +1055,7 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
 
     // We need to slide the address of the p_vaddr as these values don't get
     // relocated in memory.
-    const lldb::addr_t vaddr = program_header.p_vaddr + address;
+    const lldb::addr_t vaddr = program_header.p_vaddr + address - base_addr;
     byte_read =
         ReadMemory(vaddr, note_bytes.data(), program_header.p_memsz, error);
     if (byte_read != program_header.p_memsz)

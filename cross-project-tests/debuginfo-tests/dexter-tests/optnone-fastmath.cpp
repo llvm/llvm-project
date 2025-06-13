@@ -1,7 +1,7 @@
-// RUN: %clang -std=gnu++11 -O2 -ffast-math -g %s -o %t
+// RUN: %clang++ -std=gnu++11 -O2 -ffast-math -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
 // RUN:     --binary %t --debugger 'lldb' -- %s
-// RUN: %clang -std=gnu++11 -O0 -ffast-math -g %s -o %t
+// RUN: %clang++ -std=gnu++11 -O0 -ffast-math -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
 // RUN:     --binary %t --debugger 'lldb' -- %s
 

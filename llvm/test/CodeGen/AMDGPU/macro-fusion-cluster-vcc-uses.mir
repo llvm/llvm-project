@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs -run-pass machine-scheduler -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=tahiti -passes=machine-scheduler -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: cluster_add_addc
 # GCN: S_NOP 0, implicit-def $vcc

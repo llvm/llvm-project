@@ -383,12 +383,12 @@ void ProcessMinidump::BuildMemoryRegions() {
 
   MemoryRegionInfos to_add;
   ModuleList &modules = GetTarget().GetImages();
-  SectionLoadList &load_list = GetTarget().GetSectionLoadList();
+  Target &target = GetTarget();
   modules.ForEach([&](const ModuleSP &module_sp) {
     SectionList *sections = module_sp->GetSectionList();
     for (size_t i = 0; i < sections->GetSize(); ++i) {
       SectionSP section_sp = sections->GetSectionAtIndex(i);
-      addr_t load_addr = load_list.GetSectionLoadAddress(section_sp);
+      addr_t load_addr = target.GetSectionLoadAddress(section_sp);
       if (load_addr == LLDB_INVALID_ADDRESS)
         continue;
       MemoryRegionInfo::RangeType section_range(load_addr,

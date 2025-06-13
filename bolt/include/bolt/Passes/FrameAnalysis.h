@@ -10,6 +10,7 @@
 #define BOLT_PASSES_FRAMEANALYSIS_H
 
 #include "bolt/Passes/StackPointerTracking.h"
+#include <tuple>
 
 namespace llvm {
 namespace bolt {
@@ -53,9 +54,7 @@ struct ArgInStackAccess {
   uint8_t Size;
 
   bool operator<(const ArgInStackAccess &RHS) const {
-    if (StackOffset != RHS.StackOffset)
-      return StackOffset < RHS.StackOffset;
-    return Size < RHS.Size;
+    return std::tie(StackOffset, Size) < std::tie(RHS.StackOffset, RHS.Size);
   }
 };
 

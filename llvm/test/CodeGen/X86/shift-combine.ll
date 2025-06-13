@@ -390,7 +390,6 @@ define dso_local i32 @ashr_add_shl_i32_i8_extra_use3(i32 %r, ptr %p1, ptr %p2) n
 define dso_local void @PR42880(i32 %t0) {
 ; X86-LABEL: PR42880:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    testb %al, %al
 ; X86-NEXT:    je .LBB16_1
 ; X86-NEXT:  # %bb.2: # %if
@@ -398,7 +397,6 @@ define dso_local void @PR42880(i32 %t0) {
 ;
 ; X64-LABEL: PR42880:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    je .LBB16_1
 ; X64-NEXT:  # %bb.2: # %if
@@ -408,7 +406,7 @@ define dso_local void @PR42880(i32 %t0) {
   %x = ptrtoint ptr %add.ptr.i94 to i32
   %sub2 = sub i32 %x, 0
   %div = sdiv exact i32 %sub2, 24
-  br i1 undef, label %if, label %then
+  br i1 poison, label %if, label %then
 
 then:
   %t1 = xor i32 %div, -1

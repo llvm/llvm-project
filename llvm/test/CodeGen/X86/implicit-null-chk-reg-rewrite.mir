@@ -1,9 +1,9 @@
 # RUN: llc -mtriple=x86_64 -run-pass=implicit-null-checks %s -o - | FileCheck %s
 --- |
 
-  define i32 @reg-rewrite(ptr %x) {
+  define i32 @reg-rewrite(ptr %x, i1 %arg) {
   entry:
-    br i1 undef, label %is_null, label %not_null, !make.implicit !0
+    br i1 %arg, label %is_null, label %not_null, !make.implicit !0
 
   is_null:
     ret i32 42

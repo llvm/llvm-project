@@ -13,7 +13,6 @@
 
 #include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -33,11 +32,8 @@
 #include "llvm/IR/Type.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Regex.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -70,7 +66,7 @@ namespace {
 /// violations.
 struct TypeSanitizer {
   TypeSanitizer(Module &M);
-  bool run(Function &F, const TargetLibraryInfo &TLI);
+  bool sanitizeFunction(Function &F, const TargetLibraryInfo &TLI);
   void instrumentGlobals(Module &M);
 
 private:
@@ -121,7 +117,7 @@ private:
 } // namespace
 
 TypeSanitizer::TypeSanitizer(Module &M)
-    : TargetTriple(Triple(M.getTargetTriple())),
+    : TargetTriple(M.getTargetTriple()),
       AnonNameRegex("^_ZTS.*N[1-9][0-9]*_GLOBAL__N") {
   const DataLayout &DL = M.getDataLayout();
   IntptrTy = DL.getIntPtrType(M.getContext());
@@ -497,20 +493,18 @@ void collectMemAccessInfo(
       if (CallInst *CI = dyn_cast<CallInst>(&Inst))
         maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
 
-      if (isa<MemIntrinsic>(Inst)) {
+      if (isa<MemIntrinsic, LifetimeIntrinsic>(Inst))
         MemTypeResetInsts.push_back(&Inst);
-      } else if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-            II->getIntrinsicID() == Intrinsic::lifetime_end)
-          MemTypeResetInsts.push_back(&Inst);
-      }
     } else if (isa<AllocaInst>(Inst)) {
       MemTypeResetInsts.push_back(&Inst);
     }
   }
 }
 
-bool TypeSanitizer::run(Function &F, const TargetLibraryInfo &TLI) {
+bool TypeSanitizer::sanitizeFunction(Function &F,
+                                     const TargetLibraryInfo &TLI) {
+  if (F.isDeclaration())
+    return false;
   // This is required to prevent instrumenting call to __tysan_init from within
   // the module constructor.
   if (&F == TysanCtorFunction.getCallee() || &F == TysanGlobalsSetTypeFunction)
@@ -595,7 +589,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
 
   Value *ShadowDataInt = convertToShadowDataInt(IRB, Ptr, IntptrTy, PtrShift,
                                                 ShadowBase, AppMemMask);
-  Type *Int8PtrPtrTy = PointerType::get(IRB.getPtrTy(), 0);
+  Type *Int8PtrPtrTy = PointerType::get(IRB.getContext(), 0);
   Value *ShadowData =
       IRB.CreateIntToPtr(ShadowDataInt, Int8PtrPtrTy, "shadow.ptr");
 
@@ -816,11 +810,7 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
           NeedsMemMove = isa<MemMoveInst>(MTI);
         }
       }
-    } else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-      if (II->getIntrinsicID() != Intrinsic::lifetime_start &&
-          II->getIntrinsicID() != Intrinsic::lifetime_end)
-        return false;
-
+    } else if (auto *II = dyn_cast<LifetimeIntrinsic>(I)) {
       Size = II->getArgOperand(0);
       Dest = II->getArgOperand(1);
     } else if (auto *AI = dyn_cast<AllocaInst>(I)) {
@@ -876,15 +866,8 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
   return true;
 }
 
-PreservedAnalyses TypeSanitizerPass::run(Function &F,
-                                         FunctionAnalysisManager &FAM) {
-  TypeSanitizer TySan(*F.getParent());
-  TySan.run(F, FAM.getResult<TargetLibraryAnalysis>(F));
-  return PreservedAnalyses::none();
-}
-
-PreservedAnalyses ModuleTypeSanitizerPass::run(Module &M,
-                                               ModuleAnalysisManager &AM) {
+PreservedAnalyses TypeSanitizerPass::run(Module &M,
+                                         ModuleAnalysisManager &MAM) {
   Function *TysanCtorFunction;
   std::tie(TysanCtorFunction, std::ignore) =
       createSanitizerCtorAndInitFunctions(M, kTysanModuleCtorName,
@@ -894,5 +877,12 @@ PreservedAnalyses ModuleTypeSanitizerPass::run(Module &M,
   TypeSanitizer TySan(M);
   TySan.instrumentGlobals(M);
   appendToGlobalCtors(M, TysanCtorFunction, 0);
+
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  for (Function &F : M) {
+    const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+    TySan.sanitizeFunction(F, TLI);
+  }
+
   return PreservedAnalyses::none();
 }

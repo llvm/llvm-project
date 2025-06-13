@@ -252,7 +252,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
   if (LeafRec->isSubClassOf("Register")) {
     AddMatcher(new RecordMatcher("physreg input " + LeafRec->getName().str(),
                                  NextRecordedOperandNo));
-    PhysRegInputs.push_back(std::pair(LeafRec, NextRecordedOperandNo++));
+    PhysRegInputs.emplace_back(LeafRec, NextRecordedOperandNo++);
     return;
   }
 
@@ -272,7 +272,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
     // Remember this ComplexPattern so that we can emit it after all the other
     // structural matches are done.
     unsigned InputOperand = VariableMap[N.getName()] - 1;
-    MatchedComplexPatterns.push_back(std::pair(&N, InputOperand));
+    MatchedComplexPatterns.emplace_back(&N, InputOperand);
     return;
   }
 
@@ -306,7 +306,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode &N,
     // The "name" of a non-leaf complex pattern (MY_PAT $op1, $op2) is
     // "MY_PAT:op1:op2". We should already have validated that the uses are
     // consistent.
-    std::string PatternName = std::string(N.getOperator()->getName());
+    std::string PatternName = N.getOperator()->getName().str();
     for (const TreePatternNode &Child : N.children()) {
       PatternName += ":";
       PatternName += Child.getName();
@@ -508,7 +508,7 @@ void MatcherGen::EmitMatchCode(const TreePatternNode &N,
   // we already saw this in the pattern, emit code to verify dagness.
   SmallVector<std::string, 4> Names;
   if (!N.getName().empty())
-    Names.push_back(N.getName());
+    Names.push_back(N.getName().str());
 
   for (const ScopedName &Name : N.getNamesAsPredicateArg()) {
     Names.push_back(
@@ -580,8 +580,8 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
   // checks (e.g. addrmode matches).  We emit this after the structural match
   // because they are generally more expensive to evaluate and more difficult to
   // factor.
-  for (unsigned i = 0, e = MatchedComplexPatterns.size(); i != e; ++i) {
-    auto &N = *MatchedComplexPatterns[i].first;
+  for (const auto &MCP : MatchedComplexPatterns) {
+    auto &N = *MCP.first;
 
     // Remember where the results of this match get stuck.
     if (N.isLeaf()) {
@@ -595,7 +595,7 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
     }
 
     // Get the slot we recorded the value in from the name on the node.
-    unsigned RecNodeEntry = MatchedComplexPatterns[i].second;
+    unsigned RecNodeEntry = MCP.second;
 
     const ComplexPattern *CP = N.getComplexPatternInfo(CGP);
     assert(CP && "Not a valid ComplexPattern!");
@@ -730,7 +730,6 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
       // 7 bit and we cannot use StringInteger.
       if (RB.getSubRegIndices().size() > 127) {
         const CodeGenSubRegIndex *I = RB.findSubRegIdx(Def);
-        assert(I && "Cannot find subreg index by name!");
         if (I->EnumValue > 127) {
           AddMatcher(new EmitIntegerMatcher(I->EnumValue, MVT::i32,
                                             NextRecordedOperandNo));

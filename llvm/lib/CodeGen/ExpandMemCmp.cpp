@@ -680,6 +680,14 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
                      m_SpecificInt(CI->getType()->getIntegerBitWidth() - 1)))) {
       Pred = ICmpInst::ICMP_SLT;
       NeedsZExt = true;
+    } else if (match(UI, m_SpecificICmp(ICmpInst::ICMP_SGT, m_Specific(CI),
+                                        m_AllOnes()))) {
+      // Adjust predicate as if it compared with 0.
+      Pred = ICmpInst::ICMP_SGE;
+    } else if (match(UI, m_SpecificICmp(ICmpInst::ICMP_SLT, m_Specific(CI),
+                                        m_One()))) {
+      // Adjust predicate as if it compared with 0.
+      Pred = ICmpInst::ICMP_SLE;
     } else {
       // In case of a successful match this call will set `Pred` variable
       match(UI, m_ICmp(Pred, m_Specific(CI), m_Zero()));

@@ -84,7 +84,11 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
     // TODO: we need to filter OpKill here to avoid inlining it to
     // a loop continue construct:
     // https://github.com/KhronosGroup/SPIRV-Headers/issues/86
-    // However OpKill is fragment shader specific and we don't support it yet.
+    // For now, we just disallow inlining OpKill anywhere in the code,
+    // but this restriction should be relaxed, as pointed above.
+    if (isa<spirv::KillOp>(op))
+      return false;
+
     return true;
   }
 
@@ -171,10 +175,7 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
 
   // Check other allowed types
   if (auto t = llvm::dyn_cast<FloatType>(type)) {
-    if (type.isBF16()) {
-      parser.emitError(typeLoc, "cannot use 'bf16' to compose SPIR-V types");
-      return Type();
-    }
+    // TODO: All float types are allowed for now, but this should be fixed.
   } else if (auto t = llvm::dyn_cast<IntegerType>(type)) {
     if (!ScalarType::isValid(t)) {
       parser.emitError(typeLoc,

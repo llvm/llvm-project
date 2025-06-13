@@ -59,7 +59,7 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
   TileCheck(ArrayRef<OpFoldResult> tileSizes) : tileSizes(tileSizes) {}
 
   void visitDimExpr(AffineDimExpr expr) {
-    isTiled |= !isZeroIndex(tileSizes[expr.getPosition()]);
+    isTiled |= !isZeroInteger(tileSizes[expr.getPosition()]);
   }
   void visitAffineBinaryOpExpr(AffineBinaryOpExpr expr) {
     visit(expr.getLHS());
@@ -142,9 +142,63 @@ static void unpackRanges(OpBuilder &builder, Location loc,
 //===----------------------------------------------------------------------===//
 // General utilities
 //===----------------------------------------------------------------------===//
+//
+/// The permutation can be obtained from two permutations:
+///   a) Compute the permutation vector to move the last `numPackedDims` into
+///      the `innerPosDims` of a shape of rank `rank`.
+///   b) Compute the permutation vector to move outer dims if the
+///      `outerPerm` parameter is not empty.
+/// Apply (b) permutation on (a) permutation to get the final permutation.
+static SmallVector<int64_t>
+computePackUnPackPerm(int64_t rank, ArrayRef<int64_t> &innerDimsPos,
+                      ArrayRef<int64_t> &outerPerm,
+                      PackingMetadata &packingMetadata) {
+  int64_t numPackedDims = innerDimsPos.size();
+  auto lastDims =
+      llvm::to_vector(llvm::seq<int64_t>(rank - numPackedDims, rank));
+  packingMetadata = computePackingMetadata(rank, innerDimsPos);
+  SmallVector<int64_t> innerPositionsPerm =
+      computePermutationVector(rank, lastDims, packingMetadata.insertPositions);
+
+  SmallVector<int64_t> outerPos = packingMetadata.outerPositions;
+  if (!outerPerm.empty())
+    applyPermutationToVector(outerPos, outerPerm);
+  SmallVector<int64_t> outerPositionPerm =
+      computePermutationVector(rank, packingMetadata.outerPositions, outerPos);
+
+  SmallVector<int64_t> packInverseDestPermutation = innerPositionsPerm;
+  applyPermutationToVector(packInverseDestPermutation, outerPositionPerm);
+  return packInverseDestPermutation;
+}
 
 namespace mlir {
 namespace linalg {
+
+SmallVector<int64_t> getPackInverseDestPerm(PackOp packOp) {
+
+  PackingMetadata pMetadata;
+  int64_t packedRank = packOp.getDestType().getRank();
+  ArrayRef<int64_t> innerDimPos = packOp.getInnerDimsPos();
+  ArrayRef<int64_t> outerPerm = packOp.getOuterDimsPerm();
+  SmallVector<int64_t> packInvDestPerm =
+      computePackUnPackPerm(packedRank, innerDimPos, outerPerm, pMetadata);
+  return packInvDestPerm;
+}
+
+SmallVector<int64_t> getUnPackInverseSrcPerm(UnPackOp unpackOp) {
+  PackingMetadata metadata;
+  return getUnPackInverseSrcPerm(unpackOp, metadata);
+}
+
+SmallVector<int64_t> getUnPackInverseSrcPerm(UnPackOp unpackOp,
+                                             PackingMetadata &metadata) {
+  int64_t unpackRank = unpackOp.getSourceType().getRank();
+  ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
+  ArrayRef<int64_t> outerPerm = unpackOp.getOuterDimsPerm();
+  SmallVector<int64_t> unpackInvSrcPerm =
+      computePackUnPackPerm(unpackRank, innerDimPos, outerPerm, metadata);
+  return unpackInvSrcPerm;
+}
 
 bool allIndexingsAreProjectedPermutation(LinalgOp op) {
   return llvm::all_of(op.getIndexingMapsArray(), [](AffineMap m) {
@@ -596,8 +650,17 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
     auto m = map.getSubMap({r});
     LLVM_DEBUG(llvm::dbgs() << "computeSliceParameters: submap: " << m << "\n");
     IRRewriter rewriter(builder);
-    OpFoldResult offset = makeComposedFoldedAffineApply(rewriter, loc, m, lbs);
+    // The offset of the slice is m(lbs) - m(0).
+    SmallVector<Attribute> zeros(lbs.size(), rewriter.getIndexAttr(0));
+    SmallVector<Attribute> mAtZero;
+    [[maybe_unused]] auto res = m.constantFold(zeros, mAtZero);
+    assert(succeeded(res) && "affine_map must be evaluatable (not symbols)");
+    int64_t mAtZeroInt =
+        cast<IntegerAttr>(mAtZero[0]).getValue().getSExtValue();
+    OpFoldResult offset = makeComposedFoldedAffineApply(
+        rewriter, loc, m.getResult(0) - mAtZeroInt, lbs);
     sliceParams.offsets.push_back(offset);
+
     OpFoldResult closedIntSize =
         makeComposedFoldedAffineApply(rewriter, loc, m, subShapeSizes);
     // Resulting size needs to be made half open interval again.
@@ -678,7 +741,7 @@ SmallVector<OpFoldResult> computeTileOffsets(OpBuilder &b, Location loc,
   SmallVector<OpFoldResult> offsets;
   for (unsigned idx = 0, idxIvs = 0, e = tileSizes.size(); idx < e; ++idx) {
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for loop#" << idx << "\n");
-    bool isTiled = !isZeroIndex(tileSizes[idx]);
+    bool isTiled = !isZeroInteger(tileSizes[idx]);
     offsets.push_back(isTiled ? ivs[idxIvs++] : b.getIndexAttr(0));
     LLVM_DEBUG(llvm::dbgs()
                << "computeTileOffsets: " << offsets.back() << "\n");
@@ -691,7 +754,7 @@ SmallVector<OpFoldResult> computeTileSizes(OpBuilder &b, Location loc,
                                            ArrayRef<OpFoldResult> sizeBounds) {
   SmallVector<OpFoldResult> sizes;
   for (unsigned idx = 0, e = tileSizes.size(); idx < e; ++idx) {
-    bool isTiled = !isZeroIndex(tileSizes[idx]);
+    bool isTiled = !isZeroInteger(tileSizes[idx]);
     // Before composing, we need to make range a closed interval.
     OpFoldResult size = isTiled ? tileSizes[idx] : sizeBounds[idx];
     AffineExpr d0 = getAffineDimExpr(0, b.getContext());
@@ -747,7 +810,7 @@ computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
                           bool omitPartialTileCheck) {
   assert(ivs.size() == static_cast<size_t>(llvm::count_if(
                            llvm::make_range(tileSizes.begin(), tileSizes.end()),
-                           [](OpFoldResult v) { return !isZeroIndex(v); })) &&
+                           [](OpFoldResult v) { return !isZeroInteger(v); })) &&
          "expected as many ivs as non-zero sizes");
 
   // Construct (potentially temporary) mins and maxes on which to apply maps

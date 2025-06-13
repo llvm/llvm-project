@@ -346,8 +346,11 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   emitRemark() << getRemark();
-  for (Operation *op : state.getPayloadOps(getTarget()))
+  for (Operation *op : state.getPayloadOps(getTarget())) {
+    if (!op->getUses().empty())
+      return emitSilenceableError() << "cannot erase an op that has uses";
     rewriter.eraseOp(op);
+  }
 
   if (getFailAfterErase())
     return emitSilenceableError() << "silenceable error";

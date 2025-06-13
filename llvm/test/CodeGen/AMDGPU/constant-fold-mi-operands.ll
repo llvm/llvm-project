@@ -92,7 +92,7 @@ define amdgpu_kernel void @fold_mi_s_not_0(ptr addrspace(1) %out, i32 %x) #0 {
 ; GCN-NEXT: v_mov_b32_e32 v[[RESULT_HI:[0-9]+]], -1{{$}}
 ; GCN-NEXT: buffer_store_dwordx2 v[[[RESULT_LO]]:[[RESULT_HI]]]
 define amdgpu_kernel void @fold_mi_v_not_0(ptr addrspace(1) %out) {
-  %vreg = load volatile i64, ptr addrspace(1) undef
+  %vreg = load volatile i64, ptr addrspace(1) poison
   %ctpop = call i64 @llvm.ctpop.i64(i64 %vreg)
   %xor = xor i64 %ctpop, -1
   store i64 %xor, ptr addrspace(1) %out
@@ -111,8 +111,8 @@ define amdgpu_kernel void @fold_mi_v_not_0(ptr addrspace(1) %out) {
 ; GCN-DAG: v_mov_b32_e32 v[[RESULT_HI:[0-9]+]], v[[VREG1_HI]]
 ; GCN: buffer_store_dwordx2 v[[[RESULT_LO]]:[[RESULT_HI]]]
 define amdgpu_kernel void @fold_mi_or_neg1(ptr addrspace(1) %out) {
-  %vreg0 = load volatile i64, ptr addrspace(1) undef
-  %vreg1 = load volatile i64, ptr addrspace(1) undef
+  %vreg0 = load volatile i64, ptr addrspace(1) poison
+  %vreg1 = load volatile i64, ptr addrspace(1) poison
   %ctpop = call i64 @llvm.ctpop.i64(i64 %vreg0)
   %xor = xor i64 %ctpop, -1
   %or = or i64 %xor, %vreg1
@@ -127,8 +127,8 @@ define amdgpu_kernel void @fold_mi_or_neg1(ptr addrspace(1) %out) {
 ; GCN: v_and_b32
 ; GCN-NOT: v_and_b32
 define amdgpu_kernel void @fold_mi_and_neg1(ptr addrspace(1) %out) {
-  %vreg0 = load volatile i64, ptr addrspace(1) undef
-  %vreg1 = load volatile i64, ptr addrspace(1) undef
+  %vreg0 = load volatile i64, ptr addrspace(1) poison
+  %vreg1 = load volatile i64, ptr addrspace(1) poison
   %ctpop = call i64 @llvm.ctpop.i64(i64 %vreg0)
   %xor = xor i64 %ctpop, -1
   %and = and i64 %xor, %vreg1

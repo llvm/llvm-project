@@ -10,11 +10,11 @@
 #define FORTRAN_SEMANTICS_SYMBOL_H_
 
 #include "type.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
 #include "flang/Semantics/module-dependences.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/ADT/DenseMapInfo.h"
 
 #include <array>
@@ -22,6 +22,7 @@
 #include <list>
 #include <optional>
 #include <set>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -29,6 +30,8 @@ class raw_ostream;
 }
 namespace Fortran::parser {
 struct Expr;
+struct OpenMPDeclareReductionConstruct;
+struct OmpMetadirectiveDirective;
 }
 
 namespace Fortran::semantics {
@@ -48,7 +51,7 @@ using MutableSymbolVector = std::vector<MutableSymbolRef>;
 
 // Mixin for details with OpenMP declarative constructs.
 class WithOmpDeclarative {
-  using OmpAtomicOrderType = common::OmpAtomicDefaultMemOrderType;
+  using OmpAtomicOrderType = common::OmpMemoryOrderType;
 
 public:
   ENUM_CLASS(RequiresFlag, ReverseOffload, UnifiedAddress, UnifiedSharedMemory,
@@ -127,6 +130,9 @@ private:
 // Device type specific OpenACC routine information
 class OpenACCRoutineDeviceTypeInfo {
 public:
+  explicit OpenACCRoutineDeviceTypeInfo(
+      Fortran::common::OpenACCDeviceType dType)
+      : deviceType_{dType} {}
   bool isSeq() const { return isSeq_; }
   void set_isSeq(bool value = true) { isSeq_ = value; }
   bool isVector() const { return isVector_; }
@@ -137,14 +143,20 @@ public:
   void set_isGang(bool value = true) { isGang_ = value; }
   unsigned gangDim() const { return gangDim_; }
   void set_gangDim(unsigned value) { gangDim_ = value; }
-  const std::string *bindName() const {
-    return bindName_ ? &*bindName_ : nullptr;
+  const std::variant<std::string, SymbolRef> *bindName() const {
+    return bindName_.has_value() ? &*bindName_ : nullptr;
   }
-  void set_bindName(std::string &&name) { bindName_ = std::move(name); }
-  void set_dType(Fortran::common::OpenACCDeviceType dType) {
-    deviceType_ = dType;
+  const std::optional<std::variant<std::string, SymbolRef>> &
+  bindNameOpt() const {
+    return bindName_;
   }
+  void set_bindName(std::string &&name) { bindName_.emplace(std::move(name)); }
+  void set_bindName(SymbolRef symbol) { bindName_.emplace(symbol); }
+
   Fortran::common::OpenACCDeviceType dType() const { return deviceType_; }
+
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const OpenACCRoutineDeviceTypeInfo &);
 
 private:
   bool isSeq_{false};
@@ -152,7 +164,9 @@ private:
   bool isWorker_{false};
   bool isGang_{false};
   unsigned gangDim_{0};
-  std::optional<std::string> bindName_;
+  // bind("name") -> std::string
+  // bind(sym) -> SymbolRef (requires namemangling in lowering)
+  std::optional<std::variant<std::string, SymbolRef>> bindName_;
   Fortran::common::OpenACCDeviceType deviceType_{
       Fortran::common::OpenACCDeviceType::None};
 };
@@ -162,14 +176,28 @@ private:
 // in as objects in the OpenACCRoutineDeviceTypeInfo list.
 class OpenACCRoutineInfo : public OpenACCRoutineDeviceTypeInfo {
 public:
+  OpenACCRoutineInfo()
+      : OpenACCRoutineDeviceTypeInfo(Fortran::common::OpenACCDeviceType::None) {
+  }
   bool isNohost() const { return isNohost_; }
   void set_isNohost(bool value = true) { isNohost_ = value; }
-  std::list<OpenACCRoutineDeviceTypeInfo> &deviceTypeInfos() {
+  const std::list<OpenACCRoutineDeviceTypeInfo> &deviceTypeInfos() const {
     return deviceTypeInfos_;
   }
-  void add_deviceTypeInfo(OpenACCRoutineDeviceTypeInfo &info) {
-    deviceTypeInfos_.push_back(info);
+
+  OpenACCRoutineDeviceTypeInfo &add_deviceTypeInfo(
+      Fortran::common::OpenACCDeviceType type) {
+    return add_deviceTypeInfo(OpenACCRoutineDeviceTypeInfo(type));
   }
+
+  OpenACCRoutineDeviceTypeInfo &add_deviceTypeInfo(
+      OpenACCRoutineDeviceTypeInfo &&info) {
+    deviceTypeInfos_.push_back(std::move(info));
+    return deviceTypeInfos_.back();
+  }
+
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const OpenACCRoutineInfo &);
 
 private:
   std::list<OpenACCRoutineDeviceTypeInfo> deviceTypeInfos_;
@@ -329,9 +357,11 @@ public:
   }
   bool IsAssumedSize() const { return rank_.value_or(0) == isAssumedSize; }
   bool IsAssumedRank() const { return rank_.value_or(0) == isAssumedRank; }
+  bool isTypeGuard() const { return isTypeGuard_; }
   void set_rank(int rank);
   void set_IsAssumedSize();
   void set_IsAssumedRank();
+  void set_isTypeGuard(bool yes = true);
 
 private:
   MaybeExpr expr_;
@@ -340,6 +370,7 @@ private:
   static constexpr int isAssumedSize{-1}; // RANK(*)
   static constexpr int isAssumedRank{-2}; // RANK DEFAULT
   std::optional<int> rank_;
+  bool isTypeGuard_{false}; // TYPE IS or CLASS IS, but not CLASS(DEFAULT)
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const AssocEntityDetails &);
 
@@ -571,6 +602,7 @@ class TypeParamDetails {
 public:
   TypeParamDetails() = default;
   TypeParamDetails(const TypeParamDetails &) = default;
+  TypeParamDetails &operator=(const TypeParamDetails &) = default;
   std::optional<common::TypeParamAttr> attr() const { return attr_; }
   TypeParamDetails &set_attr(common::TypeParamAttr);
   MaybeIntExpr &init() { return init_; }
@@ -605,12 +637,12 @@ private:
 class UseErrorDetails {
 public:
   UseErrorDetails(const UseDetails &);
-  UseErrorDetails &add_occurrence(const SourceName &, const Scope &);
-  using listType = std::list<std::pair<SourceName, const Scope *>>;
-  const listType occurrences() const { return occurrences_; };
+  UseErrorDetails &add_occurrence(const SourceName &, const Symbol &);
+  using ListType = std::list<std::pair<SourceName, const Symbol *>>;
+  const ListType occurrences() const { return occurrences_; };
 
 private:
-  listType occurrences_;
+  ListType occurrences_;
 };
 
 // A symbol host-associated from an enclosing scope.
@@ -698,6 +730,40 @@ private:
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GenericDetails &);
 
+// Used for OpenMP DECLARE REDUCTION, it holds the information
+// needed to resolve which declaration (there could be multiple
+// with the same name) to use for a given type.
+class UserReductionDetails {
+public:
+  using TypeVector = std::vector<const DeclTypeSpec *>;
+  using DeclInfo = std::variant<const parser::OpenMPDeclareReductionConstruct *,
+      const parser::OmpMetadirectiveDirective *>;
+  using DeclVector = std::vector<DeclInfo>;
+
+  UserReductionDetails() = default;
+
+  void AddType(const DeclTypeSpec &type) { typeList_.push_back(&type); }
+  const TypeVector &GetTypeList() const { return typeList_; }
+
+  bool SupportsType(const DeclTypeSpec &type) const {
+    // We have to compare the actual type, not the pointer, as some
+    // types are not guaranteed to be the same object.
+    for (auto t : typeList_) {
+      if (*t == type) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void AddDecl(const DeclInfo &decl) { declList_.emplace_back(decl); }
+  const DeclVector &GetDeclList() const { return declList_; }
+
+private:
+  TypeVector typeList_;
+  DeclVector declList_;
+};
+
 class UnknownDetails {};
 
 using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
@@ -705,7 +771,7 @@ using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
     ObjectEntityDetails, ProcEntityDetails, AssocEntityDetails,
     DerivedTypeDetails, UseDetails, UseErrorDetails, HostAssocDetails,
     GenericDetails, ProcBindingDetails, NamelistDetails, CommonBlockDetails,
-    TypeParamDetails, MiscDetails>;
+    TypeParamDetails, MiscDetails, UserReductionDetails>;
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Details &);
 std::string DetailsToString(const Details &);
 
@@ -726,6 +792,7 @@ public:
       LocalityShared, // named in SHARED locality-spec
       InDataStmt, // initialized in a DATA statement, =>object, or /init/
       InNamelist, // in a Namelist group
+      InCommonBlock, // referenced in a common block
       EntryDummyArgument,
       CompilerCreated, // A compiler created symbol
       // For compiler created symbols that are constant but cannot legally have
@@ -751,12 +818,13 @@ public:
       // OpenMP data-copying attribute
       OmpCopyIn, OmpCopyPrivate,
       // OpenMP miscellaneous flags
-      OmpCommonBlock, OmpReduction, OmpAligned, OmpNontemporal, OmpAllocate,
-      OmpDeclarativeAllocateDirective, OmpExecutableAllocateDirective,
-      OmpDeclareSimd, OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction,
-      OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined,
-      OmpImplicit, OmpDependObject, OmpInclusiveScan, OmpExclusiveScan,
-      OmpInScanReduction);
+      OmpCommonBlock, OmpReduction, OmpInReduction, OmpAligned, OmpNontemporal,
+      OmpAllocate, OmpDeclarativeAllocateDirective,
+      OmpExecutableAllocateDirective, OmpDeclareSimd, OmpDeclareTarget,
+      OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
+      OmpIfSpecified, OmpNone, OmpPreDetermined, OmpExplicit, OmpImplicit,
+      OmpDependObject, OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction,
+      OmpUniform);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
@@ -861,23 +929,7 @@ public:
   bool operator!=(const Symbol &that) const { return !(*this == that); }
 
   int Rank() const { return RankImpl(); }
-
-  int Corank() const {
-    return common::visit(
-        common::visitors{
-            [](const SubprogramDetails &sd) {
-              return sd.isFunction() ? sd.result().Corank() : 0;
-            },
-            [](const GenericDetails &) {
-              return 0; /*TODO*/
-            },
-            [](const UseDetails &x) { return x.symbol().Corank(); },
-            [](const HostAssocDetails &x) { return x.symbol().Corank(); },
-            [](const ObjectEntityDetails &oed) { return oed.coshape().Rank(); },
-            [](const auto &) { return 0; },
-        },
-        details_);
-  }
+  int Corank() const { return CorankImpl(); }
 
   // If there is a parent component, return a pointer to its derived type spec.
   // The Scope * argument defaults to this->scope_ but should be overridden
@@ -950,6 +1002,32 @@ private:
               } else {
                 return 0;
               }
+            },
+            [](const auto &) { return 0; },
+        },
+        details_);
+  }
+  inline int CorankImpl(int depth = startRecursionDepth) const {
+    if (depth-- == 0) {
+      return 0;
+    }
+    return common::visit(
+        common::visitors{
+            [&](const SubprogramDetails &sd) {
+              return sd.isFunction() ? sd.result().CorankImpl(depth) : 0;
+            },
+            [](const GenericDetails &) { return 0; },
+            [&](const ProcEntityDetails &ped) {
+              const Symbol *iface{ped.procInterface()};
+              return iface ? iface->CorankImpl(depth) : 0;
+            },
+            [&](const UseDetails &x) { return x.symbol().CorankImpl(depth); },
+            [&](const HostAssocDetails &x) {
+              return x.symbol().CorankImpl(depth);
+            },
+            [](const ObjectEntityDetails &oed) { return oed.coshape().Rank(); },
+            [](const AssocEntityDetails &aed) {
+              return aed.expr() ? aed.expr()->Corank() : 0;
             },
             [](const auto &) { return 0; },
         },

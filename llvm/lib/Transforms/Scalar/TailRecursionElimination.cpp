@@ -515,7 +515,8 @@ void TailRecursionEliminator::createTailRecurseLoopHeader(CallInst *CI) {
   BasicBlock *NewEntry = BasicBlock::Create(F.getContext(), "", &F, HeaderBB);
   NewEntry->takeName(HeaderBB);
   HeaderBB->setName("tailrecurse");
-  BranchInst::Create(HeaderBB, NewEntry);
+  auto *BI = BranchInst::Create(HeaderBB, NewEntry);
+  BI->setDebugLoc(DebugLoc::getCompilerGenerated());
   // If the new branch preserves the debug location of CI, it could result in
   // misleading stepping, if CI is located in a conditional branch.
   // So, here we don't give any debug location to the new branch.
@@ -526,7 +527,7 @@ void TailRecursionEliminator::createTailRecurseLoopHeader(CallInst *CI) {
        OEBI != E;)
     if (AllocaInst *AI = dyn_cast<AllocaInst>(OEBI++))
       if (isa<ConstantInt>(AI->getArraySize()))
-        AI->moveBefore(&*NEBI);
+        AI->moveBefore(NEBI);
 
   // Now that we have created a new block, which jumps to the entry
   // block, insert a PHI node for each argument of the function.
@@ -725,6 +726,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
       SelectInst *SI =
           SelectInst::Create(RetKnownPN, RetPN, Ret->getReturnValue(),
                              "current.ret.tr", Ret->getIterator());
+      SI->setDebugLoc(Ret->getDebugLoc());
       RetSelects.push_back(SI);
 
       RetPN->addIncoming(SI, BB);
@@ -784,7 +786,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
           AccRecInstrNew->setName("accumulator.ret.tr");
           AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
                                      RI->getOperand(0));
-          AccRecInstrNew->insertBefore(RI);
+          AccRecInstrNew->insertBefore(RI->getIterator());
           AccRecInstrNew->dropLocation();
           RI->setOperand(0, AccRecInstrNew);
         }
@@ -800,6 +802,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
         SelectInst *SI =
             SelectInst::Create(RetKnownPN, RetPN, RI->getOperand(0),
                                "current.ret.tr", RI->getIterator());
+        SI->setDebugLoc(DebugLoc::getCompilerGenerated());
         RetSelects.push_back(SI);
         RI->setOperand(0, SI);
       }
@@ -813,7 +816,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
           AccRecInstrNew->setName("accumulator.ret.tr");
           AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
                                      SI->getFalseValue());
-          AccRecInstrNew->insertBefore(SI);
+          AccRecInstrNew->insertBefore(SI->getIterator());
           AccRecInstrNew->dropLocation();
           SI->setFalseValue(AccRecInstrNew);
         }

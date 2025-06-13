@@ -81,7 +81,7 @@ public:
   void allocateStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      MachineFunction &MF, uint64_t Offset,
                      uint64_t RealStackSize, bool EmitCFI, bool NeedProbe,
-                     uint64_t ProbeSize) const;
+                     uint64_t ProbeSize, bool DynAllocation) const;
 
 protected:
   const RISCVSubtarget &STI;
@@ -107,6 +107,11 @@ private:
   // Replace a StackProbe stub (if any) with the actual probe code inline
   void inlineStackProbe(MachineFunction &MF,
                         MachineBasicBlock &PrologueMBB) const override;
+  void allocateAndProbeStackForRVV(MachineFunction &MF, MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   const DebugLoc &DL, int64_t Amount,
+                                   MachineInstr::MIFlag Flag, bool EmitCFI,
+                                   bool DynAllocation) const;
 };
 } // namespace llvm
 #endif

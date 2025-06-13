@@ -247,21 +247,9 @@ define <4 x float> @test_v4f32_2(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test_v4f32_3(<4 x float> %a, <4 x float> %b) {
-; SSE2-LABEL: 'test_v4f32_3'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %1
-;
-; SSSE3-LABEL: 'test_v4f32_3'
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %1
-;
-; SSE42-LABEL: 'test_v4f32_3'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %1
-;
-; AVX-LABEL: 'test_v4f32_3'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %1
+; CHECK-LABEL: 'test_v4f32_3'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %1
 ;
   %1 = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
   ret <4 x float> %1
@@ -294,13 +282,9 @@ define <4 x i64> @test_v4i64_2(<4 x i64> %a, <4 x i64> %b) {
 }
 
 define <4 x i64> @test_v4i64_3(<4 x i64> %a, <4 x i64> %b) {
-; SSE-LABEL: 'test_v4i64_3'
-; SSE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %1
-;
-; AVX-LABEL: 'test_v4i64_3'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %1
+; CHECK-LABEL: 'test_v4i64_3'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %1
 ;
   %1 = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
   ret <4 x i64> %1
@@ -333,13 +317,9 @@ define <4 x double> @test_v4f64_2(<4 x double> %a, <4 x double> %b) {
 }
 
 define <4 x double> @test_v4f64_3(<4 x double> %a, <4 x double> %b) {
-; SSE-LABEL: 'test_v4f64_3'
-; SSE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 4, i32 5, i32 6, i32 3>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %1
-;
-; AVX-LABEL: 'test_v4f64_3'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 4, i32 5, i32 6, i32 3>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %1
+; CHECK-LABEL: 'test_v4f64_3'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 4, i32 5, i32 6, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %1
 ;
   %1 = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 4, i32 5, i32 6, i32 3>
   ret <4 x double> %1
