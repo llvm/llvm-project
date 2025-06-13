@@ -8,21 +8,19 @@
 
 // test that <bitset> includes <string>, <stdexcept> and <iosfwd>
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <bitset>
 
 #include "test_macros.h"
 
-#ifndef _LIBCPP_STRING
+#ifndef _LIBCPP___CXX03_STRING
 #error <string> has not been included
 #endif
 
-#ifndef _LIBCPP_STDEXCEPT
+#ifndef _LIBCPP___CXX03_STDEXCEPT
 #error <stdexcept> has not been included
 #endif
 
-#ifndef _LIBCPP_IOSFWD
+#ifndef _LIBCPP___CXX03_IOSFWD
 #error <iosfwd> has not been included
 #endif
 
