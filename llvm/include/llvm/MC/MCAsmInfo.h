@@ -32,6 +32,7 @@ class MCSection;
 class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
+class raw_ostream;
 
 namespace WinEH {
 
@@ -709,6 +710,8 @@ public:
 
   StringRef getSpecifierName(uint32_t S) const;
   std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
+
+  void printExpr(raw_ostream &, const MCExpr &) const;
 };
 
 } // end namespace llvm
