@@ -100,137 +100,6 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
   }
 }
 
-static void setMSP430Libcalls(RuntimeLibcallsInfo &Info, const Triple &TT) {
-  // EABI Libcalls - EABI Section 6.2
-  const struct {
-    const RTLIB::Libcall Op;
-    const RTLIB::LibcallImpl Impl;
-  } LibraryCalls[] = {
-      // Floating point conversions - EABI Table 6
-      {RTLIB::FPROUND_F64_F32, RTLIB::__mspabi_cvtdf},
-      {RTLIB::FPEXT_F32_F64, RTLIB::__mspabi_cvtfd},
-      // The following is NOT implemented in libgcc
-      //{ RTLIB::FPTOSINT_F64_I16,  RTLIB::__mspabi_fixdi },
-      {RTLIB::FPTOSINT_F64_I32, RTLIB::__mspabi_fixdli},
-      {RTLIB::FPTOSINT_F64_I64, RTLIB::__mspabi_fixdlli},
-      // The following is NOT implemented in libgcc
-      //{ RTLIB::FPTOUINT_F64_I16,  RTLIB::__mspabi_fixdu },
-      {RTLIB::FPTOUINT_F64_I32, RTLIB::__mspabi_fixdul},
-      {RTLIB::FPTOUINT_F64_I64, RTLIB::__mspabi_fixdull},
-      // The following is NOT implemented in libgcc
-      //{ RTLIB::FPTOSINT_F32_I16,  RTLIB::__mspabi_fixfi },
-      {RTLIB::FPTOSINT_F32_I32, RTLIB::__mspabi_fixfli},
-      {RTLIB::FPTOSINT_F32_I64, RTLIB::__mspabi_fixflli},
-      // The following is NOT implemented in libgcc
-      //{ RTLIB::FPTOUINT_F32_I16,  RTLIB::__mspabi_fixfu },
-      {RTLIB::FPTOUINT_F32_I32, RTLIB::__mspabi_fixful},
-      {RTLIB::FPTOUINT_F32_I64, RTLIB::__mspabi_fixfull},
-      // TODO The following IS implemented in libgcc
-      //{ RTLIB::SINTTOFP_I16_F64,  RTLIB::__mspabi_fltid },
-      {RTLIB::SINTTOFP_I32_F64, RTLIB::__mspabi_fltlid},
-      // TODO The following IS implemented in libgcc but is not in the EABI
-      {RTLIB::SINTTOFP_I64_F64, RTLIB::__mspabi_fltllid},
-      // TODO The following IS implemented in libgcc
-      //{ RTLIB::UINTTOFP_I16_F64,  RTLIB::__mspabi_fltud },
-      {RTLIB::UINTTOFP_I32_F64, RTLIB::__mspabi_fltuld},
-      // The following IS implemented in libgcc but is not in the EABI
-      {RTLIB::UINTTOFP_I64_F64, RTLIB::__mspabi_fltulld},
-      // TODO The following IS implemented in libgcc
-      //{ RTLIB::SINTTOFP_I16_F32,  RTLIB::__mspabi_fltif },
-      {RTLIB::SINTTOFP_I32_F32, RTLIB::__mspabi_fltlif},
-      // TODO The following IS implemented in libgcc but is not in the EABI
-      {RTLIB::SINTTOFP_I64_F32, RTLIB::__mspabi_fltllif},
-      // TODO The following IS implemented in libgcc
-      //{ RTLIB::UINTTOFP_I16_F32,  RTLIB::__mspabi_fltuf },
-      {RTLIB::UINTTOFP_I32_F32, RTLIB::__mspabi_fltulf},
-      // The following IS implemented in libgcc but is not in the EABI
-      {RTLIB::UINTTOFP_I64_F32, RTLIB::__mspabi_fltullf},
-
-      // Floating point comparisons - EABI Table 7
-      {RTLIB::OEQ_F64, RTLIB::__mspabi_cmpd__oeq},
-      {RTLIB::UNE_F64, RTLIB::__mspabi_cmpd__une},
-      {RTLIB::OGE_F64, RTLIB::__mspabi_cmpd__oge},
-      {RTLIB::OLT_F64, RTLIB::__mspabi_cmpd__olt},
-      {RTLIB::OLE_F64, RTLIB::__mspabi_cmpd__ole},
-      {RTLIB::OGT_F64, RTLIB::__mspabi_cmpd__ogt},
-      {RTLIB::OEQ_F32, RTLIB::__mspabi_cmpf__oeq},
-      {RTLIB::UNE_F32, RTLIB::__mspabi_cmpf__une},
-      {RTLIB::OGE_F32, RTLIB::__mspabi_cmpf__oge},
-      {RTLIB::OLT_F32, RTLIB::__mspabi_cmpf__olt},
-      {RTLIB::OLE_F32, RTLIB::__mspabi_cmpf__ole},
-      {RTLIB::OGT_F32, RTLIB::__mspabi_cmpf__ogt},
-
-      // Floating point arithmetic - EABI Table 8
-      {RTLIB::ADD_F64, RTLIB::__mspabi_addd},
-      {RTLIB::ADD_F32, RTLIB::__mspabi_addf},
-      {RTLIB::DIV_F64, RTLIB::__mspabi_divd},
-      {RTLIB::DIV_F32, RTLIB::__mspabi_divf},
-      {RTLIB::MUL_F64, RTLIB::__mspabi_mpyd},
-      {RTLIB::MUL_F32, RTLIB::__mspabi_mpyf},
-      {RTLIB::SUB_F64, RTLIB::__mspabi_subd},
-      {RTLIB::SUB_F32, RTLIB::__mspabi_subf},
-      // The following are NOT implemented in libgcc
-      // { RTLIB::NEG_F64,  RTLIB::__mspabi_negd },
-      // { RTLIB::NEG_F32,  RTLIB::__mspabi_negf },
-
-      // Universal Integer Operations - EABI Table 9
-      {RTLIB::SDIV_I16, RTLIB::__mspabi_divi},
-      {RTLIB::SDIV_I32, RTLIB::__mspabi_divli},
-      {RTLIB::SDIV_I64, RTLIB::__mspabi_divlli},
-      {RTLIB::UDIV_I16, RTLIB::__mspabi_divu},
-      {RTLIB::UDIV_I32, RTLIB::__mspabi_divul},
-      {RTLIB::UDIV_I64, RTLIB::__mspabi_divull},
-      {RTLIB::SREM_I16, RTLIB::__mspabi_remi},
-      {RTLIB::SREM_I32, RTLIB::__mspabi_remli},
-      {RTLIB::SREM_I64, RTLIB::__mspabi_remlli},
-      {RTLIB::UREM_I16, RTLIB::__mspabi_remu},
-      {RTLIB::UREM_I32, RTLIB::__mspabi_remul},
-      {RTLIB::UREM_I64, RTLIB::__mspabi_remull},
-
-      // Bitwise Operations - EABI Table 10
-      // TODO: __mspabi_[srli/srai/slli] ARE implemented in libgcc
-      {RTLIB::SRL_I32, RTLIB::__mspabi_srll},
-      {RTLIB::SRA_I32, RTLIB::__mspabi_sral},
-      {RTLIB::SHL_I32, RTLIB::__mspabi_slll},
-      // __mspabi_[srlll/srall/sllll/rlli/rlll] are NOT implemented in libgcc
-  };
-
-  for (const auto &LC : LibraryCalls)
-    Info.setLibcallImpl(LC.Op, LC.Impl);
-
-  // Several of the runtime library functions use a special calling conv
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_divull,
-                                 CallingConv::MSP430_BUILTIN);
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_remull,
-                                 CallingConv::MSP430_BUILTIN);
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_divlli,
-                                 CallingConv::MSP430_BUILTIN);
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_remlli,
-                                 CallingConv::MSP430_BUILTIN);
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_addd,
-                                 CallingConv::MSP430_BUILTIN);
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_subd,
-                                 CallingConv::MSP430_BUILTIN);
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_mpyd,
-                                 CallingConv::MSP430_BUILTIN);
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_divd,
-                                 CallingConv::MSP430_BUILTIN);
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__oeq,
-                                 CallingConv::MSP430_BUILTIN);
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__une,
-                                 CallingConv::MSP430_BUILTIN);
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__oge,
-                                 CallingConv::MSP430_BUILTIN);
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__olt,
-                                 CallingConv::MSP430_BUILTIN);
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__ole,
-                                 CallingConv::MSP430_BUILTIN);
-  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__ogt,
-                                 CallingConv::MSP430_BUILTIN);
-
-  // TODO: __mspabi_srall, __mspabi_srlll, __mspabi_sllll
-}
-
 void RuntimeLibcallsInfo::initSoftFloatCmpLibcallPredicates() {
   SoftFloatCompareLibcallPredicates[RTLIB::OEQ_F32] = CmpInst::ICMP_EQ;
   SoftFloatCompareLibcallPredicates[RTLIB::OEQ_F64] = CmpInst::ICMP_EQ;
@@ -440,13 +309,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 
   if (TT.isARM() || TT.isThumb())
     setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
-  else if (TT.getArch() == Triple::ArchType::avr) {
-    // Several of the runtime library functions use a special calling conv
-    setLibcallImplCallingConv(RTLIB::__divmodqi4, CallingConv::AVR_BUILTIN);
-    setLibcallImplCallingConv(RTLIB::__divmodhi4, CallingConv::AVR_BUILTIN);
-    setLibcallImplCallingConv(RTLIB::__udivmodqi4, CallingConv::AVR_BUILTIN);
-    setLibcallImplCallingConv(RTLIB::__udivmodhi4, CallingConv::AVR_BUILTIN);
-  }
 
   if (!TT.isWasm()) {
     // These libcalls are only available in compiler-rt, not libgcc.
@@ -502,9 +364,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
         RTLIB::HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES,
         RTLIB::__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes);
   }
-
-  if (TT.getArch() == Triple::ArchType::msp430)
-    setMSP430Libcalls(*this, TT);
 }
 
 bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
