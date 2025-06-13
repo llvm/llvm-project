@@ -2995,8 +2995,7 @@ ParseResult LoopNestOp::parse(OpAsmParser &parser, OperationState &result) {
   };
 
   if (!parser.parseOptionalKeyword("tiles") &&
-      (parser.parseLParen() ||
-      parser.parseCommaSeparatedList(parseTiles) ||
+      (parser.parseLParen() || parser.parseCommaSeparatedList(parseTiles) ||
        parser.parseRParen()))
     return failure();
 
