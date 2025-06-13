@@ -132,11 +132,15 @@ bool X86FixupInstTuningPass::processInstruction(
   auto ProcessVPERMILPDri = [&](unsigned NewOpc) -> bool {
     if (!NewOpcPreferable(NewOpc))
       return false;
-    unsigned MaskImm = MI.getOperand(NumOperands - 1).getImm();
-    MI.removeOperand(NumOperands - 1);
-    MI.addOperand(MI.getOperand(NumOperands - 2));
-    MI.setDesc(TII->get(NewOpc));
-    MI.addOperand(MachineOperand::CreateImm(MaskImm));
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      unsigned MaskImm = MI.getOperand(NumOperands - 1).getImm();
+      MI.removeOperand(NumOperands - 1);
+      MI.addOperand(MI.getOperand(NumOperands - 2));
+      MI.setDesc(TII->get(NewOpc));
+      MI.addOperand(MachineOperand::CreateImm(MaskImm));
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
     return true;
   };
 
@@ -147,11 +151,15 @@ bool X86FixupInstTuningPass::processInstruction(
   auto ProcessVPERMILPSri = [&](unsigned NewOpc) -> bool {
     if (!NewOpcPreferable(NewOpc))
       return false;
-    unsigned MaskImm = MI.getOperand(NumOperands - 1).getImm();
-    MI.removeOperand(NumOperands - 1);
-    MI.addOperand(MI.getOperand(NumOperands - 2));
-    MI.setDesc(TII->get(NewOpc));
-    MI.addOperand(MachineOperand::CreateImm(MaskImm));
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      unsigned MaskImm = MI.getOperand(NumOperands - 1).getImm();
+      MI.removeOperand(NumOperands - 1);
+      MI.addOperand(MI.getOperand(NumOperands - 2));
+      MI.setDesc(TII->get(NewOpc));
+      MI.addOperand(MachineOperand::CreateImm(MaskImm));
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
     return true;
   };
 
@@ -164,7 +172,11 @@ bool X86FixupInstTuningPass::processInstruction(
     if (!ST->hasNoDomainDelayShuffle() ||
         !NewOpcPreferable(NewOpc, /*ReplaceInTie*/ false))
       return false;
-    MI.setDesc(TII->get(NewOpc));
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      MI.setDesc(TII->get(NewOpc));
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
     return true;
   };
 
@@ -185,9 +197,12 @@ bool X86FixupInstTuningPass::processInstruction(
   auto ProcessUNPCK = [&](unsigned NewOpc, unsigned MaskImm) -> bool {
     if (!NewOpcPreferable(NewOpc, /*ReplaceInTie*/ false))
       return false;
-
-    MI.setDesc(TII->get(NewOpc));
-    MI.addOperand(MachineOperand::CreateImm(MaskImm));
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      MI.setDesc(TII->get(NewOpc));
+      MI.addOperand(MachineOperand::CreateImm(MaskImm));
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
     return true;
   };
 
@@ -198,7 +213,11 @@ bool X86FixupInstTuningPass::processInstruction(
     if (!ST->hasNoDomainDelayShuffle() ||
         !NewOpcPreferable(NewOpc, /*ReplaceInTie*/ false))
       return false;
-    MI.setDesc(TII->get(NewOpc));
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      MI.setDesc(TII->get(NewOpc));
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
     return true;
   };
 
@@ -229,8 +248,12 @@ bool X86FixupInstTuningPass::processInstruction(
       return false;
     if (!OptSize && !NewOpcPreferable(MovOpc))
       return false;
-    MI.setDesc(TII->get(MovOpc));
-    MI.removeOperand(NumOperands - 1);
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      MI.setDesc(TII->get(MovOpc));
+      MI.removeOperand(NumOperands - 1);
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
     return true;
   };
 
