@@ -53,8 +53,9 @@ define void @addr_from_arg(ptr %ptr, i1 %p) {
 ; CHECK:       [[BODY_1]]:
 ; CHECK-NEXT:    [[SUNKADDR:%.*]] = bitcast ptr [[PTR]] to ptr
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[SUNKADDR]], align 4
-; CHECK-NEXT:    [[UNUSED:%.*]] = load <4 x i32>, ptr [[PTR]], align 4
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ptr [[PTR]] to ptr
+; CHECK-NEXT:    [[UNUSED:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -84,8 +85,8 @@ define void @addr_from_global(i1 %p) {
 ; CHECK:       [[BODY_1]]:
 ; CHECK-NEXT:    [[GEP1:%.*]] = bitcast ptr @globalptr to ptr
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[UNUSED:%.*]] = load <4 x i32>, ptr @globalptr, align 4
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @globalptr, align 4
+; CHECK-NEXT:    [[UNUSED:%.*]] = load <4 x i32>, ptr [[GEP1]], align 4
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
