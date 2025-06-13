@@ -20,23 +20,10 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::custom {
 
-QueryCheck::QueryCheck(llvm::StringRef Name,
-                       const ClangTidyOptions::CustomCheckValue &V,
-                       ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {
-  for (const ClangTidyOptions::CustomCheckDiag &D : V.Diags) {
-    auto DiagnosticIdIt =
-        Diags
-            .try_emplace(D.Level.value_or(DiagnosticIDs::Warning),
-                         llvm::StringMap<llvm::SmallVector<std::string>>{})
-            .first;
-    auto DiagMessageIt =
-        DiagnosticIdIt->getSecond()
-            .try_emplace(D.BindName, llvm::SmallVector<std::string>{})
-            .first;
-    DiagMessageIt->second.emplace_back(D.Message);
-  }
-
+static SmallVector<ast_matchers::dynamic::DynTypedMatcher>
+parseQuery(const ClangTidyOptions::CustomCheckValue &V,
+           ClangTidyContext *Context) {
+  SmallVector<ast_matchers::dynamic::DynTypedMatcher> Matchers{};
   clang::query::QuerySession QS({});
   llvm::StringRef QueryStringRef{V.Query};
   while (!QueryStringRef.empty()) {
@@ -54,8 +41,8 @@ QueryCheck::QueryCheck(llvm::StringRef Name,
     }
     case query::QK_Invalid: {
       const auto &InvalidQuery = llvm::cast<query::InvalidQuery>(*Q);
-      Context->configurationDiag(InvalidQuery.ErrStr);
-      break;
+      Context->configurationDiag(InvalidQuery.ErrStr, DiagnosticIDs::Error);
+      return {};
     }
     // FIXME: TODO
     case query::QK_File:
@@ -67,11 +54,33 @@ QueryCheck::QueryCheck(llvm::StringRef Name,
     case query::QK_NoOp:
     case query::QK_Quit:
     case query::QK_SetBool: {
-      Context->configurationDiag("unsupported query kind");
+      Context->configurationDiag("unsupported query kind",
+                                 DiagnosticIDs::Error);
+      return {};
     }
     }
     QueryStringRef = Q->RemainingContent;
   }
+  return Matchers;
+}
+
+QueryCheck::QueryCheck(llvm::StringRef Name,
+                       const ClangTidyOptions::CustomCheckValue &V,
+                       ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context) {
+  for (const ClangTidyOptions::CustomCheckDiag &D : V.Diags) {
+    auto DiagnosticIdIt =
+        Diags
+            .try_emplace(D.Level.value_or(DiagnosticIDs::Warning),
+                         llvm::StringMap<llvm::SmallVector<std::string>>{})
+            .first;
+    auto DiagMessageIt =
+        DiagnosticIdIt->getSecond()
+            .try_emplace(D.BindName, llvm::SmallVector<std::string>{})
+            .first;
+    DiagMessageIt->second.emplace_back(D.Message);
+  }
+  Matchers = parseQuery(V, Context);
 }
 
 void QueryCheck::registerMatchers(MatchFinder *Finder) {

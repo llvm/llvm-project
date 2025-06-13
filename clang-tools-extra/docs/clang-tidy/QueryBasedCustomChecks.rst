@@ -15,6 +15,10 @@ enabled or disabled by the checks option like the built-in checks.
 Custom checks support inheritance from parent configurations like other
 configuration items.
 
+Goal: easy to write, cross platform, multiple versions supported toolkit for
+custom clang-tidy rules.
+Non-Goal: complex checks, performance, fix-its, etc.
+
 Configuration
 =============
 
@@ -25,6 +29,8 @@ Configuration
     - BindName: name of the node to be bound in `Query`.
     - Message: message to be reported.
     - Level: severity of the diagnostic, the possible values are `Note`, `Warning`.
+
+CustomChecks can be configured by `Checks` option in the configuration file.
 
 Example
 =======
