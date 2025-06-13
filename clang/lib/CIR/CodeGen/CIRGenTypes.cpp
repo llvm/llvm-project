@@ -419,6 +419,15 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
+
+    // TODO(CIR): In LLVM, "lower arrays of undefined struct type to arrays of
+    // i8 just to have a concrete type"
+    if (!builder.isSized(elemTy)) {
+      cgm.errorNYI(SourceLocation(), "arrays of undefined struct type", type);
+      resultType = cgm.UInt32Ty;
+      break;
+    }
+
     resultType = cir::ArrayType::get(elemTy, arrTy->getSize().getZExtValue());
     break;
   }
@@ -432,8 +441,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   }
 
   case Type::Enum: {
-    const EnumDecl *ED = cast<EnumType>(ty)->getDecl();
-    if (auto integerType = ED->getIntegerType(); !integerType.isNull())
+    const EnumDecl *ed = cast<EnumType>(ty)->getDecl();
+    if (auto integerType = ed->getIntegerType(); !integerType.isNull())
       return convertType(integerType);
     // Return a placeholder 'i32' type.  This can be changed later when the
     // type is defined (see UpdateCompletedType), but is likely to be the

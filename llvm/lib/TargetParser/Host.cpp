@@ -18,6 +18,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include <string.h>
@@ -1672,8 +1673,32 @@ StringRef sys::getHostCPUName() {
   return "generic";
 }
 #elif defined(__riscv)
+#if defined(__linux__)
+// struct riscv_hwprobe
+struct RISCVHwProbe {
+  int64_t Key;
+  uint64_t Value;
+};
+#endif
+
 StringRef sys::getHostCPUName() {
 #if defined(__linux__)
+  // Try the hwprobe way first.
+  RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_MVENDORID=*/0, 0},
+                       {/*RISCV_HWPROBE_KEY_MARCHID=*/1, 0},
+                       {/*RISCV_HWPROBE_KEY_MIMPID=*/2, 0}};
+  int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
+                    /*pair_count=*/std::size(Query), /*cpu_count=*/0,
+                    /*cpus=*/0, /*flags=*/0);
+  if (Ret == 0) {
+    RISCV::CPUModel Model{static_cast<uint32_t>(Query[0].Value), Query[1].Value,
+                          Query[2].Value};
+    StringRef Name = RISCV::getCPUNameFromCPUModel(Model);
+    if (!Name.empty())
+      return Name;
+  }
+
+  // Then try the cpuinfo way.
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   StringRef Content = P ? P->getBuffer() : "";
   StringRef Name = detail::getHostCPUNameForRISCV(Content);
@@ -2148,11 +2173,6 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   return Features;
 }
 #elif defined(__linux__) && defined(__riscv)
-// struct riscv_hwprobe
-struct RISCVHwProbe {
-  int64_t Key;
-  uint64_t Value;
-};
 const StringMap<bool> sys::getHostCPUFeatures() {
   RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_BASE_BEHAVIOR=*/3, 0},
                        {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0},

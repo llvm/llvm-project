@@ -4063,6 +4063,9 @@ def warn_at_available_unchecked_use : Warning<
   "%select{@available|__builtin_available}0 does not guard availability here; "
   "use if (%select{@available|__builtin_available}0) instead">,
   InGroup<DiagGroup<"unsupported-availability-guard">>;
+def warn_availability_invalid_os_version
+    : Warning<"invalid %1 version '%0' in availability attribute">, InGroup<DiagGroup<"invalid-version-availability">>;
+def note_availability_invalid_os_version_adjusted: Note<"implicitly treating version as '%0'">;
 
 def warn_missing_sdksettings_for_availability_checking : Warning<
   "%0 availability is ignored without a valid 'SDKSettings.json' in the SDK">,
@@ -6260,14 +6263,19 @@ def warn_static_local_in_extern_inline : Warning<
 def note_convert_inline_to_static : Note<
   "use 'static' to give inline function %0 internal linkage">;
 
-def warn_possible_object_duplication_mutable : Warning<
-  "%0 may be duplicated when built into a shared library: "
-  "it is mutable, has hidden visibility, and external linkage">,
-  InGroup<UniqueObjectDuplication>, DefaultIgnore;
-def warn_possible_object_duplication_init : Warning<
-  "initialization of %0 may run twice when built into a shared library: "
-  "it has hidden visibility and external linkage">,
-  InGroup<UniqueObjectDuplication>, DefaultIgnore;
+def warn_possible_object_duplication_mutable
+    : Warning<"%0 may be duplicated when built into a shared library: "
+              "it is mutable, with external linkage and "
+              "%select{hidden visibility|no import/export annotation}1">,
+      InGroup<UniqueObjectDuplication>,
+      DefaultIgnore;
+def warn_possible_object_duplication_init
+    : Warning<"initialization of %0 may run twice when built into a shared "
+              "library: "
+              "it has external linkage and "
+              "%select{hidden visibility|no import/export annotation}1">,
+      InGroup<UniqueObjectDuplication>,
+      DefaultIgnore;
 
 def ext_redefinition_of_typedef : ExtWarn<
   "redefinition of typedef %0 is a C11 feature">,

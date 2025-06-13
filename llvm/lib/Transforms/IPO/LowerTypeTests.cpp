@@ -132,8 +132,6 @@ static cl::opt<DropTestKind>
                                           "Drop all type test sequences")),
                     cl::Hidden, cl::init(DropTestKind::None));
 
-static cl::opt<bool> DropTypeTestsLate("lowertypetests-drop-type-tests-late");
-
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
     return false;
@@ -1077,8 +1075,7 @@ void LowerTypeTestsModule::importTypeTest(CallInst *CI) {
     return;
 
   TypeIdLowering TIL = importTypeId(TypeIdStr->getString());
-  Value *Lowered = DropTypeTestsLate ? ConstantInt::getTrue(M.getContext())
-                                     : lowerTypeTestCall(TypeIdStr, CI, TIL);
+  Value *Lowered = lowerTypeTestCall(TypeIdStr, CI, TIL);
   if (Lowered) {
     CI->replaceAllUsesWith(Lowered);
     CI->eraseFromParent();
