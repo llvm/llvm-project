@@ -120,6 +120,7 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
 //  postfix_expression:
 //    primary_expression
 //    postfix_expression "[" integer_literal "]"
+//    postfix_expression "[" integer_literal "-" integer_literal "]"
 //    postfix_expression "." id_expression
 //    postfix_expression "->" id_expression
 //
@@ -131,17 +132,30 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
     switch (token.GetKind()) {
     case Token::l_square: {
       m_dil_lexer.Advance();
-      std::optional<int64_t> rhs = ParseIntegerConstant();
-      if (!rhs) {
+      std::optional<int64_t> index = ParseIntegerConstant();
+      if (!index) {
         BailOut(
             llvm::formatv("failed to parse integer constant: {0}", CurToken()),
             CurToken().GetLocation(), CurToken().GetSpelling().length());
         return std::make_unique<ErrorNode>();
       }
+      if (CurToken().GetKind() == Token::minus) {
+        m_dil_lexer.Advance();
+        std::optional<int64_t> last_index = ParseIntegerConstant();
+        if (!last_index) {
+          BailOut(llvm::formatv("failed to parse integer constant: {0}",
+                                CurToken()),
+                  CurToken().GetLocation(), CurToken().GetSpelling().length());
+          return std::make_unique<ErrorNode>();
+        }
+        lhs = std::make_unique<BitFieldExtractionNode>(
+            loc, std::move(lhs), std::move(*index), std::move(*last_index));
+      } else {
+        lhs = std::make_unique<ArraySubscriptNode>(loc, std::move(lhs),
+                                                   std::move(*index));
+      }
       Expect(Token::r_square);
       m_dil_lexer.Advance();
-      lhs = std::make_unique<ArraySubscriptNode>(loc, std::move(lhs),
-                                                 std::move(*rhs));
       break;
     }
     case Token::period:
