@@ -4174,6 +4174,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // Instrument AVX permutation intrinsic.
   // We apply the same permutation (argument index 1) to the shadow.
   void handleAVXPermutation(IntrinsicInst &I) {
+    assert(I.arg_size() == 2);
+    assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
+    assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
+    [[maybe_unused]] auto ArgVectorSize =
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
+    assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
+               ->getNumElements() == ArgVectorSize);
+    assert(I.getType() == I.getArgOperand(0)->getType());
     IRBuilder<> IRB(&I);
     Value *Shadow = getShadow(&I, 0);
     insertShadowCheck(I.getArgOperand(1), &I);
