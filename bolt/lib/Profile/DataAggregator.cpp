@@ -49,6 +49,8 @@ static cl::opt<bool>
                      cl::desc("aggregate basic samples (without LBR info)"),
                      cl::cat(AggregatorCategory));
 
+extern cl::opt<bool> DumpData;
+
 static cl::opt<std::string>
     ITraceAggregation("itrace",
                       cl::desc("Generate LBR info with perf itrace argument"),
@@ -596,6 +598,9 @@ void DataAggregator::processProfile(BinaryContext &BC) {
 
   for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
+
+  if (opts::DumpData)
+    dump();
 
   // Release intermediate storage.
   clear(BranchLBRs);
