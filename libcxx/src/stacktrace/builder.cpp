@@ -22,33 +22,46 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void builder::build_stacktrace(size_t skip, size_t max_depth) {
-  // First get the instruction addresses, populate __entries_
+#if defined(_LIBCPP_WIN32API)
+  // Windows implementation
   win_impl dbghelp{*this};
-  unwind unwind{*this};
   dbghelp.collect(skip + 1, max_depth);
-  unwind.collect(skip + 1, max_depth);
+  if (!__entries_.size()) {
+    return;
+  }
+  dbghelp.ident_modules();
+  dbghelp.resolve_lines();
+  dbghelp.symbolize();
 
-  // (Can't proceed if empty)
+#else
+  // Non-Windows; assume Unix-like.
+
+  // For spawning `addr2line` or similar external process
+  spawner pspawn{*this};
+
+  // `Unwind.h` or `libunwind.h` often available on Linux/OSX etc.
+  unwind unwind{*this};
+  unwind.collect(skip + 1, max_depth);
   if (!__entries_.size()) {
     return;
   }
 
-  // Associate addrs with binaries (ELF/MachO/etc.)
+#  if defined(__APPLE__)
+  // Specific to MacOS and other Apple SDKs
   macos macos{*this};
-  linux linux{*this};
-  dbghelp.ident_modules();
   macos.ident_modules();
-  linux.ident_modules();
-
-  // Resolve addresses to symbols, filename, linenumber
-  spawner pspawn{*this};
-  dbghelp.resolve_lines();
   pspawn.resolve_lines();
-
-  // Populate missing symbols, if any.
-  dbghelp.symbolize();
   macos.symbolize();
+
+#  else
+  // Linux and other other platforms
+  linux linux{*this};
+  linux.ident_modules();
+  pspawn.resolve_lines();
   linux.symbolize();
+
+#  endif
+#endif
 }
 
 } // namespace __stacktrace
