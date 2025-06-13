@@ -575,10 +575,12 @@ foreach mx = SchedMxListFWRed in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defm "" : LMULWriteResMX<"WriteVMALUV", [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = 4 in  {
+    defm "" : LMULWriteResMX<"WriteVMALUV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVMSFSV", [SMX60_VIEU], mx, IsWorstCase>;
+  }
   defm "" : LMULWriteResMX<"WriteVMPopV", [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVMFFSV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVMSFSV", [SMX60_VIEU], mx, IsWorstCase>;
 
   defm "" : LMULWriteResMX<"WriteVIotaV", [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVIdxV", [SMX60_VIEU], mx, IsWorstCase>;
