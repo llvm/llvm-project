@@ -1287,8 +1287,7 @@ SymbolFileDWARFDebugMap::GetSeparateDebugInfoFiles() {
       continue;
 
     if (cu_map.find(info.oso_path) == cu_map.end())
-      cu_map[info.oso_path] = info.so_file;
-    ;
+      cu_map[info.oso_path] = lldb_private::FileSpec(info.oso_path);
   }
   return cu_map;
 }
