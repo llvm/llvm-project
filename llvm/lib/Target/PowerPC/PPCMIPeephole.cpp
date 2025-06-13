@@ -1292,6 +1292,10 @@ bool PPCMIPeephole::simplifyCode() {
             unsigned MB = MI.getOperand(3).getImm();
             unsigned ME = MI.getOperand(4).getImm();
 
+            // LBARX already sets the upper 24 bits of the destination register
+            // to zero. If the register is cleared to zero in the upper 24 bits
+            // using RLWINM later, we eliminate the RLWINM. Same applies to
+            // LHARX.
             if (SH == 0 && ME == 31 &&
                 ((MB == 24 && Opcode == PPC::LBARX) ||
                  (MB == 16 && Opcode == PPC::LHARX))) {
