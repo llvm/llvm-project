@@ -14,6 +14,7 @@ cause issues. Only applies to C++11 and above, as that's when
 
 Options
 -------
+
 .. option :: SharedPointerClasses
 
    A semicolon-separated list of class names that should be treated as
