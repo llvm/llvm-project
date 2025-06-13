@@ -12,7 +12,6 @@
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/null_check.h"
-#include "src/string/memory_utils/inline_memmove.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -21,7 +20,7 @@ LLVM_LIBC_FUNCTION(wchar_t *, wmemmove,
   LIBC_CRASH_ON_NULLPTR(dest);
   LIBC_CRASH_ON_NULLPTR(src);
 
-  inline_memmove(dest, src, n * sizeof(wchar_t));
+  __builtin_memmove(dest, src, n * sizeof(wchar_t));
   return dest;
 }
 
