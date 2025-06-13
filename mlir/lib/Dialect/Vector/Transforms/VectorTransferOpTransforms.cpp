@@ -581,7 +581,6 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
 }
 
 namespace {
-
 /// Rewrites contiguous row-major vector.transfer_read ops by inserting
 /// memref.collapse_shape on the source so that the resulting
 /// vector.transfer_read has a 1D source. Requires the source shape to be
@@ -630,7 +629,11 @@ public:
     if (transferReadOp.getMask())
       return failure();
 
-    int64_t firstDimToCollapse = sourceType.getRank() - vectorType.getRank();
+    // Determine the first memref dimension to collapse - just enough so we can
+    // read a flattened vector.
+    int64_t firstDimToCollapse =
+        sourceType.getRank() -
+        vectorType.getShape().drop_while([](auto v) { return v == 1; }).size();
 
     // 1. Collapse the source memref
     Value collapsedSource =
@@ -722,7 +725,11 @@ public:
     if (transferWriteOp.getMask())
       return failure();
 
-    int64_t firstDimToCollapse = sourceType.getRank() - vectorType.getRank();
+    // Determine the first memref dimension to collapse - just enough so we can
+    // read a flattened vector.
+    int64_t firstDimToCollapse =
+        sourceType.getRank() -
+        vectorType.getShape().drop_while([](auto v) { return v == 1; }).size();
 
     // 1. Collapse the source memref
     Value collapsedSource =
