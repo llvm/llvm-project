@@ -235,7 +235,8 @@ void NVVMReflect::replaceReflectCalls(
       if (auto *UI = dyn_cast<Instruction>(U))
         Worklist.push_back(UI);
     I->replaceAllUsesWith(C);
-    I->eraseFromParent();
+    if (isInstructionTriviallyDead(I))
+      I->eraseFromParent();
   };
 
   for (auto &[Call, NewValue] : ReflectReplacements)
