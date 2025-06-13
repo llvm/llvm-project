@@ -77,6 +77,15 @@ TEST_P(olGetDeviceInfoTest, SuccessDriverVersion) {
   ASSERT_EQ(std::strlen(DriverVersion.data()), Size - 1);
 }
 
+TEST_P(olGetDeviceInfoTest, SuccessMaxWorkGroupSize) {
+  ol_dimensions_t Value{0, 0, 0};
+  ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE,
+                                 sizeof(Value), &Value));
+  ASSERT_GT(Value.x, 0u);
+  ASSERT_GT(Value.y, 0u);
+  ASSERT_GT(Value.z, 0u);
+}
+
 TEST_P(olGetDeviceInfoTest, InvalidNullHandleDevice) {
   ol_device_type_t DeviceType;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
