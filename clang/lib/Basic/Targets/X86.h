@@ -997,6 +997,10 @@ public:
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
   }
+
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinX86_64TargetInfo

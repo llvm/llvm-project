@@ -1321,7 +1321,7 @@ static bool interp__builtin_ia32_pdep(InterpState &S, CodePtr OpPC,
     if (Mask[I])
       Result.setBitVal(I, Val[P++]);
   }
-  pushInteger(S, Result, Call->getType());
+  pushInteger(S, std::move(Result), Call->getType());
   return true;
 }
 
@@ -1344,7 +1344,7 @@ static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
     if (Mask[I])
       Result.setBitVal(P++, Val[I]);
   }
-  pushInteger(S, Result, Call->getType());
+  pushInteger(S, std::move(Result), Call->getType());
   return true;
 }
 

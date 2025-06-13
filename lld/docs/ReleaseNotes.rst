@@ -25,6 +25,10 @@ Non-comprehensive list of changes in this release
 
 ELF Improvements
 ----------------
+* Added ``-z dynamic-undefined-weak`` to make undefined weak symbols dynamic
+  when the dynamic symbol table is present.
+  (`#143831 <https://github.com/llvm/llvm-project/pull/143831>`_)
+
 * For AArch64, added support for ``-zgcs-report-dynamic``, enabling checks for
   GNU GCS Attribute Flags in Dynamic Objects when GCS is enabled. Inherits value
   from ``-zgcs-report`` (capped at ``warning`` level) unless user-defined,

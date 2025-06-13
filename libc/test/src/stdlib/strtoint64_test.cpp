@@ -8,9 +8,9 @@
 
 #include <stdint.h>
 
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
-#include "src/errno/libc_errno.h"
 
 #include "StrtolTest.h"
 #include "test/UnitTest/Test.h"
@@ -21,7 +21,7 @@ int64_t strtoint64(const char *__restrict str, char **__restrict str_end,
                    int base) {
   auto result = internal::strtointeger<int64_t>(str, base);
   if (result.has_error())
-    LIBC_NAMESPACE::libc_errno = result.error;
+    libc_errno = result.error;
 
   if (str_end != nullptr)
     *str_end = const_cast<char *>(str + result.parsed_len);
@@ -33,7 +33,7 @@ uint64_t strtouint64(const char *__restrict str, char **__restrict str_end,
                      int base) {
   auto result = internal::strtointeger<uint64_t>(str, base);
   if (result.has_error())
-    LIBC_NAMESPACE::libc_errno = result.error;
+    libc_errno = result.error;
 
   if (str_end != nullptr)
     *str_end = const_cast<char *>(str + result.parsed_len);

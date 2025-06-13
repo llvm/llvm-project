@@ -1775,6 +1775,7 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
   AllocaInst *NewAlloca =
       new AllocaInst(ByValType, Arg->getType()->getPointerAddressSpace(),
                      nullptr, Alignment, Arg->getName());
+  NewAlloca->setDebugLoc(DebugLoc::getCompilerGenerated());
   NewAlloca->insertBefore(Caller->begin()->begin());
   IFI.StaticAllocas.push_back(NewAlloca);
 
@@ -3258,6 +3259,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Add an unconditional branch to make this look like the CallInst case...
     CreatedBranchToNormalDest = BranchInst::Create(II->getNormalDest(), CB.getIterator());
+    // We intend to replace this DebugLoc with another later.
+    CreatedBranchToNormalDest->setDebugLoc(DebugLoc::getTemporary());
 
     // Split the basic block.  This guarantees that no PHI nodes will have to be
     // updated due to new incoming edges, and make the invoke case more
@@ -3359,6 +3362,12 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     Returns[0]->eraseFromParent();
     ReturnBB->eraseFromParent();
   } else if (!CB.use_empty()) {
+    // In this case there are no returns to use, so there is no clear source
+    // location for the "return".
+    // FIXME: It may be correct to use the scope end line of the function here,
+    // since this likely means we are falling out of the function.
+    if (CreatedBranchToNormalDest)
+      CreatedBranchToNormalDest->setDebugLoc(DebugLoc::getUnknown());
     // No returns, but something is using the return value of the call.  Just
     // nuke the result.
     CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));

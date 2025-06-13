@@ -105,7 +105,7 @@ static CXXMethodDecl *LookupSpecialMemberFromXValue(Sema &SemaRef,
   switch (OCS.BestViableFunction(SemaRef, LookupLoc, Best)) {
   case OR_Success:
   case OR_Deleted:
-    return cast<CXXMethodDecl>(Best->Function);
+    return cast<CXXMethodDecl>(Best->Function)->getCanonicalDecl();
   default:
     return nullptr;
   }
@@ -163,6 +163,8 @@ static bool IsDefaultMovable(Sema &SemaRef, const CXXRecordDecl *D) {
 
   if (!Dtr)
     return true;
+
+  Dtr = Dtr->getCanonicalDecl();
 
   if (Dtr->isUserProvided() && (!Dtr->isDefaulted() || Dtr->isDeleted()))
     return false;
@@ -2044,11 +2046,13 @@ static void DiagnoseNonDefaultMovable(Sema &SemaRef, SourceLocation Loc,
           << diag::TraitNotSatisfiedReason::UserProvidedAssign
           << Decl->isMoveAssignmentOperator() << Decl->getSourceRange();
   }
-  CXXDestructorDecl *Dtr = D->getDestructor();
-  if (Dtr && Dtr->isUserProvided() && !Dtr->isDefaulted())
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::DeletedDtr << /*User Provided*/ 1
-        << Dtr->getSourceRange();
+  if (CXXDestructorDecl *Dtr = D->getDestructor()) {
+    Dtr = Dtr->getCanonicalDecl();
+    if (Dtr->isUserProvided() && !Dtr->isDefaulted())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::DeletedDtr << /*User Provided*/ 1
+          << Dtr->getSourceRange();
+  }
 }
 
 static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
