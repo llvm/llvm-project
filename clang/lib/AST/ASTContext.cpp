@@ -1706,7 +1706,7 @@ void ASTContext::setRelocationInfoForCXXRecord(
 }
 
 bool ASTContext::containsAddressDiscriminatedPointerAuth(QualType T) {
-  if (!LangOpts.PointerAuthCalls && !LangOpts.PointerAuthIntrinsics)
+  if (!isPointerAuthenticationAvailable())
     return false;
 
   T = T.getCanonicalType();
@@ -1716,13 +1716,14 @@ bool ASTContext::containsAddressDiscriminatedPointerAuth(QualType T) {
   if (!RD)
     return false;
 
+  if (auto Existing = RecordContainsAddressDiscriminatedPointerAuth.find(RD);
+      Existing != RecordContainsAddressDiscriminatedPointerAuth.end())
+    return Existing->second;
+
   auto SaveReturn = [this, RD](bool Result) {
     RecordContainsAddressDiscriminatedPointerAuth.insert({RD, Result});
     return Result;
   };
-  if (auto Existing = RecordContainsAddressDiscriminatedPointerAuth.find(RD);
-      Existing != RecordContainsAddressDiscriminatedPointerAuth.end())
-    return Existing->second;
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
     if (CXXRD->isPolymorphic() &&
         hasAddressDiscriminatedVTableAuthentication(CXXRD))
@@ -15157,10 +15158,11 @@ ASTContext::baseForVTableAuthentication(const CXXRecordDecl *ThisClass) {
 
 bool ASTContext::hasAddressDiscriminatedVTableAuthentication(
     const CXXRecordDecl *Class) {
-  assert(Class->isPolymorphic());
+  if (!isPointerAuthenticationAvailable() || !Class->isPolymorphic())
+    return false;
   const CXXRecordDecl *BaseType = baseForVTableAuthentication(Class);
   using AuthAttr = VTablePointerAuthenticationAttr;
-  const auto *ExplicitAuth = BaseType->getAttr<AuthAttr>();
+  const AuthAttr *ExplicitAuth = BaseType->getAttr<AuthAttr>();
   if (!ExplicitAuth)
     return LangOpts.PointerAuthVTPtrAddressDiscrimination;
   AuthAttr::AddressDiscriminationMode AddressDiscrimination =
