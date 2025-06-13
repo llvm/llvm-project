@@ -10,6 +10,7 @@
 #include "hdr/types/char8_t.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/error_or.h"
+#include "src/__support/math_extras.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/utf_ret.h"
 
@@ -35,8 +36,12 @@ int CharacterConverter::push(char8_t utf8_byte) {
     }
     // 2 through 4 bytes total
     else if (numOnes >= 2 && numOnes <= 4) {
+      /* Since the format is 110xxxxx, 1110xxxx, and 11110xxx for 2, 3, and 4,
+      we will make the base mask with 7 ones and right shift it as necessary. */
+      const size_t significant_bits = 7;
       state->total_bytes = numOnes;
-      utf8_byte &= (0x7F >> numOnes);
+      utf8_byte &=
+          (mask_trailing_ones<uint32_t, significant_bits>() >> numOnes);
     }
     // Invalid first byte
     else {
@@ -48,9 +53,9 @@ int CharacterConverter::push(char8_t utf8_byte) {
   }
   // Any subsequent push
   // Adding 6 more bits so need to left shift
-  const int BITS_PER_UTF8 = 6;
+  const size_t BITS_PER_UTF8 = 6;
   if (cpp::countl_one(utf8_byte) == 1 && !isComplete()) {
-    char32_t byte = utf8_byte & 0x3F;
+    char32_t byte = utf8_byte & mask_trailing_ones<uint32_t, BITS_PER_UTF8>();
     state->partial = state->partial << BITS_PER_UTF8;
     state->partial |= byte;
     state->bytes_processed++;
