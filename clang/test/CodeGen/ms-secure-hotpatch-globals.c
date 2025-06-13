@@ -1,7 +1,7 @@
 // This verifies that global variable redirection works correctly when using hotpatching.
 //
 // RUN: %clang_cl -c --target=x86_64-windows-msvc -O2 /Z7 \
-// RUN:   -fms-secure-hotpatch-functions-list=hp1,hp2,hp3,hp4,hp5_phi_ptr_mixed,hp_phi_ptr_both \
+// RUN:   -fms-secure-hotpatch-functions-list=hp1,hp2,hp3,hp4,hp5_phi_ptr_mixed,hp_phi_ptr_both,hp_const_ptr_sub \
 // RUN:   /clang:-S /clang:-o- %s | FileCheck %s
 
 #ifdef __clang__
@@ -114,10 +114,20 @@ void hp_phi_ptr_both(int x) NO_TAIL {
     take_data(y);
 }
 
-// CHECK: hp_phi_ptr_both
+// CHECK: hp_phi_ptr_both:
 // CHECK: .seh_endprologue
 // CHECK: test ecx, ecx
 // CHECK: mov rsi, qword ptr [rip + __ref_g_has_pointers]
 // CHECK: mov rsi, qword ptr [rip + __ref_g_data]
 // CHECK: take_data
 // CHECK: .seh_endproc
+
+// Test a constant expression which references global variable addresses.
+size_t hp_const_ptr_sub() NO_TAIL {
+    return (unsigned char*)&g_has_pointers - (unsigned char*)&g_data;
+}
+
+// CHECK: hp_const_ptr_sub:
+// CHECK: mov rax, qword ptr [rip + __ref_g_has_pointers]
+// CHECK: sub rax, qword ptr [rip + __ref_g_data]
+// CHECK: ret

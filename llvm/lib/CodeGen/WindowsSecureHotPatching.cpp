@@ -395,8 +395,7 @@ static GlobalVariable *getOrCreateRefVariable(
 // If this function creates new instructions, then it will insert them
 // before InsertionPoint.
 static Value *rewriteGlobalVariablesInConstant(
-    Constant *C,
-    SmallDenseMap<GlobalVariable *, Value *> &GVLoadMap,
+    Constant *C, SmallDenseMap<GlobalVariable *, Value *> &GVLoadMap,
     IRBuilder<> &IRBuilderAtEntry) {
   if (C->getValueID() == Value::GlobalVariableVal) {
     GlobalVariable *GV = cast<GlobalVariable>(C);
