@@ -1558,7 +1558,6 @@ unresolved:
 
 const Init *BinOpInit::resolveReferences(Resolver &R) const {
   const Init *lhs = LHS->resolveReferences(R);
-  const Init *rhs = RHS->resolveReferences(R);
 
   unsigned Opc = getOpcode();
   if (Opc == AND || Opc == OR) {
@@ -1576,6 +1575,8 @@ const Init *BinOpInit::resolveReferences(Resolver &R) const {
         return LHSi;
     }
   }
+
+  const Init *rhs = RHS->resolveReferences(R);
 
   if (LHS != lhs || RHS != rhs)
     return (BinOpInit::get(getOpcode(), lhs, rhs, getType()))
