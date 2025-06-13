@@ -182,6 +182,11 @@ public:
   evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                  uint64_t &Target) const;
 
+  /// Given an instruction that accesses a memory address, try to compute
+  /// the target address. Return true on success, and the address in \p Target.
+  virtual bool evaluateInstruction(const MCInst &Inst, uint64_t Addr,
+                                   uint64_t Size, uint64_t &Target) const;
+
   /// Given an instruction tries to get the address of a memory operand. Returns
   /// the address on success.
   virtual std::optional<uint64_t>
