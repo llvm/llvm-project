@@ -82,6 +82,36 @@ define <vscale x 4 x i32> @binop_reverse_splat_elim2(<vscale x 4 x i32> %a, i32 
   ret <vscale x 4 x i32> %add.rev
 }
 
+define <vscale x 4 x i32> @binop_reverse_splat_elim3(<vscale x 4 x i32> %a, i32 %b, i32 %evl) {
+; CHECK-LABEL: @binop_reverse_splat_elim3(
+; CHECK-NEXT:    [[B_INS:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
+; CHECK-NEXT:    [[B_VEC:%.*]] = shufflevector <vscale x 4 x i32> [[B_INS]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw <vscale x 4 x i32> [[B_VEC]], [[A_REV:%.*]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
+;
+  %b.ins = insertelement <vscale x 4 x i32> poison, i32 %b, i32 0
+  %b.vec = shufflevector <vscale x 4 x i32> %b.ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> %a, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %add = add nsw <vscale x 4 x i32> %b.vec, %a.rev
+  %add.rev = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> %add, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 4 x i32> %add.rev
+}
+
+define <vscale x 4 x i32> @binop_reverse_splat_elim4(<vscale x 4 x i32> %a, i32 %b, i32 %evl) {
+; CHECK-LABEL: @binop_reverse_splat_elim4(
+; CHECK-NEXT:    [[B_INS:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
+; CHECK-NEXT:    [[B_VEC:%.*]] = shufflevector <vscale x 4 x i32> [[B_INS]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[ADD1:%.*]] = add nsw <vscale x 4 x i32> [[A:%.*]], [[B_VEC]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD1]]
+;
+  %b.ins = insertelement <vscale x 4 x i32> poison, i32 %b, i32 0
+  %b.vec = shufflevector <vscale x 4 x i32> %b.ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> %a, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %add = add nsw <vscale x 4 x i32> %a.rev,  %b.vec
+  %add.rev = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> %add, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 4 x i32> %add.rev
+}
+
 define <vscale x 4 x float> @unop_reverse_splat_elim(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 %evl) {
 ; CHECK-LABEL: @unop_reverse_splat_elim(
 ; CHECK-NEXT:    [[OP:%.*]] = fneg <vscale x 4 x float> [[A_REV:%.*]]
