@@ -125,7 +125,7 @@ class CXXBasePath;
 class CXXBasePaths;
 class CXXFieldCollector;
 class CodeCompleteConsumer;
-class SummaryManager;
+class SummaryContext;
 class SummaryConsumer;
 enum class ComparisonCategoryType : unsigned char;
 class ConstraintSatisfaction;
@@ -161,7 +161,6 @@ class SemaARM;
 class SemaAVR;
 class SemaBPF;
 class SemaCodeCompletion;
-class SemaSummarizer;
 class SemaCUDA;
 class SemaDirectX;
 class SemaHLSL;
@@ -887,7 +886,7 @@ public:
   Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
        TranslationUnitKind TUKind = TU_Complete,
        CodeCompleteConsumer *CompletionConsumer = nullptr,
-       SummaryManager *SummaryManager = nullptr,
+       SummaryContext *SummaryCtx = nullptr,
        SummaryConsumer *SummaryConsumer = nullptr);
   ~Sema();
 
@@ -1265,6 +1264,8 @@ public:
   DiagnosticsEngine &Diags;
   SourceManager &SourceMgr;
   api_notes::APINotesManager APINotes;
+  SummaryContext *SummaryCtx;
+  SummaryConsumer *SummaryCnsmr;
 
   /// A RAII object to enter scope of a compound statement.
   class CompoundScopeRAII {
@@ -1569,7 +1570,6 @@ private:
   std::unique_ptr<SemaAVR> AVRPtr;
   std::unique_ptr<SemaBPF> BPFPtr;
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
-  std::unique_ptr<SemaSummarizer> SummarizerPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
   std::unique_ptr<SemaDirectX> DirectXPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;

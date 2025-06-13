@@ -37,7 +37,6 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaSummarizer.h"
 #include "clang/Sema/SummaryConsumer.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
@@ -749,22 +748,24 @@ void CompilerInstance::createSummaryConsumer() {
     return;
 
   std::error_code EC;
-  // FIXME: this being static is a design error
-  static llvm::raw_fd_ostream SummaryOS(SummaryFile, EC, llvm::sys::fs::CD_CreateAlways);
+  SummaryOS.reset(new llvm::raw_fd_ostream(SummaryFile, EC,
+                                           llvm::sys::fs::CD_CreateAlways));
 
-  if(!EC)
-    TheSummaryConsumer.reset(new JSONPrintingSummaryConsumer(getSummaryManager(), SummaryOS));
-}
+  if (EC) {
+    SummaryOS = nullptr;
+    return;
+  }
 
-void CompilerInstance::createSummaryManager() {
-  TheSummaryManager.reset(new SummaryManager());
+  TheSummaryConsumer.reset(
+      new JSONPrintingSummaryConsumer(getSummaryContext(), *SummaryOS));
 }
 
 void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer,
                                   SummaryConsumer *SummaryConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
-                         TUKind, CompletionConsumer, hasSummaryManager() ? &getSummaryManager() : nullptr, SummaryConsumer));
+                         TUKind, CompletionConsumer, &getSummaryContext(),
+                         SummaryConsumer));
 
   // Set up API notes.
   TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);

@@ -19,6 +19,7 @@
 #include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Sema/SummaryContext.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -48,6 +49,7 @@ class ModuleFile;
 }
 
 class CodeCompleteConsumer;
+class SummaryContext;
 class SummaryConsumer;
 class DiagnosticsEngine;
 class DiagnosticConsumer;
@@ -57,7 +59,6 @@ class Module;
 class ModuleCache;
 class Preprocessor;
 class Sema;
-class SummaryManager;
 class SourceManager;
 class TargetInfo;
 enum class DisableValidationForModuleKind;
@@ -125,9 +126,12 @@ class CompilerInstance : public ModuleLoader {
 
   /// The summary consumer.
   std::unique_ptr<SummaryConsumer> TheSummaryConsumer;
-  
-  /// The summary manager object.
-  std::unique_ptr<SummaryManager> TheSummaryManager;
+
+  /// The summary context.
+  std::unique_ptr<SummaryContext> SummaryCtx;
+
+  /// The summary output file.
+  std::unique_ptr<llvm::raw_fd_ostream> SummaryOS;
 
   /// The semantic analysis object.
   std::unique_ptr<Sema> TheSema;
@@ -524,15 +528,6 @@ public:
   /// setASTContext - Replace the current AST context.
   void setASTContext(ASTContext *Value);
 
-  bool hasSummaryManager() {
-    return TheSummaryManager != nullptr;
-  }
-
-  SummaryManager &getSummaryManager() {
-    assert(TheSummaryManager && "Compiler instance has no summary manager!");
-    return *TheSummaryManager;
-  }
-
   /// Replace the current Sema; the compiler instance takes ownership
   /// of S.
   void setSema(Sema *S);
@@ -624,9 +619,22 @@ public:
     return *CompletionConsumer;
   }
 
+  /// setCodeCompletionConsumer - Replace the current code completion consumer;
+  /// the compiler instance takes ownership of \p Value.
+  void setCodeCompletionConsumer(CodeCompleteConsumer *Value);
+
   /// @}
   /// @name Summary
   /// @{
+
+  bool hasSummaryContext() { return (bool)SummaryCtx; }
+
+  SummaryContext &getSummaryContext() {
+    assert(SummaryCtx && "Compiler instance has no summary context!");
+    return *SummaryCtx;
+  }
+
+  void createSummaryContext() { SummaryCtx.reset(new SummaryContext()); }
 
   bool hasSummaryConsumer() const { return (bool)TheSummaryConsumer; }
 
@@ -636,9 +644,7 @@ public:
     return *TheSummaryConsumer;
   }
 
-  /// setCodeCompletionConsumer - Replace the current code completion consumer;
-  /// the compiler instance takes ownership of \p Value.
-  void setCodeCompletionConsumer(CodeCompleteConsumer *Value);
+  void createSummaryConsumer();
 
   /// @}
   /// @name Frontend timer
@@ -764,9 +770,6 @@ public:
   static CodeCompleteConsumer *createCodeCompletionConsumer(
       Preprocessor &PP, StringRef Filename, unsigned Line, unsigned Column,
       const CodeCompleteOptions &Opts, raw_ostream &OS);
-
-  void createSummaryConsumer();
-  void createSummaryManager();
 
   /// Create the Sema object to be used for parsing.
   void createSema(TranslationUnitKind TUKind,

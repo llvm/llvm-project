@@ -5,36 +5,37 @@
 #include "llvm/Support/JSON.h"
 namespace clang {
 class FunctionSummary;
-class SummaryManager;
+class SummaryContext;
 
 class SummaryConsumer {
 protected:
-    const SummaryManager *TheSummaryManager;
+  const SummaryContext *SummaryCtx;
 
 public:
-    SummaryConsumer(const SummaryManager &SummaryManager) : TheSummaryManager(&SummaryManager) {}
-    virtual ~SummaryConsumer() = default;
+  SummaryConsumer(const SummaryContext &SummaryCtx) : SummaryCtx(&SummaryCtx) {}
+  virtual ~SummaryConsumer() = default;
 
-    virtual void ProcessStartOfSourceFile() {};
-    virtual void ProcessFunctionSummary(const FunctionSummary&) {};
-    virtual void ProcessEndOfSourceFile() {};
+  virtual void ProcessStartOfSourceFile(){};
+  virtual void ProcessFunctionSummary(const FunctionSummary &){};
+  virtual void ProcessEndOfSourceFile(){};
 };
 
 class PrintingSummaryConsumer : public SummaryConsumer {
 public:
-    PrintingSummaryConsumer(const SummaryManager &SummaryManager, raw_ostream &OS)
-      : SummaryConsumer(SummaryManager) {}
+  PrintingSummaryConsumer(const SummaryContext &SummaryCtx, raw_ostream &OS)
+      : SummaryConsumer(SummaryCtx) {}
 };
 
 class JSONPrintingSummaryConsumer : public PrintingSummaryConsumer {
     llvm::json::OStream JOS;
 
 public:
-    JSONPrintingSummaryConsumer(const SummaryManager &SummaryManager, raw_ostream &OS) : PrintingSummaryConsumer(SummaryManager, OS), JOS(OS, 2) {}
+  JSONPrintingSummaryConsumer(const SummaryContext &SummaryCtx, raw_ostream &OS)
+      : PrintingSummaryConsumer(SummaryCtx, OS), JOS(OS, 2) {}
 
-    void ProcessStartOfSourceFile() override { JOS.arrayBegin(); };
-    void ProcessFunctionSummary(const FunctionSummary&) override;
-    void ProcessEndOfSourceFile() override { JOS.arrayEnd(); };
+  void ProcessStartOfSourceFile() override { JOS.arrayBegin(); };
+  void ProcessFunctionSummary(const FunctionSummary &) override;
+  void ProcessEndOfSourceFile() override { JOS.arrayEnd(); };
 };
 } // namespace clang
 

@@ -35,7 +35,7 @@
 #include "clang/Parse/ParseAST.h"
 #include "clang/Sema/HLSLExternalSemaSource.h"
 #include "clang/Sema/MultiplexExternalSemaSource.h"
-#include "clang/Sema/SemaSummarizer.h"
+#include "clang/Sema/SummaryContext.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
@@ -895,8 +895,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     }
   }
 
-  if(!CI.hasSummaryManager()) {
-    CI.createSummaryManager();
+  if (!CI.hasSummaryContext()) {
+    CI.createSummaryContext();
   }
 
   // Set up embedding for any specified files. Do this before we load any
@@ -992,11 +992,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
           if (!JSON)
             continue;
 
-          CI.getSummaryManager().ParseSummaryFromJSON(*JSON->getAsArray());
+          CI.getSummaryContext().ParseSummaryFromJSON(*JSON->getAsArray());
         }
       }
 
-      CI.getSummaryManager().ReduceSummaries();
+      CI.getSummaryContext().ReduceSummaries();
     }
   }
 
@@ -1371,8 +1371,8 @@ void ASTFrontendAction::ExecuteAction() {
   if (CI.hasCodeCompletionConsumer())
     CompletionConsumer = &CI.getCodeCompletionConsumer();
 
-  if(!CI.hasSummaryManager()) {
-    CI.createSummaryManager();
+  if (!CI.hasSummaryContext()) {
+    CI.createSummaryContext();
   }
   CI.createSummaryConsumer();
 

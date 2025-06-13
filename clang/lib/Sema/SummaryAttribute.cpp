@@ -1,5 +1,5 @@
 #include "clang/Sema/SummaryAttribute.h"
-#include "clang/Sema/SemaSummarizer.h"
+#include "clang/Sema/SummaryContext.h"
 
 namespace clang {
 void NoWriteGlobalAttr::Callback::run(

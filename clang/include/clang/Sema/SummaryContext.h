@@ -1,7 +1,6 @@
-#ifndef LLVM_CLANG_SEMA_SEMASUMMARIZER_H
-#define LLVM_CLANG_SEMA_SEMASUMMARIZER_H
+#ifndef LLVM_CLANG_SEMA_SEMASUMMARYCONTEXT_H
+#define LLVM_CLANG_SEMA_SEMASUMMARYCONTEXT_H
 
-#include "clang/Sema/SemaBase.h"
 #include "clang/Sema/SummaryAttribute.h"
 #include "clang/Sema/SummaryConsumer.h"
 #include <set>
@@ -26,11 +25,9 @@ public:
   void replaceAttributes(std::set<const SummaryAttribute *> Attrs) {
     this->Attrs = std::move(Attrs);
   }
-
-  friend class SummaryManager;
 };
 
-class SummaryManager {
+class SummaryContext {
   std::map<SmallVector<char>, const FunctionSummary *> IDToSummary;
   std::vector<std::unique_ptr<FunctionSummary>> FunctionSummaries;
 
@@ -43,7 +40,7 @@ class SummaryManager {
   bool ReduceFunctionSummary(FunctionSummary &FunctionSummary);
 
 public:
-  SummaryManager();
+  SummaryContext();
 
   const FunctionSummary *GetSummary(const FunctionDecl *FD) const;
   void SummarizeFunctionBody(const FunctionDecl *FD);
@@ -51,20 +48,6 @@ public:
   void ParseSummaryFromJSON(const llvm::json::Array &Summary);
   void ReduceSummaries();
 };
-
-// FIXME: Is this class needed?
-class SemaSummarizer : public SemaBase {
-public:
-  SummaryManager *TheSummaryManager;
-  SummaryConsumer *TheSummaryConsumer;
-
-  SemaSummarizer(Sema &S, SummaryManager &SummaryManager, SummaryConsumer *SummaryConsumer) 
-    : SemaBase(S), TheSummaryManager(&SummaryManager), TheSummaryConsumer(SummaryConsumer) {};
-
-  void ActOnStartOfSourceFile();
-  void ActOnEndOfSourceFile();
-  void SummarizeFunctionBody(const FunctionDecl *FD);
-};
 } // namespace clang
 
-#endif // LLVM_CLANG_SEMA_SEMASUMMARIZE_H
+#endif // LLVM_CLANG_SEMA_SEMASUMMARYCONTEXTH

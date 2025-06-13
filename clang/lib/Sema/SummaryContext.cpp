@@ -1,4 +1,4 @@
-#include "clang/Sema/SemaSummarizer.h"
+#include "clang/Sema/SummaryContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Sema/SummaryAttribute.h"
@@ -46,7 +46,7 @@ FunctionSummary::FunctionSummary(
     : ID(std::move(ID)), Attrs(std::move(FunctionAttrs)),
       Calls(std::move(Calls)) {}
 
-SummaryManager::SummaryManager() {
+SummaryContext::SummaryContext() {
   Attributes.emplace_back(std::make_unique<NoWriteGlobalAttr>());
 
   for (auto &&Attr : Attributes) {
@@ -56,7 +56,7 @@ SummaryManager::SummaryManager() {
   }
 }
 
-void SummaryManager::CreateSummary(SmallVector<char> ID,
+void SummaryContext::CreateSummary(SmallVector<char> ID,
                                    std::set<const SummaryAttribute *> Attrs,
                                    std::set<SmallVector<char>> Calls) {
   auto Summary = std::make_unique<FunctionSummary>(
@@ -66,12 +66,12 @@ void SummaryManager::CreateSummary(SmallVector<char> ID,
 }
 
 const FunctionSummary *
-SummaryManager::GetSummary(const FunctionDecl *FD) const {
+SummaryContext::GetSummary(const FunctionDecl *FD) const {
   auto USR = GetUSR(FD);
   return IDToSummary.count(USR) ? IDToSummary.at(USR) : nullptr;
 }
 
-void SummaryManager::SummarizeFunctionBody(const FunctionDecl *FD) {
+void SummaryContext::SummarizeFunctionBody(const FunctionDecl *FD) {
   std::set<const SummaryAttribute *> Attrs;
 
   for (auto &&Attr : Attributes) {
@@ -82,7 +82,7 @@ void SummaryManager::SummarizeFunctionBody(const FunctionDecl *FD) {
   CreateSummary(GetUSR(FD), std::move(Attrs), CallCollector().collect(FD));
 }
 
-void SummaryManager::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
+void SummaryContext::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
   for (auto it = Summary.begin(); it != Summary.end(); ++it) {
     const llvm::json::Object *FunctionSummary = it->getAsObject();
 
@@ -108,7 +108,7 @@ void SummaryManager::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
   }
 }
 
-bool SummaryManager::ReduceFunctionSummary(FunctionSummary &Function) {
+bool SummaryContext::ReduceFunctionSummary(FunctionSummary &Function) {
   bool changed = false;
 
   for (auto &&call : Function.getCalls()) {
@@ -137,7 +137,7 @@ bool SummaryManager::ReduceFunctionSummary(FunctionSummary &Function) {
   return changed;
 }
 
-void SummaryManager::ReduceSummaries() {
+void SummaryContext::ReduceSummaries() {
   bool changed = true;
   while (changed) {
     changed = false;
@@ -146,23 +146,4 @@ void SummaryManager::ReduceSummaries() {
       changed |= ReduceFunctionSummary(*Function);
   }
 }
-
-void SemaSummarizer::ActOnStartOfSourceFile() {
-  if(TheSummaryConsumer)
-    TheSummaryConsumer->ProcessStartOfSourceFile();
-}
-
-void SemaSummarizer::ActOnEndOfSourceFile() {
-  if(TheSummaryConsumer)
-    TheSummaryConsumer->ProcessEndOfSourceFile();
-}
-
-void SemaSummarizer::SummarizeFunctionBody(const FunctionDecl *FD) {
-  TheSummaryManager->SummarizeFunctionBody(FD);
-
-  if(TheSummaryConsumer)
-    TheSummaryConsumer->ProcessFunctionSummary(
-        *TheSummaryManager->GetSummary(FD));
-}
-
 } // namespace clang

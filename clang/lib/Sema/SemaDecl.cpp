@@ -55,9 +55,9 @@
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSYCL.h"
-#include "clang/Sema/SemaSummarizer.h"
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaWasm.h"
+#include "clang/Sema/SummaryContext.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -16695,8 +16695,10 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (FD && !FD->isDeleted())
     checkTypeSupport(FD->getType(), FD->getLocation(), FD);
 
-  if (FD && SummarizerPtr && SummarizerPtr->TheSummaryConsumer)
-    SummarizerPtr->SummarizeFunctionBody(FD);
+  if (SummaryCnsmr) {
+    SummaryCtx->SummarizeFunctionBody(FD);
+    SummaryCnsmr->ProcessFunctionSummary(*SummaryCtx->GetSummary(FD));
+  }
 
   return dcl;
 }
