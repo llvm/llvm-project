@@ -436,7 +436,6 @@ bool Parser::ParseAttributeArgumentList(
     } else {
       Expr = ParseAssignmentExpression();
     }
-    Expr = Actions.CorrectDelayedTyposInExpr(Expr);
 
     if (Tok.is(tok::ellipsis))
       Expr = Actions.ActOnPackExpansion(Expr.get(), ConsumeToken());
@@ -472,15 +471,6 @@ bool Parser::ParseAttributeArgumentList(
     Arg++;
   }
 
-  if (SawError) {
-    // Ensure typos get diagnosed when errors were encountered while parsing the
-    // expression list.
-    for (auto &E : Exprs) {
-      ExprResult Expr = Actions.CorrectDelayedTyposInExpr(E);
-      if (Expr.isUsable())
-        E = Expr.get();
-    }
-  }
   return SawError;
 }
 
@@ -565,9 +555,7 @@ unsigned Parser::ParseAttributeArgsCommon(
               nullptr,
               Sema::ExpressionEvaluationContextRecord::EK_AttrArgument);
 
-          ExprResult ArgExpr(
-              Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
-
+          ExprResult ArgExpr = ParseAssignmentExpression();
           if (ArgExpr.isInvalid()) {
             SkipUntil(tok::r_paren, StopAtSemi);
             return 0;
@@ -3216,9 +3204,7 @@ void Parser::ParseBoundsAttribute(IdentifierInfo &AttrName,
       Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, nullptr,
       ExpressionKind::EK_AttrArgument);
 
-  ExprResult ArgExpr(
-      Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
-
+  ExprResult ArgExpr = ParseAssignmentExpression();
   if (ArgExpr.isInvalid()) {
     Parens.skipToEnd();
     return;
@@ -6896,8 +6882,8 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       //   void (f()) requires true;
       Diag(Tok, diag::err_requires_clause_inside_parens);
       ConsumeToken();
-      ExprResult TrailingRequiresClause = Actions.CorrectDelayedTyposInExpr(
-         ParseConstraintLogicalOrExpression(/*IsTrailingRequiresClause=*/true));
+      ExprResult TrailingRequiresClause =
+          ParseConstraintLogicalOrExpression(/*IsTrailingRequiresClause=*/true);
       if (TrailingRequiresClause.isUsable() && D.isFunctionDeclarator() &&
           !D.hasTrailingRequiresClause())
         // We're already ill-formed if we got here but we'll accept it anyway.
@@ -7544,8 +7530,7 @@ void Parser::ParseParameterDeclarationClause(
       Diag(Tok,
            diag::err_requires_clause_on_declarator_not_declaring_a_function);
       ConsumeToken();
-      Actions.CorrectDelayedTyposInExpr(
-         ParseConstraintLogicalOrExpression(/*IsTrailingRequiresClause=*/true));
+      ParseConstraintLogicalOrExpression(/*IsTrailingRequiresClause=*/true);
     }
 
     // Remember this parsed parameter in ParamInfo.
@@ -7659,7 +7644,6 @@ void Parser::ParseParameterDeclarationClause(
             }
             DefArgResult = ParseAssignmentExpression();
           }
-          DefArgResult = Actions.CorrectDelayedTyposInExpr(DefArgResult);
           if (DefArgResult.isInvalid()) {
             Actions.ActOnParamDefaultArgumentError(Param, EqualLoc,
                                                    /*DefaultArg=*/nullptr);
@@ -7805,8 +7789,7 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
     } else {
       EnterExpressionEvaluationContext Unevaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-      NumElements =
-          Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+      NumElements = ParseAssignmentExpression();
     }
   } else {
     if (StaticLoc.isValid()) {
@@ -7943,8 +7926,8 @@ void Parser::ParseTypeofSpecifier(DeclSpec &DS) {
   bool isCastExpr;
   ParsedType CastTy;
   SourceRange CastRange;
-  ExprResult Operand = Actions.CorrectDelayedTyposInExpr(
-      ParseExprAfterUnaryExprOrTypeTrait(OpTok, isCastExpr, CastTy, CastRange));
+  ExprResult Operand =
+      ParseExprAfterUnaryExprOrTypeTrait(OpTok, isCastExpr, CastTy, CastRange);
   if (HasParens)
     DS.setTypeArgumentRange(CastRange);
 

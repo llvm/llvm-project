@@ -4153,10 +4153,6 @@ ExprResult Sema::ActOnRequiresClause(ExprResult ConstraintExpr) {
   if (ConstraintExpr.isInvalid())
     return ExprError();
 
-  ConstraintExpr = CorrectDelayedTyposInExpr(ConstraintExpr);
-  if (ConstraintExpr.isInvalid())
-    return ExprError();
-
   if (DiagnoseUnexpandedParameterPack(ConstraintExpr.get(),
                                       UPPC_RequiresClause))
     return ExprError();
@@ -4206,23 +4202,20 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
     return;
   }
 
-  ExprResult Init = CorrectDelayedTyposInExpr(InitExpr, /*InitDecl=*/nullptr,
-                                              /*RecoverUncorrectedTypos=*/true);
-  assert(Init.isUsable() && "Init should at least have a RecoveryExpr");
-  if (!FD->getType()->isDependentType() && !Init.get()->isTypeDependent()) {
-    Init = ConvertMemberDefaultInitExpression(FD, Init.get(), InitLoc);
+  if (!FD->getType()->isDependentType() && !InitExpr.get()->isTypeDependent()) {
+    InitExpr = ConvertMemberDefaultInitExpression(FD, InitExpr.get(), InitLoc);
     // C++11 [class.base.init]p7:
     //   The initialization of each base and member constitutes a
     //   full-expression.
-    if (!Init.isInvalid())
-      Init = ActOnFinishFullExpr(Init.get(), /*DiscarededValue=*/false);
-    if (Init.isInvalid()) {
+    if (!InitExpr.isInvalid())
+      InitExpr = ActOnFinishFullExpr(InitExpr.get(), /*DiscarededValue=*/false);
+    if (InitExpr.isInvalid()) {
       FD->setInvalidDecl();
       return;
     }
   }
 
-  FD->setInClassInitializer(Init.get());
+  FD->setInClassInitializer(InitExpr.get());
 }
 
 /// Find the direct and/or virtual base specifiers that
@@ -4392,13 +4385,7 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
                           SourceLocation IdLoc,
                           Expr *Init,
                           SourceLocation EllipsisLoc) {
-  ExprResult Res = CorrectDelayedTyposInExpr(Init, /*InitDecl=*/nullptr,
-                                             /*RecoverUncorrectedTypos=*/true);
-  if (!Res.isUsable())
-    return true;
-  Init = Res.get();
-
-  if (!ConstructorD)
+  if (!ConstructorD || !Init)
     return true;
 
   AdjustDeclIfTemplate(ConstructorD);

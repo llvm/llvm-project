@@ -1010,16 +1010,20 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
 
 /// Emit code to compute the specified expression which
 /// can have any type.  The result is returned as an RValue struct.
-RValue CIRGenFunction::emitAnyExpr(const Expr *e) {
+RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot) {
   switch (CIRGenFunction::getEvaluationKind(e->getType())) {
   case cir::TEK_Scalar:
     return RValue::get(emitScalarExpr(e));
   case cir::TEK_Complex:
     cgm.errorNYI(e->getSourceRange(), "emitAnyExpr: complex type");
     return RValue::get(nullptr);
-  case cir::TEK_Aggregate:
-    cgm.errorNYI(e->getSourceRange(), "emitAnyExpr: aggregate type");
-    return RValue::get(nullptr);
+  case cir::TEK_Aggregate: {
+    if (aggSlot.isIgnored())
+      aggSlot = createAggTemp(e->getType(), getLoc(e->getSourceRange()),
+                              getCounterAggTmpAsString());
+    emitAggExpr(e, aggSlot);
+    return aggSlot.asRValue();
+  }
   }
   llvm_unreachable("bad evaluation kind");
 }
@@ -1261,6 +1265,23 @@ Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e) {
   return Address(ptr, addr.getAlignment());
 }
 
+/// Given the address of a temporary variable, produce an r-value of its type.
+RValue CIRGenFunction::convertTempToRValue(Address addr, clang::QualType type,
+                                           clang::SourceLocation loc) {
+  LValue lvalue = makeAddrLValue(addr, type, AlignmentSource::Decl);
+  switch (getEvaluationKind(type)) {
+  case cir::TEK_Complex:
+    cgm.errorNYI(loc, "convertTempToRValue: complex type");
+    return RValue::get(nullptr);
+  case cir::TEK_Aggregate:
+    cgm.errorNYI(loc, "convertTempToRValue: aggregate type");
+    return RValue::get(nullptr);
+  case cir::TEK_Scalar:
+    return RValue::get(emitLoadOfScalar(lvalue, loc));
+  }
+  llvm_unreachable("bad evaluation kind");
+}
+
 /// Emit an `if` on a boolean condition, filling `then` and `else` into
 /// appropriated regions.
 mlir::LogicalResult CIRGenFunction::emitIfOnBoolExpr(const Expr *cond,
@@ -1473,6 +1494,10 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
     type = Ctor_Complete;
     break;
   case CXXConstructionKind::Delegating:
+    // We should be emitting a constructor; GlobalDecl will assert this
+    type = curGD.getCtorType();
+    delegating = true;
+    break;
   case CXXConstructionKind::VirtualBase:
   case CXXConstructionKind::NonVirtualBase:
     cgm.errorNYI(e->getSourceRange(),
