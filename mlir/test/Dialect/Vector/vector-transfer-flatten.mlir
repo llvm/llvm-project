@@ -188,9 +188,31 @@ func.func @transfer_read_leading_dynamic_dims(
 
 // -----
 
-// One of the dims to be flattened is dynamic - not supported ATM.
+// The vector could be a non-contiguous slice of the input
+// memref.
 
 func.func @negative_transfer_read_dynamic_dim_to_flatten(
+    %mem : memref<4x?x?x2xi8>) -> vector<2x2x2xi8> {
+
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0 : i8
+  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
+    memref<4x?x?x2xi8>, vector<2x2x2xi8>
+  return %res : vector<2x2x2xi8>
+}
+
+// CHECK-LABEL: func.func @negative_transfer_read_dynamic_dim_to_flatten(
+// CHECK-NOT: memref.collapse_shape
+// CHECK-NOT: vector.shape_cast
+
+// CHECK-128B-LABEL: func @negative_transfer_read_dynamic_dim_to_flatten(
+//   CHECK-128B-NOT:   memref.collapse_shape
+
+// -----
+
+// Can flatten the righmost dynamic dimension
+
+func.func @transfer_read_dynamic_dim_to_flatten(
     %idx_1: index,
     %idx_2: index,
     %mem: memref<1x?x4x6xi32>) -> vector<1x2x6xi32> {
@@ -203,11 +225,25 @@ func.func @negative_transfer_read_dynamic_dim_to_flatten(
   return %res : vector<1x2x6xi32>
 }
 
-// CHECK-LABEL: func.func @negative_transfer_read_dynamic_dim_to_flatten
-// CHECK-NOT: memref.collapse_shape
-// CHECK-NOT: vector.shape_cast
+// CHECK: #[[$MAP:.*]] = affine_map<()[s0, s1] -> (s0 * 24 + s1 * 6)>
 
-// CHECK-128B-LABEL: func @negative_transfer_read_dynamic_dim_to_flatten
+// CHECK-LABEL: func.func @transfer_read_dynamic_dim_to_flatten
+// CHECK-SAME:    %[[IDX_1:arg0]]
+// CHECK-SAME:    %[[IDX_2:arg1]]
+// CHECK-SAME:    %[[MEM:arg2]]
+// CHECK:              %[[C0_I32:.*]] = arith.constant 0 : i32
+// CHECK:              %[[C0:.*]] = arith.constant 0 : index
+// CHECK:              %[[COLLAPSED:.*]] = memref.collapse_shape %[[MEM]]
+// CHECK-SAME{LITERAL}:  [[0], [1, 2, 3]]
+// CHECK-SAME:           memref<1x?x4x6xi32> into memref<1x?xi32>
+// CHECK:              %[[COLLAPSED_IDX:.*]] = affine.apply #[[$MAP]]()[%[[IDX_1]], %[[IDX_2]]]
+// CHECK:              %[[VEC_1D:.*]] = vector.transfer_read %[[COLLAPSED]][%[[C0]], %[[COLLAPSED_IDX]]],
+// CHECK-SAME:           %[[C0_I32]] {in_bounds = [true]} : memref<1x?xi32>, vector<12xi32>
+// CHECK:              %[[RESULT:.*]] = vector.shape_cast %[[VEC_1D]] : vector<12xi32> to vector<1x2x6xi32>
+// CHECK:              return %[[RESULT]] : vector<1x2x6xi32>
+
+
+// CHECK-128B-LABEL: func @transfer_read_dynamic_dim_to_flatten
 //   CHECK-128B-NOT:   memref.collapse_shape
 
 // -----
@@ -450,10 +486,30 @@ func.func @transfer_write_leading_dynamic_dims(
 //       CHECK-128B:   memref.collapse_shape
 
 // -----
-
-// One of the dims to be flattened is dynamic - not supported ATM.
+ 
+// The vector could be a non-contiguous slice of the input
+// memref.
 
 func.func @negative_transfer_write_dynamic_to_flatten(
+    %mem : memref<4x?x?x2xi8>,
+    %vec : vector<2x2x2xi8>) {
+
+  %c0 = arith.constant 0 : index
+  vector.transfer_write  %vec, %mem[%c0, %c0, %c0, %c0]
+    : vector<2x2x2xi8>, memref<4x?x?x2xi8>
+  return
+}
+
+// CHECK-LABEL: func.func @negative_transfer_write_dynamic_to_flatten(
+// CHECK-NOT: memref.collapse_shape
+// CHECK-NOT: vector.shape_cast
+
+// CHECK-128B-LABEL: func @negative_transfer_write_dynamic_to_flatten(
+//   CHECK-128B-NOT:   memref.collapse_shape
+
+// -----
+
+func.func @transfer_write_dynamic_to_flatten(
     %idx_1: index,
     %idx_2: index,
     %vec : vector<1x2x6xi32>,
@@ -466,11 +522,24 @@ func.func @negative_transfer_write_dynamic_to_flatten(
   return
 }
 
-// CHECK-LABEL: func.func @negative_transfer_write_dynamic_to_flatten
-// CHECK-NOT: memref.collapse_shape
-// CHECK-NOT: vector.shape_cast
+// CHECK: #[[$MAP:.*]] = affine_map<()[s0, s1] -> (s0 * 24 + s1 * 6)>
 
-// CHECK-128B-LABEL: func @negative_transfer_write_dynamic_to_flatten
+// CHECK-LABEL: func.func @transfer_write_dynamic_to_flatten
+// CHECK-SAME:    %[[IDX_1:arg0]]: index
+// CHECK-SAME:    %[[IDX_2:arg1]]: index
+// CHECK-SAME:    %[[VEC:arg2]]: vector<1x2x6xi32>
+// CHECK-SAME:    %[[MEM:arg3]]: memref<1x?x4x6xi32>
+
+// CHECK:              %[[C0:.*]] = arith.constant 0 : index
+// CHECK:              %[[COLLAPSED_MEM:.*]] = memref.collapse_shape %[[MEM]]
+// CHECK-SAME{LITERAL}:  [[0], [1, 2, 3]]
+// CHECK-SAME:           : memref<1x?x4x6xi32> into memref<1x?xi32>
+// CHECK:              %[[COLLAPSED_IDX:.*]] = affine.apply #[[$MAP]]()[%[[IDX_1]], %[[IDX_2]]]
+// CHECK:              %[[VEC_1D:.*]] = vector.shape_cast %[[VEC]] : vector<1x2x6xi32> to vector<12xi32>
+// CHECK:              vector.transfer_write %[[VEC_1D]], %[[COLLAPSED_MEM]][%[[C0]], %[[COLLAPSED_IDX]]]
+// CHECK-SAME:           {in_bounds = [true]} : vector<12xi32>, memref<1x?xi32>
+
+// CHECK-128B-LABEL: func @transfer_write_dynamic_to_flatten
 //   CHECK-128B-NOT:   memref.collapse_shape
 
 // -----
@@ -550,6 +619,8 @@ func.func @negative_out_of_bound_transfer_read(
 // CHECK-NOT:   memref.collapse_shape
 
 // -----
+
+// Can flatten the righmost dynamic dimension
 
 func.func @negative_out_of_bound_transfer_write(
     %mem : memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, %vec : vector<1x1x3x2xi8>) {
