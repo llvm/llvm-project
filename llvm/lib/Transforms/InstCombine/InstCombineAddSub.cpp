@@ -2807,23 +2807,11 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
 
-  // (sub[ nsw][ nuw] (sext (add nsw (X, Y)), sext (X))) --> (sext (Y))
-  {
-    Value *Add0;
-    if (match(Op1, m_SExt(m_Value(X))) && match(Op0, m_SExt(m_Value(Add0))) &&
-        match(Add0, m_c_NSWAdd(m_Specific(X), m_Value(Y)))) {
-      // Non-constant Y requires new SExt.
-      unsigned NumOfNewInstrs = !isa<Constant>(Y) ? 1 : 0;
-      // Check if we can trade some of the old instructions for the new ones.
-      unsigned NumOfDeadInstrs = 0;
-      NumOfDeadInstrs += Op0->hasOneUse() ? 1 : 0;
-      NumOfDeadInstrs += Op1->hasOneUse() ? 1 : 0;
-      NumOfDeadInstrs += Add0->hasOneUse() ? 1 : 0;
-      if (NumOfDeadInstrs >= NumOfNewInstrs) {
-        Value *SExtY = Builder.CreateSExt(Y, I.getType());
-        return replaceInstUsesWith(I, SExtY);
-      }
-    }
+  // (sub (sext (add nsw (X, Y)), sext (X))) --> (sext (Y))
+  if (match(Op1, m_SExt(m_Value(X))) &&
+      match(Op0, m_SExt(m_c_NSWAdd(m_Specific(X), m_Value(Y))))) {
+    Value *SExtY = Builder.CreateSExt(Y, I.getType());
+    return replaceInstUsesWith(I, SExtY);
   }
 
   // (sub[ nsw] (sext (add nsw (X, Y)), sext (add nsw (X, Z)))) -->
