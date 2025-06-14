@@ -2807,6 +2807,44 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
 
+  // (sub (sext (add nsw (X, Y)), sext (X))) --> (sext (Y))
+  if (match(Op1, m_SExt(m_Value(X))) &&
+      match(Op0, m_SExt(m_c_NSWAdd(m_Specific(X), m_Value(Y))))) {
+    Value *SExtY = Builder.CreateSExt(Y, I.getType());
+    return replaceInstUsesWith(I, SExtY);
+  }
+
+  // (sub[ nsw] (sext (add nsw (X, Y)), sext (add nsw (X, Z)))) -->
+  // --> (sub[ nsw] (sext (Y), sext(Z)))
+  {
+    Value *Z, *Add0, *Add1;
+    if (match(Op0, m_SExt(m_Value(Add0))) &&
+        match(Op1, m_SExt(m_Value(Add1))) &&
+        ((match(Add0, m_NSWAdd(m_Value(X), m_Value(Y))) &&
+          match(Add1, m_c_NSWAdd(m_Specific(X), m_Value(Z)))) ||
+         (match(Add0, m_NSWAdd(m_Value(Y), m_Value(X))) &&
+          match(Add1, m_c_NSWAdd(m_Specific(X), m_Value(Z)))))) {
+      unsigned NumOfNewInstrs = 0;
+      // Non-constant Y, Z require new SExt.
+      NumOfNewInstrs += !isa<Constant>(Y) ? 1 : 0;
+      NumOfNewInstrs += !isa<Constant>(Z) ? 1 : 0;
+      // Check if we can trade some of the old instructions for the new ones.
+      unsigned NumOfDeadInstrs = 0;
+      NumOfDeadInstrs += Op0->hasOneUse() ? 1 : 0;
+      NumOfDeadInstrs += Op1->hasOneUse() ? 1 : 0;
+      NumOfDeadInstrs += Add0->hasOneUse() ? 1 : 0;
+      NumOfDeadInstrs += Add1->hasOneUse() ? 1 : 0;
+      if (NumOfDeadInstrs >= NumOfNewInstrs) {
+        Value *SExtY = Builder.CreateSExt(Y, I.getType());
+        Value *SExtZ = Builder.CreateSExt(Z, I.getType());
+        Value *Sub = Builder.CreateSub(SExtY, SExtZ, "",
+                                       /* HasNUW */ false,
+                                       /* HasNSW */ I.hasNoSignedWrap());
+        return replaceInstUsesWith(I, Sub);
+      }
+    }
+  }
+
   return TryToNarrowDeduceFlags();
 }
 
