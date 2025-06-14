@@ -317,7 +317,7 @@ static unsigned getColumns([[maybe_unused]] int FileID) {
 
   // Unfortunately, COLUMNS is a shell variable, not a proper environment
   // variable, so it is often not available; query the column count via
-  // the termios API instead if it isn't.
+  // ioctl() instead if it isn't.
   unsigned Columns = 0;
 
 #ifdef HAVE_SYS_IOCTL_H
