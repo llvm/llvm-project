@@ -3198,8 +3198,8 @@ Attr *ASTRecordReader::readAttr() {
                     SpellingIndex == AlignedAttr::Keyword_alignas);
   bool IsRegularKeywordAttribute = Record.readBool();
 
-  AttributeCommonInfo Info(AttrName, ScopeName, AttrRange, ScopeLoc,
-                           AttributeCommonInfo::Kind(ParsedKind),
+  AttributeCommonInfo Info(AttrName, AttributeScopeInfo(ScopeName, ScopeLoc),
+                           AttrRange, AttributeCommonInfo::Kind(ParsedKind),
                            {AttributeCommonInfo::Syntax(Syntax), SpellingIndex,
                             IsAlignas, IsRegularKeywordAttribute});
 
