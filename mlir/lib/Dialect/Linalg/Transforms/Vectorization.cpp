@@ -2522,13 +2522,8 @@ bool mlir::linalg::hasVectorizationImpl(Operation *op) {
              tensor::InsertSliceOp>(op);
 }
 
-/// Emit a suitable vector form for an operation. If provided,
-/// `inputVectorSizes` are used to vectorize this operation.
-/// `inputVectorSizes` must match the rank of the iteration space of the
-/// operation and the input vector sizes must be greater than or equal to
-/// their counterpart iteration space sizes, if static. `inputVectorShapes`
-/// also allows the vectorization of operations with dynamic shapes.
 LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
+                                      SmallVector<Value> &newResults,
                                       ArrayRef<int64_t> inputVectorSizes,
                                       ArrayRef<bool> inputScalableVecDims,
                                       bool vectorizeNDExtract,
@@ -2558,57 +2553,65 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
     }
   }
 
+  return TypeSwitch<Operation *, LogicalResult>(op)
+      .Case<linalg::LinalgOp>([&](auto linalgOp) {
+        // TODO: isaConvolutionOpInterface that can also infer from
+        // generic features. Will require stride/dilation attributes
+        // inference.
+        if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
+          FailureOr<Operation *> convOr = vectorizeConvolution(
+              rewriter, linalgOp, inputVectorSizes, inputScalableVecDims,
+              flatten1DDepthwiseConv);
+          if (succeeded(convOr)) {
+            llvm::append_range(newResults, (*convOr)->getResults());
+            return success();
+          }
+
+          LDBG("Unsupported convolution can't be vectorized.\n");
+          return failure();
+        }
+
+        LDBG("Vectorize generic by broadcasting to the canonical vector "
+             "shape\n");
+
+        // Pre-process before proceeding.
+        convertAffineApply(rewriter, linalgOp);
+
+        // TODO: 'vectorize' takes in a 'RewriterBase' which is up-casted
+        // to 'OpBuilder' when it is passed over to some methods like
+        // 'vectorizeAsLinalgGeneric'. This is highly problematic: if we
+        // erase an op within these methods, the actual rewriter won't be
+        // notified and we will end up with read-after-free issues!
+        return vectorizeAsLinalgGeneric(rewriter, state, linalgOp, newResults);
+      })
+      .Case<tensor::PadOp>([&](auto padOp) {
+        return vectorizeAsTensorPadOp(rewriter, padOp, inputVectorSizes,
+                                      newResults);
+      })
+      .Case<linalg::PackOp>([&](auto packOp) {
+        return vectorizeAsTensorPackOp(rewriter, packOp, inputVectorSizes,
+                                       newResults);
+      })
+      .Case<linalg::UnPackOp>([&](auto unpackOp) {
+        return vectorizeAsTensorUnpackOp(rewriter, unpackOp, inputVectorSizes,
+                                         newResults);
+      })
+      .Case<tensor::InsertSliceOp>([&](auto sliceOp) {
+        return vectorizeAsInsertSliceOp(rewriter, sliceOp, inputVectorSizes,
+                                        newResults);
+      })
+      .Default([](auto) { return failure(); });
+}
+
+LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
+                                      ArrayRef<int64_t> inputVectorSizes,
+                                      ArrayRef<bool> inputScalableVecDims,
+                                      bool vectorizeNDExtract,
+                                      bool flatten1DDepthwiseConv) {
   SmallVector<Value> results;
-  auto vectorizeResult =
-      TypeSwitch<Operation *, LogicalResult>(op)
-          .Case<linalg::LinalgOp>([&](auto linalgOp) {
-            // TODO: isaConvolutionOpInterface that can also infer from
-            // generic features. Will require stride/dilation attributes
-            // inference.
-            if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
-              FailureOr<Operation *> convOr = vectorizeConvolution(
-                  rewriter, linalgOp, inputVectorSizes, inputScalableVecDims,
-                  flatten1DDepthwiseConv);
-              if (succeeded(convOr)) {
-                llvm::append_range(results, (*convOr)->getResults());
-                return success();
-              }
-
-              LDBG("Unsupported convolution can't be vectorized.\n");
-              return failure();
-            }
-
-            LDBG("Vectorize generic by broadcasting to the canonical vector "
-                 "shape\n");
-
-            // Pre-process before proceeding.
-            convertAffineApply(rewriter, linalgOp);
-
-            // TODO: 'vectorize' takes in a 'RewriterBase' which is up-casted
-            // to 'OpBuilder' when it is passed over to some methods like
-            // 'vectorizeAsLinalgGeneric'. This is highly problematic: if we
-            // erase an op within these methods, the actual rewriter won't be
-            // notified and we will end up with read-after-free issues!
-            return vectorizeAsLinalgGeneric(rewriter, state, linalgOp, results);
-          })
-          .Case<tensor::PadOp>([&](auto padOp) {
-            return vectorizeAsTensorPadOp(rewriter, padOp, inputVectorSizes,
-                                          results);
-          })
-          .Case<linalg::PackOp>([&](auto packOp) {
-            return vectorizeAsTensorPackOp(rewriter, packOp, inputVectorSizes,
-                                           results);
-          })
-          .Case<linalg::UnPackOp>([&](auto unpackOp) {
-            return vectorizeAsTensorUnpackOp(rewriter, unpackOp,
-                                             inputVectorSizes, results);
-          })
-          .Case<tensor::InsertSliceOp>([&](auto sliceOp) {
-            return vectorizeAsInsertSliceOp(rewriter, sliceOp, inputVectorSizes,
-                                            results);
-          })
-          .Default([](auto) { return failure(); });
-
+  LogicalResult vectorizeResult = mlir::linalg::vectorize(
+      rewriter, op, results, inputVectorSizes, inputScalableVecDims,
+      vectorizeNDExtract, flatten1DDepthwiseConv);
   if (failed(vectorizeResult)) {
     LDBG("Vectorization failed\n");
     return failure();

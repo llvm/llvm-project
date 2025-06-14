@@ -772,12 +772,21 @@ LogicalResult deallocateGPUPrivateMemory(OpBuilder &, Value /*buffer*/);
 bool hasVectorizationImpl(Operation *);
 
 /// Emit a suitable vector form for an operation. If provided,
-/// `inputVectorSizes` are used to vectorize this operation. `inputVectorSizes`
-/// must match the rank of the iteration space of the operation and the sizes
-/// must be smaller or equal than their counterpart interation space sizes, if
-/// static. `inputVectorShapes` also allows the vectorization of operations with
-/// dynamic shapes.
+/// `inputVectorSizes` are used to vectorize this operation.
+/// `inputVectorSizes` must match the rank of the iteration space of the
+/// operation and the input vector sizes must be greater than or equal to
+/// their counterpart iteration space sizes, if static. `inputVectorShapes`
+/// also allows the vectorization of operations with dynamic shapes.
 LogicalResult vectorize(RewriterBase &rewriter, Operation *op,
+                        ArrayRef<int64_t> inputVectorSizes = {},
+                        ArrayRef<bool> inputScalableVecDims = {},
+                        bool vectorizeNDExtract = false,
+                        bool flatten1DDepthwiseConv = false);
+
+/// Vectorize and store new vectorized results in `newResuls`, without replacing
+/// the old `op`.
+LogicalResult vectorize(RewriterBase &rewriter, Operation *op,
+                        SmallVector<Value> &newResults,
                         ArrayRef<int64_t> inputVectorSizes = {},
                         ArrayRef<bool> inputScalableVecDims = {},
                         bool vectorizeNDExtract = false,
