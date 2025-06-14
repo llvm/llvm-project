@@ -3696,7 +3696,8 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case CASE_VMA_OPCODE_LMULS(NMSAC, VV): {
     // If the tail policy is undisturbed we can't commute.
     assert(RISCVII::hasVecPolicyOp(MI.getDesc().TSFlags));
-    if ((MI.getOperand(MI.getNumExplicitOperands() - 1).getImm() & 1) == 0)
+    if ((MI.getOperand(RISCVII::getVecPolicyOpNum(MI.getDesc())).getImm() &
+         1) == 0)
       return false;
 
     // For these instructions we can only swap operand 1 and operand 3 by
@@ -3716,7 +3717,8 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case CASE_VMA_OPCODE_LMULS(NMSUB, VV): {
     // If the tail policy is undisturbed we can't commute.
     assert(RISCVII::hasVecPolicyOp(MI.getDesc().TSFlags));
-    if ((MI.getOperand(MI.getNumExplicitOperands() - 1).getImm() & 1) == 0)
+    if ((MI.getOperand(RISCVII::getVecPolicyOpNum(MI.getDesc())).getImm() &
+         1) == 0)
       return false;
 
     // For these instructions we have more freedom. We can commute with the
@@ -4331,7 +4333,8 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
     // If the tail policy is undisturbed we can't convert.
     assert(RISCVII::hasVecPolicyOp(MI.getDesc().TSFlags) &&
            MI.getNumExplicitOperands() == 6);
-    if ((MI.getOperand(5).getImm() & 1) == 0)
+    if ((MI.getOperand(RISCVII::getVecPolicyOpNum(MI.getDesc())).getImm() &
+         1) == 0)
       return nullptr;
 
     // clang-format off
