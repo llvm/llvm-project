@@ -261,7 +261,7 @@ void MCObjectStreamer::emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc,
 
 void MCObjectStreamer::emitULEB128Value(const MCExpr *Value) {
   int64_t IntValue;
-  if (Value->evaluateAsAbsolute(IntValue, getAssemblerPtr())) {
+  if (Value->evaluateAsAbsolute(IntValue, getAssembler())) {
     emitULEB128IntValue(IntValue);
     return;
   }
@@ -270,7 +270,7 @@ void MCObjectStreamer::emitULEB128Value(const MCExpr *Value) {
 
 void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
   int64_t IntValue;
-  if (Value->evaluateAsAbsolute(IntValue, getAssemblerPtr())) {
+  if (Value->evaluateAsAbsolute(IntValue, getAssembler())) {
     emitSLEB128IntValue(IntValue);
     return;
   }
@@ -727,7 +727,7 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
                                 int64_t Expr, SMLoc Loc) {
   int64_t IntNumValues;
   // Do additional checking now if we can resolve the value.
-  if (NumValues.evaluateAsAbsolute(IntNumValues, getAssemblerPtr())) {
+  if (NumValues.evaluateAsAbsolute(IntNumValues, getAssembler())) {
     if (IntNumValues < 0) {
       getContext().getSourceManager()->PrintMessage(
           Loc, SourceMgr::DK_Warning,
