@@ -123,7 +123,9 @@ bool llvm::applyDebugifyMetadata(
     if (F.hasPrivateLinkage() || F.hasInternalLinkage())
       SPFlags |= DISubprogram::SPFlagLocalToUnit;
     auto SP = DIB.createFunction(CU, F.getName(), F.getName(), File, NextLine,
-                                 SPType, NextLine, DINode::FlagZero, SPFlags);
+                                 SPType, NextLine, DINode::FlagZero, SPFlags,
+                                 nullptr, nullptr, nullptr, nullptr, "",
+                                 /*UseKeyInstructions*/ ApplyAtomGroups);
     F.setSubprogram(SP);
 
     // Helper that inserts a dbg.value before \p InsertBefore, copying the
