@@ -98,9 +98,6 @@ add_clang_library(clangSema
   SemaType.cpp
   SemaWasm.cpp
   SemaX86.cpp
-  SummaryAttribute.cpp
-  SummaryConsumer.cpp
-  SummaryContext.cpp
   TypeLocBuilder.cpp
 
   DEPENDS
@@ -117,4 +114,5 @@ add_clang_library(clangSema
   clangEdit
   clangLex
   clangSupport
+  clangSummary
   )

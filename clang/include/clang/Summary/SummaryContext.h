@@ -1,8 +1,8 @@
-#ifndef LLVM_CLANG_SEMA_SEMASUMMARYCONTEXT_H
-#define LLVM_CLANG_SEMA_SEMASUMMARYCONTEXT_H
+#ifndef LLVM_CLANG_SUMMARY_SUMMARYCONTEXT_H
+#define LLVM_CLANG_SUMMARY_SUMMARYCONTEXT_H
 
-#include "clang/Sema/SummaryAttribute.h"
-#include "clang/Sema/SummaryConsumer.h"
+#include "clang/Summary/SummaryAttribute.h"
+#include "clang/Summary/SummaryConsumer.h"
 #include <set>
 
 namespace clang {
@@ -57,4 +57,4 @@ public:
 };
 } // namespace clang
 
-#endif // LLVM_CLANG_SEMA_SEMASUMMARYCONTEXTH
+#endif // LLVM_CLANG_SUMMARY_SUMMARYCONTEXTH

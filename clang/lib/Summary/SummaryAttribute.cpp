@@ -1,5 +1,5 @@
-#include "clang/Sema/SummaryAttribute.h"
-#include "clang/Sema/SummaryContext.h"
+#include "clang/Summary/SummaryAttribute.h"
+#include "clang/Summary/SummaryContext.h"
 
 namespace clang {
 bool NoWriteGlobalAttr::infer(const FunctionDecl *FD) const {

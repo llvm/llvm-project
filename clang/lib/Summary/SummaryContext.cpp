@@ -1,8 +1,8 @@
-#include "clang/Sema/SummaryContext.h"
+#include "clang/Summary/SummaryContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Index/USRGeneration.h"
-#include "clang/Sema/SummaryAttribute.h"
-#include "clang/Sema/SummaryConsumer.h"
+#include "clang/Summary/SummaryAttribute.h"
+#include "clang/Summary/SummaryConsumer.h"
 #include <set>
 
 namespace clang {
@@ -92,7 +92,8 @@ void SummaryContext::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
     std::set<const SummaryAttr *> FunctionAttrs;
     const llvm::json::Array *FunctionAttributes =
         FunctionSummary->getObject("attrs")->getArray("function");
-    for(auto attrIt = FunctionAttributes->begin(); attrIt != FunctionAttributes->end(); ++attrIt) {
+    for (auto attrIt = FunctionAttributes->begin();
+         attrIt != FunctionAttributes->end(); ++attrIt) {
       for (auto &&Attr : Attributes) {
         if (Attr->parse(*attrIt->getAsString()))
           FunctionAttrs.emplace(Attr.get());
@@ -101,7 +102,8 @@ void SummaryContext::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
 
     std::set<SmallVector<char>> Calls;
     const llvm::json::Array *CallEntries = FunctionSummary->getArray("calls");
-    for(auto callIt = CallEntries->begin(); callIt != CallEntries->end(); ++callIt) {
+    for (auto callIt = CallEntries->begin(); callIt != CallEntries->end();
+         ++callIt) {
       auto *Obj = callIt->getAsObject();
       Calls.emplace(SmallString<128>(*Obj->getString("id")));
     }

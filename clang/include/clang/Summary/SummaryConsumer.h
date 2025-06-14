@@ -1,5 +1,5 @@
-#ifndef LLVM_CLANG_SEMA_SUMMARYCONSUMER_H
-#define LLVM_CLANG_SEMA_SUMMARYCONSUMER_H
+#ifndef LLVM_CLANG_SUMMARY_SUMMARYCONSUMER_H
+#define LLVM_CLANG_SUMMARY_SUMMARYCONSUMER_H
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/Support/JSON.h"
@@ -27,7 +27,7 @@ public:
 };
 
 class JSONPrintingSummaryConsumer : public PrintingSummaryConsumer {
-    llvm::json::OStream JOS;
+  llvm::json::OStream JOS;
 
 public:
   JSONPrintingSummaryConsumer(const SummaryContext &SummaryCtx, raw_ostream &OS)
@@ -42,4 +42,4 @@ public:
 };
 } // namespace clang
 
-#endif // LLVM_CLANG_SEMA_SUMMARYCONSUMER_H
+#endif // LLVM_CLANG_SUMMARY_SUMMARYCONSUMER_H

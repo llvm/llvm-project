@@ -1,8 +1,9 @@
-#include "clang/Sema/SummaryConsumer.h"
-#include "clang/Sema/SummaryContext.h"
+#include "clang/Summary/SummaryConsumer.h"
+#include "clang/Summary/SummaryContext.h"
 
 namespace clang {
-void JSONPrintingSummaryConsumer::ProcessFunctionSummary(const FunctionSummary &Summary) {
+void JSONPrintingSummaryConsumer::ProcessFunctionSummary(
+    const FunctionSummary &Summary) {
   JOS.object([&] {
     JOS.attribute("id", llvm::json::Value(Summary.getID()));
     JOS.attributeObject("attrs", [&] {
