@@ -1579,10 +1579,9 @@ def EmitC_ClassOp
   let summary =
       "Represents a C++ class definition, encapsulating fields and methods.";
 
-  // FIX WORDING
   let description = [{
     The `emitc.class` operation defines a C++ class, acting as a container
-    for its data fields (`emitc.variable`) and methods (`emitc.func`).
+    for its data fields (`emitc.field`) and methods (`emitc.func`).
     It creates a distinct scope, isolating its contents from the surrounding
     MLIR region, similar to how C++ classes encapsulate their internals.
     All the class memebrs need to be default initalizable. 
