@@ -6,7 +6,7 @@ target triple = "arm64"
 define i1 @test_EQ_IllEbT(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_EQ_IllEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmn x0, x1
+; CHECK-NEXT:    cmn x1, x0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -70,7 +70,7 @@ entry:
 define i1 @test_EQ_IiiEbT(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_EQ_IiiEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmn w0, w1
+; CHECK-NEXT:    cmn w1, w0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -220,7 +220,7 @@ entry:
 define i1 @test_NE_IllEbT(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_NE_IllEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmn x0, x1
+; CHECK-NEXT:    cmn x1, x0
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
@@ -284,7 +284,7 @@ entry:
 define i1 @test_NE_IiiEbT(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_NE_IiiEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmn w0, w1
+; CHECK-NEXT:    cmn w1, w0
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
