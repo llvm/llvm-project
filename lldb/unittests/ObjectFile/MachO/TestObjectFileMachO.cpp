@@ -94,4 +94,128 @@ TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
   for (size_t i = 0; i < 10; i++)
     OF->ParseSymtab(symtab);
 }
+
+TEST_F(ObjectFileMachOTest, ObjectFormatWithVersionLoadCommand) {
+  // A Mach-O file of arm64 CPU type and macOS 10.14.0
+  const char *yamldata = R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0100000C
+  cpusubtype:      0x00000000
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      176
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           658944
+    sdk:             658944
+    ntools:          0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4
+    fileoff:         208
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        content:         'AABBCCDD'
+        size:            4
+        offset:          208
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+...
+)";
+
+  // Perform setup.
+  llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
+  EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(file->moduleSpec());
+  ASSERT_NE(module_sp, nullptr);
+  auto object_file = module_sp->GetObjectFile();
+  ASSERT_NE(object_file, nullptr);
+
+  // Verify that the object file is recognized as Mach-O.
+  ASSERT_EQ(object_file->GetArchitecture().GetTriple().getObjectFormat(),
+            llvm::Triple::MachO);
+
+  // Verify that the triple string does NOT contain "-macho".
+  ASSERT_EQ(object_file->GetArchitecture().GetTriple().str(),
+            "arm64-apple-macosx10.14.0");
+}
+
+TEST_F(ObjectFileMachOTest, ObjectFormatWithoutVersionLoadCommand) {
+  // A Mach-O file of arm64 CPU type, without load command LC_BUILD_VERSION.
+  const char *yamldata = R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0100000C
+  cpusubtype:      0x00000000
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      152
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4
+    fileoff:         184
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        content:         'AABBCCDD'
+        size:            4
+        offset:          184
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+...
+)";
+
+  // Perform setup.
+  llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
+  EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(file->moduleSpec());
+  ASSERT_NE(module_sp, nullptr);
+  auto object_file = module_sp->GetObjectFile();
+  ASSERT_NE(object_file, nullptr);
+
+  // Verify that the object file is recognized as Mach-O.
+  ASSERT_EQ(object_file->GetArchitecture().GetTriple().getObjectFormat(),
+            llvm::Triple::MachO);
+
+  // Verify that the triple string contains "-macho".
+  ASSERT_EQ(object_file->GetArchitecture().GetTriple().str(),
+            "arm64-apple--macho");
+}
 #endif

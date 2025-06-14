@@ -5255,6 +5255,10 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
   }
 
   if (!found_any) {
+    // Explicitly set the object format to Mach-O if no LC_BUILD_VERSION or
+    // LC_VERSION_MIN_* are found. Without this, the object format will default
+    // to ELF (see `getDefaultFormat()` in `Triple.cpp`), which is wrong.
+    base_triple.setObjectFormat(llvm::Triple::MachO);
     add_triple(base_triple);
   }
 }
