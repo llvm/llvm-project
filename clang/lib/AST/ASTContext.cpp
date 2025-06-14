@@ -6774,8 +6774,9 @@ CanQualType ASTContext::getCanonicalSizeType() const {
 QualType ASTContext::getSignedSizeType() const {
   if (SignedSizeType.isNull()) {
     if (!getLangOpts().HLSL)
-      SignedSizeType = getTypedefType(buildImplicitTypedef(
-          getFromTargetType(Target->getSignedSizeType()), "__signed_size_t"));
+      SignedSizeType = getPredefinedSugarType(
+          PredefinedSugarType::Kind::SignedSizeT,
+          getFromTargetType(Target->getSignedSizeType()));
     else
       SignedSizeType = getFromTargetType(Target->getSignedSizeType());
   }
@@ -6787,9 +6788,9 @@ QualType ASTContext::getSignedSizeType() const {
 QualType ASTContext::getPointerDiffType() const {
   if (PtrdiffType.isNull()) {
     if (!getLangOpts().HLSL)
-      PtrdiffType = getTypedefType(buildImplicitTypedef(
-          getFromTargetType(Target->getPtrDiffType(LangAS::Default)),
-          "__ptrdiff_t"));
+      PtrdiffType = getPredefinedSugarType(
+          PredefinedSugarType::Kind::PtrdiffT,
+          getFromTargetType(Target->getPtrDiffType(LangAS::Default)));
     else
       PtrdiffType = getFromTargetType(Target->getPtrDiffType(LangAS::Default));
   }
