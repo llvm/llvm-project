@@ -14598,7 +14598,9 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
                                       DX->isCountInBytes(), DX->isOrNull(),
                                       CDX);
   }
-  case Type::PredefinedSugar:;
+  case Type::PredefinedSugar:
+    // FIXME: Should this be reachable here?
+    return QualType();
   }
   llvm_unreachable("Unhandled Type Class");
 }

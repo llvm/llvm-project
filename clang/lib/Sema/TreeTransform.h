@@ -7257,7 +7257,8 @@ QualType TreeTransform<Derived>::TransformPredefinedSugarType(
   QualType Result = TL.getType();
 
   if (getDerived().AlwaysRebuild()) {
-    Result = getDerived().RebuildPredefinedSugarType(llvm::to_underlying(EIT->getKind()));
+    Result = getDerived().RebuildPredefinedSugarType(
+        llvm::to_underlying(EIT->getKind()));
   }
 
   PredefinedSugarTypeLoc NewTL = TLB.push<PredefinedSugarTypeLoc>(Result);

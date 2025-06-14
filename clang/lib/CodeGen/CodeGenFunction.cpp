@@ -722,7 +722,7 @@ static bool matchesStlAllocatorFn(const Decl *D, const ASTContext &Ctx) {
     return false;
 
   if (MD->parameters()[0]->getType().getCanonicalType() !=
-    Ctx.getCanonicalSizeType())
+      Ctx.getCanonicalSizeType())
     return false;
 
   if (MD->getNumParams() == 2) {
