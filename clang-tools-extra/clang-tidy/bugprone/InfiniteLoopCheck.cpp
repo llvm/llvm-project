@@ -85,7 +85,7 @@ static bool isVarThatIsPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
 
     if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
       if (const auto *DD =
-              dyn_cast_if_present<DecompositionDecl>(BD->getDecomposedDecl())) {
+              dyn_cast<DecompositionDecl>(BD->getDecomposedDecl())) {
         if (!DD->isLocalVarDeclOrParm())
           return true;
 
@@ -241,8 +241,7 @@ static bool hasStaticLocalVariable(const Stmt *Cond) {
         return true;
 
     if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
-      if (const auto *DD =
-              dyn_cast_if_present<DecompositionDecl>(BD->getDecomposedDecl()))
+      if (const auto *DD = dyn_cast<DecompositionDecl>(BD->getDecomposedDecl()))
         if (DD->isStaticLocal())
           return true;
   }
