@@ -130,6 +130,12 @@ New checks
   Finds setter-like member functions that take a pointer parameter and set a
   reference member of the same class with the pointed value.
 
+- New :doc:`bugprone-null-check-after-dereference
+  <clang-tidy/checks/bugprone/null-check-after-dereference>` check.
+
+  Identifies redundant pointer null-checks, by finding cases where
+  the pointer cannot be null at the location of the null-check.
+
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
