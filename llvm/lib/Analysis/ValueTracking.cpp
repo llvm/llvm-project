@@ -9594,15 +9594,12 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
         Upper = *C + 1;
       } else if (HasNSW) {
         if (C->isNegative()) {
-          // 'sub nsw -C, x' produces [SINT_MIN, SINT_MAX - (C - 1)].
-          // Because to be negative, C must be - 1, and the highest result is
-          // INT_MIN, so -INT_MIN - 1 is INT_MAX, so it is SINT_MAX - (C - 1),
-          // or SINT_MAX - C + 1
+          // 'sub nsw -C, x' produces [SINT_MIN, -C - SINT_MIN].
           Lower = APInt::getSignedMinValue(Width);
           Upper = *C - APInt::getSignedMaxValue(Width);
         } else {
           // Note that sub 0, INT_MIN is not NSW. It techically is a signed wrap
-          // 'sub nsw C, x' produces [SINT_MIN + 1 + C, SINT_MAX].
+          // 'sub nsw C, x' produces [C - SINT_MAX, SINT_MAX].
           Lower = *C - APInt::getSignedMaxValue(Width);
           Upper = APInt::getSignedMinValue(Width);
         }
