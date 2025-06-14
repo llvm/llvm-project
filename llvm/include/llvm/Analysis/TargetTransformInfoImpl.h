@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -151,6 +152,34 @@ public:
   }
 
   virtual bool isNoopAddrSpaceCast(unsigned, unsigned) const { return false; }
+
+  // Assuming that the cast between the two given addrspaces is not a noop,
+  // calculate the width of the given mask value so that it can be applied to
+  // the destination addrspace. In case it cannot be applied since the cast
+  // between the two addrspaces is invalid or the mask value is larger than the
+  // resulting addrspace bit-width, return an empty optional.
+  //
+  // Note that this currently expects the addrspaces to be integral. In case one
+  // of them isn't, an empty optional is returned.
+  virtual std::optional<uint64_t>
+  getAddrSpaceCastMaskWidth(unsigned FromAS, unsigned ToAS, Value *MaskOp,
+                            Instruction *I) const {
+    if (DL.isNonIntegralAddressSpace(FromAS) ||
+        DL.isNonIntegralAddressSpace(ToAS))
+      return std::nullopt;
+    // All valid 64-bit to 32-bit casts work by chopping off the high
+    // bits. Any masking only clearing the low bits will also apply in the new
+    // address space.
+    if (DL.getPointerSizeInBits(FromAS) != 64 ||
+        DL.getPointerSizeInBits(ToAS) != 32)
+      return std::nullopt;
+    // TODO: Do we need to thread more context in here?
+    KnownBits Known = computeKnownBits(MaskOp, DL, nullptr, I);
+    if (Known.countMinLeadingOnes() < 32)
+      return std::nullopt;
+    return 32;
+  }
+
   virtual bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
     return AS == 0;
