@@ -494,13 +494,22 @@ static std::vector<llvm::StringRef> semanticTokenModifiers() {
 void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                    Callback<llvm::json::Value> Reply) {
   // Determine character encoding first as it affects constructed ClangdServer.
-  if (Params.capabilities.offsetEncoding && !Opts.Encoding) {
-    Opts.Encoding = OffsetEncoding::UTF16; // fallback
-    for (OffsetEncoding Supported : *Params.capabilities.offsetEncoding)
-      if (Supported != OffsetEncoding::UnsupportedEncoding) {
-        Opts.Encoding = Supported;
-        break;
+  if (!Opts.Encoding) {
+    if (Params.capabilities.PositionEncodings) {
+      for (OffsetEncoding Supported : *Params.capabilities.PositionEncodings) {
+        if (Supported != OffsetEncoding::UnsupportedEncoding) {
+          Opts.Encoding = Supported;
+          break;
+        }
       }
+    } else if (Params.capabilities.offsetEncoding) {
+      for (OffsetEncoding Supported : *Params.capabilities.offsetEncoding) {
+        if (Supported != OffsetEncoding::UnsupportedEncoding) {
+          Opts.Encoding = Supported;
+          break;
+        }
+      }
+    }
   }
 
   if (Params.capabilities.TheiaSemanticHighlighting &&
@@ -686,6 +695,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   ServerCaps["executeCommandProvider"] =
       llvm::json::Object{{"commands", Commands}};
 
+  if (Opts.Encoding)
+    ServerCaps["positionEncoding"] = *Opts.Encoding;
+
   llvm::json::Object Result{
       {{"serverInfo",
         llvm::json::Object{
@@ -696,6 +708,17 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (Opts.Encoding)
     Result["offsetEncoding"] = *Opts.Encoding;
   Reply(std::move(Result));
+
+  if (Params.capabilities.offsetEncoding &&
+      !Params.capabilities.PositionEncodings) {
+    ShowMessageParams Msg;
+    Msg.message =
+        "offsetEncoding is deprecated in favor of general.positionEncodings. "
+        "Migrate to standard positionEncodings request";
+    Msg.type = MessageType::Warning;
+    elog(Msg.message.c_str());
+    ShowMessage(Msg);
+  }
 
   // Apply settings after we're fully initialized.
   // This can start background indexing and in turn trigger LSP notifications.
