@@ -37,14 +37,6 @@ public:
 };
 
 class NoWriteGlobalAttr : public SummaryAttr {
-  class Callback : public ast_matchers::MatchFinder::MatchCallback {
-  public:
-    bool WriteGlobal = false;
-
-    void
-    run(const ast_matchers::MatchFinder::MatchResult &Result) override final;
-  };
-
   NoWriteGlobalAttr() : SummaryAttr(NO_WRITE_GLOBAL, "no_write_global") {}
 
 public:
