@@ -163,6 +163,7 @@ Clang-Tidy Checks
    :doc:`bugprone-unintended-char-ostream-output <bugprone/unintended-char-ostream-output>`, "Yes"
    :doc:`bugprone-unique-ptr-array-mismatch <bugprone/unique-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
+   :doc:`bugprone-unsequenced-global-accesses <bugprone/unsequenced-global-accesses>`,
    :doc:`bugprone-unused-local-non-trivial-variable <bugprone/unused-local-non-trivial-variable>`,
    :doc:`bugprone-unused-raii <bugprone/unused-raii>`, "Yes"
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
@@ -173,9 +174,11 @@ Clang-Tidy Checks
    :doc:`cert-env33-c <cert/env33-c>`,
    :doc:`cert-err33-c <cert/err33-c>`,
    :doc:`cert-err34-c <cert/err34-c>`,
+   :doc:`cert-exp30-c <cert/exp30-c>`,
    :doc:`cert-err52-cpp <cert/err52-cpp>`,
    :doc:`cert-err58-cpp <cert/err58-cpp>`,
    :doc:`cert-err60-cpp <cert/err60-cpp>`,
+   :doc:`cert-exp50-cpp <cert/exp50-cpp>`,
    :doc:`cert-flp30-c <cert/flp30-c>`,
    :doc:`cert-mem57-cpp <cert/mem57-cpp>`,
    :doc:`cert-msc50-cpp <cert/msc50-cpp>`,

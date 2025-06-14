@@ -130,6 +130,12 @@ New checks
   Finds setter-like member functions that take a pointer parameter and set a
   reference member of the same class with the pointed value.
 
+- New :doc: `bugprone-unsequenced-global-accesses
+  <clang-tidy/checks/bugprone/unsequenced-global-accesses>` check.
+
+  Finds unsequenced actions (i.e. unsequenced write and read/write) 
+  on global variables nested in functions in the same translation unit.
+
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
@@ -150,6 +156,14 @@ New checks
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
+
+- New `cert-exp30-c <cert/exp30-c>` alias for 
+  `bugprone-unsequenced-global-accesses
+  <clang-tidy/checks/bugprone/unsequenced-global-accesses>`.
+
+- New `cert-exp50-cpp <cert/exp50-cpp>` alias for 
+  `bugprone-unsequenced-global-accesses
+  <clang-tidy/checks/bugprone/unsequenced-global-accesses>`.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
