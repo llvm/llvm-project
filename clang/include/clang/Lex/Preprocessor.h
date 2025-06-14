@@ -350,6 +350,9 @@ private:
   /// Whether the last token we lexed was an '@'.
   bool LastTokenWasAt = false;
 
+  /// First pp-token in current translation unit.
+  Token FirstPPToken;
+
   /// A position within a C++20 import-seq.
   class StdCXXImportSeq {
   public:
@@ -1766,6 +1769,8 @@ public:
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);
 
+  void setFirstPPToken(const Token &Tok) { FirstPPToken = Tok; }
+  Token getFirstPPToken() const { return FirstPPToken; }
   bool LexAfterModuleImport(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 

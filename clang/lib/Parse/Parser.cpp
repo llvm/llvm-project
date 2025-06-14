@@ -2340,7 +2340,8 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
 
 Parser::DeclGroupPtrTy
 Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
-  SourceLocation StartLoc = Tok.getLocation();
+  Token Introducer = Tok;
+  SourceLocation StartLoc = Introducer.getLocation();
 
   Sema::ModuleDeclKind MDK = TryConsumeToken(tok::kw_export)
                                  ? Sema::ModuleDeclKind::Interface
@@ -2359,7 +2360,7 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   // Parse a global-module-fragment, if present.
   if (getLangOpts().CPlusPlusModules && Tok.is(tok::semi)) {
     SourceLocation SemiLoc = ConsumeToken();
-    if (ImportState != Sema::ModuleImportState::FirstDecl) {
+    if (!Introducer.isFirstPPToken()) {
       Diag(StartLoc, diag::err_global_module_introducer_not_at_start)
         << SourceRange(StartLoc, SemiLoc);
       return nullptr;
@@ -2416,7 +2417,7 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
 
   return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
-                                 ImportState);
+                                 ImportState, Introducer.isFirstPPToken());
 }
 
 Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
