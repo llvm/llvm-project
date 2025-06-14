@@ -47279,9 +47279,12 @@ static SDValue combineExtractVectorEltAndOperand(SDNode* N, SelectionDAG& DAG,
     // resulted from a reduction, then we need to replace all uses of V with
     // scalar_to_vector(Op) to make sure that we eliminated the binop + shuffle
     // pyramid. This is safe to do, because the elements of V are undefined except 
-    // for the zeroth element.
+    // for the zeroth element and Op does not depend on V.
 
     auto OldV = N->getOperand(0);
+    assert(!Op.getNode()->hasPredecessor(OldV.getNode()) && 
+        "Op must not depend on the converted reduction");
+
     auto NewV = DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), OldV->getValueType(0), Op);
 
     auto NV = DCI.CombineTo(N, Op);
