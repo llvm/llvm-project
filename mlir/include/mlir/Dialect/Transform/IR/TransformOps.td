@@ -418,7 +418,7 @@ def ApplyRegisteredPassOp : TransformDialectOp<"apply_registered_pass",
         with options = { "top-down" = false,
                          "max-iterations" = %max_iter,
                          "test-convergence" = true,
-                         "max-num-rewrites" =  %max_rewrites }
+                         "max-num-rewrites" = %max_rewrites }
         to %module
     : (!transform.any_param, !transform.any_param, !transform.any_op) -> !transform.any_op
     ```
