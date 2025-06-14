@@ -4986,8 +4986,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "desugaredQualType": "long",
-// CHECK-NEXT:               "qualType": "__ptrdiff_t",
-// CHECK-NEXT:               "typeAliasDeclId": "0x{{.*}}"
+// CHECK-NEXT:               "qualType": "__ptrdiff_t"
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "value": "10"
@@ -6511,8 +6510,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "desugaredQualType": "long"
-// CHECK-NEXT:               "qualType": "__ptrdiff_t",
-// CHECK-NEXT:               "typeAliasDeclId": "0x{{.*}}"
+// CHECK-NEXT:               "qualType": "__ptrdiff_t"
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "value": "10"
