@@ -531,6 +531,11 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
       setLibcallName(RTLIB::MULO_I64, nullptr);
     }
     setLibcallName(RTLIB::MULO_I128, nullptr);
+  } else {
+    // Define the emscripten name for return address helper.
+    // TODO: when implementing other Wasm backends, make this generic or only do
+    // this on emscripten depending on what they end up doing.
+    setLibcallName(RTLIB::RETURN_ADDRESS, "emscripten_return_address");
   }
 
   if (TT.isSystemZ() && TT.isOSzOS()) {
