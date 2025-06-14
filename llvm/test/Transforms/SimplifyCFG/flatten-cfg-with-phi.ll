@@ -12,7 +12,16 @@ define i1 @_Z7compareRK1SS1_(ptr %a, ptr %b) {
 ; CHECK-NEXT:   %2 = and i1 %cmp.i, %cmp.i19
 ; CHECK-NEXT:   %3 = select i1 %cmp.i, i1 false, i1 true
 ; CHECK-NEXT:   br i1 %2, label %land.rhs, label %lor.end
-; CHECK-LABEL: lor.end:                                          ; preds = %land.rhs, %entry
+; CHECK-EMPTY:
+; CHECK-NEXT: land.rhs:  ; preds = %entry
+; CHECK-NEXT:   %y = getelementptr inbounds nuw i8, ptr %a, i64 4
+; CHECK-NEXT:   %4 = load i32, ptr %y, align 4, !tbaa !8
+; CHECK-NEXT:   %y14 = getelementptr inbounds nuw i8, ptr %b, i64 4
+; CHECK-NEXT:   %5 = load i32, ptr %y14, align 4, !tbaa !8
+; CHECK-NEXT:   %cmp = icmp slt i32 %4, %5
+; CHECK-NEXT:   br label %lor.end
+; CHECK-EMPTY:
+; CHECK-NEXT: lor.end:  ; preds = %land.rhs, %entry
 ; CHECK-NEXT:   %6 = phi i1 [ %cmp, %land.rhs ], [ %3, %entry ]
 ; CHECK-NEXT:   ret i1 %6
 entry:
