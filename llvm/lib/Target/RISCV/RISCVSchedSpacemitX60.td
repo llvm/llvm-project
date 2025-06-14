@@ -545,13 +545,17 @@ foreach mx = SchedMxListF in {
 foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
+    defvar RedLat =
+      !cond(!eq(mx, "M1"): 7, !eq(mx, "M2"): 11, !eq(mx, "M4"): 19, !eq(mx, "M8"): 35,
+                               /* mx=MF2, MF4, MF8 */ true: 5);
 
-    // Simple reduction
-    defm "" : LMULSEWWriteResMXSEW<"WriteVIRedV_From",  [SMX60_VIEU], mx, sew, IsWorstCase>;
-
-    // Advanced reduction
-    defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SMX60_VIEU],
-                                   mx, sew, IsWorstCase>;
+    let Latency = RedLat in {
+      // WriteVIRedV_From include vredand, vredor, vredxor, and vredsum. Only the vredsum have the
+      // the latency of 5/5/5/7/11/19/35, while vredand, vredor, vredxor have latencies of
+      // 4/4/4/6/10/18/34, but since they are all in the same group, we use the worst case.
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
   }
 }
 
