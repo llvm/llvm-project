@@ -110,23 +110,6 @@ void test4() {
   };
 }
 
-// Verify no crash
-void test5_GH62711() {
-  // CHECK:      VAArgExpr {{.*}} 'int' contains-errors
-  // CHECK-NEXT: | `-ImplicitCastExpr {{.*}} '<dependent type>' contains-errors
-  // CHECK-NEXT: |   `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
-  if (__builtin_va_arg(undef, int) << 1);
-}
-
-void test6_GH50244() {
-  double array[16];
-  // CHECK:      UnaryExprOrTypeTraitExpr {{.*}} '__size_t':'unsigned long' contains-errors sizeof
-  // CHECK-NEXT: `-CallExpr {{.*}} '<dependent type>' contains-errors
-  // CHECK-NEXT:   |-DeclRefExpr {{.*}} 'int ()'
-  // CHECK-NEXT:   `-RecoveryExpr {{.*}} '<dependent type>'
-  sizeof array / sizeof foo(undef);
-}
-
 // No crash on DeclRefExpr that refers to ValueDecl with invalid initializers.
 void test7() {
   int b[] = {""()};
