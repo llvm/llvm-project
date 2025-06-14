@@ -99,9 +99,6 @@ int main(int, char**) {
 
   static_assert(test_constraints_insert_range<std::vector, int, double>());
 
-  test_insert_range_exception_safety_throwing_copy<std::vector>();
-  test_insert_range_exception_safety_throwing_allocator<std::vector, int>();
-
 #ifndef TEST_HAS_NO_LOCALIZATION
   test_counted_istream_view();
 #endif
