@@ -42,6 +42,7 @@ class SummaryContext {
 public:
   SummaryContext();
 
+  const SummaryAttribute *GetAttribute(SummaryAttributeKind kind) const;
   const FunctionSummary *GetSummary(const FunctionDecl *FD) const;
   void SummarizeFunctionBody(const FunctionDecl *FD);
 

@@ -65,6 +65,11 @@ void SummaryContext::CreateSummary(SmallVector<char> ID,
   IDToSummary[SummaryPtr->getID()] = SummaryPtr;
 }
 
+const SummaryAttribute *
+SummaryContext::GetAttribute(SummaryAttributeKind kind) const {
+  return KindToAttribute.at(kind);
+}
+
 const FunctionSummary *
 SummaryContext::GetSummary(const FunctionDecl *FD) const {
   auto USR = GetUSR(FD);

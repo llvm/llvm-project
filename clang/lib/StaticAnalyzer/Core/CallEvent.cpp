@@ -277,13 +277,24 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
             ValuesToInvalidate.push_back(loc::MemRegionVal(TVR));
   }
 
+  bool ShouldPreserveGlobals = false;
+  const SummaryContext *SummaryCtx =
+      State->getStateManager().getOwningEngine().getSummaryCtx();
+  if (SummaryCtx) {
+    const auto *Summary =
+        SummaryCtx->GetSummary(llvm::dyn_cast<FunctionDecl>(getDecl()));
+    ShouldPreserveGlobals =
+        Summary && Summary->getAttributes().count(
+                       SummaryCtx->GetAttribute(NO_WRITE_GLOBAL));
+  }
+
   // Invalidate designated regions using the batch invalidation API.
   // NOTE: Even if RegionsToInvalidate is empty, we may still invalidate
   //  global variables.
-  return Result->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
-                                   BlockCount, getLocationContext(),
-                                   /*CausedByPointerEscape*/ true,
-                                   /*Symbols=*/nullptr, this, &ETraits);
+  return Result->invalidateRegions(
+      ValuesToInvalidate, getCFGElementRef(), BlockCount, getLocationContext(),
+      /*CausedByPointerEscape*/ true,
+      /*Symbols=*/nullptr, ShouldPreserveGlobals ? nullptr : this, &ETraits);
 }
 
 ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,

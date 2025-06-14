@@ -217,6 +217,8 @@ public:
     return &CTU;
   }
 
+  const SummaryContext *getSummaryCtx() { return SummaryCtx; }
+
   const NodeBuilderContext &getBuilderContext() {
     assert(currBldrCtx);
     return *currBldrCtx;
