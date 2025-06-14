@@ -128,7 +128,7 @@ public:
                    std::unique_ptr<CodeInjector> injector)
       : RecVisitorMode(0), RecVisitorBR(nullptr), Ctx(nullptr),
         PP(CI.getPreprocessor()), OutDir(outdir), Opts(opts), Plugins(plugins),
-        Injector(std::move(injector)), CTU(CI),
+        Injector(std::move(injector)), CTU(CI), SummaryCtx(nullptr),
         MacroExpansions(CI.getLangOpts()) {
     EntryPointStat::lockRegistry();
     DigestAnalyzerOptions();
