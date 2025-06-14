@@ -84,6 +84,10 @@ Improvements and New Features
 - The ``flat_map::insert`` and ``flat_set::insert_range`` have been optimized, resulting in a performance improvement of up
   to 10x for inserting elements into a ``flat_map`` when the input range is a ``flat_map`` or a ``zip_view``.
 
+- The ``std::{fill, fill_n}`` and ``std::ranges::{fill, fill_n}`` algorithms have been optimized for segmented iterators,
+  resulting in a performance improvement of at least 10x for ``std::deque<int>`` iterators and
+  ``std::join_view<std::vector<std::vector<int>>>`` iterators.
+
 Deprecations and Removals
 -------------------------
 
