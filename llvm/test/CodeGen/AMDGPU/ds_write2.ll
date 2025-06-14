@@ -1009,15 +1009,10 @@ define amdgpu_kernel void @write2_v2i32_align1_odd_offset() {
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    ds_write_b8 v1, v0 offset:65
-; CI-NEXT:    v_mov_b32_e32 v0, 1
-; CI-NEXT:    ds_write_b8 v1, v0 offset:70
-; CI-NEXT:    v_mov_b32_e32 v0, 0xc8
-; CI-NEXT:    ds_write_b8 v1, v0 offset:69
-; CI-NEXT:    ds_write_b8 v1, v1 offset:68
-; CI-NEXT:    ds_write_b8 v1, v1 offset:67
-; CI-NEXT:    ds_write_b8 v1, v1 offset:66
+; CI-NEXT:    ds_write_b16 v1, v1 offset:66
+; CI-NEXT:    v_mov_b32_e32 v0, 0x1c800
+; CI-NEXT:    ds_write_b32 v1, v0 offset:68
 ; CI-NEXT:    ds_write_b8 v1, v1 offset:72
-; CI-NEXT:    ds_write_b8 v1, v1 offset:71
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-ALIGNED-LABEL: write2_v2i32_align1_odd_offset:
@@ -1025,15 +1020,10 @@ define amdgpu_kernel void @write2_v2i32_align1_odd_offset() {
 ; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v0, 0x7b
 ; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-ALIGNED-NEXT:    ds_write_b8 v1, v0 offset:65
-; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v0, 1
-; GFX9-ALIGNED-NEXT:    ds_write_b8 v1, v0 offset:70
-; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v0, 0xc8
-; GFX9-ALIGNED-NEXT:    ds_write_b8 v1, v0 offset:69
-; GFX9-ALIGNED-NEXT:    ds_write_b8 v1, v1 offset:68
-; GFX9-ALIGNED-NEXT:    ds_write_b8 v1, v1 offset:67
-; GFX9-ALIGNED-NEXT:    ds_write_b8 v1, v1 offset:66
+; GFX9-ALIGNED-NEXT:    ds_write_b16 v1, v1 offset:66
+; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v0, 0x1c800
+; GFX9-ALIGNED-NEXT:    ds_write_b32 v1, v0 offset:68
 ; GFX9-ALIGNED-NEXT:    ds_write_b8 v1, v1 offset:72
-; GFX9-ALIGNED-NEXT:    ds_write_b8 v1, v1 offset:71
 ; GFX9-ALIGNED-NEXT:    s_endpgm
 ;
 ; GFX9-UNALIGNED-LABEL: write2_v2i32_align1_odd_offset:
