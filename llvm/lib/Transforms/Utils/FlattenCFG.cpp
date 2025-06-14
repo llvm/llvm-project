@@ -206,6 +206,8 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
       Idx = CIdx;
     else if (CIdx != Idx) {
       // Inverse Branch Condition
+      IRBuilder<>::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(PBI);
       InvertBranch(PBI, Builder);
     }
 
