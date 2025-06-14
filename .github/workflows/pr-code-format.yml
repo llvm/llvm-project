@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+      - gh-101657
       - 'users/**'
 
 jobs:
@@ -16,7 +17,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
       cancel-in-progress: true
-    if: github.repository == 'llvm/llvm-project'
+    if: github.repository == 'DhruvSrivastavaX/lldb-for-aix'
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
