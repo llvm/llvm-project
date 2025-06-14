@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// gcc 15 does not seem to recognize the __product_iterator_traits specializations
+// UNSUPPORTED: gcc
 
 #include <flat_map>
 #include <ranges>
