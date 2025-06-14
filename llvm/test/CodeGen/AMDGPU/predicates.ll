@@ -45,10 +45,8 @@ ENDIF:
 }
 
 ; CHECK-LABEL: {{^}}nested_if:
-; CHECK: ALU_PUSH_BEFORE
-; CHECK: JUMP
-; CHECK: POP
-; CHECK: PRED_SET{{[EGN][ET]*}}_INT * Exec
+; CHECK: ALU
+; CHECK: CNDGT_INT
 ; CHECK: PRED_SET{{[EGN][ET]*}}_INT * Pred,
 ; CHECK: LSHL * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1, Pred_sel
 define amdgpu_kernel void @nested_if(ptr addrspace(1) %out, i32 %in) {
