@@ -198,6 +198,9 @@ def NoFree : EnumAttr<"nofree", IntersectAnd, [FnAttr, ParamAttr]>;
 /// Argument is dead if the call unwinds.
 def DeadOnUnwind : EnumAttr<"dead_on_unwind", IntersectAnd, [ParamAttr]>;
 
+/// Argument is dead upon function return.
+def DeadOnReturn : EnumAttr<"dead_on_return", IntersectAnd, [ParamAttr]>;
+
 /// Disable implicit floating point insts.
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 

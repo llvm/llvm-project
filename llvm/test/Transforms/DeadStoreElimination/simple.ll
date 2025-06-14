@@ -425,7 +425,7 @@ define ptr @test25(ptr %p) nounwind {
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8, ptr [[P_4]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[P_4]], align 1
-; CHECK-NEXT:    [[Q:%.*]] = call ptr @strdup(ptr [[P]]) #[[ATTR13:[0-9]+]]
+; CHECK-NEXT:    [[Q:%.*]] = call ptr @strdup(ptr [[P]]) #[[ATTR14:[0-9]+]]
 ; CHECK-NEXT:    store i8 [[TMP]], ptr [[P_4]], align 1
 ; CHECK-NEXT:    ret ptr [[Q]]
 ;
@@ -855,3 +855,23 @@ bb:
   store ptr null, ptr null, align 8
   ret void
 }
+
+define void @test_dead_on_return(ptr dead_on_return %p) {
+; CHECK-LABEL: @test_dead_on_return(
+; CHECK-NEXT:    ret void
+;
+  store i8 0, ptr %p
+  ret void
+}
+
+define void @test_dead_on_return_maythrow(ptr dead_on_return %p) {
+; CHECK-LABEL: @test_dead_on_return_maythrow(
+; CHECK-NEXT:    call void @maythrow()
+; CHECK-NEXT:    ret void
+;
+  store i8 0, ptr %p
+  call void @maythrow()
+  ret void
+}
+
+declare void @maythrow() memory(none)
