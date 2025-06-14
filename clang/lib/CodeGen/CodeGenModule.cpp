@@ -9691,9 +9691,34 @@ void CodeGenModule::resetOptKernelMetadata(const Stmt *DirectiveStmt) {
     eraseOptKernelNestElem(getOptKernelKey(*Dir));
 }
 
+bool CodeGenModule::isStdNameSpace(const CallExpr *Call) const {
+  // Examine the first child, the call itself.
+  const Stmt *CE = nullptr;
+  for (const Stmt *Child : Call->children())
+    if (Child) {
+      CE = Child;
+      break;
+    }
+  if (CE) {
+    while (isa<ImplicitCastExpr>(CE))
+      CE = cast<ImplicitCastExpr>(CE)->getSubExpr();
+    if (isa<DeclRefExpr>(CE)) {
+      const DeclRefExpr *DRE = cast<DeclRefExpr>(CE);
+      if (DRE->hasQualifier()) {
+        const NestedNameSpecifier *NS = DRE->getQualifier();
+        if (NS->getKind() == NestedNameSpecifier::Namespace &&
+            !NS->getAsNamespace()->getNameAsString().compare("std"))
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
 CodeGenModule::NoLoopXteamErr
-CodeGenModule::getStatusOptKernelHostBuiltin(std::string CallName) const {
-  if (isOptKernelHostMin(CallName) || isOptKernelHostMax(CallName))
+CodeGenModule::getStatusOptKernelHostBuiltin(const CallExpr *Call) const {
+  std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
+  if (isOptKernelHostMin(Call) || isOptKernelHostMax(Call))
     return NxSuccess;
   auto emitDebugMsg = [](std::string Msg) {
     Msg += ": Not recognized as builtin in host compile";
@@ -9704,8 +9729,9 @@ CodeGenModule::getStatusOptKernelHostBuiltin(std::string CallName) const {
 }
 
 CodeGenModule::NoLoopXteamErr
-CodeGenModule::getStatusOptKernelAMDGCNBuiltin(std::string CallName) const {
-  if (isOptKernelAMDGCNMin(CallName) || isOptKernelAMDGCNMax(CallName))
+CodeGenModule::getStatusOptKernelAMDGCNBuiltin(const CallExpr *Call) const {
+  std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
+  if (isOptKernelAMDGCNMin(Call) || isOptKernelAMDGCNMax(Call))
     return NxSuccess;
   auto emitDebugMsg = [](std::string Msg) {
     Msg += ": Not recognized as builtin in device compile";
@@ -9717,12 +9743,11 @@ CodeGenModule::getStatusOptKernelAMDGCNBuiltin(std::string CallName) const {
 
 CodeGenModule::NoLoopXteamErr
 CodeGenModule::getStatusOptKernelBuiltin(const CallExpr *Call) {
-  std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
   if (getLangOpts().OpenMPIsTargetDevice) {
-    if (auto NxStatus = getStatusOptKernelAMDGCNBuiltin(CallName))
+    if (auto NxStatus = getStatusOptKernelAMDGCNBuiltin(Call))
       return NxStatus;
   } else {
-    if (auto NxStatus = getStatusOptKernelHostBuiltin(CallName))
+    if (auto NxStatus = getStatusOptKernelHostBuiltin(Call))
       return NxStatus;
   }
   return NxSuccess;

@@ -1109,9 +1109,9 @@ CodeGenFunction::ExtractXteamRedRhsExpr(const CallExpr *Call,
   // then extracting the other argument.
   CodeGenModule::XteamRedOpKind Opcode;
   std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
-  if (CGM.isOptKernelAMDGCNMax(CallName))
+  if (CGM.isOptKernelAMDGCNMax(Call))
     Opcode = CodeGenModule::XR_OP_max;
-  else if (CGM.isOptKernelAMDGCNMin(CallName))
+  else if (CGM.isOptKernelAMDGCNMin(Call))
     Opcode = CodeGenModule::XR_OP_min;
   else
     llvm_unreachable("Epecting either min or max");
