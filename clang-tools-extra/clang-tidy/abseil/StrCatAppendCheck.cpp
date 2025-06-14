@@ -17,7 +17,7 @@ namespace clang::tidy::abseil {
 namespace {
 // Skips any combination of temporary materialization, temporary binding and
 // implicit casting.
-AST_MATCHER_P(Stmt, IgnoringTemporaries, ast_matchers::internal::Matcher<Stmt>,
+AST_MATCHER_P(Stmt, ignoringTemporaries, ast_matchers::internal::Matcher<Stmt>,
               InnerMatcher) {
   const Stmt *E = &Node;
   while (true) {
@@ -43,7 +43,7 @@ void StrCatAppendCheck::registerMatchers(MatchFinder *Finder) {
   const auto StrCat = functionDecl(hasName("::absl::StrCat"));
   // The arguments of absl::StrCat are implicitly converted to AlphaNum. This
   // matches to the arguments because of that behavior.
-  const auto AlphaNum = IgnoringTemporaries(cxxConstructExpr(
+  const auto AlphaNum = ignoringTemporaries(cxxConstructExpr(
       argumentCountIs(1), hasType(cxxRecordDecl(hasName("::absl::AlphaNum"))),
       hasArgument(0, ignoringImpCasts(declRefExpr(to(equalsBoundNode("LHS")),
                                                   expr().bind("Arg0"))))));
@@ -62,7 +62,7 @@ void StrCatAppendCheck::registerMatchers(MatchFinder *Finder) {
                    hasOverloadedOperatorName("="),
                    hasArgument(0, declRefExpr(to(decl().bind("LHS")))),
                    hasArgument(
-                       1, IgnoringTemporaries(
+                       1, ignoringTemporaries(
                               callExpr(callee(StrCat), hasArgument(0, AlphaNum),
                                        unless(HasAnotherReferenceToLhs))
                                   .bind("Call"))))

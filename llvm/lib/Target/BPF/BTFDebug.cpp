@@ -1438,7 +1438,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     // constant with private linkage and if it won't be in .rodata.str<#>
     // and .rodata.cst<#> sections.
     if (SecName == ".rodata" && Global.hasPrivateLinkage() &&
-        DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
+        DataSecEntries.find(SecName) == DataSecEntries.end()) {
       // skip .rodata.str<#> and .rodata.cst<#> sections
       if (!GVKind->isMergeableCString() && !GVKind->isMergeableConst()) {
         DataSecEntries[std::string(SecName)] =

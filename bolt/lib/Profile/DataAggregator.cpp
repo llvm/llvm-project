@@ -803,7 +803,7 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count,
   const uint64_t FuncAddress = FromFunc->getAddress();
   std::optional<BoltAddressTranslation::FallthroughListTy> FTs =
       BAT && BAT->isBATFunction(FuncAddress)
-          ? BAT->getFallthroughsInTrace(FuncAddress, From, To, IsReturn)
+          ? BAT->getFallthroughsInTrace(FuncAddress, From - IsReturn, To)
           : getFallthroughsInTrace(*FromFunc, Trace, Count, IsReturn);
   if (!FTs) {
     LLVM_DEBUG(dbgs() << "Invalid trace " << Trace << '\n');
@@ -1200,14 +1200,15 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     FT_EXTERNAL_ORIGIN // f
   } Type = INVALID;
 
-  // The number of fields to parse, set based on Type.
+  /// The number of fields to parse, set based on \p Type.
   int AddrNum = 0;
   int CounterNum = 0;
-  // Storage for parsed fields.
+  /// Storage for parsed fields.
   StringRef EventName;
   std::optional<Location> Addr[3];
   int64_t Counters[2] = {0};
 
+  /// Parse strings: record type and optionally an event name.
   while (Type == INVALID || Type == EVENT_NAME) {
     while (checkAndConsumeFS()) {
     }
@@ -1241,6 +1242,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     CounterNum = SSI(Str).Case("B", 2).Case("E", 0).Default(1);
   }
 
+  /// Parse locations depending on entry type, recording them in \p Addr array.
   for (int I = 0; I < AddrNum; ++I) {
     while (checkAndConsumeFS()) {
     }
@@ -1250,6 +1252,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     Addr[I] = AddrOrErr.get();
   }
 
+  /// Parse counters depending on entry type.
   for (int I = 0; I < CounterNum; ++I) {
     while (checkAndConsumeFS()) {
     }
@@ -1260,11 +1263,13 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     Counters[I] = CountOrErr.get();
   }
 
+  /// Expect end of line here.
   if (!checkAndConsumeNewLine()) {
     reportError("expected end of line");
     return make_error_code(llvm::errc::io_error);
   }
 
+  /// Record event name into \p EventNames and return.
   if (Type == EVENT_NAME) {
     EventNames.insert(EventName);
     return std::error_code();
@@ -1278,6 +1283,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   int64_t Count = Counters[0];
   int64_t Mispreds = Counters[1];
 
+  /// Record basic IP sample into \p BasicSamples and return.
   if (Type == SAMPLE) {
     BasicSamples[FromOffset] += Count;
     NumTotalSamples += Count;
@@ -1289,21 +1295,25 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   if (ToFunc)
     ToFunc->setHasProfileAvailable();
 
+  /// For legacy fall-through types, adjust locations to match Trace container.
   if (Type == FT || Type == FT_EXTERNAL_ORIGIN) {
-    Addr[2] = Location(Addr[1]->Offset);
-    Addr[1] = Location(Addr[0]->Offset);
+    Addr[2] = Location(Addr[1]->Offset); // Trace To
+    Addr[1] = Location(Addr[0]->Offset); // Trace From
+    // Put a magic value into Trace Branch to differentiate from a full trace.
     Addr[0] = Location(Type == FT ? Trace::FT_ONLY : Trace::FT_EXTERNAL_ORIGIN);
   }
 
+  /// For legacy branch type, mark Trace To to differential from a full trace.
   if (Type == BRANCH) {
     Addr[2] = Location(Trace::BR_ONLY);
   }
 
+  /// Record a trace.
   Trace T{Addr[0]->Offset, Addr[1]->Offset, Addr[2]->Offset};
   TakenBranchInfo TI{(uint64_t)Count, (uint64_t)Mispreds};
-
   Traces.emplace_back(T, TI);
 
+  /// Increment trace (fall-through) counter.
   if (Addr[2]->Offset != Trace::BR_ONLY)
     NumTraces += Count;
 
@@ -2217,6 +2227,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       YamlBF.Id = BF->getFunctionNumber();
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
+      YamlBF.ExternEntryCount = BF->getExternEntryCount();
       YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
       const BoltAddressTranslation::BBHashMapTy &BlockMap =
           BAT->getBBHashMap(FuncAddress);
