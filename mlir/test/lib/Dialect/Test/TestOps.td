@@ -2825,7 +2825,7 @@ def TestNVVMRequiresSMArchCondOp :
   let assemblyFormat = "attr-dict";
 }
 
-def TestNVVMRequirestSMArchCondMultiOp : 
+def TestNVVMRequirestSMArchCondMultiOp :
     TEST_Op<"nvvm_requires_sm_90a_or_sm_100a", [NVVMRequiresSMa<[90, 100]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
@@ -3454,6 +3454,38 @@ def OpWithPropertyPredicates : TEST_Op<"op_with_property_predicates"> {
   );
   let assemblyFormat = "attr-dict prop-dict";
 }
+
+def TestPropPatternOp1 : TEST_Op<"prop_pattern_op_1"> {
+  let arguments = (ins
+    StringProp:$tag,
+    I64Prop:$val,
+    BoolProp:$cond
+  );
+  let results = (outs I32:$results);
+  let assemblyFormat = "$tag $val $cond attr-dict";
+}
+
+def TestPropPatternOp2 : TEST_Op<"prop_pattern_op_2"> {
+  let arguments = (ins
+    I32:$input,
+    StringProp:$tag
+  );
+  let assemblyFormat = "$input $tag attr-dict";
+}
+
+def : Pat<
+  (TestPropPatternOp1 $tag, NonNegativeI64Prop:$val, ConstantProp<BoolProp, "false">),
+  (TestPropPatternOp1 $tag, (NativeCodeCall<"$0 + 1"> $val), ConstantProp<BoolProp, "true">)>;
+
+def : Pat<
+  (TestPropPatternOp2 (TestPropPatternOp1 $tag1, $val, ConstantProp<BoolProp, "true">),
+    PropConstraint<CPred<"!$_self.empty()">, "non-empty string">:$tag2),
+  (TestPropPatternOp2
+    (TestPropPatternOp1 $tag1,
+      (NativeCodeCall<"-($0)"> $val),
+      ConstantProp<BoolProp, "false">),
+    (NativeCodeCall<"$0.str() + \".\" + $1.str()"> $tag1, $tag2))
+>;
 
 //===----------------------------------------------------------------------===//
 // Test Dataflow
