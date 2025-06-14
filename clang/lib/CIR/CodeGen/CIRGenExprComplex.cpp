@@ -15,11 +15,25 @@ public:
   explicit ComplexExprEmitter(CIRGenFunction &cgf)
       : cgf(cgf), builder(cgf.getBuilder()) {}
 
+  //===--------------------------------------------------------------------===//
+  //                               Utilities
+  //===--------------------------------------------------------------------===//
+
+  /// Given an expression with complex type that represents a value l-value,
+  /// this method emits the address of the l-value, then loads and returns the
+  /// result.
+  mlir::Value emitLoadOfLValue(const Expr *e) {
+    return emitLoadOfLValue(cgf.emitLValue(e), e->getExprLoc());
+  }
+
+  mlir::Value emitLoadOfLValue(LValue lv, SourceLocation loc);
+
   /// Store the specified real/imag parts into the
   /// specified value pointer.
   void emitStoreOfComplex(mlir::Location loc, mlir::Value val, LValue lv,
                           bool isInit);
 
+  mlir::Value VisitCallExpr(const CallExpr *e);
   mlir::Value VisitInitListExpr(InitListExpr *e);
 
   mlir::Value VisitImaginaryLiteral(const ImaginaryLiteral *il);
@@ -34,6 +48,16 @@ static const ComplexType *getComplexType(QualType type) {
   return cast<ComplexType>(cast<AtomicType>(type)->getValueType());
 }
 
+mlir::Value ComplexExprEmitter::emitLoadOfLValue(LValue lv,
+                                                 SourceLocation loc) {
+  assert(lv.isSimple() && "non-simple complex l-value?");
+  if (lv.getType()->isAtomicType())
+    cgf.cgm.errorNYI("emitLoadOfLValue with Atomic LV");
+
+  const Address srcAddr = lv.getAddress();
+  return builder.createLoad(cgf.getLoc(loc), srcAddr);
+}
+
 void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
                                             LValue lv, bool isInit) {
   if (lv.getType()->isAtomicType() ||
@@ -44,6 +68,15 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
 
   const Address destAddr = lv.getAddress();
   builder.createStore(loc, val, destAddr);
+}
+
+mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
+  if (e->getCallReturnType(cgf.getContext())->isReferenceType())
+    return emitLoadOfLValue(e);
+
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+  auto complex = cgf.emitCallExpr(e).getComplexVal();
+  return builder.createComplexCreate(loc, complex.first, complex.second);
 }
 
 mlir::Value ComplexExprEmitter::VisitInitListExpr(InitListExpr *e) {

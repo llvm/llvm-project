@@ -91,6 +91,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     builder.create<cir::AssumeOp>(getLoc(e->getExprLoc()), argValue);
     return RValue::get(nullptr);
   }
+  case Builtin::BI__builtin_complex: {
+    mlir::Value real = emitScalarExpr(e->getArg(0));
+    mlir::Value imag = emitScalarExpr(e->getArg(1));
+    mlir::Value complex = builder.createComplexCreate(loc, real, imag);
+    return RValue::get(complex);
+  }
   }
 
   cgm.errorNYI(e->getSourceRange(), "unimplemented builtin call");
