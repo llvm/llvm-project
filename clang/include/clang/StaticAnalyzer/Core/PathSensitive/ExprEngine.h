@@ -184,7 +184,8 @@ private:
 public:
   ExprEngine(cross_tu::CrossTranslationUnitContext &CTU, AnalysisManager &mgr,
              SetOfConstDecls *VisitedCalleesIn, FunctionSummariesTy *FS,
-             InliningModes HowToInlineIn, const SummaryContext *SummaryCtx);
+             InliningModes HowToInlineIn,
+             const SummaryContext *SummaryCtx = nullptr);
 
   virtual ~ExprEngine() = default;
 
