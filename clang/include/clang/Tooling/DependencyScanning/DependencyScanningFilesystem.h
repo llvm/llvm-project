@@ -220,13 +220,41 @@ public:
   CacheShard &getShardForFilename(StringRef Filename) const;
   CacheShard &getShardForUID(llvm::sys::fs::UniqueID UID) const;
 
-  /// Visits all cached entries and re-stat an entry using FS if
-  /// it is negatively stat cached. If re-stat succeeds on a path,
-  /// the path is added to InvalidPaths, indicating that the cache
-  /// may have erroneously negatively cached it. The caller can then
-  /// use InvalidPaths to issue diagnostics.
-  std::vector<StringRef>
-  getInvalidNegativeStatCachedPaths(llvm::vfs::FileSystem &UnderlyingFS) const;
+  struct InvalidEntryDiagInfo {
+    // A null terminated string that contains a path.
+    const char *Path = nullptr;
+
+    enum class Type : unsigned char { NegativeCaching = 1, SizeChanged = 2 };
+
+    Type T;
+
+    struct SizeChangedInfo {
+      uint64_t CachedSize = 0;
+      uint64_t ActualSize = 0;
+    };
+
+    std::optional<SizeChangedInfo> SizeInfo;
+
+    InvalidEntryDiagInfo(const char *Path) : Path(Path) {
+      T = Type::NegativeCaching;
+    }
+
+    InvalidEntryDiagInfo(const char *Path, uint64_t CachedSize,
+                         uint64_t ActualSize)
+        : Path(Path), SizeInfo({CachedSize, ActualSize}) {
+      T = Type::SizeChanged;
+    }
+  };
+
+  /// Visits all cached entries and re-stat an entry using UnderlyingFS to check
+  /// if the cache contains invalid entries. An entry can be invalid for two
+  /// reasons:
+  ///  1. The entry contains a stat error, indicating the file did not exist
+  ///     in the cache, but the file exists on the UnderlyingFS.
+  ///  2. The entry is associated with a file whose size is different from the
+  ///     actual size on the UnderlyingFS.
+  std::vector<InvalidEntryDiagInfo>
+  getInvalidEntryDiagInfo(llvm::vfs::FileSystem &UnderlyingFS) const;
 
 private:
   std::unique_ptr<CacheShard[]> CacheShards;
