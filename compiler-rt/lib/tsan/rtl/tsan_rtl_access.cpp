@@ -525,7 +525,7 @@ SECOND:
 void ShadowSet(RawShadow* p, RawShadow* end, RawShadow v) {
   DCHECK_LE(p, end);
   DCHECK(IsShadowMem(p));
-  DCHECK(IsShadowMem(end));
+  DCHECK(p == end || IsShadowMem(end - 1));
   UNUSED const uptr kAlign = kShadowCnt * kShadowSize;
   DCHECK_EQ(reinterpret_cast<uptr>(p) % kAlign, 0);
   DCHECK_EQ(reinterpret_cast<uptr>(end) % kAlign, 0);
@@ -675,7 +675,7 @@ void MemoryAccessRangeT(ThreadState* thr, uptr pc, uptr addr, uptr size) {
     Printf("Access to non app mem start: %p\n", (void*)addr);
     DCHECK(IsAppMem(addr));
   }
-  if (!IsAppMem(addr + size - 1)) {
+  if (size > 0 && !IsAppMem(addr + size - 1)) {
     Printf("Access to non app mem end: %p\n", (void*)(addr + size - 1));
     DCHECK(IsAppMem(addr + size - 1));
   }
@@ -686,7 +686,7 @@ void MemoryAccessRangeT(ThreadState* thr, uptr pc, uptr addr, uptr size) {
 
   RawShadow* shadow_mem_end = reinterpret_cast<RawShadow*>(
       reinterpret_cast<uptr>(shadow_mem) + size * kShadowMultiplier - 1);
-  if (!IsShadowMem(shadow_mem_end)) {
+  if (size > 0 && !IsShadowMem(shadow_mem_end)) {
     Printf("Bad shadow end addr: %p (%p)\n", shadow_mem_end,
            (void*)(addr + size - 1));
     Printf(
