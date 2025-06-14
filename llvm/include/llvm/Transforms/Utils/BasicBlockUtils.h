@@ -609,7 +609,8 @@ LLVM_ABI void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
 
 // Check whether the function only has blocks with simple terminators:
 // br/brcond/unreachable/ret (or callbr if AllowCallBr)
-LLVM_ABI bool hasOnlySimpleTerminator(const Function &F, bool AllowCallBr = true);
+LLVM_ABI bool hasOnlySimpleTerminator(const Function &F,
+                                      bool AllowCallBr = true);
 
 } // end namespace llvm
 
