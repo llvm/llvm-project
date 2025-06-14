@@ -764,7 +764,8 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer,
                                   SummaryConsumer *SummaryConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
-                         TUKind, CompletionConsumer, &getSummaryContext(),
+                         TUKind, CompletionConsumer,
+                         hasSummaryContext() ? &getSummaryContext() : nullptr,
                          SummaryConsumer));
 
   // Set up API notes.
