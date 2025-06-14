@@ -40,34 +40,31 @@ public:
 };
 } // namespace
 
-FunctionSummary::FunctionSummary(
-    SmallVector<char> ID, std::set<const SummaryAttribute *> FunctionAttrs,
-    std::set<SmallVector<char>> Calls)
+FunctionSummary::FunctionSummary(SmallVector<char> ID,
+                                 std::set<const SummaryAttr *> FunctionAttrs,
+                                 std::set<SmallVector<char>> Calls)
     : ID(std::move(ID)), Attrs(std::move(FunctionAttrs)),
       Calls(std::move(Calls)) {}
 
-SummaryContext::SummaryContext() {
-  Attributes.emplace_back(std::make_unique<NoWriteGlobalAttr>());
+template <typename T> void SummaryContext::registerAttr() {
+  std::unique_ptr<T> attr(new T());
+  SummaryAttrKind Kind = attr->getKind();
 
-  for (auto &&Attr : Attributes) {
-    assert(KindToAttribute.count(Attr->getKind()) == 0 &&
-           "Attr already registered");
-    KindToAttribute[Attr->getKind()] = Attr.get();
-  }
+  if (KindToAttribute.count(Kind))
+    return;
+
+  KindToAttribute[Kind] = Attributes.emplace_back(std::move(attr)).get();
 }
 
+SummaryContext::SummaryContext() { registerAttr<NoWriteGlobalAttr>(); }
+
 void SummaryContext::CreateSummary(SmallVector<char> ID,
-                                   std::set<const SummaryAttribute *> Attrs,
+                                   std::set<const SummaryAttr *> Attrs,
                                    std::set<SmallVector<char>> Calls) {
   auto Summary = std::make_unique<FunctionSummary>(
       std::move(ID), std::move(Attrs), std::move(Calls));
   auto *SummaryPtr = FunctionSummaries.emplace_back(std::move(Summary)).get();
   IDToSummary[SummaryPtr->getID()] = SummaryPtr;
-}
-
-const SummaryAttribute *
-SummaryContext::GetAttribute(SummaryAttributeKind kind) const {
-  return KindToAttribute.at(kind);
 }
 
 const FunctionSummary *
@@ -77,7 +74,7 @@ SummaryContext::GetSummary(const FunctionDecl *FD) const {
 }
 
 void SummaryContext::SummarizeFunctionBody(const FunctionDecl *FD) {
-  std::set<const SummaryAttribute *> Attrs;
+  std::set<const SummaryAttr *> Attrs;
 
   for (auto &&Attr : Attributes) {
     if (Attr->infer(FD))
@@ -92,7 +89,7 @@ void SummaryContext::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
     const llvm::json::Object *FunctionSummary = it->getAsObject();
 
     SmallString<128> ID(*FunctionSummary->getString("id"));
-    std::set<const SummaryAttribute *> FunctionAttrs;
+    std::set<const SummaryAttr *> FunctionAttrs;
     const llvm::json::Array *FunctionAttributes =
         FunctionSummary->getObject("attrs")->getArray("function");
     for(auto attrIt = FunctionAttributes->begin(); attrIt != FunctionAttributes->end(); ++attrIt) {
@@ -117,7 +114,7 @@ bool SummaryContext::ReduceFunctionSummary(FunctionSummary &Function) {
   bool changed = false;
 
   for (auto &&call : Function.getCalls()) {
-    std::set<const SummaryAttribute *> reducedAttrs;
+    std::set<const SummaryAttr *> reducedAttrs;
 
     // If we don't have a summary about a called function, we forget
     // everything about the current one as well.

@@ -280,12 +280,11 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   bool ShouldPreserveGlobals = false;
   const SummaryContext *SummaryCtx =
       State->getStateManager().getOwningEngine().getSummaryCtx();
-  if (SummaryCtx) {
-    const auto *Summary =
-        SummaryCtx->GetSummary(llvm::dyn_cast<FunctionDecl>(getDecl()));
+  const FunctionDecl *FD = llvm::dyn_cast<FunctionDecl>(getDecl());
+  if (SummaryCtx && FD) {
+    const auto *Summary = SummaryCtx->GetSummary(FD);
     ShouldPreserveGlobals =
-        Summary && Summary->getAttributes().count(
-                       SummaryCtx->GetAttribute(NO_WRITE_GLOBAL));
+        Summary && Summary->hasAttribute<NoWriteGlobalAttr>();
   }
 
   // Invalidate designated regions using the batch invalidation API.

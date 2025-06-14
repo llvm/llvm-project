@@ -3,37 +3,40 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include <string>
 
 namespace clang {
-enum SummaryAttributeKind {
+enum SummaryAttrKind {
   NO_WRITE_GLOBAL,
 };
 
 class FunctionSummary;
+class SummaryContext;
 
-class SummaryAttribute {
-  const SummaryAttributeKind Kind;
-  std::string_view Serialzed;
+class SummaryAttr {
+  const SummaryAttrKind Kind;
+  const char *Spelling;
+
+protected:
+  SummaryAttr(SummaryAttrKind Kind, const char *Spelling)
+      : Kind(Kind), Spelling(Spelling){};
 
 public:
-  SummaryAttribute(SummaryAttributeKind Attr, const char *Str)
-      : Kind(Attr), Serialzed(Str) {}
-  virtual ~SummaryAttribute() = default;
+  virtual ~SummaryAttr() = default;
 
-  SummaryAttributeKind getKind() { return Kind; }
+  SummaryAttrKind getKind() const { return Kind; }
+  const char *getSpelling() const { return Spelling; }
 
   virtual bool infer(const FunctionDecl *FD) const = 0;
   virtual bool merge(const FunctionSummary &Caller,
                      const FunctionSummary &Callee) const = 0;
 
-  virtual std::string serialize() const { return std::string(Serialzed); };
+  virtual std::string serialize() const { return std::string(Spelling); };
   virtual bool parse(std::string_view input) const {
-    return input == Serialzed;
+    return input == Spelling;
   };
 };
 
-class NoWriteGlobalAttr : public SummaryAttribute {
+class NoWriteGlobalAttr : public SummaryAttr {
   class Callback : public ast_matchers::MatchFinder::MatchCallback {
   public:
     bool WriteGlobal = false;
@@ -42,12 +45,17 @@ class NoWriteGlobalAttr : public SummaryAttribute {
     run(const ast_matchers::MatchFinder::MatchResult &Result) override final;
   };
 
-public:
-  NoWriteGlobalAttr() : SummaryAttribute(NO_WRITE_GLOBAL, "no_write_global") {}
+  NoWriteGlobalAttr() : SummaryAttr(NO_WRITE_GLOBAL, "no_write_global") {}
 
+public:
   bool infer(const FunctionDecl *FD) const override final;
   bool merge(const FunctionSummary &Caller,
              const FunctionSummary &Callee) const override final;
+
+  static bool classof(const SummaryAttr *A) {
+    return A->getKind() == NO_WRITE_GLOBAL;
+  }
+  friend class SummaryContext;
 };
 } // namespace clang
 
