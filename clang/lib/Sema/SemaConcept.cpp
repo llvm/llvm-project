@@ -380,15 +380,23 @@ SubstitutionInTemplateArguments(
             Constraint.getParameterMapping(), MLTAL, SubstArgs) ||
         Trap.hasErrorOccurred())
       return std::nullopt;
+    // Sema::CheckTemplateArgumentInfo CTAI;
+    // auto *TD = const_cast<TemplateDecl *>(
+    //     cast<TemplateDecl>(Constraint.getConstraintDecl()));
+    // if (S.CheckTemplateArgumentList(TD, TD->getLocation(), SubstArgs,
+    //                                 /*DefaultArguments=*/{},
+    //                                 /*PartialTemplateArgs=*/true, CTAI))
+    //   return std::nullopt;
     NormalizedConstraint::OccurenceList Used =
         Constraint.mappingOccurenceList();
     SubstitutedOuterMost =
         llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
-    for (unsigned I = 0, MappedIndex = 0; I < SubstArgs.size(); I++)
-      if (I < Used.size() && Used[I]) {
+    for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
+      TemplateArgument Arg;
+      if (Used[I])
         // SubstitutedOuterMost[I].dump();
         // SubstArgs[MappedIndex].getArgument().dump();
-        TemplateArgument Arg = S.Context.getCanonicalTemplateArgument(
+        Arg = S.Context.getCanonicalTemplateArgument(
               SubstArgs[MappedIndex++].getArgument());
         if (I < SubstitutedOuterMost.size())
           SubstitutedOuterMost[I] = Arg;
@@ -681,7 +689,7 @@ static bool calculateConstraintSatisfaction(
   Ok = calculateConstraintSatisfaction(S, Constraint.getRHS(), Template,
                                          TemplateNameLoc, MLTAL, Satisfaction,
                                          PackSubstitutionIndex);
-  if(Ok && Satisfaction.IsSatisfied && !Satisfaction.ContainsErrors)
+  if (Ok && Satisfaction.IsSatisfied && !Satisfaction.ContainsErrors)
     Satisfaction.Details.erase(Satisfaction.Details.begin() + EffectiveDetailEndIndex,
                                Satisfaction.Details.end());
   return Ok;
@@ -1590,7 +1598,7 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
           /*OnlyDeduced=*/false,
           /*Depth=*/0, OccurringIndices);
     } else if (N.getKind() == NormalizedConstraint::ConstraintKind::ConceptId) {
-      auto Args = static_cast<ConceptIdConstraint &>(N)
+      auto *Args = static_cast<ConceptIdConstraint &>(N)
                       .getConceptId()
                       ->getTemplateArgsAsWritten();
       if (Args)
@@ -1629,12 +1637,25 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
   if (S.SubstTemplateArgumentsInParameterMapping(N.getParameterMapping(), MLTAL,
                                                  SubstArgs))
     return true;
+  // Sema::CheckTemplateArgumentInfo CTAI;
+  // auto *TD =
+  //     const_cast<TemplateDecl *>(cast<TemplateDecl>(N.getConstraintDecl()));
+  // if (S.CheckTemplateArgumentList(TD, TD->getLocation(), SubstArgs,
+  //                                 /*DefaultArguments=*/{},
+  //                                 /*PartialTemplateArgs=*/true, CTAI))
+  //   return true;
   TemplateArgumentLoc *TempArgs =
       new (S.Context) TemplateArgumentLoc[SubstArgs.size()];
+  // for (unsigned I = 0; I < CTAI.SugaredConverted.size(); ++I)
+  //   TempArgs[I] = S.getTrivialTemplateArgumentLoc(CTAI.SugaredConverted[I],
+  //                                                 QualType(), SourceLocation());
   llvm::copy(SubstArgs.arguments(), TempArgs);
   N.updateParameterMapping(
       N.mappingOccurenceList(),
       MutableArrayRef<TemplateArgumentLoc>(TempArgs, SubstArgs.size()));
+  // N.updateParameterMapping(N.mappingOccurenceList(),
+  //                          MutableArrayRef<TemplateArgumentLoc>(
+  //                              TempArgs, CTAI.SugaredConverted.size()));
   return false;
 }
 
@@ -1643,13 +1664,11 @@ substituteParameterMappings(Sema &S, ConceptIdConstraint &N,
                             const MultiLevelTemplateArgumentList &MLTAL,
                             const ASTTemplateArgumentListInfo *ArgsAsWritten) {
 
-  {
     if (N.getConstraintDecl()) {
       substituteParameterMappings(
           S, static_cast<NormalizedConstraintWithParamMapping &>(N), MLTAL,
           ArgsAsWritten);
     }
-  }
   return substituteParameterMappings(S, N.getNormalizedConstraint(), MLTAL,
                                      ArgsAsWritten);
 }

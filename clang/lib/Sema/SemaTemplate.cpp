@@ -5972,6 +5972,17 @@ bool Sema::CheckTemplateArgumentList(
         return true;
       }
 
+      // For constraint parameter mapping, we have already built a pack in
+      // TransformTemplateArguments
+      // if (inParameterMappingSubstitution()) {
+      //   llvm::copy(SugaredArgumentPack, std::back_inserter(CTAI.SugaredConverted));
+      //   SugaredArgumentPack.clear();
+      //   llvm::copy(CanonicalArgumentPack, std::back_inserter(CTAI.CanonicalConverted));
+      //   CanonicalArgumentPack.clear();
+      //   ++Param;
+      //   continue;
+      // }
+
       CTAI.SugaredConverted.push_back(
           TemplateArgument::CreatePackCopy(Context, SugaredArgumentPack));
       SugaredArgumentPack.clear();
