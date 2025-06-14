@@ -1341,7 +1341,7 @@ public:
 
   InstructionCost
   getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
-                           unsigned Index,
+                           int Index,
                            TTI::TargetCostKind CostKind) const override {
     return thisT()->getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                        CostKind, Index, nullptr, nullptr) +
@@ -1409,8 +1409,8 @@ public:
   }
 
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
+                                     TTI::TargetCostKind CostKind, int Index,
+                                     const Value *Op0,
                                      const Value *Op1) const override {
     return getRegUsageForType(Val->getScalarType());
   }
@@ -1420,8 +1420,8 @@ public:
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Scalar,
+                                     TTI::TargetCostKind CostKind, int Index,
+                                     Value *Scalar,
                                      ArrayRef<std::tuple<Value *, User *, int>>
                                          ScalarUserAndIdx) const override {
     return thisT()->getVectorInstrCost(Opcode, Val, CostKind, Index, nullptr,
@@ -1430,7 +1430,7 @@ public:
 
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index) const override {
+                                     int Index) const override {
     Value *Op0 = nullptr;
     Value *Op1 = nullptr;
     if (auto *IE = dyn_cast<InsertElementInst>(&I)) {
