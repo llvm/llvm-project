@@ -21,6 +21,8 @@ public:
                           bool isInit);
 
   mlir::Value VisitInitListExpr(InitListExpr *e);
+
+  mlir::Value VisitImaginaryLiteral(const ImaginaryLiteral *il);
 };
 
 } // namespace
@@ -63,6 +65,34 @@ mlir::Value ComplexExprEmitter::VisitInitListExpr(InitListExpr *e) {
   mlir::Type complexElemLLVMTy = cgf.convertType(complexElemTy);
   mlir::TypedAttr defaultValue = builder.getZeroInitAttr(complexElemLLVMTy);
   auto complexAttr = cir::ConstComplexAttr::get(defaultValue, defaultValue);
+  return builder.create<cir::ConstantOp>(loc, complexAttr);
+}
+
+mlir::Value
+ComplexExprEmitter::VisitImaginaryLiteral(const ImaginaryLiteral *il) {
+  auto ty = mlir::cast<cir::ComplexType>(cgf.convertType(il->getType()));
+  mlir::Type elementTy = ty.getElementType();
+  mlir::Location loc = cgf.getLoc(il->getExprLoc());
+
+  mlir::TypedAttr realValueAttr;
+  mlir::TypedAttr imagValueAttr;
+
+  if (mlir::isa<cir::IntType>(elementTy)) {
+    llvm::APInt imagValue = cast<IntegerLiteral>(il->getSubExpr())->getValue();
+    realValueAttr = cir::IntAttr::get(elementTy, 0);
+    imagValueAttr = cir::IntAttr::get(elementTy, imagValue);
+  } else {
+    assert(mlir::isa<cir::CIRFPTypeInterface>(elementTy) &&
+           "Expected complex element type to be floating-point");
+
+    llvm::APFloat imagValue =
+        cast<FloatingLiteral>(il->getSubExpr())->getValue();
+    realValueAttr = cir::FPAttr::get(
+        elementTy, llvm::APFloat::getZero(imagValue.getSemantics()));
+    imagValueAttr = cir::FPAttr::get(elementTy, imagValue);
+  }
+
+  auto complexAttr = cir::ConstComplexAttr::get(realValueAttr, imagValueAttr);
   return builder.create<cir::ConstantOp>(loc, complexAttr);
 }
 
