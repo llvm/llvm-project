@@ -2272,6 +2272,17 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
       setPartialReduceMLAAction(MLAOps, VT,
                                 MVT::getVectorVT(MVT::i8, NumElts * 2), Custom);
     }
+
+    if (Subtarget->hasMatMulInt8()) {
+      if (VT.getVectorElementType() == MVT::i32)
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, VT,
+                                  MVT::getVectorVT(MVT::i8, NumElts * 4),
+                                  Custom);
+      else if (VT.getVectorElementType() == MVT::i64)
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, VT,
+                                  MVT::getVectorVT(MVT::i8, NumElts * 8),
+                                  Custom);
+    }
   }
 
   // Lower fixed length vector operations to scalable equivalents.
@@ -3392,8 +3403,19 @@ bool isLegalCmpImmed(APInt C) {
   return isLegalArithImmed(C.abs().getZExtValue());
 }
 
-static bool cannotBeIntMin(SDValue CheckedVal, SelectionDAG &DAG) {
-  KnownBits KnownSrc = DAG.computeKnownBits(CheckedVal);
+static bool isSafeSignedCMN(SDValue Op, SelectionDAG &DAG) {
+  // 0 - INT_MIN sign wraps, so no signed wrap means cmn is safe.
+  if (Op->getFlags().hasNoSignedWrap())
+    return true;
+
+  // We can still figure out if the second operand is safe to use
+  // in a CMN instruction by checking if it is known to be not the minimum
+  // signed value. If it is not, then we can safely use CMN.
+  // Note: We can eventually remove this check and simply rely on
+  // Op->getFlags().hasNoSignedWrap() once SelectionDAG/ISelLowering
+  // consistently sets them appropriately when making said nodes.
+
+  KnownBits KnownSrc = DAG.computeKnownBits(Op.getOperand(1));
   return !KnownSrc.getSignedMinValue().isMinSignedValue();
 }
 
@@ -3402,7 +3424,7 @@ static bool cannotBeIntMin(SDValue CheckedVal, SelectionDAG &DAG) {
 // can be set differently by this operation. It comes down to whether
 // "SInt(~op2)+1 == SInt(~op2+1)" (and the same for UInt). If they are then
 // everything is fine. If not then the optimization is wrong. Thus general
-// comparisons are only valid if op2 != 0.
+// comparisons are only valid if op2 != 0 and op2 != INT_MIN.
 //
 // So, finally, the only LLVM-native comparisons that don't mention C or V
 // are the ones that aren't unsigned comparisons. They're the only ones we can
@@ -3411,7 +3433,7 @@ static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
   return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0)) &&
          (isIntEqualitySetCC(CC) ||
           (isUnsignedIntSetCC(CC) && DAG.isKnownNeverZero(Op.getOperand(1))) ||
-          (isSignedIntSetCC(CC) && cannotBeIntMin(Op.getOperand(1), DAG)));
+          (isSignedIntSetCC(CC) && isSafeSignedCMN(Op, DAG)));
 }
 
 static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &dl,
@@ -12270,13 +12292,14 @@ enum class PredicateConstraint { Uph, Upl, Upa };
 // not what we want. The code here pre-empts this by matching the register
 // explicitly.
 static std::optional<std::pair<unsigned, const TargetRegisterClass *>>
-parsePredicateRegAsConstraint(StringRef Constraint) {
+parseSVERegAsConstraint(StringRef Constraint) {
   if (!Constraint.starts_with('{') || !Constraint.ends_with('}') ||
-      Constraint[1] != 'p')
+      (Constraint[1] != 'p' && Constraint[1] != 'z'))
     return std::nullopt;
 
+  bool IsPredicate = Constraint[1] == 'p';
   Constraint = Constraint.substr(2, Constraint.size() - 3);
-  bool IsPredicateAsCount = Constraint.starts_with("n");
+  bool IsPredicateAsCount = IsPredicate && Constraint.starts_with("n");
   if (IsPredicateAsCount)
     Constraint = Constraint.drop_front(1);
 
@@ -12286,8 +12309,9 @@ parsePredicateRegAsConstraint(StringRef Constraint) {
 
   if (IsPredicateAsCount)
     return std::make_pair(AArch64::PN0 + V, &AArch64::PNRRegClass);
-  else
+  if (IsPredicate)
     return std::make_pair(AArch64::P0 + V, &AArch64::PPRRegClass);
+  return std::make_pair(AArch64::Z0 + V, &AArch64::ZPRRegClass);
 }
 
 static std::optional<PredicateConstraint>
@@ -12537,8 +12561,16 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
       break;
     }
   } else {
-    if (const auto P = parsePredicateRegAsConstraint(Constraint))
+    if (const auto P = parseSVERegAsConstraint(Constraint)) {
+      // SME functions that are not in streaming mode, should
+      // still observe clobbers of Z-registers by clobbering
+      // the lower 128bits of those registers.
+      if (AArch64::ZPRRegClass.hasSubClassEq(P->second) &&
+          !Subtarget->isSVEorStreamingSVEAvailable())
+        return std::make_pair(TRI->getSubReg(P->first, AArch64::zsub),
+                              &AArch64::FPR128RegClass);
       return *P;
+    }
     if (const auto PC = parsePredicateConstraint(Constraint))
       if (const auto *RegClass = getPredicateRegisterClass(*PC, VT))
         return std::make_pair(0U, RegClass);
