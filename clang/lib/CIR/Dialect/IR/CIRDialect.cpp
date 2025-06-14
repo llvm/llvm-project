@@ -1643,6 +1643,15 @@ LogicalResult cir::VecShuffleOp::verify() {
                          << " and " << getResult().getType() << " don't match";
   }
 
+  const uint64_t maxValidIndex =
+      getVec1().getType().getSize() + getVec2().getType().getSize() - 1;
+  if (llvm::any_of(
+          getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
+            return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;
+          })) {
+    return emitOpError() << ": index for __builtin_shufflevector must be "
+                            "less than the total number of vector elements";
+  }
   return success();
 }
 

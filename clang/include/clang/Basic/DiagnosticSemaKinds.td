@@ -1767,8 +1767,7 @@ def note_unsatisfied_trait
     : Note<"%0 is not %enum_select<TraitName>{"
            "%TriviallyRelocatable{trivially relocatable}|"
            "%Replaceable{replaceable}|"
-           "%TriviallyCopyable{trivially copyable}|"
-           "%Constructible{constructible with provided types}"
+           "%TriviallyCopyable{trivially copyable}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1798,10 +1797,7 @@ def note_unsatisfied_trait_reason
            "%DeletedAssign{has a deleted %select{copy|move}1 "
            "assignment operator}|"
            "%UnionWithUserDeclaredSMF{is a union with a user-declared "
-           "%sub{select_special_member_kind}1}|"
-           "%FunctionType{is a function type}|"
-           "%CVVoidType{is a cv void type}|"
-           "%IncompleteArrayType{is an incomplete array type}"
+           "%sub{select_special_member_kind}1}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<

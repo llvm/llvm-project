@@ -73,6 +73,14 @@ int cStyleCasts_0(unsigned x1, int x2, float x3, short x4, double x5) {
   // LLVM: %{{[0-9]+}} = fcmp une float %{{[0-9]+}}, 0.000000e+00
   // LLVM: %{{[0-9]+}} = zext i1 %{{[0-9]+}} to i8
 
+  double d2 = f; // float to double
+  // CIR: %{{[0-9]+}} = cir.cast(floating, %{{[0-9]+}} : !cir.float), !cir.double
+  // LLVM: %{{[0-9]+}} = fpext float %{{[0-9]+}} to double
+
+  f = d2; // double to float
+  // CIR: %{{[0-9]+}} = cir.cast(floating, %{{[0-9]+}} : !cir.double), !cir.float
+  // LLVM: %{{[0-9]+}} = fptrunc double %{{[0-9]+}} to float
+
   return 0;
 }
 

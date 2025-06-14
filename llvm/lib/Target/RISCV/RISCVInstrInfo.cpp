@@ -4581,7 +4581,7 @@ bool RISCV::hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2) {
 }
 
 std::optional<unsigned>
-RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
+RISCV::getVectorLowDemandedScalarBits(unsigned Opcode, unsigned Log2SEW) {
   switch (Opcode) {
   default:
     return std::nullopt;

@@ -1564,15 +1564,14 @@ static bool isUSMStorageClass(SPIRV::StorageClass::StorageClass SC) {
 static bool isASCastInGVar(MachineRegisterInfo *MRI, Register ResVReg) {
   bool IsGRef = false;
   bool IsAllowedRefs =
-      std::all_of(MRI->use_instr_begin(ResVReg), MRI->use_instr_end(),
-                  [&IsGRef](auto const &It) {
-                    unsigned Opcode = It.getOpcode();
-                    if (Opcode == SPIRV::OpConstantComposite ||
-                        Opcode == SPIRV::OpVariable ||
-                        isSpvIntrinsic(It, Intrinsic::spv_init_global))
-                      return IsGRef = true;
-                    return Opcode == SPIRV::OpName;
-                  });
+      llvm::all_of(MRI->use_instructions(ResVReg), [&IsGRef](auto const &It) {
+        unsigned Opcode = It.getOpcode();
+        if (Opcode == SPIRV::OpConstantComposite ||
+            Opcode == SPIRV::OpVariable ||
+            isSpvIntrinsic(It, Intrinsic::spv_init_global))
+          return IsGRef = true;
+        return Opcode == SPIRV::OpName;
+      });
   return IsAllowedRefs && IsGRef;
 }
 
