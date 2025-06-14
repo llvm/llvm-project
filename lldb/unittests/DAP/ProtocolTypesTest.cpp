@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolTypes.h"
+#include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 using namespace lldb;
@@ -662,6 +664,24 @@ TEST(ProtocolTypesTest, ThreadResponseBody) {
       "name": "thr2"
     }
   ]
+})";
+  // Validate toJSON
+  EXPECT_EQ(json, pp(body));
+}
+
+TEST(ProtocolTypesTest, CapabilitiesEventBody) {
+  Capabilities capabilities;
+  capabilities.supportedFeatures = {
+      eAdapterFeatureANSIStyling,
+      eAdapterFeatureBreakpointLocationsRequest,
+  };
+  CapabilitiesEventBody body;
+  body.capabilities = capabilities;
+  StringRef json = R"({
+  "capabilities": {
+    "supportsANSIStyling": true,
+    "supportsBreakpointLocationsRequest": true
+  }
 })";
   // Validate toJSON
   EXPECT_EQ(json, pp(body));

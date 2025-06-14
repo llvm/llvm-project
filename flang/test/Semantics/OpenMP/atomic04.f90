@@ -1,5 +1,3 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 
 ! OpenMP Atomic construct
@@ -7,7 +5,6 @@
 ! Update assignment must be 'var = var op expr' or 'var = expr op var'
 
 program OmpAtomic
-   use omp_lib
    real x
    integer y
    logical m, n, l
@@ -20,12 +17,10 @@ program OmpAtomic
 !$omp atomic
    x = 1 + x
 !$omp atomic
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level + operator
    x = y + 1
 !$omp atomic
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level + operator
    x = 1 + y
 
 !$omp atomic
@@ -33,12 +28,10 @@ program OmpAtomic
 !$omp atomic
    x = 1 - x
 !$omp atomic
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level - operator
    x = y - 1
 !$omp atomic
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level - operator
    x = 1 - y
 
 !$omp atomic
@@ -46,12 +39,10 @@ program OmpAtomic
 !$omp atomic
    x = 1*x
 !$omp atomic
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should appear as an argument in the update operation
    x = y*1
 !$omp atomic
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should appear as an argument in the update operation
    x = 1*y
 
 !$omp atomic
@@ -59,12 +50,10 @@ program OmpAtomic
 !$omp atomic
    x = 1/x
 !$omp atomic
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
    x = y/1
 !$omp atomic
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
    x = 1/y
 
 !$omp atomic
@@ -72,8 +61,7 @@ program OmpAtomic
 !$omp atomic
    m = n .AND. m
 !$omp atomic 
-   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
-   !ERROR: Exactly one occurence of 'm' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level AND operator
    m = n .AND. l
 
 !$omp atomic
@@ -81,8 +69,7 @@ program OmpAtomic
 !$omp atomic
    m = n .OR. m
 !$omp atomic 
-   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
-   !ERROR: Exactly one occurence of 'm' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level OR operator
    m = n .OR. l
 
 !$omp atomic
@@ -90,8 +77,7 @@ program OmpAtomic
 !$omp atomic
    m = n .EQV. m
 !$omp atomic
-   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
-   !ERROR: Exactly one occurence of 'm' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level EQV operator
    m = n .EQV. l
 
 !$omp atomic
@@ -99,8 +85,7 @@ program OmpAtomic
 !$omp atomic
    m = n .NEQV. m
 !$omp atomic
-   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
-   !ERROR: Exactly one occurence of 'm' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level NEQV/EOR operator
    m = n .NEQV. l
 
 !$omp atomic update
@@ -108,12 +93,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1 + x
 !$omp atomic update
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level + operator
    x = y + 1
 !$omp atomic update
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level + operator
    x = 1 + y
 
 !$omp atomic update
@@ -121,12 +104,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1 - x
 !$omp atomic update
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level - operator
    x = y - 1
 !$omp atomic update
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level - operator
    x = 1 - y
 
 !$omp atomic update
@@ -134,12 +115,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1*x
 !$omp atomic update
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should appear as an argument in the update operation
    x = y*1
 !$omp atomic update
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should appear as an argument in the update operation
    x = 1*y
 
 !$omp atomic update
@@ -147,12 +126,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1/x
 !$omp atomic update
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
    x = y/1
 !$omp atomic update
-   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-   !ERROR: Exactly one occurence of 'x' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
    x = 1/y
 
 !$omp atomic update
@@ -160,8 +137,7 @@ program OmpAtomic
 !$omp atomic update
    m = n .AND. m
 !$omp atomic update
-   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
-   !ERROR: Exactly one occurence of 'm' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level AND operator
    m = n .AND. l
 
 !$omp atomic update
@@ -169,8 +145,7 @@ program OmpAtomic
 !$omp atomic update
    m = n .OR. m
 !$omp atomic update
-   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
-   !ERROR: Exactly one occurence of 'm' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level OR operator
    m = n .OR. l
 
 !$omp atomic update
@@ -178,8 +153,7 @@ program OmpAtomic
 !$omp atomic update
    m = n .EQV. m
 !$omp atomic update
-   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
-   !ERROR: Exactly one occurence of 'm' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level EQV operator
    m = n .EQV. l
 
 !$omp atomic update
@@ -187,8 +161,7 @@ program OmpAtomic
 !$omp atomic update
    m = n .NEQV. m
 !$omp atomic update
-   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
-   !ERROR: Exactly one occurence of 'm' expected on the RHS of atomic update assignment statement
+   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level NEQV/EOR operator
    m = n .NEQV. l
 
 end program OmpAtomic
@@ -204,35 +177,34 @@ subroutine more_invalid_atomic_update_stmts()
     type(some_type) p
     
     !$omp atomic
-    !ERROR: Invalid or missing operator in atomic update statement
         x = x
 
     !$omp atomic update
-    !ERROR: Invalid or missing operator in atomic update statement
+    !ERROR: The atomic variable x should appear as an argument in the update operation
         x = 1    
 
     !$omp atomic update
-    !ERROR: Exactly one occurence of 'a' expected on the RHS of atomic update assignment statement
+    !ERROR: Within atomic operation a and a*b access the same storage
         a = a * b + a
 
     !$omp atomic
-    !ERROR: Atomic update statement should be of form `a = a operator expr` OR `a = expr operator a`
+    !ERROR: The atomic variable a should occur exactly once among the arguments of the top-level * operator
         a = b * (a + 9)
 
     !$omp atomic update
-    !ERROR: Exactly one occurence of 'a' expected on the RHS of atomic update assignment statement
+    !ERROR: Within atomic operation a and (a+b) access the same storage
         a = a * (a + b)
 
     !$omp atomic
-    !ERROR: Exactly one occurence of 'a' expected on the RHS of atomic update assignment statement
+    !ERROR: Within atomic operation a and (b+a) access the same storage
         a = (b + a) * a
 
     !$omp atomic
-    !ERROR: Atomic update statement should be of form `a = a operator expr` OR `a = expr operator a`
+    !ERROR: The atomic variable a should occur exactly once among the arguments of the top-level + operator
         a = a * b + c
 
     !$omp atomic update
-    !ERROR: Atomic update statement should be of form `a = a operator expr` OR `a = expr operator a`
+    !ERROR: The atomic variable a should occur exactly once among the arguments of the top-level + operator
         a = a + b + c
 
     !$omp atomic
@@ -243,23 +215,18 @@ subroutine more_invalid_atomic_update_stmts()
 
     !$omp atomic
     !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches scalar INTEGER(4) and rank 1 array of INTEGER(4)
-    !ERROR: Expected scalar expression on the RHS of atomic update assignment statement
         a = a + d
 
     !$omp atomic update
     !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches scalar REAL(4) and rank 1 array of REAL(4)
-    !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
-    !ERROR: Expected scalar expression on the RHS of atomic update assignment statement
+    !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
         x = x * y / z
 
     !$omp atomic
-    !ERROR: Atomic update statement should be of form `p%m = p%m operator expr` OR `p%m = expr operator p%m`
-    !ERROR: Exactly one occurence of 'p%m' expected on the RHS of atomic update assignment statement
+    !ERROR: The atomic variable p%m should occur exactly once among the arguments of the top-level + operator
         p%m = x + y
 
     !$omp atomic update
     !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches scalar REAL(4) and rank 1 array of REAL(4)
-    !ERROR: Expected scalar expression on the RHS of atomic update assignment statement
-    !ERROR: Exactly one occurence of 'p%m' expected on the RHS of atomic update assignment statement
         p%m = p%m + p%n
 end subroutine
