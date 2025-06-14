@@ -476,6 +476,31 @@ The SYCL kernel in the previous code sample meets these expectations.
   }];
 }
 
+def SYCLExternalDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "sycl_external";
+  let Content = [{
+The ``sycl_external`` attribute can only be applied to external functions, and
+indicates that the function must be treated as a device function and must be
+emitted even if it has no direct uses from other device functions.
+
+The following examples demonstrate the use of this attribute:
+
+.. code-block:: c++
+
+[[clang::sycl_external]] void Foo();
+
+[[clang::sycl_external]] void Bar() { /* ... */ }
+
+[[clang::sycl_external]] extern void Baz();
+
+[[nodiscard]] [[clang::sycl_external]] void Important();
+
+[[clang::sycl_external]] [[nodiscard]] void AlsoImportant();
+
+  }];
+}
+
 def SYCLKernelEntryPointDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
