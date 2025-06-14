@@ -9599,7 +9599,7 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
           // INT_MIN, so -INT_MIN - 1 is INT_MAX, so it is SINT_MAX - (C - 1),
           // or SINT_MAX - C + 1
           Lower = APInt::getSignedMinValue(Width);
-          Upper = APInt::getSignedMaxValue(Width) + *C + 2;
+          Upper = *C - APInt::getSignedMaxValue(Width);
         } else {
           // Note that sub 0, INT_MIN is not NSW. It techically is a signed wrap
           // 'sub nsw C, x' produces [SINT_MIN + 1 + C, SINT_MAX].
