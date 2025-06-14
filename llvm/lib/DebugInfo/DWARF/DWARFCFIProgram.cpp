@@ -23,18 +23,6 @@
 using namespace llvm;
 using namespace dwarf;
 
-static void printRegister(raw_ostream &OS, DIDumpOptions DumpOpts,
-                          unsigned RegNum) {
-  if (DumpOpts.GetNameForDWARFReg) {
-    auto RegName = DumpOpts.GetNameForDWARFReg(RegNum, DumpOpts.IsEH);
-    if (!RegName.empty()) {
-      OS << RegName;
-      return;
-    }
-  }
-  OS << "reg" << RegNum;
-}
-
 // See DWARF standard v3, section 7.23
 const uint8_t DWARF_CFI_PRIMARY_OPCODE_MASK = 0xc0;
 const uint8_t DWARF_CFI_PRIMARY_OPERAND_MASK = 0x3f;
@@ -360,86 +348,4 @@ CFIProgram::getOperandTypes() {
 #undef DECLARE_OP2
 
   return ArrayRef<OperandType[MaxOperands]>(&OpTypes[0], DW_CFA_restore + 1);
-}
-
-/// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
-void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
-                              const Instruction &Instr, unsigned OperandIdx,
-                              uint64_t Operand,
-                              std::optional<uint64_t> &Address) const {
-  assert(OperandIdx < MaxOperands);
-  uint8_t Opcode = Instr.Opcode;
-  OperandType Type = getOperandTypes()[Opcode][OperandIdx];
-
-  switch (Type) {
-  case OT_Unset: {
-    OS << " Unsupported " << (OperandIdx ? "second" : "first") << " operand to";
-    auto OpcodeName = callFrameString(Opcode);
-    if (!OpcodeName.empty())
-      OS << " " << OpcodeName;
-    else
-      OS << format(" Opcode %x", Opcode);
-    break;
-  }
-  case OT_None:
-    break;
-  case OT_Address:
-    OS << format(" %" PRIx64, Operand);
-    Address = Operand;
-    break;
-  case OT_Offset:
-    // The offsets are all encoded in a unsigned form, but in practice
-    // consumers use them signed. It's most certainly legacy due to
-    // the lack of signed variants in the first Dwarf standards.
-    OS << format(" %+" PRId64, int64_t(Operand));
-    break;
-  case OT_FactoredCodeOffset: // Always Unsigned
-    if (CodeAlignmentFactor)
-      OS << format(" %" PRId64, Operand * CodeAlignmentFactor);
-    else
-      OS << format(" %" PRId64 "*code_alignment_factor", Operand);
-    if (Address && CodeAlignmentFactor) {
-      *Address += Operand * CodeAlignmentFactor;
-      OS << format(" to 0x%" PRIx64, *Address);
-    }
-    break;
-  case OT_SignedFactDataOffset:
-    if (DataAlignmentFactor)
-      OS << format(" %" PRId64, int64_t(Operand) * DataAlignmentFactor);
-    else
-      OS << format(" %" PRId64 "*data_alignment_factor", int64_t(Operand));
-    break;
-  case OT_UnsignedFactDataOffset:
-    if (DataAlignmentFactor)
-      OS << format(" %" PRId64, Operand * DataAlignmentFactor);
-    else
-      OS << format(" %" PRId64 "*data_alignment_factor", Operand);
-    break;
-  case OT_Register:
-    OS << ' ';
-    printRegister(OS, DumpOpts, Operand);
-    break;
-  case OT_AddressSpace:
-    OS << format(" in addrspace%" PRId64, Operand);
-    break;
-  case OT_Expression:
-    assert(Instr.Expression && "missing DWARFExpression object");
-    OS << " ";
-    DWARFExpressionPrinter::print(&Instr.Expression.value(), OS, DumpOpts,
-                                  nullptr);
-    break;
-  }
-}
-
-void CFIProgram::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-                      unsigned IndentLevel,
-                      std::optional<uint64_t> Address) const {
-  for (const auto &Instr : Instructions) {
-    uint8_t Opcode = Instr.Opcode;
-    OS.indent(2 * IndentLevel);
-    OS << callFrameString(Opcode) << ":";
-    for (unsigned i = 0; i < Instr.Ops.size(); ++i)
-      printOperand(OS, DumpOpts, Instr, i, Instr.Ops[i], Address);
-    OS << '\n';
-  }
 }
