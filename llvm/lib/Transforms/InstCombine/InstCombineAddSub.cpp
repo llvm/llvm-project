@@ -2810,22 +2810,18 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   // (sub[ nsw][ nuw] (sext (add nsw (X, Y)), sext (X))) --> (sext (Y))
   {
     Value *Add0;
-    if (match(Op0, m_SExt(m_Value(Add0))) &&
-        match(Add0, m_Add(m_Value(X), m_Value(Y))) &&
-        match(Op1, m_SExt(m_Specific(X)))) {
-      auto *OBO0 = cast<OverflowingBinaryOperator>(Add0);
-      if (OBO0->hasNoSignedWrap()) {
-        // Non-constant Y requires new SExt.
-        unsigned numOfNewInstrs = !isa<Constant>(Y) ? 1 : 0;
-        // Check if we can trade some of the old instructions for the new ones.
-        unsigned numOfDeadInstrs = 0;
-        numOfDeadInstrs += Op0->hasOneUse() ? 1 : 0;
-        numOfDeadInstrs += Op1->hasOneUse() ? 1 : 0;
-        numOfDeadInstrs += Add0->hasOneUse() ? 1 : 0;
-        if (numOfDeadInstrs >= numOfNewInstrs) {
-          Value *SExtY = Builder.CreateSExt(Y, I.getType());
-          return replaceInstUsesWith(I, SExtY);
-        }
+    if (match(Op1, m_SExt(m_Value(X))) && match(Op0, m_SExt(m_Value(Add0))) &&
+        match(Add0, m_c_NSWAdd(m_Specific(X), m_Value(Y)))) {
+      // Non-constant Y requires new SExt.
+      unsigned NumOfNewInstrs = !isa<Constant>(Y) ? 1 : 0;
+      // Check if we can trade some of the old instructions for the new ones.
+      unsigned NumOfDeadInstrs = 0;
+      NumOfDeadInstrs += Op0->hasOneUse() ? 1 : 0;
+      NumOfDeadInstrs += Op1->hasOneUse() ? 1 : 0;
+      NumOfDeadInstrs += Add0->hasOneUse() ? 1 : 0;
+      if (NumOfDeadInstrs >= NumOfNewInstrs) {
+        Value *SExtY = Builder.CreateSExt(Y, I.getType());
+        return replaceInstUsesWith(I, SExtY);
       }
     }
   }
@@ -2835,30 +2831,28 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   {
     Value *Z, *Add0, *Add1;
     if (match(Op0, m_SExt(m_Value(Add0))) &&
-        match(Add0, m_Add(m_Value(X), m_Value(Y))) &&
         match(Op1, m_SExt(m_Value(Add1))) &&
-        match(Add1, m_Add(m_Specific(X), m_Value(Z)))) {
-      auto *OBO0 = cast<OverflowingBinaryOperator>(Add0);
-      auto *OBO1 = cast<OverflowingBinaryOperator>(Add1);
-      if (OBO0->hasNoSignedWrap() && OBO1->hasNoSignedWrap()) {
-        unsigned numOfNewInstrs = 0;
-        // Non-constant Y, Z require new SExt.
-        numOfNewInstrs += !isa<Constant>(Y) ? 1 : 0;
-        numOfNewInstrs += !isa<Constant>(Z) ? 1 : 0;
-        // Check if we can trade some of the old instructions for the new ones.
-        unsigned numOfDeadInstrs = 0;
-        numOfDeadInstrs += Op0->hasOneUse() ? 1 : 0;
-        numOfDeadInstrs += Op1->hasOneUse() ? 1 : 0;
-        numOfDeadInstrs += Add0->hasOneUse() ? 1 : 0;
-        numOfDeadInstrs += Add1->hasOneUse() ? 1 : 0;
-        if (numOfDeadInstrs >= numOfNewInstrs) {
-          Value *SExtY = Builder.CreateSExt(Y, I.getType());
-          Value *SExtZ = Builder.CreateSExt(Z, I.getType());
-          Value *Sub = Builder.CreateSub(SExtY, SExtZ, "",
-                                         /* HasNUW */ false,
-                                         /* HasNSW */ I.hasNoSignedWrap());
-          return replaceInstUsesWith(I, Sub);
-        }
+        ((match(Add0, m_NSWAdd(m_Value(X), m_Value(Y))) &&
+          match(Add1, m_c_NSWAdd(m_Specific(X), m_Value(Z)))) ||
+         (match(Add0, m_NSWAdd(m_Value(Y), m_Value(X))) &&
+          match(Add1, m_c_NSWAdd(m_Specific(X), m_Value(Z)))))) {
+      unsigned NumOfNewInstrs = 0;
+      // Non-constant Y, Z require new SExt.
+      NumOfNewInstrs += !isa<Constant>(Y) ? 1 : 0;
+      NumOfNewInstrs += !isa<Constant>(Z) ? 1 : 0;
+      // Check if we can trade some of the old instructions for the new ones.
+      unsigned NumOfDeadInstrs = 0;
+      NumOfDeadInstrs += Op0->hasOneUse() ? 1 : 0;
+      NumOfDeadInstrs += Op1->hasOneUse() ? 1 : 0;
+      NumOfDeadInstrs += Add0->hasOneUse() ? 1 : 0;
+      NumOfDeadInstrs += Add1->hasOneUse() ? 1 : 0;
+      if (NumOfDeadInstrs >= NumOfNewInstrs) {
+        Value *SExtY = Builder.CreateSExt(Y, I.getType());
+        Value *SExtZ = Builder.CreateSExt(Z, I.getType());
+        Value *Sub = Builder.CreateSub(SExtY, SExtZ, "",
+                                       /* HasNUW */ false,
+                                       /* HasNSW */ I.hasNoSignedWrap());
+        return replaceInstUsesWith(I, Sub);
       }
     }
   }
