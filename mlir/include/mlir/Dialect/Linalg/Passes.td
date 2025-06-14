@@ -72,6 +72,9 @@ def LinalgFoldUnitExtentDimsPass : Pass<"linalg-fold-unit-extent-dims", ""> {
 
 def LinalgElementwiseOpFusionPass : Pass<"linalg-fuse-elementwise-ops"> {
   let summary = "Fuse elementwise operations on tensors";
+  let options = [ListOption<"reductionFusionOpBlacklist",
+                            "reduction-fusion-blacklist", "std::string",
+                            "List of ops to blacklist for reduction fusion.">];
   let dependentDialects = [
     "affine::AffineDialect", "linalg::LinalgDialect", "memref::MemRefDialect"
   ];

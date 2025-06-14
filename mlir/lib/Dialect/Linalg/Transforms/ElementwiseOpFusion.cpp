@@ -104,6 +104,20 @@ static bool isOpOperandCanBeDroppedAfterFusedLinalgs(
              indexingMaps, producer.getContext())) != AffineMap();
 }
 
+static bool
+shouldFuseIntoReduction(linalg::GenericOp op,
+                        llvm::StringSet<> &blacklistedReductionFusionOps) {
+  for (Operation &innerOp : op.getRegion().front()) {
+    if (innerOp.hasTrait<OpTrait::IsTerminator>())
+      continue;
+
+    if (blacklistedReductionFusionOps.contains(
+            innerOp.getName().getStringRef()))
+      return false;
+  }
+  return true;
+}
+
 /// Returns a set of indices of the producer's results which would
 /// be preserved after the fusion.
 /// * There is a chance that the implementation of the transformation does not
@@ -136,7 +150,8 @@ llvm::SmallDenseSet<int> mlir::linalg::getPreservedProducerResults(
 }
 
 /// Conditions for elementwise fusion of generic operations.
-bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
+bool mlir::linalg::areElementwiseOpsFusable(
+    OpOperand *fusedOperand, llvm::StringSet<> &blacklistedReductionFusionOps) {
   if (!fusedOperand)
     return false;
 
@@ -157,6 +172,10 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
   // Verify that
   // - the producer has all "parallel" iterator type.
   if (producer.getNumParallelLoops() != producer.getNumLoops())
+    return false;
+
+  if (consumer.getNumReductionLoops() > 0 &&
+      !shouldFuseIntoReduction(producer, blacklistedReductionFusionOps))
     return false;
 
   // Only allow fusing the producer of an input operand for now.
@@ -335,10 +354,12 @@ static void generateFusedElementwiseOpRegion(
 }
 
 FailureOr<mlir::linalg::ElementwiseOpFusionResult>
-mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
-                                 OpOperand *fusedOperand) {
-  assert(areElementwiseOpsFusable(fusedOperand) &&
-         "expected elementwise operation pre-conditions to pass");
+mlir::linalg::fuseElementwiseOps(
+    RewriterBase &rewriter, OpOperand *fusedOperand,
+    llvm::StringSet<> &blacklistedReductionFusionOps) {
+  assert(
+      areElementwiseOpsFusable(fusedOperand, blacklistedReductionFusionOps) &&
+      "expected elementwise operation pre-conditions to pass");
   auto producerResult = cast<OpResult>(fusedOperand->get());
   auto producer = cast<GenericOp>(producerResult.getOwner());
   auto consumer = cast<GenericOp>(fusedOperand->getOwner());
@@ -462,16 +483,19 @@ namespace {
 /// Patterns to fuse a generic op, with the producer of its operands.
 class FuseElementwiseOps : public OpRewritePattern<GenericOp> {
 public:
+  llvm::StringSet<> &blacklistedReductionFusionOps;
   FuseElementwiseOps(MLIRContext *context, ControlFusionFn fun,
+                     llvm::StringSet<> &blacklistedReductionFusionOps,
                      PatternBenefit benefit = 1)
       : OpRewritePattern<GenericOp>(context, benefit),
+        blacklistedReductionFusionOps(blacklistedReductionFusionOps),
         controlFn(std::move(fun)) {}
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
     // Find the first operand that is defined by another generic op on tensors.
     for (OpOperand &opOperand : genericOp->getOpOperands()) {
-      if (!areElementwiseOpsFusable(&opOperand))
+      if (!areElementwiseOpsFusable(&opOperand, blacklistedReductionFusionOps))
         continue;
       if (!controlFn(&opOperand))
         continue;
@@ -479,8 +503,8 @@ public:
       Operation *producer = opOperand.get().getDefiningOp();
 
       // Find the producer of the operand.
-      FailureOr<ElementwiseOpFusionResult> fusionResult =
-          fuseElementwiseOps(rewriter, &opOperand);
+      FailureOr<ElementwiseOpFusionResult> fusionResult = fuseElementwiseOps(
+          rewriter, &opOperand, blacklistedReductionFusionOps);
       if (failed(fusionResult))
         return rewriter.notifyMatchFailure(genericOp, "fusion failed");
 
@@ -2248,9 +2272,17 @@ void mlir::linalg::populateFoldReshapeOpsByCollapsingPatterns(
 
 void mlir::linalg::populateElementwiseOpsFusionPatterns(
     RewritePatternSet &patterns,
-    const ControlFusionFn &controlElementwiseOpsFusion) {
+    const ControlFusionFn &controlElementwiseOpsFusion,
+    llvm::StringSet<> *blacklistedReductionFusionOps) {
   auto *context = patterns.getContext();
-  patterns.add<FuseElementwiseOps>(context, controlElementwiseOpsFusion);
+  if (blacklistedReductionFusionOps)
+    patterns.add<FuseElementwiseOps>(context, controlElementwiseOpsFusion,
+                                     *blacklistedReductionFusionOps);
+  else {
+    llvm::StringSet<> emptyBlacklistedReductionFusionOps;
+    patterns.add<FuseElementwiseOps>(context, controlElementwiseOpsFusion,
+                                     emptyBlacklistedReductionFusionOps);
+  }
   patterns.add<FoldFillWithGenericOp, FoldScalarOrSplatConstant,
                RemoveOutsDependency>(context);
   // Add the patterns that clean up dead operands and results.
@@ -2282,10 +2314,17 @@ struct LinalgElementwiseOpFusionPass
           LinalgElementwiseOpFusionPass> {
   using impl::LinalgElementwiseOpFusionPassBase<
       LinalgElementwiseOpFusionPass>::LinalgElementwiseOpFusionPassBase;
+
+  llvm::StringSet<> blacklistedReductionFusionOps;
+
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext *context = op->getContext();
     RewritePatternSet patterns(context);
+
+    for (const auto &opName : reductionFusionOpBlacklist) {
+      blacklistedReductionFusionOps.insert(opName);
+    }
 
     // Add folding with reshape by expansion patterns.
     ControlFusionFn defaultControlFn = [](OpOperand *fusedOperand) {
@@ -2294,7 +2333,8 @@ struct LinalgElementwiseOpFusionPass
     };
 
     // Add elementwise op fusion patterns.
-    populateElementwiseOpsFusionPatterns(patterns, defaultControlFn);
+    populateElementwiseOpsFusionPatterns(patterns, defaultControlFn,
+                                         &blacklistedReductionFusionOps);
     populateFoldReshapeOpsByExpansionPatterns(patterns, defaultControlFn);
     tensor::populateBubbleUpExpandShapePatterns(patterns);
 

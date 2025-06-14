@@ -60,8 +60,9 @@ struct TestMultiUseProducerFusion : public OpRewritePattern<linalg::GenericOp> {
   LogicalResult matchAndRewrite(linalg::GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *fusableOperand = nullptr;
+    llvm::StringSet<> blacklist;
     for (OpOperand &operand : genericOp->getOpOperands()) {
-      if (linalg::areElementwiseOpsFusable(&operand)) {
+      if (linalg::areElementwiseOpsFusable(&operand, blacklist)) {
         fusableOperand = &operand;
         break;
       }
@@ -70,7 +71,7 @@ struct TestMultiUseProducerFusion : public OpRewritePattern<linalg::GenericOp> {
       return rewriter.notifyMatchFailure(genericOp, "no fusable operand found");
     }
     std::optional<linalg::ElementwiseOpFusionResult> fusionResult =
-        linalg::fuseElementwiseOps(rewriter, fusableOperand);
+        linalg::fuseElementwiseOps(rewriter, fusableOperand, blacklist);
     if (!fusionResult)
       return rewriter.notifyMatchFailure(genericOp, "fusion failed");
     for (auto [origValue, replacement] : fusionResult->replacements) {
@@ -141,6 +142,12 @@ struct TestLinalgElementwiseFusion
   Option<bool> fuseMultiUseProducer{
       *this, "fuse-multiuse-producer",
       llvm::cl::desc("Test fusion of producer ops with multiple uses"),
+      llvm::cl::init(false)};
+
+  Option<bool> blacklistOpsForReduction{
+      *this, "blacklist-ops-for-reduction",
+      llvm::cl::desc(
+          "Test fusion of generic operations with a control function."),
       llvm::cl::init(false)};
 
   ListOption<int64_t> collapseDimensions{
@@ -253,6 +260,20 @@ struct TestLinalgElementwiseFusion
       RewritePatternSet patterns(context);
       patterns.insert<TestMultiUseProducerFusion>(context);
       if (failed(applyPatternsGreedily(funcOp.getBody(), std::move(patterns))))
+        return signalPassFailure();
+      return;
+    }
+
+    if (blacklistOpsForReduction) {
+      RewritePatternSet fusionPatterns(context);
+      auto controlFn = [](OpOperand *operand) { return true; };
+      llvm::StringSet<> blacklist;
+      blacklist.insert("arith.addf");
+
+      linalg::populateElementwiseOpsFusionPatterns(fusionPatterns, controlFn,
+                                                   &blacklist);
+      if (failed(applyPatternsAndFoldGreedily(funcOp.getBody(),
+                                              std::move(fusionPatterns))))
         return signalPassFailure();
       return;
     }

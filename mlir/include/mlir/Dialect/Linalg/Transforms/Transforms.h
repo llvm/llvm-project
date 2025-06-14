@@ -450,7 +450,8 @@ using ControlSplitReductionFn =
 /// Return true if two `linalg.generic` operations with producer/consumer
 /// relationship through `fusedOperand` can be fused using elementwise op
 /// fusion.
-bool areElementwiseOpsFusable(OpOperand *fusedOperand);
+bool areElementwiseOpsFusable(OpOperand *fusedOperand,
+                              llvm::StringSet<> &blacklistedReductionFusionOps);
 
 /// Promote memref.subviews feeding linalg-on-buffers operations.
 LogicalResult promoteSubviewsPrecondition(Operation *op,
@@ -505,7 +506,8 @@ struct ElementwiseOpFusionResult {
   llvm::DenseMap<Value, Value> replacements;
 };
 FailureOr<ElementwiseOpFusionResult>
-fuseElementwiseOps(RewriterBase &rewriter, OpOperand *fusedOperand);
+fuseElementwiseOps(RewriterBase &rewriter, OpOperand *fusedOperand,
+                   llvm::StringSet<> &blacklistedReductionFusionOps);
 
 /// Returns a set of indices of the producer's results which would
 /// be preserved after the fusion.
@@ -1783,7 +1785,8 @@ using ControlFusionFn = std::function<bool(OpOperand *fusedOperand)>;
 /// when both operations are fusable elementwise operations.
 void populateElementwiseOpsFusionPatterns(
     RewritePatternSet &patterns,
-    const ControlFusionFn &controlElementwiseOpFusion);
+    const ControlFusionFn &controlElementwiseOpFusion,
+    llvm::StringSet<> *blacklistedReductionFusionOps = nullptr);
 
 /// Function type which is used to control propagation of linalg.pack/unpack
 /// ops.
