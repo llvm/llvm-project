@@ -77,6 +77,35 @@ void CIRGenFunction::emitAggregateStore(mlir::Value value, Address dest) {
   builder.createStore(*currSrcLoc, value, dest);
 }
 
+/// Construct the CIR attribute list of a function or call.
+void CIRGenModule::constructAttributeList(CIRGenCalleeInfo calleeInfo,
+                                          cir::SideEffect &sideEffect) {
+  assert(!cir::MissingFeatures::opCallCallConv());
+  sideEffect = cir::SideEffect::All;
+
+  assert(!cir::MissingFeatures::opCallAttrs());
+
+  const Decl *targetDecl = calleeInfo.getCalleeDecl().getDecl();
+
+  if (targetDecl) {
+    assert(!cir::MissingFeatures::opCallAttrs());
+
+    // 'const', 'pure' and 'noalias' attributed functions are also nounwind.
+    if (targetDecl->hasAttr<ConstAttr>()) {
+      // gcc specifies that 'const' functions have greater restrictions than
+      // 'pure' functions, so they also cannot have infinite loops.
+      sideEffect = cir::SideEffect::Const;
+    } else if (targetDecl->hasAttr<PureAttr>()) {
+      // gcc specifies that 'pure' functions cannot have infinite loops.
+      sideEffect = cir::SideEffect::Pure;
+    }
+
+    assert(!cir::MissingFeatures::opCallAttrs());
+  }
+
+  assert(!cir::MissingFeatures::opCallAttrs());
+}
+
 /// Returns the canonical formal type of the given C++ method.
 static CanQual<FunctionProtoType> getFormalType(const CXXMethodDecl *md) {
   return md->getType()
@@ -386,7 +415,8 @@ static cir::CIRCallOpInterface
 emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
                cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
                cir::FuncOp directFuncOp,
-               const SmallVectorImpl<mlir::Value> &cirCallArgs) {
+               const SmallVectorImpl<mlir::Value> &cirCallArgs,
+               cir::SideEffect sideEffect) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   assert(!cir::MissingFeatures::opCallSurroundingTry());
@@ -397,11 +427,11 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
   if (indirectFuncTy) {
     // TODO(cir): Set calling convention for indirect calls.
     assert(!cir::MissingFeatures::opCallCallConv());
-    return builder.createIndirectCallOp(callLoc, indirectFuncVal,
-                                        indirectFuncTy, cirCallArgs);
+    return builder.createIndirectCallOp(
+        callLoc, indirectFuncVal, indirectFuncTy, cirCallArgs, sideEffect);
   }
 
-  return builder.createCallOp(callLoc, directFuncOp, cirCallArgs);
+  return builder.createCallOp(callLoc, directFuncOp, cirCallArgs, sideEffect);
 }
 
 const CIRGenFunctionInfo &
@@ -513,8 +543,9 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     funcName = calleeFuncOp.getName();
 
   assert(!cir::MissingFeatures::opCallCallConv());
-  assert(!cir::MissingFeatures::opCallSideEffect());
   assert(!cir::MissingFeatures::opCallAttrs());
+  cir::SideEffect sideEffect;
+  cgm.constructAttributeList(callee.getAbstractInfo(), sideEffect);
 
   assert(!cir::MissingFeatures::invokeOp());
 
@@ -538,8 +569,9 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   assert(!cir::MissingFeatures::opCallAttrs());
 
   mlir::Location callLoc = loc;
-  cir::CIRCallOpInterface theCall = emitCallLikeOp(
-      *this, loc, indirectFuncTy, indirectFuncVal, directFuncOp, cirCallArgs);
+  cir::CIRCallOpInterface theCall =
+      emitCallLikeOp(*this, loc, indirectFuncTy, indirectFuncVal, directFuncOp,
+                     cirCallArgs, sideEffect);
 
   if (callOp)
     *callOp = theCall;
