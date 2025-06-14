@@ -1160,6 +1160,46 @@ def SPIRV_GLFMixOp :
 
 // -----
 
+def SPIRV_GLLengthOp : SPIRV_GLOp<"Length", 66, [
+    Pure,
+    TypesMatchWith<"result type must match operand element type",
+                  "operand", "result",
+                  "::mlir::getElementTypeOrSelf($_self)">
+  ]> {
+  let summary = "Return the length of a vector x";
+
+  let description = [{
+    Result is the length of vector x, i.e., sqrt(x[0]**2 + x[1]**2 + ...).
+
+    The operand x must be a scalar or vector whose component type is floating-point.
+
+    Result Type must be a scalar of the same type as the component type of x.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Length %0 : vector<3xf32> -> f32
+    %3 = spirv.GL.Length %1 : f32 -> f32
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$operand
+  );
+
+  let results = (outs
+    SPIRV_Float:$result
+  );
+
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand) `->` type($result)
+  }];
+
+  let hasVerifier = 0;
+}
+
+// -----
+
 def SPIRV_GLDistanceOp : SPIRV_GLOp<"Distance", 67, [
     Pure,
     AllTypesMatch<["p0", "p1"]>,
