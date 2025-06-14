@@ -59,7 +59,7 @@ bool isValidAddrOffsetForOpcode(unsigned Opcode, int64_t Offset);
 bool checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits);
 
 // Get Xtensa User Register by register encoding value.
-MCRegister getUserRegister(unsigned Code);
+MCRegister getUserRegister(unsigned Code, const MCRegisterInfo &MRI);
 } // namespace Xtensa
 } // end namespace llvm
 

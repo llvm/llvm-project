@@ -123,7 +123,10 @@ static DecodeStatus DecodeURRegisterClass(MCInst &Inst, uint64_t RegNo,
   if (RegNo > 255)
     return MCDisassembler::Fail;
 
-  MCPhysReg Reg = Xtensa::getUserRegister(RegNo);
+  const XtensaDisassembler *Dis =
+      static_cast<const XtensaDisassembler *>(Decoder);
+  const MCRegisterInfo *MRI = Dis->getContext().getRegisterInfo();
+  MCPhysReg Reg = Xtensa::getUserRegister(RegNo, *MRI);
   if (!Xtensa::checkRegister(Reg, Decoder->getSubtargetInfo().getFeatureBits()))
     return MCDisassembler::Fail;
 
