@@ -6987,11 +6987,11 @@ QualType TreeTransform<Derived>::TransformUnaryTransformType(
                                                             TypeLocBuilder &TLB,
                                                      UnaryTransformTypeLoc TL) {
   QualType Result = TL.getType();
+  TypeSourceInfo *NewBaseTSI = TL.getUnderlyingTInfo();
   if (Result->isDependentType()) {
     const UnaryTransformType *T = TL.getTypePtr();
 
-    TypeSourceInfo *NewBaseTSI =
-        getDerived().TransformType(TL.getUnderlyingTInfo());
+    NewBaseTSI = getDerived().TransformType(TL.getUnderlyingTInfo());
     if (!NewBaseTSI)
       return QualType();
     QualType NewBase = NewBaseTSI->getType();
@@ -7006,7 +7006,7 @@ QualType TreeTransform<Derived>::TransformUnaryTransformType(
   UnaryTransformTypeLoc NewTL = TLB.push<UnaryTransformTypeLoc>(Result);
   NewTL.setKWLoc(TL.getKWLoc());
   NewTL.setParensRange(TL.getParensRange());
-  NewTL.setUnderlyingTInfo(TL.getUnderlyingTInfo());
+  NewTL.setUnderlyingTInfo(NewBaseTSI);
   return Result;
 }
 

@@ -1521,7 +1521,10 @@ public:
   }
 
   bool ShouldPreserveTemplateArgumentsPacks() const {
-    return PreserveArgumentPacks;
+    // This is disabled temporarily.
+    // We need to figure out a way to correctly handle packs outside of
+    // CheckTemplateArguments
+    return false && PreserveArgumentPacks;
   }
 
   TemplateArgument
@@ -2233,8 +2236,7 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
     if (Arg.getKind() != TemplateArgument::Expression) {
       assert(SemaRef.inParameterMappingSubstitution());
       // FIXME: SourceLocation()?
-      ExprResult E = SemaRef.BuildExpressionFromNonTypeTemplateArgument(
-          Arg, SourceLocation());
+      ExprResult E = SemaRef.BuildExpressionFromNonTypeTemplateArgument(Arg, SourceLocation());
       if (E.isInvalid())
         return E;
       Arg = TemplateArgument(E.get(), /*IsCanonical=*/false);
