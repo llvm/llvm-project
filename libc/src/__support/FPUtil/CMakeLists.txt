@@ -262,16 +262,10 @@ add_header_library(
   HDRS
     bfloat16.h
   DEPENDS
-    .fenv_impl
-    .fp_bits
-    .cast
-    .rounding_mode
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.bit
-    libc.src.__support.big_int
-    libc.src.__support.macros.optimization
+    libc.src.__support.CPP.type_traits
+    .cast
+    libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
 )
 

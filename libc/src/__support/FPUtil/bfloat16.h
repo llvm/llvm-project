@@ -9,19 +9,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_BFLOAT16_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_BFLOAT16_H
 
-#include "FEnvImpl.h"
-#include "FPBits.h"
-#include "hdr/errno_macros.h"
-#include "hdr/fenv_macros.h"
-#include "multiply_add.h"
-#include "rounding_mode.h"
-#include "src/__support/CPP/type_traits.h"
-#include "src/__support/FPUtil/cast.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/CPP/bit.h"                 // cpp::bit_cast
+#include "src/__support/CPP/type_traits.h"         // cpp::is_floating_point_v
+#include "src/__support/FPUtil/cast.h"             // fputil::cast
+#include "src/__support/macros/config.h"           // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/types.h" // bfloat16
 
-#include <stddef.h>
-#include <stdint.h>
+#include <stdint.h> // uint16_t
 
 namespace LIBC_NAMESPACE_DECL {
 struct BFloat16 {
@@ -48,7 +42,7 @@ struct BFloat16 {
     uint32_t x_bits = static_cast<uint32_t>(bits) << 16U;
     return cpp::bit_cast<float>(x_bits);
   }
-};
+}; // struct BFloat16
 
 } // namespace LIBC_NAMESPACE_DECL
 
