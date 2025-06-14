@@ -452,6 +452,8 @@ SYMBOL(equal_range, std::ranges::, <algorithm>)
 SYMBOL(lower_bound, std::ranges::, <algorithm>)
 SYMBOL(upper_bound, std::ranges::, <algorithm>)
 
+SYMBOL(unwrap_reference_t, std::, <type_traits>)
+
 // These are C symbols that are not under std namespace.
 SYMBOL(localtime_r, None, <ctime>)
 SYMBOL(localtime_r, None, <time.h>)

@@ -6056,7 +6056,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1 in {
                         PseudoInstExpansion<(CSRRS GPR:$rd, SysRegVLENB.Encoding, X0)>,
                         Sched<[WriteRdVLENB]>;
   let Defs = [VL, VTYPE] in {
-  def PseudoReadVLENBViaVSETVLIX0 : Pseudo<(outs GPR:$rd), (ins uimm5:$shamt),
+  def PseudoReadVLENBViaVSETVLIX0 : Pseudo<(outs GPRNoX0:$rd), (ins uimm5:$shamt),
                                   []>,
                            Sched<[WriteVSETVLI, ReadVSETVLI]>;
   }
@@ -6096,9 +6096,12 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Defs = [VL, VTYPE] in {
 def PseudoVSETVLI : Pseudo<(outs GPR:$rd), (ins GPRNoX0:$rs1, VTypeIOp11:$vtypei), []>,
                     PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
                     Sched<[WriteVSETVLI, ReadVSETVLI]>;
-def PseudoVSETVLIX0 : Pseudo<(outs GPR:$rd), (ins GPRX0:$rs1, VTypeIOp11:$vtypei), []>,
+def PseudoVSETVLIX0 : Pseudo<(outs GPRNoX0:$rd), (ins GPRX0:$rs1, VTypeIOp11:$vtypei), []>,
                       PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
                       Sched<[WriteVSETVLI, ReadVSETVLI]>;
+def PseudoVSETVLIX0X0 : Pseudo<(outs GPRX0:$rd), (ins GPRX0:$rs1, VTypeIOp11:$vtypei), []>,
+                        PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
+                        Sched<[WriteVSETVLI, ReadVSETVLI]>;
 def PseudoVSETIVLI : Pseudo<(outs GPR:$rd), (ins uimm5:$rs1, VTypeIOp10:$vtypei), []>,
                      PseudoInstExpansion<(VSETIVLI GPR:$rd, uimm5:$rs1, VTypeIOp10:$vtypei)>,
                      Sched<[WriteVSETIVLI]>;
@@ -6141,8 +6144,6 @@ defm PseudoVSUX : VPseudoIStore<Ordered=false>;
 // 7.7. Unit-stride Fault-Only-First Loads
 //===----------------------------------------------------------------------===//
 
-// vleff may update VL register
-let Defs = [VL] in
 defm PseudoVL : VPseudoFFLoad;
 
 //===----------------------------------------------------------------------===//
@@ -6156,11 +6157,7 @@ defm PseudoVSSEG : VPseudoUSSegStore;
 defm PseudoVSSSEG : VPseudoSSegStore;
 defm PseudoVSOXSEG : VPseudoISegStore<Ordered=true>;
 defm PseudoVSUXSEG : VPseudoISegStore<Ordered=false>;
-
-// vlseg<nf>e<eew>ff.v may update VL register
-let Defs = [VL] in {
 defm PseudoVLSEG : VPseudoUSSegLoadFF;
-}
 
 //===----------------------------------------------------------------------===//
 // 11. Vector Integer Arithmetic Instructions

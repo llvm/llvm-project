@@ -109,10 +109,13 @@ def update_test(opt_basename: str, ti: common.TestInfo):
                     prefixes,
                 )
         elif (
-            re.search(r"(LV|LDist): Checking a loop in ", raw_tool_outputs) is not None
+            re.search(
+                r"(LV|LDist|HashRecognize): Checking a loop in ", raw_tool_outputs
+            )
+            is not None
         ):
             for raw_tool_output in re.split(
-                r"(LV|LDist): Checking a loop in ", raw_tool_outputs
+                r"(LV|LDist|HashRecognize): Checking a loop in ", raw_tool_outputs
             ):
                 builder.process_run_line(
                     common.LOOP_PASS_DEBUG_RE,

@@ -438,7 +438,7 @@ OPTIONS
   were measured for, but if you want to analyze them for some other combination
   (specified via `-mtriple`/`-mcpu`), you can pass this flag.
 
-.. option:: --dump-object-to-disk=true
+.. option:: --dump-object-to-disk=<filename>
 
  If set,  llvm-exegesis will dump the generated code to a temporary file to
  enable code inspection. Disabled by default.

@@ -21,10 +21,12 @@ namespace test0 {
   public:
     void foo(Public&);
   protected:
-    void foo(Protected&); // expected-note 2 {{declared protected here}}
+    void foo(Protected&); // expected-note 4 {{declared protected here}}
   private:
-    void foo(Private&); // expected-note 2 {{declared private here}}
+    void foo(Private&); // expected-note 4 {{declared private here}}
   };
+
+  class B : public A {};
 
   void test(A *op) {
     op->foo(PublicInst);
@@ -34,6 +36,16 @@ namespace test0 {
     void (A::*a)(Public&) = &A::foo;
     void (A::*b)(Protected&) = &A::foo; // expected-error {{'foo' is a protected member}}
     void (A::*c)(Private&) = &A::foo; // expected-error {{'foo' is a private member}}
+  }
+
+  void test(B *op) {
+    op->foo(PublicInst);
+    op->foo(ProtectedInst); // expected-error {{'foo' is a protected member}}
+    op->foo(PrivateInst); // expected-error {{'foo' is a private member}}
+
+    void (B::*a)(Public&) = &B::foo;
+    void (B::*b)(Protected&) = &B::foo; // expected-error {{'foo' is a protected member}}
+    void (B::*c)(Private&) = &B::foo; // expected-error {{'foo' is a private member}}
   }
 }
 

@@ -16,7 +16,7 @@ define dso_local void @_Z3fooPKcz(ptr noundef %0, ...) "frame-pointer"="all" {
 ; RV64V-NEXT:    addi s0, sp, 432
 ; RV64V-NEXT:    .cfi_def_cfa s0, 64
 ; RV64V-NEXT:    lui t0, 2
-; RV64V-NEXT:    addiw t0, t0, -576
+; RV64V-NEXT:    addi t0, t0, -576
 ; RV64V-NEXT:    sub sp, sp, t0
 ; RV64V-NEXT:    sd a5, 40(s0)
 ; RV64V-NEXT:    sd a6, 48(s0)

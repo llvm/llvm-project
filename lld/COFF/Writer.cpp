@@ -24,12 +24,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/Support/BinaryStreamReader.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Parallel.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -2498,22 +2495,16 @@ void Writer::setECSymbols() {
               offsetof(data_directory, Size),
           ctx.symtab.edataEnd->getRVA() - ctx.symtab.edataStart->getRVA() +
               ctx.symtab.edataEnd->getSize());
-    if (hybridPdata.first) {
+    if (hybridPdata.first)
       ctx.dynamicRelocs->set(
           dataDirOffset64 + EXCEPTION_TABLE * sizeof(data_directory) +
               offsetof(data_directory, Size),
           hybridPdata.last->getRVA() - hybridPdata.first->getRVA() +
               hybridPdata.last->getSize());
-      if (chpeSym) {
-        size_t size = 0;
-        if (pdata.first)
-          size = pdata.last->getRVA() + pdata.last->getSize() -
-                 pdata.first->getRVA();
-        ctx.dynamicRelocs->set(chpeSym->getRVA() +
-                                   offsetof(chpe_metadata, ExtraRFETableSize),
-                               size);
-      }
-    }
+    if (chpeSym && pdata.first)
+      ctx.dynamicRelocs->set(
+          chpeSym->getRVA() + offsetof(chpe_metadata, ExtraRFETableSize),
+          pdata.last->getRVA() + pdata.last->getSize() - pdata.first->getRVA());
   }
 }
 

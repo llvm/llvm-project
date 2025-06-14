@@ -254,3 +254,55 @@ def testReplicateOp(module: Module):
     # CHECK: %[[FIRST:.+]] = pdl_match
     # CHECK: %[[SECOND:.+]] = pdl_match
     # CHECK: %{{.*}} = replicate num(%[[FIRST]]) %[[SECOND]]
+
+
+@run
+def testApplyRegisteredPassOp(module: Module):
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        mod = transform.ApplyRegisteredPassOp(
+            transform.AnyOpType.get(), sequence.bodyTarget, "canonicalize"
+        )
+        mod = transform.ApplyRegisteredPassOp(
+            transform.AnyOpType.get(),
+            mod.result,
+            "canonicalize",
+            options={"top-down": BoolAttr.get(False)},
+        )
+        max_iter = transform.param_constant(
+            transform.AnyParamType.get(),
+            IntegerAttr.get(IntegerType.get_signless(64), 10),
+        )
+        max_rewrites = transform.param_constant(
+            transform.AnyParamType.get(),
+            IntegerAttr.get(IntegerType.get_signless(64), 1),
+        )
+        transform.apply_registered_pass(
+            transform.AnyOpType.get(),
+            mod,
+            "canonicalize",
+            options={
+                "top-down": BoolAttr.get(False),
+                "max-iterations": max_iter,
+                "test-convergence": True,
+                "max-rewrites": max_rewrites,
+            },
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testApplyRegisteredPassOp
+    # CHECK: transform.sequence
+    # CHECK:   %{{.*}} = apply_registered_pass "canonicalize" to {{.*}} : (!transform.any_op) -> !transform.any_op
+    # CHECK:   %{{.*}} = apply_registered_pass "canonicalize"
+    # CHECK-SAME:    with options = {"top-down" = false}
+    # CHECK-SAME:    to {{.*}} : (!transform.any_op) -> !transform.any_op
+    # CHECK:   %[[MAX_ITER:.+]] = transform.param.constant
+    # CHECK:   %[[MAX_REWRITE:.+]] = transform.param.constant
+    # CHECK:   %{{.*}} = apply_registered_pass "canonicalize"
+    # NB: MLIR has sorted the dict lexicographically by key:
+    # CHECK-SAME:    with options = {"max-iterations" = %[[MAX_ITER]],
+    # CHECK-SAME:                    "max-rewrites" =  %[[MAX_REWRITE]],
+    # CHECK-SAME:                    "test-convergence" = true,
+    # CHECK-SAME:                    "top-down" = false}
+    # CHECK-SAME:    to %{{.*}} : (!transform.any_op, !transform.any_param, !transform.any_param) -> !transform.any_op

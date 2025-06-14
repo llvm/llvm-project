@@ -104,7 +104,7 @@ void sw2(int a) {
 // CIR:        cir.switch (%[[COND:.*]] : !s32i) {
 // CIR-NEXT:   cir.case(equal, [#cir.int<3> : !s32i]) {
 // CIR-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-NEXT:     cir.store %[[ZERO]], %[[FOMO]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:     cir.store{{.*}} %[[ZERO]], %[[FOMO]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: define void @_Z3sw2i
 // LLVM:   store i32 2, ptr %[[YOLO_ADDR:.*]], align 4
@@ -153,7 +153,7 @@ void sw3(int a) {
 
 // CIR: cir.func @_Z3sw3i
 // CIR: cir.scope {
-// CIR-NEXT:   %[[COND:.*]] = cir.load %[[A:.*]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   %[[COND:.*]] = cir.load{{.*}} %[[A:.*]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.switch (%[[COND]] : !s32i) {
 // CIR-NEXT:   cir.case(default, []) {
 // CIR-NEXT:     cir.break
@@ -200,16 +200,16 @@ int sw4(int a) {
 // CIR-NEXT:       cir.case(equal, [#cir.int<42> : !s32i]) {
 // CIR-NEXT:         cir.scope {
 // CIR-NEXT:           %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
-// CIR-NEXT:           cir.store %[[THREE]], %[[RETVAL:.*]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:           %[[RET3:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:           cir.store{{.*}} %[[THREE]], %[[RETVAL:.*]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:           %[[RET3:.*]] = cir.load{{.*}} %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:           cir.return %[[RET3]] : !s32i
 // CIR-NEXT:         }
 // CIR-NEXT:         cir.yield
 // CIR-NEXT:       }
 // CIR-NEXT:       cir.case(default, []) {
 // CIR-NEXT:         %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
-// CIR-NEXT:         cir.store %[[TWO]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:         %[[RET2:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:         cir.store{{.*}} %[[TWO]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:         %[[RET2:.*]] = cir.load{{.*}} %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:         cir.return %[[RET2]] : !s32i
 // CIR-NEXT:       }
 // CIR-NEXT:       cir.yield
@@ -985,7 +985,7 @@ void sw15(int x) {
 // CIR-NEXT: }
 // CIR-NEXT: cir.case(equal, [#cir.int<2> : !s32i]) {
 // CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-NEXT:   cir.store %[[ZERO]], %[[Y]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   cir.store{{.*}} %[[ZERO]], %[[Y]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:   cir.yield
 // CIR-NEXT: }
 // CIR-NEXT: cir.case(equal, [#cir.int<3> : !s32i]) {
