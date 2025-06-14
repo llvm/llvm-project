@@ -14,6 +14,7 @@
 #include "clang/AST/FormatString.h"
 #include "FormatStringParsing.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -327,7 +328,7 @@ static bool namedTypeToLengthModifierKind(ASTContext &Ctx, QualType QT,
   for (/**/; const auto *TT = QT->getAs<TypedefType>();
        QT = TT->getDecl()->getUnderlyingType()) {
     const auto *TD = TT->getDecl();
-    auto const *DC = TT->getDecl()->getDeclContext();
+    const auto *DC = TT->getDecl()->getDeclContext();
     bool RC = false;
     if (Ctx.getLangOpts().C99) {
       RC = DC->isTranslationUnit();
@@ -336,14 +337,13 @@ static bool namedTypeToLengthModifierKind(ASTContext &Ctx, QualType QT,
     }
     if (RC) {
       StringRef Name = TD->getIdentifier()->getName();
-      if (Name == "size_t" || Name == "__size_t") {
+      if (Name == "size_t") {
         K = LengthModifier::AsSizeT;
         return true;
-      } else if (Name == "__signed_size_t" ||
-                 Name == "ssize_t" /*Not C99, but common in Unix.*/) {
+      } else if (Name == "ssize_t" /*Not C99, but common in Unix.*/) {
         K = LengthModifier::AsSizeT;
         return true;
-      } else if (Name == "ptrdiff_t" || Name == "__ptrdiff_t") {
+      } else if (Name == "ptrdiff_t") {
         K = LengthModifier::AsPtrDiff;
         return true;
       } else if (Name == "intmax_t") {
@@ -353,6 +353,18 @@ static bool namedTypeToLengthModifierKind(ASTContext &Ctx, QualType QT,
         K = LengthModifier::AsIntMax;
         return true;
       }
+    }
+  }
+  if (const auto *PST = QT->getAs<PredefinedSugarType>()) {
+    using Kind = PredefinedSugarType::Kind;
+    switch (PST->getKind()) {
+    case Kind::SizeT:
+    case Kind::SignedSizeT:
+      K = LengthModifier::AsSizeT;
+      return true;
+    case Kind::PtrdiffT:
+      K = LengthModifier::AsPtrDiff;
+      return true;
     }
   }
   return false;
