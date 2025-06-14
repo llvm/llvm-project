@@ -535,18 +535,3 @@ add_fp_unittest(
   LINK_LIBRARIES
     -lpthread
 )
-
-# Bfloat16 Exhaustive Tests
-
-add_fp_unittest(
-  fbfloat16_test
-  NO_RUN_POSTBUILD
-  NEED_MPFR
-  SUITE
-    libc_math_exhaustive_tests
-  SRCS
-    fbfloat16_test.cpp
-  DEPENDS
-    .exhaustive_test
-    libc.src.math.fbfloat16
-)

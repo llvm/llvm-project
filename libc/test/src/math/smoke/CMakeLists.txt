@@ -5307,15 +5307,3 @@ add_fp_unittest(
     libc.src.__support.macros.properties.os
     libc.src.__support.macros.properties.types
 )
-
-# Bfloat16 Smoke Tests
-
-add_fp_unittest(
-  fbfloat16_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    fbfloat16_test.cpp
-  DEPENDS
-    libc.src.math.fbfloat16
-)
