@@ -35,7 +35,10 @@ public:
 
   void ProcessStartOfSourceFile() override { JOS.arrayBegin(); };
   void ProcessFunctionSummary(const FunctionSummary &) override;
-  void ProcessEndOfSourceFile() override { JOS.arrayEnd(); };
+  void ProcessEndOfSourceFile() override {
+    JOS.arrayEnd();
+    JOS.flush();
+  };
 };
 } // namespace clang
 
