@@ -9,12 +9,10 @@
 #ifndef _LIBCPP___CONCEPTS_COMPARISON_COMMON_TYPE_H
 #define _LIBCPP___CONCEPTS_COMPARISON_COMMON_TYPE_H
 
-#include <__concepts/common_reference_with.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__type_traits/common_reference.h>
-#include <__type_traits/make_const_lvalue_ref.h>
 #include <__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
