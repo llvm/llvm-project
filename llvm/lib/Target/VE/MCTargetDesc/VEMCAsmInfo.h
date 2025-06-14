@@ -24,6 +24,8 @@ class VEELFMCAsmInfo : public MCAsmInfoELF {
 
 public:
   explicit VEELFMCAsmInfo(const Triple &TheTriple);
+  void printSpecifierExpr(raw_ostream &OS,
+                          const MCSpecifierExpr &Expr) const override;
 };
 
 } // namespace llvm
