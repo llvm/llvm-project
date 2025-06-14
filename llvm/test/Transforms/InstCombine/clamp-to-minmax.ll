@@ -185,6 +185,22 @@ define float @clamp_negative_same_op(float %x) {
   ret float %r
 }
 
+define float @clamp_negative_propagate_poison(float %x) {
+; CHECK-LABEL: @clamp_negative_propagate_poison(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ninf ole float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP1]], float 1.000000e+00, float [[X]]
+; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp nnan ole float [[MAX]], 2.550000e+02
+; CHECK-NEXT:    [[R1:%.*]] = select nnan i1 [[DOTINV]], float [[MAX]], float 2.550000e+02
+; CHECK-NEXT:    ret float [[R1]]
+;
+  %cmp1 = fcmp ninf ole float %x, 1.000000e+00
+  %max = select i1 %cmp1, float 1.000000e+00, float %x
+  %cmp2 = fcmp nnan ole float %x, 2.550000e+02
+  %r = select i1 %cmp2, float %max, float 2.550000e+02
+  ret float %r
+}
+
+
 
 ; And now without fast.
 
