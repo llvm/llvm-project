@@ -1030,13 +1030,10 @@ let Class = DependentBitIntType in {
 }
 
 let Class = PredefinedSugarType in {
-  def : Property<"underlying", QualType> {
-    let Read = [{ node->desugar() }];
-  }
   def : Property<"k", UInt32> {
     let Read = [{ static_cast<uint32_t>(node->getKind()) }];
   }
   def : Creator<[{
-    return ctx.getPredefinedSugarType(k, underlying);
+    return ctx.getPredefinedSugarType(k);
   }]>;
 }

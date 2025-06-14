@@ -25,7 +25,6 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/SYCLKernelInfo.h"
 #include "clang/AST/TemplateName.h"
-#include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
@@ -1530,7 +1529,7 @@ public:
   /// and bit count.
   QualType getDependentBitIntType(bool Unsigned, Expr *BitsExpr) const;
 
-  QualType getPredefinedSugarType(uint32_t KD, QualType UnderlyingType) const;
+  QualType getPredefinedSugarType(uint32_t KD) const;
 
   /// Gets the struct used to keep track of the extended descriptor for
   /// pointer to blocks.

@@ -74,6 +74,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2533,7 +2534,6 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
 
   case Type::PredefinedSugar:
     return getTypeInfo(cast<PredefinedSugarType>(T)->desugar().getTypePtr());
-    break;
 
   case Type::Pipe:
     Width = Target->getPointerWidth(LangAS::opencl_global);
@@ -5153,10 +5153,22 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
   return QualType(New, 0);
 }
 
-QualType ASTContext::getPredefinedSugarType(uint32_t KD,
-                                            QualType UnderlyingType) const {
+QualType ASTContext::getPredefinedSugarType(uint32_t KD) const {
+  using Kind = Type::PredefinedSugarKind;
+  auto getUnderlyingType = [](const ASTContext &Ctx, Kind KDI) -> QualType {
+    switch (KDI) {
+    case Kind::SizeT:
+      return Ctx.getFromTargetType(Ctx.Target->getSizeType());
+    case Kind::SignedSizeT:
+      return Ctx.getFromTargetType(Ctx.Target->getSignedSizeType());
+    case Kind::PtrdiffT:
+      return Ctx.getFromTargetType(Ctx.Target->getPtrDiffType(LangAS::Default));
+    }
+    llvm_unreachable("unexpected kind");
+  };
   auto *New = new (*this, alignof(PredefinedSugarType)) PredefinedSugarType(
-      static_cast<PredefinedSugarType::Kind>(KD), UnderlyingType);
+      static_cast<Type::PredefinedSugarKind>(KD),
+      getUnderlyingType(*this, static_cast<Type::PredefinedSugarKind>(KD)));
   Types.push_back(New);
   return QualType(New, 0);
 }
@@ -6757,9 +6769,8 @@ QualType ASTContext::getTagDeclType(const TagDecl *Decl) const {
 QualType ASTContext::getSizeType() const {
   if (SizeType.isNull()) {
     if (!getLangOpts().HLSL)
-      SizeType =
-          getPredefinedSugarType(PredefinedSugarType::Kind::SizeT,
-                                 getFromTargetType(Target->getSizeType()));
+      SizeType = getPredefinedSugarType(
+          llvm::to_underlying(Type::PredefinedSugarKind::SizeT));
     else
       SizeType = getFromTargetType(Target->getSizeType());
   }
@@ -6776,8 +6787,7 @@ QualType ASTContext::getSignedSizeType() const {
   if (SignedSizeType.isNull()) {
     if (!getLangOpts().HLSL)
       SignedSizeType = getPredefinedSugarType(
-          PredefinedSugarType::Kind::SignedSizeT,
-          getFromTargetType(Target->getSignedSizeType()));
+          llvm::to_underlying(Type::PredefinedSugarKind::SignedSizeT));
     else
       SignedSizeType = getFromTargetType(Target->getSignedSizeType());
   }
@@ -6790,8 +6800,7 @@ QualType ASTContext::getPointerDiffType() const {
   if (PtrdiffType.isNull()) {
     if (!getLangOpts().HLSL)
       PtrdiffType = getPredefinedSugarType(
-          PredefinedSugarType::Kind::PtrdiffT,
-          getFromTargetType(Target->getPtrDiffType(LangAS::Default)));
+          llvm::to_underlying(Type::PredefinedSugarKind::PtrdiffT));
     else
       PtrdiffType = getFromTargetType(Target->getPtrDiffType(LangAS::Default));
   }
@@ -14589,9 +14598,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
                                       DX->isCountInBytes(), DX->isOrNull(),
                                       CDX);
   }
-  case Type::PredefinedSugar: {
-    return QualType();
-  }
+  case Type::PredefinedSugar:;
   }
   llvm_unreachable("Unhandled Type Class");
 }

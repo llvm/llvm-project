@@ -5624,3 +5624,15 @@ HLSLAttributedResourceType::findHandleTypeOnResource(const Type *RT) {
   }
   return nullptr;
 }
+
+StringRef PredefinedSugarType::getName() const {
+  switch (getKind()) {
+  case PredefinedSugarKind::SizeT:
+    return "__size_t";
+  case PredefinedSugarKind::SignedSizeT:
+    return "__signed_size_t";
+  case PredefinedSugarKind::PtrdiffT:
+    return "__ptrdiff_t";
+  }
+  llvm_unreachable("unexpected kind");
+}

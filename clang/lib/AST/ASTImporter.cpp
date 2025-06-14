@@ -57,6 +57,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1896,8 +1897,8 @@ ExpectedType clang::ASTNodeImporter::VisitDependentBitIntType(
 
 ExpectedType clang::ASTNodeImporter::VisitPredefinedSugarType(
     const clang::PredefinedSugarType *T) {
-  return Importer.getToContext().getPredefinedSugarType(T->getKind(),
-                                                        T->desugar());
+  return Importer.getToContext().getPredefinedSugarType(
+      llvm::to_underlying(T->getKind()));
 }
 
 ExpectedType clang::ASTNodeImporter::VisitDependentSizedMatrixType(

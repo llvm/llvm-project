@@ -356,7 +356,7 @@ static bool namedTypeToLengthModifierKind(ASTContext &Ctx, QualType QT,
     }
   }
   if (const auto *PST = QT->getAs<PredefinedSugarType>()) {
-    using Kind = PredefinedSugarType::Kind;
+    using Kind = Type::PredefinedSugarKind;
     switch (PST->getKind()) {
     case Kind::SizeT:
     case Kind::SignedSizeT:

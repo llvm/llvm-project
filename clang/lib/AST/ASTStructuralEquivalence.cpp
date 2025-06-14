@@ -1483,9 +1483,11 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case Type::PredefinedSugar: {
     const auto *TP1 = cast<PredefinedSugarType>(T1);
     const auto *TP2 = cast<PredefinedSugarType>(T2);
-
     if (TP1->getKind() != TP2->getKind())
       return false;
+    else
+      assert(TP1->getCanonicalTypeInternal() ==
+             TP2->getCanonicalTypeInternal());
     break;
   }
   } // end switch
