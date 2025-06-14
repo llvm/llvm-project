@@ -162,6 +162,12 @@ public:
         builder.getAttr<cir::FPAttr>(type, e->getValue()));
   }
 
+  mlir::Value VisitCharacterLiteral(const CharacterLiteral *e) {
+    mlir::Type ty = cgf.convertType(e->getType());
+    auto init = cir::IntAttr::get(ty, e->getValue());
+    return builder.create<cir::ConstantOp>(cgf.getLoc(e->getExprLoc()), init);
+  }
+
   mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *e) {
     return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
@@ -346,8 +352,8 @@ public:
         assert(!cir::MissingFeatures::fpConstraints());
         castKind = cir::CastKind::float_to_int;
       } else if (mlir::isa<cir::CIRFPTypeInterface>(dstTy)) {
-        cgf.getCIRGenModule().errorNYI("floating point casts");
-        return cgf.createDummyValue(src.getLoc(), dstType);
+        // TODO: split this to createFPExt/createFPTrunc
+        return builder.createFloatingCast(src, fullDstTy);
       } else {
         llvm_unreachable("Internal error: Cast to unexpected type");
       }

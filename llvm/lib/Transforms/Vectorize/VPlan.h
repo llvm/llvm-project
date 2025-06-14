@@ -2114,7 +2114,7 @@ public:
   VPWidenPHIRecipe *clone() override {
     auto *C = new VPWidenPHIRecipe(cast<PHINode>(getUnderlyingValue()),
                                    getOperand(0), getDebugLoc(), Name);
-    for (VPValue *Op : make_range(std::next(op_begin()), op_end()))
+    for (VPValue *Op : llvm::drop_begin(operands()))
       C->addOperand(Op);
     return C;
   }
