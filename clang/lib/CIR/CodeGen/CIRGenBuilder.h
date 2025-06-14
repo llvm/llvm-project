@@ -24,6 +24,7 @@ namespace clang::CIRGen {
 class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
   llvm::StringMap<unsigned> recordNames;
+  llvm::StringMap<unsigned> globalsVersioning;
 
 public:
   CIRGenBuilderTy(mlir::MLIRContext &mlirContext, const CIRGenTypeCache &tc)
@@ -371,6 +372,23 @@ public:
   /// pointed to by \p arrayPtr.
   mlir::Value maybeBuildArrayDecay(mlir::Location loc, mlir::Value arrayPtr,
                                    mlir::Type eltTy);
+
+  /// Creates a versioned global variable. If the symbol is already taken, an ID
+  /// will be appended to the symbol. The returned global must always be queried
+  /// for its name so it can be referenced correctly.
+  [[nodiscard]] cir::GlobalOp
+  createVersionedGlobal(mlir::ModuleOp module, mlir::Location loc,
+                        mlir::StringRef name, mlir::Type type,
+                        cir::GlobalLinkageKind linkage) {
+    // Create a unique name if the given name is already taken.
+    std::string uniqueName;
+    if (unsigned version = globalsVersioning[name.str()]++)
+      uniqueName = name.str() + "." + std::to_string(version);
+    else
+      uniqueName = name.str();
+
+    return createGlobal(module, loc, uniqueName, type, linkage);
+  }
 };
 
 } // namespace clang::CIRGen
