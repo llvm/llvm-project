@@ -37,9 +37,6 @@
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif
-#ifdef HAVE_TERMIOS_H
-#include <termios.h>
-#endif
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only generic UNIX code that
@@ -323,7 +320,7 @@ static unsigned getColumns([[maybe_unused]] int FileID) {
   // the termios API instead if it isn't.
   unsigned Columns = 0;
 
-#if defined(HAVE_SYS_IOCTL_H) && defined(HAVE_TERMIOS_H)
+#ifdef HAVE_SYS_IOCTL_H
   // Try to determine the width of the terminal.
   struct winsize ws;
   if (ioctl(FileID, TIOCGWINSZ, &ws) == 0)
