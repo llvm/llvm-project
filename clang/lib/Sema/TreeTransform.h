@@ -30,6 +30,7 @@
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtSYCL.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Sema/Designator.h"
@@ -46,8 +47,11 @@
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
+#include <iterator>
 #include <optional>
 
 using namespace llvm::omp;
@@ -317,6 +321,8 @@ public:
   /// Note to the derived class when a function parameter pack is
   /// being expanded.
   void ExpandingFunctionParameterPack(ParmVarDecl *Pack) { }
+
+  bool ShouldPreserveTemplateArgumentsPacks() const { return false; }
 
   /// Transforms the given type into another type.
   ///
@@ -654,6 +660,10 @@ public:
   bool TransformTemplateArguments(InputIterator First,
                                   InputIterator Last,
                                   TemplateArgumentListInfo &Outputs,
+                                  bool Uneval = false);
+
+  bool TransformTemplateArguments(ArrayRef<TemplateArgument> Args,
+                                  SmallVector<TemplateArgument> &Outputs,
                                   bool Uneval = false);
 
   /// Fakes up a TemplateArgumentLoc for a given TemplateArgument.
@@ -5043,13 +5053,32 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
       typedef TemplateArgumentLocInventIterator<Derived,
                                                 TemplateArgument::pack_iterator>
         PackLocIterator;
-      if (TransformTemplateArguments(PackLocIterator(*this,
-                                                 In.getArgument().pack_begin()),
-                                     PackLocIterator(*this,
-                                                   In.getArgument().pack_end()),
-                                     Outputs, Uneval))
+
+      TemplateArgumentListInfo *PackOutput = &Outputs;
+      TemplateArgumentListInfo New;
+
+      if (getDerived().ShouldPreserveTemplateArgumentsPacks()) {
+        PackOutput = &New;
+      }
+
+      if (TransformTemplateArguments(
+              PackLocIterator(*this, In.getArgument().pack_begin()),
+              PackLocIterator(*this, In.getArgument().pack_end()), *PackOutput,
+              Uneval))
         return true;
 
+      if (getDerived().ShouldPreserveTemplateArgumentsPacks()) {
+        SmallVector<TemplateArgument> Args;
+        Args.reserve(New.size());
+        llvm::transform(
+            New.arguments(), std::back_inserter(Args),
+            [](const TemplateArgumentLoc &Loc) { return Loc.getArgument(); });
+        TemplateArgumentLoc ArgLoc;
+        TemplateArgument Arg =
+            TemplateArgument::CreatePackCopy(SemaRef.getASTContext(), Args);
+        InventTemplateArgumentLoc(Arg, ArgLoc);
+        Outputs.addArgument(ArgLoc);
+      }
       continue;
     }
 
@@ -5142,7 +5171,6 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
   }
 
   return false;
-
 }
 
 //===----------------------------------------------------------------------===//
@@ -6161,7 +6189,7 @@ ParmVarDecl *TreeTransform<Derived>::TransformFunctionTypeParam(
                                              /* DefArg */ nullptr);
   newParm->setScopeInfo(OldParm->getFunctionScopeDepth(),
                         OldParm->getFunctionScopeIndex() + indexAdjustment);
-  transformedLocalDecl(OldParm, {newParm});
+  getDerived().transformedLocalDecl(OldParm, {newParm});
   return newParm;
 }
 
