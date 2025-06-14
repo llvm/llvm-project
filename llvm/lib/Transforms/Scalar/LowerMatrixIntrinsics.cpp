@@ -32,6 +32,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -468,6 +469,10 @@ class LowerMatrixIntrinsics {
     }
 
     iterator_range<SmallVector<Value *, 8>::iterator> vectors() {
+      return make_range(Vectors.begin(), Vectors.end());
+    }
+
+    iterator_range<SmallVector<Value *, 8>::const_iterator> vectors() const {
       return make_range(Vectors.begin(), Vectors.end());
     }
 
@@ -1450,6 +1455,128 @@ public:
     return Builder.CreateAdd(Sum, Mul);
   }
 
+  bool tryLowerIntrinsic(IntrinsicInst *Inst) {
+    Value *Start = nullptr;
+    Value *Op = nullptr;
+    switch (Inst->getIntrinsicID()) {
+    case Intrinsic::vector_reduce_fadd:
+    case Intrinsic::vector_reduce_fmul: {
+      FastMathFlags FMF = getFastMathFlags(Inst);
+      if (Inst->getType()->isFloatingPointTy() && !FMF.allowReassoc())
+        return false;
+
+      if (match(Inst, m_Intrinsic<Intrinsic::vector_reduce_fadd>(
+                          m_Unless(m_AnyZeroFP()), m_Value())))
+        return false;
+
+      if (match(Inst, m_Intrinsic<Intrinsic::vector_reduce_fmul>(
+                          m_Unless(m_FPOne()), m_Value())))
+        return false;
+
+      Start = Inst->getOperand(0);
+      Op = Inst->getOperand(1);
+    } break;
+    case Intrinsic::vector_reduce_fmax:
+    case Intrinsic::vector_reduce_fmaximum:
+    case Intrinsic::vector_reduce_fmin:
+    case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_mul:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_xor:
+      Op = Inst->getOperand(0);
+      break;
+    default:
+      return false;
+    }
+
+    auto *I = Inst2ColumnMatrix.find(Op);
+    if (I == Inst2ColumnMatrix.end())
+      return false;
+
+    IRBuilder<> Builder(Inst);
+
+    const MatrixTy &M = I->second;
+
+    auto CreateVReduce = [&](Value *LHS, Value *RHS) {
+      switch (Inst->getIntrinsicID()) {
+      case Intrinsic::vector_reduce_add:
+        return Builder.CreateAdd(LHS, RHS);
+      case Intrinsic::vector_reduce_and:
+        return Builder.CreateAnd(LHS, RHS);
+      case Intrinsic::vector_reduce_fadd:
+        return Builder.CreateFAdd(LHS, RHS);
+      case Intrinsic::vector_reduce_fmax:
+        return Builder.CreateMaximum(LHS, RHS);
+      case Intrinsic::vector_reduce_fmaximum:
+        return Builder.CreateMaximumNum(LHS, RHS);
+      case Intrinsic::vector_reduce_fmin:
+        return Builder.CreateMinimum(LHS, RHS);
+      case Intrinsic::vector_reduce_fminimum:
+        return Builder.CreateMinimumNum(LHS, RHS);
+      case Intrinsic::vector_reduce_fmul:
+        return Builder.CreateFMul(LHS, RHS);
+      case Intrinsic::vector_reduce_mul:
+        return Builder.CreateMul(LHS, RHS);
+      case Intrinsic::vector_reduce_or:
+        return Builder.CreateOr(LHS, RHS);
+      case Intrinsic::vector_reduce_xor:
+        return Builder.CreateXor(LHS, RHS);
+      default:
+        llvm_unreachable("unexpected intrinsic");
+      }
+    };
+
+    Value *ResultV;
+    if (Inst->getIntrinsicID() == Intrinsic::vector_reduce_fadd ||
+        Inst->getIntrinsicID() == Intrinsic::vector_reduce_fmul) {
+      ResultV = Builder.CreateVectorSplat(ElementCount::getFixed(M.getStride()),
+                                          Start);
+      for (auto &Vector : M.vectors())
+        ResultV = CreateVReduce(ResultV, Vector);
+    } else {
+      ResultV = M.getVector(0);
+      for (auto &Vector : drop_begin(M.vectors()))
+        ResultV = CreateVReduce(ResultV, Vector);
+    }
+
+    auto CreateHReduce = [&](Value *V) {
+      switch (Inst->getIntrinsicID()) {
+      case Intrinsic::vector_reduce_add:
+        return Builder.CreateAddReduce(V);
+      case Intrinsic::vector_reduce_and:
+        return Builder.CreateAndReduce(V);
+      case Intrinsic::vector_reduce_fadd:
+        return Builder.CreateFAddReduce(Start, V);
+      case Intrinsic::vector_reduce_fmax:
+        return Builder.CreateFPMaxReduce(V);
+      case Intrinsic::vector_reduce_fmaximum:
+        return Builder.CreateFPMaximumReduce(V);
+      case Intrinsic::vector_reduce_fmin:
+        return Builder.CreateFPMinReduce(V);
+      case Intrinsic::vector_reduce_fminimum:
+        return Builder.CreateFPMinimumReduce(V);
+      case Intrinsic::vector_reduce_fmul:
+        return Builder.CreateFMulReduce(Start, V);
+      case Intrinsic::vector_reduce_mul:
+        return Builder.CreateMulReduce(V);
+      case Intrinsic::vector_reduce_or:
+        return Builder.CreateOrReduce(V);
+      case Intrinsic::vector_reduce_xor:
+        return Builder.CreateXorReduce(V);
+      default:
+        llvm_unreachable("unexpected intrinsic");
+      }
+    };
+
+    Value *Result = CreateHReduce(ResultV);
+    Inst->replaceAllUsesWith(Result);
+    Result->takeName(Inst);
+    Inst->eraseFromParent();
+    return true;
+  }
+
   /// Cache \p Matrix as result of \p Inst and update the uses of \p Inst. For
   /// users with shape information, there's nothing to do: they will use the
   /// cached value when they are lowered. For other users, \p Matrix is
@@ -1466,6 +1593,10 @@ public:
     for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
       if (ShapeMap.contains(U.getUser()))
         continue;
+
+      if (auto *Intr = dyn_cast<IntrinsicInst>(U.getUser()))
+        if (tryLowerIntrinsic(Intr))
+          continue;
 
       if (!Flattened) {
         Flattened = Matrix.embedInVector(Builder);
