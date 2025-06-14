@@ -28,9 +28,7 @@ namespace emitc {
 /// with matching id are emitted.
 LogicalResult translateToCpp(Operation *op, raw_ostream &os,
                              bool declareVariablesAtTop = false,
-                             StringRef fileId = {}, bool emitClass = false,
-                             StringRef className = {},
-                             StringRef fieldNameAttribute = {});
+                             StringRef fileId = {});
 } // namespace emitc
 } // namespace mlir
 
