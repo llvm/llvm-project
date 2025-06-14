@@ -895,10 +895,6 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     }
   }
 
-  if (!CI.hasSummaryContext()) {
-    CI.createSummaryContext();
-  }
-
   // Set up embedding for any specified files. Do this before we load any
   // source files, including the primary module map for the compilation.
   for (const auto &F : CI.getFrontendOpts().ModulesEmbedFiles) {
@@ -969,7 +965,12 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     }
   }
 
-  // FIXME: lookup dirs recursively
+  bool ProcessesSummaries = !CI.getFrontendOpts().SummaryDirPath.empty() ||
+                            !CI.getFrontendOpts().SummaryFile.empty();
+  if (ProcessesSummaries && !CI.hasSummaryContext())
+    CI.createSummaryContext();
+
+  // FIXME: cleanup and lookup dirs recursively
   if (!CI.getFrontendOpts().SummaryDirPath.empty()) {
     FileManager &FileMgr = CI.getFileManager();
 
@@ -1371,12 +1372,10 @@ void ASTFrontendAction::ExecuteAction() {
   if (CI.hasCodeCompletionConsumer())
     CompletionConsumer = &CI.getCodeCompletionConsumer();
 
-  if (!CI.hasSummaryContext()) {
-    CI.createSummaryContext();
-  }
-  CI.createSummaryConsumer();
+  if (!CI.getFrontendOpts().SummaryFile.empty())
+    CI.createSummaryConsumer();
 
-  // Use a code completion consumer?
+  // Use a code summary consumer?
   SummaryConsumer *SummaryConsumer = nullptr;
   if (CI.hasSummaryConsumer())
     SummaryConsumer = &CI.getSummaryConsumer();
