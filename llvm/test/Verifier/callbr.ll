@@ -167,3 +167,12 @@ define void @test_callbr_intrinsic_wrong_signature(ptr %ptr) {
 cont:
   ret void
 }
+
+; CHECK-NEXT: Callbr for intrinsics currently doesn't support operand bundles
+define void @test_callbr_intrinsic_no_operand_bundles(i1 %c) {
+  callbr void @llvm.amdgcn.kill(i1 %c) [ "foo"(i1 %c) ] to label %cont [label %kill]
+kill:
+  unreachable
+cont:
+  ret void
+}

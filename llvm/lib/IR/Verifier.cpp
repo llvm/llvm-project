@@ -3300,7 +3300,7 @@ void Verifier::visitCallBrInst(CallBrInst &CBI) {
     Check(CBI.getCalledFunction(),
           "Callbr: indirect function / invalid signature");
     Check(!CBI.hasOperandBundles(),
-          "Callbr currently doesn't support operand bundles");
+          "Callbr for intrinsics currently doesn't support operand bundles");
 
     switch (CBI.getIntrinsicID()) {
     case Intrinsic::amdgcn_kill: {
