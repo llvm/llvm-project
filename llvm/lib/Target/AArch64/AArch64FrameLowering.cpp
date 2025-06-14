@@ -2551,7 +2551,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
           return AArch64::FP;
         }
         // Otherwise, we can choose between:
-        //  SUB TMP, FP, #(-CalleeSaveBaseOffset)
+        //  SUB TMP, FP, #CalleeSaveBaseOffset
         //  ADDVL SP, TMP, #(-SVECalleeSavedSize)
         // OR:
         //  ADD SP, BP, #NumBytes
