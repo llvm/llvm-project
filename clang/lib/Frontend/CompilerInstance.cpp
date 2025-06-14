@@ -743,8 +743,8 @@ CompilerInstance::createCodeCompletionConsumer(Preprocessor &PP,
 }
 
 void CompilerInstance::createSummaryConsumer() {
-  const std::string& SummaryFile = getFrontendOpts().SummaryFile;
-  if(SummaryFile.empty())
+  const std::string &SummaryFile = getFrontendOpts().SummaryFile;
+  if (SummaryFile.empty())
     return;
 
   std::error_code EC;

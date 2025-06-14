@@ -18,7 +18,7 @@ class SummaryAttr {
 
 protected:
   SummaryAttr(SummaryAttrKind Kind, const char *Spelling)
-      : Kind(Kind), Spelling(Spelling){};
+      : Kind(Kind), Spelling(Spelling) {};
 
 public:
   virtual ~SummaryAttr() = default;

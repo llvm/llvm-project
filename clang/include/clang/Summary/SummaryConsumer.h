@@ -15,9 +15,9 @@ public:
   SummaryConsumer(const SummaryContext &SummaryCtx) : SummaryCtx(&SummaryCtx) {}
   virtual ~SummaryConsumer() = default;
 
-  virtual void ProcessStartOfSourceFile(){};
-  virtual void ProcessFunctionSummary(const FunctionSummary &){};
-  virtual void ProcessEndOfSourceFile(){};
+  virtual void ProcessStartOfSourceFile() {};
+  virtual void ProcessFunctionSummary(const FunctionSummary &) {};
+  virtual void ProcessEndOfSourceFile() {};
 };
 
 class PrintingSummaryConsumer : public SummaryConsumer {
