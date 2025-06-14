@@ -50,6 +50,14 @@ func.func @exp(%arg0 : i32) -> () {
 
 // -----
 
+func.func @exp_bf16(%arg0 : bf16) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values of length 2/3/4}}
+  %2 = spirv.GL.Exp %arg0 : bf16
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.GL.{F|S|U}{Max|Min}
 //===----------------------------------------------------------------------===//
@@ -87,6 +95,15 @@ func.func @iminmax(%arg0: i32, %arg1: i32) {
   %3 = spirv.GL.SMin %arg0, %arg1 : i32
   // CHECK: spirv.GL.UMin {{%.*}}, {{%.*}} : i32
   %4 = spirv.GL.UMin %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+func.func @fmaxminbf16vec(%arg0 : vector<3xbf16>, %arg1 : vector<3xbf16>) {
+  // expected-error @+1 {{operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %1 = spirv.GL.FMax %arg0, %arg1 : vector<3xbf16>
+  %2 = spirv.GL.FMin %arg0, %arg1 : vector<3xbf16>
   return
 }
 
@@ -567,7 +584,71 @@ func.func @fmix_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>, %arg2 : vec
 // -----
 
 //===----------------------------------------------------------------------===//
-// spirv.GL.Exp
+// spirv.GL.FindILsb
+//===----------------------------------------------------------------------===//
+
+func.func @findimsb_scalar_i32(%arg0 : i32) -> () {
+  // CHECK: spirv.GL.FindILsb {{%.*}} : i32
+  %2 = spirv.GL.FindILsb %arg0 : i32
+  return
+}
+
+func.func @findimsb_vector_i32(%arg0 : vector<3xi32>) -> () {
+  // CHECK: spirv.GL.FindILsb {{%.*}} : vector<3xi32>
+  %2 = spirv.GL.FindILsb %arg0 : vector<3xi32>
+  return
+}
+
+func.func @findimsb_scalar_i16(%arg0 : i16) -> () {
+  // CHECK: spirv.GL.FindILsb {{%.*}} : i16
+  %2 = spirv.GL.FindILsb %arg0 : i16
+  return
+}
+
+func.func @findimsb_vector_i64(%arg0 : vector<3xi64>) -> () {
+  // CHECK: spirv.GL.FindILsb {{%.*}} : vector<3xi64>
+  %2 = spirv.GL.FindILsb %arg0 : vector<3xi64>
+  return
+}
+
+// -----
+
+func.func @findimsb_error_scalar_float(%arg0 : f32) -> () {
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4/8/1}}
+  %2 = spirv.GL.FindILsb %arg0 : f32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.FindSMsb
+//===----------------------------------------------------------------------===//
+
+func.func @findsmsb_scalar(%arg0 : i32) -> () {
+  // CHECK: spirv.GL.FindSMsb {{%.*}} : i32
+  %2 = spirv.GL.FindSMsb %arg0 : i32
+  return
+}
+
+func.func @findsmsb_vector(%arg0 : vector<3xi32>) -> () {
+  // CHECK: spirv.GL.FindSMsb {{%.*}} : vector<3xi32>
+  %2 = spirv.GL.FindSMsb %arg0 : vector<3xi32>
+  return
+}
+
+// -----
+
+func.func @findsmsb_error_scalar_i64(%arg0 : i64) -> () {
+  // expected-error @+1 {{operand #0 must be Int32 or vector of Int32}}
+  %2 = spirv.GL.FindSMsb %arg0 : i64
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.FindUMsb
 //===----------------------------------------------------------------------===//
 
 func.func @findumsb(%arg0 : i32) -> () {

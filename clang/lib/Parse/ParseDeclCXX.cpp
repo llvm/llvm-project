@@ -1071,10 +1071,7 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
       EnterExpressionEvaluationContext Unevaluated(
           Actions, Sema::ExpressionEvaluationContext::Unevaluated, nullptr,
           Sema::ExpressionEvaluationContextRecord::EK_Decltype);
-      Result = Actions.CorrectDelayedTyposInExpr(
-          ParseExpression(), /*InitDecl=*/nullptr,
-          /*RecoverUncorrectedTypos=*/false,
-          [](Expr *E) { return E->hasPlaceholderType() ? ExprError() : E; });
+      Result = ParseExpression();
       if (Result.isInvalid()) {
         DS.SetTypeSpecError();
         if (SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch)) {
@@ -4465,8 +4462,7 @@ bool Parser::ParseCXXAssumeAttributeArg(
       Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
 
   TentativeParsingAction TPA(*this);
-  ExprResult Res(
-      Actions.CorrectDelayedTyposInExpr(ParseConditionalExpression()));
+  ExprResult Res = ParseConditionalExpression();
   if (Res.isInvalid()) {
     TPA.Commit();
     SkipUntil(tok::r_paren, tok::r_square, StopAtSemi | StopBeforeMatch);

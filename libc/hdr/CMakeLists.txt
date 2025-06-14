@@ -221,6 +221,8 @@ add_proxy_header_library(
 
 add_header_library(wchar_overlay HDRS wchar_overlay.h)
 
+add_header_library(uchar_overlay HDRS uchar_overlay.h)
+
 add_proxy_header_library(
   wchar_macros
   HDRS
