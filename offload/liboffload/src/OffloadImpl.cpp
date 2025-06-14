@@ -458,6 +458,9 @@ Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
 }
 
 Error olDestroyProgram_impl(ol_program_handle_t Program) {
+  if (auto Err = Program->Image->getDevice().unloadBinary(Program->Image))
+    return Err;
+
   return olDestroy(Program);
 }
 
