@@ -46,6 +46,7 @@ private:
   ExprMutationAnalyzer::Memoized MutationAnalyzerCache;
   utils::IncludeInserter Inserter;
   const std::vector<StringRef> AllowedTypes;
+  bool IsAllowedInCoroutines;
 };
 
 } // namespace clang::tidy::performance
