@@ -19,6 +19,14 @@ add_header_library(
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.optional
+)
+
+add_header_library(
+  futex_timeout
+  HDRS
+    futex_timeout.h
+  DEPENDS
+    .futex_utils
     libc.src.__support.time.linux.abs_timeout
 )
 
@@ -34,7 +42,7 @@ add_header_library(
   HDRS
     mutex.h
   DEPENDS
-    .futex_utils
+    .futex_timeout
     libc.src.__support.threads.sleep
     libc.src.__support.time.linux.abs_timeout
     libc.src.__support.time.linux.monotonicity
@@ -50,7 +58,7 @@ add_header_library(
   HDRS
     rwlock.h
   DEPENDS
-    .futex_utils
+    .futex_timeout
     .raw_mutex
     libc.src.__support.common
     libc.src.__support.OSUtil.osutil
