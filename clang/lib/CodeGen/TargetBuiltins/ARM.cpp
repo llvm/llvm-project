@@ -5471,19 +5471,22 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == clang::AArch64::BI_ReadStatusReg ||
-      BuiltinID == clang::AArch64::BI_WriteStatusReg) {
+      BuiltinID == clang::AArch64::BI_WriteStatusReg ||
+      BuiltinID == clang::AArch64::BI__sys) {
     LLVMContext &Context = CGM.getLLVMContext();
 
     unsigned SysReg =
       E->getArg(0)->EvaluateKnownConstInt(getContext()).getZExtValue();
 
     std::string SysRegStr;
-    llvm::raw_string_ostream(SysRegStr) <<
-                       ((1 << 1) | ((SysReg >> 14) & 1))  << ":" <<
-                       ((SysReg >> 11) & 7)               << ":" <<
-                       ((SysReg >> 7)  & 15)              << ":" <<
-                       ((SysReg >> 3)  & 15)              << ":" <<
-                       ( SysReg        & 7);
+    unsigned SysRegOp0 = (BuiltinID == clang::AArch64::BI_ReadStatusReg ||
+                          BuiltinID == clang::AArch64::BI_WriteStatusReg)
+                             ? ((1 << 1) | ((SysReg >> 14) & 1))
+                             : 1;
+    llvm::raw_string_ostream(SysRegStr)
+        << SysRegOp0 << ":" << ((SysReg >> 11) & 7) << ":"
+        << ((SysReg >> 7) & 15) << ":" << ((SysReg >> 3) & 15) << ":"
+        << (SysReg & 7);
 
     llvm::Metadata *Ops[] = { llvm::MDString::get(Context, SysRegStr) };
     llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
@@ -5500,8 +5503,13 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::write_register, Types);
     llvm::Value *ArgValue = EmitScalarExpr(E->getArg(1));
-
-    return Builder.CreateCall(F, { Metadata, ArgValue });
+    llvm::Value *Result = Builder.CreateCall(F, {Metadata, ArgValue});
+    if (BuiltinID == clang::AArch64::BI__sys) {
+      // Return 0 for convenience, even though MSVC returns some other undefined
+      // value.
+      Result = ConstantInt::get(Builder.getInt32Ty(), 0);
+    }
+    return Result;
   }
 
   if (BuiltinID == clang::AArch64::BI_AddressOfReturnAddress) {
