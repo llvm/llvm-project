@@ -84,12 +84,6 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReadWithEOF) {
       Failed<TransportEOFError>());
 }
 
-TEST_F(HTTPDelimitedJSONTransportTest, ReadAfterClosed) {
-  input.CloseReadFileDescriptor();
-  ASSERT_THAT_EXPECTED(
-      transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
-      llvm::Failed());
-}
 
 TEST_F(HTTPDelimitedJSONTransportTest, InvalidTransport) {
   transport = std::make_unique<HTTPDelimitedJSONTransport>(nullptr, nullptr);
@@ -136,13 +130,6 @@ TEST_F(JSONRPCTransportTest, ReadWithEOF) {
       Failed<TransportEOFError>());
 }
 
-TEST_F(JSONRPCTransportTest, ReadAfterClosed) {
-  input.CloseReadFileDescriptor();
-  ASSERT_THAT_EXPECTED(
-      transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
-      llvm::Failed());
-}
-
 TEST_F(JSONRPCTransportTest, Write) {
   ASSERT_THAT_ERROR(transport->Write(JSONTestType{"foo"}), Succeeded());
   output.CloseWriteFileDescriptor();
@@ -172,5 +159,23 @@ TEST_F(JSONRPCTransportTest, ReadWithTimeout) {
   ASSERT_THAT_EXPECTED(
       transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
       Failed<TransportTimeoutError>());
+}
+
+// Windows CRT _read checks that the file descriptor is valid and calls a
+// handler if not. This handler is normally a breakpoint, which looks like a
+// crash when not handled by a debugger.
+// https://learn.microsoft.com/en-us/%20cpp/c-runtime-library/reference/read?view=msvc-170
+TEST_F(HTTPDelimitedJSONTransportTest, ReadAfterClosed) {
+  input.CloseReadFileDescriptor();
+  ASSERT_THAT_EXPECTED(
+      transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
+      llvm::Failed());
+}
+
+TEST_F(JSONRPCTransportTest, ReadAfterClosed) {
+  input.CloseReadFileDescriptor();
+  ASSERT_THAT_EXPECTED(
+      transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
+      llvm::Failed());
 }
 #endif

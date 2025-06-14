@@ -836,8 +836,7 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
 
       Diag(ExpectedLoc, diag::err_expected_after)
           << "'case'" << tok::colon
-          << FixItHint::CreateInsertion(ExpectedLoc,
-                                        tok::getTokenName(tok::colon));
+          << FixItHint::CreateInsertion(ExpectedLoc, ":");
 
       ColonLoc = ExpectedLoc;
     }
