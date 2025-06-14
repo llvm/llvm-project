@@ -8054,6 +8054,41 @@ public:
   }
 };
 
+class PredefinedSugarType final : public Type {
+public:
+  enum Kind { SizeT, SignedSizeT, PtrdiffT };
+  friend class ASTContext;
+
+private:
+  Kind K;
+  QualType Underlying;
+  PredefinedSugarType(Kind KD, QualType UnderlyingType)
+      : Type(PredefinedSugar, UnderlyingType->getCanonicalTypeInternal(),
+             TypeDependence::None),
+        K(KD), Underlying(UnderlyingType) {}
+
+public:
+  bool isSugared() const { return true; }
+  QualType desugar() const { return Underlying; }
+  Kind getKind() const { return K; }
+
+  StringRef getName() const {
+    switch (K) {
+    case SizeT:
+      return "__size_t";
+    case SignedSizeT:
+      return "__signed_size_t";
+    case PtrdiffT:
+      return "__ptrdiff_t";
+    }
+    llvm_unreachable("");
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == PredefinedSugar;
+  }
+};
+
 /// A qualifier set is used to build a set of qualifiers.
 class QualifierCollector : public Qualifiers {
 public:

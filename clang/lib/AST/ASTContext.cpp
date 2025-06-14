@@ -2528,7 +2528,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Align = static_cast<unsigned>(Width);
     }
   }
+
   break;
+
+  case Type::PredefinedSugar:
+    return getTypeInfo(cast<PredefinedSugarType>(T)->desugar().getTypePtr());
+    break;
 
   case Type::Pipe:
     Width = Target->getPointerWidth(LangAS::opencl_global);
@@ -5148,6 +5153,14 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
   return QualType(New, 0);
 }
 
+QualType ASTContext::getPredefinedSugarType(uint32_t KD,
+                                            QualType UnderlyingType) const {
+  auto *New = new (*this, alignof(PredefinedSugarType)) PredefinedSugarType(
+      static_cast<PredefinedSugarType::Kind>(KD), UnderlyingType);
+  Types.push_back(New);
+  return QualType(New, 0);
+}
+
 #ifndef NDEBUG
 static bool NeedsInjectedClassNameType(const RecordDecl *D) {
   if (!isa<CXXRecordDecl>(D)) return false;
@@ -6743,8 +6756,9 @@ QualType ASTContext::getTagDeclType(const TagDecl *Decl) const {
 QualType ASTContext::getSizeType() const {
   if (SizeType.isNull()) {
     if (!getLangOpts().HLSL)
-      SizeType = getTypedefType(buildImplicitTypedef(
-          getFromTargetType(Target->getSizeType()), "__size_t"));
+      SizeType =
+          getPredefinedSugarType(PredefinedSugarType::Kind::SizeT,
+                                 getFromTargetType(Target->getSizeType()));
     else
       SizeType = getFromTargetType(Target->getSizeType());
   }
@@ -14572,6 +14586,9 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     return Ctx.getCountAttributedType(Ctx.getQualifiedType(Underlying), CEX,
                                       DX->isCountInBytes(), DX->isOrNull(),
                                       CDX);
+  }
+  case Type::PredefinedSugar: {
+    return QualType();
   }
   }
   llvm_unreachable("Unhandled Type Class");
