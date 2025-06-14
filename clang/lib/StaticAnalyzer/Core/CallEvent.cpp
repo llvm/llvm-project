@@ -280,7 +280,7 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   bool ShouldPreserveGlobals = false;
   const SummaryContext *SummaryCtx =
       State->getStateManager().getOwningEngine().getSummaryCtx();
-  const FunctionDecl *FD = llvm::dyn_cast<FunctionDecl>(getDecl());
+  const FunctionDecl *FD = llvm::dyn_cast_or_null<FunctionDecl>(getDecl());
   if (SummaryCtx && FD) {
     const auto *Summary = SummaryCtx->GetSummary(FD);
     ShouldPreserveGlobals =
