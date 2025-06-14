@@ -1957,8 +1957,7 @@ private:
 
   // The core language uses these types as the result types of some expressions,
   // which are typically standard integer types and consistent with it's
-  // typedefs (if any). These variables store the typedefs generated in the AST,
-  // not the typedefs provided in the header files.
+  // typedefs (if any).
   mutable QualType SizeType;       // __size_t
   mutable QualType SignedSizeType; // __signed_size_t
   mutable QualType PtrdiffType;    // __ptrdiff_t
