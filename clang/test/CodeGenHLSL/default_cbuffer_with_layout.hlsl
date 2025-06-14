@@ -4,14 +4,14 @@
 // CHECK-SAME: target("dx.Layout", %S, 8, 0) }>
 // CHECK: %S = type <{ <2 x float> }>
 
-// CHECK-DAG: @b = external addrspace(2) global float, align 4
-// CHECK-DAG: @d = external addrspace(2) global <4 x i32>, align 16
+// CHECK-DAG: @b = external hidden addrspace(2) global float, align 4
+// CHECK-DAG: @d = external hidden addrspace(2) global <4 x i32>, align 16
 // CHECK-DAG: @"$Globals.cb" = global target("dx.CBuffer",
 // CHECK-DAG-SAME: target("dx.Layout", %"__cblayout_$Globals", 144, 120, 16, 32, 64, 128, 112))
-// CHECK-DAG: @a = external addrspace(2) global i32, align 4
-// CHECK-DAG: @c = external addrspace(2) global [4 x double], align 8
-// CHECK-DAG: @e = external addrspace(2) global <4 x float>, align 16
-// CHECK-DAG: @s = external addrspace(2) global target("dx.Layout", %S, 8, 0), align 1
+// CHECK-DAG: @a = external hidden addrspace(2) global i32, align 4
+// CHECK-DAG: @c = external hidden addrspace(2) global [4 x double], align 8
+// CHECK-DAG: @e = external hidden addrspace(2) global <4 x float>, align 16
+// CHECK-DAG: @s = external hidden addrspace(2) global target("dx.Layout", %S, 8, 0), align 1
 
 struct S {
   float2 v;
