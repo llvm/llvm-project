@@ -103,7 +103,7 @@
 "`LWG4142 <https://wg21.link/LWG4142>`__","``format_parse_context::check_dynamic_spec`` should require at least one type","2024-11 (Wrocław)","","",""
 "`LWG4144 <https://wg21.link/LWG4144>`__","Disallow ``unique_ptr<T&, D>``","2024-11 (Wrocław)","","",""
 "`LWG4147 <https://wg21.link/LWG4147>`__","Precondition on ``inplace_vector::emplace``","2024-11 (Wrocław)","","",""
-"`LWG4148 <https://wg21.link/LWG4148>`__","``unique_ptr::operator*`` should not allow dangling references","2024-11 (Wrocław)","","",""
+"`LWG4148 <https://wg21.link/LWG4148>`__","``unique_ptr::operator*`` should not allow dangling references","2024-11 (Wrocław)","|Complete|","21",""
 "`LWG4153 <https://wg21.link/LWG4153>`__","Fix extra ""-1"" for ``philox_engine::max()``","2024-11 (Wrocław)","","",""
 "`LWG4154 <https://wg21.link/LWG4154>`__","The Mandates for ``std::packaged_task``'s constructor from a callable entity should consider decaying","2024-11 (Wrocław)","","",""
 "`LWG4157 <https://wg21.link/LWG4157>`__","The resolution of LWG3465 was damaged by P2167R3","2024-11 (Wrocław)","","20",""
