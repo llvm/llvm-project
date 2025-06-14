@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_AFFINE_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_AFFINE_TRANSFORMS_TRANSFORMS_H
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
 
@@ -32,6 +33,18 @@ enum class BoundType;
 
 namespace affine {
 class AffineApplyOp;
+
+/// Lowers `affine.delinearize_index` into a sequence of division and remainder
+/// operations.
+LogicalResult lowerAffineDelinearizeIndexOp(RewriterBase &rewriter,
+                                            AffineDelinearizeIndexOp op);
+
+/// Lowers `affine.linearize_index` into a sequence of multiplications and
+/// additions. Make a best effort to sort the input indices so that
+/// the most loop-invariant terms are at the left of the additions
+/// to enable loop-invariant code motion.
+LogicalResult lowerAffineLinearizeIndexOp(RewriterBase &rewriter,
+                                          AffineLinearizeIndexOp op);
 
 /// Populate patterns that expand affine index operations into more fundamental
 /// operations (not necessarily restricted to Affine dialect).
