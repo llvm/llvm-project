@@ -9603,8 +9603,8 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
         } else {
           // Note that sub 0, INT_MIN is not NSW. It techically is a signed wrap
           // 'sub nsw C, x' produces [SINT_MIN + 1 + C, SINT_MAX].
-          Lower = APInt::getSignedMinValue(Width) + *C + 1;
-          Upper = APInt::getSignedMaxValue(Width) + 1;
+          Lower = *C - APInt::getSignedMaxValue(Width);
+          Upper = APInt::getSignedMinValue(Width);
         }
       }
     }
