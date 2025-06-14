@@ -47,3 +47,16 @@ const MCExpr *RISCVMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
   assert(Encoding & dwarf::DW_EH_PE_sdata4 && "Unexpected encoding");
   return RISCVMCExpr::create(ME, ELF::R_RISCV_32_PCREL, Ctx);
 }
+
+RISCVMCAsmInfoDarwin::RISCVMCAsmInfoDarwin() {
+  CodePointerSize = 4;
+  PrivateGlobalPrefix = "L";
+  PrivateLabelPrefix = "L";
+  SeparatorString = "%%";
+  CommentString = ";";
+  AlignmentIsInBytes = false;
+  SupportsDebugInformation = true;
+  ExceptionsType = ExceptionHandling::DwarfCFI;
+  Data16bitsDirective = "\t.half\t";
+  Data32bitsDirective = "\t.word\t";
+}
