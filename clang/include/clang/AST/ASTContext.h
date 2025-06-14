@@ -629,9 +629,26 @@ public:
   void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
                                      CXXRecordDeclRelocationInfo);
 
+  /// Examines a given type, and returns whether the T itself
+  /// is address discriminated, or any transitively embedded types
+  /// contain data that is address discriminated. This includes
+  /// implicitly authenticated values like vtable pointers, as well as
+  /// explicitly qualified fields.
+  bool containsAddressDiscriminatedPointerAuth(QualType T);
+
 private:
+  // A simple helper function to short circuit pointer auth checks.
+  bool isPointerAuthenticationAvailable() const {
+    return LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics ||
+           LangOpts.PointerAuthVTPtrAddressDiscrimination;
+  }
+
   llvm::DenseMap<const CXXRecordDecl *, CXXRecordDeclRelocationInfo>
       RelocatableClasses;
+
+  // FIXME: store in RecordDeclBitfields in future?
+  llvm::DenseMap<const RecordDecl *, bool>
+      RecordContainsAddressDiscriminatedPointerAuth;
 
   ImportDecl *FirstLocalImport = nullptr;
   ImportDecl *LastLocalImport = nullptr;
@@ -3668,6 +3685,13 @@ public:
   /// authentication policy for the specified record.
   const CXXRecordDecl *
   baseForVTableAuthentication(const CXXRecordDecl *ThisClass);
+
+  /// If this class is polymorphic, returns true if any of this class's
+  /// vtable pointers have an address discriminated pointer authentication
+  /// schema.
+  /// This does not check fields of the class or base classes.
+  bool hasAddressDiscriminatedVTableAuthentication(const CXXRecordDecl *Class);
+
   bool useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
                                StringRef MangledName);
 

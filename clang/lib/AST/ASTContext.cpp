@@ -1705,6 +1705,41 @@ void ASTContext::setRelocationInfoForCXXRecord(
   RelocatableClasses.insert({D, Info});
 }
 
+bool ASTContext::containsAddressDiscriminatedPointerAuth(QualType T) {
+  if (!isPointerAuthenticationAvailable())
+    return false;
+
+  T = T.getCanonicalType();
+  if (T.hasAddressDiscriminatedPointerAuth())
+    return true;
+  const RecordDecl *RD = T->getAsRecordDecl();
+  if (!RD)
+    return false;
+
+  if (auto Existing = RecordContainsAddressDiscriminatedPointerAuth.find(RD);
+      Existing != RecordContainsAddressDiscriminatedPointerAuth.end())
+    return Existing->second;
+
+  auto SaveReturn = [this, RD](bool Result) {
+    RecordContainsAddressDiscriminatedPointerAuth.insert({RD, Result});
+    return Result;
+  };
+  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    if (CXXRD->isPolymorphic() &&
+        hasAddressDiscriminatedVTableAuthentication(CXXRD))
+      return SaveReturn(true);
+    for (auto Base : CXXRD->bases()) {
+      if (containsAddressDiscriminatedPointerAuth(Base.getType()))
+        return SaveReturn(true);
+    }
+  }
+  for (auto *FieldDecl : RD->fields()) {
+    if (containsAddressDiscriminatedPointerAuth(FieldDecl->getType()))
+      return SaveReturn(true);
+  }
+  return SaveReturn(false);
+}
+
 void ASTContext::addedLocalImportDecl(ImportDecl *Import) {
   assert(!Import->getNextLocalImport() &&
          "Import declaration already in the chain");
@@ -15125,6 +15160,22 @@ ASTContext::baseForVTableAuthentication(const CXXRecordDecl *ThisClass) {
     PrimaryBase = Base;
   }
   return PrimaryBase;
+}
+
+bool ASTContext::hasAddressDiscriminatedVTableAuthentication(
+    const CXXRecordDecl *Class) {
+  if (!isPointerAuthenticationAvailable() || !Class->isPolymorphic())
+    return false;
+  const CXXRecordDecl *BaseType = baseForVTableAuthentication(Class);
+  using AuthAttr = VTablePointerAuthenticationAttr;
+  const AuthAttr *ExplicitAuth = BaseType->getAttr<AuthAttr>();
+  if (!ExplicitAuth)
+    return LangOpts.PointerAuthVTPtrAddressDiscrimination;
+  AuthAttr::AddressDiscriminationMode AddressDiscrimination =
+      ExplicitAuth->getAddressDiscrimination();
+  if (AddressDiscrimination == AuthAttr::DefaultAddressDiscrimination)
+    return LangOpts.PointerAuthVTPtrAddressDiscrimination;
+  return AddressDiscrimination == AuthAttr::AddressDiscrimination;
 }
 
 bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
