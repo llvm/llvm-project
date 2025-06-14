@@ -35,6 +35,8 @@ using namespace llvm;
 struct XtensaOperand;
 
 class XtensaAsmParser : public MCTargetAsmParser {
+  const MCRegisterInfo &MRI;
+
   enum XtensaRegisterType { Xtensa_Generic, Xtensa_SR, Xtensa_UR };
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
@@ -91,7 +93,8 @@ public:
 
   XtensaAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                   const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII) {
+      : MCTargetAsmParser(Options, STI, MII),
+        MRI(*Parser.getContext().getRegisterInfo()) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
 
@@ -617,7 +620,7 @@ ParseStatus XtensaAsmParser::parseRegister(OperandVector &Operands,
     // and such situation may lead to confilct
     if (RegType == Xtensa_UR) {
       int64_t RegCode = getLexer().getTok().getIntVal();
-      RegNo = Xtensa::getUserRegister(RegCode);
+      RegNo = Xtensa::getUserRegister(RegCode, MRI);
     } else {
       RegName = getLexer().getTok().getString();
       RegNo = MatchRegisterAltName(RegName);

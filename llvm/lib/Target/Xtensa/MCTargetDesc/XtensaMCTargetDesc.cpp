@@ -202,11 +202,10 @@ bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits,
 }
 
 // Get Xtensa User Register by encoding value.
-MCRegister Xtensa::getUserRegister(unsigned Code) {
-  switch (Code) {
-  case 232:
+MCRegister Xtensa::getUserRegister(unsigned Code, const MCRegisterInfo &MRI) {
+  if (MRI.getEncodingValue(Xtensa::FCR) == Code) {
     return Xtensa::FCR;
-  case 233:
+  } else if (MRI.getEncodingValue(Xtensa::FSR) == Code) {
     return Xtensa::FSR;
   }
   return Xtensa::NoRegister;
