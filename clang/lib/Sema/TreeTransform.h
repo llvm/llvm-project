@@ -47,6 +47,7 @@
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <optional>
@@ -7256,7 +7257,7 @@ QualType TreeTransform<Derived>::TransformPredefinedSugarType(
   QualType Result = TL.getType();
 
   if (getDerived().AlwaysRebuild()) {
-    Result = getDerived().RebuildPredefinedSugarType(EIT->getKind());
+    Result = getDerived().RebuildPredefinedSugarType(llvm::to_underlying(EIT->getKind()));
   }
 
   PredefinedSugarTypeLoc NewTL = TLB.push<PredefinedSugarTypeLoc>(Result);
