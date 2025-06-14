@@ -92,6 +92,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/CommandLine.h"
 #include <cassert>
 #include <climits>
 #include <cstddef>
@@ -106,6 +107,15 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+
+
+namespace opts {
+// Option for dumping auto type inference
+extern llvm::cl::OptionCategory DumpAutoInference;
+extern llvm::cl::opt<bool> DumpAutoTypeInference;
+} // namespace opts
+
 
 namespace llvm {
 struct InlineAsmIdentifierInfo;
@@ -859,6 +869,14 @@ public:
 
   /// Print out statistics about the semantic analysis.
   void PrintStats() const;
+
+    /// Emits diagnostic remark indicating the compiler-deduced types and return
+  /// type for variables and functions
+  void DumpAutoTypeInference(SourceManager &SM, SourceLocation Loc, bool isVar,
+                             ASTContext &Context, llvm::StringRef Name,
+                             QualType DeducedType);
+
+
 
   /// Run some code with "sufficient" stack space. (Currently, at least 256K is
   /// guaranteed). Produces a warning if we're low on stack space and allocates

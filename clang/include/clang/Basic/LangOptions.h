@@ -530,7 +530,8 @@ public:
   SanitizerSet Sanitize;
   /// Is at least one coverage instrumentation type enabled.
   bool SanitizeCoverage = false;
-
+  
+  bool DumpAutoTypeInference = false;
   /// Paths to files specifying which objects
   /// (files, functions, variables) should not be instrumented.
   std::vector<std::string> NoSanitizeFiles;
