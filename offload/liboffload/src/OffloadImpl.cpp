@@ -168,15 +168,27 @@ void initPlugins() {
       !std::getenv("OFFLOAD_DISABLE_VALIDATION");
 }
 
-// TODO: We can properly reference count here and manage the resources in a more
-// clever way
 Error olInit_impl() {
   static std::once_flag InitFlag;
   std::call_once(InitFlag, initPlugins);
 
   return Error::success();
 }
-Error olShutDown_impl() { return Error::success(); }
+
+Error olShutDown_impl() {
+  llvm::Error Result = Error::success();
+
+  for (auto &P : Platforms()) {
+    // Host plugin is nullptr and has no deinit
+    if (!P.Plugin)
+      continue;
+
+    if (auto Res = P.Plugin->deinit())
+      Result = llvm::joinErrors(std::move(Result), std::move(Res));
+  }
+
+  return Result;
+}
 
 Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
                                   ol_platform_info_t PropName, size_t PropSize,
@@ -458,6 +470,9 @@ Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
 }
 
 Error olDestroyProgram_impl(ol_program_handle_t Program) {
+  if (auto Err = Program->Image->getDevice().unloadBinary(Program->Image))
+    return Err;
+
   return olDestroy(Program);
 }
 
