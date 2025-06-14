@@ -2478,6 +2478,13 @@ const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength) {
   return Str.data();
 }
 
+char *LLVMIntrinsicCopyName(unsigned ID, size_t *NameLength) {
+  auto IID = llvm_map_to_intrinsic_id(ID);
+  auto Str = llvm::Intrinsic::getName(IID);
+  *NameLength = Str.size();
+  return strdup(Str.data());
+}
+
 LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
                                  LLVMTypeRef *ParamTypes, size_t ParamCount) {
   auto IID = llvm_map_to_intrinsic_id(ID);
