@@ -177,10 +177,10 @@ TEST_F(LoongArch64EmulatorTester, testJIRL) {
   gpr.gpr[12] = 0x12000400;
   ASSERT_TRUE(TestExecute(inst));
   auto r1 = gpr.gpr[1];
-  auto pc = ReadPC(&success);
-  ASSERT_TRUE(success);
+  auto pc = ReadPC();
+  ASSERT_TRUE(pc);
   ASSERT_EQ(r1, old_pc + 4);
-  ASSERT_EQ(pc, gpr.gpr[12] + (offs16 * 4));
+  ASSERT_EQ(*pc, gpr.gpr[12] + (offs16 * 4));
 }
 
 TEST_F(LoongArch64EmulatorTester, testB) {
@@ -193,9 +193,9 @@ TEST_F(LoongArch64EmulatorTester, testB) {
   uint32_t inst = 0b01010000000000000100000000000001;
   uint32_t offs26 = 0x10010;
   ASSERT_TRUE(TestExecute(inst));
-  auto pc = ReadPC(&success);
-  ASSERT_TRUE(success);
-  ASSERT_EQ(pc, old_pc + (offs26 * 4));
+  auto pc = ReadPC();
+  ASSERT_TRUE(pc);
+  ASSERT_EQ(*pc, old_pc + (offs26 * 4));
 }
 
 TEST_F(LoongArch64EmulatorTester, testBL) {
@@ -209,10 +209,10 @@ TEST_F(LoongArch64EmulatorTester, testBL) {
   uint32_t offs26 = 0x10010;
   ASSERT_TRUE(TestExecute(inst));
   auto r1 = gpr.gpr[1];
-  auto pc = ReadPC(&success);
-  ASSERT_TRUE(success);
+  auto pc = ReadPC();
+  ASSERT_TRUE(pc);
   ASSERT_EQ(r1, old_pc + 4);
-  ASSERT_EQ(pc, old_pc + (offs26 * 4));
+  ASSERT_EQ(*pc, old_pc + (offs26 * 4));
 }
 
 static void testBcondBranch(LoongArch64EmulatorTester *tester,
@@ -226,9 +226,9 @@ static void testBcondBranch(LoongArch64EmulatorTester *tester,
   // b<cmp> r12, r13, (-256)
   uint32_t inst = encoder(12, 13, -256);
   ASSERT_TRUE(tester->TestExecute(inst));
-  auto pc = tester->ReadPC(&success);
-  ASSERT_TRUE(success);
-  ASSERT_EQ(pc, old_pc + (branched ? (-256 * 4) : 4));
+  auto pc = tester->ReadPC();
+  ASSERT_TRUE(pc);
+  ASSERT_EQ(*pc, old_pc + (branched ? (-256 * 4) : 4));
 }
 
 static void testBZcondBranch(LoongArch64EmulatorTester *tester,
@@ -241,9 +241,9 @@ static void testBZcondBranch(LoongArch64EmulatorTester *tester,
   // b<cmp>z  r4, (-256)
   uint32_t inst = encoder(4, -256);
   ASSERT_TRUE(tester->TestExecute(inst));
-  auto pc = tester->ReadPC(&success);
-  ASSERT_TRUE(success);
-  ASSERT_EQ(pc, old_pc + (branched ? (-256 * 4) : 4));
+  auto pc = tester->ReadPC();
+  ASSERT_TRUE(pc);
+  ASSERT_EQ(*pc, old_pc + (branched ? (-256 * 4) : 4));
 }
 
 static void testBCZcondBranch(LoongArch64EmulatorTester *tester,
@@ -256,9 +256,9 @@ static void testBCZcondBranch(LoongArch64EmulatorTester *tester,
   // bc<cmp>z fcc0, 256
   uint32_t inst = encoder(0, 256);
   ASSERT_TRUE(tester->TestExecute(inst));
-  auto pc = tester->ReadPC(&success);
-  ASSERT_TRUE(success);
-  ASSERT_EQ(pc, old_pc + (branched ? (256 * 4) : 4));
+  auto pc = tester->ReadPC();
+  ASSERT_TRUE(pc);
+  ASSERT_EQ(*pc, old_pc + (branched ? (256 * 4) : 4));
 }
 
 GEN_BCOND_TEST(64, BEQ, 1, 1, 0)

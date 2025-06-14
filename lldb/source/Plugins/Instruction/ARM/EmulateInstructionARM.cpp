@@ -14471,3 +14471,14 @@ bool EmulateInstructionARM::CreateFunctionEntryUnwind(UnwindPlan &unwind_plan) {
   unwind_plan.SetReturnAddressRegister(dwarf_lr);
   return true;
 }
+
+unsigned ARMSingleStepBreakpointLocationsPredictor::GetBreakpointSize(
+    lldb::addr_t bp_addr, Status &error) {
+  auto flags = m_emulator_up->ReadRegisterUnsigned(
+      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS, LLDB_INVALID_ADDRESS,
+      nullptr);
+  if (flags == LLDB_INVALID_ADDRESS)
+    error = Status("Reading flags failed!");
+
+  return (flags & 0x20) ? /* Thumb mode */ 2 : /* Arm mode */ 4;
+}
