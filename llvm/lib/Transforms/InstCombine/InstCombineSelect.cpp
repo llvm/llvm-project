@@ -565,6 +565,62 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
   return nullptr;
 }
 
+/// Try to fold a select to a min/max intrinsic. Many cases are already handled
+/// by matchDecomposedSelectPattern but here we handle the cases where more
+/// extensive modification of the IR is required.
+static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
+                                   Value *FVal,
+                                   InstCombiner::BuilderTy &Builder,
+                                   const SimplifyQuery &SQ) {
+  const Value *CmpLHS = Cmp->getOperand(0);
+  const Value *CmpRHS = Cmp->getOperand(1);
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+
+  // (X > Y) ? X : (Y - 1) ==> MIN(X, Y - 1)
+  // (X < Y) ? X : (Y + 1) ==> MAX(X, Y + 1)
+  // This transformation is valid when overflow corresponding to the sign of
+  // the comparison is poison and we must drop the non-matching overflow flag.
+  if (CmpRHS == TVal) {
+    std::swap(CmpLHS, CmpRHS);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+  }
+
+  // TODO: consider handling 'or disjoint' as well, though these would need to
+  // be converted to 'add' instructions.
+  if (!(CmpLHS == TVal && isa<Instruction>(FVal)))
+    return nullptr;
+
+  if (Pred == CmpInst::ICMP_SGT &&
+      match(FVal, m_NSWAdd(m_Specific(CmpRHS), m_One()))) {
+    cast<Instruction>(FVal)->setHasNoUnsignedWrap(false);
+    return Builder.CreateBinaryIntrinsic(Intrinsic::smax, TVal, FVal);
+  }
+
+  if (Pred == CmpInst::ICMP_SLT &&
+      match(FVal, m_NSWAdd(m_Specific(CmpRHS), m_AllOnes()))) {
+    cast<Instruction>(FVal)->setHasNoUnsignedWrap(false);
+    return Builder.CreateBinaryIntrinsic(Intrinsic::smin, TVal, FVal);
+  }
+
+  if (Pred == CmpInst::ICMP_UGT &&
+      match(FVal, m_NUWAdd(m_Specific(CmpRHS), m_One()))) {
+    cast<Instruction>(FVal)->setHasNoSignedWrap(false);
+    return Builder.CreateBinaryIntrinsic(Intrinsic::umax, TVal, FVal);
+  }
+
+  // Note: We must use isKnownNonZero here because "sub nuw %x, 1" will be
+  // canonicalized to "add %x, -1" discarding the nuw flag.
+  if (Pred == CmpInst::ICMP_ULT &&
+      match(FVal, m_Add(m_Specific(CmpRHS), m_AllOnes())) &&
+      isKnownNonZero(CmpRHS, SQ)) {
+    cast<Instruction>(FVal)->setHasNoSignedWrap(false);
+    cast<Instruction>(FVal)->setHasNoUnsignedWrap(false);
+    return Builder.CreateBinaryIntrinsic(Intrinsic::umin, TVal, FVal);
+  }
+
+  return nullptr;
+}
+
 /// We want to turn:
 ///   (select (icmp eq (and X, Y), 0), (and (lshr X, Z), 1), 1)
 /// into:
@@ -1939,6 +1995,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     SI.swapProfMetadata();
     return &SI;
   }
+
+  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder, SQ))
+    return replaceInstUsesWith(SI, V);
 
   if (Instruction *V =
           foldSelectICmpAndAnd(SI.getType(), ICI, TrueVal, FalseVal, Builder))

@@ -155,5 +155,7 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
   // Support $ as PC in inline asm
   DollarIsPC = true;
 
+  UsesSetToEquateSymbol = true;
+
   initializeVariantKinds(variantKindDescs);
 }
