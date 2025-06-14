@@ -166,10 +166,10 @@ private:
             // Retrieveing the address so that DoConstruct or inner loop can be
             // set later.
             loops.push(&(std::get<std::optional<
-                             common::Indirection<parser::OpenMPLoopConstruct>>>(
+                    common::Indirection<parser::OpenMPLoopConstruct>>>(
                 loops.top()->t)
-                             .value()
-                             .value()));
+                    .value()
+                    .value()));
             nextIt = block.erase(nextIt);
           }
         }
