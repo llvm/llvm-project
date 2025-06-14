@@ -576,6 +576,7 @@ Parser::ParseOpenMPDeclareMapperDirective(AccessSpecifier AS) {
     return DeclGroupPtrTy();
   }
 
+  Scope *OuterScope = getCurScope();
   // Enter scope.
   DeclarationNameInfo DirName;
   SourceLocation Loc = Tok.getLocation();
@@ -614,12 +615,17 @@ Parser::ParseOpenMPDeclareMapperDirective(AccessSpecifier AS) {
     IsCorrect = false;
   }
 
+  // This needs to be called within the scope because
+  // processImplicitMapsWithDefaultMappers may add clauses when analyzing nested
+  // types. The scope used for calling ActOnOpenMPDeclareMapperDirective,
+  // however, needs to be the outer one, otherwise declared mappers don't become
+  // visible.
+  DeclGroupPtrTy DG = Actions.OpenMP().ActOnOpenMPDeclareMapperDirective(
+      OuterScope, Actions.getCurLexicalContext(), MapperId, MapperType,
+      Range.getBegin(), VName, AS, MapperVarRef.get(), Clauses);
   // Exit scope.
   Actions.OpenMP().EndOpenMPDSABlock(nullptr);
   OMPDirectiveScope.Exit();
-  DeclGroupPtrTy DG = Actions.OpenMP().ActOnOpenMPDeclareMapperDirective(
-      getCurScope(), Actions.getCurLexicalContext(), MapperId, MapperType,
-      Range.getBegin(), VName, AS, MapperVarRef.get(), Clauses);
   if (!IsCorrect)
     return DeclGroupPtrTy();
 
