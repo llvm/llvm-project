@@ -7942,6 +7942,17 @@ bool CheckPrintfHandler::HandlePrintfSpecifier(
   if (!FS.hasStandardConversionSpecifier(S.getLangOpts()))
     HandleNonStandardConversionSpecifier(CS, startSpecifier, specifierLen);
 
+  // Check the explicitly fixed size is supported
+  if (!FS.isExplicitlyFixedSizeSupported()){
+    EmitFormatDiagnostic(S.PDiag(
+                         diag::warn_format_conversion_size_unsupported) 
+                         << FS.getLengthModifier().toString()
+                         << FS.getExplicitlyFixedSize(),
+                         getLocationOfByte(startSpecifier),
+                         /*IsStringLocation*/true,
+                         getSpecifierRange(startSpecifier, specifierLen));
+  }
+
   // The remaining checks depend on the data arguments.
   if (!HasFormatArguments())
     return true;
@@ -8595,6 +8606,17 @@ bool CheckScanfHandler::HandleScanfSpecifier(
   else if (!FS.hasStandardLengthConversionCombination())
     HandleInvalidLengthModifier(FS, CS, startSpecifier, specifierLen,
                                 diag::warn_format_non_standard_conversion_spec);
+  
+  // Check the explicitly fixed size is supported
+  if (!FS.isExplicitlyFixedSizeSupported()){
+    EmitFormatDiagnostic(S.PDiag(
+                         diag::warn_format_conversion_size_unsupported) 
+                         << FS.getLengthModifier().toString()
+                         << FS.getExplicitlyFixedSize(),
+                         getLocationOfByte(startSpecifier),
+                         /*IsStringLocation*/true,
+                         getSpecifierRange(startSpecifier, specifierLen));
+  }
 
   if (!FS.hasStandardConversionSpecifier(S.getLangOpts()))
     HandleNonStandardConversionSpecifier(CS, startSpecifier, specifierLen);
