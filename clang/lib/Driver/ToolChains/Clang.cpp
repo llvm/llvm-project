@@ -5473,7 +5473,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.getLastArg(options::OPT_summaries_dir_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_summaries_dir_EQ);
 
-  // FIXME: This needs to be cleaned up and needs proper error handling as well.
   if (const Arg *A = Args.getLastArg(options::OPT_emit_summaries_EQ)) {
     llvm::SmallString<10> input;
     for (const auto &II : Inputs) {
@@ -5485,14 +5484,21 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
 
     if (!input.empty()) {
-      if (A->containsValue("cwd")) {
-        llvm::SmallString<10> filename = llvm::sys::path::filename(input);
-        llvm::sys::path::replace_extension(filename, "json");
+      Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o);
+      StringRef filename = llvm::sys::path::filename(input);
+      llvm::SmallString<10> summaryFile;
 
+      if (A->containsValue("cwd") || !FinalOutput) {
+        summaryFile = filename;
+      } else if (A->containsValue("obj") && FinalOutput) {
+        summaryFile = llvm::sys::path::parent_path(FinalOutput->getValue());
+        llvm::sys::path::append(summaryFile, filename);
+      }
+
+      if (!summaryFile.empty()) {
+        llvm::sys::path::replace_extension(summaryFile, "json");
         CmdArgs.push_back(
-            Args.MakeArgString(Twine("-summary-file=") + filename));
-      } else if (A->containsValue("obj")) {
-        // FIXME: implement
+            Args.MakeArgString(Twine("-summary-file=") + summaryFile));
       }
     }
   }
