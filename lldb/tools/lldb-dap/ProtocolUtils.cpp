@@ -105,6 +105,21 @@ protocol::Source CreateSource(lldb::SBAddress address, lldb::SBTarget &target) {
   return CreateSource(line_entry.GetFileSpec());
 }
 
+protocol::Source CreateSource(lldb::SBFrame frame) {
+  if (!frame.IsValid())
+    return {};
+
+  const lldb::SBTarget target = frame.GetThread().GetProcess().GetTarget();
+  lldb::SBDebugger debugger = target.GetDebugger();
+  lldb::StopDisassemblyType stop_disassembly_display =
+      GetStopDisassemblyDisplay(debugger);
+  const lldb::SBAddress frame_pc = frame.GetPCAddress();
+  if (ShouldDisplayAssemblySource(frame_pc, stop_disassembly_display))
+    return CreateAssemblySource(target, frame_pc);
+
+  return CreateSource(frame.GetLineEntry().GetFileSpec());
+}
+
 bool IsAssemblySource(const protocol::Source &source) {
   // According to the specification, a source must have either `path` or
   // `sourceReference` specified. We use `path` for sources with known source

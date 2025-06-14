@@ -42,6 +42,17 @@ protocol::Source CreateSource(const lldb::SBFileSpec &file);
 ///     definition outlined by Microsoft.
 protocol::Source CreateSource(lldb::SBAddress address, lldb::SBTarget &target);
 
+/// Create a `protocol::Source` object as described in the debug adapter
+/// definition.
+///
+/// \param[in] frame
+///     The frame to use when populating the "Source" object.
+///
+/// \return
+///     A `protcol::Source` object that follows the formal JSON
+///     definition outlined by Microsoft.
+protocol::Source CreateSource(lldb::SBFrame frame);
+
 /// Checks if the given source is for assembly code.
 bool IsAssemblySource(const protocol::Source &source);
 
