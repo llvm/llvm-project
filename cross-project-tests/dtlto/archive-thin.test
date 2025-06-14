@@ -1,0 +1,65 @@
+# REQUIRES: x86-registered-target,ld.lld,llvm-ar
+
+# Test that a DTLTO link succeeds and outputs the expected set of files
+# correctly when thin archives are present.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+RUN: %clang --target=x86_64-linux-gnu -flto=thin -c \
+RUN:   foo.c bar.c dog.c cat.c _start.c
+
+RUN: llvm-ar rcs foo.a foo.o --thin
+# Create this bitcode thin archive in a subdirectory to test the expansion of
+# the path to a bitcode file that is referenced using "..", e.g., in this case
+# "../bar.o".
+RUN: mkdir lib
+RUN: llvm-ar rcs lib/bar.a bar.o --thin
+# Create this bitcode thin archive with an absolute path entry containing "..".
+RUN: llvm-ar rcs dog.a %t/lib/../dog.o --thin
+RUN: llvm-ar rcs cat.a cat.o --thin
+RUN: llvm-ar rcs _start.a _start.o --thin
+
+RUN: mkdir %t/out && cd %t/out
+
+RUN: ld.lld %t/foo.a %t/lib/bar.a ../_start.a %t/cat.a \
+RUN:   --whole-archive ../dog.a \
+RUN:   --thinlto-distributor=%python \
+RUN:   --thinlto-distributor-arg=%llvm_src_root/utils/dtlto/local.py \
+RUN:   --thinlto-remote-compiler=%clang \
+RUN:   --save-temps
+
+# Check that the required output files have been created.
+RUN: ls | FileCheck %s --check-prefix=OUTPUTS \
+RUN:     --implicit-check-not=cat --implicit-check-not=foo
+
+# JSON jobs description.
+OUTPUTS-DAG: a.[[PID:[a-zA-Z0-9_]+]].dist-file.json
+
+# Individual summary index files.
+OUTPUTS-DAG:    dog.1.[[PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG: _start.2.[[PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG:    bar.3.[[PID]].native.o.thinlto.bc{{$}}
+
+# Native output object files.
+OUTPUTS-DAG:    dog.1.[[PID]].native.o{{$}}
+OUTPUTS-DAG: _start.2.[[PID]].native.o{{$}}
+OUTPUTS-DAG:    bar.3.[[PID]].native.o{{$}}
+
+#--- foo.c
+__attribute__((retain)) void foo() {}
+
+#--- bar.c
+extern void foo();
+__attribute__((retain)) void bar() { foo(); }
+
+#--- dog.c
+__attribute__((retain)) void dog() {}
+
+#--- cat.c
+__attribute__((retain)) void cat() {}
+
+#--- _start.c
+extern void bar();
+__attribute__((retain)) void _start() {
+  bar();
+}
+
