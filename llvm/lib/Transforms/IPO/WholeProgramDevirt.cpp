@@ -1087,6 +1087,7 @@ bool DevirtModule::tryFindVirtualCallTargets(
     std::vector<VirtualCallTarget> &TargetsForSlot,
     const std::set<TypeMemberInfo> &TypeMemberInfos, uint64_t ByteOffset,
     ModuleSummaryIndex *ExportSummary) {
+  bool HasAvailableExternally = false;
   for (const TypeMemberInfo &TM : TypeMemberInfos) {
     if (!TM.Bits->GV->isConstant())
       return false;
@@ -1095,6 +1096,16 @@ bool DevirtModule::tryFindVirtualCallTargets(
     // with public LTO visibility.
     if (TM.Bits->GV->getVCallVisibility() ==
         GlobalObject::VCallVisibilityPublic)
+      return false;
+
+    // Record if the first GV is AvailableExternally
+    if (TargetsForSlot.empty())
+      HasAvailableExternally = TM.Bits->GV->hasAvailableExternallyLinkage();
+
+    // When the first GV is AvailableExternally, check if all other GVs are
+    // also AvailableExternally. If they are not the same, return false.
+    if (!TargetsForSlot.empty() && HasAvailableExternally &&
+        !TM.Bits->GV->hasAvailableExternallyLinkage())
       return false;
 
     Function *Fn = nullptr;
