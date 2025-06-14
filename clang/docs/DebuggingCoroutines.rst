@@ -311,17 +311,25 @@ variables in the C++ source.
 Get the suspended points
 ========================
 
-An important requirement for debugging coroutines is to understand suspended
-points, which are where the coroutine is currently suspended and awaiting.
+An important requirement for debugging coroutines is to understand at which
+point a coroutine is currently suspended and awaiting.
 
-For simple cases like the above, inspecting the value of the `__coro_index`
-variable in the coroutine frame works well.
+The value of the `__coro_index` inside a couroutine frame indicates the current
+suspension point. To map this id back to a source code location, you can lookup
+the source location of a special, compiler-generated label `__coro_suspend_<N>`.
 
-However, it is not quite so simple in really complex situations. In these
-cases, it is necessary to use the coroutine libraries to insert the
-line-number.
+::
 
-For example:
+  (gdb) info line -function coro_task -label __coro_resume_2
+  Line 45 of "llvm-example.cpp" starts at address 0x1b1b <_ZL9coro_taski.resume+555> and ends at 0x1b46 <_ZL9coro_taski.resume+598>.
+  Line 45 of "llvm-example.cpp" starts at address 0x201b <_ZL9coro_taski.destroy+555> and ends at 0x2046 <_ZL9coro_taski.destroy+598>.
+  Line 45 of "llvm-example.cpp" starts at address 0x253b <_ZL9coro_taski.cleanup+555> and ends at 0x2566 <_ZL9coro_taski.cleanup+598>.
+
+Older versions of LLVM/clang might not yet emit those labels, though. For
+simple cases, you might still be able to guess the suspension point correctly.
+
+Alternatively, you might also want to modify your coroutine library to store
+the line number of the current suspension point in the promise:
 
 .. code-block:: c++
 
