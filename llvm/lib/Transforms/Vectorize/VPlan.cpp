@@ -289,34 +289,12 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   if (hasVectorValue(Def))
     return Data.VPV2Vector[Def];
 
-  auto GetBroadcastInstrs = [this, Def](Value *V) {
-    bool SafeToHoist =
-        !Def->hasDefiningRecipe() ||
-        VPDT.properlyDominates(Def->getDefiningRecipe()->getParent(),
-                               Plan->getVectorPreheader());
-
-    if (VF.isScalar())
-      return V;
-    // Place the code for broadcasting invariant variables in the new preheader.
-    IRBuilder<>::InsertPointGuard Guard(Builder);
-    if (SafeToHoist) {
-      BasicBlock *LoopVectorPreHeader =
-          CFG.VPBB2IRBB[Plan->getVectorPreheader()];
-      if (LoopVectorPreHeader)
-        Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
-    }
-
-    // Place the code for broadcasting invariant variables in the new preheader.
-    // Broadcast the scalar into all locations in the vector.
-    Value *Shuf = Builder.CreateVectorSplat(VF, V, "broadcast");
-
-    return Shuf;
-  };
-
   if (!hasScalarValue(Def, {0})) {
     assert(Def->isLiveIn() && "expected a live-in");
     Value *IRV = Def->getLiveInIRValue();
-    Value *B = GetBroadcastInstrs(IRV);
+    if (VF.isScalar())
+      return IRV;
+    Value *B = Builder.CreateVectorSplat(VF, IRV, "broadcast");
     set(Def, B);
     return B;
   }
@@ -361,7 +339,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   // insertelements once.
   Value *VectorValue = nullptr;
   if (IsSingleScalar) {
-    VectorValue = GetBroadcastInstrs(ScalarValue);
+    VectorValue = Builder.CreateVectorSplat(VF, ScalarValue, "broadcast");
     set(Def, VectorValue);
   } else {
     // Initialize packing with insertelements to start from undef.
