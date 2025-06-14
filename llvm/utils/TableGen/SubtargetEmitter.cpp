@@ -1486,7 +1486,7 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
       MCSchedClassDesc &MCDesc = SCTab[SCIdx];
       const CodeGenSchedClass &SchedClass = SchedModels.getSchedClass(SCIdx);
       unsigned NameOff = StrTab.GetOrAddStringOffset(SchedClass.Name);
-      OS << "  {DBGFIELD(" << NameOff << ") ";
+      OS << "  {DBGFIELD(/*" << SchedClass.Name << "*/ " << NameOff << ") ";
       if (SchedClass.Name.size() < 18)
         OS.indent(18 - SchedClass.Name.size());
       OS << MCDesc.NumMicroOps << ", " << (MCDesc.BeginGroup ? "true" : "false")
