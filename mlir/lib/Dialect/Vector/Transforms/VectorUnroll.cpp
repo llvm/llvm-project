@@ -54,6 +54,28 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
   return slicedIndices;
 }
 
+// Compute the new indices by adding `offsets` to `originalIndices`.
+// If m < n (m = offsets.size(), n = originalIndices.size()),
+// then only the trailing m values in `originalIndices` are updated.
+static SmallVector<Value> computeIndices(PatternRewriter &rewriter,
+                                         Location loc,
+                                         ArrayRef<Value> originalIndices,
+                                         ArrayRef<int64_t> offsets) {
+  assert(offsets.size() <= originalIndices.size() &&
+         "Offsets should not exceed the number of original indices");
+  SmallVector<Value> indices(originalIndices);
+
+  auto start = indices.size() - offsets.size();
+  for (auto [i, offset] : llvm::enumerate(offsets)) {
+    if (offset != 0) {
+      indices[start + i] = rewriter.create<arith::AddIOp>(
+          loc, originalIndices[start + i],
+          rewriter.create<arith::ConstantIndexOp>(loc, offset));
+    }
+  }
+  return indices;
+}
+
 // Clones `op` into a new operations that takes `operands` and returns
 // `resultTypes`.
 static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
@@ -631,6 +653,124 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+// This pattern unrolls the vector load into multiple 1D vector loads by
+// extracting slices from the base memory and inserting them into the result
+// vector using vector.insert_strided_slice.
+// Following,
+//   vector.load %base[%indices] : memref<4x4xf32>, vector<4x4xf32>
+// is converted to :
+//   %cst = arith.constant dense<0.0> : vector<4x4xf32>
+//   %slice_0 = vector.load %base[%indices] : memref<4x4xf32>, vector<4xf32>
+//   %result_0 = vector.insert_strided_slice %slice_0, %cst
+//     {offsets = [0, 0], strides = [1]} : vector<4xf32> into vector<4x4xf32>
+//   %slice_1 = vector.load %base[%indices + 1]
+//     : memref<4x4xf32>, vector<4xf32>
+//   %result_1 = vector.insert_strided_slice %slice_1, %result_0
+//     {offsets = [1, 0], strides = [1]} : vector<4xf32> into vector<4x4xf32>
+//   ...
+struct UnrollLoadPattern : public OpRewritePattern<vector::LoadOp> {
+  UnrollLoadPattern(MLIRContext *context,
+                    const vector::UnrollVectorOptions &options,
+                    PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::LoadOp>(context, benefit), options(options) {}
+
+  LogicalResult matchAndRewrite(vector::LoadOp loadOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType vecType = loadOp.getVectorType();
+    // Only unroll >1D loads
+    if (vecType.getRank() <= 1)
+      return failure();
+
+    Location loc = loadOp.getLoc();
+    ArrayRef<int64_t> originalShape = vecType.getShape();
+
+    // Target type is a 1D vector of the innermost dimension.
+    auto targetType =
+        VectorType::get(originalShape.back(), vecType.getElementType());
+
+    // Extend the targetShape to the same rank of original shape by padding 1s
+    // for leading dimensions for convenience of computing offsets
+    SmallVector<int64_t> targetShape(originalShape.size(), 1);
+    targetShape.back() = originalShape.back();
+
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, vecType, rewriter.getZeroAttr(vecType));
+
+    SmallVector<Value> originalIndices(loadOp.getIndices().begin(),
+                                       loadOp.getIndices().end());
+
+    for (SmallVector<int64_t> offsets :
+         StaticTileOffsetRange(originalShape, targetShape)) {
+      SmallVector<Value> indices =
+          computeIndices(rewriter, loc, originalIndices, offsets);
+      Value slice = rewriter.create<vector::LoadOp>(loc, targetType,
+                                                    loadOp.getBase(), indices);
+      // Insert the slice into the result at the correct position.
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, slice, result, offsets, SmallVector<int64_t>({1}));
+    }
+    rewriter.replaceOp(loadOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
+// This pattern unrolls the vector store into multiple 1D vector stores by
+// extracting slices from the source vector and storing them into the
+// destination.
+// Following,
+//   vector.store %source, %base[%indices] : vector<4x4xf32>
+// is converted to :
+//   %slice_0 = vector.extract %source[0] : vector<4xf32>
+//   vector.store %slice_0, %base[%indices] : vector<4xf32>
+//   %slice_1 = vector.extract %source[1] : vector<4xf32>
+//   vector.store %slice_1, %base[%indices + 1] : vector<4xf32>
+//   ...
+struct UnrollStorePattern : public OpRewritePattern<vector::StoreOp> {
+  UnrollStorePattern(MLIRContext *context,
+                     const vector::UnrollVectorOptions &options,
+                     PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::StoreOp>(context, benefit), options(options) {}
+
+  LogicalResult matchAndRewrite(vector::StoreOp storeOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType vecType = storeOp.getVectorType();
+    // Only unroll >1D stores.
+    if (vecType.getRank() <= 1)
+      return failure();
+
+    Location loc = storeOp.getLoc();
+    ArrayRef<int64_t> originalShape = vecType.getShape();
+
+    // Extend the targetShape to the same rank of original shape by padding 1s
+    // for leading dimensions for convenience of computing offsets
+    SmallVector<int64_t> targetShape(originalShape.size(), 1);
+    targetShape.back() = originalShape.back();
+
+    Value base = storeOp.getBase();
+    Value vector = storeOp.getValueToStore();
+
+    SmallVector<Value> originalIndices(storeOp.getIndices().begin(),
+                                       storeOp.getIndices().end());
+
+    for (SmallVector<int64_t> offsets :
+         StaticTileOffsetRange(originalShape, targetShape)) {
+      SmallVector<Value> indices =
+          computeIndices(rewriter, loc, originalIndices, offsets);
+      offsets.pop_back();
+      Value slice = rewriter.create<vector::ExtractOp>(loc, vector, offsets);
+      rewriter.create<vector::StoreOp>(loc, slice, base, indices);
+    }
+    rewriter.eraseOp(storeOp);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
 struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
   UnrollBroadcastPattern(MLIRContext *context,
                          const vector::UnrollVectorOptions &options,
@@ -699,10 +839,10 @@ private:
 void mlir::vector::populateVectorUnrollPatterns(
     RewritePatternSet &patterns, const UnrollVectorOptions &options,
     PatternBenefit benefit) {
-  patterns
-      .add<UnrollTransferReadPattern, UnrollTransferWritePattern,
-           UnrollContractionPattern, UnrollElementwisePattern,
-           UnrollReductionPattern, UnrollMultiReductionPattern,
-           UnrollTransposePattern, UnrollGatherPattern, UnrollBroadcastPattern>(
-          patterns.getContext(), options, benefit);
+  patterns.add<UnrollTransferReadPattern, UnrollTransferWritePattern,
+               UnrollContractionPattern, UnrollElementwisePattern,
+               UnrollReductionPattern, UnrollMultiReductionPattern,
+               UnrollTransposePattern, UnrollGatherPattern, UnrollLoadPattern,
+               UnrollStorePattern, UnrollBroadcastPattern>(
+      patterns.getContext(), options, benefit);
 }
