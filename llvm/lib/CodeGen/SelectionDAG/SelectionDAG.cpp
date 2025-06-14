@@ -1679,81 +1679,81 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
     Elt = ConstantInt::get(*getContext(), Elt->getValue());
 
   // In some cases the vector type is legal but the element type is illegal and
-  // needs to be promoted, for example v8i8 on ARM.  In this case, promote the
-  // inserted value (the type does not need to match the vector element type).
-  // Any extra bits introduced will be truncated away.
-  if (VT.isVector() && TLI->getTypeAction(*getContext(), EltVT) ==
-                           TargetLowering::TypePromoteInteger) {
-    EltVT = TLI->getTypeToTransformTo(*getContext(), EltVT);
-    APInt NewVal;
-    if (TLI->isSExtCheaperThanZExt(VT.getScalarType(), EltVT))
-      NewVal = Elt->getValue().sextOrTrunc(EltVT.getSizeInBits());
-    else
-      NewVal = Elt->getValue().zextOrTrunc(EltVT.getSizeInBits());
-    Elt = ConstantInt::get(*getContext(), NewVal);
-  }
-  // In other cases the element type is illegal and needs to be expanded, for
-  // example v2i64 on MIPS32. In this case, find the nearest legal type, split
-  // the value into n parts and use a vector type with n-times the elements.
-  // Then bitcast to the type requested.
-  // Legalizing constants too early makes the DAGCombiner's job harder so we
-  // only legalize if the DAG tells us we must produce legal types.
-  else if (NewNodesMustHaveLegalTypes && VT.isVector() &&
-           TLI->getTypeAction(*getContext(), EltVT) ==
-               TargetLowering::TypeExpandInteger) {
-    const APInt &NewVal = Elt->getValue();
-    EVT ViaEltVT = TLI->getTypeToTransformTo(*getContext(), EltVT);
-    unsigned ViaEltSizeInBits = ViaEltVT.getSizeInBits();
+  // thus when necessary we "legalise" the constant here so as to simplify the
+  // job of calling this function.  NOTE: Only legalize when necessary so that
+  // we don't make DAGCombiner's job harder.
+  if (NewNodesMustHaveLegalTypes && VT.isVector()) {
+    // Promote the inserted value (the type does not need to match the vector
+    // element type). Any extra bits introduced will be truncated away.
+    if (TLI->getTypeAction(*getContext(), EltVT) ==
+        TargetLowering::TypePromoteInteger) {
+      EltVT = TLI->getTypeToTransformTo(*getContext(), EltVT);
+      APInt NewVal;
+      if (TLI->isSExtCheaperThanZExt(VT.getScalarType(), EltVT))
+        NewVal = Elt->getValue().sextOrTrunc(EltVT.getSizeInBits());
+      else
+        NewVal = Elt->getValue().zextOrTrunc(EltVT.getSizeInBits());
+      Elt = ConstantInt::get(*getContext(), NewVal);
+    }
+    // For expansion we find the nearest legal type, split the value into n
+    // parts and use a vector type with n-times the elements. Then bitcast to
+    // the type requested.
+    else if (TLI->getTypeAction(*getContext(), EltVT) ==
+             TargetLowering::TypeExpandInteger) {
+      const APInt &NewVal = Elt->getValue();
+      EVT ViaEltVT = TLI->getTypeToTransformTo(*getContext(), EltVT);
+      unsigned ViaEltSizeInBits = ViaEltVT.getSizeInBits();
 
-    // For scalable vectors, try to use a SPLAT_VECTOR_PARTS node.
-    if (VT.isScalableVector() ||
-        TLI->isOperationLegal(ISD::SPLAT_VECTOR, VT)) {
-      assert(EltVT.getSizeInBits() % ViaEltSizeInBits == 0 &&
-             "Can only handle an even split!");
-      unsigned Parts = EltVT.getSizeInBits() / ViaEltSizeInBits;
+      // For scalable vectors, try to use a SPLAT_VECTOR_PARTS node.
+      if (VT.isScalableVector() ||
+          TLI->isOperationLegal(ISD::SPLAT_VECTOR, VT)) {
+        assert(EltVT.getSizeInBits() % ViaEltSizeInBits == 0 &&
+               "Can only handle an even split!");
+        unsigned Parts = EltVT.getSizeInBits() / ViaEltSizeInBits;
 
-      SmallVector<SDValue, 2> ScalarParts;
-      for (unsigned i = 0; i != Parts; ++i)
-        ScalarParts.push_back(getConstant(
+        SmallVector<SDValue, 2> ScalarParts;
+        for (unsigned i = 0; i != Parts; ++i)
+          ScalarParts.push_back(getConstant(
+              NewVal.extractBits(ViaEltSizeInBits, i * ViaEltSizeInBits), DL,
+              ViaEltVT, isT, isO));
+
+        return getNode(ISD::SPLAT_VECTOR_PARTS, DL, VT, ScalarParts);
+      }
+
+      unsigned ViaVecNumElts = VT.getSizeInBits() / ViaEltSizeInBits;
+      EVT ViaVecVT = EVT::getVectorVT(*getContext(), ViaEltVT, ViaVecNumElts);
+
+      // Check the temporary vector is the correct size. If this fails then
+      // getTypeToTransformTo() probably returned a type whose size (in bits)
+      // isn't a power-of-2 factor of the requested type size.
+      assert(ViaVecVT.getSizeInBits() == VT.getSizeInBits());
+
+      SmallVector<SDValue, 2> EltParts;
+      for (unsigned i = 0; i < ViaVecNumElts / VT.getVectorNumElements(); ++i)
+        EltParts.push_back(getConstant(
             NewVal.extractBits(ViaEltSizeInBits, i * ViaEltSizeInBits), DL,
             ViaEltVT, isT, isO));
 
-      return getNode(ISD::SPLAT_VECTOR_PARTS, DL, VT, ScalarParts);
+      // EltParts is currently in little endian order. If we actually want
+      // big-endian order then reverse it now.
+      if (getDataLayout().isBigEndian())
+        std::reverse(EltParts.begin(), EltParts.end());
+
+      // The elements must be reversed when the element order is different
+      // to the endianness of the elements (because the BITCAST is itself a
+      // vector shuffle in this situation). However, we do not need any code to
+      // perform this reversal because getConstant() is producing a vector
+      // splat.
+      // This situation occurs in MIPS MSA.
+
+      SmallVector<SDValue, 8> Ops;
+      for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i)
+        llvm::append_range(Ops, EltParts);
+
+      SDValue V =
+          getNode(ISD::BITCAST, DL, VT, getBuildVector(ViaVecVT, DL, Ops));
+      return V;
     }
-
-    unsigned ViaVecNumElts = VT.getSizeInBits() / ViaEltSizeInBits;
-    EVT ViaVecVT = EVT::getVectorVT(*getContext(), ViaEltVT, ViaVecNumElts);
-
-    // Check the temporary vector is the correct size. If this fails then
-    // getTypeToTransformTo() probably returned a type whose size (in bits)
-    // isn't a power-of-2 factor of the requested type size.
-    assert(ViaVecVT.getSizeInBits() == VT.getSizeInBits());
-
-    SmallVector<SDValue, 2> EltParts;
-    for (unsigned i = 0; i < ViaVecNumElts / VT.getVectorNumElements(); ++i)
-      EltParts.push_back(getConstant(
-          NewVal.extractBits(ViaEltSizeInBits, i * ViaEltSizeInBits), DL,
-          ViaEltVT, isT, isO));
-
-    // EltParts is currently in little endian order. If we actually want
-    // big-endian order then reverse it now.
-    if (getDataLayout().isBigEndian())
-      std::reverse(EltParts.begin(), EltParts.end());
-
-    // The elements must be reversed when the element order is different
-    // to the endianness of the elements (because the BITCAST is itself a
-    // vector shuffle in this situation). However, we do not need any code to
-    // perform this reversal because getConstant() is producing a vector
-    // splat.
-    // This situation occurs in MIPS MSA.
-
-    SmallVector<SDValue, 8> Ops;
-    for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i)
-      llvm::append_range(Ops, EltParts);
-
-    SDValue V =
-        getNode(ISD::BITCAST, DL, VT, getBuildVector(ViaVecVT, DL, Ops));
-    return V;
   }
 
   assert(Elt->getBitWidth() == EltVT.getSizeInBits() &&
