@@ -626,7 +626,7 @@ struct RequireAllocationGuard {
     void requireExactly(std::size_t N) { m_req_alloc = N; m_exactly = true; }
 
     ~RequireAllocationGuard() {
-        assert(globalMemCounter.checkOutstandingNewEq(static_cast<int>(m_outstanding_new_on_init)));
+        ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(globalMemCounter.checkOutstandingNewEq(static_cast<int>(m_outstanding_new_on_init)));
         std::size_t Expect = m_new_count_on_init + m_req_alloc;
         assert(globalMemCounter.checkNewCalledEq(static_cast<int>(Expect)) ||
                (!m_exactly && globalMemCounter.checkNewCalledGreaterThan(static_cast<int>(Expect))));
