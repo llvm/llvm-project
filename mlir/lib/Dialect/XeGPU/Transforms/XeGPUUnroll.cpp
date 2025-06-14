@@ -415,6 +415,7 @@ struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
 
     TypedValue<::mlir::VectorType> indiceVec = op.getOffsets();
     VectorType indiceVecTy = indiceVec.getType();
+    
     SmallVector<Type> convertedIndiceTypes =
         getUnrolledTypes(indiceVecTy, *targetShape);
     SmallVector<Value> convertedIndiceVec =
