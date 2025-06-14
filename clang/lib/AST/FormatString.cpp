@@ -11,10 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/FormatString.h"
 #include "FormatStringParsing.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Type.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/Support/ConvertUTF.h"
