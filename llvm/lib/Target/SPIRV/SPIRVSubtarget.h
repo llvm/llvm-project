@@ -101,6 +101,7 @@ public:
     return TargetTriple.getArch() == Triple::spirv32 ||
            TargetTriple.getArch() == Triple::spirv64;
   }
+  bool isVulkan() const { return TargetTriple.getOS() == Triple::Vulkan; }
   const std::string &getTargetTripleAsStr() const { return TargetTriple.str(); }
   VersionTuple getSPIRVVersion() const { return SPIRVVersion; };
   bool isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const;
