@@ -52,6 +52,13 @@
 // CHECK-INTERCHANGE-LOOPS: "-floop-interchange"
 // CHECK-NO-INTERCHANGE-LOOPS: "-fno-loop-interchange"
 
+// RUN: %clang -### -S -fexperimental-fuse-loops %s 2>&1 | FileCheck -check-prefix=CHECK-FUSE-LOOPS %s
+// RUN: %clang -### -S -fno-experimental-fuse-loops %s 2>&1 | FileCheck -check-prefix=CHECK-NO-FUSE-LOOPS %s
+// RUN: %clang -### -S -fno-experimental-fuse-loops -fexperimental-fuse-loops %s 2>&1 | FileCheck -check-prefix=CHECK-FUSE-LOOPS %s
+// RUN: %clang -### -S -fexperimental-fuse-loops -fno-experimental-fuse-loops %s 2>&1 | FileCheck -check-prefix=CHECK-NO-FUSE-LOOPS %s
+// CHECK-FUSE-LOOPS: "-fexperimental-fuse-loops"
+// CHECK-NO-FUSE-LOOPS: "-fno-experimental-fuse-loops"
+
 // RUN: %clang -### -S -fprofile-sample-accurate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-SAMPLE-ACCURATE %s
 // CHECK-PROFILE-SAMPLE-ACCURATE: "-fprofile-sample-accurate"
 
