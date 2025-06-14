@@ -209,6 +209,12 @@ def FamilyTiny
              [FamilyAVR0, FeatureBREAK, FeatureSRAM, FeatureTinyEncoding,
               FeatureSmallStack]>;
 
+def FamilyXMEGA2 : Family<"xmega2",
+                          [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
+                           FeatureADDSUBIW, FeatureSRAM, FeatureJMPCALL,
+                           FeatureMultiplication, FeatureMOVW, FeatureLPMX,
+                           FeatureBREAK, FeatureLowByteFirst]>;
+
 def FamilyXMEGA3 : Family<"xmega3",
                           [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
                            FeatureADDSUBIW, FeatureSRAM, FeatureJMPCALL,
