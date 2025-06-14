@@ -13,19 +13,20 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "llvm/ADT/DenseMap.h"
 
 using namespace clang;
 
-typedef llvm::DenseMap<Stmt*, Stmt*> MapTy;
+typedef llvm::DenseMap<Stmt *, ParentMap::ValueT> MapTy;
 
 enum OpaqueValueMode {
   OV_Transparent,
   OV_Opaque
 };
 
-static void BuildParentMap(MapTy& M, Stmt* S,
+static void BuildParentMap(MapTy &M, Stmt *S, unsigned ParentDepth,
                            OpaqueValueMode OVMode = OV_Transparent) {
   if (!S)
     return;
@@ -35,23 +36,23 @@ static void BuildParentMap(MapTy& M, Stmt* S,
     PseudoObjectExpr *POE = cast<PseudoObjectExpr>(S);
     Expr *SF = POE->getSyntacticForm();
 
-    auto [Iter, Inserted] = M.try_emplace(SF, S);
+    auto [Iter, Inserted] = M.try_emplace(SF, S, ParentDepth);
     if (!Inserted) {
       // Nothing more to do in opaque mode if we are updating an existing map.
       if (OVMode == OV_Opaque)
         break;
       // Update the entry in transparent mode, and clear existing state.
-      Iter->second = S;
+      Iter->second = {S, ParentDepth};
       for (Stmt *SubStmt : S->children())
         M.erase(SubStmt);
     }
-    BuildParentMap(M, SF, OV_Transparent);
+    BuildParentMap(M, SF, ParentDepth + 1, OV_Transparent);
 
     for (PseudoObjectExpr::semantics_iterator I = POE->semantics_begin(),
                                               E = POE->semantics_end();
          I != E; ++I) {
-      M[*I] = S;
-      BuildParentMap(M, *I, OV_Opaque);
+      M[*I] = {S, ParentDepth + 1};
+      BuildParentMap(M, *I, ParentDepth + 1, OV_Opaque);
     }
     break;
   }
@@ -59,17 +60,17 @@ static void BuildParentMap(MapTy& M, Stmt* S,
     assert(OVMode == OV_Transparent && "Should not appear alongside OVEs");
     BinaryConditionalOperator *BCO = cast<BinaryConditionalOperator>(S);
 
-    M[BCO->getCommon()] = S;
-    BuildParentMap(M, BCO->getCommon(), OV_Transparent);
+    M[BCO->getCommon()] = {S, ParentDepth + 1};
+    BuildParentMap(M, BCO->getCommon(), ParentDepth + 1, OV_Transparent);
 
-    M[BCO->getCond()] = S;
-    BuildParentMap(M, BCO->getCond(), OV_Opaque);
+    M[BCO->getCond()] = {S, ParentDepth + 1};
+    BuildParentMap(M, BCO->getCond(), ParentDepth + 1, OV_Opaque);
 
-    M[BCO->getTrueExpr()] = S;
-    BuildParentMap(M, BCO->getTrueExpr(), OV_Opaque);
+    M[BCO->getTrueExpr()] = {S, ParentDepth + 1};
+    BuildParentMap(M, BCO->getTrueExpr(), ParentDepth + 1, OV_Opaque);
 
-    M[BCO->getFalseExpr()] = S;
-    BuildParentMap(M, BCO->getFalseExpr(), OV_Transparent);
+    M[BCO->getFalseExpr()] = {S, ParentDepth + 1};
+    BuildParentMap(M, BCO->getFalseExpr(), ParentDepth + 1, OV_Transparent);
 
     break;
   }
@@ -81,33 +82,33 @@ static void BuildParentMap(MapTy& M, Stmt* S,
     // parent, then not reassign that when traversing the semantic expressions.
     OpaqueValueExpr *OVE = cast<OpaqueValueExpr>(S);
     Expr *SrcExpr = OVE->getSourceExpr();
-    auto [Iter, Inserted] = M.try_emplace(SrcExpr, S);
+    auto [Iter, Inserted] = M.try_emplace(SrcExpr, S, ParentDepth);
     // Force update in transparent mode.
     if (!Inserted && OVMode == OV_Transparent) {
-      Iter->second = S;
+      Iter->second = {S, ParentDepth};
       Inserted = true;
     }
     if (Inserted)
-      BuildParentMap(M, SrcExpr, OV_Transparent);
+      BuildParentMap(M, SrcExpr, ParentDepth + 1, OV_Transparent);
     break;
   }
   case Stmt::CapturedStmtClass:
     for (Stmt *SubStmt : S->children()) {
       if (SubStmt) {
-        M[SubStmt] = S;
-        BuildParentMap(M, SubStmt, OVMode);
+        M[SubStmt] = {S, ParentDepth + 1};
+        BuildParentMap(M, SubStmt, ParentDepth + 1, OVMode);
       }
     }
     if (Stmt *SubStmt = cast<CapturedStmt>(S)->getCapturedStmt()) {
-      M[SubStmt] = S;
-      BuildParentMap(M, SubStmt, OVMode);
+      M[SubStmt] = {S, ParentDepth + 1};
+      BuildParentMap(M, SubStmt, ParentDepth + 1, OVMode);
     }
     break;
   default:
     for (Stmt *SubStmt : S->children()) {
       if (SubStmt) {
-        M[SubStmt] = S;
-        BuildParentMap(M, SubStmt, OVMode);
+        M[SubStmt] = {S, ParentDepth + 1};
+        BuildParentMap(M, SubStmt, ParentDepth + 1, OVMode);
       }
     }
     break;
@@ -117,7 +118,7 @@ static void BuildParentMap(MapTy& M, Stmt* S,
 ParentMap::ParentMap(Stmt *S) : Impl(nullptr) {
   if (S) {
     MapTy *M = new MapTy();
-    BuildParentMap(*M, S);
+    BuildParentMap(*M, S, 0);
     Impl = M;
   }
 }
@@ -126,9 +127,9 @@ ParentMap::~ParentMap() {
   delete (MapTy*) Impl;
 }
 
-void ParentMap::addStmt(Stmt* S) {
+void ParentMap::addStmt(Stmt *S, unsigned Depth) {
   if (S) {
-    BuildParentMap(*(MapTy*) Impl, S);
+    BuildParentMap(*(MapTy *)Impl, S, Depth);
   }
 }
 
@@ -136,13 +137,18 @@ void ParentMap::setParent(const Stmt *S, const Stmt *Parent) {
   assert(S);
   assert(Parent);
   MapTy *M = reinterpret_cast<MapTy *>(Impl);
-  M->insert(std::make_pair(const_cast<Stmt *>(S), const_cast<Stmt *>(Parent)));
+  M->try_emplace(const_cast<Stmt *>(S), const_cast<Stmt *>(Parent),
+                 getParentDepth(Parent) + 1);
 }
 
-Stmt* ParentMap::getParent(Stmt* S) const {
+ParentMap::ValueT ParentMap::lookup(Stmt *S) const {
   MapTy* M = (MapTy*) Impl;
   return M->lookup(S);
 }
+
+Stmt *ParentMap::getParent(Stmt *S) const { return lookup(S).first; }
+
+unsigned ParentMap::getParentDepth(Stmt *S) const { return lookup(S).second; }
 
 Stmt *ParentMap::getParentIgnoreParens(Stmt *S) const {
   do {
@@ -221,4 +227,3 @@ bool ParentMap::isConsumedExpr(Expr* E) const {
       return true;
   }
 }
-
