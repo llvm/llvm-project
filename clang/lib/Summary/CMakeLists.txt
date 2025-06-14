@@ -11,4 +11,5 @@ add_clang_library(clangSummary
   LINK_LIBS
   clangAST
   clangSupport
+  clangIndex
   )
