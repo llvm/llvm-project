@@ -905,6 +905,14 @@ def AlwaysInline : DeclOrStmtAttr {
   let Documentation = [AlwaysInlineDocs];
 }
 
+def AlwaysSpecialize : InheritableParamAttr {
+ let Spellings = [GNU<"always_specialize">, CXX11<"clang", "always_specialize">,
+                   C23<"clang", "always_specialize">];
+ let Subjects = SubjectList<[ParmVar]>;
+ let Documentation = [AlwaysSpecializeDocs];
+ let SimpleHandler = 1;
+}
+
 def Artificial : InheritableAttr {
   let Spellings = [GCC<"artificial">];
   let Subjects = SubjectList<[InlineFunction]>;

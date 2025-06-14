@@ -8126,6 +8126,17 @@ Attribute docs`_, and `the GCC Inline docs`_.
   let Heading = "always_inline, __force_inline";
 }
 
+def AlwaysSpecializeDocs : Documentation {
+  let Category = DocCatConsumed;
+  let Content = [{
+  The ``always_specialize`` attribute on a function parameter indicates that
+  the function shall be duplicated and specialized with respect to constant
+  arguments. This will usually increase code size. It controls an IR transform
+  similar in spirit to ``always_inline``.
+  }];
+    let Heading = "always_specialize";      
+}
+
 def EnforceTCBDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
