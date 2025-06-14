@@ -49,6 +49,18 @@ class SMX60GetVIALULatency<string mx> {
   );
 }
 
+class SMX60GetVIRedLatency<string mx> {
+  int c = !cond(
+    !eq(mx, "M1") : 7,
+    !eq(mx, "M2") : 11,
+    !eq(mx, "M4") : 19,
+    !eq(mx, "M8") : 35,
+    !eq(mx, "MF2") : 5,
+    !eq(mx, "MF4") : 5,
+    !eq(mx, "MF8") : 5
+  );
+}
+
 def SpacemitX60Model : SchedMachineModel {
   let IssueWidth        = 2; // dual-issue
   let MicroOpBufferSize = 0; // in-order
@@ -545,16 +557,15 @@ foreach mx = SchedMxListF in {
 foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
-    defvar RedLat =
-      !cond(!eq(mx, "M1"): 7, !eq(mx, "M2"): 11, !eq(mx, "M4"): 19, !eq(mx, "M8"): 35,
-                               /* mx=MF2, MF4, MF8 */ true: 5);
+    defvar RedLat = SMX60GetVIRedLatency<mx>.c;
 
     let Latency = RedLat in {
-      // WriteVIRedV_From include vredand, vredor, vredxor, and vredsum. Only the vredsum have the
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+
+      // WriteVIRedV_From includes vredand, vredor, vredxor, and vredsum. Only the vredsum have the
       // the latency of 5/5/5/7/11/19/35, while vredand, vredor, vredxor have latencies of
       // 4/4/4/6/10/18/34, but since they are all in the same group, we use the worst case.
       defm "" : LMULSEWWriteResMXSEW<"WriteVIRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
-      defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
   }
 }
@@ -562,8 +573,11 @@ foreach mx = SchedMxList in {
 foreach mx = SchedMxListWRed in {
   foreach sew = SchedSEWSet<mx, 0, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListWRed>.c;
+    defvar RedLat = SMX60GetVIRedLatency<mx>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVIWRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    let Latency = RedLat in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIWRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
   }
 }
 
