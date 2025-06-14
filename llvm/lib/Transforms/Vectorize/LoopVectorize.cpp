@@ -7263,14 +7263,13 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
                  RdxDesc.getRecurrenceKind())) {
     Value *StartV = getStartValueFromReductionResult(EpiRedResult);
+    Value *SentinelV = EpiRedResult->getOperand(2)->getLiveInIRValue();
     using namespace llvm::PatternMatch;
     Value *Cmp, *OrigResumeV, *CmpOp;
     bool IsExpectedPattern =
         match(MainResumeValue,
-              m_Select(
-                  m_OneUse(m_Value(Cmp)),
-                  m_Specific(EpiRedResult->getOperand(2)->getLiveInIRValue()),
-                  m_Value(OrigResumeV))) &&
+              m_Select(m_OneUse(m_Value(Cmp)), m_Specific(SentinelV),
+                       m_Value(OrigResumeV))) &&
         (match(Cmp, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(OrigResumeV),
                                    m_Value(CmpOp))) &&
          ((CmpOp == StartV && isGuaranteedNotToBeUndefOrPoison(CmpOp))));
@@ -9224,11 +9223,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
             RdxDesc.getRecurrenceKind())) {
       VPValue *Start = PhiR->getStartValue();
-      FinalReductionResult = Builder.createNaryOp(
-          VPInstruction::ComputeFindLastIVResult,
-          {PhiR, Start, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()),
-           NewExitingVPV},
-          ExitDL);
+      VPValue *Sentinel = Plan->getOrAddLiveIn(RdxDesc.getSentinelValue());
+      FinalReductionResult =
+          Builder.createNaryOp(VPInstruction::ComputeFindLastIVResult,
+                               {PhiR, Start, Sentinel, NewExitingVPV}, ExitDL);
     } else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
                    RdxDesc.getRecurrenceKind())) {
       VPValue *Start = PhiR->getStartValue();
@@ -9816,8 +9814,8 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
         IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
         Value *Cmp = Builder.CreateICmpEQ(ResumeV, ToFrozen[StartV]);
-        ResumeV = Builder.CreateSelect(
-            Cmp, RdxResult->getOperand(2)->getLiveInIRValue(), ResumeV);
+        Value *Sentinel = RdxResult->getOperand(2)->getLiveInIRValue();
+        ResumeV = Builder.CreateSelect(Cmp, Sentinel, ResumeV);
       } else {
         VPValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
         auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
