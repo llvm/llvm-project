@@ -1059,7 +1059,8 @@ declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i32) #1
 
 define amdgpu_ps half @extract_elt0_s_buffer_load_v2f16(<4 x i32> inreg %rsrc, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt0_s_buffer_load_v2f16(
-; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.s.buffer.load.f16(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA1:%.*]] = call <2 x half> @llvm.amdgcn.s.buffer.load.v2f16(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = extractelement <2 x half> [[DATA1]], i64 0
 ; CHECK-NEXT:    ret half [[DATA]]
 ;
   %data = call <2 x half> @llvm.amdgcn.s.buffer.load.v2f16(<4 x i32> %rsrc, i32 %ofs, i32 0)
@@ -1069,8 +1070,8 @@ define amdgpu_ps half @extract_elt0_s_buffer_load_v2f16(<4 x i32> inreg %rsrc, i
 
 define amdgpu_ps half @extract_elt1_s_buffer_load_v2f16(<4 x i32> inreg %rsrc, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt1_s_buffer_load_v2f16(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 2
-; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.s.buffer.load.f16(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 0)
+; CHECK-NEXT:    [[DATA1:%.*]] = call <2 x half> @llvm.amdgcn.s.buffer.load.v2f16(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = extractelement <2 x half> [[DATA1]], i64 1
 ; CHECK-NEXT:    ret half [[DATA]]
 ;
   %data = call <2 x half> @llvm.amdgcn.s.buffer.load.v2f16(<4 x i32> %rsrc, i32 %ofs, i32 0)
@@ -1080,8 +1081,8 @@ define amdgpu_ps half @extract_elt1_s_buffer_load_v2f16(<4 x i32> inreg %rsrc, i
 
 define amdgpu_ps half @extract_elt1_s_buffer_load_v3f16(<4 x i32> inreg %rsrc, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt1_s_buffer_load_v3f16(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 2
-; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.s.buffer.load.f16(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 0)
+; CHECK-NEXT:    [[DATA1:%.*]] = call <3 x half> @llvm.amdgcn.s.buffer.load.v3f16(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = extractelement <3 x half> [[DATA1]], i64 1
 ; CHECK-NEXT:    ret half [[DATA]]
 ;
   %data = call <3 x half> @llvm.amdgcn.s.buffer.load.v3f16(<4 x i32> %rsrc, i32 %ofs, i32 0)
@@ -1091,8 +1092,8 @@ define amdgpu_ps half @extract_elt1_s_buffer_load_v3f16(<4 x i32> inreg %rsrc, i
 
 define amdgpu_ps half @extract_elt1_s_buffer_load_v4f16(<4 x i32> inreg %rsrc, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt1_s_buffer_load_v4f16(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 2
-; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.s.buffer.load.f16(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 0)
+; CHECK-NEXT:    [[DATA1:%.*]] = call <4 x half> @llvm.amdgcn.s.buffer.load.v4f16(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = extractelement <4 x half> [[DATA1]], i64 1
 ; CHECK-NEXT:    ret half [[DATA]]
 ;
   %data = call <4 x half> @llvm.amdgcn.s.buffer.load.v4f16(<4 x i32> %rsrc, i32 %ofs, i32 0)
@@ -1103,8 +1104,8 @@ define amdgpu_ps half @extract_elt1_s_buffer_load_v4f16(<4 x i32> inreg %rsrc, i
 
 define amdgpu_ps half @extract_elt3_s_buffer_load_v4f16(<4 x i32> inreg %rsrc, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt3_s_buffer_load_v4f16(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 6
-; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.s.buffer.load.f16(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 0)
+; CHECK-NEXT:    [[DATA1:%.*]] = call <4 x half> @llvm.amdgcn.s.buffer.load.v4f16(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = extractelement <4 x half> [[DATA1]], i64 3
 ; CHECK-NEXT:    ret half [[DATA]]
 ;
   %data = call <4 x half> @llvm.amdgcn.s.buffer.load.v4f16(<4 x i32> %rsrc, i32 %ofs, i32 0)
@@ -1129,7 +1130,8 @@ declare <4 x half> @llvm.amdgcn.s.buffer.load.v4f16(<4 x i32>, i32, i32) #1
 
 define amdgpu_ps i8 @extract_elt0_s_buffer_load_v2i8(<4 x i32> inreg %rsrc, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt0_s_buffer_load_v2i8(
-; CHECK-NEXT:    [[DATA:%.*]] = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA1:%.*]] = call <2 x i8> @llvm.amdgcn.s.buffer.load.v2i8(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = extractelement <2 x i8> [[DATA1]], i64 0
 ; CHECK-NEXT:    ret i8 [[DATA]]
 ;
   %data = call <2 x i8> @llvm.amdgcn.s.buffer.load.v2i8(<4 x i32> %rsrc, i32 %ofs, i32 0)
@@ -1139,8 +1141,8 @@ define amdgpu_ps i8 @extract_elt0_s_buffer_load_v2i8(<4 x i32> inreg %rsrc, i32 
 
 define amdgpu_ps i8 @extract_elt1_s_buffer_load_v2i8(<4 x i32> inreg %rsrc, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt1_s_buffer_load_v2i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 1
-; CHECK-NEXT:    [[DATA:%.*]] = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 0)
+; CHECK-NEXT:    [[DATA1:%.*]] = call <2 x i8> @llvm.amdgcn.s.buffer.load.v2i8(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = extractelement <2 x i8> [[DATA1]], i64 1
 ; CHECK-NEXT:    ret i8 [[DATA]]
 ;
   %data = call <2 x i8> @llvm.amdgcn.s.buffer.load.v2i8(<4 x i32> %rsrc, i32 %ofs, i32 0)
@@ -1150,8 +1152,8 @@ define amdgpu_ps i8 @extract_elt1_s_buffer_load_v2i8(<4 x i32> inreg %rsrc, i32 
 
 define amdgpu_ps i8 @extract_elt1_s_buffer_load_v3i8(<4 x i32> inreg %rsrc, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt1_s_buffer_load_v3i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 1
-; CHECK-NEXT:    [[DATA:%.*]] = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 0)
+; CHECK-NEXT:    [[DATA1:%.*]] = call <3 x i8> @llvm.amdgcn.s.buffer.load.v3i8(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = extractelement <3 x i8> [[DATA1]], i64 1
 ; CHECK-NEXT:    ret i8 [[DATA]]
 ;
   %data = call <3 x i8> @llvm.amdgcn.s.buffer.load.v3i8(<4 x i32> %rsrc, i32 %ofs, i32 0)
@@ -1161,8 +1163,8 @@ define amdgpu_ps i8 @extract_elt1_s_buffer_load_v3i8(<4 x i32> inreg %rsrc, i32 
 
 define amdgpu_ps i8 @extract_elt1_s_buffer_load_v4i8(<4 x i32> inreg %rsrc, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt1_s_buffer_load_v4i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 1
-; CHECK-NEXT:    [[DATA:%.*]] = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 0)
+; CHECK-NEXT:    [[DATA1:%.*]] = call <4 x i8> @llvm.amdgcn.s.buffer.load.v4i8(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = extractelement <4 x i8> [[DATA1]], i64 1
 ; CHECK-NEXT:    ret i8 [[DATA]]
 ;
   %data = call <4 x i8> @llvm.amdgcn.s.buffer.load.v4i8(<4 x i32> %rsrc, i32 %ofs, i32 0)
@@ -1172,8 +1174,8 @@ define amdgpu_ps i8 @extract_elt1_s_buffer_load_v4i8(<4 x i32> inreg %rsrc, i32 
 
 define amdgpu_ps i8 @extract_elt3_s_buffer_load_v4i8(<4 x i32> inreg %rsrc, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt3_s_buffer_load_v4i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 3
-; CHECK-NEXT:    [[DATA:%.*]] = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 0)
+; CHECK-NEXT:    [[DATA1:%.*]] = call <4 x i8> @llvm.amdgcn.s.buffer.load.v4i8(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = extractelement <4 x i8> [[DATA1]], i64 3
 ; CHECK-NEXT:    ret i8 [[DATA]]
 ;
   %data = call <4 x i8> @llvm.amdgcn.s.buffer.load.v4i8(<4 x i32> %rsrc, i32 %ofs, i32 0)
@@ -1183,7 +1185,8 @@ define amdgpu_ps i8 @extract_elt3_s_buffer_load_v4i8(<4 x i32> inreg %rsrc, i32 
 
 define amdgpu_ps <2 x i8> @extract_elt0_elt1_s_buffer_load_v4i8(<4 x i32> inreg %rsrc, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt0_elt1_s_buffer_load_v4i8(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x i8> @llvm.amdgcn.s.buffer.load.v2i8(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA1:%.*]] = call <4 x i8> @llvm.amdgcn.s.buffer.load.v4i8(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = shufflevector <4 x i8> [[DATA1]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    ret <2 x i8> [[DATA]]
 ;
   %data = call <4 x i8> @llvm.amdgcn.s.buffer.load.v4i8(<4 x i32> %rsrc, i32 %ofs, i32 0)
