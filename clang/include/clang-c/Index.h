@@ -2390,7 +2390,7 @@ CINDEX_LINKAGE unsigned clang_isDeclaration(enum CXCursorKind);
  * A declaration is invalid if it could not be parsed successfully.
  *
  * \returns non-zero if the cursor represents a declaration and it is
- * invalid, otherwise NULL.
+ * invalid, otherwise zero.
  */
 CINDEX_LINKAGE unsigned clang_isInvalidDeclaration(CXCursor);
 
