@@ -49,7 +49,7 @@ static Matcher<Stmt> loopEndingStmt(Matcher<Stmt> Internal) {
 }
 
 /// Return whether `Var` was changed in `LoopStmt`.
-static bool isChanged(const Stmt *LoopStmt, const VarDecl *Var,
+static bool isChanged(const Stmt *LoopStmt, const ValueDecl *Var,
                       ASTContext *Context) {
   if (const auto *ForLoop = dyn_cast<ForStmt>(LoopStmt))
     return (ForLoop->getInc() &&
@@ -81,6 +81,23 @@ static bool isVarThatIsPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
       return hasPtrOrReferenceInFunc(Func, Var) ||
              isChanged(LoopStmt, Var, Context);
       // FIXME: Track references.
+    }
+
+    if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
+      if (const auto *DD =
+              dyn_cast_if_present<DecompositionDecl>(BD->getDecomposedDecl())) {
+        if (!DD->isLocalVarDeclOrParm())
+          return true;
+
+        if (DD->getType().isVolatileQualified())
+          return true;
+
+        if (!BD->getType().getTypePtr()->isIntegerType())
+          return true;
+
+        return hasPtrOrReferenceInFunc(Func, BD) ||
+               isChanged(LoopStmt, BD, Context);
+      }
     }
   } else if (isa<MemberExpr, CallExpr, ObjCIvarRefExpr, ObjCPropertyRefExpr,
                  ObjCMessageExpr>(Cond)) {
@@ -123,6 +140,10 @@ static std::string getCondVarNames(const Stmt *Cond) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
     if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl()))
       return std::string(Var->getName());
+
+    if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
+      return std::string(BD->getName());
+    }
   }
 
   std::string Result;
@@ -214,10 +235,18 @@ static bool overlap(ArrayRef<CallGraphNode *> SCC,
 
 /// returns true iff `Cond` involves at least one static local variable.
 static bool hasStaticLocalVariable(const Stmt *Cond) {
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond))
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
     if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
       if (VD->isStaticLocal())
         return true;
+
+    if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
+      if (const auto *DD =
+              dyn_cast_if_present<DecompositionDecl>(BD->getDecomposedDecl()))
+        if (DD->isStaticLocal())
+          return true;
+  }
+
   for (const Stmt *Child : Cond->children())
     if (Child && hasStaticLocalVariable(Child))
       return true;
