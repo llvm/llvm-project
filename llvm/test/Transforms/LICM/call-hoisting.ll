@@ -86,14 +86,16 @@ exit:
 
 declare void @store(i32 %val, ptr %p) argmemonly writeonly nounwind
 
+; loop invariant calls to writeonly functions such as the above
+; should be hoisted
 define void @test(ptr %loc) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -118,10 +120,10 @@ define void @test_multiexit(ptr %loc, i1 %earlycnd) {
 ; CHECK-LABEL: define void @test_multiexit(
 ; CHECK-SAME: ptr [[LOC:%.*]], i1 [[EARLYCND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[BACKEDGE:.*]] ]
-; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[EARLYCND]], label %[[EXIT1:.*]], label %[[BACKEDGE]]
 ; CHECK:       [[BACKEDGE]]:
@@ -148,6 +150,97 @@ backedge:
 exit1:
   ret void
 exit2:
+  ret void
+}
+
+; cannot be hoisted because the two pointers can alias one another
+define void @neg_two_pointer(ptr %loc, ptr %otherloc) {
+; CHECK-LABEL: define void @neg_two_pointer(
+; CHECK-SAME: ptr [[LOC:%.*]], ptr [[OTHERLOC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
+; CHECK-NEXT:    call void @store(i32 1, ptr [[OTHERLOC]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  call void @store(i32 0, ptr %loc)
+  call void @store(i32 1, ptr %otherloc)
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+; hoisted due to pointers not aliasing
+define void @two_pointer_noalias(ptr noalias %loc, ptr noalias %otherloc) {
+; CHECK-LABEL: define void @two_pointer_noalias(
+; CHECK-SAME: ptr noalias [[LOC:%.*]], ptr noalias [[OTHERLOC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
+; CHECK-NEXT:    call void @store(i32 1, ptr [[OTHERLOC]])
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  call void @store(i32 0, ptr %loc)
+  call void @store(i32 1, ptr %otherloc)
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+; when there's a conflicting read, store call should not be hoisted
+define void @neg_conflicting_read(ptr noalias %loc, ptr noalias %otherloc) {
+; CHECK-LABEL: define void @neg_conflicting_read(
+; CHECK-SAME: ptr noalias [[LOC:%.*]], ptr noalias [[OTHERLOC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    call void @load(i32 0, ptr [[LOC]])
+; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @store(i32 0, ptr %loc)
+  br label %loop
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  call void @load(i32 0, ptr %loc)
+  call void @store(i32 0, ptr %loc)
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+exit:
   ret void
 }
 
@@ -374,14 +467,17 @@ exit:
   ret void
 }
 
-define void @neg_not_argmemonly(ptr %loc) {
+; when the call is not argmemonly and its not the only memory access
+; we do not hoist it
+define void @neg_not_argmemonly(ptr %loc, ptr %loc2) {
 ; CHECK-LABEL: define void @neg_not_argmemonly(
-; CHECK-SAME: ptr [[LOC:%.*]]) {
+; CHECK-SAME: ptr [[LOC:%.*]], ptr [[LOC2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    call void @not_argmemonly(i32 0, ptr [[LOC]])
+; CHECK-NEXT:    call void @load(i32 0, ptr [[LOC2]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -394,6 +490,7 @@ entry:
 loop:
   %iv = phi i32 [0, %entry], [%iv.next, %loop]
   call void @not_argmemonly(i32 0, ptr %loc)
+  call void @load(i32 0, ptr %loc2)
   %iv.next = add i32 %iv, 1
   %cmp = icmp slt i32 %iv, 200
   br i1 %cmp, label %loop, label %exit
