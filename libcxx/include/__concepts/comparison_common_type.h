@@ -15,6 +15,7 @@
 #include <__config>
 #include <__type_traits/common_reference.h>
 #include <__type_traits/make_const_lvalue_ref.h>
+#include <__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
