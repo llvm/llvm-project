@@ -703,6 +703,7 @@ Bug Fixes in This Version
   the second clause of a C-style ``for`` loop. (#GH139818)
 - Fixed a bug with constexpr evaluation for structs containing unions in case of C++ modules. (#GH143168)
 - Fixed incorrect token location when emitting diagnostics for tokens expanded from macros. (#GH143216)
+- Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
