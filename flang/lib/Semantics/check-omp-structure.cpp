@@ -1820,14 +1820,23 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetWithClause &x) {
     const parser::OmpClause *toClause = FindClause(llvm::omp::Clause::OMPC_to);
     const parser::OmpClause *linkClause =
         FindClause(llvm::omp::Clause::OMPC_link);
+    const parser::OmpClause *indirectClause =
+        FindClause(llvm::omp::Clause::OMPC_indirect);
     if (!enterClause && !toClause && !linkClause) {
       context_.Say(x.source,
           "If the DECLARE TARGET directive has a clause, it must contain at least one ENTER clause or LINK clause"_err_en_US);
+    }
+    if (indirectClause && !enterClause) {
+      context_.Say(x.source,
+          "The INDIRECT clause cannot be used without the ENTER clause with the DECLARE TARGET directive."_err_en_US);
     }
     unsigned version{context_.langOptions().OpenMPVersion};
     if (toClause && version >= 52) {
       context_.Warn(common::UsageWarning::OpenMPUsage, toClause->source,
           "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
+    }
+    if (indirectClause) {
+      CheckAllowedClause(llvm::omp::Clause::OMPC_indirect);
     }
   }
 }
