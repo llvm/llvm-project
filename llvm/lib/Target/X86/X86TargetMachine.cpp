@@ -47,6 +47,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
+#include "llvm/Transforms/Utils/GuardedLoadHardening.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -493,6 +494,9 @@ void X86PassConfig::addIRPasses() {
       addPass(createCFGuardCheckPass());
     }
   }
+
+  // Lightweight spectre v1 mitigation.
+  addPass(createGuardedLoadHardeningPass());
 
   if (TM->Options.JMCInstrument)
     addPass(createJMCInstrumenterPass());
