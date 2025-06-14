@@ -367,6 +367,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.btowc
     libc.src.wchar.wcslen
     libc.src.wchar.wctob
+    libc.src.wchar.wmemmove
     libc.src.wchar.wmemset
     libc.src.wchar.wcschr
     libc.src.wchar.wcsncmp
