@@ -262,24 +262,14 @@ void StackSlotColoring::InitializeSlots() {
   UsedColors[0].resize(LastFI);
   Assignments.resize(LastFI);
 
-  using Pair = std::iterator_traits<LiveStacks::iterator>::value_type;
-
-  SmallVector<Pair *, 16> Intervals;
-
-  Intervals.reserve(LS->getNumIntervals());
-  for (auto &I : *LS)
-    Intervals.push_back(&I);
-  llvm::sort(Intervals,
-             [](Pair *LHS, Pair *RHS) { return LHS->first < RHS->first; });
-
   // Gather all spill slots into a list.
   LLVM_DEBUG(dbgs() << "Spill slot intervals:\n");
-  for (auto *I : Intervals) {
-    LiveInterval &li = I->second;
-    LLVM_DEBUG(li.dump());
-    int FI = li.reg().stackSlotIndex();
-    if (MFI->isDeadObjectIndex(FI))
+  for (auto [Idx, I] : llvm::enumerate(*LS)) {
+    int FI = Idx + LS->getStartIdx();
+    if (!I || MFI->isDeadObjectIndex(FI))
       continue;
+    LiveInterval &li = *I;
+    LLVM_DEBUG(li.dump());
 
     SSIntervals.push_back(&li);
     OrigAlignments[FI] = MFI->getObjectAlign(FI);
@@ -369,7 +359,6 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
   SmallVector<int, 16> SlotMapping(NumObjs, -1);
   SmallVector<float, 16> SlotWeights(NumObjs, 0.0);
   SmallVector<SmallVector<int, 4>, 16> RevMap(NumObjs);
-  BitVector UsedColors(NumObjs);
 
   LLVM_DEBUG(dbgs() << "Color spill slot intervals:\n");
   bool Changed = false;
@@ -380,7 +369,6 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
     SlotMapping[SS] = NewSS;
     RevMap[NewSS].push_back(SS);
     SlotWeights[NewSS] += li->weight();
-    UsedColors.set(NewSS);
     Changed |= (SS != NewSS);
   }
 
