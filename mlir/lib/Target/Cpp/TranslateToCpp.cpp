@@ -68,14 +68,6 @@ inline LogicalResult interleaveCommaWithError(const Container &c,
   return interleaveWithError(c.begin(), c.end(), eachFn, [&]() { os << ", "; });
 }
 
-template <typename Container, typename UnaryFunctor>
-inline LogicalResult interleaveWithNewLineWithError(const Container &c,
-                                                    raw_ostream &os,
-                                                    UnaryFunctor eachFn) {
-  return interleaveWithError(c.begin(), c.end(), eachFn,
-                             [&]() { os << ";\n"; });
-}
-
 /// Return the precedence of a operator as an integer, higher values
 /// imply higher precedence.
 static FailureOr<int> getOperatorPrecedence(Operation *operation) {
@@ -124,8 +116,7 @@ namespace {
 /// Emitter that uses dialect specific emitters to emit C++ code.
 struct CppEmitter {
   explicit CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
-                      StringRef fileId, bool emitClass, StringRef className,
-                      StringRef fieldNameAttribute);
+                      StringRef fileId);
 
   /// Emits attribute or returns failure.
   LogicalResult emitAttribute(Location loc, Attribute attr);
@@ -242,15 +233,6 @@ struct CppEmitter {
   /// be declared at the beginning of a function.
   bool shouldDeclareVariablesAtTop() { return declareVariablesAtTop; };
 
-  // Returns whether we should emit a C++ class
-  bool shouldPrintClass() { return emitClass; };
-
-  // Returns the class name to emit
-  std::string getClassName() { return className; };
-
-  // Returns the field name to use in the map
-  std::string getfieldNameAttribute() { return fieldNameAttribute; };
-
   /// Returns whether this file op should be emitted
   bool shouldEmitFile(FileOp file) {
     return !fileId.empty() && file.getId() == fileId;
@@ -285,18 +267,6 @@ private:
 
   /// Only emit file ops whos id matches this value.
   std::string fileId;
-
-  /// Controls whether the output should be a C++ class.
-  /// If true, the generated C++ code will be encapsulated within a class,
-  /// and functions from the input module will become its member functions.
-  const bool emitClass;
-
-  /// The specified name for the generated C++ class
-  const std::string className;
-
-  /// Name of the MLIR attribute to use as a field name within the generated
-  /// class
-  const std::string fieldNameAttribute;
 
   /// Map from value to name of C++ variable that contain the name.
   ValueMapper valueMapper;
@@ -1063,17 +1033,6 @@ static LogicalResult printFunctionArgs(CppEmitter &emitter,
       }));
 }
 
-static LogicalResult printFields(CppEmitter &emitter, Operation *functionOp,
-                                 Region::BlockArgListType arguments) {
-  raw_indented_ostream &os = emitter.ostream();
-
-  return (interleaveWithNewLineWithError(
-      arguments, os, [&](BlockArgument arg) -> LogicalResult {
-        return emitter.emitVariableDeclaration(
-            functionOp->getLoc(), arg.getType(), emitter.getOrCreateName(arg));
-      }));
-}
-
 static LogicalResult printFunctionBody(CppEmitter &emitter,
                                        Operation *functionOp,
                                        Region::BlockListType &blocks) {
@@ -1178,45 +1137,6 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return success();
 }
 
-static LogicalResult emitClassFields(CppEmitter &emitter,
-                                     emitc::FuncOp functionOp) {
-  raw_indented_ostream &os = emitter.ostream();
-  auto argAttrs = functionOp.getArgAttrs();
-  Operation *operation = functionOp.getOperation();
-  if (failed(printFields(emitter, operation, functionOp.getArguments())))
-    return failure();
-  os << ";\n";
-
-  std::map<std::string, Value> fields;
-  os << "\nstd::map<std::string, char*> _buffer_map {";
-  if (argAttrs) {
-    for (const auto [a, v] : zip(*argAttrs, functionOp.getArguments())) {
-      if (auto da = dyn_cast<mlir::DictionaryAttr>(a)) {
-        auto nv = da.getNamed(emitter.getfieldNameAttribute())->getValue();
-        auto name = cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(nv)[0]).str();
-        auto Ins = fields.insert({name, v});
-        if (!Ins.second)
-          return failure();
-        os << " { \"" << name << "\"" << ", reinterpret_cast<char*>("
-           << emitter.getOrCreateName(v) << ") }, ";
-      }
-    }
-  } else
-    return failure();
-
-  os << "};\n";
-  os << "char* getBufferForName(const std::string& name) const {\n";
-  os.indent();
-  os.indent();
-  os << "auto it = _buffer_map.find(name);\n";
-  os << "return (it == _buffer_map.end()) ? nullptr : it->second;\n";
-  os.unindent();
-  os.unindent();
-  os << "}\n\n";
-
-  return success();
-}
-
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::FuncOp functionOp) {
   // We need to declare variables at top if the function has multiple blocks.
@@ -1228,30 +1148,6 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
   CppEmitter::Scope scope(emitter);
   raw_indented_ostream &os = emitter.ostream();
-  Operation *operation = functionOp.getOperation();
-  if (emitter.shouldPrintClass()) {
-    if (functionOp.isExternal()) {
-      // TODO: Determine the best long-term strategy for external functions.
-      // Currently, we're skipping over this functionOp.
-      // We have considered using emitWarning() which would return
-      // InFlightDiagnostic which seems can be automatically converted to
-      // LogicalResult since this is done in emitAttributes where emitError is
-      // converted to LogicalResult. However, it requires that we pass in a
-      // location which at first glance we don't have in this scope. Open to
-      // further discussion on this.
-      os << "Warning: Cannot process external function '"
-         << functionOp.getName() << "'. "
-         << "This functionOp lacks a body so we will skip over it.";
-      return success();
-    }
-    os << "class " << emitter.getClassName() << " final {\n";
-    os << "public: \n";
-    os.indent();
-
-    if (failed(emitClassFields(emitter, functionOp)))
-      return failure();
-  }
-
   if (functionOp.getSpecifiers()) {
     for (Attribute specifier : functionOp.getSpecifiersAttr()) {
       os << cast<StringAttr>(specifier).str() << " ";
@@ -1261,37 +1157,23 @@ static LogicalResult printOperation(CppEmitter &emitter,
   if (failed(emitter.emitTypes(functionOp.getLoc(),
                                functionOp.getFunctionType().getResults())))
     return failure();
-  // TODO: We may wanna consider having the name of the function be execute in
-  // the case that we want to emit a class instead of main. Leaving as is for
-  // now to make the change smaller.
   os << " " << functionOp.getName();
 
   os << "(";
-
-  if (!emitter.shouldPrintClass()) {
-    if (functionOp.isExternal()) {
-      if (failed(printFunctionArgs(emitter, operation,
-                                   functionOp.getArgumentTypes())))
-        return failure();
-      os << ");";
-      return success();
-    }
-    if (failed(
-            printFunctionArgs(emitter, operation, functionOp.getArguments())))
+  Operation *operation = functionOp.getOperation();
+  if (functionOp.isExternal()) {
+    if (failed(printFunctionArgs(emitter, operation,
+                                 functionOp.getArgumentTypes())))
       return failure();
+    os << ");";
+    return success();
   }
+  if (failed(printFunctionArgs(emitter, operation, functionOp.getArguments())))
+    return failure();
   os << ") {\n";
-
   if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
     return failure();
-
-  if (emitter.shouldPrintClass()) {
-    os << "}\n";
-    os.unindent();
-    os << "};\n";
-  } else {
-    os << "}\n";
-  }
+  os << "}\n";
 
   return success();
 }
@@ -1328,11 +1210,9 @@ static LogicalResult printOperation(CppEmitter &emitter,
 }
 
 CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
-                       StringRef fileId, bool emitClass, StringRef className,
-                       StringRef fieldNameAttribute)
+                       StringRef fileId)
     : os(os), declareVariablesAtTop(declareVariablesAtTop),
-      fileId(fileId.str()), emitClass(emitClass), className(className.str()),
-      fieldNameAttribute(fieldNameAttribute.str()) {
+      fileId(fileId.str()) {
   valueInScopeCount.push(0);
   labelInScopeCount.push(0);
 }
@@ -1915,10 +1795,7 @@ LogicalResult CppEmitter::emitTupleType(Location loc, ArrayRef<Type> types) {
 
 LogicalResult emitc::translateToCpp(Operation *op, raw_ostream &os,
                                     bool declareVariablesAtTop,
-                                    StringRef fileId, bool emitClass,
-                                    StringRef className,
-                                    StringRef fieldNameAttribute) {
-  CppEmitter emitter(os, declareVariablesAtTop, fileId, emitClass, className,
-                     fieldNameAttribute);
+                                    StringRef fileId) {
+  CppEmitter emitter(os, declareVariablesAtTop, fileId);
   return emitter.emitOperation(*op, /*trailingSemicolon=*/false);
 }
