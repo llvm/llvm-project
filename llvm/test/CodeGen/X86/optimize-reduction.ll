@@ -7,16 +7,9 @@ define { i16, i16 } @test_reduce_v16i16_with_umin(<16 x i16> %x, <16 x i16> %y) 
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm4
 ; SSE41-NEXT:    pminuw %xmm1, %xmm4
-; SSE41-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,3,2,3]
-; SSE41-NEXT:    pminuw %xmm4, %xmm5
-; SSE41-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[1,1,1,1]
-; SSE41-NEXT:    pminuw %xmm5, %xmm6
-; SSE41-NEXT:    movdqa %xmm6, %xmm5
-; SSE41-NEXT:    psrld $16, %xmm5
-; SSE41-NEXT:    pminuw %xmm6, %xmm5
 ; SSE41-NEXT:    phminposuw %xmm4, %xmm4
 ; SSE41-NEXT:    movd %xmm4, %eax
-; SSE41-NEXT:    pshuflw {{.*#+}} xmm4 = xmm5[0,0,0,0,4,5,6,7]
+; SSE41-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[0,0,0,0,4,5,6,7]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,1,0,1]
 ; SSE41-NEXT:    pcmpeqw %xmm4, %xmm1
 ; SSE41-NEXT:    pcmpeqd %xmm5, %xmm5
@@ -36,14 +29,8 @@ define { i16, i16 } @test_reduce_v16i16_with_umin(<16 x i16> %x, <16 x i16> %y) 
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX2-NEXT:    vpminuw %xmm2, %xmm0, %xmm2
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[2,3,2,3]
-; AVX2-NEXT:    vpminuw %xmm3, %xmm2, %xmm3
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[1,1,1,1]
-; AVX2-NEXT:    vpminuw %xmm4, %xmm3, %xmm3
-; AVX2-NEXT:    vpsrld $16, %xmm3, %xmm4
 ; AVX2-NEXT:    vphminposuw %xmm2, %xmm2
 ; AVX2-NEXT:    vmovd %xmm2, %eax
-; AVX2-NEXT:    vpminuw %xmm4, %xmm3, %xmm2
 ; AVX2-NEXT:    vpbroadcastw %xmm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
@@ -70,20 +57,13 @@ define { i16, i16 } @test_reduce_v16i16_with_umin(<16 x i16> %x, <16 x i16> %y) 
 
 define { i16, i16 } @test_reduce_v16i16_with_add(<16 x i16> %x, <16 x i16> %y) {
 ; SSE41-LABEL: test_reduce_v16i16_with_add:
-; SSE41:       # %bb.0: # %start
-; SSE41-NEXT:    movdqa %xmm0, %xmm4
-; SSE41-NEXT:    paddw %xmm1, %xmm4
-; SSE41-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,3,2,3]
-; SSE41-NEXT:    paddw %xmm4, %xmm5
-; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[1,1,1,1]
-; SSE41-NEXT:    paddw %xmm5, %xmm4
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa %xmm1, %xmm4
+; SSE41-NEXT:    phaddw %xmm0, %xmm4
 ; SSE41-NEXT:    phaddw %xmm4, %xmm4
-; SSE41-NEXT:    movdqa %xmm1, %xmm5
-; SSE41-NEXT:    phaddw %xmm0, %xmm5
-; SSE41-NEXT:    phaddw %xmm5, %xmm5
-; SSE41-NEXT:    phaddw %xmm5, %xmm5
-; SSE41-NEXT:    phaddw %xmm5, %xmm5
-; SSE41-NEXT:    movd %xmm5, %eax
+; SSE41-NEXT:    phaddw %xmm4, %xmm4
+; SSE41-NEXT:    phaddw %xmm4, %xmm4
+; SSE41-NEXT:    movd %xmm4, %eax
 ; SSE41-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[0,0,0,0,4,5,6,7]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,1,0,1]
 ; SSE41-NEXT:    pcmpeqw %xmm4, %xmm1
@@ -101,20 +81,14 @@ define { i16, i16 } @test_reduce_v16i16_with_add(<16 x i16> %x, <16 x i16> %y) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX2-LABEL: test_reduce_v16i16_with_add:
-; AVX2:       # %bb.0: # %start
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vpaddw %xmm2, %xmm0, %xmm3
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
-; AVX2-NEXT:    vpaddw %xmm4, %xmm3, %xmm3
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[1,1,1,1]
-; AVX2-NEXT:    vpaddw %xmm4, %xmm3, %xmm3
-; AVX2-NEXT:    vphaddw %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vphaddw %xmm0, %xmm2, %xmm2
 ; AVX2-NEXT:    vphaddw %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vphaddw %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vphaddw %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vmovd %xmm2, %eax
-; AVX2-NEXT:    vpbroadcastw %xmm3, %ymm2
+; AVX2-NEXT:    vpbroadcastw %xmm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
@@ -127,7 +101,6 @@ define { i16, i16 } @test_reduce_v16i16_with_add(<16 x i16> %x, <16 x i16> %y) {
 ; AVX2-NEXT:    # kill: def $dx killed $dx killed $edx
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-start:
   %sum_x = tail call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %x)
   %sum_x_vec = insertelement <1 x i16> poison, i16 %sum_x, i64 0
   %sum_x_splat = shufflevector <1 x i16> %sum_x_vec, <1 x i16> poison, <16 x i32> zeroinitializer
