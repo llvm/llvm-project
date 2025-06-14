@@ -71,6 +71,34 @@ define i32 @getC() {
   ret i32 %res
 }
 
+; CHECK-LABEL: _getCPair
+; CHECK: [[ADRP_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: adrp [[ADRP_REG:x[0-9]+]], _C@GOTPAGE
+; CHECK-NEXT: [[LDRGOT_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: ldr {{[xw]}}[[LDRGOT_REG:[0-9]+]], [[[ADRP_REG]], _C@GOTPAGEOFF]
+; CHECK-NEXT: [[LDR_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: ldp q0, q1, [x[[LDRGOT_REG]]]
+; CHECK-NEXT: ret
+; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
+define <8 x i32> @getCPair() {
+  %res = load <8 x i32>, ptr @C, align 4
+  ret <8 x i32> %res
+}
+
+; CHECK-LABEL: _getCNontemporalPair
+; CHECK: [[ADRP_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: adrp [[ADRP_REG:x[0-9]+]], _C@GOTPAGE
+; CHECK-NEXT: [[LDRGOT_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: ldr {{[xw]}}[[LDRGOT_REG:[0-9]+]], [[[ADRP_REG]], _C@GOTPAGEOFF]
+; CHECK-NEXT: [[LDR_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: ldnp q0, q1, [x[[LDRGOT_REG]]]
+; CHECK-NEXT: ret
+; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
+define <8 x i32> @getCNontemporalPair() {
+  %res = load <8 x i32>, ptr @C, align 4, !nontemporal !0
+  ret <8 x i32> %res
+}
+
 ; LDRSW supports loading from a literal.
 ; Make sure we emit AdrpLdrGotLdr for those.
 ; CHECK-LABEL: _getSExtC
@@ -126,6 +154,36 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: _setCPair
+; CHECK: [[ADRP_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: adrp [[ADRP_REG:x[0-9]+]], _C@GOTPAGE
+; CHECK-NEXT: [[LDRGOT_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: ldr {{[xw]}}[[LDRGOT_REG:[0-9]+]], [[[ADRP_REG]], _C@GOTPAGEOFF]
+; CHECK-NEXT: [[LDR_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: stp q0, q1, [x[[LDRGOT_REG]]]
+; CHECK-NEXT: ret
+; CHECK: .loh AdrpLdrGotStr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
+define void @setCPair(<8 x i32> %t) {
+entry:
+  store <8 x i32> %t, ptr @C, align 4
+  ret void
+}
+
+; CHECK-LABEL: _setCNontemporalPair
+; CHECK: [[ADRP_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: adrp [[ADRP_REG:x[0-9]+]], _C@GOTPAGE
+; CHECK-NEXT: [[LDRGOT_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: ldr {{[xw]}}[[LDRGOT_REG:[0-9]+]], [[[ADRP_REG]], _C@GOTPAGEOFF]
+; CHECK-NEXT: [[LDR_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: stnp q0, q1, [x[[LDRGOT_REG]]]
+; CHECK-NEXT: ret
+; CHECK: .loh AdrpLdrGotStr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
+define void @setCNontemporalPair(<8 x i32> %t) {
+entry:
+  store <8 x i32> %t, ptr @C, align 4, !nontemporal !0
+  ret void
+}
+
 ; Perform the same tests for internal global and a displacement
 ; in the addressing mode.
 ; Indeed we will get an ADD for those instead of LOADGot.
@@ -146,6 +204,51 @@ define i32 @getInternalCPlus4() {
   %addr = getelementptr inbounds i32, ptr @InternalC, i32 4
   %res = load i32, ptr %addr, align 4
   ret i32 %res
+}
+
+; CHECK-LABEL: _getInternalCUnscaled
+; CHECK: [[ADRP_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: adrp [[ADRP_REG:x[0-9]+]], _InternalC@PAGE
+; CHECK-NEXT: [[ADDGOT_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: add [[ADDGOT_REG:x[0-9]+]], [[ADRP_REG]], _InternalC@PAGEOFF
+; CHECK-NEXT: [[LDR_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: ldur w0, [[[ADDGOT_REG]], #-4]
+; CHECK-NEXT: ret
+; CHECK: .loh AdrpAddLdr [[ADRP_LABEL]], [[ADDGOT_LABEL]], [[LDR_LABEL]]
+define i32 @getInternalCUnscaled() {
+  %addr = getelementptr inbounds i32, ptr @InternalC, i32 -1
+  %res = load i32, ptr %addr, align 4
+  ret i32 %res
+}
+
+; CHECK-LABEL: _getInternalCPair
+; CHECK: [[ADRP_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: adrp [[ADRP_REG:x[0-9]+]], _InternalC@PAGE
+; CHECK-NEXT: [[ADDGOT_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: add [[ADDGOT_REG:x[0-9]+]], [[ADRP_REG]], _InternalC@PAGEOFF
+; CHECK-NEXT: [[LDR_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: ldp q0, q1, [[[ADDGOT_REG]], #16]
+; CHECK-NEXT: ret
+; CHECK: .loh AdrpAddLdr [[ADRP_LABEL]], [[ADDGOT_LABEL]], [[LDR_LABEL]]
+define <8 x i32> @getInternalCPair() {
+  %addr = getelementptr inbounds i32, ptr @InternalC, i32 4
+  %res = load <8 x i32>, ptr %addr, align 4
+  ret <8 x i32> %res
+}
+
+; CHECK-LABEL: _getInternalCNontemporalPair
+; CHECK: [[ADRP_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: adrp [[ADRP_REG:x[0-9]+]], _InternalC@PAGE
+; CHECK-NEXT: [[ADDGOT_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: add [[ADDGOT_REG:x[0-9]+]], [[ADRP_REG]], _InternalC@PAGEOFF
+; CHECK-NEXT: [[LDR_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: ldnp q0, q1, [[[ADDGOT_REG]], #16]
+; CHECK-NEXT: ret
+; CHECK: .loh AdrpAddLdr [[ADRP_LABEL]], [[ADDGOT_LABEL]], [[LDR_LABEL]]
+define <8 x i32> @getInternalCNontemporalPair() {
+  %addr = getelementptr inbounds i32, ptr @InternalC, i32 4
+  %res = load <8 x i32>, ptr %addr, align 4, !nontemporal !0
+  ret <8 x i32> %res
 }
 
 ; LDRSW supports loading from a literal.
@@ -203,6 +306,54 @@ define void @setInternalCPlus4(i32 %t) {
 entry:
   %addr = getelementptr inbounds i32, ptr @InternalC, i32 4
   store i32 %t, ptr %addr, align 4
+  ret void
+}
+
+; CHECK-LABEL: _setInternalCUnscaled
+; CHECK: [[ADRP_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: adrp [[ADRP_REG:x[0-9]+]], _InternalC@PAGE
+; CHECK-NEXT: [[ADDGOT_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: add [[ADDGOT_REG:x[0-9]+]], [[ADRP_REG]], _InternalC@PAGEOFF
+; CHECK-NEXT: [[LDR_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: stur w0, [[[ADDGOT_REG]], #-4]
+; CHECK-NEXT: ret
+; CHECK: .loh AdrpAddStr [[ADRP_LABEL]], [[ADDGOT_LABEL]], [[LDR_LABEL]]
+define void @setInternalCUnscaled(i32 %t) {
+entry:
+  %addr = getelementptr inbounds i32, ptr @InternalC, i32 -1
+  store i32 %t, ptr %addr, align 4
+  ret void
+}
+
+; CHECK-LABEL: _setInternalCPair
+; CHECK: [[ADRP_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: adrp [[ADRP_REG:x[0-9]+]], _InternalC@PAGE
+; CHECK-NEXT: [[ADDGOT_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: add [[ADDGOT_REG:x[0-9]+]], [[ADRP_REG]], _InternalC@PAGEOFF
+; CHECK-NEXT: [[LDR_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: stp q0, q1, [[[ADDGOT_REG]], #16]
+; CHECK-NEXT: ret
+; CHECK: .loh AdrpAddStr [[ADRP_LABEL]], [[ADDGOT_LABEL]], [[LDR_LABEL]]
+define void @setInternalCPair(<8 x i32> %t) {
+entry:
+  %addr = getelementptr inbounds i32, ptr @InternalC, i32 4
+  store <8 x i32> %t, ptr %addr, align 4
+  ret void
+}
+
+; CHECK-LABEL: _setInternalCNontemporalPair
+; CHECK: [[ADRP_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: adrp [[ADRP_REG:x[0-9]+]], _InternalC@PAGE
+; CHECK-NEXT: [[ADDGOT_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: add [[ADDGOT_REG:x[0-9]+]], [[ADRP_REG]], _InternalC@PAGEOFF
+; CHECK-NEXT: [[LDR_LABEL:Lloh[0-9]+]]:
+; CHECK-NEXT: stnp q0, q1, [[[ADDGOT_REG]], #16]
+; CHECK-NEXT: ret
+; CHECK: .loh AdrpAddStr [[ADRP_LABEL]], [[ADDGOT_LABEL]], [[LDR_LABEL]]
+define void @_setInternalCNontemporalPair(<8 x i32> %t) {
+entry:
+  %addr = getelementptr inbounds i32, ptr @InternalC, i32 4
+  store <8 x i32> %t, ptr %addr, align 4, !nontemporal !0
   ret void
 }
 
@@ -678,5 +829,7 @@ if.end.i:
   unreachable
 }
 declare void @callee(ptr nocapture readonly, ...)
+
+!0 = !{ i32 1 }
 
 attributes #0 = { "target-cpu"="cyclone" }
