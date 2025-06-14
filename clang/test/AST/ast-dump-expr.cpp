@@ -126,23 +126,23 @@ void UnaryExpressions(int *p) {
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:16> 'int *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'int *'
 
   ::new int;
-  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9> 'int *' global Function 0x{{[^ ]*}} 'operator new' 'void *(__size_t)'
+  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9> 'int *' global Function 0x{{[^ ]*}} 'operator new' 'void *(unsigned long)'
 
   new (int);
-  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> 'int *' Function 0x{{[^ ]*}} 'operator new' 'void *(__size_t)'
+  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> 'int *' Function 0x{{[^ ]*}} 'operator new' 'void *(unsigned long)'
 
   new int{12};
-  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:13> 'int *' Function 0x{{[^ ]*}} 'operator new' 'void *(__size_t)'
+  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:13> 'int *' Function 0x{{[^ ]*}} 'operator new' 'void *(unsigned long)'
   // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:10, col:13> 'int'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:11> 'int' 12
 
   new int[2];
-  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:12> 'int *' array Function 0x{{[^ ]*}} 'operator new[]' 'void *(__size_t)'
+  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:12> 'int *' array Function 0x{{[^ ]*}} 'operator new[]' 'void *(unsigned long)'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:11> 'int' 2
 
   new int[2]{1, 2};
-  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:18> 'int *' array Function 0x{{[^ ]*}} 'operator new[]' 'void *(__size_t)'
+  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:18> 'int *' array Function 0x{{[^ ]*}} 'operator new[]' 'void *(unsigned long)'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:11> 'int' 2
   // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:13, col:18> 'int[2]'
@@ -164,7 +164,7 @@ void UnaryExpressions(int *p) {
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:8> 'int *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'int *'
 
   ::delete p;
-  // CHECK: CXXDeleteExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:12> 'void' global Function 0x{{[^ ]*}} 'operator delete' 'void (void *, __size_t) noexcept'
+  // CHECK: CXXDeleteExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:12> 'void' global Function 0x{{[^ ]*}} 'operator delete' 'void (void *, unsigned long) noexcept'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:12> 'int *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'int *'
 
