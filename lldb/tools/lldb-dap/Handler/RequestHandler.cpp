@@ -14,10 +14,12 @@
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
-#include "RunInTerminal.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBEnvironment.h"
 #include "llvm/Support/Error.h"
+#include <cerrno>
+#include <csignal>
+#include <limits>
 #include <mutex>
 
 #if !defined(_WIN32)
@@ -51,6 +53,70 @@ static uint32_t SetLaunchFlag(uint32_t flags, bool flag,
   return flags;
 }
 
+// Assume single thread
+class PidReceiver {
+private:
+  inline static volatile std::sig_atomic_t pid;
+  sigset_t oldmask;
+  struct sigaction oldaction;
+
+  static_assert(std::numeric_limits<volatile sig_atomic_t>::max() >=
+                    std::numeric_limits<pid_t>::max(),
+                "sig_atomic_t must be able to hold a pid_t value");
+
+  static void sig_handler(int, siginfo_t *info, void *) {
+    // Store the PID from the signal info
+    pid = info->si_pid;
+  }
+
+  PidReceiver(const PidReceiver &) = delete;
+  PidReceiver &operator=(const PidReceiver &) = delete;
+  PidReceiver(PidReceiver &&) = delete;
+
+public:
+  PidReceiver() {
+    pid = LLDB_INVALID_PROCESS_ID;
+    // sigprocmask and sigaction can only fail by programmer error
+    // Defer SIGUSR1, otherwise we might receive it out of pselect and hang
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGUSR1);
+    assert(!sigprocmask(SIG_BLOCK, &mask, &oldmask));
+
+    // Set up sigaction for SIGUSR1 with SA_SIGINFO
+    struct sigaction sa;
+    std::memset(&sa, 0, sizeof(sa));
+    sa.sa_sigaction = sig_handler;
+    sa.sa_flags = SA_SIGINFO;
+    sigemptyset(&sa.sa_mask);
+    assert(!sigaction(SIGUSR1, &sa, &oldaction));
+  }
+
+  ~PidReceiver() {
+    // Restore the old signal mask
+    assert(!sigprocmask(SIG_SETMASK, &oldmask, nullptr));
+    assert(!sigaction(SIGUSR1, &oldaction, nullptr));
+  }
+
+  llvm::Expected<lldb::pid_t> WaitForPid() {
+    // Wait for the signal to be received
+    while (pid == LLDB_INVALID_PROCESS_ID) {
+      struct timespec timeout;
+      timeout.tv_sec = 5;
+      timeout.tv_nsec = 0;
+      auto ret = pselect(0, nullptr, nullptr, nullptr, &timeout, &oldmask);
+      if (ret == -1 && errno != EINTR) {
+        return llvm::createStringError(
+            std::error_code(errno, std::generic_category()), "pselect failed");
+      } else if (ret == 0) {
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Timed out waiting for signal");
+      }
+    }
+    return pid;
+  }
+};
+
 static llvm::Error
 RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
   if (!dap.clientFeatures.contains(
@@ -65,26 +131,19 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
   dap.is_attach = true;
   lldb::SBAttachInfo attach_info;
 
-  llvm::Expected<std::shared_ptr<FifoFile>> comm_file_or_err =
-      CreateRunInTerminalCommFile();
-  if (!comm_file_or_err)
-    return comm_file_or_err.takeError();
-  FifoFile &comm_file = *comm_file_or_err.get();
-
-  RunInTerminalDebugAdapterCommChannel comm_channel(comm_file.m_path);
-
   lldb::pid_t debugger_pid = LLDB_INVALID_PROCESS_ID;
 #if !defined(_WIN32)
   debugger_pid = getpid();
 #endif
 
+  auto pid_receiver = PidReceiver();
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
       arguments.configuration.program, arguments.args, arguments.env,
-      arguments.cwd, comm_file.m_path, debugger_pid);
+      arguments.cwd, debugger_pid);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
 
-  if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
+  if (llvm::Expected<lldb::pid_t> pid = pid_receiver.WaitForPid())
     attach_info.SetProcessID(*pid);
   else
     return pid.takeError();
@@ -95,13 +154,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 
   if (error.Fail())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Failed to attach to the target process. %s",
-                                   comm_channel.GetLauncherError().c_str());
-  // This will notify the runInTerminal launcher that we attached.
-  // We have to make this async, as the function won't return until the launcher
-  // resumes and reads the data.
-  std::future<lldb::SBError> did_attach_message_success =
-      comm_channel.NotifyDidAttach();
+                                   "Failed to attach to the target process.");
 
   // We just attached to the runInTerminal launcher, which was waiting to be
   // attached. We now resume it, so it can receive the didAttach notification
@@ -115,15 +168,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
   // we return the debugger to its sync state.
   scope_sync_mode.reset();
 
-  // If sending the notification failed, the launcher should be dead by now and
-  // the async didAttach notification should have an error message, so we
-  // return it. Otherwise, everything was a success.
-  did_attach_message_success.wait();
-  error = did_attach_message_success.get();
-  if (error.Success())
-    return llvm::Error::success();
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 error.GetCString());
+  return llvm::Error::success();
 }
 
 void BaseRequestHandler::Run(const Request &request) {
