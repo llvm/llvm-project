@@ -53,13 +53,10 @@ enum class RecurKind {
   FMaximumNum, ///< FP max with llvm.maximumnum semantics
   FMulAdd,  ///< Sum of float products with llvm.fmuladd(a * b + sum).
   AnyOf,    ///< AnyOf reduction with select(cmp(),x,y) where one of (x,y) is
-            ///< loop invariant, and both x and y are integer type.
+            ///< loop invariant.
   FindLastIV, ///< FindLast reduction with select(cmp(),x,y) where one of
-              ///< (x,y) is increasing loop induction, and both x and y are
-              ///< integer type.
+              ///< (x,y) is increasing loop induction.
   // clang-format on
-  // TODO: Any_of and FindLast reduction need not be restricted to integer type
-  // only.
 };
 
 /// The RecurrenceDescriptor is used to identify recurrences variables in a
