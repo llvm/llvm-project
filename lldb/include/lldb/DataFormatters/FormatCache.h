@@ -13,6 +13,7 @@
 #include <map>
 #include <mutex>
 
+#include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-public.h"
 
@@ -32,7 +33,7 @@ private:
   public:
     Entry();
 
-    template<typename ImplSP> bool IsCached();
+    template <typename ImplSP> bool IsCached(FormattersMatchData &match_data);
     bool IsFormatCached();
     bool IsSummaryCached();
     bool IsSyntheticCached();
@@ -54,7 +55,8 @@ private:
 public:
   FormatCache() = default;
 
-  template <typename ImplSP> bool Get(ConstString type, ImplSP &format_impl_sp);
+  template <typename ImplSP>
+  bool Get(FormattersMatchData &match_data, ImplSP &format_impl_sp);
   void Set(ConstString type, lldb::TypeFormatImplSP &format_sp);
   void Set(ConstString type, lldb::TypeSummaryImplSP &summary_sp);
   void Set(ConstString type, lldb::SyntheticChildrenSP &synthetic_sp);
