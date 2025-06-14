@@ -6739,16 +6739,17 @@ QualType ASTContext::getTagDeclType(const TagDecl *Decl) const {
   return getTypeDeclType(const_cast<TagDecl*>(Decl));
 }
 
-// Inject __size_t, __signed_size_t, and __ptrdiff_t to provide portable hints
-// and diagnostics. In C and C++, expressions of type size_t can be obtained via
-// the sizeof operator, expressions of type ptrdiff_t via pointer subtraction,
-// and expressions of type signed size_t via the z literal suffix (since C++23).
+// Using PredefinedSugarType makes size_t, signed size_t, and ptrdiff_t behave
+// as named sugar types rather than built-in types, enabling better hints and
+// diagnostics. In C and C++, expressions of type size_t can be obtained via the
+// sizeof operator, expressions of type ptrdiff_t via pointer subtraction, and
+// expressions of type signed size_t via the z literal suffix (since C++23).
 // However, no core language mechanism directly produces an expression of type
 // unsigned ptrdiff_t. The unsigned ptrdiff_t type is solely required by format
 // specifiers for printf and scanf. Consequently, no expression's type needs to
 // be displayed as unsigned ptrdiff_t. Verification of whether a type is
 // unsigned ptrdiff_t is also unnecessary, as no corresponding typedefs exist.
-// Therefore, injecting a typedef for signed ptrdiff_t is not required.
+// Therefore, unsigned ptrdiff_t does not need to do that.
 
 /// getSizeType - Return the unique type for "size_t" (C99 7.17), the result
 /// of the sizeof operator (C99 6.5.3.4p4). The value is target dependent and
