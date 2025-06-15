@@ -494,7 +494,7 @@ class DebugCommunication(object):
             raise ValueError("didn't get terminated event")
         return event_dict
 
-    def get_capability(self, key):
+    def get_capability(self, key: str):
         """Get a value for the given key if it there is a key/value pair in
         the capabilities reported by the adapter.
         """
