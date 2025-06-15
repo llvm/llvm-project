@@ -7102,6 +7102,14 @@ void Sema::MarkUsedTemplateParameters(ArrayRef<TemplateArgument> TemplateArgs,
                                  /*OnlyDeduced=*/false, Depth, Used);
 }
 
+void Sema::MarkUsedTemplateParameters(
+    ArrayRef<TemplateArgumentLoc> TemplateArgs, unsigned Depth,
+    llvm::SmallBitVector &Used) {
+  for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
+    ::MarkUsedTemplateParameters(Context, TemplateArgs[I].getArgument(),
+                                 /*OnlyDeduced=*/false, Depth, Used);
+}
+
 void Sema::MarkDeducedTemplateParameters(
     ASTContext &Ctx, const FunctionTemplateDecl *FunctionTemplate,
     llvm::SmallBitVector &Deduced) {

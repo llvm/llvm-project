@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++2c -verify %s
 
-template <class T> concept A = true;
+template <class T> concept A = (T(), true);
 template <class T> concept C = A<T> && true;
 template <class T> concept D = A<T> && __is_same(T, int);
 
@@ -158,6 +158,7 @@ static_assert(And1<int, S>() == 1); // expected-error {{no matching function for
 
 static_assert(And2<S>() == 2);
 static_assert(And2<S, S>() == 2);
+// FIXME: Should it compile??
 static_assert(And2<int>() == 2);
 
 static_assert(And2<int, int>() == 2);  // expected-error {{no matching function for call to 'And2'}}
