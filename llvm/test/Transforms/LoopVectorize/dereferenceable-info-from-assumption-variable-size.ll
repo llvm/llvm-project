@@ -4,9 +4,9 @@
 declare void @llvm.assume(i1)
 
 ; %a is known dereferenceable via assume for the whole loop.
-define void @deref_assumption_in_preheader_non_constant_trip_count_access_i8(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
+define void @deref_assumption_in_preheader_non_constant_trip_count_access_i8(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_non_constant_trip_count_access_i8(
-; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i64 [[N]]) ]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
@@ -86,9 +86,9 @@ exit:
 }
 
 ; %a is known dereferenceable via assume for the whole loop.
-define void @deref_assumption_in_preheader_non_constant_trip_count_access_i32(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
+define void @deref_assumption_in_preheader_non_constant_trip_count_access_i32(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_non_constant_trip_count_access_i32(
-; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[N]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i64 [[MUL]]) ]
@@ -171,9 +171,9 @@ exit:
 
 
 ; %a is NOT known dereferenceable via assume for the whole loop.
-define void @deref_assumption_in_preheader_too_small_non_constant_trip_count_access_i32(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
+define void @deref_assumption_in_preheader_too_small_non_constant_trip_count_access_i32(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_too_small_non_constant_trip_count_access_i32(
-; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i64 [[N]]) ]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
@@ -253,9 +253,9 @@ exit:
 }
 
 ; %a is NOT known dereferenceable via assume for the whole loop.
-define void @deref_assumption_in_preheader_too_small2_non_constant_trip_count_access_i32(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
+define void @deref_assumption_in_preheader_too_small2_non_constant_trip_count_access_i32(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_too_small2_non_constant_trip_count_access_i32(
-; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i64 100) ]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
