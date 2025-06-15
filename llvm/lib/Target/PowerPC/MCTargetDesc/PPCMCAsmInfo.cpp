@@ -13,6 +13,7 @@
 #include "PPCMCAsmInfo.h"
 #include "PPCMCExpr.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -136,6 +137,18 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   initializeVariantKinds(variantKindDescs);
 }
 
+void PPCELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                         const MCSpecifierExpr &Expr) const {
+  printExpr(OS, *Expr.getSubExpr());
+  OS << '@' << getSpecifierName(Expr.getSpecifier());
+}
+
+bool PPCELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
+                                                MCValue &Res,
+                                                const MCAssembler *Asm) const {
+  return PPC::evaluateAsRelocatableImpl(Expr, Res, Asm);
+}
+
 void PPCXCOFFMCAsmInfo::anchor() {}
 
 PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
@@ -158,4 +171,15 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
   UsesSetToEquateSymbol = true;
 
   initializeVariantKinds(variantKindDescs);
+}
+
+void PPCXCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                           const MCSpecifierExpr &Expr) const {
+  printExpr(OS, *Expr.getSubExpr());
+  OS << '@' << getSpecifierName(Expr.getSpecifier());
+}
+
+bool PPCXCOFFMCAsmInfo::evaluateAsRelocatableImpl(
+    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
+  return PPC::evaluateAsRelocatableImpl(Expr, Res, Asm);
 }

@@ -749,9 +749,9 @@ public:
           getSpecifier(SRE) == PPC::S_TLS_PCREL)
         return CreateTLSReg(SRE, S, E, IsPPC64);
 
-    if (const PPCMCExpr *TE = dyn_cast<PPCMCExpr>(Val)) {
+    if (const auto *SE = dyn_cast<MCSpecifierExpr>(Val)) {
       int64_t Res;
-      if (TE->evaluateAsConstant(Res))
+      if (PPC::evaluateAsConstant(*SE, Res))
         return CreateContextImm(Res, S, E, IsPPC64);
     }
 
@@ -1375,7 +1375,7 @@ const MCExpr *PPCAsmParser::extractSpecifier(const MCExpr *E,
     break;
   case MCExpr::Specifier: {
     // Detect error but do not return a modified expression.
-    auto *TE = cast<PPCMCExpr>(E);
+    auto *TE = cast<MCSpecifierExpr>(E);
     Spec = TE->getSpecifier();
     (void)extractSpecifier(TE->getSubExpr(), Spec);
     Spec = PPC::S_None;
@@ -1439,7 +1439,7 @@ bool PPCAsmParser::parseExpression(const MCExpr *&EVal) {
   uint16_t Spec = PPC::S_None;
   const MCExpr *E = extractSpecifier(EVal, Spec);
   if (Spec != PPC::S_None)
-    EVal = PPCMCExpr::create(Spec, E, getParser().getContext());
+    EVal = MCSpecifierExpr::create(E, Spec, getParser().getContext());
 
   return false;
 }
@@ -1841,5 +1841,5 @@ const MCExpr *PPCAsmParser::applySpecifier(const MCExpr *E, uint32_t Spec,
     }
   }
 
-  return PPCMCExpr::create(PPCMCExpr::Specifier(Spec), E, Ctx);
+  return MCSpecifierExpr::create(E, Spec, Ctx);
 }

@@ -16,32 +16,19 @@
 
 namespace llvm {
 
-class PPCMCExpr : public MCSpecifierExpr {
-public:
-  using Specifier = uint16_t;
-
-private:
-  std::optional<int64_t> evaluateAsInt64(int64_t Value) const;
-
-  explicit PPCMCExpr(Specifier S, const MCExpr *Expr)
-      : MCSpecifierExpr(Expr, S) {}
-
-public:
-  static const PPCMCExpr *create(Specifier S, const MCExpr *Expr,
-                                 MCContext &Ctx);
-  static const PPCMCExpr *create(const MCExpr *Expr, Specifier S,
-                                 MCContext &Ctx);
-
-  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAssembler *Asm) const override;
-
-  bool evaluateAsConstant(int64_t &Res) const;
-};
+namespace PPCMCExpr {
+using Specifier = uint16_t;
+}
 
 static inline PPCMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
   return PPCMCExpr::Specifier(SRE->getKind());
 }
+
+namespace PPC {
+bool evaluateAsConstant(const MCSpecifierExpr &Expr, int64_t &Res);
+bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
+                               const MCAssembler *Asm);
+} // namespace PPC
 
 } // end namespace llvm
 

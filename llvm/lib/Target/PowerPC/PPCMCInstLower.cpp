@@ -164,11 +164,11 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   switch (access) {
     case PPCII::MO_LO:
     case PPCII::MO_PIC_LO_FLAG:
-      Expr = PPCMCExpr::create(Expr, PPC::S_LO, Ctx);
+      Expr = MCSpecifierExpr::create(Expr, PPC::S_LO, Ctx);
       break;
     case PPCII::MO_HA:
     case PPCII::MO_PIC_HA_FLAG:
-      Expr = PPCMCExpr::create(Expr, PPC::S_HA, Ctx);
+      Expr = MCSpecifierExpr::create(Expr, PPC::S_HA, Ctx);
       break;
   }
 
