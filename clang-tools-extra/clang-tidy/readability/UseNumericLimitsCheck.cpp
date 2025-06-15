@@ -144,7 +144,7 @@ void UseNumericLimitsCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     diag(Location,
-         "The constant %0 is being utilized. Consider using %1 instead")
+         "the constant '%0' is being utilized; consider using '%1' instead")
         << std::to_string(SourceValue) << Replacement
         << FixItHint::CreateReplacement(Range, Replacement)
         << Inserter.createIncludeInsertion(
