@@ -328,7 +328,7 @@ define i32 @private_load_2xi16_align2_not_alloca(ptr addrspace(5) %p) #0 {
 ; ALIGNED-NEXT:    [[ZEXT_0:%.*]] = zext i16 [[P_0]] to i32
 ; ALIGNED-NEXT:    [[ZEXT_1:%.*]] = zext i16 [[P_1]] to i32
 ; ALIGNED-NEXT:    [[SHL_1:%.*]] = shl i32 [[ZEXT_1]], 16
-; ALIGNED-NEXT:    [[OR:%.*]] = or i32 [[ZEXT_0]], [[SHL_1]]
+; ALIGNED-NEXT:    [[OR:%.*]] = or disjoint i32 [[ZEXT_0]], [[SHL_1]]
 ; ALIGNED-NEXT:    ret i32 [[OR]]
 ;
 ; UNALIGNED-LABEL: @private_load_2xi16_align2_not_alloca(
@@ -338,7 +338,7 @@ define i32 @private_load_2xi16_align2_not_alloca(ptr addrspace(5) %p) #0 {
 ; UNALIGNED-NEXT:    [[ZEXT_0:%.*]] = zext i16 [[P_01]] to i32
 ; UNALIGNED-NEXT:    [[ZEXT_1:%.*]] = zext i16 [[P_12]] to i32
 ; UNALIGNED-NEXT:    [[SHL_1:%.*]] = shl i32 [[ZEXT_1]], 16
-; UNALIGNED-NEXT:    [[OR:%.*]] = or i32 [[ZEXT_0]], [[SHL_1]]
+; UNALIGNED-NEXT:    [[OR:%.*]] = or disjoint i32 [[ZEXT_0]], [[SHL_1]]
 ; UNALIGNED-NEXT:    ret i32 [[OR]]
 ;
   %gep.p = getelementptr i16, ptr addrspace(5) %p, i64 1
@@ -359,7 +359,7 @@ define i32 @private_load_2xi16_align1_not_alloca(ptr addrspace(5) %p) #0 {
 ; ALIGNED-NEXT:    [[ZEXT_0:%.*]] = zext i16 [[P_0]] to i32
 ; ALIGNED-NEXT:    [[ZEXT_1:%.*]] = zext i16 [[P_1]] to i32
 ; ALIGNED-NEXT:    [[SHL_1:%.*]] = shl i32 [[ZEXT_1]], 16
-; ALIGNED-NEXT:    [[OR:%.*]] = or i32 [[ZEXT_0]], [[SHL_1]]
+; ALIGNED-NEXT:    [[OR:%.*]] = or disjoint i32 [[ZEXT_0]], [[SHL_1]]
 ; ALIGNED-NEXT:    ret i32 [[OR]]
 ;
 ; UNALIGNED-LABEL: @private_load_2xi16_align1_not_alloca(
@@ -369,7 +369,7 @@ define i32 @private_load_2xi16_align1_not_alloca(ptr addrspace(5) %p) #0 {
 ; UNALIGNED-NEXT:    [[ZEXT_0:%.*]] = zext i16 [[P_01]] to i32
 ; UNALIGNED-NEXT:    [[ZEXT_1:%.*]] = zext i16 [[P_12]] to i32
 ; UNALIGNED-NEXT:    [[SHL_1:%.*]] = shl i32 [[ZEXT_1]], 16
-; UNALIGNED-NEXT:    [[OR:%.*]] = or i32 [[ZEXT_0]], [[SHL_1]]
+; UNALIGNED-NEXT:    [[OR:%.*]] = or disjoint i32 [[ZEXT_0]], [[SHL_1]]
 ; UNALIGNED-NEXT:    ret i32 [[OR]]
 ;
   %gep.p = getelementptr i16, ptr addrspace(5) %p, i64 1
