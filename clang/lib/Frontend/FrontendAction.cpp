@@ -38,6 +38,7 @@
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
+#include "clang/Summary/SummaryContext.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
@@ -46,7 +47,9 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <fstream>
 #include <memory>
+#include <sstream>
 #include <system_error>
 using namespace clang;
 
@@ -962,6 +965,42 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     }
   }
 
+  bool ProcessesSummaries = !CI.getFrontendOpts().SummaryDirPath.empty() ||
+                            !CI.getFrontendOpts().SummaryFile.empty();
+  if (ProcessesSummaries && !CI.hasSummaryContext())
+    CI.createSummaryContext();
+
+  // FIXME: cleanup and lookup dirs recursively
+  if (!CI.getFrontendOpts().SummaryDirPath.empty()) {
+    FileManager &FileMgr = CI.getFileManager();
+
+    StringRef SummaryDirPath = CI.getFrontendOpts().SummaryDirPath;
+    if (auto SummaryDir = FileMgr.getOptionalDirectoryRef(SummaryDirPath)) {
+      std::error_code EC;
+      SmallString<128> DirNative;
+      llvm::sys::path::native(SummaryDir->getName(), DirNative);
+
+      llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
+      for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
+                                         DirEnd;
+           Dir != DirEnd && !EC; Dir.increment(EC)) {
+        if (llvm::sys::path::extension(Dir->path()) == ".json") {
+          std::ifstream t(Dir->path().str());
+          std::stringstream buffer;
+          buffer << t.rdbuf();
+
+          auto JSON = llvm::json::parse(buffer.str());
+          if (!JSON)
+            continue;
+
+          CI.getSummaryContext().ParseSummaryFromJSON(*JSON->getAsArray());
+        }
+      }
+
+      CI.getSummaryContext().ReduceSummaries();
+    }
+  }
+
   // Set up the preprocessor if needed. When parsing model files the
   // preprocessor of the original source is reused.
   if (!isModelParsingAction())
@@ -1333,8 +1372,17 @@ void ASTFrontendAction::ExecuteAction() {
   if (CI.hasCodeCompletionConsumer())
     CompletionConsumer = &CI.getCodeCompletionConsumer();
 
+  if (!CI.getFrontendOpts().SummaryFile.empty())
+    CI.createSummaryConsumer();
+
+  // Use a code summary consumer?
+  SummaryConsumer *SummaryConsumer = nullptr;
+  if (CI.hasSummaryConsumer())
+    SummaryConsumer = &CI.getSummaryConsumer();
+
   if (!CI.hasSema())
-    CI.createSema(getTranslationUnitKind(), CompletionConsumer);
+    CI.createSema(getTranslationUnitKind(), CompletionConsumer,
+                  SummaryConsumer);
 
   ParseAST(CI.getSema(), CI.getFrontendOpts().ShowStats,
            CI.getFrontendOpts().SkipFunctionBodies);
