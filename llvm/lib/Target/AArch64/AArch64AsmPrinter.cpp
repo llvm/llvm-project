@@ -1841,21 +1841,24 @@ void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     default: llvm_unreachable("Unexpected opcode");
     case AArch64::FMOVH0:
-      FMov.setOpcode(STI->hasFullFP16() ? AArch64::FMOVWHr : AArch64::FMOVWSr);
+      FMov.setOpcode(AArch64::EOR_ZZZ);
       if (!STI->hasFullFP16())
         DestReg = (AArch64::S0 + (DestReg - AArch64::H0));
       FMov.addOperand(MCOperand::createReg(DestReg));
-      FMov.addOperand(MCOperand::createReg(AArch64::WZR));
+      FMov.addOperand(MCOperand::createReg(DestReg));
+      FMov.addOperand(MCOperand::createReg(DestReg));
       break;
     case AArch64::FMOVS0:
-      FMov.setOpcode(AArch64::FMOVWSr);
+      FMov.setOpcode(AArch64::EOR_ZZZ);
       FMov.addOperand(MCOperand::createReg(DestReg));
-      FMov.addOperand(MCOperand::createReg(AArch64::WZR));
+      FMov.addOperand(MCOperand::createReg(DestReg));
+      FMov.addOperand(MCOperand::createReg(DestReg));
       break;
     case AArch64::FMOVD0:
-      FMov.setOpcode(AArch64::FMOVXDr);
+      FMov.setOpcode(AArch64::EOR_ZZZ);
       FMov.addOperand(MCOperand::createReg(DestReg));
-      FMov.addOperand(MCOperand::createReg(AArch64::XZR));
+      FMov.addOperand(MCOperand::createReg(DestReg));
+      FMov.addOperand(MCOperand::createReg(DestReg));
       break;
     }
     EmitToStreamer(*OutStreamer, FMov);
