@@ -165,7 +165,7 @@ private:
   std::string m_error;
   bool m_val_summary_ok;
 
-  friend struct StringSummaryFormat;
+  friend struct StringSummaryData;
 
   ValueObjectPrinter(const ValueObjectPrinter &) = delete;
   const ValueObjectPrinter &operator=(const ValueObjectPrinter &) = delete;

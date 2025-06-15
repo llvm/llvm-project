@@ -57,21 +57,17 @@ std::string TypeSummaryImpl::GetSummaryKindName() {
     return "python";
   case Kind::eInternal:
     return "c++";
+  case Kind::eCascading:
+    return "cascading";
   case Kind::eBytecode:
     return "bytecode";
   }
   llvm_unreachable("Unknown type kind name");
 }
 
-StringSummaryFormat::StringSummaryFormat(const TypeSummaryImpl::Flags &flags,
-                                         const char *format_cstr,
-                                         uint32_t ptr_match_depth)
-    : TypeSummaryImpl(Kind::eSummaryString, flags, ptr_match_depth),
-      m_format_str() {
-  SetSummaryString(format_cstr);
-}
+StringSummaryData::StringSummaryData(const char *f) { SetFormat(f); }
 
-void StringSummaryFormat::SetSummaryString(const char *format_cstr) {
+void StringSummaryData::SetFormat(const char *format_cstr) {
   m_format.Clear();
   if (format_cstr && format_cstr[0]) {
     m_format_str = format_cstr;
@@ -82,8 +78,19 @@ void StringSummaryFormat::SetSummaryString(const char *format_cstr) {
   }
 }
 
-bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
-                                       const TypeSummaryOptions &options) {
+StringSummaryFormat::StringSummaryFormat(const TypeSummaryImpl::Flags &flags,
+                                         const char *format_cstr,
+                                         uint32_t ptr_match_depth)
+    : TypeSummaryImpl(Kind::eSummaryString, flags, ptr_match_depth),
+      m_data(format_cstr) {}
+
+void StringSummaryFormat::SetSummaryString(const char *format_cstr) {
+  m_data.SetFormat(format_cstr);
+}
+
+bool StringSummaryData::FormatObject(ValueObject *valobj, std::string &retval,
+                                     const TypeSummaryOptions &options,
+                                     const TypeSummaryImpl &summary) {
   if (!valobj) {
     retval.assign("NULL ValueObject");
     return false;
@@ -96,12 +103,12 @@ bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
   if (frame)
     sc = frame->GetSymbolContext(lldb::eSymbolContextEverything);
 
-  if (IsOneLiner()) {
+  if (summary.IsOneLiner()) {
     // We've already checked the case of a NULL valobj above.  Let's put in an
     // assert here to make sure someone doesn't take that out:
     assert(valobj && "Must have a valid ValueObject to summarize");
     ValueObjectPrinter printer(*valobj, &s, DumpValueObjectOptions());
-    printer.PrintChildrenOneLiner(HideNames(valobj));
+    printer.PrintChildrenOneLiner(summary.HideNames(valobj));
     retval = std::string(s.GetString());
     return true;
   } else {
@@ -117,40 +124,52 @@ bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
   }
 }
 
+bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
+                                       const TypeSummaryOptions &options) {
+  return m_data.FormatObject(valobj, retval, options, *this);
+}
+
 std::string StringSummaryFormat::GetDescription() {
   StreamString sstr;
 
-  sstr.Printf("`%s`%s%s%s%s%s%s%s%s%s ptr-match-depth=%u", m_format_str.c_str(),
-              m_error.Fail() ? " error: " : "",
-              m_error.Fail() ? m_error.AsCString() : "",
-              Cascades() ? "" : " (not cascading)",
-              !DoesPrintChildren(nullptr) ? "" : " (show children)",
-              !DoesPrintValue(nullptr) ? " (hide value)" : "",
-              IsOneLiner() ? " (one-line printout)" : "",
-              SkipsPointers() ? " (skip pointers)" : "",
-              SkipsReferences() ? " (skip references)" : "",
-              HideNames(nullptr) ? " (hide member names)" : "",
-              GetPtrMatchDepth());
+  sstr.Printf(
+      "`%s`%s%s%s%s%s%s%s%s%s ptr-match-depth=%u", m_data.m_format_str.c_str(),
+      m_data.m_error.Fail() ? " error: " : "",
+      m_data.m_error.Fail() ? m_data.m_error.AsCString() : "",
+      Cascades() ? "" : " (not cascading)",
+      !DoesPrintChildren(nullptr) ? "" : " (show children)",
+      !DoesPrintValue(nullptr) ? " (hide value)" : "",
+      IsOneLiner() ? " (one-line printout)" : "",
+      SkipsPointers() ? " (skip pointers)" : "",
+      SkipsReferences() ? " (skip references)" : "",
+      HideNames(nullptr) ? " (hide member names)" : "", GetPtrMatchDepth());
   return std::string(sstr.GetString());
 }
 
-std::string StringSummaryFormat::GetName() { return m_format_str; }
+std::string StringSummaryFormat::GetName() { return m_data.m_format_str; }
 
-CXXFunctionSummaryFormat::CXXFunctionSummaryFormat(
-    const TypeSummaryImpl::Flags &flags, Callback impl, const char *description,
-    uint32_t ptr_match_depth)
-    : TypeSummaryImpl(Kind::eCallback, flags, ptr_match_depth), m_impl(impl),
-      m_description(description ? description : "") {}
-
-bool CXXFunctionSummaryFormat::FormatObject(ValueObject *valobj,
-                                            std::string &dest,
-                                            const TypeSummaryOptions &options) {
+bool CXXFunctionSummaryData::FormatObject(ValueObject *valobj,
+                                          std::string &dest,
+                                          const TypeSummaryOptions &options,
+                                          const TypeSummaryImpl &summary) {
   dest.clear();
   StreamString stream;
   if (!m_impl || !m_impl(*valobj, stream, options))
     return false;
   dest = std::string(stream.GetString());
   return true;
+}
+
+CXXFunctionSummaryFormat::CXXFunctionSummaryFormat(
+    const TypeSummaryImpl::Flags &flags, Callback impl, const char *description,
+    uint32_t ptr_match_depth)
+    : TypeSummaryImpl(Kind::eCallback, flags, ptr_match_depth), m_data{impl},
+      m_description(description ? description : "") {}
+
+bool CXXFunctionSummaryFormat::FormatObject(ValueObject *valobj,
+                                            std::string &dest,
+                                            const TypeSummaryOptions &options) {
+  return m_data.FormatObject(valobj, dest, options, *this);
 }
 
 std::string CXXFunctionSummaryFormat::GetDescription() {
@@ -168,6 +187,66 @@ std::string CXXFunctionSummaryFormat::GetDescription() {
 }
 
 std::string CXXFunctionSummaryFormat::GetName() { return m_description; }
+
+CXXCascadingSummaryFormat::CXXCascadingSummaryFormat(
+    const TypeSummaryImpl::Flags &flags, const char *description,
+    ImplList impls, uint32_t ptr_match_depth)
+    : TypeSummaryImpl(Kind::eCascading, flags, ptr_match_depth),
+      m_impls(std::move(impls)) {}
+
+CXXCascadingSummaryFormat *
+CXXCascadingSummaryFormat::Append(Validator *validator, Impl impl) {
+  m_impls.emplace_back(validator, std::move(impl));
+  return this;
+}
+
+CXXCascadingSummaryFormat::ImplList
+CXXCascadingSummaryFormat::CopyImpls() const {
+  auto copy_impl = [](const ImplEntry &entry) -> ImplEntry {
+    return {entry.first,
+            std::visit(
+                llvm::makeVisitor(
+                    [](const CXXFunctionSummaryData &fn) -> Impl { return fn; },
+                    [](const StringSummaryData &string) -> Impl {
+                      return StringSummaryData(string.m_format_str.c_str());
+                    }),
+                entry.second)};
+  };
+  return {llvm::map_iterator(m_impls.begin(), copy_impl),
+          llvm::map_iterator(m_impls.end(), copy_impl)};
+}
+
+bool CXXCascadingSummaryFormat::FormatObject(
+    ValueObject *valobj, std::string &dest, const TypeSummaryOptions &options) {
+  if (!valobj)
+    return false;
+
+  for (auto &[validator, impl] : m_impls) {
+    if (!validator || validator(*valobj))
+      return std::visit(
+          [&](auto &impl) {
+            return impl.FormatObject(valobj, dest, options, *this);
+          },
+          impl);
+  }
+  return false;
+}
+
+std::string CXXCascadingSummaryFormat::GetDescription() {
+  StreamString sstr;
+  sstr.Printf("size=%zu %s%s%s%s%s%s%s ptr-match-depth=%u %s", m_impls.size(),
+              Cascades() ? "" : " (not cascading)",
+              !DoesPrintChildren(nullptr) ? "" : " (show children)",
+              !DoesPrintValue(nullptr) ? " (hide value)" : "",
+              IsOneLiner() ? " (one-line printout)" : "",
+              SkipsPointers() ? " (skip pointers)" : "",
+              SkipsReferences() ? " (skip references)" : "",
+              HideNames(nullptr) ? " (hide member names)" : "",
+              GetPtrMatchDepth(), m_description.c_str());
+  return std::string(sstr.GetString());
+}
+
+std::string CXXCascadingSummaryFormat::GetName() { return m_description; }
 
 ScriptSummaryFormat::ScriptSummaryFormat(const TypeSummaryImpl::Flags &flags,
                                          const char *function_name,

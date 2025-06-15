@@ -370,6 +370,9 @@ bool SBTypeSummary::IsEqualTo(lldb::SBTypeSummary &rhs) {
     if (IsSummaryString() != rhs.IsSummaryString())
       return false;
     return GetOptions() == rhs.GetOptions();
+  case TypeSummaryImpl::Kind::eCascading:
+    return llvm::dyn_cast<CXXCascadingSummaryFormat>(m_opaque_sp.get()) ==
+           llvm::dyn_cast<CXXCascadingSummaryFormat>(rhs.m_opaque_sp.get());
   case TypeSummaryImpl::Kind::eInternal:
     return (m_opaque_sp.get() == rhs.m_opaque_sp.get());
   }
@@ -406,7 +409,7 @@ bool SBTypeSummary::CopyOnWrite_Impl() {
   if (CXXFunctionSummaryFormat *current_summary_ptr =
           llvm::dyn_cast<CXXFunctionSummaryFormat>(m_opaque_sp.get())) {
     new_sp = TypeSummaryImplSP(new CXXFunctionSummaryFormat(
-        GetOptions(), current_summary_ptr->m_impl,
+        GetOptions(), current_summary_ptr->m_data.m_impl,
         current_summary_ptr->m_description.c_str()));
   } else if (ScriptSummaryFormat *current_summary_ptr =
                  llvm::dyn_cast<ScriptSummaryFormat>(m_opaque_sp.get())) {
@@ -417,6 +420,11 @@ bool SBTypeSummary::CopyOnWrite_Impl() {
                  llvm::dyn_cast<StringSummaryFormat>(m_opaque_sp.get())) {
     new_sp = TypeSummaryImplSP(new StringSummaryFormat(
         GetOptions(), current_summary_ptr->GetSummaryString()));
+  } else if (CXXCascadingSummaryFormat *current_summary_ptr =
+                 llvm::dyn_cast<CXXCascadingSummaryFormat>(m_opaque_sp.get())) {
+    new_sp = TypeSummaryImplSP(new CXXCascadingSummaryFormat(
+        GetOptions(), current_summary_ptr->GetTextualInfo(),
+        current_summary_ptr->CopyImpls()));
   }
 
   SetSP(new_sp);

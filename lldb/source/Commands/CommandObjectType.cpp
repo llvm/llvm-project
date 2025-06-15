@@ -1397,9 +1397,10 @@ bool CommandObjectTypeSummaryAdd::Execute_StringSummary(
     result.AppendError("summary creation failed");
     return false;
   }
-  if (string_format->m_error.Fail()) {
-    result.AppendErrorWithFormat("syntax error: %s",
-                                 string_format->m_error.AsCString("<unknown>"));
+  if (string_format->m_data.m_error.Fail()) {
+    result.AppendErrorWithFormat(
+        "syntax error: %s",
+        string_format->m_data.m_error.AsCString("<unknown>"));
     return false;
   }
   lldb::TypeSummaryImplSP entry(string_format.release());

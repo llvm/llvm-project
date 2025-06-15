@@ -48,7 +48,14 @@ private:
 
 class TypeSummaryImpl {
 public:
-  enum class Kind { eSummaryString, eScript, eBytecode, eCallback, eInternal };
+  enum class Kind {
+    eSummaryString,
+    eScript,
+    eBytecode,
+    eCallback,
+    eCascading,
+    eInternal
+  };
 
   virtual ~TypeSummaryImpl() = default;
 
@@ -292,18 +299,29 @@ private:
   const TypeSummaryImpl &operator=(const TypeSummaryImpl &) = delete;
 };
 
-// simple string-based summaries, using ${var to show data
-struct StringSummaryFormat : public TypeSummaryImpl {
+struct StringSummaryData {
   std::string m_format_str;
   FormatEntity::Entry m_format;
   Status m_error;
+
+  StringSummaryData(const char *f);
+  void SetFormat(const char *f);
+
+  bool FormatObject(ValueObject *valobj, std::string &dest,
+                    const TypeSummaryOptions &options,
+                    const TypeSummaryImpl &summary);
+};
+
+// simple string-based summaries, using ${var to show data
+struct StringSummaryFormat : public TypeSummaryImpl {
+  StringSummaryData m_data;
 
   StringSummaryFormat(const TypeSummaryImpl::Flags &flags, const char *f,
                       uint32_t ptr_match_depth = 1);
 
   ~StringSummaryFormat() override = default;
 
-  const char *GetSummaryString() const { return m_format_str.c_str(); }
+  const char *GetSummaryString() const { return m_data.m_format_str.c_str(); }
 
   void SetSummaryString(const char *f);
 
@@ -323,15 +341,23 @@ private:
   const StringSummaryFormat &operator=(const StringSummaryFormat &) = delete;
 };
 
-// summaries implemented via a C++ function
-struct CXXFunctionSummaryFormat : public TypeSummaryImpl {
+struct CXXFunctionSummaryData {
   // we should convert these to SBValue and SBStream if we ever cross the
   // boundary towards the external world
-  typedef std::function<bool(ValueObject &, Stream &,
-                             const TypeSummaryOptions &)>
-      Callback;
+  using Callback =
+      std::function<bool(ValueObject &, Stream &, const TypeSummaryOptions &)>;
 
   Callback m_impl;
+
+  bool FormatObject(ValueObject *valobj, std::string &dest,
+                    const TypeSummaryOptions &options,
+                    const TypeSummaryImpl &summary);
+};
+
+// summaries implemented via a C++ function
+struct CXXFunctionSummaryFormat : public TypeSummaryImpl {
+  using Callback = CXXFunctionSummaryData::Callback;
+  CXXFunctionSummaryData m_data;
   std::string m_description;
 
   CXXFunctionSummaryFormat(const TypeSummaryImpl::Flags &flags, Callback impl,
@@ -340,11 +366,13 @@ struct CXXFunctionSummaryFormat : public TypeSummaryImpl {
 
   ~CXXFunctionSummaryFormat() override = default;
 
-  Callback GetBackendFunction() const { return m_impl; }
+  Callback GetBackendFunction() const { return m_data.m_impl; }
 
   const char *GetTextualInfo() const { return m_description.c_str(); }
 
-  void SetBackendFunction(Callback cb_func) { m_impl = std::move(cb_func); }
+  void SetBackendFunction(Callback cb_func) {
+    m_data.m_impl = std::move(cb_func);
+  }
 
   void SetTextualInfo(const char *descr) {
     if (descr)
@@ -370,6 +398,55 @@ private:
   CXXFunctionSummaryFormat(const CXXFunctionSummaryFormat &) = delete;
   const CXXFunctionSummaryFormat &
   operator=(const CXXFunctionSummaryFormat &) = delete;
+};
+
+// Multiple summaries for the same type name but different type layouts.
+// A validator function checks the layout.
+struct CXXCascadingSummaryFormat : public TypeSummaryImpl {
+  using Validator = bool(ValueObject &valobj);
+  using Impl = std::variant<CXXFunctionSummaryData, StringSummaryData>;
+  using ImplEntry = std::pair<Validator *, Impl>;
+  using ImplList = llvm::SmallVector<ImplEntry, 2>;
+
+  ImplList m_impls;
+  std::string m_description;
+
+  CXXCascadingSummaryFormat(const TypeSummaryImpl::Flags &flags,
+                            const char *description, ImplList impls = {},
+                            uint32_t ptr_match_depth = 1);
+
+  ~CXXCascadingSummaryFormat() override = default;
+
+  const char *GetTextualInfo() const { return m_description.c_str(); }
+
+  CXXCascadingSummaryFormat *Append(Validator *validator, Impl impl);
+
+  void SetTextualInfo(const char *descr) {
+    if (descr)
+      m_description.assign(descr);
+    else
+      m_description.clear();
+  }
+
+  ImplList CopyImpls() const;
+
+  bool FormatObject(ValueObject *valobj, std::string &dest,
+                    const TypeSummaryOptions &options) override;
+
+  std::string GetDescription() override;
+
+  static bool classof(const TypeSummaryImpl *S) {
+    return S->GetKind() == Kind::eCascading;
+  }
+
+  std::string GetName() override;
+
+  using SharedPointer = std::shared_ptr<CXXCascadingSummaryFormat>;
+
+private:
+  CXXCascadingSummaryFormat(const CXXCascadingSummaryFormat &) = delete;
+  const CXXCascadingSummaryFormat &
+  operator=(const CXXCascadingSummaryFormat &) = delete;
 };
 
 // Python-based summaries, running script code to show data
