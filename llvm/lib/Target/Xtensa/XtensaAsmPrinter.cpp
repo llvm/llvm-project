@@ -257,7 +257,6 @@ XtensaAsmPrinter::LowerSymbolOperand(const MachineOperand &MO,
   }
 
   const MCExpr *ME = MCSymbolRefExpr::create(Symbol, OutContext);
-  ME = XtensaMCExpr::create(ME, Kind, OutContext);
 
   if (Offset) {
     // Assume offset is never negative.
