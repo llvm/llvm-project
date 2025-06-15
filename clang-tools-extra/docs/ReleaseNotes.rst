@@ -149,8 +149,10 @@ New checks
   the pointee type also has a ``reset`` method.
 
 - New :doc:`readability-use-numeric-limits
-  <clang-tidy/checks/readability/use-numeric-limits>` check to replace certain
-  integer literals with ``std::numeric_limits`` calls.
+  <clang-tidy/checks/readability/use-numeric-limits>` check.
+
+  Finds certain integer literals and suggests replacing them with equivalent
+  ``std::numeric_limits`` calls.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

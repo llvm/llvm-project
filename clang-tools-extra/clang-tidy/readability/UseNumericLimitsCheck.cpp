@@ -145,7 +145,7 @@ void UseNumericLimitsCheck::check(const MatchFinder::MatchResult &Result) {
 
     diag(Location,
          "the constant '%0' is being utilized; consider using '%1' instead")
-        << std::to_string(SourceValue) << Replacement
+        << SourceValue << Replacement
         << FixItHint::CreateReplacement(Range, Replacement)
         << Inserter.createIncludeInsertion(
                Result.SourceManager->getFileID(Location), "<limits>");
