@@ -59,6 +59,18 @@ public:
 
   lldb::addr_t GetFuncFileAddress() { return m_func_file_addr; }
 
+  /// Represents an entry in the DWARFExpressionList with all needed metadata
+  struct DWARFExpressionEntry {
+    lldb::addr_t base;
+    lldb::addr_t end;
+    const DWARFExpression *expr;
+  };
+
+  /// Returns the entry (base, end, data) for a given PC address
+  llvm::Expected<DWARFExpressionEntry>
+  GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
+                              lldb::addr_t load_addr) const;
+
   const DWARFExpression *GetExpressionAtAddress(lldb::addr_t func_load_addr,
                                                 lldb::addr_t load_addr) const;
 
