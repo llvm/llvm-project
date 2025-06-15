@@ -2833,7 +2833,7 @@ unsigned M68kTargetLowering::getJumpTableEncoding() const {
 const MCExpr *M68kTargetLowering::LowerCustomJumpTableEntry(
     const MachineJumpTableInfo *MJTI, const MachineBasicBlock *MBB,
     unsigned uid, MCContext &Ctx) const {
-  return MCSymbolRefExpr::create(MBB->getSymbol(), M68kMCExpr::VK_GOTOFF, Ctx);
+  return MCSymbolRefExpr::create(MBB->getSymbol(), M68k::S_GOTOFF, Ctx);
 }
 
 SDValue M68kTargetLowering::getPICJumpTableRelocBase(SDValue Table,
