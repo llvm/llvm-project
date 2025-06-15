@@ -29,6 +29,7 @@ namespace llvm {
 /// it may further optimize control-flow to create non-canonical forms.
 class SimplifyCFGPass : public PassInfoMixin<SimplifyCFGPass> {
   SimplifyCFGOptions Options;
+  static char ID;
 
 public:
   /// The default constructor sets the pass options to create canonical IR,
