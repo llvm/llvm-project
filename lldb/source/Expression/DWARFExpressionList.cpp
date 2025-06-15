@@ -53,6 +53,27 @@ bool DWARFExpressionList::ContainsAddress(lldb::addr_t func_load_addr,
   return GetExpressionAtAddress(func_load_addr, addr) != nullptr;
 }
 
+llvm::Expected<DWARFExpressionList::DWARFExpressionEntry>
+DWARFExpressionList::GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
+                                                 lldb::addr_t load_addr) const {
+  if (const DWARFExpression *expr = GetAlwaysValidExpr()) {
+    return DWARFExpressionEntry{0, LLDB_INVALID_ADDRESS, expr};
+  }
+
+  if (func_load_addr == LLDB_INVALID_ADDRESS)
+    func_load_addr = m_func_file_addr;
+
+  addr_t addr = load_addr - func_load_addr + m_func_file_addr;
+  uint32_t index = m_exprs.FindEntryIndexThatContains(addr);
+  if (index == UINT32_MAX) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "No DWARF expression found for address 0x%llx", addr);
+  }
+
+  const Entry &entry = *m_exprs.GetEntryAtIndex(index);
+  return DWARFExpressionEntry{entry.base, entry.GetRangeEnd(), &entry.data};
+}
+
 const DWARFExpression *
 DWARFExpressionList::GetExpressionAtAddress(lldb::addr_t func_load_addr,
                                             lldb::addr_t load_addr) const {
