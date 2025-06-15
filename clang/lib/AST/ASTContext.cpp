@@ -1737,8 +1737,10 @@ bool ASTContext::containsAddressDiscriminatedPointerAuth(QualType T) {
     return Existing->second;
 
   auto SaveReturn = [this, RD](bool Result) {
-    auto __unused[ResultIter, DidAdd] =
+    auto [ResultIter, DidAdd] =
         RecordContainsAddressDiscriminatedPointerAuth.try_emplace(RD, Result);
+    (void)ResultIter;
+    (void)DidAdd;
     assert(DidAdd);
     return Result;
   };
