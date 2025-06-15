@@ -421,6 +421,7 @@ extern "C" int optMain(
   initializeTarget(Registry);
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
+  initializeAlwaysSpecializerPass(Registry);
   initializeExpandLargeDivRemLegacyPassPass(Registry);
   initializeExpandFpLegacyPassPass(Registry);
   initializeExpandMemCmpLegacyPassPass(Registry);

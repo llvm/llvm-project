@@ -50,6 +50,7 @@ void initializeTarget(PassRegistry &);
 
 void initializeAAResultsWrapperPassPass(PassRegistry &);
 void initializeAlwaysInlinerLegacyPassPass(PassRegistry &);
+void initializeAlwaysSpecializerPass(PassRegistry &);
 void initializeAssignmentTrackingAnalysisPass(PassRegistry &);
 void initializeAssumptionCacheTrackerPass(PassRegistry &);
 void initializeAtomicExpandLegacyPass(PassRegistry &);

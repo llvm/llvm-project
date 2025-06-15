@@ -42,6 +42,7 @@
 #include "llvm/Transforms/Coroutines/CoroSplit.h"
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
+#include "llvm/Transforms/IPO/AlwaysSpecializer.h"
 #include "llvm/Transforms/IPO/Annotation2Metadata.h"
 #include "llvm/Transforms/IPO/ArgumentPromotion.h"
 #include "llvm/Transforms/IPO/Attributor.h"
@@ -1277,6 +1278,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
+  MPM.addPass(AlwaysSpecializerPass());
 
   if (EnableModuleInliner)
     MPM.addPass(buildModuleInlinerPipeline(Level, Phase));
@@ -2252,6 +2254,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   // code generation.
   MPM.addPass(AlwaysInlinerPass(
       /*InsertLifetimeIntrinsics=*/false));
+  MPM.addPass(AlwaysSpecializerPass());
 
   if (PTO.MergeFunctions)
     MPM.addPass(MergeFunctionsPass());
