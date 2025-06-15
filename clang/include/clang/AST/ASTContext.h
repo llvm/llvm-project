@@ -1957,9 +1957,9 @@ private:
   // The core language uses these types as the result types of some expressions,
   // which are typically standard integer types and consistent with it's
   // typedefs (if any).
-  mutable QualType SizeType;       // __size_t
-  mutable QualType SignedSizeType; // __signed_size_t
-  mutable QualType PtrdiffType;    // __ptrdiff_t
+  QualType SizeType;       // __size_t
+  QualType SignedSizeType; // __signed_size_t
+  QualType PtrdiffType;    // __ptrdiff_t
 public:
   /// Return the unique reference to the type for the specified TagDecl
   /// (struct/union/class/enum) decl.

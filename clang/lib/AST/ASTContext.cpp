@@ -1516,6 +1516,24 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
     MSGuidTagDecl = buildImplicitRecord("_GUID");
     getTranslationUnitDecl()->addDecl(MSGuidTagDecl);
   }
+
+  // size_t (C99TC3 6.5.3.4), signed size_t (C++23 5.13.2) and
+  // ptrdiff_t (C99TC3 6.5.6) Although these types are not built-in, they are
+  // part of the core language and are widely used.
+  if (!LangOpts.HLSL) {
+    // Using PredefinedSugarType makes these types as named sugar types rather
+    // than standard integer types, enabling better hints and diagnostics.
+    SizeType = getPredefinedSugarType(
+        llvm::to_underlying(Type::PredefinedSugarKind::SizeT));
+    SignedSizeType = getPredefinedSugarType(
+        llvm::to_underlying(Type::PredefinedSugarKind::SignedSizeT));
+    PtrdiffType = getPredefinedSugarType(
+        llvm::to_underlying(Type::PredefinedSugarKind::PtrdiffT));
+  } else {
+    SizeType = getFromTargetType(Target.getSizeType());
+    SignedSizeType = getFromTargetType(Target.getSignedSizeType());
+    PtrdiffType = getFromTargetType(Target.getPtrDiffType(LangAS::Default));
+  }
 }
 
 DiagnosticsEngine &ASTContext::getDiagnostics() const {
@@ -6750,31 +6768,10 @@ QualType ASTContext::getTagDeclType(const TagDecl *Decl) const {
   return getTypeDeclType(const_cast<TagDecl*>(Decl));
 }
 
-// Using PredefinedSugarType makes size_t, signed size_t, and ptrdiff_t behave
-// as named sugar types rather than built-in types, enabling better hints and
-// diagnostics. In C and C++, expressions of type size_t can be obtained via the
-// sizeof operator, expressions of type ptrdiff_t via pointer subtraction, and
-// expressions of type signed size_t via the z literal suffix (since C++23).
-// However, no core language mechanism directly produces an expression of type
-// unsigned ptrdiff_t. The unsigned ptrdiff_t type is solely required by format
-// specifiers for printf and scanf. Consequently, no expression's type needs to
-// be displayed as unsigned ptrdiff_t. Verification of whether a type is
-// unsigned ptrdiff_t is also unnecessary, as no corresponding typedefs exist.
-// Therefore, unsigned ptrdiff_t does not need to do that.
-
 /// getSizeType - Return the unique type for "size_t" (C99 7.17), the result
 /// of the sizeof operator (C99 6.5.3.4p4). The value is target dependent and
 /// needs to agree with the definition in <stddef.h>.
-QualType ASTContext::getSizeType() const {
-  if (SizeType.isNull()) {
-    if (!getLangOpts().HLSL)
-      SizeType = getPredefinedSugarType(
-          llvm::to_underlying(Type::PredefinedSugarKind::SizeT));
-    else
-      SizeType = getFromTargetType(Target->getSizeType());
-  }
-  return SizeType;
-}
+QualType ASTContext::getSizeType() const { return SizeType; }
 
 CanQualType ASTContext::getCanonicalSizeType() const {
   return getFromTargetType(Target->getSizeType());
@@ -6782,29 +6779,11 @@ CanQualType ASTContext::getCanonicalSizeType() const {
 
 /// Return the unique signed counterpart of the integer type
 /// corresponding to size_t.
-QualType ASTContext::getSignedSizeType() const {
-  if (SignedSizeType.isNull()) {
-    if (!getLangOpts().HLSL)
-      SignedSizeType = getPredefinedSugarType(
-          llvm::to_underlying(Type::PredefinedSugarKind::SignedSizeT));
-    else
-      SignedSizeType = getFromTargetType(Target->getSignedSizeType());
-  }
-  return SignedSizeType;
-}
+QualType ASTContext::getSignedSizeType() const { return SignedSizeType; }
 
 /// getPointerDiffType - Return the unique type for "ptrdiff_t" (C99 7.17)
 /// defined in <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
-QualType ASTContext::getPointerDiffType() const {
-  if (PtrdiffType.isNull()) {
-    if (!getLangOpts().HLSL)
-      PtrdiffType = getPredefinedSugarType(
-          llvm::to_underlying(Type::PredefinedSugarKind::PtrdiffT));
-    else
-      PtrdiffType = getFromTargetType(Target->getPtrDiffType(LangAS::Default));
-  }
-  return PtrdiffType;
-}
+QualType ASTContext::getPointerDiffType() const { return PtrdiffType; }
 
 /// Return the unique unsigned counterpart of "ptrdiff_t"
 /// integer type. The standard (C11 7.21.6.1p7) refers to this type
