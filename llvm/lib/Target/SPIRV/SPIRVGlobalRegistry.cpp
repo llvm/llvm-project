@@ -780,7 +780,9 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::Alignment, {Alignment});
   }
 
-  if (HasLinkageTy)
+  // LinkageAttributes required Linkage capability. This capability is not
+  // supported by Vulkan.
+  if (HasLinkageTy && !ST.isVulkan())
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
                     {static_cast<uint32_t>(LinkageType)}, Name);
 
