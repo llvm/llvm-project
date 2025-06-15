@@ -1038,13 +1038,14 @@ if(LLVM_USE_SANITIZER)
         # lld string tail merging interacts badly with ASAN on Windows, turn it off here
         # See https://github.com/llvm/llvm-project/issues/62078
         append("/opt:nolldtailmerge" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+        # Static and dynamic C runtimes all load ASAN as a DLL
+        # See https://devblogs.microsoft.com/cppblog/msvc-address-sanitizer-one-dll-for-all-runtime-configurations/
+        append("clang_rt.asan_dynamic-${arch}.lib" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
         if (${CMAKE_MSVC_RUNTIME_LIBRARY} MATCHES "^(MultiThreaded|MultiThreadedDebug)$")
-          append("/wholearchive:clang_rt.asan-${arch}.lib /wholearchive:clang_rt.asan_cxx-${arch}.lib"
-            CMAKE_EXE_LINKER_FLAGS)
-          append("/wholearchive:clang_rt.asan_dll_thunk-${arch}.lib"
-            CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+          append("/wholearchive:clang_rt.asan_static_runtime_thunk-${arch}.lib"
+            CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
         else()
-          append("clang_rt.asan_dynamic-${arch}.lib /wholearchive:clang_rt.asan_dynamic_runtime_thunk-${arch}.lib"
+          append("/wholearchive:clang_rt.asan_dynamic_runtime_thunk-${arch}.lib"
             CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
         endif()
       endif()
