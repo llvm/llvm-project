@@ -2579,26 +2579,27 @@ define amdgpu_kernel void @sdivrem_v2i8(ptr addrspace(1) %out0, ptr addrspace(1)
 ; GFX10-NEXT:    v_add_nc_u32_e32 v4, 1, v0
 ; GFX10-NEXT:    v_cmp_le_u32_e32 vcc_lo, s1, v2
 ; GFX10-NEXT:    v_subrev_nc_u32_e32 v5, s1, v2
+; GFX10-NEXT:    s_xor_b32 s1, s11, s2
 ; GFX10-NEXT:    v_add_nc_u32_e32 v6, 1, v1
 ; GFX10-NEXT:    v_cmp_le_u32_e64 s0, s3, v3
-; GFX10-NEXT:    s_xor_b32 s1, s11, s2
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc_lo
-; GFX10-NEXT:    v_subrev_nc_u32_e32 v4, s3, v3
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, v2, v5, vcc_lo
+; GFX10-NEXT:    v_subrev_nc_u32_e32 v4, s3, v3
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, v6, s0
 ; GFX10-NEXT:    v_xor_b32_e32 v0, s1, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v3, v3, v4, s0
 ; GFX10-NEXT:    v_xor_b32_e32 v2, s11, v2
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, v3, v4, s0
 ; GFX10-NEXT:    s_xor_b32 s0, s12, s10
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0xff
-; GFX10-NEXT:    v_xor_b32_e32 v1, s0, v1
 ; GFX10-NEXT:    v_subrev_nc_u32_e32 v0, s1, v0
-; GFX10-NEXT:    v_xor_b32_e32 v3, s12, v3
 ; GFX10-NEXT:    v_subrev_nc_u32_e32 v2, s11, v2
+; GFX10-NEXT:    v_xor_b32_e32 v1, s0, v1
+; GFX10-NEXT:    v_xor_b32_e32 v3, s12, v3
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GFX10-NEXT:    v_and_b32_e32 v2, 0xff, v2
 ; GFX10-NEXT:    v_subrev_nc_u32_e32 v1, s0, v1
-; GFX10-NEXT:    v_and_b32_sdwa v0, v0, v4 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-NEXT:    v_subrev_nc_u32_e32 v3, s12, v3
-; GFX10-NEXT:    v_and_b32_sdwa v2, v2, v4 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX10-NEXT:    v_lshlrev_b16 v0, 8, v0
+; GFX10-NEXT:    v_lshlrev_b16 v2, 8, v2
 ; GFX10-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_or_b32_sdwa v2, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD

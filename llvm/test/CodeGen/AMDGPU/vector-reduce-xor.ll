@@ -63,8 +63,10 @@ define i8 @test_vector_reduce_xor_v2i8(<2 x i8> %v) {
 ; GFX10-SDAG-LABEL: test_vector_reduce_xor_v2i8:
 ; GFX10-SDAG:       ; %bb.0: ; %entry
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_lshrrev_b16 v2, 8, v1
 ; GFX10-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GFX10-SDAG-NEXT:    v_xor_b32_sdwa v1, v1, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_1
+; GFX10-SDAG-NEXT:    v_xor_b32_e32 v2, v1, v2
+; GFX10-SDAG-NEXT:    v_lshlrev_b16 v1, 8, v2
 ; GFX10-SDAG-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
