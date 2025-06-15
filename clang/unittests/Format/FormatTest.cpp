@@ -22276,7 +22276,7 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
   verifyFormat("auto foo = Items{\n"
                "    Section{\n"
                "            0, bar(),\n"
-               "            }\n"
+               "    }\n"
                "};",
                Style);
   verifyFormat("struct test demo[] = {\n"
@@ -27901,39 +27901,39 @@ TEST_F(FormatTest, AlignArrayOfStructuresLeftAlignmentNonSquare) {
   // crashes, these tests assert that the array is not changed but will
   // also act as regression tests for when it is properly fixed
   verifyFormat("struct test demo[] = {\n"
-               "    {1, 2},\n"
+               "    {1, 2   },\n"
                "    {3, 4, 5},\n"
                "    {6, 7, 8}\n"
                "};",
                Style);
   verifyFormat("struct test demo[] = {\n"
                "    {1, 2, 3, 4, 5},\n"
-               "    {3, 4, 5},\n"
-               "    {6, 7, 8}\n"
+               "    {3, 4, 5      },\n"
+               "    {6, 7, 8      }\n"
                "};",
                Style);
   verifyFormat("struct test demo[] = {\n"
-               "    {1, 2, 3, 4, 5},\n"
-               "    {3, 4, 5},\n"
+               "    {1, 2, 3, 4, 5         },\n"
+               "    {3, 4, 5               },\n"
                "    {6, 7, 8, 9, 10, 11, 12}\n"
                "};",
                Style);
   verifyFormat("struct test demo[] = {\n"
-               "    {1, 2, 3},\n"
-               "    {3, 4, 5},\n"
+               "    {1, 2, 3               },\n"
+               "    {3, 4, 5               },\n"
                "    {6, 7, 8, 9, 10, 11, 12}\n"
                "};",
                Style);
 
   verifyFormat("S{\n"
-               "    {},\n"
-               "    {},\n"
+               "    {    },\n"
+               "    {    },\n"
                "    {a, b}\n"
                "};",
                Style);
   verifyFormat("S{\n"
-               "    {},\n"
-               "    {},\n"
+               "    {    },\n"
+               "    {    },\n"
                "    {a, b},\n"
                "};",
                Style);
@@ -27953,6 +27953,36 @@ TEST_F(FormatTest, AlignArrayOfStructuresLeftAlignmentNonSquare) {
                "  };\n"
                "}",
                Style);
+  verifyFormat("test demo::a[] = {\n"
+               "    {abcde, foo(\"something\"),      extra_bit},\n"
+               "    {\n"
+               "     ab,    foo(\"something else\"),\n"
+               "    },\n"
+               "    {\n"
+               "     abc,   foo(\"\"),\n"
+               "    }\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo = {\n"
+               "    {abcde, foo(\"something\"),     extra_bit},\n"
+               "    {ab,    foo(\"something else\")          },\n"
+               "    {abc,   foo(\"\")                        }\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo = {\n"
+               "    {abcde, foo(\"something\"),      extra_bit},\n"
+               "    {ab,    foo(\"something else\")           },\n"
+               "    {ad,    foo(\"something else\"), extra    },\n"
+               "    {abc,   foo(\"\")                         }\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo = {\n"
+               "    {\n"
+               "     very_long_identifier_number_1, shorter_identifier,\n"
+               "     very_long_identifier_number_3,\n"
+               "    }\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, AlignArrayOfStructuresRightAlignmentNonSquare) {
@@ -27965,39 +27995,39 @@ TEST_F(FormatTest, AlignArrayOfStructuresRightAlignmentNonSquare) {
   // crashes, these tests assert that the array is not changed but will
   // also act as regression tests for when it is properly fixed
   verifyFormat("struct test demo[] = {\n"
-               "    {1, 2},\n"
+               "    {1, 2   },\n"
                "    {3, 4, 5},\n"
                "    {6, 7, 8}\n"
                "};",
                Style);
   verifyFormat("struct test demo[] = {\n"
                "    {1, 2, 3, 4, 5},\n"
-               "    {3, 4, 5},\n"
-               "    {6, 7, 8}\n"
+               "    {3, 4, 5      },\n"
+               "    {6, 7, 8      }\n"
                "};",
                Style);
   verifyFormat("struct test demo[] = {\n"
-               "    {1, 2, 3, 4, 5},\n"
-               "    {3, 4, 5},\n"
+               "    {1, 2, 3, 4,  5        },\n"
+               "    {3, 4, 5               },\n"
                "    {6, 7, 8, 9, 10, 11, 12}\n"
                "};",
                Style);
   verifyFormat("struct test demo[] = {\n"
-               "    {1, 2, 3},\n"
-               "    {3, 4, 5},\n"
+               "    {1, 2, 3               },\n"
+               "    {3, 4, 5               },\n"
                "    {6, 7, 8, 9, 10, 11, 12}\n"
                "};",
                Style);
 
   verifyFormat("S{\n"
-               "    {},\n"
-               "    {},\n"
+               "    {    },\n"
+               "    {    },\n"
                "    {a, b}\n"
                "};",
                Style);
   verifyFormat("S{\n"
-               "    {},\n"
-               "    {},\n"
+               "    {    },\n"
+               "    {    },\n"
                "    {a, b},\n"
                "};",
                Style);
