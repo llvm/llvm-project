@@ -1,4 +1,4 @@
-//===- BPF.cpp ------------------------------------------------------------===//
+//===- BPF.cpp - BPF ABI Implementation ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ABI/ABIFunctionInfo.h"
 #include "llvm/ABI/ABIInfo.h"
 #include "llvm/ABI/Types.h"
 #include "llvm/Support/Alignment.h"
@@ -18,18 +19,7 @@ private:
   TypeBuilder &TB;
 
   bool isAggregateType(const Type *Ty) const {
-    return Ty->isStruct() || Ty->isUnion() || Ty->isArray() ||
-           (Ty->isVector() && !isSimpleVector(dyn_cast<VectorType>(Ty)));
-  }
-
-  bool isSimpleVector(const VectorType *VecTy) const {
-    const Type *ElemTy = VecTy->getElementType();
-
-    if (!ElemTy->isInteger() && !ElemTy->isFloat())
-      return false;
-
-    auto VecSizeInBits = VecTy->getSizeInBits().getFixedValue();
-    return VecSizeInBits <= 128;
+    return Ty->isStruct() || Ty->isUnion() || Ty->isArray();
   }
 
   bool isPromotableIntegerType(const IntegerType *IntTy) const {
@@ -46,10 +36,8 @@ public:
 
     if (isAggregateType(RetTy)) {
       auto SizeInBits = RetTy->getSizeInBits().getFixedValue();
-
       if (SizeInBits == 0)
         return ABIArgInfo::getIgnore();
-
       return ABIArgInfo::getIndirect(RetTy->getAlignment().value());
     }
 
@@ -65,7 +53,6 @@ public:
   ABIArgInfo classifyArgumentType(const Type *ArgTy) const override {
     if (isAggregateType(ArgTy)) {
       auto SizeInBits = ArgTy->getSizeInBits().getFixedValue();
-
       if (SizeInBits == 0)
         return ABIArgInfo::getIgnore();
 
@@ -80,6 +67,7 @@ public:
         }
         return ABIArgInfo::getDirect(CoerceTy);
       }
+
       return ABIArgInfo::getIndirect(ArgTy->getAlignment().value());
     }
 
@@ -87,15 +75,26 @@ public:
       auto BitWidth = IntTy->getSizeInBits().getFixedValue();
       if (BitWidth > 128)
         return ABIArgInfo::getIndirect(ArgTy->getAlignment().value());
+
       if (isPromotableIntegerType(IntTy)) {
         const Type *PromotedTy =
             TB.getIntegerType(32, Align(4), IntTy->isSigned());
-        return ABIArgInfo::getDirect(
-            PromotedTy); // change to getExtend when implemented
+        auto AI = ABIArgInfo::getExtend(PromotedTy);
+
+        IntTy->isSigned() ? AI.setSignExt() : AI.setZeroExt();
+
+        return AI;
       }
     }
 
     return ABIArgInfo::getDirect();
+  }
+
+  void computeInfo(ABIFunctionInfo &FI) {
+    FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+    for (auto &I : FI.arguments()) {
+      I.ArgInfo = classifyArgumentType(I.ABIType);
+    }
   }
 };
 
