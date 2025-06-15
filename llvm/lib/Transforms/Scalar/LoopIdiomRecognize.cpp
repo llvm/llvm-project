@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
+#include "llvm/Analysis/HashRecognize.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -144,6 +145,14 @@ static cl::opt<bool, true>
                      cl::location(DisableLIRP::Wcslen), cl::init(false),
                      cl::ReallyHidden);
 
+bool DisableLIRP::HashRecognize;
+static cl::opt<bool, true>
+    DisableLIRPHashRecognize("disable-" DEBUG_TYPE "-hashrecognize",
+                             cl::desc("Proceed with loop idiom recognize pass, "
+                                      "but do not optimize CRC loops."),
+                             cl::location(DisableLIRP::HashRecognize),
+                             cl::init(false), cl::ReallyHidden);
+
 static cl::opt<bool> UseLIRCodeSizeHeurs(
     "use-lir-code-size-heurs",
     cl::desc("Use loop idiom recognition code size heuristics when compiling "
@@ -158,6 +167,7 @@ class LoopIdiomRecognize {
   DominatorTree *DT;
   LoopInfo *LI;
   ScalarEvolution *SE;
+  std::optional<PolynomialInfo> HashRecognizeResult;
   TargetLibraryInfo *TLI;
   const TargetTransformInfo *TTI;
   const DataLayout *DL;
@@ -168,11 +178,13 @@ class LoopIdiomRecognize {
 public:
   explicit LoopIdiomRecognize(AliasAnalysis *AA, DominatorTree *DT,
                               LoopInfo *LI, ScalarEvolution *SE,
+                              std::optional<PolynomialInfo> HR,
                               TargetLibraryInfo *TLI,
                               const TargetTransformInfo *TTI, MemorySSA *MSSA,
                               const DataLayout *DL,
                               OptimizationRemarkEmitter &ORE)
-      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL), ORE(ORE) {
+      : AA(AA), DT(DT), LI(LI), SE(SE), HashRecognizeResult(HR), TLI(TLI),
+        TTI(TTI), DL(DL), ORE(ORE) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
@@ -238,6 +250,7 @@ private:
                                   const SCEV *BECount);
   bool avoidLIRForMultiBlockLoop(bool IsMemset = false,
                                  bool IsLoopMemset = false);
+  bool optimizeCRCLoop(const PolynomialInfo &Info);
 
   /// @}
   /// \name Noncountable Loop Idiom Handling
@@ -283,7 +296,11 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
-  LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
+  std::optional<PolynomialInfo> HR;
+  if (!DisableLIRP::HashRecognize)
+    HR = AM.getResult<HashRecognizeAnalysis>(L, AR);
+
+  LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, HR, &AR.TLI, &AR.TTI,
                          AR.MSSA, DL, ORE);
   if (!LIR.runOnLoop(&L))
     return PreservedAnalyses::all();
@@ -326,7 +343,7 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
   HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
   HasMemcpy = TLI->has(LibFunc_memcpy);
 
-  if (HasMemset || HasMemsetPattern || HasMemcpy)
+  if (HasMemset || HasMemsetPattern || HasMemcpy || HashRecognizeResult)
     if (SE->hasLoopInvariantBackedgeTakenCount(L))
       return runOnCountableLoop();
 
@@ -369,6 +386,10 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
 
     MadeChange |= runOnLoopBlock(BB, BECount, ExitBlocks);
   }
+
+  // Optimize a CRC loop if HashRecognize found one.
+  MadeChange |= HashRecognizeResult && optimizeCRCLoop(*HashRecognizeResult);
+
   return MadeChange;
 }
 
@@ -1471,6 +1492,146 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
   }
 
   return false;
+}
+
+bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
+  // We currently only optimize CRC loops with TC a multiple of 8 with a table
+  // lookup: the table-lookup can be improved using target-specific
+  // instructions.
+  if (Info.TripCount % 8 != 0)
+    return false;
+
+  // First, create a new GlobalVariable corresponding to the
+  // Sarwate-lookup-table.
+  Type *CRCTy = Info.LHS->getType();
+  unsigned CRCBW = CRCTy->getIntegerBitWidth();
+  std::array<Constant *, 256> CRCConstants;
+  transform(Info.SarwateTable, CRCConstants.begin(),
+            [CRCTy](const APInt &E) { return ConstantInt::get(CRCTy, E); });
+  Constant *ConstArray =
+      ConstantArray::get(ArrayType::get(CRCTy, 256), CRCConstants);
+  Module &M = *CurLoop->getHeader()->getModule();
+  GlobalVariable *GV =
+      new GlobalVariable(M, ConstArray->getType(), true,
+                         GlobalValue::PrivateLinkage, ConstArray, ".crctable");
+
+  PHINode *IV = CurLoop->getCanonicalInductionVariable();
+  Type *IVTy = IV->getType();
+  SmallVector<PHINode *, 2> Cleanup;
+
+  // Next, mark all PHIs for removal except IV.
+  {
+    for (PHINode &PN : CurLoop->getHeader()->phis()) {
+      if (&PN == IV)
+        continue;
+      PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
+      Cleanup.push_back(&PN);
+    }
+  }
+
+  // Next, fix up the trip count.
+  {
+    unsigned NewBTC = (Info.TripCount / 8) - 1;
+    BasicBlock *LoopBlk = CurLoop->getLoopLatch();
+    BranchInst *BrInst = cast<BranchInst>(LoopBlk->getTerminator());
+    CmpPredicate ExitPred = BrInst->getSuccessor(0) == LoopBlk
+                                ? ICmpInst::Predicate::ICMP_NE
+                                : ICmpInst::Predicate::ICMP_EQ;
+    Instruction *ExitCond = CurLoop->getLatchCmpInst();
+    IRBuilder<> Builder(ExitCond);
+    Value *NewExitCond = Builder.CreateICmp(
+        ExitPred, IV, ConstantInt::get(IVTy, NewBTC), "exit.cond");
+    ExitCond->replaceAllUsesWith(NewExitCond);
+    deleteDeadInstruction(ExitCond);
+  }
+
+  // Finally, fill the loop with the Sarwate-table-lookup logic, and replace all
+  // uses of ComputedValue.
+  //
+  // Little-endian:
+  //   crc = (crc >> 8) ^ tbl[data[iv] ^ (crc & 0xFF)]
+  // Big-Endian:
+  //   crc = (crc << 8) ^ tbl[data[iv] ^ (crc >> (crc.bw - 8))]
+  {
+    // Compute the top 8 bits of Op.
+    auto GetLoByte = [](IRBuilderBase &Builder, Value *Op, const Twine &Name) {
+      Type *OpTy = Op->getType();
+      return Builder.CreateAnd(Op, ConstantInt::get(OpTy, 0XFF), Name);
+    };
+    auto GetHiByte = [](IRBuilderBase &Builder, Value *Op, const Twine &Name) {
+      Type *OpTy = Op->getType();
+      unsigned OpBW = OpTy->getIntegerBitWidth();
+      return Builder.CreateLShr(
+          Builder.CreateAnd(
+              Op, ConstantInt::get(OpTy, APInt::getHighBitsSet(OpBW, 8)), Name),
+          ConstantInt::get(OpTy, OpBW - 8), Name + ".hi.extract");
+    };
+
+    IRBuilder<> Builder(CurLoop->getHeader(),
+                        CurLoop->getHeader()->getFirstNonPHIIt());
+    // Create the CRC PHI, and initialize its incoming value to AllOnes from the
+    // entry block.
+    PHINode *CRCPhi = Builder.CreatePHI(CRCTy, 2, "crc");
+    Constant *AllOnes = ConstantInt::get(CRCTy, APInt::getAllOnes(CRCBW));
+    CRCPhi->addIncoming(AllOnes, CurLoop->getLoopPreheader());
+
+    // CRC is now an evolving variable, initialized to the PHI.
+    Value *CRC = CRCPhi;
+
+    // Data is either LHSAux, if one is evolving in the loop or a loop-invariant
+    // LHS.
+    if (Value *Data = Info.LHSAux ? Info.LHSAux : Info.LHS) {
+      // Compute Data[iv], when Data is an integer.
+      Value *IVLo = Builder.CreateZExtOrTrunc(
+          Builder.CreateShl(IV, ConstantInt::get(IVTy, 3), "iv.bits"),
+          Data->getType(), "iv.indexer");
+      Value *DataIndexer =
+          GetHiByte(Builder, Builder.CreateShl(Data, IVLo, "data.lo.indexer"),
+                    "data.hi.mask");
+      CRC = Builder.CreateXor(
+          CRC, Builder.CreateZExtOrTrunc(DataIndexer, CRCTy, "data.indexer"),
+          "xor.crc.data");
+    }
+
+    // CRCShift = CRC (<<|>>) 8. No shift in case of CRC-8.
+    Value *CRCShift = nullptr;
+    if (CRCBW > 8)
+      CRCShift = Info.ByteOrderSwapped
+                     ? Builder.CreateShl(CRC, 8, "crc.be.shift")
+                     : Builder.CreateLShr(CRC, 8, "crc.le.shift");
+
+    // CRCTableLd = CRCTable[(top|bottom) byte of CRC].
+    Value *CRCIndexer = Info.ByteOrderSwapped
+                            ? GetHiByte(Builder, CRC, "crc.hi.mask")
+                            : GetLoByte(Builder, CRC, "crc.lo.mask");
+    Value *CRCTableGEP = Builder.CreatePtrAdd(GV, CRCIndexer, "crc.tbl.indexer",
+                                              GEPNoWrapFlags::inBounds());
+    Value *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "crc.tbl.index");
+
+    // CRC = CRCShift ^ CRCableLd. No XOR with shift in case of CRC-8.
+    if (CRCBW > 8)
+      CRC = Builder.CreateXor(CRCShift, CRCTableLd, "xor.crcshift.tbl");
+
+    // Connect the back-edge for the loop.
+    CRCPhi->addIncoming(CRC, CurLoop->getLoopLatch());
+    Info.ComputedValue->replaceUsesOutsideBlock(CRC, CurLoop->getLoopLatch());
+
+    // Finalize the CRC and RAUW the LCSSAPhi in the exit block of the loop.
+    Builder.SetInsertPoint(CurLoop->getExitBlock()->getFirstNonPHIIt());
+    Value *FinalizedCRC =
+        Builder.CreateXor(Info.LCSSAPhi, AllOnes, "finalize.crc");
+    Info.LCSSAPhi->replaceUsesWithIf(FinalizedCRC, [FinalizedCRC](Use &U) {
+      return U.getUser() != FinalizedCRC;
+    });
+  }
+
+  // Cleanup.
+  {
+    for (PHINode *PN : Cleanup)
+      RecursivelyDeleteDeadPHINode(PN);
+    SE->forgetLoop(CurLoop);
+  }
+  return true;
 }
 
 bool LoopIdiomRecognize::runOnNoncountableLoop() {
