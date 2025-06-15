@@ -544,6 +544,9 @@ private:
                                             unsigned ExtendOpc) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerRESET_FPENV(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) const;

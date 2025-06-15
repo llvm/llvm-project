@@ -61,19 +61,12 @@ Type *IRBuilderBase::getCurrentFunctionReturnType() const {
   return BB->getParent()->getReturnType();
 }
 
-DebugLoc IRBuilderBase::getCurrentDebugLocation() const {
-  for (auto &KV : MetadataToCopy)
-    if (KV.first == LLVMContext::MD_dbg)
-      return {cast<DILocation>(KV.second)};
-
-  return {};
-}
+DebugLoc IRBuilderBase::getCurrentDebugLocation() const { return StoredDL; }
 void IRBuilderBase::SetInstDebugLocation(Instruction *I) const {
-  for (const auto &KV : MetadataToCopy)
-    if (KV.first == LLVMContext::MD_dbg) {
-      I->setDebugLoc(DebugLoc(KV.second));
-      return;
-    }
+  // We prefer to set our current debug location if any has been set, but if
+  // our debug location is empty and I has a valid location, we shouldn't
+  // overwrite it.
+  I->setDebugLoc(StoredDL.orElse(I->getDebugLoc()));
 }
 
 Value *IRBuilderBase::CreateAggregateCast(Value *V, Type *DestTy) {

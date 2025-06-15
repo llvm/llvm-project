@@ -28,6 +28,15 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   CIRGenFunction &cgf;
   AggValueSlot dest;
 
+  // Calls `fn` with a valid return value slot, potentially creating a temporary
+  // to do so. If a temporary is created, an appropriate copy into `Dest` will
+  // be emitted, as will lifetime markers.
+  //
+  // The given function should take a ReturnValueSlot, and return an RValue that
+  // points to said slot.
+  void withReturnValueSlot(const Expr *e,
+                           llvm::function_ref<RValue(ReturnValueSlot)> fn);
+
   AggValueSlot ensureSlot(mlir::Location loc, QualType t) {
     if (!dest.isIgnored())
       return dest;
@@ -40,9 +49,17 @@ public:
   AggExprEmitter(CIRGenFunction &cgf, AggValueSlot dest)
       : cgf(cgf), dest(dest) {}
 
+  /// Given an expression with aggregate type that represents a value lvalue,
+  /// this method emits the address of the lvalue, then loads the result into
+  /// DestPtr.
+  void emitAggLoadOfLValue(const Expr *e);
+
   void emitArrayInit(Address destPtr, cir::ArrayType arrayTy, QualType arrayQTy,
                      Expr *exprToVisit, ArrayRef<Expr *> args,
                      Expr *arrayFiller);
+
+  /// Perform the final copy to DestPtr, if desired.
+  void emitFinalDestCopy(QualType type, const LValue &src);
 
   void emitInitializationToLValue(Expr *e, LValue lv);
 
@@ -50,7 +67,12 @@ public:
 
   void Visit(Expr *e) { StmtVisitor<AggExprEmitter>::Visit(e); }
 
+  void VisitCallExpr(const CallExpr *e);
+
+  void VisitDeclRefExpr(DeclRefExpr *e) { emitAggLoadOfLValue(e); }
+
   void VisitInitListExpr(InitListExpr *e);
+  void VisitCXXConstructExpr(const CXXConstructExpr *e);
 
   void visitCXXParenListOrInitListExpr(Expr *e, ArrayRef<Expr *> args,
                                        FieldDecl *initializedFieldInUnion,
@@ -77,6 +99,17 @@ static bool isTrivialFiller(Expr *e) {
            cons->getConstructor()->isTrivial();
 
   return false;
+}
+
+/// Given an expression with aggregate type that represents a value lvalue, this
+/// method emits the address of the lvalue, then loads the result into DestPtr.
+void AggExprEmitter::emitAggLoadOfLValue(const Expr *e) {
+  LValue lv = cgf.emitLValue(e);
+
+  // If the type of the l-value is atomic, then do an atomic load.
+  assert(!cir::MissingFeatures::opLoadStoreAtomic());
+
+  emitFinalDestCopy(e->getType(), lv);
 }
 
 void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
@@ -181,6 +214,18 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   }
 }
 
+/// Perform the final copy to destPtr, if desired.
+void AggExprEmitter::emitFinalDestCopy(QualType type, const LValue &src) {
+  // If dest is ignored, then we're evaluating an aggregate expression
+  // in a context that doesn't care about the result.  Note that loads
+  // from volatile l-values force the existence of a non-ignored
+  // destination.
+  if (dest.isIgnored())
+    return;
+
+  cgf.cgm.errorNYI("emitFinalDestCopy: non-ignored dest is NYI");
+}
+
 void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
   const QualType type = lv.getType();
 
@@ -202,7 +247,11 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
     cgf.cgm.errorNYI("emitInitializationToLValue TEK_Complex");
     break;
   case cir::TEK_Aggregate:
-    cgf.emitAggExpr(e, AggValueSlot::forLValue(lv));
+    cgf.emitAggExpr(e, AggValueSlot::forLValue(lv, AggValueSlot::IsDestructed,
+                                               AggValueSlot::IsNotAliased,
+                                               AggValueSlot::MayOverlap,
+                                               dest.isZeroed()));
+
     return;
   case cir::TEK_Scalar:
     if (lv.isSimple())
@@ -211,6 +260,11 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
       cgf.emitStoreThroughLValue(RValue::get(cgf.emitScalarExpr(e)), lv);
     return;
   }
+}
+
+void AggExprEmitter::VisitCXXConstructExpr(const CXXConstructExpr *e) {
+  AggValueSlot slot = ensureSlot(cgf.getLoc(e->getSourceRange()), e->getType());
+  cgf.emitCXXConstructExpr(e, slot);
 }
 
 void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
@@ -238,6 +292,44 @@ void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
   // memsets; that would be easy for arrays, but relatively
   // difficult for structures with the current code.
   cgf.emitNullInitialization(loc, lv.getAddress(), lv.getType());
+}
+
+void AggExprEmitter::VisitCallExpr(const CallExpr *e) {
+  if (e->getCallReturnType(cgf.getContext())->isReferenceType()) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "reference return type");
+    return;
+  }
+
+  withReturnValueSlot(
+      e, [&](ReturnValueSlot slot) { return cgf.emitCallExpr(e, slot); });
+}
+
+void AggExprEmitter::withReturnValueSlot(
+    const Expr *e, llvm::function_ref<RValue(ReturnValueSlot)> fn) {
+  QualType retTy = e->getType();
+
+  assert(!cir::MissingFeatures::aggValueSlotDestructedFlag());
+  bool requiresDestruction =
+      retTy.isDestructedType() == QualType::DK_nontrivial_c_struct;
+  if (requiresDestruction)
+    cgf.cgm.errorNYI(
+        e->getSourceRange(),
+        "withReturnValueSlot: return value requiring destruction is NYI");
+
+  // If it makes no observable difference, save a memcpy + temporary.
+  //
+  // We need to always provide our own temporary if destruction is required.
+  // Otherwise, fn will emit its own, notice that it's "unused", and end its
+  // lifetime before we have the chance to emit a proper destructor call.
+  assert(!cir::MissingFeatures::aggValueSlotAlias());
+  assert(!cir::MissingFeatures::aggValueSlotGC());
+
+  Address retAddr = dest.getAddress();
+  assert(!cir::MissingFeatures::emitLifetimeMarkers());
+
+  assert(!cir::MissingFeatures::aggValueSlotVolatile());
+  assert(!cir::MissingFeatures::aggValueSlotDestructedFlag());
+  fn(ReturnValueSlot(retAddr));
 }
 
 void AggExprEmitter::VisitInitListExpr(InitListExpr *e) {
@@ -278,6 +370,8 @@ LValue CIRGenFunction::emitAggExprToLValue(const Expr *e) {
   assert(hasAggregateEvaluationKind(e->getType()) && "Invalid argument!");
   Address temp = createMemTemp(e->getType(), getLoc(e->getSourceRange()));
   LValue lv = makeAddrLValue(temp, e->getType());
-  emitAggExpr(e, AggValueSlot::forLValue(lv));
+  emitAggExpr(e, AggValueSlot::forLValue(lv, AggValueSlot::IsNotDestructed,
+                                         AggValueSlot::IsNotAliased,
+                                         AggValueSlot::DoesNotOverlap));
   return lv;
 }

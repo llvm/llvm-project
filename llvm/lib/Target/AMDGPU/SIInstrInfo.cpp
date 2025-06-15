@@ -7734,6 +7734,29 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     Inst.eraseFromParent();
     return;
   }
+  case AMDGPU::V_S_EXP_F16_e64:
+  case AMDGPU::V_S_LOG_F16_e64:
+  case AMDGPU::V_S_RCP_F16_e64:
+  case AMDGPU::V_S_RSQ_F16_e64:
+  case AMDGPU::V_S_SQRT_F16_e64: {
+    const DebugLoc &DL = Inst.getDebugLoc();
+    Register NewDst = MRI.createVirtualRegister(ST.useRealTrue16Insts()
+                                                    ? &AMDGPU::VGPR_16RegClass
+                                                    : &AMDGPU::VGPR_32RegClass);
+    auto NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
+                        .addImm(0) // src0_modifiers
+                        .add(Inst.getOperand(2))
+                        .addImm(0)  // clamp
+                        .addImm(0); // omod
+    if (ST.useRealTrue16Insts())
+      NewInstr.addImm(0); // opsel0
+    MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
+    legalizeOperandsVALUt16(*NewInstr, MRI);
+    legalizeOperands(*NewInstr, MDT);
+    addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
+    Inst.eraseFromParent();
+    return;
+  }
   }
 
   if (NewOpcode == AMDGPU::INSTRUCTION_LIST_END) {
