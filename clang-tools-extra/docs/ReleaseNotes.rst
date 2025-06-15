@@ -148,6 +148,12 @@ New checks
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
 
+- New :doc:`bugprone-move-shared-pointer-contents
+  <clang-tidy/checks/bugprone/move-shared-pointer-contents>` check.
+
+  Detects calls to move the contents out of a ``std::shared_ptr`` rather than
+  moving the pointer itself.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
