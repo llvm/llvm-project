@@ -19,6 +19,7 @@
 #include "../bugprone/SuspiciousMemoryComparisonCheck.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
 #include "../bugprone/UnsafeFunctionsCheck.h"
+#include "../bugprone/UnsequencedGlobalAccessesCheck.h"
 #include "../bugprone/UnusedReturnValueCheck.h"
 #include "../concurrency/ThreadCanceltypeAsynchronousCheck.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
@@ -261,6 +262,9 @@ public:
     CheckFactories.registerCheck<ThrownExceptionTypeCheck>("cert-err60-cpp");
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");
+    // EXP
+    CheckFactories.registerCheck<bugprone::UnsequencedGlobalAccessesCheck>(
+        "cert-exp50-cpp");
     // MEM
     CheckFactories.registerCheck<DefaultOperatorNewAlignmentCheck>(
         "cert-mem57-cpp");
@@ -299,6 +303,8 @@ public:
         "cert-err33-c");
     CheckFactories.registerCheck<StrToNumCheck>("cert-err34-c");
     // EXP
+    CheckFactories.registerCheck<bugprone::UnsequencedGlobalAccessesCheck>(
+        "cert-exp30-c");
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-exp42-c");
     // FLP
