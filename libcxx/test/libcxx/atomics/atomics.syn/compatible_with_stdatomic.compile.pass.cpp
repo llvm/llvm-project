@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-threads
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+
+// On Android, libc++'s <stdatomic.h> header always redirects to <atomic>, even before C++23.
+// UNSUPPORTED: c++03
+// UNSUPPORTED: (c++11 || c++14 || c++17 || c++20) && !android
 
 // This test verifies that <stdatomic.h> redirects to <atomic>.
 
