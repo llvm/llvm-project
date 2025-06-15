@@ -963,19 +963,19 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
   default:
     llvm_unreachable("Unknown target flag on GV operand");
   case RISCVII::MO_None:
-    Kind = RISCVMCExpr::VK_None;
+    Kind = RISCV::S_None;
     break;
   case RISCVII::MO_CALL:
     Kind = ELF::R_RISCV_CALL_PLT;
     break;
   case RISCVII::MO_LO:
-    Kind = RISCVMCExpr::VK_LO;
+    Kind = RISCV::S_LO;
     break;
   case RISCVII::MO_HI:
     Kind = ELF::R_RISCV_HI20;
     break;
   case RISCVII::MO_PCREL_LO:
-    Kind = RISCVMCExpr::VK_PCREL_LO;
+    Kind = RISCV::S_PCREL_LO;
     break;
   case RISCVII::MO_PCREL_HI:
     Kind = ELF::R_RISCV_PCREL_HI20;
@@ -984,7 +984,7 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     Kind = ELF::R_RISCV_GOT_HI20;
     break;
   case RISCVII::MO_TPREL_LO:
-    Kind = RISCVMCExpr::VK_TPREL_LO;
+    Kind = RISCV::S_TPREL_LO;
     break;
   case RISCVII::MO_TPREL_HI:
     Kind = ELF::R_RISCV_TPREL_HI20;
@@ -1018,7 +1018,7 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     ME = MCBinaryExpr::createAdd(
         ME, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
-  if (Kind != RISCVMCExpr::VK_None)
+  if (Kind != RISCV::S_None)
     ME = RISCVMCExpr::create(ME, Kind, Ctx);
   return MCOperand::createExpr(ME);
 }
