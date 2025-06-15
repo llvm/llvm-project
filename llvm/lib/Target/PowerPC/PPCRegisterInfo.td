@@ -307,13 +307,6 @@ def SPEFSCR: SPR<512, "spefscr">, DwarfRegNum<[612, 112]>;
 
 def XER: SPR<1, "xer">, DwarfRegNum<[76]>;
 
-// Carry bit.  In the architecture this is really bit 0 of the XER register
-// (which really is SPR register 1);  this is the only bit interesting to a
-// compiler.
-def CARRY: SPR<1, "xer">, DwarfRegNum<[76]> {
-  let Aliases = [XER];
-}
-
 // FP rounding mode:  bits 30 and 31 of the FP status and control register
 // This is not allocated as a normal register; it appears only in
 // Uses and Defs.  The ABI says it needs to be preserved by a function,
@@ -492,7 +485,7 @@ def LR8RC : RegisterClass<"PPC", [i64], 64, (add LR8)> {
 }
 
 def VRSAVERC : RegisterClass<"PPC", [i32], 32, (add VRSAVE)>;
-def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY, XER)> {
+def XERRC : RegisterClass<"PPC", [i32], 32, (add XER)> {
   let CopyCost = -1;
   let isAllocatable = 0;
 }
