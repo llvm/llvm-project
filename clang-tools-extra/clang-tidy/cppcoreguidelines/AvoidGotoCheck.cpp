@@ -25,7 +25,7 @@ AST_MATCHER(GotoStmt, isInMacro) {
 
 AvoidGotoCheck::AvoidGotoCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void AvoidGotoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);

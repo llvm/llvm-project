@@ -57,5 +57,5 @@ Options
 
 .. option:: IgnoreMacros
 
-   If set to `true`, the check will not warn if both label and ``goto``
-   statement are placed inside a macro. Default is `true`.
+   If set to `true`, the check will not warn if ``goto`` statement is placed
+   inside a macro. Default is `false`.
