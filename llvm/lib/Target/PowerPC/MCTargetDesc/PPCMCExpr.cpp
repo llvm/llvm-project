@@ -21,6 +21,11 @@ const PPCMCExpr *PPCMCExpr::create(Specifier S, const MCExpr *Expr,
   return new (Ctx) PPCMCExpr(S, Expr);
 }
 
+const PPCMCExpr *PPCMCExpr::create(const MCExpr *Expr, Specifier S,
+                                   MCContext &Ctx) {
+  return new (Ctx) PPCMCExpr(S, Expr);
+}
+
 void PPCMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   getSubExpr()->print(OS, MAI);
   OS << '@' << MAI->getSpecifierName(specifier);
@@ -44,23 +49,23 @@ PPCMCExpr::evaluateAsConstant(int64_t &Res) const {
 
 std::optional<int64_t> PPCMCExpr::evaluateAsInt64(int64_t Value) const {
   switch (specifier) {
-  case VK_LO:
+  case PPC::S_LO:
     return Value & 0xffff;
-  case VK_HI:
+  case PPC::S_HI:
     return (Value >> 16) & 0xffff;
-  case VK_HA:
+  case PPC::S_HA:
     return ((Value + 0x8000) >> 16) & 0xffff;
-  case VK_HIGH:
+  case PPC::S_HIGH:
     return (Value >> 16) & 0xffff;
-  case VK_HIGHA:
+  case PPC::S_HIGHA:
     return ((Value + 0x8000) >> 16) & 0xffff;
-  case VK_HIGHER:
+  case PPC::S_HIGHER:
     return (Value >> 32) & 0xffff;
-  case VK_HIGHERA:
+  case PPC::S_HIGHERA:
     return ((Value + 0x8000) >> 32) & 0xffff;
-  case VK_HIGHEST:
+  case PPC::S_HIGHEST:
     return (Value >> 48) & 0xffff;
-  case VK_HIGHESTA:
+  case PPC::S_HIGHESTA:
     return ((Value + 0x8000) >> 48) & 0xffff;
   default:
     return {};
