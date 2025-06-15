@@ -1298,6 +1298,9 @@ module std [system] {
 
     header "flat_map"
     export *
+    export std.algorithm.ranges_sort
+    export std.ranges.zip_view
+    export std.tuple
   }
 
   module flat_set {
