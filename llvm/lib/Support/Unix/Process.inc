@@ -307,21 +307,20 @@ bool Process::FileDescriptorIsDisplayed(int fd) {
 #endif
 }
 
-static unsigned getColumns([[maybe_unused]] int FileID) {
+static unsigned getColumns(int FileID) {
   // If COLUMNS is defined in the environment, wrap to that many columns.
+  // This matches GCC.
   if (const char *ColumnsStr = std::getenv("COLUMNS")) {
     int Columns = std::atoi(ColumnsStr);
     if (Columns > 0)
       return Columns;
   }
 
-  // Unfortunately, COLUMNS is a shell variable, not a proper environment
-  // variable, so it is often not available; query the column count via
-  // ioctl() instead if it isn't.
+  // Some shells do not export COLUMNS; query the column count via ioctl()
+  // instead if it isn't available.
   unsigned Columns = 0;
 
 #ifdef HAVE_SYS_IOCTL_H
-  // Try to determine the width of the terminal.
   struct winsize ws;
   if (ioctl(FileID, TIOCGWINSZ, &ws) == 0)
     Columns = ws.ws_col;
