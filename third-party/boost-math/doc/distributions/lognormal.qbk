@@ -1,0 +1,121 @@
+[section:lognormal_dist Log Normal Distribution]
+
+``#include <boost/math/distributions/lognormal.hpp>``
+
+   namespace boost{ namespace math{ 
+      
+   template <class RealType = double, 
+             class ``__Policy``   = ``__policy_class`` >
+   class lognormal_distribution;
+   
+   typedef lognormal_distribution<> lognormal;
+   
+   template <class RealType, class ``__Policy``>
+   class lognormal_distribution
+   {
+   public:
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+      // Construct:
+      BOOST_MATH_GPU_ENABLED lognormal_distribution(RealType location = 0, RealType scale = 1);
+      // Accessors:
+      BOOST_MATH_GPU_ENABLED RealType location()const;
+      BOOST_MATH_GPU_ENABLED RealType scale()const;
+   };
+   
+   }} // namespaces
+   
+The lognormal distribution is the distribution that arises
+when the logarithm of the random variable is normally distributed.
+A lognormal distribution results when the variable is the product 
+of a large number of independent, identically-distributed variables.
+
+For location and scale parameters /m/ and /s/ it is defined by the
+probability density function:
+
+[equation lognormal_ref]
+
+The location and scale parameters are equivalent to the mean and 
+standard deviation of the logarithm of the random variable.
+
+The following graph illustrates the effect of the location
+parameter on the PDF, note that the range of the random
+variable remains \[0,+[infin]\] irrespective of the value of the
+location parameter:
+
+[graph lognormal_pdf1]
+
+The next graph illustrates the effect of the scale parameter on the PDF:
+
+[graph lognormal_pdf2]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED lognormal_distribution(RealType location = 0, RealType scale = 1);
+   
+Constructs a lognormal distribution with location /location/ and 
+scale /scale/.
+
+The location parameter is the same as the mean of the logarithm of the
+random variate.
+
+The scale parameter is the same as the standard deviation of the
+logarithm of the random variate.
+
+Requires that the scale parameter is greater than zero, otherwise calls
+__domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType location()const;
+   
+Returns the /location/ parameter of this distribution.
+   
+   BOOST_MATH_GPU_ENABLED RealType scale()const;
+      
+Returns the /scale/ parameter of this distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all
+distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \[0,+[infin]\].
+
+[h4 Accuracy]
+
+The lognormal distribution is implemented in terms of the 
+standard library log and exp functions, plus the
+[link math_toolkit.sf_erf.error_function error function], 
+and as such should have very low error rates.
+
+[h4 Implementation]
+
+In the following table /m/ is the location parameter of the distribution, 
+/s/ is its scale parameter, /x/ is the random variate, /p/ is the probability
+and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = e[super -(ln(x) - m)[super 2 ] \/ 2s[super 2 ] ] \/ (x * s * sqrt(2pi)) ]]
+[[cdf][Using the relation: p = cdf(normal_distribtion<RealType>(m, s), log(x)) ]]
+[[cdf complement][Using the relation: q = cdf(complement(normal_distribtion<RealType>(m, s), log(x))) ]]
+[[quantile][Using the relation: x = exp(quantile(normal_distribtion<RealType>(m, s), p))]]
+[[quantile from the complement][Using the relation: x = exp(quantile(complement(normal_distribtion<RealType>(m, s), q)))]]
+[[mean][e[super m + s[super 2 ] / 2 ] ]]
+[[variance][(e[super s[super 2] ] - 1) * e[super 2m + s[super 2 ] ] ]]
+[[mode][e[super m - s[super 2 ] ] ]]
+[[skewness][sqrt(e[super s[super 2] ] - 1) * (2 + e[super s[super 2] ]) ]]
+[[kurtosis][e[super 4s[super 2] ] + 2e[super 3s[super 2] ] + 3e[super 2s[super 2] ] - 3]]
+[[kurtosis excess][e[super 4s[super 2] ] + 2e[super 3s[super 2] ] + 3e[super 2s[super 2] ] - 6 ]]
+]
+
+[endsect] [/section:lognormal_dist Log Normal Distribution]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

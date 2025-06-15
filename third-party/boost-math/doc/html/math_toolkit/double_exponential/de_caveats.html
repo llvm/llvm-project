@@ -1,0 +1,187 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Caveats</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../double_exponential.html" title="Double-exponential quadrature">
+<link rel="prev" href="de_thread.html" title="Thread Safety">
+<link rel="next" href="de_refes.html" title="References">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="de_thread.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../double_exponential.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="de_refes.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.double_exponential.de_caveats"></a><a class="link" href="de_caveats.html" title="Caveats">Caveats</a>
+</h3></div></div></div>
+<p>
+        A few things to keep in mind while using the tanh-sinh, exp-sinh, and sinh-sinh
+        quadratures:
+      </p>
+<p>
+        These routines are <span class="bold"><strong>very</strong></span> aggressive about
+        approaching the endpoint singularities. This allows lots of significant digits
+        to be extracted, but also has another problem: Roundoff error can cause the
+        function to be evaluated at the endpoints. A few ways to avoid this: Narrow
+        up the bounds of integration to say, [a + ε, b - ε], make sure (a+b)/2 and
+        (b-a)/2 are representable, and finally, if you think the compromise between
+        accuracy an usability has gone too far in the direction of accuracy, file
+        a ticket.
+      </p>
+<p>
+        Both exp-sinh and sinh-sinh quadratures evaluate the functions they are passed
+        at <span class="bold"><strong>very</strong></span> large argument. You might understand
+        that x<sup>12</sup>exp(-x) is should be zero when x<sup>12</sup> overflows, but IEEE floating point
+        arithmetic does not. Hence <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">pow</span><span class="special">(</span><span class="identifier">x</span><span class="special">,</span> <span class="number">12</span><span class="special">)*</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">exp</span><span class="special">(-</span><span class="identifier">x</span><span class="special">)</span></code> is an indeterminate form whenever <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">pow</span><span class="special">(</span><span class="identifier">x</span><span class="special">,</span>
+        <span class="number">12</span><span class="special">)</span></code>
+        overflows. So make sure your functions have the correct limiting behavior;
+        for example
+      </p>
+<pre class="programlisting"><span class="keyword">auto</span> <span class="identifier">f</span> <span class="special">=</span> <span class="special">[](</span><span class="keyword">double</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">{</span>
+    <span class="keyword">double</span> <span class="identifier">t</span> <span class="special">=</span> <span class="identifier">exp</span><span class="special">(-</span><span class="identifier">x</span><span class="special">);</span>
+    <span class="keyword">if</span><span class="special">(</span><span class="identifier">t</span> <span class="special">==</span> <span class="number">0</span><span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+    <span class="special">}</span>
+    <span class="keyword">return</span> <span class="identifier">t</span><span class="special">*</span><span class="identifier">pow</span><span class="special">(</span><span class="identifier">x</span><span class="special">,</span> <span class="number">12</span><span class="special">);</span>
+<span class="special">};</span>
+</pre>
+<p>
+        has the correct behavior for large <span class="emphasis"><em>x</em></span>, but <code class="computeroutput"><span class="keyword">auto</span> <span class="identifier">f</span> <span class="special">=</span> <span class="special">[](</span><span class="keyword">double</span>
+        <span class="identifier">x</span><span class="special">)</span> <span class="special">{</span> <span class="keyword">return</span> <span class="identifier">exp</span><span class="special">(-</span><span class="identifier">x</span><span class="special">)*</span><span class="identifier">pow</span><span class="special">(</span><span class="identifier">x</span><span class="special">,</span> <span class="number">12</span><span class="special">);</span> <span class="special">};</span></code> does
+        not.
+      </p>
+<p>
+        Oscillatory integrals, such as the sinc integral, are poorly approximated
+        by double-exponential quadrature. Fortunately the error estimates and L1
+        norm are massive for these integrals, but nonetheless, oscillatory integrals
+        require different techniques.
+      </p>
+<p>
+        A special mention should be made about integrating through zero: while our
+        range adaptors preserve precision when one endpoint is zero, things get harder
+        when the origin is neither in the center of the range, nor at an endpoint.
+        Consider integrating:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic">1 / (1 +x^2)</span>
+        </p></blockquote></div>
+<p>
+        Over (a, ∞). As long as <code class="computeroutput"><span class="identifier">a</span> <span class="special">&gt;=</span> <span class="number">0</span></code> both
+        the tanh_sinh and the exp_sinh integrators will handle this just fine: in
+        fact they provide a rather efficient method for this kind of integral. However,
+        if we have <code class="computeroutput"><span class="identifier">a</span> <span class="special">&lt;</span>
+        <span class="number">0</span></code> then we are forced to adapt the range
+        in a way that produces abscissa values near zero that have an absolute error
+        of ε, and since all of the area of the integral is near zero both integrators
+        thrash around trying to reach the target accuracy, but never actually get
+        there for <code class="computeroutput"><span class="identifier">a</span> <span class="special">&lt;&lt;</span>
+        <span class="number">0</span></code>. On the other hand, the simple expedient
+        of breaking the integral into two domains: (a, 0) and (0, b) and integrating
+        each separately using the tanh-sinh integrator, works just fine.
+      </p>
+<p>
+        Finally, some endpoint singularities are too strong to be handled by <code class="computeroutput"><span class="identifier">tanh_sinh</span></code> or equivalent methods, for example
+        consider integrating the function:
+      </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">p</span> <span class="special">=</span> <span class="identifier">some_value</span><span class="special">;</span>
+<span class="identifier">tanh_sinh</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">integrator</span><span class="special">;</span>
+<span class="keyword">auto</span> <span class="identifier">f</span> <span class="special">=</span> <span class="special">[&amp;](</span><span class="keyword">double</span> <span class="identifier">x</span><span class="special">){</span> <span class="keyword">return</span> <span class="identifier">pow</span><span class="special">(</span><span class="identifier">tan</span><span class="special">(</span><span class="identifier">x</span><span class="special">),</span> <span class="identifier">p</span><span class="special">);</span> <span class="special">};</span>
+<span class="keyword">auto</span> <span class="identifier">Q</span> <span class="special">=</span> <span class="identifier">integrator</span><span class="special">.</span><span class="identifier">integrate</span><span class="special">(</span><span class="identifier">f</span><span class="special">,</span> <span class="number">0</span><span class="special">,</span> <span class="identifier">constants</span><span class="special">::</span><span class="identifier">half_pi</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;());</span>
+</pre>
+<p>
+        The first problem with this function, is that the singularity is at π/2, so
+        if we're integrating over (0, π/2) then we can never approach closer to the
+        singularity than ε, and for p less than but close to 1, we need to get <span class="emphasis"><em>very</em></span>
+        close to the singularity to find all the area under the function. If we recall
+        the identity <code class="literal">tan(π/2 - x) == 1/tan(x)</code> then we can rewrite
+        the function like this:
+      </p>
+<pre class="programlisting"><span class="keyword">auto</span> <span class="identifier">f</span> <span class="special">=</span> <span class="special">[&amp;](</span><span class="keyword">double</span> <span class="identifier">x</span><span class="special">){</span> <span class="keyword">return</span> <span class="identifier">pow</span><span class="special">(</span><span class="identifier">tan</span><span class="special">(</span><span class="identifier">x</span><span class="special">),</span> <span class="special">-</span><span class="identifier">p</span><span class="special">);</span> <span class="special">};</span>
+</pre>
+<p>
+        And now the singularity is at the origin and we can get much closer to it
+        when evaluating the integral: all we have done is swap the integral endpoints
+        over.
+      </p>
+<p>
+        This actually works just fine for p &lt; 0.95, but after that the <code class="computeroutput"><span class="identifier">tanh_sinh</span></code> integrator starts thrashing around
+        and is unable to converge on the integral. The problem is actually a lack
+        of exponent range: if we simply swap type double for something with a greater
+        exponent range (an 80-bit long double or a quad precision type), then we
+        can get to at least p = 0.99. If we want to go beyond that, or stick with
+        type double, then we have to get smart.
+      </p>
+<p>
+        The easiest method is to notice that for small x, then <code class="literal">tan(x) ≅ x</code>,
+        and so we are simply integrating x<sup>-p</sup>. Therefore we can use this approximation
+        over (0, small), and integrate numerically from (small, π/2), using ε as a suitable
+        crossover point seems sensible:
+      </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">p</span> <span class="special">=</span> <span class="identifier">some_value</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">crossover</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">epsilon</span><span class="special">();</span>
+<span class="identifier">tanh_sinh</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">integrator</span><span class="special">;</span>
+<span class="keyword">auto</span> <span class="identifier">f</span> <span class="special">=</span> <span class="special">[&amp;](</span><span class="keyword">double</span> <span class="identifier">x</span><span class="special">){</span> <span class="keyword">return</span> <span class="identifier">pow</span><span class="special">(</span><span class="identifier">tan</span><span class="special">(</span><span class="identifier">x</span><span class="special">),</span> <span class="identifier">p</span><span class="special">);</span> <span class="special">};</span>
+<span class="keyword">auto</span> <span class="identifier">Q</span> <span class="special">=</span> <span class="identifier">integrator</span><span class="special">.</span><span class="identifier">integrate</span><span class="special">(</span><span class="identifier">f</span><span class="special">,</span> <span class="identifier">crossover</span><span class="special">,</span> <span class="identifier">constants</span><span class="special">::</span><span class="identifier">half_pi</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;())</span> <span class="special">+</span> <span class="identifier">pow</span><span class="special">(</span><span class="identifier">crossover</span><span class="special">,</span> <span class="number">1</span> <span class="special">-</span> <span class="identifier">p</span><span class="special">)</span> <span class="special">/</span> <span class="special">(</span><span class="number">1</span> <span class="special">-</span> <span class="identifier">p</span><span class="special">);</span>
+</pre>
+<p>
+        There is an alternative, more complex method, which is applicable when we
+        are dealing with expressions which can be simplified by evaluating by logs.
+        Let's suppose that as in this case, all the area under the graph is infinitely
+        close to zero, now imagine that we could expand that region out over a much
+        larger range of abscissa values: that's exactly what happens if we perform
+        argument substitution, replacing <code class="computeroutput"><span class="identifier">x</span></code>
+        by <code class="computeroutput"><span class="identifier">exp</span><span class="special">(-</span><span class="identifier">x</span><span class="special">)</span></code> (note
+        that we must also multiply by the derivative of <code class="computeroutput"><span class="identifier">exp</span><span class="special">(-</span><span class="identifier">x</span><span class="special">)</span></code>).
+        Now the singularity at zero is moved to +∞, and the π/2 bound to -log(π/2).
+        Initially our argument substituted function looks like:
+      </p>
+<pre class="programlisting"><span class="keyword">auto</span> <span class="identifier">f</span> <span class="special">=</span> <span class="special">[&amp;](</span><span class="keyword">double</span> <span class="identifier">x</span><span class="special">){</span> <span class="keyword">return</span> <span class="identifier">exp</span><span class="special">(-</span><span class="identifier">x</span><span class="special">)</span> <span class="special">*</span> <span class="identifier">pow</span><span class="special">(</span><span class="identifier">tan</span><span class="special">(</span><span class="identifier">exp</span><span class="special">(-</span><span class="identifier">x</span><span class="special">)),</span> <span class="special">-</span><span class="identifier">p</span><span class="special">);</span> <span class="special">};</span>
+</pre>
+<p>
+        Which is hardly any better, as we still run out of exponent range just as
+        before. However, if we replace <code class="computeroutput"><span class="identifier">tan</span><span class="special">(</span><span class="identifier">exp</span><span class="special">(-</span><span class="identifier">x</span><span class="special">))</span></code> by
+        <code class="computeroutput"><span class="identifier">exp</span><span class="special">(-</span><span class="identifier">x</span><span class="special">)</span></code> for
+        suitably small <code class="computeroutput"><span class="identifier">exp</span><span class="special">(-</span><span class="identifier">x</span><span class="special">)</span></code>, and
+        therefore <code class="literal">x &gt; -log(ε)</code>, we can greatly simplify the expression
+        and evaluate by logs:
+      </p>
+<pre class="programlisting"><span class="keyword">auto</span> <span class="identifier">f</span> <span class="special">=</span> <span class="special">[&amp;](</span><span class="keyword">double</span> <span class="identifier">x</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="keyword">static</span> <span class="keyword">const</span> <span class="keyword">double</span> <span class="identifier">crossover</span> <span class="special">=</span> <span class="special">-</span><span class="identifier">log</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">epsilon</span><span class="special">());</span>
+   <span class="keyword">return</span> <span class="identifier">x</span> <span class="special">&gt;</span> <span class="identifier">crossover</span> <span class="special">?</span> <span class="identifier">exp</span><span class="special">((</span><span class="identifier">p</span> <span class="special">-</span> <span class="number">1</span><span class="special">)</span> <span class="special">*</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">:</span> <span class="identifier">exp</span><span class="special">(-</span><span class="identifier">x</span><span class="special">)</span> <span class="special">*</span> <span class="identifier">pow</span><span class="special">(</span><span class="identifier">tan</span><span class="special">(</span><span class="identifier">exp</span><span class="special">(-</span><span class="identifier">x</span><span class="special">)),</span> <span class="special">-</span><span class="identifier">p</span><span class="special">);</span>
+<span class="special">};</span>
+</pre>
+<p>
+        This form integrates just fine over (-log(π/2), +∞) using either the <code class="computeroutput"><span class="identifier">tanh_sinh</span></code> or <code class="computeroutput"><span class="identifier">exp_sinh</span></code>
+        classes.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="de_thread.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../double_exponential.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="de_refes.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

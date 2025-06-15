@@ -1,0 +1,500 @@
+
+[section:cs_eg Chi Squared Distribution Examples]
+
+[section:chi_sq_intervals Confidence Intervals on the Standard Deviation]
+
+Once you have calculated the standard deviation for your data, a legitimate
+question to ask is "How reliable is the calculated standard deviation?".
+For this situation the Chi Squared distribution can be used to calculate
+confidence intervals for the standard deviation.
+
+The full example code & sample output is in
+[@../../example/chi_square_std_dev_test.cpp chi_square_std_dev_test.cpp].
+
+We'll begin by defining the procedure that will calculate and print out the
+confidence intervals:
+
+   void confidence_limits_on_std_deviation(
+        double Sd,    // Sample Standard Deviation
+        unsigned N)   // Sample size
+   {
+
+We'll begin by printing out some general information:
+
+   cout <<
+      "________________________________________________\n"
+      "2-Sided Confidence Limits For Standard Deviation\n"
+      "________________________________________________\n\n";
+   cout << setprecision(7);
+   cout << setw(40) << left << "Number of Observations" << "=  " << N << "\n";
+   cout << setw(40) << left << "Standard Deviation" << "=  " << Sd << "\n";
+
+and then define a table of significance levels for which we'll calculate
+intervals:
+
+   double alpha[] = { 0.5, 0.25, 0.1, 0.05, 0.01, 0.001, 0.0001, 0.00001 };
+
+The distribution we'll need to calculate the confidence intervals is a
+Chi Squared distribution, with N-1 degrees of freedom:
+
+   chi_squared dist(N - 1);
+
+For each value of alpha, the formula for the confidence interval is given by:
+
+[equation chi_squ_tut1]
+
+Where [equation chi_squ_tut2] is the upper critical value, and
+[equation chi_squ_tut3] is the lower critical value of the
+Chi Squared distribution.
+
+In code we begin by printing out a table header:
+
+   cout << "\n\n"
+           "_____________________________________________\n"
+           "Confidence          Lower          Upper\n"
+           " Value (%)          Limit          Limit\n"
+           "_____________________________________________\n";
+
+and then loop over the values of alpha and calculate the intervals
+for each: remember that the lower critical value is the same as the
+quantile, and the upper critical value is the same as the quantile
+from the complement of the probability:
+
+   for(unsigned i = 0; i < sizeof(alpha)/sizeof(alpha[0]); ++i)
+   {
+      // Confidence value:
+      cout << fixed << setprecision(3) << setw(10) << right << 100 * (1-alpha[i]);
+      // Calculate limits:
+      double lower_limit = sqrt((N - 1) * Sd * Sd / quantile(complement(dist, alpha[i] / 2)));
+      double upper_limit = sqrt((N - 1) * Sd * Sd / quantile(dist, alpha[i] / 2));
+      // Print Limits:
+      cout << fixed << setprecision(5) << setw(15) << right << lower_limit;
+      cout << fixed << setprecision(5) << setw(15) << right << upper_limit << endl;
+   }
+   cout << endl;
+
+To see some example output we'll use the
+[@http://www.itl.nist.gov/div898/handbook/eda/section3/eda3581.htm
+gear data] from the __handbook.
+The data represents measurements of gear diameter from a manufacturing
+process.
+
+[pre'''
+________________________________________________
+2-Sided Confidence Limits For Standard Deviation
+________________________________________________
+
+Number of Observations                  =  100
+Standard Deviation                      =  0.006278908
+
+
+_____________________________________________
+Confidence          Lower          Upper
+ Value (%)          Limit          Limit
+_____________________________________________
+    50.000        0.00601        0.00662
+    75.000        0.00582        0.00685
+    90.000        0.00563        0.00712
+    95.000        0.00551        0.00729
+    99.000        0.00530        0.00766
+    99.900        0.00507        0.00812
+    99.990        0.00489        0.00855
+    99.999        0.00474        0.00895
+''']
+
+So at the 95% confidence level we conclude that the standard deviation
+is between 0.00551 and 0.00729.
+
+[h4 Confidence intervals as a function of the number of observations]
+
+Similarly, we can also list the confidence intervals for the standard deviation
+for the common confidence levels 95%, for increasing numbers of observations.
+
+The standard deviation used to compute these values is unity,
+so the limits listed are *multipliers* for any particular standard deviation.
+For example, given a standard deviation of 0.0062789 as in the example
+above; for 100 observations the multiplier is 0.8780
+giving the lower confidence limit of 0.8780 * 0.006728 = 0.00551.
+
+[pre'''
+____________________________________________________
+Confidence level (two-sided)            =  0.0500000
+Standard Deviation                      =  1.0000000
+________________________________________
+Observations        Lower          Upper
+                    Limit          Limit
+________________________________________
+         2         0.4461        31.9102
+         3         0.5207         6.2847
+         4         0.5665         3.7285
+         5         0.5991         2.8736
+         6         0.6242         2.4526
+         7         0.6444         2.2021
+         8         0.6612         2.0353
+         9         0.6755         1.9158
+        10         0.6878         1.8256
+        15         0.7321         1.5771
+        20         0.7605         1.4606
+        30         0.7964         1.3443
+        40         0.8192         1.2840
+        50         0.8353         1.2461
+        60         0.8476         1.2197
+       100         0.8780         1.1617
+       120         0.8875         1.1454
+      1000         0.9580         1.0459
+     10000         0.9863         1.0141
+     50000         0.9938         1.0062
+    100000         0.9956         1.0044
+   1000000         0.9986         1.0014
+''']
+
+With just 2 observations the limits are from *0.445* up to to *31.9*,
+so the standard deviation might be about *half*
+the observed value up to [*30 times] the observed value!
+
+Estimating a standard deviation with just a handful of values leaves a very great uncertainty,
+especially the upper limit.
+Note especially how far the upper limit is skewed from the most likely standard deviation.
+
+Even for 10 observations, normally considered a reasonable number,
+the range is still from 0.69 to 1.8, about a range of 0.7 to 2,
+and is still highly skewed with an upper limit *twice* the median.
+
+When we have 1000 observations, the estimate of the standard deviation is starting to look convincing,
+with a range from 0.95 to 1.05 - now near symmetrical, but still about + or - 5%.
+
+Only when we have 10000 or more repeated observations can we start to be reasonably confident
+(provided we are sure that other factors like drift are not creeping in).
+
+For 10000 observations, the interval is 0.99 to 1.1 - finally a really convincing + or -1% confidence.
+
+[endsect] [/section:chi_sq_intervals Confidence Intervals on the Standard Deviation]
+
+[section:chi_sq_test Chi-Square Test for the Standard Deviation]
+
+We use this test to determine whether the standard deviation of a sample
+differs from a specified value.  Typically this occurs in process change
+situations where we wish to compare the standard deviation of a new
+process to an established one.
+
+The code for this example is contained in
+[@../../example/chi_square_std_dev_test.cpp chi_square_std_dev_test.cpp], and
+we'll begin by defining the procedure that will print out the test
+statistics:
+
+   void chi_squared_test(
+       double Sd,     // Sample std deviation
+       double D,      // True std deviation
+       unsigned N,    // Sample size
+       double alpha)  // Significance level
+   {
+
+The procedure begins by printing a summary of the input data:
+
+   using namespace std;
+   using namespace boost::math;
+
+   // Print header:
+   cout <<
+      "______________________________________________\n"
+      "Chi Squared test for sample standard deviation\n"
+      "______________________________________________\n\n";
+   cout << setprecision(5);
+   cout << setw(55) << left << "Number of Observations" << "=  " << N << "\n";
+   cout << setw(55) << left << "Sample Standard Deviation" << "=  " << Sd << "\n";
+   cout << setw(55) << left << "Expected True Standard Deviation" << "=  " << D << "\n\n";
+
+The test statistic (T) is simply the ratio of the sample and "true" standard
+deviations squared, multiplied by the number of degrees of freedom (the
+sample size less one):
+
+   double t_stat = (N - 1) * (Sd / D) * (Sd / D);
+   cout << setw(55) << left << "Test Statistic" << "=  " << t_stat << "\n";
+
+The distribution we need to use, is a Chi Squared distribution with N-1
+degrees of freedom:
+
+   chi_squared dist(N - 1);
+
+The various hypothesis that can be tested are summarised in the following table:
+
+[table
+[[Hypothesis][Test]]
+[[The null-hypothesis: there is no difference in standard deviation from the specified value]
+    [ Reject if T < [chi][super 2][sub (1-alpha/2; N-1)] or T > [chi][super 2][sub (alpha/2; N-1)] ]]
+[[The alternative hypothesis: there is a difference in standard deviation from the specified value]
+    [ Reject if [chi][super 2][sub (1-alpha/2; N-1)] >= T  >= [chi][super 2][sub (alpha/2; N-1)] ]]
+[[The alternative hypothesis: the standard deviation is less than the specified value]
+    [ Reject if [chi][super 2][sub (1-alpha; N-1)] <= T ]]
+[[The alternative hypothesis: the standard deviation is greater than the specified value]
+    [ Reject if [chi][super 2][sub (alpha; N-1)] >= T ]]
+]
+
+Where [chi][super 2][sub (alpha; N-1)] is the upper critical value of the
+Chi Squared distribution, and [chi][super 2][sub (1-alpha; N-1)] is the
+lower critical value.
+
+Recall that the lower critical value is the same
+as the quantile, and the upper critical value is the same as the quantile
+from the complement of the probability, that gives us the following code
+to calculate the critical values:
+
+   double ucv = quantile(complement(dist, alpha));
+   double ucv2 = quantile(complement(dist, alpha / 2));
+   double lcv = quantile(dist, alpha);
+   double lcv2 = quantile(dist, alpha / 2);
+   cout << setw(55) << left << "Upper Critical Value at alpha: " << "=  "
+      << setprecision(3) << scientific << ucv << "\n";
+   cout << setw(55) << left << "Upper Critical Value at alpha/2: " << "=  "
+      << setprecision(3) << scientific << ucv2 << "\n";
+   cout << setw(55) << left << "Lower Critical Value at alpha: " << "=  "
+      << setprecision(3) << scientific << lcv << "\n";
+   cout << setw(55) << left << "Lower Critical Value at alpha/2: " << "=  "
+      << setprecision(3) << scientific << lcv2 << "\n\n";
+
+Now that we have the critical values, we can compare these to our test
+statistic, and print out the result of each hypothesis and test:
+
+   cout << setw(55) << left <<
+      "Results for Alternative Hypothesis and alpha" << "=  "
+      << setprecision(4) << fixed << alpha << "\n\n";
+   cout << "Alternative Hypothesis              Conclusion\n";
+
+   cout << "Standard Deviation != " << setprecision(3) << fixed << D << "            ";
+   if((ucv2 < t_stat) || (lcv2 > t_stat))
+      cout << "ACCEPTED\n";
+   else
+      cout << "REJECTED\n";
+
+   cout << "Standard Deviation  < " << setprecision(3) << fixed << D << "            ";
+   if(lcv > t_stat)
+      cout << "ACCEPTED\n";
+   else
+      cout << "REJECTED\n";
+
+   cout << "Standard Deviation  > " << setprecision(3) << fixed << D << "            ";
+   if(ucv < t_stat)
+      cout << "ACCEPTED\n";
+   else
+      cout << "REJECTED\n";
+   cout << endl << endl;
+
+To see some example output we'll use the
+[@http://www.itl.nist.gov/div898/handbook/eda/section3/eda3581.htm
+gear data] from the __handbook.
+The data represents measurements of gear diameter from a manufacturing
+process.  The program output is deliberately designed to mirror
+the DATAPLOT output shown in the
+[@http://www.itl.nist.gov/div898/handbook/eda/section3/eda358.htm
+NIST Handbook Example].
+
+[pre'''
+______________________________________________
+Chi Squared test for sample standard deviation
+______________________________________________
+
+Number of Observations                                 =  100
+Sample Standard Deviation                              =  0.00628
+Expected True Standard Deviation                       =  0.10000
+
+Test Statistic                                         =  0.39030
+CDF of test statistic:                                 =  1.438e-099
+Upper Critical Value at alpha:                         =  1.232e+002
+Upper Critical Value at alpha/2:                       =  1.284e+002
+Lower Critical Value at alpha:                         =  7.705e+001
+Lower Critical Value at alpha/2:                       =  7.336e+001
+
+Results for Alternative Hypothesis and alpha           =  0.0500
+
+Alternative Hypothesis              Conclusion'''
+Standard Deviation != 0.100            ACCEPTED
+Standard Deviation  < 0.100            ACCEPTED
+Standard Deviation  > 0.100            REJECTED
+]
+
+In this case we are testing whether the sample standard deviation is 0.1,
+and the null-hypothesis is rejected, so we conclude that the standard
+deviation ['is not] 0.1.
+
+For an alternative example, consider the
+[@http://www.itl.nist.gov/div898/handbook/prc/section2/prc23.htm
+silicon wafer data] again from the __handbook.
+In this scenario a supplier of 100 ohm.cm silicon wafers claims
+that his fabrication  process can produce wafers with sufficient
+consistency so that the standard deviation of resistivity for
+the lot does not exceed 10 ohm.cm. A sample of N = 10 wafers taken
+from the lot has a standard deviation of 13.97 ohm.cm, and the question
+we ask ourselves is "Is the suppliers claim correct?".
+
+The program output now looks like this:
+
+[pre'''
+______________________________________________
+Chi Squared test for sample standard deviation
+______________________________________________
+
+Number of Observations                                 =  10
+Sample Standard Deviation                              =  13.97000
+Expected True Standard Deviation                       =  10.00000
+
+Test Statistic                                         =  17.56448
+CDF of test statistic:                                 =  9.594e-001
+Upper Critical Value at alpha:                         =  1.692e+001
+Upper Critical Value at alpha/2:                       =  1.902e+001
+Lower Critical Value at alpha:                         =  3.325e+000
+Lower Critical Value at alpha/2:                       =  2.700e+000
+
+Results for Alternative Hypothesis and alpha           =  0.0500
+
+Alternative Hypothesis              Conclusion'''
+Standard Deviation != 10.000            REJECTED
+Standard Deviation  < 10.000            REJECTED
+Standard Deviation  > 10.000            ACCEPTED
+]
+
+In this case, our null-hypothesis is that the standard deviation of
+the sample is less than 10: this hypothesis is rejected in the analysis
+above, and so we reject the manufacturers claim.
+
+[endsect] [/section:chi_sq_test Chi-Square Test for the Standard Deviation]
+
+[section:chi_sq_size Estimating the Required Sample Sizes for a Chi-Square Test for the Standard Deviation]
+
+Suppose we conduct a Chi Squared test for standard deviation and the result
+is borderline, a legitimate question to ask is "How large would the sample size
+have to be in order to produce a definitive result?"
+
+The class template [link math_toolkit.dist_ref.dists.chi_squared_dist
+chi_squared_distribution] has a static method
+`find_degrees_of_freedom` that will calculate this value for
+some acceptable risk of type I failure /alpha/, type II failure
+/beta/, and difference from the standard deviation /diff/.  Please
+note that the method used works on variance, and not standard deviation
+as is usual for the Chi Squared Test.
+
+The code for this example is located in
+[@../../example/chi_square_std_dev_test.cpp chi_square_std_dev_test.cpp].
+
+We begin by defining a procedure to print out the sample sizes required
+for various risk levels:
+
+   void chi_squared_sample_sized(
+        double diff,      // difference from variance to detect
+        double variance)  // true variance
+   {
+
+The procedure begins by printing out the input data:
+
+   using namespace std;
+   using namespace boost::math;
+
+   // Print out general info:
+   cout <<
+      "_____________________________________________________________\n"
+      "Estimated sample sizes required for various confidence levels\n"
+      "_____________________________________________________________\n\n";
+   cout << setprecision(5);
+   cout << setw(40) << left << "True Variance" << "=  " << variance << "\n";
+   cout << setw(40) << left << "Difference to detect" << "=  " << diff << "\n";
+
+And defines a table of significance levels for which we'll calculate sample sizes:
+
+   double alpha[] = { 0.5, 0.25, 0.1, 0.05, 0.01, 0.001, 0.0001, 0.00001 };
+
+For each value of alpha we can calculate two sample sizes: one where the
+sample variance is less than the true value by /diff/ and one
+where it is greater than the true value by /diff/.  Thanks to the
+asymmetric nature of the Chi Squared distribution these two values will
+not be the same, the difference in their calculation differs only in the
+sign of /diff/ that's passed to `find_degrees_of_freedom`.  Finally
+in this example we'll simply things, and let risk level /beta/ be the
+same as /alpha/:
+
+   cout << "\n\n"
+           "_______________________________________________________________\n"
+           "Confidence       Estimated          Estimated\n"
+           " Value (%)      Sample Size        Sample Size\n"
+           "                (lower one         (upper one\n"
+           "                 sided test)        sided test)\n"
+           "_______________________________________________________________\n";
+   //
+   // Now print out the data for the table rows.
+   //
+   for(unsigned i = 0; i < sizeof(alpha)/sizeof(alpha[0]); ++i)
+   {
+      // Confidence value:
+      cout << fixed << setprecision(3) << setw(10) << right << 100 * (1-alpha[i]);
+      // calculate df for a lower single sided test:
+      double df = chi_squared::find_degrees_of_freedom(
+         -diff, alpha[i], alpha[i], variance);
+      // convert to sample size:
+      double size = ceil(df) + 1;
+      // Print size:
+      cout << fixed << setprecision(0) << setw(16) << right << size;
+      // calculate df for an upper single sided test:
+      df = chi_squared::find_degrees_of_freedom(
+         diff, alpha[i], alpha[i], variance);
+      // convert to sample size:
+      size = ceil(df) + 1;
+      // Print size:
+      cout << fixed << setprecision(0) << setw(16) << right << size << endl;
+   }
+   cout << endl;
+
+For some example output, consider the
+[@http://www.itl.nist.gov/div898/handbook/prc/section2/prc23.htm
+silicon wafer data] from the __handbook.
+In this scenario a supplier of 100 ohm.cm silicon wafers claims
+that his fabrication  process can produce wafers with sufficient
+consistency so that the standard deviation of resistivity for
+the lot does not exceed 10 ohm.cm. A sample of N = 10 wafers taken
+from the lot has a standard deviation of 13.97 ohm.cm, and the question
+we ask ourselves is "How large would our sample have to be to reliably
+detect this difference?".
+
+To use our procedure above, we have to convert the
+standard deviations to variance (square them),
+after which the program output looks like this:
+
+[pre'''
+_____________________________________________________________
+Estimated sample sizes required for various confidence levels
+_____________________________________________________________
+
+True Variance                           =  100.00000
+Difference to detect                    =  95.16090
+
+
+_______________________________________________________________
+Confidence       Estimated          Estimated
+ Value (%)      Sample Size        Sample Size
+                (lower one         (upper one
+                 sided test)        sided test)
+_______________________________________________________________
+    50.000               2               2
+    75.000               2              10
+    90.000               4              32
+    95.000               5              51
+    99.000               7              99
+    99.900              11             174
+    99.990              15             251
+    99.999              20             330'''
+]
+
+In this case we are interested in a upper single sided test.
+So for example, if the maximum acceptable risk of falsely rejecting
+the null-hypothesis is 0.05 (Type I error), and the maximum acceptable
+risk of failing to reject the null-hypothesis is also 0.05
+(Type II error), we estimate that we would need a sample size of 51.
+
+[endsect] [/section:chi_sq_size Estimating the Required Sample Sizes for a Chi-Square Test for the Standard Deviation]
+
+[endsect] [/section:cs_eg Chi Squared Distribution]
+
+[/
+  Copyright 2006, 2013 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

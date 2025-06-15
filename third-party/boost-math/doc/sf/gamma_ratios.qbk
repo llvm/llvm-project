@@ -1,0 +1,98 @@
+[section:gamma_ratios Ratios of Gamma Functions]
+
+``
+#include <boost/math/special_functions/gamma.hpp>
+``
+
+   namespace boost{ namespace math{
+   
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma_ratio(T1 a, T2 b);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma_ratio(T1 a, T2 b, const ``__Policy``&);
+   
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma_delta_ratio(T1 a, T2 delta);
+   
+   template <class T1, class T2, class Policy>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma_delta_ratio(T1 a, T2 delta, const ``__Policy``&);
+   
+   }} // namespaces
+   
+[h4 Description]
+
+   template <class T1, class T2> 
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma_ratio(T1 a, T2 b);
+   
+   template <class T1, class T2, class ``__Policy``> 
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma_ratio(T1 a, T2 b, const ``__Policy``&);
+   
+Returns the ratio of gamma functions:
+
+[equation gamma_ratio0]
+
+[optional_policy]
+
+Internally this just calls `tgamma_delta_ratio(a, b-a)`.
+   
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma_delta_ratio(T1 a, T2 delta);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma_delta_ratio(T1 a, T2 delta, const ``__Policy``&);
+   
+Returns the ratio of gamma functions:
+
+[equation gamma_ratio1]
+
+[optional_policy]
+
+Note that the result is calculated accurately even when /delta/ is
+small compared to /a/: indeed even if /a+delta ~ a/.  The function is
+typically used when /a/ is large and /delta/ is very small.
+
+The return type of these functions is computed using the __arg_promotion_rules
+when T1 and T2 are different types, otherwise the result type is simple T1.
+
+[graph tgamma_delta_ratio]
+
+[h4 Accuracy]
+
+The following table shows the peak errors (in units of epsilon) 
+found on various platforms with various floating point types.
+Unless otherwise specified any floating point type that is narrower
+than the one shown will have __zero_error.
+
+[table_tgamma_delta_ratio]
+
+[table_tgamma_ratio]
+
+[h4 Testing]
+
+Accuracy tests use data generated at very high precision
+(with [@http://shoup.net/ntl/doc/RR.txt NTL RR class]
+set at 1000-bit precision: about 300 decimal digits)
+and a deliberately naive calculation of [Gamma](x)/[Gamma](y).  
+
+[h4 Implementation]
+
+The implementation of these functions is very similar to that of 
+__beta, and is based on combining similar power terms
+to improve accuracy and avoid spurious overflow/underflow.
+
+In addition there are optimisations for the situation where /delta/
+is a small integer: in which case this function is basically
+the reciprocal of a rising factorial, or where both arguments
+are smallish integers: in which case table lookup of factorials
+can be used to calculate the ratio.
+
+[endsect] [/section:gamma_ratios Ratios of Gamma Functions]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

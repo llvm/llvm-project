@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectView>ProjectFiles</ProjectView>
+    <PublishUrlHistory>\\hetpA\H%24\Distex\|\\hetp7\H%24\Distex\|\\hetp7\H%24\|I:\boost-sandbox\libs\math_functions\dot_net_example\Distex\|publish\</PublishUrlHistory>
+    <InstallUrlHistory>\\hetp7\H%24\</InstallUrlHistory>
+    <SupportUrlHistory>
+    </SupportUrlHistory>
+    <UpdateUrlHistory>
+    </UpdateUrlHistory>
+    <BootstrapperUrlHistory>
+    </BootstrapperUrlHistory>
+    <FallbackCulture>en-US</FallbackCulture>
+    <VerifyUploadedFiles>false</VerifyUploadedFiles>
+    <EnableSecurityDebugging>false</EnableSecurityDebugging>
+    <ErrorReportUrlHistory />
+  </PropertyGroup>
+  <PropertyGroup>
+    <ReferencePath>I:\boost-trunk\libs\math\dot_net_example\boost_math\</ReferencePath>
+  </PropertyGroup>
+</Project>

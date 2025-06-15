@@ -1,0 +1,20 @@
+[/..\example/../../../libs/math/doc/roots/elliptic_table_100_gcc_X64_SSE2.qbk
+Copyright 2015 Paul A. Bristow.
+Copyright 2015 John Maddock.
+Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt).
+]
+
+
+[h6 Program [@../../example/root_elliptic_finding.cpp root_elliptic_finding.cpp],
+ GNU C++ version 7.1.0, GNU libstdc++ version 20170502, Win32
+Compiled in optimise mode., _X64_SSE2]
+[table:elliptic root with radius 28 and arc length 300) for float, double, long double and cpp_bin_float_50 types, using _X64_SSE2
+[[][float][][][] [][double][][][] [][long d][][][] [][cpp50][][]]
+[[Algo     ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ]]
+[[TOMS748  ][  5][  328][1.24][ -1][ ][  8][  890][1.50][  0][ ][  8][ 1234][1.61][  4][ ][ 11][487500][1.57][ -3][ ]]
+[[Newton   ][  3][  359][1.35][ -1][ ][  4][  718][1.21][  1][ ][  4][  843][1.10][  1][ ][  5][379687][1.22][  0][ ]]
+[[Halley   ][  2][  265][[role blue 1.00]][  0][ ][  3][  593][[role blue 1.00]][  1][ ][  3][  765][[role blue 1.00]][  7][ ][  4][310937][[role blue 1.00]][  0][ ]]
+[[Schr'''&#xf6;'''der][  3][  343][1.29][ -1][ ][  4][  812][1.37][  0][ ][  4][ 1046][1.37][  3][ ][  5][390625][1.26][ -2][ ]]
+] [/end of table root]

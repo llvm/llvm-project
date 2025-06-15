@@ -1,0 +1,790 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Hypergeometric 1F1</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../hypergeometric.html" title="Hypergeometric Functions">
+<link rel="prev" href="hypergeometric_2f0.html" title="Hypergeometric 2F0">
+<link rel="next" href="hypergeometric_pfq.html" title="Hypergeometric pFq">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="hypergeometric_2f0.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../hypergeometric.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="hypergeometric_pfq.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.hypergeometric.hypergeometric_1f1"></a><a class="link" href="hypergeometric_1f1.html" title="Hypergeometric 1F1">Hypergeometric
+      <sub>1</sub><span class="emphasis"><em>F</em></span><sub>1</sub></a>
+</h3></div></div></div>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">hypergeometric_1F1</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span> <span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">hypergeometric_1F1</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">a</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">z</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">hypergeometric_1F1</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">a</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">z</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">hypergeometric_1F1_regularized</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">a</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">z</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">hypergeometric_1F1_regularized</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">a</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">z</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">log_hypergeometric_1F1</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">a</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">z</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">log_hypergeometric_1F1</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">a</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">z</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">log_hypergeometric_1F1</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">a</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">z</span><span class="special">,</span> <span class="keyword">int</span><span class="special">*</span> <span class="identifier">sign</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">log_hypergeometric_1F1</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">a</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">z</span><span class="special">,</span> <span class="keyword">int</span><span class="special">*</span> <span class="identifier">sign</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<h5>
+<a name="math_toolkit.hypergeometric.hypergeometric_1f1.h0"></a>
+        <span class="phrase"><a name="math_toolkit.hypergeometric.hypergeometric_1f1.description"></a></span><a class="link" href="hypergeometric_1f1.html#math_toolkit.hypergeometric.hypergeometric_1f1.description">Description</a>
+      </h5>
+<p>
+        </p>
+<div>
+   <script type="text/javascript" src="../../../graphs/hypergeometric_1f1/plotlyjs-bundle.js"></script>
+</div>
+<p>
+      </p>
+<p>
+        The function <code class="computeroutput"><span class="identifier">hypergeometric_1F1</span><span class="special">(</span><span class="identifier">a</span><span class="special">,</span>
+        <span class="identifier">b</span><span class="special">,</span> <span class="identifier">z</span><span class="special">)</span></code> returns
+        the non-singular solution to <a href="https://en.wikipedia.org/wiki/Confluent_hypergeometric_function" target="_top">Kummer's
+        equation</a>
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_2.svg" width="181" height="34"></object></span>
+        </p></blockquote></div>
+<p>
+        which for |<span class="emphasis"><em>z</em></span>| &lt; 1 has the hypergeometric series expansion
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_1.svg" width="234" height="38"></object></span>
+        </p></blockquote></div>
+<p>
+        where (<span class="emphasis"><em>a</em></span>)<sub><span class="emphasis"><em>n</em></span></sub> denotes rising factorial.
+        This function has the same definition as Mathematica's <code class="computeroutput"><span class="identifier">Hypergeometric1F1</span><span class="special">[</span><span class="identifier">a</span><span class="special">,</span>
+        <span class="identifier">b</span><span class="special">,</span> <span class="identifier">z</span><span class="special">]</span></code> and
+        Maple's <code class="computeroutput"><span class="identifier">KummerM</span><span class="special">(</span><span class="identifier">a</span><span class="special">,</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">z</span><span class="special">)</span></code>.
+      </p>
+<p>
+        The "regularized" versions of the function return:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_17.svg" width="313" height="44"></object></span>
+        </p></blockquote></div>
+<p>
+        The "log" versions of the function return:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_18.svg" width="119" height="20"></object></span>
+        </p></blockquote></div>
+<p>
+        When the optional <code class="computeroutput"><span class="identifier">sign</span></code> argument
+        is supplied it is set on exit to either +1 or -1 depending on the sign of
+        <sub>1</sub><span class="emphasis"><em>F</em></span><sub>1</sub>(<span class="emphasis"><em>a</em></span>, <span class="emphasis"><em>b</em></span>,
+        <span class="emphasis"><em>z</em></span>).
+      </p>
+<p>
+        Both the regularized and the logarithmic versions of these functions return
+        results without the spurious under/overflow that plague naive implementations.
+      </p>
+<h5>
+<a name="math_toolkit.hypergeometric.hypergeometric_1f1.h1"></a>
+        <span class="phrase"><a name="math_toolkit.hypergeometric.hypergeometric_1f1.known_issues"></a></span><a class="link" href="hypergeometric_1f1.html#math_toolkit.hypergeometric.hypergeometric_1f1.known_issues">Known
+        Issues</a>
+      </h5>
+<p>
+        This function is still very much the subject of active research, and a full
+        range of methods capable of calculating the function over its entire domain
+        are not yet available. We have worked extremely hard to ensure that problem
+        domains result in an exception being thrown (an <a class="link" href="../error_handling.html#math_toolkit.error_handling.evaluation_error">evaluation_error</a>)
+        rather than return a garbage result. Domains that are still unsolved include:
+      </p>
+<div class="informaltable"><table class="table">
+<colgroup>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                <p>
+                  domain
+                </p>
+              </th>
+<th>
+                <p>
+                  comment
+                </p>
+              </th>
+<th>
+                <p>
+                  example
+                </p>
+              </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_13.svg" width="101" height="16"></object></span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="emphasis"><em>a, b</em></span> and <span class="emphasis"><em>z</em></span> all large.
+                </p>
+              </td>
+<td>
+                <p>
+                  <sub>1</sub>F<sub>1</sub>(-814723.75, -13586.87890625, -15.87335205078125)
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_14.svg" width="89" height="16"></object></span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="emphasis"><em>a &lt; b</em></span>, <span class="emphasis"><em>b &gt; z</em></span>, this
+                  is really the same domain as above.
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_15.svg" width="78" height="16"></object></span>
+                </p>
+              </td>
+<td>
+                <p>
+                  There is a gap in between methods where no reliable implementation
+                  is possible, the issue becomes much worse for <span class="emphasis"><em>a</em></span>,
+                  <span class="emphasis"><em>b</em></span> and <span class="emphasis"><em>z</em></span> all large.
+                </p>
+              </td>
+<td>
+                <p>
+                  <sub>1</sub>F<sub>1</sub>(9057.91796875, -1252.51318359375, 15.87335205078125)
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_16.svg" width="98" height="18"></object></span>
+                </p>
+              </td>
+<td>
+                <p>
+                  This domain is mostly handled by A&amp;S 13.3.6 (see implementation
+                  notes below), but there are some values where either that series
+                  is non-convergent (most particularly for <span class="emphasis"><em>b</em></span>
+                  &lt; 0) or where the series becomes divergent after a few terms
+                  limiting the precision that can be achieved.
+                </p>
+              </td>
+<td>
+                <p>
+                  <sub>1</sub>F<sub>1</sub>(-5.9981750131794866e-15, 0.499999999999994, -240.42092034220695)
+                </p>
+              </td>
+</tr>
+</tbody>
+</table></div>
+<p>
+        The following graph illustrates the problem area for <span class="emphasis"><em>b &lt; 0</em></span>
+        and <span class="emphasis"><em>a,z &gt; 0</em></span>:
+      </p>
+<p>
+        </p>
+<div>
+        <script type="text/javascript" src="../../../graphs/hypergeometric_1f1/negative_b_incalculable.js"></script>
+        
+        <div id="fce5fa05-942c-4973-941f-2f3d25bcecb3" style="width: 800px; height: 600px;" class="plotly-graph-div"></div>
+        <script type="text/javascript">
+            (function(){
+                window.PLOTLYENV={'BASE_URL': 'https://plot.ly'};
+
+                var gd = document.getElementById('fce5fa05-942c-4973-941f-2f3d25bcecb3')
+                var resizeDebounce = null;
+
+                function resizePlot() {
+                    var bb = gd.getBoundingClientRect();
+                    Plotly.relayout(gd, {
+                        width: bb.width,
+                        height: bb.height
+                    });
+                }
+
+                
+                window.addEventListener('resize', function() {
+                    if (resizeDebounce) {
+                        window.clearTimeout(resizeDebounce);
+                    }
+                    resizeDebounce = window.setTimeout(resizePlot, 100);
+                });
+                
+
+                
+                Plotly.plot(gd,  {
+                   data: negative_b_incalculable.data,
+                   layout: negative_b_incalculable.layout,
+                   frames: negative_b_incalculable.frames,
+                    config: {"showLink": true, "linkText": "Export to plot.ly", "mapboxAccessToken": "pk.eyJ1IjoiY2hyaWRkeXAiLCJhIjoiY2lxMnVvdm5iMDA4dnhsbTQ5aHJzcGs0MyJ9.X9o_rzNLNesDxdra4neC_A"}
+                });
+                
+           }());
+        </script>
+    </div>
+<p>
+
+      </p>
+<h5>
+<a name="math_toolkit.hypergeometric.hypergeometric_1f1.h2"></a>
+        <span class="phrase"><a name="math_toolkit.hypergeometric.hypergeometric_1f1.testing"></a></span><a class="link" href="hypergeometric_1f1.html#math_toolkit.hypergeometric.hypergeometric_1f1.testing">Testing</a>
+      </h5>
+<p>
+        There are 3 main groups of tests:
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+            Spot tests for special inputs with known values.
+          </li>
+<li class="listitem">
+            Sanity checks which use integrals of hypergeometric functions of known
+            value. These are particularly useful since for fixed <span class="emphasis"><em>a</em></span>
+            and <span class="emphasis"><em>b</em></span> they evaluate <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(a,b,z)</em></span>
+            for all <span class="emphasis"><em>z</em></span>.
+          </li>
+<li class="listitem">
+            Testing against values precomputed using arbitrary precision arithmetic
+            and the <span class="emphasis"><em>pFq</em></span> series.
+          </li>
+</ul></div>
+<p>
+        We also have a <a href="../../../../tools/hypergeometric_1F1_error_plot.cpp" target="_top">small
+        program</a> for testing random values over a user-specified domain of
+        <span class="emphasis"><em>a</em></span>, <span class="emphasis"><em>b</em></span> and <span class="emphasis"><em>z</em></span>,
+        this program is also used for the error rate plots below and has been extremely
+        useful in fine-tuning the implementation.
+      </p>
+<p>
+        It should be noted however, that there are some domains for large negative
+        <span class="emphasis"><em>a</em></span> and <span class="emphasis"><em>b</em></span> that have poor test coverage
+        as we were simply unable to compute test values in reasonable time: it is
+        not uncommon for the <span class="emphasis"><em>pFq</em></span> series to cancel many hundreds
+        of digits and sometimes into the thousands of digits.
+      </p>
+<h5>
+<a name="math_toolkit.hypergeometric.hypergeometric_1f1.h3"></a>
+        <span class="phrase"><a name="math_toolkit.hypergeometric.hypergeometric_1f1.errors"></a></span><a class="link" href="hypergeometric_1f1.html#math_toolkit.hypergeometric.hypergeometric_1f1.errors">Errors</a>
+      </h5>
+<p>
+        We divide the domain of <sub>1</sub><span class="emphasis"><em>F</em></span><sub>1</sub> up into several domains to
+        explain the error rates.
+      </p>
+<p>
+        In the following graphs we ran 100000 random test cases over each domain,
+        note that the scatter plots show only the very worst errors as otherwise
+        the graphs are both incomprehensible and virtually unplottable (as in sudden
+        browser death).
+      </p>
+<p>
+        For 0 &lt; a,b,z the error rates are trivially small unless we are forced
+        to take steps to avoid very-slow convergence and use a method other than
+        direct evaluation of the series for performance reasons. Even so the errors
+        rates are broadly acceptable, while the scatter graph shows where the worst
+        errors are located:
+      </p>
+<p>
+        <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../graphs/hypergeometric_1f1/positive_abz_bins.svg" width="567" height="320"></object></span>
+        </p>
+<div>
+   <script type="text/javascript" src="../../../graphs/hypergeometric_1f1/positive_abz.js"></script>
+
+   <div id="87d8c26d-c743-4b69-8576-64f861bb7262" style="width: 800px; height: 600px;" class="plotly-graph-div"></div>
+   <script type="text/javascript">
+      (function () {
+         window.PLOTLYENV = { 'BASE_URL': 'https://plot.ly' };
+
+         var gd = document.getElementById('87d8c26d-c743-4b69-8576-64f861bb7262')
+         var resizeDebounce = null;
+
+         function resizePlot() {
+            var bb = gd.getBoundingClientRect();
+            Plotly.relayout(gd, {
+               width: bb.width,
+               height: bb.height
+            });
+         }
+
+
+         window.addEventListener('resize', function () {
+            if (resizeDebounce) {
+               window.clearTimeout(resizeDebounce);
+            }
+            resizeDebounce = window.setTimeout(resizePlot, 100);
+         });
+
+
+
+         Plotly.plot(gd, {
+            data: positive_abz.data,
+            layout: positive_abz.layout,
+            frames: positive_abz.frames,
+            config: { "showLink": true, "linkText": "Export to plot.ly", "mapboxAccessToken": "pk.eyJ1IjoiY2hyaWRkeXAiLCJhIjoiY2lxMnVvdm5iMDA4dnhsbTQ5aHJzcGs0MyJ9.X9o_rzNLNesDxdra4neC_A" }
+         });
+
+      }());
+   </script>
+</div>
+<p>
+
+      </p>
+<p>
+        For -1000 &lt; a &lt; 0 and 0 &lt; b,z &lt; 1000 the maximum error rates
+        are higher, but most are still low, and the worst errors are fairly evenly
+        distributed:
+      </p>
+<p>
+        <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../graphs/hypergeometric_1f1/negative_a_bins.svg" width="567" height="331"></object></span>
+        </p>
+<div>
+   <script type="text/javascript" src="../../../graphs/hypergeometric_1f1/negative_a.js"></script>
+
+   <div id="cc677464-acba-4deb-b026-ef0ea03f1259" style="width: 800px; height: 600px;" class="plotly-graph-div"></div>
+   <script type="text/javascript">
+      (function () {
+         window.PLOTLYENV = { 'BASE_URL': 'https://plot.ly' };
+
+         var gd = document.getElementById('cc677464-acba-4deb-b026-ef0ea03f1259')
+         var resizeDebounce = null;
+
+         function resizePlot() {
+            var bb = gd.getBoundingClientRect();
+            Plotly.relayout(gd, {
+               width: bb.width,
+               height: bb.height
+            });
+         }
+
+
+         window.addEventListener('resize', function () {
+            if (resizeDebounce) {
+               window.clearTimeout(resizeDebounce);
+            }
+            resizeDebounce = window.setTimeout(resizePlot, 100);
+         });
+
+
+
+         Plotly.plot(gd, {
+            data: negative_a.data,
+            layout: negative_a.layout,
+            frames: negative_a.frames,
+            config: { "showLink": true, "linkText": "Export to plot.ly", "mapboxAccessToken": "pk.eyJ1IjoiY2hyaWRkeXAiLCJhIjoiY2lxMnVvdm5iMDA4dnhsbTQ5aHJzcGs0MyJ9.X9o_rzNLNesDxdra4neC_A" }
+         });
+
+      }());
+   </script>
+</div>
+<p>
+
+      </p>
+<p>
+        For -1000 &lt; <span class="emphasis"><em>b</em></span> &lt; 0 and <span class="emphasis"><em>a</em></span>,<span class="emphasis"><em>z</em></span>
+        &gt; 0 the errors are mostly low at double precision except near the "unimplementable
+        zone". Note however, that the some of the methods used here fail to
+        converge to much better than double precision.
+      </p>
+<p>
+        <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../graphs/hypergeometric_1f1/negative_b_bins.svg" width="567" height="319"></object></span>
+        </p>
+<div>
+        
+        <script type="text/javascript" src="../../../graphs/hypergeometric_1f1/negative_b.js"></script>
+        
+        <div id="49ba2424-47a3-454d-ba72-b46ded00693f" style="width: 800px; height: 600px;" class="plotly-graph-div"></div>
+        <script type="text/javascript">
+            (function(){
+                window.PLOTLYENV={'BASE_URL': 'https://plot.ly'};
+
+                var gd = document.getElementById('49ba2424-47a3-454d-ba72-b46ded00693f')
+                var resizeDebounce = null;
+
+                function resizePlot() {
+                    var bb = gd.getBoundingClientRect();
+                    Plotly.relayout(gd, {
+                        width: bb.width,
+                        height: bb.height
+                    });
+                }
+
+                
+                window.addEventListener('resize', function() {
+                    if (resizeDebounce) {
+                        window.clearTimeout(resizeDebounce);
+                    }
+                    resizeDebounce = window.setTimeout(resizePlot, 100);
+                });
+                
+
+                
+                Plotly.plot(gd,  {
+                   data: negative_b.data,
+                   layout: negative_b.layout,
+                   frames: negative_b.frames,
+                    config: {"showLink": true, "linkText": "Export to plot.ly", "mapboxAccessToken": "pk.eyJ1IjoiY2hyaWRkeXAiLCJhIjoiY2lxMnVvdm5iMDA4dnhsbTQ5aHJzcGs0MyJ9.X9o_rzNLNesDxdra4neC_A"}
+                });
+                
+           }());
+        </script>
+    </div>
+<p>
+
+      </p>
+<p>
+        For both <span class="emphasis"><em>a</em></span> and <span class="emphasis"><em>b</em></span> less than zero,
+        the errors the worst errors are clustered in a "difficult zone"
+        with <span class="emphasis"><em>b &lt; a</em></span> and <span class="emphasis"><em>z</em></span> ≈ <span class="emphasis"><em>a</em></span>:
+      </p>
+<p>
+        <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../graphs/hypergeometric_1f1/negative_ab_bins.svg" width="461" height="280"></object></span>
+        <body>
+        <script type="text/javascript" src="../../../graphs/hypergeometric_1f1/negative_ab.js"></script>
+        
+        <div id="2867e84a-7d1d-4110-b28a-fb718dbd65ca" style="width: 800px; height: 600px;" class="plotly-graph-div"></div>
+        <script type="text/javascript">
+            (function(){
+                window.PLOTLYENV={'BASE_URL': 'https://plot.ly'};
+
+                var gd = document.getElementById('2867e84a-7d1d-4110-b28a-fb718dbd65ca')
+                var resizeDebounce = null;
+
+                function resizePlot() {
+                    var bb = gd.getBoundingClientRect();
+                    Plotly.relayout(gd, {
+                        width: bb.width,
+                        height: bb.height
+                    });
+                }
+
+                
+                window.addEventListener('resize', function() {
+                    if (resizeDebounce) {
+                        window.clearTimeout(resizeDebounce);
+                    }
+                    resizeDebounce = window.setTimeout(resizePlot, 100);
+                });
+                
+
+                
+                Plotly.plot(gd,  {
+                   data: negative_ab.data,
+                   layout: negative_ab.layout,
+                   frames: negative_ab.frames,
+                    config: {"showLink": true, "linkText": "Export to plot.ly", "mapboxAccessToken": "pk.eyJ1IjoiY2hyaWRkeXAiLCJhIjoiY2lxMnVvdm5iMDA4dnhsbTQ5aHJzcGs0MyJ9.X9o_rzNLNesDxdra4neC_A"}
+                });
+                
+           }());
+        </script>
+    </body>
+
+      </p>
+<h5>
+<a name="math_toolkit.hypergeometric.hypergeometric_1f1.h4"></a>
+        <span class="phrase"><a name="math_toolkit.hypergeometric.hypergeometric_1f1.implementation"></a></span><a class="link" href="hypergeometric_1f1.html#math_toolkit.hypergeometric.hypergeometric_1f1.implementation">Implementation</a>
+      </h5>
+<p>
+        The implementation for this function is remarkably complex; readers will
+        have to refer to the code for the transitions between methods, as we can
+        only give an overview here.
+      </p>
+<p>
+        In almost all cases where <span class="emphasis"><em>z &lt; 0</em></span> we use <a href="https://en.wikipedia.org/wiki/Confluent_hypergeometric_function" target="_top">Kummer's
+        relation</a> to make <span class="emphasis"><em>z</em></span> positive:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_12.svg" width="189" height="16"></object></span>
+        </p></blockquote></div>
+<p>
+        The main series representation
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_1.svg" width="234" height="38"></object></span>
+        </p></blockquote></div>
+<p>
+        is used only when
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+            we are sure that it is convergent and not subject to excessive cancellation,
+            and
+          </li>
+<li class="listitem">
+            there is no other better method available.
+          </li>
+</ul></div>
+<p>
+        The implementation of this series is complicated by the fact that for <span class="emphasis"><em>b</em></span>
+        &lt; 0 then what appears to be a fully converged series can in fact suddenly
+        jump back to life again as <span class="emphasis"><em>b</em></span> crosses the origin.
+      </p>
+<p>
+        A&amp;S 13.3.6 gives
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_3.svg" width="614" height="39"></object></span>
+        </p></blockquote></div>
+<p>
+        which is particularly useful for <span class="emphasis"><em>a ≅ b</em></span> and <span class="emphasis"><em>z
+        &gt; 0</em></span>, or <span class="emphasis"><em>a</em></span> ≪ 1, and <span class="emphasis"><em>z
+        &lt; 0</em></span>.
+      </p>
+<p>
+        Then we have Tricomi's approximation (given in simplified form in A&amp;S
+        13.3.7) <a class="link" href="hypergeometric_refs.html" title="Hypergeometric References">(7)</a>
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_4.svg" width="356" height="38"></object></span>
+        </p></blockquote></div>
+<p>
+        with
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_5.svg" width="390" height="33"></object></span>
+        </p></blockquote></div>
+<p>
+        and
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_6.svg" width="370" height="16"></object></span>
+        </p></blockquote></div>
+<p>
+        With <span class="emphasis"><em>E<sub>v</sub></em></span> defined as:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_7.svg" width="149" height="86"></object></span>
+        </p></blockquote></div>
+<p>
+        This approximation is especially effective when <span class="emphasis"><em>a &lt; 0</em></span>.
+      </p>
+<p>
+        For <span class="emphasis"><em>a</em></span> and <span class="emphasis"><em>b</em></span> both large and positive
+        and somewhat similar in size then an expansion in terms of gamma functions
+        can be used <a class="link" href="hypergeometric_refs.html" title="Hypergeometric References">(6)</a>:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_8.svg" width="349" height="43"></object></span>
+        </p></blockquote></div>
+<p>
+        For <span class="emphasis"><em>z</em></span> large we have the asymptotic expansion:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_9.svg" width="261" height="43"></object></span>
+        </p></blockquote></div>
+<p>
+        which is a special case of the gamma function expansion above.
+      </p>
+<p>
+        In the situation where <code class="computeroutput"><span class="identifier">ab</span><span class="special">/</span><span class="identifier">z</span></code> is reasonably
+        small then Luke's rational approximation is used - this is too complex to
+        document here, refer either to the code or the original paper <a class="link" href="hypergeometric_refs.html" title="Hypergeometric References">(3)</a>.
+      </p>
+<p>
+        The special case <sub>1</sub><span class="emphasis"><em>F</em></span><sub>1</sub>(1, <span class="emphasis"><em>b</em></span>, -<span class="emphasis"><em>z</em></span>)
+        is treated via Luke's Pade approximation <a class="link" href="hypergeometric_refs.html" title="Hypergeometric References">(3)</a>.
+      </p>
+<p>
+        That effectively completes the "direct" methods used, the remaining
+        areas are treated indirectly via recurrence relations. These require extreme
+        care in their use, as they often change the direction of stability, or else
+        are not stable at all. Sometimes this is a well defined and characterized
+        change in direction: for example with <span class="emphasis"><em>a,b</em></span> and <span class="emphasis"><em>z</em></span>
+        all positive recurrence on <span class="emphasis"><em>a</em></span> via
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_10.svg" width="429" height="16"></object></span>
+        </p></blockquote></div>
+<p>
+        abruptly changes from stable forwards recursion to stable backwards if <span class="emphasis"><em>2a-b+z</em></span>
+        changes sign. Thus recurrence on <span class="emphasis"><em>a</em></span>, even when <sub>1</sub><span class="emphasis"><em>F</em></span><sub>1</sub>(<span class="emphasis"><em>a</em></span>+<span class="emphasis"><em>N</em></span>,
+        <span class="emphasis"><em>b</em></span>, <span class="emphasis"><em>z</em></span>) is strictly increasing, needs
+        careful handling as <span class="emphasis"><em>a</em></span> → 0.
+      </p>
+<p>
+        The transitory nature of the stable recurrence relations is well documented
+        in the literature, for example <a class="link" href="hypergeometric_refs.html" title="Hypergeometric References">(10)</a>
+        gives many examples, including the anomalous behaviour of recurrence on
+        <span class="emphasis"><em>a</em></span> and <span class="emphasis"><em>b</em></span> for large <span class="emphasis"><em>z</em></span>
+        as first documented by Gauchi <a class="link" href="hypergeometric_refs.html" title="Hypergeometric References">(12)</a>.
+        Gauchi also provides the definitive reference on 3-term recurrence relations
+        in general in <a class="link" href="hypergeometric_refs.html" title="Hypergeometric References">(11)</a>.
+      </p>
+<p>
+        Unfortunately, not all recurrence stabilities are so well defined. For example,
+        when considering <sub>1</sub>F<sub>1</sub>(<span class="emphasis"><em>a</em></span>, -<span class="emphasis"><em>b</em></span>, <span class="emphasis"><em>z</em></span>)
+        it would be convenient to use the continued fractions associated with the
+        recurrence relations to calculate <sub>1</sub>F<sub>1</sub>(<span class="emphasis"><em>a</em></span>, -<span class="emphasis"><em>b</em></span>,
+        <span class="emphasis"><em>z</em></span>) / <sub>1</sub>F<sub>1</sub>(<span class="emphasis"><em>a</em></span>, 1-<span class="emphasis"><em>b</em></span>,
+        <span class="emphasis"><em>z</em></span>) and then normalize either by iterating forwards on
+        <span class="emphasis"><em>b</em></span> until <span class="emphasis"><em>b &gt; 0</em></span> and comparison
+        with a reference value, or by using the Wronskian
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../equations/hypergeometric_1f1_11.svg" width="564" height="33"></object></span>
+        </p></blockquote></div>
+<p>
+        which is of course the well known Miller's method <a class="link" href="hypergeometric_refs.html" title="Hypergeometric References">(12)</a>.
+      </p>
+<p>
+        Unfortunately, stable forwards recursion on <span class="emphasis"><em>b</em></span> is stable
+        only for <span class="emphasis"><em>|b| &lt;&lt; |z|</em></span>, as <span class="emphasis"><em>|b|</em></span>
+        increases in magnitude it passes through a region where recursion is unstable
+        in both directions before eventually becoming stable in the backwards direction
+        (at least for a while!). This transition is moderated not by a change of
+        sign in the recurrence coefficients themselves, but by a change in the behaviour
+        of the <span class="emphasis"><em>values</em></span> of <sub>1</sub>F<sub>1</sub> - from alternating in sign when
+        <span class="emphasis"><em>|b|</em></span> is small to having the same sign when <span class="emphasis"><em>b</em></span>
+        is larger. During the actual transition, <sub>1</sub>F<sub>1</sub> will either pass through a zero
+        or a minima depending on whether b is even or odd (if there is a minima at
+        <sub>1</sub>F<sub>1</sub>(a, b, z) then there is necessarily a zero at <sub>1</sub>F<sub>1</sub>(a+1, b+1, z) as per
+        the <a href="https://dlmf.nist.gov/13.3#E15" target="_top">derivative of the function</a>).
+        As a result the behaviour of the recurrence relations is almost impossible
+        to reason about in this area, and we are left to using heuristic based approaches
+        to "guess" which region we are in.
+      </p>
+<p>
+        In this implementation we use recurrence relations as follows:
+      </p>
+<p>
+        For <span class="emphasis"><em>a,b,z &gt; 0</em></span> and large we can either:
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+            Make <span class="emphasis"><em>0 &lt; a &lt; 1</em></span> and <span class="emphasis"><em>b &gt; z</em></span>
+            and evaluate the defining series directly, or
+          </li>
+<li class="listitem">
+            The gamma function approximation has decent convergence and accuracy
+            for <span class="emphasis"><em>2b - 1 &lt; a &lt; 2b &lt; z</em></span>, so we can move
+            <span class="emphasis"><em>a</em></span> and <span class="emphasis"><em>b</em></span> into this region, or
+          </li>
+<li class="listitem">
+            We can recurse on <span class="emphasis"><em>b</em></span> alone so that <span class="emphasis"><em>b-1
+            &lt; a &lt; b</em></span> and use A&amp;S 13.3.6 as long as <span class="emphasis"><em>z</em></span>
+            is not too large.
+          </li>
+</ul></div>
+<p>
+        For <span class="emphasis"><em>b &lt; 0</em></span> and <span class="emphasis"><em>a</em></span> tiny we would
+        normally use A&amp;S 13.3.6, but when that is non-convergent for some inputs
+        we can use the forward recurrence relation on <span class="emphasis"><em>b</em></span> to calculate
+        the ratio <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(a, -b, z)/<sub>1</sub>F<sub>1</sub>(a, 1-b, z)</em></span> and then iterate
+        forwards until <span class="emphasis"><em>b &gt; 0</em></span> and compute a reference value
+        and normalize (Millers Method). In the same domain when <span class="emphasis"><em>b</em></span>
+        is near -1 we can use a single backwards recursion on <span class="emphasis"><em>b</em></span>
+        to compute <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(a, -b, z)</em></span> from <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(a, 2-b,
+        z)</em></span> and <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(<span class="emphasis"><em>a</em></span>, 1-<span class="emphasis"><em>b</em></span>,
+        <span class="emphasis"><em>z</em></span>)</em></span> even though technically we are recursing
+        in the unstable direction.
+      </p>
+<p>
+        For <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(-N, b, z)</em></span> and integer <span class="emphasis"><em>N</em></span>
+        then backwards recursion from <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(0, b, z)</em></span> and <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(-1,
+        b, z)</em></span> works well.
+      </p>
+<p>
+        For <span class="emphasis"><em>a</em></span> or <span class="emphasis"><em>b</em></span> &lt; 0 and if all the
+        direct methods have failed, then we use various fallbacks:
+      </p>
+<p>
+        For <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(-a, b, z)</em></span> we can use backwards recursion on
+        <span class="emphasis"><em>a</em></span> as long as <span class="emphasis"><em>b &gt; z</em></span>, otherwise
+        a more complex scheme is required which starts from <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(-a + N,
+        b + M, z)</em></span>, and recurses backwards in up to 3 stages: first on
+        <span class="emphasis"><em>a</em></span>, then on <span class="emphasis"><em>a</em></span> and <span class="emphasis"><em>b</em></span>
+        together, and finally on <span class="emphasis"><em>b</em></span> alone.
+      </p>
+<p>
+        For <span class="emphasis"><em>b &lt; 0</em></span> we have no good methods in some domains
+        (see the unsolved issues above). However in some circumstances we can either
+        use:
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+            3-stage backwards recursion on both <span class="emphasis"><em>a</em></span>, <span class="emphasis"><em>a</em></span>
+            and <span class="emphasis"><em>b</em></span> and then <span class="emphasis"><em>b</em></span> as above.
+          </li>
+<li class="listitem">
+            Calculate the ratio <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(a, b, z) / <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(a-1, b-1,
+            z)</em></span></em></span> via backwards recurrence when z is small, and
+            then normalize via the Wronskian above (Miller's method).
+          </li>
+<li class="listitem">
+            Calculate the ratio <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(a, b, z) / <span class="emphasis"><em><sub>1</sub>F<sub>1</sub>(a+1, b+1,
+            z)</em></span></em></span> via forwards recurrence when z is large, and
+            then normalize by iterating until b &gt; 1 and comparing to a reference
+            value.
+          </li>
+</ul></div>
+<p>
+        The latter two methods use a lookup table to determine whether inputs are
+        in either of the domains or neither. Unfortunately the methods are basically
+        limited to double precision: calculation of the ratios require iteration
+        <span class="emphasis"><em>towards</em></span> the no-mans-land between the two methods where
+        iteration is unstable in both directions. As a result, only low-precision
+        results which require few iterations to calculate the ratio are available.
+      </p>
+<p>
+        If all else fails, then we use a checked series summation which will raise
+        an <a class="link" href="../error_handling.html#math_toolkit.error_handling.evaluation_error">evaluation_error</a>
+        if more than half the digits are destroyed by cancellation.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="hypergeometric_2f0.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../hypergeometric.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="hypergeometric_pfq.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>
