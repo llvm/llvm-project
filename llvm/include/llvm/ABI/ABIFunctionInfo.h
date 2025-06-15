@@ -14,26 +14,141 @@
 #ifndef LLVM_ABI_ABIFUNCTIONINFO_H
 #define LLVM_ABI_ABIFUNCTIONINFO_H
 
-#include "ABIInfo.h"
+#include "llvm/ABI/Types.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/TrailingObjects.h"
 
 namespace llvm {
 namespace abi {
 
-struct FunctionABIInfo {
-  llvm::CallingConv::ID CC = llvm::CallingConv::C;
-  llvm::CallingConv::ID EffectiveCC = llvm::CallingConv::C;
+/// ABIArgInfo - Helper class to encapsulate information about how a
+/// specific type should be passed to or returned from a function.
+class ABIArgInfo {
+public:
+  enum Kind {
+    Direct,
+    Extend,
+    Indirect,
+    Ignore,
+    Expand,
+    CoerceAndExpand,
+    InAlloca
+  };
 
-  // Core ABI attributes
-  bool NoReturn = false;
-  bool NoUnwind = false;
+private:
+  Kind TheKind;
+  const Type *CoercionType;
+  bool InReg : 1;
+  bool PaddingInReg : 1;
+  bool SignExt : 1;
+  bool ZeroExt : 1;
+  unsigned IndirectAlign : 16;
+  bool IndirectByVal : 1;
+
+  ABIArgInfo(Kind K = Direct)
+      : TheKind(K), CoercionType(nullptr), InReg(false), PaddingInReg(false),
+        SignExt(false), ZeroExt(false), IndirectAlign(0), IndirectByVal(false) {
+  }
+
+public:
+  static ABIArgInfo getDirect(const Type *T = nullptr) {
+    ABIArgInfo AI(Direct);
+    AI.CoercionType = T;
+    return AI;
+  }
+
+  static ABIArgInfo getDirectInReg(const Type *T = nullptr) {
+    ABIArgInfo AI = getDirect(T);
+    AI.InReg = true;
+    return AI;
+  }
+
+  static ABIArgInfo getExtend(const Type *T = nullptr) {
+    ABIArgInfo AI(Extend);
+    AI.CoercionType = T;
+    return AI;
+  }
+
+  ABIArgInfo &setSignExt(bool SignExtend = true) {
+    this->SignExt = SignExtend;
+    if (SignExtend)
+      this->ZeroExt = false;
+    return *this;
+  }
+
+  ABIArgInfo &setZeroExt(bool ZeroExtend = true) {
+    this->ZeroExt = ZeroExtend;
+    if (ZeroExtend)
+      this->SignExt = false;
+    return *this;
+  }
+
+  static ABIArgInfo getIndirect(unsigned Align = 0, bool ByVal = true) {
+    ABIArgInfo AI(Indirect);
+    AI.IndirectAlign = Align;
+    AI.IndirectByVal = ByVal;
+    return AI;
+  }
+
+  static ABIArgInfo getIndirectInReg(unsigned Align = 0, bool ByVal = true) {
+    ABIArgInfo AI = getIndirect(Align, ByVal);
+    AI.InReg = true;
+    return AI;
+  }
+
+  static ABIArgInfo getIgnore() { return ABIArgInfo(Ignore); }
+  static ABIArgInfo getExpand() { return ABIArgInfo(Expand); }
+
+  static ABIArgInfo getCoerceAndExpand(const Type *CoercionType) {
+    ABIArgInfo AI(CoerceAndExpand);
+    AI.CoercionType = CoercionType;
+    return AI;
+  }
+
+  Kind getKind() const { return TheKind; }
+  bool isDirect() const { return TheKind == Direct; }
+  bool isIndirect() const { return TheKind == Indirect; }
+  bool isIgnore() const { return TheKind == Ignore; }
+  bool isExpand() const { return TheKind == Expand; }
+  bool isCoerceAndExpand() const { return TheKind == CoerceAndExpand; }
+  bool isInAlloca() const { return TheKind == InAlloca; }
+  bool isInReg() const { return InReg; }
+  bool hasPaddingInReg() const { return PaddingInReg; }
+
+  unsigned getIndirectAlign() const {
+    assert(isIndirect() && "Invalid Kind!");
+    return IndirectAlign;
+  }
+
+  bool getIndirectByVal() const {
+    assert(isIndirect() && "Invalid Kind!");
+    return IndirectByVal;
+  }
+
+  const Type *getCoerceToType() const {
+    assert((isDirect() || isCoerceAndExpand()) && "Invalid Kind!");
+    return CoercionType;
+  }
+
+  ABIArgInfo &setInReg(bool InReg = true) {
+    this->InReg = InReg;
+    return *this;
+  }
+
+  ABIArgInfo &setPaddingInReg(bool HasPadding = true) {
+    this->PaddingInReg = HasPadding;
+    return *this;
+  }
+};
+
+/// Function-level ABI attributes that affect argument/return passing
+struct ABICallAttributes {
+  CallingConv::ID CC = CallingConv::C;
+  CallingConv::ID EffectiveCC = CallingConv::C;
+
   bool HasSRet = false;
-  bool IsVariadic = false;
   bool IsInstanceMethod = false;
-  // Are these ABI Relavent(?)
   bool IsChainCall = false;
   bool IsDelegateCall = false;
 
@@ -41,19 +156,20 @@ struct FunctionABIInfo {
   bool HasRegParm = false;
   unsigned RegParm = 0;
   bool NoCallerSavedRegs = false;
-  // Security/extensions(are they ABI related?)
+
+  // Security extensions
   bool NoCfCheck = false;
   bool CmseNSCall = false;
 
-  // Optimization hints
+  // Memory management
   bool ReturnsRetained = false;
   unsigned MaxVectorWidth = 0;
 
-  FunctionABIInfo() = default;
-  FunctionABIInfo(llvm::CallingConv::ID CC) : CC(CC), EffectiveCC(CC) {}
+  ABICallAttributes() = default;
+  ABICallAttributes(CallingConv::ID CC) : CC(CC), EffectiveCC(CC) {}
 };
 
-// Not an Immediate requirement for BPF
+/// Information about required vs optional arguments for variadic functions
 struct RequiredArgs {
 private:
   unsigned NumRequired;
@@ -72,6 +188,7 @@ public:
   }
 
   bool allowsOptionalArgs() const { return NumRequired != All; }
+  bool isVariadic() const { return allowsOptionalArgs(); }
 
   unsigned getNumRequiredArgs() const {
     return allowsOptionalArgs() ? NumRequired : 0;
@@ -82,8 +199,7 @@ public:
   }
 };
 
-// Implementation detail of ABIFunctionInfo, factored out so it can be named
-// in the TrailingObjects base class of ABIFunctionInfo.
+/// Argument information for ABIFunctionInfo
 struct ABIFunctionInfoArgInfo {
   const Type *ABIType;
   ABIArgInfo ArgInfo;
@@ -96,17 +212,15 @@ struct ABIFunctionInfoArgInfo {
 };
 
 class ABIFunctionInfo final
-    : public llvm::FoldingSetNode,
-      private TrailingObjects<ABIFunctionInfo, ABIFunctionInfoArgInfo> {
+    : private TrailingObjects<ABIFunctionInfo, ABIFunctionInfoArgInfo> {
   typedef ABIFunctionInfoArgInfo ArgInfo;
 
 private:
   const Type *ReturnType;
   ABIArgInfo ReturnInfo;
   unsigned NumArgs;
-  FunctionABIInfo ABIInfo;
-  RequiredArgs
-      Required; // For Variadic Functions but we can focus on this later
+  ABICallAttributes CallAttrs;
+  RequiredArgs Required;
 
   ABIFunctionInfo(const Type *RetTy, unsigned NumArguments)
       : ReturnType(RetTy), ReturnInfo(ABIArgInfo::getDirect()),
@@ -116,24 +230,25 @@ private:
 
 public:
   static ABIFunctionInfo *
-  create(llvm::CallingConv::ID CC, const Type *ReturnType,
-         llvm::ArrayRef<const Type *> ArgTypes,
-         const FunctionABIInfo &ABIInfo = FunctionABIInfo(),
+  create(CallingConv::ID CC, const Type *ReturnType,
+         ArrayRef<const Type *> ArgTypes,
+         const ABICallAttributes &CallAttrs = ABICallAttributes(),
          RequiredArgs Required = RequiredArgs());
 
   const Type *getReturnType() const { return ReturnType; }
   ABIArgInfo &getReturnInfo() { return ReturnInfo; }
   const ABIArgInfo &getReturnInfo() const { return ReturnInfo; }
 
-  llvm::CallingConv::ID getCallingConvention() const { return ABIInfo.CC; }
-
-  const FunctionABIInfo &getExtInfo() const { return ABIInfo; }
+  CallingConv::ID getCallingConvention() const { return CallAttrs.CC; }
+  const ABICallAttributes &getCallAttributes() const { return CallAttrs; }
   RequiredArgs getRequiredArgs() const { return Required; }
-  llvm::ArrayRef<ArgInfo> arguments() const {
+  bool isVariadic() const { return Required.isVariadic(); }
+
+  ArrayRef<ArgInfo> arguments() const {
     return {getTrailingObjects<ArgInfo>(), NumArgs};
   }
 
-  llvm::MutableArrayRef<ArgInfo> arguments() {
+  MutableArrayRef<ArgInfo> arguments() {
     return {getTrailingObjects<ArgInfo>(), NumArgs};
   }
 
@@ -146,27 +261,11 @@ public:
     assert(Index < NumArgs && "Invalid argument index");
     return arguments()[Index];
   }
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    ID.AddInteger(static_cast<unsigned>(ABIInfo.CC));
-    ID.AddPointer(ReturnType);
-    ID.AddInteger(static_cast<unsigned>(ReturnInfo.getKind()));
-    if (ReturnInfo.getCoerceToType())
-      ID.AddPointer(ReturnInfo.getCoerceToType());
-    ID.AddInteger(NumArgs);
-    for (const auto &ArgInfo : arguments()) {
-      ID.AddPointer(ArgInfo.ABIType);
-      ID.AddInteger(static_cast<unsigned>(ArgInfo.ArgInfo.getKind()));
-      if (ArgInfo.ArgInfo.getCoerceToType())
-        ID.AddPointer(ArgInfo.ArgInfo.getCoerceToType());
-    }
-    ID.AddInteger(Required.getNumRequiredArgs());
-    ID.AddBoolean(Required.allowsOptionalArgs());
-    ID.AddBoolean(ABIInfo.NoReturn);
-    ID.AddBoolean(ABIInfo.IsVariadic);
-    // TODO: Add more flags
-  }
+
+  unsigned getNumArgs() const { return NumArgs; }
 };
+
 } // namespace abi
 } // namespace llvm
 
-#endif // !LLVM_ABI_ABIFUNCTIONINFO_H
+#endif // LLVM_ABI_ABIFUNCTIONINFO_H

@@ -28,7 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
-namespace mapper {
+namespace CodeGen {
 
 /// Main entry point for converting Clang QualType to LLVM ABI Type.
 /// This method performs type canonicalization, caching, and dispatches
@@ -164,7 +164,8 @@ QualTypeMapper::convertArrayType(const clang::ArrayType *AT) {
 /// \return LLVM ABI VectorType with element type, count, and alignment
 const llvm::abi::Type *QualTypeMapper::convertVectorType(const VectorType *VT) {
   const llvm::abi::Type *ElementType = convertType(VT->getElementType());
-  uint64_t NumElements = VT->getNumElements();
+  llvm::ElementCount NumElements =
+      llvm::ElementCount::getFixed(VT->getNumElements());
 
   llvm::Align VectorAlign = getTypeAlign(QualType(VT, 0));
 
@@ -285,39 +286,13 @@ QualTypeMapper::convertPointerType(const clang::PointerType *PT) {
 /// \return LLVM ABI IntegerType representing the enum's underlying type
 const llvm::abi::Type *
 QualTypeMapper::convertEnumType(const clang::EnumType *ET) {
-  if (!ET)
-    return Builder.getIntegerType(32, llvm::Align(4), true);
   const EnumDecl *ED = ET->getDecl();
-  if (!ED)
-    return Builder.getIntegerType(32, llvm::Align(4), true);
-  if (ED->isInvalidDecl())
-    return Builder.getIntegerType(32, llvm::Align(4), true);
-
-  if (!ED->isComplete()) {
-    if (ED->isFixed()) {
-      QualType UnderlyingType = ED->getIntegerType();
-      if (!UnderlyingType.isNull()) {
-        return convertType(UnderlyingType);
-      }
-    }
-    return Builder.getIntegerType(32, llvm::Align(4), true);
-  }
   QualType UnderlyingType = ED->getIntegerType();
-
-  if (UnderlyingType.isNull())
-    UnderlyingType = ED->getPromotionType();
 
   if (UnderlyingType.isNull())
     UnderlyingType = ASTCtx.IntTy;
 
-  if (const auto *BT = dyn_cast<BuiltinType>(UnderlyingType.getTypePtr()))
-    return convertBuiltinType(BT);
-
-  uint64_t TypeSize = ASTCtx.getTypeSize(UnderlyingType);
-  llvm::Align TypeAlign = getTypeAlign(UnderlyingType);
-  bool IsSigned = UnderlyingType->isSignedIntegerType();
-
-  return Builder.getIntegerType(TypeSize, TypeAlign, IsSigned);
+  return convertType(UnderlyingType);
 }
 
 /// Converts plain C structs and C++ classes without inheritance.
@@ -400,5 +375,5 @@ void QualTypeMapper::computeFieldInfo(
   }
 }
 
-} // namespace mapper
+} // namespace CodeGen
 } // namespace clang
