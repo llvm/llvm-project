@@ -163,3 +163,11 @@ void MCAsmInfo::printSpecifierExpr(raw_ostream &OS,
   // migrate to MCAsmInfo::printSpecifierExpr.
   Expr.printImpl(OS, this);
 }
+
+bool MCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
+                                          MCValue &Res,
+                                          const MCAssembler *Asm) const {
+  // TODO: Remove after all targets that use MCSpecifierExpr migrate to
+  // MCAsmInfo::evaluateAsRelocatableImpl.
+  return Expr.evaluateAsRelocatableImpl(Res, Asm);
+}

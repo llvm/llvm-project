@@ -680,7 +680,10 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     return true;
   }
   case Specifier:
-    return cast<MCSpecifierExpr>(this)->evaluateAsRelocatableImpl(Res, Asm);
+    // Fold the expression during relocation generation. As parse time Asm might
+    // be null, and targets should not rely on the folding.
+    return Asm && Asm->getContext().getAsmInfo()->evaluateAsRelocatableImpl(
+                      cast<MCSpecifierExpr>(*this), Res, Asm);
   }
 
   llvm_unreachable("Invalid assembly expression kind!");
