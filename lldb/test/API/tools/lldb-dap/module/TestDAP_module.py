@@ -54,7 +54,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
             return symbol_regex.match(program_module["symbolStatus"])
 
         if expect_debug_info_size:
-            self.waitUntil(checkSymbolsLoadedWithSize)
+            self.wait_until(checkSymbolsLoadedWithSize)
         active_modules = self.dap_server.get_modules()
         program_module = active_modules[program_basename]
         self.assertEqual(program_basename, program_module["name"])
