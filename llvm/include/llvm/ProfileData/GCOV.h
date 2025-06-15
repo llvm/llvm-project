@@ -271,6 +271,16 @@ public:
   DenseSet<const GCOVBlock *> visited;
 };
 
+/// GCOVLocation - Represent file of lines same with block_location_info in gcc.
+class GCOVLocation {
+public:
+  GCOVLocation(unsigned idx) : srcIdx(idx) {}
+
+public:
+  unsigned srcIdx;
+  SmallVector<uint32_t, 4> lines;
+};
+
 /// GCOVBlock - Collects block information.
 class GCOVBlock {
 public:
@@ -281,8 +291,13 @@ public:
 
   GCOVBlock(uint32_t N) : number(N) {}
 
-  void addLine(uint32_t N) { lines.push_back(N); }
-  uint32_t getLastLine() const { return lines.back(); }
+  void addLine(uint32_t N) {
+    locations.back().lines.push_back(N);
+    lastLine = N;
+  }
+  void addFile(unsigned fileIdx) { locations.emplace_back(fileIdx); }
+
+  uint32_t getLastLine() const { return lastLine; }
   uint64_t getCount() const { return count; }
 
   void addSrcEdge(GCOVArc *Edge) { pred.push_back(Edge); }
@@ -311,7 +326,8 @@ public:
   uint64_t count = 0;
   SmallVector<GCOVArc *, 2> pred;
   SmallVector<GCOVArc *, 2> succ;
-  SmallVector<uint32_t, 4> lines;
+  SmallVector<GCOVLocation, 4> locations;
+  uint32_t lastLine;
   bool traversable = false;
   GCOVArc *incoming = nullptr;
 };
