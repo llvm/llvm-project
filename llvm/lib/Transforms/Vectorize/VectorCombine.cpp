@@ -111,6 +111,7 @@ private:
   bool foldInsExtFNeg(Instruction &I);
   bool foldInsExtBinop(Instruction &I);
   bool foldInsExtVectorToShuffle(Instruction &I);
+  bool foldBitOpOfBitcasts(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
@@ -798,6 +799,58 @@ bool VectorCombine::foldInsExtBinop(Instruction &I) {
   Worklist.pushValue(NewIns0);
   Worklist.pushValue(NewIns1);
   replaceValue(I, *NewBO);
+  return true;
+}
+
+bool VectorCombine::foldBitOpOfBitcasts(Instruction &I) {
+  // Match: bitop(bitcast(x), bitcast(y)) -> bitcast(bitop(x, y))
+  auto *BinOp = dyn_cast<BinaryOperator>(&I);
+  if (!BinOp || !BinOp->isBitwiseLogicOp())
+    return false;
+
+  Value *LHS = BinOp->getOperand(0);
+  Value *RHS = BinOp->getOperand(1);
+
+  // Both operands must be bitcasts
+  auto *LHSCast = dyn_cast<BitCastInst>(LHS);
+  auto *RHSCast = dyn_cast<BitCastInst>(RHS);
+  if (!LHSCast || !RHSCast)
+    return false;
+
+  Value *LHSSrc = LHSCast->getOperand(0);
+  Value *RHSSrc = RHSCast->getOperand(0);
+
+  // Source types must match
+  if (LHSSrc->getType() != RHSSrc->getType())
+    return false;
+
+  // Only handle vector types
+  auto *SrcVecTy = dyn_cast<FixedVectorType>(LHSSrc->getType());
+  auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
+  if (!SrcVecTy || !DstVecTy)
+    return false;
+
+  // Same total bit width
+  if (SrcVecTy->getPrimitiveSizeInBits() != DstVecTy->getPrimitiveSizeInBits())
+    return false;
+
+  // Cost check: prefer operations on narrower element types
+  unsigned SrcEltBits = SrcVecTy->getScalarSizeInBits();
+  unsigned DstEltBits = DstVecTy->getScalarSizeInBits();
+
+  // Prefer smaller element sizes (more elements, finer granularity)
+  if (SrcEltBits > DstEltBits)
+    return false;
+
+  // Create the operation on the source type
+  Value *NewOp = Builder.CreateBinOp(BinOp->getOpcode(), LHSSrc, RHSSrc,
+                                     BinOp->getName() + ".inner");
+  if (auto *NewBinOp = dyn_cast<BinaryOperator>(NewOp))
+    NewBinOp->copyIRFlags(BinOp);
+
+  // Bitcast the result back
+  Value *Result = Builder.CreateBitCast(NewOp, I.getType());
+  replaceValue(I, *Result);
   return true;
 }
 
@@ -3561,6 +3614,11 @@ bool VectorCombine::run() {
         break;
       case Instruction::BitCast:
         MadeChange |= foldBitcastShuffle(I);
+        break;
+      case Instruction::And:
+      case Instruction::Or:
+      case Instruction::Xor:
+        MadeChange |= foldBitOpOfBitcasts(I);
         break;
       default:
         MadeChange |= shrinkType(I);
