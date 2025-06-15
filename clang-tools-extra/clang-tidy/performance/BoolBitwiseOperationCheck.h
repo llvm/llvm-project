@@ -31,6 +31,7 @@ public:
 
 private:
   bool StrictMode;
+  bool IgnoreMacros;
 };
 
 } // namespace clang::tidy::performance

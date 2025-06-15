@@ -289,19 +289,16 @@ void bad_in_macro() {
     bool a = true, b = false;
 
     // change operator - BAD
-    a MY_OR b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [performance-bool-bitwise-operation]
+    IDENT(a bitor) b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [performance-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
-    a MY_AND b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [performance-bool-bitwise-operation]
+    a IDENT(bitand b);
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [performance-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
-    a MY_OR_ASSIGN b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [performance-bool-bitwise-operation]
+    IDENT(a or_eq) b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [performance-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
-    a MY_AND_ASSIGN b;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [performance-bool-bitwise-operation]
-    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
-    IDENT(a and_eq b);
+    a IDENT(and_eq b);
     // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [performance-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
@@ -347,6 +344,23 @@ void bad_in_macro() {
     b and_eq CAT(a, b);
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'b' instead of bitwise operator '&=' [performance-bool-bitwise-operation]
     // CHECK-FIXES: b = b and CAT(a, b);
+}
+
+void bad_in_macro_fixit() {
+    bool a = true, b = false;
+
+    // FIXME: implement fixit for all of these cases
+    
+    a MY_OR b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [performance-bool-bitwise-operation]
+    a MY_AND b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [performance-bool-bitwise-operation]
+    a MY_OR_ASSIGN b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean variable 'a' instead of bitwise operator '|=' [performance-bool-bitwise-operation]
+    a MY_AND_ASSIGN b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [performance-bool-bitwise-operation]
+    IDENT(a and_eq b);
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean variable 'a' instead of bitwise operator '&=' [performance-bool-bitwise-operation]
 }
 
 template<typename T>

@@ -9,6 +9,7 @@
 #include "BoolBitwiseOperationCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/ScopeExit.h"
 #include <array>
 #include <optional>
 #include <utility>
@@ -83,11 +84,13 @@ static llvm::StringRef translate(llvm::StringRef Value) {
 BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.get("StrictMode", true)) {}
+      StrictMode(Options.get("StrictMode", true)),
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void BoolBitwiseOperationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
@@ -106,11 +109,14 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<BinaryOperator>("op");
 
-  auto Diag = diag(MatchedExpr->getOperatorLoc(),
-                   "use logical operator '%0' for boolean %1 instead of "
-                   "bitwise operator '%2'")
-              << translate(MatchedExpr->getOpcodeStr())
-              << tryPrintVariable(MatchedExpr) << MatchedExpr->getOpcodeStr();
+  auto DiagEmitterProc = [MatchedExpr, this] {
+    return diag(MatchedExpr->getOperatorLoc(),
+                "use logical operator '%0' for boolean %1 instead of "
+                "bitwise operator '%2'")
+           << translate(MatchedExpr->getOpcodeStr())
+           << tryPrintVariable(MatchedExpr) << MatchedExpr->getOpcodeStr();
+  };
+  auto DiagEmitter = llvm::make_scope_exit(DiagEmitterProc);
 
   if (isInTemplateFunction(MatchedExpr, *Result.Context))
     return;
@@ -127,16 +133,25 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
 
   SourceLocation Loc = MatchedExpr->getOperatorLoc();
 
-  if (Loc.isInvalid() || Loc.isMacroID())
+  if (Loc.isInvalid() || Loc.isMacroID()) {
+    if (IgnoreMacros)
+      DiagEmitter.release();
     return;
+  }
 
   Loc = Result.SourceManager->getSpellingLoc(Loc);
-  if (Loc.isInvalid() || Loc.isMacroID())
+  if (Loc.isInvalid() || Loc.isMacroID()) {
+    if (IgnoreMacros)
+      DiagEmitter.release();
     return;
+  }
 
   const CharSourceRange TokenRange = CharSourceRange::getTokenRange(Loc);
-  if (TokenRange.isInvalid())
+  if (TokenRange.isInvalid()) {
+    if (IgnoreMacros)
+      DiagEmitter.release();
     return;
+  }
 
   StringRef Spelling = Lexer::getSourceText(TokenRange, *Result.SourceManager,
                                             Result.Context->getLangOpts());
@@ -154,11 +169,16 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
     if (!DelcRefLHS)
       return;
     const SourceLocation LocLHS = DelcRefLHS->getEndLoc();
-    if (LocLHS.isInvalid() || LocLHS.isMacroID())
+    if (LocLHS.isInvalid() || LocLHS.isMacroID()) {
+      if (IgnoreMacros)
+        DiagEmitter.release();
       return;
+    }
     const SourceLocation InsertLoc = clang::Lexer::getLocForEndOfToken(
         LocLHS, 0, *Result.SourceManager, Result.Context->getLangOpts());
     if (InsertLoc.isInvalid() || InsertLoc.isMacroID()) {
+      if (IgnoreMacros)
+        DiagEmitter.release();
       return;
     }
     InsertEqual = FixItHint::CreateInsertion(
@@ -201,13 +221,18 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
         SurroundedExpr->getEndLoc(), 0, *Result.SourceManager,
         Result.Context->getLangOpts());
     if (InsertFirstLoc.isInvalid() || InsertFirstLoc.isMacroID() ||
-        InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID())
+        InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID()) {
+      if (IgnoreMacros)
+        DiagEmitter.release();
       return;
+    }
     InsertBrace1 = FixItHint::CreateInsertion(InsertFirstLoc, "(");
     InsertBrace2 = FixItHint::CreateInsertion(InsertSecondLoc, ")");
   }
 
-  Diag << InsertEqual << ReplaceOperator << InsertBrace1 << InsertBrace2;
+  DiagEmitter.release();
+  DiagEmitterProc() << InsertEqual << ReplaceOperator << InsertBrace1
+                    << InsertBrace2;
 }
 
 } // namespace clang::tidy::performance
