@@ -339,6 +339,8 @@ New Compiler Flags
 
 - New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunities.
 
+- New option ``-ignore-pch`` added to disable precompiled headers. It overrides ``-emit-pch`` and ``-include-pch``. (#GH142409, `PCHDocs <https://clang.llvm.org/docs/UsersManual.html#ignoring-a-pch-file>`_).
+
 Deprecated Compiler Flags
 -------------------------
 
