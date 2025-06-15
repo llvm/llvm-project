@@ -203,3 +203,26 @@ void foo11() {
 
 // OGCG: %[[COMPLEX:.*]] = alloca { double, double }, align 8
 // OGCG: %[[IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[COMPLEX]], i32 0, i32 1
+
+void foo12() {
+  double _Complex c;
+  double real = __real__ c;
+}
+
+// CIR: %[[COMPLEX:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["c"]
+// CIR: %[[INIT:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["real", init]
+// CIR: %[[REAL_PTR:.*]] = cir.complex.real_ptr %[[COMPLEX]] : !cir.ptr<!cir.complex<!cir.double>> -> !cir.ptr<!cir.double>
+// CIR: %[[REAL:.*]] = cir.load{{.*}} %[[REAL_PTR]] : !cir.ptr<!cir.double>, !cir.double
+// CIR: cir.store{{.*}} %[[REAL]], %[[INIT]] : !cir.double, !cir.ptr<!cir.double>
+
+// LLVM: %[[COMPLEX:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[INIT:.*]] = alloca double, i64 1, align 8
+// LLVM: %[[REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[COMPLEX]], i32 0, i32 0
+// LLVM: %[[REAL:.*]] = load double, ptr %[[REAL_PTR]], align 8
+// LLVM: store double %[[REAL]], ptr %[[INIT]], align 8
+
+// OGCG: %[[COMPLEX:.*]] = alloca { double, double }, align 8
+// OGCG: %[[INIT:.*]] = alloca double, align 8
+// OGCG: %[[REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[COMPLEX]], i32 0, i32 0
+// OGCG: %[[REAL:.*]] = load double, ptr %[[REAL_PTR]], align 8
+// OGCG: store double %[[REAL]], ptr %[[INIT]], align 8

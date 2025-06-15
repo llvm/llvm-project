@@ -603,6 +603,8 @@ public:
 
   mlir::Value VisitUnaryLNot(const UnaryOperator *e);
 
+  mlir::Value VisitUnaryReal(const UnaryOperator *e);
+
   mlir::Value VisitCXXThisExpr(CXXThisExpr *te) { return cgf.loadCXXThis(); }
 
   /// Emit a conversion from the specified type to the specified destination
@@ -1889,6 +1891,25 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
 
   // ZExt result to the expr type.
   return maybePromoteBoolResult(boolVal, cgf.convertType(e->getType()));
+}
+
+mlir::Value ScalarExprEmitter::VisitUnaryReal(const UnaryOperator *e) {
+  // TODO(cir): handle scalar promotion.
+  Expr *op = e->getSubExpr();
+  if (op->getType()->isAnyComplexType()) {
+    // If it's an l-value, load through the appropriate subobject l-value.
+    // Note that we have to ask E because Op might be an l-value that
+    // this won't work for, e.g. an Obj-C property.
+    if (e->isGLValue())
+      return cgf.emitLoadOfLValue(cgf.emitLValue(e), e->getExprLoc())
+          .getScalarVal();
+
+    // Otherwise, calculate and project.
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "VisitUnaryReal calculate and project");
+  }
+
+  return Visit(op);
 }
 
 /// Return the size or alignment of the type of argument of the sizeof
