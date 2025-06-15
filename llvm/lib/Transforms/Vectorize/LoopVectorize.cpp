@@ -8130,7 +8130,7 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
     PartialReductionChain Chain = Pair.first;
     if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
         ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB))
-      ScaledReductionMap.emplace_or_assign(Chain.Reduction, Pair.second);
+      ScaledReductionMap.try_emplace(Chain.Reduction, Pair.second);
   }
 }
 
