@@ -1,0 +1,99 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=si-fold-operands -o - %s | FileCheck %s
+
+---
+name:            v_mov_b64_pseudo_ignore
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+    ; CHECK-LABEL: name: v_mov_b64_pseudo_ignore
+    ; CHECK: [[MAT_B64:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 1234, implicit $exec
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[MAT_B64]], %subreg.sub0, [[MAT_B64]], %subreg.sub1
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
+    %0:vreg_64_align2 = V_MOV_B64_PSEUDO 1234, implicit $exec
+    %1:vreg_64_align2 = REG_SEQUENCE %0, %subreg.sub0, %0, %subreg.sub1
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name:            v_mov_b32_splatted_zero
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+    ; CHECK-LABEL: name: v_mov_b32_splatted_zero
+    ; CHECK: {{%[0-9]}}:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: [[MAT_B64:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[MAT_B64]]
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1:vreg_64_align2 = REG_SEQUENCE %0, %subreg.sub0, %0, %subreg.sub1
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name:            multi_v_mov_b32_fits
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+    ; CHECK-LABEL: name: multi_v_mov_b32_fits
+    ; CHECK: [[MAT_B32:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec
+    ; CHECK-NEXT: [[MAT_B32_ZERO:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: [[MAT_B64:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 12345, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[MAT_B64]]
+    %0:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %2:vreg_64_align2 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
+    S_ENDPGM 0, implicit %2
+...
+
+---
+name:            multi_v_mov_b32_no_fold
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+    ; CHECK-LABEL: name: multi_v_mov_b32_no_fold
+    ; CHECK: [[MAT_B32_ONE:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; CHECK-NEXT: [[MAT_B32:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[MAT_B32_ONE]], %subreg.sub0, [[MAT_B32]], %subreg.sub1
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
+    %0:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec
+    %2:vreg_64_align2 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
+    S_ENDPGM 0, implicit %2
+...
+
+---
+name:            v_mov_b32_to_b128
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+    ; CHECK-LABEL: name: v_mov_b32_to_b128
+    ; CHECK: [[MAT_B32:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: [[MAT_B64_FIRST:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
+    ; CHECK-NEXT: [[MAT_B64_SECOND:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[MAT_B64_FIRST]], %subreg.sub0_sub1, [[MAT_B64_SECOND]], %subreg.sub2_sub3
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1:vreg_128_align2 = REG_SEQUENCE %0, %subreg.sub0, %0, %subreg.sub1, %0, %subreg.sub2, %0, %subreg.sub3
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name:            multi_v_mov_b32_to_b128
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+    ; CHECK-LABEL: name: multi_v_mov_b32_to_b128
+    ; CHECK: [[MAT_B32_FIRST:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec
+    ; CHECK-NEXT: [[MAT_B32_SECOND:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: [[MAT_B64_FIRST:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 12345, implicit $exec
+    ; CHECK-NEXT: [[MAT_B64_SECOND:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 12345, implicit $exec
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[MAT_B64_FIRST]], %subreg.sub0_sub1, [[MAT_B64_SECOND]], %subreg.sub2_sub3
+    %0:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %2:vreg_128_align2 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %0, %subreg.sub2, %1, %subreg.sub3
+    S_ENDPGM 0, implicit %2
+...
