@@ -249,4 +249,7 @@ struct NonMovableIntComparable {
 
 static_assert(!check_three_way_comparable_with<NonMovableIntComparable, int>());
 
+// For testing
+static_assert(!std::three_way_comparable_with<NonMovableIntComparable, int>);
+
 } // namespace user_defined

@@ -1121,4 +1121,7 @@ static_assert(
 static_assert(check_equality_comparable_with<move_only_equality_with_int, int>());
 static_assert(check_equality_comparable_with<std::unique_ptr<int>, std::nullptr_t>());
 static_assert(!check_equality_comparable_with<nonmovable_equality_with_int, int>());
+
+// For testing
+static_assert(!std::equality_comparable_with<nonmovable_equality_with_int, int>);
 } // namespace types_fit_for_purpose
