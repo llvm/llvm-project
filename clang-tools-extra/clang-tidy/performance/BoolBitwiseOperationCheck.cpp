@@ -10,6 +10,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Twine.h"
 #include <array>
 #include <optional>
 #include <utility>
@@ -18,12 +19,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-static std::string tryPrintVariable(const BinaryOperator *E) {
-  if (E->isCompoundAssignmentOp()) {
+static std::string tryPrintVariable(const BinaryOperator *BO) {
+  if (BO->isCompoundAssignmentOp()) {
     const auto *DelcRefLHS =
-        dyn_cast<DeclRefExpr>(E->getLHS()->IgnoreImpCasts());
+        dyn_cast<DeclRefExpr>(BO->getLHS()->IgnoreImpCasts());
     if (DelcRefLHS)
-      return "variable '" + DelcRefLHS->getDecl()->getNameAsString() + "'";
+      return ("variable '" +
+              llvm::Twine(DelcRefLHS->getDecl()->getNameAsString()) + "'")
+          .str();
   }
   return "values";
 }
@@ -36,8 +39,8 @@ static bool hasExplicitParentheses(const Expr *E, const SourceManager &SM,
   const SourceLocation Start = E->getBeginLoc();
   const SourceLocation End = E->getEndLoc();
 
-  if (Start.isMacroID() || End.isMacroID() || !Start.isValid() ||
-      !End.isValid())
+  if (Start.isMacroID() || End.isMacroID() || Start.isInvalid() ||
+      End.isInvalid())
     return false;
 
   const std::optional<Token> PrevTok =
@@ -52,7 +55,7 @@ static bool hasExplicitParentheses(const Expr *E, const SourceManager &SM,
 template <typename AstNode>
 static bool isInTemplateFunction(const AstNode *AN, ASTContext &Context) {
   DynTypedNodeList Parents = Context.getParents(*AN);
-  for (const auto &Parent : Parents) {
+  for (const DynTypedNode &Parent : Parents) {
     if (const auto *FD = Parent.template get<FunctionDecl>())
       return FD->isTemplateInstantiation() ||
              FD->getTemplatedKind() != FunctionDecl::TK_NonTemplate;
@@ -72,10 +75,10 @@ constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
                              {"bitor", "or"},
                              {"or_eq", "or"}}};
 
-static llvm::StringRef translate(llvm::StringRef Value) {
+static std::string translate(llvm::StringRef Value) {
   for (const auto &[Bitwise, Logical] : OperatorsTransformation) {
     if (Value == Bitwise)
-      return Logical;
+      return Logical.str();
   }
 
   return {};
@@ -155,14 +158,12 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
 
   StringRef Spelling = Lexer::getSourceText(TokenRange, *Result.SourceManager,
                                             Result.Context->getLangOpts());
-  StringRef TranslatedSpelling = translate(Spelling);
+  const std::string FixSpelling = translate(Spelling);
 
-  if (TranslatedSpelling.empty())
+  if (FixSpelling.empty())
     return;
 
-  const std::string FixSpelling = TranslatedSpelling.str();
-
-  FixItHint InsertEqual, ReplaceOperator, InsertBrace1, InsertBrace2;
+  FixItHint InsertEqual;
   if (MatchedExpr->isCompoundAssignmentOp()) {
     const auto *DelcRefLHS =
         dyn_cast<DeclRefExpr>(MatchedExpr->getLHS()->IgnoreImpCasts());
@@ -184,7 +185,8 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
     InsertEqual = FixItHint::CreateInsertion(
         InsertLoc, " = " + DelcRefLHS->getDecl()->getNameAsString());
   }
-  ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
+
+  auto ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
 
   std::optional<BinaryOperatorKind> ParentOpcode;
   if (const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p");
@@ -215,6 +217,7 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
                              Result.Context->getLangOpts()))
     SurroundedExpr = nullptr;
 
+  FixItHint InsertBrace1, InsertBrace2;
   if (SurroundedExpr) {
     const SourceLocation InsertFirstLoc = SurroundedExpr->getBeginLoc();
     const SourceLocation InsertSecondLoc = clang::Lexer::getLocForEndOfToken(
