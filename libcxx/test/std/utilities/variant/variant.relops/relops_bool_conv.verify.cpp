@@ -71,8 +71,6 @@ inline constexpr MyBoolExplicit operator>(const ComparesToMyBoolExplicit& LHS, c
 inline constexpr MyBoolExplicit operator>=(const ComparesToMyBoolExplicit& LHS, const ComparesToMyBoolExplicit& RHS) noexcept {
   return MyBoolExplicit(LHS.value >= RHS.value);
 }
-
-
 void test() {
   using V = std::variant<int, ComparesToMyBoolExplicit>;
   V v1(42);
