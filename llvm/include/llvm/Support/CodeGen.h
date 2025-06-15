@@ -130,6 +130,15 @@ namespace llvm {
     Invalid = 2, ///< Not used.
   };
 
+  enum class WinX64EHUnwindV2Mode {
+    // Don't use unwind v2 (i.e., use v1).
+    Disabled = 0,
+    // Use unwind v2 here possible, otherwise fallback to v1.
+    BestEffort = 1,
+    // Use unwind v2 everywhere, otherwise raise an error.
+    Required = 2,
+  };
+
   } // namespace llvm
 
 #endif
