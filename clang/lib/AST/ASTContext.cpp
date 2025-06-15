@@ -1704,6 +1704,22 @@ void ASTContext::setRelocationInfoForCXXRecord(
   assert(RelocatableClasses.find(D) == RelocatableClasses.end());
   RelocatableClasses.insert({D, Info});
 }
+static bool
+hasAddressDiscriminatedVTableAuthentication(ASTContext &Context,
+                                            const CXXRecordDecl *Class) {
+  if (!Context.isPointerAuthenticationAvailable() || !Class->isPolymorphic())
+    return false;
+  const CXXRecordDecl *BaseType = Context.baseForVTableAuthentication(Class);
+  using AuthAttr = VTablePointerAuthenticationAttr;
+  const AuthAttr *ExplicitAuth = BaseType->getAttr<AuthAttr>();
+  if (!ExplicitAuth)
+    return Context.getLangOpts().PointerAuthVTPtrAddressDiscrimination;
+  AuthAttr::AddressDiscriminationMode AddressDiscrimination =
+      ExplicitAuth->getAddressDiscrimination();
+  if (AddressDiscrimination == AuthAttr::DefaultAddressDiscrimination)
+    return Context.getLangOpts().PointerAuthVTPtrAddressDiscrimination;
+  return AddressDiscrimination == AuthAttr::AddressDiscrimination;
+}
 
 bool ASTContext::containsAddressDiscriminatedPointerAuth(QualType T) {
   if (!isPointerAuthenticationAvailable())
@@ -1721,12 +1737,14 @@ bool ASTContext::containsAddressDiscriminatedPointerAuth(QualType T) {
     return Existing->second;
 
   auto SaveReturn = [this, RD](bool Result) {
-    RecordContainsAddressDiscriminatedPointerAuth.insert({RD, Result});
+    auto __unused[ResultIter, DidAdd] =
+        RecordContainsAddressDiscriminatedPointerAuth.try_emplace(RD, Result);
+    assert(DidAdd);
     return Result;
   };
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
     if (CXXRD->isPolymorphic() &&
-        hasAddressDiscriminatedVTableAuthentication(CXXRD))
+        hasAddressDiscriminatedVTableAuthentication(*this, CXXRD))
       return SaveReturn(true);
     for (auto Base : CXXRD->bases()) {
       if (containsAddressDiscriminatedPointerAuth(Base.getType()))
@@ -15154,22 +15172,6 @@ ASTContext::baseForVTableAuthentication(const CXXRecordDecl *ThisClass) {
     PrimaryBase = Base;
   }
   return PrimaryBase;
-}
-
-bool ASTContext::hasAddressDiscriminatedVTableAuthentication(
-    const CXXRecordDecl *Class) {
-  if (!isPointerAuthenticationAvailable() || !Class->isPolymorphic())
-    return false;
-  const CXXRecordDecl *BaseType = baseForVTableAuthentication(Class);
-  using AuthAttr = VTablePointerAuthenticationAttr;
-  const AuthAttr *ExplicitAuth = BaseType->getAttr<AuthAttr>();
-  if (!ExplicitAuth)
-    return LangOpts.PointerAuthVTPtrAddressDiscrimination;
-  AuthAttr::AddressDiscriminationMode AddressDiscrimination =
-      ExplicitAuth->getAddressDiscrimination();
-  if (AddressDiscrimination == AuthAttr::DefaultAddressDiscrimination)
-    return LangOpts.PointerAuthVTPtrAddressDiscrimination;
-  return AddressDiscrimination == AuthAttr::AddressDiscrimination;
 }
 
 bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,

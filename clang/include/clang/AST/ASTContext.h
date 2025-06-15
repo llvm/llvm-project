@@ -635,14 +635,14 @@ public:
   /// implicitly authenticated values like vtable pointers, as well as
   /// explicitly qualified fields.
   bool containsAddressDiscriminatedPointerAuth(QualType T);
-
-private:
   // A simple helper function to short circuit pointer auth checks.
+
   bool isPointerAuthenticationAvailable() const {
     return LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics ||
            LangOpts.PointerAuthVTPtrAddressDiscrimination;
   }
 
+private:
   llvm::DenseMap<const CXXRecordDecl *, CXXRecordDeclRelocationInfo>
       RelocatableClasses;
 
@@ -3685,12 +3685,6 @@ public:
   /// authentication policy for the specified record.
   const CXXRecordDecl *
   baseForVTableAuthentication(const CXXRecordDecl *ThisClass);
-
-  /// If this class is polymorphic, returns true if any of this class's
-  /// vtable pointers have an address discriminated pointer authentication
-  /// schema.
-  /// This does not check fields of the class or base classes.
-  bool hasAddressDiscriminatedVTableAuthentication(const CXXRecordDecl *Class);
 
   bool useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
                                StringRef MangledName);
