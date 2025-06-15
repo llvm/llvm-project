@@ -8092,15 +8092,14 @@ private:
 
 public:
   bool isSugared() const { return true; }
+
   QualType desugar() const { return getCanonicalTypeInternal(); }
+
   PredefinedSugarKind getKind() const {
     return PredefinedSugarKind(PredefinedSugarTypeBits.Kind);
   }
 
   StringRef getName() const;
-
-  static QualType makePredefinedSugarType(ASTContext &Ctx,
-                                          PredefinedSugarKind KD);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == PredefinedSugar;

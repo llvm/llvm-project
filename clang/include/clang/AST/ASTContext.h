@@ -1977,15 +1977,6 @@ public:
   /// the integer type corresponding to size_t.
   QualType getSignedSizeType() const;
 
-  /// Return the unique type for "ptrdiff_t" (C99 7.17) defined in
-  /// <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
-  QualType getPointerDiffType() const;
-
-  /// Return the unique unsigned counterpart of "ptrdiff_t"
-  /// integer type. The standard (C11 7.21.6.1p7) refers to this type
-  /// in the definition of %tu format specifier.
-  QualType getUnsignedPointerDiffType() const;
-
   /// Return the unique type for "intmax_t" (C99 7.18.1.5), defined in
   /// <stdint.h>.
   CanQualType getIntMaxType() const;
@@ -2024,6 +2015,15 @@ public:
   /// Return a type compatible with "uintptr_t" (C99 7.18.1.4),
   /// as defined by the target.
   QualType getUIntPtrType() const;
+
+  /// Return the unique type for "ptrdiff_t" (C99 7.17) defined in
+  /// <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
+  QualType getPointerDiffType() const;
+
+  /// Return the unique unsigned counterpart of "ptrdiff_t"
+  /// integer type. The standard (C11 7.21.6.1p7) refers to this type
+  /// in the definition of %tu format specifier.
+  QualType getUnsignedPointerDiffType() const;
 
   /// Return the unique type for "pid_t" defined in
   /// <sys/types.h>. We need this to compute the correct type for vfork().
