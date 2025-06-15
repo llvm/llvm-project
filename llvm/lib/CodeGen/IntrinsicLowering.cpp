@@ -326,6 +326,10 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     break;
   }
 
+  case Intrinsic::speculative_data_barrier:
+    break; // Simply strip out speculative_data_barrier on unsupported
+           // architectures
+
   case Intrinsic::dbg_declare:
   case Intrinsic::dbg_label:
     break;    // Simply strip out debugging intrinsics
