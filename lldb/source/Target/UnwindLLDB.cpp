@@ -68,6 +68,10 @@ uint32_t UnwindLLDB::DoGetFrameCount() {
   return m_frames.size();
 }
 
+#ifdef _AIX
+bool UGLY_HACK_NULL_TOPFRAME = false;
+#endif
+
 bool UnwindLLDB::AddFirstFrame() {
   if (m_frames.size() > 0)
     return true;
@@ -90,6 +94,17 @@ bool UnwindLLDB::AddFirstFrame() {
 
   if (!reg_ctx_sp->ReadPC(first_cursor_sp->start_pc))
     goto unwind_done;
+
+#ifdef _AIX
+  lldb::addr_t lr;
+  if (!reg_ctx_sp->ReadLR(lr))
+    goto unwind_done;
+
+  if (first_cursor_sp->start_pc == 0) {
+    first_cursor_sp->start_pc = lr;
+    UGLY_HACK_NULL_TOPFRAME = true;
+  }
+#endif
 
   // Everything checks out, so release the auto pointer value and let the
   // cursor own it in its shared pointer
