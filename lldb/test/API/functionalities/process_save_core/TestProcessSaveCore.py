@@ -88,3 +88,10 @@ class ProcessSaveCoreTestCase(TestBase):
                 os.unlink(core)
             except OSError:
                 pass
+
+    def test_help(self):
+        """Test that help shows minidump as an option in plugin-names."""
+        self.expect(
+            "help process save-core",
+            substrs=["process save-core", "<plugin>", "Values:", "minidump"],
+        )
