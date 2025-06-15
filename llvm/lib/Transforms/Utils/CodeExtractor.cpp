@@ -814,7 +814,11 @@ void CodeExtractor::severSplitPHINodesOfExits() {
 }
 
 void CodeExtractor::splitReturnBlocks() {
-  for (BasicBlock *Block : Blocks)
+  for (BasicBlock *Block : Blocks) {
+    if (!Block->getTerminator()) {
+      errs() << "====== No terminator in block: " << Block->getName()
+             << "======\n";
+    }
     if (ReturnInst *RI = dyn_cast<ReturnInst>(Block->getTerminator())) {
       BasicBlock *New =
           Block->splitBasicBlock(RI->getIterator(), Block->getName() + ".ret");
@@ -831,6 +835,7 @@ void CodeExtractor::splitReturnBlocks() {
           DT->changeImmediateDominator(I, NewNode);
       }
     }
+  }
 }
 
 Function *CodeExtractor::constructFunctionDeclaration(
