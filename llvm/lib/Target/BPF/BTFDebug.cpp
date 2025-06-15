@@ -18,11 +18,13 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -976,11 +978,23 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
   if (Tag != dwarf::DW_TAG_structure_type || CTy->isForwardDecl())
     return;
 
-  // Visit all struct members to ensure pointee type is visited
+  // Visit all struct members to ensure their types are visited.
   const DINodeArray Elements = CTy->getElements();
   for (const auto *Element : Elements) {
     const auto *MemberType = cast<DIDerivedType>(Element);
-    visitTypeEntry(MemberType->getBaseType());
+    const DIType *MemberBaseType = MemberType->getBaseType();
+
+    // If the member is a composite type, that may indicate the currently
+    // visited composite type is a wrapper, and the member represents the
+    // actual map definition.
+    // In that case, visit the member with `visitMapDefType` instead of
+    // `visitTypeEntry`, treating it specifically as a map definition rather
+    // than as a regular composite type.
+    const auto *MemberCTy = dyn_cast<DICompositeType>(MemberBaseType);
+    if (MemberCTy) {
+      visitMapDefType(MemberBaseType, TypeId);
+    } else
+      visitTypeEntry(MemberBaseType);
   }
 
   // Visit this type, struct or a const/typedef/volatile/restrict type
