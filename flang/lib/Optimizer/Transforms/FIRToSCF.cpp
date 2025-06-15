@@ -87,13 +87,48 @@ struct DoLoopConversion : public OpRewritePattern<fir::DoLoopOp> {
     return success();
   }
 };
+
+struct IfConversion : public OpRewritePattern<fir::IfOp> {
+  using OpRewritePattern<fir::IfOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(fir::IfOp ifOp,
+                                PatternRewriter &rewriter) const override {
+    mlir::Location loc = ifOp.getLoc();
+    mlir::detail::TypedValue<mlir::IntegerType> condition = ifOp.getCondition();
+    ValueTypeRange<ResultRange> resultTypes = ifOp.getResultTypes();
+    mlir::scf::IfOp scfIfOp = rewriter.create<scf::IfOp>(
+        loc, resultTypes, condition, !ifOp.getElseRegion().empty());
+    // then region
+    scfIfOp.getThenRegion().takeBody(ifOp.getThenRegion());
+    Block &scfThenBlock = scfIfOp.getThenRegion().front();
+    Operation *scfThenTerminator = scfThenBlock.getTerminator();
+    // fir.result->scf.yield
+    rewriter.setInsertionPointToEnd(&scfThenBlock);
+    rewriter.replaceOpWithNewOp<scf::YieldOp>(scfThenTerminator,
+                                              scfThenTerminator->getOperands());
+
+    // else region
+    if (!ifOp.getElseRegion().empty()) {
+      scfIfOp.getElseRegion().takeBody(ifOp.getElseRegion());
+      mlir::Block &elseBlock = scfIfOp.getElseRegion().front();
+      mlir::Operation *elseTerminator = elseBlock.getTerminator();
+
+      rewriter.setInsertionPointToEnd(&elseBlock);
+      rewriter.replaceOpWithNewOp<scf::YieldOp>(elseTerminator,
+                                                elseTerminator->getOperands());
+    }
+
+    scfIfOp->setAttrs(ifOp->getAttrs());
+    rewriter.replaceOp(ifOp, scfIfOp);
+    return success();
+  }
+};
 } // namespace
 
 void FIRToSCFPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
-  patterns.add<DoLoopConversion>(patterns.getContext());
+  patterns.add<DoLoopConversion, IfConversion>(patterns.getContext());
   ConversionTarget target(getContext());
-  target.addIllegalOp<fir::DoLoopOp>();
+  target.addIllegalOp<fir::DoLoopOp, fir::IfOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

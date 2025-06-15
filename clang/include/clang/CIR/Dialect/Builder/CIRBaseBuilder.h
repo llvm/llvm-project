@@ -90,6 +90,8 @@ public:
       return cir::IntAttr::get(ty, 0);
     if (cir::isAnyFloatingPointType(ty))
       return cir::FPAttr::getZero(ty);
+    if (auto complexType = mlir::dyn_cast<cir::ComplexType>(ty))
+      return cir::ZeroAttr::get(complexType);
     if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty))
       return cir::ZeroAttr::get(arrTy);
     if (auto vecTy = mlir::dyn_cast<cir::VectorType>(ty))
@@ -183,9 +185,23 @@ public:
                                     global.getSymName());
   }
 
+  mlir::Value createGetGlobal(cir::GlobalOp global) {
+    return createGetGlobal(global.getLoc(), global);
+  }
+
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
                            mlir::IntegerAttr align = {}) {
     return create<cir::StoreOp>(loc, val, dst, align);
+  }
+
+  [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
+                                           mlir::Location loc,
+                                           mlir::StringRef name,
+                                           mlir::Type type,
+                                           cir::GlobalLinkageKind linkage) {
+    mlir::OpBuilder::InsertionGuard guard(*this);
+    setInsertionPointToStart(mlirModule.getBody());
+    return create<cir::GlobalOp>(loc, name, type, linkage);
   }
 
   cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
@@ -274,6 +290,11 @@ public:
   mlir::Value createBitcast(mlir::Location loc, mlir::Value src,
                             mlir::Type newTy) {
     return createCast(loc, cir::CastKind::bitcast, src, newTy);
+  }
+
+  mlir::Value createPtrBitcast(mlir::Value src, mlir::Type newPointeeTy) {
+    assert(mlir::isa<cir::PointerType>(src.getType()) && "expected ptr src");
+    return createBitcast(src, getPointerTo(newPointeeTy));
   }
 
   //===--------------------------------------------------------------------===//
