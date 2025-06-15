@@ -20,6 +20,7 @@
 
 #include "benchmark/benchmark.h"
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 namespace support {
 
@@ -343,6 +344,7 @@ void associative_container_benchmarks(std::string container) {
       }
     });
 
+#if TEST_STD_VER >= 23
     bench("insert(iterator, iterator) (product_iterator from zip_view)", [=](auto& st) {
       const std::size_t size = st.range(0);
       std::vector<Key> keys  = generate_unique_keys(size + (size / 10));
@@ -363,6 +365,7 @@ void associative_container_benchmarks(std::string container) {
         st.ResumeTiming();
       }
     });
+#endif
   }
   /////////////////////////
   // Erasure
