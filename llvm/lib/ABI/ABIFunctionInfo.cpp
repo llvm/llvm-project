@@ -11,10 +11,10 @@
 using namespace llvm;
 using namespace llvm::abi;
 
-ABIFunctionInfo *ABIFunctionInfo::create(llvm::CallingConv::ID CC,
+ABIFunctionInfo *ABIFunctionInfo::create(CallingConv::ID CC,
                                          const Type *ReturnType,
-                                         llvm::ArrayRef<const Type *> ArgTypes,
-                                         const FunctionABIInfo &ABIInfo,
+                                         ArrayRef<const Type *> ArgTypes,
+                                         const ABICallAttributes &CallAttrs,
                                          RequiredArgs Required) {
 
   assert(!Required.allowsOptionalArgs() ||
@@ -26,8 +26,8 @@ ABIFunctionInfo *ABIFunctionInfo::create(llvm::CallingConv::ID CC,
   ABIFunctionInfo *FI =
       new (Buffer) ABIFunctionInfo(ReturnType, ArgTypes.size());
 
-  FI->ABIInfo = ABIInfo;
-  FI->ABIInfo.CC = CC;
+  FI->CallAttrs = CallAttrs;
+  FI->CallAttrs.CC = CC;
   FI->Required = Required;
 
   auto Args = FI->arguments();
