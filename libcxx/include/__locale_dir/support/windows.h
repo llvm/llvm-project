@@ -221,6 +221,23 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __strxfrm(char* __dest, const char* __src, s
 }
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
+#    if defined(__MINGW32__) && __MSVCRT_VERSION__ < 0x0800
+_LIBCPP_EXPORTED_FROM_ABI int __iswctype(wint_t c, wctype_t __type, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI int __iswspace(wint_t c, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI int __iswprint(wint_t c, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI int __iswcntrl(wint_t c, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI int __iswupper(wint_t c, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI int __iswlower(wint_t c, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI int __iswalpha(wint_t c, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI int __iswblank(wint_t c, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI int __iswdigit(wint_t c, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI int __iswpunct(wint_t c, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI int __iswxdigit(wint_t c, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI wint_t __towupper(wint_t c, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI wint_t __towlower(wint_t c, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI int __wcscoll(const wchar_t* ws1, const wchar_t* ws2, __locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI size_t __wcsxfrm(wchar_t* dest, const wchar_t* src, size_t n, __locale_t loc);
+#    else
 inline _LIBCPP_HIDE_FROM_ABI int __iswctype(wint_t __c, wctype_t __type, __locale_t __loc) {
   return ::_iswctype_l(__c, __type, __loc);
 }
@@ -245,7 +262,8 @@ inline _LIBCPP_HIDE_FROM_ABI int __wcscoll(const wchar_t* __ws1, const wchar_t* 
 inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __src, size_t __n, __locale_t __loc) {
   return ::_wcsxfrm_l(__dest, __src, __n, __loc);
 }
-#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
+#    endif // defined(__MINGW32__) && __MSVCRT_VERSION__ < 0x0800
+#  endif   // _LIBCPP_HAS_WIDE_CHARACTERS
 
 #  if defined(__MINGW32__) && __MSVCRT_VERSION__ < 0x0800
 _LIBCPP_EXPORTED_FROM_ABI size_t __strftime(char*, size_t, const char*, const struct tm*, __locale_t);
