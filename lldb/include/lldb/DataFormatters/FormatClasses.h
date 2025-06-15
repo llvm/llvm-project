@@ -154,8 +154,8 @@ public:
   TypeNameSpecifierImpl() = default;
 
   TypeNameSpecifierImpl(llvm::StringRef name,
-                        lldb::FormatterMatchType match_type)
-      : m_match_type(match_type) {
+                        lldb::FormatterMatchType match_type, uint32_t tag = 0)
+      : m_match_type(match_type), m_tag(tag) {
     m_type.m_type_name = std::string(name);
   }
 
@@ -192,6 +192,8 @@ public:
 
   bool IsRegex() { return m_match_type == lldb::eFormatterMatchRegex; }
 
+  uint32_t GetTag() const { return m_tag; }
+
 private:
   lldb::FormatterMatchType m_match_type = lldb::eFormatterMatchExact;
   // TODO: Replace this with TypeAndOrName.
@@ -200,6 +202,7 @@ private:
     CompilerType m_compiler_type;
   };
   TypeOrName m_type;
+  uint32_t m_tag = 0;
 
   TypeNameSpecifierImpl(const TypeNameSpecifierImpl &) = delete;
   const TypeNameSpecifierImpl &

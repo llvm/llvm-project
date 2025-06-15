@@ -151,10 +151,14 @@ public:
 
   virtual std::string GetDescription() = 0;
 
+  CxxTypeValidatorFn *GetTypeValidator() const { return m_validator_fn; }
+  void SetTypeValidator(CxxTypeValidatorFn *value) { m_validator_fn = value; }
+
 protected:
   Flags m_flags;
   uint32_t m_my_revision = 0;
   uint32_t m_ptr_match_depth = 1;
+  CxxTypeValidatorFn *m_validator_fn = nullptr;
 
 private:
   TypeFormatImpl(const TypeFormatImpl &) = delete;

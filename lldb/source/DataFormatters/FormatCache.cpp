@@ -53,23 +53,41 @@ void FormatCache::Entry::Set(lldb::SyntheticChildrenSP synthetic_sp) {
 
 namespace lldb_private {
 
-template<> bool FormatCache::Entry::IsCached<lldb::TypeFormatImplSP>() {
-  return IsFormatCached();
+template <typename ImplSP>
+static bool passesValidator(const ImplSP &impl_sp,
+                            FormattersMatchData &match_data) {
+  if (!impl_sp || !impl_sp->GetTypeValidator())
+    return true;
+
+  ValueObject &valobj = match_data.GetValueObject();
+  lldb::ValueObjectSP valobj_sp = valobj.GetQualifiedRepresentationIfAvailable(
+      match_data.GetDynamicValueType(), valobj.IsSynthetic());
+  return valobj_sp && impl_sp->GetTypeValidator()(valobj_sp->GetCompilerType());
 }
-template<> bool FormatCache::Entry::IsCached<lldb::TypeSummaryImplSP> () {
-  return IsSummaryCached();
+
+template <>
+bool FormatCache::Entry::IsCached<lldb::TypeFormatImplSP>(
+    FormattersMatchData &match_data) {
+  return IsFormatCached() && passesValidator(m_format_sp, match_data);
 }
-template<> bool FormatCache::Entry::IsCached<lldb::SyntheticChildrenSP>() {
-  return IsSyntheticCached();
+template <>
+bool FormatCache::Entry::IsCached<lldb::TypeSummaryImplSP>(
+    FormattersMatchData &match_data) {
+  return IsSummaryCached() && passesValidator(m_summary_sp, match_data);
+}
+template <>
+bool FormatCache::Entry::IsCached<lldb::SyntheticChildrenSP>(
+    FormattersMatchData &match_data) {
+  return IsSyntheticCached() && passesValidator(m_synthetic_sp, match_data);
 }
 
 } // namespace lldb_private
 
 template <typename ImplSP>
-bool FormatCache::Get(ConstString type, ImplSP &format_impl_sp) {
+bool FormatCache::Get(FormattersMatchData &match_data, ImplSP &format_impl_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  auto entry = m_entries[type];
-  if (entry.IsCached<ImplSP>()) {
+  auto entry = m_entries[match_data.GetTypeForCache()];
+  if (entry.IsCached<ImplSP>(match_data)) {
     m_cache_hits++;
     entry.Get(format_impl_sp);
     return true;
@@ -82,12 +100,13 @@ bool FormatCache::Get(ConstString type, ImplSP &format_impl_sp) {
 /// Explicit instantiations for the three types.
 /// \{
 template bool
-FormatCache::Get<lldb::TypeFormatImplSP>(ConstString, lldb::TypeFormatImplSP &);
+FormatCache::Get<lldb::TypeFormatImplSP>(FormattersMatchData &,
+                                         lldb::TypeFormatImplSP &);
 template bool
-FormatCache::Get<lldb::TypeSummaryImplSP>(ConstString,
+FormatCache::Get<lldb::TypeSummaryImplSP>(FormattersMatchData &,
                                           lldb::TypeSummaryImplSP &);
 template bool
-FormatCache::Get<lldb::SyntheticChildrenSP>(ConstString,
+FormatCache::Get<lldb::SyntheticChildrenSP>(FormattersMatchData &,
                                             lldb::SyntheticChildrenSP &);
 /// \}
 
