@@ -52,6 +52,7 @@ private:
   MDNode *BuildRootDescriptor(const RootDescriptor &Descriptor);
   MDNode *BuildDescriptorTable(const DescriptorTable &Table);
   MDNode *BuildDescriptorTableClause(const DescriptorTableClause &Clause);
+  MDNode *BuildStaticSampler(const StaticSampler &Sampler);
 
   llvm::LLVMContext &Ctx;
   ArrayRef<RootElement> Elements;

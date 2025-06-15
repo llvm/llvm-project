@@ -173,16 +173,6 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
   return Plugin::success();
 }
 
-bool GenericGlobalHandlerTy::hasProfilingGlobals(GenericDeviceTy &Device,
-                                                 DeviceImageTy &Image) {
-  GlobalTy global(getInstrProfNamesVarName().str(), 0);
-  if (auto Err = getGlobalMetadataFromImage(Device, Image, global)) {
-    consumeError(std::move(Err));
-    return false;
-  }
-  return true;
-}
-
 Expected<GPUProfGlobals>
 GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
                                              DeviceImageTy &Image) {
@@ -204,12 +194,17 @@ GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
     // Check if given current global is a profiling global based
     // on name
     if (*NameOrErr == getInstrProfNamesVarName()) {
-      // Read in profiled function names
-      DeviceProfileData.NamesData = SmallVector<uint8_t>(Sym.getSize(), 0);
-      GlobalTy NamesGlobal(NameOrErr->str(), Sym.getSize(),
-                           DeviceProfileData.NamesData.data());
-      if (auto Err = readGlobalFromDevice(Device, Image, NamesGlobal))
-        return Err;
+      // Read in profiled function names from ELF
+      auto SectionOrErr = Sym.getSection();
+      if (!SectionOrErr)
+        return SectionOrErr.takeError();
+
+      auto ContentsOrErr = (*SectionOrErr)->getContents();
+      if (!ContentsOrErr)
+        return ContentsOrErr.takeError();
+
+      SmallVector<uint8_t> NameBytes(ContentsOrErr->bytes());
+      DeviceProfileData.NamesData = NameBytes;
     } else if (NameOrErr->starts_with(getInstrProfCountersVarPrefix())) {
       // Read global variable profiling counts
       SmallVector<int64_t> Counts(Sym.getSize() / sizeof(int64_t), 0);
@@ -321,4 +316,8 @@ Error GPUProfGlobals::write() const {
                          "error writing GPU PGO data to file");
 
   return Plugin::success();
+}
+
+bool GPUProfGlobals::empty() const {
+  return Counts.empty() && Data.empty() && NamesData.empty();
 }

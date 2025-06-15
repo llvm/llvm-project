@@ -54,8 +54,6 @@
 
 using namespace llvm;
 
-LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
-
 //===----------------------------------------------------------------------===//
 // Methods to implement the globals and functions lists.
 //
@@ -73,8 +71,7 @@ template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<GlobalIFunc>;
 
 Module::Module(StringRef MID, LLVMContext &C)
     : Context(C), ValSymTab(std::make_unique<ValueSymbolTable>(-1)),
-      ModuleID(std::string(MID)), SourceFileName(std::string(MID)),
-      IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
+      ModuleID(std::string(MID)), SourceFileName(std::string(MID)) {
   Context.addModule(this);
 }
 
@@ -85,7 +82,6 @@ Module &Module::operator=(Module &&Other) {
 
   ModuleID = std::move(Other.ModuleID);
   SourceFileName = std::move(Other.SourceFileName);
-  IsNewDbgInfoFormat = std::move(Other.IsNewDbgInfoFormat);
 
   GlobalList.clear();
   GlobalList.splice(GlobalList.begin(), Other.GlobalList);

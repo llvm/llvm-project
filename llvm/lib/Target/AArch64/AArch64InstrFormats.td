@@ -282,7 +282,7 @@ def CondCode : AsmOperandClass {
   let DiagnosticType = "InvalidCondCode";
 }
 
-// A 32-bit register pasrsed as 64-bit
+// A 32-bit register parsed as 64-bit
 def GPR32as64Operand : AsmOperandClass {
   let Name = "GPR32as64";
   let ParserMethod =
@@ -292,7 +292,7 @@ def GPR32as64 : RegisterOperand<GPR32> {
   let ParserMatchClass = GPR32as64Operand;
 }
 
-// A 64-bit register pasrsed as 32-bit
+// A 64-bit register parsed as 32-bit
 def GPR64as32Operand : AsmOperandClass {
   let Name = "GPR64as32";
   let ParserMethod =
@@ -580,7 +580,7 @@ def uimm5s8 : Operand<i64>, ImmLeaf<i64,
   let PrintMethod = "printImmScale<8>";
 }
 
-// tuimm5sN predicate - similiar to uimm5sN, but use TImmLeaf (TargetConstant)
+// tuimm5sN predicate - similar to uimm5sN, but use TImmLeaf (TargetConstant)
 // instead of ImmLeaf (Constant)
 def tuimm5s2 : Operand<i64>, TImmLeaf<i64,
                 [{ return Imm >= 0 && Imm < (32*2) && ((Imm % 2) == 0); }],
@@ -3776,7 +3776,7 @@ multiclass StoreUI<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
 // Same as StoreUI, but take a RegisterOperand. This is used by GlobalISel to
 // substitute zero-registers automatically.
 //
-// TODO: Roll out zero-register subtitution to GPR32/GPR64 and fold this back
+// TODO: Roll out zero-register substitution to GPR32/GPR64 and fold this back
 //       into StoreUI.
 multiclass StoreUIz<bits<2> sz, bit V, bits<2> opc, RegisterOperand regtype,
              Operand indextype, string asm, list<dag> pattern> {

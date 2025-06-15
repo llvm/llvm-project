@@ -22,20 +22,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "vemcexpr"
 
-const VEMCExpr *VEMCExpr::create(Specifier Kind, const MCExpr *Expr,
+const VEMCExpr *VEMCExpr::create(Specifier S, const MCExpr *Expr,
                                  MCContext &Ctx) {
-  return new (Ctx) VEMCExpr(Kind, Expr);
+  return new (Ctx) VEMCExpr(Expr, S);
 }
 
-void VEMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-
-  const MCExpr *Expr = getSubExpr();
-  Expr->print(OS, MAI);
-  if (specifier != VK_None && specifier != VK_REFLONG)
-    OS << '@' << MAI->getSpecifierName(specifier);
-}
-
-VE::Fixups VEMCExpr::getFixupKind(VEMCExpr::Specifier S) {
+VE::Fixups VEMCExpr::getFixupKind(MCSpecifierExpr::Spec S) {
   switch (S) {
   default:
     llvm_unreachable("Unhandled VEMCExpr::Specifier");
@@ -78,8 +70,4 @@ bool VEMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
     return false;
   Res.setSpecifier(specifier);
   return true;
-}
-
-void VEMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
 }

@@ -4749,6 +4749,8 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
   EnterExpressionEvaluationContext EECtx{
       *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
+  ContextRAII CurContext(*this, CSD->getDeclContext(),
+                         /*NewThisContext=*/false);
   if (!AreArgsDependent &&
       CheckConstraintSatisfaction(
           NamedConcept, AssociatedConstraint(NamedConcept->getConstraintExpr()),
