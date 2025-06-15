@@ -19,30 +19,28 @@
 namespace llvm {
 
 class M68kMCExpr : public MCSpecifierExpr {
-public:
-  enum Specifier {
-    VK_None,
-
-    VK_GOT = MCSymbolRefExpr::FirstTargetSpecifier,
-    VK_GOTOFF,
-    VK_GOTPCREL,
-    VK_GOTTPOFF,
-    VK_PLT,
-    VK_TLSGD,
-    VK_TLSLD,
-    VK_TLSLDM,
-    VK_TPOFF,
-  };
-
 protected:
-  explicit M68kMCExpr(const MCExpr *Expr, Specifier S)
-      : MCSpecifierExpr(Expr, S) {}
+  explicit M68kMCExpr(const MCExpr *Expr, Spec S) : MCSpecifierExpr(Expr, S) {}
 
 public:
-  static const M68kMCExpr *create(const MCExpr *, Specifier, MCContext &);
+  static const M68kMCExpr *create(const MCExpr *, Spec, MCContext &);
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
 };
+namespace M68k {
+enum Specifier {
+  S_None,
+  S_GOT,
+  S_GOTOFF,
+  S_GOTPCREL,
+  S_GOTTPOFF,
+  S_PLT,
+  S_TLSGD,
+  S_TLSLD,
+  S_TLSLDM,
+  S_TPOFF,
+};
+}
 } // namespace llvm
 
 #endif
