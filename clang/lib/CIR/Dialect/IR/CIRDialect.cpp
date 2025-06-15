@@ -1934,6 +1934,24 @@ OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexRealOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexRealOp::verify() {
+  if (getType() != getOperand().getType().getElementType()) {
+    emitOpError() << "cir.complex.real result type does not match operand type";
+    return failure();
+  }
+  return success();
+}
+
+OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
+  auto complex =
+      mlir::cast_if_present<cir::ConstComplexAttr>(adaptor.getOperand());
+  return complex ? complex.getReal() : nullptr;
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
