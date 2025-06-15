@@ -44,7 +44,7 @@ const MCExpr *RISCVMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
   MCContext &Ctx = Streamer.getContext();
   const MCExpr *ME = MCSymbolRefExpr::create(Sym, Ctx);
   assert(Encoding & dwarf::DW_EH_PE_sdata4 && "Unexpected encoding");
-  return RISCVMCExpr::create(ME, ELF::R_RISCV_32_PCREL, Ctx);
+  return MCSpecifierExpr::create(ME, ELF::R_RISCV_32_PCREL, Ctx);
 }
 
 void RISCVMCAsmInfo::printSpecifierExpr(raw_ostream &OS,

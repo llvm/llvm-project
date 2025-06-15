@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVAsmBackend.h"
 #include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "RISCVFixupKinds.h"
@@ -26,11 +25,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscvmcexpr"
-
-const RISCVMCExpr *RISCVMCExpr::create(const MCExpr *Expr, Specifier S,
-                                       MCContext &Ctx) {
-  return new (Ctx) RISCVMCExpr(Expr, S);
-}
 
 RISCV::Specifier RISCV::parseSpecifierName(StringRef name) {
   return StringSwitch<RISCV::Specifier>(name)
