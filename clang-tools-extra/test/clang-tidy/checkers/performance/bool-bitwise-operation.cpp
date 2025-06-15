@@ -186,12 +186,27 @@ void bad_with_priors2() {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [performance-bool-bitwise-operation]
     // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [performance-bool-bitwise-operation]
     // CHECK-FIXES: (b && c) || a;
+}
 
-    // case to check `hasAncestor` works as we expected:
+template<typename T>
+T ident(T val) { return val; }
+
+// cases to check `hasAncestor` works as we expected:
+void bad_has_ancestor() {
+    bool a = false, b = true, c = true;
     bool d = false;
     d ^ (a && b & c);
     // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [performance-bool-bitwise-operation]
     // CHECK-FIXES: d ^ (a && b && c);
+
+    a ^ ident(b & c || a);
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [performance-bool-bitwise-operation]
+    // CHECK-FIXES: a ^ ident(b && c || a);
+
+    a | ident(a ? b & c : c);
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean values instead of bitwise operator '|' [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:21: warning: use logical operator '&&' for boolean values instead of bitwise operator '&' [performance-bool-bitwise-operation]
+    // CHECK-FIXES: a | ident(a ? b && c : c);
 }
 
 void bad_with_priors_already_braced() {

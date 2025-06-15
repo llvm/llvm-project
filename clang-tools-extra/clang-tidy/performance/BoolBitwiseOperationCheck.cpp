@@ -167,7 +167,12 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
 
   std::optional<BinaryOperatorKind> ParentOpcode;
-  if (const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p"); Parent)
+  if (const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p");
+      Parent && llvm::any_of(std::array{Parent->getLHS(), Parent->getRHS()},
+                             [&](const Expr *E) {
+                               return dyn_cast<BinaryOperator>(
+                                          E->IgnoreImpCasts()) == MatchedExpr;
+                             }))
     ParentOpcode = Parent->getOpcode();
 
   const auto *RHS =
