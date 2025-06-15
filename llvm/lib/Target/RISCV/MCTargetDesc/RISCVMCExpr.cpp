@@ -13,6 +13,7 @@
 
 #include "RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVAsmBackend.h"
+#include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "RISCVFixupKinds.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
@@ -31,65 +32,8 @@ const RISCVMCExpr *RISCVMCExpr::create(const MCExpr *Expr, Specifier S,
   return new (Ctx) RISCVMCExpr(Expr, S);
 }
 
-void RISCVMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  Specifier S = getSpecifier();
-  bool HasVariant = S != RISCV::S_None && S != ELF::R_RISCV_CALL_PLT;
-
-  if (HasVariant)
-    OS << '%' << getSpecifierName(S) << '(';
-  Expr->print(OS, MAI);
-  if (HasVariant)
-    OS << ')';
-}
-
-const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
-  MCValue AUIPCLoc;
-  if (!getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr))
-    return nullptr;
-
-  const MCSymbol *AUIPCSymbol = AUIPCLoc.getAddSym();
-  if (!AUIPCSymbol)
-    return nullptr;
-  const auto *DF = dyn_cast_or_null<MCDataFragment>(AUIPCSymbol->getFragment());
-
-  if (!DF)
-    return nullptr;
-
-  uint64_t Offset = AUIPCSymbol->getOffset();
-  if (DF->getContents().size() == Offset) {
-    DF = dyn_cast_or_null<MCDataFragment>(DF->getNext());
-    if (!DF)
-      return nullptr;
-    Offset = 0;
-  }
-
-  for (const MCFixup &F : DF->getFixups()) {
-    if (F.getOffset() != Offset)
-      continue;
-    auto Kind = F.getTargetKind();
-    if (!mc::isRelocation(F.getKind())) {
-      if (Kind == RISCV::fixup_riscv_pcrel_hi20) {
-        *DFOut = DF;
-        return &F;
-      }
-      break;
-    }
-    switch (Kind) {
-    case ELF::R_RISCV_GOT_HI20:
-    case ELF::R_RISCV_TLS_GOT_HI20:
-    case ELF::R_RISCV_TLS_GD_HI20:
-    case ELF::R_RISCV_TLSDESC_HI20:
-      *DFOut = DF;
-      return &F;
-    }
-  }
-
-  return nullptr;
-}
-
-std::optional<RISCVMCExpr::Specifier>
-RISCVMCExpr::getSpecifierForName(StringRef name) {
-  return StringSwitch<std::optional<RISCVMCExpr::Specifier>>(name)
+RISCV::Specifier RISCV::parseSpecifierName(StringRef name) {
+  return StringSwitch<RISCV::Specifier>(name)
       .Case("lo", RISCV::S_LO)
       .Case("hi", ELF::R_RISCV_HI20)
       .Case("pcrel_lo", RISCV::S_PCREL_LO)
@@ -108,10 +52,10 @@ RISCVMCExpr::getSpecifierForName(StringRef name) {
       // Used in data directives
       .Case("pltpcrel", ELF::R_RISCV_PLT32)
       .Case("gotpcrel", ELF::R_RISCV_GOT32_PCREL)
-      .Default(std::nullopt);
+      .Default(0);
 }
 
-StringRef RISCVMCExpr::getSpecifierName(Specifier S) {
+StringRef RISCV::getSpecifierName(Specifier S) {
   switch (S) {
   case RISCV::S_None:
     llvm_unreachable("not used as %specifier()");
