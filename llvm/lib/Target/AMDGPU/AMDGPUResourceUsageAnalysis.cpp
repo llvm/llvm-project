@@ -137,29 +137,274 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   if (MFI->isStackRealigned())
     Info.PrivateSegmentSize += FrameInfo.getMaxAlign().value();
 
-  Info.UsesVCC = MRI.isPhysRegUsed(AMDGPU::VCC);
+  Info.UsesVCC =
+      MRI.isPhysRegUsed(AMDGPU::VCC_LO) || MRI.isPhysRegUsed(AMDGPU::VCC_HI);
 
-  Info.NumVGPR = TRI.getNumDefinedPhysRegs(MRI, AMDGPU::VGPR_32RegClass);
-  Info.NumExplicitSGPR =
-      TRI.getNumDefinedPhysRegs(MRI, AMDGPU::SGPR_32RegClass);
-  if (ST.hasMAIInsts())
-    Info.NumAGPR = TRI.getNumDefinedPhysRegs(MRI, AMDGPU::AGPR_32RegClass);
-
-  // Preloaded registers are written by the hardware, not defined in the
-  // function body, so they need special handling.
-  if (MFI->isEntryFunction()) {
-    Info.NumExplicitSGPR =
-        std::max<int32_t>(Info.NumExplicitSGPR, MFI->getNumPreloadedSGPRs());
-    Info.NumVGPR = std::max<int32_t>(Info.NumVGPR, MFI->getNumPreloadedVGPRs());
+  // If there are no calls, MachineRegisterInfo can tell us the used register
+  // count easily.
+  // A tail call isn't considered a call for MachineFrameInfo's purposes.
+  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
+    Info.NumVGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass);
+    Info.NumExplicitSGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::SGPR_32RegClass);
+    if (ST.hasMAIInsts())
+      Info.NumAGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::AGPR_32RegClass);
+    return Info;
   }
 
-  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall())
-    return Info;
-
+  int32_t MaxVGPR = -1;
+  int32_t MaxAGPR = -1;
+  int32_t MaxSGPR = -1;
   Info.CalleeSegmentSize = 0;
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
+      // TODO: Check regmasks? Do they occur anywhere except calls?
+      for (const MachineOperand &MO : MI.operands()) {
+        unsigned Width = 0;
+        bool IsSGPR = false;
+        bool IsAGPR = false;
+
+        if (!MO.isReg())
+          continue;
+
+        Register Reg = MO.getReg();
+        switch (Reg) {
+        case AMDGPU::EXEC:
+        case AMDGPU::EXEC_LO:
+        case AMDGPU::EXEC_HI:
+        case AMDGPU::SCC:
+        case AMDGPU::M0:
+        case AMDGPU::M0_LO16:
+        case AMDGPU::M0_HI16:
+        case AMDGPU::SRC_SHARED_BASE_LO:
+        case AMDGPU::SRC_SHARED_BASE:
+        case AMDGPU::SRC_SHARED_LIMIT_LO:
+        case AMDGPU::SRC_SHARED_LIMIT:
+        case AMDGPU::SRC_PRIVATE_BASE_LO:
+        case AMDGPU::SRC_PRIVATE_BASE:
+        case AMDGPU::SRC_PRIVATE_LIMIT_LO:
+        case AMDGPU::SRC_PRIVATE_LIMIT:
+        case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
+        case AMDGPU::SGPR_NULL:
+        case AMDGPU::SGPR_NULL64:
+        case AMDGPU::MODE:
+          continue;
+
+        case AMDGPU::NoRegister:
+          assert(MI.isDebugInstr() &&
+                 "Instruction uses invalid noreg register");
+          continue;
+
+        case AMDGPU::VCC:
+        case AMDGPU::VCC_LO:
+        case AMDGPU::VCC_HI:
+        case AMDGPU::VCC_LO_LO16:
+        case AMDGPU::VCC_LO_HI16:
+        case AMDGPU::VCC_HI_LO16:
+        case AMDGPU::VCC_HI_HI16:
+          Info.UsesVCC = true;
+          continue;
+
+        case AMDGPU::FLAT_SCR:
+        case AMDGPU::FLAT_SCR_LO:
+        case AMDGPU::FLAT_SCR_HI:
+          continue;
+
+        case AMDGPU::XNACK_MASK:
+        case AMDGPU::XNACK_MASK_LO:
+        case AMDGPU::XNACK_MASK_HI:
+          llvm_unreachable("xnack_mask registers should not be used");
+
+        case AMDGPU::LDS_DIRECT:
+          llvm_unreachable("lds_direct register should not be used");
+
+        case AMDGPU::TBA:
+        case AMDGPU::TBA_LO:
+        case AMDGPU::TBA_HI:
+        case AMDGPU::TMA:
+        case AMDGPU::TMA_LO:
+        case AMDGPU::TMA_HI:
+          llvm_unreachable("trap handler registers should not be used");
+
+        case AMDGPU::SRC_VCCZ:
+          llvm_unreachable("src_vccz register should not be used");
+
+        case AMDGPU::SRC_EXECZ:
+          llvm_unreachable("src_execz register should not be used");
+
+        case AMDGPU::SRC_SCC:
+          llvm_unreachable("src_scc register should not be used");
+
+        default:
+          break;
+        }
+
+        if (AMDGPU::SGPR_32RegClass.contains(Reg) ||
+            AMDGPU::SGPR_LO16RegClass.contains(Reg) ||
+            AMDGPU::SGPR_HI16RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 1;
+        } else if (AMDGPU::VGPR_32RegClass.contains(Reg) ||
+                   AMDGPU::VGPR_16RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 1;
+        } else if (AMDGPU::AGPR_32RegClass.contains(Reg) ||
+                   AMDGPU::AGPR_LO16RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 1;
+        } else if (AMDGPU::SGPR_64RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 2;
+        } else if (AMDGPU::VReg_64RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 2;
+        } else if (AMDGPU::AReg_64RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 2;
+        } else if (AMDGPU::VReg_96RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 3;
+        } else if (AMDGPU::SReg_96RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 3;
+        } else if (AMDGPU::AReg_96RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 3;
+        } else if (AMDGPU::SGPR_128RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 4;
+        } else if (AMDGPU::VReg_128RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 4;
+        } else if (AMDGPU::AReg_128RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 4;
+        } else if (AMDGPU::VReg_160RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 5;
+        } else if (AMDGPU::SReg_160RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 5;
+        } else if (AMDGPU::AReg_160RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 5;
+        } else if (AMDGPU::VReg_192RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 6;
+        } else if (AMDGPU::SReg_192RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 6;
+        } else if (AMDGPU::AReg_192RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 6;
+        } else if (AMDGPU::VReg_224RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 7;
+        } else if (AMDGPU::SReg_224RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 7;
+        } else if (AMDGPU::AReg_224RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 7;
+        } else if (AMDGPU::SReg_256RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 8;
+        } else if (AMDGPU::VReg_256RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 8;
+        } else if (AMDGPU::AReg_256RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 8;
+        } else if (AMDGPU::VReg_288RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 9;
+        } else if (AMDGPU::SReg_288RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 9;
+        } else if (AMDGPU::AReg_288RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 9;
+        } else if (AMDGPU::VReg_320RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 10;
+        } else if (AMDGPU::SReg_320RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 10;
+        } else if (AMDGPU::AReg_320RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 10;
+        } else if (AMDGPU::VReg_352RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 11;
+        } else if (AMDGPU::SReg_352RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 11;
+        } else if (AMDGPU::AReg_352RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 11;
+        } else if (AMDGPU::VReg_384RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 12;
+        } else if (AMDGPU::SReg_384RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 12;
+        } else if (AMDGPU::AReg_384RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 12;
+        } else if (AMDGPU::SReg_512RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 16;
+        } else if (AMDGPU::VReg_512RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 16;
+        } else if (AMDGPU::AReg_512RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 16;
+        } else if (AMDGPU::SReg_1024RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 32;
+        } else if (AMDGPU::VReg_1024RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 32;
+        } else if (AMDGPU::AReg_1024RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 32;
+        } else {
+          // We only expect TTMP registers or registers that do not belong to
+          // any RC.
+          assert((AMDGPU::TTMP_32RegClass.contains(Reg) ||
+                  AMDGPU::TTMP_64RegClass.contains(Reg) ||
+                  AMDGPU::TTMP_128RegClass.contains(Reg) ||
+                  AMDGPU::TTMP_256RegClass.contains(Reg) ||
+                  AMDGPU::TTMP_512RegClass.contains(Reg) ||
+                  !TRI.getPhysRegBaseClass(Reg)) &&
+                 "Unknown register class");
+        }
+        unsigned HWReg = TRI.getHWRegIndex(Reg);
+        int MaxUsed = HWReg + Width - 1;
+        if (IsSGPR) {
+          MaxSGPR = MaxUsed > MaxSGPR ? MaxUsed : MaxSGPR;
+        } else if (IsAGPR) {
+          MaxAGPR = MaxUsed > MaxAGPR ? MaxUsed : MaxAGPR;
+        } else {
+          MaxVGPR = MaxUsed > MaxVGPR ? MaxUsed : MaxVGPR;
+        }
+      }
+
       if (MI.isCall()) {
         // Pseudo used just to encode the underlying global. Is there a better
         // way to track this?
@@ -218,6 +463,10 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
       }
     }
   }
+
+  Info.NumExplicitSGPR = MaxSGPR + 1;
+  Info.NumVGPR = MaxVGPR + 1;
+  Info.NumAGPR = MaxAGPR + 1;
 
   return Info;
 }
