@@ -7,14 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCMCExpr.h"
-#include "PPCFixupKinds.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
-#include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -89,8 +85,4 @@ bool PPCMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   }
 
   return true;
-}
-
-void PPCMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
 }

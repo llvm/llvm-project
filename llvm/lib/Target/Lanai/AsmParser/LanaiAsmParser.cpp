@@ -232,13 +232,13 @@ public:
 
     // Symbolic reference expression
     if (const LanaiMCExpr *SymbolRefExpr = dyn_cast<LanaiMCExpr>(Imm.Value))
-      return SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_ABS_HI;
+      return SymbolRefExpr->getSpecifier() == LanaiMCExpr::VK_Lanai_ABS_HI;
 
     // Binary expression
     if (const MCBinaryExpr *BinaryExpr = dyn_cast<MCBinaryExpr>(Imm.Value))
       if (const LanaiMCExpr *SymbolRefExpr =
               dyn_cast<LanaiMCExpr>(BinaryExpr->getLHS()))
-        return SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_ABS_HI;
+        return SymbolRefExpr->getSpecifier() == LanaiMCExpr::VK_Lanai_ABS_HI;
 
     return false;
   }
@@ -269,13 +269,13 @@ public:
 
     // Symbolic reference expression
     if (const LanaiMCExpr *SymbolRefExpr = dyn_cast<LanaiMCExpr>(Imm.Value))
-      return SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_ABS_LO;
+      return SymbolRefExpr->getSpecifier() == LanaiMCExpr::VK_Lanai_ABS_LO;
 
     // Binary expression
     if (const MCBinaryExpr *BinaryExpr = dyn_cast<MCBinaryExpr>(Imm.Value))
       if (const LanaiMCExpr *SymbolRefExpr =
               dyn_cast<LanaiMCExpr>(BinaryExpr->getLHS()))
-        return SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_ABS_LO;
+        return SymbolRefExpr->getSpecifier() == LanaiMCExpr::VK_Lanai_ABS_LO;
 
     return false;
   }
@@ -293,13 +293,13 @@ public:
 
     // Symbolic reference expression
     if (const LanaiMCExpr *SymbolRefExpr = dyn_cast<LanaiMCExpr>(Imm.Value))
-      return SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_ABS_LO;
+      return SymbolRefExpr->getSpecifier() == LanaiMCExpr::VK_Lanai_ABS_LO;
 
     // Binary expression
     if (const MCBinaryExpr *BinaryExpr = dyn_cast<MCBinaryExpr>(Imm.Value))
       if (const LanaiMCExpr *SymbolRefExpr =
               dyn_cast<LanaiMCExpr>(BinaryExpr->getLHS()))
-        return SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_ABS_LO;
+        return SymbolRefExpr->getSpecifier() == LanaiMCExpr::VK_Lanai_ABS_LO;
 
     return false;
   }
@@ -340,7 +340,7 @@ public:
 
     // Symbolic reference expression
     if (const LanaiMCExpr *SymbolRefExpr = dyn_cast<LanaiMCExpr>(Imm.Value))
-      return SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_None;
+      return SymbolRefExpr->getSpecifier() == LanaiMCExpr::VK_Lanai_None;
     if (const MCSymbolRefExpr *SymbolRefExpr =
             dyn_cast<MCSymbolRefExpr>(Imm.Value)) {
       return SymbolRefExpr->getKind() == MCSymbolRefExpr::VK_None;
@@ -350,7 +350,7 @@ public:
     if (const MCBinaryExpr *BinaryExpr = dyn_cast<MCBinaryExpr>(Imm.Value)) {
       if (const LanaiMCExpr *SymbolRefExpr =
               dyn_cast<LanaiMCExpr>(BinaryExpr->getLHS()))
-        return SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_None;
+        return SymbolRefExpr->getSpecifier() == LanaiMCExpr::VK_Lanai_None;
       if (const MCSymbolRefExpr *SymbolRefExpr =
               dyn_cast<MCSymbolRefExpr>(BinaryExpr->getLHS()))
         return SymbolRefExpr->getKind() == MCSymbolRefExpr::VK_None;
@@ -468,14 +468,14 @@ public:
 #ifndef NDEBUG
       const LanaiMCExpr *SymbolRefExpr = dyn_cast<LanaiMCExpr>(getImm());
       assert(SymbolRefExpr &&
-             SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_ABS_LO);
+             SymbolRefExpr->getSpecifier() == LanaiMCExpr::VK_Lanai_ABS_LO);
 #endif
       Inst.addOperand(MCOperand::createExpr(getImm()));
     } else if (isa<MCBinaryExpr>(getImm())) {
 #ifndef NDEBUG
       const MCBinaryExpr *BinaryExpr = dyn_cast<MCBinaryExpr>(getImm());
       assert(BinaryExpr && isa<LanaiMCExpr>(BinaryExpr->getLHS()) &&
-             cast<LanaiMCExpr>(BinaryExpr->getLHS())->getKind() ==
+             cast<LanaiMCExpr>(BinaryExpr->getLHS())->getSpecifier() ==
                  LanaiMCExpr::VK_Lanai_ABS_LO);
 #endif
       Inst.addOperand(MCOperand::createExpr(getImm()));
@@ -499,14 +499,14 @@ public:
 #ifndef NDEBUG
       const LanaiMCExpr *SymbolRefExpr = dyn_cast<LanaiMCExpr>(getImm());
       assert(SymbolRefExpr &&
-             SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_ABS_HI);
+             SymbolRefExpr->getSpecifier() == LanaiMCExpr::VK_Lanai_ABS_HI);
 #endif
       Inst.addOperand(MCOperand::createExpr(getImm()));
     } else if (isa<MCBinaryExpr>(getImm())) {
 #ifndef NDEBUG
       const MCBinaryExpr *BinaryExpr = dyn_cast<MCBinaryExpr>(getImm());
       assert(BinaryExpr && isa<LanaiMCExpr>(BinaryExpr->getLHS()) &&
-             cast<LanaiMCExpr>(BinaryExpr->getLHS())->getKind() ==
+             cast<LanaiMCExpr>(BinaryExpr->getLHS())->getSpecifier() ==
                  LanaiMCExpr::VK_Lanai_ABS_HI);
 #endif
       Inst.addOperand(MCOperand::createExpr(getImm()));
@@ -530,7 +530,7 @@ public:
 #ifndef NDEBUG
       const LanaiMCExpr *SymbolRefExpr = dyn_cast<LanaiMCExpr>(getImm());
       assert(SymbolRefExpr &&
-             SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_None);
+             SymbolRefExpr->getSpecifier() == LanaiMCExpr::VK_Lanai_None);
 #endif
       Inst.addOperand(MCOperand::createExpr(getImm()));
     } else if (isa<MCSymbolRefExpr>(getImm())) {
@@ -545,7 +545,7 @@ public:
 #ifndef NDEBUG
       const MCBinaryExpr *BinaryExpr = dyn_cast<MCBinaryExpr>(getImm());
       assert(BinaryExpr && isa<LanaiMCExpr>(BinaryExpr->getLHS()) &&
-             cast<LanaiMCExpr>(BinaryExpr->getLHS())->getKind() ==
+             cast<LanaiMCExpr>(BinaryExpr->getLHS())->getSpecifier() ==
                  LanaiMCExpr::VK_Lanai_None);
 #endif
       Inst.addOperand(MCOperand::createExpr(getImm()));
@@ -737,7 +737,7 @@ std::unique_ptr<LanaiOperand> LanaiAsmParser::parseIdentifier() {
   SMLoc Start = Parser.getTok().getLoc();
   SMLoc End = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   const MCExpr *Res, *RHS = nullptr;
-  LanaiMCExpr::VariantKind Kind = LanaiMCExpr::VK_Lanai_None;
+  LanaiMCExpr::Spec Kind = LanaiMCExpr::VK_Lanai_None;
 
   if (Lexer.getKind() != AsmToken::Identifier)
     return nullptr;
@@ -866,7 +866,7 @@ bool shouldBeSls(const LanaiOperand &Op) {
   // The instruction should be encoded as an SLS if the operand is a symbolic
   // reference with no variant.
   if (const LanaiMCExpr *SymbolRefExpr = dyn_cast<LanaiMCExpr>(Op.getImm()))
-    return SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_None;
+    return SymbolRefExpr->getSpecifier() == LanaiMCExpr::VK_Lanai_None;
   // The instruction should be encoded as an SLS if the operand is a binary
   // expression with the left-hand side being a symbolic reference with no
   // variant.
@@ -874,7 +874,7 @@ bool shouldBeSls(const LanaiOperand &Op) {
     const LanaiMCExpr *LHSSymbolRefExpr =
         dyn_cast<LanaiMCExpr>(BinaryExpr->getLHS());
     return (LHSSymbolRefExpr &&
-            LHSSymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_None);
+            LHSSymbolRefExpr->getSpecifier() == LanaiMCExpr::VK_Lanai_None);
   }
   return false;
 }

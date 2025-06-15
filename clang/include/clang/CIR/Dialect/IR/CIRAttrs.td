@@ -17,6 +17,7 @@ include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Attrs
@@ -273,6 +274,92 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 
   let assemblyFormat = [{
     `<` custom<ConstPtr>($value) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ConstComplexAttr
+//===----------------------------------------------------------------------===//
+
+def ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex",
+                                [TypedAttrInterface]> {
+  let summary = "An attribute that contains a constant complex value";
+  let description = [{
+    The `#cir.const_complex` attribute contains a constant value of complex
+    number type. The `real` parameter gives the real part of the complex number
+    and the `imag` parameter gives the imaginary part of the complex number.
+
+    The `real` and `imag` parameters must both reference the same type and must
+    be either IntAttr or FPAttr.
+
+    ```mlir
+    %ci = #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i>
+        : !cir.complex<!s32i>
+    %cf = #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float,
+        #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let parameters = (ins
+    AttributeSelfTypeParameter<"", "cir::ComplexType">:$type,
+    CIR_AnyIntOrFloatAttr:$real,
+    CIR_AnyIntOrFloatAttr:$imag
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::TypedAttr":$real,
+                                        "mlir::TypedAttr":$imag), [{
+      auto type = cir::ComplexType::get(real.getType());
+      return $_get(type.getContext(), type, real, imag);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+
+  let assemblyFormat = [{
+    `<` qualified($real) `,` qualified($imag) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VisibilityAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_VisibilityKind : I32EnumAttr<"VisibilityKind", "C/C++ visibility", [
+  I32EnumAttrCase<"Default", 1, "default">,
+  I32EnumAttrCase<"Hidden", 2, "hidden">,
+  I32EnumAttrCase<"Protected", 3, "protected">
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::cir";
+}
+
+def CIR_VisibilityAttr : CIR_Attr<"Visibility", "visibility"> {
+  let summary = "Visibility attribute";
+  let description = [{
+    Visibility attributes.
+  }];
+  let parameters = (ins "VisibilityKind":$value);
+
+  let assemblyFormat = [{
+    $value
+  }];
+
+  let builders = [
+    AttrBuilder<(ins CArg<"VisibilityKind", "cir::VisibilityKind::Default">:$value), [{
+      return $_get($_ctxt, value);
+    }]>
+  ];
+
+  let skipDefaultBuilders = 1;
+
+  // Make DefaultValuedAttr accept VisibilityKind as default value ($0).
+  let constBuilderCall = "cir::VisibilityAttr::get($_builder.getContext(), $0)";
+
+  let extraClassDeclaration = [{
+    bool isDefault() const { return getValue() == VisibilityKind::Default; };
+    bool isHidden() const { return getValue() == VisibilityKind::Hidden; };
+    bool isProtected() const { return getValue() == VisibilityKind::Protected; };
   }];
 }
 

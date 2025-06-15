@@ -216,7 +216,7 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
 
     if ((Op2.getReg() == AArch64::WZR || Op2.getReg() == AArch64::XZR) &&
         (ImmR == 0 || ImmS < ImmR) && STI.hasFeature(AArch64::HasV8_2aOps)) {
-      // BFC takes precedence over its entire range, sligtly differently to BFI.
+      // BFC takes precedence over its entire range, slightly differently to BFI.
       int BitWidth = Opcode == AArch64::BFMXri ? 64 : 32;
       int LSB = (BitWidth - ImmR) % BitWidth;
       int Width = ImmS + 1;
@@ -2051,7 +2051,7 @@ void AArch64InstPrinter::printImm8OptLsl(const MCInst *MI, unsigned OpNum,
   unsigned UnscaledVal = MI->getOperand(OpNum).getImm();
   unsigned Shift = MI->getOperand(OpNum + 1).getImm();
   assert(AArch64_AM::getShiftType(Shift) == AArch64_AM::LSL &&
-         "Unexepected shift type!");
+         "Unexpected shift type!");
 
   // #0 lsl #8 is never pretty printed
   if ((UnscaledVal == 0) && (AArch64_AM::getShiftValue(Shift) != 0)) {

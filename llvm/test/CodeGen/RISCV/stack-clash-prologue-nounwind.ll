@@ -44,7 +44,7 @@ define i8 @f1() #0 nounwind {
 ; RV64I-NEXT:    sb a0, 16(sp)
 ; RV64I-NEXT:    lbu a0, 16(sp)
 ; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, 16
+; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
 ;
@@ -86,7 +86,7 @@ define i8 @f2() #0 nounwind {
 ; RV64I-NEXT:    sb a0, 16(sp)
 ; RV64I-NEXT:    lbu a0, 16(sp)
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, 16
+; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
 ;
@@ -131,7 +131,7 @@ define i8 @f3() #0 "stack-probe-size"="32768" nounwind {
 ; RV64I-NEXT:    sb a0, 16(sp)
 ; RV64I-NEXT:    lbu a0, 16(sp)
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, 16
+; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
 ;
@@ -164,13 +164,13 @@ define i8 @f4() nounwind {
 ; RV64I-LABEL: f4:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw a0, a0, 16
+; RV64I-NEXT:    addi a0, a0, 16
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    li a0, 3
 ; RV64I-NEXT:    sb a0, 16(sp)
 ; RV64I-NEXT:    lbu a0, 16(sp)
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, 16
+; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
 ;
@@ -211,7 +211,7 @@ define i8 @f5() #0 "stack-probe-size"="65536" nounwind {
 ; RV64I-NEXT:    sb a0, 16(sp)
 ; RV64I-NEXT:    lbu a0, 16(sp)
 ; RV64I-NEXT:    lui a1, 256
-; RV64I-NEXT:    addiw a1, a1, 16
+; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
 ;
@@ -259,7 +259,7 @@ define i8 @f6() #0 nounwind {
 ; RV64I-NEXT:    sb a0, 16(sp)
 ; RV64I-NEXT:    lbu a0, 16(sp)
 ; RV64I-NEXT:    lui a1, 262144
-; RV64I-NEXT:    addiw a1, a1, 16
+; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
 ;
@@ -303,13 +303,13 @@ define i8 @f7() #0 "stack-probe-size"="65536" nounwind {
 ; RV64I-NEXT:    bne sp, t1, .LBB7_1
 ; RV64I-NEXT:  # %bb.2: # %entry
 ; RV64I-NEXT:    lui a0, 13
-; RV64I-NEXT:    addiw a0, a0, -1520
+; RV64I-NEXT:    addi a0, a0, -1520
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    li a0, 3
 ; RV64I-NEXT:    sb a0, 9(sp)
 ; RV64I-NEXT:    lbu a0, 9(sp)
 ; RV64I-NEXT:    lui a1, 244141
-; RV64I-NEXT:    addiw a1, a1, -1520
+; RV64I-NEXT:    addi a1, a1, -1520
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
 ;
