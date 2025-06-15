@@ -580,13 +580,11 @@ define i32 @test20_as1(ptr addrspace(1) %P, i32 %A, i32 %B) {
 }
 
 
-define i32 @test21() {
+define i32 @test21(ptr %pbob1) {
 ; CHECK-LABEL: @test21(
-; CHECK-NEXT:    [[PBOB1:%.*]] = alloca [[INTSTRUCT:%.*]], align 8
-; CHECK-NEXT:    [[RVAL:%.*]] = load i32, ptr [[PBOB1]], align 4
+; CHECK-NEXT:    [[RVAL:%.*]] = load i32, ptr [[PBOB1:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[RVAL]]
 ;
-  %pbob1 = alloca %intstruct
   %pbob2 = getelementptr %intstruct, ptr %pbob1
   %rval = load i32, ptr %pbob2
   ret i32 %rval
@@ -654,18 +652,16 @@ define i1 @test26(ptr %arr) {
   %struct.siginfo_t = type { i32, i32, i32, { { i32, i32, [0 x i8], %struct.sigval_t, i32 }, [88 x i8] } }
   %struct.sigval_t = type { ptr }
 
-define i32 @test27(ptr %to, ptr %from) {
+define i32 @test27(ptr %to, ptr %from, ptr %from_addr) {
 ; CHECK-LABEL: @test27(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FROM_ADDR:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    [[T344:%.*]] = load ptr, ptr [[FROM_ADDR]], align 8
+; CHECK-NEXT:    [[T344:%.*]] = load ptr, ptr [[FROM_ADDR:%.*]], align 8
 ; CHECK-NEXT:    [[T348:%.*]] = getelementptr i8, ptr [[T344]], i64 24
 ; CHECK-NEXT:    [[T351:%.*]] = load i32, ptr [[T348]], align 8
 ; CHECK-NEXT:    [[T360:%.*]] = call i32 asm sideeffect "...", "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"(i32 [[T351]], ptr elementtype([[STRUCT___LARGE_STRUCT:%.*]]) null, i32 -14, i32 0) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %from_addr = alloca ptr
   %t344 = load ptr, ptr %from_addr, align 8
   %t345 = getelementptr %struct.siginfo_t, ptr %t344, i32 0, i32 3
   %t346 = getelementptr { { i32, i32, [0 x i8], %struct.sigval_t, i32 }, [88 x i8] }, ptr %t345, i32 0, i32 0
@@ -1345,10 +1341,7 @@ declare noalias ptr @malloc(i64) nounwind allockind("alloc,uninitialized") alloc
 define i32 @test_gep_bitcast_malloc(ptr %a) {
 ; CHECK-LABEL: @test_gep_bitcast_malloc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(16) ptr @malloc(i64 16)
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr i8, ptr [[CALL]], i64 12
-; CHECK-NEXT:    [[A_C:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    ret i32 [[A_C]]
+; CHECK-NEXT:    ret i32 undef
 ;
 entry:
   %call = call noalias ptr @malloc(i64 16) #2
