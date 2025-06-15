@@ -14,6 +14,7 @@
 #include "VEMCExpr.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -63,4 +64,13 @@ void VEELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
   auto specifier = Expr.getSpecifier();
   if (specifier && specifier != VE::S_REFLONG)
     OS << '@' << getSpecifierName(specifier);
+}
+
+bool VEELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
+                                               MCValue &Res,
+                                               const MCAssembler *Asm) const {
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+  Res.setSpecifier(Expr.getSpecifier());
+  return true;
 }

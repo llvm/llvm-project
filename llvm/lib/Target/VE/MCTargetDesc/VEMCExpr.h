@@ -20,21 +20,6 @@
 namespace llvm {
 
 class StringRef;
-class VEMCExpr : public MCSpecifierExpr {
-public:
-  using Specifier = uint8_t;
-
-private:
-  explicit VEMCExpr(const MCExpr *Expr, Specifier S)
-      : MCSpecifierExpr(Expr, S) {}
-
-public:
-  static const VEMCExpr *create(Specifier Kind, const MCExpr *Expr,
-                                MCContext &Ctx);
-
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAssembler *Asm) const override;
-};
 
 namespace VE {
 enum Specifier {

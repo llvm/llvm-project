@@ -67,18 +67,17 @@ public:
 };
 } // end of anonymous namespace
 
-static MCOperand createVEMCOperand(VEMCExpr::Specifier Kind, MCSymbol *Sym,
+static MCOperand createVEMCOperand(VE::Specifier Kind, MCSymbol *Sym,
                                    MCContext &OutContext) {
   const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(Sym, OutContext);
-  const VEMCExpr *expr = VEMCExpr::create(Kind, MCSym, OutContext);
-  return MCOperand::createExpr(expr);
+  return MCOperand::createExpr(
+      MCSpecifierExpr::create(MCSym, Kind, OutContext));
 }
 
-static MCOperand createGOTRelExprOp(VEMCExpr::Specifier Kind,
-                                    MCSymbol *GOTLabel, MCContext &OutContext) {
+static MCOperand createGOTRelExprOp(VE::Specifier Kind, MCSymbol *GOTLabel,
+                                    MCContext &OutContext) {
   const MCSymbolRefExpr *GOT = MCSymbolRefExpr::create(GOTLabel, OutContext);
-  const VEMCExpr *expr = VEMCExpr::create(Kind, GOT, OutContext);
-  return MCOperand::createExpr(expr);
+  return MCOperand::createExpr(MCSpecifierExpr::create(GOT, Kind, OutContext));
 }
 
 static void emitSIC(MCStreamer &OutStreamer, MCOperand &RD,
@@ -166,9 +165,8 @@ static void emitANDrm(MCStreamer &OutStreamer, MCOperand &RS1, MCOperand &Imm,
 }
 
 static void emitHiLo(MCStreamer &OutStreamer, MCSymbol *GOTSym,
-                     VEMCExpr::Specifier HiKind, VEMCExpr::Specifier LoKind,
-                     MCOperand &RD, MCContext &OutContext,
-                     const MCSubtargetInfo &STI) {
+                     VE::Specifier HiKind, VE::Specifier LoKind, MCOperand &RD,
+                     MCContext &OutContext, const MCSubtargetInfo &STI) {
 
   MCOperand hi = createVEMCOperand(HiKind, GOTSym, OutContext);
   MCOperand lo = createVEMCOperand(LoKind, GOTSym, OutContext);

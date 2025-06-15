@@ -50,7 +50,7 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
   default:
     break;
   }
-  if (const VEMCExpr *SExpr = dyn_cast<VEMCExpr>(Fixup.getValue())) {
+  if (auto *SExpr = dyn_cast<MCSpecifierExpr>(Fixup.getValue())) {
     if (SExpr->getSpecifier() == VE::S_PC_LO32)
       return ELF::R_VE_PC_LO32;
   }

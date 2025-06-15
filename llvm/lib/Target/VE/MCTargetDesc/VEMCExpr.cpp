@@ -22,11 +22,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "vemcexpr"
 
-const VEMCExpr *VEMCExpr::create(Specifier S, const MCExpr *Expr,
-                                 MCContext &Ctx) {
-  return new (Ctx) VEMCExpr(Expr, S);
-}
-
 VE::Fixups VE::getFixupKind(uint8_t S) {
   switch (S) {
   default:
@@ -62,12 +57,4 @@ VE::Fixups VE::getFixupKind(uint8_t S) {
   case VE::S_TPOFF_LO32:
     return VE::fixup_ve_tpoff_lo32;
   }
-}
-
-bool VEMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                         const MCAssembler *Asm) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-  Res.setSpecifier(specifier);
-  return true;
 }
