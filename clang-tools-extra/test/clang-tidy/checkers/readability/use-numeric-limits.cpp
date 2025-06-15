@@ -1,5 +1,15 @@
 // RUN: %check_clang_tidy %s readability-use-numeric-limits %t
-#include <stdint.h>
+// CHECK-FIXES: #include <limits>
+
+using int8_t = signed char;
+using int16_t = short;
+using int32_t = int;
+using int64_t = long long;
+using uint8_t = unsigned char;
+using uint16_t = unsigned short;
+using uint32_t = unsigned int;
+using uint64_t = unsigned long long;
+
 
 void Invalid() {
   // CHECK-MESSAGES: :[[@LINE+2]]:14: warning: the constant '-128' is being utilized; consider using 'std::numeric_limits<int8_t>::min()' instead [readability-use-numeric-limits]

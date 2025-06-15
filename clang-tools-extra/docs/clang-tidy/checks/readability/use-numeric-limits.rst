@@ -3,8 +3,8 @@
 readability-use-numeric-limits
 ==============================
 
-Replaces certain integer literals with equivalent calls to
-``std::numeric_limits<T>::min()`` or ``std::numeric_limits<T>::max()``.
+Finds certain integer literals and suggests replacing them with equivalent
+``std::numeric_limits`` calls.
 
 Before:
 

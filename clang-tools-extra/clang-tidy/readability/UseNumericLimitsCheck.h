@@ -14,8 +14,8 @@
 
 namespace clang::tidy::readability {
 
-/// Replaces certain integer literals with equivalent calls to
-/// ``std::numeric_limits``.
+/// Finds certain integer literals and suggests replacing them with equivalent
+/// ``std::numeric_limits`` calls.
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/use-numeric-limits.html
 class UseNumericLimitsCheck : public ClangTidyCheck {
