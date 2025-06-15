@@ -66,6 +66,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPBranchOnMaskSC:
+  case VPFirstOrderRecurrencePHISC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
     return false;
@@ -113,6 +114,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
   case VPBranchOnMaskSC:
+  case VPFirstOrderRecurrencePHISC:
   case VPPredInstPHISC:
   case VPScalarIVStepsSC:
   case VPWidenStoreEVLSC:
@@ -146,6 +148,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
 bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPDefID()) {
   case VPDerivedIVSC:
+  case VPFirstOrderRecurrencePHISC:
   case VPPredInstPHISC:
   case VPVectorEndPointerSC:
     return false;
@@ -409,7 +412,7 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                              const VPIRFlags &Flags, DebugLoc DL,
                              const Twine &Name)
     : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, Flags, DL),
-      Opcode(Opcode), Name(Name.str()) {
+      VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
 }
@@ -590,7 +593,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case VPInstruction::BranchOnCond: {
     Value *Cond = State.get(getOperand(0), VPLane(0));
-    return createCondBranch(Cond, getParent(), State);
+    auto *Br = createCondBranch(Cond, getParent(), State);
+    applyMetadata(*Br);
+    return Br;
   }
   case VPInstruction::BranchOnCount: {
     // First create the compare.
@@ -835,6 +840,10 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   I32Ty, {Arg0Ty, I32Ty, I1Ty});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
+  case VPInstruction::ExtractPenultimateElement:
+    if (VF == ElementCount::getScalable(1))
+      return InstructionCost::getInvalid();
+  LLVM_FALLTHROUGH;
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
