@@ -847,6 +847,9 @@ def note_drv_available_multilibs : Note<
   "available multilibs are:%0">;
 def err_drv_multilib_custom_error : Error<
   "multilib configuration error: %0">;
+def warn_drv_multilib_not_available_for_target: Warning<
+  "no multilib structure encoded for Arm, Aarch64 and PPC targets">,
+  InGroup<DiagGroup<"multilib-not-found">>;
 
 def err_drv_experimental_crel : Error<
   "-Wa,--allow-experimental-crel must be specified to use -Wa,--crel. "
