@@ -110,13 +110,12 @@ void UseNumericLimitsCheck::check(const MatchFinder::MatchResult &Result) {
   const IntegerLiteral *BareMatchedDecl =
       Result.Nodes.getNodeAs<IntegerLiteral>("bare-integer-literal");
 
-  if (NegativeMatchedDecl != nullptr) {
+  if (NegativeMatchedDecl != nullptr)
     MatchedDecl = NegativeMatchedDecl;
-  } else if (PositiveMatchedDecl != nullptr) {
+  else if (PositiveMatchedDecl != nullptr)
     MatchedDecl = PositiveMatchedDecl;
-  } else if (BareMatchedDecl != nullptr) {
+  else if (BareMatchedDecl != nullptr)
     MatchedDecl = BareMatchedDecl;
-  }
 
   const llvm::APInt MatchedIntegerConstant = MatchedDecl->getValue();
 
@@ -151,13 +150,11 @@ void UseNumericLimitsCheck::check(const MatchFinder::MatchResult &Result) {
                Result.SourceManager->getFileID(Location), "<limits>");
   };
 
-  for (const auto &[Value, Replacement] : SignedConstants) {
+  for (const auto &[Value, Replacement] : SignedConstants)
     Fixer(MatchedIntegerConstant.getSExtValue(), Value, Replacement);
-  }
 
-  for (const auto &[Value, Replacement] : UnsignedConstants) {
+  for (const auto &[Value, Replacement] : UnsignedConstants)
     Fixer(MatchedIntegerConstant.getZExtValue(), Value, Replacement);
-  }
 }
 
 } // namespace clang::tidy::readability
