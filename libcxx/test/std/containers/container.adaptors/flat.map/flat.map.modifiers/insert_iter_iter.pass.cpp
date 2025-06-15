@@ -18,6 +18,7 @@
 #include <cassert>
 #include <functional>
 #include <deque>
+#include <ranges>
 
 #include "MinSequenceContainer.h"
 #include "../helpers.h"
@@ -77,12 +78,32 @@ void test() {
   assert(m == expected2);
 }
 
+void test_product_iterator() {
+  using M = std::flat_map<int, int>;
+  {
+    M m1{{1, 1}, {2, 1}, {3, 1}};
+    M m2{{4, 1}, {5, 1}, {6, 1}};
+    m1.insert(m2.begin(), m2.end());
+    M expected{{1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}, {6, 1}};
+    assert(m1 == expected);
+  }
+  {
+    std::vector<int> keys{1, 2, 3};
+    std::vector<int> values{1, 1, 1};
+    auto zv = std::views::zip(keys, values);
+    M m;
+    m.insert(zv.begin(), zv.end());
+    M expected{{1, 1}, {2, 1}, {3, 1}};
+    assert(m == expected);
+  }
+}
+
 int main(int, char**) {
   test<std::vector<int>, std::vector<double>>();
   test<std::deque<int>, std::vector<double>>();
   test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
-
+  test_product_iterator();
   {
     auto insert_func = [](auto& m, const auto& newValues) { m.insert(newValues.begin(), newValues.end()); };
     test_insert_range_exception_guarantee(insert_func);
