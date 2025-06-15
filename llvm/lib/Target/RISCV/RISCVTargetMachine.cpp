@@ -157,6 +157,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
 static StringRef computeDataLayout(const Triple &TT,
                                    const TargetOptions &Options) {
   StringRef ABIName = Options.MCOptions.getABIName();
+  if (TT.isOSBinFormatMachO()) {
+    assert(TT.isArch32Bit() && "Invalid triple.");
+    assert((ABIName != "ilp32e") && "Invalid ABI.");
+    return "e-m:o-p:32:32-i64:64-n32-S128";
+  }
   if (TT.isArch64Bit()) {
     if (ABIName == "lp64e")
       return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S64";
@@ -176,6 +181,15 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   return RM.value_or(Reloc::Static);
 }
 
+static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
+  if (TT.isOSBinFormatELF())
+    return std::make_unique<RISCVELFTargetObjectFile>();
+  else if (TT.isOSBinFormatMachO())
+    return std::make_unique<TargetLoweringObjectFileMachO>();
+  else
+    return std::unique_ptr<TargetLoweringObjectFile>();
+}
+
 RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
@@ -185,7 +199,7 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, computeDataLayout(TT, Options), TT, CPU, FS,
                                Options, getEffectiveRelocModel(TT, RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(std::make_unique<RISCVELFTargetObjectFile>()) {
+      TLOF(createTLOF(TT)) {
   initAsmInfo();
 
   // RISC-V supports the MachineOutliner.

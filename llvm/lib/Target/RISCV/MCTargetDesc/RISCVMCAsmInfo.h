@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVMCASMINFO_H
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVMCASMINFO_H
 
+#include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAsmInfoELF.h"
 
 namespace llvm {
@@ -26,6 +27,11 @@ public:
 
   const MCExpr *getExprForFDESymbol(const MCSymbol *Sym, unsigned Encoding,
                                     MCStreamer &Streamer) const override;
+};
+
+class RISCVMCAsmInfoDarwin : public MCAsmInfoDarwin {
+public:
+  explicit RISCVMCAsmInfoDarwin();
 };
 
 } // namespace llvm
