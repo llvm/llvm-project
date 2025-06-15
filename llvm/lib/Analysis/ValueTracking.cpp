@@ -3043,6 +3043,10 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     // (X | (X != 0)) is non zero
     if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
       return true;
+    // X | Y != 0 if X != Y.
+    if (isKnownNonEqual(I->getOperand(0), I->getOperand(1), DemandedElts, Q,
+                        Depth))
+      return true;
     // X | Y != 0 if X != 0 or Y != 0.
     return isKnownNonZero(I->getOperand(1), DemandedElts, Q, Depth) ||
            isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
