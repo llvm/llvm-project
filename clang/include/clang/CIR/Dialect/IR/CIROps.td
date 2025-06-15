@@ -2385,4 +2385,33 @@ def ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
   let hasFolder = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// ComplexRealPtrOp
+//===----------------------------------------------------------------------===//
+
+def ComplexRealPtrOp : CIR_Op<"complex.real_ptr", [Pure]> {
+  let summary = "Derive a pointer to the real part of a complex value";
+  let description = [{
+    `cir.complex.real_ptr` operation takes a pointer operand that points to a
+    complex value of type `!cir.complex` and yields a pointer to the real part
+    of the operand.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.real_ptr %0 : !cir.ptr<!cir.complex<!cir.double>> -> !cir.ptr<!cir.double>
+    ```
+  }];
+
+  let results = (outs CIR_PtrToIntOrFloatType:$result);
+  let arguments = (ins CIR_PtrToComplexType:$operand);
+
+  let assemblyFormat = [{
+    $operand `:`
+    qualified(type($operand)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
