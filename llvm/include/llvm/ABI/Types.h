@@ -139,15 +139,11 @@ private:
 
 public:
   VectorType(const Type *ElemType, ElementCount NumElems, Align Align)
-      : Type(
-            TypeKind::Vector,
-            NumElems.isScalable()
-                ? TypeSize(ElemType->getSizeInBits().getFixedValue() *
-                               NumElems.getKnownMinValue(),
-                           true)
-                : TypeSize::getFixed(ElemType->getSizeInBits().getFixedValue() *
-                                     NumElems.getFixedValue()),
-            Align),
+      : Type(TypeKind::Vector,
+             TypeSize(ElemType->getSizeInBits().getFixedValue() *
+                          NumElems.getKnownMinValue(),
+                      NumElems.isScalable()),
+             Align),
         ElementType(ElemType), NumElements(NumElems) {}
 
   const Type *getElementType() const { return ElementType; }
@@ -243,8 +239,8 @@ public:
         ArrayType(ElementType, NumElements);
   }
 
-  const VectorType *getVectorType(const Type *ElementType, uint64_t NumElements,
-                                  Align Align) {
+  const VectorType *getVectorType(const Type *ElementType,
+                                  ElementCount NumElements, Align Align) {
     return new (Allocator.Allocate<VectorType>())
         VectorType(ElementType, NumElements, Align);
   }
