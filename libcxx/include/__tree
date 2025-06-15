@@ -1166,11 +1166,10 @@ public:
     using __key_type = typename _NodeTypes::key_type;
     // fails here for move_alloc.pass.cpp
     // if(std::is_constant_evaluated()) {
-    //   // TODO: use a better name
-    //   using foo_type = __get_node_value_type_t<_Tp>;
-    //   // foo_type tmp {__value.first, __value.second};
-    //   // __value.~foo_type();
-    //   // new (std::addressof(__value))(foo_type)(tmp);
+    //   using __node_value_type = __get_node_value_type_t<_Tp>;
+    //   // __node_value_type tmp {__value.first, __value.second};
+    //   // __value.~__node_value_type();
+    //   // new (std::addressof(__value))(__node_value_type)(tmp);
     //   // __emplace_hint_unique(__p, tmp);
     //   __key_type kk;
     //   new (std::addressof(kk))(__key_type)(__value.first);
@@ -1382,12 +1381,11 @@ private:
       tmp.first = const_cast<__copy_cvref_t<_From, __key_type>&&>(__rhs.first);
       tmp.second                         = std::forward<_From>(__rhs).second;
       // __lhs = pair<const int, double>
-      // TODO: use a better name
-      using foo_type = __get_node_value_type_t<value_type>;
+      using __node_value_type = __get_node_value_type_t<value_type>;
       // const_cast is not allowed at constexpr time.
       // we get around this by deleting and creating a new node value
-      // __lhs.~foo_type();
-      // new (std::addressof(__lhs))(foo_type)(std::move(tmp));
+      // __lhs.~__node_value_type();
+      // new (std::addressof(__lhs))(__node_value_type)(std::move(tmp));
       __lhs = std::move(tmp);
     } else {
       // This is technically UB, since the object was constructed as `const`.
