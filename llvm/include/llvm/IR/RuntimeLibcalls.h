@@ -86,6 +86,16 @@ struct RuntimeLibcallsInfo {
     return ArrayRef(LibcallRoutineNames).drop_back();
   }
 
+  /// Return a function name compatible with RTLIB::MEMCPY, or nullptr if fully
+  /// unsupported.
+  const char *getMemcpyName() const {
+    if (const char *Memcpy = getLibcallName(RTLIB::MEMCPY))
+      return Memcpy;
+
+    // Fallback to memmove if memcpy isn't available.
+    return getLibcallName(RTLIB::MEMMOVE);
+  }
+
 private:
   /// Stores the name each libcall.
   const char *LibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1];
