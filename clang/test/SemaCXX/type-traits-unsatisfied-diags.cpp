@@ -166,7 +166,7 @@ static_assert(__builtin_is_replaceable(const volatile int));
 static_assert(__builtin_is_replaceable(void()));
 // expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(void ())}} \
 // expected-note@-1 {{'void ()' is not replaceable}} \
-// expected-note@-1 {{because it not a scalar or class type}}
+// expected-note@-1 {{because it is not a scalar or class type}}
 
 struct B {
  virtual ~B();
