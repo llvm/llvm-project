@@ -92,7 +92,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       const MCSymbolRefExpr *SymExpr =
           static_cast<const MCSymbolRefExpr *>(Expr);
 
-      if (SymExpr && getSpecifier(SymExpr) == PPCMCExpr::VK_PCREL_OPT) {
+      if (SymExpr && getSpecifier(SymExpr) == PPC::S_PCREL_OPT) {
         const MCSymbol &Symbol = SymExpr->getSymbol();
         if (MI->getOpcode() == PPC::PLDpc) {
           printInstruction(MI, Address, STI, O);
@@ -579,13 +579,13 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
   // because we do not want the assembly to print out the @notoc at the
   // end like __tls_get_addr(x@tlsgd)@notoc. Instead we want it to look
   // like __tls_get_addr@notoc(x@tlsgd).
-  if (getSpecifier(RefExp) == PPCMCExpr::VK_NOTOC)
+  if (getSpecifier(RefExp) == PPC::S_NOTOC)
     O << '@' << MAI.getSpecifierName(RefExp->getKind());
   O << '(';
   printOperand(MI, OpNo + 1, STI, O);
   O << ')';
-  if (getSpecifier(RefExp) != PPCMCExpr::VK_None &&
-      getSpecifier(RefExp) != PPCMCExpr::VK_NOTOC)
+  if (getSpecifier(RefExp) != PPC::S_None &&
+      getSpecifier(RefExp) != PPC::S_NOTOC)
     O << '@' << MAI.getSpecifierName(RefExp->getKind());
   if (Rhs) {
     SmallString<0> Buf;
