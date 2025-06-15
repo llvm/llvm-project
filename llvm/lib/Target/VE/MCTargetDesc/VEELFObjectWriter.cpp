@@ -40,10 +40,10 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                          const MCValue &Target,
                                          bool IsPCRel) const {
   switch (Target.getSpecifier()) {
-  case VEMCExpr::VK_TLS_GD_HI32:
-  case VEMCExpr::VK_TLS_GD_LO32:
-  case VEMCExpr::VK_TPOFF_HI32:
-  case VEMCExpr::VK_TPOFF_LO32:
+  case VE::S_TLS_GD_HI32:
+  case VE::S_TLS_GD_LO32:
+  case VE::S_TPOFF_HI32:
+  case VE::S_TPOFF_LO32:
     if (auto *SA = Target.getAddSym())
       cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
@@ -51,7 +51,7 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
     break;
   }
   if (const VEMCExpr *SExpr = dyn_cast<VEMCExpr>(Fixup.getValue())) {
-    if (SExpr->getSpecifier() == VEMCExpr::VK_PC_LO32)
+    if (SExpr->getSpecifier() == VE::S_PC_LO32)
       return ELF::R_VE_PC_LO32;
   }
 

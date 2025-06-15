@@ -1042,7 +1042,7 @@ bool VEAsmParser::parseLiteralValues(unsigned Size, SMLoc L) {
 const MCExpr *VEAsmParser::extractSpecifier(const MCExpr *E,
                                             VEMCExpr::Specifier &Variant) {
   MCContext &Context = getParser().getContext();
-  Variant = VEMCExpr::VK_None;
+  Variant = VE::S_None;
 
   switch (E->getKind()) {
   case MCExpr::Target:
@@ -1055,51 +1055,51 @@ const MCExpr *VEAsmParser::extractSpecifier(const MCExpr *E,
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
 
     switch (SRE->getSpecifier()) {
-    case VEMCExpr::VK_None:
+    case VE::S_None:
       // Use VK_REFLONG to a symbol without modifiers.
-      Variant = VEMCExpr::VK_REFLONG;
+      Variant = VE::S_REFLONG;
       break;
-    case VEMCExpr::VK_HI32:
-      Variant = VEMCExpr::VK_HI32;
+    case VE::S_HI32:
+      Variant = VE::S_HI32;
       break;
-    case VEMCExpr::VK_LO32:
-      Variant = VEMCExpr::VK_LO32;
+    case VE::S_LO32:
+      Variant = VE::S_LO32;
       break;
-    case VEMCExpr::VK_PC_HI32:
-      Variant = VEMCExpr::VK_PC_HI32;
+    case VE::S_PC_HI32:
+      Variant = VE::S_PC_HI32;
       break;
-    case VEMCExpr::VK_PC_LO32:
-      Variant = VEMCExpr::VK_PC_LO32;
+    case VE::S_PC_LO32:
+      Variant = VE::S_PC_LO32;
       break;
-    case VEMCExpr::VK_GOT_HI32:
-      Variant = VEMCExpr::VK_GOT_HI32;
+    case VE::S_GOT_HI32:
+      Variant = VE::S_GOT_HI32;
       break;
-    case VEMCExpr::VK_GOT_LO32:
-      Variant = VEMCExpr::VK_GOT_LO32;
+    case VE::S_GOT_LO32:
+      Variant = VE::S_GOT_LO32;
       break;
-    case VEMCExpr::VK_GOTOFF_HI32:
-      Variant = VEMCExpr::VK_GOTOFF_HI32;
+    case VE::S_GOTOFF_HI32:
+      Variant = VE::S_GOTOFF_HI32;
       break;
-    case VEMCExpr::VK_GOTOFF_LO32:
-      Variant = VEMCExpr::VK_GOTOFF_LO32;
+    case VE::S_GOTOFF_LO32:
+      Variant = VE::S_GOTOFF_LO32;
       break;
-    case VEMCExpr::VK_PLT_HI32:
-      Variant = VEMCExpr::VK_PLT_HI32;
+    case VE::S_PLT_HI32:
+      Variant = VE::S_PLT_HI32;
       break;
-    case VEMCExpr::VK_PLT_LO32:
-      Variant = VEMCExpr::VK_PLT_LO32;
+    case VE::S_PLT_LO32:
+      Variant = VE::S_PLT_LO32;
       break;
-    case VEMCExpr::VK_TLS_GD_HI32:
-      Variant = VEMCExpr::VK_TLS_GD_HI32;
+    case VE::S_TLS_GD_HI32:
+      Variant = VE::S_TLS_GD_HI32;
       break;
-    case VEMCExpr::VK_TLS_GD_LO32:
-      Variant = VEMCExpr::VK_TLS_GD_LO32;
+    case VE::S_TLS_GD_LO32:
+      Variant = VE::S_TLS_GD_LO32;
       break;
-    case VEMCExpr::VK_TPOFF_HI32:
-      Variant = VEMCExpr::VK_TPOFF_HI32;
+    case VE::S_TPOFF_HI32:
+      Variant = VE::S_TPOFF_HI32;
       break;
-    case VEMCExpr::VK_TPOFF_LO32:
-      Variant = VEMCExpr::VK_TPOFF_LO32;
+    case VE::S_TPOFF_LO32:
+      Variant = VE::S_TPOFF_LO32;
       break;
     default:
       return nullptr;
@@ -1130,9 +1130,9 @@ const MCExpr *VEAsmParser::extractSpecifier(const MCExpr *E,
     if (!RHS)
       RHS = BE->getRHS();
 
-    if (LHSVariant == VEMCExpr::VK_None)
+    if (LHSVariant == VE::S_None)
       Variant = RHSVariant;
-    else if (RHSVariant == VEMCExpr::VK_None)
+    else if (RHSVariant == VE::S_None)
       Variant = LHSVariant;
     else if (LHSVariant == RHSVariant)
       Variant = LHSVariant;
