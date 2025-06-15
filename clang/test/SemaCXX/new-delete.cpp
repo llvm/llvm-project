@@ -160,6 +160,13 @@ void bad_news(int *ip)
 #if __cplusplus < 201103L
   (void)new int[]{}; // expected-error {{array size must be specified in new expression with no initializer}}
 #endif
+  struct X { int n; };
+  const X cx = {5};
+  (void)new(&cx) X{10}; // expected-error {{placement new expression with a const-qualified argument of type 'const X *' is not allowed}}
+  const X* const cx2 = 0;
+  (void)new(cx2) X{10}; // expected-error {{placement new expression with a const-qualified argument of type 'const X *const' is not allowed}}
+  const int arr[1] = {1};
+  (void)new(&arr[0]) int(10); // expected-error {{placement new expression with a const-qualified argument of type 'const int *' is not allowed}}
 }
 
 void no_matching_placement_new() {

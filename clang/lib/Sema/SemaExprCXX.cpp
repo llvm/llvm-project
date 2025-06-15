@@ -2752,10 +2752,18 @@ static bool resolveAllocationOverloadInterior(
     if (Diagnose) {
       // If this is an allocation of the form 'new (p) X' for some object
       // pointer p (or an expression that will decay to such a pointer),
-      // diagnose the missing inclusion of <new>.
+      // diagnose potential error.
       if (!R.isClassLookup() && Args.size() == 2 &&
           (Args[1]->getType()->isObjectPointerType() ||
            Args[1]->getType()->isArrayType())) {
+        if (Args[1]->getType()->isPointerType()) {
+          if (Args[1]->getType()->getPointeeType().isConstQualified()) {
+            S.Diag(Args[1]->getExprLoc(),
+                   diag::err_placement_new_into_const_qualified_storage)
+                << Args[1]->getType() << Args[1]->getSourceRange();
+            return true;
+          }
+        }
         S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
             << R.getLookupName() << Range;
         // Listing the candidates is unlikely to be useful; skip it.
