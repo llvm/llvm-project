@@ -82,7 +82,7 @@ public:
 static MCOperand createSparcMCOperand(uint16_t Kind, MCSymbol *Sym,
                                       MCContext &OutContext) {
   const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(Sym, OutContext);
-  const SparcMCExpr *expr = Sparc::createSpecifierExpr(OutContext, MCSym, Kind);
+  const SparcMCExpr *expr = MCSpecifierExpr::create(MCSym, Kind, OutContext);
   return MCOperand::createExpr(expr);
 }
 static MCOperand createPCXCallOP(MCSymbol *Label,
@@ -101,7 +101,7 @@ static MCOperand createPCXRelExprOp(uint16_t Spec, MCSymbol *GOTLabel,
 
   const MCBinaryExpr *Sub = MCBinaryExpr::createSub(Cur, Start, OutContext);
   const MCBinaryExpr *Add = MCBinaryExpr::createAdd(GOT, Sub, OutContext);
-  const SparcMCExpr *expr = Sparc::createSpecifierExpr(OutContext, Add, Spec);
+  const SparcMCExpr *expr = MCSpecifierExpr::create(Add, Spec, OutContext);
   return MCOperand::createExpr(expr);
 }
 
@@ -302,7 +302,7 @@ MCOperand SparcAsmPrinter::lowerOperand(const MachineOperand &MO) const {
 
     const MCExpr *expr = MCSymbolRefExpr::create(Symbol, OutContext);
     if (RelType)
-      expr = Sparc::createSpecifierExpr(OutContext, expr, RelType);
+      expr = MCSpecifierExpr::create(expr, RelType, OutContext);
     return MCOperand::createExpr(expr);
   }
 
