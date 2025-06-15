@@ -1986,14 +1986,13 @@ bool Sema::CheckAttrNoArgs(const ParsedAttr &Attrs) {
 bool Sema::CheckAttrTarget(const ParsedAttr &AL) {
   // Check whether the attribute is valid on the current target.
   if (!AL.existsInTarget(Context.getTargetInfo())) {
-    Diag(AL.getLoc(), AL.isRegularKeywordAttribute()
-                          ? diag::err_keyword_not_supported_on_target
-                          : diag::warn_unknown_attribute_ignored)
-        << AL << AL.getRange();
+    if (AL.isRegularKeywordAttribute())
+      Diag(AL.getLoc(), diag::err_keyword_not_supported_on_target);
+    else
+      DiagnoseUnknownAttribute(AL);
     AL.setInvalid();
     return true;
   }
-
   return false;
 }
 
@@ -2374,7 +2373,8 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   IdentifierLoc *Platform = AL.getArgAsIdent(0);
 
   IdentifierInfo *II = Platform->getIdentifierInfo();
-  if (AvailabilityAttr::getPrettyPlatformName(II->getName()).empty())
+  StringRef PrettyName = AvailabilityAttr::getPrettyPlatformName(II->getName());
+  if (PrettyName.empty())
     S.Diag(Platform->getLoc(), diag::warn_availability_unknown_platform)
         << Platform->getIdentifierInfo();
 
@@ -2385,6 +2385,32 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   AvailabilityChange Introduced = AL.getAvailabilityIntroduced();
   AvailabilityChange Deprecated = AL.getAvailabilityDeprecated();
   AvailabilityChange Obsoleted = AL.getAvailabilityObsoleted();
+
+  const llvm::Triple::OSType PlatformOS = AvailabilityAttr::getOSType(
+      AvailabilityAttr::canonicalizePlatformName(II->getName()));
+
+  auto reportAndUpdateIfInvalidOS = [&](auto &InputVersion) -> void {
+    const bool IsInValidRange =
+        llvm::Triple::isValidVersionForOS(PlatformOS, InputVersion);
+    // Canonicalize availability versions.
+    auto CanonicalVersion = llvm::Triple::getCanonicalVersionForOS(
+        PlatformOS, InputVersion, IsInValidRange);
+    if (!IsInValidRange) {
+      S.Diag(Platform->getLoc(), diag::warn_availability_invalid_os_version)
+          << InputVersion.getAsString() << PrettyName;
+      S.Diag(Platform->getLoc(),
+             diag::note_availability_invalid_os_version_adjusted)
+          << CanonicalVersion.getAsString();
+    }
+    InputVersion = CanonicalVersion;
+  };
+
+  if (PlatformOS != llvm::Triple::OSType::UnknownOS) {
+    reportAndUpdateIfInvalidOS(Introduced.Version);
+    reportAndUpdateIfInvalidOS(Deprecated.Version);
+    reportAndUpdateIfInvalidOS(Obsoleted.Version);
+  }
+
   bool IsUnavailable = AL.getUnavailableLoc().isValid();
   bool IsStrict = AL.getStrictLoc().isValid();
   StringRef Str;
@@ -2476,7 +2502,11 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         }
 
         auto Major = Version.getMajor();
-        auto NewMajor = Major >= 9 ? Major - 7 : 0;
+        auto NewMajor = Major;
+        if (Major < 9)
+          NewMajor = 0;
+        else if (Major < 12)
+          NewMajor = Major - 7;
         if (NewMajor >= 2) {
           if (Version.getMinor()) {
             if (Version.getSubminor())
@@ -7557,6 +7587,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLWaveSize:
     S.HLSL().handleWaveSizeAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLSV_Position:
+    S.HLSL().handleSV_PositionAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLVkExtBuiltinInput:
     S.HLSL().handleVkExtBuiltinInputAttr(D, AL);
     break;
@@ -7922,8 +7955,7 @@ static void checkUnusedDeclAttributes(Sema &S, const ParsedAttributesView &A) {
       continue;
 
     if (AL.getKind() == ParsedAttr::UnknownAttribute) {
-      S.Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored)
-          << AL << AL.getRange();
+      S.DiagnoseUnknownAttribute(AL);
     } else {
       S.Diag(AL.getLoc(), diag::warn_attribute_not_on_decl) << AL
                                                             << AL.getRange();
@@ -7941,15 +7973,45 @@ void Sema::checkUnusedDeclAttributes(Declarator &D) {
 
 void Sema::DiagnoseUnknownAttribute(const ParsedAttr &AL) {
   std::string NormalizedFullName = '\'' + AL.getNormalizedFullName() + '\'';
-  if (auto CorrectedFullName =
-          AL.getCorrectedFullName(Context.getTargetInfo(), getLangOpts())) {
-    Diag(AL.getNormalizedRange().getBegin(),
-         diag::warn_unknown_attribute_ignored_suggestion)
-        << NormalizedFullName << *CorrectedFullName << AL.getNormalizedRange();
+  SourceRange NR = AL.getNormalizedRange();
+
+  StringRef ScopeName = AL.getNormalizedScopeName();
+  std::optional<StringRef> CorrectedScopeName =
+      AL.tryGetCorrectedScopeName(ScopeName);
+  if (CorrectedScopeName) {
+    ScopeName = *CorrectedScopeName;
+  }
+
+  StringRef AttrName = AL.getNormalizedAttrName(ScopeName);
+  std::optional<StringRef> CorrectedAttrName = AL.tryGetCorrectedAttrName(
+      ScopeName, AttrName, Context.getTargetInfo(), getLangOpts());
+  if (CorrectedAttrName) {
+    AttrName = *CorrectedAttrName;
+  }
+
+  if (CorrectedScopeName || CorrectedAttrName) {
+    std::string CorrectedFullName =
+        AL.getNormalizedFullName(ScopeName, AttrName);
+    SemaDiagnosticBuilder D =
+        Diag(CorrectedScopeName ? NR.getBegin() : AL.getRange().getBegin(),
+             diag::warn_unknown_attribute_ignored_suggestion);
+
+    D << NormalizedFullName << CorrectedFullName;
+
+    if (AL.isExplicitScope()) {
+      D << FixItHint::CreateReplacement(NR, CorrectedFullName) << NR;
+    } else {
+      if (CorrectedScopeName) {
+        D << FixItHint::CreateReplacement(SourceRange(AL.getScopeLoc()),
+                                          ScopeName);
+      }
+      if (CorrectedAttrName) {
+        D << FixItHint::CreateReplacement(AL.getRange(), AttrName);
+      }
+    }
   } else {
-    Diag(AL.getNormalizedRange().getBegin(),
-         diag::warn_unknown_attribute_ignored)
-        << NormalizedFullName << AL.getNormalizedRange();
+    Diag(NR.getBegin(), diag::warn_unknown_attribute_ignored)
+        << NormalizedFullName << NR;
   }
 }
 

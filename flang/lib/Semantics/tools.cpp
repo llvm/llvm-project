@@ -17,6 +17,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <set>
@@ -1756,4 +1757,332 @@ bool HadUseError(
   }
 }
 
+bool CheckForSymbolMatch(const SomeExpr *lhs, const SomeExpr *rhs) {
+  if (lhs && rhs) {
+    if (SymbolVector lhsSymbols{evaluate::GetSymbolVector(*lhs)};
+        !lhsSymbols.empty()) {
+      const Symbol &first{*lhsSymbols.front()};
+      for (const Symbol &symbol : evaluate::GetSymbolVector(*rhs)) {
+        if (first == symbol) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+namespace operation {
+template <typename T> //
+SomeExpr asSomeExpr(const T &x) {
+  auto copy{x};
+  return AsGenericExpr(std::move(copy));
+}
+
+template <bool IgnoreResizingConverts> //
+struct ArgumentExtractor
+    : public evaluate::Traverse<ArgumentExtractor<IgnoreResizingConverts>,
+          std::pair<operation::Operator, std::vector<SomeExpr>>, false> {
+  using Arguments = std::vector<SomeExpr>;
+  using Result = std::pair<operation::Operator, Arguments>;
+  using Base = evaluate::Traverse<ArgumentExtractor<IgnoreResizingConverts>,
+      Result, false>;
+  static constexpr auto IgnoreResizes = IgnoreResizingConverts;
+  static constexpr auto Logical = common::TypeCategory::Logical;
+  ArgumentExtractor() : Base(*this) {}
+
+  Result Default() const { return {}; }
+
+  using Base::operator();
+
+  template <int Kind> //
+  Result operator()(
+      const evaluate::Constant<evaluate::Type<Logical, Kind>> &x) const {
+    if (const auto &val{x.GetScalarValue()}) {
+      return val->IsTrue()
+          ? std::make_pair(operation::Operator::True, Arguments{})
+          : std::make_pair(operation::Operator::False, Arguments{});
+    }
+    return Default();
+  }
+
+  template <typename R> //
+  Result operator()(const evaluate::FunctionRef<R> &x) const {
+    Result result{operation::OperationCode(x.proc()), {}};
+    for (size_t i{0}, e{x.arguments().size()}; i != e; ++i) {
+      if (auto *e{x.UnwrapArgExpr(i)}) {
+        result.second.push_back(*e);
+      }
+    }
+    return result;
+  }
+
+  template <typename D, typename R, typename... Os>
+  Result operator()(const evaluate::Operation<D, R, Os...> &x) const {
+    if constexpr (std::is_same_v<D, evaluate::Parentheses<R>>) {
+      // Ignore top-level parentheses.
+      return (*this)(x.template operand<0>());
+    }
+    if constexpr (IgnoreResizes &&
+        std::is_same_v<D, evaluate::Convert<R, R::category>>) {
+      // Ignore conversions within the same category.
+      // Atomic operations on int(kind=1) may be implicitly widened
+      // to int(kind=4) for example.
+      return (*this)(x.template operand<0>());
+    } else {
+      return std::make_pair(operation::OperationCode(x),
+          OperationArgs(x, std::index_sequence_for<Os...>{}));
+    }
+  }
+
+  template <typename T> //
+  Result operator()(const evaluate::Designator<T> &x) const {
+    return {operation::Operator::Identity, {asSomeExpr(x)}};
+  }
+
+  template <typename T> //
+  Result operator()(const evaluate::Constant<T> &x) const {
+    return {operation::Operator::Identity, {asSomeExpr(x)}};
+  }
+
+  template <typename... Rs> //
+  Result Combine(Result &&result, Rs &&...results) const {
+    // There shouldn't be any combining needed, since we're stopping the
+    // traversal at the top-level operation, but implement one that picks
+    // the first non-empty result.
+    if constexpr (sizeof...(Rs) == 0) {
+      return std::move(result);
+    } else {
+      if (!result.second.empty()) {
+        return std::move(result);
+      } else {
+        return Combine(std::move(results)...);
+      }
+    }
+  }
+
+private:
+  template <typename D, typename R, typename... Os, size_t... Is>
+  Arguments OperationArgs(const evaluate::Operation<D, R, Os...> &x,
+      std::index_sequence<Is...>) const {
+    return Arguments{SomeExpr(x.template operand<Is>())...};
+  }
+};
+} // namespace operation
+
+std::string operation::ToString(operation::Operator op) {
+  switch (op) {
+  case Operator::Unknown:
+    return "??";
+  case Operator::Add:
+    return "+";
+  case Operator::And:
+    return "AND";
+  case Operator::Associated:
+    return "ASSOCIATED";
+  case Operator::Call:
+    return "function-call";
+  case Operator::Constant:
+    return "constant";
+  case Operator::Convert:
+    return "type-conversion";
+  case Operator::Div:
+    return "/";
+  case Operator::Eq:
+    return "==";
+  case Operator::Eqv:
+    return "EQV";
+  case Operator::False:
+    return ".FALSE.";
+  case Operator::Ge:
+    return ">=";
+  case Operator::Gt:
+    return ">";
+  case Operator::Identity:
+    return "identity";
+  case Operator::Intrinsic:
+    return "intrinsic";
+  case Operator::Le:
+    return "<=";
+  case Operator::Lt:
+    return "<";
+  case Operator::Max:
+    return "MAX";
+  case Operator::Min:
+    return "MIN";
+  case Operator::Mul:
+    return "*";
+  case Operator::Ne:
+    return "/=";
+  case Operator::Neqv:
+    return "NEQV/EOR";
+  case Operator::Not:
+    return "NOT";
+  case Operator::Or:
+    return "OR";
+  case Operator::Pow:
+    return "**";
+  case Operator::Resize:
+    return "resize";
+  case Operator::Sub:
+    return "-";
+  case Operator::True:
+    return ".TRUE.";
+  }
+  llvm_unreachable("Unhandler operator");
+}
+
+operation::Operator operation::OperationCode(
+    const evaluate::ProcedureDesignator &proc) {
+  Operator code = llvm::StringSwitch<Operator>(proc.GetName())
+                      .Case("associated", Operator::Associated)
+                      .Case("min", Operator::Min)
+                      .Case("max", Operator::Max)
+                      .Case("iand", Operator::And)
+                      .Case("ior", Operator::Or)
+                      .Case("ieor", Operator::Neqv)
+                      .Default(Operator::Call);
+  if (code == Operator::Call && proc.GetSpecificIntrinsic()) {
+    return Operator::Intrinsic;
+  }
+  return code;
+}
+
+std::pair<operation::Operator, std::vector<SomeExpr>> GetTopLevelOperation(
+    const SomeExpr &expr) {
+  return operation::ArgumentExtractor<true>{}(expr);
+}
+
+namespace operation {
+struct ConvertCollector
+    : public evaluate::Traverse<ConvertCollector,
+          std::pair<MaybeExpr, std::vector<evaluate::DynamicType>>, false> {
+  using Result = std::pair<MaybeExpr, std::vector<evaluate::DynamicType>>;
+  using Base = evaluate::Traverse<ConvertCollector, Result, false>;
+  ConvertCollector() : Base(*this) {}
+
+  Result Default() const { return {}; }
+
+  using Base::operator();
+
+  template <typename T> //
+  Result operator()(const evaluate::Designator<T> &x) const {
+    return {asSomeExpr(x), {}};
+  }
+
+  template <typename T> //
+  Result operator()(const evaluate::FunctionRef<T> &x) const {
+    return {asSomeExpr(x), {}};
+  }
+
+  template <typename T> //
+  Result operator()(const evaluate::Constant<T> &x) const {
+    return {asSomeExpr(x), {}};
+  }
+
+  template <typename D, typename R, typename... Os>
+  Result operator()(const evaluate::Operation<D, R, Os...> &x) const {
+    if constexpr (std::is_same_v<D, evaluate::Parentheses<R>>) {
+      // Ignore parentheses.
+      return (*this)(x.template operand<0>());
+    } else if constexpr (is_convert_v<D>) {
+      // Convert should always have a typed result, so it should be safe to
+      // dereference x.GetType().
+      return Combine(
+          {std::nullopt, {*x.GetType()}}, (*this)(x.template operand<0>()));
+    } else if constexpr (is_complex_constructor_v<D>) {
+      // This is a conversion iff the imaginary operand is 0.
+      if (IsZero(x.template operand<1>())) {
+        return Combine(
+            {std::nullopt, {*x.GetType()}}, (*this)(x.template operand<0>()));
+      } else {
+        return {asSomeExpr(x.derived()), {}};
+      }
+    } else {
+      return {asSomeExpr(x.derived()), {}};
+    }
+  }
+
+  template <typename... Rs> //
+  Result Combine(Result &&result, Rs &&...results) const {
+    Result v(std::move(result));
+    auto setValue{[](MaybeExpr &x, MaybeExpr &&y) {
+      assert((!x.has_value() || !y.has_value()) && "Multiple designators");
+      if (!x.has_value()) {
+        x = std::move(y);
+      }
+    }};
+    auto moveAppend{[](auto &accum, auto &&other) {
+      for (auto &&s : other) {
+        accum.push_back(std::move(s));
+      }
+    }};
+    (setValue(v.first, std::move(results).first), ...);
+    (moveAppend(v.second, std::move(results).second), ...);
+    return v;
+  }
+
+private:
+  template <typename T> //
+  static bool IsZero(const T &x) {
+    return false;
+  }
+  template <typename T> //
+  static bool IsZero(const evaluate::Expr<T> &x) {
+    return common::visit([](auto &&s) { return IsZero(s); }, x.u);
+  }
+  template <typename T> //
+  static bool IsZero(const evaluate::Constant<T> &x) {
+    if (auto &&maybeScalar{x.GetScalarValue()}) {
+      return maybeScalar->IsZero();
+    } else {
+      return false;
+    }
+  }
+
+  template <typename T> //
+  struct is_convert {
+    static constexpr bool value{false};
+  };
+  template <typename T, common::TypeCategory C> //
+  struct is_convert<evaluate::Convert<T, C>> {
+    static constexpr bool value{true};
+  };
+  template <int K> //
+  struct is_convert<evaluate::ComplexComponent<K>> {
+    // Conversion from complex to real.
+    static constexpr bool value{true};
+  };
+  template <typename T> //
+  static constexpr bool is_convert_v = is_convert<T>::value;
+
+  template <typename T> //
+  struct is_complex_constructor {
+    static constexpr bool value{false};
+  };
+  template <int K> //
+  struct is_complex_constructor<evaluate::ComplexConstructor<K>> {
+    static constexpr bool value{true};
+  };
+  template <typename T> //
+  static constexpr bool is_complex_constructor_v =
+      is_complex_constructor<T>::value;
+};
+} // namespace operation
+
+MaybeExpr GetConvertInput(const SomeExpr &x) {
+  // This returns SomeExpr(x) when x is a designator/functionref/constant.
+  return operation::ConvertCollector{}(x).first;
+}
+
+bool IsSameOrConvertOf(const SomeExpr &expr, const SomeExpr &x) {
+  // Check if expr is same as x, or a sequence of Convert operations on x.
+  if (expr == x) {
+    return true;
+  } else if (auto maybe{GetConvertInput(expr)}) {
+    return *maybe == x;
+  } else {
+    return false;
+  }
+}
 } // namespace Fortran::semantics

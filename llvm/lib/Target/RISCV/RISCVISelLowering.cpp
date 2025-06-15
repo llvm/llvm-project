@@ -649,6 +649,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::GET_ROUNDING, XLenVT, Custom);
     setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
+    setOperationAction(ISD::GET_FPENV, XLenVT, Custom);
+    setOperationAction(ISD::SET_FPENV, XLenVT, Custom);
+    setOperationAction(ISD::RESET_FPENV, MVT::Other, Custom);
   }
 
   setOperationAction({ISD::GlobalAddress, ISD::BlockAddress, ISD::ConstantPool,
@@ -8159,6 +8162,12 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerGET_ROUNDING(Op, DAG);
   case ISD::SET_ROUNDING:
     return lowerSET_ROUNDING(Op, DAG);
+  case ISD::GET_FPENV:
+    return lowerGET_FPENV(Op, DAG);
+  case ISD::SET_FPENV:
+    return lowerSET_FPENV(Op, DAG);
+  case ISD::RESET_FPENV:
+    return lowerRESET_FPENV(Op, DAG);
   case ISD::EH_DWARF_CFA:
     return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::VP_MERGE:
@@ -9085,6 +9094,32 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
           DAG.getNode(IsCZERO_NEZ ? RISCVISD::CZERO_NEZ : RISCVISD::CZERO_EQZ,
                       DL, VT, LHSVal, CondV);
       return DAG.getNode(ISD::ADD, DL, VT, CMOV, RHSVal);
+    }
+
+    // (select c, c1, t) -> (add (czero_nez t - c1, c), c1)
+    // (select c, t, c1) -> (add (czero_eqz t - c1, c), c1)
+    if (isa<ConstantSDNode>(TrueV) != isa<ConstantSDNode>(FalseV)) {
+      bool IsCZERO_NEZ = isa<ConstantSDNode>(TrueV);
+      SDValue ConstVal = IsCZERO_NEZ ? TrueV : FalseV;
+      SDValue RegV = IsCZERO_NEZ ? FalseV : TrueV;
+      int64_t RawConstVal = cast<ConstantSDNode>(ConstVal)->getSExtValue();
+      // Fall back to XORI if Const == -0x800
+      if (RawConstVal == -0x800) {
+        SDValue XorOp = DAG.getNode(ISD::XOR, DL, VT, RegV, ConstVal);
+        SDValue CMOV =
+            DAG.getNode(IsCZERO_NEZ ? RISCVISD::CZERO_NEZ : RISCVISD::CZERO_EQZ,
+                        DL, VT, XorOp, CondV);
+        return DAG.getNode(ISD::XOR, DL, VT, CMOV, ConstVal);
+      }
+      // Efficient only if the constant and its negation fit into `ADDI`
+      // Prefer Add/Sub over Xor since can be compressed for small immediates
+      if (isInt<12>(RawConstVal)) {
+        SDValue SubOp = DAG.getNode(ISD::SUB, DL, VT, RegV, ConstVal);
+        SDValue CMOV =
+            DAG.getNode(IsCZERO_NEZ ? RISCVISD::CZERO_NEZ : RISCVISD::CZERO_EQZ,
+                        DL, VT, SubOp, CondV);
+        return DAG.getNode(ISD::ADD, DL, VT, CMOV, ConstVal);
+      }
     }
 
     // (select c, t, f) -> (or (czero_eqz t, c), (czero_nez f, c))
@@ -13799,6 +13834,41 @@ SDValue RISCVTargetLowering::lowerSET_ROUNDING(SDValue Op,
                      RMValue);
 }
 
+SDValue RISCVTargetLowering::lowerGET_FPENV(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  const MVT XLenVT = Subtarget.getXLenVT();
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::fcsr, DL, XLenVT);
+  SDVTList VTs = DAG.getVTList(XLenVT, MVT::Other);
+  return DAG.getNode(RISCVISD::READ_CSR, DL, VTs, Chain, SysRegNo);
+}
+
+SDValue RISCVTargetLowering::lowerSET_FPENV(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  const MVT XLenVT = Subtarget.getXLenVT();
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue EnvValue = Op->getOperand(1);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::fcsr, DL, XLenVT);
+
+  EnvValue = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, EnvValue);
+  return DAG.getNode(RISCVISD::WRITE_CSR, DL, MVT::Other, Chain, SysRegNo,
+                     EnvValue);
+}
+
+SDValue RISCVTargetLowering::lowerRESET_FPENV(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  const MVT XLenVT = Subtarget.getXLenVT();
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue EnvValue = DAG.getRegister(RISCV::X0, XLenVT);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::fcsr, DL, XLenVT);
+
+  return DAG.getNode(RISCVISD::WRITE_CSR, DL, MVT::Other, Chain, SysRegNo,
+                     EnvValue);
+}
+
 SDValue RISCVTargetLowering::lowerEH_DWARF_CFA(SDValue Op,
                                                SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -16103,16 +16173,79 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
   return true;
 }
 
+/// Try to map an integer comparison with size > XLEN to vector instructions
+/// before type legalization splits it up into chunks.
+static SDValue
+combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
+                                const SDLoc &DL, SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
+  assert(ISD::isIntEqualitySetCC(CC) && "Bad comparison predicate");
+
+  if (!Subtarget.hasVInstructions())
+    return SDValue();
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  EVT OpVT = X.getValueType();
+  // We're looking for an oversized integer equality comparison.
+  if (!OpVT.isScalarInteger())
+    return SDValue();
+
+  unsigned OpSize = OpVT.getSizeInBits();
+  // TODO: Support non-power-of-2 types.
+  if (!isPowerOf2_32(OpSize))
+    return SDValue();
+
+  // The size should be larger than XLen and smaller than the maximum vector
+  // size.
+  if (OpSize <= Subtarget.getXLen() ||
+      OpSize > Subtarget.getRealMinVLen() *
+                   Subtarget.getMaxLMULForFixedLengthVectors())
+    return SDValue();
+
+  // Don't perform this combine if constructing the vector will be expensive.
+  auto IsVectorBitCastCheap = [](SDValue X) {
+    X = peekThroughBitcasts(X);
+    return isa<ConstantSDNode>(X) || X.getValueType().isVector() ||
+           X.getOpcode() == ISD::LOAD;
+  };
+  if (!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y))
+    return SDValue();
+
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat))
+    return SDValue();
+
+  unsigned VecSize = OpSize / 8;
+  EVT VecVT = MVT::getVectorVT(MVT::i8, VecSize);
+  EVT CmpVT = MVT::getVectorVT(MVT::i1, VecSize);
+
+  SDValue VecX = DAG.getBitcast(VecVT, X);
+  SDValue VecY = DAG.getBitcast(VecVT, Y);
+  SDValue Cmp = DAG.getSetCC(DL, CmpVT, VecX, VecY, ISD::SETNE);
+  return DAG.getSetCC(DL, VT, DAG.getNode(ISD::VECREDUCE_OR, DL, XLenVT, Cmp),
+                      DAG.getConstant(0, DL, XLenVT), CC);
+}
+
 // Replace (seteq (i64 (and X, 0xffffffff)), C1) with
 // (seteq (i64 (sext_inreg (X, i32)), C1')) where C1' is C1 sign extended from
 // bit 31. Same for setne. C1' may be cheaper to materialize and the sext_inreg
 // can become a sext.w instead of a shift pair.
 static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
+  SDLoc dl(N);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   EVT OpVT = N0.getValueType();
+
+  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  // Looking for an equality compare.
+  if (!isIntEqualitySetCC(Cond))
+    return SDValue();
+
+  if (SDValue V =
+          combineVectorSizedSetCCEquality(VT, N0, N1, Cond, dl, DAG, Subtarget))
+    return V;
 
   if (OpVT != MVT::i64 || !Subtarget.is64Bit())
     return SDValue();
@@ -16128,11 +16261,6 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
       N0.getConstantOperandVal(1) != UINT64_C(0xffffffff))
     return SDValue();
 
-  // Looking for an equality compare.
-  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  if (!isIntEqualitySetCC(Cond))
-    return SDValue();
-
   // Don't do this if the sign bit is provably zero, it will be turned back into
   // an AND.
   APInt SignMask = APInt::getOneBitSet(64, 31);
@@ -16141,7 +16269,6 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
 
   const APInt &C1 = N1C->getAPIntValue();
 
-  SDLoc dl(N);
   // If the constant is larger than 2^32 - 1 it is impossible for both sides
   // to be equal.
   if (C1.getActiveBits() > 32)

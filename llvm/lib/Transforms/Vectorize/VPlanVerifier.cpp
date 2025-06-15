@@ -429,8 +429,7 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
     return false;
   }
 
-  // TODO: Remove once loop regions are dissolved before execution.
-  if (!VerifyLate && !isa<VPCanonicalIVPHIRecipe>(&*Entry->begin())) {
+  if (!isa<VPCanonicalIVPHIRecipe>(&*Entry->begin())) {
     errs() << "VPlan vector loop header does not start with a "
               "VPCanonicalIVPHIRecipe\n";
     return false;

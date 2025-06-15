@@ -103,8 +103,7 @@ public:
   /// otherwise.
   std::optional<FallthroughListTy> getFallthroughsInTrace(uint64_t FuncAddress,
                                                           uint64_t From,
-                                                          uint64_t To,
-                                                          bool IsReturn) const;
+                                                          uint64_t To) const;
 
   /// If available, fetch the address of the hot part linked to the cold part
   /// at \p Address. Return 0 otherwise.
