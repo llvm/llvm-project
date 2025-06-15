@@ -590,7 +590,7 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
   if (Rhs) {
     SmallString<0> Buf;
     raw_svector_ostream Tmp(Buf);
-    Rhs->print(Tmp, &MAI);
+    MAI.printExpr(Tmp, *Rhs);
     if (isdigit(Buf[0]))
       O << '+';
     O << Buf;
@@ -671,5 +671,5 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   assert(Op.isExpr() && "unknown operand kind in printOperand");
-  Op.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *Op.getExpr());
 }

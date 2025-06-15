@@ -255,7 +255,7 @@ public:
     OS << "\t.localentry\t";
     S->print(OS, MAI);
     OS << ", ";
-    LocalOffset->print(OS, MAI);
+    MAI->printExpr(OS, *LocalOffset);
     OS << '\n';
   }
 };
