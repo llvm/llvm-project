@@ -591,6 +591,7 @@ static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
   args::getZOptionValue(args, OPT_z, "max-page-size", 0);
   args::getZOptionValue(args, OPT_z, "common-page-size", 0);
   getZFlag(args, "rel", "rela", false);
+  getZFlag(args, "dynamic-undefined-weak", "nodynamic-undefined-weak", false);
   for (auto *arg : args.filtered(OPT_z))
     if (!arg->isClaimed())
       Warn(ctx) << "unknown -z value: " << StringRef(arg->getValue());
@@ -2856,15 +2857,15 @@ static void readSecurityNotes(Ctx &ctx) {
   StringRef referenceFileName;
   if (ctx.arg.emachine == EM_AARCH64) {
     auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
-      return !f->aarch64PauthAbiCoreInfo.empty();
+      return f->aarch64PauthAbiCoreInfo.has_value();
     });
     if (it != ctx.objectFiles.end()) {
       ctx.aarch64PauthAbiCoreInfo = (*it)->aarch64PauthAbiCoreInfo;
       referenceFileName = (*it)->getName();
     }
   }
-  bool hasValidPauthAbiCoreInfo = llvm::any_of(
-      ctx.aarch64PauthAbiCoreInfo, [](uint8_t c) { return c != 0; });
+  bool hasValidPauthAbiCoreInfo =
+      ctx.aarch64PauthAbiCoreInfo && ctx.aarch64PauthAbiCoreInfo->isValid();
 
   auto report = [&](ReportPolicy policy) -> ELFSyncStream {
     return {ctx, toDiagLevel(policy)};
@@ -2951,10 +2952,10 @@ static void readSecurityNotes(Ctx &ctx) {
     }
     ctx.arg.andFeatures &= features;
 
-    if (ctx.aarch64PauthAbiCoreInfo.empty())
+    if (!ctx.aarch64PauthAbiCoreInfo)
       continue;
 
-    if (f->aarch64PauthAbiCoreInfo.empty()) {
+    if (!f->aarch64PauthAbiCoreInfo) {
       report(ctx.arg.zPauthReport)
           << f
           << ": -z pauth-report: file does not have AArch64 "
@@ -2964,11 +2965,18 @@ static void readSecurityNotes(Ctx &ctx) {
     }
 
     if (ctx.aarch64PauthAbiCoreInfo != f->aarch64PauthAbiCoreInfo)
-      Err(ctx) << "incompatible values of AArch64 PAuth core info found\n>>> "
-               << referenceFileName << ": 0x"
-               << toHex(ctx.aarch64PauthAbiCoreInfo, /*LowerCase=*/true)
-               << "\n>>> " << f << ": 0x"
-               << toHex(f->aarch64PauthAbiCoreInfo, /*LowerCase=*/true);
+      Err(ctx)
+          << "incompatible values of AArch64 PAuth core info found\n"
+          << "platform:\n"
+          << ">>> " << referenceFileName << ": 0x"
+          << toHex(ctx.aarch64PauthAbiCoreInfo->platform, /*LowerCase=*/true)
+          << "\n>>> " << f << ": 0x"
+          << toHex(f->aarch64PauthAbiCoreInfo->platform, /*LowerCase=*/true)
+          << "\nversion:\n"
+          << ">>> " << referenceFileName << ": 0x"
+          << toHex(ctx.aarch64PauthAbiCoreInfo->version, /*LowerCase=*/true)
+          << "\n>>> " << f << ": 0x"
+          << toHex(f->aarch64PauthAbiCoreInfo->version, /*LowerCase=*/true);
   }
 
   // Force enable Shadow Stack.
@@ -3057,6 +3065,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Create dynamic sections for dynamic linking and static PIE.
   ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
   ctx.arg.exportDynamic &= ctx.hasDynsym;
+
+  // Preemptibility of undefined symbols when ctx.hasDynsym is true. Default is
+  // true for dynamic linking.
+  ctx.arg.zDynamicUndefined =
+      getZFlag(args, "dynamic-undefined-weak", "nodynamic-undefined-weak",
+               ctx.sharedFiles.size() || ctx.arg.shared) &&
+      ctx.hasDynsym;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))
