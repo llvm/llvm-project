@@ -22,16 +22,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "sparcmcexpr"
 
-const SparcMCExpr *Sparc::createSpecifierExpr(MCContext &Ctx,
-                                              const MCExpr *Expr, uint16_t S) {
-  return new (Ctx) MCSpecifierExpr(Expr, S);
-}
-
-const SparcMCExpr *Sparc::createSpecifierExpr(MCContext &Ctx,
-                                              const MCSymbol *Sym, uint16_t S) {
-  return new (Ctx) MCSpecifierExpr(MCSymbolRefExpr::create(Sym, Ctx), S);
-}
-
 StringRef Sparc::getSpecifierName(uint16_t S) {
   // clang-format off
   switch (uint16_t(S)) {

@@ -737,6 +737,16 @@ MCFragment *MCExpr::findAssociatedFragment() const {
   llvm_unreachable("Invalid assembly expression kind!");
 }
 
+const MCSpecifierExpr *MCSpecifierExpr::create(const MCExpr *Expr, Spec S,
+                                               MCContext &Ctx, SMLoc Loc) {
+  return new (Ctx) MCSpecifierExpr(Expr, S, Loc);
+}
+
+const MCSpecifierExpr *MCSpecifierExpr::create(const MCSymbol *Sym, Spec S,
+                                               MCContext &Ctx, SMLoc Loc) {
+  return new (Ctx) MCSpecifierExpr(MCSymbolRefExpr::create(Sym, Ctx), S, Loc);
+}
+
 bool MCSpecifierExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                                 const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))

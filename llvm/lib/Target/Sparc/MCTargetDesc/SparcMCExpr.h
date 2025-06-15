@@ -23,10 +23,6 @@ class StringRef;
 using SparcMCExpr = MCSpecifierExpr;
 
 namespace Sparc {
-const SparcMCExpr *createSpecifierExpr(MCContext &Ctx, const MCExpr *Expr,
-                                       uint16_t S);
-const SparcMCExpr *createSpecifierExpr(MCContext &Ctx, const MCSymbol *Sym,
-                                       uint16_t S);
 uint16_t parseSpecifier(StringRef name);
 StringRef getSpecifierName(uint16_t S);
 } // namespace Sparc
