@@ -669,7 +669,7 @@ define i32 @test_phi_to_zext(i8 noundef %0) {
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[SW_1]] ], [ 0, [[SW_0]] ], [ 255, [[SW_255]] ]
+; CHECK-NEXT:    [[DOT0:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[DOT0]]
 ;
 entry:
@@ -713,7 +713,8 @@ define i32 @test_phi_to_zext_inverted(i8 noundef %0) {
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ -256, [[SW_255]] ], [ -2, [[SW_1]] ], [ -1, [[SW_0]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
+; CHECK-NEXT:    [[DOT0:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[DOT0]]
 ;
 entry:
@@ -753,7 +754,7 @@ define i8 @test_multiple_predecessors_phi_to_zext(i1 %cond, i1 %cond2) {
 ; CHECK:       if2.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ 0, [[IF_FALSE]] ], [ 1, [[IF2_TRUE]] ], [ 1, [[IF2_FALSE]] ]
+; CHECK-NEXT:    [[RET:%.*]] = zext i1 [[COND]] to i8
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
 entry:
@@ -793,7 +794,7 @@ define i32 @test_phi_to_sext(i8 noundef %0) {
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[SW_1]] ], [ 0, [[SW_0]] ], [ -1, [[SW_255]] ]
+; CHECK-NEXT:    [[DOT0:%.*]] = sext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[DOT0]]
 ;
 entry:
@@ -837,7 +838,8 @@ define i32 @test_phi_to_sext_inverted(i8 noundef %0) {
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ -2, [[SW_1]] ], [ -1, [[SW_0]] ], [ 0, [[SW_255]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[TMP0]], -1
+; CHECK-NEXT:    [[DOT0:%.*]] = sext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[DOT0]]
 ;
 entry:
@@ -877,7 +879,7 @@ define i8 @test_multiple_predecessors_phi_to_sext(i1 %cond, i1 %cond2) {
 ; CHECK:       if2.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ 0, [[IF_FALSE]] ], [ -1, [[IF2_TRUE]] ], [ -1, [[IF2_FALSE]] ]
+; CHECK-NEXT:    [[RET:%.*]] = sext i1 [[COND]] to i8
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
 entry:
@@ -995,7 +997,7 @@ define i8 @test_phi_to_trunc(i32 %0) {
 ; CHECK:       sw.255:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ -1, [[SW_255]] ], [ 1, [[SW_1]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[DOT0:%.*]] = trunc i32 [[TMP0]] to i8
 ; CHECK-NEXT:    ret i8 [[DOT0]]
 ;
 entry:
@@ -1034,7 +1036,8 @@ define i8 @test_phi_to_trunc_inverted(i32 %0) {
 ; CHECK:       sw.255:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ 0, [[SW_255]] ], [ -2, [[SW_1]] ], [ -1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
+; CHECK-NEXT:    [[DOT0:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[DOT0]]
 ;
 entry:
