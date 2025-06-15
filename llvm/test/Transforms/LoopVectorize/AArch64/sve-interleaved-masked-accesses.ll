@@ -67,8 +67,7 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SCALAR_TAIL_FOLDING:       middle.block:
-; SCALAR_TAIL_FOLDING-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; SCALAR_TAIL_FOLDING-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SCALAR_TAIL_FOLDING:       scalar.ph:
 ;
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided1
@@ -205,8 +204,7 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; SCALAR_TAIL_FOLDING:       middle.block:
-; SCALAR_TAIL_FOLDING-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; SCALAR_TAIL_FOLDING-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SCALAR_TAIL_FOLDING:       scalar.ph:
 ;
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided2
@@ -335,8 +333,7 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; SCALAR_TAIL_FOLDING:       middle.block:
-; SCALAR_TAIL_FOLDING-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; SCALAR_TAIL_FOLDING-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SCALAR_TAIL_FOLDING:       scalar.ph:
 ;
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided3
@@ -490,8 +487,7 @@ define dso_local void @masked_strided_factor4(ptr noalias nocapture readonly %p,
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; SCALAR_TAIL_FOLDING:       middle.block:
-; SCALAR_TAIL_FOLDING-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; SCALAR_TAIL_FOLDING-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SCALAR_TAIL_FOLDING:       scalar.ph:
 ;
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided_factor4

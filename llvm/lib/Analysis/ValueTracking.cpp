@@ -9585,28 +9585,71 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
       bool HasNSW = IIQ.hasNoSignedWrap(&BO);
       bool HasNUW = IIQ.hasNoUnsignedWrap(&BO);
 
-      // If the caller expects a signed compare, then try to use a signed range.
-      // Otherwise if both no-wraps are set, use the unsigned range because it
-      // is never larger than the signed range. Example:
-      // "sub nuw nsw i8 -2, x" is unsigned [0, 254] vs. signed [-128, 126].
-      // "sub nuw nsw i8 2, x" is unsigned [0, 2] vs. signed [-125, 127].
-      if (PreferSignedRange && HasNSW && HasNUW)
-        HasNUW = false;
-
-      if (HasNUW) {
-        // 'sub nuw c, x' produces [0, C].
-        Upper = *C + 1;
-      } else if (HasNSW) {
+      // Build the two candidate ranges as [lo..hi]:
+      //   unsignedRange:  NUW ⇒ [0 .. C]
+      //   signedRange:    NSW ⇒ either [SINT_MIN .. -C - SINT_MIN] or [C -
+      //   SINT_MAX .. SINT_MAX]
+      auto makeUnsignedRange = [&]() {
+        return std::pair<APInt, APInt>(APInt::getZero(Width), *C);
+      };
+      auto makeSignedRange = [&]() {
         if (C->isNegative()) {
-          // 'sub nsw -C, x' produces [SINT_MIN, -C - SINT_MIN].
-          Lower = APInt::getSignedMinValue(Width);
-          Upper = *C - APInt::getSignedMaxValue(Width);
+          // sub nsw -C, x
+          APInt lo = APInt::getSignedMinValue(Width);
+          APInt hi = *C - APInt::getSignedMinValue(Width);
+          return std::pair<APInt, APInt>(lo, hi);
         } else {
-          // Note that sub 0, INT_MIN is not NSW. It techically is a signed wrap
-          // 'sub nsw C, x' produces [C - SINT_MAX, SINT_MAX].
-          Lower = *C - APInt::getSignedMaxValue(Width);
-          Upper = APInt::getSignedMinValue(Width);
+          // sub nsw C, x
+          APInt lo = *C - APInt::getSignedMaxValue(Width);
+          APInt hi = APInt::getSignedMaxValue(Width);
+          return std::pair<APInt, APInt>(lo, hi);
         }
+      };
+
+      // Split a (possibly wrapping) [lo..hi] into up to two non‑wrapping
+      // pieces:
+      auto splitPieces = [&](std::pair<APInt, APInt> rng,
+                             SmallVectorImpl<std::pair<APInt, APInt>> &pieces) {
+        APInt lo = rng.first, hi = rng.second;
+        if (lo.ugt(hi)) {
+          // wraps around 2^n
+          pieces.emplace_back(lo, APInt::getMaxValue(Width)); // [lo..2^n-1]
+          pieces.emplace_back(APInt::getZero(Width), hi);     // [0..hi]
+        } else {
+          pieces.emplace_back(lo, hi);
+        }
+      };
+
+      SmallVector<std::pair<APInt, APInt>, 2> piecesU, piecesS;
+      if (HasNUW)
+        splitPieces(makeUnsignedRange(), piecesU);
+      if (HasNSW)
+        splitPieces(makeSignedRange(), piecesS);
+
+      // Intersect piecewise:
+      SmallVector<std::pair<APInt, APInt>, 2> inters;
+      for (auto &u : piecesU) {
+        for (auto &s : piecesS) {
+          APInt loI = u.first.ugt(s.first) ? u.first : s.first;
+          APInt hiI = u.second.ult(s.second) ? u.second : s.second;
+          if (loI.ule(hiI))
+            inters.emplace_back(loI, hiI);
+        }
+      }
+
+      if (inters.size() == 1) {
+        // Exactly one contiguous overlap → use it
+        Lower = inters[0].first;
+        Upper = inters[0].second;
+      } else if (HasNUW && !PreferSignedRange) {
+        // Fallback to plain NUW result [0..C]
+        Lower = APInt::getZero(Width);
+        Upper = *C;
+      } else if (HasNSW) {
+        // Fallback to plain NSW result
+        auto S = makeSignedRange();
+        Lower = S.first;
+        Upper = S.second;
       }
     }
     break;
@@ -9615,26 +9658,74 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
       bool HasNSW = IIQ.hasNoSignedWrap(&BO);
       bool HasNUW = IIQ.hasNoUnsignedWrap(&BO);
 
-      // If the caller expects a signed compare, then try to use a signed
-      // range. Otherwise if both no-wraps are set, use the unsigned range
-      // because it is never larger than the signed range. Example: "add nuw
-      // nsw i8 X, -2" is unsigned [254,255] vs. signed [-128, 125].
-      if (PreferSignedRange && HasNSW && HasNUW)
-        HasNUW = false;
+      // Build the two candidate ranges as [lo..hi] in the unsigned 0..2^n-1
+      // world:
+      //  NUW: 'add nuw x, C' ⇒ [ C .. UINT_MAX ]
+      auto makeUnsignedRange = [&]() {
+        APInt lo = *C;
+        APInt hi = APInt::getMaxValue(Width);
+        return std::pair<APInt, APInt>(lo, hi);
+      };
 
-      if (HasNUW) {
-        // 'add nuw x, C' produces [C, UINT_MAX].
-        Lower = *C;
-      } else if (HasNSW) {
+      //  NSW: 'add nsw x, C'
+      //    if C<0:  [ SINT_MIN .. SINT_MAX + C ]
+      //    else:    [ SINT_MIN + C .. SINT_MAX ]
+      auto makeSignedRange = [&]() {
         if (C->isNegative()) {
-          // 'add nsw x, -C' produces [SINT_MIN, SINT_MAX - C].
-          Lower = APInt::getSignedMinValue(Width);
-          Upper = APInt::getSignedMaxValue(Width) + *C + 1;
+          APInt lo = APInt::getSignedMinValue(Width);
+          APInt hi = APInt::getSignedMaxValue(Width) + *C;
+          return std::pair<APInt, APInt>(lo, hi);
         } else {
-          // 'add nsw x, +C' produces [SINT_MIN + C, SINT_MAX].
-          Lower = APInt::getSignedMinValue(Width) + *C;
-          Upper = APInt::getSignedMaxValue(Width) + 1;
+          APInt lo = APInt::getSignedMinValue(Width) + *C;
+          APInt hi = APInt::getSignedMaxValue(Width);
+          return std::pair<APInt, APInt>(lo, hi);
         }
+      };
+
+      // Split [lo..hi] into up to two non‑wrapping intervals:
+      auto splitPieces = [&](std::pair<APInt, APInt> rng,
+                             SmallVectorImpl<std::pair<APInt, APInt>> &dst) {
+        APInt lo = rng.first, hi = rng.second;
+        if (lo.ugt(hi)) {
+          // wraps around 2^n
+          dst.emplace_back(lo, APInt::getMaxValue(Width));
+          dst.emplace_back(APInt::getZero(Width), hi);
+        } else {
+          dst.emplace_back(lo, hi);
+        }
+      };
+
+      SmallVector<std::pair<APInt, APInt>, 2> piecesU, piecesS;
+      if (HasNUW)
+        splitPieces(makeUnsignedRange(), piecesU);
+      if (HasNSW)
+        splitPieces(makeSignedRange(), piecesS);
+
+      // Intersect piecewise
+      SmallVector<std::pair<APInt, APInt>, 2> inters;
+      for (auto &u : piecesU) {
+        for (auto &s : piecesS) {
+          APInt loI = u.first.ugt(s.first) ? u.first : s.first;
+          APInt hiI = u.second.ult(s.second) ? u.second : s.second;
+          if (loI.ule(hiI))
+            inters.emplace_back(loI, hiI);
+        }
+      }
+
+      if (inters.size() == 1) {
+        // Exactly one contiguous overlap ⇒ use it
+        Lower = inters[0].first;
+        Upper = inters[0].second +
+                1; // make Upper exclusive if you’re following [Lo..Hi)
+      } else if (HasNUW && !PreferSignedRange) {
+        // Fallback to plain NUW [C..UINT_MAX]
+        Lower = *C;
+        Upper = APInt::getMaxValue(Width) + 1;
+      } else if (HasNSW) {
+        // Fallback to plain NSW
+        auto S = makeSignedRange();
+        Lower = S.first;
+        Upper = S.second + 1;
       }
     }
     break;
