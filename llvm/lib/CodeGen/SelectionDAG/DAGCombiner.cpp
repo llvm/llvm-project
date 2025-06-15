@@ -16699,8 +16699,8 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   if (!HasFMAD && !HasFMA)
     return SDValue();
 
-  bool AllowFusionGlobally = (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-                              Options.UnsafeFPMath || HasFMAD);
+  bool AllowFusionGlobally =
+      Options.AllowFPOpFusion == FPOpFusion::Fast || HasFMAD;
   // If the addition is not contractable, do not combine.
   if (!AllowFusionGlobally && !N->getFlags().hasAllowContract())
     return SDValue();
@@ -17935,7 +17935,8 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
   }
 
   // FIXME: use fast math flags instead of Options.UnsafeFPMath
-  if (Options.UnsafeFPMath) {
+  if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
+      Options.NoSignedZerosFPMath) {
     if (N0CFP && N0CFP->isZero())
       return N2;
     if (N1CFP && N1CFP->isZero())
