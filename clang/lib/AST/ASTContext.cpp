@@ -1705,9 +1705,8 @@ void ASTContext::setRelocationInfoForCXXRecord(
   RelocatableClasses.insert({D, Info});
 }
 
-static bool
-primaryBaseHaseAddressDiscriminatedVTableAuthentication(ASTContext &Context,
-                                            const CXXRecordDecl *Class) {
+static bool primaryBaseHaseAddressDiscriminatedVTableAuthentication(
+    ASTContext &Context, const CXXRecordDecl *Class) {
   if (!Class->isPolymorphic())
     return false;
   const CXXRecordDecl *BaseType = Context.baseForVTableAuthentication(Class);
@@ -1747,14 +1746,18 @@ ASTContext::PointerAuthContent ASTContext::findPointerAuthContent(QualType T) {
     return Result;
   };
   auto ShouldContinueAfterUpdate = [&](PointerAuthContent NewResult) {
-    static_assert(PointerAuthContent::None < PointerAuthContent::AddressDiscriminatedVTable);
-    static_assert(PointerAuthContent::AddressDiscriminatedVTable < PointerAuthContent::AddressDiscriminatedData);
+    static_assert(PointerAuthContent::None <
+                  PointerAuthContent::AddressDiscriminatedVTable);
+    static_assert(PointerAuthContent::AddressDiscriminatedVTable <
+                  PointerAuthContent::AddressDiscriminatedData);
     if (NewResult > Result)
       Result = NewResult;
     return Result != PointerAuthContent::AddressDiscriminatedData;
   };
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-    if (primaryBaseHaseAddressDiscriminatedVTableAuthentication(*this, CXXRD) && !ShouldContinueAfterUpdate(PointerAuthContent::AddressDiscriminatedVTable))
+    if (primaryBaseHaseAddressDiscriminatedVTableAuthentication(*this, CXXRD) &&
+        !ShouldContinueAfterUpdate(
+            PointerAuthContent::AddressDiscriminatedVTable))
       return SaveResultAndReturn();
     for (auto Base : CXXRD->bases()) {
       if (!ShouldContinueAfterUpdate(findPointerAuthContent(Base.getType())))
@@ -1762,7 +1765,8 @@ ASTContext::PointerAuthContent ASTContext::findPointerAuthContent(QualType T) {
     }
   }
   for (auto *FieldDecl : RD->fields()) {
-    if (!ShouldContinueAfterUpdate(findPointerAuthContent(FieldDecl->getType())))
+    if (!ShouldContinueAfterUpdate(
+            findPointerAuthContent(FieldDecl->getType())))
       return SaveResultAndReturn();
   }
   return SaveResultAndReturn();
