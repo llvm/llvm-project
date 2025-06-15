@@ -34,13 +34,13 @@ namespace std {
     T* ptr;
 
   public:
-    reference_wrapper(T& ref) : ptr(&ref) {}
+    constexpr reference_wrapper(T& ref) : ptr(&ref) {}
 
-    T& get() { return *ptr; }
+    constexpr T& get() { return *ptr; }
   };
 
   template <class T>
-  reference_wrapper<T> ref(T& v) {
+  constexpr reference_wrapper<T> ref(T& v) {
     return reference_wrapper<T>(v);
   }
 } // namespace std
@@ -190,3 +190,42 @@ void call3() {
   func(d, &DependentTest::func);
   func(d, &DependentTest::bad_func); // expected-note {{requested here}}
 }
+
+constexpr int constexpr_func() {
+  return 42;
+}
+
+struct ConstexprTestStruct {
+  int i;
+  constexpr int func() {
+    return 55;
+  }
+};
+
+// Make sure that constant evaluation works
+static_assert([]() {
+
+  ConstexprTestStruct s;
+  if (__builtin_invoke(&ConstexprTestStruct::func, s) != 55) // [func.requires]/p1.1
+    return false;
+  if (__builtin_invoke(&ConstexprTestStruct::func, std::ref(s)) != 55) // [func.requires]/p1.2
+    return false;
+  if (__builtin_invoke(&ConstexprTestStruct::func, &s) != 55) // [func.requires]/p1.3
+    return false;
+
+  s.i = 22;
+  if (__builtin_invoke(&ConstexprTestStruct::i, s) != 22) // [func.requires]/p1.4
+    return false;
+  if (__builtin_invoke(&ConstexprTestStruct::i, std::ref(s)) != 22) // [func.requires]/p1.5
+    return false;
+  if (__builtin_invoke(&ConstexprTestStruct::i, &s) != 22) // [func.requires]/p1.6
+    return false;
+
+  // [func.requires]/p1.7
+  if (__builtin_invoke(constexpr_func) != 42)
+    return false;
+  if (__builtin_invoke([] { return 34; }) != 34)
+    return false;
+
+  return true;
+}());
