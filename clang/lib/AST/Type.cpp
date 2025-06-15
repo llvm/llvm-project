@@ -5627,11 +5627,11 @@ HLSLAttributedResourceType::findHandleTypeOnResource(const Type *RT) {
 
 StringRef PredefinedSugarType::getName() const {
   switch (getKind()) {
-  case PredefinedSugarKind::SizeT:
+  case Kind::SizeT:
     return "__size_t";
-  case PredefinedSugarKind::SignedSizeT:
+  case Kind::SignedSizeT:
     return "__signed_size_t";
-  case PredefinedSugarKind::PtrdiffT:
+  case Kind::PtrdiffT:
     return "__ptrdiff_t";
   }
   llvm_unreachable("unexpected kind");

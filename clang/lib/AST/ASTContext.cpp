@@ -1523,12 +1523,11 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   if (!LangOpts.HLSL) {
     // Using PredefinedSugarType makes these types as named sugar types rather
     // than standard integer types, enabling better hints and diagnostics.
-    SizeType = getPredefinedSugarType(
-        llvm::to_underlying(Type::PredefinedSugarKind::SizeT));
-    SignedSizeType = getPredefinedSugarType(
-        llvm::to_underlying(Type::PredefinedSugarKind::SignedSizeT));
-    PtrdiffType = getPredefinedSugarType(
-        llvm::to_underlying(Type::PredefinedSugarKind::PtrdiffT));
+    using Kind = PredefinedSugarType::Kind;
+    SizeType = getPredefinedSugarType(llvm::to_underlying(Kind::SizeT));
+    SignedSizeType =
+        getPredefinedSugarType(llvm::to_underlying(Kind::SignedSizeT));
+    PtrdiffType = getPredefinedSugarType(llvm::to_underlying(Kind::PtrdiffT));
   } else {
     SizeType = getFromTargetType(Target.getSizeType());
     SignedSizeType = getFromTargetType(Target.getSignedSizeType());
@@ -5171,7 +5170,7 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
 }
 
 QualType ASTContext::getPredefinedSugarType(uint32_t KD) const {
-  using Kind = Type::PredefinedSugarKind;
+  using Kind = PredefinedSugarType::Kind;
   auto getUnderlyingType = [](const ASTContext &Ctx, Kind KDI) -> QualType {
     switch (KDI) {
     case Kind::SizeT:
@@ -5184,8 +5183,7 @@ QualType ASTContext::getPredefinedSugarType(uint32_t KD) const {
     llvm_unreachable("unexpected kind");
   };
   auto *New = new (*this, alignof(PredefinedSugarType)) PredefinedSugarType(
-      static_cast<Type::PredefinedSugarKind>(KD),
-      getUnderlyingType(*this, static_cast<Type::PredefinedSugarKind>(KD)));
+      static_cast<Kind>(KD), getUnderlyingType(*this, static_cast<Kind>(KD)));
   Types.push_back(New);
   return QualType(New, 0);
 }

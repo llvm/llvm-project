@@ -2258,20 +2258,17 @@ protected:
     unsigned NumExpansions;
   };
 
-public:
-  /// The kind of a tag type.
   enum class PredefinedSugarKind {
     /// The "size_t" type.
     SizeT,
 
-    /// The "signed_size_t" type.
+    /// The "signed size_t" type.
     SignedSizeT,
 
     /// The "ptrdiff_t" type.
     PtrdiffT
   };
 
-protected:
   class PresefinedSugarTypeBitfields {
     friend class PredefinedSugarType;
 
@@ -8082,9 +8079,10 @@ public:
 class PredefinedSugarType final : public Type {
 public:
   friend class ASTContext;
+  using Kind = PredefinedSugarKind;
 
 private:
-  PredefinedSugarType(PredefinedSugarKind KD, QualType UnderlyingType)
+  PredefinedSugarType(Kind KD, QualType UnderlyingType)
       : Type(PredefinedSugar, UnderlyingType->getCanonicalTypeInternal(),
              TypeDependence::None) {
     PredefinedSugarTypeBits.Kind = llvm::to_underlying(KD);
@@ -8095,9 +8093,7 @@ public:
 
   QualType desugar() const { return getCanonicalTypeInternal(); }
 
-  PredefinedSugarKind getKind() const {
-    return PredefinedSugarKind(PredefinedSugarTypeBits.Kind);
-  }
+  Kind getKind() const { return Kind(PredefinedSugarTypeBits.Kind); }
 
   StringRef getName() const;
 
