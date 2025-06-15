@@ -316,11 +316,10 @@ InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
 
 InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    TTI::TargetCostKind CostKind,
-                                                   unsigned Index,
-                                                   const Value *Op0,
+                                                   int Index, const Value *Op0,
                                                    const Value *Op1) const {
-  Type *ElemTy = Val->isVectorTy() ? cast<VectorType>(Val)->getElementType()
-                                   : Val;
+  Type *ElemTy =
+      Val->isVectorTy() ? cast<VectorType>(Val)->getElementType() : Val;
   if (Opcode == Instruction::InsertElement) {
     // Need two rotations for non-zero index.
     unsigned Cost = (Index != 0) ? 2 : 0;

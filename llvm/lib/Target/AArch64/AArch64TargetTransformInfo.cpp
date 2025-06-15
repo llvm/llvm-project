@@ -3642,7 +3642,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
 InstructionCost
 AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
-                                         VectorType *VecTy, unsigned Index,
+                                         VectorType *VecTy, int Index,
                                          TTI::TargetCostKind CostKind) const {
 
   // Make sure we were given a valid extend opcode.
@@ -3711,12 +3711,24 @@ InstructionCost AArch64TTIImpl::getCFInstrCost(unsigned Opcode,
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
-    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, int Index,
     bool HasRealUse, const Instruction *I, Value *Scalar,
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
-  if (Index != -1U) {
+  if (Index == TargetTransformInfo::LastIndex) {
+    if (isa<ScalableVectorType>(Val)) {
+      // This typically requires both while and lastb instructions in order
+      // to extract the last element. If this is in a loop the while
+      // instruction can at least be hoisted out, although it will consume a
+      // predicate register. The cost should be more expensive than the base
+      // extract cost, which is 2 for most CPUs.
+      return CostKind == TTI::TCK_CodeSize ? 2 : 3;
+    }
+    Index = cast<FixedVectorType>(Val)->getNumElements() - 1;
+  }
+
+  if (TargetTransformInfo::isKnownVectorIndex(Index)) {
     // Legalize the type.
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
 
@@ -3884,8 +3896,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    TTI::TargetCostKind CostKind,
-                                                   unsigned Index,
-                                                   const Value *Op0,
+                                                   int Index, const Value *Op0,
                                                    const Value *Op1) const {
   bool HasRealUse =
       Opcode == Instruction::InsertElement && Op0 && !isa<UndefValue>(Op0);
@@ -3893,7 +3904,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(
-    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, int Index,
     Value *Scalar,
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
   return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, false, nullptr,
@@ -3903,7 +3914,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(
 InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
                                                    Type *Val,
                                                    TTI::TargetCostKind CostKind,
-                                                   unsigned Index) const {
+                                                   int Index) const {
   return getVectorInstrCostHelper(I.getOpcode(), Val, CostKind, Index,
                                   true /* HasRealUse */, &I);
 }
@@ -4052,10 +4063,13 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       // loading the vector from constant pool or in some cases, may also result
       // in scalarization. For now, we are approximating this with the
       // scalarization cost.
-      auto ExtractCost = 2 * getVectorInstrCost(Instruction::ExtractElement, Ty,
-                                                CostKind, -1, nullptr, nullptr);
-      auto InsertCost = getVectorInstrCost(Instruction::InsertElement, Ty,
-                                           CostKind, -1, nullptr, nullptr);
+      auto ExtractCost =
+          2 * getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind,
+                                 TargetTransformInfo::UnknownIndex, nullptr,
+                                 nullptr);
+      auto InsertCost = getVectorInstrCost(
+          Instruction::InsertElement, Ty, CostKind,
+          TargetTransformInfo::UnknownIndex, nullptr, nullptr);
       unsigned NElts = cast<FixedVectorType>(Ty)->getNumElements();
       return ExtractCost + InsertCost +
              NElts * getArithmeticInstrCost(Opcode, Ty->getScalarType(),
@@ -4153,9 +4167,11 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
         // On AArch64, without SVE, vector divisions are expanded
         // into scalar divisions of each pair of elements.
         Cost += getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind,
-                                   -1, nullptr, nullptr);
-        Cost += getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
-                                   nullptr, nullptr);
+                                   TargetTransformInfo::UnknownIndex, nullptr,
+                                   nullptr);
+        Cost += getVectorInstrCost(Instruction::InsertElement, Ty, CostKind,
+                                   TargetTransformInfo::UnknownIndex, nullptr,
+                                   nullptr);
       }
 
       // TODO: if one of the arguments is scalar, then it's not necessary to
@@ -4186,11 +4202,13 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       return LT.first;
     return cast<VectorType>(Ty)->getElementCount().getKnownMinValue() *
            (getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind) +
-            getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind, -1,
-                               nullptr, nullptr) *
+            getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind,
+                               TargetTransformInfo::UnknownIndex, nullptr,
+                               nullptr) *
                 2 +
-            getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
-                               nullptr, nullptr));
+            getVectorInstrCost(Instruction::InsertElement, Ty, CostKind,
+                               TargetTransformInfo::UnknownIndex, nullptr,
+                               nullptr));
   case ISD::ADD:
   case ISD::XOR:
   case ISD::OR:

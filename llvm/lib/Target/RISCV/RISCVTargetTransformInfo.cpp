@@ -2211,8 +2211,7 @@ InstructionCost RISCVTTIImpl::getCFInstrCost(unsigned Opcode,
 
 InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                  TTI::TargetCostKind CostKind,
-                                                 unsigned Index,
-                                                 const Value *Op0,
+                                                 int Index, const Value *Op0,
                                                  const Value *Op1) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
@@ -2227,7 +2226,7 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   if (!LT.second.isVector()) {
     auto *FixedVecTy = cast<FixedVectorType>(Val);
     // If Index is a known constant, cost is zero.
-    if (Index != -1U)
+    if (TargetTransformInfo::isKnownVectorIndex(Index))
       return 0;
     // Extract/InsertElement with non-constant index is very costly when
     // scalarized; estimate cost of loads/stores sequence via the stack:
@@ -2280,7 +2279,7 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   // When insertelement we should add the index with 1 as the input of vslideup.
   unsigned SlideCost = Opcode == Instruction::InsertElement ? 2 : 1;
 
-  if (Index != -1U) {
+  if (TargetTransformInfo::isKnownVectorIndex(Index)) {
     // The type may be split. For fixed-width vectors we can normalize the
     // index to the new type.
     if (LT.second.isFixedLengthVector()) {
@@ -2309,14 +2308,15 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   // When the vector needs to split into multiple register groups and the index
   // exceeds single vector register group, we need to insert/extract the element
   // via stack.
-  if (LT.first > 1 &&
-      ((Index == -1U) || (Index >= LT.second.getVectorMinNumElements() &&
-                          LT.second.isScalableVector()))) {
+  if (LT.first > 1 && (!TargetTransformInfo::isKnownVectorIndex(Index) ||
+                       (Index >= LT.second.getVectorMinNumElements() &&
+                        LT.second.isScalableVector()))) {
     Type *ScalarType = Val->getScalarType();
     Align VecAlign = DL.getPrefTypeAlign(Val);
     Align SclAlign = DL.getPrefTypeAlign(ScalarType);
     // Extra addi for unknown index.
-    InstructionCost IdxCost = Index == -1U ? 1 : 0;
+    InstructionCost IdxCost =
+        TargetTransformInfo::isKnownVectorIndex(Index) ? 0 : 1;
 
     // Store all split vectors into stack and load the target element.
     if (Opcode == Instruction::ExtractElement)
