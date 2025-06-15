@@ -255,7 +255,7 @@ struct CallOpInterface
       }
 
       // Returning a memref.
-      FailureOr<BaseMemRefType> resultType =
+      FailureOr<BufferLikeType> resultType =
           bufferization::getBufferType(result, options, state);
       if (failed(resultType))
         return failure();
@@ -290,13 +290,13 @@ struct CallOpInterface
         // The called function was not bufferized yet. This can happen when
         // there cycles in the function call graph. Compute the bufferized
         // result type.
-        FailureOr<BaseMemRefType> maybeMemRefType =
+        FailureOr<BufferLikeType> maybeBufferType =
             bufferization::getBufferType(
                 funcOp.getArgument(opOperand.getOperandNumber()), options,
                 state);
-        if (failed(maybeMemRefType))
+        if (failed(maybeBufferType))
           return failure();
-        memRefType = *maybeMemRefType;
+        memRefType = *maybeBufferType;
       }
 
       // Since we don't yet have a clear layout story, to_buffer may
