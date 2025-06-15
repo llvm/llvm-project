@@ -29,6 +29,7 @@
 #include <__type_traits/copy_cvref.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
@@ -1375,17 +1376,19 @@ private:
     using __key_type = typename _NodeTypes::key_type;
 
     if (std::is_constant_evaluated()) {
-      __get_node_value_type_t<value_type> tmp{__rhs.first, __rhs.second};
-      // tmp.first = const_cast<__copy_cvref_t<_From, __key_type>&&>(__rhs.first);
-      // tmp.second                         = std::forward<_From>(__rhs).second;
+      __get_node_value_type_t<value_type>
+      // pair< typename std::remove_const<value_type::first_type>::type, typename value_type::second_type > 
+      tmp {__rhs.first, __rhs.second};
+      tmp.first = const_cast<__copy_cvref_t<_From, __key_type>&&>(__rhs.first);
+      tmp.second                         = std::forward<_From>(__rhs).second;
       // __lhs = pair<const int, double>
       // TODO: use a better name
       using foo_type = __get_node_value_type_t<value_type>;
       // const_cast is not allowed at constexpr time.
       // we get around this by deleting and creating a new node value
-      __lhs.~foo_type();
-      new (std::addressof(__lhs))(foo_type)(tmp);
-      // __lhs = std::move(tmp);
+      // __lhs.~foo_type();
+      // new (std::addressof(__lhs))(foo_type)(std::move(tmp));
+      __lhs = std::move(tmp);
     } else {
       // This is technically UB, since the object was constructed as `const`.
       // Clang doesn't optimize on this currently though.
