@@ -26,7 +26,7 @@
 #include "llvm/Support/Allocator.h"
 
 namespace clang {
-namespace mapper {
+namespace CodeGen {
 
 class QualTypeMapper {
 private:
@@ -68,7 +68,7 @@ public:
   llvm::abi::TypeBuilder getTypeBuilder() { return Builder; }
 };
 
-} // namespace mapper
+} // namespace CodeGen
 } // namespace clang
 
 #endif // !CLANG_CODEGEN_QUALTYPE_MAPPER_H
