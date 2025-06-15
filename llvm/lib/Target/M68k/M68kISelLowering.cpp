@@ -19,7 +19,7 @@
 #include "M68kSubtarget.h"
 #include "M68kTargetMachine.h"
 #include "M68kTargetObjectFile.h"
-#include "MCTargetDesc/M68kMCExpr.h"
+#include "MCTargetDesc/M68kMCAsmInfo.h"
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/CallingConvLower.h"

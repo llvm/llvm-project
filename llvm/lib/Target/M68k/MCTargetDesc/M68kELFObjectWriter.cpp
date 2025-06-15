@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/M68kFixupKinds.h"
-#include "MCTargetDesc/M68kMCExpr.h"
+#include "MCTargetDesc/M68kMCAsmInfo.h"
 #include "MCTargetDesc/M68kMCTargetDesc.h"
 
 #include "llvm/BinaryFormat/ELF.h"

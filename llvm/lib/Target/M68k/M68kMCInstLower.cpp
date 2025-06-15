@@ -18,7 +18,7 @@
 #include "M68kInstrInfo.h"
 
 #include "MCTargetDesc/M68kBaseInfo.h"
-#include "MCTargetDesc/M68kMCExpr.h"
+#include "MCTargetDesc/M68kMCAsmInfo.h"
 
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
