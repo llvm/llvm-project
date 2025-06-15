@@ -17,9 +17,12 @@
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__string/char_traits.h>
+#include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_callable.h>
+#include <__type_traits/is_same.h>
 #include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -157,6 +160,49 @@ template <
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1> __search_impl(
     _Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Sent2 __last2, _Pred& __pred, _Proj1& __proj1, _Proj2& __proj2) {
   return std::__search_forward_impl<_ClassicAlgPolicy>(__first1, __last1, __first2, __last2, __pred, __proj1, __proj2);
+}
+
+template <
+    class _Iter1,
+    class _Sent1,
+    class _Iter2,
+    class _Sent2,
+    class _Pred,
+    class _Proj1,
+    class _Proj2,
+    __enable_if_t<__desugars_to_v<__equal_tag, _Pred, typename iterator_traits<_Iter1>::value_type, typename iterator_traits<_Iter1>::value_type> &&
+                  __is_identity<_Proj1>::value && __is_identity<_Proj2>::value &&
+                  __has_random_access_iterator_category<_Iter1>::value &&
+                  __has_random_access_iterator_category<_Iter2>::value &&
+                  (is_same_v<typename iterator_traits<_Iter1>::value_type, char> ||
+                  is_same_v<typename iterator_traits<_Iter1>::value_type, wchar_t> ||
+                  is_same_v<typename iterator_traits<_Iter1>::value_type, char8_t> ||
+                  is_same_v<typename iterator_traits<_Iter1>::value_type, char16_t> ||
+                  is_same_v<typename iterator_traits<_Iter1>::value_type, char32_t>),
+                  int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1> __search_impl(
+  _Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Sent2 __last2, _Pred& __pred, _Proj1& __proj1, _Proj2& __proj2) {
+  using value_type = __remove_const_t<typename iterator_traits<_Iter1>::value_type>;
+  using _CharT  = value_type;
+  using _Traits = char_traits<_CharT>;
+
+  auto __size2 = __last2 - __first2;
+  if (__size2 == 0)
+    return {__first1, __first1};
+
+  auto __size1 = __last1 - __first1;
+  if (__size1 < __size2) {
+    return {__last1, __last1};
+  }
+
+  const value_type* __r = std::__search_substring<_CharT, _Traits>(__first1, __last1, __first2, __last2);
+  if (__r == __first1)
+    return {__first1, __first1};
+
+  if (__r == __last1)
+    return {__last1, __last1};
+
+  return {__r, __r + __size1};
 }
 
 template <class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
