@@ -213,6 +213,7 @@ def FamilyXMEGA2 : Family<"xmega2",
                           [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
                            FeatureADDSUBIW, FeatureSRAM, FeatureJMPCALL,
                            FeatureMultiplication, FeatureMOVW, FeatureLPMX,
+                           FeatureSPM, FeatureSPMX,
                            FeatureBREAK, FeatureLowByteFirst]>;
 
 def FamilyXMEGA3 : Family<"xmega3",
@@ -226,6 +227,7 @@ def FamilyXMEGA4 : Family<"xmega4",
                            FeatureADDSUBIW, FeatureSRAM, FeatureJMPCALL,
                            FeatureMultiplication, FeatureMOVW, FeatureLPMX,
                            FeatureELPM, FeatureELPMX,
+                           FeatureSPM, FeatureSPMX,
                            FeatureBREAK, FeatureLowByteFirst]>;
 
 def FamilyXMEGA : Family<"xmega",
