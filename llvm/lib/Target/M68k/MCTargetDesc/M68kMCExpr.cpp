@@ -13,7 +13,7 @@
 
 using namespace llvm;
 
-const M68kMCExpr *M68kMCExpr::create(const MCExpr *Expr, Specifier S,
+const M68kMCExpr *M68kMCExpr::create(const MCExpr *Expr, Spec S,
                                      MCContext &Ctx) {
   return new (Ctx) M68kMCExpr(Expr, S);
 }
