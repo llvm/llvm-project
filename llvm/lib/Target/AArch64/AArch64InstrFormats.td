@@ -799,6 +799,22 @@ class fixedpoint_recip_i64<ValueType FloatVT>
   let DecoderMethod = "DecodeFixedPointScaleImm64";
 }
 
+class fixedpoint_recip_vec_i32<ValueType VecFloatVT>
+    : Operand<VecFloatVT>,
+      ComplexPattern<VecFloatVT, 1,
+                     "SelectCVTFixedPosRecipOperandVec<32>", [build_vector]> {
+  let EncoderMethod = "getFixedPointScaleOpValue";
+  let DecoderMethod = "DecodeFixedPointScaleImm32";
+}
+
+class fixedpoint_recip_vec_i64<ValueType VecFloatVT>
+    : Operand<VecFloatVT>,
+      ComplexPattern<VecFloatVT, 1,
+                     "SelectCVTFixedPosRecipOperandVec<64>", [build_vector]> {
+  let EncoderMethod = "getFixedPointScaleOpValue";
+  let DecoderMethod = "DecodeFixedPointScaleImm32";
+}
+
 def fixedpoint_recip_f16_i32 : fixedpoint_recip_i32<f16>;
 def fixedpoint_recip_f32_i32 : fixedpoint_recip_i32<f32>;
 def fixedpoint_recip_f64_i32 : fixedpoint_recip_i32<f64>;
@@ -806,6 +822,16 @@ def fixedpoint_recip_f64_i32 : fixedpoint_recip_i32<f64>;
 def fixedpoint_recip_f16_i64 : fixedpoint_recip_i64<f16>;
 def fixedpoint_recip_f32_i64 : fixedpoint_recip_i64<f32>;
 def fixedpoint_recip_f64_i64 : fixedpoint_recip_i64<f64>;
+
+def fixedpoint_recip_v2f16_v2i32 : fixedpoint_recip_vec_i32<v2f16>;
+def fixedpoint_recip_v4f16_v4i32 : fixedpoint_recip_vec_i32<v4f16>;
+def fixedpoint_recip_v8f16_v8i32 : fixedpoint_recip_vec_i32<v8f16>;
+def fixedpoint_recip_v2f32_v2i32 : fixedpoint_recip_vec_i32<v2f32>;
+def fixedpoint_recip_v4f32_v4i32 : fixedpoint_recip_vec_i32<v4f32>;
+
+def fixedpoint_recip_v2f16_v2i64 : fixedpoint_recip_vec_i64<v2f16>;
+def fixedpoint_recip_v2f32_v2i64 : fixedpoint_recip_vec_i64<v2f32>;
+def fixedpoint_recip_v2f64_v2i64 : fixedpoint_recip_vec_i64<v2f64>;
 
 def vecshiftR8 : Operand<i32>, ImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 9);
@@ -5406,6 +5432,102 @@ class BaseIntegerToFPUnscaled<bits<2> rmode, bits<3> opcode,
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Rd;
 }
+
+multiclass IntegerToFPVector<
+    bits<2> rmode, bits<3> opcode, string asm, RegisterClass srcRegClass,
+    RegisterClass dstRegClass, Operand imm_op, bits<1> q, bits<2> size,
+    bits<2> srcElemTypeBits, list<Predicate> preds> {
+
+  def _V : BaseIntegerToFP<rmode, opcode, srcRegClass, dstRegClass, imm_op,
+                           asm, []> {
+    let Inst{30} = q;
+    let Inst{23 -22} = size;
+    let Inst{18 -16} = 0b001;
+    let Inst{11 -10} = srcElemTypeBits;
+    let Predicates = preds;
+  }
+}
+
+// SCVTF (Signed Convert To Floating-Point) from Vector 32-bit Integer (vNi32)
+// defm SCVTFv2f16_v2i32 : IntegerToFPVector<0b00, 0b010, "scvtf",
+//                                     FPR64, FPR64,
+//                                     fixedpoint_recip_v2f16_v2i32,
+//                                     0, 0b00, 0b10, [HasFullFP16]>;
+
+// defm SCVTFv4f16_v4i32 : IntegerToFPVector<0b00, 0b010, "scvtf",
+//                                     FPR128, FPR128,
+//                                     fixedpoint_recip_v4f16_v4i32,
+//                                     1, 0b00, 0b10, [HasFullFP16]>;
+
+// defm SCVTFv8f16_v8i32 : IntegerToFPVector<0b00, 0b010, "scvtf",
+//                                     FPR128, FPR128,
+//                                     fixedpoint_recip_v8f16_v8i32,
+//                                     1, 0b00, 0b10, [HasFullFP16]>;
+
+defm SCVTFv2f32_v2i32
+    : IntegerToFPVector<0b00, 0b010, "scvtf", FPR64, FPR64,
+                        fixedpoint_recip_v2f32_v2i32, 0, 0b01, 0b10, []>;
+
+defm SCVTFv4f32_v4i32
+    : IntegerToFPVector<0b00, 0b010, "scvtf", FPR128, FPR128,
+                        fixedpoint_recip_v4f32_v4i32, 1, 0b01, 0b10, []>;
+
+// SCVTF (Signed Convert To Floating-Point) from Vector 64-bit Integer (vNi64)
+// defm SCVTFv2f16_v2i64 : IntegerToFPVector<0b00, 0b010, "scvtf",
+//                                     FPR128, FPR128,
+//                                     fixedpoint_recip_v2f16_v2i64,
+//                                     1, 0b00, 0b11, [HasFullFP16]>;
+
+// defm SCVTFv2f32_v2i64 : IntegerToFPVector<0b00, 0b010, "scvtf",
+//                                     FPR128, FPR128,
+//                                     fixedpoint_recip_v2f32_v2i64,
+//                                     1, 0b01, 0b11, []>;
+
+defm SCVTFv2f64_v2i64
+    : IntegerToFPVector<0b00, 0b010, "scvtf", FPR128, FPR128,
+                        fixedpoint_recip_v2f64_v2i64, 1, 0b10, 0b11, []>;
+
+// def : Pat<
+//   (fmul (sint_to_fp (v2i32 V64:$Rn)),
+//         fixedpoint_recip_v2f32_v2i32:$scale),
+//   (SCVTFv2f16_v2i32_V V64:$Rn, fixedpoint_recip_v2f32_v2i32:$scale)
+// >;
+
+// def : Pat<
+//   (fmul (sint_to_fp (v4i32 FPR128:$Rn)),
+//         fixedpoint_recip_v4f16_v4i32:$scale),
+//   (SCVTFv4f16_v4i32_V FPR128:$Rn, fixedpoint_recip_v4f16_v4i32:$scale)
+// >;
+
+// def : Pat<
+//   (fmul (sint_to_fp (v8i32 FPR128:$Rn)),
+//         fixedpoint_recip_v8f16_v8i32:$scale),
+//   (SCVTFv8f16_v8i32_V FPR128:$Rn, fixedpoint_recip_v8f16_v8i32:$scale)
+// >;
+
+def : Pat<(fmul(sint_to_fp(v2i32 V64:$Rn)),
+              fixedpoint_recip_v2f32_v2i32:$scale),
+          (SCVTFv2f32_v2i32_V V64:$Rn, fixedpoint_recip_v2f32_v2i32:$scale)>;
+
+def : Pat<(fmul(sint_to_fp(v4i32 FPR128:$Rn)),
+              fixedpoint_recip_v4f32_v4i32:$scale),
+          (SCVTFv4f32_v4i32_V FPR128:$Rn, fixedpoint_recip_v4f32_v4i32:$scale)>;
+
+// def : Pat<
+//   (fmul (sint_to_fp (v2i64 FPR128:$Rn)),
+//         fixedpoint_recip_v2f16_v2i64:$scale),
+//   (SCVTFv2f16_v2i64_V FPR128:$Rn, fixedpoint_recip_v2f16_v2i64:$scale)
+// >;
+
+// def : Pat<
+//   (fmul (sint_to_fp (v2i64 FPR128:$Rn)),
+//         fixedpoint_recip_v2f32_v2i64:$scale),
+//   (SCVTFv2f32_v2i64_V FPR128:$Rn, fixedpoint_recip_v2f32_v2i64:$scale)
+// >;
+
+def : Pat<(fmul(sint_to_fp(v2i64 FPR128:$Rn)),
+              fixedpoint_recip_v2f64_v2i64:$scale),
+          (SCVTFv2f64_v2i64_V FPR128:$Rn, fixedpoint_recip_v2f64_v2i64:$scale)>;
 
 multiclass IntegerToFP<bits<2> rmode, bits<3> opcode, string asm, SDPatternOperator node> {
   // Unscaled
