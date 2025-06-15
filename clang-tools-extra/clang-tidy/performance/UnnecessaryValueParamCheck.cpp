@@ -50,7 +50,8 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()),
       AllowedTypes(
-          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))),
+      IsAllowedInCoroutines(Options.get("IsAllowedInCoroutines", false)) {}
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   const auto ExpensiveValueParamDecl = parmVarDecl(
@@ -63,7 +64,10 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
           TK_AsIs,
-          functionDecl(hasBody(stmt()), isDefinition(), unless(isImplicit()),
+          functionDecl(hasBody(IsAllowedInCoroutines
+                                   ? stmt()
+                                   : stmt(unless(coroutineBodyStmt()))),
+                       isDefinition(), unless(isImplicit()),
                        unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
                        has(typeLoc(forEach(ExpensiveValueParamDecl))),
                        decl().bind("functionDecl"))),
@@ -123,6 +127,7 @@ void UnnecessaryValueParamCheck::storeOptions(
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
+  Options.store(Opts, "IsAllowedInCoroutines", IsAllowedInCoroutines);
 }
 
 void UnnecessaryValueParamCheck::onEndOfTranslationUnit() {
