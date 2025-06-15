@@ -6506,3 +6506,58 @@ entry:
   %insert = insertelement <5 x double> %vec, double %val, i32 %idx
   ret <5 x double> %insert
 }
+
+; Found by fuzzer, reduced with llvm-reduce.
+define amdgpu_kernel void @insert_very_small_from_very_large(<32 x i16> %L3, ptr %ptr) {
+; GPRIDX-LABEL: insert_very_small_from_very_large:
+; GPRIDX:       ; %bb.0: ; %bb
+; GPRIDX-NEXT:    s_load_dwordx16 s[12:27], s[8:9], 0x0
+; GPRIDX-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x40
+; GPRIDX-NEXT:    s_waitcnt lgkmcnt(0)
+; GPRIDX-NEXT:    s_lshr_b32 s2, s12, 1
+; GPRIDX-NEXT:    s_and_b32 s2, s2, 1
+; GPRIDX-NEXT:    s_lshl_b32 s2, s2, 1
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, s2
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, s1
+; GPRIDX-NEXT:    flat_store_byte v[0:1], v2
+; GPRIDX-NEXT:    s_endpgm
+;
+; GFX10-LABEL: insert_very_small_from_very_large:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx16 s[12:27], s[8:9], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x40
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_lshr_b32 s2, s12, 1
+; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    s_and_b32 s2, s2, 1
+; GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-NEXT:    s_lshl_b32 s2, s2, 1
+; GFX10-NEXT:    v_mov_b32_e32 v2, s2
+; GFX10-NEXT:    flat_store_byte v[0:1], v2
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: insert_very_small_from_very_large:
+; GFX11:       ; %bb.0: ; %bb
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b512 s[8:23], s[4:5], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x40
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_lshr_b32 s2, s8, 1
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    s_and_b32 s2, s2, 1
+; GFX11-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-NEXT:    s_lshl_b32 s2, s2, 1
+; GFX11-NEXT:    v_mov_b32_e32 v2, s2
+; GFX11-NEXT:    flat_store_b8 v[0:1], v2
+; GFX11-NEXT:    s_endpgm
+bb:
+  %a = bitcast <32 x i16> %L3 to i512
+  %b = trunc i512 %a to i8
+  %c = trunc i8 %b to i2
+  %d = bitcast i2 %c to <2 x i1>
+  %insert = insertelement <2 x i1> %d, i1 false, i32 0
+  store <2 x i1> %insert, ptr %ptr, align 1
+  ret void
+}
