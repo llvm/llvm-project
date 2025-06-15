@@ -1278,6 +1278,8 @@ public:
   QualType RebuildDependentBitIntType(bool IsUnsigned, Expr *NumBitsExpr,
                                       SourceLocation Loc);
 
+  QualType RebuildPredefinedSugarType(uint32_t K);
+
   /// Build a new template name given a nested name specifier, a flag
   /// indicating whether the "template" keyword was provided, and the template
   /// that the template name refers to.
@@ -7243,6 +7245,22 @@ QualType TreeTransform<Derived>::TransformDependentBitIntType(
     BitIntTypeLoc NewTL = TLB.push<BitIntTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
   }
+  return Result;
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformPredefinedSugarType(
+    TypeLocBuilder &TLB, PredefinedSugarTypeLoc TL) {
+  const PredefinedSugarType *EIT = TL.getTypePtr();
+  QualType Result = TL.getType();
+
+  if (getDerived().AlwaysRebuild()) {
+    Result = getDerived().RebuildPredefinedSugarType(
+        llvm::to_underlying(EIT->getKind()));
+  }
+
+  PredefinedSugarTypeLoc NewTL = TLB.push<PredefinedSugarTypeLoc>(Result);
+  NewTL.setNameLoc(TL.getNameLoc());
   return Result;
 }
 
@@ -17424,6 +17442,11 @@ template <typename Derived>
 QualType TreeTransform<Derived>::RebuildDependentBitIntType(
     bool IsUnsigned, Expr *NumBitsExpr, SourceLocation Loc) {
   return SemaRef.BuildBitIntType(IsUnsigned, NumBitsExpr, Loc);
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildPredefinedSugarType(uint32_t K) {
+  return SemaRef.Context.getPredefinedSugarType(K);
 }
 
 template<typename Derived>

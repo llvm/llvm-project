@@ -3,10 +3,6 @@
 // RUN: %clang_cc1 -triple thumbv7k-apple-watchos2.0.0 -fsyntax-only -fblocks -verify %s
 // RUN: %clang_cc1 -triple thumbv7k-apple-watchos2.0.0 -fsyntax-only -fblocks -verify -Wformat-pedantic -DPEDANTIC %s
 
-#if !defined(PEDANTIC)
-// expected-no-diagnostics
-#endif
-
 #if __LP64__
 typedef unsigned long NSUInteger;
 typedef long NSInteger;
@@ -30,12 +26,10 @@ void testSizeSpecifier(void) {
   NSInteger i = 0;
   NSUInteger j = 0;
   NSLog(@"max NSInteger = %zi", i);
-  NSLog(@"max NSUinteger = %zu", j);
-
 #if defined(PEDANTIC)
-  // expected-warning@-4 {{values of type 'NSInteger' should not be used as format arguments; add an explicit cast to 'long' instead}}
-  // expected-warning@-4 {{values of type 'NSUInteger' should not be used as format arguments; add an explicit cast to 'unsigned long' instead}}
+  // expected-warning@-2 {{values of type 'NSInteger' should not be used as format arguments; add an explicit cast to 'long' instead}}
 #endif
+  NSLog(@"max NSUinteger = %zu", j); // expected-warning {{values of type 'NSUInteger' should not be used as format arguments; add an explicit cast to 'unsigned long' instead}}
 }
 
 void testPtrdiffSpecifier(ptrdiff_t x) {
@@ -43,10 +37,9 @@ void testPtrdiffSpecifier(ptrdiff_t x) {
   NSUInteger j = 0;
 
   NSLog(@"ptrdiff_t NSUinteger: %tu", j);
-  NSLog(@"ptrdiff_t NSInteger: %td", i);
-  NSLog(@"ptrdiff_t %tu, %td", x, x);
 #if __is_target_os(watchos) && defined(PEDANTIC)
-  // expected-warning@-4 {{values of type 'NSUInteger' should not be used as format arguments; add an explicit cast to 'unsigned long' instead}}
-  // expected-warning@-4 {{values of type 'NSInteger' should not be used as format arguments; add an explicit cast to 'long' instead}}
+  // expected-warning@-2 {{values of type 'NSUInteger' should not be used as format arguments; add an explicit cast to 'unsigned long' instead}}
 #endif
+  NSLog(@"ptrdiff_t NSInteger: %td", i); // expected-warning {{values of type 'NSInteger' should not be used as format arguments; add an explicit cast to 'long' instead}}
+  NSLog(@"ptrdiff_t %tu, %td", x, x); // no-warning
 }

@@ -3398,7 +3398,8 @@ void Sema::DeclareGlobalNewDelete() {
   GlobalNewDeleteDeclared = true;
 
   QualType VoidPtr = Context.getPointerType(Context.VoidTy);
-  QualType SizeT = Context.getSizeType();
+  // FIXME: Why is 'Canonical'SizeType needed here?
+  QualType SizeT = Context.getCanonicalSizeType();
 
   auto DeclareGlobalAllocationFunctions = [&](OverloadedOperatorKind Kind,
                                               QualType Return, QualType Param) {
