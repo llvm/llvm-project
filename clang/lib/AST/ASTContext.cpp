@@ -1704,10 +1704,11 @@ void ASTContext::setRelocationInfoForCXXRecord(
   assert(RelocatableClasses.find(D) == RelocatableClasses.end());
   RelocatableClasses.insert({D, Info});
 }
+
 static bool
-hasAddressDiscriminatedVTableAuthentication(ASTContext &Context,
+primaryBaseHaseAddressDiscriminatedVTableAuthentication(ASTContext &Context,
                                             const CXXRecordDecl *Class) {
-  if (!Context.isPointerAuthenticationAvailable() || !Class->isPolymorphic())
+  if (!Class->isPolymorphic())
     return false;
   const CXXRecordDecl *BaseType = Context.baseForVTableAuthentication(Class);
   using AuthAttr = VTablePointerAuthenticationAttr;
@@ -1721,22 +1722,23 @@ hasAddressDiscriminatedVTableAuthentication(ASTContext &Context,
   return AddressDiscrimination == AuthAttr::AddressDiscrimination;
 }
 
-bool ASTContext::containsAddressDiscriminatedPointerAuth(QualType T) {
-  if (!isPointerAuthenticationAvailable())
-    return false;
+ASTContext::PointerAuthContent ASTContext::findPointerAuthContent(QualType T) {
+  assert(isPointerAuthenticationAvailable());
 
   T = T.getCanonicalType();
   if (T.hasAddressDiscriminatedPointerAuth())
-    return true;
+    return PointerAuthContent::AddressDiscriminatedData;
   const RecordDecl *RD = T->getAsRecordDecl();
   if (!RD)
-    return false;
+    return PointerAuthContent::None;
 
   if (auto Existing = RecordContainsAddressDiscriminatedPointerAuth.find(RD);
       Existing != RecordContainsAddressDiscriminatedPointerAuth.end())
     return Existing->second;
 
-  auto SaveReturn = [this, RD](bool Result) {
+  PointerAuthContent Result = PointerAuthContent::None;
+
+  auto SaveResultAndReturn = [&]() -> PointerAuthContent {
     auto [ResultIter, DidAdd] =
         RecordContainsAddressDiscriminatedPointerAuth.try_emplace(RD, Result);
     (void)ResultIter;
@@ -1744,20 +1746,26 @@ bool ASTContext::containsAddressDiscriminatedPointerAuth(QualType T) {
     assert(DidAdd);
     return Result;
   };
+  auto ShouldContinueAfterUpdate = [&](PointerAuthContent NewResult) {
+    static_assert(PointerAuthContent::None < PointerAuthContent::AddressDiscriminatedVTable);
+    static_assert(PointerAuthContent::AddressDiscriminatedVTable < PointerAuthContent::AddressDiscriminatedData);
+    if (NewResult > Result)
+      Result = NewResult;
+    return Result != PointerAuthContent::AddressDiscriminatedData;
+  };
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-    if (CXXRD->isPolymorphic() &&
-        hasAddressDiscriminatedVTableAuthentication(*this, CXXRD))
-      return SaveReturn(true);
+    if (primaryBaseHaseAddressDiscriminatedVTableAuthentication(*this, CXXRD) && !ShouldContinueAfterUpdate(PointerAuthContent::AddressDiscriminatedVTable))
+      return SaveResultAndReturn();
     for (auto Base : CXXRD->bases()) {
-      if (containsAddressDiscriminatedPointerAuth(Base.getType()))
-        return SaveReturn(true);
+      if (!ShouldContinueAfterUpdate(findPointerAuthContent(Base.getType())))
+        return SaveResultAndReturn();
     }
   }
   for (auto *FieldDecl : RD->fields()) {
-    if (containsAddressDiscriminatedPointerAuth(FieldDecl->getType()))
-      return SaveReturn(true);
+    if (!ShouldContinueAfterUpdate(findPointerAuthContent(FieldDecl->getType())))
+      return SaveResultAndReturn();
   }
-  return SaveReturn(false);
+  return SaveResultAndReturn();
 }
 
 void ASTContext::addedLocalImportDecl(ImportDecl *Import) {

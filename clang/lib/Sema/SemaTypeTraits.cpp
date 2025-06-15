@@ -331,6 +331,9 @@ bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
   if (BaseElementType->isIncompleteType())
     return false;
 
+  if (Context.containsNonRelocatablePointerAuth(Type))
+    return false;
+
   if (BaseElementType->isScalarType() || BaseElementType->isVectorType())
     return true;
 

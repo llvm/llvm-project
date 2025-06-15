@@ -16,20 +16,27 @@ struct AddressDiscPtrauth {
   void * __ptrauth(1, 1, 1234) p;
 };
 
-static_assert(__builtin_is_cpp_trivially_relocatable(AddressDiscPtrauth));
+static_assert(!__builtin_is_cpp_trivially_relocatable(AddressDiscPtrauth));
 
 struct MultipleBaseClasses : NonAddressDiscPtrauth, AddressDiscPtrauth {
 
 };
 
-static_assert(__builtin_is_cpp_trivially_relocatable(MultipleBaseClasses));
+static_assert(!__builtin_is_cpp_trivially_relocatable(MultipleBaseClasses));
 
-struct MultipleMembers {
+struct MultipleMembers1 {
    NonAddressDiscPtrauth field0;
    AddressDiscPtrauth field1;
 };
 
-static_assert(__builtin_is_cpp_trivially_relocatable(MultipleMembers));
+static_assert(!__builtin_is_cpp_trivially_relocatable(MultipleMembers1));
+
+struct MultipleMembers2 {
+   NonAddressDiscPtrauth field0;
+   NonAddressDiscPtrauth field1;
+};
+
+static_assert(__builtin_is_cpp_trivially_relocatable(MultipleMembers2));
 
 struct UnionOfPtrauth {
     union {

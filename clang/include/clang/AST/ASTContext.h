@@ -629,17 +629,26 @@ public:
   void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
                                      CXXRecordDeclRelocationInfo);
 
-  /// Examines a given type, and returns whether the T itself
+  /// Examines a given type, and returns whether the type itself
   /// is address discriminated, or any transitively embedded types
   /// contain data that is address discriminated. This includes
   /// implicitly authenticated values like vtable pointers, as well as
   /// explicitly qualified fields.
-  bool containsAddressDiscriminatedPointerAuth(QualType T);
-  // A simple helper function to short circuit pointer auth checks.
+  bool containsAddressDiscriminatedPointerAuth(QualType T) {
+    if (!isPointerAuthenticationAvailable())
+      return false;
+    return findPointerAuthContent(T) != PointerAuthContent::None;
+  }
 
-  bool isPointerAuthenticationAvailable() const {
-    return LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics ||
-           LangOpts.PointerAuthVTPtrAddressDiscrimination;
+  /// Examines a given type, and returns whether the type itself
+  /// or any data it transitively contains has a pointer authentication
+  /// schema that is not safely relocatable. e.g. any data or fields
+  /// with address discrimination other than any otherwise similar
+  /// vtable pointers.
+  bool containsNonRelocatablePointerAuth(QualType T) {
+    if (!isPointerAuthenticationAvailable())
+      return false;
+    return findPointerAuthContent(T) == PointerAuthContent::AddressDiscriminatedData;
   }
 
 private:
@@ -647,7 +656,19 @@ private:
       RelocatableClasses;
 
   // FIXME: store in RecordDeclBitfields in future?
-  llvm::DenseMap<const RecordDecl *, bool>
+  enum class PointerAuthContent : uint8_t {
+    None,
+    AddressDiscriminatedVTable,
+    AddressDiscriminatedData
+  };
+
+  // A simple helper function to short circuit pointer auth checks.
+  bool isPointerAuthenticationAvailable() const {
+    return LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics ||
+           LangOpts.PointerAuthVTPtrAddressDiscrimination;
+  }
+  PointerAuthContent findPointerAuthContent(QualType T);
+  llvm::DenseMap<const RecordDecl *, PointerAuthContent>
       RecordContainsAddressDiscriminatedPointerAuth;
 
   ImportDecl *FirstLocalImport = nullptr;
