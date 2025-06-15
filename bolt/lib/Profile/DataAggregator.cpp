@@ -1203,6 +1203,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     INVALID = 0,
     EVENT_NAME,        // E
     TRACE,             // T
+    RETURN,            // R
     SAMPLE,            // S
     BRANCH,            // B
     FT,                // F
@@ -1234,6 +1235,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
 
     Type = StringSwitch<AggregatedLBREntry>(Str)
                .Case("T", TRACE)
+               .Case("R", RETURN)
                .Case("S", SAMPLE)
                .Case("E", EVENT_NAME)
                .Case("B", BRANCH)
@@ -1247,7 +1249,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     }
 
     using SSI = StringSwitch<int>;
-    AddrNum = SSI(Str).Case("T", 3).Case("S", 1).Case("E", 0).Default(2);
+    AddrNum = SSI(Str).Cases("T", "R", 3).Case("S", 1).Case("E", 0).Default(2);
     CounterNum = SSI(Str).Case("B", 2).Case("E", 0).Default(1);
   }
 
@@ -1313,8 +1315,13 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   }
 
   /// For legacy branch type, mark Trace To to differentite from a full trace.
-  if (Type == BRANCH) {
+  if (Type == BRANCH)
     Addr[2] = Location(Trace::BR_ONLY);
+
+  if (Type == RETURN) {
+    if (!Addr[0]->Offset)
+      Addr[0]->Offset = Trace::BR_EXTERNAL_RETURN;
+    Returns.emplace(Addr[0]->Offset);
   }
 
   /// Record a trace.
