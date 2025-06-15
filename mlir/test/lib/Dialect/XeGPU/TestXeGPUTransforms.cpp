@@ -19,6 +19,12 @@ using namespace mlir::xegpu;
 
 namespace {
 
+
+#define DEBUG_TYPE "test-xegpu-unroll"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
+
+
 struct TestXeGPUUnrollingPatterns
     : public PassWrapper<TestXeGPUUnrollingPatterns,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -48,12 +54,13 @@ struct TestXeGPUUnrollingPatterns
     options.setNativeShapeFn(
         [&](Operation *op) -> std::optional<SmallVector<int64_t>> {
           if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp,
-                  xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::StoreNdOp>(op)) {
+                  xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::StoreNdOp,
+                  xegpu::CreateDescOp, xegpu::UpdateOffsetOp, xegpu::PrefetchOp,
+                  xegpu::LoadGatherOp, xegpu::StoreScatterOp>(op)) {
             xegpu::TensorDescType tdescTy;
             if (auto createNdOp = dyn_cast<xegpu::CreateNdDescOp>(op)) {
               tdescTy = createNdOp.getType();
-            } else if (auto updateNdOp =
-                           dyn_cast<xegpu::UpdateNdOffsetOp>(op)) {
+            } else if (auto updateNdOp = dyn_cast<xegpu::UpdateNdOffsetOp>(op)) {
               tdescTy = updateNdOp.getTensorDescType();
             } else if (auto prefetchNdOp = dyn_cast<xegpu::PrefetchNdOp>(op)) {
               tdescTy = prefetchNdOp.getTensorDescType();
@@ -61,20 +68,7 @@ struct TestXeGPUUnrollingPatterns
               tdescTy = loadNdOp.getTensorDescType();
             } else if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
               tdescTy = storeNdOp.getTensorDescType();
-            }
-
-            if (auto layout = tdescTy.getLayoutAttr()) {
-              auto inst_data = layout.getInstData();
-              if (inst_data && layout.isSgLayout())
-                return SmallVector<int64_t>(inst_data.asArrayRef().begin(),
-                                            inst_data.asArrayRef().end());
-            }
-          }
-
-          if (isa<xegpu::CreateDescOp, xegpu::UpdateOffsetOp, xegpu::PrefetchOp,
-                  xegpu::LoadGatherOp, xegpu::StoreScatterOp>(op)) {
-            xegpu::TensorDescType tdescTy;
-            if (auto createOp = dyn_cast<xegpu::CreateDescOp>(op)) {
+            } else if (auto createOp = dyn_cast<xegpu::CreateDescOp>(op)) {
               tdescTy = createOp.getType();
             } else if (auto updateOp = dyn_cast<xegpu::UpdateOffsetOp>(op)) {
               tdescTy = updateOp.getTensorDescType();
@@ -111,14 +105,40 @@ struct TestXeGPUUnrollingPatterns
             Attribute encoding = tdescTy.getEncoding();
             auto layout = llvm::dyn_cast_if_present<xegpu::LayoutAttr>(
                 tdescTy.getLayout());
+            
+            int64_t newChunkSize = 0;
+            auto instData = layout.getInstData();
+            if (!instData.empty())
+              newChunkSize = instData.asArrayRef().back();   
+            
             if (layout) {
               if (layout.getLaneLayout() == nullptr)
                 layout = xegpu::LayoutAttr();
               else
                 layout = layout.dropInstData();
             }
-            newTy = xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
-                                               layout);
+
+            SmallVector<NamedAttribute> attrs;
+            auto scatterAttr = mlir::dyn_cast<xegpu::ScatterTensorDescAttr>(encoding);
+            if (scatterAttr) {
+              int64_t chunkSize = scatterAttr.getChunkSize().getInt();
+              
+              if (chunkSize > 1) {
+
+                auto chunkSizeAttr = mlir::IntegerAttr::get(
+                  mlir::IntegerType::get(ctx, 64), newChunkSize);
+
+                // To create a new attribute with a different chunk_size:
+                auto newEncoding = xegpu::ScatterTensorDescAttr::get(
+                    ctx, scatterAttr.getMemorySpace(), chunkSizeAttr);
+
+                encoding = newEncoding;
+
+              }
+
+            }
+            newTy = xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding, layout);
+
           } else {
             newTy = type.clone(tileShape, elemTy);
           }

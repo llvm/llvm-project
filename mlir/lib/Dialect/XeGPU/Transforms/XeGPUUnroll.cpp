@@ -404,7 +404,7 @@ struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
     xegpu::TensorDescType tdescTy = op.getType();
 
     // check if the tensor descriptor type is a 1d vector type
-    if (tdescTy.getRank() > 1)
+    if (tdescTy.getRank() > 2)
       return failure();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
@@ -416,16 +416,47 @@ struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
     TypedValue<::mlir::VectorType> indiceVec = op.getOffsets();
     VectorType indiceVecTy = indiceVec.getType();
 
-    SmallVector<Type> convertedIndiceTypes =
-        getUnrolledTypes(indiceVecTy, *targetShape);
-    SmallVector<Value> convertedIndiceVec =
-        pack(indiceVec, convertedIndiceTypes, *targetShape, loc, rewriter);
-
+    SmallVector<Type> convertedIndiceTypes;
+    SmallVector<Value> convertedIndiceVec;
     SmallVector<Value> newOps;
-    for (auto indice : convertedIndiceVec) {
-      auto newOp = rewriter.create<xegpu::CreateDescOp>(loc, newTdescTy,
+
+    if (tdescTy.getRank() == 2) {
+      SmallVector<int64_t> oneDShape(targetShape->begin(), targetShape->end() - 1);
+      convertedIndiceTypes = getUnrolledTypes(indiceVecTy, oneDShape);
+      convertedIndiceVec = pack(indiceVec, convertedIndiceTypes, oneDShape, loc, rewriter);
+      // Assume tdescTy, targetShape, and convertedIndiceVec are defined
+      int64_t outerDim = tdescTy.getShape().back();
+      int64_t innerDim = targetShape->back();
+      int64_t numInnerLoops = outerDim / innerDim;
+
+      // Get element size in bytes
+      int64_t elemSize = tdescTy.getElementType().getIntOrFloatBitWidth() / 8;
+
+      for (auto [indice, indiceType] : llvm::zip(convertedIndiceVec, convertedIndiceTypes)) {
+        for (int64_t i = 0; i < numInnerLoops; ++i) {
+          // Compute the offset
+          Value inc = rewriter.create<arith::ConstantIndexOp>(loc, i * innerDim);
+          Value incVec = rewriter.create<vector::SplatOp>(loc, indiceType, inc);
+          Value offsetIndice = rewriter.create<arith::AddIOp>(loc, indice, incVec);
+
+          auto chunkSizeAttr = rewriter.getI64IntegerAttr(innerDim);
+              auto newOp = rewriter.create<xegpu::CreateDescOp>(
+              loc, newTdescTy, op.getSource(), offsetIndice);
+
+          newOps.push_back(newOp);
+        }
+      }
+    } else if (tdescTy.getRank() == 1) {
+      convertedIndiceTypes = getUnrolledTypes(indiceVecTy, *targetShape);
+      convertedIndiceVec = pack(indiceVec, convertedIndiceTypes, *targetShape, loc, rewriter);
+      for (auto indice : convertedIndiceVec) {
+        auto newOp = rewriter.create<xegpu::CreateDescOp>(loc, newTdescTy,
                                                         op.getSource(), indice);
-      newOps.push_back(newOp);
+        newOps.push_back(newOp);
+      }
+    } else {
+      // Unsupported rank for tensor descriptor
+      return failure();
     }
 
     Value castOp = unpack(newOps, tdescTy, *targetShape, loc, rewriter);
@@ -445,9 +476,9 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
     // check if the tensor descriptor type is a 1d vector type
-    if (tdescTy.getRank() > 1)
+    if (tdescTy.getRank() > 2)
       return failure();
-
+    
     VectorType maskTy = llvm::dyn_cast<VectorType>(op.getMask().getType());
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
