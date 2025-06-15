@@ -204,13 +204,11 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
     RHSOpcode = RHS->getOpcode();
 
   const BinaryOperator *SurroundedExpr = nullptr;
-  if ((MatchedExpr->getOpcode() == BO_Or && ParentOpcode.has_value() &&
-       *ParentOpcode == BO_LAnd) ||
-      (MatchedExpr->getOpcode() == BO_And && ParentOpcode.has_value() &&
-       llvm::is_contained({BO_Xor, BO_Or}, *ParentOpcode)))
+  if ((MatchedExpr->getOpcode() == BO_Or && ParentOpcode == BO_LAnd) ||
+      (MatchedExpr->getOpcode() == BO_And &&
+       llvm::is_contained({BO_Xor, BO_Or}, ParentOpcode)))
     SurroundedExpr = MatchedExpr;
-  else if (MatchedExpr->getOpcode() == BO_AndAssign && RHSOpcode.has_value() &&
-           *RHSOpcode == BO_LOr)
+  else if (MatchedExpr->getOpcode() == BO_AndAssign && RHSOpcode == BO_LOr)
     SurroundedExpr = RHS;
 
   if (hasExplicitParentheses(SurroundedExpr, *Result.SourceManager,
