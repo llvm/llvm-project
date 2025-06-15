@@ -117,6 +117,13 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`readability-use-numeric-limits
+  <clang-tidy/checks/readability/use-numeric-limits>` check.
+
+  Replaces certain integer literals with equivalent calls to
+  ``std::numeric_limits<T>::min()`` or ``std::numeric_limits<T>::max()``.
+
+
 - New :doc:`bugprone-capturing-this-in-member-variable
   <clang-tidy/checks/bugprone/capturing-this-in-member-variable>` check.
 
@@ -147,6 +154,10 @@ New checks
 
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
+
+- New :doc:`readability-use-numeric-limits
+  <clang-tidy/checks/readability/use-numeric-limits>` check to replace certain
+  integer literals with ``std::numeric_limits`` calls.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
