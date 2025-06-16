@@ -652,13 +652,29 @@ foreach mx = SchedMxListFW in {
   }
 }
 
-// Worst case needs around 29/25/37 * LMUL cycles for f16/32/64.
-foreach mx = SchedMxListF in {
+// Simple floating-point division operations
+foreach mx = ["MF4", "MF2"] in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFDivV",  [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFDivF",  [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+    let Latency = 10 in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFDivV",  [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFDivF",  [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+    }
+    defm "" : LMULSEWWriteResMXSEW<"WriteVFSqrtV", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+  }
+}
+
+// Complex floating-point division operations
+foreach mx = ["M1", "M2", "M4", "M8"] in {
+  foreach sew = SchedSEWSet<mx, 1>.val in {
+    defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
+    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
+
+    let Latency = !mul(LMulLat, 18) in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFDivV",  [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFDivF",  [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+    }
     defm "" : LMULSEWWriteResMXSEW<"WriteVFSqrtV", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
   }
 }
