@@ -70,6 +70,7 @@
 
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
+using namespace lldb_private;
 
 namespace {
 #ifdef _WIN32
@@ -893,14 +894,14 @@ llvm::Error DAP::Loop() {
 
         while (!disconnecting) {
           llvm::Expected<Message> next =
-              transport.Read(std::chrono::seconds(1));
-          if (next.errorIsA<EndOfFileError>()) {
+              transport.Read<protocol::Message>(std::chrono::seconds(1));
+          if (next.errorIsA<TransportEOFError>()) {
             consumeError(next.takeError());
             break;
           }
 
           // If the read timed out, continue to check if we should disconnect.
-          if (next.errorIsA<TimeoutError>()) {
+          if (next.errorIsA<TransportTimeoutError>()) {
             consumeError(next.takeError());
             continue;
           }
