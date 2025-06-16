@@ -88,6 +88,19 @@ class SMX60GetVIMaskLatency<string mx> {
   );
 }
 
+// Latency for widening operations (vwadd, vwsub, vwmul, etc.)
+class SMX60GetVIWideLatency<string mx> {
+  int c = !cond(
+    !eq(mx, "M1") : 4,
+    !eq(mx, "M2") : 5,
+    !eq(mx, "M4") : 8,
+    !eq(mx, "M8") : 8, // M8 not supported for most widening, fallback
+    !eq(mx, "MF2") : 4,
+    !eq(mx, "MF4") : 4,
+    !eq(mx, "MF8") : 4
+  );
+}
+
 class SMX60GetVIRedLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 7,
@@ -442,14 +455,17 @@ foreach mx = SchedMxList in {
 // Widening
 foreach mx = SchedMxListW in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
+  defvar WideLat = SMX60GetVIWideLatency<mx>.c;
 
-  defm "" : LMULWriteResMX<"WriteVIWALUV",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIWALUX",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIWALUI",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIWMulV",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIWMulX",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIWMulAddV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIWMulAddX", [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = WideLat in {
+    defm "" : LMULWriteResMX<"WriteVIWALUV",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIWALUX",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIWALUI",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIWMulV",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIWMulX",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIWMulAddV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIWMulAddX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 }
 
 // Worst case needs 51/45/42/72 * lmul cycles for i8/16/32/64.
@@ -498,7 +514,7 @@ foreach mx = SchedMxList in {
   defvar ALULat = SMX60GetVIALULatency<mx>.c;
 
   defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
-  
+
   let Latency = ArithLat in {
     defm "" : LMULWriteResMX<"WriteVSALUV",   [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSALUX",   [SMX60_VIEU], mx, IsWorstCase>;
