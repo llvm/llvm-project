@@ -117,8 +117,6 @@ enum WaitEventType {
   SMEM_ACCESS,              // scalar-memory read & write
   EXP_GPR_LOCK,             // export holding on its data src
   GDS_GPR_LOCK,             // GDS holding on its data and addr src
-  EXP_POS_ACCESS,           // write to export position
-  EXP_PARAM_ACCESS,         // write to export parameter
   VMW_GPR_LOCK,             // vector-memory write holding on its data src
   EXP_LDS_ACCESS,           // read by ldsdir counting as export
   NUM_WAIT_EVENTS,
@@ -554,8 +552,7 @@ public:
         eventMask({VMEM_ACCESS, VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS,
                    VMEM_BVH_READ_ACCESS}),
         eventMask({SMEM_ACCESS, LDS_ACCESS, GDS_ACCESS, SQ_MESSAGE}),
-        eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
-                   EXP_POS_ACCESS, EXP_LDS_ACCESS}),
+        eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_LDS_ACCESS}),
         eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
         0,
         0,
@@ -589,8 +586,7 @@ public:
     static const unsigned WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] = {
         eventMask({VMEM_ACCESS, VMEM_READ_ACCESS}),
         eventMask({LDS_ACCESS, GDS_ACCESS}),
-        eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
-                   EXP_POS_ACCESS, EXP_LDS_ACCESS}),
+        eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_LDS_ACCESS}),
         eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
         eventMask({VMEM_SAMPLER_READ_ACCESS}),
         eventMask({VMEM_BVH_READ_ACCESS}),
@@ -1747,8 +1743,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       // Export and GDS are tracked individually, either may trigger a waitcnt
       // for EXEC.
       if (ScoreBrackets.hasPendingEvent(EXP_GPR_LOCK) ||
-          ScoreBrackets.hasPendingEvent(EXP_PARAM_ACCESS) ||
-          ScoreBrackets.hasPendingEvent(EXP_POS_ACCESS) ||
           ScoreBrackets.hasPendingEvent(GDS_GPR_LOCK)) {
         Wait.ExpCnt = 0;
       }
@@ -2196,13 +2190,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     int64_t Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::waitexp)->getImm();
     ScoreBrackets->applyWaitcnt(EXP_CNT, Imm);
   } else if (SIInstrInfo::isEXP(Inst)) {
-    unsigned Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
-    if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_PARAM_ACCESS, Inst);
-    else if (Imm >= AMDGPU::Exp::ET_POS0 && Imm <= AMDGPU::Exp::ET_POS_LAST)
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_POS_ACCESS, Inst);
-    else
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_GPR_LOCK, Inst);
+    ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_GPR_LOCK, Inst);
   } else {
     switch (Inst.getOpcode()) {
     case AMDGPU::S_SENDMSG:
