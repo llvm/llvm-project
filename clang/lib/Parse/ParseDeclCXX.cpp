@@ -760,6 +760,10 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
 
     Decl *AD = ParseAliasDeclarationAfterDeclarator(
         TemplateInfo, UsingLoc, D, DeclEnd, AS, Attrs, &DeclFromDeclSpec);
+
+    if (!AD)
+      return nullptr;
+
     return Actions.ConvertDeclToDeclGroup(AD, DeclFromDeclSpec);
   }
 
