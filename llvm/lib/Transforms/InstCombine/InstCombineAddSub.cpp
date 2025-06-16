@@ -2815,7 +2815,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   }
 
   // (sub[ nsw] (sext (add nsw (X, Y)), sext (add nsw (X, Z)))) -->
-  // --> (sub[ nsw] (sext (Y), sext(Z)))
+  // --> (sub[ nsw] (sext (Y), sext (Z)))
   {
     Value *Z, *Add0, *Add1;
     if (match(Op0, m_SExtLike(m_Value(Add0))) &&
