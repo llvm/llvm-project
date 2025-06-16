@@ -3,8 +3,8 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-gnu"
 
-; This test includes a call graph with multiple SCCs. The purpose of this is 
-; to check that norecurse is not added when a function is part of non-singular 
+; This test includes a call graph with multiple SCCs. The purpose of this is
+; to check that norecurse is not added when a function is part of non-singular
 ; SCC.
 ; There are three different SCCs in this test:
 ;  SCC#1:  main, foo, bar, foo1, bar1
@@ -13,9 +13,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; None of these functions should be marked as norecurse
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @bar1() local_unnamed_addr #0 {
+define internal void @bar1() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @bar1(
+; CHECK-LABEL: define internal void @bar1(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @main()
@@ -45,9 +45,9 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @foo1() local_unnamed_addr #0 {
+define internal void @foo1() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @foo1(
+; CHECK-LABEL: define internal void @foo1(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @bar1()
@@ -59,9 +59,9 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @bar() local_unnamed_addr #0 {
+define internal void @bar() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @bar(
+; CHECK-LABEL: define internal void @bar(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @foo1()
@@ -73,9 +73,9 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @foo() local_unnamed_addr #0 {
+define internal void @foo() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @foo(
+; CHECK-LABEL: define internal void @foo(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @bar()
@@ -87,9 +87,9 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @bar4() local_unnamed_addr #0 {
+define internal void @bar4() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @bar4(
+; CHECK-LABEL: define internal void @bar4(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @bar2()
@@ -101,9 +101,9 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @bar2() local_unnamed_addr #0 {
+define internal void @bar2() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @bar2(
+; CHECK-LABEL: define internal void @bar2(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @bar3()
@@ -115,9 +115,9 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @bar3() local_unnamed_addr #0 {
+define internal void @bar3() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @bar3(
+; CHECK-LABEL: define internal void @bar3(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @bar4()
@@ -129,9 +129,9 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @fun() local_unnamed_addr #0 {
+define internal void @fun() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @fun(
+; CHECK-LABEL: define internal void @fun(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @baz()
@@ -143,9 +143,9 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @baz() local_unnamed_addr #0 {
+define internal void @baz() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @baz(
+; CHECK-LABEL: define internal void @baz(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @fun()

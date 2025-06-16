@@ -3,19 +3,20 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-gnu"
 
-; This test includes a call graph with multiple SCCs. The purpose of this is 
-; to check that norecurse is added to a function which calls a function which 
-; is indirectly recursive but is not part of the recursive chain. 
+; This test includes a call graph with multiple SCCs. The purpose of this is
+; to check that norecurse is added to a function which calls a function which
+; is indirectly recursive but is not part of the recursive chain.
 ; There are two SCCs in this test:
 ;  SCC#1:  bar2, bar3, bar4
 ;  SCC#2:  baz, fun
 ; main() calls bar2 and baz, both of which are part of some indirect recursive
-; chain. but does not call back main() and hence main() can be marked as 
-; norecurse.
+; chain. but does not call back main() and hence main() can be marked as
+; norecurse. But main() does not have internal linkage, hence we avoid adding 
+; norecurse for main() as well.
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
 define dso_local noundef i32 @main() local_unnamed_addr #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind memory(none) uwtable
+; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
 ; CHECK-LABEL: define dso_local noundef i32 @main(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -30,10 +31,10 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @bar4() local_unnamed_addr #0 {
+define internal void @bar4() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @bar4(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-LABEL: define internal void @bar4(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @bar2()
 ; CHECK-NEXT:    ret void
@@ -44,10 +45,10 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @bar2() local_unnamed_addr #0 {
+define internal void @bar2() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @bar2(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR1]] {
+; CHECK-LABEL: define internal void @bar2(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @bar3()
 ; CHECK-NEXT:    ret void
@@ -58,10 +59,10 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @bar3() local_unnamed_addr #0 {
+define internal void @bar3() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @bar3(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR1]] {
+; CHECK-LABEL: define internal void @bar3(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @bar4()
 ; CHECK-NEXT:    ret void
@@ -72,10 +73,10 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @fun() local_unnamed_addr #0 {
+define internal void @fun() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @fun(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR1]] {
+; CHECK-LABEL: define internal void @fun(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @baz()
 ; CHECK-NEXT:    ret void
@@ -86,10 +87,10 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define dso_local void @baz() local_unnamed_addr #0 {
+define internal void @baz() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-; CHECK-LABEL: define dso_local void @baz(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR1]] {
+; CHECK-LABEL: define internal void @baz(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @fun()
 ; CHECK-NEXT:    ret void

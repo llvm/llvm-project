@@ -3,10 +3,10 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-gnu"
 
-; This test includes a call graph with a self recursive function. 
-; The purpose of this is to check that norecurse is added to functions 
-; which have a self-recursive function in the call-chain. 
-; The call-chain in this test is as follows 
+; This test includes a call graph with a self recursive function.
+; The purpose of this is to check that norecurse is added to functions
+; which have a self-recursive function in the call-chain.
+; The call-chain in this test is as follows
 ; main -> bob -> callee1 -> callee2 -> callee3 -> callee4 -> callee5
 ; where callee5 is self recursive.
 
@@ -14,9 +14,9 @@ target triple = "aarch64-unknown-linux-gnu"
 @y = dso_local global i32 2, align 4
 
 ; Function Attrs: nofree noinline norecurse nounwind memory(readwrite, argmem: none) uwtable
-define dso_local void @callee6() local_unnamed_addr #0 {
+define internal void @callee6() local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline norecurse nounwind memory(readwrite, argmem: none) uwtable
-; CHECK-LABEL: define dso_local void @callee6(
+; CHECK-LABEL: define internal void @callee6(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @y, align 4, !tbaa [[TBAA8:![0-9]+]]
@@ -32,9 +32,9 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nounwind uwtable
-define dso_local void @callee5(i32 noundef %x) local_unnamed_addr #1 {
+define internal void @callee5(i32 noundef %x) local_unnamed_addr #1 {
 ; CHECK: Function Attrs: nofree noinline nounwind uwtable
-; CHECK-LABEL: define dso_local void @callee5(
+; CHECK-LABEL: define internal void @callee5(
 ; CHECK-SAME: i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], 0
@@ -60,9 +60,9 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; Function Attrs: nofree noinline nounwind uwtable
-define dso_local void @callee4() local_unnamed_addr #1 {
+define internal void @callee4() local_unnamed_addr #1 {
 ; CHECK: Function Attrs: nofree noinline norecurse nounwind uwtable
-; CHECK-LABEL: define dso_local void @callee4(
+; CHECK-LABEL: define internal void @callee4(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @x, align 4, !tbaa [[TBAA8]]
@@ -76,9 +76,9 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nounwind uwtable
-define dso_local void @callee3() local_unnamed_addr #1 {
+define internal void @callee3() local_unnamed_addr #1 {
 ; CHECK: Function Attrs: nofree noinline norecurse nounwind uwtable
-; CHECK-LABEL: define dso_local void @callee3(
+; CHECK-LABEL: define internal void @callee3(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @callee4()
@@ -90,9 +90,9 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nounwind uwtable
-define dso_local void @callee2() local_unnamed_addr #1 {
+define internal void @callee2() local_unnamed_addr #1 {
 ; CHECK: Function Attrs: nofree noinline norecurse nounwind uwtable
-; CHECK-LABEL: define dso_local void @callee2(
+; CHECK-LABEL: define internal void @callee2(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @callee3()
@@ -104,9 +104,9 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nounwind uwtable
-define dso_local void @callee1() local_unnamed_addr #1 {
+define internal void @callee1() local_unnamed_addr #1 {
 ; CHECK: Function Attrs: nofree noinline norecurse nounwind uwtable
-; CHECK-LABEL: define dso_local void @callee1(
+; CHECK-LABEL: define internal void @callee1(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @callee2()
@@ -118,9 +118,9 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nounwind uwtable
-define dso_local void @bob() local_unnamed_addr #1 {
+define internal void @bob() local_unnamed_addr #1 {
 ; CHECK: Function Attrs: nofree noinline norecurse nounwind uwtable
-; CHECK-LABEL: define dso_local void @bob(
+; CHECK-LABEL: define internal void @bob(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @callee1()
