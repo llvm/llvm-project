@@ -377,24 +377,36 @@ SubstitutionInTemplateArguments(
                ? Constraint.getPackSubstitutionIndex()
                : PackSubstitutionIndex);
     if (S.SubstTemplateArgumentsInParameterMapping(
-            Constraint.getParameterMapping(), MLTAL, SubstArgs) ||
+            Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
+            SubstArgs) ||
         Trap.hasErrorOccurred())
+      return std::nullopt;
+    Sema::CheckTemplateArgumentInfo CTAI;
+    auto *TD = const_cast<TemplateDecl *>(
+        cast<TemplateDecl>(Constraint.getConstraintDecl()));
+    if (S.CheckTemplateArgumentList(TD, Constraint.getUsedTemplateParamList(),
+                                    TD->getLocation(), SubstArgs,
+                                    /*DefaultArguments=*/{},
+                                    /*PartialTemplateArgs=*/false, CTAI))
       return std::nullopt;
     NormalizedConstraint::OccurenceList Used =
         Constraint.mappingOccurenceList();
     SubstitutedOuterMost =
         llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
-    for (unsigned I = 0, MappedIndex = 0; I < SubstArgs.size(); I++)
-      if (I < Used.size() && Used[I]) {
+    for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
+      TemplateArgument Arg;
+      if (Used[I])
         // SubstitutedOuterMost[I].dump();
         // SubstArgs[MappedIndex].getArgument().dump();
-        TemplateArgument Arg = S.Context.getCanonicalTemplateArgument(
-            SubstArgs[MappedIndex++].getArgument());
-        if (I < SubstitutedOuterMost.size())
-          SubstitutedOuterMost[I] = Arg;
-        else
-          SubstitutedOuterMost.push_back(Arg);
-      }
+        // Arg = S.Context.getCanonicalTemplateArgument(
+        //     SubstArgs[MappedIndex++].getArgument());
+        Arg = S.Context.getCanonicalTemplateArgument(
+            CTAI.SugaredConverted[MappedIndex++]);
+      if (I < SubstitutedOuterMost.size())
+        SubstitutedOuterMost[I] = Arg;
+      else
+        SubstitutedOuterMost.push_back(Arg);
+    }
     MLTAL.replaceOutermostTemplateArguments(
         const_cast<NamedDecl *>(Constraint.getConstraintDecl()),
         SubstitutedOuterMost);
@@ -681,7 +693,7 @@ static bool calculateConstraintSatisfaction(
   Ok = calculateConstraintSatisfaction(S, Constraint.getRHS(), Template,
                                          TemplateNameLoc, MLTAL, Satisfaction,
                                          PackSubstitutionIndex);
-  if(Ok && Satisfaction.IsSatisfied && !Satisfaction.ContainsErrors)
+  if (Ok && Satisfaction.IsSatisfied && !Satisfaction.ContainsErrors)
     Satisfaction.Details.erase(Satisfaction.Details.begin() + EffectiveDetailEndIndex,
                                Satisfaction.Details.end());
   return Ok;
@@ -1574,26 +1586,37 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
           /*OnlyDeduced=*/false,
           /*Depth=*/0, OccurringIndices);
     } else if (N.getKind() == NormalizedConstraint::ConstraintKind::ConceptId) {
-      auto Args = static_cast<ConceptIdConstraint &>(N)
-                      .getConceptId()
-                      ->getTemplateArgsAsWritten();
+      auto *Args = static_cast<ConceptIdConstraint &>(N)
+                       .getConceptId()
+                       ->getTemplateArgsAsWritten();
       if (Args)
         S.MarkUsedTemplateParameters(Args->arguments(),
                                      /*Depth=*/0, OccurringIndices);
     }
     TemplateArgumentLoc *TempArgs =
         new (S.Context) TemplateArgumentLoc[OccurringIndices.count()];
+    llvm::SmallVector<NamedDecl *> UsedParams;
     for (unsigned I = 0, J = 0, C = TemplateParams->size(); I != C; ++I) {
       SourceLocation Loc = ArgsAsWritten->NumTemplateArgs > I
                                ? ArgsAsWritten->arguments()[I].getLocation()
                                : SourceLocation();
-      if (OccurringIndices[I])
-        new (&(TempArgs)[J++]) TemplateArgumentLoc(
-            S.getIdentityTemplateArgumentLoc(TemplateParams->begin()[I], Loc));
+      if (OccurringIndices[I]) {
+        NamedDecl *Param = TemplateParams->begin()[I];
+        new (&(TempArgs)[J])
+            TemplateArgumentLoc(S.getIdentityTemplateArgumentLoc(Param, Loc));
+        UsedParams.push_back(Param);
+        J++;
+      }
     }
+    auto *UsedList = TemplateParameterList::Create(
+        S.Context, TemplateParams->getTemplateLoc(),
+        TemplateParams->getLAngleLoc(), UsedParams,
+        /*RAngleLoc=*/SourceLocation(),
+        /*RequiresClause=*/nullptr);
     N.updateParameterMapping(OccurringIndices,
                              MutableArrayRef<TemplateArgumentLoc>{
-                                 TempArgs, OccurringIndices.count()});
+                                 TempArgs, OccurringIndices.count()},
+                             UsedList);
   }
   SourceLocation InstLocBegin =
       ArgsAsWritten->arguments().empty()
@@ -1610,15 +1633,39 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
       {InstLocBegin, InstLocEnd});
   if (Inst.isInvalid())
     return true;
-  if (S.SubstTemplateArgumentsInParameterMapping(N.getParameterMapping(), MLTAL,
-                                                 SubstArgs))
+  // TransformTemplateArguments is unable to preserve the source location of a
+  // pack. The SourceLocation is necessary for the instantiation location.
+  // FIXME: The BaseLoc will be used as the location of the pack expansion,
+  // which is wrong.
+  if (S.SubstTemplateArgumentsInParameterMapping(
+          N.getParameterMapping(), N.getBeginLoc(), MLTAL, SubstArgs))
+    return true;
+  Sema::CheckTemplateArgumentInfo CTAI;
+  auto *TD =
+      const_cast<TemplateDecl *>(cast<TemplateDecl>(N.getConstraintDecl()));
+  if (S.CheckTemplateArgumentList(TD, N.getUsedTemplateParamList(),
+                                  TD->getLocation(), SubstArgs,
+                                  /*DefaultArguments=*/{},
+                                  /*PartialTemplateArgs=*/false, CTAI))
     return true;
   TemplateArgumentLoc *TempArgs =
-      new (S.Context) TemplateArgumentLoc[SubstArgs.size()];
-  llvm::copy(SubstArgs.arguments(), TempArgs);
-  N.updateParameterMapping(
-      N.mappingOccurenceList(),
-      MutableArrayRef<TemplateArgumentLoc>(TempArgs, SubstArgs.size()));
+      new (S.Context) TemplateArgumentLoc[CTAI.SugaredConverted.size()];
+  for (unsigned I = 0; I < CTAI.SugaredConverted.size(); ++I) {
+    SourceLocation Loc;
+    // If this is an empty pack, we have no corresponding SubstArgs.
+    if (I < SubstArgs.size())
+      Loc = SubstArgs.arguments()[I].getLocation();
+    TempArgs[I] = S.getTrivialTemplateArgumentLoc(CTAI.SugaredConverted[I],
+                                                  QualType(), Loc);
+  }
+  // llvm::copy(SubstArgs.arguments(), TempArgs);
+  // N.updateParameterMapping(
+  //     N.mappingOccurenceList(),
+  //     MutableArrayRef<TemplateArgumentLoc>(TempArgs, SubstArgs.size()));
+  N.updateParameterMapping(N.mappingOccurenceList(),
+                           MutableArrayRef<TemplateArgumentLoc>(
+                               TempArgs, CTAI.SugaredConverted.size()),
+                           N.getUsedTemplateParamList());
   return false;
 }
 
@@ -1627,12 +1674,10 @@ substituteParameterMappings(Sema &S, ConceptIdConstraint &N,
                             const MultiLevelTemplateArgumentList &MLTAL,
                             const ASTTemplateArgumentListInfo *ArgsAsWritten) {
 
-  {
-    if (N.getConstraintDecl()) {
-      substituteParameterMappings(
-          S, static_cast<NormalizedConstraintWithParamMapping &>(N), MLTAL,
-          ArgsAsWritten);
-    }
+  if (N.getConstraintDecl()) {
+    substituteParameterMappings(
+        S, static_cast<NormalizedConstraintWithParamMapping &>(N), MLTAL,
+        ArgsAsWritten);
   }
   return substituteParameterMappings(S, N.getNormalizedConstraint(), MLTAL,
                                      ArgsAsWritten);

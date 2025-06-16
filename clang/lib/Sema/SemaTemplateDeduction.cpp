@@ -6634,6 +6634,7 @@ struct MarkUsedTemplateParameterVisitor : DynamicRecursiveASTVisitor {
     if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(E->getDecl()))
       if (NTTP->getDepth() == Depth)
         Used[NTTP->getIndex()] = true;
+    DynamicRecursiveASTVisitor::TraverseType(E->getType());
     return true;
   }
 };
@@ -6974,10 +6975,13 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     break;
 
   case Type::UnaryTransform:
-    if (!OnlyDeduced)
-      MarkUsedTemplateParameters(Ctx,
-                                 cast<UnaryTransformType>(T)->getUnderlyingType(),
-                                 OnlyDeduced, Depth, Used);
+    if (!OnlyDeduced) {
+      auto *UTT = cast<UnaryTransformType>(T);
+      auto Next = UTT->getUnderlyingType();
+      if (Next.isNull())
+        Next = UTT->getBaseType();
+      MarkUsedTemplateParameters(Ctx, Next, OnlyDeduced, Depth, Used);
+    }
     break;
 
   case Type::PackExpansion:

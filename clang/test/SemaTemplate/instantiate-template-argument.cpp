@@ -17,6 +17,7 @@ template<char X>
 constexpr int foo() requires C1<1, X> && true { return 2; }
 // sizeof(U) >= 4 [U = X (decltype(1))]
 
+// GCC rejects it: https://godbolt.org/z/MWG756K8c
 static_assert(foo<'a'>() == 2);
 
 template<char Z>
