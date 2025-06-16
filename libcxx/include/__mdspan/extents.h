@@ -21,8 +21,8 @@
 #include <__config>
 
 #include <__concepts/arithmetic.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/common_type.h>
-#include <__type_traits/integer_traits.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/make_unsigned.h>

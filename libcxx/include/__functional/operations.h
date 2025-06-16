@@ -14,8 +14,8 @@
 #include <__functional/binary_function.h>
 #include <__functional/unary_function.h>
 #include <__fwd/functional.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/desugars_to.h>
-#include <__type_traits/is_integral.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

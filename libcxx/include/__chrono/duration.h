@@ -13,10 +13,10 @@
 #include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
 #include <__config>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_floating_point.h>
 #include <limits>
 #include <ratio>
 

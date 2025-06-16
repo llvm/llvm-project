@@ -10,9 +10,9 @@
 #define _LIBCPP___TYPE_TRAITS_MAKE_SIGNED_H
 
 #include <__config>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/copy_cv.h>
 #include <__type_traits/is_enum.h>
-#include <__type_traits/is_integral.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/type_list.h>
 

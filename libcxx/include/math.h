@@ -377,9 +377,8 @@ extern "C++" {
 #      include <__math/rounding_functions.h>
 #      include <__math/traits.h>
 #      include <__math/trigonometric_functions.h>
+#      include <__type_traits/arithmetic_traits.h>
 #      include <__type_traits/enable_if.h>
-#      include <__type_traits/is_floating_point.h>
-#      include <__type_traits/is_integral.h>
 #      include <stdlib.h>
 
 // fpclassify relies on implementation-defined constants, so we can't move it to a detail header

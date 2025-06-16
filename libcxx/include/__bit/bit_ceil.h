@@ -12,7 +12,7 @@
 #include <__assert>
 #include <__bit/countl.h>
 #include <__config>
-#include <__type_traits/integer_traits.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -15,9 +15,9 @@
 #include <__config>
 #include <__math/exponential_functions.h>
 #include <__math/traits.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
-#include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_same.h>
 #include <__utility/forward.h>
 #include <__utility/priority_tag.h>

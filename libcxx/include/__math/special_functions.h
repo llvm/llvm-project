@@ -13,8 +13,8 @@
 #include <__config>
 #include <__math/copysign.h>
 #include <__math/traits.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/is_integral.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

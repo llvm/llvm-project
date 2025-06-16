@@ -14,14 +14,12 @@
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/is_constructible.h>
-#include <__type_traits/is_convertible.h>
-#include <__type_traits/is_signed.h>
 #include <__type_traits/is_void.h>
 #include <__utility/as_const.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <__utility/swap.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -71,6 +71,10 @@ module std_core [system] {
     module aligned_storage                            { header "__type_traits/aligned_storage.h" }
     module aligned_union                              { header "__type_traits/aligned_union.h" }
     module alignment_of                               { header "__type_traits/alignment_of.h" }
+    module arithmetic_traits                          {
+      header "__type_traits/arithmetic_traits.h"
+      export std_core.type_traits.integral_constant
+    }
     module can_extract_key                            { header "__type_traits/can_extract_key.h" }
     module common_reference                           { header "__type_traits/common_reference.h" }
     module common_type {
@@ -94,7 +98,6 @@ module std_core [system] {
     module extent                                     { header "__type_traits/extent.h" }
     module has_unique_object_representation           { header "__type_traits/has_unique_object_representation.h" }
     module has_virtual_destructor                     { header "__type_traits/has_virtual_destructor.h" }
-    module integer_traits                             { header "__type_traits/integer_traits.h" }
     module integral_constant                          { header "__type_traits/integral_constant.h" }
     module invoke                                     { header "__type_traits/invoke.h" }
     module is_abstract {
@@ -111,10 +114,6 @@ module std_core [system] {
     }
     module is_always_bitcastable {
       header "__type_traits/is_always_bitcastable.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_arithmetic {
-      header "__type_traits/is_arithmetic.h"
       export std_core.type_traits.integral_constant
     }
     module is_array {
@@ -193,10 +192,6 @@ module std_core [system] {
       header "__type_traits/is_final.h"
       export std_core.type_traits.integral_constant
     }
-    module is_floating_point {
-      header "__type_traits/is_floating_point.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_function {
       header "__type_traits/is_function.h"
       export std_core.type_traits.integral_constant
@@ -211,10 +206,6 @@ module std_core [system] {
     }
     module is_implicitly_default_constructible {
       header "__type_traits/is_implicitly_default_constructible.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_integral {
-      header "__type_traits/is_integral.h"
       export std_core.type_traits.integral_constant
     }
     module is_literal_type {
@@ -285,10 +276,6 @@ module std_core [system] {
       header "__type_traits/is_scalar.h"
       export std_core.type_traits.integral_constant
     }
-    module is_signed {
-      header "__type_traits/is_signed.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_specialization {
       header "__type_traits/is_specialization.h"
       export std_core.type_traits.integral_constant
@@ -335,10 +322,6 @@ module std_core [system] {
     }
     module is_union {
       header "__type_traits/is_union.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_unsigned {
-      header "__type_traits/is_unsigned.h"
       export std_core.type_traits.integral_constant
     }
     module is_valid_expansion {

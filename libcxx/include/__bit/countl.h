@@ -10,7 +10,7 @@
 #define _LIBCPP___BIT_COUNTL_H
 
 #include <__config>
-#include <__type_traits/integer_traits.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

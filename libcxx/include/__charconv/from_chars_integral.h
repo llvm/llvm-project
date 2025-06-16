@@ -17,10 +17,8 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__system_error/errc.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_unsigned.h>
 #include <__type_traits/make_unsigned.h>
 #include <limits>
 

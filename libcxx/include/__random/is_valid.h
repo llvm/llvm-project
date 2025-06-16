@@ -10,10 +10,10 @@
 #define _LIBCPP___RANDOM_IS_VALID_H
 
 #include <__config>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/is_unsigned.h>
 #include <__utility/declval.h>
 #include <cstdint>
 

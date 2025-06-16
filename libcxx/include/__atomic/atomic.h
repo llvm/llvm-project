@@ -17,16 +17,13 @@
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_function.h>
-#include <__type_traits/is_integral.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
-#include <__type_traits/remove_volatile.h>
 #include <__utility/forward.h>
 #include <cstring>
 

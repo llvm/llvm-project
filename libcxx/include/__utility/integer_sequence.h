@@ -11,7 +11,7 @@
 
 #include <__config>
 #include <__cstddef/size_t.h>
-#include <__type_traits/is_integral.h>
+#include <__type_traits/arithmetic_traits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

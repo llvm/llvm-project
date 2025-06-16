@@ -13,7 +13,7 @@
 #include <__assert>
 #include <__config>
 #include <__memory/addressof.h>
-#include <__type_traits/integer_traits.h>
+#include <__type_traits/arithmetic_traits.h>
 #include <__utility/cmp.h>
 #include <limits>
 
