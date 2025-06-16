@@ -100,6 +100,7 @@ typedef std::optional<FileSpec> (*SymbolLocatorLocateExecutableSymbolFile)(
 typedef bool (*SymbolLocatorDownloadObjectAndSymbolFile)(
     ModuleSpec &module_spec, Status &error, bool force_lookup,
     bool copy_executable);
+typedef uint64_t (*SymbolLocatorGetPriority)();
 using BreakpointHitCallback =
     std::function<bool(void *baton, StoppointCallbackContext *context,
                        lldb::user_id_t break_id, lldb::user_id_t break_loc_id)>;

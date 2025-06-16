@@ -10,4 +10,7 @@ let Definition = "symbollocatordebuginfod" in {
   def Timeout : Property<"timeout", "UInt64">,
     DefaultUnsignedValue<0>,
     Desc<"Timeout (in seconds) for requests made to a DEBUGINFOD server. A value of zero means we use the debuginfod default timeout: DEBUGINFOD_TIMEOUT if the environment variable is set and 90 seconds otherwise.">;
+  def Priority : Property<"priority", "UInt64">,
+    DefaultUnsignedValue<2>,
+    Desc<"The priority order for this symbol locator plugin when multiple symbol locators are available. Lower values indicate higher priority. The default symbol locator priority is 2">;
 }

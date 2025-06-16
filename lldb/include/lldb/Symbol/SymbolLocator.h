@@ -14,6 +14,9 @@
 
 namespace lldb_private {
 
+// Default priority for symbol locator plugins. Lower values are favored first.
+static constexpr uint32_t kDefaultSymbolLocatorPriority = 2;
+
 class SymbolLocator : public PluginInterface {
 public:
   SymbolLocator() = default;

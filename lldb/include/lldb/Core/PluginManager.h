@@ -431,7 +431,8 @@ public:
       SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file =
           nullptr,
       SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle = nullptr,
-      DebuggerInitializeCallback debugger_init_callback = nullptr);
+      DebuggerInitializeCallback debugger_init_callback = nullptr,
+      SymbolLocatorGetPriority get_priority_callback = nullptr);
 
   static bool UnregisterPlugin(SymbolLocatorCreateInstance create_callback);
 

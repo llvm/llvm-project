@@ -13,6 +13,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
+#include "lldb/Symbol/SymbolLocator.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
@@ -25,6 +26,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <queue>
 #include <string>
 #include <utility>
 #include <vector>
@@ -321,6 +323,29 @@ public:
         enabled_instances.push_back(instance);
     }
     return enabled_instances;
+  }
+
+  // Return a priority queue of all enabled instances, ordered by priority
+  // (lower priority values = higher priority in queue)
+  template <typename PriorityGetter>
+  std::priority_queue<Instance, std::vector<Instance>,
+                      std::function<bool(const Instance &, const Instance &)>>
+  GetPriorityQueue(PriorityGetter get_priority) {
+    // Create comparator that orders by priority (lower values = higher
+    // priority)
+    auto comparator = [get_priority](const Instance &a, const Instance &b) {
+      return get_priority(a) > get_priority(b); // Reverse for min-heap behavior
+    };
+
+    std::priority_queue<Instance, std::vector<Instance>,
+                        std::function<bool(const Instance &, const Instance &)>>
+        pq(comparator);
+
+    for (const auto &instance : m_instances) {
+      if (instance.enabled)
+        pq.push(instance);
+    }
+    return pq;
   }
 
   const Instance *GetInstanceAtIndex(uint32_t idx) {
@@ -1223,18 +1248,26 @@ struct SymbolLocatorInstance
       SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file,
       SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file,
       SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle,
-      DebuggerInitializeCallback debugger_init_callback)
+      DebuggerInitializeCallback debugger_init_callback,
+      SymbolLocatorGetPriority get_priority_callback)
       : PluginInstance<SymbolLocatorCreateInstance>(
             name, description, create_callback, debugger_init_callback),
         locate_executable_object_file(locate_executable_object_file),
         locate_executable_symbol_file(locate_executable_symbol_file),
         download_object_symbol_file(download_object_symbol_file),
-        find_symbol_file_in_bundle(find_symbol_file_in_bundle) {}
+        find_symbol_file_in_bundle(find_symbol_file_in_bundle),
+        get_priority_callback(get_priority_callback) {}
+
+  uint64_t GetPriority() const {
+    return get_priority_callback ? get_priority_callback()
+                                 : kDefaultSymbolLocatorPriority;
+  }
 
   SymbolLocatorLocateExecutableObjectFile locate_executable_object_file;
   SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file;
   SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file;
   SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle;
+  SymbolLocatorGetPriority get_priority_callback;
 };
 typedef PluginInstances<SymbolLocatorInstance> SymbolLocatorInstances;
 
@@ -1250,11 +1283,13 @@ bool PluginManager::RegisterPlugin(
     SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file,
     SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file,
     SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle,
-    DebuggerInitializeCallback debugger_init_callback) {
+    DebuggerInitializeCallback debugger_init_callback,
+    SymbolLocatorGetPriority get_priority_callback) {
   return GetSymbolLocatorInstances().RegisterPlugin(
       name, description, create_callback, locate_executable_object_file,
       locate_executable_symbol_file, download_object_symbol_file,
-      find_symbol_file_in_bundle, debugger_init_callback);
+      find_symbol_file_in_bundle, debugger_init_callback,
+      get_priority_callback);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -1270,8 +1305,13 @@ PluginManager::GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx) {
 ModuleSpec
 PluginManager::LocateExecutableObjectFile(const ModuleSpec &module_spec,
                                           StatisticsMap &map) {
-  auto instances = GetSymbolLocatorInstances().GetSnapshot();
-  for (auto &instance : instances) {
+  auto pq = GetSymbolLocatorInstances().GetPriorityQueue(
+      [](const auto &instance) { return instance.GetPriority(); });
+
+  while (!pq.empty()) {
+    auto instance = pq.top();
+    pq.pop();
+
     if (instance.locate_executable_object_file) {
       StatsDuration time;
       std::optional<ModuleSpec> result;
@@ -1290,8 +1330,12 @@ PluginManager::LocateExecutableObjectFile(const ModuleSpec &module_spec,
 FileSpec PluginManager::LocateExecutableSymbolFile(
     const ModuleSpec &module_spec, const FileSpecList &default_search_paths,
     StatisticsMap &map) {
-  auto instances = GetSymbolLocatorInstances().GetSnapshot();
-  for (auto &instance : instances) {
+  auto pq = GetSymbolLocatorInstances().GetPriorityQueue(
+      [](const auto &instance) { return instance.GetPriority(); });
+
+  while (!pq.empty()) {
+    auto instance = pq.top();
+    pq.pop();
     if (instance.locate_executable_symbol_file) {
       StatsDuration time;
       std::optional<FileSpec> result;

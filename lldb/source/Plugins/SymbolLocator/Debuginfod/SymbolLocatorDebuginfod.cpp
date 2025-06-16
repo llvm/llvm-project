@@ -83,6 +83,16 @@ public:
     }
   }
 
+  uint32_t GetPriority() const {
+    std::optional<uint32_t> priority =
+        m_collection_sp->GetPropertyAtIndexAs<uint64_t>(ePropertyPriority);
+    if (priority && *priority >= 0) {
+      return priority.value();
+    } else {
+      return kDefaultSymbolLocatorPriority;
+    }
+  }
+
 private:
   void ServerURLsChangedCallback() {
     m_server_urls = GetDebugInfoDURLs();
@@ -103,6 +113,13 @@ static PluginProperties &GetGlobalPluginProperties() {
   return g_settings;
 }
 
+static uint64_t GetDebuginfodPriority() {
+  // Grab LLDB's Debuginfod overrides from the
+  // plugin.symbol-locator.debuginfod.* settings.
+  PluginProperties &plugin_props = GetGlobalPluginProperties();
+  return plugin_props.GetPriority();
+}
+
 SymbolLocatorDebuginfod::SymbolLocatorDebuginfod() : SymbolLocator() {}
 
 void SymbolLocatorDebuginfod::Initialize() {
@@ -112,7 +129,8 @@ void SymbolLocatorDebuginfod::Initialize() {
     PluginManager::RegisterPlugin(
         GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
         LocateExecutableObjectFile, LocateExecutableSymbolFile, nullptr,
-        nullptr, SymbolLocatorDebuginfod::DebuggerInitialize);
+        nullptr, SymbolLocatorDebuginfod::DebuggerInitialize,
+        GetDebuginfodPriority);
     llvm::HTTPClient::initialize();
   });
 }
