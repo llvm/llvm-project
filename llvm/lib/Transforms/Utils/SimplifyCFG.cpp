@@ -3909,11 +3909,10 @@ shouldFoldCondBranchesToCommonDestination(BranchInst *BI, BranchInst *PBI,
   return std::nullopt;
 }
 
-static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
-                                             DomTreeUpdater *DTU,
-                                             MemorySSAUpdater *MSSAU,
-                                             const TargetTransformInfo *TTI,
-                                             SmallDenseMap<PHINode*, SelectInst*, 8> &InsertNewPHIs) {
+static bool performBranchToCommonDestFolding(
+    BranchInst *BI, BranchInst *PBI, DomTreeUpdater *DTU,
+    MemorySSAUpdater *MSSAU, const TargetTransformInfo *TTI,
+    SmallDenseMap<PHINode *, SelectInst *, 8> &InsertNewPHIs) {
   BasicBlock *BB = BI->getParent();
   BasicBlock *PredBlock = PBI->getParent();
 
@@ -4008,7 +4007,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
         Instruction *SI = It->second;
         // Oprands might have been promoted to bonous inst
         RemapInstruction(SI, VMap,
-                RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+                         RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
         // Insert SelectInst as the new PHINode incoming value
         SI->insertBefore(PredBlock->getTerminator()->getIterator());
         // Fix PHINode
@@ -4081,11 +4080,11 @@ bool llvm::foldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
   SmallVector<BasicBlock *, 8> Preds;
   struct InsertPointTy {
     InstructionCost Cost;
-    Value          *TValue; // True Value
-    Value          *FValue; // False Value
-    PHINode        *Phi;
+    Value *TValue; // True Value
+    Value *FValue; // False Value
+    PHINode *Phi;
   };
-  SmallDenseMap<BranchInst*, SmallVector<InsertPointTy, 8>, 8> InsertPts;
+  SmallDenseMap<BranchInst *, SmallVector<InsertPointTy, 8>, 8> InsertPts;
   for (BasicBlock *PredBlock : predecessors(BB)) {
     BranchInst *PBI = dyn_cast<BranchInst>(PredBlock->getTerminator());
 
@@ -4093,8 +4092,9 @@ bool llvm::foldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     if (!PBI || PBI->isUnconditional())
       continue;
 
-    // If there is a PHI node in the common successor, verify that the same value flows in from both
-    // blocks. Otherwise, check whether we can create a SelectInst to combine the incoming values
+    // If there is a PHI node in the common successor, verify that the same
+    // value flows in from both blocks. Otherwise, check whether we can create a
+    // SelectInst to combine the incoming values
     if (!safeToMergeTerminators(BI, PBI)) {
       if (BI == PBI)
         continue;
@@ -4105,9 +4105,10 @@ bool llvm::foldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
             Value *IV1 = Phi.getIncomingValueForBlock(PredBlock);
             InstructionCost PCost;
             if (TTI) {
-              PCost = TTI->getCmpSelInstrCost(Instruction::Select, Phi.getType(),
-                                     CmpInst::makeCmpResultType(Phi.getType()),
-                                     CmpInst::BAD_ICMP_PREDICATE, CostKind);
+              PCost = TTI->getCmpSelInstrCost(
+                  Instruction::Select, Phi.getType(),
+                  CmpInst::makeCmpResultType(Phi.getType()),
+                  CmpInst::BAD_ICMP_PREDICATE, CostKind);
             }
             auto &IP = InsertPts[PBI];
             if (PBI->getSuccessor(0) == BB)
@@ -4210,8 +4211,9 @@ bool llvm::foldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     SmallDenseMap<PHINode *, SelectInst *, 8> newPhis;
     if (InsertPts.contains(PBI)) {
       Value *PC = PBI->getCondition();
-      for (auto const InsertInfo: InsertPts[PBI]) {
-        SelectInst *newPhi = SelectInst::Create(PC, InsertInfo.TValue, InsertInfo.FValue);
+      for (auto const InsertInfo : InsertPts[PBI]) {
+        SelectInst *newPhi =
+            SelectInst::Create(PC, InsertInfo.TValue, InsertInfo.FValue);
         newPhis.insert(std::make_pair(InsertInfo.Phi, newPhi));
       }
     }
