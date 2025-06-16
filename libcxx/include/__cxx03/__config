@@ -595,7 +595,9 @@ typedef __char32_t char32_t;
 // clang-format on
 
 #  if defined(__APPLE__) || defined(__FreeBSD__) || defined(_LIBCPP_MSVCRT_LIKE) || defined(__NetBSD__)
-#    define _LIBCPP_LOCALE__L_EXTENSIONS 1
+#    if !defined(__MSVCRT_VERSION__) || __MSVCRT_VERSION__ >= 0x800
+#      define _LIBCPP_LOCALE__L_EXTENSIONS 1
+#    endif
 #  endif
 
 #  ifdef __FreeBSD__
