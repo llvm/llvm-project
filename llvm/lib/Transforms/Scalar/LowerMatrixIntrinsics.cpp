@@ -2278,7 +2278,7 @@ public:
 
   MatrixTy VisitPHI(PHINode *Inst, const ShapeInfo &SI, IRBuilder<> &Builder) {
     // Shim this->getMatrix to insert split phi's as needed.
-    auto getMatrix = [this, &Builder, SI](Value *MatrixVal) -> MatrixTy {
+    auto GetMatrix = [this, &Builder, SI](Value *MatrixVal) -> MatrixTy {
       IRBuilder<>::InsertPointGuard IPG(Builder);
 
       auto I = Inst2ColumnMatrix.find(MatrixVal);
@@ -2306,14 +2306,14 @@ public:
       return this->getMatrix(MatrixVal, SI, Builder);
     };
 
-    MatrixTy PhiM = getMatrix(Inst);
+    MatrixTy PhiM = GetMatrix(Inst);
 
     for (unsigned IncomingI = 0, IncomingE = Inst->getNumIncomingValues();
          IncomingI != IncomingE; ++IncomingI) {
       Value *IncomingV = Inst->getIncomingValue(IncomingI);
       BasicBlock *IncomingB = Inst->getIncomingBlock(IncomingI);
 
-      MatrixTy OpM = getMatrix(IncomingV);
+      MatrixTy OpM = GetMatrix(IncomingV);
 
       for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI) {
         PHINode *NewPHI = cast<PHINode>(PhiM.getVector(VI));
