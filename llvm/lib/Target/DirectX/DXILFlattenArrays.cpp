@@ -229,20 +229,17 @@ void DXILFlattenArraysVisitor::collectIndicesAndDimsFromGEP(
     GetElementPtrInst &GEP, SmallVectorImpl<Value *> &Indices,
     SmallVectorImpl<uint64_t> &Dims, bool &AllIndicesAreConstInt) {
 
-  // Skip the first index which is array ptr
-  // and collect all subsequent indices
   Type *CurrentType = GEP.getSourceElementType();
-  for (unsigned I = 1; I < GEP.getNumIndices(); ++I) {
-    Value *Index = GEP.getOperand(I + 1); // +1 because operand 0 is the pointer
-    AllIndicesAreConstInt &= isa<ConstantInt>(Index);
-    Indices.push_back(Index);
 
-    // Get the dimension size for this index
+  // Note index 0 is the ptr index.
+  for (Value *Index : llvm::drop_begin(GEP.indices(), 1)) {
+    Indices.push_back(Index);
+    AllIndicesAreConstInt &= isa<ConstantInt>(Index);
+
     if (auto *ArrayTy = dyn_cast<ArrayType>(CurrentType)) {
       Dims.push_back(ArrayTy->getNumElements());
       CurrentType = ArrayTy->getElementType();
     } else {
-      // This shouldn't happen for well-formed GEPs
       assert(false && "Expected array type in GEP chain");
     }
   }

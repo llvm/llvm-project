@@ -221,10 +221,10 @@ define void @gep_4d_index_test()  {
     ; CHECK-NEXT: getelementptr inbounds [16 x i32], ptr %.1dim, i32 0, i32 15
     ; CHECK-NEXT:    ret void
     %1 = alloca [2x[2 x[2 x [2 x i32]]]], align 4
-    %2 = getelementptr inbounds [2x[2 x[2 x [2 x i32]]]], [2x[2 x[2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 0, i32 0, i32 1
-    %3 = getelementptr inbounds [2x[2 x[2 x [2 x i32]]]], [2x[2 x[2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 0, i32 1, i32 1
-    %4 = getelementptr inbounds [2x[2 x[2 x [2 x i32]]]], [2x[2 x[2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 1, i32 1, i32 1
-    %5 = getelementptr inbounds [2x[2 x[2 x [2 x i32]]]], [2x[2 x[2 x [2 x i32]]]]* %1, i32 0, i32 1, i32 1, i32 1, i32 1
+    %2 = getelementptr inbounds [2 x [2 x[2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 0, i32 0, i32 1
+    %3 = getelementptr inbounds [2 x [2 x[2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 0, i32 1, i32 1
+    %4 = getelementptr inbounds [2 x [2 x[2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 1, i32 1, i32 1
+    %5 = getelementptr inbounds [2 x [2 x[2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 1, i32 1, i32 1, i32 1
     ret void
 }
 
@@ -234,22 +234,22 @@ define void @gep_4d_index_and_gep_chain_mixed() {
   ; CHECK-COUNT-16: getelementptr inbounds [16 x i32], ptr [[ALLOCA]], i32 0, i32 {{[0-9]|1[0-5]}}
   ; CHECK-NEXT: ret void
   %1 = alloca [2x[2 x[2 x [2 x i32]]]], align 4
-  %a4d0_0 = getelementptr inbounds [2x[2 x[2 x [2 x i32]]]], [2x[2 x[2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 0
+  %a4d0_0 = getelementptr inbounds [2 x [2 x [2 x [2 x i32]]]], [2 x [2 x[2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 0
   %a2d0_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %a4d0_0, i32 0, i32 0, i32 0
   %a2d0_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %a4d0_0, i32 0, i32 0, i32 1
   %a2d1_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %a4d0_0, i32 0, i32 1, i32 0
   %a2d1_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %a4d0_0, i32 0, i32 1, i32 1
-  %b4d0_1 = getelementptr inbounds [2x[2 x[2 x [2 x i32]]]], [2x[2 x[2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 1
+  %b4d0_1 = getelementptr inbounds [2 x [2 x [2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 1
   %b2d0_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %b4d0_1, i32 0, i32 0, i32 0
   %b2d0_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %b4d0_1, i32 0, i32 0, i32 1
   %b2d1_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %b4d0_1, i32 0, i32 1, i32 0
   %b2d1_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %b4d0_1, i32 0, i32 1, i32 1
-  %c4d1_0 = getelementptr inbounds [2x[2 x[2 x [2 x i32]]]], [2x[2 x[2 x [2 x i32]]]]* %1, i32 0, i32 1, i32 0
+  %c4d1_0 = getelementptr inbounds [2 x [2 x [2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 1, i32 0
   %c2d0_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %c4d1_0, i32 0, i32 0, i32 0
   %c2d0_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %c4d1_0, i32 0, i32 0, i32 1
   %c2d1_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %c4d1_0, i32 0, i32 1, i32 0
   %c2d1_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %c4d1_0, i32 0, i32 1, i32 1
-  %g4d1_1 = getelementptr inbounds [2x[2 x[2 x [2 x i32]]]], [2x[2 x[2 x [2 x i32]]]]* %1, i32 0, i32 1, i32 1
+  %g4d1_1 = getelementptr inbounds [2 x [2 x [2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 1, i32 1
   %g2d0_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %g4d1_1, i32 0, i32 0, i32 0
   %g2d0_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %g4d1_1, i32 0, i32 0, i32 1
   %g2d1_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %g4d1_1, i32 0, i32 1, i32 0
