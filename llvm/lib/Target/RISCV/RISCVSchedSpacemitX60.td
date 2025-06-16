@@ -632,30 +632,21 @@ foreach mx = SchedMxList in {
 }
 
 // 16. Vector Permutation Instructions
-// Simple Slide
+// Slide
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
+  defvar ALULat = SMX60GetVIALULatency<mx>.c;
 
-  defm "" : LMULWriteResMX<"WriteVSlideI",  [SMX60_VIEU], mx, IsWorstCase>;
+  // TODO: vslide*down seems to be 1 cycle slower than vslide*up in our tests
+  let Latency = ALULat in {
+    defm "" : LMULWriteResMX<"WriteVSlideI",  [SMX60_VIEU], mx, IsWorstCase>;
 
-  defm "" : LMULWriteResMX<"WriteVISlide1X", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVFSlide1F", [SMX60_VIEU], mx, IsWorstCase>;
-}
+    defm "" : LMULWriteResMX<"WriteVISlide1X", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFSlide1F", [SMX60_VIEU], mx, IsWorstCase>;
 
-foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
-  defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
-
-  defm "" : LMULWriteResMX<"WriteVSlideUpX",   [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSlideDownX", [SMX60_VIEU], mx, IsWorstCase>;
-}
-
-// Complex Slide
-foreach mx = ["M2", "M4", "M8"] in {
-  defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
-
-  defm "" : LMULWriteResMX<"WriteVSlideUpX", [SMX60_VIEU], mx, IsWorstCase>;
-
-  defm "" : LMULWriteResMX<"WriteVSlideDownX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideUpX",   [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideDownX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 }
 
 // Simple Gather and Compress
