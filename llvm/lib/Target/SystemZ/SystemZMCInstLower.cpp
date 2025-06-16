@@ -16,8 +16,8 @@
 
 using namespace llvm;
 
-// Return the VK_* enumeration for MachineOperand target flags Flags.
-static SystemZMCExpr::Specifier getSpecifierForTFlags(unsigned Flags) {
+// Return the S_* enumeration for MachineOperand target flags Flags.
+static SystemZ::Specifier getSpecifierForTFlags(unsigned Flags) {
   switch (Flags & SystemZII::MO_SYMBOL_MODIFIER) {
     case 0:
       return SystemZ::S_None;
@@ -34,7 +34,7 @@ SystemZMCInstLower::SystemZMCInstLower(MCContext &ctx,
   : Ctx(ctx), AsmPrinter(asmprinter) {}
 
 const MCExpr *SystemZMCInstLower::getExpr(const MachineOperand &MO,
-                                          SystemZMCExpr::Specifier Spec) const {
+                                          SystemZ::Specifier Spec) const {
   const MCSymbol *Symbol;
   bool HasOffset = true;
   switch (MO.getType()) {
@@ -85,7 +85,7 @@ MCOperand SystemZMCInstLower::lowerOperand(const MachineOperand &MO) const {
     return MCOperand::createImm(MO.getImm());
 
   default: {
-    SystemZMCExpr::Specifier Kind = getSpecifierForTFlags(MO.getTargetFlags());
+    auto Kind = getSpecifierForTFlags(MO.getTargetFlags());
     return MCOperand::createExpr(getExpr(MO, Kind));
   }
   }

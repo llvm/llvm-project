@@ -8,7 +8,6 @@
 
 #include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
-#include "MCTargetDesc/SystemZMCExpr.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "MCTargetDesc/SystemZTargetStreamer.h"
 #include "TargetInfo/SystemZTargetInfo.h"
@@ -1707,7 +1706,7 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
     if (Parser.getTok().isNot(AsmToken::Identifier))
       return Error(Parser.getTok().getLoc(), "unexpected token");
 
-    SystemZMCExpr::Specifier Kind = SystemZ::S_None;
+    auto Kind = SystemZ::S_None;
     StringRef Name = Parser.getTok().getString();
     if (Name == "tls_gdcall")
       Kind = SystemZ::S_TLSGD;
