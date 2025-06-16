@@ -1,0 +1,128 @@
+#===============================================================================
+# Setup Project
+#===============================================================================
+cmake_minimum_required(VERSION 3.20.0)
+
+set(LLVM_SUBPROJECT_TITLE "libsycl")
+
+set(LIBSYCL_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
+set(LIBSYCL_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
+
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
+set(CMAKE_CXX_STANDARD_REQUIRED YES)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+#===============================================================================
+# Setup CMake Options
+#===============================================================================
+
+option(LIBSYCL_ENABLE_WERROR "Treat all warnings as errors in the libsycl project" OFF)
+
+#===============================================================================
+# Configure System
+#===============================================================================
+
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+set(LIBSYCL_SHARED_OUTPUT_NAME "sycl" CACHE STRING "Output name for the shared libsycl runtime library.")
+
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+  set(LIBSYCL_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
+  if(LIBSYCL_LIBDIR_SUBDIR)
+    string(APPEND LIBSYCL_TARGET_SUBDIR /${LIBSYCL_LIBDIR_SUBDIR})
+  endif()
+  cmake_path(NORMAL_PATH LIBSYCL_TARGET_SUBDIR)
+  set(LIBSYCL_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBSYCL_TARGET_SUBDIR})
+  set(LIBSYCL_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBSYCL_TARGET_SUBDIR} CACHE STRING
+      "Path where built libsycl libraries should be installed.")
+  unset(LIBSYCL_TARGET_SUBDIR)
+else()
+  if(LLVM_LIBRARY_OUTPUT_INTDIR)
+    set(LIBSYCL_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  else()
+    set(LIBSYCL_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBSYCL_LIBDIR_SUFFIX})
+  endif()
+  set(LIBSYCL_INSTALL_LIBRARY_DIR lib${LIBSYCL_LIBDIR_SUFFIX} CACHE STRING
+      "Path where built libsycl libraries should be installed.")
+endif()
+
+set(LIBSYCL_INCLUDE_DIR include)
+set(LIBSYCL_BUILD_INCLUDE_DIR ${LLVM_BINARY_DIR}/${LIBSYCL_INCLUDE_DIR})
+set(LIBSYCL_SOURCE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
+
+set(LIBSYCL_MAJOR_VERSION 0)
+set(LIBSYCL_MINOR_VERSION 1)
+set(LIBSYCL_PATCH_VERSION 0)
+set(LIBSYCL_VERSION_STRING "${LIBSYCL_MAJOR_VERSION}.${LIBSYCL_MINOR_VERSION}.${LIBSYCL_PATCH_VERSION}")
+set(LIBSYCL_ABI_NAMESPACE "V${LIBSYCL_MAJOR_VERSION}" CACHE STRING
+    "The inline ABI namespace used by libsycl. It defaults to Vn where `n` is the current ABI version.")
+
+#===============================================================================
+# Setup Compiler Flags
+#===============================================================================
+
+# Enable all warnings by default
+if(MSVC)
+  append("/W4" CMAKE_CXX_FLAGS)
+else()
+  append("-Wall -Wextra" CMAKE_CXX_FLAGS)
+endif()
+
+if(LIBSYCL_ENABLE_WERROR)
+  if(MSVC)
+    append("/WX" CMAKE_CXX_FLAGS)
+  else()
+    append("-Werror" CMAKE_CXX_FLAGS)
+  endif()
+endif()
+
+#===============================================================================
+# Setup build & install rules
+#===============================================================================
+
+# Generate headers
+configure_file("${LIBSYCL_SOURCE_DIR}/src/version.hpp.in" "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/version.hpp")
+
+# Install generated headers.
+install(FILES
+  "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/version.hpp"
+  DESTINATION "${LIBSYCL_INCLUDE_DIR}/sycl"
+  COMPONENT sycl-headers)
+
+# This is a workaround to detect changes (add or modify) in subtree which
+# are not detected by copy_directory command.
+file(GLOB_RECURSE HEADERS_IN_SYCL_DIR CONFIGURE_DEPENDS "${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl/*")
+
+string(REPLACE "${LIBSYCL_SOURCE_INCLUDE_DIR}" "${LIBSYCL_BUILD_INCLUDE_DIR}"
+  OUT_HEADERS_IN_SYCL_DIR "${HEADERS_IN_SYCL_DIR}")
+
+# Copy SYCL headers from sources to build directory
+add_custom_target(sycl-headers
+  DEPENDS ${OUT_HEADERS_IN_SYCL_DIR})
+
+add_custom_command(
+  OUTPUT  ${OUT_HEADERS_IN_SYCL_DIR}
+  DEPENDS ${HEADERS_IN_SYCL_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl ${LIBSYCL_BUILD_INCLUDE_DIR}/sycl
+  COMMENT "Copying SYCL headers...")
+
+install(DIRECTORY "${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl" DESTINATION ${LIBSYCL_INCLUDE_DIR} COMPONENT sycl-headers)
+
+if (WIN32)
+  set(LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME}${LIBSYCL_MAJOR_VERSION})
+  if (MSVC)
+    list(APPEND LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME}${LIBSYCL_MAJOR_VERSION}d)
+  endif()
+else()
+  set(LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME})
+endif()
+
+add_subdirectory(src)
+
+add_custom_target(libsycl-runtime-libraries
+  DEPENDS ${LIBSYCL_RT_LIBS}
+)
