@@ -69,6 +69,7 @@ protected:
     unsigned PackSubstitutionIndex : 26;
     llvm::SmallBitVector Indexes;
     TemplateArgumentLoc *Args;
+    TemplateParameterList *ParamList;
     ExprOrConcept ConstraintExpr;
     const NamedDecl *ConstraintDecl;
   };
@@ -81,6 +82,7 @@ protected:
     unsigned Placeholder : 26;
     OccurenceList Indexes;
     TemplateArgumentLoc *Args;
+    TemplateParameterList *ParamList;
     const Expr *Pattern;
     NormalizedConstraint *Constraint;
   };
@@ -118,6 +120,7 @@ protected:
                PackIndex.toInternalRepresentation(),
                /*Indexes=*/{},
                /*Args=*/nullptr,
+               /*ParamList=*/nullptr,
                ConstraintExpr,
                ConstraintDecl} {}
 
@@ -128,6 +131,7 @@ protected:
                      /*Placeholder=*/0,
                      /*Indexes=*/{},
                      /*Args=*/nullptr,
+                     /*ParamList=*/nullptr,
                      Pattern,
                      Constraint} {}
 
@@ -138,7 +142,8 @@ protected:
       : ConceptId{{llvm::to_underlying(ConstraintKind::ConceptId),
                    /*Placeholder=*/0, PackIndex.toInternalRepresentation(),
                    /*Indexes=*/{},
-                   /*Args=*/nullptr, ConceptId, ConstraintDecl},
+                   /*Args=*/nullptr, /*ParamList=*/nullptr, ConceptId,
+                   ConstraintDecl},
                   SubConstraint} {}
 
   NormalizedConstraint(NormalizedConstraint *LHS, CompoundConstraintKind CCK,
@@ -160,15 +165,18 @@ protected:
     return {Atomic.Args, Atomic.Indexes.count()};
   }
 
-  void InitParameterMapping(TemplateParameterList *TemplateParams, const Expr *,
-                            const ASTTemplateArgumentListInfo *ArgsAsWritten);
+  TemplateParameterList *getUsedTemplateParamList() const {
+    return Atomic.ParamList;
+  }
 
   void updateParameterMapping(OccurenceList Indexes,
-                              llvm::MutableArrayRef<TemplateArgumentLoc> Args) {
+                              llvm::MutableArrayRef<TemplateArgumentLoc> Args,
+                              TemplateParameterList *ParamList) {
     assert(getKind() != ConstraintKind::Compound);
     assert(Indexes.count() == Args.size());
     Atomic.Indexes = Indexes;
     Atomic.Args = Args.data();
+    Atomic.ParamList = ParamList;
   }
 
   bool hasMatchingParameterMapping(ASTContext &C,
@@ -283,6 +291,7 @@ public:
   using NormalizedConstraint::hasParameterMapping;
   using NormalizedConstraint::mappingOccurenceList;
   using NormalizedConstraint::updateParameterMapping;
+  using NormalizedConstraint::getUsedTemplateParamList;
 
   const NamedDecl *getConstraintDecl() const { return Atomic.ConstraintDecl; }
 
@@ -306,12 +315,6 @@ public:
 
   const Expr *getConstraintExpr() const {
     return cast<const Expr *>(Atomic.ConstraintExpr);
-  }
-
-  void InitParameterMapping(const ASTTemplateArgumentListInfo *ArgsAsWritten) {
-    NormalizedConstraint::InitParameterMapping(
-        cast<TemplateDecl>(Atomic.ConstraintDecl)->getTemplateParameters(),
-        getConstraintExpr(), ArgsAsWritten);
   }
 };
 

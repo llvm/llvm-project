@@ -1426,8 +1426,9 @@ public:
   } ForParameterMappingSubstitution;
 
   TemplateInstantiator(ForParameterMappingSubstitution_t, Sema &SemaRef,
+                       SourceLocation Loc,
                        const MultiLevelTemplateArgumentList &TemplateArgs)
-      : inherited(SemaRef), TemplateArgs(TemplateArgs),
+      : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
         BailOutOnIncomplete(false), PreserveArgumentPacks(true) {}
 
   void setEvaluateConstraints(bool B) { EvaluateConstraints = B; }
@@ -2214,11 +2215,11 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
     Arg = getTemplateArgumentPackPatternForRewrite(Arg);
     if (Arg.getKind() != TemplateArgument::Expression) {
       assert(SemaRef.inParameterMappingSubstitution());
-      // FIXME: SourceLocation()?
-      ExprResult E = SemaRef.BuildExpressionFromNonTypeTemplateArgument(Arg, SourceLocation());
-      if (E.isInvalid())
+      ExprResult Expr = SemaRef.BuildExpressionFromNonTypeTemplateArgument(
+          Arg, E->getLocation());
+      if (Expr.isInvalid())
         return E;
-      Arg = TemplateArgument(E.get(), /*IsCanonical=*/false);
+      Arg = TemplateArgument(Expr.get(), /*IsCanonical=*/false);
     }
     assert(Arg.getKind() == TemplateArgument::Expression &&
            "unexpected nontype template argument kind in template rewrite");
@@ -4486,11 +4487,11 @@ bool Sema::SubstTemplateArguments(
 }
 
 bool Sema::SubstTemplateArgumentsInParameterMapping(
-    ArrayRef<TemplateArgumentLoc> Args,
+    ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
     const MultiLevelTemplateArgumentList &TemplateArgs,
     TemplateArgumentListInfo &Out) {
   TemplateInstantiator Instantiator(
-      TemplateInstantiator::ForParameterMappingSubstitution, *this,
+      TemplateInstantiator::ForParameterMappingSubstitution, *this, BaseLoc,
       TemplateArgs);
   return Instantiator.TransformTemplateArguments(Args.begin(), Args.end(), Out);
 }

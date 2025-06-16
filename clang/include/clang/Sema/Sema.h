@@ -11987,6 +11987,13 @@ public:
                                  bool UpdateArgsWithConversions = true,
                                  bool *ConstraintsNotSatisfied = nullptr);
 
+  bool CheckTemplateArgumentList(
+      TemplateDecl *Template, TemplateParameterList *Params,
+      SourceLocation TemplateLoc, TemplateArgumentListInfo &TemplateArgs,
+      const DefaultArguments &DefaultArgs, bool PartialTemplateArgs,
+      CheckTemplateArgumentInfo &CTAI, bool UpdateArgsWithConversions = true,
+      bool *ConstraintsNotSatisfied = nullptr);
+
   bool CheckTemplateTypeArgument(
       TemplateTypeParmDecl *Param, TemplateArgumentLoc &Arg,
       SmallVectorImpl<TemplateArgument> &SugaredConverted,
@@ -13329,7 +13336,7 @@ public:
                          TemplateArgumentListInfo &Outputs);
 
   bool SubstTemplateArgumentsInParameterMapping(
-      ArrayRef<TemplateArgumentLoc> Args,
+      ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
       const MultiLevelTemplateArgumentList &TemplateArgs,
       TemplateArgumentListInfo &Out);
 
