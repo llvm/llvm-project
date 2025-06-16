@@ -652,7 +652,7 @@ Improvements to Clang's diagnostics
 
 - Fixed false positives in ``-Wformat-truncation`` and ``-Wformat-overflow``
   diagnostics when floating-point numbers had both width field and plus or space
-  prefix specified.
+  prefix specified. (#GH143951)
 
 - Clang now avoids issuing `-Wreturn-type` warnings in some cases where
   the final statement of a non-void function is a `throw` expression, or
