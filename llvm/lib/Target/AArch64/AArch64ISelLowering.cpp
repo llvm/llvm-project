@@ -2239,28 +2239,26 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   if (VT.getVectorElementType() == MVT::i64) {
     setPartialReduceMLAAction(MLAOps, VT,
                               MVT::getVectorVT(MVT::i8, NumElts * 8), Custom);
-    setPartialReduceMLAAction(
-        MLAOps, VT, MVT::getVectorVT(MVT::i16, NumElts * 4), Custom);
-    setPartialReduceMLAAction(
-        MLAOps, VT, MVT::getVectorVT(MVT::i32, NumElts * 2), Custom);
+    setPartialReduceMLAAction(MLAOps, VT,
+                              MVT::getVectorVT(MVT::i16, NumElts * 4), Custom);
+    setPartialReduceMLAAction(MLAOps, VT,
+                              MVT::getVectorVT(MVT::i32, NumElts * 2), Custom);
   } else if (VT.getVectorElementType() == MVT::i32) {
     setPartialReduceMLAAction(MLAOps, VT,
                               MVT::getVectorVT(MVT::i8, NumElts * 4), Custom);
-    setPartialReduceMLAAction(
-        MLAOps, VT, MVT::getVectorVT(MVT::i16, NumElts * 2), Custom);
+    setPartialReduceMLAAction(MLAOps, VT,
+                              MVT::getVectorVT(MVT::i16, NumElts * 2), Custom);
   } else if (VT.getVectorElementType() == MVT::i16) {
     setPartialReduceMLAAction(MLAOps, VT,
                               MVT::getVectorVT(MVT::i8, NumElts * 2), Custom);
   }
-  if(Subtarget->hasMatMulInt8()) {
+  if (Subtarget->hasMatMulInt8()) {
     if (VT.getVectorElementType() == MVT::i32)
-        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, VT,
-                                  MVT::getVectorVT(MVT::i8, NumElts * 4),
-                                  Custom);
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, VT,
+                                MVT::getVectorVT(MVT::i8, NumElts * 4), Custom);
     else if (VT.getVectorElementType() == MVT::i64)
-        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, VT,
-                                  MVT::getVectorVT(MVT::i8, NumElts * 8),
-                                  Custom);
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, VT,
+                                MVT::getVectorVT(MVT::i8, NumElts * 8), Custom);
   }
 
   // Lower fixed length vector operations to scalable equivalents.
