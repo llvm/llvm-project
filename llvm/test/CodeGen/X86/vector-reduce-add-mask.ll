@@ -113,7 +113,6 @@ define i64 @test_v4i64_v4i16(<4 x i64> %a0) {
 ; AVX512BW-NEXT:    vpmovqb %zmm0, %xmm0
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vmovq %xmm0, %rax
 ; AVX512BW-NEXT:    vzeroupper

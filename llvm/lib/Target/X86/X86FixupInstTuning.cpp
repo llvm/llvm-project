@@ -54,6 +54,7 @@ public:
 
 private:
   const X86InstrInfo *TII = nullptr;
+  const X86RegisterInfo *TRI = nullptr;
   const X86Subtarget *ST = nullptr;
   const MCSchedModel *SM = nullptr;
 };
@@ -277,6 +278,18 @@ bool X86FixupInstTuningPass::processInstruction(
     return true;
   };
 
+  auto ProcessMOVToBLEND = [&](unsigned BlendOpc, unsigned BlendImm) -> bool {
+    if (OptSize || !NewOpcPreferable(BlendOpc, /*ReplaceInTie*/ false))
+      return false;
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      MI.setDesc(TII->get(BlendOpc));
+      MI.addOperand(MachineOperand::CreateImm(BlendImm));
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
+    return true;
+  };
+
   switch (Opc) {
   case X86::BLENDPDrri:
     return ProcessBLENDToMOV(X86::MOVSDrr, 0x3, 0x1);
@@ -295,6 +308,24 @@ bool X86FixupInstTuningPass::processInstruction(
     // TODO: Add X86::VPBLENDWYrri handling
     // TODO: Add X86::VPBLENDWYrmi handling
     return ProcessBLENDWToBLENDD(X86::VPBLENDDrri, 4);
+
+  case X86::VMOVSDZrr:
+    if (TRI->getEncodingValue(MI.getOperand(0).getReg()) >= 16 ||
+        TRI->getEncodingValue(MI.getOperand(1).getReg()) >= 16 ||
+        TRI->getEncodingValue(MI.getOperand(2).getReg()) >= 16)
+      return false;
+    [[fallthrough]];
+  case X86::VMOVSDrr:
+    return ProcessMOVToBLEND(X86::VBLENDPDrri, 0x01);
+
+  case X86::VMOVSSZrr:
+    if (TRI->getEncodingValue(MI.getOperand(0).getReg()) >= 16 ||
+        TRI->getEncodingValue(MI.getOperand(1).getReg()) >= 16 ||
+        TRI->getEncodingValue(MI.getOperand(2).getReg()) >= 16)
+      return false;
+    [[fallthrough]];
+  case X86::VMOVSSrr:
+    return ProcessMOVToBLEND(X86::VBLENDPSrri, 0x01);
 
   case X86::VPERMILPDri:
     return ProcessVPERMILPDri(X86::VSHUFPDrri);
@@ -573,6 +604,7 @@ bool X86FixupInstTuningPass::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   ST = &MF.getSubtarget<X86Subtarget>();
   TII = ST->getInstrInfo();
+  TRI = ST->getRegisterInfo();
   SM = &ST->getSchedModel();
 
   for (MachineBasicBlock &MBB : MF) {
