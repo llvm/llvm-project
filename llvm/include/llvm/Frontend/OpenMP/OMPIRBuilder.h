@@ -1604,16 +1604,6 @@ private:
       ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
       Function *ReduceFn, AttributeList FuncAttrs);
 
-  /// Creates the runtime call specified
-  /// \param Callee Function Declaration Value
-  /// \param Args Arguments passed to the call
-  /// \param Name Optional param to specify the name of the call Instruction.
-  ///
-  /// \return The Runtime call instruction created.
-  llvm::CallInst *emitNoUnwindRuntimeCall(llvm::FunctionCallee Callee,
-                                          ArrayRef<llvm::Value *> Args,
-                                          const llvm::Twine &Name);
-
   /// Helper function for CreateCanonicalScanLoops to create InputLoop
   /// in the firstGen and Scan Loop in the SecondGen
   /// \param InputLoopGen Callback for generating the loop for input phase

@@ -4013,10 +4013,10 @@ OpenMPIRBuilder::createMasked(const LocationDescription &Loc,
                               /*Conditional*/ true, /*hasFinalize*/ true);
 }
 
-llvm::CallInst *
-OpenMPIRBuilder::emitNoUnwindRuntimeCall(llvm::FunctionCallee Callee,
-                                         ArrayRef<llvm::Value *> Args,
-                                         const llvm::Twine &Name) {
+llvm::CallInst *emitNoUnwindRuntimeCall(IRBuilder<> &Builder,
+                                        llvm::FunctionCallee Callee,
+                                        ArrayRef<llvm::Value *> Args,
+                                        const llvm::Twine &Name) {
   llvm::CallInst *Call = Builder.CreateCall(
       Callee, Args, SmallVector<llvm::OperandBundleDef, 1>(), Name);
   Call->setDoesNotThrow();
@@ -4038,9 +4038,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createScan(
   if (ScanInfo.OMPFirstScanLoop) {
     llvm::Error Err =
         emitScanBasedDirectiveDeclsIR(AllocaIP, ScanVars, ScanVarsType);
-    if (Err) {
+    if (Err)
       return Err;
-    }
   }
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -4209,11 +4208,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     llvm::BasicBlock *InputBB = Builder.GetInsertBlock();
     llvm::Value *Arg =
         Builder.CreateUIToFP(ScanInfo.Span, Builder.getDoubleTy());
-    llvm::Value *LogVal = emitNoUnwindRuntimeCall(F, Arg, "");
+    llvm::Value *LogVal = emitNoUnwindRuntimeCall(Builder, F, Arg, "");
     F = llvm::Intrinsic::getOrInsertDeclaration(
         Builder.GetInsertBlock()->getModule(),
         (llvm::Intrinsic::ID)llvm::Intrinsic::ceil, Builder.getDoubleTy());
-    LogVal = emitNoUnwindRuntimeCall(F, LogVal, "");
+    LogVal = emitNoUnwindRuntimeCall(Builder, F, LogVal, "");
     LogVal = Builder.CreateFPToUI(LogVal, Builder.getInt32Ty());
     llvm::Value *NMin1 = Builder.CreateNUWSub(
         ScanInfo.Span, llvm::ConstantInt::get(ScanInfo.Span->getType(), 1));
@@ -4296,9 +4295,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
   Error Err = emitScanBasedDirectiveFinalsIR(ReductionInfos);
-  if (Err) {
+  if (Err)
     return Err;
-  }
 
   return AfterIP;
 }
@@ -4600,9 +4598,8 @@ Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
     Builder.restoreIP(CodeGenIP);
     Value *Span = Builder.CreateMul(IV, Step);
     Value *IndVar = Builder.CreateAdd(Span, Start);
-    if (InScan) {
+    if (InScan)
       ScanInfo.IV = IndVar;
-    }
     return BodyGenCB(Builder.saveIP(), IndVar);
   };
   LocationDescription LoopLoc = ComputeIP.isSet() ? Loc.IP : Builder.saveIP();
