@@ -62,15 +62,14 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
                            matchers::matchesAnyListedName(AllowedTypes))))))),
       decl().bind("param"));
   Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          functionDecl(hasBody(IgnoreCoroutines
-                                   ? stmt(unless(coroutineBodyStmt()))
-                                   : stmt()),
-                       isDefinition(), unless(isImplicit()),
-                       unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
-                       has(typeLoc(forEach(ExpensiveValueParamDecl))),
-                       decl().bind("functionDecl"))),
+      traverse(TK_AsIs,
+               functionDecl(
+                   hasBody(IgnoreCoroutines ? stmt(unless(coroutineBodyStmt()))
+                                            : stmt()),
+                   isDefinition(), unless(isImplicit()),
+                   unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
+                   has(typeLoc(forEach(ExpensiveValueParamDecl))),
+                   decl().bind("functionDecl"))),
       this);
 }
 
