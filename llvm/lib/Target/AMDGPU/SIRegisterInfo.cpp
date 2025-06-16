@@ -3864,9 +3864,25 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
   if (!isSGPRClass(RC))
     return BaseImplRetVal;
 
+  // Exit without an avoidance strategy
   const unsigned Strategy = getSGPRHazardAvoidanceStrategy(MF);
   if (!Strategy)
     return BaseImplRetVal;
+
+  // Register has a hazard if it is SGPR used by VALU
+  DenseMap<Register, bool> HazardRegs;
+  auto HasSGPRHazard = [&MRI, TRI, &HazardRegs](Register Reg) {
+    const auto *RC = MRI.getRegClass(Reg);
+    if (!RC || !TRI->isSGPRClass(RC))
+      return false;
+    if (!HazardRegs.contains(Reg)) {
+      HazardRegs[Reg] = llvm::any_of(
+          MRI.reg_nodbg_operands(Reg), [](const MachineOperand &MO) {
+            return MO.isUse() && SIInstrInfo::isVALU(*MO.getParent());
+          });
+    }
+    return HazardRegs[Reg];
+  };
 
   SmallSet<MCPhysReg, 4> CopyHints;
   CopyHints.insert(Hints.begin(), Hints.end());
@@ -3883,7 +3899,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
 
   // V1: simply reverse allocation order, mean 23% reduction in hazards
   if (Strategy == 1) {
-    if (FuncInfo->checkFlag(VirtReg, AMDGPU::VirtRegFlag::SGPR_HAZARD_REG)) {
+    if (HasSGPRHazard(VirtReg)) {
       for (MCPhysReg PhysReg : reverse(Order))
         AddHint(PhysReg);
     } else {
@@ -3906,8 +3922,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
       LiveIntervalUnion &LIU = LiveUnions[Unit];
       for (const LiveInterval *LI : LIU.getMap()) {
         Intervals.insert(LI);
-        if (FuncInfo->checkFlag(LI->reg(),
-                                AMDGPU::VirtRegFlag::SGPR_HAZARD_REG)) {
+        if (HasSGPRHazard(LI->reg())) {
           IsHazard = true;
           // Break here as we only care about interval count for non-hazard regs
           break;
@@ -3927,8 +3942,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
   // V2: weight the entire order based on hazard free usage, mean 30% reduction
   // in hazards
   if (Strategy == 2) {
-    bool VRegIsHazard =
-        FuncInfo->checkFlag(VirtReg, AMDGPU::VirtRegFlag::SGPR_HAZARD_REG);
+    bool VRegIsHazard = HasSGPRHazard(VirtReg);
     SmallVector<MCPhysReg> NewOrder(Order);
     std::sort(NewOrder.begin(), NewOrder.end(), [&](MCPhysReg A, MCPhysReg B) {
       return VRegIsHazard ? IntervalCount[A] < IntervalCount[B]
@@ -3969,7 +3983,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     }
   }
 
-  if (FuncInfo->checkFlag(VirtReg, AMDGPU::VirtRegFlag::SGPR_HAZARD_REG)) {
+  if (HasSGPRHazard(VirtReg)) {
     // Reorder allocations based on usage, so least used will be reused first.
     // This means least used regs are touched by hazards first.
     std::sort(Allocated.begin(), Allocated.end(),

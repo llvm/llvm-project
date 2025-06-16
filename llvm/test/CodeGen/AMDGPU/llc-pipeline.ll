@@ -350,7 +350,6 @@
 ; GCN-O1-NEXT:        SI Whole Quad Mode
 ; GCN-O1-NEXT:        SI optimize exec mask operations pre-RA
 ; GCN-O1-NEXT:        AMDGPU Pre-RA Long Branch Reg
-; GCN-O1-NEXT:        AMDGPU Mark Hazard SGPRs
 ; GCN-O1-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-NEXT:        Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Debug Variable Analysis
@@ -661,7 +660,6 @@
 ; GCN-O1-OPTS-NEXT:        SI Whole Quad Mode
 ; GCN-O1-OPTS-NEXT:        SI optimize exec mask operations pre-RA
 ; GCN-O1-OPTS-NEXT:        AMDGPU Pre-RA Long Branch Reg
-; GCN-O1-OPTS-NEXT:        AMDGPU Mark Hazard SGPRs
 ; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:        Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Debug Variable Analysis
@@ -978,7 +976,6 @@
 ; GCN-O2-NEXT:        SI optimize exec mask operations pre-RA
 ; GCN-O2-NEXT:        SI Form memory clauses
 ; GCN-O2-NEXT:        AMDGPU Pre-RA Long Branch Reg
-; GCN-O2-NEXT:        AMDGPU Mark Hazard SGPRs
 ; GCN-O2-NEXT:        Machine Natural Loop Construction
 ; GCN-O2-NEXT:        Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Debug Variable Analysis
@@ -1308,7 +1305,6 @@
 ; GCN-O3-NEXT:        SI optimize exec mask operations pre-RA
 ; GCN-O3-NEXT:        SI Form memory clauses
 ; GCN-O3-NEXT:        AMDGPU Pre-RA Long Branch Reg
-; GCN-O3-NEXT:        AMDGPU Mark Hazard SGPRs
 ; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Debug Variable Analysis
