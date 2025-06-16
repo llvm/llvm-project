@@ -725,7 +725,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       return false;
 
     const auto *Prev = Current.getPreviousNonComment();
-    if (!(Prev && Prev->is(tok::l_paren)))
+    if (!Prev || Prev->isNot(tok::l_paren))
       return false;
 
     if (Prev->BlockParameterCount == 0)
