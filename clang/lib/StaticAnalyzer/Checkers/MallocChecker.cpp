@@ -1375,7 +1375,8 @@ bool isVoidStar(QualType T) {
   return !T.isNull() && T->isPointerType() && T->getPointeeType()->isVoidType();
 }
 
-const Expr* getPlacementNewBufferArg(const CallExpr *CE, const FunctionDecl *FD) {
+const Expr *getPlacementNewBufferArg(const CallExpr *CE,
+                                     const FunctionDecl *FD) {
   if (CE->getNumArgs() == 1)
     return nullptr;
   // Second argument of placement new must be void*
