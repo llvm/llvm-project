@@ -40,6 +40,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MatrixBuilder.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
@@ -435,10 +436,6 @@ class LowerMatrixIntrinsics {
     iterator_range<SmallVector<Value *, 8>::iterator> columns() {
       assert(isColumnMajor() &&
              "columns() only supported for column-major matrixes");
-      return make_range(Vectors.begin(), Vectors.end());
-    }
-
-    iterator_range<SmallVector<Value *, 8>::iterator> vectors() {
       return make_range(Vectors.begin(), Vectors.end());
     }
 
@@ -1420,12 +1417,12 @@ public:
   }
 
   bool tryLowerIntrinsic(IntrinsicInst *Inst) {
+    FastMathFlags FMF = getFastMathFlags(Inst);
     Value *Start = nullptr;
     Value *Op = nullptr;
     switch (Inst->getIntrinsicID()) {
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul: {
-      FastMathFlags FMF = getFastMathFlags(Inst);
       if (Inst->getType()->isFloatingPointTy() && !FMF.allowReassoc())
         return false;
 
@@ -1497,12 +1494,20 @@ public:
         Inst->getIntrinsicID() == Intrinsic::vector_reduce_fmul) {
       ResultV = Builder.CreateVectorSplat(ElementCount::getFixed(M.getStride()),
                                           Start);
-      for (auto &Vector : M.vectors())
+      for (auto &Vector : M.vectors()) {
         ResultV = CreateVReduce(ResultV, Vector);
+        if (isa<FPMathOperator>(ResultV))
+          if (auto *ResultVI = dyn_cast<Instruction>(ResultV))
+            ResultVI->setFastMathFlags(FMF);
+      }
     } else {
       ResultV = M.getVector(0);
-      for (auto &Vector : drop_begin(M.vectors()))
+      for (auto &Vector : drop_begin(M.vectors())) {
         ResultV = CreateVReduce(ResultV, Vector);
+        if (isa<FPMathOperator>(ResultV))
+          if (auto *ResultVI = dyn_cast<Instruction>(ResultV))
+            ResultVI->setFastMathFlags(FMF);
+      }
     }
 
     auto CreateHReduce = [&](Value *V) {
@@ -1535,6 +1540,9 @@ public:
     };
 
     Value *Result = CreateHReduce(ResultV);
+    if (isa<FPMathOperator>(Result))
+      if (auto *ResultI = dyn_cast<Instruction>(Result))
+        ResultI->setFastMathFlags(FMF);
     Inst->replaceAllUsesWith(Result);
     Result->takeName(Inst);
     Inst->eraseFromParent();
