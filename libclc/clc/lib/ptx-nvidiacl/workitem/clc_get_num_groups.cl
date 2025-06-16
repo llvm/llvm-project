@@ -6,11 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
-#define __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
+#include <clc/workitem/clc_get_num_groups.h>
 
-#include <clc/internal/clc.h>
-
-_CLC_OVERLOAD _CLC_DECL size_t get_local_size(uint dim);
-
-#endif // __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
+_CLC_OVERLOAD _CLC_DEF size_t clc_get_num_groups(uint dim) {
+  switch (dim) {
+  case 0:
+    return __nvvm_read_ptx_sreg_nctaid_x();
+  case 1:
+    return __nvvm_read_ptx_sreg_nctaid_y();
+  case 2:
+    return __nvvm_read_ptx_sreg_nctaid_z();
+  default:
+    return 0;
+  }
+}

@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
-#define __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
+#include <clc/opencl/workitem/get_local_linear_id.h>
+#include <clc/workitem/clc_get_local_linear_id.h>
 
-#include <clc/internal/clc.h>
-
-_CLC_OVERLOAD _CLC_DECL size_t get_local_size(uint dim);
-
-#endif // __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
+_CLC_OVERLOAD _CLC_DEF size_t get_local_linear_id() {
+  return clc_get_local_linear_id();
+}

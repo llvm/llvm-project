@@ -6,11 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
-#define __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
+#include <clc/workitem/clc_get_sub_group_local_id.h>
 
-#include <clc/internal/clc.h>
-
-_CLC_OVERLOAD _CLC_DECL size_t get_local_size(uint dim);
-
-#endif // __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
+_CLC_OVERLOAD _CLC_DEF uint clc_get_sub_group_local_id() {
+  return __nvvm_read_ptx_sreg_laneid();
+}

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
-#define __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
+#ifndef __CLC_WORKITEM_CLC_GET_ENQUEUED_LOCAL_SIZE_H__
+#define __CLC_WORKITEM_CLC_GET_ENQUEUED_LOCAL_SIZE_H__
 
 #include <clc/internal/clc.h>
 
-_CLC_OVERLOAD _CLC_DECL size_t get_local_size(uint dim);
+_CLC_OVERLOAD _CLC_DECL size_t clc_get_enqueued_local_size(uint dim);
 
-#endif // __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
+#endif // __CLC_WORKITEM_CLC_GET_ENQUEUED_LOCAL_SIZE_H__

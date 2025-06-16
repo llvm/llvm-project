@@ -6,17 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#ifndef __CLC_WORKITEM_CLC_GET_NUM_GROUPS_H__
+#define __CLC_WORKITEM_CLC_GET_NUM_GROUPS_H__
 
-_CLC_DEF _CLC_OVERLOAD size_t get_group_id(uint dim) {
-  switch (dim) {
-  case 0:
-    return __nvvm_read_ptx_sreg_ctaid_x();
-  case 1:
-    return __nvvm_read_ptx_sreg_ctaid_y();
-  case 2:
-    return __nvvm_read_ptx_sreg_ctaid_z();
-  default:
-    return 0;
-  }
-}
+#include <clc/internal/clc.h>
+
+_CLC_OVERLOAD _CLC_DECL size_t clc_get_num_groups(uint dim);
+
+#endif // __CLC_WORKITEM_CLC_GET_NUM_GROUPS_H__

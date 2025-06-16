@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
-#define __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
+#ifndef __CLC_WORKITEM_CLC_GET_SUB_GROUP_LOCAL_ID_H__
+#define __CLC_WORKITEM_CLC_GET_SUB_GROUP_LOCAL_ID_H__
 
 #include <clc/internal/clc.h>
 
-_CLC_OVERLOAD _CLC_DECL size_t get_local_size(uint dim);
+_CLC_DEF _CLC_OVERLOAD uint clc_get_sub_group_local_id();
 
-#endif // __CLC_OPENCL_WORKITEM_GET_LOCAL_SIZE_H__
+#endif // __CLC_WORKITEM_CLC_GET_SUB_GROUP_LOCAL_ID_H__
