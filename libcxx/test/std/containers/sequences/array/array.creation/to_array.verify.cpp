@@ -35,7 +35,7 @@ int main(int, char**) {
   {
     const MoveOnly cmo[] = {MoveOnly{3}};
     // expected-error@array:* {{to_array requires move constructible elements}}
-    // expected-error-re@array:* {{{{(call to implicitly-deleted copy constructor of 'MoveOnly')|(call to deleted constructor of 'MoveOnly')}}}}
+    // expected-error-re@array:* 0-1{{{{(call to implicitly-deleted copy constructor of 'MoveOnly')|(call to deleted constructor of 'MoveOnly')}}}}
     std::to_array(std::move(cmo)); // expected-note {{requested here}}
   }
 
