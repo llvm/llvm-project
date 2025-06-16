@@ -379,6 +379,24 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::OGT_F128, "__gtkf2");
     setLibcallName(RTLIB::UO_F128, "__unordkf2");
 
+    setLibcallName(RTLIB::ACOS_F128, "acosf128");
+    setLibcallName(RTLIB::ASIN_F128, "asinf128");
+    setLibcallName(RTLIB::ATAN2_F128, "atan2f128");
+    setLibcallName(RTLIB::ATAN_F128, "atanf128");
+    setLibcallName(RTLIB::CBRT_F128, "cbrtf128");
+    setLibcallName(RTLIB::COPYSIGN_F128, "copysignf128");
+    setLibcallName(RTLIB::COSH_F128, "coshf128");
+    setLibcallName(RTLIB::EXP10_F128, "exp10f128");
+    setLibcallName(RTLIB::FMAXIMUM_F128, "fmaximumf128");
+    setLibcallName(RTLIB::FMAXIMUM_NUM_F128, "fmaximum_numf128");
+    setLibcallName(RTLIB::FMINIMUM_F128, "fminimumf128");
+    setLibcallName(RTLIB::FMINIMUM_NUM_F128, "fminimum_numf128");
+    setLibcallName(RTLIB::LDEXP_F128, "ldexpf128");
+    setLibcallName(RTLIB::MODF_F128, "modff128");
+    setLibcallName(RTLIB::ROUNDEVEN_F128, "roundevenf128");
+    setLibcallName(RTLIB::SINH_F128, "sinhf128");
+    setLibcallName(RTLIB::TANH_F128, "tanhf128");
+    setLibcallName(RTLIB::TAN_F128, "tanf128");
     setLibcallName(RTLIB::LOG_F128, "logf128");
     setLibcallName(RTLIB::LOG2_F128, "log2f128");
     setLibcallName(RTLIB::LOG10_F128, "log10f128");
@@ -404,6 +422,13 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
     setLibcallName(RTLIB::FMA_F128, "fmaf128");
     setLibcallName(RTLIB::FREXP_F128, "frexpf128");
+
+    // TODO: Do these exist?
+    setLibcallName(RTLIB::EXP_FINITE_F128, nullptr);
+    setLibcallName(RTLIB::EXP2_FINITE_F128, nullptr);
+    setLibcallName(RTLIB::LOG_FINITE_F128, nullptr);
+    setLibcallName(RTLIB::LOG2_FINITE_F128, nullptr);
+    setLibcallName(RTLIB::LOG10_FINITE_F128, nullptr);
 
     if (TT.isOSAIX()) {
       bool isPPC64 = TT.isPPC64();
