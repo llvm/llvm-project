@@ -510,6 +510,22 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       continue;
     MCRegister FReg = MAI->getFuncReg(&F);
     assert(FReg.isValid());
+
+    if (Attribute Attr = F.getFnAttribute("hlsl.shader"); Attr.isValid()) {
+      // SPIR-V common validation: Fragment requires OriginUpperLeft or
+      // OriginLowerLeft.
+      // VUID-StandaloneSpirv-OriginLowerLeft-04653: Fragment must declare
+      // OriginUpperLeft.
+      if (Attr.getValueAsString() == "pixel") {
+        MCInst Inst;
+        Inst.setOpcode(SPIRV::OpExecutionMode);
+        Inst.addOperand(MCOperand::createReg(FReg));
+        unsigned EM =
+            static_cast<unsigned>(SPIRV::ExecutionMode::OriginUpperLeft);
+        Inst.addOperand(MCOperand::createImm(EM));
+        outputMCInst(Inst);
+      }
+    }
     if (MDNode *Node = F.getMetadata("reqd_work_group_size"))
       outputExecutionModeFromMDNode(FReg, Node, SPIRV::ExecutionMode::LocalSize,
                                     3, 1);
