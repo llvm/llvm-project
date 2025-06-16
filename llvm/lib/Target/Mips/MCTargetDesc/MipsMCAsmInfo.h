@@ -45,6 +45,7 @@ public:
 };
 
 namespace Mips {
+using Specifier = uint16_t;
 enum {
   S_None,
   S_CALL_HI16 = FirstTargetFixupKind,
