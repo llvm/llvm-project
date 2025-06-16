@@ -12,12 +12,11 @@
 #include "src/stdio/fgets.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fwrite.h"
-#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
-using LlvmLibcFgetsTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+#include "src/__support/libc_errno.h"
 
-TEST_F(LlvmLibcFgetsTest, WriteAndReadCharacters) {
+TEST(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   constexpr char FILENAME[] = "testdata/fgets.test";
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -36,6 +35,7 @@ TEST_F(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   // This is an error and not a real EOF.
   ASSERT_EQ(LIBC_NAMESPACE::feof(file), 0);
   ASSERT_NE(LIBC_NAMESPACE::ferror(file), 0);
+  libc_errno = 0;
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 
