@@ -432,7 +432,7 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   if (Offset.isImm())
     OS << MCO.getImm();
   else if (Offset.isGlobal() || Offset.isBlockAddress() || Offset.isMCSymbol())
-    OS << *MCO.getExpr();
+    MAI->printExpr(OS, *MCO.getExpr());
 
   if (Offset.isMCSymbol())
     MMI->getContext().registerInlineAsmLabel(Offset.getMCSymbol());
