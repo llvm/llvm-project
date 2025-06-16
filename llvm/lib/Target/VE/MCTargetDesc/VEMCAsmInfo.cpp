@@ -14,25 +14,26 @@
 #include "VEMCExpr.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {VEMCExpr::VK_HI32, "hi"},
-    {VEMCExpr::VK_LO32, "lo"},
-    {VEMCExpr::VK_PC_HI32, "pc_hi"},
-    {VEMCExpr::VK_PC_LO32, "pc_lo"},
-    {VEMCExpr::VK_GOT_HI32, "got_hi"},
-    {VEMCExpr::VK_GOT_LO32, "got_lo"},
-    {VEMCExpr::VK_GOTOFF_HI32, "gotoff_hi"},
-    {VEMCExpr::VK_GOTOFF_LO32, "gotoff_lo"},
-    {VEMCExpr::VK_PLT_HI32, "plt_hi"},
-    {VEMCExpr::VK_PLT_LO32, "plt_lo"},
-    {VEMCExpr::VK_TLS_GD_HI32, "tls_gd_hi"},
-    {VEMCExpr::VK_TLS_GD_LO32, "tls_gd_lo"},
-    {VEMCExpr::VK_TPOFF_HI32, "tpoff_hi"},
-    {VEMCExpr::VK_TPOFF_LO32, "tpoff_lo"},
+    {VE::S_HI32, "hi"},
+    {VE::S_LO32, "lo"},
+    {VE::S_PC_HI32, "pc_hi"},
+    {VE::S_PC_LO32, "pc_lo"},
+    {VE::S_GOT_HI32, "got_hi"},
+    {VE::S_GOT_LO32, "got_lo"},
+    {VE::S_GOTOFF_HI32, "gotoff_hi"},
+    {VE::S_GOTOFF_LO32, "gotoff_lo"},
+    {VE::S_PLT_HI32, "plt_hi"},
+    {VE::S_PLT_LO32, "plt_lo"},
+    {VE::S_TLS_GD_HI32, "tls_gd_hi"},
+    {VE::S_TLS_GD_LO32, "tls_gd_lo"},
+    {VE::S_TPOFF_HI32, "tpoff_hi"},
+    {VE::S_TPOFF_LO32, "tpoff_lo"},
 };
 
 void VEELFMCAsmInfo::anchor() {}
@@ -55,4 +56,21 @@ VEELFMCAsmInfo::VEELFMCAsmInfo(const Triple &TheTriple) {
   SupportsDebugInformation = true;
 
   initializeVariantKinds(variantKindDescs);
+}
+
+void VEELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                        const MCSpecifierExpr &Expr) const {
+  printExpr(OS, *Expr.getSubExpr());
+  auto specifier = Expr.getSpecifier();
+  if (specifier && specifier != VE::S_REFLONG)
+    OS << '@' << getSpecifierName(specifier);
+}
+
+bool VEELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
+                                               MCValue &Res,
+                                               const MCAssembler *Asm) const {
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+  Res.setSpecifier(Expr.getSpecifier());
+  return true;
 }

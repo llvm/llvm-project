@@ -536,6 +536,23 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPIIndex",
+    srcs = [
+        "lib/CAPI/Dialect/Index.cpp",
+    ],
+    hdrs = [
+        "include/mlir-c/Dialect/Index.h",
+    ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":IndexDialect",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPILinalg",
     srcs = [
         "lib/CAPI/Dialect/Linalg.cpp",
@@ -3506,6 +3523,7 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
+        ":SCFTransforms",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorTransforms",
@@ -6881,6 +6899,7 @@ cc_library(
     deps = [
         ":SPIRVDialect",
         ":Support",
+        "//llvm:Support",
         "//llvm:config",
     ],
 )
@@ -11248,13 +11267,19 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "TransformDialectEnumsIncGen",
+    name = "TransformAttrsIncGen",
     tbl_outs = {
         "include/mlir/Dialect/Transform/IR/TransformDialectEnums.h.inc": [
             "-gen-enum-decls",
         ],
         "include/mlir/Dialect/Transform/IR/TransformDialectEnums.cpp.inc": [
             "-gen-enum-defs",
+        ],
+        "include/mlir/Dialect/Transform/IR/TransformAttrs.h.inc": [
+            "-gen-attrdef-decls",
+        ],
+        "include/mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc": [
+            "-gen-attrdef-defs",
         ],
     },
     tblgen = ":mlir-tblgen",
@@ -11381,7 +11406,7 @@ cc_library(
         ":Rewrite",
         ":SideEffectInterfaces",
         ":Support",
-        ":TransformDialectEnumsIncGen",
+        ":TransformAttrsIncGen",
         ":TransformDialectIncGen",
         ":TransformDialectInterfaces",
         ":TransformDialectUtils",
