@@ -38,5 +38,11 @@ Options
 
 .. option:: StrictMode
 
-    Disabling this option promotes more fixit hints even when they might
+    Disabling this option promotes more fix-it hints even when they might
     change evaluation order or skip side effects. Default value is `true`.
+
+.. option:: IgnoreMacros
+
+    Enabling this option hides the warning message in a situation where
+    it is not possible to change a bitwise operator to a logical one due
+    to a macro in the expression body. Default value is `false`.
