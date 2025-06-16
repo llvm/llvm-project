@@ -106,13 +106,6 @@ struct TestXeGPUUnrollingPatterns
             auto layout = llvm::dyn_cast_if_present<xegpu::LayoutAttr>(
                 tdescTy.getLayout());
            
-            if (layout) {
-              if (layout.getLaneLayout() == nullptr)
-                layout = xegpu::LayoutAttr();
-              else
-                layout = layout.dropInstData();
-            }
-
             if (encoding && mlir::isa<xegpu::ScatterTensorDescAttr>(encoding)) {
               auto scatterAttr = mlir::dyn_cast<xegpu::ScatterTensorDescAttr>(encoding);
               int64_t chunkSize = scatterAttr.getChunkSize().getInt();
@@ -135,6 +128,13 @@ struct TestXeGPUUnrollingPatterns
               }
 
             }
+            if (layout) {
+              if (layout.getLaneLayout() == nullptr)
+                layout = xegpu::LayoutAttr();
+              else
+                layout = layout.dropInstData();
+            }
+
             newTy = xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding, layout);
 
           } else {

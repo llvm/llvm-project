@@ -267,7 +267,7 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     return success();
   }
 };
-/*
+
 struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
   using UnrollPattern<xegpu::StoreNdOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::StoreNdOp op,
@@ -294,49 +294,6 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
       rewriter.create<xegpu::StoreNdOp>(loc, v, t, op.getL1HintAttr(),
                                         op.getL2HintAttr(), op.getL3HintAttr());
 
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-*/
-
-struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
-  using UnrollPattern<xegpu::StoreNdOp>::UnrollPattern;
-  LogicalResult matchAndRewrite(xegpu::StoreNdOp op,
-                                PatternRewriter &rewriter) const override {
-    Location loc = op.getLoc();
-    VectorType valueTy = op.getValueType();
-    xegpu::TensorDescType tdescTy = op.getTensorDescType();
-
-    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    LDBG("UnrollStoreNdOp: targetShape present? " << (targetShape.has_value() ? "yes" : "no"));
-    if (!targetShape)
-      return failure();
-
-    LDBG("targetShape: ");
-    for (auto v : *targetShape) LDBG("  " << v);
-
-    SmallVector<Type> convertedValTypes =
-        getUnrolledTypes(valueTy, *targetShape);
-    LDBG("convertedValTypes size: " << convertedValTypes.size());
-    SmallVector<Type> convertedTdescTypes =
-        getUnrolledTypes(tdescTy, *targetShape);
-    LDBG("convertedTdescTypes size: " << convertedTdescTypes.size());
-
-    SmallVector<Value> convertedValues =
-        pack(op.getValue(), convertedValTypes, *targetShape, loc, rewriter);
-    LDBG("convertedValues size: " << convertedValues.size());
-    SmallVector<Value> convertedTdescs = pack(
-        op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
-    LDBG("convertedTdescs size: " << convertedTdescs.size());
-
-    for (auto [v, t] : llvm::zip(convertedValues, convertedTdescs)) {
-      LDBG("Creating StoreNdOp with value: " << v << ", tdesc: " << t);
-      rewriter.create<xegpu::StoreNdOp>(loc, v, t, op.getL1HintAttr(),
-                                        op.getL2HintAttr(), op.getL3HintAttr());
-    }
-
-    LDBG("Erasing original StoreNdOp: " << op);
     rewriter.eraseOp(op);
     return success();
   }
