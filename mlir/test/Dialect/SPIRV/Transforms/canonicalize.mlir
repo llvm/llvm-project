@@ -2498,16 +2498,17 @@ func.func @cannot_canonicalize_selection_op_4(%cond: i1) -> () {
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: @convert_length_into_fabs_scalar
-func.func @convert_length_in_fabs_scalar(%arg0 : f32) -> f32 {
-
+func.func @convert_length_into_fabs_scalar(%arg0 : f32) -> f32 {
+  //CHECK: spirv.GL.FAbs {{%.*}} : f32
+  //CHECK-NOT: spirv.GL.Length
   %0 = spirv.GL.Length %arg0 : f32 -> f32
-  //%11 = spirv.GL.Length %arg1 : vector<3xf32> -> f32
   spirv.ReturnValue %0 : f32
 }
 
 // CHECK-LABEL: @dont_convert_length_into_fabs_vec
-func.func @dont_convert_length_in_fabs_vec(%arg0 : vector<3xf32>) -> f32 {
-
+func.func @dont_convert_length_into_fabs_vec(%arg0 : vector<3xf32>) -> f32 {
+  //CHECK: spirv.GL.Length {{%.*}} : vector<3xf32> -> f32
+  //CHECK-NOT: spirv.GL.FAbs
   %0 = spirv.GL.Length %arg0 : vector<3xf32> -> f32
   spirv.ReturnValue %0 : f32
 }
