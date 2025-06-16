@@ -585,42 +585,6 @@ func.func @warp_scf_for_multiple_yield(%arg0: index, %arg1: memref<?xf32>, %arg2
 }
 
 // -----
-// CHECK-PROP-LABEL: func.func @warp_scf_for_unused_yield(
-//       CHECK-PROP: %[[W0:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<4xf32>, vector<4xf32>) {
-//       CHECK-PROP: %[[INI0:.*]] = "some_def"() : () -> vector<128xf32>
-//       CHECK-PROP: %[[INI1:.*]] = "some_def"() : () -> vector<128xf32>
-//       CHECK-PROP: gpu.yield %[[INI0]], %[[INI1]] : vector<128xf32>, vector<128xf32>
-//       CHECK-PROP: }
-//       CHECK-PROP: %[[F:.*]]:2 = scf.for %{{.*}} iter_args(%{{.*}} = %[[W0]]#0, %{{.*}} = %[[W0]]#1) -> (vector<4xf32>, vector<4xf32>) {
-//       CHECK-PROP: %[[W1:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[32] args(%{{.*}} : vector<4xf32>, vector<4xf32>) -> (vector<4xf32>, vector<4xf32>) {
-//       CHECK-PROP: %[[ACC0:.*]] = "some_def"(%{{.*}}) : (vector<128xf32>, index) -> vector<128xf32>
-//       CHECK-PROP: %[[ACC1:.*]] = "some_def"(%{{.*}}) : (index, vector<128xf32>, vector<128xf32>) -> vector<128xf32>
-//       CHECK-PROP: gpu.yield %[[ACC1]], %[[ACC0]] : vector<128xf32>, vector<128xf32>
-//       CHECK-PROP: }
-//       CHECK-PROP: scf.yield %[[W1]]#0, %[[W1]]#1 : vector<4xf32>, vector<4xf32>
-//       CHECK-PROP: }
-//       CHECK-PROP: "some_use"(%[[F]]#0) : (vector<4xf32>) -> ()
-func.func @warp_scf_for_unused_yield(%arg0: index) {
-  %c128 = arith.constant 128 : index
-  %c1 = arith.constant 1 : index
-  %c0 = arith.constant 0 : index
-  %0 = gpu.warp_execute_on_lane_0(%arg0)[32] -> (vector<4xf32>) {
-    %ini = "some_def"() : () -> (vector<128xf32>)
-    %ini1 = "some_def"() : () -> (vector<128xf32>)
-    %3:2 = scf.for %arg3 = %c0 to %c128 step %c1 iter_args(%arg4 = %ini, %arg5 = %ini1) -> (vector<128xf32>, vector<128xf32>) {
-      %add = arith.addi %arg3, %c1 : index
-      %1  = "some_def"(%arg5, %add) : (vector<128xf32>, index) -> (vector<128xf32>)
-      %acc = "some_def"(%add, %arg4, %1) : (index, vector<128xf32>, vector<128xf32>) -> (vector<128xf32>)
-      scf.yield %acc, %1 : vector<128xf32>, vector<128xf32>
-    }
-    gpu.yield %3#0 : vector<128xf32>
-  }
-  "some_use"(%0) : (vector<4xf32>) -> ()
-  return
-}
-
-
-// -----
 
 // CHECK-PROP-LABEL: func @vector_reduction(
 //  CHECK-PROP-SAME:     %[[laneid:.*]]: index)

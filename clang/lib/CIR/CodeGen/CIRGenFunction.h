@@ -316,6 +316,10 @@ public:
     ~SourceLocRAIIObject() { restore(); }
   };
 
+  /// Hold counters for incrementally naming temporaries
+  unsigned counterAggTmp = 0;
+  std::string getCounterAggTmpAsString();
+
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
   mlir::Location getLoc(clang::SourceLocation srcLoc);
   mlir::Location getLoc(clang::SourceRange srcLoc);
@@ -333,6 +337,8 @@ public:
     PrototypeWrapper(const clang::FunctionProtoType *ft) : p(ft) {}
     PrototypeWrapper(const clang::ObjCMethodDecl *md) : p(md) {}
   };
+
+  bool isLValueSuitableForInlineAtomic(LValue lv);
 
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
@@ -464,6 +470,10 @@ public:
   /// Perform the usual unary conversions on the specified expression and
   /// compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *e);
+
+  cir::GlobalOp addInitializerToStaticVarDecl(const VarDecl &d,
+                                              cir::GlobalOp gv,
+                                              cir::GetGlobalOp gvAddr);
 
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
@@ -695,6 +705,8 @@ public:
                          mlir::OpBuilder::InsertPoint ip,
                          mlir::Value arraySize = nullptr);
 
+  void emitAggregateStore(mlir::Value value, Address dest);
+
   void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
 
   LValue emitAggExprToLValue(const Expr *e);
@@ -703,7 +715,8 @@ public:
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
   /// should be returned.
-  RValue emitAnyExpr(const clang::Expr *e);
+  RValue emitAnyExpr(const clang::Expr *e,
+                     AggValueSlot aggSlot = AggValueSlot::ignored());
 
   /// Similarly to emitAnyExpr(), however, the result will always be accessible
   /// even if no aggregate location is provided.
@@ -849,6 +862,10 @@ public:
 
   mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
 
+  /// Emit the computation of the specified expression of complex type,
+  /// returning the result.
+  mlir::Value emitComplexExpr(const Expr *e);
+
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
   void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
@@ -947,6 +964,11 @@ public:
 
   void emitScalarInit(const clang::Expr *init, mlir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
+
+  void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
+
+  void emitStoreOfComplex(mlir::Location loc, mlir::Value v, LValue dest,
+                          bool isInit);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
                          clang::QualType ty, bool isInit = false,
@@ -1151,6 +1173,17 @@ public:
 
   void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
   void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
+
+  /// Create a temporary memory object for the given aggregate type.
+  AggValueSlot createAggTemp(QualType ty, mlir::Location loc,
+                             const Twine &name = "tmp",
+                             Address *alloca = nullptr) {
+    assert(!cir::MissingFeatures::aggValueSlot());
+    return AggValueSlot::forAddr(
+        createMemTemp(ty, loc, name, alloca), ty.getQualifiers(),
+        AggValueSlot::IsNotDestructed, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap);
+  }
 
 private:
   QualType getVarArgType(const Expr *arg);
