@@ -341,24 +341,21 @@ struct WgToSgElementwiseOp : public ConversionPattern {
                   ConversionPatternRewriter &rewriter) const override {
     // Only match ops with elementwise trait
     if (!OpTrait::hasElementwiseMappableTraits(op))
-      return rewriter.notifyMatchFailure(op, "Not an elementwise op");
+      return failure();
 
     auto resultType = dyn_cast<VectorType>(op->getResult(0).getType());
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
     xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op->getResult(0));
     if (!layout || !layout.getSgLayout())
-      return rewriter.notifyMatchFailure(
-          op, "Operation does not have a valid layout attribute for subgroup "
-              "distribution");
+      return failure();
 
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
 
     size_t numVariants = operands.empty() ? 0 : operands.front().size();
     for (auto &operandVec : operands)
       if (operandVec.size() != numVariants)
-        return rewriter.notifyMatchFailure(
-            op, "Operand lists have mismatched sizes");
+        return failure();
 
     SmallVector<Value> newResults;
     VectorType newResultType =
@@ -375,7 +372,7 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       // Copy all attributes, but update "layout_result_0" to drop
       // sgLayout/sgData
       for (auto attr : op->getAttrs()) {
-        if (attr.getName() != "layout_result_0")
+        if (!isa<xegpu::LayoutAttr>(attr.getValue()))
           state.addAttribute(attr.getName(), attr.getValue());
       }
       Operation *newOp = rewriter.create(state);
@@ -598,10 +595,10 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           }
         }
 
-        auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(
-            op->getAttrOfType<xegpu::LayoutAttr>("layout_result_0"));
+        xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op->getResult(0));
         return isLegal(layout);
       });
+
   target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
       [=](UnrealizedConversionCastOp op) {
         return llvm::is_contained(existingCastOps, op.getOperation());
