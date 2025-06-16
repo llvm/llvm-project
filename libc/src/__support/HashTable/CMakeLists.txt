@@ -32,9 +32,8 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization
     libc.src.__support.memory_size
-    libc.src.string.memset
-    libc.src.string.strcmp
-    libc.src.string.strlen
+    libc.src.string.memory_utils.inline_strcmp
+    libc.src.string.string_utils
 )
 
 add_header_library(
