@@ -69,6 +69,37 @@ public:
                               FunctionNameRepresentation representation,
                               Stream &s) override;
 
+  /// Returns the name of function up to the first generic or opening
+  /// parenthesis.
+  ///
+  /// The following function will have the name "foo":
+  /// \code{.swift}
+  /// func foo<T>(bar: T) {}
+  /// \endcode
+  ///
+  /// \param sc        The associated SymbolContext.
+  /// \param exe_ctx   The associated ExecutionContext.
+  /// \returns The name of a function as an std::string.
+  std::string GetFunctionName(const SymbolContext &sc,
+                              const ExecutionContext *exe_ctx);
+
+  /// Returns the arguments of a function call with its generics if any.
+  ///
+  /// Calling GetFunctionDisplayArgs on the following function call will return
+  /// "<Int>(bar=1)"
+  /// \code{.swift}
+  /// func foo<T>(bar: T) {}
+  /// foo(1)
+  /// \endcode
+  ///
+  /// \param sc        The associated SymbolContext.
+  /// \param args      The VariableList that are passed to the function.
+  /// \param exe_ctx   The associated ExecutionContext.
+  /// \returns The generics and arguments of a function call as an std::string.
+  std::string
+  GetFunctionDisplayArgs(const SymbolContext &sc, VariableList &args,
+                         const lldb_private::ExecutionContext *exe_ctx);
+
   void GetExceptionResolverDescription(bool catch_on, bool throw_on,
                                        Stream &s) override;
 
