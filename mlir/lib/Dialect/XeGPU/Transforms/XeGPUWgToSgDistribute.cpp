@@ -8,10 +8,12 @@
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -19,6 +21,7 @@
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <optional>
 
 namespace mlir {
 namespace xegpu {
@@ -328,6 +331,63 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
+// This pattern transforms elementwise ops in math/arith dialect
+struct WgToSgElementwiseOp : public ConversionPattern {
+  WgToSgElementwiseOp(MLIRContext *ctx)
+      : ConversionPattern(MatchAnyOpTypeTag(), /*benefit=*/1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Only match ops with elementwise trait
+    if (!OpTrait::hasElementwiseMappableTraits(op))
+      return rewriter.notifyMatchFailure(op, "Not an elementwise op");
+
+    auto resultType = dyn_cast<VectorType>(op->getResult(0).getType());
+    ArrayRef<int64_t> wgShape = resultType.getShape();
+
+    xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op->getResult(0));
+    if (!layout || !layout.getSgLayout())
+      return rewriter.notifyMatchFailure(
+          op, "Operation does not have a valid layout attribute for subgroup "
+              "distribution");
+
+    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
+
+    size_t numVariants = operands.empty() ? 0 : operands.front().size();
+    for (auto &operandVec : operands)
+      if (operandVec.size() != numVariants)
+        return rewriter.notifyMatchFailure(
+            op, "Operand lists have mismatched sizes");
+
+    SmallVector<Value> newResults;
+    VectorType newResultType =
+        VectorType::get(sgShape, resultType.getElementType());
+
+    for (size_t i = 0; i < numVariants; ++i) {
+      SmallVector<Value> opOperands;
+      for (auto &operandVec : operands)
+        opOperands.push_back(operandVec[i]);
+
+      OperationState state(op->getLoc(), op->getName());
+      state.addOperands(opOperands);
+      state.addTypes(newResultType);
+      // Copy all attributes, but update "layout_result_0" to drop
+      // sgLayout/sgData
+      for (auto attr : op->getAttrs()) {
+        if (attr.getName() != "layout_result_0")
+          state.addAttribute(attr.getName(), attr.getValue());
+      }
+      Operation *newOp = rewriter.create(state);
+      xegpu::setLayoutAttr(newOp->getResult(0), layout.dropSgLayoutAndData());
+      newResults.push_back(newOp->getResult(0));
+    }
+
+    rewriter.replaceOpWithMultiple(op, {newResults});
+    return success();
+  }
+};
+
 // Handles UnrealizedConversionCastOp generated during
 // SCFStructuralTypeConversions (step 1). This op may appear as either a
 // target or source materialization for Vector values, e.g.:
@@ -411,7 +471,8 @@ namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp,
                WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
-               UnrealizedConversionCastOpPattern>(patterns.getContext());
+               UnrealizedConversionCastOpPattern, WgToSgElementwiseOp>(
+      patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -518,6 +579,29 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     return isLegal(layout);
   });
 
+  target.addDynamicallyLegalDialect<math::MathDialect, arith::ArithDialect>(
+      [=](Operation *op) -> std::optional<bool> {
+        // Only handle elementwise mappable ops
+        if (!OpTrait::hasElementwiseMappableTraits(op))
+          return true;
+
+        VectorType resultType =
+            dyn_cast<VectorType>(op->getResult(0).getType());
+        if (!resultType)
+          return true;
+
+        // Check if all operands are vectors of the same shape
+        for (Value operand : op->getOperands()) {
+          VectorType operandType = dyn_cast<VectorType>(operand.getType());
+          if (!operandType || operandType.getShape() != resultType.getShape()) {
+            return true;
+          }
+        }
+
+        auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(
+            op->getAttrOfType<xegpu::LayoutAttr>("layout_result_0"));
+        return isLegal(layout);
+      });
   target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
       [=](UnrealizedConversionCastOp op) {
         return llvm::is_contained(existingCastOps, op.getOperation());
