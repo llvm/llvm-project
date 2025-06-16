@@ -23,6 +23,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/Utility/XcodeSDK.h"
+#include "lldb/Utility/XcodeSDKPath.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"

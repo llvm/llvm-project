@@ -79,6 +79,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   VASprintf.cpp
   VMRange.cpp
   XcodeSDK.cpp
+  XcodeSDKPath.cpp
   ZipFile.cpp
 
   LINK_COMPONENTS
