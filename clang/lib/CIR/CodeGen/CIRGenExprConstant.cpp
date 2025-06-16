@@ -330,6 +330,222 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
 }
 
 //===----------------------------------------------------------------------===//
+//                          ConstantLValueEmitter
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// A struct which can be used to peephole certain kinds of finalization
+/// that normally happen during l-value emission.
+struct ConstantLValue {
+  llvm::PointerUnion<mlir::Value, mlir::Attribute> value;
+  bool hasOffsetApplied;
+
+  ConstantLValue(std::nullptr_t) : value(nullptr), hasOffsetApplied(false) {}
+  ConstantLValue() : value(nullptr), hasOffsetApplied(false) {}
+};
+
+/// A helper class for emitting constant l-values.
+class ConstantLValueEmitter
+    : public ConstStmtVisitor<ConstantLValueEmitter, ConstantLValue> {
+  CIRGenModule &cgm;
+  ConstantEmitter &emitter;
+  const APValue &value;
+  QualType destType;
+
+  // Befriend StmtVisitorBase so that we don't have to expose Visit*.
+  friend StmtVisitorBase;
+
+public:
+  ConstantLValueEmitter(ConstantEmitter &emitter, const APValue &value,
+                        QualType destType)
+      : cgm(emitter.cgm), emitter(emitter), value(value), destType(destType) {}
+
+  mlir::Attribute tryEmit();
+
+private:
+  mlir::Attribute tryEmitAbsolute(mlir::Type destTy);
+  ConstantLValue tryEmitBase(const APValue::LValueBase &base);
+
+  ConstantLValue VisitStmt(const Stmt *s) { return nullptr; }
+  ConstantLValue VisitConstantExpr(const ConstantExpr *e);
+  ConstantLValue VisitCompoundLiteralExpr(const CompoundLiteralExpr *e);
+  ConstantLValue VisitStringLiteral(const StringLiteral *e);
+  ConstantLValue VisitObjCBoxedExpr(const ObjCBoxedExpr *e);
+  ConstantLValue VisitObjCEncodeExpr(const ObjCEncodeExpr *e);
+  ConstantLValue VisitObjCStringLiteral(const ObjCStringLiteral *e);
+  ConstantLValue VisitPredefinedExpr(const PredefinedExpr *e);
+  ConstantLValue VisitAddrLabelExpr(const AddrLabelExpr *e);
+  ConstantLValue VisitCallExpr(const CallExpr *e);
+  ConstantLValue VisitBlockExpr(const BlockExpr *e);
+  ConstantLValue VisitCXXTypeidExpr(const CXXTypeidExpr *e);
+  ConstantLValue
+  VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
+};
+
+} // namespace
+
+mlir::Attribute ConstantLValueEmitter::tryEmit() {
+  const APValue::LValueBase &base = value.getLValueBase();
+
+  // The destination type should be a pointer or reference
+  // type, but it might also be a cast thereof.
+  //
+  // FIXME: the chain of casts required should be reflected in the APValue.
+  // We need this in order to correctly handle things like a ptrtoint of a
+  // non-zero null pointer and addrspace casts that aren't trivially
+  // represented in LLVM IR.
+  mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
+  assert(mlir::isa<cir::PointerType>(destTy));
+
+  // If there's no base at all, this is a null or absolute pointer,
+  // possibly cast back to an integer type.
+  if (!base)
+    return tryEmitAbsolute(destTy);
+
+  // Otherwise, try to emit the base.
+  ConstantLValue result = tryEmitBase(base);
+
+  // If that failed, we're done.
+  llvm::PointerUnion<mlir::Value, mlir::Attribute> &value = result.value;
+  if (!value)
+    return {};
+
+  // Apply the offset if necessary and not already done.
+  if (!result.hasOffsetApplied) {
+    cgm.errorNYI("ConstantLValueEmitter: apply offset");
+    return {};
+  }
+
+  // Convert to the appropriate type; this could be an lvalue for
+  // an integer. FIXME: performAddrSpaceCast
+  if (mlir::isa<cir::PointerType>(destTy)) {
+    if (auto attr = mlir::dyn_cast<mlir::Attribute>(value))
+      return attr;
+    cgm.errorNYI("ConstantLValueEmitter: non-attribute pointer");
+    return {};
+  }
+
+  cgm.errorNYI("ConstantLValueEmitter: other?");
+  return {};
+}
+
+/// Try to emit an absolute l-value, such as a null pointer or an integer
+/// bitcast to pointer type.
+mlir::Attribute ConstantLValueEmitter::tryEmitAbsolute(mlir::Type destTy) {
+  // If we're producing a pointer, this is easy.
+  auto destPtrTy = mlir::cast<cir::PointerType>(destTy);
+  return cgm.getBuilder().getConstPtrAttr(
+      destPtrTy, value.getLValueOffset().getQuantity());
+}
+
+ConstantLValue
+ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
+  // Handle values.
+  if (const ValueDecl *d = base.dyn_cast<const ValueDecl *>()) {
+    // The constant always points to the canonical declaration. We want to look
+    // at properties of the most recent declaration at the point of emission.
+    d = cast<ValueDecl>(d->getMostRecentDecl());
+
+    if (d->hasAttr<WeakRefAttr>()) {
+      cgm.errorNYI(d->getSourceRange(),
+                   "ConstantLValueEmitter: emit pointer base for weakref");
+      return {};
+    }
+
+    if (auto *fd = dyn_cast<FunctionDecl>(d)) {
+      cgm.errorNYI(fd->getSourceRange(),
+                   "ConstantLValueEmitter: function decl");
+      return {};
+    }
+
+    if (auto *vd = dyn_cast<VarDecl>(d)) {
+      cgm.errorNYI(vd->getSourceRange(), "ConstantLValueEmitter: var decl");
+      return {};
+    }
+  }
+
+  // Handle typeid(T).
+  if (base.dyn_cast<TypeInfoLValue>()) {
+    cgm.errorNYI("ConstantLValueEmitter: typeid");
+    return {};
+  }
+
+  // Otherwise, it must be an expression.
+  return Visit(base.get<const Expr *>());
+}
+
+ConstantLValue ConstantLValueEmitter::VisitConstantExpr(const ConstantExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: constant expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitCompoundLiteralExpr(const CompoundLiteralExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: compound literal");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitStringLiteral(const StringLiteral *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: string literal");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCEncodeExpr(const ObjCEncodeExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: objc encode expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCStringLiteral(const ObjCStringLiteral *e) {
+  cgm.errorNYI(e->getSourceRange(),
+               "ConstantLValueEmitter: objc string literal");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCBoxedExpr(const ObjCBoxedExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: objc boxed expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: predefined expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: addr label expr");
+  return {};
+}
+
+ConstantLValue ConstantLValueEmitter::VisitCallExpr(const CallExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: call expr");
+  return {};
+}
+
+ConstantLValue ConstantLValueEmitter::VisitBlockExpr(const BlockExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: block expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitCXXTypeidExpr(const CXXTypeidExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: cxx typeid expr");
+  return {};
+}
+
+ConstantLValue ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
+    const MaterializeTemporaryExpr *e) {
+  cgm.errorNYI(e->getSourceRange(),
+               "ConstantLValueEmitter: materialize temporary expr");
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 //                             ConstantEmitter
 //===----------------------------------------------------------------------===//
 
@@ -556,23 +772,8 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate member pointer");
     return {};
   }
-  case APValue::LValue: {
-
-    if (value.getLValueBase()) {
-      cgm.errorNYI("non-null pointer initialization");
-    } else {
-
-      mlir::Type desiredType = cgm.convertType(destType);
-      if (const cir::PointerType ptrType =
-              mlir::dyn_cast<cir::PointerType>(desiredType)) {
-        return builder.getConstPtrAttr(ptrType,
-                                       value.getLValueOffset().getQuantity());
-      } else {
-        llvm_unreachable("non-pointer variable initialized with a pointer");
-      }
-    }
-    return {};
-  }
+  case APValue::LValue:
+    return ConstantLValueEmitter(*this, value, destType).tryEmit();
   case APValue::Struct:
   case APValue::Union:
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate struct or union");
