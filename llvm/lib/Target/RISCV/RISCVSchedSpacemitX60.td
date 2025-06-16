@@ -375,10 +375,10 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVIMergeV",  [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMergeX",  [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMergeI",  [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMovV",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMovX",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMovI",    [SMX60_VIEU], mx, IsWorstCase>;
   }
-  defm "" : LMULWriteResMX<"WriteVIMovV",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIMovX",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIMovI",    [SMX60_VIEU], mx, IsWorstCase>;
 
   defm "" : LMULWriteResMX<"WriteVShiftV",   [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVShiftX",   [SMX60_VIEU], mx, IsWorstCase>;
