@@ -1363,6 +1363,48 @@ static bool equivalentAddressValues(Value *A, Value *B) {
   return false;
 }
 
+// Combine
+//   %load = load <8 x i32>, ptr %ptr, align 32
+//   %sel = select <8 x i1> %cmp, <8 x i32> %x, <8 x i32> %load
+//   store <8 x i32> %sel, ptr %ptr, align 32
+// to
+//   @llvm.masked.store.v8i32.p0(<8 x i32> %x, ptr %ptr, i32 32, <8 x i1> %cmp)
+static bool combineToMaskedStore(InstCombinerImpl &IC, StoreInst &Store) {
+  Value *StoredValue = Store.getValueOperand();
+  auto *Select = dyn_cast<SelectInst>(StoredValue);
+  if (!Select || !StoredValue->getType()->isVectorTy())
+    return false;
+
+  Value *Condition = Select->getCondition();
+  Value *TrueValue = Select->getTrueValue();
+  Value *FalseValue = Select->getFalseValue();
+
+  const auto *Load = dyn_cast<LoadInst>(FalseValue);
+  if (!Load || Load->getPointerOperand() != Store.getPointerOperand())
+    return false;
+
+  if (Load->isVolatile() || Store.isVolatile() || Load->isAtomic() ||
+      Store.isAtomic())
+    return false;
+
+  Value *Pointer = Store.getPointerOperand();
+
+  for (const auto *I = Load->getNextNode(); I && I != &Store;
+       I = I->getNextNode()) {
+    if (I->mayHaveSideEffects())
+      return false;
+
+    if (const auto *OtherStore = dyn_cast<StoreInst>(I)) {
+      if (OtherStore->getPointerOperand() == Pointer)
+        return false;
+    }
+  }
+
+  IC.Builder.CreateMaskedStore(TrueValue, Pointer, Store.getAlign(), Condition);
+
+  return true;
+}
+
 Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   Value *Val = SI.getOperand(0);
   Value *Ptr = SI.getOperand(1);
@@ -1373,6 +1415,9 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
 
   // Try to canonicalize the stored type.
   if (unpackStoreToAggregate(*this, SI))
+    return eraseInstFromFunction(SI);
+
+  if (combineToMaskedStore(*this, SI))
     return eraseInstFromFunction(SI);
 
   // Replace GEP indices if possible.

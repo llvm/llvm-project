@@ -61,8 +61,7 @@ define i32 @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end) 
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD4]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul <4 x i32> [[WIDE_LOAD]], splat (i32 5)
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[TMP15]], splat (i32 3)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[DOTNOT]], <4 x i32> [[TMP16]], <4 x i32> [[WIDE_LOAD]]
-; CHECK-NEXT:    store <4 x i32> [[PREDPHI]], ptr [[TMP13]], align 4, !alias.scope [[META0]], !noalias [[META3]]
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP16]], ptr [[TMP13]], i32 4, <4 x i1> [[DOTNOT]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
