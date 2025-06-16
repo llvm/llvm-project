@@ -632,7 +632,7 @@ static std::optional<Address> FindAddressForLineNumber(Function &function,
     return std::nullopt;
 
   // Get the first line entry for this function.
-  AddressRange func_range = function.GetAddressRange();
+  AddressRange func_range = function.GetAddressRanges().front();
   uint32_t first_entry_idx;
   {
     LineEntry first_line_entry;
@@ -683,9 +683,9 @@ GetFuncToLocalVariablesMap(llvm::ArrayRef<Function *> funcs) {
 
 /// Returns the first line associated with `function`.
 static uint32_t GetLineNumberForFunction(Function &function) {
-  FileSpec filespec;
+  SupportFileSP func_decl_file_sp;
   uint32_t line_num = 0;
-  function.GetStartLineSourceInfo(filespec, line_num);
+  function.GetStartLineSourceInfo(func_decl_file_sp, line_num);
   return line_num;
 }
 
