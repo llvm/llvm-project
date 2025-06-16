@@ -704,6 +704,7 @@ Bug Fixes in This Version
 - Fixed a bug with constexpr evaluation for structs containing unions in case of C++ modules. (#GH143168)
 - Fixed incorrect token location when emitting diagnostics for tokens expanded from macros. (#GH143216)
 - Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
+- Fixed a crash when an invalid attribute is applied to a using declaration in a ``constexpr`` function. (#GH144264)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
