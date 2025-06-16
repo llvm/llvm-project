@@ -2788,7 +2788,7 @@ std::pair<size_t, Immediate> LSRInstance::getUse(const SCEV *&Expr,
   }
 
   std::pair<UseMapTy::iterator, bool> P =
-    UseMap.insert(std::make_pair(LSRUse::SCEVUseKindPair(Expr, Kind), 0));
+      UseMap.try_emplace(LSRUse::SCEVUseKindPair(Expr, Kind));
   if (!P.second) {
     // A use already existed with this base.
     size_t LUIdx = P.first->second;
@@ -6008,9 +6008,8 @@ static bool canHoistIVInc(const TargetTransformInfo &TTI, const LSRFixup &Fixup,
 
   Instruction *I = Fixup.UserInst;
   Type *Ty = I->getType();
-  return Ty->isIntegerTy() &&
-         ((isa<LoadInst>(I) && TTI.isIndexedLoadLegal(TTI.MIM_PostInc, Ty)) ||
-          (isa<StoreInst>(I) && TTI.isIndexedStoreLegal(TTI.MIM_PostInc, Ty)));
+  return (isa<LoadInst>(I) && TTI.isIndexedLoadLegal(TTI.MIM_PostInc, Ty)) ||
+         (isa<StoreInst>(I) && TTI.isIndexedStoreLegal(TTI.MIM_PostInc, Ty));
 }
 
 /// Rewrite all the fixup locations with new values, following the chosen

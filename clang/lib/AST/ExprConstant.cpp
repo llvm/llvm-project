@@ -6844,7 +6844,8 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
         // FIXME: In this case, the values of the other subobjects are
         // specified, since zero-initialization sets all padding bits to zero.
         if (!Value->hasValue() ||
-            (Value->isUnion() && Value->getUnionField() != FD)) {
+            (Value->isUnion() &&
+             !declaresSameEntity(Value->getUnionField(), FD))) {
           if (CD->isUnion())
             *Value = APValue(FD);
           else
@@ -17326,7 +17327,6 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::CXXDeleteExprClass:
   case Expr::CXXPseudoDestructorExprClass:
   case Expr::UnresolvedLookupExprClass:
-  case Expr::TypoExprClass:
   case Expr::RecoveryExprClass:
   case Expr::DependentScopeDeclRefExprClass:
   case Expr::CXXConstructExprClass:

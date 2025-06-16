@@ -1849,7 +1849,7 @@ def ZTR : RegisterClass<"AArch64", [untyped], 512, (add ZT0)> {
 // * Tile vectors:
 //
 //   Their representation is similar to regular tiles, but they have an extra
-//   'h' or 'v' to tell how the vector at [reg+offset] is layed out in the tile,
+//   'h' or 'v' to tell how the vector at [reg+offset] is laid out in the tile,
 //   horizontally or vertically.
 //
 //   e.g. za1h.h or za15v.q, which corresponds to vectors in registers ZAH1 and

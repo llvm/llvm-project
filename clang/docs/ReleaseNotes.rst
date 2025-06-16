@@ -157,6 +157,8 @@ Resolutions to C++ Defect Reports
   `constraint-expression <https://cplusplus.github.io/CWG/issues/2517.html>`_.
 - Implemented `CWG3005 Function parameters should never be name-independent <https://wg21.link/CWG3005>`_.
 
+- Implemented `CWG2496 ref-qualifiers and virtual overriding <https://wg21.link/CWG2496>`_.
+
 C Language Changes
 ------------------
 
@@ -289,6 +291,8 @@ C23 Feature Support
   directive. Fixes #GH126940.
 - Fixed a crash when a declaration of a ``constexpr`` variable with an invalid
   type. Fixes #GH140887
+- Documented `WG14 N3006 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
+  which clarified how Clang is handling underspecified object declarations.
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -618,6 +622,14 @@ Improvements to Clang's diagnostics
 
 - Improved the FixIts for unused lambda captures.
 
+- Delayed typo correction was removed from the compiler; immediate typo
+  correction behavior remains the same. Delayed typo correction facilities were
+  fragile and unmaintained, and the removal closed the following issues:
+  #GH142457, #GH139913, #GH138850, #GH137867, #GH137860, #GH107840, #GH93308,
+  #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
+  #GH36703, #GH32903, #GH23312, #GH69874.
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -687,8 +699,12 @@ Bug Fixes in This Version
 - Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
 - Fixed duplicate entries in TableGen that caused the wrong attribute to be selected. (GH#140701)
 - Fixed type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed. (#GH141397)
-- Constant evaluation now correctly runs the destructor of a variable declared in 
+- Constant evaluation now correctly runs the destructor of a variable declared in
   the second clause of a C-style ``for`` loop. (#GH139818)
+- Fixed a bug with constexpr evaluation for structs containing unions in case of C++ modules. (#GH143168)
+- Fixed incorrect token location when emitting diagnostics for tokens expanded from macros. (#GH143216)
+- Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
+- Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -836,6 +852,7 @@ Bug Fixes to C++ Support
 - Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
 - Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
 - Fixed an access checking bug when substituting into concepts (#GH115838)
+- Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -843,6 +860,7 @@ Bug Fixes to AST Handling
 - Fixed uninitialized use check in a lambda within CXXOperatorCallExpr. (#GH129198)
 - Fixed a malformed printout of ``CXXParenListInitExpr`` in certain contexts.
 - Fixed a malformed printout of certain calling convention function attributes. (#GH143160)
+- Fixed dependency calculation for TypedefTypes (#GH89774)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1094,6 +1112,10 @@ OpenMP Support
   open parenthesis. (#GH139665)
 - An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have
   an argument larger than what can fit within a 64-bit integer.
+- Added support for private variable reduction.
+- Fixed mapping of arrays of structs containing nested structs with user defined
+  mappers, by using compiler-generated default mappers for the outer structs for
+  such maps.
 
 Improvements
 ^^^^^^^^^^^^
