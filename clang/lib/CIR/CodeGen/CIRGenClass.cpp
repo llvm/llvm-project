@@ -21,6 +21,125 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+/// Checks whether the given constructor is a valid subject for the
+/// complete-to-base constructor delegation optimization, i.e. emitting the
+/// complete constructor as a simple call to the base constructor.
+bool CIRGenFunction::isConstructorDelegationValid(
+    const CXXConstructorDecl *ctor) {
+  // Currently we disable the optimization for classes with virtual bases
+  // because (1) the address of parameter variables need to be consistent across
+  // all initializers but (2) the delegate function call necessarily creates a
+  // second copy of the parameter variable.
+  //
+  // The limiting example (purely theoretical AFAIK):
+  //   struct A { A(int &c) { c++; } };
+  //   struct A : virtual A {
+  //     B(int count) : A(count) { printf("%d\n", count); }
+  //   };
+  // ...although even this example could in principle be emitted as a delegation
+  // since the address of the parameter doesn't escape.
+  if (ctor->getParent()->getNumVBases())
+    return false;
+
+  // We also disable the optimization for variadic functions because it's
+  // impossible to "re-pass" varargs.
+  if (ctor->getType()->castAs<FunctionProtoType>()->isVariadic())
+    return false;
+
+  // FIXME: Decide if we can do a delegation of a delegating constructor.
+  if (ctor->isDelegatingConstructor())
+    return false;
+
+  return true;
+}
+
+/// This routine generates necessary code to initialize base classes and
+/// non-static data members belonging to this constructor.
+void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
+                                      CXXCtorType ctorType,
+                                      FunctionArgList &args) {
+  if (cd->isDelegatingConstructor())
+    return emitDelegatingCXXConstructorCall(cd, args);
+
+  if (cd->getNumCtorInitializers() != 0) {
+    // There's much more to do here.
+    cgm.errorNYI(cd->getSourceRange(), "emitCtorPrologue: any initializer");
+    return;
+  }
+}
+
+Address CIRGenFunction::loadCXXThisAddress() {
+  assert(curFuncDecl && "loading 'this' without a func declaration?");
+  assert(isa<CXXMethodDecl>(curFuncDecl));
+
+  // Lazily compute CXXThisAlignment.
+  if (cxxThisAlignment.isZero()) {
+    // Just use the best known alignment for the parent.
+    // TODO: if we're currently emitting a complete-object ctor/dtor, we can
+    // always use the complete-object alignment.
+    auto rd = cast<CXXMethodDecl>(curFuncDecl)->getParent();
+    cxxThisAlignment = cgm.getClassPointerAlignment(rd);
+  }
+
+  return Address(loadCXXThis(), cxxThisAlignment);
+}
+
+void CIRGenFunction::emitDelegateCXXConstructorCall(
+    const CXXConstructorDecl *ctor, CXXCtorType ctorType,
+    const FunctionArgList &args, SourceLocation loc) {
+  CallArgList delegateArgs;
+
+  FunctionArgList::const_iterator i = args.begin(), e = args.end();
+  assert(i != e && "no parameters to constructor");
+
+  // this
+  Address thisAddr = loadCXXThisAddress();
+  delegateArgs.add(RValue::get(thisAddr.getPointer()), (*i)->getType());
+  ++i;
+
+  // FIXME: The location of the VTT parameter in the parameter list is specific
+  // to the Itanium ABI and shouldn't be hardcoded here.
+  if (cgm.getCXXABI().needsVTTParameter(curGD)) {
+    cgm.errorNYI(loc, "emitDelegateCXXConstructorCall: VTT parameter");
+    return;
+  }
+
+  // Explicit arguments.
+  for (; i != e; ++i) {
+    const VarDecl *param = *i;
+    // FIXME: per-argument source location
+    emitDelegateCallArg(delegateArgs, param, loc);
+  }
+
+  assert(!cir::MissingFeatures::sanitizers());
+
+  emitCXXConstructorCall(ctor, ctorType, /*ForVirtualBase=*/false,
+                         /*Delegating=*/true, thisAddr, delegateArgs, loc);
+}
+
+void CIRGenFunction::emitDelegatingCXXConstructorCall(
+    const CXXConstructorDecl *ctor, const FunctionArgList &args) {
+  assert(ctor->isDelegatingConstructor());
+
+  Address thisPtr = loadCXXThisAddress();
+
+  assert(!cir::MissingFeatures::objCGC());
+  assert(!cir::MissingFeatures::sanitizers());
+  AggValueSlot aggSlot = AggValueSlot::forAddr(
+      thisPtr, Qualifiers(), AggValueSlot::IsDestructed,
+      AggValueSlot::IsNotAliased, AggValueSlot::MayOverlap,
+      AggValueSlot::IsNotZeroed);
+
+  emitAggExpr(ctor->init_begin()[0]->getInit(), aggSlot);
+
+  const CXXRecordDecl *classDecl = ctor->getParent();
+  if (cgm.getLangOpts().Exceptions && !classDecl->hasTrivialDestructor()) {
+    cgm.errorNYI(ctor->getSourceRange(),
+                 "emitDelegatingCXXConstructorCall: exception");
+    return;
+  }
+}
+
 Address CIRGenFunction::getAddressOfBaseClass(
     Address value, const CXXRecordDecl *derived,
     llvm::iterator_range<CastExpr::path_const_iterator> path,

@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -160,9 +161,10 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   else if (OffsetMO.isImm())
     OS << ", " << OffsetMO.getImm();
   else if (OffsetMO.isGlobal() || OffsetMO.isBlockAddress() ||
-           OffsetMO.isMCSymbol())
-    OS << ", " << *MCO.getExpr();
-  else
+           OffsetMO.isMCSymbol()) {
+    OS << ", ";
+    MAI->printExpr(OS, *MCO.getExpr());
+  } else
     return true;
 
   return false;

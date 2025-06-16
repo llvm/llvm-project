@@ -886,9 +886,10 @@ protected:
 #include "CommandOptions.inc"
 
 static llvm::Error CopyExpressionResult(ValueObject &result,
-                                        DataBufferHeap &buffer) {
+                                        DataBufferHeap &buffer,
+                                        ExecutionContextScope *scope) {
   uint64_t value = result.GetValueAsUnsigned(0);
-  auto size_or_err = result.GetCompilerType().GetByteSize(nullptr);
+  auto size_or_err = result.GetCompilerType().GetByteSize(scope);
   if (!size_or_err)
     return size_or_err.takeError();
 
@@ -924,9 +925,17 @@ EvaluateExpression(llvm::StringRef expression, StackFrame &frame,
   ValueObjectSP result_sp;
   auto status =
       process.GetTarget().EvaluateExpression(expression, &frame, result_sp);
-  if (status != eExpressionCompleted || !result_sp)
+  if (!result_sp)
     return llvm::createStringError(
-        "expression evaluation failed. pass a string instead");
+        "No result returned from expression. Exit status: %d", status);
+
+  if (status != eExpressionCompleted)
+    return result_sp->GetError().ToError();
+
+  result_sp = result_sp->GetQualifiedRepresentationIfAvailable(
+      result_sp->GetDynamicValueType(), /*synthValue=*/true);
+  if (!result_sp)
+    return llvm::createStringError("failed to get dynamic result type");
 
   return result_sp;
 }
@@ -1076,13 +1085,15 @@ protected:
           m_memory_options.m_expr.GetValueAs<llvm::StringRef>().value_or(""),
           m_exe_ctx.GetFrameRef(), *process);
       if (!result_or_err) {
+        result.AppendError("Expression evaluation failed: ");
         result.AppendError(llvm::toString(result_or_err.takeError()));
         return;
       }
 
       ValueObjectSP result_sp = *result_or_err;
 
-      if (auto err = CopyExpressionResult(*result_sp, buffer)) {
+      if (auto err = CopyExpressionResult(*result_sp, buffer,
+                                          m_exe_ctx.GetFramePtr())) {
         result.AppendError(llvm::toString(std::move(err)));
         return;
       }
