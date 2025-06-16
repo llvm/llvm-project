@@ -3598,8 +3598,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       break;
     Value *EVL = II->getArgOperand(2);
     // rev(unop rev(X)) --> unop X
-    if (match(Vec, m_OneUse(m_UnOp(m_Intrinsic<Intrinsic::experimental_vp_reverse>(
-          m_Value(X), m_AllOnes(), m_Specific(EVL)))))) {
+    if (match(Vec,
+              m_OneUse(m_UnOp(m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                  m_Value(X), m_AllOnes(), m_Specific(EVL)))))) {
       auto *OldUnOp = cast<UnaryOperator>(Vec);
       auto *NewUnOp = UnaryOperator::CreateWithCopiedFlags(
           OldUnOp->getOpcode(), X, OldUnOp, OldUnOp->getName(),
