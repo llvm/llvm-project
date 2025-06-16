@@ -24,18 +24,6 @@ class StringRef;
 class RISCVMCExpr : public MCSpecifierExpr {
 public:
   using Specifier = uint16_t;
-  // Specifiers mapping to relocation types below FirstTargetFixupKind are
-  // encoded literally, with these exceptions:
-  enum {
-    VK_None,
-    // Specifiers mapping to distinct relocation types.
-    VK_LO = FirstTargetFixupKind,
-    VK_PCREL_LO,
-    VK_TPREL_LO,
-    // Vendor-specific relocation types might conflict across vendors.
-    // Refer to them using Specifier constants.
-    VK_QC_ABS20,
-  };
 
 private:
   explicit RISCVMCExpr(const MCExpr *Expr, Specifier S)
@@ -44,18 +32,6 @@ private:
 public:
   static const RISCVMCExpr *create(const MCExpr *Expr, Specifier S,
                                    MCContext &Ctx);
-
-  /// Get the corresponding PC-relative HI fixup that a VK_PCREL_LO
-  /// points to, and optionally the fragment containing it.
-  ///
-  /// \returns nullptr if this isn't a VK_PCREL_LO pointing to a
-  /// known PC-relative HI fixup.
-  const MCFixup *getPCRelHiFixup(const MCFragment **DFOut) const;
-
-  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-
-  static std::optional<Specifier> getSpecifierForName(StringRef name);
-  static StringRef getSpecifierName(Specifier Kind);
 };
 } // end namespace llvm.
 
