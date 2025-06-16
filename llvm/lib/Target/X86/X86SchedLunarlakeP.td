@@ -1817,7 +1817,7 @@ def LNLPWriteResGroupX236 : SchedWriteRes<[LNLPPort00_01_02_03_04_05, LNLPPort01
   let NumMicroOps = 2;
 }
 def : InstRW<[LNLPWriteResGroupX236], (instregex "^SMSW(32|64)r$")>;
-def LNLPWriteResGroupX237 : SchedWriteRes<[ADLPPort00, LNLPPort20_21_22]> {
+def LNLPWriteResGroupX237 : SchedWriteRes<[LNLPPort00, LNLPPort20_21_22]> {
   let Latency = 24;
   let NumMicroOps = 2;
 }

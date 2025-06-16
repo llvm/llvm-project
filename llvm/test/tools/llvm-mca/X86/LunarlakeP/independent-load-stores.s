@@ -52,43 +52,42 @@
 # ALL-NEXT:       4      12    0.67    *      *            addq	$44, 640(%r14)
 
 # ALL:           Resources:
-# ALL-NEXT:      [0]   - ADLPPort00
-# ALL-NEXT:      [1]   - LNLPPort00
-# ALL-NEXT:      [2]   - LNLPPort01
-# ALL-NEXT:      [3]   - LNLPPort02
-# ALL-NEXT:      [4]   - LNLPPort03
-# ALL-NEXT:      [5]   - LNLPPort04
-# ALL-NEXT:      [6]   - LNLPPort05
-# ALL-NEXT:      [7]   - LNLPPort10
-# ALL-NEXT:      [8]   - LNLPPort11
-# ALL-NEXT:      [9]   - LNLPPort20
-# ALL-NEXT:      [10]  - LNLPPort21
-# ALL-NEXT:      [11]  - LNLPPort22
-# ALL-NEXT:      [12]  - LNLPPort25
-# ALL-NEXT:      [13]  - LNLPPort26
-# ALL-NEXT:      [14]  - LNLPPort27
-# ALL-NEXT:      [15]  - LNLPPortInvalid
-# ALL-NEXT:      [16]  - LNLPVPort00
-# ALL-NEXT:      [17]  - LNLPVPort01
-# ALL-NEXT:      [18]  - LNLPVPort02
-# ALL-NEXT:      [19]  - LNLPVPort03
+# ALL-NEXT:      [0]   - LNLPPort00
+# ALL-NEXT:      [1]   - LNLPPort01
+# ALL-NEXT:      [2]   - LNLPPort02
+# ALL-NEXT:      [3]   - LNLPPort03
+# ALL-NEXT:      [4]   - LNLPPort04
+# ALL-NEXT:      [5]   - LNLPPort05
+# ALL-NEXT:      [6]   - LNLPPort10
+# ALL-NEXT:      [7]   - LNLPPort11
+# ALL-NEXT:      [8]   - LNLPPort20
+# ALL-NEXT:      [9]   - LNLPPort21
+# ALL-NEXT:      [10]  - LNLPPort22
+# ALL-NEXT:      [11]  - LNLPPort25
+# ALL-NEXT:      [12]  - LNLPPort26
+# ALL-NEXT:      [13]  - LNLPPort27
+# ALL-NEXT:      [14]  - LNLPPortInvalid
+# ALL-NEXT:      [15]  - LNLPVPort00
+# ALL-NEXT:      [16]  - LNLPVPort01
+# ALL-NEXT:      [17]  - LNLPVPort02
+# ALL-NEXT:      [18]  - LNLPVPort03
 
 # ALL:           Resource pressure per iteration:
-# ALL-NEXT:      [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]
-# ALL-NEXT:       -      -     3.33    -     3.33    -     3.34   5.00   5.00   6.66   6.66   6.68   3.33   3.33   3.34    -      -      -      -      -
+# ALL-NEXT:      [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]
+# ALL-NEXT:       -     3.33    -     3.33    -     3.34   5.00   5.00   6.66   6.66   6.68   3.33   3.33   3.34    -      -      -      -      -
 
 # ALL:           Resource pressure by instruction:
-# ALL-NEXT:      [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   Instructions:
-# ALL-NEXT:       -      -     0.33    -     0.33    -     0.34    -     1.00   0.66   0.66   0.68   0.33   0.33   0.34    -      -      -      -      -     addq	$44, 64(%r14)
-# ALL-NEXT:       -      -     0.33    -     0.34    -     0.33   1.00    -     0.66   0.68   0.66   0.33   0.34   0.33    -      -      -      -      -     addq	$44, 128(%r14)
-# ALL-NEXT:       -      -     0.34    -     0.33    -     0.33    -     1.00   0.68   0.66   0.66   0.34   0.33   0.33    -      -      -      -      -     addq	$44, 192(%r14)
-# ALL-NEXT:       -      -     0.33    -     0.33    -     0.34   1.00    -     0.66   0.66   0.68   0.33   0.33   0.34    -      -      -      -      -     addq	$44, 256(%r14)
-# ALL-NEXT:       -      -     0.33    -     0.34    -     0.33    -     1.00   0.66   0.68   0.66   0.33   0.34   0.33    -      -      -      -      -     addq	$44, 320(%r14)
-# ALL-NEXT:       -      -     0.34    -     0.33    -     0.33   1.00    -     0.68   0.66   0.66   0.34   0.33   0.33    -      -      -      -      -     addq	$44, 384(%r14)
-# ALL-NEXT:       -      -     0.33    -     0.33    -     0.34    -     1.00   0.66   0.66   0.68   0.33   0.33   0.34    -      -      -      -      -     addq	$44, 448(%r14)
-# ALL-NEXT:       -      -     0.33    -     0.34    -     0.33   1.00    -     0.66   0.68   0.66   0.33   0.34   0.33    -      -      -      -      -     addq	$44, 512(%r14)
-# ALL-NEXT:       -      -     0.34    -     0.33    -     0.33    -     1.00   0.68   0.66   0.66   0.34   0.33   0.33    -      -      -      -      -     addq	$44, 576(%r14)
-# ALL-NEXT:       -      -     0.33    -     0.33    -     0.34   1.00    -     0.66   0.66   0.68   0.33   0.33   0.34    -      -      -      -      -     addq	$44, 640(%r14)
+# ALL-NEXT:      [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   Instructions:
+# ALL-NEXT:       -     0.33    -     0.33    -     0.34    -     1.00   0.66   0.66   0.68   0.33   0.33   0.34    -      -      -      -      -     addq	$44, 64(%r14)
+# ALL-NEXT:       -     0.33    -     0.34    -     0.33   1.00    -     0.66   0.68   0.66   0.33   0.34   0.33    -      -      -      -      -     addq	$44, 128(%r14)
+# ALL-NEXT:       -     0.34    -     0.33    -     0.33    -     1.00   0.68   0.66   0.66   0.34   0.33   0.33    -      -      -      -      -     addq	$44, 192(%r14)
+# ALL-NEXT:       -     0.33    -     0.33    -     0.34   1.00    -     0.66   0.66   0.68   0.33   0.33   0.34    -      -      -      -      -     addq	$44, 256(%r14)
+# ALL-NEXT:       -     0.33    -     0.34    -     0.33    -     1.00   0.66   0.68   0.66   0.33   0.34   0.33    -      -      -      -      -     addq	$44, 320(%r14)
+# ALL-NEXT:       -     0.34    -     0.33    -     0.33   1.00    -     0.68   0.66   0.66   0.34   0.33   0.33    -      -      -      -      -     addq	$44, 384(%r14)
+# ALL-NEXT:       -     0.33    -     0.33    -     0.34    -     1.00   0.66   0.66   0.68   0.33   0.33   0.34    -      -      -      -      -     addq	$44, 448(%r14)
+# ALL-NEXT:       -     0.33    -     0.34    -     0.33   1.00    -     0.66   0.68   0.66   0.33   0.34   0.33    -      -      -      -      -     addq	$44, 512(%r14)
+# ALL-NEXT:       -     0.34    -     0.33    -     0.33    -     1.00   0.68   0.66   0.66   0.34   0.33   0.33    -      -      -      -      -     addq	$44, 576(%r14)
+# ALL-NEXT:       -     0.33    -     0.33    -     0.34   1.00    -     0.66   0.66   0.68   0.33   0.33   0.34    -      -      -      -      -     addq	$44, 640(%r14)
 
 # ALL:           Timeline view:
 

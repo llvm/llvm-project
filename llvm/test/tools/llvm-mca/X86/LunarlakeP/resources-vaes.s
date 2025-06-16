@@ -32,38 +32,37 @@ vaesenclast      (%rax), %ymm1, %ymm3
 # CHECK-NEXT:  2      11    2.33    *                   vaesenclast	(%rax), %ymm1, %ymm3
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - ADLPPort00
-# CHECK-NEXT: [1]   - LNLPPort00
-# CHECK-NEXT: [2]   - LNLPPort01
-# CHECK-NEXT: [3]   - LNLPPort02
-# CHECK-NEXT: [4]   - LNLPPort03
-# CHECK-NEXT: [5]   - LNLPPort04
-# CHECK-NEXT: [6]   - LNLPPort05
-# CHECK-NEXT: [7]   - LNLPPort10
-# CHECK-NEXT: [8]   - LNLPPort11
-# CHECK-NEXT: [9]   - LNLPPort20
-# CHECK-NEXT: [10]  - LNLPPort21
-# CHECK-NEXT: [11]  - LNLPPort22
-# CHECK-NEXT: [12]  - LNLPPort25
-# CHECK-NEXT: [13]  - LNLPPort26
-# CHECK-NEXT: [14]  - LNLPPort27
-# CHECK-NEXT: [15]  - LNLPPortInvalid
-# CHECK-NEXT: [16]  - LNLPVPort00
-# CHECK-NEXT: [17]  - LNLPVPort01
-# CHECK-NEXT: [18]  - LNLPVPort02
-# CHECK-NEXT: [19]  - LNLPVPort03
+# CHECK-NEXT: [0]   - LNLPPort00
+# CHECK-NEXT: [1]   - LNLPPort01
+# CHECK-NEXT: [2]   - LNLPPort02
+# CHECK-NEXT: [3]   - LNLPPort03
+# CHECK-NEXT: [4]   - LNLPPort04
+# CHECK-NEXT: [5]   - LNLPPort05
+# CHECK-NEXT: [6]   - LNLPPort10
+# CHECK-NEXT: [7]   - LNLPPort11
+# CHECK-NEXT: [8]   - LNLPPort20
+# CHECK-NEXT: [9]   - LNLPPort21
+# CHECK-NEXT: [10]  - LNLPPort22
+# CHECK-NEXT: [11]  - LNLPPort25
+# CHECK-NEXT: [12]  - LNLPPort26
+# CHECK-NEXT: [13]  - LNLPPort27
+# CHECK-NEXT: [14]  - LNLPPortInvalid
+# CHECK-NEXT: [15]  - LNLPVPort00
+# CHECK-NEXT: [16]  - LNLPVPort01
+# CHECK-NEXT: [17]  - LNLPVPort02
+# CHECK-NEXT: [18]  - LNLPVPort03
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.33   9.33   9.33    -      -      -      -     16.00  16.00   -      -
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     9.33   9.33   9.33    -      -      -      -     16.00  16.00   -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -     vaesdec	%ymm0, %ymm1, %ymm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.33   2.33   2.33    -      -      -      -     2.00   2.00    -      -     vaesdec	(%rax), %ymm1, %ymm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -     vaesdeclast	%ymm0, %ymm1, %ymm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.33   2.33   2.33    -      -      -      -     2.00   2.00    -      -     vaesdeclast	(%rax), %ymm1, %ymm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -     vaesenc	%ymm0, %ymm1, %ymm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.33   2.33   2.33    -      -      -      -     2.00   2.00    -      -     vaesenc	(%rax), %ymm1, %ymm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -     vaesenclast	%ymm0, %ymm1, %ymm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.33   2.33   2.33    -      -      -      -     2.00   2.00    -      -     vaesenclast	(%rax), %ymm1, %ymm3
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -     vaesdec	%ymm0, %ymm1, %ymm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.33   2.33   2.33    -      -      -      -     2.00   2.00    -      -     vaesdec	(%rax), %ymm1, %ymm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -     vaesdeclast	%ymm0, %ymm1, %ymm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.33   2.33   2.33    -      -      -      -     2.00   2.00    -      -     vaesdeclast	(%rax), %ymm1, %ymm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -     vaesenc	%ymm0, %ymm1, %ymm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.33   2.33   2.33    -      -      -      -     2.00   2.00    -      -     vaesenc	(%rax), %ymm1, %ymm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -     vaesenclast	%ymm0, %ymm1, %ymm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.33   2.33   2.33    -      -      -      -     2.00   2.00    -      -     vaesenclast	(%rax), %ymm1, %ymm3
