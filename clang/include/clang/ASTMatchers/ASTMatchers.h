@@ -8713,6 +8713,33 @@ AST_MATCHER_P(OMPExecutableDirective, hasAnyClause,
                                     Builder) != Clauses.end();
 }
 
+/// Matches any ``#pragma omp target update`` executable directive.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update from(a)
+///   #pragma omp target update to(b)
+/// \endcode
+///
+/// ``ompTargetUpdateDirective()`` matches both ``omp target update from(a)``
+/// and ``omp target update to(b)``.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt,
+                                                   OMPTargetUpdateDirective>
+    ompTargetUpdateDirective;
+
+/// Matches OpenMP ``from`` clause.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update from(a)
+/// \endcode
+///
+/// ``ompFromClause()`` matches ``from(a)``.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPFromClause>
+    ompFromClause;
+
 /// Matches OpenMP ``default`` clause.
 ///
 /// Given
