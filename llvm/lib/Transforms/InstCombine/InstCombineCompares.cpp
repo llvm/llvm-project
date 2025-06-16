@@ -7729,15 +7729,8 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   }
 
   // icmp slt (sub nsw x, y), (add nsw x, y)  -->  icmp sgt y, 0
-  // icmp sgt (sub nsw x, y), (add nsw x, y)  -->  icmp slt y, 0
-  // icmp sle (sub nsw x, y), (add nsw x, y)  -->  icmp sge y, 0
-  // icmp sge (sub nsw x, y), (add nsw x, y)  -->  icmp sle y, 0
   // icmp ult (sub nuw x, y), (add nuw x, y)  -->  icmp ugt y, 0
-  // icmp ugt (sub nuw x, y), (add nuw x, y)  -->  icmp ult y, 0
-  // icmp ule (sub nuw x, y), (add nuw x, y)  -->  icmp uge y, 0
-  // icmp uge (sub nuw x, y), (add nuw x, y)  -->  icmp ule y, 0
   // icmp eq (sub nsw/nuw x, y), (add nsw/nuw x, y)   -->  icmp eq y, 0
-  // icmp ne (sub nsw/nuw x, y), (add nsw/nuw x, y)   -->  icmp ne y, 0
   {
     Value *A, *B;
     CmpPredicate CmpPred;
