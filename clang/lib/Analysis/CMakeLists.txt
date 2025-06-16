@@ -19,6 +19,7 @@ add_clang_library(clangAnalysis
   Dominators.cpp
   ExprMutationAnalyzer.cpp
   FixitUtil.cpp
+  ConvergenceCheck.cpp
   IntervalPartition.cpp
   IssueHash.cpp
   LiveVariables.cpp
