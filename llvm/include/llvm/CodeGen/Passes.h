@@ -620,8 +620,6 @@ LLVM_ABI FunctionPass *createCallBrPass();
 
 /// Lowers KCFI operand bundles for indirect calls.
 LLVM_ABI FunctionPass *createKCFIPass();
-
-LLVM_ABI FunctionPass *createTargetVerifierLegacyPass();
 } // namespace llvm
 
 #endif
