@@ -3277,7 +3277,7 @@ static bool isRemovableWrite(CallBase &CB, Value *UsedV,
   return Dest && Dest->Ptr == UsedV;
 }
 
-static bool isAllocSiteRemovable(Instruction *AI,
+static std::optional<ModRefInfo> isAllocSiteRemovable(Instruction *AI,
                                  SmallVectorImpl<WeakTrackingVH> &Users,
                                  const TargetLibraryInfo &TLI, bool KnowInit) {
   SmallVector<Instruction*, 4> Worklist;
@@ -3292,7 +3292,7 @@ static bool isAllocSiteRemovable(Instruction *AI,
       switch (I->getOpcode()) {
       default:
         // Give up the moment we see something we can't handle.
-        return false;
+        return std::nullopt;
 
       case Instruction::AddrSpaceCast:
       case Instruction::BitCast:
@@ -3307,10 +3307,10 @@ static bool isAllocSiteRemovable(Instruction *AI,
         // We also fold comparisons in some conditions provided the alloc has
         // not escaped (see isNeverEqualToUnescapedAlloc).
         if (!ICI->isEquality())
-          return false;
+          return std::nullopt;
         unsigned OtherIndex = (ICI->getOperand(0) == PI) ? 1 : 0;
         if (!isNeverEqualToUnescapedAlloc(ICI->getOperand(OtherIndex), TLI, AI))
-          return false;
+          return std::nullopt;
 
         // Do not fold compares to aligned_alloc calls, as they may have to
         // return null in case the required alignment cannot be satisfied,
@@ -3330,7 +3330,7 @@ static bool isAllocSiteRemovable(Instruction *AI,
         if (CB && TLI.getLibFunc(*CB->getCalledFunction(), TheLibFunc) &&
             TLI.has(TheLibFunc) && TheLibFunc == LibFunc_aligned_alloc &&
             !AlignmentAndSizeKnownValid(CB))
-          return false;
+          return std::nullopt;
         Users.emplace_back(I);
         continue;
       }
@@ -3340,20 +3340,20 @@ static bool isAllocSiteRemovable(Instruction *AI,
         if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
           switch (II->getIntrinsicID()) {
           default:
-            return false;
+            return std::nullopt;
 
           case Intrinsic::memmove:
           case Intrinsic::memcpy:
           case Intrinsic::memset: {
             MemIntrinsic *MI = cast<MemIntrinsic>(II);
             if (MI->isVolatile())
-              return false;
+              return std::nullopt;
             // Note: this could also be ModRef, but we can still interpret that
             // as just Mod in that case.
             ModRefInfo NewAccess =
                 MI->getRawDest() == PI ? ModRefInfo::Mod : ModRefInfo::Ref;
             if ((Access & ~NewAccess) != ModRefInfo::NoModRef)
-              return false;
+              return std::nullopt;
             Access |= NewAccess;
           }
             [[fallthrough]];
@@ -3393,14 +3393,14 @@ static bool isAllocSiteRemovable(Instruction *AI,
           continue;
         }
 
-        return false;
+        return std::nullopt;
 
       case Instruction::Store: {
         StoreInst *SI = cast<StoreInst>(I);
         if (SI->isVolatile() || SI->getPointerOperand() != PI)
-          return false;
+          return std::nullopt;
         if (isRefSet(Access))
-          return false;
+          return std::nullopt;
         Access |= ModRefInfo::Mod;
         Users.emplace_back(I);
         continue;
@@ -3409,9 +3409,9 @@ static bool isAllocSiteRemovable(Instruction *AI,
       case Instruction::Load: {
         LoadInst *LI = cast<LoadInst>(I);
         if (LI->isVolatile() || LI->getPointerOperand() != PI)
-          return false;
+          return std::nullopt;
         if (isModSet(Access))
-          return false;
+          return std::nullopt;
         Access |= ModRefInfo::Ref;
         Users.emplace_back(I);
         continue;
@@ -3421,7 +3421,8 @@ static bool isAllocSiteRemovable(Instruction *AI,
     }
   } while (!Worklist.empty());
 
-  return true;
+  assert(Access != ModRefInfo::ModRef);
+  return Access;
 }
 
 Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
@@ -3451,20 +3452,25 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
 
   // Determine what getInitialValueOfAllocation would return without actually
   // allocating the result.
-  bool KnowInitUndef = isa<AllocaInst>(MI);
+  bool KnowInitUndef = false;
   bool KnowInitZero = false;
-  if (!KnowInitUndef) {
-    Constant *Init = getInitialValueOfAllocation(
-        &MI, &TLI, Type::getInt8Ty(MI.getContext()));
-    if (Init) {
-      if (isa<UndefValue>(Init))
-        KnowInitUndef = true;
-      else if (Init->isNullValue())
-        KnowInitZero = true;
-    }
+  Constant *Init = getInitialValueOfAllocation(
+      &MI, &TLI, Type::getInt8Ty(MI.getContext()));
+  if (Init) {
+    if (isa<UndefValue>(Init))
+      KnowInitUndef = true;
+    else if (Init->isNullValue())
+      KnowInitZero = true;
   }
+  // The various sanitizers don't actually return undef memory, but rather
+  // memory initialized with special forms of runtime poison
+  auto &F = *MI.getFunction();
+  if (F.hasFnAttribute(Attribute::SanitizeMemory) ||
+      F.hasFnAttribute(Attribute::SanitizeAddress))
+    KnowInitUndef = false;
 
-  if (isAllocSiteRemovable(&MI, Users, TLI, KnowInitZero | KnowInitUndef)) {
+  auto Removable = isAllocSiteRemovable(&MI, Users, TLI, KnowInitZero | KnowInitUndef);
+  if (Removable) {
     for (unsigned i = 0, e = Users.size(); i != e; ++i) {
       // Lowering all @llvm.objectsize and MTI calls first because they may use
       // a bitcast/GEP of the alloca we are removing.
@@ -3485,14 +3491,14 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
           Users[i] = nullptr; // Skip examining in the next loop.
         }
         if (auto *MTI = dyn_cast<MemTransferInst>(I)) {
-          if (KnowInitZero && getUnderlyingObject(MTI->getRawDest()) != &MI) {
+          if (KnowInitZero && isRefSet(*Removable)) {
             IRBuilderBase::InsertPointGuard Guard(Builder);
             Builder.SetInsertPoint(MTI);
             auto *M = Builder.CreateMemSet(
                 MTI->getRawDest(),
                 ConstantInt::get(Type::getInt8Ty(MI.getContext()), 0),
                 MTI->getLength(), MTI->getDestAlign());
-            M->copyMetadata(*MTI, LLVMContext::MD_DIAssignID);
+            M->copyMetadata(*MTI);
           }
         }
       }
