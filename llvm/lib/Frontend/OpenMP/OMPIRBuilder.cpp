@@ -6735,7 +6735,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
                             /*TargetTaskAllocaIP=*/{}));
       else
         cantFail(emitTargetTask(TaskBodyCB, DeviceID, SrcLocInfo, AllocaIP,
-                                /*Dependencies=*/{}, RTArgs , Info.HasNoWait));
+                                /*Dependencies=*/{}, RTArgs, Info.HasNoWait));
     } else {
       Function *BeginMapperFunc = getOrCreateRuntimeFunctionPtr(
           omp::OMPRTL___tgt_target_data_begin_mapper);
@@ -7253,27 +7253,51 @@ static Expected<Function *> createOutlinedFunction(
                                     ValueReplacementMap);
   return Func;
 }
+/// Given a task descriptor, TaskWithPrivates, return the pointer to the block
+/// of pointers containing shared data between the parent task and the created
+/// task.
+static LoadInst *loadSharedDataFromTaskDescriptor(OpenMPIRBuilder &OMPIRBuilder,
+                                                  IRBuilderBase &Builder,
+                                                  Value *TaskWithPrivates,
+                                                  Type *TaskWithPrivatesTy) {
 
+  Type *TaskTy = OMPIRBuilder.Task;
+  LLVMContext &Ctx = Builder.getContext();
+  Value *TaskT =
+      Builder.CreateStructGEP(TaskWithPrivatesTy, TaskWithPrivates, 0);
+  Value *Shareds = TaskT;
+  // TaskWithPrivatesTy can be one of the following
+  // 1. %struct.task_with_privates = type { %struct.kmp_task_ompbuilder_t,
+  //                                        %struct.privates }
+  // 2. %struct.kmp_task_ompbuilder_t ;; This is simply TaskTy
+  //
+  // In the former case, that is when  TaskWithPrivatesTy != TaskTy,
+  // its first member has to be the task descriptor. TaskTy is the type of the
+  // task descriptor. TaskT is the pointer to the task descriptor. Loading the
+  // first member of TaskT, gives us the pointer to shared data.
+  if (TaskWithPrivatesTy != TaskTy)
+    Shareds = Builder.CreateStructGEP(TaskTy, TaskT, 0);
+  return Builder.CreateLoad(PointerType::getUnqual(Ctx), Shareds);
+}
 /// Create an entry point for a target task with the following.
 /// It'll have the following signature
 /// void @.omp_target_task_proxy_func(i32 %thread.id, ptr %task)
 /// This function is called from emitTargetTask once the
 /// code to launch the target kernel has been outlined already.
+/// NumOffloadingArrays is the number of offloading arrays that we need to copy
+/// into the task structure so that the deferred target task can access this
+/// data even after the stack frame of the generating task has been rolled
+/// back. Offloading arrays contain base pointers, pointers, sizes etc
+/// of the data that the target kernel will access. These in effect are the
+/// non-empty arrays of pointers held by OpenMPIRBuilder::TargetDataRTArgs.
 static Function *emitTargetTaskProxyFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, CallInst *StaleCI,
     StructType *PrivatesTy, StructType *TaskWithPrivatesTy,
     const size_t NumOffloadingArrays, const int SharedArgsOperandNo) {
 
-  // NumOffloadingArrays is the number of offloading arrays that we need to copy
-  // into the task structure so that the deferred target task can access this
-  // data even after the stack frame of the generating task has been rolled
-  // back. Offloading arrays contain base pointers, pointers, sizes etc
-  // of the data that the target kernel will access. In other words, the
-  // arrays of pointers held by OpenMPIRBuilder::TargetDataRTArgs
-  // The number of arrays and the size of each array depends on the specifics of
-  // the target call. These arrays are copied into a struct whose type is
-  // PrivatesTy. So, if NumOffloadingArrays is non-zero, PrivatesTy better
-  // not be nullptr
+  // If NumOffloadingArrays is non-zero, PrivatesTy better not be nullptr.
+  // This is because PrivatesTy is the type of the structure in which
+  // we pass the offloading arrays to the deferred target task.
   assert((!NumOffloadingArrays || PrivatesTy) &&
          "PrivatesTy cannot be nullptr when there are offloadingArrays"
          "to privatize");
@@ -7317,17 +7341,16 @@ static Function *emitTargetTaskProxyFunction(
   auto ProxyFn = Function::Create(ProxyFnTy, GlobalValue::InternalLinkage,
                                   ".omp_target_task_proxy_func",
                                   Builder.GetInsertBlock()->getModule());
-  ProxyFn->getArg(0)->setName("thread.id");
-  ProxyFn->getArg(1)->setName("task");
+  Value *ThreadId = ProxyFn->getArg(0);
+  Value *TaskWithPrivates = ProxyFn->getArg(1);
+  ThreadId->setName("thread.id");
+  TaskWithPrivates->setName("task");
 
   bool HasShareds = SharedArgsOperandNo > 0;
   bool HasOffloadingArrays = NumOffloadingArrays > 0;
   BasicBlock *EntryBB =
       BasicBlock::Create(Builder.getContext(), "entry", ProxyFn);
   Builder.SetInsertPoint(EntryBB);
-
-  Value *ThreadId = ProxyFn->getArg(0);
-  Value *TaskWithPrivates = ProxyFn->getArg(1);
 
   SmallVector<Value *> KernelLaunchArgs;
   KernelLaunchArgs.reserve(StaleCI->arg_size());
@@ -7337,14 +7360,16 @@ static Function *emitTargetTaskProxyFunction(
     assert(TaskTy != TaskWithPrivatesTy &&
            "If there are offloading arrays to pass to the target"
            "TaskTy cannot be the same as TaskWithPrivatesTy");
-    Value *Privates = Builder.CreateStructGEP(TaskWithPrivatesTy, TaskWithPrivates, 1);
+    Value *Privates =
+        Builder.CreateStructGEP(TaskWithPrivatesTy, TaskWithPrivates, 1);
     for (unsigned int i = 0; i < NumOffloadingArrays; ++i)
-      KernelLaunchArgs.push_back(Builder.CreateStructGEP(PrivatesTy, Privates, i));
+      KernelLaunchArgs.push_back(
+          Builder.CreateStructGEP(PrivatesTy, Privates, i));
   }
 
   if (HasShareds) {
-    auto *ArgStructAlloca = dyn_cast<AllocaInst>(
-        StaleCI->getArgOperand(SharedArgsOperandNo));
+    auto *ArgStructAlloca =
+        dyn_cast<AllocaInst>(StaleCI->getArgOperand(SharedArgsOperandNo));
     assert(ArgStructAlloca &&
            "Unable to find the alloca instruction corresponding to arguments "
            "for extracted function");
@@ -7356,22 +7381,8 @@ static Function *emitTargetTaskProxyFunction(
     Value *SharedsSize =
         Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
 
-    Value *TaskT = Builder.CreateStructGEP(TaskWithPrivatesTy, TaskWithPrivates, 0);
-    Value *Shareds = TaskT;
-    // TaskWithPrivatesTy can be
-    // %struct.task_with_privates = type { %struct.kmp_task_ompbuilder_t,
-    // %struct.privates }
-    // OR
-    //  %struct.kmp_task_ompbuilder_t  ;; This is simply TaskTy
-    // In the former case, that is when  TaskWithPrivatesTy is not the same as
-    // TaskTy, then its first member has to be the task descriptor. TaskTy is
-    // the type of the task descriptor. TaskT is the pointer to the task
-    // descriptor. Loading the first member of TaskT, gives us the pointer to
-    // shared data.
-    if (TaskWithPrivatesTy != TaskTy)
-      Shareds = Builder.CreateStructGEP(TaskTy, TaskT, 0);
-    LoadInst *LoadShared =
-        Builder.CreateLoad(PointerType::getUnqual(Ctx), Shareds);
+    LoadInst *LoadShared = loadSharedDataFromTaskDescriptor(
+        OMPBuilder, Builder, TaskWithPrivates, TaskWithPrivatesTy);
 
     Builder.CreateMemCpy(
         NewArgStructAlloca, NewArgStructAlloca->getAlign(), LoadShared,
@@ -7382,7 +7393,16 @@ static Function *emitTargetTaskProxyFunction(
   Builder.CreateRetVoid();
   return ProxyFn;
 }
+static Type *getOffloadingArrayType(Value *V) {
 
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(V))
+    return GEP->getSourceElementType();
+  if (auto *Alloca = dyn_cast<AllocaInst>(V))
+    return Alloca->getAllocatedType();
+
+  llvm_unreachable("Unhandled Instruction type");
+  return nullptr;
+}
 // This function returns a struct that has at most two members.
 // The first member is always %struct.kmp_task_ompbuilder_t, that is the task
 // descriptor. The second member, if needed, is a struct containing arrays
@@ -7398,27 +7418,24 @@ static Function *emitTargetTaskProxyFunction(
 // If there aren't any offloading arrays to pass to the target kernel,
 // %struct.kmp_task_ompbuilder_t is returned.
 static StructType *
-createTaskWithPrivatesTy(Type *Task,
+createTaskWithPrivatesTy(OpenMPIRBuilder &OMPIRBuilder,
                          ArrayRef<Value *> OffloadingArraysToPrivatize) {
 
   if (OffloadingArraysToPrivatize.empty())
-    return static_cast<StructType *>(Task);
+    return OMPIRBuilder.Task;
 
   SmallVector<Type *, 4> StructFieldTypes;
-  for (auto &V : OffloadingArraysToPrivatize) {
+  for (Value *V : OffloadingArraysToPrivatize) {
     assert(V->getType()->isPointerTy() &&
            "Expected pointer to array to privatize. Got a non-pointer value "
            "instead");
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(V))
-      StructFieldTypes.push_back(GEP->getSourceElementType());
-    else if (auto *Alloca = dyn_cast<AllocaInst>(V))
-      StructFieldTypes.push_back(Alloca->getAllocatedType());
-    else
-      llvm_unreachable("Unhandled Instruction type");
+    Type *ArrayTy = getOffloadingArrayType(V);
+    assert(ArrayTy && "ArrayType cannot be nullptr");
+    StructFieldTypes.push_back(ArrayTy);
   }
   StructType *PrivatesStructTy =
       StructType::create(StructFieldTypes, "struct.privates");
-  return StructType::create({Task, PrivatesStructTy},
+  return StructType::create({OMPIRBuilder.Task, PrivatesStructTy},
                             "struct.task_with_privates");
 }
 static Error emitTargetOutlinedFunction(
@@ -7445,7 +7462,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     TargetTaskBodyCallbackTy TaskBodyCB, Value *DeviceID, Value *RTLoc,
     OpenMPIRBuilder::InsertPointTy AllocaIP,
     const SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
-    TargetDataRTArgs &RTArgs, bool HasNoWait) {
+    const TargetDataRTArgs &RTArgs, bool HasNoWait) {
 
   // The following explains the code-gen scenario for the `target` directive. A
   // similar scneario is followed for other device-related directives (e.g.
@@ -7492,11 +7509,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
   //
   // That is we create the following
   //   struct task_with_privates {
-  //      struct kmp_task_ompbuilder_t;
+  //      struct kmp_task_ompbuilder_t task_struct;
   //      struct privates {
-  //         [2 x ptr], ; baseptrs
-  //         [2 x ptr]  ; ptrs
-  //         [2 x i64]  ; sizes
+  //         [2 x ptr] ; baseptrs
+  //         [2 x ptr] ; ptrs
+  //         [2 x i64] ; sizes
   //      }
   //   }
   //   void user_code_that_offloads(...) {
@@ -7514,12 +7531,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
   //                                               sizeof(structArg),
   //                                               @.omp_target_task_proxy_func,
   //                                               ...)
-  //     memcpy(target_task->shareds, %structArg, sizeof(structArg))
-  //     memcpy(target_task->privates->baseptrs,
+  //            sizeof(structArg))
+  //     memcpy(target_task_with_privates->privates->baseptrs,
   //            offload_baseptrs, sizeof(offload_baseptrs)
-  //     memcpy(target_task->privates->ptrs,
+  //     memcpy(target_task_with_privates->privates->ptrs,
   //            offload_ptrs, sizeof(offload_ptrs)
-  //     memcpy(target_task->privates->sizes,
+  //     memcpy(target_task_with_privates->privates->sizes,
   //            offload_sizes, sizeof(offload_sizes)
   //     dependencies_array = ...
   //     ;; if nowait not present
@@ -7550,7 +7567,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
   //   that of the kernel_launch function.
   //
   //   kernel_launch_function is generated by emitKernelLaunch and has the
-  //   always_inline attribute. For this example, it'll look like so
+  //   always_inline attribute. For this example, it'll look like so:
   //   void kernel_launch_function(%thread_id, %offload_baseptrs, %offload_ptrs,
   //                               %offload_sizes,  %structArg) alwaysinline {
   //       %kernel_args = alloca %struct.__tgt_kernel_arguments, align 8
@@ -7606,28 +7623,29 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
             /*IsFinished=*/true);
 
   SmallVector<Value *, 2> OffloadingArraysToPrivatize;
-  if (DeviceID && HasNoWait) {
-    for (auto *V : {RTArgs.BasePointersArray, RTArgs.PointersArray,
-                    RTArgs.MappersArray, RTArgs.MapNamesArray,
-                    RTArgs.MapTypesArray, RTArgs.MapTypesArrayEnd,
-                    RTArgs.SizesArray}) {
-      if (V && !isa<ConstantPointerNull>(V) &&
-          !isa<GlobalVariable>(V)) {
+  bool NeedsTargetTask = HasNoWait && DeviceID;
+  if (NeedsTargetTask) {
+    for (auto *V :
+         {RTArgs.BasePointersArray, RTArgs.PointersArray, RTArgs.MappersArray,
+          RTArgs.MapNamesArray, RTArgs.MapTypesArray, RTArgs.MapTypesArrayEnd,
+          RTArgs.SizesArray}) {
+      if (V && !isa<ConstantPointerNull, GlobalVariable>(V)) {
         OffloadingArraysToPrivatize.push_back(V);
         OI.ExcludeArgsFromAggregate.push_back(V);
       }
     }
   }
-  OI.PostOutlineCB = [this, ToBeDeleted, Dependencies, HasNoWait,
-                      DeviceID, OffloadingArraysToPrivatize](Function &OutlinedFn) mutable {
-   assert(OutlinedFn.hasOneUse() &&
+  OI.PostOutlineCB = [this, ToBeDeleted, Dependencies, NeedsTargetTask,
+                      DeviceID, OffloadingArraysToPrivatize](
+                         Function &OutlinedFn) mutable {
+    assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
 
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
 
     // The first argument of StaleCI is always the thread id.
     // The next few arguments are the pointers to offloading arrays
-    // if any. (See OffloadingArraysToPrivatize)
+    // if any. (see OffloadingArraysToPrivatize)
     // Finally, all other local values that are live-in into the outlined region
     // end up in a structure whose pointer is passed as the last argument. This
     // piece of data is passed in the "shared" field of the task structure. So,
@@ -7637,22 +7655,24 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     // StaleCI is exactly OffloadingArraysToPrivatize.size() + 2
     const unsigned int NumStaleCIArgs = StaleCI->arg_size();
     bool HasShareds = NumStaleCIArgs > OffloadingArraysToPrivatize.size() + 1;
-    assert(!HasShareds ||
-           NumStaleCIArgs == (OffloadingArraysToPrivatize.size() + 2) &&
-           "Wrong number of arguments for StaleCI when shareds are present");
-    int SharedArgOperandNo = HasShareds ? OffloadingArraysToPrivatize.size() + 1 : 0;
+    assert(
+        !HasShareds ||
+        NumStaleCIArgs == (OffloadingArraysToPrivatize.size() + 2) &&
+            "Wrong number of arguments for StaleCI when shareds are present");
+    int SharedArgOperandNo =
+        HasShareds ? OffloadingArraysToPrivatize.size() + 1 : 0;
 
-    StructType *TaskWithPrivatesTy = createTaskWithPrivatesTy(Task, OffloadingArraysToPrivatize);
+    StructType *TaskWithPrivatesTy =
+        createTaskWithPrivatesTy(*this, OffloadingArraysToPrivatize);
     StructType *PrivatesTy = nullptr;
 
-    if (OffloadingArraysToPrivatize.size())
+    if (!OffloadingArraysToPrivatize.empty())
       PrivatesTy =
           static_cast<StructType *>(TaskWithPrivatesTy->getElementType(1));
 
-    Function *ProxyFn = emitTargetTaskProxyFunction(*this, Builder, StaleCI, PrivatesTy,
-                                                    TaskWithPrivatesTy,
-                                                    OffloadingArraysToPrivatize.size(),
-                                                    SharedArgOperandNo);
+    Function *ProxyFn = emitTargetTaskProxyFunction(
+        *this, Builder, StaleCI, PrivatesTy, TaskWithPrivatesTy,
+        OffloadingArraysToPrivatize.size(), SharedArgOperandNo);
 
     LLVM_DEBUG(dbgs() << "Proxy task entry function created: " << *ProxyFn
                       << "\n");
@@ -7670,7 +7690,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     // If `HasNoWait == true`, we call  @__kmpc_omp_target_task_alloc to provide
     // the DeviceID to the deferred task and also since
     // @__kmpc_omp_target_task_alloc creates an untied/async task.
-    bool NeedsTargetTask = HasNoWait && DeviceID;
     Function *TaskAllocFn =
         !NeedsTargetTask
             ? getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc)
@@ -7685,17 +7704,17 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     // Tasksize refers to the size in bytes of kmp_task_t data structure
     // plus any other data to be passed to the target task, if any, which
     // is packed into a struct. kmp_task_t and the struct so created are
-    // packed into a wrapper struct whose type is TaskWithPrivatesTy
-    Value *TaskSize =
-        Builder.getInt64(M.getDataLayout().getTypeStoreSize(TaskWithPrivatesTy));
+    // packed into a wrapper struct whose type is TaskWithPrivatesTy.
+    Value *TaskSize = Builder.getInt64(
+        M.getDataLayout().getTypeStoreSize(TaskWithPrivatesTy));
 
     // Argument - `sizeof_shareds` (SharedsSize)
     // SharedsSize refers to the shareds array size in the kmp_task_t data
     // structure.
     Value *SharedsSize = Builder.getInt64(0);
     if (HasShareds) {
-      auto *ArgStructAlloca = dyn_cast<AllocaInst>(
-          StaleCI->getArgOperand(SharedArgOperandNo));
+      auto *ArgStructAlloca =
+          dyn_cast<AllocaInst>(StaleCI->getArgOperand(SharedArgOperandNo));
       assert(ArgStructAlloca &&
              "Unable to find the alloca instruction corresponding to arguments "
              "for extracted function");
@@ -7736,27 +7755,17 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
     if (HasShareds) {
       Value *Shareds = StaleCI->getArgOperand(SharedArgOperandNo);
-      Value *TaskT = Builder.CreateStructGEP(TaskWithPrivatesTy, TaskData, 0);
-      Value *TaskSharedsPtr = TaskT;
-      if (TaskWithPrivatesTy != Task) {
-        TaskSharedsPtr = Builder.CreateStructGEP(Task, TaskT, 0);
-      }
-      Value *TaskShareds = Builder.CreateLoad(VoidPtr, TaskSharedsPtr);
-
+      Value *TaskShareds = loadSharedDataFromTaskDescriptor(
+          *this, Builder, TaskData, TaskWithPrivatesTy);
       Builder.CreateMemCpy(TaskShareds, Alignment, Shareds, Alignment,
                            SharedsSize);
     }
-    if (OffloadingArraysToPrivatize.size()) {
-      Value *Privates = Builder.CreateStructGEP(TaskWithPrivatesTy, TaskData, 1);
+    if (!OffloadingArraysToPrivatize.empty()) {
+      Value *Privates =
+          Builder.CreateStructGEP(TaskWithPrivatesTy, TaskData, 1);
       for (unsigned int i = 0; i < OffloadingArraysToPrivatize.size(); ++i) {
         Value *PtrToPrivatize = OffloadingArraysToPrivatize[i];
-        Type *ArrayType = nullptr;
-        if (auto *GEP = dyn_cast<GetElementPtrInst>(PtrToPrivatize))
-          ArrayType = GEP->getSourceElementType();
-        else if (auto *Alloca = dyn_cast<AllocaInst>(PtrToPrivatize))
-          ArrayType = Alloca->getAllocatedType();
-        else
-          llvm_unreachable("Unhandled Instruction type");
+        Type *ArrayType = getOffloadingArrayType(PtrToPrivatize);
         assert(ArrayType && "ArrayType cannot be nullptr");
 
         Type *ElementType = PrivatesTy->getElementType(i);
@@ -7764,9 +7773,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
                "ElementType should match ArrayType");
 
         Value *Dst = Builder.CreateStructGEP(PrivatesTy, Privates, i);
-        Builder.CreateMemCpy(Dst, Alignment, PtrToPrivatize, Alignment,
-                             Builder.getInt64(M.getDataLayout().
-                                              getTypeStoreSize(ElementType)));
+        Builder.CreateMemCpy(
+            Dst, Alignment, PtrToPrivatize, Alignment,
+            Builder.getInt64(M.getDataLayout().getTypeStoreSize(ElementType)));
       }
     }
 
@@ -7914,7 +7923,6 @@ static void emitTargetCall(
         // Arguments that are intended to be directly forwarded to an
         // emitKernelLaunch call are pased as nullptr, since
         // OutlinedFnID=nullptr results in that call not being done.
-        OpenMPIRBuilder::TargetDataInfo Info;
         OpenMPIRBuilder::TargetDataRTArgs EmptyRTArgs;
         return OMPBuilder.emitTargetTask(TaskBodyCB, /*DeviceID=*/nullptr,
                                          /*RTLoc=*/nullptr, AllocaIP,
@@ -7931,7 +7939,7 @@ static void emitTargetCall(
       [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
           OpenMPIRBuilder::InsertPointTy CodeGenIP) -> Error {
     Info.HasNoWait = HasNoWait;
-    OpenMPIRBuilder::MapInfosTy &MapInfo = GenMapInfoCB(CodeGenIP);
+    OpenMPIRBuilder::MapInfosTy &MapInfo = GenMapInfoCB(Builder.saveIP());
     OpenMPIRBuilder::TargetDataRTArgs RTArgs;
     if (Error Err = OMPBuilder.emitOffloadingArraysAndArgs(
             AllocaIP, CodeGenIP, Info, RTArgs, MapInfo, CustomMapperCB,
@@ -8008,7 +8016,8 @@ static void emitTargetCall(
       // explicit generation of the target task.
       if (RequiresOuterTargetTask)
         return OMPBuilder.emitTargetTask(TaskBodyCB, DeviceID, RTLoc, AllocaIP,
-                                         Dependencies, KArgs.RTArgs, Info.HasNoWait);
+                                         Dependencies, KArgs.RTArgs,
+                                         Info.HasNoWait);
 
       return OMPBuilder.emitKernelLaunch(Builder, OutlinedFnID,
                                          EmitTargetCallFallbackCB, KArgs,
