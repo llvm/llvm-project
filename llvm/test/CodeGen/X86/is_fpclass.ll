@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-linux | FileCheck %s -check-prefixes=X86
 ; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s -check-prefixes=X64,X64-GENERIC
 ; RUN: llc < %s -mtriple=x86_64-linux -mattr=+ndd | FileCheck %s -check-prefixes=X64,X64-NDD
+; RUN: llc < %s -mtriple=x86_64-linux -mattr=+zu | FileCheck %s -check-prefix=X64-ZU
 
 define i1 @isnan_f(float %x) {
 ; X86-LABEL: isnan_f:
@@ -19,6 +20,12 @@ define i1 @isnan_f(float %x) {
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
 ; X64-NEXT:    setp %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isnan_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    ucomiss %xmm0, %xmm0
+; X64-ZU-NEXT:    setzup %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 3)  ; "nan"
   ret i1 %0
@@ -40,6 +47,12 @@ define i1 @isnot_nan_f(float %x) {
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
 ; X64-NEXT:    setnp %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isnot_nan_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    ucomiss %xmm0, %xmm0
+; X64-ZU-NEXT:    setzunp %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1020)  ; 0x3fc = "zero|subnormal|normal|inf"
   ret i1 %0
@@ -67,6 +80,17 @@ define i1 @issignaling_f(float %x) {
 ; X64-NEXT:    setge %al
 ; X64-NEXT:    andb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: issignaling_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzul %cl
+; X64-ZU-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %al
+; X64-ZU-NEXT:    andb %cl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1)  ; "snan"
   ret i1 %0
@@ -94,6 +118,17 @@ define i1 @not_issignaling_f(float %x) {
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_issignaling_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzuge %cl
+; X64-ZU-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X64-ZU-NEXT:    setzul %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1022)  ; ~"snan"
   ret i1 %0
@@ -115,6 +150,14 @@ define i1 @isquiet_f(float %x) {
 ; X64-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
 ; X64-NEXT:    setge %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isquiet_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzuge %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 2)  ; "qnan"
   ret i1 %0
@@ -136,6 +179,14 @@ define i1 @not_isquiet_f(float %x) {
 ; X64-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_isquiet_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzul %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1021)  ; ~"qnan"
   ret i1 %0
@@ -157,6 +208,14 @@ define i1 @isinf_f(float %x) {
 ; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isinf_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 516)  ; 0x204 = "inf"
   ret i1 %0
@@ -178,6 +237,14 @@ define i1 @not_isinf_f(float %x) {
 ; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_isinf_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 507)  ; ~0x204 = "~inf"
   ret i1 %0
@@ -196,6 +263,13 @@ define i1 @is_plus_inf_f(float %x) {
 ; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: is_plus_inf_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 512)  ; 0x200 = "+inf"
   ret i1 %0
@@ -214,6 +288,13 @@ define i1 @is_minus_inf_f(float %x) {
 ; X64-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: is_minus_inf_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 4)  ; "-inf"
   ret i1 %0
@@ -232,6 +313,13 @@ define i1 @not_is_minus_inf_f(float %x) {
 ; X64-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_is_minus_inf_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1019)  ; ~"-inf"
   ret i1 %0
@@ -253,6 +341,14 @@ define i1 @isfinite_f(float %x) {
 ; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isfinite_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzul %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 504)  ; 0x1f8 = "finite"
   ret i1 %0
@@ -274,6 +370,14 @@ define i1 @not_isfinite_f(float %x) {
 ; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    setge %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_isfinite_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzuge %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 519)  ; ~0x1f8 = "~finite"
   ret i1 %0
@@ -292,6 +396,13 @@ define i1 @is_plus_finite_f(float %x) {
 ; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: is_plus_finite_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 448)  ; 0x1c0 = "+finite"
   ret i1 %0
@@ -310,6 +421,13 @@ define i1 @not_is_plus_finite_f(float %x) {
 ; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_is_plus_finite_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzuae %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 575)  ; ~0x1c0 = ~"+finite"
   ret i1 %0
@@ -337,6 +455,17 @@ define i1 @is_minus_finite_f(float %x) {
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    andb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: is_minus_finite_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzus %cl
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzul %al
+; X64-ZU-NEXT:    andb %cl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 56)  ; 0x38 = "-finite"
   ret i1 %0
@@ -364,6 +493,17 @@ define i1 @not_is_minus_finite_f(float %x) {
 ; X64-NEXT:    setge %al
 ; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_is_minus_finite_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzuns %cl
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzuge %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 967)  ; ~0x38 = ~"-finite"
   ret i1 %0
@@ -387,6 +527,15 @@ define i1 @isnormal_f(float %x) #1 {
 ; X64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isnormal_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 264)  ; 0x108 = "normal"
   ret i1 %0
@@ -410,6 +559,15 @@ define i1 @not_isnormal_f(float %x) #1 {
 ; X64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_isnormal_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; X64-ZU-NEXT:    setzuae %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 759)  ; ~0x108 = "~normal"
   ret i1 %0
@@ -439,6 +597,18 @@ define i1 @is_plus_normal_f(float %x) {
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    andb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: is_plus_normal_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzuns %cl
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    andb %cl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 256)  ; 0x100 = "+normal"
   ret i1 %0
@@ -462,6 +632,15 @@ define i1 @issubnormal_f(float %x) {
 ; X64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: issubnormal_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    decl %eax
+; X64-ZU-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 144)  ; 0x90 = "subnormal"
   ret i1 %0
@@ -485,6 +664,15 @@ define i1 @issubnormal_f_daz(float %x) #0 {
 ; X64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: issubnormal_f_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    decl %eax
+; X64-ZU-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 144)  ; 0x90 = "subnormal"
   ret i1 %0
@@ -508,6 +696,15 @@ define i1 @issubnormal_f_maybe_daz(float %x) #1 {
 ; X64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: issubnormal_f_maybe_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    decl %eax
+; X64-ZU-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 144)  ; 0x90 = "subnormal"
   ret i1 %0
@@ -531,6 +728,15 @@ define i1 @not_issubnormal_f(float %x) {
 ; X64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_issubnormal_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    decl %eax
+; X64-ZU-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-ZU-NEXT:    setzuae %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 879)  ; ~0x90 = "~subnormal"
   ret i1 %0
@@ -554,6 +760,15 @@ define i1 @not_issubnormal_f_daz(float %x) #0 {
 ; X64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_issubnormal_f_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    decl %eax
+; X64-ZU-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-ZU-NEXT:    setzuae %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 879)  ; ~0x90 = "~subnormal"
   ret i1 %0
@@ -577,6 +792,15 @@ define i1 @not_issubnormal_f_maybe_daz(float %x) #1 {
 ; X64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_issubnormal_f_maybe_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    decl %eax
+; X64-ZU-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-ZU-NEXT:    setzuae %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 879)  ; ~0x90 = "~subnormal"
   ret i1 %0
@@ -598,6 +822,14 @@ define i1 @is_plus_subnormal_f(float %x) {
 ; X64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: is_plus_subnormal_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    decl %eax
+; X64-ZU-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 128)  ; 0x80 = "+subnormal"
   ret i1 %0
@@ -619,6 +851,14 @@ define i1 @not_is_plus_subnormal_f(float %x) {
 ; X64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_is_plus_subnormal_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    decl %eax
+; X64-ZU-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-ZU-NEXT:    setzuae %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 895)  ; ~0x80 = ~"+subnormal"
   ret i1 %0
@@ -648,6 +888,18 @@ define i1 @is_minus_subnormal_f(float %x) {
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    andb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: is_minus_subnormal_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzus %cl
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    decl %eax
+; X64-ZU-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    andb %cl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 16)  ; 0x10 = "-subnormal"
   ret i1 %0
@@ -677,6 +929,18 @@ define i1 @not_is_minus_subnormal_f(float %x) {
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_is_minus_subnormal_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzuns %cl
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    decl %eax
+; X64-ZU-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-ZU-NEXT:    setzuae %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1007)  ; ~0x10 = ~"-subnormal"
   ret i1 %0
@@ -695,6 +959,13 @@ define i1 @iszero_f(float %x) {
 ; X64-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: iszero_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 96)  ; 0x60 = "zero"
   ret i1 %0
@@ -713,6 +984,13 @@ define i1 @iszero_f_daz(float %x) #0 {
 ; X64-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: iszero_f_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 96)  ; 0x60 = "zero"
   ret i1 %0
@@ -731,6 +1009,13 @@ define i1 @iszero_f_maybe_daz(float %x) #1 {
 ; X64-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: iszero_f_maybe_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 96)  ; 0x60 = "zero"
   ret i1 %0
@@ -749,6 +1034,13 @@ define i1 @not_iszero_f(float %x) {
 ; X64-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_iszero_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 927)  ; ~0x60 = "~zero"
   ret i1 %0
@@ -767,6 +1059,13 @@ define i1 @not_iszero_f_daz(float %x) #0 {
 ; X64-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_iszero_f_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 927)  ; ~0x60 = "~zero"
   ret i1 %0
@@ -785,6 +1084,13 @@ define i1 @not_iszero_f_maybe_daz(float %x) #1 {
 ; X64-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_iszero_f_maybe_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 927)  ; ~0x60 = "~zero"
   ret i1 %0
@@ -803,6 +1109,13 @@ define i1 @issubnormal_or_zero_f(float %x) {
 ; X64-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: issubnormal_or_zero_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 240)  ; 0xf0 = "subnormal|zero"
   ret i1 %0
@@ -821,6 +1134,13 @@ define i1 @issubnormal_or_zero_f_daz(float %x) #0 {
 ; X64-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: issubnormal_or_zero_f_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 240)  ; 0xf0 = "subnormal|zero"
   ret i1 %0
@@ -839,6 +1159,13 @@ define i1 @issubnormal_or_zero_f_maybe_daz(float %x) #1 {
 ; X64-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: issubnormal_or_zero_f_maybe_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 240)  ; 0xf0 = "subnormal|zero"
   ret i1 %0
@@ -857,6 +1184,13 @@ define i1 @not_issubnormal_or_zero_f(float %x) {
 ; X64-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_issubnormal_or_zero_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 783)  ; ~0xf0 = "~(subnormal|zero)"
   ret i1 %0
@@ -875,6 +1209,13 @@ define i1 @not_issubnormal_or_zero_f_daz(float %x) #0 {
 ; X64-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_issubnormal_or_zero_f_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 783)  ; ~0xf0 = "~(subnormal|zero)"
   ret i1 %0
@@ -893,6 +1234,13 @@ define i1 @not_issubnormal_or_zero_f_maybe_daz(float %x) #1 {
 ; X64-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_issubnormal_or_zero_f_maybe_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 783)  ; ~0xf0 = "~(subnormal|zero)"
   ret i1 %0
@@ -911,6 +1259,13 @@ define i1 @is_plus_zero_f(float %x) {
 ; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: is_plus_zero_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 64)  ; 0x40 = "+zero"
   ret i1 %0
@@ -929,6 +1284,13 @@ define i1 @not_is_plus_zero_f(float %x) {
 ; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_is_plus_zero_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 959)  ; ~0x40 = ~"+zero"
   ret i1 %0
@@ -948,6 +1310,13 @@ define i1 @is_minus_zero_f(float %x) {
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    seto %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: is_minus_zero_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    negl %eax
+; X64-ZU-NEXT:    setzuo %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 32)  ; 0x20 = "-zero"
   ret i1 %0
@@ -967,6 +1336,13 @@ define i1 @not_is_minus_zero_f(float %x) {
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    setno %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_is_minus_zero_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    negl %eax
+; X64-ZU-NEXT:    setzuno %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 991)  ; ~0x20 = ~"-zero"
   ret i1 %0
@@ -988,6 +1364,14 @@ define i1 @isnan_f_strictfp(float %x) strictfp {
 ; X64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
 ; X64-NEXT:    setge %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isnan_f_strictfp:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 3) strictfp ; "nan"
   ret i1 %0
@@ -1009,6 +1393,14 @@ define i1 @not_isnan_f_strictfp(float %x) strictfp {
 ; X64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_isnan_f_strictfp:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X64-ZU-NEXT:    setzul %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1020) strictfp ; ~"nan"
   ret i1 %0
@@ -1030,6 +1422,14 @@ define i1 @isfinite_f_strictfp(float %x) strictfp {
 ; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isfinite_f_strictfp:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzul %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 504) strictfp ; 0x1f8 = "finite"
   ret i1 %0
@@ -1051,6 +1451,14 @@ define i1 @not_isfinite_f_strictfp(float %x) strictfp {
 ; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    setge %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_isfinite_f_strictfp:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzuge %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 519) strictfp ; ~0x1f8 = ~"finite"
   ret i1 %0
@@ -1069,6 +1477,13 @@ define i1 @iszero_f_strictfp(float %x) strictfp {
 ; X64-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: iszero_f_strictfp:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 96) strictfp ; 0x60 = "zero"
   ret i1 %0
@@ -1087,6 +1502,13 @@ define i1 @not_iszero_f_strictfp(float %x) strictfp {
 ; X64-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_iszero_f_strictfp:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 927) strictfp ; ~0x60 = ~"zero"
   ret i1 %0
@@ -1108,6 +1530,12 @@ define i1 @isnan_d(double %x) {
 ; X64-NEXT:    ucomisd %xmm0, %xmm0
 ; X64-NEXT:    setp %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isnan_d:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    ucomisd %xmm0, %xmm0
+; X64-ZU-NEXT:    setzup %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 3)  ; "nan"
   ret i1 %0
@@ -1142,6 +1570,16 @@ define i1 @isinf_d(double %x) {
 ; X64-NDD-NEXT:    cmpq %rcx, %rax
 ; X64-NDD-NEXT:    sete %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: isinf_d:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movq %xmm0, %rax
+; X64-ZU-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-ZU-NEXT:    andq %rax, %rcx
+; X64-ZU-NEXT:    movabsq $9218868437227405312, %rax # imm = 0x7FF0000000000000
+; X64-ZU-NEXT:    cmpq %rax, %rcx
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 516)  ; 0x204 = "inf"
   ret i1 %0
@@ -1175,6 +1613,16 @@ define i1 @isfinite_d(double %x) {
 ; X64-NDD-NEXT:    cmpq %rcx, %rax
 ; X64-NDD-NEXT:    setl %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: isfinite_d:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movq %xmm0, %rax
+; X64-ZU-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-ZU-NEXT:    andq %rax, %rcx
+; X64-ZU-NEXT:    movabsq $9218868437227405312, %rax # imm = 0x7FF0000000000000
+; X64-ZU-NEXT:    cmpq %rax, %rcx
+; X64-ZU-NEXT:    setzul %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 504)  ; 0x1f8 = "finite"
   ret i1 %0
@@ -1214,6 +1662,18 @@ define i1 @isnormal_d(double %x) {
 ; X64-NDD-NEXT:    cmpl $1023, %eax # imm = 0x3FF
 ; X64-NDD-NEXT:    setb %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: isnormal_d:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movq %xmm0, %rax
+; X64-ZU-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-ZU-NEXT:    andq %rax, %rcx
+; X64-ZU-NEXT:    movabsq $-4503599627370496, %rax # imm = 0xFFF0000000000000
+; X64-ZU-NEXT:    addq %rcx, %rax
+; X64-ZU-NEXT:    shrq $53, %rax
+; X64-ZU-NEXT:    cmpl $1023, %eax # imm = 0x3FF
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 264)  ; 0x108 = "normal"
   ret i1 %0
@@ -1253,6 +1713,17 @@ define i1 @issubnormal_d(double %x) {
 ; X64-NDD-NEXT:    cmpq %rcx, %rax
 ; X64-NDD-NEXT:    setb %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: issubnormal_d:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movq %xmm0, %rax
+; X64-ZU-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-ZU-NEXT:    andq %rax, %rcx
+; X64-ZU-NEXT:    decq %rcx
+; X64-ZU-NEXT:    movabsq $4503599627370495, %rax # imm = 0xFFFFFFFFFFFFF
+; X64-ZU-NEXT:    cmpq %rax, %rcx
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 144)  ; 0x90 = "subnormal"
   ret i1 %0
@@ -1274,6 +1745,14 @@ define i1 @iszero_d(double %x) {
 ; X64-NEXT:    testq %rax, %rax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: iszero_d:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movq %xmm0, %rax
+; X64-ZU-NEXT:    shlq %rax
+; X64-ZU-NEXT:    testq %rax, %rax
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 96)  ; 0x60 = "zero"
   ret i1 %0
@@ -1321,6 +1800,20 @@ define i1 @issignaling_d(double %x) {
 ; X64-NDD-NEXT:    setg %al
 ; X64-NDD-NEXT:    andb %cl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: issignaling_d:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movq %xmm0, %rax
+; X64-ZU-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-ZU-NEXT:    andq %rax, %rcx
+; X64-ZU-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
+; X64-ZU-NEXT:    cmpq %rax, %rcx
+; X64-ZU-NEXT:    setzul %dl
+; X64-ZU-NEXT:    movabsq $9218868437227405312, %rax # imm = 0x7FF0000000000000
+; X64-ZU-NEXT:    cmpq %rax, %rcx
+; X64-ZU-NEXT:    setzug %al
+; X64-ZU-NEXT:    andb %dl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 1)  ; "snan"
   ret i1 %0
@@ -1354,6 +1847,16 @@ define i1 @isquiet_d(double %x) {
 ; X64-NDD-NEXT:    cmpq %rcx, %rax
 ; X64-NDD-NEXT:    setg %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: isquiet_d:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movq %xmm0, %rax
+; X64-ZU-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-ZU-NEXT:    andq %rax, %rcx
+; X64-ZU-NEXT:    movabsq $9221120237041090559, %rax # imm = 0x7FF7FFFFFFFFFFFF
+; X64-ZU-NEXT:    cmpq %rax, %rcx
+; X64-ZU-NEXT:    setzug %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 2)  ; "qnan"
   ret i1 %0
@@ -1390,6 +1893,16 @@ define i1 @isnan_d_strictfp(double %x) strictfp {
 ; X64-NDD-NEXT:    cmpq %rcx, %rax
 ; X64-NDD-NEXT:    setg %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: isnan_d_strictfp:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movq %xmm0, %rax
+; X64-ZU-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-ZU-NEXT:    andq %rax, %rcx
+; X64-ZU-NEXT:    movabsq $9218868437227405312, %rax # imm = 0x7FF0000000000000
+; X64-ZU-NEXT:    cmpq %rax, %rcx
+; X64-ZU-NEXT:    setzug %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 3) strictfp ; "nan"
   ret i1 %0
@@ -1411,6 +1924,14 @@ define i1 @iszero_d_strictfp(double %x) strictfp {
 ; X64-NEXT:    testq %rax, %rax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: iszero_d_strictfp:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movq %xmm0, %rax
+; X64-ZU-NEXT:    shlq %rax
+; X64-ZU-NEXT:    testq %rax, %rax
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 96) strictfp ; 0x60 = "zero"
   ret i1 %0
@@ -1434,6 +1955,12 @@ define <1 x i1> @isnan_v1f(<1 x float> %x) {
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
 ; X64-NEXT:    setp %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isnan_v1f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    ucomiss %xmm0, %xmm0
+; X64-ZU-NEXT:    setzup %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call <1 x i1> @llvm.is.fpclass.v1f32(<1 x float> %x, i32 3)  ; "nan"
   ret <1 x i1> %0
@@ -1455,6 +1982,14 @@ define <1 x i1> @isnan_v1f_strictfp(<1 x float> %x) strictfp {
 ; X64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
 ; X64-NEXT:    setge %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isnan_v1f_strictfp:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call <1 x i1> @llvm.is.fpclass.v1f32(<1 x float> %x, i32 3) strictfp ; "nan"
   ret <1 x i1> %0
@@ -1483,6 +2018,12 @@ define <2 x i1> @isnan_v2f(<2 x float> %x) {
 ; X64-NEXT:    cmpunordps %xmm0, %xmm0
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isnan_v2f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    cmpunordps %xmm0, %xmm0
+; X64-ZU-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %x, i32 3)  ; "nan"
   ret <2 x i1> %0
@@ -1512,6 +2053,12 @@ define <2 x i1> @isnot_nan_v2f(<2 x float> %x) {
 ; X64-NEXT:    cmpordps %xmm0, %xmm0
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isnot_nan_v2f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    cmpordps %xmm0, %xmm0
+; X64-ZU-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %x, i32 1020)  ; 0x3fc = "zero|subnormal|normal|inf"
   ret <2 x i1> %0
@@ -1536,6 +2083,13 @@ define <2 x i1> @isnan_v2f_strictfp(<2 x float> %x) strictfp {
 ; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isnan_v2f_strictfp:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; X64-ZU-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-ZU-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %x, i32 3) strictfp ; "nan"
   ret <2 x i1> %0
@@ -1583,6 +2137,11 @@ define <4 x i1> @isnan_v4f(<4 x float> %x) {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    cmpunordps %xmm0, %xmm0
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isnan_v4f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    cmpunordps %xmm0, %xmm0
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %x, i32 3)  ; "nan"
   ret <4 x i1> %0
@@ -1627,6 +2186,12 @@ define <4 x i1> @isnan_v4f_strictfp(<4 x float> %x) strictfp {
 ; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isnan_v4f_strictfp:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-ZU-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %x, i32 3) strictfp ; "nan"
   ret <4 x i1> %0
@@ -1642,6 +2207,11 @@ define i1 @isnone_f(float %x) {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isnone_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    xorl %eax, %eax
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 0)
   ret i1 %0
@@ -1657,6 +2227,11 @@ define i1 @isany_f(float %x) {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movb $1, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isany_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movb $1, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1023)
   ret i1 %0
@@ -1681,6 +2256,13 @@ define i1 @iszero_or_nan_f(float %x) {
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: iszero_or_nan_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    xorps %xmm1, %xmm1
+; X64-ZU-NEXT:    ucomiss %xmm1, %xmm0
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 99)  ; 0x60|0x3 = "zero|nan"
   ret i1 %0
@@ -1708,6 +2290,17 @@ define i1 @iszero_or_nan_f_daz(float %x) #0 {
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: iszero_or_nan_f_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %cl
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 99)  ; 0x60|0x3 = "zero|nan"
   ret i1 %0
@@ -1735,6 +2328,17 @@ define i1 @iszero_or_nan_f_maybe_daz(float %x) #1 {
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: iszero_or_nan_f_maybe_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %cl
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 99)  ; 0x60|0x3 = "zero|nan"
   ret i1 %0
@@ -1758,6 +2362,13 @@ define i1 @not_iszero_or_nan_f(float %x) {
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_iszero_or_nan_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    xorps %xmm1, %xmm1
+; X64-ZU-NEXT:    ucomiss %xmm1, %xmm0
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 924)  ; ~0x60 = "~(zero|nan)"
   ret i1 %0
@@ -1785,6 +2396,17 @@ define i1 @not_iszero_or_nan_f_daz(float %x) #0 {
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    andb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_iszero_or_nan_f_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X64-ZU-NEXT:    setzul %cl
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    andb %cl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 924)  ; ~(0x60|0x3) = "~(zero|nan)"
   ret i1 %0
@@ -1812,6 +2434,17 @@ define i1 @not_iszero_or_nan_f_maybe_daz(float %x) #1 {
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    andb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_iszero_or_nan_f_maybe_daz:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X64-ZU-NEXT:    setzul %cl
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    andb %cl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 924)  ; ~(0x60|0x3) = "~(zero|nan)"
   ret i1 %0
@@ -1839,6 +2472,17 @@ define i1 @iszero_or_qnan_f(float %x) {
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: iszero_or_qnan_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzuge %cl
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 98)  ; 0x60|0x2 = "zero|qnan"
   ret i1 %0
@@ -1886,6 +2530,20 @@ define i1 @iszero_or_snan_f(float %x) {
 ; X64-NDD-NEXT:    sete %al
 ; X64-NDD-NEXT:    orb %cl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: iszero_or_snan_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzul %cl
+; X64-ZU-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %dl
+; X64-ZU-NEXT:    andb %cl, %dl
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    orb %dl, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 97)  ; 0x60|0x1 = "zero|snan"
   ret i1 %0
@@ -1962,6 +2620,28 @@ define i1 @not_iszero_or_qnan_f(float %x) {
 ; X64-NDD-NEXT:    orb %cl, %al
 ; X64-NDD-NEXT:    orb %dl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: not_iszero_or_qnan_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzul %cl
+; X64-ZU-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %dl
+; X64-ZU-NEXT:    andb %cl, %dl
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %cl
+; X64-ZU-NEXT:    leal -1(%rax), %esi
+; X64-ZU-NEXT:    cmpl $8388607, %esi # imm = 0x7FFFFF
+; X64-ZU-NEXT:    setzub %sil
+; X64-ZU-NEXT:    orb %cl, %sil
+; X64-ZU-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    orb %dl, %al
+; X64-ZU-NEXT:    orb %sil, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 925)  ; ~(0x60|0x2) = "~(zero|qnan)"
   ret i1 %0
@@ -2024,6 +2704,25 @@ define i1 @not_iszero_or_snan_f(float %x) {
 ; X64-NDD-NEXT:    setb %al
 ; X64-NDD-NEXT:    orb %cl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: not_iszero_or_snan_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %cl
+; X64-ZU-NEXT:    leal -1(%rax), %edx
+; X64-ZU-NEXT:    cmpl $8388607, %edx # imm = 0x7FFFFF
+; X64-ZU-NEXT:    setzub %dl
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzuge %sil
+; X64-ZU-NEXT:    orb %cl, %sil
+; X64-ZU-NEXT:    orb %dl, %sil
+; X64-ZU-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    orb %sil, %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 926)  ; ~(0x60|0x1) = "~(zero|snan)"
   ret i1 %0
@@ -2045,6 +2744,14 @@ define i1 @isinf_or_nan_f(float %x) {
 ; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    setge %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isinf_or_nan_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzuge %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 519)  ; 0x204|0x3 = "inf|nan"
   ret i1 %0
@@ -2066,6 +2773,14 @@ define i1 @not_isinf_or_nan_f(float %x) {
 ; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_isinf_or_nan_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzul %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 504)  ; ~(0x204|0x3) = "~(inf|nan)"
   ret i1 %0
@@ -2087,6 +2802,14 @@ define i1 @isfinite_or_nan_f(float %x) {
 ; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: isfinite_or_nan_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 507)  ; 0x1f8|0x3 = "finite|nan"
   ret i1 %0
@@ -2108,6 +2831,14 @@ define i1 @not_isfinite_or_nan_f(float %x) {
 ; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_isfinite_or_nan_f:
+; X64-ZU:       # %bb.0: # %entry
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 516)  ; ~(0x1f8|0x3) = "~(finite|nan)"
   ret i1 %0
@@ -2130,6 +2861,12 @@ define i1 @is_plus_inf_or_nan_f(float %x) {
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: is_plus_inf_or_nan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 515)  ; 0x200|0x3 = "+inf|nan"
   ret i1 %class
 }
@@ -2151,6 +2888,12 @@ define i1 @is_minus_inf_or_nan_f(float %x) {
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: is_minus_inf_or_nan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 7)  ; "-inf|nan"
   ret i1 %class
 }
@@ -2172,6 +2915,12 @@ define i1 @not_is_plus_inf_or_nan_f(float %x) {
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_is_plus_inf_or_nan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 508)  ; ~(0x200|0x3) = "~(+inf|nan)"
   ret i1 %class
 }
@@ -2193,6 +2942,12 @@ define i1 @not_is_minus_inf_or_nan_f(float %x) {
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_is_minus_inf_or_nan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1016)  ; "~(-inf|nan)"
   ret i1 %class
 }
@@ -2241,6 +2996,21 @@ define i1 @is_plus_inf_or_snan_f(float %x) {
 ; X64-NDD-NEXT:    sete %al
 ; X64-NDD-NEXT:    orb %cl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: is_plus_inf_or_snan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    movl %eax, %ecx
+; X64-ZU-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %ecx # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzul %dl
+; X64-ZU-NEXT:    cmpl $2139095041, %ecx # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %cl
+; X64-ZU-NEXT:    andb %dl, %cl
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 513)  ; 0x200|0x1 = "+inf|snan"
   ret i1 %class
 }
@@ -2267,6 +3037,17 @@ define i1 @is_plus_inf_or_qnan_f(float %x) {
 ; X64-NEXT:    setge %al
 ; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: is_plus_inf_or_qnan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %cl
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzuge %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 514)  ; 0x200|0x1 = "+inf|qnan"
   ret i1 %class
 }
@@ -2313,6 +3094,20 @@ define i1 @not_is_plus_inf_or_snan_f(float %x) {
 ; X64-NDD-NEXT:    setge %al
 ; X64-NDD-NEXT:    orb %cl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: not_is_plus_inf_or_snan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    setzue %cl
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzul %dl
+; X64-ZU-NEXT:    orb %cl, %dl
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzuge %al
+; X64-ZU-NEXT:    orb %dl, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 510) ; ~(+inf|snan)
   ret i1 %class
 }
@@ -2370,6 +3165,24 @@ define i1 @not_is_plus_inf_or_qnan_f(float %x) {
 ; X64-NDD-NEXT:    orb %cl, %al
 ; X64-NDD-NEXT:    orb %dl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: not_is_plus_inf_or_qnan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    movl %eax, %ecx
+; X64-ZU-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %ecx # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzul %dl
+; X64-ZU-NEXT:    cmpl $2139095041, %ecx # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %sil
+; X64-ZU-NEXT:    andb %dl, %sil
+; X64-ZU-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    setzue %dl
+; X64-ZU-NEXT:    cmpl $2139095040, %ecx # imm = 0x7F800000
+; X64-ZU-NEXT:    setzul %al
+; X64-ZU-NEXT:    orb %dl, %al
+; X64-ZU-NEXT:    orb %sil, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 509) ; ~(+inf|qnan)
   ret i1 %class
 }
@@ -2418,6 +3231,21 @@ define i1 @is_minus_inf_or_snan_f(float %x) {
 ; X64-NDD-NEXT:    sete %al
 ; X64-NDD-NEXT:    orb %cl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: is_minus_inf_or_snan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    movl %eax, %ecx
+; X64-ZU-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %ecx # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzul %dl
+; X64-ZU-NEXT:    cmpl $2139095041, %ecx # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %cl
+; X64-ZU-NEXT:    andb %dl, %cl
+; X64-ZU-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 5)  ; "-inf|snan"
   ret i1 %class
 }
@@ -2444,6 +3272,17 @@ define i1 @is_minus_inf_or_qnan_f(float %x) {
 ; X64-NEXT:    setge %al
 ; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: is_minus_inf_or_qnan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    setzue %cl
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzuge %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 6)  ; "-inf|qnan"
   ret i1 %class
 }
@@ -2490,6 +3329,20 @@ define i1 @not_is_minus_inf_or_snan_f(float %x) {
 ; X64-NDD-NEXT:    setge %al
 ; X64-NDD-NEXT:    orb %cl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: not_is_minus_inf_or_snan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %cl
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzul %dl
+; X64-ZU-NEXT:    orb %cl, %dl
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzuge %al
+; X64-ZU-NEXT:    orb %dl, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1018)  ; "~(-inf|snan)"
   ret i1 %class
 }
@@ -2547,6 +3400,24 @@ define i1 @not_is_minus_inf_or_qnan_f(float %x) {
 ; X64-NDD-NEXT:    orb %cl, %al
 ; X64-NDD-NEXT:    orb %dl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: not_is_minus_inf_or_qnan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    movl %eax, %ecx
+; X64-ZU-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %ecx # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzul %dl
+; X64-ZU-NEXT:    cmpl $2139095041, %ecx # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %sil
+; X64-ZU-NEXT:    andb %dl, %sil
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %dl
+; X64-ZU-NEXT:    cmpl $2139095040, %ecx # imm = 0x7F800000
+; X64-ZU-NEXT:    setzul %al
+; X64-ZU-NEXT:    orb %dl, %al
+; X64-ZU-NEXT:    orb %sil, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1017)  ; "-inf|qnan"
   ret i1 %class
 }
@@ -2575,6 +3446,18 @@ define i1 @issubnormal_or_nan_f(float %x) {
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: issubnormal_or_nan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %cl
+; X64-ZU-NEXT:    decl %eax
+; X64-ZU-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 147)  ; 0x90|0x3 = "subnormal|nan"
   ret i1 %class
 }
@@ -2599,6 +3482,13 @@ define i1 @issubnormal_or_zero_or_nan_f(float %x) {
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: issubnormal_or_zero_or_nan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-ZU-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 243)  ; 0xf0|0x3 = "subnormal|zero|nan"
   ret i1 %class
 }
@@ -2621,6 +3511,13 @@ define i1 @issubnormal_or_zero_or_nan_f_daz(float %x) #0 {
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: issubnormal_or_zero_or_nan_f_daz:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    xorps %xmm1, %xmm1
+; X64-ZU-NEXT:    ucomiss %xmm1, %xmm0
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 243)  ; 0xf0|0x3 = "subnormal|zero|nan"
   ret i1 %class
 }
@@ -2669,6 +3566,21 @@ define i1 @issubnormal_or_zero_or_snan_f(float %x) {
 ; X64-NDD-NEXT:    sete %al
 ; X64-NDD-NEXT:    orb %cl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: issubnormal_or_zero_or_snan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    movl %eax, %ecx
+; X64-ZU-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %ecx # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzul %dl
+; X64-ZU-NEXT:    cmpl $2139095041, %ecx # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %cl
+; X64-ZU-NEXT:    andb %dl, %cl
+; X64-ZU-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 241)  ; 0x90|0x1 = "subnormal|snan"
   ret i1 %class
 }
@@ -2695,6 +3607,17 @@ define i1 @issubnormal_or_zero_or_qnan_f(float %x) {
 ; X64-NEXT:    setge %al
 ; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: issubnormal_or_zero_or_qnan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %cl
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzuge %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 242)  ; 0x90|0x2 = "subnormal|qnan"
   ret i1 %class
 }
@@ -2744,6 +3667,21 @@ define i1 @not_issubnormal_or_nan_f(float %x) {
 ; X64-NDD-NEXT:    setb %al
 ; X64-NDD-NEXT:    orb %cl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: not_issubnormal_or_nan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %cl
+; X64-ZU-NEXT:    testl %eax, %eax
+; X64-ZU-NEXT:    setzue %dl
+; X64-ZU-NEXT:    orb %cl, %dl
+; X64-ZU-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    orb %dl, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 876)  ; ~(0x90|0x3) = ~"subnormal|nan"
   ret i1 %class
 }
@@ -2768,6 +3706,13 @@ define i1 @not_issubnormal_or_zero_or_nan_f(float %x) {
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_issubnormal_or_zero_or_nan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-ZU-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-ZU-NEXT:    setzuae %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 780)  ; ~(0xf0|0x3) = ~"subnormal|zero|nan"
   ret i1 %class
 }
@@ -2790,6 +3735,13 @@ define i1 @not_issubnormal_or_zero_or_nan_f_daz(float %x) #0 {
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
+;
+; X64-ZU-LABEL: not_issubnormal_or_zero_or_nan_f_daz:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    xorps %xmm1, %xmm1
+; X64-ZU-NEXT:    ucomiss %xmm1, %xmm0
+; X64-ZU-NEXT:    setzune %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 780)  ; ~(0xf0|0x3) = ~"subnormal|zero|nan"
   ret i1 %class
 }
@@ -2839,6 +3791,21 @@ define i1 @not_issubnormal_or_zero_or_snan_f(float %x) {
 ; X64-NDD-NEXT:    setb %al
 ; X64-NDD-NEXT:    orb %cl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: not_issubnormal_or_zero_or_snan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzuge %cl
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %dl
+; X64-ZU-NEXT:    orb %cl, %dl
+; X64-ZU-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    orb %dl, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 782)  ; ~(0x90|0x1) = ~"subnormal|snan"
   ret i1 %class
 }
@@ -2897,6 +3864,24 @@ define i1 @not_issubnormal_or_zero_or_qnan_f(float %x) {
 ; X64-NDD-NEXT:    setb %al
 ; X64-NDD-NEXT:    orb %cl, %al
 ; X64-NDD-NEXT:    retq
+;
+; X64-ZU-LABEL: not_issubnormal_or_zero_or_qnan_f:
+; X64-ZU:       # %bb.0:
+; X64-ZU-NEXT:    movd %xmm0, %eax
+; X64-ZU-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-ZU-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X64-ZU-NEXT:    setzul %cl
+; X64-ZU-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X64-ZU-NEXT:    setzuge %dl
+; X64-ZU-NEXT:    andb %cl, %dl
+; X64-ZU-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-ZU-NEXT:    setzue %cl
+; X64-ZU-NEXT:    orb %dl, %cl
+; X64-ZU-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; X64-ZU-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; X64-ZU-NEXT:    setzub %al
+; X64-ZU-NEXT:    orb %cl, %al
+; X64-ZU-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 781)  ; ~(0x90|0x2) = ~"subnormal|qnan"
   ret i1 %class
 }
