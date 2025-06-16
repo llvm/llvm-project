@@ -631,7 +631,7 @@ Improvements to Clang's diagnostics
 
 - Fixed false positives in ``-Wformat-truncation`` and ``-Wformat-overflow``
   diagnostics when floating-point numbers had both width field and plus or space
-  prefix specified.
+  prefix specified. (#GH143951)
 
 Improvements to Clang's time-trace
 ----------------------------------
