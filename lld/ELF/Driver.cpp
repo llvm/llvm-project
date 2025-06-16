@@ -65,6 +65,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cstdlib>
 #include <tuple>
 #include <utility>
@@ -1700,51 +1701,59 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   bool hasZicfilpFuncSigReportDynamic = false;
   bool hasZicfissReportDynamic = false;
   struct ReportOptDesc {
-    const char *const name;
+    const StringRef name;
     ReportPolicy &policy;
     bool *const seen;
 
-    ReportOptDesc(const char *const name, ReportPolicy &policy, bool *seen)
+    ReportOptDesc(const StringRef name, ReportPolicy &policy, bool *seen)
         : name(name), policy(policy), seen(seen) {}
   };
-  const ReportOptDesc reports[] = {
-      {"bti-report", ctx.arg.zBtiReport, nullptr},
-      {"cet-report", ctx.arg.zCetReport, nullptr},
-      {"execute-only-report", ctx.arg.zExecuteOnlyReport, nullptr},
-      {"gcs-report", ctx.arg.zGcsReport, nullptr},
-      {"gcs-report-dynamic", ctx.arg.zGcsReportDynamic, &hasGcsReportDynamic},
-      {"pauth-report", ctx.arg.zPauthReport, nullptr},
-      {"zicfilp-unlabeled-report", ctx.arg.zZicfilpUnlabeledReport, nullptr},
-      {"zicfilp-unlabeled-report-dynamic",
+  // Sort the descriptions by name according to StringRef::compare() so we can
+  // binary search it
+  ReportOptDesc reports[] = {
+      {{"bti-report"}, ctx.arg.zBtiReport, nullptr},
+      {{"cet-report"}, ctx.arg.zCetReport, nullptr},
+      {{"execute-only-report"}, ctx.arg.zExecuteOnlyReport, nullptr},
+      {{"gcs-report"}, ctx.arg.zGcsReport, nullptr},
+      {{"gcs-report-dynamic"}, ctx.arg.zGcsReportDynamic, &hasGcsReportDynamic},
+      {{"pauth-report"}, ctx.arg.zPauthReport, nullptr},
+      {{"zicfilp-func-sig-report"}, ctx.arg.zZicfilpFuncSigReport, nullptr},
+      {{"zicfilp-func-sig-report-dynamic"},
+       ctx.arg.zZicfilpFuncSigReportDynamic,
+       &hasZicfilpFuncSigReportDynamic},
+      {{"zicfilp-unlabeled-report"}, ctx.arg.zZicfilpUnlabeledReport, nullptr},
+      {{"zicfilp-unlabeled-report-dynamic"},
        ctx.arg.zZicfilpUnlabeledReportDynamic,
        &hasZicfilpUnlabeledReportDynamic},
-      {"zicfilp-func-sig-report", ctx.arg.zZicfilpFuncSigReport, nullptr},
-      {"zicfilp-func-sig-report-dynamic", ctx.arg.zZicfilpFuncSigReportDynamic,
-       &hasZicfilpFuncSigReportDynamic},
-      {"zicfiss-report", ctx.arg.zZicfissReport, nullptr},
-      {"zicfiss-report-dynamic", ctx.arg.zZicfissReportDynamic,
+      {{"zicfiss-report"}, ctx.arg.zZicfissReport, nullptr},
+      {{"zicfiss-report-dynamic"},
+       ctx.arg.zZicfissReportDynamic,
        &hasZicfissReportDynamic}};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
-    for (const ReportOptDesc &desc : reports) {
-      if (option.first != desc.name)
-        continue;
-      arg->claim();
-      if (option.second == "none")
-        desc.policy = ReportPolicy::None;
-      else if (option.second == "warning")
-        desc.policy = ReportPolicy::Warning;
-      else if (option.second == "error")
-        desc.policy = ReportPolicy::Error;
-      else {
-        ErrAlways(ctx) << "unknown -z " << desc.name
-                       << "= value: " << option.second;
-        continue;
-      }
-      if (desc.seen)
-        *desc.seen = true;
+    ReportOptDesc *const desc =
+        std::lower_bound(std::begin(reports), std::end(reports), option.first,
+                         [](const ReportOptDesc &d, const StringRef &s) {
+                           return d.name < s;
+                         });
+    if (desc == std::end(reports) || desc->name != option.first)
+      continue;
+
+    arg->claim();
+    if (option.second == "none")
+      desc->policy = ReportPolicy::None;
+    else if (option.second == "warning")
+      desc->policy = ReportPolicy::Warning;
+    else if (option.second == "error")
+      desc->policy = ReportPolicy::Error;
+    else {
+      ErrAlways(ctx) << "unknown -z " << desc->name
+                     << "= value: " << option.second;
+      continue;
     }
+    if (desc->seen)
+      *desc->seen = true;
   }
 
   struct ReportDynamicOptDesc {
