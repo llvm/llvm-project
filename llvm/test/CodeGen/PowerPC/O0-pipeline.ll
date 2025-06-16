@@ -69,6 +69,7 @@
 ; CHECK-NEXT:       Stack Frame Layout Analysis
 ; CHECK-NEXT:       PowerPC Expand Atomic
 ; CHECK-NEXT:       PowerPC Branch Selector
+; CHECK-NEXT:       Basic Block Hash Compute
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Linux PPC Assembly Printer

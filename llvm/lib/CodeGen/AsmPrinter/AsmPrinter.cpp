@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -455,6 +456,7 @@ const MCSection *AsmPrinter::getCurrentSection() const {
 void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
+  AU.addRequired<MachineBlockHashInfo>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<GCModuleInfo>();
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
@@ -1486,6 +1488,8 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       PrevMBBEndSymbol = MBBSymbol;
     }
 
+    auto MBHI = &getAnalysis<MachineBlockHashInfo>();
+
     if (!Features.OmitBBEntries) {
       // TODO: Remove this check when version 1 is deprecated.
       if (BBAddrMapVersion > 1) {
@@ -1505,6 +1509,8 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
       // Emit the Metadata.
       OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
+      // Emit the Hash.
+      OutStreamer->emitULEB128IntValue(MBHI->getMBBHash(MBB));
     }
 
     PrevMBBEndSymbol = MBB.getEndSymbol();
