@@ -4157,7 +4157,7 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
-  
+
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
 
@@ -4216,6 +4216,7 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
     SDValue SplitLHS = DAG.getNode(ISD::BITCAST, LHSSL, ConcatType, LHS);
     Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, LHSSL, TargetType, SplitLHS, One);
   }
+  Hi = DAG.getFreeze(Hi);
 
   SDValue HiShift = DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftFullAmt);
   SDValue NewShift = DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt);
