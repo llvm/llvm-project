@@ -1113,6 +1113,9 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
 
   case ISD::BITCAST:     Res = SoftenFloatOp_BITCAST(N); break;
   case ISD::BR_CC:       Res = SoftenFloatOp_BR_CC(N); break;
+  case ISD::FAKE_USE:
+    Res = SoftenFloatOp_FAKE_USE(N);
+    break;
   case ISD::STRICT_FP_TO_FP16:
   case ISD::FP_TO_FP16:  // Same as FP_ROUND for softening purposes
   case ISD::FP_TO_BF16:
@@ -1167,6 +1170,12 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_BITCAST(SDNode *N) {
   SDValue Op0 = GetSoftenedFloat(N->getOperand(0));
 
   return DAG.getNode(ISD::BITCAST, SDLoc(N), N->getValueType(0), Op0);
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatOp_FAKE_USE(SDNode *N) {
+  SDValue Op = GetSoftenedFloat(N->getOperand(1));
+
+  return DAG.getNode(ISD::FAKE_USE, SDLoc(N), MVT::Other, N->getOperand(0), Op);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_FP_ROUND(SDNode *N) {
