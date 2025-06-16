@@ -11663,16 +11663,13 @@ SDValue DAGCombiner::foldShiftToAvg(SDNode *N) {
 SDValue DAGCombiner::foldBitwiseOpWithNeg(SDNode *N, const SDLoc &DL, EVT VT) {
   unsigned Opc = N->getOpcode();
   SDValue X, Y, Z;
-  if (sd_match(N, m_BitwiseLogic(m_Value(X),
-                                 m_Add(m_AllOf(m_Value(Y), m_Not(m_Value(Y))),
-                                       m_Value(Z)))))
+  if (sd_match(
+          N, m_BitwiseLogic(m_Value(X), m_Add(m_Not(m_Value(Y)), m_Value(Z)))))
     return DAG.getNode(Opc, DL, VT, X,
                        DAG.getNOT(DL, DAG.getNode(ISD::SUB, DL, VT, Y, Z), VT));
 
-  if (sd_match(N, m_BitwiseLogic(m_Value(X),
-                                 m_Sub(m_AllOf(m_Value(Y), m_Not(m_Value(Y)),
-                                               m_OneUse(m_Not(m_Value(Y)))),
-                                       m_Value(Z)))))
+  if (sd_match(N, m_BitwiseLogic(m_Value(X), m_Sub(m_OneUse(m_Not(m_Value(Y))),
+                                                   m_Value(Z)))))
     return DAG.getNode(Opc, DL, VT, X,
                        DAG.getNOT(DL, DAG.getNode(ISD::ADD, DL, VT, Y, Z), VT));
 
