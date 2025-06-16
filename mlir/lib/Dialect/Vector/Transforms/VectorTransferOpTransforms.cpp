@@ -890,27 +890,27 @@ class RewriteScalarExtractOfTransferRead
 
       // Compute affine expression `newIndices[idx] + pos` where `pos` can be
       // either a constant or a value.
-      OpFoldResult ofr;
+      OpFoldResult composedIdx;
       if (auto attr = dyn_cast<Attribute>(pos)) {
         int64_t offset = cast<IntegerAttr>(attr).getInt();
-        ofr = affine::makeComposedFoldedAffineApply(
+        composedIdx = affine::makeComposedFoldedAffineApply(
             rewriter, extractOp.getLoc(),
             rewriter.getAffineSymbolExpr(0) + offset, {newIndices[idx]});
       } else {
         Value dynamicOffset = cast<Value>(pos);
         AffineExpr sym0, sym1;
         bindSymbols(rewriter.getContext(), sym0, sym1);
-        ofr = affine::makeComposedFoldedAffineApply(
+        composedIdx = affine::makeComposedFoldedAffineApply(
             rewriter, extractOp.getLoc(), sym0 + sym1,
             {newIndices[idx], dynamicOffset});
       }
 
       // Update the corresponding index with the folded result.
-      if (auto value = dyn_cast<Value>(ofr)) {
+      if (auto value = dyn_cast<Value>(composedIdx)) {
         newIndices[idx] = value;
       } else {
         newIndices[idx] = rewriter.create<arith::ConstantIndexOp>(
-            extractOp.getLoc(), *getConstantIntValue(ofr));
+            extractOp.getLoc(), *getConstantIntValue(composedIdx));
       }
     }
     if (isa<MemRefType>(xferOp.getBase().getType())) {
