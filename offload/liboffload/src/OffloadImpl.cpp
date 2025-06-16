@@ -101,10 +101,8 @@ using PlatformVecT = SmallVector<ol_platform_impl_t, 4>;
 static PlatformVecT *PlatformList;
 PlatformVecT &Platforms() { return *PlatformList; }
 
-static std::atomic_int &GlobalRefCount() {
-  static std::atomic_int Ref{0};
-  return Ref;
-}
+static std::mutex InitDeinitMtx;
+static uint32_t RefCount = 0;
 
 ol_device_handle_t HostDevice() {
   // The host platform is always inserted last
@@ -173,20 +171,18 @@ void initPlugins() {
 }
 
 Error olInit_impl() {
-  // While the refcount increment ensures that only thread performs
-  // initialization, we need to ensure that other threads are blocked until it
-  // is completed - hence this mutex.
-  static std::mutex Init{};
-  std::lock_guard<std::mutex> Guard{Init};
+  std::lock_guard<std::mutex> Guard{InitDeinitMtx};
 
-  if (++GlobalRefCount() == 1)
+  if (++RefCount == 1)
     initPlugins();
 
   return Error::success();
 }
 
 Error olShutDown_impl() {
-  if (--GlobalRefCount() != 0)
+  std::lock_guard<std::mutex> Guard{InitDeinitMtx};
+
+  if (--RefCount != 0)
     return Error::success();
 
   llvm::Error Result = Error::success();
