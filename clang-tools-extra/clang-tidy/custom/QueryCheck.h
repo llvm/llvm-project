@@ -28,7 +28,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  llvm::SmallVector<ast_matchers::dynamic::DynTypedMatcher> Matchers{};
+  llvm::SmallVector<ast_matchers::dynamic::DynTypedMatcher> Matchers;
   using BindNameMapToDiagMessage =
       llvm::StringMap<llvm::SmallVector<std::string>>;
   using DiagMaps =
