@@ -238,6 +238,12 @@ bool SymbolManager::canSymbolicate(QualType T) {
   return false;
 }
 
+const SymbolConjured *SymbolManager::conjureSymbol(
+    ConstCFGElementRef Elem, const LocationContext *LCtx, QualType T,
+    unsigned VisitCount, const void *SymbolTag /*=nullptr*/) {
+  return acquire<SymbolConjured>(Elem, LCtx, T, VisitCount, SymbolTag);
+}
+
 void SymbolManager::addSymbolDependency(const SymbolRef Primary,
                                         const SymbolRef Dependent) {
   auto &dependencies = SymbolDependencies[Primary];

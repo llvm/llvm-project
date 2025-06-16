@@ -67,7 +67,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       if (RightV.isUnknown()) {
         unsigned Count = currBldrCtx->blockCount();
         RightV = svalBuilder.conjureSymbolVal(nullptr, getCFGElementRef(), LCtx,
-                                              Count);
+                                              RHS->getType(), Count);
       }
       // Simulate the effects of a "store":  bind the value of the RHS
       // to the L-Value represented by the LHS.

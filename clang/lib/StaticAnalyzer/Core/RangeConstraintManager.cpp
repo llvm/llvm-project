@@ -1264,7 +1264,9 @@ public:
 
 private:
   SymbolicRangeInferrer(RangeSet::Factory &F, ProgramStateRef S)
-      : ValueFactory(F.getValueFactory()), RangeFactory(F), State(S) {}
+      : SVB(S->getStateManager().getSValBuilder()),
+        SymMgr(S->getSymbolManager()), ValueFactory(F.getValueFactory()),
+        RangeFactory(F), State(S) {}
 
   /// Infer range information from the given integer constant.
   ///
@@ -1471,8 +1473,10 @@ private:
     return getRangeForNegatedExpr(
         [SSE, State = this->State]() -> SymbolRef {
           if (SSE->getOpcode() == BO_Sub)
-            return State->getSymbolManager().acquire<SymSymExpr>(
-                SSE->getRHS(), BO_Sub, SSE->getLHS(), SSE->getType());
+            return State->getSymbolManager()
+                .acquire<SymSymExpr>(SSE->getRHS(), BO_Sub, SSE->getLHS(),
+                                     SSE->getType())
+                .getOrNull();
           return nullptr;
         },
         SSE->getType());
@@ -1481,8 +1485,9 @@ private:
   std::optional<RangeSet> getRangeForNegatedSym(SymbolRef Sym) {
     return getRangeForNegatedExpr(
         [Sym, State = this->State]() {
-          return State->getSymbolManager().acquire<UnarySymExpr>(
-              Sym, UO_Minus, Sym->getType());
+          return State->getSymbolManager()
+              .acquire<UnarySymExpr>(Sym, UO_Minus, Sym->getType())
+              .getOrNull();
         },
         Sym->getType());
   }
@@ -1495,8 +1500,13 @@ private:
     if (!IsCommutative)
       return std::nullopt;
 
-    SymbolRef Commuted = State->getSymbolManager().acquire<SymSymExpr>(
-        SSE->getRHS(), Op, SSE->getLHS(), SSE->getType());
+    SymbolRef Commuted = State->getSymbolManager()
+                             .acquire<SymSymExpr>(SSE->getRHS(), Op,
+                                                  SSE->getLHS(), SSE->getType())
+                             .getOrNull();
+    if (!Commuted)
+      return std::nullopt;
+
     if (const RangeSet *Range = getConstraint(State, Commuted))
       return *Range;
     return std::nullopt;
@@ -1525,8 +1535,6 @@ private:
     const SymExpr *RHS = SSE->getRHS();
     QualType T = SSE->getType();
 
-    SymbolManager &SymMgr = State->getSymbolManager();
-
     // We use this variable to store the last queried operator (`QueriedOP`)
     // for which the `getCmpOpState` returned with `Unknown`. If there are two
     // different OPs that returned `Unknown` then we have to query the special
@@ -1540,8 +1548,10 @@ private:
 
       // Let's find an expression e.g. (x < y).
       BinaryOperatorKind QueriedOP = OperatorRelationsTable::getOpFromIndex(i);
-      const SymSymExpr *SymSym =
-          SymMgr.acquire<SymSymExpr>(LHS, QueriedOP, RHS, T);
+      SymbolRef SymSym =
+          SymMgr.acquire<SymSymExpr>(LHS, QueriedOP, RHS, T).getOrNull();
+      if (!SymSym)
+        continue;
       const RangeSet *QueriedRangeSet = getConstraint(State, SymSym);
 
       // If ranges were not previously found,
@@ -1549,7 +1559,9 @@ private:
       if (!QueriedRangeSet) {
         const BinaryOperatorKind ROP =
             BinaryOperator::reverseComparisonOp(QueriedOP);
-        SymSym = SymMgr.acquire<SymSymExpr>(RHS, ROP, LHS, T);
+        SymSym = SymMgr.acquire<SymSymExpr>(RHS, ROP, LHS, T).getOrNull();
+        if (!SymSym)
+          continue;
         QueriedRangeSet = getConstraint(State, SymSym);
       }
 
@@ -1622,6 +1634,8 @@ private:
     return RangeSet(RangeFactory, Zero);
   }
 
+  SValBuilder &SVB;
+  SymbolManager &SymMgr;
   BasicValueFactory &ValueFactory;
   RangeSet::Factory &RangeFactory;
   ProgramStateRef State;

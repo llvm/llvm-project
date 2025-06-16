@@ -51,17 +51,17 @@ private:
   /// Note, however, that it can't be used in Profile because SymbolManager
   /// needs to compute Profile before allocating SymExpr.
   const SymbolID Sym;
+  const unsigned Complexity;
 
 protected:
-  SymExpr(Kind k, SymbolID Sym) : K(k), Sym(Sym) {}
+  SymExpr(Kind k, SymbolID Sym, unsigned Complexity)
+      : K(k), Sym(Sym), Complexity(Complexity) {}
 
   static bool isValidTypeForSymbol(QualType T) {
     // FIXME: Depending on whether we choose to deprecate structural symbols,
     // this may become much stricter.
     return !T.isNull() && !T->isVoidType();
   }
-
-  mutable unsigned Complexity = 0;
 
 public:
   virtual ~SymExpr() = default;
@@ -108,7 +108,7 @@ public:
     return llvm::make_range(symbol_iterator(this), symbol_iterator());
   }
 
-  virtual unsigned computeComplexity() const = 0;
+  unsigned complexity() const { return Complexity; }
 
   /// Find the region from which this symbol originates.
   ///
@@ -136,10 +136,15 @@ using SymbolRefSmallVectorTy = SmallVector<SymbolRef, 2>;
 /// A symbol representing data which can be stored in a memory location
 /// (region).
 class SymbolData : public SymExpr {
+  friend class SymbolManager;
   void anchor() override;
 
 protected:
-  SymbolData(Kind k, SymbolID sym) : SymExpr(k, sym) { assert(classof(this)); }
+  SymbolData(Kind k, SymbolID sym) : SymExpr(k, sym, computeComplexity()) {
+    assert(classof(this));
+  }
+
+  static unsigned computeComplexity(...) { return 1; }
 
 public:
   ~SymbolData() override = default;
@@ -147,14 +152,10 @@ public:
   /// Get a string representation of the kind of the region.
   virtual StringRef getKindStr() const = 0;
 
-  unsigned computeComplexity() const override {
-    return 1;
-  };
-
   // Implement isa<T> support.
-  static inline bool classof(const SymExpr *SE) {
-    Kind k = SE->getKind();
-    return k >= BEGIN_SYMBOLS && k <= END_SYMBOLS;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) {
+    return K >= BEGIN_SYMBOLS && K <= END_SYMBOLS;
   }
 };
 
