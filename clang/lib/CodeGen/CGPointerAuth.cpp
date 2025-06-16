@@ -520,13 +520,12 @@ void CodeGenFunction::EmitSingleObjectPointerAuthRelocationFixup(
     const FixupVectorTy &Fixups, QualType ElementType, Address Dst,
     Address Src) {
   auto GetFixupAddress = [&](Address BaseAddress, CharUnits Offset,
-                             KnownNonNull_t IsKnownNonNull,
-                             const char *Reason) {
+                             KnownNonNull_t IsKnownNonNull) {
     llvm::Value *BasePtr = BaseAddress.emitRawPointer(*this);
     llvm::Value *OffsetValue =
         llvm::ConstantInt::get(PtrDiffTy, Offset.getQuantity());
     llvm::Value *FixupAddress =
-        Builder.CreateInBoundsGEP(Int8Ty, BasePtr, OffsetValue, Reason);
+        Builder.CreateInBoundsGEP(Int8Ty, BasePtr, OffsetValue);
     return Address(FixupAddress, VoidPtrPtrTy,
                    BaseAddress.getAlignment().alignmentAtOffset(Offset),
                    IsKnownNonNull);
@@ -542,12 +541,10 @@ void CodeGenFunction::EmitSingleObjectPointerAuthRelocationFixup(
 
     // We don't use the existing copy helpers as we'll be resigning a
     // value in place assuming the old address for the read.
-    Address FixupDst = GetFixupAddress(Dst, Fixup.Offset, IsKnownNonNull,
-                                       "fixup.dst.with.offset");
+    Address FixupDst = GetFixupAddress(Dst, Fixup.Offset, IsKnownNonNull);
     CGPointerAuthInfo DstPtrAuth = EmitPointerAuthInfo(Qualifier, FixupDst);
 
-    Address FixupSrc = GetFixupAddress(Src, Fixup.Offset, IsKnownNonNull,
-                                       "fixup.src.with.offset");
+    Address FixupSrc = GetFixupAddress(Src, Fixup.Offset, IsKnownNonNull);
     CGPointerAuthInfo SrcPtrAuth = EmitPointerAuthInfo(Qualifier, FixupSrc);
 
     // We're loading from the destination here as we've already performed the

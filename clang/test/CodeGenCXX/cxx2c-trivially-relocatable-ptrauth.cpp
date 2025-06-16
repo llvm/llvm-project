@@ -2,15 +2,7 @@
 
 typedef __SIZE_TYPE__ size_t;
 
-
-#if 1
 #define vtable_ptrauth(...) [[clang::ptrauth_vtable_pointer(__VA_ARGS__)]]
-
-#else
-#define vtable_ptrauth(...)
-#define __ptrauth(...)
-#endif
-
 #define ADDR_AND_TYPE_DISC  vtable_ptrauth(process_independent, address_discrimination, type_discrimination) 
 #define TYPE_DISC_ONLY  vtable_ptrauth(process_independent, no_address_discrimination, type_discrimination) 
 
