@@ -2071,7 +2071,6 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
                               SmallPtrSet<Function *, 8> &Changed,
                               bool NoFunctionsAddressIsTaken) {
   // Try and identify functions that do not recurse.
-
   // If the SCC contains multiple nodes we know for sure there is recursion.
   if (SCCNodes.size() != 1)
     return;
@@ -2080,9 +2079,6 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
   if (!F || !F->hasExactDefinition() || F->doesNotRecurse())
     return;
 
-  Module *M = F->getParent();
-  llvm::TargetLibraryInfoImpl TLII(llvm::Triple(M->getTargetTriple()));
-  llvm::TargetLibraryInfo TLI(TLII);
   // If all of the calls in F are identifiable and can be proven to not
   // callback F, F is norecurse. This check also detects self-recursion
   // as F is not currently marked norecurse, so any call from F to F
@@ -2090,9 +2086,6 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
   for (auto &BB : *F) {
     for (auto &I : BB.instructionsWithoutDebug()) {
       if (auto *CB = dyn_cast<CallBase>(&I)) {
-        if (F->hasAddressTaken())
-          return;
-
         Function *Callee = CB->getCalledFunction();
 
         if (!Callee || Callee == F)
@@ -2101,12 +2094,16 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
         if (Callee->doesNotRecurse())
           continue;
 
-        LibFunc LF;
         if (Callee->isDeclaration()) {
           if (Callee->hasFnAttribute(Attribute::NoCallback) ||
-              (NoFunctionsAddressIsTaken &&
-               TLI.getLibFunc(Callee->getName(), LF)))
+              NoFunctionsAddressIsTaken)
             continue;
+          return;
+        } else if (F->hasAddressTaken() || !F->hasLocalLinkage()) {
+          // Control reaches here only for callees which are defined in this
+          // module and do not satisfy conditions for norecurse attribute.
+          // In such a case, if function F has external linkage or address
+          // taken, conversatively avoid adding norecurse.
           return;
         }
       }
@@ -2114,8 +2111,8 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
   }
 
   // Every call was either to an external function guaranteed to not make a
-  // call to this function or a direct call to internal function and we have no
-  // indirect recursion as the SCC size is one. This function cannot recurse.
+  // call to this function or a direct call to internal function. Also, SCC is
+  // one. Together, the above checks ensures, this function cannot norecurse.
   F->setDoesNotRecurse();
   ++NumNoRecurse;
   Changed.insert(F);

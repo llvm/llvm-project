@@ -33,9 +33,9 @@ define internal void @sendmsghalt_is_norecurse() {
 }
 
 define internal i32 @sendmsg_rtn_is_norecurse() {
-; FNATTRS: Function Attrs: mustprogress nounwind willreturn
+; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn
 ; FNATTRS-LABEL: define internal i32 @sendmsg_rtn_is_norecurse(
-; FNATTRS-SAME: ) #[[ATTR2:[0-9]+]] {
+; FNATTRS-SAME: ) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 1)
 ; FNATTRS-NEXT:    ret i32 [[RES]]
 ;
@@ -74,9 +74,8 @@ define void @user() {
 ;.
 ; FNATTRS: attributes #[[ATTR0]] = { mustprogress norecurse nounwind willreturn }
 ; FNATTRS: attributes #[[ATTR1]] = { norecurse nounwind }
-; FNATTRS: attributes #[[ATTR2]] = { mustprogress nounwind willreturn }
-; FNATTRS: attributes #[[ATTR3:[0-9]+]] = { nocallback nounwind willreturn }
-; FNATTRS: attributes #[[ATTR4:[0-9]+]] = { nocallback nounwind }
+; FNATTRS: attributes #[[ATTR2:[0-9]+]] = { nocallback nounwind willreturn }
+; FNATTRS: attributes #[[ATTR3:[0-9]+]] = { nocallback nounwind }
 ;.
 ; ATTRIBUTOR: attributes #[[ATTR0]] = { mustprogress norecurse nounwind willreturn }
 ; ATTRIBUTOR: attributes #[[ATTR1]] = { norecurse nounwind }
