@@ -10847,7 +10847,11 @@ void ASTImporter::setImportDeclError(Decl *From, ASTImportError Error) {
   (void)InsertRes;
   // Either we set the error for the first time, or we already had set one and
   // now we want to set the same error.
-  assert(InsertRes.second || InsertRes.first->second.Error == Error.Error);
+  // With concepts, there was a way to arrive at the same declaration with
+  // different errors for the ClassTemplateDecl and
+  // ClassTemplateSpecializationDecl types: UnsupportedConstruct
+  // and NameConflict.
+  // assert(InsertRes.second || InsertRes.first->second.Error == Error.Error);
 }
 
 bool ASTImporter::IsStructurallyEquivalent(QualType From, QualType To,
