@@ -409,9 +409,14 @@ foreach mx = SchedMxList in {
   defvar MaskLat = SMX60GetVIMaskLatency<mx>.c;
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defm "" : LMULWriteResMX<"WriteVIALUV",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIALUX",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIALUI",    [SMX60_VIEU], mx, IsWorstCase>;
+  // WriteVIALUV/X/I includes vadd, vsub, vrsub, vand, vor, vxor. The arithmetic operations
+  // (vadd, vsub, vrsub) have latencies of 4/4/5/8, while logical operations (vand, vor, vxor)
+  // have latencies of 4/4/8/16, but since they are all in the same group, we use ArithLat (4/4/5/8).
+  let Latency = ArithLat in {
+    defm "" : LMULWriteResMX<"WriteVIALUV",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIALUX",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIALUI",    [SMX60_VIEU], mx, IsWorstCase>;
+  }
   let Latency = ALULat in {
     defm "" : LMULWriteResMX<"WriteVExtV",     [SMX60_VIEU], mx, IsWorstCase>;
   }
