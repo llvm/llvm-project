@@ -61,13 +61,15 @@ OpFoldResult FromPtrOp::fold(FoldAdaptor adaptor) {
     if (!toPtr || toPtr.getPtr().getType() != fromPtr.getType())
       return ptrLike;
     Value md = fromPtr.getMetadata();
-    // If there's no metadata in the op fold the op.
-    if (!md)
+    // If the type has trivial metadata fold.
+    if (!fromPtr.getType().hasPtrMetadata()) {
       ptrLike = toPtr.getPtr();
-    // Fold if the metadata can be verified to be equal.
-    else if (auto mdOp = dyn_cast_or_null<GetMetadataOp>(md.getDefiningOp());
-             mdOp && mdOp.getPtr() == toPtr.getPtr())
-      ptrLike = toPtr.getPtr();
+    } else if (md) {
+      // Fold if the metadata can be verified to be equal.
+      if (auto mdOp = dyn_cast_or_null<GetMetadataOp>(md.getDefiningOp());
+          mdOp && mdOp.getPtr() == toPtr.getPtr())
+        ptrLike = toPtr.getPtr();
+    }
     // Check for a sequence of casts.
     fromPtr = dyn_cast_or_null<FromPtrOp>(ptrLike ? ptrLike.getDefiningOp()
                                                   : nullptr);

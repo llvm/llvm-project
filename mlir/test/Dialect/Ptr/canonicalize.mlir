@@ -28,12 +28,12 @@ func.func @test_from_ptr_0(%mr: memref<f32, #ptr.generic_space>) -> memref<f32, 
   return %res : memref<f32, #ptr.generic_space>
 }
 
+/// Check the op doesn't fold because folding a ptr-type with metadata requires knowing the origin of the metadata.
 // CHECK-LABEL: @test_from_ptr_1
 // CHECK-SAME: (%[[MEM_REF:.*]]: memref<f32, #ptr.generic_space>)
 func.func @test_from_ptr_1(%mr: memref<f32, #ptr.generic_space>) -> memref<f32, #ptr.generic_space> {
-  // CHECK-NOT: ptr.to_ptr
-  // CHECK-NOT: ptr.from_ptr
-  // CHECK: return %[[MEM_REF]]
+  // CHECK: ptr.to_ptr
+  // CHECK: ptr.from_ptr
   %ptr = ptr.to_ptr %mr : memref<f32, #ptr.generic_space> -> !ptr.ptr<#ptr.generic_space>
   %res = ptr.from_ptr %ptr : !ptr.ptr<#ptr.generic_space> -> memref<f32, #ptr.generic_space>
   return %res : memref<f32, #ptr.generic_space>
