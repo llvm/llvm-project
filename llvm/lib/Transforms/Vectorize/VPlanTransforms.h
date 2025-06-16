@@ -184,6 +184,9 @@ struct VPlanTransforms {
                                          VPBasicBlock *LatchVPBB,
                                          VFRange &Range);
 
+  /// Replace loop regions with explicit CFG.
+  static void dissolveLoopRegions(VPlan &Plan);
+
   /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void convertToConcreteRecipes(VPlan &Plan, Type &CanonicalIVTy);
@@ -231,6 +234,10 @@ struct VPlanTransforms {
   /// removed in the future.
   static DenseMap<VPBasicBlock *, VPValue *>
   introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
+
+  /// Add branch weight metadata, if the \p Plan's middle block is terminated by
+  /// a BranchOnCond recipe.
+  static void addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF);
 };
 
 } // namespace llvm

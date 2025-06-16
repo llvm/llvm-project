@@ -43,7 +43,7 @@ bool parseDiagnosticArgs(clang::DiagnosticOptions &opts,
 class CompilerInvocationBase {
 public:
   /// Options controlling the diagnostic engine.
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagnosticOpts;
+  std::shared_ptr<clang::DiagnosticOptions> diagnosticOpts;
   /// Options for the preprocessor.
   std::shared_ptr<Fortran::frontend::PreprocessorOptions> preprocessorOpts;
 

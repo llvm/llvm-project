@@ -2,7 +2,7 @@
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -12,7 +12,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -22,7 +22,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -32,7 +32,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -42,7 +42,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -52,7 +52,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -62,7 +62,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -72,7 +72,7 @@ acc.loop {
 
 // expected-error@+1 {{expected non-empty body.}}
 acc.loop {
-}
+} attributes {independent = [#acc.device_type<none>]}
 
 // -----
 
@@ -99,7 +99,7 @@ acc.loop {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{only one of "auto", "independent", "seq" can be present at the same time}}
+// expected-error@+1 {{only one of auto, independent, seq can be present at the same time}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   acc.yield
 } attributes {auto_ = [#acc.device_type<none>], seq = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
@@ -168,7 +168,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32){
 // expected-error@+1 {{'acc.init' op cannot be nested in a compute operation}}
   acc.init
   acc.yield
-} attributes {inclusiveUpperbound = array<i1: true>}
+} attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
 // -----
 
@@ -186,7 +186,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 // expected-error@+1 {{'acc.shutdown' op cannot be nested in a compute operation}}
   acc.shutdown
   acc.yield
-} attributes {inclusiveUpperbound = array<i1: true>}
+} attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
 // -----
 
@@ -198,7 +198,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
     acc.shutdown
   }) : () -> ()
   acc.yield
-} attributes {inclusiveUpperbound = array<i1: true>}
+} attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
 // -----
 
@@ -797,7 +797,7 @@ func.func @acc_loop_container() {
         scf.yield
     }
     acc.yield
-  } attributes { collapse = [2], collapseDeviceType = [#acc.device_type<none>] }
+  } attributes { collapse = [2], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>]}
   return
 }
 
@@ -816,6 +816,6 @@ func.func @acc_loop_container() {
       scf.yield
     }
     acc.yield
-  } attributes { collapse = [3], collapseDeviceType = [#acc.device_type<none>] }
+  } attributes { collapse = [3], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>]}
   return
 }

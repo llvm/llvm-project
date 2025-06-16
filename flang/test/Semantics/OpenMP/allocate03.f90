@@ -18,6 +18,7 @@ use omp_lib
   !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the ALLOCATE directive
   !$omp allocate(my_var%array)
 
+  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the ALLOCATE directive
   !$omp allocate(darray, my_var%array) allocator(omp_default_mem_alloc)
     allocate ( darray(a, b) )

@@ -197,6 +197,16 @@ def Tosa_PadOpQuantInfoBuilder : OpBuilder<
                             input, paddings);
   }]>;
 
+// This builder is called on the TOSA variable operator with a variable type
+// and optional initial value. The builder will extract var_shape and element type
+// attributes from variable type.
+def Tosa_VariableOpBuilder : OpBuilder<
+  (ins "StringRef":$name, "Type":$variable_type, "Attribute":$initial_value),
+  [{
+    buildVariableOp($_builder, $_state, name, variable_type, initial_value);
+  }]>;
+
+
 // Wrapper over base I32EnumAttr to set common fields.
 class Tosa_I32Enum<string name, string description, list<I32EnumAttrCase> cases>
      : I32EnumAttr<name, description, cases> {

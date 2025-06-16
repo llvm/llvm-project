@@ -12,13 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchMCExpr.h"
-#include "LoongArchAsmBackend.h"
+#include "LoongArchMCAsmInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -30,36 +28,7 @@ const LoongArchMCExpr *LoongArchMCExpr::create(const MCExpr *Expr, uint16_t S,
   return new (Ctx) LoongArchMCExpr(Expr, Specifier(S), Hint);
 }
 
-void LoongArchMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  Specifier S = getSpecifier();
-  bool HasVariant = S != VK_None && S != ELF::R_LARCH_B26;
-
-  if (HasVariant)
-    OS << '%' << getSpecifierName(specifier) << '(';
-  Expr->print(OS, MAI);
-  if (HasVariant)
-    OS << ')';
-}
-
-bool LoongArchMCExpr::evaluateAsRelocatableImpl(
-    MCValue &Res,
-    const MCAssembler *Asm) const { // Explicitly drop the layout and assembler
-                                    // to prevent any symbolic folding in
-  // the expression handling.  This is required to preserve symbolic difference
-  // expressions to emit the paired relocations.
-  if (!getSubExpr()->evaluateAsRelocatable(Res, nullptr))
-    return false;
-
-  Res.setSpecifier(specifier);
-  // Custom fixup types are not valid with symbol difference expressions.
-  return !Res.getSubSym();
-}
-
-void LoongArchMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
-}
-
-StringRef LoongArchMCExpr::getSpecifierName(uint16_t S) {
+StringRef LoongArch::getSpecifierName(uint16_t S) {
   switch (S) {
   default:
     llvm_unreachable("Invalid ELF symbol kind");
@@ -170,7 +139,7 @@ StringRef LoongArchMCExpr::getSpecifierName(uint16_t S) {
   }
 }
 
-LoongArchMCExpr::Specifier LoongArchMCExpr::parseSpecifier(StringRef name) {
+LoongArchMCExpr::Specifier LoongArch::parseSpecifier(StringRef name) {
   return StringSwitch<LoongArchMCExpr::Specifier>(name)
       .Case("plt", ELF::R_LARCH_B26)
       .Case("b16", ELF::R_LARCH_B16)
@@ -226,5 +195,5 @@ LoongArchMCExpr::Specifier LoongArchMCExpr::parseSpecifier(StringRef name) {
       .Case("ld_pcrel_20", ELF::R_LARCH_TLS_LD_PCREL20_S2)
       .Case("gd_pcrel_20", ELF::R_LARCH_TLS_GD_PCREL20_S2)
       .Case("desc_pcrel_20", ELF::R_LARCH_TLS_DESC_PCREL20_S2)
-      .Default(VK_None);
+      .Default(0);
 }

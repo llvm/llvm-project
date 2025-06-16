@@ -20,8 +20,6 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
-#include "clang/Sema/SemaDiagnostic.h"
-#include "llvm/Support/TimeProfiler.h"
 using namespace clang;
 
 unsigned Parser::ReenterTemplateScopes(MultiParseScope &S, Decl *D) {
@@ -298,8 +296,7 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
     return nullptr;
   }
 
-  ExprResult ConstraintExprResult =
-      Actions.CorrectDelayedTyposInExpr(ParseConstraintExpression());
+  ExprResult ConstraintExprResult = ParseConstraintExpression();
   if (ConstraintExprResult.isInvalid()) {
     SkipUntil(tok::semi);
     if (D)

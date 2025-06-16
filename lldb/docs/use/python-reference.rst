@@ -609,7 +609,7 @@ special needs.
 The easiest way to do this is to derive your new command from the lldb.ParsedCommand
 class.  That responds in the same way to the help & repeat command interfaces, and
 provides some convenience methods, and most importantly an LLDBOptionValueParser,
-accessed throught lldb.ParsedCommand.get_parser().  The parser is used to set
+accessed through lldb.ParsedCommand.get_parser().  The parser is used to set
 your command definitions, and to retrieve option values in the __call__ method.
 
 To set up the command definition, implement the ParsedCommand abstract method:

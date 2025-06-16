@@ -64,8 +64,7 @@ void CIRDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
 static ParseResult parseConstPtr(AsmParser &parser, mlir::IntegerAttr &value) {
 
   if (parser.parseOptionalKeyword("null").succeeded()) {
-    value = mlir::IntegerAttr::get(
-        mlir::IntegerType::get(parser.getContext(), 64), 0);
+    value = parser.getBuilder().getI64IntegerAttr(0);
     return success();
   }
 
@@ -180,6 +179,26 @@ LogicalResult FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (APFloat::SemanticsToEnum(fpType.getFloatSemantics()) !=
       APFloat::SemanticsToEnum(value.getSemantics()))
     return emitError() << "floating-point semantics mismatch";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConstComplexAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+ConstComplexAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                         cir::ComplexType type, mlir::TypedAttr real,
+                         mlir::TypedAttr imag) {
+  mlir::Type elemType = type.getElementType();
+  if (real.getType() != elemType)
+    return emitError()
+           << "type of the real part does not match the complex type";
+
+  if (imag.getType() != elemType)
+    return emitError()
+           << "type of the imaginary part does not match the complex type";
 
   return success();
 }

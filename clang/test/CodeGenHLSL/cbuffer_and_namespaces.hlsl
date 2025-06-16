@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 // Make sure cbuffer inside namespace works.
 

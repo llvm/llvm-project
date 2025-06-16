@@ -128,6 +128,12 @@
 //   * llvm.nvvm.swap.lo.hi.b64      --> llvm.fshl(x, x, 32)
 //   * llvm.nvvm.atomic.load.inc.32  --> atomicrmw uinc_wrap
 //   * llvm.nvvm.atomic.load.dec.32  --> atomicrmw udec_wrap
+// * llvm.nvvm.barrier0              --> llvm.nvvm.barrier.cta.sync.aligned.all(0)
+// * llvm.nvvm.barrier.n             --> llvm.nvvm.barrier.cta.sync.aligned.all(x)
+// * llvm.nvvm.bar.sync              --> llvm.nvvm.barrier.cta.sync.aligned.all(x)
+// * llvm.nvvm.barrier               --> llvm.nvvm.barrier.cta.sync.aligned(x, y)
+// * llvm.nvvm.barrier.sync          --> llvm.nvvm.barrier.cta.sync.all(x)
+// * llvm.nvvm.barrier.sync.cnt      --> llvm.nvvm.barrier.cta.sync(x, y)
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;         // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;         // (shared)ptr
@@ -739,14 +745,34 @@ class NVVMBuiltin :
 }
 
 let TargetPrefix = "nvvm" in {
-  def int_nvvm_prmt : NVVMBuiltin,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-        [IntrNoMem, IntrSpeculatable]>;
+
+  // PRMT - permute
+
+  let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
+    def int_nvvm_prmt : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+
+    foreach mode = ["f4e", "b4e"] in
+      def int_nvvm_prmt_ # mode :
+          DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+
+    // Note: these variants also have 2 source operands but only one will ever
+    // be used so we eliminate the other operand in the IR (0 is used as the
+    // placeholder in the backend).
+    foreach mode = ["rc8", "ecl", "ecr", "rc16"] in
+      def int_nvvm_prmt_ # mode :
+          DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
+  }
 
   def int_nvvm_nanosleep : NVVMBuiltin,
       DefaultAttrsIntrinsic<[], [llvm_i32_ty],
                             [IntrConvergent, IntrNoMem, IntrHasSideEffects]>;
 
+  // Performance Monitor Events (pm events) intrinsics
+  def int_nvvm_pm_event_mask : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[], [llvm_i16_ty],
+                [IntrConvergent, IntrNoMem, IntrHasSideEffects,
+                 ImmArg<ArgIndex<0>>]>;
 //
 // Min Max
 //
@@ -1263,18 +1289,6 @@ let TargetPrefix = "nvvm" in {
   defm int_nvvm_atomic_cas_gen_i  : PTXAtomicWithScope3<llvm_anyint_ty>;
 
 // Bar.Sync
-
-  // The builtin for "bar.sync 0" is called __syncthreads.  Unlike most of the
-  // intrinsics in this file, this one is a user-facing API.
-  def int_nvvm_barrier0 : ClangBuiltin<"__syncthreads">,
-      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
-  // Synchronize all threads in the CTA at barrier 'n'.
-  def int_nvvm_barrier_n : ClangBuiltin<"__nvvm_bar_n">,
-      Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-  // Synchronize 'm', a multiple of warp size, (arg 2) threads in
-  // the CTA at barrier 'n' (arg 1).
-  def int_nvvm_barrier : ClangBuiltin<"__nvvm_bar">,
-      Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
   def int_nvvm_barrier0_popc : ClangBuiltin<"__nvvm_bar0_popc">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
   def int_nvvm_barrier0_and : ClangBuiltin<"__nvvm_bar0_and">,
@@ -1282,16 +1296,21 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_barrier0_or : ClangBuiltin<"__nvvm_bar0_or">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 
-  def int_nvvm_bar_sync : NVVMBuiltin,
-      Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
   def int_nvvm_bar_warp_sync : NVVMBuiltin,
       Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 
-  // barrier.sync id[, cnt]
-  def int_nvvm_barrier_sync : NVVMBuiltin,
-      Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-  def int_nvvm_barrier_sync_cnt : NVVMBuiltin,
-      Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
+  // barrier{.cta}.sync{.aligned}      a{, b};
+  // barrier{.cta}.arrive{.aligned}    a, b;
+  let IntrProperties = [IntrConvergent, IntrNoCallback] in {
+    foreach align = ["", "_aligned"] in {
+      def int_nvvm_barrier_cta_sync # align # _all :
+          Intrinsic<[], [llvm_i32_ty]>;
+      def int_nvvm_barrier_cta_sync # align # _count :
+          Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
+      def int_nvvm_barrier_cta_arrive # align # _count :
+          Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
+    }
+  }
 
   // barrier.cluster.[wait, arrive, arrive.relaxed]
   def int_nvvm_barrier_cluster_arrive :
@@ -2001,20 +2020,26 @@ foreach dim = 1...5 in {
     defvar num_im2col_offsets = !if(is_im2col, !add(dim, -2), 0);
     defvar im2col_offsets_args = !listsplat(llvm_i16_ty, num_im2col_offsets);
 
+    defvar g2s_params = !listconcat(
+                          [llvm_shared_cluster_ptr_ty, // dst_ptr
+                           llvm_shared_ptr_ty,  // mbarrier_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                          tensor_dim_args,      // actual tensor dims
+                          im2col_offsets_args,  // im2col offsets
+                          [llvm_i16_ty,         // cta_mask
+                           llvm_i64_ty]);       // cache_hint
+    defvar g2s_flags = [llvm_i1_ty,             // Flag for cta_mask
+                        llvm_i1_ty,             // Flag for cache_hint
+                        llvm_i32_ty];           // Flag for cta_group
+    defvar cta_group_idx = !add(
+                             !size(g2s_params),
+                             !sub(!size(g2s_flags), 1));
+    defvar g2s_props = [IntrConvergent,
+                        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+                        // Allowed values for cta_group are {0,1,2} i.e [0, 3).
+                        Range<ArgIndex<cta_group_idx>, 0, 3>];
     def int_nvvm_cp_async_bulk_tensor_g2s_ # mode # _ # dim # d :
-      DefaultAttrsIntrinsicFlags<[],
-          !listconcat([llvm_shared_cluster_ptr_ty,  // dst_shared_cluster_ptr
-                       llvm_shared_ptr_ty,          // mbarrier_smem_ptr
-                       llvm_ptr_ty],                // tensormap_ptr
-                      tensor_dim_args,              // actual tensor dims
-                      im2col_offsets_args,          // im2col offsets
-                      [llvm_i16_ty,                 // cta_mask
-                       llvm_i64_ty]),               // cache_hint
-          [llvm_i1_ty,                              // Flag for cta_mask
-           llvm_i1_ty],                             // Flag for cache_hint
-          [IntrConvergent,
-           WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
-           NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<2>>]>;
+      DefaultAttrsIntrinsicFlags<[], g2s_params, g2s_flags, g2s_props>;
 
     def int_nvvm_cp_async_bulk_tensor_s2g_ # mode # _ # dim # d :
       DefaultAttrsIntrinsicFlags<[],

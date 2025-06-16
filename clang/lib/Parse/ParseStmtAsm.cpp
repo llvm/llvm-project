@@ -15,7 +15,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -30,7 +29,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
 using namespace clang;
 
 namespace {
@@ -866,7 +864,7 @@ bool Parser::ParseAsmOperandsOpt(SmallVectorImpl<IdentifierInfo *> &Names,
     // Read the parenthesized expression.
     BalancedDelimiterTracker T(*this, tok::l_paren);
     T.consumeOpen();
-    ExprResult Res = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+    ExprResult Res = ParseExpression();
     T.consumeClose();
     if (Res.isInvalid()) {
       SkipUntil(tok::r_paren, StopAtSemi);

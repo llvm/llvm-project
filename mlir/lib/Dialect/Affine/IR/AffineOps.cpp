@@ -294,10 +294,12 @@ bool mlir::affine::isValidDim(Value value) {
     return isValidDim(value, getAffineScope(defOp));
 
   // This value has to be a block argument for an op that has the
-  // `AffineScope` trait or for an affine.for or affine.parallel.
+  // `AffineScope` trait or an induction var of an affine.for or
+  // affine.parallel.
+  if (isAffineInductionVar(value))
+    return true;
   auto *parentOp = llvm::cast<BlockArgument>(value).getOwner()->getParentOp();
-  return parentOp && (parentOp->hasTrait<OpTrait::AffineScope>() ||
-                      isa<AffineForOp, AffineParallelOp>(parentOp));
+  return parentOp && parentOp->hasTrait<OpTrait::AffineScope>();
 }
 
 // Value can be used as a dimension id iff it meets one of the following
@@ -318,10 +320,9 @@ bool mlir::affine::isValidDim(Value value, Region *region) {
 
   auto *op = value.getDefiningOp();
   if (!op) {
-    // This value has to be a block argument for an affine.for or an
+    // This value has to be an induction var for an affine.for or an
     // affine.parallel.
-    auto *parentOp = llvm::cast<BlockArgument>(value).getOwner()->getParentOp();
-    return isa<AffineForOp, AffineParallelOp>(parentOp);
+    return isAffineInductionVar(value);
   }
 
   // Affine apply operation is ok if all of its operands are ok.
@@ -2366,7 +2367,7 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
     if (forOp.getNumResults() == 0)
       return success();
     std::optional<uint64_t> tripCount = getTrivialConstantTripCount(forOp);
-    if (tripCount && *tripCount == 0) {
+    if (tripCount == 0) {
       // The initial values of the iteration arguments would be the op's
       // results.
       rewriter.replaceOp(forOp, forOp.getInits());
@@ -2446,7 +2447,7 @@ void AffineForOp::getSuccessorRegions(
 
   // From the loop body, if the trip count is one, we can only branch back to
   // the parent.
-  if (!point.isParent() && tripCount && *tripCount == 1) {
+  if (!point.isParent() && tripCount == 1) {
     regions.push_back(RegionSuccessor(getResults()));
     return;
   }
@@ -2459,8 +2460,7 @@ void AffineForOp::getSuccessorRegions(
 
 /// Returns true if the affine.for has zero iterations in trivial cases.
 static bool hasTrivialZeroTripCount(AffineForOp op) {
-  std::optional<uint64_t> tripCount = getTrivialConstantTripCount(op);
-  return tripCount && *tripCount == 0;
+  return getTrivialConstantTripCount(op) == 0;
 }
 
 LogicalResult AffineForOp::fold(FoldAdaptor adaptor,
@@ -2666,7 +2666,7 @@ AffineParallelOp mlir::affine::getAffineParallelInductionVarOwner(Value val) {
   if (!ivArg || !ivArg.getOwner())
     return nullptr;
   Operation *containingOp = ivArg.getOwner()->getParentOp();
-  auto parallelOp = dyn_cast<AffineParallelOp>(containingOp);
+  auto parallelOp = dyn_cast_if_present<AffineParallelOp>(containingOp);
   if (parallelOp && llvm::is_contained(parallelOp.getIVs(), val))
     return parallelOp;
   return nullptr;
@@ -4788,7 +4788,7 @@ struct DropUnitExtentBasis
          llvm::enumerate(delinearizeOp.getPaddedBasis())) {
       std::optional<int64_t> basisVal =
           basis ? getConstantIntValue(basis) : std::nullopt;
-      if (basisVal && *basisVal == 1)
+      if (basisVal == 1)
         replacements[index] = getZero();
       else
         newBasis.push_back(basis);

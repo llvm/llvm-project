@@ -294,6 +294,28 @@ RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) const {
              : TTI::PSK_Software;
 }
 
+InstructionCost RISCVTTIImpl::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend,
+    std::optional<unsigned> BinOp) const {
+
+  // zve32x is broken for partial_reduce_umla, but let's make sure we
+  // don't generate them.
+  if (!ST->hasStdExtZvqdotq() || ST->getELen() < 64 ||
+      Opcode != Instruction::Add || !BinOp || *BinOp != Instruction::Mul ||
+      InputTypeA != InputTypeB || !InputTypeA->isIntegerTy(8) ||
+      !AccumType->isIntegerTy(32) || !VF.isKnownMultipleOf(4))
+    return InstructionCost::getInvalid();
+
+  Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+  // Note: Asuming all vqdot* variants are equal cost
+  // TODO: Thread CostKind through this API
+  return LT.first * getRISCVInstructionCost(RISCV::VQDOT_VV, LT.second,
+                                            TTI::TCK_RecipThroughput);
+}
+
 bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   // Currently, the ExpandReductions pass can't expand scalable-vector
   // reductions, but we still request expansion as RVV doesn't support certain
@@ -2274,9 +2296,12 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       Index = Index % M1Max;
     }
 
-    // We could extract/insert the first element without vslidedown/vslideup.
     if (Index == 0)
+      // We can extract/insert the first element without vslidedown/vslideup.
       SlideCost = 0;
+    else if (ST->hasVendorXRivosVisni() && isUInt<5>(Index) &&
+             Val->getScalarType()->isIntegerTy())
+      SlideCost = 0; // With ri.vinsert/ri.vextract there is no slide needed
     else if (Opcode == Instruction::InsertElement)
       SlideCost = 1; // With a constant index, we do not need to use addi.
   }
@@ -2926,6 +2951,23 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   } else {
     Options.LoadSizes = {4, 2, 1};
     Options.AllowedTailExpansions = {3};
+  }
+
+  if (IsZeroCmp && ST->hasVInstructions()) {
+    unsigned RealMinVLen = ST->getRealMinVLen();
+    // Support Fractional LMULs if the lengths are larger than XLen.
+    // TODO: Support non-power-of-2 types.
+    for (unsigned FLMUL = 8; FLMUL >= 2; FLMUL /= 2) {
+      unsigned Len = RealMinVLen / FLMUL;
+      if (Len > ST->getXLen())
+        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
+    }
+    for (unsigned LMUL = 1; LMUL <= ST->getMaxLMULForFixedLengthVectors();
+         LMUL *= 2) {
+      unsigned Len = RealMinVLen * LMUL;
+      if (Len > ST->getXLen())
+        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
+    }
   }
   return Options;
 }

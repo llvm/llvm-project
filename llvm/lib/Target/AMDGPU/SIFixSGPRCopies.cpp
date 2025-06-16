@@ -618,8 +618,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
 
 bool SIFixSGPRCopies::run(MachineFunction &MF) {
   // Only need to run this in SelectionDAG path.
-  if (MF.getProperties().hasProperty(
-        MachineFunctionProperties::Property::Selected))
+  if (MF.getProperties().hasSelected())
     return false;
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -635,11 +634,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
       switch (MI.getOpcode()) {
       default:
         continue;
-      case AMDGPU::COPY:
-      case AMDGPU::WQM:
-      case AMDGPU::STRICT_WQM:
-      case AMDGPU::SOFT_WQM:
-      case AMDGPU::STRICT_WWM: {
+      case AMDGPU::COPY: {
         const TargetRegisterClass *SrcRC, *DstRC;
         std::tie(SrcRC, DstRC) = getCopyRegClasses(MI, *TRI, *MRI);
 
@@ -663,6 +658,10 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 
         break;
       }
+      case AMDGPU::WQM:
+      case AMDGPU::STRICT_WQM:
+      case AMDGPU::SOFT_WQM:
+      case AMDGPU::STRICT_WWM:
       case AMDGPU::INSERT_SUBREG:
       case AMDGPU::PHI:
       case AMDGPU::REG_SEQUENCE: {

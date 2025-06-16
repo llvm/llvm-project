@@ -200,15 +200,16 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
 
   if constexpr (Dir == ShiftDir::Left) {
     if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
-      const Expr *E = S.Current->getExpr(OpPC);
       // C++11 [expr.shift]p2: A signed left shift must have a non-negative
       // operand, and must not overflow the corresponding unsigned type.
       if (LHS.isNegative()) {
+        const Expr *E = S.Current->getExpr(OpPC);
         S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
         if (!S.noteUndefinedBehavior())
           return false;
       } else if (LHS.toUnsigned().countLeadingZeros() <
                  static_cast<unsigned>(RHS)) {
+        const Expr *E = S.Current->getExpr(OpPC);
         S.CCEDiag(E, diag::note_constexpr_lshift_discards);
         if (!S.noteUndefinedBehavior())
           return false;
@@ -1034,6 +1035,9 @@ static inline bool IsOpaqueConstantCall(const CallExpr *E) {
           Builtin == Builtin::BI__builtin_function_start);
 }
 
+bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
+                                             const Pointer &RHS);
+
 template <>
 inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   using BoolT = PrimConv<PT_Bool>::T;
@@ -1066,6 +1070,18 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(LHS.getIntegerRepresentation(),
                                              RHS.getIntegerRepresentation()))));
     return true;
+  }
+
+  // FIXME: The source check here isn't entirely correct.
+  if (LHS.pointsToStringLiteral() && RHS.pointsToStringLiteral() &&
+      LHS.getFieldDesc()->asExpr() != RHS.getFieldDesc()->asExpr()) {
+    if (arePotentiallyOverlappingStringLiterals(LHS, RHS)) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_literal_comparison)
+          << LHS.toDiagnosticString(S.getASTContext())
+          << RHS.toDiagnosticString(S.getASTContext());
+      return false;
+    }
   }
 
   if (Pointer::hasSameBase(LHS, RHS)) {
@@ -1326,21 +1342,9 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
-static inline bool Kill(InterpState &S, CodePtr OpPC) {
-  const auto &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Destroy))
-    return false;
-  Ptr.endLifetime();
-  return true;
-}
-
-static inline bool StartLifetime(InterpState &S, CodePtr OpPC) {
-  const auto &Ptr = S.Stk.peek<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Destroy))
-    return false;
-  Ptr.startLifetime();
-  return true;
-}
+bool EndLifetime(InterpState &S, CodePtr OpPC);
+bool EndLifetimePop(InterpState &S, CodePtr OpPC);
+bool StartLifetime(InterpState &S, CodePtr OpPC);
 
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the
