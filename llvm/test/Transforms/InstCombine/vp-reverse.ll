@@ -47,10 +47,9 @@ define <vscale x 4 x i32> @binop_reverse_elim_diffmask(<vscale x 4 x i32> %a, <v
 
 define <vscale x 4 x i32> @binop_reverse_elim_diffevl(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 %evl) {
 ; CHECK-LABEL: @binop_reverse_elim_diffevl(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw <vscale x 4 x i32> [[A_REV]], [[B_REV]]
-; CHECK-NEXT:    [[ADD_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[ADD]], <vscale x 4 x i1> splat (i1 true), i32 10)
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw <vscale x 4 x i32> [[A_REV:%.*]], [[B_REV:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[ADD]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL:%.*]])
+; CHECK-NEXT:    [[ADD_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[ADD1]], <vscale x 4 x i1> splat (i1 true), i32 10)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD_REV]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> %a, <vscale x 4 x i1> splat (i1 true), i32 %evl)
