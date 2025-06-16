@@ -173,6 +173,12 @@ void initPlugins() {
 }
 
 Error olInit_impl() {
+  // While the refcount increment ensures that only thread performs
+  // initialization, we need to ensure that other threads are blocked until it
+  // is completed - hence this mutex.
+  static std::mutex Init{};
+  std::lock_guard<std::mutex> Guard{Init};
+
   if (++GlobalRefCount() == 1)
     initPlugins();
 
