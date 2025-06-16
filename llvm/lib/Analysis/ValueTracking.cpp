@@ -9785,6 +9785,10 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
   unsigned Width = II.getType()->getScalarSizeInBits();
   const APInt *C;
   switch (II.getIntrinsicID()) {
+  case Intrinsic::scmp:
+  case Intrinsic::ucmp:
+    return ConstantRange::getNonEmpty(APInt::getAllOnes(Width),
+                                      APInt::getOneBitSet(Width, 0));
   case Intrinsic::ctlz:
   case Intrinsic::cttz: {
     APInt Upper(Width, Width);
