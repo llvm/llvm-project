@@ -52,8 +52,7 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; SCALAR_EPILOGUE-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALAR_EPILOGUE-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SCALAR_EPILOGUE:       middle.block:
-; SCALAR_EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; SCALAR_EPILOGUE-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; SCALAR_EPILOGUE-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SCALAR_EPILOGUE:       scalar.ph:
 ;
 ; PREDICATED_TAIL_FOLDING-LABEL: define void @masked_strided_factor2
@@ -237,8 +236,7 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; SCALAR_EPILOGUE-NEXT:    [[TMP32:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALAR_EPILOGUE-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; SCALAR_EPILOGUE:       middle.block:
-; SCALAR_EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; SCALAR_EPILOGUE-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; SCALAR_EPILOGUE-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SCALAR_EPILOGUE:       scalar.ph:
 ;
 ; PREDICATED_TAIL_FOLDING-LABEL: define void @masked_strided_factor4
