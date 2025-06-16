@@ -622,6 +622,14 @@ Improvements to Clang's diagnostics
 
 - Improved the FixIts for unused lambda captures.
 
+- Delayed typo correction was removed from the compiler; immediate typo
+  correction behavior remains the same. Delayed typo correction facilities were
+  fragile and unmaintained, and the removal closed the following issues:
+  #GH142457, #GH139913, #GH138850, #GH137867, #GH137860, #GH107840, #GH93308,
+  #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
+  #GH36703, #GH32903, #GH23312, #GH69874.
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -693,6 +701,9 @@ Bug Fixes in This Version
 - Fixed type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed. (#GH141397)
 - Constant evaluation now correctly runs the destructor of a variable declared in
   the second clause of a C-style ``for`` loop. (#GH139818)
+- Fixed a bug with constexpr evaluation for structs containing unions in case of C++ modules. (#GH143168)
+- Fixed incorrect token location when emitting diagnostics for tokens expanded from macros. (#GH143216)
+- Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1100,6 +1111,10 @@ OpenMP Support
   open parenthesis. (#GH139665)
 - An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have
   an argument larger than what can fit within a 64-bit integer.
+- Added support for private variable reduction.
+- Fixed mapping of arrays of structs containing nested structs with user defined
+  mappers, by using compiler-generated default mappers for the outer structs for
+  such maps.
 
 Improvements
 ^^^^^^^^^^^^

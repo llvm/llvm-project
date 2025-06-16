@@ -6,9 +6,9 @@ target triple = "riscv64-unknown-linux-gnu"
 
 ; Make sure we do not pick <vscale x 1 x i64> as VF for a loop with a
 ; first-order recurrence.
-define i64 @pr97452_scalable_vf1_for(ptr %src) #0 {
+define i64 @pr97452_scalable_vf1_for(ptr %src, ptr noalias %dst) #0 {
 ; CHECK-LABEL: define i64 @pr97452_scalable_vf1_for(
-; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -17,8 +17,17 @@ define i64 @pr97452_scalable_vf1_for(ptr %src) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 0>, %[[VECTOR_PH]] ], [ [[WIDE_LOAD1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1]] = load <4 x i64>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i64> [[WIDE_LOAD]], <4 x i64> [[WIDE_LOAD1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP8]], i32 4
+; CHECK-NEXT:    store <4 x i64> [[TMP3]], ptr [[TMP9]], align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -31,15 +40,17 @@ define i64 @pr97452_scalable_vf1_for(ptr %src) #0 {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[L:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[FOR:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[L:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L]] = load i64, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[FOR]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 22
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[SCALAR_RECUR]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[FOR]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -49,8 +60,10 @@ loop:
   %for = phi i64 [ 0, %entry ], [ %l, %loop ]
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %iv.next = add i64 %iv, 1
-  %gep = getelementptr inbounds i64, ptr %src, i64 %iv
-  %l = load i64, ptr %gep, align 8
+  %gep.src = getelementptr inbounds i64, ptr %src, i64 %iv
+  %l = load i64, ptr %gep.src, align 8
+  %gep.dst = getelementptr inbounds i64, ptr %dst, i64 %iv
+  store i64 %for, ptr %gep.dst
   %ec = icmp eq i64 %iv, 22
   br i1 %ec, label %exit, label %loop
 

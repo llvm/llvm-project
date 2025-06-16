@@ -7,10 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/uint128.h"
-#include "src/errno/libc_errno.h"
 #include "src/stdlib/strtold.h"
 
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
 #include <stddef.h>
@@ -25,7 +26,7 @@
 #error "Unknown long double type"
 #endif
 
-class LlvmLibcStrToLDTest : public LIBC_NAMESPACE::testing::Test {
+class LlvmLibcStrToLDTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 public:
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
@@ -80,7 +81,6 @@ public:
         FPBits(static_cast<FPBits::StorageType>(expectedRawData));
     const int expected_errno = expectedErrno;
 
-    LIBC_NAMESPACE::libc_errno = 0;
     long double result = LIBC_NAMESPACE::strtold(inputString, &str_end);
 
     LIBC_NAMESPACE::fputil::FPBits<long double> actual_fp =

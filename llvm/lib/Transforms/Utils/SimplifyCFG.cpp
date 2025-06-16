@@ -1137,7 +1137,7 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
         // branch, drop it. When we fold the bonus instructions we want to make
         // sure we reset their debug locations in order to avoid stepping on
         // dead code caused by folding dead branches.
-        NewBonusInst->setDebugLoc(DebugLoc());
+        NewBonusInst->setDebugLoc(DebugLoc::getDropped());
       } else if (const DebugLoc &DL = NewBonusInst->getDebugLoc()) {
         mapAtomInstance(DL, VMap);
       }
@@ -2104,11 +2104,11 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
 
   // Ensure terminator gets a debug location, even an unknown one, in case
   // it involves inlinable calls.
-  SmallVector<DILocation *, 4> Locs;
+  SmallVector<DebugLoc, 4> Locs;
   Locs.push_back(I1->getDebugLoc());
   for (auto *OtherSuccTI : OtherSuccTIs)
     Locs.push_back(OtherSuccTI->getDebugLoc());
-  NT->setDebugLoc(DILocation::getMergedLocations(Locs));
+  NT->setDebugLoc(DebugLoc::getMergedLocations(Locs));
 
   // PHIs created below will adopt NT's merged DebugLoc.
   IRBuilder<NoFolder> Builder(NT);
@@ -2830,7 +2830,8 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
       // so just form a new block with unreachable terminator.
       BasicBlock *MergedNormalDest = BasicBlock::Create(
           Ctx, II0BB->getName() + ".cont", Func, InsertBeforeBlock);
-      new UnreachableInst(Ctx, MergedNormalDest);
+      auto *UI = new UnreachableInst(Ctx, MergedNormalDest);
+      UI->setDebugLoc(DebugLoc::getTemporary());
       MergedInvoke->setNormalDest(MergedNormalDest);
     }
 
@@ -2904,7 +2905,7 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
       MergedDebugLoc = II->getDebugLoc();
     else
       MergedDebugLoc =
-          DILocation::getMergedLocation(MergedDebugLoc, II->getDebugLoc());
+          DebugLoc::getMergedLocation(MergedDebugLoc, II->getDebugLoc());
 
     // And replace the old `invoke` with an unconditionally branch
     // to the block with the merged `invoke`.
@@ -3398,7 +3399,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     if (!SpeculatedStoreValue || &I != SpeculatedStore) {
       // Don't update the DILocation of dbg.assign intrinsics.
       if (!isa<DbgAssignIntrinsic>(&I))
-        I.setDebugLoc(DebugLoc());
+        I.setDebugLoc(DebugLoc::getDropped());
     }
     I.dropUBImplyingAttrsAndMetadata();
 
@@ -4063,13 +4064,11 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   Module *M = BB->getModule();
 
-  if (PredBlock->IsNewDbgInfoFormat) {
-    PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
-    for (DbgVariableRecord &DVR :
-         filterDbgVars(PredBlock->getTerminator()->getDbgRecordRange())) {
-      RemapDbgRecord(M, &DVR, VMap,
-                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    }
+  PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
+  for (DbgVariableRecord &DVR :
+       filterDbgVars(PredBlock->getTerminator()->getDbgRecordRange())) {
+    RemapDbgRecord(M, &DVR, VMap,
+                   RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
   }
 
   // Now that the Cond was cloned into the predecessor basic block,
@@ -5716,7 +5715,8 @@ static void createUnreachableSwitchDefault(SwitchInst *Switch,
   BasicBlock *NewDefaultBlock = BasicBlock::Create(
       BB->getContext(), BB->getName() + ".unreachabledefault", BB->getParent(),
       OrigDefaultBlock);
-  new UnreachableInst(Switch->getContext(), NewDefaultBlock);
+  auto *UI = new UnreachableInst(Switch->getContext(), NewDefaultBlock);
+  UI->setDebugLoc(DebugLoc::getTemporary());
   Switch->setDefaultDest(&*NewDefaultBlock);
   if (DTU) {
     SmallVector<DominatorTree::UpdateType, 2> Updates;

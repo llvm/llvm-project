@@ -140,11 +140,11 @@ RT_API_ATTRS void Component::CreatePointerDescriptor(Descriptor &descriptor,
     const SubscriptValue *subscripts) const {
   RUNTIME_CHECK(terminator, genre_ == Genre::Data);
   EstablishDescriptor(descriptor, container, terminator);
-  std::size_t offset{offset_};
   if (subscripts) {
-    offset += container.SubscriptsToByteOffset(subscripts);
+    descriptor.set_base_addr(container.Element<char>(subscripts) + offset_);
+  } else {
+    descriptor.set_base_addr(container.OffsetElement<char>() + offset_);
   }
-  descriptor.set_base_addr(container.OffsetElement<char>() + offset);
   descriptor.raw().attribute = CFI_attribute_pointer;
 }
 
