@@ -1,6 +1,8 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.6-vulkan1.3-library %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan1.3-library %s -o - -filetype=obj | spirv-val %}
 
+@.str.b = private unnamed_addr constant [2 x i8] c"B\00", align 1
+
 ; CHECK: OpCapability StorageImageWriteWithoutFormat
 ; CHECK-DAG: OpDecorate [[IntBufferVar:%[0-9]+]] DescriptorSet 16
 ; CHECK-DAG: OpDecorate [[IntBufferVar]] Binding 7
@@ -20,7 +22,7 @@ declare <4 x i32> @get_data() #1
 define void @RWBufferLoad_Vec4_I32() #0 {
   %buffer0 = call target("spirv.Image", i32, 5, 2, 0, 0, 2, 0)
       @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0(
-          i32 16, i32 7, i32 1, i32 0, i1 false)
+          i32 16, i32 7, i32 1, i32 0, i1 false, ptr nonnull @.str.b)
 
 ; CHECK: [[data:%[0-9]+]] = OpFunctionCall
   %data = call <4 x i32> @get_data()

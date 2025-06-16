@@ -15,25 +15,28 @@
 #define LLVM_TARGETPARSER_PPCTARGETPARSER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 namespace PPC {
-bool isValidCPU(StringRef CPU);
-void fillValidCPUList(SmallVectorImpl<StringRef> &Values);
-void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI bool isValidCPU(StringRef CPU);
+LLVM_ABI void fillValidCPUList(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values);
 
 // Get target CPU name.
 // If CPUName is empty or generic, return the default CPU name.
 // If CPUName is not empty or generic, return the normalized CPU name.
-StringRef getNormalizedPPCTargetCPU(const Triple &T, StringRef CPUName = "");
+LLVM_ABI StringRef getNormalizedPPCTargetCPU(const Triple &T,
+                                             StringRef CPUName = "");
 
 // Get the tune CPU name.
-StringRef getNormalizedPPCTuneCPU(const Triple &T, StringRef CPUName = "");
+LLVM_ABI StringRef getNormalizedPPCTuneCPU(const Triple &T,
+                                           StringRef CPUName = "");
 
 // For PPC, there are some cpu names for same CPU, like pwr10 and power10,
 // normalize them.
-StringRef normalizeCPUName(StringRef CPUName);
+LLVM_ABI StringRef normalizeCPUName(StringRef CPUName);
 } // namespace PPC
 } // namespace llvm
 

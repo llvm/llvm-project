@@ -34,6 +34,12 @@ namespace {
 class ScalarExprEmitter;
 } // namespace
 
+namespace mlir {
+namespace acc {
+class LoopOp;
+} // namespace acc
+} // namespace mlir
+
 namespace clang::CIRGen {
 
 class CIRGenFunction : public CIRGenTypeCache {
@@ -60,6 +66,7 @@ public:
   ImplicitParamDecl *cxxabiThisDecl = nullptr;
   mlir::Value cxxabiThisValue = nullptr;
   mlir::Value cxxThisValue = nullptr;
+  clang::CharUnits cxxThisAlignment;
 
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
@@ -309,6 +316,10 @@ public:
     ~SourceLocRAIIObject() { restore(); }
   };
 
+  /// Hold counters for incrementally naming temporaries
+  unsigned counterAggTmp = 0;
+  std::string getCounterAggTmpAsString();
+
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
   mlir::Location getLoc(clang::SourceLocation srcLoc);
   mlir::Location getLoc(clang::SourceRange srcLoc);
@@ -326,6 +337,8 @@ public:
     PrototypeWrapper(const clang::FunctionProtoType *ft) : p(ft) {}
     PrototypeWrapper(const clang::ObjCMethodDecl *md) : p(md) {}
   };
+
+  bool isLValueSuitableForInlineAtomic(LValue lv);
 
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
@@ -458,6 +471,10 @@ public:
   /// compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *e);
 
+  cir::GlobalOp addInitializerToStaticVarDecl(const VarDecl &d,
+                                              cir::GlobalOp gv,
+                                              cir::GetGlobalOp gvAddr);
+
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
     assert(!localDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
@@ -466,6 +483,12 @@ public:
   }
 
   bool shouldNullCheckClassCastValue(const CastExpr *ce);
+
+  RValue convertTempToRValue(Address addr, clang::QualType type,
+                             clang::SourceLocation loc);
+
+  static bool
+  isConstructorDelegationValid(const clang::CXXConstructorDecl *ctor);
 
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
 
@@ -511,6 +534,7 @@ public:
     assert(cxxThisValue && "no 'this' value for this function");
     return cxxThisValue;
   }
+  Address loadCXXThisAddress();
 
   /// Get an appropriate 'undef' rvalue for the given type.
   /// TODO: What's the equivalent for MLIR? Currently we're only using this for
@@ -665,6 +689,8 @@ private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
                               clang::CharUnits alignment);
 
+  CIRGenCallee emitDirectCallee(const GlobalDecl &gd);
+
 public:
   Address emitAddrOfFieldStorage(Address base, const FieldDecl *field,
                                  llvm::StringRef fieldName,
@@ -679,6 +705,8 @@ public:
                          mlir::OpBuilder::InsertPoint ip,
                          mlir::Value arraySize = nullptr);
 
+  void emitAggregateStore(mlir::Value value, Address dest);
+
   void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
 
   LValue emitAggExprToLValue(const Expr *e);
@@ -687,7 +715,8 @@ public:
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
   /// should be returned.
-  RValue emitAnyExpr(const clang::Expr *e);
+  RValue emitAnyExpr(const clang::Expr *e,
+                     AggValueSlot aggSlot = AggValueSlot::ignored());
 
   /// Similarly to emitAnyExpr(), however, the result will always be accessible
   /// even if no aggregate location is provided.
@@ -710,6 +739,9 @@ public:
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
+
+  RValue emitBuiltinExpr(const clang::GlobalDecl &gd, unsigned builtinID,
+                         const clang::CallExpr *e, ReturnValueSlot returnValue);
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
@@ -742,7 +774,22 @@ public:
 
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
 
+  void emitConstructorBody(FunctionArgList &args);
+
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
+
+  void emitCXXConstructExpr(const clang::CXXConstructExpr *e,
+                            AggValueSlot dest);
+
+  void emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
+                              clang::CXXCtorType type, bool forVirtualBase,
+                              bool delegating, AggValueSlot thisAVS,
+                              const clang::CXXConstructExpr *e);
+
+  void emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
+                              clang::CXXCtorType type, bool forVirtualBase,
+                              bool delegating, Address thisAddr,
+                              CallArgList &args, clang::SourceLocation loc);
 
   mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
                                           llvm::ArrayRef<const Attr *> attrs);
@@ -765,6 +812,16 @@ public:
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
+
+  void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
+                        clang::CXXCtorType ctorType, FunctionArgList &args);
+
+  // It's important not to confuse this and emitDelegateCXXConstructorCall.
+  // Delegating constructors are the C++11 feature. The constructor delegate
+  // optimization is used to reduce duplication in the base and complete
+  // constructors where they are substantially the same.
+  void emitDelegatingCXXConstructorCall(const CXXConstructorDecl *ctor,
+                                        const FunctionArgList &args);
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
@@ -805,6 +862,10 @@ public:
 
   mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
 
+  /// Emit the computation of the specified expression of complex type,
+  /// returning the result.
+  mlir::Value emitComplexExpr(const Expr *e);
+
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
   void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
@@ -816,6 +877,17 @@ public:
   mlir::LogicalResult emitDefaultStmt(const clang::DefaultStmt &s,
                                       mlir::Type condType,
                                       bool buildingTopLevelCase);
+
+  void emitDelegateCXXConstructorCall(const clang::CXXConstructorDecl *ctor,
+                                      clang::CXXCtorType ctorType,
+                                      const FunctionArgList &args,
+                                      clang::SourceLocation loc);
+
+  /// We are performing a delegate call; that is, the current function is
+  /// delegating to another one. Produce a r-value suitable for passing the
+  /// given parameter.
+  void emitDelegateCallArg(CallArgList &args, const clang::VarDecl *param,
+                           clang::SourceLocation loc);
 
   /// Emit an `if` on a boolean condition to the specified blocks.
   /// FIXME: Based on the condition, this might try to simplify the codegen of
@@ -892,6 +964,11 @@ public:
 
   void emitScalarInit(const clang::Expr *init, mlir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
+
+  void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
+
+  void emitStoreOfComplex(mlir::Location loc, mlir::Value v, LValue dest,
+                          bool isInit);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
                          clang::QualType ty, bool isInit = false,
@@ -1064,6 +1141,12 @@ private:
                           OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
                           ArrayRef<const OpenACCClause *> clauses);
 
+  // The OpenACC LoopOp requires that we have auto, seq, or independent on all
+  // LoopOp operations for the 'none' device type case. This function checks if
+  // the LoopOp has one, else it updates it to have one.
+  void updateLoopOpParallelism(mlir::acc::LoopOp &op, bool isOrphan,
+                               OpenACCDirectiveKind dk);
+
 public:
   mlir::LogicalResult
   emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);
@@ -1090,6 +1173,17 @@ public:
 
   void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
   void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
+
+  /// Create a temporary memory object for the given aggregate type.
+  AggValueSlot createAggTemp(QualType ty, mlir::Location loc,
+                             const Twine &name = "tmp",
+                             Address *alloca = nullptr) {
+    assert(!cir::MissingFeatures::aggValueSlot());
+    return AggValueSlot::forAddr(
+        createMemTemp(ty, loc, name, alloca), ty.getQualifiers(),
+        AggValueSlot::IsNotDestructed, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap);
+  }
 
 private:
   QualType getVarArgType(const Expr *arg);

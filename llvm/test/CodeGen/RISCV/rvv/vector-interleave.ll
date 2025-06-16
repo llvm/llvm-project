@@ -260,18 +260,18 @@ define <vscale x 128 x i1> @vector_interleave_nxv128i1_nxv64i1(<vscale x 64 x i1
 ; ZIP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; ZIP-NEXT:    vmv1r.v v9, v0
 ; ZIP-NEXT:    vmv1r.v v0, v8
-; ZIP-NEXT:    vmv.v.i v16, 0
-; ZIP-NEXT:    vmerge.vim v24, v16, 1, v0
+; ZIP-NEXT:    vmv.v.i v24, 0
+; ZIP-NEXT:    vmerge.vim v16, v24, 1, v0
 ; ZIP-NEXT:    vmv1r.v v0, v9
-; ZIP-NEXT:    vmerge.vim v8, v16, 1, v0
+; ZIP-NEXT:    vmerge.vim v8, v24, 1, v0
 ; ZIP-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; ZIP-NEXT:    ri.vzip2b.vv v4, v8, v24
-; ZIP-NEXT:    ri.vzip2b.vv v20, v12, v28
-; ZIP-NEXT:    ri.vzip2a.vv v0, v8, v24
-; ZIP-NEXT:    ri.vzip2a.vv v16, v12, v28
+; ZIP-NEXT:    ri.vzip2b.vv v4, v8, v16
+; ZIP-NEXT:    ri.vzip2b.vv v28, v12, v20
+; ZIP-NEXT:    ri.vzip2a.vv v0, v8, v16
+; ZIP-NEXT:    ri.vzip2a.vv v24, v12, v20
 ; ZIP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; ZIP-NEXT:    vmsne.vi v9, v0, 0
-; ZIP-NEXT:    vmsne.vi v8, v16, 0
+; ZIP-NEXT:    vmsne.vi v8, v24, 0
 ; ZIP-NEXT:    vmv1r.v v0, v9
 ; ZIP-NEXT:    ret
   %res = call <vscale x 128 x i1> @llvm.vector.interleave2.nxv128i1(<vscale x 64 x i1> %a, <vscale x 64 x i1> %b)

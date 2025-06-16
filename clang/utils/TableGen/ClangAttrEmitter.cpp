@@ -3739,7 +3739,8 @@ static void GenerateHasAttrSpellingStringSwitch(
                       : '(' + itostr(Version) + ')';
 
     if (Scope.empty() || Scope == Spelling.nameSpace()) {
-      if (TestStringMap.contains(Spelling.name()))
+      if (TestStringMap.contains(Spelling.name()) &&
+          TestStringMap[Spelling.name()] != TestStr)
         TestStringMap[Spelling.name()] += " || " + TestStr;
       else
         TestStringMap[Spelling.name()] = TestStr;
@@ -5405,7 +5406,7 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
       // Handle Undocumented category separately - no content merging
       if (Cat == "Undocumented" && UndocumentedCategory) {
         UndocumentedDocs.push_back(
-            DocumentationData(Doc, Attr, HeadingAndSpellings));
+            DocumentationData(Doc, Attr, std::move(HeadingAndSpellings)));
         continue;
       }
 

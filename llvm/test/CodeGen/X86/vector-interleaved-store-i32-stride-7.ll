@@ -651,7 +651,7 @@ define void @store_i32_stride7_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FCP-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [7,3,7,3,7,3,7,3]
 ; AVX2-FCP-NEXT:    vpermps %ymm6, %ymm3, %ymm3
 ; AVX2-FCP-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; AVX2-FCP-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm3[1,2,3]
+; AVX2-FCP-NEXT:    vmovss {{.*#+}} xmm1 = xmm1[0],xmm3[1,2,3]
 ; AVX2-FCP-NEXT:    vmovaps %ymm2, (%rax)
 ; AVX2-FCP-NEXT:    vmovaps %ymm4, 64(%rax)
 ; AVX2-FCP-NEXT:    vmovaps %ymm7, 32(%rax)

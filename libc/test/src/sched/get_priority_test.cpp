@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/sched/sched_get_priority_max.h"
 #include "src/sched/sched_get_priority_min.h"
 #include "test/UnitTest/Test.h"
@@ -58,7 +58,7 @@ TEST(LlvmLibcSchedGetPriorityTest, HandleBadPolicyTest) {
 }
 
 TEST(LlvmLibcSchedGetPriorityTest, SmokeTest) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   // We Test:
   // SCHED_OTHER, SCHED_FIFO, SCHED_RR

@@ -49,8 +49,6 @@ bool isExprValueStored(const Expr *E, ASTContext &C) {
   return isa<CallExpr, CXXConstructExpr>(ParentE);
 }
 
-} // namespace
-
 AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
               ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
   for (unsigned NH = Node.getNumHandlers(), I = 0; I < NH; ++I) {
@@ -73,6 +71,8 @@ AST_MATCHER(CXXNewExpr, mayThrow) {
     return false;
   return !OperatorNew->getType()->castAs<FunctionProtoType>()->isNothrow();
 }
+
+} // namespace
 
 void MultipleNewInOneExpressionCheck::registerMatchers(MatchFinder *Finder) {
   auto BadAllocType =

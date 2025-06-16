@@ -13,7 +13,7 @@
 #include "LanaiAluCode.h"
 #include "MCTargetDesc/LanaiBaseInfo.h"
 #include "MCTargetDesc/LanaiFixupKinds.h"
-#include "MCTargetDesc/LanaiMCExpr.h"
+#include "MCTargetDesc/LanaiMCAsmInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -89,14 +89,14 @@ public:
 static Lanai::Fixups FixupKind(const MCExpr *Expr) {
   if (isa<MCSymbolRefExpr>(Expr))
     return Lanai::FIXUP_LANAI_21;
-  if (const LanaiMCExpr *McExpr = dyn_cast<LanaiMCExpr>(Expr)) {
-    LanaiMCExpr::Spec ExprKind = McExpr->getSpecifier();
+  if (const MCSpecifierExpr *McExpr = dyn_cast<MCSpecifierExpr>(Expr)) {
+    Lanai::Specifier ExprKind = McExpr->getSpecifier();
     switch (ExprKind) {
-    case LanaiMCExpr::VK_Lanai_None:
+    case Lanai::S_None:
       return Lanai::FIXUP_LANAI_21;
-    case LanaiMCExpr::VK_Lanai_ABS_HI:
+    case Lanai::S_ABS_HI:
       return Lanai::FIXUP_LANAI_HI16;
-    case LanaiMCExpr::VK_Lanai_ABS_LO:
+    case Lanai::S_ABS_LO:
       return Lanai::FIXUP_LANAI_LO16;
     }
   }
@@ -123,7 +123,7 @@ unsigned LanaiMCCodeEmitter::getMachineOpValue(
     Expr = BinaryExpr->getLHS();
   }
 
-  assert(isa<LanaiMCExpr>(Expr) || Expr->getKind() == MCExpr::SymbolRef);
+  assert(isa<MCSpecifierExpr>(Expr) || Expr->getKind() == MCExpr::SymbolRef);
   // Push fixup (all info is contained within)
   Fixups.push_back(
       MCFixup::create(0, MCOp.getExpr(), MCFixupKind(FixupKind(Expr))));

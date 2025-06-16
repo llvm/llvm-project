@@ -1016,7 +1016,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(..., i32 %d0, i32 %d1, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
@@ -1034,18 +1034,26 @@ source tensor is preserved at the destination. The dimension of the
 tensor data ranges from 1d to 5d with the coordinates specified
 by the ``i32 %d0 ... i32 %d4`` arguments.
 
-* The last two arguments to these intrinsics are boolean flags
-  indicating support for cache_hint and/or multicast modifiers.
-  These flag arguments must be compile-time constants. The backend
-  looks through these flags and lowers the intrinsics appropriately.
+* The last three arguments to these intrinsics are flags
+  indicating support for multicast, cache_hint and cta_group::1/2
+  modifiers. These flag arguments must be compile-time constants.
+  The backend looks through these flags and lowers the intrinsics
+  appropriately.
 
-* The Nth argument (denoted by ``i1 flag_ch``) when set, indicates
+* The argument denoted by ``i1 %flag_ch`` when set, indicates
   a valid cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
   variant of the PTX instruction.
 
-* The [N-1]th argument (denoted by ``i1 flag_mc``) when set, indicates
-  the presence of a multicast mask (``i16 %mc``) and generates the PTX
-  instruction with the ``.multicast::cluster`` modifier.
+* The argument denoted by ``i1 %flag_mc`` when set, indicates
+  the presence of a multicast mask (``i16 %mc``) and generates
+  the PTX instruction with the ``.multicast::cluster`` modifier.
+
+* The argument denoted by ``i32 %flag_cta_group`` takes values within
+  the range [0, 3) i.e. {0,1,2}. When the value of ``%flag_cta_group``
+  is not within the range, it may raise an error from the Verifier.
+  The default value is '0' with no cta_group modifier in the
+  instruction. The values of '1' and '2' lower to ``cta_group::1``
+  and ``cta_group::2`` variants of the PTX instruction respectively.
 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
@@ -1058,7 +1066,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
 
@@ -1074,8 +1082,8 @@ are unrolled into a single dimensional column at the destination. In this
 mode, the tensor has to be at least three-dimensional. Along with the tensor
 coordinates, im2col offsets are also specified (denoted by
 ``i16 im2col0...i16 %im2col2``). The number of im2col offsets is two less
-than the number of dimensions of the tensor operation. The last two arguments
-to these intrinsics are boolean flags, with the same functionality as described
+than the number of dimensions of the tensor operation. The last three arguments
+to these intrinsics are flags, with the same functionality as described
 in the ``tile`` mode intrinsics above.
 
 For more information, refer PTX ISA

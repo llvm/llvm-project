@@ -246,6 +246,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # https://github.com/llvm/llvm-project/issues/80060
     # libc.src.sys.epoll.epoll_pwait2
 
+    # sys/ioctl.h entrypoints
+    libc.src.sys.ioctl.ioctl
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
     libc.src.sys.mman.mincore
@@ -364,6 +367,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.btowc
     libc.src.wchar.wcslen
     libc.src.wchar.wctob
+    libc.src.wchar.wmemmove
     libc.src.wchar.wmemset
     libc.src.wchar.wcschr
     libc.src.wchar.wcsncmp
@@ -1113,6 +1117,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
+    libc.src.stdio.perror
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts

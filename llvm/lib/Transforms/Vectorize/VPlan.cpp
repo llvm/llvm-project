@@ -331,7 +331,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
 
   bool IsSingleScalar = vputils::isSingleScalar(Def);
 
-  VPLane LastLane(IsSingleScalar ? 0 : VF.getKnownMinValue() - 1);
+  VPLane LastLane(IsSingleScalar ? 0 : VF.getFixedValue() - 1);
   // Check if there is a scalar value for the selected lane.
   if (!hasScalarValue(Def, LastLane)) {
     // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
@@ -368,7 +368,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
     Value *Undef = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
     set(Def, Undef);
-    for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
+    for (unsigned Lane = 0; Lane < VF.getFixedValue(); ++Lane)
       packScalarIntoVectorizedValue(Def, Lane);
     VectorValue = get(Def);
   }
@@ -395,7 +395,7 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
       LLVM_DEBUG(dbgs() << "Failed to create new discriminator: "
                         << DIL->getFilename() << " Line: " << DIL->getLine());
   } else
-    Builder.SetCurrentDebugLocation(DIL);
+    Builder.SetCurrentDebugLocation(DL);
 }
 
 void VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
@@ -789,8 +789,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Entry);
   State->Lane = VPLane(0);
-  for (unsigned Lane = 0, VF = State->VF.getKnownMinValue(); Lane < VF;
-       ++Lane) {
+  for (unsigned Lane = 0, VF = State->VF.getFixedValue(); Lane < VF; ++Lane) {
     State->Lane = VPLane(Lane, VPLane::Kind::First);
     // Visit the VPBlocks connected to \p this, starting from it.
     for (VPBlockBase *Block : RPOT) {
@@ -1072,7 +1071,14 @@ void VPlan::execute(VPTransformState *State) {
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   // For now only return the cost of the vector loop region, ignoring any other
   // blocks, like the preheader or middle blocks.
-  return getVectorLoopRegion()->cost(VF, Ctx);
+  InstructionCost Cost = getVectorLoopRegion()->cost(VF, Ctx);
+
+  // If any instructions in the middle block are invalid return invalid.
+  // TODO: Remove once no VPlans with VF == vscale x 1 and first-order recurrences are created.
+  if (!getMiddleBlock()->cost(VF, Ctx).isValid())
+    return InstructionCost::getInvalid();
+
+  return Cost;
 }
 
 VPRegionBlock *VPlan::getVectorLoopRegion() {
