@@ -896,17 +896,6 @@ Sections:
             "are enabled: version = 1 feature = 4");
   }
 
-  SmallString<128> CommonVersionedYamlString(CommonYamlString);
-  CommonVersionedYamlString += R"(
-      - Version: 2
-        BBRanges:
-          - BBEntries:
-              - ID:            1
-                AddressOffset: 0x0
-                Size:          0x1
-                Metadata:      0x2
-)";
-
   // Check that we fail when function entry count is enabled but not provided.
   SmallString<128> MissingFuncEntryCount(CommonYamlString);
   MissingFuncEntryCount += R"(

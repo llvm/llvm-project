@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AVRRegisterInfo.h"
+#include "MCTargetDesc/AVRMCAsmInfo.h"
 #include "MCTargetDesc/AVRMCELFStreamer.h"
-#include "MCTargetDesc/AVRMCExpr.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
@@ -447,7 +447,7 @@ bool AVRAsmParser::tryParseExpression(OperandVector &Operands, int64_t offset) {
 
 bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
   bool isNegated = false;
-  AVRMCExpr::Specifier ModifierKind = AVRMCExpr::VK_AVR_NONE;
+  AVR::Specifier ModifierKind = AVR::S_AVR_NONE;
 
   SMLoc S = Parser.getTok().getLoc();
 
@@ -473,14 +473,14 @@ bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
   StringRef ModifierName = Parser.getTok().getString();
   ModifierKind = AVRMCExpr::parseSpecifier(ModifierName);
 
-  if (ModifierKind != AVRMCExpr::VK_AVR_NONE) {
+  if (ModifierKind != AVR::S_AVR_NONE) {
     Parser.Lex();
     Parser.Lex(); // Eat modifier name and parenthesis
     if (Parser.getTok().getString() == GENERATE_STUBS &&
         Parser.getTok().getKind() == AsmToken::Identifier) {
       std::string GSModName = ModifierName.str() + "_" + GENERATE_STUBS;
       ModifierKind = AVRMCExpr::parseSpecifier(GSModName);
-      if (ModifierKind != AVRMCExpr::VK_AVR_NONE)
+      if (ModifierKind != AVR::S_AVR_NONE)
         Parser.Lex(); // Eat gs modifier name
     }
   } else {
@@ -698,15 +698,15 @@ ParseStatus AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
       Tokens[1].getKind() == AsmToken::Identifier) {
     MCSymbol *Symbol = getContext().getOrCreateSymbol(".text");
     AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L,
-                                        AVRMCExpr::VK_AVR_NONE);
+                                        AVR::S_AVR_NONE);
     return ParseStatus::NoMatch;
   }
 
   if (Parser.getTok().getKind() == AsmToken::Identifier &&
       Parser.getLexer().peekTok().getKind() == AsmToken::LParen) {
     StringRef ModifierName = Parser.getTok().getString();
-    AVRMCExpr::Specifier Spec = AVRMCExpr::parseSpecifier(ModifierName);
-    if (Spec != AVRMCExpr::VK_AVR_NONE) {
+    AVR::Specifier Spec = AVRMCExpr::parseSpecifier(ModifierName);
+    if (Spec != AVR::S_AVR_NONE) {
       Parser.Lex();
       Parser.Lex(); // Eat the modifier and parenthesis
     } else {
