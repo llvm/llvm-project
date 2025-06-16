@@ -17,35 +17,6 @@ namespace llvm {
 class MipsMCExpr : public MCSpecifierExpr {
 public:
   using Specifier = Spec;
-  enum {
-    MEK_None,
-    MEK_CALL_HI16,
-    MEK_CALL_LO16,
-    MEK_DTPREL,
-    MEK_DTPREL_HI,
-    MEK_DTPREL_LO,
-    MEK_GOT,
-    MEK_GOTTPREL,
-    MEK_GOT_CALL,
-    MEK_GOT_DISP,
-    MEK_GOT_HI16,
-    MEK_GOT_LO16,
-    MEK_GOT_OFST,
-    MEK_GOT_PAGE,
-    MEK_GPREL,
-    MEK_HI,
-    MEK_HIGHER,
-    MEK_HIGHEST,
-    MEK_LO,
-    MEK_NEG,
-    MEK_PCREL_HI16,
-    MEK_PCREL_LO16,
-    MEK_TLSGD,
-    MEK_TLSLDM,
-    MEK_TPREL_HI,
-    MEK_TPREL_LO,
-    MEK_Special,
-  };
 
 private:
   explicit MipsMCExpr(const MCExpr *Expr, Specifier S)
@@ -60,14 +31,6 @@ public:
                                        MCContext &Ctx);
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAssembler *Asm) const override;
-
-  bool isGpOff(Specifier &S) const;
-  bool isGpOff() const {
-    Specifier S;
-    return isGpOff(S);
-  }
 };
 
 } // end namespace llvm
