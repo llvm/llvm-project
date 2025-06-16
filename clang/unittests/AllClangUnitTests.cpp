@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
+#include "gtest/gtest.h"
 
 // This custom main entry point for the AllClangUnitTests binary registers all
 // tests on startup, so the tests don't become sensitive to target registration
