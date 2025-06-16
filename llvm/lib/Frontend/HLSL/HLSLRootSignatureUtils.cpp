@@ -129,6 +129,39 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
+static const EnumEntry<RootFlags> RootFlagNames[] = {
+    {"AllowInputAssemblerInputLayout",
+     RootFlags::AllowInputAssemblerInputLayout},
+    {"DenyVertexShaderRootAccess", RootFlags::DenyVertexShaderRootAccess},
+    {"DenyHullShaderRootAccess", RootFlags::DenyHullShaderRootAccess},
+    {"DenyDomainShaderRootAccess", RootFlags::DenyDomainShaderRootAccess},
+    {"DenyGeometryShaderRootAccess", RootFlags::DenyGeometryShaderRootAccess},
+    {"DenyPixelShaderRootAccess", RootFlags::DenyPixelShaderRootAccess},
+    {"AllowStreamOutput", RootFlags::AllowStreamOutput},
+    {"LocalRootSignature", RootFlags::LocalRootSignature},
+    {"DenyAmplificationShaderRootAccess",
+     RootFlags::DenyAmplificationShaderRootAccess},
+    {"DenyMeshShaderRootAccess", RootFlags::DenyMeshShaderRootAccess},
+    {"CBVSRVUAVHeapDirectlyIndexed", RootFlags::CBVSRVUAVHeapDirectlyIndexed},
+    {"SamplerHeapDirectlyIndexed", RootFlags::SamplerHeapDirectlyIndexed},
+};
+
+raw_ostream &operator<<(raw_ostream &OS, const RootFlags &Flags) {
+  OS << "RootFlags(";
+  printFlags(OS, Flags, ArrayRef(RootFlagNames));
+  OS << ")";
+
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const RootConstants &Constants) {
+  OS << "RootConstants(num32BitConstants = " << Constants.Num32BitConstants
+     << ", " << Constants.Reg << ", space = " << Constants.Space
+     << ", visibility = " << Constants.Visibility << ")";
+
+  return OS;
+}
+
 raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table) {
   OS << "DescriptorTable(numClauses = " << Table.NumClauses
      << ", visibility = " << Table.Visibility << ")";
