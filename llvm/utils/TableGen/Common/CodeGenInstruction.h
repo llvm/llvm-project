@@ -127,8 +127,7 @@ public:
     /// getTiedOperand - If this operand is tied to another one, return the
     /// other operand number.  Otherwise, return -1.
     int getTiedRegister() const {
-      for (unsigned j = 0, e = Constraints.size(); j != e; ++j) {
-        const CGIOperandList::ConstraintInfo &CI = Constraints[j];
+      for (const CGIOperandList::ConstraintInfo &CI : Constraints) {
         if (CI.isTied())
           return CI.getTiedOperand();
       }

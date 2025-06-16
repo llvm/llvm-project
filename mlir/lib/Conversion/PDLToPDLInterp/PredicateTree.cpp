@@ -173,7 +173,7 @@ getTreePredicates(std::vector<PositionalPredicate> &predList, Value val,
 
       // Ignore the specified operand, usually because this position was
       // visited in an upward traversal via an iterative choice.
-      if (ignoreOperand && *ignoreOperand == operandIt.index())
+      if (ignoreOperand == operandIt.index())
         continue;
 
       Position *pos =

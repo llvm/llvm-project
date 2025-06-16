@@ -54,10 +54,8 @@ static llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
   case AS_none:
     Field = (AccessSpecifier)R[0];
     return llvm::Error::success();
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid value for AccessSpecifier");
   }
+  llvm_unreachable("invalid value for AccessSpecifier");
 }
 
 static llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,

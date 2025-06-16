@@ -132,6 +132,10 @@
 
 /* Define to 1 to enable expensive checks for debug location coverage checking,
    and to 0 otherwise. */
-#define LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING 1
+#define LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING 0
+
+/* Define to 1 to enable expensive tracking of the origin of debug location
+   coverage bugs, and to 0 otherwise. */
+#define LLVM_ENABLE_DEBUGLOC_ORIGIN_TRACKING 0
 
 #endif

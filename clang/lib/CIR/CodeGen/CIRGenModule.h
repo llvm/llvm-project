@@ -113,7 +113,20 @@ public:
 
   mlir::Operation *lastGlobalOp = nullptr;
 
+  llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
+
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
+
+  cir::GlobalOp getStaticLocalDeclAddress(const VarDecl *d) {
+    return staticLocalDeclMap[d];
+  }
+
+  void setStaticLocalDeclAddress(const VarDecl *d, cir::GlobalOp c) {
+    staticLocalDeclMap[d] = c;
+  }
+
+  cir::GlobalOp getOrCreateStaticVarDecl(const VarDecl &d,
+                                         cir::GlobalLinkageKind linkage);
 
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value

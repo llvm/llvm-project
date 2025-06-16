@@ -3978,7 +3978,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   for (auto *Tok = FirstNonComment && FirstNonComment->isNot(tok::kw_using)
                        ? FirstNonComment->Next
                        : nullptr;
-       Tok; Tok = Tok->Next) {
+       Tok && Tok->isNot(BK_BracedInit); Tok = Tok->Next) {
     if (Tok->is(TT_StartOfName))
       SeenName = true;
     if (Tok->Previous->EndsCppAttributeGroup)

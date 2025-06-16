@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/RISCVMCExpr.h"
+#include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -33,8 +33,8 @@ public:
 
   bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
               CompFuncTy Comp) const override {
-    const auto &RISCVExprA = cast<RISCVMCExpr>(A);
-    const auto &RISCVExprB = cast<RISCVMCExpr>(B);
+    const auto &RISCVExprA = cast<MCSpecifierExpr>(A);
+    const auto &RISCVExprB = cast<MCSpecifierExpr>(B);
     if (RISCVExprA.getSpecifier() != RISCVExprB.getSpecifier())
       return false;
 
@@ -245,7 +245,7 @@ public:
                   MCContext *Ctx) {
     Inst.setOpcode(Opcode);
     Inst.clear();
-    Inst.addOperand(MCOperand::createExpr(RISCVMCExpr::create(
+    Inst.addOperand(MCOperand::createExpr(MCSpecifierExpr::create(
         MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
         ELF::R_RISCV_CALL_PLT, *Ctx)));
   }
@@ -342,7 +342,7 @@ public:
   }
 
   const MCSymbol *getTargetSymbol(const MCExpr *Expr) const override {
-    auto *RISCVExpr = dyn_cast<RISCVMCExpr>(Expr);
+    auto *RISCVExpr = dyn_cast<MCSpecifierExpr>(Expr);
     if (RISCVExpr && RISCVExpr->getSubExpr())
       return getTargetSymbol(RISCVExpr->getSubExpr());
 
@@ -435,19 +435,19 @@ public:
     case ELF::R_RISCV_TLS_GD_HI20:
       // The GOT is reused so no need to create GOT relocations
     case ELF::R_RISCV_PCREL_HI20:
-      return RISCVMCExpr::create(Expr, ELF::R_RISCV_PCREL_HI20, Ctx);
+      return MCSpecifierExpr::create(Expr, ELF::R_RISCV_PCREL_HI20, Ctx);
     case ELF::R_RISCV_PCREL_LO12_I:
     case ELF::R_RISCV_PCREL_LO12_S:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_PCREL_LO, Ctx);
+      return MCSpecifierExpr::create(Expr, RISCV::S_PCREL_LO, Ctx);
     case ELF::R_RISCV_HI20:
-      return RISCVMCExpr::create(Expr, ELF::R_RISCV_HI20, Ctx);
+      return MCSpecifierExpr::create(Expr, ELF::R_RISCV_HI20, Ctx);
     case ELF::R_RISCV_LO12_I:
     case ELF::R_RISCV_LO12_S:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_LO, Ctx);
+      return MCSpecifierExpr::create(Expr, RISCV::S_LO, Ctx);
     case ELF::R_RISCV_CALL:
-      return RISCVMCExpr::create(Expr, ELF::R_RISCV_CALL_PLT, Ctx);
+      return MCSpecifierExpr::create(Expr, ELF::R_RISCV_CALL_PLT, Ctx);
     case ELF::R_RISCV_CALL_PLT:
-      return RISCVMCExpr::create(Expr, ELF::R_RISCV_CALL_PLT, Ctx);
+      return MCSpecifierExpr::create(Expr, ELF::R_RISCV_CALL_PLT, Ctx);
     }
   }
 
@@ -466,10 +466,10 @@ public:
       return false;
 
     const auto *ImmExpr = ImmOp.getExpr();
-    if (!isa<RISCVMCExpr>(ImmExpr))
+    if (!isa<MCSpecifierExpr>(ImmExpr))
       return false;
 
-    switch (cast<RISCVMCExpr>(ImmExpr)->getSpecifier()) {
+    switch (cast<MCSpecifierExpr>(ImmExpr)->getSpecifier()) {
     default:
       return false;
     case ELF::R_RISCV_CALL_PLT:

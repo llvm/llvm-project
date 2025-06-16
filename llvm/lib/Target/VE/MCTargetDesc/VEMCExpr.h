@@ -20,42 +20,30 @@
 namespace llvm {
 
 class StringRef;
-class VEMCExpr : public MCSpecifierExpr {
-public:
-  enum Specifier {
-    VK_None,
 
-    VK_REFLONG = MCSymbolRefExpr::FirstTargetSpecifier,
-    VK_HI32,        // @hi
-    VK_LO32,        // @lo
-    VK_PC_HI32,     // @pc_hi
-    VK_PC_LO32,     // @pc_lo
-    VK_GOT_HI32,    // @got_hi
-    VK_GOT_LO32,    // @got_lo
-    VK_GOTOFF_HI32, // @gotoff_hi
-    VK_GOTOFF_LO32, // @gotoff_lo
-    VK_PLT_HI32,    // @plt_hi
-    VK_PLT_LO32,    // @plt_lo
-    VK_TLS_GD_HI32, // @tls_gd_hi
-    VK_TLS_GD_LO32, // @tls_gd_lo
-    VK_TPOFF_HI32,  // @tpoff_hi
-    VK_TPOFF_LO32,  // @tpoff_lo
-  };
+namespace VE {
+enum Specifier {
+  S_None,
 
-private:
-  explicit VEMCExpr(const MCExpr *Expr, Specifier S)
-      : MCSpecifierExpr(Expr, S) {}
-
-public:
-  static const VEMCExpr *create(Specifier Kind, const MCExpr *Expr,
-                                MCContext &Ctx);
-
-  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAssembler *Asm) const override;
-
-  static VE::Fixups getFixupKind(Spec S);
+  S_REFLONG = MCSymbolRefExpr::FirstTargetSpecifier,
+  S_HI32,        // @hi
+  S_LO32,        // @lo
+  S_PC_HI32,     // @pc_hi
+  S_PC_LO32,     // @pc_lo
+  S_GOT_HI32,    // @got_hi
+  S_GOT_LO32,    // @got_lo
+  S_GOTOFF_HI32, // @gotoff_hi
+  S_GOTOFF_LO32, // @gotoff_lo
+  S_PLT_HI32,    // @plt_hi
+  S_PLT_LO32,    // @plt_lo
+  S_TLS_GD_HI32, // @tls_gd_hi
+  S_TLS_GD_LO32, // @tls_gd_lo
+  S_TPOFF_HI32,  // @tpoff_hi
+  S_TPOFF_LO32,  // @tpoff_lo
 };
+
+VE::Fixups getFixupKind(uint8_t S);
+} // namespace VE
 
 } // namespace llvm
 

@@ -338,6 +338,8 @@ public:
     PrototypeWrapper(const clang::ObjCMethodDecl *md) : p(md) {}
   };
 
+  bool isLValueSuitableForInlineAtomic(LValue lv);
+
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
@@ -468,6 +470,10 @@ public:
   /// Perform the usual unary conversions on the specified expression and
   /// compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *e);
+
+  cir::GlobalOp addInitializerToStaticVarDecl(const VarDecl &d,
+                                              cir::GlobalOp gv,
+                                              cir::GetGlobalOp gvAddr);
 
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
@@ -856,6 +862,10 @@ public:
 
   mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
 
+  /// Emit the computation of the specified expression of complex type,
+  /// returning the result.
+  mlir::Value emitComplexExpr(const Expr *e);
+
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
   void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
@@ -954,6 +964,11 @@ public:
 
   void emitScalarInit(const clang::Expr *init, mlir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
+
+  void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
+
+  void emitStoreOfComplex(mlir::Location loc, mlir::Value v, LValue dest,
+                          bool isInit);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
                          clang::QualType ty, bool isInit = false,

@@ -574,9 +574,10 @@ class QCILoadMultiple<bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
 
 // rd corresponds to the source for the store 'rs3' described in the spec.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
-class QCIStoreMultiple<bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
+class QCIStoreMultiple<bits<2> funct2, DAGOperand InTyRd, DAGOperand InTyRs2,
+                       string opcodestr>
     : RVInstRBase<0b111, OPC_CUSTOM_1, (outs),
-                  (ins GPR:$rd, GPR:$rs1, InTyRs2:$rs2, uimm7_lsb00:$imm),
+                  (ins InTyRd:$rd, GPR:$rs1, InTyRs2:$rs2, uimm7_lsb00:$imm),
                   opcodestr, "$rd, $rs2, ${imm}(${rs1})"> {
   bits<7> imm;
   let Inst{31-25} = {funct2, imm{6-2}};
@@ -967,10 +968,10 @@ let Predicates = [HasVendorXqcics, IsRV32] in {
 } // Predicates = [HasVendorXqcics, IsRV32]
 
 let Predicates = [HasVendorXqcilsm, IsRV32] in {
-    def QC_SWM : QCIStoreMultiple<0b00, GPRNoX0, "qc.swm">;
-    def QC_SWMI : QCIStoreMultiple<0b01, uimm5nonzero, "qc.swmi">;
-    def QC_SETWM : QCIStoreMultiple<0b10, GPRNoX0, "qc.setwm">;
-    def QC_SETWMI : QCIStoreMultiple<0b11, uimm5nonzero, "qc.setwmi">;
+    def QC_SWM : QCIStoreMultiple<0b00, GPRNoX0, GPRNoX0, "qc.swm">;
+    def QC_SWMI : QCIStoreMultiple<0b01, GPRNoX0, uimm5nonzero, "qc.swmi">;
+    def QC_SETWM : QCIStoreMultiple<0b10, GPR, GPRNoX0, "qc.setwm">;
+    def QC_SETWMI : QCIStoreMultiple<0b11, GPR, uimm5nonzero, "qc.setwmi">;
 
     def QC_LWM : QCILoadMultiple<0b00, GPRNoX0, "qc.lwm">;
     def QC_LWMI : QCILoadMultiple<0b01, uimm5nonzero, "qc.lwmi">;
@@ -1211,9 +1212,9 @@ let EmitPriority = 0 in {
 let Predicates = [HasVendorXqcilsm, IsRV32] in {
 let EmitPriority = 0 in {
   def : InstAlias<"qc.swm $rs3, $rs2, (${rs1})",
-                  (QC_SWM GPR:$rs3, GPR:$rs1, GPRNoX0:$rs2, 0)>;
+                  (QC_SWM GPRNoX0:$rs3, GPR:$rs1, GPRNoX0:$rs2, 0)>;
   def : InstAlias<"qc.swmi $rs3, $length, (${rs1})",
-                  (QC_SWMI GPR:$rs3, GPR:$rs1, uimm5nonzero:$length, 0)>;
+                  (QC_SWMI GPRNoX0:$rs3, GPR:$rs1, uimm5nonzero:$length, 0)>;
   def : InstAlias<"qc.setwm $rs3, $rs2, (${rs1})",
                   (QC_SETWM GPR:$rs3, GPR:$rs1, GPRNoX0:$rs2, 0)>;
   def : InstAlias<"qc.setwmi $rs3, $length, (${rs1})",

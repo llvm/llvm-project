@@ -112,9 +112,22 @@ bool OmpRewriteMutator::Pre(parser::OpenMPAtomicConstruct &x) {
 
   // Add a memory order clause to the atomic directive.
   atomicDirectiveDefaultOrderFound_ = true;
+  llvm::omp::Clause kind{x.GetKind()};
   switch (*defaultMemOrder) {
   case common::OmpMemoryOrderType::Acq_Rel:
-    clauseList->v.emplace_back(parser::OmpClause{parser::OmpClause::AcqRel{}});
+    // FIXME: Implement 5.0 rules, pending clarification on later spec
+    // versions.
+    // [5.0:62:22-26]
+    if (kind == llvm::omp::Clause::OMPC_read) {
+      clauseList->v.emplace_back(
+          parser::OmpClause{parser::OmpClause::Acquire{}});
+    } else if (kind == llvm::omp::Clause::OMPC_update && x.IsCapture()) {
+      clauseList->v.emplace_back(
+          parser::OmpClause{parser::OmpClause::AcqRel{}});
+    } else {
+      clauseList->v.emplace_back(
+          parser::OmpClause{parser::OmpClause::Release{}});
+    }
     break;
   case common::OmpMemoryOrderType::Relaxed:
     clauseList->v.emplace_back(parser::OmpClause{parser::OmpClause::Relaxed{}});

@@ -490,26 +490,30 @@ template <typename A> std::optional<CoarrayRef> ExtractCoarrayRef(const A &x) {
   }
 }
 
-struct ExtractSubstringHelper {
-  template <typename T> static std::optional<Substring> visit(T &&) {
+template <typename TARGET> struct ExtractFromExprDesignatorHelper {
+  template <typename T> static std::optional<TARGET> visit(T &&) {
     return std::nullopt;
   }
 
-  static std::optional<Substring> visit(const Substring &e) { return e; }
+  static std::optional<TARGET> visit(const TARGET &t) { return t; }
 
   template <typename T>
-  static std::optional<Substring> visit(const Designator<T> &e) {
+  static std::optional<TARGET> visit(const Designator<T> &e) {
     return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 
-  template <typename T>
-  static std::optional<Substring> visit(const Expr<T> &e) {
+  template <typename T> static std::optional<TARGET> visit(const Expr<T> &e) {
     return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 };
 
 template <typename A> std::optional<Substring> ExtractSubstring(const A &x) {
-  return ExtractSubstringHelper::visit(x);
+  return ExtractFromExprDesignatorHelper<Substring>::visit(x);
+}
+
+template <typename A>
+std::optional<ComplexPart> ExtractComplexPart(const A &x) {
+  return ExtractFromExprDesignatorHelper<ComplexPart>::visit(x);
 }
 
 // If an expression is simply a whole symbol data designator,

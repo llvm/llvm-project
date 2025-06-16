@@ -922,11 +922,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Print information about the device.
-  Error obtainInfoImpl(InfoQueueTy &Info) override {
+  Expected<InfoTreeNode> obtainInfoImpl() override {
     char TmpChar[1000];
     const char *TmpCharPtr;
     size_t TmpSt;
     int TmpInt;
+    InfoTreeNode Info;
 
     CUresult Res = cuDriverGetVersion(&TmpInt);
     if (Res == CUDA_SUCCESS)
@@ -971,27 +972,27 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Res == CUDA_SUCCESS)
       Info.add("Maximum Threads per Block", TmpInt);
 
-    Info.add("Maximum Block Dimensions", "");
+    auto &MaxBlock = *Info.add("Maximum Block Dimensions", "");
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add<InfoLevel2>("x", TmpInt);
+      MaxBlock.add("x", TmpInt);
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add<InfoLevel2>("y", TmpInt);
+      MaxBlock.add("y", TmpInt);
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add<InfoLevel2>("z", TmpInt);
+      MaxBlock.add("z", TmpInt);
 
-    Info.add("Maximum Grid Dimensions", "");
+    auto &MaxGrid = *Info.add("Maximum Grid Dimensions", "");
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add<InfoLevel2>("x", TmpInt);
+      MaxGrid.add("x", TmpInt);
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add<InfoLevel2>("y", TmpInt);
+      MaxGrid.add("y", TmpInt);
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add<InfoLevel2>("z", TmpInt);
+      MaxGrid.add("z", TmpInt);
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_PITCH, TmpInt);
     if (Res == CUDA_SUCCESS)
@@ -1087,7 +1088,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     Info.add("Compute Capabilities", ComputeCapability.str());
 
-    return Plugin::success();
+    return Info;
   }
 
   virtual bool shouldSetupDeviceMemoryPool() const override {

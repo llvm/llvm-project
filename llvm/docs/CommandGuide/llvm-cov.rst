@@ -380,6 +380,11 @@ OPTIONS
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
 
+.. option:: -empty-profile
+
+ Display the baseline coverage of the binaries with all zero execution counts.
+ Mutually exclusive with -instr-profile.
+
 .. program:: llvm-cov report
 
 .. _llvm-cov-report:
@@ -469,6 +474,11 @@ OPTIONS
 
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
+
+.. option:: -empty-profile
+
+ Display the baseline coverage of the binaries with all zero execution counts.
+ Mutually exclusive with -instr-profile.
 
 .. program:: llvm-cov export
 
@@ -561,6 +571,11 @@ OPTIONS
 
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
+
+.. option:: -empty-profile
+
+ Export the baseline coverage of the binaries with all zero execution counts.
+ Mutually exclusive with -instr-profile.
 
 CONVERT-FOR-TESTING COMMAND
 ---------------------------

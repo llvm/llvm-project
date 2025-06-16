@@ -20,24 +20,13 @@
 namespace llvm {
 
 class StringRef;
-class XtensaMCExpr : public MCSpecifierExpr {
-public:
-  using Specifier = uint16_t;
-  enum { VK_None, VK_TPOFF };
 
-private:
-  explicit XtensaMCExpr(const MCExpr *Expr, Specifier S)
-      : MCSpecifierExpr(Expr, S) {}
+namespace Xtensa {
+enum Specifier { S_None, S_TPOFF };
 
-public:
-  static const XtensaMCExpr *create(const MCExpr *Expr, Specifier,
-                                    MCContext &Ctx);
-
-  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-
-  static Specifier parseSpecifier(StringRef name);
-  static StringRef getSpecifierName(Specifier Kind);
-};
+uint8_t parseSpecifier(StringRef name);
+StringRef getSpecifierName(uint8_t S);
+} // namespace Xtensa
 
 } // end namespace llvm.
 

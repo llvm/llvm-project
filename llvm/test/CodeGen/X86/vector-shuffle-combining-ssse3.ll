@@ -53,7 +53,7 @@ define <2 x double> @combine_pshufb_as_movsd(<2 x double> %a0, <2 x double> %a1)
 ;
 ; AVX-LABEL: combine_pshufb_as_movsd:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
   %1 = shufflevector <2 x double> %a0, <2 x double> %a1, <2 x i32> <i32 3, i32 0>
   %2 = bitcast <2 x double> %1 to <16 x i8>

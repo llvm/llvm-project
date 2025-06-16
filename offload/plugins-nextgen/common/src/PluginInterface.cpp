@@ -1578,14 +1578,14 @@ Error GenericDeviceTy::initDeviceInfo(__tgt_device_info *DeviceInfo) {
 }
 
 Error GenericDeviceTy::printInfo() {
-  InfoQueueTy InfoQueue;
+  auto Info = obtainInfoImpl();
 
   // Get the vendor-specific info entries describing the device properties.
-  if (auto Err = obtainInfoImpl(InfoQueue))
+  if (auto Err = Info.takeError())
     return Err;
 
   // Print all info entries.
-  InfoQueue.print();
+  Info->print();
 
   return Plugin::success();
 }

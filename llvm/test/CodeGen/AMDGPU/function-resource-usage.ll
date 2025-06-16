@@ -5,14 +5,14 @@
 ; GCN-LABEL: {{^}}use_vcc:
 ; GCN: .set use_vcc.num_vgpr, 0
 ; GCN: .set use_vcc.num_agpr, 0
-; GCN: .set use_vcc.numbered_sgpr, 0
+; GCN: .set use_vcc.numbered_sgpr, 32
 ; GCN: .set use_vcc.private_seg_size, 0
 ; GCN: .set use_vcc.uses_vcc, 1
 ; GCN: .set use_vcc.uses_flat_scratch, 0
 ; GCN: .set use_vcc.has_dyn_sized_stack, 0
 ; GCN: .set use_vcc.has_recursion, 0
 ; GCN: .set use_vcc.has_indirect_call, 0
-; GCN: TotalNumSgprs: 4
+; GCN: TotalNumSgprs: 36
 ; GCN: NumVgprs: 0
 ; GCN: ScratchSize: 0
 define void @use_vcc() #1 {
@@ -59,14 +59,14 @@ define amdgpu_kernel void @indirect_2level_use_vcc_kernel(ptr addrspace(1) %out)
 ; GCN-LABEL: {{^}}use_flat_scratch:
 ; GCN: .set use_flat_scratch.num_vgpr, 0
 ; GCN: .set use_flat_scratch.num_agpr, 0
-; GCN: .set use_flat_scratch.numbered_sgpr, 0
+; GCN: .set use_flat_scratch.numbered_sgpr, 32
 ; GCN: .set use_flat_scratch.private_seg_size, 0
 ; GCN: .set use_flat_scratch.uses_vcc, 0
 ; GCN: .set use_flat_scratch.uses_flat_scratch, 1
 ; GCN: .set use_flat_scratch.has_dyn_sized_stack, 0
 ; GCN: .set use_flat_scratch.has_recursion, 0
 ; GCN: .set use_flat_scratch.has_indirect_call, 0
-; GCN: TotalNumSgprs: 6
+; GCN: TotalNumSgprs: 38
 ; GCN: NumVgprs: 0
 ; GCN: ScratchSize: 0
 define void @use_flat_scratch() #1 {
@@ -113,14 +113,14 @@ define amdgpu_kernel void @indirect_2level_use_flat_scratch_kernel(ptr addrspace
 ; GCN-LABEL: {{^}}use_10_vgpr:
 ; GCN: .set use_10_vgpr.num_vgpr, 10
 ; GCN: .set use_10_vgpr.num_agpr, 0
-; GCN: .set use_10_vgpr.numbered_sgpr, 0
+; GCN: .set use_10_vgpr.numbered_sgpr, 32
 ; GCN: .set use_10_vgpr.private_seg_size, 0
 ; GCN: .set use_10_vgpr.uses_vcc, 0
 ; GCN: .set use_10_vgpr.uses_flat_scratch, 0
 ; GCN: .set use_10_vgpr.has_dyn_sized_stack, 0
 ; GCN: .set use_10_vgpr.has_recursion, 0
 ; GCN: .set use_10_vgpr.has_indirect_call, 0
-; GCN: TotalNumSgprs: 4
+; GCN: TotalNumSgprs: 36
 ; GCN: NumVgprs: 10
 ; GCN: ScratchSize: 0
 define void @use_10_vgpr() #1 {
@@ -168,14 +168,14 @@ define amdgpu_kernel void @indirect_2_level_use_10_vgpr() #0 {
 ; GCN-LABEL: {{^}}use_50_vgpr:
 ; GCN:	.set use_50_vgpr.num_vgpr, 50
 ; GCN:	.set use_50_vgpr.num_agpr, 0
-; GCN:	.set use_50_vgpr.numbered_sgpr, 0
+; GCN:	.set use_50_vgpr.numbered_sgpr, 32
 ; GCN:	.set use_50_vgpr.private_seg_size, 0
 ; GCN:	.set use_50_vgpr.uses_vcc, 0
 ; GCN:	.set use_50_vgpr.uses_flat_scratch, 0
 ; GCN:	.set use_50_vgpr.has_dyn_sized_stack, 0
 ; GCN:	.set use_50_vgpr.has_recursion, 0
 ; GCN:	.set use_50_vgpr.has_indirect_call, 0
-; GCN: TotalNumSgprs: 4
+; GCN: TotalNumSgprs: 36
 ; GCN: NumVgprs: 50
 ; GCN: ScratchSize: 0
 define void @use_50_vgpr() #1 {
@@ -258,14 +258,14 @@ define amdgpu_kernel void @indirect_2_level_use_80_sgpr() #0 {
 ; GCN-LABEL: {{^}}use_stack0:
 ; GCN:	.set use_stack0.num_vgpr, 1
 ; GCN:	.set use_stack0.num_agpr, 0
-; GCN:	.set use_stack0.numbered_sgpr, 0
+; GCN:	.set use_stack0.numbered_sgpr, 33
 ; GCN:	.set use_stack0.private_seg_size, 2052
 ; GCN:	.set use_stack0.uses_vcc, 0
 ; GCN:	.set use_stack0.uses_flat_scratch, 0
 ; GCN:	.set use_stack0.has_dyn_sized_stack, 0
 ; GCN:	.set use_stack0.has_recursion, 0
 ; GCN:	.set use_stack0.has_indirect_call, 0
-; GCN: TotalNumSgprs: 4
+; GCN: TotalNumSgprs: 37
 ; GCN: NumVgprs: 1
 ; GCN: ScratchSize: 2052
 define void @use_stack0() #1 {
@@ -277,14 +277,14 @@ define void @use_stack0() #1 {
 ; GCN-LABEL: {{^}}use_stack1:
 ; GCN:	.set use_stack1.num_vgpr, 1
 ; GCN:	.set use_stack1.num_agpr, 0
-; GCN:	.set use_stack1.numbered_sgpr, 0
+; GCN:	.set use_stack1.numbered_sgpr, 33
 ; GCN:	.set use_stack1.private_seg_size, 404
 ; GCN:	.set use_stack1.uses_vcc, 0
 ; GCN:	.set use_stack1.uses_flat_scratch, 0
 ; GCN:	.set use_stack1.has_dyn_sized_stack, 0
 ; GCN:	.set use_stack1.has_recursion, 0
 ; GCN:	.set use_stack1.has_indirect_call, 0
-; GCN: TotalNumSgprs: 4
+; GCN: TotalNumSgprs: 37
 ; GCN: NumVgprs: 1
 ; GCN: ScratchSize: 404
 define void @use_stack1() #1 {

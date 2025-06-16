@@ -2,10 +2,10 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=HSAMD %s
 
 ; CHECK-LABEL: {{^}}min_64_max_64:
-; CHECK: SGPRBlocks: 2
+; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
-; CHECK: NumVGPRsForWavesPerEU: 3
+; CHECK: NumVGPRsForWavesPerEU: 1
 define amdgpu_kernel void @min_64_max_64() #0 {
 entry:
   ret void
@@ -13,10 +13,10 @@ entry:
 attributes #0 = {"amdgpu-flat-work-group-size"="64,64"}
 
 ; CHECK-LABEL: {{^}}min_64_max_128:
-; CHECK: SGPRBlocks: 2
+; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
-; CHECK: NumVGPRsForWavesPerEU: 3
+; CHECK: NumVGPRsForWavesPerEU: 1
 define amdgpu_kernel void @min_64_max_128() #1 {
 entry:
   ret void

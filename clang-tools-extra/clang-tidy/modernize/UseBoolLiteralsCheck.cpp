@@ -26,13 +26,12 @@ void UseBoolLiteralsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void UseBoolLiteralsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          implicitCastExpr(
-              has(ignoringParenImpCasts(integerLiteral().bind("literal"))),
-              hasImplicitDestinationType(qualType(booleanType())),
-              unless(isInTemplateInstantiation()),
-              anyOf(hasParent(explicitCastExpr().bind("cast")), anything()))),
+      traverse(TK_AsIs,
+               implicitCastExpr(
+                   has(ignoringParenImpCasts(integerLiteral().bind("literal"))),
+                   hasImplicitDestinationType(qualType(booleanType())),
+                   unless(isInTemplateInstantiation()),
+                   optionally(hasParent(explicitCastExpr().bind("cast"))))),
       this);
 
   Finder->addMatcher(

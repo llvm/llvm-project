@@ -1,0 +1,30 @@
+// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @fold_complex_create_test() -> !cir.complex<!s32i>  {
+    %0 = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["__retval"]
+    %1 = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+    %2 = cir.const #cir.int<1> : !s32i
+    %3 = cir.const #cir.int<2> : !s32i
+    %4 = cir.complex.create %2, %3 : !s32i -> !cir.complex<!s32i>
+    cir.store align(4) %4, %1 : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+    %5 = cir.load align(4) %1 : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+    cir.store align(4) %5, %0 : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+    %6 = cir.load %0 : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+    cir.return %6 : !cir.complex<!s32i>
+  }
+
+// CHECK: cir.func @fold_complex_create_test() -> !cir.complex<!s32i> {
+// CHECK:   %[[RET:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["__retval"]
+// CHECK:   %[[INIT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CHECK:   %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>
+// CHECK:   cir.store{{.*}} %[[COMPLEX]], %[[INIT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+// CHECK:   %[[TMP:.*]] = cir.load{{.*}} %[[INIT]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CHECK:   cir.store{{.*}} %[[TMP:.*]], %[[RET]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+// CHECK:   %[[TMP_2:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CHECK:   cir.return %[[TMP_2]] : !cir.complex<!s32i>
+// CHECK: }
+
+}

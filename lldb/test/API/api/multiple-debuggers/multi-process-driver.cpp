@@ -13,10 +13,11 @@
 // that are hit when lldb is being used to debug multiple processes
 // simultaneously.
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
+#include <unistd.h>
 
 #include "lldb/API/LLDB.h"
 #include "lldb/API/SBCommandInterpreter.h"
