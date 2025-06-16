@@ -4279,7 +4279,7 @@ declare i32 @llvm.ctlz.i32(i32, i1)
 ; This is only valid when x + (N-1) doesn't overflow
 
 ; Test with known range that prevents overflow
-define noundef range(i32 0, 100) i32 @ceil_div_by_8_known_range(i32 noundef range(i32 0, 100) %x) {
+define i32 @ceil_div_by_8_known_range(i32 range(i32 0, 100) %x) {
 ; CHECK-LABEL: @ceil_div_by_8_known_range(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[X:%.*]], 7
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[TMP1]], 3
@@ -4294,7 +4294,7 @@ define noundef range(i32 0, 100) i32 @ceil_div_by_8_known_range(i32 noundef rang
 }
 
 ; Test with the exact IR from the original testcase
-define noundef range(i32 0, 6) i32 @ceil_div_from_clz(i32 noundef %v) {
+define i32 @ceil_div_from_clz(i32 %v) {
 ; CHECK-LABEL: @ceil_div_from_clz(
 ; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[V:%.*]], i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw nsw i32 39, [[CTLZ]]

@@ -1791,8 +1791,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // (X >> log2(N)) + zext(X & (N-1) != 0) --> (X + (N-1)) >> log2(N)
   // This is valid when adding (N-1) to X doesn't overflow.
   {
-    Value *X = nullptr;
-    const APInt *ShiftAmt = nullptr, *Mask = nullptr;
+    Value *X;
+    const APInt *ShiftAmt, *Mask;
     CmpPredicate Pred;
 
     // Match: (X >> C) + zext((X & Mask) != 0)
@@ -1806,9 +1806,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
       // Check if X + Mask doesn't overflow
       Constant *MaskC = ConstantInt::get(X->getType(), *Mask);
-      bool WillNotOverflowUnsigned = willNotOverflowUnsignedAdd(X, MaskC, I);
-
-      if (WillNotOverflowUnsigned) {
+      if (willNotOverflowUnsignedAdd(X, MaskC, I)) {
         // (X + Mask) >> ShiftAmt
         Value *Add = Builder.CreateNUWAdd(X, MaskC);
         return BinaryOperator::CreateLShr(
