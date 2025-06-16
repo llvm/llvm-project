@@ -392,6 +392,7 @@ std::string serialize(std::unique_ptr<Info> &I) {
   case InfoType::IT_default:
     return "";
   }
+  llvm_unreachable("unhandled enumerator");
 }
 
 static void parseFullComment(const FullComment *C, CommentInfo &CI) {
