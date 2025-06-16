@@ -160,6 +160,12 @@ def CIR_AnyIntOrFloatType : AnyTypeOf<[CIR_AnyFloatType, CIR_AnyIntType],
 }
 
 //===----------------------------------------------------------------------===//
+// Complex Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyComplexType : CIR_TypeBase<"::cir::ComplexType", "complex type">;
+
+//===----------------------------------------------------------------------===//
 // Pointer Type predicates
 //===----------------------------------------------------------------------===//
 
@@ -180,6 +186,19 @@ class CIR_PtrToPtrTo<code type, string summary>
     : CIR_ConfinedType<CIR_AnyPtrType, [CIR_IsPtrToPtrToPred<type>],
         "pointer to pointer to " # summary>;
 
+// Pointee type constraint bases
+class CIR_PointeePred<Pred pred> : SubstLeaves<"$_self",
+    "::mlir::cast<::cir::PointerType>($_self).getPointee()", pred>;
+
+class CIR_PtrToAnyOf<list<Type> types, string summary = "">
+    : CIR_ConfinedType<CIR_AnyPtrType,
+        [Or<!foreach(type, types, CIR_PointeePred<type.predicate>)>],
+        !if(!empty(summary),
+            "pointer to " # CIR_TypeSummaries<types>.value,
+            summary)>;
+
+class CIR_PtrToType<Type type> : CIR_PtrToAnyOf<[type]>;
+
 // Void pointer type constraints
 def CIR_VoidPtrType
     : CIR_PtrTo<"::cir::VoidType", "void type">,
@@ -191,6 +210,11 @@ def CIR_PtrToVoidPtrType
       BuildableType<"$_builder.getType<" # cppType # ">("
         "$_builder.getType<" # cppType # ">("
         "cir::VoidType::get($_builder.getContext())))">;
+
+// Pointer to type constraints
+def CIR_PtrToIntOrFloatType : CIR_PtrToType<CIR_AnyIntOrFloatType>;
+
+def CIR_PtrToComplexType : CIR_PtrToType<CIR_AnyComplexType>;
 
 //===----------------------------------------------------------------------===//
 // Vector Type predicates

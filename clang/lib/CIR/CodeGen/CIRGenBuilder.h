@@ -366,6 +366,19 @@ public:
     return create<cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
   }
 
+  /// Create a cir.complex.real_ptr operation that derives a pointer to the real
+  /// part of the complex value pointed to by the specified pointer value.
+  mlir::Value createRealPtr(mlir::Location loc, mlir::Value value) {
+    auto srcPtrTy = mlir::cast<cir::PointerType>(value.getType());
+    auto srcComplexTy = mlir::cast<cir::ComplexType>(srcPtrTy.getPointee());
+    return create<cir::ComplexRealPtrOp>(
+        loc, getPointerTo(srcComplexTy.getElementType()), value);
+  }
+
+  Address createRealPtr(mlir::Location loc, Address addr) {
+    return Address{createRealPtr(loc, addr.getPointer()), addr.getAlignment()};
+  }
+
   /// Create a cir.ptr_stride operation to get access to an array element.
   /// \p idx is the index of the element to access, \p shouldDecay is true if
   /// the result should decay to a pointer to the element type.

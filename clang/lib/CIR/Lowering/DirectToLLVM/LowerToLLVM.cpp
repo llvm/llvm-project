@@ -1836,7 +1836,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecShuffleOpLowering,
                CIRToLLVMVecShuffleDynamicOpLowering,
                CIRToLLVMVecTernaryOpLowering,
-               CIRToLLVMComplexCreateOpLowering
+               CIRToLLVMComplexCreateOpLowering,
+               CIRToLLVMComplexRealPtrOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -2137,6 +2138,23 @@ mlir::LogicalResult CIRToLLVMComplexCreateOpLowering::matchAndRewrite(
       op->getLoc(), realComplex, adaptor.getImag(), 1);
 
   rewriter.replaceOp(op, complex);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMComplexRealPtrOpLowering::matchAndRewrite(
+    cir::ComplexRealPtrOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::PointerType operandTy = op.getOperand().getType();
+  mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
+  mlir::Type elementLLVMTy =
+      getTypeConverter()->convertType(operandTy.getPointee());
+
+  mlir::LLVM::GEPArg gepIndices[2] = {{0}, {0}};
+  mlir::LLVM::GEPNoWrapFlags inboundsNuw =
+      mlir::LLVM::GEPNoWrapFlags::inbounds | mlir::LLVM::GEPNoWrapFlags::nuw;
+  rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+      op, resultLLVMTy, elementLLVMTy, adaptor.getOperand(), gepIndices,
+      inboundsNuw);
   return mlir::success();
 }
 
