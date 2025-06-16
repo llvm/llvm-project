@@ -398,42 +398,42 @@ MipsTargetAsmStreamer::MipsTargetAsmStreamer(MCStreamer &S,
 void MipsTargetAsmStreamer::emitDTPRel32Value(const MCExpr *Value) {
   auto *MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.dtprelword\t";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitDTPRel64Value(const MCExpr *Value) {
   auto *MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.dtpreldword\t";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitTPRel32Value(const MCExpr *Value) {
   auto *MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.tprelword\t";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitTPRel64Value(const MCExpr *Value) {
   auto *MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.tpreldword\t";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitGPRel32Value(const MCExpr *Value) {
   auto *MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.gpword\t";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitGPRel64Value(const MCExpr *Value) {
   auto *MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.gpdword\t";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
