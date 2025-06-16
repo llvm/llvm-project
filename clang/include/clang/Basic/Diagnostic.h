@@ -424,10 +424,13 @@ private:
     bool empty() const { return Files.empty(); }
 
     /// Clear out this map.
-    void clear() {
+    void clear(bool Soft) {
+      // Just clear the cache when in soft mode.
       Files.clear();
-      FirstDiagState = CurDiagState = nullptr;
-      CurDiagStateLoc = SourceLocation();
+      if (!Soft) {
+        FirstDiagState = CurDiagState = nullptr;
+        CurDiagStateLoc = SourceLocation();
+      }
     }
 
     /// Produce a debugging dump of the diagnostic state.
@@ -920,6 +923,10 @@ public:
   /// Reset the state of the diagnostic object to its initial configuration.
   /// \param[in] soft - if true, doesn't reset the diagnostic mappings and state
   void Reset(bool soft = false);
+  /// We keep a cache of FileIDs for diagnostics mapped by pragmas. These might
+  /// get invalidated when diagnostics engine is shared across different
+  /// compilations. Provide users with a way to reset that.
+  void ResetPragmas();
 
   //===--------------------------------------------------------------------===//
   // DiagnosticsEngine classification and reporting interfaces.

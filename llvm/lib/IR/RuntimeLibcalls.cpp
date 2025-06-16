@@ -21,13 +21,17 @@ static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
   if (TT.isWindowsArm64EC()) {
     // FIXME: are there calls we need to exclude from this?
 #define HANDLE_LIBCALL(code, name)                                             \
-  {                                                                            \
+  if (sizeof(name) != 1) {                                                     \
     const char *libcallName = Info.getLibcallName(RTLIB::code);                \
-    if (libcallName && libcallName[0] != '#')                                  \
-      Info.setLibcallName(RTLIB::code, "#" #name);                             \
+    if (libcallName && libcallName[0] != '#') {                                \
+      assert(strcmp(libcallName, name) == 0 && "Unexpected name");             \
+      Info.setLibcallName(RTLIB::code, "#" name);                              \
+    }                                                                          \
   }
+#define LIBCALL_NO_NAME ""
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
+#undef LIBCALL_NO_NAME
   }
 }
 
@@ -41,13 +45,8 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT) {
         const char *const Name;
         const CallingConv::ID CC;
       } LibraryCalls[] = {
-          {RTLIB::SDIVREM_I8, "__rt_sdiv", CallingConv::ARM_AAPCS},
-          {RTLIB::SDIVREM_I16, "__rt_sdiv", CallingConv::ARM_AAPCS},
           {RTLIB::SDIVREM_I32, "__rt_sdiv", CallingConv::ARM_AAPCS},
           {RTLIB::SDIVREM_I64, "__rt_sdiv64", CallingConv::ARM_AAPCS},
-
-          {RTLIB::UDIVREM_I8, "__rt_udiv", CallingConv::ARM_AAPCS},
-          {RTLIB::UDIVREM_I16, "__rt_udiv", CallingConv::ARM_AAPCS},
           {RTLIB::UDIVREM_I32, "__rt_udiv", CallingConv::ARM_AAPCS},
           {RTLIB::UDIVREM_I64, "__rt_udiv64", CallingConv::ARM_AAPCS},
       };
@@ -62,13 +61,8 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT) {
         const char *const Name;
         const CallingConv::ID CC;
       } LibraryCalls[] = {
-          {RTLIB::SDIVREM_I8, "__aeabi_idivmod", CallingConv::ARM_AAPCS},
-          {RTLIB::SDIVREM_I16, "__aeabi_idivmod", CallingConv::ARM_AAPCS},
           {RTLIB::SDIVREM_I32, "__aeabi_idivmod", CallingConv::ARM_AAPCS},
           {RTLIB::SDIVREM_I64, "__aeabi_ldivmod", CallingConv::ARM_AAPCS},
-
-          {RTLIB::UDIVREM_I8, "__aeabi_uidivmod", CallingConv::ARM_AAPCS},
-          {RTLIB::UDIVREM_I16, "__aeabi_uidivmod", CallingConv::ARM_AAPCS},
           {RTLIB::UDIVREM_I32, "__aeabi_uidivmod", CallingConv::ARM_AAPCS},
           {RTLIB::UDIVREM_I64, "__aeabi_uldivmod", CallingConv::ARM_AAPCS},
       };
@@ -78,6 +72,34 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT) {
         Info.setLibcallCallingConv(LC.Op, LC.CC);
       }
     }
+  }
+
+  if (TT.isOSWindows()) {
+    static const struct {
+      const RTLIB::Libcall Op;
+      const char *const Name;
+      const CallingConv::ID CC;
+    } LibraryCalls[] = {
+        {RTLIB::FPTOSINT_F32_I64, "__stoi64", CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::FPTOSINT_F64_I64, "__dtoi64", CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::FPTOUINT_F32_I64, "__stou64", CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::FPTOUINT_F64_I64, "__dtou64", CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::SINTTOFP_I64_F32, "__i64tos", CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::SINTTOFP_I64_F64, "__i64tod", CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::UINTTOFP_I64_F32, "__u64tos", CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::UINTTOFP_I64_F64, "__u64tod", CallingConv::ARM_AAPCS_VFP},
+    };
+
+    for (const auto &LC : LibraryCalls) {
+      Info.setLibcallName(LC.Op, LC.Name);
+      Info.setLibcallCallingConv(LC.Op, LC.CC);
+    }
+  }
+
+  // Use divmod compiler-rt calls for iOS 5.0 and later.
+  if (TT.isOSBinFormatMachO() && (!TT.isiOS() || !TT.isOSVersionLT(5, 0))) {
+    Info.setLibcallName(RTLIB::SDIVREM_I32, "__divmodsi4");
+    Info.setLibcallName(RTLIB::UDIVREM_I32, "__udivmodsi4");
   }
 }
 
@@ -205,8 +227,10 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
             nullptr);
 
 #define HANDLE_LIBCALL(code, name) setLibcallName(RTLIB::code, name);
+#define LIBCALL_NO_NAME nullptr
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
+#undef LIBCALL_NO_NAME
 
   // Initialize calling conventions to their default.
   for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
@@ -444,7 +468,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
   }
 
   // Setup Windows compiler runtime calls.
-  if (TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()) {
+  if (TT.getArch() == Triple::x86 &&
+      (TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment())) {
     static const struct {
       const RTLIB::Libcall Op;
       const char *const Name;
@@ -513,6 +538,11 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
       setLibcallName(RTLIB::MULO_I64, nullptr);
     }
     setLibcallName(RTLIB::MULO_I128, nullptr);
+  } else {
+    // Define the emscripten name for return address helper.
+    // TODO: when implementing other Wasm backends, make this generic or only do
+    // this on emscripten depending on what they end up doing.
+    setLibcallName(RTLIB::RETURN_ADDRESS, "emscripten_return_address");
   }
 
   if (TT.isSystemZ() && TT.isOSzOS()) {
