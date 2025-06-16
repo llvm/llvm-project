@@ -14,15 +14,15 @@ define void @pointer_after_object_does_not_wrap(i32 %y, ptr %s, ptr %p) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep2.iv = getelementptr inbounds i8, ptr %p, i32 %iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep1.iv = getelementptr inbounds i8, ptr %s, i32 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (%y + %p) High: (2147483647 + %p))
 ; CHECK-NEXT:            Member: {(%y + %p),+,1}<nw><%loop>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (%y + %s) High: (2147483647 + %s))
 ; CHECK-NEXT:            Member: {(%y + %s),+,1}<nw><%loop>
 ; CHECK-EMPTY:
@@ -57,15 +57,15 @@ define void @pointer_after_object_would_wrap(i32 %y, ptr %s, ptr %p) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep2.iv = getelementptr inbounds i8, ptr %p, i32 %iv
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep1.iv = getelementptr inbounds i8, ptr %s, i32 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (%y + %p) High: (-2147483648 + %p))
 ; CHECK-NEXT:            Member: {(%y + %p),+,1}<nw><%loop>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (%y + %s) High: (-2147483648 + %s))
 ; CHECK-NEXT:            Member: {(%y + %s),+,1}<nw><%loop>
 ; CHECK-EMPTY:

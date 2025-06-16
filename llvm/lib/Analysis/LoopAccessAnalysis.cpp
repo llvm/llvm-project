@@ -188,12 +188,31 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
   Members.push_back(Index);
 }
 
+/// Returns \p A + \p B, if it is guaranteed not to unsigned wrap. Otherwise
+/// return nullptr.
+static const SCEV *addSCEVOverflow(const SCEV *A, const SCEV *B,
+                                   ScalarEvolution &SE) {
+  if (!SE.willNotOverflow(Instruction::Add, false, A, B))
+    return nullptr;
+  return SE.getAddExpr(A, B);
+}
+
+/// Returns \p A * \p B, if it is guaranteed not to unsigned wrap. Otherwise
+/// return nullptr.
+static const SCEV *mulSCEVOverflow(const SCEV *A, const SCEV *B,
+                                   ScalarEvolution &SE) {
+  if (!SE.willNotOverflow(Instruction::Mul, false, A, B))
+    return nullptr;
+  return SE.getMulExpr(A, B);
+}
+
 /// Return true, if evaluating \p AR at \p MaxBTC cannot wrap, because \p AR at
 /// \p MaxBTC is guaranteed inbounds of the accessed object.
-static bool evaluateAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
-                                              const SCEV *MaxBTC,
-                                              ScalarEvolution &SE,
-                                              const DataLayout &DL) {
+static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
+                                                 const SCEV *MaxBTC,
+                                                 const SCEV *EltSize,
+                                                 ScalarEvolution &SE,
+                                                 const DataLayout &DL) {
   auto *PointerBase = SE.getPointerBase(AR->getStart());
   auto *StartPtr = dyn_cast<SCEVUnknown>(PointerBase);
   if (!StartPtr)
@@ -208,29 +227,45 @@ static bool evaluateAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
   const SCEV *Step = AR->getStepRecurrence(SE);
   Type *WiderTy = SE.getWiderType(MaxBTC->getType(), Step->getType());
   Step = SE.getNoopOrSignExtend(Step, WiderTy);
-  MaxBTC = SE.getNoopOrSignExtend(MaxBTC, WiderTy);
+  MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
+
+  // For the computations below, make sure they don't unsigned wrap.
+  if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, AR->getStart(), StartPtr))
+    return false;
+  const SCEV *StartOffset = SE.getNoopOrSignExtend(
+      SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
+
+  const SCEV *OffsetAtLastIter =
+      mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, false), SE);
+  if (!OffsetAtLastIter)
+    return false;
+
+  const SCEV *OffsetLastAccessedByte = addSCEVOverflow(
+      OffsetAtLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
+  if (!OffsetLastAccessedByte)
+    return false;
+
   if (SE.isKnownPositive(Step)) {
-    // For positive steps, check if (AR->getStart() - StartPtr) + MaxBTC <=
-    // DerefBytes / Step
-    const SCEV *StartOffset = SE.getNoopOrSignExtend(
-        SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
-    return SE.isKnownPredicate(
-        CmpInst::ICMP_ULE, SE.getAddExpr(StartOffset, MaxBTC),
-        SE.getUDivExpr(SE.getConstant(WiderTy, DerefBytes), Step));
+    // For positive steps, check if
+    //  (AR->getStart() - StartPtr) + (MaxBTC  * Step) + EltSize <= DerefBytes,
+    // while making sure none of the computations unsigned wrap themselves.
+    const SCEV *LastAccessedByte =
+        addSCEVOverflow(StartOffset, OffsetLastAccessedByte, SE);
+    if (!LastAccessedByte)
+      return false;
+    return SE.isKnownPredicate(CmpInst::ICMP_ULE, LastAccessedByte,
+                               SE.getConstant(WiderTy, DerefBytes));
   }
+
   if (SE.isKnownNegative(Step)) {
-    // For negative steps, check using StartOffset == AR->getStart() - StartPtr:
-    //  * StartOffset >= MaxBTC * Step
-    //  * AND  StartOffset <= DerefBytes / Step
-    auto *StartOffset = SE.getNoopOrSignExtend(
-        SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
-    return SE.isKnownPredicate(
-               CmpInst::ICMP_UGE, StartOffset,
-               SE.getMulExpr(MaxBTC, SE.getNegativeSCEV(Step))) &&
-           SE.isKnownPredicate(
-               CmpInst::ICMP_ULE, StartOffset,
-               SE.getUDivExpr(SE.getConstant(WiderTy, DerefBytes),
-                              SE.getNegativeSCEV(Step)));
+    // For negative steps check if
+    //  * StartOffset >= (MaxBTC * Step + EltSize)
+    //  * StartOffset <= DerefBytes.
+    return SE
+        .isKnownPredicate(CmpInst::ICMP_SGE, StartOffset,
+                          OffsetLastAccessedByte)
+            SE.isKnownPredicate(CmpInst::ICMP_ULE, StartOffset,
+                                SE.getConstant(WiderTy, DerefBytes));
   }
   return false;
 }
@@ -271,14 +306,18 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       // than the start of the AddRec due to wrapping (for example consider
       // MaxBTC = -2). If that's the case, set ScEnd to -(EltSize + 1). ScEnd
       // will get incremented by EltSize before returning, so this effectively
-      // sets ScEnd to unsigned max. Note that LAA separately checks that
-      // accesses cannot not wrap, so unsigned max represents an upper bound.
-      ScEnd = SE->getAddExpr(
-          SE->getNegativeSCEV(EltSizeSCEV),
-          SE->getSCEV(ConstantExpr::getIntToPtr(
-              ConstantInt::get(EltSizeSCEV->getType(), -1), AR->getType())));
-      if (evaluateAddRecAtMaxBTCWillNotWrap(AR, MaxBTC, *SE, DL))
+      // sets ScEnd to the maximum unsigned value for the type. Note that LAA
+      // separately checks that accesses cannot not wrap, so unsigned max
+      // represents an upper bound.
+      if (evaluatePtrAddRecAtMaxBTCWillNotWrap(AR, MaxBTC, EltSizeSCEV, *SE,
+                                               DL)) {
         ScEnd = AR->evaluateAtIteration(MaxBTC, *SE);
+      } else {
+        ScEnd = SE->getAddExpr(
+            SE->getNegativeSCEV(EltSizeSCEV),
+            SE->getSCEV(ConstantExpr::getIntToPtr(
+                ConstantInt::get(EltSizeSCEV->getType(), -1), AR->getType())));
+      }
     }
     const SCEV *Step = AR->getStepRecurrence(*SE);
 
