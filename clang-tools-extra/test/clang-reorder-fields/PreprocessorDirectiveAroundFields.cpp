@@ -7,8 +7,8 @@ namespace bar {
 // This is okay to reorder.
 struct Foo {
 #ifdef DEFINE_FIELDS // CHECK:      {{^#ifdef DEFINE_FIELDS}}
-  int y;             // CHECK-NEXT: {{^ int y;}}
-  int x;             // CHECK-NEXT: {{^ int x;}}
+  int x;             // CHECK-NEXT: {{^ int y;}}
+  int y;             // CHECK-NEXT: {{^ int x;}}
 #endif               // CHECK-NEXT: {{^#endif}}
 };
 
