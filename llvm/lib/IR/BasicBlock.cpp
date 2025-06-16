@@ -21,7 +21,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 
 #include "LLVMContextImpl.h"
