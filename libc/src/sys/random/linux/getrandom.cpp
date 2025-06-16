@@ -12,7 +12,6 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
-
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include <sys/syscall.h> // For syscall numbers.
@@ -24,7 +23,7 @@ LLVM_LIBC_FUNCTION(ssize_t, getrandom,
   auto rand = internal::getrandom(buf, buflen, flags);
   if (rand.has_value())
     return rand.value();
-  libc_errno = static_cast<int>(-(rand.error()));
+  libc_errno = static_cast<int>(rand.error());
   return -1;
 }
 
