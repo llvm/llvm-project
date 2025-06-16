@@ -24,18 +24,6 @@ class StringRef;
 class RISCVMCExpr : public MCSpecifierExpr {
 public:
   using Specifier = uint16_t;
-  // Specifiers mapping to relocation types below FirstTargetFixupKind are
-  // encoded literally, with these exceptions:
-  enum {
-    VK_None,
-    // Specifiers mapping to distinct relocation types.
-    VK_LO = FirstTargetFixupKind,
-    VK_PCREL_LO,
-    VK_TPREL_LO,
-    // Vendor-specific relocation types might conflict across vendors.
-    // Refer to them using Specifier constants.
-    VK_QC_ABS20,
-  };
 
 private:
   explicit RISCVMCExpr(const MCExpr *Expr, Specifier S)
@@ -57,6 +45,21 @@ public:
   static std::optional<Specifier> getSpecifierForName(StringRef name);
   static StringRef getSpecifierName(Specifier Kind);
 };
+
+namespace RISCV {
+// Specifiers mapping to relocation types below FirstTargetFixupKind are
+// encoded literally, with these exceptions:
+enum Specifier {
+  S_None,
+  // Specifiers mapping to distinct relocation types.
+  S_LO = FirstTargetFixupKind,
+  S_PCREL_LO,
+  S_TPREL_LO,
+  // Vendor-specific relocation types might conflict across vendors.
+  // Refer to them using Specifier constants.
+  S_QC_ABS20,
+};
+} // namespace RISCV
 } // end namespace llvm.
 
 #endif
