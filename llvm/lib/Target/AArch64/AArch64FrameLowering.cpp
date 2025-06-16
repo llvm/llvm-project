@@ -2540,8 +2540,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     // FP to restore SVE callee saves (as there is an unknown amount of
     // data/padding between the SP and SVE CS area).
     Register BaseForSVEDealloc =
-        AFI->isStackRealigned() || MFI.hasVarSizedObjects() ? AArch64::FP
-                                                            : AArch64::SP;
+        (AFI->isStackRealigned() || MFI.hasVarSizedObjects()) ? AArch64::FP
+                                                              : AArch64::SP;
     if (SVECalleeSavedSize && BaseForSVEDealloc == AArch64::FP) {
       Register CalleeSaveBase = AArch64::FP;
       if (int64_t CalleeSaveBaseOffset =
