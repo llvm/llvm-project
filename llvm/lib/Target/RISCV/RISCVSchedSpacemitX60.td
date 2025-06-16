@@ -49,6 +49,19 @@ class SMX60GetVIALULatency<string mx> {
   );
 }
 
+// Latency for arithmetic operations (vadd, vsub, vmax, vmin, etc.)
+class SMX60GetVIArithLatency<string mx> {
+  int c = !cond(
+    !eq(mx, "M1") : 4,
+    !eq(mx, "M2") : 4,
+    !eq(mx, "M4") : 5,
+    !eq(mx, "M8") : 8,
+    !eq(mx, "MF2") : 4,
+    !eq(mx, "MF4") : 4,
+    !eq(mx, "MF8") : 4
+  );
+}
+
 // Latency for carry arithmetic operations (vadc, vsbc)
 class SMX60GetVICarryLatency<string mx> {
   int c = !cond(
@@ -56,6 +69,19 @@ class SMX60GetVICarryLatency<string mx> {
     !eq(mx, "M2") : 4,
     !eq(mx, "M4") : 8,
     !eq(mx, "M8") : 9,
+    !eq(mx, "MF2") : 4,
+    !eq(mx, "MF4") : 4,
+    !eq(mx, "MF8") : 4
+  );
+}
+
+// Latency for mask-producing operations (vmadc, vmsbc, vmseq, etc.)
+class SMX60GetVIMaskLatency<string mx> {
+  int c = !cond(
+    !eq(mx, "M1") : 4,
+    !eq(mx, "M2") : 6,
+    !eq(mx, "M4") : 10,
+    !eq(mx, "M8") : 18,
     !eq(mx, "MF2") : 4,
     !eq(mx, "MF4") : 4,
     !eq(mx, "MF8") : 4
@@ -365,7 +391,9 @@ def : WriteRes<!cast<SchedWrite>("WriteVMov8V"), [SMX60_VIEU]> { let Latency = 1
 // 11. Vector Integer Arithmetic Instructions
 foreach mx = SchedMxList in {
   defvar ALULat = SMX60GetVIALULatency<mx>.c;
+  defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
   defvar CarryLat = SMX60GetVICarryLatency<mx>.c;
+  defvar MaskLat = SMX60GetVIMaskLatency<mx>.c;
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
   defm "" : LMULWriteResMX<"WriteVIALUV",    [SMX60_VIEU], mx, IsWorstCase>;
@@ -379,12 +407,16 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVICALUX",   [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICALUI",   [SMX60_VIEU], mx, IsWorstCase>;
   }
-  defm "" : LMULWriteResMX<"WriteVICALUMV",  [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVICALUMX",  [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVICALUMI",  [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVICmpV",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVICmpX",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVICmpI",    [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = MaskLat in {
+    defm "" : LMULWriteResMX<"WriteVICALUMV",  [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMX",  [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMI",  [SMX60_VIEU], mx, IsWorstCase>;
+  }
+  let Latency = MaskLat in {
+    defm "" : LMULWriteResMX<"WriteVICmpV",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICmpX",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICmpI",    [SMX60_VIEU], mx, IsWorstCase>;
+  }
   defm "" : LMULWriteResMX<"WriteVIMinMaxV", [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVIMinMaxX", [SMX60_VIEU], mx, IsWorstCase>;
   let Latency = ALULat in {
