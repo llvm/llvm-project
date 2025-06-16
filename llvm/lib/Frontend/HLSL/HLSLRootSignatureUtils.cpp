@@ -22,18 +22,20 @@ namespace hlsl {
 namespace rootsig {
 
 template <typename T>
-static StringRef getEnumName(const T Value, ArrayRef<EnumEntry<T>> Enums) {
+static std::optional<StringRef> getEnumName(const T Value,
+                                            ArrayRef<EnumEntry<T>> Enums) {
   for (const auto &EnumItem : Enums)
     if (EnumItem.Value == Value)
       return EnumItem.Name;
-  return "";
+  return std::nullopt;
 }
 
 template <typename T>
 static raw_ostream &printEnum(raw_ostream &OS, const T Value,
                               ArrayRef<EnumEntry<T>> Enums) {
-  OS << getEnumName(Value, Enums);
-
+  auto MaybeName = getEnumName(Value, Enums);
+  if (MaybeName)
+    OS << *MaybeName;
   return OS;
 }
 
@@ -234,10 +236,11 @@ MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
 
 MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
   IRBuilder<> Builder(Ctx);
-  StringRef TypeName =
+  std::optional<StringRef> TypeName =
       getEnumName(dxil::ResourceClass(llvm::to_underlying(Descriptor.Type)),
                   ArrayRef(ResourceClassNames));
-  llvm::SmallString<7> Name({"Root", TypeName});
+  assert(TypeName && "Provided an invalid Resource Class");
+  llvm::SmallString<7> Name({"Root", *TypeName});
   Metadata *Operands[] = {
       MDString::get(Ctx, Name),
       ConstantAsMetadata::get(
@@ -275,11 +278,12 @@ MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
 MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
   IRBuilder<> Builder(Ctx);
-  StringRef Name =
+  std::optional<StringRef> Name =
       getEnumName(dxil::ResourceClass(llvm::to_underlying(Clause.Type)),
                   ArrayRef(ResourceClassNames));
+  assert(Name && "Provided an invalid Resource Class");
   Metadata *Operands[] = {
-      MDString::get(Ctx, Name),
+      MDString::get(Ctx, *Name),
       ConstantAsMetadata::get(Builder.getInt32(Clause.NumDescriptors)),
       ConstantAsMetadata::get(Builder.getInt32(Clause.Reg.Number)),
       ConstantAsMetadata::get(Builder.getInt32(Clause.Space)),
