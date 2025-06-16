@@ -417,8 +417,10 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVICmpX",    [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICmpI",    [SMX60_VIEU], mx, IsWorstCase>;
   }
-  defm "" : LMULWriteResMX<"WriteVIMinMaxV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIMinMaxX", [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = ArithLat in {
+    defm "" : LMULWriteResMX<"WriteVIMinMaxV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMinMaxX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
   let Latency = ALULat in {
     defm "" : LMULWriteResMX<"WriteVIMergeV",  [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMergeX",  [SMX60_VIEU], mx, IsWorstCase>;
