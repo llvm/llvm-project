@@ -1584,14 +1584,13 @@ def EmitC_ClassOp
     for its data fields (`emitc.field`) and methods (`emitc.func`).
     It creates a distinct scope, isolating its contents from the surrounding
     MLIR region, similar to how C++ classes encapsulate their internals.
-    All the class memebrs need to be default initalizable. 
 
     Example:
     ```mlir
-    emitc.class @MymainClass {
-      emitc.field @another_feature : !emitc.array<1xf32> = {tf_saved_model.index_path = ["another_feature"]}
-      emitc.field @some_feature : !emitc.array<1xf32> = {tf_saved_model.index_path = ["some_feature"]}
-      emitc.field @output_0 : !emitc.array<1xf32> = {tf_saved_model.index_path = ["output_0"]}
+    emitc.class @mainClass {
+      emitc.field @another_feature : !emitc.array<1xf32> = {emitc.opaque = ["another_feature"]}
+      emitc.field @some_feature : !emitc.array<1xf32> = {emitc.opaque = ["some_feature"]}
+      emitc.field @output_0 : !emitc.array<1xf32> = {emitc.opaque = ["output_0"]}
 
       emitc.func @execute() {
         %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
@@ -1634,15 +1633,22 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
   let summary = "A field within a class";
   let description = [{
     The `emitc.field` operation declares a named field within an `emitc.class`
-    operation. The field's type must be an EmitC type. An optional initial value can be provided.
+    operation. The field's type must be an EmitC type. The initial value is optional. 
+    If the argument has attributes, these become the initial value, else we end up with no initial value.
 
     Example with initial values:
 
     ```mlir
-    emitc.class @MyModelClass {
-      emitc.field @another_feature : !emitc.array<1xf32> = {tf_saved_model.index_path = ["another_feature"]}
-      emitc.field @some_feature : !emitc.array<1xf32> = {tf_saved_model.index_path = ["some_feature"]}
-      emitc.field @output_0 : !emitc.array<1xf32> = {tf_saved_model.index_path = ["output_0"]}
+    emitc.class @modelClass {
+      emitc.field @another_feature : !emitc.array<1xf32> = {emitc.opaque = ["another_feature"]}
+      emitc.field @some_feature : !emitc.array<1xf32> = {emitc.opaque = ["some_feature"]}
+      emitc.field @output_0 : !emitc.array<1xf32> = {emitc.opaque = ["output_0"]}
+    }
+    ```
+    Example with no initial value:
+    ```mlir
+     emitc.class @modelClass {
+      emitc.field @another_feature : !emitc.array<1xf32>
     }
     ```
   }];
