@@ -173,10 +173,15 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
     return;
   }
 
-  case MCExpr::Specifier:
-    // TODO: Remove after all targets that use MCSpecifierExpr migrate to
-    // MCAsmInfo::printSpecifierExpr.
-    return cast<MCSpecifierExpr>(this)->printImpl(OS, MAI);
+  case MCExpr::Specifier: {
+    auto &SE = cast<MCSpecifierExpr>(*this);
+    if (MAI)
+      return MAI->printSpecifierExpr(OS, SE);
+    // Used by dump features like -show-inst. Regular MCAsmStreamer output must
+    // set MAI.
+    OS << "specifier(" << SE.getSpecifier() << ',' << *SE.getSubExpr() << ')';
+    return;
+  }
   }
 
   llvm_unreachable("Invalid expression kind!");
