@@ -1304,7 +1304,7 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
     FailureOr<SmallVector<::mlir::emitc::ReplacementItem>> parseFormatString();
   }];
 
-  let arguments = (ins StrAttr:$value, Variadic<EmitCType>:$fmtArgs);
+  let arguments = (ins StrAttr:$value, Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$fmtArgs);
 
   let builders = [OpBuilder<(ins "::mlir::StringAttr":$value),
                             [{ build($_builder, $_state, value, {}); }]>];
