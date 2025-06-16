@@ -416,33 +416,6 @@ class LowerMatrixIntrinsics {
         addVector(PoisonValue::get(FixedVectorType::get(
             EltTy, isColumnMajor() ? NumRows : NumColumns)));
     }
-    MatrixTy(ConstantData *Constant, const ShapeInfo &SI)
-        : IsColumnMajor(SI.IsColumnMajor) {
-      Type *EltTy = cast<VectorType>(Constant->getType())->getElementType();
-      Type *RowTy = VectorType::get(EltTy, ElementCount::getFixed(SI.NumRows));
-
-      for (unsigned J = 0, D = SI.getNumVectors(); J < D; ++J) {
-        if (auto *CDV = dyn_cast<ConstantDataVector>(Constant)) {
-          unsigned Width = SI.getStride();
-          size_t EltSize = EltTy->getPrimitiveSizeInBits() / 8;
-          StringRef Data = CDV->getRawDataValues().substr(J * Width * EltSize,
-                                                          Width * EltSize);
-          addVector(
-              ConstantDataVector::getRaw(Data, Width, CDV->getElementType()));
-        } else if (isa<PoisonValue>(Constant))
-          addVector(PoisonValue::get(RowTy));
-        else if (isa<UndefValue>(Constant))
-          addVector(UndefValue::get(RowTy));
-        else if (isa<ConstantAggregateZero>(Constant))
-          addVector(ConstantAggregateZero::get(RowTy));
-        else {
-#ifndef NDEBUG
-          Constant->dump();
-#endif
-          report_fatal_error("unhandled ConstantData type");
-        }
-      }
-    }
 
     Value *getVector(unsigned i) const { return Vectors[i]; }
     Value *getColumn(unsigned i) const {
@@ -646,10 +619,6 @@ public:
 
       MatrixVal = M.embedInVector(Builder);
     }
-
-    // If it's a constant, materialize the split version of it with this shape.
-    if (auto *IncomingConst = dyn_cast<ConstantData>(MatrixVal))
-      return MatrixTy(IncomingConst, SI);
 
     // Otherwise split MatrixVal.
     SmallVector<Value *, 16> SplitVecs;
