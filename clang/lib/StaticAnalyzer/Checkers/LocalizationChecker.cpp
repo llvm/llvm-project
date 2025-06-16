@@ -747,9 +747,7 @@ void NonLocalizedStringChecker::reportLocalizationError(
   if (isDebuggingContext(C))
     return;
 
-  static CheckerProgramPointTag Tag("NonLocalizedStringChecker",
-                                    "UnlocalizedString");
-  ExplodedNode *ErrNode = C.addTransition(C.getState(), C.getPredecessor(), &Tag);
+  ExplodedNode *ErrNode = C.generateNonFatalErrorNode();
 
   if (!ErrNode)
     return;

@@ -2367,7 +2367,7 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
     if (forOp.getNumResults() == 0)
       return success();
     std::optional<uint64_t> tripCount = getTrivialConstantTripCount(forOp);
-    if (tripCount && *tripCount == 0) {
+    if (tripCount == 0) {
       // The initial values of the iteration arguments would be the op's
       // results.
       rewriter.replaceOp(forOp, forOp.getInits());
@@ -2447,7 +2447,7 @@ void AffineForOp::getSuccessorRegions(
 
   // From the loop body, if the trip count is one, we can only branch back to
   // the parent.
-  if (!point.isParent() && tripCount && *tripCount == 1) {
+  if (!point.isParent() && tripCount == 1) {
     regions.push_back(RegionSuccessor(getResults()));
     return;
   }
@@ -2460,8 +2460,7 @@ void AffineForOp::getSuccessorRegions(
 
 /// Returns true if the affine.for has zero iterations in trivial cases.
 static bool hasTrivialZeroTripCount(AffineForOp op) {
-  std::optional<uint64_t> tripCount = getTrivialConstantTripCount(op);
-  return tripCount && *tripCount == 0;
+  return getTrivialConstantTripCount(op) == 0;
 }
 
 LogicalResult AffineForOp::fold(FoldAdaptor adaptor,
@@ -4789,7 +4788,7 @@ struct DropUnitExtentBasis
          llvm::enumerate(delinearizeOp.getPaddedBasis())) {
       std::optional<int64_t> basisVal =
           basis ? getConstantIntValue(basis) : std::nullopt;
-      if (basisVal && *basisVal == 1)
+      if (basisVal == 1)
         replacements[index] = getZero();
       else
         newBasis.push_back(basis);

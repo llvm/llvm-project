@@ -975,6 +975,8 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       emitULEB128(I, OS);
 
       // Decoder index.
+      unsigned DecodeIdx = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
+      assert(ErrMsg == nullptr && "ULEB128 value too large!");
       emitULEB128(I, OS);
 
       auto EncI = OpcodeToEncodingID.find(Opc);
@@ -982,18 +984,17 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       auto EncodingID = EncI->second;
 
       if (!IsTry) {
-        OS << "// Opcode: " << NumberedEncodings[EncodingID] << "\n";
+        OS << "// Opcode: " << NumberedEncodings[EncodingID]
+           << ", DecodeIdx: " << DecodeIdx << '\n';
         break;
       }
 
       // Fallthrough for OPC_TryDecode.
-
       if (!IsFail) {
         uint32_t NumToSkip = emitNumToSkip(I, OS);
-        OS << "// Opcode: " << NumberedEncodings[EncodingID];
+        OS << "// Opcode: " << NumberedEncodings[EncodingID]
+           << ", DecodeIdx: " << DecodeIdx;
         emitNumToSkipComment(NumToSkip, /*InComment=*/true);
-      } else {
-        OS << "// Opcode: " << NumberedEncodings[EncodingID];
       }
       OS << '\n';
       break;
@@ -2249,7 +2250,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     const uint8_t DecoderOp = *Ptr++;
     switch (DecoderOp) {
     default:
-      errs() << Loc << ": Unexpected decode table opcode!\n";
+      errs() << Loc << ": Unexpected decode table opcode: "
+             << (int)DecoderOp << '\n';
       return MCDisassembler::Fail;
     case MCD::OPC_ExtractField: {
       // Decode the start value.

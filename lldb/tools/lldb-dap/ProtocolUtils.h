@@ -48,6 +48,32 @@ bool IsAssemblySource(const protocol::Source &source);
 /// Get the address as a 16-digit hex string, e.g. "0x0000000000012345"
 std::string GetLoadAddressString(const lldb::addr_t addr);
 
+/// Create a "Thread" object for a LLDB thread object.
+///
+/// This function will fill in the following keys in the returned
+/// object:
+///   "id" - the thread ID as an integer
+///   "name" - the thread name as a string which combines the LLDB
+///            thread index ID along with the string name of the thread
+///            from the OS if it has a name.
+///
+/// \param[in] thread
+///     The LLDB thread to use when populating out the "Thread"
+///     object.
+///
+/// \param[in] format
+///     The LLDB format to use when populating out the "Thread"
+///     object.
+///
+/// \return
+///     A "Thread" JSON object with that follows the formal JSON
+///     definition outlined by Microsoft.
+protocol::Thread CreateThread(lldb::SBThread &thread, lldb::SBFormat &format);
+
+/// Returns the set of threads associated with the process.
+std::vector<protocol::Thread> GetThreads(lldb::SBProcess process,
+                                         lldb::SBFormat &format);
+
 } // namespace lldb_dap
 
 #endif
