@@ -529,7 +529,13 @@ struct ClientCapabilities {
   bool TheiaSemanticHighlighting = false;
 
   /// Supported encodings for LSP character offsets. (clangd extension).
+  ///
+  /// @deprecated in favour of PositionEncodings.
   std::optional<std::vector<OffsetEncoding>> offsetEncoding;
+
+  /// Supported encodings for LSP character offsets. (introduced by LSP 3.17).
+  /// general.positionEncodings
+  std::optional<std::vector<OffsetEncoding>> PositionEncodings;
 
   /// The content format that should be used for Hover requests.
   /// textDocument.hover.contentEncoding
