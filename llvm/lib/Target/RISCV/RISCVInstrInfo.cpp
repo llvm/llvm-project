@@ -4226,38 +4226,32 @@ bool RISCVInstrInfo::simplifyInstruction(MachineInstr &MI) const {
 #define CASE_WIDEOP_OPCODE_COMMON(OP, LMUL)                                    \
   RISCV::PseudoV##OP##_##LMUL##_TIED
 
-#define CASE_WIDEOP_OPCODE_LMULS_MF4(OP)                                       \
-  CASE_WIDEOP_OPCODE_COMMON(OP, MF4):                                          \
+#define CASE_WIDEOP_OPCODE_LMULS(OP)                                           \
+  CASE_WIDEOP_OPCODE_COMMON(OP, MF8):                                          \
+  case CASE_WIDEOP_OPCODE_COMMON(OP, MF4):                                     \
   case CASE_WIDEOP_OPCODE_COMMON(OP, MF2):                                     \
   case CASE_WIDEOP_OPCODE_COMMON(OP, M1):                                      \
   case CASE_WIDEOP_OPCODE_COMMON(OP, M2):                                      \
   case CASE_WIDEOP_OPCODE_COMMON(OP, M4)
-
-#define CASE_WIDEOP_OPCODE_LMULS(OP)                                           \
-  CASE_WIDEOP_OPCODE_COMMON(OP, MF8):                                          \
-  case CASE_WIDEOP_OPCODE_LMULS_MF4(OP)
 
 #define CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, LMUL)                             \
   case RISCV::PseudoV##OP##_##LMUL##_TIED:                                     \
     NewOpc = RISCV::PseudoV##OP##_##LMUL;                                      \
     break;
 
-#define CASE_WIDEOP_CHANGE_OPCODE_LMULS_MF4(OP)                                \
+#define CASE_WIDEOP_CHANGE_OPCODE_LMULS(OP)                                    \
+  CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF8)                                    \
   CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF4)                                    \
   CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF2)                                    \
   CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, M1)                                     \
   CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, M2)                                     \
   CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4)
 
-#define CASE_WIDEOP_CHANGE_OPCODE_LMULS(OP)                                    \
-  CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF8)                                    \
-  CASE_WIDEOP_CHANGE_OPCODE_LMULS_MF4(OP)
-
 // FP Widening Ops may by SEW aware. Create SEW aware cases for these cases.
 #define CASE_FP_WIDEOP_OPCODE_COMMON(OP, LMUL, SEW)                            \
   RISCV::PseudoV##OP##_##LMUL##_##SEW##_TIED
 
-#define CASE_FP_WIDEOP_OPCODE_LMULS_MF4(OP)                                    \
+#define CASE_FP_WIDEOP_OPCODE_LMULS(OP)                                        \
   CASE_FP_WIDEOP_OPCODE_COMMON(OP, MF4, E16):                                  \
   case CASE_FP_WIDEOP_OPCODE_COMMON(OP, MF2, E16):                             \
   case CASE_FP_WIDEOP_OPCODE_COMMON(OP, MF2, E32):                             \
@@ -4273,7 +4267,7 @@ bool RISCVInstrInfo::simplifyInstruction(MachineInstr &MI) const {
     NewOpc = RISCV::PseudoV##OP##_##LMUL##_##SEW;                              \
     break;
 
-#define CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_MF4(OP)                             \
+#define CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS(OP)                                 \
   CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF4, E16)                            \
   CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF2, E16)                            \
   CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF2, E32)                            \
@@ -4283,9 +4277,6 @@ bool RISCVInstrInfo::simplifyInstruction(MachineInstr &MI) const {
   CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M2, E32)                             \
   CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4, E16)                             \
   CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4, E32)                             \
-
-#define CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS(OP)                                 \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_MF4(OP)
 // clang-format on
 
 MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
@@ -4295,8 +4286,8 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     return nullptr;
-  case CASE_FP_WIDEOP_OPCODE_LMULS_MF4(FWADD_WV):
-  case CASE_FP_WIDEOP_OPCODE_LMULS_MF4(FWSUB_WV): {
+  case CASE_FP_WIDEOP_OPCODE_LMULS(FWADD_WV):
+  case CASE_FP_WIDEOP_OPCODE_LMULS(FWSUB_WV): {
     assert(RISCVII::hasVecPolicyOp(MI.getDesc().TSFlags) &&
            MI.getNumExplicitOperands() == 7 &&
            "Expect 7 explicit operands rd, rs2, rs1, rm, vl, sew, policy");
@@ -4309,8 +4300,8 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
     switch (MI.getOpcode()) {
     default:
       llvm_unreachable("Unexpected opcode");
-    CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_MF4(FWADD_WV)
-    CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_MF4(FWSUB_WV)
+    CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS(FWADD_WV)
+    CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS(FWSUB_WV)
     }
     // clang-format on
 
@@ -4390,15 +4381,12 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
 }
 
 #undef CASE_WIDEOP_OPCODE_COMMON
-#undef CASE_WIDEOP_OPCODE_LMULS_MF4
 #undef CASE_WIDEOP_OPCODE_LMULS
 #undef CASE_WIDEOP_CHANGE_OPCODE_COMMON
-#undef CASE_WIDEOP_CHANGE_OPCODE_LMULS_MF4
 #undef CASE_WIDEOP_CHANGE_OPCODE_LMULS
 #undef CASE_FP_WIDEOP_OPCODE_COMMON
-#undef CASE_FP_WIDEOP_OPCODE_LMULS_MF4
+#undef CASE_FP_WIDEOP_OPCODE_LMULS
 #undef CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON
-#undef CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_MF4
 #undef CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS
 
 void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
