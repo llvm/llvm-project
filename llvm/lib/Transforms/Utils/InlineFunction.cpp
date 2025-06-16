@@ -2705,8 +2705,9 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Clear debug locations for all inlined allocas to prevent stack protection
     // code from inheriting incorrect source attribution
-    for (Function::iterator BB = FirstNewBlock, E = Caller->end(); BB != E; ++BB) {
-     for (BasicBlock::iterator I = BB->begin(), IE = BB->end(); I != IE; ++I) {
+    for (Function::iterator BB = FirstNewBlock, E = Caller->end(); BB != E;
+         ++BB) {
+      for (BasicBlock::iterator I = BB->begin(), IE = BB->end(); I != IE; ++I) {
         if (auto *AI = dyn_cast<AllocaInst>(I)) {
           AI->setDebugLoc(DebugLoc());
         }
