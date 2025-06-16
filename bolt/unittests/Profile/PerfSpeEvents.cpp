@@ -81,11 +81,10 @@ protected:
   std::unique_ptr<ObjectFile> ObjFile;
   std::unique_ptr<BinaryContext> BC;
 
-  // Helper function to export lists to show the mismatch
-  void exportBrStackEventMismatch(
+  /// Helper function to export lists to show the mismatch.
+  void reportBrStackEventMismatch(
       const std::unordered_map<Trace, TakenBranchInfo, TraceHash> &BranchLBRs,
       const std::vector<MockBranchInfo> &ExpectedSamples) {
-    // Simple export where they differ
     llvm::errs() << "BranchLBRs items: \n";
     for (const auto &AggrLBR : BranchLBRs)
       llvm::errs() << "{" << AggrLBR.first.From << ", " << AggrLBR.first.To
@@ -98,7 +97,7 @@ protected:
                    << ", " << BI.MispredCount << "}" << "\n";
   }
 
-  // Parse and check SPE brstack as LBR.
+  /// Parse and check SPE brstack as LBR.
   void parseAndCheckBrstackEvents(
       uint64_t PID, const std::vector<MockBranchInfo> &ExpectedSamples) {
     DataAggregator DA("<pseudo input>");
@@ -111,11 +110,10 @@ protected:
 
     EXPECT_EQ(DA.BranchLBRs.size(), ExpectedSamples.size());
     if (DA.BranchLBRs.size() != ExpectedSamples.size())
-      exportBrStackEventMismatch(DA.BranchLBRs, ExpectedSamples);
+      reportBrStackEventMismatch(DA.BranchLBRs, ExpectedSamples);
 
     for (const MockBranchInfo &BI : ExpectedSamples) {
-      /// Check whether the key exists, throws 'std::out_of_range'
-      /// if the container does not have an element with the specified key.
+      // Check that each key exists and that it matches.
       EXPECT_NO_THROW(DA.BranchLBRs.at(Trace(BI.From, BI.To)));
 
       EXPECT_EQ(DA.BranchLBRs.at(Trace(BI.From, BI.To)).MispredCount,
