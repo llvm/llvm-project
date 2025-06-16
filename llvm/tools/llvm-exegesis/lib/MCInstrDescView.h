@@ -85,6 +85,7 @@ struct Operand {
   bool IsDef = false;
   bool IsEarlyClobber = false;
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
+  bool mayLoadOrStore = false;                      // checks mayLoad and store
   const MCOperandInfo *Info = nullptr;              // Set for Explicit Op.
   std::optional<uint8_t> TiedToIndex;               // Set for Reg&Explicit Op.
   MCRegister ImplicitReg;                           // Non-0 for Implicit Op.
