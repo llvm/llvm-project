@@ -1371,16 +1371,15 @@ void MallocChecker::checkIfFreeNameIndex(ProgramStateRef State,
   C.addTransition(State);
 }
 
-bool isVoidStar(QualType T) {
-  return !T.isNull() && T->isPointerType() && T->getPointeeType()->isVoidType();
-}
-
 const Expr *getPlacementNewBufferArg(const CallExpr *CE,
                                      const FunctionDecl *FD) {
-  if (CE->getNumArgs() == 1)
+  // Checking for signature:
+  // void* operator new  ( std::size_t count, void* ptr );
+  // void* operator new[]( std::size_t count, void* ptr );
+  if (CE->getNumArgs() != 2)
     return nullptr;
-  // Second argument of placement new must be void*
-  if (!isVoidStar(FD->getParamDecl(1)->getType()))
+  auto BuffType = FD->getParamDecl(1)->getType();
+  if (BuffType.isNull() || !BuffType->isVoidPointerType())
     return nullptr;
   return CE->getArg(1);
 }
