@@ -75,8 +75,8 @@ int CharacterConverter::push(char8_t utf8_byte) {
 }
 
 ErrorOr<char32_t> CharacterConverter::pop_utf32() {
-  /* if pop is called too early, do not reset the state, use error to determine
-   whether enough bytes have been pushed */
+  // If pop is called too early, do not reset the state, use error to determine
+  // whether enough bytes have been pushed
   if (!isComplete() || state->bytes_processed == 0)
     return Error(-1);
   char32_t utf32 = state->partial;
