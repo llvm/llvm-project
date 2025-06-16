@@ -1533,6 +1533,9 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
   std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
 
+  if (!SrcLT.first.isValid() || !DstLT.first.isValid())
+    return InstructionCost::getInvalid();
+
   // Handle i1 source and dest cases *before* calling logic in BasicTTI.
   // The shared implementation doesn't model vector widening during legalization
   // and instead assumes scalarization.  In order to scalarize an <N x i1>
