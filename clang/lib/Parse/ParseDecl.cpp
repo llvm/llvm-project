@@ -8588,8 +8588,7 @@ void Parser::ParseBoundsAttributeArgFromString(
       Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, nullptr,
       ExpressionKind::EK_AttrArgument);
 
-  ExprResult Result(
-      Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
+  ExprResult Result(ParseAssignmentExpression());
 
   // Check if we parsed the whole thing.
   if (Result.isUsable() &&
