@@ -3555,32 +3555,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::vector_reverse: {
-    Value *BO0, *BO1, *X, *Y;
     Value *Vec = II->getArgOperand(0);
-    if (match(Vec, m_OneUse(m_BinOp(m_Value(BO0), m_Value(BO1))))) {
-      auto *OldBinOp = cast<BinaryOperator>(Vec);
-      if (match(BO0, m_VecReverse(m_Value(X)))) {
-        // rev(binop rev(X), rev(Y)) --> binop X, Y
-        if (match(BO1, m_VecReverse(m_Value(Y))))
-          return replaceInstUsesWith(CI, BinaryOperator::CreateWithCopiedFlags(
-                                             OldBinOp->getOpcode(), X, Y,
-                                             OldBinOp, OldBinOp->getName(),
-                                             II->getIterator()));
-        // rev(binop rev(X), BO1Splat) --> binop X, BO1Splat
-        if (isSplatValue(BO1))
-          return replaceInstUsesWith(CI, BinaryOperator::CreateWithCopiedFlags(
-                                             OldBinOp->getOpcode(), X, BO1,
-                                             OldBinOp, OldBinOp->getName(),
-                                             II->getIterator()));
-      }
-      // rev(binop BO0Splat, rev(Y)) --> binop BO0Splat, Y
-      if (match(BO1, m_VecReverse(m_Value(Y))) && isSplatValue(BO0))
-        return replaceInstUsesWith(CI,
-                                   BinaryOperator::CreateWithCopiedFlags(
-                                       OldBinOp->getOpcode(), BO0, Y, OldBinOp,
-                                       OldBinOp->getName(), II->getIterator()));
-    }
+    // Note: We canonicalize reverse after binops, so we don't need a
+    // corresponding binop case here. TODO: Consider canonicalizing
+    // reverse after fneg?
+
     // rev(unop rev(X)) --> unop X
+    Value *X;
     if (match(Vec, m_OneUse(m_UnOp(m_VecReverse(m_Value(X)))))) {
       auto *OldUnOp = cast<UnaryOperator>(Vec);
       auto *NewUnOp = UnaryOperator::CreateWithCopiedFlags(
