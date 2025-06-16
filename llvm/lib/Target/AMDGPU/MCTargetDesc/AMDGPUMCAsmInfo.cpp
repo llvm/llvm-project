@@ -45,6 +45,7 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   CommentString = ";";
   InlineAsmStart = ";#ASMSTART";
   InlineAsmEnd = ";#ASMEND";
+  UsesSetToEquateSymbol = true;
 
   //===--- Data Emission Directives -------------------------------------===//
   UsesELFSectionDirectiveForBSS = true;

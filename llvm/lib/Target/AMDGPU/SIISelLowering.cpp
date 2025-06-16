@@ -64,6 +64,14 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
     cl::desc("Use indirect register addressing for divergent indexes"),
     cl::init(false));
 
+// TODO: This option should be removed once we switch to always using PTRADD in
+// the SelectionDAG.
+static cl::opt<bool> UseSelectionDAGPTRADD(
+    "amdgpu-use-sdag-ptradd", cl::Hidden,
+    cl::desc("Generate ISD::PTRADD nodes for 64-bit pointer arithmetic in the "
+             "SelectionDAG ISel"),
+    cl::init(false));
+
 static bool denormalModeIsFlushAllF32(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().FP32Denormals == DenormalMode::getPreserveSign();
@@ -12522,6 +12530,11 @@ static bool isNoUnsignedWrap(SDValue Addr) {
 }
 
 #endif /* LLPC_BUILD_NPI */
+bool SITargetLowering::shouldPreservePtrArith(const Function &F,
+                                              EVT PtrVT) const {
+  return UseSelectionDAGPTRADD && PtrVT == MVT::i64;
+}
+
 // The raw.(t)buffer and struct.(t)buffer intrinsics have two offset args:
 // offset (the offset that is included in bounds checking and swizzling, to be
 // split between the instruction's voffset and immoffset fields) and soffset

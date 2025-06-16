@@ -2623,6 +2623,7 @@ class getAsmVOP3P <bit HasDst, int NumSrcArgs, bit HasNeg,
   string ret = dst#src0#src1#src2#opsel#mods#clamp;
 }
 
+#ifdef LLPC_BUILD_NPI
 // FIXME-TRUE16 AsmVOP3OpSel will be deprecated after all
 // VOP3 16 bit instructions are replaced to true16 format
 class getAsmVOP3OpSel <int NumSrcArgs,
@@ -2658,6 +2659,7 @@ class getAsmVOP3OpSel <int NumSrcArgs,
   string ret = dst#", "#src0#src1#src2#bitop3#"$op_sel"#bytesel#clamp#omod;
 }
 
+#endif /* LLPC_BUILD_NPI */
 class getAsmDPP <bit HasDst, int NumSrcArgs, bit HasModifiers, ValueType DstVT = i32> {
   string dst = !if(HasDst,
                    !if(!eq(DstVT.Size, 1),
@@ -3132,6 +3134,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
    HasSrc2Mods, DstVT, HasFP8ByteSel, HasBitOp3>.ret;
   field string Asm64 = AsmVOP3Base;
   field string AsmVOP3P = getAsmVOP3P<HasDst, NumSrcArgs, HasNeg, HasClamp, HasOpSel>.ret;
+#ifdef LLPC_BUILD_NPI
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,
                                               HasClamp,
                                               HasOMod,
@@ -3140,6 +3143,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                               HasSrc2FloatMods,
                                               HasFP8ByteSel,
                                               HasBitOp3>.ret;
+#else /* LLPC_BUILD_NPI */
+  field string AsmVOP3OpSel = AsmVOP3Base;
+#endif /* LLPC_BUILD_NPI */
   field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3Base>.ret;
   field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3Base>.ret;
   field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3Base>.ret;
