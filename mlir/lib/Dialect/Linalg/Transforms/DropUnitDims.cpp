@@ -606,8 +606,7 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
     int64_t padRank = sourceShape.size();
 
     auto isStaticZero = [](OpFoldResult f) {
-      std::optional<int64_t> maybeInt = getConstantIntValue(f);
-      return maybeInt && *maybeInt == 0;
+      return getConstantIntValue(f) == 0;
     };
 
     llvm::SmallDenseSet<unsigned> unitDimsFilter(allowedUnitDims.begin(),

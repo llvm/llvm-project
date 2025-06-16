@@ -154,6 +154,44 @@ public:
   /// OpenMP is enabled.
   using DoConcurrentMappingKind = flangomp::DoConcurrentMappingKind;
 
+  /// Name of the profile file to use as output for -fprofile-instr-generate,
+  /// -fprofile-generate, and -fcs-profile-generate.
+  std::string InstrProfileOutput;
+
+  /// Name of the profile file to use as input for -fmemory-profile-use.
+  std::string MemoryProfileUsePath;
+
+  /// Name of the profile file to use as input for -fprofile-instr-use
+  std::string ProfileInstrumentUsePath;
+
+  /// Name of the profile remapping file to apply to the profile data supplied
+  /// by -fprofile-sample-use or -fprofile-instr-use.
+  std::string ProfileRemappingFile;
+
+  /// Check if Clang profile instrumenation is on.
+  bool hasProfileClangInstr() const {
+    return getProfileInstr() == llvm::driver::ProfileClangInstr;
+  }
+
+  /// Check if IR level profile instrumentation is on.
+  bool hasProfileIRInstr() const {
+    return getProfileInstr() == llvm::driver::ProfileIRInstr;
+  }
+
+  /// Check if CS IR level profile instrumentation is on.
+  bool hasProfileCSIRInstr() const {
+    return getProfileInstr() == llvm::driver::ProfileCSIRInstr;
+  }
+  /// Check if IR level profile use is on.
+  bool hasProfileIRUse() const {
+    return getProfileUse() == llvm::driver::ProfileIRInstr ||
+           getProfileUse() == llvm::driver::ProfileCSIRInstr;
+  }
+  /// Check if CSIR profile use is on.
+  bool hasProfileCSIRUse() const {
+    return getProfileUse() == llvm::driver::ProfileCSIRInstr;
+  }
+
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default)                             \
