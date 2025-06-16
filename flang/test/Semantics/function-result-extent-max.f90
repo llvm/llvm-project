@@ -6,27 +6,27 @@
 !CHECK-NOT: warning
 
 #ifdef FILE1
-module m
+module function_with_max_result_extent_module
     implicit none
     private
-    public :: f1
-  interface f1
-    pure module function f1(n) result(res)
+    public :: function_with_max_result_extent
+  interface function_with_max_result_extent
+    pure module function function_with_max_result_extent(n) result(res)
       integer, intent(in) :: n
       integer :: res(max(n, 0))
-    end function f1
-  end interface f1
-end module m
+    end function function_with_max_result_extent
+  end interface function_with_max_result_extent
+end module function_with_max_result_extent_module
 #endif
 
 #ifdef FILE2
-submodule (m) sm
+submodule (m) function_with_max_result_extent_submodule
   implicit none
 contains
-  pure module function f1(n) result(res)
+  pure module function function_with_max_result_extent(n) result(res)
       integer, intent(in) :: n
       integer :: res(max(n, 0))
       res(:) = 0
-    end function f1
-end submodule sm
+    end function function_with_max_result_extent
+end submodule function_with_max_result_extent_submodule
 #endif
