@@ -4,7 +4,7 @@
 
 // RUN: %clang --target=i686-pc-windows-msvc -S -emit-llvm %s -o - | FileCheck --check-prefix=IR %s
 // IR: !llvm.dbg.cu = !{!0}
-// IR: !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, splitDebugInlining: false, nameTableKind: None)
+// IR: !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "{{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, splitDebugInlining: false, nameTableKind: None)
 
 // RUN: %clang --target=i686-pc-windows-msvc -c %s -o %t.o
 // RUN: llvm-readobj --codeview %t.o | FileCheck %s
@@ -27,7 +27,7 @@
 // CHECK-NEXT:       Machine: Pentium3 (0x7)
 // CHECK-NEXT:       FrontendVersion:
 // CHECK-NEXT:       BackendVersion:
-// CHECK-NEXT:       VersionName: clang version
+// CHECK-NEXT:       VersionName: {{.*}}clang version
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ]
 // CHECK-NEXT: ]
