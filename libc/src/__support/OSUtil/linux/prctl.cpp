@@ -30,7 +30,7 @@ ErrorOr<int> prctl(int option, unsigned long arg2, unsigned long arg3,
   // return value from the syscall is set to 0 on default so we do not need to
   // set the value on success manually.
   if (ret < 0)
-    return Error(-ret);
+    return Error(static_cast<int>(-ret));
 
   return static_cast<int>(ret);
 }

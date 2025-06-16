@@ -12,6 +12,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/error_or.h"
 #include <sys/prctl.h>
+#include "src/__support/libc_errno.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {

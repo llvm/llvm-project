@@ -31,7 +31,7 @@
 #include "src/__support/OSUtil/munmap.h"
 
 // for reading /proc/self/auxv
-#include "src/sys/prctl/prctl.h"
+#include "src/__support/OSUtil/prctl.h"
 #include "src/unistd/read.h"
 
 // getauxval will work either with or without __cxa_atexit support.
@@ -133,9 +133,9 @@ static void initialize_auxv_once(void) {
   // is compiled and run on separate kernels, we also check the return value of
   // prctl.
 #ifdef PR_GET_AUXV
-  int ret = prctl(PR_GET_AUXV, reinterpret_cast<unsigned long>(ptr),
+  auto ret = internal::prctl(PR_GET_AUXV, reinterpret_cast<unsigned long>(ptr),
                   available_size, 0, 0);
-  if (ret >= 0) {
+  if (ret.has_value()) {
     mmap_guard.submit_to_global();
     return;
   }
