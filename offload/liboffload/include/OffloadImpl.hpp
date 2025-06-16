@@ -26,6 +26,7 @@ namespace llvm {
 namespace offload {
 bool isTracingEnabled();
 bool isValidationEnabled();
+bool isOffloadInited();
 } // namespace offload
 } // namespace llvm
 
