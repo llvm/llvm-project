@@ -34,7 +34,7 @@ bool CharacterConverter::isComplete() {
 int CharacterConverter::push(char8_t utf8_byte) {
   uint8_t num_ones = static_cast<uint8_t>(cpp::countl_one(utf8_byte));
   // Checking the first byte if first push
-  if (state->bytes_processed == 0 && state->total_bytes == 0) {
+  if (state->bytes_processed == 0) {
     // UTF-8 char has 1 byte total
     if (num_ones == 0) {
       state->total_bytes = 1;
