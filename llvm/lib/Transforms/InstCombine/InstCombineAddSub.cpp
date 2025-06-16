@@ -1868,7 +1868,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
                                           {Sub, Builder.getFalse()});
     Value *Ret = Builder.CreateSub(
         ConstantInt::get(A->getType(), A->getType()->getScalarSizeInBits()),
-        Ctlz, "", /*HasNUW*/ true, /*HasNSW*/ true);
+        Ctlz, "", /*HasNUW=*/true, /*HasNSW=*/true);
     return replaceInstUsesWith(I, Builder.CreateZExtOrTrunc(Ret, I.getType()));
   }
 
@@ -2335,8 +2335,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     OverflowingBinaryOperator *LHSSub = cast<OverflowingBinaryOperator>(Op0);
     bool HasNUW = I.hasNoUnsignedWrap() && LHSSub->hasNoUnsignedWrap();
     bool HasNSW = HasNUW && I.hasNoSignedWrap() && LHSSub->hasNoSignedWrap();
-    Value *Add = Builder.CreateAdd(Y, Op1, "", /* HasNUW */ HasNUW,
-                                   /* HasNSW */ HasNSW);
+    Value *Add = Builder.CreateAdd(Y, Op1, "", /*HasNUW=*/HasNUW,
+                                   /*HasNSW=*/HasNSW);
     BinaryOperator *Sub = BinaryOperator::CreateSub(X, Add);
     Sub->setHasNoUnsignedWrap(HasNUW);
     Sub->setHasNoSignedWrap(HasNSW);
@@ -2838,8 +2838,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         Value *SExtY = Builder.CreateSExt(Y, I.getType());
         Value *SExtZ = Builder.CreateSExt(Z, I.getType());
         Value *Sub = Builder.CreateSub(SExtY, SExtZ, "",
-                                       /* HasNUW */ false,
-                                       /* HasNSW */ I.hasNoSignedWrap());
+                                       /*HasNUW=*/false,
+                                       /*HasNSW=*/I.hasNoSignedWrap());
         return replaceInstUsesWith(I, Sub);
       }
     }
