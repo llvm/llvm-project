@@ -9,3 +9,13 @@ add_libc_test(
   DEPENDS
     libc.src.__support.wchar.character_converter
 )
+
+add_libc_test(
+  utf32_to_8_test
+  SUITE
+    libc-support-tests
+  SRCS
+    utf32_to_8_test.cpp
+  DEPENDS
+    libc.src.__support.wchar.character_converter
+)
