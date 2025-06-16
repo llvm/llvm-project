@@ -7230,7 +7230,7 @@ static Function *emitTargetTaskProxyFunction(
 
   Type *ThreadIDTy = Type::getInt32Ty(Ctx);
   Type *TaskPtrTy = OMPBuilder.TaskPtr;
-  Type *TaskTy = OMPBuilder.Task;
+  [[maybe_unused]] Type *TaskTy = OMPBuilder.Task;
 
   auto ProxyFnTy =
       FunctionType::get(Builder.getVoidTy(), {ThreadIDTy, TaskPtrTy},
@@ -7664,7 +7664,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
           Builder.CreateStructGEP(TaskWithPrivatesTy, TaskData, 1);
       for (unsigned int i = 0; i < OffloadingArraysToPrivatize.size(); ++i) {
         Value *PtrToPrivatize = OffloadingArraysToPrivatize[i];
-        Type *ArrayType = getOffloadingArrayType(PtrToPrivatize);
+        [[maybe_unused]] Type *ArrayType =
+            getOffloadingArrayType(PtrToPrivatize);
         assert(ArrayType && "ArrayType cannot be nullptr");
 
         Type *ElementType = PrivatesTy->getElementType(i);
