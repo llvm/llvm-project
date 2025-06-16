@@ -10892,13 +10892,21 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
     }
     break;
   case ICmpInst::ICMP_UGE:
-    if (!getUnsignedRangeMin(RHS).isMinValue()) {
+    // If RHS is an op we can fold the -1, try that first.
+    if ((isa<SCEVConstant>(RHS) ||
+         match(RHS,
+               m_scev_AffineAddRec(m_SCEVConstant(), m_SCEV(), m_Loop()))) &&
+        !getUnsignedRangeMin(RHS).isMinValue()) {
       RHS = getAddExpr(getConstant(RHS->getType(), (uint64_t)-1, true), RHS);
       Pred = ICmpInst::ICMP_UGT;
       Changed = true;
     } else if (!getUnsignedRangeMax(LHS).isMaxValue()) {
       LHS = getAddExpr(getConstant(RHS->getType(), 1, true), LHS,
                        SCEV::FlagNUW);
+      Pred = ICmpInst::ICMP_UGT;
+      Changed = true;
+    } else if (!getUnsignedRangeMin(RHS).isMinValue()) {
+      RHS = getAddExpr(getConstant(RHS->getType(), (uint64_t)-1, true), RHS);
       Pred = ICmpInst::ICMP_UGT;
       Changed = true;
     }
