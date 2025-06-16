@@ -1522,7 +1522,7 @@ void DataAggregator::printBranchStacksDiagnostics(
 
 std::error_code DataAggregator::parseBranchEvents() {
   std::string BranchEventTypeStr =
-      !opts::ArmSPE ? "branch events" : "SPE branch events in LBR-format";
+      opts::ArmSPE ? "SPE branch events in LBR-format" : "branch events";
   outs() << "PERF2BOLT: parse " << BranchEventTypeStr << "...\n";
   NamedRegionTimer T("parseBranch", "Parsing " + BranchEventTypeStr,
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);

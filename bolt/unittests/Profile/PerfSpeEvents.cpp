@@ -29,8 +29,7 @@ extern cl::opt<bool> ArmSPE;
 namespace llvm {
 namespace bolt {
 
-/// Perform checks on perf SPE branch events combined with other SPE or perf
-/// events.
+/// Perform checks on perf SPE branch events.
 struct PerfSpeEventsTestHelper : public testing::Test {
   void SetUp() override {
     initalizeLLVM();
