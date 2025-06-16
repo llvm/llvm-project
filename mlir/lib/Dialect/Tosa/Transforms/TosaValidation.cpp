@@ -1193,11 +1193,23 @@ bool checkErrorIfPad(Operation *op) {
   return true;
 }
 
-static bool isOpIsolatedFromAbove(Operation *op, Region *region) {
+static bool isOpIsolatedFromAbove(Operation *op, Region &region) {
   return llvm::all_of(op->getOperands(), [&](auto operand) {
     Region *operandRegion = operand.getParentRegion();
-    return region->isAncestor(operandRegion);
+    return region.isAncestor(operandRegion);
   });
+}
+
+static bool isRegionIsolatedFromAbove(Region &region) {
+  bool noLiveInValue = true;
+  region.walk([&noLiveInValue, &region](Operation *op) {
+    if (!isOpIsolatedFromAbove(op, region)) {
+      noLiveInValue = false;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return noLiveInValue;
 }
 
 bool checkErrorIfCondIf(Operation *op) {
@@ -1236,24 +1248,10 @@ bool checkErrorIfCondIf(Operation *op) {
   // used in then/else regions (see 'simplified' example above), so it
   // must be rewritten to use the generic syntax in order to be conformant
   // to the specification.
-
-  // Returns true if the region uses no external input operands.
-  auto isIsolatedRegion = [](Region &region) -> bool {
-    bool noLiveInValue = true;
-    region.walk([&noLiveInValue, &region](Operation *op) {
-      if (!isOpIsolatedFromAbove(op, &region)) {
-        noLiveInValue = false;
-        return WalkResult::interrupt();
-      }
-      return WalkResult::advance();
-    });
-    return noLiveInValue;
-  };
-
-  mlir::Region &thenGraph = ifOp.getThenGraph();
-  mlir::Region &elseGraph = ifOp.getElseGraph();
-  bool isThenGraphIsolatedRegion = isIsolatedRegion(thenGraph);
-  bool isElseGraphIsolatedRegion = isIsolatedRegion(elseGraph);
+  Region &thenGraph = ifOp.getThenGraph();
+  Region &elseGraph = ifOp.getElseGraph();
+  bool isThenGraphIsolatedRegion = isRegionIsolatedFromAbove(thenGraph);
+  bool isElseGraphIsolatedRegion = isRegionIsolatedFromAbove(elseGraph);
 
   if (!isThenGraphIsolatedRegion || !isElseGraphIsolatedRegion) {
     op->emitOpError()
@@ -1264,10 +1262,30 @@ bool checkErrorIfCondIf(Operation *op) {
   return true;
 }
 
+bool checkErrorIfWhileLoop(Operation *op) {
+  auto whileOp = dyn_cast<tosa::WhileOp>(op);
+  if (!whileOp)
+    return true;
+
+  Region &condGraph = whileOp.getCondGraph();
+  Region &bodyGraph = whileOp.getBodyGraph();
+  bool isCondGraphIsolatedRegion = isRegionIsolatedFromAbove(condGraph);
+  bool isBodyGraphIsolatedRegion = isRegionIsolatedFromAbove(bodyGraph);
+
+  if (!isCondGraphIsolatedRegion || !isBodyGraphIsolatedRegion) {
+    op->emitOpError()
+        << "is not conformant to the TOSA specification. It requires the "
+           "cond/body regions are isolated from above.\n";
+    return false;
+  }
+  return true;
+}
+
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (!checkErrorIfResize(op) || !checkErrorIfMul(op) ||
       !checkErrorIfTable(op) || !checkErrorIfRescale(op) ||
-      !checkErrorIfPad(op) || !checkErrorIfCondIf(op))
+      !checkErrorIfPad(op) || !checkErrorIfCondIf(op) ||
+      !checkErrorIfWhileLoop(op))
     return failure();
   return success();
 }
