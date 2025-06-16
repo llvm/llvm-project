@@ -14,7 +14,6 @@
 #ifndef MLIR_DIALECT_AFFINE_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_AFFINE_TRANSFORMS_TRANSFORMS_H
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
 
@@ -33,6 +32,8 @@ enum class BoundType;
 
 namespace affine {
 class AffineApplyOp;
+class AffineDelinearizeIndexOp;
+class AffineLinearizeIndexOp;
 
 /// Lowers `affine.delinearize_index` into a sequence of division and remainder
 /// operations.
