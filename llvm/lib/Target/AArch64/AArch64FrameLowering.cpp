@@ -2566,12 +2566,12 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       return AArch64::SP;
     }();
     // If we have any SVE callee saves they must be restored now.
-    bool MustRestoreSVECalleSaves = SVECalleeSavedSize != 0;
+    bool MustRestoreSVECalleeSaves = SVECalleeSavedSize != 0;
     // If the base for deallocation is the SP we must deallocate the SVE area
     // regardless of if we have SVE callee saves. For any other base the SVE
     // area will be implicitly deallocated when we set the SP to the FP.
     bool MustDeallocateSVEArea = BaseForSVEDealloc == AArch64::SP;
-    if (MustRestoreSVECalleSaves && BaseForSVEDealloc == AArch64::FP) {
+    if (MustRestoreSVECalleeSaves && BaseForSVEDealloc == AArch64::FP) {
       Register CalleeSaveBase = AArch64::FP;
       if (int64_t CalleeSaveBaseOffset =
               AFI->getCalleeSaveBaseToFrameRecordOffset()) {
@@ -2593,7 +2593,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, CalleeSaveBase,
                       StackOffset::getScalable(-SVECalleeSavedSize), TII,
                       MachineInstr::FrameDestroy);
-    } else if (MustRestoreSVECalleSaves || MustDeallocateSVEArea) {
+    } else if (MustRestoreSVECalleeSaves || MustDeallocateSVEArea) {
       if (SVECalleeSavedSize) {
         // Deallocate the non-SVE locals first before we can deallocate (and
         // restore callee saves) from the SVE area.
