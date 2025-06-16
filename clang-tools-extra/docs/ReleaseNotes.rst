@@ -207,7 +207,7 @@ Changes in existing checks
 - Improved :doc:`misc-unconventional-assign-operator
   <clang-tidy/checks/misc/unconventional-assign-operator>` check by fixing
   false positives when copy assignment operator function in a template class
-  returns the result of another assignment to ``*this``(``return *this=...``).
+  returns the result of another assignment to ``*this`` (``return *this=...``).
 
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives
