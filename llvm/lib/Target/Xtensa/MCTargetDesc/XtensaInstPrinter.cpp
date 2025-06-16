@@ -135,7 +135,7 @@ void XtensaInstPrinter::printCallOperand(const MCInst *MI, uint64_t Address,
       O << Val;
     }
   } else if (MC.isExpr())
-    MC.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MC.getExpr());
   else
     llvm_unreachable("Invalid operand");
 }
