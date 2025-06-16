@@ -2691,6 +2691,20 @@ static void cse(BasicBlock *BB) {
   }
 }
 
+/// This function attempts to return a value that represents the vectorization
+/// factor at runtime. For fixed-width VFs we know this precisely at compile
+/// time, but for scalable VFs we calculate it based on an estimate of the
+/// vscale value.
+static unsigned getEstimatedRuntimeVF(ElementCount VF,
+                                      std::optional<unsigned> VScale) {
+  unsigned EstimatedVF = VF.getKnownMinValue();
+  if (VF.isScalable())
+    if (VScale)
+      EstimatedVF *= *VScale;
+  assert(EstimatedVF >= 1 && "Estimated VF shouldn't be less than 1");
+  return EstimatedVF;
+}
+
 InstructionCost
 LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
                                               ElementCount VF) const {
@@ -2790,10 +2804,11 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   //
   // For scalable vectorization we can't know at compile time how many
   // iterations of the loop are handled in one vector iteration, so instead
-  // assume a pessimistic vscale of '1'.
+  // use the value of vscale used for tuning.
   Loop *VectorLoop = LI->getLoopFor(HeaderBB);
-  setProfileInfoAfterUnrolling(OrigLoop, VectorLoop, OrigLoop,
-                               VF.getKnownMinValue() * UF);
+  unsigned EstimatedVFxUF =
+      getEstimatedRuntimeVF(VF * UF, Cost->getVScaleForTuning());
+  setProfileInfoAfterUnrolling(OrigLoop, VectorLoop, OrigLoop, EstimatedVFxUF);
 }
 
 void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
@@ -4029,20 +4044,6 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     invalidateCostModelingDecisions();
   }
   return MaxVF;
-}
-
-/// This function attempts to return a value that represents the vectorization
-/// factor at runtime. For fixed-width VFs we know this precisely at compile
-/// time, but for scalable VFs we calculate it based on an estimate of the
-/// vscale value.
-static unsigned getEstimatedRuntimeVF(ElementCount VF,
-                                      std::optional<unsigned> VScale) {
-  unsigned EstimatedVF = VF.getKnownMinValue();
-  if (VF.isScalable())
-    if (VScale)
-      EstimatedVF *= *VScale;
-  assert(EstimatedVF >= 1 && "Estimated VF shouldn't be less than 1");
-  return EstimatedVF;
 }
 
 bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
