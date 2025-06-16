@@ -2808,8 +2808,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return Res;
 
   // (sub (sext (add nsw (X, Y)), sext (X))) --> (sext (Y))
-  if (match(Op1, m_SExt(m_Value(X))) &&
-      match(Op0, m_SExt(m_c_NSWAdd(m_Specific(X), m_Value(Y))))) {
+  if (match(Op1, m_SExtLike(m_Value(X))) &&
+      match(Op0, m_SExtLike(m_c_NSWAdd(m_Specific(X), m_Value(Y))))) {
     Value *SExtY = Builder.CreateSExt(Y, I.getType());
     return replaceInstUsesWith(I, SExtY);
   }
@@ -2818,8 +2818,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   // --> (sub[ nsw] (sext (Y), sext(Z)))
   {
     Value *Z, *Add0, *Add1;
-    if (match(Op0, m_SExt(m_Value(Add0))) &&
-        match(Op1, m_SExt(m_Value(Add1))) &&
+    if (match(Op0, m_SExtLike(m_Value(Add0))) &&
+        match(Op1, m_SExtLike(m_Value(Add1))) &&
         ((match(Add0, m_NSWAdd(m_Value(X), m_Value(Y))) &&
           match(Add1, m_c_NSWAdd(m_Specific(X), m_Value(Z)))) ||
          (match(Add0, m_NSWAdd(m_Value(Y), m_Value(X))) &&

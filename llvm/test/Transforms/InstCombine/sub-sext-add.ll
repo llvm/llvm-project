@@ -61,6 +61,21 @@ define i64 @src_2add_2sext_sub_4(i32 %x, i32 %y, i32 %z) {
   ret i64 %sub
 }
 
+define i64 @src_2add_2sextlike_sub(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @src_2add_2sextlike_sub(
+; CHECK-NEXT:    [[SEXT1:%.*]] = sext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[SEXT2:%.*]] = sext i32 [[Z:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i64 [[SEXT1]], [[SEXT2]]
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %add1 = add nsw i32 %x, %y
+  %add2 = add nsw i32 %x, %z
+  %sext1 = zext nneg i32 %add1 to i64
+  %sext2 = zext nneg i32 %add2 to i64
+  %sub = sub i64 %sext1, %sext2
+  ret i64 %sub
+}
+
 define i64 @src_2add_2sext_sub_nsw(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @src_2add_2sext_sub_nsw(
 ; CHECK-NEXT:    [[SEXT1:%.*]] = sext i32 [[Y:%.*]] to i64
@@ -111,6 +126,18 @@ define i64 @src_x_add_2sext_sub_2(i32 %x, i32 %y) {
   %add1 = add nsw i32 %y, %x
   %sext1 = sext i32 %add1 to i64
   %sext2 = sext i32 %x to i64
+  %sub = sub i64 %sext1, %sext2
+  ret i64 %sub
+}
+
+define i64 @src_x_add_2sextlike_sub(i32 %x, i32 %y) {
+; CHECK-LABEL: @src_x_add_2sextlike_sub(
+; CHECK-NEXT:    [[SUB:%.*]] = sext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %add1 = add nsw i32 %x, %y
+  %sext1 = zext nneg i32 %add1 to i64
+  %sext2 = zext nneg i32 %x to i64
   %sub = sub i64 %sext1, %sext2
   ret i64 %sub
 }
