@@ -873,7 +873,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.float.simple.recurrence(float %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.float.simple.recurrence'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Found stray PHI
+; CHECK-NEXT:  Reason: Loop with non-unit bitshifts
 ;
 entry:
   br label %loop
@@ -887,6 +887,34 @@ loop:                                              ; preds = %loop, %entry
   %and.data.crc = fdiv float %frem.data.crc, 2.0
   %data.next = fdiv float %data, 2.0
   %check.sb = fcmp oeq float %and.data.crc, 0.0
+  %crc.lshr = lshr i16 %crc, 1
+  %xor = xor i16 %crc.lshr, -24575
+  %crc.next = select i1 %check.sb, i16 %crc.lshr, i16 %xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @not.crc.stray.phi(i8 %msg, i16 %checksum, i1 %c) {
+; CHECK-LABEL: 'not.crc.stray.phi'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Found stray PHI
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i8 [ %msg, %entry ], [ %data.next, %loop ]
+  %crc.trunc = trunc i16 %crc to i8
+  %xor.data.crc = xor i8 %data, %crc.trunc
+  %and.data.crc = and i8 %xor.data.crc, 1
+  %data.next = select i1 %c, i8 %data, i8 1
+  %check.sb = icmp eq i8 %and.data.crc, 0
   %crc.lshr = lshr i16 %crc, 1
   %xor = xor i16 %crc.lshr, -24575
   %crc.next = select i1 %check.sb, i16 %crc.lshr, i16 %xor

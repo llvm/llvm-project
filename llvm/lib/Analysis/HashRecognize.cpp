@@ -542,7 +542,11 @@ static bool arePHIsIntertwined(
 // doing this, we're immune to whether the IR expression is mul/udiv or
 // equivalently shl/lshr. Return false when it is a UDiv, true when it is a Mul,
 // and std::nullopt otherwise.
-static std::optional<bool> isBigEndianBitShift(const SCEV *E) {
+static std::optional<bool> isBigEndianBitShift(Value *V, ScalarEvolution &SE) {
+  if (!V->getType()->isIntegerTy())
+    return {};
+
+  const SCEV *E = SE.getSCEV(V);
   if (match(E, m_scev_UDiv(m_SCEV(), m_scev_SpecificInt(2))))
     return false;
   if (match(E, m_scev_Mul(m_scev_SpecificInt(2), m_SCEV())))
@@ -576,12 +580,11 @@ HashRecognize::recognizeCRC() const {
   // Make sure that all recurrences are either all SCEVMul with two or SCEVDiv
   // with two, or in other words, that they're single bit-shifts.
   std::optional<bool> ByteOrderSwapped =
-      isBigEndianBitShift(SE.getSCEV(ConditionalRecurrence.BO));
+      isBigEndianBitShift(ConditionalRecurrence.BO, SE);
   if (!ByteOrderSwapped)
     return "Loop with non-unit bitshifts";
   if (SimpleRecurrence) {
-    if (isBigEndianBitShift(SE.getSCEV(SimpleRecurrence.BO)) !=
-        ByteOrderSwapped)
+    if (isBigEndianBitShift(SimpleRecurrence.BO, SE) != ByteOrderSwapped)
       return "Loop with non-unit bitshifts";
     if (!arePHIsIntertwined(SimpleRecurrence.Phi, ConditionalRecurrence.Phi, L,
                             Instruction::BinaryOps::Xor))
