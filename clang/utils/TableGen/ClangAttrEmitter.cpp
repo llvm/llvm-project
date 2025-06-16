@@ -3747,7 +3747,8 @@ static void GenerateHasAttrSpellingStringSwitch(
                       : '(' + itostr(Version) + ')';
 
     if (Scope.empty() || Scope == Spelling.nameSpace()) {
-      if (TestStringMap.contains(Spelling.name()))
+      if (TestStringMap.contains(Spelling.name()) &&
+          TestStringMap[Spelling.name()] != TestStr)
         TestStringMap[Spelling.name()] += " || " + TestStr;
       else
         TestStringMap[Spelling.name()] = TestStr;
