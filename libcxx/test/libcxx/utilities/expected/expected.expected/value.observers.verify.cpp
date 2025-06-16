@@ -82,7 +82,7 @@ void test() {
       std::expected<int, MoveOnly> e;
       [[maybe_unused]] auto val = std::move(e).value();
       // expected-error-re@*:* {{static assertion failed {{.*}}error_type has to be both copy constructible and constructible from decltype(std::move(error()))}}
-      // expected-error@*:* {{call to deleted constructor of 'MoveOnly'}}
+      // expected-error@*:* 0-1{{call to deleted constructor of 'MoveOnly'}}
     }
 
     // is_copy_constructible_v<E> is true and is_constructible_v<E, decltype(std::move(error()))> is true.
@@ -96,7 +96,7 @@ void test() {
       std::expected<int, CopyConstructibleButNotMoveConstructible> e;
       [[maybe_unused]] auto val = std::move(e).value();
       // expected-error-re@*:* {{static assertion failed {{.*}}error_type has to be both copy constructible and constructible from decltype(std::move(error()))}}
-      // expected-error@*:* {{call to deleted constructor of 'CopyConstructibleButNotMoveConstructible'}}
+      // expected-error@*:* 0-1{{call to deleted constructor of 'CopyConstructibleButNotMoveConstructible'}}
     }
   }
 
