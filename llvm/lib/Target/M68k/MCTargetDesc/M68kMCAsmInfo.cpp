@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "M68kMCAsmInfo.h"
-#include "MCTargetDesc/M68kMCExpr.h"
 
 #include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/Triple.h"
