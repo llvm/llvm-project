@@ -406,7 +406,7 @@ already inherently target-dependent anyway.
 
 If some canonicalization narrow/widen the integer width of expressions, please
 check `shouldChangeType()` first. Otherwise, we may evaluate the expression 
-in illegal/inefficient types. For vector types, follow the instructions below.
+in illegal/inefficient types.
 
 For vector-specific transforms that require cost-modelling, the VectorCombine
 pass can be used instead. In very rare circumstances, if there are no other
@@ -415,7 +415,7 @@ AggressiveInstCombine.
 
 Generally, we prefer unsigned operations over signed operations in the middle-end, even
 if signed operations are more efficient on some targets. The following is an incomplete
-list of canonicalizations that implemented in InstCombine:
+list of canonicalizations that are implemented in InstCombine:
 
 | Original Pattern             | Canonical Form             | Condition                     |
 |------------------------------|----------------------------|-------------------------------|
@@ -554,12 +554,12 @@ One-use checks can be performed using the `m_OneUse()` matcher, or the
 
 ### Flag handling
 
-When possible, propagate poison-generating flags like `nuw` and `nsw` since they may be
-hard to salvage later. If it is not free (e.g. requires additional complexity like `willNotOverflow`
-or KnownBits queries), don't do that.
+When possible, favour propagation of poison-generating flags like `nuw` and `nsw` since they may be
+hard to salvage later. Avoid doing so if it introduces additional complexity (e.g. requires querying `willNotOverflow`
+or KnownBits).
 
 Be careful with in-place operand/predicate changes, as poison-generating flags may not be valid for new
-operands. It is recommended to create a new instruction with carefully handling of flags. If not
+operands. It is recommended to create a new instruction with careful handling of flags. If not
 applicable, call `Instruction::dropPoisonGeneratingFlags()` to clear flags in a conservative manner.
 
 Do not rely on fcmp's `nsz` flag to perform optimizations. It is meaningless for fcmp so it should not affect
