@@ -5242,25 +5242,25 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   }
 
   // Extract constant bits from a subvector's source.
-  if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
-    // TODO - support extract_subvector through bitcasts.
-    if (EltSizeInBits != VT.getScalarSizeInBits())
-      return false;
+  if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      getTargetConstantBitsFromNode(Op.getOperand(0), EltSizeInBits, UndefElts,
+                                    EltBits, AllowWholeUndefs,
+                                    AllowPartialUndefs)) {
+    EVT SrcVT = Op.getOperand(0).getValueType();
+    unsigned NumSrcElts = SrcVT.getSizeInBits() / EltSizeInBits;
+    unsigned NumSubElts = VT.getSizeInBits() / EltSizeInBits;
+    unsigned BaseOfs = Op.getConstantOperandVal(1) * VT.getScalarSizeInBits();
+    unsigned BaseIdx = BaseOfs / EltSizeInBits;
+    assert((SrcVT.getSizeInBits() % EltSizeInBits) == 0 &&
+           (VT.getSizeInBits() % EltSizeInBits) == 0 &&
+           (BaseOfs % EltSizeInBits) == 0 && "Bad subvector index");
 
-    if (getTargetConstantBitsFromNode(Op.getOperand(0), EltSizeInBits,
-                                      UndefElts, EltBits, AllowWholeUndefs,
-                                      AllowPartialUndefs)) {
-      EVT SrcVT = Op.getOperand(0).getValueType();
-      unsigned NumSrcElts = SrcVT.getVectorNumElements();
-      unsigned NumSubElts = VT.getVectorNumElements();
-      unsigned BaseIdx = Op.getConstantOperandVal(1);
-      UndefElts = UndefElts.extractBits(NumSubElts, BaseIdx);
-      if ((BaseIdx + NumSubElts) != NumSrcElts)
-        EltBits.erase(EltBits.begin() + BaseIdx + NumSubElts, EltBits.end());
-      if (BaseIdx != 0)
-        EltBits.erase(EltBits.begin(), EltBits.begin() + BaseIdx);
-      return true;
-    }
+    UndefElts = UndefElts.extractBits(NumSubElts, BaseIdx);
+    if ((BaseIdx + NumSubElts) != NumSrcElts)
+      EltBits.erase(EltBits.begin() + BaseIdx + NumSubElts, EltBits.end());
+    if (BaseIdx != 0)
+      EltBits.erase(EltBits.begin(), EltBits.begin() + BaseIdx);
+    return true;
   }
 
   // Extract constant bits from shuffle node sources.
@@ -47785,13 +47785,19 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                                                            DL, DAG, Subtarget))
       return V;
 
-  // Convert vselects with constant condition into shuffles.
-  if (CondConstantVector && DCI.isBeforeLegalizeOps() &&
-      (N->getOpcode() == ISD::VSELECT || N->getOpcode() == X86ISD::BLENDV)) {
+  if (N->getOpcode() == ISD::VSELECT || N->getOpcode() == X86ISD::BLENDV) {
     SmallVector<int, 64> Mask;
     if (createShuffleMaskFromVSELECT(Mask, Cond,
-                                     N->getOpcode() == X86ISD::BLENDV))
-      return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
+                                     N->getOpcode() == X86ISD::BLENDV)) {
+      // Convert vselects with constant condition into shuffles.
+      if (DCI.isBeforeLegalizeOps())
+        return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
+
+      // Attempt to combine as shuffle.
+      SDValue Op(N, 0);
+      if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
+        return Res;
+    }
   }
 
   // fold vselect(cond, pshufb(x), pshufb(y)) -> or (pshufb(x), pshufb(y))
@@ -49392,6 +49398,8 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
   //      (ADD (CMOV C1-C2, (CTTZ X), (X != 0)), C2)
   // Or (CMOV (ADD (CTTZ X), C2), C1, (X == 0)) ->
   //    (ADD (CMOV (CTTZ X), C1-C2, (X == 0)), C2)
+  // Or (CMOV (BSR ?, X), Y, (X == 0)) -> (BSR Y, X)
+  // TODO: Or (CMOV (BSF ?, X), Y, (X == 0)) -> (BSF Y, X)
   if ((CC == X86::COND_NE || CC == X86::COND_E) &&
       Cond.getOpcode() == X86ISD::CMP && isNullConstant(Cond.getOperand(1))) {
     SDValue Add = TrueOp;
@@ -49399,6 +49407,14 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
     // Canonicalize the condition code for easier matching and output.
     if (CC == X86::COND_E)
       std::swap(Add, Const);
+
+    // TODO: ADD BSF support, but requires changes to the "REP BSF" CTTZ hack.
+    if (Subtarget.hasBitScanPassThrough() && Add.getOpcode() == X86ISD::BSR &&
+        Add.getResNo() == 0 && Add.hasOneUse() &&
+        Add.getOperand(1) == Cond.getOperand(0)) {
+      return DAG.getNode(Add.getOpcode(), DL, Add->getVTList(), Const,
+                         Add.getOperand(1));
+    }
 
     // We might have replaced the constant in the cmov with the LHS of the
     // compare. If so change it to the RHS of the compare.
@@ -52350,59 +52366,6 @@ static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0), Ret);
 }
 
-static SDValue foldMaskedMergeImpl(SDValue And0_L, SDValue And0_R,
-                                   SDValue And1_L, SDValue And1_R,
-                                   const SDLoc &DL, SelectionDAG &DAG) {
-  if (!isBitwiseNot(And0_L, true) || !And0_L->hasOneUse())
-    return SDValue();
-  SDValue NotOp = And0_L->getOperand(0);
-  if (NotOp == And1_R)
-    std::swap(And1_R, And1_L);
-  if (NotOp != And1_L)
-    return SDValue();
-
-  // (~(NotOp) & And0_R) | (NotOp & And1_R)
-  // --> ((And0_R ^ And1_R) & NotOp) ^ And1_R
-  EVT VT = And1_L->getValueType(0);
-  SDValue Freeze_And0_R = DAG.getNode(ISD::FREEZE, SDLoc(), VT, And0_R);
-  SDValue Xor0 = DAG.getNode(ISD::XOR, DL, VT, And1_R, Freeze_And0_R);
-  SDValue And = DAG.getNode(ISD::AND, DL, VT, Xor0, NotOp);
-  SDValue Xor1 = DAG.getNode(ISD::XOR, DL, VT, And, Freeze_And0_R);
-  return Xor1;
-}
-
-/// Fold "masked merge" expressions like `(m & x) | (~m & y)` into the
-/// equivalent `((x ^ y) & m) ^ y)` pattern.
-/// This is typically a better representation for  targets without a fused
-/// "and-not" operation. This function is intended to be called from a
-/// `TargetLowering::PerformDAGCombine` callback on `ISD::OR` nodes.
-static SDValue foldMaskedMerge(SDNode *Node, SelectionDAG &DAG) {
-  // Note that masked-merge variants using XOR or ADD expressions are
-  // normalized to OR by InstCombine so we only check for OR.
-  assert(Node->getOpcode() == ISD::OR && "Must be called with ISD::OR node");
-  SDValue N0 = Node->getOperand(0);
-  if (N0->getOpcode() != ISD::AND || !N0->hasOneUse())
-    return SDValue();
-  SDValue N1 = Node->getOperand(1);
-  if (N1->getOpcode() != ISD::AND || !N1->hasOneUse())
-    return SDValue();
-
-  SDLoc DL(Node);
-  SDValue N00 = N0->getOperand(0);
-  SDValue N01 = N0->getOperand(1);
-  SDValue N10 = N1->getOperand(0);
-  SDValue N11 = N1->getOperand(1);
-  if (SDValue Result = foldMaskedMergeImpl(N00, N01, N10, N11, DL, DAG))
-    return Result;
-  if (SDValue Result = foldMaskedMergeImpl(N01, N00, N10, N11, DL, DAG))
-    return Result;
-  if (SDValue Result = foldMaskedMergeImpl(N10, N11, N00, N01, DL, DAG))
-    return Result;
-  if (SDValue Result = foldMaskedMergeImpl(N11, N10, N00, N01, DL, DAG))
-    return Result;
-  return SDValue();
-}
-
 /// If this is an add or subtract where one operand is produced by a cmp+setcc,
 /// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
 /// with CMP+{ADC, SBB}.
@@ -52805,11 +52768,6 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
       return SDValue(N, 0);
     }
   }
-
-  // We should fold "masked merge" patterns when `andn` is not available.
-  if (!Subtarget.hasBMI() && VT.isScalarInteger() && VT != MVT::i1)
-    if (SDValue R = foldMaskedMerge(N, DAG))
-      return R;
 
   if (SDValue R = combineOrXorWithSETCC(N->getOpcode(), dl, VT, N0, N1, DAG))
     return R;
@@ -59383,7 +59341,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
   // We can always convert per-lane vXf64 shuffles into VSHUFPD.
   if (!IsSplat &&
-      (VT == MVT::v4f64 || (VT == MVT::v8f64 && Subtarget.useAVX512Regs())) &&
+      ((NumOps == 2 && VT == MVT::v4f64) ||
+       (NumOps == 4 && VT == MVT::v8f64 && Subtarget.useAVX512Regs())) &&
       all_of(Ops, [](SDValue Op) { return Op.hasOneUse(); })) {
     // Collect the individual per-lane v2f64/v4f64 shuffles.
     MVT OpVT = Ops[0].getSimpleValueType();

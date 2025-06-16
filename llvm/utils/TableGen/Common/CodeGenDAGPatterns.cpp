@@ -1824,8 +1824,8 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
 }
 
 bool TreePatternNode::ContainsUnresolvedType(TreePattern &TP) const {
-  for (unsigned i = 0, e = Types.size(); i != e; ++i)
-    if (!TP.getInfer().isConcrete(Types[i], true))
+  for (const TypeSetByHwMode &Type : Types)
+    if (!TP.getInfer().isConcrete(Type, true))
       return true;
   for (const TreePatternNode &Child : children())
     if (Child.ContainsUnresolvedType(TP))

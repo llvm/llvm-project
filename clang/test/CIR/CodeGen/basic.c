@@ -309,3 +309,17 @@ size_type max_size(void) {
 // CHECK:   %6 = cir.load{{.*}} %0 : !cir.ptr<!u64i>, !u64i
 // CHECK:   cir.return %6 : !u64i
 // CHECK:   }
+
+void test_char_literal() {
+  char c;
+  c = 'X';
+}
+
+// CIR: cir.func @test_char_literal
+// CIR:   cir.const #cir.int<88>
+
+// LLVM: define void @test_char_literal()
+// LLVM:   store i8 88, ptr %{{.*}}, align 1
+
+// OGCG: define{{.*}} void @test_char_literal()
+// OGCG:   store i8 88, ptr %{{.*}}, align 1

@@ -2059,6 +2059,7 @@ def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2278,6 +2279,38 @@ def VecTernaryOp : CIR_Op<"vec.ternary",
 }
 
 //===----------------------------------------------------------------------===//
+// VecSplatOp
+//===----------------------------------------------------------------------===//
+
+def VecSplatOp : CIR_Op<"vec.splat", [Pure,
+  TypesMatchWith<"type of 'value' matches element type of 'result'", "result",
+                 "value", "cast<VectorType>($_self).getElementType()">]> {
+
+  let summary = "Convert a scalar into a vector";
+  let description = [{
+    The `cir.vec.splat` operation creates a vector value from a scalar value.
+    All elements of the vector have the same value, that of the given scalar.
+
+    It's a separate operation from `cir.vec.create` because more
+    efficient LLVM IR can be generated for it, and because some optimization and
+    analysis passes can benefit from knowing that all elements of the vector
+    have the same value.
+
+    ```mlir
+    %value = cir.const #cir.int<3> : !s32i
+    %value_vec = cir.vec.splat %value : !s32i, !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_VectorElementType:$value);
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    $value `:` type($value) `,` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BaseClassAddrOp
 //===----------------------------------------------------------------------===//
 
@@ -2318,6 +2351,38 @@ def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
       (`nonnull` $assume_not_null^)?
       ` ` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexCreateOp
+//===----------------------------------------------------------------------===//
+
+def ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
+  let summary = "Create a complex value from its real and imaginary parts";
+  let description = [{
+    The `cir.complex.create` operation takes two operands that represent the
+    real and imaginary part of a complex number, and yields the complex number.
+
+    ```mlir
+    %0 = cir.const #cir.fp<1.000000e+00> : !cir.double
+    %1 = cir.const #cir.fp<2.000000e+00> : !cir.double
+    %2 = cir.complex.create %0, %1 : !cir.double -> !cir.complex<!cir.double>
+    ```
+  }];
+
+  let results = (outs CIR_ComplexType:$result);
+  let arguments = (ins
+    CIR_AnyIntOrFloatType:$real,
+    CIR_AnyIntOrFloatType:$imag
+  );
+
+  let assemblyFormat = [{
+    $real `,` $imag
+    `:` qualified(type($real)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

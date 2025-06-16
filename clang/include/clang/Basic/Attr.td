@@ -4630,6 +4630,7 @@ def OMPDeclareVariant : InheritableAttr {
     OMPTraitInfoArgument<"TraitInfos">,
     VariadicExprArgument<"AdjustArgsNothing">,
     VariadicExprArgument<"AdjustArgsNeedDevicePtr">,
+    VariadicExprArgument<"AdjustArgsNeedDeviceAddr">,
     VariadicOMPInteropInfoArgument<"AppendArgs">,
   ];
   let AdditionalMembers = [{
@@ -4899,6 +4900,13 @@ def HLSLResourceBinding: InheritableAttr {
         return ImplicitBindingOrderID.value();
       }
   }];
+}
+
+def HLSLSV_Position : HLSLAnnotationAttr {
+  let Spellings = [HLSLAnnotation<"sv_position">];
+  let Subjects = SubjectList<[ParmVar, Field]>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLSV_PositionDocs];
 }
 
 def HLSLPackOffset: HLSLAnnotationAttr {
