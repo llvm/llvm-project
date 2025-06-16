@@ -13,7 +13,6 @@
 #ifndef LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMMCASMINFO_H
 #define LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMMCASMINFO_H
 
-#include "MCTargetDesc/ARMMCExpr.h"
 #include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAsmInfoELF.h"
@@ -22,11 +21,24 @@
 namespace llvm {
 class Triple;
 
+namespace ARM {
+void printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,
+                        const MCSpecifierExpr &Expr);
+}
+
 class ARMMCAsmInfoDarwin : public MCAsmInfoDarwin {
   virtual void anchor();
 
 public:
   explicit ARMMCAsmInfoDarwin(const Triple &TheTriple);
+  void printSpecifierExpr(raw_ostream &OS,
+                          const MCSpecifierExpr &Expr) const override {
+    ARM::printSpecifierExpr(*this, OS, Expr);
+  }
+  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &,
+                                 const MCAssembler *) const override {
+    return false;
+  }
 };
 
 class ARMELFMCAsmInfo : public MCAsmInfoELF {
@@ -36,6 +48,14 @@ public:
   explicit ARMELFMCAsmInfo(const Triple &TT);
 
   void setUseIntegratedAssembler(bool Value) override;
+  void printSpecifierExpr(raw_ostream &OS,
+                          const MCSpecifierExpr &Expr) const override {
+    ARM::printSpecifierExpr(*this, OS, Expr);
+  }
+  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &,
+                                 const MCAssembler *) const override {
+    return false;
+  }
 };
 
 class ARMCOFFMCAsmInfoMicrosoft : public MCAsmInfoMicrosoft {
@@ -43,6 +63,14 @@ class ARMCOFFMCAsmInfoMicrosoft : public MCAsmInfoMicrosoft {
 
 public:
   explicit ARMCOFFMCAsmInfoMicrosoft();
+  void printSpecifierExpr(raw_ostream &OS,
+                          const MCSpecifierExpr &Expr) const override {
+    ARM::printSpecifierExpr(*this, OS, Expr);
+  }
+  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &,
+                                 const MCAssembler *) const override {
+    return false;
+  }
 };
 
 class ARMCOFFMCAsmInfoGNU : public MCAsmInfoGNUCOFF {
@@ -50,9 +78,18 @@ class ARMCOFFMCAsmInfoGNU : public MCAsmInfoGNUCOFF {
 
 public:
   explicit ARMCOFFMCAsmInfoGNU();
+  void printSpecifierExpr(raw_ostream &OS,
+                          const MCSpecifierExpr &Expr) const override {
+    ARM::printSpecifierExpr(*this, OS, Expr);
+  }
+  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &,
+                                 const MCAssembler *) const override {
+    return false;
+  }
 };
 
 namespace ARM {
+using Specifier = uint16_t;
 enum {
   S_None,
   S_HI16 =
@@ -93,6 +130,13 @@ enum {
   S_TLSLDO,
   S_TPOFF,
 };
+
+const MCSpecifierExpr *createUpper16(const MCExpr *Expr, MCContext &Ctx);
+const MCSpecifierExpr *createLower16(const MCExpr *Expr, MCContext &Ctx);
+const MCSpecifierExpr *createUpper8_15(const MCExpr *Expr, MCContext &Ctx);
+const MCSpecifierExpr *createUpper0_7(const MCExpr *Expr, MCContext &Ctx);
+const MCSpecifierExpr *createLower8_15(const MCExpr *Expr, MCContext &Ctx);
+const MCSpecifierExpr *createLower0_7(const MCExpr *Expr, MCContext &Ctx);
 }
 
 } // namespace llvm
