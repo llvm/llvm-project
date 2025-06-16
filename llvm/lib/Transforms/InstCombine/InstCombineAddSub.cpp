@@ -2830,10 +2830,17 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       NumOfNewInstrs += !isa<Constant>(Z) ? 1 : 0;
       // Check if we can trade some of the old instructions for the new ones.
       unsigned NumOfDeadInstrs = 0;
-      NumOfDeadInstrs += Op0->hasOneUse() ? 1 : 0;
-      NumOfDeadInstrs += Op1->hasOneUse() ? 1 : 0;
-      NumOfDeadInstrs += Add0->hasOneUse() ? 1 : 0;
-      NumOfDeadInstrs += Add1->hasOneUse() ? 1 : 0;
+      if (Op0->hasOneUse()) {
+        // If Op0 (sext) has multiple uses, then we keep it
+        // and the add that it uses, otherwise, we can remove
+        // the sext and probably the add (depending on the number of its uses).
+        ++NumOfDeadInstrs;
+        NumOfDeadInstrs += Add0->hasOneUse() ? 1 : 0;
+      }
+      if (Op1->hasOneUse()) {
+        ++NumOfDeadInstrs;
+        NumOfDeadInstrs += Add1->hasOneUse() ? 1 : 0;
+      }
       if (NumOfDeadInstrs >= NumOfNewInstrs) {
         Value *SExtY = Builder.CreateSExt(Y, I.getType());
         Value *SExtZ = Builder.CreateSExt(Z, I.getType());
