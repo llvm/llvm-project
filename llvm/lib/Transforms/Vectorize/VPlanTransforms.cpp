@@ -2702,6 +2702,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       if (!MemR || !isa<VPWidenLoadRecipe>(MemR) || !MemR->isReverse())
         continue;
 
+      assert(MemR->isConsecutive() && "Reverse access must be consecutive");
+
       auto *VecEndPtr = cast<VPVectorEndPointerRecipe>(MemR->getAddr());
       VPValue *Ptr = VecEndPtr->getPtr();
       Value *PtrUV = Ptr->getUnderlyingValue();
