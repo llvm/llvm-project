@@ -222,11 +222,11 @@ public:
   DecoderEmitter(const RecordKeeper &R, StringRef PredicateNamespace)
       : RK(R), Target(R), PredicateNamespace(PredicateNamespace) {}
 
-  // Emit the decoder state machine table. Return true if any `TryDecode` ops
-  // were generated.
-  bool emitTable(formatted_raw_ostream &OS, DecoderTable &Table, indent Indent,
-                 unsigned BitWidth, StringRef Namespace,
-                 const EncodingIDsVec &EncodingIDs) const;
+  // Emit the decoder state machine table. Returns a mask of MCD decoder ops
+  // that were emitted.
+  unsigned emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
+                     indent Indent, unsigned BitWidth, StringRef Namespace,
+                     const EncodingIDsVec &EncodingIDs) const;
   void emitInstrLenTable(formatted_raw_ostream &OS,
                          ArrayRef<unsigned> InstrLen) const;
   void emitPredicateFunction(formatted_raw_ostream &OS,
@@ -827,11 +827,12 @@ unsigned Filter::usefulness() const {
 //                              //
 //////////////////////////////////
 
-// Emit the decoder state machine table.
-bool DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
-                               indent Indent, unsigned BitWidth,
-                               StringRef Namespace,
-                               const EncodingIDsVec &EncodingIDs) const {
+// Emit the decoder state machine table. Returns a mask of MCD decoder ops
+// that were emitted.
+unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
+                                   DecoderTable &Table, indent Indent,
+                                   unsigned BitWidth, StringRef Namespace,
+                                   const EncodingIDsVec &EncodingIDs) const {
   // We'll need to be able to map from a decoded opcode into the corresponding
   // EncodingID for this specific combination of BitWidth and Namespace. This
   // is used below to index into NumberedEncodings.
@@ -885,7 +886,7 @@ bool DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       OS << " (Fail)";
   };
 
-  bool HasTryDecode = false;
+  unsigned OpcodeMask = 0;
 
   while (I != E) {
     assert(I < E && "incomplete decode table entry!");
@@ -895,6 +896,7 @@ bool DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     OS.PadToColumn(12);
 
     const uint8_t DecoderOp = *I++;
+    OpcodeMask |= (1 << DecoderOp);
     switch (DecoderOp) {
     default:
       PrintFatalError("Invalid decode table opcode: " + Twine((int)DecoderOp) +
@@ -967,7 +969,6 @@ bool DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     case MCD::OPC_TryDecodeOrFail: {
       bool IsFail = DecoderOp == MCD::OPC_TryDecodeOrFail;
       bool IsTry = DecoderOp == MCD::OPC_TryDecode || IsFail;
-      HasTryDecode |= IsTry;
       // Decode the Opcode value.
       const char *ErrMsg = nullptr;
       unsigned Opc = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
@@ -1032,7 +1033,7 @@ bool DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
 
   OS << Indent << "};\n\n";
 
-  return HasTryDecode;
+  return OpcodeMask;
 }
 
 void DecoderEmitter::emitInstrLenTable(formatted_raw_ostream &OS,
@@ -2224,7 +2225,14 @@ static void insertBits(InsnType &field, InsnType bits, unsigned startBit,
 // emitDecodeInstruction - Emit the templated helper function
 // decodeInstruction().
 static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
-                                  bool HasTryDecode) {
+                                  unsigned OpcodeMask) {
+  const bool HasTryDecode = OpcodeMask & ((1 << MCD::OPC_TryDecode) |
+                                          (1 << MCD::OPC_TryDecodeOrFail));
+  const bool HasCheckPredicate =
+      OpcodeMask &
+      ((1 << MCD::OPC_CheckPredicate) | (1 << MCD::OPC_CheckPredicateOrFail));
+  const bool HasSoftFail = OpcodeMask & (1 << MCD::OPC_SoftFail);
+
   OS << R"(
 static unsigned decodeNumToSkip(const uint8_t *&Ptr) {
   unsigned NumToSkip = *Ptr++;
@@ -2244,9 +2252,11 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     OS << ",\n                                      "
           "llvm::function_ref<void(APInt &, uint64_t)> makeUp";
   }
-  OS << R"() {
-  const FeatureBitset &Bits = STI.getFeatureBits();
+  OS << ") {\n";
+  if (HasCheckPredicate)
+    OS << "  const FeatureBitset &Bits = STI.getFeatureBits();\n";
 
+  OS << R"(
   const uint8_t *Ptr = DecodeTable;
   uint64_t CurFieldValue = 0;
   DecodeStatus S = MCDisassembler::Success;
@@ -2327,7 +2337,9 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
         Ptr += NumToSkip;
       }
       break;
-    }
+    })";
+  if (HasCheckPredicate) {
+    OS << R"(
     case MCD::OPC_CheckPredicate:
     case MCD::OPC_CheckPredicateOrFail: {
       bool IsFail = DecoderOp == MCD::OPC_CheckPredicateOrFail;
@@ -2349,7 +2361,9 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
         Ptr += NumToSkip;
       }
       break;
-    }
+    })";
+  }
+  OS << R"(
     case MCD::OPC_Decode: {
       // Decode the Opcode value.
       unsigned Opc = decodeULEB128AndIncUnsafe(Ptr);
@@ -2409,17 +2423,20 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       break;
     })";
   }
+  if (HasSoftFail) {
+    OS << R"(
+      case MCD::OPC_SoftFail: {
+        // Decode the mask values.
+        uint64_t PositiveMask = decodeULEB128AndIncUnsafe(Ptr);
+        uint64_t NegativeMask = decodeULEB128AndIncUnsafe(Ptr);
+        bool Failed = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
+        if (Failed)
+          S = MCDisassembler::SoftFail;
+        LLVM_DEBUG(dbgs() << Loc << ": OPC_SoftFail: " << (Failed ? "FAIL\n" : "PASS\n"));
+        break;
+  })";
+  }
   OS << R"(
-    case MCD::OPC_SoftFail: {
-      // Decode the mask values.
-      uint64_t PositiveMask = decodeULEB128AndIncUnsafe(Ptr);
-      uint64_t NegativeMask = decodeULEB128AndIncUnsafe(Ptr);
-      bool Failed = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
-      if (Failed)
-        S = MCDisassembler::SoftFail;
-      LLVM_DEBUG(dbgs() << Loc << ": OPC_SoftFail: " << (Failed ? "FAIL\n" : "PASS\n"));
-      break;
-    }
     case MCD::OPC_Fail: {
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Fail\n");
       return MCDisassembler::Fail;
@@ -2619,7 +2636,7 @@ namespace {
   }
 
   DecoderTableInfo TableInfo;
-  bool HasTryDecode = false;
+  unsigned OpcodeMask = 0;
   for (const auto &Opc : OpcMap) {
     // Emit the decoder for this namespace+width combination.
     ArrayRef<EncodingAndInst> NumberedEncodingsRef(NumberedEncodings.data(),
@@ -2645,8 +2662,8 @@ namespace {
     TableInfo.Table.push_back(MCD::OPC_Fail);
 
     // Print the table to the output stream.
-    HasTryDecode |= emitTable(OS, TableInfo.Table, indent(0), FC.getBitWidth(),
-                              Opc.first.first, Opc.second);
+    OpcodeMask |= emitTable(OS, TableInfo.Table, indent(0), FC.getBitWidth(),
+                            Opc.first.first, Opc.second);
   }
 
   // For variable instruction, we emit a instruction length table
@@ -2654,14 +2671,20 @@ namespace {
   // You can see example usage in M68k's disassembler.
   if (IsVarLenInst)
     emitInstrLenTable(OS, InstrLen);
+
+  const bool HasCheckPredicate =
+      OpcodeMask &
+      ((1 << MCD::OPC_CheckPredicate) | (1 << MCD::OPC_CheckPredicateOrFail));
+
   // Emit the predicate function.
-  emitPredicateFunction(OS, TableInfo.Predicates, indent(0));
+  if (HasCheckPredicate)
+    emitPredicateFunction(OS, TableInfo.Predicates, indent(0));
 
   // Emit the decoder function.
   emitDecoderFunction(OS, TableInfo.Decoders, indent(0));
 
   // Emit the main entry point for the decoder, decodeInstruction().
-  emitDecodeInstruction(OS, IsVarLenInst, HasTryDecode);
+  emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask);
 
   OS << "\n} // namespace\n";
 }
