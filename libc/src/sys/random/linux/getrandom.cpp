@@ -21,10 +21,11 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(ssize_t, getrandom,
                    (void *buf, size_t buflen, unsigned int flags)) {
   auto rand = internal::getrandom(buf, buflen, flags);
-  if (rand.has_value())
-    return rand.value();
-  libc_errno = static_cast<int>(rand.error());
-  return -1;
+  if (rand.error()) {
+    libc_errno = static_cast<int>(rand.error());
+    return -1;
+  }
+  return rand.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL
