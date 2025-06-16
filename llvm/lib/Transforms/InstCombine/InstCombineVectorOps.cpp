@@ -546,7 +546,8 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
       // We know such a splat must be reading from the first operand, even
       // in the case of scalable vectors (vscale is always > 0).
       if (SplatIndex == 0)
-        return ExtractElementInst::Create(SVI->getOperand(0), Builder.getInt64(0));
+        return ExtractElementInst::Create(SVI->getOperand(0),
+                                          Builder.getInt64(0));
       // Restrict the non-zero index case to fixed-length vectors
       if (isa<FixedVectorType>(SVI->getType())) {
 
@@ -556,13 +557,14 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         int SrcIdx = -2;
         if (SplatIndex != PoisonMaskElem)
           SrcIdx = SplatIndex;
-        else if (ConstantInt* CI = dyn_cast<ConstantInt>(Index))
+        else if (ConstantInt *CI = dyn_cast<ConstantInt>(Index))
           SrcIdx = SVI->getMaskValue(CI->getZExtValue());
 
         if (SrcIdx != -2) {
           Value *Src;
-          unsigned LHSWidth = cast<FixedVectorType>(SVI->getOperand(0)->getType())
-            ->getNumElements();
+          unsigned LHSWidth =
+              cast<FixedVectorType>(SVI->getOperand(0)->getType())
+                  ->getNumElements();
 
           if (SrcIdx < 0)
             return replaceInstUsesWith(EI, PoisonValue::get(EI.getType()));
