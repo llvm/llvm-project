@@ -5079,3 +5079,41 @@ add_header_library(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.attributes
 )
+
+# BFloat16 Functions
+
+add_entrypoint_object(
+  faddbf16
+  SRCS
+    faddbf16.cpp
+  HDRS
+    ../faddbf16.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+)
+
+add_entrypoint_object(
+  fmulbf16
+  SRCS
+    fmulbf16.cpp
+  HDRS
+    ../fmulbf16.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.mul
+)
+
+add_entrypoint_object(
+  fdivbf16
+  SRCS
+    fdivbf16.cpp
+  HDRS
+    ../fdivbf16.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.div
+)
