@@ -307,3 +307,14 @@ define i32 @test_other_read_effects_read_after() {
   %v = load i32, ptr %a
   ret i32 %v
 }
+
+define void @test_other_write_effects() {
+; CHECK-LABEL: @test_other_write_effects(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @f(ptr [[A]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i32, align 4
+  call void @f(ptr %a) memory(write, argmem: readwrite) nounwind willreturn
+  ret void
+}
