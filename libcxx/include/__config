@@ -505,13 +505,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #  endif
 
-// TODO: Remove this workaround once we drop support for Clang 16
-#  if __has_warning("-Wc++23-extensions")
-#    define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++23-extensions")
-#  else
-#    define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++2b-extensions")
-#  endif
-
 // Clang modules take a significant compile time hit when pushing and popping diagnostics.
 // Since all the headers are marked as system headers unless _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER is defined, we can
 // simply disable this pushing and popping when _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER isn't defined.
@@ -522,7 +515,7 @@ typedef __char32_t char32_t;
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++14-extensions")                                                           \
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                           \
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                           \
-      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION                                                                 \
+      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++23-extensions")                                                           \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++14-extensions")                                                             \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                             \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                             \

@@ -622,6 +622,14 @@ Improvements to Clang's diagnostics
 
 - Improved the FixIts for unused lambda captures.
 
+- Delayed typo correction was removed from the compiler; immediate typo
+  correction behavior remains the same. Delayed typo correction facilities were
+  fragile and unmaintained, and the removal closed the following issues:
+  #GH142457, #GH139913, #GH138850, #GH137867, #GH137860, #GH107840, #GH93308,
+  #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
+  #GH36703, #GH32903, #GH23312, #GH69874.
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -695,6 +703,7 @@ Bug Fixes in This Version
   the second clause of a C-style ``for`` loop. (#GH139818)
 - Fixed a bug with constexpr evaluation for structs containing unions in case of C++ modules. (#GH143168)
 - Fixed incorrect token location when emitting diagnostics for tokens expanded from macros. (#GH143216)
+- Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
