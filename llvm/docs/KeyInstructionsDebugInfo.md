@@ -8,11 +8,11 @@ In development - some details may change with little notice.
 
 Tell Clang [not] to produce Key Instructions metadata with `-g[no-]key-instructions`. See the Clang docs for implementation info.
 
-Use LLVM flag `-dwarf-use-key-instructions` to interpret Key Instructions metadata when producing the DWARF line table (Clang passes the flag to LLVM). The behaviour of this flag may change.
-
 The feature improves optimized code stepping; it's intended for the feature to be used with optimisations enabled. Although the feature works at O0 it is not recommended because in some cases the effect of editing variables may not always be immediately realised. (This is a quirk of the current implementation, rather than fundemental limitation, covered in more detail later).
 
 There is currently no plan to support CodeView.
+
+Set LLVM flag `-dwarf-use-key-instructions` to `false` to ignore Key Instructions metadata when emitting DWARF.
 
 ## Problem statement
 
@@ -36,12 +36,12 @@ From the perspective of a source-level debugger user:
 
 ## Solution implementation
 
-1. `DILocation` has 2 new fields, `atomGroup` and `atomRank`.
-2. Clang creates `DILocations` using the new fields to communicate which instructions are "interesting".
+1. `DILocation` has 2 new fields, `atomGroup` and `atomRank`. `DISubprogram` has a new field `keyInstructions`.
+2. Clang creates `DILocations` using the new fields to communicate which instructions are "interesting", and sets `keyInstructions` true in `DISubprogram`s to tell LLVM to interpret the new metadata in those functions.
 3. There’s some bookkeeping required by optimisations that duplicate control flow.
 4. During DWARF emission, the new metadata is collected (linear scan over instructions) to decide is_stmt placements.
 
-1. *The metadata* - The two new `DILocation` fields are `atomGroup` and `atomRank`. Both are unsigned integers. Instructions in the same function with the same `(atomGroup, inlinedAt)` pair are part of the same source atom. `atomRank` determines is_stmt preference within that group, where a lower number is higher precedence. Higher rank instructions act as "backup" is_stmt locations, providing good fallback locations if/when the primary candidate gets optimized away. The default values of 0 indicate the instruction isn’t interesting - it's not an is_stmt candidate.
+1. *The metadata* - The two new `DILocation` fields are `atomGroup` and `atomRank`. Both are unsigned integers. Instructions in the same function with the same `(atomGroup, inlinedAt)` pair are part of the same source atom. `atomRank` determines is_stmt preference within that group, where a lower number is higher precedence. Higher rank instructions act as "backup" is_stmt locations, providing good fallback locations if/when the primary candidate gets optimized away. The default values of 0 indicate the instruction isn’t interesting - it's not an is_stmt candidate. If `keyInstructions` in `DISubprogram` is false (default) then the new `DILocation` metadata is ignored for the function (including inlined instances) when emitting DWARF.
 
 2. *Clang annotates key instructions* with the new metadata. Variable assignments (stores, memory intrinsics), control flow (branches and their conditions, some unconditional branches), and exception handling instructions are annotated. Calls are ignored as they're unconditionally marked is_stmt.
 
@@ -57,7 +57,7 @@ We’ve used contiguous line numbers rather than atom membership as the test the
 
 ## Adding the feature to a front end
 
-Front ends that want to use the feature need to do some heavy lifting; they need to annotate Key Instructions and their backups with `DILocations` with the necessary `atomGroup` and `atomRank` values. Currently they also need to tell LLVM to interpret the metadata by passing the `-dwarf-use-key-instructions` flag.
+Front ends that want to use the feature need to do some heavy lifting; they need to annotate Key Instructions and their backups with `DILocations` with the necessary `atomGroup` and `atomRank` values.  It also needs to set `keyInstructions` true in `DISubprogram`s to tell LLVM to interpret the new metadata in those functions.
 
 The prototype had LLVM annotate instructions (instead of Clang) using simple heuristics (just looking at kind of instructions). This doesn't exist anywhere upstream, but could be shared if there's interest (e.g., so another front end can try it out before committing to a full implementation ), feel fre to reach out on Discourse (@OCHyams).
 
