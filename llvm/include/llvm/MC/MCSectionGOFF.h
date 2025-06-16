@@ -39,6 +39,9 @@ class MCSectionGOFF final : public MCSection {
   // The type of this section.
   GOFF::ESDSymbolType SymbolType;
 
+  // This section is a BSS section.
+  unsigned IsBSS : 1;
+
   // Indicates that the PR symbol needs to set the length of the section to a
   // non-zero value. This is only a problem with the ADA PR - the binder will
   // generate an error in this case.
@@ -50,26 +53,26 @@ class MCSectionGOFF final : public MCSection {
   friend class MCContext;
   friend class MCSymbolGOFF;
 
-  MCSectionGOFF(StringRef Name, SectionKind K, GOFF::SDAttr SDAttributes,
-                MCSectionGOFF *Parent)
-      : MCSection(SV_GOFF, Name, K.isText(), /*IsVirtual=*/false, nullptr),
+  MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
+                GOFF::SDAttr SDAttributes, MCSectionGOFF *Parent)
+      : MCSection(SV_GOFF, Name, K.isText(), IsVirtual, nullptr),
         Parent(Parent), SDAttributes(SDAttributes),
-        SymbolType(GOFF::ESD_ST_SectionDefinition), RequiresNonZeroLength(0),
-        Emitted(0) {}
+        SymbolType(GOFF::ESD_ST_SectionDefinition), IsBSS(K.isBSS()),
+        RequiresNonZeroLength(0), Emitted(0) {}
 
-  MCSectionGOFF(StringRef Name, SectionKind K, GOFF::EDAttr EDAttributes,
-                MCSectionGOFF *Parent)
-      : MCSection(SV_GOFF, Name, K.isText(), /*IsVirtual=*/false, nullptr),
+  MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
+                GOFF::EDAttr EDAttributes, MCSectionGOFF *Parent)
+      : MCSection(SV_GOFF, Name, K.isText(), IsVirtual, nullptr),
         Parent(Parent), EDAttributes(EDAttributes),
-        SymbolType(GOFF::ESD_ST_ElementDefinition), RequiresNonZeroLength(0),
-        Emitted(0) {}
+        SymbolType(GOFF::ESD_ST_ElementDefinition), IsBSS(K.isBSS()),
+        RequiresNonZeroLength(0), Emitted(0) {}
 
-  MCSectionGOFF(StringRef Name, SectionKind K, GOFF::PRAttr PRAttributes,
-                MCSectionGOFF *Parent)
-      : MCSection(SV_GOFF, Name, K.isText(), /*IsVirtual=*/false, nullptr),
+  MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
+                GOFF::PRAttr PRAttributes, MCSectionGOFF *Parent)
+      : MCSection(SV_GOFF, Name, K.isText(), IsVirtual, nullptr),
         Parent(Parent), PRAttributes(PRAttributes),
-        SymbolType(GOFF::ESD_ST_PartReference), RequiresNonZeroLength(0),
-        Emitted(0) {}
+        SymbolType(GOFF::ESD_ST_PartReference), IsBSS(K.isBSS()),
+        RequiresNonZeroLength(0), Emitted(0) {}
 
 public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
@@ -80,6 +83,9 @@ public:
 
   // Return the parent section.
   MCSectionGOFF *getParent() const { return Parent; }
+
+  // Returns true if this is a BSS section.
+  bool isBSS() const { return IsBSS; }
 
   // Returns the type of this section.
   GOFF::ESDSymbolType getSymbolType() const { return SymbolType; }
@@ -100,6 +106,17 @@ public:
   GOFF::PRAttr getPRAttributes() const {
     assert(isPR() && "Not a PR section");
     return PRAttributes;
+  }
+
+  // Returns the text style for a section. Only defined for ED and PR sections.
+  GOFF::ESDTextStyle getTextStyle() const {
+    assert(isED() || isPR() || isVirtualSection() && "Expect ED or PR section");
+    if (isED())
+      return EDAttributes.TextStyle;
+    if (isPR())
+      return getParent()->getEDAttributes().TextStyle;
+    // Virtual sections have no data, so byte orientation is fine.
+    return GOFF::ESD_TS_ByteOriented;
   }
 
   bool requiresNonZeroLength() const { return RequiresNonZeroLength; }
