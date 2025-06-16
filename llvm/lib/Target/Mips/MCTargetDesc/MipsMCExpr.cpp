@@ -37,3 +37,10 @@ const MipsMCExpr *MipsMCExpr::createGpOff(MipsMCExpr::Specifier S,
   return create(S, create(Mips::S_NEG, create(Mips::S_GPREL, Expr, Ctx), Ctx),
                 Ctx);
 }
+
+void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
+  if (MAI)
+    MAI->printExpr(OS, *this);
+  else // llc -asm-show-inst
+    MipsELFMCAsmInfo(Triple(), MCTargetOptions()).printExpr(OS, *this);
+}
