@@ -94,15 +94,16 @@ struct AllocInfo {
 };
 
 using AllocInfoMapT = DenseMap<void *, AllocInfo>;
-AllocInfoMapT &allocInfoMap() {
-  static AllocInfoMapT AllocInfoMap{};
-  return AllocInfoMap;
-}
+static AllocInfoMapT *AllocInfoMap;
+AllocInfoMapT &allocInfoMap() { return *AllocInfoMap; }
 
 using PlatformVecT = SmallVector<ol_platform_impl_t, 4>;
-PlatformVecT &Platforms() {
-  static PlatformVecT Platforms;
-  return Platforms;
+static PlatformVecT *PlatformList;
+PlatformVecT &Platforms() { return *PlatformList; }
+
+static std::atomic_int &GlobalRefCount() {
+  static std::atomic_int Ref{0};
+  return Ref;
 }
 
 ol_device_handle_t HostDevice() {
@@ -130,6 +131,9 @@ constexpr ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 #include "Shared/Targets.def"
 
 void initPlugins() {
+  PlatformList = new PlatformVecT();
+  AllocInfoMap = new AllocInfoMapT();
+
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
@@ -169,13 +173,16 @@ void initPlugins() {
 }
 
 Error olInit_impl() {
-  static std::once_flag InitFlag;
-  std::call_once(InitFlag, initPlugins);
+  if (++GlobalRefCount() == 1)
+    initPlugins();
 
   return Error::success();
 }
 
 Error olShutDown_impl() {
+  if (--GlobalRefCount() != 0)
+    return Error::success();
+
   llvm::Error Result = Error::success();
 
   for (auto &P : Platforms()) {
@@ -186,6 +193,11 @@ Error olShutDown_impl() {
     if (auto Res = P.Plugin->deinit())
       Result = llvm::joinErrors(std::move(Result), std::move(Res));
   }
+
+  delete PlatformList;
+  PlatformList = nullptr;
+  delete AllocInfoMap;
+  AllocInfoMap = nullptr;
 
   return Result;
 }

@@ -162,7 +162,8 @@ def : Function {
   let name = "olInit";
   let desc = "Perform initialization of the Offload library and plugins";
   let details = [
-    "This must be the first API call made by a user of the Offload library"
+    "This must be the first API call made by a user of the Offload library",
+    "Each call will increment an internal reference count that is decremented by `olShutDown`"
   ];
   let params = [];
   let returns = [];
@@ -172,8 +173,8 @@ def : Function {
   let name = "olShutDown";
   let desc = "Release the resources in use by Offload";
   let details = [
-    "All resources owned by the Offload library and plugins will be released",
-    "Subsequent API calls made after calling `olShutDown` are undefined behavior"
+    "This decrements an internal reference count. When this reaches 0, all resources will be released",
+    "Subsequent API calls to methods other than `olInit` made after resources are released are undefined behavior"
   ];
   let params = [];
   let returns = [];
