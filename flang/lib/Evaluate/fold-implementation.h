@@ -1102,6 +1102,8 @@ template <typename T> Expr<T> Folder<T>::TRANSFER(FunctionRef<T> &&funcRef) {
   }
 }
 
+// TODO: Once the backend supports character extremums we could support
+// min/max with non-optional arguments to trees of extremum operations.
 template <typename T>
 Expr<T> FoldMINorMAX(
     FoldingContext &context, FunctionRef<T> &&funcRef, Ordering order) {
