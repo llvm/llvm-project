@@ -1429,9 +1429,10 @@ def FeatureVendorXqccmp
     : RISCVExperimentalExtension<0, 3,
                                  "Qualcomm 16-bit Push/Pop and Double Moves",
                                  [FeatureStdExtZca]>;
-def HasVendorXqccmp : Predicate<"Subtarget->hasVendorXqccmp()">,
-                      AssemblerPredicate<(all_of FeatureVendorXqccmp),
-                        "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
+def HasVendorXqccmp
+    : Predicate<"Subtarget->hasVendorXqccmp()">,
+      AssemblerPredicate<(all_of FeatureVendorXqccmp),
+                         "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
 
 def FeatureVendorXqcia
     : RISCVExperimentalExtension<0, 7, "Qualcomm uC Arithmetic Extension">;
