@@ -73,7 +73,7 @@ int CharacterConverter::push(char8_t utf8_byte) {
   clear();
   return -1;
 }
-  
+
 int CharacterConverter::push(char32_t utf32) {
   // we can't be partially through a conversion when pushing a utf32 value
   if (!isComplete())
@@ -108,7 +108,6 @@ ErrorOr<char32_t> CharacterConverter::pop_utf32() {
   clear();
   return utf32;
 }
-
 
 ErrorOr<char8_t> CharacterConverter::pop_utf8() {
   if (isComplete())
