@@ -633,6 +633,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     auto *PhiR = dyn_cast<VPWidenInductionRecipe>(&Phi);
     if (!PhiR)
       continue;
+
     // Try to narrow wide and replicating recipes to uniform recipes, based on
     // VPlan analysis.
     // TODO: Apply to all recipes in the future, to replace legacy uniformity
