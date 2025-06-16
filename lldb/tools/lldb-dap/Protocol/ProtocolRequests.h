@@ -533,6 +533,21 @@ bool fromJSON(const llvm::json::Value &, StepInArguments &, llvm::json::Path);
 /// body field is required.
 using StepInResponse = VoidResponse;
 
+/// Arguments for `stepInTargets` request.
+struct StepInTargetsArguments {
+  /// The stack frame for which to retrieve the possible step-in targets.
+  uint64_t frameId = LLDB_INVALID_FRAME_ID;
+};
+bool fromJSON(const llvm::json::Value &, StepInTargetsArguments &,
+              llvm::json::Path);
+
+/// Response to `stepInTargets` request.
+struct StepInTargetsResponseBody {
+  /// The possible step-in targets of the specified source location.
+  std::vector<StepInTarget> targets;
+};
+llvm::json::Value toJSON(const StepInTargetsResponseBody &);
+
 /// Arguments for `stepOut` request.
 struct StepOutArguments {
   /// Specifies the thread for which to resume execution for one step-out (of

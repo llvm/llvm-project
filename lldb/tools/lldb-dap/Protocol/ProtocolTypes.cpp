@@ -582,6 +582,30 @@ llvm::json::Value toJSON(const SteppingGranularity &SG) {
   llvm_unreachable("unhandled stepping granularity.");
 }
 
+bool fromJSON(const json::Value &Params, StepInTarget &SIT, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("id", SIT.id) && O.map("label", SIT.label) &&
+         O.mapOptional("line", SIT.line) &&
+         O.mapOptional("column", SIT.column) &&
+         O.mapOptional("endLine", SIT.endLine) &&
+         O.mapOptional("endColumn", SIT.endColumn);
+}
+
+llvm::json::Value toJSON(const StepInTarget &SIT) {
+  json::Object target{{"id", SIT.id}, {"label", SIT.label}};
+
+  if (SIT.line != LLDB_INVALID_LINE_NUMBER)
+    target.insert({"line", SIT.line});
+  if (SIT.column != LLDB_INVALID_COLUMN_NUMBER)
+    target.insert({"column", SIT.column});
+  if (SIT.endLine != LLDB_INVALID_LINE_NUMBER)
+    target.insert({"endLine", SIT.endLine});
+  if (SIT.endLine != LLDB_INVALID_COLUMN_NUMBER)
+    target.insert({"endColumn", SIT.endColumn});
+
+  return target;
+}
+
 bool fromJSON(const json::Value &Params, Thread &T, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("id", T.id) && O.map("name", T.name);

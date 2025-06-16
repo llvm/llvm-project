@@ -368,6 +368,16 @@ bool fromJSON(const json::Value &Params, StepInArguments &SIA, json::Path P) {
          OM.mapOptional("granularity", SIA.granularity);
 }
 
+bool fromJSON(const llvm::json::Value &Params, StepInTargetsArguments &SITA,
+              llvm::json::Path P) {
+  json::ObjectMapper OM(Params, P);
+  return OM && OM.map("frameId", SITA.frameId);
+}
+
+llvm::json::Value toJSON(const StepInTargetsResponseBody &SITR) {
+  return llvm::json::Object{{"targets", SITR.targets}};
+}
+
 bool fromJSON(const json::Value &Params, StepOutArguments &SOA, json::Path P) {
   json::ObjectMapper OM(Params, P);
   return OM && OM.map("threadId", SOA.threadId) &&
