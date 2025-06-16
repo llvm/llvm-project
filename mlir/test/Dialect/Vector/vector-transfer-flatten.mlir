@@ -71,40 +71,9 @@ func.func @transfer_read_dims_match_contiguous_empty_stride(
 // -----
 
 // The shape of the memref and the vector don't match, but the vector is a
-// contiguous subset of the memref, so "flattenable". The leading unit dimensions
-// of the vector have no effect on the memref area read even if they
-// span a non-contiguous part of the memref.
-
-func.func @transfer_read_dims_mismatch_contiguous_unit_dims(
-    %mem : memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>) -> vector<1x1x2x2xi8> {
-
-  %c0 = arith.constant 0 : index
-  %cst = arith.constant 0 : i8
-  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
-    memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>, vector<1x1x2x2xi8>
-  return %res : vector<1x1x2x2xi8>
-}
-
-// CHECK-LABEL:   func.func @transfer_read_dims_mismatch_contiguous_unit_dims(
-// CHECK-SAME:      %[[MEM:.*]]: memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>) -> vector<1x1x2x2xi8> {
-// CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i8
-// CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_3:.*]] = memref.collapse_shape %[[MEM]]
-// CHECK-SAME{LITERAL}: [[0], [1], [2, 3]]
-// CHECK-SAME:        : memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>> into memref<5x4x6xi8, strided<[48, 6, 1], offset: ?>>
-// CHECK:           %[[VAL_4:.*]] = vector.transfer_read %[[VAL_3]][%[[VAL_2]], %[[VAL_2]], %[[VAL_2]]], %[[VAL_1]] {in_bounds = [true]} : memref<5x4x6xi8, strided<[48, 6, 1], offset: ?>>, vector<4xi8>
-// CHECK:           %[[VAL_5:.*]] = vector.shape_cast %[[VAL_4]] : vector<4xi8> to vector<1x1x2x2xi8>
-// CHECK:           return %[[VAL_5]] : vector<1x1x2x2xi8>
-
-// CHECK-128B-LABEL: func @transfer_read_dims_mismatch_contiguous_unit_dims(
-//       CHECK-128B:   memref.collapse_shape
-
-// -----
-
-// The shape of the memref and the vector don't match, but the vector is a
 // contiguous subset of the memref, so "flattenable"
 
-func.func @transfer_read_dims_mismatch_contiguous_non_unit_dims(
+func.func @transfer_read_dims_mismatch_contiguous(
     %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<2x3x2xi8> {
 
   %c0 = arith.constant 0 : index
@@ -114,7 +83,7 @@ func.func @transfer_read_dims_mismatch_contiguous_non_unit_dims(
   return %res : vector<2x3x2xi8>
 }
 
-// CHECK-LABEL: func.func @transfer_read_dims_mismatch_contiguous_non_unit_dims(
+// CHECK-LABEL: func.func @transfer_read_dims_mismatch_contiguous(
 // CHECK-SAME:    %[[MEM:.+]]: memref<5x4x3x2xi8, {{.+}}>) -> vector<2x3x2xi8> {
 // CHECK:         %[[C0_I8:.+]] = arith.constant 0 : i8
 // CHECK:         %[[C0:.+]] = arith.constant 0 : index
@@ -126,8 +95,72 @@ func.func @transfer_read_dims_mismatch_contiguous_non_unit_dims(
 // CHECK:         %[[VEC:.+]] = vector.shape_cast %[[VEC_1D]] : vector<12xi8> to vector<2x3x2xi8>
 // CHECK:         return %[[VEC]] : vector<2x3x2xi8>
 
-// CHECK-128B-LABEL: func @transfer_read_dims_mismatch_contiguous_non_unit_dims(
+// CHECK-128B-LABEL: func @transfer_read_dims_mismatch_contiguous(
 //       CHECK-128B:   memref.collapse_shape
+
+// -----
+
+// The shape of the memref and the vector don't match, but the mismatch is only
+// at the leading unit dimensions of the vector.
+
+func.func @transfer_read_dims_mismatch_contiguous_unit_dims(
+    %mem : memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>) -> vector<1x1x4x3x2xi8> {
+
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0 : i8
+  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0, %c0], %cst :
+    memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>, vector<1x1x4x3x2xi8>
+  return %res : vector<1x1x4x3x2xi8>
+}
+
+// CHECK-LABEL: func.func @transfer_read_dims_mismatch_contiguous_unit_dims(
+// CHECK-SAME:    %[[MEM:.+]]: memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>)
+// CHECK-SAME:    -> vector<1x1x4x3x2xi8>
+// CHECK:       %[[C0_I8:.+]] = arith.constant 0 : i8
+// CHECK:       %[[C0:.+]] = arith.constant 0 : index
+// CHECK:       %[[COLLAPSED:.+]] = memref.collapse_shape %[[MEM]]
+// CHECK-SAME{LITERAL}: [[0], [1], [2, 3, 4]]
+// CHECK-SAME:    : memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>
+// CHECK-SAME:      into memref<6x5x24xi8, strided<[120, 24, 1], offset: ?>>
+// CHECK:       %[[VEC_1D:.+]] = vector.transfer_read %[[COLLAPSED]][%[[C0]], %[[C0]], %[[C0]]], %[[C0_I8]]
+// CHECK-SAME:    {in_bounds = [true]} : memref<6x5x24xi8, strided<[120, 24, 1], offset: ?>>, vector<24xi8>
+// CHECK:       %[[VEC:.+]] = vector.shape_cast %[[VEC_1D]] : vector<24xi8> to vector<1x1x4x3x2xi8>
+// CHECK:       return %[[VEC]] : vector<1x1x4x3x2xi8>
+
+// CHECK-128B-LABEL: func @transfer_read_dims_mismatch_contiguous_unit_dims(
+//       CHECK-128B:   memref.collapse_shape
+
+// -----
+
+// The memref is non-contiguous, but the vector is a contiguous subset of the
+// memref, so "flattenable". The leading unit dimensions of the vector have no
+// effect on the memref area read even if they span the non-contiguous part of
+// the memref.
+
+func.func @transfer_read_non_contiguous_unit_dims(
+    %mem : memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>) -> vector<1x1x3x2xi8> {
+
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0 : i8
+  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
+    memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>, vector<1x1x3x2xi8>
+  return %res : vector<1x1x3x2xi8>
+}
+
+// CHECK-LABEL:   func.func @transfer_read_non_contiguous_unit_dims(
+// CHECK-SAME:      %[[MEM:.*]]: memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>) -> vector<1x1x3x2xi8> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i8
+// CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_3:.*]] = memref.collapse_shape %[[MEM]]
+// CHECK-SAME{LITERAL}: [[0], [1], [2, 3]]
+// CHECK-SAME:        : memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>> into memref<5x4x6xi8, strided<[48, 6, 1], offset: ?>>
+// CHECK:           %[[VAL_4:.*]] = vector.transfer_read %[[VAL_3]][%[[VAL_2]], %[[VAL_2]], %[[VAL_2]]], %[[VAL_1]] {in_bounds = [true]} : memref<5x4x6xi8, strided<[48, 6, 1], offset: ?>>, vector<6xi8>
+// CHECK:           %[[VAL_5:.*]] = vector.shape_cast %[[VAL_4]] : vector<6xi8> to vector<1x1x3x2xi8>
+// CHECK:           return %[[VAL_5]] : vector<1x1x3x2xi8>
+
+// CHECK-128B-LABEL: func @transfer_read_non_contiguous_unit_dims(
+//       CHECK-128B:   memref.collapse_shape
+
 
 // -----
 
@@ -418,40 +451,9 @@ func.func @transfer_write_dims_match_contiguous_empty_stride(
 // -----
 
 // The shape of the memref and the vector don't match, but the vector is a
-// contiguous subset of the memref, so "flattenable". The leading unit dimensions
-// of the vector have no effect on the memref area written even if they
-// span a non-contiguous part of the memref.
-
-func.func @transfer_write_dims_mismatch_contiguous_unit_dims(
-    %mem : memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>,
-    %vec : vector<1x1x2x2xi8>) {
-
-  %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0] :
-    vector<1x1x2x2xi8>, memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>
-  return
-}
-
-// CHECK-LABEL:   func.func @transfer_write_dims_mismatch_contiguous_unit_dims
-// CHECK-SAME:      %[[MEM:.*]]: memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>,
-// CHECK-SAME:      %[[VEC:.*]]: vector<1x1x2x2xi8>) {
-// CHECK:           %[[C0:.*]] = arith.constant 0 : index
-// CHECK:           %[[COLLAPSED:.*]] = memref.collapse_shape %[[MEM]]
-// CHECK-SAME{LITERAL}: [[0], [1], [2, 3]]
-// CHECK-SAME:        : memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>> into memref<5x4x6xi8, strided<[48, 6, 1], offset: ?>>
-// CHECK:           %[[VEC_1D:.*]] = vector.shape_cast %[[VEC]] : vector<1x1x2x2xi8> to vector<4xi8>
-// CHECK:           vector.transfer_write %[[VEC_1D]], %[[COLLAPSED]][%[[C0]], %[[C0]], %[[C0]]]
-// CHECK-SAME:        {in_bounds = [true]} : vector<4xi8>, memref<5x4x6xi8, strided<[48, 6, 1], offset: ?>>
-
-// CHECK-128B-LABEL: func @transfer_write_dims_mismatch_contiguous_unit_dims(
-//       CHECK-128B:   memref.collapse_shape
-
-// -----
-
-// The shape of the memref and the vector don't match, but the vector is a
 // contiguous subset of the memref, so "flattenable".
 
-func.func @transfer_write_dims_mismatch_contiguous_non_unit_dims(
+func.func @transfer_write_dims_mismatch_contiguous(
     %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>,
     %vec : vector<2x2xi8>) {
 
@@ -461,7 +463,7 @@ func.func @transfer_write_dims_mismatch_contiguous_non_unit_dims(
   return
 }
 
-// CHECK-LABEL: func.func @transfer_write_dims_mismatch_contiguous_non_unit_dims
+// CHECK-LABEL: func.func @transfer_write_dims_mismatch_contiguous
 // CHECK-SAME:    %[[MEM:.+]]: memref<5x4x3x2xi8, {{.+}}>,
 // CHECK-SAME:    %[[VEC:.+]]: vector<2x2xi8>
 // CHECK:         %[[C0:.+]] = arith.constant 0 : index
@@ -472,7 +474,69 @@ func.func @transfer_write_dims_mismatch_contiguous_non_unit_dims(
 // CHECK:         vector.transfer_write %[[VEC_1D]], %[[COLLAPSED_MEM]][%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true]}
 // CHECK-SAME:      : vector<4xi8>, memref<5x4x6xi8, {{.+}}>
 
-// CHECK-128B-LABEL: func @transfer_write_dims_mismatch_contiguous_non_unit_dims(
+// CHECK-128B-LABEL: func @transfer_write_dims_mismatch_contiguous(
+//       CHECK-128B:   memref.collapse_shape
+
+// -----
+
+// The shape of the memref and the vector don't match, but the mismatch is only
+// at the leading unit dimensions of the vector.
+
+func.func @transfer_write_dims_mismatch_contiguous_unit_dims(
+    %mem : memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>,
+    %vec : vector<1x1x4x3x2xi8>) {
+
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0, %c0] :
+    vector<1x1x4x3x2xi8>, memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>
+
+  return
+}
+
+// CHECK-LABEL:  func.func @transfer_write_dims_mismatch_contiguous_unit_dims(
+// CHECK-SAME:   %[[MEM:.+]]: memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>
+// CHECK-SAME:   %[[VEC:.+]]: vector<1x1x4x3x2xi8>
+// CHECK:          %[[C0:.+]] = arith.constant 0 : index
+// CHECK:          %[[COLLAPSED:.+]] = memref.collapse_shape %[[MEM]]
+// CHECK-SAME{LITERAL}: [[0], [1], [2, 3, 4]]
+// CHECK-SAME:       : memref<6x5x4x3x2xi8, strided<[120, 24, 6, 2, 1], offset: ?>>
+// CHECK-SAME:         into memref<6x5x24xi8, strided<[120, 24, 1], offset: ?>>
+// CHECK:          %[[VEC_1D:.+]] = vector.shape_cast %[[VEC]] : vector<1x1x4x3x2xi8> to vector<24xi8>
+// CHECK:          vector.transfer_write %[[VEC_1D]], %[[COLLAPSED]][%[[C0]], %[[C0]], %[[C0]]]
+// CHECK-SAME:       {in_bounds = [true]} : vector<24xi8>, memref<6x5x24xi8, strided<[120, 24, 1], offset: ?>>
+
+// CHECK-128B-LABEL: func @transfer_write_dims_mismatch_contiguous_unit_dims(
+//       CHECK-128B:   memref.collapse_shape
+
+// -----
+
+// The memref is non-contiguous, but the vector is a contiguous subset of the
+// memref, so "flattenable". The leading unit dimensions of the vector have no
+// effect on the memref area read even if they span the non-contiguous part of
+// the memref.
+
+func.func @transfer_write_non_contiguous_unit_dims(
+    %mem : memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>,
+    %vec : vector<1x1x3x2xi8>) {
+
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0] :
+    vector<1x1x3x2xi8>, memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>
+  return
+}
+
+// CHECK-LABEL:   func.func @transfer_write_non_contiguous_unit_dims
+// CHECK-SAME:      %[[MEM:.*]]: memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>>,
+// CHECK-SAME:      %[[VEC:.*]]: vector<1x1x3x2xi8>) {
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[COLLAPSED:.*]] = memref.collapse_shape %[[MEM]]
+// CHECK-SAME{LITERAL}: [[0], [1], [2, 3]]
+// CHECK-SAME:        : memref<5x4x3x2xi8, strided<[48, 6, 2, 1], offset: ?>> into memref<5x4x6xi8, strided<[48, 6, 1], offset: ?>>
+// CHECK:           %[[VEC_1D:.*]] = vector.shape_cast %[[VEC]] : vector<1x1x3x2xi8> to vector<6xi8>
+// CHECK:           vector.transfer_write %[[VEC_1D]], %[[COLLAPSED]][%[[C0]], %[[C0]], %[[C0]]]
+// CHECK-SAME:        {in_bounds = [true]} : vector<6xi8>, memref<5x4x6xi8, strided<[48, 6, 1], offset: ?>>
+
+// CHECK-128B-LABEL: func @transfer_write_non_contiguous_unit_dims(
 //       CHECK-128B:   memref.collapse_shape
 
 // -----
@@ -718,4 +782,3 @@ func.func @negative_out_of_bound_transfer_write(
 // CHECK-128B-LABEL: func.func @negative_out_of_bound_transfer_write
 //   CHECK-128B-NOT:   memref.collapse_shape
 //   CHECK-128B-NOT:   vector.shape_cast
-
