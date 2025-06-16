@@ -29,7 +29,7 @@ using APSInt = llvm::APSInt;
 using APInt = llvm::APInt;
 
 /// If a Floating is constructed from Memory, it DOES NOT OWN THAT MEMORY.
-/// It will NOT copy the memory (unless, of course, copy() is called) an it
+/// It will NOT copy the memory (unless, of course, copy() is called) and it
 /// won't alllocate anything. The allocation should happen via InterpState or
 /// Program.
 class Floating final {

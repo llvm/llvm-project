@@ -30,7 +30,7 @@ using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
 
 /// If an IntegralAP is constructed from Memory, it DOES NOT OWN THAT MEMORY.
-/// It will NOT copy the memory (unless, of course, copy() is called) an it
+/// It will NOT copy the memory (unless, of course, copy() is called) and it
 /// won't alllocate anything. The allocation should happen via InterpState or
 /// Program.
 template <bool Signed> class IntegralAP final {
