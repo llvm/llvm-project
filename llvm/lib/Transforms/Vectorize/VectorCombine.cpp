@@ -824,6 +824,9 @@ bool VectorCombine::foldBitOpOfBitcasts(Instruction &I) {
   if (LHSSrc->getType() != RHSSrc->getType())
     return false;
 
+  if (!LHSSrc->getType()->getScalarType()->isIntegerTy())
+    return false;
+
   // Only handle vector types
   auto *SrcVecTy = dyn_cast<FixedVectorType>(LHSSrc->getType());
   auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
@@ -831,15 +834,25 @@ bool VectorCombine::foldBitOpOfBitcasts(Instruction &I) {
     return false;
 
   // Same total bit width
-  if (SrcVecTy->getPrimitiveSizeInBits() != DstVecTy->getPrimitiveSizeInBits())
-    return false;
+  assert(SrcVecTy->getPrimitiveSizeInBits() ==
+             DstVecTy->getPrimitiveSizeInBits() &&
+         "Bitcast should preserve total bit width");
 
-  // Cost check: prefer operations on narrower element types
-  unsigned SrcEltBits = SrcVecTy->getScalarSizeInBits();
-  unsigned DstEltBits = DstVecTy->getScalarSizeInBits();
+  // Cost Check :
+  // OldCost = bitlogic + 2*bitcasts
+  // NewCost = bitlogic + bitcast
+  auto OldCost =
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), DstVecTy) +
+      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, LHSSrc->getType(),
+                           TTI::CastContextHint::None) +
+      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, RHSSrc->getType(),
+                           TTI::CastContextHint::None);
 
-  // Prefer smaller element sizes (more elements, finer granularity)
-  if (SrcEltBits > DstEltBits)
+  auto NewCost = TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcVecTy) +
+                 TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, SrcVecTy,
+                                      TTI::CastContextHint::None);
+
+  if (NewCost > OldCost)
     return false;
 
   // Create the operation on the source type
