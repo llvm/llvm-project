@@ -345,6 +345,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "types_struct_f_owner_ex",
+    hdrs = ["hdr/types/struct_f_owner_ex.h"],
+)
+
+libc_support_library(
+    name = "types_struct_flock",
+    hdrs = ["hdr/types/struct_flock.h"],
+)
+
+libc_support_library(
+    name = "types_struct_flock64",
+    hdrs = ["hdr/types/struct_flock64.h"],
+)
+
+libc_support_library(
     name = "types_struct_timespec",
     hdrs = ["hdr/types/struct_timespec.h"],
 )
@@ -1381,6 +1396,28 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_fcntl",
+    srcs = ["src/__support/OSUtil/linux/fcntl.cpp"],
+    hdrs = ["src/__support/OSUtil/fcntl.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_osutil_syscall",
+        ":hdr_errno_macros",
+        ":hdr_fcntl_macros",
+        ":types_mode_t",
+        ":types_off_t",
+        ":types_struct_f_owner_ex",
+        ":types_struct_flock",
+        ":types_struct_flock64",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_exit",
     srcs = ["src/__support/OSUtil/linux/exit.cpp"],
     hdrs = ["src/__support/OSUtil/exit.h"],
@@ -1601,8 +1638,8 @@ libc_support_library(
 libc_header_library(
     name = "libcxx_shared_headers",
     hdrs = [
-        "shared/libc_common.h",
         "shared/fp_bits.h",
+        "shared/libc_common.h",
         "shared/str_to_float.h",
         "shared/str_to_integer.h",
     ],
@@ -4475,10 +4512,25 @@ libc_function(
     }),
     deps = [
         ":__support_common",
-        ":__support_osutil_syscall",
+        ":__support_osutil_fcntl",
         ":errno",
         ":hdr_fcntl_macros",
         ":types_mode_t",
+    ],
+)
+
+libc_function(
+    name = "fcntl",
+    srcs = ["src/fcntl/linux/fcntl.cpp"],
+    hdrs = ["src/fcntl/fcntl.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_osutil_fcntl",
+        ":errno",
     ],
 )
 
@@ -4542,7 +4594,7 @@ libc_function(
     hdrs = ["src/unistd/close.h"],
     deps = [
         ":__support_common",
-        ":__support_osutil_syscall",
+        ":__support_osutil_fcntl",
         ":errno",
     ],
 )
