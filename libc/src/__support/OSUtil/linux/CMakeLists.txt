@@ -9,10 +9,10 @@ add_object_library(
   SRCS
     exit.cpp
     fcntl.cpp
-    getrandom.cpp
   HDRS
     io.h
     syscall.h
+    getrandom.h
   DEPENDS
     .${LIBC_TARGET_ARCHITECTURE}.linux_${LIBC_TARGET_ARCHITECTURE}_util
     libc.src.__support.common
