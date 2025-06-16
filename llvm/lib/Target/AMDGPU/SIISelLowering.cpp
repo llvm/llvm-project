@@ -13880,6 +13880,17 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
       return Res;
   }
 
+  // Prefer fminnum_ieee over fminimum. For gfx950, minimum/maximum are legal
+  // for some types, but at a higher cost since it's implemented with a 3
+  // operand form.
+  const SDNodeFlags Flags = N->getFlags();
+  if ((Opc == ISD::FMINIMUM || Opc == ISD::FMAXIMUM) &&
+      !Subtarget->hasIEEEMinMax() && Flags.hasNoNaNs()) {
+    unsigned NewOpc =
+        Opc == ISD::FMINIMUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
+    return DAG.getNode(NewOpc, SDLoc(N), VT, Op0, Op1, Flags);
+  }
+
   return SDValue();
 }
 
