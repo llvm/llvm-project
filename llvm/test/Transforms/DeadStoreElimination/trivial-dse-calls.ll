@@ -288,8 +288,6 @@ define void @test_dse_non_alloca() {
 
 define void @test_other_read_effects() {
 ; CHECK-LABEL: @test_other_read_effects(
-; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @f(ptr [[A]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
@@ -300,7 +298,7 @@ define void @test_other_read_effects() {
 define i32 @test_other_read_effects_read_after() {
 ; CHECK-LABEL: @test_other_read_effects_read_after(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @f(ptr [[A]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @f(ptr [[A]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
