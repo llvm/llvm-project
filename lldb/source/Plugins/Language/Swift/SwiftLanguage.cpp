@@ -1767,7 +1767,7 @@ std::string SwiftLanguage::GetFunctionName(const SymbolContext &sc,
   if (sc.function->GetLanguage() != eLanguageTypeSwift)
     return {};
   std::string name = SwiftLanguageRuntime::DemangleSymbolAsString(
-      sc.function->GetMangled().GetMangledName().GetStringRef(),
+      sc.GetPossiblyInlinedFunctionName().GetMangledName(),
       SwiftLanguageRuntime::eSimplified, &sc, exe_ctx);
   if (name.empty())
     return {};
@@ -1885,8 +1885,7 @@ SwiftLanguage::GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
   ConstString mangled_name = mangled.GetMangledName();
   ConstString demangled_name = mangled.GetDemangledName();
   if (demangled_name && mangled_name) {
-    if (SwiftLanguageRuntime::IsSwiftMangledName(
-            demangled_name.GetStringRef())) {
+    if (SwiftLanguageRuntime::IsSwiftMangledName(mangled_name.GetStringRef())) {
       lldb_private::ConstString basename;
       bool is_method = false;
       if (SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
