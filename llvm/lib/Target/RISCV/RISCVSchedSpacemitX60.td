@@ -473,13 +473,29 @@ foreach mx = SchedMxListW in {
   }
 }
 
-// Worst case needs 51/45/42/72 * lmul cycles for i8/16/32/64.
-foreach mx = SchedMxList in {
+// Simple division and remainder operations
+foreach mx = ["MF8", "MF4", "MF2"] in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
+    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVIDivV", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVIDivX", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+    let Latency = 12 in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIDivV", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIDivX", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+    }
+  }
+}
+
+// Complex division and remainder operations
+foreach mx = ["M1", "M2", "M4", "M8"] in {
+  foreach sew = SchedSEWSet<mx>.val in {
+    defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
+    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
+
+    let Latency = !mul(LMulLat, 24) in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIDivV", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIDivX", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+    }
   }
 }
 
