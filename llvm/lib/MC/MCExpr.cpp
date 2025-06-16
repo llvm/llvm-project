@@ -174,6 +174,8 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
   }
 
   case MCExpr::Specifier:
+    // TODO: Remove after all targets that use MCSpecifierExpr migrate to
+    // MCAsmInfo::printSpecifierExpr.
     return cast<MCSpecifierExpr>(this)->printImpl(OS, MAI);
   }
 
