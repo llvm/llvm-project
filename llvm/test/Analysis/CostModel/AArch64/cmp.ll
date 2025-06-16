@@ -17,10 +17,10 @@ define void @cmps() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cf32 = fcmp ogt float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cf64 = fcmp ogt double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cbf64 = fcmp ogt bfloat undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %cfv816 = fcmp olt <8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %cfv816 = fcmp olt <8 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cfv432 = fcmp oge <4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cfv264 = fcmp oge <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %cbfv816 = fcmp olt <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %cbfv816 = fcmp olt <8 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %c8 = icmp slt i8 undef, undef
@@ -50,9 +50,9 @@ define void @andcmp() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a16 = and i16 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %c16 = icmp ne i16 %a16, 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a32 = and i32 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c32 = icmp eq i32 %a32, 0
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %c32 = icmp eq i32 %a32, 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a64 = and i64 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c64 = icmp ne i64 %a64, 0
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %c64 = icmp ne i64 %a64, 0
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %a128 = and i128 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %c128 = icmp eq i128 %a128, 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %av16i8 = and <16 x i8> undef, undef
