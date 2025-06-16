@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZMCAsmInfo.h"
-#include "MCTargetDesc/SystemZMCExpr.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCValue.h"
 
 using namespace llvm;
 
@@ -57,4 +57,32 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
 
 bool SystemZMCAsmInfoGOFF::isAcceptableChar(char C) const {
   return MCAsmInfo::isAcceptableChar(C) || C == '#';
+}
+
+void SystemZMCAsmInfoGOFF::printSpecifierExpr(
+    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
+  switch (Expr.getSpecifier()) {
+  case SystemZ::S_None:
+    OS << "A";
+    break;
+  case SystemZ::S_RCon:
+    OS << "R";
+    break;
+  case SystemZ::S_VCon:
+    OS << "V";
+    break;
+  default:
+    llvm_unreachable("Invalid kind");
+  }
+  OS << '(';
+  printExpr(OS, *Expr.getSubExpr());
+  OS << ')';
+}
+
+bool SystemZMCAsmInfoGOFF::evaluateAsRelocatableImpl(
+    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+  Res.setSpecifier(Expr.getSpecifier());
+  return true;
 }
