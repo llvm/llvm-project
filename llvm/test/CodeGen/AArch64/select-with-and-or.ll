@@ -105,8 +105,17 @@ define <4 x i1> @and_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w)
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmeq v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    cmgt v1.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NEXT:    mov w10, v0.s[3]
+; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
+; CHECK-GI-NEXT:    mov v0.b[1], w8
+; CHECK-GI-NEXT:    mov v0.b[2], w9
+; CHECK-GI-NEXT:    mov v0.b[3], w10
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %a = icmp eq <4 x i32> %x, %y
   %b = icmp sgt <4 x i32> %z, %w
@@ -127,8 +136,17 @@ define <4 x i1> @or_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w) 
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmeq v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    cmgt v1.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NEXT:    mov w10, v0.s[3]
+; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
+; CHECK-GI-NEXT:    mov v0.b[1], w8
+; CHECK-GI-NEXT:    mov v0.b[2], w9
+; CHECK-GI-NEXT:    mov v0.b[3], w10
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %a = icmp eq <4 x i32> %x, %y
   %b = icmp sgt <4 x i32> %z, %w
@@ -149,8 +167,18 @@ define <4 x i1> @and_not_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32>
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmeq v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    cmgt v1.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    bic v0.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NEXT:    mov w10, v0.s[3]
+; CHECK-GI-NEXT:    mov v0.b[1], w8
+; CHECK-GI-NEXT:    mov v0.b[2], w9
+; CHECK-GI-NEXT:    mov v0.b[3], w10
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %a = icmp eq <4 x i32> %x, %y
   %b = icmp sgt <4 x i32> %z, %w
@@ -171,8 +199,18 @@ define <4 x i1> @or_not_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> 
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmeq v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    cmgt v1.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    orn v0.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NEXT:    mov w10, v0.s[3]
+; CHECK-GI-NEXT:    mov v0.b[1], w8
+; CHECK-GI-NEXT:    mov v0.b[2], w9
+; CHECK-GI-NEXT:    mov v0.b[3], w10
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %a = icmp eq <4 x i32> %x, %y
   %b = icmp sgt <4 x i32> %z, %w
@@ -193,8 +231,17 @@ define <4 x i1> @and_vec_undef(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i3
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmeq v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    cmgt v1.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NEXT:    mov w10, v0.s[3]
+; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
+; CHECK-GI-NEXT:    mov v0.b[1], w8
+; CHECK-GI-NEXT:    mov v0.b[2], w9
+; CHECK-GI-NEXT:    mov v0.b[3], w10
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %a = icmp eq <4 x i32> %x, %y
   %b = icmp sgt <4 x i32> %z, %w
@@ -215,8 +262,17 @@ define <4 x i1> @or_vec_undef(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmeq v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    cmgt v1.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NEXT:    mov w10, v0.s[3]
+; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
+; CHECK-GI-NEXT:    mov v0.b[1], w8
+; CHECK-GI-NEXT:    mov v0.b[2], w9
+; CHECK-GI-NEXT:    mov v0.b[3], w10
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %a = icmp eq <4 x i32> %x, %y
   %b = icmp sgt <4 x i32> %z, %w
@@ -237,8 +293,18 @@ define <4 x i1> @and_not_vec_undef(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmeq v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    cmgt v1.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    bic v0.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NEXT:    mov w10, v0.s[3]
+; CHECK-GI-NEXT:    mov v0.b[1], w8
+; CHECK-GI-NEXT:    mov v0.b[2], w9
+; CHECK-GI-NEXT:    mov v0.b[3], w10
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %a = icmp eq <4 x i32> %x, %y
   %b = icmp sgt <4 x i32> %z, %w
@@ -259,8 +325,18 @@ define <4 x i1> @or_not_vec_undef(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmeq v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    cmgt v1.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    orn v0.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NEXT:    mov w10, v0.s[3]
+; CHECK-GI-NEXT:    mov v0.b[1], w8
+; CHECK-GI-NEXT:    mov v0.b[2], w9
+; CHECK-GI-NEXT:    mov v0.b[3], w10
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %a = icmp eq <4 x i32> %x, %y
   %b = icmp sgt <4 x i32> %z, %w

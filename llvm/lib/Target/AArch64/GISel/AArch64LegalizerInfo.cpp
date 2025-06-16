@@ -146,25 +146,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(HasSVE, {nxv16s8, nxv8s16, nxv4s32, nxv2s64})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
-      .clampMaxNumElements(0, s8, 16)
-      .clampMaxNumElements(0, s16, 8)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
-      .minScalarOrEltIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].getNumElements() <= 2;
-          },
-          0, s32)
-      .minScalarOrEltIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].getNumElements() <= 4;
-          },
-          0, s16)
-      .minScalarOrEltIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].getNumElements() <= 16;
-          },
-          0, s8)
+      .widenScalarOrEltToNextPow2OrMinSize(0, 8)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .moreElementsToNextPow2(0);
 
@@ -172,25 +158,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({s32, s64, v8s8, v16s8, v4s16, v8s16, v2s32, v4s32, v2s64})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
-      .clampMaxNumElements(0, s8, 16)
-      .clampMaxNumElements(0, s16, 8)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
-      .minScalarOrEltIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].getNumElements() <= 2;
-          },
-          0, s32)
-      .minScalarOrEltIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].getNumElements() <= 4;
-          },
-          0, s16)
-      .minScalarOrEltIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].getNumElements() <= 16;
-          },
-          0, s8)
+      .widenScalarOrEltToNextPow2OrMinSize(0, 8)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .moreElementsToNextPow2(0);
 

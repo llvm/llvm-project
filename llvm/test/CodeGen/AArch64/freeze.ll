@@ -58,15 +58,14 @@ define <3 x i8> @freeze_v3i8() {
 ; CHECK-GI-LABEL: freeze_v3i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov b0, v0.b[1]
-; CHECK-GI-NEXT:    mov b1, v0.b[2]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    add v0.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    umov w0, v0.h[0]
-; CHECK-GI-NEXT:    umov w1, v0.h[1]
-; CHECK-GI-NEXT:    umov w2, v0.h[2]
+; CHECK-GI-NEXT:    mov v1.b[0], v0.b[0]
+; CHECK-GI-NEXT:    mov b2, v0.b[2]
+; CHECK-GI-NEXT:    mov v1.b[1], v0.b[0]
+; CHECK-GI-NEXT:    mov v1.b[2], v2.b[0]
+; CHECK-GI-NEXT:    add v0.8b, v1.8b, v1.8b
+; CHECK-GI-NEXT:    umov w0, v0.b[0]
+; CHECK-GI-NEXT:    umov w1, v0.b[1]
+; CHECK-GI-NEXT:    umov w2, v0.b[2]
 ; CHECK-GI-NEXT:    ret
   %y1 = freeze <3 x i8> undef
   %t1 = add <3 x i8> %y1, %y1
@@ -82,15 +81,15 @@ define <4 x i8> @freeze_v4i8() {
 ; CHECK-GI-LABEL: freeze_v4i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov b0, v0.b[1]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov b1, v0.b[2]
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov b2, v0.b[3]
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    add v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    mov v1.b[0], v0.b[0]
+; CHECK-GI-NEXT:    mov b2, v0.b[2]
+; CHECK-GI-NEXT:    mov v1.b[1], v0.b[0]
+; CHECK-GI-NEXT:    mov b0, v0.b[3]
+; CHECK-GI-NEXT:    mov v1.b[2], v2.b[0]
+; CHECK-GI-NEXT:    mov v1.b[3], v0.b[0]
+; CHECK-GI-NEXT:    add v0.8b, v1.8b, v1.8b
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %y1 = freeze <4 x i8> undef
   %t1 = add <4 x i8> %y1, %y1
@@ -137,9 +136,10 @@ define <2 x i16> @freeze_v2i16() {
 ; CHECK-GI-LABEL: freeze_v2i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov h0, v0.h[1]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov v0.s[1], w8
-; CHECK-GI-NEXT:    add v0.2s, v0.2s, v0.2s
+; CHECK-GI-NEXT:    mov v0.h[1], v0.h[0]
+; CHECK-GI-NEXT:    add v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %y1 = freeze <2 x i16> undef
   %t1 = add <2 x i16> %y1, %y1
