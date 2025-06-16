@@ -448,8 +448,7 @@ define i128 @load-128bit(){
 
 define i8 @load_i40_struct_padding() {
 ; CHECK-LABEL: @load_i40_struct_padding(
-; CHECK-NEXT:    [[V:%.*]] = load i8, ptr getelementptr (i8, ptr @i40_struct, i64 6), align 1
-; CHECK-NEXT:    ret i8 [[V]]
+; CHECK-NEXT:    ret i8 0
 ;
   %v = load i8, ptr getelementptr (i8, ptr @i40_struct, i64 6)
   ret i8 %v
@@ -465,8 +464,7 @@ define i16 @load_i40_struct_partial_padding() {
 
 define i8 @load_i40_array_padding() {
 ; CHECK-LABEL: @load_i40_array_padding(
-; CHECK-NEXT:    [[V:%.*]] = load i8, ptr getelementptr (i8, ptr @i40_array, i64 6), align 1
-; CHECK-NEXT:    ret i8 [[V]]
+; CHECK-NEXT:    ret i8 0
 ;
   %v = load i8, ptr getelementptr (i8, ptr @i40_array, i64 6)
   ret i8 %v
