@@ -221,9 +221,8 @@ Changes in existing checks
 
 - Improved :doc: `bugprone-sizeof-expression
  <clang-tidy/checks/bugprone/bugprone-sizeof-expression>` check.
-
- Introduced WarnOnSizeOfInLoopTermination sub-class to detect misuses of sizeof expression
- in loop conditions. 
+ Introduced WarnOnSizeOfInLoopTermination sub-class to detect misuses of sizeof
+ expression in loop conditions. 
 
 Removed checks
 ^^^^^^^^^^^^^^

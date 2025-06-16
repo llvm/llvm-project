@@ -99,7 +99,7 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   auto LoopExpr =
       [](const ast_matchers::internal::Matcher<Stmt> &InnerMatcher) {
-        return stmt(anyOf(forStmt(InnerMatcher), whileStmt(InnerMatcher)));
+        return stmt(anyOf(forStmt(InnerMatcher), whileStmt(InnerMatcher), doStmt(InnerMatcher)));
       };
 
   const auto IntegerExpr = ignoringParenImpCasts(integerLiteral());
@@ -141,7 +141,9 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   if (WarnOnSizeOfInLoopTermination) {
     Finder->addMatcher(
-        LoopExpr(has(binaryOperator(has(SizeOfExpr)))).bind("loop-expr"), this);
+        LoopExpr(hasDescendant(
+           binaryOperator(allOf(has(SizeOfExpr.bind("sizeof-expr")), isComparisonOperator()))
+        )).bind("loop-expr"), this);
   }
 
   // Detect sizeof(kPtr) where kPtr is 'const char* kPtr = "abc"';
@@ -369,15 +371,16 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
         << E->getSourceRange();
   } else if (const auto *E = Result.Nodes.getNodeAs<Stmt>("loop-expr")) {
     auto *SizeofArgTy = Result.Nodes.getNodeAs<Type>("sizeof-arg-type");
-    if (const auto member = dyn_cast<MemberPointerType>(SizeofArgTy)) {
+    if (const auto member = dyn_cast<MemberPointerType>(SizeofArgTy))
       SizeofArgTy = member->getPointeeType().getTypePtr();
-    }
+ 
+    auto Loc = Result.Nodes.getNodeAs<Expr>("sizeof-expr");
 
     if (const auto type = dyn_cast<ArrayType>(SizeofArgTy)) {
       CharUnits sSize = Ctx.getTypeSizeInChars(type->getElementType());
       if (!sSize.isOne()) {
-        diag(E->getBeginLoc(), "suspicious usage of 'sizeof' in the loop")
-            << E->getSourceRange();
+        diag(Loc->getBeginLoc(), "suspicious usage of 'sizeof' in the loop")
+            << Loc->getSourceRange();
       }
     }
   } else if (const auto *E = Result.Nodes.getNodeAs<Expr>("sizeof-pointer")) {

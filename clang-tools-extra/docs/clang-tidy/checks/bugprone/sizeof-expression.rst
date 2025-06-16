@@ -320,7 +320,8 @@ Options
 .. option:: WarnOnSizeOfInLoopTermination
 
    When `true`, the check will warn about incorrect use of sizeof expression
-   in loop termination condition. The warning triggers if the sizeof expression
-   appears to be incorrectly used to determine the number of array/buffer elements.
+   in loop termination condition. The warning triggers if the ``sizeof``
+   expression appears to be incorrectly used to determine the number of
+   array/buffer elements.
    e.g, ``long arr[10]; for(int i = 0; i < sizeof(arr); i++) { ... }``. Default
    is `true`.

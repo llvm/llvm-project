@@ -173,43 +173,43 @@ struct B {
 };
 
 void loop_access_elements(int num, struct B b) {
-    struct A arr[10];
-    char buf[20];
+  struct A arr[10];
+  char buf[20];
 
-    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
-    for(int i = 0; i < sizeof(arr); i++) {
-       struct A a = arr[i];
-    }
+  // CHECK-MESSAGES: :[[@LINE+1]]:22: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
+  for(int i = 0; i < sizeof(arr); i++) {
+    struct A a = arr[i];
+  }
 
-    // Loop warning should not trigger here, even though this code is incorrect
-    // CHECK-MESSAGES: :[[@LINE+2]]:24: warning: suspicious usage of 'sizeof(K)'; did you mean 'K'? [bugprone-sizeof-expression]
-    // CHECK-MESSAGES: :[[@LINE+1]]:34: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator [bugprone-sizeof-expression] 
-    for(int i = 0; i < sizeof(10)/sizeof(A); i++) {
-       struct A a = arr[i];
-    }
+  // Loop warning should not trigger here, even though this code is incorrect
+  // CHECK-MESSAGES: :[[@LINE+2]]:22: warning: suspicious usage of 'sizeof(K)'; did you mean 'K'? [bugprone-sizeof-expression]
+  // CHECK-MESSAGES: :[[@LINE+1]]:32: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator [bugprone-sizeof-expression] 
+  for(int i = 0; i < sizeof(10)/sizeof(A); i++) {
+    struct A a = arr[i];
+  }
     
-    // Should not warn here
-    for(int i = 0; i < sizeof(arr)/sizeof(A); i++) {}
+  // Should not warn here
+  for(int i = 0; i < sizeof(arr)/sizeof(A); i++) {}
 
-    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
-    for(int j = 0; j < sizeof(b.a.array); j++) {}
+  // CHECK-MESSAGES: :[[@LINE+1]]:22: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
+  for(int j = 0; j < sizeof(b.a.array); j++) {}
   
-    // Should not warn here
-    for(int i = 0; i < sizeof(buf); i++) {} 
+  // Should not warn here
+  for(int i = 0; i < sizeof(buf); i++) {} 
   
-    int i = 0;
-    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
-    while(i <= sizeof(arr)) {i++;}
+  int i = 0;
+  // CHECK-MESSAGES: :[[@LINE+1]]:14: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
+  while(i <= sizeof(arr)) {i++;}
    
-    i = 0;
-    do {
-     i++;
-    } while(i <= sizeof(arr));
+  i = 0;
+  do {
+    i++;
+  // CHECK-MESSAGES: :[[@LINE+1]]:16: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression] 
+  } while(i <= sizeof(arr));
+
+  // CHECK-MESSAGES: :[[@LINE+1]]:29: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
+  for(int i = 0, j = 0; i < sizeof(arr) && j < sizeof(buf); i++, j++) {}
 }
-
-// Add cases for while loop
-
-// Add cases for do-while loop
 
 template <int T>
 int Foo() { int A[T]; return sizeof(T); }
