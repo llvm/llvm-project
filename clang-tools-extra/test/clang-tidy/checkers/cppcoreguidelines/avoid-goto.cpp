@@ -1,12 +1,15 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-avoid-goto %t
+// RUN: %check_clang_tidy -check-suffix=MACRO %s cppcoreguidelines-avoid-goto %t -- -config="{CheckOptions: { cppcoreguidelines-avoid-goto.IgnoreMacros: true }}"
 
 void noop() {}
 
 int main() {
   noop();
   goto jump_to_me;
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: avoid using 'goto' for flow control
-  // CHECK-NOTES: [[@LINE+3]]:1: note: label defined here
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: avoid using 'goto' for flow control
+  // CHECK-MESSAGES: [[@LINE+5]]:1: note: label defined here
+  // CHECK-MESSAGES-MACRO: [[@LINE-3]]:3: warning: avoid using 'goto' for flow control
+  // CHECK-MESSAGES-MACRO: [[@LINE+3]]:1: note: label defined here
   noop();
 
 jump_to_me:;
@@ -14,14 +17,18 @@ jump_to_me:;
 jump_backwards:;
   noop();
   goto jump_backwards;
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: avoid using 'goto' for flow control
-  // CHECK-NOTES: [[@LINE-4]]:1: note: label defined here
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: avoid using 'goto' for flow control
+  // CHECK-MESSAGES: [[@LINE-4]]:1: note: label defined here
+  // CHECK-MESSAGES-MACRO: [[@LINE-3]]:3: warning: avoid using 'goto' for flow control
+  // CHECK-MESSAGES-MACRO: [[@LINE-6]]:1: note: label defined here
 
   goto jump_in_line;
   ;
 jump_in_line:;
-  // CHECK-NOTES: [[@LINE-3]]:3: warning: avoid using 'goto' for flow control
-  // CHECK-NOTES: [[@LINE-2]]:1: note: label defined here
+  // CHECK-MESSAGES: [[@LINE-3]]:3: warning: avoid using 'goto' for flow control
+  // CHECK-MESSAGES: [[@LINE-2]]:1: note: label defined here
+  // CHECK-MESSAGES-MACRO: [[@LINE-5]]:3: warning: avoid using 'goto' for flow control
+  // CHECK-MESSAGES-MACRO: [[@LINE-4]]:1: note: label defined here
 
   // Test the GNU extension https://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html
 some_label:;
@@ -132,8 +139,45 @@ before_the_loop:
     for (int j = 0; j < 10; ++j) {
       if (i * j > 80)
         goto before_the_loop;
-      // CHECK-NOTES: [[@LINE-1]]:9: warning: avoid using 'goto' for flow control
-      // CHECK-NOTES: [[@LINE-8]]:1: note: label defined here
+      // CHECK-MESSAGES: [[@LINE-1]]:9: warning: avoid using 'goto' for flow control
+      // CHECK-MESSAGES: [[@LINE-8]]:1: note: label defined here
+      // CHECK-MESSAGES-MACRO: [[@LINE-3]]:9: warning: avoid using 'goto' for flow control
+      // CHECK-MESSAGES-MACRO: [[@LINE-10]]:1: note: label defined here
     }
   }
+}
+
+#define macro_goto_code \
+  noop(); \
+  goto jump_to_me; \
+  noop(); \
+jump_to_me:; \
+
+#define macro_goto_label jump_to_me:;
+#define macro_goto_jump goto jump_to_me;
+
+void inside_macro_all() {
+  macro_goto_code
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: avoid using 'goto' for flow control
+  // CHECK-MESSAGES: [[@LINE-2]]:3: note: label defined here
+}
+
+void inside_macro_label() {
+  noop();
+  goto jump_to_me;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: avoid using 'goto' for flow control
+  // CHECK-MESSAGES: [[@LINE+4]]:3: note: label defined here
+  // CHECK-MESSAGES-MACRO: [[@LINE-3]]:3: warning: avoid using 'goto' for flow control
+  // CHECK-MESSAGES-MACRO: [[@LINE+2]]:3: note: label defined here
+  noop();
+  macro_goto_label
+}
+
+void inside_macro_goto() {
+  noop();
+  macro_goto_jump
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: avoid using 'goto' for flow control
+  // CHECK-MESSAGES: [[@LINE+2]]:3: note: label defined here
+  noop();
+  jump_to_me:;
 }
