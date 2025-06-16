@@ -4999,7 +4999,6 @@ recurse:
   case Expr::ParenListExprClass:
   case Expr::MSPropertyRefExprClass:
   case Expr::MSPropertySubscriptExprClass:
-  case Expr::TypoExprClass: // This should no longer exist in the AST by now.
   case Expr::RecoveryExprClass:
   case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
