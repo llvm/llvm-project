@@ -338,8 +338,6 @@ struct WgToSgVectorBroadcastOp
                   ConversionPatternRewriter &rewriter) const override {
     VectorType resultType = op.getResult().getType();
     ArrayRef<int64_t> wgShape = resultType.getShape();
-    if (!resultType)
-      return failure();
 
     xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getResult());
     if (!layout || !layout.getSgLayout())
@@ -348,17 +346,17 @@ struct WgToSgVectorBroadcastOp
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
-    SmallVector<Value> newBroadcasts;
 
+    SmallVector<Value> newBroadcastOps;
     for (size_t i = 0; i < adaptor.getOperands().front().size(); ++i) {
       auto newBroadcast = rewriter.create<vector::BroadcastOp>(
           op.getLoc(), newResultType, adaptor.getOperands().front()[i]);
       xegpu::setLayoutAttr(newBroadcast->getResult(0),
                            layout.dropSgLayoutAndData());
-      newBroadcasts.push_back(newBroadcast.getResult());
+      newBroadcastOps.push_back(newBroadcast.getResult());
     }
 
-    rewriter.replaceOpWithMultiple(op, {newBroadcasts});
+    rewriter.replaceOpWithMultiple(op, {newBroadcastOps});
     return success();
   }
 };
@@ -556,11 +554,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<vector::BroadcastOp>(
       [=](vector::BroadcastOp op) -> bool {
-        auto resultType = dyn_cast<VectorType>(op.getResult().getType());
-        if (!resultType)
-          return true;
-        xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getResult());
-        return isLegal(layout);
+        return isLegal(xegpu::getLayoutAttr(op.getResult()));
       });
 
   target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
