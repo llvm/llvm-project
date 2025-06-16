@@ -83,7 +83,7 @@ static bool isSafeToRewrite(const RecordDecl *Decl, const ASTContext &Context) {
   // start of the first field and the end of last field.
   const SourceManager &SM = Context.getSourceManager();
   std::pair<FileID, unsigned> FileAndOffset =
-  SM.getDecomposedLoc(Decl->field_begin()->getBeginLoc());
+      SM.getDecomposedLoc(Decl->field_begin()->getBeginLoc());
   auto LastField = Decl->field_begin();
   while (std::next(LastField) != Decl->field_end())
     ++LastField;
