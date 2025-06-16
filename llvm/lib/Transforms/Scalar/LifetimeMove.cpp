@@ -213,7 +213,7 @@ PreservedAnalyses LifetimeMovePass::run(Function &F,
                                         FunctionAnalysisManager &AM) {
   // Works for coroutine for now
   if (!F.isPresplitCoroutine())
-    PreservedAnalyses::all();
+    return PreservedAnalyses::all();
 
   const DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   LifetimeMover Mover(F, DT);
