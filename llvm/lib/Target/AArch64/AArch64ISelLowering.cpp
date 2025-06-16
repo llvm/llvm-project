@@ -153,13 +153,6 @@ cl::opt<bool> EnableSVEGISel(
     cl::desc("Enable / disable SVE scalable vectors in Global ISel"),
     cl::init(false));
 
-// FIXME : This is a temporary flag, and is used to help transition to
-// performing lowering the proper way using the new PARTIAL_REDUCE_MLA ISD
-// nodes.
-static cl::opt<bool> EnablePartialReduceNodes(
-    "aarch64-enable-partial-reduce-nodes", cl::init(false), cl::ReallyHidden,
-    cl::desc("Use the new method of lowering partial reductions."));
-
 /// Value type used for condition codes.
 static const MVT MVT_CC = MVT::i32;
 
@@ -1457,7 +1450,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (MVT VT : { MVT::v16f16, MVT::v8f32, MVT::v4f64 })
       setOperationAction(ISD::FADD, VT, Custom);
 
-    if (EnablePartialReduceNodes && Subtarget->hasDotProd()) {
+    if (Subtarget->hasDotProd()) {
       static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
                                         ISD::PARTIAL_REDUCE_UMLA};
 
@@ -1895,7 +1888,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   }
 
   // Handle partial reduction operations
-  if (EnablePartialReduceNodes && Subtarget->isSVEorStreamingSVEAvailable()) {
+  if (Subtarget->isSVEorStreamingSVEAvailable()) {
     // Mark known legal pairs as 'Legal' (these will expand to UDOT or SDOT).
     // Other pairs will default to 'Expand'.
     static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
@@ -1957,17 +1950,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv2i64,
                          Custom);
 
-      if (EnablePartialReduceNodes) {
-        static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
-                                          ISD::PARTIAL_REDUCE_UMLA};
-        // Must be lowered to SVE instructions.
-        setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v4i32, Custom);
-        setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v8i16, Custom);
-        setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
-        setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v8i16, Custom);
-        setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Custom);
-        setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
-      }
+      static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                        ISD::PARTIAL_REDUCE_UMLA};
+      // Must be lowered to SVE instructions.
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v4i32, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v8i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v8i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
     }
   }
 
@@ -2165,16 +2156,6 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
   assert(I->getIntrinsicID() ==
              Intrinsic::experimental_vector_partial_reduce_add &&
          "Unexpected intrinsic!");
-  if (EnablePartialReduceNodes)
-    return true;
-
-  EVT VT = EVT::getEVT(I->getType());
-  auto Op1 = I->getOperand(1);
-  EVT Op1VT = EVT::getEVT(Op1->getType());
-  if (Op1VT.getVectorElementType() == VT.getVectorElementType() &&
-      (VT.getVectorElementCount() * 4 == Op1VT.getVectorElementCount() ||
-       VT.getVectorElementCount() * 2 == Op1VT.getVectorElementCount()))
-    return false;
   return true;
 }
 
@@ -2252,37 +2233,32 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   bool PreferNEON = VT.is64BitVector() || VT.is128BitVector();
   bool PreferSVE = !PreferNEON && Subtarget->isSVEAvailable();
 
-  if (EnablePartialReduceNodes) {
-    static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
-                                      ISD::PARTIAL_REDUCE_UMLA};
-    unsigned NumElts = VT.getVectorNumElements();
-    if (VT.getVectorElementType() == MVT::i64) {
-      setPartialReduceMLAAction(MLAOps, VT,
-                                MVT::getVectorVT(MVT::i8, NumElts * 8), Custom);
-      setPartialReduceMLAAction(
-          MLAOps, VT, MVT::getVectorVT(MVT::i16, NumElts * 4), Custom);
-      setPartialReduceMLAAction(
-          MLAOps, VT, MVT::getVectorVT(MVT::i32, NumElts * 2), Custom);
-    } else if (VT.getVectorElementType() == MVT::i32) {
-      setPartialReduceMLAAction(MLAOps, VT,
+  static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                    ISD::PARTIAL_REDUCE_UMLA};
+  unsigned NumElts = VT.getVectorNumElements();
+  if (VT.getVectorElementType() == MVT::i64) {
+    setPartialReduceMLAAction(MLAOps, VT,
+                              MVT::getVectorVT(MVT::i8, NumElts * 8), Custom);
+    setPartialReduceMLAAction(MLAOps, VT,
+                              MVT::getVectorVT(MVT::i16, NumElts * 4), Custom);
+    setPartialReduceMLAAction(MLAOps, VT,
+                              MVT::getVectorVT(MVT::i32, NumElts * 2), Custom);
+  } else if (VT.getVectorElementType() == MVT::i32) {
+    setPartialReduceMLAAction(MLAOps, VT,
+                              MVT::getVectorVT(MVT::i8, NumElts * 4), Custom);
+    setPartialReduceMLAAction(MLAOps, VT,
+                              MVT::getVectorVT(MVT::i16, NumElts * 2), Custom);
+  } else if (VT.getVectorElementType() == MVT::i16) {
+    setPartialReduceMLAAction(MLAOps, VT,
+                              MVT::getVectorVT(MVT::i8, NumElts * 2), Custom);
+  }
+  if (Subtarget->hasMatMulInt8()) {
+    if (VT.getVectorElementType() == MVT::i32)
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, VT,
                                 MVT::getVectorVT(MVT::i8, NumElts * 4), Custom);
-      setPartialReduceMLAAction(
-          MLAOps, VT, MVT::getVectorVT(MVT::i16, NumElts * 2), Custom);
-    } else if (VT.getVectorElementType() == MVT::i16) {
-      setPartialReduceMLAAction(MLAOps, VT,
-                                MVT::getVectorVT(MVT::i8, NumElts * 2), Custom);
-    }
-
-    if (Subtarget->hasMatMulInt8()) {
-      if (VT.getVectorElementType() == MVT::i32)
-        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, VT,
-                                  MVT::getVectorVT(MVT::i8, NumElts * 4),
-                                  Custom);
-      else if (VT.getVectorElementType() == MVT::i64)
-        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, VT,
-                                  MVT::getVectorVT(MVT::i8, NumElts * 8),
-                                  Custom);
-    }
+    else if (VT.getVectorElementType() == MVT::i64)
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, VT,
+                                MVT::getVectorVT(MVT::i8, NumElts * 8), Custom);
   }
 
   // Lower fixed length vector operations to scalable equivalents.
