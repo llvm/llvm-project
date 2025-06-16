@@ -12,8 +12,8 @@
 #include "hdr/types/size_t.h"
 #include "hdr/types/ssize_t.h"
 #include "hdr/unistd_macros.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
