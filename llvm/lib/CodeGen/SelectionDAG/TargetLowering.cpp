@@ -2973,8 +2973,8 @@ bool TargetLowering::SimplifyDemandedBits(
     if (!DemandedBits.intersects(SignMask))
       return TLO.CombineTo(Op, Op0);
 
-    if (SimplifyDemandedBits(Op0, ~SignMask & DemandedBits, DemandedElts, Known,
-                             TLO, Depth + 1))
+    if (SimplifyDemandedBits(Op0, DemandedBits, DemandedElts, Known, TLO,
+                             Depth + 1))
       return true;
 
     if (Known.isNonNegative())
