@@ -989,7 +989,8 @@ auto buildTransferMatchSwitch() {
       // Only NullableValue has these methods, but this
       // will also pass for other types  
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasAnyName("makeValue", "makeValueInplace")),
+          isOptionalMemberCallWithNameMatcher(
+            hasAnyName("makeValue", "makeValueInplace")),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
