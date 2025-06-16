@@ -555,9 +555,12 @@ foreach mx = SchedMxListF in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
   defvar ALULat = SMX60GetVIALULatency<mx>.c;
+  defvar MaskLat = SMX60GetVIMaskLatency<mx>.c;
 
-  defm "" : LMULWriteResMX<"WriteVFCmpV",  [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVFCmpF",  [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = MaskLat in {
+    defm "" : LMULWriteResMX<"WriteVFCmpV",  [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFCmpF",  [SMX60_VIEU], mx, IsWorstCase>;
+  }
 
   let Latency = ALULat in {
     defm "" : LMULWriteResMX<"WriteVFClassV",  [SMX60_VIEU], mx, IsWorstCase>;
