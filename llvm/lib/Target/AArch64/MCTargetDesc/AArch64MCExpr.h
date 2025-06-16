@@ -147,6 +147,8 @@ protected:
 public:
   static const AArch64MCExpr *create(const MCExpr *Expr, Specifier,
                                      MCContext &Ctx);
+  /// @name VariantKind information extractors.
+  /// @{
 
   static Specifier getSymbolLoc(Specifier S) {
     return static_cast<Specifier>(S & VK_SymLocBits);
@@ -157,6 +159,16 @@ public:
   }
 
   static bool isNotChecked(Specifier S) { return S & VK_NC; }
+
+  /// @}
+
+  /// Return the string representation of the ELF relocation specifier
+  /// (e.g. ":got:", ":lo12:").
+  StringRef getSpecifierName() const;
+
+  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
 };
 
 class AArch64AuthMCExpr final : public AArch64MCExpr {
@@ -177,7 +189,7 @@ public:
   uint16_t getDiscriminator() const { return Discriminator; }
   bool hasAddressDiversity() const { return getSpecifier() == VK_AUTHADDR; }
 
-  void print(raw_ostream &OS, const MCAsmInfo *MAI) const;
+  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
 
   static bool classof(const MCExpr *E) {
     return isa<AArch64MCExpr>(E) && classof(cast<AArch64MCExpr>(E));
