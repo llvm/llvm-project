@@ -19,11 +19,12 @@ LLVM_LIBC_FUNCTION(void *, mmap,
                     off_t offset)) {
   auto ptr = internal::mmap(addr, size, prot, flags, fd, offset);
 
-  if (ptr.has_value())
-    return ptr.value();
-
-  libc_errno = ptr.error();
-  return MAP_FAILED;
+  if (!ptr.has_value()) {
+    libc_errno = ptr.error();
+    return MAP_FAILED;
+  }
+  
+  return ptr.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

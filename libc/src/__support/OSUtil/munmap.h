@@ -9,9 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_MUNMAP_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_MUNMAP_H
 
+#include "hdr/types/off_t.h"
+#include "hdr/types/size_t.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
-#include <sys/mman.h> // For size_t and off_t
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
