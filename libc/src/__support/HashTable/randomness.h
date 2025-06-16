@@ -14,8 +14,8 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #if defined(LIBC_HASHTABLE_USE_GETRANDOM)
+#include "src/__support/OSUtil/getrandom.h"
 #include "src/__support/libc_errno.h"
-#include "src/sys/random/getrandom.h"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
@@ -39,7 +39,7 @@ LIBC_INLINE uint64_t next_random_seed() {
     size_t count = sizeof(entropy);
     uint8_t *buffer = reinterpret_cast<uint8_t *>(entropy);
     while (count > 0) {
-      ssize_t len = getrandom(buffer, count, 0);
+      ssize_t len = internal::getrandom(buffer, count, 0);
       if (len == -1) {
         if (libc_errno == ENOSYS)
           break;
