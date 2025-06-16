@@ -269,66 +269,63 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
                                        ArgTys[0] = User->getType();
                                      });
         }
-      } else {
-        // Only perform D16 folding if every user of the image sample is
-        // an ExtractElementInst immediately followed by an FPTrunc to half.
-        SmallVector<ExtractElementInst *, 4> Extracts;
-        SmallVector<FPTruncInst *, 4> Truncs;
-        bool AllHalfExtracts = true;
-
-        for (User *U : II.users()) {
-          auto *Ext = dyn_cast<ExtractElementInst>(U);
-          if (!Ext || !Ext->hasOneUse()) {
-            AllHalfExtracts = false;
-            break;
-          }
-          auto *Tr = dyn_cast<FPTruncInst>(*Ext->user_begin());
-          if (!Tr || !Tr->getType()->isHalfTy()) {
-            AllHalfExtracts = false;
-            break;
-          }
-          Extracts.push_back(Ext);
-          Truncs.push_back(Tr);
-        }
-
-        if (AllHalfExtracts && !Extracts.empty()) {
-          auto *VecTy = cast<VectorType>(II.getType());
-          Type *HalfVecTy =
-              VecTy->getWithNewType(Type::getHalfTy(II.getContext()));
-
-          // Obtain the original image sample intrinsic's signature
-          // and replace its return type with the half-vector for D16 folding
-          SmallVector<Type *, 8> SigTys;
-          Intrinsic::getIntrinsicSignature(II.getCalledFunction(), SigTys);
-          SigTys[0] = HalfVecTy;
-
-          Module *M = II.getModule();
-          Function *HalfDecl =
-              Intrinsic::getOrInsertDeclaration(M, ImageDimIntr->Intr, SigTys);
-
-          II.mutateType(HalfVecTy);
-          II.setCalledFunction(HalfDecl);
-
-          IRBuilder<> Builder(II.getContext());
-          for (auto [Ext, Tr] : zip(Extracts, Truncs)) {
-            Value *Idx = Ext->getIndexOperand();
-
-            Builder.SetInsertPoint(Tr);
-
-            Value *HalfExtract = Builder.CreateExtractElement(&II, Idx);
-            HalfExtract->takeName(Tr);
-
-            Tr->replaceAllUsesWith(HalfExtract);
-          }
-
-          for (FPTruncInst *T : Truncs)
-            IC.eraseInstFromFunction(*T);
-          for (ExtractElementInst *E : Extracts)
-            IC.eraseInstFromFunction(*E);
-
-          return &II;
-        }
       }
+
+      // Only perform D16 folding if every user of the image sample is
+      // an ExtractElementInst immediately followed by an FPTrunc to half.
+      SmallVector<ExtractElementInst *, 4> Extracts;
+      SmallVector<FPTruncInst *, 4> Truncs;
+
+      for (User *U : II.users()) {
+        auto *Ext = dyn_cast<ExtractElementInst>(U);
+        if (!Ext || !Ext->hasOneUse())
+          return std::nullopt;
+
+        auto *Tr = dyn_cast<FPTruncInst>(*Ext->user_begin());
+        if (!Tr || !Tr->getType()->isHalfTy())
+          return std::nullopt;
+
+        Extracts.push_back(Ext);
+        Truncs.push_back(Tr);
+      }
+
+      if (Extracts.empty())
+        return std::nullopt;
+
+      auto *VecTy = cast<VectorType>(II.getType());
+      Type *HalfVecTy = VecTy->getWithNewType(Type::getHalfTy(II.getContext()));
+
+      // Obtain the original image sample intrinsic's signature
+      // and replace its return type with the half-vector for D16 folding
+      SmallVector<Type *, 8> SigTys;
+      Intrinsic::getIntrinsicSignature(II.getCalledFunction(), SigTys);
+      SigTys[0] = HalfVecTy;
+
+      Module *M = II.getModule();
+      Function *HalfDecl =
+          Intrinsic::getOrInsertDeclaration(M, ImageDimIntr->Intr, SigTys);
+
+      II.mutateType(HalfVecTy);
+      II.setCalledFunction(HalfDecl);
+
+      IRBuilder<> Builder(II.getContext());
+      for (auto [Ext, Tr] : zip(Extracts, Truncs)) {
+        Value *Idx = Ext->getIndexOperand();
+
+        Builder.SetInsertPoint(Tr);
+
+        Value *HalfExtract = Builder.CreateExtractElement(&II, Idx);
+        HalfExtract->takeName(Tr);
+
+        Tr->replaceAllUsesWith(HalfExtract);
+      }
+
+      for (FPTruncInst *T : Truncs)
+        IC.eraseInstFromFunction(*T);
+      for (ExtractElementInst *E : Extracts)
+        IC.eraseInstFromFunction(*E);
+
+      return &II;
     }
   }
 
