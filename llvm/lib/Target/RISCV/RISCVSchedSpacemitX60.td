@@ -497,11 +497,15 @@ foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
   defvar ALULat = SMX60GetVIALULatency<mx>.c;
 
-  defm "" : LMULWriteResMX<"WriteVSALUV",   [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSALUX",   [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSALUI",   [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVAALUV",   [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVAALUX",   [SMX60_VIEU], mx, IsWorstCase>;
+  defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
+  
+  let Latency = ArithLat in {
+    defm "" : LMULWriteResMX<"WriteVSALUV",   [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSALUX",   [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSALUI",   [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAALUV",   [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAALUX",   [SMX60_VIEU], mx, IsWorstCase>;
+  }
   defm "" : LMULWriteResMX<"WriteVSMulV",   [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVSMulX",   [SMX60_VIEU], mx, IsWorstCase>;
   let Latency = ALULat in {
