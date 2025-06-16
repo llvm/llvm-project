@@ -41,6 +41,7 @@
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleCache.h"
+#include "clang/Summary/SummaryConsumer.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -739,10 +740,31 @@ CompilerInstance::createCodeCompletionConsumer(Preprocessor &PP,
   return new PrintingCodeCompleteConsumer(Opts, OS);
 }
 
+void CompilerInstance::createSummaryConsumer() {
+  const std::string &SummaryFile = getFrontendOpts().SummaryFile;
+  if (SummaryFile.empty())
+    return;
+
+  std::error_code EC;
+  SummaryOS.reset(new llvm::raw_fd_ostream(SummaryFile, EC,
+                                           llvm::sys::fs::CD_CreateAlways));
+
+  if (EC) {
+    SummaryOS = nullptr;
+    return;
+  }
+
+  TheSummaryConsumer.reset(
+      new JSONPrintingSummaryConsumer(getSummaryContext(), *SummaryOS));
+}
+
 void CompilerInstance::createSema(TranslationUnitKind TUKind,
-                                  CodeCompleteConsumer *CompletionConsumer) {
+                                  CodeCompleteConsumer *CompletionConsumer,
+                                  SummaryConsumer *SummaryConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
-                         TUKind, CompletionConsumer));
+                         TUKind, CompletionConsumer,
+                         hasSummaryContext() ? &getSummaryContext() : nullptr,
+                         SummaryConsumer));
 
   // Set up API notes.
   TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);

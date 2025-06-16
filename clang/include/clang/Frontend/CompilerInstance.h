@@ -19,6 +19,7 @@
 #include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Summary/SummaryContext.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -48,6 +49,8 @@ class ModuleFile;
 }
 
 class CodeCompleteConsumer;
+class SummaryContext;
+class SummaryConsumer;
 class DiagnosticsEngine;
 class DiagnosticConsumer;
 class FileManager;
@@ -120,6 +123,15 @@ class CompilerInstance : public ModuleLoader {
 
   /// The code completion consumer.
   std::unique_ptr<CodeCompleteConsumer> CompletionConsumer;
+
+  /// The summary consumer.
+  std::unique_ptr<SummaryConsumer> TheSummaryConsumer;
+
+  /// The summary context.
+  std::unique_ptr<SummaryContext> SummaryCtx;
+
+  /// The summary output file.
+  std::unique_ptr<llvm::raw_fd_ostream> SummaryOS;
 
   /// The semantic analysis object.
   std::unique_ptr<Sema> TheSema;
@@ -612,6 +624,29 @@ public:
   void setCodeCompletionConsumer(CodeCompleteConsumer *Value);
 
   /// @}
+  /// @name Summary
+  /// @{
+
+  bool hasSummaryContext() { return (bool)SummaryCtx; }
+
+  SummaryContext &getSummaryContext() {
+    assert(SummaryCtx && "Compiler instance has no summary context!");
+    return *SummaryCtx;
+  }
+
+  void createSummaryContext() { SummaryCtx.reset(new SummaryContext()); }
+
+  bool hasSummaryConsumer() const { return (bool)TheSummaryConsumer; }
+
+  SummaryConsumer &getSummaryConsumer() const {
+    assert(TheSummaryConsumer &&
+           "Compiler instance has no code summary consumer!");
+    return *TheSummaryConsumer;
+  }
+
+  void createSummaryConsumer();
+
+  /// @}
   /// @name Frontend timer
   /// @{
 
@@ -738,7 +773,8 @@ public:
 
   /// Create the Sema object to be used for parsing.
   void createSema(TranslationUnitKind TUKind,
-                  CodeCompleteConsumer *CompletionConsumer);
+                  CodeCompleteConsumer *CompletionConsumer,
+                  SummaryConsumer *SummaryConsumer = nullptr);
 
   /// Create the frontend timer and replace any existing one with it.
   void createFrontendTimer();
