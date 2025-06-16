@@ -7257,6 +7257,7 @@ static Function *emitTargetTaskProxyFunction(
     assert(TaskTy != TaskWithPrivatesTy &&
            "If there are offloading arrays to pass to the target"
            "TaskTy cannot be the same as TaskWithPrivatesTy");
+    (void)TaskTy;
     Value *Privates =
         Builder.CreateStructGEP(TaskWithPrivatesTy, TaskWithPrivates, 1);
     for (unsigned int i = 0; i < NumOffloadingArrays; ++i)
@@ -7669,6 +7670,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
         Type *ElementType = PrivatesTy->getElementType(i);
         assert(ElementType == ArrayType &&
                "ElementType should match ArrayType");
+        (void)ArrayType;
 
         Value *Dst = Builder.CreateStructGEP(PrivatesTy, Privates, i);
         Builder.CreateMemCpy(
