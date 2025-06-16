@@ -2904,7 +2904,7 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
                          ObjectOffset);
     if (FPAfterSVECalleeSaves) {
       assert(-ObjectOffset > (int64_t)AFI->getSVECalleeSavedStackSize() &&
-           "Math isn't correct for CSRs with FPAfterSVECalleeSaves");
+             "Math isn't correct for CSRs with FPAfterSVECalleeSaves");
       FPOffset += StackOffset::getScalable(AFI->getSVECalleeSavedStackSize());
     }
     // Always use the FP for SVE spills if available and beneficial.
