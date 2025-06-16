@@ -371,9 +371,11 @@ foreach mx = SchedMxList in {
   defm "" : LMULWriteResMX<"WriteVICmpI",    [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVIMinMaxV", [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVIMinMaxX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIMergeV",  [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIMergeX",  [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIMergeI",  [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = ALULat in {
+    defm "" : LMULWriteResMX<"WriteVIMergeV",  [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMergeX",  [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMergeI",  [SMX60_VIEU], mx, IsWorstCase>;
+  }
   defm "" : LMULWriteResMX<"WriteVIMovV",    [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVIMovX",    [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVIMovI",    [SMX60_VIEU], mx, IsWorstCase>;
