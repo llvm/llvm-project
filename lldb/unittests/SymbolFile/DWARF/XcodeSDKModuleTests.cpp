@@ -116,7 +116,7 @@ DWARF:
   SymbolFileDWARF &sym_file = dwarf_cu->GetSymbolFileDWARF();
   CompUnitSP comp_unit = sym_file.GetCompileUnitAtIndex(0);
   ASSERT_TRUE(static_cast<bool>(comp_unit.get()));
-  XcodeSDK sdk = sym_file.ParseXcodeSDK(*comp_unit);
+  XcodeSDKPath sdk = sym_file.ParseXcodeSDK(*comp_unit);
   ASSERT_EQ(sdk.GetType(), XcodeSDK::Type::MacOSX);
 }
 
