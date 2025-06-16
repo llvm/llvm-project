@@ -2709,7 +2709,8 @@ The following relocation types are supported:
 the ``mesa3d`` OS, which does not support ``R_AMDGPU_ABS64``.
 
 There is no current OS loader support for 32-bit programs and so
-``R_AMDGPU_ABS32`` is not used.
+``R_AMDGPU_ABS32`` is only generated for static relocations, for example to
+implement some DWARF32 forms.
 
 .. _amdgpu-loaded-code-object-path-uniform-resource-identifier:
 
