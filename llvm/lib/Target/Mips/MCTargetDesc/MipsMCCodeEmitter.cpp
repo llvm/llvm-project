@@ -13,7 +13,7 @@
 #include "MipsMCCodeEmitter.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsFixupKinds.h"
-#include "MCTargetDesc/MipsMCExpr.h"
+#include "MCTargetDesc/MipsMCAsmInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -585,110 +585,110 @@ getExprOpValue(const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
 
     Mips::Fixups FixupKind = Mips::Fixups(0);
     switch (MipsExpr->getSpecifier()) {
-    case MipsMCExpr::MEK_None:
-    case MipsMCExpr::MEK_Special:
+    case Mips::S_None:
+    case Mips::S_Special:
       llvm_unreachable("Unhandled fixup kind!");
       break;
-    case MipsMCExpr::MEK_DTPREL:
+    case Mips::S_DTPREL:
       // MEK_DTPREL is used for marking TLS DIEExpr only
       // and contains a regular sub-expression.
       return getExprOpValue(MipsExpr->getSubExpr(), Fixups, STI);
-    case MipsMCExpr::MEK_CALL_HI16:
+    case Mips::S_CALL_HI16:
       FixupKind = Mips::fixup_Mips_CALL_HI16;
       break;
-    case MipsMCExpr::MEK_CALL_LO16:
+    case Mips::S_CALL_LO16:
       FixupKind = Mips::fixup_Mips_CALL_LO16;
       break;
-    case MipsMCExpr::MEK_DTPREL_HI:
+    case Mips::S_DTPREL_HI:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_TLS_DTPREL_HI16
                                    : Mips::fixup_Mips_DTPREL_HI;
       break;
-    case MipsMCExpr::MEK_DTPREL_LO:
+    case Mips::S_DTPREL_LO:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_TLS_DTPREL_LO16
                                    : Mips::fixup_Mips_DTPREL_LO;
       break;
-    case MipsMCExpr::MEK_GOTTPREL:
+    case Mips::S_GOTTPREL:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_GOTTPREL
                                    : Mips::fixup_Mips_GOTTPREL;
       break;
-    case MipsMCExpr::MEK_GOT:
+    case Mips::S_GOT:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_GOT16
                                    : Mips::fixup_Mips_GOT;
       break;
-    case MipsMCExpr::MEK_GOT_CALL:
+    case Mips::S_GOT_CALL:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_CALL16
                                    : Mips::fixup_Mips_CALL16;
       break;
-    case MipsMCExpr::MEK_GOT_DISP:
+    case Mips::S_GOT_DISP:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_GOT_DISP
                                    : Mips::fixup_Mips_GOT_DISP;
       break;
-    case MipsMCExpr::MEK_GOT_HI16:
+    case Mips::S_GOT_HI16:
       FixupKind = Mips::fixup_Mips_GOT_HI16;
       break;
-    case MipsMCExpr::MEK_GOT_LO16:
+    case Mips::S_GOT_LO16:
       FixupKind = Mips::fixup_Mips_GOT_LO16;
       break;
-    case MipsMCExpr::MEK_GOT_PAGE:
+    case Mips::S_GOT_PAGE:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_GOT_PAGE
                                    : Mips::fixup_Mips_GOT_PAGE;
       break;
-    case MipsMCExpr::MEK_GOT_OFST:
+    case Mips::S_GOT_OFST:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_GOT_OFST
                                    : Mips::fixup_Mips_GOT_OFST;
       break;
-    case MipsMCExpr::MEK_GPREL:
+    case Mips::S_GPREL:
       FixupKind = Mips::fixup_Mips_GPREL16;
       break;
-    case MipsMCExpr::MEK_LO:
+    case Mips::S_LO:
       // Check for %lo(%neg(%gp_rel(X)))
-      if (MipsExpr->isGpOff())
+      if (Mips::isGpOff(*MipsExpr))
         FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_GPOFF_LO
                                      : Mips::fixup_Mips_GPOFF_LO;
       else
         FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_LO16
                                      : Mips::fixup_Mips_LO16;
       break;
-    case MipsMCExpr::MEK_HIGHEST:
+    case Mips::S_HIGHEST:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_HIGHEST
                                    : Mips::fixup_Mips_HIGHEST;
       break;
-    case MipsMCExpr::MEK_HIGHER:
+    case Mips::S_HIGHER:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_HIGHER
                                    : Mips::fixup_Mips_HIGHER;
       break;
-    case MipsMCExpr::MEK_HI:
+    case Mips::S_HI:
       // Check for %hi(%neg(%gp_rel(X)))
-      if (MipsExpr->isGpOff())
+      if (Mips::isGpOff(*MipsExpr))
         FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_GPOFF_HI
                                      : Mips::fixup_Mips_GPOFF_HI;
       else
         FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_HI16
                                      : Mips::fixup_Mips_HI16;
       break;
-    case MipsMCExpr::MEK_PCREL_HI16:
+    case Mips::S_PCREL_HI16:
       FixupKind = Mips::fixup_MIPS_PCHI16;
       break;
-    case MipsMCExpr::MEK_PCREL_LO16:
+    case Mips::S_PCREL_LO16:
       FixupKind = Mips::fixup_MIPS_PCLO16;
       break;
-    case MipsMCExpr::MEK_TLSGD:
+    case Mips::S_TLSGD:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_TLS_GD
                                    : Mips::fixup_Mips_TLSGD;
       break;
-    case MipsMCExpr::MEK_TLSLDM:
+    case Mips::S_TLSLDM:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_TLS_LDM
                                    : Mips::fixup_Mips_TLSLDM;
       break;
-    case MipsMCExpr::MEK_TPREL_HI:
+    case Mips::S_TPREL_HI:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_TLS_TPREL_HI16
                                    : Mips::fixup_Mips_TPREL_HI;
       break;
-    case MipsMCExpr::MEK_TPREL_LO:
+    case Mips::S_TPREL_LO:
       FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_TLS_TPREL_LO16
                                    : Mips::fixup_Mips_TPREL_LO;
       break;
-    case MipsMCExpr::MEK_NEG:
+    case Mips::S_NEG:
       FixupKind =
           isMicroMips(STI) ? Mips::fixup_MICROMIPS_SUB : Mips::fixup_Mips_SUB;
       break;

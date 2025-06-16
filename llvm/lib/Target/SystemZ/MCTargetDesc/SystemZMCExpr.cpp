@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZMCExpr.h"
+#include "SystemZMCAsmInfo.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 using namespace llvm;
 
@@ -19,11 +21,11 @@ const SystemZMCExpr *SystemZMCExpr::create(MCSpecifierExpr::Spec S,
 
 StringRef SystemZMCExpr::getVariantKindName() const {
   switch (getSpecifier()) {
-  case VK_None:
+  case SystemZ::S_None:
     return "A";
-  case VK_SystemZ_RCon:
+  case SystemZ::S_RCon:
     return "R";
-  case VK_SystemZ_VCon:
+  case SystemZ::S_VCon:
     return "V";
   default:
     llvm_unreachable("Invalid kind");
@@ -32,7 +34,7 @@ StringRef SystemZMCExpr::getVariantKindName() const {
 
 void SystemZMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   OS << getVariantKindName() << '(';
-  Expr->print(OS, MAI);
+  MAI->printExpr(OS, *Expr);
   OS << ')';
 }
 
