@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-linux-gnu -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ITANIUM,CHECK-64BIT
-// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI64,CHECK-64BIT
-// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple i386-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI32,CHECK-32BIT
+// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI64,CHECK-64BIT,CLANG21-MSABI,CLANG21-MSABI64
+// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple i386-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI32,CHECK-32BIT,CLANG21-MSABI,CLANG21-MSABI32
+// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple i386-windows -fclang-abi-compat=20 -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-32BIT,CHECK-MSABI32,CLANG20-MSABI
+// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-windows -fclang-abi-compat=20 -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI64,CHECK-64BIT,CLANG20-MSABI
 
 // PR46908: ensure the IR passes the verifier with optimizations enabled.
 // RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm-only %s -triple x86_64-linux-gnu -O2
@@ -165,38 +167,44 @@ H::~H() { call_in_dtor(); }
 // CHECK-MSABI-NOT: call{{ }}
 // CHECK-MSABI: store i32 %[[IP]], ptr %[[IP_ALLOCA:.*]]
 // CHECK-MSABI: %[[IMP_PARAM:.*]] = load i32, ptr %[[IP_ALLOCA]]
-// CHECK-MSABI-NEXT: %[[THIRDBIT:.*]] = and i32 %[[IMP_PARAM]], 4
-// CHECK-MSABI-NEXT: %[[CHCK:.*]] = icmp eq i32 %[[THIRDBIT]], 0
-// CHECK-MSABI-NEXT: br i1 %[[CHCK]], label %dtor.entry_cont, label %dtor.call_dtor
+// CLANG21: %[[THIRDBIT:.*]] = and i32 %[[IMP_PARAM]], 4
+// CLANG21-NEXT: %[[CHCK:.*]] = icmp eq i32 %[[THIRDBIT]], 0
+// CLANG21-NEXT: br i1 %[[CHCK]], label %dtor.entry_cont, label %dtor.call_dtor
+// CLANG20-MSABI: %[[FIRSTBIT:.*]] = and i32 %[[IMP_PARAM]], 1
+// CLANG20-MSABI: %[[CHCK:.*]] = icmp eq i32 %[[FIRSTBIT]], 0
+// CLANG20-MSABI: br i1 %[[CHCK]], label %dtor.continue, label %dtor.call_delete
 //
-// CHECK_MSABI-LABEL: dtor.call_dtor:
-// CHECK_MSABI-NEXT: call void @"??1H@@UEAA@XZ"({{.*}})
-// CHECK_MSABI-NEXT: br label %dtor.entry_cont
+// CLANG21-MSABI: dtor.call_dtor:
+// CLANG21-MSABI64-NEXT: call void @"??1H@@UEAA@XZ"({{.*}})
+// CLANG21-MSABI32-NEXT: call x86_thiscallcc void @"??1H@@UAE@XZ"({{.*}})
+// CLANG21-MSABI-NEXT: br label %dtor.entry_cont
 //
-// CHECK_MSABI-LABEL: dtor.entry_cont:
-// CHECK_MSABI-NEXT: %[[FIRSTBIT:.*]] = and i32 %[[IMP_PARAM]], 1
-// CHECK_MSABI-NEXT: %[[CHCK1:.*]] = icmp eq i32 %[[FIRSTBIT]], 0
-// CHECK_MSABI-NEXT: br i1 %[[CHCK1]], label %dtor.continue, label %dtor.call_delete
+// CLANG21-MSABI-LABEL: dtor.entry_cont:
+// CLANG21-MSABI-NEXT: %[[FIRSTBIT:.*]] = and i32 %[[IMP_PARAM]], 1
+// CLANG21-MSABI-NEXT: %[[CHCK1:.*]] = icmp eq i32 %[[FIRSTBIT]], 0
+// CLANG21-MSABI-NEXT: br i1 %[[CHCK1]], label %dtor.continue, label %dtor.call_delete
 //
-// CHECK_MSABI-LABEL: dtor.call_delete:
-// CHECK-MSABI: %[[THIRDBIT1:.*]] = and i32 %[[IMP_PARAM]], 4
-// CHECK-MSABI-NEXT: %[[CHCK2:.*]] = icmp eq i32 %[[THIRDBIT1]], 0
-// CHECK-MSABI-NEXT: br i1 %[[CHCK2]], label %dtor.call_class_delete, label %dtor.call_glob_delete
+// CLANG21-MSABI-LABEL: dtor.call_delete:
+// CLANG21-MSABI: %[[THIRDBIT1:.*]] = and i32 %[[IMP_PARAM]], 4
+// CLANG21-MSABI-NEXT: %[[CHCK2:.*]] = icmp eq i32 %[[THIRDBIT1]], 0
+// CLANG21-MSABI-NEXT: br i1 %[[CHCK2]], label %dtor.call_class_delete, label %dtor.call_glob_delete
 //
-// CHECK-MSABI-LABEL: dtor.call_glob_delete:
-// CHECK-MSABI64: call void @"??3@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef 48)
-// CHECK-MSABI32: call void @"??3@YAXPAXIW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i32 noundef 32, i32 noundef 16)
-// CHECK-MSABI-NEXT: br label %[[RETURN:.*]]
+// CLANG21-MSABI-LABEL: dtor.call_glob_delete:
+// CLANG21-MSABI64: call void @"??3@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef 48)
+// CLANG21-MSABI32: call void @"??3@YAXPAXIW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i32 noundef 32, i32 noundef 16)
+// CLANG21-MSABI-NEXT: br label %[[RETURN:.*]]
 //
-// CHECK-MSABI: dtor.call_class_delete:
-// CHECK-MSABI-NOT: call{{ }}
-// CHECK-MSABI64: getelementptr {{.*}}, i64 24
-// CHECK-MSABI32: getelementptr {{.*}}, i32 20
-// CHECK-MSABI-NOT: call{{ }}
+// CLANG20-MSABI: dtor.call_delete:
+// CLANG21-MSABI: dtor.call_class_delete:
+// CLANG21-MSABI-NOT: call{{ }}
+// CLANG21-MSABI64: getelementptr {{.*}}, i64 24
+// CLANG21-MSABI32: getelementptr {{.*}}, i32 20
+// CLANG21-MSABI-NOT: call{{ }}
 // CHECK-MSABI64: call void @"??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"({{.*}}, i64 noundef 48, i64 noundef 16)
 // CHECK-MSABI32: call void @"??3F@@SAXPAU0@Udestroying_delete_t@std@@IW4align_val_t@2@@Z"({{.*}}, i32 noundef 32, i32 noundef 16)
 // CHECK-MSABI: br label %[[RETURN:]]
 //
+// CHECK-MSABI: dtor.continue:
 // CHECK-MSABI64: call void @"??1H@@UEAA@XZ"(
 // CHECK-MSABI32: call x86_thiscallcc void @"??1H@@UAE@XZ"(
 // CHECK-MSABI: br label %[[RETURN]]
@@ -217,31 +225,32 @@ I::~I() { call_in_dtor(); }
 // CHECK-MSABI32-LABEL: define {{.*}} @"??_GI@@UAEPAXI@Z"(
 // CHECK-MSABI-NOT: call{{ }}
 // CHECK-MSABI: load i32
-// CHECK-MSABI-NEXT: and i32 %[[IMP_PARAM:.*]], 4
-// CHECK-MSABI-NEXT: icmp eq i32 {{.*}}, 0
-// CHECK-MSABI-NEXT: br i1 %[[CHCK]], label %dtor.entry_cont, label %dtor.call_dtor
+// CLANG21-MSABI-NEXT: and i32 %[[IMP_PARAM:.*]], 4
+// CLANG21-MSABI-NEXT: icmp eq i32 {{.*}}, 0
+// CLANG21-MSABI-NEXT: br i1 %{{.*}}, label %dtor.entry_cont, label %dtor.call_dtor
 //
-// CHECK-MSABI: dtor.call_dtor:
-// CHECK-MSABI64-NEXT: call void @"??1I@@UEAA@XZ"({{.*}})
-// CHECK-MSABI32-NEXT: call x86_thiscallcc void @"??1I@@UAE@XZ"({{.*}})
-// CHECK-MSABI-NEXT: br label %dtor.entry_cont
+// CLANG21-MSABI: dtor.call_dtor:
+// CLANG21-MSABI64-NEXT: call void @"??1I@@UEAA@XZ"({{.*}})
+// CLANG21-MSABI32-NEXT: call x86_thiscallcc void @"??1I@@UAE@XZ"({{.*}})
+// CLANG21-MSABI-NEXT: br label %dtor.entry_cont
 //
-// CHECK-MSABI: dtor.entry_cont:
-// CHECK-MSABI-NEXT: and i32 %[[IMP_PARAM]], 1
-// CHECK-MSABI-NEXT: icmp eq i32 %{{.*}}, 0
-// CHECK-MSABI-NEXT: br i1 %{{.*}}, label %dtor.continue, label %dtor.call_delete
+// CLANG21-MSABI: dtor.entry_cont:
+// CLANG21-MSABI-NEXT: and i32 %[[IMP_PARAM]], 1
+// CLANG21-MSABI-NEXT: icmp eq i32 %{{.*}}, 0
+// CLANG21-MSABI-NEXT: br i1 %{{.*}}, label %dtor.continue, label %dtor.call_delete
 //
-// CHECK-MSABI: dtor.call_delete:
-// CHECK-MSABI-NEXT: %[[THIRDBIT1:.*]] = and i32 %[[IMP_PARAM]], 4
-// CHECK-MSABI-NEXT: %[[CHCK2:.*]] = icmp eq i32 %[[THIRDBIT1]], 0
-// CHECK-MSABI-NEXT: br i1 %[[CHCK2]], label %dtor.call_class_delete, label %dtor.call_glob_delete
+// CLANG21-MSABI: dtor.call_delete:
+// CLANG21-MSABI-NEXT: %[[THIRDBIT1:.*]] = and i32 %[[IMP_PARAM]], 4
+// CLANG21-MSABI-NEXT: %[[CHCK2:.*]] = icmp eq i32 %[[THIRDBIT1]], 0
+// CLANG21-MSABI-NEXT: br i1 %[[CHCK2]], label %dtor.call_class_delete, label %dtor.call_glob_delete
 //
-// CHECK-MSABI-LABEL: dtor.call_glob_delete:
-// CHECK-MSABI64: call void @"??3@YAXPEAX_KW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i64 noundef 96, i64 noundef 32)
-// CHECK-MSABI32: call void @"??3@YAXPAXIW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i32 noundef 64, i32 noundef 32)
-// CHECK-MSABI-NEXT: br label %[[RETURN:.*]]
+// CLANG21-MSABI: dtor.call_glob_delete:
+// CLANG21-MSABI64: call void @"??3@YAXPEAX_KW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i64 noundef 96, i64 noundef 32)
+// CLANG21-MSABI32: call void @"??3@YAXPAXIW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i32 noundef 64, i32 noundef 32)
+// CLANG21-MSABI-NEXT: br label %[[RETURN:.*]]
 //
-// CHECK_MSABI: dtor.call_class_delete:
+// CLANG20-MSABI: dtor.call_delete:
+// CLANG21-MSABI: dtor.call_class_delete:
 // CHECK-MSABI-NOT: call{{ }}
 // CHECK-MSABI64: getelementptr {{.*}}, i64 24
 // CHECK-MSABI32: getelementptr {{.*}}, i32 20

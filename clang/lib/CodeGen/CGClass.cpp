@@ -1596,7 +1596,11 @@ namespace {
     assert(OD->isDestroyingOperatorDelete() == ReturnAfterDelete &&
            "unexpected value for ReturnAfterDelete");
     auto *CondTy = cast<llvm::IntegerType>(ShouldDeleteCondition->getType());
-    if (OD->isDestroyingOperatorDelete()) {
+    // Clang 20 calls global operator delete after dtor call. Clang 21 and newer
+    // call global operator delete inside of dtor body, as MSVC does.
+    bool Clang21AndNewer = CGF.getContext().getLangOpts().getClangABICompat() >
+                           LangOptions::ClangABI::Ver20;
+    if (Clang21AndNewer && OD->isDestroyingOperatorDelete()) {
       llvm::BasicBlock *CallDtor = CGF.createBasicBlock("dtor.call_dtor");
       llvm::BasicBlock *DontCallDtor = CGF.createBasicBlock("dtor.entry_cont");
       // Third bit set signals that global operator delete is called. That means
@@ -1636,7 +1640,7 @@ namespace {
     // always call it. Otherwise we need to check the third bit and call the
     // appropriate operator delete, i.e. global or class-specific.
     if (const FunctionDecl *GlobOD = Dtor->getOperatorGlobalDelete();
-        isa<CXXMethodDecl>(OD) && GlobOD) {
+        isa<CXXMethodDecl>(OD) && GlobOD && Clang21AndNewer) {
       // Third bit set signals that global operator delete is called, i.e.
       // ::delete appears on the callsite.
       llvm::Value *CheckTheBitForGlobDeleteCall = CGF.Builder.CreateAnd(
