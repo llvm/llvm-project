@@ -51,8 +51,8 @@ private:
 #elif defined(_MSC_VER)
       std::string_view v(__FUNCSIG__);
       // Extract the "xyz" from the "pretty function" string:
-      // "... TypeOf<xyz>::get(void)"
-      std::string_view front(" TypeOf<");
+      // "...TypeOf<xyz>::get(void)"
+      std::string_view front("TypeOf<");
       std::string_view back(">::get(void)");
 
 #else
