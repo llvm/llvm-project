@@ -3532,7 +3532,7 @@ bool GCNHazardRecognizer::fixScratchBaseForwardingHazard(MachineInstr *MI) {
       return 0;
     };
 
-    auto IsExpiredFn = [](const MachineInstr &MI, int SgprWrites) {
+    auto IsExpiredFn = [=](const MachineInstr &MI, int SgprWrites) {
       if (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
         unsigned Wait = MI.getOperand(0).getImm();
         if (AMDGPU::DepCtr::decodeFieldSaSdst(Wait) == 0 &&
