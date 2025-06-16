@@ -67,13 +67,10 @@ void testGlobalNoThrowPlacementExprNewBeforeOverload() {
 //----- Standard pointer placement operators
 void testGlobalPointerPlacementNew() {
   int i;
-  void *p1 = operator new(0, &i); // no warn
-
-  void *p2 = operator new[](0, &i); // no warn
-
-  int *p3 = new(&i) int; // no warn
-
-  int *p4 = new(&i) int[0]; // no warn
+  void *p1 = operator new(0, &i); // no leak: placement new never allocates
+  void *p2 = operator new[](0, &i); // no leak
+  int *p3 = new(&i) int; // no leak
+  int *p4 = new(&i) int[0]; // no leak
 }
 
 template<typename T>
