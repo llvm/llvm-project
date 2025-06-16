@@ -1219,7 +1219,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   // while examining it in isolation without considering the probability of
   // actually reaching it, we store the new trip count as separate metadata.
   //
-  // FIXME: getLoopEstimatedTripCount and setLoopEstimatedTripCount skip loops
+  // TODO: getLoopEstimatedTripCount and setLoopEstimatedTripCount skip loops
   // that don't match the restrictions of getExpectedExitLoopLatchBranch in
   // LoopUtils.cpp.  For example,
   // llvm/tests/Transforms/LoopUnroll/peel-branch-weights.ll (introduced by

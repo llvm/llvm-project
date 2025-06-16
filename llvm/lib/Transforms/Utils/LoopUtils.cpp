@@ -866,10 +866,6 @@ llvm::getLoopEstimatedTripCount(Loop *L,
             getEstimatedTripCount(LatchBranch, L, ExitWeight)) {
       if (EstimatedLoopInvocationWeight)
         *EstimatedLoopInvocationWeight = ExitWeight;
-      // FIXME: Where else are branch weights directly used for estimating loop
-      // trip counts?  They should also be updated to use
-      // LLVMLoopEstimatedTripCount when present... or to just call this
-      // function.
       if (auto EstimatedTripCount =
               getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount))
         return EstimatedTripCount;
