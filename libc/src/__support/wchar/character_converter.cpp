@@ -70,7 +70,7 @@ ErrorOr<char8_t> CharacterConverter::pop_utf8() {
   char32_t output;
 
   // Shift to get the next 6 bits from the utf32 encoding
-  const char32_t shift_amount =
+  const size_t shift_amount =
       (state->total_bytes - state->bytes_processed - 1) * ENCODED_BITS_PER_UTF8;
   if (state->bytes_processed == 0) {
     /*
