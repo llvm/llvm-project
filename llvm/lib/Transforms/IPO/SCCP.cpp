@@ -384,7 +384,6 @@ PreservedAnalyses IPSCCPPass::run(Module &M, ModuleAnalysisManager &AM) {
     return FAM.getResult<BlockFrequencyAnalysis>(F);
   };
 
-
   if (!runIPSCCP(M, DL, &FAM, GetTLI, GetTTI, GetAC, GetDT, GetBFI,
                  isFuncSpecEnabled()))
     return PreservedAnalyses::all();

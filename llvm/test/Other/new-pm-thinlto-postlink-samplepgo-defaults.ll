@@ -62,6 +62,7 @@
 
 ; CHECK-O-NEXT: Running pass: PGOForceFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: AlwaysInlinerPass
+; CHECK-O-NEXT: Running pass: AlwaysSpecializerPass
 ; CHECK-O-NEXT: Running pass: ModuleInlinerWrapperPass
 ; CHECK-O-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
