@@ -549,7 +549,7 @@ struct ConvertAllReduceOp : public OpConversionPattern<AllReduceOp> {
                   ConversionPatternRewriter &rewriter) const override {
     SymbolTableCollection symbolTableCollection;
     auto mesh = adaptor.getMesh();
-    auto meshOp = getMesh(op, symbolTableCollection);
+    mlir::mesh::MeshOp meshOp = getMesh(op, symbolTableCollection);
     if (!meshOp)
       return op->emitError() << "No mesh found for AllReduceOp";
     if (ShapedType::isDynamicShape(meshOp.getShape()))
