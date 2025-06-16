@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZMCExpr.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 using namespace llvm;
 
@@ -32,7 +33,7 @@ StringRef SystemZMCExpr::getVariantKindName() const {
 
 void SystemZMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   OS << getVariantKindName() << '(';
-  Expr->print(OS, MAI);
+  MAI->printExpr(OS, *Expr);
   OS << ')';
 }
 
