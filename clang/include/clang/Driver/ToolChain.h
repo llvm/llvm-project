@@ -94,19 +94,22 @@ public:
   using path_list = SmallVector<std::string, 16>;
 
   enum CXXStdlibType {
-    CST_Libcxx,
-    CST_Libstdcxx
+    CST_Libcxx, // LLVM libc++
+    CST_Libstdcxx,  // GNU libstdc++
+    CST_Stl,  // MSVC STL
   };
 
   enum RuntimeLibType {
     RLT_CompilerRT,
-    RLT_Libgcc
+    RLT_Libgcc,
+    RLT_Vcruntime
   };
 
   enum UnwindLibType {
     UNW_None,
     UNW_CompilerRT,
-    UNW_Libgcc
+    UNW_Libgcc,
+    UNW_Vcruntime
   };
 
   enum class UnwindTableLevel {
