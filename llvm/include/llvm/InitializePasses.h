@@ -128,6 +128,7 @@ void initializeGVNLegacyPassPass(PassRegistry &);
 void initializeGlobalMergeFuncPassWrapperPass(PassRegistry &);
 void initializeGlobalMergePass(PassRegistry &);
 void initializeGlobalsAAWrapperPassPass(PassRegistry &);
+void initializeGuardedLoadHardeningPass(PassRegistry &);
 void initializeHardwareLoopsLegacyPass(PassRegistry &);
 void initializeMIRProfileLoaderPassPass(PassRegistry &);
 void initializeIRSimilarityIdentifierWrapperPassPass(PassRegistry &);
