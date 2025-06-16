@@ -104,10 +104,9 @@ struct OperandInfo {
   std::vector<EncodingField> Fields;
   std::string Decoder;
   bool HasCompleteDecoder;
-  uint64_t InitValue;
+  uint64_t InitValue = 0;
 
-  OperandInfo(std::string D, bool HCD)
-      : Decoder(D), HasCompleteDecoder(HCD), InitValue(0) {}
+  OperandInfo(std::string D, bool HCD) : Decoder(D), HasCompleteDecoder(HCD) {}
 
   void addField(unsigned Base, unsigned Width, unsigned Offset) {
     Fields.push_back(EncodingField(Base, Width, Offset));
