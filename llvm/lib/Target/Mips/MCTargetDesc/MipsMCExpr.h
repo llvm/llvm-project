@@ -29,16 +29,6 @@ public:
                                   MCContext &Ctx);
   static const MipsMCExpr *createGpOff(Specifier S, const MCExpr *Expr,
                                        MCContext &Ctx);
-
-  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAssembler *Asm) const override;
-
-  bool isGpOff(Specifier &S) const;
-  bool isGpOff() const {
-    Specifier S;
-    return isGpOff(S);
-  }
 };
 
 } // end namespace llvm
