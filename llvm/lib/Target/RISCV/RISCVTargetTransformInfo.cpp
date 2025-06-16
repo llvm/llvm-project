@@ -604,7 +604,7 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
 
 // Consolidate!
 static MVT getLMUL1VT(MVT VT) {
-  assert(VT.getVectorElementType().getSizeInBits() <= 64 &&
+  assert(VT.getVectorElementType().getSizeInBits() <= RISCV::RVVBitsPerBlock &&
          "Unexpected vector MVT");
   return MVT::getScalableVectorVT(
       VT.getVectorElementType(),

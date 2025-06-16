@@ -18,12 +18,12 @@ struct S {
     Int i;
 };
 
-// CHECK: define spir_func target("spirv.Type", target("spirv.Image", float, 5, 2, 0, 0, 2, 0), target("spirv.IntegralConstant", i64, 4), 28, 0, 0) @_Z14getArrayBufferu17spirv_type_28_0_0U5_TypeN4hlsl8RWBufferIfEEU6_ConstLm4E(target("spirv.Type", target("spirv.Image", float, 5, 2, 0, 0, 2, 0), target("spirv.IntegralConstant", i64, 4), 28, 0, 0) %v) #0
+// CHECK: define hidden spir_func target("spirv.Type", target("spirv.Image", float, 5, 2, 0, 0, 2, 0), target("spirv.IntegralConstant", i64, 4), 28, 0, 0) @_Z14getArrayBufferu17spirv_type_28_0_0U5_TypeN4hlsl8RWBufferIfEEU6_ConstLm4E(target("spirv.Type", target("spirv.Image", float, 5, 2, 0, 0, 2, 0), target("spirv.IntegralConstant", i64, 4), 28, 0, 0) %v) #0
 ArrayBuffer<4> getArrayBuffer(ArrayBuffer<4> v) {
     return v;
 }
 
-// CHECK: define spir_func target("spirv.Type", target("spirv.Literal", 32), target("spirv.Literal", 0), 21, 4, 32) @_Z6getIntu18spirv_type_21_4_32U4_LitLi32EU4_LitLi0E(target("spirv.Type", target("spirv.Literal", 32), target("spirv.Literal", 0), 21, 4, 32) %v) #0
+// CHECK: define hidden spir_func target("spirv.Type", target("spirv.Literal", 32), target("spirv.Literal", 0), 21, 4, 32) @_Z6getIntu18spirv_type_21_4_32U4_LitLi32EU4_LitLi0E(target("spirv.Type", target("spirv.Literal", 32), target("spirv.Literal", 0), 21, 4, 32) %v) #0
 Int getInt(Int v) {
     return v;
 }
