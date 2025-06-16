@@ -438,12 +438,12 @@ public:
       return RISCVMCExpr::create(Expr, ELF::R_RISCV_PCREL_HI20, Ctx);
     case ELF::R_RISCV_PCREL_LO12_I:
     case ELF::R_RISCV_PCREL_LO12_S:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_PCREL_LO, Ctx);
+      return RISCVMCExpr::create(Expr, RISCV::S_PCREL_LO, Ctx);
     case ELF::R_RISCV_HI20:
       return RISCVMCExpr::create(Expr, ELF::R_RISCV_HI20, Ctx);
     case ELF::R_RISCV_LO12_I:
     case ELF::R_RISCV_LO12_S:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_LO, Ctx);
+      return RISCVMCExpr::create(Expr, RISCV::S_LO, Ctx);
     case ELF::R_RISCV_CALL:
       return RISCVMCExpr::create(Expr, ELF::R_RISCV_CALL_PLT, Ctx);
     case ELF::R_RISCV_CALL_PLT:
