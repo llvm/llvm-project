@@ -235,6 +235,9 @@ static void replaceMemCpy(MemCpyInst *MCI, CBufferResource &CBR,
   IRBuilder<> Builder(MCI);
   CBR.createAndSetCurrentHandle(Builder);
 
+  // This function recursively copies N array elements from the CBuffer Resource
+  // to the MemCpy Destination. Recursion is used to unravel multidimensional
+  // arrays into a sequence of scalar/vector extracts and stores.
   auto CopyElemsImpl = [&Builder, &MCI, &Name, &CBR,
                         &DL](const auto &Self, ArrayType *ArrTy,
                              size_t ArrOffset, size_t N) -> void {
