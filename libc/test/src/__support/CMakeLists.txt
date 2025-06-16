@@ -275,9 +275,8 @@ add_subdirectory(fixed_point)
 add_subdirectory(HashTable)
 add_subdirectory(time)
 add_subdirectory(threads)
-
-# Requires access to uchar header which is not on macos
-# Therefore, cannot currently build this on macos in overlay mode
+# Requires access to uchar header which is not on MacOS
+# Cannot currently build this on MacOS in overlay mode
 if(NOT(LIBC_TARGET_OS_IS_DARWIN))
   add_subdirectory(wchar)
 endif()
