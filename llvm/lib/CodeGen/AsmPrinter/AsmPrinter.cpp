@@ -1858,6 +1858,7 @@ void AsmPrinter::emitFunctionBody() {
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
         break;
       case TargetOpcode::EH_LABEL:
+        OutStreamer->AddComment("EH_LABEL");
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
         // For AsynchEH, insert a Nop if followed by a trap inst
         //   Or the exception won't be caught.
@@ -1932,8 +1933,9 @@ void AsmPrinter::emitFunctionBody() {
 
         auto CountInstruction = [&](const MachineInstr &MI) {
           // Skip Meta instructions inside bundles.
-          if (MI.isMetaInstruction())
+          if (MI.isMetaInstruction()) {
             return;
+          }
           ++NumInstsInFunction;
           if (CanDoExtraAnalysis) {
             StringRef Name = getMIMnemonic(MI, *OutStreamer);

@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Mangler.h"
@@ -2538,26 +2539,6 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case X86::SEH_BeginEpilogue: {
     assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    // Windows unwinder will not invoke function's exception handler if IP is
-    // either in prologue or in epilogue.  This behavior causes a problem when a
-    // call immediately precedes an epilogue, because the return address points
-    // into the epilogue.  To cope with that, we insert a 'nop' if it ends up
-    // immediately after a CALL in the final emitted code.
-    MachineBasicBlock::const_iterator MBBI(MI);
-    // Check if preceded by a call and emit nop if so.
-    for (MBBI = PrevCrossBBInst(MBBI);
-         MBBI != MachineBasicBlock::const_iterator();
-         MBBI = PrevCrossBBInst(MBBI)) {
-      // Pseudo instructions that aren't a call are assumed to not emit any
-      // code. If they do, we worst case generate unnecessary noops after a
-      // call.
-      if (MBBI->isCall() || !MBBI->isPseudo()) {
-        if (MBBI->isCall())
-          EmitAndCountInstruction(MCInstBuilder(X86::NOOP));
-        break;
-      }
-    }
-
     EmitSEHInstruction(MI);
     return;
   }
@@ -2586,6 +2567,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
       EmitAndCountInstruction(MCInstBuilder(X86::REX64_PREFIX));
       emitCallInstruction(TmpInst);
       emitNop(*OutStreamer, 5, Subtarget);
+      emitNopAfterCallForWindowsEH(MI);
       return;
     }
 
@@ -2606,6 +2588,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
       // For Import Call Optimization to work, we need a 3-byte nop after the
       // call instruction.
       emitNop(*OutStreamer, 3, Subtarget);
+      emitNopAfterCallForWindowsEH(MI);
       return;
     }
     break;
@@ -2639,6 +2622,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   if (MI->isCall()) {
     emitCallInstruction(TmpInst);
+    emitNopAfterCallForWindowsEH(MI);
     return;
   }
 
@@ -2658,6 +2642,133 @@ void X86AsmPrinter::emitCallInstruction(const llvm::MCInst &MCI) {
   SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
   // Then emit the call
   OutStreamer->emitInstruction(MCI, getSubtargetInfo());
+}
+
+// Checks whether a NOP is required after a CALL and inserts the NOP, if
+// necessary.
+void X86AsmPrinter::emitNopAfterCallForWindowsEH(const MachineInstr *MI) {
+  if (needsNopAfterCallForWindowsEH(MI))
+    EmitAndCountInstruction(MCInstBuilder(X86::NOOP));
+}
+
+// Determines whether a NOP is required after a CALL, so that Windows EH
+// IP2State tables have the correct information.
+//
+// On most Windows platforms (AMD64, ARM64, ARM32, IA64, but *not* x86-32),
+// exception handling works by looking up instruction pointers in lookup
+// tables. These lookup tables are stored in .xdata sections in executables.
+// One element of the lookup tables are the "IP2State" tables (Instruction
+// Pointer to State).
+//
+// If a function has any instructions that require cleanup during exception
+// unwinding, then it will have an IP2State table. Each entry in the IP2State
+// table describes a range of bytes in the function's instruction stream, and
+// associates an "EH state number" with that range of instructions. A value of
+// -1 means "the null state", which does not require any code to execute.
+// A value other than -1 is an index into the State table.
+//
+// The entries in the IP2State table contain byte offsets within the instruction
+// stream of the function. The Windows ABI requires that these offsets are
+// aligned to instruction boundaries; they are not permitted to point to a byte
+// that is not the first byte of an instruction.
+//
+// Unfortunately, CALL instructions present a problem during unwinding. CALL
+// instructions push the address of the instruction after the CALL instruction,
+// so that execution can resume after the CALL. If the CALL is the last
+// instruction within an IP2State region, then the return address (on the stack)
+// points to the *next* IP2State region. This means that the unwinder will
+// use the wrong cleanup funclet during unwinding.
+//
+// To fix this problem, MSVC will insert a NOP after a CALL instruction, if the
+// CALL instruction is the last instruction within an IP2State region. The NOP
+// is placed within the same IP2State region as the CALL, so that the return
+// address points to the NOP and the unwinder will locate the correct region.
+//
+// Previously, LLVM fixed this by adding 1 to the instruction offsets in the
+// IP2State table. This caused the instruction boundary to point *within* the
+// instruction after a CALL. This works for the purposes of unwinding, since
+// there are no AMD64 instructions that can be encoded in a single byte and
+// which throw C++ exceptions. Unfortunately, this violates the Windows ABI
+// specification, which requires that the IP2State table entries point to the
+// boundaries between exceptions.
+//
+// To fix this properly, LLVM will now insert a 1-byte NOP after CALL
+// instructions, in the same situations that MSVC does. In performance tests,
+// the NOP has no detectable significance. The NOP is rarely inserted, since
+// it is only inserted when the CALL is the last instruction before an IP2State
+// transition or the CALL is the last instruction before the function epilogue.
+//
+// NOP padding is only necessary on Windows AMD64 targets. On ARM64 and ARM32,
+// instructions have a fixed size so the unwinder knows how to "back up" by
+// one instruction.
+//
+// Interaction with Import Call Optimization (ICO):
+//
+// Import Call Optimization (ICO) is a compiler + OS feature on Windows which
+// improves the performance and security of DLL imports. ICO relies on using a
+// specific CALL idiom that can be replaced by the OS DLL loader. This removes
+// a load and indirect CALL and replaces it with a single direct CALL.
+//
+// To achieve this, ICO also inserts NOPs after the CALL instruction. If the
+// end of the CALL is aligned with an EH state transition, we *also* insert
+// a single-byte NOP.  **Both forms of NOPs must be preserved.**  They cannot
+// be combined into a single larger NOP; nor can the second NOP be removed.
+//
+// This is necessary because, if ICO is active and the call site is modified
+// by the loader, the loader will end up overwriting the NOPs that were inserted
+// for ICO. That means that those NOPs cannot be used for the correct
+// termination of the exception handling region (the IP2State transition),
+// so we still need an additional NOP instruction.  The NOPs cannot be combined
+// into a longer NOP (which is ordinarily desirable) because then ICO would
+// split one instruction, producing a malformed instruction after the ICO call.
+bool X86AsmPrinter::needsNopAfterCallForWindowsEH(const MachineInstr *MI) {
+  // We only need to insert NOPs after CALLs when targeting Windows on AMD64.
+  // Since this code is already restricted to X86, we just test for Win64.
+  if (!this->Subtarget->isTargetWin64()) {
+    return false;
+  }
+
+  MachineBasicBlock::const_iterator MBBI(MI);
+  ++MBBI; // Step over MI
+  auto End = MI->getParent()->end();
+  for (; MBBI != End; ++MBBI) {
+    // Check the instruction that follows this CALL.
+    const MachineInstr &NextMI = *MBBI;
+
+    // If there is an EH_LABEL after this CALL, then there is an EH state
+    // transition after this CALL. This is exactly the situation which requires
+    // NOP padding.
+    if (NextMI.isEHLabel()) {
+      return true;
+    }
+
+    // Somewhat similarly, if the CALL is the last instruction before the
+    // SEH prologue, then we also need a NOP. This is necessary because the
+    // Windows stack unwinder will not invoke a function's exception handler if
+    // the instruction pointer is in the function prologue or epilogue.
+    if (NextMI.getOpcode() == X86::SEH_BeginEpilogue) {
+      return true;
+    }
+
+    if (!NextMI.isPseudo() && !NextMI.isMetaInstruction()) {
+      // We found a real instruction. During the CALL, the return IP will point
+      // to this instruction. Since this instruction has the same EH state as
+      // the call itself (because there is no intervening EH_LABEL), the
+      // IP2State table will be accurate; there is no need to insert a NOP.
+      return false;
+    }
+
+    // The next instruction is a pseudo-op. Ignore it and keep searching.
+    // Because these instructions do not generate any machine code, they cannot
+    // prevent the IP2State table from pointing at the wrong instruction during
+    // a CALL.
+  }
+
+  // The CALL is at the end of the MBB. We do not insert a NOP. If the CALL
+  // is at the end of an MBB that is within a non-null EH state, then the
+  // MBB will already include an EH_LABEL at the end of this MBB. In that
+  // case, we would see the EH_LABEL, not the CALL, at the end of the MBB.
+  return false;
 }
 
 void X86AsmPrinter::emitLabelAndRecordForImportCallOptimization(
