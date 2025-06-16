@@ -1403,12 +1403,3 @@ void spirv::SelectionOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                      MLIRContext *context) {
   results.add<ConvertSelectionOpToSelect>(context);
 }
-
-//===----------------------------------------------------------------------===//
-// spirv.GL.Length
-//===----------------------------------------------------------------------===//
-
-void spirv::GLLengthOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                                    MLIRContext *context) {
-  results.add<ConvertGLLengthToGLFAbs>(context);
-}
