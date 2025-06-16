@@ -739,8 +739,7 @@ def LLVM_CallOp
           "call", [AttrSizedOperandSegments,
                    DeclareOpInterfaceMethods<FastmathFlagsInterface>,
                    DeclareOpInterfaceMethods<CallOpInterface>,
-                   DeclareOpInterfaceMethods<SymbolUserOpInterface>,
-                   DeclareOpInterfaceMethods<WeightedBranchOpInterface>]> {
+                   DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Call to an LLVM function.";
   let description = [{
     In LLVM IR, functions may return either 0 or 1 value. LLVM IR dialect
@@ -789,21 +788,16 @@ def LLVM_CallOp
       OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<LLVM_Type>:$callee_operands,
       DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags,
-      OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
       DefaultValuedAttr<CConv, "CConv::C">:$CConv,
       DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind,
       OptionalAttr<LLVM_MemoryEffectsAttr>:$memory_effects,
-      UnitAttr:$convergent,
-      UnitAttr:$no_unwind,
-      UnitAttr:$will_return,
+      UnitAttr:$convergent, UnitAttr:$no_unwind, UnitAttr:$will_return,
       VariadicOfVariadic<LLVM_Type, "op_bundle_sizes">:$op_bundle_operands,
       DenseI32ArrayAttr:$op_bundle_sizes,
       OptionalAttr<ArrayAttr>:$op_bundle_tags,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
-      OptionalAttr<DictArrayAttr>:$res_attrs,
-      UnitAttr:$no_inline,
-      UnitAttr:$always_inline,
-      UnitAttr:$inline_hint);
+      OptionalAttr<DictArrayAttr>:$res_attrs, UnitAttr:$no_inline,
+      UnitAttr:$always_inline, UnitAttr:$inline_hint);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
