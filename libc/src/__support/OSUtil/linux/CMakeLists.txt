@@ -12,6 +12,7 @@ add_object_library(
     mmap.cpp
     munmap.cpp
     prctl.cpp
+    read.cpp
   HDRS
     io.h
     syscall.h
@@ -25,6 +26,10 @@ add_object_library(
     libc.hdr.types.struct_f_owner_ex
     libc.hdr.types.off_t
     libc.include.sys_syscall
+    libc.src.__support.macros.sanitizer
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.include.unistd
 )
 
 add_header_library(

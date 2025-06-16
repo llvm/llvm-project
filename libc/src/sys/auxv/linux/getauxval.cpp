@@ -11,8 +11,8 @@
 #include "hdr/fcntl_macros.h"
 #include "src/__support/OSUtil/fcntl.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/error_or.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include <linux/auxvec.h>
 
@@ -20,19 +20,13 @@
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/futex_word.h"
 
-// -----------------------------------------------------------------------------
-// TODO: This file should not include other public libc functions. Calling other
-// public libc functions is an antipattern within LLVM-libc. This needs to be
-// cleaned up. DO NOT COPY THIS.
-// -----------------------------------------------------------------------------
-
 // for mallocing the global auxv
 #include "src/__support/OSUtil/mmap.h"
 #include "src/__support/OSUtil/munmap.h"
 
 // for reading /proc/self/auxv
 #include "src/__support/OSUtil/prctl.h"
-#include "src/unistd/read.h"
+#include "src/__support/OSUtil/read.h"
 
 // getauxval will work either with or without __cxa_atexit support.
 // In order to detect if __cxa_atexit is supported, we define a weak symbol.
@@ -46,18 +40,6 @@ extern "C" [[gnu::weak]] int __cxa_atexit(void (*callback)(void *),
 namespace LIBC_NAMESPACE_DECL {
 
 constexpr static size_t MAX_AUXV_ENTRIES = 64;
-
-// Helper to recover or set errno
-class AuxvErrnoGuard {
-public:
-  AuxvErrnoGuard() : saved(libc_errno), failure(false) {}
-  ~AuxvErrnoGuard() { libc_errno = failure ? ENOENT : saved; }
-  void mark_failure() { failure = true; }
-
-private:
-  int saved;
-  bool failure;
-};
 
 // Helper to manage the memory
 static AuxEntry *auxv = nullptr;
@@ -92,7 +74,7 @@ public:
   void *get() const { return ptr.value(); }
 
 private:
-  ErrorOr<void*> ptr;
+  ErrorOr<void *> ptr;
 };
 
 class AuxvFdGuard {
@@ -134,7 +116,7 @@ static void initialize_auxv_once(void) {
   // prctl.
 #ifdef PR_GET_AUXV
   auto ret = internal::prctl(PR_GET_AUXV, reinterpret_cast<unsigned long>(ptr),
-                  available_size, 0, 0);
+                             available_size, 0, 0);
   if (ret.has_value()) {
     mmap_guard.submit_to_global();
     return;
@@ -144,23 +126,22 @@ static void initialize_auxv_once(void) {
   if (!fd_guard.valid())
     return;
   auto *buf = reinterpret_cast<char *>(ptr);
-  libc_errno = 0;
   bool error_detected = false;
   // Read until we use up all the available space or we finish reading the file.
   while (available_size != 0) {
-    ssize_t bytes_read =
-        LIBC_NAMESPACE::read(fd_guard.get(), buf, available_size);
-    if (bytes_read <= 0) {
-      if (libc_errno == EINTR)
+    auto bytes_read = internal::read(fd_guard.get(), buf, available_size);
+    if (!bytes_read.has_value() ||
+        (bytes_read.has_value() && bytes_read.value() == 0)) {
+      if (bytes_read.error() == EINTR)
         continue;
       // Now, we either have an non-recoverable error or we have reached the end
       // of the file. Mark `error_detected` accordingly.
-      if (bytes_read == -1)
+      if (!bytes_read.has_value())
         error_detected = true;
       break;
     }
-    buf += bytes_read;
-    available_size -= bytes_read;
+    buf += bytes_read.value();
+    available_size -= bytes_read.value();
   }
   // If we get out of the loop without an error, the auxv is ready.
   if (!error_detected)
@@ -172,17 +153,17 @@ static AuxEntry read_entry(int fd) {
   size_t size = sizeof(AuxEntry);
   char *ptr = reinterpret_cast<char *>(&buf);
   while (size > 0) {
-    ssize_t ret = LIBC_NAMESPACE::read(fd, ptr, size);
-    if (ret < 0) {
-      if (libc_errno == EINTR)
+    auto ret = internal::read(fd, ptr, size);
+    if (!ret.has_value()) {
+      if (ret.error() == EINTR)
         continue;
       // Error detected, return AT_NULL
       buf.id = AT_NULL;
       buf.value = AT_NULL;
       break;
     }
-    ptr += ret;
-    size -= ret;
+    ptr += ret.value();
+    size -= ret.value();
   }
   return buf;
 }
@@ -191,15 +172,13 @@ LLVM_LIBC_FUNCTION(unsigned long, getauxval, (unsigned long id)) {
   // Fast path when libc is loaded by its own initialization code. In this case,
   // app.auxv_ptr is already set to the auxv passed on the initial stack of the
   // process.
-  AuxvErrnoGuard errno_guard;
 
-  auto search_auxv = [&errno_guard](AuxEntry *auxv,
-                                    unsigned long id) -> AuxEntryType {
+  auto search_auxv = [](AuxEntry *auxv, unsigned long id) -> AuxEntryType {
     for (auto *ptr = auxv; ptr->id != AT_NULL; ptr++)
       if (ptr->id == id)
         return ptr->value;
 
-    errno_guard.mark_failure();
+    libc_errno = ENOENT;
     return AT_NULL;
   };
 
@@ -227,7 +206,7 @@ LLVM_LIBC_FUNCTION(unsigned long, getauxval, (unsigned long id)) {
   }
 
   // cannot find the entry after all methods, mark failure and return 0
-  errno_guard.mark_failure();
+  libc_errno = ENOENT;
   return AT_NULL;
 }
 } // namespace LIBC_NAMESPACE_DECL
