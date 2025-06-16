@@ -107,3 +107,9 @@ struct UnionOfAddressDisriminatedPtrauth {
 };
 
 static_assert(!__builtin_is_cpp_trivially_relocatable(UnionOfAddressDisriminatedPtrauth));
+
+struct AddressDiscArrayMember {
+  struct { void *__ptrauth(1,1,1) field; } array_field[10];
+};
+
+static_assert(!__builtin_is_cpp_trivially_relocatable(AddressDiscArrayMember));

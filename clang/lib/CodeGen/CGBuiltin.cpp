@@ -4467,17 +4467,25 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_trivially_relocate:
   case Builtin::BImemmove:
   case Builtin::BI__builtin_memmove: {
+    QualType CopiedType = E->getArg(0)->getType()->getPointeeType();
     Address Dest = EmitPointerWithAlignment(E->getArg(0));
     Address Src = EmitPointerWithAlignment(E->getArg(1));
     Value *SizeVal = EmitScalarExpr(E->getArg(2));
-    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_trivially_relocate)
+    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_trivially_relocate) {
+      QualType BaseElementType = getContext().getBaseElementType(CopiedType);
+      if (getContext().containsAddressDiscriminatedPointerAuth(
+              BaseElementType)) {
+        llvm::Instruction *LastFixupInstruction =
+            EmitPointerAuthRelocationFixup(CopiedType, Dest, Src, SizeVal);
+        addInstToNewSourceAtom(LastFixupInstruction, nullptr);
+        return RValue::get(Dest, *this);
+      }
       SizeVal = Builder.CreateMul(
           SizeVal,
           ConstantInt::get(
               SizeVal->getType(),
-              getContext()
-                  .getTypeSizeInChars(E->getArg(0)->getType()->getPointeeType())
-                  .getQuantity()));
+              getContext().getTypeSizeInChars(CopiedType).getQuantity()));
+    }
     EmitArgCheck(TCK_Store, Dest, E->getArg(0), 0);
     EmitArgCheck(TCK_Load, Src, E->getArg(1), 1);
     auto *I = Builder.CreateMemMove(Dest, Src, SizeVal, false);

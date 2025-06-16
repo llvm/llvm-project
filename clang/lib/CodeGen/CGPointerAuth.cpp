@@ -420,6 +420,222 @@ void CodeGenFunction::EmitPointerAuthCopy(PointerAuthQualifier Qual, QualType T,
   Builder.CreateStore(Value, DestAddress);
 }
 
+static const ConstantArrayType *tryGetTypeAsConstantArrayType(QualType T) {
+  if (!T->isConstantArrayType())
+    return nullptr;
+  return cast<ConstantArrayType>(T->castAsArrayTypeUnsafe());
+}
+
+using FixupErrorTy = std::pair<const CXXRecordDecl *, CXXBaseSpecifier>;
+class CodeGenFunction::FixupFinder {
+public:
+  using FixupVectorTy = CodeGenFunction::FixupVectorTy;
+  static FixupVectorTy findFixups(CodeGenFunction &CGF, QualType T) {
+    FixupFinder Finder(CGF);
+    FixupVectorTy Result;
+    Finder.findFixups(Result, T, CharUnits::Zero());
+    std::sort(Result.begin(), Result.end(),
+              [](const auto &L, const auto &R) { return L.Offset < R.Offset; });
+    return Result;
+  }
+
+private:
+  explicit FixupFinder(CodeGenFunction &CGF)
+      : CGF(CGF), Context(CGF.getContext()) {}
+
+  void findVTablePointerFixups(FixupVectorTy &Output, CXXRecordDecl *RD,
+                               CharUnits Offset) {
+    CodeGenFunction::VPtrsVector VPtrs = CGF.getVTablePointers(RD);
+    for (auto VPtr : VPtrs) {
+      std::optional<PointerAuthQualifier> PointerAuth =
+          CGF.CGM.getVTablePointerAuthentication(VPtr.Base.getBase());
+      if (PointerAuth && PointerAuth->isAddressDiscriminated())
+        Output.push_back(
+            {Offset + VPtr.Base.getBaseOffset(), KnownNonNull, *PointerAuth});
+    }
+  }
+  void findObjectFixups(FixupVectorTy &Output, CXXRecordDecl *RD,
+                        CharUnits Offset) {
+    if (RD->isPolymorphic())
+      findVTablePointerFixups(Output, RD, Offset);
+    findFixups(Output, RD, Offset, /*SubobjectIsBase=*/true);
+  }
+
+  void findFixups(FixupVectorTy &Output, CXXRecordDecl *RD,
+                  CharUnits SubobjectOffset, bool SubobjectIsBase) {
+    // If we've found a union it by definition cannot contain
+    // address discriminated fields.
+    if (RD->isUnion())
+      return;
+    const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
+    if (Layout.hasOwnVFPtr() && RD == Layout.getPrimaryBase())
+      findVTablePointerFixups(Output, RD, SubobjectOffset);
+
+    for (auto Base : RD->bases()) {
+      CXXRecordDecl *BaseDecl =
+          Base.getType()->getAsCXXRecordDecl()->getDefinition();
+      assert(!Base.isVirtual());
+      CharUnits BaseOffset = Layout.getBaseClassOffset(BaseDecl);
+      findFixups(Output, BaseDecl, SubobjectOffset + BaseOffset,
+                 /*SubobjectIsBase=*/true);
+    }
+
+    for (const FieldDecl *Field : RD->fields()) {
+      if (Field->isBitField())
+        continue;
+      unsigned FieldBitOffset = Layout.getFieldOffset(Field->getFieldIndex());
+      CharUnits FieldOffset = Context.toCharUnitsFromBits(FieldBitOffset);
+      findFixups(Output, Field->getType(), SubobjectOffset + FieldOffset);
+    }
+  }
+  void findFixups(FixupVectorTy &Output, QualType T, CharUnits Offset) {
+    T = T.getCanonicalType();
+    if (!Context.containsAddressDiscriminatedPointerAuth(T))
+      return;
+
+    if (const ConstantArrayType *CAT = tryGetTypeAsConstantArrayType(T)) {
+      if (CAT->getSize() == 0)
+        return;
+      Output.push_back({Offset, CAT});
+      return;
+    }
+
+    if (PointerAuthQualifier Q = T.getPointerAuth();
+        Q && Q.isAddressDiscriminated()) {
+      // FIXME: Would it be reasonable to consider nullability?
+      Output.push_back({Offset, NotKnownNonNull, Q});
+      return;
+    }
+
+    CXXRecordDecl *RD = T->getAsCXXRecordDecl();
+    if (!RD)
+      return;
+    findObjectFixups(Output, RD, Offset);
+  }
+  CodeGenFunction &CGF;
+  ASTContext &Context;
+};
+
+void CodeGenFunction::EmitSingleObjectPointerAuthRelocationFixup(
+    const FixupVectorTy &Fixups, QualType ElementType, Address Dst,
+    Address Src) {
+  auto GetFixupAddress = [&](Address BaseAddress, CharUnits Offset,
+                             KnownNonNull_t IsKnownNonNull,
+                             const char *Reason) {
+    llvm::Value *BasePtr = BaseAddress.emitRawPointer(*this);
+    llvm::Value *OffsetValue =
+        llvm::ConstantInt::get(PtrDiffTy, Offset.getQuantity());
+    llvm::Value *FixupAddress =
+        Builder.CreateInBoundsGEP(Int8Ty, BasePtr, OffsetValue, Reason);
+    return Address(FixupAddress, VoidPtrPtrTy,
+                   BaseAddress.getAlignment().alignmentAtOffset(Offset),
+                   IsKnownNonNull);
+  };
+  for (auto &Fixup : Fixups) {
+    if (const ConstantArrayType *CAT = Fixup.getAsConstantArrayType()) {
+      llvm::Value *CountValue = llvm::ConstantInt::get(SizeTy, 1);
+      EmitArrayPointerAuthRelocationFixup(QualType(CAT, 0), Dst, Src,
+                                          CountValue);
+      continue;
+    }
+    auto [IsKnownNonNull, Qualifier] = Fixup.getValueFixup();
+
+    // We don't use the existing copy helpers as we'll be resigning a
+    // value in place assuming the old address for the read.
+    Address FixupDst = GetFixupAddress(Dst, Fixup.Offset, IsKnownNonNull,
+                                       "fixup.dst.with.offset");
+    CGPointerAuthInfo DstPtrAuth = EmitPointerAuthInfo(Qualifier, FixupDst);
+
+    Address FixupSrc = GetFixupAddress(Src, Fixup.Offset, IsKnownNonNull,
+                                       "fixup.src.with.offset");
+    CGPointerAuthInfo SrcPtrAuth = EmitPointerAuthInfo(Qualifier, FixupSrc);
+
+    // We're loading from the destination here as we've already performed the
+    // copy from src to dst, and as relocation has memmove semantics, the src
+    // address may have been overwritten.
+    llvm::Value *Value = Builder.CreateLoad(FixupDst);
+    Value = emitPointerAuthResign(Value, QualType(), SrcPtrAuth, DstPtrAuth,
+                                  IsKnownNonNull);
+    Builder.CreateStore(Value, FixupDst);
+  }
+}
+
+llvm::Instruction *CodeGenFunction::EmitArrayPointerAuthRelocationFixup(
+    QualType ElementType, Address Dst, Address Src, llvm::Value *Count) {
+  // Preemptively flatten array types so we don't end up with multiple levels
+  // of loops unnecessarily
+  if (const ConstantArrayType *CAT =
+          tryGetTypeAsConstantArrayType(ElementType)) {
+    uint64_t ElementCount = getContext().getConstantArrayElementCount(CAT);
+    llvm::Value *ElementCountValue =
+        llvm::ConstantInt::get(SizeTy, ElementCount);
+    Count = Builder.CreateMul(Count, ElementCountValue);
+    ElementType = getContext().getBaseElementType(QualType(CAT, 0));
+  }
+
+  FixupVectorTy *Fixups;
+  if (const auto Existing = FixupLists.find(ElementType);
+      Existing != FixupLists.end())
+    Fixups = Existing->second.get();
+  else {
+    auto FoundFixups = FixupFinder::findFixups(*this, ElementType);
+    auto [EntryPoint, Inserted] = FixupLists.try_emplace(
+        ElementType, std::make_unique<FixupVectorTy>(std::move(FoundFixups)));
+    (void)Inserted;
+    Fixups = EntryPoint->second.get();
+  }
+
+  CharUnits ElementSize = getContext().getTypeSizeInChars(ElementType);
+  CharUnits ElementAlign =
+      Src.getAlignment().alignmentOfArrayElement(ElementSize);
+  llvm::Type *LLVMElemType = ConvertTypeForMem(ElementType);
+
+  llvm::BasicBlock *RelocationFixupEntry = Builder.GetInsertBlock();
+  llvm::BasicBlock *RelocationFixupBody =
+      createBasicBlock("relocation_ptrauth_fixup.body");
+  EmitBlock(RelocationFixupBody);
+  llvm::Value *Zero = llvm::ConstantInt::get(SizeTy, 0);
+  llvm::PHINode *Index =
+      Builder.CreatePHI(SizeTy, 2, "relocation_ptrauth_fixup.index");
+  Index->addIncoming(Zero, RelocationFixupEntry);
+  llvm::Value *DstElement =
+      Builder.CreateInBoundsGEP(LLVMElemType, Dst.emitRawPointer(*this), Index,
+                                "relocation_ptrauth_fixup.dstobject");
+  Address DstElementAddress = Address(DstElement, LLVMElemType, ElementAlign);
+  llvm::Value *SrcElement =
+      Builder.CreateInBoundsGEP(LLVMElemType, Src.emitRawPointer(*this), Index,
+                                "relocation_ptrauth_fixup.srcobject");
+  Address SrcElementAddress = Address(SrcElement, LLVMElemType, ElementAlign);
+
+  // Do the fixup
+  EmitSingleObjectPointerAuthRelocationFixup(
+      *Fixups, ElementType, DstElementAddress, SrcElementAddress);
+
+  llvm::Value *NextIndex =
+      Builder.CreateNUWAdd(Index, llvm::ConstantInt::get(Index->getType(), 1),
+                           "relocation_ptrauth_fixup.next_index");
+  Index->addIncoming(NextIndex, Builder.GetInsertBlock());
+  llvm::Value *IsComplete = Builder.CreateICmpEQ(
+      NextIndex, Count, "relocation_ptrauth_fixup.is_complete");
+  llvm::BasicBlock *RelocationFixupFinished =
+      createBasicBlock("relocation_ptrauth_fixup.end");
+  Builder.CreateCondBr(IsComplete, RelocationFixupFinished,
+                       RelocationFixupBody);
+  EmitBlock(RelocationFixupFinished);
+  return RelocationFixupFinished->getTerminator();
+}
+
+llvm::Instruction *CodeGenFunction::EmitPointerAuthRelocationFixup(
+    QualType ElementType, Address Dst, Address Src, llvm::Value *Count) {
+  size_t ElementSize =
+      getContext().getTypeSizeInChars(ElementType).getQuantity();
+  llvm::Value *ElementSizeValue =
+      llvm::ConstantInt::get(Count->getType(), ElementSize);
+  llvm::Value *Size = Builder.CreateMul(Count, ElementSizeValue);
+  Builder.CreateMemMove(Dst, Src, Size, false);
+  return EmitArrayPointerAuthRelocationFixup(ElementType, Dst, Src, Count);
+}
+
 llvm::Constant *
 CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
                                         llvm::Constant *StorageAddress,
