@@ -1,8 +1,6 @@
 #include <memory>
 
-int
-main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 
   struct NodeS {
     std::shared_ptr<NodeS> next;

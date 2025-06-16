@@ -1,8 +1,6 @@
 #include <cstdint>
 
-int
-main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   enum BitFieldEnum : uint32_t { kZero, kOne };
 
   struct BitFieldStruct {
@@ -38,7 +36,7 @@ main(int argc, char **argv)
   };
 
   uint32_t data = ~0;
-  AlignedBitFieldStruct abf = (AlignedBitFieldStruct&)data;
+  AlignedBitFieldStruct abf = (AlignedBitFieldStruct &)data;
 
   return 0; // Set a breakpoint here
 }

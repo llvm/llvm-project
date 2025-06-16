@@ -11,6 +11,7 @@ import os
 import shutil
 import time
 
+
 class TestFrameVarDILPointerDereference(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -26,5 +27,8 @@ class TestFrameVarDILPointerDereference(TestBase):
         self.expect_var_path("&pp_void0[2]", type="void **")
         self.expect_var_path("**pp_int0", value="0")
         self.expect_var_path("&**pp_int0", type="int *")
-        self.expect("frame variable '&p_void[0]'", error=True,
-                    substrs=["subscript of pointer to incomplete type 'void'"])
+        self.expect(
+            "frame variable '&p_void[0]'",
+            error=True,
+            substrs=["subscript of pointer to incomplete type 'void'"],
+        )

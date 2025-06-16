@@ -1,13 +1,11 @@
-int
-main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   int val = 1;
-  int* p = &val;
+  int *p = &val;
 
-  typedef int* myp;
+  typedef int *myp;
   myp my_p = &val;
 
-  typedef int*& mypr;
+  typedef int *&mypr;
   mypr my_pr = p;
 
   return 0; // Set a breakpoint here

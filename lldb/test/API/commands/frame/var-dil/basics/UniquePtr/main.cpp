@@ -1,8 +1,6 @@
 #include <memory>
 
-int
-main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 
   struct NodeU {
     std::unique_ptr<NodeU> next;
@@ -15,7 +13,9 @@ main(int argc, char **argv)
   auto ptr_int = std::make_unique<int>(1);
   auto ptr_float = std::make_unique<float>(1.1f);
 
-  auto deleter = [](void const* data) { delete static_cast<int const*>(data); };
+  auto deleter = [](void const *data) {
+    delete static_cast<int const *>(data);
+  };
   std::unique_ptr<void, decltype(deleter)> ptr_void(new int(42), deleter);
 
   // TestUniquePtr

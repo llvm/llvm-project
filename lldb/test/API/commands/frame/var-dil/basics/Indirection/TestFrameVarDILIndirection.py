@@ -11,6 +11,7 @@ import os
 import shutil
 import time
 
+
 class TestFrameVarDILIndirection(TestBase):
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
@@ -19,8 +20,9 @@ class TestFrameVarDILIndirection(TestBase):
 
     def test_frame_var(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "Set a breakpoint here",
-                                          lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
+        )
 
         self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("*p", value="1")
@@ -30,7 +32,15 @@ class TestFrameVarDILIndirection(TestBase):
         self.expect_var_path("*my_pr", type="int *")
         self.expect_var_path("my_pr", type="mypr")
 
-        self.expect("frame variable '*1'", error=True,
-                    substrs=["Unexpected token: <'1' (numeric_constant)>"])
-        self.expect("frame variable '*val'", error=True,
-                    substrs=["dereference failed: not a pointer, reference or array type: (int) val"])
+        self.expect(
+            "frame variable '*1'",
+            error=True,
+            substrs=["Unexpected token: <'1' (numeric_constant)>"],
+        )
+        self.expect(
+            "frame variable '*val'",
+            error=True,
+            substrs=[
+                "dereference failed: not a pointer, reference or array type: (int) val"
+            ],
+        )
