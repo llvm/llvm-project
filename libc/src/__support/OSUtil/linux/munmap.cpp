@@ -11,7 +11,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include "src/__support/libc_errno.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -20,9 +20,14 @@ namespace internal {
 
 // This function is currently linux only. It has to be refactored suitably if
 // munmap is to be supported on non-linux operating systems also.
-int munmap(void *addr, size_t size) {
-  return LIBC_NAMESPACE::syscall_impl<int>(SYS_munmap,
-                                           reinterpret_cast<long>(addr), size);
+ErrorOr<int> munmap(void *addr, size_t size) {
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(
+      SYS_munmap, reinterpret_cast<long>(addr), size);
+
+  if (ret < 0)
+    return Error(-ret);
+
+  return 0;
 }
 
 } // namespace internal

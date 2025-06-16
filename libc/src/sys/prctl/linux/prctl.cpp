@@ -9,8 +9,8 @@
 #include "src/sys/prctl/prctl.h"
 
 #include "src/__support/OSUtil/prctl.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
