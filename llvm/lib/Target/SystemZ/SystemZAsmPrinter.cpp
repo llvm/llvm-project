@@ -1139,23 +1139,20 @@ void SystemZAsmPrinter::emitADASection() {
       // imported functions, that are placed in the ADA to be 8 byte aligned.
       EMIT_COMMENT("function descriptor of");
       OutStreamer->emitValue(
-          SystemZMCExpr::create(SystemZ::S_RCon,
-                                MCSymbolRefExpr::create(Sym, OutContext),
-                                OutContext),
+          MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
+                                  SystemZ::S_RCon, OutContext),
           PointerSize);
       OutStreamer->emitValue(
-          SystemZMCExpr::create(SystemZ::S_VCon,
-                                MCSymbolRefExpr::create(Sym, OutContext),
-                                OutContext),
+          MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
+                                  SystemZ::S_VCon, OutContext),
           PointerSize);
       EmittedBytes += PointerSize * 2;
       break;
     case SystemZII::MO_ADA_DATA_SYMBOL_ADDR:
       EMIT_COMMENT("pointer to data symbol");
       OutStreamer->emitValue(
-          SystemZMCExpr::create(SystemZ::S_None,
-                                MCSymbolRefExpr::create(Sym, OutContext),
-                                OutContext),
+          MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
+                                  SystemZ::S_None, OutContext),
           PointerSize);
       EmittedBytes += PointerSize;
       break;
@@ -1168,9 +1165,8 @@ void SystemZAsmPrinter::emitADASection() {
 
       EMIT_COMMENT("pointer to function descriptor");
       OutStreamer->emitValue(
-          SystemZMCExpr::create(SystemZ::S_VCon,
-                                MCSymbolRefExpr::create(Alias, OutContext),
-                                OutContext),
+          MCSpecifierExpr::create(MCSymbolRefExpr::create(Alias, OutContext),
+                                  SystemZ::S_VCon, OutContext),
           PointerSize);
       EmittedBytes += PointerSize;
       break;
