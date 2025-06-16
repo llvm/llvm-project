@@ -1204,7 +1204,7 @@ struct OmpTargetAllocMemOpConversion
     mlir::Value size = genTypeSizeInBytes(loc, ity, rewriter, llvmObjectTy);
     if (auto scaleSize = genAllocationScaleSize(heap, ity, rewriter))
       size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
-    for (mlir::Value opnd : adaptor.getOperands())
+    for (mlir::Value opnd : adaptor.getOperands().drop_front())
       size = rewriter.create<mlir::LLVM::MulOp>(
           loc, ity, size, integerCast(loc, rewriter, ity, opnd));
     auto mallocTyWidth = lowerTy().getIndexTypeBitwidth();
