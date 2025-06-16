@@ -195,6 +195,82 @@ static void replaceLoad(LoadInst *LI, CBufferResource &CBR,
   DeadInsts.push_back(LI);
 }
 
+/// Replace memcpy from a cbuffer global with a memcpy from the cbuffer handle
+/// itself. Assumes the cbuffer global is an array, and the length of bytes to
+/// copy is divisible by array element allocation size.
+/// The memcpy source must also be a direct cbuffer global reference, not a GEP.
+static void replaceMemCpy(MemCpyInst *MCI, CBufferResource &CBR,
+                          SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+
+  ArrayType *ArrTy = dyn_cast<ArrayType>(CBR.getValueType());
+  assert(ArrTy && "MemCpy lowering is only supported for array types");
+
+  // This assumption vastly simplifies the implementation
+  if (MCI->getSource() != CBR.Member)
+    reportFatalUsageError(
+        "Expected MemCpy source to be a cbuffer global variable");
+
+  const std::string Name = ("memcpy." + MCI->getDest()->getName() + "." +
+                            MCI->getSource()->getName())
+                               .str();
+
+  ConstantInt *Length = dyn_cast<ConstantInt>(MCI->getLength());
+  uint64_t ByteLength = Length->getZExtValue();
+
+  // If length to copy is zero, no memcpy is needed
+  if (ByteLength == 0) {
+    DeadInsts.push_back(MCI);
+    return;
+  }
+
+  const DataLayout &DL = CBR.getDataLayout();
+
+  Type *ElemTy = ArrTy->getElementType();
+  size_t ElemSize = DL.getTypeAllocSize(ElemTy);
+  assert(ByteLength % ElemSize == 0 &&
+         "Length of bytes to MemCpy must be divisible by allocation size of "
+         "source/destination array elements");
+  size_t ElemsToCpy = ByteLength / ElemSize;
+
+  IRBuilder<> Builder(MCI);
+  CBR.createAndSetCurrentHandle(Builder);
+
+  auto CopyElemsImpl = [&Builder, &MCI, &Name, &CBR,
+                        &DL](const auto &Self, ArrayType *ArrTy,
+                             size_t ArrOffset, size_t N) -> void {
+    Type *ElemTy = ArrTy->getElementType();
+    size_t ElemTySize = DL.getTypeAllocSize(ElemTy);
+    for (unsigned I = 0; I < N; ++I) {
+      size_t Offset = ArrOffset + I * ElemTySize;
+
+      // Recursively copy nested arrays
+      if (ArrayType *ElemArrTy = dyn_cast<ArrayType>(ElemTy)) {
+        Self(Self, ElemArrTy, Offset, ElemArrTy->getNumElements());
+        continue;
+      }
+
+      // Load CBuffer value and store it in Dest
+      APInt CBufArrayOffset(
+          DL.getIndexTypeSizeInBits(MCI->getSource()->getType()), Offset);
+      CBufArrayOffset =
+          hlsl::translateCBufArrayOffset(DL, CBufArrayOffset, ArrTy);
+      Value *CBufferVal =
+          CBR.loadValue(Builder, ElemTy, CBufArrayOffset.getZExtValue(), Name);
+      Value *GEP =
+          Builder.CreateInBoundsGEP(Builder.getInt8Ty(), MCI->getDest(),
+                                    {Builder.getInt32(Offset)}, Name + ".dest");
+      Builder.CreateStore(CBufferVal, GEP, MCI->isVolatile());
+    }
+  };
+  auto CopyElems = [&CopyElemsImpl](ArrayType *ArrTy, size_t N) -> void {
+    CopyElemsImpl(CopyElemsImpl, ArrTy, 0, N);
+  };
+
+  CopyElems(ArrTy, ElemsToCpy);
+
+  MCI->eraseFromParent();
+}
+
 static void replaceAccessesWithHandle(CBufferResource &CBR) {
   SmallVector<WeakTrackingVH> DeadInsts;
 
@@ -205,6 +281,13 @@ static void replaceAccessesWithHandle(CBufferResource &CBR) {
     // If we have a load instruction, replace the access.
     if (auto *LI = dyn_cast<LoadInst>(Cur)) {
       replaceLoad(LI, CBR, DeadInsts);
+      continue;
+    }
+
+    // If we have a memcpy instruction, replace it with multiple accesses and
+    // subsequent stores to the destination
+    if (auto *MCI = dyn_cast<MemCpyInst>(Cur)) {
+      replaceMemCpy(MCI, CBR, DeadInsts);
       continue;
     }
 
