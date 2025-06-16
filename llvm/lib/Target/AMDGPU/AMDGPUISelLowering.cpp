@@ -4162,7 +4162,7 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
     return SDValue();
 
   // for C >= 32
-  // i64 (sra x, C) -> (build_pair (sra hi_32(x), C -32), sra hi_32(x), 31))
+  // i64 (sra x, C) -> (build_pair (sra hi_32(x), C - 32), sra hi_32(x), 31))
 
   // On some subtargets, 64-bit shift is a quarter rate instruction. In the
   // common case, splitting this into a move and a 32-bit shift is faster and
@@ -4279,7 +4279,7 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
     return SDValue();
 
   // for C >= 32
-  // i64 (srl x, C) -> (build_pair (srl hi_32(x), C -32), 0)
+  // i64 (srl x, C) -> (build_pair (srl hi_32(x), C - 32), 0)
 
   // On some subtargets, 64-bit shift is a quarter rate instruction. In the
   // common case, splitting this into a move and a 32-bit shift is faster and
