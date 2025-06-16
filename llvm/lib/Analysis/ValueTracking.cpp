@@ -9081,7 +9081,6 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
     auto *LU = dyn_cast<BinaryOperator>(L);
     if (!LU)
       continue;
-    unsigned Opcode = LU->getOpcode();
     Value *LL = LU->getOperand(0);
     Value *LR = LU->getOperand(1);
 
