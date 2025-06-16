@@ -2977,9 +2977,8 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   // and return.
   BasicBlock::const_iterator BI = BB->getFirstNonPHIIt();
   // Skip over pseudo-probes and the bitcast.
-  while (&*BI == BCI || &*BI == EVI ||
-         isa<PseudoProbeInst>(BI) || isLifetimeEndOrBitCastFor(&*BI) ||
-         isFakeUse(&*BI))
+  while (&*BI == BCI || &*BI == EVI || isa<PseudoProbeInst>(BI) ||
+         isLifetimeEndOrBitCastFor(&*BI) || isFakeUse(&*BI))
     BI = std::next(BI);
   if (&*BI != RetI)
     return false;

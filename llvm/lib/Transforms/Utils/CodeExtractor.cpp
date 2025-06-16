@@ -1374,7 +1374,8 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       }
 
       // If the variable was in the scope of the old function, i.e. it was not
-      // inlined, point the intrinsic to a fresh variable within the new function.
+      // inlined, point the intrinsic to a fresh variable within the new
+      // function.
       if (!DVR.getDebugLoc().getInlinedAt())
         DVR.setVariable(GetUpdatedDIVariable(DVR.getVariable()));
     }

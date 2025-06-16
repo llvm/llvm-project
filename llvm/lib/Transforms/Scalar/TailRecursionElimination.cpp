@@ -483,8 +483,7 @@ CallInst *TailRecursionEliminator::findTRECandidate(BasicBlock *BB) {
   //   double fabs(double f) { return __builtin_fabs(f); } // a 'fabs' call
   // and disable this xform in this case, because the code generator will
   // lower the call to fabs into inline code.
-  if (BB == &F.getEntryBlock() &&
-      &BB->front() == CI &&
+  if (BB == &F.getEntryBlock() && &BB->front() == CI &&
       &*std::next(BB->begin()) == TI && CI->getCalledFunction() &&
       !TTI->isLoweredToCall(CI->getCalledFunction())) {
     // A single-block function with just a call and a return. Check that

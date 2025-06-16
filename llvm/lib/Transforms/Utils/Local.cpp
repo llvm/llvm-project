@@ -2849,8 +2849,7 @@ bool llvm::handleUnreachableTerminator(
   return Changed;
 }
 
-unsigned
-llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
+unsigned llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
   unsigned NumDeadInst = 0;
   // Delete the instructions backwards, as it has a reduced likelihood of
   // having to update as many def-use and use-def chains.

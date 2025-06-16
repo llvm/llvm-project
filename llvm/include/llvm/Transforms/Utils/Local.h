@@ -396,8 +396,7 @@ handleUnreachableTerminator(Instruction *I,
 /// Remove all instructions from a basic block other than its terminator
 /// and any present EH pad instructions. Returns the number of instructions
 /// that have been removed.
-LLVM_ABI unsigned
-removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);
+LLVM_ABI unsigned removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);
 
 /// Insert an unreachable instruction before the specified
 /// instruction, making it and the rest of the code in the block dead.

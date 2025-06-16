@@ -5613,8 +5613,8 @@ BasicBlock::iterator LSRInstance::AdjustInsertPositionForExpand(
     }
   }
 
-  assert(!isa<PHINode>(LowestIP) && !LowestIP->isEHPad()
-         && "Insertion point must be a normal instruction");
+  assert(!isa<PHINode>(LowestIP) && !LowestIP->isEHPad() &&
+         "Insertion point must be a normal instruction");
 
   // Then, climb up the immediate dominator tree as far as we can go while
   // still being dominated by the input positions.

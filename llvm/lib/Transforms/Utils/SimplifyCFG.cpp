@@ -1130,8 +1130,7 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     Instruction *NewBonusInst = BonusInst.clone();
 
-    if (!NewBonusInst->getDebugLoc().isSameSourceLocation(
-            PTI->getDebugLoc())) {
+    if (!NewBonusInst->getDebugLoc().isSameSourceLocation(PTI->getDebugLoc())) {
       // Unless the instruction has the same !dbg location as the original
       // branch, drop it. When we fold the bonus instructions we want to make
       // sure we reset their debug locations in order to avoid stepping on
