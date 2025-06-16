@@ -10,6 +10,7 @@ add_object_library(
     exit.cpp
     fcntl.cpp
     mmap.cpp
+    munmap.cpp
   HDRS
     io.h
     syscall.h

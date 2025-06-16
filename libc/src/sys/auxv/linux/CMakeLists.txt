@@ -6,7 +6,6 @@ add_entrypoint_object(
     ../getauxval.h
   DEPENDS
     libc.src.sys.prctl.prctl
-    libc.src.sys.mman.munmap
     libc.src.__support.threads.callonce
     libc.src.__support.common
     libc.src.__support.OSUtil.osutil

@@ -41,10 +41,7 @@ add_entrypoint_object(
   HDRS
     ../munmap.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(

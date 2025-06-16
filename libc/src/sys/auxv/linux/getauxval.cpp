@@ -19,7 +19,7 @@
 
 // for mallocing the global auxv
 #include "src/__support/OSUtil/mmap.h"
-#include "src/sys/mman/munmap.h"
+#include "src/__support/OSUtil/munmap.h"
 
 // for reading /proc/self/auxv
 #include "src/fcntl/open.h"
@@ -64,13 +64,13 @@ public:
                            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) {}
   ~AuxvMMapGuard() {
     if (ptr != MAP_FAILED)
-      munmap(ptr, AUXV_MMAP_SIZE);
+      internal::munmap(ptr, AUXV_MMAP_SIZE);
   }
   void submit_to_global() {
     // atexit may fail, we do not set it to global in that case.
     int ret = __cxa_atexit(
         [](void *) {
-          munmap(auxv, AUXV_MMAP_SIZE);
+          internal::munmap(auxv, AUXV_MMAP_SIZE);
           auxv = nullptr;
         },
         nullptr, nullptr);
