@@ -155,7 +155,7 @@ void incompatible_pointer_type_conversions() {
 }
 
 void dropping_qualifiers_is_incompatible() {
-  const char ccharbuf[1];
+  const char ccharbuf[1] = {0};
   volatile char vcharbuf[1];
 
   void foo(char *c) __attribute__((overloadable));

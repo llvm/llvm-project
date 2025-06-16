@@ -369,7 +369,11 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
     Alignment = InAlign;
 
   // If the GV has a specified alignment, take it into account.
-  const MaybeAlign GVAlign(GV->getAlign());
+  MaybeAlign GVAlign;
+  if (auto *GVar = dyn_cast<GlobalVariable>(GV))
+    GVAlign = GVar->getAlign();
+  else if (auto *F = dyn_cast<Function>(GV))
+    GVAlign = F->getAlign();
   if (!GVAlign)
     return Alignment;
 
@@ -382,7 +386,8 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
   return Alignment;
 }
 
-AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer)
+AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
+                       char &ID)
     : MachineFunctionPass(ID), TM(tm), MAI(tm.getMCAsmInfo()),
       OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
       SM(*this) {
@@ -560,7 +565,11 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
-    if (EmitCodeView && TM.getTargetTriple().isOSWindows())
+    // On Windows targets, emit minimal CodeView compiler info even when debug
+    // info is disabled.
+    if ((TM.getTargetTriple().isOSWindows() &&
+         M.getNamedMetadata("llvm.dbg.cu")) ||
+        (TM.getTargetTriple().isUEFI() && EmitCodeView))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
@@ -2320,7 +2329,7 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   }
 
   if (!TM.getTargetTriple().isOSBinFormatMachO() || !getIFuncMCSubtargetInfo())
-    llvm::report_fatal_error("IFuncs are not supported on this platform");
+    reportFatalUsageError("IFuncs are not supported on this platform");
 
   // On Darwin platforms, emit a manually-constructed .symbol_resolver that
   // implements the symbol resolution duties of the IFunc.
@@ -2876,17 +2885,16 @@ void AsmPrinter::emitConstantPool() {
   // Now print stuff into the calculated sections.
   const MCSection *CurSection = nullptr;
   unsigned Offset = 0;
-  for (unsigned i = 0, e = CPSections.size(); i != e; ++i) {
-    for (unsigned j = 0, ee = CPSections[i].CPEs.size(); j != ee; ++j) {
-      unsigned CPI = CPSections[i].CPEs[j];
+  for (const SectionCPs &CPSection : CPSections) {
+    for (unsigned CPI : CPSection.CPEs) {
       MCSymbol *Sym = GetCPISymbol(CPI);
       if (!Sym->isUndefined())
         continue;
 
-      if (CurSection != CPSections[i].S) {
-        OutStreamer->switchSection(CPSections[i].S);
-        emitAlignment(Align(CPSections[i].Alignment));
-        CurSection = CPSections[i].S;
+      if (CurSection != CPSection.S) {
+        OutStreamer->switchSection(CPSection.S);
+        emitAlignment(Align(CPSection.Alignment));
+        CurSection = CPSection.S;
         Offset = 0;
       }
 
@@ -4329,6 +4337,8 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
       OutStreamer->emitLabel(Sym);
   } else if (isVerbose() && MBB.isMachineBlockAddressTaken()) {
     OutStreamer->AddComment("Block address taken");
+  } else if (isVerbose() && MBB.isInlineAsmBrIndirectTarget()) {
+    OutStreamer->AddComment("Inline asm indirect target");
   }
 
   // Print some verbose block comments.
@@ -4469,7 +4479,7 @@ GCMetadataPrinter *AsmPrinter::getOrCreateGCPrinter(GCStrategy &S) {
   if (!S.usesMetadata())
     return nullptr;
 
-  auto [GCPI, Inserted] = GCMetadataPrinters.insert({&S, nullptr});
+  auto [GCPI, Inserted] = GCMetadataPrinters.try_emplace(&S);
   if (!Inserted)
     return GCPI->second.get();
 
@@ -4720,4 +4730,110 @@ AsmPrinter::getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
   // EK_LabelDifference32 is implemented as an Int32 from the base address.
   return std::make_tuple(Base, 0, BranchLabel,
                          codeview::JumpTableEntrySize::Int32);
+}
+
+void AsmPrinter::emitCOFFReplaceableFunctionData(Module &M) {
+  const Triple &TT = TM.getTargetTriple();
+  assert(TT.isOSBinFormatCOFF());
+
+  bool IsTargetArm64EC = TT.isWindowsArm64EC();
+  SmallVector<char> Buf;
+  SmallVector<MCSymbol *> FuncOverrideDefaultSymbols;
+  bool SwitchedToDirectiveSection = false;
+  for (const Function &F : M.functions()) {
+    if (F.hasFnAttribute("loader-replaceable")) {
+      if (!SwitchedToDirectiveSection) {
+        OutStreamer->switchSection(
+            OutContext.getObjectFileInfo()->getDrectveSection());
+        SwitchedToDirectiveSection = true;
+      }
+
+      StringRef Name = F.getName();
+
+      // For hybrid-patchable targets, strip the prefix so that we can mark
+      // the real function as replaceable.
+      if (IsTargetArm64EC && Name.ends_with(HybridPatchableTargetSuffix)) {
+        Name = Name.drop_back(HybridPatchableTargetSuffix.size());
+      }
+
+      MCSymbol *FuncOverrideSymbol =
+          MMI->getContext().getOrCreateSymbol(Name + "_$fo$");
+      OutStreamer->beginCOFFSymbolDef(FuncOverrideSymbol);
+      OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+      OutStreamer->endCOFFSymbolDef();
+
+      MCSymbol *FuncOverrideDefaultSymbol =
+          MMI->getContext().getOrCreateSymbol(Name + "_$fo_default$");
+      OutStreamer->beginCOFFSymbolDef(FuncOverrideDefaultSymbol);
+      OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+      OutStreamer->endCOFFSymbolDef();
+      FuncOverrideDefaultSymbols.push_back(FuncOverrideDefaultSymbol);
+
+      OutStreamer->emitBytes((Twine(" /ALTERNATENAME:") +
+                              FuncOverrideSymbol->getName() + "=" +
+                              FuncOverrideDefaultSymbol->getName())
+                                 .toStringRef(Buf));
+      Buf.clear();
+    }
+  }
+
+  if (SwitchedToDirectiveSection)
+    OutStreamer->popSection();
+
+  if (FuncOverrideDefaultSymbols.empty())
+    return;
+
+  // MSVC emits the symbols for the default variables pointing at the start of
+  // the .data section, but doesn't actually allocate any space for them. LLVM
+  // can't do this, so have all of the variables pointing at a single byte
+  // instead.
+  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getDataSection());
+  for (MCSymbol *Symbol : FuncOverrideDefaultSymbols) {
+    OutStreamer->emitLabel(Symbol);
+  }
+  OutStreamer->emitZeros(1);
+  OutStreamer->popSection();
+}
+
+void AsmPrinter::emitCOFFFeatureSymbol(Module &M) {
+  const Triple &TT = TM.getTargetTriple();
+  assert(TT.isOSBinFormatCOFF());
+
+  // Emit an absolute @feat.00 symbol.
+  MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
+  OutStreamer->beginCOFFSymbolDef(S);
+  OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
+  OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+  OutStreamer->endCOFFSymbolDef();
+  int64_t Feat00Value = 0;
+
+  if (TT.getArch() == Triple::x86) {
+    // According to the PE-COFF spec, the LSB of this value marks the object
+    // for "registered SEH".  This means that all SEH handler entry points
+    // must be registered in .sxdata.  Use of any unregistered handlers will
+    // cause the process to terminate immediately.  LLVM does not know how to
+    // register any SEH handlers, so its object files should be safe.
+    Feat00Value |= COFF::Feat00Flags::SafeSEH;
+  }
+
+  if (M.getModuleFlag("cfguard")) {
+    // Object is CFG-aware.
+    Feat00Value |= COFF::Feat00Flags::GuardCF;
+  }
+
+  if (M.getModuleFlag("ehcontguard")) {
+    // Object also has EHCont.
+    Feat00Value |= COFF::Feat00Flags::GuardEHCont;
+  }
+
+  if (M.getModuleFlag("ms-kernel")) {
+    // Object is compiled with /kernel.
+    Feat00Value |= COFF::Feat00Flags::Kernel;
+  }
+
+  OutStreamer->emitSymbolAttribute(S, MCSA_Global);
+  OutStreamer->emitAssignment(
+      S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
 }

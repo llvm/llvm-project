@@ -1110,9 +1110,7 @@ void AliasInitializer::initializeAliases(
     llvm::MapVector<const void *, SymbolAlias> &symbolToAlias) {
   SmallVector<std::pair<const void *, InProgressAliasInfo>, 0>
       unprocessedAliases = visitedSymbols.takeVector();
-  llvm::stable_sort(unprocessedAliases, [](const auto &lhs, const auto &rhs) {
-    return lhs.second < rhs.second;
-  });
+  llvm::stable_sort(unprocessedAliases, llvm::less_second());
 
   // This keeps track of all of the non-numeric names that are in flight,
   // allowing us to check for duplicates.
@@ -1148,8 +1146,7 @@ template <typename T, typename... PrintArgs>
 std::pair<size_t, size_t> AliasInitializer::visitImpl(
     T value, llvm::MapVector<const void *, InProgressAliasInfo> &aliases,
     bool canBeDeferred, PrintArgs &&...printArgs) {
-  auto [it, inserted] =
-      aliases.insert({value.getAsOpaquePointer(), InProgressAliasInfo()});
+  auto [it, inserted] = aliases.try_emplace(value.getAsOpaquePointer());
   size_t aliasIndex = std::distance(aliases.begin(), it);
   if (!inserted) {
     // Make sure that the alias isn't deferred if we don't permit it.
@@ -3463,6 +3460,10 @@ void OperationPrinter::printResourceFileMetadata(
       std::optional<uint64_t> charLimit =
           printerFlags.getLargeResourceStringLimit();
       if (charLimit.has_value()) {
+        // Don't compute resourceStr when charLimit is 0.
+        if (charLimit.value() == 0)
+          return;
+
         llvm::raw_string_ostream ss(resourceStr);
         valueFn(ss);
 

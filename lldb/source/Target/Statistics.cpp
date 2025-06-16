@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -72,6 +73,14 @@ json::Value ModuleStats::ToJSON() const {
                      debug_info_had_incomplete_types);
   module.try_emplace("symbolTableStripped", symtab_stripped);
   module.try_emplace("symbolTableSymbolCount", symtab_symbol_count);
+
+  if (!symbol_locator_time.map.empty()) {
+    json::Object obj;
+    for (const auto &entry : symbol_locator_time.map)
+      obj.try_emplace(entry.first().str(), entry.second);
+    module.try_emplace("symbolLocatorTime", std::move(obj));
+  }
+
   if (!symfile_path.empty())
     module.try_emplace("symbolFilePath", symfile_path);
 
@@ -286,9 +295,11 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   const bool include_targets = options.GetIncludeTargets();
   const bool include_modules = options.GetIncludeModules();
   const bool include_transcript = options.GetIncludeTranscript();
+  const bool include_plugins = options.GetIncludePlugins();
 
   json::Array json_targets;
   json::Array json_modules;
+  StatisticsMap symbol_locator_total_time;
   double symtab_parse_time = 0.0;
   double symtab_index_time = 0.0;
   double debug_parse_time = 0.0;
@@ -300,7 +311,6 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t debug_index_saved = 0;
   uint64_t debug_info_size = 0;
 
-  std::vector<ModuleStats> modules;
   std::lock_guard<std::recursive_mutex> guard(
       Module::GetAllocationModuleCollectionMutex());
   const uint64_t num_modules = target != nullptr
@@ -319,6 +329,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     ModuleStats module_stat;
     module_stat.symtab_parse_time = module->GetSymtabParseTime().get().count();
     module_stat.symtab_index_time = module->GetSymtabIndexTime().get().count();
+    module_stat.symbol_locator_time = module->GetSymbolLocatorStatistics();
+    symbol_locator_total_time.merge(module_stat.symbol_locator_time);
     Symtab *symtab = module->GetSymtab(/*can_create=*/false);
     if (symtab) {
       module_stat.symtab_symbol_count = symtab->GetNumSymbols();
@@ -427,6 +439,13 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     global_stats.try_emplace("targets", std::move(json_targets));
   }
 
+  if (!symbol_locator_total_time.map.empty()) {
+    json::Object obj;
+    for (const auto &entry : symbol_locator_total_time.map)
+      obj.try_emplace(entry.first().str(), entry.second);
+    global_stats.try_emplace("totalSymbolLocatorTime", std::move(obj));
+  }
+
   ConstStringStats const_string_stats;
   json::Object json_memory{
       {"strings", const_string_stats.ToJSON()},
@@ -470,6 +489,10 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         global_stats.try_emplace("transcript",
                                  std::move(json_transcript.get()));
     }
+  }
+
+  if (include_plugins) {
+    global_stats.try_emplace("plugins", PluginManager::GetJSON());
   }
 
   return std::move(global_stats);

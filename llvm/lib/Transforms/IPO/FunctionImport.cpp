@@ -577,7 +577,6 @@ class WorkloadImportsManager : public ModuleImportsManager {
     GlobalsImporter GVI(Index, DefinedGVSummaries, IsPrevailing, ImportList,
                         ExportLists);
     auto &ValueInfos = SetIter->second;
-    SmallVector<EdgeInfo, 128> GlobWorklist;
     for (auto &VI : llvm::make_early_inc_range(ValueInfos)) {
       auto It = DefinedGVSummaries.find(VI.getGUID());
       if (It != DefinedGVSummaries.end() &&
@@ -607,7 +606,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
       if (PotentialCandidates.empty()) {
         LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
                           << " because can't find eligible Callee. Guid is: "
-                          << Function::getGUID(VI.name()) << "\n");
+                          << VI.getGUID() << "\n");
         continue;
       }
       /// We will prefer importing the prevailing candidate, if not, we'll
@@ -660,8 +659,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
         continue;
       }
       LLVM_DEBUG(dbgs() << "[Workload][Including]" << VI.name() << " from "
-                        << ExportingModule << " : "
-                        << Function::getGUID(VI.name()) << "\n");
+                        << ExportingModule << " : " << VI.getGUID() << "\n");
       ImportList.addDefinition(ExportingModule, VI.getGUID());
       GVI.onImportingSummary(*GVS);
       if (ExportLists)
@@ -1609,13 +1607,23 @@ Error llvm::EmitImportsFiles(
   if (EC)
     return createFileError("cannot open " + OutputFilename,
                            errorCodeToError(EC));
+  processImportsFiles(ModulePath, ModuleToSummariesForIndex,
+                      [&](StringRef M) { ImportsOS << M << "\n"; });
+  return Error::success();
+}
+
+/// Invoke callback \p F on the file paths from which \p ModulePath
+/// will import.
+void llvm::processImportsFiles(
+    StringRef ModulePath,
+    const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex,
+    function_ref<void(const std::string &)> F) {
   for (const auto &ILI : ModuleToSummariesForIndex)
     // The ModuleToSummariesForIndex map includes an entry for the current
     // Module (needed for writing out the index files). We don't want to
     // include it in the imports file, however, so filter it out.
     if (ILI.first != ModulePath)
-      ImportsOS << ILI.first << "\n";
-  return Error::success();
+      F(ILI.first);
 }
 
 bool llvm::convertToDeclaration(GlobalValue &GV) {
@@ -1807,7 +1815,8 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
       std::string OrigId = GlobalValue::getGlobalIdentifier(
           OrigName, GlobalValue::InternalLinkage,
           TheModule.getSourceFileName());
-      GS = DefinedGlobals.find(GlobalValue::getGUID(OrigId));
+      GS = DefinedGlobals.find(
+          GlobalValue::getGUIDAssumingExternalLinkage(OrigId));
       if (GS == DefinedGlobals.end()) {
         // Also check the original non-promoted non-globalized name. In some
         // cases a preempted weak value is linked in as a local copy because
@@ -1815,7 +1824,8 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
         // In that case, since it was originally not a local value, it was
         // recorded in the index using the original name.
         // FIXME: This may not be needed once PR27866 is fixed.
-        GS = DefinedGlobals.find(GlobalValue::getGUID(OrigName));
+        GS = DefinedGlobals.find(
+            GlobalValue::getGUIDAssumingExternalLinkage(OrigName));
         assert(GS != DefinedGlobals.end());
       }
     }

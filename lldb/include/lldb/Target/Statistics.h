@@ -90,6 +90,26 @@ public:
   }
 };
 
+/// A class to count time for plugins
+class StatisticsMap {
+public:
+  void add(llvm::StringRef key, double value) {
+    if (key.empty())
+      return;
+    auto it = map.find(key);
+    if (it == map.end())
+      map.try_emplace(key, value);
+    else
+      it->second += value;
+  }
+  void merge(StatisticsMap map_to_merge) {
+    for (const auto &entry : map_to_merge.map) {
+      add(entry.first(), entry.second);
+    }
+  }
+  llvm::StringMap<double> map;
+};
+
 /// A class to count success/fail statistics.
 struct StatsSuccessFail {
   StatsSuccessFail(llvm::StringRef n) : name(n.str()) {}
@@ -118,6 +138,7 @@ struct ModuleStats {
   // track down all of the stats that contribute to this module.
   std::vector<intptr_t> symfile_modules;
   llvm::StringMap<llvm::json::Value> type_system_stats;
+  StatisticsMap symbol_locator_time;
   double symtab_parse_time = 0.0;
   double symtab_index_time = 0.0;
   uint32_t symtab_symbol_count = 0;
@@ -175,12 +196,21 @@ public:
     return !GetSummaryOnly();
   }
 
+  void SetIncludePlugins(bool value) { m_include_plugins = value; }
+  bool GetIncludePlugins() const {
+    if (m_include_plugins.has_value())
+      return m_include_plugins.value();
+    // Default to true in both default mode and summary mode.
+    return true;
+  }
+
 private:
   std::optional<bool> m_summary_only;
   std::optional<bool> m_load_all_debug_info;
   std::optional<bool> m_include_targets;
   std::optional<bool> m_include_modules;
   std::optional<bool> m_include_transcript;
+  std::optional<bool> m_include_plugins;
 };
 
 /// A class that represents statistics about a TypeSummaryProviders invocations

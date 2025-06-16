@@ -188,7 +188,6 @@
 ; GCN-O1-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O1-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-NEXT:    FunctionPass Manager
-; GCN-O1-NEXT:      Infer address spaces
 ; GCN-O1-NEXT:      Dominator Tree Construction
 ; GCN-O1-NEXT:      Cycle Info Analysis
 ; GCN-O1-NEXT:      Uniformity Analysis
@@ -228,6 +227,8 @@
 ; GCN-O1-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; GCN-O1-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O1-NEXT:      Expand reduction intrinsics
+; GCN-O1-NEXT:    AMDGPU Preload Kernel Arguments
+; GCN-O1-NEXT:    FunctionPass Manager
 ; GCN-O1-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O1-NEXT:    Lower buffer fat pointer operations to buffer resources
 ; GCN-O1-NEXT:    CallGraph Construction
@@ -469,7 +470,6 @@
 ; GCN-O1-OPTS-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O1-OPTS-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
-; GCN-O1-OPTS-NEXT:      Infer address spaces
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:      Uniformity Analysis
@@ -523,6 +523,8 @@
 ; GCN-O1-OPTS-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O1-OPTS-NEXT:      Expand reduction intrinsics
 ; GCN-O1-OPTS-NEXT:      Early CSE
+; GCN-O1-OPTS-NEXT:    AMDGPU Preload Kernel Arguments
+; GCN-O1-OPTS-NEXT:    FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O1-OPTS-NEXT:    Lower buffer fat pointer operations to buffer resources
 ; GCN-O1-OPTS-NEXT:    CallGraph Construction
@@ -780,7 +782,6 @@
 ; GCN-O2-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O2-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O2-NEXT:    FunctionPass Manager
-; GCN-O2-NEXT:      Infer address spaces
 ; GCN-O2-NEXT:      Dominator Tree Construction
 ; GCN-O2-NEXT:      Cycle Info Analysis
 ; GCN-O2-NEXT:      Uniformity Analysis
@@ -836,6 +837,8 @@
 ; GCN-O2-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O2-NEXT:      Expand reduction intrinsics
 ; GCN-O2-NEXT:      Early CSE
+; GCN-O2-NEXT:    AMDGPU Preload Kernel Arguments
+; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O2-NEXT:    Lower buffer fat pointer operations to buffer resources
 ; GCN-O2-NEXT:    CallGraph Construction
@@ -1095,7 +1098,6 @@
 ; GCN-O3-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O3-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O3-NEXT:    FunctionPass Manager
-; GCN-O3-NEXT:      Infer address spaces
 ; GCN-O3-NEXT:      Dominator Tree Construction
 ; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Uniformity Analysis
@@ -1164,6 +1166,8 @@
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Optimization Remark Emitter
 ; GCN-O3-NEXT:      Global Value Numbering
+; GCN-O3-NEXT:    AMDGPU Preload Kernel Arguments
+; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O3-NEXT:    Lower buffer fat pointer operations to buffer resources
 ; GCN-O3-NEXT:    CallGraph Construction

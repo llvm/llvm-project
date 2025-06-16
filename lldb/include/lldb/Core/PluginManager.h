@@ -12,16 +12,20 @@
 #include "lldb/Core/Architecture.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterfaceUsages.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Target/Statistics.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-interfaces.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
@@ -54,11 +58,66 @@ struct RegisteredPluginInfo {
   bool enabled = false;
 };
 
+// Define some data structures to describe known plugin "namespaces".
+// The PluginManager is organized into a series of static functions
+// that operate on different types of plugins. For example SystemRuntime
+// and ObjectFile plugins.
+//
+// The namespace name is used a prefix when matching plugin names. For example,
+// if we have an "macosx" plugin in the "system-runtime" namespace then we will
+// match a plugin name pattern against the "system-runtime.macosx" name.
+//
+// The plugin namespace here is used so we can operate on all the plugins
+// of a given type so it is easy to enable or disable them as a group.
+using GetPluginInfo = std::function<std::vector<RegisteredPluginInfo>()>;
+using SetPluginEnabled = std::function<bool(llvm::StringRef, bool)>;
+struct PluginNamespace {
+  llvm::StringRef name;
+  GetPluginInfo get_info;
+  SetPluginEnabled set_enabled;
+};
+
 class PluginManager {
 public:
   static void Initialize();
 
   static void Terminate();
+
+  // Support for enabling and disabling plugins.
+
+  // Return the plugins that can be enabled or disabled by the user.
+  static llvm::ArrayRef<PluginNamespace> GetPluginNamespaces();
+
+  // Generate a json object that describes the plugins that are available.
+  // This is a json representation of the plugin info returned by
+  // GetPluginNamespaces().
+  //
+  //    {
+  //       <plugin-namespace>: [
+  //           {
+  //               "enabled": <bool>,
+  //               "name": <plugin-name>,
+  //           },
+  //           ...
+  //       ],
+  //       ...
+  //    }
+  //
+  // If pattern is given it will be used to filter the plugins that are
+  // are returned. The pattern filters the plugin names using the
+  // PluginManager::MatchPluginName() function.
+  static llvm::json::Object GetJSON(llvm::StringRef pattern = "");
+
+  // Return true if the pattern matches the plugin name.
+  //
+  // The pattern matches the name if it is exactly equal to the namespace name
+  // or if it is equal to the qualified name, which is the namespace name
+  // followed by a dot and the plugin name (e.g. "system-runtime.foo").
+  //
+  // An empty pattern matches all plugins.
+  static bool MatchPluginName(llvm::StringRef pattern,
+                              const PluginNamespace &plugin_ns,
+                              const RegisteredPluginInfo &plugin);
 
   // ABI
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -141,8 +200,10 @@ public:
   GetOperatingSystemCreateCallbackForPluginName(llvm::StringRef name);
 
   // Language
-  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
-                             LanguageCreateInstance create_callback);
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 LanguageCreateInstance create_callback,
+                 DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(LanguageCreateInstance create_callback);
 
@@ -377,11 +438,13 @@ public:
   static SymbolLocatorCreateInstance
   GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx);
 
-  static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec);
+  static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec,
+                                               StatisticsMap &map);
 
   static FileSpec
   LocateExecutableSymbolFile(const ModuleSpec &module_spec,
-                             const FileSpecList &default_search_paths);
+                             const FileSpecList &default_search_paths,
+                             StatisticsMap &map);
 
   static bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                                           Status &error,
@@ -485,6 +548,12 @@ public:
 
   static InstrumentationRuntimeCreateInstance
   GetInstrumentationRuntimeCreateCallbackAtIndex(uint32_t idx);
+
+  static std::vector<RegisteredPluginInfo>
+  GetInstrumentationRuntimePluginInfo();
+
+  static bool SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
+                                                     bool enabled);
 
   // TypeSystem
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -611,6 +680,14 @@ public:
                                     llvm::StringRef setting_name);
 
   static bool CreateSettingForStructuredDataPlugin(
+      Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+      llvm::StringRef description, bool is_global_property);
+
+  static lldb::OptionValuePropertiesSP
+  GetSettingForCPlusPlusLanguagePlugin(Debugger &debugger,
+                                       llvm::StringRef setting_name);
+
+  static bool CreateSettingForCPlusPlusLanguagePlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       llvm::StringRef description, bool is_global_property);
 };

@@ -77,7 +77,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NativeFormatting.h"
@@ -223,10 +222,6 @@ unsigned NVPTXAsmPrinter::encodeVirtualRegister(unsigned Reg) {
       Ret = (3 << 28);
     } else if (RC == &NVPTX::Int64RegsRegClass) {
       Ret = (4 << 28);
-    } else if (RC == &NVPTX::Float32RegsRegClass) {
-      Ret = (5 << 28);
-    } else if (RC == &NVPTX::Float64RegsRegClass) {
-      Ret = (6 << 28);
     } else if (RC == &NVPTX::Int128RegsRegClass) {
       Ret = (7 << 28);
     } else {
@@ -1854,75 +1849,8 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV,
   report_fatal_error(Twine(OS.str()));
 }
 
-// Copy of MCExpr::print customized for NVPTX
 void NVPTXAsmPrinter::printMCExpr(const MCExpr &Expr, raw_ostream &OS) const {
-  switch (Expr.getKind()) {
-  case MCExpr::Target:
-    return cast<MCTargetExpr>(&Expr)->printImpl(OS, MAI);
-  case MCExpr::Constant:
-    OS << cast<MCConstantExpr>(Expr).getValue();
-    return;
-
-  case MCExpr::SymbolRef: {
-    const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(Expr);
-    const MCSymbol &Sym = SRE.getSymbol();
-    Sym.print(OS, MAI);
-    return;
-  }
-
-  case MCExpr::Unary: {
-    const MCUnaryExpr &UE = cast<MCUnaryExpr>(Expr);
-    switch (UE.getOpcode()) {
-    case MCUnaryExpr::LNot:  OS << '!'; break;
-    case MCUnaryExpr::Minus: OS << '-'; break;
-    case MCUnaryExpr::Not:   OS << '~'; break;
-    case MCUnaryExpr::Plus:  OS << '+'; break;
-    }
-    printMCExpr(*UE.getSubExpr(), OS);
-    return;
-  }
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr &BE = cast<MCBinaryExpr>(Expr);
-
-    // Only print parens around the LHS if it is non-trivial.
-    if (isa<MCConstantExpr>(BE.getLHS()) || isa<MCSymbolRefExpr>(BE.getLHS()) ||
-        isa<NVPTXGenericMCSymbolRefExpr>(BE.getLHS())) {
-      printMCExpr(*BE.getLHS(), OS);
-    } else {
-      OS << '(';
-      printMCExpr(*BE.getLHS(), OS);
-      OS<< ')';
-    }
-
-    switch (BE.getOpcode()) {
-    case MCBinaryExpr::Add:
-      // Print "X-42" instead of "X+-42".
-      if (const MCConstantExpr *RHSC = dyn_cast<MCConstantExpr>(BE.getRHS())) {
-        if (RHSC->getValue() < 0) {
-          OS << RHSC->getValue();
-          return;
-        }
-      }
-
-      OS <<  '+';
-      break;
-    default: llvm_unreachable("Unhandled binary operator");
-    }
-
-    // Only print parens around the LHS if it is non-trivial.
-    if (isa<MCConstantExpr>(BE.getRHS()) || isa<MCSymbolRefExpr>(BE.getRHS())) {
-      printMCExpr(*BE.getRHS(), OS);
-    } else {
-      OS << '(';
-      printMCExpr(*BE.getRHS(), OS);
-      OS << ')';
-    }
-    return;
-  }
-  }
-
-  llvm_unreachable("Invalid expression kind!");
+  OutContext.getAsmInfo()->printExpr(OS, Expr);
 }
 
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
@@ -2012,6 +1940,11 @@ void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, unsigned OpNum,
     printOperand(MI, OpNum + 1, O);
   }
 }
+
+char NVPTXAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(NVPTXAsmPrinter, "nvptx-asm-printer", "NVPTX Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXAsmPrinter() {

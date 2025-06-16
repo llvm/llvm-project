@@ -730,7 +730,7 @@ static void moveFunctionData(Function &Old, Function &New,
       // other outlined instructions.
       if (!isa<CallInst>(&Val)) {
         // Remove the debug information for outlined functions.
-        Val.setDebugLoc(DebugLoc());
+        Val.setDebugLoc(DebugLoc::getDropped());
 
         // Loop info metadata may contain line locations. Update them to have no
         // value in the new subprogram since the outlined code could be from
@@ -1864,7 +1864,7 @@ replaceArgumentUses(OutlinableRegion &Region,
       Value *ValueOperand = SI->getValueOperand();
 
       StoreInst *NewI = cast<StoreInst>(I->clone());
-      NewI->setDebugLoc(DebugLoc());
+      NewI->setDebugLoc(DebugLoc::getDropped());
       BasicBlock *OutputBB = VBBIt->second;
       NewI->insertInto(OutputBB, OutputBB->end());
       LLVM_DEBUG(dbgs() << "Move store for instruction " << *I << " to "
@@ -2296,7 +2296,6 @@ void IROutliner::deduplicateExtractedSections(
   fillOverallFunction(M, CurrentGroup, OutputStoreBBs, FuncsToRemove,
                       OutputMappings);
 
-  std::vector<Value *> SortedKeys;
   for (unsigned Idx = 1; Idx < CurrentGroup.Regions.size(); Idx++) {
     CurrentOS = CurrentGroup.Regions[Idx];
     AttributeFuncs::mergeAttributesForOutlining(*CurrentGroup.OutlinedFunction,
@@ -2702,7 +2701,7 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
 }
 
 bool IROutliner::extractSection(OutlinableRegion &Region) {
-  SetVector<Value *> ArgInputs, Outputs, SinkCands;
+  SetVector<Value *> ArgInputs, Outputs;
   assert(Region.StartBB && "StartBB for the OutlinableRegion is nullptr!");
   BasicBlock *InitialStart = Region.StartBB;
   Function *OrigF = Region.StartBB->getParent();

@@ -95,8 +95,8 @@ let Predicates = [HasStdExtZalasr] in {
 } // Predicates = [HasStdExtZalasr]
 
 let Predicates = [HasStdExtZalasr, IsRV32] in {
-  def : PatLAQ<acquiring_load<atomic_load_32>, LW_AQ>;
-  def : PatLAQ<seq_cst_load<atomic_load_32>, LW_AQ>;
+  def : PatLAQ<acquiring_load<atomic_load_nonext_32>, LW_AQ>;
+  def : PatLAQ<seq_cst_load<atomic_load_nonext_32>, LW_AQ>;
 
 } // Predicates = [HasStdExtZalasr, IsRV64]
 
@@ -104,8 +104,8 @@ let Predicates = [HasStdExtZalasr, IsRV64] in {
   def : PatLAQ<acquiring_load<atomic_load_asext_32>, LW_AQ>;
   def : PatLAQ<seq_cst_load<atomic_load_asext_32>, LW_AQ>;
 
-  def : PatLAQ<acquiring_load<atomic_load_64>, LD_AQ>;
-  def : PatLAQ<seq_cst_load<atomic_load_64>, LD_AQ>;
+  def : PatLAQ<acquiring_load<atomic_load_nonext_64>, LD_AQ>;
+  def : PatLAQ<seq_cst_load<atomic_load_nonext_64>, LD_AQ>;
 
   def : PatSRL<releasing_store<atomic_store_64>, SD_RL>;
   def : PatSRL<seq_cst_store<atomic_store_64>, SD_RL>;

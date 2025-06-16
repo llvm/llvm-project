@@ -23,7 +23,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <algorithm>
 #include <iterator>
 #include <tuple>
 using namespace llvm;
@@ -70,8 +69,6 @@ std::string llvm::getQualifiedName(const Record *R) {
   return Namespace + "::" + R->getName().str();
 }
 
-/// getTarget - Return the current instance of the Target class.
-///
 CodeGenTarget::CodeGenTarget(const RecordKeeper &records)
     : Records(records), CGH(records), Intrinsics(records) {
   ArrayRef<const Record *> Targets = Records.getAllDerivedDefinitions("Target");
@@ -161,54 +158,6 @@ CodeGenRegBank &CodeGenTarget::getRegBank() const {
   if (!RegBank)
     RegBank = std::make_unique<CodeGenRegBank>(Records, getHwModes());
   return *RegBank;
-}
-
-const CodeGenRegisterClass *CodeGenTarget::getSuperRegForSubReg(
-    const ValueTypeByHwMode &ValueTy, CodeGenRegBank &RegBank,
-    const CodeGenSubRegIndex *SubIdx, bool MustBeAllocatable) const {
-  std::vector<const CodeGenRegisterClass *> Candidates;
-  auto &RegClasses = RegBank.getRegClasses();
-
-  // Try to find a register class which supports ValueTy, and also contains
-  // SubIdx.
-  for (const CodeGenRegisterClass &RC : RegClasses) {
-    // Is there a subclass of this class which contains this subregister index?
-    const CodeGenRegisterClass *SubClassWithSubReg =
-        RC.getSubClassWithSubReg(SubIdx);
-    if (!SubClassWithSubReg)
-      continue;
-
-    // We have a class. Check if it supports this value type.
-    if (!llvm::is_contained(SubClassWithSubReg->VTs, ValueTy))
-      continue;
-
-    // If necessary, check that it is allocatable.
-    if (MustBeAllocatable && !SubClassWithSubReg->Allocatable)
-      continue;
-
-    // We have a register class which supports both the value type and
-    // subregister index. Remember it.
-    Candidates.push_back(SubClassWithSubReg);
-  }
-
-  // If we didn't find anything, we're done.
-  if (Candidates.empty())
-    return nullptr;
-
-  // Find and return the largest of our candidate classes.
-  llvm::stable_sort(Candidates, [&](const CodeGenRegisterClass *A,
-                                    const CodeGenRegisterClass *B) {
-    if (A->getMembers().size() > B->getMembers().size())
-      return true;
-
-    if (A->getMembers().size() < B->getMembers().size())
-      return false;
-
-    // Order by name as a tie-breaker.
-    return StringRef(A->getName()) < B->getName();
-  });
-
-  return Candidates[0];
 }
 
 /// getRegisterByName - If there is a register with the specific AsmName,
@@ -394,7 +343,7 @@ bool CodeGenTarget::guessInstructionProperties() const {
 ComplexPattern::ComplexPattern(const Record *R) {
   Ty = R->getValueAsDef("Ty");
   NumOperands = R->getValueAsInt("NumOperands");
-  SelectFunc = std::string(R->getValueAsString("SelectFunc"));
+  SelectFunc = R->getValueAsString("SelectFunc").str();
   RootNodes = R->getValueAsListOfDefs("RootNodes");
 
   // FIXME: This is a hack to statically increase the priority of patterns which

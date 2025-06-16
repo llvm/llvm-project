@@ -636,7 +636,7 @@ declare void @fn3(i64)
 
 
 ; Make sure we phi-translate and make the partially redundant load in
-; merge fully redudant and then we can jump-thread the block with the
+; merge fully redundant and then we can jump-thread the block with the
 ; store.
 ;
 define i32 @phi_translate_partial_redundant_loads(i32, ptr, ptr) {

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=both,expected -std=c++11 %s
-// RUN: %clang_cc1 -triple x86_64-linux -verify=both,ref -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=both,expected -std=c++11 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-linux -verify=both,ref      -std=c++11 %s
 
 namespace IntOrEnum {
   const int k = 0;
@@ -22,6 +22,16 @@ int array2[recurse2]; // both-warning {{variable length arrays in C++}} \
                       // both-note {{initializer of 'recurse2' is not a constant expression}} \
                       // expected-error {{variable length array declaration not allowed at file scope}} \
                       // ref-warning {{variable length array folded to constant array as an extension}}
+
+constexpr int b = b; // both-error {{must be initialized by a constant expression}} \
+                     // both-note {{read of object outside its lifetime is not allowed in a constant expression}}
+
+
+[[clang::require_constant_initialization]] int c = c; // both-error {{variable does not have a constant initializer}} \
+                                                      // both-note {{attribute here}} \
+                                                      // both-note {{read of non-const variable}} \
+                                                      // both-note {{declared here}}
+
 
 struct S {
   int m;
@@ -207,4 +217,74 @@ namespace ExternPointer {
   struct S { int a; };
   extern const S pu;
   constexpr const int *pua = &pu.a; // Ok.
+}
+
+namespace PseudoDtor {
+  typedef int I;
+  constexpr int f(int a = 1) { // both-error {{never produces a constant expression}} \
+                               // ref-note {{destroying object 'a' whose lifetime has already ended}}
+    return (
+        a.~I(), // both-note {{pseudo-destructor call is not permitted}} \
+                // expected-note {{pseudo-destructor call is not permitted}}
+        0);
+  }
+  static_assert(f() == 0, ""); // both-error {{constant expression}} \
+                               // expected-note {{in call to}}
+}
+
+namespace IntToPtrCast {
+  typedef __INTPTR_TYPE__ intptr_t;
+
+  constexpr intptr_t f(intptr_t x) {
+    return (((x) >> 21) * 8);
+  }
+
+  extern "C" int foo;
+  constexpr intptr_t i = f((intptr_t)&foo - 10); // both-error{{constexpr variable 'i' must be initialized by a constant expression}} \
+                                                 // both-note{{reinterpret_cast}}
+}
+
+namespace Volatile {
+  constexpr int f(volatile int &&r) {
+    return r; // both-note {{read of volatile-qualified type 'volatile int'}}
+  }
+  struct S {
+    int j : f(0); // both-error {{constant expression}} \
+                  // both-note {{in call to 'f(0)'}}
+  };
+}
+
+namespace ZeroSizeCmp {
+  extern void (*start[])();
+  extern void (*end[])();
+  static_assert(&start != &end, ""); // both-error {{constant expression}} \
+                                     // both-note {{comparison of pointers '&start' and '&end' to unrelated zero-sized objects}}
+}
+
+namespace OverlappingStrings {
+  static_assert(+"foo" != +"bar", "");
+  static_assert(&"xfoo"[1] != &"yfoo"[1], "");
+  static_assert(+"foot" != +"foo", "");
+  static_assert(+"foo\0bar" != +"foo\0baz", "");
+
+
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+  static_assert(fold((const char*)u"A" != (const char*)"\0A\0x"), "");
+  static_assert(fold((const char*)u"A" != (const char*)"A\0\0x"), "");
+  static_assert(fold((const char*)u"AAA" != (const char*)"AAA\0\0x"), "");
+
+  constexpr const char *string = "hello";
+  constexpr const char *also_string = string;
+  static_assert(string == string, "");
+  static_assert(string == also_string, "");
+
+
+  // These strings may overlap, and so the result of the comparison is unknown.
+  constexpr bool may_overlap_1 = +"foo" == +"foo"; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
+  constexpr bool may_overlap_2 = +"foo" == +"foo\0bar"; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
+  constexpr bool may_overlap_3 = +"foo" == &"bar\0foo"[4]; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
+  constexpr bool may_overlap_4 = &"xfoo"[1] == &"xfoo"[1]; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
+
+
+
 }

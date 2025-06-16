@@ -177,6 +177,17 @@ static DecodeStatus DecodeFPR64CRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeFPR128RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  if (RegNo >= 32)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::F0_Q + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodeGPRNoX0RegisterClass(MCInst &Inst, uint32_t RegNo,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder) {
@@ -333,6 +344,39 @@ static DecodeStatus DecodeVMV0RegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeTRRegisterClass(MCInst &Inst, uint32_t RegNo,
+                                          uint64_t Address,
+                                          const MCDisassembler *Decoder) {
+  if (RegNo > 15)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::T0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeTRM2RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  if (RegNo > 15 || RegNo % 2)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::T0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeTRM4RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  if (RegNo > 15 || RegNo % 4)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::T0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeVMaskReg(MCInst &Inst, uint32_t RegNo,
                                    uint64_t Address,
                                    const MCDisassembler *Decoder) {
@@ -447,15 +491,15 @@ static DecodeStatus decodeSImmNonZeroOperand(MCInst &Inst, uint32_t Imm,
   return decodeSImmOperand<N>(Inst, Imm, Address, Decoder);
 }
 
-template <unsigned N>
-static DecodeStatus decodeSImmOperandAndLsl1(MCInst &Inst, uint32_t Imm,
+template <unsigned T, unsigned N>
+static DecodeStatus decodeSImmOperandAndLslN(MCInst &Inst, uint32_t Imm,
                                              int64_t Address,
                                              const MCDisassembler *Decoder) {
-  assert(isUInt<N>(Imm) && "Invalid immediate");
-  // Sign-extend the number in the bottom N bits of Imm after accounting for
-  // the fact that the N bit immediate is stored in N-1 bits (the LSB is
+  assert(isUInt<T - N + 1>(Imm) && "Invalid immediate");
+  // Sign-extend the number in the bottom T bits of Imm after accounting for
+  // the fact that the T bit immediate is stored in T-N bits (the LSB is
   // always zero)
-  Inst.addOperand(MCOperand::createImm(SignExtend64<N>(Imm << 1)));
+  Inst.addOperand(MCOperand::createImm(SignExtend64<T>(Imm << N)));
   return MCDisassembler::Success;
 }
 
@@ -711,9 +755,9 @@ static constexpr FeatureBitset XqciFeatureGroup = {
 };
 
 static constexpr FeatureBitset XSfVectorGroup = {
-    RISCV::FeatureVendorXSfvcp, RISCV::FeatureVendorXSfvqmaccdod,
-    RISCV::FeatureVendorXSfvqmaccqoq, RISCV::FeatureVendorXSfvfwmaccqqq,
-    RISCV::FeatureVendorXSfvfnrclipxfqf};
+    RISCV::FeatureVendorXSfvcp,          RISCV::FeatureVendorXSfvqmaccdod,
+    RISCV::FeatureVendorXSfvqmaccqoq,    RISCV::FeatureVendorXSfvfwmaccqqq,
+    RISCV::FeatureVendorXSfvfnrclipxfqf, RISCV::FeatureVendorXSfmmbase};
 static constexpr FeatureBitset XSfSystemGroup = {
     RISCV::FeatureVendorXSiFivecdiscarddlone,
     RISCV::FeatureVendorXSiFivecflushdlone,
@@ -726,6 +770,10 @@ static constexpr FeatureBitset XTHeadGroup = {
     RISCV::FeatureVendorXTHeadMac,     RISCV::FeatureVendorXTHeadMemIdx,
     RISCV::FeatureVendorXTHeadMemPair, RISCV::FeatureVendorXTHeadSync,
     RISCV::FeatureVendorXTHeadVdot};
+
+static constexpr FeatureBitset XAndesGroup = {
+    RISCV::FeatureVendorXAndesPerf, RISCV::FeatureVendorXAndesVPackFPH,
+    RISCV::FeatureVendorXAndesVDot};
 
 static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions
@@ -740,6 +788,7 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXmipscmov32,
      {RISCV::FeatureVendorXMIPSCMov},
      "MIPS mips.ccmov"},
+    {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
     // Standard Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
     {DecoderTableXqci32, XqciFeatureGroup, "Qualcomm uC Extensions"},

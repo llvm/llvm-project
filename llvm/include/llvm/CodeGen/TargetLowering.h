@@ -50,7 +50,9 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownFPClass.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -193,7 +195,7 @@ public:
 
 /// This base class for TargetLowering contains the SelectionDAG-independent
 /// parts that can be used from the rest of CodeGen.
-class TargetLoweringBase {
+class LLVM_ABI TargetLoweringBase {
 public:
   /// This enum indicates whether operations are valid for a target, and if not,
   /// what action should be used to make them valid.
@@ -252,20 +254,20 @@ public:
   /// support for these atomic instructions, and also have different options
   /// w.r.t. what they should expand to.
   enum class AtomicExpansionKind {
-    None,    // Don't expand the instruction.
-    CastToInteger,    // Cast the atomic instruction to another type, e.g. from
-                      // floating-point to integer type.
+    None,          // Don't expand the instruction.
+    CastToInteger, // Cast the atomic instruction to another type, e.g. from
+                   // floating-point to integer type.
     LLSC,    // Expand the instruction into loadlinked/storeconditional; used
-             // by ARM/AArch64.
+             // by ARM/AArch64/PowerPC.
     LLOnly,  // Expand the (load) instruction into just a load-linked, which has
              // greater atomic guarantees than a normal load.
     CmpXChg, // Expand the instruction into cmpxchg; used by at least X86.
-    MaskedIntrinsic,  // Use a target-specific intrinsic for the LL/SC loop.
-    BitTestIntrinsic, // Use a target-specific intrinsic for special bit
-                      // operations; used by X86.
-    CmpArithIntrinsic,// Use a target-specific intrinsic for special compare
-                      // operations; used by X86.
-    Expand,           // Generic expansion in terms of other atomic operations.
+    MaskedIntrinsic,   // Use a target-specific intrinsic for the LL/SC loop.
+    BitTestIntrinsic,  // Use a target-specific intrinsic for special bit
+                       // operations; used by X86.
+    CmpArithIntrinsic, // Use a target-specific intrinsic for special compare
+                       // operations; used by X86.
+    Expand,            // Generic expansion in terms of other atomic operations.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
     // environment.
@@ -325,7 +327,7 @@ public:
           IsSwiftSelf(false), IsSwiftAsync(false), IsSwiftError(false),
           IsCFGuardTarget(false) {}
 
-    void setAttributes(const CallBase *Call, unsigned ArgIdx);
+    LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
   };
   using ArgListTy = std::vector<ArgListEntry>;
 
@@ -1228,6 +1230,9 @@ public:
     MaybeAlign align = Align(1);   // alignment
 
     MachineMemOperand::Flags flags = MachineMemOperand::MONone;
+    SyncScope::ID ssid = SyncScope::System;
+    AtomicOrdering order = AtomicOrdering::NotAtomic;
+    AtomicOrdering failureOrder = AtomicOrdering::NotAtomic;
     IntrinsicInfo() = default;
   };
 
@@ -1654,17 +1659,21 @@ public:
   /// InputVT should be treated. Either it's legal, needs to be promoted to a
   /// larger size, needs to be expanded to some other code sequence, or the
   /// target has a custom expander for it.
-  LegalizeAction getPartialReduceMLAAction(EVT AccVT, EVT InputVT) const {
-    PartialReduceActionTypes TypePair = {AccVT.getSimpleVT().SimpleTy,
-                                         InputVT.getSimpleVT().SimpleTy};
-    auto It = PartialReduceMLAActions.find(TypePair);
+  LegalizeAction getPartialReduceMLAAction(unsigned Opc, EVT AccVT,
+                                           EVT InputVT) const {
+    assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
+           Opc == ISD::PARTIAL_REDUCE_SUMLA);
+    PartialReduceActionTypes Key = {Opc, AccVT.getSimpleVT().SimpleTy,
+                                    InputVT.getSimpleVT().SimpleTy};
+    auto It = PartialReduceMLAActions.find(Key);
     return It != PartialReduceMLAActions.end() ? It->second : Expand;
   }
 
   /// Return true if a PARTIAL_REDUCE_U/SMLA node with the specified types is
   /// legal or custom for this target.
-  bool isPartialReduceMLALegalOrCustom(EVT AccVT, EVT InputVT) const {
-    LegalizeAction Action = getPartialReduceMLAAction(AccVT, InputVT);
+  bool isPartialReduceMLALegalOrCustom(unsigned Opc, EVT AccVT,
+                                       EVT InputVT) const {
+    LegalizeAction Action = getPartialReduceMLAAction(Opc, AccVT, InputVT);
     return Action == Legal || Action == Custom;
   }
 
@@ -2749,12 +2758,19 @@ protected:
   /// type InputVT should be treated by the target. Either it's legal, needs to
   /// be promoted to a larger size, needs to be expanded to some other code
   /// sequence, or the target has a custom expander for it.
-  void setPartialReduceMLAAction(MVT AccVT, MVT InputVT,
+  void setPartialReduceMLAAction(unsigned Opc, MVT AccVT, MVT InputVT,
                                  LegalizeAction Action) {
+    assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
+           Opc == ISD::PARTIAL_REDUCE_SUMLA);
     assert(AccVT.isValid() && InputVT.isValid() &&
            "setPartialReduceMLAAction types aren't valid");
-    PartialReduceActionTypes TypePair = {AccVT.SimpleTy, InputVT.SimpleTy};
-    PartialReduceMLAActions[TypePair] = Action;
+    PartialReduceActionTypes Key = {Opc, AccVT.SimpleTy, InputVT.SimpleTy};
+    PartialReduceMLAActions[Key] = Action;
+  }
+  void setPartialReduceMLAAction(ArrayRef<unsigned> Opcodes, MVT AccVT,
+                                 MVT InputVT, LegalizeAction Action) {
+    for (unsigned Opc : Opcodes)
+      setPartialReduceMLAAction(Opc, AccVT, InputVT, Action);
   }
 
   /// If Opc/OrigVT is specified as being promoted, the promotion code defaults
@@ -3216,8 +3232,7 @@ public:
   /// \p Load is a vp.load instruction.
   /// \p Mask is a mask value
   /// \p DeinterleaveRes is a list of deinterleaved results.
-  virtual bool
-  lowerDeinterleavedIntrinsicToVPLoad(VPIntrinsic *Load, Value *Mask,
+  virtual bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
                                       ArrayRef<Value *> DeinterleaveRes) const {
     return false;
   }
@@ -3228,15 +3243,14 @@ public:
   /// \p Store is the vp.store instruction.
   /// \p Mask is a mask value
   /// \p InterleaveOps is a list of values being interleaved.
-  virtual bool
-  lowerInterleavedIntrinsicToVPStore(VPIntrinsic *Store, Value *Mask,
-                                     ArrayRef<Value *> InterleaveOps) const {
+  virtual bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
+                                       ArrayRef<Value *> InterleaveOps) const {
     return false;
   }
 
   /// Lower a deinterleave intrinsic to a target specific load intrinsic.
   /// Return true on success. Currently only supports
-  /// llvm.vector.deinterleave2
+  /// llvm.vector.deinterleave{2,3,5,7}
   ///
   /// \p LI is the accompanying load instruction.
   /// \p DeinterleaveValues contains the deinterleaved values.
@@ -3248,7 +3262,7 @@ public:
 
   /// Lower an interleave intrinsic to a target specific store intrinsic.
   /// Return true on success. Currently only supports
-  /// llvm.vector.interleave2
+  /// llvm.vector.interleave{2,3,5,7}
   ///
   /// \p SI is the accompanying store instruction
   /// \p InterleaveValues contains the interleaved values.
@@ -3387,8 +3401,10 @@ public:
   /// Return true if pulling a binary operation into a select with an identity
   /// constant is profitable. This is the inverse of an IR transform.
   /// Example: X + (Cond ? Y : 0) --> Cond ? (X + Y) : X
-  virtual bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                                    EVT VT) const {
+  virtual bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                                    unsigned SelectOpcode,
+                                                    SDValue X,
+                                                    SDValue Y) const {
     return false;
   }
 
@@ -3484,6 +3500,15 @@ public:
   /// Should we expand [US]CMP nodes using two selects and two compares, or by
   /// doing arithmetic on boolean types
   virtual bool shouldExpandCmpUsingSelects(EVT VT) const { return false; }
+
+  /// True if target has some particular form of dealing with pointer arithmetic
+  /// semantics for pointers with the given value type. False if pointer
+  /// arithmetic should not be preserved for passes such as instruction
+  /// selection, and can fallback to regular arithmetic.
+  /// This should be removed when PTRADD nodes are widely supported by backends.
+  virtual bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const {
+    return false;
+  }
 
   /// Does this target support complex deinterleaving
   virtual bool isComplexDeinterleavingSupported() const { return false; }
@@ -3737,10 +3762,10 @@ private:
   uint32_t CondCodeActions[ISD::SETCC_INVALID][(MVT::VALUETYPE_SIZE + 7) / 8];
 
   using PartialReduceActionTypes =
-      std::pair<MVT::SimpleValueType, MVT::SimpleValueType>;
-  /// For each result type and input type for the ISD::PARTIAL_REDUCE_U/SMLA
-  /// nodes, keep a LegalizeAction which indicates how instruction selection
-  /// should deal with this operation.
+      std::tuple<unsigned, MVT::SimpleValueType, MVT::SimpleValueType>;
+  /// For each partial reduce opcode, result type and input type combination,
+  /// keep a LegalizeAction which indicates how instruction selection should
+  /// deal with this operation.
   DenseMap<PartialReduceActionTypes, LegalizeAction> PartialReduceMLAActions;
 
   ValueTypeActionImpl ValueTypeActions;
@@ -3895,7 +3920,7 @@ protected:
 ///
 /// This class also defines callbacks that targets must implement to lower
 /// target-specific constructs to SelectionDAG operators.
-class TargetLowering : public TargetLoweringBase {
+class LLVM_ABI TargetLowering : public TargetLoweringBase {
 public:
   struct DAGCombinerInfo;
   struct MakeLibCallOptions;
@@ -4232,6 +4257,13 @@ public:
                                               const MachineRegisterInfo &MRI,
                                               unsigned Depth = 0) const;
 
+  virtual void computeKnownFPClassForTargetInstr(GISelValueTracking &Analysis,
+                                                 Register R,
+                                                 KnownFPClass &Known,
+                                                 const APInt &DemandedElts,
+                                                 const MachineRegisterInfo &MRI,
+                                                 unsigned Depth = 0) const;
+
   /// Determine the known alignment for the pointer value \p R. This is can
   /// typically be inferred from the number of low known 0 bits. However, for a
   /// pointer with a non-integral address space, the alignment value may be
@@ -4360,14 +4392,16 @@ public:
     CombineLevel getDAGCombineLevel() { return Level; }
     bool isCalledByLegalizer() const { return CalledByLegalizer; }
 
-    void AddToWorklist(SDNode *N);
-    SDValue CombineTo(SDNode *N, ArrayRef<SDValue> To, bool AddTo = true);
-    SDValue CombineTo(SDNode *N, SDValue Res, bool AddTo = true);
-    SDValue CombineTo(SDNode *N, SDValue Res0, SDValue Res1, bool AddTo = true);
+    LLVM_ABI void AddToWorklist(SDNode *N);
+    LLVM_ABI SDValue CombineTo(SDNode *N, ArrayRef<SDValue> To,
+                               bool AddTo = true);
+    LLVM_ABI SDValue CombineTo(SDNode *N, SDValue Res, bool AddTo = true);
+    LLVM_ABI SDValue CombineTo(SDNode *N, SDValue Res0, SDValue Res1,
+                               bool AddTo = true);
 
-    bool recursivelyDeleteUnusedNodes(SDNode *N);
+    LLVM_ABI bool recursivelyDeleteUnusedNodes(SDNode *N);
 
-    void CommitTargetLoweringOpt(const TargetLoweringOpt &TLO);
+    LLVM_ABI void CommitTargetLoweringOpt(const TargetLoweringOpt &TLO);
   };
 
   /// Return if the N is a constant or constant vector equal to the true value
@@ -5123,11 +5157,11 @@ public:
 
     /// Return true of this is an input operand that is a matching constraint
     /// like "4".
-    bool isMatchingInputConstraint() const;
+    LLVM_ABI bool isMatchingInputConstraint() const;
 
     /// If this is an input matching constraint, this method returns the output
     /// operand it matches.
-    unsigned getMatchedOperand() const;
+    LLVM_ABI unsigned getMatchedOperand() const;
   };
 
   using AsmOperandInfoVector = std::vector<AsmOperandInfo>;
@@ -5799,9 +5833,10 @@ private:
 /// Given an LLVM IR type and return type attributes, compute the return value
 /// EVTs and flags, and optionally also the offsets, if the return value is
 /// being lowered to memory.
-void GetReturnInfo(CallingConv::ID CC, Type *ReturnType, AttributeList attr,
-                   SmallVectorImpl<ISD::OutputArg> &Outs,
-                   const TargetLowering &TLI, const DataLayout &DL);
+LLVM_ABI void GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
+                            AttributeList attr,
+                            SmallVectorImpl<ISD::OutputArg> &Outs,
+                            const TargetLowering &TLI, const DataLayout &DL);
 
 } // end namespace llvm
 

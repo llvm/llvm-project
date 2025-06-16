@@ -11,7 +11,8 @@
 #include <gtest/gtest.h>
 
 using olWaitQueueTest = OffloadQueueTest;
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olWaitQueueTest);
 
-TEST_F(olWaitQueueTest, SuccessEmptyQueue) {
+TEST_P(olWaitQueueTest, SuccessEmptyQueue) {
   ASSERT_SUCCESS(olWaitQueue(Queue));
 }

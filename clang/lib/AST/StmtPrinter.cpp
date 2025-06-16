@@ -50,7 +50,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -737,7 +736,9 @@ void StmtPrinter::VisitOMPCanonicalLoop(OMPCanonicalLoop *Node) {
 
 void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                               bool ForceNoStmt) {
-  OMPClausePrinter Printer(OS, Policy);
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  OMPClausePrinter Printer(OS, Policy, OpenMPVersion);
   ArrayRef<OMPClause *> Clauses = S->clauses();
   for (auto *Clause : Clauses)
     if (Clause && !Clause->isImplicit()) {
@@ -964,14 +965,18 @@ void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
 
 void StmtPrinter::VisitOMPCancellationPointDirective(
     OMPCancellationPointDirective *Node) {
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancellation point "
-           << getOpenMPDirectiveName(Node->getCancelRegion());
+           << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancel "
-           << getOpenMPDirectiveName(Node->getCancelRegion());
+           << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
@@ -2907,11 +2912,6 @@ void StmtPrinter::VisitBlockExpr(BlockExpr *Node) {
 
 void StmtPrinter::VisitOpaqueValueExpr(OpaqueValueExpr *Node) {
   PrintExpr(Node->getSourceExpr());
-}
-
-void StmtPrinter::VisitTypoExpr(TypoExpr *Node) {
-  // TODO: Print something reasonable for a TypoExpr, if necessary.
-  llvm_unreachable("Cannot print TypoExpr nodes");
 }
 
 void StmtPrinter::VisitRecoveryExpr(RecoveryExpr *Node) {

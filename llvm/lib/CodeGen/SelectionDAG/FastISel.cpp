@@ -1173,7 +1173,7 @@ bool FastISel::selectCall(const User *I) {
 
     MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                                       TII.get(TargetOpcode::INLINEASM));
-    MIB.addExternalSymbol(IA->getAsmString().c_str());
+    MIB.addExternalSymbol(IA->getAsmString().data());
     MIB.addImm(ExtraInfo);
 
     const MDNode *SrcLoc = Call->getMetadata("srcloc");
@@ -1671,9 +1671,6 @@ void FastISel::fastEmitBranch(MachineBasicBlock *MSucc,
                               const DebugLoc &DbgLoc) {
   const BasicBlock *BB = FuncInfo.MBB->getBasicBlock();
   bool BlockHasMultipleInstrs = &BB->front() != &BB->back();
-  // Handle legacy case of debug intrinsics
-  if (BlockHasMultipleInstrs && !BB->getModule()->IsNewDbgInfoFormat)
-    BlockHasMultipleInstrs = BB->sizeWithoutDebug() > 1;
   if (BlockHasMultipleInstrs && FuncInfo.MBB->isLayoutSuccessor(MSucc)) {
     // For more accurate line information if this is the only non-debug
     // instruction in the block then emit it, otherwise we have the

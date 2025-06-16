@@ -190,10 +190,14 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return 1;
     }
 
-    // This returns a vector type that represents the fragment of data owned by
-    // a work item in SIMT mode if this tensor descriptor is used in a XeGPU
-    // load/store operation.
-    FailureOr<VectorType> getDistributedVectorType();
+    /// Helper to drop all layout information from the TensorDesc type.
+    TensorDescType dropLayouts() {
+      if (!getLayoutAttr())
+        return *this;
+
+      return get(getContext(), getShape(), getElementType(), getEncoding(),
+        xegpu::LayoutAttr());
+    }
   }];
 
   let hasCustomAssemblyFormat = true;

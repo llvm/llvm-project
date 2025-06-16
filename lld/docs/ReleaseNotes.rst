@@ -25,6 +25,10 @@ Non-comprehensive list of changes in this release
 
 ELF Improvements
 ----------------
+* Added ``-z dynamic-undefined-weak`` to make undefined weak symbols dynamic
+  when the dynamic symbol table is present.
+  (`#143831 <https://github.com/llvm/llvm-project/pull/143831>`_)
+
 * For AArch64, added support for ``-zgcs-report-dynamic``, enabling checks for
   GNU GCS Attribute Flags in Dynamic Objects when GCS is enabled. Inherits value
   from ``-zgcs-report`` (capped at ``warning`` level) unless user-defined,
@@ -63,6 +67,12 @@ Breaking changes
 * Executable-only and readable-executable sections are now allowed to be placed
   in the same segment by default. Pass ``--xosegment`` to lld in order to get
   the old behavior back.
+
+* When using ``--no-pie`` without a ``SECTIONS`` command, the linker uses the
+  target's default image base. If ``-Ttext=`` or ``--section-start`` specifies
+  an output section address below this base, there will now be an error.
+  ``--image-base`` can be set at a lower address to fix the error.
+  (`#140187 <https://github.com/llvm/llvm-project/pull/140187>`_)
 
 COFF Improvements
 -----------------

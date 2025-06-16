@@ -111,7 +111,6 @@ Expected<SymbolNameSet> getDylibInterface(ExecutionSession &ES, Twine Path) {
   if (auto EC = identify_magic(Path, Magic))
     return createFileError(Path, EC);
 
-  SymbolNameSet Symbols;
   switch (Magic) {
   case file_magic::macho_universal_binary:
   case file_magic::macho_dynamically_linked_shared_lib:

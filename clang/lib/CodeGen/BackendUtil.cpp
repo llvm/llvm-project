@@ -16,7 +16,6 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -70,7 +69,8 @@
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/KCFI.h"
 #include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
-#include "llvm/Transforms/Instrumentation/MemProfiler.h"
+#include "llvm/Transforms/Instrumentation/MemProfInstrumentation.h"
+#include "llvm/Transforms/Instrumentation/MemProfUse.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/NumericalStabilitySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
@@ -124,17 +124,10 @@ namespace clang {
 extern llvm::cl::opt<bool> ClSanitizeGuardChecks;
 }
 
-// Default filename used for profile generation.
-static std::string getDefaultProfileGenName() {
-  return DebugInfoCorrelate || ProfileCorrelate != InstrProfCorrelator::NONE
-             ? "default_%m.proflite"
-             : "default_%m.profraw";
-}
-
 // Path and name of file used for profile generation
 static std::string getProfileGenName(const CodeGenOptions &CodeGenOpts) {
   std::string FileName = CodeGenOpts.InstrProfileOutput.empty()
-                             ? getDefaultProfileGenName()
+                             ? llvm::driver::getDefaultProfileGenName()
                              : CodeGenOpts.InstrProfileOutput;
   if (CodeGenOpts.ContinuousProfileSync)
     FileName = "%c" + FileName;
@@ -255,6 +248,7 @@ getSancovOptsFromCGOpts(const CodeGenOptions &CGOpts) {
   Opts.InlineBoolFlag = CGOpts.SanitizeCoverageInlineBoolFlag;
   Opts.PCTable = CGOpts.SanitizeCoveragePCTable;
   Opts.StackDepth = CGOpts.SanitizeCoverageStackDepth;
+  Opts.StackDepthCallbackMin = CGOpts.SanitizeCoverageStackDepthCallbackMin;
   Opts.TraceLoads = CGOpts.SanitizeCoverageTraceLoads;
   Opts.TraceStores = CGOpts.SanitizeCoverageTraceStores;
   Opts.CollectControlFlow = CGOpts.SanitizeCoverageControlFlow;
@@ -304,7 +298,7 @@ getCodeModel(const CodeGenOptions &CodeGenOpts) {
                            .Case("kernel", llvm::CodeModel::Kernel)
                            .Case("medium", llvm::CodeModel::Medium)
                            .Case("large", llvm::CodeModel::Large)
-                           .Case("default", ~1u)
+                           .Cases("default", "", ~1u)
                            .Default(~0u);
   assert(CodeModel != ~0u && "invalid code model!");
   if (CodeModel == ~1u)
@@ -617,7 +611,8 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
     return;
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                           Options, RM, CM, OptLevel));
-  TM->setLargeDataThreshold(CodeGenOpts.LargeDataThreshold);
+  if (TM)
+    TM->setLargeDataThreshold(CodeGenOpts.LargeDataThreshold);
 }
 
 bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
@@ -961,6 +956,22 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       Debugify.setOrigDIVerifyBugsReportFilePath(
           CodeGenOpts.DIBugsReportFilePath);
     Debugify.registerCallbacks(PIC, MAM);
+
+#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+    // If we're using debug location coverage tracking, mark all the
+    // instructions coming out of the frontend without a DebugLoc as being
+    // compiler-generated, to prevent both those instructions and new
+    // instructions that inherit their location from being treated as
+    // incorrectly empty locations.
+    for (Function &F : *TheModule) {
+      if (!F.getSubprogram())
+        continue;
+      for (BasicBlock &BB : F)
+        for (Instruction &I : BB)
+          if (!I.getDebugLoc())
+            I.setDebugLoc(DebugLoc::getCompilerGenerated());
+    }
+#endif
   }
   // Attempt to load pass plugins and register their callbacks with PB.
   for (auto &PluginFN : CodeGenOpts.PassPlugins) {
@@ -1334,7 +1345,7 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   // Context sensitive profile.
   if (CGOpts.hasProfileCSIRInstr()) {
     Conf.RunCSIRInstr = true;
-    Conf.CSIRProfile = std::move(CGOpts.InstrProfileOutput);
+    Conf.CSIRProfile = getProfileGenName(CGOpts);
   } else if (CGOpts.hasProfileCSIRUse()) {
     Conf.RunCSIRInstr = false;
     Conf.CSIRProfile = std::move(CGOpts.ProfileInstrumentUsePath);

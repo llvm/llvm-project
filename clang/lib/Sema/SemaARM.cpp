@@ -389,7 +389,7 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
     if (SemaRef.BuiltinConstantArg(TheCall, ArgIdx, Imm))
       return true;
 
-    if (std::find(Set.begin(), Set.end(), Imm.getSExtValue()) == Set.end())
+    if (!llvm::is_contained(Set, Imm.getSExtValue()))
       return Diag(TheCall->getBeginLoc(), ErrDiag) << Arg->getSourceRange();
     return false;
   };
@@ -766,7 +766,7 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
     if (HasConstPtr)
       EltTy = EltTy.withConst();
     QualType LHSTy = getASTContext().getPointerType(EltTy);
-    Sema::AssignConvertType ConvTy;
+    AssignConvertType ConvTy;
     ConvTy = SemaRef.CheckSingleAssignmentConstraints(LHSTy, RHS);
     if (RHS.isInvalid())
       return true;

@@ -63,6 +63,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
@@ -625,8 +626,7 @@ static void followUsesInContext(AAType &AA, Attributor &A,
     if (const Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
       bool Found = Explorer.findInContextOf(UserI, EIt, EEnd);
       if (Found && AA.followUseInMBEC(A, U, UserI, State))
-        for (const Use &Us : UserI->uses())
-          Uses.insert(&Us);
+        Uses.insert_range(llvm::make_pointer_range(UserI->uses()));
     }
   }
 }
@@ -1012,12 +1012,7 @@ namespace {
 #ifndef NDEBUG
 static raw_ostream &operator<<(raw_ostream &OS,
                                const AAPointerInfo::OffsetInfo &OI) {
-  ListSeparator LS;
-  OS << "[";
-  for (auto Offset : OI) {
-    OS << LS << Offset;
-  }
-  OS << "]";
+  OS << llvm::interleaved_array(OI);
   return OS;
 }
 #endif // NDEBUG
@@ -2154,7 +2149,8 @@ struct AANoUnwindCallSite final
 
 bool AANoSync::isAlignedBarrier(const CallBase &CB, bool ExecutedAligned) {
   switch (CB.getIntrinsicID()) {
-  case Intrinsic::nvvm_barrier0:
+  case Intrinsic::nvvm_barrier_cta_sync_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_sync_aligned_count:
   case Intrinsic::nvvm_barrier0_and:
   case Intrinsic::nvvm_barrier0_or:
   case Intrinsic::nvvm_barrier0_popc:
@@ -10913,9 +10909,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       return II.I == I && II.S == S;
     };
     bool operator<(const ItemInfo &II) const {
-      if (I == II.I)
-        return S < II.S;
-      return I < II.I;
+      return std::tie(I, S) < std::tie(II.I, II.S);
     };
   };
 
@@ -12597,31 +12591,39 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
-    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
     uint32_t OldAddressSpace = AssumedAddressSpace;
+    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
 
     auto CheckAddressSpace = [&](Value &Obj) {
+      // Ignore undef.
       if (isa<UndefValue>(&Obj))
         return true;
-      // If an argument in flat address space only has addrspace cast uses, and
-      // those casts are same, then we take the dst addrspace.
-      if (auto *Arg = dyn_cast<Argument>(&Obj)) {
-        if (Arg->getType()->getPointerAddressSpace() == FlatAS) {
-          unsigned CastAddrSpace = FlatAS;
-          for (auto *U : Arg->users()) {
-            auto *ASCI = dyn_cast<AddrSpaceCastInst>(U);
-            if (!ASCI)
-              return takeAddressSpace(Obj.getType()->getPointerAddressSpace());
-            if (CastAddrSpace != FlatAS &&
-                CastAddrSpace != ASCI->getDestAddressSpace())
-              return false;
-            CastAddrSpace = ASCI->getDestAddressSpace();
-          }
-          if (CastAddrSpace != FlatAS)
-            return takeAddressSpace(CastAddrSpace);
-        }
+
+      // If the object already has a non-flat address space, we simply take it.
+      unsigned ObjAS = Obj.getType()->getPointerAddressSpace();
+      if (ObjAS != FlatAS)
+        return takeAddressSpace(ObjAS);
+
+      // At this point, we know Obj is in the flat address space. For a final
+      // attempt, we want to use getAssumedAddrSpace, but first we must get the
+      // associated function, if possible.
+      Function *F = nullptr;
+      if (auto *Arg = dyn_cast<Argument>(&Obj))
+        F = Arg->getParent();
+      else if (auto *I = dyn_cast<Instruction>(&Obj))
+        F = I->getFunction();
+
+      // Use getAssumedAddrSpace if the associated function exists.
+      if (F) {
+        auto *TTI =
+            A.getInfoCache().getAnalysisResultForFunction<TargetIRAnalysis>(*F);
+        unsigned AssumedAS = TTI->getAssumedAddrSpace(&Obj);
+        if (AssumedAS != ~0U)
+          return takeAddressSpace(AssumedAS);
       }
-      return takeAddressSpace(Obj.getType()->getPointerAddressSpace());
+
+      // Now we can't do anything else but to take the flat AS.
+      return takeAddressSpace(FlatAS);
     };
 
     auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,

@@ -70,19 +70,18 @@ struct SymbolAndDesignatorExtractor {
 
   static void verify(const SymbolWithDesignator &sd) {
     const semantics::Symbol *symbol = std::get<0>(sd);
-    assert(symbol && "Expecting symbol");
-    auto &maybeDsg = std::get<1>(sd);
+    const std::optional<evaluate::Expr<evaluate::SomeType>> &maybeDsg =
+        std::get<1>(sd);
     if (!maybeDsg)
       return; // Symbol with no designator -> OK
-    std::optional<evaluate::DataRef> maybeRef =
-        evaluate::ExtractDataRef(*maybeDsg);
+    assert(symbol && "Expecting symbol");
+    std::optional<evaluate::DataRef> maybeRef = evaluate::ExtractDataRef(
+        *maybeDsg, /*intoSubstring=*/true, /*intoComplexPart=*/true);
     if (maybeRef) {
       if (&maybeRef->GetLastSymbol() == symbol)
         return; // Symbol with a designator for it -> OK
       llvm_unreachable("Expecting designator for given symbol");
     } else {
-      // This could still be a Substring or ComplexPart, but at least Substring
-      // is not allowed in OpenMP.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       maybeDsg->dump();
 #endif
@@ -612,7 +611,7 @@ Defaultmap make(const parser::OmpClause::Defaultmap &inp,
       MS(Firstprivate, Firstprivate)
       MS(None,         None)
       MS(Default,      Default)
-      // MS(, Present)  missing-in-parser
+      MS(Present,      Present)
       // clang-format on
   );
 
@@ -1400,9 +1399,13 @@ Uniform make(const parser::OmpClause::Uniform &inp,
 Update make(const parser::OmpClause::Update &inp,
             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpUpdateClause
-  auto depType =
-      common::visit([](auto &&s) { return makeDepType(s); }, inp.v.u);
-  return Update{/*DependenceType=*/depType};
+  if (inp.v) {
+    return common::visit(
+        [](auto &&s) { return Update{/*DependenceType=*/makeDepType(s)}; },
+        inp.v->u);
+  } else {
+    return Update{/*DependenceType=*/std::nullopt};
+  }
 }
 
 Use make(const parser::OmpClause::Use &inp,

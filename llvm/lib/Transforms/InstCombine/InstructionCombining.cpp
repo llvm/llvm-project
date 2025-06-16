@@ -217,6 +217,26 @@ Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
   return Offset;
 }
 
+Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
+                                        GEPNoWrapFlags NW, Type *IdxTy,
+                                        bool RewriteGEPs) {
+  Value *Sum = nullptr;
+  for (GEPOperator *GEP : reverse(GEPs)) {
+    Value *Offset = EmitGEPOffset(GEP, RewriteGEPs);
+    if (Offset->getType() != IdxTy)
+      Offset = Builder.CreateVectorSplat(
+          cast<VectorType>(IdxTy)->getElementCount(), Offset);
+    if (Sum)
+      Sum = Builder.CreateAdd(Sum, Offset, "", NW.hasNoUnsignedWrap(),
+                              NW.isInBounds());
+    else
+      Sum = Offset;
+  }
+  if (!Sum)
+    return Constant::getNullValue(IdxTy);
+  return Sum;
+}
+
 /// Legal integers and common types are considered desirable. This is used to
 /// avoid creating instructions with types that may not be supported well by the
 /// the backend.
@@ -1396,6 +1416,26 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
                        "canFreelyInvertAllUsersOf() ?");
     }
   }
+
+  // Update pre-existing debug value uses.
+  SmallVector<DbgValueInst *, 4> DbgValues;
+  SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
+  llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
+
+  auto InvertDbgValueUse = [&](auto *DbgVal) {
+    SmallVector<uint64_t, 1> Ops = {dwarf::DW_OP_not};
+    for (unsigned Idx = 0, End = DbgVal->getNumVariableLocationOps();
+         Idx != End; ++Idx)
+      if (DbgVal->getVariableLocationOp(Idx) == I)
+        DbgVal->setExpression(
+            DIExpression::appendOpsToArg(DbgVal->getExpression(), Ops, Idx));
+  };
+
+  for (DbgValueInst *DVI : DbgValues)
+    InvertDbgValueUse(DVI);
+
+  for (DbgVariableRecord *DVR : DbgVariableRecords)
+    InvertDbgValueUse(DVR);
 }
 
 /// Given a 'sub' instruction, return the RHS of the instruction if the LHS is a
@@ -1699,6 +1739,15 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   if (SI->getType()->isIntOrIntVectorTy(1))
     return nullptr;
 
+  // Avoid breaking min/max reduction pattern,
+  // which is necessary for vectorization later.
+  if (isa<MinMaxIntrinsic>(&Op))
+    for (Value *IntrinOp : Op.operands())
+      if (auto *PN = dyn_cast<PHINode>(IntrinOp))
+        for (Value *PhiOp : PN->operands())
+          if (PhiOp == &Op)
+            return nullptr;
+
   // Test if a FCmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
   // any other folding. This helps out other analyses which understand
@@ -1709,7 +1758,8 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   if (auto *CI = dyn_cast<FCmpInst>(SI->getCondition())) {
     if (CI->hasOneUse()) {
       Value *Op0 = CI->getOperand(0), *Op1 = CI->getOperand(1);
-      if ((TV == Op0 && FV == Op1) || (FV == Op0 && TV == Op1))
+      if (((TV == Op0 && FV == Op1) || (FV == Op0 && TV == Op1)) &&
+          !CI->isCommutative())
         return nullptr;
     }
   }
@@ -1831,7 +1881,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     // Handle some cases that can't be fully simplified, but where we know that
     // the two instructions will fold into one.
     auto WillFold = [&]() {
-      if (!InVal->hasOneUser())
+      if (!InVal->hasUseList() || !InVal->hasOneUser())
         return false;
 
       // icmp of ucmp/scmp with constant will fold to icmp.
@@ -2074,6 +2124,49 @@ static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
   return true;
 }
 
+/// Find a constant NewC that has property:
+///   shuffle(NewC, ShMask) = C
+/// Returns nullptr if such a constant does not exist e.g. ShMask=<0,0> C=<1,2>
+///
+/// A 1-to-1 mapping is not required. Example:
+/// ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <poison,5,6,poison>
+Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
+                                              VectorType *NewCTy) {
+  if (isa<ScalableVectorType>(NewCTy)) {
+    Constant *Splat = C->getSplatValue();
+    if (!Splat)
+      return nullptr;
+    return ConstantVector::getSplat(NewCTy->getElementCount(), Splat);
+  }
+
+  if (cast<FixedVectorType>(NewCTy)->getNumElements() >
+      cast<FixedVectorType>(C->getType())->getNumElements())
+    return nullptr;
+
+  unsigned NewCNumElts = cast<FixedVectorType>(NewCTy)->getNumElements();
+  PoisonValue *PoisonScalar = PoisonValue::get(C->getType()->getScalarType());
+  SmallVector<Constant *, 16> NewVecC(NewCNumElts, PoisonScalar);
+  unsigned NumElts = cast<FixedVectorType>(C->getType())->getNumElements();
+  for (unsigned I = 0; I < NumElts; ++I) {
+    Constant *CElt = C->getAggregateElement(I);
+    if (ShMask[I] >= 0) {
+      assert(ShMask[I] < (int)NumElts && "Not expecting narrowing shuffle");
+      Constant *NewCElt = NewVecC[ShMask[I]];
+      // Bail out if:
+      // 1. The constant vector contains a constant expression.
+      // 2. The shuffle needs an element of the constant vector that can't
+      //    be mapped to a new constant vector.
+      // 3. This is a widening shuffle that copies elements of V1 into the
+      //    extended elements (extending with poison is allowed).
+      if (!CElt || (!isa<PoisonValue>(NewCElt) && NewCElt != CElt) ||
+          I >= NewCNumElts)
+        return nullptr;
+      NewVecC[ShMask[I]] = CElt;
+    }
+  }
+  return ConstantVector::get(NewVecC);
+}
+
 Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   if (!isa<VectorType>(Inst.getType()))
     return nullptr;
@@ -2193,74 +2286,18 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   // other binops, so they can be folded. It may also enable demanded elements
   // transforms.
   Constant *C;
-  auto *InstVTy = dyn_cast<FixedVectorType>(Inst.getType());
-  if (InstVTy &&
-      match(&Inst, m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Poison(),
+  if (match(&Inst, m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Poison(),
                                                 m_Mask(Mask))),
-                             m_ImmConstant(C))) &&
-      cast<FixedVectorType>(V1->getType())->getNumElements() <=
-          InstVTy->getNumElements()) {
-    assert(InstVTy->getScalarType() == V1->getType()->getScalarType() &&
+                             m_ImmConstant(C)))) {
+    assert(Inst.getType()->getScalarType() == V1->getType()->getScalarType() &&
            "Shuffle should not change scalar type");
 
-    // Find constant NewC that has property:
-    //   shuffle(NewC, ShMask) = C
-    // If such constant does not exist (example: ShMask=<0,0> and C=<1,2>)
-    // reorder is not possible. A 1-to-1 mapping is not required. Example:
-    // ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <undef,5,6,undef>
     bool ConstOp1 = isa<Constant>(RHS);
-    ArrayRef<int> ShMask = Mask;
-    unsigned SrcVecNumElts =
-        cast<FixedVectorType>(V1->getType())->getNumElements();
-    PoisonValue *PoisonScalar = PoisonValue::get(C->getType()->getScalarType());
-    SmallVector<Constant *, 16> NewVecC(SrcVecNumElts, PoisonScalar);
-    bool MayChange = true;
-    unsigned NumElts = InstVTy->getNumElements();
-    for (unsigned I = 0; I < NumElts; ++I) {
-      Constant *CElt = C->getAggregateElement(I);
-      if (ShMask[I] >= 0) {
-        assert(ShMask[I] < (int)NumElts && "Not expecting narrowing shuffle");
-        Constant *NewCElt = NewVecC[ShMask[I]];
-        // Bail out if:
-        // 1. The constant vector contains a constant expression.
-        // 2. The shuffle needs an element of the constant vector that can't
-        //    be mapped to a new constant vector.
-        // 3. This is a widening shuffle that copies elements of V1 into the
-        //    extended elements (extending with poison is allowed).
-        if (!CElt || (!isa<PoisonValue>(NewCElt) && NewCElt != CElt) ||
-            I >= SrcVecNumElts) {
-          MayChange = false;
-          break;
-        }
-        NewVecC[ShMask[I]] = CElt;
-      }
-      // If this is a widening shuffle, we must be able to extend with poison
-      // elements. If the original binop does not produce a poison in the high
-      // lanes, then this transform is not safe.
-      // Similarly for poison lanes due to the shuffle mask, we can only
-      // transform binops that preserve poison.
-      // TODO: We could shuffle those non-poison constant values into the
-      //       result by using a constant vector (rather than an poison vector)
-      //       as operand 1 of the new binop, but that might be too aggressive
-      //       for target-independent shuffle creation.
-      if (I >= SrcVecNumElts || ShMask[I] < 0) {
-        Constant *MaybePoison =
-            ConstOp1
-                ? ConstantFoldBinaryOpOperands(Opcode, PoisonScalar, CElt, DL)
-                : ConstantFoldBinaryOpOperands(Opcode, CElt, PoisonScalar, DL);
-        if (!MaybePoison || !isa<PoisonValue>(MaybePoison)) {
-          MayChange = false;
-          break;
-        }
-      }
-    }
-    if (MayChange) {
-      Constant *NewC = ConstantVector::get(NewVecC);
-      // It may not be safe to execute a binop on a vector with poison elements
-      // because the entire instruction can be folded to undef or create poison
-      // that did not exist in the original code.
-      // TODO: The shift case should not be necessary.
-      if (Inst.isIntDivRem() || (Inst.isShift() && ConstOp1))
+    if (Constant *NewC =
+            unshuffleConstant(Mask, C, cast<VectorType>(V1->getType()))) {
+      // For fixed vectors, lanes of NewC not used by the shuffle will be poison
+      // which will cause UB for div/rem. Mask them with a safe constant.
+      if (isa<FixedVectorType>(V1->getType()) && Inst.isIntDivRem())
         NewC = getSafeVectorConstantForBinop(Opcode, NewC, ConstOp1);
 
       // Op(shuffle(V1, Mask), C) -> shuffle(Op(V1, NewC), Mask)
@@ -3300,16 +3337,14 @@ static bool isAllocSiteRemovable(Instruction *AI,
           continue;
         }
 
-        if (getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
+        if (Family && getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
-          assert(Family);
           Users.emplace_back(I);
           continue;
         }
 
-        if (getReallocatedOperand(cast<CallBase>(I)) == PI &&
+        if (Family && getReallocatedOperand(cast<CallBase>(I)) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
-          assert(Family);
           Users.emplace_back(I);
           Worklist.push_back(I);
           continue;
@@ -3615,7 +3650,7 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
 
   KnownFPClass KnownClass;
   Value *Simplified =
-      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, 0, &RI);
+      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, &RI);
   if (!Simplified)
     return nullptr;
 
@@ -3952,7 +3987,7 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
       return replaceOperand(SI, 0, V);
   }
 
-  KnownBits Known = computeKnownBits(Cond, 0, &SI);
+  KnownBits Known = computeKnownBits(Cond, &SI);
   unsigned LeadingKnownZeros = Known.countMinLeadingZeros();
   unsigned LeadingKnownOnes = Known.countMinLeadingOnes();
 
@@ -5334,8 +5369,7 @@ bool InstCombinerImpl::run() {
         // We copy the old instruction's DebugLoc to the new instruction, unless
         // InstCombine already assigned a DebugLoc to it, in which case we
         // should trust the more specifically selected DebugLoc.
-        if (!Result->getDebugLoc())
-          Result->setDebugLoc(I->getDebugLoc());
+        Result->setDebugLoc(Result->getDebugLoc().orElse(I->getDebugLoc()));
         // We also copy annotation metadata to the new instruction.
         Result->copyMetadata(*I, LLVMContext::MD_annotation);
         // Everything uses the new instruction now.
@@ -5624,15 +5658,14 @@ static bool combineInstructionsOverFunction(
   // Iterate while there is work to do.
   unsigned Iteration = 0;
   while (true) {
-    ++Iteration;
-
-    if (Iteration > Opts.MaxIterations && !VerifyFixpoint) {
+    if (Iteration >= Opts.MaxIterations && !VerifyFixpoint) {
       LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << Opts.MaxIterations
                         << " on " << F.getName()
                         << " reached; stopping without verifying fixpoint\n");
       break;
     }
 
+    ++Iteration;
     ++NumWorklistIterations;
     LLVM_DEBUG(dbgs() << "\n\nINSTCOMBINE ITERATION #" << Iteration << " on "
                       << F.getName() << "\n");
@@ -5647,13 +5680,12 @@ static bool combineInstructionsOverFunction(
 
     MadeIRChange = true;
     if (Iteration > Opts.MaxIterations) {
-      report_fatal_error(
+      reportFatalUsageError(
           "Instruction Combining on " + Twine(F.getName()) +
-              " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
-              " iterations. " +
-              "Use 'instcombine<no-verify-fixpoint>' or function attribute "
-              "'instcombine-no-verify-fixpoint' to suppress this error.",
-          /*GenCrashDiag=*/false);
+          " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
+          " iterations. " +
+          "Use 'instcombine<no-verify-fixpoint>' or function attribute "
+          "'instcombine-no-verify-fixpoint' to suppress this error.");
     }
   }
 

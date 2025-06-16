@@ -1,6 +1,4 @@
-//===-- XtensaMCAsmBackend.cpp - Xtensa assembler backend -----------------===//
-//
-//                     The LLVM Compiler Infrastructure
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,20 +22,21 @@ using namespace llvm;
 
 namespace llvm {
 class MCObjectTargetWriter;
-class XtensaMCAsmBackend : public MCAsmBackend {
+}
+namespace {
+class XtensaAsmBackend : public MCAsmBackend {
   uint8_t OSABI;
   bool IsLittleEndian;
 
 public:
-  XtensaMCAsmBackend(uint8_t osABI, bool isLE)
+  XtensaAsmBackend(uint8_t osABI, bool isLE)
       : MCAsmBackend(llvm::endianness::little), OSABI(osABI),
         IsLittleEndian(isLE) {}
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
   void relaxInstruction(MCInst &Inst,
@@ -49,9 +48,9 @@ public:
     return createXtensaObjectWriter(OSABI, IsLittleEndian);
   }
 };
-} // namespace llvm
+} // namespace
 
-MCFixupKindInfo XtensaMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo XtensaAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[Xtensa::NumTargetFixupKinds] = {
       // name                     offset bits  flags
       {"fixup_xtensa_branch_6", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
@@ -144,12 +143,11 @@ static unsigned getSize(unsigned Kind) {
   }
 }
 
-void XtensaMCAsmBackend::applyFixup(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, const MCValue &Target,
-                                    MutableArrayRef<char> Data, uint64_t Value,
-                                    bool IsResolved,
-                                    const MCSubtargetInfo *STI) const {
-  MCContext &Ctx = Asm.getContext();
+void XtensaAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+                                  const MCValue &Target,
+                                  MutableArrayRef<char> Data, uint64_t Value,
+                                  bool IsResolved) {
+  MCContext &Ctx = getContext();
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
 
   Value = adjustFixupValue(Fixup, Value, Ctx);
@@ -168,16 +166,16 @@ void XtensaMCAsmBackend::applyFixup(const MCAssembler &Asm,
   }
 }
 
-bool XtensaMCAsmBackend::mayNeedRelaxation(const MCInst &Inst,
-                                           const MCSubtargetInfo &STI) const {
+bool XtensaAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+                                         const MCSubtargetInfo &STI) const {
   return false;
 }
 
-void XtensaMCAsmBackend::relaxInstruction(MCInst &Inst,
-                                          const MCSubtargetInfo &STI) const {}
+void XtensaAsmBackend::relaxInstruction(MCInst &Inst,
+                                        const MCSubtargetInfo &STI) const {}
 
-bool XtensaMCAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
-                                      const MCSubtargetInfo *STI) const {
+bool XtensaAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                    const MCSubtargetInfo *STI) const {
   uint64_t NumNops24b = Count / 3;
 
   for (uint64_t i = 0; i != NumNops24b; ++i) {
@@ -210,11 +208,11 @@ bool XtensaMCAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-MCAsmBackend *llvm::createXtensaMCAsmBackend(const Target &T,
-                                             const MCSubtargetInfo &STI,
-                                             const MCRegisterInfo &MRI,
-                                             const MCTargetOptions &Options) {
+MCAsmBackend *llvm::createXtensaAsmBackend(const Target &T,
+                                           const MCSubtargetInfo &STI,
+                                           const MCRegisterInfo &MRI,
+                                           const MCTargetOptions &Options) {
   uint8_t OSABI =
       MCELFObjectTargetWriter::getOSABI(STI.getTargetTriple().getOS());
-  return new llvm::XtensaMCAsmBackend(OSABI, true);
+  return new XtensaAsmBackend(OSABI, true);
 }

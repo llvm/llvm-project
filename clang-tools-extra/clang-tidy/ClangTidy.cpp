@@ -29,18 +29,14 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Rewrite/Frontend/FixItRewriter.h"
-#include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "clang/Tooling/DiagnosticsYaml.h"
 #include "clang/Tooling/Refactoring.h"
-#include "clang/Tooling/ReplacementsYaml.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Process.h"
-#include <algorithm>
 #include <utility>
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
@@ -97,15 +93,14 @@ public:
   ErrorReporter(ClangTidyContext &Context, FixBehaviour ApplyFixes,
                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS)
       : Files(FileSystemOptions(), std::move(BaseFS)),
-        DiagOpts(new DiagnosticOptions()),
-        DiagPrinter(new TextDiagnosticPrinter(llvm::outs(), &*DiagOpts)),
-        Diags(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts,
+        DiagPrinter(new TextDiagnosticPrinter(llvm::outs(), DiagOpts)),
+        Diags(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts,
               DiagPrinter),
         SourceMgr(Diags, Files), Context(Context), ApplyFixes(ApplyFixes) {
-    DiagOpts->ShowColors = Context.getOptions().UseColor.value_or(
+    DiagOpts.ShowColors = Context.getOptions().UseColor.value_or(
         llvm::sys::Process::StandardOutHasColors());
     DiagPrinter->BeginSourceFile(LangOpts);
-    if (DiagOpts->ShowColors && !llvm::sys::Process::StandardOutIsDisplayed()) {
+    if (DiagOpts.ShowColors && !llvm::sys::Process::StandardOutIsDisplayed()) {
       llvm::sys::Process::UseANSIEscapeCodes(true);
     }
   }
@@ -308,7 +303,7 @@ private:
 
   FileManager Files;
   LangOptions LangOpts; // FIXME: use langopts from each original file
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  DiagnosticOptions DiagOpts;
   DiagnosticConsumer *DiagPrinter;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
@@ -424,8 +419,8 @@ ClangTidyASTConsumerFactory::createASTConsumer(
 
   std::unique_ptr<ClangTidyProfiling> Profiling;
   if (Context.getEnableProfiling()) {
-    Profiling = std::make_unique<ClangTidyProfiling>(
-        Context.getProfileStorageParams());
+    Profiling =
+        std::make_unique<ClangTidyProfiling>(Context.getProfileStorageParams());
     FinderOptions.CheckProfiling.emplace(Profiling->Records);
   }
 
@@ -437,8 +432,8 @@ ClangTidyASTConsumerFactory::createASTConsumer(
 
   if (Context.canEnableModuleHeadersParsing() &&
       Context.getLangOpts().Modules && OverlayFS != nullptr) {
-    auto ModuleExpander = std::make_unique<ExpandModularHeadersPPCallbacks>(
-        &Compiler, OverlayFS);
+    auto ModuleExpander =
+        std::make_unique<ExpandModularHeadersPPCallbacks>(&Compiler, OverlayFS);
     ModuleExpanderPP = ModuleExpander->getPreprocessor();
     PP->addPPCallbacks(std::move(ModuleExpander));
   }
@@ -502,7 +497,7 @@ getCheckNames(const ClangTidyOptions &Options,
               bool AllowEnablingAnalyzerAlphaCheckers) {
   clang::tidy::ClangTidyContext Context(
       std::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(),
-                                                Options),
+                                               Options),
       AllowEnablingAnalyzerAlphaCheckers);
   ClangTidyASTConsumerFactory Factory(Context);
   return Factory.getCheckNames();
@@ -513,13 +508,13 @@ getCheckOptions(const ClangTidyOptions &Options,
                 bool AllowEnablingAnalyzerAlphaCheckers) {
   clang::tidy::ClangTidyContext Context(
       std::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(),
-                                                Options),
+                                               Options),
       AllowEnablingAnalyzerAlphaCheckers);
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
-  DiagnosticsEngine DE(llvm::makeIntrusiveRefCnt<DiagnosticIDs>(),
-                       llvm::makeIntrusiveRefCnt<DiagnosticOptions>(),
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(llvm::makeIntrusiveRefCnt<DiagnosticIDs>(), *DiagOpts,
                        &DiagConsumer, /*ShouldOwnClient=*/false);
-  Context.setDiagnosticsEngine(&DE);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
   ClangTidyASTConsumerFactory Factory(Context);
   return Factory.getCheckOptions();
 }
@@ -558,9 +553,10 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
   Context.setProfileStoragePrefix(StoreCheckProfile);
 
   ClangTidyDiagnosticConsumer DiagConsumer(Context, nullptr, true, ApplyAnyFix);
-  DiagnosticsEngine DE(new DiagnosticIDs(), new DiagnosticOptions(),
-                       &DiagConsumer, /*ShouldOwnClient=*/false);
-  Context.setDiagnosticsEngine(&DE);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(new DiagnosticIDs(), *DiagOpts, &DiagConsumer,
+                       /*ShouldOwnClient=*/false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
   Tool.setDiagnosticConsumer(&DiagConsumer);
 
   class ActionFactory : public FrontendActionFactory {

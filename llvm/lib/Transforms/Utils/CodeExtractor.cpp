@@ -792,7 +792,6 @@ void CodeExtractor::severSplitPHINodesOfExits() {
         NewBB = BasicBlock::Create(ExitBB->getContext(),
                                    ExitBB->getName() + ".split",
                                    ExitBB->getParent(), ExitBB);
-        NewBB->IsNewDbgInfoFormat = ExitBB->IsNewDbgInfoFormat;
         SmallVector<BasicBlock *, 4> Preds(predecessors(ExitBB));
         for (BasicBlock *PredBB : Preds)
           if (Blocks.count(PredBB))
@@ -1239,11 +1238,19 @@ static void eraseDebugIntrinsicsWithNonLocalRefs(Function &F) {
   }
 }
 
-/// Fix up the debug info in the old and new functions by pointing line
-/// locations and debug intrinsics to the new subprogram scope, and by deleting
-/// intrinsics which point to values outside of the new function.
+/// Fix up the debug info in the old and new functions. Following changes are
+/// done.
+/// 1. If a debug record points to a value that has been replaced, update the
+///    record to use the new value.
+/// 2. If an Input value that has been replaced was used as a location of a
+///    debug record in the Parent function, then materealize a similar record in
+///    the new function.
+/// 3. Point line locations and debug intrinsics to the new subprogram scope
+/// 4. Remove intrinsics which point to values outside of the new function.
 static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
-                                         CallInst &TheCall) {
+                                         CallInst &TheCall,
+                                         const SetVector<Value *> &Inputs,
+                                         ArrayRef<Value *> NewValues) {
   DISubprogram *OldSP = OldFunc.getSubprogram();
   LLVMContext &Ctx = OldFunc.getContext();
 
@@ -1270,14 +1277,49 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       /*LineNo=*/0, SPType, /*ScopeLine=*/0, DINode::FlagZero, SPFlags);
   NewFunc.setSubprogram(NewSP);
 
+  auto UpdateOrInsertDebugRecord = [&](auto *DR, Value *OldLoc, Value *NewLoc,
+                                       DIExpression *Expr, bool Declare) {
+    if (DR->getParent()->getParent() == &NewFunc) {
+      DR->replaceVariableLocationOp(OldLoc, NewLoc);
+      return;
+    }
+    if (Declare) {
+      DIB.insertDeclare(NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
+                        &NewFunc.getEntryBlock());
+      return;
+    }
+    DIB.insertDbgValueIntrinsic(
+        NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
+        NewFunc.getEntryBlock().getTerminator()->getIterator());
+  };
+  for (auto [Input, NewVal] : zip_equal(Inputs, NewValues)) {
+    SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
+    SmallVector<DbgVariableRecord *, 1> DPUsers;
+    findDbgUsers(DbgUsers, Input, &DPUsers);
+    DIExpression *Expr = DIB.createExpression();
+
+    // Iterate the debud users of the Input values. If they are in the extracted
+    // function then update their location with the new value. If they are in
+    // the parent function then create a similar debug record.
+    for (auto *DVI : DbgUsers)
+      UpdateOrInsertDebugRecord(DVI, Input, NewVal, Expr,
+                                isa<DbgDeclareInst>(DVI));
+    for (auto *DVR : DPUsers)
+      UpdateOrInsertDebugRecord(DVR, Input, NewVal, Expr, DVR->isDbgDeclare());
+  }
+
   auto IsInvalidLocation = [&NewFunc](Value *Location) {
-    // Location is invalid if it isn't a constant or an instruction, or is an
-    // instruction but isn't in the new function.
-    if (!Location ||
-        (!isa<Constant>(Location) && !isa<Instruction>(Location)))
+    // Location is invalid if it isn't a constant, an instruction or an
+    // argument, or is an instruction/argument but isn't in the new function.
+    if (!Location || (!isa<Constant>(Location) && !isa<Argument>(Location) &&
+                      !isa<Instruction>(Location)))
       return true;
-    Instruction *LocationInst = dyn_cast<Instruction>(Location);
-    return LocationInst && LocationInst->getFunction() != &NewFunc;
+
+    if (Argument *Arg = dyn_cast<Argument>(Location))
+      return Arg->getParent() != &NewFunc;
+    if (Instruction *LocationInst = dyn_cast<Instruction>(Location))
+      return LocationInst->getFunction() != &NewFunc;
+    return false;
   };
 
   // Debug intrinsics in the new function need to be updated in one of two
@@ -1505,10 +1547,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   Function *newFunction = constructFunctionDeclaration(
       inputs, outputs, EntryFreq, oldFunction->getName() + "." + SuffixToUse,
       StructValues, StructTy);
-  newFunction->IsNewDbgInfoFormat = oldFunction->IsNewDbgInfoFormat;
+  SmallVector<Value *> NewValues;
 
   emitFunctionBody(inputs, outputs, StructValues, newFunction, StructTy, header,
-                   SinkingCands);
+                   SinkingCands, NewValues);
 
   std::vector<Value *> Reloads;
   CallInst *TheCall = emitReplacerCall(
@@ -1518,7 +1560,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   insertReplacerCall(oldFunction, header, TheCall->getParent(), outputs,
                      Reloads, ExitWeights);
 
-  fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall);
+  fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall, inputs,
+                               NewValues);
 
   LLVM_DEBUG(if (verifyFunction(*newFunction, &errs())) {
     newFunction->dump();
@@ -1583,7 +1626,8 @@ Type *CodeExtractor::getSwitchType() {
 void CodeExtractor::emitFunctionBody(
     const ValueSet &inputs, const ValueSet &outputs,
     const ValueSet &StructValues, Function *newFunction,
-    StructType *StructArgTy, BasicBlock *header, const ValueSet &SinkingCands) {
+    StructType *StructArgTy, BasicBlock *header, const ValueSet &SinkingCands,
+    SmallVectorImpl<Value *> &NewValues) {
   Function *oldFunction = header->getParent();
   LLVMContext &Context = oldFunction->getContext();
 
@@ -1591,7 +1635,6 @@ void CodeExtractor::emitFunctionBody(
   // head of the region, but the entry node of a function cannot have preds.
   BasicBlock *newFuncRoot =
       BasicBlock::Create(Context, "newFuncRoot", newFunction);
-  newFuncRoot->IsNewDbgInfoFormat = oldFunction->IsNewDbgInfoFormat;
 
   // Now sink all instructions which only have non-phi uses inside the region.
   // Group the allocas at the start of the block, so that any bitcast uses of
@@ -1615,7 +1658,6 @@ void CodeExtractor::emitFunctionBody(
 
   // Rewrite all users of the inputs in the extracted region to use the
   // arguments (or appropriate addressing into struct) instead.
-  SmallVector<Value *> NewValues;
   for (unsigned i = 0, e = inputs.size(), aggIdx = 0; i != e; ++i) {
     Value *RewriteVal;
     if (StructValues.contains(inputs[i])) {
@@ -1826,10 +1868,8 @@ CallInst *CodeExtractor::emitReplacerCall(
   // This takes place of the original loop
   BasicBlock *codeReplacer =
       BasicBlock::Create(Context, "codeRepl", oldFunction, ReplIP);
-  codeReplacer->IsNewDbgInfoFormat = oldFunction->IsNewDbgInfoFormat;
   BasicBlock *AllocaBlock =
       AllocationBlock ? AllocationBlock : &oldFunction->getEntryBlock();
-  AllocaBlock->IsNewDbgInfoFormat = oldFunction->IsNewDbgInfoFormat;
 
   // Update the entry count of the function.
   if (BFI)

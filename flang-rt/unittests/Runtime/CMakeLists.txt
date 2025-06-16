@@ -10,6 +10,7 @@ add_flangrt_unittest(RuntimeTests
   AccessTest.cpp
   Allocatable.cpp
   ArrayConstructor.cpp
+  Assign.cpp
   BufferTest.cpp
   CharacterTest.cpp
   CommandTest.cpp

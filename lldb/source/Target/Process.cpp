@@ -80,16 +80,6 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace std::chrono;
 
-// Comment out line below to disable memory caching, overriding the process
-// setting target.process.disable-memory-cache
-#define ENABLE_MEMORY_CACHING
-
-#ifdef ENABLE_MEMORY_CACHING
-#define DISABLE_MEM_CACHE_DEFAULT false
-#else
-#define DISABLE_MEM_CACHE_DEFAULT true
-#endif
-
 class ProcessOptionValueProperties
     : public Cloneable<ProcessOptionValueProperties, OptionValueProperties> {
 public:
@@ -368,6 +358,12 @@ FollowForkMode ProcessProperties::GetFollowForkMode() const {
   return GetPropertyAtIndexAs<FollowForkMode>(
       idx, static_cast<FollowForkMode>(
                g_process_properties[idx].default_uint_value));
+}
+
+bool ProcessProperties::TrackMemoryCacheChanges() const {
+  const uint32_t idx = ePropertyTrackMemoryCacheChanges;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
 }
 
 ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
@@ -2290,14 +2286,13 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
   if (ABISP abi_sp = GetABI())
     addr = abi_sp->FixAnyAddress(addr);
 
-#if defined(ENABLE_MEMORY_CACHING)
   m_memory_cache.Flush(addr, size);
-#endif
 
   if (buf == nullptr || size == 0)
     return 0;
 
-  m_mod_id.BumpMemoryID();
+  if (TrackMemoryCacheChanges() || !m_allocated_memory_cache.IsInCache(addr))
+    m_mod_id.BumpMemoryID();
 
   // We need to write any data that would go where any current software traps
   // (enabled software breakpoints) any software traps (breakpoints) that we
@@ -2426,7 +2421,6 @@ Status Process::WriteObjectFile(std::vector<ObjectFile::LoadableData> entries) {
   return error;
 }
 
-#define USE_ALLOCATE_MEMORY_CACHE 1
 addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
                                Status &error) {
   if (GetPrivateState() != eStateStopped) {
@@ -2435,20 +2429,7 @@ addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
     return LLDB_INVALID_ADDRESS;
   }
 
-#if defined(USE_ALLOCATE_MEMORY_CACHE)
   return m_allocated_memory_cache.AllocateMemory(size, permissions, error);
-#else
-  addr_t allocated_addr = DoAllocateMemory(size, permissions, error);
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log,
-            "Process::AllocateMemory(size=%" PRIu64
-            ", permissions=%s) => 0x%16.16" PRIx64
-            " (m_stop_id = %u m_memory_id = %u)",
-            (uint64_t)size, GetPermissionsAsCString(permissions),
-            (uint64_t)allocated_addr, m_mod_id.GetStopID(),
-            m_mod_id.GetMemoryID());
-  return allocated_addr;
-#endif
 }
 
 addr_t Process::CallocateMemory(size_t size, uint32_t permissions,
@@ -2501,21 +2482,10 @@ void Process::SetCanRunCode(bool can_run_code) {
 
 Status Process::DeallocateMemory(addr_t ptr) {
   Status error;
-#if defined(USE_ALLOCATE_MEMORY_CACHE)
   if (!m_allocated_memory_cache.DeallocateMemory(ptr)) {
     error = Status::FromErrorStringWithFormat(
         "deallocation of memory at 0x%" PRIx64 " failed.", (uint64_t)ptr);
   }
-#else
-  error = DoDeallocateMemory(ptr);
-
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log,
-            "Process::DeallocateMemory(addr=0x%16.16" PRIx64
-            ") => err = %s (m_stop_id = %u, m_memory_id = %u)",
-            ptr, error.AsCString("SUCCESS"), m_mod_id.GetStopID(),
-            m_mod_id.GetMemoryID());
-#endif
   return error;
 }
 
@@ -2664,6 +2634,7 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
   m_jit_loaders_up.reset();
   m_system_runtime_up.reset();
   m_os_up.reset();
+  GetTarget().ClearAllLoadedSections();
 
   {
     std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
@@ -2788,6 +2759,7 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
 }
 
 Status Process::LoadCore() {
+  GetTarget().ClearAllLoadedSections();
   Status error = DoLoadCore();
   if (error.Success()) {
     ListenerSP listener_sp(
@@ -2830,6 +2802,9 @@ Status Process::LoadCore() {
           "Did not get stopped event after loading the core file.");
     }
     RestoreProcessEvents();
+    // Since we hijacked the event stream, we will have we won't have run the
+    // stop hooks.  Make sure we do that here:
+    GetTarget().RunStopHooks(/* at_initial_stop= */ true);
   }
   return error;
 }
@@ -2970,6 +2945,7 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
   m_jit_loaders_up.reset();
   m_system_runtime_up.reset();
   m_os_up.reset();
+  GetTarget().ClearAllLoadedSections();
 
   lldb::pid_t attach_pid = attach_info.GetProcessID();
   Status error;
@@ -3200,6 +3176,9 @@ void Process::CompleteAttach() {
                         : "<none>");
     }
   }
+  // Since we hijacked the event stream, we will have we won't have run the
+  // stop hooks.  Make sure we do that here:
+  GetTarget().RunStopHooks(/* at_initial_stop= */ true);
 }
 
 Status Process::ConnectRemote(llvm::StringRef remote_url) {
@@ -5859,7 +5838,7 @@ void Process::ClearPreResumeActions() { m_pre_resume_actions.clear(); }
 void Process::ClearPreResumeAction(PreResumeActionCallback callback, void *baton)
 {
     PreResumeCallbackAndBaton element(callback, baton);
-    auto found_iter = std::find(m_pre_resume_actions.begin(), m_pre_resume_actions.end(), element);
+    auto found_iter = llvm::find(m_pre_resume_actions, element);
     if (found_iter != m_pre_resume_actions.end())
     {
         m_pre_resume_actions.erase(found_iter);
@@ -6689,6 +6668,18 @@ static void GetCoreFileSaveRangesStackOnly(Process &process,
   }
 }
 
+// TODO: We should refactor CoreFileMemoryRanges to use the lldb range type, and
+// then add an intersect method on it, or MemoryRegionInfo.
+static MemoryRegionInfo Intersect(const MemoryRegionInfo &lhs,
+                                  const MemoryRegionInfo::RangeType &rhs) {
+
+  MemoryRegionInfo region_info;
+  region_info.SetLLDBPermissions(lhs.GetLLDBPermissions());
+  region_info.GetRange() = lhs.GetRange().Intersect(rhs);
+
+  return region_info;
+}
+
 static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
                                                const MemoryRegionInfos &regions,
                                                const SaveCoreOptions &options,
@@ -6698,9 +6689,15 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
     return;
 
   for (const auto &range : regions) {
-    auto entry = option_ranges.FindEntryThatContains(range.GetRange());
-    if (entry)
-      AddRegion(range, true, ranges);
+    auto *entry = option_ranges.FindEntryThatIntersects(range.GetRange());
+    if (entry) {
+      if (*entry != range.GetRange()) {
+        AddRegion(Intersect(range, *entry), true, ranges);
+      } else {
+        // If they match, add the range directly.
+        AddRegion(range, true, ranges);
+      }
+    }
   }
 }
 

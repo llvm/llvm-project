@@ -267,6 +267,135 @@ template <class It>
 random_access_iterator(It) -> random_access_iterator<It>;
 #endif
 
+// Since C++20, a container iterator type that is random access is also required to support three-way comparison.
+// See C++20 [tab:container.req], C++23 [container.reqmts]/39 - /41.
+template <class It>
+class three_way_random_access_iterator {
+  It it_;
+  support::double_move_tracker tracker_;
+
+  template <class U>
+  friend class three_way_random_access_iterator;
+
+public:
+  typedef std::random_access_iterator_tag iterator_category;
+  typedef typename std::iterator_traits<It>::value_type value_type;
+  typedef typename std::iterator_traits<It>::difference_type difference_type;
+  typedef It pointer;
+  typedef typename std::iterator_traits<It>::reference reference;
+
+  TEST_CONSTEXPR three_way_random_access_iterator() : it_() {}
+  TEST_CONSTEXPR explicit three_way_random_access_iterator(It it) : it_(it) {}
+
+  template <class U>
+  TEST_CONSTEXPR three_way_random_access_iterator(const three_way_random_access_iterator<U>& u)
+      : it_(u.it_), tracker_(u.tracker_) {}
+
+  template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator(three_way_random_access_iterator<U>&& u)
+      : it_(std::move(u.it_)), tracker_(std::move(u.tracker_)) {
+    u.it_ = U();
+  }
+
+  TEST_CONSTEXPR_CXX14 reference operator*() const { return *it_; }
+  TEST_CONSTEXPR_CXX14 reference operator[](difference_type n) const { return it_[n]; }
+
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator& operator--() {
+    --it_;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator operator++(int) {
+    return three_way_random_access_iterator(it_++);
+  }
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator operator--(int) {
+    return three_way_random_access_iterator(it_--);
+  }
+
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator& operator+=(difference_type n) {
+    it_ += n;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator& operator-=(difference_type n) {
+    it_ -= n;
+    return *this;
+  }
+  friend TEST_CONSTEXPR_CXX14 three_way_random_access_iterator
+  operator+(three_way_random_access_iterator x, difference_type n) {
+    x += n;
+    return x;
+  }
+  friend TEST_CONSTEXPR_CXX14 three_way_random_access_iterator
+  operator+(difference_type n, three_way_random_access_iterator x) {
+    x += n;
+    return x;
+  }
+  friend TEST_CONSTEXPR_CXX14 three_way_random_access_iterator
+  operator-(three_way_random_access_iterator x, difference_type n) {
+    x -= n;
+    return x;
+  }
+  friend TEST_CONSTEXPR difference_type
+  operator-(three_way_random_access_iterator x, three_way_random_access_iterator y) {
+    return x.it_ - y.it_;
+  }
+
+  friend TEST_CONSTEXPR bool
+  operator==(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    return x.it_ == y.it_;
+  }
+#if TEST_STD_VER < 20
+  friend TEST_CONSTEXPR bool
+  operator!=(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    return x.it_ != y.it_;
+  }
+#endif
+  friend TEST_CONSTEXPR bool
+  operator<(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    return x.it_ < y.it_;
+  }
+  friend TEST_CONSTEXPR bool
+  operator<=(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    return x.it_ <= y.it_;
+  }
+  friend TEST_CONSTEXPR bool
+  operator>(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    return x.it_ > y.it_;
+  }
+  friend TEST_CONSTEXPR bool
+  operator>=(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    return x.it_ >= y.it_;
+  }
+#if TEST_STD_VER >= 20
+  friend constexpr std::strong_ordering
+  operator<=>(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    if constexpr (std::three_way_comparable<It>) {
+      return x.it_ <=> y.it_;
+    } else {
+      if (x.it_ < y.it_) {
+        return std::strong_ordering::less;
+      } else if (y.it_ < x.it_) {
+        return std::strong_ordering::greater;
+      } else {
+        return std::strong_ordering::equal;
+      }
+    }
+  }
+#endif
+
+  friend TEST_CONSTEXPR It base(const three_way_random_access_iterator& i) { return i.it_; }
+
+  template <class T>
+  void operator,(T const&) = delete;
+};
+#if TEST_STD_VER > 14
+template <class It>
+three_way_random_access_iterator(It) -> three_way_random_access_iterator<It>;
+#endif
+
 #if TEST_STD_VER > 17
 
 template <std::random_access_iterator It>
