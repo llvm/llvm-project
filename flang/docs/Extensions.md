@@ -164,6 +164,12 @@ end
   No other Fortran compiler enforces C7108 (to our knowledge);
   they all resolve the ambiguity by interpreting the call as a function
   reference.  We do the same, with a portability warning.
+* An override for an inaccessible procedure binding works only within
+  the same module; other apparent overrides of inaccessible bindings
+  are actually new bindings of the same name.
+  In the case of `DEFERRED` bindings in an `ABSTRACT` derived type,
+  however, overrides are necessary, so they are permitted for inaccessible
+  bindings with an optional warning.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -521,6 +527,8 @@ end
 * We respect Fortran comments in macro actual arguments (like GNU, Intel, NAG;
   unlike PGI and XLF) on the principle that macro calls should be treated
   like function references.  Fortran's line continuation methods also work.
+* We implement the `__COUNTER__` preprocessing extension,
+  see [Non-standard Extensions](Preprocessing.md#non-standard-extensions)
 
 ## Standard features not silently accepted
 

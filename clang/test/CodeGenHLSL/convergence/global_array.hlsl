@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -finclude-default-header -triple spirv-unknown-vulkan-compute -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-compute -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 // CHECK: define internal spir_func void @__cxx_global_var_init()
 // CHECK: [[entry_token:%.*]] = call token @llvm.experimental.convergence.entry()

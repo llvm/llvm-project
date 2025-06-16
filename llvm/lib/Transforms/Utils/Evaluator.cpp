@@ -77,7 +77,9 @@ isSimpleEnoughValueToCommitHelper(Constant *C,
   // We don't know exactly what relocations are allowed in constant expressions,
   // so we allow &global+constantoffset, which is safe and uniformly supported
   // across targets.
-  ConstantExpr *CE = cast<ConstantExpr>(C);
+  ConstantExpr *CE = dyn_cast<ConstantExpr>(C);
+  if (!CE)
+    return false;
   switch (CE->getOpcode()) {
   case Instruction::BitCast:
     // Bitcast is fine if the casted value is fine.

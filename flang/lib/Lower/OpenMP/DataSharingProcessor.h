@@ -45,20 +45,22 @@ private:
 
     bool Pre(const parser::OpenMPConstruct &omp) {
       // Skip constructs that may not have privatizations.
-      if (!std::holds_alternative<parser::OpenMPCriticalConstruct>(omp.u))
-        currentConstruct = &omp;
+      if (isOpenMPPrivatizingConstruct(omp))
+        constructs.push_back(&omp);
       return true;
     }
 
     void Post(const parser::OpenMPConstruct &omp) {
-      currentConstruct = nullptr;
+      if (isOpenMPPrivatizingConstruct(omp))
+        constructs.pop_back();
     }
 
     void Post(const parser::Name &name) {
-      symDefMap.try_emplace(name.symbol, currentConstruct);
+      auto *current = !constructs.empty() ? constructs.back() : nullptr;
+      symDefMap.try_emplace(name.symbol, current);
     }
 
-    const parser::OpenMPConstruct *currentConstruct = nullptr;
+    llvm::SmallVector<const parser::OpenMPConstruct *> constructs;
     llvm::DenseMap<semantics::Symbol *, const parser::OpenMPConstruct *>
         symDefMap;
 
@@ -113,6 +115,9 @@ private:
                              mlir::OpBuilder::InsertPoint *lastPrivIP);
   void insertDeallocs();
 
+  static bool isOpenMPPrivatizingConstruct(const parser::OpenMPConstruct &omp);
+  bool isOpenMPPrivatizingEvaluation(const pft::Evaluation &eval) const;
+
 public:
   DataSharingProcessor(lower::AbstractConverter &converter,
                        semantics::SemanticsContext &semaCtx,
@@ -153,10 +158,8 @@ public:
                : llvm::ArrayRef<const semantics::Symbol *>();
   }
 
-  template <typename OpType = mlir::omp::PrivateClauseOp,
-            typename OperandsStructType = mlir::omp::PrivateClauseOps>
   void privatizeSymbol(const semantics::Symbol *symToPrivatize,
-                       OperandsStructType *clauseOps);
+                       mlir::omp::PrivateClauseOps *clauseOps);
 };
 
 } // namespace omp

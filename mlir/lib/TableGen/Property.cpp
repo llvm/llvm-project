@@ -33,9 +33,13 @@ static StringRef getValueAsString(const Init *init) {
   return {};
 }
 
+StringRef PropConstraint::getInterfaceType() const {
+  return getValueAsString(def->getValueInit("interfaceType"));
+}
+
 Property::Property(const Record *def)
     : Property(
-          getValueAsString(def->getValueInit("summary")),
+          def, getValueAsString(def->getValueInit("summary")),
           getValueAsString(def->getValueInit("description")),
           getValueAsString(def->getValueInit("storageType")),
           getValueAsString(def->getValueInit("interfaceType")),
@@ -51,16 +55,15 @@ Property::Property(const Record *def)
           getValueAsString(def->getValueInit("hashProperty")),
           getValueAsString(def->getValueInit("defaultValue")),
           getValueAsString(def->getValueInit("storageTypeValueOverride"))) {
-  this->def = def;
   assert((def->isSubClassOf("Property") || def->isSubClassOf("Attr")) &&
          "must be subclass of TableGen 'Property' class");
 }
 
 Property::Property(const DefInit *init) : Property(init->getDef()) {}
 
-Property::Property(StringRef summary, StringRef description,
-                   StringRef storageType, StringRef interfaceType,
-                   StringRef convertFromStorageCall,
+Property::Property(const llvm::Record *maybeDef, StringRef summary,
+                   StringRef description, StringRef storageType,
+                   StringRef interfaceType, StringRef convertFromStorageCall,
                    StringRef assignToStorageCall,
                    StringRef convertToAttributeCall,
                    StringRef convertFromAttributeCall, StringRef parserCall,
@@ -69,8 +72,9 @@ Property::Property(StringRef summary, StringRef description,
                    StringRef writeToMlirBytecodeCall,
                    StringRef hashPropertyCall, StringRef defaultValue,
                    StringRef storageTypeValueOverride)
-    : def(nullptr), summary(summary), description(description),
-      storageType(storageType), interfaceType(interfaceType),
+    : PropConstraint(maybeDef, Constraint::CK_Prop), summary(summary),
+      description(description), storageType(storageType),
+      interfaceType(interfaceType),
       convertFromStorageCall(convertFromStorageCall),
       assignToStorageCall(assignToStorageCall),
       convertToAttributeCall(convertToAttributeCall),

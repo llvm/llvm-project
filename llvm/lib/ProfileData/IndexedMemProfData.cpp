@@ -222,7 +222,7 @@ static Error writeMemProfRadixTreeBased(
     memprof::IndexedVersion Version, bool MemProfFullSchema,
     std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData =
         nullptr,
-    memprof::MemProfSummary *MemProfSum = nullptr) {
+    std::unique_ptr<memprof::MemProfSummary> MemProfSum = nullptr) {
   assert((Version == memprof::Version3 || Version == memprof::Version4) &&
          "Unsupported version for radix tree format");
 
@@ -303,10 +303,10 @@ static Error writeMemProfV4(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     bool MemProfFullSchema,
     std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData,
-    memprof::MemProfSummary *MemProfSum) {
+    std::unique_ptr<memprof::MemProfSummary> MemProfSum) {
   return writeMemProfRadixTreeBased(
       OS, MemProfData, memprof::Version4, MemProfFullSchema,
-      std::move(DataAccessProfileData), MemProfSum);
+      std::move(DataAccessProfileData), std::move(MemProfSum));
 }
 
 // Write out the MemProf data in a requested version.
@@ -314,7 +314,7 @@ Error writeMemProf(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
     std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData,
-    memprof::MemProfSummary *MemProfSum) {
+    std::unique_ptr<memprof::MemProfSummary> MemProfSum) {
   switch (MemProfVersionRequested) {
   case memprof::Version2:
     return writeMemProfV2(OS, MemProfData, MemProfFullSchema);
@@ -322,7 +322,8 @@ Error writeMemProf(
     return writeMemProfV3(OS, MemProfData, MemProfFullSchema);
   case memprof::Version4:
     return writeMemProfV4(OS, MemProfData, MemProfFullSchema,
-                          std::move(DataAccessProfileData), MemProfSum);
+                          std::move(DataAccessProfileData),
+                          std::move(MemProfSum));
   }
 
   return make_error<InstrProfError>(

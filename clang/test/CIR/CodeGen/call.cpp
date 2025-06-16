@@ -56,3 +56,49 @@ int f7(int (*ptr)(int, int)) {
 // LLVM-LABEL: define i32 @_Z2f7PFiiiE
 // LLVM:         %[[#ptr:]] = load ptr, ptr %{{.+}}
 // LLVM-NEXT:    %{{.+}} = call i32 %[[#ptr]](i32 1, i32 2)
+
+void f8(int a, ...);
+void f9() {
+  f8(1);
+  f8(1, 2, 3, 4);
+}
+
+// CIR-LABEL: cir.func @_Z2f9v()
+// CIR:         cir.call @_Z2f8iz(%{{.+}}) : (!s32i) -> ()
+// CIR:         cir.call @_Z2f8iz(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) : (!s32i, !s32i, !s32i, !s32i) -> ()
+
+// LLVM-LABEL: define void @_Z2f9v()
+// LLVM:         call void (i32, ...) @_Z2f8iz(i32 1)
+// LLVM:         call void (i32, ...) @_Z2f8iz(i32 1, i32 2, i32 3, i32 4)
+
+struct S {
+  int x;
+  int y;
+};
+
+S f10();
+void f11() {
+  S s = f10();
+}
+
+// CIR-LABEL: cir.func @_Z3f11v()
+// CIR:         %[[#s:]] = cir.call @_Z3f10v() : () -> !rec_S
+// CIR-NEXT:    cir.store align(4) %[[#s]], %{{.+}} : !rec_S, !cir.ptr<!rec_S>
+
+// LLVM-LABEL: define void @_Z3f11v()
+// LLVM:         %[[#s:]] = call %struct.S @_Z3f10v()
+// LLVM-NEXT:    store %struct.S %[[#s]], ptr %{{.+}}, align 4
+
+void f12() {
+  f10();
+}
+
+// CIR-LABEL: cir.func @_Z3f12v()
+// CIR:         %[[#slot:]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["agg.tmp0"]
+// CIR-NEXT:    %[[#ret:]] = cir.call @_Z3f10v() : () -> !rec_S
+// CIR-NEXT:    cir.store align(4) %[[#ret]], %[[#slot]] : !rec_S, !cir.ptr<!rec_S>
+
+// LLVM-LABEL: define void @_Z3f12v() {
+// LLVM:         %[[#slot:]] = alloca %struct.S, i64 1, align 4
+// LLVM-NEXT:    %[[#ret:]] = call %struct.S @_Z3f10v()
+// LLVM-NEXT:    store %struct.S %[[#ret]], ptr %[[#slot]], align 4

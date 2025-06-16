@@ -122,8 +122,8 @@ static_assert(!b4);
 constexpr auto bar(const char *p) { return p + __builtin_strlen(p); }
 constexpr auto b5 = bar(p1) == p1;
 static_assert(!b5);
-constexpr auto b6 = bar(p1) == ""; // ref-error {{must be initialized by a constant expression}} \
-                                   // ref-note {{comparison of addresses of potentially overlapping literals}}
+constexpr auto b6 = bar(p1) == ""; // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{comparison of addresses of potentially overlapping literals}}
 constexpr auto b7 = bar(p1) + 1 == ""; // both-error {{must be initialized by a constant expression}} \
                                        // both-note {{comparison against pointer '&"test1"[6]' that points past the end of a complete object has unspecified value}}
 

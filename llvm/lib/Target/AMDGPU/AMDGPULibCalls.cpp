@@ -614,7 +614,7 @@ static bool isKnownIntegral(const Value *V, const DataLayout &DL,
 
     // Need to check int size cannot produce infinity, which computeKnownFPClass
     // knows how to do already.
-    return isKnownNeverInfinity(I, /*Depth=*/0, SimplifyQuery(DL));
+    return isKnownNeverInfinity(I, SimplifyQuery(DL));
   case Instruction::Call: {
     const CallInst *CI = cast<CallInst>(I);
     switch (CI->getIntrinsicID()) {
@@ -626,7 +626,7 @@ static bool isKnownIntegral(const Value *V, const DataLayout &DL,
     case Intrinsic::round:
     case Intrinsic::roundeven:
       return (FMF.noInfs() && FMF.noNaNs()) ||
-             isKnownNeverInfOrNaN(I, /*Depth=*/0, SimplifyQuery(DL));
+             isKnownNeverInfOrNaN(I, SimplifyQuery(DL));
     default:
       break;
     }
@@ -764,7 +764,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
       // TODO: Account for flags on current call
       if (PowrFunc &&
           cannotBeOrderedLessThanZero(
-              FPOp->getOperand(0), /*Depth=*/0,
+              FPOp->getOperand(0),
               SimplifyQuery(M->getDataLayout(), TLInfo, DT, AC, Call))) {
         Call->setCalledFunction(PowrFunc);
         return fold_pow(FPOp, B, PowrInfo) || true;

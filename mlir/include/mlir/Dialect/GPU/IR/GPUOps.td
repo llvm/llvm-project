@@ -146,7 +146,7 @@ def GPU_ClusterBlockIdOp : GPU_IndexOp<"cluster_block_id"> {
     ```
 
     If `upper_bound` is set, then executing (a lowering of) this operation in an
-    environment where the number of thread blocks per cluster  along `dimension`
+    environment where the number of thread blocks per cluster along `dimension`
     is greater than `upper_bound` causes undefined behavior.
 
     There is an implicit upper bound of `kMaxClusterDim` (currently 8).
@@ -1064,7 +1064,7 @@ def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, Pure,
     Arguments<(ins Variadic<AnyType>:$operands)>, Results<(outs)> {
   let summary = "Terminator for GPU functions.";
   let description = [{
-    A terminator operation for regions that appear in the body of  `gpu.func`
+    A terminator operation for regions that appear in the body of `gpu.func`
     functions. The operands to the `gpu.return` are the result values returned
     by an invocation of the `gpu.func`.
   }];
@@ -1092,7 +1092,7 @@ def GPU_YieldOp : GPU_Op<"yield", [Pure, ReturnLike, Terminator]>,
     Arguments<(ins Variadic<AnyType>:$values)> {
   let summary = "GPU yield operation";
   let description = [{
-    gpu.yield` is a special terminator operation for blocks inside regions
+    `gpu.yield` is a special terminator operation for blocks inside regions
     in gpu ops. It returns values to the immediately enclosing gpu op.
 
     Example:
@@ -1367,7 +1367,7 @@ def GPU_ShuffleOp : GPU_Op<
 def GPU_BarrierOp : GPU_Op<"barrier"> {
   let summary = "Synchronizes all work items of a workgroup.";
   let description = [{
-    The "barrier" op synchronizes all work items of a workgroup. It is used
+    The `barrier` op synchronizes all work items of a workgroup. It is used
     to coordinate communication between the work items of the workgroup.
 
     ```mlir

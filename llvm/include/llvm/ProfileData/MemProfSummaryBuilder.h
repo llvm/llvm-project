@@ -15,6 +15,7 @@
 
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfSummary.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace memprof {
@@ -26,9 +27,9 @@ private:
   // instances of the same allocations.
   DenseSet<uint64_t> Contexts;
 
+  // Helper called by the public raw and indexed profile addRecord interfaces.
   void addRecord(uint64_t, const PortableMemInfoBlock &);
 
-protected:
   uint64_t MaxColdTotalSize = 0;
   uint64_t MaxWarmTotalSize = 0;
   uint64_t MaxHotTotalSize = 0;
@@ -40,9 +41,9 @@ public:
   MemProfSummaryBuilder() = default;
   ~MemProfSummaryBuilder() = default;
 
-  void addRecord(const IndexedMemProfRecord &);
-  void addRecord(const MemProfRecord &);
-  std::unique_ptr<MemProfSummary> getSummary();
+  LLVM_ABI void addRecord(const IndexedMemProfRecord &);
+  LLVM_ABI void addRecord(const MemProfRecord &);
+  LLVM_ABI std::unique_ptr<MemProfSummary> getSummary();
 };
 
 } // namespace memprof
