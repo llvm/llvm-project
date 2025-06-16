@@ -190,3 +190,18 @@ void foo8() {
 // OGCG: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[COMPLEX]], i32 0, i32 1
 // OGCG: store double 0.000000e+00, ptr %[[C_REAL_PTR]], align 8
 // OGCG: store double 2.000000e+00, ptr %[[C_IMAG_PTR]], align 8
+
+void foo14() {
+  int _Complex c = 2i;
+}
+
+// CIR: %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.int<0> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>
+
+// LLVM: %[[COMPLEX:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: store { i32, i32 } { i32 0, i32 2 }, ptr %[[COMPLEX]], align 4
+
+// OGCG: %[[COMPLEX:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX]], i32 0, i32 0
+// OGCG: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX]], i32 0, i32 1
+// OGCG: store i32 0, ptr %[[C_REAL_PTR]], align 4
+// OGCG: store i32 2, ptr %[[C_IMAG_PTR]], align 4
