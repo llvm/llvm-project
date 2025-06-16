@@ -334,9 +334,8 @@ let ParentPackage = Nullability in {
 
   def NullReturnedFromNonnullChecker
       : Checker<"NullReturnedFromNonnull">,
-        HelpText<
-            "Warns when a null pointer is returned from a function that has "
-            "_Nonnull return type.">,
+        HelpText<"Warns when a null pointer is returned from a function that "
+                 "has _Nonnull return type.">,
         Documentation<HasDocumentation>;
 
   def NullableDereferencedChecker
@@ -346,16 +345,14 @@ let ParentPackage = Nullability in {
 
   def NullablePassedToNonnullChecker
       : Checker<"NullablePassedToNonnull">,
-        HelpText<
-            "Warns when a nullable pointer is passed to a pointer which has a "
-            "_Nonnull type.">,
+        HelpText<"Warns when a nullable pointer is passed to a pointer which "
+                 "has a _Nonnull type.">,
         Documentation<HasDocumentation>;
 
   def NullableReturnedFromNonnullChecker
       : Checker<"NullableReturnedFromNonnull">,
         HelpText<"Warns when a nullable pointer is returned from a function "
-                 "that has "
-                 "_Nonnull return type.">,
+                 "that has _Nonnull return type.">,
         Documentation<NotDocumented>;
 
 } // end "nullability"
