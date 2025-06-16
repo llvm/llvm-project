@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
