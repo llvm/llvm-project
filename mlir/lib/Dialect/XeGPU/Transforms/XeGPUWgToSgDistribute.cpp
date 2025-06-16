@@ -339,8 +339,8 @@ struct WgToSgElementwiseOp : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    // Only match ops with elementwise trait
-    if (!OpTrait::hasElementwiseMappableTraits(op))
+    // Only match ops with elementwise trait and single result.
+    if (!OpTrait::hasElementwiseMappableTraits(op) || op->getNumResults() != 1)
       return failure();
 
     auto resultType = dyn_cast<VectorType>(op->getResult(0).getType());
@@ -353,9 +353,12 @@ struct WgToSgElementwiseOp : public ConversionPattern {
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
 
     size_t numVariants = operands.empty() ? 0 : operands.front().size();
-    for (auto &operandVec : operands)
-      if (operandVec.size() != numVariants)
-        return failure();
+    // Only VectorType operands are supported here.
+    // TODO: Support other types.
+    if (llvm::any_of(operands, [&](const ValueRange &operandVec) {
+          return operandVec.size() != numVariants;
+        }))
+      return failure();
 
     SmallVector<Value> newResults;
     VectorType newResultType =
