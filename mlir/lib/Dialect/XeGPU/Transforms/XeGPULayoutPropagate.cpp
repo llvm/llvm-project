@@ -681,6 +681,10 @@ using GetLayoutFnTy = function_ref<xegpu::LayoutAttr(Value)>;
 /// attribute.
 static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
                               GetLayoutFnTy getLayoutOfValue) {
+  // Region ops (like scf.for) are already handled by the updateControlFlowOps.
+  if (mlir::isa<mlir::RegionBranchOpInterface>(op))
+    return success();
+
   // Iterate over all the results.
   for (OpResult result : op->getResults()) {
     Type resultType = result.getType();
@@ -709,12 +713,27 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
   return success();
 }
 
-/// Update the types of successor regions of a branch terminator op (scf.yield)
-/// with assigned layouts.
-static LogicalResult updateBranchTerminatorOpInterface(
-    mlir::OpBuilder &builder,
-    mlir::RegionBranchTerminatorOpInterface terminator,
-    GetLayoutFnTy getLayoutOfValue) {
+/// Update the types of successor regions at control-flow transfer points. If
+/// the control flow transfers to a new block the block arguments are updated.
+/// If the control flow transfers out of the region op, the result types of the
+/// region op are updated.
+/// Example:
+/// clang-format off
+/// scf.for ... iter_args(...) -> (out types) {
+///   ^bb0(block types):
+///     ...
+///   scf.yield ... : (yield types)
+/// }
+/// clang-format on
+/// In this example, at scf.yield, control-flow can transfer to successor
+/// regions. One is the ^bb0 (for loop body) and the other is the scf.for op
+/// itself (yield the results). So we update both the block arguments of the
+/// successor region (i.e. block types) and the result types of the scf.for op
+/// (i.e. out types). Note that yield types are updated by respective producers.
+static LogicalResult
+updateControlFlowOps(mlir::OpBuilder &builder,
+                     mlir::RegionBranchTerminatorOpInterface terminator,
+                     GetLayoutFnTy getLayoutOfValue) {
   // Only process if the terminator is inside a region branch op.
   if (!mlir::isa<mlir::RegionBranchOpInterface>(terminator->getParentOp()))
     return success();
@@ -725,101 +744,48 @@ static LogicalResult updateBranchTerminatorOpInterface(
   terminator.getSuccessorRegions(operands, successors);
 
   for (mlir::RegionSuccessor &successor : successors) {
-    mlir::OperandRange forwardedOperands =
+    mlir::OperandRange successorOperands =
         terminator.getSuccessorOperands(successor);
-    mlir::ValueRange regionArgs = successor.getSuccessorInputs();
-    for (auto [forwardedOperand, regionArg] :
-         llvm::zip(forwardedOperands, regionArgs)) {
-      Type inputType = regionArg.getType();
+    mlir::ValueRange successorInputs = successor.getSuccessorInputs();
+    for (auto [successorOperand, successorInput] :
+         llvm::zip(successorOperands, successorInputs)) {
+      Type inputType = successorInput.getType();
       // We only need to operate on tensor descriptor or vector types.
       if (!isa<xegpu::TensorDescType, VectorType>(inputType))
         continue;
-      xegpu::LayoutAttr argLayout = getLayoutOfValue(regionArg);
-      xegpu::LayoutAttr operandLayout = getLayoutOfValue(forwardedOperand);
+      xegpu::LayoutAttr successorInputLayout = getLayoutOfValue(successorInput);
+      xegpu::LayoutAttr successorOperandLayout =
+          getLayoutOfValue(successorOperand);
 
       // If either of the layouts is not assigned, we cannot proceed.
-      if (!operandLayout) {
+      if (!successorOperandLayout) {
         LLVM_DEBUG(
             DBGS()
             << "No layout assigned for forwarded operand in branch terminator: "
-            << forwardedOperand << "\n");
+            << successorOperand << "\n");
         return failure();
       }
       // We expect the layouts to match.
-      if (argLayout && argLayout != operandLayout) {
+      if (successorInputLayout &&
+          successorInputLayout != successorOperandLayout) {
         LLVM_DEBUG(DBGS() << "Conflicting layouts for region argument and "
                              "operand forwarded as the argument: "
-                          << argLayout << " vs " << operandLayout << "\n");
+                          << successorInputLayout << " vs "
+                          << successorOperandLayout << "\n");
         return failure();
       }
       // Get tensor descriptor type with the layout.
       if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(inputType)) {
         auto newTdescTy = xegpu::TensorDescType::get(
             tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
-            tdescTy.getEncoding(), operandLayout);
-        regionArg.setType(newTdescTy);
+            tdescTy.getEncoding(), successorOperandLayout);
+        successorInput.setType(newTdescTy);
         continue;
       }
       // If the type is a vector type and this region argument is an OpResult,
       // set the layout attribute on the OpResult.
-      if (auto result = dyn_cast<OpResult>(regionArg))
-        xegpu::setLayoutAttr(result, operandLayout);
-    }
-  }
-  return success();
-}
-
-/// Some operations contain multiple regions (like scf.for) each of which have
-/// block arguments. This function updates the block arguments types of such
-/// regions with the assigned layouts. Note that results of the region op is
-/// updated by the branch terminator op interface.
-static LogicalResult
-updateBranchOpInterface(mlir::OpBuilder &builder,
-                        mlir::RegionBranchOpInterface branch,
-                        GetLayoutFnTy getLayoutOfValue) {
-  mlir::Operation *op = branch.getOperation();
-  llvm::SmallVector<mlir::RegionSuccessor> entrySuccessors;
-  llvm::SmallVector<mlir::Attribute> operands(op->getNumOperands(), nullptr);
-  branch.getEntrySuccessorRegions(operands, entrySuccessors);
-
-  for (mlir::RegionSuccessor &successor : entrySuccessors) {
-    // Only interested in successor regions that are contained within the op.
-    if (successor.isParent())
-      continue;
-
-    mlir::OperandRange forwardedOperands =
-        branch.getEntrySuccessorOperands(successor);
-    mlir::ValueRange regionArgs = successor.getSuccessorInputs();
-
-    for (auto [forwardedOperand, regionArg] :
-         llvm::zip(forwardedOperands, regionArgs)) {
-      Type inputType = regionArg.getType();
-      // Only update tensor descriptor types in region args.
-      if (!isa<xegpu::TensorDescType>(inputType))
-        continue;
-      xegpu::LayoutAttr argLayout = getLayoutOfValue(regionArg);
-      xegpu::LayoutAttr operandLayout = getLayoutOfValue(forwardedOperand);
-
-      if (!argLayout || !operandLayout) {
-        LLVM_DEBUG(DBGS() << "No layout assigned for region arg: " << regionArg
-                          << " or forwarded operand to that arg: "
-                          << forwardedOperand << "\n");
-        return failure();
-      }
-
-      // We expect the layouts to match.
-      if (argLayout != operandLayout) {
-        LLVM_DEBUG(DBGS() << "Conflicting layouts for region argument and "
-                             "operand forwarded as the argument: "
-                          << argLayout << " vs " << operandLayout << "\n");
-        return failure();
-      }
-      // Get tensor descriptor type with the layout.
-      auto tdescTy = dyn_cast<xegpu::TensorDescType>(inputType);
-      auto newTdescTy = xegpu::TensorDescType::get(
-          tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
-          tdescTy.getEncoding(), argLayout);
-      regionArg.setType(newTdescTy);
+      if (auto result = dyn_cast<OpResult>(successorInput))
+        xegpu::setLayoutAttr(result, successorOperandLayout);
     }
   }
   return success();
@@ -885,13 +851,8 @@ void XeGPULayoutPropagatePass::runOnOperation() {
       TypeSwitch<Operation *>(&op)
           .Case<mlir::RegionBranchTerminatorOpInterface>(
               [&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
-                r = updateBranchTerminatorOpInterface(builder, branchTermOp,
-                                                      getXeGPULayoutForValue);
-              })
-          .Case<mlir::RegionBranchOpInterface>(
-              [&](mlir::RegionBranchOpInterface regionBrOp) {
-                r = updateBranchOpInterface(builder, regionBrOp,
-                                            getXeGPULayoutForValue);
+                r = updateControlFlowOps(builder, branchTermOp,
+                                         getXeGPULayoutForValue);
               })
           .Case<mlir::FunctionOpInterface>(
               [&](mlir::FunctionOpInterface funcOp) {
