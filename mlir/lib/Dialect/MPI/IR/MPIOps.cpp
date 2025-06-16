@@ -55,22 +55,20 @@ struct FoldRank final : public mlir::OpRewritePattern<mlir::mpi::CommRankOp> {
 
     // Try to get DLTI attribute for MPI:comm_world_rank
     // If found, set worldRank to the value of the attribute.
-    {
-      auto dltiAttr = dlti::query(op, {"MPI:comm_world_rank"}, false);
-      if (failed(dltiAttr))
-        return mlir::failure();
-      if (!isa<IntegerAttr>(dltiAttr.value())) {
-        return op->emitError()
-               << "Expected an integer attribute for MPI:comm_world_rank";
-      }
-      Value res = b.create<arith::ConstantIndexOp>(
-          op.getLoc(), cast<IntegerAttr>(dltiAttr.value()).getInt());
-      if (Value retVal = op.getRetval())
-        b.replaceOp(op, {retVal, res});
-      else
-        b.replaceOp(op, res);
-      return mlir::success();
+    auto dltiAttr = dlti::query(op, {"MPI:comm_world_rank"}, false);
+    if (failed(dltiAttr))
+      return mlir::failure();
+    if (!isa<IntegerAttr>(dltiAttr.value())) {
+      return op->emitError()
+             << "Expected an integer attribute for MPI:comm_world_rank";
     }
+    Value res = b.create<arith::ConstantIndexOp>(
+        op.getLoc(), cast<IntegerAttr>(dltiAttr.value()).getInt());
+    if (Value retVal = op.getRetval())
+      b.replaceOp(op, {retVal, res});
+    else
+      b.replaceOp(op, res);
+    return mlir::success();
   }
 };
 
