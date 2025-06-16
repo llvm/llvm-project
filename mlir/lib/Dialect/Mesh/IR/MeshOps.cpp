@@ -75,8 +75,6 @@ static DimensionSize operator*(DimensionSize lhs, DimensionSize rhs) {
   return lhs.value() * rhs.value();
 }
 
-/// Converts a vector of OpFoldResults (ints) into vector of Values of the
-/// provided type.
 SmallVector<Value> mlir::mesh::getMixedAsValues(OpBuilder b,
                                                 const Location &loc,
                                                 llvm::ArrayRef<int64_t> statics,

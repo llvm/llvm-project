@@ -49,9 +49,8 @@ struct FoldRank final : public mlir::OpRewritePattern<mlir::mpi::CommRankOp> {
   LogicalResult matchAndRewrite(mlir::mpi::CommRankOp op,
                                 mlir::PatternRewriter &b) const override {
     auto comm = op.getComm();
-    if (!comm.getDefiningOp<mlir::mpi::CommWorldOp>()) {
+    if (!comm.getDefiningOp<mlir::mpi::CommWorldOp>())
       return mlir::failure();
-    }
 
     // Try to get DLTI attribute for MPI:comm_world_rank
     // If found, set worldRank to the value of the attribute.
