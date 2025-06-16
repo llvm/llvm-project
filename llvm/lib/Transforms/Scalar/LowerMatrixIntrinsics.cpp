@@ -2280,7 +2280,8 @@ public:
 
     MatrixTy PhiM = GetMatrix(Inst);
 
-    for (auto [IncomingV, IncomingB] : llvm::zip_equal(Inst->incoming_values(), Inst->blocks())) {
+    for (auto [IncomingV, IncomingB] :
+         llvm::zip_equal(Inst->incoming_values(), Inst->blocks())) {
       MatrixTy OpM = GetMatrix(IncomingV);
 
       for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI) {
