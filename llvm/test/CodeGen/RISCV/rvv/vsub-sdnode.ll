@@ -922,7 +922,7 @@ define <vscale x 8 x i32> @vsub_vi_mask_nxv8i32(<vscale x 8 x i32> %va, <vscale 
   ret <vscale x 8 x i32> %vc
 }
 
-; Make sure we able to split a type that isn't an MVT even if the scalar
+; Make sure we are able to split a type that isn't an MVT even if the scalar
 ; element type isn't legal on RV32. This used to crash.
 define <vscale x 64 x i64> @vsub_vv_nxv64i64(<vscale x 64 x i64> %va, <vscale x 64 x i64> %vb) {
 ; RV32-LABEL: vsub_vv_nxv64i64:
