@@ -13632,9 +13632,13 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
       RequireCompleteDeclContext(const_cast<CXXScopeSpec&>(SS), NamedContext))
     return true;
 
-  // CWG400 [namespace.udecl]p3:
-  //   In a using-declaration used as a member-declaration, the
-  //   nested-name-specifier shall name a base class of the class being defined.
+  // C++26 [namespace.udecl]p3:
+  //   In a using-declaration used as a member-declaration, each
+  //   using-declarator shall either name an enumerator or have a
+  //   nested-name-specifier naming a base class of the current class
+  //   ([expr.prim.this]). ...
+  // "have a nested-name-specifier naming a base class of the current class"
+  // was introduced by CWG400.
 
   if (cast<CXXRecordDecl>(CurContext)
           ->isProvablyNotDerivedFrom(cast<CXXRecordDecl>(NamedContext))) {

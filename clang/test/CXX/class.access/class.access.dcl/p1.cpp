@@ -318,7 +318,7 @@ namespace test4 {
     // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
 #endif
 
-    C::foo; // legal in C++03
+    C::foo;
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
 #else
@@ -326,7 +326,7 @@ namespace test4 {
 #endif
     // expected-error@-6 {{using declaration refers to its own class}}
 
-    Subclass::foo; // legal in C++03
+    Subclass::foo;
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
 #else

@@ -159,6 +159,11 @@ Resolutions to C++ Defect Reports
 
 - Implemented `CWG2496 ref-qualifiers and virtual overriding <https://wg21.link/CWG2496>`_.
 
+- Fully implemented `CWG400 Using-declarations and the "struct hack" `
+  `<https://wg21.link/CWG400>`_. Correctly rejected invalid member
+  using-declaration whose nested-name-specifier doesn't refer to a base class of
+  the current class in C++98 mode.
+
 C Language Changes
 ------------------
 
@@ -840,8 +845,6 @@ Bug Fixes to C++ Support
 - Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
 - Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
 - Fixed an access checking bug when substituting into concepts (#GH115838)
-- Correctly rejects invalid member using-declaration whose nested name specifier
-  refers to its own class in C++98 mode.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
