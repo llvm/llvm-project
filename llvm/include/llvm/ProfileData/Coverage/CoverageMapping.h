@@ -494,6 +494,9 @@ public:
     return TV[TestVectorIndex].first[PosToID[Condition]];
   }
 
+  /// Return the executed test vectors.
+  const TestVectors &getTV() const { return TV; }
+
   /// Return the Result evaluation for an executed test vector.
   /// See MCDCRecordProcessor::RecordTestVector().
   CondState getTVResult(unsigned TestVectorIndex) {

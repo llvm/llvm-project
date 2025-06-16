@@ -62,7 +62,7 @@
 #include <utility>
 
 /// The semantic version combined as a string.
-#define LLVM_COVERAGE_EXPORT_JSON_STR "2.0.1"
+#define LLVM_COVERAGE_EXPORT_JSON_STR "3.0.0"
 
 /// Unique type identifier for JSON coverage export.
 #define LLVM_COVERAGE_EXPORT_JSON_TYPE_STR "llvm.coverage.json.export"
@@ -108,10 +108,22 @@ json::Array gatherConditions(const coverage::MCDCRecord &Record) {
   return Conditions;
 }
 
+std::pair<unsigned, unsigned> getDecisions(const coverage::MCDCRecord &Record) {
+  const coverage::MCDCRecord::TestVectors &TestVectors = Record.getTV();
+  const unsigned TrueConditions =
+      std::count_if(TestVectors.begin(), TestVectors.end(), [](const auto &TV) {
+        return TV.second == coverage::MCDCRecord::CondState::MCDC_True;
+      });
+
+  return {TrueConditions, TestVectors.size() - TrueConditions};
+}
+
 json::Array renderMCDCRecord(const coverage::MCDCRecord &Record) {
   const llvm::coverage::CounterMappingRegion &CMR = Record.getDecisionRegion();
+  const auto [TrueConditions, FalseConditions] = getDecisions(Record);
   return json::Array({CMR.LineStart, CMR.ColumnStart, CMR.LineEnd,
-                      CMR.ColumnEnd, CMR.ExpandedFileID, int64_t(CMR.Kind),
+                      CMR.ColumnEnd, TrueConditions, FalseConditions,
+                      CMR.ExpandedFileID, int64_t(CMR.Kind),
                       gatherConditions(Record)});
 }
 
