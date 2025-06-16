@@ -1298,6 +1298,24 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
     // eq/ne (mul X, Y)) with (icmp eq/ne X/Y) and if X/Y is known non-zero that
     // will fold to a constant elsewhere.
   }
+
+  // icmp eq/ne ((X >> C) or/add (X & mask(C) != 0)), 0 -> icmp eq/ne X, 0
+  if (ICmpInst::isEquality(Pred)) {
+    auto *BO = dyn_cast<BinaryOperator>(Cmp.getOperand(0));
+    Value *X;
+    const APInt *C1, *C2;
+    if (BO &&
+        (BO->getOpcode() == Instruction::Add ||
+         BO->getOpcode() == Instruction::Or) &&
+        match(BO, m_c_BinOp(m_LShr(m_Value(X), m_APInt(C1)),
+                            m_ZExt(m_SpecificICmp(
+                                ICmpInst::ICMP_NE,
+                                m_And(m_Deferred(X), m_LowBitMask(C2)),
+                                m_Zero())))) &&
+        C2->popcount() == C1->getZExtValue())
+      return new ICmpInst(Pred, X, ConstantInt::getNullValue(X->getType()));
+  }
+
   return nullptr;
 }
 
