@@ -31,7 +31,9 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/JSON.h"
 #include <map>
 
 namespace llvm {
@@ -43,6 +45,7 @@ class Function;
 class Type;
 class Value;
 class raw_ostream;
+class LLVMContext;
 
 /// IR2Vec computes two kinds of embeddings: Symbolic and Flow-aware.
 /// Symbolic embeddings capture the "syntactic" and "statistical correlation"
@@ -53,6 +56,11 @@ class raw_ostream;
 enum class IR2VecKind { Symbolic };
 
 namespace ir2vec {
+
+extern cl::opt<float> OpcWeight;
+extern cl::opt<float> TypeWeight;
+extern cl::opt<float> ArgWeight;
+
 /// Embedding is a datatype that wraps std::vector<double>. It provides
 /// additional functionality for arithmetic and comparison operations.
 /// It is meant to be used *like* std::vector<double> but is more restrictive
@@ -226,10 +234,13 @@ public:
 class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
   ir2vec::Vocab Vocabulary;
   Error readVocabulary();
+  void emitError(Error Err, LLVMContext &Ctx);
 
 public:
   static AnalysisKey Key;
   IR2VecVocabAnalysis() = default;
+  explicit IR2VecVocabAnalysis(const ir2vec::Vocab &Vocab);
+  explicit IR2VecVocabAnalysis(ir2vec::Vocab &&Vocab);
   using Result = IR2VecVocabResult;
   Result run(Module &M, ModuleAnalysisManager &MAM);
 };
