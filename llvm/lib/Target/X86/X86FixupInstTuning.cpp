@@ -292,10 +292,9 @@ bool X86FixupInstTuningPass::processInstruction(
 
   case X86::VPBLENDWrri:
     // TODO: Add X86::VPBLENDWrmi handling
-    return ProcessBLENDWToBLENDD(X86::VPBLENDDrri, 4);
-  case X86::VPBLENDWYrri:
+    // TODO: Add X86::VPBLENDWYrri handling
     // TODO: Add X86::VPBLENDWYrmi handling
-    return ProcessBLENDWToBLENDD(X86::VPBLENDDYrmi, 8);
+    return ProcessBLENDWToBLENDD(X86::VPBLENDDrri, 4);
 
   case X86::VPERMILPDri:
     return ProcessVPERMILPDri(X86::VSHUFPDrri);
