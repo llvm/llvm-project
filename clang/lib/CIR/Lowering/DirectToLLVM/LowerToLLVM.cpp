@@ -905,7 +905,32 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     rewriter.replaceOp(op, lowerCirAttrAsValue(op, op.getValue(), rewriter,
                                                getTypeConverter()));
     return mlir::success();
-  } else {
+  } else if (auto complexTy = mlir::dyn_cast<cir::ComplexType>(op.getType())) {
+    auto complexAttr = mlir::cast<cir::ConstComplexAttr>(op.getValue());
+    mlir::Type complexElemTy = complexTy.getElementType();
+    mlir::Type complexElemLLVMTy = typeConverter->convertType(complexElemTy);
+
+    mlir::Attribute components[2];
+    if (mlir::isa<cir::IntType>(complexElemTy)) {
+      components[0] = rewriter.getIntegerAttr(
+          complexElemLLVMTy,
+          mlir::cast<cir::IntAttr>(complexAttr.getReal()).getValue());
+      components[1] = rewriter.getIntegerAttr(
+          complexElemLLVMTy,
+          mlir::cast<cir::IntAttr>(complexAttr.getImag()).getValue());
+    } else {
+      components[0] = rewriter.getFloatAttr(
+          complexElemLLVMTy,
+          mlir::cast<cir::FPAttr>(complexAttr.getReal()).getValue());
+      components[1] = rewriter.getFloatAttr(
+          complexElemLLVMTy,
+          mlir::cast<cir::FPAttr>(complexAttr.getImag()).getValue());
+    }
+
+    attr = rewriter.getArrayAttr(components);
+  }
+
+  else {
     return op.emitError() << "unsupported constant type " << op.getType();
   }
 
@@ -1810,7 +1835,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecSplatOpLowering,
                CIRToLLVMVecShuffleOpLowering,
                CIRToLLVMVecShuffleDynamicOpLowering,
-               CIRToLLVMVecTernaryOpLowering
+               CIRToLLVMVecTernaryOpLowering,
+               CIRToLLVMComplexCreateOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -2093,6 +2119,24 @@ mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
           typeConverter->convertType(op.getCond().getType())));
   rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
       op, bitVec, adaptor.getLhs(), adaptor.getRhs());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMComplexCreateOpLowering::matchAndRewrite(
+    cir::ComplexCreateOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type complexLLVMTy =
+      getTypeConverter()->convertType(op.getResult().getType());
+  auto initialComplex =
+      rewriter.create<mlir::LLVM::UndefOp>(op->getLoc(), complexLLVMTy);
+
+  auto realComplex = rewriter.create<mlir::LLVM::InsertValueOp>(
+      op->getLoc(), initialComplex, adaptor.getReal(), 0);
+
+  auto complex = rewriter.create<mlir::LLVM::InsertValueOp>(
+      op->getLoc(), realComplex, adaptor.getImag(), 1);
+
+  rewriter.replaceOp(op, complex);
   return mlir::success();
 }
 
