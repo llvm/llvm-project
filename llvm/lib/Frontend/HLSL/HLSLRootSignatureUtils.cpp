@@ -129,66 +129,26 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
+static const EnumEntry<RootFlags> RootFlagNames[] = {
+    {"AllowInputAssemblerInputLayout",
+     RootFlags::AllowInputAssemblerInputLayout},
+    {"DenyVertexShaderRootAccess", RootFlags::DenyVertexShaderRootAccess},
+    {"DenyHullShaderRootAccess", RootFlags::DenyHullShaderRootAccess},
+    {"DenyDomainShaderRootAccess", RootFlags::DenyDomainShaderRootAccess},
+    {"DenyGeometryShaderRootAccess", RootFlags::DenyGeometryShaderRootAccess},
+    {"DenyPixelShaderRootAccess", RootFlags::DenyPixelShaderRootAccess},
+    {"AllowStreamOutput", RootFlags::AllowStreamOutput},
+    {"LocalRootSignature", RootFlags::LocalRootSignature},
+    {"DenyAmplificationShaderRootAccess",
+     RootFlags::DenyAmplificationShaderRootAccess},
+    {"DenyMeshShaderRootAccess", RootFlags::DenyMeshShaderRootAccess},
+    {"CBVSRVUAVHeapDirectlyIndexed", RootFlags::CBVSRVUAVHeapDirectlyIndexed},
+    {"SamplerHeapDirectlyIndexed", RootFlags::SamplerHeapDirectlyIndexed},
+};
+
 raw_ostream &operator<<(raw_ostream &OS, const RootFlags &Flags) {
   OS << "RootFlags(";
-  bool FlagSet = false;
-  unsigned Remaining = llvm::to_underlying(Flags);
-  while (Remaining) {
-    unsigned Bit = 1u << llvm::countr_zero(Remaining);
-    if (Remaining & Bit) {
-      if (FlagSet)
-        OS << " | ";
-
-      switch (static_cast<RootFlags>(Bit)) {
-      case RootFlags::AllowInputAssemblerInputLayout:
-        OS << "AllowInputAssemblerInputLayout";
-        break;
-      case RootFlags::DenyVertexShaderRootAccess:
-        OS << "DenyVertexShaderRootAccess";
-        break;
-      case RootFlags::DenyHullShaderRootAccess:
-        OS << "DenyHullShaderRootAccess";
-        break;
-      case RootFlags::DenyDomainShaderRootAccess:
-        OS << "DenyDomainShaderRootAccess";
-        break;
-      case RootFlags::DenyGeometryShaderRootAccess:
-        OS << "DenyGeometryShaderRootAccess";
-        break;
-      case RootFlags::DenyPixelShaderRootAccess:
-        OS << "DenyPixelShaderRootAccess";
-        break;
-      case RootFlags::AllowStreamOutput:
-        OS << "AllowStreamOutput";
-        break;
-      case RootFlags::LocalRootSignature:
-        OS << "LocalRootSignature";
-        break;
-      case RootFlags::DenyAmplificationShaderRootAccess:
-        OS << "DenyAmplificationShaderRootAccess";
-        break;
-      case RootFlags::DenyMeshShaderRootAccess:
-        OS << "DenyMeshShaderRootAccess";
-        break;
-      case RootFlags::CBVSRVUAVHeapDirectlyIndexed:
-        OS << "CBVSRVUAVHeapDirectlyIndexed";
-        break;
-      case RootFlags::SamplerHeapDirectlyIndexed:
-        OS << "SamplerHeapDirectlyIndexed";
-        break;
-      default:
-        OS << "invalid: " << Bit;
-        break;
-      }
-
-      FlagSet = true;
-    }
-    Remaining &= ~Bit;
-  }
-
-  if (!FlagSet)
-    OS << "None";
-
+  printFlags(OS, Flags, ArrayRef(RootFlagNames));
   OS << ")";
 
   return OS;
