@@ -20,18 +20,9 @@
 namespace llvm {
 
 class StringRef;
-class SparcMCExpr : public MCSpecifierExpr {
-public:
-  explicit SparcMCExpr(const MCExpr *Expr, uint16_t S)
-      : MCSpecifierExpr(Expr, S) {}
-  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-};
+using SparcMCExpr = MCSpecifierExpr;
 
 namespace Sparc {
-const SparcMCExpr *createSpecifierExpr(MCContext &Ctx, const MCExpr *Expr,
-                                       uint16_t S);
-const SparcMCExpr *createSpecifierExpr(MCContext &Ctx, const MCSymbol *Sym,
-                                       uint16_t S);
 uint16_t parseSpecifier(StringRef name);
 StringRef getSpecifierName(uint16_t S);
 } // namespace Sparc

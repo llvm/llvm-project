@@ -414,6 +414,11 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       CodeGenOpts.CoverageNotesFile.size() ||
       CodeGenOpts.CoverageDataFile.size())
     DebugInfo.reset(new CGDebugInfo(*this));
+  else if (getTriple().isOSWindows())
+    // On Windows targets, we want to emit compiler info even if debug info is
+    // otherwise disabled. Use a temporary CGDebugInfo instance to emit only
+    // basic compiler metadata.
+    CGDebugInfo(*this);
 
   Block.GlobalUniqueCount = 0;
 
@@ -1051,7 +1056,7 @@ void CodeGenModule::Release() {
                               "StrictVTablePointersRequirement",
                               llvm::MDNode::get(VMContext, Ops));
   }
-  if (getModuleDebugInfo())
+  if (getModuleDebugInfo() || getTriple().isOSWindows())
     // We support a single version in the linked module. The LLVM
     // parser will drop debug info with a different version number
     // (and warn about it, too).
@@ -3608,7 +3613,7 @@ CodeGenModule::isFunctionBlockedByProfileList(llvm::Function *Fn,
   // If the profile list is empty, then instrument everything.
   if (ProfileList.isEmpty())
     return ProfileList::Allow;
-  CodeGenOptions::ProfileInstrKind Kind = getCodeGenOpts().getProfileInstr();
+  llvm::driver::ProfileInstrKind Kind = getCodeGenOpts().getProfileInstr();
   // First, check the function name.
   if (auto V = ProfileList.isFunctionExcluded(Fn->getName(), Kind))
     return *V;

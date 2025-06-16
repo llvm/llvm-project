@@ -2397,7 +2397,7 @@ let RequiredFeatures = ["zvfbfmin"] in {
 }
 defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csilfd",
                                      [["vv", "v", "vv(Log2EEW:4)Uv"]]>;
-let RequiredFeatures = ["zvfh"] in
+let RequiredFeatures = ["zvfhmin"] in
 defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "x",
                                      [["vv", "v", "vv(Log2EEW:4)Uv"]]>;
 // unsigned type
