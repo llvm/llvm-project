@@ -49,27 +49,27 @@ MCOperand ARMAsmPrinter::GetSymbolRef(const MachineOperand &MO,
     break;
   case ARMII::MO_LO16:
     Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
-    Expr = ARMMCExpr::createLower16(Expr, OutContext);
+    Expr = ARM::createLower16(Expr, OutContext);
     break;
   case ARMII::MO_HI16:
     Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
-    Expr = ARMMCExpr::createUpper16(Expr, OutContext);
+    Expr = ARM::createUpper16(Expr, OutContext);
     break;
   case ARMII::MO_LO_0_7:
     Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
-    Expr = ARMMCExpr::createLower0_7(Expr, OutContext);
+    Expr = ARM::createLower0_7(Expr, OutContext);
     break;
   case ARMII::MO_LO_8_15:
     Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
-    Expr = ARMMCExpr::createLower8_15(Expr, OutContext);
+    Expr = ARM::createLower8_15(Expr, OutContext);
     break;
   case ARMII::MO_HI_0_7:
     Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
-    Expr = ARMMCExpr::createUpper0_7(Expr, OutContext);
+    Expr = ARM::createUpper0_7(Expr, OutContext);
     break;
   case ARMII::MO_HI_8_15:
     Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
-    Expr = ARMMCExpr::createUpper8_15(Expr, OutContext);
+    Expr = ARM::createUpper8_15(Expr, OutContext);
     break;
   }
 

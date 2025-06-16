@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMMCAsmInfo.h"
-#include "MCTargetDesc/ARMMCExpr.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -152,4 +152,63 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   MaxInstLength = 6;
 
   initializeVariantKinds(variantKindDescs);
+}
+
+void ARM::printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,
+                             const MCSpecifierExpr &Expr) {
+  switch (Expr.getSpecifier()) {
+  default:
+    llvm_unreachable("Invalid kind!");
+  case ARM::S_HI16:
+    OS << ":upper16:";
+    break;
+  case ARM::S_LO16:
+    OS << ":lower16:";
+    break;
+  case ARM::S_HI_8_15:
+    OS << ":upper8_15:";
+    break;
+  case ARM::S_HI_0_7:
+    OS << ":upper0_7:";
+    break;
+  case ARM::S_LO_8_15:
+    OS << ":lower8_15:";
+    break;
+  case ARM::S_LO_0_7:
+    OS << ":lower0_7:";
+    break;
+  }
+
+  const MCExpr *Sub = Expr.getSubExpr();
+  if (Sub->getKind() != MCExpr::SymbolRef)
+    OS << '(';
+  MAI.printExpr(OS, *Sub);
+  if (Sub->getKind() != MCExpr::SymbolRef)
+    OS << ')';
+}
+
+const MCSpecifierExpr *ARM::createUpper16(const MCExpr *Expr, MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_HI16, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createLower16(const MCExpr *Expr, MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_LO16, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createUpper8_15(const MCExpr *Expr,
+                                            MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_HI_8_15, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createUpper0_7(const MCExpr *Expr, MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_HI_0_7, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createLower8_15(const MCExpr *Expr,
+                                            MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_LO_8_15, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createLower0_7(const MCExpr *Expr, MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_LO_0_7, Ctx);
 }
