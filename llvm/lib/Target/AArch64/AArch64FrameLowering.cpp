@@ -2535,43 +2535,14 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                     DeallocateAfter, TII, MachineInstr::FrameDestroy, false,
                     NeedsWinCFI, &HasWinCFI);
   } else if (SVEStackSize) {
-    const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
     int64_t SVECalleeSavedSize = AFI->getSVECalleeSavedStackSize();
-    Register BaseForSVEDealloc = [&]() -> Register {
-      // With stack realignment we must use the FP to restore SVE CSRs (as both
-      // the SP and BP can't be used due to the unknown alignment padding).
-      if (AFI->isStackRealigned())
-        return AArch64::FP;
-      // With variable sized objects on the stack, we can use the BP or FP to
-      // restore the SVE callee saves.
-      if (MFI.hasVarSizedObjects()) {
-        if (DeallocateBefore && !AFI->hasStackHazardSlotIndex()) {
-          // If there's SVE locals and no hazard padding we can do:
-          //  ADDVL SP, FP, #(-SVECalleeSavedSize)
-          return AArch64::FP;
-        }
-        // Otherwise, we can choose between:
-        //  SUB TMP, FP, #CalleeSaveBaseOffset
-        //  ADDVL SP, TMP, #(-SVECalleeSavedSize)
-        // OR:
-        //  ADD SP, BP, #NumBytes
-        //  ADDVL SP, SP, #DeallocateBefore
-        // Here we choose the latter as the "ADDVL" can be omitted if there's no
-        // SVE locals (and if we're here we either don't have SVE locals or have
-        // hazard padding).
-        assert(RegInfo->hasBasePointer(MF) && "Expected base pointer!");
-        return RegInfo->getBaseRegister();
-      }
-      // In the standard case we use the SP.
-      return AArch64::SP;
-    }();
-    // If we have any SVE callee saves they must be restored now.
-    bool MustRestoreSVECalleeSaves = SVECalleeSavedSize != 0;
-    // If the base for deallocation is the SP we must deallocate the SVE area
-    // regardless of if we have SVE callee saves. For any other base the SVE
-    // area will be implicitly deallocated when we set the SP to the FP.
-    bool MustDeallocateSVEArea = BaseForSVEDealloc == AArch64::SP;
-    if (MustRestoreSVECalleeSaves && BaseForSVEDealloc == AArch64::FP) {
+    // If we have stack realignment or variable-sized objects we must use the
+    // FP to restore SVE callee saves (as there is an unknown amount of
+    // data/padding between the SP and SVE CS area).
+    Register BaseForSVEDealloc =
+        AFI->isStackRealigned() || MFI.hasVarSizedObjects() ? AArch64::FP
+                                                            : AArch64::SP;
+    if (SVECalleeSavedSize && BaseForSVEDealloc == AArch64::FP) {
       Register CalleeSaveBase = AArch64::FP;
       if (int64_t CalleeSaveBaseOffset =
               AFI->getCalleeSaveBaseToFrameRecordOffset()) {
@@ -2589,12 +2560,12 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, CalleeSaveBase,
                       StackOffset::getScalable(-SVECalleeSavedSize), TII,
                       MachineInstr::FrameDestroy);
-    } else if (MustRestoreSVECalleeSaves || MustDeallocateSVEArea) {
+    } else if (BaseForSVEDealloc == AArch64::SP) {
       if (SVECalleeSavedSize) {
         // Deallocate the non-SVE locals first before we can deallocate (and
         // restore callee saves) from the SVE area.
         emitFrameOffset(
-            MBB, RestoreBegin, DL, AArch64::SP, BaseForSVEDealloc,
+            MBB, RestoreBegin, DL, AArch64::SP, AArch64::SP,
             StackOffset::getFixed(NumBytes), TII, MachineInstr::FrameDestroy,
             false, NeedsWinCFI, &HasWinCFI, EmitCFI && !hasFP(MF),
             SVEStackSize + StackOffset::getFixed(NumBytes + PrologueSaveSize));
@@ -2607,13 +2578,11 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                       SVEStackSize +
                           StackOffset::getFixed(NumBytes + PrologueSaveSize));
 
-      if (MustDeallocateSVEArea) {
-        emitFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
-                        DeallocateAfter, TII, MachineInstr::FrameDestroy, false,
-                        NeedsWinCFI, &HasWinCFI, EmitCFI && !hasFP(MF),
-                        DeallocateAfter +
-                            StackOffset::getFixed(NumBytes + PrologueSaveSize));
-      }
+      emitFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
+                      DeallocateAfter, TII, MachineInstr::FrameDestroy, false,
+                      NeedsWinCFI, &HasWinCFI, EmitCFI && !hasFP(MF),
+                      DeallocateAfter +
+                          StackOffset::getFixed(NumBytes + PrologueSaveSize));
     }
     if (EmitCFI)
       emitCalleeSavedSVERestores(MBB, RestoreEnd);

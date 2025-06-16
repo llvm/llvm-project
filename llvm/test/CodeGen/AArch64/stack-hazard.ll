@@ -3227,7 +3227,7 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK0-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK0-NEXT:    movk w0, #59491, lsl #16
 ; CHECK0-NEXT:    .cfi_restore vg
-; CHECK0-NEXT:    mov sp, x19
+; CHECK0-NEXT:    addvl sp, x29, #-18
 ; CHECK0-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -3363,7 +3363,8 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK64-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK64-NEXT:    movk w0, #59491, lsl #16
 ; CHECK64-NEXT:    .cfi_restore vg
-; CHECK64-NEXT:    add sp, x19, #64
+; CHECK64-NEXT:    sub x8, x29, #64
+; CHECK64-NEXT:    addvl sp, x8, #-18
 ; CHECK64-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -3504,7 +3505,8 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK1024-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK1024-NEXT:    movk w0, #59491, lsl #16
 ; CHECK1024-NEXT:    .cfi_restore vg
-; CHECK1024-NEXT:    add sp, x19, #1024
+; CHECK1024-NEXT:    sub x8, x29, #1024
+; CHECK1024-NEXT:    addvl sp, x8, #-18
 ; CHECK1024-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -4148,9 +4150,9 @@ define i32 @svecc_call_dynamic_and_scalable_alloca(<4 x i16> %P0, i32 %P1, i32 %
 ; CHECK64-NEXT:    mov x0, x20
 ; CHECK64-NEXT:    bl bar
 ; CHECK64-NEXT:    mov w0, #22647 // =0x5877
+; CHECK64-NEXT:    sub x8, x29, #64
 ; CHECK64-NEXT:    movk w0, #59491, lsl #16
-; CHECK64-NEXT:    add sp, x19, #112
-; CHECK64-NEXT:    addvl sp, sp, #1
+; CHECK64-NEXT:    addvl sp, x8, #-18
 ; CHECK64-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -4263,9 +4265,9 @@ define i32 @svecc_call_dynamic_and_scalable_alloca(<4 x i16> %P0, i32 %P1, i32 %
 ; CHECK1024-NEXT:    mov x0, x20
 ; CHECK1024-NEXT:    bl bar
 ; CHECK1024-NEXT:    mov w0, #22647 // =0x5877
+; CHECK1024-NEXT:    sub x8, x29, #1024
 ; CHECK1024-NEXT:    movk w0, #59491, lsl #16
-; CHECK1024-NEXT:    add sp, x19, #1072
-; CHECK1024-NEXT:    addvl sp, sp, #1
+; CHECK1024-NEXT:    addvl sp, x8, #-18
 ; CHECK1024-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
