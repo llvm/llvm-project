@@ -1766,7 +1766,8 @@ public:
 #endif
 };
 
-/// A recipe to compute the pointers for widened memory accesses of IndexTy.
+/// A recipe to compute the pointers for widened memory accesses of IndexedTy,
+/// with the Stride expressed in units of IndexedTy.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
                               public VPUnrollPartAccessor<2> {
   Type *IndexedTy;
