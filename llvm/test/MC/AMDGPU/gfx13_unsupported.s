@@ -357,3 +357,9 @@ v_pk_max3_num_f16 v8, v1, s1, v4
 
 v_pk_min3_num_f16 v8, v1, s1, v4
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_prefetch_b8 v4, s[2:3]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v3, s[2:3]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
