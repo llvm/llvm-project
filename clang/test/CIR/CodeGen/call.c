@@ -109,3 +109,29 @@ void f9() {
 // OGCG-NEXT:    store i64 %[[RET]], ptr %[[SLOT]], align 4
 // OGCG-NEXT:    %[[ARG:.+]] = load i64, ptr %[[SLOT]], align 4
 // OGCG-NEXT:    call void @f1(i64 %[[ARG]])
+
+__attribute__((pure)) int f10(int);
+__attribute__((const)) int f11(int);
+int f12(void) {
+  return f10(1) + f11(2);
+}
+
+// CIR-LABEL: cir.func @f12() -> !s32i
+// CIR:         %[[A:.+]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:    %{{.+}} = cir.call @f10(%[[A]]) side_effect(pure) : (!s32i) -> !s32i
+// CIR-NEXT:    %[[B:.+]] = cir.const #cir.int<2> : !s32i
+// CIR-NEXT:    %{{.+}} = cir.call @f11(%[[B]]) side_effect(const) : (!s32i) -> !s32i
+
+// LLVM-LABEL: define i32 @f12()
+// LLVM:         %{{.+}} = call i32 @f10(i32 1) #[[ATTR0:.+]]
+// LLVM-NEXT:    %{{.+}} = call i32 @f11(i32 2) #[[ATTR1:.+]]
+
+// OGCG-LABEL: define dso_local i32 @f12()
+// OGCG:         %{{.+}} = call i32 @f10(i32 noundef 1) #[[ATTR0:.+]]
+// OGCG-NEXT:    %{{.+}} = call i32 @f11(i32 noundef 2) #[[ATTR1:.+]]
+
+// LLVM: attributes #[[ATTR0]] = { nounwind willreturn memory(read, errnomem: none) }
+// LLVM: attributes #[[ATTR1]] = { nounwind willreturn memory(none) }
+
+// OGCG: attributes #[[ATTR0]] = { nounwind willreturn memory(read) }
+// OGCG: attributes #[[ATTR1]] = { nounwind willreturn memory(none) }
