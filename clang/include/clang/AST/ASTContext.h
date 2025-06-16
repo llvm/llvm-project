@@ -221,7 +221,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<DependentDecltypeType, ASTContext &>
       DependentDecltypeTypes;
 
-  mutable llvm::FoldingSet<PackIndexingType> DependentPackIndexingTypes;
+  mutable llvm::ContextualFoldingSet<PackIndexingType, ASTContext &>
+      DependentPackIndexingTypes;
 
   mutable llvm::FoldingSet<TemplateTypeParmType> TemplateTypeParmTypes;
   mutable llvm::FoldingSet<ObjCTypeParamType> ObjCTypeParamTypes;
@@ -259,6 +260,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
   llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
+  llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
 
   mutable llvm::FoldingSet<CountAttributedType> CountAttributedTypes;
 
@@ -486,8 +488,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// if possible.
   ///
   /// Not serialized intentionally.
-  llvm::StringMap<const Module *> PrimaryModuleNameMap;
-  llvm::DenseMap<const Module *, const Module *> SameModuleLookupSet;
+  mutable llvm::StringMap<const Module *> PrimaryModuleNameMap;
+  mutable llvm::DenseMap<const Module *, const Module *> SameModuleLookupSet;
 
   static constexpr unsigned ConstantArrayTypesLog2InitSize = 8;
   static constexpr unsigned GeneralTypesLog2InitSize = 9;
@@ -581,7 +583,7 @@ private:
   llvm::DenseMap<UsingEnumDecl *, UsingEnumDecl *>
       InstantiatedFromUsingEnumDecl;
 
-  /// Simlarly maps instantiated UsingShadowDecls to their origin.
+  /// Similarly maps instantiated UsingShadowDecls to their origin.
   llvm::DenseMap<UsingShadowDecl*, UsingShadowDecl*>
     InstantiatedFromUsingShadowDecl;
 
@@ -616,6 +618,20 @@ private:
   /// that value exceeds the bitfield size of ParmVarDeclBits.ParameterIndex.
   using ParameterIndexTable = llvm::DenseMap<const VarDecl *, unsigned>;
   ParameterIndexTable ParamIndices;
+
+public:
+  struct CXXRecordDeclRelocationInfo {
+    unsigned IsRelocatable;
+    unsigned IsReplaceable;
+  };
+  std::optional<CXXRecordDeclRelocationInfo>
+  getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
+  void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
+                                     CXXRecordDeclRelocationInfo);
+
+private:
+  llvm::DenseMap<const CXXRecordDecl *, CXXRecordDeclRelocationInfo>
+      RelocatableClasses;
 
   ImportDecl *FirstLocalImport = nullptr;
   ImportDecl *LastLocalImport = nullptr;
@@ -775,7 +791,7 @@ public:
     }
     return new (*this) DeclListNode(ND);
   }
-  /// Deallcates a \c DeclListNode by returning it to the \c ListNodeFreeList
+  /// Deallocates a \c DeclListNode by returning it to the \c ListNodeFreeList
   /// pool.
   void DeallocateDeclListNode(DeclListNode *N) {
     N->Rest = ListNodeFreeList;
@@ -1108,7 +1124,7 @@ public:
 
   /// Clean up the merged definition list. Call this if you might have
   /// added duplicates into the list.
-  void deduplicateMergedDefinitonsFor(NamedDecl *ND);
+  void deduplicateMergedDefinitionsFor(NamedDecl *ND);
 
   /// Get the additional modules in which the definition \p Def has
   /// been merged.
@@ -1135,7 +1151,7 @@ public:
   ///
   /// FIXME: The signature may be confusing since `clang::Module` means to
   /// a module fragment or a module unit but not a C++20 module.
-  bool isInSameModule(const Module *M1, const Module *M2);
+  bool isInSameModule(const Module *M1, const Module *M2) const;
 
   TranslationUnitDecl *getTranslationUnitDecl() const {
     return TUDecl->getMostRecentDecl();
@@ -1203,7 +1219,7 @@ public:
 #include "clang/Basic/OpenCLExtensionTypes.def"
 #define SVE_TYPE(Name, Id, SingletonId) \
   CanQualType SingletonId;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   CanQualType Id##Ty;
 #include "clang/Basic/PPCTypes.def"
@@ -1792,6 +1808,10 @@ public:
   QualType getHLSLAttributedResourceType(
       QualType Wrapped, QualType Contained,
       const HLSLAttributedResourceType::Attributes &Attrs);
+
+  QualType getHLSLInlineSpirvType(uint32_t Opcode, uint32_t Size,
+                                  uint32_t Alignment,
+                                  ArrayRef<SpirvOperand> Operands);
 
   QualType getSubstTemplateTypeParmType(QualType Replacement,
                                         Decl *AssociatedDecl, unsigned Index,
@@ -2550,7 +2570,7 @@ public:
   /// Return the ABI-specified natural alignment of a (complete) type \p T,
   /// before alignment adjustments, in bits.
   ///
-  /// This alignment is curently used only by ARM and AArch64 when passing
+  /// This alignment is currently used only by ARM and AArch64 when passing
   /// arguments of a composite type.
   unsigned getTypeUnadjustedAlign(QualType T) const {
     return getTypeUnadjustedAlign(T.getTypePtr());
@@ -2623,7 +2643,7 @@ public:
   /// considered specifically for the query.
   CharUnits getAlignOfGlobalVarInChars(QualType T, const VarDecl *VD) const;
 
-  /// Return the minimum alignement as specified by the target. If \p VD is
+  /// Return the minimum alignment as specified by the target. If \p VD is
   /// non-null it may be used to identify external or weak variables.
   unsigned getMinGlobalAlignOfVar(uint64_t Size, const VarDecl *VD) const;
 
@@ -2956,6 +2976,11 @@ public:
   TemplateTemplateParmDecl *insertCanonicalTemplateTemplateParmDeclInternal(
       TemplateTemplateParmDecl *CanonTTP) const;
 
+  /// Determine whether the given template arguments \p Arg1 and \p Arg2 are
+  /// equivalent.
+  bool isSameTemplateArgument(const TemplateArgument &Arg1,
+                              const TemplateArgument &Arg2) const;
+
   /// Type Query functions.  If the type is an instance of the specified class,
   /// return the Type pointer for the underlying maximally pretty type.  This
   /// is a member of ASTContext because this may need to do some amount of
@@ -3147,6 +3172,7 @@ public:
   QualType mergeTransparentUnionType(QualType, QualType,
                                      bool OfBlockPointer=false,
                                      bool Unqualified = false);
+  QualType mergeTagDefinitions(QualType, QualType);
 
   QualType mergeObjCGCQualifiers(QualType, QualType);
 

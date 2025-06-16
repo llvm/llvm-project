@@ -165,10 +165,6 @@ define void @truncate_to_i1_used_by_branch(i8 %x, ptr %dst) #0 {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP10]], 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i8> poison, i8 [[X]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc <vscale x 4 x i8> [[BROADCAST_SPLAT]] to <vscale x 4 x i1>
-; CHECK-NEXT:    [[TMP8:%.*]] = or <vscale x 4 x i1> splat (i1 true), [[TMP7]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[DST]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -181,7 +177,7 @@ define void @truncate_to_i1_used_by_branch(i8 %x, ptr %dst) #0 {
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <vscale x 4 x i32> [[BROADCAST_SPLAT4]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 4 x i32> [[VEC_IV]], i32 0
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 [[TMP15]], i32 9)
-; CHECK-NEXT:    [[TMP11:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> zeroinitializer
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4i8.nxv4p0(<vscale x 4 x i8> zeroinitializer, <vscale x 4 x ptr> [[BROADCAST_SPLAT2]], i32 1, <vscale x 4 x i1> [[TMP11]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]

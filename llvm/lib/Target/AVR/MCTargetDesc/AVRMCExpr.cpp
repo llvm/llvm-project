@@ -69,8 +69,7 @@ bool AVRMCExpr::evaluateAsConstant(int64_t &Result) const {
 bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
                                           const MCAssembler *Asm) const {
   MCValue Value;
-  bool isRelocatable = SubExpr->evaluateAsRelocatable(Value, Asm);
-
+  bool isRelocatable = getSubExpr()->evaluateAsRelocatable(Value, Asm);
   if (!isRelocatable)
     return false;
 
@@ -185,10 +184,6 @@ AVR::Fixups AVRMCExpr::getFixupKind() const {
   }
 
   return Kind;
-}
-
-void AVRMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  Streamer.visitUsedExpr(*getSubExpr());
 }
 
 const char *AVRMCExpr::getName() const {

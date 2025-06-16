@@ -47,6 +47,9 @@ public:
   /// Returns the element type of this box type.
   mlir::Type getEleTy() const;
 
+  /// Get the raw address type of the memory described by the box.
+  mlir::Type getBaseAddressType() const;
+
   /// Unwrap element type from fir.heap, fir.ptr and fir.array.
   mlir::Type unwrapInnerType() const;
 
@@ -55,6 +58,12 @@ public:
 
   /// Is this a box for a pointer?
   bool isPointer() const;
+
+  /// Does this box for a pointer or allocatable?
+  bool isPointerOrAllocatable() const;
+
+  /// Is this a box describing volatile memory?
+  bool isVolatile() const;
 
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
@@ -456,6 +465,10 @@ inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
     return fir::ClassType::get(eleTy);
   return fir::BoxType::get(eleTy);
 }
+
+/// Re-create the given type with the given volatility, if this is a type
+/// that can represent volatility.
+mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile);
 
 /// Return the elementType where intrinsic types are replaced with none for
 /// unlimited polymorphic entities.

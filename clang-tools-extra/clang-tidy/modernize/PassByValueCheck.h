@@ -12,8 +12,6 @@
 #include "../ClangTidyCheck.h"
 #include "../utils/IncludeInserter.h"
 
-#include <memory>
-
 namespace clang::tidy::modernize {
 
 class PassByValueCheck : public ClangTidyCheck {

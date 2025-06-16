@@ -35,14 +35,14 @@ define void @load_alignment(ptr nocapture readonly byval(%class.outer) align 8 %
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %rd1, load_alignment_param_0;
-; PTX-NEXT:    ld.local.u64 %rd2, [%rd1];
-; PTX-NEXT:    ld.local.u64 %rd3, [%rd1+8];
+; PTX-NEXT:    ld.local.b64 %rd2, [%rd1];
+; PTX-NEXT:    ld.local.b64 %rd3, [%rd1+8];
 ; PTX-NEXT:    add.s64 %rd4, %rd1, 16;
 ; PTX-NEXT:    cvta.local.u64 %rd5, %rd4;
-; PTX-NEXT:    ld.local.u32 %r1, [%rd1+16];
-; PTX-NEXT:    ld.u32 %r2, [%rd2];
+; PTX-NEXT:    ld.local.b32 %r1, [%rd1+16];
+; PTX-NEXT:    ld.b32 %r2, [%rd2];
 ; PTX-NEXT:    add.s32 %r3, %r2, %r1;
-; PTX-NEXT:    st.u32 [%rd3], %r3;
+; PTX-NEXT:    st.b32 [%rd3], %r3;
 ; PTX-NEXT:    { // callseq 0, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    st.param.b64 [param0], %rd5;
@@ -116,12 +116,12 @@ define ptx_kernel void @ptr_generic(ptr %out, ptr %in) {
 ; PTXC-NEXT:    .reg .b64 %rd<5>;
 ; PTXC-EMPTY:
 ; PTXC-NEXT:  // %bb.0:
-; PTXC-NEXT:    ld.param.u64 %rd1, [ptr_generic_param_0];
-; PTXC-NEXT:    ld.param.u64 %rd2, [ptr_generic_param_1];
+; PTXC-NEXT:    ld.param.b64 %rd1, [ptr_generic_param_0];
+; PTXC-NEXT:    ld.param.b64 %rd2, [ptr_generic_param_1];
 ; PTXC-NEXT:    cvta.to.global.u64 %rd3, %rd2;
 ; PTXC-NEXT:    cvta.to.global.u64 %rd4, %rd1;
-; PTXC-NEXT:    ld.global.u32 %r1, [%rd3];
-; PTXC-NEXT:    st.global.u32 [%rd4], %r1;
+; PTXC-NEXT:    ld.global.b32 %r1, [%rd3];
+; PTXC-NEXT:    st.global.b32 [%rd4], %r1;
 ; PTXC-NEXT:    ret;
 ;
 ; PTXO-LABEL: ptr_generic(
@@ -130,10 +130,10 @@ define ptx_kernel void @ptr_generic(ptr %out, ptr %in) {
 ; PTXO-NEXT:    .reg .b64 %rd<3>;
 ; PTXO-EMPTY:
 ; PTXO-NEXT:  // %bb.0:
-; PTXO-NEXT:    ld.param.u64 %rd1, [ptr_generic_param_0];
-; PTXO-NEXT:    ld.param.u64 %rd2, [ptr_generic_param_1];
-; PTXO-NEXT:    ld.u32 %r1, [%rd2];
-; PTXO-NEXT:    st.u32 [%rd1], %r1;
+; PTXO-NEXT:    ld.param.b64 %rd1, [ptr_generic_param_0];
+; PTXO-NEXT:    ld.param.b64 %rd2, [ptr_generic_param_1];
+; PTXO-NEXT:    ld.b32 %r1, [%rd2];
+; PTXO-NEXT:    st.b32 [%rd1], %r1;
 ; PTXO-NEXT:    ret;
   %v = load i32, ptr  %in, align 4
   store i32 %v, ptr %out, align 4
@@ -153,10 +153,10 @@ define ptx_kernel void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(3) %
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [ptr_nongeneric_param_0];
-; PTX-NEXT:    ld.param.u64 %rd2, [ptr_nongeneric_param_1];
-; PTX-NEXT:    ld.shared.u32 %r1, [%rd2];
-; PTX-NEXT:    st.global.u32 [%rd1], %r1;
+; PTX-NEXT:    ld.param.b64 %rd1, [ptr_nongeneric_param_0];
+; PTX-NEXT:    ld.param.b64 %rd2, [ptr_nongeneric_param_1];
+; PTX-NEXT:    ld.shared.b32 %r1, [%rd2];
+; PTX-NEXT:    st.global.b32 [%rd1], %r1;
 ; PTX-NEXT:    ret;
   %v = load i32, ptr addrspace(3) %in, align 4
   store i32 %v, ptr addrspace(1) %out, align 4
@@ -184,10 +184,10 @@ define ptx_kernel void @ptr_as_int(i64 noundef %i, i32 noundef %v) {
 ; PTXC-NEXT:    .reg .b64 %rd<3>;
 ; PTXC-EMPTY:
 ; PTXC-NEXT:  // %bb.0:
-; PTXC-NEXT:    ld.param.u64 %rd1, [ptr_as_int_param_0];
-; PTXC-NEXT:    ld.param.u32 %r1, [ptr_as_int_param_1];
+; PTXC-NEXT:    ld.param.b64 %rd1, [ptr_as_int_param_0];
+; PTXC-NEXT:    ld.param.b32 %r1, [ptr_as_int_param_1];
 ; PTXC-NEXT:    cvta.to.global.u64 %rd2, %rd1;
-; PTXC-NEXT:    st.global.u32 [%rd2], %r1;
+; PTXC-NEXT:    st.global.b32 [%rd2], %r1;
 ; PTXC-NEXT:    ret;
 ;
 ; PTXO-LABEL: ptr_as_int(
@@ -196,9 +196,9 @@ define ptx_kernel void @ptr_as_int(i64 noundef %i, i32 noundef %v) {
 ; PTXO-NEXT:    .reg .b64 %rd<2>;
 ; PTXO-EMPTY:
 ; PTXO-NEXT:  // %bb.0:
-; PTXO-NEXT:    ld.param.u64 %rd1, [ptr_as_int_param_0];
-; PTXO-NEXT:    ld.param.u32 %r1, [ptr_as_int_param_1];
-; PTXO-NEXT:    st.u32 [%rd1], %r1;
+; PTXO-NEXT:    ld.param.b64 %rd1, [ptr_as_int_param_0];
+; PTXO-NEXT:    ld.param.b32 %r1, [ptr_as_int_param_1];
+; PTXO-NEXT:    st.b32 [%rd1], %r1;
 ; PTXO-NEXT:    ret;
   %p = inttoptr i64 %i to ptr
   store i32 %v, ptr %p, align 4
@@ -232,10 +232,10 @@ define ptx_kernel void @ptr_as_int_aggr(ptr nocapture noundef readonly byval(%st
 ; PTXC-NEXT:    .reg .b64 %rd<3>;
 ; PTXC-EMPTY:
 ; PTXC-NEXT:  // %bb.0:
-; PTXC-NEXT:    ld.param.u32 %r1, [ptr_as_int_aggr_param_1];
-; PTXC-NEXT:    ld.param.u64 %rd1, [ptr_as_int_aggr_param_0];
+; PTXC-NEXT:    ld.param.b32 %r1, [ptr_as_int_aggr_param_1];
+; PTXC-NEXT:    ld.param.b64 %rd1, [ptr_as_int_aggr_param_0];
 ; PTXC-NEXT:    cvta.to.global.u64 %rd2, %rd1;
-; PTXC-NEXT:    st.global.u32 [%rd2], %r1;
+; PTXC-NEXT:    st.global.b32 [%rd2], %r1;
 ; PTXC-NEXT:    ret;
 ;
 ; PTXO-LABEL: ptr_as_int_aggr(
@@ -244,9 +244,9 @@ define ptx_kernel void @ptr_as_int_aggr(ptr nocapture noundef readonly byval(%st
 ; PTXO-NEXT:    .reg .b64 %rd<2>;
 ; PTXO-EMPTY:
 ; PTXO-NEXT:  // %bb.0:
-; PTXO-NEXT:    ld.param.u32 %r1, [ptr_as_int_aggr_param_1];
-; PTXO-NEXT:    ld.param.u64 %rd1, [ptr_as_int_aggr_param_0];
-; PTXO-NEXT:    st.u32 [%rd1], %r1;
+; PTXO-NEXT:    ld.param.b32 %r1, [ptr_as_int_aggr_param_1];
+; PTXO-NEXT:    ld.param.b64 %rd1, [ptr_as_int_aggr_param_0];
+; PTXO-NEXT:    st.b32 [%rd1], %r1;
 ; PTXO-NEXT:    ret;
   %i = load i64, ptr %s, align 8
   %p = inttoptr i64 %i to ptr

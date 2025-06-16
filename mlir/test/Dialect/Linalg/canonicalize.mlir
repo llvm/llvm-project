@@ -495,7 +495,7 @@ func.func @dynamic_fill_pack(%arg0: tensor<?x?xf32>) -> tensor<?x?x16x16xf32> {
 
 // -----
 
-// CHECK: func @fold_self_copy
+// CHECK-LABEL: func @fold_self_copy
 func.func @fold_self_copy(%0 : memref<4x16xf32>) {
 // CHECK-NEXT: return
   linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
@@ -510,6 +510,36 @@ func.func @fold_self_copy(%0 : memref<4x16xf32>) {
 }
 
 // -----
+
+// CHECK-LABEL: func @no_fold_fill_like_memref
+//  CHECK-NEXT:   linalg.generic 
+func.func @no_fold_fill_like_memref(%in_out : memref<4x16xf32>, %fill_val : f32) {
+  linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                   affine_map<(d0, d1) -> (d0, d1)>],
+                  iterator_types = ["parallel", "parallel"]}
+    ins(%in_out : memref<4x16xf32>)
+    outs(%in_out : memref<4x16xf32>) {
+      ^bb0(%arg0: f32, %arg1: f32):
+        linalg.yield %fill_val : f32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @no_fold_fill_like_tensor
+//  CHECK-NEXT:   linalg.generic 
+func.func @no_fold_fill_like_tensor(%in_out : tensor<4x16xf32>, %fill_val : f32) -> tensor<4x16xf32> {
+  %result = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                   affine_map<(d0, d1) -> (d0, d1)>],
+                  iterator_types = ["parallel", "parallel"]}
+    ins(%in_out : tensor<4x16xf32>)
+    outs(%in_out : tensor<4x16xf32>) {
+      ^bb0(%arg0: f32, %arg1: f32):
+        linalg.yield %fill_val : f32
+  } -> tensor<4x16xf32>
+  return %result : tensor<4x16xf32>
+}
 
 // CHECK-LABEL: func @fold_static_pad_fill
 //       CHECK:   %[[F0:.+]] = arith.constant 0.000000e+00 : f32

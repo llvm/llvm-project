@@ -319,35 +319,10 @@ typedef __char32_t char32_t;
 
 #  define _LIBCPP_PREFERRED_ALIGNOF(_Tp) __alignof(_Tp)
 
-// Objective-C++ features (opt-in)
-#  if __has_feature(objc_arc)
-#    define _LIBCPP_HAS_OBJC_ARC 1
-#  else
-#    define _LIBCPP_HAS_OBJC_ARC 0
-#  endif
-
-#  if __has_feature(objc_arc_weak)
-#    define _LIBCPP_HAS_OBJC_ARC_WEAK 1
-#  else
-#    define _LIBCPP_HAS_OBJC_ARC_WEAK 0
-#  endif
-
-#  if __has_extension(blocks)
-#    define _LIBCPP_HAS_EXTENSION_BLOCKS 1
-#  else
-#    define _LIBCPP_HAS_EXTENSION_BLOCKS 0
-#  endif
-
-#  if _LIBCPP_HAS_EXTENSION_BLOCKS && defined(__APPLE__)
+#  if __has_extension(blocks) && defined(__APPLE__)
 #    define _LIBCPP_HAS_BLOCKS_RUNTIME 1
 #  else
 #    define _LIBCPP_HAS_BLOCKS_RUNTIME 0
-#  endif
-
-#  if __has_feature(address_sanitizer)
-#    define _LIBCPP_HAS_ASAN 1
-#  else
-#    define _LIBCPP_HAS_ASAN 0
 #  endif
 
 #  define _LIBCPP_ALWAYS_INLINE __attribute__((__always_inline__))
@@ -538,9 +513,9 @@ typedef __char32_t char32_t;
 #  endif
 
 // Clang modules take a significant compile time hit when pushing and popping diagnostics.
-// Since all the headers are marked as system headers in the modulemap, we can simply disable this
-// pushing and popping when building with clang modules.
-#  if !__has_feature(modules)
+// Since all the headers are marked as system headers unless _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER is defined, we can
+// simply disable this pushing and popping when _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER isn't defined.
+#  ifdef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #    define _LIBCPP_PUSH_EXTENSION_DIAGNOSTICS                                                                         \
       _LIBCPP_DIAGNOSTIC_PUSH                                                                                          \
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++11-extensions")                                                           \

@@ -311,26 +311,62 @@ template <> struct MDNodeKeyImpl<MDTuple> : MDNodeOpsKey {
 /// DenseMapInfo for DILocation.
 template <> struct MDNodeKeyImpl<DILocation> {
   unsigned Line;
-  unsigned Column;
+  uint16_t Column;
   Metadata *Scope;
   Metadata *InlinedAt;
   bool ImplicitCode;
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+  uint64_t AtomGroup : 61;
+  uint64_t AtomRank : 3;
+#endif
 
-  MDNodeKeyImpl(unsigned Line, unsigned Column, Metadata *Scope,
-                Metadata *InlinedAt, bool ImplicitCode)
+  MDNodeKeyImpl(unsigned Line, uint16_t Column, Metadata *Scope,
+                Metadata *InlinedAt, bool ImplicitCode, uint64_t AtomGroup,
+                uint8_t AtomRank)
       : Line(Line), Column(Column), Scope(Scope), InlinedAt(InlinedAt),
-        ImplicitCode(ImplicitCode) {}
+        ImplicitCode(ImplicitCode)
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+        ,
+        AtomGroup(AtomGroup), AtomRank(AtomRank)
+#endif
+  {
+  }
+
   MDNodeKeyImpl(const DILocation *L)
       : Line(L->getLine()), Column(L->getColumn()), Scope(L->getRawScope()),
-        InlinedAt(L->getRawInlinedAt()), ImplicitCode(L->isImplicitCode()) {}
+        InlinedAt(L->getRawInlinedAt()), ImplicitCode(L->isImplicitCode())
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+        ,
+        AtomGroup(L->getAtomGroup()), AtomRank(L->getAtomRank())
+#endif
+  {
+  }
 
   bool isKeyOf(const DILocation *RHS) const {
     return Line == RHS->getLine() && Column == RHS->getColumn() &&
            Scope == RHS->getRawScope() && InlinedAt == RHS->getRawInlinedAt() &&
-           ImplicitCode == RHS->isImplicitCode();
+           ImplicitCode == RHS->isImplicitCode()
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+           && AtomGroup == RHS->getAtomGroup() &&
+           AtomRank == RHS->getAtomRank();
+#else
+        ;
+#endif
   }
 
   unsigned getHashValue() const {
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+    // Hashing AtomGroup and AtomRank substantially impacts performance whether
+    // Key Instructions is enabled or not. We can't detect whether it's enabled
+    // here cheaply; avoiding hashing zero values is a good approximation. This
+    // affects Key Instruction builds too, but any potential costs incurred by
+    // messing with the hash distribution* appear to still be massively
+    // outweighed by the overall compile time savings by performing this check.
+    // * (hash_combine(x) != hash_combine(x, 0))
+    if (AtomGroup || AtomRank)
+      return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode,
+                          AtomGroup, (uint8_t)AtomRank);
+#endif
     return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode);
   }
 };
@@ -1688,8 +1724,7 @@ public:
 
   StringMap<std::unique_ptr<ConstantDataSequential>> CDSConstants;
 
-  DenseMap<std::pair<const Function *, const BasicBlock *>, BlockAddress *>
-      BlockAddresses;
+  DenseMap<const BasicBlock *, BlockAddress *> BlockAddresses;
 
   DenseMap<const GlobalValue *, DSOLocalEquivalent *> DSOLocalEquivalents;
 
@@ -1851,6 +1886,16 @@ public:
 
   std::string DefaultTargetCPU;
   std::string DefaultTargetFeatures;
+
+  /// The next available source atom group number. The front end is responsible
+  /// for assigning source atom numbers, but certain optimisations need to
+  /// assign new group numbers to a set of instructions. Most often code
+  /// duplication optimisations like loop unroll. Tracking a global maximum
+  /// value means we can know (cheaply) we're never using a group number that's
+  /// already used within this function.
+  ///
+  /// Start a 1 because 0 means the source location isn't part of an atom group.
+  uint64_t NextAtomGroup = 1;
 };
 
 } // end namespace llvm

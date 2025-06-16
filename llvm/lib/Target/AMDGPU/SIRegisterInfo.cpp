@@ -1928,7 +1928,9 @@ void SIRegisterInfo::buildSpillLoadStore(
       MIB->setAsmPrinterFlag(MachineInstr::ReloadReuse);
     }
 
-    if (NeedSuperRegImpOperand && (IsFirstSubReg || IsLastSubReg))
+    bool IsSrcDstDef = SrcDstRegState & RegState::Define;
+    if (NeedSuperRegImpOperand &&
+        (IsFirstSubReg || (IsLastSubReg && !IsSrcDstDef)))
       MIB.addReg(ValueReg, RegState::Implicit | SrcDstRegState);
 
     // The epilog restore of a wwm-scratch register can cause undesired
@@ -4050,6 +4052,20 @@ SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
   for (MCPhysReg Reg : reverse(RC.getRegisters()))
     if (MRI.isPhysRegUsed(Reg))
       return getHWRegIndex(Reg) + 1;
+  return 0;
+}
+
+unsigned
+SIRegisterInfo::getNumDefinedPhysRegs(const MachineRegisterInfo &MRI,
+                                      const TargetRegisterClass &RC) const {
+  for (MCPhysReg Reg : reverse(RC.getRegisters())) {
+    for (MCRegAliasIterator AI(Reg, this, true); AI.isValid(); ++AI) {
+      if (llvm::any_of(MRI.def_instructions(*AI), [](const MachineInstr &MI) {
+            return !MI.isImplicitDef();
+          }))
+        return getHWRegIndex(Reg) + 1;
+    }
+  }
   return 0;
 }
 

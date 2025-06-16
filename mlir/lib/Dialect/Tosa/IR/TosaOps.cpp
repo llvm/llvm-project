@@ -132,6 +132,24 @@ SmallVector<Region *> tosa::WhileOp::getLoopRegions() {
 }
 
 //===----------------------------------------------------------------------===//
+// TOSA variable operator support.
+//===----------------------------------------------------------------------===//
+
+static SmallVector<int64_t> convertToMlirShape(ArrayRef<int64_t> shape) {
+  return to_vector(llvm::map_range(shape, [](int64_t dim) {
+    return dim == -1 ? ShapedType::kDynamic : dim;
+  }));
+}
+
+// returns type of variable op
+RankedTensorType mlir::tosa::getVariableType(tosa::VariableOp variableOp) {
+  Type elementType = variableOp.getType();
+  DenseIntElementsAttr varShapeAttr = variableOp.getVarShape();
+  auto shape = convertToMlirShape(to_vector(varShapeAttr.getValues<int64_t>()));
+  return RankedTensorType::get(shape, elementType);
+}
+
+//===----------------------------------------------------------------------===//
 // Tosa dialect initialization.
 //===----------------------------------------------------------------------===//
 
@@ -177,42 +195,80 @@ Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
 // Parsers and printers
 //===----------------------------------------------------------------------===//
 
-ParseResult mlir::tosa::parseTypeOrAttr(OpAsmParser &parser, TypeAttr &typeAttr,
-                                        Attribute &attr) {
+namespace {
+
+ParseResult getShapeAndElementType(OpAsmParser &parser, Type parsedType,
+                                   DenseElementsAttr &varShapeAttr,
+                                   TypeAttr &typeAttr) {
+  if (auto shapedType = dyn_cast<ShapedType>(parsedType)) {
+    if (!shapedType.hasRank())
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected ranked type";
+
+    auto elementType = shapedType.getElementType();
+    typeAttr = TypeAttr::get(elementType);
+    ArrayRef<int64_t> shape = shapedType.getShape();
+    Builder builder(parser.getContext());
+    varShapeAttr = builder.getIndexTensorAttr(convertFromMlirShape(shape));
+    return success();
+  }
+  return parser.emitError(parser.getCurrentLocation())
+         << "expected shaped type";
+}
+
+} // namespace
+
+// parses the optional initial value or type for a tosa variable
+//  with initial value:
+//    tosa.variable @name = dense<0.0> : tensor<1x8xf32>
+//
+//  without initial value:
+//    tosa.variable @name : tensor<1x8xf32>
+ParseResult mlir::tosa::parseVariableOpTypeOrInitialValue(
+    OpAsmParser &parser, DenseElementsAttr &varShapeAttr, TypeAttr &typeAttr,
+    Attribute &initialValueAttr) {
   if (succeeded(parser.parseOptionalEqual())) {
-    if (failed(parser.parseAttribute(attr))) {
+    if (failed(parser.parseAttribute(initialValueAttr))) {
       return parser.emitError(parser.getCurrentLocation())
              << "expected attribute";
     }
-    if (auto typedAttr = dyn_cast<TypedAttr>(attr)) {
-      typeAttr = TypeAttr::get(typedAttr.getType());
+    if (auto typedAttr = dyn_cast<TypedAttr>(initialValueAttr)) {
+      return getShapeAndElementType(parser, typedAttr.getType(), varShapeAttr,
+                                    typeAttr);
     }
-    return success();
+    return parser.emitError(parser.getCurrentLocation())
+           << "expected Typed attr";
   }
 
-  Type type;
-  if (failed(parser.parseColonType(type))) {
-    return parser.emitError(parser.getCurrentLocation()) << "expected type";
+  initialValueAttr = nullptr;
+  Type parsedType;
+  if (failed(parser.parseColonType(parsedType))) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "expected type after colon";
   }
-  typeAttr = TypeAttr::get(type);
-
-  return success();
+  return getShapeAndElementType(parser, parsedType, varShapeAttr, typeAttr);
 }
 
-void mlir::tosa::printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
-                                 Attribute attr) {
+void mlir::tosa::printVariableOpTypeOrInitialValue(
+    OpAsmPrinter &p, Operation *op, DenseElementsAttr varShapeAttr,
+    TypeAttr typeAttr, Attribute initialValueAttr) {
   bool needsSpace = false;
-  auto typedAttr = dyn_cast_or_null<TypedAttr>(attr);
-  if (!typedAttr || typedAttr.getType() != type.getValue()) {
+  if (!dyn_cast_or_null<TypedAttr>(initialValueAttr)) {
+    auto shape =
+        convertToMlirShape(to_vector(varShapeAttr.getValues<int64_t>()));
+    Type elementType = typeAttr.getValue();
+    RankedTensorType tensorType =
+        RankedTensorType::get(ArrayRef<int64_t>(shape), elementType);
+    auto tensorTypeAttr = TypeAttr::get(tensorType);
     p << ": ";
-    p.printAttribute(type);
+    p.printAttribute(tensorTypeAttr);
     needsSpace = true; // subsequent attr value needs a space separator
   }
-  if (attr) {
+  if (initialValueAttr) {
     if (needsSpace)
       p << ' ';
     p << "= ";
-    p.printAttribute(attr);
+    p.printAttribute(initialValueAttr);
   }
 }
 
@@ -657,8 +713,9 @@ static LogicalResult verifyVariableOpErrorIf(T op, Type type, StringRef name) {
            << symName << "' has not been declared by 'tosa.variable'";
 
   // Verify type and shape
-  Type varType = cast<tosa::VariableOp>(varOp.value()).getType();
-  if (errorIfTypeOrShapeMismatch(op, type, name, varType, "the input tensor")
+  auto variableType = getVariableType(varOp.value());
+  if (errorIfTypeOrShapeMismatch(op, type, name, variableType,
+                                 "the input tensor")
           .failed())
     return failure();
 
@@ -1101,6 +1158,33 @@ static void buildPadOpWithQuantInfo(OpBuilder &builder, OperationState &result,
   const auto padConstOp{createPadConstTensor(builder, loc, input, zp)};
   result.addOperands({input, paddings, padConstOp});
   result.types.push_back(outputType);
+}
+
+static void buildVariableOp(OpBuilder &builder, OperationState &result,
+                            StringRef name, Type variableType,
+                            Attribute initialValue) {
+  const Location loc{result.location};
+  auto nameAttr = builder.getStringAttr(name);
+
+  auto shapedType = dyn_cast<ShapedType>(variableType);
+  if (!shapedType) {
+    (void)emitError(loc, "variable type must be a shaped type");
+    return;
+  }
+  if (!shapedType.hasRank()) {
+    (void)emitError(loc, "variable type must be a ranked type");
+    return;
+  }
+
+  auto elementType = shapedType.getElementType();
+  auto elementTypeAttr = TypeAttr::get(elementType);
+  ArrayRef<int64_t> shape = shapedType.getShape();
+  auto varShapeAttr = builder.getIndexTensorAttr(convertFromMlirShape(shape));
+
+  result.addAttribute("name", nameAttr);
+  result.addAttribute("var_shape", varShapeAttr);
+  result.addAttribute("type", elementTypeAttr);
+  result.addAttribute("initial_value", initialValue);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1676,12 +1760,6 @@ LogicalResult tosa::PadOp::verify() {
   return success();
 }
 
-static SmallVector<int64_t> convertToMlirShape(ArrayRef<int64_t> shape) {
-  return to_vector(llvm::map_range(shape, [](int64_t dim) {
-    return dim == -1 ? ShapedType::kDynamic : dim;
-  }));
-}
-
 LogicalResult tosa::SliceOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     SliceOp::Adaptor adaptor,
@@ -1779,16 +1857,17 @@ LogicalResult tosa::MulOp::inferReturnTypeComponents(
 }
 
 LogicalResult tosa::MulOp::verify() {
-  auto resElemType = getElementTypeOrSelf(getOutput());
+  const Value output = getOutput();
+  auto resElemType = getElementTypeOrSelf(output);
 
   // Verify if the element type among operands and result match tosa
   // specification.
   if (auto resIntType = dyn_cast<IntegerType>(resElemType)) {
     IntegerType lhsIntType =
-        cast<IntegerType>(getElementTypeOrSelf(getInput1()));
+        dyn_cast<IntegerType>(getElementTypeOrSelf(getInput1()));
     IntegerType rhsIntType =
-        cast<IntegerType>(getElementTypeOrSelf(getInput2()));
-    if (lhsIntType != rhsIntType)
+        dyn_cast<IntegerType>(getElementTypeOrSelf(getInput2()));
+    if (!lhsIntType || !rhsIntType || lhsIntType != rhsIntType)
       return emitOpError("requires the same element type for all operands");
 
     // Though the spec requires the element type of result to be i32, a more
@@ -1819,59 +1898,39 @@ LogicalResult tosa::MulOp::verify() {
   // Verify the op has same ranks for all main operands (excludes extra operands
   // such as shift of mul op, so this is the only difference with the built-in
   // `SameOperandsAndResultRank` trait) and results types, if known.
+  TypeRange operandTypes = getOperandTypes();
+  ShapedType aType = cast<ShapedType>(operandTypes[0]);
+  ShapedType bType = cast<ShapedType>(operandTypes[1]);
 
-  // delegate function that returns true if type is a shaped type with known
-  // rank
-  auto hasRank = [](const Type type) {
-    if (auto shaped_type = dyn_cast<ShapedType>(type))
-      return shaped_type.hasRank();
+  const bool aHasRank = aType.hasRank();
+  const bool bHasRank = bType.hasRank();
+  if (aHasRank && bHasRank) {
+    const int64_t aRank = aType.getRank();
+    const int64_t bRank = bType.getRank();
+    if (aRank != bRank)
+      return emitOpError("a and b operands don't have matching ranks, got ")
+             << aRank << " and " << bRank;
 
-    return false;
-  };
+    // check for broadcast compatible shapes
+    SmallVector<int64_t> resultShape;
+    if (!mlir::OpTrait::util::getBroadcastedShape(
+            aType.getShape(), bType.getShape(), resultShape))
+      return emitOpError("a and b operands don't have broadcast-compatible "
+                         "shapes, got ")
+             << aType << " and " << bType;
+  }
 
-  auto rankedOperandTypes =
-      llvm::to_vector(llvm::make_filter_range(getOperandTypes(), hasRank));
-
-  auto rankedResultTypes =
-      llvm::make_filter_range(getOperation()->getResultTypes(), hasRank);
-
-  // If all operands and results are unranked, then no further verification.
-  if (rankedOperandTypes.empty() && rankedResultTypes.empty())
+  ShapedType resultType = cast<ShapedType>(output.getType());
+  if (!resultType.hasRank())
     return success();
 
-  // delegate function that returns rank of shaped type with known rank
-  auto getRank = [](const Type type) {
-    return cast<ShapedType>(type).getRank();
-  };
-
-  auto rank = !rankedOperandTypes.empty() ? getRank(*rankedOperandTypes.begin())
-                                          : getRank(*rankedResultTypes.begin());
-
-  for (size_t i = 0; i < 2; ++i) {
-    if (rank != getRank(rankedOperandTypes[i])) {
-      return emitOpError("operands don't have matching ranks");
-    }
-  }
-
-  for (const auto type : rankedResultTypes) {
-    if (rank != getRank(type)) {
-      return emitOpError("result type has different rank than operands");
-    }
-  }
-
-  // check for broadcast compatible shapes in first two operands (ignoring
-  // shift)
-
-  // delegate function that returns shape of shaped type
-  auto getShape = [](const Type type) {
-    return mlir::cast<ShapedType>(type).getShape();
-  };
-  SmallVector<int64_t> resultShape;
-  if (!mlir::OpTrait::util::getBroadcastedShape(getShape(rankedOperandTypes[0]),
-                                                getShape(rankedOperandTypes[1]),
-                                                resultShape)) {
-    return emitOpError("operands don't have broadcast-compatible shapes");
-  }
+  const int64_t resultRank = resultType.getRank();
+  if (aHasRank && resultRank != aType.getRank())
+    return emitOpError("result type has different rank than a, got ")
+           << resultRank << " vs " << aType.getRank();
+  if (bHasRank && resultRank != bType.getRank())
+    return emitOpError("result type has different rank than b, got ")
+           << resultRank << " vs " << bType.getRank();
 
   return success();
 }
@@ -2064,13 +2123,20 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
     return failure();
   }
   TensorType inputType = getInput1().getType();
-  RankedTensorType outputType = getType();
 
   SmallVector<int64_t> shapeValues;
   if (!tosa::getConstShapeValues(getShape().getDefiningOp(), shapeValues)) {
     // skip following checks if shape is not constant
     return mlir::success();
   }
+
+  int missingDims = llvm::count(shapeValues, -1);
+  if (missingDims > 1)
+    return emitOpError() << "expected at most one target dimension to be -1";
+
+  const auto outputType = dyn_cast<RankedTensorType>(getType());
+  if (!outputType)
+    return success();
 
   if ((int64_t)shapeValues.size() != outputType.getRank())
     return emitOpError() << "new shape does not match result rank";
@@ -2108,18 +2174,13 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
     }
   }
 
-  int missingDims = llvm::count(shapeValues, -1);
-  if (missingDims > 1)
-    return emitOpError() << "expected at most one target dimension to be -1";
-
   return mlir::success();
 }
 
 // return failure if val is not a constant
-// set zp to -1 if val is non-zero float or  val is not integer nor float
+// set zp to -1 if val is non-zero float or val is not integer nor float
 // otherwise set zp to val's constant value
-template <typename T>
-static FailureOr<int64_t> getZeroPoint(T op, Value val) {
+static FailureOr<int64_t> getZeroPoint(Value val, bool signExtend) {
   ElementsAttr zpAttr;
   if (!matchPattern(val, m_Constant(&zpAttr))) {
     return failure();
@@ -2136,7 +2197,10 @@ static FailureOr<int64_t> getZeroPoint(T op, Value val) {
   }
 
   if (llvm::isa<IntegerType>(zpElemType)) {
-    return zpAttr.getValues<APInt>()[0].getSExtValue();
+    if (signExtend)
+      return zpAttr.getValues<APInt>()[0].getSExtValue();
+    else
+      return zpAttr.getValues<APInt>()[0].getZExtValue();
   }
 
   // return non-zero value to trigger error check
@@ -2176,8 +2240,7 @@ static LogicalResult verifyZeroPoint(tosa::RescaleOp op, Value zpVal,
       return op.emitOpError()
              << "expect " << tensorName << "_zp of 0, got " << zp;
     }
-    if (zpElemType.isInteger(16) && tensorUnsigned &&
-        zp != static_cast<int16_t>(32768)) {
+    if (zpElemType.isInteger(16) && tensorUnsigned && zp != 32768) {
       return op.emitOpError() << "expect " << tensorName
                               << "_zp of 0 or 32768 for unsigned int16 "
                               << tensorName << ", got " << zp;
@@ -2187,30 +2250,30 @@ static LogicalResult verifyZeroPoint(tosa::RescaleOp op, Value zpVal,
   return success();
 }
 
-#define ZERO_POINT_HELPER(OP, OPERAND_NAME)                                    \
+#define ZERO_POINT_HELPER(OP, OPERAND_NAME, SIGN_EXTEND)                       \
   FailureOr<int64_t> tosa::OP::get##OPERAND_NAME##ZeroPoint() {                \
-    return getZeroPoint(*this, get##OPERAND_NAME##Zp());                       \
+    return getZeroPoint(get##OPERAND_NAME##Zp(), SIGN_EXTEND);                 \
   }                                                                            \
   LogicalResult tosa::OP::verify##OPERAND_NAME##ZeroPoint(int64_t zp) {        \
     return verifyZeroPoint(*this, get##OPERAND_NAME##Zp(), zp, #OPERAND_NAME); \
   }
 
-ZERO_POINT_HELPER(Conv2DOp, Input)
-ZERO_POINT_HELPER(Conv2DOp, Weight)
-ZERO_POINT_HELPER(Conv3DOp, Input)
-ZERO_POINT_HELPER(Conv3DOp, Weight)
-ZERO_POINT_HELPER(DepthwiseConv2DOp, Input)
-ZERO_POINT_HELPER(DepthwiseConv2DOp, Weight)
-ZERO_POINT_HELPER(TransposeConv2DOp, Input)
-ZERO_POINT_HELPER(TransposeConv2DOp, Weight)
-ZERO_POINT_HELPER(AvgPool2dOp, Input)
-ZERO_POINT_HELPER(AvgPool2dOp, Output)
-ZERO_POINT_HELPER(MatMulOp, A)
-ZERO_POINT_HELPER(MatMulOp, B)
-ZERO_POINT_HELPER(NegateOp, Input1)
-ZERO_POINT_HELPER(NegateOp, Output)
-ZERO_POINT_HELPER(RescaleOp, Input)
-ZERO_POINT_HELPER(RescaleOp, Output)
+ZERO_POINT_HELPER(Conv2DOp, Input, true)
+ZERO_POINT_HELPER(Conv2DOp, Weight, true)
+ZERO_POINT_HELPER(Conv3DOp, Input, true)
+ZERO_POINT_HELPER(Conv3DOp, Weight, true)
+ZERO_POINT_HELPER(DepthwiseConv2DOp, Input, true)
+ZERO_POINT_HELPER(DepthwiseConv2DOp, Weight, true)
+ZERO_POINT_HELPER(TransposeConv2DOp, Input, true)
+ZERO_POINT_HELPER(TransposeConv2DOp, Weight, true)
+ZERO_POINT_HELPER(AvgPool2dOp, Input, true)
+ZERO_POINT_HELPER(AvgPool2dOp, Output, true)
+ZERO_POINT_HELPER(MatMulOp, A, true)
+ZERO_POINT_HELPER(MatMulOp, B, true)
+ZERO_POINT_HELPER(NegateOp, Input1, true)
+ZERO_POINT_HELPER(NegateOp, Output, true)
+ZERO_POINT_HELPER(RescaleOp, Input, !getInputUnsigned())
+ZERO_POINT_HELPER(RescaleOp, Output, !getOutputUnsigned())
 #undef ZERO_POINT_HELPER
 
 LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
@@ -2492,16 +2555,6 @@ LogicalResult tosa::ResizeOp::verify() {
   const RankedTensorType outputType =
       llvm::dyn_cast<RankedTensorType>(output.getType());
 
-  if (!inputType)
-    return emitOpError("expect a ranked input tensor");
-  if (!outputType)
-    return emitOpError("expect a ranked output tensor");
-
-  const int64_t oh = outputType.getDimSize(1);
-  const int64_t ow = outputType.getDimSize(2);
-  const int64_t ih = inputType.getDimSize(1);
-  const int64_t iw = inputType.getDimSize(2);
-
   SmallVector<int64_t> scaleValues;
   SmallVector<int64_t> offsetValues;
   SmallVector<int64_t> borderValues;
@@ -2526,6 +2579,16 @@ LogicalResult tosa::ResizeOp::verify() {
 
   const int64_t borderY = borderValues[0];
   const int64_t borderX = borderValues[1];
+
+  if (!inputType)
+    return success();
+  if (!outputType)
+    return success();
+
+  const int64_t oh = outputType.getDimSize(1);
+  const int64_t ow = outputType.getDimSize(2);
+  const int64_t ih = inputType.getDimSize(1);
+  const int64_t iw = inputType.getDimSize(2);
 
   // Don't check with input height that could be broadcast (ih != 1)
   // since Linalg, a consumer of TOSA, expects broadcasting support
@@ -2610,6 +2673,73 @@ LogicalResult tosa::ScatterOp::verify() {
           .failed()) {
     return failure();
   }
+
+  const ShapeAdaptor valuesInShape(getValuesIn().getType());
+  const ShapeAdaptor indicesShape(getIndices().getType());
+  const ShapeAdaptor inputShape(getInput().getType());
+  const ShapeAdaptor outputShape(getValuesOut().getType());
+
+  int64_t N = ShapedType::kDynamic;
+  int64_t K = ShapedType::kDynamic;
+  int64_t W = ShapedType::kDynamic;
+  int64_t C = ShapedType::kDynamic;
+  if (valuesInShape.hasRank()) {
+    N = valuesInShape.getDimSize(0);
+    K = valuesInShape.getDimSize(1);
+    C = valuesInShape.getDimSize(2);
+  }
+  if (indicesShape.hasRank()) {
+    const int64_t indicesN = indicesShape.getDimSize(0);
+    W = indicesShape.getDimSize(1);
+    if (N == ShapedType::kDynamic)
+      N = indicesN;
+    else if (indicesN != ShapedType::kDynamic && N != indicesN)
+      return emitOpError() << "requires indices dimension 0 to have size " << N
+                           << ", got " << indicesN;
+  }
+  if (inputShape.hasRank()) {
+    const int64_t inputN = inputShape.getDimSize(0);
+    const int64_t inputW = inputShape.getDimSize(1);
+    const int64_t inputC = inputShape.getDimSize(2);
+    if (N == ShapedType::kDynamic)
+      N = inputN;
+    else if (inputN != ShapedType::kDynamic && N != inputN)
+      return emitOpError() << "requires input dimension 0 to have size " << N
+                           << ", got " << inputN;
+    if (W == ShapedType::kDynamic)
+      W = inputW;
+    else if (inputW != ShapedType::kDynamic && W != inputW)
+      return emitOpError() << "requires input dimension 1 to have size " << W
+                           << ", got " << inputW;
+
+    if (C == ShapedType::kDynamic)
+      C = inputC;
+    else if (inputC != ShapedType::kDynamic && C != inputC)
+      return emitOpError() << "requires input dimension 2 to have size " << C
+                           << ", got " << inputC;
+  }
+  if (outputShape.hasRank()) {
+    const int64_t outputN = outputShape.getDimSize(0);
+    const int64_t outputK = outputShape.getDimSize(1);
+    const int64_t outputC = outputShape.getDimSize(2);
+    if (N != ShapedType::kDynamic && outputN != ShapedType::kDynamic &&
+        N != outputN)
+      return emitOpError() << "requires values_out dimension 0 to have size "
+                           << N << ", got " << outputN;
+    if (K == ShapedType::kDynamic)
+      K = outputK;
+    else if (outputK != ShapedType::kDynamic && K != outputK)
+      return emitOpError() << "requires values_out dimension 1 to have size "
+                           << K << ", got " << outputK;
+    if (C != ShapedType::kDynamic && outputC != ShapedType::kDynamic &&
+        C != outputC)
+      return emitOpError() << "requires values_out dimension 2 to have size "
+                           << C << ", got " << outputC;
+  }
+  if (K != ShapedType::kDynamic && W != ShapedType::kDynamic && !(K >= W))
+    return emitOpError() << "requires dimensions K >= W, got K=" << K
+                         << " and W=" << W;
+
   return success();
 }
 

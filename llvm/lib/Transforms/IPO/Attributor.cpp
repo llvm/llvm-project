@@ -325,7 +325,7 @@ Value *AA::getWithType(Value &V, Type &Ty) {
   if (isa<UndefValue>(V))
     return UndefValue::get(&Ty);
   if (auto *C = dyn_cast<Constant>(&V)) {
-    if (C->isNullValue())
+    if (C->isNullValue() && !Ty.isPtrOrPtrVectorTy())
       return Constant::getNullValue(&Ty);
     if (C->getType()->isPointerTy() && Ty.isPointerTy())
       return ConstantExpr::getPointerCast(C, &Ty);
@@ -1936,9 +1936,6 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
       LLVM_DEBUG(dbgs() << "[Attributor] Function " << Fn.getName()
                         << " has non call site use " << *U.get() << " in "
                         << *U.getUser() << "\n");
-      // BlockAddress users are allowed.
-      if (isa<BlockAddress>(U.getUser()))
-        continue;
       return false;
     }
 
@@ -2673,7 +2670,8 @@ ChangeStatus Attributor::run() {
 
 ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
   TimeTraceScope TimeScope("updateAA", [&]() {
-    return AA.getName() + std::to_string(AA.getIRPosition().getPositionKind());
+    return AA.getName().str() +
+           std::to_string(AA.getIRPosition().getPositionKind());
   });
   assert(Phase == AttributorPhase::UPDATE &&
          "We can update AA only in the update stage!");
@@ -2728,8 +2726,6 @@ void Attributor::createShallowWrapper(Function &F) {
       Function::Create(FnTy, F.getLinkage(), F.getAddressSpace(), F.getName());
   F.setName(""); // set the inside function anonymous
   M.getFunctionList().insert(F.getIterator(), Wrapper);
-  // Flag whether the function is using new-debug-info or not.
-  Wrapper->IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
 
   F.setLinkage(GlobalValue::InternalLinkage);
 
@@ -2810,8 +2806,6 @@ bool Attributor::internalizeFunctions(SmallPtrSetImpl<Function *> &FnSet,
       VMap[&Arg] = &(*NewFArgIt++);
     }
     SmallVector<ReturnInst *, 8> Returns;
-    // Flag whether the function is using new-debug-info or not.
-    Copied->IsNewDbgInfoFormat = F->IsNewDbgInfoFormat;
 
     // Copy the body of the original function to the new one
     CloneFunctionInto(Copied, F, VMap,
@@ -3029,8 +3023,6 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     OldFn->getParent()->getFunctionList().insert(OldFn->getIterator(), NewFn);
     NewFn->takeName(OldFn);
     NewFn->copyAttributesFrom(OldFn);
-    // Flag whether the function is using new-debug-info or not.
-    NewFn->IsNewDbgInfoFormat = OldFn->IsNewDbgInfoFormat;
 
     // Patch the pointer to LLVM function in debug info descriptor.
     NewFn->setSubprogram(OldFn->getSubprogram());
@@ -3060,14 +3052,6 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     // function right into the new function, leaving the old rotting hulk of the
     // function empty.
     NewFn->splice(NewFn->begin(), OldFn);
-
-    // Fixup block addresses to reference new function.
-    SmallVector<BlockAddress *, 8u> BlockAddresses;
-    for (User *U : OldFn->users())
-      if (auto *BA = dyn_cast<BlockAddress>(U))
-        BlockAddresses.push_back(BA);
-    for (auto *BA : BlockAddresses)
-      BA->replaceAllUsesWith(BlockAddress::get(NewFn, BA->getBasicBlock()));
 
     // Set of all "call-like" instructions that invoke the old function mapped
     // to their new replacements.
@@ -3296,7 +3280,7 @@ InformationCache::FunctionInfo::~FunctionInfo() {
     It.getSecond()->~InstructionVectorTy();
 }
 
-const ArrayRef<Function *>
+ArrayRef<Function *>
 InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
   assert(A.isClosedWorldModule() && "Cannot see all indirect callees!");
   return IndirectlyCallableFunctions;

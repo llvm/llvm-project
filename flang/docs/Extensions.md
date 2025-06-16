@@ -159,6 +159,17 @@ end
   to be constant will generate a compilation error. `ieee_support_standard`
   depends in part on `ieee_support_halting`, so this also applies to
   `ieee_support_standard` calls.
+* F'2023 constraint C7108 prohibits the use of a structure constructor
+  that could also be interpreted as a generic function reference.
+  No other Fortran compiler enforces C7108 (to our knowledge);
+  they all resolve the ambiguity by interpreting the call as a function
+  reference.  We do the same, with a portability warning.
+* An override for an inaccessible procedure binding works only within
+  the same module; other apparent overrides of inaccessible bindings
+  are actually new bindings of the same name.
+  In the case of `DEFERRED` bindings in an `ABSTRACT` derived type,
+  however, overrides are necessary, so they are permitted for inaccessible
+  bindings with an optional warning.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -286,7 +297,10 @@ end
 * DATA statement initialization is allowed for procedure pointers outside
   structure constructors.
 * Nonstandard intrinsic functions: ISNAN, SIZEOF
-* A forward reference to a default INTEGER scalar dummy argument or
+* A forward reference to an INTEGER dummy argument is permitted to appear
+  in a specification expression, such as an array bound, in a scope with
+  IMPLICIT NONE(TYPE).
+* A forward reference to a default INTEGER scalar
   `COMMON` block variable is permitted to appear in a specification
   expression, such as an array bound, in a scope with IMPLICIT NONE(TYPE)
   if the name of the variable would have caused it to be implicitly typed
@@ -419,6 +433,10 @@ end
 * A zero field width is allowed for logical formatted output (`L0`).
 * `OPEN(..., FORM='BINARY')` is accepted as a legacy synonym for
   the standard `OPEN(..., FORM='UNFORMATTED', ACCESS='STREAM')`.
+* A character string edit descriptor is allowed in an input format
+  with an optional compilation-time warning.  When executed, it
+  is treated as an 'nX' positioning control descriptor that skips
+  over the same number of characters, without comparison.
 
 ### Extensions supported when enabled by options
 
@@ -509,6 +527,8 @@ end
 * We respect Fortran comments in macro actual arguments (like GNU, Intel, NAG;
   unlike PGI and XLF) on the principle that macro calls should be treated
   like function references.  Fortran's line continuation methods also work.
+* We implement the `__COUNTER__` preprocessing extension,
+  see [Non-standard Extensions](Preprocessing.md#non-standard-extensions)
 
 ## Standard features not silently accepted
 

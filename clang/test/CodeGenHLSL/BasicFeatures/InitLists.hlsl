@@ -941,3 +941,21 @@ FourFloats case16() {
     FourFloats FF = {0, makeTwo(X), 3};
     return FF;
 }
+
+
+int case17Helper(int x) {
+  return x;
+}
+
+// InitList with OpaqueValueExpr
+// CHECK-LABEL: define void {{.*}}case17
+// CHECK: [[X:%.*]] = alloca <2 x i32>, align 8
+// CHECK-NEXT: [[C:%.*]] = call noundef i32 {{.*}}case17Helper{{.*}}(i32 noundef 0)
+// CHECK-NEXT: [[C1:%.*]] = call noundef i32 {{.*}}case17Helper{{.*}}(i32 noundef 1)
+// CHECK-NEXT: [[VI:%.*]] = insertelement <2 x i32> poison, i32 [[C]], i32 0
+// CHECK-NEXT: [[VI2:%.*]] = insertelement <2 x i32> [[VI]], i32 [[C1]], i32 1
+// CHECK-NEXT: store <2 x i32> [[VI2]], ptr [[X]], align 8
+// CHECK-NEXT: ret void
+void case17() {
+  int2 X = {case17Helper(0), case17Helper(1)};
+}

@@ -828,12 +828,13 @@ static void removeCallsiteMetadata(CallBase *Call) {
 }
 
 static void updateMemprofMetadata(CallBase *CI,
-                                  const std::vector<Metadata *> &MIBList) {
+                                  const std::vector<Metadata *> &MIBList,
+                                  OptimizationRemarkEmitter *ORE) {
   assert(!MIBList.empty());
   // Remove existing memprof, which will either be replaced or may not be needed
   // if we are able to use a single allocation type function attribute.
   removeMemProfMetadata(CI);
-  CallStackTrie CallStack;
+  CallStackTrie CallStack(ORE);
   for (Metadata *MIB : MIBList)
     CallStack.addCallStack(cast<MDNode>(MIB));
   bool MemprofMDAttached = CallStack.buildAndAttachMIBMetadata(CI);
@@ -848,7 +849,8 @@ static void updateMemprofMetadata(CallBase *CI,
 // the call that was inlined.
 static void propagateMemProfHelper(const CallBase *OrigCall,
                                    CallBase *ClonedCall,
-                                   MDNode *InlinedCallsiteMD) {
+                                   MDNode *InlinedCallsiteMD,
+                                   OptimizationRemarkEmitter *ORE) {
   MDNode *OrigCallsiteMD = ClonedCall->getMetadata(LLVMContext::MD_callsite);
   MDNode *ClonedCallsiteMD = nullptr;
   // Check if the call originally had callsite metadata, and update it for the
@@ -891,7 +893,7 @@ static void propagateMemProfHelper(const CallBase *OrigCall,
     return;
   }
   if (NewMIBList.size() < OrigMemProfMD->getNumOperands())
-    updateMemprofMetadata(ClonedCall, NewMIBList);
+    updateMemprofMetadata(ClonedCall, NewMIBList, ORE);
 }
 
 // Update memprof related metadata (!memprof and !callsite) based on the
@@ -902,7 +904,8 @@ static void propagateMemProfHelper(const CallBase *OrigCall,
 static void
 propagateMemProfMetadata(Function *Callee, CallBase &CB,
                          bool ContainsMemProfMetadata,
-                         const ValueMap<const Value *, WeakTrackingVH> &VMap) {
+                         const ValueMap<const Value *, WeakTrackingVH> &VMap,
+                         OptimizationRemarkEmitter *ORE) {
   MDNode *CallsiteMD = CB.getMetadata(LLVMContext::MD_callsite);
   // Only need to update if the inlined callsite had callsite metadata, or if
   // there was any memprof metadata inlined.
@@ -925,7 +928,7 @@ propagateMemProfMetadata(Function *Callee, CallBase &CB,
       removeCallsiteMetadata(ClonedCall);
       continue;
     }
-    propagateMemProfHelper(OrigCall, ClonedCall, CallsiteMD);
+    propagateMemProfHelper(OrigCall, ClonedCall, CallsiteMD, ORE);
   }
 }
 
@@ -1313,7 +1316,9 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         // nocapture only guarantees that no copies outlive the function, not
         // that the value cannot be locally captured.
         if (!RequiresNoCaptureBefore ||
-            !PointerMayBeCapturedBefore(A, /* ReturnCaptures */ false, I, &DT))
+            !capturesAnything(PointerMayBeCapturedBefore(
+                A, /*ReturnCaptures=*/false, I, &DT, /*IncludeI=*/false,
+                CaptureComponents::Provenance)))
           NoAliases.push_back(NewScopes[A]);
       }
 
@@ -1770,6 +1775,7 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
   AllocaInst *NewAlloca =
       new AllocaInst(ByValType, Arg->getType()->getPointerAddressSpace(),
                      nullptr, Alignment, Arg->getName());
+  NewAlloca->setDebugLoc(DebugLoc::getCompilerGenerated());
   NewAlloca->insertBefore(Caller->begin()->begin());
   IFI.StaticAllocas.push_back(NewAlloca);
 
@@ -1819,16 +1825,23 @@ static DebugLoc inlineDebugLoc(DebugLoc OrigDL, DILocation *InlinedAt,
                                DenseMap<const MDNode *, MDNode *> &IANodes) {
   auto IA = DebugLoc::appendInlinedAt(OrigDL, InlinedAt, Ctx, IANodes);
   return DILocation::get(Ctx, OrigDL.getLine(), OrigDL.getCol(),
-                         OrigDL.getScope(), IA);
+                         OrigDL.getScope(), IA, OrigDL.isImplicitCode(),
+                         OrigDL->getAtomGroup(), OrigDL->getAtomRank());
 }
 
 /// Update inlined instructions' line numbers to
 /// to encode location where these instructions are inlined.
 static void fixupLineNumbers(Function *Fn, Function::iterator FI,
                              Instruction *TheCall, bool CalleeHasDebugInfo) {
-  const DebugLoc &TheCallDL = TheCall->getDebugLoc();
-  if (!TheCallDL)
+  if (!TheCall->getDebugLoc())
     return;
+
+  // Don't propagate the source location atom from the call to inlined nodebug
+  // instructions, and avoid putting it in the InlinedAt field of inlined
+  // not-nodebug instructions. FIXME: Possibly worth transferring/generating
+  // an atom for the returned value, otherwise we miss stepping on inlined
+  // nodebug functions (which is different to existing behaviour).
+  DebugLoc TheCallDL = TheCall->getDebugLoc()->getWithoutAtom();
 
   auto &Ctx = Fn->getContext();
   DILocation *InlinedAtNode = TheCallDL;
@@ -2464,7 +2477,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                         bool MergeAttributes,
                                         AAResults *CalleeAAR,
                                         bool InsertLifetime,
-                                        Function *ForwardVarArgsTo) {
+                                        Function *ForwardVarArgsTo,
+                                        OptimizationRemarkEmitter *ORE) {
   assert(CB.getParent() && CB.getFunction() && "Instruction not in function!");
 
   // FIXME: we don't inline callbr yet.
@@ -2798,8 +2812,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // inlined function which use the same param.
     AddParamAndFnBasicAttributes(CB, VMap, InlinedFunctionInfo);
 
-    propagateMemProfMetadata(CalledFunc, CB,
-                             InlinedFunctionInfo.ContainsMemProfMetadata, VMap);
+    propagateMemProfMetadata(
+        CalledFunc, CB, InlinedFunctionInfo.ContainsMemProfMetadata, VMap, ORE);
 
     // Propagate metadata on the callsite if necessary.
     PropagateCallSiteMetadata(CB, FirstNewBlock, Caller->end());
@@ -3245,6 +3259,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Add an unconditional branch to make this look like the CallInst case...
     CreatedBranchToNormalDest = BranchInst::Create(II->getNormalDest(), CB.getIterator());
+    // We intend to replace this DebugLoc with another later.
+    CreatedBranchToNormalDest->setDebugLoc(DebugLoc::getTemporary());
 
     // Split the basic block.  This guarantees that no PHI nodes will have to be
     // updated due to new incoming edges, and make the invoke case more
@@ -3346,6 +3362,12 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     Returns[0]->eraseFromParent();
     ReturnBB->eraseFromParent();
   } else if (!CB.use_empty()) {
+    // In this case there are no returns to use, so there is no clear source
+    // location for the "return".
+    // FIXME: It may be correct to use the scope end line of the function here,
+    // since this likely means we are falling out of the function.
+    if (CreatedBranchToNormalDest)
+      CreatedBranchToNormalDest->setDebugLoc(DebugLoc::getUnknown());
     // No returns, but something is using the return value of the call.  Just
     // nuke the result.
     CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));

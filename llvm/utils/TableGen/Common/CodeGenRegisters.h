@@ -185,7 +185,10 @@ public:
 
   CodeGenRegister(const Record *R, unsigned Enum);
 
-  StringRef getName() const;
+  StringRef getName() const {
+    assert(TheDef && "no def");
+    return TheDef->getName();
+  }
 
   // Extract more information from TheDef. This is used to build an object
   // graph after all CodeGenRegister objects have been created.
@@ -705,6 +708,10 @@ class CodeGenRegBank {
   /// register.
   void computeRegUnitLaneMasks();
 
+  // Helper function for printing debug information. Handles artificial
+  // (non-native) reg units.
+  void printRegUnitNames(ArrayRef<unsigned> Units) const;
+
 public:
   CodeGenRegBank(const RecordKeeper &, const CodeGenHwModes &);
   CodeGenRegBank(CodeGenRegBank &) = delete;
@@ -734,7 +741,7 @@ public:
   // Find or create a sub-register index representing the concatenation of
   // non-overlapping sibling indices.
   CodeGenSubRegIndex *
-  getConcatSubRegIndex(const SmallVector<CodeGenSubRegIndex *, 8> &,
+  getConcatSubRegIndex(const SmallVector<CodeGenSubRegIndex *, 8> &Parts,
                        const CodeGenHwModes &CGH);
 
   const std::deque<CodeGenRegister> &getRegisters() const { return Registers; }
@@ -824,6 +831,13 @@ public:
   getMinimalPhysRegClass(const Record *RegRecord,
                          ValueTypeByHwMode *VT = nullptr);
 
+  /// Return the largest register class which supports \p Ty and covers \p
+  /// SubIdx if it exists.
+  const CodeGenRegisterClass *
+  getSuperRegForSubReg(const ValueTypeByHwMode &Ty,
+                       const CodeGenSubRegIndex *SubIdx,
+                       bool MustBeAllocatable = false) const;
+
   // Get the sum of unit weights.
   unsigned getRegUnitSetWeight(const std::vector<unsigned> &Units) const {
     unsigned Weight = 0;
@@ -884,10 +898,6 @@ public:
   // LaneMask is contained in CoveringLanes will be completely covered by
   // another sub-register with the same or larger lane mask.
   LaneBitmask CoveringLanes;
-
-  // Helper function for printing debug information. Handles artificial
-  // (non-native) reg units.
-  void printRegUnitName(unsigned Unit) const;
 };
 
 } // end namespace llvm

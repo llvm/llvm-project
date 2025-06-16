@@ -301,7 +301,7 @@ static TypeSigTy ComputeTypeSignature(const CodeGenIntrinsic &Int) {
   const Record *TypeInfo = Int.TheDef->getValueAsDef("TypeInfo");
   const ListInit *TypeList = TypeInfo->getValueAsListInit("TypeSig");
 
-  for (const auto *TypeListEntry : TypeList->getValues())
+  for (const auto *TypeListEntry : TypeList->getElements())
     TypeSig.emplace_back(cast<IntInit>(TypeListEntry)->getValue());
   return TypeSig;
 }
@@ -728,7 +728,7 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
     // Get the map for this target prefix.
     auto &[Map, CommonPrefix] = BuiltinMap[Int.TargetPrefix];
 
-    if (!Map.insert({BuiltinName, Int.EnumName}).second)
+    if (!Map.try_emplace(BuiltinName, Int.EnumName).second)
       PrintFatalError(Int.TheDef->getLoc(),
                       "Intrinsic '" + Int.TheDef->getName() + "': duplicate " +
                           CompilerName + " builtin name!");

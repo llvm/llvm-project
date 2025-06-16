@@ -506,7 +506,7 @@ define <4 x i32> @shuffle_v4i32_4012(<4 x i32> %a, <4 x i32> %b) {
 ; AVX1OR2-LABEL: shuffle_v4i32_4012:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,1,2]
-; AVX1OR2-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX1OR2-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shuffle_v4i32_4012:
@@ -618,7 +618,7 @@ define <4 x float> @shuffle_v4f32_4zzz(<4 x float> %a) {
 ; AVX-LABEL: shuffle_v4f32_4zzz:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <4 x float> zeroinitializer, <4 x float> %a, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
   ret <4 x float> %shuffle
@@ -1164,7 +1164,7 @@ define <4 x i32> @shuffle_v4i32_4zzz(<4 x i32> %a) {
 ; AVX-LABEL: shuffle_v4i32_4zzz:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <4 x i32> zeroinitializer, <4 x i32> %a, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
   ret <4 x i32> %shuffle
@@ -1202,14 +1202,14 @@ define <4 x i32> @shuffle_v4i32_z4zz(<4 x i32> %a) {
 ; AVX1-LABEL: shuffle_v4i32_z4zz:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,1,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: shuffle_v4i32_z4zz:
 ; AVX2-SLOW:       # %bb.0:
 ; AVX2-SLOW-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-SLOW-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX2-SLOW-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,1,1]
 ; AVX2-SLOW-NEXT:    retq
 ;
@@ -1258,14 +1258,14 @@ define <4 x i32> @shuffle_v4i32_zz4z(<4 x i32> %a) {
 ; AVX1-LABEL: shuffle_v4i32_zz4z:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: shuffle_v4i32_zz4z:
 ; AVX2-SLOW:       # %bb.0:
 ; AVX2-SLOW-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-SLOW-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX2-SLOW-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,0,1]
 ; AVX2-SLOW-NEXT:    retq
 ;
@@ -2138,7 +2138,7 @@ define <4 x float> @insert_reg_and_zero_v4f32(float %a) {
 ; AVX-LABEL: insert_reg_and_zero_v4f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
   %v = insertelement <4 x float> poison, float %a, i32 0
   %shuffle = shufflevector <4 x float> %v, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
@@ -2402,7 +2402,7 @@ define <4 x float> @shuffle_mem_pmovzx_v4f32(ptr %p0, ptr %p1) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vunpckhps {{.*#+}} xmm1 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX1-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AVX1-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; AVX1-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX1-NEXT:    retq
@@ -2411,7 +2411,7 @@ define <4 x float> @shuffle_mem_pmovzx_v4f32(ptr %p0, ptr %p1) {
 ; AVX2OR512VL:       # %bb.0:
 ; AVX2OR512VL-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX2OR512VL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2OR512VL-NEXT:    vunpckhps {{.*#+}} xmm1 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX2OR512VL-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AVX2OR512VL-NEXT:    vbroadcastss %xmm0, %xmm0
 ; AVX2OR512VL-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX2OR512VL-NEXT:    retq

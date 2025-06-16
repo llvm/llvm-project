@@ -257,7 +257,7 @@ namespace cwg409 { // cwg409: 2.7
     A::B b2;
     A<T>::B b3;
     A<T*>::B b4;
-    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::B'; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::B' is a C++20 extension}}
   };
 } // namespace cwg409
 

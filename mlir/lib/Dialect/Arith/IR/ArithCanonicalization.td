@@ -420,6 +420,22 @@ def TruncIShrUIMulIToMulUIExtended :
        (TruncationMatchesShiftAmount $mul, $x, $c0)]>;
 
 //===----------------------------------------------------------------------===//
+// TruncIOp
+//===----------------------------------------------------------------------===//
+
+// truncf(sitofp(x)) -> sitofp(x) if default rounding mode.
+def TruncFSIToFPToSIToFP :
+    Pat<(Arith_TruncFOp:$tr (Arith_SIToFPOp:$fp $x), $rmf, $fmf),
+        (Arith_SIToFPOp $x),
+        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
+
+// truncf(uitofp(x)) -> uitofp(x) if default rounding mode.
+def TruncFUIToFPToUIToFP :
+    Pat<(Arith_TruncFOp:$tr (Arith_UIToFPOp:$fp $x), $rmf, $fmf),
+        (Arith_UIToFPOp $x),
+        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
+
+//===----------------------------------------------------------------------===//
 // MulFOp
 //===----------------------------------------------------------------------===//
 

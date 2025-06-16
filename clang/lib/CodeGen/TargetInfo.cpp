@@ -138,11 +138,11 @@ LangAS TargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
 
 llvm::Value *TargetCodeGenInfo::performAddrSpaceCast(
     CodeGen::CodeGenFunction &CGF, llvm::Value *Src, LangAS SrcAddr,
-    LangAS DestAddr, llvm::Type *DestTy, bool isNonNull) const {
+    llvm::Type *DestTy, bool isNonNull) const {
   // Since target may map different address spaces in AST to the same address
   // space, an address space conversion may end up as a bitcast.
   if (auto *C = dyn_cast<llvm::Constant>(Src))
-    return performAddrSpaceCast(CGF.CGM, C, SrcAddr, DestAddr, DestTy);
+    return performAddrSpaceCast(CGF.CGM, C, SrcAddr, DestTy);
   // Try to preserve the source's name to make IR more readable.
   return CGF.Builder.CreateAddrSpaceCast(
       Src, DestTy, Src->hasName() ? Src->getName() + ".ascast" : "");
@@ -150,7 +150,7 @@ llvm::Value *TargetCodeGenInfo::performAddrSpaceCast(
 
 llvm::Constant *
 TargetCodeGenInfo::performAddrSpaceCast(CodeGenModule &CGM, llvm::Constant *Src,
-                                        LangAS SrcAddr, LangAS DestAddr,
+                                        LangAS SrcAddr,
                                         llvm::Type *DestTy) const {
   // Since target may map different address spaces in AST to the same address
   // space, an address space conversion may end up as a bitcast.
@@ -191,7 +191,7 @@ llvm::Value *TargetCodeGenInfo::createEnqueuedBlockKernel(
   auto *F = llvm::Function::Create(FT, llvm::GlobalValue::ExternalLinkage, Name,
                                    &CGF.CGM.getModule());
   llvm::CallingConv::ID KernelCC =
-      CGF.getTypes().ClangCallConvToLLVMCallConv(CallingConv::CC_OpenCLKernel);
+      CGF.getTypes().ClangCallConvToLLVMCallConv(CallingConv::CC_DeviceKernel);
   F->setCallingConv(KernelCC);
 
   llvm::AttrBuilder KernelAttrs(C);
@@ -256,6 +256,35 @@ void TargetCodeGenInfo::initBranchProtectionFnAttributes(
     FuncAttrs.addAttribute("branch-protection-pauth-lr");
   if (BPI.GuardedControlStack)
     FuncAttrs.addAttribute("guarded-control-stack");
+}
+
+void TargetCodeGenInfo::setPointerAuthFnAttributes(
+    const PointerAuthOptions &Opts, llvm::Function &F) {
+  auto UpdateAttr = [&F](bool AttrShouldExist, StringRef AttrName) {
+    if (AttrShouldExist && !F.hasFnAttribute(AttrName))
+      F.addFnAttr(AttrName);
+    if (!AttrShouldExist && F.hasFnAttribute(AttrName))
+      F.removeFnAttr(AttrName);
+  };
+  UpdateAttr(Opts.ReturnAddresses, "ptrauth-returns");
+  UpdateAttr((bool)Opts.FunctionPointers, "ptrauth-calls");
+  UpdateAttr(Opts.AuthTraps, "ptrauth-auth-traps");
+  UpdateAttr(Opts.IndirectGotos, "ptrauth-indirect-gotos");
+  UpdateAttr(Opts.AArch64JumpTableHardening, "aarch64-jump-table-hardening");
+}
+
+void TargetCodeGenInfo::initPointerAuthFnAttributes(
+    const PointerAuthOptions &Opts, llvm::AttrBuilder &FuncAttrs) {
+  if (Opts.ReturnAddresses)
+    FuncAttrs.addAttribute("ptrauth-returns");
+  if (Opts.FunctionPointers)
+    FuncAttrs.addAttribute("ptrauth-calls");
+  if (Opts.AuthTraps)
+    FuncAttrs.addAttribute("ptrauth-auth-traps");
+  if (Opts.IndirectGotos)
+    FuncAttrs.addAttribute("ptrauth-indirect-gotos");
+  if (Opts.AArch64JumpTableHardening)
+    FuncAttrs.addAttribute("aarch64-jump-table-hardening");
 }
 
 namespace {

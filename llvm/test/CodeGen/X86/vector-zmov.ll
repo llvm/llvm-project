@@ -63,7 +63,7 @@ define <4 x i32> @load_zmov_4i32_to_0zzz_volatile(ptr%ptr) {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 entry:
   %X = load volatile <4 x i32>, ptr %ptr

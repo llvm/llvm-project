@@ -91,6 +91,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
 
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
+  initializeARMAsmPrinterPass(Registry);
   initializeARMLoadStoreOptPass(Registry);
   initializeARMPreAllocLoadStoreOptPass(Registry);
   initializeARMParallelDSPPass(Registry);
@@ -327,7 +328,7 @@ ARMBaseTargetMachine::getTargetTransformInfo(const Function &F) const {
 
 ScheduleDAGInstrs *
 ARMBaseTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  ScheduleDAGMILive *DAG = createSchedLive(C);
   // add DAG Mutations here.
   const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
   if (ST.hasFusion())
@@ -337,7 +338,7 @@ ARMBaseTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 
 ScheduleDAGInstrs *
 ARMBaseTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
   // add DAG Mutations here.
   const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
   if (ST.hasFusion())

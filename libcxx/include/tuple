@@ -250,6 +250,7 @@ template <class... Types>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_reference.h>
+#  include <__type_traits/is_replaceable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
 #  include <__type_traits/is_trivially_relocatable.h>
@@ -257,6 +258,7 @@ template <class... Types>
 #  include <__type_traits/maybe_const.h>
 #  include <__type_traits/nat.h>
 #  include <__type_traits/negation.h>
+#  include <__type_traits/reference_constructs_from_temporary.h>
 #  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__type_traits/remove_reference.h>
@@ -307,15 +309,6 @@ template <size_t _Ip, class _Hp, bool>
 class __tuple_leaf {
   _Hp __value_;
 
-  template <class _Tp>
-  static _LIBCPP_HIDE_FROM_ABI constexpr bool __can_bind_reference() {
-#    if __has_keyword(__reference_binds_to_temporary)
-    return !__reference_binds_to_temporary(_Hp, _Tp);
-#    else
-    return true;
-#    endif
-  }
-
 public:
   _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&) = delete;
 
@@ -345,7 +338,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(_Tp&& __t) noexcept(is_nothrow_constructible<_Hp, _Tp>::value)
       : __value_(std::forward<_Tp>(__t)) {
-    static_assert(__can_bind_reference<_Tp&&>(),
+    static_assert(!__reference_constructs_from_temporary_v<_Hp, _Tp&&>,
                   "Attempted construction of reference element binds to a temporary whose lifetime has ended");
   }
 
@@ -353,7 +346,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(integral_constant<int, 0>, const _Alloc&, _Tp&& __t)
       : __value_(std::forward<_Tp>(__t)) {
-    static_assert(__can_bind_reference<_Tp&&>(),
+    static_assert(!__reference_constructs_from_temporary_v<_Hp, _Tp&&>,
                   "Attempted construction of reference element binds to a temporary whose lifetime has ended");
   }
 
@@ -462,8 +455,8 @@ template <class _Indx, class... _Tp>
 struct __tuple_impl;
 
 template <size_t... _Indx, class... _Tp>
-struct _LIBCPP_DECLSPEC_EMPTY_BASES __tuple_impl<__tuple_indices<_Indx...>, _Tp...>
-    : public __tuple_leaf<_Indx, _Tp>... {
+struct _LIBCPP_DECLSPEC_EMPTY_BASES
+    __tuple_impl<__tuple_indices<_Indx...>, _Tp...> : public __tuple_leaf<_Indx, _Tp>... {
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_impl() noexcept(
       __all<is_nothrow_default_constructible<_Tp>::value...>::value) {}
 
@@ -555,6 +548,7 @@ class _LIBCPP_NO_SPECIALIZATIONS tuple {
 public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
       __conditional_t<_And<__libcpp_is_trivially_relocatable<_Tp>...>::value, tuple, void>;
+  using __replaceable _LIBCPP_NODEBUG = __conditional_t<_And<__is_replaceable<_Tp>...>::value, tuple, void>;
 
   // [tuple.cnstr]
 

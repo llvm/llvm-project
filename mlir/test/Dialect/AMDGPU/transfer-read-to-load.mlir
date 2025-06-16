@@ -52,9 +52,9 @@ func.func @transfer_to_maskedload_fatrawbuffer_f16(%mem : memref<8x8xf16, #amdgp
 
 // -----
 
-// CHECK: #map = affine_map<()[s0, s1, s2] -> (s0 * s1 + s2)>
-// CHECK: #map1 = affine_map<()[s0, s1, s2] -> (s0 * s1, s2)>
-// CHECK-LABEL: func @transfer_to_maskedload_fatrawbuffer_dynamic_i8(
+// CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s0 * s1 + s2)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> (s0 * s1, s2)>
+// CHECK: func @transfer_to_maskedload_fatrawbuffer_dynamic_i8(
 // CHECK-SAME: %[[ARG0:.*]]: memref<?x?xi8, #amdgpu.address_space<fat_raw_buffer>>
 // CHECK-SAME: %[[ARG1:.*]]: index, %[[ARG2:.*]]: index
 // CHECK-SAME: %[[ARG3:.*]]: vector<4xi1>
@@ -64,14 +64,14 @@ func.func @transfer_to_maskedload_fatrawbuffer_dynamic_i8(%mem : memref<?x?xi8, 
   return %res : vector<4xi8>
 }
 
-// CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<4xi8>
-// CHECK: %[[C0:.*]] = arith.constant 0 : index
-// CHECK: %[[C4:.*]] = arith.constant 4 : index
-// CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG0]]
-// CHECK: %[[LINEAR:.*]] = affine.apply #map()[%[[ARG1]], %[[STRIDES]]#0, %[[ARG2]]]
-// CHECK: %[[SIZE:.*]] = affine.max #map1()[%[[STRIDES]]#0, %[[SIZES]]#0, %[[SIZES]]#1]
-// CHECK: %[[IF:.*]] = scf.if
-// CHECK: return
+// CHECK:     %[[CST:.*]] = arith.constant dense<0> : vector<4xi8>
+// CHECK:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK:     %[[C4:.*]] = arith.constant 4 : index
+// CHECK:     %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG0]]
+// CHECK-DAG: %[[SIZE:.*]] = affine.max #[[MAP1]]()[%[[STRIDES]]#0, %[[SIZES]]#0, %[[SIZES]]#1]
+// CHECK-DAG: %[[LINEAR:.*]] = affine.apply #[[MAP]]()[%[[ARG1]], %[[STRIDES]]#0, %[[ARG2]]]
+// CHECK:     %[[IF:.*]] = scf.if
+// CHECK:     return
 
 // -----
 

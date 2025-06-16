@@ -119,7 +119,7 @@ void debugUnparseNoSema(CompilerInstance &ci, llvm::raw_ostream &out) {
   auto &parseTree{ci.getParsing().parseTree()};
 
   // TODO: Options should come from CompilerInvocation
-  Unparse(out, *parseTree,
+  Unparse(out, *parseTree, ci.getInvocation().getLangOpts(),
           /*encoding=*/parser::Encoding::UTF_8,
           /*capitalizeKeywords=*/true, /*backslashEscapes=*/false,
           /*preStatement=*/nullptr,
@@ -131,6 +131,7 @@ void debugUnparseWithSymbols(CompilerInstance &ci) {
   auto &parseTree{*ci.getParsing().parseTree()};
 
   semantics::UnparseWithSymbols(llvm::outs(), parseTree,
+                                ci.getInvocation().getLangOpts(),
                                 /*encoding=*/parser::Encoding::UTF_8);
 }
 

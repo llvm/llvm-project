@@ -36,7 +36,7 @@ namespace {
   class MSP430AsmPrinter : public AsmPrinter {
   public:
     MSP430AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-        : AsmPrinter(TM, std::move(Streamer)) {}
+        : AsmPrinter(TM, std::move(Streamer), ID) {}
 
     StringRef getPassName() const override { return "MSP430 Assembly Printer"; }
 
@@ -54,6 +54,8 @@ namespace {
     void emitInstruction(const MachineInstr *MI) override;
 
     void EmitInterruptVectorSection(MachineFunction &ISR);
+
+    static char ID;
   };
 } // end of anonymous namespace
 
@@ -180,6 +182,11 @@ bool MSP430AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   emitFunctionBody();
   return false;
 }
+
+char MSP430AsmPrinter::ID = 0;
+
+INITIALIZE_PASS(MSP430AsmPrinter, "msp430-asm-printer",
+                "MSP430 Assembly Printer", false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430AsmPrinter() {

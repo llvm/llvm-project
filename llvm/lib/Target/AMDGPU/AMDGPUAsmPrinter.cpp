@@ -163,9 +163,8 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
 
   // TODO: We're checking this late, would be nice to check it earlier.
   if (STM.requiresCodeObjectV6() && CodeObjectVersion < AMDGPU::AMDHSA_COV6) {
-    report_fatal_error(
-        STM.getCPU() + " is only available on code object version 6 or better",
-        /*gen_crash_diag*/ false);
+    reportFatalUsageError(
+        STM.getCPU() + " is only available on code object version 6 or better");
   }
 
   // TODO: Which one is called first, emitStartOfAsmFile or
@@ -990,7 +989,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // dispatch registers are function args.
   unsigned WaveDispatchNumSGPR = 0, WaveDispatchNumVGPR = 0;
 
-  if (isShader(F.getCallingConv())) {
+  if (isShader(F.getCallingConv()) && isEntryFunctionCC(F.getCallingConv())) {
     bool IsPixelShader =
         F.getCallingConv() == CallingConv::AMDGPU_PS && !STM.isAmdHsaOS();
 
@@ -1061,15 +1060,6 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
     ProgInfo.NumVGPR = AMDGPUMCExpr::createTotalNumVGPR(
         ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
-  } else if (isKernel(F.getCallingConv()) &&
-             MFI->getNumKernargPreloadedSGPRs()) {
-    // Consider cases where the total number of UserSGPRs with trailing
-    // allocated preload SGPRs, is greater than the number of explicitly
-    // referenced SGPRs.
-    const MCExpr *UserPlusExtraSGPRs = MCBinaryExpr::createAdd(
-        CreateExpr(MFI->getNumUserSGPRs()), ExtraSGPRs, Ctx);
-    ProgInfo.NumSGPR =
-        AMDGPUMCExpr::createMax({ProgInfo.NumSGPR, UserPlusExtraSGPRs}, Ctx);
   }
 
   // Adjust number of registers used to meet default/requested minimum/maximum
@@ -1743,3 +1733,8 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
     EmitResourceUsageRemark("BytesLDS", "LDS Size [bytes/block]",
                             CurrentProgramInfo.LDSSize);
 }
+
+char AMDGPUAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(AMDGPUAsmPrinter, "amdgpu-asm-printer",
+                "AMDGPU Assembly Printer", false, false)

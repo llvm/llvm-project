@@ -357,8 +357,6 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   } else {
     llvm_unreachable("Unknown intrinsic");
   }
-
-  return;
 }
 
 static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
@@ -407,13 +405,13 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         Changed = true;
         break;
       case Intrinsic::lifetime_start:
-        if (STI.isOpenCLEnv()) {
+        if (!STI.isShader()) {
           Changed |= toSpvOverloadedIntrinsic(
               II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
         }
         break;
       case Intrinsic::lifetime_end:
-        if (STI.isOpenCLEnv()) {
+        if (!STI.isShader()) {
           Changed |= toSpvOverloadedIntrinsic(
               II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
         }
@@ -440,10 +438,9 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
 
   IRBuilder<> B(F->getContext());
 
-  bool HasAggrArg =
-      std::any_of(F->arg_begin(), F->arg_end(), [](Argument &Arg) {
-        return Arg.getType()->isAggregateType();
-      });
+  bool HasAggrArg = llvm::any_of(F->args(), [](Argument &Arg) {
+    return Arg.getType()->isAggregateType();
+  });
   bool DoClone = IsRetAggr || HasAggrArg;
   if (!DoClone)
     return F;

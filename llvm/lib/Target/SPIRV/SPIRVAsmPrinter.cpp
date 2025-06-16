@@ -24,7 +24,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
@@ -50,7 +49,8 @@ class SPIRVAsmPrinter : public AsmPrinter {
 public:
   explicit SPIRVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), ST(nullptr), TII(nullptr) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), ST(nullptr), TII(nullptr) {}
+  static char ID;
   bool ModuleSectionsEmitted;
   const SPIRVSubtarget *ST;
   const SPIRVInstrInfo *TII;
@@ -510,6 +510,22 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       continue;
     MCRegister FReg = MAI->getFuncReg(&F);
     assert(FReg.isValid());
+
+    if (Attribute Attr = F.getFnAttribute("hlsl.shader"); Attr.isValid()) {
+      // SPIR-V common validation: Fragment requires OriginUpperLeft or
+      // OriginLowerLeft.
+      // VUID-StandaloneSpirv-OriginLowerLeft-04653: Fragment must declare
+      // OriginUpperLeft.
+      if (Attr.getValueAsString() == "pixel") {
+        MCInst Inst;
+        Inst.setOpcode(SPIRV::OpExecutionMode);
+        Inst.addOperand(MCOperand::createReg(FReg));
+        unsigned EM =
+            static_cast<unsigned>(SPIRV::ExecutionMode::OriginUpperLeft);
+        Inst.addOperand(MCOperand::createImm(EM));
+        outputMCInst(Inst);
+      }
+    }
     if (MDNode *Node = F.getMetadata("reqd_work_group_size"))
       outputExecutionModeFromMDNode(FReg, Node, SPIRV::ExecutionMode::LocalSize,
                                     3, 1);
@@ -532,7 +548,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       Inst.addOperand(MCOperand::createImm(TypeCode));
       outputMCInst(Inst);
     }
-    if (ST->isOpenCLEnv() && !M.getNamedMetadata("spirv.ExecutionMode") &&
+    if (ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
         !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionMode);
@@ -634,6 +650,11 @@ bool SPIRVAsmPrinter::doInitialization(Module &M) {
   // We need to call the parent's one explicitly.
   return AsmPrinter::doInitialization(M);
 }
+
+char SPIRVAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(SPIRVAsmPrinter, "spirv-asm-printer", "SPIRV Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVAsmPrinter() {

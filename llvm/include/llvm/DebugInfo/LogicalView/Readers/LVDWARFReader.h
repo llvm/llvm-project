@@ -39,21 +39,12 @@ class LVDWARFReader final : public LVBinaryReader {
   LVAddress CUBaseAddress = 0;
   LVAddress CUHighAddress = 0;
 
-  // Current elements during the processing of a DIE.
-  LVElement *CurrentElement = nullptr;
-  LVScope *CurrentScope = nullptr;
-  LVSymbol *CurrentSymbol = nullptr;
-  LVType *CurrentType = nullptr;
-  LVOffset CurrentOffset = 0;
   LVOffset CurrentEndOffset = 0;
 
   // In DWARF v4, the files are 1-indexed.
   // In DWARF v5, the files are 0-indexed.
   // The DWARF reader expects the indexes as 1-indexed.
   bool IncrementFileIndex = false;
-
-  // Address ranges collected for current DIE.
-  std::vector<LVAddressRange> CurrentRanges;
 
   // Symbols with locations for current compile unit.
   LVSymbols SymbolsWithLocations;
@@ -82,7 +73,6 @@ class LVDWARFReader final : public LVBinaryReader {
 
   void mapRangeAddress(const object::ObjectFile &Obj) override;
 
-  LVElement *createElement(dwarf::Tag Tag);
   void traverseDieAndChildren(DWARFDie &DIE, LVScope *Parent,
                               DWARFDie &SkeletonDie);
   // Process the attributes for the given DIE.

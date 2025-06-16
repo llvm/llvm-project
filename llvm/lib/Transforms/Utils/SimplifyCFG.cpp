@@ -73,6 +73,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LockstepReverseIterator.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -976,8 +977,8 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
     SwitchInstProfUpdateWrapper SI = *cast<SwitchInst>(TI);
     // Okay, TI has cases that are statically dead, prune them away.
     SmallPtrSet<Constant *, 16> DeadCases;
-    for (unsigned i = 0, e = PredCases.size(); i != e; ++i)
-      DeadCases.insert(PredCases[i].Value);
+    for (const ValueEqualityComparisonCase &Case : PredCases)
+      DeadCases.insert(Case.Value);
 
     LLVM_DEBUG(dbgs() << "Threading pred instr: " << *Pred->getTerminator()
                       << "Through successor TI: " << *TI);
@@ -1129,13 +1130,17 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     Instruction *NewBonusInst = BonusInst.clone();
 
-    if (!isa<DbgInfoIntrinsic>(BonusInst) &&
-        PTI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
-      // Unless the instruction has the same !dbg location as the original
-      // branch, drop it. When we fold the bonus instructions we want to make
-      // sure we reset their debug locations in order to avoid stepping on
-      // dead code caused by folding dead branches.
-      NewBonusInst->setDebugLoc(DebugLoc());
+    if (!isa<DbgInfoIntrinsic>(BonusInst)) {
+      if (!NewBonusInst->getDebugLoc().isSameSourceLocation(
+              PTI->getDebugLoc())) {
+        // Unless the instruction has the same !dbg location as the original
+        // branch, drop it. When we fold the bonus instructions we want to make
+        // sure we reset their debug locations in order to avoid stepping on
+        // dead code caused by folding dead branches.
+        NewBonusInst->setDebugLoc(DebugLoc::getDropped());
+      } else if (const DebugLoc &DL = NewBonusInst->getDebugLoc()) {
+        mapAtomInstance(DL, VMap);
+      }
     }
 
     RemapInstruction(NewBonusInst, VMap,
@@ -1180,6 +1185,19 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
       assert(PN->getIncomingBlock(U) == PredBlock &&
              "Not in block-closed SSA form?");
       U.set(NewBonusInst);
+    }
+  }
+
+  // Key Instructions: We may have propagated atom info into the pred. If the
+  // pred's terminator already has atom info do nothing as merging would drop
+  // one atom group anyway. If it doesn't, propagte the remapped atom group
+  // from BB's terminator.
+  if (auto &PredDL = PTI->getDebugLoc()) {
+    auto &DL = BB->getTerminator()->getDebugLoc();
+    if (!PredDL->getAtomGroup() && DL && DL->getAtomGroup() &&
+        PredDL.isSameSourceLocation(DL)) {
+      PTI->setDebugLoc(DL);
+      RemapSourceAtom(PTI, VMap);
     }
   }
 }
@@ -1307,14 +1325,14 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
 
     // Okay, now we know which constants were sent to BB from the
     // predecessor.  Figure out where they will all go now.
-    for (unsigned i = 0, e = BBCases.size(); i != e; ++i)
-      if (PTIHandled.count(BBCases[i].Value)) {
+    for (const ValueEqualityComparisonCase &Case : BBCases)
+      if (PTIHandled.count(Case.Value)) {
         // If this is one we are capable of getting...
         if (PredHasWeights || SuccHasWeights)
-          Weights.push_back(WeightsForHandled[BBCases[i].Value]);
-        PredCases.push_back(BBCases[i]);
-        ++NewSuccessors[BBCases[i].Dest];
-        PTIHandled.erase(BBCases[i].Value); // This constant is taken care of
+          Weights.push_back(WeightsForHandled[Case.Value]);
+        PredCases.push_back(Case);
+        ++NewSuccessors[Case.Dest];
+        PTIHandled.erase(Case.Value); // This constant is taken care of
       }
 
     // If there are any constants vectored to BB that TI doesn't handle,
@@ -2077,11 +2095,11 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
 
   // Ensure terminator gets a debug location, even an unknown one, in case
   // it involves inlinable calls.
-  SmallVector<DILocation *, 4> Locs;
+  SmallVector<DebugLoc, 4> Locs;
   Locs.push_back(I1->getDebugLoc());
   for (auto *OtherSuccTI : OtherSuccTIs)
     Locs.push_back(OtherSuccTI->getDebugLoc());
-  NT->setDebugLoc(DILocation::getMergedLocations(Locs));
+  NT->setDebugLoc(DebugLoc::getMergedLocations(Locs));
 
   // PHIs created below will adopt NT's merged DebugLoc.
   IRBuilder<NoFolder> Builder(NT);
@@ -2188,14 +2206,6 @@ static bool canSinkInstructions(
   const auto I0MMRA = MMRAMetadata(*I0);
   for (auto *I : Insts) {
     if (!I->isSameOperationAs(I0, Instruction::CompareUsingIntersectedAttrs))
-      return false;
-
-    // swifterror pointers can only be used by a load or store; sinking a load
-    // or store would require introducing a select for the pointer operand,
-    // which isn't allowed for swifterror pointers.
-    if (isa<StoreInst>(I) && I->getOperand(1)->isSwiftError())
-      return false;
-    if (isa<LoadInst>(I) && I->getOperand(0)->isSwiftError())
       return false;
 
     // Treat MMRAs conservatively. This pass can be quite aggressive and
@@ -2811,7 +2821,8 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
       // so just form a new block with unreachable terminator.
       BasicBlock *MergedNormalDest = BasicBlock::Create(
           Ctx, II0BB->getName() + ".cont", Func, InsertBeforeBlock);
-      new UnreachableInst(Ctx, MergedNormalDest);
+      auto *UI = new UnreachableInst(Ctx, MergedNormalDest);
+      UI->setDebugLoc(DebugLoc::getTemporary());
       MergedInvoke->setNormalDest(MergedNormalDest);
     }
 
@@ -2885,7 +2896,7 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
       MergedDebugLoc = II->getDebugLoc();
     else
       MergedDebugLoc =
-          DILocation::getMergedLocation(MergedDebugLoc, II->getDebugLoc());
+          DebugLoc::getMergedLocation(MergedDebugLoc, II->getDebugLoc());
 
     // And replace the old `invoke` with an unconditionally branch
     // to the block with the merged `invoke`.
@@ -3057,7 +3068,9 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
         Value *Obj = getUnderlyingObject(StorePtr);
         bool ExplicitlyDereferenceableOnly;
         if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
-            !PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false) &&
+            capturesNothing(
+                PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false,
+                                     CaptureComponents::Provenance)) &&
             (!ExplicitlyDereferenceableOnly ||
              isDereferenceablePointer(StorePtr, StoreTy,
                                       LI->getDataLayout()))) {
@@ -3377,7 +3390,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     if (!SpeculatedStoreValue || &I != SpeculatedStore) {
       // Don't update the DILocation of dbg.assign intrinsics.
       if (!isa<DbgAssignIntrinsic>(&I))
-        I.setDebugLoc(DebugLoc());
+        I.setDebugLoc(DebugLoc::getDropped());
     }
     I.dropUBImplyingAttrsAndMetadata();
 
@@ -3572,7 +3585,7 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     // instructions into EdgeBB.  We know that there will be no uses of the
     // cloned instructions outside of EdgeBB.
     BasicBlock::iterator InsertPt = EdgeBB->getFirstInsertionPt();
-    DenseMap<Value *, Value *> TranslateMap; // Track translated values.
+    ValueToValueMapTy TranslateMap; // Track translated values.
     TranslateMap[Cond] = CB;
 
     // RemoveDIs: track instructions that we optimise away while folding, so
@@ -3592,11 +3605,11 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
         N->setName(BBI->getName() + ".c");
 
       // Update operands due to translation.
-      for (Use &Op : N->operands()) {
-        DenseMap<Value *, Value *>::iterator PI = TranslateMap.find(Op);
-        if (PI != TranslateMap.end())
-          Op = PI->second;
-      }
+      // Key Instructions: Remap all the atom groups.
+      if (const DebugLoc &DL = BBI->getDebugLoc())
+        mapAtomInstance(DL, TranslateMap);
+      RemapInstruction(N, TranslateMap,
+                       RF_IgnoreMissingLocals | RF_NoModuleLevelChanges);
 
       // Check for trivial simplification.
       if (Value *V = simplifyInstruction(N, {DL, nullptr, nullptr, AC})) {
@@ -4042,13 +4055,11 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   Module *M = BB->getModule();
 
-  if (PredBlock->IsNewDbgInfoFormat) {
-    PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
-    for (DbgVariableRecord &DVR :
-         filterDbgVars(PredBlock->getTerminator()->getDbgRecordRange())) {
-      RemapDbgRecord(M, &DVR, VMap,
-                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    }
+  PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
+  for (DbgVariableRecord &DVR :
+       filterDbgVars(PredBlock->getTerminator()->getDbgRecordRange())) {
+    RemapDbgRecord(M, &DVR, VMap,
+                   RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
   }
 
   // Now that the Cond was cloned into the predecessor basic block,
@@ -5177,8 +5188,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
   SwitchInst *New = Builder.CreateSwitch(CompVal, DefaultBB, Values.size());
 
   // Add all of the 'cases' to the switch instruction.
-  for (unsigned i = 0, e = Values.size(); i != e; ++i)
-    New->addCase(Values[i], EdgeBB);
+  for (ConstantInt *Val : Values)
+    New->addCase(Val, EdgeBB);
 
   // We added edges from PI to the EdgeBB.  As such, if there were any
   // PHI nodes in EdgeBB, they need entries to be added corresponding to
@@ -5695,7 +5706,8 @@ static void createUnreachableSwitchDefault(SwitchInst *Switch,
   BasicBlock *NewDefaultBlock = BasicBlock::Create(
       BB->getContext(), BB->getName() + ".unreachabledefault", BB->getParent(),
       OrigDefaultBlock);
-  new UnreachableInst(Switch->getContext(), NewDefaultBlock);
+  auto *UI = new UnreachableInst(Switch->getContext(), NewDefaultBlock);
+  UI->setDebugLoc(DebugLoc::getTemporary());
   Switch->setDefaultDest(&*NewDefaultBlock);
   if (DTU) {
     SmallVector<DominatorTree::UpdateType, 2> Updates;
@@ -5842,13 +5854,13 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
                                      AssumptionCache *AC,
                                      const DataLayout &DL) {
   Value *Cond = SI->getCondition();
-  KnownBits Known = computeKnownBits(Cond, DL, 0, AC, SI);
+  KnownBits Known = computeKnownBits(Cond, DL, AC, SI);
 
   // We can also eliminate cases by determining that their values are outside of
   // the limited range of the condition based on how many significant (non-sign)
   // bits are in the condition value.
   unsigned MaxSignificantBitsInCond =
-      ComputeMaxSignificantBits(Cond, DL, 0, AC, SI);
+      ComputeMaxSignificantBits(Cond, DL, AC, SI);
 
   // Gather dead cases.
   SmallVector<ConstantInt *, 8> DeadCases;
@@ -6453,9 +6465,7 @@ SwitchLookupTable::SwitchLookupTable(
 
   // Build up the table contents.
   SmallVector<Constant *, 64> TableContents(TableSize);
-  for (size_t I = 0, E = Values.size(); I != E; ++I) {
-    ConstantInt *CaseVal = Values[I].first;
-    Constant *CaseRes = Values[I].second;
+  for (const auto &[CaseVal, CaseRes] : Values) {
     assert(CaseRes->getType() == ValueType);
 
     uint64_t Idx = (CaseVal->getValue() - Offset->getValue()).getLimitedValue();
@@ -7064,8 +7074,8 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     APInt One(TableSizePowOf2, 1);
     // Build bitmask; fill in a 1 bit for every case.
     const ResultListTy &ResultList = ResultLists[PHIs[0]];
-    for (size_t I = 0, E = ResultList.size(); I != E; ++I) {
-      uint64_t Idx = (ResultList[I].first->getValue() - TableIndexOffset->getValue())
+    for (const auto &Result : ResultList) {
+      uint64_t Idx = (Result.first->getValue() - TableIndexOffset->getValue())
                          .getLimitedValue();
       MaskInt |= One << Idx;
     }
@@ -7547,8 +7557,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
     if (Seen.insert(BB).second) {
       // Keep track of which PHIs we need as keys in PhiPredIVs below.
       for (BasicBlock *Succ : BI->successors())
-        for (PHINode &Phi : Succ->phis())
-          Phis.insert(&Phi);
+        Phis.insert_range(llvm::make_pointer_range(Succ->phis()));
       // Add the successor only if not previously visited.
       Cases.emplace_back(SwitchSuccWrapper{BB, &PhiPredIVs});
     }
@@ -8099,6 +8108,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
 
 /// Check if passing a value to an instruction will cause undefined behavior.
 static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValueMayBeModified) {
+  assert(V->getType() == I->getType() && "Mismatched types");
   Constant *C = dyn_cast<Constant>(V);
   if (!C)
     return false;
@@ -8156,6 +8166,10 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     // Look through GEPs. A load from a GEP derived from NULL is still undefined
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(User))
       if (GEP->getPointerOperand() == I) {
+        // The type of GEP may differ from the type of base pointer.
+        // Bail out on vector GEPs, as they are not handled by other checks.
+        if (GEP->getType()->isVectorTy())
+          return false;
         // The current base address is null, there are four cases to consider:
         // getelementptr (TY, null, 0)                 -> null
         // getelementptr (TY, null, not zero)          -> may be modified
@@ -8214,8 +8228,8 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       if (CB->isArgOperand(&Use)) {
         unsigned ArgIdx = CB->getArgOperandNo(&Use);
         // Passing null to a nonnnull+noundef argument is undefined.
-        if (C->isNullValue() && CB->isPassingUndefUB(ArgIdx) &&
-            CB->paramHasAttr(ArgIdx, Attribute::NonNull))
+        if (isa<ConstantPointerNull>(C) &&
+            CB->paramHasNonNullAttr(ArgIdx, /*AllowUndefOrPoison=*/false))
           return !PtrValueMayBeModified;
         // Passing undef to a noundef argument is undefined.
         if (isa<UndefValue>(C) && CB->isPassingUndefUB(ArgIdx))

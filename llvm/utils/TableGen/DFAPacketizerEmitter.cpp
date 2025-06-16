@@ -92,7 +92,7 @@ public:
 } // end anonymous namespace
 
 DFAPacketizerEmitter::DFAPacketizerEmitter(const RecordKeeper &R)
-    : TargetName(std::string(CodeGenTarget(R).getName())), Records(R) {}
+    : TargetName(CodeGenTarget(R).getName().str()), Records(R) {}
 
 int DFAPacketizerEmitter::collectAllFuncUnits(
     ArrayRef<const CodeGenProcModel *> ProcModels) {
@@ -119,7 +119,7 @@ int DFAPacketizerEmitter::collectAllFuncUnits(
       assert((j < DFA_MAX_RESOURCES) &&
              "Exceeded maximum number of representable resources");
       uint64_t FuncResources = 1ULL << j;
-      FUNameToBitsMap[std::string(FUs[j]->getName())] = FuncResources;
+      FUNameToBitsMap[FUs[j]->getName().str()] = FuncResources;
       LLVM_DEBUG(dbgs() << " " << FUs[j]->getName() << ":0x"
                         << Twine::utohexstr(FuncResources));
     }
@@ -152,13 +152,13 @@ int DFAPacketizerEmitter::collectAllComboFuncs(
       const Record *ComboFunc = FuncData->getValueAsDef("TheComboFunc");
       const std::vector<const Record *> FuncList =
           FuncData->getValueAsListOfDefs("FuncList");
-      const std::string &ComboFuncName = std::string(ComboFunc->getName());
+      const std::string &ComboFuncName = ComboFunc->getName().str();
       uint64_t ComboBit = FUNameToBitsMap[ComboFuncName];
       uint64_t ComboResources = ComboBit;
       LLVM_DEBUG(dbgs() << "      combo: " << ComboFuncName << ":0x"
                         << Twine::utohexstr(ComboResources) << "\n");
       for (const Record *K : FuncList) {
-        std::string FuncName = std::string(K->getName());
+        std::string FuncName = K->getName().str();
         uint64_t FuncResources = FUNameToBitsMap[FuncName];
         LLVM_DEBUG(dbgs() << "        " << FuncName << ":0x"
                           << Twine::utohexstr(FuncResources) << "\n");
@@ -181,7 +181,7 @@ DFAPacketizerEmitter::getResourcesForItinerary(const Record *Itinerary) {
   for (const Record *StageDef : Itinerary->getValueAsListOfDefs("Stages")) {
     uint64_t StageResources = 0;
     for (const Record *Unit : StageDef->getValueAsListOfDefs("Units")) {
-      StageResources |= FUNameToBitsMap[std::string(Unit->getName())];
+      StageResources |= FUNameToBitsMap[Unit->getName().str()];
     }
     if (StageResources != 0)
       Resources.push_back(StageResources);
@@ -220,7 +220,7 @@ void DFAPacketizerEmitter::run(raw_ostream &OS) {
   for (const CodeGenProcModel &ProcModel : CGS.procModels()) {
     if (ProcModel.hasItineraries()) {
       auto NS = ProcModel.ItinsDef->getValueAsString("PacketizerNamespace");
-      ItinsByNamespace[std::string(NS)].push_back(&ProcModel);
+      ItinsByNamespace[NS.str()].push_back(&ProcModel);
     }
   }
 

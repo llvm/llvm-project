@@ -1,4 +1,4 @@
-//===--- CIRGenExprAgg.cpp - Emit CIR Code from Aggregate Expressions -----===//
+//===- CIRGenExprAggregrate.cpp - Emit CIR Code from Aggregate Expressions ===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,6 +51,7 @@ public:
   void Visit(Expr *e) { StmtVisitor<AggExprEmitter>::Visit(e); }
 
   void VisitInitListExpr(InitListExpr *e);
+  void VisitCXXConstructExpr(const CXXConstructExpr *e);
 
   void visitCXXParenListOrInitListExpr(Expr *e, ArrayRef<Expr *> args,
                                        FieldDecl *initializedFieldInUnion,
@@ -155,15 +156,13 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
     // Allocate the temporary variable
     // to store the pointer to first unitialized element
     const Address tmpAddr = cgf.createTempAlloca(
-        cirElementPtrType, cgf.getPointerAlign(), loc, "arrayinit.temp",
-        /*insertIntoFnEntryBlock=*/false);
+        cirElementPtrType, cgf.getPointerAlign(), loc, "arrayinit.temp");
     LValue tmpLV = cgf.makeAddrLValue(tmpAddr, elementPtrType);
     cgf.emitStoreThroughLValue(RValue::get(element), tmpLV);
 
     // TODO(CIR): Replace this part later with cir::DoWhileOp
     for (unsigned i = numInitElements; i != numArrayElements; ++i) {
-      cir::LoadOp currentElement =
-          builder.createLoad(loc, tmpAddr.getPointer());
+      cir::LoadOp currentElement = builder.createLoad(loc, tmpAddr);
 
       // Emit the actual filler expression.
       const LValue elementLV = cgf.makeAddrLValue(
@@ -204,7 +203,11 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
     cgf.cgm.errorNYI("emitInitializationToLValue TEK_Complex");
     break;
   case cir::TEK_Aggregate:
-    cgf.emitAggExpr(e, AggValueSlot::forLValue(lv));
+    cgf.emitAggExpr(e, AggValueSlot::forLValue(lv, AggValueSlot::IsDestructed,
+                                               AggValueSlot::IsNotAliased,
+                                               AggValueSlot::MayOverlap,
+                                               dest.isZeroed()));
+
     return;
   case cir::TEK_Scalar:
     if (lv.isSimple())
@@ -213,6 +216,11 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
       cgf.emitStoreThroughLValue(RValue::get(cgf.emitScalarExpr(e)), lv);
     return;
   }
+}
+
+void AggExprEmitter::VisitCXXConstructExpr(const CXXConstructExpr *e) {
+  AggValueSlot slot = ensureSlot(cgf.getLoc(e->getSourceRange()), e->getType());
+  cgf.emitCXXConstructExpr(e, slot);
 }
 
 void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
@@ -274,4 +282,14 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
 
 void CIRGenFunction::emitAggExpr(const Expr *e, AggValueSlot slot) {
   AggExprEmitter(*this, slot).Visit(const_cast<Expr *>(e));
+}
+
+LValue CIRGenFunction::emitAggExprToLValue(const Expr *e) {
+  assert(hasAggregateEvaluationKind(e->getType()) && "Invalid argument!");
+  Address temp = createMemTemp(e->getType(), getLoc(e->getSourceRange()));
+  LValue lv = makeAddrLValue(temp, e->getType());
+  emitAggExpr(e, AggValueSlot::forLValue(lv, AggValueSlot::IsNotDestructed,
+                                         AggValueSlot::IsNotAliased,
+                                         AggValueSlot::DoesNotOverlap));
+  return lv;
 }

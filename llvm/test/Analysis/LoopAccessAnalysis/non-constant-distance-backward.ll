@@ -21,15 +21,15 @@ define void @backward_min_distance_8(ptr %A, i64 %N) {
 ; COMMON-NEXT:      Dependences:
 ; COMMON-NEXT:      Run-time memory checks:
 ; COMMON-NEXT:      Check 0:
-; COMMON-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; COMMON-NEXT:        Comparing group GRP0:
 ; COMMON-NEXT:          %gep.off.iv = getelementptr inbounds i8, ptr %gep.off, i64 %iv
-; COMMON-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; COMMON-NEXT:        Against group GRP1:
 ; COMMON-NEXT:          %gep = getelementptr inbounds i8, ptr %A, i64 %iv
 ; COMMON-NEXT:      Grouped accesses:
-; COMMON-NEXT:        Group [[GRP1]]:
+; COMMON-NEXT:        Group GRP0:
 ; COMMON-NEXT:          (Low: {(1 + %A)<nuw>,+,1}<nuw><%outer.header> High: {(257 + %A),+,1}<nw><%outer.header>)
 ; COMMON-NEXT:            Member: {{\{\{}}(1 + %A)<nuw>,+,1}<nuw><%outer.header>,+,1}<nuw><%loop>
-; COMMON-NEXT:        Group [[GRP2]]:
+; COMMON-NEXT:        Group GRP1:
 ; COMMON-NEXT:          (Low: %A High: (256 + %A))
 ; COMMON-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; COMMON-EMPTY:
@@ -109,15 +109,15 @@ define void @backward_min_distance_120(ptr %A, i64 %N) {
 ; VW128-NEXT:      Dependences:
 ; VW128-NEXT:      Run-time memory checks:
 ; VW128-NEXT:      Check 0:
-; VW128-NEXT:        Comparing group ([[GRP7:0x[0-9a-f]+]]):
+; VW128-NEXT:        Comparing group GRP0:
 ; VW128-NEXT:          %gep.off.iv = getelementptr inbounds i8, ptr %gep.off, i64 %iv
-; VW128-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
+; VW128-NEXT:        Against group GRP1:
 ; VW128-NEXT:          %gep = getelementptr inbounds i8, ptr %A, i64 %iv
 ; VW128-NEXT:      Grouped accesses:
-; VW128-NEXT:        Group [[GRP7]]:
+; VW128-NEXT:        Group GRP0:
 ; VW128-NEXT:          (Low: {(15 + %A)<nuw>,+,1}<nuw><%outer.header> High: {(271 + %A),+,1}<nw><%outer.header>)
 ; VW128-NEXT:            Member: {{\{\{}}(15 + %A)<nuw>,+,1}<nuw><%outer.header>,+,1}<nuw><%loop>
-; VW128-NEXT:        Group [[GRP8]]:
+; VW128-NEXT:        Group GRP1:
 ; VW128-NEXT:          (Low: %A High: (256 + %A))
 ; VW128-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; VW128-EMPTY:
@@ -142,15 +142,15 @@ define void @backward_min_distance_120(ptr %A, i64 %N) {
 ; MAXLEN-NEXT:      Dependences:
 ; MAXLEN-NEXT:      Run-time memory checks:
 ; MAXLEN-NEXT:      Check 0:
-; MAXLEN-NEXT:        Comparing group ([[GRP9:0x[0-9a-f]+]]):
+; MAXLEN-NEXT:        Comparing group GRP0:
 ; MAXLEN-NEXT:          %gep.off.iv = getelementptr inbounds i8, ptr %gep.off, i64 %iv
-; MAXLEN-NEXT:        Against group ([[GRP10:0x[0-9a-f]+]]):
+; MAXLEN-NEXT:        Against group GRP1:
 ; MAXLEN-NEXT:          %gep = getelementptr inbounds i8, ptr %A, i64 %iv
 ; MAXLEN-NEXT:      Grouped accesses:
-; MAXLEN-NEXT:        Group [[GRP9]]:
+; MAXLEN-NEXT:        Group GRP0:
 ; MAXLEN-NEXT:          (Low: {(15 + %A)<nuw>,+,1}<nuw><%outer.header> High: {(271 + %A),+,1}<nw><%outer.header>)
 ; MAXLEN-NEXT:            Member: {{\{\{}}(15 + %A)<nuw>,+,1}<nuw><%outer.header>,+,1}<nuw><%loop>
-; MAXLEN-NEXT:        Group [[GRP10]]:
+; MAXLEN-NEXT:        Group GRP1:
 ; MAXLEN-NEXT:          (Low: %A High: (256 + %A))
 ; MAXLEN-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; MAXLEN-EMPTY:
@@ -230,15 +230,15 @@ define void @backward_min_distance_128(ptr %A, i64 %N) {
 ; VW128-NEXT:      Dependences:
 ; VW128-NEXT:      Run-time memory checks:
 ; VW128-NEXT:      Check 0:
-; VW128-NEXT:        Comparing group ([[GRP11:0x[0-9a-f]+]]):
+; VW128-NEXT:        Comparing group GRP0:
 ; VW128-NEXT:          %gep.off.iv = getelementptr inbounds i8, ptr %gep.off, i64 %iv
-; VW128-NEXT:        Against group ([[GRP12:0x[0-9a-f]+]]):
+; VW128-NEXT:        Against group GRP1:
 ; VW128-NEXT:          %gep = getelementptr inbounds i8, ptr %A, i64 %iv
 ; VW128-NEXT:      Grouped accesses:
-; VW128-NEXT:        Group [[GRP11]]:
+; VW128-NEXT:        Group GRP0:
 ; VW128-NEXT:          (Low: {(16 + %A)<nuw>,+,1}<nuw><%outer.header> High: {(272 + %A),+,1}<nw><%outer.header>)
 ; VW128-NEXT:            Member: {{\{\{}}(16 + %A)<nuw>,+,1}<nuw><%outer.header>,+,1}<nuw><%loop>
-; VW128-NEXT:        Group [[GRP12]]:
+; VW128-NEXT:        Group GRP1:
 ; VW128-NEXT:          (Low: %A High: (256 + %A))
 ; VW128-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; VW128-EMPTY:
@@ -263,15 +263,15 @@ define void @backward_min_distance_128(ptr %A, i64 %N) {
 ; MAXLEN-NEXT:      Dependences:
 ; MAXLEN-NEXT:      Run-time memory checks:
 ; MAXLEN-NEXT:      Check 0:
-; MAXLEN-NEXT:        Comparing group ([[GRP13:0x[0-9a-f]+]]):
+; MAXLEN-NEXT:        Comparing group GRP0:
 ; MAXLEN-NEXT:          %gep.off.iv = getelementptr inbounds i8, ptr %gep.off, i64 %iv
-; MAXLEN-NEXT:        Against group ([[GRP14:0x[0-9a-f]+]]):
+; MAXLEN-NEXT:        Against group GRP1:
 ; MAXLEN-NEXT:          %gep = getelementptr inbounds i8, ptr %A, i64 %iv
 ; MAXLEN-NEXT:      Grouped accesses:
-; MAXLEN-NEXT:        Group [[GRP13]]:
+; MAXLEN-NEXT:        Group GRP0:
 ; MAXLEN-NEXT:          (Low: {(16 + %A)<nuw>,+,1}<nuw><%outer.header> High: {(272 + %A),+,1}<nw><%outer.header>)
 ; MAXLEN-NEXT:            Member: {{\{\{}}(16 + %A)<nuw>,+,1}<nuw><%outer.header>,+,1}<nuw><%loop>
-; MAXLEN-NEXT:        Group [[GRP14]]:
+; MAXLEN-NEXT:        Group GRP1:
 ; MAXLEN-NEXT:          (Low: %A High: (256 + %A))
 ; MAXLEN-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; MAXLEN-EMPTY:
@@ -377,15 +377,15 @@ define void @backward_min_distance_256(ptr %A, i64 %N) {
 ; MAXLEN-NEXT:      Dependences:
 ; MAXLEN-NEXT:      Run-time memory checks:
 ; MAXLEN-NEXT:      Check 0:
-; MAXLEN-NEXT:        Comparing group ([[GRP15:0x[0-9a-f]+]]):
+; MAXLEN-NEXT:        Comparing group GRP0:
 ; MAXLEN-NEXT:          %gep.off.iv = getelementptr inbounds i8, ptr %gep.off, i64 %iv
-; MAXLEN-NEXT:        Against group ([[GRP16:0x[0-9a-f]+]]):
+; MAXLEN-NEXT:        Against group GRP1:
 ; MAXLEN-NEXT:          %gep = getelementptr inbounds i8, ptr %A, i64 %iv
 ; MAXLEN-NEXT:      Grouped accesses:
-; MAXLEN-NEXT:        Group [[GRP15]]:
+; MAXLEN-NEXT:        Group GRP0:
 ; MAXLEN-NEXT:          (Low: {(32 + %A)<nuw>,+,1}<nuw><%outer.header> High: {(288 + %A),+,1}<nw><%outer.header>)
 ; MAXLEN-NEXT:            Member: {{\{\{}}(32 + %A)<nuw>,+,1}<nuw><%outer.header>,+,1}<nuw><%loop>
-; MAXLEN-NEXT:        Group [[GRP16]]:
+; MAXLEN-NEXT:        Group GRP1:
 ; MAXLEN-NEXT:          (Low: %A High: (256 + %A))
 ; MAXLEN-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; MAXLEN-EMPTY:

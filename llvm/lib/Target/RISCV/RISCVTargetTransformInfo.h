@@ -107,6 +107,13 @@ public:
   TargetTransformInfo::PopcntSupportKind
   getPopcntSupport(unsigned TyWidth) const override;
 
+  InstructionCost
+  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
+                          Type *AccumType, ElementCount VF,
+                          TTI::PartialReductionExtendKind OpAExtend,
+                          TTI::PartialReductionExtendKind OpBExtend,
+                          std::optional<unsigned> BinOp) const override;
+
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
   bool supportsScalableVectors() const override {
     return ST->hasVInstructions();
@@ -168,7 +175,8 @@ public:
 
   InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) const override;
+      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+      ArrayRef<Value *> VL = {}) const override;
 
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
@@ -237,8 +245,8 @@ public:
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override;
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override;
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -371,11 +379,10 @@ public:
     case RecurKind::SMax:
     case RecurKind::UMin:
     case RecurKind::UMax:
-    case RecurKind::IAnyOf:
     case RecurKind::FMin:
     case RecurKind::FMax:
       return true;
-    case RecurKind::FAnyOf:
+    case RecurKind::AnyOf:
     case RecurKind::FAdd:
     case RecurKind::FMulAdd:
       // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
