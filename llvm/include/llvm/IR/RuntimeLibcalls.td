@@ -357,6 +357,11 @@ multiclass LibmLongDoubleLibCall<string libcall_basename = !toupper(NAME),
                            !strconcat(rtbasename, "l")>;
 }
 
+// AArch64 calls
+def SC_MEMCPY : RuntimeLibcall;
+def SC_MEMMOVE : RuntimeLibcall;
+def SC_MEMSET : RuntimeLibcall;
+
 // ARM EABI calls
 def AEABI_MEMCPY4 : RuntimeLibcall; // Align 4
 def AEABI_MEMCPY8 : RuntimeLibcall; // Align 8
@@ -985,6 +990,10 @@ defset list<RuntimeLibcallImpl> AArch64LibcallImpls = {
     defm __aarch64_ldeor#MemSize
         : AtomicOrderSizeLibcallImpl<"OUTLINE_ATOMIC_LDEOR"#MemSize>;
   }
+
+  def __arm_sc_memcpy : RuntimeLibcallImpl<SC_MEMCPY>;
+  def __arm_sc_memmove : RuntimeLibcallImpl<SC_MEMMOVE>;
+  def __arm_sc_memset : RuntimeLibcallImpl<SC_MEMSET>;
 }
 
 foreach libcall = AArch64LibcallImpls in {
