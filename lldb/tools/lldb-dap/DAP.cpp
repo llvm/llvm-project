@@ -18,6 +18,7 @@
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
+#include "ProtocolUtils.h"
 #include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"

@@ -43,19 +43,19 @@ struct ExceptionBreakpointsFilter {
 
   /// A help text providing additional information about the exception filter.
   /// This string is typically shown as a hover and can be translated.
-  std::optional<std::string> description;
+  std::string description;
 
   /// Initial value of the filter option. If not specified a value false is
   /// assumed.
-  std::optional<bool> defaultState;
+  bool defaultState = false;
 
   /// Controls whether a condition can be specified for this filter option. If
   /// false or missing, a condition can not be set.
-  std::optional<bool> supportsCondition;
+  bool supportsCondition = false;
 
   /// A help text providing information about the condition. This string is
   /// shown as the placeholder text for a text box and can be translated.
-  std::optional<std::string> conditionDescription;
+  std::string conditionDescription;
 };
 bool fromJSON(const llvm::json::Value &, ExceptionBreakpointsFilter &,
               llvm::json::Path);

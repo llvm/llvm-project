@@ -86,14 +86,14 @@ bool fromJSON(const llvm::json::Value &Params, ExceptionBreakpointsFilter &EBF,
 json::Value toJSON(const ExceptionBreakpointsFilter &EBF) {
   json::Object result{{"filter", EBF.filter}, {"label", EBF.label}};
 
-  if (EBF.description)
-    result.insert({"description", *EBF.description});
+  if (!EBF.description.empty())
+    result.insert({"description", EBF.description});
   if (EBF.defaultState)
-    result.insert({"default", *EBF.defaultState});
+    result.insert({"default", EBF.defaultState});
   if (EBF.supportsCondition)
-    result.insert({"supportsCondition", *EBF.supportsCondition});
-  if (EBF.conditionDescription)
-    result.insert({"conditionDescription", *EBF.conditionDescription});
+    result.insert({"supportsCondition", EBF.supportsCondition});
+  if (!EBF.conditionDescription.empty())
+    result.insert({"conditionDescription", EBF.conditionDescription});
 
   return result;
 }
