@@ -104,7 +104,7 @@ class AttachArguments(AttachOrLaunchArguments, total=False):
     gdbRemoteHostname: str
 
 
-class BreakpiontData(TypedDict, total=False):
+class BreakpointData(TypedDict, total=False):
     column: int
     condition: str
     hitCondition: str
@@ -112,7 +112,7 @@ class BreakpiontData(TypedDict, total=False):
     mode: str
 
 
-class SourceBreakpoint(BreakpiontData):
+class SourceBreakpoint(BreakpointData):
     line: int
 
 
@@ -249,7 +249,7 @@ class DebugCommunication(object):
         # Packets that have been received and processed but have not yet been
         # requested by a test case.
         self._pending_packets: List[Optional[ProtocolMessage]] = []
-        # Recieved packets that have not yet been processed.
+        # Received packets that have not yet been processed.
         self._recv_packets: List[Optional[ProtocolMessage]] = []
         # Used as a mutex for _recv_packets and for notify when _recv_packets
         # changes.
@@ -276,7 +276,7 @@ class DebugCommunication(object):
         self.thread_stop_reasons: Dict[str, Any] = {}
         self.frame_scopes: Dict[str, Any] = {}
         # keyed by breakpoint id
-        self.resolved_breakpoints: Dict[int, bool] = {}
+        self.resolved_breakpoints: Dict[str, bool] = {}
 
         # trigger enqueue thread
         self._recv_thread.start()
