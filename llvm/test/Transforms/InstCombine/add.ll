@@ -4492,6 +4492,26 @@ define i32 @ceil_div_commuted_multi_use(i32 range(i32 0, 100) %x) {
   ret i32 %r
 }
 
+; Multi-use test where only zext has multiple uses - should still optimize
+define i32 @ceil_div_zext_multi_use(i32 range(i32 0, 100) %x) {
+; CHECK-LABEL: @ceil_div_zext_multi_use(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    call void @use_i32(i32 [[EXT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[X]], 7
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[TMP1]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 3
+  %and = and i32 %x, 7
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  call void @use_i32(i32 %ext)
+  %r = add i32 %shr, %ext
+  ret i32 %r
+}
+
 ; Multi-use with vector type
 define <2 x i32> @ceil_div_vec_multi_use(<2 x i32> range(i32 0, 1000) %x) {
 ; CHECK-LABEL: @ceil_div_vec_multi_use(
