@@ -644,7 +644,7 @@ protected:
     return BC.MIB->getAnnotationAs<StateTy>(Inst, StateAnnotationIndex);
   }
 
-  ~CFGUnawareAnalysis() { cleanStateAnnotations(); }
+  virtual ~CFGUnawareAnalysis() { cleanStateAnnotations(); }
 };
 
 // A simplified implementation of DataflowSrcSafetyAnalysis for functions
@@ -1314,7 +1314,6 @@ shouldReportAuthOracle(const BinaryContext &BC, const MCInstReference &Inst,
   if (!AuthReg || IsChecked)
     return std::nullopt;
 
-  assert(*AuthReg != BC.MIB->getNoRegister());
   LLVM_DEBUG({
     traceInst(BC, "Found auth inst", Inst);
     traceReg(BC, "Authenticated reg", *AuthReg);

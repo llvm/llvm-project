@@ -113,7 +113,7 @@ simple:
 // CHECK-EMPTY:
 // PAUTH-NEXT:   Found sign inst:     00000000:        paciasp # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: >
 // PAUTH-NEXT:     Signed reg: LR
-// PAUTH-NEXT:     TrustedRegs: LR W30 W30_HI
+// PAUTH-NEXT:     TrustedRegs: LR W30 W30_HI{{[ \t]*$}}
 // PAUTH-NEXT:   Found call inst:     00000000:        blr     x0 # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: >
 // PAUTH-NEXT:     Call destination reg: X0
 // PAUTH-NEXT:     SafeToDerefRegs: W0 X0 W0_HI{{[ \t]*$}}
@@ -220,10 +220,10 @@ nocfg:
 // CHECK-EMPTY:
 // PAUTH-NEXT:   Found call inst:     00000000:        br      x0 # UNKNOWN CONTROL FLOW # Offset: 4 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: >
 // PAUTH-NEXT:     Call destination reg: X0
-// PAUTH-NEXT:     SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI
+// PAUTH-NEXT:     SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI{{[ \t]*$}}
 // CHECK-NEXT:   Found RET inst:     00000000:         ret # Offset: 8 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: >
 // CHECK-NEXT:     RetReg: LR
-// CHECK-NEXT:     SafeToDerefRegs:
+// CHECK-NEXT:     SafeToDerefRegs:{{[ \t]*$}}
 // CHECK-EMPTY:
 // CHECK-NEXT: Running detailed src register safety analysis...
 // CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   adr     x0, __ENTRY_nocfg@0x[[ENTRY_ADDR]], src-state<SafeToDerefRegs: LR W30 W30_HI , TrustedRegs: LR W30 W30_HI , Insts: [0]()>)
@@ -304,7 +304,7 @@ auth_oracle:
 // PAUTH-EMPTY:
 // PAUTH-NEXT:   Found auth inst:     00000000:        autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector, Insts: >
 // PAUTH-NEXT:     Authenticated reg: X0
-// PAUTH-NEXT:     safe output registers: LR W30 W30_HI
+// PAUTH-NEXT:     safe output registers: LR W30 W30_HI{{[ \t]*$}}
 // PAUTH-EMPTY:
 // PAUTH-NEXT: Running detailed dst register safety analysis...
 // PAUTH-NEXT:   DstSafetyAnalysis::ComputeNext(       ret     x30, dst-state<CannotEscapeUnchecked: , Insts: [0]()>)
