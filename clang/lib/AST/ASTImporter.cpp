@@ -1151,7 +1151,7 @@ ASTNodeImporter::ImportExprRequirement(concepts::ExprRequirement *From) {
       Req.emplace(ParamsOrErr.get(), IsDependent);
     } else if (FromTypeRequirement.isSubstitutionFailure()) {
       auto DiagOrErr = import(FromTypeRequirement.getSubstitutionDiagnostic());
-      if (DiagOrErr)
+      if (!DiagOrErr)
         return DiagOrErr.takeError();
       Req.emplace(DiagOrErr.get());
     } else {
