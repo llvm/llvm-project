@@ -14,6 +14,10 @@
 #include <climits>
 #include <cassert>
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
+#  include <stdexcept>
+#endif
+
 #include "test_macros.h"
 
 template <std::size_t N>
