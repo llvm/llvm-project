@@ -22,4 +22,6 @@ target_link_libraries(ProfileTests
 foreach (tgt ${BOLT_TARGETS_TO_BUILD})
   string(TOUPPER "${tgt}" upper)
   target_compile_definitions(ProfileTests PRIVATE "${upper}_AVAILABLE")
+  # Enable exceptions for GTEST EXPECT_NO_THROW
+  target_compile_options(ProfileTests PRIVATE "-fexceptions")
 endforeach()

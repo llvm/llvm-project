@@ -40,6 +40,8 @@ struct PerfSpeEventsTestHelper : public testing::Test {
 
 protected:
   using Trace = DataAggregator::Trace;
+  using TakenBranchInfo = DataAggregator::TakenBranchInfo;
+  using TraceHash = DataAggregator::TraceHash;
   struct MockBranchInfo {
     uint64_t From;
     uint64_t To;
@@ -79,6 +81,23 @@ protected:
   std::unique_ptr<ObjectFile> ObjFile;
   std::unique_ptr<BinaryContext> BC;
 
+  // Helper function to export lists to show the mismatch
+  void exportBrStackEventMismatch(
+      const std::unordered_map<Trace, TakenBranchInfo, TraceHash> &BranchLBRs,
+      const std::vector<MockBranchInfo> &ExpectedSamples) {
+    // Simple export where they differ
+    llvm::errs() << "BranchLBRs items: \n";
+    for (const auto &AggrLBR : BranchLBRs)
+      llvm::errs() << "{" << AggrLBR.first.From << ", " << AggrLBR.first.To
+                   << ", " << AggrLBR.second.TakenCount << ", "
+                   << AggrLBR.second.MispredCount << "}" << "\n";
+
+    llvm::errs() << "Expected items: \n";
+    for (const MockBranchInfo &BI : ExpectedSamples)
+      llvm::errs() << "{" << BI.From << ", " << BI.To << ", " << BI.TakenCount
+                   << ", " << BI.MispredCount << "}" << "\n";
+  }
+
   // Parse and check SPE brstack as LBR.
   void parseAndCheckBrstackEvents(
       uint64_t PID, const std::vector<MockBranchInfo> &ExpectedSamples) {
@@ -91,25 +110,18 @@ protected:
     DA.parseBranchEvents();
 
     EXPECT_EQ(DA.BranchLBRs.size(), ExpectedSamples.size());
-    if (DA.BranchLBRs.size() != ExpectedSamples.size()) {
-      // Simple export where they differ
-      llvm::errs() << "BranchLBRs items: \n";
-      for (const auto &AggrLBR : DA.BranchLBRs)
-        llvm::errs() << "{" << AggrLBR.first.From << ", " << AggrLBR.first.To
-                     << ", " << AggrLBR.second.TakenCount << ", "
-                     << AggrLBR.second.MispredCount << "}" << "\n";
+    if (DA.BranchLBRs.size() != ExpectedSamples.size())
+      exportBrStackEventMismatch(DA.BranchLBRs, ExpectedSamples);
 
-      llvm::errs() << "Expected items: \n";
-      for (const MockBranchInfo &BI : ExpectedSamples)
-        llvm::errs() << "{" << BI.From << ", " << BI.To << ", " << BI.TakenCount
-                     << ", " << BI.MispredCount << "}" << "\n";
-    } else {
-      for (const MockBranchInfo &BI : ExpectedSamples) {
-        EXPECT_EQ(DA.BranchLBRs.at(Trace(BI.From, BI.To)).MispredCount,
-                  BI.MispredCount);
-        EXPECT_EQ(DA.BranchLBRs.at(Trace(BI.From, BI.To)).TakenCount,
-                  BI.TakenCount);
-      }
+    for (const MockBranchInfo &BI : ExpectedSamples) {
+      /// Check whether the key exists, throws 'std::out_of_range'
+      /// if the container does not have an element with the specified key.
+      EXPECT_NO_THROW(DA.BranchLBRs.at(Trace(BI.From, BI.To)));
+
+      EXPECT_EQ(DA.BranchLBRs.at(Trace(BI.From, BI.To)).MispredCount,
+                BI.MispredCount);
+      EXPECT_EQ(DA.BranchLBRs.at(Trace(BI.From, BI.To)).TakenCount,
+                BI.TakenCount);
     }
   }
 };
