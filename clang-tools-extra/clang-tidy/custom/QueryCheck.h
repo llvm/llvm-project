@@ -29,9 +29,10 @@ public:
 
 private:
   llvm::SmallVector<ast_matchers::dynamic::DynTypedMatcher> Matchers{};
+  using BindNameMapToDiagMessage =
+      llvm::StringMap<llvm::SmallVector<std::string>>;
   using DiagMaps =
-      llvm::DenseMap<DiagnosticIDs::Level,
-                     llvm::StringMap<llvm::SmallVector<std::string>>>;
+      llvm::DenseMap<DiagnosticIDs::Level, BindNameMapToDiagMessage>;
   DiagMaps Diags;
 };
 

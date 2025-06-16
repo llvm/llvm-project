@@ -20,6 +20,12 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::custom {
 
+static void emitConfigurationDiag(ClangTidyContext *Context, StringRef Message,
+                                  StringRef CheckName) {
+  Context->configurationDiag("%0 in '%1'", DiagnosticIDs::Warning)
+      << Message << CheckName;
+}
+
 static SmallVector<ast_matchers::dynamic::DynTypedMatcher>
 parseQuery(const ClangTidyOptions::CustomCheckValue &V,
            ClangTidyContext *Context) {
@@ -39,23 +45,52 @@ parseQuery(const ClangTidyOptions::CustomCheckValue &V,
       LetQuery.run(llvm::errs(), QS);
       break;
     }
+    case query::QK_NoOp: {
+      const auto &NoOpQuery = llvm::cast<query::NoOpQuery>(*Q);
+      NoOpQuery.run(llvm::errs(), QS);
+      break;
+    }
     case query::QK_Invalid: {
       const auto &InvalidQuery = llvm::cast<query::InvalidQuery>(*Q);
-      Context->configurationDiag(InvalidQuery.ErrStr, DiagnosticIDs::Error);
+      emitConfigurationDiag(Context, InvalidQuery.ErrStr, V.Name);
       return {};
     }
     // FIXME: TODO
-    case query::QK_File:
-    case query::QK_DisableOutputKind:
-    case query::QK_EnableOutputKind:
-    case query::QK_SetOutputKind:
-    case query::QK_SetTraversalKind:
-    case query::QK_Help:
-    case query::QK_NoOp:
-    case query::QK_Quit:
+    case query::QK_File: {
+      emitConfigurationDiag(Context, "unsupported query kind 'File'", V.Name);
+      return {};
+    }
+    case query::QK_DisableOutputKind: {
+      emitConfigurationDiag(
+          Context, "unsupported query kind 'DisableOutputKind'", V.Name);
+      return {};
+    }
+    case query::QK_EnableOutputKind: {
+      emitConfigurationDiag(
+          Context, "unsupported query kind 'EnableOutputKind'", V.Name);
+      return {};
+    }
+    case query::QK_SetOutputKind: {
+      emitConfigurationDiag(Context, "unsupported query kind 'SetOutputKind'",
+                            V.Name);
+      return {};
+    }
+    case query::QK_SetTraversalKind: {
+      emitConfigurationDiag(
+          Context, "unsupported query kind 'SetTraversalKind'", V.Name);
+      return {};
+    }
     case query::QK_SetBool: {
-      Context->configurationDiag("unsupported query kind",
-                                 DiagnosticIDs::Error);
+      emitConfigurationDiag(Context, "unsupported query kind 'SetBool'",
+                            V.Name);
+      return {};
+    }
+    case query::QK_Help: {
+      emitConfigurationDiag(Context, "unsupported query kind 'Help'", V.Name);
+      return {};
+    }
+    case query::QK_Quit: {
+      emitConfigurationDiag(Context, "unsupported query kind 'Quit'", V.Name);
       return {};
     }
     }
@@ -89,19 +124,19 @@ void QueryCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void QueryCheck::check(const MatchFinder::MatchResult &Result) {
-  auto Emit = [this](DiagMaps const &DiagMaps, std::string const &BindName,
-                     DynTypedNode const &Node, DiagnosticIDs::Level Level) {
-    if (!DiagMaps.contains(Level))
+  auto Emit = [this](const DiagMaps &DiagMaps, const std::string &BindName,
+                     const DynTypedNode &Node, DiagnosticIDs::Level Level) {
+    DiagMaps::const_iterator DiagMapIt = DiagMaps.find(Level);
+    if (DiagMapIt == DiagMaps.end())
       return;
-    auto &DiagMap = DiagMaps.at(Level);
-    if (!DiagMap.contains(BindName))
+    const BindNameMapToDiagMessage &BindNameMap = DiagMapIt->second;
+    BindNameMapToDiagMessage::const_iterator BindNameMapIt =
+        BindNameMap.find(BindName);
+    if (BindNameMapIt == BindNameMap.end())
       return;
-    for (const std::string &Message : DiagMap.at(BindName)) {
+    for (const std::string &Message : BindNameMapIt->second)
       diag(Node.getSourceRange().getBegin(), Message, Level);
-    }
   };
-  for (const auto &[Name, Node] : Result.Nodes.getMap())
-    Emit(Diags, Name, Node, DiagnosticIDs::Error);
   for (const auto &[Name, Node] : Result.Nodes.getMap())
     Emit(Diags, Name, Node, DiagnosticIDs::Warning);
   // place Note last, otherwise it will not be emitted

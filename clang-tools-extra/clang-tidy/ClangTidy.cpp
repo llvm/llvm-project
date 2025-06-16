@@ -54,7 +54,7 @@ LLVM_INSTANTIATE_REGISTRY(clang::tidy::ClangTidyModuleRegistry)
 namespace clang::tidy {
 
 namespace custom {
-extern void registerCustomChecks(ClangTidyOptions const &O,
+extern void registerCustomChecks(const ClangTidyOptions &O,
                                  ClangTidyCheckFactories &Factories);
 } // namespace custom
 

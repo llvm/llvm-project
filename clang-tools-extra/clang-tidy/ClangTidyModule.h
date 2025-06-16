@@ -62,7 +62,7 @@ public:
                          });
   }
 
-  void erase(llvm::StringRef CheckName) { Factories.erase(CheckName); }
+  void eraseCheck(llvm::StringRef CheckName) { Factories.erase(CheckName); }
 
   /// Create instances of checks that are enabled.
   std::vector<std::unique_ptr<ClangTidyCheck>>

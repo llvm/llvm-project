@@ -18,7 +18,6 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <functional>
-#include <map>
 #include <optional>
 #include <string>
 #include <system_error>
