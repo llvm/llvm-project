@@ -664,7 +664,7 @@ bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
   case InfoType::IT_typedef:
     emitBlock(*static_cast<clang::doc::TypedefInfo *>(I));
     break;
-  default:
+  case InfoType::IT_default:
     llvm::errs() << "Unexpected info, unable to write.\n";
     return true;
   }

@@ -209,7 +209,7 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
   switch (Value->getKind()) {
   case MCExpr::Constant: {
     OS << "XL" << Size << '\'';
-    Value->print(OS, MAI);
+    MAI->printExpr(OS, *Value);
     OS << '\'';
     return;
   }
@@ -258,12 +258,12 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
     return;
   }
   case MCExpr::Target:
-    Value->print(OS, MAI);
+    MAI->printExpr(OS, *Value);
     return;
   default:
     if (Parens)
       OS << "A(";
-    Value->print(OS, MAI);
+    MAI->printExpr(OS, *Value);
     if (Parens)
       OS << ')';
     return;

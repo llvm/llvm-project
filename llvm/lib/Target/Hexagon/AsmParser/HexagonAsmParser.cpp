@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/HexagonMCAsmInfo.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
@@ -457,7 +458,7 @@ public:
 void HexagonOperand::print(raw_ostream &OS) const {
   switch (Kind) {
   case Immediate:
-    getImm()->print(OS, nullptr);
+    HexagonMCAsmInfo(Triple()).printExpr(OS, *getImm());
     break;
   case Register:
     OS << "<register R";

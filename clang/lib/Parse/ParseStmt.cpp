@@ -836,8 +836,7 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
 
       Diag(ExpectedLoc, diag::err_expected_after)
           << "'case'" << tok::colon
-          << FixItHint::CreateInsertion(ExpectedLoc,
-                                        tok::getTokenName(tok::colon));
+          << FixItHint::CreateInsertion(ExpectedLoc, ":");
 
       ColonLoc = ExpectedLoc;
     }
@@ -2346,8 +2345,8 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
     ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.OptionLoc, Hint.StateLoc,
                             ArgsUnion(Hint.ValueExpr)};
     TempAttrs.addNew(Hint.PragmaNameLoc->getIdentifierInfo(), Hint.Range,
-                     /*scopeName=*/nullptr, Hint.PragmaNameLoc->getLoc(),
-                     ArgHints, /*numArgs=*/4, ParsedAttr::Form::Pragma());
+                     AttributeScopeInfo(), ArgHints, /*numArgs=*/4,
+                     ParsedAttr::Form::Pragma());
   }
 
   // Get the next statement.

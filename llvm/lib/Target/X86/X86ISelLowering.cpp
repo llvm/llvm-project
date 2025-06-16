@@ -9614,13 +9614,12 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 // 256-bit AVX can use the vinsertf128 instruction
 // to create 256-bit vectors from two other 128-bit ones.
 // TODO: Detect subvector broadcast here instead of DAG combine?
-static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
+static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
+                                      SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
-  SDLoc dl(Op);
   MVT ResVT = Op.getSimpleValueType();
-
-  assert((ResVT.is256BitVector() ||
-          ResVT.is512BitVector()) && "Value type must be 256-/512-bit wide");
+  assert((ResVT.is256BitVector() || ResVT.is512BitVector()) &&
+         "Value type must be 256-/512-bit wide");
 
   unsigned NumOperands = Op.getNumOperands();
   unsigned NumFreezeUndef = 0;
@@ -9688,13 +9687,11 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
 // zeros) of the result of a node that already zeros all upper bits of
 // k-register.
 // TODO: Merge this with LowerAVXCONCAT_VECTORS?
-static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
+static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op, const SDLoc &dl,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG & DAG) {
-  SDLoc dl(Op);
   MVT ResVT = Op.getSimpleValueType();
   unsigned NumOperands = Op.getNumOperands();
-
   assert(NumOperands > 1 && isPowerOf2_32(NumOperands) &&
          "Unexpected number of operands in CONCAT_VECTORS");
 
@@ -9766,19 +9763,18 @@ static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
 static SDValue LowerCONCAT_VECTORS(SDValue Op,
                                    const X86Subtarget &Subtarget,
                                    SelectionDAG &DAG) {
+  SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   if (VT.getVectorElementType() == MVT::i1)
-    return LowerCONCAT_VECTORSvXi1(Op, Subtarget, DAG);
-
-  assert((VT.is256BitVector() && Op.getNumOperands() == 2) ||
-         (VT.is512BitVector() && (Op.getNumOperands() == 2 ||
-          Op.getNumOperands() == 4)));
+    return LowerCONCAT_VECTORSvXi1(Op, DL, Subtarget, DAG);
 
   // AVX can use the vinsertf128 instruction to create 256-bit vectors
   // from two other 128-bit ones.
-
   // 512-bit vector may contain 2 256-bit vectors or 4 128-bit vectors
-  return LowerAVXCONCAT_VECTORS(Op, DAG, Subtarget);
+  assert((VT.is256BitVector() && Op.getNumOperands() == 2) ||
+         (VT.is512BitVector() &&
+          (Op.getNumOperands() == 2 || Op.getNumOperands() == 4)));
+  return LowerAVXCONCAT_VECTORS(Op, DL, DAG, Subtarget);
 }
 
 //===----------------------------------------------------------------------===//

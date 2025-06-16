@@ -408,6 +408,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMComplexCreateOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexCreateOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexCreateOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexCreateOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 } // namespace direct
 } // namespace cir
 

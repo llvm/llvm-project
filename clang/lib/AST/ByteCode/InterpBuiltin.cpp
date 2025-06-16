@@ -1423,7 +1423,6 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   // Walk up the call stack to find the appropriate caller and get the
   // element type from it.
   auto [NewCall, ElemType] = S.getStdAllocatorCaller("allocate");
-  APSInt Bytes = popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(0)));
 
   if (ElemType.isNull()) {
     S.FFDiag(Call, S.getLangOpts().CPlusPlus20
@@ -1439,6 +1438,25 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  // We only care about the first parameter (the size), so discard all the
+  // others.
+  {
+    unsigned NumArgs = Call->getNumArgs();
+    assert(NumArgs >= 1);
+
+    // The std::nothrow_t arg never gets put on the stack.
+    if (Call->getArg(NumArgs - 1)->getType()->isNothrowT())
+      --NumArgs;
+    auto Args = llvm::ArrayRef(Call->getArgs(), Call->getNumArgs());
+    // First arg is needed.
+    Args = Args.drop_front();
+
+    // Discard the rest.
+    for (const Expr *Arg : Args)
+      discard(S.Stk, *S.getContext().classify(Arg));
+  }
+
+  APSInt Bytes = popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(0)));
   CharUnits ElemSize = S.getASTContext().getTypeSizeInChars(ElemType);
   assert(!ElemSize.isZero());
   // Divide the number of bytes by sizeof(ElemType), so we get the number of

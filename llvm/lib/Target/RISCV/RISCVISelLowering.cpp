@@ -3499,7 +3499,7 @@ getVSlideup(SelectionDAG &DAG, const RISCVSubtarget &Subtarget, const SDLoc &DL,
 }
 
 static MVT getLMUL1VT(MVT VT) {
-  assert(VT.getVectorElementType().getSizeInBits() <= 64 &&
+  assert(VT.getVectorElementType().getSizeInBits() <= RISCV::RVVBitsPerBlock &&
          "Unexpected vector MVT");
   return MVT::getScalableVectorVT(
       VT.getVectorElementType(),

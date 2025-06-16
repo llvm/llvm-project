@@ -396,6 +396,8 @@ namespace {
     bool PromoteLoad(SDValue Op);
 
     SDValue foldShiftToAvg(SDNode *N);
+    // Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
+    SDValue foldBitwiseOpWithNeg(SDNode *N, const SDLoc &DL, EVT VT);
 
     SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
                                 SDValue RHS, SDValue True, SDValue False,
@@ -7541,6 +7543,12 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       return DAG.getNode(ISD::AND, DL, VT, X,
                          DAG.getNOT(DL, DAG.getNode(Opc, DL, VT, Y, Z), VT));
 
+  // Fold (and X, (add (not Y), Z)) -> (and X, (not (sub Y, Z)))
+  // Fold (and X, (sub (not Y), Z)) -> (and X, (not (add Y, Z)))
+  if (TLI.hasAndNot(SDValue(N, 0)))
+    if (SDValue Folded = foldBitwiseOpWithNeg(N, DL, VT))
+      return Folded;
+
   // Fold (and (srl X, C), 1) -> (srl X, BW-1) for signbit extraction
   // If we are shifting down an extended sign bit, see if we can simplify
   // this to shifting the MSB directly to expose further simplifications.
@@ -11650,6 +11658,22 @@ SDValue DAGCombiner::foldShiftToAvg(SDNode *N) {
     return SDValue();
 
   return DAG.getNode(FloorISD, SDLoc(N), N->getValueType(0), {A, B});
+}
+
+SDValue DAGCombiner::foldBitwiseOpWithNeg(SDNode *N, const SDLoc &DL, EVT VT) {
+  unsigned Opc = N->getOpcode();
+  SDValue X, Y, Z;
+  if (sd_match(
+          N, m_BitwiseLogic(m_Value(X), m_Add(m_Not(m_Value(Y)), m_Value(Z)))))
+    return DAG.getNode(Opc, DL, VT, X,
+                       DAG.getNOT(DL, DAG.getNode(ISD::SUB, DL, VT, Y, Z), VT));
+
+  if (sd_match(N, m_BitwiseLogic(m_Value(X), m_Sub(m_OneUse(m_Not(m_Value(Y))),
+                                                   m_Value(Z)))))
+    return DAG.getNode(Opc, DL, VT, X,
+                       DAG.getNOT(DL, DAG.getNode(ISD::ADD, DL, VT, Y, Z), VT));
+
+  return SDValue();
 }
 
 /// Generate Min/Max node

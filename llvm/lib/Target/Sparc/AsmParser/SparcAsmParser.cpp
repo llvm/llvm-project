@@ -848,14 +848,14 @@ bool SparcAsmParser::expandSETX(MCInst &Inst, SMLoc IDLoc,
   // sethi %hh(val), tmp
   Instructions.push_back(MCInstBuilder(SP::SETHIi)
                              .addReg(MCTmpOp.getReg())
-                             .addExpr(Sparc::createSpecifierExpr(
-                                 getContext(), ValExpr, ELF::R_SPARC_HH22)));
+                             .addExpr(MCSpecifierExpr::create(
+                                 ValExpr, ELF::R_SPARC_HH22, getContext())));
   // or    tmp, %hm(val), tmp
   Instructions.push_back(MCInstBuilder(SP::ORri)
                              .addReg(MCTmpOp.getReg())
                              .addReg(MCTmpOp.getReg())
-                             .addExpr(Sparc::createSpecifierExpr(
-                                 getContext(), ValExpr, ELF::R_SPARC_HM10)));
+                             .addExpr(MCSpecifierExpr::create(
+                                 ValExpr, ELF::R_SPARC_HM10, getContext())));
   // sllx  tmp, 32, tmp
   Instructions.push_back(MCInstBuilder(SP::SLLXri)
                              .addReg(MCTmpOp.getReg())
@@ -1689,7 +1689,7 @@ const SparcMCExpr *SparcAsmParser::adjustPICRelocation(uint16_t RelType,
     }
   }
 
-  return Sparc::createSpecifierExpr(getContext(), subExpr, RelType);
+  return MCSpecifierExpr::create(subExpr, RelType, getContext());
 }
 
 bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,

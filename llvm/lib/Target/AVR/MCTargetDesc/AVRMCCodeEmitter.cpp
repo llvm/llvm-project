@@ -12,7 +12,7 @@
 
 #include "AVRMCCodeEmitter.h"
 
-#include "MCTargetDesc/AVRMCExpr.h"
+#include "MCTargetDesc/AVRMCAsmInfo.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
 #include "llvm/ADT/APFloat.h"

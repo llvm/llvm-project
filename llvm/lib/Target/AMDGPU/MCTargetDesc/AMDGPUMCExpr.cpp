@@ -77,7 +77,7 @@ void AMDGPUMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     break;
   }
   for (const auto *It = Args.begin(); It != Args.end(); ++It) {
-    (*It)->print(OS, MAI);
+    MAI->printExpr(OS, **It);
     if ((It + 1) != Args.end())
       OS << ", ";
   }
@@ -709,5 +709,5 @@ void llvm::AMDGPU::printAMDGPUMCExpr(const MCExpr *Expr, raw_ostream &OS,
     return;
   }
 
-  Expr->print(OS, MAI);
+  MAI->printExpr(OS, *Expr);
 }

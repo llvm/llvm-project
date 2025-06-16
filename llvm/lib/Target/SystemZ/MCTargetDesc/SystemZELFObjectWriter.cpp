@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/SystemZMCExpr.h"
+#include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "MCTargetDesc/SystemZMCFixups.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -103,14 +103,14 @@ unsigned SystemZELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                               bool IsPCRel) const {
   SMLoc Loc = Fixup.getLoc();
   unsigned Kind = Fixup.getKind();
-  auto Specifier = SystemZMCExpr::Specifier(Target.getSpecifier());
+  auto Specifier = SystemZ::Specifier(Target.getSpecifier());
   switch (Specifier) {
-  case SystemZMCExpr::VK_INDNTPOFF:
-  case SystemZMCExpr::VK_NTPOFF:
-  case SystemZMCExpr::VK_TLSGD:
-  case SystemZMCExpr::VK_TLSLD:
-  case SystemZMCExpr::VK_TLSLDM:
-  case SystemZMCExpr::VK_DTPOFF:
+  case SystemZ::S_INDNTPOFF:
+  case SystemZ::S_NTPOFF:
+  case SystemZ::S_TLSGD:
+  case SystemZ::S_TLSLD:
+  case SystemZ::S_TLSLDM:
+  case SystemZ::S_DTPOFF:
     if (auto *SA = Target.getAddSym())
       cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
@@ -119,12 +119,12 @@ unsigned SystemZELFObjectWriter::getRelocType(const MCFixup &Fixup,
   }
 
   switch (Specifier) {
-  case SystemZMCExpr::VK_None:
+  case SystemZ::S_None:
     if (IsPCRel)
       return getPCRelReloc(Loc, Kind);
     return getAbsoluteReloc(Loc, Kind);
 
-  case SystemZMCExpr::VK_NTPOFF:
+  case SystemZ::S_NTPOFF:
     assert(!IsPCRel && "NTPOFF shouldn't be PC-relative");
     switch (Kind) {
     case FK_Data_4:
@@ -135,14 +135,14 @@ unsigned SystemZELFObjectWriter::getRelocType(const MCFixup &Fixup,
     reportError(Loc, "Unsupported thread-local address (local-exec)");
     return 0;
 
-  case SystemZMCExpr::VK_INDNTPOFF:
+  case SystemZ::S_INDNTPOFF:
     if (IsPCRel && Kind == SystemZ::FK_390_PC32DBL)
       return ELF::R_390_TLS_IEENT;
     reportError(Loc,
                 "Only PC-relative INDNTPOFF accesses are supported for now");
     return 0;
 
-  case SystemZMCExpr::VK_DTPOFF:
+  case SystemZ::S_DTPOFF:
     assert(!IsPCRel && "DTPOFF shouldn't be PC-relative");
     switch (Kind) {
     case FK_Data_4:
@@ -153,7 +153,7 @@ unsigned SystemZELFObjectWriter::getRelocType(const MCFixup &Fixup,
     reportError(Loc, "Unsupported thread-local address (local-dynamic)");
     return 0;
 
-  case SystemZMCExpr::VK_TLSLDM:
+  case SystemZ::S_TLSLDM:
     assert(!IsPCRel && "TLSLDM shouldn't be PC-relative");
     switch (Kind) {
     case FK_Data_4:
@@ -166,7 +166,7 @@ unsigned SystemZELFObjectWriter::getRelocType(const MCFixup &Fixup,
     reportError(Loc, "Unsupported thread-local address (local-dynamic)");
     return 0;
 
-  case SystemZMCExpr::VK_TLSGD:
+  case SystemZ::S_TLSGD:
     assert(!IsPCRel && "TLSGD shouldn't be PC-relative");
     switch (Kind) {
     case FK_Data_4:
@@ -179,14 +179,14 @@ unsigned SystemZELFObjectWriter::getRelocType(const MCFixup &Fixup,
     reportError(Loc, "Unsupported thread-local address (general-dynamic)");
     return 0;
 
-  case SystemZMCExpr::VK_GOT:
-  case SystemZMCExpr::VK_GOTENT:
+  case SystemZ::S_GOT:
+  case SystemZ::S_GOTENT:
     if (IsPCRel && Kind == SystemZ::FK_390_PC32DBL)
       return ELF::R_390_GOTENT;
     reportError(Loc, "Only PC-relative GOT accesses are supported for now");
     return 0;
 
-  case SystemZMCExpr::VK_PLT:
+  case SystemZ::S_PLT:
     assert(IsPCRel && "@PLT shouldn't be PC-relative");
     switch (Kind) {
     case SystemZ::FK_390_PC12DBL:
@@ -209,8 +209,8 @@ unsigned SystemZELFObjectWriter::getRelocType(const MCFixup &Fixup,
 bool SystemZELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
                                                      unsigned Type) const {
   switch (V.getSpecifier()) {
-  case SystemZMCExpr::VK_GOT:
-  case SystemZMCExpr::VK_PLT:
+  case SystemZ::S_GOT:
+  case SystemZ::S_PLT:
     return true;
   default:
     return false;

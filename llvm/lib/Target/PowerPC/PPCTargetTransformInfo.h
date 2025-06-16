@@ -24,7 +24,7 @@
 
 namespace llvm {
 
-class PPCTTIImpl : public BasicTTIImplBase<PPCTTIImpl> {
+class PPCTTIImpl final : public BasicTTIImplBase<PPCTTIImpl> {
   typedef BasicTTIImplBase<PPCTTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;

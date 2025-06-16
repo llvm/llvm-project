@@ -35,7 +35,6 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <utility>
 
 using namespace clang;
 using namespace CodeGen;

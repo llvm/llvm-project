@@ -487,7 +487,7 @@ The current vendor extensions supported are:
   LLVM implements `version 0.3 of the Qualcomm uC Large Offset Load Store extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.11.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
 ``experimental-Xqcilsm``
-  LLVM implements `version 0.5 of the Qualcomm uC Load Store Multiple extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.11.0>`__ by Qualcomm. These instructions are only available for riscv32.
+  LLVM implements `version 0.6 of the Qualcomm uC Load Store Multiple extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
 ``experimental-Xqcisim``
   LLVM implements `version 0.2 of the Qualcomm uC Simulation Hint extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.11.0>`__ by Qualcomm. These instructions are only available for riscv32.

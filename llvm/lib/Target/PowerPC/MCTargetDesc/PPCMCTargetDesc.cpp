@@ -221,9 +221,9 @@ public:
       // variables. Finally for local-exec and initial-exec, we have a thread
       // pointer, in r13 for 64-bit mode and returned by .__get_tpointer for
       // 32-bit mode.
-      if (Kind == PPCMCExpr::VK_AIX_TLSGD || Kind == PPCMCExpr::VK_AIX_TLSGDM ||
-          Kind == PPCMCExpr::VK_AIX_TLSIE || Kind == PPCMCExpr::VK_AIX_TLSLE ||
-          Kind == PPCMCExpr::VK_AIX_TLSLD || Kind == PPCMCExpr::VK_AIX_TLSML)
+      if (Kind == PPC::S_AIX_TLSGD || Kind == PPC::S_AIX_TLSGDM ||
+          Kind == PPC::S_AIX_TLSIE || Kind == PPC::S_AIX_TLSLE ||
+          Kind == PPC::S_AIX_TLSLD || Kind == PPC::S_AIX_TLSML)
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
            << getContext().getAsmInfo()->getSpecifierName(Kind) << '\n';
       else
@@ -255,7 +255,7 @@ public:
     OS << "\t.localentry\t";
     S->print(OS, MAI);
     OS << ", ";
-    LocalOffset->print(OS, MAI);
+    MAI->printExpr(OS, *LocalOffset);
     OS << '\n';
   }
 };

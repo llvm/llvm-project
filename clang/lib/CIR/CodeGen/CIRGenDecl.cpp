@@ -499,7 +499,13 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
     emitScalarInit(init, getLoc(d->getSourceRange()), lvalue);
     return;
   case cir::TEK_Complex: {
-    cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: complex type");
+    mlir::Value complex = emitComplexExpr(init);
+    if (capturedByInit)
+      cgm.errorNYI(init->getSourceRange(),
+                   "emitExprAsInit: complex type captured by init");
+    mlir::Location loc = getLoc(init->getExprLoc());
+    emitStoreOfComplex(loc, complex, lvalue,
+                       /*isInit*/ true);
     return;
   }
   case cir::TEK_Aggregate:
@@ -593,8 +599,8 @@ void CIRGenFunction::emitDecl(const Decl &d) {
     // None of these decls require codegen support.
     return;
 
-  case Decl::Enum:   // enum X;
-  case Decl::Record: // struct/union/class X;
+  case Decl::Enum:      // enum X;
+  case Decl::Record:    // struct/union/class X;
   case Decl::CXXRecord: // struct/union/class X; [C++]
   case Decl::NamespaceAlias:
   case Decl::Using:          // using X; [C++]

@@ -478,12 +478,12 @@ public:
   }
 
   bool isIndexedLoadLegal(TTI::MemIndexedMode M, Type *Ty) const override {
-    EVT VT = getTLI()->getValueType(DL, Ty);
+    EVT VT = getTLI()->getValueType(DL, Ty, /*AllowUnknown=*/true);
     return getTLI()->isIndexedLoadLegal(getISDIndexedMode(M), VT);
   }
 
   bool isIndexedStoreLegal(TTI::MemIndexedMode M, Type *Ty) const override {
-    EVT VT = getTLI()->getValueType(DL, Ty);
+    EVT VT = getTLI()->getValueType(DL, Ty, /*AllowUnknown=*/true);
     return getTLI()->isIndexedStoreLegal(getISDIndexedMode(M), VT);
   }
 

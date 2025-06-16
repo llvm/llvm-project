@@ -100,7 +100,7 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
 
   const char *m = inst.GetMnemonic(target);
   const char *o = inst.GetOperands(target);
-  const char *c = inst.GetComment(target);
+  std::string c = inst.GetComment(target);
   auto d = inst.GetData(target);
 
   std::string bytes;
@@ -114,33 +114,29 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
 
   DisassembledInstruction disassembled_inst;
   disassembled_inst.address = inst_addr;
-  disassembled_inst.instructionBytes =
-      bytes.size() > 0 ? bytes.substr(0, bytes.size() - 1) : "";
 
-  std::string instruction;
-  llvm::raw_string_ostream si(instruction);
+  if (!bytes.empty()) // remove last whitespace
+    bytes.pop_back();
+  disassembled_inst.instructionBytes = std::move(bytes);
 
-  lldb::SBSymbol symbol = addr.GetSymbol();
+  llvm::raw_string_ostream si(disassembled_inst.instruction);
+  si << llvm::formatv("{0,-7} {1,-25}", m, o);
+
   // Only add the symbol on the first line of the function.
-  if (symbol.IsValid() && symbol.GetStartAddress() == addr) {
-    // If we have a valid symbol, append it as a label prefix for the first
-    // instruction. This is so you can see the start of a function/callsite
-    // in the assembly, at the moment VS Code (1.80) does not visualize the
-    // symbol associated with the assembly instruction.
-    si << (symbol.GetMangledName() != nullptr ? symbol.GetMangledName()
-                                              : symbol.GetName())
-       << ": ";
+  // in the comment section
+  if (lldb::SBSymbol symbol = addr.GetSymbol();
+      symbol.GetStartAddress() == addr) {
+    const llvm::StringRef sym_display_name = symbol.GetDisplayName();
+    c.append(" ");
+    c.append(sym_display_name);
 
     if (resolve_symbols)
-      disassembled_inst.symbol = symbol.GetDisplayName();
+      disassembled_inst.symbol = sym_display_name;
   }
 
-  si << llvm::formatv("{0,7} {1,12}", m, o);
-  if (c && c[0]) {
+  if (!c.empty()) {
     si << " ; " << c;
   }
-
-  disassembled_inst.instruction = std::move(instruction);
 
   protocol::Source source = CreateSource(addr, target);
   lldb::SBLineEntry line_entry = GetLineEntryForAddress(target, addr);

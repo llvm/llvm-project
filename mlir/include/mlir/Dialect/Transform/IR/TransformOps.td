@@ -418,10 +418,13 @@ def ApplyRegisteredPassOp : TransformDialectOp<"apply_registered_pass",
         with options = { "top-down" = false,
                          "max-iterations" = %max_iter,
                          "test-convergence" = true,
-                         "max-num-rewrites" =  %max_rewrites }
+                         "max-num-rewrites" = %max_rewrites }
         to %module
     : (!transform.any_param, !transform.any_param, !transform.any_op) -> !transform.any_op
     ```
+
+    Options' values which are `ArrayAttr`s are converted to comma-separated
+    lists of options. Likewise for params which associate multiple values.
 
     This op first looks for a pass pipeline with the specified name. If no such
     pipeline exists, it looks for a pass with the specified name. If no such

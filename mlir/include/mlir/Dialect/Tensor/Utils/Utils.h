@@ -30,7 +30,7 @@ namespace tensor {
 // for _static_ dimensions.
 PadOp createPadHighOp(RankedTensorType resType, Value source, Value pad,
                       bool nofold, Location loc, OpBuilder &builder,
-                      SmallVector<Value> dynOutDims = {});
+                      ValueRange dynOutDims = std::nullopt);
 
 // Creates dim ops for each dynamic dimension of the ranked tensor argument and
 // returns these as values.

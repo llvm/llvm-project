@@ -414,6 +414,34 @@ bool fromJSON(const llvm::json::Value &, SteppingGranularity &,
               llvm::json::Path);
 llvm::json::Value toJSON(const SteppingGranularity &);
 
+/// A `StepInTarget` can be used in the `stepIn` request and determines into
+/// which single target the `stepIn` request should step.
+struct StepInTarget {
+  /// Unique identifier for a step-in target.
+  lldb::addr_t id = LLDB_INVALID_ADDRESS;
+
+  /// The name of the step-in target (shown in the UI).
+  std::string label;
+
+  /// The line of the step-in target.
+  uint32_t line = LLDB_INVALID_LINE_NUMBER;
+
+  /// Start position of the range covered by the step in target. It is measured
+  /// in UTF-16 code units and the client capability `columnsStartAt1`
+  /// determines whether it is 0- or 1-based.
+  uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
+
+  /// The end line of the range covered by the step-in target.
+  uint32_t endLine = LLDB_INVALID_LINE_NUMBER;
+
+  /// End position of the range covered by the step in target. It is measured in
+  /// UTF-16 code units and the client capability `columnsStartAt1` determines
+  /// whether it is 0- or 1-based.
+  uint32_t endColumn = LLDB_INVALID_COLUMN_NUMBER;
+};
+bool fromJSON(const llvm::json::Value &, StepInTarget &, llvm::json::Path);
+llvm::json::Value toJSON(const StepInTarget &);
+
 /// A Thread.
 struct Thread {
   /// Unique identifier for the thread.

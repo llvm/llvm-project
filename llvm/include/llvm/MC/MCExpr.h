@@ -510,12 +510,16 @@ protected:
   // Target-specific relocation specifier code
   const Spec specifier;
 
-public:
-  explicit MCSpecifierExpr(const MCExpr *Expr, Spec S)
-      : MCExpr(Specifier, SMLoc()), Expr(Expr), specifier(S) {}
+  explicit MCSpecifierExpr(const MCExpr *Expr, Spec S, SMLoc Loc = SMLoc())
+      : MCExpr(Specifier, Loc), Expr(Expr), specifier(S) {}
   virtual ~MCSpecifierExpr() = default;
 
 public:
+  LLVM_ABI static const MCSpecifierExpr *
+  create(const MCExpr *Expr, Spec S, MCContext &Ctx, SMLoc Loc = SMLoc());
+  LLVM_ABI static const MCSpecifierExpr *
+  create(const MCSymbol *Sym, Spec S, MCContext &Ctx, SMLoc Loc = SMLoc());
+
   Spec getSpecifier() const { return specifier; }
   const MCExpr *getSubExpr() const { return Expr; }
 

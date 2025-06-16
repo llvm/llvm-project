@@ -50,7 +50,7 @@ SparcELFMCAsmInfo::getExprForPersonalitySymbol(const MCSymbol *Sym,
                                                MCStreamer &Streamer) const {
   if (Encoding & dwarf::DW_EH_PE_pcrel) {
     MCContext &Ctx = Streamer.getContext();
-    return Sparc::createSpecifierExpr(Ctx, Sym, ELF::R_SPARC_DISP32);
+    return MCSpecifierExpr::create(Sym, ELF::R_SPARC_DISP32, Ctx);
   }
 
   return MCAsmInfo::getExprForPersonalitySymbol(Sym, Encoding, Streamer);
@@ -62,7 +62,7 @@ SparcELFMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
                                        MCStreamer &Streamer) const {
   if (Encoding & dwarf::DW_EH_PE_pcrel) {
     MCContext &Ctx = Streamer.getContext();
-    return Sparc::createSpecifierExpr(Ctx, Sym, ELF::R_SPARC_DISP32);
+    return MCSpecifierExpr::create(Sym, ELF::R_SPARC_DISP32, Ctx);
   }
   return MCAsmInfo::getExprForFDESymbol(Sym, Encoding, Streamer);
 }

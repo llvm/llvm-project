@@ -128,6 +128,10 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %8 = spirv.GL.FindSMsb %arg3 : vector<3xi32>
     // CHECK: {{%.*}} = spirv.GL.FindUMsb {{%.*}} : vector<3xi32>
     %9 = spirv.GL.FindUMsb %arg3 : vector<3xi32>
+    // CHECK: {{%.*}} = spirv.GL.Length {{%.*}} : f32 -> f32
+    %10 = spirv.GL.Length %arg0 : f32 -> f32
+    // CHECK: {{%.*}} = spirv.GL.Length {{%.*}} : vector<3xf32> -> f32
+    %11 = spirv.GL.Length %arg1 : vector<3xf32> -> f32
     spirv.Return
   }
 

@@ -430,6 +430,10 @@ static void checkOptions(Ctx &ctx) {
                         "RISC-V targets";
     if (ctx.arg.zZicfissReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z zicfiss-report is only supported on RISC-V targets";
+    if (ctx.arg.zZicfilp != ZicfilpPolicy::Implicit)
+      ErrAlways(ctx) << "-z zicfilp is only supported on RISC-V targets";
+    if (ctx.arg.zZicfiss != ZicfissPolicy::Implicit)
+      ErrAlways(ctx) << "-z zicfiss is only supported on RISC-V targets";
   }
 
   if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
@@ -579,6 +583,46 @@ static GcsPolicy getZGcs(Ctx &ctx, opt::InputArgList &args) {
         ret = GcsPolicy::Always;
       else
         ErrAlways(ctx) << "unknown -z gcs= value: " << kv.second;
+    }
+  }
+  return ret;
+}
+
+static ZicfilpPolicy getZZicfilp(Ctx &ctx, opt::InputArgList &args) {
+  auto ret = ZicfilpPolicy::Implicit;
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "zicfilp") {
+      arg->claim();
+      if (kv.second == "unlabeled")
+        ret = ZicfilpPolicy::Unlabeled;
+      else if (kv.second == "func-sig")
+        ret = ZicfilpPolicy::FuncSig;
+      else if (kv.second == "never")
+        ret = ZicfilpPolicy::Never;
+      else if (kv.second == "implicit")
+        ret = ZicfilpPolicy::Implicit;
+      else
+        ErrAlways(ctx) << "unknown -z zicfilp= value: " << kv.second;
+    }
+  }
+  return ret;
+}
+
+static ZicfissPolicy getZZicfiss(Ctx &ctx, opt::InputArgList &args) {
+  auto ret = ZicfissPolicy::Implicit;
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "zicfiss") {
+      arg->claim();
+      if (kv.second == "always")
+        ret = ZicfissPolicy::Always;
+      else if (kv.second == "never")
+        ret = ZicfissPolicy::Never;
+      else if (kv.second == "implicit")
+        ret = ZicfissPolicy::Implicit;
+      else
+        ErrAlways(ctx) << "unknown -z zicfiss= value: " << kv.second;
     }
   }
   return ret;
@@ -1567,6 +1611,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
   ctx.arg.zForceBti = hasZOption(args, "force-bti");
   ctx.arg.zForceIbt = hasZOption(args, "force-ibt");
+  ctx.arg.zZicfilp = getZZicfilp(ctx, args);
+  ctx.arg.zZicfiss = getZZicfiss(ctx, args);
   ctx.arg.zGcs = getZGcs(ctx, args);
   ctx.arg.zGlobal = hasZOption(args, "global");
   ctx.arg.zGnustack = getZGnuStack(args);
@@ -2926,6 +2972,18 @@ static void readSecurityNotes(Ctx &ctx) {
           << f
           << ": -z zicfiss-report: file does not have "
              "GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS property";
+
+      if (ctx.arg.zZicfilp == ZicfilpPolicy::Unlabeled &&
+          (features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG))
+        Warn(ctx) << f
+                  << ": -z zicfilp=unlabeled: file has conflicting property: "
+                     "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG";
+
+      if (ctx.arg.zZicfilp == ZicfilpPolicy::FuncSig &&
+          (features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED))
+        Warn(ctx) << f
+                  << ": -z zicfilp=func-sig: file has conflicting property: "
+                     "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED";
     }
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
@@ -2988,6 +3046,25 @@ static void readSecurityNotes(Ctx &ctx) {
     ctx.arg.andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
   else if (ctx.arg.zGcs == GcsPolicy::Never)
     ctx.arg.andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+
+  if (ctx.arg.emachine == EM_RISCV) {
+    // Force enable/disable Zicfilp.
+    if (ctx.arg.zZicfilp == ZicfilpPolicy::Unlabeled) {
+      ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
+      ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG;
+    } else if (ctx.arg.zZicfilp == ZicfilpPolicy::FuncSig) {
+      ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG;
+      ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
+    } else if (ctx.arg.zZicfilp == ZicfilpPolicy::Never)
+      ctx.arg.andFeatures &= ~(GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED |
+                               GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG);
+
+    // Force enable/disable Zicfiss.
+    if (ctx.arg.zZicfiss == ZicfissPolicy::Always)
+      ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+    else if (ctx.arg.zZicfiss == ZicfissPolicy::Never)
+      ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+  }
 
   // If we are utilising GCS at any stage, the sharedFiles should be checked to
   // ensure they also support this feature. The gcs-report-dynamic option is
