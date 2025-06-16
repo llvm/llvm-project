@@ -687,7 +687,7 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     // Layouts are needed only for vector and tensor descriptor types.
     if (!isa<VectorType, xegpu::TensorDescType>(resultType))
       continue;
-    // If the result has any users, emit a warning and continue.
+    // If the result has no layout but has users, emit a warning and continue.
     xegpu::LayoutAttr layout = getLayoutOfValue(result);
     if (!layout && result.getNumUses() > 0) {
       op->emitWarning("op has users but no layout assigned for its result");
@@ -867,10 +867,10 @@ struct XeGPULayoutPropagatePass final
 } // namespace
 
 void XeGPULayoutPropagatePass::runOnOperation() {
-  auto &analyis = getAnalysis<RunLayoutInfoPropagation>();
+  auto &analysis = getAnalysis<RunLayoutInfoPropagation>();
   // Helper to convert LayoutInfo to xegpu::LayoutAttr.
   auto getXeGPULayoutForValue = [&](Value val) -> xegpu::LayoutAttr {
-    LayoutInfo layout = analyis.getLayoutInfo(val);
+    LayoutInfo layout = analysis.getLayoutInfo(val);
     if (!layout.isAssigned())
       return {};
 
