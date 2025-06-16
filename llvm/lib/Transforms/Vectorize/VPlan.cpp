@@ -1071,7 +1071,14 @@ void VPlan::execute(VPTransformState *State) {
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   // For now only return the cost of the vector loop region, ignoring any other
   // blocks, like the preheader or middle blocks.
-  return getVectorLoopRegion()->cost(VF, Ctx);
+  InstructionCost Cost = getVectorLoopRegion()->cost(VF, Ctx);
+
+  // If any instructions in the middle block are invalid return invalid.
+  // TODO: Remove once no VPlans with VF == vscale x 1 and first-order recurrences are created.
+  if (!getMiddleBlock()->cost(VF, Ctx).isValid())
+    return InstructionCost::getInvalid();
+
+  return Cost;
 }
 
 VPRegionBlock *VPlan::getVectorLoopRegion() {
