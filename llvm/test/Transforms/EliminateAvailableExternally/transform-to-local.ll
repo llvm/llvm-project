@@ -47,7 +47,7 @@ define void @hello(ptr %g) !guid !0 {
 ; CHECK-NEXT: load ptr, ptr @f
 ; CHECK-NEXT: call void @call_out(ptr %f)
 ; CHECK: Statistics Collected
-; CHECK: 1 elim-avail-extern - Number of functions converted
+; CHECK: 1 elim-avail-extern - Number of functions and globalbs converted
 ; CHECK: 1 elim-avail-extern - Number of functions removed
 
 ; NOOP: 2 elim-avail-extern - Number of functions removed

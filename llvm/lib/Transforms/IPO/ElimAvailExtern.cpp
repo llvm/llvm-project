@@ -35,8 +35,14 @@ static cl::opt<bool> ConvertToLocal(
     cl::desc("Convert available_externally into locals, renaming them "
              "to avoid link-time clashes."));
 
+static cl::opt<unsigned> ConvertGlobalVariableInAddrSpace(
+    "avail-extern-gv-in-addrspace-to-local", cl::Hidden,
+    cl::desc(
+        "Convert available_externally global variables into locals if they are "
+        "in specificed addrspace, renaming them to avoid link-time clashes."));
+
 STATISTIC(NumRemovals, "Number of functions removed");
-STATISTIC(NumConversions, "Number of functions converted");
+STATISTIC(NumConversions, "Number of functions and globalbs converted");
 STATISTIC(NumVariables, "Number of global variables removed");
 
 void deleteFunction(Function &F) {
@@ -88,8 +94,31 @@ static void convertToLocalCopy(Module &M, Function &F) {
   ++NumConversions;
 }
 
+static void convertToLocalCopy(Module &M, GlobalValue &GV) {
+  assert(GV.hasAvailableExternallyLinkage());
+  std::string OrigName = GV.getName().str();
+  std::string NewName = OrigName + ".__uniq" + getUniqueModuleId(&M);
+  GV.setName(NewName);
+  GV.setLinkage(GlobalValue::InternalLinkage);
+  ++NumConversions;
+}
+
 static bool eliminateAvailableExternally(Module &M, bool Convert) {
   bool Changed = false;
+
+  // Convert global variables in specified address space before changing it to
+  // external linkage below.
+  if (ConvertGlobalVariableInAddrSpace.getNumOccurrences()) {
+    for (GlobalVariable &GV : M.globals()) {
+      if (!GV.hasAvailableExternallyLinkage() || GV.use_empty())
+        continue;
+
+      if (GV.getAddressSpace() == ConvertGlobalVariableInAddrSpace) {
+        convertToLocalCopy(M, GV);
+        Changed = true;
+      }
+    }
+  }
 
   // Drop initializers of available externally global variables.
   for (GlobalVariable &GV : M.globals()) {
