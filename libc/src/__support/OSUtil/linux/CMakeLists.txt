@@ -9,6 +9,7 @@ add_object_library(
   SRCS
     exit.cpp
     fcntl.cpp
+    mmap.cpp
   HDRS
     io.h
     syscall.h

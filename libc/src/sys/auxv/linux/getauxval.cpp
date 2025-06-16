@@ -18,7 +18,7 @@
 #include "src/__support/threads/linux/futex_word.h"
 
 // for mallocing the global auxv
-#include "src/sys/mman/mmap.h"
+#include "src/__support/OSUtil/mmap.h"
 #include "src/sys/mman/munmap.h"
 
 // for reading /proc/self/auxv
@@ -60,8 +60,8 @@ public:
   constexpr static size_t AUXV_MMAP_SIZE = sizeof(AuxEntry) * MAX_AUXV_ENTRIES;
 
   AuxvMMapGuard()
-      : ptr(mmap(nullptr, AUXV_MMAP_SIZE, PROT_READ | PROT_WRITE,
-                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) {}
+      : ptr(internal::mmap(nullptr, AUXV_MMAP_SIZE, PROT_READ | PROT_WRITE,
+                           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) {}
   ~AuxvMMapGuard() {
     if (ptr != MAP_FAILED)
       munmap(ptr, AUXV_MMAP_SIZE);
