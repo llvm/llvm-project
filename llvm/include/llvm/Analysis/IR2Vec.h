@@ -31,7 +31,9 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/JSON.h"
 #include <map>
 
 namespace llvm {
@@ -43,6 +45,7 @@ class Function;
 class Type;
 class Value;
 class raw_ostream;
+class LLVMContext;
 
 /// IR2Vec computes two kinds of embeddings: Symbolic and Flow-aware.
 /// Symbolic embeddings capture the "syntactic" and "statistical correlation"
@@ -53,7 +56,68 @@ class raw_ostream;
 enum class IR2VecKind { Symbolic };
 
 namespace ir2vec {
-using Embedding = std::vector<double>;
+
+extern cl::opt<float> OpcWeight;
+extern cl::opt<float> TypeWeight;
+extern cl::opt<float> ArgWeight;
+
+/// Embedding is a datatype that wraps std::vector<double>. It provides
+/// additional functionality for arithmetic and comparison operations.
+/// It is meant to be used *like* std::vector<double> but is more restrictive
+/// in the sense that it does not allow the user to change the size of the
+/// embedding vector. The dimension of the embedding is fixed at the time of
+/// construction of Embedding object. But the elements can be modified in-place.
+struct Embedding {
+private:
+  std::vector<double> Data;
+
+public:
+  Embedding() = default;
+  Embedding(const std::vector<double> &V) : Data(V) {}
+  Embedding(std::vector<double> &&V) : Data(std::move(V)) {}
+  Embedding(std::initializer_list<double> IL) : Data(IL) {}
+
+  explicit Embedding(size_t Size) : Data(Size) {}
+  Embedding(size_t Size, double InitialValue) : Data(Size, InitialValue) {}
+
+  size_t size() const { return Data.size(); }
+  bool empty() const { return Data.empty(); }
+
+  double &operator[](size_t Itr) {
+    assert(Itr < Data.size() && "Index out of bounds");
+    return Data[Itr];
+  }
+
+  const double &operator[](size_t Itr) const {
+    assert(Itr < Data.size() && "Index out of bounds");
+    return Data[Itr];
+  }
+
+  using iterator = typename std::vector<double>::iterator;
+  using const_iterator = typename std::vector<double>::const_iterator;
+
+  iterator begin() { return Data.begin(); }
+  iterator end() { return Data.end(); }
+  const_iterator begin() const { return Data.begin(); }
+  const_iterator end() const { return Data.end(); }
+  const_iterator cbegin() const { return Data.cbegin(); }
+  const_iterator cend() const { return Data.cend(); }
+
+  const std::vector<double> &getData() const { return Data; }
+
+  /// Arithmetic operators
+  Embedding &operator+=(const Embedding &RHS);
+  Embedding &operator-=(const Embedding &RHS);
+
+  /// Adds Src Embedding scaled by Factor with the called Embedding.
+  /// Called_Embedding += Src * Factor
+  Embedding &scaleAndAdd(const Embedding &Src, float Factor);
+
+  /// Returns true if the embedding is approximately equal to the RHS embedding
+  /// within the specified tolerance.
+  bool approximatelyEquals(const Embedding &RHS, double Tolerance = 1e-6) const;
+};
+
 using InstEmbeddingsMap = DenseMap<const Instruction *, Embedding>;
 using BBEmbeddingsMap = DenseMap<const BasicBlock *, Embedding>;
 // FIXME: Current the keys are strings. This can be changed to
@@ -61,8 +125,8 @@ using BBEmbeddingsMap = DenseMap<const BasicBlock *, Embedding>;
 using Vocab = std::map<std::string, Embedding>;
 
 /// Embedder provides the interface to generate embeddings (vector
-/// representations) for instructions, basic blocks, and functions. The vector
-/// representations are generated using IR2Vec algorithms.
+/// representations) for instructions, basic blocks, and functions. The
+/// vector representations are generated using IR2Vec algorithms.
 ///
 /// The Embedder class is an abstract class and it is intended to be
 /// subclassed for different IR2Vec algorithms like Symbolic and Flow-aware.
@@ -98,13 +162,6 @@ protected:
   /// Lookup vocabulary for a given Key. If the key is not found, it returns a
   /// zero vector.
   Embedding lookupVocab(const std::string &Key) const;
-
-  /// Adds two vectors: Dst += Src
-  static void addVectors(Embedding &Dst, const Embedding &Src);
-
-  /// Adds Src vector scaled by Factor to Dst vector: Dst += Src * Factor
-  static void addScaledVector(Embedding &Dst, const Embedding &Src,
-                              float Factor);
 
 public:
   virtual ~Embedder() = default;
@@ -177,10 +234,13 @@ public:
 class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
   ir2vec::Vocab Vocabulary;
   Error readVocabulary();
+  void emitError(Error Err, LLVMContext &Ctx);
 
 public:
   static AnalysisKey Key;
   IR2VecVocabAnalysis() = default;
+  explicit IR2VecVocabAnalysis(const ir2vec::Vocab &Vocab);
+  explicit IR2VecVocabAnalysis(ir2vec::Vocab &&Vocab);
   using Result = IR2VecVocabResult;
   Result run(Module &M, ModuleAnalysisManager &MAM);
 };

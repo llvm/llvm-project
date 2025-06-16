@@ -127,7 +127,6 @@ add_libc_test(
     libc.src.__support.integer_literals
     libc.src.__support.str_to_float
     libc.src.__support.uint128
-    libc.src.errno.errno
 )
 
 
@@ -140,7 +139,6 @@ add_libc_test(
   DEPENDS
     libc.src.__support.integer_literals
     libc.src.__support.str_to_integer
-    libc.src.errno.errno
 )
 
 add_libc_test(
