@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Remarks/RemarkFormat.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <optional>
@@ -27,7 +26,7 @@ struct Remark;
 
 class EndOfFileError : public ErrorInfo<EndOfFileError> {
 public:
-  LLVM_ABI static char ID;
+  static char ID;
 
   EndOfFileError() = default;
 
@@ -65,7 +64,7 @@ struct ParsedStringTable {
   /// SmallVector for once.
   std::vector<size_t> Offsets;
 
-  LLVM_ABI ParsedStringTable(StringRef Buffer);
+  ParsedStringTable(StringRef Buffer);
   /// Disable copy.
   ParsedStringTable(const ParsedStringTable &) = delete;
   ParsedStringTable &operator=(const ParsedStringTable &) = delete;
@@ -74,17 +73,17 @@ struct ParsedStringTable {
   ParsedStringTable &operator=(ParsedStringTable &&) = default;
 
   size_t size() const { return Offsets.size(); }
-  LLVM_ABI Expected<StringRef> operator[](size_t Index) const;
+  Expected<StringRef> operator[](size_t Index) const;
 };
 
-LLVM_ABI Expected<std::unique_ptr<RemarkParser>>
-createRemarkParser(Format ParserFormat, StringRef Buf);
+Expected<std::unique_ptr<RemarkParser>> createRemarkParser(Format ParserFormat,
+                                                           StringRef Buf);
 
-LLVM_ABI Expected<std::unique_ptr<RemarkParser>>
+Expected<std::unique_ptr<RemarkParser>>
 createRemarkParser(Format ParserFormat, StringRef Buf,
                    ParsedStringTable StrTab);
 
-LLVM_ABI Expected<std::unique_ptr<RemarkParser>> createRemarkParserFromMeta(
+Expected<std::unique_ptr<RemarkParser>> createRemarkParserFromMeta(
     Format ParserFormat, StringRef Buf,
     std::optional<ParsedStringTable> StrTab = std::nullopt,
     std::optional<StringRef> ExternalFilePrependPath = std::nullopt);

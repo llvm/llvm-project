@@ -16,7 +16,6 @@
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkStringTable.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <optional>
@@ -70,7 +69,7 @@ private:
 
 public:
   /// Set a path to prepend to the external file path.
-  LLVM_ABI void setExternalFilePrependPath(StringRef PrependPath);
+  void setExternalFilePrependPath(StringRef PrependPath);
 
   /// Set KeepAllRemarks to \p B.
   void setKeepAllRemarks(bool B) { KeepAllRemarks = B; }
@@ -80,19 +79,19 @@ public:
   /// \p Buffer.
   /// \p Buffer can be either a standalone remark container or just
   /// metadata. This takes care of uniquing and merging the remarks.
-  LLVM_ABI Error link(StringRef Buffer,
-                      std::optional<Format> RemarkFormat = std::nullopt);
+  Error link(StringRef Buffer,
+             std::optional<Format> RemarkFormat = std::nullopt);
 
   /// Link the remarks found in \p Obj by looking for the right section and
   /// calling the method above.
-  LLVM_ABI Error link(const object::ObjectFile &Obj,
-                      std::optional<Format> RemarkFormat = std::nullopt);
+  Error link(const object::ObjectFile &Obj,
+             std::optional<Format> RemarkFormat = std::nullopt);
 
   /// Serialize the linked remarks to the stream \p OS, using the format \p
   /// RemarkFormat.
   /// This clears internal state such as the string table.
   /// Note: this implies that the serialization mode is standalone.
-  LLVM_ABI Error serialize(raw_ostream &OS, Format RemarksFormat) const;
+  Error serialize(raw_ostream &OS, Format RemarksFormat) const;
 
   /// Check whether there are any remarks linked.
   bool empty() const { return Remarks.empty(); }
@@ -110,7 +109,7 @@ public:
 /// Returns a buffer with the contents of the remarks section depending on the
 /// format of the file. If the section doesn't exist, this returns an empty
 /// optional.
-LLVM_ABI Expected<std::optional<StringRef>>
+Expected<std::optional<StringRef>>
 getRemarksSectionContents(const object::ObjectFile &Obj);
 
 } // end namespace remarks

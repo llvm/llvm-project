@@ -14,7 +14,6 @@
 #define LLVM_REMARKS_REMARKFORMAT_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -26,10 +25,10 @@ constexpr StringLiteral Magic("REMARKS");
 enum class Format { Unknown, YAML, YAMLStrTab, Bitstream };
 
 /// Parse and validate a string for the remark format.
-LLVM_ABI Expected<Format> parseFormat(StringRef FormatStr);
+Expected<Format> parseFormat(StringRef FormatStr);
 
 /// Parse and validate a magic number to a remark format.
-LLVM_ABI Expected<Format> magicToFormat(StringRef Magic);
+Expected<Format> magicToFormat(StringRef Magic);
 
 } // end namespace remarks
 } // end namespace llvm
