@@ -17,6 +17,7 @@
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
@@ -150,6 +151,14 @@ void SymbolData::anchor() {}
 
 void SymbolRegionValue::dumpToStream(raw_ostream &os) const {
   os << getKindStr() << getSymbolID() << '<' << getType() << ' ' << R << '>';
+}
+
+SymbolManager::SymbolManager(ASTContext &ctx, BasicValueFactory &bv,
+                             llvm::BumpPtrAllocator &bpalloc,
+                             const AnalyzerOptions &Opts)
+    : SymbolDependencies(16), Alloc(bpalloc), BV(bv), Ctx(ctx),
+      MaxCompComplexity(Opts.MaxSymbolComplexity) {
+  assert(MaxCompComplexity > 0 && "Zero max complexity doesn't make sense");
 }
 
 bool SymExpr::symbol_iterator::operator==(const symbol_iterator &X) const {

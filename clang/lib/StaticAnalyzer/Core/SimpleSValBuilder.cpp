@@ -290,10 +290,10 @@ static std::pair<SymbolRef, APSIntPtr> decomposeSymbol(SymbolRef Sym,
 // Simplify "(LSym + LInt) Op (RSym + RInt)" assuming all values are of the
 // same signed integral type and no overflows occur (which should be checked
 // by the caller).
-static NonLoc doRearrangeUnchecked(ProgramStateRef State,
-                                   BinaryOperator::Opcode Op, SymbolRef LSym,
-                                   llvm::APSInt LInt, SymbolRef RSym,
-                                   llvm::APSInt RInt) {
+static SVal doRearrangeUnchecked(ProgramStateRef State,
+                                 BinaryOperator::Opcode Op, SymbolRef LSym,
+                                 llvm::APSInt LInt, SymbolRef RSym,
+                                 llvm::APSInt RInt) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   BasicValueFactory &BV = SVB.getBasicValueFactory();
   SymbolManager &SymMgr = SVB.getSymbolManager();
@@ -315,10 +315,8 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
     llvm_unreachable("Operation not suitable for unchecked rearrangement!");
 
   if (LSym == RSym)
-    return SVB
-        .evalBinOp(State, Op, nonloc::ConcreteInt(BV.getValue(LInt)),
-                   nonloc::ConcreteInt(BV.getValue(RInt)), ResultTy)
-        .castAs<NonLoc>();
+    return SVB.evalBinOp(State, Op, nonloc::ConcreteInt(BV.getValue(LInt)),
+                         nonloc::ConcreteInt(BV.getValue(RInt)), ResultTy);
 
   SymbolRef ResultSym = nullptr;
   BinaryOperator::Opcode ResultOp;
@@ -417,7 +415,8 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
     return std::nullopt;
 
   // We know that no overflows can occur anymore.
-  return doRearrangeUnchecked(State, Op, LSym, LInt, RSym, RInt);
+  return doRearrangeUnchecked(State, Op, LSym, LInt, RSym, RInt)
+      .getAs<NonLoc>();
 }
 
 SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,

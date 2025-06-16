@@ -488,6 +488,10 @@ SVal SValBuilder::evalUnaryOp(ProgramStateRef state, UnaryOperator::Opcode opc,
   llvm_unreachable("Unexpected unary operator");
 }
 
+static unsigned getComplexity(SymbolRef Sym) {
+  return Sym ? Sym->complexity() : 1;
+}
+
 SVal SValBuilder::evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
                             SVal lhs, SVal rhs, QualType type) {
   if (lhs.isUndef() || rhs.isUndef())
@@ -497,6 +501,14 @@ SVal SValBuilder::evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
     return UnknownVal();
 
   if (isa<nonloc::LazyCompoundVal>(lhs) || isa<nonloc::LazyCompoundVal>(rhs)) {
+    return UnknownVal();
+  }
+
+  unsigned LeftComplexity = getComplexity(lhs.getAsSymbol());
+  unsigned RightComplexity = getComplexity(rhs.getAsSymbol());
+  // TODO: When the Max Complexity is reached, we should conjure a symbol
+  // instead of generating an Unknown value and propagate the taint info to it.
+  if (LeftComplexity + RightComplexity > AnOpts.MaxSymbolComplexity) {
     return UnknownVal();
   }
 
@@ -1102,6 +1114,8 @@ public:
 /// FIXME: If `OriginalTy.isNull()` is true, then cast performs based on CastTy
 /// only. This behavior is uncertain and should be improved.
 SVal SValBuilder::evalCast(SVal V, QualType CastTy, QualType OriginalTy) {
+  // TODO: Check if we are potentially about to exceed the MaxSymbolComplexity.
+  // Return Unknown in that case.
   EvalCastVisitor TRV{*this, CastTy, OriginalTy};
   return TRV.Visit(V);
 }

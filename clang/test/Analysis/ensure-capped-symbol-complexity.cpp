@@ -34,7 +34,7 @@ void pumpSymbolComplexity() {
 
   // This dump used to print a hugely complicated symbol, over 800 complexity, taking really long to simplify.
   clang_analyzer_dump(*p);
-  // expected-warning-re@-1 {{{{^}}(complex_${{[0-9]+}}) & 1023}} [debug.ExprInspection]{{$}}}}
+  // expected-warning-re@-1 {{{{^}}conj_${{[0-9]+}}{int, LC{{[0-9]+}}, S{{[0-9]+}}, #{{[0-9]+}}} [debug.ExprInspection]{{$}}}}
 }
 
 void hugelyOverComplicatedSymbol() {
@@ -45,14 +45,10 @@ void hugelyOverComplicatedSymbol() {
   HUNDRED_TIMES(*p = (*p + 1) & 1023;)
   HUNDRED_TIMES(*p = (*p + 1) & 1023;)
   HUNDRED_TIMES(*p = (*p + 1) & 1023;)
-  *p = (*p + 1) & 1023;
-  *p = (*p + 1) & 1023;
-  *p = (*p + 1) & 1023;
-  *p = (*p + 1) & 1023;
 
   // This dump used to print a hugely complicated symbol, over 800 complexity, taking really long to simplify.
   clang_analyzer_dump(*p);
-  // expected-warning-re@-1 {{{{^}}(((complex_${{[0-9]+}}) & 1023) + 1) & 1023 [debug.ExprInspection]{{$}}}}
+  // expected-warning-re@-1 {{{{^}}((((((((conj_${{[0-9]+}}{int, LC{{[0-9]+}}, S{{[0-9]+}}, #{{[0-9]+}}}) + 1) & 1023) + 1) & 1023) + 1) & 1023) + 1) & 1023 [debug.ExprInspection]{{$}}}}
 #undef HUNDRED_TIMES
 #undef TEN_TIMES
 }

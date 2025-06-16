@@ -36,6 +36,7 @@
 
 namespace clang {
 
+class AnalyzerOptions;
 class ASTContext;
 class Stmt;
 
@@ -581,21 +582,15 @@ class SymbolManager {
 
 public:
   SymbolManager(ASTContext &ctx, BasicValueFactory &bv,
-                llvm::BumpPtrAllocator &bpalloc, const AnalyzerOptions &Opts)
-      : SymbolDependencies(16), Alloc(bpalloc), BV(bv), Ctx(ctx),
-        MaxCompComplexity(Opts.MaxSymbolComplexity) {
-    assert(MaxCompComplexity > 0 && "Zero max complexity doesn't make sense");
-  }
+                llvm::BumpPtrAllocator &bpalloc, const AnalyzerOptions &Opts);
 
   static bool canSymbolicate(QualType T);
 
   /// Create or retrieve a SymExpr of type \p T for the given arguments.
   /// Use the arguments to check for an existing SymExpr and return it,
   /// otherwise, create a new one and keep a pointer to it to avoid duplicates.
-  template <typename T, typename... Args,
-            typename Ret = std::conditional_t<SymbolData::classof(T::ClassKind),
-                                              T, SymExpr>>
-  LLVM_ATTRIBUTE_RETURNS_NONNULL const Ret *acquire(Args &&...args);
+  template <typename T, typename... Args>
+  LLVM_ATTRIBUTE_RETURNS_NONNULL const T *acquire(Args &&...args);
 
   const SymbolConjured *conjureSymbol(ConstCFGElementRef Elem,
                                       const LocationContext *LCtx, QualType T,
@@ -733,37 +728,19 @@ public:
   virtual bool VisitMemRegion(const MemRegion *) { return true; }
 };
 
-// Returns a const pointer to T if T is a SymbolData, otherwise SymExpr.
-template <typename T, typename... Args, typename Ret>
-const Ret *SymbolManager::acquire(Args &&...args) {
-  T Dummy(/*SymbolID=*/0, args...);
-  llvm::FoldingSetNodeID DummyProfile;
-  Dummy.Profile(DummyProfile);
-
-  if (Dummy.complexity() <= MaxCompComplexity) {
-    void *InsertPos;
-    SymExpr *SD = DataSet.FindNodeOrInsertPos(DummyProfile, InsertPos);
-    if (!SD) {
-      SD = Alloc.make<T>(args...);
-      DataSet.InsertNode(SD, InsertPos);
-    }
-    return cast<Ret>(SD);
-  }
-
-  SymbolOverlyComplex OverlyComplexSym(/*SymbolID=*/0, Dummy.getType(),
-                                       DummyProfile.ComputeHash());
-  llvm::FoldingSetNodeID OverlyComplexSymProfile;
-  OverlyComplexSym.Profile(OverlyComplexSymProfile);
-
-  void *OverlyComplexSymInsertPos;
-  SymExpr *SD = DataSet.FindNodeOrInsertPos(OverlyComplexSymProfile,
-                                            OverlyComplexSymInsertPos);
+template <typename T, typename... Args>
+const T *SymbolManager::acquire(Args &&...args) {
+  llvm::FoldingSetNodeID profile;
+  T::Profile(profile, args...);
+  void *InsertPos;
+  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
-    SD = Alloc.make<SymbolOverlyComplex>(Dummy.getType(),
-                                         DummyProfile.ComputeHash());
-    DataSet.InsertNode(SD, OverlyComplexSymInsertPos);
+    SD = Alloc.make<T>(std::forward<Args>(args)...);
+    DataSet.InsertNode(SD, InsertPos);
+    assert(SD->complexity() <= MaxCompComplexity);
   }
-  return cast<Ret>(SD);
+
+  return cast<T>(SD);
 }
 
 } // namespace ento
