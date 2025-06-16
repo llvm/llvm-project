@@ -105,12 +105,7 @@ struct TestXeGPUUnrollingPatterns
             Attribute encoding = tdescTy.getEncoding();
             auto layout = llvm::dyn_cast_if_present<xegpu::LayoutAttr>(
                 tdescTy.getLayout());
-            
-            int64_t newChunkSize = 0;
-            auto instData = layout.getInstData();
-            if (!instData.empty())
-              newChunkSize = instData.asArrayRef().back();   
-            
+           
             if (layout) {
               if (layout.getLaneLayout() == nullptr)
                 layout = xegpu::LayoutAttr();
@@ -118,12 +113,15 @@ struct TestXeGPUUnrollingPatterns
                 layout = layout.dropInstData();
             }
 
-            SmallVector<NamedAttribute> attrs;
-            auto scatterAttr = mlir::dyn_cast<xegpu::ScatterTensorDescAttr>(encoding);
-            if (scatterAttr) {
+            if (encoding && mlir::isa<xegpu::ScatterTensorDescAttr>(encoding)) {
+              auto scatterAttr = mlir::dyn_cast<xegpu::ScatterTensorDescAttr>(encoding);
               int64_t chunkSize = scatterAttr.getChunkSize().getInt();
               
               if (chunkSize > 1) {
+                int64_t newChunkSize = chunkSize;
+                auto instData = layout.getInstData();
+                if (!instData.empty())
+                  newChunkSize = instData.asArrayRef().back();   
 
                 auto chunkSizeAttr = mlir::IntegerAttr::get(
                   mlir::IntegerType::get(ctx, 64), newChunkSize);

@@ -267,7 +267,7 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     return success();
   }
 };
-
+/*
 struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
   using UnrollPattern<xegpu::StoreNdOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::StoreNdOp op,
@@ -294,6 +294,49 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
       rewriter.create<xegpu::StoreNdOp>(loc, v, t, op.getL1HintAttr(),
                                         op.getL2HintAttr(), op.getL3HintAttr());
 
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+*/
+
+struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
+  using UnrollPattern<xegpu::StoreNdOp>::UnrollPattern;
+  LogicalResult matchAndRewrite(xegpu::StoreNdOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    VectorType valueTy = op.getValueType();
+    xegpu::TensorDescType tdescTy = op.getTensorDescType();
+
+    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
+    LDBG("UnrollStoreNdOp: targetShape present? " << (targetShape.has_value() ? "yes" : "no"));
+    if (!targetShape)
+      return failure();
+
+    LDBG("targetShape: ");
+    for (auto v : *targetShape) LDBG("  " << v);
+
+    SmallVector<Type> convertedValTypes =
+        getUnrolledTypes(valueTy, *targetShape);
+    LDBG("convertedValTypes size: " << convertedValTypes.size());
+    SmallVector<Type> convertedTdescTypes =
+        getUnrolledTypes(tdescTy, *targetShape);
+    LDBG("convertedTdescTypes size: " << convertedTdescTypes.size());
+
+    SmallVector<Value> convertedValues =
+        pack(op.getValue(), convertedValTypes, *targetShape, loc, rewriter);
+    LDBG("convertedValues size: " << convertedValues.size());
+    SmallVector<Value> convertedTdescs = pack(
+        op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
+    LDBG("convertedTdescs size: " << convertedTdescs.size());
+
+    for (auto [v, t] : llvm::zip(convertedValues, convertedTdescs)) {
+      LDBG("Creating StoreNdOp with value: " << v << ", tdesc: " << t);
+      rewriter.create<xegpu::StoreNdOp>(loc, v, t, op.getL1HintAttr(),
+                                        op.getL2HintAttr(), op.getL3HintAttr());
+    }
+
+    LDBG("Erasing original StoreNdOp: " << op);
     rewriter.eraseOp(op);
     return success();
   }
@@ -402,37 +445,40 @@ struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     xegpu::TensorDescType tdescTy = op.getType();
-
-    // check if the tensor descriptor type is a 1d vector type
-    if (tdescTy.getRank() > 2)
-      return failure();
-
-    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape)
-      return failure();
-
-    auto newTdescTy = getUnrolledTypes(tdescTy, *targetShape)[0];
-
     TypedValue<::mlir::VectorType> indiceVec = op.getOffsets();
     VectorType indiceVecTy = indiceVec.getType();
 
-    SmallVector<Type> convertedIndiceTypes;
-    SmallVector<Value> convertedIndiceVec;
+    if (!tdescTy.isScattered())
+      return failure();
+    
+    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
+    if (!targetShape)
+      return failure();
+ 
+    SmallVector<int64_t> targetIndiceShape(*targetShape);
+    int64_t originalChunkSize = tdescTy.getChunkSize();
+    // IndiceVec is 1 dim lower than tdescTy when chunkSize is larger than 1.
+    if (originalChunkSize > 1)
+      targetIndiceShape.pop_back();
+
+    auto newTdescTy = getUnrolledTypes(tdescTy, *targetShape)[0];
+    SmallVector<Type> convertedIndiceTypes = 
+        getUnrolledTypes(indiceVecTy, targetIndiceShape);
+    SmallVector<Value> convertedIndiceVec = 
+        pack(indiceVec, convertedIndiceTypes, targetIndiceShape, loc, rewriter);
+    
     SmallVector<Value> newOps;
 
-    if (tdescTy.getRank() == 2) {
-      SmallVector<int64_t> shape1D(targetShape->begin(), targetShape->end() - 1);
-      convertedIndiceTypes = getUnrolledTypes(indiceVecTy, shape1D);
-      convertedIndiceVec = pack(indiceVec, convertedIndiceTypes, shape1D, loc, rewriter);
-
-      int64_t wholeChunk = tdescTy.getShape().back();
-      int64_t blockedChunk = targetShape->back();
-      int64_t numInnerLoops = wholeChunk / blockedChunk;
+    // more indices is need when chunkSize > 1. Since a big load from one
+    // address could be break into multiple small loads.
+    if (originalChunkSize > 1) {
+      int64_t blockedChunkSize = targetShape->back();
+      int64_t numNewChunks = originalChunkSize/blockedChunkSize;
 
       for (auto [indice, indiceType] : llvm::zip(convertedIndiceVec, convertedIndiceTypes)) {
-        for (int64_t i = 0; i < numInnerLoops; ++i) {
+        for (int64_t i = 0; i < numNewChunks; ++i) {
           // Compute the offset
-          Value inc = rewriter.create<arith::ConstantIndexOp>(loc, i * blockedChunk);
+          Value inc = rewriter.create<arith::ConstantIndexOp>(loc, i * blockedChunkSize);
           Value incVec = rewriter.create<vector::SplatOp>(loc, indiceType, inc);
           Value offsetIndice = rewriter.create<arith::AddIOp>(loc, indice, incVec);
 
@@ -443,8 +489,6 @@ struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
         }
       }
     } else {
-      convertedIndiceTypes = getUnrolledTypes(indiceVecTy, *targetShape);
-      convertedIndiceVec = pack(indiceVec, convertedIndiceTypes, *targetShape, loc, rewriter);
       for (auto indice : convertedIndiceVec) {
         auto newOp = rewriter.create<xegpu::CreateDescOp>(loc, newTdescTy,
                                                         op.getSource(), indice);
@@ -468,15 +512,17 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getValue().getType());
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    // check if the tensor descriptor type is a 1d vector type
-    if (tdescTy.getRank() > 2)
+    if (!tdescTy.isScattered())
       return failure();
     
-    VectorType maskTy = llvm::dyn_cast<VectorType>(op.getMask().getType());
-
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
     if (!targetShape)
       return failure();
+ 
+    SmallVector<int64_t> targetMaskShape(*targetShape);
+    int64_t originalChunkSize = tdescTy.getChunkSize();
+
+    VectorType maskTy = llvm::dyn_cast<VectorType>(op.getMask().getType());
 
     Type elemTy = tdescTy.getElementType();
     VectorType newValueTy = valueTy.cloneWith(*targetShape, elemTy);
@@ -489,25 +535,26 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
     SmallVector<Type> convertedMaskTypes; 
     SmallVector<Value> convertedMasks; 
 
-    if (tdescTy.getRank() == 2) {
-      convertedMaskTypes = getUnrolledTypes(maskTy, (*targetShape)[0]);
-      SmallVector<Value> convertedMasks1D = pack(op.getMask(), convertedMaskTypes, (*targetShape)[0], loc, rewriter);
-      int64_t wholeChunk = tdescTy.getShape().back();
-      int64_t blockedChunk = targetShape->back();
-      int64_t numInnerLoops = wholeChunk / blockedChunk;
+    if (originalChunkSize > 1) {
+      targetMaskShape.pop_back();
+      convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
+      SmallVector<Value> convertedMasks1D = pack(op.getMask(), convertedMaskTypes, targetMaskShape, loc, rewriter);
+      int64_t blockedChunkSize = targetShape->back();
+      int64_t numNewChunks = originalChunkSize/blockedChunkSize;
 
       for (auto mask : convertedMasks1D) {
-        for (int64_t i = 0; i < numInnerLoops; ++i) {
+        for (int64_t i = 0; i < numNewChunks; ++i) {
           convertedMasks.push_back(mask);
         }
       }
+      // This is to handle the transpose effect when chunkSize > 1. 
       if (targetShape && targetShape->size() > 1) {
         std::swap((*targetShape)[0], (*targetShape)[1]);
         newValueTy = valueTy.cloneWith(*targetShape, elemTy);
       }
     } else {
-      convertedMaskTypes = getUnrolledTypes(maskTy, *targetShape);
-      convertedMasks = pack(op.getMask(), convertedMaskTypes, *targetShape, loc, rewriter);
+      convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
+      convertedMasks = pack(op.getMask(), convertedMaskTypes, targetMaskShape, loc, rewriter);
     }
 
     SmallVector<Value> newOps;
@@ -561,38 +608,38 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getValue().getType());
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    // check if the tensor descriptor type is a 1d vector type
-    if (tdescTy.getRank() > 2)
+    if (!tdescTy.isScattered())
       return failure();
-
-    VectorType maskTy = llvm::dyn_cast<VectorType>(op.getMask().getType());
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
     if (!targetShape)
       return failure();
-      
+
+    SmallVector<int64_t> targetIndiceShape(*targetShape);
+    int64_t originalChunkSize = tdescTy.getChunkSize();
+
+    VectorType maskTy = llvm::dyn_cast<VectorType>(op.getMask().getType());
+     
     SmallVector<Type> convertedTdescTypes =
         getUnrolledTypes(tdescTy, *targetShape);
     SmallVector<Value> convertedTdescs = pack(
         op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
 
-
     SmallVector<Type> convertedMaskTypes; 
     SmallVector<Value> convertedMasks; 
 
-    if (tdescTy.getRank() == 2) {
+    if (originalChunkSize > 1) {
+      int64_t blockedChunkSize = targetShape->back();
+      int64_t numNewChunks = originalChunkSize/blockedChunkSize;
       convertedMaskTypes = getUnrolledTypes(maskTy, (*targetShape)[0]);
       SmallVector<Value> convertedMasks1D = pack(op.getMask(), convertedMaskTypes, (*targetShape)[0], loc, rewriter);
-      int64_t wholeChunk = tdescTy.getShape().back();
-      int64_t blockedChunk = targetShape->back();
-      int64_t numInnerLoops = wholeChunk / blockedChunk;
 
       for (auto mask : convertedMasks1D) {
-        for (int64_t i = 0; i < numInnerLoops; ++i) {
+        for (int64_t i = 0; i < numNewChunks; ++i) {
           convertedMasks.push_back(mask);
         }
       }
-
+      // This is to handle the transpose effect when chunkSize > 1. 
       std::swap((*targetShape)[0], (*targetShape)[1]);
 
     } else {
@@ -626,8 +673,10 @@ struct UnrollUpdateOffsetOp : public UnrollPattern<xegpu::UpdateOffsetOp> {
     Location loc = op.getLoc();
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    // check if the tensor descriptor type is a 1d vector type
-    if (tdescTy.getRank() > 2)
+    if (tdescTy.getRank() >2)
+      return failure();
+
+    if (!tdescTy.isScattered())
       return failure();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
@@ -644,18 +693,17 @@ struct UnrollUpdateOffsetOp : public UnrollPattern<xegpu::UpdateOffsetOp> {
     SmallVector<Type> convertedOffsetTypes;
     SmallVector<Value> convertedOffsetVec;
     SmallVector<Value> newOps;
-
-    if (tdescTy.getRank() == 2) {
+    int64_t originalChunkSize = tdescTy.getChunkSize();
+    if (originalChunkSize > 1) {
       SmallVector<int64_t> shape1D(targetShape->begin(), targetShape->end() - 1);
       convertedOffsetTypes = getUnrolledTypes(offsetVecTy, shape1D);
       SmallVector<Value> convertedOffsetVec1D = pack(offsetVec, convertedOffsetTypes, shape1D, loc, rewriter);
 
-      int64_t wholeChunk = tdescTy.getShape().back();
-      int64_t blockedChunk = targetShape->back();
-      int64_t numInnerLoops = wholeChunk / blockedChunk;
+      int64_t blockedChunkSize = targetShape->back();
+      int64_t numNewChunks = originalChunkSize/blockedChunkSize;
 
       for (auto offset : convertedOffsetVec1D) {
-        for (int64_t i = 0; i < numInnerLoops; ++i) {
+        for (int64_t i = 0; i < numNewChunks; ++i) {
           convertedOffsetVec.push_back(offset);
         }
       }
