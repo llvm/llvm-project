@@ -1341,6 +1341,8 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
     ApplyAtomGroup Grp(getDebugInfo());
     CM.addMemberInitializer(Member);
   }
+
+  ApplyAtomGroup Grp(getDebugInfo());
   CM.finish();
 }
 
