@@ -70,6 +70,12 @@ enum {
 };
 }
 
+namespace RISCV32 {
+enum {
+  NT_CSREGMAP = 20,
+};
+}
+
 struct CoreNote {
   ELFNote info;
   DataExtractor data;
@@ -113,6 +119,8 @@ constexpr RegsetDesc FPR_Desc[] = {
     {llvm::Triple::NetBSD, llvm::Triple::x86, NETBSD::I386::NT_FPREGS},
     {llvm::Triple::NetBSD, llvm::Triple::x86_64, NETBSD::AMD64::NT_FPREGS},
     {llvm::Triple::OpenBSD, llvm::Triple::UnknownArch, OPENBSD::NT_FPREGS},
+    // Bare-metal 32-bit RISC-V debug target.
+    {llvm::Triple::UnknownOS, llvm::Triple::riscv32, llvm::ELF::NT_FPREGSET},
 };
 
 constexpr RegsetDesc AARCH64_SVE_Desc[] = {
@@ -159,6 +167,10 @@ constexpr RegsetDesc PPC_VMX_Desc[] = {
 
 constexpr RegsetDesc PPC_VSX_Desc[] = {
     {llvm::Triple::Linux, llvm::Triple::UnknownArch, llvm::ELF::NT_PPC_VSX},
+};
+
+constexpr RegsetDesc RISCV32_CSREGMAP_Desc[] = {
+    {llvm::Triple::UnknownOS, llvm::Triple::riscv32, RISCV32::NT_CSREGMAP},
 };
 
 } // namespace lldb_private
