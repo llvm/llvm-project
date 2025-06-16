@@ -409,7 +409,7 @@ LogicalResult ExpressionOp::verify() {
   if (!rootOp)
     return emitOpError("yielded value has no defining op");
 
-  if (!isa<emitc::ExpressionOp>(rootOp->getParentOp()))
+  if (rootOp->getParentOp() != getOperation())
     return emitOpError("yielded value not defined within expression");
 
   Type yieldType = yieldResult.getType();
