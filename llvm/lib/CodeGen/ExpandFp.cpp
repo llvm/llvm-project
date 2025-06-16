@@ -260,7 +260,7 @@ private:
     Ret = B.CreateSelect(B.CreateFCmpUEQ(Y, ConstantFP::getZero(FremTy)), Nan,
                          Ret);
     Value *XFinite =
-        NoInfs || (SQ && isKnownNeverInfinity(X, 0, *SQ))
+        NoInfs || (SQ && isKnownNeverInfinity(X, *SQ))
             ? B.getTrue()
             : B.CreateFCmpULT(B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
                               ConstantFP::getInfinity(FremTy));
