@@ -2132,7 +2132,7 @@ static bool mayFoldConstrained(ConstrainedFPIntrinsic *CI,
 
   // If evaluation raised FP exception, the result can depend on rounding
   // mode. If the latter is unknown, folding is not possible.
-  if (ORM && *ORM == RoundingMode::Dynamic)
+  if (ORM == RoundingMode::Dynamic)
     return false;
 
   // If FP exceptions are ignored, fold the call, even if such exception is
@@ -2418,7 +2418,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         if (IntrinsicID == Intrinsic::experimental_constrained_rint &&
             St == APFloat::opInexact) {
           std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
-          if (EB && *EB == fp::ebStrict)
+          if (EB == fp::ebStrict)
             return nullptr;
         }
       } else if (U.isSignaling()) {
@@ -3990,31 +3990,30 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
     return ConstantStruct::get(StTy, SinResult, CosResult);
   }
   case Intrinsic::vector_deinterleave2: {
-    auto *Vec = dyn_cast<Constant>(Operands[0]);
-    if (!Vec)
+    auto *Vec = Operands[0];
+    auto *VecTy = cast<VectorType>(Vec->getType());
+
+    if (auto *EltC = Vec->getSplatValue()) {
+      ElementCount HalfEC = VecTy->getElementCount().divideCoefficientBy(2);
+      auto *HalfVec = ConstantVector::getSplat(HalfEC, EltC);
+      return ConstantStruct::get(StTy, HalfVec, HalfVec);
+    }
+
+    if (!isa<FixedVectorType>(Vec->getType()))
       return nullptr;
 
-    auto *VecTy = cast<VectorType>(Vec->getType());
-    unsigned NumElements = VecTy->getElementCount().getKnownMinValue() / 2;
-    if (isa<ConstantAggregateZero>(Vec)) {
-      auto *HalfVecTy = VectorType::getHalfElementsVectorType(VecTy);
-      return ConstantStruct::get(StTy, ConstantAggregateZero::get(HalfVecTy),
-                                 ConstantAggregateZero::get(HalfVecTy));
+    unsigned NumElements = VecTy->getElementCount().getFixedValue() / 2;
+    SmallVector<Constant *, 4> Res0(NumElements), Res1(NumElements);
+    for (unsigned I = 0; I < NumElements; ++I) {
+      Constant *Elt0 = Vec->getAggregateElement(2 * I);
+      Constant *Elt1 = Vec->getAggregateElement(2 * I + 1);
+      if (!Elt0 || !Elt1)
+        return nullptr;
+      Res0[I] = Elt0;
+      Res1[I] = Elt1;
     }
-    if (isa<FixedVectorType>(Vec->getType())) {
-      SmallVector<Constant *, 4> Res0(NumElements), Res1(NumElements);
-      for (unsigned I = 0; I < NumElements; ++I) {
-        Constant *Elt0 = Vec->getAggregateElement(2 * I);
-        Constant *Elt1 = Vec->getAggregateElement(2 * I + 1);
-        if (!Elt0 || !Elt1)
-          return nullptr;
-        Res0[I] = Elt0;
-        Res1[I] = Elt1;
-      }
-      return ConstantStruct::get(StTy, ConstantVector::get(Res0),
-                                 ConstantVector::get(Res1));
-    }
-    return nullptr;
+    return ConstantStruct::get(StTy, ConstantVector::get(Res0),
+                               ConstantVector::get(Res1));
   }
   default:
     // TODO: Constant folding of vector intrinsics that fall through here does

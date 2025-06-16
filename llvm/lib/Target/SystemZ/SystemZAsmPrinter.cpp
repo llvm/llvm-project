@@ -1043,7 +1043,7 @@ static void printOperand(const MCOperand &MCOp, const MCAsmInfo *MAI,
   else if (MCOp.isImm())
     OS << MCOp.getImm();
   else if (MCOp.isExpr())
-    MCOp.getExpr()->print(OS, MAI);
+    MAI->printExpr(OS, *MCOp.getExpr());
   else
     llvm_unreachable("Invalid operand");
 }

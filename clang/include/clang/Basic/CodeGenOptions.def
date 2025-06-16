@@ -223,9 +223,11 @@ AFFECTING_VALUE_CODEGENOPT(OptimizeSize, 2, 0) ///< If -Os (==1) or -Oz (==2) is
 CODEGENOPT(AtomicProfileUpdate , 1, 0) ///< Set -fprofile-update=atomic
 CODEGENOPT(ContinuousProfileSync, 1, 0) ///< Enable continuous instrumentation profiling
 /// Choose profile instrumenation kind or no instrumentation.
-ENUM_CODEGENOPT(ProfileInstr, ProfileInstrKind, 4, ProfileNone)
+
+ENUM_CODEGENOPT(ProfileInstr, llvm::driver::ProfileInstrKind, 4, llvm::driver::ProfileInstrKind::ProfileNone)
+
 /// Choose profile kind for PGO use compilation.
-ENUM_CODEGENOPT(ProfileUse, ProfileInstrKind, 2, ProfileNone)
+ENUM_CODEGENOPT(ProfileUse, llvm::driver::ProfileInstrKind, 2, llvm::driver::ProfileInstrKind::ProfileNone)
 /// Partition functions into N groups and select only functions in group i to be
 /// instrumented. Selected group numbers can be 0 to N-1 inclusive.
 VALUE_CODEGENOPT(ProfileTotalFunctionGroups, 32, 1)

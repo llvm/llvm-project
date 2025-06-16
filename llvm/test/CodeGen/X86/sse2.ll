@@ -417,7 +417,7 @@ define void @test12() nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovaps 0, %xmm0
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX512-NEXT:    vblendps {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3]
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm2[1]
 ; AVX512-NEXT:    vaddps %xmm0, %xmm1, %xmm0

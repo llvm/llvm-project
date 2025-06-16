@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LanaiMCExpr.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
@@ -21,7 +22,7 @@ const LanaiMCExpr *LanaiMCExpr::create(Spec S, const MCExpr *Expr,
 
 void LanaiMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   if (specifier == VK_Lanai_None) {
-    Expr->print(OS, MAI);
+    MAI->printExpr(OS, *Expr);
     return;
   }
 
@@ -38,6 +39,6 @@ void LanaiMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 
   OS << '(';
   const MCExpr *Expr = getSubExpr();
-  Expr->print(OS, MAI);
+  MAI->printExpr(OS, *Expr);
   OS << ')';
 }

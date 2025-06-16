@@ -306,6 +306,13 @@ public:
   enum IsAliased_t { IsNotAliased, IsAliased };
   enum Overlap_t { MayOverlap, DoesNotOverlap };
 
+  /// Returns an aggregate value slot indicating that the aggregate
+  /// value is being ignored.
+  static AggValueSlot ignored() {
+    return forAddr(Address::invalid(), clang::Qualifiers(), IsNotDestructed,
+                   IsNotAliased, DoesNotOverlap);
+  }
+
   AggValueSlot(Address addr, clang::Qualifiers quals, bool destructedFlag,
                bool zeroedFlag, bool aliasedFlag, bool overlapFlag)
       : addr(addr), quals(quals), destructedFlag(destructedFlag),
@@ -333,7 +340,16 @@ public:
 
   bool isIgnored() const { return !addr.isValid(); }
 
+  mlir::Value getPointer() const { return addr.getPointer(); }
+
   IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
+
+  RValue asRValue() const {
+    if (isIgnored())
+      return RValue::getIgnored();
+    assert(!cir::MissingFeatures::aggValueSlot());
+    return RValue::getAggregate(getAddress());
+  }
 };
 
 } // namespace clang::CIRGen

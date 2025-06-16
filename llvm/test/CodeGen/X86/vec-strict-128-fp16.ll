@@ -93,7 +93,7 @@ define <2 x double> @f12(<2 x double> %a0, <8 x half> %a1) #0 {
 ; CHECK-LABEL: f12:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsh2sd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ext = extractelement <8 x half> %a1, i32 0
   %cvt = call double @llvm.experimental.constrained.fpext.f64.f16(half %ext,

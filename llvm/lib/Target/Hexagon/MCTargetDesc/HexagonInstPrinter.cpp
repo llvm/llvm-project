@@ -72,7 +72,7 @@ void HexagonInstPrinter::printOperand(MCInst const *MI, unsigned OpNo,
     if (MO.getExpr()->evaluateAsAbsolute(Value))
       O << formatImm(Value);
     else
-      MO.getExpr()->print(O, &MAI);
+      MAI.printExpr(O, *MO.getExpr());
   } else {
     llvm_unreachable("Unknown operand");
   }
@@ -90,6 +90,6 @@ void HexagonInstPrinter::printBrtarget(MCInst const *MI, unsigned OpNo,
     if (HasExtender || HexagonMCInstrInfo::isConstExtended(MII, *MI))
       if (HexagonMCInstrInfo::getExtendableOp(MII, *MI) == OpNo)
         O << "##";
-    Expr.print(O, &MAI);
+    MAI.printExpr(O, Expr);
   }
 }

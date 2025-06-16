@@ -1643,6 +1643,15 @@ LogicalResult cir::VecShuffleOp::verify() {
                          << " and " << getResult().getType() << " don't match";
   }
 
+  const uint64_t maxValidIndex =
+      getVec1().getType().getSize() + getVec2().getType().getSize() - 1;
+  if (llvm::any_of(
+          getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
+            return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;
+          })) {
+    return emitOpError() << ": index for __builtin_shufflevector must be "
+                            "less than the total number of vector elements";
+  }
   return success();
 }
 
@@ -1737,6 +1746,33 @@ OpFoldResult cir::VecTernaryOp::fold(FoldAdaptor adaptor) {
   cir::VectorType vecTy = getLhs().getType();
   return cir::ConstVectorAttr::get(
       vecTy, mlir::ArrayAttr::get(getContext(), elements));
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexCreateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexCreateOp::verify() {
+  if (getType().getElementType() != getReal().getType()) {
+    emitOpError()
+        << "operand type of cir.complex.create does not match its result type";
+    return failure();
+  }
+
+  return success();
+}
+
+OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute real = adaptor.getReal();
+  mlir::Attribute imag = adaptor.getImag();
+  if (!real || !imag)
+    return {};
+
+  // When both of real and imag are constants, we can fold the operation into an
+  // `#cir.const_complex` operation.
+  auto realAttr = mlir::cast<mlir::TypedAttr>(real);
+  auto imagAttr = mlir::cast<mlir::TypedAttr>(imag);
+  return cir::ConstComplexAttr::get(realAttr, imagAttr);
 }
 
 //===----------------------------------------------------------------------===//

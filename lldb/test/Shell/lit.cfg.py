@@ -7,9 +7,12 @@ import re
 import shutil
 import site
 import subprocess
+import sys
 
-import lit.util
+import lit.formats
 from lit.llvm import llvm_config
+from lit.llvm.subst import FindTool
+from lit.llvm.subst import ToolSubst
 
 site.addsitedir(os.path.dirname(__file__))
 from helper import toolchain

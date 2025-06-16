@@ -6,8 +6,8 @@ import copy
 import os
 import sys
 
-from lit import Test, util
 from lit.TestingConfig import TestingConfig
+from lit import LitConfig, Test, util
 
 
 def chooseConfigFileFromDir(dir, config_names):

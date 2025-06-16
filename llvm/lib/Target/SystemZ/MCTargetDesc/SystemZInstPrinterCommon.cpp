@@ -53,7 +53,7 @@ void SystemZInstPrinterCommon::printOperand(const MCOperand &MO,
   } else if (MO.isImm())
     markup(O, Markup::Immediate) << MO.getImm();
   else if (MO.isExpr())
-    MO.getExpr()->print(O, MAI);
+    MAI->printExpr(O, *MO.getExpr());
   else
     llvm_unreachable("Invalid operand");
 }
@@ -171,7 +171,7 @@ void SystemZInstPrinterCommon::printPCRelOperand(const MCInst *MI,
     markup(O, Markup::Target) << formatHex((uint64_t)TargetAddress);
   } else {
     // Otherwise, just print the expression.
-    MO.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO.getExpr());
   }
 }
 

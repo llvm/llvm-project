@@ -3010,8 +3010,8 @@ define <2 x double> @test_mm_move_sd(<2 x double> %a0, <2 x double> %a1) nounwin
 ;
 ; AVX-LABEL: test_mm_move_sd:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps $3, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x03]
-; AVX-NEXT:    # xmm0 = xmm1[0,1],xmm0[2,3]
+; AVX-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x10,0xc1]
+; AVX-NEXT:    # xmm0 = xmm1[0],xmm0[1]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %ext0 = extractelement <2 x double> %a1, i32 0
   %res0 = insertelement <2 x double> undef, double %ext0, i32 0

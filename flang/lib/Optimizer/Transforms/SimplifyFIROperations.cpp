@@ -180,41 +180,50 @@ public:
 
       std::optional<mlir::ArrayAttr> localSyms = loop.getLocalSyms();
 
-      for (auto [localVar, localArg, localizerSym] : llvm::zip_equal(
+      for (auto localInfo : llvm::zip_equal(
                loop.getLocalVars(), loop.getRegionLocalArgs(), *localSyms)) {
+        mlir::Value localVar = std::get<0>(localInfo);
+        mlir::BlockArgument localArg = std::get<1>(localInfo);
+        mlir::Attribute localizerSym = std::get<2>(localInfo);
         mlir::SymbolRefAttr localizerName =
             llvm::cast<mlir::SymbolRefAttr>(localizerSym);
         fir::LocalitySpecifierOp localizer = findLocalizer(loop, localizerName);
-
-        if (!localizer.getInitRegion().empty() ||
-            !localizer.getDeallocRegion().empty())
-          TODO(localizer.getLoc(), "localizers with `init` and `dealloc` "
-                                   "regions are not handled yet.");
 
         // TODO Should this be a heap allocation instead? For now, we allocate
         // on the stack for each loop iteration.
         mlir::Value localAlloc =
             rewriter.create<fir::AllocaOp>(loop.getLoc(), localizer.getType());
 
-        if (localizer.getLocalitySpecifierType() ==
-            fir::LocalitySpecifierType::LocalInit) {
+        auto cloneLocalizerRegion = [&](mlir::Region &region,
+                                        mlir::ValueRange regionArgs,
+                                        mlir::Block::iterator insertionPoint) {
           // It is reasonable to make this assumption since, at this stage,
           // control-flow ops are not converted yet. Therefore, things like `if`
           // conditions will still be represented by their encapsulating `fir`
           // dialect ops.
-          assert(localizer.getCopyRegion().hasOneBlock() &&
-                 "Expected localizer to have a single block.");
-          mlir::Block *beforeLocalInit = rewriter.getInsertionBlock();
-          mlir::Block *afterLocalInit = rewriter.splitBlock(
-              rewriter.getInsertionBlock(), rewriter.getInsertionPoint());
-          rewriter.cloneRegionBefore(localizer.getCopyRegion(), afterLocalInit);
-          mlir::Block *copyRegionBody = beforeLocalInit->getNextNode();
+          assert(region.hasOneBlock() &&
+                 "Expected localizer region to have a single block.");
+          mlir::OpBuilder::InsertionGuard guard(rewriter);
+          rewriter.setInsertionPoint(rewriter.getInsertionBlock(),
+                                     insertionPoint);
+          mlir::IRMapping mapper;
+          mapper.map(region.getArguments(), regionArgs);
+          for (mlir::Operation &op : region.front().without_terminator())
+            (void)rewriter.clone(op, mapper);
+        };
 
-          rewriter.eraseOp(copyRegionBody->getTerminator());
-          rewriter.mergeBlocks(afterLocalInit, copyRegionBody);
-          rewriter.mergeBlocks(copyRegionBody, beforeLocalInit,
-                               {localVar, localArg});
-        }
+        if (!localizer.getInitRegion().empty())
+          cloneLocalizerRegion(localizer.getInitRegion(), {localVar, localArg},
+                               rewriter.getInsertionPoint());
+
+        if (localizer.getLocalitySpecifierType() ==
+            fir::LocalitySpecifierType::LocalInit)
+          cloneLocalizerRegion(localizer.getCopyRegion(), {localVar, localArg},
+                               rewriter.getInsertionPoint());
+
+        if (!localizer.getDeallocRegion().empty())
+          cloneLocalizerRegion(localizer.getDeallocRegion(), {localArg},
+                               rewriter.getInsertionBlock()->end());
 
         rewriter.replaceAllUsesWith(localArg, localAlloc);
       }
