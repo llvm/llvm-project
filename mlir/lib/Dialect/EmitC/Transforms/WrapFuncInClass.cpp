@@ -12,13 +12,17 @@
 #include "mlir/Dialect/EmitC/Transforms/Transforms.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LogicalResult.h"
+#include <string>
 
 namespace mlir {
 namespace emitc {
@@ -67,7 +71,7 @@ public:
     if (funcOp->getParentOfType<emitc::ClassOp>()) {
       return failure();
     }
-    auto className = "My" + funcOp.getSymNameAttr().str() + "Class";
+    auto className = funcOp.getSymNameAttr().str() + "Class";
     mlir::emitc::ClassOp newClassOp =
         rewriter.create<emitc::ClassOp>(funcOp.getLoc(), className);
 
@@ -76,25 +80,33 @@ public:
     rewriter.setInsertionPointToStart(&newClassOp.getBody().front());
 
     auto argAttrs = funcOp.getArgAttrs();
-    if (argAttrs) {
-      for (const auto &[arg, val] :
-           llvm::zip(*argAttrs, funcOp.getArguments())) {
-        if (auto namedAttr =
-                dyn_cast<mlir::DictionaryAttr>(arg).getNamed(attributeName)) {
-          Attribute nv = namedAttr->getValue();
-          StringAttr fieldName =
-              cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(nv)[0]);
-          TypeAttr typeAttr = TypeAttr::get(val.getType());
-          fields.push_back({fieldName, typeAttr});
+    size_t idx = 0;
 
-          rewriter.create<emitc::FieldOp>(funcOp.getLoc(), fieldName, typeAttr,
-                                          /* attributes*/ arg);
+    for (const BlockArgument &val : funcOp.getArguments()) {
+      StringAttr fieldName;
+      Attribute argAttr = nullptr;
+
+      if (argAttrs && idx < argAttrs->size()) {
+        if (DictionaryAttr dictAttr =
+                dyn_cast<mlir::DictionaryAttr>((*argAttrs)[idx])) {
+          if (auto namedAttr = dictAttr.getNamed(attributeName)) {
+            Attribute nv = namedAttr->getValue();
+            fieldName = cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(nv)[0]);
+            argAttr = (*argAttrs)[idx];
+          }
         }
       }
-    } else {
-      funcOp->emitOpError("arguments should have attributes so we can "
-                          "initialize class fields.");
-      return failure();
+
+      if (!fieldName) {
+        fieldName = rewriter.getStringAttr("fieldName" + std::to_string(idx));
+      }
+
+      TypeAttr typeAttr = TypeAttr::get(val.getType());
+      fields.push_back({fieldName, typeAttr});
+      rewriter.create<emitc::FieldOp>(funcOp.getLoc(), fieldName, typeAttr,
+                                      argAttr);
+
+      ++idx;
     }
 
     rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());
@@ -112,7 +124,7 @@ public:
     rewriter.setInsertionPointToStart(&newFuncOp.getBody().front());
     std::vector<Value> newArguments;
     for (auto [fieldName, attr] : fields) {
-      auto arg =
+      GetFieldOp arg =
           rewriter.create<emitc::GetFieldOp>(loc, attr.getValue(), fieldName);
       newArguments.push_back(arg);
     }
@@ -122,14 +134,13 @@ public:
       rewriter.replaceAllUsesWith(oldArg, newArg);
     }
 
-    while (!newFuncOp.getArguments().empty()) {
-      if (failed(newFuncOp.eraseArgument(0))) {
-        break;
-      }
+    llvm::BitVector argsToErase(newFuncOp.getNumArguments(), true);
+    if (failed(newFuncOp.eraseArguments(argsToErase))) {
+      newFuncOp->emitOpError("Failed to erase all arguments using BitVector.");
     }
 
     rewriter.replaceOp(funcOp, newClassOp);
-    return funcOp->use_empty() ? success() : failure();
+    return success();
   }
 };
 
