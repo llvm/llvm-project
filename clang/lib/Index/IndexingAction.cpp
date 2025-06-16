@@ -682,12 +682,17 @@ protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override {
     auto OtherConsumer = WrapperFrontendAction::CreateASTConsumer(CI, InFile);
-    if (!OtherConsumer)
-      return nullptr;
+
+    if (CI.getFrontendOpts().IndexStorePath.empty()) {
+      // We are not generating an index store. Nothing to do.
+      return OtherConsumer;
+    }
 
     CreatedASTConsumer = true;
     std::vector<std::unique_ptr<ASTConsumer>> Consumers;
-    Consumers.push_back(std::move(OtherConsumer));
+    if (OtherConsumer) {
+      Consumers.push_back(std::move(OtherConsumer));
+    }
     Consumers.push_back(createIndexASTConsumer(CI));
     return std::make_unique<MultiplexConsumer>(std::move(Consumers));
   }

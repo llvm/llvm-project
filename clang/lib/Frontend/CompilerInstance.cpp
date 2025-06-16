@@ -1357,6 +1357,15 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   HSOpts.ModulesHashContent = true;
   FrontendOpts.Inputs = {Input};
   FrontendOpts.MayEmitDiagnosticsAfterProcessingSourceFiles = false;
+  // Clear `IndexUnitOutputPath`. Otherwise the unit for the pcm will be named
+  // after the primary source file, and will be overwritten when that file's
+  // unit is finally written.
+  FrontendOpts.IndexUnitOutputPath = "";
+  if (FrontendOpts.IndexIgnorePcms) {
+    // If we shouldn't index pcms, disable indexing by clearing the index store
+    // path.
+    FrontendOpts.IndexStorePath = "";
+  }
 
   // Don't free the remapped file buffers; they are owned by our caller.
   PPOpts.RetainRemappedFileBuffers = true;
