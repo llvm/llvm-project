@@ -665,8 +665,7 @@ private:
 
   // A simple helper function to short circuit pointer auth checks.
   bool isPointerAuthenticationAvailable() const {
-    return LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics ||
-           LangOpts.PointerAuthVTPtrAddressDiscrimination;
+    return LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics;
   }
   PointerAuthContent findPointerAuthContent(QualType T);
   llvm::DenseMap<const RecordDecl *, PointerAuthContent>
