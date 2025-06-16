@@ -9,7 +9,6 @@
 #include "src/__support/error_or.h"
 #include "src/__support/wchar/character_converter.h"
 #include "src/__support/wchar/mbstate.h"
-#include "src/__support/wchar/utf_ret.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcCharacterConverterUTF8To32Test, OneByte) {
