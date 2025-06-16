@@ -1572,4 +1572,110 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
   let hasVerifier = 1;
 }
 
+def EmitC_ClassOp
+    : EmitC_Op<"class", [AutomaticAllocationScope, IsolatedFromAbove,
+                         OpAsmOpInterface, SymbolTable,
+                         Symbol]#GraphRegionNoTerminator.traits> {
+  let summary =
+      "Represents a C++ class definition, encapsulating fields and methods.";
+
+  let description = [{
+    The `emitc.class` operation defines a C++ class, acting as a container
+    for its data fields (`emitc.field`) and methods (`emitc.func`).
+    It creates a distinct scope, isolating its contents from the surrounding
+    MLIR region, similar to how C++ classes encapsulate their internals.
+    All the class memebrs need to be default initalizable. 
+
+    Example:
+    ```mlir
+    emitc.class @MymainClass {
+      emitc.field @another_feature : !emitc.array<1xf32> = {tf_saved_model.index_path = ["another_feature"]}
+      emitc.field @some_feature : !emitc.array<1xf32> = {tf_saved_model.index_path = ["some_feature"]}
+      emitc.field @output_0 : !emitc.array<1xf32> = {tf_saved_model.index_path = ["output_0"]}
+
+      emitc.func @execute() {
+        %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+
+        %1 = get_field @another_feature : !emitc.array<1xf32>
+        %2 = get_field @some_feature : !emitc.array<1xf32>
+        %3 = get_field @output_0 : !emitc.array<1xf32>
+
+        %4 = subscript %2[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+        %5 = load %4 : <f32>
+        %6 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+        %7 = load %6 : <f32>
+        %8 = add %5, %7 : (f32, f32) -> f32
+        %9 = subscript %3[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+        assign %8 : f32 to %9 : <f32>
+        return
+      }
+  }
+
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name);
+
+  let regions = (region AnyRegion:$body);
+
+  let builders = [];
+
+  let extraClassDeclaration = [{
+    // Returns the body block containing class members and methods.
+    Block &getBlock();
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat = [{ $sym_name attr-dict-with-keyword $body }];
+}
+
+def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
+  let summary = "A field within a class";
+  let description = [{
+    The `emitc.field` operation declares a named field within an `emitc.class`
+    operation. The field's type must be an EmitC type. An optional initial value can be provided.
+
+    Example with initial values:
+
+    ```mlir
+    emitc.class @MyModelClass {
+      emitc.field @another_feature : !emitc.array<1xf32> = {tf_saved_model.index_path = ["another_feature"]}
+      emitc.field @some_feature : !emitc.array<1xf32> = {tf_saved_model.index_path = ["some_feature"]}
+      emitc.field @output_0 : !emitc.array<1xf32> = {tf_saved_model.index_path = ["output_0"]}
+    }
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type,
+      OptionalAttr<AnyAttr>:$initial_value);
+
+  let assemblyFormat =
+      [{ $sym_name `:` $type (`=` $initial_value^)? attr-dict}];
+
+  let hasVerifier = 1;
+}
+
+def EmitC_GetFieldOp
+    : EmitC_Op<"get_field", [Pure, DeclareOpInterfaceMethods<
+                                       SymbolUserOpInterface>]> {
+  let summary = "Obtain access to a field within a class instance";
+  let description = [{
+     The `emitc.get_field` operation retrieves the lvalue of a
+     named field from a given class instance.
+
+     Example:
+
+     ```mlir
+    %some_ptr = emitc.get_field @some_feature : !emitc.array<1xf32> 
+    %another_ptr = emitc.get_field @another_feature : !emitc.array<1xf32> 
+    %output_ptr = emitc.get_field @output_0 : !emitc.array<1xf32> 
+     ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$field_name);
+  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>:$result);
+  let assemblyFormat = "$field_name `:` type($result) attr-dict";
+}
+
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

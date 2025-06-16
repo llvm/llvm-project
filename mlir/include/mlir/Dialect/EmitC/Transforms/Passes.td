@@ -20,4 +20,17 @@ def FormExpressionsPass : Pass<"form-expressions"> {
   let dependentDialects = ["emitc::EmitCDialect"];
 }
 
+def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
+  let summary = "Wrap functions in classes, using arguments as fields.";
+  let description = [{
+    This pass transforms `emitc.func` operations into `emitc.class` operations.
+    Function arguments become fields of the class, and the function body is moved
+    to a new `execute` method within the class.
+  }];
+  let dependentDialects = ["emitc::EmitCDialect"];
+  let options = [Option<
+      "namedAttribute", "named-attribute", "std::string", "\"\"",
+      "Name of the attribute to look for field names on function arguments">];
+}
+
 #endif // MLIR_DIALECT_EMITC_TRANSFORMS_PASSES
