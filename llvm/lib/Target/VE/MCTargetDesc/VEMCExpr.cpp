@@ -22,60 +22,39 @@ using namespace llvm;
 
 #define DEBUG_TYPE "vemcexpr"
 
-const VEMCExpr *VEMCExpr::create(Specifier S, const MCExpr *Expr,
-                                 MCContext &Ctx) {
-  return new (Ctx) VEMCExpr(Expr, S);
-}
-
-void VEMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-
-  const MCExpr *Expr = getSubExpr();
-  Expr->print(OS, MAI);
-  if (specifier != VK_None && specifier != VK_REFLONG)
-    OS << '@' << MAI->getSpecifierName(specifier);
-}
-
-VE::Fixups VEMCExpr::getFixupKind(MCSpecifierExpr::Spec S) {
+VE::Fixups VE::getFixupKind(uint8_t S) {
   switch (S) {
   default:
     llvm_unreachable("Unhandled VEMCExpr::Specifier");
-  case VK_REFLONG:
+  case VE::S_REFLONG:
     return VE::fixup_ve_reflong;
-  case VK_HI32:
+  case VE::S_HI32:
     return VE::fixup_ve_hi32;
-  case VK_LO32:
+  case VE::S_LO32:
     return VE::fixup_ve_lo32;
-  case VK_PC_HI32:
+  case VE::S_PC_HI32:
     return VE::fixup_ve_pc_hi32;
-  case VK_PC_LO32:
+  case VE::S_PC_LO32:
     return VE::fixup_ve_pc_lo32;
-  case VK_GOT_HI32:
+  case VE::S_GOT_HI32:
     return VE::fixup_ve_got_hi32;
-  case VK_GOT_LO32:
+  case VE::S_GOT_LO32:
     return VE::fixup_ve_got_lo32;
-  case VK_GOTOFF_HI32:
+  case VE::S_GOTOFF_HI32:
     return VE::fixup_ve_gotoff_hi32;
-  case VK_GOTOFF_LO32:
+  case VE::S_GOTOFF_LO32:
     return VE::fixup_ve_gotoff_lo32;
-  case VK_PLT_HI32:
+  case VE::S_PLT_HI32:
     return VE::fixup_ve_plt_hi32;
-  case VK_PLT_LO32:
+  case VE::S_PLT_LO32:
     return VE::fixup_ve_plt_lo32;
-  case VK_TLS_GD_HI32:
+  case VE::S_TLS_GD_HI32:
     return VE::fixup_ve_tls_gd_hi32;
-  case VK_TLS_GD_LO32:
+  case VE::S_TLS_GD_LO32:
     return VE::fixup_ve_tls_gd_lo32;
-  case VK_TPOFF_HI32:
+  case VE::S_TPOFF_HI32:
     return VE::fixup_ve_tpoff_hi32;
-  case VK_TPOFF_LO32:
+  case VE::S_TPOFF_LO32:
     return VE::fixup_ve_tpoff_lo32;
   }
-}
-
-bool VEMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                         const MCAssembler *Asm) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-  Res.setSpecifier(specifier);
-  return true;
 }

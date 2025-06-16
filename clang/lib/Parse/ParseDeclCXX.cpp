@@ -1430,7 +1430,7 @@ void Parser::ParseMicrosoftInheritanceClassAttributes(ParsedAttributes &attrs) {
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
     auto Kind = Tok.getKind();
     SourceLocation AttrNameLoc = ConsumeToken();
-    attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0, Kind);
+    attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0, Kind);
   }
 }
 
@@ -1439,7 +1439,7 @@ void Parser::ParseNullabilityClassAttributes(ParsedAttributes &attrs) {
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
     auto Kind = Tok.getKind();
     SourceLocation AttrNameLoc = ConsumeToken();
-    attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0, Kind);
+    attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0, Kind);
   }
 }
 
@@ -4493,8 +4493,8 @@ bool Parser::ParseCXXAssumeAttributeArg(
   ArgsUnion Assumption = Res.get();
   auto RParen = Tok.getLocation();
   T.consumeClose();
-  Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen), ScopeName, ScopeLoc,
-               &Assumption, 1, Form);
+  Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen),
+               AttributeScopeInfo(ScopeName, ScopeLoc), &Assumption, 1, Form);
 
   if (EndLoc)
     *EndLoc = RParen;
@@ -4574,7 +4574,7 @@ bool Parser::ParseCXX11AttributeArgs(
 
     // Ignore attributes that don't exist for the target.
     if (!Attr.existsInTarget(getTargetInfo())) {
-      Diag(LParenLoc, diag::warn_unknown_attribute_ignored) << AttrName;
+      Actions.DiagnoseUnknownAttribute(Attr);
       Attr.setInvalid(true);
       return true;
     }
@@ -4629,7 +4629,7 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                                  /*ScopeName*/ nullptr,
                                  /*ScopeLoc*/ Loc, Form);
     } else
-      Attrs.addNew(AttrName, Loc, nullptr, Loc, nullptr, 0, Form);
+      Attrs.addNew(AttrName, Loc, AttributeScopeInfo(), nullptr, 0, Form);
     return;
   }
 
@@ -4724,12 +4724,15 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                                            ScopeName, ScopeLoc, OpenMPTokens);
 
     if (!AttrParsed) {
-      Attrs.addNew(
-          AttrName,
-          SourceRange(ScopeLoc.isValid() ? ScopeLoc : AttrLoc, AttrLoc),
-          ScopeName, ScopeLoc, nullptr, 0,
-          getLangOpts().CPlusPlus ? ParsedAttr::Form::CXX11()
-                                  : ParsedAttr::Form::C23());
+      Attrs.addNew(AttrName,
+                   SourceRange(ScopeLoc.isValid() && CommonScopeLoc.isInvalid()
+                                   ? ScopeLoc
+                                   : AttrLoc,
+                               AttrLoc),
+                   AttributeScopeInfo(ScopeName, ScopeLoc, CommonScopeLoc),
+                   nullptr, 0,
+                   getLangOpts().CPlusPlus ? ParsedAttr::Form::CXX11()
+                                           : ParsedAttr::Form::C23());
       AttrParsed = true;
     }
 
@@ -4890,8 +4893,8 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
   }
 
   if (!T.consumeClose()) {
-    Attrs.addNew(UuidIdent, SourceRange(UuidLoc, T.getCloseLocation()), nullptr,
-                 SourceLocation(), ArgExprs.data(), ArgExprs.size(),
+    Attrs.addNew(UuidIdent, SourceRange(UuidLoc, T.getCloseLocation()),
+                 AttributeScopeInfo(), ArgExprs.data(), ArgExprs.size(),
                  ParsedAttr::Form::Microsoft());
   }
 }
@@ -4975,8 +4978,8 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
 
   if (!T.consumeClose())
     Attrs.addNew(RootSignatureIdent,
-                 SourceRange(RootSignatureLoc, T.getCloseLocation()), nullptr,
-                 SourceLocation(), Args.data(), Args.size(),
+                 SourceRange(RootSignatureLoc, T.getCloseLocation()),
+                 AttributeScopeInfo(), Args.data(), Args.size(),
                  ParsedAttr::Form::Microsoft());
 }
 
@@ -5026,7 +5029,7 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
             ReplayOpenMPAttributeTokens(OpenMPTokens);
           }
           if (!AttrParsed) {
-            Attrs.addNew(II, NameLoc, nullptr, SourceLocation(), nullptr, 0,
+            Attrs.addNew(II, NameLoc, AttributeScopeInfo(), nullptr, 0,
                          ParsedAttr::Form::Microsoft());
           }
         }
