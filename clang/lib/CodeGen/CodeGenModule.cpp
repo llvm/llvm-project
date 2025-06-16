@@ -1319,8 +1319,10 @@ void CodeGenModule::Release() {
                               1);
 
   // Enable unwind v2 (epilog).
-  if (CodeGenOpts.WinX64EHUnwindV2)
-    getModule().addModuleFlag(llvm::Module::Warning, "winx64-eh-unwindv2", 1);
+  if (CodeGenOpts.getWinX64EHUnwindV2() != llvm::WinX64EHUnwindV2Mode::Disabled)
+    getModule().addModuleFlag(
+        llvm::Module::Warning, "winx64-eh-unwindv2",
+        static_cast<unsigned>(CodeGenOpts.getWinX64EHUnwindV2()));
 
   // Indicate whether this Module was compiled with -fopenmp
   if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd)
