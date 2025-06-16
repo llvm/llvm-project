@@ -37,6 +37,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
+#include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
@@ -401,6 +402,108 @@ static bool isNoexcept(const FunctionDecl *FD) {
   return false;
 }
 
+/// Checks if the given variable, which is assumed to be a function pointer, is
+/// initialized with a function having 'noreturn' attribute.
+static bool isInitializedWithNoReturn(const VarDecl *VD) {
+  if (const Expr *Init = VD->getInit()) {
+    if (auto *ListInit = dyn_cast<InitListExpr>(Init);
+        ListInit && ListInit->getNumInits() > 0)
+      Init = ListInit->getInit(0);
+    if (auto *DeclRef = dyn_cast<DeclRefExpr>(Init->IgnoreParenCasts()))
+      if (auto *FD = dyn_cast<FunctionDecl>(DeclRef->getDecl()))
+        return FD->isNoReturn();
+  }
+  return false;
+}
+
+/// Checks if the given expression is a reference to a function with
+/// 'noreturn' attribute.
+static bool isReferenceToNoReturn(const Expr *E) {
+  if (auto *DRef = dyn_cast<DeclRefExpr>(E->IgnoreParenCasts()))
+    if (auto *FD = dyn_cast<FunctionDecl>(DRef->getDecl()))
+      return FD->isNoReturn();
+  return false;
+}
+
+namespace {
+
+/// Looks for statements, that can define value of the given variable.
+struct TransferFunctions : public StmtVisitor<TransferFunctions> {
+  const VarDecl *Var;
+  std::optional<bool> AllValuesAreNoReturn;
+
+  TransferFunctions(const VarDecl *VD) : Var(VD) {}
+
+  void VisitDeclStmt(DeclStmt *DS) {
+    for (auto *DI : DS->decls())
+      if (auto *VD = dyn_cast<VarDecl>(DI))
+        if (VarDecl *Def = VD->getDefinition())
+          if (Def == Var)
+            AllValuesAreNoReturn = isInitializedWithNoReturn(Def);
+  }
+
+  void VisitUnaryOperator(UnaryOperator *UO) {
+    if (UO->getOpcode() == UO_AddrOf) {
+      if (auto *DRef =
+              dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParenCasts()))
+        if (DRef->getDecl() == Var)
+          AllValuesAreNoReturn = false;
+    }
+  }
+
+  void VisitBinaryOperator(BinaryOperator *BO) {
+    if (BO->getOpcode() == BO_Assign)
+      if (auto *DRef = dyn_cast<DeclRefExpr>(BO->getLHS()->IgnoreParenCasts()))
+        if (DRef->getDecl() == Var)
+          AllValuesAreNoReturn = isReferenceToNoReturn(BO->getRHS());
+  }
+
+  void VisitCallExpr(CallExpr *CE) {
+    for (CallExpr::arg_iterator I = CE->arg_begin(), E = CE->arg_end(); I != E;
+         ++I) {
+      const Expr *Arg = *I;
+      if (Arg->isGLValue() && !Arg->getType().isConstQualified())
+        if (auto *DRef = dyn_cast<DeclRefExpr>(Arg->IgnoreParenCasts()))
+          if (auto VD = dyn_cast<VarDecl>(DRef->getDecl()))
+            if (VD->getDefinition() == Var)
+              AllValuesAreNoReturn = false;
+    }
+  }
+};
+} // namespace
+
+// Checks if all possible values of the given variable are functions with
+// 'noreturn' attribute.
+static bool areAllValuesNoReturn(const VarDecl *VD, const CFGBlock &VarBlk,
+                                 AnalysisDeclContext &AC) {
+  // The set of possible values of a constant variable is determined by
+  // its initializer.
+  if (VD->getType().isConstant(AC.getASTContext())) {
+    if (const VarDecl *Def = VD->getDefinition())
+      return isInitializedWithNoReturn(Def);
+    return false;
+  }
+
+  // Scan function statements for definitions of the given variable.
+  TransferFunctions TF(VD);
+  BackwardDataflowWorklist Worklist(*AC.getCFG(), AC);
+  Worklist.enqueueBlock(&VarBlk);
+  while (const CFGBlock *B = Worklist.dequeue()) {
+    for (CFGBlock::const_reverse_iterator ri = B->rbegin(), re = B->rend();
+         ri != re; ++ri) {
+      if (std::optional<CFGStmt> cs = ri->getAs<CFGStmt>()) {
+        const Stmt *S = cs->getStmt();
+        TF.Visit(const_cast<Stmt *>(S));
+        if (TF.AllValuesAreNoReturn)
+          return *TF.AllValuesAreNoReturn;
+      }
+    }
+    Worklist.enqueuePredecessors(B);
+  }
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Check for missing return value.
 //===----------------------------------------------------------------------===//
@@ -526,6 +629,17 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
     if (!llvm::is_contained(B.succs(), &cfg->getExit())) {
       HasAbnormalEdge = true;
       continue;
+    }
+    if (auto *Call = dyn_cast<CallExpr>(S)) {
+      const Expr *Callee = Call->getCallee();
+      if (Callee->getType()->isPointerType())
+        if (auto *DeclRef =
+                dyn_cast<DeclRefExpr>(Callee->IgnoreParenImpCasts()))
+          if (auto *VD = dyn_cast<VarDecl>(DeclRef->getDecl()))
+            if (areAllValuesNoReturn(VD, B, AC)) {
+              HasAbnormalEdge = true;
+              continue;
+            }
     }
 
     HasPlainEdge = true;
