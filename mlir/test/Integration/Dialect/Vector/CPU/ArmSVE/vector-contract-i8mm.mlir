@@ -14,9 +14,9 @@
 // RUN: rm -f %t && %{compile} && FileCheck %s --input-file=%t -check-prefix CHECK-IR && %{run} | FileCheck %s
 
 #packed_maps = [
-  affine_map<(d0, d1, d2) -> (d0, d2)>,
-  affine_map<(d0, d1, d2) -> (d1, d2)>,
-  affine_map<(d0, d1, d2) -> (d0, d1)>
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (n, k)>,
+  affine_map<(m, n, k) -> (m, n)>
 ]
 
 //
@@ -38,6 +38,10 @@
 //   * RHS:      vector<[N]x8xi8>
 //   * ACC, OUT: vector<Mx[N]xi32>
 // Note that the RHS is transposed.
+// This data layout makes it efficient to load data into SVE
+// registers in the layout expected by FEAT_I8MM instructions.
+// Such a `vector.contract` is representative of the code we aim to generate
+// by scalable vectorisation of `linalg.mmt4d`.
 // See mlir/lib/Dialect/ArmSVE/Transforms/LowerContractionToSVEI8MMPattern.cpp
 // for more information and rationale about these shapes.
 //
@@ -150,7 +154,7 @@ func.func @test_smmla() {
   %rhs_flat = vector.transfer_read %rhs_mem[%c0], %c0_i8 {in_bounds = [true]} :  memref<?xi8>, vector<[32]xi8>
   %rhs = vector.shape_cast %rhs_flat : vector<[32]xi8> to vector<[4]x8xi8>
 
-  // Matrix multiplication
+  // Matrix multiplication and accumulate with transposed RHS.
   %0 = arith.extsi %lhs : vector<4x8xi8> to vector<4x8xi32>
   %1 = arith.extsi %rhs : vector<[4]x8xi8> to vector<[4]x8xi32>
   %2 = vector.contract {indexing_maps = #packed_maps,
@@ -216,7 +220,7 @@ func.func @test_ummla() {
   %rhs_flat = vector.transfer_read %rhs_mem[%c0], %c0_i8 {in_bounds = [true]} :  memref<?xi8>, vector<[32]xi8>
   %rhs = vector.shape_cast %rhs_flat : vector<[32]xi8> to vector<[4]x8xi8>
 
-  // Matrix multiplication
+  // Matrix multiplication and accumulate with transposed RHS.
   %0 = arith.extui %lhs : vector<4x8xi8> to vector<4x8xi32>
   %1 = arith.extui %rhs : vector<[4]x8xi8> to vector<[4]x8xi32>
   %2 = vector.contract {indexing_maps = #packed_maps,
@@ -283,7 +287,7 @@ func.func @test_usmmla() {
   %rhs_flat = vector.transfer_read %rhs_mem[%c0], %c0_i8 {in_bounds = [true]} :  memref<?xi8>, vector<[32]xi8>
   %rhs = vector.shape_cast %rhs_flat : vector<[32]xi8> to vector<[4]x8xi8>
 
-  // Matrix multiplication
+  // Matrix multiplication and accumulate with transposed RHS.
   %0 = arith.extui %lhs : vector<4x8xi8> to vector<4x8xi32>
   %1 = arith.extsi %rhs : vector<[4]x8xi8> to vector<[4]x8xi32>
   %2 = vector.contract {indexing_maps = #packed_maps,
@@ -351,7 +355,7 @@ func.func @test_summla() {
   %rhs_flat = vector.transfer_read %rhs_mem[%c0], %c0_i8 {in_bounds = [true]} :  memref<?xi8>, vector<[32]xi8>
   %rhs = vector.shape_cast %rhs_flat : vector<[32]xi8> to vector<[4]x8xi8>
 
-  // Matrix multiplication
+  // Matrix multiplication and accumulate with transposed RHS.
   %0 = arith.extsi %lhs : vector<4x8xi8> to vector<4x8xi32>
   %1 = arith.extui %rhs : vector<[4]x8xi8> to vector<[4]x8xi32>
   %2 = vector.contract {indexing_maps = #packed_maps,
