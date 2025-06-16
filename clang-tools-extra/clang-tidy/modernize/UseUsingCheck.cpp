@@ -151,7 +151,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
     StringRef ExtraReference = "";
     if (MainTypeEndLoc.isValid() && TypeRange.fullyContains(MainTypeEndLoc)) {
       // Each type introduced in a typedef can specify being a reference or
-      // pointer type seperately, so we need to sigure out if the new using-decl
+      // pointer type separately, so we need to sigure out if the new using-decl
       // needs to be to a reference or pointer as well.
       const SourceLocation Tok = utils::lexer::findPreviousAnyTokenKind(
           MatchedDecl->getLocation(), SM, LO, tok::TokenKind::star,
