@@ -11,7 +11,7 @@
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMInstPrinter.h"
-#include "MCTargetDesc/ARMMCExpr.h"
+#include "MCTargetDesc/ARMMCAsmInfo.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "TargetInfo/ARMTargetInfo.h"
 #include "Utils/ARMBaseInfo.h"
@@ -1327,8 +1327,8 @@ public:
       // We want to avoid matching :upper16: and :lower16: as we want these
       // expressions to match in isImm0_65535Expr()
       const ARMMCExpr *ARM16Expr = dyn_cast<ARMMCExpr>(getImm());
-      return (!ARM16Expr || (ARM16Expr->getSpecifier() != ARMMCExpr::VK_HI16 &&
-                             ARM16Expr->getSpecifier() != ARMMCExpr::VK_LO16));
+      return (!ARM16Expr || (ARM16Expr->getSpecifier() != ARM::S_HI16 &&
+                             ARM16Expr->getSpecifier() != ARM::S_LO16));
     }
     if (!isImm()) return false;
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
@@ -6473,7 +6473,7 @@ bool ARMAsmParser::parseImmExpr(int64_t &Out) {
 // :upper8_15:, :upper0_7:, :lower8_15: and :lower0_7:
 bool ARMAsmParser::parsePrefix(ARMMCExpr::Specifier &Spec) {
   MCAsmParser &Parser = getParser();
-  Spec = ARMMCExpr::VK_None;
+  Spec = ARM::S_None;
 
   // consume an optional '#' (GNU compatibility)
   if (getLexer().is(AsmToken::Hash))
@@ -6498,12 +6498,12 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::Specifier &Spec) {
     ARMMCExpr::Specifier Spec;
     uint8_t SupportedFormats;
   } PrefixEntries[] = {
-      {"upper16", ARMMCExpr::VK_HI16, COFF | ELF | MACHO},
-      {"lower16", ARMMCExpr::VK_LO16, COFF | ELF | MACHO},
-      {"upper8_15", ARMMCExpr::VK_HI_8_15, ELF},
-      {"upper0_7", ARMMCExpr::VK_HI_0_7, ELF},
-      {"lower8_15", ARMMCExpr::VK_LO_8_15, ELF},
-      {"lower0_7", ARMMCExpr::VK_LO_0_7, ELF},
+      {"upper16", ARM::S_HI16, COFF | ELF | MACHO},
+      {"lower16", ARM::S_LO16, COFF | ELF | MACHO},
+      {"upper8_15", ARM::S_HI_8_15, ELF},
+      {"upper0_7", ARM::S_HI_0_7, ELF},
+      {"lower8_15", ARM::S_LO_8_15, ELF},
+      {"lower0_7", ARM::S_LO_0_7, ELF},
   };
 
   StringRef IDVal = Parser.getTok().getIdentifier();
@@ -6880,10 +6880,10 @@ static bool isThumbI8Relocation(MCParsedAsmOperand &MCOp) {
   if (!E)
     return false;
   const ARMMCExpr *ARM16Expr = dyn_cast<ARMMCExpr>(E);
-  if (ARM16Expr && (ARM16Expr->getSpecifier() == ARMMCExpr::VK_HI_8_15 ||
-                    ARM16Expr->getSpecifier() == ARMMCExpr::VK_HI_0_7 ||
-                    ARM16Expr->getSpecifier() == ARMMCExpr::VK_LO_8_15 ||
-                    ARM16Expr->getSpecifier() == ARMMCExpr::VK_LO_0_7))
+  if (ARM16Expr && (ARM16Expr->getSpecifier() == ARM::S_HI_8_15 ||
+                    ARM16Expr->getSpecifier() == ARM::S_HI_0_7 ||
+                    ARM16Expr->getSpecifier() == ARM::S_LO_8_15 ||
+                    ARM16Expr->getSpecifier() == ARM::S_LO_0_7))
     return true;
   return false;
 }
@@ -8287,8 +8287,8 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
     if (!E) break;
     const ARMMCExpr *ARM16Expr = dyn_cast<ARMMCExpr>(E);
-    if (!ARM16Expr || (ARM16Expr->getSpecifier() != ARMMCExpr::VK_HI16 &&
-                       ARM16Expr->getSpecifier() != ARMMCExpr::VK_LO16))
+    if (!ARM16Expr || (ARM16Expr->getSpecifier() != ARM::S_HI16 &&
+                       ARM16Expr->getSpecifier() != ARM::S_LO16))
       return Error(
           Op.getStartLoc(),
           "immediate expression for mov requires :lower16: or :upper16");
@@ -12437,7 +12437,7 @@ bool ARMAsmParser::parseDirectiveTLSDescSeq(SMLoc L) {
 
   auto *Sym = getContext().getOrCreateSymbol(Parser.getTok().getIdentifier());
   const auto *SRE =
-      MCSymbolRefExpr::create(Sym, ARMMCExpr::VK_TLSDESCSEQ, getContext());
+      MCSymbolRefExpr::create(Sym, ARM::S_TLSDESCSEQ, getContext());
   Lex();
 
   if (parseEOL())
