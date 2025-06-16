@@ -725,8 +725,8 @@ BasicBlock *CreateFailBB(Function *F, const Triple &Trip) {
     StackChkFail =
         M->getOrInsertFunction("__stack_chk_fail", Type::getVoidTy(Context));
   }
-  CallInst *Call = B.CreateCall(StackChkFail, Args);
-  Call->addFnAttr(Attribute::NoReturn);
+  cast<Function>(StackChkFail.getCallee())->addFnAttr(Attribute::NoReturn);
+  B.CreateCall(StackChkFail, Args);
   B.CreateUnreachable();
   return FailBB;
 }
