@@ -39,7 +39,7 @@ class TestSimulatorPlatformLaunching(TestBase):
         if expected_version:
             self.assertEqual(aout_info["min_version_os_sdk"], expected_version)
 
-    def run_with(self, arch, os, vers, env, expected_load_command):
+    def run_with(self, arch, os, vers, env, expected_load_command, expected_platform=None):
         env_list = [env] if env else []
         triple = "-".join([arch, "apple", os + vers] + env_list)
         sdk = lldbutil.get_xcode_sdk(os, env)
@@ -75,6 +75,11 @@ class TestSimulatorPlatformLaunching(TestBase):
             self, "break here", lldb.SBFileSpec("hello.c")
         )
         triple_re = "-".join([arch, "apple", os + vers + ".*"] + env_list)
+        if expected_platform is not None:
+            # The current platform should be expected
+            self.expect("platform status", patterns=[r"Platform: " + expected_platform])
+            # Should be able to list processes on the current platform
+            self.expect("platform process list", patterns=[r"\d+ matching processes were found on \"%s\"" % expected_platform])
         self.expect("image list -b -t", patterns=[r"a\.out " + triple_re])
         self.check_debugserver(log, os + env, vers)
 
@@ -90,6 +95,7 @@ class TestSimulatorPlatformLaunching(TestBase):
             vers="",
             env="simulator",
             expected_load_command="LC_BUILD_VERSION",
+            expected_platform="ios-simulator",
         )
 
     @skipIfAsan
