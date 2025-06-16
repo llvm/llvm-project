@@ -12920,8 +12920,7 @@ def err_spirv_enum_not_valid : Error<
    "invalid value for %select{storage class}0 argument">;
 
 def err_specialization_const_lit_init
-    : Error<"variable with 'vk::constant_id' attribute cannot have an "
-            "initializer that is not a literal">;
+    : Error<"variable with 'vk::constant_id' attribute must be initialized by a int/float/enum/bool literal.">;
 def err_specialization_const_missing_initializer
     : Error<
           "variable with 'vk::constant_id' attribute must have an initializer">;
