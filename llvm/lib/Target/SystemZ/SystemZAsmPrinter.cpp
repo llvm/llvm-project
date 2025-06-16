@@ -14,7 +14,7 @@
 #include "SystemZAsmPrinter.h"
 #include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZHLASMInstPrinter.h"
-#include "MCTargetDesc/SystemZMCExpr.h"
+#include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZConstantPoolValue.h"
 #include "SystemZMCInstLower.h"
@@ -79,7 +79,7 @@ static MCInst lowerRIEfLow(const MachineInstr *MI, unsigned Opcode) {
 static const MCSymbolRefExpr *getTLSGetOffset(MCContext &Context) {
   StringRef Name = "__tls_get_offset";
   return MCSymbolRefExpr::create(Context.getOrCreateSymbol(Name),
-                                 SystemZMCExpr::VK_PLT, Context);
+                                 SystemZ::S_PLT, Context);
 }
 
 static const MCSymbolRefExpr *getGlobalOffsetTable(MCContext &Context) {
@@ -319,11 +319,10 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case SystemZ::CallBRASL_XPLINK64:
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(SystemZ::BRASL)
-            .addReg(SystemZ::R7D)
-            .addExpr(Lower.getExpr(MI->getOperand(0), SystemZMCExpr::VK_PLT)));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
+                                     .addReg(SystemZ::R7D)
+                                     .addExpr(Lower.getExpr(MI->getOperand(0),
+                                                            SystemZ::S_PLT)));
     emitCallInformation(CallType::BRASL7);
     return;
 
@@ -380,10 +379,9 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
   case SystemZ::CallBRASL:
-    LoweredMI =
-        MCInstBuilder(SystemZ::BRASL)
-            .addReg(SystemZ::R14D)
-            .addExpr(Lower.getExpr(MI->getOperand(0), SystemZMCExpr::VK_PLT));
+    LoweredMI = MCInstBuilder(SystemZ::BRASL)
+                    .addReg(SystemZ::R14D)
+                    .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_PLT));
     break;
 
   case SystemZ::CallBASR:
@@ -393,17 +391,15 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case SystemZ::CallJG:
-    LoweredMI =
-        MCInstBuilder(SystemZ::JG)
-            .addExpr(Lower.getExpr(MI->getOperand(0), SystemZMCExpr::VK_PLT));
+    LoweredMI = MCInstBuilder(SystemZ::JG)
+                    .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_PLT));
     break;
 
   case SystemZ::CallBRCL:
-    LoweredMI =
-        MCInstBuilder(SystemZ::BRCL)
-            .addImm(MI->getOperand(0).getImm())
-            .addImm(MI->getOperand(1).getImm())
-            .addExpr(Lower.getExpr(MI->getOperand(2), SystemZMCExpr::VK_PLT));
+    LoweredMI = MCInstBuilder(SystemZ::BRCL)
+                    .addImm(MI->getOperand(0).getImm())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addExpr(Lower.getExpr(MI->getOperand(2), SystemZ::S_PLT));
     break;
 
   case SystemZ::CallBR:
@@ -495,15 +491,15 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
         MCInstBuilder(SystemZ::BRASL)
             .addReg(SystemZ::R14D)
             .addExpr(getTLSGetOffset(MF->getContext()))
-            .addExpr(Lower.getExpr(MI->getOperand(0), SystemZMCExpr::VK_TLSGD));
+            .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_TLSGD));
     break;
 
   case SystemZ::TLS_LDCALL:
-    LoweredMI = MCInstBuilder(SystemZ::BRASL)
-                    .addReg(SystemZ::R14D)
-                    .addExpr(getTLSGetOffset(MF->getContext()))
-                    .addExpr(Lower.getExpr(MI->getOperand(0),
-                                           SystemZMCExpr::VK_TLSLDM));
+    LoweredMI =
+        MCInstBuilder(SystemZ::BRASL)
+            .addReg(SystemZ::R14D)
+            .addExpr(getTLSGetOffset(MF->getContext()))
+            .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_TLSLDM));
     break;
 
   case SystemZ::GOT:
@@ -798,7 +794,7 @@ void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
 
   MCSymbol *fentry = Ctx.getOrCreateSymbol("__fentry__");
   const MCSymbolRefExpr *Op =
-      MCSymbolRefExpr::create(fentry, SystemZMCExpr::VK_PLT, Ctx);
+      MCSymbolRefExpr::create(fentry, SystemZ::S_PLT, Ctx);
   OutStreamer->emitInstruction(
       MCInstBuilder(SystemZ::BRASL).addReg(SystemZ::R0D).addExpr(Op),
       getSubtargetInfo());
@@ -880,7 +876,7 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
       EncodedBytes += 2;
     }
   } else if (CalleeMO.isGlobal()) {
-    const MCExpr *Expr = Lower.getExpr(CalleeMO, SystemZMCExpr::VK_PLT);
+    const MCExpr *Expr = Lower.getExpr(CalleeMO, SystemZ::S_PLT);
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
                                    .addReg(SystemZ::R14D)
                                    .addExpr(Expr));
@@ -923,11 +919,10 @@ void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
   EmitNop(OutContext, *OutStreamer, 2, getSubtargetInfo());
   EmitToStreamer(*OutStreamer,
                  MCInstBuilder(SystemZ::LLILF).addReg(SystemZ::R2D).addImm(0));
-  EmitToStreamer(*OutStreamer,
-                 MCInstBuilder(SystemZ::BRASL)
-                     .addReg(SystemZ::R14D)
-                     .addExpr(MCSymbolRefExpr::create(
-                         FuncEntry, SystemZMCExpr::VK_PLT, OutContext)));
+  EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
+                                   .addReg(SystemZ::R14D)
+                                   .addExpr(MCSymbolRefExpr::create(
+                                       FuncEntry, SystemZ::S_PLT, OutContext)));
   OutStreamer->emitLabel(EndOfSled);
   recordSled(BeginOfSled, MI, SledKind::FUNCTION_ENTER, 2);
 }
@@ -967,10 +962,9 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   EmitNop(OutContext, *OutStreamer, 4, getSubtargetInfo());
   EmitToStreamer(*OutStreamer,
                  MCInstBuilder(SystemZ::LLILF).addReg(SystemZ::R2D).addImm(0));
-  EmitToStreamer(*OutStreamer,
-                 MCInstBuilder(SystemZ::J)
-                     .addExpr(MCSymbolRefExpr::create(
-                         FuncExit, SystemZMCExpr::VK_PLT, OutContext)));
+  EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::J)
+                                   .addExpr(MCSymbolRefExpr::create(
+                                       FuncExit, SystemZ::S_PLT, OutContext)));
   if (FallthroughLabel)
     OutStreamer->emitLabel(FallthroughLabel);
   recordSled(BeginOfSled, MI, SledKind::FUNCTION_EXIT, 2);
@@ -992,13 +986,13 @@ void SystemZAsmPrinter::emitAttributes(Module &M) {
 static uint8_t getSpecifierFromModifier(SystemZCP::SystemZCPModifier Modifier) {
   switch (Modifier) {
   case SystemZCP::TLSGD:
-    return SystemZMCExpr::VK_TLSGD;
+    return SystemZ::S_TLSGD;
   case SystemZCP::TLSLDM:
-    return SystemZMCExpr::VK_TLSLDM;
+    return SystemZ::S_TLSLDM;
   case SystemZCP::DTPOFF:
-    return SystemZMCExpr::VK_DTPOFF;
+    return SystemZ::S_DTPOFF;
   case SystemZCP::NTPOFF:
-    return SystemZMCExpr::VK_NTPOFF;
+    return SystemZ::S_NTPOFF;
   }
   llvm_unreachable("Invalid SystemCPModifier!");
 }
@@ -1145,12 +1139,12 @@ void SystemZAsmPrinter::emitADASection() {
       // imported functions, that are placed in the ADA to be 8 byte aligned.
       EMIT_COMMENT("function descriptor of");
       OutStreamer->emitValue(
-          SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_RCon,
+          SystemZMCExpr::create(SystemZ::S_RCon,
                                 MCSymbolRefExpr::create(Sym, OutContext),
                                 OutContext),
           PointerSize);
       OutStreamer->emitValue(
-          SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_VCon,
+          SystemZMCExpr::create(SystemZ::S_VCon,
                                 MCSymbolRefExpr::create(Sym, OutContext),
                                 OutContext),
           PointerSize);
@@ -1159,7 +1153,7 @@ void SystemZAsmPrinter::emitADASection() {
     case SystemZII::MO_ADA_DATA_SYMBOL_ADDR:
       EMIT_COMMENT("pointer to data symbol");
       OutStreamer->emitValue(
-          SystemZMCExpr::create(SystemZMCExpr::VK_None,
+          SystemZMCExpr::create(SystemZ::S_None,
                                 MCSymbolRefExpr::create(Sym, OutContext),
                                 OutContext),
           PointerSize);
@@ -1174,7 +1168,7 @@ void SystemZAsmPrinter::emitADASection() {
 
       EMIT_COMMENT("pointer to function descriptor");
       OutStreamer->emitValue(
-          SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_VCon,
+          SystemZMCExpr::create(SystemZ::S_VCon,
                                 MCSymbolRefExpr::create(Alias, OutContext),
                                 OutContext),
           PointerSize);

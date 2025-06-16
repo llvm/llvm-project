@@ -18,24 +18,6 @@ namespace llvm {
 class SystemZMCExpr : public MCSpecifierExpr {
 public:
   using Specifier = Spec;
-  enum {
-    VK_None,
-
-    VK_DTPOFF = MCSymbolRefExpr::FirstTargetSpecifier,
-    VK_GOT,
-    VK_GOTENT,
-    VK_INDNTPOFF,
-    VK_NTPOFF,
-    VK_PLT,
-    VK_TLSGD,
-    VK_TLSLD,
-    VK_TLSLDM,
-
-    // HLASM docs for address constants:
-    // https://www.ibm.com/docs/en/hla-and-tf/1.6?topic=value-address-constants
-    VK_SystemZ_RCon, // Address of ADA of symbol.
-    VK_SystemZ_VCon, // Address of external function symbol.
-  };
 
 private:
   explicit SystemZMCExpr(const MCExpr *Expr, Spec S)

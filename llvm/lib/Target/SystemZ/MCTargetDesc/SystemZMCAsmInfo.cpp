@@ -14,15 +14,11 @@
 using namespace llvm;
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {SystemZMCExpr::VK_DTPOFF, "DTPOFF"},
-    {SystemZMCExpr::VK_GOT, "GOT"},
-    {SystemZMCExpr::VK_GOTENT, "GOTENT"},
-    {SystemZMCExpr::VK_INDNTPOFF, "INDNTPOFF"},
-    {SystemZMCExpr::VK_NTPOFF, "NTPOFF"},
-    {SystemZMCExpr::VK_PLT, "PLT"},
-    {SystemZMCExpr::VK_TLSGD, "TLSGD"},
-    {SystemZMCExpr::VK_TLSLD, "TLSLD"},
-    {SystemZMCExpr::VK_TLSLDM, "TLSLDM"},
+    {SystemZ::S_DTPOFF, "DTPOFF"}, {SystemZ::S_GOT, "GOT"},
+    {SystemZ::S_GOTENT, "GOTENT"}, {SystemZ::S_INDNTPOFF, "INDNTPOFF"},
+    {SystemZ::S_NTPOFF, "NTPOFF"}, {SystemZ::S_PLT, "PLT"},
+    {SystemZ::S_TLSGD, "TLSGD"},   {SystemZ::S_TLSLD, "TLSLD"},
+    {SystemZ::S_TLSLDM, "TLSLDM"},
 };
 
 SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
