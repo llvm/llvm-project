@@ -18,7 +18,7 @@
 #include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
-#include "MCTargetDesc/ARMMCExpr.h"
+#include "MCTargetDesc/ARMMCAsmInfo.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -37,9 +37,9 @@ using namespace llvm;
 
 MCOperand ARMAsmPrinter::GetSymbolRef(const MachineOperand &MO,
                                       const MCSymbol *Symbol) {
-  auto Specifier = ARMMCExpr::VK_None;
+  auto Specifier = ARM::S_None;
   if (MO.getTargetFlags() & ARMII::MO_SBREL)
-    Specifier = ARMMCExpr::VK_SBREL;
+    Specifier = ARM::S_SBREL;
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
   switch (MO.getTargetFlags() & ARMII::MO_OPTION_MASK) {

@@ -18,7 +18,7 @@
 #include "ARMTargetMachine.h"
 #include "ARMTargetObjectFile.h"
 #include "MCTargetDesc/ARMInstPrinter.h"
-#include "MCTargetDesc/ARMMCExpr.h"
+#include "MCTargetDesc/ARMMCAsmInfo.h"
 #include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -92,8 +92,7 @@ void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
 
   const MCExpr *E = MCSymbolRefExpr::create(
       GetARMGVSymbol(GV, ARMII::MO_NO_FLAG),
-      (Subtarget->isTargetELF() ? ARMMCExpr::VK_TARGET1 : ARMMCExpr::VK_None),
-      OutContext);
+      (Subtarget->isTargetELF() ? ARM::S_TARGET1 : ARM::S_None), OutContext);
 
   OutStreamer->emitValue(E, Size);
 }
@@ -843,17 +842,17 @@ static MCSymbol *getPICLabel(StringRef Prefix, unsigned FunctionNumber,
 static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
   switch (Modifier) {
   case ARMCP::no_modifier:
-    return ARMMCExpr::VK_None;
+    return ARM::S_None;
   case ARMCP::TLSGD:
-    return ARMMCExpr::VK_TLSGD;
+    return ARM::S_TLSGD;
   case ARMCP::TPOFF:
-    return ARMMCExpr::VK_TPOFF;
+    return ARM::S_TPOFF;
   case ARMCP::GOTTPOFF:
-    return ARMMCExpr::VK_GOTTPOFF;
+    return ARM::S_GOTTPOFF;
   case ARMCP::SBREL:
-    return ARMMCExpr::VK_SBREL;
+    return ARM::S_SBREL;
   case ARMCP::GOT_PREL:
-    return ARMMCExpr::VK_GOT_PREL;
+    return ARM::S_GOT_PREL;
   case ARMCP::SECREL:
     return MCSymbolRefExpr::VK_SECREL;
   }
