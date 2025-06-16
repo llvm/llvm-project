@@ -26,9 +26,9 @@ namespace lldb_dap {
 ///     The SBFileSpec to use when populating out the "Source" object
 ///
 /// \return
-///     A "Source" JSON object that follows the formal JSON
+///     An optional "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
-protocol::Source CreateSource(const lldb::SBFileSpec &file);
+std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file);
 
 /// Create a "Source" JSON object as described in the debug adapter definition.
 ///
@@ -38,10 +38,15 @@ protocol::Source CreateSource(const lldb::SBFileSpec &file);
 /// \param[in] target
 ///     The target that has the address.
 ///
+/// \param[in] create_reference
+///     function used to create a source_reference
+///
 /// \return
-///     A "Source" JSON object that follows the formal JSON
+///     An optional "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
-protocol::Source CreateSource(lldb::SBAddress address, lldb::SBTarget &target);
+std::optional<protocol::Source>
+CreateSource(lldb::SBAddress address, lldb::SBTarget &target,
+             llvm::function_ref<int32_t(lldb::addr_t)> create_reference);
 
 /// Checks if the given source is for assembly code.
 bool IsAssemblySource(const protocol::Source &source);
