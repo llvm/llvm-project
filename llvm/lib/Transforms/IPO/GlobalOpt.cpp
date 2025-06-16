@@ -1920,6 +1920,14 @@ static void RemovePreallocated(Function *F) {
   }
 }
 
+static unsigned char GetDebugInfoFastCC(const Triple &Triple) {
+  if (Triple.isOSWindows() && Triple.isArch32Bit()) {
+    return llvm::dwarf::DW_CC_BORLAND_msfastcall;
+  }
+
+  return llvm::dwarf::DW_CC_normal;
+}
+
 static bool
 OptimizeFunctions(Module &M,
                   function_ref<TargetLibraryInfo &(Function &)> GetTLI,
@@ -1937,6 +1945,9 @@ OptimizeFunctions(Module &M,
   for (Function &F : llvm::make_early_inc_range(M))
     if (hasOnlyColdCalls(F, GetBFI, ChangeableCCCache))
       AllCallsCold.push_back(&F);
+
+  unsigned char DebugInfoFastCC =
+      GetDebugInfoFastCC(Triple(M.getTargetTriple()));
 
   // Optimize functions.
   for (Function &F : llvm::make_early_inc_range(M)) {
@@ -2021,6 +2032,13 @@ OptimizeFunctions(Module &M,
       // Fast calling convention.
       F.setCallingConv(CallingConv::Fast);
       ChangeCalleesToFastCall(&F);
+
+      if (F.getSubprogram()) {
+        DISubprogram *SP = F.getSubprogram();
+        auto Temp = SP->getType()->cloneWithCC(DebugInfoFastCC);
+        SP->replaceType(MDNode::replaceWithPermanent(std::move(Temp)));
+      }
+
       ++NumFastCallFns;
       Changed = true;
     }
