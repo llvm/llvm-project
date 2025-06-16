@@ -1322,7 +1322,6 @@ public:
                       ShapeInfo MatrixShape, Value *I, Value *J,
                       ShapeInfo ResultShape, Type *EltTy,
                       IRBuilder<> &Builder) {
-
     Value *Offset = Builder.CreateAdd(
         Builder.CreateMul(J, Builder.getInt64(MatrixShape.getStride())), I);
 
@@ -2370,7 +2369,8 @@ public:
   }
 
   /// Lower selects.
-  MatrixTy VisitSelectInst(SelectInst *Inst, const ShapeInfo &Shape, IRBuilder<> &Builder) {
+  MatrixTy VisitSelectInst(SelectInst *Inst, const ShapeInfo &Shape,
+                           IRBuilder<> &Builder) {
     Value *Cond = Inst->getOperand(0);
     Value *OpA = Inst->getOperand(1);
     Value *OpB = Inst->getOperand(2);
