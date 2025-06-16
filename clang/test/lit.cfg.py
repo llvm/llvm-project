@@ -116,6 +116,7 @@ tools = [
 if config.clang_examples:
     config.available_features.add("examples")
 
+
 def have_host_out_of_process_jit_feature_support():
     clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
 
