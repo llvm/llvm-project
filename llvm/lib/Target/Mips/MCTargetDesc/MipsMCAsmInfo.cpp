@@ -157,8 +157,8 @@ static void printImpl(const MCAsmInfo &MAI, raw_ostream &OS,
 
 bool Mips::isGpOff(const MCSpecifierExpr &E) {
   if (E.getSpecifier() == Mips::S_HI || E.getSpecifier() == Mips::S_LO) {
-    if (const MipsMCExpr *S1 = dyn_cast<const MipsMCExpr>(E.getSubExpr())) {
-      if (const MipsMCExpr *S2 = dyn_cast<const MipsMCExpr>(S1->getSubExpr())) {
+    if (const auto *S1 = dyn_cast<const MCSpecifierExpr>(E.getSubExpr())) {
+      if (const auto *S2 = dyn_cast<const MCSpecifierExpr>(S1->getSubExpr())) {
         if (S1->getSpecifier() == Mips::S_NEG &&
             S2->getSpecifier() == Mips::S_GPREL) {
           // S = E.getSpecifier();
@@ -176,7 +176,8 @@ static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Res,
   // special cases.
   if (Mips::isGpOff(Expr)) {
     const MCExpr *SubExpr =
-        cast<MipsMCExpr>(cast<MipsMCExpr>(Expr.getSubExpr())->getSubExpr())
+        cast<MCSpecifierExpr>(
+            cast<MCSpecifierExpr>(Expr.getSubExpr())->getSubExpr())
             ->getSubExpr();
     if (!SubExpr->evaluateAsRelocatable(Res, Asm))
       return false;
