@@ -71,7 +71,7 @@ ErrorOr<char8_t> CharacterConverter::pop_utf8() {
 
   // Shift to get the next 6 bits from the utf32 encoding
   const char32_t shift_amount =
-      (state->total_bytes - state->bytes_processed - 1) * ENCODED_BITS_PER_UTF8;
+      static_cast<char32_t>((state->total_bytes - state->bytes_processed - 1) * ENCODED_BITS_PER_UTF8);
   if (state->bytes_processed == 0) {
     /*
       Choose the correct set of most significant bits to encode the length
