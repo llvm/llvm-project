@@ -328,6 +328,7 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
                 Section.getEDAttributes().NameSpace, Symbol.getLDAttributes());
   if (Symbol.getADA())
     LD.ADAEsdId = Symbol.getADA()->getOrdinal();
+  LD.Offset = Asm.getSymbolOffset(Symbol);
   writeSymbol(LD);
 }
 

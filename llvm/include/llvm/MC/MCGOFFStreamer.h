@@ -28,9 +28,10 @@ public:
 
   GOFFObjectWriter &getWriter();
 
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
-    return false;
-  }
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
+
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override {}
 };

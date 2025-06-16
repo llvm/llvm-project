@@ -28,7 +28,10 @@ class MCSymbolGOFF : public MCSymbol {
   GOFF::LDAttr LDAttributes;
 
   enum SymbolFlags : uint16_t {
-    SF_LD = 0x01, // LD attributes are set.
+    SF_LD = 0x01,     // LD attributes are set.
+                      // Leave place for EX attributes.
+    SF_Hidden = 0x04, // Symbol is hidden, aka not exported.
+    SF_Weak = 0x08,   // Symbol is weak.
   };
 
 public:
@@ -39,7 +42,8 @@ public:
     modifyFlags(SF_LD, SF_LD);
     LDAttributes = Attr;
   }
-  GOFF::LDAttr getLDAttributes() const { return LDAttributes; }
+  const GOFF::LDAttr &getLDAttributes() const { return LDAttributes; }
+  GOFF::LDAttr &getLDAttributes() { return LDAttributes; }
   bool hasLDAttributes() const { return getFlags() & SF_LD; }
 
   void setADA(MCSectionGOFF *AssociatedDataArea) {
@@ -47,6 +51,20 @@ public:
     AssociatedDataArea->RequiresNonZeroLength = true;
   }
   MCSectionGOFF *getADA() const { return ADA; }
+
+  bool isExternal() const { return IsExternal; }
+  void setExternal(bool Value) const { IsExternal = Value; }
+
+  void setHidden(bool Value = true) {
+    modifyFlags(Value ? SF_Hidden : 0, SF_Hidden);
+  }
+  bool isHidden() const { return getFlags() & SF_Hidden; }
+  bool isExported() const { return !isHidden(); }
+
+  void setWeak(bool Value = true) { modifyFlags(Value ? SF_Weak : 0, SF_Weak); }
+  bool isWeak() const { return getFlags() & SF_Weak; }
+
+  void initAttributes();
 };
 } // end namespace llvm
 
