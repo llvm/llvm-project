@@ -3771,8 +3771,8 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK64-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK64-NEXT:    movk w0, #59491, lsl #16
 ; CHECK64-NEXT:    .cfi_restore vg
-; CHECK64-NEXT:    sub x1, x29, #64
-; CHECK64-NEXT:    addvl sp, x1, #-18
+; CHECK64-NEXT:    sub x8, x29, #64
+; CHECK64-NEXT:    addvl sp, x8, #-18
 ; CHECK64-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -3903,8 +3903,8 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK1024-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK1024-NEXT:    movk w0, #59491, lsl #16
 ; CHECK1024-NEXT:    .cfi_restore vg
-; CHECK1024-NEXT:    sub x1, x29, #1024
-; CHECK1024-NEXT:    addvl sp, x1, #-18
+; CHECK1024-NEXT:    sub x8, x29, #1024
+; CHECK1024-NEXT:    addvl sp, x8, #-18
 ; CHECK1024-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload

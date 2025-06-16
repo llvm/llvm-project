@@ -2577,13 +2577,9 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
               AFI->getCalleeSaveBaseToFrameRecordOffset()) {
         // If we have have an non-zero offset to the non-SVE CS base we need to
         // compute the base address by subtracting the offest in a temporary
-        // register. SVE functions have a "big stack" so there should be at
-        // least one scratch register available.
-        RegScavenger RS;
-        RS.enterBasicBlockEnd(MBB);
-        RS.backward(MBBI);
-        CalleeSaveBase = RS.FindUnusedReg(&AArch64::GPR64commonRegClass);
-        assert(CalleeSaveBase != AArch64::NoRegister);
+        // register first (to avoid briefly deallocating the SVE CS).
+        CalleeSaveBase = MBB.getParent()->getRegInfo().createVirtualRegister(
+            &AArch64::GPR64RegClass);
         emitFrameOffset(MBB, RestoreBegin, DL, CalleeSaveBase, AArch64::FP,
                         StackOffset::getFixed(-CalleeSaveBaseOffset), TII,
                         MachineInstr::FrameDestroy);
