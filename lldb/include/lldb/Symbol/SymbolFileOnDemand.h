@@ -229,6 +229,10 @@ public:
                                                  load_all_debug_info);
   }
 
+  lldb_private::FileSpecList GetSeparateDebugInfoFiles() override {
+    return m_sym_file_impl->GetSeparateDebugInfoFiles();
+  }
+
   lldb::TypeSP MakeType(lldb::user_id_t uid, ConstString name,
                         std::optional<uint64_t> byte_size,
                         SymbolContextScope *context,

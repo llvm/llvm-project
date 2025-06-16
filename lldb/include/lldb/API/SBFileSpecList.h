@@ -40,6 +40,9 @@ public:
 
 private:
   friend class SBTarget;
+  friend class SBModule;
+
+  SBFileSpecList(lldb_private::FileSpecList &&list);
 
   const lldb_private::FileSpecList *operator->() const;
 

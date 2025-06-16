@@ -4215,11 +4215,10 @@ void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter) {
   clang->Dump(s.AsRawOstream(), filter);
 }
 
-llvm::StringMap<lldb_private::FileSpec>
-SymbolFileDWARF::GetSeparateDebugInfoFiles() {
+lldb_private::FileSpecList SymbolFileDWARF::GetSeparateDebugInfoFiles() {
   DWARFDebugInfo &info = DebugInfo();
   const size_t num_cus = info.GetNumUnits();
-  llvm::StringMap<lldb_private::FileSpec> symbolfile_map;
+  lldb_private::FileSpecList spec_list;
   for (uint32_t cu_idx = 0; cu_idx < num_cus; ++cu_idx) {
     DWARFUnit *unit = info.GetUnitAtIndex(cu_idx);
     DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(unit);
@@ -4235,10 +4234,9 @@ SymbolFileDWARF::GetSeparateDebugInfoFiles() {
 
     lldb_private::FileSpec symfile_spec =
         dwo_symfile->GetObjectFile()->GetFileSpec();
-    if (symbolfile_map.find(symfile_spec.GetPath()) == symbolfile_map.end())
-      symbolfile_map[symfile_spec.GetPath()] = symfile_spec;
+    spec_list.AppendIfUnique(symfile_spec);
   }
-  return symbolfile_map;
+  return spec_list;
 }
 
 bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,

@@ -504,11 +504,8 @@ public:
   /// always return a valid list, even if it is empty.
   ///
   /// \return
-  ///     A unique map of all the filespecs, dwos in a dwps would be joined to
-  ///     the dwp path for example.
-  virtual llvm::StringMap<lldb_private::FileSpec> GetSeparateDebugInfoFiles() {
-    return {};
-  }
+  ///     A unique list of all the filespecs, or an empty list.
+  virtual lldb_private::FileSpecList GetSeparateDebugInfoFiles() { return {}; }
 
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,
