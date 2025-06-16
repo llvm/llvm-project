@@ -1136,8 +1136,10 @@ Instruction *InstCombinerImpl::foldPHIReduction(PHINode &PN) {
   // Remove dead instructions. BO1/2 are replaced with poison to clean up their
   // uses.
   eraseInstFromFunction(*Rdx);
-  eraseInstFromFunction(*replaceInstUsesWith(*BO1, BO1));
-  eraseInstFromFunction(*replaceInstUsesWith(*BO2, BO2));
+  eraseInstFromFunction(
+      *replaceInstUsesWith(*BO1, PoisonValue::get(BO1->getType())));
+  eraseInstFromFunction(
+      *replaceInstUsesWith(*BO2, PoisonValue::get(BO2->getType())));
   eraseInstFromFunction(*PN2);
 
   return NewPN;
