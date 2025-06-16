@@ -10,6 +10,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CXXSTRINGTYPES_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CXXSTRINGTYPES_H
 
+#include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -42,6 +43,17 @@ bool Char32SummaryProvider(ValueObject &valobj, Stream &stream,
 
 bool WCharSummaryProvider(ValueObject &valobj, Stream &stream,
                           const TypeSummaryOptions &options); // wchar_t
+
+std::optional<uint64_t> GetWCharByteSize(Target &target);
+
+/// Print a summary for a string buffer to \a stream.
+///
+/// The buffer consists of a data pointer, \a location_sp, and a known \a size.
+template <StringPrinter::StringElementType element_type>
+bool StringBufferSummaryProvider(Stream &stream,
+                                 const TypeSummaryOptions &summary_options,
+                                 lldb::ValueObjectSP location_sp, uint64_t size,
+                                 std::string prefix_token);
 
 } // namespace formatters
 } // namespace lldb_private
