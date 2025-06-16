@@ -82,7 +82,7 @@ def remove_guards(output_file_path, unifdef_path, unifdef_guards):
         print(
             "Unable to find unifdef executable. Guards will not be removed from input files. Exiting..."
         )
-        sys.exit(1)
+        sys.exit()
 
     subprocess_command = (
         [unifdef_path, "-o", output_file_path] + unifdef_guards + [output_file_path]
