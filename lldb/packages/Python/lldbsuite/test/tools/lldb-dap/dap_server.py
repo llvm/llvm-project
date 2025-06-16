@@ -29,14 +29,7 @@ from typing import (
     TextIO,
     Literal,
     cast,
-    TYPE_CHECKING,
 )
-
-if sys.version_info >= (3, 10):
-    from typing import TypeGuard
-else:
-    if TYPE_CHECKING:
-        from typing_extensions import TypeGuard
 
 ## DAP type references
 
