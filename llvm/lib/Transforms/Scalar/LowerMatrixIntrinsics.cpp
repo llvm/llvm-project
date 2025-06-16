@@ -2285,7 +2285,7 @@ public:
       if (I == Inst2ColumnMatrix.end()) {
         if (auto *PHI = dyn_cast<PHINode>(MatrixVal)) {
           auto *EltTy = cast<VectorType>(PHI->getType())->getElementType();
-          MatrixTy PhiM{SI.NumRows, SI.NumColumns, EltTy};
+          MatrixTy PhiM(SI.NumRows, SI.NumColumns, EltTy);
 
           Builder.SetInsertPoint(PHI);
           for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI)
