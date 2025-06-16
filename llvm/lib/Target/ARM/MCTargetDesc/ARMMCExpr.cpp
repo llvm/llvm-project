@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMMCExpr.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 using namespace llvm;
@@ -44,7 +45,7 @@ void ARMMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   const MCExpr *Expr = getSubExpr();
   if (Expr->getKind() != MCExpr::SymbolRef)
     OS << '(';
-  Expr->print(OS, MAI);
+  MAI->printExpr(OS, *Expr);
   if (Expr->getKind() != MCExpr::SymbolRef)
     OS << ')';
 }
