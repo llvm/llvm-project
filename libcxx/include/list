@@ -342,7 +342,10 @@ public:
       : __base(__prev, __next) {}
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI ~__list_node() {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __base_pointer __as_link() { return __base::__self(); }
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __base_pointer __as_link() {
+    return pointer_traits<__base_pointer>::pointer_to(
+        *static_cast<typename pointer_traits<__base_pointer>::element_type*>(std::addressof(*this)));
+  }
 };
 
 template <class _Tp, class _Alloc = allocator<_Tp> >
