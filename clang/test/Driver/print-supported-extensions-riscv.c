@@ -159,6 +159,7 @@
 // CHECK-NEXT:     svpbmt               1.0       'Svpbmt' (Page-Based Memory Types)
 // CHECK-NEXT:     svvptc               1.0       'Svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)
 // CHECK-NEXT:     xandesperf           5.0       'XAndesPerf' (Andes Performance Extension)
+// CHECK-NEXT:     xandesvbfhcvt        5.0       'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)
 // CHECK-NEXT:     xandesvdot           5.0       'XAndesVDot' (Andes Vector Dot Product Extension)
 // CHECK-NEXT:     xandesvpackfph       5.0       'XAndesVPackFPH' (Andes Vector Packed FP16 Extension)
 // CHECK-NEXT:     xcvalu               1.0       'XCValu' (CORE-V ALU Operations)
