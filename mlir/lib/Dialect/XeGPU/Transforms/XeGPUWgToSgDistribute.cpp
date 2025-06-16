@@ -341,19 +341,15 @@ struct WgToSgVectorBroadcastOp
     if (!resultType)
       return failure();
 
-    // Only handle broadcasts to vectors with XeGPU layout attribute
     xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getResult());
     if (!layout || !layout.getSgLayout())
       return failure();
 
-    // Extract sgShape from layout
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
     SmallVector<Value> newBroadcasts;
 
-    // The operand is always a scalar or lower-rank vector, so just broadcast
-    // for each subgroup
     for (size_t i = 0; i < adaptor.getOperands().front().size(); ++i) {
       auto newBroadcast = rewriter.create<vector::BroadcastOp>(
           op.getLoc(), newResultType, adaptor.getOperands().front()[i]);
