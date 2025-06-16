@@ -629,16 +629,16 @@ define void @triangle_phi_loopexit(i32 %x, ptr %p) {
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 1
 ; CHECK-DISABLED-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-DISABLED-NEXT:    [[CMP1_NOT:%.*]] = xor i1 [[CMP1]], true
 ; CHECK-DISABLED-NEXT:    [[CMP2:%.*]] = icmp sgt i32 10, [[ADD]]
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = select i1 [[CMP1]], i32 [[ADD]], i32 [[X]]
+; CHECK-DISABLED-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP1_NOT]], [[CMP2]]
+; CHECK-DISABLED-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[TMP0]], 0
 ; CHECK-DISABLED-NEXT:    br label [[LOOP:%.*]]
 ; CHECK-DISABLED:       loop:
-; CHECK-DISABLED-NEXT:    br i1 [[CMP1]], label [[IF:%.*]], label [[THEN:%.*]]
-; CHECK-DISABLED:       if:
-; CHECK-DISABLED-NEXT:    br i1 [[CMP2]], label [[THEN]], label [[END:%.*]]
+; CHECK-DISABLED-NEXT:    br i1 [[OR_COND]], label [[THEN:%.*]], label [[END:%.*]]
 ; CHECK-DISABLED:       then:
-; CHECK-DISABLED-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD]], [[IF]] ], [ [[X]], [[LOOP]] ]
-; CHECK-DISABLED-NEXT:    store i32 [[PHI]], ptr [[P:%.*]], align 4
-; CHECK-DISABLED-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[PHI]], 0
+; CHECK-DISABLED-NEXT:    store i32 [[TMP0]], ptr [[P:%.*]], align 4
 ; CHECK-DISABLED-NEXT:    br i1 [[CMP3]], label [[LOOP]], label [[END]]
 ; CHECK-DISABLED:       end:
 ; CHECK-DISABLED-NEXT:    ret void
@@ -647,20 +647,16 @@ define void @triangle_phi_loopexit(i32 %x, ptr %p) {
 ; CHECK-ENABLED-NEXT:  entry:
 ; CHECK-ENABLED-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 1
 ; CHECK-ENABLED-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-ENABLED-NEXT:    [[CMP1_NOT:%.*]] = xor i1 [[CMP1]], true
 ; CHECK-ENABLED-NEXT:    [[CMP2:%.*]] = icmp sgt i32 10, [[ADD]]
-; CHECK-ENABLED-NEXT:    br i1 [[CMP1]], label [[IF_LICM:%.*]], label [[THEN_LICM:%.*]]
-; CHECK-ENABLED:       if.licm:
-; CHECK-ENABLED-NEXT:    br label [[THEN_LICM]]
-; CHECK-ENABLED:       then.licm:
-; CHECK-ENABLED-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD]], [[IF_LICM]] ], [ [[X]], [[ENTRY:%.*]] ]
-; CHECK-ENABLED-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[PHI]], 0
+; CHECK-ENABLED-NEXT:    [[TMP0:%.*]] = select i1 [[CMP1]], i32 [[ADD]], i32 [[X]]
+; CHECK-ENABLED-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP1_NOT]], [[CMP2]]
+; CHECK-ENABLED-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[TMP0]], 0
 ; CHECK-ENABLED-NEXT:    br label [[LOOP:%.*]]
 ; CHECK-ENABLED:       loop:
-; CHECK-ENABLED-NEXT:    br i1 [[CMP1]], label [[IF:%.*]], label [[THEN:%.*]]
-; CHECK-ENABLED:       if:
-; CHECK-ENABLED-NEXT:    br i1 [[CMP2]], label [[THEN]], label [[END:%.*]]
+; CHECK-ENABLED-NEXT:    br i1 [[OR_COND]], label [[THEN:%.*]], label [[END:%.*]]
 ; CHECK-ENABLED:       then:
-; CHECK-ENABLED-NEXT:    store i32 [[PHI]], ptr [[P:%.*]], align 4
+; CHECK-ENABLED-NEXT:    store i32 [[TMP0]], ptr [[P:%.*]], align 4
 ; CHECK-ENABLED-NEXT:    br i1 [[CMP3]], label [[LOOP]], label [[END]]
 ; CHECK-ENABLED:       end:
 ; CHECK-ENABLED-NEXT:    ret void

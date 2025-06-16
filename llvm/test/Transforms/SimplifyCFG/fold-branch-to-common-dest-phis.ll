@@ -12,18 +12,16 @@ define void @incompatible_ivs_of_single_phi.falsedest.falsedest(i8 %v0, i8 %v1, 
 ; ALL-LABEL: @incompatible_ivs_of_single_phi.falsedest.falsedest(
 ; ALL-NEXT:  pred:
 ; ALL-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
-; ALL-NEXT:    br i1 [[C0]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
-; ALL:       dispatch:
 ; ALL-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; ALL-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = select i1 [[C0]], i8 [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]], i8 [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]]
+; ALL-NEXT:    [[OR_COND:%.*]] = select i1 [[C0]], i1 [[C1]], i1 false
+; ALL-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; ALL:       common.ret:
 ; ALL-NEXT:    ret void
 ; ALL:       final_left:
-; ALL-NEXT:    [[FINAL_LEFT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_LEFT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
-; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI]])
+; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI:%.*]])
 ; ALL-NEXT:    br label [[COMMON_RET:%.*]]
 ; ALL:       final_right:
-; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]], [[PRED:%.*]] ], [ [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
 ; ALL-NEXT:    call void @sideeffect1(i8 [[FINAL_RIGHT_PHI]])
 ; ALL-NEXT:    br label [[COMMON_RET]]
 ;
@@ -48,18 +46,16 @@ define void @incompatible_ivs_of_single_phi.falsedest.falsedest.extrause(i8 %v0,
 ; ALL-NEXT:  pred:
 ; ALL-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
 ; ALL-NEXT:    call void @use1(i1 [[C0]])
-; ALL-NEXT:    br i1 [[C0]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
-; ALL:       dispatch:
 ; ALL-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; ALL-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = select i1 [[C0]], i8 [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]], i8 [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]]
+; ALL-NEXT:    [[OR_COND:%.*]] = select i1 [[C0]], i1 [[C1]], i1 false
+; ALL-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; ALL:       common.ret:
 ; ALL-NEXT:    ret void
 ; ALL:       final_left:
-; ALL-NEXT:    [[FINAL_LEFT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_LEFT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
-; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI]])
+; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI:%.*]])
 ; ALL-NEXT:    br label [[COMMON_RET:%.*]]
 ; ALL:       final_right:
-; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]], [[PRED:%.*]] ], [ [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
 ; ALL-NEXT:    call void @sideeffect1(i8 [[FINAL_RIGHT_PHI]])
 ; ALL-NEXT:    br label [[COMMON_RET]]
 ;
@@ -84,18 +80,17 @@ define void @incompatible_ivs_of_single_phi.falsedest.truedest(i8 %v0, i8 %v1, i
 ; ALL-LABEL: @incompatible_ivs_of_single_phi.falsedest.truedest(
 ; ALL-NEXT:  pred:
 ; ALL-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
-; ALL-NEXT:    br i1 [[C0]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
-; ALL:       dispatch:
+; ALL-NEXT:    [[C0_NOT:%.*]] = xor i1 [[C0]], true
 ; ALL-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; ALL-NEXT:    br i1 [[C1]], label [[FINAL_RIGHT]], label [[FINAL_LEFT:%.*]]
+; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = select i1 [[C0]], i8 [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]], i8 [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]]
+; ALL-NEXT:    [[OR_COND:%.*]] = select i1 [[C0_NOT]], i1 true, i1 [[C1]]
+; ALL-NEXT:    br i1 [[OR_COND]], label [[FINAL_RIGHT:%.*]], label [[FINAL_LEFT:%.*]]
 ; ALL:       common.ret:
 ; ALL-NEXT:    ret void
 ; ALL:       final_left:
-; ALL-NEXT:    [[FINAL_LEFT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_LEFT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
-; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI]])
+; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI:%.*]])
 ; ALL-NEXT:    br label [[COMMON_RET:%.*]]
 ; ALL:       final_right:
-; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]], [[PRED:%.*]] ], [ [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
 ; ALL-NEXT:    call void @sideeffect1(i8 [[FINAL_RIGHT_PHI]])
 ; ALL-NEXT:    br label [[COMMON_RET]]
 ;
@@ -156,18 +151,17 @@ define void @incompatible_ivs_of_single_phi.truedest.falsedest(i8 %v0, i8 %v1, i
 ; ALL-LABEL: @incompatible_ivs_of_single_phi.truedest.falsedest(
 ; ALL-NEXT:  pred:
 ; ALL-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
-; ALL-NEXT:    br i1 [[C0]], label [[FINAL_RIGHT:%.*]], label [[DISPATCH:%.*]]
-; ALL:       dispatch:
+; ALL-NEXT:    [[C0_NOT:%.*]] = xor i1 [[C0]], true
 ; ALL-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; ALL-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = select i1 [[C0]], i8 [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]], i8 [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]]
+; ALL-NEXT:    [[OR_COND:%.*]] = select i1 [[C0_NOT]], i1 [[C1]], i1 false
+; ALL-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; ALL:       common.ret:
 ; ALL-NEXT:    ret void
 ; ALL:       final_left:
-; ALL-NEXT:    [[FINAL_LEFT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_LEFT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
-; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI]])
+; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI:%.*]])
 ; ALL-NEXT:    br label [[COMMON_RET:%.*]]
 ; ALL:       final_right:
-; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]], [[PRED:%.*]] ], [ [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
 ; ALL-NEXT:    call void @sideeffect1(i8 [[FINAL_RIGHT_PHI]])
 ; ALL-NEXT:    br label [[COMMON_RET]]
 ;
@@ -228,18 +222,16 @@ define void @incompatible_ivs_of_single_phi.truedest.truedest(i8 %v0, i8 %v1, i8
 ; ALL-LABEL: @incompatible_ivs_of_single_phi.truedest.truedest(
 ; ALL-NEXT:  pred:
 ; ALL-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
-; ALL-NEXT:    br i1 [[C0]], label [[FINAL_RIGHT:%.*]], label [[DISPATCH:%.*]]
-; ALL:       dispatch:
 ; ALL-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; ALL-NEXT:    br i1 [[C1]], label [[FINAL_RIGHT]], label [[FINAL_LEFT:%.*]]
+; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = select i1 [[C0]], i8 [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]], i8 [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]]
+; ALL-NEXT:    [[OR_COND:%.*]] = select i1 [[C0]], i1 true, i1 [[C1]]
+; ALL-NEXT:    br i1 [[OR_COND]], label [[FINAL_RIGHT:%.*]], label [[FINAL_LEFT:%.*]]
 ; ALL:       common.ret:
 ; ALL-NEXT:    ret void
 ; ALL:       final_left:
-; ALL-NEXT:    [[FINAL_LEFT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_LEFT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
-; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI]])
+; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI:%.*]])
 ; ALL-NEXT:    br label [[COMMON_RET:%.*]]
 ; ALL:       final_right:
-; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]], [[PRED:%.*]] ], [ [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
 ; ALL-NEXT:    call void @sideeffect1(i8 [[FINAL_RIGHT_PHI]])
 ; ALL-NEXT:    br label [[COMMON_RET]]
 ;
@@ -264,18 +256,16 @@ define void @incompatible_ivs_of_single_phi.truedest.truedest.extrause(i8 %v0, i
 ; ALL-NEXT:  pred:
 ; ALL-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
 ; ALL-NEXT:    call void @use1(i1 [[C0]])
-; ALL-NEXT:    br i1 [[C0]], label [[FINAL_RIGHT:%.*]], label [[DISPATCH:%.*]]
-; ALL:       dispatch:
 ; ALL-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; ALL-NEXT:    br i1 [[C1]], label [[FINAL_RIGHT]], label [[FINAL_LEFT:%.*]]
+; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = select i1 [[C0]], i8 [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]], i8 [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]]
+; ALL-NEXT:    [[OR_COND:%.*]] = select i1 [[C0]], i1 true, i1 [[C1]]
+; ALL-NEXT:    br i1 [[OR_COND]], label [[FINAL_RIGHT:%.*]], label [[FINAL_LEFT:%.*]]
 ; ALL:       common.ret:
 ; ALL-NEXT:    ret void
 ; ALL:       final_left:
-; ALL-NEXT:    [[FINAL_LEFT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_LEFT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
-; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI]])
+; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI:%.*]])
 ; ALL-NEXT:    br label [[COMMON_RET:%.*]]
 ; ALL:       final_right:
-; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]], [[PRED:%.*]] ], [ [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
 ; ALL-NEXT:    call void @sideeffect1(i8 [[FINAL_RIGHT_PHI]])
 ; ALL-NEXT:    br label [[COMMON_RET]]
 ;
@@ -303,19 +293,17 @@ define void @incompatible_ivs_of_single_phi.insertpos(i8 %v0, i8 %v1, i8 %iv.of.
 ; ALL-NEXT:  pred:
 ; ALL-NEXT:    [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]] = load i8, ptr [[SRC0:%.*]], align 1
 ; ALL-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
-; ALL-NEXT:    br i1 [[C0]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
-; ALL:       dispatch:
 ; ALL-NEXT:    [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]] = load i8, ptr [[SRC1:%.*]], align 1
 ; ALL-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; ALL-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = select i1 [[C0]], i8 [[IV_OF_FINAL_RIGHT_FROM_DISPATCH]], i8 [[IV_OF_FINAL_RIGHT_FROM_PRED]]
+; ALL-NEXT:    [[OR_COND:%.*]] = select i1 [[C0]], i1 [[C1]], i1 false
+; ALL-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; ALL:       common.ret:
 ; ALL-NEXT:    ret void
 ; ALL:       final_left:
-; ALL-NEXT:    [[FINAL_LEFT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_LEFT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
-; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI]])
+; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI:%.*]])
 ; ALL-NEXT:    br label [[COMMON_RET:%.*]]
 ; ALL:       final_right:
-; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_RIGHT_FROM_PRED]], [[PRED:%.*]] ], [ [[IV_OF_FINAL_RIGHT_FROM_DISPATCH]], [[DISPATCH]] ]
 ; ALL-NEXT:    call void @sideeffect1(i8 [[FINAL_RIGHT_PHI]])
 ; ALL-NEXT:    br label [[COMMON_RET]]
 ;
@@ -459,10 +447,10 @@ define float @D139275_c4001580(float %val) {
 ; ALL-LABEL: @D139275_c4001580(
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[CMP:%.*]] = fcmp ugt float [[VAL:%.*]], 0.000000e+00
-; ALL-NEXT:    br i1 [[CMP]], label [[IF_END:%.*]], label [[RETURN:%.*]]
-; ALL:       if.end:
 ; ALL-NEXT:    [[CMP1:%.*]] = fcmp ult float [[VAL]], 1.000000e+00
-; ALL-NEXT:    br i1 [[CMP1]], label [[IF_END3:%.*]], label [[RETURN]]
+; ALL-NEXT:    [[TMP0:%.*]] = select i1 [[CMP]], float 0x3FB99999A0000000, float 0.000000e+00
+; ALL-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP1]]
+; ALL-NEXT:    br i1 [[OR_COND]], label [[IF_END3:%.*]], label [[RETURN:%.*]]
 ; ALL:       if.end3:
 ; ALL-NEXT:    [[CMP4:%.*]] = fcmp olt float [[VAL]], 0x3FC99999A0000000
 ; ALL-NEXT:    br i1 [[CMP4]], label [[RETURN]], label [[IF_END6:%.*]]
@@ -470,7 +458,7 @@ define float @D139275_c4001580(float %val) {
 ; ALL-NEXT:    [[SUB:%.*]] = fadd float [[VAL]], 0xBFB99999A0000000
 ; ALL-NEXT:    br label [[RETURN]]
 ; ALL:       return:
-; ALL-NEXT:    [[RETVAL_0:%.*]] = phi float [ [[SUB]], [[IF_END6]] ], [ 0.000000e+00, [[ENTRY:%.*]] ], [ 0x3FB99999A0000000, [[IF_END]] ], [ 0.000000e+00, [[IF_END3]] ]
+; ALL-NEXT:    [[RETVAL_0:%.*]] = phi float [ [[SUB]], [[IF_END6]] ], [ 0.000000e+00, [[IF_END3]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
 ; ALL-NEXT:    ret float [[RETVAL_0]]
 ;
 entry:
@@ -492,6 +480,51 @@ if.end6:
 return:
   %retval.0 = phi float [ %sub, %if.end6 ], [ 0.000000e+00, %entry ], [ 0x3FB99999A0000000, %if.end ], [ 0.000000e+00, %if.end3 ]
   ret float %retval.0
+}
+
+define i1 @_Z7compareRK1SS1_(ptr %a, ptr %b) {
+; ALL-LABEL: @_Z7compareRK1SS1_(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B:%.*]], align 4
+; ALL-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[TMP0]], [[TMP1]]
+; ALL-NEXT:    [[CMP_I_NOT:%.*]] = xor i1 [[CMP_I]], true
+; ALL-NEXT:    [[CMP_I19:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
+; ALL-NEXT:    [[TMP2:%.*]] = select i1 [[CMP_I]], i1 true, i1 false
+; ALL-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP_I_NOT]], [[CMP_I19]]
+; ALL-NEXT:    br i1 [[OR_COND]], label [[LAND_RHS:%.*]], label [[LOR_END:%.*]]
+; ALL:       land.rhs:
+; ALL-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
+; ALL-NEXT:    [[TMP3:%.*]] = load i32, ptr [[Y]], align 4
+; ALL-NEXT:    [[Y14:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 4
+; ALL-NEXT:    [[TMP4:%.*]] = load i32, ptr [[Y14]], align 4
+; ALL-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP3]], [[TMP4]]
+; ALL-NEXT:    br label [[LOR_END]]
+; ALL:       lor.end:
+; ALL-NEXT:    [[TMP5:%.*]] = phi i1 [ [[CMP]], [[LAND_RHS]] ], [ [[TMP2]], [[ENTRY:%.*]] ]
+; ALL-NEXT:    ret i1 [[TMP5]]
+;
+entry:
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
+  %cmp.i = icmp slt i32 %0, %1
+  br i1 %cmp.i, label %lor.end, label %lor.rhs
+
+lor.rhs:                                          ; preds = %entry
+  %cmp.i19 = icmp eq i32 %0, %1
+  br i1 %cmp.i19, label %land.rhs, label %lor.end
+
+land.rhs:                                         ; preds = %lor.rhs
+  %y = getelementptr inbounds nuw i8, ptr %a, i64 4
+  %2 = load i32, ptr %y, align 4
+  %y14 = getelementptr inbounds nuw i8, ptr %b, i64 4
+  %3 = load i32, ptr %y14, align 4
+  %cmp = icmp slt i32 %2, %3
+  br label %lor.end
+
+lor.end:                                          ; preds = %lor.rhs, %land.rhs, %entry
+  %4 = phi i1 [ true, %entry ], [ false, %lor.rhs ], [ %cmp, %land.rhs ]
+  ret i1 %4
 }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:

@@ -160,20 +160,21 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 %len, i32 %extra, i32 %n) {
 ; LOOP-DEL:       mismatch_loop_pre:
 ; LOOP-DEL-NEXT:    br label [[MISMATCH_LOOP:%.*]]
 ; LOOP-DEL:       mismatch_loop:
-; LOOP-DEL-NEXT:    [[MISMATCH_INDEX:%.*]] = phi i32 [ [[TMP0]], [[MISMATCH_LOOP_PRE]] ], [ [[TMP43:%.*]], [[MISMATCH_LOOP_INC:%.*]] ]
+; LOOP-DEL-NEXT:    [[MISMATCH_INDEX:%.*]] = phi i32 [ [[TMP0]], [[MISMATCH_LOOP_PRE]] ], [ [[TMP43:%.*]], [[MISMATCH_LOOP]] ]
 ; LOOP-DEL-NEXT:    [[TMP37:%.*]] = zext i32 [[MISMATCH_INDEX]] to i64
 ; LOOP-DEL-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP37]]
 ; LOOP-DEL-NEXT:    [[TMP39:%.*]] = load i8, ptr [[TMP38]], align 1
 ; LOOP-DEL-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP37]]
 ; LOOP-DEL-NEXT:    [[TMP41:%.*]] = load i8, ptr [[TMP40]], align 1
 ; LOOP-DEL-NEXT:    [[TMP42:%.*]] = icmp eq i8 [[TMP39]], [[TMP41]]
-; LOOP-DEL-NEXT:    br i1 [[TMP42]], label [[MISMATCH_LOOP_INC]], label [[WHILE_END]]
-; LOOP-DEL:       mismatch_loop_inc:
+; LOOP-DEL-NEXT:    [[DOTNOT:%.*]] = xor i1 [[TMP42]], true
 ; LOOP-DEL-NEXT:    [[TMP43]] = add i32 [[MISMATCH_INDEX]], 1
 ; LOOP-DEL-NEXT:    [[TMP44:%.*]] = icmp eq i32 [[TMP43]], [[N]]
-; LOOP-DEL-NEXT:    br i1 [[TMP44]], label [[WHILE_END]], label [[MISMATCH_LOOP]]
+; LOOP-DEL-NEXT:    [[TMP45:%.*]] = select i1 [[TMP42]], i32 [[N]], i32 [[MISMATCH_INDEX]]
+; LOOP-DEL-NEXT:    [[OR_COND:%.*]] = or i1 [[DOTNOT]], [[TMP44]]
+; LOOP-DEL-NEXT:    br i1 [[OR_COND]], label [[WHILE_END]], label [[MISMATCH_LOOP]]
 ; LOOP-DEL:       while.end:
-; LOOP-DEL-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ [[N]], [[MISMATCH_LOOP_INC]] ], [ [[MISMATCH_INDEX]], [[MISMATCH_LOOP]] ], [ [[N]], [[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP36]], [[MISMATCH_VEC_LOOP_FOUND]] ]
+; LOOP-DEL-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ [[N]], [[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP36]], [[MISMATCH_VEC_LOOP_FOUND]] ], [ [[TMP45]], [[MISMATCH_LOOP]] ]
 ; LOOP-DEL-NEXT:    [[RES:%.*]] = add i32 [[MISMATCH_RESULT]], [[EXTRA]]
 ; LOOP-DEL-NEXT:    ret i32 [[RES]]
 ;
@@ -381,20 +382,21 @@ define i32 @compare_bytes_signed_wrap(ptr %a, ptr %b, i32 %len, i32 %n) {
 ; LOOP-DEL:       mismatch_loop_pre:
 ; LOOP-DEL-NEXT:    br label [[MISMATCH_LOOP:%.*]]
 ; LOOP-DEL:       mismatch_loop:
-; LOOP-DEL-NEXT:    [[MISMATCH_INDEX:%.*]] = phi i32 [ [[TMP0]], [[MISMATCH_LOOP_PRE]] ], [ [[TMP43:%.*]], [[MISMATCH_LOOP_INC:%.*]] ]
+; LOOP-DEL-NEXT:    [[MISMATCH_INDEX:%.*]] = phi i32 [ [[TMP0]], [[MISMATCH_LOOP_PRE]] ], [ [[TMP43:%.*]], [[MISMATCH_LOOP]] ]
 ; LOOP-DEL-NEXT:    [[TMP37:%.*]] = zext i32 [[MISMATCH_INDEX]] to i64
 ; LOOP-DEL-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP37]]
 ; LOOP-DEL-NEXT:    [[TMP39:%.*]] = load i8, ptr [[TMP38]], align 1
 ; LOOP-DEL-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP37]]
 ; LOOP-DEL-NEXT:    [[TMP41:%.*]] = load i8, ptr [[TMP40]], align 1
 ; LOOP-DEL-NEXT:    [[TMP42:%.*]] = icmp eq i8 [[TMP39]], [[TMP41]]
-; LOOP-DEL-NEXT:    br i1 [[TMP42]], label [[MISMATCH_LOOP_INC]], label [[WHILE_END]]
-; LOOP-DEL:       mismatch_loop_inc:
+; LOOP-DEL-NEXT:    [[DOTNOT:%.*]] = xor i1 [[TMP42]], true
 ; LOOP-DEL-NEXT:    [[TMP43]] = add nsw i32 [[MISMATCH_INDEX]], 1
 ; LOOP-DEL-NEXT:    [[TMP44:%.*]] = icmp eq i32 [[TMP43]], [[N]]
-; LOOP-DEL-NEXT:    br i1 [[TMP44]], label [[WHILE_END]], label [[MISMATCH_LOOP]]
+; LOOP-DEL-NEXT:    [[TMP45:%.*]] = select i1 [[TMP42]], i32 [[N]], i32 [[MISMATCH_INDEX]]
+; LOOP-DEL-NEXT:    [[OR_COND:%.*]] = select i1 [[DOTNOT]], i1 true, i1 [[TMP44]]
+; LOOP-DEL-NEXT:    br i1 [[OR_COND]], label [[WHILE_END]], label [[MISMATCH_LOOP]]
 ; LOOP-DEL:       while.end:
-; LOOP-DEL-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ [[N]], [[MISMATCH_LOOP_INC]] ], [ [[MISMATCH_INDEX]], [[MISMATCH_LOOP]] ], [ [[N]], [[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP36]], [[MISMATCH_VEC_LOOP_FOUND]] ]
+; LOOP-DEL-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ [[N]], [[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP36]], [[MISMATCH_VEC_LOOP_FOUND]] ], [ [[TMP45]], [[MISMATCH_LOOP]] ]
 ; LOOP-DEL-NEXT:    ret i32 [[MISMATCH_RESULT]]
 ;
 ; NO-TRANSFORM-LABEL: define i32 @compare_bytes_signed_wrap(
@@ -608,20 +610,21 @@ define i32 @compare_bytes_simple_end_ne_found(ptr %a, ptr %b, ptr %c, ptr %d, i3
 ; LOOP-DEL:       mismatch_loop_pre:
 ; LOOP-DEL-NEXT:    br label [[MISMATCH_LOOP:%.*]]
 ; LOOP-DEL:       mismatch_loop:
-; LOOP-DEL-NEXT:    [[MISMATCH_INDEX3:%.*]] = phi i32 [ [[TMP0]], [[MISMATCH_LOOP_PRE]] ], [ [[TMP43:%.*]], [[MISMATCH_LOOP_INC:%.*]] ]
+; LOOP-DEL-NEXT:    [[MISMATCH_INDEX3:%.*]] = phi i32 [ [[TMP0]], [[MISMATCH_LOOP_PRE]] ], [ [[TMP43:%.*]], [[MISMATCH_LOOP]] ]
 ; LOOP-DEL-NEXT:    [[TMP37:%.*]] = zext i32 [[MISMATCH_INDEX3]] to i64
 ; LOOP-DEL-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP37]]
 ; LOOP-DEL-NEXT:    [[TMP39:%.*]] = load i8, ptr [[TMP38]], align 1
 ; LOOP-DEL-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP37]]
 ; LOOP-DEL-NEXT:    [[TMP41:%.*]] = load i8, ptr [[TMP40]], align 1
 ; LOOP-DEL-NEXT:    [[TMP42:%.*]] = icmp eq i8 [[TMP39]], [[TMP41]]
-; LOOP-DEL-NEXT:    br i1 [[TMP42]], label [[MISMATCH_LOOP_INC]], label [[BYTE_COMPARE]]
-; LOOP-DEL:       mismatch_loop_inc:
+; LOOP-DEL-NEXT:    [[DOTNOT:%.*]] = xor i1 [[TMP42]], true
 ; LOOP-DEL-NEXT:    [[TMP43]] = add i32 [[MISMATCH_INDEX3]], 1
 ; LOOP-DEL-NEXT:    [[TMP44:%.*]] = icmp eq i32 [[TMP43]], [[N]]
-; LOOP-DEL-NEXT:    br i1 [[TMP44]], label [[BYTE_COMPARE]], label [[MISMATCH_LOOP]]
+; LOOP-DEL-NEXT:    [[TMP46:%.*]] = select i1 [[TMP42]], i32 [[N]], i32 [[MISMATCH_INDEX3]]
+; LOOP-DEL-NEXT:    [[OR_COND:%.*]] = or i1 [[DOTNOT]], [[TMP44]]
+; LOOP-DEL-NEXT:    br i1 [[OR_COND]], label [[BYTE_COMPARE]], label [[MISMATCH_LOOP]]
 ; LOOP-DEL:       byte.compare:
-; LOOP-DEL-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ [[N]], [[MISMATCH_LOOP_INC]] ], [ [[MISMATCH_INDEX3]], [[MISMATCH_LOOP]] ], [ [[N]], [[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP36]], [[MISMATCH_VEC_LOOP_FOUND]] ]
+; LOOP-DEL-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ [[N]], [[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP36]], [[MISMATCH_VEC_LOOP_FOUND]] ], [ [[TMP46]], [[MISMATCH_LOOP]] ]
 ; LOOP-DEL-NEXT:    [[TMP45:%.*]] = icmp eq i32 [[MISMATCH_RESULT]], [[N]]
 ; LOOP-DEL-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP45]], i32 [[N]], i32 [[MISMATCH_RESULT]]
 ; LOOP-DEL-NEXT:    [[SPEC_SELECT4:%.*]] = select i1 [[TMP45]], ptr [[D]], ptr [[C]]
@@ -860,20 +863,21 @@ define i32 @compare_bytes_extra_cmp(ptr %a, ptr %b, i32 %len, i32 %n, i32 %x) {
 ; LOOP-DEL:       mismatch_loop_pre:
 ; LOOP-DEL-NEXT:    br label [[MISMATCH_LOOP:%.*]]
 ; LOOP-DEL:       mismatch_loop:
-; LOOP-DEL-NEXT:    [[MISMATCH_INDEX:%.*]] = phi i32 [ [[TMP0]], [[MISMATCH_LOOP_PRE]] ], [ [[TMP43:%.*]], [[MISMATCH_LOOP_INC:%.*]] ]
+; LOOP-DEL-NEXT:    [[MISMATCH_INDEX:%.*]] = phi i32 [ [[TMP0]], [[MISMATCH_LOOP_PRE]] ], [ [[TMP43:%.*]], [[MISMATCH_LOOP]] ]
 ; LOOP-DEL-NEXT:    [[TMP37:%.*]] = zext i32 [[MISMATCH_INDEX]] to i64
 ; LOOP-DEL-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP37]]
 ; LOOP-DEL-NEXT:    [[TMP39:%.*]] = load i8, ptr [[TMP38]], align 1
 ; LOOP-DEL-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP37]]
 ; LOOP-DEL-NEXT:    [[TMP41:%.*]] = load i8, ptr [[TMP40]], align 1
 ; LOOP-DEL-NEXT:    [[TMP42:%.*]] = icmp eq i8 [[TMP39]], [[TMP41]]
-; LOOP-DEL-NEXT:    br i1 [[TMP42]], label [[MISMATCH_LOOP_INC]], label [[WHILE_END]]
-; LOOP-DEL:       mismatch_loop_inc:
+; LOOP-DEL-NEXT:    [[DOTNOT:%.*]] = xor i1 [[TMP42]], true
 ; LOOP-DEL-NEXT:    [[TMP43]] = add i32 [[MISMATCH_INDEX]], 1
 ; LOOP-DEL-NEXT:    [[TMP44:%.*]] = icmp eq i32 [[TMP43]], [[N]]
-; LOOP-DEL-NEXT:    br i1 [[TMP44]], label [[WHILE_END]], label [[MISMATCH_LOOP]]
+; LOOP-DEL-NEXT:    [[TMP45:%.*]] = select i1 [[TMP42]], i32 [[N]], i32 [[MISMATCH_INDEX]]
+; LOOP-DEL-NEXT:    [[OR_COND:%.*]] = or i1 [[DOTNOT]], [[TMP44]]
+; LOOP-DEL-NEXT:    br i1 [[OR_COND]], label [[WHILE_END]], label [[MISMATCH_LOOP]]
 ; LOOP-DEL:       while.end:
-; LOOP-DEL-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ [[N]], [[MISMATCH_LOOP_INC]] ], [ [[MISMATCH_INDEX]], [[MISMATCH_LOOP]] ], [ [[N]], [[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP36]], [[MISMATCH_VEC_LOOP_FOUND]] ]
+; LOOP-DEL-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ [[N]], [[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP36]], [[MISMATCH_VEC_LOOP_FOUND]] ], [ [[TMP45]], [[MISMATCH_LOOP]] ]
 ; LOOP-DEL-NEXT:    ret i32 [[INC_LCSSA]]
 ;
 ; NO-TRANSFORM-LABEL: define i32 @compare_bytes_extra_cmp(
@@ -1040,7 +1044,8 @@ define void @compare_bytes_cleanup_block(ptr %src1, ptr %src2) {
 ; LOOP-DEL-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
 ; LOOP-DEL-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[SRC2]], i64 [[TMP0]]
 ; LOOP-DEL-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
-; LOOP-DEL-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP2]], [[TMP4]]
+; LOOP-DEL-NEXT:    [[TMP8:%.*]] = icmp eq i8 [[TMP2]], [[TMP4]]
+; LOOP-DEL-NEXT:    [[TMP5:%.*]] = xor i1 [[TMP8]], true
 ; LOOP-DEL-NEXT:    [[TMP6]] = add i32 [[MISMATCH_INDEX]], 1
 ; LOOP-DEL-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
 ; LOOP-DEL-NEXT:    [[OR_COND:%.*]] = or i1 [[TMP5]], [[TMP7]]

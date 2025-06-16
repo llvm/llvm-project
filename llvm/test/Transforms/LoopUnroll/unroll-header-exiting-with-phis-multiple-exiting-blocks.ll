@@ -8,52 +8,25 @@ define i16 @full_unroll_multiple_exiting_blocks(ptr %A, i16 %x, i16 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[LV:%.*]] = load i16, ptr [[A:%.*]], align 2
-; CHECK-NEXT:    [[RES_NEXT:%.*]] = add i16 123, [[LV]]
-; CHECK-NEXT:    br label [[EXITING_1:%.*]]
-; CHECK:       exiting.1:
-; CHECK-NEXT:    [[EC_1:%.*]] = icmp eq i16 [[LV]], [[X:%.*]]
-; CHECK-NEXT:    br i1 [[EC_1]], label [[EXIT:%.*]], label [[EXITING_2:%.*]]
-; CHECK:       exiting.2:
-; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i16 [[LV]], [[Y:%.*]]
-; CHECK-NEXT:    br i1 [[EC_2]], label [[EXIT]], label [[LATCH:%.*]]
-; CHECK:       latch:
-; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 1
+; CHECK-NEXT:    [[RES_NEXT:%.*]] = phi i16 [ 123, [[ENTRY:%.*]] ], [ [[RES_NEXT_1:%.*]], [[LATCH_3:%.*]] ]
+; CHECK-NEXT:    [[I_0:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INC9:%.*]], [[LATCH_3]] ]
+; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr inbounds i16, ptr [[A:%.*]], i64 [[I_0]]
 ; CHECK-NEXT:    [[LV_1:%.*]] = load i16, ptr [[PTR_1]], align 2
-; CHECK-NEXT:    [[RES_NEXT_1:%.*]] = add i16 [[RES_NEXT]], [[LV_1]]
-; CHECK-NEXT:    br label [[EXITING_1_1:%.*]]
-; CHECK:       exiting.1.1:
-; CHECK-NEXT:    [[EC_1_1:%.*]] = icmp eq i16 [[LV_1]], [[X]]
-; CHECK-NEXT:    br i1 [[EC_1_1]], label [[EXIT]], label [[EXITING_2_1:%.*]]
-; CHECK:       exiting.2.1:
-; CHECK-NEXT:    [[EC_2_1:%.*]] = icmp eq i16 [[LV_1]], [[Y]]
-; CHECK-NEXT:    br i1 [[EC_2_1]], label [[EXIT]], label [[LATCH_1:%.*]]
-; CHECK:       latch.1:
-; CHECK-NEXT:    [[PTR_2:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 2
-; CHECK-NEXT:    [[LV_2:%.*]] = load i16, ptr [[PTR_2]], align 2
-; CHECK-NEXT:    [[RES_NEXT_2:%.*]] = add i16 [[RES_NEXT_1]], [[LV_2]]
-; CHECK-NEXT:    br label [[EXITING_1_2:%.*]]
-; CHECK:       exiting.1.2:
-; CHECK-NEXT:    [[EC_1_2:%.*]] = icmp eq i16 [[LV_2]], [[X]]
-; CHECK-NEXT:    br i1 [[EC_1_2]], label [[EXIT]], label [[EXITING_2_2:%.*]]
-; CHECK:       exiting.2.2:
-; CHECK-NEXT:    [[EC_2_2:%.*]] = icmp eq i16 [[LV_2]], [[Y]]
-; CHECK-NEXT:    br i1 [[EC_2_2]], label [[EXIT]], label [[LATCH_2:%.*]]
-; CHECK:       latch.2:
-; CHECK-NEXT:    [[PTR_3:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 3
-; CHECK-NEXT:    [[LV_3:%.*]] = load i16, ptr [[PTR_3]], align 2
-; CHECK-NEXT:    [[RES_NEXT_3:%.*]] = add i16 [[RES_NEXT_2]], [[LV_3]]
-; CHECK-NEXT:    br i1 false, label [[EXITING_1_3:%.*]], label [[EXIT]]
-; CHECK:       exiting.1.3:
-; CHECK-NEXT:    [[EC_1_3:%.*]] = icmp eq i16 [[LV_3]], [[X]]
-; CHECK-NEXT:    br i1 [[EC_1_3]], label [[EXIT]], label [[EXITING_2_3:%.*]]
-; CHECK:       exiting.2.3:
-; CHECK-NEXT:    [[EC_2_3:%.*]] = icmp eq i16 [[LV_3]], [[Y]]
-; CHECK-NEXT:    br i1 [[EC_2_3]], label [[EXIT]], label [[LATCH_3:%.*]]
-; CHECK:       latch.3:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[RES_NEXT_1]] = add i16 [[RES_NEXT]], [[LV_1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_0]], 3
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[EC_1_1:%.*]] = icmp eq i16 [[LV_1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP]], i16 0, i16 [[RES_NEXT_1]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP_NOT]], i1 true, i1 [[EC_1_1]]
+; CHECK-NEXT:    [[EC_2_1:%.*]] = icmp eq i16 [[LV_1]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[OR_COND]], i16 [[TMP0]], i16 1
+; CHECK-NEXT:    [[EC_2_3:%.*]] = select i1 [[OR_COND]], i1 true, i1 [[EC_2_1]]
+; CHECK-NEXT:    br i1 [[EC_2_3]], label [[EXIT:%.*]], label [[LATCH_3]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[INC9]] = add i64 [[I_0]], 1
+; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi i16 [ 0, [[EXITING_1]] ], [ 1, [[EXITING_2]] ], [ 0, [[EXITING_1_1]] ], [ 1, [[EXITING_2_1]] ], [ 0, [[EXITING_1_2]] ], [ 1, [[EXITING_2_2]] ], [ [[RES_NEXT_3]], [[LATCH_2]] ], [ 0, [[EXITING_1_3]] ], [ 1, [[EXITING_2_3]] ]
+; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi i16 [ [[TMP1]], [[HEADER]] ]
 ; CHECK-NEXT:    ret i16 [[RES_LCSSA]]
 ;
 entry:

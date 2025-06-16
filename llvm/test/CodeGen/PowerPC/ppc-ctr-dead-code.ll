@@ -8,25 +8,27 @@
 define signext i32 @limit_loop(i32 signext %iters, ptr nocapture readonly %vec, i32 signext %limit) local_unnamed_addr {
 ; CHECK-LABEL: limit_loop:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 6, 3
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    cmpwi 6, 0
-; CHECK-NEXT:    blelr 0
+; CHECK-NEXT:    cmpwi 3, 0
+; CHECK-NEXT:    ble 0, .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    mtctr 6
 ; CHECK-NEXT:    addi 4, 4, -4
-; CHECK-NEXT:    b .LBB0_3
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_2: # %for.cond
+; CHECK-NEXT:    li 6, 1
+; CHECK-NEXT:    .p2align 5
+; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    bdzlr
-; CHECK-NEXT:  .LBB0_3: # %for.body
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lwzu 6, 4(4)
-; CHECK-NEXT:    cmpw 6, 5
-; CHECK-NEXT:    blt 0, .LBB0_2
-; CHECK-NEXT:  # %bb.4:
+; CHECK-NEXT:    lwzu 7, 4(4)
+; CHECK-NEXT:    cmpd 1, 6, 3
+; CHECK-NEXT:    addi 6, 6, 1
+; CHECK-NEXT:    cmpw 7, 5
+; CHECK-NEXT:    crand 20, 0, 4
+; CHECK-NEXT:    bc 12, 20, .LBB0_2
+; CHECK-NEXT:  # %bb.3: # %cleanup.loopexit
 ; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    isellt 3, 0, 3
+; CHECK-NEXT:    clrldi 3, 3, 32
+; CHECK-NEXT:    blr
+; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
 entry:
   %cmp5 = icmp sgt i32 %iters, 0
