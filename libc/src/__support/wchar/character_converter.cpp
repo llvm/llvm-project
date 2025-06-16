@@ -87,7 +87,7 @@ ErrorOr<char8_t> CharacterConverter::pop_utf8() {
   }
 
   state->bytes_processed++;
-  return (char8_t)output;
+  return static_cast<char8_t>(output);
 }
 
 } // namespace internal
