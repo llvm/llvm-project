@@ -44,7 +44,7 @@ int CharacterConverter::push(char8_t utf8_byte) {
       /* Since the format is 110xxxxx, 1110xxxx, and 11110xxx for 2, 3, and 4,
       we will make the base mask with 7 ones and right shift it as necessary. */
       constexpr size_t SIGNIFICANT_BITS = 7;
-      uint32_t base_mask = mask_trailing_ones<uint32_t, SIGNIFICANT_BITS>();
+      uint8_t base_mask = mask_trailing_ones<uint8_t, SIGNIFICANT_BITS>();
       state->total_bytes = num_ones;
       utf8_byte &= (base_mask >> num_ones);
     }
