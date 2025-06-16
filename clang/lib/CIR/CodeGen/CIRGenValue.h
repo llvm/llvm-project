@@ -96,6 +96,7 @@ public:
     er.isVolatile = false;
     return er;
   }
+
   static RValue getComplex(const std::pair<mlir::Value, mlir::Value> &c) {
     return getComplex(c.first, c.second);
   }

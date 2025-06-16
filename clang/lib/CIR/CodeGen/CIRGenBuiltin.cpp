@@ -50,6 +50,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
 
   mlir::Location loc = getLoc(e->getExprLoc());
-  cgm.errorNYI(loc, "non constant foldable builtin calls");
+  switch (builtinID) {
+  case Builtin::BI__builtin_complex: {
+    mlir::Value real = emitScalarExpr(e->getArg(0));
+    mlir::Value imag = emitScalarExpr(e->getArg(1));
+    return RValue::getComplex(real, imag);
+  }
+  default:
+    cgm.errorNYI(loc, "non constant foldable builtin calls");
+  }
   return getUndefRValue(e->getType());
 }
