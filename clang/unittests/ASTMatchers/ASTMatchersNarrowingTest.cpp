@@ -4724,6 +4724,65 @@ void x() {
   EXPECT_TRUE(matchesWithOpenMP(Source8, Matcher));
 }
 
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_IsStandaloneDirective) {
+  auto Matcher = ompTargetUpdateDirective(isStandaloneDirective());
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_HasStructuredBlock) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(
+      Source0, ompTargetUpdateDirective(hasStructuredBlock(nullStmt()))));
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_HasClause) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(anything()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_IsAllowedToContainClauseKind) {
+  auto Matcher = ompTargetUpdateDirective(
+      isAllowedToContainClauseKind(llvm::omp::OMPC_from));
+
+  StringRef Source0 = R"(
+    void x() {
+      ;
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+
+  StringRef Source1 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source1, Matcher));
+}
+
 TEST_P(ASTMatchersTest, HasAnyBase_DirectBase) {
   if (!GetParam().isCXX()) {
     return;
