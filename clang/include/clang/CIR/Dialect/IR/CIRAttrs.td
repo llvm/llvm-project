@@ -307,9 +307,9 @@ def ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex",
   );
 
   let builders = [
-    AttrBuilderWithInferredContext<(ins "cir::ComplexType":$type,
-                                        "mlir::TypedAttr":$real,
+    AttrBuilderWithInferredContext<(ins "mlir::TypedAttr":$real,
                                         "mlir::TypedAttr":$imag), [{
+      auto type = cir::ComplexType::get(real.getType());
       return $_get(type.getContext(), type, real, imag);
     }]>,
   ];

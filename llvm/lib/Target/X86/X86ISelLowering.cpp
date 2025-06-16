@@ -5242,25 +5242,25 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   }
 
   // Extract constant bits from a subvector's source.
-  if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
-    // TODO - support extract_subvector through bitcasts.
-    if (EltSizeInBits != VT.getScalarSizeInBits())
-      return false;
+  if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      getTargetConstantBitsFromNode(Op.getOperand(0), EltSizeInBits, UndefElts,
+                                    EltBits, AllowWholeUndefs,
+                                    AllowPartialUndefs)) {
+    EVT SrcVT = Op.getOperand(0).getValueType();
+    unsigned NumSrcElts = SrcVT.getSizeInBits() / EltSizeInBits;
+    unsigned NumSubElts = VT.getSizeInBits() / EltSizeInBits;
+    unsigned BaseOfs = Op.getConstantOperandVal(1) * VT.getScalarSizeInBits();
+    unsigned BaseIdx = BaseOfs / EltSizeInBits;
+    assert((SrcVT.getSizeInBits() % EltSizeInBits) == 0 &&
+           (VT.getSizeInBits() % EltSizeInBits) == 0 &&
+           (BaseOfs % EltSizeInBits) == 0 && "Bad subvector index");
 
-    if (getTargetConstantBitsFromNode(Op.getOperand(0), EltSizeInBits,
-                                      UndefElts, EltBits, AllowWholeUndefs,
-                                      AllowPartialUndefs)) {
-      EVT SrcVT = Op.getOperand(0).getValueType();
-      unsigned NumSrcElts = SrcVT.getVectorNumElements();
-      unsigned NumSubElts = VT.getVectorNumElements();
-      unsigned BaseIdx = Op.getConstantOperandVal(1);
-      UndefElts = UndefElts.extractBits(NumSubElts, BaseIdx);
-      if ((BaseIdx + NumSubElts) != NumSrcElts)
-        EltBits.erase(EltBits.begin() + BaseIdx + NumSubElts, EltBits.end());
-      if (BaseIdx != 0)
-        EltBits.erase(EltBits.begin(), EltBits.begin() + BaseIdx);
-      return true;
-    }
+    UndefElts = UndefElts.extractBits(NumSubElts, BaseIdx);
+    if ((BaseIdx + NumSubElts) != NumSrcElts)
+      EltBits.erase(EltBits.begin() + BaseIdx + NumSubElts, EltBits.end());
+    if (BaseIdx != 0)
+      EltBits.erase(EltBits.begin(), EltBits.begin() + BaseIdx);
+    return true;
   }
 
   // Extract constant bits from shuffle node sources.
@@ -9614,13 +9614,12 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 // 256-bit AVX can use the vinsertf128 instruction
 // to create 256-bit vectors from two other 128-bit ones.
 // TODO: Detect subvector broadcast here instead of DAG combine?
-static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
+static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
+                                      SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
-  SDLoc dl(Op);
   MVT ResVT = Op.getSimpleValueType();
-
-  assert((ResVT.is256BitVector() ||
-          ResVT.is512BitVector()) && "Value type must be 256-/512-bit wide");
+  assert((ResVT.is256BitVector() || ResVT.is512BitVector()) &&
+         "Value type must be 256-/512-bit wide");
 
   unsigned NumOperands = Op.getNumOperands();
   unsigned NumFreezeUndef = 0;
@@ -9688,13 +9687,11 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
 // zeros) of the result of a node that already zeros all upper bits of
 // k-register.
 // TODO: Merge this with LowerAVXCONCAT_VECTORS?
-static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
+static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op, const SDLoc &dl,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG & DAG) {
-  SDLoc dl(Op);
   MVT ResVT = Op.getSimpleValueType();
   unsigned NumOperands = Op.getNumOperands();
-
   assert(NumOperands > 1 && isPowerOf2_32(NumOperands) &&
          "Unexpected number of operands in CONCAT_VECTORS");
 
@@ -9766,19 +9763,18 @@ static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
 static SDValue LowerCONCAT_VECTORS(SDValue Op,
                                    const X86Subtarget &Subtarget,
                                    SelectionDAG &DAG) {
+  SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   if (VT.getVectorElementType() == MVT::i1)
-    return LowerCONCAT_VECTORSvXi1(Op, Subtarget, DAG);
-
-  assert((VT.is256BitVector() && Op.getNumOperands() == 2) ||
-         (VT.is512BitVector() && (Op.getNumOperands() == 2 ||
-          Op.getNumOperands() == 4)));
+    return LowerCONCAT_VECTORSvXi1(Op, DL, Subtarget, DAG);
 
   // AVX can use the vinsertf128 instruction to create 256-bit vectors
   // from two other 128-bit ones.
-
   // 512-bit vector may contain 2 256-bit vectors or 4 128-bit vectors
-  return LowerAVXCONCAT_VECTORS(Op, DAG, Subtarget);
+  assert((VT.is256BitVector() && Op.getNumOperands() == 2) ||
+         (VT.is512BitVector() &&
+          (Op.getNumOperands() == 2 || Op.getNumOperands() == 4)));
+  return LowerAVXCONCAT_VECTORS(Op, DL, DAG, Subtarget);
 }
 
 //===----------------------------------------------------------------------===//
@@ -47785,13 +47781,19 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                                                            DL, DAG, Subtarget))
       return V;
 
-  // Convert vselects with constant condition into shuffles.
-  if (CondConstantVector && DCI.isBeforeLegalizeOps() &&
-      (N->getOpcode() == ISD::VSELECT || N->getOpcode() == X86ISD::BLENDV)) {
+  if (N->getOpcode() == ISD::VSELECT || N->getOpcode() == X86ISD::BLENDV) {
     SmallVector<int, 64> Mask;
     if (createShuffleMaskFromVSELECT(Mask, Cond,
-                                     N->getOpcode() == X86ISD::BLENDV))
-      return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
+                                     N->getOpcode() == X86ISD::BLENDV)) {
+      // Convert vselects with constant condition into shuffles.
+      if (DCI.isBeforeLegalizeOps())
+        return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
+
+      // Attempt to combine as shuffle.
+      SDValue Op(N, 0);
+      if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
+        return Res;
+    }
   }
 
   // fold vselect(cond, pshufb(x), pshufb(y)) -> or (pshufb(x), pshufb(y))
@@ -49392,6 +49394,8 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
   //      (ADD (CMOV C1-C2, (CTTZ X), (X != 0)), C2)
   // Or (CMOV (ADD (CTTZ X), C2), C1, (X == 0)) ->
   //    (ADD (CMOV (CTTZ X), C1-C2, (X == 0)), C2)
+  // Or (CMOV (BSR ?, X), Y, (X == 0)) -> (BSR Y, X)
+  // TODO: Or (CMOV (BSF ?, X), Y, (X == 0)) -> (BSF Y, X)
   if ((CC == X86::COND_NE || CC == X86::COND_E) &&
       Cond.getOpcode() == X86ISD::CMP && isNullConstant(Cond.getOperand(1))) {
     SDValue Add = TrueOp;
@@ -49399,6 +49403,14 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
     // Canonicalize the condition code for easier matching and output.
     if (CC == X86::COND_E)
       std::swap(Add, Const);
+
+    // TODO: ADD BSF support, but requires changes to the "REP BSF" CTTZ hack.
+    if (Subtarget.hasBitScanPassThrough() && Add.getOpcode() == X86ISD::BSR &&
+        Add.getResNo() == 0 && Add.hasOneUse() &&
+        Add.getOperand(1) == Cond.getOperand(0)) {
+      return DAG.getNode(Add.getOpcode(), DL, Add->getVTList(), Const,
+                         Add.getOperand(1));
+    }
 
     // We might have replaced the constant in the cmov with the LHS of the
     // compare. If so change it to the RHS of the compare.
@@ -59325,7 +59337,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
   // We can always convert per-lane vXf64 shuffles into VSHUFPD.
   if (!IsSplat &&
-      (VT == MVT::v4f64 || (VT == MVT::v8f64 && Subtarget.useAVX512Regs())) &&
+      ((NumOps == 2 && VT == MVT::v4f64) ||
+       (NumOps == 4 && VT == MVT::v8f64 && Subtarget.useAVX512Regs())) &&
       all_of(Ops, [](SDValue Op) { return Op.hasOneUse(); })) {
     // Collect the individual per-lane v2f64/v4f64 shuffles.
     MVT OpVT = Ops[0].getSimpleValueType();

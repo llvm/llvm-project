@@ -685,7 +685,6 @@ struct UnrollUpdateOffsetOp : public UnrollPattern<xegpu::UpdateOffsetOp> {
           rewriter.create<xegpu::UpdateOffsetOp>(loc, t.getType(), t, o);
       newOps.push_back(newOp);
     }
-
     Value castOp = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
     rewriter.replaceOp(op, castOp);
     return success();
