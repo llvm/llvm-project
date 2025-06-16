@@ -36,11 +36,6 @@ public:
                                        MCContext &Ctx, bool Hint = false);
 
   bool getRelaxHint() const { return RelaxHint; }
-
-  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-
-  static StringRef getSpecifierName(uint16_t S);
-  static Specifier parseSpecifier(StringRef name);
 };
 
 } // end namespace llvm

@@ -61,15 +61,15 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
     switch (Specifier) {
     default:
       report_fatal_error("Unsupported modifier for half16 fixup.");
-    case PPCMCExpr::VK_None:
+    case PPC::S_None:
       return {XCOFF::RelocationType::R_TOC, SignAndSizeForHalf16};
-    case PPCMCExpr::VK_U:
+    case PPC::S_U:
       return {XCOFF::RelocationType::R_TOCU, SignAndSizeForHalf16};
-    case PPCMCExpr::VK_L:
+    case PPC::S_L:
       return {XCOFF::RelocationType::R_TOCL, SignAndSizeForHalf16};
-    case PPCMCExpr::VK_AIX_TLSLE:
+    case PPC::S_AIX_TLSLE:
       return {XCOFF::RelocationType::R_TLS_LE, SignAndSizeForHalf16};
-    case PPCMCExpr::VK_AIX_TLSLD:
+    case PPC::S_AIX_TLSLD:
       return {XCOFF::RelocationType::R_TLS_LD, SignAndSizeForHalf16};
     }
   } break;
@@ -80,13 +80,13 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
     switch (Specifier) {
     default:
       llvm_unreachable("Unsupported Modifier");
-    case PPCMCExpr::VK_None:
+    case PPC::S_None:
       return {XCOFF::RelocationType::R_TOC, 15};
-    case PPCMCExpr::VK_L:
+    case PPC::S_L:
       return {XCOFF::RelocationType::R_TOCL, 15};
-    case PPCMCExpr::VK_AIX_TLSLE:
+    case PPC::S_AIX_TLSLE:
       return {XCOFF::RelocationType::R_TLS_LE, 15};
-    case PPCMCExpr::VK_AIX_TLSLD:
+    case PPC::S_AIX_TLSLD:
       return {XCOFF::RelocationType::R_TLS_LD, 15};
     }
   } break;
@@ -97,7 +97,7 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
   case PPC::fixup_ppc_br24abs:
     return {XCOFF::RelocationType::R_RBA, EncodedSignednessIndicator | 25};
   case PPC::fixup_ppc_nofixup: {
-    if (Specifier == PPCMCExpr::VK_None)
+    if (Specifier == PPC::S_None)
       return {XCOFF::RelocationType::R_REF, 0};
     else
       llvm_unreachable("Unsupported Modifier");
@@ -110,19 +110,19 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
     switch (Specifier) {
     default:
       report_fatal_error("Unsupported modifier");
-    case PPCMCExpr::VK_AIX_TLSGD:
+    case PPC::S_AIX_TLSGD:
       return {XCOFF::RelocationType::R_TLS, SignAndSizeForFKData};
-    case PPCMCExpr::VK_AIX_TLSGDM:
+    case PPC::S_AIX_TLSGDM:
       return {XCOFF::RelocationType::R_TLSM, SignAndSizeForFKData};
-    case PPCMCExpr::VK_AIX_TLSIE:
+    case PPC::S_AIX_TLSIE:
       return {XCOFF::RelocationType::R_TLS_IE, SignAndSizeForFKData};
-    case PPCMCExpr::VK_AIX_TLSLE:
+    case PPC::S_AIX_TLSLE:
       return {XCOFF::RelocationType::R_TLS_LE, SignAndSizeForFKData};
-    case PPCMCExpr::VK_AIX_TLSLD:
+    case PPC::S_AIX_TLSLD:
       return {XCOFF::RelocationType::R_TLS_LD, SignAndSizeForFKData};
-    case PPCMCExpr::VK_AIX_TLSML:
+    case PPC::S_AIX_TLSML:
       return {XCOFF::RelocationType::R_TLSML, SignAndSizeForFKData};
-    case PPCMCExpr::VK_None:
+    case PPC::S_None:
       return {XCOFF::RelocationType::R_POS, SignAndSizeForFKData};
     }
   }
