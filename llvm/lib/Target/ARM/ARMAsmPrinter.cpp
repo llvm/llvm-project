@@ -1619,12 +1619,15 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
                     MI->getOperand(2).getImm(), OutContext);
     const MCExpr *LabelSymExpr= MCSymbolRefExpr::create(LabelSym, OutContext);
     unsigned PCAdj = (Opc == ARM::MOVi16_ga_pcrel) ? 8 : 4;
-    const MCExpr *PCRelExpr =
-      ARMMCExpr::createLower16(MCBinaryExpr::createSub(GVSymExpr,
-                                      MCBinaryExpr::createAdd(LabelSymExpr,
-                                      MCConstantExpr::create(PCAdj, OutContext),
-                                      OutContext), OutContext), OutContext);
-      TmpInst.addOperand(MCOperand::createExpr(PCRelExpr));
+    const MCExpr *PCRelExpr = ARM::createLower16(
+        MCBinaryExpr::createSub(
+            GVSymExpr,
+            MCBinaryExpr::createAdd(LabelSymExpr,
+                                    MCConstantExpr::create(PCAdj, OutContext),
+                                    OutContext),
+            OutContext),
+        OutContext);
+    TmpInst.addOperand(MCOperand::createExpr(PCRelExpr));
 
     // Add predicate operands.
     TmpInst.addOperand(MCOperand::createImm(ARMCC::AL));
@@ -1652,12 +1655,15 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
                     MI->getOperand(3).getImm(), OutContext);
     const MCExpr *LabelSymExpr= MCSymbolRefExpr::create(LabelSym, OutContext);
     unsigned PCAdj = (Opc == ARM::MOVTi16_ga_pcrel) ? 8 : 4;
-    const MCExpr *PCRelExpr =
-        ARMMCExpr::createUpper16(MCBinaryExpr::createSub(GVSymExpr,
-                                   MCBinaryExpr::createAdd(LabelSymExpr,
-                                      MCConstantExpr::create(PCAdj, OutContext),
-                                          OutContext), OutContext), OutContext);
-      TmpInst.addOperand(MCOperand::createExpr(PCRelExpr));
+    const MCExpr *PCRelExpr = ARM::createUpper16(
+        MCBinaryExpr::createSub(
+            GVSymExpr,
+            MCBinaryExpr::createAdd(LabelSymExpr,
+                                    MCConstantExpr::create(PCAdj, OutContext),
+                                    OutContext),
+            OutContext),
+        OutContext);
+    TmpInst.addOperand(MCOperand::createExpr(PCRelExpr));
     // Add predicate operands.
     TmpInst.addOperand(MCOperand::createImm(ARMCC::AL));
     TmpInst.addOperand(MCOperand::createReg(0));

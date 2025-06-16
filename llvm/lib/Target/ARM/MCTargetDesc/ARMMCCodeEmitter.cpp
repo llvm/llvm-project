@@ -1192,7 +1192,7 @@ uint32_t ARMMCCodeEmitter::getHiLoImmOpValue(const MCInst &MI, unsigned OpIdx,
   const MCExpr *E = MO.getExpr();
   MCFixupKind Kind;
   if (E->getKind() == MCExpr::Specifier) {
-    const ARMMCExpr *ARM16Expr = cast<ARMMCExpr>(E);
+    auto *ARM16Expr = cast<MCSpecifierExpr>(E);
     E = ARM16Expr->getSubExpr();
 
     if (const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(E)) {
