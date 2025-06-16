@@ -50,15 +50,12 @@ static raw_ostream &printFlags(raw_ostream &OS, const T Value,
       if (FlagSet)
         OS << " | ";
 
-      bool Found = false;
-      for (const auto &FlagItem : Flags)
-        if (FlagItem.Value == T(Bit)) {
-          OS << FlagItem.Name;
-          Found = true;
-          break;
-        }
-      if (!Found)
+      auto MaybeFlag = getEnumName(T(Bit), Flags);
+      if (MaybeFlag)
+        OS << *MaybeFlag;
+      else
         OS << "invalid: " << Bit;
+
       FlagSet = true;
     }
     Remaining &= ~Bit;
