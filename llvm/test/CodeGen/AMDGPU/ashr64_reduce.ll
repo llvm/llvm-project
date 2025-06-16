@@ -122,6 +122,20 @@ define <2 x i64> @ashr_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
   ret <2 x i64> %ashr
 }
 
+define <2 x i64> @ashr_v2_metadata_63(<2 x i64> %arg0, ptr %arg1.ptr) {
+; CHECK-LABEL: ashr_v2_metadata_63:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, 31, v1
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, 31, v3
+; CHECK-NEXT:    v_mov_b32_e32 v1, v0
+; CHECK-NEXT:    v_mov_b32_e32 v3, v2
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %shift.amt = load <2 x i64>, ptr %arg1.ptr, !range !4, !noundef !{}
+  %ashr = ashr <2 x i64> %arg0, %shift.amt
+  ret <2 x i64> %ashr
+}
+
 ; Exact attribute does not inhibit reduction
 define <2 x i64> @ashr_exact_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: ashr_exact_v2_metadata:
@@ -194,6 +208,7 @@ define <4 x i64> @ashr_v4_metadata(<4 x i64> %arg0, ptr %arg1.ptr) {
 !1 = !{i64 32, i64 38, i64 42, i64 48}
 !2 = !{i64 31, i64 38, i64 42, i64 48}
 !3 = !{i64 32, i64 38, i64 2147483680, i64 2147483681}
+!4 = !{i64 63, i64 64}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Test range with an "or X, 16"

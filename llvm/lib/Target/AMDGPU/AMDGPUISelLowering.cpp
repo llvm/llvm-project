@@ -4185,6 +4185,9 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
 
     ShiftAmt = DAG.getConstant(RHSVal - TargetScalarType.getSizeInBits(), SL,
                                TargetType);
+  } else if (Known.getMinValue().getZExtValue() ==
+             (ElementType.getSizeInBits() - 1)) {
+    ShiftAmt = ShiftFullAmt;
   } else {
     SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
     const SDValue ShiftMask =
@@ -4232,11 +4235,7 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
     DAG.ExtractVectorElements(NewShift, LoOps, 0, NElts);
     for (unsigned I = 0; I != NElts; ++I) {
       HiAndLoOps[2 * I + 1] = HiOps[I];
-      if (Known.getMinValue().getZExtValue() ==
-          (ElementType.getSizeInBits() - 1))
-        HiAndLoOps[2 * I] = HiOps[I];
-      else
-        HiAndLoOps[2 * I] = LoOps[I];
+      HiAndLoOps[2 * I] = LoOps[I];
     }
     Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, ConcatType, HiAndLoOps);
   } else {
