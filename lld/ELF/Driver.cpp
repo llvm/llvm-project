@@ -1732,11 +1732,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
-    ReportOptDesc *const desc =
-        std::lower_bound(std::begin(reports), std::end(reports), option.first,
-                         [](const ReportOptDesc &d, const StringRef &s) {
-                           return d.name < s;
-                         });
+    ReportOptDesc *const desc = std::lower_bound(
+        std::begin(reports), std::end(reports), option.first,
+        [](const ReportOptDesc &d, const StringRef &s) { return d.name < s; });
     if (desc == std::end(reports) || desc->name != option.first)
       continue;
 
