@@ -223,7 +223,7 @@ public:
     return m_sym_file_impl->SetDebugInfoHadFrameVariableErrors();
   }
 
-  llvm::StringMap<lldb_private::FileSpec> GetSeparateDebugInfoFiles() override {
+  lldb_private::FileSpecList GetSeparateDebugInfoFiles() override {
     return m_sym_file_impl->GetSeparateDebugInfoFiles();
   }
 

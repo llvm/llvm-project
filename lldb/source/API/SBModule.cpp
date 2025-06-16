@@ -634,17 +634,11 @@ lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {
 }
 
 lldb::SBFileSpecList SBModule::GetSeparateDebugInfoFiles() {
-  lldb::SBFileSpecList sb_filespeclist;
   ModuleSP module_sp(GetSP());
-  if (module_sp) {
-    llvm::StringMap<lldb_private::FileSpec> debug_info_files =
-        module_sp->GetSeparateDebugInfoFiles();
-    for (auto &&[_, debug_info_file] : debug_info_files) {
-      sb_filespeclist.Append(debug_info_file);
-    }
-  }
+  if (module_sp)
+    return lldb::SBFileSpecList(module_sp->GetSeparateDebugInfoFiles());
 
-  return sb_filespeclist;
+  return lldb::SBFileSpecList();
 }
 
 lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {

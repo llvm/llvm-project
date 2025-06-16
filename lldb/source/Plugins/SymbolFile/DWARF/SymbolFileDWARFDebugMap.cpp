@@ -1277,19 +1277,18 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s, llvm::StringRef filter) {
   });
 }
 
-llvm::StringMap<lldb_private::FileSpec>
+lldb_private::FileSpecList
 SymbolFileDWARFDebugMap::GetSeparateDebugInfoFiles() {
   const uint32_t cu_count = GetNumCompileUnits();
-  llvm::StringMap<lldb_private::FileSpec> cu_map;
+  lldb_private::FileSpecList spec_list;
   for (uint32_t cu_idx = 0; cu_idx < cu_count; ++cu_idx) {
     const auto &info = m_compile_unit_infos[cu_idx];
     if (info.so_file.GetPath().empty())
       continue;
 
-    if (cu_map.find(info.oso_path) == cu_map.end())
-      cu_map[info.oso_path] = lldb_private::FileSpec(info.oso_path);
+    spec_list.AppendIfUnique(lldb_private::FileSpec(info.oso_path));
   }
-  return cu_map;
+  return spec_list;
 }
 
 bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
