@@ -3636,6 +3636,18 @@ void Verifier::visitCallBase(CallBase &Call) {
   Check(isCallableCC(Call.getCallingConv()),
         "calling convention does not permit calls", Call);
 
+  // Find the actual CC of the callee from the Module.
+  CallingConv::ID CalleeCC = Call.getParent()->getParent()->getParent()
+      ->getFunction(Call.getCalledFunction()->getName())->getCallingConv();
+  // Verify that a kernel does not call another kernel.
+  if (CalleeCC == CallingConv::AMDGPU_KERNEL ||
+      CalleeCC == CallingConv::SPIR_KERNEL) {
+    CallingConv::ID CallerCC = Call.getParent()->getParent()->getCallingConv();
+    Check(CallerCC != CallingConv::AMDGPU_KERNEL &&
+          CallerCC != CallingConv::SPIR_KERNEL,
+          "a kernel may not call a kernel", Call.getParent()->getParent());
+  }
+
   // Disallow passing/returning values with alignment higher than we can
   // represent.
   // FIXME: Consider making DataLayout cap the alignment, so this isn't
