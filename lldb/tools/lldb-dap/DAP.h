@@ -105,6 +105,9 @@ struct DAP {
   /// Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
 
+  /// list of addresses mapped by sourceReference(index - 1)
+  std::vector<lldb::addr_t> source_references;
+
   /// A copy of the last LaunchRequest so we can reuse its arguments if we get a
   /// RestartRequest. Restarting an AttachRequest is not supported.
   std::optional<protocol::LaunchRequestArguments> last_launch_request;
@@ -219,7 +222,9 @@ struct DAP {
   void __attribute__((format(printf, 3, 4)))
   SendFormattedOutput(OutputType o, const char *format, ...);
 
-  static int64_t GetNextSourceReference();
+  int32_t CreateSourceReference(lldb::addr_t address);
+
+  std::optional<lldb::addr_t> GetSourceReferenceAddress(int32_t reference);
 
   ExceptionBreakpoint *GetExceptionBPFromStopReason(lldb::SBThread &thread);
 

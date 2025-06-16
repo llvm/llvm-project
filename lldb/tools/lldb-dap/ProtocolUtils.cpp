@@ -46,21 +46,27 @@ static bool ShouldDisplayAssemblySource(
   return false;
 }
 
-static protocol::Source CreateAssemblySource(const lldb::SBTarget &target,
-                                             lldb::SBAddress address) {
-  protocol::Source source;
+static std::optional<protocol::Source> CreateAssemblySource(
+    const lldb::SBTarget &target, lldb::SBAddress address,
+    llvm::function_ref<uint32_t(lldb::addr_t)> create_reference) {
 
-  auto symbol = address.GetSymbol();
+  lldb::SBSymbol symbol = address.GetSymbol();
+  lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
   std::string name;
   if (symbol.IsValid()) {
-    source.sourceReference = symbol.GetStartAddress().GetLoadAddress(target);
+    load_addr = symbol.GetStartAddress().GetLoadAddress(target);
     name = symbol.GetName();
   } else {
-    const auto load_addr = address.GetLoadAddress(target);
-    source.sourceReference = load_addr;
+    load_addr = address.GetLoadAddress(target);
     name = GetLoadAddressString(load_addr);
   }
 
+  if (load_addr == LLDB_INVALID_ADDRESS) {
+    return std::nullopt;
+  }
+
+  protocol::Source source;
+  source.sourceReference = create_reference(load_addr);
   lldb::SBModule module = address.GetModule();
   if (module.IsValid()) {
     lldb::SBFileSpec file_spec = module.GetFileSpec();
@@ -81,27 +87,33 @@ static protocol::Source CreateAssemblySource(const lldb::SBTarget &target,
   return source;
 }
 
-protocol::Source CreateSource(const lldb::SBFileSpec &file) {
+std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file) {
+  if (!file.IsValid())
+    return std::nullopt;
+
   protocol::Source source;
-  if (file.IsValid()) {
-    if (const char *name = file.GetFilename())
-      source.name = name;
-    char path[PATH_MAX] = "";
-    if (file.GetPath(path, sizeof(path)) &&
-        lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX))
-      source.path = path;
-  }
+  if (const char *name = file.GetFilename())
+    source.name = name;
+  char path[PATH_MAX] = "";
+  if (file.GetPath(path, sizeof(path)) &&
+      lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX))
+    source.path = path;
   return source;
 }
 
-protocol::Source CreateSource(lldb::SBAddress address, lldb::SBTarget &target) {
+std::optional<protocol::Source>
+CreateSource(lldb::SBAddress address, lldb::SBTarget &target,
+             llvm::function_ref<int32_t(lldb::addr_t)> create_reference) {
   lldb::SBDebugger debugger = target.GetDebugger();
   lldb::StopDisassemblyType stop_disassembly_display =
       GetStopDisassemblyDisplay(debugger);
   if (ShouldDisplayAssemblySource(address, stop_disassembly_display))
-    return CreateAssemblySource(target, address);
+    return CreateAssemblySource(target, address, create_reference);
 
   lldb::SBLineEntry line_entry = GetLineEntryForAddress(target, address);
+  if (!line_entry.IsValid())
+    return std::nullopt;
+
   return CreateSource(line_entry.GetFileSpec());
 }
 
@@ -109,7 +121,8 @@ bool IsAssemblySource(const protocol::Source &source) {
   // According to the specification, a source must have either `path` or
   // `sourceReference` specified. We use `path` for sources with known source
   // code, and `sourceReferences` when falling back to assembly.
-  return source.sourceReference.value_or(0) != 0;
+  return source.sourceReference.value_or(LLDB_DAP_INVALID_SRC_REF) >
+         LLDB_DAP_INVALID_SRC_REF;
 }
 
 std::string GetLoadAddressString(const lldb::addr_t addr) {
