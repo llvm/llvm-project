@@ -17,13 +17,17 @@
 ! CHECK:  }
 
 ! CHECK-LABEL: func.func @_QPs(%arg0: !fir.boxchar<1> {fir.bindc_name = "c"}) {
-! CHECK: omp.single copyprivate(%3 -> @_copy_boxchar_c8xU : !fir.ref<!fir.boxchar<1>>) {
+! CHECK: %[[ALLOC:.*]] = fir.alloca !fir.boxchar<1>
+! CHECK: fir.store %[[SRC:.*]] to %[[ALLOC:.*]] : !fir.ref<!fir.boxchar<1>>
+! CHECK: omp.single copyprivate([[ALLOC:.*]] -> @_copy_boxchar_c8xU : !fir.ref<!fir.boxchar<1>>) {
+! CHECK:   hlfir.assign %[[NEW_VAL:.*]] to %[[SRC:.*]] : !fir.ref<!fir.char<1,3>>, !fir.boxchar<1>
 ! CHECK:   omp.terminator
 ! CHECK: }
 
 subroutine s(c)
 character(*) :: c
 !$omp single copyprivate(c)
+c = "bar"
 !$omp end single
 end subroutine
 
