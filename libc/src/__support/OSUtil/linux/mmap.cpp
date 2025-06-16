@@ -9,18 +9,19 @@
 #include "src/__support/OSUtil/mmap.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/error_or.h"
 
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
-    
+
 // This function is currently linux only. It has to be refactored suitably if
 // mmap is to be supported on non-linux operating systems also.
-void *mmap(void *addr, size_t size, int prot, int flags, int fd, off_t offset) {
+ErrorOr<void *> mmap(void *addr, size_t size, int prot, int flags, int fd,
+                     off_t offset) {
   // A lot of POSIX standard prescribed validation of the parameters is not
   // done in this function as modern linux versions do it in the syscall.
   // TODO: Perform argument validation not done by the linux syscall.
@@ -54,10 +55,8 @@ void *mmap(void *addr, size_t size, int prot, int flags, int fd, off_t offset) {
   // However, since a valid return address cannot be within the last page, a
   // return value corresponding to a location in the last page is an error
   // value.
-  if (ret < 0 && ret > -EXEC_PAGESIZE) {
-    libc_errno = static_cast<int>(-ret);
-    return MAP_FAILED;
-  }
+  if (ret < 0 && ret > -EXEC_PAGESIZE)
+    return Error(static_cast<int>(-ret));
 
   return reinterpret_cast<void *>(ret);
 }

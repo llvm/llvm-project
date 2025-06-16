@@ -12,6 +12,7 @@
 #include "src/__support/OSUtil/fcntl.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include <linux/auxvec.h>
 
@@ -69,8 +70,8 @@ public:
       : ptr(internal::mmap(nullptr, AUXV_MMAP_SIZE, PROT_READ | PROT_WRITE,
                            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) {}
   ~AuxvMMapGuard() {
-    if (ptr != MAP_FAILED)
-      internal::munmap(ptr, AUXV_MMAP_SIZE);
+    if (ptr.has_value())
+      internal::munmap(ptr.value(), AUXV_MMAP_SIZE);
   }
   void submit_to_global() {
     // atexit may fail, we do not set it to global in that case.
@@ -84,14 +85,14 @@ public:
     if (ret != 0)
       return;
 
-    auxv = reinterpret_cast<AuxEntry *>(ptr);
-    ptr = MAP_FAILED;
+    auxv = reinterpret_cast<AuxEntry *>(ptr.value());
+    ptr = Error(-1);
   }
-  bool allocated() const { return ptr != MAP_FAILED; }
-  void *get() const { return ptr; }
+  bool allocated() const { return ptr.has_value(); }
+  void *get() const { return ptr.value(); }
 
 private:
-  void *ptr;
+  ErrorOr<void*> ptr;
 };
 
 class AuxvFdGuard {

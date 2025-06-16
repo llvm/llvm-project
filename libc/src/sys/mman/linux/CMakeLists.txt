@@ -19,6 +19,7 @@ add_entrypoint_object(
     ../mmap.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -42,6 +43,7 @@ add_entrypoint_object(
     ../munmap.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(

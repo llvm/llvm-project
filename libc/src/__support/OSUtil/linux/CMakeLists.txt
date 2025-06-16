@@ -11,6 +11,7 @@ add_object_library(
     fcntl.cpp
     mmap.cpp
     munmap.cpp
+    prctl.cpp
   HDRS
     io.h
     syscall.h

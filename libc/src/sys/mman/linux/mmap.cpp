@@ -10,14 +10,20 @@
 
 #include "src/__support/OSUtil/mmap.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 
 LLVM_LIBC_FUNCTION(void *, mmap,
                    (void *addr, size_t size, int prot, int flags, int fd,
                     off_t offset)) {
-  return internal::mmap(addr, size, prot, flags, fd, offset);
+  auto ptr = internal::mmap(addr, size, prot, flags, fd, offset);
+
+  if (ptr.has_value())
+    return ptr.value();
+
+  libc_errno = ptr.error();
+  return MAP_FAILED;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

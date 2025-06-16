@@ -21,17 +21,9 @@ namespace internal {
 // This function is currently linux only. It has to be refactored suitably if
 // munmap is to be supported on non-linux operating systems also.
 int munmap(void *addr, size_t size) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(
-      SYS_munmap, reinterpret_cast<long>(addr), size);
-
-  // A negative return value indicates an error with the magnitude of the
-  // value being the error code.
-  if (ret < 0) {
-    libc_errno = -ret;
-    return -1;
-  }
-
-  return 0;
+  return LIBC_NAMESPACE::syscall_impl<int>(SYS_munmap,
+                                           reinterpret_cast<long>(addr), size);
 }
+
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
