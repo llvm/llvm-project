@@ -1221,7 +1221,7 @@ const MCExpr *TargetLoweringObjectFileELF::lowerSymbolDifference(
     if (Addend)
       Res = MCBinaryExpr::createAdd(Res, MCConstantExpr::create(Addend, Ctx),
                                     Ctx);
-    return createTargetMCExpr(Res, PLTPCRelativeSpecifier);
+    return MCSpecifierExpr::create(Res, PLTPCRelativeSpecifier, getContext());
   }
 
   if (!PLTRelativeSpecifier)
