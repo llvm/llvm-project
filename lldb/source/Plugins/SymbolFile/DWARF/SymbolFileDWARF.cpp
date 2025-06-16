@@ -4358,6 +4358,7 @@ StatsDuration::Duration SymbolFileDWARF::GetDebugInfoIndexTime() {
 
 void SymbolFileDWARF::ResetStatistics() {
   m_parse_time.reset();
+  m_loaded_dwo_file_count = 0;
   if (m_index)
     return m_index->ResetStatistics();
 }

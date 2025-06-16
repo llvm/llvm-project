@@ -31,7 +31,7 @@ SymbolFileDWARFDwo::SymbolFileDWARFDwo(SymbolFileDWARF &base_symbol_file,
                                    /*update_module_section_list*/ false)),
       m_base_symbol_file(base_symbol_file) {
   SetFileIndex(id);
-
+  m_base_symbol_file.IncrementLoadedDwoFileCount();
   // Parsing of the dwarf unit index is not thread-safe, so we need to prime it
   // to enable subsequent concurrent lookups.
   m_context.GetAsLLVM().getCUIndex();

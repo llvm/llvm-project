@@ -322,6 +322,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t num_modules_with_incomplete_types = 0;
   uint32_t num_stripped_modules = 0;
   uint32_t symtab_symbol_count = 0;
+  uint32_t total_loaded_dwo_file_count = 0;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
     Module *module = target != nullptr
                          ? target->GetImages().GetModuleAtIndex(image_idx).get()
@@ -353,6 +354,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         for (const auto &symbol_module : symbol_modules.Modules())
           module_stat.symfile_modules.push_back((intptr_t)symbol_module.get());
       }
+      // Add DWO file count from this symbol file (will be 0 for non-DWARF
+      // symbol files)
+      total_loaded_dwo_file_count += sym_file->GetLoadedDwoFileCount();
       module_stat.debug_info_index_loaded_from_cache =
           sym_file->GetDebugInfoIndexWasLoadedFromCache();
       if (module_stat.debug_info_index_loaded_from_cache)
@@ -427,6 +431,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       {"totalDebugInfoEnabled", num_debug_info_enabled_modules},
       {"totalSymbolTableStripped", num_stripped_modules},
       {"totalSymbolTableSymbolCount", symtab_symbol_count},
+      {"totalLoadedDwoFileCount", total_loaded_dwo_file_count},
   };
 
   if (include_targets) {

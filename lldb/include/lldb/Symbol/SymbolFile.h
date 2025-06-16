@@ -425,6 +425,11 @@ public:
   /// Reset the statistics for the symbol file.
   virtual void ResetStatistics() {}
 
+  /// Get the number of loaded DWO files for this symbol file.
+  /// This is used for statistics gathering and will return 0 for most
+  /// symbol file implementations except DWARF symbol files.
+  virtual uint32_t GetLoadedDwoFileCount() const { return 0; }
+
   /// Get the additional modules that this symbol file uses to parse debug info.
   ///
   /// Some debug info is stored in stand alone object files that are represented

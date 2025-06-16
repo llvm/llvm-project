@@ -315,6 +315,11 @@ public:
 
   void ResetStatistics() override;
 
+  /// Get the number of loaded DWO files for this symbol file
+  uint32_t GetLoadedDwoFileCount() const override {
+    return m_loaded_dwo_file_count;
+  }
+
   virtual lldb::offset_t
   GetVendorDWARFOpcodeSize(const DataExtractor &data,
                            const lldb::offset_t data_offset,
@@ -497,6 +502,8 @@ protected:
 
   void InitializeFirstCodeAddress();
 
+  void IncrementLoadedDwoFileCount() { m_loaded_dwo_file_count++; }
+
   void
   GetCompileOptions(std::unordered_map<lldb::CompUnitSP, Args> &args) override;
 
@@ -550,6 +557,8 @@ protected:
   /// valid value that can be used in DIERef objects which will contain
   /// an index that identifies the .DWO or .o file.
   std::optional<uint64_t> m_file_index;
+  /// Count of loaded DWO files for this symbol file
+  uint32_t m_loaded_dwo_file_count = 0;
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin

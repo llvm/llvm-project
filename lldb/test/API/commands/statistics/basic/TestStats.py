@@ -177,6 +177,7 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoParseTime",
+            "totalLoadedDwoFileCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         if self.getPlatform() != "windows":
@@ -287,6 +288,7 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoParseTime",
+            "totalLoadedDwoFileCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats["targets"][0]
@@ -325,6 +327,7 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoByteSize",
+            "totalLoadedDwoFileCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
 
@@ -377,6 +380,7 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoByteSize",
+            "totalLoadedDwoFileCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats["targets"][0]
@@ -485,6 +489,7 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoByteSize",
+            "totalLoadedDwoFileCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         target_stats = debug_stats["targets"][0]
@@ -512,6 +517,32 @@ class TestCase(TestBase):
             self.verify_keys(
                 breakpoint, 'target_stats["breakpoints"]', bp_keys_exist, None
             )
+    
+    def test_loaded_dwo_file_count(self):
+        """
+        Test "statistics dump" and the loaded dwo file count.
+        Builds a binary w/ separate .dwo files and debug_names, and then
+        verifies the loaded dwo file count is the expected count after running
+        various commands
+        """
+        da = {"CXX_SOURCES": "third.cpp baz.cpp", "EXE": self.getBuildArtifact("a.out")}
+        self.build(dictionary=da, debug_info=["dwo", "debug_names"])
+        self.addTearDownCleanup(dictionary=da)
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+
+        self.assertIn("totalLoadedDwoFileCount", debug_stats)
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 0)
+        
+        self.runCmd("b main")
+        debug_stats_after_main = self.get_stats()
+        self.assertEqual(debug_stats_after_main["totalLoadedDwoFileCount"], 1)
+        
+        self.runCmd("type lookup Baz")
+        debug_stats_after_type_lookup = self.get_stats()
+        self.assertEqual(debug_stats_after_type_lookup["totalLoadedDwoFileCount"], 2)
+        
 
     @skipUnlessDarwin
     @no_debug_info_test
