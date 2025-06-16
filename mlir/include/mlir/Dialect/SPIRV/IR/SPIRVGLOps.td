@@ -1196,6 +1196,7 @@ def SPIRV_GLLengthOp : SPIRV_GLOp<"Length", 66, [
   }];
 
   let hasVerifier = 0;
+  let hasCanonicalizer = 1;
 }
 
 // -----
