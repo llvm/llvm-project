@@ -15,9 +15,11 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SYMBOLMANAGER_H
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
@@ -26,9 +28,11 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include <cassert>
+#include <type_traits>
 
 namespace clang {
 
@@ -129,6 +133,47 @@ public:
 
   // Implement isa<T> support.
   static constexpr Kind ClassKind = SymbolConjuredKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
+};
+
+/// A symbol representing the result of an expression that became too
+/// complicated. In other words, its complexity surpassed the
+/// MaxSymbolComplexity threshold.
+/// TODO: When the MaxSymbolComplexity is reached, we should propagate the taint
+/// info to it.
+class SymbolOverlyComplex final : public SymbolData {
+  const SymExpr *OverlyComplicatedSymbol;
+
+  friend class SymExprAllocator;
+
+  SymbolOverlyComplex(SymbolID Sym, const SymExpr *OverlyComplicatedSymbol)
+      : SymbolData(ClassKind, Sym),
+        OverlyComplicatedSymbol(OverlyComplicatedSymbol) {
+    assert(OverlyComplicatedSymbol);
+  }
+
+public:
+  QualType getType() const override {
+    return OverlyComplicatedSymbol->getType();
+  }
+
+  StringRef getKindStr() const override;
+
+  void dumpToStream(raw_ostream &os) const override;
+
+  static void Profile(llvm::FoldingSetNodeID &profile,
+                      const SymExpr *OverlyComplicatedSymbol) {
+    profile.AddInteger((unsigned)ClassKind);
+    profile.AddPointer(OverlyComplicatedSymbol);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &profile) override {
+    Profile(profile, OverlyComplicatedSymbol);
+  }
+
+  // Implement isa<T> support.
+  static constexpr Kind ClassKind = SymbolOverlyComplexKind;
   static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
   static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
@@ -285,6 +330,7 @@ class SymbolMetadata : public SymbolData {
 
 /// Represents a cast expression.
 class SymbolCast : public SymExpr {
+  friend class SymbolManager;
   const SymExpr *Operand;
 
   /// Type of the operand.
@@ -295,20 +341,19 @@ class SymbolCast : public SymExpr {
 
   friend class SymExprAllocator;
   SymbolCast(SymbolID Sym, const SymExpr *In, QualType From, QualType To)
-      : SymExpr(ClassKind, Sym), Operand(In), FromTy(From), ToTy(To) {
+      : SymExpr(ClassKind, Sym, computeComplexity(In, From, To)), Operand(In),
+        FromTy(From), ToTy(To) {
     assert(In);
     assert(isValidTypeForSymbol(From));
     // FIXME: GenericTaintChecker creates symbols of void type.
     // Otherwise, 'To' should also be a valid type.
   }
 
-public:
-  unsigned computeComplexity() const override {
-    if (Complexity == 0)
-      Complexity = 1 + Operand->computeComplexity();
-    return Complexity;
+  static unsigned computeComplexity(const SymExpr *In, QualType, QualType) {
+    return In->complexity() + 1;
   }
 
+public:
   QualType getType() const override { return ToTy; }
 
   LLVM_ATTRIBUTE_RETURNS_NONNULL
@@ -336,6 +381,7 @@ public:
 
 /// Represents a symbolic expression involving a unary operator.
 class UnarySymExpr : public SymExpr {
+  friend class SymbolManager;
   const SymExpr *Operand;
   UnaryOperator::Opcode Op;
   QualType T;
@@ -343,7 +389,8 @@ class UnarySymExpr : public SymExpr {
   friend class SymExprAllocator;
   UnarySymExpr(SymbolID Sym, const SymExpr *In, UnaryOperator::Opcode Op,
                QualType T)
-      : SymExpr(ClassKind, Sym), Operand(In), Op(Op), T(T) {
+      : SymExpr(ClassKind, Sym, computeComplexity(In, Op, T)), Operand(In),
+        Op(Op), T(T) {
     // Note, some unary operators are modeled as a binary operator. E.g. ++x is
     // modeled as x + 1.
     assert((Op == UO_Minus || Op == UO_Not) && "non-supported unary expression");
@@ -354,13 +401,12 @@ class UnarySymExpr : public SymExpr {
     assert(!Loc::isLocType(T) && "unary symbol should be nonloc");
   }
 
-public:
-  unsigned computeComplexity() const override {
-    if (Complexity == 0)
-      Complexity = 1 + Operand->computeComplexity();
-    return Complexity;
+  static unsigned computeComplexity(const SymExpr *In, UnaryOperator::Opcode,
+                                    QualType) {
+    return In->complexity() + 1;
   }
 
+public:
   const SymExpr *getOperand() const { return Operand; }
   UnaryOperator::Opcode getOpcode() const { return Op; }
   QualType getType() const override { return T; }
@@ -391,8 +437,9 @@ class BinarySymExpr : public SymExpr {
   QualType T;
 
 protected:
-  BinarySymExpr(SymbolID Sym, Kind k, BinaryOperator::Opcode op, QualType t)
-      : SymExpr(k, Sym), Op(op), T(t) {
+  BinarySymExpr(SymbolID Sym, Kind k, BinaryOperator::Opcode op, QualType t,
+                unsigned Complexity)
+      : SymExpr(k, Sym, Complexity), Op(op), T(t) {
     assert(classof(this));
     // Binary expressions are results of arithmetic. Pointer arithmetic is not
     // handled by binary expressions, but it is instead handled by applying
@@ -415,7 +462,7 @@ public:
 
 protected:
   static unsigned computeOperandComplexity(const SymExpr *Value) {
-    return Value->computeComplexity();
+    return Value->complexity();
   }
   static unsigned computeOperandComplexity(const llvm::APSInt &Value) {
     return 1;
@@ -432,15 +479,24 @@ protected:
 /// Template implementation for all binary symbolic expressions
 template <class LHSTYPE, class RHSTYPE, SymExpr::Kind ClassK>
 class BinarySymExprImpl : public BinarySymExpr {
+  friend class SymbolManager;
   LHSTYPE LHS;
   RHSTYPE RHS;
 
   friend class SymExprAllocator;
   BinarySymExprImpl(SymbolID Sym, LHSTYPE lhs, BinaryOperator::Opcode op,
                     RHSTYPE rhs, QualType t)
-      : BinarySymExpr(Sym, ClassKind, op, t), LHS(lhs), RHS(rhs) {
+      : BinarySymExpr(Sym, ClassKind, op, t,
+                      computeComplexity(lhs, op, rhs, t)),
+        LHS(lhs), RHS(rhs) {
     assert(getPointer(lhs));
     assert(getPointer(rhs));
+  }
+
+  static unsigned computeComplexity(LHSTYPE lhs, BinaryOperator::Opcode,
+                                    RHSTYPE rhs, QualType) {
+    // FIXME: Should we add 1 to complexity?
+    return computeOperandComplexity(lhs) + computeOperandComplexity(rhs);
   }
 
 public:
@@ -452,13 +508,6 @@ public:
 
   LHSTYPE getLHS() const { return LHS; }
   RHSTYPE getRHS() const { return RHS; }
-
-  unsigned computeComplexity() const override {
-    if (Complexity == 0)
-      Complexity =
-          computeOperandComplexity(RHS) + computeOperandComplexity(LHS);
-    return Complexity;
-  }
 
   static void Profile(llvm::FoldingSetNodeID &ID, LHSTYPE lhs,
                       BinaryOperator::Opcode op, RHSTYPE rhs, QualType t) {
@@ -520,27 +569,30 @@ class SymbolManager {
   SymExprAllocator Alloc;
   BasicValueFactory &BV;
   ASTContext &Ctx;
+  const unsigned MaxCompComplexity;
 
 public:
   SymbolManager(ASTContext &ctx, BasicValueFactory &bv,
-                llvm::BumpPtrAllocator &bpalloc)
-      : SymbolDependencies(16), Alloc(bpalloc), BV(bv), Ctx(ctx) {}
+                llvm::BumpPtrAllocator &bpalloc, const AnalyzerOptions &Opts)
+      : SymbolDependencies(16), Alloc(bpalloc), BV(bv), Ctx(ctx),
+        MaxCompComplexity(Opts.MaxSymbolComplexity) {
+    assert(MaxCompComplexity > 0 && "Zero max complexity doesn't make sense");
+  }
 
   static bool canSymbolicate(QualType T);
 
-  /// Create or retrieve a SymExpr of type \p SymExprT for the given arguments.
+  /// Create or retrieve a SymExpr of type \p T for the given arguments.
   /// Use the arguments to check for an existing SymExpr and return it,
   /// otherwise, create a new one and keep a pointer to it to avoid duplicates.
-  template <typename SymExprT, typename... Args>
-  const SymExprT *acquire(Args &&...args);
+  template <typename T, typename... Args,
+            typename Ret = std::conditional_t<SymbolData::classof(T::ClassKind),
+                                              T, SymExpr>>
+  LLVM_ATTRIBUTE_RETURNS_NONNULL const Ret *acquire(Args &&...args);
 
   const SymbolConjured *conjureSymbol(ConstCFGElementRef Elem,
                                       const LocationContext *LCtx, QualType T,
                                       unsigned VisitCount,
-                                      const void *SymbolTag = nullptr) {
-
-    return acquire<SymbolConjured>(Elem, LCtx, T, VisitCount, SymbolTag);
-  }
+                                      const void *SymbolTag = nullptr);
 
   QualType getType(const SymExpr *SE) const {
     return SE->getType();
@@ -673,8 +725,9 @@ public:
   virtual bool VisitMemRegion(const MemRegion *) { return true; }
 };
 
-template <typename T, typename... Args>
-const T *SymbolManager::acquire(Args &&...args) {
+// Returns a const pointer to T if T is a SymbolData, otherwise SymExpr.
+template <typename T, typename... Args, typename Ret>
+const Ret *SymbolManager::acquire(Args &&...args) {
   llvm::FoldingSetNodeID profile;
   T::Profile(profile, args...);
   void *InsertPos;
@@ -682,8 +735,12 @@ const T *SymbolManager::acquire(Args &&...args) {
   if (!SD) {
     SD = Alloc.make<T>(std::forward<Args>(args)...);
     DataSet.InsertNode(SD, InsertPos);
+    if (SD->complexity() > MaxCompComplexity) {
+      return cast<Ret>(acquire<SymbolOverlyComplex>(SD));
+    }
   }
-  return cast<T>(SD);
+
+  return cast<Ret>(SD);
 }
 
 } // namespace ento

@@ -45,6 +45,7 @@ SYMBOL(SymbolCast, SymExpr)
 
 ABSTRACT_SYMBOL(SymbolData, SymExpr)
   SYMBOL(SymbolConjured, SymbolData)
+  SYMBOL(SymbolOverlyComplex, SymbolData)
   SYMBOL(SymbolDerived, SymbolData)
   SYMBOL(SymbolExtent, SymbolData)
   SYMBOL(SymbolMetadata, SymbolData)

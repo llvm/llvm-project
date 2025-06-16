@@ -32,6 +32,7 @@ using namespace ento;
 void SymExpr::anchor() {}
 
 StringRef SymbolConjured::getKindStr() const { return "conj_$"; }
+StringRef SymbolOverlyComplex::getKindStr() const { return "complex_$"; }
 StringRef SymbolDerived::getKindStr() const { return "derived_$"; }
 StringRef SymbolExtent::getKindStr() const { return "extent_$"; }
 StringRef SymbolMetadata::getKindStr() const { return "meta_$"; }
@@ -128,6 +129,10 @@ void SymbolConjured::dumpToStream(raw_ostream &os) const {
   os << ", #" << Count << '}';
 }
 
+void SymbolOverlyComplex::dumpToStream(raw_ostream &os) const {
+  os << getKindStr() << getSymbolID();
+}
+
 void SymbolDerived::dumpToStream(raw_ostream &os) const {
   os << getKindStr() << getSymbolID() << '{' << getParentSymbol() << ','
      << getRegion() << '}';
@@ -176,6 +181,7 @@ void SymExpr::symbol_iterator::expand() {
   switch (SE->getKind()) {
     case SymExpr::SymbolRegionValueKind:
     case SymExpr::SymbolConjuredKind:
+    case SymExpr::SymbolOverlyComplexKind:
     case SymExpr::SymbolDerivedKind:
     case SymExpr::SymbolExtentKind:
     case SymExpr::SymbolMetadataKind:
@@ -236,6 +242,12 @@ bool SymbolManager::canSymbolicate(QualType T) {
     return true;
 
   return false;
+}
+
+const SymbolConjured *SymbolManager::conjureSymbol(
+    ConstCFGElementRef Elem, const LocationContext *LCtx, QualType T,
+    unsigned VisitCount, const void *SymbolTag /*=nullptr*/) {
+  return acquire<SymbolConjured>(Elem, LCtx, T, VisitCount, SymbolTag);
 }
 
 void SymbolManager::addSymbolDependency(const SymbolRef Primary,
@@ -346,6 +358,7 @@ bool SymbolReaper::isLive(SymbolRef sym) {
     KnownLive = isReadableRegion(cast<SymbolRegionValue>(sym)->getRegion());
     break;
   case SymExpr::SymbolConjuredKind:
+  case SymExpr::SymbolOverlyComplexKind:
     KnownLive = false;
     break;
   case SymExpr::SymbolDerivedKind:

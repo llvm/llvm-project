@@ -291,9 +291,9 @@ static std::pair<SymbolRef, APSIntPtr> decomposeSymbol(SymbolRef Sym,
 // same signed integral type and no overflows occur (which should be checked
 // by the caller).
 static NonLoc doRearrangeUnchecked(ProgramStateRef State,
-                                   BinaryOperator::Opcode Op,
-                                   SymbolRef LSym, llvm::APSInt LInt,
-                                   SymbolRef RSym, llvm::APSInt RInt) {
+                                   BinaryOperator::Opcode Op, SymbolRef LSym,
+                                   llvm::APSInt LInt, SymbolRef RSym,
+                                   llvm::APSInt RInt) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   BasicValueFactory &BV = SVB.getBasicValueFactory();
   SymbolManager &SymMgr = SVB.getSymbolManager();

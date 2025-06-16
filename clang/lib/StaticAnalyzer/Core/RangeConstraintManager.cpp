@@ -1264,7 +1264,9 @@ public:
 
 private:
   SymbolicRangeInferrer(RangeSet::Factory &F, ProgramStateRef S)
-      : ValueFactory(F.getValueFactory()), RangeFactory(F), State(S) {}
+      : SVB(S->getStateManager().getSValBuilder()),
+        SymMgr(S->getSymbolManager()), ValueFactory(F.getValueFactory()),
+        RangeFactory(F), State(S) {}
 
   /// Infer range information from the given integer constant.
   ///
@@ -1525,8 +1527,6 @@ private:
     const SymExpr *RHS = SSE->getRHS();
     QualType T = SSE->getType();
 
-    SymbolManager &SymMgr = State->getSymbolManager();
-
     // We use this variable to store the last queried operator (`QueriedOP`)
     // for which the `getCmpOpState` returned with `Unknown`. If there are two
     // different OPs that returned `Unknown` then we have to query the special
@@ -1540,8 +1540,7 @@ private:
 
       // Let's find an expression e.g. (x < y).
       BinaryOperatorKind QueriedOP = OperatorRelationsTable::getOpFromIndex(i);
-      const SymSymExpr *SymSym =
-          SymMgr.acquire<SymSymExpr>(LHS, QueriedOP, RHS, T);
+      SymbolRef SymSym = SymMgr.acquire<SymSymExpr>(LHS, QueriedOP, RHS, T);
       const RangeSet *QueriedRangeSet = getConstraint(State, SymSym);
 
       // If ranges were not previously found,
@@ -1622,6 +1621,8 @@ private:
     return RangeSet(RangeFactory, Zero);
   }
 
+  SValBuilder &SVB;
+  SymbolManager &SymMgr;
   BasicValueFactory &ValueFactory;
   RangeSet::Factory &RangeFactory;
   ProgramStateRef State;

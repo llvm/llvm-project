@@ -66,7 +66,7 @@ public:
                              SVal Cond,
                              bool Assumption) const {
     const SymbolRef CondS = Cond.getAsSymbol();
-    if (!CondS || CondS->computeComplexity() > ComplexityThreshold)
+    if (!CondS || CondS->complexity() > ComplexityThreshold)
       return State;
 
     for (SymbolRef Antecedent : CondS->symbols()) {
