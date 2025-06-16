@@ -445,6 +445,7 @@ foreach mx = ["M2", "M4"] in {
 // 12. Vector Fixed-Point Arithmetic Instructions
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
+  defvar ALULat = SMX60GetVIALULatency<mx>.c;
 
   defm "" : LMULWriteResMX<"WriteVSALUV",   [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVSALUX",   [SMX60_VIEU], mx, IsWorstCase>;
@@ -453,9 +454,11 @@ foreach mx = SchedMxList in {
   defm "" : LMULWriteResMX<"WriteVAALUX",   [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVSMulV",   [SMX60_VIEU], mx, IsWorstCase>;
   defm "" : LMULWriteResMX<"WriteVSMulX",   [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftI", [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = ALULat in {
+    defm "" : LMULWriteResMX<"WriteVSShiftV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftI", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 }
 
 // 13. Vector Floating-Point Instructions
