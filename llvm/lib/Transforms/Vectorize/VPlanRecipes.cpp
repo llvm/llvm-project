@@ -643,8 +643,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     assert(!PhiR->isInLoop() &&
            "In-loop FindLastIV reduction is not supported yet");
 
-    // The recipe's operands are the reduction phi, followed by one operand for
-    // each part of the reduction.
+    // The recipe's operands are the reduction phi, the start value, the
+    // sentinel value, followed by one operand for each part of the reduction.
     unsigned UF = getNumOperands() - 3;
     Value *ReducedPartRdx = State.get(getOperand(3));
     for (unsigned Part = 1; Part < UF; ++Part) {
@@ -652,9 +652,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                       State.get(getOperand(3 + Part)));
     }
 
-    return createFindLastIVReduction(Builder, ReducedPartRdx,
-                                     State.get(getOperand(1), true),
-                                     getOperand(2)->getLiveInIRValue());
+    Value *Start = State.get(getOperand(1), true);
+    Value *Sentinel = getOperand(2)->getLiveInIRValue();
+    return createFindLastIVReduction(Builder, ReducedPartRdx, Start, Sentinel);
   }
   case VPInstruction::ComputeReductionResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
