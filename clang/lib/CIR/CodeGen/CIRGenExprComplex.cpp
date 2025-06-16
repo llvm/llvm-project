@@ -52,7 +52,7 @@ mlir::Value ComplexExprEmitter::emitLoadOfLValue(LValue lv,
                                                  SourceLocation loc) {
   assert(lv.isSimple() && "non-simple complex l-value?");
   if (lv.getType()->isAtomicType())
-    cgf.cgm.errorNYI("emitLoadOfLValue with Atomic LV");
+    cgf.cgm.errorNYI(loc, "emitLoadOfLValue with Atomic LV");
 
   const Address srcAddr = lv.getAddress();
   return builder.createLoad(cgf.getLoc(loc), srcAddr);
@@ -62,7 +62,7 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
                                             LValue lv, bool isInit) {
   if (lv.getType()->isAtomicType() ||
       (!isInit && cgf.isLValueSuitableForInlineAtomic(lv))) {
-    cgf.cgm.errorNYI("StoreOfComplex with Atomic LV");
+    cgf.cgm.errorNYI(loc, "StoreOfComplex with Atomic LV");
     return;
   }
 

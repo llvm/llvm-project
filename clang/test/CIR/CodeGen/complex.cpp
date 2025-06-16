@@ -191,8 +191,8 @@ void foo8() {
 // OGCG: store double 0.000000e+00, ptr %[[C_REAL_PTR]], align 8
 // OGCG: store double 2.000000e+00, ptr %[[C_IMAG_PTR]], align 8
 
-void foo9(double r, double i) {
-  double _Complex c = __builtin_complex(r, i);
+void foo9(double a, double b) {
+  double _Complex c = __builtin_complex(a, b);
 }
 
 // CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["c", init]
