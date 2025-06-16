@@ -1554,35 +1554,21 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     llvm::SmallSetVector<Value, 32> escapingValues;
     SmallVector<Type> inputTypes;
     SmallVector<Type> distTypes;
-    auto collectEscapingValues = [&](Value value) {
-      if (!escapingValues.insert(value))
-        return;
-      Type distType = value.getType();
-      if (auto vecType = dyn_cast<VectorType>(distType)) {
-        AffineMap map = distributionMapFn(value);
-        distType = getDistributedType(vecType, map, warpOp.getWarpSize());
-      }
-      inputTypes.push_back(value.getType());
-      distTypes.push_back(distType);
-    };
-
     mlir::visitUsedValuesDefinedAbove(
         forOp.getBodyRegion(), [&](OpOperand *operand) {
           Operation *parent = operand->get().getParentRegion()->getParentOp();
           if (warpOp->isAncestor(parent)) {
-            collectEscapingValues(operand->get());
+            if (!escapingValues.insert(operand->get()))
+              return;
+            Type distType = operand->get().getType();
+            if (auto vecType = dyn_cast<VectorType>(distType)) {
+              AffineMap map = distributionMapFn(operand->get());
+              distType = getDistributedType(vecType, map, warpOp.getWarpSize());
+            }
+            inputTypes.push_back(operand->get().getType());
+            distTypes.push_back(distType);
           }
         });
-
-    // Any forOp result that is not already yielded by the warpOp
-    // region is also considered escaping and must be returned by the
-    // original warpOp.
-    for (OpResult forResult : forOp.getResults()) {
-      // Check if this forResult is already yielded by the yield op.
-      if (llvm::is_contained(yield->getOperands(), forResult))
-        continue;
-      collectEscapingValues(forResult);
-    }
 
     if (llvm::is_contained(distTypes, Type{}))
       return failure();
@@ -1623,12 +1609,7 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
                                     forOp.getResultTypes().end());
     llvm::SmallDenseMap<Value, int64_t> argIndexMapping;
     for (auto [i, retIdx] : llvm::enumerate(newRetIndices)) {
-      auto newWarpResult = newWarpOp.getResult(retIdx);
-      // Unused forOp results yielded by the warpOp region are already included
-      // in the new ForOp.
-      if (llvm::is_contained(newOperands, newWarpResult))
-        continue;
-      warpInput.push_back(newWarpResult);
+      warpInput.push_back(newWarpOp.getResult(retIdx));
       argIndexMapping[escapingValues[i]] = warpInputType.size();
       warpInputType.push_back(inputTypes[i]);
     }
