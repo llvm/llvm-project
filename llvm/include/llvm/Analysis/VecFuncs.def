@@ -258,7 +258,7 @@ TLI_DEFINE_VECFUNC("acosh", "_ZGVsMxv_acosh",  SCALABLE(2), MASKED, "_ZGVsMxv", 
 TLI_DEFINE_VECFUNC("acoshf", "_ZGVsMxv_acoshf", SCALABLE(4), MASKED, "_ZGVsMxv", NOCC)
 
 TLI_DEFINE_VECFUNC("asin", "_ZGVnN2v_asin", FIXED(2), NOMASK, "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall)
-TLI_DEFINE_VECFUNC("asinf", "_ZGVnN2v_asin", FIXED(2), NOMASK, "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall)
+TLI_DEFINE_VECFUNC("asinf", "_ZGVnN2v_asinf", FIXED(2), NOMASK, "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall)
 TLI_DEFINE_VECFUNC("asinf", "_ZGVnN4v_asinf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v", CallingConv::AArch64_VectorCall)
 TLI_DEFINE_VECFUNC("asin", "_ZGVsMxv_asin", SCALABLE(2), MASKED, "_ZGVsMxv", NOCC)
 TLI_DEFINE_VECFUNC("asinf", "_ZGVsMxv_asinf", SCALABLE(4), MASKED, "_ZGVsMxv", NOCC)
@@ -288,7 +288,7 @@ TLI_DEFINE_VECFUNC("llvm.atan.f64", "_ZGVsMxv_atan", SCALABLE(2), MASKED, "_ZGVs
 TLI_DEFINE_VECFUNC("llvm.atan.f32", "_ZGVsMxv_atanf", SCALABLE(4), MASKED, "_ZGVsMxv", NOCC)
 
 TLI_DEFINE_VECFUNC("atan2", "_ZGVnN2vv_atan2", FIXED(2), NOMASK, "_ZGV_LLVM_N2vv", CallingConv::AArch64_VectorCall)
-TLI_DEFINE_VECFUNC("atan2f", "_ZGVnN2vv_atan2", FIXED(2), NOMASK, "_ZGV_LLVM_N2vv", CallingConv::AArch64_VectorCall)
+TLI_DEFINE_VECFUNC("atan2f", "_ZGVnN2vv_atan2f", FIXED(2), NOMASK, "_ZGV_LLVM_N2vv", CallingConv::AArch64_VectorCall)
 TLI_DEFINE_VECFUNC("atan2f", "_ZGVnN4vv_atan2f", FIXED(4), NOMASK, "_ZGV_LLVM_N4vv", CallingConv::AArch64_VectorCall)
 TLI_DEFINE_VECFUNC("atan2", "_ZGVsMxvv_atan2", SCALABLE(2), MASKED, "_ZGVsMxvv", NOCC)
 TLI_DEFINE_VECFUNC("atan2f", "_ZGVsMxvv_atan2f", SCALABLE(4), MASKED, "_ZGVsMxvv", NOCC)
@@ -312,7 +312,7 @@ TLI_DEFINE_VECFUNC("cbrt", "_ZGVsMxv_cbrt",  SCALABLE(2), MASKED, "_ZGVsMxv", NO
 TLI_DEFINE_VECFUNC("cbrtf", "_ZGVsMxv_cbrtf", SCALABLE(4), MASKED, "_ZGVsMxv", NOCC)
 
 TLI_DEFINE_VECFUNC("cos", "_ZGVnN2v_cos", FIXED(2), NOMASK, "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall)
-TLI_DEFINE_VECFUNC("cosf", "_ZGVnN2v_cos", FIXED(2), NOMASK, "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall)
+TLI_DEFINE_VECFUNC("cosf", "_ZGVnN2v_cosf", FIXED(2), NOMASK, "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall)
 TLI_DEFINE_VECFUNC("cosf", "_ZGVnN4v_cosf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v", CallingConv::AArch64_VectorCall)
 TLI_DEFINE_VECFUNC("cos", "_ZGVsMxv_cos",  SCALABLE(2), MASKED, "_ZGVsMxv", NOCC)
 TLI_DEFINE_VECFUNC("cosf", "_ZGVsMxv_cosf", SCALABLE(4), MASKED, "_ZGVsMxv", NOCC)
