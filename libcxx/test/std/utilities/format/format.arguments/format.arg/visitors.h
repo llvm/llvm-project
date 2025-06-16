@@ -12,7 +12,6 @@
 #include <concepts>
 #include <format>
 #include <string_view>
-#include <type_traits>
 #include <variant>
 
 // [format.arg]
