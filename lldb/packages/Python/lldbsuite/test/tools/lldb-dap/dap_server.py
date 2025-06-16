@@ -564,6 +564,8 @@ class DebugCommunication(object):
             module_list = resp["body"]["modules"]
             for module in module_list:
                 modules[module["name"]] = module
+        else:
+            raise ValueError(f"request_modules failed: {resp!r}")
         return modules
 
     def get_output(self, category: str, clear=True) -> str:
@@ -704,12 +706,10 @@ class DebugCommunication(object):
         if threadId is None:
             threadId = self.get_thread_id()
         if threadId is None:
-            print("invalid threadId")
             return None
         response = self.request_stackTrace(threadId, startFrame=frameIndex, levels=1)
         if response:
             return response["body"]["stackFrames"][0]
-        print("invalid response")
         return None
 
     def get_completions(self, text, frameId=None):
