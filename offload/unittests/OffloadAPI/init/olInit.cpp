@@ -18,7 +18,7 @@ TEST_F(olInitTest, Success) {
 }
 
 TEST_F(olInitTest, RepeatedInit) {
-  for (size_t I = 0; I < 10; I ++) {
+  for (size_t I = 0; I < 10; I++) {
     ASSERT_SUCCESS(olInit());
     ASSERT_SUCCESS(olShutDown());
   }
