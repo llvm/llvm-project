@@ -255,7 +255,13 @@ AArch64ConditionOptimizer::CmpInfo AArch64ConditionOptimizer::adjustCmp(
   const int OldImm = (int)CmpMI->getOperand(2).getImm();
   const int NewImm = std::abs(OldImm + Correction);
 
-  // Handle +0 -> -1 and -0 -> +1 (CMN with 0 immediate) transitions by
+  // Handle cmn 1 -> cmp 0, because we prefer CMP 0 over cmn 0.
+  if (OldImm == 1 && Negative && Correction == -1) {
+    // If we are adjusting from -1 to 0, we need to change the opcode.
+    Opc = getComplementOpc(Opc);
+  }
+
+  // Handle +0 -> -1 and -0 -> +1 (CMN with 0 immediate.) transitions by
   // adjusting compare instruction opcode.
   if (OldImm == 0 && ((Negative && Correction == 1) ||
                       (!Negative && Correction == -1))) {
@@ -380,8 +386,8 @@ bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
       continue;
     }
 
-    const int HeadImm = (int)HeadCmpMI->getOperand(2).getImm();
-    const int TrueImm = (int)TrueCmpMI->getOperand(2).getImm();
+    int HeadImm = (int)HeadCmpMI->getOperand(2).getImm();
+    int TrueImm = (int)TrueCmpMI->getOperand(2).getImm();
 
     LLVM_DEBUG(dbgs() << "Head branch:\n");
     LLVM_DEBUG(dbgs() << "\tcondition: " << AArch64CC::getCondCodeName(HeadCmp)
@@ -392,6 +398,14 @@ bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
     LLVM_DEBUG(dbgs() << "\tcondition: " << AArch64CC::getCondCodeName(TrueCmp)
                       << '\n');
     LLVM_DEBUG(dbgs() << "\timmediate: " << TrueImm << '\n');
+
+    unsigned Opc = HeadCmpMI->getOpcode();
+    if (Opc == AArch64::ADDSWri || Opc == AArch64::ADDSXri)
+      HeadImm = -HeadImm;
+
+    Opc = TrueCmpMI->getOpcode();
+    if (Opc == AArch64::ADDSWri || Opc == AArch64::ADDSXri)
+      TrueImm = -TrueImm;
 
     if (((HeadCmp == AArch64CC::GT && TrueCmp == AArch64CC::LT) ||
          (HeadCmp == AArch64CC::LT && TrueCmp == AArch64CC::GT)) &&
@@ -434,6 +448,8 @@ bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
           adjustHeadCond = !adjustHeadCond;
       }
 
+      TrueImm = std::abs(TrueImm);
+      HeadImm = std::abs(HeadImm);
       if (adjustHeadCond) {
         Changed |= adjustTo(HeadCmpMI, HeadCmp, TrueCmpMI, TrueImm);
       } else {
