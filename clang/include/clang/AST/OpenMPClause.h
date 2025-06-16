@@ -295,8 +295,7 @@ protected:
 
   /// Fetches list of variables associated with this clause.
   MutableArrayRef<Expr *> getVarRefs() {
-    return MutableArrayRef<Expr *>(
-        static_cast<T *>(this)->template getTrailingObjects<Expr *>(), NumVars);
+    return static_cast<T *>(this)->template getTrailingObjects<Expr *>(NumVars);
   }
 
   /// Sets the list of variables for this clause.
@@ -336,8 +335,7 @@ public:
 
   /// Fetches list of all variables in the clause.
   ArrayRef<const Expr *> getVarRefs() const {
-    return llvm::ArrayRef(
-        static_cast<const T *>(this)->template getTrailingObjects<Expr *>(),
+    return static_cast<const T *>(this)->template getTrailingObjects<Expr *>(
         NumVars);
   }
 };
@@ -382,10 +380,8 @@ public:
   }
 
   MutableArrayRef<OpenMPDirectiveKind> getDirectiveKinds() {
-    return MutableArrayRef<OpenMPDirectiveKind>(
-        static_cast<T *>(this)
-            ->template getTrailingObjects<OpenMPDirectiveKind>(),
-        NumKinds);
+    return static_cast<T *>(this)
+        ->template getTrailingObjects<OpenMPDirectiveKind>(NumKinds);
   }
 
   void setDirectiveKinds(ArrayRef<OpenMPDirectiveKind> DK) {
@@ -984,14 +980,12 @@ public:
 
   /// Returns the tile size expressions.
   MutableArrayRef<Expr *> getSizesRefs() {
-    return MutableArrayRef<Expr *>(static_cast<OMPSizesClause *>(this)
-                                       ->template getTrailingObjects<Expr *>(),
-                                   NumSizes);
+    return static_cast<OMPSizesClause *>(this)
+        ->template getTrailingObjects<Expr *>(NumSizes);
   }
   ArrayRef<Expr *> getSizesRefs() const {
-    return ArrayRef<Expr *>(static_cast<const OMPSizesClause *>(this)
-                                ->template getTrailingObjects<Expr *>(),
-                            NumSizes);
+    return static_cast<const OMPSizesClause *>(this)
+        ->template getTrailingObjects<Expr *>(NumSizes);
   }
 
   /// Sets the tile size expressions.
@@ -1090,14 +1084,12 @@ public:
   /// Returns the permutation index expressions.
   ///@{
   MutableArrayRef<Expr *> getArgsRefs() {
-    return MutableArrayRef<Expr *>(static_cast<OMPPermutationClause *>(this)
-                                       ->template getTrailingObjects<Expr *>(),
-                                   NumLoops);
+    return static_cast<OMPPermutationClause *>(this)
+        ->template getTrailingObjects<Expr *>(NumLoops);
   }
   ArrayRef<Expr *> getArgsRefs() const {
-    return ArrayRef<Expr *>(static_cast<const OMPPermutationClause *>(this)
-                                ->template getTrailingObjects<Expr *>(),
-                            NumLoops);
+    return static_cast<const OMPPermutationClause *>(this)
+        ->template getTrailingObjects<Expr *>(NumLoops);
   }
   ///@}
 
@@ -3820,10 +3812,10 @@ class OMPReductionClause final
 
   /// Get the list of help private variable reduction flags
   MutableArrayRef<bool> getPrivateVariableReductionFlags() {
-    return MutableArrayRef(getTrailingObjects<bool>(), varlist_size());
+    return getTrailingObjects<bool>(varlist_size());
   }
   ArrayRef<bool> getPrivateVariableReductionFlags() const {
-    return ArrayRef(getTrailingObjects<bool>(), varlist_size());
+    return getTrailingObjects<bool>(varlist_size());
   }
 
   /// Returns the number of Expr* objects in trailing storage
@@ -3841,7 +3833,7 @@ class OMPReductionClause final
     return MutableArrayRef<Expr *>(getLHSExprs().end(), varlist_size());
   }
   ArrayRef<const Expr *> getRHSExprs() const {
-    return llvm::ArrayRef(getLHSExprs().end(), varlist_size());
+    return ArrayRef(getLHSExprs().end(), varlist_size());
   }
 
   /// Set list of helper reduction expressions, required for proper
@@ -5925,18 +5917,15 @@ protected:
   /// Get the unique declarations that are in the trailing objects of the
   /// class.
   MutableArrayRef<ValueDecl *> getUniqueDeclsRef() {
-    return MutableArrayRef<ValueDecl *>(
-        static_cast<T *>(this)->template getTrailingObjects<ValueDecl *>(),
+    return static_cast<T *>(this)->template getTrailingObjects<ValueDecl *>(
         NumUniqueDeclarations);
   }
 
   /// Get the unique declarations that are in the trailing objects of the
   /// class.
   ArrayRef<ValueDecl *> getUniqueDeclsRef() const {
-    return ArrayRef<ValueDecl *>(
-        static_cast<const T *>(this)
-            ->template getTrailingObjects<ValueDecl *>(),
-        NumUniqueDeclarations);
+    return static_cast<const T *>(this)
+        ->template getTrailingObjects<ValueDecl *>(NumUniqueDeclarations);
   }
 
   /// Set the unique declarations that are in the trailing objects of the
@@ -5950,16 +5939,14 @@ protected:
   /// Get the number of lists per declaration that are in the trailing
   /// objects of the class.
   MutableArrayRef<unsigned> getDeclNumListsRef() {
-    return MutableArrayRef<unsigned>(
-        static_cast<T *>(this)->template getTrailingObjects<unsigned>(),
+    return static_cast<T *>(this)->template getTrailingObjects<unsigned>(
         NumUniqueDeclarations);
   }
 
   /// Get the number of lists per declaration that are in the trailing
   /// objects of the class.
   ArrayRef<unsigned> getDeclNumListsRef() const {
-    return ArrayRef<unsigned>(
-        static_cast<const T *>(this)->template getTrailingObjects<unsigned>(),
+    return static_cast<const T *>(this)->template getTrailingObjects<unsigned>(
         NumUniqueDeclarations);
   }
 
@@ -5999,18 +5986,14 @@ protected:
 
   /// Get the components that are in the trailing objects of the class.
   MutableArrayRef<MappableComponent> getComponentsRef() {
-    return MutableArrayRef<MappableComponent>(
-        static_cast<T *>(this)
-            ->template getTrailingObjects<MappableComponent>(),
-        NumComponents);
+    return static_cast<T *>(this)
+        ->template getTrailingObjects<MappableComponent>(NumComponents);
   }
 
   /// Get the components that are in the trailing objects of the class.
   ArrayRef<MappableComponent> getComponentsRef() const {
-    return ArrayRef<MappableComponent>(
-        static_cast<const T *>(this)
-            ->template getTrailingObjects<MappableComponent>(),
-        NumComponents);
+    return static_cast<const T *>(this)
+        ->template getTrailingObjects<MappableComponent>(NumComponents);
   }
 
   /// Set the components that are in the trailing objects of the class.
@@ -9475,6 +9458,7 @@ class ConstOMPClauseVisitor :
 class OMPClausePrinter final : public OMPClauseVisitor<OMPClausePrinter> {
   raw_ostream &OS;
   const PrintingPolicy &Policy;
+  unsigned Version;
 
   /// Process clauses with list of variables.
   template <typename T> void VisitOMPClauseList(T *Node, char StartSym);
@@ -9482,8 +9466,9 @@ class OMPClausePrinter final : public OMPClauseVisitor<OMPClausePrinter> {
   template <typename T> void VisitOMPMotionClause(T *Node);
 
 public:
-  OMPClausePrinter(raw_ostream &OS, const PrintingPolicy &Policy)
-      : OS(OS), Policy(Policy) {}
+  OMPClausePrinter(raw_ostream &OS, const PrintingPolicy &Policy,
+                   unsigned OpenMPVersion)
+      : OS(OS), Policy(Policy), Version(OpenMPVersion) {}
 
 #define GEN_CLANG_CLAUSE_CLASS
 #define CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(Class *S);
@@ -9658,8 +9643,7 @@ public:
 
   /// Get the clauses storage.
   MutableArrayRef<OMPClause *> getClauses() {
-    return llvm::MutableArrayRef(getTrailingObjects<OMPClause *>(),
-                                     NumClauses);
+    return getTrailingObjects<OMPClause *>(NumClauses);
   }
   ArrayRef<OMPClause *> getClauses() const {
     return const_cast<OMPChildren *>(this)->getClauses();

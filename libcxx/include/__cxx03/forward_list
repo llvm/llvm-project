@@ -480,8 +480,7 @@ protected:
   typedef __forward_list_iterator<__node_pointer> iterator;
   typedef __forward_list_const_iterator<__node_pointer> const_iterator;
 
-  _LIBCPP_HIDE_FROM_ABI __forward_list_base() _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value)
-      : __before_begin_(__begin_node(), __default_init_tag()) {}
+  _LIBCPP_HIDE_FROM_ABI __forward_list_base() : __before_begin_(__begin_node(), __default_init_tag()) {}
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_base(const allocator_type& __a)
       : __before_begin_(__begin_node(), __node_allocator(__a)) {}
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_base(const __node_allocator& __a)
@@ -498,9 +497,7 @@ protected:
     __copy_assign_alloc(__x, integral_constant<bool, __node_traits::propagate_on_container_copy_assignment::value>());
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__forward_list_base& __x)
-      _NOEXCEPT_(!__node_traits::propagate_on_container_move_assignment::value ||
-                 is_nothrow_move_assignable<__node_allocator>::value) {
+  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__forward_list_base& __x) {
     __move_assign_alloc(__x, integral_constant<bool, __node_traits::propagate_on_container_move_assignment::value>());
   }
 
@@ -531,8 +528,7 @@ protected:
   }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI void swap(__forward_list_base& __x)
-      _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>);
+  _LIBCPP_HIDE_FROM_ABI void swap(__forward_list_base& __x);
 
 protected:
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT;
@@ -546,8 +542,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__forward_list_base&, false_type) _NOEXCEPT {}
-  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__forward_list_base& __x, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value) {
+  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__forward_list_base& __x, true_type) {
     __alloc() = std::move(__x.__alloc());
   }
 };
@@ -558,8 +553,7 @@ __forward_list_base<_Tp, _Alloc>::~__forward_list_base() {
 }
 
 template <class _Tp, class _Alloc>
-inline void __forward_list_base<_Tp, _Alloc>::swap(__forward_list_base& __x)
-    _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>) {
+inline void __forward_list_base<_Tp, _Alloc>::swap(__forward_list_base& __x) {
   std::__swap_allocator(
       __alloc(), __x.__alloc(), integral_constant<bool, __node_traits::propagate_on_container_swap::value>());
   using std::swap;
@@ -608,8 +602,7 @@ public:
   typedef typename base::const_iterator const_iterator;
   typedef void __remove_return_type;
 
-  _LIBCPP_HIDE_FROM_ABI forward_list() _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value) {
-  } // = default;
+  _LIBCPP_HIDE_FROM_ABI forward_list() {} // = default;
   _LIBCPP_HIDE_FROM_ABI explicit forward_list(const allocator_type& __a);
   _LIBCPP_HIDE_FROM_ABI explicit forward_list(size_type __n);
   _LIBCPP_HIDE_FROM_ABI forward_list(size_type __n, const value_type& __v);
@@ -682,10 +675,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator erase_after(const_iterator __p);
   _LIBCPP_HIDE_FROM_ABI iterator erase_after(const_iterator __f, const_iterator __l);
 
-  _LIBCPP_HIDE_FROM_ABI void swap(forward_list& __x)
-      _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>) {
-    base::swap(__x);
-  }
+  _LIBCPP_HIDE_FROM_ABI void swap(forward_list& __x) { base::swap(__x); }
 
   _LIBCPP_HIDE_FROM_ABI void resize(size_type __n);
   _LIBCPP_HIDE_FROM_ABI void resize(size_type __n, const value_type& __v);
@@ -1226,8 +1216,7 @@ operator<=(const forward_list<_Tp, _Alloc>& __x, const forward_list<_Tp, _Alloc>
 }
 
 template <class _Tp, class _Alloc>
-inline _LIBCPP_HIDE_FROM_ABI void swap(forward_list<_Tp, _Alloc>& __x, forward_list<_Tp, _Alloc>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+inline _LIBCPP_HIDE_FROM_ABI void swap(forward_list<_Tp, _Alloc>& __x, forward_list<_Tp, _Alloc>& __y) {
   __x.swap(__y);
 }
 

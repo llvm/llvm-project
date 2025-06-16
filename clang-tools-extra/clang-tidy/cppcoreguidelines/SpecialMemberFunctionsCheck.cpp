@@ -10,7 +10,6 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringExtras.h"
 
 #define DEBUG_TYPE "clang-tidy"
@@ -117,7 +116,8 @@ void SpecialMemberFunctionsCheck::check(
   if (!MatchedDecl)
     return;
 
-  ClassDefId ID(MatchedDecl->getLocation(), std::string(MatchedDecl->getName()));
+  ClassDefId ID(MatchedDecl->getLocation(),
+                std::string(MatchedDecl->getName()));
 
   auto StoreMember = [this, &ID](SpecialMemberFunctionData Data) {
     llvm::SmallVectorImpl<SpecialMemberFunctionData> &Members =

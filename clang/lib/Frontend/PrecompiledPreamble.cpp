@@ -512,7 +512,7 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
       std::move(Buffer),
       /*WritePCHFile=*/Storage->getKind() == PCHStorage::Kind::TempFile,
       Callbacks);
-  if (!Act->BeginSourceFile(*Clang.get(), Clang->getFrontendOpts().Inputs[0]))
+  if (!Act->BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
     return BuildPreambleError::BeginSourceFileFailed;
 
   // Performed after BeginSourceFile to ensure Clang->Preprocessor can be

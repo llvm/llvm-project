@@ -34,10 +34,11 @@ namespace members {
 
 } // namespace members
 
-namespace ignore_unions {
+namespace unions {
 
   union Foo {
     CheckedObj* a;
+    // expected-warning@-1{{Member variable 'a' in 'unions::Foo' is a raw pointer to CheckedPtr capable type 'CheckedObj'}}
     CheckedPtr<CheckedObj> c;
     CheckedRef<CheckedObj> d;
   };
@@ -45,11 +46,12 @@ namespace ignore_unions {
   template<class T>
   union FooTmpl {
     T* a;
+    // expected-warning@-1{{Member variable 'a' in 'unions::FooTmpl<CheckedObj>' is a raw pointer to CheckedPtr capable type 'CheckedObj'}}
   };
 
   void forceTmplToInstantiate(FooTmpl<CheckedObj>) { }
 
-} // namespace ignore_unions
+} // namespace unions
 
 namespace checked_ptr_ref_ptr_capable {
 
@@ -59,3 +61,23 @@ namespace checked_ptr_ref_ptr_capable {
   }
 
 } // checked_ptr_ref_ptr_capable
+
+namespace ptr_to_ptr_to_checked_ptr_capable {
+
+  struct List {
+    CheckedObj** elements;
+    // expected-warning@-1{{Member variable 'elements' in 'ptr_to_ptr_to_checked_ptr_capable::List' contains a raw pointer to CheckedPtr capable type 'CheckedObj'}}
+  };
+
+  template <typename T>
+  struct TemplateList {
+    T** elements;
+    // expected-warning@-1{{Member variable 'elements' in 'ptr_to_ptr_to_checked_ptr_capable::TemplateList<CheckedObj>' contains a raw pointer to CheckedPtr capable type 'CheckedObj'}}
+  };
+  TemplateList<CheckedObj> list;
+
+  struct SafeList {
+    CheckedPtr<CheckedObj>* elements;
+  };
+
+} // namespace ptr_to_ptr_to_checked_ptr_capable

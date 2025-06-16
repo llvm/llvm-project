@@ -396,9 +396,13 @@ any option of a multiversioned function is undefined.
   }];
 }
 
-def SYCLKernelDocs : Documentation {
+def DeviceKernelDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "device_kernel, sycl_kernel, nvptx_kernel, amdgpu_kernel, "
+                "kernel, __kernel";
   let Content = [{
+These attributes specify that the function represents a kernel for device offloading.
+The specific semantics depend on the offloading language, target, and attribute spelling.
 The ``sycl_kernel`` attribute specifies that a function template will be used
 to outline device code and to generate an OpenCL kernel.
 Here is a code example of the SYCL program, which demonstrates the compiler's
@@ -4392,8 +4396,6 @@ annotated parameter.
       addToSet(str, s); // Not detected.
     }
   }
-
-.. _`lifetimebound`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
   }];
 }
 
@@ -4431,7 +4433,14 @@ destroy the object before returning. The lifetime of the copy of the parameter
 in the caller ends without a destructor call when the call begins.
 
 If a type is trivial for the purpose of calls, it is assumed to be trivially
-relocatable for the purpose of ``__is_trivially_relocatable``.
+relocatable for the purpose of ``__is_trivially_relocatable`` and
+``__builtin_is_cpp_trivially_relocatable``.
+When a type marked with ``[[trivial_abi]]`` is used as a function argument,
+the compiler may omit the call to the copy constructor.
+Thus, side effects of the copy constructor are potentially not performed.
+For example, objects that contain pointers to themselves or otherwise depend
+on their address (or the address or their subobjects) should not be declared
+``[[trivial_abi]]``.
 
 Attribute ``trivial_abi`` has no effect in the following cases:
 
@@ -6869,6 +6878,54 @@ for references or Objective-C object pointers.
 }];
 }
 
+def CFIUncheckedCalleeDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+``cfi_unchecked_callee`` is a function type attribute which prevents the compiler from instrumenting
+`Control Flow Integrity <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_ checks on indirect
+function calls. Specifically, the attribute has the following semantics:
+
+1. Indirect calls to a function type with this attribute will not be instrumented with CFI. That is,
+   the indirect call will not be checked. Note that this only changes the behavior for indirect calls
+   on pointers to function types having this attribute. It does not prevent all indirect function calls
+   for a given type from being checked.
+2. All direct references to a function whose type has this attribute will always reference the
+   function definition rather than an entry in the CFI jump table.
+3. When a pointer to a function with this attribute is implicitly cast to a pointer to a function
+   without this attribute, the compiler will give a warning saying this attribute is discarded. This
+   warning can be silenced with an explicit cast. Note an explicit cast just disables the warning, so
+   direct references to a function with a ``cfi_unchecked_callee`` attribute will still reference the
+   function definition rather than the CFI jump table.
+
+.. code-block:: c
+
+  #define CFI_UNCHECKED_CALLEE __attribute__((cfi_unchecked_callee))
+
+  void no_cfi() CFI_UNCHECKED_CALLEE {}
+
+  void (*with_cfi)() = no_cfi;  // warning: implicit conversion discards `cfi_unchecked_callee` attribute.
+                                // `with_cfi` also points to the actual definition of `no_cfi` rather than
+                                // its jump table entry.
+
+  void invoke(void (CFI_UNCHECKED_CALLEE *func)()) {
+    func();  // CFI will not instrument this indirect call.
+
+    void (*func2)() = func;  // warning: implicit conversion discards `cfi_unchecked_callee` attribute.
+
+    func2();  // CFI will instrument this indirect call. Users should be careful however because if this
+              // references a function with type `cfi_unchecked_callee`, then the CFI check may incorrectly
+              // fail because the reference will be to the function definition rather than the CFI jump
+              // table entry.
+  }
+
+This attribute can only be applied on functions or member functions. This attribute can be a good
+alternative to ``no_sanitize("cfi")`` if you only want to disable innstrumentation for specific indirect
+calls rather than applying ``no_sanitize("cfi")`` on the whole function containing indirect call. Note
+that ``cfi_unchecked_attribute`` is a type attribute doesn't disable CFI instrumentation on a function
+body.
+}];
+}
+
 def ReinitializesDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8195,6 +8252,17 @@ and https://microsoft.github.io/hlsl-specs/proposals/0013-wave-size-range.html
   }];
 }
 
+def RootSignatureDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``RootSignature`` attribute applies to HLSL entry functions to define what
+types of resources are bound to the graphics pipeline.
+
+For details about the use and specification of Root Signatures please see here:
+https://learn.microsoft.com/en-us/windows/win32/direct3d12/root-signatures
+  }];
+}
+
 def NumThreadsDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8461,6 +8529,20 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
   }];
 }
 
+def HLSLSV_PositionDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_Position`` semantic, when applied to an input parameter in a pixel
+shader, contains the location of the pixel center (x, y) in screen space.
+This semantic can be applied to the parameter, or a field in a struct used
+as an input parameter.
+This attribute is supported as an input in pixel, hull, domain and mesh shaders.
+This attribute is supported as an output in vertex, geometry and domain shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
+  }];
+}
+
 def HLSLGroupSharedAddressSpaceDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
@@ -8494,6 +8576,29 @@ into the callee).
 
 Parameters annotated with `inout` are copied into the callee via a temporary,
 and copied back to the argument after the callee returns.
+  }];
+}
+
+def HLSLVkExtBuiltinInputDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Vulkan shaders have `Input` builtins. Those variables are externally
+initialized by the driver/pipeline, but each copy is private to the current
+lane.
+
+Those builtins can be declared using the `[[vk::ext_builtin_input]]` attribute
+like follows:
+
+.. code-block:: c++
+
+  [[vk::ext_builtin_input(/* WorkgroupId */ 26)]]
+  static const uint3 groupid;
+
+This variable will be lowered into a module-level variable, with the `Input`
+storage class, and the `BuiltIn 26` decoration.
+
+The full documentation for this inline SPIR-V attribute can be found here:
+https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
   }];
 }
 
@@ -8669,6 +8774,7 @@ its underlying representation to be a WebAssembly ``funcref``.
 
 def PreferredTypeDocumentation : Documentation {
   let Category = DocCatField;
+  let Label = "langext-preferred_type_documentation";
   let Content = [{
 This attribute allows adjusting the type of a bit-field in debug information.
 This can be helpful when a bit-field is intended to store an enumeration value,
@@ -8955,14 +9061,14 @@ def CoroLifetimeBoundDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``[[clang::coro_lifetimebound]]`` is a class attribute which can be applied
-to a coroutine return type (`CRT`_) (i.e.
+to a coroutine return type (`coro_return_type, coro_wrapper`_) (i.e.
 it should also be annotated with ``[[clang::coro_return_type]]``).
 
 All parameters of a function are considered to be lifetime bound if the function returns a
 coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
 This lifetime bound analysis can be disabled for a coroutine wrapper or a coroutine by annotating the function
 with ``[[clang::coro_disable_lifetimebound]]`` function attribute .
-See `documentation`_ of ``[[clang::lifetimebound]]`` for details about lifetime bound analysis.
+See documentation of `lifetimebound`_ for details about lifetime bound analysis.
 
 
 Reference parameters of a coroutine are susceptible to capturing references to temporaries or local variables.
@@ -9022,9 +9128,6 @@ but do not pass them to the underlying coroutine or pass them by value.
   void use() {
     auto task = coro_wrapper(1); // use of temporary is fine as the argument is not lifetime bound.
   }
-
-.. _`documentation`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
-.. _`CRT`: https://clang.llvm.org/docs/AttributeReference.html#coro-return-type
 }];
 }
 

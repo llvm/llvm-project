@@ -388,6 +388,27 @@ bool ClauseProcessor::processNowait(mlir::omp::NowaitClauseOps &result) const {
   return markClauseOccurrence<omp::clause::Nowait>(result.nowait);
 }
 
+bool ClauseProcessor::processNumTasks(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::NumTasksClauseOps &result) const {
+  using NumTasks = omp::clause::NumTasks;
+  if (auto *clause = findUniqueClause<NumTasks>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::MLIRContext *context = firOpBuilder.getContext();
+    const auto &modifier =
+        std::get<std::optional<NumTasks::Prescriptiveness>>(clause->t);
+    if (modifier && *modifier == NumTasks::Prescriptiveness::Strict) {
+      result.numTasksMod = mlir::omp::ClauseNumTasksTypeAttr::get(
+          context, mlir::omp::ClauseNumTasksType::Strict);
+    }
+    const auto &numtasksExpr = std::get<omp::SomeExpr>(clause->t);
+    result.numTasks =
+        fir::getBase(converter.genExprValue(numtasksExpr, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processNumTeams(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumTeamsClauseOps &result) const {
@@ -722,6 +743,9 @@ void TypeInfo::typeScan(mlir::Type ty) {
   } else if (auto bty = mlir::dyn_cast<fir::BoxType>(ty)) {
     inBox = true;
     typeScan(bty.getEleTy());
+  } else if (auto cty = mlir::dyn_cast<fir::ClassType>(ty)) {
+    inBox = true;
+    typeScan(cty.getEleTy());
   } else if (auto cty = mlir::dyn_cast<fir::CharacterType>(ty)) {
     charLen = cty.getLen();
   } else if (auto hty = mlir::dyn_cast<fir::HeapType>(ty)) {
@@ -856,6 +880,26 @@ static bool isVectorSubscript(const evaluate::Expr<T> &expr) {
   return false;
 }
 
+bool ClauseProcessor::processDefaultMap(lower::StatementContext &stmtCtx,
+                                        DefaultMapsTy &result) const {
+  auto process = [&](const omp::clause::Defaultmap &clause,
+                     const parser::CharBlock &) {
+    using Defmap = omp::clause::Defaultmap;
+    clause::Defaultmap::VariableCategory variableCategory =
+        Defmap::VariableCategory::All;
+    // Variable Category is optional, if not specified defaults to all.
+    // Multiples of the same category are illegal as are any other
+    // defaultmaps being specified when a user specified all is in place,
+    // however, this should be handled earlier during semantics.
+    if (auto varCat =
+            std::get<std::optional<Defmap::VariableCategory>>(clause.t))
+      variableCategory = varCat.value();
+    auto behaviour = std::get<Defmap::ImplicitBehavior>(clause.t);
+    result[variableCategory] = behaviour;
+  };
+  return findRepeatableClause<omp::clause::Defaultmap>(process);
+}
+
 bool ClauseProcessor::processDepend(lower::SymMap &symMap,
                                     lower::StatementContext &stmtCtx,
                                     mlir::omp::DependClauseOps &result) const {
@@ -882,14 +926,10 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
     for (const omp::Object &object : objects) {
       assert(object.ref() && "Expecting designator");
       mlir::Value dependVar;
+      SomeExpr expr = *object.ref();
 
-      if (evaluate::ExtractSubstring(*object.ref())) {
-        TODO(converter.getCurrentLocation(),
-             "substring not supported for task depend");
-      } else if (evaluate::IsArrayElement(*object.ref())) {
-        // Array Section
-        SomeExpr expr = *object.ref();
-
+      if (evaluate::IsArrayElement(expr) || evaluate::ExtractSubstring(expr)) {
+        // Array Section or character (sub)string
         if (isVectorSubscript(expr)) {
           // OpenMP needs the address of the first indexed element (required by
           // the standard to be the lowest index) to identify the dependency. We
@@ -903,6 +943,12 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
               converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
           dependVar = entity.getBase();
         }
+      } else if (evaluate::isStructureComponent(expr) ||
+                 evaluate::ExtractComplexPart(expr)) {
+        SomeExpr expr = *object.ref();
+        hlfir::EntityWithAttributes entity = convertExprToHLFIR(
+            converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+        dependVar = entity.getBase();
       } else {
         semantics::Symbol *sym = object.sym();
         dependVar = converter.getSymbolAddress(*sym);
@@ -932,6 +978,27 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
   };
 
   return findRepeatableClause<omp::clause::Depend>(process);
+}
+
+bool ClauseProcessor::processGrainsize(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::GrainsizeClauseOps &result) const {
+  using Grainsize = omp::clause::Grainsize;
+  if (auto *clause = findUniqueClause<Grainsize>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::MLIRContext *context = firOpBuilder.getContext();
+    const auto &modifier =
+        std::get<std::optional<Grainsize::Prescriptiveness>>(clause->t);
+    if (modifier && *modifier == Grainsize::Prescriptiveness::Strict) {
+      result.grainsizeMod = mlir::omp::ClauseGrainsizeTypeAttr::get(
+          context, mlir::omp::ClauseGrainsizeType::Strict);
+    }
+    const auto &grainsizeExpr = std::get<omp::SomeExpr>(clause->t);
+    result.grainsize =
+        fir::getBase(converter.genExprValue(grainsizeExpr, stmtCtx));
+    return true;
+  }
+  return false;
 }
 
 bool ClauseProcessor::processHasDeviceAddr(
@@ -1018,6 +1085,40 @@ bool ClauseProcessor::processIsDevicePtr(
       });
 }
 
+bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
+  lower::StatementContext stmtCtx;
+  return findRepeatableClause<
+      omp::clause::Linear>([&](const omp::clause::Linear &clause,
+                               const parser::CharBlock &) {
+    auto &objects = std::get<omp::ObjectList>(clause.t);
+    for (const omp::Object &object : objects) {
+      semantics::Symbol *sym = object.sym();
+      const mlir::Value variable = converter.getSymbolAddress(*sym);
+      result.linearVars.push_back(variable);
+    }
+    if (objects.size()) {
+      if (auto &mod =
+              std::get<std::optional<omp::clause::Linear::StepComplexModifier>>(
+                  clause.t)) {
+        mlir::Value operand =
+            fir::getBase(converter.genExprValue(toEvExpr(*mod), stmtCtx));
+        result.linearStepVars.append(objects.size(), operand);
+      } else if (std::get<std::optional<omp::clause::Linear::LinearModifier>>(
+                     clause.t)) {
+        mlir::Location currentLocation = converter.getCurrentLocation();
+        TODO(currentLocation, "Linear modifiers not yet implemented");
+      } else {
+        // If nothing is present, add the default step of 1.
+        fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+        mlir::Location currentLocation = converter.getCurrentLocation();
+        mlir::Value operand = firOpBuilder.createIntegerConstant(
+            currentLocation, firOpBuilder.getI32Type(), 1);
+        result.linearStepVars.append(objects.size(), operand);
+      }
+    }
+  });
+}
+
 bool ClauseProcessor::processLink(
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
   return findRepeatableClause<omp::clause::Link>(
@@ -1052,9 +1153,10 @@ void ClauseProcessor::processMapObjects(
         typeSpec = &object.sym()->GetType()->derivedTypeSpec();
 
       if (typeSpec) {
-        mapperIdName = typeSpec->name().ToString() + ".default";
         mapperIdName =
-            converter.mangleName(mapperIdName, *typeSpec->GetScope());
+            typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+        if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
+          mapperIdName = converter.mangleName(mapperIdName, sym->owner());
       }
     }
   };
@@ -1345,8 +1447,7 @@ bool ClauseProcessor::processUseDeviceAddr(
           const parser::CharBlock &source) {
         mlir::Location location = converter.genLocation(source);
         llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
         processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
                           parentMemberIndices, result.useDeviceAddrVars,
                           useDeviceSyms);
@@ -1367,8 +1468,7 @@ bool ClauseProcessor::processUseDevicePtr(
           const parser::CharBlock &source) {
         mlir::Location location = converter.genLocation(source);
         llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
         processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
                           parentMemberIndices, result.useDevicePtrVars,
                           useDeviceSyms);

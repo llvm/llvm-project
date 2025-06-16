@@ -383,8 +383,7 @@ struct MachineVerifierLegacyPass : public MachineFunctionPass {
     // Skip functions that have known verification problems.
     // FIXME: Remove this mechanism when all problematic passes have been
     // fixed.
-    if (MF.getProperties().hasProperty(
-            MachineFunctionProperties::Property::FailsVerification))
+    if (MF.getProperties().hasFailsVerification())
       return false;
 
     MachineVerifier(this, Banner.c_str(), &errs()).verify(MF);
@@ -400,8 +399,7 @@ MachineVerifierPass::run(MachineFunction &MF,
   // Skip functions that have known verification problems.
   // FIXME: Remove this mechanism when all problematic passes have been
   // fixed.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailsVerification))
+  if (MF.getProperties().hasFailsVerification())
     return PreservedAnalyses::all();
   MachineVerifier(MFAM, Banner.c_str(), &errs()).verify(MF);
   return PreservedAnalyses::all();
@@ -462,9 +460,7 @@ void MachineVerifier::verifyProperties(const MachineFunction &MF) {
   // If a pass has introduced virtual registers without clearing the
   // NoVRegs property (or set it without allocating the vregs)
   // then report an error.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::NoVRegs) &&
-      MRI->getNumVirtRegs())
+  if (MF.getProperties().hasNoVRegs() && MRI->getNumVirtRegs())
     report("Function has NoVRegs property but there are VReg operands", &MF);
 }
 
@@ -476,8 +472,8 @@ bool MachineVerifier::verify(const MachineFunction &MF) {
   RBI = MF.getSubtarget().getRegBankInfo();
   MRI = &MF.getRegInfo();
 
-  const bool isFunctionFailedISel = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::FailedISel);
+  const MachineFunctionProperties &Props = MF.getProperties();
+  const bool isFunctionFailedISel = Props.hasFailedISel();
 
   // If we're mid-GlobalISel and we already triggered the fallback path then
   // it's expected that the MIR is somewhat broken but that's ok since we'll
@@ -485,12 +481,9 @@ bool MachineVerifier::verify(const MachineFunction &MF) {
   if (isFunctionFailedISel)
     return true;
 
-  isFunctionRegBankSelected = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::RegBankSelected);
-  isFunctionSelected = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::Selected);
-  isFunctionTracksDebugUserValues = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::TracksDebugUserValues);
+  isFunctionRegBankSelected = Props.hasRegBankSelected();
+  isFunctionSelected = Props.hasSelected();
+  isFunctionTracksDebugUserValues = Props.hasTracksDebugUserValues();
 
   if (PASS) {
     auto *LISWrapper = PASS->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
@@ -731,8 +724,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   FirstTerminator = nullptr;
   FirstNonPHI = nullptr;
 
-  if (!MF->getProperties().hasProperty(
-      MachineFunctionProperties::Property::NoPHIs) && MRI->tracksLiveness()) {
+  if (!MF->getProperties().hasNoPHIs() && MRI->tracksLiveness()) {
     // If this block has allocatable physical registers live-in, check that
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
@@ -2285,8 +2277,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     report("NoConvergent flag expected only on convergent instructions.", MI);
 
   if (MI->isPHI()) {
-    if (MF->getProperties().hasProperty(
-            MachineFunctionProperties::Property::NoPHIs))
+    if (MF->getProperties().hasNoPHIs())
       report("Found PHI instruction with NoPHIs property set", MI);
 
     if (FirstNonPHI)
@@ -2303,9 +2294,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     if (!MI->getOperand(0).isReg() || !MI->getOperand(0).isDef())
       report("Unspillable Terminator does not define a reg", MI);
     Register Def = MI->getOperand(0).getReg();
-    if (Def.isVirtual() &&
-        !MF->getProperties().hasProperty(
-            MachineFunctionProperties::Property::NoPHIs) &&
+    if (Def.isVirtual() && !MF->getProperties().hasNoPHIs() &&
         std::distance(MRI->use_nodbg_begin(Def), MRI->use_nodbg_end()) > 1)
       report("Unspillable Terminator expected to have at most one use!", MI);
   }
@@ -2626,9 +2615,8 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
     // TiedOpsRewritten property to verify two-address constraints, this
     // property will be set in twoaddressinstruction pass.
     unsigned DefIdx;
-    if (MF->getProperties().hasProperty(
-            MachineFunctionProperties::Property::TiedOpsRewritten) &&
-        MO->isUse() && MI->isRegTiedToDefOperand(MONum, &DefIdx) &&
+    if (MF->getProperties().hasTiedOpsRewritten() && MO->isUse() &&
+        MI->isRegTiedToDefOperand(MONum, &DefIdx) &&
         Reg != MI->getOperand(DefIdx).getReg())
       report("Two-address instruction operands must be identical", MO, MONum);
 
@@ -3729,9 +3717,7 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     // early-clobber slot if it is being redefined by an early-clobber def.
     // TODO: Before tied operands are rewritten, a live segment can only end at
     // an early-clobber slot if the last use is tied to an early-clobber def.
-    if (MF->getProperties().hasProperty(
-            MachineFunctionProperties::Property::TiedOpsRewritten) &&
-        S.end.isEarlyClobber()) {
+    if (MF->getProperties().hasTiedOpsRewritten() && S.end.isEarlyClobber()) {
       if (I + 1 == LR.end() || (I + 1)->start != S.end) {
         report("Live segment ending at early clobber slot must be "
                "redefined by an EC def in the same instruction",

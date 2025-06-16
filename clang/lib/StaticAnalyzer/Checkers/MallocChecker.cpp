@@ -76,10 +76,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -1833,8 +1831,10 @@ ProgramStateRef MallocChecker::MallocBindRetVal(CheckerContext &C,
   unsigned Count = C.blockCount();
   SValBuilder &SVB = C.getSValBuilder();
   const LocationContext *LCtx = C.getPredecessor()->getLocationContext();
-  DefinedSVal RetVal = isAlloca ? SVB.getAllocaRegionVal(CE, LCtx, Count)
-                                : SVB.getConjuredHeapSymbolVal(CE, LCtx, Count);
+  DefinedSVal RetVal =
+      isAlloca ? SVB.getAllocaRegionVal(CE, LCtx, Count)
+               : SVB.getConjuredHeapSymbolVal(Call.getCFGElementRef(), LCtx,
+                                              CE->getType(), Count);
   return State->BindExpr(CE, C.getLocationContext(), RetVal);
 }
 
@@ -2304,7 +2304,7 @@ MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
   // Assume that after memory is freed, it contains unknown values. This
   // conforts languages standards, since reading from freed memory is considered
   // UB and may result in arbitrary value.
-  State = State->invalidateRegions({location}, Call.getOriginExpr(),
+  State = State->invalidateRegions({location}, Call.getCFGElementRef(),
                                    C.blockCount(), C.getLocationContext(),
                                    /*CausesPointerEscape=*/false,
                                    /*InvalidatedSymbols=*/nullptr);
@@ -3098,8 +3098,7 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   // Generate leak node.
   ExplodedNode *N = C.getPredecessor();
   if (!Errors.empty()) {
-    static CheckerProgramPointTag Tag("MallocChecker", "DeadSymbolsLeak");
-    N = C.generateNonFatalErrorNode(C.getState(), &Tag);
+    N = C.generateNonFatalErrorNode(C.getState());
     if (N) {
       for (SymbolRef Sym : Errors) {
         HandleLeak(Sym, N, C);

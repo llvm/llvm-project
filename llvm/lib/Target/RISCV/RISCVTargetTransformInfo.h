@@ -25,7 +25,7 @@
 
 namespace llvm {
 
-class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
+class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
   using BaseT = BasicTTIImplBase<RISCVTTIImpl>;
   using TTI = TargetTransformInfo;
 
@@ -106,6 +106,13 @@ public:
 
   TargetTransformInfo::PopcntSupportKind
   getPopcntSupport(unsigned TyWidth) const override;
+
+  InstructionCost
+  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
+                          Type *AccumType, ElementCount VF,
+                          TTI::PartialReductionExtendKind OpAExtend,
+                          TTI::PartialReductionExtendKind OpBExtend,
+                          std::optional<unsigned> BinOp) const override;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
   bool supportsScalableVectors() const override {
@@ -372,11 +379,10 @@ public:
     case RecurKind::SMax:
     case RecurKind::UMin:
     case RecurKind::UMax:
-    case RecurKind::IAnyOf:
     case RecurKind::FMin:
     case RecurKind::FMax:
       return true;
-    case RecurKind::FAnyOf:
+    case RecurKind::AnyOf:
     case RecurKind::FAdd:
     case RecurKind::FMulAdd:
       // We can't promote f16/bf16 fadd reductions and scalable vectors can't be

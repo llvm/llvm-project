@@ -2704,8 +2704,7 @@ bool ARMTTIImpl::preferInLoopReduction(RecurKind Kind, Type *Ty) const {
   }
 }
 
-bool ARMTTIImpl::preferPredicatedReductionSelect(unsigned Opcode,
-                                                 Type *Ty) const {
+bool ARMTTIImpl::preferPredicatedReductionSelect() const {
   if (!ST->hasMVEIntegerOps())
     return false;
   return true;

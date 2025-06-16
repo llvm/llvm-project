@@ -200,11 +200,17 @@ string(TOUPPER "${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}" uppercase_LLVM_ENABLE
 
 if( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE" )
   set( LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
+elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE_AND_ORIGIN" )
+  set( LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
+  set( LLVM_ENABLE_DEBUGLOC_ORIGIN_TRACKING 1 )
 elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "DISABLED" OR NOT DEFINED LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING )
-  # The DISABLED setting is default and requires no additional defines.
+  # The DISABLED setting is default.
+  set( LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING 0 )
 else()
   message(FATAL_ERROR "Unknown value for LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING: \"${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}\"!")
 endif()
+# LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING (non-cached) is expected to be
+# 1 or 0 here, assuming referenced in #cmakedefine01.
 
 if(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS)
   add_compile_definitions(EXPERIMENTAL_KEY_INSTRUCTIONS)
@@ -214,15 +220,15 @@ if( LLVM_REVERSE_ITERATION )
   set( LLVM_ENABLE_REVERSE_ITERATION 1 )
 endif()
 
-if(WIN32)
+if(WIN32 OR CYGWIN)
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
   if(CYGWIN)
     set(LLVM_ON_WIN32 0)
     set(LLVM_ON_UNIX 1)
-  else(CYGWIN)
+  else()
     set(LLVM_ON_WIN32 1)
     set(LLVM_ON_UNIX 0)
-  endif(CYGWIN)
+  endif()
 elseif(FUCHSIA OR UNIX)
   set(LLVM_ON_WIN32 0)
   set(LLVM_ON_UNIX 1)
@@ -882,11 +888,6 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not useful.
   append("-Wno-noexcept-type" CMAKE_CXX_FLAGS)
 
-  # LLVM has a policy of including virtual "anchor" functions to control
-  # where the vtable is emitted. In `final` classes, these are exactly what
-  # this warning detects: unnecessary virtual methods.
-  add_flag_if_supported("-Wno-unnecessary-virtual-specifier" CXX_SUPPORTS_UNNECESSARY_VIRTUAL_FLAG)
-
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     append("-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
   endif()
@@ -1240,6 +1241,8 @@ if(LLVM_PROFDATA_FILE AND EXISTS ${LLVM_PROFDATA_FILE})
   else()
     message(FATAL_ERROR "LLVM_PROFDATA_FILE can only be specified when compiling with clang")
   endif()
+elseif(LLVM_PROFDATA_FILE)
+  message(WARNING "LLVM_PROFDATA_FILE specified, but ${LLVM_PROFDATA_FILE} not found")
 endif()
 
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)

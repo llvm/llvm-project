@@ -39,7 +39,7 @@ class Type;
 class Value;
 class VectorType;
 
-class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
+class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
   using BaseT = BasicTTIImplBase<AArch64TTIImpl>;
   using TTI = TargetTransformInfo;
 
@@ -435,10 +435,7 @@ public:
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const override;
 
-  bool preferPredicatedReductionSelect(unsigned Opcode,
-                                       Type *Ty) const override {
-    return ST->hasSVE();
-  }
+  bool preferPredicatedReductionSelect() const override { return ST->hasSVE(); }
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,

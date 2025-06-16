@@ -873,21 +873,17 @@ define amdgpu_kernel void @preload_block_count_z_workgroup_size_z_remainder_z(pt
 ;
 ; GFX90a-LABEL: preload_block_count_z_workgroup_size_z_remainder_z:
 ; GFX90a:       ; %bb.1:
-; GFX90a-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX90a-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
-; GFX90a-NEXT:    s_load_dword s14, s[4:5], 0x18
+; GFX90a-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x0
 ; GFX90a-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90a-NEXT:    s_branch .LBB22_0
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB22_0:
-; GFX90a-NEXT:    s_load_dword s0, s[4:5], 0x1c
+; GFX90a-NEXT:    s_lshr_b32 s0, s15, 16
 ; GFX90a-NEXT:    s_and_b32 s1, s14, 0xffff
 ; GFX90a-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX90a-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX90a-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9]
 ; GFX90a-NEXT:    s_endpgm

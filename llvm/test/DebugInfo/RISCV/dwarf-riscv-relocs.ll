@@ -38,7 +38,7 @@
 ; LINE-DUMP: .debug_line contents:
 ; LINE-DUMP-NEXT: debug_line[0x00000000]
 ; LINE-DUMP-NEXT: Line table prologue:
-; LINE-DUMP-NEXT:     total_length: 0x00000067
+; LINE-DUMP-NEXT:     total_length: 0x00000061
 ; LINE-DUMP-NEXT:           format: DWARF32
 ; LINE-DUMP-NEXT:          version: 5
 ; LINE-DUMP-NEXT:     address_size: 4
@@ -83,12 +83,10 @@
 ; LINE-DUMP-NEXT:            0x000000000000001c      3      5      0   0             0       0  is_stmt prologue_end
 ; LINE-DUMP-NEXT:0x0000005d: 06 DW_LNS_negate_stmt
 ; LINE-DUMP-NEXT:0x0000005e: 0b DW_LNS_set_epilogue_begin
-; LINE-DUMP-NEXT:0x0000005f: 03 DW_LNS_advance_line (3)
-; LINE-DUMP-NEXT:0x00000061: 09 DW_LNS_fixed_advance_pc (addr += 0x0004, op-index = 0)
-; LINE-DUMP-NEXT:0x00000064: 01 DW_LNS_copy
+; LINE-DUMP-NEXT:0x0000005f: 4a address += 4,  line += 0,  op-index += 0
 ; LINE-DUMP-NEXT:            0x0000000000000020      3      5      0   0             0       0  epilogue_begin
-; LINE-DUMP-NEXT:0x00000065: 09 DW_LNS_fixed_advance_pc (addr += 0x0010, op-index = 0)
-; LINE-DUMP-NEXT:0x00000068: 00 DW_LNE_end_sequence
+; LINE-DUMP-NEXT:0x00000060: 02 DW_LNS_advance_pc (addr += 16, op-index += 0)
+; LINE-DUMP-NEXT:0x00000062: 00 DW_LNE_end_sequence
 ; LINE-DUMP-NEXT:            0x0000000000000030      3      5      0   0             0       0  end_sequence
 
 ; ModuleID = 'dwarf-riscv-relocs.c'

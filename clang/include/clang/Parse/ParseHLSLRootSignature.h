@@ -71,13 +71,34 @@ private:
   // expected, or, there is a lexing error
 
   /// Root Element parse methods:
+  std::optional<llvm::hlsl::rootsig::RootFlags> parseRootFlags();
+  std::optional<llvm::hlsl::rootsig::RootConstants> parseRootConstants();
+  std::optional<llvm::hlsl::rootsig::RootDescriptor> parseRootDescriptor();
   std::optional<llvm::hlsl::rootsig::DescriptorTable> parseDescriptorTable();
   std::optional<llvm::hlsl::rootsig::DescriptorTableClause>
   parseDescriptorTableClause();
+  std::optional<llvm::hlsl::rootsig::StaticSampler> parseStaticSampler();
 
   /// Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
-  /// order and only exactly once. `ParsedClauseParams` denotes the current
-  /// state of parsed params
+  /// order and only exactly once. The following methods define a
+  /// `Parsed.*Params` struct to denote the current state of parsed params
+  struct ParsedConstantParams {
+    std::optional<llvm::hlsl::rootsig::Register> Reg;
+    std::optional<uint32_t> Num32BitConstants;
+    std::optional<uint32_t> Space;
+    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+  };
+  std::optional<ParsedConstantParams> parseRootConstantParams();
+
+  struct ParsedRootDescriptorParams {
+    std::optional<llvm::hlsl::rootsig::Register> Reg;
+    std::optional<uint32_t> Space;
+    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+    std::optional<llvm::hlsl::rootsig::RootDescriptorFlags> Flags;
+  };
+  std::optional<ParsedRootDescriptorParams>
+  parseRootDescriptorParams(RootSignatureToken::Kind RegType);
+
   struct ParsedClauseParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> NumDescriptors;
@@ -88,18 +109,57 @@ private:
   std::optional<ParsedClauseParams>
   parseDescriptorTableClauseParams(RootSignatureToken::Kind RegType);
 
+  struct ParsedStaticSamplerParams {
+    std::optional<llvm::hlsl::rootsig::Register> Reg;
+    std::optional<llvm::hlsl::rootsig::SamplerFilter> Filter;
+    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressU;
+    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressV;
+    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressW;
+    std::optional<float> MipLODBias;
+    std::optional<uint32_t> MaxAnisotropy;
+    std::optional<llvm::hlsl::rootsig::ComparisonFunc> CompFunc;
+    std::optional<llvm::hlsl::rootsig::StaticBorderColor> BorderColor;
+    std::optional<float> MinLOD;
+    std::optional<float> MaxLOD;
+    std::optional<uint32_t> Space;
+    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+  };
+  std::optional<ParsedStaticSamplerParams> parseStaticSamplerParams();
+
   // Common parsing methods
   std::optional<uint32_t> parseUIntParam();
   std::optional<llvm::hlsl::rootsig::Register> parseRegister();
+  std::optional<float> parseFloatParam();
 
   /// Parsing methods of various enums
   std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
+  std::optional<llvm::hlsl::rootsig::SamplerFilter> parseSamplerFilter();
+  std::optional<llvm::hlsl::rootsig::TextureAddressMode>
+  parseTextureAddressMode();
+  std::optional<llvm::hlsl::rootsig::ComparisonFunc> parseComparisonFunc();
+  std::optional<llvm::hlsl::rootsig::StaticBorderColor>
+  parseStaticBorderColor();
+  std::optional<llvm::hlsl::rootsig::RootDescriptorFlags>
+  parseRootDescriptorFlags();
   std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
   parseDescriptorRangeFlags();
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer
   std::optional<uint32_t> handleUIntLiteral();
+  /// Use NumericLiteralParser to convert CurToken.NumSpelling into a signed
+  /// 32-bit integer
+  std::optional<int32_t> handleIntLiteral(bool Negated);
+  /// Use NumericLiteralParser to convert CurToken.NumSpelling into a float
+  ///
+  /// This matches the behaviour of DXC, which is as follows:
+  ///  - convert the spelling with `strtod`
+  ///  - check for a float overflow
+  ///  - cast the double to a float
+  /// The behaviour of `strtod` is replicated using:
+  ///  Semantics: llvm::APFloat::Semantics::S_IEEEdouble
+  ///  RoundingMode: llvm::RoundingMode::NearestTiesToEven
+  std::optional<float> handleFloatLiteral(bool Negated);
 
   /// Flags may specify the value of '0' to denote that there should be no
   /// flags set.

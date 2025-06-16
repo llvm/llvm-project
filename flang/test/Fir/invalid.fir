@@ -972,8 +972,16 @@ func.func @rec_to_rec(%arg0: !fir.type<t1{i:i32, f:f32}>) -> !fir.type<t2{f:f32,
 // -----
 
 func.func @bad_box_offset(%not_a_box : !fir.ref<i32>) {
-  // expected-error@+1{{'fir.box_offset' op box_ref operand must have !fir.ref<!fir.box<T>> type}}
+  // expected-error@+1{{'fir.box_offset' op box_ref operand must have !fir.ref<!fir.box<T>> or !fir.ref<!fir.boxchar<k>> type}}
   %addr1 = fir.box_offset %not_a_box base_addr : (!fir.ref<i32>) -> !fir.llvm_ptr<!fir.ref<i32>>
+  return
+}
+
+// -----
+
+func.func @bad_box_offset(%boxchar : !fir.ref<!fir.boxchar<1>>) {
+  // expected-error@+1{{'fir.box_offset' op cannot address derived_type field of a fir.boxchar}}
+  %addr1 = fir.box_offset %boxchar derived_type : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
   return
 }
 
@@ -1196,7 +1204,7 @@ func.func @dc_0d() {
 
 func.func @dc_invalid_parent(%arg0: index, %arg1: index) {
   // expected-error@+1 {{'fir.do_concurrent.loop' op expects parent op 'fir.do_concurrent'}}
-  "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>}> ({
+  "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0, 0>}> ({
   ^bb0(%arg2: index):
      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
   }) : (index, index) -> ()
@@ -1208,7 +1216,7 @@ func.func @dc_invalid_parent(%arg0: index, %arg1: index) {
 func.func @dc_invalid_control(%arg0: index, %arg1: index) {
   // expected-error@+2 {{'fir.do_concurrent.loop' op different number of tuple elements for lowerBound, upperBound or step}}
   fir.do_concurrent {
-    "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>}> ({
+    "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0, 0>}> ({
     ^bb0(%arg2: index):
       %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
     }) : (index, index) -> ()
@@ -1221,7 +1229,7 @@ func.func @dc_invalid_control(%arg0: index, %arg1: index) {
 func.func @dc_invalid_ind_var(%arg0: index, %arg1: index) {
   // expected-error@+2 {{'fir.do_concurrent.loop' op expects the same number of induction variables: 2 as bound and step values: 1}}
   fir.do_concurrent {
-    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0>}> ({
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>}> ({
     ^bb0(%arg3: index, %arg4: index):
       %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
     }) : (index, index, index) -> ()
@@ -1234,7 +1242,7 @@ func.func @dc_invalid_ind_var(%arg0: index, %arg1: index) {
 func.func @dc_invalid_ind_var_type(%arg0: index, %arg1: index) {
   // expected-error@+2 {{'fir.do_concurrent.loop' op expects arguments for the induction variable to be of index type}}
   fir.do_concurrent {
-    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0>}> ({
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>}> ({
     ^bb0(%arg3: i32):
       %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
     }) : (index, index, index) -> ()
@@ -1248,7 +1256,7 @@ func.func @dc_invalid_reduction(%arg0: index, %arg1: index) {
   %sum = fir.alloca i32
   // expected-error@+2 {{'fir.do_concurrent.loop' op mismatch in number of reduction variables and reduction attributes}}
   fir.do_concurrent {
-    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0, %sum) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>}> ({
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0, %sum) <{operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>}> ({
     ^bb0(%arg3: index):
       %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
     }) : (index, index, index, !fir.ref<i32>) -> ()
@@ -1260,7 +1268,7 @@ func.func @dc_invalid_reduction(%arg0: index, %arg1: index) {
 
 // Should fail when volatility changes from a fir.convert
 func.func @bad_convert_volatile(%arg0: !fir.ref<i32>) -> !fir.ref<i32, volatile> {
-  // expected-error@+1 {{'fir.convert' op cannot convert between volatile and non-volatile types, use fir.volatile_cast instead}}
+  // expected-error@+1 {{op this conversion does not preserve volatility}}
   %0 = fir.convert %arg0 : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
   return %0 : !fir.ref<i32, volatile>
 }
@@ -1269,7 +1277,7 @@ func.func @bad_convert_volatile(%arg0: !fir.ref<i32>) -> !fir.ref<i32, volatile>
 
 // Should fail when volatility changes from a fir.convert
 func.func @bad_convert_volatile2(%arg0: !fir.ref<i32, volatile>) -> !fir.ref<i32> {
-  // expected-error@+1 {{'fir.convert' op cannot convert between volatile and non-volatile types, use fir.volatile_cast instead}}
+  // expected-error@+1 {{op this conversion does not preserve volatility}}
   %0 = fir.convert %arg0 : (!fir.ref<i32, volatile>) -> !fir.ref<i32>
   return %0 : !fir.ref<i32>
 }

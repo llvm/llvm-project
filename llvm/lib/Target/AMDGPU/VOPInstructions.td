@@ -112,9 +112,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   bit HasFP8DstByteSel = P.HasFP8DstByteSel;
   bit HasFP4DstByteSel = P.HasFP4DstByteSel;
 
-  let AsmOperands = !if(!and(!not(P.IsTrue16), isVop3OpSel),
-                        P.AsmVOP3OpSel,
-                        !if(!and(isVOP3P, P.IsPacked), P.AsmVOP3P, P.Asm64));
+  let AsmOperands = !if(!and(isVOP3P, P.IsPacked), P.AsmVOP3P, P.Asm64);
 
   let Size = 8;
   let mayLoad = 0;
@@ -526,14 +524,16 @@ class VOP3PXe <bits<7> op, VOPProfile MFMAPfl, bit acc_cd = 0> : Enc128, VOP3Pe_
   bits<9> scale_src0;
   bits<9> scale_src1;
 
-  bits<2> scale_src0_opsel;
-  bits<2> scale_src1_opsel;
+  //MFMALdScaleModifierOp transforms 2 bit opsel input to 4 bit value
+  //where opsel and opselHi are in 3rd and 4th bit. 
+  bits<4> src0_modifiers;
+  bits<4> src1_modifiers;
 
   // Inst{7-0} = unused
   // Inst{10-8} = neg_hi;
   // Inst{13-11} = op_sel
-  let Inst{11} = scale_src0_opsel{0};
-  let Inst{12} = scale_src1_opsel{0};
+  let Inst{11} = src0_modifiers{2}; //opsel[0]
+  let Inst{12} = src1_modifiers{2}; //opsel[1]
   // Inst{13} = unused op_sel
   // Inst{14} = unused op_sel_hi2
 
@@ -542,8 +542,8 @@ class VOP3PXe <bits<7> op, VOPProfile MFMAPfl, bit acc_cd = 0> : Enc128, VOP3Pe_
   let Inst{49-41} = scale_src1;
   // Inst{50-58} = unused
   // Inst{60-59} = op_sel_hi;
-  let Inst{59} = scale_src0_opsel{1};
-  let Inst{60} = scale_src1_opsel{1};
+  let Inst{59} = src0_modifiers{3}; //opsel_hi[0]
+  let Inst{60} = src1_modifiers{3}; //opsel_hi[1]
   // Inst{63-61} = neg;
 
   // The high half of the encoding is the unscaled mfma op.
@@ -869,13 +869,13 @@ class VOP3_DPPe_Common_Base<bits<10> op, VOPProfile P> : Enc96 {
   let Inst{10}    = !if(P.HasSrc2Mods, src2_modifiers{1}, 0);
   // 16-bit select fields which can be interpreted as OpSel or hi/lo suffix
   let Inst{11} = !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{2}, 0),
-                                 !if(P.IsFP8SrcByteSel, byte_sel{1}, ?));
+                                 !if(P.HasFP8SrcByteSel, byte_sel{1}, ?));
   let Inst{12} = !if(P.HasOpSel, !if(P.HasSrc1Mods, src1_modifiers{2}, 0),
-                                 !if(P.IsFP8SrcByteSel, byte_sel{0}, ?));
+                                 !if(P.HasFP8SrcByteSel, byte_sel{0}, ?));
   let Inst{13} = !if(P.HasOpSel, !if(P.HasSrc2Mods, src2_modifiers{2}, 0),
-                                 !if(P.IsFP8DstByteSel, byte_sel{0}, ?));
+                                 !if(P.HasFP8DstByteSel, byte_sel{0}, ?));
   let Inst{14} = !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{3}, 0),
-                                 !if(P.IsFP8DstByteSel, byte_sel{1}, ?));
+                                 !if(P.HasFP8DstByteSel, byte_sel{1}, ?));
   let Inst{15}    = !if(P.HasClamp, clamp, 0);
   let Inst{25-16} = op;
   let Inst{31-26} = 0x35;
@@ -1437,17 +1437,17 @@ class getVOP3MAIScaledPat<VOPProfile P, SDPatternOperator node> {
                       // mfma
                       [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
                                             timm:$cbsz, timm:$blgp,
-                                            MFMALdScaleModifierOp:$scale_src0_opsel,
+                                            MFMALdScaleModifierOp:$src0_modifiers,
                                             i32:$scale_src0,
-                                            MFMALdScaleModifierOp:$scale_src1_opsel,
+                                            MFMALdScaleModifierOp:$src1_modifiers,
                                             i32:$scale_src1
                                             ))],
                       // smfmac
                       [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2, i32:$idx,
                                             timm:$cbsz, timm:$abid,
-                                            MFMALdScaleModifierOp:$scale_src0_opsel,
+                                            MFMALdScaleModifierOp:$src0_modifiers,
                                             i32:$scale_src0,
-                                            MFMALdScaleModifierOp:$scale_src1_opsel,
+                                            MFMALdScaleModifierOp:$src1_modifiers,
                                             i32:$scale_src1))]);
 }
 
@@ -1476,10 +1476,13 @@ class VOP3_Profile_Base<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VO
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
+  let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
+  let HasFP8DstByteSel = P.HasFP8DstByteSel;
+  let HasOMod = P.HasOMod;
 
   let HasModifiers =
       !if (Features.IsMAI, 0,
-           !or(Features.IsPacked, Features.HasOpSel, P.HasModifiers));
+           !or(Features.IsPacked, P.HasModifiers));
 }
 
 class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile_Base<P, Features> {
@@ -1492,6 +1495,9 @@ class VOP3_Profile_True16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : 
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
+  let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
+  let HasFP8DstByteSel = P.HasFP8DstByteSel;
+  let HasOMod = P.HasOMod;
 
   let HasModifiers =
       !if (Features.IsMAI, 0,
@@ -1504,6 +1510,9 @@ class VOP3_Profile_Fake16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : 
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
+  let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
+  let HasFP8DstByteSel = P.HasFP8DstByteSel;
+  let HasOMod = P.HasOMod;
 
   let HasModifiers =
       !if (Features.IsMAI, 0,
@@ -1695,11 +1704,11 @@ multiclass VOP3_Real_Base<GFXGen Gen, bits<10> op, string opName = NAME,
                           bit isSingle = 0> {
   defvar ps = !cast<VOP_Pseudo>(opName#"_e64");
   let IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
-    if ps.Pfl.IsFP8SrcByteSel then {
+    if ps.Pfl.HasFP8SrcByteSel then {
       def _e64#Gen.Suffix :
         VOP3_Real_Gen<ps, Gen>,
         VOP3FP8OpSel_src_bytesel_gfx11_gfx12<op, ps.Pfl>;
-    } else if ps.Pfl.IsFP8DstByteSel then {
+    } else if ps.Pfl.HasFP8DstByteSel then {
       def _e64#Gen.Suffix :
         VOP3_Real_Gen<ps, Gen>,
         VOP3FP8OpSel_dst_bytesel_gfx11_gfx12<op, ps.Pfl>;
@@ -1733,11 +1742,11 @@ multiclass VOP3_Real_with_name<GFXGen Gen, bits<10> op, string opName,
   let AsmString = asmName # ps.AsmOperands,
       IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
     // FIXME-TRUE16 support FP8 instructions properly
-    if ps.Pfl.IsFP8SrcByteSel then {
+    if ps.Pfl.HasFP8SrcByteSel then {
       def _e64#Gen.Suffix :
         VOP3_Real_Gen<ps, Gen>,
         VOP3FP8OpSel_src_bytesel_gfx11_gfx12<op, ps.Pfl>;
-    } else if ps.Pfl.IsFP8DstByteSel then {
+    } else if ps.Pfl.HasFP8DstByteSel then {
       def _e64#Gen.Suffix :
         VOP3_Real_Gen<ps, Gen>,
         VOP3FP8OpSel_dst_bytesel_gfx11_gfx12<op, ps.Pfl>;

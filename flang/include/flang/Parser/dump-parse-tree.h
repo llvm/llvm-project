@@ -17,6 +17,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <type_traits>
@@ -531,22 +532,13 @@ public:
   NODE(parser, OmpAtClause)
   NODE_ENUM(OmpAtClause, ActionTime)
   NODE_ENUM(OmpSeverityClause, Severity)
-  NODE(parser, OmpAtomic)
-  NODE(parser, OmpAtomicCapture)
-  NODE(OmpAtomicCapture, Stmt1)
-  NODE(OmpAtomicCapture, Stmt2)
-  NODE(parser, OmpAtomicCompare)
-  NODE(parser, OmpAtomicCompareIfStmt)
-  NODE(parser, OmpAtomicRead)
-  NODE(parser, OmpAtomicUpdate)
-  NODE(parser, OmpAtomicWrite)
   NODE(parser, OmpBeginBlockDirective)
   NODE(parser, OmpBeginLoopDirective)
   NODE(parser, OmpBeginSectionsDirective)
   NODE(parser, OmpBlockDirective)
   static std::string GetNodeName(const llvm::omp::Directive &x) {
-    return llvm::Twine(
-        "llvm::omp::Directive = ", llvm::omp::getOpenMPDirectiveName(x))
+    return llvm::Twine("llvm::omp::Directive = ",
+        llvm::omp::getOpenMPDirectiveName(x, llvm::omp::FallbackVersion))
         .str();
   }
   NODE(parser, OmpClause)
@@ -586,7 +578,6 @@ public:
   NODE(parser, OmpDoacrossClause)
   NODE(parser, OmpDestroyClause)
   NODE(parser, OmpEndAllocators)
-  NODE(parser, OmpEndAtomic)
   NODE(parser, OmpEndBlockDirective)
   NODE(parser, OmpEndCriticalDirective)
   NODE(parser, OmpEndLoopDirective)
@@ -715,8 +706,6 @@ public:
   NODE(parser, OpenMPDeclareMapperConstruct)
   NODE_ENUM(common, OmpMemoryOrderType)
   NODE(parser, OmpMemoryOrderClause)
-  NODE(parser, OmpAtomicClause)
-  NODE(parser, OmpAtomicClauseList)
   NODE(parser, OmpAtomicDefaultMemOrderClause)
   NODE(parser, OpenMPDepobjConstruct)
   NODE(parser, OpenMPUtilityConstruct)

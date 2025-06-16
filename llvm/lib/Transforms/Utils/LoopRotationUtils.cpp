@@ -634,8 +634,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
           // memory access in coroutines.
           !Inst->getFunction()->isPresplitCoroutine()) {
 
-        if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat &&
-            !NextDbgInsts.empty()) {
+        if (!NextDbgInsts.empty()) {
           auto DbgValueRange =
               LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
           RemapDbgRecordRange(M, DbgValueRange, ValueMap,
@@ -664,8 +663,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
       ++NumInstrsDuplicated;
 
-      if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat &&
-          !NextDbgInsts.empty()) {
+      if (!NextDbgInsts.empty()) {
         auto Range = C->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
         RemapDbgRecordRange(M, Range, ValueMap,
                             RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
@@ -822,10 +820,10 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     if (DT) {
       // The OrigPreheader branches to the NewHeader and Exit now. Then, inform
       // the DT about the removed edge to the OrigHeader (that got removed).
-      SmallVector<DominatorTree::UpdateType, 3> Updates;
-      Updates.push_back({DominatorTree::Insert, OrigPreheader, Exit});
-      Updates.push_back({DominatorTree::Insert, OrigPreheader, NewHeader});
-      Updates.push_back({DominatorTree::Delete, OrigPreheader, OrigHeader});
+      SmallVector<DominatorTree::UpdateType, 3> Updates = {
+          {DominatorTree::Insert, OrigPreheader, Exit},
+          {DominatorTree::Insert, OrigPreheader, NewHeader},
+          {DominatorTree::Delete, OrigPreheader, OrigHeader}};
 
       if (MSSAU) {
         MSSAU->applyUpdates(Updates, *DT, /*UpdateDT=*/true);

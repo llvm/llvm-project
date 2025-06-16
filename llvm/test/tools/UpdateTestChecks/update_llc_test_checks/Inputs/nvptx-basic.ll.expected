@@ -10,10 +10,10 @@ define dso_local void @caller_St8x4(ptr nocapture noundef readonly byval(%struct
 ; CHECK-NEXT:    .reg .b64 %rd<13>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [caller_St8x4_param_0+8];
-; CHECK-NEXT:    ld.param.u64 %rd2, [caller_St8x4_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd3, [caller_St8x4_param_0+24];
-; CHECK-NEXT:    ld.param.u64 %rd4, [caller_St8x4_param_0+16];
+; CHECK-NEXT:    ld.param.b64 %rd1, [caller_St8x4_param_0+8];
+; CHECK-NEXT:    ld.param.b64 %rd2, [caller_St8x4_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd3, [caller_St8x4_param_0+24];
+; CHECK-NEXT:    ld.param.b64 %rd4, [caller_St8x4_param_0+16];
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[32];
 ; CHECK-NEXT:    st.param.v2.b64 [param0], {%rd2, %rd1};
@@ -27,11 +27,11 @@ define dso_local void @caller_St8x4(ptr nocapture noundef readonly byval(%struct
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd5, %rd6}, [retval0];
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd7, %rd8}, [retval0+16];
 ; CHECK-NEXT:    } // callseq 0
-; CHECK-NEXT:    ld.param.u32 %r2, [caller_St8x4_param_1];
-; CHECK-NEXT:    st.u64 [%r2], %rd5;
-; CHECK-NEXT:    st.u64 [%r2+8], %rd6;
-; CHECK-NEXT:    st.u64 [%r2+16], %rd7;
-; CHECK-NEXT:    st.u64 [%r2+24], %rd8;
+; CHECK-NEXT:    ld.param.b32 %r2, [caller_St8x4_param_1];
+; CHECK-NEXT:    st.b64 [%r2], %rd5;
+; CHECK-NEXT:    st.b64 [%r2+8], %rd6;
+; CHECK-NEXT:    st.b64 [%r2+16], %rd7;
+; CHECK-NEXT:    st.b64 [%r2+24], %rd8;
 ; CHECK-NEXT:    ret;
   %call = tail call fastcc [4 x i64] @callee_St8x4(ptr noundef nonnull byval(%struct.St8x4) align 8 %in) #2
   %.fca.0.extract = extractvalue [4 x i64] %call, 0
@@ -56,8 +56,8 @@ define internal fastcc [4 x i64] @callee_St8x4(ptr nocapture noundef readonly by
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [callee_St8x4_param_0];
-; CHECK-NEXT:    ld.param.v2.u64 {%rd3, %rd4}, [callee_St8x4_param_0+16];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [callee_St8x4_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [callee_St8x4_param_0+16];
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;

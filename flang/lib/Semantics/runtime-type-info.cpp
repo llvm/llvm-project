@@ -1018,9 +1018,11 @@ SymbolVector CollectBindings(const Scope &dtScope) {
       if (overriderIter != localBindings.end()) {
         Symbol &overrider{*overriderIter->second};
         if (symbol.attrs().test(Attr::PRIVATE) &&
+            !symbol.attrs().test(Attr::DEFERRED) &&
             FindModuleContaining(symbol.owner()) !=
                 FindModuleContaining(dtScope)) {
-          // Don't override inaccessible PRIVATE bindings
+          // Don't override inaccessible PRIVATE bindings, unless
+          // they are deferred
           auto &binding{overrider.get<ProcBindingDetails>()};
           binding.set_numPrivatesNotOverridden(
               binding.numPrivatesNotOverridden() + 1);
@@ -1061,7 +1063,7 @@ RuntimeTableBuilder::DescribeSpecialGenerics(const Scope &dtScope,
     specials =
         DescribeSpecialGenerics(*parentScope, thisScope, derivedTypeSpec);
   }
-  for (auto pair : dtScope) {
+  for (const auto &pair : dtScope) {
     const Symbol &symbol{*pair.second};
     if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
       DescribeSpecialGeneric(*generic, specials, thisScope, derivedTypeSpec);
@@ -1121,10 +1123,10 @@ void RuntimeTableBuilder::DescribeSpecialProc(
     int argThatMightBeDescriptor{0};
     MaybeExpr which;
     if (isAssignment) {
-      // Only type-bound asst's with the same type on both dummy arguments
+      // Only type-bound asst's with compatible types on both dummy arguments
       // are germane to the runtime, which needs only these to implement
       // component assignment as part of intrinsic assignment.
-      // Non-type-bound generic INTERFACEs and assignments from distinct
+      // Non-type-bound generic INTERFACEs and assignments from incompatible
       // types must not be used for component intrinsic assignment.
       CHECK(proc->dummyArguments.size() == 2);
       const auto t1{
@@ -1137,8 +1139,12 @@ void RuntimeTableBuilder::DescribeSpecialProc(
               .type.type()};
       if (!binding || t1.category() != TypeCategory::Derived ||
           t2.category() != TypeCategory::Derived ||
-          t1.IsUnlimitedPolymorphic() || t2.IsUnlimitedPolymorphic() ||
-          t1.GetDerivedTypeSpec() != t2.GetDerivedTypeSpec()) {
+          t1.IsUnlimitedPolymorphic() || t2.IsUnlimitedPolymorphic()) {
+        return;
+      }
+      if (!derivedTypeSpec ||
+          !derivedTypeSpec->MatchesOrExtends(t1.GetDerivedTypeSpec()) ||
+          !derivedTypeSpec->MatchesOrExtends(t2.GetDerivedTypeSpec())) {
         return;
       }
       which = proc->IsElemental() ? elementalAssignmentEnum_
@@ -1235,7 +1241,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
     AddValue(values, specialSchema_, procCompName,
         SomeExpr{evaluate::ProcedureDesignator{specific}});
     // index might already be present in the case of an override
-    specials.emplace(*index,
+    specials.insert_or_assign(*index,
         evaluate::StructureConstructor{
             DEREF(specialSchema_.AsDerived()), std::move(values)});
   }

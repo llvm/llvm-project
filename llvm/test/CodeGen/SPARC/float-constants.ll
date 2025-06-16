@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=sparc | FileCheck %s
 ; RUN: llc < %s -mtriple=sparcel | FileCheck %s --check-prefix=CHECK-LE
 ; RUN: llc < %s -mtriple=sparcv9 -mattr=+vis | FileCheck %s --check-prefix=CHECK-VIS
+; RUN: llc < %s -mtriple=sparcv9 -mattr=+vis,+vis3 | FileCheck %s --check-prefix=CHECK-VIS3
 
 ;; Bitcast should not do a runtime conversion, but rather emit a
 ;; constant into integer registers directly.
@@ -24,6 +25,12 @@ define <2 x i32> @bitcast() nounwind {
 ; CHECK-VIS-NEXT:    sethi 1049856, %o0
 ; CHECK-VIS-NEXT:    retl
 ; CHECK-VIS-NEXT:    mov %g0, %o1
+;
+; CHECK-VIS3-LABEL: bitcast:
+; CHECK-VIS3:       ! %bb.0:
+; CHECK-VIS3-NEXT:    sethi 1049856, %o0
+; CHECK-VIS3-NEXT:    retl
+; CHECK-VIS3-NEXT:    mov %g0, %o1
   %1 = bitcast double 5.0 to <2 x i32>
   ret <2 x i32> %1
 }
@@ -61,6 +68,17 @@ define void @test_call() nounwind {
 ; CHECK-VIS-NEXT:    ldd [%i0+%l44(.LCPI1_0)], %f0
 ; CHECK-VIS-NEXT:    ret
 ; CHECK-VIS-NEXT:    restore
+;
+; CHECK-VIS3-LABEL: test_call:
+; CHECK-VIS3:       ! %bb.0:
+; CHECK-VIS3-NEXT:    save %sp, -176, %sp
+; CHECK-VIS3-NEXT:    sethi %h44(.LCPI1_0), %i0
+; CHECK-VIS3-NEXT:    add %i0, %m44(.LCPI1_0), %i0
+; CHECK-VIS3-NEXT:    sllx %i0, 12, %i0
+; CHECK-VIS3-NEXT:    call a
+; CHECK-VIS3-NEXT:    ldd [%i0+%l44(.LCPI1_0)], %f0
+; CHECK-VIS3-NEXT:    ret
+; CHECK-VIS3-NEXT:    restore
   call void @a(double 5.0)
   ret void
 }
@@ -106,6 +124,19 @@ define double @test_intrins_call() nounwind {
 ; CHECK-VIS-NEXT:    nop
 ; CHECK-VIS-NEXT:    ret
 ; CHECK-VIS-NEXT:    restore
+;
+; CHECK-VIS3-LABEL: test_intrins_call:
+; CHECK-VIS3:       ! %bb.0:
+; CHECK-VIS3-NEXT:    save %sp, -176, %sp
+; CHECK-VIS3-NEXT:    sethi %h44(.LCPI2_0), %i0
+; CHECK-VIS3-NEXT:    add %i0, %m44(.LCPI2_0), %i0
+; CHECK-VIS3-NEXT:    sllx %i0, 12, %i0
+; CHECK-VIS3-NEXT:    ldd [%i0+%l44(.LCPI2_0)], %f0
+; CHECK-VIS3-NEXT:    fmovd %f0, %f2
+; CHECK-VIS3-NEXT:    call pow
+; CHECK-VIS3-NEXT:    nop
+; CHECK-VIS3-NEXT:    ret
+; CHECK-VIS3-NEXT:    restore
   %1 = call double @llvm.pow.f64(double 2.0, double 2.0)
   ret double %1
 }
@@ -129,6 +160,11 @@ define double @pos_zero_double() nounwind {
 ; CHECK-VIS:       ! %bb.0:
 ; CHECK-VIS-NEXT:    retl
 ; CHECK-VIS-NEXT:    fzero %f0
+;
+; CHECK-VIS3-LABEL: pos_zero_double:
+; CHECK-VIS3:       ! %bb.0:
+; CHECK-VIS3-NEXT:    retl
+; CHECK-VIS3-NEXT:    fzero %f0
   ret double +0.0
 }
 
@@ -150,6 +186,12 @@ define double @neg_zero_double() nounwind {
 ; CHECK-VIS-NEXT:    fzero %f0
 ; CHECK-VIS-NEXT:    retl
 ; CHECK-VIS-NEXT:    fnegd %f0, %f0
+;
+; CHECK-VIS3-LABEL: neg_zero_double:
+; CHECK-VIS3:       ! %bb.0:
+; CHECK-VIS3-NEXT:    fzero %f0
+; CHECK-VIS3-NEXT:    retl
+; CHECK-VIS3-NEXT:    fnegd %f0, %f0
   ret double -0.0
 }
 
@@ -170,6 +212,11 @@ define float @pos_zero_float() nounwind {
 ; CHECK-VIS:       ! %bb.0:
 ; CHECK-VIS-NEXT:    retl
 ; CHECK-VIS-NEXT:    fzeros %f0
+;
+; CHECK-VIS3-LABEL: pos_zero_float:
+; CHECK-VIS3:       ! %bb.0:
+; CHECK-VIS3-NEXT:    retl
+; CHECK-VIS3-NEXT:    fzeros %f0
   ret float +0.0
 }
 
@@ -191,5 +238,131 @@ define float @neg_zero_float() nounwind {
 ; CHECK-VIS-NEXT:    fzeros %f0
 ; CHECK-VIS-NEXT:    retl
 ; CHECK-VIS-NEXT:    fnegs %f0, %f0
+;
+; CHECK-VIS3-LABEL: neg_zero_float:
+; CHECK-VIS3:       ! %bb.0:
+; CHECK-VIS3-NEXT:    fzeros %f0
+; CHECK-VIS3-NEXT:    retl
+; CHECK-VIS3-NEXT:    fnegs %f0, %f0
   ret float -0.0
+}
+
+;; When we have VIS3, f32/f64 +/-0.5 constant should be materialized from sethi.
+
+define double @pos_half_double() nounwind {
+; CHECK-LABEL: pos_half_double:
+; CHECK:       ! %bb.0:
+; CHECK-NEXT:    sethi %hi(.LCPI7_0), %o0
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    ldd [%o0+%lo(.LCPI7_0)], %f0
+;
+; CHECK-LE-LABEL: pos_half_double:
+; CHECK-LE:       ! %bb.0:
+; CHECK-LE-NEXT:    sethi %hi(.LCPI7_0), %o0
+; CHECK-LE-NEXT:    retl
+; CHECK-LE-NEXT:    ldd [%o0+%lo(.LCPI7_0)], %f0
+;
+; CHECK-VIS-LABEL: pos_half_double:
+; CHECK-VIS:       ! %bb.0:
+; CHECK-VIS-NEXT:    sethi %h44(.LCPI7_0), %o0
+; CHECK-VIS-NEXT:    add %o0, %m44(.LCPI7_0), %o0
+; CHECK-VIS-NEXT:    sllx %o0, 12, %o0
+; CHECK-VIS-NEXT:    retl
+; CHECK-VIS-NEXT:    ldd [%o0+%l44(.LCPI7_0)], %f0
+;
+; CHECK-VIS3-LABEL: pos_half_double:
+; CHECK-VIS3:       ! %bb.0:
+; CHECK-VIS3-NEXT:    sethi 1046528, %o0
+; CHECK-VIS3-NEXT:    sllx %o0, 32, %o0
+; CHECK-VIS3-NEXT:    retl
+; CHECK-VIS3-NEXT:    movxtod %o0, %f0
+  ret double +0.5
+}
+
+define double @neg_half_double() nounwind {
+; CHECK-LABEL: neg_half_double:
+; CHECK:       ! %bb.0:
+; CHECK-NEXT:    sethi %hi(.LCPI8_0), %o0
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    ldd [%o0+%lo(.LCPI8_0)], %f0
+;
+; CHECK-LE-LABEL: neg_half_double:
+; CHECK-LE:       ! %bb.0:
+; CHECK-LE-NEXT:    sethi %hi(.LCPI8_0), %o0
+; CHECK-LE-NEXT:    retl
+; CHECK-LE-NEXT:    ldd [%o0+%lo(.LCPI8_0)], %f0
+;
+; CHECK-VIS-LABEL: neg_half_double:
+; CHECK-VIS:       ! %bb.0:
+; CHECK-VIS-NEXT:    sethi %h44(.LCPI8_0), %o0
+; CHECK-VIS-NEXT:    add %o0, %m44(.LCPI8_0), %o0
+; CHECK-VIS-NEXT:    sllx %o0, 12, %o0
+; CHECK-VIS-NEXT:    retl
+; CHECK-VIS-NEXT:    ldd [%o0+%l44(.LCPI8_0)], %f0
+;
+; CHECK-VIS3-LABEL: neg_half_double:
+; CHECK-VIS3:       ! %bb.0:
+; CHECK-VIS3-NEXT:    sethi 3143680, %o0
+; CHECK-VIS3-NEXT:    sllx %o0, 32, %o0
+; CHECK-VIS3-NEXT:    retl
+; CHECK-VIS3-NEXT:    movxtod %o0, %f0
+  ret double -0.5
+}
+
+define float @pos_half_float() nounwind {
+; CHECK-LABEL: pos_half_float:
+; CHECK:       ! %bb.0:
+; CHECK-NEXT:    sethi %hi(.LCPI9_0), %o0
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    ld [%o0+%lo(.LCPI9_0)], %f0
+;
+; CHECK-LE-LABEL: pos_half_float:
+; CHECK-LE:       ! %bb.0:
+; CHECK-LE-NEXT:    sethi %hi(.LCPI9_0), %o0
+; CHECK-LE-NEXT:    retl
+; CHECK-LE-NEXT:    ld [%o0+%lo(.LCPI9_0)], %f0
+;
+; CHECK-VIS-LABEL: pos_half_float:
+; CHECK-VIS:       ! %bb.0:
+; CHECK-VIS-NEXT:    sethi %h44(.LCPI9_0), %o0
+; CHECK-VIS-NEXT:    add %o0, %m44(.LCPI9_0), %o0
+; CHECK-VIS-NEXT:    sllx %o0, 12, %o0
+; CHECK-VIS-NEXT:    retl
+; CHECK-VIS-NEXT:    ld [%o0+%l44(.LCPI9_0)], %f0
+;
+; CHECK-VIS3-LABEL: pos_half_float:
+; CHECK-VIS3:       ! %bb.0:
+; CHECK-VIS3-NEXT:    sethi 1032192, %o0
+; CHECK-VIS3-NEXT:    retl
+; CHECK-VIS3-NEXT:    movwtos %o0, %f0
+  ret float +0.5
+}
+
+define float @neg_half_float() nounwind {
+; CHECK-LABEL: neg_half_float:
+; CHECK:       ! %bb.0:
+; CHECK-NEXT:    sethi %hi(.LCPI10_0), %o0
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    ld [%o0+%lo(.LCPI10_0)], %f0
+;
+; CHECK-LE-LABEL: neg_half_float:
+; CHECK-LE:       ! %bb.0:
+; CHECK-LE-NEXT:    sethi %hi(.LCPI10_0), %o0
+; CHECK-LE-NEXT:    retl
+; CHECK-LE-NEXT:    ld [%o0+%lo(.LCPI10_0)], %f0
+;
+; CHECK-VIS-LABEL: neg_half_float:
+; CHECK-VIS:       ! %bb.0:
+; CHECK-VIS-NEXT:    sethi %h44(.LCPI10_0), %o0
+; CHECK-VIS-NEXT:    add %o0, %m44(.LCPI10_0), %o0
+; CHECK-VIS-NEXT:    sllx %o0, 12, %o0
+; CHECK-VIS-NEXT:    retl
+; CHECK-VIS-NEXT:    ld [%o0+%l44(.LCPI10_0)], %f0
+;
+; CHECK-VIS3-LABEL: neg_half_float:
+; CHECK-VIS3:       ! %bb.0:
+; CHECK-VIS3-NEXT:    sethi 3129344, %o0
+; CHECK-VIS3-NEXT:    retl
+; CHECK-VIS3-NEXT:    movwtos %o0, %f0
+  ret float -0.5
 }

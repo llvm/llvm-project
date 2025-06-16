@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s -check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc | FileCheck %s -check-prefix=UEFI64
 ; RUN: llc < %s -mtriple=x86_64-uefi | FileCheck %s -check-prefix=UEFI64
-; RUN: llc < %s -mtriple=i686-unknown-unknown   | FileCheck %s -check-prefix=X32
+; RUN: llc < %s -mtriple=i686-unknown-unknown   | FileCheck %s -check-prefix=X86
 
 ; With -tailcallopt, CodeGen guarantees a tail call optimization
 ; for all of these.
@@ -26,15 +26,15 @@ define dso_local tailcc i32 @tailcaller(i32 %in1, i32 %in2) nounwind {
 ; UEFI64-NEXT:    addq	$40, %rsp
 ; UEFI64-NEXT:    jmp tailcallee # TAILCALL
 ;
-; X32-LABEL: tailcaller:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    subl $16, %esp
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X32-NEXT:    addl $8, %esp
-; X32-NEXT:    jmp tailcallee # TAILCALL
+; X86-LABEL: tailcaller:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    jmp tailcallee # TAILCALL
 entry:
   %tmp11 = tail call tailcc i32 @tailcallee(i32 %in1, i32 %in2, i32 %in1, i32 %in2)
   ret i32 %tmp11
@@ -53,9 +53,9 @@ define tailcc noalias ptr @noalias_caller() nounwind {
 ; UEFI64:       # %bb.0:
 ; UEFI64-NEXT:    jmp alias_callee # TAILCALL
 ;
-; X32-LABEL: noalias_caller:
-; X32:       # %bb.0:
-; X32-NEXT:    jmp alias_callee # TAILCALL
+; X86-LABEL: noalias_caller:
+; X86:       # %bb.0:
+; X86-NEXT:    jmp alias_callee # TAILCALL
   %p = tail call tailcc ptr @alias_callee()
   ret ptr %p
 }
@@ -73,9 +73,9 @@ define dso_local tailcc ptr @alias_caller() nounwind {
 ; UEFI64:       # %bb.0:
 ; UEFI64-NEXT:    jmp noalias_callee # TAILCALL
 ;
-; X32-LABEL: alias_caller:
-; X32:       # %bb.0:
-; X32-NEXT:    jmp noalias_callee # TAILCALL
+; X86-LABEL: alias_caller:
+; X86:       # %bb.0:
+; X86-NEXT:    jmp noalias_callee # TAILCALL
   %p = tail call tailcc noalias ptr @noalias_callee()
   ret ptr %p
 }
@@ -93,9 +93,9 @@ define dso_local tailcc i32 @ret_undef() nounwind {
 ; UEFI64:       # %bb.0:
 ; UEFI64-NEXT:    jmp i32_callee # TAILCALL
 ;
-; X32-LABEL: ret_undef:
-; X32:       # %bb.0:
-; X32-NEXT:    jmp i32_callee # TAILCALL
+; X86-LABEL: ret_undef:
+; X86:       # %bb.0:
+; X86-NEXT:    jmp i32_callee # TAILCALL
   %p = tail call tailcc i32 @i32_callee()
   ret i32 undef
 }
@@ -113,9 +113,9 @@ define dso_local tailcc i32 @noret() nounwind {
 ; UEFI64:       # %bb.0:
 ; UEFI64-NEXT:    jmp does_not_return # TAILCALL
 ;
-; X32-LABEL: noret:
-; X32:       # %bb.0:
-; X32-NEXT:    jmp does_not_return # TAILCALL
+; X86-LABEL: noret:
+; X86:       # %bb.0:
+; X86-NEXT:    jmp does_not_return # TAILCALL
   tail call tailcc void @does_not_return()
   unreachable
 }
@@ -139,22 +139,22 @@ define dso_local tailcc void @void_test(i32, i32, i32, i32) {
 ; UEFI64-NEXT:   .seh_endepilogue
 ; UEFI64-NEXT:   jmp void_test # TAILCALL
 ;
-; X32-LABEL: void_test:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    subl $8, %esp
-; X32-NEXT:    .cfi_def_cfa_offset 16
-; X32-NEXT:    .cfi_offset %esi, -8
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X32-NEXT:    addl $8, %esp
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    popl %esi
-; X32-NEXT:    .cfi_def_cfa_offset 4
-; X32-NEXT:    jmp void_test # TAILCALL
+; X86-LABEL: void_test:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 16
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    jmp void_test # TAILCALL
   entry:
    tail call tailcc void @void_test( i32 %0, i32 %1, i32 %2, i32 %3)
    ret void
@@ -179,22 +179,22 @@ define dso_local tailcc i1 @i1test(i32, i32, i32, i32) {
 ; UEFI64-NEXT:   .seh_endepilogue
 ; UEFI64-NEXT:   jmp i1test # TAILCALL
 ;
-; X32-LABEL: i1test:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    subl $8, %esp
-; X32-NEXT:    .cfi_def_cfa_offset 16
-; X32-NEXT:    .cfi_offset %esi, -8
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X32-NEXT:    addl $8, %esp
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    popl %esi
-; X32-NEXT:    .cfi_def_cfa_offset 4
-; X32-NEXT:    jmp i1test # TAILCALL
+; X86-LABEL: i1test:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 16
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    jmp i1test # TAILCALL
   entry:
   %4 = tail call tailcc i1 @i1test( i32 %0, i32 %1, i32 %2, i32 %3)
   ret i1 %4

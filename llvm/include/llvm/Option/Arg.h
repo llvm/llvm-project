@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {
@@ -70,15 +71,16 @@ private:
   std::unique_ptr<Arg> Alias;
 
 public:
-  Arg(const Option Opt, StringRef Spelling, unsigned Index,
-      const Arg *BaseArg = nullptr);
-  Arg(const Option Opt, StringRef Spelling, unsigned Index,
-      const char *Value0, const Arg *BaseArg = nullptr);
-  Arg(const Option Opt, StringRef Spelling, unsigned Index,
-      const char *Value0, const char *Value1, const Arg *BaseArg = nullptr);
+  LLVM_ABI Arg(const Option Opt, StringRef Spelling, unsigned Index,
+               const Arg *BaseArg = nullptr);
+  LLVM_ABI Arg(const Option Opt, StringRef Spelling, unsigned Index,
+               const char *Value0, const Arg *BaseArg = nullptr);
+  LLVM_ABI Arg(const Option Opt, StringRef Spelling, unsigned Index,
+               const char *Value0, const char *Value1,
+               const Arg *BaseArg = nullptr);
   Arg(const Arg &) = delete;
   Arg &operator=(const Arg &) = delete;
-  ~Arg();
+  LLVM_ABI ~Arg();
 
   const Option &getOption() const { return Opt; }
 
@@ -134,23 +136,23 @@ public:
   }
 
   /// Append the argument onto the given array as strings.
-  void render(const ArgList &Args, ArgStringList &Output) const;
+  LLVM_ABI void render(const ArgList &Args, ArgStringList &Output) const;
 
   /// Append the argument, render as an input, onto the given
   /// array as strings.
   ///
   /// The distinction is that some options only render their values
   /// when rendered as a input (e.g., Xlinker).
-  void renderAsInput(const ArgList &Args, ArgStringList &Output) const;
+  LLVM_ABI void renderAsInput(const ArgList &Args, ArgStringList &Output) const;
 
-  void print(raw_ostream &O) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &O) const;
+  LLVM_ABI void dump() const;
 
   /// Return a formatted version of the argument and its values, for
   /// diagnostics. Since this is for diagnostics, if this Arg was produced
   /// through an alias, this returns the string representation of the alias
   /// that the user wrote.
-  std::string getAsString(const ArgList &Args) const;
+  LLVM_ABI std::string getAsString(const ArgList &Args) const;
 };
 
 } // end namespace opt

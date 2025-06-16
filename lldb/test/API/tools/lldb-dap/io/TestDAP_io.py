@@ -22,12 +22,8 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
                 process.terminate()
                 process.wait()
             stdout_data = process.stdout.read().decode()
-            stderr_data = process.stderr.read().decode()
             print("========= STDOUT =========", file=sys.stderr)
             print(stdout_data, file=sys.stderr)
-            print("========= END =========", file=sys.stderr)
-            print("========= STDERR =========", file=sys.stderr)
-            print(stderr_data, file=sys.stderr)
             print("========= END =========", file=sys.stderr)
             print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
             with open(log_file_path, "r") as file:
