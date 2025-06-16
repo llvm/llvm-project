@@ -465,7 +465,7 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
   }
 
   // Handle typeid(T).
-  if (TypeInfoLValue TI = base.dyn_cast<TypeInfoLValue>()) {
+  if (base.dyn_cast<TypeInfoLValue>()) {
     cgm.errorNYI("ConstantLValueEmitter: typeid");
     return {};
   }
