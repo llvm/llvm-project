@@ -362,6 +362,9 @@ static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
 //===----------------------------------------------------------------------===//
 struct ShardingPropagation
     : public mesh::impl::ShardingPropagationBase<ShardingPropagation> {
+
+  using ShardingPropagationBase<ShardingPropagation>::ShardingPropagationBase;
+
   void runOnOperation() override {
     FunctionOpInterface funcOp = getOperation();
     MLIRContext *ctx = funcOp.getContext();
@@ -383,17 +386,34 @@ struct ShardingPropagation
         });
 
     // 1. propagate in reversed order
-    for (Operation &op : llvm::make_early_inc_range(llvm::reverse(block)))
-      if (failed(visitOp(&op, builder)))
-        return signalPassFailure();
-
-    LLVM_DEBUG(DBGS() << "After reversed order propagation:\n"
-                      << funcOp << "\n");
-    LLVM_DEBUG(assert(succeeded(mlir::verify(funcOp))));
+    if (traversal == TraversalOrder::Backward ||
+        traversal == TraversalOrder::BackwardForward) {
+      for (Operation &op : llvm::make_early_inc_range(llvm::reverse(block)))
+        if (failed(visitOp(&op, builder)))
+          return signalPassFailure();
+      if (traversal == TraversalOrder::BackwardForward) {
+        LLVM_DEBUG(DBGS() << "After backward order propagation:\n"
+                          << funcOp << "\n");
+        LLVM_DEBUG(assert(succeeded(mlir::verify(funcOp))));
+      }
+    }
 
     // 2. propagate in original order
-    for (Operation &op : llvm::make_early_inc_range(block))
-      if (failed(visitOp(&op, builder)))
-        return signalPassFailure();
+    if (traversal != TraversalOrder::Backward) {
+      for (Operation &op : llvm::make_early_inc_range(block))
+        if (failed(visitOp(&op, builder)))
+          return signalPassFailure();
+      if (traversal == TraversalOrder::ForwardBackward) {
+        LLVM_DEBUG(DBGS() << "After forward order propagation:\n"
+                          << funcOp << "\n");
+        LLVM_DEBUG(assert(succeeded(mlir::verify(funcOp))));
+      }
+    }
+
+    // 3. propagate in backward order if needed
+    if (traversal == TraversalOrder::ForwardBackward)
+      for (Operation &op : llvm::make_early_inc_range(llvm::reverse(block)))
+        if (failed(visitOp(&op, builder)))
+          return signalPassFailure();
   }
 };
