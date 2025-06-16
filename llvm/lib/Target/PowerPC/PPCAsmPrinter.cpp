@@ -1001,13 +1001,13 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
           MCSymbolRefExpr::create(BaseSymbol, OutContext), PB, OutContext);
 
       const MCExpr *DeltaHi =
-          PPCMCExpr::create(DeltaExpr, PPC::S_HA, OutContext);
+          MCSpecifierExpr::create(DeltaExpr, PPC::S_HA, OutContext);
       EmitToStreamer(
           *OutStreamer,
           MCInstBuilder(PPC::ADDIS).addReg(PICR).addReg(PICR).addExpr(DeltaHi));
 
       const MCExpr *DeltaLo =
-          PPCMCExpr::create(DeltaExpr, PPC::S_LO, OutContext);
+          MCSpecifierExpr::create(DeltaExpr, PPC::S_LO, OutContext);
       EmitToStreamer(
           *OutStreamer,
           MCInstBuilder(PPC::ADDI).addReg(PICR).addReg(PICR).addExpr(DeltaLo));
@@ -1401,10 +1401,10 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::PPC32GOT: {
     MCSymbol *GOTSymbol =
         OutContext.getOrCreateSymbol(StringRef("_GLOBAL_OFFSET_TABLE_"));
-    const MCExpr *SymGotTlsL = PPCMCExpr::create(
-        PPC::S_LO, MCSymbolRefExpr::create(GOTSymbol, OutContext), OutContext);
-    const MCExpr *SymGotTlsHA = PPCMCExpr::create(
-        PPC::S_HA, MCSymbolRefExpr::create(GOTSymbol, OutContext), OutContext);
+    const MCExpr *SymGotTlsL =
+        MCSpecifierExpr::create(GOTSymbol, PPC::S_LO, OutContext);
+    const MCExpr *SymGotTlsHA =
+        MCSpecifierExpr::create(GOTSymbol, PPC::S_HA, OutContext);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LI)
                                  .addReg(MI->getOperand(0).getReg())
                                  .addExpr(SymGotTlsL));
@@ -2125,14 +2125,14 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
                                 GlobalEntryLabelExp, OutContext);
 
       const MCExpr *TOCDeltaHi =
-          PPCMCExpr::create(TOCDeltaExpr, PPC::S_HA, OutContext);
+          MCSpecifierExpr::create(TOCDeltaExpr, PPC::S_HA, OutContext);
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDIS)
                                    .addReg(PPC::X2)
                                    .addReg(PPC::X12)
                                    .addExpr(TOCDeltaHi));
 
       const MCExpr *TOCDeltaLo =
-          PPCMCExpr::create(TOCDeltaExpr, PPC::S_LO, OutContext);
+          MCSpecifierExpr::create(TOCDeltaExpr, PPC::S_LO, OutContext);
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDI)
                                    .addReg(PPC::X2)
                                    .addReg(PPC::X2)
