@@ -59,10 +59,11 @@ MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo() {
   AllowAtInName = true;
 }
 
-void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
+static void printImpl(const MCAsmInfo &MAI, raw_ostream &OS,
+                      const MCSpecifierExpr &Expr) {
   int64_t AbsVal;
 
-  switch (specifier) {
+  switch (Expr.getSpecifier()) {
   case Mips::S_None:
   case Mips::S_Special:
     llvm_unreachable("Mips::S_None and MEK_Special are invalid");
@@ -70,7 +71,7 @@ void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   case Mips::S_DTPREL:
     // Mips::S_DTPREL is used for marking TLS DIEExpr only
     // and contains a regular sub-expression.
-    MAI->printExpr(OS, *getSubExpr());
+    MAI.printExpr(OS, *Expr.getSubExpr());
     return;
   case Mips::S_CALL_HI16:
     OS << "%call_hi";
@@ -147,20 +148,20 @@ void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   }
 
   OS << '(';
-  if (Expr->evaluateAsAbsolute(AbsVal))
+  if (Expr.evaluateAsAbsolute(AbsVal))
     OS << AbsVal;
   else
-    Expr->print(OS, MAI);
+    MAI.printExpr(OS, *Expr.getSubExpr());
   OS << ')';
 }
 
-bool MipsMCExpr::isGpOff(Specifier &S) const {
-  if (getSpecifier() == Mips::S_HI || getSpecifier() == Mips::S_LO) {
-    if (const MipsMCExpr *S1 = dyn_cast<const MipsMCExpr>(getSubExpr())) {
+bool Mips::isGpOff(const MCSpecifierExpr &E) {
+  if (E.getSpecifier() == Mips::S_HI || E.getSpecifier() == Mips::S_LO) {
+    if (const MipsMCExpr *S1 = dyn_cast<const MipsMCExpr>(E.getSubExpr())) {
       if (const MipsMCExpr *S2 = dyn_cast<const MipsMCExpr>(S1->getSubExpr())) {
         if (S1->getSpecifier() == Mips::S_NEG &&
             S2->getSpecifier() == Mips::S_GPREL) {
-          S = getSpecifier();
+          // S = E.getSpecifier();
           return true;
         }
       }
@@ -169,13 +170,13 @@ bool MipsMCExpr::isGpOff(Specifier &S) const {
   return false;
 }
 
-bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                           const MCAssembler *Asm) const {
+static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Res,
+                     const MCAssembler *Asm) {
   // Look for the %hi(%neg(%gp_rel(X))) and %lo(%neg(%gp_rel(X)))
   // special cases.
-  if (isGpOff()) {
+  if (Mips::isGpOff(Expr)) {
     const MCExpr *SubExpr =
-        cast<MipsMCExpr>(cast<MipsMCExpr>(getSubExpr())->getSubExpr())
+        cast<MipsMCExpr>(cast<MipsMCExpr>(Expr.getSubExpr())->getSubExpr())
             ->getSubExpr();
     if (!SubExpr->evaluateAsRelocatable(Res, Asm))
       return false;
@@ -184,8 +185,29 @@ bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
     return true;
   }
 
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-  Res.setSpecifier(specifier);
+  Res.setSpecifier(Expr.getSpecifier());
   return !Res.getSubSym();
+}
+
+void MipsELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                          const MCSpecifierExpr &Expr) const {
+  printImpl(*this, OS, Expr);
+}
+
+bool MipsELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
+                                                 MCValue &Res,
+                                                 const MCAssembler *Asm) const {
+  return evaluate(Expr, Res, Asm);
+}
+
+void MipsCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                           const MCSpecifierExpr &Expr) const {
+  printImpl(*this, OS, Expr);
+}
+
+bool MipsCOFFMCAsmInfo::evaluateAsRelocatableImpl(
+    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
+  return evaluate(Expr, Res, Asm);
 }
