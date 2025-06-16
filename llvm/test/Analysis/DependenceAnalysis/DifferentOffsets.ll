@@ -76,13 +76,9 @@ define i32 @gep_i8_vs_i32(ptr nocapture %A, i64 %n, i64 %m) {
 ; CHECK-NEXT:  Src: store i32 42, ptr %arrayidx0, align 1 --> Dst: store i32 42, ptr %arrayidx0, align 1
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 42, ptr %arrayidx0, align 1 --> Dst: store i32 42, ptr %arrayidx1, align 4
-; CHECK-NEXT:    da analyze - output [|<]!
-; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 42, ptr %arrayidx1, align 4 --> Dst: store i32 42, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - none!
-; CHECK-NEXT:  Runtime Assumptions:
-; CHECK-NEXT:  Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
 ;
 entry:
   %arrayidx0 = getelementptr inbounds i8, ptr %A, i64 %n
@@ -98,7 +94,7 @@ define void @linearized_accesses(i64 %n, i64 %m, i64 %o, ptr %A) {
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx0, align 4
 ; CHECK-NEXT:    da analyze - output [* * *]!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx1, align 4
-; CHECK-NEXT:    da analyze - output [* * *|<]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx1, align 4 --> Dst: store i32 1, ptr %idx1, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;
@@ -149,8 +145,7 @@ define void @multidim_accesses(ptr %A) {
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx0, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx1, align 4
-; FIXME: the dependence distance is not constant. Distance vector should be [* * *|<]!
-; CHECK-NEXT:    da analyze - consistent output [0 0 0|<]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx1, align 4 --> Dst: store i32 1, ptr %idx1, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;
