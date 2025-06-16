@@ -4152,7 +4152,6 @@ defm FLAT_ATOMIC_FMAX                 : VFLAT_Real_AllAddr_Atomics_gfx13<0x40, "
 defm FLAT_ATOMIC_MIN_F64              : VFLAT_Real_AllAddr_Atomics_gfx13<0x5f, "flat_atomic_min_num_f64", "flat_atomic_fmin_x2">; // TODO-GFX13: SP3 does not accept the old (gfx90a/gfx940) name as an alias.
 defm FLAT_ATOMIC_MAX_F64              : VFLAT_Real_AllAddr_Atomics_gfx13<0x60, "flat_atomic_max_num_f64", "flat_atomic_fmax_x2">; // TODO-GFX13: SP3 does not accept the old (gfx90a/gfx940) name as an alias.
 defm FLAT_ATOMIC_COND_SUB_U32         : VFLAT_Real_AllAddr_Atomics_gfx13<0x47>;
-defm FLAT_PREFETCH_B8                 : VFLAT_Real_AllAddr_gfx13<0x048>;
 defm FLAT_ATOMIC_PK_ADD_F16           : VFLAT_Real_AllAddr_Atomics_gfx13<0x4a>;
 defm FLAT_ATOMIC_PK_ADD_BF16          : VFLAT_Real_AllAddr_Atomics_gfx13<0x4b>;
 defm FLAT_DISCARD_B32                 : VFLAT_Real_Base_gfx13<0x04c>;
@@ -4224,7 +4223,6 @@ defm GLOBAL_STORE_BLOCK               : VFLAT_Real_AllAddr_gfx13<0x44>;
 defm GLOBAL_LOAD_TR_B128_w32          : VFLAT_Real_AllAddr_gfx13<0x45, "global_load_tr16_b128">;
 defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx13<0x46, "global_load_tr8_b64">;
 defm GLOBAL_ATOMIC_COND_SUB_U32       : VFLAT_Real_AllAddr_Atomics_gfx13<0x47>;
-defm GLOBAL_PREFETCH_B8               : VFLAT_Real_AllAddr_gfx13<0x48>;
 defm GLOBAL_ATOMIC_PK_ADD_F16         : VFLAT_Real_AllAddr_Atomics_gfx13<0x4a>;
 defm GLOBAL_ATOMIC_PK_ADD_BF16        : VFLAT_Real_AllAddr_Atomics_gfx13<0x4b>;
 defm GLOBAL_DISCARD_B32               : VFLAT_Real_AllAddr_gfx13<0x4c>;
