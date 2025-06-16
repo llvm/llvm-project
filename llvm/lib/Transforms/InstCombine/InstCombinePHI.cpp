@@ -1012,8 +1012,7 @@ Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
 /// For now, we require init1, init2, constant1 and constant2 to be constants.
 Instruction *InstCombinerImpl::foldPHIReduction(PHINode &PN) {
   BinaryOperator *BO1;
-  Value *Start1;
-  Value *Step1;
+  Value *Start1, *Step1;
 
   // Find the first recurrence.
   if (!PN.hasOneUse() || !matchSimpleRecurrence(&PN, BO1, Start1, Step1))
@@ -1032,11 +1031,9 @@ Instruction *InstCombinerImpl::foldPHIReduction(PHINode &PN) {
   // Find the reduction operation.
   auto Opc = BO1->getOpcode();
   BinaryOperator *Rdx = nullptr;
-  for (User *U : BO1->users())
-    if (U != &PN) {
-      Rdx = dyn_cast<BinaryOperator>(U);
-      break;
-    }
+  auto It = find_if(BO1->users(), [&](auto *U) { return U != &PN; });
+  if (It != BO1->users().end())
+    Rdx = dyn_cast<BinaryOperator>(*It);
   if (!Rdx || Rdx->getOpcode() != Opc || !Rdx->isAssociative())
     return nullptr;
 
@@ -1051,8 +1048,7 @@ Instruction *InstCombinerImpl::foldPHIReduction(PHINode &PN) {
 
   // Find the interleaved PHI and recurrence constants.
   PHINode *PN2;
-  Value *Start2;
-  Value *Step2;
+  Value *Start2, *Step2;
   if (!matchSimpleRecurrence(BO2, PN2, Start2, Step2) || !PN2->hasOneUse() ||
       PN2->getParent() != PN.getParent())
     return nullptr;
@@ -1080,18 +1076,14 @@ Instruction *InstCombinerImpl::foldPHIReduction(PHINode &PN) {
   //   rdx = binop (pn, binop (c1, c2))
 
   // Attempt to fold the constants.
-  auto *Init = llvm::ConstantFoldBinaryInstruction(Opc, Init1, Init2);
-  auto *C = llvm::ConstantFoldBinaryInstruction(Opc, C1, C2);
+  auto *Init = ConstantFoldBinaryInstruction(Opc, Init1, Init2);
+  auto *C = ConstantFoldBinaryInstruction(Opc, C1, C2);
   if (!Init || !C)
     return nullptr;
 
-  LLVM_DEBUG(dbgs() << "  Combining " << PN << "\n            " << *BO1
-                    << "\n       with " << *PN2 << "\n            " << *BO2
-                    << '\n');
-  ++NumPHIsInterleaved;
-
   // Create the new PHI.
-  auto *NewPN = PHINode::Create(PN.getType(), PN.getNumIncomingValues());
+  auto *NewPN =
+      PHINode::Create(PN.getType(), PN.getNumIncomingValues(), "reduced.phi");
 
   // Create the new binary op.
   auto *NewOp = BinaryOperator::Create(Opc, NewPN, C);
@@ -1110,7 +1102,6 @@ Instruction *InstCombinerImpl::foldPHIReduction(PHINode &PN) {
     Flags.applyFlags(*NewOp);
   }
   InsertNewInstWith(NewOp, BO1->getIterator());
-  replaceInstUsesWith(*Rdx, NewOp);
 
   for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
     auto *V = PN.getIncomingValue(I);
@@ -1133,9 +1124,14 @@ Instruction *InstCombinerImpl::foldPHIReduction(PHINode &PN) {
       llvm_unreachable("Unexpected incoming value!");
   }
 
+  LLVM_DEBUG(dbgs() << "  Combined " << PN << "\n           " << *BO1
+                    << "\n      with " << *PN2 << "\n           " << *BO2
+                    << '\n');
+  ++NumPHIsInterleaved;
+
   // Remove dead instructions. BO1/2 are replaced with poison to clean up their
   // uses.
-  eraseInstFromFunction(*Rdx);
+  eraseInstFromFunction(*replaceInstUsesWith(*Rdx, NewOp));
   eraseInstFromFunction(
       *replaceInstUsesWith(*BO1, PoisonValue::get(BO1->getType())));
   eraseInstFromFunction(
