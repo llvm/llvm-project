@@ -781,7 +781,6 @@ updateBranchOpInterface(mlir::OpBuilder &builder,
   llvm::SmallVector<mlir::RegionSuccessor> entrySuccessors;
   llvm::SmallVector<mlir::Attribute> operands(op->getNumOperands(), nullptr);
   branch.getEntrySuccessorRegions(operands, entrySuccessors);
-  mlir::ValueRange results = op->getResults();
 
   for (mlir::RegionSuccessor &successor : entrySuccessors) {
     // Only interested in successor regions that are contained within the op.
@@ -792,8 +791,8 @@ updateBranchOpInterface(mlir::OpBuilder &builder,
         branch.getEntrySuccessorOperands(successor);
     mlir::ValueRange regionArgs = successor.getSuccessorInputs();
 
-    for (auto [forwardedOperand, regionArg, result] :
-         llvm::zip(forwardedOperands, regionArgs, results)) {
+    for (auto [forwardedOperand, regionArg] :
+         llvm::zip(forwardedOperands, regionArgs)) {
       Type inputType = regionArg.getType();
       // Only update tensor descriptor types in region args.
       if (!isa<xegpu::TensorDescType>(inputType))
@@ -873,14 +872,9 @@ void XeGPULayoutPropagatePass::runOnOperation() {
     LayoutInfo layout = analysis.getLayoutInfo(val);
     if (!layout.isAssigned())
       return {};
-
-    SmallVector<int, 2> laneLayout, laneData;
-    for (auto [layout, data] : llvm::zip_equal(layout.getLayoutAsArrayRef(),
-                                               layout.getDataAsArrayRef())) {
-      laneLayout.push_back(static_cast<int>(layout));
-      laneData.push_back(static_cast<int>(data));
-    }
-    return xegpu::LayoutAttr::get(val.getContext(), laneLayout, laneData);
+    return xegpu::LayoutAttr::get(
+        val.getContext(), llvm::to_vector_of<int>(layout.getLayoutAsArrayRef()),
+        llvm::to_vector_of<int>(layout.getDataAsArrayRef()));
   };
 
   mlir::OpBuilder builder(&getContext());
