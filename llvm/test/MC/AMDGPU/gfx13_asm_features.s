@@ -39,23 +39,23 @@ image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC
 image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D scope:SCOPE_SYS cfs:CFS_128B th:TH_LOAD_BYPASS
 // GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x48,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
 
-global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
-// GFX13: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x12,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0xfc,0xff]
+global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
+// GFX13: global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x00,0x01,0x02,0xee,0x01,0x00,0x3c,0x00,0x00,0x00,0xfc,0xff]
 
-global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS cfs:CFS_128B scope:SCOPE_SYS
-// GFX13: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x12,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0xfc,0xff]
+global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS cfs:CFS_128B scope:SCOPE_SYS
+// GFX13: global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x00,0x01,0x02,0xee,0x01,0x00,0x3c,0x00,0x00,0x00,0xfc,0xff]
 
-global_prefetch_b8 v4, s[2:3] offset:-1024 cfs:CFS_128B th:TH_LOAD_BYPASS scope:SCOPE_SYS
-// GFX13: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x12,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0xfc,0xff]
+global_load_u8 v1, v0, s[0:1] offset:-1024 cfs:CFS_128B th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX13: global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x00,0x01,0x02,0xee,0x01,0x00,0x3c,0x00,0x00,0x00,0xfc,0xff]
 
-global_prefetch_b8 v4, s[2:3] offset:-1024 cfs:CFS_128B scope:SCOPE_SYS th:TH_LOAD_BYPASS
-// GFX13: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x12,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0xfc,0xff]
+global_load_u8 v1, v0, s[0:1] offset:-1024 cfs:CFS_128B scope:SCOPE_SYS th:TH_LOAD_BYPASS
+// GFX13: global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x00,0x01,0x02,0xee,0x01,0x00,0x3c,0x00,0x00,0x00,0xfc,0xff]
 
-global_prefetch_b8 v4, s[2:3] offset:-1024 scope:SCOPE_SYS th:TH_LOAD_BYPASS cfs:CFS_128B
-// GFX13: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x12,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0xfc,0xff]
+global_load_u8 v1, v0, s[0:1] offset:-1024 scope:SCOPE_SYS th:TH_LOAD_BYPASS cfs:CFS_128B
+// GFX13: global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x00,0x01,0x02,0xee,0x01,0x00,0x3c,0x00,0x00,0x00,0xfc,0xff]
 
-global_prefetch_b8 v4, s[2:3] offset:-1024 scope:SCOPE_SYS cfs:CFS_128B th:TH_LOAD_BYPASS
-// GFX13: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x12,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0xfc,0xff]
+global_load_u8 v1, v0, s[0:1] offset:-1024 scope:SCOPE_SYS cfs:CFS_128B th:TH_LOAD_BYPASS
+// GFX13: global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x00,0x01,0x02,0xee,0x01,0x00,0x3c,0x00,0x00,0x00,0xfc,0xff]
 
 buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
 // GFX13: buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x03,0x01,0x03,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
@@ -119,17 +119,17 @@ image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC
 image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:3
 // GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B ; encoding: [0x02,0x03,0x48,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
 
-global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:0
-// GFX13: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x02,0x00,0x12,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0xfc,0xff]
+global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:0
+// GFX13: global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x00,0x00,0x02,0xee,0x01,0x00,0x3c,0x00,0x00,0x00,0xfc,0xff]
 
-global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:1
-// GFX13: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x12,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0xfc,0xff]
+global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:1
+// GFX13: global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x00,0x01,0x02,0xee,0x01,0x00,0x3c,0x00,0x00,0x00,0xfc,0xff]
 
-global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:2
-// GFX13: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B ; encoding: [0x02,0x02,0x12,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0xfc,0xff]
+global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:2
+// GFX13: global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B ; encoding: [0x00,0x02,0x02,0xee,0x01,0x00,0x3c,0x00,0x00,0x00,0xfc,0xff]
 
-global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:3
-// GFX13: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B ; encoding: [0x02,0x03,0x12,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0xfc,0xff]
+global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:3
+// GFX13: global_load_u8 v1, v0, s[0:1] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B ; encoding: [0x00,0x03,0x02,0xee,0x01,0x00,0x3c,0x00,0x00,0x00,0xfc,0xff]
 
 buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:0
 // GFX13: buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x03,0x00,0x03,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
