@@ -585,8 +585,10 @@ llvm::json::Value toJSON(const SteppingGranularity &SG) {
 bool fromJSON(const json::Value &Params, StepInTarget &SIT, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("id", SIT.id) && O.map("label", SIT.label) &&
-         O.map("line", SIT.line) && O.map("column", SIT.column) &&
-         O.map("endLine", SIT.endLine) && O.map("endColumn", SIT.endColumn);
+         O.mapOptional("line", SIT.line) &&
+         O.mapOptional("column", SIT.column) &&
+         O.mapOptional("endLine", SIT.endLine) &&
+         O.mapOptional("endColumn", SIT.endColumn);
 }
 
 llvm::json::Value toJSON(const StepInTarget &SIT) {
