@@ -20,14 +20,6 @@ struct is_trivially_copyable {
 
 template <typename T>
 constexpr bool is_trivially_copyable_v = __is_trivially_copyable(T);
-
-template <typename... Args>
-struct is_constructible {
-    static constexpr bool value = __is_constructible(Args...);
-};
-
-template <typename... Args>
-constexpr bool is_constructible_v = __is_constructible(Args...);
 #endif
 
 #ifdef STD2
@@ -52,17 +44,6 @@ using is_trivially_copyable  = __details_is_trivially_copyable<T>;
 
 template <typename T>
 constexpr bool is_trivially_copyable_v = __is_trivially_copyable(T);
-
-template <typename... Args>
-struct __details_is_constructible{
-    static constexpr bool value = __is_constructible(Args...);
-};
-
-template <typename... Args>
-using is_constructible  = __details_is_constructible<Args...>;
-
-template <typename... Args>
-constexpr bool is_constructible_v = __is_constructible(Args...);
 #endif
 
 
@@ -92,15 +73,6 @@ using is_trivially_copyable  = __details_is_trivially_copyable<T>;
 
 template <typename T>
 constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;
-
-template <typename... Args>
-struct __details_is_constructible : bool_constant<__is_constructible(Args...)> {};
-
-template <typename... Args>
-using is_constructible  = __details_is_constructible<Args...>;
-
-template <typename... Args>
-constexpr bool is_constructible_v = is_constructible<Args...>::value;
 #endif
 
 }
@@ -128,15 +100,6 @@ static_assert(std::is_trivially_copyable_v<int&>);
 // expected-note@-1 {{because it is a reference type}}
 
 
-static_assert(std::is_constructible<int, int>::value);
-
-static_assert(std::is_constructible<void>::value);
-// expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_constructible<void>::value'}} \
-// expected-note@-1 {{because it is a cv void type}}
-static_assert(std::is_constructible_v<void>);
-// expected-error@-1 {{static assertion failed due to requirement 'std::is_constructible_v<void>'}} \
-// expected-note@-1 {{because it is a cv void type}}
-
 namespace test_namespace {
     using namespace std;
     static_assert(is_trivially_relocatable<int&>::value);
@@ -156,13 +119,6 @@ namespace test_namespace {
     // expected-error@-1 {{static assertion failed due to requirement 'is_trivially_copyable_v<int &>'}} \
     // expected-note@-1 {{'int &' is not trivially copyable}} \
     // expected-note@-1 {{because it is a reference type}}
-
-    static_assert(is_constructible<void>::value);
-    // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_constructible<void>::value'}} \
-    // expected-note@-1 {{because it is a cv void type}}
-    static_assert(is_constructible_v<void>);
-    // expected-error@-1 {{static assertion failed due to requirement 'is_constructible_v<void>'}} \
-    // expected-note@-1 {{because it is a cv void type}}
 }
 
 
@@ -182,15 +138,6 @@ template <typename T>
 concept C2 = std::is_trivially_copyable_v<T>; // #concept4
 
 template <C2 T> void g2();  // #cand4
-
-template <typename... Args>
-requires std::is_constructible<Args...>::value void f3();  // #cand5
-
-template <typename... Args>
-concept C3 = std::is_constructible_v<Args...>; // #concept6
-
-template <C3 T> void g3();  // #cand6
-
 
 void test() {
     f<int&>();
@@ -222,19 +169,6 @@ void test() {
     // expected-note@#concept4 {{because 'std::is_trivially_copyable_v<int &>' evaluated to false}} \
     // expected-note@#concept4 {{'int &' is not trivially copyable}} \
     // expected-note@#concept4 {{because it is a reference type}}
-
-    f3<void>();
-    // expected-error@-1 {{no matching function for call to 'f3'}} \
-    // expected-note@#cand5 {{candidate template ignored: constraints not satisfied [with Args = <void>]}} \
-    // expected-note-re@#cand5 {{because '{{.*}}is_constructible<void>::value' evaluated to false}} \
-    // expected-note@#cand5 {{because it is a cv void type}}
-
-    g3<void>();
-    // expected-error@-1 {{no matching function for call to 'g3'}} \
-    // expected-note@#cand6 {{candidate template ignored: constraints not satisfied [with T = void]}} \
-    // expected-note@#cand6 {{because 'void' does not satisfy 'C3'}} \
-    // expected-note@#concept6 {{because 'std::is_constructible_v<void>' evaluated to false}} \
-    // expected-note@#concept6 {{because it is a cv void type}}
 }
 }
 
