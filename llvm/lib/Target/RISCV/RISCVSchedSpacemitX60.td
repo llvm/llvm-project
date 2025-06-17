@@ -607,24 +607,31 @@ foreach mx = SchedMxList in {
   }
 }
 
-// Widening
+// Widening conversion operations use 4 * LMUL cycles
 foreach mx = SchedMxListW in {
   foreach sew = SchedSEWSet<mx, isF=0, isWidening=1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListW>.c;
+    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFWCvtIToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    let Latency = !mul(LMulLat, 4) in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWCvtIToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
   }
 }
 
 foreach mx = SchedMxListFW in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListFW>.c;
+  defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
-  defm "" : LMULWriteResMX<"WriteVFWCvtFToIV", [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = !mul(LMulLat, 4) in {
+    defm "" : LMULWriteResMX<"WriteVFWCvtFToIV", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 }
 
 foreach mx = SchedMxListFW in {
   foreach sew = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFW, isF=1>.c;
+    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
     defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUF", [SMX60_VIEU], mx, sew, IsWorstCase>;
@@ -632,7 +639,9 @@ foreach mx = SchedMxListFW in {
     defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulF", [SMX60_VIEU], mx, sew, IsWorstCase>;
     defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulAddV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulAddF", [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFWCvtFToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    let Latency = !mul(LMulLat, 4) in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWCvtFToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
   }
 }
 
