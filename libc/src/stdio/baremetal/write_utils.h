@@ -13,10 +13,8 @@
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h" // For printf_core::WRITE_OK
 
-#include <stddef.h>
-
 namespace LIBC_NAMESPACE_DECL {
-namespace {
+namespace write_utils {
 
 LIBC_INLINE int stdout_write_hook(cpp::string_view new_str, void *) {
   write_to_stdout(new_str);
@@ -36,13 +34,13 @@ LIBC_INLINE void write(::FILE *f, cpp::string_view new_str) {
   }
 }
 
-LIBC_INLINE decltype(&stdout_write_hook) get_write_hook(::FILE *f) {
-  if (f == stdout) {
+using StreamWriter = int (*)(cpp::string_view, void *);
+LIBC_INLINE StreamWriter get_write_hook(::FILE *f) {
+  if (f == stdout)
     return &stdout_write_hook;
-  }
 
   return &stderr_write_hook;
 }
 
-} // namespace
+} // namespace write_utils
 } // namespace LIBC_NAMESPACE_DECL

@@ -6,7 +6,6 @@ add_entrypoint_object(
     ../fprintf.h
     write_utils.h
   DEPENDS
-    libc.src.__support.OSUtil.osutil
     libc.src.__support.CPP.string_view
     libc.src.stdio.printf_core.printf_main
 )
@@ -64,9 +63,7 @@ add_entrypoint_object(
     write_utils.h
   DEPENDS
     libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
     libc.src.__support.arg_list
-    libc.src.__support.OSUtil.osutil
 )
 
 add_entrypoint_object(
@@ -121,9 +118,7 @@ add_entrypoint_object(
     ../vprintf.h
   DEPENDS
     libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
     libc.src.__support.arg_list
-    libc.src.__support.OSUtil.osutil
 )
 
 add_entrypoint_object(

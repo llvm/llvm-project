@@ -29,7 +29,7 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   char buffer[BUFF_SIZE];
 
   printf_core::WriteBuffer<printf_core::WriteMode::FLUSH_TO_STREAM> wb(
-      buffer, BUFF_SIZE, &stdout_write_hook, nullptr);
+      buffer, BUFF_SIZE, &write_utils::stdout_write_hook, nullptr);
   printf_core::Writer<printf_core::WriteMode::FLUSH_TO_STREAM> writer(wb);
 
   int retval = printf_core::printf_main(&writer, format, args);

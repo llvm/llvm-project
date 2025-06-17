@@ -1,4 +1,4 @@
-//===-- Baremetal Implementation of putchar -------------------------------===//
+//===-- Implementation of putchar for baremetal -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
-  char uc = static_cast<unsigned char>(c);
+  char uc = static_cast<char>(c);
 
   write_to_stdout(cpp::string_view(&uc, 1));
 

@@ -8,13 +8,10 @@
 
 #include "src/stdio/vprintf.h"
 
-#include "src/__support/OSUtil/io.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/baremetal/write_utils.h"
-#include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_main.h"
-#include "src/stdio/printf_core/writer.h"
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -30,7 +27,7 @@ LLVM_LIBC_FUNCTION(int, vprintf,
   char buffer[BUFF_SIZE];
 
   printf_core::WriteBuffer<printf_core::WriteMode::FLUSH_TO_STREAM> wb(
-      buffer, BUFF_SIZE, &stdout_write_hook, nullptr);
+      buffer, BUFF_SIZE, &write_utils::stdout_write_hook, nullptr);
   printf_core::Writer<printf_core::WriteMode::FLUSH_TO_STREAM> writer(wb);
 
   int retval = printf_core::printf_main(&writer, format, args);

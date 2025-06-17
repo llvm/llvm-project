@@ -1,4 +1,4 @@
-//===-- Baremetal Implementation of fputc ---------------------------------===//
+//===-- Implementation of fputc for baremetal -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, fputc, (int c, ::FILE *stream)) {
   char uc = static_cast<char>(c);
 
-  write(stream, cpp::string_view(&uc, 1));
+  write_utils::write(stream, cpp::string_view(&uc, 1));
 
   return 0;
 }
