@@ -22,9 +22,19 @@
 
 namespace Fortran::semantics {
 
+static const Symbol &ResolveOriginalTypeSymbol(const Symbol *symbol) {
+  symbol = &symbol->GetUltimate();
+  if (const auto *generic{symbol->detailsIf<GenericDetails>()}) {
+    CHECK(generic->derivedType() != nullptr);
+    return generic->derivedType()->GetUltimate();
+  } else {
+    return *symbol;
+  }
+}
+
 DerivedTypeSpec::DerivedTypeSpec(SourceName name, const Symbol &typeSymbol)
     : name_{name}, originalTypeSymbol_{typeSymbol},
-      typeSymbol_{typeSymbol.GetUltimate()} {
+      typeSymbol_{ResolveOriginalTypeSymbol(&typeSymbol)} {
   CHECK(typeSymbol_.has<DerivedTypeDetails>());
 }
 DerivedTypeSpec::DerivedTypeSpec(const DerivedTypeSpec &that) = default;

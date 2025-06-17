@@ -7416,7 +7416,8 @@ void DeclarationVisitor::SetType(
 std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveDerivedType(
     const parser::Name &name) {
   Scope &outer{NonDerivedTypeScope()};
-  Symbol *symbol{FindSymbol(outer, name)};
+  Symbol *original{FindSymbol(outer, name)};
+  Symbol *symbol{original};
   Symbol *ultimate{symbol ? &symbol->GetUltimate() : nullptr};
   auto *generic{ultimate ? ultimate->detailsIf<GenericDetails>() : nullptr};
   if (generic) {
@@ -7429,11 +7430,12 @@ std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveDerivedType(
       (generic && &ultimate->owner() == &outer)) {
     if (allowForwardReferenceToDerivedType()) {
       if (!symbol) {
-        symbol = &MakeSymbol(outer, name.source, Attrs{});
+        symbol = original = &MakeSymbol(outer, name.source, Attrs{});
         Resolve(name, *symbol);
       } else if (generic) {
         // forward ref to type with later homonymous generic
-        symbol = &outer.MakeSymbol(name.source, Attrs{}, UnknownDetails{});
+        symbol = original =
+            &outer.MakeSymbol(name.source, Attrs{}, UnknownDetails{});
         generic->set_derivedType(*symbol);
         name.symbol = symbol;
       }
@@ -7453,7 +7455,7 @@ std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveDerivedType(
   if (CheckUseError(name)) {
     return std::nullopt;
   } else if (symbol->GetUltimate().has<DerivedTypeDetails>()) {
-    return DerivedTypeSpec{name.source, *symbol};
+    return DerivedTypeSpec{name.source, *original};
   } else {
     Say(name, "'%s' is not a derived type"_err_en_US);
     return std::nullopt;

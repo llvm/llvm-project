@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Parser/tools.h"
+#include "flang/Semantics/tools.h"
 #include "flang/Common/indirection.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
-#include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
 #include "llvm/ADT/StringSwitch.h"
