@@ -973,7 +973,7 @@ void SemaHLSL::emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS,
 
 std::pair<IdentifierInfo *, bool>
 SemaHLSL::ActOnStartRootSignatureDecl(StringRef Signature) {
-  auto Hash = llvm::hash_value(Signature);
+  llvm::hash_code Hash = llvm::hash_value(Signature);
   std::string IdStr = "__hlsl_rootsig_decl_" + std::to_string(Hash);
   IdentifierInfo *DeclIdent = &(getASTContext().Idents.get(IdStr));
 
