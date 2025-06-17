@@ -132,14 +132,6 @@ public:
                                bool IsMutable = false, bool IsVolatile = false,
                                const Expr *Init = nullptr);
 
-  void *Allocate(size_t Size, unsigned Align = 8) const {
-    return Allocator.Allocate(Size, Align);
-  }
-  template <typename T> T *Allocate(size_t Num = 1) const {
-    return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
-  }
-  void Deallocate(void *Ptr) const {}
-
   /// Context to manage declaration lifetimes.
   class DeclScope {
   public:
@@ -212,7 +204,7 @@ private:
   };
 
   /// Allocator for globals.
-  mutable PoolAllocTy Allocator;
+  PoolAllocTy Allocator;
 
   /// Global objects.
   std::vector<Global *> Globals;
@@ -245,19 +237,5 @@ public:
 
 } // namespace interp
 } // namespace clang
-
-inline void *operator new(size_t Bytes, const clang::interp::Program &C,
-                          size_t Alignment = 8) {
-  return C.Allocate(Bytes, Alignment);
-}
-
-inline void operator delete(void *Ptr, const clang::interp::Program &C,
-                            size_t) {
-  C.Deallocate(Ptr);
-}
-inline void *operator new[](size_t Bytes, const clang::interp::Program &C,
-                            size_t Alignment = 8) {
-  return C.Allocate(Bytes, Alignment);
-}
 
 #endif

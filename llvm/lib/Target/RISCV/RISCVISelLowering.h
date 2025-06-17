@@ -363,6 +363,15 @@ public:
   static std::pair<unsigned, unsigned>
   computeVLMAXBounds(MVT ContainerVT, const RISCVSubtarget &Subtarget);
 
+  /// Given a vector (either fixed or scalable), return the scalable vector
+  /// corresponding to a vector register (i.e. an m1 register group).
+  static MVT getM1VT(MVT VT) {
+    unsigned EltSizeInBits = VT.getVectorElementType().getSizeInBits();
+    assert(EltSizeInBits <= RISCV::RVVBitsPerBlock && "Unexpected vector MVT");
+    return MVT::getScalableVectorVT(VT.getVectorElementType(),
+                                    RISCV::RVVBitsPerBlock / EltSizeInBits);
+  }
+
   static unsigned getRegClassIDForLMUL(RISCVVType::VLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
   static unsigned getRegClassIDForVecVT(MVT VT);
