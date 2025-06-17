@@ -481,7 +481,8 @@ INTERCEPTOR(char*, textdomain, const char *domainname) {
 #endif
 
 #if SANITIZER_INTERCEPT_STRCMP || SANITIZER_INTERCEPT_MEMCMP
-static inline int CharCmpX(unsigned char c1, unsigned char c2) {
+[[maybe_unused]] static inline int CharCmpX(unsigned char c1,
+                                            unsigned char c2) {
   return (c1 == c2) ? 0 : (c1 < c2) ? -1 : 1;
 }
 #endif
@@ -1350,7 +1351,8 @@ INTERCEPTOR(unsigned long, time, unsigned long *t) {
 #if SANITIZER_INTERCEPT_LOCALTIME_AND_FRIENDS
 static void unpoison_tm(void *ctx, __sanitizer_tm *tm) {
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, tm, sizeof(*tm));
-#if !SANITIZER_SOLARIS
+// AIX tm struct does not have tm_zone field.
+#  if !SANITIZER_SOLARIS && !SANITIZER_AIX
   if (tm->tm_zone) {
     // Can not use COMMON_INTERCEPTOR_WRITE_RANGE here, because tm->tm_zone
     // can point to shared memory and tsan would report a data race.
@@ -1735,10 +1737,12 @@ INTERCEPTOR(int, __vsprintf_chk, char *str, int flag, SIZE_T size_to,
 VSPRINTF_INTERCEPTOR_IMPL(vsprintf, str, format, ap)
 #endif
 
+#  if SANITIZER_INTERCEPT_VASPRINTF
 INTERCEPTOR(int, vasprintf, char **strp, const char *format, va_list ap)
 VASPRINTF_INTERCEPTOR_IMPL(vasprintf, strp, format, ap)
+#  endif
 
-#if SANITIZER_INTERCEPT_ISOC99_PRINTF
+#  if SANITIZER_INTERCEPT_ISOC99_PRINTF
 INTERCEPTOR(int, __isoc99_vprintf, const char *format, va_list ap)
 VPRINTF_INTERCEPTOR_IMPL(__isoc99_vprintf, format, ap)
 
@@ -1787,10 +1791,12 @@ INTERCEPTOR(int, __snprintf_chk, char *str, SIZE_T size, int flag,
 FORMAT_INTERCEPTOR_IMPL(__snprintf_chk, vsnprintf, str, size, format)
 #endif
 
+#  if SANITIZER_INTERCEPT_ASPRINTF
 INTERCEPTOR(int, asprintf, char **strp, const char *format, ...)
 FORMAT_INTERCEPTOR_IMPL(asprintf, vasprintf, strp, format)
+#  endif
 
-#if SANITIZER_INTERCEPT_ISOC99_PRINTF
+#  if SANITIZER_INTERCEPT_ISOC99_PRINTF
 INTERCEPTOR(int, __isoc99_printf, const char *format, ...)
 FORMAT_INTERCEPTOR_IMPL(__isoc99_printf, __isoc99_vprintf, format)
 
@@ -1811,17 +1817,24 @@ FORMAT_INTERCEPTOR_IMPL(__isoc99_snprintf, __isoc99_vsnprintf, str, size,
 #endif  // SANITIZER_INTERCEPT_PRINTF
 
 #if SANITIZER_INTERCEPT_PRINTF
-#define INIT_PRINTF                     \
-  COMMON_INTERCEPT_FUNCTION_LDBL(printf);    \
-  COMMON_INTERCEPT_FUNCTION_LDBL(sprintf);   \
-  COMMON_INTERCEPT_FUNCTION_LDBL(snprintf);  \
-  COMMON_INTERCEPT_FUNCTION_LDBL(asprintf);  \
-  COMMON_INTERCEPT_FUNCTION_LDBL(fprintf);   \
-  COMMON_INTERCEPT_FUNCTION_LDBL(vprintf);   \
-  COMMON_INTERCEPT_FUNCTION_LDBL(vsprintf);  \
-  COMMON_INTERCEPT_FUNCTION_LDBL(vsnprintf); \
-  COMMON_INTERCEPT_FUNCTION_LDBL(vasprintf); \
-  COMMON_INTERCEPT_FUNCTION_LDBL(vfprintf);
+#  define INIT_PRINTF_COMMON                   \
+    COMMON_INTERCEPT_FUNCTION_LDBL(printf);    \
+    COMMON_INTERCEPT_FUNCTION_LDBL(sprintf);   \
+    COMMON_INTERCEPT_FUNCTION_LDBL(snprintf);  \
+    COMMON_INTERCEPT_FUNCTION_LDBL(fprintf);   \
+    COMMON_INTERCEPT_FUNCTION_LDBL(vprintf);   \
+    COMMON_INTERCEPT_FUNCTION_LDBL(vsprintf);  \
+    COMMON_INTERCEPT_FUNCTION_LDBL(vsnprintf); \
+    COMMON_INTERCEPT_FUNCTION_LDBL(vfprintf);
+#  if !SANITIZER_AIX
+// AIX does not have [v]asprintf.
+#    define INIT_PRINTF_EXTRA                   \
+      COMMON_INTERCEPT_FUNCTION_LDBL(asprintf); \
+      COMMON_INTERCEPT_FUNCTION_LDBL(vasprintf);
+#  else
+#    define INIT_PRINTF_EXTRA
+#  endif
+#  define INIT_PRINTF INIT_PRINTF_COMMON INIT_PRINTF_EXTRA
 #else
 #define INIT_PRINTF
 #endif

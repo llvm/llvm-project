@@ -266,7 +266,8 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
   if (MayAlias(to, from)) {
     if (mustDeallocateLHS) {
       deferDeallocation = &deferredDeallocStatDesc.descriptor();
-      Fortran::runtime::memcpy(deferDeallocation, &to, to.SizeInBytes());
+      Fortran::runtime::memcpy(
+          reinterpret_cast<void *>(deferDeallocation), &to, to.SizeInBytes());
       to.set_base_addr(nullptr);
     } else if (!isSimpleMemmove()) {
       // Handle LHS/RHS aliasing by copying RHS into a temp, then
@@ -274,7 +275,7 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
       auto descBytes{from.SizeInBytes()};
       StaticDescriptor<maxRank, true, 16> staticDesc;
       Descriptor &newFrom{staticDesc.descriptor()};
-      Fortran::runtime::memcpy(&newFrom, &from, descBytes);
+      Fortran::runtime::memcpy(reinterpret_cast<void *>(&newFrom), &from, descBytes);
       // Pretend the temporary descriptor is for an ALLOCATABLE
       // entity, otherwise, the Deallocate() below will not
       // free the descriptor memory.
@@ -329,6 +330,7 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
       }
       flags &= ~NeedFinalization;
       toElementBytes = to.ElementBytes(); // may have changed
+      toDerived = toAddendum ? toAddendum->derivedType() : nullptr;
     }
   }
   if (toDerived && (flags & CanBeDefinedAssignment)) {

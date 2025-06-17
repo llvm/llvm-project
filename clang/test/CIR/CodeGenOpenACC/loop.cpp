@@ -41,12 +41,12 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
   for(unsigned I = 0; I < N; ++I);
   // CHECK: acc.loop {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {seq = [#acc.device_type<nvidia>, #acc.device_type<radeon>]} loc
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>], seq = [#acc.device_type<nvidia>, #acc.device_type<radeon>]} loc
 #pragma acc loop device_type(radeon) seq
   for(unsigned I = 0; I < N; ++I);
   // CHECK: acc.loop {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {seq = [#acc.device_type<radeon>]} loc
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>], seq = [#acc.device_type<radeon>]} loc
 #pragma acc loop seq device_type(nvidia, radeon)
   for(unsigned I = 0; I < N; ++I);
   // CHECK: acc.loop {
@@ -67,12 +67,12 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
   for(unsigned I = 0; I < N; ++I);
   // CHECK: acc.loop {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {independent = [#acc.device_type<nvidia>, #acc.device_type<radeon>]} loc
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<nvidia>, #acc.device_type<radeon>, #acc.device_type<none>]} loc
 #pragma acc loop device_type(radeon) independent
   for(unsigned I = 0; I < N; ++I);
   // CHECK: acc.loop {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {independent = [#acc.device_type<radeon>]} loc
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<radeon>, #acc.device_type<none>]} loc
 #pragma acc loop independent device_type(nvidia, radeon)
   for(unsigned I = 0; I < N; ++I);
   // CHECK: acc.loop {
@@ -93,12 +93,12 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
   for(unsigned I = 0; I < N; ++I);
   // CHECK: acc.loop {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<nvidia>, #acc.device_type<radeon>]} loc
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<nvidia>, #acc.device_type<radeon>], independent = [#acc.device_type<none>]} loc
 #pragma acc loop device_type(radeon) auto
   for(unsigned I = 0; I < N; ++I);
   // CHECK: acc.loop {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<radeon>]} loc
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<radeon>], independent = [#acc.device_type<none>]} loc
 #pragma acc loop auto device_type(nvidia, radeon)
   for(unsigned I = 0; I < N; ++I);
   // CHECK: acc.loop {
@@ -116,7 +116,7 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
       for(unsigned K = 0; K < N; ++K);
   // CHECK: acc.loop {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {collapse = [1], collapseDeviceType = [#acc.device_type<none>]}
+  // CHECK-NEXT: } attributes {collapse = [1], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>]}
 
   #pragma acc loop collapse(1) device_type(radeon) collapse (2)
   for(unsigned I = 0; I < N; ++I)
@@ -124,7 +124,7 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
       for(unsigned K = 0; K < N; ++K);
   // CHECK: acc.loop {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {collapse = [1, 2], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<radeon>]}
+  // CHECK-NEXT: } attributes {collapse = [1, 2], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<radeon>], independent = [#acc.device_type<none>]}
 
   #pragma acc loop collapse(1) device_type(radeon, nvidia) collapse (2)
   for(unsigned I = 0; I < N; ++I)
@@ -132,14 +132,14 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
       for(unsigned K = 0; K < N; ++K);
   // CHECK: acc.loop {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {collapse = [1, 2, 2], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<radeon>, #acc.device_type<nvidia>]}
+  // CHECK-NEXT: } attributes {collapse = [1, 2, 2], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<radeon>, #acc.device_type<nvidia>], independent = [#acc.device_type<none>]}
   #pragma acc loop collapse(1) device_type(radeon, nvidia) collapse(2) device_type(host) collapse(3)
   for(unsigned I = 0; I < N; ++I)
     for(unsigned J = 0; J < N; ++J)
       for(unsigned K = 0; K < N; ++K);
   // CHECK: acc.loop {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {collapse = [1, 2, 2, 3], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<radeon>, #acc.device_type<nvidia>, #acc.device_type<host>]}
+  // CHECK-NEXT: } attributes {collapse = [1, 2, 2, 3], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<radeon>, #acc.device_type<nvidia>, #acc.device_type<host>], independent = [#acc.device_type<none>]}
 
   #pragma acc loop tile(1, 2, 3)
   for(unsigned I = 0; I < N; ++I)
@@ -392,4 +392,85 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
   }
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+
+  // Checking the automatic-addition of parallelism clauses.
+#pragma acc loop
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT:  acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>]} loc
+
+#pragma acc parallel
+  {
+    // CHECK-NEXT: acc.parallel {
+#pragma acc loop
+    for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT:  acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>]} loc
+  }
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc kernels
+  {
+    // CHECK-NEXT: acc.kernels {
+#pragma acc loop
+    for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT:  acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>]} loc
+  }
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+
+#pragma acc serial
+  {
+    // CHECK-NEXT: acc.serial {
+#pragma acc loop
+    for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT:  acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {seq = [#acc.device_type<none>]} loc
+  }
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc serial
+  {
+    // CHECK-NEXT: acc.serial {
+#pragma acc loop worker
+    for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT:  acc.loop worker {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>]} loc
+  }
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc serial
+  {
+    // CHECK-NEXT: acc.serial {
+#pragma acc loop vector
+    for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT:  acc.loop vector {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>]} loc
+  }
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc serial
+  {
+    // CHECK-NEXT: acc.serial {
+#pragma acc loop gang
+    for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT:  acc.loop gang {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>]} loc
+  }
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
 }

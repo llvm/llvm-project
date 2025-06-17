@@ -13,15 +13,15 @@
 #|
 #|   Value        Repository
 #|   -----------  ---------------------------------------------------------
-#|   comgr        https://github.com/RadeonOpenCompute/ROCm-CompilerSupport
-#|   device-libs  https://github.com/RadeonOpenCompute/ROCm-Device-Libs
-#|   hipcc        https://github.com/ROCm-Developer-Tools/HIPCC
+#|   comgr        https://github.com/ROCm/llvm-project/tree/amd-staging/amd/comgr
+#|   device-libs  https://github.com/ROCm/llvm-project/tree/amd-staging/amd/device-libs
+#|   hipcc        https://github.com/ROCm/llvm-project/tree/amd-staging/amd/hipcc
 #|
 #| BASE-BRANCH identifies the branch upon which the to-be-translated branch is
 #| based (e.g. amd-stg-open).
 #|
 #| The TARGET-REPO-DIR must locate a fresh clone of the ROCm llvm-project
-#| repository (https://github.com/RadeonOpenCompute/llvm-project). If the
+#| repository (https://github.com/ROCm/llvm-project). If the
 #| script is to be invoked repeatedly the same clone may be reused. It is
 #| NOT recommended to use any clone which contains local refs that have not
 #| been saved elsewhere, as they may be clobbered!

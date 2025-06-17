@@ -17,6 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -147,4 +148,26 @@ std::optional<uint32_t> MCAsmInfo::getSpecifierForName(StringRef Name) const {
   if (It != NameToSpecifier.end())
     return It->second;
   return {};
+}
+
+void MCAsmInfo::printExpr(raw_ostream &OS, const MCExpr &Expr) const {
+  if (auto *SE = dyn_cast<MCSpecifierExpr>(&Expr))
+    printSpecifierExpr(OS, *SE);
+  else
+    Expr.print(OS, this);
+}
+
+void MCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                   const MCSpecifierExpr &Expr) const {
+  // TODO: Switch to unreachable after all targets that use MCSpecifierExpr
+  // migrate to MCAsmInfo::printSpecifierExpr.
+  Expr.printImpl(OS, this);
+}
+
+bool MCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
+                                          MCValue &Res,
+                                          const MCAssembler *Asm) const {
+  // TODO: Remove after all targets that use MCSpecifierExpr migrate to
+  // MCAsmInfo::evaluateAsRelocatableImpl.
+  return Expr.evaluateAsRelocatableImpl(Res, Asm);
 }

@@ -1077,13 +1077,12 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
   for (auto *Image : LoadedImages) {
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    if (!Handler.hasProfilingGlobals(*this, *Image))
-      continue;
-
-    GPUProfGlobals profdata;
     auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
     if (!ProfOrErr)
       return ProfOrErr.takeError();
+
+    if (ProfOrErr->empty())
+      continue;
 
     // Dump out profdata
     if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
@@ -1852,14 +1851,14 @@ Error GenericDeviceTy::prepopulatePageTable(void *ptr, int64_t size) {
 }
 
 Error GenericDeviceTy::printInfo() {
-  InfoQueueTy InfoQueue;
+  auto Info = obtainInfoImpl();
 
   // Get the vendor-specific info entries describing the device properties.
-  if (auto Err = obtainInfoImpl(InfoQueue))
+  if (auto Err = Info.takeError())
     return Err;
 
   // Print all info entries.
-  InfoQueue.print();
+  Info->print();
 
   return Plugin::success();
 }

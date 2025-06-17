@@ -19,12 +19,13 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/ExecutionEngine/Orc/Shared/VTuneSharedStructs.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 namespace orc {
 
-class VTuneSupportPlugin : public ObjectLinkingLayer::Plugin {
+class LLVM_ABI VTuneSupportPlugin : public ObjectLinkingLayer::Plugin {
 public:
   VTuneSupportPlugin(ExecutorProcessControl &EPC, ExecutorAddr RegisterImplAddr,
                      ExecutorAddr UnregisterImplAddr, bool EmitDebugInfo)

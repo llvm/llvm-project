@@ -20,8 +20,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 using namespace clang;
 
 bool Parser::MayBeDesignationStart() {
@@ -478,8 +476,6 @@ ExprResult Parser::ParseBraceInitializer() {
 
     if (Tok.is(tok::ellipsis))
       SubElt = Actions.ActOnPackExpansion(SubElt.get(), ConsumeToken());
-
-    SubElt = Actions.CorrectDelayedTyposInExpr(SubElt.get());
 
     // If we couldn't parse the subelement, bail out.
     if (SubElt.isUsable()) {

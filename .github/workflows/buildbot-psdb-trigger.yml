@@ -9,7 +9,8 @@ on:
 jobs:  
   trigger-build:
     if: github.event.pull_request.draft == false
-    runs-on: self-hosted
+    runs-on: 
+      group: compiler-generic-runners
     env:  
       PR_SHA: ${{ github.event.pull_request.head.sha != '' && github.event.pull_request.head.sha || github.sha }}
       PR_NUMBER: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 0 }}

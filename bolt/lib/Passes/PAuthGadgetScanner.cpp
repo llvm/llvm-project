@@ -66,14 +66,12 @@ namespace PAuthGadgetScanner {
 }
 
 [[maybe_unused]] static void traceReg(const BinaryContext &BC, StringRef Label,
-                                      ErrorOr<MCPhysReg> Reg) {
+                                      MCPhysReg Reg) {
   dbgs() << "    " << Label << ": ";
-  if (Reg.getError())
-    dbgs() << "(error)";
-  else if (*Reg == BC.MIB->getNoRegister())
+  if (Reg == BC.MIB->getNoRegister())
     dbgs() << "(none)";
   else
-    dbgs() << BC.MRI->getName(*Reg);
+    dbgs() << BC.MRI->getName(Reg);
   dbgs() << "\n";
 }
 
@@ -365,17 +363,15 @@ protected:
   SmallVector<MCPhysReg> getRegsMadeSafeToDeref(const MCInst &Point,
                                                 const SrcState &Cur) const {
     SmallVector<MCPhysReg> Regs;
-    const MCPhysReg NoReg = BC.MIB->getNoRegister();
 
     // A signed pointer can be authenticated, or
-    ErrorOr<MCPhysReg> AutReg = BC.MIB->getAuthenticatedReg(Point);
-    if (AutReg && *AutReg != NoReg)
+    bool Dummy = false;
+    if (auto AutReg = BC.MIB->getWrittenAuthenticatedReg(Point, Dummy))
       Regs.push_back(*AutReg);
 
     // ... a safe address can be materialized, or
-    MCPhysReg NewAddrReg = BC.MIB->getMaterializedAddressRegForPtrAuth(Point);
-    if (NewAddrReg != NoReg)
-      Regs.push_back(NewAddrReg);
+    if (auto NewAddrReg = BC.MIB->getMaterializedAddressRegForPtrAuth(Point))
+      Regs.push_back(*NewAddrReg);
 
     // ... an address can be updated in a safe manner, producing the result
     // which is as trusted as the input address.
@@ -391,13 +387,20 @@ protected:
   SmallVector<MCPhysReg> getRegsMadeTrusted(const MCInst &Point,
                                             const SrcState &Cur) const {
     SmallVector<MCPhysReg> Regs;
-    const MCPhysReg NoReg = BC.MIB->getNoRegister();
 
     // An authenticated pointer can be checked, or
-    MCPhysReg CheckedReg =
+    std::optional<MCPhysReg> CheckedReg =
         BC.MIB->getAuthCheckedReg(Point, /*MayOverwrite=*/false);
-    if (CheckedReg != NoReg && Cur.SafeToDerefRegs[CheckedReg])
-      Regs.push_back(CheckedReg);
+    if (CheckedReg && Cur.SafeToDerefRegs[*CheckedReg])
+      Regs.push_back(*CheckedReg);
+
+    // ... a pointer can be authenticated by an instruction that always checks
+    // the pointer, or
+    bool IsChecked = false;
+    std::optional<MCPhysReg> AutReg =
+        BC.MIB->getWrittenAuthenticatedReg(Point, IsChecked);
+    if (AutReg && IsChecked)
+      Regs.push_back(*AutReg);
 
     if (CheckerSequenceInfo.contains(&Point)) {
       MCPhysReg CheckedReg;
@@ -413,9 +416,8 @@ protected:
     }
 
     // ... a safe address can be materialized, or
-    MCPhysReg NewAddrReg = BC.MIB->getMaterializedAddressRegForPtrAuth(Point);
-    if (NewAddrReg != NoReg)
-      Regs.push_back(NewAddrReg);
+    if (auto NewAddrReg = BC.MIB->getMaterializedAddressRegForPtrAuth(Point))
+      Regs.push_back(*NewAddrReg);
 
     // ... an address can be updated in a safe manner, producing the result
     // which is as trusted as the input address.
@@ -738,25 +740,27 @@ shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
   if (!BC.MIB->isReturn(Inst))
     return std::nullopt;
 
-  ErrorOr<MCPhysReg> MaybeRetReg = BC.MIB->getRegUsedAsRetDest(Inst);
-  if (MaybeRetReg.getError()) {
+  bool IsAuthenticated = false;
+  std::optional<MCPhysReg> RetReg =
+      BC.MIB->getRegUsedAsRetDest(Inst, IsAuthenticated);
+  if (!RetReg) {
     return make_generic_report(
         Inst, "Warning: pac-ret analysis could not analyze this return "
               "instruction");
   }
-  MCPhysReg RetReg = *MaybeRetReg;
-  LLVM_DEBUG({
-    traceInst(BC, "Found RET inst", Inst);
-    traceReg(BC, "RetReg", RetReg);
-    traceReg(BC, "Authenticated reg", BC.MIB->getAuthenticatedReg(Inst));
-  });
-  if (BC.MIB->isAuthenticationOfReg(Inst, RetReg))
-    return std::nullopt;
-  LLVM_DEBUG({ traceRegMask(BC, "SafeToDerefRegs", S.SafeToDerefRegs); });
-  if (S.SafeToDerefRegs[RetReg])
+  if (IsAuthenticated)
     return std::nullopt;
 
-  return make_gadget_report(RetKind, Inst, RetReg);
+  LLVM_DEBUG({
+    traceInst(BC, "Found RET inst", Inst);
+    traceReg(BC, "RetReg", *RetReg);
+    traceRegMask(BC, "SafeToDerefRegs", S.SafeToDerefRegs);
+  });
+
+  if (S.SafeToDerefRegs[*RetReg])
+    return std::nullopt;
+
+  return make_gadget_report(RetKind, Inst, *RetReg);
 }
 
 static std::optional<PartialReport<MCPhysReg>>
@@ -772,7 +776,7 @@ shouldReportCallGadget(const BinaryContext &BC, const MCInstReference &Inst,
   if (IsAuthenticated)
     return std::nullopt;
 
-  assert(DestReg != BC.MIB->getNoRegister());
+  assert(DestReg != BC.MIB->getNoRegister() && "Valid register expected");
   LLVM_DEBUG({
     traceInst(BC, "Found call inst", Inst);
     traceReg(BC, "Call destination reg", DestReg);
@@ -789,19 +793,19 @@ shouldReportSigningOracle(const BinaryContext &BC, const MCInstReference &Inst,
                           const SrcState &S) {
   static const GadgetKind SigningOracleKind("signing oracle found");
 
-  MCPhysReg SignedReg = BC.MIB->getSignedReg(Inst);
-  if (SignedReg == BC.MIB->getNoRegister())
+  std::optional<MCPhysReg> SignedReg = BC.MIB->getSignedReg(Inst);
+  if (!SignedReg)
     return std::nullopt;
 
   LLVM_DEBUG({
     traceInst(BC, "Found sign inst", Inst);
-    traceReg(BC, "Signed reg", SignedReg);
+    traceReg(BC, "Signed reg", *SignedReg);
     traceRegMask(BC, "TrustedRegs", S.TrustedRegs);
   });
-  if (S.TrustedRegs[SignedReg])
+  if (S.TrustedRegs[*SignedReg])
     return std::nullopt;
 
-  return make_gadget_report(SigningOracleKind, Inst, SignedReg);
+  return make_gadget_report(SigningOracleKind, Inst, *SignedReg);
 }
 
 template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {

@@ -399,11 +399,11 @@ define i1 @PR140534(i32 %a0, i32 %a1, i32 %a2) {
 ; AVX1-LABEL: PR140534:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movl %edi, %eax
-; AVX1-NEXT:    vcvtsi2sd %rax, %xmm0, %xmm0
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
 ; AVX1-NEXT:    movl %esi, %eax
-; AVX1-NEXT:    vcvtsi2sd %rax, %xmm1, %xmm1
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm1
 ; AVX1-NEXT:    movl %edx, %eax
-; AVX1-NEXT:    vcvtsi2sd %rax, %xmm2, %xmm2
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm2
 ; AVX1-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vcmpltsd %xmm2, %xmm1, %xmm2
 ; AVX1-NEXT:    vcmpltsd %xmm0, %xmm1, %xmm0
@@ -414,9 +414,9 @@ define i1 @PR140534(i32 %a0, i32 %a1, i32 %a2) {
 ;
 ; AVX512-LABEL: PR140534:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtusi2sd %edi, %xmm0, %xmm0
-; AVX512-NEXT:    vcvtusi2sd %esi, %xmm1, %xmm1
-; AVX512-NEXT:    vcvtusi2sd %edx, %xmm2, %xmm2
+; AVX512-NEXT:    vcvtusi2sd %edi, %xmm15, %xmm0
+; AVX512-NEXT:    vcvtusi2sd %esi, %xmm15, %xmm1
+; AVX512-NEXT:    vcvtusi2sd %edx, %xmm15, %xmm2
 ; AVX512-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX512-NEXT:    vcmpltsd %xmm2, %xmm1, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm0, %xmm1, %k1

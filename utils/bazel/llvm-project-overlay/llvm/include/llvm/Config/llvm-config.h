@@ -124,11 +124,18 @@
 /* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
 #define LLVM_ENABLE_DIA_SDK 0
 
+/* Define if plugins enabled */
+/* LLVM_ENABLE_PLUGINS defined in Bazel */
+
 /* Define if building LLVM with LLVM_ENABLE_TELEMETRY */
 #define LLVM_ENABLE_TELEMETRY 1
 
 /* Define to 1 to enable expensive checks for debug location coverage checking,
    and to 0 otherwise. */
-#define LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING 1
+#define LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING 0
+
+/* Define to 1 to enable expensive tracking of the origin of debug location
+   coverage bugs, and to 0 otherwise. */
+#define LLVM_ENABLE_DEBUGLOC_ORIGIN_TRACKING 0
 
 #endif

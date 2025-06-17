@@ -12,8 +12,10 @@
 
 // Test CTAD on cases where deduction should fail.
 
+#include <array>
 #include <flat_map>
 #include <functional>
+#include <tuple>
 #include <utility>
 
 struct NotAnAllocator {
@@ -53,5 +55,17 @@ void test() {
     // since we have parens, not braces, this deliberately does not find the initializer_list constructor
     std::flat_multimap m(PC{1, 1L});
     // expected-error-re@-1{{{{no viable constructor or deduction guide for deduction of template arguments of '.*flat_multimap'}}}}
+  }
+  {
+    // cannot deduce from tuple-like objects without proper iterator
+    std::tuple<int, double> t{1, 2.0};
+    std::flat_multimap m(t);
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}flat_multimap'}}
+  }
+  {
+    // cannot deduce from array-like objects without proper iterator
+    std::array<int, 2> arr{1, 2};
+    std::flat_multimap m(arr);
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}flat_multimap'}}
   }
 }

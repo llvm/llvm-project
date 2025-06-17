@@ -16,7 +16,6 @@
 #include "time_utils.h"
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 error_code directory_entry::__do_refresh() noexcept {
   __data_.__reset();
@@ -71,5 +70,4 @@ error_code directory_entry::__do_refresh() noexcept {
   return failure_ec;
 }
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM
