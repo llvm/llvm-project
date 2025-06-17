@@ -29,7 +29,7 @@
 #include <string>
 #include <utility>
 
-extern LLVM_ABI llvm::cl::opt<bool> NoKernelInfoEndLTO;
+LLVM_ABI extern llvm::cl::opt<bool> NoKernelInfoEndLTO;
 
 namespace llvm {
 
