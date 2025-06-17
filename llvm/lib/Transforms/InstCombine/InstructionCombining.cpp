@@ -5552,7 +5552,7 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
     unsigned NumDeadInstInBB;
     NumDeadInstInBB = removeAllNonTerminatorAndEHPadInstructions(&BB);
 
-    MadeIRChange |= NumDeadInstInBB;
+    MadeIRChange |= NumDeadInstInBB != 0;
     NumDeadInst += NumDeadInstInBB;
   }
 
