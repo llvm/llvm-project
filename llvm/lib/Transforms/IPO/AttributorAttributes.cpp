@@ -13127,6 +13127,12 @@ struct AAAddressSpaceCallSiteArgument final : AAAddressSpaceImpl {
 
 /// ------------------------ No Alias Address Space  ---------------------------
 // This attribute assumes flat address space can alias all other address space
+
+// TODO: this is similar to AAAddressSpace, most of the code should be merged.
+// But merging it created failing cased on gateway test that cannot be
+// reproduced locally. So should open a seperated PR to hande the merge of
+// AANoAliasAddrSpace and AAAddressSpace attribute
+
 namespace {
 struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
   AANoAliasAddrSpaceImpl(const IRPosition &IRP, Attributor &A)
