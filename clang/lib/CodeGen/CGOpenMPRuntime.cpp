@@ -9994,6 +9994,17 @@ static void emitTargetCallKernelLaunch(
         ++RedVarCount;
       }
     }
+    // Process debug info.
+    if (CGF.CGM.getCodeGenOpts().getDebugInfo() !=
+        llvm::codegenoptions::NoDebugInfo) {
+      auto FillInfoMap = [&](MappableExprsHandler::MappingExprInfo &MapExpr) {
+        return emitMappingInformation(CGF, OMPBuilder, MapExpr);
+      };
+
+      CombinedInfo.Names.resize(CombinedInfo.Exprs.size());
+      llvm::transform(CombinedInfo.Exprs, CombinedInfo.Names.begin(),
+                      FillInfoMap);
+    }
   }
 
   CGOpenMPRuntime::TargetDataInfo Info;
