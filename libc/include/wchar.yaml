@@ -1,6 +1,8 @@
 header: wchar.h
 header_template: wchar.h.def
-macros: []
+macros:
+  - macro_name: NULL
+    macro_header: null-macro.h
 types:
   - type_name: size_t
   - type_name: wint_t
@@ -107,24 +109,32 @@ functions:
       - stdc
     return_type: wchar_t *
     arguments: 
-      - type: __restrict wchar_t *
-      - type: const __restrict wchar_t *
+      - type: wchar_t *__restrict 
+      - type: const wchar_t *__restrict
+      - type: size_t
+  - name: wmemmove
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: wchar_t *
+      - type: const wchar_t *
       - type: size_t
   - name: wcsncpy
     standards:
       - stdc
     return_type: wchar_t *
     arguments:
-      - type: __restrict wchar_t *
-      - type: const __restrict wchar_t *
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
       - type: size_t
   - name: wcscat
     standards:
       - stdc
     return_type: wchar_t *
     arguments: 
-      - type: __restrict wchar_t *
-      - type: const __restrict wchar_t *
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
   - name: wcsstr
     standards:
       - stdc
@@ -137,13 +147,13 @@ functions:
       - stdc
     return_type: wchar_t *
     arguments:
-      - type: __restrict wchar_t *
-      - type: const __restrict wchar_t *
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
       - type: size_t
   - name: wcscpy
     standards:
       - stdc
     return_type: wchar_t *
     arguments:
-      - type: __restrict wchar_t *
-      - type: const __restrict wchar_t *
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict

@@ -115,8 +115,8 @@ void for_range3() {
 // CIR:    %[[C_ADDR:.*]] = cir.alloca !rec_C3{{.*}} ["c"]
 // CIR:    cir.scope {
 // CIR:      %[[RANGE_ADDR:.*]] = cir.alloca !cir.ptr<!rec_C3>{{.*}} ["__range1", init, const]
-// CIR:      %[[BEGIN_ADDR:.*]] = cir.alloca !rec_Iterator, !cir.ptr<!rec_Iterator>{{.*}} ["__begin1"]
-// CIR:      %[[END_ADDR:.*]] = cir.alloca !rec_Iterator, !cir.ptr<!rec_Iterator>{{.*}} ["__end1"]
+// CIR:      %[[BEGIN_ADDR:.*]] = cir.alloca !rec_Iterator, !cir.ptr<!rec_Iterator>{{.*}} ["__begin1", init]
+// CIR:      %[[END_ADDR:.*]] = cir.alloca !rec_Iterator, !cir.ptr<!rec_Iterator>{{.*}} ["__end1", init]
 // CIR:      %[[E_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Element>{{.*}} ["e", init, const]
 // CIR:      cir.store{{.*}} %[[C_ADDR]], %[[RANGE_ADDR]]
 // CIR:      cir.for : cond {

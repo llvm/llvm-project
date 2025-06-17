@@ -522,67 +522,69 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     // Uses VFP for Thumb libfuncs if available.
     if (Subtarget->isThumb() && Subtarget->hasVFP2Base() &&
         Subtarget->hasARMOps() && !Subtarget->useSoftFloat()) {
+      // clang-format off
       static const struct {
         const RTLIB::Libcall Op;
         const char * const Name;
-        const ISD::CondCode Cond;
+        const CmpInst::Predicate Cond;
       } LibraryCalls[] = {
         // Single-precision floating-point arithmetic.
-        { RTLIB::ADD_F32, "__addsf3vfp", ISD::SETCC_INVALID },
-        { RTLIB::SUB_F32, "__subsf3vfp", ISD::SETCC_INVALID },
-        { RTLIB::MUL_F32, "__mulsf3vfp", ISD::SETCC_INVALID },
-        { RTLIB::DIV_F32, "__divsf3vfp", ISD::SETCC_INVALID },
+        { RTLIB::ADD_F32, "__addsf3vfp", CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::SUB_F32, "__subsf3vfp", CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::MUL_F32, "__mulsf3vfp", CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::DIV_F32, "__divsf3vfp", CmpInst::BAD_ICMP_PREDICATE },
 
         // Double-precision floating-point arithmetic.
-        { RTLIB::ADD_F64, "__adddf3vfp", ISD::SETCC_INVALID },
-        { RTLIB::SUB_F64, "__subdf3vfp", ISD::SETCC_INVALID },
-        { RTLIB::MUL_F64, "__muldf3vfp", ISD::SETCC_INVALID },
-        { RTLIB::DIV_F64, "__divdf3vfp", ISD::SETCC_INVALID },
+        { RTLIB::ADD_F64, "__adddf3vfp", CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::SUB_F64, "__subdf3vfp", CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::MUL_F64, "__muldf3vfp", CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::DIV_F64, "__divdf3vfp", CmpInst::BAD_ICMP_PREDICATE },
 
         // Single-precision comparisons.
-        { RTLIB::OEQ_F32, "__eqsf2vfp",    ISD::SETNE },
-        { RTLIB::UNE_F32, "__nesf2vfp",    ISD::SETNE },
-        { RTLIB::OLT_F32, "__ltsf2vfp",    ISD::SETNE },
-        { RTLIB::OLE_F32, "__lesf2vfp",    ISD::SETNE },
-        { RTLIB::OGE_F32, "__gesf2vfp",    ISD::SETNE },
-        { RTLIB::OGT_F32, "__gtsf2vfp",    ISD::SETNE },
-        { RTLIB::UO_F32,  "__unordsf2vfp", ISD::SETNE },
+        { RTLIB::OEQ_F32, "__eqsf2vfp",    CmpInst::ICMP_NE },
+        { RTLIB::UNE_F32, "__nesf2vfp",    CmpInst::ICMP_NE },
+        { RTLIB::OLT_F32, "__ltsf2vfp",    CmpInst::ICMP_NE },
+        { RTLIB::OLE_F32, "__lesf2vfp",    CmpInst::ICMP_NE },
+        { RTLIB::OGE_F32, "__gesf2vfp",    CmpInst::ICMP_NE },
+        { RTLIB::OGT_F32, "__gtsf2vfp",    CmpInst::ICMP_NE },
+        { RTLIB::UO_F32,  "__unordsf2vfp", CmpInst::ICMP_NE },
 
         // Double-precision comparisons.
-        { RTLIB::OEQ_F64, "__eqdf2vfp",    ISD::SETNE },
-        { RTLIB::UNE_F64, "__nedf2vfp",    ISD::SETNE },
-        { RTLIB::OLT_F64, "__ltdf2vfp",    ISD::SETNE },
-        { RTLIB::OLE_F64, "__ledf2vfp",    ISD::SETNE },
-        { RTLIB::OGE_F64, "__gedf2vfp",    ISD::SETNE },
-        { RTLIB::OGT_F64, "__gtdf2vfp",    ISD::SETNE },
-        { RTLIB::UO_F64,  "__unorddf2vfp", ISD::SETNE },
+        { RTLIB::OEQ_F64, "__eqdf2vfp",    CmpInst::ICMP_NE },
+        { RTLIB::UNE_F64, "__nedf2vfp",    CmpInst::ICMP_NE },
+        { RTLIB::OLT_F64, "__ltdf2vfp",    CmpInst::ICMP_NE },
+        { RTLIB::OLE_F64, "__ledf2vfp",    CmpInst::ICMP_NE },
+        { RTLIB::OGE_F64, "__gedf2vfp",    CmpInst::ICMP_NE },
+        { RTLIB::OGT_F64, "__gtdf2vfp",    CmpInst::ICMP_NE },
+        { RTLIB::UO_F64,  "__unorddf2vfp", CmpInst::ICMP_NE },
 
         // Floating-point to integer conversions.
         // i64 conversions are done via library routines even when generating VFP
         // instructions, so use the same ones.
-        { RTLIB::FPTOSINT_F64_I32, "__fixdfsivfp",    ISD::SETCC_INVALID },
-        { RTLIB::FPTOUINT_F64_I32, "__fixunsdfsivfp", ISD::SETCC_INVALID },
-        { RTLIB::FPTOSINT_F32_I32, "__fixsfsivfp",    ISD::SETCC_INVALID },
-        { RTLIB::FPTOUINT_F32_I32, "__fixunssfsivfp", ISD::SETCC_INVALID },
+        { RTLIB::FPTOSINT_F64_I32, "__fixdfsivfp",    CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::FPTOUINT_F64_I32, "__fixunsdfsivfp", CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::FPTOSINT_F32_I32, "__fixsfsivfp",    CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::FPTOUINT_F32_I32, "__fixunssfsivfp", CmpInst::BAD_ICMP_PREDICATE },
 
         // Conversions between floating types.
-        { RTLIB::FPROUND_F64_F32, "__truncdfsf2vfp",  ISD::SETCC_INVALID },
-        { RTLIB::FPEXT_F32_F64,   "__extendsfdf2vfp", ISD::SETCC_INVALID },
+        { RTLIB::FPROUND_F64_F32, "__truncdfsf2vfp",  CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::FPEXT_F32_F64,   "__extendsfdf2vfp", CmpInst::BAD_ICMP_PREDICATE },
 
         // Integer to floating-point conversions.
         // i64 conversions are done via library routines even when generating VFP
         // instructions, so use the same ones.
         // FIXME: There appears to be some naming inconsistency in ARM libgcc:
         // e.g., __floatunsidf vs. __floatunssidfvfp.
-        { RTLIB::SINTTOFP_I32_F64, "__floatsidfvfp",    ISD::SETCC_INVALID },
-        { RTLIB::UINTTOFP_I32_F64, "__floatunssidfvfp", ISD::SETCC_INVALID },
-        { RTLIB::SINTTOFP_I32_F32, "__floatsisfvfp",    ISD::SETCC_INVALID },
-        { RTLIB::UINTTOFP_I32_F32, "__floatunssisfvfp", ISD::SETCC_INVALID },
+        { RTLIB::SINTTOFP_I32_F64, "__floatsidfvfp",    CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::UINTTOFP_I32_F64, "__floatunssidfvfp", CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::SINTTOFP_I32_F32, "__floatsisfvfp",    CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::UINTTOFP_I32_F32, "__floatunssisfvfp", CmpInst::BAD_ICMP_PREDICATE },
       };
+      // clang-format on
 
       for (const auto &LC : LibraryCalls) {
         setLibcallName(LC.Op, LC.Name);
-        if (LC.Cond != ISD::SETCC_INVALID)
+        if (LC.Cond != CmpInst::BAD_ICMP_PREDICATE)
           setCmpLibcallCC(LC.Op, LC.Cond);
       }
     }
@@ -592,97 +594,99 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   if (Subtarget->isAAPCS_ABI() &&
       (Subtarget->isTargetAEABI() || Subtarget->isTargetGNUAEABI() ||
        Subtarget->isTargetMuslAEABI() || Subtarget->isTargetAndroid())) {
+    // clang-format off
     static const struct {
       const RTLIB::Libcall Op;
       const char * const Name;
       const CallingConv::ID CC;
-      const ISD::CondCode Cond;
+      const CmpInst::Predicate Cond;
     } LibraryCalls[] = {
       // Double-precision floating-point arithmetic helper functions
       // RTABI chapter 4.1.2, Table 2
-      { RTLIB::ADD_F64, "__aeabi_dadd", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::DIV_F64, "__aeabi_ddiv", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::MUL_F64, "__aeabi_dmul", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::SUB_F64, "__aeabi_dsub", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+      { RTLIB::ADD_F64, "__aeabi_dadd", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::DIV_F64, "__aeabi_ddiv", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::MUL_F64, "__aeabi_dmul", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SUB_F64, "__aeabi_dsub", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
 
       // Double-precision floating-point comparison helper functions
       // RTABI chapter 4.1.2, Table 3
-      { RTLIB::OEQ_F64, "__aeabi_dcmpeq", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::UNE_F64, "__aeabi_dcmpeq", CallingConv::ARM_AAPCS, ISD::SETEQ },
-      { RTLIB::OLT_F64, "__aeabi_dcmplt", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::OLE_F64, "__aeabi_dcmple", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::OGE_F64, "__aeabi_dcmpge", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::OGT_F64, "__aeabi_dcmpgt", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::UO_F64,  "__aeabi_dcmpun", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+      { RTLIB::OEQ_F64, "__aeabi_dcmpeq", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
+      { RTLIB::UNE_F64, "__aeabi_dcmpeq", CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ },
+      { RTLIB::OLT_F64, "__aeabi_dcmplt", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
+      { RTLIB::OLE_F64, "__aeabi_dcmple", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
+      { RTLIB::OGE_F64, "__aeabi_dcmpge", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
+      { RTLIB::OGT_F64, "__aeabi_dcmpgt", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
+      { RTLIB::UO_F64,  "__aeabi_dcmpun", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
 
       // Single-precision floating-point arithmetic helper functions
       // RTABI chapter 4.1.2, Table 4
-      { RTLIB::ADD_F32, "__aeabi_fadd", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::DIV_F32, "__aeabi_fdiv", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::MUL_F32, "__aeabi_fmul", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::SUB_F32, "__aeabi_fsub", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+      { RTLIB::ADD_F32, "__aeabi_fadd", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::DIV_F32, "__aeabi_fdiv", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::MUL_F32, "__aeabi_fmul", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SUB_F32, "__aeabi_fsub", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
 
       // Single-precision floating-point comparison helper functions
       // RTABI chapter 4.1.2, Table 5
-      { RTLIB::OEQ_F32, "__aeabi_fcmpeq", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::UNE_F32, "__aeabi_fcmpeq", CallingConv::ARM_AAPCS, ISD::SETEQ },
-      { RTLIB::OLT_F32, "__aeabi_fcmplt", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::OLE_F32, "__aeabi_fcmple", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::OGE_F32, "__aeabi_fcmpge", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::OGT_F32, "__aeabi_fcmpgt", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::UO_F32,  "__aeabi_fcmpun", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+      { RTLIB::OEQ_F32, "__aeabi_fcmpeq", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
+      { RTLIB::UNE_F32, "__aeabi_fcmpeq", CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ },
+      { RTLIB::OLT_F32, "__aeabi_fcmplt", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
+      { RTLIB::OLE_F32, "__aeabi_fcmple", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
+      { RTLIB::OGE_F32, "__aeabi_fcmpge", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
+      { RTLIB::OGT_F32, "__aeabi_fcmpgt", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
+      { RTLIB::UO_F32,  "__aeabi_fcmpun", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
 
       // Floating-point to integer conversions.
       // RTABI chapter 4.1.2, Table 6
-      { RTLIB::FPTOSINT_F64_I32, "__aeabi_d2iz",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::FPTOUINT_F64_I32, "__aeabi_d2uiz", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::FPTOSINT_F64_I64, "__aeabi_d2lz",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::FPTOUINT_F64_I64, "__aeabi_d2ulz", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::FPTOSINT_F32_I32, "__aeabi_f2iz",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::FPTOUINT_F32_I32, "__aeabi_f2uiz", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::FPTOSINT_F32_I64, "__aeabi_f2lz",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::FPTOUINT_F32_I64, "__aeabi_f2ulz", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+      { RTLIB::FPTOSINT_F64_I32, "__aeabi_d2iz",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::FPTOUINT_F64_I32, "__aeabi_d2uiz", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::FPTOSINT_F64_I64, "__aeabi_d2lz",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::FPTOUINT_F64_I64, "__aeabi_d2ulz", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::FPTOSINT_F32_I32, "__aeabi_f2iz",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::FPTOUINT_F32_I32, "__aeabi_f2uiz", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::FPTOSINT_F32_I64, "__aeabi_f2lz",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::FPTOUINT_F32_I64, "__aeabi_f2ulz", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
 
       // Conversions between floating types.
       // RTABI chapter 4.1.2, Table 7
-      { RTLIB::FPROUND_F64_F32, "__aeabi_d2f", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::FPROUND_F64_F16, "__aeabi_d2h", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::FPEXT_F32_F64,   "__aeabi_f2d", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+      { RTLIB::FPROUND_F64_F32, "__aeabi_d2f", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::FPROUND_F64_F16, "__aeabi_d2h", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::FPEXT_F32_F64,   "__aeabi_f2d", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
 
       // Integer to floating-point conversions.
       // RTABI chapter 4.1.2, Table 8
-      { RTLIB::SINTTOFP_I32_F64, "__aeabi_i2d",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::UINTTOFP_I32_F64, "__aeabi_ui2d", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::SINTTOFP_I64_F64, "__aeabi_l2d",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::UINTTOFP_I64_F64, "__aeabi_ul2d", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::SINTTOFP_I32_F32, "__aeabi_i2f",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::UINTTOFP_I32_F32, "__aeabi_ui2f", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::SINTTOFP_I64_F32, "__aeabi_l2f",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::UINTTOFP_I64_F32, "__aeabi_ul2f", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+      { RTLIB::SINTTOFP_I32_F64, "__aeabi_i2d",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::UINTTOFP_I32_F64, "__aeabi_ui2d", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SINTTOFP_I64_F64, "__aeabi_l2d",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::UINTTOFP_I64_F64, "__aeabi_ul2d", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SINTTOFP_I32_F32, "__aeabi_i2f",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::UINTTOFP_I32_F32, "__aeabi_ui2f", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SINTTOFP_I64_F32, "__aeabi_l2f",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::UINTTOFP_I64_F32, "__aeabi_ul2f", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
 
       // Long long helper functions
       // RTABI chapter 4.2, Table 9
-      { RTLIB::MUL_I64, "__aeabi_lmul", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::SHL_I64, "__aeabi_llsl", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::SRL_I64, "__aeabi_llsr", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::SRA_I64, "__aeabi_lasr", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+      { RTLIB::MUL_I64, "__aeabi_lmul", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SHL_I64, "__aeabi_llsl", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SRL_I64, "__aeabi_llsr", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SRA_I64, "__aeabi_lasr", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
 
       // Integer division functions
       // RTABI chapter 4.3.1
-      { RTLIB::SDIV_I8,  "__aeabi_idiv",     CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::SDIV_I16, "__aeabi_idiv",     CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::SDIV_I32, "__aeabi_idiv",     CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::SDIV_I64, "__aeabi_ldivmod",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::UDIV_I8,  "__aeabi_uidiv",    CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::UDIV_I16, "__aeabi_uidiv",    CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::UDIV_I32, "__aeabi_uidiv",    CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-      { RTLIB::UDIV_I64, "__aeabi_uldivmod", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+      { RTLIB::SDIV_I8,  "__aeabi_idiv",     CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SDIV_I16, "__aeabi_idiv",     CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SDIV_I32, "__aeabi_idiv",     CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SDIV_I64, "__aeabi_ldivmod",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::UDIV_I8,  "__aeabi_uidiv",    CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::UDIV_I16, "__aeabi_uidiv",    CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::UDIV_I32, "__aeabi_uidiv",    CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::UDIV_I64, "__aeabi_uldivmod", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
     };
+    // clang-format on
 
     for (const auto &LC : LibraryCalls) {
       setLibcallName(LC.Op, LC.Name);
       setLibcallCallingConv(LC.Op, LC.CC);
-      if (LC.Cond != ISD::SETCC_INVALID)
+      if (LC.Cond != CmpInst::BAD_ICMP_PREDICATE)
         setCmpLibcallCC(LC.Op, LC.Cond);
     }
 
@@ -706,36 +710,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
         setLibcallCallingConv(LC.Op, LC.CC);
       }
     }
-  }
-
-  if (Subtarget->isTargetWindows()) {
-    static const struct {
-      const RTLIB::Libcall Op;
-      const char * const Name;
-      const CallingConv::ID CC;
-    } LibraryCalls[] = {
-      { RTLIB::FPTOSINT_F32_I64, "__stoi64", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::FPTOSINT_F64_I64, "__dtoi64", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::FPTOUINT_F32_I64, "__stou64", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::FPTOUINT_F64_I64, "__dtou64", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::SINTTOFP_I64_F32, "__i64tos", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::SINTTOFP_I64_F64, "__i64tod", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::UINTTOFP_I64_F32, "__u64tos", CallingConv::ARM_AAPCS_VFP },
-      { RTLIB::UINTTOFP_I64_F64, "__u64tod", CallingConv::ARM_AAPCS_VFP },
-    };
-
-    for (const auto &LC : LibraryCalls) {
-      setLibcallName(LC.Op, LC.Name);
-      setLibcallCallingConv(LC.Op, LC.CC);
-    }
-  }
-
-  // Use divmod compiler-rt calls for iOS 5.0 and later.
-  if (Subtarget->isTargetMachO() &&
-      !(Subtarget->isTargetIOS() &&
-        Subtarget->getTargetTriple().isOSVersionLT(5, 0))) {
-    setLibcallName(RTLIB::SDIVREM_I32, "__divmodsi4");
-    setLibcallName(RTLIB::UDIVREM_I32, "__udivmodsi4");
   }
 
   // The half <-> float conversion functions are always soft-float on
@@ -2718,8 +2692,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         unsigned RegBegin, RegEnd;
         CCInfo.getInRegsParamInfo(CurByValIdx, RegBegin, RegEnd);
 
-        EVT PtrVT =
-            DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+        EVT PtrVT = getPointerTy(DAG.getDataLayout());
         unsigned int i, j;
         for (i = 0, j = RegBegin; j < RegEnd; i++, j++) {
           SDValue Const = DAG.getConstant(4*i, dl, MVT::i32);
@@ -5054,7 +5027,7 @@ ARMTargetLowering::getARMXALUOOp(SDValue Op, SelectionDAG &DAG,
 SDValue
 ARMTargetLowering::LowerSignedALUO(SDValue Op, SelectionDAG &DAG) const {
   // Let legalize expand this if it isn't a legal type yet.
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(Op.getValueType()))
+  if (!isTypeLegal(Op.getValueType()))
     return SDValue();
 
   SDValue Value, OverflowCmp;
@@ -5100,7 +5073,7 @@ static SDValue ConvertCarryFlagToBooleanCarry(SDValue Flags, EVT VT,
 SDValue ARMTargetLowering::LowerUnsignedALUO(SDValue Op,
                                              SelectionDAG &DAG) const {
   // Let legalize expand this if it isn't a legal type yet.
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(Op.getValueType()))
+  if (!isTypeLegal(Op.getValueType()))
     return SDValue();
 
   SDValue LHS = Op.getOperand(0);
@@ -5198,7 +5171,7 @@ SDValue ARMTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (Cond.getResNo() == 1 &&
       (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
        Opc == ISD::USUBO)) {
-    if (!DAG.getTargetLoweringInfo().isTypeLegal(Cond->getValueType(0)))
+    if (!isTypeLegal(Cond->getValueType(0)))
       return SDValue();
 
     SDValue Value, OverflowCmp;
@@ -5560,8 +5533,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (isUnsupportedFloatingType(LHS.getValueType())) {
-    DAG.getTargetLoweringInfo().softenSetCCOperands(
-        DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS);
+    softenSetCCOperands(DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS);
 
     // If softenSetCCOperands only returned one value, we should compare it to
     // zero.
@@ -5766,7 +5738,7 @@ SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
        Opc == ISD::USUBO || OptimizeMul)) {
     // Only lower legal XALUO ops.
-    if (!DAG.getTargetLoweringInfo().isTypeLegal(Cond->getValueType(0)))
+    if (!isTypeLegal(Cond->getValueType(0)))
       return SDValue();
 
     // The actual operation with overflow check.
@@ -5796,8 +5768,7 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
 
   if (isUnsupportedFloatingType(LHS.getValueType())) {
-    DAG.getTargetLoweringInfo().softenSetCCOperands(
-        DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS);
+    softenSetCCOperands(DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS);
 
     // If softenSetCCOperands only returned one value, we should compare it to
     // zero.
@@ -5817,7 +5788,7 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
        Opc == ISD::USUBO || OptimizeMul) &&
       (CC == ISD::SETEQ || CC == ISD::SETNE)) {
     // Only lower legal XALUO ops.
-    if (!DAG.getTargetLoweringInfo().isTypeLegal(LHS->getValueType(0)))
+    if (!isTypeLegal(LHS->getValueType(0)))
       return SDValue();
 
     // The actual operation with overflow check.
@@ -6285,7 +6256,6 @@ static SDValue CombineVMOVDRRCandidateWithVecOp(const SDNode *BC,
 /// vectors), since the legalizer won't know what to do with that.
 SDValue ARMTargetLowering::ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
                                          const ARMSubtarget *Subtarget) const {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc dl(N);
   SDValue Op = N->getOperand(0);
 
@@ -6312,7 +6282,7 @@ SDValue ARMTargetLowering::ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Turn i64->f64 into VMOVDRR.
-  if (SrcVT == MVT::i64 && TLI.isTypeLegal(DstVT)) {
+  if (SrcVT == MVT::i64 && isTypeLegal(DstVT)) {
     // Do not force values to GPRs (this is what VMOVDRR does for the inputs)
     // if we can combine the bitcast with its source.
     if (SDValue Val = CombineVMOVDRRCandidateWithVecOp(N, DAG))
@@ -6324,7 +6294,7 @@ SDValue ARMTargetLowering::ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
   }
 
   // Turn f64->i64 into VMOVRRD.
-  if (DstVT == MVT::i64 && TLI.isTypeLegal(SrcVT)) {
+  if (DstVT == MVT::i64 && isTypeLegal(SrcVT)) {
     SDValue Cvt;
     if (DAG.getDataLayout().isBigEndian() && SrcVT.isVector() &&
         SrcVT.getVectorNumElements() > 1)
@@ -9961,7 +9931,6 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Pair of floats / doubles used to pass the result.
   Type *RetTy = StructType::get(ArgTy, ArgTy);
@@ -9975,7 +9944,7 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
     const uint64_t ByteSize = DL.getTypeAllocSize(RetTy);
     const Align StackAlign = DL.getPrefTypeAlign(RetTy);
     int FrameIdx = MFI.CreateStackObject(ByteSize, StackAlign, false);
-    SRet = DAG.getFrameIndex(FrameIdx, TLI.getPointerTy(DL));
+    SRet = DAG.getFrameIndex(FrameIdx, getPointerTy(DL));
 
     ArgListEntry Entry;
     Entry.Node = SRet;
@@ -10033,15 +10002,14 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   SDLoc dl(Op);
 
   const auto &DL = DAG.getDataLayout();
-  const auto &TLI = DAG.getTargetLoweringInfo();
-
-  const char *Name = nullptr;
+  RTLIB::Libcall LC;
   if (Signed)
-    Name = (VT == MVT::i32) ? "__rt_sdiv" : "__rt_sdiv64";
+    LC = VT == MVT::i32 ? RTLIB::SDIVREM_I32 : RTLIB::SDIVREM_I64;
   else
-    Name = (VT == MVT::i32) ? "__rt_udiv" : "__rt_udiv64";
+    LC = VT == MVT::i32 ? RTLIB::UDIVREM_I32 : RTLIB::UDIVREM_I64;
 
-  SDValue ES = DAG.getExternalSymbol(Name, TLI.getPointerTy(DL));
+  const char *Name = getLibcallName(LC);
+  SDValue ES = DAG.getExternalSymbol(Name, getPointerTy(DL));
 
   ARMTargetLowering::ArgListTy Args;
 
@@ -10131,7 +10099,6 @@ void ARMTargetLowering::ExpandDIV_Windows(
     SDValue Op, SelectionDAG &DAG, bool Signed,
     SmallVectorImpl<SDValue> &Results) const {
   const auto &DL = DAG.getDataLayout();
-  const auto &TLI = DAG.getTargetLoweringInfo();
 
   assert(Op.getValueType() == MVT::i64 &&
          "unexpected type for custom lowering DIV");
@@ -10143,7 +10110,7 @@ void ARMTargetLowering::ExpandDIV_Windows(
 
   SDValue Lower = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Result);
   SDValue Upper = DAG.getNode(ISD::SRL, dl, MVT::i64, Result,
-                              DAG.getConstant(32, dl, TLI.getPointerTy(DL)));
+                              DAG.getConstant(32, dl, getPointerTy(DL)));
   Upper = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Upper);
 
   Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lower, Upper));
@@ -10555,8 +10522,8 @@ SDValue ARMTargetLowering::LowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
   // If we don't have instructions of this float type then soften to a libcall
   // and use SETCC instead.
   if (isUnsupportedFloatingType(LHS.getValueType())) {
-    DAG.getTargetLoweringInfo().softenSetCCOperands(
-      DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS, Chain, IsSignaling);
+    softenSetCCOperands(DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS,
+                        Chain, IsSignaling);
     if (!RHS.getNode()) {
       RHS = DAG.getConstant(0, dl, LHS.getValueType());
       CC = ISD::SETNE;

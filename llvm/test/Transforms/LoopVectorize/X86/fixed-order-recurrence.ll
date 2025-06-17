@@ -217,14 +217,12 @@ define i64 @test_pr62954_scalar_epilogue_required(ptr %A, ptr noalias %B, ptr %C
 ; CHECK-NEXT:    [[REC_START:%.*]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <2 x i64> poison, i64 [[REC_START]], i32 1
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i64> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP1]] = sub nsw <2 x i64> zeroinitializer, [[STEP_ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <2 x i64> zeroinitializer, [[STEP_ADD]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -299,13 +297,12 @@ define void @for_iv_trunc_optimized(ptr %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 1>, [[VECTOR_PH]] ], [ [[STEP_ADD:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 1, i32 2, i32 3, i32 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[VEC_IND]], <4 x i32> [[STEP_ADD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[TMP0]], splat (i32 3)
-; CHECK-NEXT:    [[TMP3]] = or <4 x i32> [[TMP1]], splat (i32 3)
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP1]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP5]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr [[DST:%.*]], align 4
@@ -364,11 +361,9 @@ define void @test_for_tried_to_force_scalar(ptr noalias %A, ptr noalias %B, ptr 
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i64 8, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP4]]
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x ptr> poison, ptr [[A:%.*]], i32 3
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x ptr> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[TMP28:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 2
@@ -377,7 +372,7 @@ define void @test_for_tried_to_force_scalar(ptr noalias %A, ptr noalias %B, ptr 
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 5
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 7
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr nusw [3 x float], ptr [[A:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP8]]
@@ -392,7 +387,7 @@ define void @test_for_tried_to_force_scalar(ptr noalias %A, ptr noalias %B, ptr 
 ; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP21]], i32 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x ptr> [[TMP25]], ptr [[TMP22]], i32 1
 ; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x ptr> [[TMP26]], ptr [[TMP23]], i32 2
-; CHECK-NEXT:    [[TMP28]] = insertelement <4 x ptr> [[TMP27]], ptr [[TMP24]], i32 3
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x ptr> [[TMP27]], ptr [[TMP24]], i32 3
 ; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <4 x ptr> [[TMP20]], <4 x ptr> [[TMP28]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x float>, ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x float> [[WIDE_VEC]], <12 x float> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
