@@ -30,7 +30,7 @@ class ScalarEvolution;
 class User;
 class Value;
 
-class HexagonTTIImpl : public BasicTTIImplBase<HexagonTTIImpl> {
+class HexagonTTIImpl final : public BasicTTIImplBase<HexagonTTIImpl> {
   using BaseT = BasicTTIImplBase<HexagonTTIImpl>;
   using TTI = TargetTransformInfo;
 
@@ -155,8 +155,8 @@ public:
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override;
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override;
 
   InstructionCost
   getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,

@@ -230,6 +230,9 @@ set(GENERIC_TF_SOURCES
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (these should normally be provided by a shared library)"
   On)
+option(COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS
+  "Skip the standard C library provided arm aeabi builtins from compiler-rt)"
+  Off)
 
 if(NOT FUCHSIA AND NOT COMPILER_RT_BAREMETAL_BUILD AND NOT COMPILER_RT_GPU_BUILD)
   set(GENERIC_SOURCES
@@ -450,7 +453,7 @@ set(thumb1_base_SOURCES
   ${GENERIC_SOURCES}
 )
 
-set(arm_EABI_SOURCES
+set(arm_EABI_RT_SOURCES
   arm/aeabi_cdcmp.S
   arm/aeabi_cdcmpeq_check_nan.c
   arm/aeabi_cfcmp.S
@@ -462,13 +465,28 @@ set(arm_EABI_SOURCES
   arm/aeabi_frsub.c
   arm/aeabi_idivmod.S
   arm/aeabi_ldivmod.S
+  arm/aeabi_uidivmod.S
+  arm/aeabi_uldivmod.S
+)
+
+set(arm_EABI_CLIB_SOURCES
   arm/aeabi_memcmp.S
   arm/aeabi_memcpy.S
   arm/aeabi_memmove.S
   arm/aeabi_memset.S
-  arm/aeabi_uidivmod.S
-  arm/aeabi_uldivmod.S
 )
+
+if(NOT COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS)
+  set(arm_EABI_SOURCES
+    ${arm_EABI_RT_SOURCES}
+    ${arm_EABI_CLIB_SOURCES}
+  )
+else()
+  message(STATUS "COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS is ON, so skipping __aeabi_memcmp, __aeabi_memcpy, __aeabi_memmove and __aeabi_memset Sources")
+  set(arm_EABI_SOURCES
+    ${arm_EABI_RT_SOURCES}
+  )
+endif()
 
 set(arm_Thumb1_JT_SOURCES
   arm/switch16.S
@@ -582,9 +600,18 @@ if (COMPILER_RT_HAS_AARCH64_SME)
     set_source_files_properties(aarch64/arm_apple_sme_abi.s PROPERTIES COMPILE_FLAGS -march=armv8a+sme)
     message(STATUS "AArch64 Apple SME ABI routines enabled")
   elseif (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR)
-    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-libc-mem-routines.S aarch64/sme-abi-assert.c aarch64/sme-libc-routines.c)
+    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-assert.c)
+    if(COMPILER_RT_HAS_ARM_UNALIGNED AND COMPILER_RT_HAS_ARM_FP)
+      list(APPEND aarch64_SOURCES aarch64/sme-libc-opt-memset-memchr.S aarch64/sme-libc-opt-memcpy-memmove.S)
+    elseif(COMPILER_RT_HAS_ARM_UNALIGNED)
+      list(APPEND aarch64_SOURCES aarch64/sme-libc-memset-memchr.c aarch64/sme-libc-opt-memcpy-memmove.S)
+      message(WARNING "AArch64 SME ABI assembly-optimized memset/memchr disabled: target does not have hardware floating-point support.")
+    else()
+      list(APPEND aarch64_SOURCES aarch64/sme-libc-memset-memchr.c aarch64/sme-libc-memcpy-memmove.c)
+      message(WARNING "AArch64 SME ABI assembly-optimized routines disabled: target does not support unaligned accesses.")
+    endif()
     message(STATUS "AArch64 SME ABI routines enabled")
-    set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
+    set_source_files_properties(aarch64/sme-libc-memset-memchr.c aarch64/sme-libc-memcpy-memmove.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
   else()
     if(COMPILER_RT_DISABLE_AARCH64_FMV)
       message(WARNING "AArch64 SME ABI routines require function multiversioning support.")
@@ -650,6 +677,7 @@ set(armv7k_SOURCES ${arm_SOURCES})
 set(arm64_SOURCES ${aarch64_SOURCES})
 set(arm64e_SOURCES ${aarch64_SOURCES})
 set(arm64_32_SOURCES ${aarch64_SOURCES})
+set(arm64ec_SOURCES ${aarch64_SOURCES})
 
 # macho_embedded archs
 set(armv6m_SOURCES ${thumb1_SOURCES})

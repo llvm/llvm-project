@@ -49,7 +49,6 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/Stack.h"
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTRecordReader.h"
@@ -57,12 +56,10 @@
 #include "clang/Serialization/ModuleFile.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamReader.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <algorithm>
@@ -3201,8 +3198,8 @@ Attr *ASTRecordReader::readAttr() {
                     SpellingIndex == AlignedAttr::Keyword_alignas);
   bool IsRegularKeywordAttribute = Record.readBool();
 
-  AttributeCommonInfo Info(AttrName, ScopeName, AttrRange, ScopeLoc,
-                           AttributeCommonInfo::Kind(ParsedKind),
+  AttributeCommonInfo Info(AttrName, AttributeScopeInfo(ScopeName, ScopeLoc),
+                           AttrRange, AttributeCommonInfo::Kind(ParsedKind),
                            {AttributeCommonInfo::Syntax(Syntax), SpellingIndex,
                             IsAlignas, IsRegularKeywordAttribute});
 
@@ -4574,11 +4571,12 @@ namespace {
                             Reader.getOwningModuleFile(Cat)) {
           StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
           StructuralEquivalenceContext Ctx(
-              Cat->getASTContext(), Existing->getASTContext(),
-              NonEquivalentDecls, StructuralEquivalenceKind::Default,
-              /*StrictTypeSpelling =*/false,
-              /*Complain =*/false,
-              /*ErrorOnTagTypeMismatch =*/true);
+              Reader.getContext().getLangOpts(), Cat->getASTContext(),
+              Existing->getASTContext(), NonEquivalentDecls,
+              StructuralEquivalenceKind::Default,
+              /*StrictTypeSpelling=*/false,
+              /*Complain=*/false,
+              /*ErrorOnTagTypeMismatch=*/true);
           if (!Ctx.IsEquivalent(Cat, Existing)) {
             // Warn only if the categories with the same name are different.
             Reader.Diag(Cat->getLocation(), diag::warn_dup_category_def)
@@ -4633,11 +4631,10 @@ namespace {
 
       // Perform a binary search to find the local redeclarations for this
       // declaration (if any).
-      const ObjCCategoriesInfo Compare = { LocalID, 0 };
-      const ObjCCategoriesInfo *Result
-        = std::lower_bound(M.ObjCCategoriesMap,
-                           M.ObjCCategoriesMap + M.LocalNumObjCCategoriesInMap,
-                           Compare);
+      const ObjCCategoriesInfo Compare = {LocalID, 0};
+      const ObjCCategoriesInfo *Result = std::lower_bound(
+          M.ObjCCategoriesMap,
+          M.ObjCCategoriesMap + M.LocalNumObjCCategoriesInMap, Compare);
       if (Result == M.ObjCCategoriesMap + M.LocalNumObjCCategoriesInMap ||
           LocalID != Result->getDefinitionID()) {
         // We didn't find anything. If the class definition is in this module

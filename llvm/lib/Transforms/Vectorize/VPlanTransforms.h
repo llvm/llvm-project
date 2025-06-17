@@ -53,9 +53,7 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
-  static std::unique_ptr<VPlan>
-  buildPlainCFG(Loop *TheLoop, LoopInfo &LI,
-                DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB);
+  static std::unique_ptr<VPlan> buildPlainCFG(Loop *TheLoop, LoopInfo &LI);
 
   /// Prepare the plan for vectorization. It will introduce a dedicated
   /// VPBasicBlock for the vector pre-header as well as a VPBasicBlock as exit
@@ -68,7 +66,9 @@ struct VPlanTransforms {
   static void prepareForVectorization(VPlan &Plan, Type *InductionTy,
                                       PredicatedScalarEvolution &PSE,
                                       bool RequiresScalarEpilogueCheck,
-                                      bool TailFolded, Loop *TheLoop);
+                                      bool TailFolded, Loop *TheLoop,
+                                      DebugLoc IVDL, bool HasUncountableExit,
+                                      VFRange &Range);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
@@ -172,20 +172,31 @@ struct VPlanTransforms {
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
-  /// Update \p Plan to account for the uncountable early exit block in \p
-  /// UncountableExitingBlock by
-  ///  * updating the condition exiting the vector loop to include the early
-  ///    exit conditions
+  /// Update \p Plan to account for the uncountable early exit from \p
+  /// EarlyExitingVPBB to \p EarlyExitVPBB by
+  ///  * updating the condition exiting the loop via the latch to include the
+  ///    early exit condition,
   ///  * splitting the original middle block to branch to the early exit block
-  ///    if taken.
-  static void handleUncountableEarlyExit(VPlan &Plan, Loop *OrigLoop,
-                                         BasicBlock *UncountableExitingBlock,
-                                         VPRecipeBuilder &RecipeBuilder,
+  ///    conditionally - according to the early exit condition.
+  static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
+                                         VPBasicBlock *EarlyExitVPBB,
+                                         VPlan &Plan, VPBasicBlock *HeaderVPBB,
+                                         VPBasicBlock *LatchVPBB,
                                          VFRange &Range);
+
+  /// Replace loop regions with explicit CFG.
+  static void dissolveLoopRegions(VPlan &Plan);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void convertToConcreteRecipes(VPlan &Plan, Type &CanonicalIVTy);
+
+  /// This function converts initial recipes to the abstract recipes and clamps
+  /// \p Range based on cost model for following optimizations and cost
+  /// estimations. The converted abstract recipes will lower to concrete
+  /// recipes before codegen.
+  static void convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
+                                       VFRange &Range);
 
   /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
@@ -198,6 +209,11 @@ struct VPlanTransforms {
   optimizeInductionExitUsers(VPlan &Plan,
                              DenseMap<VPValue *, VPValue *> &EndValues);
 
+  /// Materialize VPInstruction::StepVectors for VPWidenIntOrFpInductionRecipes.
+  /// TODO: Remove once all of VPWidenIntOrFpInductionRecipe is expanded in
+  /// convertToConcreteRecipes.
+  static void materializeStepVectors(VPlan &Plan);
+
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
 
@@ -209,6 +225,19 @@ struct VPlanTransforms {
   /// candidates.
   static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                      unsigned VectorRegWidth);
+
+  /// Predicate and linearize the control-flow in the only loop region of
+  /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
+  /// header, otherwise use all-true for the header mask. Masks for blocks are
+  /// added to a block-to-mask map which is returned in order to be used later
+  /// for wide recipe construction. This argument is temporary and will be
+  /// removed in the future.
+  static DenseMap<VPBasicBlock *, VPValue *>
+  introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
+
+  /// Add branch weight metadata, if the \p Plan's middle block is terminated by
+  /// a BranchOnCond recipe.
+  static void addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF);
 };
 
 } // namespace llvm

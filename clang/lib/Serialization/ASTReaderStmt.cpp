@@ -41,23 +41,18 @@
 #include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/Lambda.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/OpenMPKinds.h"
-#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Token.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTRecordReader.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitstreamReader.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
@@ -1036,6 +1031,8 @@ void ASTStmtReader::VisitCallExpr(CallExpr *E) {
   E->setADLCallKind(
       static_cast<CallExpr::ADLCallKind>(CurrentUnpackingBits->getNextBit()));
   bool HasFPFeatures = CurrentUnpackingBits->getNextBit();
+  E->setCoroElideSafe(CurrentUnpackingBits->getNextBit());
+  E->setUsesMemberSyntax(CurrentUnpackingBits->getNextBit());
   assert((NumArgs == E->getNumArgs()) && "Wrong NumArgs!");
   E->setRParenLoc(readSourceLocation());
   E->setCallee(Record.readSubExpr());
@@ -1045,6 +1042,9 @@ void ASTStmtReader::VisitCallExpr(CallExpr *E) {
   if (HasFPFeatures)
     E->setStoredFPFeatures(
         FPOptionsOverride::getFromOpaqueInt(Record.readInt()));
+
+  if (E->getStmtClass() == Stmt::CallExprClass)
+    E->updateTrailingSourceLoc();
 }
 
 void ASTStmtReader::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
@@ -1433,12 +1433,12 @@ void ASTStmtReader::VisitPseudoObjectExpr(PseudoObjectExpr *E) {
   E->PseudoObjectExprBits.ResultIndex = Record.readInt();
 
   // Read the syntactic expression.
-  E->getSubExprsBuffer()[0] = Record.readSubExpr();
+  E->getTrailingObjects()[0] = Record.readSubExpr();
 
   // Read all the semantic expressions.
   for (unsigned i = 0; i != numSemanticExprs; ++i) {
     Expr *subExpr = Record.readSubExpr();
-    E->getSubExprsBuffer()[i+1] = subExpr;
+    E->getTrailingObjects()[i + 1] = subExpr;
   }
 }
 
@@ -2156,7 +2156,7 @@ void ASTStmtReader::VisitTypeTraitExpr(TypeTraitExpr *E) {
 
 void ASTStmtReader::VisitArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
   VisitExpr(E);
-  E->ATT = (ArrayTypeTrait)Record.readInt();
+  E->ArrayTypeTraitExprBits.ATT = (ArrayTypeTrait)Record.readInt();
   E->Value = (unsigned int)Record.readInt();
   SourceRange Range = readSourceRange();
   E->Loc = Range.getBegin();
@@ -2167,8 +2167,8 @@ void ASTStmtReader::VisitArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
 
 void ASTStmtReader::VisitExpressionTraitExpr(ExpressionTraitExpr *E) {
   VisitExpr(E);
-  E->ET = (ExpressionTrait)Record.readInt();
-  E->Value = (bool)Record.readInt();
+  E->ExpressionTraitExprBits.ET = (ExpressionTrait)Record.readInt();
+  E->ExpressionTraitExprBits.Value = (bool)Record.readInt();
   SourceRange Range = readSourceRange();
   E->QueriedExpression = Record.readSubExpr();
   E->Loc = Range.getBegin();
@@ -2209,14 +2209,14 @@ void ASTStmtReader::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 
 void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
   VisitExpr(E);
-  E->TransformedExpressions = Record.readInt();
-  E->FullySubstituted = Record.readInt();
+  E->PackIndexingExprBits.TransformedExpressions = Record.readInt();
+  E->PackIndexingExprBits.FullySubstituted = Record.readInt();
   E->EllipsisLoc = readSourceLocation();
   E->RSquareLoc = readSourceLocation();
   E->SubExprs[0] = Record.readStmt();
   E->SubExprs[1] = Record.readStmt();
   auto **Exprs = E->getTrailingObjects<Expr *>();
-  for (unsigned I = 0; I < E->TransformedExpressions; ++I)
+  for (unsigned I = 0; I < E->PackIndexingExprBits.TransformedExpressions; ++I)
     Exprs[I] = Record.readExpr();
 }
 
@@ -2275,7 +2275,7 @@ void ASTStmtReader::VisitCXXFoldExpr(CXXFoldExpr *E) {
   E->SubExprs[0] = Record.readSubExpr();
   E->SubExprs[1] = Record.readSubExpr();
   E->SubExprs[2] = Record.readSubExpr();
-  E->Opcode = (BinaryOperatorKind)Record.readInt();
+  E->CXXFoldExprBits.Opcode = (BinaryOperatorKind)Record.readInt();
 }
 
 void ASTStmtReader::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
@@ -2308,10 +2308,6 @@ void ASTStmtReader::VisitOpaqueValueExpr(OpaqueValueExpr *E) {
   E->SourceExpr = Record.readSubExpr();
   E->OpaqueValueExprBits.Loc = readSourceLocation();
   E->setIsUnique(Record.readInt());
-}
-
-void ASTStmtReader::VisitTypoExpr(TypoExpr *E) {
-  llvm_unreachable("Cannot read TypoExpr nodes");
 }
 
 void ASTStmtReader::VisitRecoveryExpr(RecoveryExpr *E) {
@@ -2935,7 +2931,7 @@ void ASTStmtReader::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
   S->ParensLoc = Record.readSourceRange();
   S->ReadOnlyLoc = Record.readSourceLocation();
   for (unsigned I = 0; I < S->NumVars; ++I)
-    S->getVarListPtr()[I] = cast<Expr>(Record.readSubStmt());
+    S->getVarList()[I] = cast<Expr>(Record.readSubStmt());
 }
 
 void ASTStmtReader::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {

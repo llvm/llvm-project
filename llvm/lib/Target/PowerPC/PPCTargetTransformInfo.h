@@ -24,7 +24,7 @@
 
 namespace llvm {
 
-class PPCTTIImpl : public BasicTTIImplBase<PPCTTIImpl> {
+class PPCTTIImpl final : public BasicTTIImplBase<PPCTTIImpl> {
   typedef BasicTTIImplBase<PPCTTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;
@@ -130,8 +130,8 @@ public:
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override;
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override;
   InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,

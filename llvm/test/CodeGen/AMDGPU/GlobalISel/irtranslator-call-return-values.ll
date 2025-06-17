@@ -60,11 +60,11 @@ declare [5 x i8] @external_a5i8_func_void() #0
 declare hidden i32 @external_i32_func_i32(i32) #0
 
 ; amdgpu_gfx calling convention
-declare i1 @external_gfx_i1_func_void() #0
-declare i8 @external_gfx_i8_func_void() #0
-declare i32 @external_gfx_i32_func_void() #0
-declare { i32, i64 } @external_gfx_i32_i64_func_void() #0
-declare hidden i32 @external_gfx_i32_func_i32(i32) #0
+declare amdgpu_gfx i1 @external_gfx_i1_func_void() #0
+declare amdgpu_gfx i8 @external_gfx_i8_func_void() #0
+declare amdgpu_gfx i32 @external_gfx_i32_func_void() #0
+declare amdgpu_gfx { i32, i64 } @external_gfx_i32_i64_func_void() #0
+declare hidden amdgpu_gfx i32 @external_gfx_i32_func_i32(i32) #0
 
 
 define amdgpu_kernel void @test_call_external_i32_func_i32_imm(ptr addrspace(1) %out) #0 {

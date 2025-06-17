@@ -32,14 +32,16 @@ namespace llvm {
   class StringRef;
 
   /// Helper functions for StringRef::getAsInteger.
-  bool getAsUnsignedInteger(StringRef Str, unsigned Radix,
-                            unsigned long long &Result);
+  LLVM_ABI bool getAsUnsignedInteger(StringRef Str, unsigned Radix,
+                                     unsigned long long &Result);
 
-  bool getAsSignedInteger(StringRef Str, unsigned Radix, long long &Result);
+  LLVM_ABI bool getAsSignedInteger(StringRef Str, unsigned Radix,
+                                   long long &Result);
 
-  bool consumeUnsignedInteger(StringRef &Str, unsigned Radix,
-                              unsigned long long &Result);
-  bool consumeSignedInteger(StringRef &Str, unsigned Radix, long long &Result);
+  LLVM_ABI bool consumeUnsignedInteger(StringRef &Str, unsigned Radix,
+                                       unsigned long long &Result);
+  LLVM_ABI bool consumeSignedInteger(StringRef &Str, unsigned Radix,
+                                     long long &Result);
 
   /// StringRef - Represent a constant reference to a string, i.e. a character
   /// array and a length, which need not be null terminated.
@@ -193,11 +195,11 @@ namespace llvm {
     }
 
     /// Compare two strings, ignoring case.
-    [[nodiscard]] int compare_insensitive(StringRef RHS) const;
+    [[nodiscard]] LLVM_ABI int compare_insensitive(StringRef RHS) const;
 
     /// compare_numeric - Compare two strings, treating sequences of digits as
     /// numbers.
-    [[nodiscard]] int compare_numeric(StringRef RHS) const;
+    [[nodiscard]] LLVM_ABI int compare_numeric(StringRef RHS) const;
 
     /// Determine the edit distance between this string and another
     /// string.
@@ -217,11 +219,11 @@ namespace llvm {
     /// or (if \p AllowReplacements is \c true) replacements needed to
     /// transform one of the given strings into the other. If zero,
     /// the strings are identical.
-    [[nodiscard]] unsigned edit_distance(StringRef Other,
-                                         bool AllowReplacements = true,
-                                         unsigned MaxEditDistance = 0) const;
+    [[nodiscard]] LLVM_ABI unsigned
+    edit_distance(StringRef Other, bool AllowReplacements = true,
+                  unsigned MaxEditDistance = 0) const;
 
-    [[nodiscard]] unsigned
+    [[nodiscard]] LLVM_ABI unsigned
     edit_distance_insensitive(StringRef Other, bool AllowReplacements = true,
                               unsigned MaxEditDistance = 0) const;
 
@@ -271,7 +273,7 @@ namespace llvm {
     }
 
     /// Check if this string starts with the given \p Prefix, ignoring case.
-    [[nodiscard]] bool starts_with_insensitive(StringRef Prefix) const;
+    [[nodiscard]] LLVM_ABI bool starts_with_insensitive(StringRef Prefix) const;
 
     /// Check if this string ends with the given \p Suffix.
     [[nodiscard]] bool ends_with(StringRef Suffix) const {
@@ -284,7 +286,7 @@ namespace llvm {
     }
 
     /// Check if this string ends with the given \p Suffix, ignoring case.
-    [[nodiscard]] bool ends_with_insensitive(StringRef Suffix) const;
+    [[nodiscard]] LLVM_ABI bool ends_with_insensitive(StringRef Suffix) const;
 
     /// @}
     /// @name String Searching
@@ -302,7 +304,8 @@ namespace llvm {
     ///
     /// \returns The index of the first occurrence of \p C, or npos if not
     /// found.
-    [[nodiscard]] size_t find_insensitive(char C, size_t From = 0) const;
+    [[nodiscard]] LLVM_ABI size_t find_insensitive(char C,
+                                                   size_t From = 0) const;
 
     /// Search for the first character satisfying the predicate \p F
     ///
@@ -332,13 +335,14 @@ namespace llvm {
     ///
     /// \returns The index of the first occurrence of \p Str, or npos if not
     /// found.
-    [[nodiscard]] size_t find(StringRef Str, size_t From = 0) const;
+    [[nodiscard]] LLVM_ABI size_t find(StringRef Str, size_t From = 0) const;
 
     /// Search for the first string \p Str in the string, ignoring case.
     ///
     /// \returns The index of the first occurrence of \p Str, or npos if not
     /// found.
-    [[nodiscard]] size_t find_insensitive(StringRef Str, size_t From = 0) const;
+    [[nodiscard]] LLVM_ABI size_t find_insensitive(StringRef Str,
+                                                   size_t From = 0) const;
 
     /// Search for the last character \p C in the string.
     ///
@@ -358,19 +362,20 @@ namespace llvm {
     ///
     /// \returns The index of the last occurrence of \p C, or npos if not
     /// found.
-    [[nodiscard]] size_t rfind_insensitive(char C, size_t From = npos) const;
+    [[nodiscard]] LLVM_ABI size_t rfind_insensitive(char C,
+                                                    size_t From = npos) const;
 
     /// Search for the last string \p Str in the string.
     ///
     /// \returns The index of the last occurrence of \p Str, or npos if not
     /// found.
-    [[nodiscard]] size_t rfind(StringRef Str) const;
+    [[nodiscard]] LLVM_ABI size_t rfind(StringRef Str) const;
 
     /// Search for the last string \p Str in the string, ignoring case.
     ///
     /// \returns The index of the last occurrence of \p Str, or npos if not
     /// found.
-    [[nodiscard]] size_t rfind_insensitive(StringRef Str) const;
+    [[nodiscard]] LLVM_ABI size_t rfind_insensitive(StringRef Str) const;
 
     /// Find the first character in the string that is \p C, or npos if not
     /// found. Same as find.
@@ -382,18 +387,20 @@ namespace llvm {
     /// not found.
     ///
     /// Complexity: O(size() + Chars.size())
-    [[nodiscard]] size_t find_first_of(StringRef Chars, size_t From = 0) const;
+    [[nodiscard]] LLVM_ABI size_t find_first_of(StringRef Chars,
+                                                size_t From = 0) const;
 
     /// Find the first character in the string that is not \p C or npos if not
     /// found.
-    [[nodiscard]] size_t find_first_not_of(char C, size_t From = 0) const;
+    [[nodiscard]] LLVM_ABI size_t find_first_not_of(char C,
+                                                    size_t From = 0) const;
 
     /// Find the first character in the string that is not in the string
     /// \p Chars, or npos if not found.
     ///
     /// Complexity: O(size() + Chars.size())
-    [[nodiscard]] size_t find_first_not_of(StringRef Chars,
-                                           size_t From = 0) const;
+    [[nodiscard]] LLVM_ABI size_t find_first_not_of(StringRef Chars,
+                                                    size_t From = 0) const;
 
     /// Find the last character in the string that is \p C, or npos if not
     /// found.
@@ -405,19 +412,20 @@ namespace llvm {
     /// found.
     ///
     /// Complexity: O(size() + Chars.size())
-    [[nodiscard]] size_t find_last_of(StringRef Chars,
-                                      size_t From = npos) const;
+    [[nodiscard]] LLVM_ABI size_t find_last_of(StringRef Chars,
+                                               size_t From = npos) const;
 
     /// Find the last character in the string that is not \p C, or npos if not
     /// found.
-    [[nodiscard]] size_t find_last_not_of(char C, size_t From = npos) const;
+    [[nodiscard]] LLVM_ABI size_t find_last_not_of(char C,
+                                                   size_t From = npos) const;
 
     /// Find the last character in the string that is not in \p Chars, or
     /// npos if not found.
     ///
     /// Complexity: O(size() + Chars.size())
-    [[nodiscard]] size_t find_last_not_of(StringRef Chars,
-                                          size_t From = npos) const;
+    [[nodiscard]] LLVM_ABI size_t find_last_not_of(StringRef Chars,
+                                                   size_t From = npos) const;
 
     /// Return true if the given string is a substring of *this, and false
     /// otherwise.
@@ -458,7 +466,7 @@ namespace llvm {
 
     /// Return the number of non-overlapped occurrences of \p Str in
     /// the string.
-    size_t count(StringRef Str) const;
+    LLVM_ABI size_t count(StringRef Str) const;
 
     /// Parse the current string as an integer of the specified radix.  If
     /// \p Radix is specified as zero, this does radix autosensing using
@@ -523,7 +531,7 @@ namespace llvm {
     ///
     /// APInt::fromString is superficially similar but assumes the
     /// string is well-formed in the given radix.
-    bool getAsInteger(unsigned Radix, APInt &Result) const;
+    LLVM_ABI bool getAsInteger(unsigned Radix, APInt &Result) const;
 
     /// Parse the current string as an integer of the specified \p Radix.  If
     /// \p Radix is specified as zero, this does radix autosensing using
@@ -534,7 +542,7 @@ namespace llvm {
     /// erroneous if empty.
     /// The portion of the string representing the discovered numeric value
     /// is removed from the beginning of the string.
-    bool consumeInteger(unsigned Radix, APInt &Result);
+    LLVM_ABI bool consumeInteger(unsigned Radix, APInt &Result);
 
     /// Parse the current string as an IEEE double-precision floating
     /// point value.  The string must be a well-formed double.
@@ -543,17 +551,17 @@ namespace llvm {
     /// cannot be represented exactly.  Otherwise, the function only fails
     /// in case of an overflow or underflow, or an invalid floating point
     /// representation.
-    bool getAsDouble(double &Result, bool AllowInexact = true) const;
+    LLVM_ABI bool getAsDouble(double &Result, bool AllowInexact = true) const;
 
     /// @}
     /// @name String Operations
     /// @{
 
     // Convert the given ASCII string to lowercase.
-    [[nodiscard]] std::string lower() const;
+    [[nodiscard]] LLVM_ABI std::string lower() const;
 
     /// Convert the given ASCII string to uppercase.
-    [[nodiscard]] std::string upper() const;
+    [[nodiscard]] LLVM_ABI std::string upper() const;
 
     /// @}
     /// @name Substring Operations
@@ -751,9 +759,8 @@ namespace llvm {
     /// \param Separator - The string to split on.
     /// \param MaxSplit - The maximum number of times the string is split.
     /// \param KeepEmpty - True if empty substring should be added.
-    void split(SmallVectorImpl<StringRef> &A,
-               StringRef Separator, int MaxSplit = -1,
-               bool KeepEmpty = true) const;
+    LLVM_ABI void split(SmallVectorImpl<StringRef> &A, StringRef Separator,
+                        int MaxSplit = -1, bool KeepEmpty = true) const;
 
     /// Split into substrings around the occurrences of a separator character.
     ///
@@ -769,8 +776,8 @@ namespace llvm {
     /// \param Separator - The string to split on.
     /// \param MaxSplit - The maximum number of times the string is split.
     /// \param KeepEmpty - True if empty substring should be added.
-    void split(SmallVectorImpl<StringRef> &A, char Separator, int MaxSplit = -1,
-               bool KeepEmpty = true) const;
+    LLVM_ABI void split(SmallVectorImpl<StringRef> &A, char Separator,
+                        int MaxSplit = -1, bool KeepEmpty = true) const;
 
     /// Split into two substrings around the last occurrence of a separator
     /// character.
@@ -911,7 +918,7 @@ namespace llvm {
   /// @}
 
   /// Compute a hash_code for a StringRef.
-  [[nodiscard]] hash_code hash_value(StringRef S);
+  [[nodiscard]] LLVM_ABI hash_code hash_value(StringRef S);
 
   // Provide DenseMapInfo for StringRefs.
   template <> struct DenseMapInfo<StringRef, void> {
@@ -925,7 +932,7 @@ namespace llvm {
           reinterpret_cast<const char *>(~static_cast<uintptr_t>(1)), 0);
     }
 
-    static unsigned getHashValue(StringRef Val);
+    LLVM_ABI static unsigned getHashValue(StringRef Val);
 
     static bool isEqual(StringRef LHS, StringRef RHS) {
       if (RHS.data() == getEmptyKey().data())

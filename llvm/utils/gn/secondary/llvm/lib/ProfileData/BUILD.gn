@@ -9,6 +9,7 @@ static_library("ProfileData") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
+    "DataAccessProf.cpp",
     "GCOV.cpp",
     "IndexedMemProfData.cpp",
     "InstrProf.cpp",
@@ -17,7 +18,11 @@ static_library("ProfileData") {
     "InstrProfWriter.cpp",
     "ItaniumManglingCanonicalizer.cpp",
     "MemProf.cpp",
+    "MemProfCommon.cpp",
+    "MemProfRadixTree.cpp",
     "MemProfReader.cpp",
+    "MemProfSummary.cpp",
+    "MemProfSummaryBuilder.cpp",
     "PGOCtxProfReader.cpp",
     "PGOCtxProfWriter.cpp",
     "ProfileSummaryBuilder.cpp",

@@ -19,10 +19,6 @@
 /* Define to 1 to enable crash memory dumps, and to 0 otherwise. */
 #cmakedefine01 LLVM_ENABLE_CRASH_DUMPS
 
-/* Define to 1 to enable expensive checks for debug location coverage checking,
-   and to 0 otherwise. */
-#cmakedefine01 ENABLE_DEBUGLOC_COVERAGE_TRACKING
-
 /* Define to 1 to prefer forward slashes on Windows, and to 0 prefer
    backslashes. */
 #cmakedefine01 LLVM_WINDOWS_PREFER_FORWARD_SLASH
@@ -168,6 +164,9 @@
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #cmakedefine HAVE_SYS_MMAN_H ${HAVE_SYS_MMAN_H}
 
+/* Define to 1 if you have the <sys/ioctl.h> header file. */
+#cmakedefine HAVE_SYS_IOCTL_H ${HAVE_SYS_IOCTL_H}
+
 /* Define to 1 if stat struct has st_mtimespec member .*/
 #cmakedefine HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC ${HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC}
 
@@ -239,6 +238,12 @@
 
 /* Have host's ___chkstk_ms */
 #cmakedefine HAVE____CHKSTK_MS ${HAVE____CHKSTK_MS}
+
+/* Define if ICU library is available */
+#cmakedefine01 HAVE_ICU
+
+/* Define if iconv library is available */
+#cmakedefine01 HAVE_ICONV
 
 /* Linker version detected at compile time. */
 #cmakedefine HOST_LINK_VERSION "${HOST_LINK_VERSION}"

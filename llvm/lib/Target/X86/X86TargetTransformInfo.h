@@ -25,7 +25,7 @@ namespace llvm {
 
 class InstCombiner;
 
-class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
+class X86TTIImpl final : public BasicTTIImplBase<X86TTIImpl> {
   typedef BasicTTIImplBase<X86TTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;
@@ -166,11 +166,12 @@ public:
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override;
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override;
   InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) const override;
+      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+      ArrayRef<Value *> VL = {}) const override;
   InstructionCost
   getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
                             const APInt &DemandedDstElts,

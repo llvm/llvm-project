@@ -328,8 +328,7 @@ inline bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
 /// Compile time Log2.
 /// Valid only for positive powers of two.
 template <size_t kValue> constexpr size_t CTLog2() {
-  static_assert(kValue > 0 && llvm::isPowerOf2_64(kValue),
-                "Value is not a valid power of 2");
+  static_assert(llvm::isPowerOf2_64(kValue), "Value is not a valid power of 2");
   return 1 + CTLog2<kValue / 2>();
 }
 
@@ -703,7 +702,7 @@ SaturatingMultiplyAdd(T X, T Y, T A, bool *ResultOverflowed = nullptr) {
 }
 
 /// Use this rather than HUGE_VALF; the latter causes warnings on MSVC.
-extern const float huge_valf;
+LLVM_ABI extern const float huge_valf;
 
 /// Add two signed integers, computing the two's complement truncated result,
 /// returning true if overflow occurred.

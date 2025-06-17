@@ -25,16 +25,15 @@ add_header_library(
     table.h
   DEPENDS
     .bitmask
-    libc.include.llvm-libc-types.ENTRY
+    libc.hdr.types.ENTRY
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
     libc.src.__support.hash
     libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization
     libc.src.__support.memory_size
-    libc.src.string.memset
-    libc.src.string.strcmp
-    libc.src.string.strlen
+    libc.src.string.memory_utils.inline_strcmp
+    libc.src.string.string_utils
 )
 
 add_header_library(

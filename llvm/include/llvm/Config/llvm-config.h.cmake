@@ -129,4 +129,12 @@
 /* Define if building LLVM with LLVM_ENABLE_TELEMETRY */
 #cmakedefine01 LLVM_ENABLE_TELEMETRY
 
+/* Define to 1 to enable expensive checks for debug location coverage checking,
+   and to 0 otherwise. */
+#cmakedefine01 LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+
+/* Define to 1 to enable expensive tracking of the origin of debug location
+   coverage bugs, and to 0 otherwise. */
+#cmakedefine01 LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+
 #endif

@@ -8,11 +8,12 @@
 
 // REQUIRES: host-has-gdb-with-python
 // REQUIRES: locale.en_US.UTF-8
+// REQUIRES: optimization=none
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: c++03
 
-// TODO: Investigate these failures which break the CI.
-// UNSUPPORTED: clang-18, clang-19, clang-20, clang-21
+// TODO: Investigate why this fails on the arm bots
+// UNSUPPORTED: target=arm{{.*}}
 
 // The Android libc++ tests are run on a non-Android host, connected to an
 // Android device over adb. gdb needs special support to make this work (e.g.

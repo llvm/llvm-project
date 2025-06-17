@@ -316,14 +316,22 @@ static cl::opt<bool> ClEagerChecks(
 
 static cl::opt<bool> ClDumpStrictInstructions(
     "msan-dump-strict-instructions",
-    cl::desc("print out instructions with default strict semantics"),
+    cl::desc("print out instructions with default strict semantics i.e.,"
+             "check that all the inputs are fully initialized, and mark "
+             "the output as fully initialized. These semantics are applied "
+             "to instructions that could not be handled explicitly nor "
+             "heuristically."),
     cl::Hidden, cl::init(false));
 
-static cl::opt<bool> ClDumpStrictIntrinsics(
-    "msan-dump-strict-intrinsics",
-    cl::desc("Prints 'unknown' intrinsics that were handled heuristically. "
-             "Use -msan-dump-strict-instructions to print intrinsics that "
-             "could not be handled exactly nor heuristically."),
+// Currently, all the heuristically handled instructions are specifically
+// IntrinsicInst. However, we use the broader "HeuristicInstructions" name
+// to parallel 'msan-dump-strict-instructions', and to keep the door open to
+// handling non-intrinsic instructions heuristically.
+static cl::opt<bool> ClDumpHeuristicInstructions(
+    "msan-dump-heuristic-instructions",
+    cl::desc("Prints 'unknown' instructions that were handled heuristically. "
+             "Use -msan-dump-strict-instructions to print instructions that "
+             "could not be handled explicitly nor heuristically."),
     cl::Hidden, cl::init(false));
 
 static cl::opt<int> ClInstrumentationWithCallThreshold(
@@ -2077,6 +2085,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(ShadowPtr && "Could not find shadow for an argument");
       return ShadowPtr;
     }
+
+    // TODO: Partially undefined vectors are handled by the fall-through case
+    //       below (see partial-poison.ll); this causes false negatives.
+
     // For everything else the shadow is zero.
     return getCleanShadow(V);
   }
@@ -3197,10 +3209,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   bool handleUnknownIntrinsic(IntrinsicInst &I) {
     if (handleUnknownIntrinsicUnlogged(I)) {
-      if (ClDumpStrictIntrinsics)
+      if (ClDumpHeuristicInstructions)
         dumpInst(I);
 
-      LLVM_DEBUG(dbgs() << "UNKNOWN INTRINSIC HANDLED HEURISTICALLY: " << I
+      LLVM_DEBUG(dbgs() << "UNKNOWN INSTRUCTION HANDLED HEURISTICALLY: " << I
                         << "\n");
       return true;
     } else
@@ -4159,6 +4171,63 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, PtrSrcOrigin);
   }
 
+  // Instrument AVX permutation intrinsic.
+  // We apply the same permutation (argument index 1) to the shadow.
+  void handleAVXPermutation(IntrinsicInst &I) {
+    assert(I.arg_size() == 2);
+    assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
+    assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
+    [[maybe_unused]] auto ArgVectorSize =
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
+    assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
+               ->getNumElements() == ArgVectorSize);
+    assert(I.getType() == I.getArgOperand(0)->getType());
+    IRBuilder<> IRB(&I);
+    Value *Shadow = getShadow(&I, 0);
+    insertShadowCheck(I.getArgOperand(1), &I);
+
+    // Shadows are integer-ish types but some intrinsics require a
+    // different (e.g., floating-point) type.
+    Shadow = IRB.CreateBitCast(Shadow, I.getArgOperand(0)->getType());
+    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                       {Shadow, I.getArgOperand(1)});
+
+    setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
+    setOriginForNaryOp(I);
+  }
+  // Instrument AVX permutation intrinsic.
+  // We apply the same permutation (argument index 1) to the shadows.
+  void handleAVXVpermil2var(IntrinsicInst &I) {
+    assert(I.arg_size() == 3);
+    assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
+    assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
+    assert(isa<FixedVectorType>(I.getArgOperand(2)->getType()));
+    [[maybe_unused]] auto ArgVectorSize =
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
+    assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
+               ->getNumElements() == ArgVectorSize);
+    assert(cast<FixedVectorType>(I.getArgOperand(2)->getType())
+               ->getNumElements() == ArgVectorSize);
+    assert(I.getArgOperand(0)->getType() == I.getArgOperand(2)->getType());
+    assert(I.getType() == I.getArgOperand(0)->getType());
+    assert(I.getArgOperand(1)->getType()->isIntOrIntVectorTy());
+    IRBuilder<> IRB(&I);
+    Value *AShadow = getShadow(&I, 0);
+    Value *Idx = I.getArgOperand(1);
+    Value *BShadow = getShadow(&I, 2);
+    insertShadowCheck(Idx, &I);
+
+    // Shadows are integer-ish types but some intrinsics require a
+    // different (e.g., floating-point) type.
+    AShadow = IRB.CreateBitCast(AShadow, I.getArgOperand(0)->getType());
+    BShadow = IRB.CreateBitCast(BShadow, I.getArgOperand(2)->getType());
+    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                       {AShadow, Idx, BShadow});
+
+    setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
+    setOriginForNaryOp(I);
+  }
+
   // Instrument BMI / BMI2 intrinsics.
   // All of these intrinsics are Z = I(X, Y)
   // where the types of all operands and the result match, and are either i32 or
@@ -5103,6 +5172,52 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(Success);
       break;
     }
+    case Intrinsic::x86_avx2_permd:
+    case Intrinsic::x86_avx2_permps:
+    case Intrinsic::x86_ssse3_pshuf_b_128:
+    case Intrinsic::x86_avx2_pshuf_b:
+    case Intrinsic::x86_avx512_pshuf_b_512:
+    case Intrinsic::x86_avx512_permvar_df_256:
+    case Intrinsic::x86_avx512_permvar_df_512:
+    case Intrinsic::x86_avx512_permvar_di_256:
+    case Intrinsic::x86_avx512_permvar_di_512:
+    case Intrinsic::x86_avx512_permvar_hi_128:
+    case Intrinsic::x86_avx512_permvar_hi_256:
+    case Intrinsic::x86_avx512_permvar_hi_512:
+    case Intrinsic::x86_avx512_permvar_qi_128:
+    case Intrinsic::x86_avx512_permvar_qi_256:
+    case Intrinsic::x86_avx512_permvar_qi_512:
+    case Intrinsic::x86_avx512_permvar_sf_512:
+    case Intrinsic::x86_avx512_permvar_si_512:
+    case Intrinsic::x86_avx_vpermilvar_pd:
+    case Intrinsic::x86_avx_vpermilvar_pd_256:
+    case Intrinsic::x86_avx512_vpermilvar_pd_512:
+    case Intrinsic::x86_avx_vpermilvar_ps:
+    case Intrinsic::x86_avx_vpermilvar_ps_256:
+    case Intrinsic::x86_avx512_vpermilvar_ps_512: {
+      handleAVXPermutation(I);
+      break;
+    }
+    case Intrinsic::x86_avx512_vpermi2var_d_128:
+    case Intrinsic::x86_avx512_vpermi2var_d_256:
+    case Intrinsic::x86_avx512_vpermi2var_d_512:
+    case Intrinsic::x86_avx512_vpermi2var_hi_128:
+    case Intrinsic::x86_avx512_vpermi2var_hi_256:
+    case Intrinsic::x86_avx512_vpermi2var_hi_512:
+    case Intrinsic::x86_avx512_vpermi2var_pd_128:
+    case Intrinsic::x86_avx512_vpermi2var_pd_256:
+    case Intrinsic::x86_avx512_vpermi2var_pd_512:
+    case Intrinsic::x86_avx512_vpermi2var_ps_128:
+    case Intrinsic::x86_avx512_vpermi2var_ps_256:
+    case Intrinsic::x86_avx512_vpermi2var_ps_512:
+    case Intrinsic::x86_avx512_vpermi2var_q_128:
+    case Intrinsic::x86_avx512_vpermi2var_q_256:
+    case Intrinsic::x86_avx512_vpermi2var_q_512:
+    case Intrinsic::x86_avx512_vpermi2var_qi_128:
+    case Intrinsic::x86_avx512_vpermi2var_qi_256:
+    case Intrinsic::x86_avx512_vpermi2var_qi_512:
+      handleAVXVpermil2var(I);
+      break;
 
     case Intrinsic::x86_avx512fp16_mask_add_sh_round:
     case Intrinsic::x86_avx512fp16_mask_sub_sh_round:
@@ -6592,7 +6707,6 @@ struct VarArgPowerPC64Helper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
-    Triple TargetTriple(F.getParent()->getTargetTriple());
     for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
@@ -6625,7 +6739,6 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
     unsigned VAArgBase;
-    Triple TargetTriple(F.getParent()->getTargetTriple());
     // Parameter save area is 8 bytes from frame pointer in PPC32
     VAArgBase = 8;
     unsigned VAArgOffset = VAArgBase;
@@ -6730,7 +6843,6 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
-    Triple TargetTriple(F.getParent()->getTargetTriple());
     for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);

@@ -1642,7 +1642,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // this entry.
   DenseSet<uint32_t> LastNodeContextIds = LastNode->getContextIds();
 
-  bool PrevIterCreatedNode = false;
+  [[maybe_unused]] bool PrevIterCreatedNode = false;
   bool CreatedNode = false;
   for (unsigned I = 0; I < Calls.size();
        I++, PrevIterCreatedNode = CreatedNode) {
@@ -1832,8 +1832,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     DenseMap<const FuncTy *, unsigned> FuncToIndex;
     for (const auto &[Idx, CallCtxInfo] : enumerate(Calls))
       FuncToIndex.insert({CallCtxInfo.Func, Idx});
-    std::stable_sort(
-        Calls.begin(), Calls.end(),
+    llvm::stable_sort(
+        Calls,
         [&FuncToIndex](const CallContextInfo &A, const CallContextInfo &B) {
           return A.StackIds.size() > B.StackIds.size() ||
                  (A.StackIds.size() == B.StackIds.size() &&
@@ -2183,6 +2183,9 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
 
   updateStackNodes();
 
+  if (ExportToDot)
+    exportToDot("poststackupdate");
+
   handleCallsitesWithMultipleTargets();
 
   markBackedges();
@@ -2232,9 +2235,8 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
           CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
               EmptyContext;
           unsigned I = 0;
-          assert(
-              (!MemProfReportHintedSizes && MinClonedColdBytePercent >= 100) ||
-              AN.ContextSizeInfos.size() == AN.MIBs.size());
+          assert(!metadataMayIncludeContextSizeInfo() ||
+                 AN.ContextSizeInfos.size() == AN.MIBs.size());
           // Now add all of the MIBs and their stack nodes.
           for (auto &MIB : AN.MIBs) {
             CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
@@ -2285,6 +2287,9 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
     exportToDot("prestackupdate");
 
   updateStackNodes();
+
+  if (ExportToDot)
+    exportToDot("poststackupdate");
 
   handleCallsitesWithMultipleTargets();
 
@@ -3688,27 +3693,27 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   const unsigned AllocTypeCloningPriority[] = {/*None*/ 3, /*NotCold*/ 4,
                                                /*Cold*/ 1,
                                                /*NotColdCold*/ 2};
-  std::stable_sort(Node->CallerEdges.begin(), Node->CallerEdges.end(),
-                   [&](const std::shared_ptr<ContextEdge> &A,
-                       const std::shared_ptr<ContextEdge> &B) {
-                     // Nodes with non-empty context ids should be sorted before
-                     // those with empty context ids.
-                     if (A->ContextIds.empty())
-                       // Either B ContextIds are non-empty (in which case we
-                       // should return false because B < A), or B ContextIds
-                       // are empty, in which case they are equal, and we should
-                       // maintain the original relative ordering.
-                       return false;
-                     if (B->ContextIds.empty())
-                       return true;
+  llvm::stable_sort(Node->CallerEdges,
+                    [&](const std::shared_ptr<ContextEdge> &A,
+                        const std::shared_ptr<ContextEdge> &B) {
+                      // Nodes with non-empty context ids should be sorted
+                      // before those with empty context ids.
+                      if (A->ContextIds.empty())
+                        // Either B ContextIds are non-empty (in which case we
+                        // should return false because B < A), or B ContextIds
+                        // are empty, in which case they are equal, and we
+                        // should maintain the original relative ordering.
+                        return false;
+                      if (B->ContextIds.empty())
+                        return true;
 
-                     if (A->AllocTypes == B->AllocTypes)
-                       // Use the first context id for each edge as a
-                       // tie-breaker.
-                       return *A->ContextIds.begin() < *B->ContextIds.begin();
-                     return AllocTypeCloningPriority[A->AllocTypes] <
-                            AllocTypeCloningPriority[B->AllocTypes];
-                   });
+                      if (A->AllocTypes == B->AllocTypes)
+                        // Use the first context id for each edge as a
+                        // tie-breaker.
+                        return *A->ContextIds.begin() < *B->ContextIds.begin();
+                      return AllocTypeCloningPriority[A->AllocTypes] <
+                             AllocTypeCloningPriority[B->AllocTypes];
+                    });
 
   assert(Node->AllocTypes != (uint8_t)AllocationType::None);
 
@@ -4180,8 +4185,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
     // their caller edge counts, putting the original non-clone node first in
     // cases of a tie. This simplifies finding an existing node to use as the
     // merge node.
-    std::stable_sort(CalleeEdges.begin(), CalleeEdges.end(),
-                     CalleeCallerEdgeLessThan);
+    llvm::stable_sort(CalleeEdges, CalleeCallerEdgeLessThan);
 
     /// Find other callers of the given set of callee edges that can
     /// share the same callee merge node. See the comments at this method
@@ -5050,6 +5054,45 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
   return true;
 }
 
+#ifndef NDEBUG
+// Sanity check that the MIB stack ids match between the summary and
+// instruction metadata.
+static void checkAllocContextIds(
+    const AllocInfo &AllocNode, const MDNode *MemProfMD,
+    const CallStack<MDNode, MDNode::op_iterator> &CallsiteContext,
+    const ModuleSummaryIndex *ImportSummary) {
+  auto MIBIter = AllocNode.MIBs.begin();
+  for (auto &MDOp : MemProfMD->operands()) {
+    assert(MIBIter != AllocNode.MIBs.end());
+    auto StackIdIndexIter = MIBIter->StackIdIndices.begin();
+    auto *MIBMD = cast<const MDNode>(MDOp);
+    MDNode *StackMDNode = getMIBStackNode(MIBMD);
+    assert(StackMDNode);
+    CallStack<MDNode, MDNode::op_iterator> StackContext(StackMDNode);
+    auto ContextIterBegin =
+        StackContext.beginAfterSharedPrefix(CallsiteContext);
+    // Skip the checking on the first iteration.
+    uint64_t LastStackContextId =
+        (ContextIterBegin != StackContext.end() && *ContextIterBegin == 0) ? 1
+                                                                           : 0;
+    for (auto ContextIter = ContextIterBegin; ContextIter != StackContext.end();
+         ++ContextIter) {
+      // If this is a direct recursion, simply skip the duplicate
+      // entries, to be consistent with how the summary ids were
+      // generated during ModuleSummaryAnalysis.
+      if (LastStackContextId == *ContextIter)
+        continue;
+      LastStackContextId = *ContextIter;
+      assert(StackIdIndexIter != MIBIter->StackIdIndices.end());
+      assert(ImportSummary->getStackIdAtIndex(*StackIdIndexIter) ==
+             *ContextIter);
+      StackIdIndexIter++;
+    }
+    MIBIter++;
+  }
+}
+#endif
+
 bool MemProfContextDisambiguation::applyImport(Module &M) {
   assert(ImportSummary);
   bool Changed = false;
@@ -5242,40 +5285,10 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           assert(AI != FS->allocs().end());
           auto &AllocNode = *(AI++);
 
-          // Sanity check that the MIB stack ids match between the summary and
-          // instruction metadata.
-          auto MIBIter = AllocNode.MIBs.begin();
-          for (auto &MDOp : MemProfMD->operands()) {
-            assert(MIBIter != AllocNode.MIBs.end());
-            LLVM_ATTRIBUTE_UNUSED auto StackIdIndexIter =
-                MIBIter->StackIdIndices.begin();
-            auto *MIBMD = cast<const MDNode>(MDOp);
-            MDNode *StackMDNode = getMIBStackNode(MIBMD);
-            assert(StackMDNode);
-            CallStack<MDNode, MDNode::op_iterator> StackContext(StackMDNode);
-            auto ContextIterBegin =
-                StackContext.beginAfterSharedPrefix(CallsiteContext);
-            // Skip the checking on the first iteration.
-            uint64_t LastStackContextId =
-                (ContextIterBegin != StackContext.end() &&
-                 *ContextIterBegin == 0)
-                    ? 1
-                    : 0;
-            for (auto ContextIter = ContextIterBegin;
-                 ContextIter != StackContext.end(); ++ContextIter) {
-              // If this is a direct recursion, simply skip the duplicate
-              // entries, to be consistent with how the summary ids were
-              // generated during ModuleSummaryAnalysis.
-              if (LastStackContextId == *ContextIter)
-                continue;
-              LastStackContextId = *ContextIter;
-              assert(StackIdIndexIter != MIBIter->StackIdIndices.end());
-              assert(ImportSummary->getStackIdAtIndex(*StackIdIndexIter) ==
-                     *ContextIter);
-              StackIdIndexIter++;
-            }
-            MIBIter++;
-          }
+#ifndef NDEBUG
+          checkAllocContextIds(AllocNode, MemProfMD, CallsiteContext,
+                               ImportSummary);
+#endif
 
           // Perform cloning if not yet done.
           CloneFuncIfNeeded(/*NumClones=*/AllocNode.Versions.size());

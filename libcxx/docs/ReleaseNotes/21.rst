@@ -70,6 +70,12 @@ Improvements and New Features
 - The segmented iterator optimization for ``std::for_each`` has been backported to C++11. Previously it was only available
   in C++23 and later.
 
+- The ``std::for_each_n`` algorithm has been optimized for segmented iterators, resulting in a performance improvement of
+  up to 17.7x for ``std::deque<short>`` iterators, and up to 13.9x for ``std::join_view<vector<vector<short>>>`` iterators.
+
+- The ``bitset::to_string`` function has been optimized, resulting in a performance improvement of up to 8.3x for bitsets
+  with uniformly distributed zeros and ones, and up to 13.5x and 16.1x for sparse and dense bitsets, respectively.
+
 Deprecations and Removals
 -------------------------
 
@@ -80,16 +86,28 @@ Deprecations and Removals
 - The ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` has been removed, making ``std::__libcpp_verbose_abort``
   unconditionally ``noexcept``.
 
+- libc++ no longer adds ``constexpr`` to ``std::hash<std::vector<bool, A>>::operator()``, as the ``constexpr`` addition
+  since C++20 was an unintended extension.
+
+- TODO: The non-conforming extension ``packaged_task::result_type`` has been removed in LLVM 21.
+
 Potentially breaking changes
 ----------------------------
 
 - The implementation of ``num_put::do_put`` has been replaced to improve the performance, which can lead to different
   output when printing pointers.
 
-Upcoming Deprecations and Removals
-----------------------------------
+- User-defined specializations of ``std::common_reference`` are diagnosed now. To customize the common reference type, ``std::basic_common_reference`` should be specialized instead.
 
-LLVM 21
+- ``std::function`` used to have allocator support, which was removed from the Standard by `http://wg21.link/p0302r1`
+  due to issues with its design and inconsistent support from implementations. Previously, libc++ would provide
+  allocator-aware APIs in ``std::function`` in C++11 and C++14, but ignores the allocator argument in all places but
+  one. Starting in this release, the allocator argument is always ignored.
+
+Announcements About Future Releases
+-----------------------------------
+
+LLVM 22
 ~~~~~~~
 
 - The status of the C++03 implementation will be frozen after the LLVM 21 release. This means that starting in LLVM 22,
@@ -100,13 +118,6 @@ LLVM 21
 
   If you are using C++03 in your project, you should consider moving to a newer version of the Standard to get the most
   out of libc++.
-
-- Non-conforming extension ``packaged_task::result_type`` will be removed in LLVM 21.
-
-LLVM 22
-~~~~~~~
-
-- TODO
 
 
 ABI Affecting Changes

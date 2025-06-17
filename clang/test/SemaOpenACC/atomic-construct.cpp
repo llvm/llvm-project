@@ -66,7 +66,7 @@ void IfClause(int x, int v) {
   x = v;
 
   // expected-error@+2{{OpenACC 'if' clause cannot appear more than once on a 'atomic' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'if' clause is here}}
 #pragma acc atomic read if(x) if (v)
   x = v;
 }

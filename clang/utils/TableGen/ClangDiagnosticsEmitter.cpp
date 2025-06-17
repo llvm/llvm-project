@@ -1089,7 +1089,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
 
     if (End) {
       Parsed.push_back(New<TextPiece>(Text.slice(0, End), "diagtext"));
-      Text = Text.slice(End, StringRef::npos);
+      Text = Text.substr(End);
       if (Text.empty())
         break;
     }
@@ -1103,7 +1103,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
     // Extract the (optional) modifier.
     size_t ModLength = Text.find_first_of("0123456789<{");
     StringRef Modifier = Text.slice(0, ModLength);
-    Text = Text.slice(ModLength, StringRef::npos);
+    Text = Text.substr(ModLength);
     ModifierType ModType = StringSwitch<ModifierType>{Modifier}
                                .Case("select", MT_Select)
                                .Case("enum_select", MT_EnumSelect)
@@ -1154,7 +1154,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
       Text = Text.drop_front(); // Drop '<'
       size_t EnumNameLen = Text.find_first_of('>');
       EnumSelect->EnumName = Text.slice(0, EnumNameLen);
-      Text = Text.slice(EnumNameLen, StringRef::npos);
+      Text = Text.substr(EnumNameLen);
       ExpectAndConsume(">");
 
       if (Text[0] != '{')
@@ -1169,7 +1169,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
           Text = Text.drop_front(); // '%'
           size_t OptionNameLen = Text.find_first_of("{");
           EnumSelect->OptionEnumNames.push_back(Text.slice(0, OptionNameLen));
-          Text = Text.slice(OptionNameLen, StringRef::npos);
+          Text = Text.substr(OptionNameLen);
         } else {
           EnumSelect->OptionEnumNames.push_back({});
         }
@@ -1206,7 +1206,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
         assert(!Text.empty());
         Plural->OptionPrefixes.push_back(
             New<TextPiece>(Text.slice(0, End), "diagtext"));
-        Text = Text.slice(End, StringRef::npos);
+        Text = Text.substr(End);
         Plural->Options.push_back(
             parseDiagText(Text, StopAt::PipeOrCloseBrace));
         assert(!Text.empty() && "malformed %plural");
@@ -1794,8 +1794,8 @@ static std::string getDiagCategoryEnum(StringRef name) {
   if (name.empty())
     return "DiagCat_None";
   SmallString<256> enumName = StringRef("DiagCat_");
-  for (StringRef::iterator I = name.begin(), E = name.end(); I != E; ++I)
-    enumName += isalnum(*I) ? *I : '_';
+  for (char C : name)
+    enumName += isalnum(C) ? C : '_';
   return std::string(enumName);
 }
 

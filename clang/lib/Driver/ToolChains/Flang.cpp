@@ -8,12 +8,11 @@
 
 #include "Flang.h"
 #include "Arch/RISCV.h"
-#include "CommonArgs.h"
 
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
@@ -128,7 +127,8 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_std_EQ, options::OPT_W_Joined,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
                    options::OPT_funderscoring, options::OPT_fno_underscoring,
-                   options::OPT_funsigned, options::OPT_fno_unsigned});
+                   options::OPT_funsigned, options::OPT_fno_unsigned,
+                   options::OPT_finstrument_functions});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
   if (Args.hasArg(options::OPT_gN_Group)) {
@@ -151,6 +151,7 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
+  handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
   handleVectorizeSLPArgs(Args, CmdArgs);
 
@@ -483,7 +484,7 @@ void Flang::addTargetOptions(const ArgList &Args,
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
-    } else if (Name == "LIBMVEC-X86") {
+    } else if (Name == "libmvec" || Name == "AMDLIBM") {
       if (Triple.getArch() != llvm::Triple::x86 &&
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -694,6 +695,10 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     A->claim();
   }
 
+  StringRef Recip = parseMRecipOption(D.getDiags(), Args);
+  if (!Recip.empty())
+    CmdArgs.push_back(Args.MakeArgString("-mrecip=" + Recip));
+
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
       (FPContract == "fast" || FPContract.empty())) {
@@ -881,6 +886,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Disable all warnings
   // TODO: Handle interactions between -w, -pedantic, -Wall, -WOption
   Args.AddLastArg(CmdArgs, options::OPT_w);
+
+  // recognise options: fprofile-generate -fprofile-use=
+  Args.addAllArgs(
+      CmdArgs, {options::OPT_fprofile_generate, options::OPT_fprofile_use_EQ});
 
   // Forward flags for OpenMP. We don't do this if the current action is an
   // device offloading action other than OpenMP.

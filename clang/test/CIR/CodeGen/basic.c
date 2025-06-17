@@ -5,6 +5,28 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+enum A {
+  A_one,
+  A_two
+};
+enum A a;
+
+// CHECK:   cir.global external @a = #cir.int<0> : !u32i
+
+enum B : int;
+enum B b;
+
+// CHECK:   cir.global external @b = #cir.int<0> : !u32i
+
+
+enum C : int {
+  C_one,
+  C_two
+};
+enum C c;
+
+// CHECK:   cir.global external @c = #cir.int<0> : !u32i
+
 int f1(int i);
 
 int f1(int i) {
@@ -12,15 +34,14 @@ int f1(int i) {
   return i;
 }
 
-//      CIR: module
-// CIR-NEXT: cir.func @f1(%arg0: !s32i loc({{.*}})) -> !s32i
+// CIR:      cir.func @f1(%arg0: !s32i loc({{.*}})) -> !s32i
 // CIR-NEXT:   %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
-// CIR-NEXT:   cir.store %arg0, %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[I_IGNORED:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:   %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:   cir.store %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %arg0, %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[I_IGNORED:.*]] = cir.load{{.*}} %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   %[[I:.*]] = cir.load{{.*}} %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[R:.*]] = cir.load{{.*}} %[[RV]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define i32 @f1(i32 %[[IP:.*]])
@@ -46,8 +67,8 @@ int f2(void) { return 3; }
 //      CIR: cir.func @f2() -> !s32i
 // CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR-NEXT:   %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
-// CIR-NEXT:   cir.store %[[THREE]], %[[RV]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[R:.*]] = cir.load %0 : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %[[THREE]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[R:.*]] = cir.load{{.*}} %0 : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define i32 @f2()
@@ -69,10 +90,10 @@ int f3(void) {
 // CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR-NEXT:   %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT:   %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
-// CIR-NEXT:   cir.store %[[THREE]], %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:   cir.store %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %[[THREE]], %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[I:.*]] = cir.load{{.*}} %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[R:.*]] = cir.load{{.*}} %[[RV]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define i32 @f3()
@@ -153,9 +174,9 @@ int f6(void) {
 //      CIR: cir.func @f6() -> !s32i
 // CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR-NEXT:   %[[GV_PTR:.*]] = cir.get_global @gv : !cir.ptr<!s32i>
-// CIR-NEXT:   %[[GV:.*]] = cir.load %[[GV_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:   cir.store %[[GV]], %[[RV]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   %[[GV:.*]] = cir.load{{.*}} %[[GV_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %[[GV]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[R:.*]] = cir.load{{.*}} %[[RV]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 // LLVM:      define i32 @f6()
@@ -178,9 +199,9 @@ int f7(int a, int b, int c) {
 // CIR:  %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR:  %[[B_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
 // CIR:  %[[C_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["c", init]
-// CIR:  %[[A:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR:  %[[B:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR:  %[[C:.*]] = cir.load %[[C_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR:  %[[A:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR:  %[[B:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR:  %[[C:.*]] = cir.load{{.*}} %[[C_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR:  %[[B_PLUS_C:.*]] = cir.binop(add, %[[B]], %[[C]]) nsw : !s32i
 // CIR:  %[[RETVAL:.*]] = cir.binop(add, %[[A]], %[[B_PLUS_C]]) nsw : !s32i
 
@@ -213,10 +234,10 @@ int f8(int *p) {
 // CIR: cir.func @f8
 // CIR:    %[[P_PTR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p", init]
 // CIR:    %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
-// CIR:    %[[P:.*]] = cir.load deref %[[P_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR:    cir.store %[[TWO]], %[[P]] : !s32i, !cir.ptr<!s32i>
-// CIR:    %[[P2:.*]] = cir.load deref %[[P_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR:    %[[STAR_P:.*]] = cir.load %[[P2]] : !cir.ptr<!s32i>, !s32i
+// CIR:    %[[P:.*]] = cir.load deref{{.*}} %[[P_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR:    cir.store{{.*}} %[[TWO]], %[[P]] : !s32i, !cir.ptr<!s32i>
+// CIR:    %[[P2:.*]] = cir.load deref{{.*}} %[[P_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR:    %[[STAR_P:.*]] = cir.load{{.*}} %[[P2]] : !cir.ptr<!s32i>, !s32i
 
 // LLVM: define i32 @f8
 // LLVM:   %[[P_PTR:.*]] = alloca ptr, i64 1, align 8
@@ -232,6 +253,37 @@ int f8(int *p) {
 // OGCG:   store i32 2, ptr %[[P]], align 4
 // OGCG:   %[[P2:.*]] = load ptr, ptr %[[P_PTR]], align 8
 // OGCG:   %[[STAR_P:.*]] = load i32, ptr %[[P2]], align 4
+
+
+void f9() {}
+
+//      CIR: cir.func @f9()
+// CIR-NEXT:   cir.return
+
+//      LLVM: define void @f9()
+// LLVM-NEXT:   ret void
+
+//      OGCG: define{{.*}} void @f9()
+// OGCG-NEXT: entry:
+// OGCG-NEXT:   ret void
+
+void f10(int arg0, ...) {}
+
+//      CIR: cir.func @f10(%[[ARG0:.*]]: !s32i loc({{.*}}), ...)
+// CIR-NEXT:   %[[ARG0_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["arg0", init] {alignment = 4 : i64}
+// CIR-NEXT:   cir.store{{.*}} %[[ARG0]], %[[ARG0_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   cir.return
+
+//      LLVM: define void @f10(i32 %[[ARG0:.*]], ...)
+// LLVM-NEXT:   %[[ARG0_PTR:.*]] = alloca i32, i64 1, align 4
+// LLVM-NEXT:   store i32 %[[ARG0]], ptr %[[ARG0_PTR]], align 4
+// LLVM-NEXT:   ret void
+
+//      OGCG: define{{.*}} void @f10(i32 noundef %[[ARG0:.*]], ...)
+// OGCG-NEXT: entry:
+// OGCG-NEXT:   %[[ARG0_PTR:.*]] = alloca i32, align 4
+// OGCG-NEXT:   store i32 %[[ARG0]], ptr %[[ARG0_PTR]], align 4
+// OGCG-NEXT:   ret void
 
 typedef unsigned long size_type;
 typedef unsigned long _Tp;
@@ -253,3 +305,21 @@ size_type max_size(void) {
 
 // OGCG: define{{.*}} i64 @max_size()
 // OGCG:   ret i64 2305843009213693951
+// CHECK:   cir.store{{.*}} %5, %0 : !u64i, !cir.ptr<!u64i>
+// CHECK:   %6 = cir.load{{.*}} %0 : !cir.ptr<!u64i>, !u64i
+// CHECK:   cir.return %6 : !u64i
+// CHECK:   }
+
+void test_char_literal() {
+  char c;
+  c = 'X';
+}
+
+// CIR: cir.func @test_char_literal
+// CIR:   cir.const #cir.int<88>
+
+// LLVM: define void @test_char_literal()
+// LLVM:   store i8 88, ptr %{{.*}}, align 1
+
+// OGCG: define{{.*}} void @test_char_literal()
+// OGCG:   store i8 88, ptr %{{.*}}, align 1

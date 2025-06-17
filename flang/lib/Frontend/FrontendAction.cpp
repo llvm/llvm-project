@@ -183,7 +183,7 @@ bool FrontendAction::runSemanticChecks() {
 
   // Transfer any pending non-fatal messages from parsing to semantics
   // so that they are merged and all printed in order.
-  auto &semanticsCtx{ci.getSemanticsContext()};
+  auto &semanticsCtx{ci.createNewSemanticsContext()};
   semanticsCtx.messages().Annex(std::move(ci.getParsing().messages()));
   semanticsCtx.set_debugModuleWriter(ci.getInvocation().getDebugModuleDir());
 

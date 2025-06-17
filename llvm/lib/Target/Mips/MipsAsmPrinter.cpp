@@ -15,6 +15,7 @@
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsInstPrinter.h"
+#include "MCTargetDesc/MipsMCAsmInfo.h"
 #include "MCTargetDesc/MipsMCNaCl.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "MCTargetDesc/MipsTargetStreamer.h"
@@ -1244,7 +1245,7 @@ void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 // and value for debug thread local expression.
 void MipsAsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
   if (auto *MipsExpr = dyn_cast<MipsMCExpr>(Value)) {
-    if (MipsExpr && MipsExpr->getSpecifier() == MipsMCExpr::MEK_DTPREL) {
+    if (MipsExpr && MipsExpr->getSpecifier() == Mips::S_DTPREL) {
       switch (Size) {
       case 4:
         getTargetStreamer().emitDTPRel32Value(MipsExpr->getSubExpr());
@@ -1291,6 +1292,11 @@ bool MipsAsmPrinter::isLongBranchPseudo(int Opcode) const {
           || Opcode == Mips::LONG_BRANCH_DADDiu
           || Opcode == Mips::LONG_BRANCH_DADDiu2Op);
 }
+
+char MipsAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(MipsAsmPrinter, "mips-asm-printer", "Mips Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsAsmPrinter() {

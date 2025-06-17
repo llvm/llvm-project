@@ -482,11 +482,14 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING**:STRING
   Enhances Debugify's ability to detect line number errors by storing extra
   information inside Instructions, removing false positives from Debugify's
-  results at the cost of performance. Allowed values are `DISABLED` (default)
-  and `COVERAGE`. `COVERAGE` tracks whether and why a line number was
-  intentionally dropped or not generated for an instruction, allowing Debugify
-  to avoid reporting these as errors; this comes with a small performance cost
-  of ~0.1%. `COVERAGE` is an ABI-breaking option.
+  results at the cost of performance. Allowed values are `DISABLED` (default),
+  `COVERAGE`, and `COVERAGE_AND_ORIGIN`. `COVERAGE` tracks whether and why a
+  line number was intentionally dropped or not generated for an instruction,
+  allowing Debugify to avoid reporting these as errors; this comes with a small
+  performance cost of ~0.1%. `COVERAGE_AND_ORIGIN` additionally stores a
+  stacktrace of the point where each DebugLoc is unintentionally dropped,
+  allowing for much easier bug triaging at the cost of a ~10x performance
+  slowdown. `COVERAGE` and `COVERAGE_AND_ORIGIN` are ABI-breaking options.
 
 **LLVM_ENABLE_DIA_SDK**:BOOL
   Enable building with MSVC DIA SDK for PDB debugging support. Available
@@ -589,7 +592,7 @@ enabled sub-projects. Nearly all of these variable names begin with
 
   .. note::
     Some projects listed here can also go in ``LLVM_ENABLE_RUNTIMES``. They
-    should only appear in one of the two lists. If a project is a valid possiblity
+    should only appear in one of the two lists. If a project is a valid possibility
     for both, prefer putting it in ``LLVM_ENABLE_RUNTIMES``.
 
 **LLVM_ENABLE_RTTI**:BOOL
@@ -733,7 +736,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   On Windows, allows embedding a different C runtime allocator into the LLVM
   tools and libraries. Using a lock-free allocator such as the ones listed below
   greatly decreases ThinLTO link time by about an order of magnitude. It also
-  midly improves Clang build times, by about 5-10%. At the moment, rpmalloc,
+  mildly improves Clang build times, by about 5-10%. At the moment, rpmalloc,
   snmalloc and mimalloc are supported. Use the path to `git clone` to select
   the respective allocator, for example:
 

@@ -133,7 +133,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
@@ -1891,7 +1890,6 @@ void ARMFrameLowering::emitFPStatusRestores(
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
-  SmallVector<MCRegister> Regs;
   auto RegPresent = [&CSI](MCRegister Reg) {
     return llvm::any_of(CSI, [Reg](const CalleeSavedInfo &C) {
       return C.getReg() == Reg;

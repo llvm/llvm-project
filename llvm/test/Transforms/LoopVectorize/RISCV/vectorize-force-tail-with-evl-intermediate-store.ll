@@ -67,7 +67,7 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; IF-EVL-OUTLOOP-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IF-EVL-OUTLOOP:       middle.block:
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP19]])
-; IF-EVL-OUTLOOP-NEXT:    store i32 [[TMP23]], ptr [[ADDR]], align 4, !alias.scope [[META6:![0-9]+]], !noalias [[META0]]
+; IF-EVL-OUTLOOP-NEXT:    store i32 [[TMP23]], ptr [[ADDR]], align 4, !alias.scope [[META7:![0-9]+]], !noalias [[META0]]
 ; IF-EVL-OUTLOOP-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL-OUTLOOP:       scalar.ph:
 ; IF-EVL-OUTLOOP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY1:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
@@ -82,7 +82,7 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; IF-EVL-OUTLOOP-NEXT:    store i32 [[ADD]], ptr [[ADDR]], align 4
 ; IF-EVL-OUTLOOP-NEXT:    [[IV_NEXT1]] = add nuw nsw i64 [[IV1]], 1
 ; IF-EVL-OUTLOOP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N]]
-; IF-EVL-OUTLOOP-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP8:![0-9]+]]
+; IF-EVL-OUTLOOP-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP9:![0-9]+]]
 ; IF-EVL-OUTLOOP:       for.end:
 ; IF-EVL-OUTLOOP-NEXT:    ret void
 ;
@@ -129,7 +129,7 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; IF-EVL-INLOOP-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IF-EVL-INLOOP-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IF-EVL-INLOOP:       middle.block:
-; IF-EVL-INLOOP-NEXT:    store i32 [[TMP22]], ptr [[ADDR]], align 4, !alias.scope [[META6:![0-9]+]], !noalias [[META0]]
+; IF-EVL-INLOOP-NEXT:    store i32 [[TMP22]], ptr [[ADDR]], align 4, !alias.scope [[META7:![0-9]+]], !noalias [[META0]]
 ; IF-EVL-INLOOP-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL-INLOOP:       scalar.ph:
 ; IF-EVL-INLOOP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
@@ -144,7 +144,7 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; IF-EVL-INLOOP-NEXT:    store i32 [[ADD]], ptr [[ADDR]], align 4
 ; IF-EVL-INLOOP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-INLOOP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-INLOOP-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; IF-EVL-INLOOP-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; IF-EVL-INLOOP:       for.end:
 ; IF-EVL-INLOOP-NEXT:    ret void
 ;
@@ -283,22 +283,24 @@ for.end:
 ; IF-EVL-OUTLOOP: [[META0]] = !{[[META1:![0-9]+]]}
 ; IF-EVL-OUTLOOP: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
 ; IF-EVL-OUTLOOP: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
-; IF-EVL-OUTLOOP: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
+; IF-EVL-OUTLOOP: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]], [[META6:![0-9]+]]}
 ; IF-EVL-OUTLOOP: [[META4]] = !{!"llvm.loop.isvectorized", i32 1}
-; IF-EVL-OUTLOOP: [[META5]] = !{!"llvm.loop.unroll.runtime.disable"}
-; IF-EVL-OUTLOOP: [[META6]] = !{[[META7:![0-9]+]]}
-; IF-EVL-OUTLOOP: [[META7]] = distinct !{[[META7]], [[META2]]}
-; IF-EVL-OUTLOOP: [[LOOP8]] = distinct !{[[LOOP8]], [[META4]]}
+; IF-EVL-OUTLOOP: [[META5]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
+; IF-EVL-OUTLOOP: [[META6]] = !{!"llvm.loop.unroll.runtime.disable"}
+; IF-EVL-OUTLOOP: [[META7]] = !{[[META8:![0-9]+]]}
+; IF-EVL-OUTLOOP: [[META8]] = distinct !{[[META8]], [[META2]]}
+; IF-EVL-OUTLOOP: [[LOOP9]] = distinct !{[[LOOP9]], [[META4]]}
 ;.
 ; IF-EVL-INLOOP: [[META0]] = !{[[META1:![0-9]+]]}
 ; IF-EVL-INLOOP: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
 ; IF-EVL-INLOOP: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
-; IF-EVL-INLOOP: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
+; IF-EVL-INLOOP: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]], [[META6:![0-9]+]]}
 ; IF-EVL-INLOOP: [[META4]] = !{!"llvm.loop.isvectorized", i32 1}
-; IF-EVL-INLOOP: [[META5]] = !{!"llvm.loop.unroll.runtime.disable"}
-; IF-EVL-INLOOP: [[META6]] = !{[[META7:![0-9]+]]}
-; IF-EVL-INLOOP: [[META7]] = distinct !{[[META7]], [[META2]]}
-; IF-EVL-INLOOP: [[LOOP8]] = distinct !{[[LOOP8]], [[META4]]}
+; IF-EVL-INLOOP: [[META5]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
+; IF-EVL-INLOOP: [[META6]] = !{!"llvm.loop.unroll.runtime.disable"}
+; IF-EVL-INLOOP: [[META7]] = !{[[META8:![0-9]+]]}
+; IF-EVL-INLOOP: [[META8]] = distinct !{[[META8]], [[META2]]}
+; IF-EVL-INLOOP: [[LOOP9]] = distinct !{[[LOOP9]], [[META4]]}
 ;.
 ; NO-VP-OUTLOOP: [[META0]] = !{[[META1:![0-9]+]]}
 ; NO-VP-OUTLOOP: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}

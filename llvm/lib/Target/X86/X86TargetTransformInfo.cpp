@@ -123,7 +123,7 @@ std::optional<unsigned> X86TTIImpl::getCacheSize(
     //   - Broadwell
     //   - Skylake
     //   - Kabylake
-    return 32 * 1024;  //  32 KByte
+    return 32 * 1024;  //  32 KiB
   case TargetTransformInfo::CacheLevel::L2D:
     //   - Penryn
     //   - Nehalem
@@ -134,7 +134,7 @@ std::optional<unsigned> X86TTIImpl::getCacheSize(
     //   - Broadwell
     //   - Skylake
     //   - Kabylake
-    return 256 * 1024; // 256 KByte
+    return 256 * 1024; // 256 KiB
   }
 
   llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
@@ -4767,8 +4767,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
 InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                TTI::TargetCostKind CostKind,
-                                               unsigned Index, Value *Op0,
-                                               Value *Op1) const {
+                                               unsigned Index, const Value *Op0,
+                                               const Value *Op1) const {
   static const CostTblEntry SLMCostTbl[] = {
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i8,      4 },
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i16,     4 },
@@ -4916,7 +4916,8 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
 InstructionCost X86TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   assert(DemandedElts.getBitWidth() ==
              cast<FixedVectorType>(Ty)->getNumElements() &&
          "Vector size mismatch");
@@ -4935,7 +4936,24 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
   assert(NumLegalVectors >= 0 && "Negative cost!");
 
   // For insertions, a ISD::BUILD_VECTOR style vector initialization can be much
-  // cheaper than an accumulation of ISD::INSERT_VECTOR_ELT.
+  // cheaper than an accumulation of ISD::INSERT_VECTOR_ELT.  SLPVectorizer has
+  // a special heuristic regarding poison input which is passed here in
+  // ForPoisonSrc.
+  if (Insert && !ForPoisonSrc) {
+    // This is nearly identical to BaseT::getScalarizationOverhead(), except
+    // it is passing nullptr to getVectorInstrCost() for Op0 (instead of
+    // Constant::getNullValue()), which makes the X86TTIImpl
+    // getVectorInstrCost() return 0 instead of 1.
+    for (unsigned I : seq(DemandedElts.getBitWidth())) {
+      if (!DemandedElts[I])
+        continue;
+      Cost += getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, I,
+                                 Constant::getNullValue(Ty),
+                                 VL.empty() ? nullptr : VL[I]);
+    }
+    return Cost;
+  }
+
   if (Insert) {
     if ((MScalarTy == MVT::i16 && ST->hasSSE2()) ||
         (MScalarTy.isInteger() && ST->hasSSE41()) ||
@@ -5975,12 +5993,19 @@ InstructionCost X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // This is an imperfect hack to prevent constant hoisting of
     // compares that might be trying to check if a 64-bit value fits in
     // 32-bits. The backend can optimize these cases using a right shift by 32.
-    // Ideally we would check the compare predicate here. There also other
-    // similar immediates the backend can use shifts for.
+    // There are other predicates and immediates the backend can use shifts for.
     if (Idx == 1 && ImmBitWidth == 64) {
       uint64_t ImmVal = Imm.getZExtValue();
       if (ImmVal == 0x100000000ULL || ImmVal == 0xffffffff)
         return TTI::TCC_Free;
+
+      if (auto *Cmp = dyn_cast_or_null<CmpInst>(Inst)) {
+        if (Cmp->isEquality()) {
+          KnownBits Known = computeKnownBits(Cmp->getOperand(0), DL);
+          if (Known.countMinTrailingZeros() >= 32)
+            return TTI::TCC_Free;
+        }
+      }
     }
     ImmIdx = 1;
     break;
