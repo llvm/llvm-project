@@ -2648,8 +2648,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   // the asm operand name via this HasModifiers flag
   field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
   field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
-   HasOpSel, HasOMod, IsVOP3P, HasNeg, HasSrc0Mods, HasSrc1Mods,
-   HasSrc2Mods, DstVT, HasFP8ByteSel, HasBitOp3>.ret;
+   HasOpSel, HasOMod, IsVOP3P, HasNeg, HasSrc0FloatMods, HasSrc1FloatMods,
+   HasSrc2FloatMods, DstVT, HasFP8ByteSel, HasBitOp3>.ret;
   field string Asm64 = AsmVOP3Base;
   field string AsmVOP3P = getAsmVOP3P<HasDst, NumSrcArgs, HasNeg, HasClamp, HasOpSel>.ret;
   field string AsmVOP3OpSel = AsmVOP3Base;
