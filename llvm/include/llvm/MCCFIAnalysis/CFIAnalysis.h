@@ -27,6 +27,7 @@ class CFIAnalysis {
   MCRegisterInfo const *MCRI;
   std::unique_ptr<ExtendedMCInstrAnalysis> EMCIA;
   CFIState State;
+  bool IsEH;
 
 private:
   // The CFI analysis only keeps track and cares about super registers, not the
@@ -44,7 +45,7 @@ private:
 
 public:
   CFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
-              MCInstrAnalysis *MCIA,
+              MCInstrAnalysis *MCIA, bool IsEH,
               ArrayRef<MCCFIInstruction> PrologueCFIDirectives);
 
   void update(const MCInst &Inst, ArrayRef<MCCFIInstruction> CFIDirectives);
