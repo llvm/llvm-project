@@ -432,6 +432,10 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
   assert(ByteOffset <= DL.getTypeAllocSize(C->getType()) &&
          "Out of range access");
 
+  // Reading type padding, return zero.
+  if (ByteOffset >= DL.getTypeStoreSize(C->getType()))
+    return true;
+
   // If this element is zero or undefined, we can just return since *CurPtr is
   // zero initialized.
   if (isa<ConstantAggregateZero>(C) || isa<UndefValue>(C))

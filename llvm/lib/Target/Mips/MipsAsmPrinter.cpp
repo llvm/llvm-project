@@ -1244,7 +1244,7 @@ void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 // Emit .dtprelword or .dtpreldword directive
 // and value for debug thread local expression.
 void MipsAsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
-  if (auto *MipsExpr = dyn_cast<MipsMCExpr>(Value)) {
+  if (auto *MipsExpr = dyn_cast<MCSpecifierExpr>(Value)) {
     if (MipsExpr && MipsExpr->getSpecifier() == Mips::S_DTPREL) {
       switch (Size) {
       case 4:

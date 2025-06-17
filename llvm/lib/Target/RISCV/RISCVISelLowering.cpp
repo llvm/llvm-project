@@ -3498,14 +3498,6 @@ getVSlideup(SelectionDAG &DAG, const RISCVSubtarget &Subtarget, const SDLoc &DL,
   return DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, VT, Ops);
 }
 
-static MVT getLMUL1VT(MVT VT) {
-  assert(VT.getVectorElementType().getSizeInBits() <= RISCV::RVVBitsPerBlock &&
-         "Unexpected vector MVT");
-  return MVT::getScalableVectorVT(
-      VT.getVectorElementType(),
-      RISCV::RVVBitsPerBlock / VT.getVectorElementType().getSizeInBits());
-}
-
 struct VIDSequence {
   int64_t StepNumerator;
   unsigned StepDenominator;
@@ -4316,7 +4308,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
     MVT OneRegVT = MVT::getVectorVT(ElemVT, ElemsPerVReg);
     MVT M1VT = getContainerForFixedLengthVector(DAG, OneRegVT, Subtarget);
-    assert(M1VT == getLMUL1VT(M1VT));
+    assert(M1VT == RISCVTargetLowering::getM1VT(M1VT));
 
     // The following semantically builds up a fixed length concat_vector
     // of the component build_vectors.  We eagerly lower to scalable and
@@ -4356,7 +4348,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       count_if(Op->op_values(), [](const SDValue &V) { return V.isUndef(); });
   unsigned NumDefElts = NumElts - NumUndefElts;
   if (NumDefElts >= 8 && NumDefElts > NumElts / 2 &&
-      ContainerVT.bitsLE(getLMUL1VT(ContainerVT))) {
+      ContainerVT.bitsLE(RISCVTargetLowering::getM1VT(ContainerVT))) {
     SmallVector<SDValue> SubVecAOps, SubVecBOps;
     SmallVector<SDValue> MaskVals;
     SDValue UndefElem = DAG.getUNDEF(Op->getOperand(0)->getValueType(0));
@@ -5114,7 +5106,8 @@ static SDValue lowerVZIP(unsigned Opc, SDValue Op0, SDValue Op1,
 
   MVT InnerVT = ContainerVT;
   auto [Mask, VL] = getDefaultVLOps(IntVT, InnerVT, DL, DAG, Subtarget);
-  if (Op1.isUndef() && ContainerVT.bitsGT(getLMUL1VT(ContainerVT)) &&
+  if (Op1.isUndef() &&
+      ContainerVT.bitsGT(RISCVTargetLowering::getM1VT(ContainerVT)) &&
       (RISCVISD::RI_VUNZIP2A_VL == Opc || RISCVISD::RI_VUNZIP2B_VL == Opc)) {
     InnerVT = ContainerVT.getHalfNumVectorElementsVT();
     VL = DAG.getConstant(VT.getVectorNumElements() / 2, DL,
@@ -5382,7 +5375,7 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
   MVT OneRegVT = MVT::getVectorVT(ElemVT, ElemsPerVReg);
   MVT M1VT = getContainerForFixedLengthVector(DAG, OneRegVT, Subtarget);
-  assert(M1VT == getLMUL1VT(M1VT));
+  assert(M1VT == RISCVTargetLowering::getM1VT(M1VT));
   unsigned NumOpElts = M1VT.getVectorMinNumElements();
   unsigned NumElts = ContainerVT.getVectorMinNumElements();
   unsigned NumOfSrcRegs = NumElts / NumOpElts;
@@ -6152,7 +6145,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       return convertFromScalableVector(VT, Gather, DAG, Subtarget);
     }
 
-    const MVT M1VT = getLMUL1VT(ContainerVT);
+    const MVT M1VT = RISCVTargetLowering::getM1VT(ContainerVT);
     EVT SubIndexVT = M1VT.changeVectorElementType(IndexVT.getScalarType());
     auto [InnerTrueMask, InnerVL] =
         getDefaultScalableVLOps(M1VT, DL, DAG, Subtarget);
@@ -7801,7 +7794,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // This reduces the length of the chain of vslideups and allows us to
     // perform the vslideups at a smaller LMUL, limited to MF2.
     if (Op.getNumOperands() > 2 &&
-        ContainerVT.bitsGE(getLMUL1VT(ContainerVT))) {
+        ContainerVT.bitsGE(RISCVTargetLowering::getM1VT(ContainerVT))) {
       MVT HalfVT = VT.getHalfNumVectorElementsVT();
       assert(isPowerOf2_32(Op.getNumOperands()));
       size_t HalfNumOps = Op.getNumOperands() / 2;
@@ -9821,11 +9814,12 @@ getSmallestVTForIndex(MVT VecVT, unsigned MaxIdx, SDLoc DL, SelectionDAG &DAG,
   const unsigned MinVLMAX = VectorBitsMin / EltSize;
   MVT SmallerVT;
   if (MaxIdx < MinVLMAX)
-    SmallerVT = getLMUL1VT(VecVT);
+    SmallerVT = RISCVTargetLowering::getM1VT(VecVT);
   else if (MaxIdx < MinVLMAX * 2)
-    SmallerVT = getLMUL1VT(VecVT).getDoubleNumVectorElementsVT();
+    SmallerVT =
+        RISCVTargetLowering::getM1VT(VecVT).getDoubleNumVectorElementsVT();
   else if (MaxIdx < MinVLMAX * 4)
-    SmallerVT = getLMUL1VT(VecVT)
+    SmallerVT = RISCVTargetLowering::getM1VT(VecVT)
                     .getDoubleNumVectorElementsVT()
                     .getDoubleNumVectorElementsVT();
   if (!SmallerVT.isValid() || !VecVT.bitsGT(SmallerVT))
@@ -9898,9 +9892,8 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     // If we're compiling for an exact VLEN value, we can always perform
     // the insert in m1 as we can determine the register corresponding to
     // the index in the register group.
-    const MVT M1VT = getLMUL1VT(ContainerVT);
-    if (auto VLEN = Subtarget.getRealVLen();
-        VLEN && ContainerVT.bitsGT(M1VT)) {
+    const MVT M1VT = RISCVTargetLowering::getM1VT(ContainerVT);
+    if (auto VLEN = Subtarget.getRealVLen(); VLEN && ContainerVT.bitsGT(M1VT)) {
       EVT ElemVT = VecVT.getVectorElementType();
       unsigned ElemsPerVReg = *VLEN / ElemVT.getFixedSizeInBits();
       unsigned RemIdx = OrigIdx % ElemsPerVReg;
@@ -10127,7 +10120,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   const auto VLen = Subtarget.getRealVLen();
   if (auto *IdxC = dyn_cast<ConstantSDNode>(Idx);
       IdxC && VLen && VecVT.getSizeInBits().getKnownMinValue() > *VLen) {
-    MVT M1VT = getLMUL1VT(ContainerVT);
+    MVT M1VT = RISCVTargetLowering::getM1VT(ContainerVT);
     unsigned OrigIdx = IdxC->getZExtValue();
     EVT ElemVT = VecVT.getVectorElementType();
     unsigned ElemsPerVReg = *VLen / ElemVT.getFixedSizeInBits();
@@ -10175,7 +10168,8 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   // TODO: We don't have the same code for insert_vector_elt because we
   // have BUILD_VECTOR and handle the degenerate case there.  Should we
   // consider adding an inverse BUILD_VECTOR node?
-  MVT LMUL2VT = getLMUL1VT(ContainerVT).getDoubleNumVectorElementsVT();
+  MVT LMUL2VT =
+      RISCVTargetLowering::getM1VT(ContainerVT).getDoubleNumVectorElementsVT();
   if (ContainerVT.bitsGT(LMUL2VT) && VecVT.isFixedLengthVector())
     return SDValue();
 
@@ -11107,7 +11101,7 @@ static SDValue lowerReductionSeq(unsigned RVVOpcode, MVT ResVT,
                                  SDValue VL, const SDLoc &DL, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   const MVT VecVT = Vec.getSimpleValueType();
-  const MVT M1VT = getLMUL1VT(VecVT);
+  const MVT M1VT = RISCVTargetLowering::getM1VT(VecVT);
   const MVT XLenVT = Subtarget.getXLenVT();
   const bool NonZeroAVL = isNonZeroAVL(VL);
 
@@ -11485,8 +11479,8 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     assert(VLen);
     AlignedIdx /= *VLen / RISCV::RVVBitsPerBlock;
   }
-  if (ContainerVecVT.bitsGT(getLMUL1VT(ContainerVecVT))) {
-    InterSubVT = getLMUL1VT(ContainerVecVT);
+  if (ContainerVecVT.bitsGT(RISCVTargetLowering::getM1VT(ContainerVecVT))) {
+    InterSubVT = RISCVTargetLowering::getM1VT(ContainerVecVT);
     // Extract a subvector equal to the nearest full vector register type. This
     // should resolve to a EXTRACT_SUBREG instruction.
     AlignedExtract = DAG.getExtractSubvector(DL, InterSubVT, Vec, AlignedIdx);
@@ -11677,7 +11671,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   // If the vector type is an LMUL-group type, extract a subvector equal to the
   // nearest full vector register type.
   MVT InterSubVT = VecVT;
-  if (VecVT.bitsGT(getLMUL1VT(VecVT))) {
+  if (VecVT.bitsGT(RISCVTargetLowering::getM1VT(VecVT))) {
     // If VecVT has an LMUL > 1, then SubVecVT should have a smaller LMUL, and
     // we should have successfully decomposed the extract into a subregister.
     // We use an extract_subvector that will resolve to a subreg extract.
@@ -11688,7 +11682,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
       assert(VLen);
       Idx /= *VLen / RISCV::RVVBitsPerBlock;
     }
-    InterSubVT = getLMUL1VT(VecVT);
+    InterSubVT = RISCVTargetLowering::getM1VT(VecVT);
     Vec = DAG.getExtractSubvector(DL, InterSubVT, Vec, Idx);
   }
 
@@ -11805,7 +11799,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     // For fractional LMUL, check if we can use a higher LMUL
     // instruction to avoid a vslidedown.
     if (SDValue Src = foldConcatVector(V1, V2);
-        Src && getLMUL1VT(VT).bitsGT(VT)) {
+        Src && RISCVTargetLowering::getM1VT(VT).bitsGT(VT)) {
       EVT NewVT = VT.getDoubleNumVectorElementsVT();
       Src = DAG.getExtractSubvector(DL, NewVT, Src, 0);
       // Freeze the source so we can increase its use count.
@@ -12187,7 +12181,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   // vrgather.vv v14, v9, v16
   // vrgather.vv v13, v10, v16
   // vrgather.vv v12, v11, v16
-  if (ContainerVT.bitsGT(getLMUL1VT(ContainerVT)) &&
+  if (ContainerVT.bitsGT(RISCVTargetLowering::getM1VT(ContainerVT)) &&
       ContainerVT.getVectorElementCount().isKnownMultipleOf(2)) {
     auto [Lo, Hi] = DAG.SplitVector(Vec, DL);
     Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, Lo.getSimpleValueType(), Lo);
@@ -12252,7 +12246,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   // At LMUL > 1, do the index computation in 16 bits to reduce register
   // pressure.
   if (IntVT.getScalarType().bitsGT(MVT::i16) &&
-      IntVT.bitsGT(getLMUL1VT(IntVT))) {
+      IntVT.bitsGT(RISCVTargetLowering::getM1VT(IntVT))) {
     assert(isUInt<16>(MaxVLMAX - 1)); // Largest VLMAX is 65536 @ zvl65536b
     GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
     IntVT = IntVT.changeVectorElementType(MVT::i16);
@@ -12339,7 +12333,7 @@ RISCVTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
   const auto [MinVLMAX, MaxVLMAX] =
       RISCVTargetLowering::computeVLMAXBounds(ContainerVT, Subtarget);
   if (MinVLMAX == MaxVLMAX && MinVLMAX == VT.getVectorNumElements() &&
-      getLMUL1VT(ContainerVT).bitsLE(ContainerVT)) {
+      RISCVTargetLowering::getM1VT(ContainerVT).bitsLE(ContainerVT)) {
     MachineMemOperand *MMO = Load->getMemOperand();
     SDValue NewLoad =
         DAG.getLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
@@ -12400,7 +12394,7 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
   const auto [MinVLMAX, MaxVLMAX] =
       RISCVTargetLowering::computeVLMAXBounds(ContainerVT, Subtarget);
   if (MinVLMAX == MaxVLMAX && MinVLMAX == VT.getVectorNumElements() &&
-      getLMUL1VT(ContainerVT).bitsLE(ContainerVT)) {
+      RISCVTargetLowering::getM1VT(ContainerVT).bitsLE(ContainerVT)) {
     MachineMemOperand *MMO = Store->getMemOperand();
     return DAG.getStore(Store->getChain(), DL, NewValue, Store->getBasePtr(),
                         MMO->getPointerInfo(), MMO->getBaseAlign(),
@@ -20368,7 +20362,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return Scalar.getOperand(0);
 
     // Use M1 or smaller to avoid over constraining register allocation
-    const MVT M1VT = getLMUL1VT(VT);
+    const MVT M1VT = RISCVTargetLowering::getM1VT(VT);
     if (M1VT.bitsLT(VT)) {
       SDValue M1Passthru = DAG.getExtractSubvector(DL, M1VT, Passthru, 0);
       SDValue Result =
@@ -20382,7 +20376,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // no purpose.
     if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar);
         Const && !Const->isZero() && isInt<5>(Const->getSExtValue()) &&
-        VT.bitsLE(getLMUL1VT(VT)) && Passthru.isUndef())
+        VT.bitsLE(RISCVTargetLowering::getM1VT(VT)) && Passthru.isUndef())
       return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Scalar, VL);
 
     break;
@@ -20390,7 +20384,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::VMV_X_S: {
     SDValue Vec = N->getOperand(0);
     MVT VecVT = N->getOperand(0).getSimpleValueType();
-    const MVT M1VT = getLMUL1VT(VecVT);
+    const MVT M1VT = RISCVTargetLowering::getM1VT(VecVT);
     if (M1VT.bitsLT(VecVT)) {
       Vec = DAG.getExtractSubvector(DL, M1VT, Vec, 0);
       return DAG.getNode(RISCVISD::VMV_X_S, DL, N->getSimpleValueType(0), Vec);
