@@ -926,22 +926,4 @@ llvm::json::Value toJSON(const DisassembledInstruction &DI) {
   return result;
 }
 
-bool fromJSON(const json::Value &Params, ReadMemoryArguments &RMA,
-              json::Path P) {
-  json::ObjectMapper O(Params, P);
-  return O && O.map("memoryReference", RMA.memoryReference) &&
-         O.map("count", RMA.count) && O.mapOptional("offset", RMA.offset);
-}
-
-json::Value toJSON(const ReadMemoryResponse &RMR) {
-  json::Object result{{"address", RMR.address}};
-
-  if (RMR.unreadableBytes)
-    result.insert({"unreadableBytes", RMR.unreadableBytes});
-  if (RMR.data)
-    result.insert({"data", RMR.data});
-
-  return result;
-}
-
 } // namespace lldb_dap::protocol

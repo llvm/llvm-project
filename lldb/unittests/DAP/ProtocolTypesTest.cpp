@@ -769,10 +769,13 @@ TEST(ProtocolTypesTest, StepInTarget) {
 TEST(ProtocolTypesTest, ReadMemoryArguments) {
   ReadMemoryArguments args;
   args.count = 20;
-  args.memoryReference = "0xabba";
+  args.memoryReference = 43962;
   args.offset = std::nullopt;
 
-  llvm::Expected<ReadMemoryArguments> expected = parse<ReadMemoryArguments>(
+  llvm::Expected<ReadMemoryArguments> expected =
+      parse<ReadMemoryArguments>(R"({"memoryReference":"-4000", "count": 20})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Failed());
+  expected = parse<ReadMemoryArguments>(
       R"({"memoryReference":"0xabba", "count": 20})");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
 
@@ -781,14 +784,17 @@ TEST(ProtocolTypesTest, ReadMemoryArguments) {
   EXPECT_EQ(args.offset, expected->offset);
 }
 
-TEST(ProtocolTypesTest, ReadMemoryResponse) {
-  ReadMemoryResponse response;
+TEST(ProtocolTypesTest, ReadMemoryResponseBody) {
+  ReadMemoryResponseBody response;
   response.address = "0xdeadbeef";
-  response.data = "aGVsbG8gd29ybGQhCg==";
-  response.unreadableBytes = 0;
+  const std::string data_str = "hello world!";
+  std::transform(data_str.begin(), data_str.end(),
+                 std::back_inserter(response.data),
+                 [](char letter) { return std::byte(letter); });
+  response.unreadableBytes = 1;
 
   Expected<Value> expected = json::parse(
-      R"({ "address": "0xdeadbeef", "data": "aGVsbG8gd29ybGQhCg==", "unreadableBytes": 0})");
+      R"({ "address": "0xdeadbeef", "data": "aGVsbG8gd29ybGQh", "unreadableBytes": 1})");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(pp(*expected), pp(response));
 }

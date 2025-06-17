@@ -10,7 +10,6 @@
 #include "JSONUtils.h"
 #include "RequestHandler.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Base64.h"
 
 namespace lldb_dap {
 
@@ -18,16 +17,10 @@ namespace lldb_dap {
 //
 // Clients should only call this request if the corresponding capability
 // `supportsReadMemoryRequest` is true
-llvm::Expected<protocol::ReadMemoryResponse>
+llvm::Expected<protocol::ReadMemoryResponseBody>
 ReadMemoryRequestHandler::Run(const protocol::ReadMemoryArguments &args) const {
-
-  const std::optional<lldb::addr_t> addr_opt =
-      DecodeMemoryReference(args.memoryReference);
-  if (!addr_opt)
-    return llvm::make_error<DAPError>(
-        llvm::formatv("Malformed memory reference: {}", args.memoryReference));
-
-  const lldb::addr_t raw_address = *addr_opt + args.offset.value_or(0);
+  const lldb::addr_t raw_address =
+      args.memoryReference + args.offset.value_or(0);
 
   lldb::SBProcess process = dap.target.GetProcess();
   if (!lldb::SBDebugger::StateIsStoppedState(process.GetState()))
@@ -37,13 +30,14 @@ ReadMemoryRequestHandler::Run(const protocol::ReadMemoryArguments &args) const {
   // We also need support reading 0 bytes
   // VS Code sends those requests to check if a `memoryReference`
   // can be dereferenced.
-  auto buffer = std::vector<uint8_t>(count_read);
+  protocol::ReadMemoryResponseBody response;
+  std::vector<std::byte> &buffer = response.data;
+  buffer.resize(count_read);
 
   lldb::SBError error;
   const size_t memory_count = dap.target.GetProcess().ReadMemory(
       raw_address, buffer.data(), buffer.size(), error);
 
-  protocol::ReadMemoryResponse response;
   response.address = "0x" + llvm::utohexstr(raw_address);
 
   // reading memory may fail for multiple reasons. memory not readable,
@@ -54,9 +48,6 @@ ReadMemoryRequestHandler::Run(const protocol::ReadMemoryArguments &args) const {
   }
 
   buffer.resize(std::min<size_t>(memory_count, args.count));
-  if (!buffer.empty())
-    response.data = llvm::encodeBase64(buffer);
-
   return response;
 }
 

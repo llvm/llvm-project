@@ -566,14 +566,14 @@ public:
 
 class ReadMemoryRequestHandler final
     : public RequestHandler<protocol::ReadMemoryArguments,
-                            llvm::Expected<protocol::ReadMemoryResponse>> {
+                            llvm::Expected<protocol::ReadMemoryResponseBody>> {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "readMemory"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureReadMemoryRequest};
   }
-  llvm::Expected<protocol::ReadMemoryResponse>
+  llvm::Expected<protocol::ReadMemoryResponseBody>
   Run(const protocol::ReadMemoryArguments &args) const override;
 };
 
