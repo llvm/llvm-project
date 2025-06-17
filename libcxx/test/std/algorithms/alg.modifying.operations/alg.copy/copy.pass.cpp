@@ -88,23 +88,23 @@ TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
 }
 
 template <std::size_t N>
-struct CopyFromForwardIterToBitIter {
+struct CopyFromIterToBitIter {
   std::array<bool, N> in;
 
-  template <class FwdIter>
+  template <class Iter>
   TEST_CONSTEXPR_CXX20 void operator()() {
     for (std::size_t i = 0; i < in.size(); i += 2)
       in[i] = true;
 
     { // Aligned
       std::vector<bool> out(N);
-      std::copy(FwdIter(in.data()), FwdIter(in.data() + N), out.begin());
+      std::copy(Iter(in.data()), Iter(in.data() + N), out.begin());
       for (std::size_t i = 0; i < N; ++i)
         assert(out[i] == static_cast<bool>(in[i]));
     }
     { // Unaligned
       std::vector<bool> out(N + 8);
-      std::copy(FwdIter(in.data()), FwdIter(in.data() + N), out.begin() + 4);
+      std::copy(Iter(in.data()), Iter(in.data() + N), out.begin() + 4);
       for (std::size_t i = 0; i < N; ++i)
         assert(out[i + 4] == static_cast<bool>(in[i]));
     }
@@ -112,7 +112,8 @@ struct CopyFromForwardIterToBitIter {
 };
 
 // Test std::copy with segmented iterators: deque<T>::iterator, join_view::iterator
-void test_segmented_iterator() { // TODO: Mark this test as TEST_CONSTEXPR_CXX23 when std::deque is constexpr
+/*TEST_CONSTEXPR_CXX26*/ void
+test_segmented_iterator() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::deque is constexpr
   // std::deque iterator
   { // Copy from segmented input to contiguous output (deque<int> to vector<int>)
     std::deque<int> in(20);
@@ -157,7 +158,7 @@ void test_segmented_iterator() { // TODO: Mark this test as TEST_CONSTEXPR_CXX23
 
 #if TEST_STD_VER >= 20
   // join_view iterator
-  { // Copy from segmented input to contiguous output (join_viw to vector<int>)
+  { // Copy from segmented input to contiguous output (join_view to vector<int>)
     std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {0, 0}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
     auto jv = std::ranges::join_view(v);
     std::vector<int> expected(jv.begin(), jv.end());
@@ -359,15 +360,15 @@ TEST_CONSTEXPR_CXX20 bool test() {
     }
   }
 
-  { // Test std::copy when copying from forward_iterators (and above) to vector<bool> iterator
-    types::for_each(types::forward_iterator_list<bool*>(), CopyFromForwardIterToBitIter<8>());
-    types::for_each(types::forward_iterator_list<bool*>(), CopyFromForwardIterToBitIter<19>());
-    types::for_each(types::forward_iterator_list<bool*>(), CopyFromForwardIterToBitIter<32>());
-    types::for_each(types::forward_iterator_list<bool*>(), CopyFromForwardIterToBitIter<64>());
-    types::for_each(types::forward_iterator_list<bool*>(), CopyFromForwardIterToBitIter<299>());
+  { // Test std::copy when copying from input_iterators (and above) to vector<bool> iterator
+    types::for_each(types::cpp17_input_iterator_list<bool*>(), CopyFromIterToBitIter<8>());
+    types::for_each(types::cpp17_input_iterator_list<bool*>(), CopyFromIterToBitIter<19>());
+    types::for_each(types::cpp17_input_iterator_list<bool*>(), CopyFromIterToBitIter<32>());
+    types::for_each(types::cpp17_input_iterator_list<bool*>(), CopyFromIterToBitIter<64>());
+    types::for_each(types::cpp17_input_iterator_list<bool*>(), CopyFromIterToBitIter<299>());
   }
 
-  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
     test_segmented_iterator();
 
   return true;

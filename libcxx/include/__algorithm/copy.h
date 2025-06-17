@@ -14,7 +14,6 @@
 #include <__algorithm/min.h>
 #include <__config>
 #include <__fwd/bit_reference.h>
-#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/segmented_iterator.h>
 #include <__memory/pointer_traits.h>
@@ -156,25 +155,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false> _
   return __result;
 }
 
-template <class _InIter,
-          class _Sent,
-          __enable_if_t<__has_input_iterator_category<_InIter>::value &&
-                            !__has_random_access_iterator_category<_InIter>::value,
-                        int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 typename iterator_traits<_InIter>::difference_type
-__iter_sent_distance(_InIter __first, _Sent __last) {
-  typename iterator_traits<_InIter>::difference_type __r(0);
-  for (; __first != __last; ++__first)
-    ++__r;
-  return __r;
-}
-
-template <class _InIter, class _Sent, __enable_if_t<__has_random_access_iterator_category<_InIter>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 typename iterator_traits<_InIter>::difference_type
-__iter_sent_distance(_InIter __first, _Sent __last) {
-  return static_cast<typename iterator_traits<_InIter>::difference_type>(__last - __first);
-}
-
 struct __copy_impl {
   template <class _InIter, class _Sent, class _OutIter>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
@@ -248,31 +228,19 @@ struct __copy_impl {
     return std::make_pair(__last, std::__copy_unaligned(__first, __last, __result));
   }
 
-  template <class _InIter, class _Cp, __enable_if_t<__is_segmented_iterator<_InIter>::value, int> = 0>
+  template < class _InIter,
+             class _Cp,
+             __enable_if_t<!__is_segmented_iterator<_InIter>::value &&
+                               (__has_random_access_iterator_category<_InIter>::value ||
+                                __has_iterator_concept_convertible_to<_InIter, random_access_iterator_tag>::value) &&
+                               is_convertible<typename iterator_traits<_InIter>::value_type, bool>::value,
+                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, __bit_iterator<_Cp, false> >
   operator()(_InIter __first, _InIter __last, __bit_iterator<_Cp, /* IsConst = */ false> __result) const {
-    std::__for_each_segment(__first, __last, _CopySegment<_InIter, __bit_iterator<_Cp, false> >(__result));
-    return std::make_pair(__last, std::move(__result));
-  }
-
-  template <class _InIter,
-            class _Sent,
-            class _Cp,
-            __enable_if_t<!__is_segmented_iterator<_InIter>::value &&
-                              (__has_forward_iterator_category<_InIter>::value ||
-                               __has_iterator_concept_convertible_to<_InIter, forward_iterator_tag>::value) &&
-                              is_convertible<typename iterator_traits<_InIter>::value_type, bool>::value,
-                          int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, __bit_iterator<_Cp, false> >
-  operator()(_InIter __first, _Sent __last, __bit_iterator<_Cp, /* IsConst = */ false> __result) const {
-    using _It            = __bit_iterator<_Cp, false>;
-    using __storage_type = typename _It::__storage_type;
-#if _LIBCPP_STD_VER >= 20
-    __storage_type __n = static_cast<__storage_type>(std::ranges::distance(__first, __last));
-#else
-    __storage_type __n = static_cast<__storage_type>(std::__iter_sent_distance(__first, __last));
-#endif
+    using _It                      = __bit_iterator<_Cp, false>;
+    using __storage_type           = typename _It::__storage_type;
     const unsigned __bits_per_word = _It::__bits_per_word;
+    __storage_type __n             = static_cast<__storage_type>(__last - __first);
 
     if (__first != __last) {
       // do first partial word, if present

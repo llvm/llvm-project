@@ -481,7 +481,6 @@ void sequence_container_benchmarks(std::string container) {
             }
           });
       };
-      bm.template operator()<forward_iterator>("fwd_iter");
       bm.template operator()<random_access_iterator>("ra_iter");
     }
     { // iterator-pair assignment
@@ -505,7 +504,6 @@ void sequence_container_benchmarks(std::string container) {
             }
           });
       };
-      bm.template operator()<forward_iterator>("fwd_iter");
       bm.template operator()<random_access_iterator>("ra_iter");
     }
     { // Iterator-pair insertion
@@ -527,7 +525,6 @@ void sequence_container_benchmarks(std::string container) {
             }
           });
       };
-      bm.template operator()<forward_iterator>("fwd_iter");
       bm.template operator()<random_access_iterator>("ra_iter");
     }
 
@@ -548,7 +545,6 @@ void sequence_container_benchmarks(std::string container) {
             }
           });
       };
-      bm.template operator()<forward_range_wrapper>("fwd_range");
       bm.template operator()<random_access_range_wrapper>("ra_range");
     }
     { // Range-assignment
@@ -574,7 +570,6 @@ void sequence_container_benchmarks(std::string container) {
             }
           });
       };
-      bm.template operator()<forward_range_wrapper>("fwd_range");
       bm.template operator()<random_access_range_wrapper>("ra_range");
     }
     { // Range-insertion
@@ -597,7 +592,6 @@ void sequence_container_benchmarks(std::string container) {
             }
           });
       };
-      bm.template operator()<forward_range_wrapper>("fwd_range");
       bm.template operator()<random_access_range_wrapper>("ra_range");
     }
     { // Range-append
@@ -618,7 +612,6 @@ void sequence_container_benchmarks(std::string container) {
             }
           });
       };
-      bm.template operator()<forward_range_wrapper>("fwd_range");
       bm.template operator()<random_access_range_wrapper>("ra_range");
     }
 #endif
