@@ -1114,6 +1114,12 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
       if (AVR::isProgramMemoryAccess(LD))
         return false;
 
+    // FIXME: We temporarily apply a test which prevents generating incorrect code
+    // (see https://github.com/llvm/llvm-project/issues/143247 )
+    // until we determined and fixed the root cause.
+    if (Op->getOperand(0)->hasOneUse())
+      return false;
+
     Base = Op->getOperand(0);
     Offset = DAG.getConstant(RHSC, DL, MVT::i8);
     AM = ISD::POST_INC;
