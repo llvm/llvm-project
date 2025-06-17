@@ -1,8 +1,8 @@
 ; RUN: llc -O0 -mtriple=spirv1.6-vulkan1.3-compute %s -o - | FileCheck %s --check-prefix=CHECK-NOEXT
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan1.3-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; RUN: llc -O0 -mtriple=spirv1.6-vulkan1.3-compute -spirv-ext=+SPV_KHR_float_controls2 %s -o - | FileCheck %s --check-prefix=CHECK-EXT
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan1.3-compute -spirv-ext=+SPV_KHR_float_controls2 %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; CHECK-NOEXT-NOT: OpDecorate FPFastMathMode
 
