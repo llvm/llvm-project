@@ -42,12 +42,12 @@ end
 !use m2,only:n
 !use m3,only:m
 !end
+!module m1
+!integer(4),parameter::n=123_4
+!end
 !module m2
 !use m1,only:n
 !end
 !module m3
 !use m1,only:m=>n
-!end
-!module m1
-!integer(4),parameter::n=123_4
 !end

@@ -27,7 +27,6 @@ end
 !CHECK: integer(4)::global_variable
 !CHECK: end
 !CHECK: module modfile78b
-!CHECK: use modfile78a,only:global_variable
 !CHECK: contains
 !CHECK: subroutine test()
 !CHECK: end

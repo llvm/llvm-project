@@ -1852,8 +1852,7 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
     } else {
       if (!(messageDisplayedSet_ & 2)) {
         exprAnalyzer_.Say(
-            "Values in array constructor must have the same declared type "
-            "when no explicit type appears"_err_en_US); // C7110
+            "Values in array constructor must have the same declared type when no explicit type appears"_err_en_US); // C7110
         messageDisplayedSet_ |= 2;
       }
     }
