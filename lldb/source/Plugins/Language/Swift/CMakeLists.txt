@@ -1,3 +1,11 @@
+lldb_tablegen(LanguageSwiftProperties.inc -gen-lldb-property-defs
+  SOURCE LanguageSwiftProperties.td
+  TARGET LLDBPluginLanguageSwiftPropertiesGen)
+
+lldb_tablegen(LanguageSwiftPropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE LanguageSwiftProperties.td
+  TARGET LLDBPluginLanguageSwiftPropertiesEnumGen)
+
 set(LLVM_NO_RTTI 1)
 
 add_lldb_library(lldbPluginSwiftLanguage PLUGIN
@@ -36,3 +44,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL Clang AND NOT SWIFT_COMPILER_MSVC_LIKE)
   target_compile_options(lldbPluginSwiftLanguage PRIVATE
     -Wno-dollar-in-identifier-extension)
 endif()
+
+add_dependencies(lldbPluginSwiftLanguage
+  LLDBPluginLanguageSwiftPropertiesGen
+  LLDBPluginLanguageSwiftPropertiesEnumGen)

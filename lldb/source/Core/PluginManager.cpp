@@ -2072,6 +2072,7 @@ static constexpr llvm::StringLiteral kJITLoaderPluginName("jit-loader");
 static constexpr llvm::StringLiteral
     kStructuredDataPluginName("structured-data");
 static constexpr llvm::StringLiteral kCPlusPlusLanguagePlugin("cplusplus");
+static constexpr llvm::StringLiteral kSwiftLanguagePlugin("swift");
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForDynamicLoaderPlugin(Debugger &debugger,
@@ -2473,4 +2474,17 @@ std::vector<RegisteredPluginInfo> PluginManager::GetUnwindAssemblyPluginInfo() {
 bool PluginManager::SetUnwindAssemblyPluginEnabled(llvm::StringRef name,
                                                    bool enable) {
   return GetUnwindAssemblyInstances().SetInstanceEnabled(name, enable);
+}
+lldb::OptionValuePropertiesSP
+PluginManager::GetSettingForSwiftLanguagePlugin(Debugger &debugger,
+                                                llvm::StringRef setting_name) {
+  return GetSettingForPlugin(debugger, setting_name, kSwiftLanguagePlugin);
+}
+
+bool PluginManager::CreateSettingForSwiftLanguagePlugin(
+    Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+    llvm::StringRef description, bool is_global_property) {
+  return CreateSettingForPlugin(debugger, kSwiftLanguagePlugin,
+                                "Settings for Swift language plug-ins",
+                                properties_sp, description, is_global_property);
 }
