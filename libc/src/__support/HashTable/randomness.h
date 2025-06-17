@@ -40,7 +40,7 @@ LIBC_INLINE uint64_t next_random_seed() {
     uint8_t *buffer = reinterpret_cast<uint8_t *>(entropy);
     while (count > 0) {
       auto len = internal::getrandom(buffer, count, 0);
-      if (len.error()) {
+      if (!len.has_value()) {
         if (len.error() == ENOSYS)
           break;
         continue;
