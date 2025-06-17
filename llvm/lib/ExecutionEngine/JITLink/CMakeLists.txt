@@ -26,6 +26,7 @@ add_llvm_component_library(LLVMJITLink
   ELF_loongarch.cpp
   ELF_ppc64.cpp
   ELF_riscv.cpp
+  ELF_systemz.cpp
   ELF_x86_64.cpp
 
   # COFF
@@ -41,6 +42,7 @@ add_llvm_component_library(LLVMJITLink
   loongarch.cpp
   ppc64.cpp
   riscv.cpp
+  systemz.cpp
   x86_64.cpp
 
   ADDITIONAL_HEADER_DIRS

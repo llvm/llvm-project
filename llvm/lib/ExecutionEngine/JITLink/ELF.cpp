@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/JITLink/ELF_loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
+#include "llvm/ExecutionEngine/JITLink/ELF_systemz.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Format.h"
@@ -99,6 +100,8 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer) {
   }
   case ELF::EM_RISCV:
     return createLinkGraphFromELFObject_riscv(ObjectBuffer);
+  case ELF::EM_S390:
+    return createLinkGraphFromELFObject_systemz(ObjectBuffer);
   case ELF::EM_X86_64:
     return createLinkGraphFromELFObject_x86_64(ObjectBuffer);
   case ELF::EM_386:
@@ -135,6 +138,9 @@ void link_ELF(std::unique_ptr<LinkGraph> G,
   case Triple::riscv32:
   case Triple::riscv64:
     link_ELF_riscv(std::move(G), std::move(Ctx));
+    return;
+  case Triple::systemz:
+    link_ELF_systemz(std::move(G), std::move(Ctx));
     return;
   case Triple::x86_64:
     link_ELF_x86_64(std::move(G), std::move(Ctx));
