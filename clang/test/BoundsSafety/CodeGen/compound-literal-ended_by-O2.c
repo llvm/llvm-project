@@ -170,11 +170,9 @@ void local_var_init(char* __bidi_indexable new_start, char* new_end) {
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]] to i64
-// CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x i64] poison, i64 [[TMP0]], 0
-// CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[NEW_END]] to i64
-// CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x i64] [[DOTFCA_0_INSERT]], i64 [[TMP1]], 1
-// CHECK-NEXT:    tail call void @consume_eb([2 x i64] [[DOTFCA_1_INSERT]]) #[[ATTR6:[0-9]+]]
+// CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x ptr] poison, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], 0
+// CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x ptr] [[DOTFCA_0_INSERT]], ptr [[NEW_END]], 1
+// CHECK-NEXT:    tail call void @consume_eb([2 x ptr] [[DOTFCA_1_INSERT]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void call_arg(char* __bidi_indexable new_start, char* new_end) {
@@ -660,11 +658,9 @@ void local_var_init_from_eb(char* __ended_by(new_end) new_start, char* new_end) 
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[NEW_START]] to i64
-// CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x i64] poison, i64 [[TMP0]], 0
-// CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[NEW_END]] to i64
-// CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x i64] [[DOTFCA_0_INSERT]], i64 [[TMP1]], 1
-// CHECK-NEXT:    tail call void @consume_eb([2 x i64] [[DOTFCA_1_INSERT]]) #[[ATTR6]]
+// CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x ptr] poison, ptr [[NEW_START]], 0
+// CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x ptr] [[DOTFCA_0_INSERT]], ptr [[NEW_END]], 1
+// CHECK-NEXT:    tail call void @consume_eb([2 x ptr] [[DOTFCA_1_INSERT]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 void call_arg_from_eb(char* __ended_by(new_end) new_start, char* new_end) {

@@ -342,8 +342,8 @@ void local_var_init(char* __bidi_indexable new_start, char* new_end) {
 // CHECK-NEXT:    store ptr [[WIDE_PTR_PTR18]], ptr [[START]], align 8
 // CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds nuw [[STRUCT_EB]], ptr [[DOTCOMPOUNDLITERAL]], i32 0, i32 1
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[END]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = load [2 x i64], ptr [[DOTCOMPOUNDLITERAL]], align 8
-// CHECK-NEXT:    call void @consume_eb([2 x i64] [[TMP3]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load [2 x ptr], ptr [[DOTCOMPOUNDLITERAL]], align 8
+// CHECK-NEXT:    call void @consume_eb([2 x ptr] [[TMP3]])
 // CHECK-NEXT:    ret void
 //
 void call_arg(char* __bidi_indexable new_start, char* new_end) {
@@ -1720,8 +1720,8 @@ void local_var_init_from_eb(char* __ended_by(new_end) new_start, char* new_end) 
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR43:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP38]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB44:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR43]], align 8
 // CHECK-NEXT:    store ptr [[WIDE_PTR_PTR40]], ptr [[END]], align 8
-// CHECK-NEXT:    [[TMP13:%.*]] = load [2 x i64], ptr [[DOTCOMPOUNDLITERAL]], align 8
-// CHECK-NEXT:    call void @consume_eb([2 x i64] [[TMP13]])
+// CHECK-NEXT:    [[TMP13:%.*]] = load [2 x ptr], ptr [[DOTCOMPOUNDLITERAL]], align 8
+// CHECK-NEXT:    call void @consume_eb([2 x ptr] [[TMP13]])
 // CHECK-NEXT:    ret void
 //
 void call_arg_from_eb(char* __ended_by(new_end) new_start, char* new_end) {
