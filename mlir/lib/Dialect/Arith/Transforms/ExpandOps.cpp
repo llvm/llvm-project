@@ -345,9 +345,8 @@ struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultETy = getElementTypeOrSelf(resultTy);
 
-    if (!llvm::isa<Float4E2M1FNType>(operandETy) ||
-        !llvm::isa<Float32Type>(resultETy)) {
-      return rewriter.notifyMatchFailure(op, "not a ext of F4E2M1FN to F32");
+    if (!isa<Float4E2M1FNType>(operandETy)) {
+      return rewriter.notifyMatchFailure(op, "not a ext of F4E2M1FN");
     }
 
     Type i4Ty = cloneToShapedType(operandTy, b.getI4Type());
@@ -357,8 +356,9 @@ struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Value bitcast = b.create<arith::BitcastOp>(i4Ty, operand);
 
     Value c0x1 = createConst(op->getLoc(), i4Ty, 1, rewriter);
-    Value c0x0000001c = createConst(op->getLoc(), i32Ty, 28, rewriter);
     Value c0x00000014 = createConst(op->getLoc(), i32Ty, 22, rewriter);
+    Value c0x00000015 = createConst(op->getLoc(), i32Ty, 23, rewriter);
+    Value c0x0000001c = createConst(op->getLoc(), i32Ty, 28, rewriter);
     Value cZero =
         createFloatConst(op->getLoc(), f32Ty, APFloat(0.0f), rewriter);
     Value cHalf =
@@ -370,29 +370,33 @@ struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
 
     Value f4SignBit = b.create<arith::AndIOp>(bitcast, signBitmask);
     Value f32Bits = b.create<arith::ExtUIOp>(i32Ty, f4SignBit);
-    f32Bits = b.create<arith::ShRUIOp>(f32Bits, c0x0000001c);
+    f32Bits = b.create<arith::ShLIOp>(f32Bits, c0x0000001c);
 
     Value biasAdjustment = createConst(op.getLoc(), i32Ty, 126, rewriter);
     Value f4ExpBits = b.create<arith::AndIOp>(bitcast, exponentBitmask);
     f4ExpBits = b.create<arith::ShRUIOp>(f4ExpBits, c0x1);
     Value f32ExpBits = b.create<arith::ExtUIOp>(i32Ty, f4ExpBits);
     f32ExpBits = b.create<arith::AddIOp>(f32ExpBits, biasAdjustment);
-    f32ExpBits = b.create<arith::ShLIOp>(f32ExpBits, c0x00000014);
-    f32Bits = b.create<arith::AddIOp>(f32Bits, f32ExpBits);
+    Value f32Exp = b.create<arith::ShLIOp>(f32ExpBits, c0x00000015);
+    f32Bits = b.create<arith::AddIOp>(f32Bits, f32Exp);
 
     Value f4ManBit = b.create<arith::AndIOp>(bitcast, mantissaBitmask);
     Value f32ManBit = b.create<arith::ExtUIOp>(i32Ty, f4ManBit);
+    f32ManBit = b.create<arith::ShLIOp>(f32ManBit, c0x00000014);
     f32Bits = b.create<arith::AddIOp>(f32Bits, f32ManBit);
 
-    // Special consideration for subnormal exp (exp == 0).
+    // Special consideration for subnormal exponent (exp == 00).
     Value isSubnormal = b.create<arith::CmpIOp>(arith::CmpIPredicate::eq,
                                                 f32ExpBits, biasAdjustment);
     Value isManSet =
         b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, f4ManBit, c0x1);
     Value subnormalVal = b.create<arith::SelectOp>(isManSet, cHalf, cZero);
-    f32Bits = b.create<arith::SelectOp>(isSubnormal, subnormalVal, f32Bits);
 
     Value result = b.create<arith::BitcastOp>(f32Ty, f32Bits);
+    result = b.create<arith::SelectOp>(isSubnormal, subnormalVal, result);
+    if (!isa<Float32Type>(resultETy)) {
+      result = b.create<arith::TruncFOp>(resultETy, operand);
+    }
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -481,8 +485,11 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultETy = getElementTypeOrSelf(resultTy);
 
-    if (!isa<Float32Type>(operandETy) || !isa<Float4E2M1FNType>(resultETy)) {
-      return rewriter.notifyMatchFailure(op, "not a trunc of F32 to F4E2M1FN");
+    if (!isa<Float32Type>(operandETy)) {
+      operand = b.create<arith::ExtFOp>(b.getF32Type(), operand);
+    }
+    if (!isa<Float4E2M1FNType>(resultETy)) {
+      return rewriter.notifyMatchFailure(op, "not a trunc of F4E2M1FN");
     }
 
     Type i4Ty = cloneToShapedType(operandTy, b.getI4Type());
@@ -491,19 +498,27 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
     Value c0x1 = createConst(op->getLoc(), i4Ty, 1, rewriter);
+    Value c0x3 = createConst(op->getLoc(), i4Ty, 3, rewriter);
     Value c0x00000016 = createConst(op->getLoc(), i32Ty, 22, rewriter);
     Value c0x00 = createConst(op.getLoc(), i8Ty, 0x00, rewriter);
     Value c0xff = createConst(op.getLoc(), i8Ty, 0xff, rewriter);
     Value c0x00000000 = createConst(op.getLoc(), i32Ty, 0, rewriter);
 
-    // Step 1: Clamp to bounds.
+    // Step 0: Clamp to bounds.
     Value cHigherBound =
         createFloatConst(op->getLoc(), f32Ty, APFloat(6.0f), rewriter);
     Value cLowerBound =
         createFloatConst(op->getLoc(), f32Ty, APFloat(-6.0f), rewriter);
-    Value operandClamped = b.create<arith::MinimumFOp>(cLowerBound, operand);
-    operandClamped = b.create<arith::MaximumFOp>(cHigherBound, operandClamped);
+    Value operandClamped = b.create<arith::MinimumFOp>(cHigherBound, operand);
+    operandClamped = b.create<arith::MaximumFOp>(cLowerBound, operandClamped);
     Value f32Bits = b.create<arith::BitcastOp>(i32Ty, operandClamped);
+
+    // Step 1: Set sign bit.
+    Value cF32ExpManWidth =
+        createConst(op->getLoc(), i32Ty, 31, rewriter); // 23
+    Value f32Sign = b.create<arith::ShRUIOp>(f32Bits, cF32ExpManWidth);
+    Value f4Sign = b.create<arith::TruncIOp>(i4Ty, f32Sign);
+    Value f4Bits = b.create<arith::ShLIOp>(f4Sign, c0x3);
 
     // Step 2: Convert exponent by adjusting bias.
     Value biasAdjustment = createConst(op.getLoc(), i32Ty, 0x7e, rewriter);
@@ -513,8 +528,9 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Value f32SignExp = b.create<arith::ShRUIOp>(f32Bits, cF32MantissaWidth);
     Value biasAdjustedSignExp =
         b.create<arith::SubIOp>(f32SignExp, biasAdjustment);
-    Value f4SignExp = b.create<arith::TruncIOp>(i4Ty, biasAdjustedSignExp);
-    f4SignExp = b.create<arith::ShLIOp>(f4SignExp, cF4MantissaWidth);
+    Value f4Exp = b.create<arith::TruncIOp>(i4Ty, biasAdjustedSignExp);
+    f4Exp = b.create<arith::ShLIOp>(f4Exp, cF4MantissaWidth);
+    f4Bits = b.create<arith::AddIOp>(f4Bits, f4Exp);
 
     // Step 3: Set mantissa to first bit.
     Value cF32FirstBitMask =
@@ -522,7 +538,7 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Value man1Bit = b.create<arith::AndIOp>(f32Bits, cF32FirstBitMask);
     man1Bit = b.create<arith::ShRUIOp>(man1Bit, c0x00000016);
     Value f4Man = b.create<arith::TruncIOp>(i4Ty, man1Bit);
-    Value f4Bits = b.create<arith::AddIOp>(f4SignExp, f4Man);
+    f4Bits = b.create<arith::AddIOp>(f4Bits, f4Man);
 
     // Step 4: Special consideration for conversion to 0.5.
     Value cF32MantissaMask =
@@ -538,7 +554,6 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Value roundToHalf = b.create<arith::AndIOp>(isNegOneExp, isNonZeroMan);
     Value isZeroExp =
         b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, f8Exp, c0x00);
-
     Value subnormalF4Bits = createConst(op->getLoc(), i4Ty, 0xf, rewriter);
     Value halfF4Bits = createConst(op->getLoc(), i4Ty, 0x0, rewriter);
     Value subResult =
@@ -719,16 +734,24 @@ struct ArithExpandOpsPass
     if (includeF8E8M0) {
       arith::populateExpandF8E8M0Patterns(patterns);
     }
+    if (includeF4E2M1) {
+      arith::populateExpandF4E2M1Patterns(patterns);
+    }
 
     target.addDynamicallyLegalOp<arith::ExtFOp>(
       [=](arith::ExtFOp op) {
         Type inETy = getElementTypeOrSelf(op.getOperand().getType());
         Type outETy = getElementTypeOrSelf(op.getType());
         bool legalTypes = true;
-        if (includeBf16) 
+        if (includeBf16) {
           legalTypes &= !(inETy.isBF16() && outETy.isF32());
-        if (includeF8E8M0)
+        } 
+        if (includeF8E8M0) {
           legalTypes &= !llvm::isa<Float8E8M0FNUType>(inETy);
+        } 
+        if (includeF4E2M1) {
+          legalTypes &= !llvm::isa<Float4E2M1FNType>(inETy);
+        }
         return legalTypes;
       });
 
@@ -737,10 +760,15 @@ struct ArithExpandOpsPass
         Type inETy = getElementTypeOrSelf(op.getOperand().getType());
         Type outETy = getElementTypeOrSelf(op.getType());
         bool legalTypes = true;
-        if (includeBf16) 
+        if (includeBf16) {
           legalTypes &= !(inETy.isF32() && outETy.isBF16());
-        if (includeF8E8M0) 
+        }
+        if (includeF8E8M0) {
           legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy)); 
+        }
+        if (includeF4E2M1) {
+          legalTypes &= !llvm::isa<Float4E2M1FNType>(outETy);
+        }
         return legalTypes;
       });
 
@@ -762,6 +790,11 @@ void mlir::arith::populateCeilFloorDivExpandOpsPatterns(
 
 void mlir::arith::populateExpandBFloat16Patterns(RewritePatternSet &patterns) {
   patterns.add<BFloat16ExtFOpConverter, BFloat16TruncFOpConverter>(
+      patterns.getContext());
+}
+
+void mlir::arith::populateExpandF4E2M1Patterns(RewritePatternSet &patterns) {
+  patterns.add<F4E2M1ExtFOpConverter, F4E2M1TruncFOpConverter>(
       patterns.getContext());
 }
 
