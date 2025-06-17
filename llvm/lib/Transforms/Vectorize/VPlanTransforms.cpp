@@ -2626,7 +2626,6 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   WidePHI->addOperand(Next);
 
   WidenIVR->replaceAllUsesWith(WidePHI);
-  WidenIVR->eraseFromParent();
 }
 
 void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
@@ -2738,6 +2737,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
 
       if (auto *WidenIVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
         expandVPWidenIntOrFpInduction(WidenIVR, TypeInfo);
+        ToRemove.push_back(WidenIVR);
         continue;
       }
 
