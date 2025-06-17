@@ -17,8 +17,14 @@ int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
+  // Initialize all levels of target components. Keep this in sync with
+  // cc1_main.
+  llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmPrinters();
+  llvm::InitializeAllAsmParsers();
+
 
   return RUN_ALL_TESTS();
 }
