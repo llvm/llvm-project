@@ -510,20 +510,17 @@ protected:
   // Target-specific relocation specifier code
   const Spec specifier;
 
-public:
-  explicit MCSpecifierExpr(const MCExpr *Expr, Spec S)
-      : MCExpr(Specifier, SMLoc()), Expr(Expr), specifier(S) {}
-  virtual ~MCSpecifierExpr() = default;
+  explicit MCSpecifierExpr(const MCExpr *Expr, Spec S, SMLoc Loc = SMLoc())
+      : MCExpr(Specifier, Loc), Expr(Expr), specifier(S) {}
 
 public:
+  LLVM_ABI static const MCSpecifierExpr *
+  create(const MCExpr *Expr, Spec S, MCContext &Ctx, SMLoc Loc = SMLoc());
+  LLVM_ABI static const MCSpecifierExpr *
+  create(const MCSymbol *Sym, Spec S, MCContext &Ctx, SMLoc Loc = SMLoc());
+
   Spec getSpecifier() const { return specifier; }
   const MCExpr *getSubExpr() const { return Expr; }
-
-  virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-    llvm_unreachable("Replace MCExpr::print calls with MCAsmInfo::printExpr");
-  }
-  virtual bool evaluateAsRelocatableImpl(MCValue &Res,
-                                         const MCAssembler *Asm) const;
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Specifier;

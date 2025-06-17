@@ -131,10 +131,10 @@
 
 /* Define to 1 to enable expensive checks for debug location coverage checking,
    and to 0 otherwise. */
-#cmakedefine01 LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#cmakedefine01 LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 
 /* Define to 1 to enable expensive tracking of the origin of debug location
    coverage bugs, and to 0 otherwise. */
-#cmakedefine01 LLVM_ENABLE_DEBUGLOC_ORIGIN_TRACKING
+#cmakedefine01 LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
 #endif

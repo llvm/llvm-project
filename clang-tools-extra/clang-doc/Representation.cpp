@@ -147,6 +147,7 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unexpected info type");
   }
+  llvm_unreachable("unhandled enumerator");
 }
 
 bool CommentInfo::operator==(const CommentInfo &Other) const {

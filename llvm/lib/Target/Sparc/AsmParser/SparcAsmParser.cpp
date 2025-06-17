@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/ADT/SmallVector.h"
@@ -109,7 +109,8 @@ class SparcAsmParser : public MCTargetAsmParser {
   ParseStatus parseExpression(int64_t &Val);
 
   // Helper function for dealing with %lo / %hi in PIC mode.
-  const SparcMCExpr *adjustPICRelocation(uint16_t VK, const MCExpr *subExpr);
+  const MCSpecifierExpr *adjustPICRelocation(uint16_t VK,
+                                             const MCExpr *subExpr);
 
   // Helper function to see if current token can start an expression.
   bool isPossibleExpression(const AsmToken &Token);
@@ -848,14 +849,14 @@ bool SparcAsmParser::expandSETX(MCInst &Inst, SMLoc IDLoc,
   // sethi %hh(val), tmp
   Instructions.push_back(MCInstBuilder(SP::SETHIi)
                              .addReg(MCTmpOp.getReg())
-                             .addExpr(Sparc::createSpecifierExpr(
-                                 getContext(), ValExpr, ELF::R_SPARC_HH22)));
+                             .addExpr(MCSpecifierExpr::create(
+                                 ValExpr, ELF::R_SPARC_HH22, getContext())));
   // or    tmp, %hm(val), tmp
   Instructions.push_back(MCInstBuilder(SP::ORri)
                              .addReg(MCTmpOp.getReg())
                              .addReg(MCTmpOp.getReg())
-                             .addExpr(Sparc::createSpecifierExpr(
-                                 getContext(), ValExpr, ELF::R_SPARC_HM10)));
+                             .addExpr(MCSpecifierExpr::create(
+                                 ValExpr, ELF::R_SPARC_HM10, getContext())));
   // sllx  tmp, 32, tmp
   Instructions.push_back(MCInstBuilder(SP::SLLXri)
                              .addReg(MCTmpOp.getReg())
@@ -1642,7 +1643,7 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
 static bool hasGOTReference(const MCExpr *Expr) {
   switch (Expr->getKind()) {
   case MCExpr::Target:
-    if (const SparcMCExpr *SE = dyn_cast<SparcMCExpr>(Expr))
+    if (const MCSpecifierExpr *SE = dyn_cast<MCSpecifierExpr>(Expr))
       return hasGOTReference(SE->getSubExpr());
     break;
 
@@ -1668,8 +1669,8 @@ static bool hasGOTReference(const MCExpr *Expr) {
   return false;
 }
 
-const SparcMCExpr *SparcAsmParser::adjustPICRelocation(uint16_t RelType,
-                                                       const MCExpr *subExpr) {
+const MCSpecifierExpr *
+SparcAsmParser::adjustPICRelocation(uint16_t RelType, const MCExpr *subExpr) {
   // When in PIC mode, "%lo(...)" and "%hi(...)" behave differently.
   // If the expression refers contains _GLOBAL_OFFSET_TABLE, it is
   // actually a %pc10 or %pc22 relocation. Otherwise, they are interpreted
@@ -1689,7 +1690,7 @@ const SparcMCExpr *SparcAsmParser::adjustPICRelocation(uint16_t RelType,
     }
   }
 
-  return Sparc::createSpecifierExpr(getContext(), subExpr, RelType);
+  return MCSpecifierExpr::create(subExpr, RelType, getContext());
 }
 
 bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
