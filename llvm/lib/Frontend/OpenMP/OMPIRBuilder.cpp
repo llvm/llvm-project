@@ -4184,7 +4184,11 @@ Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
     Value *IndVar = Builder.CreateAdd(Span, Start);
     return BodyGenCB(Builder.saveIP(), IndVar);
   };
-  LocationDescription LoopLoc = ComputeIP.isSet() ? Loc.IP : Builder.saveIP();
+  LocationDescription LoopLoc =
+      ComputeIP.isSet()
+          ? Loc
+          : LocationDescription(Builder.saveIP(),
+                                Builder.getCurrentDebugLocation());
   return createCanonicalLoop(LoopLoc, BodyGen, TripCount, Name);
 }
 
