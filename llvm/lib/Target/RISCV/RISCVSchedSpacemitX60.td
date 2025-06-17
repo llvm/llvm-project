@@ -703,11 +703,15 @@ foreach mx = SchedMxListFW in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFW, isF=1>.c;
     defvar LMulLat = SMX60GetLMulCycles<mx>.c;
     defvar FMALat = SMX60GetVFFMALatency<mx>.c;
+    defvar WideLat = SMX60GetVIWideLatency<mx>.c;
 
     defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUF", [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulV", [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulF", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    // FP widening multiply operations: measured 4,6,8 - use WideLat (4,5,8) as approximation
+    let Latency = WideLat in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulF", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
     // FP widening multiply-add operations: e16 has 5,5,8; e32 has 6,7,8
     // Use existing FMALat (6,6,7,8) as close approximation
     let Latency = FMALat in {
