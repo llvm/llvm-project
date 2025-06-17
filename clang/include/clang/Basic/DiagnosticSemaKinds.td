@@ -1779,7 +1779,7 @@ def note_unsatisfied_trait_reason
            "%HasArcLifetime{has an ARC lifetime qualifier}|"
            "%VLA{is a variably-modified type}|"
            "%VBase{has a virtual base %1}|"
-           "%NotScalarOrClass{not %select{a|an array of objects of}1 scalar or "
+           "%NotScalarOrClass{is not %select{a|an array of objects of}1 scalar or "
            "class type}|"
            "%NTRBase{has a non-trivially-relocatable base %1}|"
            "%NTRField{has a non-trivially-relocatable member %1 of type %2}|"
@@ -6263,14 +6263,19 @@ def warn_static_local_in_extern_inline : Warning<
 def note_convert_inline_to_static : Note<
   "use 'static' to give inline function %0 internal linkage">;
 
-def warn_possible_object_duplication_mutable : Warning<
-  "%0 may be duplicated when built into a shared library: "
-  "it is mutable, has hidden visibility, and external linkage">,
-  InGroup<UniqueObjectDuplication>, DefaultIgnore;
-def warn_possible_object_duplication_init : Warning<
-  "initialization of %0 may run twice when built into a shared library: "
-  "it has hidden visibility and external linkage">,
-  InGroup<UniqueObjectDuplication>, DefaultIgnore;
+def warn_possible_object_duplication_mutable
+    : Warning<"%0 may be duplicated when built into a shared library: "
+              "it is mutable, with external linkage and "
+              "%select{hidden visibility|no import/export annotation}1">,
+      InGroup<UniqueObjectDuplication>,
+      DefaultIgnore;
+def warn_possible_object_duplication_init
+    : Warning<"initialization of %0 may run twice when built into a shared "
+              "library: "
+              "it has external linkage and "
+              "%select{hidden visibility|no import/export annotation}1">,
+      InGroup<UniqueObjectDuplication>,
+      DefaultIgnore;
 
 def ext_redefinition_of_typedef : ExtWarn<
   "redefinition of typedef %0 is a C11 feature">,

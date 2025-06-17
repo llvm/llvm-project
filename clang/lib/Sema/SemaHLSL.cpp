@@ -764,6 +764,13 @@ void SemaHLSL::CheckSemanticAnnotation(
       return;
     DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Compute});
     break;
+  case attr::HLSLSV_Position:
+    // TODO(#143523): allow use on other shader types & output once the overall
+    // semantic logic is implemented.
+    if (ST == llvm::Triple::Pixel)
+      return;
+    DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Pixel});
+    break;
   default:
     llvm_unreachable("Unknown HLSLAnnotationAttr");
   }
@@ -971,6 +978,31 @@ void SemaHLSL::emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS,
       << NewFnName << FixItHint::CreateReplacement(FullRange, OS.str());
 }
 
+std::pair<IdentifierInfo *, bool>
+SemaHLSL::ActOnStartRootSignatureDecl(StringRef Signature) {
+  llvm::hash_code Hash = llvm::hash_value(Signature);
+  std::string IdStr = "__hlsl_rootsig_decl_" + std::to_string(Hash);
+  IdentifierInfo *DeclIdent = &(getASTContext().Idents.get(IdStr));
+
+  // Check if we have already found a decl of the same name.
+  LookupResult R(SemaRef, DeclIdent, SourceLocation(),
+                 Sema::LookupOrdinaryName);
+  bool Found = SemaRef.LookupQualifiedName(R, SemaRef.CurContext);
+  return {DeclIdent, Found};
+}
+
+void SemaHLSL::ActOnFinishRootSignatureDecl(
+    SourceLocation Loc, IdentifierInfo *DeclIdent,
+    SmallVector<llvm::hlsl::rootsig::RootElement> &Elements) {
+
+  auto *SignatureDecl = HLSLRootSignatureDecl::Create(
+      SemaRef.getASTContext(), /*DeclContext=*/SemaRef.CurContext, Loc,
+      DeclIdent, Elements);
+
+  SignatureDecl->setImplicit();
+  SemaRef.PushOnScopeChains(SignatureDecl, SemaRef.getCurScope());
+}
+
 void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() != 1) {
     Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
@@ -1145,6 +1177,26 @@ void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL) {
 
   D->addAttr(::new (getASTContext())
                  HLSLSV_DispatchThreadIDAttr(getASTContext(), AL));
+}
+
+bool SemaHLSL::diagnosePositionType(QualType T, const ParsedAttr &AL) {
+  const auto *VT = T->getAs<VectorType>();
+
+  if (!T->hasFloatingRepresentation() || (VT && VT->getNumElements() > 4)) {
+    Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
+        << AL << "float/float1/float2/float3/float4";
+    return false;
+  }
+
+  return true;
+}
+
+void SemaHLSL::handleSV_PositionAttr(Decl *D, const ParsedAttr &AL) {
+  auto *VD = cast<ValueDecl>(D);
+  if (!diagnosePositionType(VD->getType(), AL))
+    return;
+
+  D->addAttr(::new (getASTContext()) HLSLSV_PositionAttr(getASTContext(), AL));
 }
 
 void SemaHLSL::handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL) {

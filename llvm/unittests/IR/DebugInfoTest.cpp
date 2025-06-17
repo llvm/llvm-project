@@ -991,7 +991,6 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   Instruction *RetInst = &*std::next(FirstInst->getIterator());
 
   // Set-up DbgMarkers in this block.
-  ExitBlock->IsNewDbgInfoFormat = true;
   ExitBlock->createMarker(FirstInst);
   ExitBlock->createMarker(RetInst);
 
@@ -1127,7 +1126,6 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   BasicBlock *BB1 = &F->getEntryBlock();
   // First instruction should be a dbg.value.
   EXPECT_TRUE(isa<DbgValueInst>(BB1->front()));
-  EXPECT_FALSE(BB1->IsNewDbgInfoFormat);
   // Validating the block for DbgVariableRecords / DbgMarkers shouldn't fail --
   // there's no data stored right now.
   bool BrokenDebugInfo = false;
@@ -1135,15 +1133,8 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   EXPECT_FALSE(Error);
   EXPECT_FALSE(BrokenDebugInfo);
 
-  // Function and module should be marked as not having the new format too.
-  EXPECT_FALSE(F->IsNewDbgInfoFormat);
-  EXPECT_FALSE(M->IsNewDbgInfoFormat);
-
   // Now convert.
   M->convertToNewDbgValues();
-  EXPECT_TRUE(M->IsNewDbgInfoFormat);
-  EXPECT_TRUE(F->IsNewDbgInfoFormat);
-  EXPECT_TRUE(BB1->IsNewDbgInfoFormat);
 
   // There should now be no dbg.value instructions!
   // Ensure the first instruction exists, the test all of them.
@@ -1180,7 +1171,6 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   // There should be no DbgVariableRecords / DbgMarkers in the second block, but
   // it should be marked as being in the new format.
   BasicBlock *BB2 = BB1->getNextNode();
-  EXPECT_TRUE(BB2->IsNewDbgInfoFormat);
   for (auto &Inst : *BB2)
     // Either there should be no marker, or it should be empty.
     EXPECT_TRUE(!Inst.DebugMarker ||
@@ -1207,9 +1197,6 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
 
   // Convert everything back to the "old" format and ensure it's right.
   M->convertFromNewDbgValues();
-  EXPECT_FALSE(M->IsNewDbgInfoFormat);
-  EXPECT_FALSE(F->IsNewDbgInfoFormat);
-  EXPECT_FALSE(BB1->IsNewDbgInfoFormat);
 
   EXPECT_EQ(BB1->size(), 4u);
   ASSERT_TRUE(isa<DbgValueInst>(BB1->front()));

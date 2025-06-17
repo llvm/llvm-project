@@ -356,26 +356,26 @@ getSource(const semantics::SemanticsContext &semaCtx,
   const parser::CharBlock *source = nullptr;
 
   auto ompConsVisit = [&](const parser::OpenMPConstruct &x) {
-    std::visit(common::visitors{
-                   [&](const parser::OpenMPSectionsConstruct &x) {
-                     source = &std::get<0>(x.t).source;
-                   },
-                   [&](const parser::OpenMPLoopConstruct &x) {
-                     source = &std::get<0>(x.t).source;
-                   },
-                   [&](const parser::OpenMPBlockConstruct &x) {
-                     source = &std::get<0>(x.t).source;
-                   },
-                   [&](const parser::OpenMPCriticalConstruct &x) {
-                     source = &std::get<0>(x.t).source;
-                   },
-                   [&](const parser::OpenMPAtomicConstruct &x) {
-                     std::visit([&](const auto &x) { source = &x.source; },
-                                x.u);
-                   },
-                   [&](const auto &x) { source = &x.source; },
-               },
-               x.u);
+    std::visit(
+        common::visitors{
+            [&](const parser::OpenMPSectionsConstruct &x) {
+              source = &std::get<0>(x.t).source;
+            },
+            [&](const parser::OpenMPLoopConstruct &x) {
+              source = &std::get<0>(x.t).source;
+            },
+            [&](const parser::OpenMPBlockConstruct &x) {
+              source = &std::get<0>(x.t).source;
+            },
+            [&](const parser::OpenMPCriticalConstruct &x) {
+              source = &std::get<0>(x.t).source;
+            },
+            [&](const parser::OpenMPAtomicConstruct &x) {
+              source = &std::get<parser::OmpDirectiveSpecification>(x.t).source;
+            },
+            [&](const auto &x) { source = &x.source; },
+        },
+        x.u);
   };
 
   eval.visit(common::visitors{
