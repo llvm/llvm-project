@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFCFIProgram.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <map>
 #include <vector>
@@ -82,12 +83,12 @@ public:
   /// Create a location whose rule is set to Unspecified. This means the
   /// register value might be in the same register but it wasn't specified in
   /// the unwind opcodes.
-  static UnwindLocation createUnspecified();
+  LLVM_ABI static UnwindLocation createUnspecified();
   /// Create a location where the value is undefined and not available. This can
   /// happen when a register is volatile and can't be recovered.
-  static UnwindLocation createUndefined();
+  LLVM_ABI static UnwindLocation createUndefined();
   /// Create a location where the value is known to be in the register itself.
-  static UnwindLocation createSame();
+  LLVM_ABI static UnwindLocation createSame();
   /// Create a location that is in (Deref == false) or at (Deref == true) the
   /// CFA plus an offset. Most registers that are spilled onto the stack use
   /// this rule. The rule for the register will use this rule and specify a
@@ -95,8 +96,8 @@ public:
   /// relative to a CFA value which is typically defined using the register
   /// plus offset location. \see createRegisterPlusOffset(...) for more
   /// information.
-  static UnwindLocation createIsCFAPlusOffset(int32_t Off);
-  static UnwindLocation createAtCFAPlusOffset(int32_t Off);
+  LLVM_ABI static UnwindLocation createIsCFAPlusOffset(int32_t Off);
+  LLVM_ABI static UnwindLocation createAtCFAPlusOffset(int32_t Off);
   /// Create a location where the saved value is in (Deref == false) or at
   /// (Deref == true) a regiser plus an offset and, optionally, in the specified
   /// address space (used mostly for the CFA).
@@ -105,18 +106,18 @@ public:
   /// frame pointer as the register, with an offset that accounts for all
   /// spilled registers and all local variables in a function, and Deref ==
   /// false.
-  static UnwindLocation
+  LLVM_ABI static UnwindLocation
   createIsRegisterPlusOffset(uint32_t Reg, int32_t Off,
                              std::optional<uint32_t> AddrSpace = std::nullopt);
-  static UnwindLocation
+  LLVM_ABI static UnwindLocation
   createAtRegisterPlusOffset(uint32_t Reg, int32_t Off,
                              std::optional<uint32_t> AddrSpace = std::nullopt);
   /// Create a location whose value is the result of evaluating a DWARF
   /// expression. This allows complex expressions to be evaluated in order to
   /// unwind a register or CFA value.
-  static UnwindLocation createIsDWARFExpression(DWARFExpression Expr);
-  static UnwindLocation createAtDWARFExpression(DWARFExpression Expr);
-  static UnwindLocation createIsConstant(int32_t Value);
+  LLVM_ABI static UnwindLocation createIsDWARFExpression(DWARFExpression Expr);
+  LLVM_ABI static UnwindLocation createAtDWARFExpression(DWARFExpression Expr);
+  LLVM_ABI static UnwindLocation createIsConstant(int32_t Value);
 
   Location getLocation() const { return Kind; }
   uint32_t getRegister() const { return RegNum; }
@@ -154,12 +155,12 @@ public:
   /// instead of from .debug_frame. This is needed for register number
   /// conversion because some register numbers differ between the two sections
   /// for certain architectures like x86.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
+  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
 
-  bool operator==(const UnwindLocation &RHS) const;
+  LLVM_ABI bool operator==(const UnwindLocation &RHS) const;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const UnwindLocation &R);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindLocation &R);
 
 /// A class that can track all registers with locations in a UnwindRow object.
 ///
@@ -212,7 +213,7 @@ public:
   /// instead of from .debug_frame. This is needed for register number
   /// conversion because some register numbers differ between the two sections
   /// for certain architectures like x86.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
+  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
 
   /// Returns true if we have any register locations in this object.
   bool hasLocations() const { return !Locations.empty(); }
@@ -224,7 +225,7 @@ public:
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const RegisterLocations &RL);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const RegisterLocations &RL);
 
 /// A class that represents a single row in the unwind table that is decoded by
 /// parsing the DWARF Call Frame Information opcodes.
@@ -293,11 +294,11 @@ public:
   ///
   /// \param IndentLevel specify the indent level as an integer. The UnwindRow
   /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-            unsigned IndentLevel = 0) const;
+  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+                     unsigned IndentLevel = 0) const;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const UnwindRow &Row);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindRow &Row);
 
 /// A class that contains all UnwindRow objects for an FDE or a single unwind
 /// row for a CIE. To unwind an address the rows, which are sorted by start
@@ -340,8 +341,8 @@ public:
   ///
   /// \param IndentLevel specify the indent level as an integer. The UnwindRow
   /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-            unsigned IndentLevel = 0) const;
+  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+                     unsigned IndentLevel = 0) const;
 
   /// Parse the information in the CFIProgram and update the CurrRow object
   /// that the state machine describes.
@@ -358,8 +359,8 @@ public:
   /// the initial register locations from the CIE. If NULL, then a CIE's
   /// opcodes are being parsed and this is not needed. This is used for the
   /// DW_CFA_restore and DW_CFA_restore_extended opcodes.
-  Error parseRows(const CFIProgram &CFIP, UnwindRow &CurrRow,
-                  const RegisterLocations *InitialLocs);
+  LLVM_ABI Error parseRows(const CFIProgram &CFIP, UnwindRow &CurrRow,
+                           const RegisterLocations *InitialLocs);
 
 private:
   RowContainer Rows;
@@ -368,7 +369,7 @@ private:
   std::optional<uint64_t> EndAddress;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const UnwindTable &Rows);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindTable &Rows);
 
 } // end namespace dwarf
 
