@@ -29,6 +29,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
@@ -4903,7 +4904,7 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
   }
 }
 
-void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
+void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
   assert(Tok.is(tok::identifier) &&
          "Expected an identifier to denote which MS attribute to consider");
   IdentifierInfo *RootSignatureIdent = Tok.getIdentifierInfo();
@@ -4945,18 +4946,14 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
 
   // Construct our identifier
   StringRef Signature = StrLiteral.value()->getString();
-  auto Hash = llvm::hash_value(Signature);
-  std::string IdStr = "__hlsl_rootsig_decl_" + std::to_string(Hash);
-  IdentifierInfo *DeclIdent = &(Actions.getASTContext().Idents.get(IdStr));
-
-  LookupResult R(Actions, DeclIdent, SourceLocation(),
-                 Sema::LookupOrdinaryName);
-  // Check if we have already found a decl of the same name, if we haven't
-  // then parse the root signature string and construct the in-memory elements
-  if (!Actions.LookupQualifiedName(R, Actions.CurContext)) {
+  auto [DeclIdent, Found] =
+      Actions.HLSL().ActOnStartRootSignatureDecl(Signature);
+  // If we haven't found an already defined DeclIdent then parse the root
+  // signature string and construct the in-memory elements
+  if (!Found) {
+    // Offset location 1 to account for '"'
     SourceLocation SignatureLoc =
-        StrLiteral.value()->getExprLoc().getLocWithOffset(
-            1); // offset 1 for '"'
+        StrLiteral.value()->getExprLoc().getLocWithOffset(1);
     // Invoke the root signature parser to construct the in-memory constructs
     hlsl::RootSignatureLexer Lexer(Signature, SignatureLoc);
     SmallVector<llvm::hlsl::rootsig::RootElement> RootElements;
@@ -4966,12 +4963,9 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
       return;
     }
 
-    // Create the Root Signature
-    auto *SignatureDecl = HLSLRootSignatureDecl::Create(
-        Actions.getASTContext(), /*DeclContext=*/Actions.CurContext,
-        RootSignatureLoc, DeclIdent, RootElements);
-    SignatureDecl->setImplicit();
-    Actions.PushOnScopeChains(SignatureDecl, getCurScope());
+    // Construct the declaration.
+    Actions.HLSL().ActOnFinishRootSignatureDecl(RootSignatureLoc, DeclIdent,
+                                                RootElements);
   }
 
   // Create the arg for the ParsedAttr
@@ -5014,7 +5008,7 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
       if (Tok.getIdentifierInfo()->getName() == "uuid")
         ParseMicrosoftUuidAttributeArgs(Attrs);
       else if (Tok.getIdentifierInfo()->getName() == "RootSignature")
-        ParseMicrosoftRootSignatureAttributeArgs(Attrs);
+        ParseHLSLRootSignatureAttributeArgs(Attrs);
       else {
         IdentifierInfo *II = Tok.getIdentifierInfo();
         SourceLocation NameLoc = Tok.getLocation();
