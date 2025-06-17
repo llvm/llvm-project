@@ -16,7 +16,7 @@ using namespace lldb_private;
 namespace {
 template <typename T> class JSONTransportTest : public PipeTest {
 protected:
-  std::unique_ptr<JSONTransport> transport;
+  std::unique_ptr<T> transport;
 
   void SetUp() override {
     PipeTest::SetUp();
@@ -36,7 +36,13 @@ public:
   using JSONTransportTest::JSONTransportTest;
 };
 
-class JSONRPCTransportTest : public JSONTransportTest<JSONRPCTransport> {
+class TestJSONRPCTransport : public JSONRPCTransport {
+public:
+  using JSONRPCTransport::JSONRPCTransport;
+  using JSONRPCTransport::WriteImpl; // For partial writes.
+};
+
+class JSONRPCTransportTest : public JSONTransportTest<TestJSONRPCTransport> {
 public:
   using JSONTransportTest::JSONTransportTest;
 };
@@ -83,7 +89,6 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReadWithEOF) {
       transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
       Failed<TransportEOFError>());
 }
-
 
 TEST_F(HTTPDelimitedJSONTransportTest, InvalidTransport) {
   transport = std::make_unique<HTTPDelimitedJSONTransport>(nullptr, nullptr);
@@ -142,13 +147,43 @@ TEST_F(JSONRPCTransportTest, Write) {
 }
 
 TEST_F(JSONRPCTransportTest, InvalidTransport) {
-  transport = std::make_unique<JSONRPCTransport>(nullptr, nullptr);
+  transport = std::make_unique<TestJSONRPCTransport>(nullptr, nullptr);
   ASSERT_THAT_EXPECTED(
       transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
       Failed<TransportInvalidError>());
 }
 
 #ifndef _WIN32
+TEST_F(HTTPDelimitedJSONTransportTest, NonBlockingRead) {
+  ASSERT_THAT_EXPECTED(
+      transport->Read<JSONTestType>(std::chrono::microseconds::zero()),
+      llvm::FailedWithMessage(
+          "HTTPDelimitedJSONTransport does not support non-blocking reads"));
+}
+
+TEST_F(JSONRPCTransportTest, NonBlockingRead) {
+  llvm::StringRef head = R"({"str")";
+  llvm::StringRef tail = R"(: "foo"})"
+                         "\n";
+
+  ASSERT_THAT_EXPECTED(input.Write(head.data(), head.size()), Succeeded());
+  ASSERT_THAT_EXPECTED(
+      transport->Read<JSONTestType>(std::chrono::microseconds::zero()),
+      Failed<TransportTimeoutError>());
+
+  ASSERT_THAT_EXPECTED(input.Write(tail.data(), tail.size()), Succeeded());
+  while (true) {
+    llvm::Expected<JSONTestType> result =
+        transport->Read<JSONTestType>(std::chrono::microseconds::zero());
+    if (result.errorIsA<TransportTimeoutError>()) {
+      llvm::consumeError(result.takeError());
+      continue;
+    }
+    ASSERT_THAT_EXPECTED(result, HasValue(testing::FieldsAre(/*str=*/"foo")));
+    break;
+  }
+}
+
 TEST_F(HTTPDelimitedJSONTransportTest, ReadWithTimeout) {
   ASSERT_THAT_EXPECTED(
       transport->Read<JSONTestType>(std::chrono::milliseconds(1)),
