@@ -18,6 +18,7 @@
 
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -46,7 +47,13 @@ ClangDynamicCheckerFunctions::Install(DiagnosticManager &diagnostic_manager,
     ObjCLanguageRuntime *objc_language_runtime =
         ObjCLanguageRuntime::Get(*process);
 
-    if (objc_language_runtime) {
+    SourceLanguage lang = process->GetTarget().GetLanguage();
+    if (!lang)
+      if (auto *frame = exe_ctx.GetFramePtr())
+        lang = frame->GetLanguage();
+
+    if (objc_language_runtime &&
+        Language::LanguageIsObjC(lang.AsLanguageType())) {
       Expected<std::unique_ptr<UtilityFunction>> checker_fn =
           objc_language_runtime->CreateObjectChecker(VALID_OBJC_OBJECT_CHECK_NAME, exe_ctx);
       if (!checker_fn)
