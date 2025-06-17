@@ -5150,10 +5150,16 @@ def mno_fix_cortex_a72_aes_1655431 : Flag<["-"], "mno-fix-cortex-a72-aes-1655431
   Alias<mno_fix_cortex_a57_aes_1742098>;
 def mfix_cortex_a53_835769 : Flag<["-"], "mfix-cortex-a53-835769">,
   Group<m_aarch64_Features_Group>,
-  HelpText<"Workaround Cortex-A53 erratum 835769 (AArch64 only)">;
+  HelpText<"Work around Cortex-A53 erratum 835769 (AArch64 only)">;
 def mno_fix_cortex_a53_835769 : Flag<["-"], "mno-fix-cortex-a53-835769">,
   Group<m_aarch64_Features_Group>,
-  HelpText<"Don't workaround Cortex-A53 erratum 835769 (AArch64 only)">;
+  HelpText<"Don't work around Cortex-A53 erratum 835769 (AArch64 only)">;
+def mfix_cortex_a53_843419 : Flag<["-"], "mfix-cortex-a53-843419">,
+  Group<m_aarch64_Features_Group>,
+  HelpText<"Work around Cortex-A53 erratum 843419 (AArch64 only)">;
+def mno_fix_cortex_a53_843419 : Flag<["-"], "mno-fix-cortex-a53-843419">,
+  Group<m_aarch64_Features_Group>,
+  HelpText<"Don't work around Cortex-A53 erratum 843419 (AArch64 only)">;
 def mmark_bti_property : Flag<["-"], "mmark-bti-property">,
   Group<m_aarch64_Features_Group>,
   HelpText<"Add .note.gnu.property with BTI to assembly files (AArch64 only)">;
