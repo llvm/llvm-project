@@ -2,6 +2,8 @@
   "configuration": {
     "runtime_prefix": "__instrumentor_",
     "runtime_prefix.description": "The runtime API prefix.",
+    "runtime_stubs_file": "test.c",
+    "runtime_stubs_file.description": "The file into which runtime stubs should be written.",
     "target_regex": "",
     "target_regex.description": "Regular expression to be matched against the module target. Only targets that match this regex will be instrumented",
     "host_enabled": true,
