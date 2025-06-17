@@ -10,6 +10,7 @@
 #include "BitcodeWriter.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
+#include "clang/AST/Mangle.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringExtras.h"
@@ -909,6 +910,13 @@ emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
       RI->Template.emplace();
     RI->Template->Specialization.emplace();
     auto &Specialization = *RI->Template->Specialization;
+    auto *Mangler = ItaniumMangleContext::create(
+        D->getASTContext(), D->getASTContext().getDiagnostics());
+    std::string MangledName;
+    llvm::raw_string_ostream Stream(MangledName);
+    Mangler->mangleCXXVTT(dyn_cast<CXXRecordDecl>(D), Stream);
+    Specialization.MangledName.emplace(MangledName);
+    delete Mangler;
 
     // What this is a specialization of.
     auto SpecOf = CTSD->getSpecializedTemplateOrPartial();

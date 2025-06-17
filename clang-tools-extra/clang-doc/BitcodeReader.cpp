@@ -83,6 +83,13 @@ static llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,
   return llvm::Error::success();
 }
 
+static llvm::Error decodeRecord(const Record &R,
+                                std::optional<SmallString<16>> &Field,
+                                llvm::StringRef Blob) {
+  Field.emplace(Blob);
+  return llvm::Error::success();
+}
+
 static llvm::Error decodeRecord(const Record &R, InfoType &Field,
                                 llvm::StringRef Blob) {
   switch (auto IT = static_cast<InfoType>(R[0])) {
@@ -379,6 +386,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
                                TemplateSpecializationInfo *I) {
   if (ID == TEMPLATE_SPECIALIZATION_OF)
     return decodeRecord(R, I->SpecializationOf, Blob);
+  if (ID == TEMPLATE_SPECIALIZATION_MANGLED_NAME)
+    return decodeRecord(R, I->MangledName, Blob);
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "invalid field for TemplateParamInfo");
 }

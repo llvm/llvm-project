@@ -202,6 +202,8 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {TEMPLATE_PARAM_CONTENTS, {"Contents", &genStringAbbrev}},
           {TEMPLATE_SPECIALIZATION_OF,
            {"SpecializationOf", &genSymbolIdAbbrev}},
+          {TEMPLATE_SPECIALIZATION_MANGLED_NAME,
+           {"MangledName", &genStringAbbrev}},
           {TYPEDEF_USR, {"USR", &genSymbolIdAbbrev}},
           {TYPEDEF_NAME, {"Name", &genStringAbbrev}},
           {TYPEDEF_DEFLOCATION, {"DefLocation", &genLocationAbbrev}},
@@ -263,7 +265,8 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Template Blocks.
         {BI_TEMPLATE_BLOCK_ID, {}},
         {BI_TEMPLATE_PARAM_BLOCK_ID, {TEMPLATE_PARAM_CONTENTS}},
-        {BI_TEMPLATE_SPECIALIZATION_BLOCK_ID, {TEMPLATE_SPECIALIZATION_OF}}};
+        {BI_TEMPLATE_SPECIALIZATION_BLOCK_ID,
+         {TEMPLATE_SPECIALIZATION_OF, TEMPLATE_SPECIALIZATION_MANGLED_NAME}}};
 
 // AbbreviationMap
 
@@ -638,6 +641,8 @@ void ClangDocBitcodeWriter::emitBlock(const TemplateInfo &T) {
 void ClangDocBitcodeWriter::emitBlock(const TemplateSpecializationInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_TEMPLATE_SPECIALIZATION_BLOCK_ID);
   emitRecord(T.SpecializationOf, TEMPLATE_SPECIALIZATION_OF);
+  if (T.MangledName)
+    emitRecord(T.MangledName->str(), TEMPLATE_SPECIALIZATION_MANGLED_NAME);
   for (const auto &P : T.Params)
     emitBlock(P);
 }
