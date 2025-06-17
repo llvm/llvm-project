@@ -5,12 +5,12 @@ define void @dupq_i8_256b(ptr %addr) #0 {
 ; CHECK-LABEL: dupq_i8_256b:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    dupq z0.b, z0.b[11]
+; CHECK-NEXT:    dupq z0.b, z0.b[15]
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %load = load <32 x i8>, ptr %addr
-  %splat.lanes = shufflevector <32 x i8> %load, <32 x i8> poison, <32 x i32> <i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11,
-                                                                              i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27>
+  %splat.lanes = shufflevector <32 x i8> %load, <32 x i8> poison, <32 x i32> <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15,
+                                                                              i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
   store <32 x i8> %splat.lanes, ptr %addr
   ret void
 }
