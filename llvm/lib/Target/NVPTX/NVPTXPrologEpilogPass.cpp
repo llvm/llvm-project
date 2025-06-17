@@ -108,7 +108,7 @@ bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
           continue;
 
         // Eliminate this FrameIndex operand.
-        TRI.eliminateFrameIndex(MI, 0, Idx, nullptr);
+        RemovedMI = TRI.eliminateFrameIndex(MI, 0, Idx, nullptr);
         Modified = true;
         if (RemovedMI)
           break;
