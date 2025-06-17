@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Bufferization/IR/BufferizationConversionInterface.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -720,11 +719,9 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
   if (bufferizableOp)
     return bufferizableOp.getBufferType(value, options, state, invocationStack);
 
-  // Op is not bufferizable, use conversion interface.
-  bufferization::ConversionInterface iface(value.getContext());
-  return iface.getBufferType(value, options, state, [&](const Twine &message) {
-    return op->emitError(message);
-  });
+  // Op is not bufferizable.
+  return cast<TensorLikeType>(value.getType())
+      .getBufferType(options, state, [&]() { return op->emitError(); });
 }
 
 bool bufferization::hasTensorSemantics(Operation *op) {
@@ -1059,10 +1056,8 @@ bool bufferization::detail::typesMatchAfterBufferization(Operation &op,
   assert(isa<TensorLikeType>(tensor.getType()) && "expected TensorLikeType");
   assert(isa<BufferLikeType>(buffer.getType()) && "expected BufferLikeType");
 
-  // Op is not bufferizable, use conversion interface.
-  bufferization::ConversionInterface iface(op.getContext());
-  return succeeded(iface.typesMatch(
-      cast<TensorLikeType>(tensor.getType()),
-      cast<BufferLikeType>(buffer.getType()),
-      [&](const Twine &message) { return op.emitError(message); }));
+  return mlir::succeeded(
+      cast<TensorLikeType>(tensor.getType())
+          .verifyCompatibleBufferType(cast<BufferLikeType>(buffer.getType()),
+                                      [&]() { return op.emitError(); }));
 }

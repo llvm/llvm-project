@@ -745,8 +745,8 @@ bool defaultHasTensorSemantics(Operation *op);
 FailureOr<BaseMemRefType> castToMemRef(FailureOr<BufferLikeType> bufferType);
 
 /// This function is a free-standing helper that relies on
-/// bufferization::ConversionInterface to verify the types in tensor and buffer
-/// worlds match.
+/// bufferization::TensorLikeTypeInterface to verify the types in tensor and
+/// buffer worlds match.
 bool typesMatchAfterBufferization(Operation &op, Value tensor, Value buffer);
 } // namespace detail
 
