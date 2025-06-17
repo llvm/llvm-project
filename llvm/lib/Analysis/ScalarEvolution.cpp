@@ -10893,9 +10893,10 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
     break;
   case ICmpInst::ICMP_UGE:
     // If RHS is an op we can fold the -1, try that first.
+    // Otherwise prefer LHS to preserve the nuw flag.
     if ((isa<SCEVConstant>(RHS) ||
-         match(RHS,
-               m_scev_AffineAddRec(m_SCEVConstant(), m_SCEV(), m_Loop()))) &&
+         (isa<SCEVAddExpr, SCEVAddRecExpr>(RHS) &&
+          isa<SCEVConstant>(cast<SCEVNAryExpr>(RHS)->getOperand(0)))) &&
         !getUnsignedRangeMin(RHS).isMinValue()) {
       RHS = getAddExpr(getConstant(RHS->getType(), (uint64_t)-1, true), RHS);
       Pred = ICmpInst::ICMP_UGT;
