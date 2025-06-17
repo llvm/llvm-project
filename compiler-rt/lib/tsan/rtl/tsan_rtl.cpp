@@ -532,7 +532,7 @@ static void StopBackgroundThread() {
 
 void DontNeedShadowFor(uptr addr, uptr size) {
   ReleaseMemoryPagesToOS(reinterpret_cast<uptr>(MemToShadow(addr)),
-                         reinterpret_cast<uptr>(MemToShadow(addr + size)));
+                         reinterpret_cast<uptr>(MemToEndShadow(addr + size)));
 }
 
 #if !SANITIZER_GO
@@ -588,12 +588,12 @@ void MapShadow(uptr addr, uptr size) {
   // CHECK_EQ(addr, addr & ~((64 << 10) - 1));  // windows wants 64K alignment
   const uptr kPageSize = GetPageSizeCached();
   uptr shadow_begin = RoundDownTo((uptr)MemToShadow(addr), kPageSize);
-  uptr shadow_end = RoundUpTo((uptr)MemToShadow(addr + size), kPageSize);
+  uptr shadow_end = RoundUpTo((uptr)MemToEndShadow(addr + size), kPageSize);
   if (!MmapFixedNoReserve(shadow_begin, shadow_end - shadow_begin, "shadow"))
     Die();
 #else
   uptr shadow_begin = RoundDownTo((uptr)MemToShadow(addr), (64 << 10));
-  uptr shadow_end = RoundUpTo((uptr)MemToShadow(addr + size), (64 << 10));
+  uptr shadow_end = RoundUpTo((uptr)MemToEndShadow(addr + size), (64 << 10));
   VPrintf(2, "MapShadow for (0x%zx-0x%zx), begin/end: (0x%zx-0x%zx)\n",
           addr, addr + size, shadow_begin, shadow_end);
 

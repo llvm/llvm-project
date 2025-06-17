@@ -688,16 +688,15 @@ void MemoryAccessRangeT(ThreadState* thr, uptr pc, uptr addr, uptr size) {
     DCHECK(IsShadowMem(shadow_mem));
   }
 
-  RawShadow* shadow_mem_end = reinterpret_cast<RawShadow*>(
-      reinterpret_cast<uptr>(shadow_mem) + size * kShadowMultiplier - 1);
-  if (!IsShadowMem(shadow_mem_end)) {
-    Printf("Bad shadow end addr: %p (%p)\n", shadow_mem_end,
+  RawShadow* shadow_mem_end = MemToEndShadow(addr + size);
+  if (size > 0 && !IsShadowMem(shadow_mem_end - 1)) {
+    Printf("Bad shadow end addr: %p (%p)\n", shadow_mem_end - 1,
            (void*)(addr + size - 1));
     Printf(
         "Shadow start addr (ok): %p (%p); size: 0x%zx; kShadowMultiplier: "
         "%zx\n",
         shadow_mem, (void*)addr, size, kShadowMultiplier);
-    DCHECK(IsShadowMem(shadow_mem_end));
+    DCHECK(IsShadowMem(shadow_mem_end - 1));
   }
 #endif
 
