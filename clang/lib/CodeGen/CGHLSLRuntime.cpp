@@ -471,14 +471,6 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   }
 }
 
-void CGHLSLRuntime::setHLSLFunctionAttributes(const FunctionDecl *FD,
-                                              llvm::Function *Fn) {
-  if (FD->isInExportDeclContext()) {
-    const StringRef ExportAttrKindStr = "hlsl.export";
-    Fn->addFnAttr(ExportAttrKindStr);
-  }
-}
-
 static void gatherFunctions(SmallVectorImpl<Function *> &Fns, llvm::Module &M,
                             bool CtorOrDtor) {
   const auto *GV =
