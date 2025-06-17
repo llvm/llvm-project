@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVFixupKinds.h"
-#include "MCTargetDesc/RISCVMCExpr.h"
+#include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -49,7 +49,7 @@ unsigned RISCVELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                             const MCValue &Target,
                                             bool IsPCRel) const {
   unsigned Kind = Fixup.getTargetKind();
-  auto Spec = RISCVMCExpr::Specifier(Target.getSpecifier());
+  auto Spec = Target.getSpecifier();
   switch (Spec) {
   case ELF::R_RISCV_TPREL_HI20:
   case ELF::R_RISCV_TLS_GOT_HI20:
@@ -62,7 +62,7 @@ unsigned RISCVELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case ELF::R_RISCV_GOT32_PCREL:
     if (Kind == FK_Data_4)
       break;
-    reportError(Fixup.getLoc(), "%" + RISCVMCExpr::getSpecifierName(Spec) +
+    reportError(Fixup.getLoc(), "%" + RISCV::getSpecifierName(Spec) +
                                     " can only be used in a .word directive");
     return ELF::R_RISCV_NONE;
   default:

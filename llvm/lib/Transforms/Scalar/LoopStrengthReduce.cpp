@@ -6008,9 +6008,8 @@ static bool canHoistIVInc(const TargetTransformInfo &TTI, const LSRFixup &Fixup,
 
   Instruction *I = Fixup.UserInst;
   Type *Ty = I->getType();
-  return Ty->isIntegerTy() &&
-         ((isa<LoadInst>(I) && TTI.isIndexedLoadLegal(TTI.MIM_PostInc, Ty)) ||
-          (isa<StoreInst>(I) && TTI.isIndexedStoreLegal(TTI.MIM_PostInc, Ty)));
+  return (isa<LoadInst>(I) && TTI.isIndexedLoadLegal(TTI.MIM_PostInc, Ty)) ||
+         (isa<StoreInst>(I) && TTI.isIndexedStoreLegal(TTI.MIM_PostInc, Ty));
 }
 
 /// Rewrite all the fixup locations with new values, following the chosen

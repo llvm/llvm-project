@@ -188,6 +188,7 @@ static bool IsEligibleForTrivialRelocation(Sema &SemaRef,
       return false;
   }
 
+  bool IsUnion = D->isUnion();
   for (const FieldDecl *Field : D->fields()) {
     if (Field->getType()->isDependentType())
       continue;
@@ -196,6 +197,12 @@ static bool IsEligibleForTrivialRelocation(Sema &SemaRef,
     // ... has a non-static data member of an object type that is not
     // of a trivially relocatable type
     if (!SemaRef.IsCXXTriviallyRelocatableType(Field->getType()))
+      return false;
+
+    // A union contains values with address discriminated pointer auth
+    // cannot be relocated.
+    if (IsUnion && SemaRef.Context.containsAddressDiscriminatedPointerAuth(
+                       Field->getType()))
       return false;
   }
   return !D->hasDeletedDestructor();
@@ -313,7 +320,6 @@ bool Sema::IsCXXTriviallyRelocatableType(const CXXRecordDecl &RD) {
 }
 
 bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
-
   QualType BaseElementType = getASTContext().getBaseElementType(Type);
 
   if (Type->isVariableArrayType())
@@ -322,10 +328,10 @@ bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
   if (BaseElementType.hasNonTrivialObjCLifetime())
     return false;
 
-  if (BaseElementType.hasAddressDiscriminatedPointerAuth())
+  if (BaseElementType->isIncompleteType())
     return false;
 
-  if (BaseElementType->isIncompleteType())
+  if (Context.containsNonRelocatablePointerAuth(Type))
     return false;
 
   if (BaseElementType->isScalarType() || BaseElementType->isVectorType())
@@ -670,7 +676,10 @@ static bool IsTriviallyRelocatableType(Sema &SemaRef, QualType T) {
   if (!BaseElementType->isObjectType())
     return false;
 
-  if (T.hasAddressDiscriminatedPointerAuth())
+  // The deprecated __builtin_is_trivially_relocatable does not have
+  // an equivalent to __builtin_trivially_relocate, so there is no
+  // safe way to use it if there are any address discriminated values.
+  if (SemaRef.getASTContext().containsAddressDiscriminatedPointerAuth(T))
     return false;
 
   if (const auto *RD = BaseElementType->getAsCXXRecordDecl();

@@ -536,6 +536,23 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPIIndex",
+    srcs = [
+        "lib/CAPI/Dialect/Index.cpp",
+    ],
+    hdrs = [
+        "include/mlir-c/Dialect/Index.h",
+    ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":IndexDialect",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPILinalg",
     srcs = [
         "lib/CAPI/Dialect/Linalg.cpp",

@@ -1779,7 +1779,7 @@ def note_unsatisfied_trait_reason
            "%HasArcLifetime{has an ARC lifetime qualifier}|"
            "%VLA{is a variably-modified type}|"
            "%VBase{has a virtual base %1}|"
-           "%NotScalarOrClass{not %select{a|an array of objects of}1 scalar or "
+           "%NotScalarOrClass{is not %select{a|an array of objects of}1 scalar or "
            "class type}|"
            "%NTRBase{has a non-trivially-relocatable base %1}|"
            "%NTRField{has a non-trivially-relocatable member %1 of type %2}|"
