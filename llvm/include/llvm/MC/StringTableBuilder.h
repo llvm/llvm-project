@@ -56,7 +56,7 @@ public:
   /// Add a string to the builder. Returns the position of S in the table. The
   /// position will be changed if finalize is used. Can only be used before the
   /// table is finalized. Priority is only useful with reordering. Strings with
-  /// same priority will be put together. Strings with higher priority are
+  /// the same priority will be put together. Strings with higher priority are
   /// placed closer to the begin of string table. When adding same string with
   /// different priority, the maximum priority win.
   LLVM_ABI size_t add(CachedHashStringRef S, uint8_t Priority = 0);
