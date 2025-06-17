@@ -588,8 +588,13 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVAALUV",   [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVAALUX",   [SMX60_VIEU], mx, IsWorstCase>;
   }
-  defm "" : LMULWriteResMX<"WriteVSMulV",   [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSMulX",   [SMX60_VIEU], mx, IsWorstCase>;
+  // Vector saturating multiply (vsmul): same latency pattern as integer multiply
+  // TODO: Change WriteVSMul* to use LMULSEWSchedWrites in RISCVScheduleV.td for SEW-dependent latencies
+  defvar SMulLat = SMX60GetVIMulE64Latency<mx>.c;
+  let Latency = SMulLat in {
+    defm "" : LMULWriteResMX<"WriteVSMulV",   [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSMulX",   [SMX60_VIEU], mx, IsWorstCase>;
+  }
   let Latency = ALULat in {
     defm "" : LMULWriteResMX<"WriteVSShiftV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSShiftX", [SMX60_VIEU], mx, IsWorstCase>;
