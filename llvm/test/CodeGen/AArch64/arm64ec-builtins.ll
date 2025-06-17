@@ -28,10 +28,9 @@ define i128 @f4(i128 %x, i128 %y) {
   ret i128 %r
 }
 
-; FIXME: This is wrong; should be "#__aarch64_cas1_relax"
 define i8 @f5(i8 %expected, i8 %new, ptr %ptr) "target-features"="+outline-atomics" {
 ; CHECK-LABEL: "#f5":
-; CHECK: bl __aarch64_cas1_relax
+; CHECK: bl "#__aarch64_cas1_relax"
     %pair = cmpxchg ptr %ptr, i8 %expected, i8 %new monotonic monotonic, align 1
    %r = extractvalue { i8, i1 } %pair, 0
     ret i8 %r
