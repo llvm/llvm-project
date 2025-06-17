@@ -7,192 +7,122 @@
 ; The function minlst primarily takes two indices (i.e. range), scans backwards in the range
 ; and returns the firstIV of the minimum value.
 
-define i32 @minlst(i32 %first_index, i32 %last_index, ptr %array) {
-; CHECK-REV-MIN-LABEL: define fastcc i32 @minlst(
-; CHECK-REV-MIN-SAME: i32 [[FIRST_INDEX:%.*]], i32 [[LAST_INDEX:%.*]], ptr [[ARRAY:%.*]]) {
-; CHECK-REV-MIN-NEXT:  [[ENTRY:.*]]:
-; CHECK-REV-MIN-NEXT:    [[FIRST_INDEX_SEXT:%.*]] = sext i32 [[FIRST_INDEX]] to i64
-; CHECK-REV-MIN-NEXT:    [[LAST_INDEX_NEG:%.*]] = sub i32 0, [[LAST_INDEX]]
-; CHECK-REV-MIN-NEXT:    [[LAST_INDEX_NEG_SEXT:%.*]] = sext i32 [[LAST_INDEX_NEG]] to i64
-; CHECK-REV-MIN-NEXT:    [[ADD:%.*]] = add nsw i64 [[FIRST_INDEX_SEXT]], [[LAST_INDEX_NEG_SEXT]]
-; CHECK-REV-MIN-NEXT:    [[SUB:%.*]] = sub nsw i64 0, [[ADD]]
-; CHECK-REV-MIN-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 -8
-; CHECK-REV-MIN-NEXT:    [[INVARIANT_GEP5:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 -4
-; CHECK-REV-MIN-NEXT:    [[EARLY_EXIT_COND:%.*]] = icmp slt i64 [[ADD]], 0
-; CHECK-REV-MIN-NEXT:    br i1 [[EARLY_EXIT_COND]], label %[[LOOP_PREHEADER:.*]], [[DOT_CRIT_EDGE:label %.*]]
-; CHECK-REV-MIN:       [[LOOP_PREHEADER]]:
-; CHECK-REV-MIN-NEXT:    [[LAST_INDEX_SEXT:%.*]] = sext i32 [[LAST_INDEX]] to i64
-; CHECK-REV-MIN-NEXT:    br label %[[LOOP:.*]]
-; CHECK-REV-MIN:       [[LOOP]]:
-; CHECK-REV-MIN-NEXT:    [[IV:%.*]] = phi i64 [ [[LAST_INDEX_SEXT]], %[[LOOP_PREHEADER]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-REV-MIN-NEXT:    [[TMP0:%.*]] = phi i64 [ [[TMP1:%.*]], %[[LOOP]] ], [ [[SUB]], %[[LOOP_PREHEADER]] ]
-; CHECK-REV-MIN-NEXT:    [[INDEX:%.*]] = phi i32 [ [[SELECT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX]], %[[LOOP_PREHEADER]] ]
-; CHECK-REV-MIN-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
-; CHECK-REV-MIN-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[INVARIANT_GEP]], i64 [[IV]]
-; CHECK-REV-MIN-NEXT:    [[LOAD1:%.*]] = load float, ptr [[GEP]], align 4
-; CHECK-REV-MIN-NEXT:    [[INDEX_SEXT:%.*]] = sext i32 [[INDEX]] to i64
-; CHECK-REV-MIN-NEXT:    [[GEP6:%.*]] = getelementptr float, ptr [[INVARIANT_GEP5]], i64 [[INDEX_SEXT]]
-; CHECK-REV-MIN-NEXT:    [[LOAD2:%.*]] = load float, ptr [[GEP6]], align 4
-; CHECK-REV-MIN-NEXT:    [[CMP:%.*]] = fcmp contract olt float [[LOAD1]], [[LOAD2]]
-; CHECK-REV-MIN-NEXT:    [[IV_NEXT_TRUNC:%.*]] = trunc nsw i64 [[IV_NEXT]] to i32
-; CHECK-REV-MIN-NEXT:    [[SELECT]] = select i1 [[CMP]], i32 [[IV_NEXT_TRUNC]], i32 [[INDEX]]
-; CHECK-REV-MIN-NEXT:    [[TMP1]] = add nsw i64 [[TMP0]], -1
-; CHECK-REV-MIN-NEXT:    [[LOOP_COND:%.*]] = icmp sgt i64 [[TMP0]], 1
-; CHECK-REV-MIN-NEXT:    br i1 [[LOOP_COND]], label %[[LOOP]], label %[[DOT_CRIT_EDGE_LOOPEXIT:.*]]
-; CHECK-REV-MIN:       [[__CRIT_EDGE_LOOPEXIT:.*:]]
-; CHECK-REV-MIN-NEXT:    [[SELECT_LCSSA:%.*]] = phi i32 [ [[SELECT]], %[[LOOP]] ]
-; CHECK-REV-MIN-NEXT:    br [[DOT_CRIT_EDGE]]
-; CHECK-REV-MIN:       [[__CRIT_EDGE:.*:]]
-; CHECK-REV-MIN-NEXT:    [[LAST_INDEX_RET:%.*]] = phi i32 [ [[LAST_INDEX]], %[[ENTRY]] ], [ [[SELECT_LCSSA]], %[[DOT_CRIT_EDGE_LOOPEXIT]] ]
-; CHECK-REV-MIN-NEXT:    ret i32 [[LAST_INDEX_RET]]
-;
-; CHECK-REV-MIN-VW1-IL4-LABEL: define i32 @minlst(
-; CHECK-REV-MIN-VW1-IL4-SAME: i32 [[FIRST_INDEX:%.*]], i32 [[LAST_INDEX:%.*]], ptr [[ARRAY:%.*]]) {
+define i64 @minlst(i64 %first_index, i64 %last_index, ptr %first_ptr, ptr %second_ptr, i1 %early_exit_cond) {
+; CHECK-REV-MIN-VW1-IL4-LABEL: define i64 @minlst(
+; CHECK-REV-MIN-VW1-IL4-SAME: i64 [[FIRST_INDEX:%.*]], i64 [[LAST_INDEX:%.*]], ptr [[FIRST_PTR:%.*]], ptr [[SECOND_PTR:%.*]], i1 [[EARLY_EXIT_COND:%.*]]) {
 ; CHECK-REV-MIN-VW1-IL4-NEXT:  [[ENTRY:.*]]:
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[FIRST_INDEX_SEXT:%.*]] = sext i32 [[FIRST_INDEX]] to i64
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[LAST_INDEX_NEG:%.*]] = sub i32 0, [[LAST_INDEX]]
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[LAST_INDEX_NEG_SEXT:%.*]] = sext i32 [[LAST_INDEX_NEG]] to i64
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[ADD:%.*]] = add nsw i64 [[FIRST_INDEX_SEXT]], [[LAST_INDEX_NEG_SEXT]]
+; CHECK-REV-MIN-VW1-IL4-NEXT:    [[LAST_INDEX_NEG:%.*]] = sub i64 0, [[LAST_INDEX]]
+; CHECK-REV-MIN-VW1-IL4-NEXT:    [[ADD:%.*]] = add nsw i64 [[FIRST_INDEX]], [[LAST_INDEX_NEG]]
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    [[DIFF:%.*]] = sub nsw i64 0, [[ADD]]
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[FIRST_PTR:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 -8
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[SECOND_PTR:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 -4
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[EARLY_EXIT_COND:%.*]] = icmp slt i64 [[ADD]], 0
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    br i1 [[EARLY_EXIT_COND]], label %[[LOOP_PREHEADER:.*]], [[DOT_CRIT_EDGE:label %.*]]
 ; CHECK-REV-MIN-VW1-IL4:       [[LOOP_PREHEADER]]:
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[LAST_INDEX_SEXT:%.*]] = sext i32 [[LAST_INDEX]] to i64
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-REV-MIN-VW1-IL4:       [[LOOP]]:
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX_SEXT]], %[[LOOP_PREHEADER]] ]
+; CHECK-REV-MIN-VW1-IL4-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX]], %[[LOOP_PREHEADER]] ]
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    [[DEC_IV:%.*]] = phi i64 [ [[DEC:%.*]], %[[LOOP]] ], [ [[DIFF]], %[[LOOP_PREHEADER]] ]
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[INDEX:%.*]] = phi i32 [ [[SELECT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX]], %[[LOOP_PREHEADER]] ]
+; CHECK-REV-MIN-VW1-IL4-NEXT:    [[INDEX_SEXT:%.*]] = phi i64 [ [[SELECT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX]], %[[LOOP_PREHEADER]] ]
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    [[LOAD1_PTR:%.*]] = getelementptr float, ptr [[FIRST_PTR]], i64 [[IV]]
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    [[LOAD1:%.*]] = load float, ptr [[LOAD1_PTR]], align 4
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[INDEX_SEXT:%.*]] = sext i32 [[INDEX]] to i64
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    [[LOAD2_PTR:%.*]] = getelementptr float, ptr [[SECOND_PTR]], i64 [[INDEX_SEXT]]
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    [[LOAD2:%.*]] = load float, ptr [[LOAD2_PTR]], align 4
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    [[CMP:%.*]] = fcmp contract olt float [[LOAD1]], [[LOAD2]]
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[IV_NEXT_TRUNC:%.*]] = trunc nsw i64 [[IV_NEXT]] to i32
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[SELECT]] = select i1 [[CMP]], i32 [[IV_NEXT_TRUNC]], i32 [[INDEX]]
+; CHECK-REV-MIN-VW1-IL4-NEXT:    [[SELECT]] = select i1 [[CMP]], i64 [[IV_NEXT]], i64 [[INDEX_SEXT]]
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    [[DEC]] = add nsw i64 [[DEC_IV]], -1
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    [[LOOP_COND:%.*]] = icmp sgt i64 [[DEC_IV]], 1
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    br i1 [[LOOP_COND]], label %[[LOOP]], label %[[DOT_CRIT_EDGE_LOOPEXIT:.*]]
 ; CHECK-REV-MIN-VW1-IL4:       [[__CRIT_EDGE_LOOPEXIT:.*:]]
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[SELECT_LCSSA:%.*]] = phi i32 [ [[SELECT]], %[[LOOP]] ]
+; CHECK-REV-MIN-VW1-IL4-NEXT:    [[SELECT_LCSSA:%.*]] = phi i64 [ [[SELECT]], %[[LOOP]] ]
 ; CHECK-REV-MIN-VW1-IL4-NEXT:    br [[DOT_CRIT_EDGE]]
 ; CHECK-REV-MIN-VW1-IL4:       [[__CRIT_EDGE:.*:]]
-; CHECK-REV-MIN-VW1-IL4-NEXT:    [[LAST_INDEX_RET:%.*]] = phi i32 [ [[LAST_INDEX]], %[[ENTRY]] ], [ [[SELECT_LCSSA]], %[[DOT_CRIT_EDGE_LOOPEXIT]] ]
-; CHECK-REV-MIN-VW1-IL4-NEXT:    ret i32 [[LAST_INDEX_RET]]
+; CHECK-REV-MIN-VW1-IL4-NEXT:    [[LAST_INDEX_RET:%.*]] = phi i64 [ [[LAST_INDEX]], %[[ENTRY]] ], [ [[SELECT_LCSSA]], %[[DOT_CRIT_EDGE_LOOPEXIT]] ]
+; CHECK-REV-MIN-VW1-IL4-NEXT:    ret i64 [[LAST_INDEX_RET]]
 ;
-; CHECK-REV-MIN-VW4-IL1-LABEL: define i32 @minlst(
-; CHECK-REV-MIN-VW4-IL1-SAME: i32 [[FIRST_INDEX:%.*]], i32 [[LAST_INDEX:%.*]], ptr [[ARRAY:%.*]]) {
+; CHECK-REV-MIN-VW4-IL1-LABEL: define i64 @minlst(
+; CHECK-REV-MIN-VW4-IL1-SAME: i64 [[FIRST_INDEX:%.*]], i64 [[LAST_INDEX:%.*]], ptr [[FIRST_PTR:%.*]], ptr [[SECOND_PTR:%.*]], i1 [[EARLY_EXIT_COND:%.*]]) {
 ; CHECK-REV-MIN-VW4-IL1-NEXT:  [[ENTRY:.*]]:
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[FIRST_INDEX_SEXT:%.*]] = sext i32 [[FIRST_INDEX]] to i64
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[LAST_INDEX_NEG:%.*]] = sub i32 0, [[LAST_INDEX]]
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[LAST_INDEX_NEG_SEXT:%.*]] = sext i32 [[LAST_INDEX_NEG]] to i64
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[ADD:%.*]] = add nsw i64 [[FIRST_INDEX_SEXT]], [[LAST_INDEX_NEG_SEXT]]
+; CHECK-REV-MIN-VW4-IL1-NEXT:    [[LAST_INDEX_NEG:%.*]] = sub i64 0, [[LAST_INDEX]]
+; CHECK-REV-MIN-VW4-IL1-NEXT:    [[ADD:%.*]] = add nsw i64 [[FIRST_INDEX]], [[LAST_INDEX_NEG]]
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    [[DIFF:%.*]] = sub nsw i64 0, [[ADD]]
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[FIRST_PTR:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 -8
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[SECOND_PTR:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 -4
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[EARLY_EXIT_COND:%.*]] = icmp slt i64 [[ADD]], 0
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    br i1 [[EARLY_EXIT_COND]], label %[[LOOP_PREHEADER:.*]], [[DOT_CRIT_EDGE:label %.*]]
 ; CHECK-REV-MIN-VW4-IL1:       [[LOOP_PREHEADER]]:
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[LAST_INDEX_SEXT:%.*]] = sext i32 [[LAST_INDEX]] to i64
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-REV-MIN-VW4-IL1:       [[LOOP]]:
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX_SEXT]], %[[LOOP_PREHEADER]] ]
+; CHECK-REV-MIN-VW4-IL1-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX]], %[[LOOP_PREHEADER]] ]
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    [[DEC_IV:%.*]] = phi i64 [ [[DEC:%.*]], %[[LOOP]] ], [ [[DIFF]], %[[LOOP_PREHEADER]] ]
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[INDEX:%.*]] = phi i32 [ [[SELECT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX]], %[[LOOP_PREHEADER]] ]
+; CHECK-REV-MIN-VW4-IL1-NEXT:    [[INDEX_SEXT:%.*]] = phi i64 [ [[SELECT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX]], %[[LOOP_PREHEADER]] ]
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    [[LOAD1_PTR:%.*]] = getelementptr float, ptr [[FIRST_PTR]], i64 [[IV]]
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    [[LOAD1:%.*]] = load float, ptr [[LOAD1_PTR]], align 4
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[INDEX_SEXT:%.*]] = sext i32 [[INDEX]] to i64
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    [[LOAD2_PTR:%.*]] = getelementptr float, ptr [[SECOND_PTR]], i64 [[INDEX_SEXT]]
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    [[LOAD2:%.*]] = load float, ptr [[LOAD2_PTR]], align 4
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    [[CMP:%.*]] = fcmp contract olt float [[LOAD1]], [[LOAD2]]
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[IV_NEXT_TRUNC:%.*]] = trunc nsw i64 [[IV_NEXT]] to i32
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[SELECT]] = select i1 [[CMP]], i32 [[IV_NEXT_TRUNC]], i32 [[INDEX]]
+; CHECK-REV-MIN-VW4-IL1-NEXT:    [[SELECT]] = select i1 [[CMP]], i64 [[IV_NEXT]], i64 [[INDEX_SEXT]]
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    [[DEC]] = add nsw i64 [[DEC_IV]], -1
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    [[LOOP_COND:%.*]] = icmp sgt i64 [[DEC_IV]], 1
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    br i1 [[LOOP_COND]], label %[[LOOP]], label %[[DOT_CRIT_EDGE_LOOPEXIT:.*]]
 ; CHECK-REV-MIN-VW4-IL1:       [[__CRIT_EDGE_LOOPEXIT:.*:]]
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[SELECT_LCSSA:%.*]] = phi i32 [ [[SELECT]], %[[LOOP]] ]
+; CHECK-REV-MIN-VW4-IL1-NEXT:    [[SELECT_LCSSA:%.*]] = phi i64 [ [[SELECT]], %[[LOOP]] ]
 ; CHECK-REV-MIN-VW4-IL1-NEXT:    br [[DOT_CRIT_EDGE]]
 ; CHECK-REV-MIN-VW4-IL1:       [[__CRIT_EDGE:.*:]]
-; CHECK-REV-MIN-VW4-IL1-NEXT:    [[LAST_INDEX_RET:%.*]] = phi i32 [ [[LAST_INDEX]], %[[ENTRY]] ], [ [[SELECT_LCSSA]], %[[DOT_CRIT_EDGE_LOOPEXIT]] ]
-; CHECK-REV-MIN-VW4-IL1-NEXT:    ret i32 [[LAST_INDEX_RET]]
+; CHECK-REV-MIN-VW4-IL1-NEXT:    [[LAST_INDEX_RET:%.*]] = phi i64 [ [[LAST_INDEX]], %[[ENTRY]] ], [ [[SELECT_LCSSA]], %[[DOT_CRIT_EDGE_LOOPEXIT]] ]
+; CHECK-REV-MIN-VW4-IL1-NEXT:    ret i64 [[LAST_INDEX_RET]]
 ;
-; CHECK-REV-MIN-VW4-IL2-LABEL: define i32 @minlst(
-; CHECK-REV-MIN-VW4-IL2-SAME: i32 [[FIRST_INDEX:%.*]], i32 [[LAST_INDEX:%.*]], ptr [[ARRAY:%.*]]) {
+; CHECK-REV-MIN-VW4-IL2-LABEL: define i64 @minlst(
+; CHECK-REV-MIN-VW4-IL2-SAME: i64 [[FIRST_INDEX:%.*]], i64 [[LAST_INDEX:%.*]], ptr [[FIRST_PTR:%.*]], ptr [[SECOND_PTR:%.*]], i1 [[EARLY_EXIT_COND:%.*]]) {
 ; CHECK-REV-MIN-VW4-IL2-NEXT:  [[ENTRY:.*]]:
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[FIRST_INDEX_SEXT:%.*]] = sext i32 [[FIRST_INDEX]] to i64
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[LAST_INDEX_NEG:%.*]] = sub i32 0, [[LAST_INDEX]]
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[LAST_INDEX_NEG_SEXT:%.*]] = sext i32 [[LAST_INDEX_NEG]] to i64
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[ADD:%.*]] = add nsw i64 [[FIRST_INDEX_SEXT]], [[LAST_INDEX_NEG_SEXT]]
+; CHECK-REV-MIN-VW4-IL2-NEXT:    [[LAST_INDEX_NEG:%.*]] = sub i64 0, [[LAST_INDEX]]
+; CHECK-REV-MIN-VW4-IL2-NEXT:    [[ADD:%.*]] = add nsw i64 [[FIRST_INDEX]], [[LAST_INDEX_NEG]]
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    [[DIFF:%.*]] = sub nsw i64 0, [[ADD]]
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[FIRST_PTR:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 -8
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[SECOND_PTR:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 -4
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[EARLY_EXIT_COND:%.*]] = icmp slt i64 [[ADD]], 0
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    br i1 [[EARLY_EXIT_COND]], label %[[LOOP_PREHEADER:.*]], [[DOT_CRIT_EDGE:label %.*]]
 ; CHECK-REV-MIN-VW4-IL2:       [[LOOP_PREHEADER]]:
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[LAST_INDEX_SEXT:%.*]] = sext i32 [[LAST_INDEX]] to i64
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-REV-MIN-VW4-IL2:       [[LOOP]]:
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX_SEXT]], %[[LOOP_PREHEADER]] ]
+; CHECK-REV-MIN-VW4-IL2-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX]], %[[LOOP_PREHEADER]] ]
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    [[DEC_IV:%.*]] = phi i64 [ [[DEC:%.*]], %[[LOOP]] ], [ [[DIFF]], %[[LOOP_PREHEADER]] ]
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[INDEX:%.*]] = phi i32 [ [[SELECT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX]], %[[LOOP_PREHEADER]] ]
+; CHECK-REV-MIN-VW4-IL2-NEXT:    [[INDEX_SEXT:%.*]] = phi i64 [ [[SELECT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX]], %[[LOOP_PREHEADER]] ]
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    [[LOAD1_PTR:%.*]] = getelementptr float, ptr [[FIRST_PTR]], i64 [[IV]]
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    [[LOAD1:%.*]] = load float, ptr [[LOAD1_PTR]], align 4
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[INDEX_SEXT:%.*]] = sext i32 [[INDEX]] to i64
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    [[LOAD2_PTR:%.*]] = getelementptr float, ptr [[SECOND_PTR]], i64 [[INDEX_SEXT]]
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    [[LOAD2:%.*]] = load float, ptr [[LOAD2_PTR]], align 4
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    [[CMP:%.*]] = fcmp contract olt float [[LOAD1]], [[LOAD2]]
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[IV_NEXT_TRUNC:%.*]] = trunc nsw i64 [[IV_NEXT]] to i32
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[SELECT]] = select i1 [[CMP]], i32 [[IV_NEXT_TRUNC]], i32 [[INDEX]]
+; CHECK-REV-MIN-VW4-IL2-NEXT:    [[SELECT]] = select i1 [[CMP]], i64 [[IV_NEXT]], i64 [[INDEX_SEXT]]
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    [[DEC]] = add nsw i64 [[DEC_IV]], -1
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    [[LOOP_COND:%.*]] = icmp sgt i64 [[DEC_IV]], 1
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    br i1 [[LOOP_COND]], label %[[LOOP]], label %[[DOT_CRIT_EDGE_LOOPEXIT:.*]]
 ; CHECK-REV-MIN-VW4-IL2:       [[__CRIT_EDGE_LOOPEXIT:.*:]]
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[SELECT_LCSSA:%.*]] = phi i32 [ [[SELECT]], %[[LOOP]] ]
+; CHECK-REV-MIN-VW4-IL2-NEXT:    [[SELECT_LCSSA:%.*]] = phi i64 [ [[SELECT]], %[[LOOP]] ]
 ; CHECK-REV-MIN-VW4-IL2-NEXT:    br [[DOT_CRIT_EDGE]]
 ; CHECK-REV-MIN-VW4-IL2:       [[__CRIT_EDGE:.*:]]
-; CHECK-REV-MIN-VW4-IL2-NEXT:    [[LAST_INDEX_RET:%.*]] = phi i32 [ [[LAST_INDEX]], %[[ENTRY]] ], [ [[SELECT_LCSSA]], %[[DOT_CRIT_EDGE_LOOPEXIT]] ]
-; CHECK-REV-MIN-VW4-IL2-NEXT:    ret i32 [[LAST_INDEX_RET]]
+; CHECK-REV-MIN-VW4-IL2-NEXT:    [[LAST_INDEX_RET:%.*]] = phi i64 [ [[LAST_INDEX]], %[[ENTRY]] ], [ [[SELECT_LCSSA]], %[[DOT_CRIT_EDGE_LOOPEXIT]] ]
+; CHECK-REV-MIN-VW4-IL2-NEXT:    ret i64 [[LAST_INDEX_RET]]
 ;
 entry:
-  %first_index_sext = sext i32 %first_index to i64
-  %last_index_neg = sub i32 0, %last_index
-  %last_index_neg_sext = sext i32 %last_index_neg to i64
-  %add = add nsw i64 %first_index_sext, %last_index_neg_sext
+  %last_index_neg = sub i64 0, %last_index
+  %add = add nsw i64 %first_index, %last_index_neg
   %diff = sub nsw i64 0, %add
-  %first_ptr = getelementptr i8, ptr %array, i64 -8
-  %second_ptr = getelementptr i8, ptr %array, i64 -4
-  %early_exit_cond = icmp slt i64 %add, 0
   br i1 %early_exit_cond, label %loop.preheader, label %._crit_edge
 
 loop.preheader:                                 ; preds = %entry
-  %last_index_sext = sext i32 %last_index to i64
   br label %loop
 
 loop:                                           ; preds = %loop.preheader, %loop
-  %iv = phi i64 [%iv.next, %loop], [ %last_index_sext, %loop.preheader ]
+  %iv = phi i64 [ %iv.next, %loop ], [ %last_index, %loop.preheader ]
   %dec_iv = phi i64 [ %dec, %loop ], [ %diff, %loop.preheader ]
-  %index = phi i32 [ %select, %loop ], [ %last_index, %loop.preheader ]
+  %index = phi i64 [ %select, %loop ], [ %last_index, %loop.preheader ]
   %iv.next = add nsw i64 %iv, -1
   %load1_ptr = getelementptr float, ptr %first_ptr, i64 %iv
   %load1 = load float, ptr %load1_ptr, align 4
-  %index_sext = sext i32 %index to i64
-  %load2_ptr = getelementptr float, ptr %second_ptr, i64 %index_sext
+  %load2_ptr = getelementptr float, ptr %second_ptr, i64 %index
   %load2 = load float, ptr %load2_ptr, align 4
   %cmp = fcmp contract olt float %load1, %load2
-  %iv.next.trunc = trunc nsw i64 %iv.next to i32
-  %select = select i1 %cmp, i32 %iv.next.trunc, i32 %index
+  %select = select i1 %cmp, i64 %iv.next, i64 %index
   %dec = add nsw i64 %dec_iv, -1
   %loop_cond = icmp sgt i64 %dec_iv, 1
   br i1 %loop_cond, label %loop, label %._crit_edge
 
 ._crit_edge:                                      ; preds = %loop, %entry
-  %last_index_ret = phi i32 [ %select, %loop ], [ %last_index, %entry ]
-  ret i32 %last_index_ret
+  %last_index_ret = phi i64 [ %select, %loop ], [ %last_index, %entry ]
+  ret i64 %last_index_ret
 }
