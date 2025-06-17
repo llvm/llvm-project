@@ -1587,29 +1587,21 @@ def EmitC_ClassOp
 
     Example:
     ```mlir
-    emitc.class @mainClass {
-      emitc.field @another_feature : !emitc.array<1xf32> = {emitc.opaque = ["another_feature"]}
-      emitc.field @some_feature : !emitc.array<1xf32> = {emitc.opaque = ["some_feature"]}
-      emitc.field @output_0 : !emitc.array<1xf32> = {emitc.opaque = ["output_0"]}
-
+    emitc.func @model(%input_data : !emitc.array<1xf32> {emitc.opaque = ["input_tensor"]}) attributes { } {
+      %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+      %1 = subscript %input_data[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+      return
+    }
+    // becomes 
+    emitc.class @modelClass {
+      emitc.field @input_tensor : !emitc.array<1xf32> = {emitc.opaque = ["input_tensor"]}
       emitc.func @execute() {
         %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
-
-        %1 = get_field @another_feature : !emitc.array<1xf32>
-        %2 = get_field @some_feature : !emitc.array<1xf32>
-        %3 = get_field @output_0 : !emitc.array<1xf32>
-
-        %4 = subscript %2[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
-        %5 = load %4 : <f32>
-        %6 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
-        %7 = load %6 : <f32>
-        %8 = add %5, %7 : (f32, f32) -> f32
-        %9 = subscript %3[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
-        assign %8 : f32 to %9 : <f32>
+        %1 = get_field @input_tensor : !emitc.array<1xf32>
+        %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
         return
       }
-  }
-
+    }
     ```
   }];
 
@@ -1633,23 +1625,22 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
   let summary = "A field within a class";
   let description = [{
     The `emitc.field` operation declares a named field within an `emitc.class`
-    operation. The field's type must be an EmitC type. The initial value is optional. 
-    If the argument has attributes, these become the initial value, else we end up with no initial value.
+    operation. The field's type must be an EmitC type. 
+    If the corresponding function argument has attributes (accessed via `argAttrs`), 
+    these attributes are attached to the field operation. 
+    Otherwise, the field is created without additional attributes.
 
-    Example with initial values:
-
+    Example of func argument with attributes:
     ```mlir
-    emitc.class @modelClass {
-      emitc.field @another_feature : !emitc.array<1xf32> = {emitc.opaque = ["another_feature"]}
-      emitc.field @some_feature : !emitc.array<1xf32> = {emitc.opaque = ["some_feature"]}
-      emitc.field @output_0 : !emitc.array<1xf32> = {emitc.opaque = ["output_0"]}
-    }
+    %arg0: !emitc.array<1xf32> {emitc.opaque = ["another_feature"]} 
+    // becomes
+    emitc.field @another_feature : !emitc.array<1xf32> = {emitc.opaque = ["another_feature"]}
     ```
-    Example with no initial value:
+    Example of func argument without attributes:
     ```mlir
-     emitc.class @modelClass {
-      emitc.field @another_feature : !emitc.array<1xf32>
-    }
+    %arg0 : !emitc.array<1xf32>
+    // becomes
+    emitc.field @fieldName0 : !emitc.array<1xf32>
     ```
   }];
 
@@ -1673,9 +1664,7 @@ def EmitC_GetFieldOp
      Example:
 
      ```mlir
-    %some_ptr = emitc.get_field @some_feature : !emitc.array<1xf32> 
-    %another_ptr = emitc.get_field @another_feature : !emitc.array<1xf32> 
-    %output_ptr = emitc.get_field @output_0 : !emitc.array<1xf32> 
+     %0 = get_field @fieldName0 : !emitc.array<1xf32>
      ```
   }];
 

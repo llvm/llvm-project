@@ -21,19 +21,18 @@ module attributes { } {
 // CHECK-NEXT:     emitc.field @some_feature : !emitc.array<1xf32> = {emitc.opaque = ["some_feature"]}
 // CHECK-NEXT:     emitc.field @output_0 : !emitc.array<1xf32> = {emitc.opaque = ["output_0"]}
 // CHECK-NEXT:     emitc.func @execute() {
-// CHECK-NEXT:       %{{[0-9]+}} = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
-// CHECK-NEXT:       %{{[0-9]+}} = get_field @another_feature : !emitc.array<1xf32>
-// CHECK-NEXT:       %{{[0-9]+}} = get_field @some_feature : !emitc.array<1xf32>
-// CHECK-NEXT:       %{{[0-9]+}} = get_field @output_0 : !emitc.array<1xf32>
-// CHECK-NEXT:       %{{[0-9]+}} = subscript %{{[0-9]+}}[%{{[0-9]+}}] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
-// CHECK-NEXT:       %{{[0-9]+}} = load %{{[0-9]+}} : <f32>
-// CHECK-NEXT:       %{{[0-9]+}} = subscript %{{[0-9]+}}[%{{[0-9]+}}] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
-// CHECK-NEXT:       %{{[0-9]+}} = load %{{[0-9]+}} : <f32>
-// CHECK-NEXT:       %{{[0-9]+}} = add %{{[0-9]+}}, %{{[0-9]+}} : (f32, f32) -> f32
-// CHECK-NEXT:       %{{[0-9]+}} = subscript %{{[0-9]+}}[%{{[0-9]+}}] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
-// CHECK-NEXT:       assign %{{[0-9]+}} : f32 to %{{[0-9]+}} : <f32>
+// CHECK-NEXT:       "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+// CHECK-NEXT:       get_field @another_feature : !emitc.array<1xf32>
+// CHECK-NEXT:       get_field @some_feature : !emitc.array<1xf32>
+// CHECK-NEXT:       get_field @output_0 : !emitc.array<1xf32>
+// CHECK-NEXT:       subscript {{.*}}[{{.*}}] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+// CHECK-NEXT:       load {{.*}} : <f32>
+// CHECK-NEXT:       subscript {{.*}}[{{.*}}] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+// CHECK-NEXT:       load {{.*}} : <f32>
+// CHECK-NEXT:       add {{.*}}, {{.*}} : (f32, f32) -> f32
+// CHECK-NEXT:       subscript {{.*}}[{{.*}}] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+// CHECK-NEXT:       assign {{.*}} : f32 to {{.*}} : <f32>
 // CHECK-NEXT:       return
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
-

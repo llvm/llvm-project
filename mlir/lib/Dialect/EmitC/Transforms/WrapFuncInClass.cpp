@@ -80,9 +80,7 @@ public:
     rewriter.setInsertionPointToStart(&newClassOp.getBody().front());
 
     auto argAttrs = funcOp.getArgAttrs();
-    size_t idx = 0;
-
-    for (const BlockArgument &val : funcOp.getArguments()) {
+    for (auto [idx, val] : llvm::enumerate(funcOp.getArguments())) {
       StringAttr fieldName;
       Attribute argAttr = nullptr;
 
@@ -105,8 +103,6 @@ public:
       fields.push_back({fieldName, typeAttr});
       rewriter.create<emitc::FieldOp>(funcOp.getLoc(), fieldName, typeAttr,
                                       argAttr);
-
-      ++idx;
     }
 
     rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());
@@ -123,7 +119,7 @@ public:
 
     rewriter.setInsertionPointToStart(&newFuncOp.getBody().front());
     std::vector<Value> newArguments;
-    for (auto [fieldName, attr] : fields) {
+    for (auto &[fieldName, attr] : fields) {
       GetFieldOp arg =
           rewriter.create<emitc::GetFieldOp>(loc, attr.getValue(), fieldName);
       newArguments.push_back(arg);

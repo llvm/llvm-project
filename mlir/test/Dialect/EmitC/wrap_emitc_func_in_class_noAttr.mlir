@@ -1,4 +1,4 @@
-// RUN: mlir-opt --wrap-emitc-func-in-class='named-attribute=emitc.opaque' %s | FileCheck %s
+// RUN: mlir-opt --wrap-emitc-func-in-class %s | FileCheck %s
 
 emitc.func @foo(%arg0 : !emitc.array<1xf32>) {
   emitc.call_opaque "bar" (%arg0) : (!emitc.array<1xf32>) -> ()
