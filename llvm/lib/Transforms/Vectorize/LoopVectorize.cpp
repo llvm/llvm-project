@@ -421,7 +421,8 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
 
 /// A version of ScalarEvolution::getSmallConstantTripCount that returns an
 /// ElementCount to include loops whose trip count is a function of vscale.
-ElementCount getSmallConstantTripCount(ScalarEvolution *SE, const Loop *L) {
+static ElementCount getSmallConstantTripCount(ScalarEvolution *SE,
+                                              const Loop *L) {
   return ElementCount::getFixed(SE->getSmallConstantTripCount(L));
 }
 
