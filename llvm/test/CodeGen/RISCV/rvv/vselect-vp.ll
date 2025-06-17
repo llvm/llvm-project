@@ -483,10 +483,10 @@ define <vscale x 2 x i64> @select_nxv2i64_constant_true(<vscale x 2 x i1> %a, <v
 define <vscale x 2 x i64> @select_nxv2i64_constant_false(<vscale x 2 x i1> %a, <vscale x 2 x i64> %b, i32 zeroext %evl) {
 ; CHECK-LABEL: select_nxv2i64_constant_false:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 100
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vmnot.m v0, v0
+; CHECK-NEXT:    li a0, 100
+; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.select.nxv2i64(<vscale x 2 x i1> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> splat (i64 100), i32 %evl)
   ret <vscale x 2 x i64> %v

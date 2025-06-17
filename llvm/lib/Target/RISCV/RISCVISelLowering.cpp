@@ -1628,15 +1628,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT});
   if (Subtarget.hasVInstructions())
     setTargetDAGCombine(
-        {ISD::FCOPYSIGN,    ISD::MGATHER,      ISD::MSCATTER,
-         ISD::VP_GATHER,    ISD::VP_SCATTER,   ISD::SRA,
-         ISD::SRL,          ISD::SHL,          ISD::STORE,
-         ISD::SPLAT_VECTOR, ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
-         ISD::VP_STORE,     ISD::VP_TRUNCATE,  ISD::EXPERIMENTAL_VP_REVERSE,
-         ISD::MUL,          ISD::SDIV,         ISD::UDIV,
-         ISD::SREM,         ISD::UREM,         ISD::INSERT_VECTOR_ELT,
-         ISD::ABS,          ISD::CTPOP,        ISD::VECTOR_SHUFFLE,
-         ISD::VSELECT,      ISD::VECREDUCE_ADD});
+        {ISD::FCOPYSIGN,    ISD::MGATHER,       ISD::MSCATTER,
+         ISD::VP_GATHER,    ISD::VP_SCATTER,    ISD::SRA,
+         ISD::SRL,          ISD::SHL,           ISD::STORE,
+         ISD::SPLAT_VECTOR, ISD::BUILD_VECTOR,  ISD::CONCAT_VECTORS,
+         ISD::VP_STORE,     ISD::VP_TRUNCATE,   ISD::EXPERIMENTAL_VP_REVERSE,
+         ISD::MUL,          ISD::SDIV,          ISD::UDIV,
+         ISD::SREM,         ISD::UREM,          ISD::INSERT_VECTOR_ELT,
+         ISD::ABS,          ISD::CTPOP,         ISD::VECTOR_SHUFFLE,
+         ISD::VSELECT,      ISD::VECREDUCE_ADD, ISD::VP_SELECT});
 
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
@@ -19732,6 +19732,18 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return performSELECTCombine(N, DAG, Subtarget);
   case ISD::VSELECT:
     return performVSELECTCombine(N, DAG);
+  case ISD::VP_SELECT: {
+    if (SDValue Op2 = N->getOperand(2);
+        Op2.hasOneUse() && (Op2.getOpcode() == ISD::SPLAT_VECTOR ||
+                            Op2.getOpcode() == ISD::SPLAT_VECTOR_PARTS)) {
+      SDLoc DL(N);
+      SDValue Op0 = N->getOperand(0);
+      SDValue Val = DAG.getLogicalNOT(DL, Op0, Op0.getValueType());
+      return DAG.getNode(ISD::VP_SELECT, DL, N->getValueType(0), Val,
+                         N->getOperand(2), N->getOperand(1), N->getOperand(3));
+    }
+    return SDValue();
+  }
   case RISCVISD::CZERO_EQZ:
   case RISCVISD::CZERO_NEZ: {
     SDValue Val = N->getOperand(0);
