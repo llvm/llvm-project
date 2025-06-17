@@ -673,7 +673,8 @@ private:
 
   integerPart addSignificand(const IEEEFloat &);
   integerPart subtractSignificand(const IEEEFloat &, integerPart);
-  lostFraction addOrSubtractSignificand(const IEEEFloat &, bool subtract);
+  // Exported for IEEEFloatUnitTestHelper.
+  LLVM_ABI lostFraction addOrSubtractSignificand(const IEEEFloat &, bool subtract);
   lostFraction multiplySignificand(const IEEEFloat &, IEEEFloat,
                                    bool ignoreAddend = false);
   lostFraction multiplySignificand(const IEEEFloat&);

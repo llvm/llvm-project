@@ -17,19 +17,20 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManagerImpl.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
 AnalysisKey FunctionAnalysisManagerMachineFunctionProxy::Key;
 
 namespace llvm {
-template class AnalysisManager<MachineFunction>;
+template class LLVM_EXPORT_TEMPLATE AnalysisManager<MachineFunction>;
 template class PassManager<MachineFunction>;
-template class InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
+template class LLVM_EXPORT_TEMPLATE InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
                                          Module>;
-template class InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
+template class LLVM_EXPORT_TEMPLATE InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
                                          Function>;
-template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
+template class LLVM_EXPORT_TEMPLATE OuterAnalysisManagerProxy<ModuleAnalysisManager,
                                          MachineFunction>;
 } // namespace llvm
 
