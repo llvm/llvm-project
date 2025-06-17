@@ -49,8 +49,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
   elseif(COMPILER_RT_HAS_GCC_LIB)
     # As a final fallback, use the static libgcc library.
     list(APPEND FUZZER_UNWINDER_LIBS gcc)
-  else()
-    message(FATAL_ERROR "Building fuzzer tests with -nostdlib++ requires a suitable unwinder (libunwind or libgcc_s) but none was found.")
+  elseif(NOT COMPILER_RT_USE_BUILTINS_LIBRARY)
+    # If no unwinder is found and we aren't using the builtins library
+    message(FATAL_ERROR "Fuzzer tests require a suitable unwinder, but none was found.")
   endif()
   # Add the detected unwinder library to our link flags.
   list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS ${FUZZER_UNWINDER_LIBS})
