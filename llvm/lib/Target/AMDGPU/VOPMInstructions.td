@@ -1720,7 +1720,7 @@ def VOPMAsmOnlyInfoTable : InfoAsmOnlyTable <"VOPM">;
 class InfoPseudoTable <string Class>: GenericTable {
   let FilterClass = Class;
   let CppTypeName = "VOPMPseudoInfo";
-  let Fields = ["Opcode"];
+  let Fields = ["Opcode", "IsConvolve"];
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "isVOPMPseudoOpcodeHelper";
