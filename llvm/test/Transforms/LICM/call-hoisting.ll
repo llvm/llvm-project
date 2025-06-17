@@ -90,16 +90,15 @@ define void @test_load_not_argmemonly(ptr noalias %sink) {
 ; CHECK-LABEL: define void @test_load_not_argmemonly(
 ; CHECK-SAME: ptr noalias [[SINK:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @load_not_argmemonly()
+; CHECK-NEXT:    store i32 [[RET]], ptr [[SINK]], align 4
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RET:%.*]] = call i32 @load_not_argmemonly()
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RET_LCSSA:%.*]] = phi i32 [ [[RET]], %[[LOOP]] ]
-; CHECK-NEXT:    store i32 [[RET_LCSSA]], ptr [[SINK]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
