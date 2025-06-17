@@ -1,4 +1,4 @@
-// RUN: mlir-opt -xegpu-layout-propagate -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -xegpu-propagate-layout -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func.func @dpas_f16(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<16x16xf16>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {

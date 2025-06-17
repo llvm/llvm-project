@@ -29,14 +29,14 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
                            "vector::VectorDialect"];
 }
 
-def XeGPULayoutPropagate : Pass<"xegpu-layout-propagate"> {
+def XeGPULayoutPropagate : Pass<"xegpu-propagate-layout"> {
   let summary = "Propagate and assign XeGPU layout information";
   let description = [{
     This pass propagates the XeGPU layout information accross ops. Starting
     from a set of anchor operations (e.g. `dpas`, `store_nd`), this will
     propagate the layouts required for their operands to the producers. With
-    this propagated layout information, pass will then update the XeGPU tensor
-    descriptor type with the layout information.
+    this propagated layout information, pass will then update op result type
+    with the layout information.
   }];
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
                            "vector::VectorDialect"];
