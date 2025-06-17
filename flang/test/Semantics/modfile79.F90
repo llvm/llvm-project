@@ -1,4 +1,5 @@
-!RUN: %flang -c -DWHICH=1 %s && FileCheck %s <modfile79a.mod && %flang -c -fhermetic-module-files -DWHICH=2 %s && %flang -c %s && FileCheck %s <modfile79a.mod
+!RUN: rm -rf %t && mkdir -p %t
+!RUN: %flang -c -DWHICH=1 -J%t %s && FileCheck %s <%t/modfile79a.mod && %flang -c -fhermetic-module-files -DWHICH=2 -J%t %s && %flang -c -J%t %s && FileCheck %s <%t/modfile79a.mod
 
 !Ensure that writing modfile79c.mod doesn't cause a spurious
 !regeneration of modfile79a.mod from its copy in the hermetic
