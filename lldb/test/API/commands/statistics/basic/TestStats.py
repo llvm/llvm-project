@@ -540,6 +540,29 @@ class TestCase(TestBase):
         # Verify that the dwo file count is zero
         self.assertEqual(debug_stats["totalDwoFileCount"], 0)
         self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 0)
+    
+    def test_debug_names_eager_loads_dwo_files(self):
+        """
+        Test the eager loading behavior of DWO files when debug_names is absent by
+        building a split-dwarf binary without debug_names and then running "statistics dump".
+        DWO file loading behavior:
+        - With debug_names: DebugNamesDWARFIndex allows for lazy loading.
+          DWO files are loaded on-demand when symbols are actually looked up
+        - Without debug_names: ManualDWARFIndex uses eager loading.
+          All DWO files are loaded upfront during the first symbol lookup to build a manual index. 
+        """
+        da = {"CXX_SOURCES": "third.cpp baz.cpp", "EXE": self.getBuildArtifact("a.out")}
+        self.build(dictionary=da, debug_info=["dwo"])
+        self.addTearDownCleanup(dictionary=da)
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+        self.assertIn("totalDwoFileCount", debug_stats)
+        self.assertIn("totalLoadedDwoFileCount", debug_stats)
+        
+        # Verify that all DWO files are loaded
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 2)
 
     def test_split_dwarf_dwo_file_count(self):
         """
@@ -548,10 +571,11 @@ class TestCase(TestBase):
         verifies the loaded dwo file count is the expected count after running
         various commands
         """
-        # Build with split DWARF: -gsplit-dwarf creates separate .dwo files,
-        # -gpubnames enables accelerator tables for faster symbol lookup
-        # Expected output: third.dwo (contains main) and baz.dwo (contains Baz struct/function)
         da = {"CXX_SOURCES": "third.cpp baz.cpp", "EXE": self.getBuildArtifact("a.out")}
+        # -gsplit-dwarf creates separate .dwo files,
+        # -gpubnames enables the debug_names accelerator tables for faster symbol lookup
+        #  and lazy loading of DWO files
+        # Expected output: third.dwo (contains main) and baz.dwo (contains Baz struct/function)
         self.build(dictionary=da, debug_info=["dwo", "debug_names"])
         self.addTearDownCleanup(dictionary=da)
         exe = self.getBuildArtifact("a.out")

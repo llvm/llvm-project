@@ -33,6 +33,37 @@ static void EmplaceSafeString(llvm::json::Object &obj, llvm::StringRef key,
     obj.try_emplace(key, llvm::json::fixUTF8(str));
 }
 
+static void UpdateDwoFileCounts(SymbolFile *sym_file,
+                                uint32_t &total_dwo_file_count,
+                                uint32_t &total_loaded_dwo_file_count) {
+  // Count DWO files from this symbol file using GetSeparateDebugInfo
+  // For DWP files, this increments counts for both total and successfully
+  // loaded DWO CUs. For non split-dwarf files, these counts should not change
+  StructuredData::Dictionary separate_debug_info;
+  if (sym_file->GetSeparateDebugInfo(separate_debug_info,
+                                     /*errors_only=*/false,
+                                     /*load_all_debug_info*/ false)) {
+    llvm::StringRef type;
+    if (separate_debug_info.GetValueForKeyAsString("type", type) &&
+        type == "dwo") {
+      StructuredData::Array *files;
+      if (separate_debug_info.GetValueForKeyAsArray("separate-debug-info-files",
+                                                    files)) {
+        files->ForEach([&](StructuredData::Object *obj) {
+          if (auto dict = obj->GetAsDictionary()) {
+            total_dwo_file_count++;
+
+            bool loaded = false;
+            if (dict->GetValueForKeyAsBoolean("loaded", loaded) && loaded)
+              total_loaded_dwo_file_count++;
+          }
+          return true;
+        });
+      }
+    }
+  }
+}
+
 json::Value StatsSuccessFail::ToJSON() const {
   return json::Object{{"successes", successes}, {"failures", failures}};
 }
@@ -355,30 +386,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         for (const auto &symbol_module : symbol_modules.Modules())
           module_stat.symfile_modules.push_back((intptr_t)symbol_module.get());
       }
-      // Count DWO files from this symbol file using GetSeparateDebugInfo
-      StructuredData::Dictionary separate_debug_info;
-      if (sym_file->GetSeparateDebugInfo(separate_debug_info,
-                                         /*errors_only=*/false,
-                                         /*load_all_debug_info*/ false)) {
-        llvm::StringRef type;
-        if (separate_debug_info.GetValueForKeyAsString("type", type) &&
-            type == "dwo") {
-          StructuredData::Array *files;
-          if (separate_debug_info.GetValueForKeyAsArray(
-                  "separate-debug-info-files", files)) {
-            files->ForEach([&](StructuredData::Object *obj) {
-              if (auto dict = obj->GetAsDictionary()) {
-                total_dwo_file_count++;
-
-                bool loaded = false;
-                if (dict->GetValueForKeyAsBoolean("loaded", loaded) && loaded)
-                  total_loaded_dwo_file_count++;
-              }
-              return true;
-            });
-          }
-        }
-      }
+      UpdateDwoFileCounts(sym_file, total_dwo_file_count,
+                          total_loaded_dwo_file_count);
       module_stat.debug_info_index_loaded_from_cache =
           sym_file->GetDebugInfoIndexWasLoadedFromCache();
       if (module_stat.debug_info_index_loaded_from_cache)
