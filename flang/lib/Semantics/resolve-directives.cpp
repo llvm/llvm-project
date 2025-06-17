@@ -834,7 +834,7 @@ private:
   void AddOmpRequiresToScope(Scope &, WithOmpDeclarative::RequiresFlags,
       std::optional<common::OmpMemoryOrderType>);
   void IssueNonConformanceWarning(llvm::omp::Directive D,
-      parser::CharBlock source, unsigned emit_from_version);
+      parser::CharBlock source, unsigned EmitFromVersion);
 
   void CreateImplicitSymbols(const Symbol *symbol);
 
@@ -3134,13 +3134,13 @@ void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
 }
 
 void OmpAttributeVisitor::IssueNonConformanceWarning(llvm::omp::Directive D,
-    parser::CharBlock source, unsigned emit_from_version) {
+    parser::CharBlock source, unsigned EmitFromVersion) {
   std::string warnStr;
   llvm::raw_string_ostream warnStrOS(warnStr);
   unsigned version{context_.langOptions().OpenMPVersion};
   // We only want to emit the warning when the version being used has the
   // directive deprecated
-  if (version < emit_from_version) {
+  if (version < EmitFromVersion) {
     return;
   }
   warnStrOS << "OpenMP directive "
