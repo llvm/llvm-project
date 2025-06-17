@@ -4455,14 +4455,12 @@ SemaObjC::CheckObjCConversion(SourceRange castRange, QualType castType,
   if (exprACTC == ACTC_indirectRetainable &&
       (castACTC == ACTC_voidPtr ||
        (castACTC == ACTC_coreFoundation && SemaRef.isCast(CCK)) ||
-       (IsReinterpretCast && (effCastType->isPointerType() ||
-                              effCastType->isObjCObjectPointerType()))))
+       (IsReinterpretCast && effCastType->isAnyPointerType())))
     return ACR_okay;
   if (castACTC == ACTC_indirectRetainable &&
       (((exprACTC == ACTC_voidPtr || exprACTC == ACTC_coreFoundation) &&
         SemaRef.isCast(CCK)) ||
-       (IsReinterpretCast && (castExprType->isPointerType() ||
-                              castExprType->isObjCObjectPointerType()))))
+       (IsReinterpretCast && castExprType->isAnyPointerType())))
     return ACR_okay;
 
   switch (ARCCastChecker(Context, exprACTC, castACTC, false).Visit(castExpr)) {
