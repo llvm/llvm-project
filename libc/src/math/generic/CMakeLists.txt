@@ -5117,3 +5117,16 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.generic.div
 )
+
+
+add_entrypoint_object(
+  bf16add
+  SRCS
+    bf16add.cpp
+  HDRS
+    ../bf16add.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+)
