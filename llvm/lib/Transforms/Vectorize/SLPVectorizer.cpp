@@ -555,6 +555,13 @@ static bool isCommutative(Instruction *I, Instruction *InstWithUses) {
 }
 
 /// This is a helper function to check whether \p I is commutative.
+/// This is a convenience wrapper that calls the two-parameter version of
+/// isCommutative with the same instruction for both parameters. This is
+/// the common case where the instruction being checked for commutativity
+/// is the same as the instruction whose uses are analyzed for special
+/// patterns (see the two-parameter version above for details).
+/// \param I The instruction to check for commutativity
+/// \returns true if the instruction is commutative, false otherwise
 static bool isCommutative(Instruction *I) { return isCommutative(I, I); }
 
 template <typename T>
