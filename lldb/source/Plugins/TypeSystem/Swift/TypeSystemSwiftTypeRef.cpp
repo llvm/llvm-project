@@ -2103,15 +2103,14 @@ ConstString TypeSystemSwiftTypeRef::GetSwiftModuleFor(const SymbolContext &sc) {
 }
 
 const char *TypeSystemSwiftTypeRef::DeriveKeyFor(const SymbolContext &sc) {
-  if (sc.function)
+  if (sc.comp_unit && sc.comp_unit->GetLanguage() == eLanguageTypeSwift)
     if (ConstString name = GetSwiftModuleFor(sc))
       return name.GetCString();
 
-  if (sc.module_sp) {
-    if (sc.module_sp->GetFileSpec())
-      return sc.module_sp->GetFileSpec().GetFilename().GetCString();
-    return sc.module_sp->GetObjectName().GetCString();
-  }
+  // Otherwise create a catch-all context per unique triple.
+  if (sc.module_sp)
+    return ConstString(sc.module_sp->GetArchitecture().GetTriple().str()).AsCString();
+
   return nullptr;
 }
 
@@ -2593,6 +2592,9 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
   ConstString lhs = l.GetMangledTypeName();
   ConstString rhs = r.GetMangledTypeName();
   if (lhs == ConstString("$sSiD") && rhs == ConstString("$sSuD"))
+    return true;
+  if (lhs.GetStringRef() == "$sSPySo0023unnamedstruct_hEEEdhdEaVGSgD" &&
+      rhs.GetStringRef() == "$ss13OpaquePointerVSgD")
     return true;
   // Ignore missing sugar.
   swift::Demangle::Demangler dem;
