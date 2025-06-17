@@ -2231,8 +2231,9 @@ static void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
                                        QualType ReturnType) {
   auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
   if (VecTyA)
-    ReturnType = S->Context.getVectorType(ReturnType, VecTyA->getNumElements(),
-                                          VectorKind::Generic);
+    ReturnType =
+        S->Context.getExtVectorType(ReturnType, VecTyA->getNumElements());
+
   TheCall->setType(ReturnType);
 }
 
@@ -2545,8 +2546,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     if (auto *VecTy = EltTy->getAs<VectorType>()) {
       EltTy = VecTy->getElementType();
-      ResTy = SemaRef.Context.getVectorType(ResTy, VecTy->getNumElements(),
-                                            VecTy->getVectorKind());
+      ResTy = SemaRef.Context.getExtVectorType(ResTy, VecTy->getNumElements());
     }
 
     if (!EltTy->isIntegerType()) {
