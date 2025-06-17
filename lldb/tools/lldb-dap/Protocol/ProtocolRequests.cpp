@@ -368,6 +368,16 @@ bool fromJSON(const json::Value &Params, StepInArguments &SIA, json::Path P) {
          OM.mapOptional("granularity", SIA.granularity);
 }
 
+bool fromJSON(const llvm::json::Value &Params, StepInTargetsArguments &SITA,
+              llvm::json::Path P) {
+  json::ObjectMapper OM(Params, P);
+  return OM && OM.map("frameId", SITA.frameId);
+}
+
+llvm::json::Value toJSON(const StepInTargetsResponseBody &SITR) {
+  return llvm::json::Object{{"targets", SITR.targets}};
+}
+
 bool fromJSON(const json::Value &Params, StepOutArguments &SOA, json::Path P) {
   json::ObjectMapper OM(Params, P);
   return OM && OM.map("threadId", SOA.threadId) &&
@@ -436,6 +446,20 @@ bool fromJSON(const json::Value &Params, SetDataBreakpointsArguments &SDBA,
 
 json::Value toJSON(const SetDataBreakpointsResponseBody &SDBR) {
   return json::Object{{"breakpoints", SDBR.breakpoints}};
+}
+
+bool fromJSON(const json::Value &Params, SetExceptionBreakpointsArguments &Args,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("filters", Args.filters) &&
+         O.mapOptional("filterOptions", Args.filterOptions);
+}
+
+json::Value toJSON(const SetExceptionBreakpointsResponseBody &B) {
+  json::Object result;
+  if (!B.breakpoints.empty())
+    result.insert({"breakpoints", B.breakpoints});
+  return result;
 }
 
 json::Value toJSON(const ThreadsResponseBody &TR) {
