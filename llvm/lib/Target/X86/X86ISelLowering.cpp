@@ -8268,6 +8268,7 @@ static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
                              SDValue &Opnd0, SDValue &Opnd1,
                              unsigned &NumExtracts,
                              bool &IsSubAdd) {
+  using namespace SDPatternMatch;
 
   MVT VT = BV->getSimpleValueType(0);
   if (!Subtarget.hasSSE3() || !VT.isFloatingPoint())
@@ -8302,14 +8303,8 @@ static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
     // Try to match the following pattern:
     // (BINOP (extract_vector_elt A, i), (extract_vector_elt B, i))
     // Early exit if we cannot match that sequence.
-    if (Op0.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-        Op1.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-        !isa<ConstantSDNode>(Op0.getOperand(1)) ||
-        Op0.getOperand(1) != Op1.getOperand(1))
-      return false;
-
-    unsigned I0 = Op0.getConstantOperandVal(1);
-    if (I0 != i)
+    if (!sd_match(Op0, m_ExtractElt(m_SpecificVT(VT), m_SpecificInt(i))) ||
+        !sd_match(Op1, m_ExtractElt(m_SpecificVT(VT), m_SpecificInt(i))))
       return false;
 
     // We found a valid add/sub node, make sure its the same opcode as previous
@@ -8319,16 +8314,10 @@ static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
     Opc[i % 2] = Opcode;
 
     // Update InVec0 and InVec1.
-    if (InVec0.isUndef()) {
+    if (InVec0.isUndef())
       InVec0 = Op0.getOperand(0);
-      if (InVec0.getSimpleValueType() != VT)
-        return false;
-    }
-    if (InVec1.isUndef()) {
+    if (InVec1.isUndef())
       InVec1 = Op1.getOperand(0);
-      if (InVec1.getSimpleValueType() != VT)
-        return false;
-    }
 
     // Make sure that operands in input to each add/sub node always
     // come from a same pair of vectors.
