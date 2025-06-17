@@ -14223,8 +14223,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
 
     // HLSL variable with the `vk::constant_id` attribute must be initialized.
     if (!Var->isInvalidDecl() && Var->hasAttr<HLSLVkConstantIdAttr>()) {
-      Diag(Var->getLocation(),
-           diag::err_specialization_const_missing_initializer);
+      Diag(Var->getLocation(), diag::err_specialization_const);
       Var->setInvalidDecl();
       return;
     }

@@ -8,7 +8,7 @@
 const bool sc0 = true;
 
 #ifdef __spirv__
-// expected-error@+2{{variable with 'vk::constant_id' attribute cannot have an initializer that is not a literal}}
+// expected-error@+2{{variable with 'vk::constant_id' attribute must be a const int/float/enum/bool and be initialized with a literal}}
 [[vk::constant_id(1)]]
 const bool sc1 = sc0; // error
 
@@ -16,15 +16,15 @@ const bool sc1 = sc0; // error
 [[vk::constant_id(2)]]
 static const bool sc2 = false; // error
 
-// expected-error@+2{{variable with 'vk::constant_id' attribute must have an initializer}}
+// expected-error@+2{{variable with 'vk::constant_id' attribute must be a const int/float/enum/bool and be initialized with a literal}}
 [[vk::constant_id(3)]]
 const bool sc3; // error
 
-// expected-error@+2{{variable with 'vk::constant_id' attribute must be const}}
+// expected-error@+2{{variable with 'vk::constant_id' attribute must be a const int/float/enum/bool and be initialized with a literal}}
 [[vk::constant_id(4)]]
 bool sc4 = false; // error
 
-// expected-error@+2{{variable with 'vk::constant_id' attribute must be an enum, bool, integer, or floating point value}}
+// expected-error@+2{{variable with 'vk::constant_id' attribute must be a const int/float/enum/bool and be initialized with a literal}}
 [[vk::constant_id(5)]]
 const int2 sc5 = {0,0}; // error
 

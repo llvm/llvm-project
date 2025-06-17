@@ -12919,16 +12919,9 @@ def err_spirv_enum_not_int : Error<
 def err_spirv_enum_not_valid : Error<
    "invalid value for %select{storage class}0 argument">;
 
-def err_specialization_const_lit_init
-    : Error<"variable with 'vk::constant_id' attribute must be initialized by a int/float/enum/bool literal.">;
-def err_specialization_const_missing_initializer
-    : Error<
-          "variable with 'vk::constant_id' attribute must have an initializer">;
-def err_specialization_const_missing_const
-    : Error<"variable with 'vk::constant_id' attribute must be const">;
-def err_specialization_const_is_not_int_or_float
-    : Error<"variable with 'vk::constant_id' attribute must be an enum, bool, "
-            "integer, or floating point value">;
+def err_specialization_const
+    : Error<"variable with 'vk::constant_id' attribute must be a const "
+            "int/float/enum/bool and be initialized with a literal">;
 
 // errors of expect.with.probability
 def err_probability_not_constant_float : Error<

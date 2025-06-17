@@ -654,12 +654,12 @@ SemaHLSL::mergeVkConstantIdAttr(Decl *D, const AttributeCommonInfo &AL,
   auto *VD = cast<VarDecl>(D);
 
   if (getSpecConstBuiltinId(VD->getType()) == Builtin::NotBuiltin) {
-    Diag(VD->getLocation(), diag::err_specialization_const_is_not_int_or_float);
+    Diag(VD->getLocation(), diag::err_specialization_const);
     return nullptr;
   }
 
   if (!VD->getType().isConstQualified()) {
-    Diag(VD->getLocation(), diag::err_specialization_const_missing_const);
+    Diag(VD->getLocation(), diag::err_specialization_const);
     return nullptr;
   }
 
@@ -3735,7 +3735,7 @@ bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
 
   APValue InitValue;
   if (!Init->isCXX11ConstantExpr(Context, &InitValue)) {
-    Diag(VDecl->getLocation(), diag::err_specialization_const_lit_init);
+    Diag(VDecl->getLocation(), diag::err_specialization_const);
     VDecl->setInvalidDecl();
     return false;
   }
