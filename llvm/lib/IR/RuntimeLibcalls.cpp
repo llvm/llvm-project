@@ -18,6 +18,25 @@ static cl::opt<bool>
 
 static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
                                    const Triple &TT) {
+#define LCALLNAMES(A, B, N)                                                    \
+  Info.setLibcallName(A##N##_RELAX, #B #N "_relax");                           \
+  Info.setLibcallName(A##N##_ACQ, #B #N "_acq");                               \
+  Info.setLibcallName(A##N##_REL, #B #N "_rel");                               \
+  Info.setLibcallName(A##N##_ACQ_REL, #B #N "_acq_rel");
+#define LCALLNAME4(A, B)                                                       \
+  LCALLNAMES(A, B, 1)                                                          \
+  LCALLNAMES(A, B, 2) LCALLNAMES(A, B, 4) LCALLNAMES(A, B, 8)
+#define LCALLNAME5(A, B)                                                       \
+  LCALLNAMES(A, B, 1)                                                          \
+  LCALLNAMES(A, B, 2)                                                          \
+  LCALLNAMES(A, B, 4) LCALLNAMES(A, B, 8) LCALLNAMES(A, B, 16)
+  LCALLNAME5(RTLIB::OUTLINE_ATOMIC_CAS, __aarch64_cas)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_SWP, __aarch64_swp)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDADD, __aarch64_ldadd)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, __aarch64_ldset)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, __aarch64_ldclr)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, __aarch64_ldeor)
+
   if (TT.isWindowsArm64EC()) {
     // FIXME: are there calls we need to exclude from this?
 #define HANDLE_LIBCALL(code, name)                                             \
@@ -32,7 +51,18 @@ static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
 #undef LIBCALL_NO_NAME
+
+    LCALLNAME5(RTLIB::OUTLINE_ATOMIC_CAS, #__aarch64_cas)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_SWP, #__aarch64_swp)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDADD, #__aarch64_ldadd)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, #__aarch64_ldset)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, #__aarch64_ldclr)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, #__aarch64_ldeor)
   }
+
+#undef LCALLNAMES
+#undef LCALLNAME4
+#undef LCALLNAME5
 }
 
 static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT) {
@@ -220,21 +250,49 @@ static void setMSP430Libcalls(RuntimeLibcallsInfo &Info, const Triple &TT) {
   // TODO: __mspabi_srall, __mspabi_srlll, __mspabi_sllll
 }
 
+void RuntimeLibcallsInfo::initSoftFloatCmpLibcallPredicates() {
+  SoftFloatCompareLibcallPredicates[RTLIB::OEQ_F32] = CmpInst::ICMP_EQ;
+  SoftFloatCompareLibcallPredicates[RTLIB::OEQ_F64] = CmpInst::ICMP_EQ;
+  SoftFloatCompareLibcallPredicates[RTLIB::OEQ_F128] = CmpInst::ICMP_EQ;
+  SoftFloatCompareLibcallPredicates[RTLIB::OEQ_PPCF128] = CmpInst::ICMP_EQ;
+  SoftFloatCompareLibcallPredicates[RTLIB::UNE_F32] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UNE_F64] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UNE_F128] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UNE_PPCF128] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGE_F32] = CmpInst::ICMP_SGE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGE_F64] = CmpInst::ICMP_SGE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGE_F128] = CmpInst::ICMP_SGE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGE_PPCF128] = CmpInst::ICMP_SGE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLT_F32] = CmpInst::ICMP_SLT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLT_F64] = CmpInst::ICMP_SLT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLT_F128] = CmpInst::ICMP_SLT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLT_PPCF128] = CmpInst::ICMP_SLT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLE_F32] = CmpInst::ICMP_SLE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLE_F64] = CmpInst::ICMP_SLE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLE_F128] = CmpInst::ICMP_SLE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OLE_PPCF128] = CmpInst::ICMP_SLE;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGT_F32] = CmpInst::ICMP_SGT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGT_F64] = CmpInst::ICMP_SGT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGT_F128] = CmpInst::ICMP_SGT;
+  SoftFloatCompareLibcallPredicates[RTLIB::OGT_PPCF128] = CmpInst::ICMP_SGT;
+  SoftFloatCompareLibcallPredicates[RTLIB::UO_F32] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UO_F64] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UO_F128] = CmpInst::ICMP_NE;
+  SoftFloatCompareLibcallPredicates[RTLIB::UO_PPCF128] = CmpInst::ICMP_NE;
+}
+
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
-  std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames),
-            nullptr);
+  initSoftFloatCmpLibcallPredicates();
+
+  initSoftFloatCmpLibcallPredicates();
 
 #define HANDLE_LIBCALL(code, name) setLibcallName(RTLIB::code, name);
 #define LIBCALL_NO_NAME nullptr
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
 #undef LIBCALL_NO_NAME
-
-  // Initialize calling conventions to their default.
-  for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
-    setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
 
   // Use the f128 variants of math functions on x86
   if (TT.isX86() && TT.isGNUEnvironment()) {
@@ -379,7 +437,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
       break;
     }
 
-    if (darwinHasSinCos(TT)) {
+    if (darwinHasSinCosStret(TT)) {
       setLibcallName(RTLIB::SINCOS_STRET_F32, "__sincosf_stret");
       setLibcallName(RTLIB::SINCOS_STRET_F64, "__sincos_stret");
       if (TT.isWatchABI()) {
@@ -423,8 +481,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::EXP10_F64, "__exp10");
   }
 
-  if (TT.isGNUEnvironment() || TT.isOSFuchsia() ||
-      (TT.isAndroid() && !TT.isAndroidVersionLT(9))) {
+  if (hasSinCos(TT)) {
     setLibcallName(RTLIB::SINCOS_F32, "sincosf");
     setLibcallName(RTLIB::SINCOS_F64, "sincos");
     setLibcallName(RTLIB::SINCOS_F80, "sincosl");
@@ -488,7 +545,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     }
   }
 
-  if (TT.getArch() == Triple::ArchType::aarch64)
+  if (TT.isAArch64())
     setAArch64LibcallNames(*this, TT);
   else if (TT.isARM() || TT.isThumb())
     setARMLibcallNames(*this, TT);

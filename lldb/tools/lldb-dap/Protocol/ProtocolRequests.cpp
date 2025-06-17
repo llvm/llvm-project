@@ -448,6 +448,20 @@ json::Value toJSON(const SetDataBreakpointsResponseBody &SDBR) {
   return json::Object{{"breakpoints", SDBR.breakpoints}};
 }
 
+bool fromJSON(const json::Value &Params, SetExceptionBreakpointsArguments &Args,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("filters", Args.filters) &&
+         O.mapOptional("filterOptions", Args.filterOptions);
+}
+
+json::Value toJSON(const SetExceptionBreakpointsResponseBody &B) {
+  json::Object result;
+  if (!B.breakpoints.empty())
+    result.insert({"breakpoints", B.breakpoints});
+  return result;
+}
+
 json::Value toJSON(const ThreadsResponseBody &TR) {
   return json::Object{{"threads", TR.threads}};
 }
