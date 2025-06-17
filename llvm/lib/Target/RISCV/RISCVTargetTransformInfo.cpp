@@ -305,11 +305,10 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
   if (!ST->hasStdExtZvqdotq() || ST->getELen() < 64 ||
       Opcode != Instruction::Add || !BinOp || *BinOp != Instruction::Mul ||
       InputTypeA != InputTypeB || !InputTypeA->isIntegerTy(8) ||
-      OpAExtend != OpBExtend || !AccumType->isIntegerTy(32) ||
-      !VF.isKnownMultipleOf(4) || !VF.isScalable())
+      !AccumType->isIntegerTy(32) || !VF.isKnownMultipleOf(4))
     return InstructionCost::getInvalid();
 
-  Type *Tp = VectorType::get(AccumType, VF);
+  Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
   // Note: Asuming all vqdot* variants are equal cost
   // TODO: Thread CostKind through this API
@@ -2297,9 +2296,12 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       Index = Index % M1Max;
     }
 
-    // We could extract/insert the first element without vslidedown/vslideup.
     if (Index == 0)
+      // We can extract/insert the first element without vslidedown/vslideup.
       SlideCost = 0;
+    else if (ST->hasVendorXRivosVisni() && isUInt<5>(Index) &&
+             Val->getScalarType()->isIntegerTy())
+      SlideCost = 0; // With ri.vinsert/ri.vextract there is no slide needed
     else if (Opcode == Instruction::InsertElement)
       SlideCost = 1; // With a constant index, we do not need to use addi.
   }
@@ -2949,6 +2951,23 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   } else {
     Options.LoadSizes = {4, 2, 1};
     Options.AllowedTailExpansions = {3};
+  }
+
+  if (IsZeroCmp && ST->hasVInstructions()) {
+    unsigned RealMinVLen = ST->getRealMinVLen();
+    // Support Fractional LMULs if the lengths are larger than XLen.
+    // TODO: Support non-power-of-2 types.
+    for (unsigned FLMUL = 8; FLMUL >= 2; FLMUL /= 2) {
+      unsigned Len = RealMinVLen / FLMUL;
+      if (Len > ST->getXLen())
+        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
+    }
+    for (unsigned LMUL = 1; LMUL <= ST->getMaxLMULForFixedLengthVectors();
+         LMUL *= 2) {
+      unsigned Len = RealMinVLen * LMUL;
+      if (Len > ST->getXLen())
+        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
+    }
   }
   return Options;
 }

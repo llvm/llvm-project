@@ -16,6 +16,7 @@
 #include <cassert>
 #include <deque>
 #include <flat_map>
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -94,6 +95,14 @@ int main(int, char**) {
     auto p = m.equal_range(Transparent<int>{3});
     assert(p.first != p.second);
     assert(transparent_used);
+  }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_map<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"epsilon", 1}, {"eta", 3}, {"gamma", 3}};
+    auto [first, last] = m.equal_range("beta");
+    assert(first == m.begin() + 1);
+    assert(last == m.begin() + 2);
   }
 
   return 0;

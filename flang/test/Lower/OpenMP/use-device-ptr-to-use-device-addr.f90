@@ -1,7 +1,6 @@
 ! The "use_device_addr" was added to the "target data" directive in OpenMP 5.0.
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
-
+! RUN: %flang_fc1 -fdefer-desc-map -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
+! RUN: bbc -fdefer-desc-map -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
 ! This tests primary goal is to check the promotion of non-CPTR arguments from
 ! use_device_ptr to use_device_addr works, without breaking any functionality.
 

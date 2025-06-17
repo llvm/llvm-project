@@ -15,6 +15,7 @@
 #include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -1028,7 +1029,7 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
   (void)LocalScope.Privatize();
   for (const auto &VLASizePair : WrapperVLASizes)
     VLASizeMap[VLASizePair.second.first] = VLASizePair.second.second;
-  PGO.assignRegionCounters(GlobalDecl(CD), F);
+  PGO->assignRegionCounters(GlobalDecl(CD), F);
 
   // Generate specialized kernels for device only
   if (CGM.getLangOpts().OpenMPIsTargetDevice && D.hasAssociatedStmt() &&
@@ -1822,6 +1823,7 @@ void CodeGenFunction::EmitOMPReductionClauseFinal(
   llvm::SmallVector<const Expr *, 8> LHSExprs;
   llvm::SmallVector<const Expr *, 8> RHSExprs;
   llvm::SmallVector<const Expr *, 8> ReductionOps;
+  llvm::SmallVector<bool, 8> IsPrivateVarReduction;
   bool HasAtLeastOneReduction = false;
   bool IsReductionWithTaskMod = false;
   for (const auto *C : D.getClausesOfKind<OMPReductionClause>()) {
@@ -1832,6 +1834,8 @@ void CodeGenFunction::EmitOMPReductionClauseFinal(
     Privates.append(C->privates().begin(), C->privates().end());
     LHSExprs.append(C->lhs_exprs().begin(), C->lhs_exprs().end());
     RHSExprs.append(C->rhs_exprs().begin(), C->rhs_exprs().end());
+    IsPrivateVarReduction.append(C->private_var_reduction_flags().begin(),
+                                 C->private_var_reduction_flags().end());
     ReductionOps.append(C->reduction_ops().begin(), C->reduction_ops().end());
     IsReductionWithTaskMod =
         IsReductionWithTaskMod || C->getModifier() == OMPC_REDUCTION_task;
@@ -1853,7 +1857,7 @@ void CodeGenFunction::EmitOMPReductionClauseFinal(
     // parallel directive (it always has implicit barrier).
     CGM.getOpenMPRuntime().emitReduction(
         *this, D.getEndLoc(), Privates, LHSExprs, RHSExprs, ReductionOps,
-        {WithNowait, SimpleReduction, ReductionKind});
+        {WithNowait, SimpleReduction, IsPrivateVarReduction, ReductionKind});
   }
 }
 
@@ -4449,7 +4453,8 @@ static void emitScanBasedDirective(
       PrivScope.Privatize();
       CGF.CGM.getOpenMPRuntime().emitReduction(
           CGF, S.getEndLoc(), Privates, LHSs, RHSs, ReductionOps,
-          {/*WithNowait=*/true, /*SimpleReduction=*/true, OMPD_unknown});
+          {/*WithNowait=*/true, /*SimpleReduction=*/true,
+           /*IsPrivateVarReduction*/ {}, OMPD_unknown});
     }
     llvm::Value *NextIVal =
         CGF.Builder.CreateNUWSub(IVal, llvm::ConstantInt::get(CGF.SizeTy, 1));
@@ -5289,7 +5294,7 @@ class CheckVarsEscapingUntiedTaskDeclContext final
 
 public:
   explicit CheckVarsEscapingUntiedTaskDeclContext() = default;
-  virtual ~CheckVarsEscapingUntiedTaskDeclContext() = default;
+  ~CheckVarsEscapingUntiedTaskDeclContext() = default;
   void VisitDeclStmt(const DeclStmt *S) {
     if (!S)
       return;
@@ -6267,7 +6272,8 @@ void CodeGenFunction::EmitOMPScanDirective(const OMPScanDirective &S) {
       }
       CGM.getOpenMPRuntime().emitReduction(
           *this, ParentDir.getEndLoc(), Privates, LHSs, RHSs, ReductionOps,
-          {/*WithNowait=*/true, /*SimpleReduction=*/true, OMPD_simd});
+          {/*WithNowait=*/true, /*SimpleReduction=*/true,
+           /*IsPrivateVarReduction*/ {}, OMPD_simd});
       for (unsigned I = 0, E = CopyArrayElems.size(); I < E; ++I) {
         const Expr *PrivateExpr = Privates[I];
         LValue DestLVal;

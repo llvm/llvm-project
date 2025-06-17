@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGDEBUGINFO_H
 
 #include "CGBuilder.h"
+#include "SanitizerHandler.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -210,6 +211,7 @@ private:
   llvm::DIType *CreateType(const FunctionType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const HLSLAttributedResourceType *Ty,
                            llvm::DIFile *F);
+  llvm::DIType *CreateType(const HLSLInlineSpirvType *Ty, llvm::DIFile *F);
   /// Get structure or union type.
   llvm::DIType *CreateType(const RecordType *Tyg);
 
@@ -676,6 +678,9 @@ public:
   void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
                                    llvm::Value *Backup, uint64_t Atom);
 
+  /// Emit symbol for debugger that holds the pointer to the vtable.
+  void emitVTableSymbol(llvm::GlobalVariable *VTable, const CXXRecordDecl *RD);
+
 private:
   /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p
   /// Rank (lower nonzero rank is higher precedence). Does nothing if \p I
@@ -1004,6 +1009,17 @@ public:
   ApplyInlineDebugLocation(CodeGenFunction &CGF, GlobalDecl InlinedFn);
   /// Restore everything back to the original state.
   ~ApplyInlineDebugLocation();
+};
+
+class SanitizerDebugLocation {
+  CodeGenFunction *CGF;
+  ApplyDebugLocation Apply;
+
+public:
+  SanitizerDebugLocation(CodeGenFunction *CGF,
+                         ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+                         SanitizerHandler Handler);
+  ~SanitizerDebugLocation();
 };
 
 } // namespace CodeGen

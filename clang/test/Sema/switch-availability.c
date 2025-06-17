@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -verify -Wswitch -Wreturn-type -triple x86_64-apple-macosx10.12 %s
-// RUN: %clang_cc1 -verify -Wswitch -Wreturn-type -Wno-deprecated-switch-case -DNO_DEPRECATED_CASE -triple x86_64-apple-macosx10.12 %s
+// RUN: %clang_cc1 -verify -Wswitch -Wreturn-type -Wno-deprecated-declarations-switch-case -DNO_DEPRECATED_CASE -triple x86_64-apple-macosx10.12 %s
 
 enum SwitchOne {
   Unavail __attribute__((availability(macos, unavailable))),

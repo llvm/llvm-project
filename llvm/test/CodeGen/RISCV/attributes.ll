@@ -47,6 +47,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+shcounterenw %s -o - | FileCheck --check-prefixes=CHECK,RV32SHCOUNTERENW %s
 ; RUN: llc -mtriple=riscv32 -mattr=+shgatpa %s -o - | FileCheck --check-prefixes=CHECK,RV32SHGATPA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+shvsatpa %s -o - | FileCheck --check-prefixes=CHECK,RV32SHVSATPA %s
+; RUN: llc -mtriple=riscv32 -mattr=+shlcofideleg %s -o - | FileCheck --check-prefixes=CHECK,RV32SHLCOFIDELEG %s
 ; RUN: llc -mtriple=riscv32 -mattr=+ssccfg %s -o - | FileCheck --check-prefixes=CHECK,RV32SSCCFG %s
 ; RUN: llc -mtriple=riscv32 -mattr=+ssccptr %s -o - | FileCheck --check-prefixes=CHECK,RV32SSCCPTR %s
 ; RUN: llc -mtriple=riscv32 -mattr=+sscofpmf %s -o - | FileCheck --check-prefixes=CHECK,RV32SSCOFPMF %s
@@ -222,6 +223,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+shcounterenw %s -o - | FileCheck --check-prefixes=CHECK,RV64SHCOUNTERENW %s
 ; RUN: llc -mtriple=riscv64 -mattr=+shgatpa %s -o - | FileCheck --check-prefixes=CHECK,RV64SHGATPA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+shvsatpa %s -o - | FileCheck --check-prefixes=CHECK,RV64SHVSATPA %s
+; RUN: llc -mtriple=riscv64 -mattr=+shlcofideleg %s -o - | FileCheck --check-prefixes=CHECK,RV64SHLCOFIDELEG %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ssccfg %s -o - | FileCheck --check-prefixes=CHECK,RV64SSCCFG %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ssccptr %s -o - | FileCheck --check-prefixes=CHECK,RV64SSCCPTR %s
 ; RUN: llc -mtriple=riscv64 -mattr=+sscofpmf %s -o - | FileCheck --check-prefixes=CHECK,RV64SSCOFPMF %s
@@ -396,6 +398,7 @@
 ; RV32SHCOUNTERENW: .attribute 5, "rv32i2p1_shcounterenw1p0"
 ; RV32SHGATPA: .attribute 5, "rv32i2p1_shgatpa1p0"
 ; RV32SHVSATPA: .attribute 5, "rv32i2p1_shvsatpa1p0"
+; RV32SHLCOFIDELEG: .attribute 5, "rv32i2p1_shlcofideleg1p0"
 ; RV32SSCCFG: .attribute 5, "rv32i2p1_ssccfg1p0"
 ; RV32SSCCPTR: .attribute 5, "rv32i2p1_ssccptr1p0"
 ; RV32SSCOFPMF: .attribute 5, "rv32i2p1_sscofpmf1p0"
@@ -572,6 +575,7 @@
 ; RV64SHCOUNTERENW: .attribute 5, "rv64i2p1_shcounterenw1p0"
 ; RV64SHGATPA: .attribute 5, "rv64i2p1_shgatpa1p0"
 ; RV64SHVSATPA: .attribute 5, "rv64i2p1_shvsatpa1p0"
+; RV64SHLCOFIDELEG: .attribute 5, "rv64i2p1_shlcofideleg1p0"
 ; RV64SSCCFG: .attribute 5, "rv64i2p1_ssccfg1p0"
 ; RV64SSCCPTR: .attribute 5, "rv64i2p1_ssccptr1p0"
 ; RV64SSCOFPMF: .attribute 5, "rv64i2p1_sscofpmf1p0"

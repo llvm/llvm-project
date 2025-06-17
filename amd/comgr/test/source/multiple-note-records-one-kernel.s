@@ -120,7 +120,7 @@ _ZN17__HIP_CoordinatesI14__HIP_BlockDimE1xE:
 	.zero	1
 	.size	_ZN17__HIP_CoordinatesI14__HIP_BlockDimE1xE, 1
 
-	.ident	"AMD clang version 17.0.0 (https://github.com/RadeonOpenCompute/llvm-project roc-6.0.0 23483 7208e8d15fbf218deb74483ea8c549c67ca4985e)"
+	.ident	"AMD clang version 17.0.0 (https://github.com/ROCm/llvm-project roc-6.0.0 23483 7208e8d15fbf218deb74483ea8c549c67ca4985e)"
 	.section	".note.GNU-stack"
 	.addrsig
 	.amdgpu_metadata

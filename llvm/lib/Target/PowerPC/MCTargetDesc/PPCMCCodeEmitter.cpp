@@ -329,11 +329,11 @@ PPCMCCodeEmitter::getDispRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(Expr);
     (void)SRE;
     // Currently these are the only valid PCRelative Relocations.
-    assert((getSpecifier(SRE) == PPCMCExpr::VK_PCREL ||
-            getSpecifier(SRE) == PPCMCExpr::VK_GOT_PCREL ||
-            getSpecifier(SRE) == PPCMCExpr::VK_GOT_TLSGD_PCREL ||
-            getSpecifier(SRE) == PPCMCExpr::VK_GOT_TLSLD_PCREL ||
-            getSpecifier(SRE) == PPCMCExpr::VK_GOT_TPREL_PCREL) &&
+    assert((getSpecifier(SRE) == PPC::S_PCREL ||
+            getSpecifier(SRE) == PPC::S_GOT_PCREL ||
+            getSpecifier(SRE) == PPC::S_GOT_TLSGD_PCREL ||
+            getSpecifier(SRE) == PPC::S_GOT_TLSLD_PCREL ||
+            getSpecifier(SRE) == PPC::S_GOT_TPREL_PCREL) &&
            "VariantKind must be VK_PCREL or VK_GOT_PCREL or "
            "VK_GOT_TLSGD_PCREL or VK_GOT_TLSLD_PCREL or "
            "VK_GOT_TPREL_PCREL.");
@@ -368,8 +368,8 @@ PPCMCCodeEmitter::getDispRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
            "Value must fit in 34 bits.");
 
     // Currently these are the only valid PCRelative Relocations.
-    assert((getSpecifier(SRE) == PPCMCExpr::VK_PCREL ||
-            getSpecifier(SRE) == PPCMCExpr::VK_GOT_PCREL) &&
+    assert((getSpecifier(SRE) == PPC::S_PCREL ||
+            getSpecifier(SRE) == PPC::S_GOT_PCREL) &&
            "VariantKind must be VK_PCREL or VK_GOT_PCREL");
     // Generate the fixup for the relocation.
     Fixups.push_back(
@@ -433,7 +433,7 @@ unsigned PPCMCCodeEmitter::getTLSRegEncoding(const MCInst &MI, unsigned OpNo,
   // if using PC relative memops.
   const MCExpr *Expr = MO.getExpr();
   const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(Expr);
-  bool IsPCRel = getSpecifier(SRE) == PPCMCExpr::VK_TLS_PCREL;
+  bool IsPCRel = getSpecifier(SRE) == PPC::S_TLS_PCREL;
   Fixups.push_back(MCFixup::create(IsPCRel ? 1 : 0, Expr,
                                    (MCFixupKind)PPC::fixup_ppc_nofixup));
   const Triple &TT = STI.getTargetTriple();

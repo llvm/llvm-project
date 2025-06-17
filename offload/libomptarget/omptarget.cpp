@@ -600,8 +600,10 @@ postProcessingTargetDataEnd(DeviceTy *Device,
         // TODO/FIXME: Look into a better longterm solution, such as a different
         // mapping combination for descriptors or performing a similar base
         // address skip that we've done elsewhere in the omptarget runtime.
-        bool isZeroCopy = PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY;
-        if ((*ShadowPtr.HstPtrAddr == nullptr || isZeroCopy) &&
+        const bool isZeroCopy = PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY;
+        const bool isUSMMode =
+            PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY;
+        if ((*ShadowPtr.HstPtrAddr == nullptr || isZeroCopy || isUSMMode) &&
             ShadowPtr.IsDescriptorBaseAddr)
           return OFFLOAD_SUCCESS;
         *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
@@ -854,9 +856,12 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
               // different mapping combination for descriptors or performing a
               // similar base address skip that we've done elsewhere in the
               // omptarget runtime.
-              bool isZeroCopy =
+              const bool isZeroCopy =
                   PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY;
-              if ((*ShadowPtr.HstPtrAddr == nullptr || isZeroCopy) &&
+              const bool isUSMMode =
+                  PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY;
+              if ((*ShadowPtr.HstPtrAddr == nullptr || isZeroCopy ||
+                   isUSMMode) &&
                   ShadowPtr.IsDescriptorBaseAddr)
                 return OFFLOAD_SUCCESS;
               *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;

@@ -385,11 +385,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   setMaxAtomicSizeInBitsSupported(64);
 
-  // Define the emscripten name for return address helper.
-  // TODO: when implementing other Wasm backends, make this generic or only do
-  // this on emscripten depending on what they end up doing.
-  setLibcallName(RTLIB::RETURN_ADDRESS, "emscripten_return_address");
-
   // Always convert switches to br_tables unless there is only one case, which
   // is equivalent to a simple branch. This reduces code size for wasm, and we
   // defer possible jump table optimizations to the VM.

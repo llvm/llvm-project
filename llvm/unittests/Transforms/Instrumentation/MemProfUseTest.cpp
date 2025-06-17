@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Instrumentation/MemProfUse.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
@@ -17,7 +18,6 @@
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Testing/Support/Error.h"
-#include "llvm/Transforms/Instrumentation/MemProfiler.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

@@ -88,6 +88,7 @@ struct Entry {
     FunctionNameWithArgs,
     FunctionNameNoArgs,
     FunctionMangledName,
+    FunctionPrefix,
     FunctionScope,
     FunctionBasename,
     FunctionTemplateArguments,
@@ -103,6 +104,7 @@ struct Entry {
     FunctionInitial,
     FunctionChanged,
     FunctionIsOptimized,
+    FunctionIsInlined,
     LineEntryFile,
     LineEntryLineNumber,
     LineEntryColumn,
@@ -204,6 +206,8 @@ struct Entry {
     return true;
   }
 
+  operator bool() const { return type != Type::Invalid; }
+
   std::vector<Entry> &GetChildren();
 
   std::string string;
@@ -216,7 +220,7 @@ struct Entry {
   size_t level = 0;
   /// @}
 
-  Type type;
+  Type type = Type::Invalid;
   lldb::Format fmt = lldb::eFormatDefault;
   lldb::addr_t number = 0;
   bool deref = false;

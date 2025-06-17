@@ -136,6 +136,10 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
   }
 }
 
+// Explicitly instantiate the default case to conform to the C++ standard
+template RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous<char, -1>(
+    const Descriptor &to, const Descriptor &from);
+
 template <typename P, int RANK>
 RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
     const Descriptor &to, const Descriptor &from) {
@@ -153,6 +157,9 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
   }
 }
 
+template RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous<char, -1>(
+    const Descriptor &to, const Descriptor &from);
+
 template <typename P, int RANK>
 RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
     const Descriptor &to, const Descriptor &from) {
@@ -169,6 +176,9 @@ RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
     }
   }
 }
+
+template RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous<char, -1>(
+    const Descriptor &to, const Descriptor &from);
 
 // ShallowCopy helper for calling the correct specialised variant based on
 // scenario

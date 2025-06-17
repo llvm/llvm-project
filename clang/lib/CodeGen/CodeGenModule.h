@@ -2132,10 +2132,9 @@ public:
   void updateXteamRedVarOpcode(const CallExpr *Call, const VarDecl *VD,
                                XteamRedVarMap *RedMap) {
     XteamRedOpKind Opcode;
-    std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
-    if (isOptKernelAMDGCNMax(CallName))
+    if (isOptKernelAMDGCNMax(Call))
       Opcode = XR_OP_max;
-    else if (isOptKernelAMDGCNMin(CallName))
+    else if (isOptKernelAMDGCNMin(Call))
       Opcode = XR_OP_min;
     else
       llvm_unreachable("Expected either min or max");
@@ -2200,10 +2199,16 @@ public:
   /// Return status indicating whether the call is an Xteam-supported host
   /// builtin.
   CodeGenModule::NoLoopXteamErr
-  getStatusOptKernelHostBuiltin(std::string CallName) const;
+  getStatusOptKernelHostBuiltin(const CallExpr *C) const;
+
+  /// Is the callee in std namespace?
+  bool isStdNameSpace(const CallExpr *Call) const;
 
   /// Is the function name recognized as a min builtin by the host compile?
-  bool isOptKernelHostMin(std::string CallName) const {
+  bool isOptKernelHostMin(const CallExpr *Call) const {
+    std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
+    if (isStdNameSpace(Call) && !CallName.compare("min"))
+      return true;
     return (!CallName.compare("fmin") || !CallName.compare("fminf") ||
             !CallName.compare("fminl") || !CallName.compare("__builtin_fmin") ||
             !CallName.compare("__builtin_fminf") ||
@@ -2211,7 +2216,10 @@ public:
   }
 
   /// Is the function name recognized as a max builtin by the host compile?
-  bool isOptKernelHostMax(std::string CallName) const {
+  bool isOptKernelHostMax(const CallExpr *Call) const {
+    std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
+    if (isStdNameSpace(Call) && !CallName.compare("max"))
+      return true;
     return (!CallName.compare("fmax") || !CallName.compare("fmaxf") ||
             !CallName.compare("fmaxl") || !CallName.compare("__builtin_fmax") ||
             !CallName.compare("__builtin_fmaxf") ||
@@ -2221,10 +2229,13 @@ public:
   /// Return status indicating whether the amdgcn device function is supported
   /// by Xteam.
   CodeGenModule::NoLoopXteamErr
-  getStatusOptKernelAMDGCNBuiltin(std::string CallName) const;
+  getStatusOptKernelAMDGCNBuiltin(const CallExpr *C) const;
 
   /// Is the function name recognized as a min builtin by the device compile?
-  bool isOptKernelAMDGCNMin(std::string CallName) const {
+  bool isOptKernelAMDGCNMin(const CallExpr *Call) const {
+    std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
+    if (isStdNameSpace(Call) && !CallName.compare("min"))
+      return true;
     return (!CallName.compare("fmin[device={arch(amdgcn)}]") ||
             !CallName.compare("fminf[device={arch(amdgcn)}]") ||
             !CallName.compare("fminl[device={arch(amdgcn)}]") ||
@@ -2235,7 +2246,10 @@ public:
   }
 
   // Is the function name recognized as a max builtin by the device compile?
-  bool isOptKernelAMDGCNMax(std::string CallName) const {
+  bool isOptKernelAMDGCNMax(const CallExpr *Call) const {
+    std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
+    if (isStdNameSpace(Call) && !CallName.compare("max"))
+      return true;
     return (!CallName.compare("fmax[device={arch(amdgcn)}]") ||
             !CallName.compare("fmaxf[device={arch(amdgcn)}]") ||
             !CallName.compare("fmaxl[device={arch(amdgcn)}]") ||
@@ -2407,6 +2421,15 @@ public:
     // initializers or non empty initializers. This can provide a consistent
     // behavior. So projects like the Linux kernel can rely on it.
     return !getLangOpts().CPlusPlus;
+  }
+
+  // Helper to get the alignment for a variable.
+  unsigned getVtableGlobalVarAlignment(const VarDecl *D = nullptr) {
+    LangAS AS = GetGlobalVarAddressSpace(D);
+    unsigned PAlign = getItaniumVTableContext().isRelativeLayout()
+                          ? 32
+                          : getTarget().getPointerAlign(AS);
+    return PAlign;
   }
 
 private:

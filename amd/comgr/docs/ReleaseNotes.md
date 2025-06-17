@@ -1,4 +1,4 @@
-Comgr v4.0 Release Notes
+Comgr v4.0 (In Progress) Release Notes
 ========================
 
 This document contains the release notes for the Code Object Manager (Comgr),
@@ -38,8 +38,9 @@ Bug Fixes
 New APIs
 --------
 - amd\_comgr\_info\_set\_vfs\_() (v3.1)
-    - By setting this ActionInfo property, a user can explicitly dictate if
-    device libraries should be linked using a Virtual File System (VFS).
+    - By setting this ActionInfo property, users can explicitly dictate if
+    device libraries should be linked using the real file system or a
+    Virtual File System (VFS).
 
 Deprecated APIs
 ---------------

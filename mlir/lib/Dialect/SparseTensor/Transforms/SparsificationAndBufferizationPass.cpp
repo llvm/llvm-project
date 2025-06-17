@@ -152,8 +152,10 @@ public:
     // invalidate the results of the analysis. From now on, only small and
     // localized rewrites are allowed, such as replacing a tensor op with its
     // memref equivalent.
-    if (failed(bufferization::insertTensorCopies(getOperation(),
-                                                 bufferizationOptions)))
+    bufferization::BufferizationState bufferizationState;
+
+    if (failed(bufferization::insertTensorCopies(
+            getOperation(), bufferizationOptions, bufferizationState)))
       return signalPassFailure();
 
     // Option `testAnalysisOnly` is a debug/testing flag. If set, the results of

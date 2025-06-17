@@ -12,7 +12,8 @@ jobs:
   # This workflow contains a single job called "invoke_jenkins_PSDB"
   invoke_jenkins_PSDB:
     if: github.event.pull_request.draft == false
-    runs-on: self-hosted
+    runs-on: 
+      group: compiler-generic-runners
     env:
         svc_acc_org_secret: ${{secrets.CI_GITHUB_TOKEN}}
         input_sha: ${{ github.event.pull_request.head.sha != '' && github.event.pull_request.head.sha || github.sha }}

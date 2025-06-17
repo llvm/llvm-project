@@ -429,6 +429,11 @@
 // MCPU-SIFIVE-X280-SAME: "-target-feature" "+zvl512b" "-target-feature" "+zvl64b"
 // MCPU-SIFIVE-X280-SAME: "-target-abi" "lp64d"
 
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -menable-experimental-extensions -mcpu=sifive-x390 | FileCheck -check-prefix=MCPU-SIFIVE-X390 %s
+// MCPU-SIFIVE-X390: "-target-cpu" "sifive-x390"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-sifive-x390.c`
+// MCPU-SIFIVE-X390-SAME: "-target-abi" "lp64d"
+
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p450 | FileCheck -check-prefix=MCPU-SIFIVE-P450 %s
 // MCPU-SIFIVE-P450: "-nostdsysteminc" "-target-cpu" "sifive-p450"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+m"

@@ -5192,7 +5192,7 @@ D. References
 
     .. _amdgpu-dwarf-AMD-ROCgdb:
 
-2.  [AMD-ROCgdb] `AMD ROCm Debugger (ROCgdb) <https://github.com/ROCm-Developer-Tools/ROCgdb>`__
+2.  [AMD-ROCgdb] `AMD ROCm Debugger (ROCgdb) <https://github.com/ROCm/ROCgdb>`__
 
     .. _amdgpu-dwarf-AMD-ROCm:
 

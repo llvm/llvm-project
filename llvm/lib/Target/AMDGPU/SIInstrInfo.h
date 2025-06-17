@@ -1324,6 +1324,8 @@ public:
   /// Fix operands in Inst to fix 16bit SALU to VALU lowering.
   void legalizeOperandsVALUt16(MachineInstr &Inst,
                                MachineRegisterInfo &MRI) const;
+  void legalizeOperandsVALUt16(MachineInstr &Inst, unsigned OpIdx,
+                               MachineRegisterInfo &MRI) const;
 
   /// Replace the instructions opcode with the equivalent VALU
   /// opcode.  This function will also move the users of MachineInstruntions
@@ -1565,6 +1567,10 @@ bool execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
                                 const MachineInstr &DefMI,
                                 const MachineInstr &UseMI);
 
+bool checkIfExecMayBeModifiedBeforeUseAcrossBB(
+    const MachineRegisterInfo &MRI, Register VReg, const MachineInstr &DefMI,
+    const MachineInstr &UseMI, const int SIFoldOperandsPreheaderThreshold);
+    
 /// \brief Return false if EXEC is not changed between the def of \p VReg at \p
 /// DefMI and all its uses. Should be run on SSA. Currently does not attempt to
 /// track between blocks.

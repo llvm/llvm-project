@@ -1486,6 +1486,17 @@ void DLLFile::parse() {
     symtab.addLazyDLLSymbol(this, s, impName);
     if (code)
       symtab.addLazyDLLSymbol(this, s, symbolName);
+    if (symtab.isEC()) {
+      StringRef impAuxName = saver().save("__imp_aux_" + symbolName);
+      symtab.addLazyDLLSymbol(this, s, impAuxName);
+
+      if (code) {
+        std::optional<std::string> mangledName =
+            getArm64ECMangledFunctionName(symbolName);
+        if (mangledName)
+          symtab.addLazyDLLSymbol(this, s, *mangledName);
+      }
+    }
   }
 }
 

@@ -649,12 +649,6 @@ amd_comgr_status_t executeCommand(const Command &Job, raw_ostream &LogS,
   Argv.append(Arguments.begin(), Arguments.end());
   Argv.push_back(nullptr);
 
-  // By default clang driver will ask CC1 to leak memory.
-  auto *IT = find(Argv, StringRef("-disable-free"));
-  if (IT != Argv.end()) {
-    Argv.erase(IT);
-  }
-
   clearLLVMOptions();
 
   if (Argv[1] == StringRef("-cc1")) {
@@ -899,6 +893,10 @@ amd_comgr_status_t AMDGPUCompiler::processFile(DataObject *Input,
     Argv.push_back("-Xclang");
     Argv.push_back(Flag);
   }
+
+  // By default clang driver will ask CC1 to leak memory.
+  Argv.push_back("-Xclang");
+  Argv.push_back("-no-disable-free");
 
   Argv.push_back(InputFilePath);
 
