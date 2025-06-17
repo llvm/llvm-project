@@ -5097,7 +5097,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
 
       bool IsWave32 = ST.isWave32();
       unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-      unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+      MCRegister ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
       unsigned CountReg =
           IsWave32 ? AMDGPU::S_BCNT1_I32_B32 : AMDGPU::S_BCNT1_I32_B64;
 
