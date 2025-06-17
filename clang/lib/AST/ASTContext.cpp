@@ -12983,7 +12983,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>())
       return true;
 
-    // Functions definitions with the sycl_external attribute are required
+    // Function definitions with the sycl_external attribute are required
     // during device compilation regardless of whether they are reachable from
     // a SYCL kernel.
     if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLExternalAttr>())

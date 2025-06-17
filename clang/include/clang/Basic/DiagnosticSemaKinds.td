@@ -12851,7 +12851,7 @@ def err_sycl_special_type_num_init_method : Error<
   "types with 'sycl_special_class' attribute must have one and only one '__init' "
   "method defined">;
 
-//SYCL external attribute diagnostics
+// SYCL external attribute diagnostics
 def err_sycl_attribute_invalid_linkage : Error<
   "'sycl_external' can only be applied to functions with external linkage">;
 

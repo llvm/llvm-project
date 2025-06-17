@@ -480,10 +480,24 @@ def SYCLExternalDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "sycl_external";
   let Content = [{
-The ``sycl_external`` attribute can only be applied to external functions, and
-indicates that the function must be treated as a device function and must be
-emitted even if it has no direct uses from other device functions.
-
+The ``sycl_external`` attribute indicates that a function defined in another
+translation unit may be called by a device function defined in the current
+translation unit or, if defined in the current translation unit, the function
+may be called by device functions defined in other translation units.
+The attribute is intended for use in the implementation of the ``SYCL_EXTERNAL``
+macro as specified in section 5.10.1, "SYCL functions and member functions
+linkage", of the SYCL 2020 specification.
+The attribute only appertains to functions and only those that meet the
+following requirements.
+* Has external linkage.
+* Is not explicitly defined as deleted (the function may be an explicitly
+  defaulted function that is defined as deleted).
+The attribute shall be present on the first declaration of a function and
+may optionally be present on subsequent declarations.
+When compiling for a SYCL device target that does not support the generic
+address space, the function shall not specify a raw pointer or reference type
+as the return type or as a parameter type.
+See section 5.9, "Address-space deduction", of the SYCL 2020 specification.
 The following examples demonstrate the use of this attribute:
 
 .. code-block:: c++
@@ -493,10 +507,6 @@ The following examples demonstrate the use of this attribute:
 [[clang::sycl_external]] void Bar() { /* ... */ }
 
 [[clang::sycl_external]] extern void Baz();
-
-[[nodiscard]] [[clang::sycl_external]] void Important();
-
-[[clang::sycl_external]] [[nodiscard]] void AlsoImportant();
 
   }];
 }
