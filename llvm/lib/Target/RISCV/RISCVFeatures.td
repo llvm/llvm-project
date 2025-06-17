@@ -1426,7 +1426,8 @@ def HasVendorXwchc
 // Qualcomm Extensions
 
 def FeatureVendorXqccmp
-    : RISCVExperimentalExtension<0, 1, "Qualcomm 16-bit Push/Pop and Double Moves",
+    : RISCVExperimentalExtension<0, 3,
+                                 "Qualcomm 16-bit Push/Pop and Double Moves",
                                  [FeatureStdExtZca]>;
 def HasVendorXqccmp
     : Predicate<"Subtarget->hasVendorXqccmp()">,
@@ -1488,14 +1489,14 @@ def HasVendorXqcics
                          "'Xqcics' (Qualcomm uC Conditional Select Extension)">;
 
 def FeatureVendorXqcicsr
-    : RISCVExperimentalExtension<0, 3, "Qualcomm uC CSR Extension">;
+    : RISCVExperimentalExtension<0, 4, "Qualcomm uC CSR Extension">;
 def HasVendorXqcicsr
     : Predicate<"Subtarget->hasVendorXqcicsr()">,
       AssemblerPredicate<(all_of FeatureVendorXqcicsr),
                          "'Xqcicsr' (Qualcomm uC CSR Extension)">;
 
 def FeatureVendorXqciint
-    : RISCVExperimentalExtension<0, 7, "Qualcomm uC Interrupts Extension",
+    : RISCVExperimentalExtension<0, 10, "Qualcomm uC Interrupts Extension",
                                  [FeatureStdExtZca]>;
 def HasVendorXqciint
     : Predicate<"Subtarget->hasVendorXqciint()">,
@@ -1542,7 +1543,7 @@ def HasVendorXqcilo
                          "'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)">;
 
 def FeatureVendorXqcilsm
-    : RISCVExperimentalExtension<0, 5,
+    : RISCVExperimentalExtension<0, 6,
                                  "Qualcomm uC Load Store Multiple Extension">;
 def HasVendorXqcilsm
     : Predicate<"Subtarget->hasVendorXqcilsm()">,

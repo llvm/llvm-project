@@ -366,11 +366,12 @@ public:
   /// Given a vector (either fixed or scalable), return the scalable vector
   /// corresponding to a vector register (i.e. an m1 register group).
   static MVT getM1VT(MVT VT) {
-    assert(VT.getVectorElementType().getSizeInBits() <= 64 &&
+    unsigned EltSizeInBits = VT.getVectorElementType().getSizeInBits();
+    assert(EltSizeInBits <= RISCV::RVVBitsPerBlock &&
            "Unexpected vector MVT");
     return MVT::getScalableVectorVT(
         VT.getVectorElementType(),
-        RISCV::RVVBitsPerBlock / VT.getVectorElementType().getSizeInBits());
+        RISCV::RVVBitsPerBlock / EltSizeInBits);
   }
 
   static unsigned getRegClassIDForLMUL(RISCVVType::VLMUL LMul);
