@@ -636,19 +636,25 @@ foreach mx = SchedMxListFW in {
   }
 }
 
-// Narrowing
+// Narrowing conversion operations use 4 * LMUL cycles
 foreach mx = SchedMxListW in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
+  defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
-  defm "" : LMULWriteResMX<"WriteVFNCvtFToIV", [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = !mul(LMulLat, 4) in {
+    defm "" : LMULWriteResMX<"WriteVFNCvtFToIV", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 }
 
 foreach mx = SchedMxListFW in {
   foreach sew = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
-
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFW, isF=1>.c;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFNCvtIToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFNCvtFToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
+
+    let Latency = !mul(LMulLat, 4) in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFNCvtIToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFNCvtFToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
   }
 }
 
