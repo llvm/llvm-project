@@ -10,5 +10,5 @@
 #include <clc/workitem/clc_get_enqueued_num_sub_groups.h>
 
 _CLC_OVERLOAD _CLC_DEF uint get_enqueued_num_sub_groups() {
-  return clc_get_enqueued_num_sub_groups();
+  return __clc_get_enqueued_num_sub_groups();
 }

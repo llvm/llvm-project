@@ -10,5 +10,5 @@
 #include <clc/workitem/clc_get_sub_group_local_id.h>
 
 _CLC_OVERLOAD _CLC_DEF uint get_sub_group_local_id() {
-  return clc_get_sub_group_local_id();
+  return __clc_get_sub_group_local_id();
 }

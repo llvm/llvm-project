@@ -10,5 +10,5 @@
 #include <clc/workitem/clc_get_global_offset.h>
 
 _CLC_OVERLOAD _CLC_DEF size_t get_global_offset(uint dim) {
-  return clc_get_global_offset(dim);
+  return __clc_get_global_offset(dim);
 }

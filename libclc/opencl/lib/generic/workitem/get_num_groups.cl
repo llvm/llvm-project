@@ -10,5 +10,5 @@
 #include <clc/workitem/clc_get_num_groups.h>
 
 _CLC_OVERLOAD _CLC_DEF size_t get_num_groups(uint dim) {
-  return clc_get_num_groups(dim);
+  return __clc_get_num_groups(dim);
 }

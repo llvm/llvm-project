@@ -10,5 +10,5 @@
 #include <clc/workitem/clc_get_enqueued_local_size.h>
 
 _CLC_OVERLOAD _CLC_DEF size_t get_enqueued_local_size(uint dim) {
-  return clc_get_enqueued_local_size(dim);
+  return __clc_get_enqueued_local_size(dim);
 }

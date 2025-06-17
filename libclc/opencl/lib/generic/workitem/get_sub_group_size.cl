@@ -10,5 +10,5 @@
 #include <clc/workitem/clc_get_sub_group_size.h>
 
 _CLC_OVERLOAD _CLC_DEF uint get_sub_group_size() {
-  return clc_get_sub_group_size();
+  return __clc_get_sub_group_size();
 }

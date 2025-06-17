@@ -10,6 +10,6 @@
 #include <clc/workitem/clc_get_local_size.h>
 #include <clc/workitem/clc_get_num_groups.h>
 
-_CLC_OVERLOAD _CLC_DEF size_t clc_get_global_size(uint dim) {
-  return clc_get_num_groups(dim) * clc_get_local_size(dim);
+_CLC_OVERLOAD _CLC_DEF size_t __clc_get_global_size(uint dim) {
+  return __clc_get_num_groups(dim) * __clc_get_local_size(dim);
 }

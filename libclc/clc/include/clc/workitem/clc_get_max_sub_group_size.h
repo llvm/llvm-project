@@ -11,6 +11,6 @@
 
 #include <clc/internal/clc.h>
 
-_CLC_DEF _CLC_OVERLOAD uint clc_get_max_sub_group_size();
+_CLC_DEF _CLC_OVERLOAD uint __clc_get_max_sub_group_size();
 
 #endif // __CLC_WORKITEM_CLC_GET_MAX_SUB_GROUP_SIZE_H__

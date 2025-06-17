@@ -12,15 +12,15 @@
 #include <clc/workitem/clc_get_sub_group_id.h>
 #include <clc/workitem/clc_get_sub_group_size.h>
 
-_CLC_OVERLOAD _CLC_DEF uint clc_get_sub_group_size() {
-  if (clc_get_sub_group_id() != clc_get_num_sub_groups() - 1) {
-    return clc_get_max_sub_group_size();
+_CLC_OVERLOAD _CLC_DEF uint __clc_get_sub_group_size() {
+  if (__clc_get_sub_group_id() != __clc_get_num_sub_groups() - 1) {
+    return __clc_get_max_sub_group_size();
   }
-  size_t size_x = clc_get_local_size(0);
-  size_t size_y = clc_get_local_size(1);
-  size_t size_z = clc_get_local_size(2);
+  size_t size_x = __clc_get_local_size(0);
+  size_t size_y = __clc_get_local_size(1);
+  size_t size_z = __clc_get_local_size(2);
   size_t linear_size = size_z * size_y * size_x;
-  size_t uniform_groups = clc_get_num_sub_groups() - 1;
-  size_t uniform_size = clc_get_max_sub_group_size() * uniform_groups;
+  size_t uniform_groups = __clc_get_num_sub_groups() - 1;
+  size_t uniform_size = __clc_get_max_sub_group_size() * uniform_groups;
   return linear_size - uniform_size;
 }

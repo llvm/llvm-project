@@ -12,7 +12,7 @@
 #include <clc/workitem/clc_get_group_id.h>
 #include <clc/workitem/clc_get_local_id.h>
 
-_CLC_OVERLOAD _CLC_DEF size_t clc_get_global_id(uint dim) {
-  return clc_get_group_id(dim) * clc_get_enqueued_local_size(dim) +
-         clc_get_local_id(dim) + clc_get_global_offset(dim);
+_CLC_OVERLOAD _CLC_DEF size_t __clc_get_global_id(uint dim) {
+  return __clc_get_group_id(dim) * __clc_get_enqueued_local_size(dim) +
+         __clc_get_local_id(dim) + __clc_get_global_offset(dim);
 }

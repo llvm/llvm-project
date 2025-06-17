@@ -12,21 +12,21 @@
 #include <clc/workitem/clc_get_global_size.h>
 #include <clc/workitem/clc_get_work_dim.h>
 
-_CLC_OVERLOAD _CLC_DEF size_t clc_get_global_linear_id() {
-  uint dim = clc_get_work_dim();
+_CLC_OVERLOAD _CLC_DEF size_t __clc_get_global_linear_id() {
+  uint dim = __clc_get_work_dim();
   switch (dim) {
   default:
   case 1:
-    return clc_get_global_id(0) - clc_get_global_offset(0);
+    return __clc_get_global_id(0) - __clc_get_global_offset(0);
   case 2:
-    return (clc_get_global_id(1) - clc_get_global_offset(1)) *
-               clc_get_global_size(0) +
-           (clc_get_global_id(0) - clc_get_global_offset(0));
+    return (__clc_get_global_id(1) - __clc_get_global_offset(1)) *
+               __clc_get_global_size(0) +
+           (__clc_get_global_id(0) - __clc_get_global_offset(0));
   case 3:
-    return ((clc_get_global_id(2) - clc_get_global_offset(2)) *
-            clc_get_global_size(1) * clc_get_global_size(0)) +
-           ((clc_get_global_id(1) - clc_get_global_offset(1)) *
-            clc_get_global_size(0)) +
-           (clc_get_global_id(0) - clc_get_global_offset(0));
+    return ((__clc_get_global_id(2) - __clc_get_global_offset(2)) *
+            __clc_get_global_size(1) * __clc_get_global_size(0)) +
+           ((__clc_get_global_id(1) - __clc_get_global_offset(1)) *
+            __clc_get_global_size(0)) +
+           (__clc_get_global_id(0) - __clc_get_global_offset(0));
   }
 }

@@ -11,6 +11,6 @@
 
 #include <clc/internal/clc.h>
 
-_CLC_OVERLOAD _CLC_DECL size_t clc_get_global_linear_id();
+_CLC_OVERLOAD _CLC_DECL size_t __clc_get_global_linear_id();
 
 #endif // __CLC_WORKITEM_CLC_GET_GLOBAL_LINEAR_ID_H__

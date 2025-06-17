@@ -8,7 +8,7 @@
 
 #include <clc/workitem/clc_get_num_groups.h>
 
-_CLC_OVERLOAD _CLC_DEF size_t clc_get_num_groups(uint dim) {
+_CLC_OVERLOAD _CLC_DEF size_t __clc_get_num_groups(uint dim) {
   switch (dim) {
   case 0:
     return __nvvm_read_ptx_sreg_nctaid_x();

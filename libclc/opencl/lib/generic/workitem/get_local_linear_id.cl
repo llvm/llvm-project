@@ -10,5 +10,5 @@
 #include <clc/workitem/clc_get_local_linear_id.h>
 
 _CLC_OVERLOAD _CLC_DEF size_t get_local_linear_id() {
-  return clc_get_local_linear_id();
+  return __clc_get_local_linear_id();
 }

@@ -9,4 +9,4 @@
 #include <clc/opencl/workitem/get_work_dim.h>
 #include <clc/workitem/clc_get_work_dim.h>
 
-_CLC_OVERLOAD _CLC_DEF uint clc_get_work_dim() { return clc_get_work_dim(); }
+_CLC_OVERLOAD _CLC_DEF uint get_work_dim() { return __clc_get_work_dim(); }
