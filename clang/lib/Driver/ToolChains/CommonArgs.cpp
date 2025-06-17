@@ -2622,6 +2622,11 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
                                 llvm::opt::ArgStringList &CC1Args,
                                 StringRef Arch, StringRef Target,
                                 bool isBitCodeSDL) {
+  
+  // Check if offload libraries are disabled
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
+    return;
 
   SmallVector<std::string, 8> LibraryPaths;
   // Add search directories from LIBRARY_PATH env variable
