@@ -164,8 +164,8 @@ CodeGenRegister::CodeGenRegister(const Record *R, unsigned Enum)
     : TheDef(R), EnumValue(Enum),
       CostPerUse(R->getValueAsListOfInts("CostPerUse")),
       CoveredBySubRegs(R->getValueAsBit("CoveredBySubRegs")),
-      HasDisjunctSubRegs(false), Constant(R->getValueAsBit("isConstant")),
-      SubRegsComplete(false), SuperRegsComplete(false), TopoSig(~0u) {
+      Constant(R->getValueAsBit("isConstant")), SubRegsComplete(false),
+      SuperRegsComplete(false), TopoSig(~0u) {
   Artificial = R->getValueAsBit("isArtificial");
 }
 

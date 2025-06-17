@@ -339,6 +339,8 @@ New Compiler Flags
 
 - New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunities.
 
+- New option ``-ignore-pch`` added to disable precompiled headers. It overrides ``-emit-pch`` and ``-include-pch``. (#GH142409, `PCHDocs <https://clang.llvm.org/docs/UsersManual.html#ignoring-a-pch-file>`_).
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -704,6 +706,7 @@ Bug Fixes in This Version
 - Fixed a bug with constexpr evaluation for structs containing unions in case of C++ modules. (#GH143168)
 - Fixed incorrect token location when emitting diagnostics for tokens expanded from macros. (#GH143216)
 - Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
+- Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

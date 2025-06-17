@@ -9614,13 +9614,12 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 // 256-bit AVX can use the vinsertf128 instruction
 // to create 256-bit vectors from two other 128-bit ones.
 // TODO: Detect subvector broadcast here instead of DAG combine?
-static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
+static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
+                                      SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
-  SDLoc dl(Op);
   MVT ResVT = Op.getSimpleValueType();
-
-  assert((ResVT.is256BitVector() ||
-          ResVT.is512BitVector()) && "Value type must be 256-/512-bit wide");
+  assert((ResVT.is256BitVector() || ResVT.is512BitVector()) &&
+         "Value type must be 256-/512-bit wide");
 
   unsigned NumOperands = Op.getNumOperands();
   unsigned NumFreezeUndef = 0;
@@ -9688,13 +9687,11 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
 // zeros) of the result of a node that already zeros all upper bits of
 // k-register.
 // TODO: Merge this with LowerAVXCONCAT_VECTORS?
-static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
+static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op, const SDLoc &dl,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG & DAG) {
-  SDLoc dl(Op);
   MVT ResVT = Op.getSimpleValueType();
   unsigned NumOperands = Op.getNumOperands();
-
   assert(NumOperands > 1 && isPowerOf2_32(NumOperands) &&
          "Unexpected number of operands in CONCAT_VECTORS");
 
@@ -9766,19 +9763,18 @@ static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
 static SDValue LowerCONCAT_VECTORS(SDValue Op,
                                    const X86Subtarget &Subtarget,
                                    SelectionDAG &DAG) {
+  SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   if (VT.getVectorElementType() == MVT::i1)
-    return LowerCONCAT_VECTORSvXi1(Op, Subtarget, DAG);
-
-  assert((VT.is256BitVector() && Op.getNumOperands() == 2) ||
-         (VT.is512BitVector() && (Op.getNumOperands() == 2 ||
-          Op.getNumOperands() == 4)));
+    return LowerCONCAT_VECTORSvXi1(Op, DL, Subtarget, DAG);
 
   // AVX can use the vinsertf128 instruction to create 256-bit vectors
   // from two other 128-bit ones.
-
   // 512-bit vector may contain 2 256-bit vectors or 4 128-bit vectors
-  return LowerAVXCONCAT_VECTORS(Op, DAG, Subtarget);
+  assert((VT.is256BitVector() && Op.getNumOperands() == 2) ||
+         (VT.is512BitVector() &&
+          (Op.getNumOperands() == 2 || Op.getNumOperands() == 4)));
+  return LowerAVXCONCAT_VECTORS(Op, DL, DAG, Subtarget);
 }
 
 //===----------------------------------------------------------------------===//
@@ -45517,6 +45513,7 @@ static SDValue combinevXi1ConstantToInteger(SDValue Op, SelectionDAG &DAG) {
 static SDValue combineCastedMaskArithmetic(SDNode *N, SelectionDAG &DAG,
                                            TargetLowering::DAGCombinerInfo &DCI,
                                            const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
   assert(N->getOpcode() == ISD::BITCAST && "Expected a bitcast");
 
   if (!DCI.isBeforeLegalizeOps())
@@ -45530,15 +45527,6 @@ static SDValue combineCastedMaskArithmetic(SDNode *N, SelectionDAG &DAG,
   SDValue Op = N->getOperand(0);
   EVT SrcVT = Op.getValueType();
 
-  if (!Op.hasOneUse())
-    return SDValue();
-
-  // Look for logic ops.
-  if (Op.getOpcode() != ISD::AND &&
-      Op.getOpcode() != ISD::OR &&
-      Op.getOpcode() != ISD::XOR)
-    return SDValue();
-
   // Make sure we have a bitcast between mask registers and a scalar type.
   if (!(SrcVT.isVector() && SrcVT.getVectorElementType() == MVT::i1 &&
         DstVT.isScalarInteger()) &&
@@ -45546,18 +45534,18 @@ static SDValue combineCastedMaskArithmetic(SDNode *N, SelectionDAG &DAG,
         SrcVT.isScalarInteger()))
     return SDValue();
 
-  SDValue LHS = Op.getOperand(0);
-  SDValue RHS = Op.getOperand(1);
+  SDValue LHS, RHS;
 
-  if (LHS.hasOneUse() && LHS.getOpcode() == ISD::BITCAST &&
-      LHS.getOperand(0).getValueType() == DstVT)
-    return DAG.getNode(Op.getOpcode(), SDLoc(N), DstVT, LHS.getOperand(0),
-                       DAG.getBitcast(DstVT, RHS));
+  // Look for logic ops.
+  if (!sd_match(Op, m_OneUse(m_BitwiseLogic(m_Value(LHS), m_Value(RHS)))))
+    return SDValue();
 
-  if (RHS.hasOneUse() && RHS.getOpcode() == ISD::BITCAST &&
-      RHS.getOperand(0).getValueType() == DstVT)
+  // If either operand was bitcast from DstVT, then perform logic with DstVT (at
+  // least one of the getBitcast() will fold away).
+  if (sd_match(LHS, m_OneUse(m_BitCast(m_SpecificVT(DstVT)))) ||
+      sd_match(RHS, m_OneUse(m_BitCast(m_SpecificVT(DstVT)))))
     return DAG.getNode(Op.getOpcode(), SDLoc(N), DstVT,
-                       DAG.getBitcast(DstVT, LHS), RHS.getOperand(0));
+                       DAG.getBitcast(DstVT, LHS), DAG.getBitcast(DstVT, RHS));
 
   // If the RHS is a vXi1 build vector, this is a good reason to flip too.
   // Most of these have to move a constant from the scalar domain anyway.
@@ -59687,16 +59675,6 @@ static SDValue narrowExtractedVectorSelect(SDNode *Ext, const SDLoc &DL,
 static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
                                         TargetLowering::DAGCombinerInfo &DCI,
                                         const X86Subtarget &Subtarget) {
-  // For AVX1 only, if we are extracting from a 256-bit and+not (which will
-  // eventually get combined/lowered into ANDNP) with a concatenated operand,
-  // split the 'and' into 128-bit ops to avoid the concatenate and extract.
-  // We let generic combining take over from there to simplify the
-  // insert/extract and 'not'.
-  // This pattern emerges during AVX1 legalization. We handle it before lowering
-  // to avoid complications like splitting constant vector loads.
-
-  // Capture the original wide type in the likely case that we need to bitcast
-  // back to this type.
   if (!N->getValueType(0).isSimple())
     return SDValue();
 
@@ -59712,8 +59690,14 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(N);
 
-  if (Subtarget.hasAVX() && !Subtarget.hasAVX2() &&
-      TLI.isTypeLegal(InVecVT) &&
+  // For AVX1 only, if we are extracting from a 256-bit and+not (which will
+  // eventually get combined/lowered into ANDNP) with a concatenated operand,
+  // split the 'and' into 128-bit ops to avoid the concatenate and extract.
+  // We let generic combining take over from there to simplify the
+  // insert/extract and 'not'.
+  // This pattern emerges during AVX1 legalization. We handle it before lowering
+  // to avoid complications like splitting constant vector loads.
+  if (Subtarget.hasAVX() && !Subtarget.hasAVX2() && TLI.isTypeLegal(InVecVT) &&
       InSizeInBits == 256 && InVecBC.getOpcode() == ISD::AND) {
     auto isConcatenatedNot = [](SDValue V) {
       V = peekThroughBitcasts(V);
