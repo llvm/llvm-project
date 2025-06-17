@@ -13963,31 +13963,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 
     // We allow integer constant expressions in all cases.
     } else if (DclT->isIntegralOrEnumerationType()) {
-      // Check whether the expression is a constant expression.
-      SourceLocation Loc;
       if (getLangOpts().CPlusPlus11 && DclT.isVolatileQualified())
         // In C++11, a non-constexpr const static data member with an
         // in-class initializer cannot be volatile.
         Diag(VDecl->getLocation(), diag::err_in_class_initializer_volatile);
-      else if (Init->isValueDependent())
-        ; // Nothing to check.
-      else if (Init->isIntegerConstantExpr(Context, &Loc))
-        ; // Ok, it's an ICE!
-      else if (Init->getType()->isScopedEnumeralType() &&
-               Init->isCXX11ConstantExpr(Context))
-        ; // Ok, it is a scoped-enum constant expression.
-      else if (Init->isEvaluatable(Context)) {
-        // If we can constant fold the initializer through heroics, accept it,
-        // but report this as a use of an extension for -pedantic.
-        Diag(Loc, diag::ext_in_class_initializer_non_constant)
-          << Init->getSourceRange();
-      } else {
-        // Otherwise, this is some crazy unknown case.  Report the issue at the
-        // location provided by the isIntegerConstantExpr failed check.
-        Diag(Loc, diag::err_in_class_initializer_non_constant)
-          << Init->getSourceRange();
-        VDecl->setInvalidDecl();
-      }
 
     // We allow foldable floating-point constants as an extension.
     } else if (DclT->isFloatingType()) { // also permits complex, which is ok
@@ -14715,6 +14694,17 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       // Compute and cache the constant value, and remember that we have a
       // constant initializer.
       if (HasConstInit) {
+        if (var->isStaticDataMember() && !var->isInline() &&
+            var->getLexicalDeclContext()->isRecord() &&
+            type->isIntegralOrEnumerationType()) {
+          // In C++98, in-class initialization for a static data member must
+          // be an integer constant expression.
+          SourceLocation Loc;
+          if (!Init->isIntegerConstantExpr(Context, &Loc)) {
+            Diag(Loc, diag::ext_in_class_initializer_non_constant)
+                << Init->getSourceRange();
+          }
+        }
         (void)var->checkForConstantInitialization(Notes);
         Notes.clear();
       } else if (CacheCulprit) {
@@ -14750,6 +14740,13 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
           << Attr->getRange() << Attr->isConstinit();
       for (auto &it : Notes)
         Diag(it.first, it.second);
+    } else if (var->isStaticDataMember() && !var->isInline() &&
+               var->getLexicalDeclContext()->isRecord()) {
+      Diag(var->getLocation(), diag::err_in_class_initializer_non_constant)
+          << Init->getSourceRange();
+      for (auto &it : Notes)
+        Diag(it.first, it.second);
+      var->setInvalidDecl();
     } else if (IsGlobal &&
                !getDiagnostics().isIgnored(diag::warn_global_constructor,
                                            var->getLocation())) {
