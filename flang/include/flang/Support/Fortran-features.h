@@ -81,8 +81,9 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
-using Warning = std::variant<LanguageFeature, UsageWarning>;
-using WarningAndEnabled = std::pair<Warning, bool>;
+using LanguageFeatureOrWarning = std::variant<LanguageFeature, UsageWarning>;
+using LanguageControlFlag =
+    std::pair<LanguageFeatureOrWarning, /*shouldEnable=*/bool>;
 
 class LanguageFeatureControl {
 public:
@@ -96,11 +97,11 @@ public:
   void EnableWarning(UsageWarning w, bool yes = true) {
     warnUsage_.set(w, yes);
   }
-  void EnableWarning(Warning warning, bool yes = true) {
-    if (std::holds_alternative<LanguageFeature>(warning)) {
-      EnableWarning(std::get<LanguageFeature>(warning), yes);
+  void EnableWarning(LanguageFeatureOrWarning flag, bool yes = true) {
+    if (std::holds_alternative<LanguageFeature>(flag)) {
+      EnableWarning(std::get<LanguageFeature>(flag), yes);
     } else {
-      EnableWarning(std::get<UsageWarning>(warning), yes);
+      EnableWarning(std::get<UsageWarning>(flag), yes);
     }
   }
   void WarnOnAllNonstandard(bool yes = true);
@@ -126,7 +127,7 @@ public:
   bool ShouldWarn(UsageWarning w) const { return warnUsage_.test(w); }
   // Cli options
   // Find a warning by its Cli spelling, i.e. '[no-]warning-name'.
-  std::optional<WarningAndEnabled> FindWarning(std::string_view input);
+  std::optional<LanguageControlFlag> FindWarning(std::string_view input);
   // Take a string from the Cli and apply it to the LanguageFeatureControl.
   // Return true if the option was recognized (and hence applied).
   bool EnableWarning(std::string_view input);

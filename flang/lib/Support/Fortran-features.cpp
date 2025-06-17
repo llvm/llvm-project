@@ -151,7 +151,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
 }
 
-std::optional<std::pair<Warning, bool>> LanguageFeatureControl::FindWarning(
+std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(
     std::string_view input) {
   bool negated{false};
   if (input.size() > 3 && input.substr(0, 3) == "no-") {
