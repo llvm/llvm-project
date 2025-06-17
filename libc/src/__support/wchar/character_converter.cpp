@@ -19,9 +19,10 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
+// This is for utf-8 bytes other than the first byte
 constexpr size_t ENCODED_BITS_PER_UTF8 = 6;
-// the number of bits per utf-8 byte that actually encode character
-// information not metadata (# of bits excluding the byte headers)
+// The number of bits per utf-8 byte that actually encode character
+// Information not metadata (# of bits excluding the byte headers)
 constexpr uint32_t MASK_ENCODED_BITS =
     mask_trailing_ones<uint32_t, ENCODED_BITS_PER_UTF8>();
 
