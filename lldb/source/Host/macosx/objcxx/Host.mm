@@ -746,8 +746,8 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
         !match_info.ProcessIDsMatch(process_info))
       continue;
 
-    // Get CPU type first so we can know to look for iOS simulator is we have
-    // x86 or x86_64
+    // Get CPU type first so we can know to look for iOS simulator if we have
+    // a compatible type.
     if (GetMacOSXProcessCPUType(process_info)) {
       if (GetMacOSXProcessArgs(&match_info, process_info)) {
         if (match_info.Matches(process_info))

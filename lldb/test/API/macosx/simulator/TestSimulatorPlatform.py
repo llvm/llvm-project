@@ -77,17 +77,22 @@ class TestSimulatorPlatformLaunching(TestBase):
             self, "break here", lldb.SBFileSpec("hello.c")
         )
         triple_re = "-".join([arch, "apple", os + vers + ".*"] + env_list)
+        self.expect("image list -b -t", patterns=[r"a\.out " + triple_re])
         if expected_platform is not None:
-            # The current platform should be expected
+            # Verify the platform name.
             self.expect("platform status", patterns=[r"Platform: " + expected_platform])
-            # Should be able to list processes on the current platform
+            # Verify that processes on the platform can be listed.
+            #
+            # Note: The `Host::FindProcessesImpl()` of some of the Hosts filters out processes which are being debugged.
+            # (e.g. code for iOS simulator linked below). So we cannot verify that `a.out` is in the process list
+            # (because its already being debugged by this test).
+            # https://github.com/llvm/llvm-project/blob/b5dbf8210a57b986b9802304745f4c5c108cf37b/lldb/source/Host/macosx/objcxx/Host.mm#L724
             self.expect(
                 "platform process list",
                 patterns=[
                     r"\d+ matching processes were found on \"%s\"" % expected_platform
                 ],
             )
-        self.expect("image list -b -t", patterns=[r"a\.out " + triple_re])
         self.check_debugserver(log, os + env, vers)
 
     @skipIfAsan
