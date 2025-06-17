@@ -43,6 +43,7 @@ posix_defines = [
     "HAVE_SETENV_R=1",
     "HAVE_STRERROR_R=1",
     "HAVE_SYSEXITS_H=1",
+    "HAVE_SYS_IOCTL_H=1",
     "HAVE_UNISTD_H=1",
 ]
 

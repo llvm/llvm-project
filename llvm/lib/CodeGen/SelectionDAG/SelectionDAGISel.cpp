@@ -1507,7 +1507,6 @@ static bool isFoldedOrDeadInstruction(const Instruction *I,
                                       const FunctionLoweringInfo &FuncInfo) {
   return !I->mayWriteToMemory() && // Side-effecting instructions aren't folded.
          !I->isTerminator() &&     // Terminators aren't folded.
-         !isa<DbgInfoIntrinsic>(I) && // Debug instructions aren't folded.
          !I->isEHPad() &&             // EH pad instructions aren't folded.
          !FuncInfo.isExportedInst(I); // Exported instrs must be computed.
 }

@@ -959,27 +959,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i16, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i32, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i64, LibCall);
-#define LCALLNAMES(A, B, N)                                                    \
-  setLibcallName(A##N##_RELAX, #B #N "_relax");                                \
-  setLibcallName(A##N##_ACQ, #B #N "_acq");                                    \
-  setLibcallName(A##N##_REL, #B #N "_rel");                                    \
-  setLibcallName(A##N##_ACQ_REL, #B #N "_acq_rel");
-#define LCALLNAME4(A, B)                                                       \
-  LCALLNAMES(A, B, 1)                                                          \
-  LCALLNAMES(A, B, 2) LCALLNAMES(A, B, 4) LCALLNAMES(A, B, 8)
-#define LCALLNAME5(A, B)                                                       \
-  LCALLNAMES(A, B, 1)                                                          \
-  LCALLNAMES(A, B, 2)                                                          \
-  LCALLNAMES(A, B, 4) LCALLNAMES(A, B, 8) LCALLNAMES(A, B, 16)
-    LCALLNAME5(RTLIB::OUTLINE_ATOMIC_CAS, __aarch64_cas)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_SWP, __aarch64_swp)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDADD, __aarch64_ldadd)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, __aarch64_ldset)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, __aarch64_ldclr)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, __aarch64_ldeor)
-#undef LCALLNAMES
-#undef LCALLNAME4
-#undef LCALLNAME5
   }
 
   if (Subtarget->outlineAtomics() && !Subtarget->hasLSFE()) {
@@ -5082,9 +5061,10 @@ SDValue AArch64TargetLowering::LowerFSINCOS(SDValue Op,
 
   StructType *RetTy = StructType::get(ArgTy, ArgTy);
   TargetLowering::CallLoweringInfo CLI(DAG);
+  CallingConv::ID CC = getLibcallCallingConv(LC);
   CLI.setDebugLoc(dl)
       .setChain(DAG.getEntryNode())
-      .setLibCallee(CallingConv::Fast, RetTy, Callee, std::move(Args));
+      .setLibCallee(CC, RetTy, Callee, std::move(Args));
 
   std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
   return CallResult.first;

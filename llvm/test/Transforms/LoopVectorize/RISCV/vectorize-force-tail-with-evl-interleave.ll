@@ -29,17 +29,17 @@ define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 2
-; IF-EVL-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = mul <vscale x 4 x i64> [[TMP10]], splat (i64 1)
 ; IF-EVL-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP12]]
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP8]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP8]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = icmp ule <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = icmp ule <vscale x 4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
