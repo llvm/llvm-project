@@ -504,7 +504,7 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
       int64_t numNewChunks = originalChunkSize / blockedChunkSize;
 
       for (auto mask : convertedMasks1D) {
-        for (int64_t i = 0; i < numNewChunks; ++i) 
+        for (int64_t i = 0; i < numNewChunks; ++i)
           convertedMasks.push_back(mask);
       }
       // This is to handle the transpose effect when chunkSize > 1.
