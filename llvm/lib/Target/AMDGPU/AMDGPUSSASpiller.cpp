@@ -28,15 +28,12 @@ namespace {
 class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   LiveIntervals &LIS;
   MachineLoopInfo &LI;
-  MachineDominatorTree &MDT;
   AMDGPUNextUseAnalysis::Result &NU;
   MachineRegisterInfo *MRI;
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
   const GCNSubtarget *ST;
   MachineFrameInfo *MFI;
-
-  static constexpr int NO_STACK_SLOT = INT_MAX;
 
   unsigned NumSpillSlots;
 
@@ -186,13 +183,9 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   bool isCoveredActive(VRegMaskPair VMP, const RegisterSet Active);
 
 public:
-  AMDGPUSSASpiller() = default;
-
   AMDGPUSSASpiller(LiveIntervals &LIS, MachineLoopInfo &LI,
-                   MachineDominatorTree &MDT, AMDGPUNextUseAnalysis::Result &NU)
-      : LIS(LIS), LI(LI), MDT(MDT), NU(NU), NumSpillSlots(0) //,
-        // Virt2StackSlotMap(NO_STACK_SLOT) {
-        {
+                   AMDGPUNextUseAnalysis::Result &NU)
+      : LIS(LIS), LI(LI), NU(NU), NumSpillSlots(0) {
     TG = new TimerGroup("SSA SPiller Timing",
                         "Time Spent in different parts of the SSA Spiller");
     T1 = new Timer("General time", "ProcessFunction", *TG);
@@ -206,8 +199,8 @@ public:
     delete T2;
     delete T3;
     delete T4;
-    //delete TG;
-      }
+    // delete TG;
+  }
   bool run(MachineFunction &MF);
 };
 
@@ -959,9 +952,8 @@ llvm::AMDGPUSSASpillerPass::run(MachineFunction &MF,
                                 MachineFunctionAnalysisManager &MFAM) {
   LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   MachineLoopInfo &LI = MFAM.getResult<MachineLoopAnalysis>(MF);
-  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   AMDGPUNextUseAnalysis::Result &NU = MFAM.getResult<AMDGPUNextUseAnalysis>(MF);
-  AMDGPUSSASpiller Impl(LIS, LI, MDT, NU);
+  AMDGPUSSASpiller Impl(LIS, LI, NU);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -987,8 +979,6 @@ public:
     AU.setPreservesCFG();
     AU.addRequiredTransitiveID(MachineLoopInfoID);
     AU.addPreservedID(MachineLoopInfoID);
-    AU.addRequiredTransitiveID(MachineDominatorsID);
-    AU.addPreservedID(MachineDominatorsID);
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addRequired<AMDGPUNextUseAnalysisWrapper>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -998,17 +988,14 @@ public:
 bool AMDGPUSSASpillerLegacy::runOnMachineFunction(MachineFunction &MF) {
   LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  MachineDominatorTree &MDT =
-      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   AMDGPUNextUseAnalysis::Result &NU =
       getAnalysis<AMDGPUNextUseAnalysisWrapper>().getNU();
-  AMDGPUSSASpiller Impl(LIS, LI, MDT, NU);
+  AMDGPUSSASpiller Impl(LIS, LI, NU);
   return Impl.run(MF);
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPUSSASpillerLegacy, DEBUG_TYPE, "AMDGPU SSA Spiller",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUNextUseAnalysisWrapper)

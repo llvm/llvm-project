@@ -209,7 +209,7 @@ NextUseResult::getSortedSubregUses(const MachineBasicBlock::iterator I,
       }
     }
   }
-  return std::move(Result);
+  return Result;
 }
 
 void NextUseResult::dumpUsedInBlock() {

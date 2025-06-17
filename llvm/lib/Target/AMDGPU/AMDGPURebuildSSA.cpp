@@ -43,6 +43,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
   DenseMap<MachineInstr *, unsigned> PHIMap;
   DenseMap<unsigned, VRegDefStack> VregNames;
   DenseSet<unsigned> DefSeen;
+  DenseSet<unsigned> Renamed;
 
   void collectCrossBlockVRegs(MachineFunction &MF);
   void findPHINodesPlacement(const SmallPtrSetImpl<MachineBasicBlock *> &LiveInBlocks,
@@ -68,10 +69,11 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
     }
     for (auto &I : make_range(MBB.getFirstNonPHI(), MBB.end())) {
 
-      // TODO: Need to support the RENAIMED set to avoid replacing the registers
+      // We to support the RENAIMED set to avoid replacing the registers
       // which were not renamed in uses!
       for (auto &Op : I.uses()) {
-        if (Op.isReg() && Op.getReg().isVirtual()) {
+        if (Op.isReg() && Op.getReg().isVirtual() &&
+            Renamed.contains(Op.getReg())) {
           unsigned VReg = Op.getReg();
           assert(!VregNames[VReg].empty() &&
                  "Error: use does not dominated by definition!\n");
@@ -159,6 +161,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
             LLVM_DEBUG(dbgs()
                        << "Renaming VReg: " << Register::virtReg2Index(VReg)
                        << " to " << Register::virtReg2Index(NewVReg) << "\n");
+            Renamed.insert(VReg);
           } else {
             VregNames[VReg].push_back(
                 {VReg, getOperandLaneMask(Op, TRI, MRI), Op.getSubReg(), &I});
@@ -255,7 +258,8 @@ bool AMDGPURebuildSSALegacy::runOnMachineFunction(MachineFunction &MF) {
   PHINodes.clear();
   VregNames.clear();
   DefSeen.clear();
- 
+  Renamed.clear();
+
   // Collect all cross-block virtual registers.
   // This includes registers that are live-in to the function, and registers
   // that are defined in multiple blocks.

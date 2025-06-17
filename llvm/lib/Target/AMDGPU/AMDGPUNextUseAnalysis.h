@@ -121,7 +121,7 @@ public:
       SmallVector<unsigned> Keys;
       for (auto P : NextUseMap)
         Keys.push_back(P.first);
-      return std::move(Keys);
+      return Keys;
     }
 
     bool contains(unsigned Key) {
