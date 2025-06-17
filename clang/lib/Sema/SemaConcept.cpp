@@ -1540,22 +1540,15 @@ void Sema::DiagnoseUnsatisfiedConstraint(
 const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
     ConstrainedDeclOrNestedRequirement ConstrainedDeclOrNestedReq,
     ArrayRef<AssociatedConstraint> AssociatedConstraints) {
-  // In case the ConstrainedDecl comes from modules, it is necessary to use
-  // the canonical decl to avoid different atomic constraints with the 'same'
-  // declarations.
-
   if (!ConstrainedDeclOrNestedReq)
     return NormalizedConstraint::fromAssociatedConstraints(
         *this, nullptr, AssociatedConstraints);
 
   const NamedDecl *ND =
       ConstrainedDeclOrNestedReq.dyn_cast<const NamedDecl *>();
-  if (ND)
-    ND = cast<NamedDecl>(ND->getCanonicalDecl());
-
   auto CacheEntry = NormalizationCache.find(ConstrainedDeclOrNestedReq);
   if (CacheEntry == NormalizationCache.end()) {
-    auto Normalized = NormalizedConstraint::fromAssociatedConstraints(
+    auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
         *this, ND, AssociatedConstraints);
     CacheEntry =
         NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
@@ -1795,10 +1788,12 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
       // constraint. If any such substitution results in an invalid type or
       // expression, the program is ill-formed; no diagnostic is required.
       // [...]
-      ConceptDecl *CD = CSE->getNamedConcept();
+
+      // Use canonical declarations to merge ConceptDecls across
+      // different modules.
+      ConceptDecl *CD = CSE->getNamedConcept()->getCanonicalDecl();
       SubNF = NormalizedConstraint::fromAssociatedConstraints(
-          S, CSE->getNamedConcept(),
-          AssociatedConstraint(CD->getConstraintExpr(), SubstIndex));
+          S, CD, AssociatedConstraint(CD->getConstraintExpr(), SubstIndex));
 
       if (!SubNF)
         return nullptr;
