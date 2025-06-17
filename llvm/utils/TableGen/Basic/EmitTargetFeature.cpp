@@ -1,4 +1,4 @@
-//===- EmitTargetFeature.cpp - Generate CPU Targer feature ----===//
+//===- EmitTargetFeature.cpp - Generate CPU Target feature ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 //  This tablegen backend exports cpu target features
-//  and cpu sub-type for all platform.  
+//  and cpu sub-type.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +22,7 @@ using namespace llvm;
 using FeatureMapTy = DenseMap<const Record *, unsigned>;
 using ConstRecVec = std::vector<const Record *>;
 
-struct LessRecordFieldNameAndID {
+struct lessRecordFieldNameAndID {
   bool operator()(const Record *Rec1, const Record *Rec2) const {
     return std::tuple(Rec1->getValueAsString("Name"), Rec1->getID()) <
            std::tuple(Rec2->getValueAsString("Name"), Rec2->getID());
@@ -38,7 +38,8 @@ static StringRef getTargetName(const RecordKeeper &Records) {
   return Targets[0]->getName();
 }
 
-static FeatureMapTy enumeration(const RecordKeeper &Records, raw_ostream &OS) {
+static FeatureMapTy enumerationFeatures(const RecordKeeper &Records,
+                                        raw_ostream &OS) {
   ArrayRef<const Record *> DefList =
       Records.getAllDerivedDefinitions("SubtargetFeature");
 
@@ -67,7 +68,7 @@ static FeatureMapTy enumeration(const RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "  " << "NumSubtargetFeatures = " << N << "\n";
 
-  // Close enumeration and namespace
+  // Close enumerationFeatures and namespace
   OS << "};\n";
   OS << "} // end namespace " << Target << "\n";
   return FeatureMap;
@@ -104,7 +105,7 @@ static void printFeatureKeyValues(const RecordKeeper &Records, raw_ostream &OS,
   if (FeatureList.empty())
     return;
 
-  llvm::sort(FeatureList, LessRecordFieldNameAndID());
+  llvm::sort(FeatureList, lessRecordFieldNameAndID());
 
   StringRef Target = getTargetName(Records);
   // Begin feature table.
@@ -169,7 +170,7 @@ static void emitTargetFeature(const RecordKeeper &RK, raw_ostream &OS) {
   OS << "#undef GET_SUBTARGETFEATURES_ENUM\n\n";
 
   OS << "namespace llvm {\n";
-  auto FeatureMap = enumeration(RK, OS);
+  auto FeatureMap = enumerationFeatures(RK, OS);
   OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_SUBTARGETFEATURES_ENUM\n\n";
 
