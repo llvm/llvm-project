@@ -133,14 +133,14 @@ let Latency = 4 in {
 }
 
 // Atomics
-let Latency = 9 in {
+let Latency = 8 in {
   def : WriteRes<WriteAtomicSTW, [SMX60_LS]>;
   def : WriteRes<WriteAtomicSTD, [SMX60_LS]>;
   def : WriteRes<WriteAtomicLDW, [SMX60_LS]>;
   def : WriteRes<WriteAtomicLDD, [SMX60_LS]>;
 }
 
-let Latency = 13 in {
+let Latency = 12 in {
   def : WriteRes<WriteAtomicW, [SMX60_LS]>;
   def : WriteRes<WriteAtomicD, [SMX60_LS]>;
 }
