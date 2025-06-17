@@ -10,9 +10,9 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 
-#include "hdr/float_macros.h"                         // LDBL_MANT_DIG
-#include "include/llvm-libc-macros/float16-macros.h"  // LIBC_TYPES_HAS_FLOAT16
-#include "include/llvm-libc-types/float128.h"         // float128
+#include "hdr/float_macros.h"                        // LDBL_MANT_DIG
+#include "include/llvm-libc-macros/float16-macros.h" // LIBC_TYPES_HAS_FLOAT16
+#include "include/llvm-libc-types/float128.h"        // float128
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/cpu_features.h"
@@ -63,7 +63,7 @@ using float16 = _Float16;
 // -- bfloat16 support ---------------------------------------------------------
 
 namespace LIBC_NAMESPACE_DECL {
-    struct BFloat16;
+struct BFloat16;
 }
 
 using bfloat16 = LIBC_NAMESPACE::BFloat16;
