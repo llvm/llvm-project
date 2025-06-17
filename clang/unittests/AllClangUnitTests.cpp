@@ -25,6 +25,5 @@ int main(int argc, char **argv) {
   llvm::InitializeAllAsmPrinters();
   llvm::InitializeAllAsmParsers();
 
-
   return RUN_ALL_TESTS();
 }
