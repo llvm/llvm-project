@@ -327,7 +327,7 @@ void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLog) {
       EXPECT_LE(Size, Allocator->getUsableSize(P));
       memset(P, 0xaa, Size);
       checkMemoryTaggingMaybe(Allocator, P, Size, Align);
-      Allocator->deallocate(P, Origin, Size);
+      Allocator->deallocate(P, Origin, Size, true);
     }
   }
 
@@ -374,7 +374,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroContents) {
       for (scudo::uptr I = 0; I < Size; I++)
         ASSERT_EQ((reinterpret_cast<char *>(P))[I], '\0');
       memset(P, 0xaa, Size);
-      Allocator->deallocate(P, Origin, Size);
+      Allocator->deallocate(P, Origin, Size, true);
     }
   }
 }
@@ -392,7 +392,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroFill) {
       for (scudo::uptr I = 0; I < Size; I++)
         ASSERT_EQ((reinterpret_cast<char *>(P))[I], '\0');
       memset(P, 0xaa, Size);
-      Allocator->deallocate(P, Origin, Size);
+      Allocator->deallocate(P, Origin, Size, true);
     }
   }
 }
@@ -709,7 +709,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
 
       while (!V.empty()) {
         auto Pair = V.back();
-        Allocator->deallocate(Pair.first, Origin, Pair.second);
+        Allocator->deallocate(Pair.first, Origin, Pair.second, true);
         V.pop_back();
       }
     });
@@ -782,26 +782,26 @@ TEST(ScudoCombinedDeathTest, DeathCombined) {
   EXPECT_NE(P, nullptr);
 
   // Invalid sized deallocation.
-  EXPECT_DEATH(Allocator->deallocate(P, Origin, Size + 8U), "");
+  EXPECT_DEATH(Allocator->deallocate(P, Origin, Size + 8U, true), "");
 
   // Misaligned pointer. Potentially unused if EXPECT_DEATH isn't available.
   UNUSED void *MisalignedP =
       reinterpret_cast<void *>(reinterpret_cast<scudo::uptr>(P) | 1U);
-  EXPECT_DEATH(Allocator->deallocate(MisalignedP, Origin, Size), "");
-  EXPECT_DEATH(Allocator->reallocate(MisalignedP, Size * 2U), "");
+  EXPECT_DEATH(Allocator->deallocate(MisalignedP, Origin, Size, true), "");
+  EXPECT_DEATH(Allocator->reallocate(MisalignedP, Size * 2U, true), "");
 
   // Header corruption.
   scudo::u64 *H =
       reinterpret_cast<scudo::u64 *>(scudo::Chunk::getAtomicHeader(P));
   *H ^= 0x42U;
-  EXPECT_DEATH(Allocator->deallocate(P, Origin, Size), "");
+  EXPECT_DEATH(Allocator->deallocate(P, Origin, Size, true), "");
   *H ^= 0x420042U;
-  EXPECT_DEATH(Allocator->deallocate(P, Origin, Size), "");
+  EXPECT_DEATH(Allocator->deallocate(P, Origin, Size, true), "");
   *H ^= 0x420000U;
 
   // Invalid chunk state.
-  Allocator->deallocate(P, Origin, Size);
-  EXPECT_DEATH(Allocator->deallocate(P, Origin, Size), "");
+  Allocator->deallocate(P, Origin, Size, true);
+  EXPECT_DEATH(Allocator->deallocate(P, Origin, Size, true), "");
   EXPECT_DEATH(Allocator->reallocate(P, Size * 2U), "");
   EXPECT_DEATH(Allocator->getUsableSize(P), "");
 }
@@ -908,13 +908,13 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, DisableMemInit) {
       memset(Ptrs[I], 0xaa, Size);
     }
     for (unsigned I = 0; I != Ptrs.size(); ++I)
-      Allocator->deallocate(Ptrs[I], Origin, Size);
+      Allocator->deallocate(Ptrs[I], Origin, Size, true);
     for (unsigned I = 0; I != Ptrs.size(); ++I) {
       Ptrs[I] = Allocator->allocate(Size - 8, Origin);
       memset(Ptrs[I], 0xbb, Size - 8);
     }
     for (unsigned I = 0; I != Ptrs.size(); ++I)
-      Allocator->deallocate(Ptrs[I], Origin, Size - 8);
+      Allocator->deallocate(Ptrs[I], Origin, Size - 8, true);
     for (unsigned I = 0; I != Ptrs.size(); ++I) {
       Ptrs[I] = Allocator->allocate(Size, Origin, 1U << MinAlignLog, true);
       for (scudo::uptr J = 0; J < Size; ++J)

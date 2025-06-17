@@ -47,6 +47,15 @@
 #define UNUSED __attribute__((unused))
 #define USED __attribute__((used))
 #define NOEXCEPT noexcept
+#ifdef __has_attribute
+#if __has_attribute(fallthrough)
+#define FALLTHROUGH __attribute__((fallthrough))
+#else
+#define FALLTHROUGH
+#endif
+#else
+#define FALLTHROUGH
+#endif
 
 // This check is only available on Clang. This is essentially an alias of
 // C++20's 'constinit' specifier which will take care of this when (if?) we can

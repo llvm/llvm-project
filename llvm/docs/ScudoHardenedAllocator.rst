@@ -267,6 +267,16 @@ The following "string" options are available:
 |                                 |                | the scudo_malloc_set_track_allocation_stacks    |
 |                                 |                | function.                                       |
 +---------------------------------+----------------+-------------------------------------------------+
+| delete_alignment_mismatch       | true           | Whether or not we report errors on mismatch     |
+|                                 |                | between alignment of new and delete.            |
++---------------------------------+----------------+-------------------------------------------------+
+| free_size_mismatch              | true           | Whether or not we report errors on mismatch     |
+|                                 |                | between sizes of malloc and free_sized.         |
++---------------------------------+----------------+-------------------------------------------------+
+| free_alignment_mismatch         | true           | Whether or not we report errors on mismatch     |
+|                                 |                | between alignment of aligned_alloc and          |
+|                                 |                | free_aligned_sized.                             |
++---------------------------------+----------------+-------------------------------------------------+
 
 Additional flags can be specified, for example if Scudo if compiled with
 `GWP-ASan <https://llvm.org/docs/GwpAsan.html>`_ support.

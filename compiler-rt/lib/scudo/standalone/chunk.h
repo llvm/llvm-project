@@ -53,10 +53,11 @@ namespace Chunk {
 // but https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61414 prevents it from
 // happening, as it will error, complaining the number of bits is not enough.
 enum Origin : u8 {
-  Malloc = 0,
-  New = 1,
-  NewArray = 2,
-  Memalign = 3,
+  Malloc = 0,   // malloc, calloc, realloc, free, free_sized
+  New = 1,      // operator new, operator delete
+  NewArray = 2, // operator new [], operator delete []
+  Memalign = 3, // aligned_alloc, posix_memalign, memalign, pvalloc, valloc,
+                // free_aligned_sized
 };
 
 enum State : u8 { Available = 0, Allocated = 1, Quarantined = 2 };

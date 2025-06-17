@@ -170,6 +170,12 @@ public:
       Primary.Options.set(OptionBit::DeallocTypeMismatch);
     if (getFlags()->delete_size_mismatch)
       Primary.Options.set(OptionBit::DeleteSizeMismatch);
+    if (getFlags()->free_size_mismatch)
+      Primary.Options.set(OptionBit::FreeSizeMismatch);
+    if (getFlags()->free_alignment_mismatch)
+      Primary.Options.set(OptionBit::FreeAlignmentMismatch);
+    if (getFlags()->delete_alignment_mismatch)
+      Primary.Options.set(OptionBit::DeleteAlignmentMismatch);
     if (allocatorSupportsMemoryTagging<AllocatorConfig>() &&
         systemSupportsMemoryTagging())
       Primary.Options.set(OptionBit::UseMemoryTagging);
@@ -433,7 +439,8 @@ public:
   }
 
   NOINLINE void deallocate(void *Ptr, Chunk::Origin Origin, uptr DeleteSize = 0,
-                           UNUSED uptr Alignment = MinAlignment) {
+                           bool HasDeleteSize = false, uptr DeleteAlignment = 0,
+                           bool HasDeleteAlignment = false) {
     if (UNLIKELY(!Ptr))
       return;
 
@@ -456,6 +463,9 @@ public:
     }
 #endif // GWP_ASAN_HOOKS
 
+    if (UNLIKELY(HasDeleteAlignment && !isPowerOfTwo(DeleteAlignment)))
+      reportAlignmentNotPowerOfTwo(DeleteAlignment);
+
     if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(Ptr), MinAlignment)))
       reportMisalignedPointer(AllocatorAction::Deallocating, Ptr);
 
@@ -470,19 +480,41 @@ public:
 
     const Options Options = Primary.Options.load();
     if (Options.get(OptionBit::DeallocTypeMismatch)) {
-      if (UNLIKELY(Header.OriginOrWasZeroed != Origin)) {
-        // With the exception of memalign'd chunks, that can be still be free'd.
-        if (Header.OriginOrWasZeroed != Chunk::Origin::Memalign ||
-            Origin != Chunk::Origin::Malloc)
-          reportDeallocTypeMismatch(AllocatorAction::Deallocating, Ptr,
-                                    Header.OriginOrWasZeroed, Origin);
-      }
+      if (UNLIKELY(isOriginMismatch(
+              static_cast<Chunk::Origin>(Header.OriginOrWasZeroed), Origin,
+              HasDeleteSize)))
+        reportDeallocTypeMismatch(AllocatorAction::Deallocating, Ptr,
+                                  Header.OriginOrWasZeroed, Origin,
+                                  HasDeleteSize);
     }
 
     const uptr Size = getSize(Ptr, &Header);
-    if (DeleteSize && Options.get(OptionBit::DeleteSizeMismatch)) {
-      if (UNLIKELY(DeleteSize != Size))
-        reportDeleteSizeMismatch(Ptr, DeleteSize, Size);
+    switch (Origin) {
+    case Chunk::Origin::New:
+      FALLTHROUGH;
+    case Chunk::Origin::NewArray:
+      if (Options.get(OptionBit::DeleteSizeMismatch) && HasDeleteSize) {
+        if (UNLIKELY(DeleteSize != Size))
+          reportDeleteSizeMismatch(Ptr, DeleteSize, Size);
+      }
+      if (Options.get(OptionBit::DeleteAlignmentMismatch) &&
+          HasDeleteAlignment) {
+        if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(Ptr), DeleteAlignment)))
+          reportDeleteAlignmentMismatch(Ptr, DeleteAlignment);
+      }
+      break;
+    case Chunk::Origin::Memalign:
+      if (Options.get(OptionBit::FreeAlignmentMismatch) && HasDeleteAlignment) {
+        if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(Ptr), DeleteAlignment)))
+          reportFreeAlignmentMismatch(Ptr, DeleteAlignment);
+      }
+      FALLTHROUGH;
+    case Chunk::Origin::Malloc:
+      if (Options.get(OptionBit::FreeSizeMismatch) && HasDeleteSize) {
+        if (UNLIKELY(DeleteSize != Size))
+          reportFreeSizeMismatch(Ptr, DeleteSize, Size);
+      }
+      break;
     }
 
     quarantineOrDeallocateChunk(Options, TaggedPtr, &Header, Size);
@@ -529,14 +561,20 @@ public:
     if (UNLIKELY(Header.State != Chunk::State::Allocated))
       reportInvalidChunkState(AllocatorAction::Reallocating, OldPtr);
 
-    // Pointer has to be allocated with a malloc-type function. Some
-    // applications think that it is OK to realloc a memalign'ed pointer, which
-    // will trigger this check. It really isn't.
     if (Options.get(OptionBit::DeallocTypeMismatch)) {
-      if (UNLIKELY(Header.OriginOrWasZeroed != Chunk::Origin::Malloc))
-        reportDeallocTypeMismatch(AllocatorAction::Reallocating, OldPtr,
-                                  Header.OriginOrWasZeroed,
-                                  Chunk::Origin::Malloc);
+      // There is no language prohibiting the use of realloc with
+      // aligned_alloc/posix_memalign/memalign and etc. The outcome in
+      // practice is that the newly allocated memory will typically not
+      // have the same alignment but will have minimum alignment. With
+      // regards to operator new, there is no guarantee that the allocator
+      // being used with malloc is the same as operator new. There is also
+      // no guarantee that they share the same minimum alignment guarantees.
+      // So we reject these.
+      if (UNLIKELY(Header.OriginOrWasZeroed == Chunk::Origin::New ||
+                   Header.OriginOrWasZeroed == Chunk::Origin::NewArray))
+        reportDeallocTypeMismatch(
+            AllocatorAction::Reallocating, OldPtr, Header.OriginOrWasZeroed,
+            Chunk::Origin::Malloc, /*HasDeleteSize=*/false);
     }
 
     void *BlockBegin = getBlockBegin(OldTaggedPtr, &Header);
@@ -1745,6 +1783,19 @@ private:
     }
     return (Bytes - sizeof(AllocationRingBuffer)) /
            sizeof(typename AllocationRingBuffer::Entry);
+  }
+
+  static bool isOriginMismatch(Chunk::Origin Alloc, Chunk::Origin Dealloc,
+                               bool HasDeleteSize) {
+    if (Alloc == Dealloc) {
+      return false;
+    }
+    if (Alloc == Chunk::Origin::Memalign && Dealloc == Chunk::Origin::Malloc &&
+        !HasDeleteSize) {
+      // aligned_alloc with free is allowed, but not free_sized.
+      return false;
+    }
+    return true;
   }
 };
 

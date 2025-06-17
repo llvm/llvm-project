@@ -9,14 +9,6 @@
 #include "memtag.h"
 #include "tests/scudo_unit_test.h"
 
-// Match Android's default configuration, which disables Scudo's mismatch
-// allocation check, as it is being triggered by some third party code.
-#if SCUDO_ANDROID
-#define DEALLOC_TYPE_MISMATCH "false"
-#else
-#define DEALLOC_TYPE_MISMATCH "true"
-#endif
-
 static void EnableMemoryTaggingIfSupported() {
   if (!scudo::archSupportsMemoryTagging())
     return;
