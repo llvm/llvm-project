@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolTypes.h"
-#include "Protocol/ProtocolEvents.h"
-#include "Protocol/ProtocolRequests.h"
+#include "TestingSupport/TestUtilities.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
@@ -20,22 +19,10 @@ using namespace llvm;
 using namespace lldb;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
+using lldb_private::pp;
+using lldb_private::roundtrip;
 using llvm::json::parse;
 using llvm::json::Value;
-
-/// Returns a pretty printed json string of a `llvm::json::Value`.
-static std::string pp(const json::Value &E) {
-  return formatv("{0:2}", E).str();
-}
-
-template <typename T> static llvm::Expected<T> roundtrip(const T &input) {
-  llvm::json::Value value = toJSON(input);
-  llvm::json::Path::Root root;
-  T output;
-  if (!fromJSON(value, output, root))
-    return root.getError();
-  return output;
-}
 
 TEST(ProtocolTypesTest, ExceptionBreakpointsFilter) {
   ExceptionBreakpointsFilter filter;
@@ -641,42 +628,6 @@ TEST(ProtocolTypesTest, Thread) {
                        FailedWithMessage("expected string at thread.name"));
 }
 
-TEST(ProtocolTypesTest, ThreadResponseBody) {
-  const ThreadsResponseBody body{{{1, "thr1"}, {2, "thr2"}}};
-  const StringRef json = R"({
-  "threads": [
-    {
-      "id": 1,
-      "name": "thr1"
-    },
-    {
-      "id": 2,
-      "name": "thr2"
-    }
-  ]
-})";
-  // Validate toJSON
-  EXPECT_EQ(json, pp(body));
-}
-
-TEST(ProtocolTypesTest, CapabilitiesEventBody) {
-  Capabilities capabilities;
-  capabilities.supportedFeatures = {
-      eAdapterFeatureANSIStyling,
-      eAdapterFeatureBreakpointLocationsRequest,
-  };
-  CapabilitiesEventBody body;
-  body.capabilities = capabilities;
-  StringRef json = R"({
-  "capabilities": {
-    "supportsANSIStyling": true,
-    "supportsBreakpointLocationsRequest": true
-  }
-})";
-  // Validate toJSON
-  EXPECT_EQ(json, pp(body));
-}
-
 TEST(ProtocolTypesTest, ExceptionFilterOptions) {
   EXPECT_THAT_EXPECTED(parse<ExceptionFilterOptions>(R"({"filterId":"id"})"),
                        HasValue(Value(ExceptionFilterOptions{
@@ -703,47 +654,6 @@ TEST(ProtocolTypesTest, ExceptionFilterOptions) {
       parse<ExceptionFilterOptions>(R"({"filterId":"id","mode":42})",
                                     "exceptionFilterOptions"),
       FailedWithMessage("expected string at exceptionFilterOptions.mode"));
-}
-
-TEST(ProtocolTypesTest, SetExceptionBreakpointsArguments) {
-  EXPECT_THAT_EXPECTED(
-      parse<SetExceptionBreakpointsArguments>(R"({"filters":[]})"),
-      HasValue(testing::FieldsAre(/*filters=*/testing::IsEmpty(),
-                                  /*filterOptions=*/testing::IsEmpty())));
-  EXPECT_THAT_EXPECTED(
-      parse<SetExceptionBreakpointsArguments>(R"({"filters":["abc"]})"),
-      HasValue(testing::FieldsAre(/*filters=*/std::vector<std::string>{"abc"},
-                                  /*filterOptions=*/testing::IsEmpty())));
-  EXPECT_THAT_EXPECTED(
-      parse<SetExceptionBreakpointsArguments>(
-          R"({"filters":[],"filterOptions":[{"filterId":"abc"}]})"),
-      HasValue(testing::FieldsAre(
-          /*filters=*/testing::IsEmpty(),
-          /*filterOptions=*/testing::Contains(testing::FieldsAre(
-              /*filterId=*/"abc", /*condition=*/"", /*mode=*/"")))));
-
-  // Validate parse errors
-  EXPECT_THAT_EXPECTED(parse<SetExceptionBreakpointsArguments>(R"({})"),
-                       FailedWithMessage("missing value at (root).filters"));
-  EXPECT_THAT_EXPECTED(
-      parse<SetExceptionBreakpointsArguments>(R"({"filters":false})"),
-      FailedWithMessage("expected array at (root).filters"));
-}
-
-TEST(ProtocolTypesTest, SetExceptionBreakpointsResponseBody) {
-  SetExceptionBreakpointsResponseBody body;
-  Breakpoint bp;
-  bp.id = 12, bp.verified = true;
-  body.breakpoints = {bp};
-  EXPECT_EQ(R"({
-  "breakpoints": [
-    {
-      "id": 12,
-      "verified": true
-    }
-  ]
-})",
-            pp(body));
 }
 
 TEST(ProtocolTypesTest, StepInTarget) {

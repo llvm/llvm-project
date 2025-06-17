@@ -30,6 +30,20 @@
   }
 
 namespace lldb_private {
+
+/// Returns a pretty printed json string of a `llvm::json::Value`.
+std::string pp(const llvm::json::Value &E);
+
+/// Converts the given value into JSON and back into the same type.
+template <typename T> static llvm::Expected<T> roundtrip(const T &input) {
+  llvm::json::Value value = toJSON(input);
+  llvm::json::Path::Root root;
+  T output;
+  if (!fromJSON(value, output, root))
+    return root.getError();
+  return output;
+}
+
 std::string GetInputFilePath(const llvm::Twine &name);
 
 class TestUtilities {
@@ -59,6 +73,7 @@ private:
 
   std::string Buffer;
 };
+
 } // namespace lldb_private
 
 #endif
