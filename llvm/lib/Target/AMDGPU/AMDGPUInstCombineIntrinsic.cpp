@@ -273,8 +273,8 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
 
       // Only perform D16 folding if every user of the image sample is
       // an ExtractElementInst immediately followed by an FPTrunc to half.
-      SmallVector<ExtractElementInst *, 4> Extracts;
-      SmallVector<FPTruncInst *, 4> Truncs;
+      SmallVector<std::pair<ExtractElementInst *, FPTruncInst *>, 4>
+          ExtractTruncPairs;
 
       for (User *U : II.users()) {
         auto *Ext = dyn_cast<ExtractElementInst>(U);
@@ -285,11 +285,10 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
         if (!Tr || !Tr->getType()->isHalfTy())
           return std::nullopt;
 
-        Extracts.push_back(Ext);
-        Truncs.push_back(Tr);
+        ExtractTruncPairs.emplace_back(Ext, Tr);
       }
 
-      if (Extracts.empty())
+      if (ExtractTruncPairs.empty())
         return std::nullopt;
 
       auto *VecTy = cast<VectorType>(II.getType());
@@ -309,7 +308,7 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
       II.setCalledFunction(HalfDecl);
 
       IRBuilder<> Builder(II.getContext());
-      for (auto [Ext, Tr] : zip(Extracts, Truncs)) {
+      for (auto &[Ext, Tr] : ExtractTruncPairs) {
         Value *Idx = Ext->getIndexOperand();
 
         Builder.SetInsertPoint(Tr);
@@ -320,10 +319,10 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
         Tr->replaceAllUsesWith(HalfExtract);
       }
 
-      for (FPTruncInst *T : Truncs)
-        IC.eraseInstFromFunction(*T);
-      for (ExtractElementInst *E : Extracts)
-        IC.eraseInstFromFunction(*E);
+      for (auto &[Ext, Tr] : ExtractTruncPairs) {
+        IC.eraseInstFromFunction(*Tr);
+        IC.eraseInstFromFunction(*Ext);
+      }
 
       return &II;
     }
