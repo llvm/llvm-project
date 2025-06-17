@@ -78,9 +78,9 @@ define <vscale x 4 x i8> @insert_nxv1i8_nxv4i8_3(<vscale x 4 x i8> %vec, <vscale
 ; CHECK-LABEL: insert_nxv1i8_nxv4i8_3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    slli a1, a0, 1
-; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    srli a1, a0, 3
+; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a0
 ; CHECK-NEXT:    ret
@@ -294,9 +294,8 @@ define <vscale x 16 x i8> @insert_nxv16i8_nxv1i8_2(<vscale x 16 x i8> %vec, <vsc
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    slli a2, a1, 1
-; CHECK-NEXT:    add a1, a2, a1
 ; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v10, a0
 ; CHECK-NEXT:    ret
@@ -309,7 +308,7 @@ define <vscale x 16 x i8> @insert_nxv16i8_nxv1i8_3(<vscale x 16 x i8> %vec, <vsc
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    slli a2, a1, 1
+; CHECK-NEXT:    srli a2, a0, 2
 ; CHECK-NEXT:    add a1, a2, a1
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, ma
@@ -394,9 +393,8 @@ define <vscale x 32 x half> @insert_nxv32f16_undef_nxv1f16_26(<vscale x 1 x half
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    slli a2, a1, 1
-; CHECK-NEXT:    add a1, a2, a1
 ; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v14, v8, a0
 ; CHECK-NEXT:    ret
@@ -460,11 +458,10 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_2(<vscale x 4 x i1> %v, <vscale x
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    srli a1, a0, 3
+; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
-; CHECK-NEXT:    slli a2, a1, 1
-; CHECK-NEXT:    add a1, a2, a1
-; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v9, v8, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
@@ -601,9 +598,8 @@ define <vscale x 32 x bfloat> @insert_nxv32bf16_undef_nxv1bf16_26(<vscale x 1 x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    slli a2, a1, 1
-; CHECK-NEXT:    add a1, a2, a1
 ; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v14, v8, a0
 ; CHECK-NEXT:    ret

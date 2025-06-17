@@ -751,6 +751,56 @@ struct SetDataBreakpointsResponseBody {
 };
 llvm::json::Value toJSON(const SetDataBreakpointsResponseBody &);
 
+/// Arguments for `setExceptionBreakpoints` request.
+struct SetExceptionBreakpointsArguments {
+  /// Set of exception filters specified by their ID. The set of all possible
+  /// exception filters is defined by the `exceptionBreakpointFilters`
+  /// capability. The `filter` and `filterOptions` sets are additive.
+  std::vector<std::string> filters;
+
+  /// Set of exception filters and their options. The set of all possible
+  /// exception filters is defined by the `exceptionBreakpointFilters`
+  /// capability. This attribute is only honored by a debug adapter if the
+  /// corresponding capability `supportsExceptionFilterOptions` is true. The
+  /// `filter` and `filterOptions` sets are additive.
+  std::vector<ExceptionFilterOptions> filterOptions;
+
+  // unsupported keys: exceptionOptions
+};
+bool fromJSON(const llvm::json::Value &, SetExceptionBreakpointsArguments &,
+              llvm::json::Path);
+
+/// Response to `setExceptionBreakpoints` request.
+///
+/// The response contains an array of `Breakpoint` objects with information
+/// about each exception breakpoint or filter. The `Breakpoint` objects are in
+/// the same order as the elements of the `filters`, `filterOptions`,
+/// `exceptionOptions` arrays given as arguments. If both `filters` and
+/// `filterOptions` are given, the returned array must start with `filters`
+/// information first, followed by `filterOptions` information.
+///
+/// The `verified` property of a `Breakpoint` object signals whether the
+/// exception breakpoint or filter could be successfully created and whether the
+/// condition is valid. In case of an error the `message` property explains the
+/// problem. The `id` property can be used to introduce a unique ID for the
+/// exception breakpoint or filter so that it can be updated subsequently by
+/// sending breakpoint events.
+///
+/// For backward compatibility both the `breakpoints` array and the enclosing
+/// `body` are optional. If these elements are missing a client is not able to
+/// show problems for individual exception breakpoints or filters.
+struct SetExceptionBreakpointsResponseBody {
+  /// Information about the exception breakpoints or filters.
+  ///
+  /// The breakpoints returned are in the same order as the elements of the
+  /// `filters`, `filterOptions`, `exceptionOptions` arrays in the arguments. If
+  /// both `filters` and `filterOptions` are given, the returned array must
+  /// start with `filters` information first, followed by `filterOptions`
+  /// information.
+  std::vector<Breakpoint> breakpoints;
+};
+llvm::json::Value toJSON(const SetExceptionBreakpointsResponseBody &);
+
 /// Arguments to `disassemble` request.
 struct DisassembleArguments {
   /// Memory reference to the base location containing the instructions to
