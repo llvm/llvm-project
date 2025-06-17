@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+<<<<<<< HEAD
 #include "Plugins/Language/Swift/SwiftMangled.h"
+=======
+>>>>>>> d2c3aeda7c2e ([lldb] add function name syntax highlighting in Swift backtraces)
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "TestingSupport/TestUtilities.h"
 
