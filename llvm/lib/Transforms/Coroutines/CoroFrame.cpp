@@ -18,7 +18,6 @@
 #include "CoroInternal.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/StackLifetime.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"

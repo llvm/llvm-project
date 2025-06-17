@@ -218,6 +218,9 @@ PreservedAnalyses LifetimeMovePass::run(Function &F,
   const DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   LifetimeMover Mover(F, DT);
   Mover.run();
-  return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 } // namespace llvm

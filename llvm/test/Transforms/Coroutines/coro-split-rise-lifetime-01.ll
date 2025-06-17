@@ -1,4 +1,4 @@
-; Test allocas that do not cross suspension point will not go to frame
+; Test lifetime-move and coro-split correctly optimize allocas that do not cross suspension points
 ; RUN: opt < %s -passes='cgscc(lifetime-move,coro-split),early-cse' -S | FileCheck %s
 
 ; CHECK: %large.alloca = alloca [500 x i8], align 16

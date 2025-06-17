@@ -1,5 +1,4 @@
-; Corresponding to coro-split-sink-lifetime-01.ll. This file tests that whether the CoroFrame
-; pass knows the operand of lifetime.start intrinsic may be GEP as well.
+; Test lifetime-move and coro-split correctly optimize allocas that do not cross suspension points
 ; RUN: opt < %s -passes='cgscc(lifetime-move,coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
 
 %"struct.std::coroutine_handle" = type { ptr }
