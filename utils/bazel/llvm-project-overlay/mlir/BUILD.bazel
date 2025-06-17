@@ -3512,7 +3512,7 @@ cc_library(
     deps = [
         ":AffineUtils",
         ":Analysis",
-        ":ArithDialect",	
+        ":ArithDialect",
         ":ArithUtils",
         ":DialectUtils",
         ":FunctionInterfaces",
