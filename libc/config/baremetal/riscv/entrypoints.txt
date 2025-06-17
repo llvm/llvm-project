@@ -124,8 +124,11 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdio.h entrypoints
     libc.src.stdio.asprintf
+    libc.src.stdio.fprintf
+    libc.src.stdio.fputc
     libc.src.stdio.getchar
     libc.src.stdio.printf
+    libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
     libc.src.stdio.remove
