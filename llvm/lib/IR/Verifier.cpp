@@ -3632,21 +3632,12 @@ void Verifier::visitCallBase(CallBase &Call) {
     Check(Callee->getValueType() == FTy,
           "Intrinsic called with incompatible signature", Call);
 
-  // Verify if the calling convention of the callee is callable.
-  Check(isCallableCC(Call.getCallingConv()),
-        "calling convention does not permit calls", Call);
-
   // Find the actual CC of the callee from the Module.
   CallingConv::ID CalleeCC = Call.getParent()->getParent()->getParent()
       ->getFunction(Call.getCalledFunction()->getName())->getCallingConv();
-  // Verify that a kernel does not call another kernel.
-  if (CalleeCC == CallingConv::AMDGPU_KERNEL ||
-      CalleeCC == CallingConv::SPIR_KERNEL) {
-    CallingConv::ID CallerCC = Call.getParent()->getParent()->getCallingConv();
-    Check(CallerCC != CallingConv::AMDGPU_KERNEL &&
-          CallerCC != CallingConv::SPIR_KERNEL,
-          "a kernel may not call a kernel", Call.getParent()->getParent());
-  }
+  // Verify if the calling convention of the callee is callable.
+  Check(isCallableCC(CalleeCC),
+        "calling convention does not permit calls", Call);
 
   // Disallow passing/returning values with alignment higher than we can
   // represent.
