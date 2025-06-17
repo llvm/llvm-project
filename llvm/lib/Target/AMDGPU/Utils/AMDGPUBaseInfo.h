@@ -606,6 +606,9 @@ bool isVOPMAsmOnly(unsigned Opc);
 LLVM_READONLY
 bool isVOPMPseudo(unsigned Opc);
 
+LLVM_READONLY
+bool isConvolve(unsigned Opc);
+
 #endif /* LLPC_BUILD_NPI */
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY

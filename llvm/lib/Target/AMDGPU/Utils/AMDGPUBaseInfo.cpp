@@ -414,6 +414,7 @@ struct VOPMAsmOnlyInfo {
 
 struct VOPMPseudoInfo {
   uint16_t Opcode;
+  bool IsConvolve;
 };
 
 #endif /* LLPC_BUILD_NPI */
@@ -615,6 +616,11 @@ bool isVOPCAsmOnly(unsigned Opc) { return isVOPCAsmOnlyOpcodeHelper(Opc); }
 bool isVOPMAsmOnly(unsigned Opc) { return isVOPMAsmOnlyOpcodeHelper(Opc); }
 
 bool isVOPMPseudo(unsigned Opc) { return isVOPMPseudoOpcodeHelper(Opc); }
+
+bool isConvolve(unsigned Opc) {
+  const VOPMPseudoInfo *VOPMInfo = isVOPMPseudoOpcodeHelper(Opc);
+  return VOPMInfo ? VOPMInfo->IsConvolve : false;
+}
 
 #endif /* LLPC_BUILD_NPI */
 bool getMAIIsDGEMM(unsigned Opc) {

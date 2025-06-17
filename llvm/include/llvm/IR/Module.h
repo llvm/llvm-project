@@ -1041,6 +1041,10 @@ public:
 
   /// Returns target-abi from MDString, null if target-abi is absent.
   StringRef getTargetABIFromMD();
+
+  /// Get how unwind v2 (epilog) information should be generated for x64
+  /// Windows.
+  WinX64EHUnwindV2Mode getWinX64EHUnwindV2Mode() const;
 };
 
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the

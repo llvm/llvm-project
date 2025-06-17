@@ -905,7 +905,7 @@ public:
 
 #if LLPC_BUILD_NPI
   static bool isConvolve(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::IsConvolve;
+    return AMDGPU::isConvolve(MI.getOpcode());
   }
 
 #endif /* LLPC_BUILD_NPI */
