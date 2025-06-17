@@ -6391,7 +6391,7 @@ bool CombinerHelper::matchCombineFMinMaxNaN(MachineInstr &MI,
 
 // Combine multiple FDIVs with the same divisor into multiple FMULs by the
 // reciprocal.
-// E.g., (a / D; b / D;) -> (recip = 1.0 / D; a * recip; b * recip)
+// E.g., (a / Y; b / Y;) -> (recip = 1.0 / Y; a * recip; b * recip)
 bool CombinerHelper::matchRepeatedFPDivisor(
     MachineInstr &MI, SmallVector<MachineInstr *> &MatchInfo) const {
   assert(MI.getOpcode() == TargetOpcode::G_FDIV);
@@ -6413,19 +6413,18 @@ bool CombinerHelper::matchRepeatedFPDivisor(
   // Exit early if the target does not want this transform or if there can't
   // possibly be enough uses of the divisor to make the transform worthwhile.
   unsigned MinUses = getTargetLowering().combineRepeatedFPDivisors();
-
   if (!MinUses)
     return false;
 
-  // Find all FDIV users of the same divisor. Use a set because duplicates may
-  // be present in the user list. For the moment we limit all instructions to a
-  // single BB and use the first Instr in MatchInfo as the dominating position.
+  // Find all FDIV users of the same divisor. For the moment we limit all
+  // instructions to a single BB and use the first Instr in MatchInfo as the
+  // dominating position.
   MatchInfo.push_back(&MI);
   for (auto &U : MRI.use_nodbg_instructions(Y)) {
     if (&U == &MI || U.getParent() != MI.getParent())
       continue;
     if (U.getOpcode() == TargetOpcode::G_FDIV &&
-        U.getOperand(2).getReg() == Y) {
+        U.getOperand(2).getReg() == Y && U.getOperand(1).getReg() != Y) {
       // This division is eligible for optimization only if global unsafe math
       // is enabled or if this division allows reciprocal formation.
       if (UnsafeMath || U.getFlag(MachineInstr::MIFlag::FmArcp)) {
@@ -6448,13 +6447,14 @@ void CombinerHelper::applyRepeatedFPDivisor(
   Builder.setInsertPt(*MatchInfo[0]->getParent(), MatchInfo[0]);
   LLT Ty = MRI.getType(MatchInfo[0]->getOperand(0).getReg());
   auto Div = Builder.buildFDiv(Ty, Builder.buildFConstant(Ty, 1.0),
-                               MatchInfo[0]->getOperand(2).getReg());
+                               MatchInfo[0]->getOperand(2).getReg(),
+                               MatchInfo[0]->getFlags());
 
   // Replace all found div's with fmul instructions.
   for (MachineInstr *MI : MatchInfo) {
     Builder.setInsertPt(*MI->getParent(), MI);
     Builder.buildFMul(MI->getOperand(0).getReg(), MI->getOperand(1).getReg(),
-                      Div->getOperand(0).getReg());
+                      Div->getOperand(0).getReg(), MI->getFlags());
     MI->eraseFromParent();
   }
 }

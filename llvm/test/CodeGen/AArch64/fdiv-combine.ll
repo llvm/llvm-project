@@ -103,6 +103,36 @@ define void @two_fdiv_double(double %D, double %a, double %b) #0 {
   ret void
 }
 
+define void @four_fdiv_multi_float(float %D, float %a, float %b, float %c) #0 {
+; CHECK-SD-LABEL: four_fdiv_multi_float:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s4, #1.00000000
+; CHECK-SD-NEXT:    fdiv s5, s4, s0
+; CHECK-SD-NEXT:    fmul s4, s1, s5
+; CHECK-SD-NEXT:    fmul s1, s2, s5
+; CHECK-SD-NEXT:    fmul s2, s3, s5
+; CHECK-SD-NEXT:    fmul s3, s0, s5
+; CHECK-SD-NEXT:    fmov s0, s4
+; CHECK-SD-NEXT:    b foo_4f
+;
+; CHECK-GI-LABEL: four_fdiv_multi_float:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov s4, #1.00000000
+; CHECK-GI-NEXT:    fdiv s5, s4, s0
+; CHECK-GI-NEXT:    fdiv s4, s0, s0
+; CHECK-GI-NEXT:    fmul s0, s1, s5
+; CHECK-GI-NEXT:    fmul s1, s2, s5
+; CHECK-GI-NEXT:    fmul s2, s3, s5
+; CHECK-GI-NEXT:    fmov s3, s4
+; CHECK-GI-NEXT:    b foo_4f
+  %div = fdiv float %a, %D
+  %div1 = fdiv float %b, %D
+  %div2 = fdiv float %c, %D
+  %div3 = fdiv float %D, %D
+  tail call void @foo_4f(float %div, float %div1, float %div2, float %div3)
+  ret void
+}
+
 define void @splat_three_fdiv_4xfloat(float %D, <4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
 ; CHECK-LABEL: splat_three_fdiv_4xfloat:
 ; CHECK:       // %bb.0:
@@ -215,6 +245,7 @@ entry:
 }
 
 declare void @foo_3f(float, float, float)
+declare void @foo_4f(float, float, float, float)
 declare void @foo_3d(double, double, double)
 declare void @foo_3_4xf(<4 x float>, <4 x float>, <4 x float>)
 declare void @foo_3_2xd(<2 x double>, <2 x double>, <2 x double>)
