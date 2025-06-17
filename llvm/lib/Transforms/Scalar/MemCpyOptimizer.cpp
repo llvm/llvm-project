@@ -727,7 +727,7 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
       if (performStackMoveOptzn(LI, SI, DestAlloca, SrcAlloca,
                                 DL.getTypeStoreSize(T), BAA)) {
         // Avoid invalidating the iterator.
-        BBI = SI->getNextNonDebugInstruction()->getIterator();
+        BBI = SI->getNextNode()->getIterator();
         eraseInstruction(SI);
         eraseInstruction(LI);
         ++NumMemCpyInstr;
@@ -1843,7 +1843,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   if (performStackMoveOptzn(M, M, DestAlloca, SrcAlloca,
                             TypeSize::getFixed(Len->getZExtValue()), BAA)) {
     // Avoid invalidating the iterator.
-    BBI = M->getNextNonDebugInstruction()->getIterator();
+    BBI = M->getNextNode()->getIterator();
     eraseInstruction(M);
     ++NumMemCpyInstr;
     return true;

@@ -2674,14 +2674,14 @@ static std::optional<Instruction *> instCombineSVEInsr(InstCombiner &IC,
 static std::optional<Instruction *> instCombineDMB(InstCombiner &IC,
                                                    IntrinsicInst &II) {
   // If this barrier is post-dominated by identical one we can remove it
-  auto *NI = II.getNextNonDebugInstruction();
+  auto *NI = II.getNextNode();
   unsigned LookaheadThreshold = DMBLookaheadThreshold;
   auto CanSkipOver = [](Instruction *I) {
     return !I->mayReadOrWriteMemory() && !I->mayHaveSideEffects();
   };
   while (LookaheadThreshold-- && CanSkipOver(NI)) {
     auto *NIBB = NI->getParent();
-    NI = NI->getNextNonDebugInstruction();
+    NI = NI->getNextNode();
     if (!NI) {
       if (auto *SuccBB = NIBB->getUniqueSuccessor())
         NI = &*SuccBB->getFirstNonPHIOrDbgOrLifetime();

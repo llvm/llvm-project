@@ -807,7 +807,7 @@ static void updateScopeLine(Instruction *ActiveSuspend,
     return;
 
   // No subsequent instruction -> fallback to the location of ActiveSuspend.
-  if (!ActiveSuspend->getNextNonDebugInstruction()) {
+  if (!ActiveSuspend->getNextNode()) {
     if (auto DL = ActiveSuspend->getDebugLoc())
       if (SPToUpdate.getFile() == DL->getFile())
         SPToUpdate.setScopeLine(DL->getLine());
@@ -815,7 +815,7 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   }
 
   BasicBlock::iterator Successor =
-      ActiveSuspend->getNextNonDebugInstruction()->getIterator();
+      ActiveSuspend->getNextNode()->getIterator();
   // Corosplit splits the BB around ActiveSuspend, so the meaningful
   // instructions are not in the same BB.
   if (auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
