@@ -574,9 +574,8 @@ llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
 
   auto target = frame.GetThread().GetProcess().GetTarget();
   std::optional<protocol::Source> source =
-      CreateSource(frame.GetPCAddress(), target, [&dap](lldb::addr_t addr) {
-        return dap.CreateSourceReference(addr);
-      });
+      dap.ResolveSource(frame.GetPCAddress());
+
   if (source && !IsAssemblySource(*source)) {
     // This is a normal source with a valid line entry.
     auto line_entry = frame.GetLineEntry();

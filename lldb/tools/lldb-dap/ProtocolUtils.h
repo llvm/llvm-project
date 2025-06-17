@@ -32,11 +32,11 @@ std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file);
 
 /// Create a "Source" JSON object as described in the debug adapter definition.
 ///
-/// \param[in] address
-///     The address to use when populating out the "Source" object.
-///
 /// \param[in] target
 ///     The target that has the address.
+///
+/// \param[in] address
+///     The address to use when populating out the "Source" object.
 ///
 /// \param[in] create_reference
 ///     function used to create a source_reference
@@ -44,12 +44,14 @@ std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file);
 /// \return
 ///     An optional "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
-std::optional<protocol::Source>
-CreateSource(lldb::SBAddress address, lldb::SBTarget &target,
-             llvm::function_ref<int32_t(lldb::addr_t)> create_reference);
+std::optional<protocol::Source> CreateAssemblySource(
+    const lldb::SBTarget &target, lldb::SBAddress address,
+    llvm::function_ref<int32_t(lldb::addr_t)> create_reference);
 
 /// Checks if the given source is for assembly code.
 bool IsAssemblySource(const protocol::Source &source);
+
+bool DisplayAssemblySource(lldb::SBDebugger &debugger, lldb::SBAddress address);
 
 /// Get the address as a 16-digit hex string, e.g. "0x0000000000012345"
 std::string GetLoadAddressString(const lldb::addr_t addr);

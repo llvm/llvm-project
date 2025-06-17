@@ -105,9 +105,6 @@ struct DAP {
   /// Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
 
-  /// list of addresses mapped by sourceReference(index - 1)
-  std::vector<lldb::addr_t> source_references;
-
   /// A copy of the last LaunchRequest so we can reuse its arguments if we get a
   /// RestartRequest. Restarting an AttachRequest is not supported.
   std::optional<protocol::LaunchRequestArguments> last_launch_request;
@@ -256,6 +253,17 @@ struct DAP {
   /// \return the expression mode
   ReplMode DetectReplMode(lldb::SBFrame frame, std::string &expression,
                           bool partial_expression);
+
+  /// Create a "Source" JSON object as described in the debug adapter
+  /// definition.
+  ///
+  /// \param[in] address
+  ///     The address to use when populating out the "Source" object.
+  ///
+  /// \return
+  ///     An optional "Source" JSON object that follows the formal JSON
+  ///     definition outlined by Microsoft.
+  std::optional<protocol::Source> ResolveSource(lldb::SBAddress address);
 
   /// \return
   ///   \b false if a fatal error was found while executing these commands,
@@ -410,6 +418,10 @@ private:
   std::thread event_thread;
   std::thread progress_event_thread;
   /// @}
+
+  /// list of addresses mapped by sourceReference(index - 1)
+  std::vector<lldb::addr_t> m_source_references;
+  std::mutex m_source_references_mutex;
 
   /// Queue for all incoming messages.
   std::deque<protocol::Message> m_queue;

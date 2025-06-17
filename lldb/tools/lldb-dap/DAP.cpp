@@ -498,22 +498,24 @@ DAP::SendFormattedOutput(OutputType o, const char *format, ...) {
 }
 
 int32_t DAP::CreateSourceReference(lldb::addr_t address) {
-  auto iter = llvm::find(source_references, address);
-  if (iter != source_references.end())
-    return std::distance(source_references.begin(), iter) + 1;
+  std::lock_guard<std::mutex> guard(m_source_references_mutex);
+  auto iter = llvm::find(m_source_references, address);
+  if (iter != m_source_references.end())
+    return std::distance(m_source_references.begin(), iter) + 1;
 
-  source_references.emplace_back(address);
-  return static_cast<int32_t>(source_references.size());
+  m_source_references.emplace_back(address);
+  return static_cast<int32_t>(m_source_references.size());
 }
 
 std::optional<lldb::addr_t> DAP::GetSourceReferenceAddress(int32_t reference) {
+  std::lock_guard<std::mutex> guard(m_source_references_mutex);
   if (reference <= LLDB_DAP_INVALID_SRC_REF)
     return std::nullopt;
 
-  if (static_cast<size_t>(reference) > source_references.size())
+  if (static_cast<size_t>(reference) > m_source_references.size())
     return std::nullopt;
 
-  return source_references[reference - 1];
+  return m_source_references[reference - 1];
 }
 
 ExceptionBreakpoint *DAP::GetExceptionBPFromStopReason(lldb::SBThread &thread) {
@@ -619,6 +621,22 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
   }
 
   llvm_unreachable("enum cases exhausted.");
+}
+
+std::optional<protocol::Source> DAP::ResolveSource(lldb::SBAddress address) {
+
+  if (DisplayAssemblySource(debugger, address)) {
+    auto create_reference = [this](lldb::addr_t addr) {
+      return CreateSourceReference(addr);
+    };
+    return CreateAssemblySource(target, address, create_reference);
+  }
+
+  lldb::SBLineEntry line_entry = GetLineEntryForAddress(target, address);
+  if (!line_entry.IsValid())
+    return std::nullopt;
+
+  return CreateSource(line_entry.GetFileSpec());
 }
 
 bool DAP::RunLLDBCommands(llvm::StringRef prefix,
