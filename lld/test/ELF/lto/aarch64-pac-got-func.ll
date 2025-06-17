@@ -37,16 +37,6 @@ target triple = "aarch64-unknown-linux-gnu"
 @g3 = external global ptr
 @g4 = external global ptr
 
-; Minor codegen changes may influence function sizes and thus move subsequent
-; symbols. To prevent accidental changes to symbol addresses, request an
-; alignment that is larger than any expected function's size.
-;
-; Note that it is handy to have a trivial function like _start at the end of
-; the .text section, as most offsets of interest point to the dynamic section,
-; and one cannot easily control its alignment. On the other hand, the _start
-; function almost certainly contains a single ret instruction and is itself
-; aligned, making offsets of the subsequent sections predictable.
-
 define void @func() align 1024 {
 entry:
   ret void
