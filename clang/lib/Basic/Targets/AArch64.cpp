@@ -822,9 +822,15 @@ std::optional<std::pair<unsigned, unsigned>>
 AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
                                   bool IsArmStreamingFunction,
                                   llvm::StringMap<bool> *FeatureMap) const {
-  if (LangOpts.VScaleMin || LangOpts.VScaleMax)
+  if (!IsArmStreamingFunction && (LangOpts.VScaleMin || LangOpts.VScaleMax))
     return std::pair<unsigned, unsigned>(
         LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
+
+  if (IsArmStreamingFunction &&
+      (LangOpts.VScaleStreamingMin || LangOpts.VScaleStreamingMax))
+    return std::pair<unsigned, unsigned>(
+        LangOpts.VScaleStreamingMin ? LangOpts.VScaleStreamingMin : 1,
+        LangOpts.VScaleStreamingMax);
 
   if (hasFeature("sve") || (FeatureMap && (FeatureMap->lookup("sve"))))
     return std::pair<unsigned, unsigned>(1, 16);
