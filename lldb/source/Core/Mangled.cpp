@@ -148,6 +148,41 @@ void Mangled::SetValue(ConstString name) {
   }
 }
 
+// BEGIN SWIFT
+#ifdef LLDB_ENABLE_SWIFT
+static ConstString GetSwiftDemangledStr(ConstString m_mangled,
+                                        const SymbolContext *sc,
+                                        ConstString &m_demangled) {
+  const char *mangled_name = m_mangled.GetCString();
+  Log *log = GetLog(LLDBLog::Demangle);
+  LLDB_LOGF(log, "demangle swift: %s", mangled_name);
+  auto [demangled, info] = SwiftLanguageRuntime::TrackedDemangleSymbolAsString(
+      mangled_name, SwiftLanguageRuntime::eSimplified, sc);
+  info.PrefixRange.second =
+      std::min(info.BasenameRange.first, info.ArgumentsRange.first);
+  info.SuffixRange.first =
+      std::max(info.BasenameRange.second, info.ArgumentsRange.second);
+  info.SuffixRange.second = demangled.length();
+
+  // Don't cache the demangled name the function isn't available yet.
+  if (!sc || !sc->function) {
+    LLDB_LOGF(log, "demangle swift: %s -> \"%s\" (not cached)", mangled_name,
+              demangled.c_str());
+    return ConstString(demangled);
+  }
+  if (demangled.empty()) {
+    LLDB_LOGF(log, "demangle swift: %s -> error: failed to demangle",
+              mangled_name);
+  } else {
+    LLDB_LOGF(log, "demangle swift: %s -> \"%s\"", mangled_name,
+              demangled.c_str());
+    m_demangled.SetStringWithMangledCounterpart(demangled, m_mangled);
+  }
+  return m_demangled;
+}
+#endif // LLDB_ENABLE_SWIFT
+// END SWIFT
+
 // Local helpers for different demangling implementations.
 static char *GetMSVCDemangledStr(llvm::StringRef M) {
   char *demangled_cstr = llvm::microsoftDemangle(
@@ -352,28 +387,7 @@ ConstString Mangled::GetDemangledNameImpl(
     // Demangling a swift name requires the swift compiler. This is
     // explicitly unsupported on llvm.org.
 #ifdef LLDB_ENABLE_SWIFT
-  {
-    const char *mangled_name = m_mangled.GetCString();
-    Log *log = GetLog(LLDBLog::Demangle);
-    LLDB_LOGF(log, "demangle swift: %s", mangled_name);
-    std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(
-        mangled_name, SwiftLanguageRuntime::eTypeName, sc));
-    // Don't cache the demangled name the function isn't available yet.
-    if (!sc || !sc->function) {
-      LLDB_LOGF(log, "demangle swift: %s -> \"%s\" (not cached)", mangled_name,
-                demangled.c_str());
-      return ConstString(demangled);
-    }
-    if (demangled.empty()) {
-      LLDB_LOGF(log, "demangle swift: %s -> error: failed to demangle",
-                mangled_name);
-    } else {
-      LLDB_LOGF(log, "demangle swift: %s -> \"%s\"", mangled_name,
-                demangled.c_str());
-      m_demangled.SetStringWithMangledCounterpart(demangled, m_mangled);
-    }
-    return m_demangled;
-  }
+    return GetSwiftDemangledStr(m_mangled, sc, m_demangled);
 #endif // LLDB_ENABLE_SWIFT
   break;
   case eManglingSchemeNone:

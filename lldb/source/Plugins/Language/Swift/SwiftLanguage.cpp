@@ -1913,21 +1913,96 @@ SwiftLanguage::GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
 
 static std::optional<llvm::StringRef>
 GetDemangledBasename(const SymbolContext &sc) {
-  return std::nullopt;
+  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
+  if (!mangled)
+    return std::nullopt;
+
+  auto demangled_name = mangled.GetDemangledName().GetStringRef();
+  if (demangled_name.empty())
+    return std::nullopt;
+
+  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  if (!info)
+    return std::nullopt;
+
+  // Function without a basename is nonsense.
+  if (!info->hasBasename())
+    return std::nullopt;
+
+  return demangled_name.slice(info->BasenameRange.first,
+                              info->BasenameRange.second);
 }
 
 static std::optional<llvm::StringRef>
 GetDemangledFunctionPrefix(const SymbolContext &sc) {
-  return std::nullopt;
+  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
+  if (!mangled)
+    return std::nullopt;
+
+  auto demangled_name = mangled.GetDemangledName().GetStringRef();
+  if (demangled_name.empty())
+    return std::nullopt;
+
+  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  if (!info)
+    return std::nullopt;
+
+  // Function without a basename is nonsense.
+  if (!info->hasBasename())
+    return std::nullopt;
+
+  return demangled_name.slice(info->PrefixRange.first,
+                              info->PrefixRange.second);
 }
 
 static std::optional<llvm::StringRef>
 GetDemangledFunctionSuffix(const SymbolContext &sc) {
-  return std::nullopt;
+  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
+  if (!mangled)
+    return std::nullopt;
+
+  auto demangled_name = mangled.GetDemangledName().GetStringRef();
+  if (demangled_name.empty())
+    return std::nullopt;
+
+  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  if (!info)
+    return std::nullopt;
+
+  // Function without a basename is nonsense.
+  if (!info->hasBasename())
+    return std::nullopt;
+
+  return demangled_name.slice(info->SuffixRange.first,
+                              info->SuffixRange.second);
 }
 
 static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
-  return false;
+  assert(sc.symbol);
+
+  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
+  if (!mangled)
+    return false;
+
+  auto demangled_name = mangled.GetDemangledName().GetStringRef();
+  if (demangled_name.empty())
+    return false;
+
+  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  if (!info)
+    return false;
+
+  // Function without a basename is nonsense.
+  if (!info->hasBasename())
+    return false;
+
+  if (info->ArgumentsRange.second < info->ArgumentsRange.first)
+    return false;
+
+  s << demangled_name.slice(info->ArgumentsRange.first,
+                            info->ArgumentsRange.second);
+
+  return true;
 }
 
 static VariableListSP GetFunctionVariableList(const SymbolContext &sc) {
