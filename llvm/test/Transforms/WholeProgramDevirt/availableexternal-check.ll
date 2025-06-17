@@ -11,12 +11,11 @@
 ;   ...;
 ; }
 ;
-; Build command is "clang++ -O2 -target x86_64-unknown-linux -flto=thin \
+; Build command is "clang++ -O2 -target x86_64-unknown-linux -flto=full \
 ; -fwhole-program-vtables -static-libstdc++  -Wl,-plugin-opt=-whole-program-visibility"
 ;
 ; _ZTVSt9exception's visibility is 1 (Linkage Unit), and available_externally.
-; But another vtable _ZTV1A.0 is not available_externally.
-; They should not do devirtualization because they are in different linkage type.
+; If any GV is available_externally, icall.branch.funnel should not be generated.
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux"
