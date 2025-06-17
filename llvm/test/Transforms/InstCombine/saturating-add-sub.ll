@@ -2350,4 +2350,17 @@ define i8 @fold_add_umax_to_usub_multiuse(i8 %a) {
   ret i8 %sel
 }
 
+define i32 @add_check_zero(i32 %num) {
+; CHECK-LABEL: @add_check_zero(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[NUM:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ADD]], 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %add = add i32 %num, 1
+  %cmp = icmp eq i32 %add, 0
+  %cond = select i1 %cmp, i32 -1, i32 %add
+  ret i32 %cond
+}
+
 declare void @usei8(i8)
