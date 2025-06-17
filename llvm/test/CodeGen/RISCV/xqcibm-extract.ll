@@ -247,6 +247,48 @@ define i32 @extu_from_and_i32(i32 %x) {
   ret i32 %a
 }
 
+define i32 @no_extu_from_and_i32(i32 %x) {
+; RV32I-LABEL: no_extu_from_and_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 31
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: no_extu_from_and_i32:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    andi a0, a0, 31
+; RV32XQCIBM-NEXT:    ret
+  %a = and i32 %x, 31
+  ret i32 %a
+}
+
+define i32 @extu_from_and_i32_simm12_lb(i32 %x) {
+; RV32I-LABEL: extu_from_and_i32_simm12_lb:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 63
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: extu_from_and_i32_simm12_lb:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.extu a0, a0, 6, 0
+; RV32XQCIBM-NEXT:    ret
+  %a = and i32 %x, 63
+  ret i32 %a
+}
+
+define i32 @extu_from_and_i32_simm12_ub(i32 %x) {
+; RV32I-LABEL: extu_from_and_i32_simm12_ub:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 2047
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: extu_from_and_i32_simm12_ub:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.extu a0, a0, 11, 0
+; RV32XQCIBM-NEXT:    ret
+  %a = and i32 %x, 2047
+  ret i32 %a
+}
+
 define i64 @extu_from_and_i64(i64 %x) {
 ; RV32I-LABEL: extu_from_and_i64:
 ; RV32I:       # %bb.0:
@@ -330,4 +372,52 @@ define i64 @extu_from_lshr_and_i64(i64 %x) {
   %masked = and i64 %x, 16773120
   %shifted = lshr i64 %masked, 12
   ret i64 %shifted
+}
+
+define i32 @ext_from_ashr_shl_i32(i32 %x) {
+; RV32I-LABEL: ext_from_ashr_shl_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 8
+; RV32I-NEXT:    srai a0, a0, 24
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: ext_from_ashr_shl_i32:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.ext a0, a0, 8, 16
+; RV32XQCIBM-NEXT:    ret
+  %shl = shl i32 %x, 8
+  %ashr = ashr i32 %shl, 24
+  ret i32 %ashr
+}
+
+define i32 @ext_from_ashr_sexti8_i32(i8 %x) {
+; RV32I-LABEL: ext_from_ashr_sexti8_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    srai a0, a0, 29
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: ext_from_ashr_sexti8_i32:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.ext a0, a0, 3, 5
+; RV32XQCIBM-NEXT:    ret
+  %sext = sext i8 %x to i32
+  %ashr = ashr i32 %sext, 5
+  ret i32 %ashr
+}
+
+define i32 @ext_from_ashr_sexti16_i32(i16 %x) {
+; RV32I-LABEL: ext_from_ashr_sexti16_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srai a0, a0, 31
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: ext_from_ashr_sexti16_i32:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.ext a0, a0, 1, 15
+; RV32XQCIBM-NEXT:    ret
+  %sext = sext i16 %x to i32
+  %ashr = ashr i32 %sext, 24
+  ret i32 %ashr
 }

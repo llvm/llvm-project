@@ -62,14 +62,13 @@ constexpr std::array<std::string_view, ITEMS> EnumNames(const char *p) {
   enum class NAME { __VA_ARGS__ }; \
   [[maybe_unused]] static constexpr std::size_t NAME##_enumSize{ \
       ::Fortran::common::CountEnumNames(#__VA_ARGS__)}; \
-  [[maybe_unused]] static constexpr std::array<std::string_view, \
-      NAME##_enumSize> NAME##_names{ \
-      ::Fortran::common::EnumNames<NAME##_enumSize>(#__VA_ARGS__)}; \
   [[maybe_unused]] static inline std::size_t EnumToInt(NAME e) { \
     return static_cast<std::size_t>(e); \
   } \
   [[maybe_unused]] static inline std::string_view EnumToString(NAME e) { \
-    return NAME##_names[static_cast<std::size_t>(e)]; \
+    static const constexpr auto names{ \
+        ::Fortran::common::EnumNames<NAME##_enumSize>(#__VA_ARGS__)}; \
+    return names[static_cast<std::size_t>(e)]; \
   } \
   [[maybe_unused]] inline void ForEach##NAME(std::function<void(NAME)> f) { \
     for (std::size_t i{0}; i < NAME##_enumSize; ++i) { \
