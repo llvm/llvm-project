@@ -687,13 +687,18 @@ foreach mx = SchedMxListFW in {
   foreach sew = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFW, isF=1>.c;
     defvar LMulLat = SMX60GetLMulCycles<mx>.c;
+    defvar FMALat = SMX60GetVFFMALatency<mx>.c;
 
     defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUF", [SMX60_VIEU], mx, sew, IsWorstCase>;
     defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulF", [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulAddV", [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulAddF", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    // FP widening multiply-add operations: e16 has 5,5,8; e32 has 6,7,8
+    // Use existing FMALat (6,6,7,8) as close approximation
+    let Latency = FMALat in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulAddV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulAddF", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
     let Latency = !mul(LMulLat, 4) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWCvtFToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
