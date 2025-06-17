@@ -2545,13 +2545,11 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   VPValue *Start = WidenIVR->getStartValue();
   VPValue *Step = WidenIVR->getStepValue();
   VPValue *VF = WidenIVR->getVFValue();
-  TruncInst *Trunc = WidenIVR->getTruncInst();
   DebugLoc DL = WidenIVR->getDebugLoc();
 
   // The value from the original loop to which we are mapping the new induction
   // variable.
-  Instruction *IV = Trunc ? cast<Instruction>(Trunc) : WidenIVR->getPHINode();
-  Type *Ty = IV->getType();
+  Type *Ty = TypeInfo.inferScalarType(WidenIVR);
 
   const InductionDescriptor &ID = WidenIVR->getInductionDescriptor();
   Instruction::BinaryOps AddOp;
@@ -2568,17 +2566,17 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
 
   // If the phi is truncated, truncate the start and step values.
   VPBuilder Builder(Plan->getVectorPreheader());
-  if (isa<TruncInst>(IV)) {
-    assert(TypeInfo.inferScalarType(Start)->isIntegerTy() &&
-           "Truncation requires an integer type");
+  Type *StepTy = TypeInfo.inferScalarType(Step);
+  if (Ty->getScalarSizeInBits() < StepTy->getScalarSizeInBits()) {
+    assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
     Step = Builder.createScalarCast(Instruction::Trunc, Step, Ty, DL);
     Start = Builder.createScalarCast(Instruction::Trunc, Start, Ty, DL);
+    StepTy = Ty;
   }
 
   // Construct the initial value of the vector IV in the vector loop preheader.
-  Type *StepTy = TypeInfo.inferScalarType(Step);
   Type *IVIntTy =
-      IntegerType::get(IV->getContext(), StepTy->getScalarSizeInBits());
+      IntegerType::get(StepTy->getContext(), StepTy->getScalarSizeInBits());
   VPValue *Init = Builder.createNaryOp(VPInstruction::StepVector, {}, IVIntTy);
   if (StepTy->isFloatingPointTy())
     Init = Builder.createWidenCast(Instruction::UIToFP, Init, StepTy);
