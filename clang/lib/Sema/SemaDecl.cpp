@@ -62,6 +62,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
