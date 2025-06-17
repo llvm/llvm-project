@@ -376,7 +376,7 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       // Copy all attributes, but update "layout_result_0" to drop
       // sgLayout/sgData
       for (auto attr : op->getAttrs()) {
-        if (isa<xegpu::LayoutAttr>(attr.getValue()))
+        if (auto layout = dyn_cast<xegpu::LayoutAttr>(attr.getValue()))
           state.addAttribute(attr.getName(), layout.dropSgLayoutAndData());
         else
           state.addAttribute(attr.getName(), attr.getValue());
