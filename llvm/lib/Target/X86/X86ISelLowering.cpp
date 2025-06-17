@@ -51308,13 +51308,11 @@ static bool hasBZHI(const X86Subtarget &Subtarget, MVT VT) {
 
 /// Folds (and X, (or Y, ~Z)) --> (and X, ~(and ~Y, Z))
 /// This undoes the inverse fold performed in InstCombine
-static SDValue combineAndNotOrIntoAndNotAnd(SDNode *N, SelectionDAG &DAG) {
-
+static SDValue combineAndNotOrIntoAndNotAnd(SDNode *N, const SDLoc &DL,
+                                            SelectionDAG &DAG) {
   using namespace llvm::SDPatternMatch;
   MVT VT = N->getSimpleValueType(0);
-  SDLoc DL(N);
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.hasAndNot(SDValue(N, 0)))
+  if (!DAG.getTargetLoweringInfo().hasAndNot(SDValue(N, 0)))
     return SDValue();
 
   SDValue X, Y, Z;
@@ -51850,7 +51848,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   if (SDValue R = combineAndLoadToBZHI(N, DAG, Subtarget))
     return R;
 
-  if (SDValue R = combineAndNotOrIntoAndNotAnd(N, DAG))
+  if (SDValue R = combineAndNotOrIntoAndNotAnd(N, dl, DAG))
     return R;
 
   // fold (and (mul x, c1), c2) -> (mul x, (and c1, c2))
