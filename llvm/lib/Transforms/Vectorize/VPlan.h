@@ -2735,10 +2735,10 @@ class VPBundleRecipe : public VPSingleDefRecipe {
         BundleType(BundleType) {
     // Bundle up the operand recipes.
     SmallPtrSet<VPUser *, 4> BundledUsers;
-    for (auto *R : ToBundle)
+    for (auto *R : BundledOps)
       BundledUsers.insert(R);
 
-    // Recipes in the bundle, expect the last one, must only be used inside the
+    // Recipes in the bundle, except the last one, must only be used inside the
     // bundle. If there other external users, clone the recipes for the bundle.
     for (const auto &[Idx, R] : enumerate(drop_end(ToBundle))) {
       if (all_of(R->users(), [&BundledUsers](VPUser *U) {
@@ -2748,14 +2748,14 @@ class VPBundleRecipe : public VPSingleDefRecipe {
           R->removeFromParent();
         continue;
       }
-      // There users external to the bundle. Clone the recipe for use in the
+      // The users external to the bundle. Clone the recipe for use in the
       // bundle and update all its in-bundle users.
-      this->BundledOps[Idx] = R->clone();
-      BundledUsers.insert(this->BundledOps[Idx]);
-      R->replaceUsesWithIf(this->BundledOps[Idx],
-                           [&BundledUsers](VPUser &U, unsigned) {
-                             return BundledUsers.contains(&U);
-                           });
+      VPSingleDefRecipe *Copy = R->clone();
+      BundledOps[Idx] = Copy;
+      BundledUsers.insert(Copy);
+      R->replaceUsesWithIf(Copy, [&BundledUsers](VPUser &U, unsigned) {
+        return BundledUsers.contains(&U);
+      });
     }
     BundledOps.back()->removeFromParent();
 
@@ -2763,7 +2763,7 @@ class VPBundleRecipe : public VPSingleDefRecipe {
     // create new temporary VPValues for all operands not defined by recipe in
     // the bundle. The original operands are added as operands of the
     // VPBundleRecipe.
-    for (auto *R : this->BundledOps) {
+    for (auto *R : BundledOps) {
       for (const auto &[Idx, Op] : enumerate(R->operands())) {
         auto *Def = Op->getDefiningRecipe();
         if (Def && BundledUsers.contains(Def))
@@ -2802,6 +2802,7 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPBundleSC)
 
   VPBundleRecipe *clone() override {
+    assert(!BundledOps.empty() && "empty bundles should be removed");
     return new VPBundleRecipe(BundleType, BundledOps);
   }
 
@@ -2809,6 +2810,9 @@ public:
   /// recipe.
   VPSingleDefRecipe *getResultOp() const { return BundledOps.back(); }
 
+  /// Insert the bundled recipes back into the VPlan, directly before the
+  /// current recipe. Leaves the bundle recipe empty and the recipe must be
+  /// removed before codegen.
   void unbundle();
 
   /// Generate the extraction of the appropriate bit from the block mask and the

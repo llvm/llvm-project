@@ -268,7 +268,11 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
           .Case<VPBundleRecipe>([this](const auto *R) {
-            return inferScalarType(R->getOperand(R->getNumOperands() - 2));
+            unsigned RdxOpIdxOffset =
+                cast<VPReductionRecipe>(R->getResultOp())->isConditional() ? 2
+                                                                           : 1;
+            return inferScalarType(
+                R->getOperand(R->getNumOperands() - RdxOpIdxOffset));
           })
           .Case<VPActiveLaneMaskPHIRecipe, VPCanonicalIVPHIRecipe,
                 VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe,

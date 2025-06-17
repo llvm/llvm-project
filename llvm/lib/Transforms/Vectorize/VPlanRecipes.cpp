@@ -2590,6 +2590,7 @@ void VPBundleRecipe::unbundle() {
       BundledOps.size() == 5) {
     // Note that we will drop the extend after mul which transforms
     // reduce.add(ext(mul(ext, ext))) to reduce.add(mul(ext, ext)).
+    // TODO: This transform should be done separately from bundling/unbundling.
     auto *Ext0 = cast<VPWidenCastRecipe>(BundledOps[0]);
     auto *Ext1 = cast<VPWidenCastRecipe>(BundledOps[1]);
     auto *Ext2 = cast<VPWidenCastRecipe>(BundledOps[3]);
@@ -2602,7 +2603,7 @@ void VPBundleRecipe::unbundle() {
     if (Ext0 != Ext1) {
       Op1 = new VPWidenCastRecipe(Ext1->getOpcode(), Ext1->getOperand(0),
                                   Ext2->getResultType(), *Ext1, getDebugLoc());
-      Op1->insertBefore(Ext0);
+      Op1->insertBefore(Ext1);
     }
     auto *Mul = cast<VPWidenRecipe>(BundledOps[2]);
     auto *Red = cast<VPReductionRecipe>(BundledOps[4]);
