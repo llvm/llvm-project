@@ -16211,7 +16211,10 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
           Attribute::NoImplicitFloat))
     return SDValue();
 
-  assert(OpSize % 8 == 0 && "The size should be a multiple of 8");
+  // Bail out for non-byte-sized types.
+  if (!OpVT.isByteSized())
+    return SDValue();
+
   unsigned VecSize = OpSize / 8;
   EVT VecVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8, VecSize);
   EVT CmpVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, VecSize);
