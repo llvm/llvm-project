@@ -24,9 +24,9 @@
 using namespace llvm;
 
 static cl::opt<int> SIFoldOperandsPreheaderThreshold(
-    "amdgpu-si-fold-operands-preheader-threshold", cl::init(100),
+    "amdgpu-si-fold-operands-preheader-threshold", cl::init(1000),
     cl::desc("Threshold for operand folding hazard check. "
-             "Defaults to 100 MIs, upper limit 10000."));
+             "Defaults to 1000 MIs, upper limit 10000."));
 
 namespace {
 

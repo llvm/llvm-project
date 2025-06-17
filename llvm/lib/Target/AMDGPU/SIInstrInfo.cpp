@@ -9755,7 +9755,7 @@ bool execMayBeModifiedBeforeUseUtil(
 
   int NumInst = 0;
   for (auto I = BeginIterator; I != EndIterator; ++I) {
-    if (I->isDebugInstr())
+    if (I->isMetaInstruction())
       continue;
 
     if (++NumInst > MaxInstScan)
@@ -9877,7 +9877,7 @@ bool llvm::execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
   for (auto I = std::next(DefMI.getIterator()); ; ++I) {
     assert(I != DefBB->end());
 
-    if (I->isDebugInstr())
+    if (I->isMetaInstruction())
       continue;
 
     if (++NumInst > MaxInstScan)
