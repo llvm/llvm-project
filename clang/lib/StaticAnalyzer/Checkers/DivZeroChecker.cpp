@@ -69,7 +69,7 @@ void DivZeroChecker::reportTaintBug(
     llvm::ArrayRef<SymbolRef> TaintedSyms) const {
   if (!TaintedDivChecker.isEnabled())
     return;
-  if (ExplodedNode *N = C.generateNonFatalErrorNode(StateZero)) {
+  if (ExplodedNode *N = C.generateErrorNode(StateZero)) {
     auto R =
         std::make_unique<PathSensitiveBugReport>(TaintedDivChecker, Msg, N);
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
@@ -113,9 +113,8 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
   if ((stateNotZero && stateZero)) {
     std::vector<SymbolRef> taintedSyms = getTaintedSymbols(C.getState(), *DV);
     if (!taintedSyms.empty()) {
-      reportTaintBug("Division by a tainted value, possibly zero", stateNotZero,
+      reportTaintBug("Division by a tainted value, possibly zero", stateZero,
                      C, taintedSyms);
-      return;
     }
   }
 
