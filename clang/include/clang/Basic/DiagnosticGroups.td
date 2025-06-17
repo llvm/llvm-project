@@ -1677,8 +1677,6 @@ def BoundsSafetyStrictTerminatedByCast
     : DiagGroup<"bounds-safety-strict-terminated-by-cast">;
 def BoundsSafetyCountAttrArithConstantCount :
   DiagGroup<"bounds-safety-externally-counted-ptr-arith-constant-count">;
-def BoundsSafetyLegacyChecksEnabled :
-  DiagGroup<"bounds-safety-legacy-checks-enabled">;
 // TO_UPSTREAM(BoundsSafety) OFF
 
 // -fbounds-safety and bounds annotation related warnings

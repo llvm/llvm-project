@@ -454,8 +454,6 @@ public:
     BS_CHK_CompoundLiteralInit = 1 << 4, // rdar://110871666
     BS_CHK_LibCAttributes = 1 << 5,      // rdar://84733153
     BS_CHK_ArraySubscriptAgg = 1 << 6,   // rdar://145020583
-
-    BS_CHK_MaxMask = BS_CHK_ArraySubscriptAgg,
   };
   using BoundsSafetyNewChecksMaskIntTy =
       std::underlying_type_t<BoundsSafetyNewChecks>;
