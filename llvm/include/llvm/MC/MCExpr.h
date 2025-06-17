@@ -38,6 +38,7 @@ public:
     Constant,  ///< Constant expressions.
     SymbolRef, ///< References to labels and assigned expressions.
     Unary,     ///< Unary expressions.
+    Specifier, ///< Expression with a relocation specifier.
     Target     ///< Target specific expression.
   };
 
@@ -81,13 +82,10 @@ public:
   /// \name Utility Methods
   /// @{
 
+  // TODO: Make this private. Users should call MCAsmInfo::printExpr instead.
   LLVM_ABI void print(raw_ostream &OS, const MCAsmInfo *MAI,
                       int SurroundingPrec = 0) const;
   LLVM_ABI void dump() const;
-
-  /// Returns whether the given symbol is used anywhere in the expression or
-  /// subexpressions.
-  LLVM_ABI bool isSymbolUsedInExpression(const MCSymbol *Sym) const;
 
   /// @}
   /// \name Expression Evaluation
@@ -488,9 +486,6 @@ public:
                                          const MCAssembler *Asm) const = 0;
   // allow Target Expressions to be checked for equality
   virtual bool isEqualTo(const MCExpr *x) const { return false; }
-  virtual bool isSymbolUsedInExpression(const MCSymbol *Sym) const {
-    return false;
-  }
   // This should be set when assigned expressions are not valid ".set"
   // expressions, e.g. registers, and must be inlined.
   virtual bool inlineAssignedExpr() const { return false; }
@@ -499,6 +494,36 @@ public:
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
+  }
+};
+
+/// Extension point for target-specific MCExpr subclasses with a relocation
+/// specifier, serving as a replacement for MCSymbolRefExpr::VariantKind.
+/// Limit this to top-level use, avoiding its inclusion as a subexpression.
+///
+/// NOTE: All subclasses are required to have trivial destructors because
+/// MCExprs are bump pointer allocated and not destructed.
+class LLVM_ABI MCSpecifierExpr : public MCExpr {
+protected:
+  using Spec = uint16_t;
+  const MCExpr *Expr;
+  // Target-specific relocation specifier code
+  const Spec specifier;
+
+  explicit MCSpecifierExpr(const MCExpr *Expr, Spec S, SMLoc Loc = SMLoc())
+      : MCExpr(Specifier, Loc), Expr(Expr), specifier(S) {}
+
+public:
+  LLVM_ABI static const MCSpecifierExpr *
+  create(const MCExpr *Expr, Spec S, MCContext &Ctx, SMLoc Loc = SMLoc());
+  LLVM_ABI static const MCSpecifierExpr *
+  create(const MCSymbol *Sym, Spec S, MCContext &Ctx, SMLoc Loc = SMLoc());
+
+  Spec getSpecifier() const { return specifier; }
+  const MCExpr *getSubExpr() const { return Expr; }
+
+  static bool classof(const MCExpr *E) {
+    return E->getKind() == MCExpr::Specifier;
   }
 };
 

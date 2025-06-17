@@ -482,7 +482,8 @@ def ProcessorFeatures {
   // Future
   // For future CPU we assume that all of the existing features from Power11
   // still exist with the exception of those we know are Power11 specific.
-  list<SubtargetFeature> FutureAdditionalFeatures = [FeatureISAFuture];
+  list<SubtargetFeature> FutureAdditionalFeatures = [DirectivePwrFuture,
+                                                     FeatureISAFuture];
   list<SubtargetFeature> FutureSpecificFeatures = [];
   list<SubtargetFeature> FutureInheritableFeatures =
     !listconcat(P11InheritableFeatures, FutureAdditionalFeatures);

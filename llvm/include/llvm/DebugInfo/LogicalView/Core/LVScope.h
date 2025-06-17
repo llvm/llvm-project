@@ -325,10 +325,6 @@ public:
   void printExtra(raw_ostream &OS, bool Full = true) const override;
   virtual void printWarnings(raw_ostream &OS, bool Full = true) const {}
   virtual void printMatchedElements(raw_ostream &OS, bool UseMatchedElements) {}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump() const override { print(dbgs()); }
-#endif
 };
 
 // Class to represent a DWARF Union/Structure/Class.
@@ -418,6 +414,9 @@ class LLVM_ABI LVScopeCompileUnit final : public LVScope {
 
   // Compilation directory name.
   size_t CompilationDirectoryIndex = 0;
+
+  // Source language.
+  LVSourceLanguage SourceLanguage{};
 
   // Used by the CodeView Reader.
   codeview::CPUType CompilationCPUType = codeview::CPUType::X64;
@@ -548,6 +547,9 @@ public:
   void setProducer(StringRef ProducerName) override {
     ProducerIndex = getStringPool().getIndex(ProducerName);
   }
+
+  LVSourceLanguage getSourceLanguage() const override { return SourceLanguage; }
+  void setSourceLanguage(LVSourceLanguage SL) override { SourceLanguage = SL; }
 
   void setCPUType(codeview::CPUType Type) { CompilationCPUType = Type; }
   codeview::CPUType getCPUType() { return CompilationCPUType; }

@@ -1642,7 +1642,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // this entry.
   DenseSet<uint32_t> LastNodeContextIds = LastNode->getContextIds();
 
-  bool PrevIterCreatedNode = false;
+  [[maybe_unused]] bool PrevIterCreatedNode = false;
   bool CreatedNode = false;
   for (unsigned I = 0; I < Calls.size();
        I++, PrevIterCreatedNode = CreatedNode) {
@@ -2183,6 +2183,9 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
 
   updateStackNodes();
 
+  if (ExportToDot)
+    exportToDot("poststackupdate");
+
   handleCallsitesWithMultipleTargets();
 
   markBackedges();
@@ -2284,6 +2287,9 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
     exportToDot("prestackupdate");
 
   updateStackNodes();
+
+  if (ExportToDot)
+    exportToDot("poststackupdate");
 
   handleCallsitesWithMultipleTargets();
 

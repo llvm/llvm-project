@@ -4,7 +4,6 @@ add_lldb_unittest(SymbolFileDWARFTests
   DWARFDIETest.cpp
   DWARFIndexCachingTest.cpp
   DWARFUnitTest.cpp
-  SymbolFileDWARFDebugMapTests.cpp
   SymbolFileDWARFTests.cpp
   XcodeSDKModuleTests.cpp
 

@@ -122,8 +122,6 @@ namespace llvm {
 extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
 }
 
-LLVM_ABI extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-
 namespace {
 
 /// These are manifest constants used by the bitcode writer. They do not need to

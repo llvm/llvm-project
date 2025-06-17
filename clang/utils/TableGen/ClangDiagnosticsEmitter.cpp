@@ -1794,8 +1794,8 @@ static std::string getDiagCategoryEnum(StringRef name) {
   if (name.empty())
     return "DiagCat_None";
   SmallString<256> enumName = StringRef("DiagCat_");
-  for (StringRef::iterator I = name.begin(), E = name.end(); I != E; ++I)
-    enumName += isalnum(*I) ? *I : '_';
+  for (char C : name)
+    enumName += isalnum(C) ? C : '_';
   return std::string(enumName);
 }
 

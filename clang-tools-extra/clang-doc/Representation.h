@@ -45,6 +45,25 @@ enum class InfoType {
   IT_typedef
 };
 
+enum class CommentKind {
+  CK_FullComment,
+  CK_ParagraphComment,
+  CK_TextComment,
+  CK_InlineCommandComment,
+  CK_HTMLStartTagComment,
+  CK_HTMLEndTagComment,
+  CK_BlockCommandComment,
+  CK_ParamCommandComment,
+  CK_TParamCommandComment,
+  CK_VerbatimBlockComment,
+  CK_VerbatimBlockLineComment,
+  CK_VerbatimLineComment,
+  CK_Unknown
+};
+
+CommentKind stringToCommentKind(llvm::StringRef KindStr);
+llvm::StringRef commentKindToString(CommentKind Kind);
+
 // A representation of a parsed comment.
 struct CommentInfo {
   CommentInfo() = default;
@@ -60,13 +79,13 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
-  // TODO: The Kind field should be an enum, so we can switch on it easily.
-  SmallString<16>
-      Kind; // Kind of comment (FullComment, ParagraphComment, TextComment,
-            // InlineCommandComment, HTMLStartTagComment, HTMLEndTagComment,
-            // BlockCommandComment, ParamCommandComment,
-            // TParamCommandComment, VerbatimBlockComment,
-            // VerbatimBlockLineComment, VerbatimLineComment).
+  CommentKind Kind = CommentKind::
+      CK_Unknown; // Kind of comment (FullComment, ParagraphComment,
+                  // TextComment, InlineCommandComment, HTMLStartTagComment,
+                  // HTMLEndTagComment, BlockCommandComment,
+                  // ParamCommandComment, TParamCommandComment,
+                  // VerbatimBlockComment, VerbatimBlockLineComment,
+                  // VerbatimLineComment).
   SmallString<64> Text;      // Text of the comment.
   SmallString<16> Name;      // Name of the comment (for Verbatim and HTML).
   SmallString<8> Direction;  // Parameter direction (for (T)ParamCommand).

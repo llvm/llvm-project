@@ -61,6 +61,14 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
     cl::desc("Use indirect register addressing for divergent indexes"),
     cl::init(false));
 
+// TODO: This option should be removed once we switch to always using PTRADD in
+// the SelectionDAG.
+static cl::opt<bool> UseSelectionDAGPTRADD(
+    "amdgpu-use-sdag-ptradd", cl::Hidden,
+    cl::desc("Generate ISD::PTRADD nodes for 64-bit pointer arithmetic in the "
+             "SelectionDAG ISel"),
+    cl::init(false));
+
 static bool denormalModeIsFlushAllF32(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().FP32Denormals == DenormalMode::getPreserveSign();
@@ -523,8 +531,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SADDSAT, ISD::SSUBSAT}, {MVT::i16, MVT::i32},
                        Legal);
 
-  setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, {MVT::f32, MVT::f64},
-                     Custom);
+  setOperationAction(
+      {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+      {MVT::f32, MVT::f64}, Custom);
 
   // These are really only legal for ieee_mode functions. We should be avoiding
   // them for functions that don't have ieee_mode enabled, so just say they are
@@ -763,7 +772,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         MVT::v32f16, MVT::v32bf16},
                        Custom);
 
-    setOperationAction({ISD::FMAXNUM, ISD::FMINNUM}, MVT::f16, Custom);
+    setOperationAction(
+        {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+        MVT::f16, Custom);
     setOperationAction({ISD::FMAXNUM_IEEE, ISD::FMINNUM_IEEE}, MVT::f16, Legal);
 
     setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE, ISD::FMINIMUMNUM,
@@ -817,8 +828,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE},
                          VT, Custom);
 
-    setOperationAction({ISD::FMAXNUM, ISD::FMINNUM}, {MVT::v2f16, MVT::v4f16},
-                       Custom);
+    setOperationAction(
+        {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+        {MVT::v2f16, MVT::v4f16}, Custom);
 
     setOperationAction(ISD::FEXP, MVT::v2f16, Custom);
     setOperationAction(ISD::SELECT, {MVT::v4i16, MVT::v4f16, MVT::v4bf16},
@@ -926,8 +938,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
-  if (Subtarget->hasCvtPkF16F32Inst())
-    setOperationAction(ISD::FP_ROUND, MVT::v2f16, Custom);
+  if (Subtarget->hasCvtPkF16F32Inst()) {
+    setOperationAction(ISD::FP_ROUND,
+                       {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v16f16},
+                       Custom);
+  }
 
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
@@ -6051,6 +6066,9 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     return lowerFMINNUM_FMAXNUM(Op, DAG);
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+    return lowerFMINIMUMNUM_FMAXIMUMNUM(Op, DAG);
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
     return lowerFMINIMUM_FMAXIMUM(Op, DAG);
@@ -6075,8 +6093,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMUL:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
-  case ISD::FMINIMUMNUM:
-  case ISD::FMAXIMUMNUM:
   case ISD::UADDSAT:
   case ISD::USUBSAT:
   case ISD::SADDSAT:
@@ -6896,14 +6912,35 @@ SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG, SDValue Op,
                            DAG.getTargetConstant(0, DL, MVT::i32));
 }
 
+SDValue SITargetLowering::splitFP_ROUNDVectorOp(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  EVT DstVT = Op.getValueType();
+  unsigned NumElts = DstVT.getVectorNumElements();
+  assert(NumElts > 2 && isPowerOf2_32(NumElts));
+
+  auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+
+  SDLoc DL(Op);
+  unsigned Opc = Op.getOpcode();
+  SDValue Flags = Op.getOperand(1);
+  EVT HalfDstVT =
+      EVT::getVectorVT(*DAG.getContext(), DstVT.getScalarType(), NumElts / 2);
+  SDValue OpLo = DAG.getNode(Opc, DL, HalfDstVT, Lo, Flags);
+  SDValue OpHi = DAG.getNode(Opc, DL, HalfDstVT, Hi, Flags);
+
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, OpLo, OpHi);
+}
+
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Op.getValueType();
 
-  if (DstVT == MVT::v2f16) {
+  if (DstVT.isVector() && DstVT.getScalarType() == MVT::f16) {
     assert(Subtarget->hasCvtPkF16F32Inst() && "support v_cvt_pk_f16_f32");
-    return SrcVT == MVT::v2f32 ? Op : SDValue();
+    if (SrcVT.getScalarType() != MVT::f32)
+      return SDValue();
+    return SrcVT == MVT::v2f32 ? Op : splitFP_ROUNDVectorOp(Op, DAG);
   }
 
   if (SrcVT.getScalarType() != MVT::f64)
@@ -6956,6 +6993,23 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
   // where there is known no sNaN.
   if (IsIEEEMode)
     return expandFMINNUM_FMAXNUM(Op.getNode(), DAG);
+
+  if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
+      VT == MVT::v16bf16)
+    return splitBinaryVectorOp(Op, DAG);
+  return Op;
+}
+
+SDValue
+SITargetLowering::lowerFMINIMUMNUM_FMAXIMUMNUM(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  const MachineFunction &MF = DAG.getMachineFunction();
+  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  bool IsIEEEMode = Info->getMode().IEEE;
+
+  if (IsIEEEMode)
+    return expandFMINIMUMNUM_FMAXIMUMNUM(Op.getNode(), DAG);
 
   if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
       VT == MVT::v16bf16)
@@ -10433,6 +10487,11 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   }
 }
 
+bool SITargetLowering::shouldPreservePtrArith(const Function &F,
+                                              EVT PtrVT) const {
+  return UseSelectionDAGPTRADD && PtrVT == MVT::i64;
+}
+
 // The raw.(t)buffer and struct.(t)buffer intrinsics have two offset args:
 // offset (the offset that is included in bounds checking and swizzling, to be
 // split between the instruction's voffset and immoffset fields) and soffset
@@ -13841,6 +13900,17 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
       Op0.hasOneUse()) {
     if (SDValue Res = performFPMed3ImmCombine(DAG, SDLoc(N), Op0, Op1))
       return Res;
+  }
+
+  // Prefer fminnum_ieee over fminimum. For gfx950, minimum/maximum are legal
+  // for some types, but at a higher cost since it's implemented with a 3
+  // operand form.
+  const SDNodeFlags Flags = N->getFlags();
+  if ((Opc == ISD::FMINIMUM || Opc == ISD::FMAXIMUM) &&
+      !Subtarget->hasIEEEMinMax() && Flags.hasNoNaNs()) {
+    unsigned NewOpc =
+        Opc == ISD::FMINIMUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
+    return DAG.getNode(NewOpc, SDLoc(N), VT, Op0, Op1, Flags);
   }
 
   return SDValue();

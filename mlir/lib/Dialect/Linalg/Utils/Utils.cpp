@@ -688,7 +688,7 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
     //    tensors with "0" dimensions would never be constructed.
     int64_t shapeSize = shape[r];
     std::optional<int64_t> sizeCst = getConstantIntValue(size);
-    auto hasTileSizeOne = sizeCst && *sizeCst == 1;
+    auto hasTileSizeOne = sizeCst == 1;
     auto dividesEvenly = sizeCst && !ShapedType::isDynamic(shapeSize) &&
                          ((shapeSize % *sizeCst) == 0);
     if (!hasTileSizeOne && !dividesEvenly) {

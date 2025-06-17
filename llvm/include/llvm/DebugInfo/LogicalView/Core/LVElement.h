@@ -15,6 +15,7 @@
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVELEMENT_H
 
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
+#include "llvm/DebugInfo/LogicalView/Core/LVSourceLanguage.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
@@ -220,6 +221,9 @@ public:
 
   virtual StringRef getProducer() const { return StringRef(); }
   virtual void setProducer(StringRef ProducerName) {}
+
+  virtual LVSourceLanguage getSourceLanguage() const { return {}; }
+  virtual void setSourceLanguage(LVSourceLanguage SL) {}
 
   virtual bool isCompileUnit() const { return false; }
   virtual bool isRoot() const { return false; }

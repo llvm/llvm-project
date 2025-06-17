@@ -140,7 +140,9 @@ public:
 
   // l-values
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e) {
-    assert(!cir::MissingFeatures::tryEmitAsConstant());
+    if (CIRGenFunction::ConstantEmission constant = cgf.tryEmitAsConstant(e))
+      return cgf.emitScalarConstant(constant, e);
+
     return emitLoadOfLValue(e);
   }
 
@@ -158,6 +160,12 @@ public:
     return builder.create<cir::ConstantOp>(
         cgf.getLoc(e->getExprLoc()),
         builder.getAttr<cir::FPAttr>(type, e->getValue()));
+  }
+
+  mlir::Value VisitCharacterLiteral(const CharacterLiteral *e) {
+    mlir::Type ty = cgf.convertType(e->getType());
+    auto init = cir::IntAttr::get(ty, e->getValue());
+    return builder.create<cir::ConstantOp>(cgf.getLoc(e->getExprLoc()), init);
   }
 
   mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *e) {
@@ -189,9 +197,24 @@ public:
           cgf.getLoc(e->getSourceRange()), inputVec, indexVec);
     }
 
-    cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
-                                   "ShuffleVectorExpr with indices");
-    return {};
+    mlir::Value vec1 = Visit(e->getExpr(0));
+    mlir::Value vec2 = Visit(e->getExpr(1));
+
+    // The documented form of __builtin_shufflevector, where the indices are
+    // a variable number of integer constants. The constants will be stored
+    // in an ArrayAttr.
+    SmallVector<mlir::Attribute, 8> indices;
+    for (unsigned i = 2; i < e->getNumSubExprs(); ++i) {
+      indices.push_back(
+          cir::IntAttr::get(cgf.builder.getSInt64Ty(),
+                            e->getExpr(i)
+                                ->EvaluateKnownConstInt(cgf.getContext())
+                                .getSExtValue()));
+    }
+
+    return cgf.builder.create<cir::VecShuffleOp>(
+        cgf.getLoc(e->getSourceRange()), cgf.convertType(e->getType()), vec1,
+        vec2, cgf.builder.getArrayAttr(indices));
   }
 
   mlir::Value VisitConvertVectorExpr(ConvertVectorExpr *e) {
@@ -329,8 +352,8 @@ public:
         assert(!cir::MissingFeatures::fpConstraints());
         castKind = cir::CastKind::float_to_int;
       } else if (mlir::isa<cir::CIRFPTypeInterface>(dstTy)) {
-        cgf.getCIRGenModule().errorNYI("floating point casts");
-        return cgf.createDummyValue(src.getLoc(), dstType);
+        // TODO: split this to createFPExt/createFPTrunc
+        return builder.createFloatingCast(src, fullDstTy);
       } else {
         llvm_unreachable("Internal error: Cast to unexpected type");
       }
@@ -1761,6 +1784,14 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return builder.createCast(cgf.getLoc(ce->getSourceRange()),
                               cir::CastKind::member_ptr_to_bool, memPtr,
                               cgf.convertType(destTy));
+  }
+
+  case CK_VectorSplat: {
+    // Create a vector object and fill all elements with the same scalar value.
+    assert(destTy->isVectorType() && "CK_VectorSplat to non-vector type");
+    return builder.create<cir::VecSplatOp>(
+        cgf.getLoc(subExpr->getSourceRange()), cgf.convertType(destTy),
+        Visit(subExpr));
   }
 
   default:
