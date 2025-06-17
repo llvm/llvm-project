@@ -573,8 +573,19 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back("-Bstatic");
 
-  if (TC.getTriple().isRISCV() && Args.hasArg(options::OPT_mno_relax))
-    CmdArgs.push_back("--no-relax");
+  if (const char *LDMOption = getLDMOption(TC.getTriple(), Args)) {
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back(LDMOption);
+  } else {
+    D.Diag(diag::err_target_unknown_triple) << Triple.str();
+    return;
+  }
+
+  if (Triple.isRISCV()) {
+    CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+  }
 
   if (Triple.isARM() || Triple.isThumb()) {
     bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
