@@ -111,13 +111,13 @@ define <4 x i32> @multid_load_test() #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(3) [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 3) to ptr addrspace(3)
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(3) [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 0, i32 1) to ptr addrspace(3)
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 0, i32 4) to ptr addrspace(3)
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr addrspace(3) [[TMP9]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 0, i32 1), i32 1) to ptr addrspace(3)
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 0, i32 4), i32 1) to ptr addrspace(3)
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr addrspace(3) [[TMP11]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 0, i32 1), i32 2) to ptr addrspace(3)
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 0, i32 4), i32 2) to ptr addrspace(3)
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr addrspace(3) [[TMP13]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 0, i32 1), i32 3) to ptr addrspace(3)
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr inbounds ([36 x i32], ptr addrspace(3) @groushared2dArrayofVectors.scalarized.1dim, i32 0, i32 4), i32 3) to ptr addrspace(3)
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr addrspace(3) [[TMP15]], align 4
 ; CHECK-NEXT:    [[DOTI05:%.*]] = add i32 [[TMP2]], [[TMP10]]
 ; CHECK-NEXT:    [[DOTI16:%.*]] = add i32 [[TMP4]], [[TMP12]]
