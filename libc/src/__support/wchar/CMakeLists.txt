@@ -19,3 +19,19 @@ add_object_library(
     libc.src.__support.math_extras
     .mbstate
 )
+
+add_object_library(
+  wcrtomb
+  HDRS
+    wcrtomb.h
+  SRCS 
+    wcrtomb.cpp
+  DEPENDS
+    libc.hdr.types.char32_t
+    libc.hdr.types.size_t
+    libc.hdr.types.mbstate_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.error_or
+    .character_converter
+    .mbstate
+)

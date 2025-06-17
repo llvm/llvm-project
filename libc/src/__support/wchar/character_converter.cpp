@@ -12,6 +12,7 @@
 #include "src/__support/error_or.h"
 #include "src/__support/math_extras.h"
 #include "src/__support/wchar/mbstate.h"
+#include "src/__support/libc_errno.h" // for error numbers
 
 #include "character_converter.h"
 
@@ -51,7 +52,7 @@ int CharacterConverter::push(char32_t utf32) {
   // `utf32` contains a value that is too large to actually represent a valid
   // unicode character
   clear();
-  return -1;
+  return EILSEQ;
 }
 
 ErrorOr<char8_t> CharacterConverter::pop_utf8() {
