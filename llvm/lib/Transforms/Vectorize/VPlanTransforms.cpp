@@ -2554,6 +2554,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   const InductionDescriptor &ID = WidenIVR->getInductionDescriptor();
   Instruction::BinaryOps AddOp;
   Instruction::BinaryOps MulOp;
+  // FIXME: The newly created binary instructions should contain nsw/nuw
+  // flags, which can be found from the original scalar operations.
   VPIRFlags Flags;
   if (ID.getKind() == InductionDescriptor::IK_IntInduction) {
     AddOp = Instruction::Add;
@@ -2584,8 +2586,6 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   VPValue *SplatStart = Builder.createNaryOp(VPInstruction::Broadcast, Start);
   VPValue *SplatStep = Builder.createNaryOp(VPInstruction::Broadcast, Step);
 
-  // FIXME: The newly created binary instructions should contain nsw/nuw
-  // flags, which can be found from the original scalar operations.
   Init = Builder.createNaryOp(MulOp, {Init, SplatStep}, Flags);
   Init =
       Builder.createNaryOp(AddOp, {SplatStart, Init}, Flags, {}, "induction");
