@@ -30039,14 +30039,14 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
 
     if (Subtarget->hasSVE2p1()) {
       if (std::optional<unsigned> Lane = isDUPQMask(ShuffleMask, VT)) {
-        SDValue IID = DAG.getConstant(Intrinsic::aarch64_sve_dup_laneq, DL,
-                                      MVT::i64);
+        SDValue IID =
+            DAG.getConstant(Intrinsic::aarch64_sve_dup_laneq, DL, MVT::i64);
         return convertFromScalableVector(
-          DAG, VT, DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL,
-                               {ContainerVT, MVT::i64},
-                               {IID, Op1,
-                               DAG.getConstant(*Lane, DL, MVT::i64,
-                                               /*isTarget=*/true)}));
+            DAG, VT,
+            DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {ContainerVT, MVT::i64},
+                        {IID, Op1,
+                         DAG.getConstant(*Lane, DL, MVT::i64,
+                                         /*isTarget=*/true)}));
       }
     }
   }
