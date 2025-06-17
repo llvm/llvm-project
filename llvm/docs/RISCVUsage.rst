@@ -442,7 +442,7 @@ The current vendor extensions supported are:
   LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
 
 ``experimental-Xqccmp``
-  LLVM implements `version 0.1 of the 16-bit Push/Pop instructions and double-moves extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqccmp_extension-0.1.0>`__ by Qualcomm. All instructions are prefixed with `qc.` as described in the specification.
+  LLVM implements `version 0.3 of the 16-bit Push/Pop instructions and double-moves extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqccmp_extension-0.3.0>`__ by Qualcomm. All instructions are prefixed with `qc.` as described in the specification.
 
 ``experimental-Xqcia``
   LLVM implements `version 0.7 of the Qualcomm uC Arithmetic extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.

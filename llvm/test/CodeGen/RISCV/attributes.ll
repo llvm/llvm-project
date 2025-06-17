@@ -437,7 +437,7 @@
 ; RV32XTHEADMEMPAIR: .attribute 5, "rv32i2p1_xtheadmempair1p0"
 ; RV32XTHEADSYNC: .attribute 5, "rv32i2p1_xtheadsync1p0"
 ; RV32XWCHC: .attribute 5, "rv32i2p1_zca1p0_xwchc2p2"
-; RV32XQCCMP: .attribute 5, "rv32i2p1_zca1p0_xqccmp0p1"
+; RV32XQCCMP: .attribute 5, "rv32i2p1_zca1p0_xqccmp0p3"
 ; RV32XQCIA: .attribute 5, "rv32i2p1_xqcia0p7"
 ; RV32XQCIAC: .attribute 5, "rv32i2p1_zca1p0_xqciac0p3"
 ; RV32XQCIBI: .attribute 5, "rv32i2p1_zca1p0_xqcibi0p2"
@@ -683,7 +683,7 @@
 ; RV64SSCTR: .attribute 5, "rv64i2p1_sscsrind1p0_ssctr1p0"
 ; RV64SDEXT: .attribute 5, "rv64i2p1_sdext1p0"
 ; RV64SDTRIG: .attribute 5, "rv64i2p1_sdtrig1p0"
-; RV64XQCCMP: .attribute 5, "rv64i2p1_zca1p0_xqccmp0p1"
+; RV64XQCCMP: .attribute 5, "rv64i2p1_zca1p0_xqccmp0p3"
 
 ; RVI20U32: .attribute 5, "rv32i2p1"
 ; RVI20U64: .attribute 5, "rv64i2p1"
