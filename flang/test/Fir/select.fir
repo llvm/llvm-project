@@ -64,6 +64,6 @@ func.func @h(%a : i32) -> i32 {
    return %1 : i32
 ^bb6:
    %x = arith.addi %b4, %b3 : i32
-   // CHECK: ret i32
+   // CHECK-DAG: ret i32
    return %x : i32
 }

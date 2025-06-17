@@ -57,7 +57,7 @@ func.func @fa(%a : !fir.ref<!fir.array<100xf32>>) {
 // CHECK-SAME: ptr {{[^%]*}}%[[res:.*]], ptr {{[^%]*}}%[[arg0:.*]], i64 %[[arg1:.*]])
 func.func @b1(%arg0 : !fir.ref<!fir.char<1,?>>, %arg1 : index) -> !fir.box<!fir.char<1,?>> {
   // CHECK: %[[alloca:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }
-  // CHECK: %[[size:.*]] = mul i64 1, %[[arg1]]
+  // CHECK: %[[size:.*]] = mul i64 %[[arg1]], 1
   // CHECK: insertvalue {{.*}} undef, i64 %[[size]], 1
   // CHECK: insertvalue {{.*}} i32 20240719, 2
   // CHECK: insertvalue {{.*}} ptr %[[arg0]], 0
@@ -89,7 +89,7 @@ func.func @b2(%arg0 : !fir.ref<!fir.array<?x!fir.char<1,5>>>, %arg1 : index) -> 
 func.func @b3(%arg0 : !fir.ref<!fir.array<?x!fir.char<1,?>>>, %arg1 : index, %arg2 : index) -> !fir.box<!fir.array<?x!fir.char<1,?>>> {
   %1 = fir.shape %arg2 : (index) -> !fir.shape<1>
   // CHECK: %[[alloca:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
-  // CHECK: %[[size:.*]] = mul i64 1, %[[arg1]]
+  // CHECK: %[[size:.*]] = mul i64 %[[arg1]], 1
   // CHECK: insertvalue {{.*}} i64 %[[size]], 1
   // CHECK: insertvalue {{.*}} i32 20240719, 2
   // CHECK: insertvalue {{.*}} i64 %[[arg2]], 7, 0, 1
@@ -108,7 +108,7 @@ func.func @b4(%arg0 : !fir.ref<!fir.array<7x!fir.char<1,?>>>, %arg1 : index) -> 
   %c_7 = arith.constant 7 : index
   %1 = fir.shape %c_7 : (index) -> !fir.shape<1>
   // CHECK: %[[alloca:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
-  // CHECK:   %[[size:.*]] = mul i64 1, %[[arg1]]
+  // CHECK:   %[[size:.*]] = mul i64 %[[arg1]], 1
   // CHECK: insertvalue {{.*}} i64 %[[size]], 1
   // CHECK: insertvalue {{.*}} i32 20240719, 2
   // CHECK: insertvalue {{.*}} i64 7, 7, 0, 1

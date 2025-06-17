@@ -37,8 +37,7 @@ func.func @bar2() -> i1 {
 
 // CHECK-LABEL: @foo3
 func.func @foo3(%arg0: !fir.boxchar<1>) -> i1 {
-  // CHECK: %[[extract:.*]] = extractvalue { ptr, i64 } %{{.*}}, 0
-  // CHECK: %[[ptr:.*]] = ptrtoint ptr %[[extract]] to i64
+  // CHECK: %[[ptr:.*]] = ptrtoint ptr %0 to i64
   // CHECK: icmp ne i64 %[[ptr]], 0
   %0 = fir.is_present %arg0 : (!fir.boxchar<1>) -> i1
   return %0 : i1

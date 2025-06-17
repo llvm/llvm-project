@@ -411,6 +411,12 @@ void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
 
   // Add codegen pass pipeline.
   fir::createDefaultFIRCodeGenPassPipeline(pm, config, inputFilename);
+
+  // Run a pass to prepare for translation of delayed privatization in the
+  // context of deferred target tasks.
+  addNestedPassConditionally<mlir::LLVM::LLVMFuncOp>(pm, disableFirToLlvmIr,[&]() {
+    return mlir::LLVM::createPrepareForOMPOffloadPrivatizationPass();
+  });
 }
 
 } // namespace fir

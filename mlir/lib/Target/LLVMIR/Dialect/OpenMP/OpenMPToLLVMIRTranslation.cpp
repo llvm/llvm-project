@@ -356,14 +356,8 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("priority");
   };
   auto checkPrivate = [&todo](auto op, LogicalResult &result) {
-    if constexpr (std::is_same_v<std::decay_t<decltype(op)>, omp::TargetOp>) {
-      // Privatization is supported only for included target tasks.
-      if (!op.getPrivateVars().empty() && op.getNowait())
-        result = todo("privatization for deferred target tasks");
-    } else {
-      if (!op.getPrivateVars().empty() || op.getPrivateSyms())
-        result = todo("privatization");
-    }
+    if (!op.getPrivateVars().empty() || op.getPrivateSyms())
+      result = todo("privatization");
   };
   auto checkReduction = [&todo](auto op, LogicalResult &result) {
     if (isa<omp::TeamsOp>(op))
@@ -450,7 +444,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkDevice(op, result);
         checkInReduction(op, result);
         checkIsDevicePtr(op, result);
-        checkPrivate(op, result);
       })
       .Default([](Operation &) {
         // Assume all clauses for an operation can be translated unless they are

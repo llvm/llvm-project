@@ -96,13 +96,13 @@ func.func @_QTt1P.f2.offset(%0 : i32, %1 : i32) -> i32 {
 
 func.func private @bar(!fir.ref<!fir.char<1,?>>)
 
-// CHECK-LABEL: define void @_QPfoo(i32 %0, i32 %1)
-func.func @_QPfoo(%arg0 : i32, %arg1 : i32) {
+// CHECK-LABEL: define ptr @_QPfoo(i32 %0, i32 %1)
+func.func @_QPfoo(%arg0 : i32, %arg1 : i32) -> !fir.ref<!fir.type<_QTt1>> {
   // CHECK: %[[size:.*]] = call i64 @_QTt1P.mem.size(i32 %0, i32 %1)
   // CHECK: %[[alloc:.*]] = alloca i8, i64 %[[size]]
   %0 = fir.alloca !fir.type<_QTt1(p1:i32,p2:i32){f1:!fir.char<1,?>,f2:!fir.char<1,?>}>(%arg0, %arg1 : i32, i32)
   //%2 = fir.coordinate_of %0, f2 : (!fir.ref<!fir.type<_QTt1>>) -> !fir.ref<!fir.char<1,?>>
   %2 = fir.zero_bits !fir.ref<!fir.char<1,?>>
   fir.call @bar(%2) : (!fir.ref<!fir.char<1,?>>) -> ()
-  return
+  return %0 : !fir.ref<!fir.type<_QTt1>>
 }

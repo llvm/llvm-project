@@ -73,4 +73,16 @@ def DIScopeForLLVMFuncOpPass : Pass<"ensure-debug-info-scope-on-llvm-func", "::m
   ];
 }
 
+def PrepareForOMPOffloadPrivatizationPass : Pass<"omp-offload-privatization-prepare", "::mlir::LLVM::LLVMFuncOp"> {
+    let summary = "Prepare OpenMP maps for privatization for deferred target tasks";
+    let description = [{
+      When generating LLVMIR for privatized variables in an OpenMP offloading directive (eg. omp::TargetOp)
+      that creates a deferred target task (when the nowait clause is used), we need to copy the privatized
+      variable out of the stack of the generating task and into the heap so that the deferred target task
+      can still access it. However, if such a privatized variable is also mapped, typically the case for
+      allocatables, then the corresponding `omp::MapInfoOp` needs to be fixed up to map the new heap-allocated
+      variable and not the original variable.
+    }];
+  let dependentDialects = ["LLVM::LLVMDialect", "mlir::omp::OpenMPDialect"];
+}
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES
