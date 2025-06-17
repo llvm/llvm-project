@@ -64,7 +64,8 @@ private:
     auto DefineExternalGOTSymbolIfPresent =
         createDefineExternalSectionStartAndEndSymbolsPass(
             [&](LinkGraph &LG, Symbol &Sym) -> SectionRangeSymbolDesc {
-              if (Sym.getName() == ELFGOTSymbolName)
+              if (Sym.getName() != nullptr &&
+                  *Sym.getName() == ELFGOTSymbolName)
                 if (auto *GOTSection = G.findSectionByName(
                         systemz::GOTTableManager::getSectionName())) {
                   GOTSymbol = &Sym;
@@ -90,7 +91,7 @@ private:
 
       // Check for an existing defined symbol.
       for (auto *Sym : GOTSection->symbols())
-        if (Sym->getName() == ELFGOTSymbolName) {
+        if (Sym->getName() != nullptr && *Sym->getName() == ELFGOTSymbolName) {
           GOTSymbol = Sym;
           return Error::success();
         }
@@ -112,7 +113,7 @@ private:
     // we just need to point the GOT symbol at some address in this graph.
     if (!GOTSymbol) {
       for (auto *Sym : G.external_symbols()) {
-        if (Sym->getName() == ELFGOTSymbolName) {
+        if (Sym->getName() != nullptr && *Sym->getName() == ELFGOTSymbolName) {
           auto Blocks = G.blocks();
           if (!Blocks.empty()) {
             G.makeAbsolute(*Sym, (*Blocks.begin())->getAddress());
@@ -365,14 +366,16 @@ private:
 
 public:
   ELFLinkGraphBuilder_systemz(StringRef FileName,
-                              const object::ELFFile<ELFT> &Obj, Triple TT,
-                              SubtargetFeatures Features)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
-                                  FileName, systemz::getEdgeKindName) {}
+                              const object::ELFFile<ELFT> &Obj,
+                              std::shared_ptr<orc::SymbolStringPool> SSP,
+                              Triple TT, SubtargetFeatures Features)
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
+                                  std::move(Features), FileName,
+                                  systemz::getEdgeKindName) {}
 };
 
-Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromELFObject_systemz(MemoryBufferRef ObjectBuffer) {
+Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_systemz(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";
@@ -391,7 +394,7 @@ createLinkGraphFromELFObject_systemz(MemoryBufferRef ObjectBuffer) {
 
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64BE>>(**ELFObj);
   return ELFLinkGraphBuilder_systemz(
-             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
+             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
              (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }
