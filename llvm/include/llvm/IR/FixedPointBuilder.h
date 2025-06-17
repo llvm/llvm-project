@@ -132,6 +132,44 @@ template <class IRBuilderTy> class FixedPointBuilder {
     return Type::getFloatingPointTy(Ty->getContext(), *FloatSema);
   }
 
+  static SmallString<16> GetOutlinedFuncName(StringRef OpName, bool Saturated,
+                                             unsigned Scale) {
+    SmallString<16> OutlinedFuncName("__outlined_");
+    OutlinedFuncName += OpName;
+    OutlinedFuncName += "_fix";
+    if (Saturated)
+      OutlinedFuncName += "_sat";
+    OutlinedFuncName += "_";
+    OutlinedFuncName += std::to_string(Scale);
+    return OutlinedFuncName;
+  }
+
+  Value *CallFixedPointIntrinsicWrapper(Intrinsic::ID IID,
+                                        StringRef OutlinedFuncName,
+                                        Value *WideLHS, Value *WideRHS,
+                                        unsigned Scale) {
+    Module *M = B.GetInsertBlock()->getParent()->getParent();
+    FunctionCallee Callee =
+        M->getOrInsertFunction(OutlinedFuncName, WideLHS->getType(),
+                               WideLHS->getType(), WideRHS->getType());
+    Function *OutlinedFunc = cast<Function>(Callee.getCallee());
+    if (OutlinedFunc->empty()) {
+      BasicBlock *BB =
+          BasicBlock::Create(M->getContext(), "entry", OutlinedFunc);
+      IRBuilder<> Builder(BB);
+      Value *V = Builder.CreateIntrinsic(IID, {WideLHS->getType()},
+                                         {OutlinedFunc->getArg(0),
+                                          OutlinedFunc->getArg(1),
+                                          Builder.getInt32(Scale)});
+      Builder.CreateRet(V);
+
+      Comdat *C = M->getOrInsertComdat(OutlinedFuncName);
+      OutlinedFunc->setComdat(C);
+      OutlinedFunc->addFnAttr(Attribute::NoInline);
+    }
+    return B.CreateCall(Callee, {WideLHS, WideRHS});
+  }
+
 public:
   FixedPointBuilder(IRBuilderTy &Builder) : B(Builder) {}
 
@@ -285,8 +323,8 @@ public:
   /// \p LHSSema - The semantic of the left hand side
   /// \p RHS     - The right hand side
   /// \p RHSSema - The semantic of the right hand side
-  Value *CreateMul(Value *LHS, const FixedPointSemantics &LHSSema,
-                   Value *RHS, const FixedPointSemantics &RHSSema) {
+  Value *CreateMul(Value *LHS, const FixedPointSemantics &LHSSema, Value *RHS,
+                   const FixedPointSemantics &RHSSema, bool Outlined = false) {
     auto CommonSema = getCommonBinopSemantic(LHSSema, RHSSema);
     bool UseSigned = CommonSema.isSigned() || CommonSema.hasUnsignedPadding();
 
@@ -299,9 +337,19 @@ public:
     } else {
       IID = UseSigned ? Intrinsic::smul_fix : Intrinsic::umul_fix;
     }
-    Value *Result = B.CreateIntrinsic(
-        IID, {WideLHS->getType()},
-        {WideLHS, WideRHS, B.getInt32(CommonSema.getScale())});
+
+    Value *Result;
+    if (!Outlined) {
+      Result = B.CreateIntrinsic(
+          IID, {WideLHS->getType()},
+          {WideLHS, WideRHS, B.getInt32(CommonSema.getScale())});
+    } else {
+      auto OutlinedFuncName =
+          GetOutlinedFuncName(UseSigned ? "smul" : "umul",
+                              CommonSema.isSaturated(), CommonSema.getScale());
+      Result = CallFixedPointIntrinsicWrapper(IID, OutlinedFuncName, WideLHS,
+                                              WideRHS, CommonSema.getScale());
+    }
 
     return CreateFixedToFixed(Result, CommonSema,
                               LHSSema.getCommonSemantics(RHSSema));
@@ -313,8 +361,8 @@ public:
   /// \p LHSSema - The semantic of the left hand side
   /// \p RHS     - The right hand side
   /// \p RHSSema - The semantic of the right hand side
-  Value *CreateDiv(Value *LHS, const FixedPointSemantics &LHSSema,
-                   Value *RHS, const FixedPointSemantics &RHSSema) {
+  Value *CreateDiv(Value *LHS, const FixedPointSemantics &LHSSema, Value *RHS,
+                   const FixedPointSemantics &RHSSema, bool Outlined = false) {
     auto CommonSema = getCommonBinopSemantic(LHSSema, RHSSema);
     bool UseSigned = CommonSema.isSigned() || CommonSema.hasUnsignedPadding();
 
@@ -327,9 +375,19 @@ public:
     } else {
       IID = UseSigned ? Intrinsic::sdiv_fix : Intrinsic::udiv_fix;
     }
-    Value *Result = B.CreateIntrinsic(
-        IID, {WideLHS->getType()},
-        {WideLHS, WideRHS, B.getInt32(CommonSema.getScale())});
+
+    Value *Result;
+    if (!Outlined) {
+      Result = B.CreateIntrinsic(
+          IID, {WideLHS->getType()},
+          {WideLHS, WideRHS, B.getInt32(CommonSema.getScale())});
+    } else {
+      auto OutlinedFuncName =
+          GetOutlinedFuncName(UseSigned ? "sdiv" : "udiv",
+                              CommonSema.isSaturated(), CommonSema.getScale());
+      Result = CallFixedPointIntrinsicWrapper(IID, OutlinedFuncName, WideLHS,
+                                              WideRHS, CommonSema.getScale());
+    }
 
     return CreateFixedToFixed(Result, CommonSema,
                               LHSSema.getCommonSemantics(RHSSema));
