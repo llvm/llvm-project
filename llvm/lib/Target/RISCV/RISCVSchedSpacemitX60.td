@@ -127,6 +127,32 @@ class SMX60GetVIRedLatency<string mx> {
   );
 }
 
+// Latency for integer multiply operations with e32 (5,5,5,8 pattern)
+class SMX60GetVIMulE32Latency<string mx> {
+  int c = !cond(
+    !eq(mx, "M1") : 5,
+    !eq(mx, "M2") : 5,
+    !eq(mx, "M4") : 5,
+    !eq(mx, "M8") : 8,
+    !eq(mx, "MF2") : 5,
+    !eq(mx, "MF4") : 5,
+    !eq(mx, "MF8") : 5
+  );
+}
+
+// Latency for integer multiply operations with e64 (7,8,16,32 pattern)
+class SMX60GetVIMulE64Latency<string mx> {
+  int c = !cond(
+    !eq(mx, "M1") : 7,
+    !eq(mx, "M2") : 8,
+    !eq(mx, "M4") : 16,
+    !eq(mx, "M8") : 32,
+    !eq(mx, "MF2") : 7,
+    !eq(mx, "MF4") : 7,
+    !eq(mx, "MF8") : 7
+  );
+}
+
 def SpacemitX60Model : SchedMachineModel {
   let IssueWidth        = 2; // dual-issue
   let MicroOpBufferSize = 0; // in-order
@@ -465,10 +491,16 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVShiftI",   [SMX60_VIEU], mx, IsWorstCase>;
   }
 
-  defm "" : LMULWriteResMX<"WriteVIMulV",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIMulX",    [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIMulAddV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIMulAddX", [SMX60_VIEU], mx, IsWorstCase>;
+  // Integer multiply operations: e8/e16 have 4,4,5,8; e32 has 5,5,5,8; e64 has 7,8,16,32
+  // Since multiply operations use LMUL-only scheduling classes, we use worst-case 7,8,16,32
+  // TODO: Change WriteVIMul* to use LMULSEWSchedWrites in RISCVScheduleV.td for SEW-dependent latencies
+  defvar MulLat = SMX60GetVIMulE64Latency<mx>.c;
+  let Latency = MulLat in {
+    defm "" : LMULWriteResMX<"WriteVIMulV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMulX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMulAddV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMulAddX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 }
 
 // Widening
