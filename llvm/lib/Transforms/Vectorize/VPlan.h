@@ -2428,6 +2428,7 @@ protected:
     }
     setUnderlyingValue(I);
   }
+
 public:
   VPReductionRecipe(RecurKind RdxKind, FastMathFlags FMFs, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
