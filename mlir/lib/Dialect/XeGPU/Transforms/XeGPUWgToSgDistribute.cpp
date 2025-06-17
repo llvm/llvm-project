@@ -331,7 +331,7 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
-// This pattern transforms elementwise ops in math/arith dialect
+// This pattern transforms elementwise ops to work at subgroup level.
 struct WgToSgElementwiseOp : public ConversionPattern {
   WgToSgElementwiseOp(MLIRContext *ctx)
       : ConversionPattern(MatchAnyOpTypeTag(), /*benefit=*/1, ctx) {}
@@ -344,6 +344,8 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       return failure();
 
     auto resultType = dyn_cast<VectorType>(op->getResult(0).getType());
+    assert(resultType && "Expected result to be a VectorType");
+
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
     xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op->getResult(0));
@@ -353,8 +355,7 @@ struct WgToSgElementwiseOp : public ConversionPattern {
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
 
     size_t numVariants = operands.empty() ? 0 : operands.front().size();
-    // Only VectorType operands are supported here.
-    // TODO: Support other types.
+
     if (llvm::any_of(operands, [&](const ValueRange &operandVec) {
           return operandVec.size() != numVariants;
         }))
@@ -375,11 +376,12 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       // Copy all attributes, but update "layout_result_0" to drop
       // sgLayout/sgData
       for (auto attr : op->getAttrs()) {
-        if (!isa<xegpu::LayoutAttr>(attr.getValue()))
+        if (isa<xegpu::LayoutAttr>(attr.getValue()))
+          state.addAttribute(attr.getName(), layout.dropSgLayoutAndData());
+        else
           state.addAttribute(attr.getName(), attr.getValue());
       }
       Operation *newOp = rewriter.create(state);
-      xegpu::setLayoutAttr(newOp->getResult(0), layout.dropSgLayoutAndData());
       newResults.push_back(newOp->getResult(0));
     }
 
@@ -591,6 +593,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           return true;
 
         // Check if all operands are vectors of the same shape
+        // TODO: Support other types.
         for (Value operand : op->getOperands()) {
           VectorType operandType = dyn_cast<VectorType>(operand.getType());
           if (!operandType || operandType.getShape() != resultType.getShape()) {
