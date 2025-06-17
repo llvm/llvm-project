@@ -339,6 +339,8 @@ New Compiler Flags
 
 - New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunities.
 
+- New option ``-ignore-pch`` added to disable precompiled headers. It overrides ``-emit-pch`` and ``-include-pch``. (#GH142409, `PCHDocs <https://clang.llvm.org/docs/UsersManual.html#ignoring-a-pch-file>`_).
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -356,6 +358,8 @@ Modified Compiler Flags
 - The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
 
 - The ``-fchar8_t`` flag is no longer considered in non-C++ languages modes. (#GH55373)
+
+- The ``-fveclib=libmvec`` option now supports AArch64 targets (requires GLIBC 2.40 or newer).
 
 Removed Compiler Flags
 -------------------------
