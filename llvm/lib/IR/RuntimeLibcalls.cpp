@@ -393,8 +393,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::OGT_F128, "__gtkf2");
     setLibcallName(RTLIB::UO_F128, "__unordkf2");
 
-    setLongDoubleIsF128Libm(*this);
-
     // TODO: Do the finite only functions exist?
     setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/false);
 
