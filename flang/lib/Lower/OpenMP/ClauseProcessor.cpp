@@ -858,9 +858,11 @@ bool ClauseProcessor::processCopyprivate(
 
     // CopyPrivate variables must be passed by reference. However, in the case
     // of assumed shapes/vla the type is not a !fir.ref, but a !fir.box.
-    // In these cases to retrieve the appropriate !fir.ref<!fir.box<...>> to
-    // access the data we need we must perform an alloca and then store to it
-    // and retrieve the data from the new alloca.
+    // In the case of character types, the passed in type can also be
+    // !fir.boxchar. In these cases to retrieve the appropriate
+    // !fir.ref<!fir.box<...>> or !fir.ref<!fir.boxchar<..>> to access the data
+    // we need we must perform an alloca and then store to it and retrieve the
+    // data from the new alloca.
     if (mlir::isa<fir::BaseBoxType>(symType) ||
         mlir::isa<fir::BoxCharType>(symType)) {
       fir::FirOpBuilder &builder = converter.getFirOpBuilder();

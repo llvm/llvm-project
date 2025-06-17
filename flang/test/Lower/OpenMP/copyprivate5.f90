@@ -10,8 +10,8 @@
 ! CHECK:    %[[RSRC:.*]] = fir.load %arg1 : [[TYPE]]
 ! CHECK:    %[[UDST:.*]]:2 = fir.unboxchar %[[RDST:.*]] : ([[UTYPE:!fir.boxchar<1>]]) -> ([[RTYPE:!fir.ref<!fir.char<1,\?>>]], [[ITYPE:index]])
 ! CHECK:    %[[USRC:.*]]:2 = fir.unboxchar %[[RSRC:.*]] : ([[UTYPE]]) -> ([[RTYPE]], [[ITYPE]])
-! CHECK:    %[[DST:.*]]:2 = hlfir.declare %[[UDST:.*]]#0 typeparams %[[UDST:.*]]#1 {uniq_name = "_copy_boxchar_c8xU_dst"} : ([[RTYPE]], [[ITYPE]]) -> ([[UTYPE]], [[RTYPE]])
-! CHECK:    %[[SRC:.*]]:2 = hlfir.declare %[[USRC:.*]]#0 typeparams %[[UDST:.*]]#1 {uniq_name = "_copy_boxchar_c8xU_src"} : ([[RTYPE]], [[ITYPE]]) -> ([[UTYPE]], [[RTYPE]])
+! CHECK:    %[[DST:.*]]:2 = hlfir.declare %[[UDST:.*]]#0 typeparams %[[UDST:.*]]#1 {uniq_name = "[[NAME1:.*]]"} : ([[RTYPE]], [[ITYPE]]) -> ([[UTYPE]], [[RTYPE]])
+! CHECK:    %[[SRC:.*]]:2 = hlfir.declare %[[USRC:.*]]#0 typeparams %[[UDST:.*]]#1 {uniq_name = "[[NAME2:.*]]"} : ([[RTYPE]], [[ITYPE]]) -> ([[UTYPE]], [[RTYPE]])
 ! CHECK:    hlfir.assign %[[SRC:.*]]#0 to %[[DST:.*]]#0 : [[UTYPE]], [[UTYPE]]
 ! CHECK:    return
 ! CHECK:  }
