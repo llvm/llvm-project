@@ -138,9 +138,9 @@ entry:
   ret void
 }
 
-define void @PR12470_inner(i16 signext %p1) nounwind uwtable {
+define void @PR12470_inner(i16 signext %p1, i1 %arg) nounwind uwtable {
 entry:
-  br i1 undef, label %cond.true, label %cond.false
+  br i1 %arg, label %cond.true, label %cond.false
 
 cond.true:
   br label %cond.end
@@ -161,7 +161,7 @@ if.end5:
   ret void
 }
 
-define void @PR12470_outer() {
+define void @PR12470_outer(i1 %arg) {
 ; This previously crashed during inliner cleanup and folding inner return
 ; instructions. Check that we don't crash and we produce a function with a single
 ; return instruction due to merging the returns of the inlined function.
@@ -172,16 +172,16 @@ define void @PR12470_outer() {
 ; CHECK: }
 
 entry:
-  call void @PR12470_inner(i16 signext 1)
+  call void @PR12470_inner(i16 signext 1, i1 1)
   ret void
 }
 
-define void @crasher_inner() nounwind uwtable {
+define void @crasher_inner(i1 %arg) nounwind uwtable {
 entry:
   br i1 false, label %for.end28, label %for.body6
 
 for.body6:
-  br i1 undef, label %for.body6, label %for.cond12.for.inc26_crit_edge
+  br i1 %arg, label %for.body6, label %for.cond12.for.inc26_crit_edge
 
 for.cond12.for.inc26_crit_edge:
   br label %for.body6.1
@@ -190,13 +190,13 @@ for.end28:
   ret void
 
 for.body6.1:
-  br i1 undef, label %for.body6.1, label %for.cond12.for.inc26_crit_edge.1
+  br i1 %arg, label %for.body6.1, label %for.cond12.for.inc26_crit_edge.1
 
 for.cond12.for.inc26_crit_edge.1:
   br label %for.body6.2
 
 for.body6.2:
-  br i1 undef, label %for.body6.2, label %for.cond12.for.inc26_crit_edge.2
+  br i1 %arg, label %for.body6.2, label %for.cond12.for.inc26_crit_edge.2
 
 for.cond12.for.inc26_crit_edge.2:
   br label %for.end28
@@ -209,6 +209,6 @@ define void @crasher_outer() {
 ; CHECK-NOT: ret
 ; CHECK: }
 entry:
-  tail call void @crasher_inner()
+  tail call void @crasher_inner(i1 1)
   ret void
 }

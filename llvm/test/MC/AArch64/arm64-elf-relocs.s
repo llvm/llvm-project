@@ -331,6 +331,19 @@ trickQuestion:
 // CHECK-OBJ-LP64: R_AARCH64_GOT_LD_PREL19 sym
 // CHECK-OBJ-LP64: R_AARCH64_GOT_LD_PREL19 sym
 
+   adr x24, #:got_auth:sym
+   adr x24, :got_auth:sym
+   ldr x24, #:got_auth:sym
+   ldr x24, :got_auth:sym
+// CHECK: adr x24, :got_auth:sym
+// CHECK: adr x24, :got_auth:sym
+// CHECK: ldr x24, :got_auth:sym
+// CHECK: ldr x24, :got_auth:sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_GOT_ADR_PREL_LO21 sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_GOT_ADR_PREL_LO21 sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_GOT_LD_PREL19 sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_GOT_LD_PREL19 sym
+
 // GOT relocations referencing local symbols are not converted to reference
 // STT_SECTION symbols. https://github.com/llvm/llvm-project/issues/63418
   ldr x0, [x0, :got_lo12:local0]
@@ -345,6 +358,25 @@ trickQuestion:
 // CHECK-OBJ-LP64-NEXT: R_AARCH64_LD64_GOT_LO12_NC local1{{$}}
 // CHECK-OBJ-LP64-NEXT: R_AARCH64_LD64_GOTPAGE_LO15 local2{{$}}
 // CHECK-OBJ-LP64-NEXT: R_AARCH64_ADR_GOT_PAGE local3{{$}}
+
+   add x5, x0, #:tlsdesc_auth_lo12:sym
+// CHECK: add x5, x0, :tlsdesc_auth_lo12:sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_TLSDESC_ADD_LO12 sym
+
+   add x5, x0, #:tlsdesc_auth_lo12:sym+70
+// CHECK: add x5, x0, :tlsdesc_auth_lo12:sym+70
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_TLSDESC_ADD_LO12 sym+0x46
+
+   adrp x2, :tlsdesc_auth:sym
+// CHECK: adrp x2, :tlsdesc_auth:sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_TLSDESC_ADR_PAGE21 sym
+
+   ldr x24, [x23, #:tlsdesc_auth_lo12:sym]
+   ldr d22, [x21, :tlsdesc_auth_lo12:sym]
+// CHECK: ldr x24, [x23, :tlsdesc_auth_lo12:sym]
+// CHECK: ldr d22, [x21, :tlsdesc_auth_lo12:sym]
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_TLSDESC_LD64_LO12 sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_TLSDESC_LD64_LO12 sym
 
 .data
 local0: .long 0

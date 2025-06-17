@@ -32,8 +32,8 @@ modes are:
   including heuristic checks that might have significant performance overhead as
   well as internal library assertions. This mode should be used in
   non-production environments (such as test suites, CI, or local development).
-  We don’t commit to a particular level of performance in this mode and it’s
-  *not* intended to be used in production.
+  We do not commit to a particular level of performance in this mode.
+  In particular, this mode is *not* intended to be used in production.
 
 .. note::
 
@@ -155,13 +155,13 @@ easier to reason about the high-level semantics of a hardening mode.
   in the library -- whatever the consequences are, they will happen in the user
   code.
 
-- ``pedantic`` -- checks preconditions that are imposed by the Standard, but
-  violating which happens to be benign in libc++.
+- ``pedantic`` -- checks preconditions that are imposed by the C++ standard,
+  but violating which happens to be benign in libc++.
 
 - ``semantic-requirement`` -- checks that the given argument satisfies the
-  semantic requirements imposed by the Standard. Typically, there is no simple
-  way to completely prove that a semantic requirement is satisfied; thus, this
-  would often be a heuristic check and it might be quite expensive.
+  semantic requirements imposed by the C++ standard. Typically, there is no
+  simple way to completely prove that a semantic requirement is satisfied;
+  thus, this would often be a heuristic check and it might be quite expensive.
 
 - ``internal`` -- checks that internal invariants of the library hold. These
   assertions don't depend on user input.
@@ -239,7 +239,7 @@ Mapping between the hardening modes and the assertion categories
 
 .. note::
 
-  The categories enabled by each mode are subject to change and users should not
+  The categories enabled by each mode are subject to change. Users should not
   rely on the precise assertions enabled by a mode at a given point in time.
   However, the library does guarantee to keep the hardening modes stable and
   to fulfill the semantics documented here.
@@ -248,13 +248,11 @@ Hardening assertion failure
 ===========================
 
 In production modes (``fast`` and ``extensive``), a hardening assertion failure
-immediately ``_traps <https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic>``
+immediately ``_traps <https://clang.llvm.org/docs/LanguageExtensions.html#builtin-verbose-trap>``
 the program. This is the safest approach that also minimizes the code size
 penalty as the failure handler maps to a single instruction. The downside is
 that the failure provides no additional details other than the stack trace
 (which might also be affected by optimizations).
-
-TODO(hardening): describe ``__builtin_verbose_trap`` once we can use it.
 
 In the ``debug`` mode, an assertion failure terminates the program in an
 unspecified manner and also outputs the associated error message to the error
@@ -311,7 +309,10 @@ ABI configuration.
 ABI options
 -----------
 
-Vendors can use the following ABI options to enable additional hardening checks:
+Vendors can use some ABI options at CMake configuration time (when building libc++
+itself) to enable additional hardening checks. This is done by passing these
+macros as ``-DLIBCXX_ABI_DEFINES="_LIBCPP_ABI_FOO;_LIBCPP_ABI_BAR;etc"`` at
+CMake configuration time. The available options are:
 
 - ``_LIBCPP_ABI_BOUNDED_ITERATORS`` -- changes the iterator type of select
   containers (see below) to a bounded iterator that keeps track of whether it's
@@ -341,7 +342,7 @@ Vendors can use the following ABI options to enable additional hardening checks:
 
   ABI impact: changes the iterator type of ``vector`` (except ``vector<bool>``).
 
-- ``_LIBCPP_ABI_BOUNDED_UNIQUE_PTR``` -- tracks the bounds of the array stored inside
+- ``_LIBCPP_ABI_BOUNDED_UNIQUE_PTR`` -- tracks the bounds of the array stored inside
   a ``std::unique_ptr<T[]>``, allowing it to trap when accessed out-of-bounds. This
   requires the ``std::unique_ptr`` to be created using an API like ``std::make_unique``
   or ``std::make_unique_for_overwrite``, otherwise the bounds information is not available
@@ -407,7 +408,7 @@ Hardened containers status
       - ✅
       - ❌
     * - ``forward_list``
-      - ❌
+      - ✅
       - ❌
     * - ``deque``
       - ✅
@@ -458,7 +459,7 @@ Hardened containers status
       - Partial
       - N/A
     * - ``bitset``
-      - ❌
+      - ✅
       - N/A
 
 Note: for ``vector`` and ``string``, the iterator does not check for

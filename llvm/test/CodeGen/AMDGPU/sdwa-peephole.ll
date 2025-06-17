@@ -873,20 +873,20 @@ define amdgpu_kernel void @mul_v8half(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v13, 16, v5
 ; NOSDWA-NEXT:    v_mul_f16_e32 v1, v5, v1
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
-; NOSDWA-NEXT:    v_lshrrev_b32_e32 v14, 16, v4
 ; NOSDWA-NEXT:    v_mul_f16_e32 v0, v4, v0
-; NOSDWA-NEXT:    v_mul_f16_e32 v4, v11, v10
+; NOSDWA-NEXT:    v_lshrrev_b32_e32 v4, 16, v4
+; NOSDWA-NEXT:    v_mul_f16_e32 v10, v11, v10
 ; NOSDWA-NEXT:    v_mul_f16_e32 v7, v12, v7
 ; NOSDWA-NEXT:    v_mul_f16_e32 v6, v13, v6
-; NOSDWA-NEXT:    v_mul_f16_e32 v5, v14, v5
-; NOSDWA-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; NOSDWA-NEXT:    v_mul_f16_e32 v4, v4, v5
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v5, 16, v10
 ; NOSDWA-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; NOSDWA-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; NOSDWA-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; NOSDWA-NEXT:    v_or_b32_e32 v3, v3, v4
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; NOSDWA-NEXT:    v_or_b32_e32 v3, v3, v5
 ; NOSDWA-NEXT:    v_or_b32_e32 v2, v2, v7
 ; NOSDWA-NEXT:    v_or_b32_e32 v1, v1, v6
-; NOSDWA-NEXT:    v_or_b32_e32 v0, v0, v5
+; NOSDWA-NEXT:    v_or_b32_e32 v0, v0, v4
 ; NOSDWA-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -1787,15 +1787,14 @@ define amdgpu_kernel void @add_bb_v2i16(ptr addrspace(1) %out, ptr addrspace(1) 
 ; NOSDWA-NEXT:    flat_load_dword v1, v[0:1]
 ; NOSDWA-NEXT:    flat_load_dword v2, v[2:3]
 ; NOSDWA-NEXT:    v_mov_b32_e32 v0, s0
-; NOSDWA-NEXT:    s_waitcnt vmcnt(1)
-; NOSDWA-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(0)
-; NOSDWA-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
+; NOSDWA-NEXT:    v_add_u32_e32 v3, vcc, v1, v2
+; NOSDWA-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; NOSDWA-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; NOSDWA-NEXT:    v_add_u32_e32 v1, vcc, v1, v2
-; NOSDWA-NEXT:    v_add_u32_e32 v2, vcc, v3, v4
-; NOSDWA-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; NOSDWA-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; NOSDWA-NEXT:    v_or_b32_e32 v2, v1, v2
+; NOSDWA-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; NOSDWA-NEXT:    v_or_b32_e32 v2, v3, v1
 ; NOSDWA-NEXT:    v_mov_b32_e32 v1, s1
 ; NOSDWA-NEXT:    flat_store_dword v[0:1], v2
 ; NOSDWA-NEXT:    s_endpgm
@@ -1813,9 +1812,9 @@ define amdgpu_kernel void @add_bb_v2i16(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX89-NEXT:    flat_load_dword v2, v[2:3]
 ; GFX89-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
-; GFX89-NEXT:    v_add_u32_sdwa v3, vcc, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX89-NEXT:    v_add_u32_e32 v1, vcc, v1, v2
-; GFX89-NEXT:    v_or_b32_sdwa v2, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX89-NEXT:    v_add_u32_e32 v3, vcc, v1, v2
+; GFX89-NEXT:    v_add_u32_sdwa v1, vcc, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX89-NEXT:    v_or_b32_sdwa v2, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX89-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX89-NEXT:    flat_store_dword v[0:1], v2
 ; GFX89-NEXT:    s_endpgm
@@ -1992,13 +1991,13 @@ entry:
   %tmp7 = extractelement <8 x i8> %tmp, i32 6
   %tmp8 = extractelement <8 x i8> %tmp, i32 7
 
-  %tmp9 = insertelement <2 x i8> undef, i8 %tmp1, i32 0
+  %tmp9 = insertelement <2 x i8> poison, i8 %tmp1, i32 0
   %tmp10 = insertelement <2 x i8> %tmp9, i8 %tmp2, i32 1
-  %tmp11 = insertelement <2 x i8> undef, i8 %tmp3, i32 0
+  %tmp11 = insertelement <2 x i8> poison, i8 %tmp3, i32 0
   %tmp12 = insertelement <2 x i8> %tmp11, i8 %tmp4, i32 1
-  %tmp13 = insertelement <2 x i8> undef, i8 %tmp5, i32 0
+  %tmp13 = insertelement <2 x i8> poison, i8 %tmp5, i32 0
   %tmp14 = insertelement <2 x i8> %tmp13, i8 %tmp6, i32 1
-  %tmp15 = insertelement <2 x i8> undef, i8 %tmp7, i32 0
+  %tmp15 = insertelement <2 x i8> poison, i8 %tmp7, i32 0
   %tmp16 = insertelement <2 x i8> %tmp15, i8 %tmp8, i32 1
 
   %tmp17 = shufflevector <2 x i8> %tmp10, <2 x i8> %tmp12, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -2015,13 +2014,13 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; NOSDWA-LABEL: sdwa_crash_inlineasm_def:
 ; NOSDWA:       ; %bb.0: ; %bb
 ; NOSDWA-NEXT:    s_mov_b32 s0, 0xffff
+; NOSDWA-NEXT:    s_and_b64 vcc, exec, -1
+; NOSDWA-NEXT:  .LBB21_1: ; %bb1
+; NOSDWA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NOSDWA-NEXT:    ;;#ASMSTART
 ; NOSDWA-NEXT:    v_and_b32_e32 v0, s0, v0
 ; NOSDWA-NEXT:    ;;#ASMEND
 ; NOSDWA-NEXT:    v_or_b32_e32 v0, 0x10000, v0
-; NOSDWA-NEXT:    s_and_b64 vcc, exec, -1
-; NOSDWA-NEXT:  .LBB21_1: ; %bb1
-; NOSDWA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NOSDWA-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(0)
 ; NOSDWA-NEXT:    s_mov_b64 vcc, vcc
@@ -2032,13 +2031,13 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; GFX89-LABEL: sdwa_crash_inlineasm_def:
 ; GFX89:       ; %bb.0: ; %bb
 ; GFX89-NEXT:    s_mov_b32 s0, 0xffff
+; GFX89-NEXT:    s_and_b64 vcc, exec, -1
+; GFX89-NEXT:  .LBB21_1: ; %bb1
+; GFX89-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX89-NEXT:    ;;#ASMSTART
 ; GFX89-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GFX89-NEXT:    ;;#ASMEND
 ; GFX89-NEXT:    v_or_b32_e32 v0, 0x10000, v0
-; GFX89-NEXT:    s_and_b64 vcc, exec, -1
-; GFX89-NEXT:  .LBB21_1: ; %bb1
-; GFX89-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX89-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    s_mov_b64 vcc, vcc
@@ -2049,13 +2048,13 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; GFX9-LABEL: sdwa_crash_inlineasm_def:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_mov_b32 s0, 0xffff
+; GFX9-NEXT:    s_and_b64 vcc, exec, -1
+; GFX9-NEXT:  .LBB21_1: ; %bb1
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    v_or_b32_e32 v0, 0x10000, v0
-; GFX9-NEXT:    s_and_b64 vcc, exec, -1
-; GFX9-NEXT:  .LBB21_1: ; %bb1
-; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_mov_b64 vcc, vcc
@@ -2066,13 +2065,13 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; GFX10-LABEL: sdwa_crash_inlineasm_def:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_mov_b32 s0, 0xffff
+; GFX10-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX10-NEXT:  .LBB21_1: ; %bb1
+; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    v_or_b32_e32 v0, 0x10000, v0
-; GFX10-NEXT:    s_mov_b32 vcc_lo, exec_lo
-; GFX10-NEXT:  .LBB21_1: ; %bb1
-; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_cbranch_vccnz .LBB21_1
@@ -2082,18 +2081,18 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb11, %bb
-  %tmp = phi <2 x i32> [ %tmp12, %bb11 ], [ undef, %bb ]
+  %tmp = phi <2 x i32> [ %tmp12, %bb11 ], [ poison, %bb ]
   br i1 true, label %bb2, label %bb11
 
 bb2:                                              ; preds = %bb1
-  %tmp3 = call i32 asm "v_and_b32_e32 $0, $1, $2", "=v,s,v"(i32 65535, i32 undef) #1
+  %tmp3 = call i32 asm "v_and_b32_e32 $0, $1, $2", "=v,s,v"(i32 65535, i32 poison) #1
   %tmp5 = or i32 %tmp3, 65536
   %tmp6 = insertelement <2 x i32> %tmp, i32 %tmp5, i64 0
   br label %bb11
 
 bb11:                                             ; preds = %bb10, %bb2
   %tmp12 = phi <2 x i32> [ %tmp6, %bb2 ], [ %tmp, %bb1 ]
-  store volatile <2 x i32> %tmp12, ptr addrspace(1) undef
+  store volatile <2 x i32> %tmp12, ptr addrspace(1) poison
   br label %bb1
 }
 
@@ -2101,16 +2100,18 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; NOSDWA-LABEL: crash_lshlrevb16_not_reg_op:
 ; NOSDWA:       ; %bb.0: ; %bb0
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; NOSDWA-NEXT:    s_bitset1_b32 s4, 8
+; NOSDWA-NEXT:    s_and_b32 s6, s4, 0x1ff
 ; NOSDWA-NEXT:    s_mov_b64 s[4:5], 0
 ; NOSDWA-NEXT:    s_and_b64 vcc, exec, -1
 ; NOSDWA-NEXT:  .LBB22_1: ; %bb1
 ; NOSDWA-NEXT:    ; =>This Inner Loop Header: Depth=1
-; NOSDWA-NEXT:    s_lshl_b32 s6, s4, 3
+; NOSDWA-NEXT:    s_lshl_b32 s7, s4, 3
 ; NOSDWA-NEXT:    v_mov_b32_e32 v0, s4
-; NOSDWA-NEXT:    s_lshr_b32 s6, 0x100, s6
+; NOSDWA-NEXT:    s_lshr_b32 s7, s6, s7
 ; NOSDWA-NEXT:    v_mov_b32_e32 v1, s5
 ; NOSDWA-NEXT:    s_mov_b64 s[4:5], 1
-; NOSDWA-NEXT:    v_mov_b32_e32 v2, s6
+; NOSDWA-NEXT:    v_mov_b32_e32 v2, s7
 ; NOSDWA-NEXT:    flat_store_byte v[0:1], v2
 ; NOSDWA-NEXT:    s_mov_b64 vcc, vcc
 ; NOSDWA-NEXT:    s_cbranch_vccnz .LBB22_1
@@ -2121,16 +2122,18 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; GFX89-LABEL: crash_lshlrevb16_not_reg_op:
 ; GFX89:       ; %bb.0: ; %bb0
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX89-NEXT:    s_bitset1_b32 s4, 8
+; GFX89-NEXT:    s_and_b32 s6, s4, 0x1ff
 ; GFX89-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX89-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX89-NEXT:  .LBB22_1: ; %bb1
 ; GFX89-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX89-NEXT:    s_lshl_b32 s6, s4, 3
+; GFX89-NEXT:    s_lshl_b32 s7, s4, 3
 ; GFX89-NEXT:    v_mov_b32_e32 v0, s4
-; GFX89-NEXT:    s_lshr_b32 s6, 0x100, s6
+; GFX89-NEXT:    s_lshr_b32 s7, s6, s7
 ; GFX89-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX89-NEXT:    s_mov_b64 s[4:5], 1
-; GFX89-NEXT:    v_mov_b32_e32 v2, s6
+; GFX89-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX89-NEXT:    flat_store_byte v[0:1], v2
 ; GFX89-NEXT:    s_mov_b64 vcc, vcc
 ; GFX89-NEXT:    s_cbranch_vccnz .LBB22_1
@@ -2141,16 +2144,18 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; GFX9-LABEL: crash_lshlrevb16_not_reg_op:
 ; GFX9:       ; %bb.0: ; %bb0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_bitset1_b32 s4, 8
+; GFX9-NEXT:    s_and_b32 s6, s4, 0x1ff
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX9-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX9-NEXT:  .LBB22_1: ; %bb1
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_lshl_b32 s6, s4, 3
+; GFX9-NEXT:    s_lshl_b32 s7, s4, 3
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
-; GFX9-NEXT:    s_lshr_b32 s6, 0x100, s6
+; GFX9-NEXT:    s_lshr_b32 s7, s6, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 1
-; GFX9-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX9-NEXT:    flat_store_byte v[0:1], v2
 ; GFX9-NEXT:    s_mov_b64 vcc, vcc
 ; GFX9-NEXT:    s_cbranch_vccnz .LBB22_1
@@ -2161,14 +2166,16 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; GFX10-LABEL: crash_lshlrevb16_not_reg_op:
 ; GFX10:       ; %bb.0: ; %bb0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b64 s[4:5], 0
+; GFX10-NEXT:    s_bitset1_b32 s4, 8
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX10-NEXT:    s_and_b32 s6, s4, 0x1ff
+; GFX10-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX10-NEXT:  .LBB22_1: ; %bb1
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    s_lshl_b32 s6, s4, 3
+; GFX10-NEXT:    s_lshl_b32 s7, s4, 3
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s5
-; GFX10-NEXT:    s_lshr_b32 s4, 0x100, s6
+; GFX10-NEXT:    s_lshr_b32 s4, s6, s7
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX10-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX10-NEXT:    flat_store_byte v[0:1], v2

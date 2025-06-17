@@ -367,7 +367,7 @@ func.func @subgroup_reduce_cluster_stride_without_size(%arg0 : vector<4xf32>) {
 // -----
 
 func.func @subgroup_reduce_bad_type(%arg0 : vector<2x2xf32>) {
-  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float or vector of}}
+  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float or fixed-length vector of}}
   %res = gpu.subgroup_reduce add %arg0 : (vector<2x2xf32>) -> vector<2x2xf32>
   return
 }
@@ -375,7 +375,7 @@ func.func @subgroup_reduce_bad_type(%arg0 : vector<2x2xf32>) {
 // -----
 
 func.func @subgroup_reduce_bad_type_scalable(%arg0 : vector<[2]xf32>) {
-  // expected-error@+1 {{is not compatible with scalable vector types}}
+  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float or fixed-length vector of}}
   %res = gpu.subgroup_reduce add %arg0 : (vector<[2]xf32>) -> vector<[2]xf32>
   return
 }
@@ -463,8 +463,16 @@ func.func @shuffle_mismatching_type(%arg0 : f32, %arg1 : i32, %arg2 : i32) {
 // -----
 
 func.func @shuffle_unsupported_type(%arg0 : index, %arg1 : i32, %arg2 : i32) {
-  // expected-error@+1 {{op operand #0 must be Integer or Float or vector of Integer or Float values of ranks 1, but got 'index'}}
+  // expected-error@+1 {{op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1, but got 'index'}}
   %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : index
+  return
+}
+
+// -----
+
+func.func @shuffle_unsupported_type_vec(%arg0 : vector<[4]xf32>, %arg1 : i32, %arg2 : i32) {
+  // expected-error@+1 {{op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1, but got 'vector<[4]xf32>'}}
+  %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : vector<[4]xf32>
   return
 }
 
@@ -877,3 +885,89 @@ gpu.binary @binary [#gpu.object<#rocdl.target<chip = "gfx900">,
     ]>,
     bin = "BLOB">
   ]
+
+// -----
+
+func.func @warp_wrong_num_outputs(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected same number of yield operands and return values.}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[64] -> (vector<4xi32>) {
+  }
+  return
+}
+
+// -----
+
+func.func @warp_wrong_num_inputs(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected same number op arguments and block arguments.}}
+  gpu.warp_execute_on_lane_0(%laneid)[64] {
+  ^bb0(%arg0 : vector<128xi32>) :
+  }
+  return
+}
+
+// -----
+
+func.func @warp_wrong_return_distribution(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op incompatible distribution dimensions from 'vector<128xi32>' to 'vector<4xi32>'}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[64] -> (vector<4xi32>) {
+    %0 = arith.constant dense<2>: vector<128xi32>
+    gpu.yield %0 : vector<128xi32>
+  }
+  return
+}
+
+
+// -----
+
+func.func @warp_wrong_arg_distribution(%laneid: index, %v0 : vector<4xi32>) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op incompatible distribution dimensions from 'vector<128xi32>' to 'vector<4xi32>'}}
+  gpu.warp_execute_on_lane_0(%laneid)[64]
+  args(%v0 : vector<4xi32>) {
+   ^bb0(%arg0 : vector<128xi32>) :
+  }
+  return
+}
+
+// -----
+
+func.func @warp_2_distributed_dims(%laneid: index) {
+  // expected-error@+1 {{incompatible distribution dimensions from 'vector<128x128xi32>' to 'vector<4x4xi32>' with warp size = 32}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x4xi32>) {
+    %0 = arith.constant dense<2>: vector<128x128xi32>
+    gpu.yield %0 : vector<128x128xi32>
+  }
+  return
+}
+
+// -----
+
+func.func @warp_2_distributed_dims(%laneid: index) {
+  // expected-error@+1 {{expected expanded vector dimension #1 (8) to be a multipler of the distributed vector dimension (3)}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x3xi32>) {
+    %0 = arith.constant dense<2>: vector<4x8xi32>
+    gpu.yield %0 : vector<4x8xi32>
+  }
+  return
+}
+
+// -----
+
+func.func @warp_mismatch_rank(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected distributed vectors to have same rank and element type.}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x4xi32>) {
+    %0 = arith.constant dense<2>: vector<128xi32>
+    gpu.yield %0 : vector<128xi32>
+  }
+  return
+}
+
+// -----
+
+func.func @warp_mismatch_rank(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected vector type for distributed operands.}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (i32) {
+    %0 = arith.constant dense<2>: vector<128xi32>
+    gpu.yield %0 : vector<128xi32>
+  }
+  return
+}

@@ -28,6 +28,14 @@ int v __attribute__((visibility("hidden")));
 // CHECK: char *PR24565() __attribute__((malloc))
 char *PR24565() __attribute__((__malloc__));
 
+void my_cleanup_func(char *);
+
+// using __attribute__(malloc()) with args is currently ignored by Clang
+// CHECK: char *PR52265_a()
+__attribute__((malloc(my_cleanup_func))) char *PR52265_a();
+// CHECK: char *PR52265_b()
+__attribute__((malloc(my_cleanup_func, 1))) char *PR52265_b();
+
 // CHECK: class __attribute__((consumable("unknown"))) AttrTester1
 class __attribute__((consumable(unknown))) AttrTester1 {
   // CHECK: void callableWhen() __attribute__((callable_when("unconsumed", "consumed")));

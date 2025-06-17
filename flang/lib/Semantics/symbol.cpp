@@ -144,6 +144,52 @@ llvm::raw_ostream &operator<<(
       os << ' ' << x;
     }
   }
+  if (!x.openACCRoutineInfos_.empty()) {
+    os << " openACCRoutineInfos:";
+    for (const auto &x : x.openACCRoutineInfos_) {
+      os << x;
+    }
+  }
+  return os;
+}
+
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const OpenACCRoutineDeviceTypeInfo &x) {
+  if (x.dType() != common::OpenACCDeviceType::None) {
+    os << " deviceType(" << common::EnumToString(x.dType()) << ')';
+  }
+  if (x.isSeq()) {
+    os << " seq";
+  }
+  if (x.isVector()) {
+    os << " vector";
+  }
+  if (x.isWorker()) {
+    os << " worker";
+  }
+  if (x.isGang()) {
+    os << " gang(" << x.gangDim() << ')';
+  }
+  if (const auto *bindName{x.bindName()}) {
+    if (const auto &symbol{std::get_if<std::string>(bindName)}) {
+      os << " bindName(\"" << *symbol << "\")";
+    } else {
+      const SymbolRef s{std::get<SymbolRef>(*bindName)};
+      os << " bindName(" << s->name() << ")";
+    }
+  }
+  return os;
+}
+
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const OpenACCRoutineInfo &x) {
+  if (x.isNohost()) {
+    os << " nohost";
+  }
+  os << static_cast<const OpenACCRoutineDeviceTypeInfo &>(x);
+  for (const auto &d : x.deviceTypeInfos_) {
+    os << d;
+  }
   return os;
 }
 
@@ -155,6 +201,7 @@ void EntityDetails::set_type(const DeclTypeSpec &type) {
 void AssocEntityDetails::set_rank(int rank) { rank_ = rank; }
 void AssocEntityDetails::set_IsAssumedSize() { rank_ = isAssumedSize; }
 void AssocEntityDetails::set_IsAssumedRank() { rank_ = isAssumedRank; }
+void AssocEntityDetails::set_isTypeGuard(bool yes) { isTypeGuard_ = yes; }
 void EntityDetails::ReplaceType(const DeclTypeSpec &type) { type_ = &type; }
 
 ObjectEntityDetails::ObjectEntityDetails(EntityDetails &&d)
@@ -177,11 +224,11 @@ ProcEntityDetails::ProcEntityDetails(EntityDetails &&d)
     : EntityDetails(std::move(d)) {}
 
 UseErrorDetails::UseErrorDetails(const UseDetails &useDetails) {
-  add_occurrence(useDetails.location(), *GetUsedModule(useDetails).scope());
+  add_occurrence(useDetails.location(), useDetails.symbol());
 }
 UseErrorDetails &UseErrorDetails::add_occurrence(
-    const SourceName &location, const Scope &module) {
-  occurrences_.push_back(std::make_pair(location, &module));
+    const SourceName &location, const Symbol &used) {
+  occurrences_.push_back(std::make_pair(location, &used));
   return *this;
 }
 
@@ -245,8 +292,7 @@ void GenericDetails::CopyFrom(const GenericDetails &from) {
 // This is primarily for debugging.
 std::string DetailsToString(const Details &details) {
   return common::visit(
-      common::visitors{
-          [](const UnknownDetails &) { return "Unknown"; },
+      common::visitors{[](const UnknownDetails &) { return "Unknown"; },
           [](const MainProgramDetails &) { return "MainProgram"; },
           [](const ModuleDetails &) { return "Module"; },
           [](const SubprogramDetails &) { return "Subprogram"; },
@@ -265,7 +311,7 @@ std::string DetailsToString(const Details &details) {
           [](const TypeParamDetails &) { return "TypeParam"; },
           [](const MiscDetails &) { return "Misc"; },
           [](const AssocEntityDetails &) { return "AssocEntity"; },
-      },
+          [](const UserReductionDetails &) { return "UserReductionDetails"; }},
       details);
 }
 
@@ -298,6 +344,9 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
             },
             [&](const HostAssocDetails &) {
               return this->has<HostAssocDetails>();
+            },
+            [&](const UserReductionDetails &) {
+              return this->has<UserReductionDetails>();
             },
             [](const auto &) { return false; },
         },
@@ -557,9 +606,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           [&](const UseErrorDetails &x) {
             os << " uses:";
             char sep{':'};
-            for (const auto &[location, module] : x.occurrences()) {
-              os << sep << " from " << module->GetName().value() << " at "
-                 << location;
+            for (const auto &[location, sym] : x.occurrences()) {
+              os << sep << " from " << sym->name() << " at " << location;
               sep = ',';
             }
           },
@@ -597,6 +645,11 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           },
           [&](const MiscDetails &x) {
             os << ' ' << MiscDetails::EnumToString(x.kind());
+          },
+          [&](const UserReductionDetails &x) {
+            for (auto &type : x.GetTypeList()) {
+              DumpType(os, type);
+            }
           },
           [&](const auto &x) { os << x; },
       },
@@ -795,6 +848,9 @@ std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
     break;
   case Symbol::Flag::OmpLinear:
     clauseName = "LINEAR";
+    break;
+  case Symbol::Flag::OmpUniform:
+    clauseName = "UNIFORM";
     break;
   case Symbol::Flag::OmpFirstPrivate:
     clauseName = "FIRSTPRIVATE";

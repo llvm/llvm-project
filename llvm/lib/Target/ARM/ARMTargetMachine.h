@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
@@ -24,7 +25,7 @@
 
 namespace llvm {
 
-class ARMBaseTargetMachine : public LLVMTargetMachine {
+class ARMBaseTargetMachine : public CodeGenTargetMachineImpl {
 public:
   enum ARMABI {
     ARM_ABI_UNKNOWN,
@@ -95,6 +96,10 @@ public:
                                 PerFunctionMIParsingState &PFS,
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 };
 
 /// ARM/Thumb little endian target machine.

@@ -54,6 +54,10 @@ LLVM_LIBC_FUNCTION(float16, cospif16, (float16 x)) {
 
     // Check for NaN or infintiy values
     if (LIBC_UNLIKELY(x_abs >= 0x7c00)) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
       // If value is equal to infinity
       if (x_abs == 0x7c00) {
         fputil::set_errno_if_required(EDOM);
@@ -73,7 +77,7 @@ LLVM_LIBC_FUNCTION(float16, cospif16, (float16 x)) {
     return fputil::cast<float16>(0.0f);
 
   // Since, cosm1_y = cos_y - 1, therefore:
-  // 	cos(x * pi) = cos_k(cosm1_y) + cos_k - sin_k * sin_y
+  //   cos(x * pi) = cos_k(cosm1_y) + cos_k - sin_k * sin_y
   return fputil::cast<float16>(fputil::multiply_add(
       cos_k, cosm1_y, fputil::multiply_add(-sin_k, sin_y, cos_k)));
 }

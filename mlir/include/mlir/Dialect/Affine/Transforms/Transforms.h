@@ -32,10 +32,28 @@ enum class BoundType;
 
 namespace affine {
 class AffineApplyOp;
+class AffineDelinearizeIndexOp;
+class AffineLinearizeIndexOp;
+
+/// Lowers `affine.delinearize_index` into a sequence of division and remainder
+/// operations.
+LogicalResult lowerAffineDelinearizeIndexOp(RewriterBase &rewriter,
+                                            AffineDelinearizeIndexOp op);
+
+/// Lowers `affine.linearize_index` into a sequence of multiplications and
+/// additions. Make a best effort to sort the input indices so that
+/// the most loop-invariant terms are at the left of the additions
+/// to enable loop-invariant code motion.
+LogicalResult lowerAffineLinearizeIndexOp(RewriterBase &rewriter,
+                                          AffineLinearizeIndexOp op);
 
 /// Populate patterns that expand affine index operations into more fundamental
 /// operations (not necessarily restricted to Affine dialect).
 void populateAffineExpandIndexOpsPatterns(RewritePatternSet &patterns);
+
+/// Populate patterns that expand affine index operations into their equivalent
+/// `affine.apply` representations.
+void populateAffineExpandIndexOpsAsAffinePatterns(RewritePatternSet &patterns);
 
 /// Helper function to rewrite `op`'s affine map and reorder its operands such
 /// that they are in increasing order of hoistability (i.e. the least hoistable)

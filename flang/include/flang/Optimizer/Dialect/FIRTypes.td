@@ -77,24 +77,24 @@ def fir_BoxType : FIR_Type<"Box", "box", [], "BaseBoxType"> {
     to) whether the entity is an array, its size, or what type it has.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-        "mlir::Type":$eleTy), [{
-      return Base::get(eleTy.getContext(), eleTy);
+        "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
+      return Base::get(eleTy.getContext(), eleTy, isVolatile);
     }]>,
   ];
 
   let extraClassDeclaration = [{
     mlir::Type getElementType() const { return getEleTy(); }
+    bool isVolatile() const { return getIsVolatile(); }
   }];
 
   let genVerifyDecl = 1;
-
-  let assemblyFormat = "`<` $eleTy `>`";
+  let hasCustomAssemblyFormat = 1;
 }
 
 def fir_CharacterType : FIR_Type<"Character", "char"> {
@@ -146,16 +146,20 @@ def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
     is equivalent to a fir.box type with a dynamic type.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy), [{
-      return $_get(eleTy.getContext(), eleTy);
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
+      return $_get(eleTy.getContext(), eleTy, isVolatile);
     }]>
   ];
 
+  let extraClassDeclaration = [{
+    bool isVolatile() const { return getIsVolatile(); }
+  }];
+
   let genVerifyDecl = 1;
-  let assemblyFormat = "`<` $eleTy `>`";
+  let hasCustomAssemblyFormat = 1;
 }
 
 def fir_FieldType : FIR_Type<"Field", "field"> {
@@ -203,6 +207,22 @@ def fir_IntegerType : FIR_Type<"Integer", "int"> {
   let description = [{
     Model of a Fortran INTEGER intrinsic type, including the KIND type
     parameter.
+  }];
+
+  let parameters = (ins "KindTy":$fKind);
+  let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    using KindTy = unsigned;
+  }];
+}
+
+def fir_UnsignedType : FIR_Type<"Unsigned", "unsigned"> {
+  let summary = "FIR unsigned type";
+
+  let description = [{
+    Model of a Fortran UNSIGNED extension intrinsic type, including
+    the KIND type parameter.
   }];
 
   let parameters = (ins "KindTy":$fKind);
@@ -330,6 +350,12 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
     void finalize(llvm::ArrayRef<TypePair> lenPList,
                   llvm::ArrayRef<TypePair> typeList);
 
+    // fir.type is unpacked by default. If the flag is set, the packed fir.type
+    // is generated and the alignment is enforced by explicit padding by i8
+    // array fields.
+    bool isPacked() const;
+    void pack(bool);
+
     detail::RecordTypeStorage const *uniqueKey() const;
   }];
 }
@@ -339,20 +365,26 @@ def fir_ReferenceType : FIR_Type<"Reference", "ref"> {
 
   let description = [{
     The type of a reference to an entity in memory.
+
+    References can be volatile. Any ops taking an operand of a volatile
+    reference must set their memory effects appropriately. Accesses of
+    volatile references are currently modeled as read and write effects
+    to a specific memory resource.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType), [{
-      return Base::get(elementType.getContext(), elementType);
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType, CArg<"bool", "false">:$isVolatile), [{
+      return Base::get(elementType.getContext(), elementType, isVolatile);
     }]>,
   ];
 
   let extraClassDeclaration = [{
     mlir::Type getElementType() const { return getEleTy(); }
+    bool isVolatile() const { return getIsVolatile(); }
   }];
 
   let genVerifyDecl = 1;
@@ -557,8 +589,9 @@ def IsBaseBoxTypePred
 def fir_BaseBoxType : Type<IsBaseBoxTypePred, "fir.box or fir.class type">;
 
 // Generalized FIR and standard dialect types representing intrinsic types
-def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerLike.predicate,
-    AnySignedInteger.predicate, fir_IntegerType.predicate]>, "any integer">;
+def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerOrIndexLike.predicate,
+    AnySignedInteger.predicate, AnyUnsignedInteger.predicate,
+    fir_IntegerType.predicate, fir_UnsignedType.predicate]>, "any integer">;
 def AnyLogicalLike : TypeConstraint<Or<[BoolLike.predicate,
     fir_LogicalType.predicate]>, "any logical">;
 def AnyRealLike : TypeConstraint<FloatLike.predicate, "any real">;
@@ -635,5 +668,12 @@ def ArrayOrBoxOrRecord : TypeConstraint<Or<[fir_SequenceType.predicate,
     IsBaseBoxTypePred, fir_RecordType.predicate]>,
     "fir.box, fir.array or fir.type">;
 
+// Returns true iff the type is an array box or a reference to such type.
+def IsArrayBoxPred : CPred<"::fir::getBoxRank($_self) != 0">;
+
+// Any boxed array type (not a reference to a boxed array type).
+def AnyBoxedArray
+    : TypeConstraint<And<[BoxOrClassType.predicate, IsArrayBoxPred]>,
+                     "any boxed array">;
 
 #endif // FIR_DIALECT_FIR_TYPES

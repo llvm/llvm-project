@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -std=c++20 -verify -Wfunction-effects %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -std=c++20 -verify -Wfunction-effects -Wno-vla-extension %s
 // These are in a separate file because errors (e.g. incompatible attributes) currently prevent
 // the FXAnalysis pass from running at all.
 
@@ -144,6 +144,41 @@ void nb9() [[clang::nonblocking]]
 		expected-note {{in template expansion here}}
 }
 
+// Make sure we verify lambdas produced from template expansions.
+struct HasTemplatedLambda {
+	void (*fptr)() [[clang::nonblocking]];
+
+	template <typename C>
+	HasTemplatedLambda(const C&)
+		: fptr{ []() [[clang::nonblocking]] {
+			auto* y = new int; // expected-warning {{lambda with 'nonblocking' attribute must not allocate or deallocate memory}}
+		} }
+	{}
+};
+
+void nb9a()
+{
+	HasTemplatedLambda bad(42);
+}
+
+// Templated function and lambda.
+template <typename T>
+void TemplatedFunc(T x) [[clang::nonblocking]] {
+	auto* ptr = new T; // expected-warning {{function with 'nonblocking' attribute must not allocate or deallocate memory}}
+}
+
+void nb9b() [[clang::nonblocking]] {
+	TemplatedFunc(42); // expected-note {{in template expansion here}}
+
+	auto foo = [](auto x) [[clang::nonblocking]] {
+		auto* ptr = new int; // expected-warning {{lambda with 'nonblocking' attribute must not allocate or deallocate memory}}
+		return x;
+	};
+
+	// Note that foo() won't be validated unless instantiated.
+	foo(42);
+}
+
 void nb10(
 	void (*fp1)(), // expected-note {{function pointer cannot be inferred 'nonblocking'}}
 	void (*fp2)() [[clang::nonblocking]]
@@ -209,6 +244,23 @@ struct PTMFTester {
 void PTMFTester::convert() [[clang::nonblocking]]
 {
 	(this->*mConvertFunc)();
+}
+
+// Allow implicit conversion from array to pointer.
+void nb14(unsigned idx) [[clang::nonblocking]]
+{
+	using FP = void (*)() [[clang::nonblocking]];
+	using FPArray = FP[2];
+	auto nb = +[]() [[clang::nonblocking]] {};
+
+	FPArray src{ nb, nullptr };
+	FP f = src[idx]; // This should not generate a warning.
+
+	FP twoDim[2][2] = {};
+	FP g = twoDim[1][1];
+
+	FP vla[idx];
+	FP h = vla[0];
 }
 
 // Block variables

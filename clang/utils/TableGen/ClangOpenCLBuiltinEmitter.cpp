@@ -1,4 +1,4 @@
-//===- ClangOpenCLBuiltinEmitter.cpp - Generate Clang OpenCL Builtin handling
+//===-- ClangOpenCLBuiltinEmitter.cpp - Generate OpenCL Builtin handling --===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -1175,9 +1175,7 @@ StringRef OpenCLBuiltinFileEmitterBase::emitTypeExtensionGuards(
       // The TypeExtensions are space-separated in the .td file.
       SmallVector<StringRef, 2> ExtVec;
       TypeExt.split(ExtVec, " ");
-      for (const auto Ext : ExtVec) {
-        ExtSet.insert(Ext);
-      }
+      ExtSet.insert_range(ExtVec);
     }
   }
 

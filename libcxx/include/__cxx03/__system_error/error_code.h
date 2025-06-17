@@ -7,10 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SYSTEM_ERROR_ERROR_CODE_H
-#define _LIBCPP___SYSTEM_ERROR_ERROR_CODE_H
+#ifndef _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CODE_H
+#define _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CODE_H
 
-#include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/hash.h>
 #include <__cxx03/__functional/unary_function.h>
@@ -28,11 +27,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_error_code_enum : public false_type {};
-
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_error_code_enum_v = is_error_code_enum<_Tp>::value;
-#endif
 
 namespace __adl_only {
 // Those cause ADL to trigger but they are not viable candidates,
@@ -97,13 +91,9 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator==(const error_code& __x, const error_
   return __x.category().equivalent(__x.value(), __y) || __y.category().equivalent(__x, __y.value());
 }
 
-#if _LIBCPP_STD_VER <= 17
 inline _LIBCPP_HIDE_FROM_ABI bool operator==(const error_condition& __x, const error_code& __y) _NOEXCEPT {
   return __y == __x;
 }
-#endif
-
-#if _LIBCPP_STD_VER <= 17
 
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const error_code& __x, const error_code& __y) _NOEXCEPT {
   return !(__x == __y);
@@ -121,16 +111,6 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<(const error_code& __x, const error_c
   return __x.category() < __y.category() || (__x.category() == __y.category() && __x.value() < __y.value());
 }
 
-#else // _LIBCPP_STD_VER <= 17
-
-inline _LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(const error_code& __x, const error_code& __y) noexcept {
-  if (auto __c = __x.category() <=> __y.category(); __c != 0)
-    return __c;
-  return __x.value() <=> __y.value();
-}
-
-#endif // _LIBCPP_STD_VER <= 17
-
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<error_code> : public __unary_function<error_code, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const error_code& __ec) const _NOEXCEPT {
@@ -140,4 +120,4 @@ struct _LIBCPP_TEMPLATE_VIS hash<error_code> : public __unary_function<error_cod
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SYSTEM_ERROR_ERROR_CODE_H
+#endif // _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CODE_H

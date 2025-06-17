@@ -25,10 +25,12 @@
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/is_core_convertible.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_replaceable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_constructible.h>
@@ -459,17 +461,19 @@ class expected : private __expected_base<_Tp, _Err> {
   template <class _Up, class _OtherErr>
   friend class expected;
 
-  using __base = __expected_base<_Tp, _Err>;
+  using __base _LIBCPP_NODEBUG = __expected_base<_Tp, _Err>;
 
 public:
   using value_type      = _Tp;
   using error_type      = _Err;
   using unexpected_type = unexpected<_Err>;
 
-  using __trivially_relocatable =
+  using __trivially_relocatable _LIBCPP_NODEBUG =
       __conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value && __libcpp_is_trivially_relocatable<_Err>::value,
                       expected,
                       void>;
+  using __replaceable _LIBCPP_NODEBUG =
+      __conditional_t<__is_replaceable_v<_Tp> && __is_replaceable_v<_Err>, expected, void>;
 
   template <class _Up>
   using rebind = expected<_Up, error_type>;
@@ -505,7 +509,7 @@ public:
 
 private:
   template <class _Up, class _OtherErr, class _UfQual, class _OtherErrQual>
-  using __can_convert = _And<
+  using __can_convert _LIBCPP_NODEBUG = _And<
       is_constructible<_Tp, _UfQual>,
       is_constructible<_Err, _OtherErrQual>,
       _If<_Not<is_same<remove_cv_t<_Tp>, bool>>::value,
@@ -1139,8 +1143,15 @@ public:
 
   // [expected.object.eq], equality operators
   template <class _T2, class _E2>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y)
     requires(!is_void_v<_T2>)
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y) {
+#  if _LIBCPP_STD_VER >= 26
+            && requires {
+                 { *__x == *__y } -> __core_convertible_to<bool>;
+                 { __x.error() == __y.error() } -> __core_convertible_to<bool>;
+               }
+#  endif
+  {
     if (__x.__has_val() != __y.__has_val()) {
       return false;
     } else {
@@ -1153,12 +1164,24 @@ public:
   }
 
   template <class _T2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const _T2& __v) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const _T2& __v)
+#  if _LIBCPP_STD_VER >= 26
+    requires(!__is_std_expected<_T2>::value) && requires {
+      { *__x == __v } -> __core_convertible_to<bool>;
+    }
+#  endif
+  {
     return __x.__has_val() && static_cast<bool>(__x.__val() == __v);
   }
 
   template <class _E2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __e) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __e)
+#  if _LIBCPP_STD_VER >= 26
+    requires requires {
+      { __x.error() == __e.error() } -> __core_convertible_to<bool>;
+    }
+#  endif
+  {
     return !__x.__has_val() && static_cast<bool>(__x.__unex() == __e.error());
   }
 };
@@ -1363,7 +1386,7 @@ class expected<_Tp, _Err> : private __expected_void_base<_Err> {
   friend class expected;
 
   template <class _Up, class _OtherErr, class _OtherErrQual>
-  using __can_convert =
+  using __can_convert _LIBCPP_NODEBUG =
       _And< is_void<_Up>,
             is_constructible<_Err, _OtherErrQual>,
             _Not<is_constructible<unexpected<_Err>, expected<_Up, _OtherErr>&>>,
@@ -1371,7 +1394,7 @@ class expected<_Tp, _Err> : private __expected_void_base<_Err> {
             _Not<is_constructible<unexpected<_Err>, const expected<_Up, _OtherErr>&>>,
             _Not<is_constructible<unexpected<_Err>, const expected<_Up, _OtherErr>>>>;
 
-  using __base = __expected_void_base<_Err>;
+  using __base _LIBCPP_NODEBUG = __expected_void_base<_Err>;
 
 public:
   using value_type      = _Tp;
@@ -1851,7 +1874,13 @@ public:
   // [expected.void.eq], equality operators
   template <class _T2, class _E2>
     requires is_void_v<_T2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y)
+#  if _LIBCPP_STD_VER >= 26
+    requires requires {
+      { __x.error() == __y.error() } -> __core_convertible_to<bool>;
+    }
+#  endif
+  {
     if (__x.__has_val() != __y.__has_val()) {
       return false;
     } else {
@@ -1860,7 +1889,13 @@ public:
   }
 
   template <class _E2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __y) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __y)
+#  if _LIBCPP_STD_VER >= 26
+    requires requires {
+      { __x.error() == __y.error() } -> __core_convertible_to<bool>;
+    }
+#  endif
+  {
     return !__x.__has_val() && static_cast<bool>(__x.__unex() == __y.error());
   }
 };

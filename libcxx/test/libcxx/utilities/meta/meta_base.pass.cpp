@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include "test_macros.h"
 
 TEST_CLANG_DIAGNOSTIC_IGNORED("-Wprivate-header")

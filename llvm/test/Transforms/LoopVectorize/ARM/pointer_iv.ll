@@ -69,10 +69,10 @@ define hidden void @pointer_phi_v4i32_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 996, [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[B_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END2]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A_ADDR_09]], align 4
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_09]], i32 8
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_09]], i32 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[Y]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[B_ADDR_07]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_07]], i32 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_07]], i32 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -106,8 +106,8 @@ define hidden void @pointer_phi_v4i32_add3(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 12, i32 24, i32 36>
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[B]], i32 [[OFFSET_IDX]]
@@ -123,10 +123,10 @@ define hidden void @pointer_phi_v4i32_add3(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 996, [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[B_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END2]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_ADDR_09]], align 4
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_09]], i32 12
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_09]], i32 12
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP3]], [[Y]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[B_ADDR_07]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_07]], i32 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_07]], i32 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -219,10 +219,10 @@ define hidden void @pointer_phi_v8i16_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[I_010:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 992, [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[B_ADDR_09:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END2]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[L1:%.*]] = load i16, ptr [[A_ADDR_011]], align 2
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_011]], i32 4
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_011]], i32 4
 ; CHECK-NEXT:    [[CONV1:%.*]] = add i16 [[L1]], [[TMP0]]
 ; CHECK-NEXT:    store i16 [[CONV1]], ptr [[B_ADDR_09]], align 2
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_09]], i32 2
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_09]], i32 2
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_010]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -258,10 +258,10 @@ define hidden void @pointer_phi_v8i16_add3(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[I_010:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[B_ADDR_09:%.*]] = phi ptr [ [[B:%.*]], [[ENTRY]] ], [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[L1:%.*]] = load i16, ptr [[A_ADDR_011]], align 2
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_011]], i32 6
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_011]], i32 6
 ; CHECK-NEXT:    [[CONV1:%.*]] = add i16 [[L1]], [[TMP0]]
 ; CHECK-NEXT:    store i16 [[CONV1]], ptr [[B_ADDR_09]], align 2
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_09]], i32 2
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_09]], i32 2
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_010]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[FOR_BODY]]
@@ -311,10 +311,10 @@ define hidden void @pointer_phi_v16i8_add1(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[I_09:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 992, [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[B_ADDR_08:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END2]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[A_ADDR_010]], align 1
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_010]], i32 1
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_010]], i32 1
 ; CHECK-NEXT:    [[CONV1:%.*]] = add i8 [[TMP3]], [[TMP0]]
 ; CHECK-NEXT:    store i8 [[CONV1]], ptr [[B_ADDR_08]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_08]], i32 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_08]], i32 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_09]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
@@ -367,10 +367,10 @@ define hidden void @pointer_phi_v16i8_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[I_09:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 992, [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[B_ADDR_08:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END2]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[A_ADDR_010]], align 1
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_010]], i32 2
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_010]], i32 2
 ; CHECK-NEXT:    [[CONV1:%.*]] = add i8 [[TMP3]], [[TMP0]]
 ; CHECK-NEXT:    store i8 [[CONV1]], ptr [[B_ADDR_08]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_08]], i32 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_08]], i32 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_09]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
@@ -407,10 +407,10 @@ define hidden void @pointer_phi_v16i8_add3(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[I_09:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[B_ADDR_08:%.*]] = phi ptr [ [[B:%.*]], [[ENTRY]] ], [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[A_ADDR_010]], align 1
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_010]], i32 3
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_010]], i32 3
 ; CHECK-NEXT:    [[CONV1:%.*]] = add i8 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    store i8 [[CONV1]], ptr [[B_ADDR_08]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_08]], i32 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_08]], i32 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_09]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[FOR_BODY]]
@@ -502,10 +502,10 @@ define hidden void @pointer_phi_v4f32_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 996, [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[B_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END2]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[A_ADDR_09]], align 4
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_09]], i32 8
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_09]], i32 8
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP2]], [[Y]]
 ; CHECK-NEXT:    store float [[ADD]], ptr [[B_ADDR_07]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_07]], i32 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_07]], i32 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
@@ -539,8 +539,8 @@ define hidden void @pointer_phi_v4f32_add3(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 12, i32 24, i32 36>
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[B]], i32 [[OFFSET_IDX]]
@@ -556,10 +556,10 @@ define hidden void @pointer_phi_v4f32_add3(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 996, [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[B_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END2]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[A_ADDR_09]], align 4
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_09]], i32 12
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_09]], i32 12
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP3]], [[Y]]
 ; CHECK-NEXT:    store float [[ADD]], ptr [[B_ADDR_07]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_07]], i32 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_07]], i32 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
@@ -649,10 +649,10 @@ define hidden void @pointer_phi_v4half_add2(ptr noalias nocapture readonly %A, p
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 992, [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[B_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END2]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load half, ptr [[A_ADDR_09]], align 4
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_09]], i32 4
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_09]], i32 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast half [[TMP2]], [[Y]]
 ; CHECK-NEXT:    store half [[ADD]], ptr [[B_ADDR_07]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_07]], i32 2
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_07]], i32 2
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
@@ -703,10 +703,10 @@ define hidden void @pointer_phi_v4half_add3(ptr noalias nocapture readonly %A, p
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 992, [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[B_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END2]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load half, ptr [[A_ADDR_09]], align 4
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_09]], i32 6
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_09]], i32 6
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast half [[TMP2]], [[Y]]
 ; CHECK-NEXT:    store half [[ADD]], ptr [[B_ADDR_07]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_07]], i32 2
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_07]], i32 2
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
@@ -743,8 +743,8 @@ define hidden void @pointer_phi_v4i32_uf2(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 24, i32 48, i32 72>
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 96, i32 120, i32 144, i32 168>
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 2
@@ -767,10 +767,10 @@ define hidden void @pointer_phi_v4i32_uf2(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 9992, [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[B_ADDR_06:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END2]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[A_ADDR_08]], align 4
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_08]], i32 24
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_08]], i32 24
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], [[Y]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[B_ADDR_06]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_06]], i32 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_06]], i32 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 10000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
@@ -808,8 +808,8 @@ define hidden void @pointer_phi_v4i32_uf4(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 24, i32 48, i32 72>
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 96, i32 120, i32 144, i32 168>
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 192, i32 216, i32 240, i32 264>
@@ -842,10 +842,10 @@ define hidden void @pointer_phi_v4i32_uf4(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 9984, [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[B_ADDR_06:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END2]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[A_ADDR_08]], align 4
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_08]], i32 24
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_08]], i32 24
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP12]], [[Y]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[B_ADDR_06]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_06]], i32 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_06]], i32 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 10000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
@@ -880,9 +880,9 @@ define hidden void @mult_ptr_iv(ptr noalias nocapture readonly %x, ptr noalias n
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ], [ [[X]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[POINTER_PHI5:%.*]] = phi ptr [ [[PTR_IND6:%.*]], [[VECTOR_BODY]] ], [ [[Z]], [[ENTRY]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[POINTER_PHI5]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, <4 x ptr> [[TMP0]], i32 1
@@ -907,20 +907,20 @@ define hidden void @mult_ptr_iv(ptr noalias nocapture readonly %x, ptr noalias n
 ; CHECK-NEXT:    [[X_ADDR_050:%.*]] = phi ptr [ [[INCDEC_PTR2:%.*]], [[FOR_BODY]] ], [ [[X]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[Z_ADDR_049:%.*]] = phi ptr [ [[INCDEC_PTR34:%.*]], [[FOR_BODY]] ], [ [[Z]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[I_048:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i8, ptr [[X_ADDR_050]], i32 1
+; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[X_ADDR_050]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[X_ADDR_050]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i8, ptr [[X_ADDR_050]], i32 2
+; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds nuw i8, ptr [[X_ADDR_050]], i32 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[INCDEC_PTR]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR2]] = getelementptr inbounds i8, ptr [[X_ADDR_050]], i32 3
+; CHECK-NEXT:    [[INCDEC_PTR2]] = getelementptr inbounds nuw i8, ptr [[X_ADDR_050]], i32 3
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[INCDEC_PTR1]], align 1
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[TMP10]], 10
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul i8 [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = mul i8 [[TMP10]], [[TMP12]]
-; CHECK-NEXT:    [[INCDEC_PTR32:%.*]] = getelementptr inbounds i8, ptr [[Z_ADDR_049]], i32 1
+; CHECK-NEXT:    [[INCDEC_PTR32:%.*]] = getelementptr inbounds nuw i8, ptr [[Z_ADDR_049]], i32 1
 ; CHECK-NEXT:    store i8 [[MUL]], ptr [[Z_ADDR_049]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR33:%.*]] = getelementptr inbounds i8, ptr [[Z_ADDR_049]], i32 2
+; CHECK-NEXT:    [[INCDEC_PTR33:%.*]] = getelementptr inbounds nuw i8, ptr [[Z_ADDR_049]], i32 2
 ; CHECK-NEXT:    store i8 [[MUL1]], ptr [[INCDEC_PTR32]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR34]] = getelementptr inbounds i8, ptr [[Z_ADDR_049]], i32 3
+; CHECK-NEXT:    [[INCDEC_PTR34]] = getelementptr inbounds nuw i8, ptr [[Z_ADDR_049]], i32 3
 ; CHECK-NEXT:    store i8 [[MUL2]], ptr [[INCDEC_PTR33]], align 1
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_048]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000

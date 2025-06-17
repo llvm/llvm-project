@@ -55,18 +55,18 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x2 = frame-setup ADDI $x2, -2032
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 2032
-  ; CHECK-NEXT:   SD killed $x1, $x2, 2024 :: (store (s64) into %stack.3)
-  ; CHECK-NEXT:   SD killed $x8, $x2, 2016 :: (store (s64) into %stack.4)
-  ; CHECK-NEXT:   SD killed $x18, $x2, 2008 :: (store (s64) into %stack.5)
-  ; CHECK-NEXT:   SD killed $x19, $x2, 2000 :: (store (s64) into %stack.6)
-  ; CHECK-NEXT:   SD killed $x20, $x2, 1992 :: (store (s64) into %stack.7)
-  ; CHECK-NEXT:   SD killed $x21, $x2, 1984 :: (store (s64) into %stack.8)
-  ; CHECK-NEXT:   SD killed $x22, $x2, 1976 :: (store (s64) into %stack.9)
-  ; CHECK-NEXT:   SD killed $x23, $x2, 1968 :: (store (s64) into %stack.10)
-  ; CHECK-NEXT:   SD killed $x24, $x2, 1960 :: (store (s64) into %stack.11)
-  ; CHECK-NEXT:   SD killed $x25, $x2, 1952 :: (store (s64) into %stack.12)
-  ; CHECK-NEXT:   SD killed $x26, $x2, 1944 :: (store (s64) into %stack.13)
-  ; CHECK-NEXT:   SD killed $x27, $x2, 1936 :: (store (s64) into %stack.14)
+  ; CHECK-NEXT:   frame-setup SD killed $x1, $x2, 2024 :: (store (s64) into %stack.3)
+  ; CHECK-NEXT:   frame-setup SD killed $x8, $x2, 2016 :: (store (s64) into %stack.4)
+  ; CHECK-NEXT:   frame-setup SD killed $x18, $x2, 2008 :: (store (s64) into %stack.5)
+  ; CHECK-NEXT:   frame-setup SD killed $x19, $x2, 2000 :: (store (s64) into %stack.6)
+  ; CHECK-NEXT:   frame-setup SD killed $x20, $x2, 1992 :: (store (s64) into %stack.7)
+  ; CHECK-NEXT:   frame-setup SD killed $x21, $x2, 1984 :: (store (s64) into %stack.8)
+  ; CHECK-NEXT:   frame-setup SD killed $x22, $x2, 1976 :: (store (s64) into %stack.9)
+  ; CHECK-NEXT:   frame-setup SD killed $x23, $x2, 1968 :: (store (s64) into %stack.10)
+  ; CHECK-NEXT:   frame-setup SD killed $x24, $x2, 1960 :: (store (s64) into %stack.11)
+  ; CHECK-NEXT:   frame-setup SD killed $x25, $x2, 1952 :: (store (s64) into %stack.12)
+  ; CHECK-NEXT:   frame-setup SD killed $x26, $x2, 1944 :: (store (s64) into %stack.13)
+  ; CHECK-NEXT:   frame-setup SD killed $x27, $x2, 1936 :: (store (s64) into %stack.14)
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x1, -8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x8, -16
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x18, -24
@@ -152,18 +152,18 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   $x2 = frame-destroy ADDI $x8, -2032
   ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa $x2, 2032
-  ; CHECK-NEXT:   $x1 = LD $x2, 2024 :: (load (s64) from %stack.3)
-  ; CHECK-NEXT:   $x8 = LD $x2, 2016 :: (load (s64) from %stack.4)
-  ; CHECK-NEXT:   $x18 = LD $x2, 2008 :: (load (s64) from %stack.5)
-  ; CHECK-NEXT:   $x19 = LD $x2, 2000 :: (load (s64) from %stack.6)
-  ; CHECK-NEXT:   $x20 = LD $x2, 1992 :: (load (s64) from %stack.7)
-  ; CHECK-NEXT:   $x21 = LD $x2, 1984 :: (load (s64) from %stack.8)
-  ; CHECK-NEXT:   $x22 = LD $x2, 1976 :: (load (s64) from %stack.9)
-  ; CHECK-NEXT:   $x23 = LD $x2, 1968 :: (load (s64) from %stack.10)
-  ; CHECK-NEXT:   $x24 = LD $x2, 1960 :: (load (s64) from %stack.11)
-  ; CHECK-NEXT:   $x25 = LD $x2, 1952 :: (load (s64) from %stack.12)
-  ; CHECK-NEXT:   $x26 = LD $x2, 1944 :: (load (s64) from %stack.13)
-  ; CHECK-NEXT:   $x27 = LD $x2, 1936 :: (load (s64) from %stack.14)
+  ; CHECK-NEXT:   $x1 = frame-destroy LD $x2, 2024 :: (load (s64) from %stack.3)
+  ; CHECK-NEXT:   $x8 = frame-destroy LD $x2, 2016 :: (load (s64) from %stack.4)
+  ; CHECK-NEXT:   $x18 = frame-destroy LD $x2, 2008 :: (load (s64) from %stack.5)
+  ; CHECK-NEXT:   $x19 = frame-destroy LD $x2, 2000 :: (load (s64) from %stack.6)
+  ; CHECK-NEXT:   $x20 = frame-destroy LD $x2, 1992 :: (load (s64) from %stack.7)
+  ; CHECK-NEXT:   $x21 = frame-destroy LD $x2, 1984 :: (load (s64) from %stack.8)
+  ; CHECK-NEXT:   $x22 = frame-destroy LD $x2, 1976 :: (load (s64) from %stack.9)
+  ; CHECK-NEXT:   $x23 = frame-destroy LD $x2, 1968 :: (load (s64) from %stack.10)
+  ; CHECK-NEXT:   $x24 = frame-destroy LD $x2, 1960 :: (load (s64) from %stack.11)
+  ; CHECK-NEXT:   $x25 = frame-destroy LD $x2, 1952 :: (load (s64) from %stack.12)
+  ; CHECK-NEXT:   $x26 = frame-destroy LD $x2, 1944 :: (load (s64) from %stack.13)
+  ; CHECK-NEXT:   $x27 = frame-destroy LD $x2, 1936 :: (load (s64) from %stack.14)
   ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x1
   ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x8
   ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x18

@@ -439,9 +439,7 @@ public:
 
   // Returns true if the value already has a shadow (including if the value is a
   // constant). If true, calling getShadow() is valid.
-  bool hasShadow(Value *V) const {
-    return isa<Constant>(V) || (Map.find(V) != Map.end());
-  }
+  bool hasShadow(Value *V) const { return isa<Constant>(V) || Map.contains(V); }
 
   // Returns the shadow value for a given value. Asserts that the value has
   // a shadow value. Lazily creates shadows for constant values.
@@ -644,11 +642,11 @@ NumericalStabilitySanitizerPass::run(Module &M, ModuleAnalysisManager &MAM) {
 }
 
 static GlobalValue *createThreadLocalGV(const char *Name, Module &M, Type *Ty) {
-  return dyn_cast<GlobalValue>(M.getOrInsertGlobal(Name, Ty, [&M, Ty, Name] {
+  return M.getOrInsertGlobal(Name, Ty, [&M, Ty, Name] {
     return new GlobalVariable(M, Ty, false, GlobalVariable::ExternalLinkage,
                               nullptr, Name, nullptr,
                               GlobalVariable::InitialExecTLSModel);
-  }));
+  });
 }
 
 NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
@@ -760,7 +758,7 @@ void NumericalStabilitySanitizer::createShadowArguments(
       }))
     return;
 
-  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHI());
+  IRBuilder<> Builder(&F.getEntryBlock(), F.getEntryBlock().getFirstNonPHIIt());
   // The function has shadow args if the shadow args tag matches the function
   // address.
   Value *HasShadowArgs = Builder.CreateICmpEQ(
@@ -1110,7 +1108,7 @@ PHINode *NumericalStabilitySanitizer::maybeCreateShadowPhi(
   // created. They will be populated in a final phase, once all shadow values
   // have been created.
   PHINode *Shadow = PHINode::Create(ExtendedVT, Phi.getNumIncomingValues());
-  Shadow->insertAfter(&Phi);
+  Shadow->insertAfter(Phi.getIterator());
   return Shadow;
 }
 
@@ -2042,8 +2040,6 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   // the module constructor.
   if (F.getName() == kNsanModuleCtorName)
     return false;
-  SmallVector<Instruction *, 8> AllLoadsAndStores;
-  SmallVector<Instruction *, 8> LocalLoadsAndStores;
 
   // The instrumentation maintains:
   //  - for each IR value `v` of floating-point (or vector floating-point) type

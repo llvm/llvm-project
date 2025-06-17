@@ -19,6 +19,16 @@
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
 
+# if defined(__ELF__) && defined(__CET__) && defined(__has_include)
+# if __has_include(<cet.h>)
+# include <cet.h>
+# endif
+# endif
+
+# if !defined(_CET_ENDBR)
+# define _CET_ENDBR
+# endif
+
 # if KMP_MIC
 // the 'delay r16/r32/r64' should be used instead of the 'pause'.
 // The delay operation has the effect of removing the current thread from
@@ -66,6 +76,7 @@
 	ALIGN  4
 	.globl KMP_PREFIX_UNDERSCORE($0)
 KMP_PREFIX_UNDERSCORE($0):
+	_CET_ENDBR
 .endmacro
 # else // KMP_OS_DARWIN
 #  define KMP_PREFIX_UNDERSCORE(x) x //no extra underscore for Linux* OS symbols
@@ -92,6 +103,7 @@ KMP_PREFIX_UNDERSCORE($0):
         .globl KMP_PREFIX_UNDERSCORE(\proc)
 KMP_PREFIX_UNDERSCORE(\proc):
 	.cfi_startproc
+	_CET_ENDBR
 .endm
 .macro KMP_CFI_DEF_OFFSET sz
 	.cfi_def_cfa_offset	\sz
@@ -2458,7 +2470,7 @@ __kmp_invoke_microtask:
 
 #endif /* KMP_ARCH_S390X */
 
-#if KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_AARCH64_32
+#if KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC32
 #ifndef KMP_PREFIX_UNDERSCORE
 # define KMP_PREFIX_UNDERSCORE(x) x
 #endif
@@ -2470,13 +2482,14 @@ __kmp_invoke_microtask:
 KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
     .4byte .gomp_critical_user_
 #ifdef __ELF__
+    .type KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),%object
     .size KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),4
 #endif
-#endif /* KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_AARCH64_32 */
+#endif /* KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC32 */
 
 #if KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||                   \
     KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE ||                 \
-    KMP_ARCH_S390X
+    KMP_ARCH_S390X || KMP_ARCH_SPARC64
 #ifndef KMP_PREFIX_UNDERSCORE
 # define KMP_PREFIX_UNDERSCORE(x) x
 #endif
@@ -2488,11 +2501,12 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
 KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
     .8byte .gomp_critical_user_
 #ifdef __ELF__
+    .type KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),%object
     .size KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),8
 #endif
 #endif /* KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||
           KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE || 
-          KMP_ARCH_S390X */
+          KMP_ARCH_S390X || KMP_ARCH_SPARC64 */
 
 #if KMP_OS_LINUX
 # if KMP_ARCH_ARM || KMP_ARCH_AARCH64

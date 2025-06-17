@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_COUNT_H
-#define _LIBCPP___ALGORITHM_COUNT_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_COUNT_H
+#define _LIBCPP___CXX03___ALGORITHM_COUNT_H
 
 #include <__cxx03/__algorithm/iterator_operations.h>
 #include <__cxx03/__algorithm/min.h>
@@ -16,9 +16,9 @@
 #include <__cxx03/__bit/popcount.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__fwd/bit_reference.h>
 #include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__type_traits/invoke.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -31,7 +31,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // generic implementation
 template <class _AlgPolicy, class _Iter, class _Sent, class _Tp, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename _IterOps<_AlgPolicy>::template __difference_type<_Iter>
+_LIBCPP_HIDE_FROM_ABI typename _IterOps<_AlgPolicy>::template __difference_type<_Iter>
 __count(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
   typename _IterOps<_AlgPolicy>::template __difference_type<_Iter> __r(0);
   for (; __first != __last; ++__first)
@@ -42,7 +42,7 @@ __count(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
 
 // __bit_iterator implementation
 template <bool _ToCount, class _Cp, bool _IsConst>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __bit_iterator<_Cp, _IsConst>::difference_type
+_LIBCPP_HIDE_FROM_ABI typename __bit_iterator<_Cp, _IsConst>::difference_type
 __count_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n) {
   using _It             = __bit_iterator<_Cp, _IsConst>;
   using __storage_type  = typename _It::__storage_type;
@@ -71,7 +71,7 @@ __count_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
 }
 
 template <class, class _Cp, bool _IsConst, class _Tp, class _Proj, __enable_if_t<__is_identity<_Proj>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iter_diff_t<__bit_iterator<_Cp, _IsConst> >
+_LIBCPP_HIDE_FROM_ABI __iter_diff_t<__bit_iterator<_Cp, _IsConst> >
 __count(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value, _Proj&) {
   if (__value)
     return std::__count_bool<true>(__first, static_cast<typename _Cp::size_type>(__last - __first));
@@ -79,7 +79,7 @@ __count(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __l
 }
 
 template <class _InputIterator, class _Tp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iter_diff_t<_InputIterator>
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI __iter_diff_t<_InputIterator>
 count(_InputIterator __first, _InputIterator __last, const _Tp& __value) {
   __identity __proj;
   return std::__count<_ClassicAlgPolicy>(__first, __last, __value, __proj);
@@ -89,4 +89,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_COUNT_H
+#endif // _LIBCPP___CXX03___ALGORITHM_COUNT_H

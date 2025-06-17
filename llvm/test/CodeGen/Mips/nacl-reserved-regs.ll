@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -O3 < %s | FileCheck %s
 ; RUN: llc -mtriple=mipsel-none-nacl-gnu -O3 < %s \
 ; RUN:  | FileCheck %s -check-prefix=CHECK-NACL
 

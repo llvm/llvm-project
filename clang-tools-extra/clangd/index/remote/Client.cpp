@@ -146,6 +146,13 @@ public:
     return streamRPC(Request, &remote::v1::SymbolIndex::Stub::Refs, Callback);
   }
 
+  bool containedRefs(const clangd::ContainedRefsRequest &Request,
+                     llvm::function_ref<void(const ContainedRefsResult &)>
+                         Callback) const override {
+    return streamRPC(Request, &remote::v1::SymbolIndex::Stub::ContainedRefs,
+                     Callback);
+  }
+
   void
   relations(const clangd::RelationsRequest &Request,
             llvm::function_ref<void(const SymbolID &, const clangd::Symbol &)>

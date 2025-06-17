@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CTIME
-#define _LIBCPP_CTIME
+#ifndef _LIBCPP___CXX03_CTIME
+#define _LIBCPP___CXX03_CTIME
 
 /*
     ctime synopsis
@@ -50,7 +50,7 @@ int timespec_get( struct timespec *ts, int base); // C++17
 // <time.h> is not provided by libc++
 #if __has_include(<time.h>)
 #  include <time.h>
-#  ifdef _LIBCPP_TIME_H
+#  ifdef _LIBCPP___CXX03_TIME_H
 #    error "If libc++ starts defining <time.h>, the __has_include check should move to libc++'s <time.h>"
 #  endif
 #endif
@@ -65,9 +65,6 @@ using ::clock_t _LIBCPP_USING_IF_EXISTS;
 using ::size_t _LIBCPP_USING_IF_EXISTS;
 using ::time_t _LIBCPP_USING_IF_EXISTS;
 using ::tm _LIBCPP_USING_IF_EXISTS;
-#if _LIBCPP_STD_VER >= 17
-using ::timespec _LIBCPP_USING_IF_EXISTS;
-#endif
 using ::clock _LIBCPP_USING_IF_EXISTS;
 using ::difftime _LIBCPP_USING_IF_EXISTS;
 using ::mktime _LIBCPP_USING_IF_EXISTS;
@@ -77,10 +74,7 @@ using ::ctime _LIBCPP_USING_IF_EXISTS;
 using ::gmtime _LIBCPP_USING_IF_EXISTS;
 using ::localtime _LIBCPP_USING_IF_EXISTS;
 using ::strftime _LIBCPP_USING_IF_EXISTS;
-#if _LIBCPP_STD_VER >= 17
-using ::timespec_get _LIBCPP_USING_IF_EXISTS;
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CTIME
+#endif // _LIBCPP___CXX03_CTIME

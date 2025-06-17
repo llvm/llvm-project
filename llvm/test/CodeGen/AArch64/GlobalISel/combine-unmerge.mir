@@ -567,3 +567,49 @@ body:             |
     $q0 = COPY %me(s128)
     $x0 = COPY %def(s64)
 ...
+# Check that we zext the merge
+---
+name:            test_merge_zero
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_merge_zero
+    ; CHECK: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %me:_(s128) = G_ZEXT %opaque(s64)
+    ; CHECK-NEXT: $q0 = COPY %me(s128)
+    %opaque:_(s64) = COPY $x0
+    %def:_(s64) = G_CONSTANT i64 0
+    %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
+    $q0 = COPY %me(s128)
+...
+# Check that we still zext the merge, multi-use
+---
+name:            test_merge_zero_multi_use
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_merge_zero_multi_use
+    ; CHECK: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %def:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %me:_(s128) = G_ZEXT %opaque(s64)
+    ; CHECK-NEXT: $q0 = COPY %me(s128)
+    ; CHECK-NEXT: $x0 = COPY %def(s64)
+    %opaque:_(s64) = COPY $x0
+    %def:_(s64) = G_CONSTANT i64 0
+    %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
+    $q0 = COPY %me(s128)
+    $x0 = COPY %def(s64)
+...
+# Check that we don't zext the merge with one
+---
+name:            test_merge_one
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_merge_one
+    ; CHECK: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %def:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def(s64)
+    ; CHECK-NEXT: $q0 = COPY %me(s128)
+    %opaque:_(s64) = COPY $x0
+    %def:_(s64) = G_CONSTANT i64 1
+    %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
+    $q0 = COPY %me(s128)
+...

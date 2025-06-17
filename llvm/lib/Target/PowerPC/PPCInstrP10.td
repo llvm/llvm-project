@@ -79,6 +79,10 @@ def SDT_PPCxxmfacc : SDTypeProfile<1, 1, [
   SDTCisVT<0, v512i1>, SDTCisVT<1, v512i1>
 ]>;
 
+def SDT_PPCsetbc : SDTypeProfile<1, 1, [
+  SDTCisInt<0>, SDTCisInt<1>
+]>;
+
 //===----------------------------------------------------------------------===//
 // ISA 3.1 specific PPCISD nodes.
 //
@@ -91,6 +95,8 @@ def PPCAccExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCAccExtractVsx,
 def PPCPairExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCPairExtractVsx,
                         []>;
 def PPCxxmfacc : SDNode<"PPCISD::XXMFACC", SDT_PPCxxmfacc, []>;
+def PPCsetbc  : SDNode<"PPCISD::SETBC",   SDT_PPCsetbc, []>;
+def PPCsetbcr : SDNode<"PPCISD::SETBCR",  SDT_PPCsetbc, []>;
 
 //===----------------------------------------------------------------------===//
 
@@ -105,7 +111,7 @@ def SDT_PPCLXVRZX : SDTypeProfile<1, 2, [
 
 // PPC Specific DAG Nodes.
 def PPClxvrzx : SDNode<"PPCISD::LXVRZX", SDT_PPCLXVRZX,
-                       [SDNPHasChain, SDNPMayLoad]>;
+                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 // Top-level class for prefixed instructions.
 class PI<bits<6> pref, bits<6> opcode, dag OOL, dag IOL, string asmstr,
@@ -1133,17 +1139,11 @@ class MMIRR_XX3Form_XYP4_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Inst{63} = 0;
 }
 
-
-
 def Concats {
   dag VecsToVecPair0 =
-    (v256i1 (INSERT_SUBREG
-      (INSERT_SUBREG (IMPLICIT_DEF), $vs0, sub_vsx1),
-      $vs1, sub_vsx0));
+    (v256i1 (REG_SEQUENCE VSRpRC, $vs0, sub_vsx1, $vs1, sub_vsx0));
   dag VecsToVecPair1 =
-    (v256i1 (INSERT_SUBREG
-      (INSERT_SUBREG (IMPLICIT_DEF), $vs2, sub_vsx1),
-      $vs3, sub_vsx0));
+    (v256i1 (REG_SEQUENCE VSRpRC, $vs2, sub_vsx1, $vs3, sub_vsx0));
 }
 
 let Predicates = [PairedVectorMemops] in {
@@ -1275,13 +1275,13 @@ let Predicates = [PCRelativeMemops] in {
             (PSTDpc $RS, $ga, 0)>;
 
   // Atomic Load
-  def : Pat<(i32 (atomic_load_8 (PPCmatpcreladdr PCRelForm:$ga))),
+  def : Pat<(i32 (atomic_load_azext_8 (PPCmatpcreladdr PCRelForm:$ga))),
             (PLBZpc $ga, 0)>;
-  def : Pat<(i32 (atomic_load_16 (PPCmatpcreladdr PCRelForm:$ga))),
+  def : Pat<(i32 (atomic_load_azext_16 (PPCmatpcreladdr PCRelForm:$ga))),
             (PLHZpc $ga, 0)>;
-  def : Pat<(i32 (atomic_load_32 (PPCmatpcreladdr PCRelForm:$ga))),
+  def : Pat<(i32 (atomic_load_nonext_32 (PPCmatpcreladdr PCRelForm:$ga))),
             (PLWZpc $ga, 0)>;
-  def : Pat<(i64 (atomic_load_64 (PPCmatpcreladdr PCRelForm:$ga))),
+  def : Pat<(i64 (atomic_load_nonext_64 (PPCmatpcreladdr PCRelForm:$ga))),
             (PLDpc $ga, 0)>;
 
   // Atomic Store
@@ -1401,10 +1401,12 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1, Predicates = [P
 
 let Predicates = [IsISA3_1] in {
   def SETBC : XForm_XT5_BI5<31, 384, (outs gprc:$RST), (ins crbitrc:$BI),
-                            "setbc $RST, $BI", IIC_IntCompare, []>,
+                            "setbc $RST, $BI", IIC_IntCompare,
+                            [(set i32:$RST, (PPCsetbc i1:$BI))]>,
                             SExt32To64, ZExt32To64;
   def SETBCR : XForm_XT5_BI5<31, 416, (outs gprc:$RST), (ins crbitrc:$BI),
-                             "setbcr $RST, $BI", IIC_IntCompare, []>,
+                             "setbcr $RST, $BI", IIC_IntCompare,
+                             [(set i32:$RST, (PPCsetbcr i1:$BI))]>,
                              SExt32To64, ZExt32To64;
   def SETNBC : XForm_XT5_BI5<31, 448, (outs gprc:$RST), (ins crbitrc:$BI),
                              "setnbc $RST, $BI", IIC_IntCompare, []>,
@@ -2157,7 +2159,7 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, HasVSX] in {
                                (COPY_TO_REGCLASS $VRB, VSRC), 2)))>;
 }
 
-class xxevalPattern <dag pattern, bits<8> imm> :
+class XXEvalPattern <dag pattern, bits<8> imm> :
   Pat<(v4i32 pattern), (XXEVAL $vA, $vB, $vC, imm)> {}
 
 let Predicates = [PrefixInstrs, HasP10Vector] in {
@@ -2190,83 +2192,83 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     // Anonymous patterns for XXEVAL
     // AND
     // and(A, B, C)
-    def : xxevalPattern<(and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 1>;
+    def : XXEvalPattern<(and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 1>;
     // and(A, xor(B, C))
-    def : xxevalPattern<(and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 6>;
+    def : XXEvalPattern<(and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 6>;
     // and(A, or(B, C))
-    def : xxevalPattern<(and v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 7>;
+    def : XXEvalPattern<(and v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 7>;
     // and(A, nor(B, C))
-    def : xxevalPattern<(and v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 8>;
+    def : XXEvalPattern<(and v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 8>;
     // and(A, eqv(B, C))
-    def : xxevalPattern<(and v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 9>;
+    def : XXEvalPattern<(and v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 9>;
     // and(A, nand(B, C))
-    def : xxevalPattern<(and v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 14>;
+    def : XXEvalPattern<(and v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 14>;
 
     // NAND
     // nand(A, B, C)
-    def : xxevalPattern<(vnot (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC))),
+    def : XXEvalPattern<(vnot (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC))),
                          !sub(255, 1)>;
     // nand(A, xor(B, C))
-    def : xxevalPattern<(vnot (and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))),
+    def : XXEvalPattern<(vnot (and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))),
                          !sub(255, 6)>;
     // nand(A, or(B, C))
-    def : xxevalPattern<(vnot (and v4i32:$vA, (or v4i32:$vB, v4i32:$vC))),
+    def : XXEvalPattern<(vnot (and v4i32:$vA, (or v4i32:$vB, v4i32:$vC))),
                          !sub(255, 7)>;
     // nand(A, nor(B, C))
-    def : xxevalPattern<(or (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)),
+    def : XXEvalPattern<(or (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)),
                          !sub(255, 8)>;
     // nand(A, eqv(B, C))
-    def : xxevalPattern<(or (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)),
+    def : XXEvalPattern<(or (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)),
                          !sub(255, 9)>;
     // nand(A, nand(B, C))
-    def : xxevalPattern<(or (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)),
+    def : XXEvalPattern<(or (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)),
                          !sub(255, 14)>;
 
     // EQV
     // (eqv A, B, C)
-    def : xxevalPattern<(or (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)),
+    def : XXEvalPattern<(or (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)),
                             (vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)))),
                          150>;
     // (eqv A, (and B, C))
-    def : xxevalPattern<(vnot (xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 225>;
+    def : XXEvalPattern<(vnot (xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 225>;
     // (eqv A, (or B, C))
-    def : xxevalPattern<(vnot (xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 135>;
+    def : XXEvalPattern<(vnot (xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 135>;
 
     // NOR
     // (nor A, B, C)
-    def : xxevalPattern<(vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 128>;
+    def : XXEvalPattern<(vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 128>;
     // (nor A, (and B, C))
-    def : xxevalPattern<(vnot (or v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 224>;
+    def : XXEvalPattern<(vnot (or v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 224>;
     // (nor A, (eqv B, C))
-    def : xxevalPattern<(and (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)), 96>;
+    def : XXEvalPattern<(and (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)), 96>;
     // (nor A, (nand B, C))
-    def : xxevalPattern<(and (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)), 16>;
+    def : XXEvalPattern<(and (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)), 16>;
     // (nor A, (nor B, C))
-    def : xxevalPattern<(and (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)), 112>;
+    def : XXEvalPattern<(and (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)), 112>;
     // (nor A, (xor B, C))
-    def : xxevalPattern<(vnot (or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))), 144>;
+    def : XXEvalPattern<(vnot (or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))), 144>;
 
     // OR
     // (or A, B, C)
-    def : xxevalPattern<(or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 127>;
+    def : XXEvalPattern<(or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 127>;
     // (or A, (and B, C))
-    def : xxevalPattern<(or v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 31>;
+    def : XXEvalPattern<(or v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 31>;
     // (or A, (eqv B, C))
-    def : xxevalPattern<(or v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 159>;
+    def : XXEvalPattern<(or v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 159>;
     // (or A, (nand B, C))
-    def : xxevalPattern<(or v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 239>;
+    def : XXEvalPattern<(or v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 239>;
     // (or A, (nor B, C))
-    def : xxevalPattern<(or v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 143>;
+    def : XXEvalPattern<(or v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 143>;
     // (or A, (xor B, C))
-    def : xxevalPattern<(or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 111>;
+    def : XXEvalPattern<(or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 111>;
 
     // XOR
     // (xor A, B, C)
-    def : xxevalPattern<(xor v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 105>;
+    def : XXEvalPattern<(xor v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 105>;
     // (xor A, (and B, C))
-    def : xxevalPattern<(xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 30>;
+    def : XXEvalPattern<(xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 30>;
     // (xor A, (or B, C))
-    def : xxevalPattern<(xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 120>;
+    def : XXEvalPattern<(xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 120>;
 
     // Anonymous patterns to select prefixed VSX loads and stores.
     // Load / Store f128
@@ -2358,10 +2360,10 @@ let Predicates = [PrefixInstrs] in {
   def : Pat<(store i64:$rS, PDForm:$dst), (PSTD g8rc:$rS, memri34:$dst)>;
 
   // Atomic Load
-  def : Pat<(i32 (atomic_load_8 PDForm:$src)), (PLBZ memri34:$src)>;
-  def : Pat<(i32 (atomic_load_16 PDForm:$src)), (PLHZ memri34:$src)>;
-  def : Pat<(i32 (atomic_load_32 PDForm:$src)), (PLWZ memri34:$src)>;
-  def : Pat<(i64 (atomic_load_64 PDForm:$src)), (PLD memri34:$src)>;
+  def : Pat<(i32 (atomic_load_azext_8 PDForm:$src)), (PLBZ memri34:$src)>;
+  def : Pat<(i32 (atomic_load_azext_16 PDForm:$src)), (PLHZ memri34:$src)>;
+  def : Pat<(i32 (atomic_load_nonext_32 PDForm:$src)), (PLWZ memri34:$src)>;
+  def : Pat<(i64 (atomic_load_nonext_64 PDForm:$src)), (PLD memri34:$src)>;
 
   // Atomic Store
   def : Pat<(atomic_store_8 i32:$RS, PDForm:$dst), (PSTB $RS, memri34:$dst)>;

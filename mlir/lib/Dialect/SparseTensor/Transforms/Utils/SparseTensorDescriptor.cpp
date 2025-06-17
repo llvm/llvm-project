@@ -38,12 +38,14 @@ convertSparseTensorType(RankedTensorType rtp, SmallVectorImpl<Type> &fields) {
   if (!stt.hasEncoding())
     return std::nullopt;
 
+  unsigned numFields = fields.size();
+  (void)numFields;
   foreachFieldAndTypeInSparseTensor(
       stt,
-      [&fields](Type fieldType, FieldIndex fieldIdx,
-                SparseTensorFieldKind /*fieldKind*/, Level /*lvl*/,
-                LevelType /*lt*/) -> bool {
-        assert(fieldIdx == fields.size());
+      [&](Type fieldType, FieldIndex fieldIdx,
+          SparseTensorFieldKind /*fieldKind*/, Level /*lvl*/,
+          LevelType /*lt*/) -> bool {
+        assert(numFields + fieldIdx == fields.size());
         fields.push_back(fieldType);
         return true;
       });
@@ -69,9 +71,6 @@ SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
 
   // Required by scf.for 1:N type conversion.
   addSourceMaterialization(materializeTuple);
-
-  // Required as a workaround until we have full 1:N support.
-  addArgumentMaterialization(materializeTuple);
 }
 
 //===----------------------------------------------------------------------===//

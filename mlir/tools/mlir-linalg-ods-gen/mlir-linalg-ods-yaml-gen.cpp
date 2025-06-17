@@ -117,9 +117,9 @@ struct ScalarAssign {
 };
 
 struct LinalgStructuredOpConfig {
-  SmallVector<LinalgOperandDef> args;
+  SmallVector<LinalgOperandDef, 4> args;
   LinalgIndexingMapsConfig indexingMaps;
-  SmallVector<LinalgIteratorTypeDef> iteratorTypes;
+  SmallVector<LinalgIteratorTypeDef, 4> iteratorTypes;
   std::vector<ScalarAssign> assignments;
 };
 
@@ -679,8 +679,7 @@ ParseResult {0}::parse(OpAsmParser &parser, OperationState &result) {{
 }
 void {0}::print(OpAsmPrinter &p) {{
   SmallVector<StringRef, 3> elidedAttrs = {{"operandSegmentSizes",
-                                           "linalg.memoized_indexing_maps",
-                                           "indexing_maps"};
+                                           "linalg.memoized_indexing_maps"};
   ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                            elidedAttrs);
 }

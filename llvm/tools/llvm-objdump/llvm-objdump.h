@@ -15,8 +15,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/FormattedStream.h"
 #include <functional>
 #include <memory>
@@ -79,6 +77,7 @@ class Dumper {
   StringSet<> Warnings;
 
 protected:
+  llvm::raw_ostream &OS;
   std::function<Error(const Twine &Msg)> WarningHandler;
 
 public:

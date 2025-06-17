@@ -25,7 +25,7 @@ from datetime import date
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.intersphinx", "sphinx.ext.todo"]
+extensions = ["sphinx.ext.intersphinx", "sphinx.ext.todo", "sphinx_reredirects"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -261,3 +261,5 @@ intersphinx_mapping = {}
 
 # Enable this if you want TODOs to show up in the generated documentation.
 todo_include_todos = True
+
+redirects = {"math/index": "../headers/math/index.html"}

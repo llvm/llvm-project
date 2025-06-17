@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/ExprOpenMP.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -20,7 +19,6 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -31,13 +29,12 @@ class DereferenceChecker
     : public Checker< check::Location,
                       check::Bind,
                       EventDispatcher<ImplicitNullDerefEvent> > {
-  enum DerefKind { NullPointer, UndefinedPointerValue, AddressOfLabel };
-
-  BugType BT_Null{this, "Dereference of null pointer", categories::LogicError};
-  BugType BT_Undef{this, "Dereference of undefined pointer value",
-                   categories::LogicError};
-  BugType BT_Label{this, "Dereference of the address of a label",
-                   categories::LogicError};
+  enum DerefKind {
+    NullPointer,
+    UndefinedPointerValue,
+    AddressOfLabel,
+    FixedAddress,
+  };
 
   void reportBug(DerefKind K, ProgramStateRef State, const Stmt *S,
                  CheckerContext &C) const;
@@ -55,7 +52,13 @@ public:
                              const LocationContext *LCtx,
                              bool loadedFrom = false);
 
-  bool SuppressAddressSpaces = false;
+  bool CheckNullDereference = false;
+  bool CheckFixedDereference = false;
+
+  std::unique_ptr<BugType> BT_Null;
+  std::unique_ptr<BugType> BT_Undef;
+  std::unique_ptr<BugType> BT_Label;
+  std::unique_ptr<BugType> BT_FixedAddress;
 };
 } // end anonymous namespace
 
@@ -130,7 +133,9 @@ bool DereferenceChecker::suppressReport(CheckerContext &C,
   QualType Ty = E->getType();
   if (!Ty.hasAddressSpace())
     return false;
-  if (SuppressAddressSpaces)
+  if (C.getAnalysisManager()
+          .getAnalyzerOptions()
+          .ShouldSuppressAddressSpaceDereferences)
     return true;
 
   const llvm::Triple::ArchType Arch =
@@ -160,19 +165,41 @@ void DereferenceChecker::reportBug(DerefKind K, ProgramStateRef State,
   llvm::StringRef DerefStr2;
   switch (K) {
   case DerefKind::NullPointer:
-    BT = &BT_Null;
+    if (!CheckNullDereference) {
+      C.addSink();
+      return;
+    }
+    BT = BT_Null.get();
     DerefStr1 = " results in a null pointer dereference";
     DerefStr2 = " results in a dereference of a null pointer";
     break;
   case DerefKind::UndefinedPointerValue:
-    BT = &BT_Undef;
+    if (!CheckNullDereference) {
+      C.addSink();
+      return;
+    }
+    BT = BT_Undef.get();
     DerefStr1 = " results in an undefined pointer dereference";
     DerefStr2 = " results in a dereference of an undefined pointer value";
     break;
   case DerefKind::AddressOfLabel:
-    BT = &BT_Label;
+    if (!CheckNullDereference) {
+      C.addSink();
+      return;
+    }
+    BT = BT_Label.get();
     DerefStr1 = " results in an undefined pointer dereference";
     DerefStr2 = " results in a dereference of an address of a label";
+    break;
+  case DerefKind::FixedAddress:
+    // Deliberately don't add a sink node if check is disabled.
+    // This situation may be valid in special cases.
+    if (!CheckFixedDereference)
+      return;
+
+    BT = BT_FixedAddress.get();
+    DerefStr1 = " results in a dereference of a fixed address";
+    DerefStr2 = " results in a dereference of a fixed address";
     break;
   };
 
@@ -284,6 +311,13 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
     }
   }
 
+  if (location.isConstant()) {
+    const Expr *DerefExpr = getDereferenceExpr(S, isLoad);
+    if (!suppressReport(C, DerefExpr))
+      reportBug(DerefKind::FixedAddress, notNullState, DerefExpr, C);
+    return;
+  }
+
   // From this point forward, we know that the location is not null.
   C.addTransition(notNullState);
 }
@@ -332,6 +366,13 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
     }
   }
 
+  if (V.isConstant()) {
+    const Expr *DerefExpr = getDereferenceExpr(S, true);
+    if (!suppressReport(C, DerefExpr))
+      reportBug(DerefKind::FixedAddress, State, DerefExpr, C);
+    return;
+  }
+
   // Unlike a regular null dereference, initializing a reference with a
   // dereferenced null pointer does not actually cause a runtime exception in
   // Clang's implementation of references.
@@ -351,12 +392,41 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
   C.addTransition(State, this);
 }
 
-void ento::registerDereferenceChecker(CheckerManager &mgr) {
-  auto *Chk = mgr.registerChecker<DereferenceChecker>();
-  Chk->SuppressAddressSpaces = mgr.getAnalyzerOptions().getCheckerBooleanOption(
-      mgr.getCurrentCheckerName(), "SuppressAddressSpaces");
+void ento::registerDereferenceModeling(CheckerManager &Mgr) {
+  Mgr.registerChecker<DereferenceChecker>();
 }
 
-bool ento::shouldRegisterDereferenceChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterDereferenceModeling(const CheckerManager &) {
+  return true;
+}
+
+void ento::registerNullDereferenceChecker(CheckerManager &Mgr) {
+  auto *Chk = Mgr.getChecker<DereferenceChecker>();
+  Chk->CheckNullDereference = true;
+  Chk->BT_Null.reset(new BugType(Mgr.getCurrentCheckerName(),
+                                 "Dereference of null pointer",
+                                 categories::LogicError));
+  Chk->BT_Undef.reset(new BugType(Mgr.getCurrentCheckerName(),
+                                  "Dereference of undefined pointer value",
+                                  categories::LogicError));
+  Chk->BT_Label.reset(new BugType(Mgr.getCurrentCheckerName(),
+                                  "Dereference of the address of a label",
+                                  categories::LogicError));
+}
+
+bool ento::shouldRegisterNullDereferenceChecker(const CheckerManager &) {
+  return true;
+}
+
+void ento::registerFixedAddressDereferenceChecker(CheckerManager &Mgr) {
+  auto *Chk = Mgr.getChecker<DereferenceChecker>();
+  Chk->CheckFixedDereference = true;
+  Chk->BT_FixedAddress.reset(new BugType(Mgr.getCurrentCheckerName(),
+                                         "Dereference of a fixed address",
+                                         categories::LogicError));
+}
+
+bool ento::shouldRegisterFixedAddressDereferenceChecker(
+    const CheckerManager &) {
   return true;
 }

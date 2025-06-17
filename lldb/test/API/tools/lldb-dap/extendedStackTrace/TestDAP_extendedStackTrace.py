@@ -2,7 +2,6 @@
 Test lldb-dap stackTrace request with an extended backtrace thread.
 """
 
-
 import os
 
 import lldbdap_testcase
@@ -12,11 +11,7 @@ from lldbsuite.test.lldbplatformutil import *
 
 
 class TestDAP_extendedStackTrace(lldbdap_testcase.DAPTestCaseBase):
-    @skipUnlessDarwin
-    def test_stackTrace(self):
-        """
-        Tests the 'stackTrace' packet on a thread with an extended backtrace.
-        """
+    def build_and_run(self, displayExtendedBacktrace=True):
         backtrace_recording_lib = findBacktraceRecordingDylib()
         if not backtrace_recording_lib:
             self.skipTest(
@@ -36,7 +31,7 @@ class TestDAP_extendedStackTrace(lldbdap_testcase.DAPTestCaseBase):
                 "DYLD_LIBRARY_PATH=/usr/lib/system/introspection",
                 "DYLD_INSERT_LIBRARIES=" + backtrace_recording_lib,
             ],
-            displayExtendedBacktrace=True,
+            displayExtendedBacktrace=displayExtendedBacktrace,
         )
         source = "main.m"
         breakpoint = line_number(source, "breakpoint 1")
@@ -47,6 +42,12 @@ class TestDAP_extendedStackTrace(lldbdap_testcase.DAPTestCaseBase):
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
 
+    @skipUnlessDarwin
+    def test_stackTrace(self):
+        """
+        Tests the 'stackTrace' packet on a thread with an extended backtrace.
+        """
+        self.build_and_run()
         events = self.continue_to_next_stop()
 
         stackFrames, totalFrames = self.get_stackFrames_and_totalFramesCount(
@@ -66,11 +67,11 @@ class TestDAP_extendedStackTrace(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(len(stackLabels), 2, "expected two label stack frames")
         self.assertRegex(
             stackLabels[0][1]["name"],
-            "Enqueued from com.apple.root.default-qos \(Thread \d\)",
+            r"Enqueued from com.apple.root.default-qos \(Thread \d\)",
         )
         self.assertRegex(
             stackLabels[1][1]["name"],
-            "Enqueued from com.apple.main-thread \(Thread \d\)",
+            r"Enqueued from com.apple.main-thread \(Thread \d\)",
         )
 
         for i, frame in stackLabels:
@@ -102,3 +103,23 @@ class TestDAP_extendedStackTrace(lldbdap_testcase.DAPTestCaseBase):
             self.assertGreaterEqual(
                 totalFrames, i, "total frames should include a pagination offset"
             )
+
+    @skipUnlessDarwin
+    def test_stackTraceWithFormat(self):
+        """
+        Tests the 'stackTrace' packet on a thread with an extended backtrace using stack trace formats.
+        """
+        self.build_and_run(displayExtendedBacktrace=False)
+        events = self.continue_to_next_stop()
+
+        stackFrames, _ = self.get_stackFrames_and_totalFramesCount(
+            threadId=events[0]["body"]["threadId"], format={"includeAll": True}
+        )
+
+        stackLabels = [
+            (i, frame)
+            for i, frame in enumerate(stackFrames)
+            if frame.get("presentationHint", "") == "label"
+        ]
+
+        self.assertEqual(len(stackLabels), 2, "expected two label stack frames")

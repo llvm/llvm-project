@@ -37,6 +37,7 @@ add_llvm_component_library(LLVMTransformUtils
   InstructionNamer.cpp
   Instrumentation.cpp
   IntegerDivision.cpp
+  IRNormalizer.cpp
   LCSSA.cpp
   LibCallsShrinkWrap.cpp
   Local.cpp
@@ -55,6 +56,7 @@ add_llvm_component_library(LLVMTransformUtils
   LowerInvoke.cpp
   LowerMemIntrinsics.cpp
   LowerSwitch.cpp
+  LowerVectorIntrinsics.cpp
   MatrixUtils.cpp
   MemoryOpRemark.cpp
   MemoryTaggingSupport.cpp

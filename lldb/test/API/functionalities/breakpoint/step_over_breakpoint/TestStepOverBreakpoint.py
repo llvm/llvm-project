@@ -5,7 +5,6 @@ which should be eStopReasonBreakpoint in general,
 and eStopReasonPlanComplete when breakpoint's condition fails.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -90,6 +89,11 @@ class StepOverBreakpointsTestCase(TestBase):
                 self.assertGreaterEqual(step_count, steps_expected)
                 break
 
+        # We did a `stepi` when we hit our last breakpoint, and the stepi was not
+        # completed yet, so when we resume it will complete (running process.Continue()
+        # would have the same result - we step one instruction and stop again when
+        # our interrupted stepi completes).
+        self.thread.StepInstruction(True)
         # Run the process until termination
         self.process.Continue()
         self.assertState(self.process.GetState(), lldb.eStateExited)

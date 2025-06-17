@@ -302,7 +302,7 @@ struct BufferizationOptions {
                              Value to) const;
 
   /// Specifies whether not bufferizable ops are allowed in the input. If so,
-  /// bufferization.to_memref and bufferization.to_tensor ops are inserted at
+  /// bufferization.to_buffer and bufferization.to_tensor ops are inserted at
   /// the boundaries.
   bool allowUnknownOps = false;
 
@@ -314,16 +314,6 @@ struct BufferizationOptions {
   // then writes inside of parallel regions that write to buffers defined
   // outside of the parallel region will be given a new buffer.
   bool checkParallelRegions = true;
-
-  /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
-  /// If this flag is set to `false`, those invariants are no longer enforced
-  /// with buffer copies.
-  ///
-  /// Note: Deactivating this flag can lead to incorrect bufferization results
-  /// when used incorrectly. This flag is useful with
-  /// `AlwaysCopyAnalysisState` which bufferizes all writing tensor
-  /// OpOperands out-of-place.
-  bool enforceAliasingInvariants = true;
 
   /// This function controls buffer types on function signatures. Sets
   /// `functionArgTypeConverterFn` and `inferFunctionResultLayout` accordingly.
@@ -456,10 +446,11 @@ public:
   /// read by themselves (e.g., ExtractSliceOp).
   bool isValueRead(Value value) const;
 
-  /// Starting from `value`, follow the use-def chain in reverse, always
+  /// Starting from `opOperand`, follow the use-def chain in reverse, always
   /// selecting the aliasing OpOperands. Find and return Values for which
   /// `condition` evaluates to true. OpOperands of such matching Values are not
-  /// traversed any further.
+  /// traversed any further, the visited aliasing opOperands will be preserved
+  /// through `visitedOpOperands`.
   ///
   /// When reaching the end of a chain, also return the last Value of that
   /// chain if `config.alwaysIncludeLeaves` is set.
@@ -483,8 +474,9 @@ public:
   /// Additional stopping conditions for the traversal can be specified in
   /// `config`.
   SetVector<Value> findValueInReverseUseDefChain(
-      Value value, llvm::function_ref<bool(Value)> condition,
-      TraversalConfig config = TraversalConfig()) const;
+      OpOperand *opOperand, llvm::function_ref<bool(Value)> condition,
+      TraversalConfig config = TraversalConfig(),
+      llvm::DenseSet<OpOperand *> *visitedOpOperands = nullptr) const;
 
   /// Find the values that may define the contents of the given value at
   /// runtime. A block argument is always a definition. An OpResult is a
@@ -518,7 +510,7 @@ public:
   ///
   /// Note: OpResults of unknown ops are handled conservatively and assumed to
   /// be definitions.
-  SetVector<Value> findDefinitions(Value value) const;
+  SetVector<Value> findDefinitions(OpOperand *opOperand) const;
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   virtual bool isInPlace(OpOperand &opOperand) const;
@@ -561,6 +553,11 @@ public:
 
   virtual void resetCache();
 
+  /// Checks whether `op0` and `op1` are inside mutually exclusive regions.
+  /// The logic defers to `mlir::insideMutuallyExclusiveRegions`, but the
+  /// result is cached.
+  bool insideMutuallyExclusiveRegions(Operation *op0, Operation *op1);
+
 protected:
   AnalysisState(const BufferizationOptions &options, TypeID type);
 
@@ -574,6 +571,25 @@ private:
   /// Cache containing closest ancestor repetitive Region.
   DenseMap<std::variant<Operation *, Block *, Region *, Value>, Region *>
       enclosingRepetitiveRegionCache;
+
+  /// Cache that specifies whether the two operations are in mutually exclusive
+  /// regions.
+  DenseMap<std::pair<Operation *, Operation *>, bool>
+      insideMutuallyExclusiveRegionsCache;
+};
+
+/// BufferizationState provides information about the state of the IR during the
+/// bufferization process.
+class BufferizationState {
+public:
+  /// Get a reference to the collection of cached symbol tables.
+  SymbolTableCollection &getSymbolTables();
+
+private:
+  /// The cached symbol tables.
+  /// The user is expected to update / invalidate the cached symbol tables if
+  /// the bufferized operation has the Symbol or SymbolTable traits.
+  SymbolTableCollection symbolTables;
 };
 
 /// Create an AllocTensorOp for the given shaped value (memref or tensor).
@@ -582,13 +598,14 @@ private:
 FailureOr<Value>
 allocateTensorForShapedValue(OpBuilder &b, Location loc, Value shapedValue,
                              const BufferizationOptions &options,
-                             bool copy = true);
+                             const BufferizationState &state, bool copy = true);
 
 /// Lookup the buffer for the given value. If the value was not bufferized
-/// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
+/// yet, wrap it in a ToBufferOp. Otherwise, it is the result of a ToTensorOp,
 /// from which the memref operand is returned.
 FailureOr<Value> getBuffer(RewriterBase &rewriter, Value value,
-                           const BufferizationOptions &options);
+                           const BufferizationOptions &options,
+                           const BufferizationState &state);
 
 /// Return the buffer type for a given Value (tensor) after bufferization
 /// without bufferizing any IR.
@@ -599,7 +616,8 @@ FailureOr<Value> getBuffer(RewriterBase &rewriter, Value value,
 ///
 /// This function is a wrapper around BufferizableOpInterface::getBufferType.
 FailureOr<BaseMemRefType> getBufferType(Value value,
-                                        const BufferizationOptions &options);
+                                        const BufferizationOptions &options,
+                                        const BufferizationState &state);
 
 /// Return the buffer type for a given Value (tensor) after bufferization
 /// without bufferizing any IR. This function (and not the other overload
@@ -613,6 +631,7 @@ FailureOr<BaseMemRefType> getBufferType(Value value,
 /// This function is a wrapper around `BufferizableOpInterface::getBufferType`.
 FailureOr<BaseMemRefType> getBufferType(Value value,
                                         const BufferizationOptions &options,
+                                        const BufferizationState &state,
                                         SmallVector<Value> &invocationStack);
 
 /// Return "true" if the given op has tensor semantics and should be bufferized.
@@ -693,6 +712,7 @@ AliasingOpOperandList defaultGetAliasingOpOperands(Value value,
 /// places.
 FailureOr<BaseMemRefType>
 defaultGetBufferType(Value value, const BufferizationOptions &options,
+                     const BufferizationState &state,
                      SmallVector<Value> &invocationStack);
 
 /// This is the default implementation of

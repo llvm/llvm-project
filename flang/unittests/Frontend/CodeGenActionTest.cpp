@@ -72,8 +72,7 @@ public:
     mlirCtx->loadDialect<test::DummyDialect>();
 
     mlir::Location loc(mlir::UnknownLoc::get(mlirCtx.get()));
-    mlirModule =
-        std::make_unique<mlir::ModuleOp>(mlir::ModuleOp::create(loc, "mod"));
+    mlirModule = mlir::ModuleOp::create(loc, "mod");
 
     mlir::OpBuilder builder(mlirCtx.get());
     builder.setInsertionPointToStart(&mlirModule->getRegion().front());
@@ -87,8 +86,9 @@ public:
 TEST(CodeGenAction, GracefullyHandleLLVMConversionFailure) {
   std::string diagnosticOutput;
   llvm::raw_string_ostream diagnosticsOS(diagnosticOutput);
+  clang::DiagnosticOptions diagOpts;
   auto diagPrinter = std::make_unique<Fortran::frontend::TextDiagnosticPrinter>(
-      diagnosticsOS, new clang::DiagnosticOptions());
+      diagnosticsOS, diagOpts);
 
   CompilerInstance ci;
   ci.createDiagnostics(diagPrinter.get(), /*ShouldOwnClient=*/false);

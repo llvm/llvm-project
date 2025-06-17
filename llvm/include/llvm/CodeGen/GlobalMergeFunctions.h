@@ -78,6 +78,10 @@ public:
 
 /// Global function merging pass for new pass manager.
 struct GlobalMergeFuncPass : public PassInfoMixin<GlobalMergeFuncPass> {
+  const ModuleSummaryIndex *ImportSummary = nullptr;
+  GlobalMergeFuncPass() = default;
+  GlobalMergeFuncPass(const ModuleSummaryIndex *ImportSummary)
+      : ImportSummary(ImportSummary) {}
   PreservedAnalyses run(Module &M, AnalysisManager<Module> &);
 };
 

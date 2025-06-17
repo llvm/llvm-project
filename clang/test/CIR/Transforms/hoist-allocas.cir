@@ -1,0 +1,113 @@
+ // RUN: cir-opt %s -cir-hoist-allocas -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+#true = #cir.bool<true> : !cir.bool
+
+module {
+  cir.func @l1() {
+    cir.scope {
+      %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+      %1 = cir.const #cir.int<0> : !s32i
+      cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+      cir.for : cond {
+        %2 = cir.const #true
+        cir.condition(%2)
+      } body {
+       cir.yield
+      } step {
+        cir.yield
+      }
+    }
+    cir.return
+  }
+  // CHECK:      cir.func @l1
+  // CHECK-NEXT:   %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NEXT:     cir.store %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT:     cir.for : cond {
+  // CHECK-NEXT:       %[[TRUE:.*]] = cir.const #true
+  // CHECK-NEXT:       cir.condition(%[[TRUE]])
+  // CHECK-NEXT:     } body {
+  // CHECK-NEXT:       cir.yield
+  // CHECK-NEXT:     } step {
+  // CHECK-NEXT:       cir.yield
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  cir.func @l2() {
+    cir.scope {
+      cir.for : cond {
+        %0 = cir.const #true
+        cir.condition(%0)
+      } body {
+        cir.scope {
+          %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+          %2 = cir.const #cir.int<0> : !s32i
+          cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
+        }
+       cir.yield
+      } step {
+        cir.yield
+      }
+    }
+    cir.return
+  }
+  // CHECK:      cir.func @l2
+  // CHECK-NEXT:   %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.for : cond {
+  // CHECK-NEXT:       %[[TRUE:.*]] = cir.const #true
+  // CHECK-NEXT:       cir.condition(%[[TRUE]])
+  // CHECK-NEXT:     } body {
+  // CHECK-NEXT:       cir.scope {
+  // CHECK-NEXT:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NEXT:         cir.store %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT:       }
+  // CHECK-NEXT:       cir.yield
+  // CHECK-NEXT:     } step {
+  // CHECK-NEXT:       cir.yield
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  cir.func @l3() {
+    cir.scope {
+      cir.for : cond {
+        %0 = cir.const #true
+        cir.condition(%0)
+      } body {
+        cir.scope {
+          %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init, const] {alignment = 4 : i64}
+          %2 = cir.const #cir.int<0> : !s32i
+          cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
+        }
+       cir.yield
+      } step {
+        cir.yield
+      }
+    }
+    cir.return
+  }
+  // CHECK:      cir.func @l3
+  // CHECK-NEXT:   %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.for : cond {
+  // CHECK-NEXT:       %[[TRUE:.*]] = cir.const #true
+  // CHECK-NEXT:       cir.condition(%[[TRUE]])
+  // CHECK-NEXT:     } body {
+  // CHECK-NEXT:       cir.scope {
+  // CHECK-NEXT:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NEXT:         cir.store %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT:       }
+  // CHECK-NEXT:       cir.yield
+  // CHECK-NEXT:     } step {
+  // CHECK-NEXT:       cir.yield
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+}

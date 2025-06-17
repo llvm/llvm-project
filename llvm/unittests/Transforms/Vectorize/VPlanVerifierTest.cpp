@@ -8,100 +8,108 @@
 
 #include "../lib/Transforms/Vectorize/VPlanVerifier.h"
 #include "../lib/Transforms/Vectorize/VPlan.h"
+#include "../lib/Transforms/Vectorize/VPlanCFG.h"
+#include "VPlanTestBase.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
-namespace {
-TEST(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {});
-  VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI});
+using VPVerifierTest = VPlanTestBase;
 
-  VPBasicBlock *VPPH = new VPBasicBlock("ph");
-  VPBasicBlock *VPBB1 = new VPBasicBlock();
+namespace {
+TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
+  VPlan &Plan = getPlan();
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
+  VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI});
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
+
+  VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBB1->appendRecipe(UseI);
   VPBB1->appendRecipe(DefI);
 
-  auto TC = std::make_unique<VPValue>();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBB2->appendRecipe(CanIV);
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
-
-  LLVMContext C;
-  auto *ScalarHeader = BasicBlock::Create(C, "");
-  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
-  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
-  VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
 #endif
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  EXPECT_STREQ("Use before def!\n"
+               "  EMIT vp<%1> = sub vp<%2>\n"
+               "  before\n"
+               "  EMIT vp<%2> = add ir<0>\n",
+               ::testing::internal::GetCapturedStderr().c_str());
+#else
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
-  delete ScalarHeader;
+#endif
 }
 
-TEST(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {});
+TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
+  VPlan &Plan = getPlan();
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
   VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(UseI, {});
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
 
-  VPBasicBlock *VPPH = new VPBasicBlock("ph");
-  VPBasicBlock *VPBB1 = new VPBasicBlock();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
 
   VPBB1->appendRecipe(UseI);
   VPBB2->appendRecipe(CanIV);
   VPBB2->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
-
-  auto TC = std::make_unique<VPValue>();
-  LLVMContext C;
-  auto *ScalarHeader = BasicBlock::Create(C, "");
-  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
-  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
-  VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
 #endif
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  EXPECT_STREQ("Use before def!\n"
+               "  EMIT vp<%1> = sub vp<%3>\n"
+               "  before\n"
+               "  EMIT vp<%3> = add ir<0>\n",
+               ::testing::internal::GetCapturedStderr().c_str());
+#else
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
-  delete ScalarHeader;
+#endif
 }
 
-TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
-  LLVMContext C;
+TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
+  VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
   auto *Phi = PHINode::Create(Int32, 1);
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 0));
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(I1, {});
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
   auto *Blend = new VPBlendRecipe(Phi, {DefI});
 
-  VPBasicBlock *VPPH = new VPBasicBlock("ph");
-  VPBasicBlock *VPBB1 = new VPBasicBlock();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
-  VPBasicBlock *VPBB3 = new VPBasicBlock();
-  VPBasicBlock *VPBB4 = new VPBasicBlock();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
 
-  VPBB1->appendRecipe(I1);
   VPBB2->appendRecipe(CanIV);
   VPBB3->appendRecipe(Blend);
   VPBB4->appendRecipe(DefI);
@@ -109,56 +117,95 @@ TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB3, VPBB4);
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB4, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB4, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
-  auto TC = std::make_unique<VPValue>();
-  auto *ScalarHeader = BasicBlock::Create(C, "");
-  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
-  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
-  VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
 #endif
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  EXPECT_STREQ("Use before def!\n"
+               "  BLEND ir<<badref>> = vp<%2>\n"
+               "  before\n"
+               "  EMIT vp<%2> = add ir<0>\n",
+               ::testing::internal::GetCapturedStderr().c_str());
+#else
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
+#endif
 
   delete Phi;
-  delete ScalarHeader;
 }
 
-TEST(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(I1, {});
+TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 0));
+
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
+  VPPhi *Phi = new VPPhi({DefI}, {});
+  VPBB2->appendRecipe(Phi);
+  VPBB2->appendRecipe(DefI);
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
+  VPBB3->appendRecipe(CanIV);
+
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB3, VPBB3, "R1");
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB2, R1);
+  VPBlockUtils::connectBlocks(VPBB4, Plan.getScalarHeader());
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  EXPECT_STREQ("Incoming def at index 0 does not dominate incoming block!\n"
+               "  EMIT vp<%2> = add ir<0>\n"
+               "  does not dominate preheader for\n"
+               "  EMIT-SCALAR vp<%1> = phi [ vp<%2>, preheader ]",
+               ::testing::internal::GetCapturedStderr().c_str());
+#else
+  EXPECT_STREQ("Incoming def at index 0 does not dominate incoming block!\n", ::
+                   testing::internal::GetCapturedStderr()
+                       .c_str());
+#endif
+#endif
+}
+
+TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
+  VPlan &Plan = getPlan();
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero});
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
   VPInstruction *BranchOnCond2 =
       new VPInstruction(VPInstruction::BranchOnCond, {I1});
 
-  VPBasicBlock *VPPH = new VPBasicBlock("ph");
-  VPBasicBlock *VPBB1 = new VPBasicBlock();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
 
   VPBB1->appendRecipe(I1);
   VPBB1->appendRecipe(BranchOnCond2);
   VPBB2->appendRecipe(CanIV);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
-  auto TC = std::make_unique<VPValue>();
-  LLVMContext C;
-  auto *ScalarHeader = BasicBlock::Create(C, "");
-  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
-  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
-  VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
@@ -168,21 +215,21 @@ TEST(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   EXPECT_STREQ("Multiple instances of the same successor.\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
-  delete ScalarHeader;
 }
 
-TEST(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(I1, {});
+TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
+  VPlan &Plan = getPlan();
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero});
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
   VPInstruction *BranchOnCond2 =
       new VPInstruction(VPInstruction::BranchOnCond, {I1});
 
-  VPBasicBlock *VPPH = new VPBasicBlock("ph");
-  VPBasicBlock *VPBB1 = new VPBasicBlock();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
-  VPBasicBlock *VPBB3 = new VPBasicBlock();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
 
   VPBB1->appendRecipe(I1);
   VPBB2->appendRecipe(CanIV);
@@ -191,16 +238,11 @@ TEST(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
 
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB3, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB3, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
-  auto TC = std::make_unique<VPValue>();
-  LLVMContext C;
-  auto *ScalarHeader = BasicBlock::Create(C, "");
-  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
-  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
-  VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
@@ -210,31 +252,30 @@ TEST(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
   EXPECT_STREQ("Multiple instances of the same successor.\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
-  delete ScalarHeader;
 }
 
-TEST(VPVerifierTest, BlockOutsideRegionWithParent) {
-  VPBasicBlock *VPPH = new VPBasicBlock("ph");
-  VPBasicBlock *VPBB1 = new VPBasicBlock();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
+TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
+  VPlan &Plan = getPlan();
 
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {});
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
+  VPBB2->appendRecipe(CanIV);
+
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {DefI});
 
   VPBB1->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
-  VPBB1->setParent(R1);
 
-  auto TC = std::make_unique<VPValue>();
-  LLVMContext C;
-  auto *ScalarHeader = BasicBlock::Create(C, "");
-  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
-  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
-  VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
+  VPBB1->setParent(R1);
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
@@ -244,7 +285,46 @@ TEST(VPVerifierTest, BlockOutsideRegionWithParent) {
   EXPECT_STREQ("Predecessor is not in the same region.\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
-  delete ScalarHeader;
 }
 
+class VPIRVerifierTest : public VPlanTestIRBase {};
+
+TEST_F(VPIRVerifierTest, testVerifyIRPhi) {
+  const char *ModuleString =
+      "define void @f(ptr %A, i64 %N) {\n"
+      "entry:\n"
+      "  br label %loop\n"
+      "loop:\n"
+      "  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]\n"
+      "  %arr.idx = getelementptr inbounds i32, ptr %A, i64 %iv\n"
+      "  %l1 = load i32, ptr %arr.idx, align 4\n"
+      "  %res = add i32 %l1, 10\n"
+      "  store i32 %res, ptr %arr.idx, align 4\n"
+      "  %iv.next = add i64 %iv, 1\n"
+      "  %exitcond = icmp ne i64 %iv.next, %N\n"
+      "  br i1 %exitcond, label %loop, label %for.end\n"
+      "for.end:\n"
+      "  %p = phi i32 [ %l1, %loop ]\n"
+      "  ret void\n"
+      "}\n";
+
+  Module &M = parseModule(ModuleString);
+
+  Function *F = M.getFunction("f");
+  BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
+  auto Plan = buildVPlan(LoopHeader);
+
+  Plan->getExitBlocks()[0]->front().addOperand(
+      Plan->getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(*Ctx), 0)));
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(*Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_STREQ(
+      "Phi-like recipe with different number of operands and predecessors.\n",
+      ::testing::internal::GetCapturedStderr().c_str());
+#endif
+}
 } // namespace

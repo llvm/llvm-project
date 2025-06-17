@@ -13,7 +13,6 @@
 
 #include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
-#include "GCNSubtarget.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -615,7 +614,7 @@ static bool isKnownIntegral(const Value *V, const DataLayout &DL,
 
     // Need to check int size cannot produce infinity, which computeKnownFPClass
     // knows how to do already.
-    return isKnownNeverInfinity(I, /*Depth=*/0, SimplifyQuery(DL));
+    return isKnownNeverInfinity(I, SimplifyQuery(DL));
   case Instruction::Call: {
     const CallInst *CI = cast<CallInst>(I);
     switch (CI->getIntrinsicID()) {
@@ -627,7 +626,7 @@ static bool isKnownIntegral(const Value *V, const DataLayout &DL,
     case Intrinsic::round:
     case Intrinsic::roundeven:
       return (FMF.noInfs() && FMF.noNaNs()) ||
-             isKnownNeverInfOrNaN(I, /*Depth=*/0, SimplifyQuery(DL));
+             isKnownNeverInfOrNaN(I, SimplifyQuery(DL));
     default:
       break;
     }
@@ -654,7 +653,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
 
   // Further check the number of arguments to see if they match.
   // TODO: Check calling convention matches too
-  if (!FInfo.isCompatibleSignature(CI->getFunctionType()))
+  if (!FInfo.isCompatibleSignature(*Callee->getParent(), CI->getFunctionType()))
     return false;
 
   LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << '\n');
@@ -765,7 +764,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
       // TODO: Account for flags on current call
       if (PowrFunc &&
           cannotBeOrderedLessThanZero(
-              FPOp->getOperand(0), /*Depth=*/0,
+              FPOp->getOperand(0),
               SimplifyQuery(M->getDataLayout(), TLInfo, DT, AC, Call))) {
         Call->setCalledFunction(PowrFunc);
         return fold_pow(FPOp, B, PowrInfo) || true;
@@ -1361,6 +1360,11 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   bool const isSin = fInfo.getId() == AMDGPULibFunc::EI_SIN;
 
   Value *CArgVal = FPOp->getOperand(0);
+
+  // TODO: Constant fold the call
+  if (isa<ConstantData>(CArgVal))
+    return false;
+
   CallInst *CI = cast<CallInst>(FPOp);
 
   Function *F = B.GetInsertBlock()->getParent();

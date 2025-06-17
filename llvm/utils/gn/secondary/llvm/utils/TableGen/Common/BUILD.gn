@@ -1,4 +1,5 @@
 static_library("Common") {
+  output_name = "LLVMTableGenCommon"
   deps = [
     "//llvm/include/llvm/CodeGen:GenVT",
     "//llvm/lib/CodeGenTypes",

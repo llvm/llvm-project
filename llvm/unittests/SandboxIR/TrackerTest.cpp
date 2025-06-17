@@ -52,6 +52,9 @@ define void @foo(ptr %ptr) {
   auto *F = Ctx.createFunction(&LLVMF);
   auto *BB = &*F->begin();
   auto &Tracker = Ctx.getTracker();
+  // Check empty().
+  EXPECT_TRUE(Ctx.getTracker().empty());
+
   Tracker.save();
   auto It = BB->begin();
   auto *Gep0 = &*It++;
@@ -64,6 +67,9 @@ define void @foo(ptr %ptr) {
   EXPECT_EQ(St->getOperand(0), Ld);
   EXPECT_EQ(St->getOperand(1), Gep1);
   EXPECT_EQ(Ld->getOperand(0), Gep1);
+
+  // Check empty().
+  EXPECT_FALSE(Ctx.getTracker().empty());
 
   Ctx.getTracker().revert();
   EXPECT_NE(St->getOperand(0), Ld);
@@ -1844,3 +1850,71 @@ define void @foo(i32 %arg, float %farg) {
   Ctx.revert();
   EXPECT_FALSE(FAdd->getFastMathFlags() != OrigFMF);
 }
+
+// IRSnapshotChecker is only defined in debug mode.
+#ifndef NDEBUG
+
+TEST_F(TrackerTest, IRSnapshotCheckerNoChanges) {
+  parseIR(C, R"IR(
+define i32 @foo(i32 %arg) {
+  %add0 = add i32 %arg, %arg
+  ret i32 %add0
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  [[maybe_unused]] auto *F = Ctx.createFunction(&LLVMF);
+  sandboxir::IRSnapshotChecker Checker(Ctx);
+  Checker.save();
+  Checker.expectNoDiff();
+}
+
+TEST_F(TrackerTest, IRSnapshotCheckerDiesWithUnexpectedChanges) {
+  parseIR(C, R"IR(
+define i32 @foo(i32 %arg) {
+  %add0 = add i32 %arg, %arg
+  %add1 = add i32 %add0, %arg
+  ret i32 %add1
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::Instruction *Add0 = &*It++;
+  sandboxir::Instruction *Add1 = &*It++;
+  sandboxir::IRSnapshotChecker Checker(Ctx);
+  Checker.save();
+  Add1->setOperand(1, Add0);
+  EXPECT_DEATH(Checker.expectNoDiff(), "Found IR difference");
+}
+
+TEST_F(TrackerTest, IRSnapshotCheckerSaveMultipleTimes) {
+  parseIR(C, R"IR(
+define i32 @foo(i32 %arg) {
+  %add0 = add i32 %arg, %arg
+  %add1 = add i32 %add0, %arg
+  ret i32 %add1
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::Instruction *Add0 = &*It++;
+  sandboxir::Instruction *Add1 = &*It++;
+  sandboxir::IRSnapshotChecker Checker(Ctx);
+  Checker.save();
+  Add1->setOperand(1, Add0);
+  // Now IR differs from the last snapshot. Let's take a new snapshot.
+  Checker.save();
+  // The new snapshot should have replaced the old one, so this should succeed.
+  Checker.expectNoDiff();
+}
+
+#endif // NDEBUG

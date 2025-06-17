@@ -42,8 +42,7 @@ define i32 @test(<vscale x 32 x i8> %bin.rdx, <vscale x 32 x i8> %bin.rdx2)  {
 ; CHECK-NEXT:    add z1.s, z3.s, z1.s
 ; CHECK-NEXT:    add z0.s, z1.s, z0.s
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %a = sext <vscale x 32 x i8> %bin.rdx to <vscale x 32 x i32>
   %b = sext <vscale x 32 x i8> %bin.rdx2 to <vscale x 32 x i32>

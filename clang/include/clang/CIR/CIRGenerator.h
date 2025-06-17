@@ -37,24 +37,57 @@ namespace cir {
 class CIRGenerator : public clang::ASTConsumer {
   virtual void anchor();
   clang::DiagnosticsEngine &diags;
-  clang::ASTContext *astCtx;
+  clang::ASTContext *astContext;
   // Only used for debug info.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs;
 
   const clang::CodeGenOptions &codeGenOpts;
 
+  unsigned handlingTopLevelDecls;
+
+  /// Use this when emitting decls to block re-entrant decl emission. It will
+  /// emit all deferred decls on scope exit. Set EmitDeferred to false if decl
+  /// emission must be deferred longer, like at the end of a tag definition.
+  struct HandlingTopLevelDeclRAII {
+    CIRGenerator &self;
+    bool emitDeferred;
+    HandlingTopLevelDeclRAII(CIRGenerator &self, bool emitDeferred = true)
+        : self{self}, emitDeferred{emitDeferred} {
+      ++self.handlingTopLevelDecls;
+    }
+    ~HandlingTopLevelDeclRAII() {
+      unsigned Level = --self.handlingTopLevelDecls;
+      if (Level == 0 && emitDeferred)
+        self.emitDeferredDecls();
+    }
+  };
+
 protected:
-  std::unique_ptr<mlir::MLIRContext> mlirCtx;
+  std::unique_ptr<mlir::MLIRContext> mlirContext;
   std::unique_ptr<clang::CIRGen::CIRGenModule> cgm;
+
+private:
+  llvm::SmallVector<clang::FunctionDecl *, 8> deferredInlineMemberFuncDefs;
 
 public:
   CIRGenerator(clang::DiagnosticsEngine &diags,
                llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs,
                const clang::CodeGenOptions &cgo);
   ~CIRGenerator() override;
-  void Initialize(clang::ASTContext &astCtx) override;
+  void Initialize(clang::ASTContext &astContext) override;
   bool HandleTopLevelDecl(clang::DeclGroupRef group) override;
+  void HandleTranslationUnit(clang::ASTContext &astContext) override;
+  void HandleInlineFunctionDefinition(clang::FunctionDecl *d) override;
+  void HandleTagDeclDefinition(clang::TagDecl *d) override;
+  void CompleteTentativeDefinition(clang::VarDecl *d) override;
+
   mlir::ModuleOp getModule() const;
+  mlir::MLIRContext &getMLIRContext() { return *mlirContext; };
+  const mlir::MLIRContext &getMLIRContext() const { return *mlirContext; };
+
+  bool verifyModule() const;
+
+  void emitDeferredDecls();
 };
 
 } // namespace cir

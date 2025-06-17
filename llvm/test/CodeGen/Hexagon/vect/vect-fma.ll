@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 < %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 < %s
 ; REQUIRES: asserts
 ; Used to fail with "SplitVectorResult #0: 0x16cbe60: v4f64 = fma"
 

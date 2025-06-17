@@ -12,7 +12,7 @@ func.func @load_1D_vector(%source: memref<8x16x32xf32>, %offset: index) -> vecto
 // CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc
 // CHECK-SAME:    %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]]
 // CHECK-SAME:    memref<8x16x32xf32> -> !xegpu.tensor_desc<8xf32,
-// CHECK-SAME:    boundary_check = true
+// CHECK-SAME:    boundary_check = false
 // CHECK:       %[[VEC:.+]] = xegpu.load_nd %[[DESC]]{{.*}}-> vector<8xf32>
 // CHECK:       return %[[VEC]]
 

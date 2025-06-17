@@ -66,19 +66,19 @@ static cl::opt<unsigned> MaxCodeSizeGrowth(
     "Maximum codesize growth allowed per function"));
 
 static cl::opt<unsigned> MinCodeSizeSavings(
-    "funcspec-min-codesize-savings", cl::init(20), cl::Hidden, cl::desc(
-    "Reject specializations whose codesize savings are less than this"
-    "much percent of the original function size"));
+    "funcspec-min-codesize-savings", cl::init(20), cl::Hidden,
+    cl::desc("Reject specializations whose codesize savings are less than this "
+             "much percent of the original function size"));
 
 static cl::opt<unsigned> MinLatencySavings(
     "funcspec-min-latency-savings", cl::init(40), cl::Hidden,
-    cl::desc("Reject specializations whose latency savings are less than this"
+    cl::desc("Reject specializations whose latency savings are less than this "
              "much percent of the original function size"));
 
 static cl::opt<unsigned> MinInliningBonus(
-    "funcspec-min-inlining-bonus", cl::init(300), cl::Hidden, cl::desc(
-    "Reject specializations whose inlining bonus is less than this"
-    "much percent of the original function size"));
+    "funcspec-min-inlining-bonus", cl::init(300), cl::Hidden,
+    cl::desc("Reject specializations whose inlining bonus is less than this "
+             "much percent of the original function size"));
 
 static cl::opt<bool> SpecializeOnAddress(
     "funcspec-on-address", cl::init(false), cl::Hidden, cl::desc(
@@ -415,6 +415,8 @@ Constant *InstCostVisitor::visitCallBase(CallBase &I) {
 
   for (unsigned Idx = 0, E = I.getNumOperands() - 1; Idx != E; ++Idx) {
     Value *V = I.getOperand(Idx);
+    if (isa<MetadataAsValue>(V))
+      return nullptr;
     Constant *C = findConstantFor(V);
     if (!C)
       return nullptr;
@@ -660,7 +662,7 @@ FunctionSpecializer::~FunctionSpecializer() {
 /// non-negative, which is true for both TCK_CodeSize and TCK_Latency, and
 /// always Valid.
 static unsigned getCostValue(const Cost &C) {
-  int64_t Value = *C.getValue();
+  int64_t Value = C.getValue();
 
   assert(Value >= 0 && "CodeSize and Latency cannot be negative");
   // It is safe to down cast since we know the arguments cannot be negative and
@@ -711,7 +713,7 @@ bool FunctionSpecializer::run() {
     if (!SpecializeLiteralConstant && !Inserted && !Metrics.isRecursive)
       continue;
 
-    int64_t Sz = *Metrics.NumInsts.getValue();
+    int64_t Sz = Metrics.NumInsts.getValue();
     assert(Sz > 0 && "CodeSize should be positive");
     // It is safe to down cast from int64_t, NumInsts is always positive.
     unsigned FuncSize = static_cast<unsigned>(Sz);

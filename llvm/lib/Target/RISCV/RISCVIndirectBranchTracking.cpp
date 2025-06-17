@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // The pass adds LPAD (AUIPC with rs1 = X0) machine instructions at the
-// beginning of each basic block or function that is referenced by an indrect
+// beginning of each basic block or function that is referenced by an indirect
 // jump/call instruction.
 //
 //===----------------------------------------------------------------------===//
@@ -20,6 +20,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 
+#define DEBUG_TYPE "riscv-indrect-branch-tracking"
+#define PASS_NAME "RISC-V Indirect Branch Tracking"
+
 using namespace llvm;
 
 cl::opt<uint32_t> PreferredLandingPadLabel(
@@ -27,27 +30,28 @@ cl::opt<uint32_t> PreferredLandingPadLabel(
     cl::desc("Use preferred fixed label for all labels"));
 
 namespace {
-class RISCVIndirectBranchTrackingPass : public MachineFunctionPass {
+class RISCVIndirectBranchTracking : public MachineFunctionPass {
 public:
-  RISCVIndirectBranchTrackingPass() : MachineFunctionPass(ID) {}
+  static char ID;
+  RISCVIndirectBranchTracking() : MachineFunctionPass(ID) {}
 
-  StringRef getPassName() const override {
-    return "RISC-V Indirect Branch Tracking";
-  }
+  StringRef getPassName() const override { return PASS_NAME; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
-  static char ID;
   const Align LpadAlign = Align(4);
 };
 
 } // end anonymous namespace
 
-char RISCVIndirectBranchTrackingPass::ID = 0;
+INITIALIZE_PASS(RISCVIndirectBranchTracking, DEBUG_TYPE, PASS_NAME, false,
+                false)
+
+char RISCVIndirectBranchTracking::ID = 0;
 
 FunctionPass *llvm::createRISCVIndirectBranchTrackingPass() {
-  return new RISCVIndirectBranchTrackingPass();
+  return new RISCVIndirectBranchTracking();
 }
 
 static void emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII,
@@ -57,8 +61,7 @@ static void emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII,
       .addImm(Label);
 }
 
-bool RISCVIndirectBranchTrackingPass::runOnMachineFunction(
-    MachineFunction &MF) {
+bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
   const auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
   if (!Subtarget.hasStdExtZicfilp())

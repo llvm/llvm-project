@@ -5,6 +5,12 @@
 # RUN: llvm-readobj -r %t.relax | FileCheck %s --check-prefixes=RELOC,RELAX
 # RUN: llvm-mc --triple=loongarch64 --mattr=+la-global-with-abs \
 # RUN:     %s | FileCheck %s --check-prefix=ABS
+# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+la-global-with-abs \
+# RUN:     --mattr=-relax %s -o %t
+# RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=GTOABS-RELOC
+# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+la-global-with-abs \
+# RUN:     --mattr=+relax %s -o %t.relax
+# RUN: llvm-readobj -r %t.relax | FileCheck %s --check-prefixes=GTOABS-RELOC,GTOABS-RELAX
 
 # RELOC:      Relocations [
 # RELOC-NEXT:   Section ({{.*}}) .rela.text {
@@ -36,6 +42,10 @@ la.pcrel $a0, sym_pcrel
 # RELAX-NEXT: R_LARCH_RELAX - 0x0
 # RELOC-NEXT: R_LARCH_PCALA_LO12 sym_pcrel 0x0
 # RELAX-NEXT: R_LARCH_RELAX - 0x0
+# GTOABS-RELOC: R_LARCH_PCALA_HI20 sym_pcrel 0x0
+# GTOABS-RELAX-NEXT: R_LARCH_RELAX - 0x0
+# GTOABS-RELOC-NEXT: R_LARCH_PCALA_LO12 sym_pcrel 0x0
+# GTOABS-RELAX-NEXT: R_LARCH_RELAX - 0x0
 
 la.got $a0, sym_got
 # CHECK-NEXT: pcalau12i $a0, %got_pc_hi20(sym_got)
@@ -73,7 +83,9 @@ la.tls.ie $a0, sym_ie
 # ABS-NEXT:   ld.d $a0, $a0, 0
 # ABS-EMPTY:
 # RELOC-NEXT: R_LARCH_TLS_IE_PC_HI20 sym_ie 0x0
+# RELAX-NEXT: R_LARCH_RELAX - 0x0
 # RELOC-NEXT: R_LARCH_TLS_IE_PC_LO12 sym_ie 0x0
+# RELAX-NEXT: R_LARCH_RELAX - 0x0
 
 la.tls.ld $a0, sym_ld
 # CHECK-NEXT: pcalau12i $a0, %ld_pc_hi20(sym_ld)
@@ -85,7 +97,9 @@ la.tls.ld $a0, sym_ld
 # ABS-NEXT:   lu52i.d $a0, $a0, %got64_hi12(sym_ld)
 # ABS-EMPTY:
 # RELOC-NEXT: R_LARCH_TLS_LD_PC_HI20 sym_ld 0x0
+# RELAX-NEXT: R_LARCH_RELAX - 0x0
 # RELOC-NEXT: R_LARCH_GOT_PC_LO12 sym_ld 0x0
+# RELAX-NEXT: R_LARCH_RELAX - 0x0
 
 la.tls.gd $a0, sym_gd
 # CHECK-NEXT: pcalau12i $a0, %gd_pc_hi20(sym_gd)
@@ -97,7 +111,9 @@ la.tls.gd $a0, sym_gd
 # ABS-NEXT:   lu52i.d $a0, $a0, %got64_hi12(sym_gd)
 # ABS-EMPTY:
 # RELOC-NEXT: R_LARCH_TLS_GD_PC_HI20 sym_gd 0x0
+# RELAX-NEXT: R_LARCH_RELAX - 0x0
 # RELOC-NEXT: R_LARCH_GOT_PC_LO12 sym_gd 0x0
+# RELAX-NEXT: R_LARCH_RELAX - 0x0
 
 la.tls.desc $a0, sym_desc
 # CHECK-NEXT: pcalau12i $a0, %desc_pc_hi20(sym_desc)
@@ -113,9 +129,13 @@ la.tls.desc $a0, sym_desc
 # ABS-NEXT:   jirl $ra, $ra, %desc_call(sym_desc)
 # ABS-EMPTY:
 # RELOC-NEXT: R_LARCH_TLS_DESC_PC_HI20 sym_desc 0x0
+# RELAX-NEXT: R_LARCH_RELAX - 0x0
 # RELOC-NEXT: R_LARCH_TLS_DESC_PC_LO12 sym_desc 0x0
+# RELAX-NEXT: R_LARCH_RELAX - 0x0
 # RELOC-NEXT: R_LARCH_TLS_DESC_LD sym_desc 0x0
+# RELAX-NEXT: R_LARCH_RELAX - 0x0
 # RELOC-NEXT: R_LARCH_TLS_DESC_CALL sym_desc 0x0
+# RELAX-NEXT: R_LARCH_RELAX - 0x0
 
 #############################################################
 ## with a temporary register.

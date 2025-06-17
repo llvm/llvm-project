@@ -13,8 +13,12 @@
 # RUN: not ld.lld tag1.o tag1a.o tag2.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR1 %s
 
 # ERR1:      error: incompatible values of AArch64 PAuth core info found
-# ERR1-NEXT: >>> tag1.o: 0x2a000000000000000{{1|2}}00000000000000
-# ERR1-NEXT: >>> tag2.o: 0x2a000000000000000{{1|2}}00000000000000
+# ERR1-NEXT: platform:
+# ERR1-NEXT: >>> tag1.o: 0x2a
+# ERR1-NEXT: >>> tag2.o: 0x2a
+# ERR1-NEXT: version:
+# ERR1-NEXT: >>> tag1.o: 0x01
+# ERR1-NEXT: >>> tag2.o: 0x02
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag-short.s -o short.o
 # RUN: not ld.lld short.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR2 %s
@@ -56,8 +60,8 @@
 
 # PACPLTTAG:      0x0000000070000003 (AARCH64_PAC_PLT)
 
-# RUN: llvm-objdump -d pacplt-nowarn | FileCheck --check-prefix PACPLT -DA=10380 -DB=478 -DC=480 %s
-# RUN: llvm-objdump -d pacplt-warn   | FileCheck --check-prefix PACPLT -DA=10390 -DB=488 -DC=490 %s
+# RUN: llvm-objdump -d pacplt-nowarn | FileCheck --check-prefixes=PACPLT,NOHINT -DA=10380 -DB=478 -DC=480 %s
+# RUN: llvm-objdump -d pacplt-warn   | FileCheck --check-prefixes=PACPLT,HINT   -DA=10390 -DB=488 -DC=490 %s
 
 # PACPLT: Disassembly of section .text:
 # PACPLT:      <func2>:
@@ -77,9 +81,15 @@
 # PACPLT-NEXT:     adrp    x16, 0x30000 <func3+0x30000>
 # PACPLT-NEXT:     ldr     x17, [x16, #0x[[C]]]
 # PACPLT-NEXT:     add     x16, x16, #0x[[C]]
-# PACPLT-NEXT:     autia1716
-# PACPLT-NEXT:     br      x17
+# NOHINT-NEXT:     braa    x17, x16
+# NOHINT-NEXT:     nop
+# HINT-NEXT:       autia1716
+# HINT-NEXT:       br      x17
 # PACPLT-NEXT:     nop
+
+# RUN: not ld.lld tag1.o -z pauth-report=u 2>&1 | FileCheck --check-prefix=REPORT-ERR %s
+# REPORT-ERR:  error: unknown -z pauth-report= value: u{{$}}
+# REPORT-EMPTY:
 
 #--- abi-tag-short.s
 

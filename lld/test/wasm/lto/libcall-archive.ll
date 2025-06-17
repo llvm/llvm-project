@@ -16,7 +16,7 @@ entry:
 
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1)
 
-attributes #0 = { "target-features"="-bulk-memory" }
+attributes #0 = { "target-features"="-bulk-memory,-bulk-memory-opt" }
 
 ; CHECK:       - Type:            CUSTOM
 ; CHECK-NEXT:    Name:            name

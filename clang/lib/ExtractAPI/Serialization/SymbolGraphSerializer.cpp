@@ -19,14 +19,12 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
 #include <optional>
-#include <type_traits>
 
 using namespace clang;
 using namespace clang::extractapi;
@@ -1067,9 +1065,8 @@ void SymbolGraphSerializer::serializeWithExtensionGraphs(
 
   for (auto &ExtensionSGF : Serializer.ExtendedModules) {
     if (auto ExtensionOS =
-            CreateOutputStream(ExtensionSGF.getKey() + "@" + API.ProductName))
-      Serializer.serializeGraphToStream(*ExtensionOS, Options,
-                                        ExtensionSGF.getKey(),
+            CreateOutputStream(API.ProductName + "@" + ExtensionSGF.getKey()))
+      Serializer.serializeGraphToStream(*ExtensionOS, Options, API.ProductName,
                                         std::move(ExtensionSGF.getValue()));
   }
 }

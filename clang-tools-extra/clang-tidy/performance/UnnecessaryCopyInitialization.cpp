@@ -15,7 +15,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
 #include <optional>
-#include <utility>
 
 namespace clang::tidy::performance {
 namespace {
@@ -104,14 +103,18 @@ AST_MATCHER_FUNCTION_P(StatementMatcher,
                                 hasArgument(0, hasType(ReceiverType)))));
 }
 
+AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
+
 AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
-  // Only allow initialization of a const reference from a free function if it
-  // has no arguments. Otherwise it could return an alias to one of its
-  // arguments and the arguments need to be checked for const use as well.
-  return callExpr(callee(functionDecl(returns(hasCanonicalType(
-                                          matchers::isReferenceToConst())))
-                             .bind(FunctionDeclId)),
-                  argumentCountIs(0), unless(callee(cxxMethodDecl())))
+  // Only allow initialization of a const reference from a free function or
+  // static member function if it has no arguments. Otherwise it could return
+  // an alias to one of its arguments and the arguments need to be checked
+  // for const use as well.
+  return callExpr(argumentCountIs(0),
+                  callee(functionDecl(returns(hasCanonicalType(
+                                          matchers::isReferenceToConst())),
+                                      unless(cxxMethodDecl(unless(isStatic()))))
+                             .bind(FunctionDeclId)))
       .bind(InitFunctionCallId);
 }
 
@@ -232,12 +235,14 @@ UnnecessaryCopyInitialization::UnnecessaryCopyInitialization(
           Options.get("ExcludedContainerTypes", ""))) {}
 
 void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
-  auto LocalVarCopiedFrom = [this](const internal::Matcher<Expr> &CopyCtorArg) {
-    return compoundStmt(
-               forEachDescendant(
-                   declStmt(
-                       unless(has(decompositionDecl())),
-                       has(varDecl(hasLocalStorage(),
+  auto LocalVarCopiedFrom =
+      [this](const ast_matchers::internal::Matcher<Expr> &CopyCtorArg) {
+        return compoundStmt(
+                   forEachDescendant(
+                       declStmt(
+                           unless(has(decompositionDecl())),
+                           has(varDecl(
+                                   hasLocalStorage(),
                                    hasType(qualType(
                                        hasCanonicalType(allOf(
                                            matchers::isExpensiveToCopy(),
@@ -254,10 +259,10 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
                                                isCopyConstructor())),
                                            hasArgument(0, CopyCtorArg))
                                            .bind("ctorCall"))))
-                               .bind("newVarDecl")))
-                       .bind("declStmt")))
-        .bind("blockStmt");
-  };
+                                   .bind("newVarDecl")))
+                           .bind("declStmt")))
+            .bind("blockStmt");
+      };
 
   Finder->addMatcher(
       LocalVarCopiedFrom(anyOf(

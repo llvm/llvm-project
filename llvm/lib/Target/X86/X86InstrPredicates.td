@@ -45,6 +45,7 @@ def NoEGPR       : Predicate<"!Subtarget->hasEGPR()">;
 // entries, so that the NDD variant can be selected first to benefit RA.
 def HasNDD       : Predicate<"Subtarget->hasNDD()">;
 def NoNDD        : Predicate<"!Subtarget->hasNDD()">;
+def HasZU        : Predicate<"Subtarget->hasZU()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
@@ -232,6 +233,8 @@ let RecomputePerFunction = 1 in {
                             "shouldOptForSize(MF)">;
   def NoSSE41_Or_OptForSize : Predicate<"shouldOptForSize(MF) || "
                                         "!Subtarget->hasSSE41()">;
+  def ImportCallOptimizationEnabled : Predicate<"MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
+  def ImportCallOptimizationDisabled : Predicate<"!MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
 }
 
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;

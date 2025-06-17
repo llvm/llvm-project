@@ -366,7 +366,7 @@ void ScopDetection::detect(Function &F) {
 
   // Prune non-profitable regions.
   for (auto &DIt : DetectionContextMap) {
-    DetectionContext &DC = *DIt.getSecond().get();
+    DetectionContext &DC = *DIt.getSecond();
     if (DC.Log.hasErrors())
       continue;
     if (!ValidRegions.count(&DC.CurRegion))
@@ -431,7 +431,7 @@ bool ScopDetection::isMaxRegionInScop(const Region &R, bool Verify) {
     Entry = std::make_unique<DetectionContext>(const_cast<Region &>(R), AA,
                                                /*Verifying=*/false);
 
-    return isValidRegion(*Entry.get());
+    return isValidRegion(*Entry);
   }
 
   return true;
@@ -500,7 +500,7 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
     }
   }
 
-  Context.RequiredILS.insert(RequiredILS.begin(), RequiredILS.end());
+  Context.RequiredILS.insert_range(RequiredILS);
 
   return true;
 }
@@ -520,7 +520,7 @@ bool ScopDetection::involvesMultiplePtrs(const SCEV *S0, const SCEV *S1,
     if (!V->getType()->isPointerTy())
       continue;
 
-    auto *PtrSCEV = SE.getSCEVAtScope(V, Scope);
+    const SCEV *PtrSCEV = SE.getSCEVAtScope(V, Scope);
     if (isa<SCEVConstant>(PtrSCEV))
       continue;
 
@@ -528,7 +528,7 @@ bool ScopDetection::involvesMultiplePtrs(const SCEV *S0, const SCEV *S1,
     if (!BasePtr)
       return true;
 
-    auto *BasePtrVal = BasePtr->getValue();
+    Value *BasePtrVal = BasePtr->getValue();
     if (PtrVals.insert(BasePtrVal).second) {
       for (auto *PtrVal : PtrVals)
         if (PtrVal != BasePtrVal && !AA.isNoAlias(PtrVal, BasePtrVal))
@@ -720,7 +720,8 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
 
         // Bail if a pointer argument has a base address not known to
         // ScalarEvolution. Note that a zero pointer is acceptable.
-        auto *ArgSCEV = SE.getSCEVAtScope(Arg, LI.getLoopFor(CI.getParent()));
+        const SCEV *ArgSCEV =
+            SE.getSCEVAtScope(Arg, LI.getLoopFor(CI.getParent()));
         if (ArgSCEV->isZero())
           continue;
 
@@ -891,7 +892,7 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
         if (auto *AF2 = dyn_cast<SCEVMulExpr>(Op)) {
           SmallVector<const SCEV *, 0> Operands;
 
-          for (auto *MulOp : AF2->operands()) {
+          for (const SCEV *MulOp : AF2->operands()) {
             if (auto *Const = dyn_cast<SCEVConstant>(MulOp))
               Operands.push_back(Const);
             if (auto *Unknown = dyn_cast<SCEVUnknown>(MulOp)) {
@@ -1366,7 +1367,7 @@ bool ScopDetection::isValidLoop(Loop *L, DetectionContext &Context) {
 ScopDetection::LoopStats
 ScopDetection::countBeneficialSubLoops(Loop *L, ScalarEvolution &SE,
                                        unsigned MinProfitableTrips) {
-  auto *TripCount = SE.getBackedgeTakenCount(L);
+  const SCEV *TripCount = SE.getBackedgeTakenCount(L);
 
   int NumLoops = 1;
   int MaxLoopDepth = 1;
@@ -1495,7 +1496,7 @@ Region *ScopDetection::expandRegion(Region &R) {
     std::unique_ptr<DetectionContext> &Entry = DetectionContextMap[P];
     Entry = std::make_unique<DetectionContext>(*ExpandedRegion, AA,
                                                /*Verifying=*/false);
-    DetectionContext &Context = *Entry.get();
+    DetectionContext &Context = *Entry;
 
     POLLY_DEBUG(dbgs() << "\t\tTrying " << ExpandedRegion->getNameStr()
                        << "\n");
@@ -1553,7 +1554,7 @@ static bool regionWithoutLoops(Region &R, LoopInfo &LI) {
 void ScopDetection::removeCachedResultsRecursively(const Region &R) {
   for (auto &SubRegion : R) {
     if (ValidRegions.count(SubRegion.get())) {
-      removeCachedResults(*SubRegion.get());
+      removeCachedResults(*SubRegion);
     } else
       removeCachedResultsRecursively(*SubRegion);
   }
@@ -1567,7 +1568,7 @@ void ScopDetection::findScops(Region &R) {
   std::unique_ptr<DetectionContext> &Entry =
       DetectionContextMap[getBBPairForRegion(&R)];
   Entry = std::make_unique<DetectionContext>(R, AA, /*Verifying=*/false);
-  DetectionContext &Context = *Entry.get();
+  DetectionContext &Context = *Entry;
 
   bool DidBailout = true;
   if (!PollyProcessUnprofitable && regionWithoutLoops(R, LI))
@@ -1833,7 +1834,7 @@ void ScopDetection::printLocations(Function &F) {
 
 void ScopDetection::emitMissedRemarks(const Function &F) {
   for (auto &DIt : DetectionContextMap) {
-    DetectionContext &DC = *DIt.getSecond().get();
+    DetectionContext &DC = *DIt.getSecond();
     if (DC.Log.hasErrors())
       emitRejectionRemarks(DIt.getFirst(), DC.Log, ORE);
   }

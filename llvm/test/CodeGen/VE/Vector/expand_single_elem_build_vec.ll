@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ve -mattr=+vpu | FileCheck %s
+; RUN: llc < %s -mtriple=ve -mattr=+vpu | FileCheck %s
 
 ; Function Attrs: norecurse nounwind readnone
 ; Check that a single-element insertion is lowered to a insert_vector_elt node for isel.

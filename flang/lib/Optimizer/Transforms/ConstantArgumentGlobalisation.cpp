@@ -168,13 +168,13 @@ public:
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
     mlir::GreedyRewriteConfig config;
-    config.enableRegionSimplification =
-        mlir::GreedySimplifyRegionLevel::Disabled;
-    config.strictMode = mlir::GreedyRewriteStrictness::ExistingOps;
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
+    config.setStrictness(mlir::GreedyRewriteStrictness::ExistingOps);
 
     patterns.insert<CallOpRewriter>(context, *di);
-    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
-            mod, std::move(patterns), config))) {
+    if (mlir::failed(
+            mlir::applyPatternsGreedily(mod, std::move(patterns), config))) {
       mlir::emitError(mod.getLoc(),
                       "error in constant globalisation optimization\n");
       signalPassFailure();

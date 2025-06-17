@@ -23,13 +23,13 @@
 ; IR: %6 = add nsw i64 %polly.indvar4, 13
 ; IR: %polly.access.add.polly.subfunc.arg.A = add nsw i64 %polly.access.mul.polly.subfunc.arg.A, %6
 ; IR: %polly.access.polly.subfunc.arg.A = getelementptr float, ptr %polly.subfunc.arg.A, i64 %polly.access.add.polly.subfunc.arg.A
-; IR: %tmp10_p_scalar_ = load float, ptr %polly.access.polly.subfunc.arg.A, align 4, !alias.scope !0, !noalias !3, !llvm.access.group !4
+; IR: %tmp10_p_scalar_ = load float, ptr %polly.access.polly.subfunc.arg.A, align 4, !alias.scope !3, !noalias !6, !llvm.access.group !7
 
 ; IR: %polly.access.mul.polly.subfunc.arg.A7 = mul nsw i64 %polly.indvar, %polly.subfunc.arg.m
 ; IR: %7 = add nsw i64 %polly.indvar4, 43
 ; IR: %polly.access.add.polly.subfunc.arg.A8 = add nsw i64 %polly.access.mul.polly.subfunc.arg.A7, %7
 ; IR: %polly.access.polly.subfunc.arg.A9 = getelementptr float, ptr %polly.subfunc.arg.A, i64 %polly.access.add.polly.subfunc.arg.A8
-; IR: store float %p_tmp11, ptr %polly.access.polly.subfunc.arg.A9, align 4, !alias.scope !0, !noalias !3, !llvm.access.group !4
+; IR: store float %p_tmp11, ptr %polly.access.polly.subfunc.arg.A9, align 4, !alias.scope !3, !noalias !6, !llvm.access.group !7
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @new_multidim_access(i64 %n, i64 %m, ptr %A) {

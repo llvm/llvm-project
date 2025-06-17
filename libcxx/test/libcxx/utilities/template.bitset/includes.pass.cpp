@@ -8,6 +8,8 @@
 
 // test that <bitset> includes <string>, <stdexcept> and <iosfwd>
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <bitset>
 
 #include "test_macros.h"

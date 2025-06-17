@@ -32,7 +32,6 @@
 #define PROF_VTABLE_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_VTAB_COMMON)
 #define PROF_BITS_START INSTR_PROF_SECT_START(INSTR_PROF_BITS_COMMON)
 #define PROF_BITS_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_BITS_COMMON)
-#define PROF_ORDERFILE_START INSTR_PROF_SECT_START(INSTR_PROF_ORDERFILE_COMMON)
 #define PROF_VNODES_START INSTR_PROF_SECT_START(INSTR_PROF_VNODES_COMMON)
 #define PROF_VNODES_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_VNODES_COMMON)
 #define PROF_COVINIT_START INSTR_PROF_SECT_START(INSTR_PROF_COVINIT_COMMON)
@@ -53,7 +52,6 @@ extern char PROF_VNAME_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern char PROF_VNAME_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern char PROF_BITS_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern char PROF_BITS_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
-extern uint32_t PROF_ORDERFILE_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern char PROF_NAME_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern char PROF_NAME_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern ValueProfNode PROF_VNODES_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
@@ -101,9 +99,6 @@ COMPILER_RT_VISIBILITY char *__llvm_profile_begin_bitmap(void) {
 }
 COMPILER_RT_VISIBILITY char *__llvm_profile_end_bitmap(void) {
   return &PROF_BITS_STOP;
-}
-COMPILER_RT_VISIBILITY uint32_t *__llvm_profile_begin_orderfile(void) {
-  return &PROF_ORDERFILE_START;
 }
 
 COMPILER_RT_VISIBILITY ValueProfNode *
@@ -194,41 +189,33 @@ static int WriteBinaryIds(ProfDataWriter *Writer, const ElfW(Nhdr) * Note,
  */
 COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
   extern const ElfW(Ehdr) __ehdr_start __attribute__((visibility("hidden")));
+  extern ElfW(Dyn) _DYNAMIC[] __attribute__((weak, visibility("hidden")));
+
   const ElfW(Ehdr) *ElfHeader = &__ehdr_start;
   const ElfW(Phdr) *ProgramHeader =
       (const ElfW(Phdr) *)((uintptr_t)ElfHeader + ElfHeader->e_phoff);
 
+  /* Compute the added base address in case of position-independent code. */
+  uintptr_t Base = 0;
+  for (uint32_t I = 0; I < ElfHeader->e_phnum; I++) {
+    if (ProgramHeader[I].p_type == PT_PHDR)
+      Base = (uintptr_t)ProgramHeader - ProgramHeader[I].p_vaddr;
+    if (ProgramHeader[I].p_type == PT_DYNAMIC && _DYNAMIC)
+      Base = (uintptr_t)_DYNAMIC - ProgramHeader[I].p_vaddr;
+  }
+
   int TotalBinaryIdsSize = 0;
-  uint32_t I;
   /* Iterate through entries in the program header. */
-  for (I = 0; I < ElfHeader->e_phnum; I++) {
+  for (uint32_t I = 0; I < ElfHeader->e_phnum; I++) {
     /* Look for the notes segment in program header entries. */
     if (ProgramHeader[I].p_type != PT_NOTE)
       continue;
 
     /* There can be multiple notes segment, and examine each of them. */
-    const ElfW(Nhdr) * Note;
-    const ElfW(Nhdr) * NotesEnd;
-    /*
-     * When examining notes in file, use p_offset, which is the offset within
-     * the elf file, to find the start of notes.
-     */
-    if (ProgramHeader[I].p_memsz == 0 ||
-        ProgramHeader[I].p_memsz == ProgramHeader[I].p_filesz) {
-      Note = (const ElfW(Nhdr) *)((uintptr_t)ElfHeader +
-                                  ProgramHeader[I].p_offset);
-      NotesEnd = (const ElfW(Nhdr) *)((const char *)(Note) +
-                                      ProgramHeader[I].p_filesz);
-    } else {
-      /*
-       * When examining notes in memory, use p_vaddr, which is the address of
-       * section after loaded to memory, to find the start of notes.
-       */
-      Note =
-          (const ElfW(Nhdr) *)((uintptr_t)ElfHeader + ProgramHeader[I].p_vaddr);
-      NotesEnd =
-          (const ElfW(Nhdr) *)((const char *)(Note) + ProgramHeader[I].p_memsz);
-    }
+    const ElfW(Nhdr) *Note =
+        (const ElfW(Nhdr) *)(Base + ProgramHeader[I].p_vaddr);
+    const ElfW(Nhdr) *NotesEnd =
+        (const ElfW(Nhdr) *)((const char *)(Note) + ProgramHeader[I].p_memsz);
 
     int BinaryIdsSize = WriteBinaryIds(Writer, Note, NotesEnd);
     if (TotalBinaryIdsSize == -1)

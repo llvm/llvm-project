@@ -8,7 +8,6 @@
 
 #include "DXILFinalizeLinkage.h"
 #include "DirectX.h"
-#include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Metadata.h"
@@ -19,13 +18,17 @@
 using namespace llvm;
 
 static bool finalizeLinkage(Module &M) {
-  SmallPtrSet<Function *, 8> Funcs;
+  SmallVector<Function *> Funcs;
 
   // Collect non-entry and non-exported functions to set to internal linkage.
   for (Function &EF : M.functions()) {
-    if (EF.hasFnAttribute("hlsl.shader") || EF.hasFnAttribute("hlsl.export"))
+    if (EF.isIntrinsic())
       continue;
-    Funcs.insert(&EF);
+    if (EF.hasExternalLinkage() && EF.hasDefaultVisibility())
+      continue;
+    if (EF.hasFnAttribute("hlsl.shader"))
+      continue;
+    Funcs.push_back(&EF);
   }
 
   for (Function *F : Funcs) {
@@ -47,10 +50,6 @@ PreservedAnalyses DXILFinalizeLinkage::run(Module &M,
 
 bool DXILFinalizeLinkageLegacy::runOnModule(Module &M) {
   return finalizeLinkage(M);
-}
-
-void DXILFinalizeLinkageLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addPreserved<DXILResourceWrapperPass>();
 }
 
 char DXILFinalizeLinkageLegacy::ID = 0;

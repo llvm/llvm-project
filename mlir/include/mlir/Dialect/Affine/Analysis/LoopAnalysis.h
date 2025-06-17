@@ -119,6 +119,14 @@ bool isOpwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts);
 /// any dependence component is negative along any of `loops`.
 bool isTilingValid(ArrayRef<AffineForOp> loops);
 
+/// Returns true if the affine nest rooted at `root` has a cyclic dependence
+/// among its affine memory accesses. The dependence could be through any
+/// dependences carried by loops contained in `root` (inclusive of `root`) and
+/// those carried by loop bodies (blocks) contained. Dependences carried by
+/// loops outer to `root` aren't relevant. This method doesn't consider/account
+/// for aliases.
+bool hasCyclicDependence(AffineForOp root);
+
 } // namespace affine
 } // namespace mlir
 

@@ -173,7 +173,7 @@ void check_bidirectional_iterator_requirements() {
   _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(missing_postdecrement, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{cannot decrement value of type 'missing_postdecrement'}}
   _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(not_returning_iter_reference, ""); // expected-error {{static assertion failed}}
-  // expected-note@*:* {{because type constraint 'same_as<int, __iter_reference<not_returning_iter_reference> >' was not satisfied}}
+  // expected-note-re@*:* {{because type constraint 'same_as<int, __iter_reference<not_returning_iter_reference>{{ ?}}>' was not satisfied}}
   // clang-format on
 }
 

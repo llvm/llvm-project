@@ -519,14 +519,14 @@ protected:
         --pointer_count;
       }
 
-      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
-      if (!size) {
+      auto size_or_err = compiler_type.GetByteSize(nullptr);
+      if (!size_or_err) {
         result.AppendErrorWithFormat(
-            "unable to get the byte size of the type '%s'\n",
-            view_as_type_cstr);
+            "unable to get the byte size of the type '%s'\n%s",
+            view_as_type_cstr, llvm::toString(size_or_err.takeError()).c_str());
         return;
       }
-      m_format_options.GetByteSizeValue() = *size;
+      m_format_options.GetByteSizeValue() = *size_or_err;
 
       if (!m_format_options.GetCountValue().OptionWasSet())
         m_format_options.GetCountValue() = 1;
@@ -639,15 +639,16 @@ protected:
       if (!m_format_options.GetFormatValue().OptionWasSet())
         m_format_options.GetFormatValue().SetCurrentValue(eFormatDefault);
 
-      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
-      if (!size) {
-        result.AppendError("can't get size of type");
+      auto size_or_err = compiler_type.GetByteSize(nullptr);
+      if (!size_or_err) {
+        result.AppendError(llvm::toString(size_or_err.takeError()));
         return;
       }
-      bytes_read = *size * m_format_options.GetCountValue().GetCurrentValue();
+      auto size = *size_or_err;
+      bytes_read = size * m_format_options.GetCountValue().GetCurrentValue();
 
       if (argc > 0)
-        addr = addr + (*size * m_memory_options.m_offset.GetCurrentValue());
+        addr = addr + (size * m_memory_options.m_offset.GetCurrentValue());
     } else if (m_format_options.GetFormatValue().GetCurrentValue() !=
                eFormatCString) {
       data_sp = std::make_shared<DataBufferHeap>(total_byte_size, '\0');
@@ -884,6 +885,61 @@ protected:
 #define LLDB_OPTIONS_memory_find
 #include "CommandOptions.inc"
 
+static llvm::Error CopyExpressionResult(ValueObject &result,
+                                        DataBufferHeap &buffer,
+                                        ExecutionContextScope *scope) {
+  uint64_t value = result.GetValueAsUnsigned(0);
+  auto size_or_err = result.GetCompilerType().GetByteSize(scope);
+  if (!size_or_err)
+    return size_or_err.takeError();
+
+  switch (*size_or_err) {
+  case 1: {
+    uint8_t byte = (uint8_t)value;
+    buffer.CopyData(&byte, 1);
+  } break;
+  case 2: {
+    uint16_t word = (uint16_t)value;
+    buffer.CopyData(&word, 2);
+  } break;
+  case 4: {
+    uint32_t lword = (uint32_t)value;
+    buffer.CopyData(&lword, 4);
+  } break;
+  case 8: {
+    buffer.CopyData(&value, 8);
+  } break;
+  default:
+    return llvm::createStringError(
+        "Only expressions resulting in 1, 2, 4, or 8-byte-sized values are "
+        "supported. For other pattern sizes the --string (-s) option may be "
+        "used.");
+  }
+
+  return llvm::Error::success();
+}
+
+static llvm::Expected<ValueObjectSP>
+EvaluateExpression(llvm::StringRef expression, StackFrame &frame,
+                   Process &process) {
+  ValueObjectSP result_sp;
+  auto status =
+      process.GetTarget().EvaluateExpression(expression, &frame, result_sp);
+  if (!result_sp)
+    return llvm::createStringError(
+        "No result returned from expression. Exit status: %d", status);
+
+  if (status != eExpressionCompleted)
+    return result_sp->GetError().ToError();
+
+  result_sp = result_sp->GetQualifiedRepresentationIfAvailable(
+      result_sp->GetDynamicValueType(), /*synthValue=*/true);
+  if (!result_sp)
+    return llvm::createStringError("failed to get dynamic result type");
+
+  return result_sp;
+}
+
 // Find the specified data in memory
 class CommandObjectMemoryFind : public CommandObjectParsed {
 public:
@@ -1025,49 +1081,20 @@ protected:
       }
       buffer.CopyData(str);
     } else if (m_memory_options.m_expr.OptionWasSet()) {
-      StackFrame *frame = m_exe_ctx.GetFramePtr();
-      ValueObjectSP result_sp;
-      if ((eExpressionCompleted ==
-           process->GetTarget().EvaluateExpression(
-               m_memory_options.m_expr.GetValueAs<llvm::StringRef>().value_or(
-                   ""),
-               frame, result_sp)) &&
-          result_sp) {
-        uint64_t value = result_sp->GetValueAsUnsigned(0);
-        std::optional<uint64_t> size =
-            result_sp->GetCompilerType().GetByteSize(nullptr);
-        if (!size)
-          return;
-        switch (*size) {
-        case 1: {
-          uint8_t byte = (uint8_t)value;
-          buffer.CopyData(&byte, 1);
-        } break;
-        case 2: {
-          uint16_t word = (uint16_t)value;
-          buffer.CopyData(&word, 2);
-        } break;
-        case 4: {
-          uint32_t lword = (uint32_t)value;
-          buffer.CopyData(&lword, 4);
-        } break;
-        case 8: {
-          buffer.CopyData(&value, 8);
-        } break;
-        case 3:
-        case 5:
-        case 6:
-        case 7:
-          result.AppendError("unknown type. pass a string instead");
-          return;
-        default:
-          result.AppendError(
-              "result size larger than 8 bytes. pass a string instead");
-          return;
-        }
-      } else {
-        result.AppendError(
-            "expression evaluation failed. pass a string instead");
+      auto result_or_err = EvaluateExpression(
+          m_memory_options.m_expr.GetValueAs<llvm::StringRef>().value_or(""),
+          m_exe_ctx.GetFrameRef(), *process);
+      if (!result_or_err) {
+        result.AppendError("Expression evaluation failed: ");
+        result.AppendError(llvm::toString(result_or_err.takeError()));
+        return;
+      }
+
+      ValueObjectSP result_sp = *result_or_err;
+
+      if (auto err = CopyExpressionResult(*result_sp, buffer,
+                                          m_exe_ctx.GetFramePtr())) {
+        result.AppendError(llvm::toString(std::move(err)));
         return;
       }
     } else {
@@ -1664,6 +1691,9 @@ protected:
     MemoryRegionInfo::OptionalBool memory_tagged = range_info.GetMemoryTagged();
     if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
       result.AppendMessage("memory tagging: enabled");
+    MemoryRegionInfo::OptionalBool is_shadow_stack = range_info.IsShadowStack();
+    if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
+      result.AppendMessage("shadow stack: yes");
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();
@@ -1737,7 +1767,7 @@ protected:
 
     // It is important that we track the address used to request the region as
     // this will give the correct section name in the case that regions overlap.
-    // On Windows we get mutliple regions that start at the same place but are
+    // On Windows we get multiple regions that start at the same place but are
     // different sizes and refer to different sections.
     std::vector<std::pair<lldb_private::MemoryRegionInfo, lldb::addr_t>>
         region_list;

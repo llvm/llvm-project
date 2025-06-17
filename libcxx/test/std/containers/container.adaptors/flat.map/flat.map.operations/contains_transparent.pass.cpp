@@ -14,6 +14,7 @@
 
 #include <cassert>
 #include <flat_map>
+#include <functional>
 #include <string>
 #include <utility>
 #include <deque>
@@ -66,6 +67,13 @@ int main(int, char**) {
     auto b = m.contains(Transparent<int>{3});
     assert(b);
     assert(transparent_used);
+  }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_map<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"epsilon", 1}, {"eta", 3}, {"gamma", 3}};
+    assert(m.contains("beta") == true);
+    assert(m.contains("charlie") == false);
   }
   return 0;
 }

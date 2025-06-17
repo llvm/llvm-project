@@ -8,16 +8,14 @@
 
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "TargetInfo/BPFTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -51,7 +49,9 @@ class BPFAsmParser : public MCTargetAsmParser {
   bool equalIsAsmAssignment() override { return false; }
   // "*" is used for dereferencing memory that it will be the start of
   // statement.
-  bool starIsStartOfStatement() override { return true; }
+  bool tokenIsStartOfStatement(AsmToken::TokenKind Token) override {
+    return Token == AsmToken::Star;
+  }
 
 #define GET_ASSEMBLER_HEADER
 #include "BPFGenAsmMatcher.inc"
@@ -237,6 +237,7 @@ public:
         .Case("exit", true)
         .Case("lock", true)
         .Case("ld_pseudo", true)
+        .Case("store_release", true)
         .Default(false);
   }
 
@@ -273,6 +274,7 @@ public:
         .Case("cmpxchg_64", true)
         .Case("cmpxchg32_32", true)
         .Case("addr_space_cast", true)
+        .Case("load_acquire", true)
         .Default(false);
   }
 };

@@ -38,9 +38,8 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; ZVFHMIN:       [[VECTOR_BODY]]:
 ; ZVFHMIN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; ZVFHMIN-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; ZVFHMIN-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[A]], i64 [[TMP0]]
-; ZVFHMIN-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr [[B]], i64 [[TMP0]]
+; ZVFHMIN-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
+; ZVFHMIN-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
 ; ZVFHMIN-NEXT:    [[TMP3:%.*]] = getelementptr half, ptr [[TMP1]], i32 0
 ; ZVFHMIN-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP3]], align 2
 ; ZVFHMIN-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr [[TMP2]], i32 0

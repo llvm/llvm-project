@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_MINMAX_ELEMENT_H
-#define _LIBCPP___ALGORITHM_MINMAX_ELEMENT_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_MINMAX_ELEMENT_H
+#define _LIBCPP___CXX03___ALGORITHM_MINMAX_ELEMENT_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__type_traits/is_callable.h>
 #include <__cxx03/__utility/pair.h>
 
@@ -29,17 +29,16 @@ class _MinmaxElementLessFunc {
   _Proj& __proj_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _MinmaxElementLessFunc(_Comp& __comp, _Proj& __proj)
-      : __comp_(__comp), __proj_(__proj) {}
+  _LIBCPP_HIDE_FROM_ABI _MinmaxElementLessFunc(_Comp& __comp, _Proj& __proj) : __comp_(__comp), __proj_(__proj) {}
 
   template <class _Iter>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(_Iter& __it1, _Iter& __it2) {
+  _LIBCPP_HIDE_FROM_ABI bool operator()(_Iter& __it1, _Iter& __it2) {
     return std::__invoke(__comp_, std::__invoke(__proj_, *__it1), std::__invoke(__proj_, *__it2));
   }
 };
 
 template <class _Iter, class _Sent, class _Proj, class _Comp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
+_LIBCPP_HIDE_FROM_ABI pair<_Iter, _Iter>
 __minmax_element_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
   auto __less = _MinmaxElementLessFunc<_Comp, _Proj>(__comp, __proj);
 
@@ -79,7 +78,7 @@ __minmax_element_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj)
 }
 
 template <class _ForwardIterator, class _Compare>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_ForwardIterator, _ForwardIterator>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI pair<_ForwardIterator, _ForwardIterator>
 minmax_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp) {
   static_assert(
       __has_forward_iterator_category<_ForwardIterator>::value, "std::minmax_element requires a ForwardIterator");
@@ -90,11 +89,11 @@ minmax_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __com
 }
 
 template <class _ForwardIterator>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_ForwardIterator, _ForwardIterator>
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI pair<_ForwardIterator, _ForwardIterator>
 minmax_element(_ForwardIterator __first, _ForwardIterator __last) {
   return std::minmax_element(__first, __last, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_MINMAX_ELEMENT_H
+#endif // _LIBCPP___CXX03___ALGORITHM_MINMAX_ELEMENT_H

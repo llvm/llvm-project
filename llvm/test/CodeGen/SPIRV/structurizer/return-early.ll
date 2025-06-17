@@ -39,11 +39,11 @@ while.body:
     i32 5, label %sw.bb2
   ]
 
-; CHECK: %[[#case_1]] = OpLabel
+; CHECK: %[[#case_5]] = OpLabel
 ; CHECK:                OpStore %[[#reg_0]] %[[#]]
 ; CHECK:                OpBranch %[[#switch_end]]
-sw.bb:
-  store i32 1, ptr %a, align 4
+sw.bb2:
+  store i32 5, ptr %a, align 4
   br label %while.end
 
 ; CHECK: %[[#case_2]] = OpLabel
@@ -53,11 +53,11 @@ sw.bb1:
   store i32 3, ptr %a, align 4
   br label %while.end
 
-; CHECK: %[[#case_5]] = OpLabel
+; CHECK: %[[#case_1]] = OpLabel
 ; CHECK:                OpStore %[[#reg_0]] %[[#]]
 ; CHECK:                OpBranch %[[#switch_end]]
-sw.bb2:
-  store i32 5, ptr %a, align 4
+sw.bb:
+  store i32 1, ptr %a, align 4
   br label %while.end
 
 ; CHECK: %[[#switch_end]] = OpLabel

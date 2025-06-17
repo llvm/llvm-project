@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fsanitize=thread -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=SAN
 // RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fsanitize=address -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=SAN
 
+// REQUIRES: aarch64-registered-target
+
 int foo(int) __attribute__ ((ifunc("foo_ifunc")));
 
 static int f1(int i) {
