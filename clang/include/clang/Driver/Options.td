@@ -1772,7 +1772,7 @@ def fmcdc_max_test_vectors_EQ : Joined<["-"], "fmcdc-max-test-vectors=">,
   HelpText<"Maximum number of test vectors in MC/DC coverage">,
   MarshallingInfoInt<CodeGenOpts<"MCDCMaxTVs">, "0x7FFFFFFE">;
 def fprofile_generate : Flag<["-"], "fprofile-generate">,
-    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    Group<f_Group>, Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fprofile_generate_EQ : Joined<["-"], "fprofile-generate=">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
@@ -1789,7 +1789,7 @@ def fprofile_use : Flag<["-"], "fprofile-use">, Group<f_Group>,
     Visibility<[ClangOption, CLOption]>, Alias<fprofile_instr_use>;
 def fprofile_use_EQ : Joined<["-"], "fprofile-use=">,
     Group<f_Group>,
-    Visibility<[ClangOption, CLOption]>,
+    Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>,
     MetaVarName<"<pathname>">,
     HelpText<"Use instrumentation data for profile-guided optimization. If pathname is a directory, it reads from <pathname>/default.profdata. Otherwise, it reads from file <pathname>.">;
 def fno_profile_instr_generate : Flag<["-"], "fno-profile-instr-generate">,
@@ -2167,11 +2167,14 @@ defm assume_nothrow_exception_dtor: BoolFOption<"assume-nothrow-exception-dtor",
   LangOpts<"AssumeNothrowExceptionDtor">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume that exception objects' destructors are non-throwing">,
   NegFlag<SetFalse>>;
-defm winx64_eh_unwindv2 : BoolFOption<"winx64-eh-unwindv2",
-  CodeGenOpts<"WinX64EHUnwindV2">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " unwind v2 (epilog) information for x64 Windows">>;
+def winx64_eh_unwindv2
+    : Joined<["-"], "fwinx64-eh-unwindv2=">, Group<f_Group>,
+    Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Generate unwind v2 (epilog) information for x64 Windows">,
+      Values<"disabled,best-effort,required">,
+      NormalizedValues<["Disabled", "BestEffort", "Required"]>,
+      NormalizedValuesScope<"llvm::WinX64EHUnwindV2Mode">,
+      MarshallingInfoEnum<CodeGenOpts<"WinX64EHUnwindV2">, "Disabled">;
 def fexcess_precision_EQ : Joined<["-"], "fexcess-precision=">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>,
   HelpText<"Allows control over excess precision on targets where native "
@@ -4927,8 +4930,10 @@ def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
   HelpText<"Set Fuchsia API level">,
   MarshallingInfoInt<LangOpts<"FuchsiaAPILevel">>;
 def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
+  Visibility<[ClangOption, CC1Option, FlangOption]>,
   Group<m_Group>, HelpText<"Set macOS deployment target">;
 def : Joined<["-"], "mmacosx-version-min=">,
+  Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
   Group<m_Group>, Alias<mmacos_version_min_EQ>;
 def mms_bitfields : Flag<["-"], "mms-bitfields">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -5054,9 +5059,10 @@ def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify the size in bits of an RVV vector register">,
   DocBrief<!strconcat(
-    "Defaults to the vector length agnostic value of \"scalable\". "
-    "Accepts power of 2 values between 64 and 65536. Also accepts "
-    "\"zvl\" to use the value implied by -march/-mcpu.",
+    "Specify the size in bits of an RVV vector register. Defaults to the "
+    "vector length agnostic value of \"scalable\". Accepts power of 2 values "
+    "between 64 and 65536. Also accepts \"zvl\" to use the value implied by "
+    "-march/-mcpu.",
     !cond(
       // Flang does not set the preprocessor define.
       !eq(GlobalDocumentation.Program, "Flang") : "",
@@ -5144,10 +5150,16 @@ def mno_fix_cortex_a72_aes_1655431 : Flag<["-"], "mno-fix-cortex-a72-aes-1655431
   Alias<mno_fix_cortex_a57_aes_1742098>;
 def mfix_cortex_a53_835769 : Flag<["-"], "mfix-cortex-a53-835769">,
   Group<m_aarch64_Features_Group>,
-  HelpText<"Workaround Cortex-A53 erratum 835769 (AArch64 only)">;
+  HelpText<"Work around Cortex-A53 erratum 835769 (AArch64 only)">;
 def mno_fix_cortex_a53_835769 : Flag<["-"], "mno-fix-cortex-a53-835769">,
   Group<m_aarch64_Features_Group>,
-  HelpText<"Don't workaround Cortex-A53 erratum 835769 (AArch64 only)">;
+  HelpText<"Don't work around Cortex-A53 erratum 835769 (AArch64 only)">;
+def mfix_cortex_a53_843419 : Flag<["-"], "mfix-cortex-a53-843419">,
+  Group<m_aarch64_Features_Group>,
+  HelpText<"Work around Cortex-A53 erratum 843419 (AArch64 only)">;
+def mno_fix_cortex_a53_843419 : Flag<["-"], "mno-fix-cortex-a53-843419">,
+  Group<m_aarch64_Features_Group>,
+  HelpText<"Don't work around Cortex-A53 erratum 843419 (AArch64 only)">;
 def mmark_bti_property : Flag<["-"], "mmark-bti-property">,
   Group<m_aarch64_Features_Group>,
   HelpText<"Add .note.gnu.property with BTI to assembly files (AArch64 only)">;
@@ -5474,9 +5486,10 @@ def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
   HelpText<"Don't generate implicit floating point or vector instructions">;
 def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>;
 def mrecip : Flag<["-"], "mrecip">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Equivalent to '-mrecip=all'">;
 def mrecip_EQ : CommaJoined<["-"], "mrecip=">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Control use of approximate reciprocal and reciprocal square root instructions followed by <n> iterations of "
            "Newton-Raphson refinement. "
            "<value> = ( ['!'] ['vec-'] ('rcp'|'sqrt') [('h'|'s'|'d')] [':'<n>] ) | 'all' | 'default' | 'none'">,
@@ -7758,7 +7771,7 @@ def fpatchable_function_entry_section_EQ
       MarshallingInfoString<CodeGenOpts<"PatchableFunctionEntrySection">>;
 def fprofile_instrument_EQ : Joined<["-"], "fprofile-instrument=">,
     HelpText<"Enable PGO instrumentation">, Values<"none,clang,llvm,csllvm,sample-coldcov">,
-    NormalizedValuesScope<"CodeGenOptions">,
+    NormalizedValuesScope<"llvm::driver::ProfileInstrKind">,
     NormalizedValues<["ProfileNone", "ProfileClangInstr", "ProfileIRInstr", "ProfileCSIRInstr", "ProfileIRSampleColdCov"]>,
     MarshallingInfoEnum<CodeGenOpts<"ProfileInstr">, "ProfileNone">;
 def fprofile_instrument_path_EQ : Joined<["-"], "fprofile-instrument-path=">,
@@ -8968,7 +8981,9 @@ def _SLASH_volatile_Group : OptionGroup<"</volatile group>">,
   Group<cl_compile_Group>;
 
 def _SLASH_d2epilogunwind : CLFlag<"d2epilogunwind">,
-  HelpText<"Enable unwind v2 (epilog) information for x64 Windows">;
+  HelpText<"Best effort generate unwind v2 (epilog) information for x64 Windows">;
+def _SLASH_d2epilogunwindrequirev2 : CLFlag<"d2epilogunwindrequirev2">,
+  HelpText<"Require generation of unwind v2 (epilog) information for x64 Windows">;
 def _SLASH_EH : CLJoined<"EH">, HelpText<"Set exception handling model">;
 def _SLASH_EP : CLFlag<"EP">,
   HelpText<"Disable linemarker output and preprocess to stdout">;

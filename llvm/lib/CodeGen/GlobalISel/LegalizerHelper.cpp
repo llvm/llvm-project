@@ -118,7 +118,7 @@ LegalizerHelper::LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
                                    LostDebugLocObserver &LocObserver) {
-  LLVM_DEBUG(dbgs() << "Legalizing: " << MI);
+  LLVM_DEBUG(dbgs() << "\nLegalizing: " << MI);
 
   MIRBuilder.setInstrAndDebugLoc(MI);
 

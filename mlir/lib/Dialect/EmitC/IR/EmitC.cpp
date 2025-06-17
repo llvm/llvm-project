@@ -386,9 +386,7 @@ OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 Operation *ExpressionOp::getRootOp() {
   auto yieldOp = cast<YieldOp>(getBody()->getTerminator());
   Value yieldedValue = yieldOp.getResult();
-  Operation *rootOp = yieldedValue.getDefiningOp();
-  assert(rootOp && "Yielded value not defined within expression");
-  return rootOp;
+  return yieldedValue.getDefiningOp();
 }
 
 LogicalResult ExpressionOp::verify() {
@@ -405,6 +403,14 @@ LogicalResult ExpressionOp::verify() {
 
   if (!yieldResult)
     return emitOpError("must yield a value at termination");
+
+  Operation *rootOp = yieldResult.getDefiningOp();
+
+  if (!rootOp)
+    return emitOpError("yielded value has no defining op");
+
+  if (rootOp->getParentOp() != getOperation())
+    return emitOpError("yielded value not defined within expression");
 
   Type yieldType = yieldResult.getType();
 

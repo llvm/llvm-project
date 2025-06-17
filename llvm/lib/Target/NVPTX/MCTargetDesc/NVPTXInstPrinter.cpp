@@ -15,6 +15,7 @@
 #include "NVPTXUtilities.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -90,7 +91,7 @@ void NVPTXInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     markup(O, Markup::Immediate) << formatImm(Op.getImm());
   } else {
     assert(Op.isExpr() && "Unknown operand kind in printOperand");
-    Op.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *Op.getExpr());
   }
 }
 
@@ -436,4 +437,23 @@ void NVPTXInstPrinter::printTmaReductionMode(const MCInst *MI, int OpNum,
   }
   llvm_unreachable(
       "Invalid Reduction Op in printCpAsyncBulkTensorReductionMode");
+}
+
+void NVPTXInstPrinter::printCTAGroup(const MCInst *MI, int OpNum,
+                                     raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  using CGTy = nvvm::CTAGroupKind;
+
+  switch (static_cast<CGTy>(MO.getImm())) {
+  case CGTy::CG_NONE:
+    O << "";
+    return;
+  case CGTy::CG_1:
+    O << ".cta_group::1";
+    return;
+  case CGTy::CG_2:
+    O << ".cta_group::2";
+    return;
+  }
+  llvm_unreachable("Invalid cta_group in printCTAGroup");
 }

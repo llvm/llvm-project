@@ -33,6 +33,7 @@
 #include "ToolChains/Linux.h"
 #include "ToolChains/MSP430.h"
 #include "ToolChains/MSVC.h"
+#include "ToolChains/Managarm.h"
 #include "ToolChains/MinGW.h"
 #include "ToolChains/MipsLinux.h"
 #include "ToolChains/NaCl.h"
@@ -1596,28 +1597,27 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       A->claim();
 
       if (Args.hasArg(options::OPT_spirv)) {
+        const llvm::StringMap<llvm::Triple::SubArchType> ValidTargets = {
+            {"vulkan1.2", llvm::Triple::SPIRVSubArch_v15},
+            {"vulkan1.3", llvm::Triple::SPIRVSubArch_v16}};
         llvm::Triple T(TargetTriple);
-        T.setArch(llvm::Triple::spirv);
-        T.setOS(llvm::Triple::Vulkan);
 
-        // Set specific Vulkan version if applicable.
+        // Set specific Vulkan version. Default to vulkan1.3.
+        auto TargetInfo = ValidTargets.find("vulkan1.3");
+        assert(TargetInfo != ValidTargets.end());
         if (const Arg *A = Args.getLastArg(options::OPT_fspv_target_env_EQ)) {
-          const llvm::StringMap<llvm::Triple::SubArchType> ValidTargets = {
-              {"vulkan1.2", llvm::Triple::SPIRVSubArch_v15},
-              {"vulkan1.3", llvm::Triple::SPIRVSubArch_v16}};
-
-          auto TargetInfo = ValidTargets.find(A->getValue());
-          if (TargetInfo != ValidTargets.end()) {
-            T.setOSName(TargetInfo->getKey());
-            T.setArch(llvm::Triple::spirv, TargetInfo->getValue());
-          } else {
+          TargetInfo = ValidTargets.find(A->getValue());
+          if (TargetInfo == ValidTargets.end()) {
             Diag(diag::err_drv_invalid_value)
                 << A->getAsString(Args) << A->getValue();
           }
           A->claim();
         }
-
-        TargetTriple = T.str();
+        if (TargetInfo != ValidTargets.end()) {
+          T.setOSName(TargetInfo->getKey());
+          T.setArch(llvm::Triple::spirv, TargetInfo->getValue());
+          TargetTriple = T.str();
+        }
       }
     } else {
       Diag(diag::err_drv_dxc_missing_target_profile);
@@ -4883,7 +4883,10 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   // For HIP non-rdc non-device-only compilation, create a linker wrapper
   // action for each host object to link, bundle and wrap device files in
   // it.
-  if (isa<AssembleJobAction>(HostAction) && HIPNoRDC && !offloadDeviceOnly()) {
+  if ((isa<AssembleJobAction>(HostAction) ||
+       (isa<BackendJobAction>(HostAction) &&
+        HostAction->getType() == types::TY_LTO_BC)) &&
+      HIPNoRDC && !offloadDeviceOnly()) {
     ActionList AL{HostAction};
     HostAction = C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_Object);
     HostAction->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
@@ -6839,6 +6842,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       break;
     case llvm::Triple::Fuchsia:
       TC = std::make_unique<toolchains::Fuchsia>(*this, Target, Args);
+      break;
+    case llvm::Triple::Managarm:
+      TC = std::make_unique<toolchains::Managarm>(*this, Target, Args);
       break;
     case llvm::Triple::Solaris:
       TC = std::make_unique<toolchains::Solaris>(*this, Target, Args);

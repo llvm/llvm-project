@@ -172,6 +172,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.free
     libc.src.stdlib.malloc
 
+    # sys/ioctl.h entrypoints
+    libc.src.sys.ioctl.ioctl
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap

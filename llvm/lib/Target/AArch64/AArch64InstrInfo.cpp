@@ -8775,7 +8775,7 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     return false;
 
   // Find Definition.
-  assert(MI.getParent() && "Incomplete machine instruciton\n");
+  assert(MI.getParent() && "Incomplete machine instruction\n");
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction *MF = MBB->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
@@ -9077,7 +9077,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // address signing attributes, i.e., all share the same value for the
   // attribute "sign-return-address" and all share the same type of key they
   // are signed with.
-  // Additionally we require all functions to simultaniously either support
+  // Additionally we require all functions to simultaneously either support
   // v8.3a features or not. Otherwise an outlined function could get signed
   // using dedicated v8.3 instructions and a call from a function that doesn't
   // support v8.3 instructions would therefore be invalid.
@@ -10319,7 +10319,7 @@ unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {
 MachineBasicBlock::iterator
 AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
                                    Register TargetReg, bool FrameSetup) const {
-  assert(TargetReg != AArch64::SP && "New top of stack cannot aleady be in SP");
+  assert(TargetReg != AArch64::SP && "New top of stack cannot already be in SP");
 
   MachineBasicBlock &MBB = *MBBI->getParent();
   MachineFunction &MF = *MBB.getParent();
