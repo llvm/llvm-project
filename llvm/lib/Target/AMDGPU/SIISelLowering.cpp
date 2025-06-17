@@ -5182,7 +5182,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
 
-    // Create initail values of induction variable from Exec, Accumulator and
+    // Create initial values of induction variable from Exec, Accumulator and
     // insert branch instr to newly created ComputeBlock
     uint32_t InitalValue = getIdentityValueForWaveReduction(Opc);
     auto TmpSReg =
