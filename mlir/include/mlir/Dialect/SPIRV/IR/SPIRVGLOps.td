@@ -1160,6 +1160,46 @@ def SPIRV_GLFMixOp :
 
 // -----
 
+def SPIRV_GLLengthOp : SPIRV_GLOp<"Length", 66, [
+    Pure,
+    TypesMatchWith<"result type must match operand element type",
+                  "operand", "result",
+                  "::mlir::getElementTypeOrSelf($_self)">
+  ]> {
+  let summary = "Return the length of a vector x";
+
+  let description = [{
+    Result is the length of vector x, i.e., sqrt(x[0]**2 + x[1]**2 + ...).
+
+    The operand x must be a scalar or vector whose component type is floating-point.
+
+    Result Type must be a scalar of the same type as the component type of x.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Length %0 : vector<3xf32> -> f32
+    %3 = spirv.GL.Length %1 : f32 -> f32
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$operand
+  );
+
+  let results = (outs
+    SPIRV_Float:$result
+  );
+
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand) `->` type($result)
+  }];
+
+  let hasVerifier = 0;
+}
+
+// -----
+
 def SPIRV_GLDistanceOp : SPIRV_GLOp<"Distance", 67, [
     Pure,
     AllTypesMatch<["p0", "p1"]>,
@@ -1269,6 +1309,41 @@ def SPIRV_GLReflectOp : SPIRV_GLBinaryArithmeticOp<"Reflect", 71, SPIRV_Float> {
     %2 = spirv.GL.Reflect %0, %1 : f32
     %3 = spirv.GL.Reflect %0, %1 : vector<3xf32>
     ```
+  }];
+}
+
+// ----
+
+def SPIRV_GLFindILsbOp : SPIRV_GLUnaryArithmeticOp<"FindILsb", 73, SPIRV_Integer> {
+  let summary = "Integer least-significant bit";
+
+  let description = [{
+    Results in the bit number of the least-significant 1-bit in the binary
+    representation of Value. If Value is 0, the result is -1.
+
+    Result Type and the type of Value must both be integer scalar or
+    integer vector types. Result Type and operand types must have the
+    same number of components with the same component width. Results are
+    computed per component.
+  }];
+}
+
+// ----
+
+def SPIRV_GLFindSMsbOp : SPIRV_GLUnaryArithmeticOp<"FindSMsb", 74, SPIRV_Int32> {
+  let summary = "Signed-integer most-significant bit, with Value interpreted as a signed integer";
+
+  let description = [{
+    For positive numbers, the result will be the bit number of the most significant
+    1-bit. For negative numbers, the result will be the bit number of the most
+    significant 0-bit. For a Value of 0 or -1, the result is -1.
+
+    Result Type and the type of Value must both be integer scalar or
+    integer vector types. Result Type and operand types must have the
+    same number of components with the same component width. Results are
+    computed per component.
+
+    This instruction is currently limited to 32-bit width components.
   }];
 }
 

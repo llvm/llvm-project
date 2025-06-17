@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
@@ -86,14 +87,39 @@ struct RuntimeLibcallsInfo {
     return ArrayRef(LibcallRoutineNames).drop_back();
   }
 
+  /// Get the comparison predicate that's to be used to test the result of the
+  /// comparison libcall against zero. This should only be used with
+  /// floating-point compare libcalls.
+  CmpInst::Predicate
+  getSoftFloatCmpLibcallPredicate(RTLIB::Libcall Call) const {
+    return SoftFloatCompareLibcallPredicates[Call];
+  }
+
+  // FIXME: This should be removed. This should be private constant.
+  void setSoftFloatCmpLibcallPredicate(RTLIB::Libcall Call,
+                                       CmpInst::Predicate Pred) {
+    SoftFloatCompareLibcallPredicates[Call] = Pred;
+  }
+
 private:
   /// Stores the name each libcall.
-  const char *LibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1];
+  const char *LibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1] = {nullptr};
+
+  static_assert(static_cast<int>(CallingConv::C) == 0,
+                "default calling conv should be encoded as 0");
 
   /// Stores the CallingConv that should be used for each libcall.
-  CallingConv::ID LibcallCallingConvs[RTLIB::UNKNOWN_LIBCALL];
+  CallingConv::ID LibcallCallingConvs[RTLIB::UNKNOWN_LIBCALL] = {};
 
-  static bool darwinHasSinCos(const Triple &TT) {
+  /// The condition type that should be used to test the result of each of the
+  /// soft floating-point comparison libcall against integer zero.
+  ///
+  // FIXME: This is only relevant for the handful of floating-point comparison
+  // runtime calls; it's excessive to have a table entry for every single
+  // opcode.
+  CmpInst::Predicate SoftFloatCompareLibcallPredicates[RTLIB::UNKNOWN_LIBCALL];
+
+  static bool darwinHasSinCosStret(const Triple &TT) {
     assert(TT.isOSDarwin() && "should be called with darwin triple");
     // Don't bother with 32 bit x86.
     if (TT.getArch() == Triple::x86)
@@ -107,6 +133,14 @@ private:
     // Any other darwin such as WatchOS/TvOS is new enough.
     return true;
   }
+
+  /// Return true if the target has sincosf/sincos/sincosl functions
+  static bool hasSinCos(const Triple &TT) {
+    return TT.isGNUEnvironment() || TT.isOSFuchsia() ||
+           (TT.isAndroid() && !TT.isAndroidVersionLT(9));
+  }
+
+  void initSoftFloatCmpLibcallPredicates();
 
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.

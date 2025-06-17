@@ -113,7 +113,20 @@ public:
 
   mlir::Operation *lastGlobalOp = nullptr;
 
+  llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
+
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
+
+  cir::GlobalOp getStaticLocalDeclAddress(const VarDecl *d) {
+    return staticLocalDeclMap[d];
+  }
+
+  void setStaticLocalDeclAddress(const VarDecl *d, cir::GlobalOp c) {
+    staticLocalDeclMap[d] = c;
+  }
+
+  cir::GlobalOp getOrCreateStaticVarDecl(const VarDecl &d,
+                                         cir::GlobalLinkageKind linkage);
 
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value
@@ -267,6 +280,11 @@ public:
   // Make sure that this type is translated.
   void updateCompletedType(const clang::TagDecl *td);
 
+  // Produce code for this constructor/destructor. This method doesn't try to
+  // apply any ABI rules about which other constructors/destructors are needed
+  // or if they are alias to each other.
+  cir::FuncOp codegenCXXStructor(clang::GlobalDecl gd);
+
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
@@ -282,6 +300,10 @@ public:
   cir::FuncOp createCIRFunction(mlir::Location loc, llvm::StringRef name,
                                 cir::FuncType funcType,
                                 const clang::FunctionDecl *funcDecl);
+
+  /// Given a builtin id for a function like "__builtin_fabsf", return a
+  /// Function* for "fabsf".
+  cir::FuncOp getBuiltinLibFunction(const FunctionDecl *fd, unsigned builtinID);
 
   mlir::IntegerAttr getSize(CharUnits size) {
     return builder.getSizeFromCharUnits(size);

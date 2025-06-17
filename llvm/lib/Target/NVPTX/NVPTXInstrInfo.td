@@ -135,11 +135,7 @@ def hasAtomAddF64 : Predicate<"Subtarget->hasAtomAddF64()">;
 def hasAtomScope : Predicate<"Subtarget->hasAtomScope()">;
 def hasAtomBitwise64 : Predicate<"Subtarget->hasAtomBitwise64()">;
 def hasAtomMinMax64 : Predicate<"Subtarget->hasAtomMinMax64()">;
-def hasVote : Predicate<"Subtarget->hasVote()">;
-def hasDouble : Predicate<"Subtarget->hasDouble()">;
 def hasClusters : Predicate<"Subtarget->hasClusters()">;
-def hasLDG : Predicate<"Subtarget->hasLDG()">;
-def hasLDU : Predicate<"Subtarget->hasLDU()">;
 def hasPTXASUnreachableBug : Predicate<"Subtarget->hasPTXASUnreachableBug()">;
 def noPTXASUnreachableBug : Predicate<"!Subtarget->hasPTXASUnreachableBug()">;
 def hasOptEnabled : Predicate<"TM.getOptLevel() != CodeGenOptLevel::None">;
@@ -150,9 +146,6 @@ def doNoF32FTZ : Predicate<"!useF32FTZ()">;
 def doRsqrtOpt : Predicate<"doRsqrtOpt()">;
 
 def doMulWide      : Predicate<"doMulWide">;
-
-def do_SQRTF32_APPROX : Predicate<"!usePrecSqrtF32()">;
-def do_SQRTF32_RN : Predicate<"usePrecSqrtF32()">;
 
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
@@ -1623,6 +1616,10 @@ let hasSideEffects = false in {
                 [(set i32:$d, (prmt i32:$a, imm:$b, i32:$c, imm:$mode))]>;
 
 }
+
+// PRMT folding patterns
+def : Pat<(fshr i32:$hi, i32:$lo, (shl i32:$amt, (i32 3))),
+          (PRMT_B32rrr $lo, $hi, $amt, PrmtF4E)>;
 
 
 // byte extraction + signed/unsigned extension to i32.

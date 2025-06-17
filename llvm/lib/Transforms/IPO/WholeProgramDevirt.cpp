@@ -494,28 +494,28 @@ struct CallSiteInfo {
   /// Whether all call sites represented by this CallSiteInfo, including those
   /// in summaries, have been devirtualized. This starts off as true because a
   /// default constructed CallSiteInfo represents no call sites.
+  ///
+  /// If at the end of the pass there are still undevirtualized calls, we will
+  /// need to add a use of llvm.type.test to each of the function summaries in
+  /// the vector.
   bool AllCallSitesDevirted = true;
 
   // These fields are used during the export phase of ThinLTO and reflect
   // information collected from function summaries.
 
-  /// Whether any function summary contains an llvm.assume(llvm.type.test) for
-  /// this slot.
-  bool SummaryHasTypeTestAssumeUsers = false;
-
   /// CFI-specific: a vector containing the list of function summaries that use
   /// the llvm.type.checked.load intrinsic and therefore will require
   /// resolutions for llvm.type.test in order to implement CFI checks if
-  /// devirtualization was unsuccessful. If devirtualization was successful, the
-  /// pass will clear this vector by calling markDevirt(). If at the end of the
-  /// pass the vector is non-empty, we will need to add a use of llvm.type.test
-  /// to each of the function summaries in the vector.
+  /// devirtualization was unsuccessful.
   std::vector<FunctionSummary *> SummaryTypeCheckedLoadUsers;
+
+  /// A vector containing the list of function summaries that use
+  /// assume(llvm.type.test).
   std::vector<FunctionSummary *> SummaryTypeTestAssumeUsers;
 
   bool isExported() const {
-    return SummaryHasTypeTestAssumeUsers ||
-           !SummaryTypeCheckedLoadUsers.empty();
+    return !SummaryTypeCheckedLoadUsers.empty() ||
+           !SummaryTypeTestAssumeUsers.empty();
   }
 
   void addSummaryTypeCheckedLoadUser(FunctionSummary *FS) {
@@ -525,16 +525,10 @@ struct CallSiteInfo {
 
   void addSummaryTypeTestAssumeUser(FunctionSummary *FS) {
     SummaryTypeTestAssumeUsers.push_back(FS);
-    SummaryHasTypeTestAssumeUsers = true;
     AllCallSitesDevirted = false;
   }
 
-  void markDevirt() {
-    AllCallSitesDevirted = true;
-
-    // As explained in the comment for SummaryTypeCheckedLoadUsers.
-    SummaryTypeCheckedLoadUsers.clear();
-  }
+  void markDevirt() { AllCallSitesDevirted = true; }
 };
 
 // Call site information collected for a specific VTableSlot.
@@ -2465,11 +2459,14 @@ bool DevirtModule::run() {
     if (ExportSummary && isa<MDString>(S.first.TypeID)) {
       auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
           cast<MDString>(S.first.TypeID)->getString());
-      for (auto *FS : S.second.CSInfo.SummaryTypeCheckedLoadUsers)
-        FS->addTypeTest(GUID);
+      auto AddTypeTestsForTypeCheckedLoads = [&](CallSiteInfo &CSI) {
+        if (!CSI.AllCallSitesDevirted)
+          for (auto *FS : CSI.SummaryTypeCheckedLoadUsers)
+            FS->addTypeTest(GUID);
+      };
+      AddTypeTestsForTypeCheckedLoads(S.second.CSInfo);
       for (auto &CCS : S.second.ConstCSInfo)
-        for (auto *FS : CCS.second.SummaryTypeCheckedLoadUsers)
-          FS->addTypeTest(GUID);
+        AddTypeTestsForTypeCheckedLoads(CCS.second);
     }
   }
 

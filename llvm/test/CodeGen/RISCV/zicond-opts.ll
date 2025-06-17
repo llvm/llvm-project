@@ -146,20 +146,18 @@ define i64 @select_imm_reg(i64 %t, i1 %cond) {
 ; RV32ZICOND-LABEL: select_imm_reg:
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    andi a2, a2, 1
-; RV32ZICOND-NEXT:    li a3, 3
-; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
-; RV32ZICOND-NEXT:    czero.eqz a3, a3, a2
-; RV32ZICOND-NEXT:    or a0, a3, a0
+; RV32ZICOND-NEXT:    addi a0, a0, -3
 ; RV32ZICOND-NEXT:    czero.nez a1, a1, a2
+; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
+; RV32ZICOND-NEXT:    addi a0, a0, 3
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: select_imm_reg:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    andi a1, a1, 1
-; RV64ZICOND-NEXT:    li a2, 3
+; RV64ZICOND-NEXT:    addi a0, a0, -3
 ; RV64ZICOND-NEXT:    czero.nez a0, a0, a1
-; RV64ZICOND-NEXT:    czero.eqz a1, a2, a1
-; RV64ZICOND-NEXT:    or a0, a1, a0
+; RV64ZICOND-NEXT:    addi a0, a0, 3
 ; RV64ZICOND-NEXT:    ret
   %4 = select i1 %cond, i64 3, i64 %t
   ret i64 %4
@@ -170,20 +168,18 @@ define i64 @select_reg_imm(i64 %t, i1 %cond) {
 ; RV32ZICOND-LABEL: select_reg_imm:
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    andi a2, a2, 1
-; RV32ZICOND-NEXT:    li a3, 3
-; RV32ZICOND-NEXT:    czero.nez a3, a3, a2
-; RV32ZICOND-NEXT:    czero.eqz a0, a0, a2
-; RV32ZICOND-NEXT:    or a0, a0, a3
+; RV32ZICOND-NEXT:    addi a0, a0, -3
 ; RV32ZICOND-NEXT:    czero.eqz a1, a1, a2
+; RV32ZICOND-NEXT:    czero.eqz a0, a0, a2
+; RV32ZICOND-NEXT:    addi a0, a0, 3
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: select_reg_imm:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    andi a1, a1, 1
-; RV64ZICOND-NEXT:    li a2, 3
-; RV64ZICOND-NEXT:    czero.nez a2, a2, a1
+; RV64ZICOND-NEXT:    addi a0, a0, -3
 ; RV64ZICOND-NEXT:    czero.eqz a0, a0, a1
-; RV64ZICOND-NEXT:    or a0, a0, a2
+; RV64ZICOND-NEXT:    addi a0, a0, 3
 ; RV64ZICOND-NEXT:    ret
   %4 = select i1 %cond, i64 %t, i64 3
   ret i64 %4
@@ -194,21 +190,19 @@ define i64 @select_imm_reg_neg_2048(i64 %t, i1 %cond) {
 ; RV32ZICOND-LABEL: select_imm_reg_neg_2048:
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    andi a2, a2, 1
-; RV32ZICOND-NEXT:    li a3, -2048
+; RV32ZICOND-NEXT:    xori a0, a0, -2048
+; RV32ZICOND-NEXT:    neg a3, a2
 ; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
-; RV32ZICOND-NEXT:    czero.eqz a3, a3, a2
-; RV32ZICOND-NEXT:    neg a2, a2
-; RV32ZICOND-NEXT:    or a0, a3, a0
-; RV32ZICOND-NEXT:    or a1, a2, a1
+; RV32ZICOND-NEXT:    or a1, a3, a1
+; RV32ZICOND-NEXT:    xori a0, a0, -2048
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: select_imm_reg_neg_2048:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    andi a1, a1, 1
-; RV64ZICOND-NEXT:    li a2, -2048
+; RV64ZICOND-NEXT:    xori a0, a0, -2048
 ; RV64ZICOND-NEXT:    czero.nez a0, a0, a1
-; RV64ZICOND-NEXT:    czero.eqz a1, a2, a1
-; RV64ZICOND-NEXT:    or a0, a1, a0
+; RV64ZICOND-NEXT:    xori a0, a0, -2048
 ; RV64ZICOND-NEXT:    ret
   %4 = select i1 %cond, i64 -2048, i64 %t
   ret i64 %4
