@@ -22,6 +22,8 @@ def getTriple(os, arch, version):
 def getOlderVersion(major, minor):
     if minor != 0:
         return '%d.%d' % (major, minor-1)
+    if major == 26:
+        return '%d.%d' % (major-11, minor)
     return '%d.%d' % (major-1, minor)
 
 class TestAvailability(TestBase):
