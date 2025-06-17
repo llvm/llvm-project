@@ -40,13 +40,6 @@ struct PerfSpeEventsTestHelper : public testing::Test {
 protected:
   using Trace = DataAggregator::Trace;
   using TakenBranchInfo = DataAggregator::TakenBranchInfo;
-  using TraceHash = DataAggregator::TraceHash;
-  struct MockBranchInfo {
-    uint64_t From;
-    uint64_t To;
-    uint64_t TakenCount;
-    uint64_t MispredCount;
-  };
 
   void initalizeLLVM() {
     llvm::InitializeAllTargetInfos();
@@ -82,23 +75,25 @@ protected:
 
   /// Helper function to export lists to show the mismatch.
   void reportBrStackEventMismatch(
-      const std::unordered_map<Trace, TakenBranchInfo, TraceHash> &BranchLBRs,
-      const std::vector<MockBranchInfo> &ExpectedSamples) {
-    llvm::errs() << "BranchLBRs items: \n";
-    for (const auto &AggrLBR : BranchLBRs)
-      llvm::errs() << "{" << AggrLBR.first.From << ", " << AggrLBR.first.To
-                   << ", " << AggrLBR.second.TakenCount << ", "
-                   << AggrLBR.second.MispredCount << "}" << "\n";
+      const std::vector<std::pair<Trace, TakenBranchInfo>> &Traces,
+      const std::vector<std::pair<Trace, TakenBranchInfo>> &ExpectedSamples) {
+    llvm::errs() << "Traces items: \n";
+    for (const auto &[Trace, BI] : Traces)
+      llvm::errs() << "{" << Trace.Branch << ", " << Trace.From << ","
+                   << Trace.To << ", " << BI.TakenCount << ", "
+                   << BI.MispredCount << "}" << "\n";
 
     llvm::errs() << "Expected items: \n";
-    for (const MockBranchInfo &BI : ExpectedSamples)
-      llvm::errs() << "{" << BI.From << ", " << BI.To << ", " << BI.TakenCount
-                   << ", " << BI.MispredCount << "}" << "\n";
+    for (const auto &[Trace, BI] : ExpectedSamples)
+      llvm::errs() << "{" << Trace.Branch << ", " << Trace.From << ", "
+                   << Trace.To << ", " << BI.TakenCount << ", "
+                   << BI.MispredCount << "}" << "\n";
   }
 
   /// Parse and check SPE brstack as LBR.
   void parseAndCheckBrstackEvents(
-      uint64_t PID, const std::vector<MockBranchInfo> &ExpectedSamples) {
+      uint64_t PID,
+      const std::vector<std::pair<Trace, TakenBranchInfo>> &ExpectedSamples) {
     DataAggregator DA("<pseudo input>");
     DA.ParsingBuf = opts::ReadPerfEvents;
     DA.BC = BC.get();
@@ -107,18 +102,19 @@ protected:
 
     DA.parseBranchEvents();
 
-    EXPECT_EQ(DA.BranchLBRs.size(), ExpectedSamples.size());
-    if (DA.BranchLBRs.size() != ExpectedSamples.size())
-      reportBrStackEventMismatch(DA.BranchLBRs, ExpectedSamples);
+    EXPECT_EQ(DA.Traces.size(), ExpectedSamples.size());
+    if (DA.Traces.size() != ExpectedSamples.size())
+      reportBrStackEventMismatch(DA.Traces, ExpectedSamples);
 
-    for (const MockBranchInfo &BI : ExpectedSamples) {
-      // Check that each key exists and that it matches.
-      EXPECT_NO_THROW(DA.BranchLBRs.at(Trace(BI.From, BI.To)));
+    const auto TracesBegin = DA.Traces.begin();
+    const auto TracesEnd = DA.Traces.end();
+    for (const auto &BI : ExpectedSamples) {
+      auto it = find_if(TracesBegin, TracesEnd,
+                        [&BI](const auto &Tr) { return Tr.first == BI.first; });
 
-      EXPECT_EQ(DA.BranchLBRs.at(Trace(BI.From, BI.To)).MispredCount,
-                BI.MispredCount);
-      EXPECT_EQ(DA.BranchLBRs.at(Trace(BI.From, BI.To)).TakenCount,
-                BI.TakenCount);
+      EXPECT_NE(it, TracesEnd);
+      EXPECT_EQ(it->second.MispredCount, BI.second.MispredCount);
+      EXPECT_EQ(it->second.TakenCount, BI.second.TakenCount);
     }
   }
 };
@@ -147,16 +143,20 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstack) {
                          "  1234  0xf001/0xf002/MN/-/-/8/COND/-\n"
                          "  1234  0xc456/0xc789/M/-/-/13/-/-\n";
 
-  // MockBranchInfo contains the aggregated information about
-  // a Branch {From, To, TakenCount, MispredCount}.
-  // Let's check the following example: {0xd123, 0xd456, 2, 2}.
-  // This entry has a TakenCount = 2,
-  // as we have two samples for (0xd123, 0xd456) in our input.
-  // It also has MispredsCount = 2, as 'M' misprediction flag
-  // appears in both cases.
-  std::vector<MockBranchInfo> ExpectedSamples = {
-      {0xa001, 0xa002, 1, 0}, {0xb001, 0xb002, 1, 0}, {0xc456, 0xc789, 2, 1},
-      {0xd123, 0xd456, 2, 2}, {0xe001, 0xe002, 1, 0}, {0xf001, 0xf002, 1, 1}};
+  // ExpectedSamples contains the aggregated information about
+  // a branch {{Branch From, To}, {TakenCount, MispredCount}}.
+  // Consider this example trace: {{0xd123, 0xd456, Trace::BR_ONLY},
+  // {2,2}}. This entry has a TakenCount = 2, as we have two samples for
+  // (0xd123, 0xd456) in our input. It also has MispredsCount = 2,
+  // as 'M' misprediction flag appears in both cases. BR_ONLY means
+  // the trace only contains branch data.
+  std::vector<std::pair<Trace, TakenBranchInfo>> ExpectedSamples = {
+      {{0xa001, 0xa002, Trace::BR_ONLY}, {1, 0}},
+      {{0xb001, 0xb002, Trace::BR_ONLY}, {1, 0}},
+      {{0xc456, 0xc789, Trace::BR_ONLY}, {2, 1}},
+      {{0xd123, 0xd456, Trace::BR_ONLY}, {2, 2}},
+      {{0xe001, 0xe002, Trace::BR_ONLY}, {1, 0}},
+      {{0xf001, 0xf002, Trace::BR_ONLY}, {1, 1}}};
 
   parseAndCheckBrstackEvents(1234, ExpectedSamples);
 }
