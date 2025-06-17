@@ -195,7 +195,7 @@ static NOINLINE void MapRodata(char* buffer, uptr size) {
         !segment.IsWritable() && IsAppMem(segment.start)) {
       // Assume it's .rodata
       char *shadow_start = (char *)MemToShadow(segment.start);
-      char *shadow_end = (char *)MemToShadow(segment.end);
+      char *shadow_end = (char *)MemToEndShadow(segment.end);
       for (char *p = shadow_start; p < shadow_end;
            p += marker.size() * sizeof(RawShadow)) {
         internal_mmap(
