@@ -48,7 +48,6 @@ LIBC_INLINE uint64_t next_random_seed() {
       count -= len.value();
       buffer += len.value();
     }
-    libc_errno = errno_backup;
 #endif
     state.update(&entropy, sizeof(entropy));
   }
