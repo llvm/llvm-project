@@ -145,8 +145,9 @@ static bool parseRootFlags(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   if (std::optional<uint32_t> Val = extractMdIntValue(RootFlagNode, 1))
     RSD.Flags = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt>(
-                               Ctx, "RootFlagNode", RootFlagNode, 1) || HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RootFlagNode",
+                                                   RootFlagNode, 1) ||
+               HasError;
 
   return HasError;
 }
@@ -167,27 +168,31 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 1))
     Header.ShaderVisibility = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt>(
-                               Ctx, "RootConstantNode", RootConstantNode, 1) || HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RootConstantNode",
+                                                   RootConstantNode, 1) ||
+               HasError;
 
   dxbc::RTS0::v1::RootConstants Constants;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 2))
     Constants.ShaderRegister = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "RootConstantNode", RootConstantNode, 2) || HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RootConstantNode",
+                                                   RootConstantNode, 2) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 3))
     Constants.RegisterSpace = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "RootConstantNode", RootConstantNode, 3) || HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RootConstantNode",
+                                                   RootConstantNode, 3) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 4))
     Constants.Num32BitValues = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "RootConstantNode", RootConstantNode, 4) || HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RootConstantNode",
+                                                   RootConstantNode, 4) ||
+               HasError;
   if (!HasError)
     RSD.ParametersContainer.addParameter(Header, Constants);
 
@@ -226,24 +231,24 @@ static bool parseRootDescriptors(LLVMContext *Ctx,
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 1))
     Header.ShaderVisibility = *Val;
   else
-    HasError =
-               reportInvalidTypeError<ConstantInt>(Ctx, "RootDescriptorNode",
-                                                   RootDescriptorNode, 1)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RootDescriptorNode",
+                                                   RootDescriptorNode, 1) ||
+               HasError;
 
   dxbc::RTS0::v2::RootDescriptor Descriptor;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 2))
     Descriptor.ShaderRegister = *Val;
   else
-    HasError =
-               reportInvalidTypeError<ConstantInt>(Ctx, "RootDescriptorNode",
-                                                   RootDescriptorNode, 2)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RootDescriptorNode",
+                                                   RootDescriptorNode, 2) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 3))
     Descriptor.RegisterSpace = *Val;
   else
-    HasError =
-               reportInvalidTypeError<ConstantInt>(Ctx, "RootDescriptorNode",
-                                                   RootDescriptorNode, 3)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RootDescriptorNode",
+                                                   RootDescriptorNode, 3) ||
+               HasError;
 
   if (RSD.Version == 1) {
     if (!HasError)
@@ -255,9 +260,9 @@ static bool parseRootDescriptors(LLVMContext *Ctx,
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 4))
     Descriptor.Flags = *Val;
   else
-    HasError =
-               reportInvalidTypeError<ConstantInt>(Ctx, "RootDescriptorNode",
-                                                   RootDescriptorNode, 4)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RootDescriptorNode",
+                                                   RootDescriptorNode, 4) ||
+               HasError;
   if (!HasError)
     RSD.ParametersContainer.addParameter(Header, Descriptor);
   return HasError;
@@ -278,9 +283,9 @@ static bool parseDescriptorRange(LLVMContext *Ctx,
       extractMdStringValue(RangeDescriptorNode, 0);
 
   if (!ElementText.has_value())
-    HasError =
-        reportInvalidTypeError<MDString>(Ctx, "RangeDescriptorNode",
-                                                     RangeDescriptorNode, 0)|| HasError;
+    HasError = reportInvalidTypeError<MDString>(Ctx, "RangeDescriptorNode",
+                                                RangeDescriptorNode, 0) ||
+               HasError;
 
   Range.RangeType =
       StringSwitch<uint32_t>(*ElementText)
@@ -292,43 +297,44 @@ static bool parseDescriptorRange(LLVMContext *Ctx,
           .Default(-1u);
 
   if (Range.RangeType == -1u)
-    HasError = reportError(Ctx, "Invalid Descriptor Range type: " +
-                                                *ElementText)|| HasError;
+    HasError =
+        reportError(Ctx, "Invalid Descriptor Range type: " + *ElementText) ||
+        HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 1))
     Range.NumDescriptors = *Val;
   else
-    HasError =
-               reportInvalidTypeError<ConstantInt>(Ctx, "RangeDescriptorNode",
-                                                   RangeDescriptorNode, 1) || HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RangeDescriptorNode",
+                                                   RangeDescriptorNode, 1) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 2))
     Range.BaseShaderRegister = *Val;
   else
-    HasError =
-               reportInvalidTypeError<ConstantInt>(Ctx, "RangeDescriptorNode",
-                                                   RangeDescriptorNode, 2) || HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RangeDescriptorNode",
+                                                   RangeDescriptorNode, 2) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 3))
     Range.RegisterSpace = *Val;
   else
-    HasError =
-               reportInvalidTypeError<ConstantInt>(Ctx, "RangeDescriptorNode",
-                                                   RangeDescriptorNode, 3) || HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RangeDescriptorNode",
+                                                   RangeDescriptorNode, 3) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 4))
     Range.OffsetInDescriptorsFromTableStart = *Val;
   else
-    HasError =
-               reportInvalidTypeError<ConstantInt>(Ctx, "RangeDescriptorNode",
-                                                   RangeDescriptorNode, 4) || HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RangeDescriptorNode",
+                                                   RangeDescriptorNode, 4) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 5))
     Range.Flags = *Val;
   else
-    HasError =
-               reportInvalidTypeError<ConstantInt>(Ctx, "RangeDescriptorNode",
-                                                   RangeDescriptorNode, 5) || HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "RangeDescriptorNode",
+                                                   RangeDescriptorNode, 5) ||
+               HasError;
   if (!HasError)
     Table.Ranges.push_back(Range);
   return HasError;
@@ -345,9 +351,9 @@ static bool parseDescriptorTable(LLVMContext *Ctx,
   if (std::optional<uint32_t> Val = extractMdIntValue(DescriptorTableNode, 1))
     Header.ShaderVisibility = *Val;
   else
-    HasError =
-               reportInvalidTypeError<ConstantInt>(Ctx, "DescriptorTableNode",
-                                                   DescriptorTableNode, 1) || HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "DescriptorTableNode",
+                                                   DescriptorTableNode, 1) ||
+               HasError;
 
   mcdxbc::DescriptorTable Table;
   Header.ParameterType =
@@ -356,9 +362,9 @@ static bool parseDescriptorTable(LLVMContext *Ctx,
   for (unsigned int I = 2; I < NumOperands; I++) {
     MDNode *Element = dyn_cast<MDNode>(DescriptorTableNode->getOperand(I));
     if (Element == nullptr)
-      HasError =
-          reportInvalidTypeError<MDNode>(Ctx, "DescriptorTableNode",
-                                                     DescriptorTableNode, I)  || HasError;
+      HasError = reportInvalidTypeError<MDNode>(Ctx, "DescriptorTableNode",
+                                                DescriptorTableNode, I) ||
+                 HasError;
 
     if (parseDescriptorRange(Ctx, RSD, Table, Element))
       HasError = true || HasError;
@@ -378,80 +384,93 @@ static bool parseStaticSampler(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 1))
     Sampler.Filter = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "StaticSamplerNode", StaticSamplerNode, 1)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "StaticSamplerNode",
+                                                   StaticSamplerNode, 1) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 2))
     Sampler.AddressU = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "StaticSamplerNode", StaticSamplerNode, 2)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "StaticSamplerNode",
+                                                   StaticSamplerNode, 2) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 3))
     Sampler.AddressV = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "StaticSamplerNode", StaticSamplerNode, 3)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "StaticSamplerNode",
+                                                   StaticSamplerNode, 3) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 4))
     Sampler.AddressW = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "StaticSamplerNode", StaticSamplerNode, 4)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "StaticSamplerNode",
+                                                   StaticSamplerNode, 4) ||
+               HasError;
 
   if (std::optional<APFloat> Val = extractMdFloatValue(StaticSamplerNode, 5))
     Sampler.MipLODBias = Val->convertToFloat();
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "StaticSamplerNode", StaticSamplerNode, 5)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "StaticSamplerNode",
+                                                   StaticSamplerNode, 5) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 6))
     Sampler.MaxAnisotropy = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "StaticSamplerNode", StaticSamplerNode, 6)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "StaticSamplerNode",
+                                                   StaticSamplerNode, 6) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 7))
     Sampler.ComparisonFunc = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "StaticSamplerNode", StaticSamplerNode, 7)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "StaticSamplerNode",
+                                                   StaticSamplerNode, 7) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 8))
     Sampler.BorderColor = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "StaticSamplerNode", StaticSamplerNode, 8)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "StaticSamplerNode",
+                                                   StaticSamplerNode, 8) ||
+               HasError;
 
   if (std::optional<APFloat> Val = extractMdFloatValue(StaticSamplerNode, 9))
     Sampler.MinLOD = Val->convertToFloat();
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "StaticSamplerNode", StaticSamplerNode, 9)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "StaticSamplerNode",
+                                                   StaticSamplerNode, 9) ||
+               HasError;
 
   if (std::optional<APFloat> Val = extractMdFloatValue(StaticSamplerNode, 10))
     Sampler.MaxLOD = Val->convertToFloat();
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "StaticSamplerNode", StaticSamplerNode, 10)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "StaticSamplerNode",
+                                                   StaticSamplerNode, 10) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 11))
     Sampler.ShaderRegister = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "StaticSamplerNode", StaticSamplerNode, 11)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "StaticSamplerNode",
+                                                   StaticSamplerNode, 11) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 12))
     Sampler.RegisterSpace = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "StaticSamplerNode", StaticSamplerNode, 12)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "StaticSamplerNode",
+                                                   StaticSamplerNode, 12) ||
+               HasError;
 
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 13))
     Sampler.ShaderVisibility = *Val;
   else
-    HasError = reportInvalidTypeError<ConstantInt> (
-                               Ctx, "StaticSamplerNode", StaticSamplerNode, 13)|| HasError;
+    HasError = reportInvalidTypeError<ConstantInt>(Ctx, "StaticSamplerNode",
+                                                   StaticSamplerNode, 13) ||
+               HasError;
   if (!HasError)
     RSD.StaticSamplers.push_back(Sampler);
   return HasError;
@@ -728,8 +747,9 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
 
   for (const mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
     if (!dxbc::isValidShaderVisibility(Info.Header.ShaderVisibility))
-      HasError = reportValueError(Ctx, "ShaderVisibility" ,
-                                              Info.Header.ShaderVisibility)|| HasError;
+      HasError = reportValueError(Ctx, "ShaderVisibility",
+                                  Info.Header.ShaderVisibility) ||
+                 HasError;
 
     assert(dxbc::isValidParameterType(Info.Header.ParameterType) &&
            "Invalid value for ParameterType");
@@ -742,17 +762,20 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
       const dxbc::RTS0::v2::RootDescriptor &Descriptor =
           RSD.ParametersContainer.getRootDescriptor(Info.Location);
       if (!verifyRegisterValue(Descriptor.ShaderRegister))
-        HasError = reportValueError(Ctx, "ShaderRegister" ,
-                                                Descriptor.ShaderRegister)|| HasError;
+        HasError = reportValueError(Ctx, "ShaderRegister",
+                                    Descriptor.ShaderRegister) ||
+                   HasError;
 
       if (!verifyRegisterSpace(Descriptor.RegisterSpace))
-        HasError = reportValueError(Ctx, "RegisterSpace" ,
-                                                Descriptor.RegisterSpace)|| HasError;
+        HasError =
+            reportValueError(Ctx, "RegisterSpace", Descriptor.RegisterSpace) ||
+            HasError;
 
       if (RSD.Version > 1) {
         if (!verifyDescriptorFlag(Descriptor.Flags))
-          HasError  =
-                     reportValueError(Ctx, "DescriptorFlag", Descriptor.Flags)|| HasError;
+          HasError =
+              reportValueError(Ctx, "DescriptorFlag", Descriptor.Flags) ||
+              HasError;
       }
       break;
     }
@@ -765,8 +788,9 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
               reportValueError(Ctx, "RangeType", Range.RangeType) || HasError;
 
         if (!verifyRegisterSpace(Range.RegisterSpace))
-          HasError = reportValueError(Ctx, "RegisterSpace" ,
-                                                  Range.RegisterSpace)|| HasError;
+          HasError =
+              reportValueError(Ctx, "RegisterSpace", Range.RegisterSpace) ||
+              HasError;
 
         if (!verifyDescriptorRangeFlag(RSD.Version, Range.RangeType,
                                        Range.Flags))
@@ -799,12 +823,14 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
           reportValueError(Ctx, "MipLODBias", Sampler.MipLODBias) || HasError;
 
     if (!verifyMaxAnisotropy(Sampler.MaxAnisotropy))
-      HasError  =
-                 reportValueError(Ctx, "MaxAnisotropy", Sampler.MaxAnisotropy)|| HasError;
+      HasError =
+          reportValueError(Ctx, "MaxAnisotropy", Sampler.MaxAnisotropy) ||
+          HasError;
 
     if (!verifyComparisonFunc(Sampler.ComparisonFunc))
-      HasError = reportValueError(Ctx, "ComparisonFunc" ,
-                                              Sampler.ComparisonFunc)|| HasError;
+      HasError =
+          reportValueError(Ctx, "ComparisonFunc", Sampler.ComparisonFunc) ||
+          HasError;
 
     if (!verifyBorderColor(Sampler.BorderColor))
       HasError =
@@ -817,16 +843,19 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
       HasError = reportValueError(Ctx, "MaxLOD", Sampler.MaxLOD) || HasError;
 
     if (!verifyRegisterValue(Sampler.ShaderRegister))
-      HasError = reportValueError(Ctx, "ShaderRegister" ,
-                                              Sampler.ShaderRegister)|| HasError;
+      HasError =
+          reportValueError(Ctx, "ShaderRegister", Sampler.ShaderRegister) ||
+          HasError;
 
     if (!verifyRegisterSpace(Sampler.RegisterSpace))
-      HasError  =
-                 reportValueError(Ctx, "RegisterSpace", Sampler.RegisterSpace)|| HasError;
+      HasError =
+          reportValueError(Ctx, "RegisterSpace", Sampler.RegisterSpace) ||
+          HasError;
 
     if (!dxbc::isValidShaderVisibility(Sampler.ShaderVisibility))
-      HasError = reportValueError(Ctx, "ShaderVisibility" ,
-                                              Sampler.ShaderVisibility)|| HasError;
+      HasError =
+          reportValueError(Ctx, "ShaderVisibility", Sampler.ShaderVisibility) ||
+          HasError;
   }
 
   return HasError;
