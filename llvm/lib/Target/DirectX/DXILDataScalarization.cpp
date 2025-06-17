@@ -192,13 +192,19 @@ DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
     return VA->second;
 
   auto InsertPoint = Builder.GetInsertPoint();
-  Builder.SetInsertPointPastAllocas(Builder.GetInsertBlock()->getParent());
 
+  // Allocate the array to hold the vector elements
+  Builder.SetInsertPointPastAllocas(Builder.GetInsertBlock()->getParent());
   Type *ArrTy = equivalentArrayTypeFromVector(Vec->getType());
   AllocaInst *ArrAlloca =
       Builder.CreateAlloca(ArrTy, nullptr, Name + ".alloca");
   const uint64_t ArrNumElems = ArrTy->getArrayNumElements();
 
+  // Create loads and stores to populate the array immediately after the
+  // original vector's defining instruction if available, else immediately after
+  // the alloca
+  if (auto *Instr = dyn_cast<Instruction>(Vec))
+    Builder.SetInsertPoint(Instr->getNextNonDebugInstruction());
   SmallVector<Value *, 4> GEPs(ArrNumElems);
   for (unsigned I = 0; I < ArrNumElems; ++I) {
     Value *EE = Builder.CreateExtractElement(Vec, I, Name + ".extract");
@@ -213,6 +219,19 @@ DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
   return {ArrAlloca, GEPs};
 }
 
+/// Returns a pair of Value* with the first being a GEP into ArrAlloca using
+/// indices {0, Index}, and the second Value* being a Load of the GEP
+static std::pair<Value *, Value *>
+dynamicallyLoadArray(IRBuilder<> &Builder, AllocaInst *ArrAlloca, Value *Index,
+                     const Twine &Name = "") {
+  Type *ArrTy = ArrAlloca->getAllocatedType();
+  Value *GEP = Builder.CreateInBoundsGEP(
+      ArrTy, ArrAlloca, {Builder.getInt32(0), Index}, Name + ".index");
+  Value *Load =
+      Builder.CreateLoad(ArrTy->getArrayElementType(), GEP, Name + ".load");
+  return std::make_pair(GEP, Load);
+}
+
 bool DataScalarizerVisitor::replaceDynamicInsertElementInst(
     InsertElementInst &IEI) {
   IRBuilder<> Builder(&IEI);
@@ -224,14 +243,15 @@ bool DataScalarizerVisitor::replaceDynamicInsertElementInst(
   AllocaAndGEPs ArrAllocaAndGEPs =
       createArrayFromVector(Builder, Vec, IEI.getName());
   AllocaInst *ArrAlloca = ArrAllocaAndGEPs.first;
+  Type *ArrTy = ArrAlloca->getAllocatedType();
   SmallVector<Value *, 4> &ArrGEPs = ArrAllocaAndGEPs.second;
 
-  Type *ArrTy = ArrAlloca->getAllocatedType();
-  Value *GEPForStore =
-      Builder.CreateInBoundsGEP(ArrTy, ArrAlloca, {Builder.getInt32(0), Index},
-                                IEI.getName() + ".dynindex");
-  Builder.CreateStore(Val, GEPForStore);
+  auto GEPAndLoad =
+      dynamicallyLoadArray(Builder, ArrAlloca, Index, IEI.getName());
+  Value *GEP = GEPAndLoad.first;
+  Value *Load = GEPAndLoad.second;
 
+  Builder.CreateStore(Val, GEP);
   Value *NewIEI = PoisonValue::get(Vec->getType());
   for (unsigned I = 0; I < ArrTy->getArrayNumElements(); ++I) {
     Value *Load = Builder.CreateLoad(ArrTy->getArrayElementType(), ArrGEPs[I],
@@ -239,6 +259,10 @@ bool DataScalarizerVisitor::replaceDynamicInsertElementInst(
     NewIEI = Builder.CreateInsertElement(NewIEI, Load, Builder.getInt32(I),
                                          IEI.getName() + ".insert");
   }
+
+  // Store back the original value so the Alloca can be reused for subsequent
+  // insertelement instructions on the same vector
+  Builder.CreateStore(Load, GEP);
 
   IEI.replaceAllUsesWith(NewIEI);
   IEI.eraseFromParent();
@@ -261,12 +285,9 @@ bool DataScalarizerVisitor::replaceDynamicExtractElementInst(
       createArrayFromVector(Builder, EEI.getVectorOperand(), EEI.getName());
   AllocaInst *ArrAlloca = ArrAllocaAndGEPs.first;
 
-  Type *ArrTy = ArrAlloca->getAllocatedType();
-  Value *GEP = Builder.CreateInBoundsGEP(
-      ArrTy, ArrAlloca, {Builder.getInt32(0), EEI.getIndexOperand()},
-      EEI.getName() + ".index");
-  Value *Load = Builder.CreateLoad(ArrTy->getArrayElementType(), GEP,
-                                   EEI.getName() + ".load");
+  auto GEPAndLoad = dynamicallyLoadArray(Builder, ArrAlloca,
+                                         EEI.getIndexOperand(), EEI.getName());
+  Value *Load = GEPAndLoad.second;
 
   EEI.replaceAllUsesWith(Load);
   EEI.eraseFromParent();
