@@ -669,6 +669,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeSITOFP(MI, MRI, Helper);
   case TargetOpcode::G_FPTOSI:
     return legalizeFPTOSI(MI, MRI, Helper);
+  case TargetOpcode::G_BITCAST:
+    return legalizeBitcast(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -833,6 +835,23 @@ bool X86LegalizerInfo::legalizeNarrowingStore(MachineInstr &MI,
   Store.setMemRefs(MF, {NewMMO});
   Helper.Observer.changedInstr(Store);
   return true;
+}
+
+bool X86LegalizerInfo::legalizeBitcast(MachineInstr &MI,
+                                       MachineRegisterInfo &MRI,
+                                       LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  assert(!SrcTy.isVector() && "G_BITCAST does not support vectors yet");
+  bool isCopy =
+      (SrcTy == DstTy) || (SrcTy.getSizeInBits() == DstTy.getSizeInBits());
+  if (isCopy) {
+    MIRBuilder.buildCopy(DstReg, SrcReg);
+    MI.eraseFromParent();
+    return true;
+  }
+  // For Vectors specific bitcasts
+  return Helper.lowerBitcast(MI) == LegalizerHelper::LegalizeResult::Legalized;
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
