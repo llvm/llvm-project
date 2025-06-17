@@ -1787,6 +1787,34 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Ashr = foldAddToAshr(I))
     return Ashr;
 
+  // Ceiling division by power-of-2:
+  // (X >> log2(N)) + zext(X & (N-1) != 0) --> (X + (N-1)) >> log2(N)
+  // This is valid when adding (N-1) to X doesn't overflow.
+  {
+    Value *X;
+    const APInt *ShiftAmt, *Mask;
+    CmpPredicate Pred;
+
+    // Match: (X >> C) + zext((X & Mask) != 0)
+    // or:    zext((X & Mask) != 0) + (X >> C)
+    if (match(&I, m_c_Add(m_OneUse(m_LShr(m_Value(X), m_APInt(ShiftAmt))),
+                          m_ZExt(m_SpecificICmp(
+                              ICmpInst::ICMP_NE,
+                              m_And(m_Deferred(X), m_LowBitMask(Mask)),
+                              m_ZeroInt())))) &&
+        Mask->popcount() == *ShiftAmt) {
+
+      // Check if X + Mask doesn't overflow
+      Constant *MaskC = ConstantInt::get(X->getType(), *Mask);
+      if (willNotOverflowUnsignedAdd(X, MaskC, I)) {
+        // (X + Mask) >> ShiftAmt
+        Value *Add = Builder.CreateNUWAdd(X, MaskC);
+        return BinaryOperator::CreateLShr(
+            Add, ConstantInt::get(X->getType(), *ShiftAmt));
+      }
+    }
+  }
+
   // (~X) + (~Y) --> -2 - (X + Y)
   {
     // To ensure we can save instructions we need to ensure that we consume both
