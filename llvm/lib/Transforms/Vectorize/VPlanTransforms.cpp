@@ -31,6 +31,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TypeSize.h"
@@ -1137,6 +1138,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       TypeInfo.inferScalarType(R.getVPSingleValue())->isIntegerTy(1)) {
     Def->setOperand(1, Def->getOperand(0));
     Def->setOperand(0, Y);
+    return;
+  }
+
+  if (auto *Phi = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(Def)) {
+    if (Phi->getOperand(0) == Phi->getOperand(1))
+      Def->replaceAllUsesWith(Phi->getOperand(0));
     return;
   }
 
@@ -3202,4 +3209,26 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   Plan.getVF().replaceAllUsesWith(
       Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
   removeDeadRecipes(Plan);
+}
+
+/// Add branch weight metadata, if the \p Plan's middle block is terminated by a
+/// BranchOnCond recipe.
+void VPlanTransforms::addBranchWeightToMiddleTerminator(VPlan &Plan,
+                                                        ElementCount VF) {
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+  auto *MiddleTerm =
+      dyn_cast_or_null<VPInstruction>(MiddleVPBB->getTerminator());
+  // Only add branch metadata if there is a (conditional) terminator.
+  if (!MiddleTerm)
+    return;
+
+  assert(MiddleTerm->getOpcode() == VPInstruction::BranchOnCond &&
+         "must have a BranchOnCond");
+  // Assume that `TripCount % VectorStep ` is equally distributed.
+  unsigned VectorStep = Plan.getUF() * VF.getKnownMinValue();
+  assert(VectorStep > 0 && "trip count should not be zero");
+  MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
+  MDNode *BranchWeights =
+      MDB.createBranchWeights({1, VectorStep - 1}, /*IsExpected=*/false);
+  MiddleTerm->addMetadata(LLVMContext::MD_prof, BranchWeights);
 }

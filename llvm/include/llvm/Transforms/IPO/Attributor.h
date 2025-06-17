@@ -6335,6 +6335,47 @@ struct AAUnderlyingObjects : AbstractAttribute {
                           AA::ValueScope Scope = AA::Interprocedural) const = 0;
 };
 
+/// An abstract interface for identifying pointers from which loads can be
+/// marked invariant.
+struct AAInvariantLoadPointer : public AbstractAttribute {
+  AAInvariantLoadPointer(const IRPosition &IRP) : AbstractAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPointerTy())
+      return false;
+
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAInvariantLoadPointer &createForPosition(const IRPosition &IRP,
+                                                   Attributor &A);
+
+  /// Return true if the pointer's contents are known to remain invariant.
+  virtual bool isKnownInvariant() const = 0;
+  virtual bool isKnownLocallyInvariant() const = 0;
+
+  /// Return true if the pointer's contents are assumed to remain invariant.
+  virtual bool isAssumedInvariant() const = 0;
+  virtual bool isAssumedLocallyInvariant() const = 0;
+
+  /// See AbstractAttribute::getName().
+  StringRef getName() const override { return "AAInvariantLoadPointer"; }
+
+  /// See AbstractAttribute::getIdAddr().
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAInvariantLoadPointer
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address).
+  static const char ID;
+};
+
 /// An abstract interface for address space information.
 struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
   AAAddressSpace(const IRPosition &IRP, Attributor &A)
