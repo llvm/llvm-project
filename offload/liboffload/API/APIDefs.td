@@ -146,6 +146,7 @@ class Function : APIObject {
   list<Return> returns;
   list<string> details = [];
   list<string> analogues = [];
+  bit trace = 1;
 
   list<Return> returns_with_def = !listconcat(DefaultReturns, returns);
   list<Return> all_returns = AddPointerChecksToReturns<params,
