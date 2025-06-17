@@ -10,9 +10,9 @@
 #include "hdr/types/char8_t.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
+#include "src/__support/libc_errno.h" // for error numbers
 #include "src/__support/math_extras.h"
 #include "src/__support/wchar/mbstate.h"
-#include "src/__support/libc_errno.h" // for error numbers
 
 #include "character_converter.h"
 

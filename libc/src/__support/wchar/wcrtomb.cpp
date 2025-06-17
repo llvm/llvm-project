@@ -21,7 +21,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
-                        mbstate_t *__restrict ps) {               
+                        mbstate_t *__restrict ps) {
   CharacterConverter cr((internal::mbstate *)ps);
 
   char buf[sizeof(wchar_t) / sizeof(char)];

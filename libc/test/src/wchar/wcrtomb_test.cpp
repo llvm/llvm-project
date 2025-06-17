@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/types/wchar_t.h"
 #include "hdr/types/mbstate_t.h"
-#include "src/wchar/wcrtomb.h"
-#include "src/string/memset.h"
-#include "test/UnitTest/Test.h"
+#include "hdr/types/wchar_t.h"
 #include "src/__support/libc_errno.h"
+#include "src/string/memset.h"
+#include "src/wchar/wcrtomb.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcWCRToMBTest, OneByte) {
   mbstate_t state;
-  LIBC_NAMESPACE::memset(&state, 0, sizeof (mbstate_t));
+  LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
   wchar_t wc = L'U';
   char mb[4];
   size_t cnt = LIBC_NAMESPACE::wcrtomb(mb, wc, &state);
@@ -25,7 +25,7 @@ TEST(LlvmLibcWCRToMBTest, OneByte) {
 
 TEST(LlvmLibcWCRToMBTest, TwoByte) {
   mbstate_t state;
-  LIBC_NAMESPACE::memset(&state, 0, sizeof (mbstate_t));
+  LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
   // testing utf32: 0xff -> utf8: 0xc3 0xbf
   wchar_t wc = 0xff;
   char mb[4];
@@ -37,7 +37,7 @@ TEST(LlvmLibcWCRToMBTest, TwoByte) {
 
 TEST(LlvmLibcWCRToMBTest, ThreeByte) {
   mbstate_t state;
-  LIBC_NAMESPACE::memset(&state, 0, sizeof (mbstate_t));
+  LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
   // testing utf32: 0xac15 -> utf8: 0xea 0xb0 0x95
   wchar_t wc = 0xac15;
   char mb[4];
@@ -50,7 +50,7 @@ TEST(LlvmLibcWCRToMBTest, ThreeByte) {
 
 TEST(LlvmLibcWCRToMBTest, FourByte) {
   mbstate_t state;
-  LIBC_NAMESPACE::memset(&state, 0, sizeof (mbstate_t));
+  LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
   // testing utf32: 0x1f921 -> utf8: 0xf0 0x9f 0xa4 0xa1
   wchar_t wc = 0x1f921;
   char mb[4];
@@ -64,7 +64,7 @@ TEST(LlvmLibcWCRToMBTest, FourByte) {
 
 TEST(LlvmLibcWCRToMBTest, NullString) {
   mbstate_t state;
-  LIBC_NAMESPACE::memset(&state, 0, sizeof (mbstate_t));
+  LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
   wchar_t wc = L'A';
   char mb[4];
 
@@ -84,7 +84,7 @@ TEST(LlvmLibcWCRToMBTest, NullState) {
 
 TEST(LlvmLibcWCRToMBTest, InvalidWchar) {
   mbstate_t state;
-  LIBC_NAMESPACE::memset(&state, 0, sizeof (mbstate_t));
+  LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
   wchar_t wc = 0x12ffff;
   char mb[4];
   size_t cnt = LIBC_NAMESPACE::wcrtomb(mb, wc, &state);
