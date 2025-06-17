@@ -7360,12 +7360,15 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     uint64_t Val = Op.getConstantOperandVal(0);
     if (isPowerOf2_64(Val)) {
       uint64_t Log2 = Log2_64(Val);
-      if (Log2 < 3)
+      if (Log2 < 3) {
+        SDNodeFlags Flags;
+        Flags.setExact(true);
         Res = DAG.getNode(ISD::SRL, DL, XLenVT, Res,
                           DAG.getConstant(3 - Log2, DL, VT));
-      else if (Log2 > 3)
+      } else if (Log2 > 3) {
         Res = DAG.getNode(ISD::SHL, DL, XLenVT, Res,
                           DAG.getConstant(Log2 - 3, DL, XLenVT));
+      }
     } else if ((Val % 8) == 0) {
       // If the multiplier is a multiple of 8, scale it down to avoid needing
       // to shift the VLENB value.
