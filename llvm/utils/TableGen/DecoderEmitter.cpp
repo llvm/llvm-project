@@ -1052,19 +1052,13 @@ void DecoderEmitter::emitPredicateFunction(formatted_raw_ostream &OS,
   OS << Indent << "static bool checkDecoderPredicate(unsigned Idx, "
      << "const FeatureBitset &Bits) {\n";
   Indent += 2;
-  if (!Predicates.empty()) {
-    OS << Indent << "switch (Idx) {\n";
-    OS << Indent << "default: llvm_unreachable(\"Invalid index!\");\n";
-    unsigned Index = 0;
-    for (const auto &Predicate : Predicates) {
-      OS << Indent << "case " << Index++ << ":\n";
-      OS << Indent + 2 << "return (" << Predicate << ");\n";
-    }
-    OS << Indent << "}\n";
-  } else {
-    // No case statement to emit
-    OS << Indent << "llvm_unreachable(\"Invalid index!\");\n";
+  OS << Indent << "switch (Idx) {\n";
+  OS << Indent << "default: llvm_unreachable(\"Invalid index!\");\n";
+  for (const auto &[Index, Predicate] : enumerate(Predicates)) {
+    OS << Indent << "case " << Index << ":\n";
+    OS << Indent + 2 << "return (" << Predicate << ");\n";
   }
+  OS << Indent << "}\n";
   Indent -= 2;
   OS << Indent << "}\n\n";
 }
