@@ -43301,51 +43301,6 @@ static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N, const SDLoc &DL,
   return DAG.getNode(X86ISD::ADDSUB, DL, VT, Opnd0, Opnd1);
 }
 
-// We are looking for a shuffle where both sources are concatenated with undef
-// and have a width that is half of the output's width. AVX2 has VPERMD/Q, so
-// if we can express this as a single-source shuffle, that's preferable.
-static SDValue combineShuffleOfConcatUndef(SDNode *N, const SDLoc &DL,
-                                           SelectionDAG &DAG,
-                                           const X86Subtarget &Subtarget) {
-  if (!Subtarget.hasAVX2() || !isa<ShuffleVectorSDNode>(N))
-    return SDValue();
-
-  EVT VT = N->getValueType(0);
-
-  // We only care about shuffles of 128/256-bit vectors of 32/64-bit values.
-  if (!VT.is128BitVector() && !VT.is256BitVector())
-    return SDValue();
-
-  if (VT.getVectorElementType() != MVT::i32 &&
-      VT.getVectorElementType() != MVT::i64 &&
-      VT.getVectorElementType() != MVT::f32 &&
-      VT.getVectorElementType() != MVT::f64)
-    return SDValue();
-
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
-  // Check that both sources are concats with undef.
-  if (N0.getOpcode() != ISD::CONCAT_VECTORS ||
-      N1.getOpcode() != ISD::CONCAT_VECTORS || N0.getNumOperands() != 2 ||
-      N1.getNumOperands() != 2 || !N0.getOperand(1).isUndef() ||
-      !N1.getOperand(1).isUndef())
-    return SDValue();
-
-  // Construct the new shuffle mask. Elements from the first source retain their
-  // index, but elements from the second source no longer need to skip an undef.
-  SmallVector<int, 8> Mask;
-  int NumElts = VT.getVectorNumElements();
-
-  auto *SVOp = cast<ShuffleVectorSDNode>(N);
-  for (int Elt : SVOp->getMask())
-    Mask.push_back(Elt < NumElts ? Elt : (Elt - NumElts / 2));
-
-  SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, N0.getOperand(0),
-                               N1.getOperand(0));
-  return DAG.getVectorShuffle(VT, DL, Concat, DAG.getUNDEF(VT), Mask);
-}
-
 /// If we have a shuffle of AVX/AVX512 (256/512 bit) vectors that only uses the
 /// low half of each source vector and does not set any high half elements in
 /// the destination vector, narrow the shuffle to half its original size.
@@ -43400,15 +43355,6 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
   if (SDValue LD = combineToConsecutiveLoads(
           VT, SDValue(N, 0), dl, DAG, Subtarget, /*IsAfterLegalize*/ true))
     return LD;
-
-  // For AVX2, we sometimes want to combine
-  // (vector_shuffle <mask> (concat_vectors t1, undef)
-  //                        (concat_vectors t2, undef))
-  // Into:
-  // (vector_shuffle <mask> (concat_vectors t1, t2), undef)
-  // Since the latter can be efficiently lowered with VPERMD/VPERMQ
-  if (SDValue ShufConcat = combineShuffleOfConcatUndef(N, dl, DAG, Subtarget))
-    return ShufConcat;
 
   if (isTargetShuffle(N->getOpcode())) {
     SDValue Op(N, 0);
