@@ -152,19 +152,19 @@ LanguageFeatureControl::LanguageFeatureControl() {
 }
 
 std::optional<std::pair<Warning, bool>> LanguageFeatureControl::FindWarning(
-    std::string input) {
+    std::string_view input) {
   bool negated{false};
   if (input.size() > 3 && input.substr(0, 3) == "no-") {
     negated = true;
     input = input.substr(3);
   }
-  if (auto it{cliOptions_.find(input)}; it != cliOptions_.end()) {
+  if (auto it{cliOptions_.find(std::string{input})}; it != cliOptions_.end()) {
     return std::make_pair(it->second, !negated);
   }
   return std::nullopt;
 }
 
-bool LanguageFeatureControl::EnableWarning(std::string input) {
+bool LanguageFeatureControl::EnableWarning(std::string_view input) {
   if (auto warningAndEnabled{FindWarning(input)}) {
     EnableWarning(warningAndEnabled->first, warningAndEnabled->second);
     return true;

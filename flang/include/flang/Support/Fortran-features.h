@@ -126,10 +126,10 @@ public:
   bool ShouldWarn(UsageWarning w) const { return warnUsage_.test(w); }
   // Cli options
   // Find a warning by its Cli spelling, i.e. '[no-]warning-name'.
-  std::optional<WarningAndEnabled> FindWarning(std::string input);
+  std::optional<WarningAndEnabled> FindWarning(std::string_view input);
   // Take a string from the Cli and apply it to the LanguageFeatureControl.
   // Return true if the option was recognized (and hence applied).
-  bool EnableWarning(std::string input);
+  bool EnableWarning(std::string_view input);
   // The add and replace functions are not currently used but are provided
   // to allow a flexible many-to-one mapping from Cli spellings to enum values.
   // Taking a string by value because the functions own this string after the
