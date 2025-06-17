@@ -4336,7 +4336,7 @@ enum class SrcStatus {
   HALF_START = IS_UPPER_HALF,
   HALF_END = IS_LOWER_HALF_NEG
 };
-// Test if the MI is truncating to half, such as `%reg0:n = G_TRUNC %reg1:2n`
+/// Test if the MI is truncating to half, such as `%reg0:n = G_TRUNC %reg1:2n`
 static bool isTruncHalf(const MachineInstr *MI,
                         const MachineRegisterInfo &MRI) {
   if (MI->getOpcode() != AMDGPU::G_TRUNC)
@@ -4347,8 +4347,8 @@ static bool isTruncHalf(const MachineInstr *MI,
   return DstSize * 2 == SrcSize;
 }
 
-// Test if the MI is logic shift right with half bits,
-// such as `%reg0:2n =G_LSHR %reg1:2n, CONST(n)`
+/// Test if the MI is logic shift right with half bits,
+/// such as `%reg0:2n =G_LSHR %reg1:2n, CONST(n)`
 static bool isLshrHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
   if (MI->getOpcode() != AMDGPU::G_LSHR)
     return false;
@@ -4364,8 +4364,8 @@ static bool isLshrHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
   return false;
 }
 
-// Test if the MI is shift left with half bits,
-// such as `%reg0:2n =G_SHL %reg1:2n, CONST(n)`
+/// Test if the MI is shift left with half bits,
+/// such as `%reg0:2n =G_SHL %reg1:2n, CONST(n)`
 static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
   if (MI->getOpcode() != AMDGPU::G_SHL)
     return false;
@@ -4381,7 +4381,7 @@ static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
   return false;
 }
 
-// Test function, if the MI is `%reg0:n, %reg1:n = G_UNMERGE_VALUES %reg2:2n`
+/// Test function, if the MI is `%reg0:n, %reg1:n = G_UNMERGE_VALUES %reg2:2n`
 static bool isUnmergeHalf(const MachineInstr *MI,
                           const MachineRegisterInfo &MRI) {
   if (MI->getOpcode() != AMDGPU::G_UNMERGE_VALUES)
@@ -4566,6 +4566,8 @@ calcNextStatus(std::pair<Register, SrcStatus> Curr,
   // Handle general Opc cases.
   switch (Opc) {
   case AMDGPU::G_BITCAST:
+    return std::optional<std::pair<Register, SrcStatus>>(
+        {MI->getOperand(1).getReg(), Curr.second});
   case AMDGPU::COPY:
     if (MI->getOperand(1).getReg().isPhysical())
       return std::nullopt;
@@ -4641,14 +4643,19 @@ calcNextStatus(std::pair<Register, SrcStatus> Curr,
   return std::nullopt;
 }
 
-class searchOptions {
+/// This is used to control valid status that current MI supports. For example,
+/// non floating point intrinsic such as @llvm.amdgcn.sdot2 does not support NEG
+/// bit on VOP3P.
+/// The class can be further extended to recognize support on SEL, NEG, ABS bit
+/// for different MI on different arch
+class SearchOptions {
 private:
   bool HasNeg = false;
-  // Assume all complex pattern of VOP3P has opsel.
+  // Assume all complex pattern of VOP3P have opsel.
   bool HasOpsel = true;
 
 public:
-  searchOptions(Register Reg, const MachineRegisterInfo &MRI) {
+  SearchOptions(Register Reg, const MachineRegisterInfo &MRI) {
     const MachineInstr *MI = MRI.getVRegDef(Reg);
     unsigned Opc = MI->getOpcode();
 
@@ -4676,15 +4683,15 @@ public:
 };
 
 static SmallVector<std::pair<Register, SrcStatus>>
-getSrcStats(Register Reg, const MachineRegisterInfo &MRI,
-            searchOptions SearchOptions, int MaxDepth = 6) {
+getSrcStats(Register Reg, const MachineRegisterInfo &MRI, SearchOptions SO,
+            int MaxDepth = 3) {
   int Depth = 0;
   auto Curr = calcNextStatus({Reg, SrcStatus::IS_SAME}, MRI);
   SmallVector<std::pair<Register, SrcStatus>> Statlist;
 
   while (Depth <= MaxDepth && Curr.has_value()) {
     Depth++;
-    if (SearchOptions.checkOptions(Curr.value().second))
+    if (SO.checkOptions(Curr.value().second))
       Statlist.push_back(Curr.value());
     Curr = calcNextStatus(Curr.value(), MRI);
   }
@@ -4693,19 +4700,18 @@ getSrcStats(Register Reg, const MachineRegisterInfo &MRI,
 }
 
 static std::pair<Register, SrcStatus>
-getLastSameOrNeg(Register Reg, const MachineRegisterInfo &MRI,
-                 searchOptions SearchOptions, int MaxDepth = 6) {
+getLastSameOrNeg(Register Reg, const MachineRegisterInfo &MRI, SearchOptions SO,
+                 int MaxDepth = 3) {
   int Depth = 0;
   std::pair<Register, SrcStatus> LastSameOrNeg = {Reg, SrcStatus::IS_SAME};
   auto Curr = calcNextStatus(LastSameOrNeg, MRI);
 
   while (Depth <= MaxDepth && Curr.has_value()) {
     Depth++;
-    if (SearchOptions.checkOptions(Curr.value().second)) {
-      if (Curr.value().second == SrcStatus::IS_SAME ||
-          Curr.value().second == SrcStatus::IS_HI_NEG ||
-          Curr.value().second == SrcStatus::IS_LO_NEG ||
-          Curr.value().second == SrcStatus::IS_BOTH_NEG)
+    SrcStatus Stat = Curr.value().second;
+    if (SO.checkOptions(Stat)) {
+      if (Stat == SrcStatus::IS_SAME || Stat == SrcStatus::IS_HI_NEG ||
+          Stat == SrcStatus::IS_LO_NEG || Stat == SrcStatus::IS_BOTH_NEG)
         LastSameOrNeg = Curr.value();
     }
     Curr = calcNextStatus(Curr.value(), MRI);
@@ -4766,10 +4772,9 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
     return {RootReg, Mods};
   }
 
-  searchOptions SearchOptions(RootReg, MRI);
+  SearchOptions SO(RootReg, MRI);
 
-  std::pair<Register, SrcStatus> Stat =
-      getLastSameOrNeg(RootReg, MRI, SearchOptions);
+  std::pair<Register, SrcStatus> Stat = getLastSameOrNeg(RootReg, MRI, SO);
 
   if (Stat.second == SrcStatus::IS_BOTH_NEG)
     Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
@@ -4787,7 +4792,7 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
   }
 
   SmallVector<std::pair<Register, SrcStatus>> StatlistHi =
-      getSrcStats(MI->getOperand(2).getReg(), MRI, SearchOptions);
+      getSrcStats(MI->getOperand(2).getReg(), MRI, SO);
 
   if (StatlistHi.empty()) {
     Mods |= SISrcMods::OP_SEL_1;
@@ -4795,7 +4800,7 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
   }
 
   SmallVector<std::pair<Register, SrcStatus>> StatlistLo =
-      getSrcStats(MI->getOperand(1).getReg(), MRI, SearchOptions);
+      getSrcStats(MI->getOperand(1).getReg(), MRI, SO);
 
   if (StatlistLo.empty()) {
     Mods |= SISrcMods::OP_SEL_1;
@@ -4869,7 +4874,7 @@ static Register getLegalRegBank(Register NewReg, Register RootReg,
       BuildMI(*BB, MI, MI->getDebugLoc(), TII.get(AMDGPU::COPY), DstReg)
           .addReg(NewReg);
 
-  // only accept VGPR.
+  // Only accept VGPR.
   return MIB->getOperand(0).getReg();
 }
 
