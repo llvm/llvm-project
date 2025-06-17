@@ -308,7 +308,13 @@ public:
     case RISCV::C_FLWSP:
     case RISCV::C_FSWSP:
     case RISCV::C_FLDSP:
-    case RISCV::C_FSDSP: {
+    case RISCV::C_FSDSP:
+    case RISCV::C_LD_RV32:
+    case RISCV::C_SD_RV32:
+    case RISCV::C_SDSP_RV32:
+    case RISCV::LD_RV32:
+    case RISCV::C_LDSP_RV32:
+    case RISCV::SD_RV32: {
       MCRegister Reg = Inst.getOperand(1).getReg();
       auto TargetRegState = getGPRState(Reg);
       if (TargetRegState && Reg != RISCV::X0) {

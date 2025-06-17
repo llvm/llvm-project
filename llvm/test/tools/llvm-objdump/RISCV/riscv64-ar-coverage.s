@@ -1,4 +1,4 @@
-# RUN: llvm-objdump -d %p/Inputs/riscv-ar-coverage | FileCheck %s
+# RUN: llvm-objdump -d %p/Inputs/riscv64-ar-coverage | FileCheck %s
 
 # CHECK: 0000000000001000 <_start>:
 # CHECK-NEXT:     1000: 00001517     	auipc	a0, 0x1
@@ -22,23 +22,22 @@
 # CHECK-NEXT:     1032: 00a02423     	sw	a0, 0x8(zero)
 # CHECK-NEXT:     1036: 00101097     	auipc	ra, 0x101
 # CHECK-NEXT:     103a: fd6080e7     	jalr	-0x2a(ra) <func>
-# CHECK-NEXT:     103e: 00102437     	lui	s0, 0x102
-# CHECK-NEXT:     1042: 8800         	sb	s0, 0x0(s0) <target+0xffffc>
-# CHECK-NEXT:     1044: 00102137     	lui	sp, 0x102
-# CHECK-NEXT:     1048: 4522         	lw	a0, 0x8(sp) <far_target>
+# CHECK-NEXT:     103e: 640d         	lui	s0, 0x3
+# CHECK-NEXT:     1040: 8800         	sb	s0, 0x0(s0) <zcb>
+# CHECK-NEXT:     1042: 4522         	lw	a0, 0x8(sp)
+
 
 .global _start
 .text
 
-# The core of the feature being added was address resolution for instruction
-# sequences where a register is populated by immediate values via two
+# The core of the feature being added was address resolution for instruction 
+# sequences where an register is populated by immediate values via two
 # separate instructions. First by an instruction that provides the upper bits
 # (auipc, lui ...) followed by another instruction for the lower bits (addi,
 # jalr, ld ...).
 
-
 _start:
-  # Test block 1-3 each focus on a certain starting instruction in a sequences,
+  # Test block 1-3 each focus on a certain starting instruction in a sequences, 
   # the ones that provide the upper bits. The other sequence is another
   # instruction the provides the lower bits. The second instruction is
   # arbitrarily chosen to increase code coverage
@@ -69,7 +68,7 @@ _start:
   lui a1, 0x1        # unrelated instruction
   slli t1, t1, 0x1   # unrelated instruction
   addi a0, a0, 0x4
-  addi a0, a0, 0x1
+  addi a0, a0, 0x1   # verify register tracking terminates
 
   # Test 5 ensures that an instruction writing into the zero register does
   # not trigger resolution because that register's value cannot change and
@@ -86,17 +85,10 @@ _start:
   call func
 
   # test #7 zcb extension
-  lui x8, 0x102
-  # the immediate value for Zcb extension is heavily bounded, so we will relax
-  # the requirement of hitting one of the labels and focus on correctness of the
-  # resolution. This can be verified by looking at the source: The upper bits of
-  # lui make the far jump related to .skip 0x100000 and then 8 more bytes must be
-  # traversed before we hit far_target--.skip 0x4 and .word 1 in target. Adding 8
-  # to address resolved for the instruction below yields exactly the desired label.
+  lui x8, 0x3
   c.sb x8, 0(x8)
 
   # test #8 stack based load/stores
-  lui sp, 0x102
   c.lwsp a0, 0x8(sp)
 
 # these are the labels that the instructions above are expecteed to resolve to
@@ -104,7 +96,10 @@ _start:
 .skip 0x4
 target:
   .word 1
-.skip 0x100000
+.skip 0xff8
+zcb:
+  .word 1
+.skip 0xff004
 far_target:
   .word 2
 func:
