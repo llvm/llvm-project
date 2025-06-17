@@ -8,3 +8,41 @@ module  {
 cir.global external @vec_b = #cir.zero : !cir.vector<4 x !cir.array<!s32i x 10>>
 
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module  {
+  cir.func @invalid_vector_shuffle() {
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<2> : !s32i
+    %3 = cir.const #cir.int<3> : !s32i
+    %4 = cir.const #cir.int<4> : !s32i
+    %vec_1 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    %vec_2 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    // expected-error @below {{element types of '!cir.vector<4 x !cir.int<s, 32>>' and '!cir.vector<4 x !cir.int<s, 64>>' don't match}}
+    %new_vec = cir.vec.shuffle(%vec_1, %vec_2 : !cir.vector<4 x !s32i>) [#cir.int<7> : !s64i, #cir.int<5> : !s64i, #cir.int<3> : !s64i, #cir.int<1> : !s64i] : !cir.vector<4 x !s64i>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module  {
+  cir.func @invalid_vector_shuffle() {
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<2> : !s32i
+    %3 = cir.const #cir.int<3> : !s32i
+    %4 = cir.const #cir.int<4> : !s32i
+    %vec_1 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    %vec_2 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    // expected-error @below {{the number of elements in [#cir.int<7> : !cir.int<s, 64>, #cir.int<5> : !cir.int<s, 64>, #cir.int<3> : !cir.int<s, 64>] and '!cir.vector<4 x !cir.int<s, 64>>' don't match}}
+    %new_vec = cir.vec.shuffle(%vec_1, %vec_2 : !cir.vector<4 x !s32i>) [#cir.int<7> : !s64i, #cir.int<5> : !s64i, #cir.int<3> : !s64i] : !cir.vector<4 x !s64i>
+    cir.return
+  }
+}

@@ -1,22 +1,3 @@
-# Math functions not yet available in the libc project, or those not yet tuned
-# for GPU workloads are provided as wrappers over vendor libraries. If we find
-# them ahead of time we will import them statically. Otherwise, we will keep
-# them as external references and expect them to be resolved by the user when
-# they compile. In the future,we will use implementations from the 'libc'
-# project and not provide these wrappers.
-if(CUDAToolkit_FOUND)
-  set(libdevice_path ${CUDAToolkit_BIN_DIR}/../nvvm/libdevice/libdevice.10.bc)
-  if (EXISTS ${libdevice_path})
-    message(STATUS "Found the CUDA device library. Implementations falling back "
-                   "to the vendor libraries will be resolved statically.")
-    set(bitcode_link_flags
-        "SHELL:-Xclang -mlink-builtin-bitcode -Xclang ${libdevice_path}")
-  endif()
-else()
-  message(STATUS "Could not find the CUDA device library. Unimplemented "
-                 "functions will be an external reference to the vendor libraries.")
-endif()
-
 add_entrypoint_object(
   ceil
   SRCS

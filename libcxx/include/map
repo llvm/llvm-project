@@ -1548,6 +1548,8 @@ struct __container_traits<map<_Key, _Tp, _Compare, _Allocator> > {
   // For associative containers, if an exception is thrown by any operation from within
   // an insert or emplace function inserting a single element, the insertion has no effect.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
+
+  static _LIBCPP_CONSTEXPR const bool __reservable = false;
 };
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
@@ -2071,6 +2073,8 @@ struct __container_traits<multimap<_Key, _Tp, _Compare, _Allocator> > {
   // For associative containers, if an exception is thrown by any operation from within
   // an insert or emplace function inserting a single element, the insertion has no effect.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
+
+  static _LIBCPP_CONSTEXPR const bool __reservable = false;
 };
 
 _LIBCPP_END_NAMESPACE_STD

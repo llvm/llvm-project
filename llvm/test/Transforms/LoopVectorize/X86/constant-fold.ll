@@ -110,8 +110,8 @@ define void @redundant_or_1(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-NEXT:    store i32 0, ptr [[TMP17]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE8]]
 ; CHECK:       pred.store.continue8:
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -214,8 +214,8 @@ define void @redundant_or_2(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-NEXT:    store i32 0, ptr [[TMP16]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE8]]
 ; CHECK:       pred.store.continue8:
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]

@@ -8,7 +8,7 @@
 
 #include "AArch64MCTargetDesc.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -73,7 +73,7 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
       break;
     default:
       Ctx.reportError(Fixup.getLoc(), "relocation specifier " +
-                                          A64E->getSpecifierName() +
+                                          AArch64::getSpecifierName(*A64E) +
                                           " unsupported on COFF targets");
       return COFF::IMAGE_REL_ARM64_ABSOLUTE; // Dummy return value
     }
@@ -83,7 +83,7 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
   default: {
     if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
       Ctx.reportError(Fixup.getLoc(), "relocation specifier " +
-                                          A64E->getSpecifierName() +
+                                          AArch64::getSpecifierName(*A64E) +
                                           " unsupported on COFF targets");
     } else {
       MCFixupKindInfo Info = MAB.getFixupKindInfo(Fixup.getKind());

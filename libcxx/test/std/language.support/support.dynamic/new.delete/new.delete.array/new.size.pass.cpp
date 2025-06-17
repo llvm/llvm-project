@@ -11,6 +11,9 @@
 // asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete
 
+// GCC warns about allocating numeric_limits<size_t>::max() being too large (which we test here)
+// ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-alloc-size-larger-than
+
 #include <new>
 #include <cstddef>
 #include <cassert>

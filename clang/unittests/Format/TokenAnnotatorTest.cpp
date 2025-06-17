@@ -2273,6 +2273,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   EXPECT_TOKEN(Tokens[16], tok::l_paren, TT_FunctionDeclarationLParen);
   EXPECT_TOKEN(Tokens[18], tok::arrow, TT_TrailingReturnArrow);
 
+  Tokens = annotate("void __stdcall f();");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_FunctionDeclarationLParen);
+
   Tokens = annotate("int iso_time(time_t);");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
@@ -3749,6 +3754,13 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
   EXPECT_BRACE_KIND(Tokens[6], BK_BracedInit);
+
+  Tokens = annotate("auto f1{&T::operator()};");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[2], BK_BracedInit);
+  // Not TT_FunctionDeclarationName.
+  EXPECT_TOKEN(Tokens[6], tok::kw_operator, TT_Unknown);
+  EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
@@ -4098,6 +4110,20 @@ TEST_F(TokenAnnotatorTest, BitFieldColon) {
                          "};");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::colon, TT_BitFieldColon);
+}
+
+TEST_F(TokenAnnotatorTest, JsonCodeInRawString) {
+  auto Tokens = annotate("{\n"
+                         "  \"foo\": \"bar\",\n"
+                         "  \"str\": \"test\"\n"
+                         "}",
+                         getLLVMStyle(FormatStyle::LK_Json));
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_brace, TT_DictLiteral);
+  EXPECT_TOKEN(Tokens[1], tok::string_literal, TT_SelectorName);
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_DictLiteral);
+  EXPECT_TOKEN(Tokens[5], tok::string_literal, TT_SelectorName);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_DictLiteral);
 }
 
 } // namespace
