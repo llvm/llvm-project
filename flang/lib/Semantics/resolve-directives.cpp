@@ -833,8 +833,8 @@ private:
 
   void AddOmpRequiresToScope(Scope &, WithOmpDeclarative::RequiresFlags,
       std::optional<common::OmpMemoryOrderType>);
-  void IssueNonConformanceWarning(
-      llvm::omp::Directive D, parser::CharBlock source);
+  void IssueNonConformanceWarning(llvm::omp::Directive D,
+      parser::CharBlock source, unsigned emit_from_version);
 
   void CreateImplicitSymbols(const Symbol *symbol);
 
@@ -1664,10 +1664,9 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
     // TODO others
     break;
   }
-  if ((beginDir.v == llvm::omp::Directive::OMPD_master ||
-          beginDir.v == llvm::omp::Directive::OMPD_parallel_master) &&
-      context_.langOptions().OpenMPVersion >= 52)
-    IssueNonConformanceWarning(beginDir.v, beginDir.source);
+  if (beginDir.v == llvm::omp::Directive::OMPD_master ||
+      beginDir.v == llvm::omp::Directive::OMPD_parallel_master)
+    IssueNonConformanceWarning(beginDir.v, beginDir.source, 52);
   ClearDataSharingAttributeObjects();
   ClearPrivateDataSharingAttributeObjects();
   ClearAllocateNames();
@@ -1785,13 +1784,12 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   default:
     break;
   }
-  if ((beginDir.v == llvm::omp::OMPD_master_taskloop ||
-          beginDir.v == llvm::omp::OMPD_master_taskloop_simd ||
-          beginDir.v == llvm::omp::OMPD_parallel_master_taskloop ||
-          beginDir.v == llvm::omp::OMPD_parallel_master_taskloop_simd ||
-          beginDir.v == llvm::omp::Directive::OMPD_target_loop) &&
-      context_.langOptions().OpenMPVersion >= 52)
-    IssueNonConformanceWarning(beginDir.v, beginDir.source);
+  if (beginDir.v == llvm::omp::OMPD_master_taskloop ||
+      beginDir.v == llvm::omp::OMPD_master_taskloop_simd ||
+      beginDir.v == llvm::omp::OMPD_parallel_master_taskloop ||
+      beginDir.v == llvm::omp::OMPD_parallel_master_taskloop_simd ||
+      beginDir.v == llvm::omp::Directive::OMPD_target_loop)
+    IssueNonConformanceWarning(beginDir.v, beginDir.source, 52);
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
 
@@ -2075,9 +2073,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDispatchConstruct &x) {
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPExecutableAllocate &x) {
-  if (context_.langOptions().OpenMPVersion >= 52) {
-    IssueNonConformanceWarning(llvm::omp::Directive::OMPD_allocate, x.source);
-  }
+  IssueNonConformanceWarning(llvm::omp::Directive::OMPD_allocate, x.source, 52);
 
   PushContext(x.source, llvm::omp::Directive::OMPD_allocate);
   const auto &list{std::get<std::optional<parser::OmpObjectList>>(x.t)};
@@ -3137,11 +3133,16 @@ void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
   } while (!scopeIter->IsGlobal());
 }
 
-void OmpAttributeVisitor::IssueNonConformanceWarning(
-    llvm::omp::Directive D, parser::CharBlock source) {
+void OmpAttributeVisitor::IssueNonConformanceWarning(llvm::omp::Directive D,
+    parser::CharBlock source, unsigned emit_from_version) {
   std::string warnStr;
   llvm::raw_string_ostream warnStrOS(warnStr);
   unsigned version{context_.langOptions().OpenMPVersion};
+  // We only want to emit the warning when the version being used has the
+  // directive deprecated
+  if (version < emit_from_version) {
+    return;
+  }
   warnStrOS << "OpenMP directive "
             << parser::ToUpperCaseLetters(
                    llvm::omp::getOpenMPDirectiveName(D, version).str())
