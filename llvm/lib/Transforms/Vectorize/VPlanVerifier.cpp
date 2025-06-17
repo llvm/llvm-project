@@ -156,7 +156,8 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         .Case<VPWidenIntrinsicRecipe>([&](const VPWidenIntrinsicRecipe *S) {
           return VerifyEVLUse(*S, S->getNumOperands() - 1);
         })
-        .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe>(
+        .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe,
+              VPWidenIntOrFpInductionRecipe>(
             [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
         .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
@@ -165,18 +166,30 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         .Case<VPInstruction>([&](const VPInstruction *I) {
           if (I->getOpcode() == Instruction::PHI)
             return VerifyEVLUse(*I, 1);
-          if (I->getOpcode() != Instruction::Add) {
-            errs() << "EVL is used as an operand in non-VPInstruction::Add\n";
+          switch (I->getOpcode()) {
+          case Instruction::Add:
+            break;
+          case Instruction::UIToFP:
+          case Instruction::Trunc:
+          case Instruction::ZExt:
+          case Instruction::Mul:
+          case Instruction::FMul:
+            if (!VerifyLate) {
+              errs() << "EVL used by unexpected VPInstruction\n";
+              return false;
+            }
+            break;
+          default:
+            errs() << "EVL used by unexpected VPInstruction\n";
             return false;
           }
           if (I->getNumUsers() != 1) {
-            errs() << "EVL is used in VPInstruction:Add with multiple "
-                      "users\n";
+            errs() << "EVL is used in VPInstruction with multiple users\n";
             return false;
           }
           if (!VerifyLate && !isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
-            errs() << "Result of VPInstruction::Add with EVL operand is "
-                      "not used by VPEVLBasedIVPHIRecipe\n";
+            errs() << "Result of VPInstruction with EVL operand is not used by "
+                      "VPEVLBasedIVPHIRecipe\n";
             return false;
           }
           return true;

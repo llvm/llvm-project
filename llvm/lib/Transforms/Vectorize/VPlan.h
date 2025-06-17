@@ -2006,6 +2006,7 @@ public:
 
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
+  void setVFValue(VPValue *New) { return setOperand(2, New); }
 
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled return the VPValue for the induction
