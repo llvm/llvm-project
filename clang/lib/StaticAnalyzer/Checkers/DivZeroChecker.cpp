@@ -113,8 +113,8 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
   if ((stateNotZero && stateZero)) {
     std::vector<SymbolRef> taintedSyms = getTaintedSymbols(C.getState(), *DV);
     if (!taintedSyms.empty()) {
-      reportTaintBug("Division by a tainted value, possibly zero", stateZero,
-                     C, taintedSyms);
+      reportTaintBug("Division by a tainted value, possibly zero", stateZero, C,
+                     taintedSyms);
     }
   }
 
