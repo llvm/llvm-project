@@ -7309,7 +7309,7 @@ static Function *emitTargetTaskProxyFunction(
 
   Type *ThreadIDTy = Type::getInt32Ty(Ctx);
   Type *TaskPtrTy = OMPBuilder.TaskPtr;
-  Type *TaskTy = OMPBuilder.Task;
+  [[maybe_unused]] Type *TaskTy = OMPBuilder.Task;
 
   auto ProxyFnTy =
       FunctionType::get(Builder.getVoidTy(), {ThreadIDTy, TaskPtrTy},
@@ -7337,7 +7337,9 @@ static Function *emitTargetTaskProxyFunction(
     assert(TaskTy != TaskWithPrivatesTy &&
            "If there are offloading arrays to pass to the target"
            "TaskTy cannot be the same as TaskWithPrivatesTy");
-    Value *Privates = Builder.CreateStructGEP(TaskWithPrivatesTy, TaskWithPrivates, 1);
+    (void)TaskTy;
+    Value *Privates =
+        Builder.CreateStructGEP(TaskWithPrivatesTy, TaskWithPrivates, 1);
     for (unsigned int i = 0; i < NumOffloadingArrays; ++i)
       KernelLaunchArgs.push_back(Builder.CreateStructGEP(PrivatesTy, Privates, i));
   }
@@ -7750,7 +7752,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
       Value *Privates = Builder.CreateStructGEP(TaskWithPrivatesTy, TaskData, 1);
       for (unsigned int i = 0; i < OffloadingArraysToPrivatize.size(); ++i) {
         Value *PtrToPrivatize = OffloadingArraysToPrivatize[i];
-        Type *ArrayType = nullptr;
+        [[maybe_unused]] Type *ArrayType = nullptr;
         if (auto *GEP = dyn_cast<GetElementPtrInst>(PtrToPrivatize))
           ArrayType = GEP->getSourceElementType();
         else if (auto *Alloca = dyn_cast<AllocaInst>(PtrToPrivatize))
@@ -7762,6 +7764,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
         Type *ElementType = PrivatesTy->getElementType(i);
         assert(ElementType == ArrayType &&
                "ElementType should match ArrayType");
+        (void)ArrayType;
 
         Value *Dst = Builder.CreateStructGEP(PrivatesTy, Privates, i);
         Builder.CreateMemCpy(Dst, Alignment, PtrToPrivatize, Alignment,
