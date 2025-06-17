@@ -3832,8 +3832,7 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
 
   // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
   // source-cache.
-  bool SkipSrc = (isGFX1170() &&
-                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx11) ||
+  bool SkipSrc = Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1170 ||
                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12;
 
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
