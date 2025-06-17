@@ -402,9 +402,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
           if (llvm::sys::IsBigEndianHost)
             swapBytes(M.get(), NumBits.roundToBytes());
 
-          Floating R = S.allocFloat(Semantics);
-          Floating::bitcastFromMemory(M.get(), Semantics, &R);
-          P.deref<Floating>() = R;
+          P.deref<Floating>() = Floating::bitcastFromMemory(M.get(), Semantics);
           P.initialize();
           return true;
         }
