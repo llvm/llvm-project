@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Optional, Callable
+from typing import Optional
 import uuid
 
 import dap_server
@@ -121,19 +121,11 @@ class DAPTestCaseBase(TestBase):
             f"Expected to resolve all breakpoints. Unresolved breakpoint ids: {unresolved_breakpoints}",
         )
 
-    def wait_until(
-        self,
-        predicate: Callable[[], bool],
-        delay: float = 0.5,
-        timeout: float = DEFAULT_TIMEOUT,
-    ) -> bool:
-        """Repeatedly run the predicate until either the predicate returns True
-        or a timeout has occurred."""
-        deadline = time.monotonic() + timeout
-        while deadline > time.monotonic():
-            if predicate():
+    def waitUntil(self, condition_callback):
+        for _ in range(20):
+            if condition_callback():
                 return True
-            time.sleep(delay)
+            time.sleep(0.5)
         return False
 
     def assertCapabilityIsSet(self, key: str, msg: Optional[str] = None) -> None:
@@ -152,7 +144,6 @@ class DAPTestCaseBase(TestBase):
         "breakpoint_ids" should be a list of breakpoint ID strings
         (["1", "2"]). The return value from self.set_source_breakpoints()
         or self.set_function_breakpoints() can be passed to this function"""
-        breakpoint_ids = [str(i) for i in breakpoint_ids]
         stopped_events = self.dap_server.wait_for_stopped(timeout)
         for stopped_event in stopped_events:
             if "body" in stopped_event:
@@ -164,16 +155,22 @@ class DAPTestCaseBase(TestBase):
                     and body["reason"] != "instruction breakpoint"
                 ):
                     continue
-                if "hitBreakpointIds" not in body:
+                if "description" not in body:
                     continue
-                hit_breakpoint_ids = body["hitBreakpointIds"]
-                for bp in hit_breakpoint_ids:
-                    if str(bp) in breakpoint_ids:
+                # Descriptions for breakpoints will be in the form
+                # "breakpoint 1.1", so look for any description that matches
+                # ("breakpoint 1.") in the description field as verification
+                # that one of the breakpoint locations was hit. DAP doesn't
+                # allow breakpoints to have multiple locations, but LLDB does.
+                # So when looking at the description we just want to make sure
+                # the right breakpoint matches and not worry about the actual
+                # location.
+                description = body["description"]
+                for breakpoint_id in breakpoint_ids:
+                    match_desc = f"breakpoint {breakpoint_id}."
+                    if match_desc in description:
                         return
-        self.assertTrue(
-            False,
-            f"breakpoint not hit, wanted breakpoint_ids={breakpoint_ids} stopped_events={stopped_events}",
-        )
+        self.assertTrue(False, f"breakpoint not hit, stopped_events={stopped_events}")
 
     def verify_stop_exception_info(self, expected_description, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify the stop
@@ -208,9 +205,7 @@ class DAPTestCaseBase(TestBase):
                     found = True
                     break
             self.assertTrue(
-                found,
-                "verify '%s' found in console output for '%s' in %s"
-                % (cmd, flavor, output),
+                found, "verify '%s' found in console output for '%s'" % (cmd, flavor)
             )
 
     def get_dict_value(self, d, key_path):
@@ -282,30 +277,26 @@ class DAPTestCaseBase(TestBase):
                         return (source["path"], stackFrame["line"])
         return ("", 0)
 
-    def get_stdout(self):
-        return self.dap_server.get_output("stdout")
+    def get_stdout(self, timeout=0.0):
+        return self.dap_server.get_output("stdout", timeout=timeout)
 
-    def get_console(self):
-        return self.dap_server.get_output("console")
+    def get_console(self, timeout=0.0):
+        return self.dap_server.get_output("console", timeout=timeout)
 
-    def get_important(self):
-        return self.dap_server.get_output("important")
+    def get_important(self, timeout=0.0):
+        return self.dap_server.get_output("important", timeout=timeout)
 
-    def collect_stdout(self, timeout_secs: float, pattern: Optional[str] = None) -> str:
+    def collect_stdout(self, timeout_secs, pattern=None):
         return self.dap_server.collect_output(
             "stdout", timeout_secs=timeout_secs, pattern=pattern
         )
 
-    def collect_console(
-        self, timeout_secs: float, pattern: Optional[str] = None
-    ) -> str:
+    def collect_console(self, timeout_secs, pattern=None):
         return self.dap_server.collect_output(
             "console", timeout_secs=timeout_secs, pattern=pattern
         )
 
-    def collect_important(
-        self, timeout_secs: float, pattern: Optional[str] = None
-    ) -> str:
+    def collect_important(self, timeout_secs, pattern=None):
         return self.dap_server.collect_output(
             "important", timeout_secs=timeout_secs, pattern=pattern
         )
@@ -364,7 +355,7 @@ class DAPTestCaseBase(TestBase):
             return self.dap_server.wait_for_stopped(timeout)
         return None
 
-    def do_continue(self) -> None:  # `continue` is a keyword.
+    def do_continue(self):  # `continue` is a keyword.
         resp = self.dap_server.request_continue()
         self.assertTrue(resp["success"], f"continue request failed: {resp}")
 
@@ -372,14 +363,10 @@ class DAPTestCaseBase(TestBase):
         self.do_continue()
         return self.dap_server.wait_for_stopped(timeout)
 
-    def continue_to_breakpoint(
-        self, breakpoint_id: int, timeout: Optional[float] = DEFAULT_TIMEOUT
-    ) -> None:
-        self.continue_to_breakpoints([breakpoint_id], timeout)
+    def continue_to_breakpoint(self, breakpoint_id: str, timeout=DEFAULT_TIMEOUT):
+        self.continue_to_breakpoints((breakpoint_id), timeout)
 
-    def continue_to_breakpoints(
-        self, breakpoint_ids: list[int], timeout: Optional[float] = DEFAULT_TIMEOUT
-    ) -> None:
+    def continue_to_breakpoints(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
         self.do_continue()
         self.verify_breakpoint_hit(breakpoint_ids, timeout)
 
