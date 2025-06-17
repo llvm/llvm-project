@@ -992,16 +992,15 @@ public:
     case systemz::Delta64FromGOT:
     case systemz::Delta12JumpSlot:
     case systemz::Delta16JumpSlot:
+    case systemz::Delta20JumpSlot:
     case systemz::Delta32JumpSlot:
     case systemz::Delta64JumpSlot:
-    case systemz::Delta20JumpSlot: {
     case systemz::DeltaPCRelGOT:
     case systemz::DeltaPCRelGOTdbl:
     case systemz::PCRel32GOTEntry:
     case systemz::PCRel32JumpSlot:
       KindToSet = E.getKind();
       break;
-    }
     default:
       return false;
     }

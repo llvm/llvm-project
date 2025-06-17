@@ -22,9 +22,20 @@ const char NullPointerContent[8] = {0x00, 0x00, 0x00, 0x00,
                                     0x00, 0x00, 0x00, 0x00};
 
 const char Pointer64JumpStubContent[14] = {
-    static_cast<char>(0xC0), 0x10, 0x00, 0x00, 0x00, 0x00, // larl r1
-    static_cast<char>(0xE3), 0x10, 0x10, 0x00, 0x00, 0x04, // LG 1, 0(1)
-    static_cast<char>(0x07), 0xF1,                         // BCR 15, 1
+    static_cast<char>(0xC0u),
+    0x10,
+    0x00,
+    0x00,
+    0x00,
+    0x00, // larl r1
+    static_cast<char>(0xE3u),
+    0x10,
+    0x10,
+    0x00,
+    0x00,
+    0x04, // LG 1, 0(1)
+    static_cast<char>(0x07u),
+    static_cast<char>(0xF1u), // BCR 15, 1
 };
 
 const char *getEdgeKindName(Edge::Kind R) {
