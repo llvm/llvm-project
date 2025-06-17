@@ -4575,13 +4575,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Args.hasFlag(OPT_ftrigraphs, OPT_fno_trigraphs, Opts.Trigraphs);
 
   /*TO_UPSTREAM(BoundsSafety) ON*/
-  // Parse the enabled checks and emit any necessary diagnostics.
-  // We do not diagnose missing checks here because warnings emitted in this
-  // context cannot be surpressed and don't respect `-Werror`
-  // (rdar://152730261). Instead we warn about missing checks in the driver.
+  // Parse the enabled checks and emit any necessary diagnostics
   Opts.BoundsSafetyBringUpMissingChecks =
-      ParseBoundsSafetyNewChecksMaskFromArgs(Args, &Diags,
-                                             /*DiagnoseMissingChecks=*/false);
+      ParseBoundsSafetyNewChecksMaskFromArgs(Args, &Diags);
 
   // -fbounds-safety should be automatically marshalled into `Opts` in
   // GenerateFrontendArgs() via `LangOpts<"BoundsSafety">` on
