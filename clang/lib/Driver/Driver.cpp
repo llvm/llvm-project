@@ -33,6 +33,7 @@
 #include "ToolChains/Linux.h"
 #include "ToolChains/MSP430.h"
 #include "ToolChains/MSVC.h"
+#include "ToolChains/Managarm.h"
 #include "ToolChains/MinGW.h"
 #include "ToolChains/MipsLinux.h"
 #include "ToolChains/NaCl.h"
@@ -6841,6 +6842,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       break;
     case llvm::Triple::Fuchsia:
       TC = std::make_unique<toolchains::Fuchsia>(*this, Target, Args);
+      break;
+    case llvm::Triple::Managarm:
+      TC = std::make_unique<toolchains::Managarm>(*this, Target, Args);
       break;
     case llvm::Triple::Solaris:
       TC = std::make_unique<toolchains::Solaris>(*this, Target, Args);
