@@ -609,12 +609,15 @@ foreach mx = SchedMxListF in {
     defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
     defvar FMALat = SMX60GetVFFMALatency<mx>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFALUV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
-    let Latency = ArithLat in {
+    // Floating-point ALU/Mul operations: e16 has 4,4,5,8; e32 has 4,4,5,8; e64 has 5,5,5,8
+    // Use worst-case 5,5,5,8 for simplicity
+    defvar FPMulLat = SMX60GetVIMulE32Latency<mx>.c;
+    let Latency = FPMulLat in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFALUV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFALUF",  [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMulV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMulF",  [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFMulV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFMulF",  [SMX60_VIEU], mx, sew, IsWorstCase>;
     let Latency = FMALat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddF", [SMX60_VIEU], mx, sew, IsWorstCase>;
