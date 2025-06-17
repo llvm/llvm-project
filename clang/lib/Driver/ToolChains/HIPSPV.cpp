@@ -73,8 +73,7 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
 
   // Add static device libraries using the common helper function.
   // This handles unbundling archives (.a) containing bitcode bundles.
-  const HIPSPVToolChain &TC = static_cast<const HIPSPVToolChain &>(getToolChain());
-  StringRef Arch = TC.getTriple().getArchName();
+  StringRef Arch = getToolChain().getTriple().getArchName();
   StringRef Target = "generic"; // SPIR-V is generic, no specific target ID like -mcpu
   tools::AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkArgs, Arch,
                                   Target, /*IsBitCodeSDL=*/true);
