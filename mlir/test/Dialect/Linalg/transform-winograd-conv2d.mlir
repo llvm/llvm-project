@@ -14,10 +14,10 @@ module attributes {transform.with_named_sequence} {
 }
 
 // CHECK-LABEL: func.func @conv2d
-// CHECK: linalg.winograd_filter_transform m(4) r(3)
-// CHECK: linalg.winograd_input_transform m(4) r(3)
+// CHECK: linalg.winograd_filter_transform mfr(F_4_3)
+// CHECK: linalg.winograd_input_transform mfr(F_4_3)
 // CHECK: linalg.batch_matmul
-// CHECK: linalg.winograd_output_transform m(4) r(3)
+// CHECK: linalg.winograd_output_transform mfr(F_4_3)
 
 // -----
 
@@ -35,13 +35,13 @@ module attributes {transform.with_named_sequence} {
 }
 
 // CHECK-LABEL: func.func @conv2d_unaligned
-// CHECK:       linalg.winograd_filter_transform m(4) r(3)
+// CHECK:       linalg.winograd_filter_transform mfr(F_4_3)
 // CHECK:       tensor.pad
 // CHECK-SAME:  low[0, 0, 0, 0] high[0, 3, 3, 0]
-// CHECK:       linalg.winograd_input_transform m(4) r(3)
+// CHECK:       linalg.winograd_input_transform mfr(F_4_3)
 // CHECK:       tensor.pad
 // CHECK-SAME:  low[0, 0, 0, 0] high[0, 3, 3, 0]
-// CHECK:       linalg.winograd_output_transform m(4) r(3)
+// CHECK:       linalg.winograd_output_transform mfr(F_4_3)
 
 // -----
 
