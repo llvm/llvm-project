@@ -1559,13 +1559,11 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
 #if LLVM_ENABLE_THREADS
 
   std::mutex WorkThreadsMutex;
-  SmallVector<std::thread,0> WorkThreads;
+  SmallVector<std::thread, 0> WorkThreads;
   DispatchOverride = [&](std::unique_ptr<Task> T) {
     std::unique_lock Lock(WorkThreadsMutex);
     WorkThreads.push_back(
-        std::thread([T = std::move(T)]() mutable {
-          T->run();
-        }));
+        std::thread([T = std::move(T)]() mutable { T->run(); }));
   };
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
