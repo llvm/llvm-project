@@ -695,6 +695,8 @@ namespace clang {
     ExpectedStmt VisitCXXFoldExpr(CXXFoldExpr *E);
     ExpectedStmt VisitRequiresExpr(RequiresExpr* E);
     ExpectedStmt VisitConceptSpecializationExpr(ConceptSpecializationExpr* E);
+    ExpectedStmt
+    VisitSubstNonTypeTemplateParmPackExpr(SubstNonTypeTemplateParmPackExpr *E);
 
     // Helper for chaining together multiple imports. If an error is detected,
     // subsequent imports will return default constructed nodes, so that failure
@@ -7639,6 +7641,21 @@ ExpectedDecl ASTNodeImporter::VisitImplicitConceptSpecializationDecl(ImplicitCon
   To->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(To);
   return To;
+}
+
+ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmPackExpr(
+    SubstNonTypeTemplateParmPackExpr *E) {
+  Error Err = Error::success();
+  auto ToType = importChecked(Err, E->getType());
+  auto ToNameLoc = importChecked(Err, E->getParameterPackLocation());
+  auto ToArgPack = importChecked(Err, E->getArgumentPack());
+  auto ToAssociatedDecl = importChecked(Err, E->getAssociatedDecl());
+  if (Err)
+    return std::move(Err);
+
+  return new (Importer.getToContext()) SubstNonTypeTemplateParmPackExpr(
+      ToType, E->getValueKind(), ToNameLoc, ToArgPack, ToAssociatedDecl,
+      E->getIndex(), E->getFinal());
 }
 
 ExpectedStmt ASTNodeImporter::VisitSourceLocExpr(SourceLocExpr *E) {
