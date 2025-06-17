@@ -412,7 +412,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
       break;
     }
 
-    if (darwinHasSinCos(TT)) {
+    if (darwinHasSinCosStret(TT)) {
       setLibcallName(RTLIB::SINCOS_STRET_F32, "__sincosf_stret");
       setLibcallName(RTLIB::SINCOS_STRET_F64, "__sincos_stret");
       if (TT.isWatchABI()) {
@@ -456,8 +456,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::EXP10_F64, "__exp10");
   }
 
-  if (TT.isGNUEnvironment() || TT.isOSFuchsia() ||
-      (TT.isAndroid() && !TT.isAndroidVersionLT(9))) {
+  if (hasSinCos(TT)) {
     setLibcallName(RTLIB::SINCOS_F32, "sincosf");
     setLibcallName(RTLIB::SINCOS_F64, "sincos");
     setLibcallName(RTLIB::SINCOS_F80, "sincosl");
