@@ -13436,19 +13436,20 @@ static std::optional<unsigned> isDUPQMask(ArrayRef<int> M, EVT VT) {
   unsigned Lane = (unsigned)M[0];
   unsigned Segments = VT.getFixedSizeInBits() / 128;
   unsigned SegmentElts = VT.getVectorNumElements() / Segments;
+
+  // Make sure there's no size changes.
   if (SegmentElts * Segments != M.size())
     return std::nullopt;
 
-  for (unsigned I = 0; I < Segments; ++I) {
-    unsigned Broadcast = (unsigned)M[I * SegmentElts];
-    if (Broadcast - (I * SegmentElts) > SegmentElts)
+  // Check that the first index corresponds to one of the lanes in the first
+  // segment.
+  if ((unsigned)M[0] >= SegmentElts)
+    return std::nullopt;
+
+  // Check that all lanes match the first, adjusted for segment.
+  for (unsigned I = 0; I < M.size(); ++I)
+    if ((unsigned)M[I] != ((unsigned)M[0] + ((I / SegmentElts) * SegmentElts)))
       return std::nullopt;
-    for (unsigned J = 0; J < SegmentElts; ++J) {
-      int Idx = M[(I * SegmentElts) + J];
-      if ((unsigned)Idx != Broadcast)
-        return std::nullopt;
-    }
-  }
 
   return Lane;
 }
