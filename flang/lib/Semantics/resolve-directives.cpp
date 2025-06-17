@@ -1952,6 +1952,12 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
   if (outer.has_value()) {
     for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
+      if (loop->IsDoConcurrent()) {
+        auto &stmt =
+            std::get<parser::Statement<parser::NonLabelDoStmt>>(loop->t);
+        context_.Say(stmt.source,
+            "DO CONCURRENT loops cannot form part of a loop nest."_err_en_US);
+      }
       // go through all the nested do-loops and resolve index variables
       const parser::Name *iv{GetLoopIndex(*loop)};
       if (iv) {
