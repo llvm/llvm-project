@@ -59683,16 +59683,6 @@ static SDValue narrowExtractedVectorSelect(SDNode *Ext, const SDLoc &DL,
 static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
                                         TargetLowering::DAGCombinerInfo &DCI,
                                         const X86Subtarget &Subtarget) {
-  // For AVX1 only, if we are extracting from a 256-bit and+not (which will
-  // eventually get combined/lowered into ANDNP) with a concatenated operand,
-  // split the 'and' into 128-bit ops to avoid the concatenate and extract.
-  // We let generic combining take over from there to simplify the
-  // insert/extract and 'not'.
-  // This pattern emerges during AVX1 legalization. We handle it before lowering
-  // to avoid complications like splitting constant vector loads.
-
-  // Capture the original wide type in the likely case that we need to bitcast
-  // back to this type.
   if (!N->getValueType(0).isSimple())
     return SDValue();
 
@@ -59708,8 +59698,14 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(N);
 
-  if (Subtarget.hasAVX() && !Subtarget.hasAVX2() &&
-      TLI.isTypeLegal(InVecVT) &&
+  // For AVX1 only, if we are extracting from a 256-bit and+not (which will
+  // eventually get combined/lowered into ANDNP) with a concatenated operand,
+  // split the 'and' into 128-bit ops to avoid the concatenate and extract.
+  // We let generic combining take over from there to simplify the
+  // insert/extract and 'not'.
+  // This pattern emerges during AVX1 legalization. We handle it before lowering
+  // to avoid complications like splitting constant vector loads.
+  if (Subtarget.hasAVX() && !Subtarget.hasAVX2() && TLI.isTypeLegal(InVecVT) &&
       InSizeInBits == 256 && InVecBC.getOpcode() == ISD::AND) {
     auto isConcatenatedNot = [](SDValue V) {
       V = peekThroughBitcasts(V);
