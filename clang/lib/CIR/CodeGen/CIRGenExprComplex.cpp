@@ -74,9 +74,7 @@ mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
   if (e->getCallReturnType(cgf.getContext())->isReferenceType())
     return emitLoadOfLValue(e);
 
-  mlir::Location loc = cgf.getLoc(e->getExprLoc());
-  auto complex = cgf.emitCallExpr(e).getComplexVal();
-  return builder.createComplexCreate(loc, complex.first, complex.second);
+  return cgf.emitCallExpr(e).getValue();
 }
 
 mlir::Value ComplexExprEmitter::VisitInitListExpr(InitListExpr *e) {

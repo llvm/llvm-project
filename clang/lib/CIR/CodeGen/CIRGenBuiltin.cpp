@@ -98,6 +98,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value complex = builder.createComplexCreate(loc, real, imag);
     return RValue::get(complex);
   }
+    default:
+    break;
   }
 
   cgm.errorNYI(e->getSourceRange(), "unimplemented builtin call");
