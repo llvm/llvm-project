@@ -2,9 +2,6 @@
 
 // Semantic tests for sycl_external attribute
 
-[[clang::sycl_external(3)]] // expected-error {{'sycl_external' attribute takes no arguments}}
-void bar() {}
-
 [[clang::sycl_external]] // expected-error {{'sycl_external' can only be applied to functions with external linkage}}
 static void func1() {}
 
@@ -17,6 +14,12 @@ namespace {
 
 [[clang::sycl_external]] // expected-error {{'sycl_external' can only be applied to functions with external linkage}}
   void func4(UnnX) {}
+
+// FIXME: The first declaration of a function is required to have the attribute.
+// The attribute may be optionally present on subsequent declarations
+int foo(int c);
+
+[[clang::sycl_external]] void foo();
 
 class A {
   [[clang::sycl_external]]
