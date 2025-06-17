@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fobjc-runtime-has-weak -fsyntax-only -fobjc-arc -verify -fblocks %s
 
 @class NSString;
+typedef unsigned __INTPTR_TYPE__ uintptr_t;
 
 void * cvt(id arg) // expected-note{{candidate function not viable: cannot convert argument of incomplete type 'void *' to '__strong id'}}
 {
@@ -82,8 +83,8 @@ void test_reinterpret_cast(__strong id *sip, __weak id *wip,
   (void)reinterpret_cast<unsigned long *>(csip); // expected-error {{reinterpret_cast from '__strong id const *' to 'unsigned long *' casts away qualifiers}}
   const unsigned long *p2 = nullptr;
   (void)reinterpret_cast<__strong id *>(p2); // expected-error {{reinterpret_cast from 'const unsigned long *' to '__strong id *' casts away qualifiers}}
-  auto ul = reinterpret_cast<unsigned long>(sip);
-  (void)reinterpret_cast<__strong id *>(ul); // expected-error {{cast of 'unsigned long' to '__strong id *' is disallowed with ARC}}
+  auto uip = reinterpret_cast<uintptr_t>(sip);
+  (void)reinterpret_cast<__strong id *>(uip); // expected-error {{to '__strong id *' is disallowed with ARC}}
 }
 
 void test_cstyle_cast(__strong id *sip, __weak id *wip, 
