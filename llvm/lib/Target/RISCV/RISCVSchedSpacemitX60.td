@@ -755,7 +755,6 @@ foreach mx = ["MF4", "MF2"] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFDivV",  [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFDivF",  [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
     }
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFSqrtV", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
   }
 }
 
@@ -769,7 +768,26 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFDivV",  [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFDivF",  [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
     }
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFSqrtV", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+  }
+}
+
+// vfsqrt.v operations with measured latencies
+// From CSV: e16 = 18,36,72,144 = 18*LMUL; e32 = 38,76,144 (irregular); e64 = 40,80,160,320 = 40*LMUL
+foreach mx = SchedMxListF in {
+  foreach sew = SchedSEWSet<mx, 1>.val in {
+    defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
+    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
+
+    // Compute latency based on SEW and LMUL combination
+    defvar LatencyMul = !cond(
+      !eq(sew, 16) : 18,  // e16: 18*LMUL
+      !eq(sew, 32) : 38,  // e32: use 38 as base (38,76,146 pattern is irregular, use worst-case approach)
+      !eq(sew, 64) : 40   // e64: 40*LMUL
+    );
+
+    let Latency = !mul(LMulLat, LatencyMul) in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFSqrtV", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+    }
   }
 }
 
@@ -824,14 +842,14 @@ foreach mx = SchedMxListF in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
     defvar LMulLat = SMX60GetLMulCycles<mx>.c;
-    
+
     // Compute latency based on SEW and LMUL combination
     defvar LatencyMul = !cond(
       !eq(sew, 16) : 48,  // e16: 48*LMUL
       !eq(sew, 32) : 24,  // e32: 24*LMUL
       !eq(sew, 64) : 12   // e64: 12*LMUL
     );
-    
+
     let Latency = !mul(LMulLat, LatencyMul) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRedOV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
@@ -844,13 +862,13 @@ foreach mx = SchedMxListFWRed in {
   foreach sew = SchedSEWSet<mx, 1, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFWRed, 1>.c;
     defvar LMulLat = SMX60GetLMulCycles<mx>.c;
-    
+
     // Compute latency based on SEW and LMUL combination
     defvar LatencyMul = !cond(
       !eq(sew, 16) : 64,  // e16: 64*LMUL
       !eq(sew, 32) : 32   // e32: 32*LMUL (e64 has no data, will use fallback)
     );
-    
+
     let Latency = !mul(LMulLat, LatencyMul) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedV_From",  [SMX60_VIEU],
                                       mx, sew, IsWorstCase>;
