@@ -713,23 +713,28 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
   return success();
 }
 
-/// Update the types of successor regions at control-flow transfer points. If
-/// the control flow transfers to a new block the block arguments are updated.
-/// If the control flow transfers out of the region op, the result types of the
-/// region op are updated.
-/// Example:
+/// Region ops like scf.for need special handling because they have blocks
+/// inside. If the blocks have tensor descriptor type as block arguments, thier
+/// types must be updated. Also region op can have results that may not have any
+/// users (e.g. A and B tiles). They are not assigned a layout by layout
+/// analysis because they have no users. However inside the region op
+/// corresponding block arguments for these results do have layouts. Therefore,
+/// in this case we still need to update the result types with the layout
+/// attribute. This function function updates the internal block arguments and
+/// the result types of the region op with the assigned layouts.
 /// clang-format off
-/// scf.for ... iter_args(...) -> (out types) {
+/// Example: scf.for ... iter_args(...) -> (out types) {
 ///   ^bb0(block types):
 ///     ...
 ///   scf.yield ... : (yield types)
 /// }
 /// clang-format on
-/// In this example, at scf.yield, control-flow can transfer to successor
+/// In this example, at scf.yield, control-flow can transfer to two successor
 /// regions. One is the ^bb0 (for loop body) and the other is the scf.for op
 /// itself (yield the results). So we update both the block arguments of the
 /// successor region (i.e. block types) and the result types of the scf.for op
-/// (i.e. out types). Note that yield types are updated by respective producers.
+/// (i.e. out types). Note that yield types are updated by respective producers
+/// inside bb0.
 static LogicalResult
 updateControlFlowOps(mlir::OpBuilder &builder,
                      mlir::RegionBranchTerminatorOpInterface terminator,
