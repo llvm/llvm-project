@@ -2019,9 +2019,7 @@ define float @v_fneg_minimumnum_f32_no_ieee(float %a, float %b) #4 {
 ; GCN-LABEL: v_fneg_minimumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v1, -1.0, v1
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_max_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_max_f32_e64 v0, -v0, -v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minimumnum.f32(float %a, float %b)
   %fneg = fneg float %min
@@ -2044,8 +2042,7 @@ define float @v_fneg_self_minimumnum_f32_no_ieee(float %a) #4 {
 ; GCN-LABEL: v_fneg_self_minimumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_max_f32_e32 v0, v0, v0
+; GCN-NEXT:    v_max_f32_e64 v0, -v0, -v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minimumnum.f32(float %a, float %a)
   %min.fneg = fneg float %min
@@ -2068,8 +2065,7 @@ define float @v_fneg_posk_minimumnum_f32_no_ieee(float %a) #4 {
 ; GCN-LABEL: v_fneg_posk_minimumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_max_f32_e32 v0, -4.0, v0
+; GCN-NEXT:    v_max_f32_e64 v0, -v0, -4.0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minimumnum.f32(float 4.0, float %a)
   %fneg = fneg float %min
@@ -2092,8 +2088,7 @@ define float @v_fneg_negk_minimumnum_f32_no_ieee(float %a) #4 {
 ; GCN-LABEL: v_fneg_negk_minimumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GCN-NEXT:    v_max_f32_e64 v0, -v0, 4.0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minimumnum.f32(float -4.0, float %a)
   %fneg = fneg float %min
@@ -2251,8 +2246,7 @@ define float @v_fneg_neg0_minimumnum_f32_no_ieee(float %a) #4 {
 ; GCN-LABEL: v_fneg_neg0_minimumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_max_f32_e32 v0, 0, v0
+; GCN-NEXT:    v_max_f32_e64 v0, -v0, 0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minimumnum.f32(float -0.0, float %a)
   %fneg = fneg float %min
@@ -2299,7 +2293,6 @@ define float @v_fneg_0_minimumnum_foldable_use_f32_no_ieee(float %a, float %b) #
 ; GCN-LABEL: v_fneg_0_minimumnum_foldable_use_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; GCN-NEXT:    v_min_f32_e32 v0, 0, v0
 ; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -2330,9 +2323,7 @@ define <2 x float> @v_fneg_minimumnum_multi_use_minimumnum_f32_no_ieee(float %a,
 ; GCN-LABEL: v_fneg_minimumnum_multi_use_minimumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v1, -1.0, v1
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_max_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_max_f32_e64 v0, -v0, -v1
 ; GCN-NEXT:    v_mul_f32_e32 v1, -4.0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minimumnum.f32(float %a, float %b)
@@ -2364,9 +2355,7 @@ define float @v_fneg_maximumnum_f32_no_ieee(float %a, float %b) #4 {
 ; GCN-LABEL: v_fneg_maximumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v1, -1.0, v1
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_min_f32_e64 v0, -v0, -v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %max = call float @llvm.maximumnum.f32(float %a, float %b)
   %fneg = fneg float %max
@@ -2389,8 +2378,7 @@ define float @v_fneg_self_maximumnum_f32_no_ieee(float %a) #4 {
 ; GCN-LABEL: v_fneg_self_maximumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_min_f32_e32 v0, v0, v0
+; GCN-NEXT:    v_min_f32_e64 v0, -v0, -v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %max = call float @llvm.maximumnum.f32(float %a, float %a)
   %max.fneg = fneg float %max
@@ -2413,8 +2401,7 @@ define float @v_fneg_posk_maximumnum_f32_no_ieee(float %a) #4 {
 ; GCN-LABEL: v_fneg_posk_maximumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_min_f32_e32 v0, -4.0, v0
+; GCN-NEXT:    v_min_f32_e64 v0, -v0, -4.0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %max = call float @llvm.maximumnum.f32(float 4.0, float %a)
   %fneg = fneg float %max
@@ -2437,8 +2424,7 @@ define float @v_fneg_negk_maximumnum_f32_no_ieee(float %a) #4 {
 ; GCN-LABEL: v_fneg_negk_maximumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_min_f32_e32 v0, 4.0, v0
+; GCN-NEXT:    v_min_f32_e64 v0, -v0, 4.0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %max = call float @llvm.maximumnum.f32(float -4.0, float %a)
   %fneg = fneg float %max
@@ -2473,8 +2459,7 @@ define float @v_fneg_neg0_maximumnum_f32_no_ieee(float %a) #4 {
 ; GCN-LABEL: v_fneg_neg0_maximumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_min_f32_e32 v0, 0, v0
+; GCN-NEXT:    v_min_f32_e64 v0, -v0, 0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %max = call float @llvm.maximumnum.f32(float -0.0, float %a)
   %fneg = fneg float %max
@@ -2499,7 +2484,6 @@ define float @v_fneg_0_maximumnum_foldable_use_f32_no_ieee(float %a, float %b) #
 ; GCN-LABEL: v_fneg_0_maximumnum_foldable_use_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; GCN-NEXT:    v_max_f32_e32 v0, 0, v0
 ; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -2530,9 +2514,7 @@ define <2 x float> @v_fneg_maximumnum_multi_use_maximumnum_f32_no_ieee(float %a,
 ; GCN-LABEL: v_fneg_maximumnum_multi_use_maximumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v1, -1.0, v1
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_min_f32_e64 v0, -v0, -v1
 ; GCN-NEXT:    v_mul_f32_e32 v1, -4.0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %max = call float @llvm.maximumnum.f32(float %a, float %b)

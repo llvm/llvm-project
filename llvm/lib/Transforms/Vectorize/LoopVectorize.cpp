@@ -953,6 +953,14 @@ public:
     return expectedCost(UserVF).isValid();
   }
 
+  /// \return True if maximizing vector bandwidth is enabled by the target or
+  /// user options, for the given register kind.
+  bool useMaxBandwidth(TargetTransformInfo::RegisterKind RegKind);
+
+  /// \return True if maximizing vector bandwidth is enabled by the target or
+  /// user options, for the given vector factor.
+  bool useMaxBandwidth(ElementCount VF);
+
   /// \return The size (in bits) of the smallest and widest types in the code
   /// that needs to be vectorized. We ignore values that remain scalar such as
   /// 64 bit loop indices.
@@ -2683,6 +2691,20 @@ static void cse(BasicBlock *BB) {
   }
 }
 
+/// This function attempts to return a value that represents the vectorization
+/// factor at runtime. For fixed-width VFs we know this precisely at compile
+/// time, but for scalable VFs we calculate it based on an estimate of the
+/// vscale value.
+static unsigned getEstimatedRuntimeVF(ElementCount VF,
+                                      std::optional<unsigned> VScale) {
+  unsigned EstimatedVF = VF.getKnownMinValue();
+  if (VF.isScalable())
+    if (VScale)
+      EstimatedVF *= *VScale;
+  assert(EstimatedVF >= 1 && "Estimated VF shouldn't be less than 1");
+  return EstimatedVF;
+}
+
 InstructionCost
 LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
                                               ElementCount VF) const {
@@ -2742,8 +2764,7 @@ LoopVectorizationCostModel::getVectorIntrinsicCost(CallInst *CI,
 
 void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   // Fix widened non-induction PHIs by setting up the PHI operands.
-  if (EnableVPlanNativePath)
-    fixNonInductionPHIs(State);
+  fixNonInductionPHIs(State);
 
   // After vectorization, the exit blocks of the original loop will have
   // additional predecessors. Invalidate SCEVs for the exit phis in case SE
@@ -2782,10 +2803,11 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   //
   // For scalable vectorization we can't know at compile time how many
   // iterations of the loop are handled in one vector iteration, so instead
-  // assume a pessimistic vscale of '1'.
+  // use the value of vscale used for tuning.
   Loop *VectorLoop = LI->getLoopFor(HeaderBB);
-  setProfileInfoAfterUnrolling(OrigLoop, VectorLoop, OrigLoop,
-                               VF.getKnownMinValue() * UF);
+  unsigned EstimatedVFxUF =
+      getEstimatedRuntimeVF(VF * UF, Cost->getVScaleForTuning());
+  setProfileInfoAfterUnrolling(OrigLoop, VectorLoop, OrigLoop, EstimatedVFxUF);
 }
 
 void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
@@ -3921,6 +3943,20 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   return FixedScalableVFPair::getNone();
 }
 
+bool LoopVectorizationCostModel::useMaxBandwidth(ElementCount VF) {
+  return useMaxBandwidth(VF.isScalable()
+                             ? TargetTransformInfo::RGK_ScalableVector
+                             : TargetTransformInfo::RGK_FixedWidthVector);
+}
+
+bool LoopVectorizationCostModel::useMaxBandwidth(
+    TargetTransformInfo::RegisterKind RegKind) {
+  return MaximizeBandwidth || (MaximizeBandwidth.getNumOccurrences() == 0 &&
+                               (TTI.shouldMaximizeVectorBandwidth(RegKind) ||
+                                (UseWiderVFIfCallVariantsPresent &&
+                                 Legal->hasVectorCallVariants())));
+}
+
 ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     unsigned MaxTripCount, unsigned SmallestType, unsigned WidestType,
     ElementCount MaxSafeVF, bool FoldTailByMasking) {
@@ -3986,10 +4022,7 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
       ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
                            : TargetTransformInfo::RGK_FixedWidthVector;
   ElementCount MaxVF = MaxVectorElementCount;
-  if (MaximizeBandwidth ||
-      (MaximizeBandwidth.getNumOccurrences() == 0 &&
-       (TTI.shouldMaximizeVectorBandwidth(RegKind) ||
-        (UseWiderVFIfCallVariantsPresent && Legal->hasVectorCallVariants())))) {
+  if (useMaxBandwidth(RegKind)) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),
         ComputeScalableMaxVF);
@@ -4010,20 +4043,6 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     invalidateCostModelingDecisions();
   }
   return MaxVF;
-}
-
-/// This function attempts to return a value that represents the vectorization
-/// factor at runtime. For fixed-width VFs we know this precisely at compile
-/// time, but for scalable VFs we calculate it based on an estimate of the
-/// vscale value.
-static unsigned getEstimatedRuntimeVF(ElementCount VF,
-                                      std::optional<unsigned> VScale) {
-  unsigned EstimatedVF = VF.getKnownMinValue();
-  if (VF.isScalable())
-    if (VScale)
-      EstimatedVF *= *VScale;
-  assert(EstimatedVF >= 1 && "Estimated VF shouldn't be less than 1");
-  return EstimatedVF;
 }
 
 bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
@@ -4344,15 +4363,21 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
   for (auto &P : VPlans) {
     ArrayRef<ElementCount> VFs(P->vectorFactors().begin(),
                                P->vectorFactors().end());
-    auto RUs = calculateRegisterUsageForPlan(*P, VFs, TTI, CM.ValuesToIgnore);
-    for (auto [VF, RU] : zip_equal(VFs, RUs)) {
+
+    SmallVector<VPRegisterUsage, 8> RUs;
+    if (CM.useMaxBandwidth(TargetTransformInfo::RGK_ScalableVector) ||
+        CM.useMaxBandwidth(TargetTransformInfo::RGK_FixedWidthVector))
+      RUs = calculateRegisterUsageForPlan(*P, VFs, TTI, CM.ValuesToIgnore);
+
+    for (unsigned I = 0; I < VFs.size(); I++) {
+      ElementCount VF = VFs[I];
       // The cost for scalar VF=1 is already calculated, so ignore it.
       if (VF.isScalar())
         continue;
 
       /// Don't consider the VF if it exceeds the number of registers for the
       /// target.
-      if (RU.exceedsMaxNumRegs(TTI))
+      if (CM.useMaxBandwidth(VF) && RUs[I].exceedsMaxNumRegs(TTI))
         continue;
 
       InstructionCost C = CM.expectedCost(VF);
@@ -7106,8 +7131,14 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   for (auto &P : VPlans) {
     ArrayRef<ElementCount> VFs(P->vectorFactors().begin(),
                                P->vectorFactors().end());
-    auto RUs = calculateRegisterUsageForPlan(*P, VFs, TTI, CM.ValuesToIgnore);
-    for (auto [VF, RU] : zip_equal(VFs, RUs)) {
+
+    SmallVector<VPRegisterUsage, 8> RUs;
+    if (CM.useMaxBandwidth(TargetTransformInfo::RGK_ScalableVector) ||
+        CM.useMaxBandwidth(TargetTransformInfo::RGK_FixedWidthVector))
+      RUs = calculateRegisterUsageForPlan(*P, VFs, TTI, CM.ValuesToIgnore);
+
+    for (unsigned I = 0; I < VFs.size(); I++) {
+      ElementCount VF = VFs[I];
       if (VF.isScalar())
         continue;
       if (!ForceVectorization && !willGenerateVectors(*P, VF, TTI)) {
@@ -7129,7 +7160,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
       InstructionCost Cost = cost(*P, VF);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
 
-      if (RU.exceedsMaxNumRegs(TTI)) {
+      if (CM.useMaxBandwidth(VF) && RUs[I].exceedsMaxNumRegs(TTI)) {
         LLVM_DEBUG(dbgs() << "LV(REG): Not considering vector loop of width "
                           << VF << " because it uses too many registers\n");
         continue;
@@ -7292,7 +7323,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
          "Trying to execute plan with unsupported VF");
   assert(BestVPlan.hasUF(BestUF) &&
          "Trying to execute plan with unsupported UF");
-  VPlanTransforms::runPass(VPlanTransforms::materializeStepVectors, BestVPlan);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
@@ -9733,7 +9763,10 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
                 match(
                     P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck),
                     m_SpecificInt(0)) &&
-                is_contained(P.incoming_values(), EPI.VectorTripCount))
+                all_of(P.incoming_values(), [&EPI](Value *Inc) {
+                  return Inc == EPI.VectorTripCount ||
+                         match(Inc, m_SpecificInt(0));
+                }))
               return &P;
             return nullptr;
           });
