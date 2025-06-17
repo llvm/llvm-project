@@ -7846,6 +7846,8 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(
    iterator_range<BasicBlock::const_iterator> Range, unsigned ScanLimit) {
   assert(ScanLimit && "scan limit must be non-zero");
   for (const Instruction &I : Range) {
+    if (isa<DbgInfoIntrinsic>(I))
+        continue;
     if (--ScanLimit == 0)
       return false;
     if (!isGuaranteedToTransferExecutionToSuccessor(&I))
@@ -8048,6 +8050,8 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
     // well-defined operands.
 
     for (const auto &I : make_range(Begin, End)) {
+      if (isa<DbgInfoIntrinsic>(I))
+        continue;
       if (--ScanLimit == 0)
         break;
 
@@ -8072,6 +8076,8 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
 
   while (true) {
     for (const auto &I : make_range(Begin, End)) {
+      if (isa<DbgInfoIntrinsic>(I))
+        continue;
       if (--ScanLimit == 0)
         return false;
       if (mustTriggerUB(&I, YieldsPoison))

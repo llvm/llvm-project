@@ -5613,7 +5613,8 @@ BasicBlock::iterator LSRInstance::AdjustInsertPositionForExpand(
     }
   }
 
-  assert(!isa<PHINode>(LowestIP) && !LowestIP->isEHPad() &&
+  assert(!isa<PHINode>(LowestIP) && !LowestIP->isEHPad()
+         && !isa<DbgInfoIntrinsic>(LowestIP) &&
          "Insertion point must be a normal instruction");
 
   // Then, climb up the immediate dominator tree as far as we can go while
@@ -5625,6 +5626,9 @@ BasicBlock::iterator LSRInstance::AdjustInsertPositionForExpand(
 
   // Ignore landingpad instructions.
   while (IP->isEHPad()) ++IP;
+
+  // Ignore debug intrinsics.
+  while (isa<DbgInfoIntrinsic>(IP)) ++IP;
 
   // Set IP below instructions recently inserted by SCEVExpander. This keeps the
   // IP consistent across expansions and allows the previously inserted

@@ -1320,7 +1320,10 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
     HandlePHINodesInSuccessorBlocks(I.getParent());
   }
 
-  ++SDNodeOrder;
+  // Increase the SDNodeOrder if dealing with a non-debug instruction.
+  if (!isa<DbgInfoIntrinsic>(I))
+    ++SDNodeOrder;
+
   CurInst = &I;
 
   // Set inserted listener only if required.

@@ -4787,7 +4787,11 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
     MoveBefore = *MoveBeforeOpt;
   }
 
-  // Re-point iterator to come after any debug-info records.
+  // Don't move to the position of a debug intrinsic.
+  if (isa<DbgInfoIntrinsic>(MoveBefore))
+    MoveBefore = MoveBefore->getNextNonDebugInstruction()->getIterator();
+  // Re-point iterator to come after any debug-info records, if we're
+  // running in "RemoveDIs" mode
   MoveBefore.setHeadBit(false);
 
   bool Changed = false;
@@ -5578,9 +5582,11 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
       continue;
 
     unsigned NumDeadInstInBB;
-    NumDeadInstInBB = removeAllNonTerminatorAndEHPadInstructions(&BB);
+    unsigned NumDeadDbgInstInBB;
+    std::tie(NumDeadInstInBB, NumDeadDbgInstInBB) =
+        removeAllNonTerminatorAndEHPadInstructions(&BB);
 
-    MadeIRChange |= NumDeadInstInBB != 0;
+    MadeIRChange |= NumDeadInstInBB + NumDeadDbgInstInBB > 0;
     NumDeadInst += NumDeadInstInBB;
   }
 

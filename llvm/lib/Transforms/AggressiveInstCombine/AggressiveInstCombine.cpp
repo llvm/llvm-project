@@ -719,7 +719,9 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
     if (Inst.mayWriteToMemory() && isModSet(AA.getModRefInfo(&Inst, Loc)))
       return false;
 
-    if (++NumScanned > MaxInstrsToScan)
+    // Ignore debug info so that's not counted against MaxInstrsToScan.
+    // Otherwise debug info could affect codegen.
+    if (!isa<DbgInfoIntrinsic>(Inst) && ++NumScanned > MaxInstrsToScan)
       return false;
   }
 

@@ -369,7 +369,8 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
 
   unsigned Count = 0;
   for (; Count < ClScanLimit && !BI->isTerminator(); ++BI) {
-    ++Count;
+    if (!isa<DbgInfoIntrinsic>(*BI))
+      ++Count;
 
     if (isNoModRef(AA->getModRefInfo(&*BI, AllocaLoc)))
       continue;
