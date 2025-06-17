@@ -102,6 +102,11 @@ CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
   auto element_type =
       table_type.GetDirectNestedTypeWithName("value_type").GetTypedefedType();
 
+  // In newer unordered_map layouts, the std::pair element type isn't wrapped
+  // in any helper types. So return it directly.
+  if (isStdTemplate(element_type.GetTypeName(), "pair"))
+    return element_type;
+
   // This synthetic provider is used for both unordered_(multi)map and
   // unordered_(multi)set. For older unordered_map layouts, the element type has
   // an additional type layer, an internal struct (`__hash_value_type`) that
