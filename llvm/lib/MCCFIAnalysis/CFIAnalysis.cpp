@@ -67,18 +67,17 @@ MCPhysReg CFIAnalysis::getSuperReg(MCPhysReg Reg) {
 }
 
 CFIAnalysis::CFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
-                         MCInstrAnalysis *MCIA,
+                         MCInstrAnalysis *MCIA, bool IsEH,
                          ArrayRef<MCCFIInstruction> PrologueCFIDirectives)
     : Context(Context), MCII(MCII), MCRI(Context->getRegisterInfo()),
-      State(Context) {
+      State(Context), IsEH(IsEH) {
   EMCIA.reset(new ExtendedMCInstrAnalysis(Context, MCII, MCIA));
 
-  // TODO check what should be passed as EH? I am putting false everywhere.
   for (auto &&[Reg, RegClass] : getAllSuperRegs()) {
     if (MCRI->get(Reg).IsArtificial || MCRI->get(Reg).IsConstant)
       continue;
 
-    DWARFRegType DwarfReg = MCRI->getDwarfRegNum(Reg, false);
+    DWARFRegType DwarfReg = MCRI->getDwarfRegNum(Reg, IsEH);
     // TODO is it OK to create fake CFI directives for doing this?
     State.apply(MCCFIInstruction::createSameValue(nullptr, DwarfReg));
   }
@@ -93,7 +92,7 @@ CFIAnalysis::CFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
   State.apply(MCCFIInstruction::createUndefined(
       nullptr,
       MCRI->getDwarfRegNum(MCRI->getProgramCounter(),
-                           false))); // TODO for now, we don't care about the PC
+                           IsEH))); // TODO for now, we don't care about the PC
   // TODO
   auto LastRow = State.getLastRow();
   assert(LastRow && "there should be at least one row");
@@ -106,7 +105,7 @@ CFIAnalysis::CFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
 
   State.apply(MCCFIInstruction::createUndefined(
       nullptr, MCRI->getDwarfRegNum(EMCIA->getFlagsReg(),
-                                    false))); // Flags cannot be caller-saved
+                                    IsEH))); // Flags cannot be caller-saved
 
   // Applying the prologue after default assumptions to overwrite them.
   for (auto &&PrologueCFIDirective : PrologueCFIDirectives) {
@@ -129,28 +128,27 @@ void CFIAnalysis::update(const MCInst &Inst,
 
   std::set<DWARFRegType> Writes, Reads;
   for (unsigned I = 0; I < MCInstInfo.NumImplicitUses; I++)
-    Reads.insert(MCRI->getDwarfRegNum(
-        getSuperReg(MCInstInfo.implicit_uses()[I]), false));
+    Reads.insert(
+        MCRI->getDwarfRegNum(getSuperReg(MCInstInfo.implicit_uses()[I]), IsEH));
   for (unsigned I = 0; I < MCInstInfo.NumImplicitDefs; I++)
-    Writes.insert(MCRI->getDwarfRegNum(
-        getSuperReg(MCInstInfo.implicit_defs()[I]), false));
+    Writes.insert(
+        MCRI->getDwarfRegNum(getSuperReg(MCInstInfo.implicit_defs()[I]), IsEH));
 
   for (unsigned I = 0; I < Inst.getNumOperands(); I++) {
     auto &&Operand = Inst.getOperand(I);
     if (Operand.isReg()) {
       if (I < MCInstInfo.getNumDefs())
         Writes.insert(
-            MCRI->getDwarfRegNum(getSuperReg(Operand.getReg()), false));
+            MCRI->getDwarfRegNum(getSuperReg(Operand.getReg()), IsEH));
       else if (Operand.getReg())
-        Reads.insert(
-            MCRI->getDwarfRegNum(getSuperReg(Operand.getReg()), false));
+        Reads.insert(MCRI->getDwarfRegNum(getSuperReg(Operand.getReg()), IsEH));
     }
   }
 
   checkCFADiff(Inst, State, AfterState, Reads, Writes);
 
   for (auto [LLVMReg, _] : getAllSuperRegs()) {
-    DWARFRegType Reg = MCRI->getDwarfRegNum(LLVMReg, false);
+    DWARFRegType Reg = MCRI->getDwarfRegNum(LLVMReg, IsEH);
 
     auto PrevUnwindLoc =
         State.getLastRow()->getRegisterLocations().getRegisterLocation(Reg);
@@ -182,7 +180,7 @@ void CFIAnalysis::checkRegDiff(
     const dwarf::UnwindLocation &PrevRegState, // TODO maybe re-name
     const dwarf::UnwindLocation &NextRegState, // TODO maybe re-name
     const std::set<DWARFRegType> &Reads, const std::set<DWARFRegType> &Writes) {
-  auto RegLLVMOpt = MCRI->getLLVMRegNum(Reg, false);
+  auto RegLLVMOpt = MCRI->getLLVMRegNum(Reg, IsEH);
   if (RegLLVMOpt == std::nullopt) {
     assert(PrevRegState == NextRegState);
     return;
@@ -195,12 +193,12 @@ void CFIAnalysis::checkRegDiff(
   std::optional<MCPhysReg> PrevRefRegLLVM =
       (PrevRefReg != std::nullopt
            ? std::make_optional(
-                 MCRI->getLLVMRegNum(PrevRefReg.value(), false).value())
+                 MCRI->getLLVMRegNum(PrevRefReg.value(), IsEH).value())
            : std::nullopt);
   std::optional<MCPhysReg> NextRefRegLLVM =
       (PrevRefReg != std::nullopt
            ? std::make_optional(
-                 MCRI->getLLVMRegNum(PrevRefReg.value(), false).value())
+                 MCRI->getLLVMRegNum(PrevRefReg.value(), IsEH).value())
            : std::nullopt);
 
   // TODO Again getting CFA register out of UnwindRow
@@ -211,7 +209,7 @@ void CFIAnalysis::checkRegDiff(
   // TODO asserting it (maybe in the helper function).
   MCPhysReg PrevStateCFARegLLVM =
       MCRI->getLLVMRegNum(PrevState.getLastRow()->getCFAValue().getRegister(),
-                          false)
+                          IsEH)
           .value();
 
   { // try generate
@@ -244,7 +242,7 @@ void CFIAnalysis::checkRegDiff(
     }
 
     // TODO In this stage of program, there is not possible next stages, it's
-    // TODO either the same or nothing. The maybe I have to refactor it back to
+    // TODO either the same or nothing. Then maybe I have to refactor it back to
     // TODO the primitive design. And when got the semantic info, get back to
     // TODO this code.
     for (auto &&PossibleNextRegState : PossibleNextRegStates) {
@@ -331,7 +329,7 @@ void CFIAnalysis::checkCFADiff(const MCInst &Inst, const CFIState &PrevState,
       NextState.getLastRow()->getCFAValue().getOffset();
 
   const char *PrevCFARegName =
-      MCRI->getName(MCRI->getLLVMRegNum(PrevCFAReg, false /* TODO */).value());
+      MCRI->getName(MCRI->getLLVMRegNum(PrevCFAReg, IsEH).value());
 
   if (PrevCFAReg == NextCFAReg) {
     if (PrevCFAOffset == NextCFAOffset) {
