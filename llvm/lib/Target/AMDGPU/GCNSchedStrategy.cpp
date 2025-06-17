@@ -1696,7 +1696,7 @@ struct ExcessRP {
   unsigned ArchVGPRs = 0;
   /// Number of excess AGPRs.
   unsigned AGPRs = 0;
-  /// For unified register files, number of excess VGPRs.
+  /// For unified register files, number of excess VGPRs. 0 otherwise.
   unsigned VGPRs = 0;
   /// For unified register files with AGPR usage, number of excess ArchVGPRs to
   /// save before we are able to save a whole allocation granule.
@@ -1705,29 +1705,26 @@ struct ExcessRP {
   bool HasAGPRs = false;
   /// Whether the subtarget has a unified RF.
   bool UnifiedRF;
+  /// Whether we consider that ArchVGPRs can be spilled to AGPRs and the other
+  /// way around.
+  bool AllowVGPRToVGPRSpill;
 
   /// Constructs the excess RP model; determines the excess pressure w.r.t. a
   /// maximum number of allowed SGPRs/VGPRs.
   ExcessRP(const GCNSubtarget &ST, const GCNRegPressure &RP, unsigned MaxSGPRs,
-           unsigned MaxVGPRs);
+           unsigned MaxVGPRs, bool AllowVGPRToVGPRSpill);
 
   /// Accounts for \p NumRegs saved SGPRs in the model. Returns whether saving
   /// these SGPRs helped reduce excess pressure.
   bool saveSGPRs(unsigned NumRegs) { return saveRegs(SGPRs, NumRegs); }
 
-  /// Accounts for \p NumRegs saved ArchVGPRs in the model. If \p
-  /// UseArchVGPRForAGPRSpill is true, saved ArchVGPRs are used to save excess
-  /// AGPRs once excess ArchVGPR pressure has been eliminated. Returns whether
-  /// saving these ArchVGPRs helped reduce excess pressure.
-  bool saveArchVGPRs(unsigned NumRegs, bool UseArchVGPRForAGPRSpill);
+  /// Accounts for \p NumRegs saved ArchVGPRs in the model. Returns whether
+  /// saving these ArchGPRs helped reduce excess pressure.
+  bool saveArchVGPRs(unsigned NumRegs);
 
   /// Accounts for \p NumRegs saved AGPRs in the model. Returns whether saving
   /// these AGPRs helped reduce excess pressure.
-  bool saveAGPRs(unsigned NumRegs) {
-    return saveRegs(AGPRs, NumRegs) ||
-           (UnifiedRF && saveRegs(VGPRs, NumRegs)) ||
-           saveRegs(ArchVGPRs, NumRegs);
-  }
+  bool saveAGPRs(unsigned NumRegs);
 
   /// Returns whether there is any excess register pressure.
   operator bool() const { return SGPRs || ArchVGPRs || AGPRs || VGPRs; }
@@ -1753,8 +1750,10 @@ private:
 } // namespace
 
 ExcessRP::ExcessRP(const GCNSubtarget &ST, const GCNRegPressure &RP,
-                   unsigned MaxSGPRs, unsigned MaxVGPRs)
-    : UnifiedRF(ST.hasGFX90AInsts()) {
+                   unsigned MaxSGPRs, unsigned MaxVGPRs,
+                   bool AllowVGPRToVGPRSpill)
+    : UnifiedRF(ST.hasGFX90AInsts()),
+      AllowVGPRToVGPRSpill(AllowVGPRToVGPRSpill) {
   // Compute excess SGPR pressure.
   unsigned NumSGPRs = RP.getSGPRNum();
   if (NumSGPRs > MaxSGPRs)
@@ -1799,15 +1798,15 @@ ExcessRP::ExcessRP(const GCNSubtarget &ST, const GCNRegPressure &RP,
   }
 }
 
-bool ExcessRP::saveArchVGPRs(unsigned NumRegs, bool UseArchVGPRForAGPRSpill) {
+bool ExcessRP::saveArchVGPRs(unsigned NumRegs) {
   bool Progress = saveRegs(ArchVGPRs, NumRegs);
   if (!NumRegs)
     return Progress;
 
   if (!UnifiedRF) {
-    if (UseArchVGPRForAGPRSpill)
+    if (AllowVGPRToVGPRSpill)
       Progress |= saveRegs(AGPRs, NumRegs);
-  } else if (HasAGPRs && (VGPRs || (UseArchVGPRForAGPRSpill && AGPRs))) {
+  } else if (HasAGPRs && (VGPRs || (AllowVGPRToVGPRSpill && AGPRs))) {
     // There is progress as long as there are VGPRs left to save, even if the
     // save induced by this particular call does not cross an ArchVGPR alignment
     // barrier.
@@ -1834,13 +1833,21 @@ bool ExcessRP::saveArchVGPRs(unsigned NumRegs, bool UseArchVGPRForAGPRSpill) {
     // Prioritize saving generic VGPRs, then AGPRs if we allow AGPR-to-ArchVGPR
     // spilling and have some free ArchVGPR slots.
     saveRegs(VGPRs, NumSavedRegs);
-    if (UseArchVGPRForAGPRSpill)
+    if (AllowVGPRToVGPRSpill)
       saveRegs(AGPRs, NumSavedRegs);
   } else {
     // No AGPR usage in the region i.e., no allocation granule to worry about.
     Progress |= saveRegs(VGPRs, NumRegs);
   }
+  return Progress;
+}
 
+bool ExcessRP::saveAGPRs(unsigned NumRegs) {
+  bool Progress = saveRegs(AGPRs, NumRegs);
+  if (UnifiedRF)
+    Progress |= saveRegs(VGPRs, NumRegs);
+  if (AllowVGPRToVGPRSpill)
+    Progress |= saveRegs(ArchVGPRs, NumRegs);
   return Progress;
 }
 
@@ -1871,7 +1878,13 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   // one in the whole function.
   for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
     GCNRegPressure &RP = DAG.Pressure[I];
-    ExcessRP Excess(ST, RP, MaxSGPRsNoSpill, MaxVGPRsNoSpill);
+    // We allow saved VGPRs of one category (ArchVGPR or AGPR) to be considered
+    // as free spill slots for the other category only when we are just trying
+    // to eliminate spilling. At this point we err on the conservative side and
+    // do not increase register-to-register spilling for the sake of increasing
+    // occupancy.
+    ExcessRP Excess(ST, RP, MaxSGPRsNoSpill, MaxVGPRsNoSpill,
+                    /*AllowVGPRToVGPRSpill=*/true);
     if (Excess && IncreaseOccupancy) {
       // There is spilling in the region and we were so far trying to increase
       // occupancy. Strop trying that and focus on reducing spilling.
@@ -1879,7 +1892,8 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
       OptRegions.clear();
     } else if (IncreaseOccupancy) {
       // There is no spilling in the region, try to increase occupancy.
-      Excess = ExcessRP(ST, RP, MaxSGPRsIncOcc, MaxVGPRsIncOcc);
+      Excess = ExcessRP(ST, RP, MaxSGPRsIncOcc, MaxVGPRsIncOcc,
+                        /*AllowVGPRToVGPRSpill=*/false);
     }
     if (Excess)
       OptRegions.insert({I, Excess});
@@ -1914,19 +1928,12 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
                               bool &Progress) -> bool {
     ExcessRP &Excess = OptIt->getSecond();
     unsigned NumRegs = SIRegisterInfo::getNumCoveredRegs(Mask);
-    if (SRI->isSGPRClass(RC)) {
+    if (SRI->isSGPRClass(RC))
       Progress |= Excess.saveSGPRs(NumRegs);
-    } else if (SRI->isAGPRClass(RC)) {
+    else if (SRI->isAGPRClass(RC))
       Progress |= Excess.saveAGPRs(NumRegs);
-    } else {
-      // We allow saved ArchVGPRs to be considered as free spill slots for AGPRs
-      // only when we are just trying to eliminate spilling to memory. At this
-      // point we err on the conservative side and do not increase
-      // register-to-register spilling for the sake of increasing occupancy.
-      Progress |=
-          Excess.saveArchVGPRs(NumRegs,
-                               /*UseArchVGPRForAGPRSpill=*/!IncreaseOccupancy);
-    }
+    else
+      Progress |= Excess.saveArchVGPRs(NumRegs);
     if (!Excess)
       OptRegions.erase(OptIt->getFirst());
     return OptRegions.empty();
