@@ -705,8 +705,13 @@ foreach mx = SchedMxListFW in {
     defvar FMALat = SMX60GetVFFMALatency<mx>.c;
     defvar WideLat = SMX60GetVIWideLatency<mx>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUV", [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUF", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    // FP widening ALU operations: .vv/.vf variants measured 4,6,8 but .wf/.wv variants measured 5,9,17
+    // Using SMX60GetLMulCycles * 4 as compromise (gives 4,8,16 pattern)
+    // TODO: Split .wf/.wv variants into separate scheduling classes to use accurate 5,9,17 latencies
+    let Latency = !mul(LMulLat, 4) in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUF", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
     // FP widening multiply operations: measured 4,6,8 - use WideLat (4,5,8) as approximation
     let Latency = WideLat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulV", [SMX60_VIEU], mx, sew, IsWorstCase>;
