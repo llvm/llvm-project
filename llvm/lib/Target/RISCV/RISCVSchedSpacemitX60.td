@@ -763,14 +763,26 @@ foreach mx = ["MF4", "MF2"] in {
   }
 }
 
-// Complex floating-point division operations
+// Complex floating-point division operations with measured latencies
+// vfdiv.vv measured: e16=12,24,48,96 (12*LMUL); e32=38,76,152,304 (38*LMUL); e64=40,80,160,320 (40*LMUL)
 foreach mx = ["M1", "M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
     defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
-    let Latency = !mul(LMulLat, 18) in {
+    // Compute latency based on SEW and LMUL combination
+    defvar LatencyMul = !cond(
+      !eq(sew, 16) : 12,  // e16: 12*LMUL
+      !eq(sew, 32) : 38,  // e32: 38*LMUL
+      !eq(sew, 64) : 40   // e64: 40*LMUL
+    );
+
+    let Latency = !mul(LMulLat, LatencyMul) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFDivV",  [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
+    }
+
+    // Keep vfdiv.vf with the original 18*LMUL approximation until measured
+    let Latency = !mul(LMulLat, 18) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFDivF",  [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
     }
   }
