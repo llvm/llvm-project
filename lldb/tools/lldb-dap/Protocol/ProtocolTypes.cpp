@@ -86,14 +86,14 @@ bool fromJSON(const llvm::json::Value &Params, ExceptionBreakpointsFilter &EBF,
 json::Value toJSON(const ExceptionBreakpointsFilter &EBF) {
   json::Object result{{"filter", EBF.filter}, {"label", EBF.label}};
 
-  if (EBF.description)
-    result.insert({"description", *EBF.description});
+  if (!EBF.description.empty())
+    result.insert({"description", EBF.description});
   if (EBF.defaultState)
-    result.insert({"default", *EBF.defaultState});
+    result.insert({"default", EBF.defaultState});
   if (EBF.supportsCondition)
-    result.insert({"supportsCondition", *EBF.supportsCondition});
-  if (EBF.conditionDescription)
-    result.insert({"conditionDescription", *EBF.conditionDescription});
+    result.insert({"supportsCondition", EBF.supportsCondition});
+  if (!EBF.conditionDescription.empty())
+    result.insert({"conditionDescription", EBF.conditionDescription});
 
   return result;
 }
@@ -418,23 +418,41 @@ json::Value toJSON(const Capabilities &C) {
   for (const auto &feature : C.supportedFeatures)
     result.insert({ToString(feature), true});
 
-  if (C.exceptionBreakpointFilters && !C.exceptionBreakpointFilters->empty())
+  if (!C.exceptionBreakpointFilters.empty())
+    result.insert({"exceptionBreakpointFilters", C.exceptionBreakpointFilters});
+  if (!C.completionTriggerCharacters.empty())
     result.insert(
-        {"exceptionBreakpointFilters", *C.exceptionBreakpointFilters});
-  if (C.completionTriggerCharacters && !C.completionTriggerCharacters->empty())
+        {"completionTriggerCharacters", C.completionTriggerCharacters});
+  if (!C.additionalModuleColumns.empty())
+    result.insert({"additionalModuleColumns", C.additionalModuleColumns});
+  if (!C.supportedChecksumAlgorithms.empty())
     result.insert(
-        {"completionTriggerCharacters", *C.completionTriggerCharacters});
-  if (C.additionalModuleColumns && !C.additionalModuleColumns->empty())
-    result.insert({"additionalModuleColumns", *C.additionalModuleColumns});
-  if (C.supportedChecksumAlgorithms && !C.supportedChecksumAlgorithms->empty())
-    result.insert(
-        {"supportedChecksumAlgorithms", *C.supportedChecksumAlgorithms});
-  if (C.breakpointModes && !C.breakpointModes->empty())
-    result.insert({"breakpointModes", *C.breakpointModes});
+        {"supportedChecksumAlgorithms", C.supportedChecksumAlgorithms});
+  if (!C.breakpointModes.empty())
+    result.insert({"breakpointModes", C.breakpointModes});
 
   // lldb-dap extensions
-  if (C.lldbExtVersion && !C.lldbExtVersion->empty())
-    result.insert({"$__lldb_version", *C.lldbExtVersion});
+  if (!C.lldbExtVersion.empty())
+    result.insert({"$__lldb_version", C.lldbExtVersion});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &Params, ExceptionFilterOptions &EFO,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("filterId", EFO.filterId) &&
+         O.mapOptional("condition", EFO.condition) &&
+         O.mapOptional("mode", EFO.mode);
+}
+
+json::Value toJSON(const ExceptionFilterOptions &EFO) {
+  json::Object result{{"filterId", EFO.filterId}};
+
+  if (!EFO.condition.empty())
+    result.insert({"condition", EFO.condition});
+  if (!EFO.mode.empty())
+    result.insert({"mode", EFO.mode});
 
   return result;
 }

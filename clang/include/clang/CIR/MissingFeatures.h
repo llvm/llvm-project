@@ -236,6 +236,7 @@ struct MissingFeatures {
   static bool runCleanupsScope() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
+  static bool asmLabelAttr() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
