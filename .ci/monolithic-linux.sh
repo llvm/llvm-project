@@ -57,7 +57,6 @@ projects="${1}"
 targets="${2}"
 runtimes="${3}"
 runtime_targets="${4}"
-runtime_targets_needs_reconfig="${5}"
 
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
 
@@ -94,15 +93,9 @@ echo "--- ninja"
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets}
 
-if [[ "${runtime_targets}" != "" ]]; then
-  echo "--- ninja runtimes"
-
-  ninja -C "${BUILD_DIR}" ${runtime_targets}
-fi
-
 # Compiling runtimes with just-built Clang and running their tests
 # as an additional testing for Clang.
-if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
+if [[ "${runtimes_targets}" != "" ]]; then
   echo "--- cmake runtimes C++26"
 
   cmake \
@@ -112,7 +105,7 @@ if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
 
   echo "--- ninja runtimes C++26"
 
-  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
+  ninja -C "${BUILD_DIR}" ${runtime_targets}
 
   echo "--- cmake runtimes clang modules"
 
@@ -123,5 +116,5 @@ if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
 
   echo "--- ninja runtimes clang modules"
 
-  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
+  ninja -C "${BUILD_DIR}" ${runtime_targets}
 fi

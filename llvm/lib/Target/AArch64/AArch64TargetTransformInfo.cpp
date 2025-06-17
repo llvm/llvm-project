@@ -4005,7 +4005,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       // have similar cost.
       auto VT = TLI->getValueType(DL, Ty);
       if (VT.isScalarInteger() && VT.getSizeInBits() <= 64) {
-        if (Op2Info.isPowerOf2()) {
+        if (Op2Info.isPowerOf2() || Op2Info.isNegatedPowerOf2()) {
+          // Neg can be folded into the asr instruction.
           return ISD == ISD::SDIV ? (3 * AddCost + AsrCost)
                                   : (3 * AsrCost + AddCost);
         } else {
@@ -4013,17 +4014,24 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
         }
       } else if (VT.isVector()) {
         InstructionCost UsraCost = 2 * AsrCost;
-        if (Op2Info.isPowerOf2()) {
+        if (Op2Info.isPowerOf2() || Op2Info.isNegatedPowerOf2()) {
           // Division with scalable types corresponds to native 'asrd'
           // instruction when SVE is available.
           // e.g. %1 = sdiv <vscale x 4 x i32> %a, splat (i32 8)
+
+          // One more for the negation in SDIV
+          InstructionCost Cost =
+              (Op2Info.isNegatedPowerOf2() && ISD == ISD::SDIV) ? AsrCost : 0;
           if (Ty->isScalableTy() && ST->hasSVE())
-            return 2 * AsrCost;
-          return UsraCost +
-                 (ISD == ISD::SDIV
-                      ? (LT.second.getScalarType() == MVT::i64 ? 1 : 2) *
-                            AsrCost
-                      : 2 * AddCost);
+            Cost += 2 * AsrCost;
+          else {
+            Cost +=
+                UsraCost +
+                (ISD == ISD::SDIV
+                     ? (LT.second.getScalarType() == MVT::i64 ? 1 : 2) * AsrCost
+                     : 2 * AddCost);
+          }
+          return Cost;
         } else if (LT.second == MVT::v2i64) {
           return VT.getVectorNumElements() *
                  getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind,
@@ -4345,15 +4353,26 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     }
   }
 
-  // Treat the icmp in icmp(and, 0) as free, as we can make use of ands.
-  // FIXME: This can apply to more conditions and add/sub if it can be shown to
-  // be profitable.
+  // Treat the icmp in icmp(and, 0) or icmp(and, -1/1) when it can be folded to
+  // icmp(and, 0) as free, as we can make use of ands, but only if the
+  // comparison is not unsigned.
   if (ValTy->isIntegerTy() && ISD == ISD::SETCC && I &&
-      ICmpInst::isEquality(VecPred) &&
+      !CmpInst::isUnsigned(VecPred) &&
       TLI->isTypeLegal(TLI->getValueType(DL, ValTy)) &&
-      match(I->getOperand(1), m_Zero()) &&
-      match(I->getOperand(0), m_And(m_Value(), m_Value())))
-    return 0;
+      match(I->getOperand(0), m_And(m_Value(), m_Value()))) {
+    if (match(I->getOperand(1), m_Zero()))
+      return 0;
+
+    // x >= 1 / x < 1 -> x > 0 / x <= 0
+    if (match(I->getOperand(1), m_One()) &&
+        (VecPred == CmpInst::ICMP_SLT || VecPred == CmpInst::ICMP_SGE))
+      return 0;
+
+    // x <= -1 / x > -1 -> x > 0 / x <= 0
+    if (match(I->getOperand(1), m_AllOnes()) &&
+        (VecPred == CmpInst::ICMP_SLE || VecPred == CmpInst::ICMP_SGT))
+      return 0;
+  }
 
   // The base case handles scalable vectors fine for now, since it treats the
   // cost as 1 * legalization cost.
@@ -4573,6 +4592,13 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
   auto *VecVTy = cast<VectorType>(VecTy);
 
   if (VecTy->isScalableTy() && !ST->hasSVE())
+    return InstructionCost::getInvalid();
+
+  // Scalable VFs will emit vector.[de]interleave intrinsics, and currently we
+  // only have lowering for power-of-2 factors.
+  // TODO: Add lowering for vector.[de]interleave3 intrinsics and support in
+  // InterleavedAccessPass for ld3/st3
+  if (VecTy->isScalableTy() && !isPowerOf2_32(Factor))
     return InstructionCost::getInvalid();
 
   // Vectorization for masked interleaved accesses is only enabled for scalable

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/MipsFixupKinds.h"
-#include "MCTargetDesc/MipsMCExpr.h"
+#include "MCTargetDesc/MipsMCAsmInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -16,6 +16,7 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -157,14 +158,14 @@ unsigned MipsELFObjectWriter::getRelocType(const MCFixup &Fixup,
   // Determine the type of the relocation.
   unsigned Kind = Fixup.getTargetKind();
   switch (Target.getSpecifier()) {
-  case MipsMCExpr::MEK_DTPREL:
-  case MipsMCExpr::MEK_DTPREL_HI:
-  case MipsMCExpr::MEK_DTPREL_LO:
-  case MipsMCExpr::MEK_TLSLDM:
-  case MipsMCExpr::MEK_TLSGD:
-  case MipsMCExpr::MEK_GOTTPREL:
-  case MipsMCExpr::MEK_TPREL_HI:
-  case MipsMCExpr::MEK_TPREL_LO:
+  case Mips::S_DTPREL:
+  case Mips::S_DTPREL_HI:
+  case Mips::S_DTPREL_LO:
+  case Mips::S_TLSLDM:
+  case Mips::S_TLSGD:
+  case Mips::S_GOTTPREL:
+  case Mips::S_TPREL_HI:
+  case Mips::S_TPREL_LO:
     if (auto *SA = Target.getAddSym())
       cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;

@@ -325,10 +325,6 @@ public:
   void printExtra(raw_ostream &OS, bool Full = true) const override;
   virtual void printWarnings(raw_ostream &OS, bool Full = true) const {}
   virtual void printMatchedElements(raw_ostream &OS, bool UseMatchedElements) {}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump() const override { print(dbgs()); }
-#endif
 };
 
 // Class to represent a DWARF Union/Structure/Class.
