@@ -1345,27 +1345,26 @@ void RotateOp::build(OpBuilder &builder, OperationState &result, Value value,
 }
 
 LogicalResult RotateOp::verify() {
-  llvm::APInt offsetValue;
-  if (auto constOp = getOffset().getDefiningOp<arith::ConstantOp>()) {
-    if (auto intAttr = llvm::dyn_cast<mlir::IntegerAttr>(constOp.getValue())) {
-      offsetValue = intAttr.getValue();
-    } else {
-      return emitOpError() << "offset is not an integer value";
-    }
-  } else {
+  auto offsetConstOp = getOffset().getDefiningOp<arith::ConstantOp>();
+  if (!offsetConstOp)
     return emitOpError() << "offset is not a constant value";
-  }
 
-  llvm::APInt widthValue;
-  if (auto constOp = getWidth().getDefiningOp<arith::ConstantOp>()) {
-    if (auto intAttr = llvm::dyn_cast<mlir::IntegerAttr>(constOp.getValue())) {
-      widthValue = intAttr.getValue();
-    } else {
-      return emitOpError() << "width is not an integer value";
-    }
-  } else {
+  auto offsetIntAttr =
+      llvm::dyn_cast<mlir::IntegerAttr>(offsetConstOp.getValue());
+  if (!offsetIntAttr)
+    return emitOpError() << "offset is not an integer value";
+
+  auto widthConstOp = getWidth().getDefiningOp<arith::ConstantOp>();
+  if (!widthConstOp)
     return emitOpError() << "width is not a constant value";
-  }
+
+  auto widthIntAttr =
+      llvm::dyn_cast<mlir::IntegerAttr>(widthConstOp.getValue());
+  if (!widthIntAttr)
+    return emitOpError() << "width is not an integer value";
+
+  llvm::APInt offsetValue = offsetIntAttr.getValue();
+  llvm::APInt widthValue = widthIntAttr.getValue();
 
   if (!widthValue.isPowerOf2())
     return emitOpError() << "width must be a power of two";

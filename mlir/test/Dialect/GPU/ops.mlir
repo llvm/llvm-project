@@ -142,7 +142,7 @@ module attributes {gpu.container_module} {
 
       // CHECK: gpu.rotate %{{.*}}, %{{.*}}, %{{.*}} : f32
       %rotate_width = arith.constant 16 : i32
-      %rotate = gpu.rotate %arg0, %offset, %rotate_width : f32
+      %rotate, %pred4 = gpu.rotate %arg0, %offset, %rotate_width : f32
 
       "gpu.barrier"() : () -> ()
 

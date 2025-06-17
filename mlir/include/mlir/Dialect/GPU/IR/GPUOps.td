@@ -1367,7 +1367,7 @@ def GPU_ShuffleOp : GPU_Op<
 def GPU_RotateOp : GPU_Op<
     "rotate", [Pure, AllTypesMatch<["value", "rotateResult"]>]>,
     Arguments<(ins AnyIntegerOrFloatOr1DVector:$value, I32:$offset, I32:$width)>,
-    Results<(outs AnyIntegerOrFloatOr1DVector:$rotateResult)> {
+    Results<(outs AnyIntegerOrFloatOr1DVector:$rotateResult, I1:$valid)> {
   let summary = "Rotate values within a subgroup.";
   let description = [{
     The "rotate" op moves values across lanes (a.k.a., invocations, work items)
@@ -1381,15 +1381,19 @@ def GPU_RotateOp : GPU_Op<
     Return the `rotateResult` of the invocation whose id within the group is
     calculated as follows:
 
-    Invocation ID = ((LocalId + Delta) & (width - 1)) + (LocalId & ~(width - 1))
+    ```mlir
+    Invocation ID = ((LaneId + offset) & (width - 1)) + (LaneId & ~(width - 1))
+    ```
 
-    Returns the `rotateResult` if the current lane id is smaller than `width`.
+    Returns the `rotateResult` and `true` if the current lane id is smaller than
+    `width`, and an unspecified value and `false` otherwise.
 
     example:
 
     ```mlir
     %cst1 = arith.constant 1 : i32
-    %1 = gpu.rotate %0, %cst1, %width : f32
+    %width = arith.constant 16 : i32
+    %1, %2 = gpu.rotate %0, %cst1, %width : f32
     ```
 
     For lane `k`, returns the value from lane `(k + cst1) % width`.

@@ -489,7 +489,11 @@ LogicalResult GPURotateConversion::matchAndRewrite(
   Value result = rewriter.create<spirv::GroupNonUniformRotateKHROp>(
       loc, scope, adaptor.getValue(), adaptor.getOffset(), adaptor.getWidth());
 
-  rewriter.replaceOp(rotateOp, result);
+  Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
+  Value validVal = rewriter.create<arith::CmpIOp>(
+      loc, arith::CmpIPredicate::ult, laneId, adaptor.getWidth());
+
+  rewriter.replaceOp(rotateOp, {result, validVal});
   return success();
 }
 
