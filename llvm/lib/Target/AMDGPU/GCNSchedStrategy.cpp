@@ -1724,7 +1724,9 @@ struct ExcessRP {
   /// Accounts for \p NumRegs saved AGPRs in the model. Returns whether saving
   /// these AGPRs helped reduce excess pressure.
   bool saveAGPRs(unsigned NumRegs) {
-    return saveRegs(AGPRs, NumRegs) || saveRegs(VGPRs, NumRegs);
+    return saveRegs(AGPRs, NumRegs) ||
+           (UnifiedRF && saveRegs(VGPRs, NumRegs)) ||
+           saveRegs(ArchVGPRs, NumRegs);
   }
 
   /// Returns whether there is any excess register pressure.
