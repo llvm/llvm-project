@@ -139,10 +139,7 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
     si << " ; " << c;
   }
 
-  std::optional<protocol::Source> source =
-      CreateSource(addr, target, [&dap](lldb::addr_t addr) {
-        return dap.CreateSourceReference(addr);
-      });
+  std::optional<protocol::Source> source = dap.ResolveSource(addr);
   lldb::SBLineEntry line_entry = GetLineEntryForAddress(target, addr);
 
   // If the line number is 0 then the entry represents a compiler generated

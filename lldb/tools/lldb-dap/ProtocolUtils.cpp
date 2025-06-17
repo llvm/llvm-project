@@ -46,9 +46,9 @@ static bool ShouldDisplayAssemblySource(
   return false;
 }
 
-static std::optional<protocol::Source> CreateAssemblySource(
+std::optional<protocol::Source> CreateAssemblySource(
     const lldb::SBTarget &target, lldb::SBAddress address,
-    llvm::function_ref<uint32_t(lldb::addr_t)> create_reference) {
+    llvm::function_ref<int32_t(lldb::addr_t)> create_reference) {
 
   lldb::SBSymbol symbol = address.GetSymbol();
   lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
@@ -101,28 +101,19 @@ std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file) {
   return source;
 }
 
-std::optional<protocol::Source>
-CreateSource(lldb::SBAddress address, lldb::SBTarget &target,
-             llvm::function_ref<int32_t(lldb::addr_t)> create_reference) {
-  lldb::SBDebugger debugger = target.GetDebugger();
-  lldb::StopDisassemblyType stop_disassembly_display =
-      GetStopDisassemblyDisplay(debugger);
-  if (ShouldDisplayAssemblySource(address, stop_disassembly_display))
-    return CreateAssemblySource(target, address, create_reference);
-
-  lldb::SBLineEntry line_entry = GetLineEntryForAddress(target, address);
-  if (!line_entry.IsValid())
-    return std::nullopt;
-
-  return CreateSource(line_entry.GetFileSpec());
-}
-
 bool IsAssemblySource(const protocol::Source &source) {
   // According to the specification, a source must have either `path` or
   // `sourceReference` specified. We use `path` for sources with known source
   // code, and `sourceReferences` when falling back to assembly.
   return source.sourceReference.value_or(LLDB_DAP_INVALID_SRC_REF) >
          LLDB_DAP_INVALID_SRC_REF;
+}
+
+bool DisplayAssemblySource(lldb::SBDebugger &debugger,
+                           lldb::SBAddress address) {
+  const lldb::StopDisassemblyType stop_disassembly_display =
+      GetStopDisassemblyDisplay(debugger);
+  return ShouldDisplayAssemblySource(address, stop_disassembly_display);
 }
 
 std::string GetLoadAddressString(const lldb::addr_t addr) {
