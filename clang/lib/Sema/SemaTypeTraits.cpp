@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -189,6 +188,7 @@ static bool IsEligibleForTrivialRelocation(Sema &SemaRef,
       return false;
   }
 
+  bool IsUnion = D->isUnion();
   for (const FieldDecl *Field : D->fields()) {
     if (Field->getType()->isDependentType())
       continue;
@@ -197,6 +197,12 @@ static bool IsEligibleForTrivialRelocation(Sema &SemaRef,
     // ... has a non-static data member of an object type that is not
     // of a trivially relocatable type
     if (!SemaRef.IsCXXTriviallyRelocatableType(Field->getType()))
+      return false;
+
+    // A union contains values with address discriminated pointer auth
+    // cannot be relocated.
+    if (IsUnion && SemaRef.Context.containsAddressDiscriminatedPointerAuth(
+                       Field->getType()))
       return false;
   }
   return !D->hasDeletedDestructor();
@@ -314,7 +320,6 @@ bool Sema::IsCXXTriviallyRelocatableType(const CXXRecordDecl &RD) {
 }
 
 bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
-
   QualType BaseElementType = getASTContext().getBaseElementType(Type);
 
   if (Type->isVariableArrayType())
@@ -323,10 +328,10 @@ bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
   if (BaseElementType.hasNonTrivialObjCLifetime())
     return false;
 
-  if (BaseElementType.hasAddressDiscriminatedPointerAuth())
+  if (BaseElementType->isIncompleteType())
     return false;
 
-  if (BaseElementType->isIncompleteType())
+  if (Context.containsNonRelocatablePointerAuth(Type))
     return false;
 
   if (BaseElementType->isScalarType() || BaseElementType->isVectorType())
@@ -671,7 +676,10 @@ static bool IsTriviallyRelocatableType(Sema &SemaRef, QualType T) {
   if (!BaseElementType->isObjectType())
     return false;
 
-  if (T.hasAddressDiscriminatedPointerAuth())
+  // The deprecated __builtin_is_trivially_relocatable does not have
+  // an equivalent to __builtin_trivially_relocate, so there is no
+  // safe way to use it if there are any address discriminated values.
+  if (SemaRef.getASTContext().containsAddressDiscriminatedPointerAuth(T))
     return false;
 
   if (const auto *RD = BaseElementType->getAsCXXRecordDecl();
@@ -1948,7 +1956,6 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
             TypeTrait::UTT_IsCppTriviallyRelocatable)
       .Case("is_replaceable", TypeTrait::UTT_IsReplaceable)
       .Case("is_trivially_copyable", TypeTrait::UTT_IsTriviallyCopyable)
-      .Case("is_constructible", TypeTrait::TT_IsConstructible)
       .Default(std::nullopt);
 }
 
@@ -1985,16 +1992,8 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
     Trait = StdNameToTypeTrait(Name);
     if (!Trait)
       return std::nullopt;
-    for (const auto &Arg : VD->getTemplateArgs().asArray()) {
-      if (Arg.getKind() == TemplateArgument::ArgKind::Pack) {
-        for (const auto &InnerArg : Arg.pack_elements())
-          Args.push_back(InnerArg.getAsType());
-      } else if (Arg.getKind() == TemplateArgument::ArgKind::Type) {
-        Args.push_back(Arg.getAsType());
-      } else {
-        llvm_unreachable("Unexpected kind");
-      }
-    }
+    for (const auto &Arg : VD->getTemplateArgs().asArray())
+      Args.push_back(Arg.getAsType());
     return {{Trait.value(), std::move(Args)}};
   }
 
@@ -2267,60 +2266,6 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   }
 }
 
-static void DiagnoseNonConstructibleReason(
-    Sema &SemaRef, SourceLocation Loc,
-    const llvm::SmallVector<clang::QualType, 1> &Ts) {
-  if (Ts.empty()) {
-    return;
-  }
-
-  bool ContainsVoid = false;
-  for (const QualType &ArgTy : Ts) {
-    ContainsVoid |= ArgTy->isVoidType();
-  }
-
-  if (ContainsVoid)
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::CVVoidType;
-
-  QualType T = Ts[0];
-  if (T->isFunctionType())
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::FunctionType;
-
-  if (T->isIncompleteArrayType())
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::IncompleteArrayType;
-
-  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
-  if (!D || D->isInvalidDecl() || !D->hasDefinition())
-    return;
-
-  llvm::BumpPtrAllocator OpaqueExprAllocator;
-  SmallVector<Expr *, 2> ArgExprs;
-  ArgExprs.reserve(Ts.size() - 1);
-  for (unsigned I = 1, N = Ts.size(); I != N; ++I) {
-    QualType ArgTy = Ts[I];
-    if (ArgTy->isObjectType() || ArgTy->isFunctionType())
-      ArgTy = SemaRef.Context.getRValueReferenceType(ArgTy);
-    ArgExprs.push_back(
-        new (OpaqueExprAllocator.Allocate<OpaqueValueExpr>())
-            OpaqueValueExpr(Loc, ArgTy.getNonLValueExprType(SemaRef.Context),
-                            Expr::getValueKindForType(ArgTy)));
-  }
-
-  EnterExpressionEvaluationContext Unevaluated(
-      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
-  Sema::ContextRAII TUContext(SemaRef,
-                              SemaRef.Context.getTranslationUnitDecl());
-  InitializedEntity To(InitializedEntity::InitializeTemporary(T));
-  InitializationKind InitKind(InitializationKind::CreateDirect(Loc, Loc, Loc));
-  InitializationSequence Init(SemaRef, To, InitKind, ArgExprs);
-
-  Init.Diagnose(SemaRef, To, InitKind, ArgExprs);
-  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
-}
-
 static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
                                                SourceLocation Loc, QualType T) {
   SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
@@ -2359,9 +2304,6 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     break;
   case UTT_IsTriviallyCopyable:
     DiagnoseNonTriviallyCopyableReason(*this, E->getBeginLoc(), Args[0]);
-    break;
-  case TT_IsConstructible:
-    DiagnoseNonConstructibleReason(*this, E->getBeginLoc(), Args);
     break;
   default:
     break;

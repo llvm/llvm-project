@@ -26,9 +26,10 @@
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
 // RUN: %clang_analyze_cc1 -std=c++17 -fblocks -verify %s \
-// RUN:   -verify=expected,leak \
+// RUN:   -verify=expected,leak,inspection \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
+// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks \
+// RUN:   -analyzer-checker=debug.ExprInspection
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -62,6 +63,39 @@ void testGlobalNoThrowPlacementOpNewBeforeOverload() {
 void testGlobalNoThrowPlacementExprNewBeforeOverload() {
   int *p = new(std::nothrow) int;
 } // leak-warning{{Potential leak of memory pointed to by 'p'}}
+
+//----- Standard pointer placement operators
+void testGlobalPointerPlacementNew() {
+  int i;
+  void *p1 = operator new(0, &i); // no leak: placement new never allocates
+  void *p2 = operator new[](0, &i); // no leak
+  int *p3 = new(&i) int; // no leak
+  int *p4 = new(&i) int[0]; // no leak
+}
+
+template<typename T>
+void clang_analyzer_dump(T x);
+
+void testPlacementNewBufValue() {
+  int i = 10;
+  int *p = new(&i) int;
+  clang_analyzer_dump(p); // inspection-warning{{&i}}
+  clang_analyzer_dump(*p); // inspection-warning{{10}}
+}
+
+void testPlacementNewBufValueExplicitOp() {
+  int i = 10;
+  int *p = (int*)operator new(sizeof(int), &i);
+  clang_analyzer_dump(p); // inspection-warning{{&i}}
+  clang_analyzer_dump(*p); // inspection-warning{{10}}
+}
+
+void testPlacementArrNewBufValueExplicitArrOp() {
+  int i = 10;
+  int *p = (int*)operator new[](sizeof(int), &i);
+  clang_analyzer_dump(p); // inspection-warning{{&i}}
+  clang_analyzer_dump(*p); // inspection-warning{{10}}
+}
 
 //----- Other cases
 void testNewMemoryIsInHeap() {
