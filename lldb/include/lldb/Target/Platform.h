@@ -30,7 +30,7 @@
 #include "lldb/Utility/Timeout.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserIDResolver.h"
-#include "lldb/Utility/XcodeSDKPath.h"
+#include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 

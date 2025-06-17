@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#include "lldb/Utility/XcodeSDKPath.h"
+#include "lldb/Utility/XcodeSDK.h"
 
 #include <string>
 
