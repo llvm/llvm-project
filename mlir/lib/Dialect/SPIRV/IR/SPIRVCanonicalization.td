@@ -75,3 +75,11 @@ def ConvertComparisonIntoClamp2_#CmpClampPair[0] : Pat<
         )),
     (CmpClampPair[1] $input, $min, $max)>;
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Length -> spirv.GL.FAbs
+//===----------------------------------------------------------------------===//
+
+def ConvertGLLengthToGLFAbs : Pat<
+    (SPIRV_GLLengthOp SPIRV_Float:$operand),
+    (SPIRV_GLFAbsOp $operand)>;
