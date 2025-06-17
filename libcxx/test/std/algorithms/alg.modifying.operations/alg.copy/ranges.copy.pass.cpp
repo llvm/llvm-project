@@ -101,7 +101,7 @@ constexpr void test_iterators() {
 }
 // clang-format on
 
-#if TEST_STD_VER >= 23
+#if TEST_STD_VER >= 23 // vector<bool>::iterator is not an output_iterator before C++23
 constexpr bool test_vector_bool(std::size_t N) {
   std::vector<bool> in(N, false);
   for (std::size_t i = 0; i < N; i += 2)
@@ -121,7 +121,109 @@ constexpr bool test_vector_bool(std::size_t N) {
 
   return true;
 }
+
+template <std::size_t N>
+struct CopyFromIterToBitIter {
+  std::array<bool, N> in;
+
+  template <class Iter>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    for (std::size_t i = 0; i < in.size(); i += 2)
+      in[i] = true;
+
+    { // Aligned
+      std::vector<bool> out(N);
+      std::ranges::copy(Iter(in.data()), Iter(in.data() + N), out.begin());
+      for (std::size_t i = 0; i < N; ++i)
+        assert(out[i] == static_cast<bool>(in[i]));
+    }
+    { // Unaligned
+      std::vector<bool> out(N + 8);
+      std::ranges::copy(Iter(in.data()), Iter(in.data() + N), out.begin() + 4);
+      for (std::size_t i = 0; i < N; ++i)
+        assert(out[i + 4] == static_cast<bool>(in[i]));
+    }
+  }
+};
 #endif
+
+// Test std::copy with segmented iterators: deque<T>::iterator, join_view::iterator
+/*TEST_CONSTEXPR_CXX26*/ void
+test_segmented_iterator() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::deque is constexpr
+  // std::deque iterator
+  { // Copy from segmented input to contiguous output (deque<int> to vector<int>)
+    std::deque<int> in(20);
+    for (std::size_t i = 0; i < in.size(); ++i)
+      in[i] = i;
+    std::vector<int> out(in.size());
+    std::ranges::copy(in, out.begin());
+    assert(std::equal(in.begin(), in.end(), out.begin()));
+  }
+  { // Copy from contiguous input to segmented output (vector<int> to deque<int>)
+    std::vector<int> in(20);
+    for (std::size_t i = 0; i < in.size(); ++i)
+      in[i] = i;
+    std::deque<int> out(in.size());
+    std::ranges::copy(in, out.begin());
+    assert(std::equal(in.begin(), in.end(), out.begin()));
+  }
+  { // Copy from segmented input to segmented output (deque<int> to deque<int>)
+    std::deque<int> in(20);
+    for (std::size_t i = 0; i < in.size(); ++i)
+      in[i] = i;
+    std::deque<int> out(in.size());
+    std::ranges::copy(in, out.begin());
+    assert(in == out);
+  }
+#if TEST_STD_VER >= 23
+  { // Copy from segmented input to vector<bool> output
+    std::deque<bool> in(199, false);
+    for (std::size_t i = 0; i < in.size(); i += 2)
+      in[i] = true;
+    std::vector<bool> out(in.size());
+    std::ranges::copy(in, out.begin());
+    assert(std::equal(in.begin(), in.end(), out.begin()));
+  }
+#endif // TEST_STD_VER >= 23
+  {    // Copy from vector<bool> input to segmented output
+    std::vector<bool> in(199, false);
+    for (std::size_t i = 0; i < in.size(); i += 2)
+      in[i] = true;
+    std::deque<bool> out(in.size());
+    std::ranges::copy(in, out.begin());
+    assert(std::equal(in.begin(), in.end(), out.begin()));
+  }
+
+#if TEST_STD_VER >= 20
+  // join_view iterator
+  { // Copy from segmented input to contiguous output (join_view to vector<int>)
+    std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {0, 0}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
+    auto jv = std::ranges::join_view(v);
+    std::vector<int> expected(jv.begin(), jv.end());
+    std::vector<int> out(expected.size());
+    std::ranges::copy(jv, out.begin());
+    assert(out == expected);
+  }
+  { // Copy from segmented input to segmented output (join_view to deque)
+    std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {0, 0}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
+    auto jv = std::ranges::join_view(v);
+    std::deque<int> expected(jv.begin(), jv.end());
+    std::deque<int> out(expected.size());
+    std::ranges::copy(jv, out.begin());
+    assert(out == expected);
+  }
+#endif // TEST_STD_VER >= 20
+#if TEST_STD_VER >= 23
+  { // Copy from segmented input to vector<bool> output
+    std::vector<std::vector<int>> v{{1, 1}, {1, 0, 1}, {0, 0}, {1, 1, 1}, {1}, {1, 1, 1, 1}, {0, 0, 1, 1, 0, 1, 1}};
+    auto jv = std::ranges::join_view(v);
+    std::vector<bool> expected(jv.begin(), jv.end());
+    std::vector<bool> out(expected.size());
+    std::ranges::copy(jv, out.begin());
+    assert(out == expected);
+  }
+#endif // TEST_STD_VER >= 23
+}
 
 constexpr bool test() {
   types::for_each(types::forward_iterator_list<int*>{}, []<class Out>() {
@@ -385,7 +487,18 @@ constexpr bool test() {
         assert(out[i] == false);
     }
   }
-#endif
+
+  { // Test std::ranges::copy when copying from forward_iterators (and above) to vector<bool> iterator
+    types::for_each(types::forward_iterator_list<bool*>(), CopyFromIterToBitIter<8>());
+    types::for_each(types::forward_iterator_list<bool*>(), CopyFromIterToBitIter<19>());
+    types::for_each(types::forward_iterator_list<bool*>(), CopyFromIterToBitIter<32>());
+    types::for_each(types::forward_iterator_list<bool*>(), CopyFromIterToBitIter<64>());
+    types::for_each(types::forward_iterator_list<bool*>(), CopyFromIterToBitIter<299>());
+  }
+#endif // TEST_STD_VER >= 23
+
+  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+    test_segmented_iterator();
 
   return true;
 }

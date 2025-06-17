@@ -51,25 +51,6 @@ constexpr auto wrap_input(std::vector<T>& input) {
 }
 
 template <class Iter, class Sent>
-class forward_range_wrapper {
-public:
-  using _Iter = forward_iterator<Iter>;
-  using _Sent = sentinel_wrapper<_Iter>;
-
-  forward_range_wrapper() = default;
-  forward_range_wrapper(Iter begin, Iter end) : begin_(std::move(begin)), end_(std::move(end)) {}
-  _Iter begin() { return _Iter(std::move(begin_)); }
-  _Sent end() { return _Sent(_Iter(std::move(end_))); }
-
-private:
-  Iter begin_;
-  Sent end_;
-};
-
-template <class Iter, class Sent>
-forward_range_wrapper(Iter, Sent) -> forward_range_wrapper<Iter, Sent>;
-
-template <class Iter, class Sent>
 class random_access_range_wrapper {
 public:
   using _Iter = cpp20_random_access_iterator<Iter>;
