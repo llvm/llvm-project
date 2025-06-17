@@ -15,6 +15,7 @@
 #include "flang/Parser/unparse.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Semantics/symbol-set-closure.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/FileSystem.h"
@@ -224,70 +225,9 @@ std::string ModFileWriter::GetAsString(const Symbol &symbol) {
 // referenced directly from other modules; they may require new USE
 // associations.
 static void HarvestSymbolsNeededFromOtherModules(
-    SourceOrderedSymbolSet &, const Scope &);
-static void HarvestSymbolsNeededFromOtherModules(
-    SourceOrderedSymbolSet &set, const Symbol &symbol, const Scope &scope) {
-  auto HarvestBound{[&](const Bound &bound) {
-    if (const auto &expr{bound.GetExplicit()}) {
-      for (SymbolRef ref : evaluate::CollectSymbols(*expr)) {
-        set.emplace(*ref);
-      }
-    }
-  }};
-  auto HarvestShapeSpec{[&](const ShapeSpec &shapeSpec) {
-    HarvestBound(shapeSpec.lbound());
-    HarvestBound(shapeSpec.ubound());
-  }};
-  auto HarvestArraySpec{[&](const ArraySpec &arraySpec) {
-    for (const auto &shapeSpec : arraySpec) {
-      HarvestShapeSpec(shapeSpec);
-    }
-  }};
-
-  if (symbol.has<DerivedTypeDetails>()) {
-    if (symbol.scope()) {
-      HarvestSymbolsNeededFromOtherModules(set, *symbol.scope());
-    }
-  } else if (const auto &generic{symbol.detailsIf<GenericDetails>()};
-             generic && generic->derivedType()) {
-    const Symbol &dtSym{*generic->derivedType()};
-    if (dtSym.has<DerivedTypeDetails>()) {
-      if (dtSym.scope()) {
-        HarvestSymbolsNeededFromOtherModules(set, *dtSym.scope());
-      }
-    } else {
-      CHECK(dtSym.has<UseDetails>() || dtSym.has<UseErrorDetails>());
-    }
-  } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    HarvestArraySpec(object->shape());
-    HarvestArraySpec(object->coshape());
-    if (IsNamedConstant(symbol) || scope.IsDerivedType()) {
-      if (object->init()) {
-        for (SymbolRef ref : evaluate::CollectSymbols(*object->init())) {
-          set.emplace(*ref);
-        }
-      }
-    }
-  } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (proc->init() && *proc->init() && scope.IsDerivedType()) {
-      set.emplace(**proc->init());
-    }
-  } else if (const auto *subp{symbol.detailsIf<SubprogramDetails>()}) {
-    for (const Symbol *dummy : subp->dummyArgs()) {
-      if (dummy) {
-        HarvestSymbolsNeededFromOtherModules(set, *dummy, scope);
-      }
-    }
-    if (subp->isFunction()) {
-      HarvestSymbolsNeededFromOtherModules(set, subp->result(), scope);
-    }
-  }
-}
-
-static void HarvestSymbolsNeededFromOtherModules(
     SourceOrderedSymbolSet &set, const Scope &scope) {
-  for (const auto &[_, symbol] : scope) {
-    HarvestSymbolsNeededFromOtherModules(set, *symbol, scope);
+  for (const Symbol &symbol : CollectAllDependences(scope)) {
+    set.insert(symbol);
   }
 }
 
@@ -369,7 +309,7 @@ void ModFileWriter::PutSymbols(
   PrepareRenamings(scope);
   SourceOrderedSymbolSet modules;
   CollectSymbols(scope, sorted, uses, modules);
-  // Write module files for dependencies first so that their
+  // Write module files for dependences first so that their
   // hashes are known.
   for (const Symbol &mod : modules) {
     if (hermeticModules) {

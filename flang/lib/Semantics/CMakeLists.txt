@@ -46,6 +46,7 @@ add_flang_library(FortranSemantics
   scope.cpp
   semantics.cpp
   symbol.cpp
+  symbol-set-closure.cpp
   tools.cpp
   type.cpp
   unparse-with-symbols.cpp
