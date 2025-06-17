@@ -2995,10 +2995,11 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
 
   if (IsZeroCmp && ST->hasVInstructions()) {
     unsigned VLenB = ST->getRealMinVLen() / 8;
-    // The minimum size should be `XLen / 8 + 1`.
+    // The minimum size should be `XLen / 8 + 1`, and the maxinum size should be
+    // `VLenB * MaxLMUL` so that it fits in a single register group.
     unsigned MinSize = ST->getXLen() / 8 + 1;
-    for (unsigned Size = MinSize;
-         Size <= VLenB * ST->getMaxLMULForFixedLengthVectors(); Size++)
+    unsigned MaxSize = VLenB * ST->getMaxLMULForFixedLengthVectors();
+    for (unsigned Size = MinSize; Size <= MaxSize; Size++)
       Options.LoadSizes.insert(Options.LoadSizes.begin(), Size);
   }
   return Options;
