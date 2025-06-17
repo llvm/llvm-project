@@ -75,8 +75,8 @@ gpu.func @subgroup_load_nd(%src: memref<8x16xf16>) {
   gpu.return
 }
 
-// CHECK: func @lane_load_nd(%[[arg0:.*]]: memref<8x16xf16>) {
-gpu.func @lane_load_nd(%src: memref<8x16xf16>) {
+// CHECK: func @simt_load_nd(%[[arg0:.*]]: memref<8x16xf16>) {
+gpu.func @simt_load_nd(%src: memref<8x16xf16>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0[0, 0] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
   // CHECK: %[[R1:.*]] = xegpu.load_nd %[[R0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<8x16xf16> -> vector<8xf16>
@@ -94,8 +94,8 @@ gpu.func @subgroup_load_nd_2(%src: memref<8x16xf16>) {
   gpu.return
 }
 
-// CHECK: func @lane_load_nd_2(%[[arg0:.*]]: memref<8x16xf16>) {
-gpu.func @lane_load_nd_2(%src: memref<8x16xf16>) {
+// CHECK: func @simt_load_nd_2(%[[arg0:.*]]: memref<8x16xf16>) {
+gpu.func @simt_load_nd_2(%src: memref<8x16xf16>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0[0, 0] : memref<8x16xf16> -> !xegpu.tensor_desc<16xf16>
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<8x16xf16> -> !xegpu.tensor_desc<16xf16>
   // CHECK: %[[R1:.*]] = xegpu.load_nd %[[R0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<16xf16> -> vector<1xf16>
@@ -112,8 +112,8 @@ gpu.func @subgroup_load_nd_3(%src: memref<24x32xf32>) {
   gpu.return
 }
 
-// CHECK: func @lane_load_nd_3(%[[arg0:.*]]: memref<24x32xf32>) {
-gpu.func @lane_load_nd_3(%src: memref<24x32xf32>) {
+// CHECK: func @simt_load_nd_3(%[[arg0:.*]]: memref<24x32xf32>) {
+gpu.func @simt_load_nd_3(%src: memref<24x32xf32>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf32>
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf32>
   // CHECK: %[[R1:.*]] = xegpu.load_nd %[[R0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<8x16xf32> -> vector<8xf32>
@@ -130,8 +130,8 @@ gpu.func @subgroup_load_nd_4(%src: memref<24x32xf16>) {
   gpu.return
 }
 
-// CHECK: func @lane_load_nd_4(%[[arg0:.*]]: memref<24x32xf16>) {
-gpu.func @lane_load_nd_4(%src: memref<24x32xf16>) {
+// CHECK: func @simt_load_nd_4(%[[arg0:.*]]: memref<24x32xf16>) {
+gpu.func @simt_load_nd_4(%src: memref<24x32xf16>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<16x16xf16>
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<16x16xf16>
   // CHECK: %[[R1:.*]] = xegpu.load_nd %[[R0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<16x16xf16> -> vector<16xf16>
@@ -148,8 +148,8 @@ gpu.func @subgroup_load_nd_5(%src: memref<24x32xf32>) {
   gpu.return
 }
 
-// CHECK: func @lane_load_nd_5(%[[arg0:.*]]: memref<24x32xf32>) {
-gpu.func @lane_load_nd_5(%src: memref<24x32xf32>) {
+// CHECK: func @simt_load_nd_5(%[[arg0:.*]]: memref<24x32xf32>) {
+gpu.func @simt_load_nd_5(%src: memref<24x32xf32>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<32xf32>
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<32xf32>
   // CHECK: %[[R1:.*]] = xegpu.load_nd %[[R0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<32xf32> -> vector<2xf32>
@@ -166,8 +166,8 @@ gpu.func @subgroup_load_nd_6(%src: memref<24x32xf16>) {
   gpu.return
 }
 
-// CHECK: func @lane_load_nd_6(%[[arg0:.*]]: memref<24x32xf16>) {
-gpu.func @lane_load_nd_6(%src: memref<24x32xf16>) {
+// CHECK: func @simt_load_nd_6(%[[arg0:.*]]: memref<24x32xf16>) {
+gpu.func @simt_load_nd_6(%src: memref<24x32xf16>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>>
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 2>>
   // CHECK: %[[R1:.*]] = xegpu.load_nd %[[R0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>> -> vector<32xf16>
@@ -185,8 +185,8 @@ gpu.func @subgroup_load_nd_7(%src: memref<24x32xf16>) {
   gpu.return
 }
 
-// CHECK: func @lane_load_nd_7(%[[arg0:.*]]: memref<24x32xf16>) {
-gpu.func @lane_load_nd_7(%src: memref<24x32xf16>) {
+// CHECK: func @simt_load_nd_7(%[[arg0:.*]]: memref<24x32xf16>) {
+gpu.func @simt_load_nd_7(%src: memref<24x32xf16>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>>
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 2>>
   // CHECK: %[[R1:.*]] = xegpu.load_nd %[[R0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>> -> vector<32xf16>
@@ -204,8 +204,8 @@ gpu.func @subgroup_load_nd_8(%src: memref<24x32xf32>) {
   gpu.return
 }
 
-// CHECK: func @lane_load_nd_8(%[[arg0:.*]]: memref<24x32xf32>) {
-gpu.func @lane_load_nd_8(%src: memref<24x32xf32>) {
+// CHECK: func @simt_load_nd_8(%[[arg0:.*]]: memref<24x32xf32>) {
+gpu.func @simt_load_nd_8(%src: memref<24x32xf32>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<16x8xf32>
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<16x8xf32>
   // CHECK: %[[R1:.*]] = xegpu.load_nd %[[R0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, transpose = array<i64: 1, 0>}> : !xegpu.tensor_desc<16x8xf32> -> vector<8xf32>
@@ -224,8 +224,8 @@ gpu.func @subgroup_store_nd(%dst: memref<24x32xf16>) {
   gpu.return
 }
 
-// CHECK: func @lane_store_nd(%[[arg0:.*]]: memref<24x32xf16>) {
-gpu.func @lane_store_nd(%src: memref<24x32xf16>) {
+// CHECK: func @simt_store_nd(%[[arg0:.*]]: memref<24x32xf16>) {
+gpu.func @simt_store_nd(%src: memref<24x32xf16>) {
   // CHECK: %[[C:.*]] = arith.constant dense<1.000000e+00> : vector<48xf16>
   %1 = arith.constant dense<1.0>: vector<48xf16>
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16>
@@ -249,8 +249,8 @@ gpu.func @subgroup_store_nd_2(%dst: memref<24x32xf16>) {
 }
 
 
-// CHECK: func @lane_store_nd_2(%[[arg0:.*]]: memref<24x32xf16>) {
-gpu.func @lane_store_nd_2(%src: memref<24x32xf16>) {
+// CHECK: func @simt_store_nd_2(%[[arg0:.*]]: memref<24x32xf16>) {
+gpu.func @simt_store_nd_2(%src: memref<24x32xf16>) {
   // CHECK: %[[C:.*]] = arith.constant dense<1.000000e+00> : vector<2xf16>
   %1 = arith.constant dense<1.0>: vector<2xf16>
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<32xf16>
@@ -323,8 +323,8 @@ gpu.func @subgroup_load(%src: ui64) {
   gpu.return
 }
 
-// CHECK: gpu.func @lane_load(%[[arg0:.*]]: ui64) {
-gpu.func @lane_load(%src: ui64) {
+// CHECK: gpu.func @simt_load(%[[arg0:.*]]: ui64) {
+gpu.func @simt_load(%src: ui64) {
   //CHECK: %[[cst:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   //CHECK: %[[cst1:.*]] = arith.constant dense<true> : vector<4xi1>
@@ -349,8 +349,8 @@ gpu.func @subgroup_load_2(%src: ui64) {
   gpu.return
 }
 
-// CHECK: gpu.func @lane_load_2(%[[arg0:.*]]: ui64) {
-gpu.func @lane_load_2(%src: ui64) {
+// CHECK: gpu.func @simt_load_2(%[[arg0:.*]]: ui64) {
+gpu.func @simt_load_2(%src: ui64) {
   //CHECK: %[[cst:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   //CHECK: %[[cst1:.*]] = arith.constant dense<true> : vector<4xi1>
@@ -375,8 +375,8 @@ gpu.func @subgroup_load_3(%src: ui64) {
   gpu.return
 }
 
-// CHECK: gpu.func @lane_load_3(%[[arg0:.*]]: ui64) {
-gpu.func @lane_load_3(%src: ui64) {
+// CHECK: gpu.func @simt_load_3(%[[arg0:.*]]: ui64) {
+gpu.func @simt_load_3(%src: ui64) {
   //CHECK: %[[cst:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   //CHECK: %[[cst1:.*]] = arith.constant dense<true> : vector<4xi1>
@@ -405,8 +405,8 @@ gpu.func @subgroup_store(%src: ui64) {
 
 
 
-// CHECK: gpu.func @lane_store(%[[arg0:.*]]: ui64) {
-gpu.func @lane_store(%src: ui64) {
+// CHECK: gpu.func @simt_store(%[[arg0:.*]]: ui64) {
+gpu.func @simt_store(%src: ui64) {
   //CHECK: %[[cst:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   //CHECK: %[[cst1:.*]] = arith.constant dense<true> : vector<4xi1>
@@ -437,8 +437,8 @@ gpu.func @subgroup_store_2(%src: ui64) {
 
 
 
-// CHECK: gpu.func @lane_store_2(%[[arg0:.*]]: ui64) {
-gpu.func @lane_store_2(%src: ui64) {
+// CHECK: gpu.func @simt_store_2(%[[arg0:.*]]: ui64) {
+gpu.func @simt_store_2(%src: ui64) {
   //CHECK: %[[cst:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   //CHECK: %[[cst1:.*]] = arith.constant dense<true> : vector<4xi1>
@@ -468,8 +468,8 @@ gpu.func @subgroup_store_3(%src: ui64) {
 }
 
 
-// CHECK: gpu.func @lane_store_3(%[[arg0:.*]]: ui64) {
-gpu.func @lane_store_3(%src: ui64) {
+// CHECK: gpu.func @simt_store_3(%[[arg0:.*]]: ui64) {
+gpu.func @simt_store_3(%src: ui64) {
   //CHECK: %[[cst:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   //CHECK: %[[cst1:.*]] = arith.constant dense<true> : vector<4xi1>
@@ -515,8 +515,8 @@ gpu.func @subgroup_dpas(%a : vector<8x16xf16>, %b: vector<16x16xf16>) {
   gpu.return
 }
 
-// CHECK: gpu.func @lane_dpas(%[[arg0:.*]]: vector<8xf16>, %[[arg1:.*]]: vector<16xf16>)
-gpu.func @lane_dpas(%a : vector<8xf16>, %b: vector<16xf16>) {
+// CHECK: gpu.func @simt_dpas(%[[arg0:.*]]: vector<8xf16>, %[[arg1:.*]]: vector<16xf16>)
+gpu.func @simt_dpas(%a : vector<8xf16>, %b: vector<16xf16>) {
   // CHECK: xegpu.dpas %[[arg0]], %[[arg1]] : vector<8xf16>, vector<16xf16> -> vector<8xf32>
   %1 = xegpu.dpas %a, %b : vector<8xf16>, vector<16xf16> -> vector<8xf32>
   gpu.return
@@ -529,8 +529,8 @@ gpu.func @subgroup_dpas_packed_b(%a : vector<8x16xf16>, %b: vector<8x16x2xf16>) 
   gpu.return
 }
 
-// CHECK: gpu.func @atomic_rmw(%[[arg0:.*]]: ui64, %[[arg1:.*]]: vector<16xf32>, %[[arg2:.*]]: vector<16xi1>)
-gpu.func @atomic_rmw(%src: ui64, %value : vector<16xf32>, %mask : vector<16xi1>) {
+// CHECK: gpu.func @subgroup_atomic_rmw(%[[arg0:.*]]: ui64, %[[arg1:.*]]: vector<16xf32>, %[[arg2:.*]]: vector<16xi1>)
+gpu.func @subgroup_atomic_rmw(%src: ui64, %value : vector<16xf32>, %mask : vector<16xi1>) {
   //CHECK: %[[c:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xindex>
   %c = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xindex>
   //CHECK: %[[R0:.*]] = xegpu.create_tdesc %[[arg0]], %[[c]] : ui64, vector<16xindex> -> !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>
