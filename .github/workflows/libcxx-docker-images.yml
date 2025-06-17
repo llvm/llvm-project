@@ -1,0 +1,12 @@
+# This file defines the Docker images used by various self-hosted runner groups used
+# in the libc++ pre-merge testing pipeline.
+#
+# The images are specified this way instead of being in the workflow file due to a
+# Kubernetes bug, as described in https://discourse.llvm.org/t/rfc-migrating-libc-premerge-testing-to-new-llvm-premerge-testing-infrastructure.
+#
+# When updating this file, the self-hosted runner sets are going to pick up the
+# specified image after a short delay. The Docker images used are always the
+# ones on the 'main' branch of the official LLVM GitHub repository.
+libcxx-runner-set-current: ghcr.io/llvm/libcxx-linux-builder:b060022103f551d8ca1dad84122ef73927c86512
+libcxx-runner-set-next: none
+libcxx-runner-set-release: ghcr.io/llvm/libcxx-linux-builder:d8a0709b1090350a7fe3604d8ab78c7d62f10698
