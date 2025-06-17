@@ -261,7 +261,6 @@ public:
         .Case("bswap32", true)
         .Case("bswap64", true)
         .Case("goto", true)
-        .Case("gotol", true)
         .Case("ll", true)
         .Case("skb", true)
         .Case("s", true)
