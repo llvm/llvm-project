@@ -8,11 +8,10 @@
 define i32 @masked_merge0_demorgan(i32 %a0, i32 %a1, i32 %a2) {
 ; NOBMI-LABEL: masked_merge0_demorgan:
 ; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    orl %edi, %edx
-; NOBMI-NEXT:    movl %edi, %eax
-; NOBMI-NEXT:    notl %eax
-; NOBMI-NEXT:    orl %esi, %eax
-; NOBMI-NEXT:    andl %edx, %eax
+; NOBMI-NEXT:    movl %esi, %eax
+; NOBMI-NEXT:    xorl %edx, %eax
+; NOBMI-NEXT:    andl %edi, %eax
+; NOBMI-NEXT:    xorl %edx, %eax
 ; NOBMI-NEXT:    retq
 ;
 ; BMI-LABEL: masked_merge0_demorgan:
@@ -29,15 +28,22 @@ define i32 @masked_merge0_demorgan(i32 %a0, i32 %a1, i32 %a2) {
 }
 
 define i16 @masked_merge1_demorgan(i16 %a0, i16 %a1, i16 %a2) {
-; CHECK-LABEL: masked_merge1_demorgan:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    orl %edi, %edx
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    andl %edx, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    retq
+; NOBMI-LABEL: masked_merge1_demorgan:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    movl %esi, %eax
+; NOBMI-NEXT:    xorl %edx, %eax
+; NOBMI-NEXT:    andl %edi, %eax
+; NOBMI-NEXT:    xorl %edx, %eax
+; NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: masked_merge1_demorgan:
+; BMI:       # %bb.0:
+; BMI-NEXT:    andnl %edx, %edi, %eax
+; BMI-NEXT:    andl %edi, %esi
+; BMI-NEXT:    orl %esi, %eax
+; BMI-NEXT:    # kill: def $ax killed $ax killed $eax
+; BMI-NEXT:    retq
   %not = xor i16 %a0, -1
   %or0 = or i16 %not, %a1
   %or1 = or i16 %a0, %a2
@@ -48,11 +54,8 @@ define i16 @masked_merge1_demorgan(i16 %a0, i16 %a1, i16 %a2) {
 define i8 @masked_merge2_demorgan(i8 %a0, i8 %a1, i8 %a2) {
 ; CHECK-LABEL: masked_merge2_demorgan:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notb %al
-; CHECK-NEXT:    orb %sil, %al
-; CHECK-NEXT:    orb %sil, %dil
-; CHECK-NEXT:    andb %dil, %al
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %not = xor i8 %a0, -1
   %or0 = or i8 %not, %a1
@@ -64,13 +67,12 @@ define i8 @masked_merge2_demorgan(i8 %a0, i8 %a1, i8 %a2) {
 define i64 @masked_merge3_demorgan(i64 %a0, i64 %a1, i64 %a2) {
 ; NOBMI-LABEL: masked_merge3_demorgan:
 ; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    movq %rsi, %rax
 ; NOBMI-NEXT:    notq %rdx
-; NOBMI-NEXT:    orq %rdi, %rdx
-; NOBMI-NEXT:    movq %rdi, %rax
+; NOBMI-NEXT:    xorq %rdx, %rax
 ; NOBMI-NEXT:    notq %rax
-; NOBMI-NEXT:    notq %rsi
-; NOBMI-NEXT:    orq %rsi, %rax
-; NOBMI-NEXT:    andq %rdx, %rax
+; NOBMI-NEXT:    andq %rdi, %rax
+; NOBMI-NEXT:    xorq %rdx, %rax
 ; NOBMI-NEXT:    retq
 ;
 ; BMI-LABEL: masked_merge3_demorgan:
