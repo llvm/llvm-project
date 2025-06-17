@@ -16,8 +16,6 @@
 #include <optional>
 
 using namespace llvm;
-using namespace lldb;
-using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 using lldb_private::pp;
 using lldb_private::roundtrip;
