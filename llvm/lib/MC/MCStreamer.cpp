@@ -1249,6 +1249,20 @@ void MCStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
   emitULEB128Value(Diff);
 }
 
+MCDwarfLocListOffsetPairFragment *MCStreamer::emitDwarfLocListOffsetPairEntry(
+    int8_t OffsetPair, const MCSymbol *Base, const MCSymbol *Begin,
+    const MCSymbol *End, StringRef EnumEle) {
+  // Base impl: emit offsets independently, possibly resulting in multiple
+  // fragments.
+  AddComment(EnumEle);
+  emitInt8(OffsetPair);
+  AddComment("  starting offset");
+  emitAbsoluteSymbolDiffAsULEB128(Begin, Base);
+  AddComment("  ending offset");
+  emitAbsoluteSymbolDiffAsULEB128(End, Base);
+  return nullptr;
+}
+
 void MCStreamer::emitSubsectionsViaSymbols() {
   llvm_unreachable(
       "emitSubsectionsViaSymbols only supported on Mach-O targets");

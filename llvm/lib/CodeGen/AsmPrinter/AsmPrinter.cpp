@@ -3383,6 +3383,13 @@ void AsmPrinter::emitLabelDifferenceAsULEB128(const MCSymbol *Hi,
   OutStreamer->emitAbsoluteSymbolDiffAsULEB128(Hi, Lo);
 }
 
+MCDwarfLocListOffsetPairFragment *AsmPrinter::emitDwarfLocListOffsetPairEntry(
+    int8_t OffsetPair, const MCSymbol *Base, const MCSymbol *Begin,
+    const MCSymbol *End, StringRef EnumEle) {
+  return OutStreamer->emitDwarfLocListOffsetPairEntry(OffsetPair, Base, Begin,
+                                                      End, EnumEle);
+}
+
 /// EmitLabelPlusOffset - Emit something like ".long Label+Offset"
 /// where the size in bytes of the directive is specified by Size and Label
 /// specifies the label.  This implicitly uses .set if it is available.

@@ -296,6 +296,8 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     return cast<MCDwarfLineAddrFragment>(F).getContents().size();
   case MCFragment::FT_DwarfFrame:
     return cast<MCDwarfCallFrameFragment>(F).getContents().size();
+  case MCFragment::FT_DwarfLoclistEntry:
+    return cast<MCDwarfLocListOffsetPairFragment>(F).getContents().size();
   case MCFragment::FT_CVInlineLines:
     return cast<MCCVInlineLineTableFragment>(F).getContents().size();
   case MCFragment::FT_CVDefRange:
@@ -730,6 +732,12 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     OS << CF.getContents();
     break;
   }
+  case MCFragment::FT_DwarfLoclistEntry: {
+    const MCDwarfLocListOffsetPairFragment &OF =
+        cast<MCDwarfLocListOffsetPairFragment>(F);
+    OS << OF.getContents();
+    break;
+  }
   case MCFragment::FT_CVInlineLines: {
     const auto &OF = cast<MCCVInlineLineTableFragment>(F);
     OS << OF.getContents();
@@ -1150,6 +1158,49 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCDwarfCallFrameFragment &DF) {
   return OldSize != Data.size();
 }
 
+bool MCAssembler::relaxDwarfLoclistEntry(MCDwarfLocListOffsetPairFragment &DF) {
+  SmallVectorImpl<char> &Data = DF.getContents();
+  raw_svector_ostream OSE(Data);
+
+  int64_t DiffAInt, DiffBInt;
+  bool Abs = DF.StartOffset->evaluateKnownAbsolute(DiffAInt, *this);
+  assert(Abs && "We created a loc/range list entry with an invalid expression");
+
+  Abs = DF.EndOffset->evaluateKnownAbsolute(DiffBInt, *this);
+  assert(Abs && "We created a loc/range list entry with an invalid expression");
+  (void)Abs;
+
+  unsigned OldSize = Data.size();
+  Data.clear();
+
+  // We could track the list entry kind encoding in a field, but it so happens
+  // that LLE and RLE offset_pair encodings are both 0x4.
+  static_assert((unsigned)dwarf::DW_LLE_offset_pair ==
+                (unsigned)dwarf::DW_RLE_offset_pair);
+  // DWARVv5 p44.
+  // Each location list entry begins with a single byte identifying the kind of
+  // that entry, followed by zero or more operands depending on the kind.
+  OSE << static_cast<uint8_t>(dwarf::DW_LLE_offset_pair);
+  // DWARFv5 p45, 54.
+  // [DW_LLE_offset_pair and DW_RLE_offset_pair have] two unsigned LEB128
+  // operands. The values of these operands are the starting and ending
+  // offsets, respectively, relative to the applicable base address, that
+  // define the address range.
+  encodeULEB128(DiffAInt, OSE);
+  encodeULEB128(DiffBInt, OSE);
+
+  // DWARFv5 p45.
+  // [DW_LLE_offset_pair] operands are followed by a counted location
+  // description.
+  if (unsigned Sz = DF.LocationDescriptionExpr.size()) {
+    encodeULEB128(Sz, OSE);
+    Data.append(DF.LocationDescriptionExpr.begin(),
+                DF.LocationDescriptionExpr.begin() + Sz);
+  }
+
+  return OldSize != Data.size();
+}
+
 bool MCAssembler::relaxCVInlineLineTable(MCCVInlineLineTableFragment &F) {
   unsigned OldSize = F.getContents().size();
   getContext().getCVContext().encodeInlineLineTable(*this, F);
@@ -1198,6 +1249,8 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
     return relaxDwarfLineAddr(cast<MCDwarfLineAddrFragment>(F));
   case MCFragment::FT_DwarfFrame:
     return relaxDwarfCallFrameFragment(cast<MCDwarfCallFrameFragment>(F));
+  case MCFragment::FT_DwarfLoclistEntry:
+    return relaxDwarfLoclistEntry(cast<MCDwarfLocListOffsetPairFragment>(F));
   case MCFragment::FT_LEB:
     return relaxLEB(cast<MCLEBFragment>(F));
   case MCFragment::FT_BoundaryAlign:

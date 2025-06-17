@@ -3308,6 +3308,7 @@ static void emitRangeList(
     }
 
     for (const auto *RS : P.second) {
+      MCDwarfLocListOffsetPairFragment *LE = nullptr;
       const MCSymbol *Begin = RS->Begin;
       const MCSymbol *End = RS->End;
       assert(Begin && "Range without a begin symbol?");
@@ -3315,12 +3316,8 @@ static void emitRangeList(
       if (Base) {
         if (UseDwarf5) {
           // Emit offset_pair when we have a base.
-          Asm->OutStreamer->AddComment(StringifyEnum(OffsetPair));
-          Asm->emitInt8(OffsetPair);
-          Asm->OutStreamer->AddComment("  starting offset");
-          Asm->emitLabelDifferenceAsULEB128(Begin, Base);
-          Asm->OutStreamer->AddComment("  ending offset");
-          Asm->emitLabelDifferenceAsULEB128(End, Base);
+          LE = Asm->emitDwarfLocListOffsetPairEntry(
+              OffsetPair, Base, Begin, End, StringifyEnum(OffsetPair));
         } else {
           Asm->emitLabelDifference(Begin, Base, Size);
           Asm->emitLabelDifference(End, Base, Size);
@@ -3336,7 +3333,7 @@ static void emitRangeList(
         Asm->OutStreamer->emitSymbolValue(Begin, Size);
         Asm->OutStreamer->emitSymbolValue(End, Size);
       }
-      EmitPayload(*RS);
+      EmitPayload(*RS, LE);
     }
   }
 
@@ -3357,8 +3354,18 @@ static void emitLocList(DwarfDebug &DD, AsmPrinter *Asm, const DebugLocStream::L
                 dwarf::DW_LLE_offset_pair, dwarf::DW_LLE_startx_length,
                 dwarf::DW_LLE_end_of_list, llvm::dwarf::LocListEncodingString,
                 /* ShouldUseBaseAddress */ true,
-                [&](const DebugLocStream::Entry &E) {
-                  DD.emitDebugLocEntryLocation(E, List.CU);
+                [&](const DebugLocStream::Entry &E,
+                    MCDwarfLocListOffsetPairFragment *LLE) {
+                  if (LLE) {
+                    // We don't need to emit the length header if we're writing
+                    // to an entry fragment directly.
+                    std::vector<std::string> Comments;
+                    BufferByteStreamer S(LLE->LocationDescriptionExpr, Comments,
+                                         /*GenerateComments*/ false);
+                    DD.emitDebugLocEntry(S, E, List.CU);
+                  } else {
+                    DD.emitDebugLocEntryLocation(E, List.CU);
+                  }
                 });
 }
 
@@ -3579,13 +3586,12 @@ void DwarfDebug::emitDebugARanges() {
 /// Emit a single range list. We handle both DWARF v5 and earlier.
 static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm,
                           const RangeSpanList &List) {
-  emitRangeList(DD, Asm, List.Label, List.Ranges, *List.CU,
-                dwarf::DW_RLE_base_addressx, dwarf::DW_RLE_offset_pair,
-                dwarf::DW_RLE_startx_length, dwarf::DW_RLE_end_of_list,
-                llvm::dwarf::RangeListEncodingString,
-                List.CU->getCUNode()->getRangesBaseAddress() ||
-                    DD.getDwarfVersion() >= 5,
-                [](auto) {});
+  emitRangeList(
+      DD, Asm, List.Label, List.Ranges, *List.CU, dwarf::DW_RLE_base_addressx,
+      dwarf::DW_RLE_offset_pair, dwarf::DW_RLE_startx_length,
+      dwarf::DW_RLE_end_of_list, llvm::dwarf::RangeListEncodingString,
+      List.CU->getCUNode()->getRangesBaseAddress() || DD.getDwarfVersion() >= 5,
+      [](auto, auto) {});
 }
 
 void DwarfDebug::emitDebugRangesImpl(const DwarfFile &Holder, MCSection *Section) {

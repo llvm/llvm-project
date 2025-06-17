@@ -45,6 +45,7 @@ public:
     FT_Org,
     FT_Dwarf,
     FT_DwarfFrame,
+    FT_DwarfLoclistEntry,
     FT_LEB,
     FT_BoundaryAlign,
     FT_SymbolId,
@@ -135,6 +136,7 @@ public:
     case MCFragment::FT_Data:
     case MCFragment::FT_Dwarf:
     case MCFragment::FT_DwarfFrame:
+    case MCFragment::FT_DwarfLoclistEntry:
     case MCFragment::FT_PseudoProbe:
       return true;
     }
@@ -197,7 +199,8 @@ public:
     MCFragment::FragmentType Kind = F->getKind();
     return Kind == MCFragment::FT_Relaxable || Kind == MCFragment::FT_Data ||
            Kind == MCFragment::FT_CVDefRange || Kind == MCFragment::FT_Dwarf ||
-           Kind == MCFragment::FT_DwarfFrame;
+           Kind == MCFragment::FT_DwarfFrame ||
+           Kind == MCFragment::FT_DwarfLoclistEntry;
   }
 };
 
@@ -437,6 +440,29 @@ public:
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_DwarfFrame;
+  }
+};
+
+class MCContext;
+
+/// Represents a DWARF offset-pair kind location list or range list entry.
+/// Currently not suitable to use if either of the offsets require
+/// linker-relaxable relocations, which should be emitted as uleb fragments
+/// instead.
+/// LocationDescriptionExpr, which represents a DWARF location description,
+/// is only used for location list entries.
+class MCDwarfLocListOffsetPairFragment
+    : public MCEncodedFragmentWithFixups<16, 0> {
+public:
+  SmallVector<char, 8> LocationDescriptionExpr;
+  const MCExpr *StartOffset;
+  const MCExpr *EndOffset;
+
+  MCDwarfLocListOffsetPairFragment(MCContext &Context, const MCSymbol *Base,
+                                   const MCSymbol *Begin, const MCSymbol *End);
+
+  static bool classof(const MCFragment *F) {
+    return F->getKind() == MCFragment::FT_DwarfLoclistEntry;
   }
 };
 

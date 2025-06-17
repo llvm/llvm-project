@@ -122,6 +122,34 @@ void MCObjectStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
     MCStreamer::emitAbsoluteSymbolDiffAsULEB128(Hi, Lo);
 }
 
+MCDwarfLocListOffsetPairFragment *
+MCObjectStreamer::emitDwarfLocListOffsetPairEntry(int8_t OffsetPair,
+                                                  const MCSymbol *Base,
+                                                  const MCSymbol *Begin,
+                                                  const MCSymbol *End,
+                                                  StringRef EnumEle) {
+  // Heuristic: if we can emit one of the offsets as a constant now that
+  // that consumes less memory than creating a MCDwarfLocListOffsetPairFragment.
+  bool BeginOrEndInBaseFragment = Base->getFragment() == Begin->getFragment() ||
+                                  Base->getFragment() == End->getFragment();
+  // If the offset ulebs require linker-relaxable relocations then fall back to
+  // default uleb emission, rather than using MCDwarfLocListOffsetPairFragment.
+  // FIXME: Is there a better way to check this?
+  bool SameSection = &Base->getSection() == &End->getSection() &&
+                     &End->getSection() == &Begin->getSection();
+  bool MayBeLinkerRelaxable =
+      Base->getSection().isLinkerRelaxable() || !SameSection;
+  if (BeginOrEndInBaseFragment || MayBeLinkerRelaxable)
+    return MCStreamer::emitDwarfLocListOffsetPairEntry(OffsetPair, Base, Begin,
+                                                       End, EnumEle);
+
+  MCDwarfLocListOffsetPairFragment *Frag =
+      getContext().allocFragment<MCDwarfLocListOffsetPairFragment>(
+          getContext(), Base, Begin, End);
+  insert(Frag);
+  return Frag;
+}
+
 void MCObjectStreamer::reset() {
   if (Assembler) {
     Assembler->reset();
