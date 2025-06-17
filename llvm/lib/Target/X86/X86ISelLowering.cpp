@@ -1435,6 +1435,20 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::BITREVERSE, VT, Custom);
   }
 
+  // Vector min/max reductions
+  if (Subtarget.hasSSE41())
+  {
+    for (MVT VT : MVT::vector_valuetypes()) {
+      if (VT.getScalarType() == MVT::i8 || VT.getScalarType() == MVT::i16)
+      {
+        setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
+        setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
+        setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
+        setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
+      }
+    }
+  }
+
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX()) {
     bool HasInt256 = Subtarget.hasInt256();
 
@@ -25409,6 +25423,94 @@ static SDValue LowerEXTEND_VECTOR_INREG(SDValue Op,
   return SignExt;
 }
 
+// Create a min/max v8i16/v16i8 horizontal reduction with PHMINPOSUW.
+static SDValue createMinMaxReduction(SDValue Src, EVT TargetVT, SDLoc DL,
+                                     ISD::NodeType BinOp, SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget)
+{
+  assert(Subtarget.hasSSE41() && "The caller must check if SSE4.1 is available");
+
+  EVT SrcVT = Src.getValueType();
+  EVT SrcSVT = SrcVT.getScalarType();
+
+  if (SrcSVT != TargetVT || (SrcVT.getSizeInBits() % 128) != 0)
+    return SDValue();
+
+  // First, reduce the source down to 128-bit, applying BinOp to lo/hi.
+  while (SrcVT.getSizeInBits() > 128) {
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = splitVector(Src, DAG, DL);
+    SrcVT = Lo.getValueType();
+    Src = DAG.getNode(BinOp, DL, SrcVT, Lo, Hi);
+  }
+  assert(((SrcVT == MVT::v8i16 && TargetVT == MVT::i16) ||
+          (SrcVT == MVT::v16i8 && TargetVT == MVT::i8)) &&
+         "Unexpected value type");
+
+  // PHMINPOSUW applies to UMIN(v8i16), for SMIN/SMAX/UMAX we must apply a mask
+  // to flip the value accordingly.
+  SDValue Mask;
+  unsigned MaskEltsBits = TargetVT.getSizeInBits();
+  if (BinOp == ISD::SMAX)
+    Mask = DAG.getConstant(APInt::getSignedMaxValue(MaskEltsBits), DL, SrcVT);
+  else if (BinOp == ISD::SMIN)
+    Mask = DAG.getConstant(APInt::getSignedMinValue(MaskEltsBits), DL, SrcVT);
+  else if (BinOp == ISD::UMAX)
+    Mask = DAG.getAllOnesConstant(DL, SrcVT);
+
+  if (Mask)
+    Src = DAG.getNode(ISD::XOR, DL, SrcVT, Mask, Src);
+
+  // For v16i8 cases we need to perform UMIN on pairs of byte elements,
+  // shuffling each upper element down and insert zeros. This means that the
+  // v16i8 UMIN will leave the upper element as zero, performing zero-extension
+  // ready for the PHMINPOS.
+  if (TargetVT == MVT::i8) {
+    SDValue Upper = DAG.getVectorShuffle(
+        SrcVT, DL, Src, DAG.getConstant(0, DL, MVT::v16i8),
+        {1, 16, 3, 16, 5, 16, 7, 16, 9, 16, 11, 16, 13, 16, 15, 16});
+    Src = DAG.getNode(ISD::UMIN, DL, SrcVT, Src, Upper);
+  }
+
+  // Perform the PHMINPOS on a v8i16 vector,
+  Src = DAG.getBitcast(MVT::v8i16, Src);
+  Src = DAG.getNode(X86ISD::PHMINPOS, DL, MVT::v8i16, Src);
+  Src = DAG.getBitcast(SrcVT, Src);
+
+  if (Mask)
+    Src = DAG.getNode(ISD::XOR, DL, SrcVT, Mask, Src);
+
+  return DAG.getExtractVectorElt(DL, TargetVT, Src, 0);
+}
+
+static SDValue LowerVECTOR_REDUCE_MINMAX(SDValue Op,
+    const X86Subtarget& Subtarget,
+    SelectionDAG& DAG)
+{
+  ISD::NodeType BinOp;
+  switch (Op.getOpcode())
+  {
+    default: 
+      assert(false && "Expected min/max reduction");
+      break;
+    case ISD::VECREDUCE_UMIN:
+      BinOp = ISD::UMIN;
+      break;
+    case ISD::VECREDUCE_UMAX:
+      BinOp = ISD::UMAX;
+      break;
+    case ISD::VECREDUCE_SMIN:
+      BinOp = ISD::SMIN;
+      break;
+    case ISD::VECREDUCE_SMAX:
+      BinOp = ISD::SMAX;
+      break;
+  }
+
+  return createMinMaxReduction(Op->getOperand(0), Op.getValueType(), SDLoc(Op),
+      BinOp, DAG, Subtarget);
+}
+
 static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
                                 SelectionDAG &DAG) {
   MVT VT = Op->getSimpleValueType(0);
@@ -33620,6 +33722,11 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ZERO_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
     return LowerEXTEND_VECTOR_INREG(Op, Subtarget, DAG);
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_SMAX:
+    return LowerVECTOR_REDUCE_MINMAX(Op, Subtarget, DAG);
   case ISD::FP_TO_SINT:
   case ISD::STRICT_FP_TO_SINT:
   case ISD::FP_TO_UINT:
@@ -46192,60 +46299,8 @@ static SDValue combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
   if (!Src)
     return SDValue();
 
-  EVT SrcVT = Src.getValueType();
-  EVT SrcSVT = SrcVT.getScalarType();
-  if (SrcSVT != ExtractVT || (SrcVT.getSizeInBits() % 128) != 0)
-    return SDValue();
-
-  SDLoc DL(Extract);
-  SDValue MinPos = Src;
-
-  // First, reduce the source down to 128-bit, applying BinOp to lo/hi.
-  while (SrcVT.getSizeInBits() > 128) {
-    SDValue Lo, Hi;
-    std::tie(Lo, Hi) = splitVector(MinPos, DAG, DL);
-    SrcVT = Lo.getValueType();
-    MinPos = DAG.getNode(BinOp, DL, SrcVT, Lo, Hi);
-  }
-  assert(((SrcVT == MVT::v8i16 && ExtractVT == MVT::i16) ||
-          (SrcVT == MVT::v16i8 && ExtractVT == MVT::i8)) &&
-         "Unexpected value type");
-
-  // PHMINPOSUW applies to UMIN(v8i16), for SMIN/SMAX/UMAX we must apply a mask
-  // to flip the value accordingly.
-  SDValue Mask;
-  unsigned MaskEltsBits = ExtractVT.getSizeInBits();
-  if (BinOp == ISD::SMAX)
-    Mask = DAG.getConstant(APInt::getSignedMaxValue(MaskEltsBits), DL, SrcVT);
-  else if (BinOp == ISD::SMIN)
-    Mask = DAG.getConstant(APInt::getSignedMinValue(MaskEltsBits), DL, SrcVT);
-  else if (BinOp == ISD::UMAX)
-    Mask = DAG.getAllOnesConstant(DL, SrcVT);
-
-  if (Mask)
-    MinPos = DAG.getNode(ISD::XOR, DL, SrcVT, Mask, MinPos);
-
-  // For v16i8 cases we need to perform UMIN on pairs of byte elements,
-  // shuffling each upper element down and insert zeros. This means that the
-  // v16i8 UMIN will leave the upper element as zero, performing zero-extension
-  // ready for the PHMINPOS.
-  if (ExtractVT == MVT::i8) {
-    SDValue Upper = DAG.getVectorShuffle(
-        SrcVT, DL, MinPos, DAG.getConstant(0, DL, MVT::v16i8),
-        {1, 16, 3, 16, 5, 16, 7, 16, 9, 16, 11, 16, 13, 16, 15, 16});
-    MinPos = DAG.getNode(ISD::UMIN, DL, SrcVT, MinPos, Upper);
-  }
-
-  // Perform the PHMINPOS on a v8i16 vector,
-  MinPos = DAG.getBitcast(MVT::v8i16, MinPos);
-  MinPos = DAG.getNode(X86ISD::PHMINPOS, DL, MVT::v8i16, MinPos);
-  MinPos = DAG.getBitcast(SrcVT, MinPos);
-
-  if (Mask)
-    MinPos = DAG.getNode(ISD::XOR, DL, SrcVT, Mask, MinPos);
-
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT, MinPos,
-                     DAG.getVectorIdxConstant(0, DL));
+  return createMinMaxReduction(Src, ExtractVT, SDLoc(Extract),
+      BinOp, DAG, Subtarget);
 }
 
 // Attempt to replace an all_of/any_of/parity style horizontal reduction with a MOVMSK.

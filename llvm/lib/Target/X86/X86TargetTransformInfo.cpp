@@ -6575,6 +6575,25 @@ X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   return Options;
 }
 
+bool llvm::X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
+  switch (II->getIntrinsicID()) {
+  default:
+    return true;
+
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax:
+    auto *VType = cast<FixedVectorType>(II->getOperand(0)->getType());
+    auto SType = VType->getScalarType();
+    bool CanUsePHMINPOSUW = 
+        ST->hasSSE41() && II->getType() == SType &&
+        (VType->getPrimitiveSizeInBits() % 128) == 0 &&
+        (SType->isIntegerTy(8) || SType->isIntegerTy(16));
+    return !CanUsePHMINPOSUW;
+  }
+}
+
 bool X86TTIImpl::prefersVectorizedAddressing() const {
   return supportsGather();
 }
