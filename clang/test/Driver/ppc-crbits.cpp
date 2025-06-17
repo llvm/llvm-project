@@ -43,63 +43,6 @@
 // CHECK-CRBITS: "-target-feature" "+crbits"
 
 
-// RUN: %clang -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -emit-llvm \
-// RUN:   -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -mcrbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -mno-crbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-NOCRBITS
-
-// RUN: %clang -target powerpc64le-unknown-linux-gnu -mcpu=pwr9 -emit-llvm \
-// RUN:   -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc64le-unknown-linux-gnu -mcpu=pwr9 -mcrbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc64le-unknown-linux-gnu -mcpu=pwr9 -mno-crbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-NOCRBITS
-
-// RUN: %clang -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -emit-llvm \
-// RUN:   -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mcrbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mno-crbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-NOCRBITS
-
-// RUN: %clang -target powerpc64le-unknown-linux-gnu -mcpu=pwr7 -emit-llvm \
-// RUN:   -S %s -o - | FileCheck %s --check-prefix=HAS-NOCRBITS
-// RUN: %clang -target powerpc64le-unknown-linux-gnu -mcpu=pwr7 -mcrbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc64le-unknown-linux-gnu -mcpu=pwr7 -mno-crbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-NOCRBITS
-
-// RUN: %clang -target powerpc-ibm-aix -mcpu=pwr10 -emit-llvm \
-// RUN:   -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc-ibm-aix -mcpu=pwr10 -mcrbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc-ibm-aix -mcpu=pwr10 -mno-crbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-NOCRBITS
-
-// RUN: %clang -target powerpc-ibm-aix -mcpu=pwr9 -emit-llvm \
-// RUN:   -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc-ibm-aix -mcpu=pwr9 -mcrbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc-ibm-aix -mcpu=pwr9 -mno-crbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-NOCRBITS
-
-// RUN: %clang -target powerpc-ibm-aix -mcpu=pwr8 -emit-llvm \
-// RUN:   -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc-ibm-aix -mcpu=pwr8 -mcrbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc-ibm-aix -mcpu=pwr8 -mno-crbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-NOCRBITS
-
-// RUN: %clang -target powerpc-ibm-aix -mcpu=pwr7 -emit-llvm \
-// RUN:   -S %s -o - | FileCheck %s --check-prefix=HAS-NOCRBITS
-// RUN: %clang -target powerpc-ibm-aix -mcpu=pwr7 -mcrbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-CRBITS
-// RUN: %clang -target powerpc-ibm-aix -mcpu=pwr7 -mno-crbits \
-// RUN:   -emit-llvm -S %s -o - | FileCheck %s --check-prefix=HAS-NOCRBITS
-
-
 // HAS-CRBITS: main(
 // HAS-CRBITS: attributes #0 = {
 // HAS-CRBITS-SAME: +crbits

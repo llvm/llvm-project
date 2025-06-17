@@ -211,13 +211,6 @@ static std::string computeFSAdditions(StringRef FS, CodeGenOptLevel OL,
       FullFS = "+64bit";
   }
 
-  if (OL >= CodeGenOptLevel::Default) {
-    if (!FullFS.empty())
-      FullFS = "+crbits," + FullFS;
-    else
-      FullFS = "+crbits";
-  }
-
   if (OL != CodeGenOptLevel::None) {
     if (!FullFS.empty())
       FullFS = "+invariant-function-descriptors," + FullFS;

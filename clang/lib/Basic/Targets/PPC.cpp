@@ -559,11 +559,6 @@ bool PPCTargetInfo::initFeatureMap(
                                 .Case("pwr9", true)
                                 .Case("pwr8", true)
                                 .Default(false);
-  Features["crbits"] = llvm::StringSwitch<bool>(CPU)
-                                .Case("ppc64le", true)
-                                .Case("pwr9", true)
-                                .Case("pwr8", true)
-                                .Default(false);
   Features["vsx"] = llvm::StringSwitch<bool>(CPU)
                         .Case("ppc64le", true)
                         .Case("pwr9", true)
