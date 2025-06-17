@@ -13908,7 +13908,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
   // operand form.
   const SDNodeFlags Flags = N->getFlags();
   if ((Opc == ISD::FMINIMUM || Opc == ISD::FMAXIMUM) &&
-      !Subtarget->hasIEEEMinMax() && Flags.hasNoNaNs()) {
+      !Subtarget->hasIEEEMinimumMaximumInsts() && Flags.hasNoNaNs()) {
     unsigned NewOpc =
         Opc == ISD::FMINIMUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
     return DAG.getNode(NewOpc, SDLoc(N), VT, Op0, Op1, Flags);

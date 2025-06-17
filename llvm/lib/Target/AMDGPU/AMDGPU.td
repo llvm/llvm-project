@@ -146,7 +146,7 @@ def FeatureFmaMixInsts : SubtargetFeature<"fma-mix-insts",
 def FeatureIEEEMinimumMaximumInsts : SubtargetFeature<"ieee-minimum-maximum-insts",
   "HasIEEEMinimumMaximumInsts",
   "true",
-  "Has v_minimum/maximum_f16/f32/f64 and v_pk_minimum/maximum_f16 instructions"
+  "Has v_minimum/maximum_f16/f32/f64, v_minimummaximum/maximumminimum_f16/f32 and v_pk_minimum/maximum_f16 instructions"
 >;
 
 def FeatureMinimum3Maximum3F32 : SubtargetFeature<"minimum3-maximum3-f32",

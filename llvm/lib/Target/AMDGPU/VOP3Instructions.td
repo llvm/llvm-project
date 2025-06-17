@@ -1506,7 +1506,7 @@ let SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0 in {
   defm V_MINIMUMMAXIMUM_F32 : VOP3Inst<"v_minimummaximum_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
   defm V_MAXIMUMMINIMUM_F16 : VOP3Inst_t16<"v_maximumminimum_f16", VOP_F16_F16_F16_F16>;
   defm V_MINIMUMMAXIMUM_F16 : VOP3Inst_t16<"v_minimummaximum_f16", VOP_F16_F16_F16_F16>;
-} // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
+} // End SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0
 
 let SubtargetPredicate = HasDot9Insts, IsDOT=1 in {
   defm V_DOT2_F16_F16 :   VOP3Inst_t16_with_profiles<"v_dot2_f16_f16", VOP3_DOT_Profile<VOP_F16_V2F16_V2F16_F16>,
