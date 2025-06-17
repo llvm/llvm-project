@@ -7364,7 +7364,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         SDNodeFlags Flags;
         Flags.setExact(true);
         Res = DAG.getNode(ISD::SRL, DL, XLenVT, Res,
-                          DAG.getConstant(3 - Log2, DL, VT));
+                          DAG.getConstant(3 - Log2, DL, XLenVT), Flags);
       } else if (Log2 > 3) {
         Res = DAG.getNode(ISD::SHL, DL, XLenVT, Res,
                           DAG.getConstant(Log2 - 3, DL, XLenVT));
