@@ -846,7 +846,7 @@ struct ReadMemoryArguments {
 
   /// Offset (in bytes) to be applied to the reference location before reading
   /// data. Can be negative.
-  std::optional<int64_t> offset;
+  int64_t offset = 0;
 
   /// Number of bytes to read at the specified location and offset.
   uint64_t count;

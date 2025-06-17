@@ -770,7 +770,7 @@ TEST(ProtocolTypesTest, ReadMemoryArguments) {
   ReadMemoryArguments args;
   args.count = 20;
   args.memoryReference = 43962;
-  args.offset = std::nullopt;
+  args.offset = 0;
 
   llvm::Expected<ReadMemoryArguments> expected =
       parse<ReadMemoryArguments>(R"({"memoryReference":"-4000", "count": 20})");

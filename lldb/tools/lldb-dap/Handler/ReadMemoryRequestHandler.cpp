@@ -19,8 +19,7 @@ namespace lldb_dap {
 // `supportsReadMemoryRequest` is true
 llvm::Expected<protocol::ReadMemoryResponseBody>
 ReadMemoryRequestHandler::Run(const protocol::ReadMemoryArguments &args) const {
-  const lldb::addr_t raw_address =
-      args.memoryReference + args.offset.value_or(0);
+  const lldb::addr_t raw_address = args.memoryReference + args.offset;
 
   lldb::SBProcess process = dap.target.GetProcess();
   if (!lldb::SBDebugger::StateIsStoppedState(process.GetState()))
