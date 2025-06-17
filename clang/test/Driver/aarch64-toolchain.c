@@ -135,7 +135,8 @@
 
 // AARCH64-BAREMETAL-COMPILER-RT: "{{.*}}crt0.o"
 // AARCH64-BAREMETAL-COMPILER-RT: "{{.*}}clang_rt.crtbegin.o"
-// AARCH64-BAREMETAL-COMPILER-RT: "--start-group" "{{.*}}libclang_rt.builtins.a" "-lc" "-lgloss" "--end-group"
+// AARCH64-BAREMETAL-COMPILER-RT: "--start-group" "{{.*}}libclang_rt.builtins.a"
+// AARCH64-BAREMETAL-COMPILER-RT: "-lc" "-lgloss" "--end-group"
 // AARCH64-BAREMETAL-COMPILER-RT: "{{.*}}clang_rt.crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
