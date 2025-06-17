@@ -68,8 +68,7 @@ int CharacterConverter::push(char8_t utf8_byte) {
   // Any subsequent push
   // Adding 6 more bits so need to left shift
   if (num_ones == 1 && !isComplete()) {
-    char32_t byte =
-        utf8_byte & MASK_ENCODED_BITS;
+    char32_t byte = utf8_byte & MASK_ENCODED_BITS;
     state->partial = state->partial << ENCODED_BITS_PER_UTF8;
     state->partial |= byte;
     state->bytes_processed++;
