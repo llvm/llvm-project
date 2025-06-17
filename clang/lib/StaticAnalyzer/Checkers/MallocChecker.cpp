@@ -1376,7 +1376,8 @@ const Expr *getPlacementNewBufferArg(const CallExpr *CE,
   // Checking for signature:
   // void* operator new  ( std::size_t count, void* ptr );
   // void* operator new[]( std::size_t count, void* ptr );
-  if (CE->getNumArgs() != 2)
+  if (CE->getNumArgs() != 2 || (FD->getOverloadedOperator() != OO_New &&
+                                FD->getOverloadedOperator() != OO_Array_New))
     return nullptr;
   auto BuffType = FD->getParamDecl(1)->getType();
   if (BuffType.isNull() || !BuffType->isVoidPointerType())
