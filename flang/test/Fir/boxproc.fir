@@ -3,7 +3,7 @@
 // RUN: %if powerpc-registered-target %{tco --target=powerpc64le-unknown-linux-gnu %s | FileCheck %s --check-prefixes=CHECK,CHECK-PPC %}
 
 // CHECK-LABEL: define void @_QPtest_proc_dummy()
-// CHECK-AARCH64: %[[VAL_3:.*]] = alloca [36 x i8], i64 1, align 1
+// CHECK-AARCH64: %[[VAL_3:.*]] = alloca [32 x i8], i64 1, align 1
 // CHECK-X86:     %[[VAL_3:.*]] = alloca [32 x i8], i64 1, align 1
 // CHECK-PPC:     %[[VAL_3:.*]] = alloca [4{{[0-8]+}} x i8], i64 1, align 1
 // CHECK:         %[[VAL_1:.*]] = alloca { ptr }, i64 1, align 8
@@ -63,7 +63,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 }
 
 // CHECK-LABEL: define void @_QPtest_proc_dummy_char()
-// CHECK-AARCH64: %[[VAL_20:.*]] = alloca [36 x i8], i64 1, align 1
+// CHECK-AARCH64: %[[VAL_20:.*]] = alloca [32 x i8], i64 1, align 1
 // CHECK-X86:     %[[VAL_20:.*]] = alloca [32 x i8], i64 1, align 1
 // CHECK-PPC:     %[[VAL_20:.*]] = alloca [4{{[0-8]+}} x i8], i64 1, align 1
 // CHECK:         %[[VAL_2:.*]] = alloca { { ptr, i64 } }, i64 1, align 8

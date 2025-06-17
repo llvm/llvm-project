@@ -107,6 +107,7 @@ libc_test(
     deps = [
         "//libc:__support_fputil_fp_bits",
         "//libc:atof",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -206,6 +207,7 @@ libc_test_library(
         "//libc:__support_macros_properties_architectures",
         "//libc:errno",
         "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -251,6 +253,7 @@ libc_test(
     deps = [
         "//libc:__support_fputil_fp_bits",
         "//libc:strtof",
+        "//libc/test/UnitTest:errno_test_helpers",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -261,6 +264,7 @@ libc_test(
     deps = [
         "//libc:__support_fputil_fp_bits",
         "//libc:strtod",
+        "//libc/test/UnitTest:errno_test_helpers",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -272,5 +276,6 @@ libc_test(
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_uint128",
         "//libc:strtold",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
