@@ -239,8 +239,14 @@ static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
     return encodeULEB128(value, buf);
   case R_WASM_TABLE_INDEX_SLEB:
   case R_WASM_TABLE_INDEX_SLEB64:
+  case R_WASM_TABLE_INDEX_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_SLEB:
   case R_WASM_MEMORY_ADDR_SLEB64:
+  case R_WASM_MEMORY_ADDR_REL_SLEB:
+  case R_WASM_MEMORY_ADDR_REL_SLEB64:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB64:
+  case R_WASM_TABLE_INDEX_REL_SLEB:
     return encodeSLEB128(static_cast<int64_t>(value), buf);
   default:
     llvm_unreachable("unexpected relocation type");
@@ -256,11 +262,17 @@ static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
   case R_WASM_MEMORY_ADDR_LEB:
   case R_WASM_TABLE_NUMBER_LEB:
   case R_WASM_TABLE_INDEX_SLEB:
+  case R_WASM_TABLE_INDEX_REL_SLEB:
   case R_WASM_MEMORY_ADDR_SLEB:
+  case R_WASM_MEMORY_ADDR_REL_SLEB:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB:
     return 5;
   case R_WASM_TABLE_INDEX_SLEB64:
+  case R_WASM_TABLE_INDEX_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_LEB64:
   case R_WASM_MEMORY_ADDR_SLEB64:
+  case R_WASM_MEMORY_ADDR_REL_SLEB64:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB64:
     return 10;
   default:
     llvm_unreachable("unexpected relocation type");
