@@ -14,6 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -419,7 +420,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   NewLHS = Call.first;
   NewRHS = DAG.getConstant(0, dl, RetVT);
 
-  CCCode = getCmpLibcallCC(LC1);
+  CCCode = getICmpCondCode(getSoftFloatCmpLibcallPredicate(LC1));
   if (ShouldInvertCC) {
     assert(RetVT.isInteger());
     CCCode = getSetCCInverse(CCCode, RetVT);
@@ -441,7 +442,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
 
     SDValue Tmp = DAG.getSetCC(dl, SetCCVT, NewLHS, NewRHS, CCCode);
     auto Call2 = makeLibCall(DAG, LC2, RetVT, Ops, CallOptions, dl, Chain);
-    CCCode = getCmpLibcallCC(LC2);
+    CCCode = getICmpCondCode(getSoftFloatCmpLibcallPredicate(LC2));
     if (ShouldInvertCC)
       CCCode = getSetCCInverse(CCCode, RetVT);
     NewLHS = DAG.getSetCC(dl, SetCCVT, Call2.first, NewRHS, CCCode);

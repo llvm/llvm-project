@@ -1204,10 +1204,6 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
 
     return !Invalidated;
   } else if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-    // Don't sink or hoist dbg info; it's legal, but not useful.
-    if (isa<DbgInfoIntrinsic>(I))
-      return false;
-
     // Don't sink calls which can throw.
     if (CI->mayThrow())
       return false;
@@ -2224,10 +2220,10 @@ bool llvm::promoteLoopAccessesToScalars(
   });
 
   // Look at all the loop uses, and try to merge their locations.
-  std::vector<DILocation *> LoopUsesLocs;
-  for (auto *U : LoopUses)
-    LoopUsesLocs.push_back(U->getDebugLoc().get());
-  auto DL = DebugLoc(DILocation::getMergedLocations(LoopUsesLocs));
+  std::vector<DebugLoc> LoopUsesLocs;
+  for (auto U : LoopUses)
+    LoopUsesLocs.push_back(U->getDebugLoc());
+  auto DL = DebugLoc::getMergedLocations(LoopUsesLocs);
 
   // We use the SSAUpdater interface to insert phi nodes as required.
   SmallVector<PHINode *, 16> NewPHIs;
@@ -2248,7 +2244,7 @@ bool llvm::promoteLoopAccessesToScalars(
     if (SawUnorderedAtomic)
       PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
     PreheaderLoad->setAlignment(Alignment);
-    PreheaderLoad->setDebugLoc(DebugLoc());
+    PreheaderLoad->setDebugLoc(DebugLoc::getDropped());
     if (AATags && LoadIsGuaranteedToExecute)
       PreheaderLoad->setAAMetadata(AATags);
 
@@ -2808,6 +2804,7 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
     auto *NewBO =
         BinaryOperator::Create(Ins->getOpcode(), LHS, RHS,
                                Ins->getName() + ".reass", Ins->getIterator());
+    NewBO->setDebugLoc(DebugLoc::getDropped());
     NewBO->copyIRFlags(Ins);
     if (VariantOp == Ins)
       VariantOp = NewBO;
@@ -2864,6 +2861,7 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
 
   auto *NewBO = BinaryOperator::Create(
       Opcode, LV, Inv, BO->getName() + ".reass", BO->getIterator());
+  NewBO->setDebugLoc(DebugLoc::getDropped());
 
   if (Opcode == Instruction::FAdd || Opcode == Instruction::FMul) {
     // Intersect FMF flags for FADD and FMUL.
