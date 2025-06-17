@@ -108,21 +108,11 @@ json::Array gatherConditions(const coverage::MCDCRecord &Record) {
   return Conditions;
 }
 
-std::pair<unsigned, unsigned> getDecisions(const coverage::MCDCRecord &Record) {
-  const coverage::MCDCRecord::TestVectors &TestVectors = Record.getTV();
-  const unsigned TrueConditions =
-      std::count_if(TestVectors.begin(), TestVectors.end(), [](const auto &TV) {
-        return TV.second == coverage::MCDCRecord::CondState::MCDC_True;
-      });
-
-  return {TrueConditions, TestVectors.size() - TrueConditions};
-}
-
 json::Array renderMCDCRecord(const coverage::MCDCRecord &Record) {
   const llvm::coverage::CounterMappingRegion &CMR = Record.getDecisionRegion();
-  const auto [TrueConditions, FalseConditions] = getDecisions(Record);
+  const auto [TrueDecisions, FalseDecisions] = Record.getDecisions();
   return json::Array({CMR.LineStart, CMR.ColumnStart, CMR.LineEnd,
-                      CMR.ColumnEnd, TrueConditions, FalseConditions,
+                      CMR.ColumnEnd, TrueDecisions, FalseDecisions,
                       CMR.ExpandedFileID, int64_t(CMR.Kind),
                       gatherConditions(Record)});
 }
