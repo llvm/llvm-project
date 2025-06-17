@@ -115,6 +115,7 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
     if (!taintedSyms.empty()) {
       reportTaintBug("Division by a tainted value, possibly zero", stateZero, C,
                      taintedSyms);
+      // Fallthrough to continue analysis in case of non-zero denominator.
     }
   }
 
