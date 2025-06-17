@@ -855,12 +855,6 @@ def AArch64duplane32 : SDNode<"AArch64ISD::DUPLANE32", SDT_AArch64DupLane>;
 def AArch64duplane64 : SDNode<"AArch64ISD::DUPLANE64", SDT_AArch64DupLane>;
 def AArch64duplane128 : SDNode<"AArch64ISD::DUPLANE128", SDT_AArch64DupLane>;
 
-// Scalar-to-vector segmented duplication
-def AArch64duplaneq8  : SDNode<"AArch64ISD::DUPLANEQ8", SDT_AArch64DupLane>;
-def AArch64duplaneq16 : SDNode<"AArch64ISD::DUPLANEQ16", SDT_AArch64DupLane>;
-def AArch64duplaneq32 : SDNode<"AArch64ISD::DUPLANEQ32", SDT_AArch64DupLane>;
-def AArch64duplaneq64 : SDNode<"AArch64ISD::DUPLANEQ64", SDT_AArch64DupLane>;
-
 def AArch64insr      : SDNode<"AArch64ISD::INSR", SDT_AArch64Insr>;
 
 // Vector shuffles
