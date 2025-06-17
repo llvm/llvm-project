@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Parallel.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Jobserver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
 
 #include <atomic>
 #include <future>
+#include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -49,6 +53,9 @@ public:
 class ThreadPoolExecutor : public Executor {
 public:
   explicit ThreadPoolExecutor(ThreadPoolStrategy S) {
+    if (S.UseJobserver)
+      TheJobserver = JobserverClient::getInstance();
+
     ThreadCount = S.compute_thread_count();
     // Spawn all but one of the threads in another thread as spawning threads
     // can take a while.
@@ -68,6 +75,10 @@ public:
       work(S, 0);
     });
   }
+
+  // To make sure the thread pool executor can only be created with a parallel
+  // strategy.
+  ThreadPoolExecutor() = delete;
 
   void stop() {
     {
@@ -119,7 +130,24 @@ private:
       auto Task = std::move(WorkStack.back());
       WorkStack.pop_back();
       Lock.unlock();
-      Task();
+
+      if (TheJobserver) {
+        JobSlot Slot = TheJobserver->tryAcquire();
+        if (Slot.isValid()) {
+          Task();
+          TheJobserver->release(std::move(Slot));
+        } else {
+          // The task could not be run because no job slot was
+          // available. Re-queue the task so that another thread can try
+          // to run it later.
+          std::lock_guard<std::mutex> RequeueLock(Mutex);
+          WorkStack.push_back(std::move(Task));
+          Cond.notify_one();
+          // Yield to give another thread a chance to release a token.
+          std::this_thread::yield();
+        }
+      } else
+        Task();
     }
   }
 
@@ -130,9 +158,20 @@ private:
   std::promise<void> ThreadsCreated;
   std::vector<std::thread> Threads;
   unsigned ThreadCount;
+
+  JobserverClient *TheJobserver = nullptr;
 };
 
-Executor *Executor::getDefaultExecutor() {
+// A global raw pointer to the executor. Lifetime is managed by the
+// objects created within createExecutor().
+static Executor *TheExec = nullptr;
+static std::once_flag Flag;
+
+// This function will be called exactly once to create the executor.
+// It contains the necessary platform-specific logic. Since functions
+// called by std::call_once cannot return value, we have to set the
+// executor as a global variable.
+void createExecutor() {
 #ifdef _WIN32
   // The ManagedStatic enables the ThreadPoolExecutor to be stopped via
   // llvm_shutdown() which allows a "clean" fast exit, e.g. via _exit(). This
@@ -156,15 +195,21 @@ Executor *Executor::getDefaultExecutor() {
                        ThreadPoolExecutor::Deleter>
       ManagedExec;
   static std::unique_ptr<ThreadPoolExecutor> Exec(&(*ManagedExec));
-  return Exec.get();
+  TheExec = Exec.get();
 #else
   // ManagedStatic is not desired on other platforms. When `Exec` is destroyed
   // by llvm_shutdown(), worker threads will clean up and invoke TLS
   // destructors. This can lead to race conditions if other threads attempt to
   // access TLS objects that have already been destroyed.
   static ThreadPoolExecutor Exec(strategy);
-  return &Exec;
+  TheExec = &Exec;
 #endif
+}
+
+Executor *Executor::getDefaultExecutor() {
+  // Use std::call_once to lazily and safely initialize the executor.
+  std::call_once(Flag, createExecutor);
+  return TheExec;
 }
 } // namespace
 } // namespace detail
