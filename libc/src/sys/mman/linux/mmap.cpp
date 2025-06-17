@@ -11,6 +11,7 @@
 #include "src/__support/OSUtil/mmap.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -19,11 +20,11 @@ LLVM_LIBC_FUNCTION(void *, mmap,
                     off_t offset)) {
   auto ptr = internal::mmap(addr, size, prot, flags, fd, offset);
 
-  if (!ptr.has_value()) {
+  if (LIBC_UNLIKELY(!ptr.has_value())) {
     libc_errno = ptr.error();
     return MAP_FAILED;
   }
-  
+
   return ptr.value();
 }
 

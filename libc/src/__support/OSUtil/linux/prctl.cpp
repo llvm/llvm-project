@@ -12,6 +12,7 @@
 
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
@@ -29,7 +30,7 @@ ErrorOr<int> prctl(int option, unsigned long arg2, unsigned long arg3,
   // (https://github.com/torvalds/linux/blob/bee0e7762ad2c6025b9f5245c040fcc36ef2bde8/kernel/sys.c#L2442),
   // return value from the syscall is set to 0 on default so we do not need to
   // set the value on success manually.
-  if (ret < 0)
+  if (LIBC_UNLIKELY(ret < 0))
     return Error(static_cast<int>(-ret));
 
   return static_cast<int>(ret);

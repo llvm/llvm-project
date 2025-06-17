@@ -14,6 +14,7 @@
 #include "src/__support/macros/config.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <sys/syscall.h> // For syscall numbers.
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -55,7 +56,7 @@ ErrorOr<void *> mmap(void *addr, size_t size, int prot, int flags, int fd,
   // However, since a valid return address cannot be within the last page, a
   // return value corresponding to a location in the last page is an error
   // value.
-  if (ret < 0 && ret > -EXEC_PAGESIZE)
+  if (LIBC_UNLIKELY(ret < 0 && ret > -EXEC_PAGESIZE))
     return Error(static_cast<int>(-ret));
 
   return reinterpret_cast<void *>(ret);

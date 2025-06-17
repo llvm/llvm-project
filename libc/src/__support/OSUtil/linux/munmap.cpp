@@ -13,7 +13,8 @@
 
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
-#include <sys/syscall.h> // For syscall numbers.
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include <sys/syscall.h>                       // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -24,7 +25,7 @@ ErrorOr<int> munmap(void *addr, size_t size) {
   int ret = LIBC_NAMESPACE::syscall_impl<int>(
       SYS_munmap, reinterpret_cast<long>(addr), size);
 
-  if (ret < 0)
+  if (LIBC_UNLIKELY(ret < 0))
     return Error(-ret);
 
   return 0;
