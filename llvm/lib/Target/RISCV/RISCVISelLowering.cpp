@@ -15240,11 +15240,41 @@ static SDValue combineAddOfBooleanXor(SDNode *N, SelectionDAG &DAG) {
                      N0.getOperand(0));
 }
 
+// Try to turn (add (srl x, n), (srl x, n)) into (srl x, n-1).
+//
+// This combine could perhaps be moved to DAGCombiner. For RISCV this kind of
+// pattern seem to appear in situations when x is READ_VLENB, which matches with
+// the condition that the lsb of x need to be zero.
+static SDValue combineAddSrl(SDNode *N, SelectionDAG &DAG) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Match (add (srl x, n), (srl x, n)).
+  if (N0 != N1 || N0.getOpcode() != ISD::SRL)
+    return SDValue();
+
+  // Need a srl that has constant shift amount of at least 1.
+  std::optional<uint64_t> ShAmt = DAG.getValidShiftAmount(N0);
+  if (!ShAmt || *ShAmt == 0)
+    return SDValue();
+
+  // Last bit shifted out by srl should be known zero.
+  if (!DAG.computeKnownBits(N0.getOperand(0)).Zero[*ShAmt - 1])
+    return SDValue();
+
+  SDValue NewAmt = DAG.getShiftAmountConstant(*ShAmt - 1, VT, DL);
+  return DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), NewAmt);
+}
+
 static SDValue performADDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
   if (SDValue V = combineAddOfBooleanXor(N, DAG))
+    return V;
+  if (SDValue V = combineAddSrl(N, DAG))
     return V;
   if (SDValue V = transformAddImmMulImm(N, DAG, Subtarget))
     return V;

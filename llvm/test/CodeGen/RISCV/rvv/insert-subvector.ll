@@ -246,8 +246,7 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv1i32_1(<vscale x 16 x i32> %vec, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v16, a0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv1i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 1 x i32> %subvec, i64 1)
@@ -282,8 +281,8 @@ define <vscale x 16 x i8> @insert_nxv16i8_nxv1i8_1(<vscale x 16 x i8> %vec, <vsc
 ; CHECK-LABEL: insert_nxv16i8_nxv1i8_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a1, a0, 2
 ; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v10, a0
 ; CHECK-NEXT:    ret
@@ -363,8 +362,7 @@ define <vscale x 32 x half> @insert_nxv32f16_nxv2f16_2(<vscale x 32 x half> %vec
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
-; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v16, a0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x half> @llvm.vector.insert.nxv2f16.nxv32f16(<vscale x 32 x half> %vec, <vscale x 2 x half> %subvec, i64 2)
@@ -376,8 +374,7 @@ define <vscale x 32 x half> @insert_nxv32f16_nxv2f16_26(<vscale x 32 x half> %ve
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
-; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v14, v16, a0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x half> @llvm.vector.insert.nxv2f16.nxv32f16(<vscale x 32 x half> %vec, <vscale x 2 x half> %subvec, i64 26)
@@ -422,8 +419,8 @@ define <vscale x 32 x i1> @insert_nxv32i1_nxv8i1_8(<vscale x 32 x i1> %v, <vscal
 ; CHECK-LABEL: insert_nxv32i1_nxv8i1_8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a1, a0, 2
 ; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v0, v8, a0
 ; CHECK-NEXT:    ret
@@ -570,8 +567,7 @@ define <vscale x 32 x bfloat> @insert_nxv32bf16_nxv2bf16_2(<vscale x 32 x bfloat
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
-; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v16, a0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x bfloat> @llvm.vector.insert.nxv2bf16.nxv32bf16(<vscale x 32 x bfloat> %vec, <vscale x 2 x bfloat> %subvec, i64 2)
@@ -583,8 +579,7 @@ define <vscale x 32 x bfloat> @insert_nxv32bf16_nxv2bf16_26(<vscale x 32 x bfloa
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
-; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v14, v16, a0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x bfloat> @llvm.vector.insert.nxv2bf16.nxv32bf16(<vscale x 32 x bfloat> %vec, <vscale x 2 x bfloat> %subvec, i64 26)
