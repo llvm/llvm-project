@@ -792,14 +792,15 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count,
   const uint64_t From = Trace.From, To = Trace.To;
   BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(From);
   BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(To);
+  NumTraces += Count;
   if (!FromFunc || !ToFunc) {
     LLVM_DEBUG(dbgs() << "Out of range trace " << Trace << '\n');
     NumLongRangeTraces += Count;
     return false;
   }
   if (FromFunc != ToFunc) {
-    NumInvalidTraces += Count;
     LLVM_DEBUG(dbgs() << "Invalid trace " << Trace << '\n');
+    NumInvalidTraces += Count;
     return false;
   }
 
@@ -1329,10 +1330,6 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   TakenBranchInfo TI{(uint64_t)Count, (uint64_t)Mispreds};
   Traces.emplace_back(T, TI);
 
-  /// Increment trace (fall-through) counter.
-  if (Addr[2]->Offset != Trace::BR_ONLY)
-    NumTraces += Count;
-
   NumTotalSamples += Count;
 
   return std::error_code();
@@ -1429,11 +1426,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     // chronological order)
     if (NeedsSkylakeFix && NumEntry <= 2)
       continue;
-    uint64_t TraceTo = Trace::BR_ONLY;
-    if (NextLBR) {
-      TraceTo = NextLBR->From;
-      ++NumTraces;
-    }
+    uint64_t TraceTo = NextLBR ? NextLBR->From : Trace::BR_ONLY;
     NextLBR = &LBR;
 
     TakenBranchInfo &Info = TraceMap[Trace{LBR.From, LBR.To, TraceTo}];

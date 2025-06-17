@@ -25,6 +25,7 @@
 
 namespace llvm {
 
+class MCAssembler;
 class MCContext;
 class MCCFIInstruction;
 class MCExpr;
@@ -33,6 +34,7 @@ class MCSection;
 class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
+class MCValue;
 class raw_ostream;
 
 namespace WinEH {
@@ -713,7 +715,12 @@ public:
   std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
 
   void printExpr(raw_ostream &, const MCExpr &) const;
-  virtual void printSpecifierExpr(raw_ostream &, const MCSpecifierExpr &) const;
+  virtual void printSpecifierExpr(raw_ostream &,
+                                  const MCSpecifierExpr &) const {
+    llvm_unreachable("Need to implement hook if target uses MCSpecifierExpr");
+  }
+  virtual bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
+                                         const MCAssembler *Asm) const;
 };
 
 } // end namespace llvm
