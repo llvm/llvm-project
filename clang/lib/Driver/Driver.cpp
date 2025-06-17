@@ -4330,6 +4330,14 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     YcArg = YuArg = nullptr;
   }
 
+  if (Args.hasArg(options::OPT_include_pch) &&
+      Args.hasArg(options::OPT_ignore_pch)) {
+    // If -ignore-pch is used, -include-pch is disabled. Since -emit-pch is
+    // CC1option, it will not be added to command argments if -ignore-pch is
+    // used.
+    Args.eraseArg(options::OPT_include_pch);
+  }
+
   bool LinkOnly = phases::Link == FinalPhase && Inputs.size() > 0;
   for (auto &I : Inputs) {
     types::ID InputType = I.first;

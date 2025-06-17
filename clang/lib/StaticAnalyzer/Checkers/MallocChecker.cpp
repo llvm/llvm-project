@@ -1371,6 +1371,20 @@ void MallocChecker::checkIfFreeNameIndex(ProgramStateRef State,
   C.addTransition(State);
 }
 
+const Expr *getPlacementNewBufferArg(const CallExpr *CE,
+                                     const FunctionDecl *FD) {
+  // Checking for signature:
+  // void* operator new  ( std::size_t count, void* ptr );
+  // void* operator new[]( std::size_t count, void* ptr );
+  if (CE->getNumArgs() != 2 || (FD->getOverloadedOperator() != OO_New &&
+                                FD->getOverloadedOperator() != OO_Array_New))
+    return nullptr;
+  auto BuffType = FD->getParamDecl(1)->getType();
+  if (BuffType.isNull() || !BuffType->isVoidPointerType())
+    return nullptr;
+  return CE->getArg(1);
+}
+
 void MallocChecker::checkCXXNewOrCXXDelete(ProgramStateRef State,
                                            const CallEvent &Call,
                                            CheckerContext &C) const {
@@ -1386,6 +1400,14 @@ void MallocChecker::checkCXXNewOrCXXDelete(ProgramStateRef State,
   // processed by the checkPostStmt callbacks for CXXNewExpr and
   // CXXDeleteExpr.
   const FunctionDecl *FD = C.getCalleeDecl(CE);
+  if (const auto *BufArg = getPlacementNewBufferArg(CE, FD)) {
+    // Placement new does not allocate memory
+    auto RetVal = State->getSVal(BufArg, Call.getLocationContext());
+    State = State->BindExpr(CE, C.getLocationContext(), RetVal);
+    C.addTransition(State);
+    return;
+  }
+
   switch (FD->getOverloadedOperator()) {
   case OO_New:
     State = MallocMemAux(C, Call, CE->getArg(0), UndefinedVal(), State,
