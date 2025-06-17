@@ -87,29 +87,6 @@ struct TestXeGPUUnrollingPatterns
             }
           }
 
-          if (isa<xegpu::CreateDescOp, xegpu::UpdateOffsetOp, xegpu::PrefetchOp,
-                  xegpu::LoadGatherOp, xegpu::StoreScatterOp>(op)) {
-            xegpu::TensorDescType tdescTy;
-            if (auto createOp = dyn_cast<xegpu::CreateDescOp>(op)) {
-              tdescTy = createOp.getType();
-            } else if (auto updateOp = dyn_cast<xegpu::UpdateOffsetOp>(op)) {
-              tdescTy = updateOp.getTensorDescType();
-            } else if (auto prefetchOp = dyn_cast<xegpu::PrefetchOp>(op)) {
-              tdescTy = prefetchOp.getTensorDescType();
-            } else if (auto loadOp = dyn_cast<xegpu::LoadGatherOp>(op)) {
-              tdescTy = loadOp.getTensorDescType();
-            } else if (auto storeOp = dyn_cast<xegpu::StoreScatterOp>(op)) {
-              tdescTy = storeOp.getTensorDescType();
-            }
-
-            if (auto layout = tdescTy.getLayoutAttr()) {
-              auto inst_data = layout.getInstData();
-              if (inst_data && layout.isSgLayout())
-                return SmallVector<int64_t>(inst_data.asArrayRef().begin(),
-                                            inst_data.asArrayRef().end());
-            }
-          }
-
           if (isa<xegpu::DpasOp>(op))
             return SmallVector<int64_t>{8, 16, 16};
 
@@ -128,19 +105,21 @@ struct TestXeGPUUnrollingPatterns
             auto layout = llvm::dyn_cast_if_present<xegpu::LayoutAttr>(
                 tdescTy.getLayout());
 
+            // If the encoding is a ScatterTensorDescAttr, we need to
+            // potentially adjust the chunk size based on the inst_data.
             if (encoding && mlir::isa<xegpu::ScatterTensorDescAttr>(encoding)) {
               auto scatterAttr =
                   mlir::dyn_cast<xegpu::ScatterTensorDescAttr>(encoding);
               int64_t chunkSize = scatterAttr.getChunkSize().getInt();
 
               if (chunkSize > 1) {
-                int64_t newChunkSize = chunkSize;
+                int64_t blockedChunkSize = chunkSize;
                 auto instData = layout.getInstData();
                 if (!instData.empty())
-                  newChunkSize = instData.asArrayRef().back();
+                  blockedChunkSize = instData.asArrayRef().back();
 
                 auto chunkSizeAttr = mlir::IntegerAttr::get(
-                    mlir::IntegerType::get(ctx, 64), newChunkSize);
+                    mlir::IntegerType::get(ctx, 64), blockedChunkSize);
 
                 // To create a new attribute with a different chunk_size:
                 auto newEncoding = xegpu::ScatterTensorDescAttr::get(

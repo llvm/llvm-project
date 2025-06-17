@@ -426,7 +426,7 @@ struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
 
     SmallVector<Value> newOps;
 
-    // more indices is need when chunkSize > 1. Since a big load from one
+    // More indices is need when chunkSize > 1. Since a big load from one
     // address could be break into multiple small loads.
     if (originalChunkSize > 1) {
       int64_t blockedChunkSize = targetShape->back();
@@ -504,15 +504,12 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
       int64_t numNewChunks = originalChunkSize / blockedChunkSize;
 
       for (auto mask : convertedMasks1D) {
-        for (int64_t i = 0; i < numNewChunks; ++i) {
+        for (int64_t i = 0; i < numNewChunks; ++i) 
           convertedMasks.push_back(mask);
-        }
       }
       // This is to handle the transpose effect when chunkSize > 1.
-      if (targetShape && targetShape->size() > 1) {
-        std::swap((*targetShape)[0], (*targetShape)[1]);
-        newValueTy = valueTy.cloneWith(*targetShape, elemTy);
-      }
+      std::swap((*targetShape)[0], (*targetShape)[1]);
+      newValueTy = valueTy.cloneWith(*targetShape, elemTy);
     } else {
       convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
       convertedMasks = pack(op.getMask(), convertedMaskTypes, targetMaskShape,
@@ -540,8 +537,7 @@ struct UnrollPrefetchOp : public UnrollPattern<xegpu::PrefetchOp> {
     Location loc = op.getLoc();
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    // check if the tensor descriptor type is a 1d vector type
-    if (tdescTy.getRank() > 2)
+    if (!tdescTy.isScattered())
       return failure();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
