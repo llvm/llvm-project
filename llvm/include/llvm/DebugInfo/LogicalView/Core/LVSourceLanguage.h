@@ -14,6 +14,7 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSOURCELANGUAGE_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSOURCELANGUAGE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -52,7 +53,7 @@ struct LVSourceLanguage {
 
   bool isValid() const { return Language != Invalid; }
   TaggedLanguage get() const { return Language; }
-  StringRef getName() const;
+  LLVM_ABI StringRef getName() const;
 
 private:
   TaggedLanguage Language = Invalid;

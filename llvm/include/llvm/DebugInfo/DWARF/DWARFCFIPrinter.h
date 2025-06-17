@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFCFIPRINTER_H
 #define LLVM_DEBUGINFO_DWARF_DWARFCFIPRINTER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/DWARF/DWARFCFIProgram.h"
 
 namespace llvm {
@@ -17,7 +18,7 @@ struct DIDumpOptions;
 
 namespace dwarf {
 
-void printCFIProgram(const CFIProgram &P, raw_ostream &OS,
+LLVM_ABI void printCFIProgram(const CFIProgram &P, raw_ostream &OS,
                      const DIDumpOptions &DumpOpts, unsigned IndentLevel,
                      std::optional<uint64_t> Address);
 

@@ -14,6 +14,7 @@
 #ifndef LLVM_TELEMETRY_TELEMETRY_H
 #define LLVM_TELEMETRY_TELEMETRY_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -101,7 +102,7 @@ struct EntryKind {
 /// For example, The LLDB debugger can define a DebugCommandInfo subclass
 /// which has additional fields about the debug-command being instrumented,
 /// such as `CommandArguments` or `CommandName`.
-struct TelemetryInfo {
+struct LLVM_ABI TelemetryInfo {
   // This represents a unique-id, conventionally corresponding to
   // a tool's session - i.e., every time the tool starts until it exits.
   //
@@ -141,7 +142,7 @@ public:
 /// and this framework.
 /// It is responsible for collecting telemetry data from the tool being
 /// monitored and transmitting the data elsewhere.
-class Manager {
+class LLVM_ABI Manager {
 public:
   virtual ~Manager() = default;
 

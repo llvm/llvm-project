@@ -34,7 +34,7 @@ namespace dxil {
 
 // Returns the resource name from dx_resource_handlefrombinding or
 // dx_resource_handlefromimplicitbinding call
-StringRef getResourceNameFromBindingCall(CallInst *CI);
+LLVM_ABI StringRef getResourceNameFromBindingCall(CallInst *CI);
 
 /// The dx.RawBuffer target extension type
 ///

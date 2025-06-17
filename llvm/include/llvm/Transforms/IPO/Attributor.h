@@ -6349,7 +6349,7 @@ struct AAInvariantLoadPointer : public AbstractAttribute {
   }
 
   /// Create an abstract attribute view for the position \p IRP.
-  static AAInvariantLoadPointer &createForPosition(const IRPosition &IRP,
+  LLVM_ABI static AAInvariantLoadPointer &createForPosition(const IRPosition &IRP,
                                                    Attributor &A);
 
   /// Return true if the pointer's contents are known to remain invariant.
@@ -6373,7 +6373,7 @@ struct AAInvariantLoadPointer : public AbstractAttribute {
   }
 
   /// Unique ID (due to the unique address).
-  static const char ID;
+  LLVM_ABI static const char ID;
 };
 
 /// An abstract interface for address space information.
