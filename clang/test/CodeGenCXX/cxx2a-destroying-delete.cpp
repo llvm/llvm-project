@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-linux-gnu -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ITANIUM,CHECK-64BIT
 // RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI64,CHECK-64BIT,CLANG21-MSABI,CLANG21-MSABI64
 // RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple i386-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI32,CHECK-32BIT,CLANG21-MSABI,CLANG21-MSABI32
-// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple i386-windows -fclang-abi-compat=20 -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-32BIT,CHECK-MSABI32,CLANG20-MSABI
-// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-windows -fclang-abi-compat=20 -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI64,CHECK-64BIT,CLANG20-MSABI
+// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple i386-windows -fclang-abi-compat=20 -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-32BIT,CHECK-MSABI32,CLANG20-MSABI,CLANG20-MSABI32
+// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-windows -fclang-abi-compat=20 -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI64,CHECK-64BIT,CLANG20-MSABI,CLANG20-MSABI64
 
 // PR46908: ensure the IR passes the verifier with optimizations enabled.
 // RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm-only %s -triple x86_64-linux-gnu -O2
@@ -34,6 +34,20 @@ void delete_A(A *a) { delete a; }
 // CHECK-NOT: call
 // CHECK: }
 
+void glob_delete_A(A *a) { ::delete a; }
+
+// CHECK-LABEL: define {{.*}}glob_delete_A
+// CHECK: %[[a:.*]] = load
+// CHECK: icmp eq ptr %[[a]], null
+// CHECK: br i1
+
+// CHECK-ITANIUM: call void @_ZN1AD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %[[a]])
+// CHECK-ITANIUM-NEXT: call void @_ZdlPvm(ptr noundef %[[a]], i64 noundef 8)
+// CHECK-MSABI64: call void @"??1A@@QEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %[[a]])
+// CHECK-MSABI64-NEXT: call void @"??3@YAXPEAX_K@Z"(ptr noundef %[[a]], i64 noundef 8)
+// CHECK-MSABI32: call x86_thiscallcc void @"??1A@@QAE@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %[[a]])
+// CHECK-MSABI32-NEXT: call void @"??3@YAXPAXI@Z"(ptr noundef %[[a]], i32 noundef 4)
+
 struct B {
   virtual ~B();
   void operator delete(B*, std::destroying_delete_t);
@@ -51,6 +65,31 @@ void delete_B(B *b) { delete b; }
 // CHECK: call {{void|noundef ptr|x86_thiscallcc noundef ptr}} %[[DTOR]](ptr {{[^,]*}} %[[b]]
 // CHECK-MSABI-SAME: , i32 noundef 1)
 // CHECK-NOT: call
+// CHECK: }
+
+void glob_delete_B(B *b) { ::delete b; }
+// CHECK-LABEL: define {{.*}}glob_delete_B
+// CHECK: %[[b:.*]] = load
+// CHECK: icmp eq ptr %[[b]], null
+// CHECK: br i1
+
+// CHECK-NOT: call
+// CHECK-MSABI: %[[VTABLE:.*]] = load
+// CHECK-MSABI: %[[DTOR:.*]] = load
+// CHECK-ITANIUM: %[[VTABLE:.*]] = load ptr, ptr %[[b]], align 8
+// CHECK-ITANIUM: %[[COMPLETEOFFSETPTR:.*]] = getelementptr inbounds i64, ptr %[[VTABLE]], i64 -2
+// CHECK-ITANIUM: %[[OFFSET:.*]] = load i64, ptr %[[COMPLETEOFFSETPTR]], align 8
+// CHECK-ITANIUM: %[[ALLOCATED:.*]] = getelementptr inbounds i8, ptr %[[b]], i64 %[[OFFSET]]
+// CHECK-ITANIUM: %[[VTABLE1:.*]] = load ptr, ptr %[[b]], align 8
+// CHECK-ITANIUM: %[[DTOR_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VTABLE1]], i64 0
+// CHECK-ITANIUM: %[[DTOR:.*]] = load ptr, ptr %[[DTOR_ADDR]], align 8
+// CHECK: call {{void|noundef ptr|x86_thiscallcc noundef ptr}} %[[DTOR]](ptr {{[^,]*}} %[[b]]
+// CLANG21-MSABI-SAME: , i32 noundef 5)
+// CLANG20-MSABI-SAME: , i32 noundef 0)
+// CLANG21-MSABI-NOT: call
+// CLANG20-MSABI64: call void @"??3@YAXPEAX_K@Z"({{.*}})
+// CLANG20-MSABI32: call void @"??3@YAXPAXI@Z"({{.*}})
+// CHECK-ITANIUM: call void @_ZdlPvm({{.*}})
 // CHECK: }
 
 struct Padding {
