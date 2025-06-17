@@ -8644,8 +8644,10 @@ static void addExitUsersForFirstOrderRecurrences(
       if (ExitIRI->getOperand(0) != FOR)
         continue;
       // For VF vscale x 1, if vscale = 1, we are unable to extract the
-      // penultimate value of the recurrence. Instead, we can extract the last
-      // element directly from VPInstruction::FirstOrderRecurrenceSplice.
+      // penultimate value of the recurrence. Instead, we rely on function
+      // addUsersInExitBlocks to extract the last element from the result of
+      // VPInstruction::FirstOrderRecurrenceSplice by leaving the user of the
+      // recurrence phi in ExitUsersToFix.
       // TODO: Consider vscale_range info and UF.
       if (LoopVectorizationPlanner::getDecisionAndClampRange(IsScalableOne,
                                                              Range))
