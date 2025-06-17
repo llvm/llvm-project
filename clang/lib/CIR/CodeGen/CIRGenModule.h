@@ -301,6 +301,10 @@ public:
                                 cir::FuncType funcType,
                                 const clang::FunctionDecl *funcDecl);
 
+  /// Given a builtin id for a function like "__builtin_fabsf", return a
+  /// Function* for "fabsf".
+  cir::FuncOp getBuiltinLibFunction(const FunctionDecl *fd, unsigned builtinID);
+
   mlir::IntegerAttr getSize(CharUnits size) {
     return builder.getSizeFromCharUnits(size);
   }
