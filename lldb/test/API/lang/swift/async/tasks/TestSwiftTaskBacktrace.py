@@ -3,7 +3,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase
 import lldbsuite.test.lldbutil as lldbutil
 
-
 class TestCase(TestBase):
 
     @swiftTest
@@ -32,6 +31,6 @@ class TestCase(TestBase):
                 ".sleep(",
                 "`second() at main.swift:6",
                 "`first() at main.swift:2",
-                "`closure #1 in static Main.main() at main.swift:12",
+                "`closure #1() at main.swift:12:19",
             ],
         )
