@@ -765,3 +765,30 @@ TEST(ProtocolTypesTest, StepInTarget) {
   EXPECT_EQ(target.endLine, deserialized_target->endLine);
   EXPECT_EQ(target.endColumn, deserialized_target->endColumn);
 }
+
+TEST(ProtocolTypesTest, ReadMemoryArguments) {
+  ReadMemoryArguments args;
+  args.count = 20;
+  args.memoryReference = "0xabba";
+  args.offset = std::nullopt;
+
+  llvm::Expected<ReadMemoryArguments> expected = parse<ReadMemoryArguments>(
+      R"({"memoryReference":"0xabba", "count": 20})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+
+  EXPECT_EQ(args.count, expected->count);
+  EXPECT_EQ(args.memoryReference, expected->memoryReference);
+  EXPECT_EQ(args.offset, expected->offset);
+}
+
+TEST(ProtocolTypesTest, ReadMemoryResponse) {
+  ReadMemoryResponse response;
+  response.address = "0xdeadbeef";
+  response.data = "aGVsbG8gd29ybGQhCg==";
+  response.unreadableBytes = 0;
+
+  Expected<Value> expected = json::parse(
+      R"({ "address": "0xdeadbeef", "data": "aGVsbG8gd29ybGQhCg==", "unreadableBytes": 0})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(response));
+}
