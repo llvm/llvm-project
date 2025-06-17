@@ -279,8 +279,8 @@ public:
   void DumpClangAST(Stream &s, llvm::StringRef filter) override;
 
   /// List separate dwo files.
-  bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                            bool errors_only) override;
+  bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
+                            bool load_all_debug_info = true) override;
 
   DWARFContext &GetDWARFContext() { return m_context; }
 
@@ -314,11 +314,6 @@ public:
   StatsDuration &GetDebugInfoParseTimeRef() { return m_parse_time; }
 
   void ResetStatistics() override;
-
-  /// Get the number of loaded DWO files for this symbol file
-  uint32_t GetLoadedDwoFileCount() const override {
-    return m_loaded_dwo_file_count;
-  }
 
   virtual lldb::offset_t
   GetVendorDWARFOpcodeSize(const DataExtractor &data,
@@ -502,8 +497,6 @@ protected:
 
   void InitializeFirstCodeAddress();
 
-  void IncrementLoadedDwoFileCount() { m_loaded_dwo_file_count++; }
-
   void
   GetCompileOptions(std::unordered_map<lldb::CompUnitSP, Args> &args) override;
 
@@ -557,8 +550,6 @@ protected:
   /// valid value that can be used in DIERef objects which will contain
   /// an index that identifies the .DWO or .o file.
   std::optional<uint64_t> m_file_index;
-  /// Count of loaded DWO files for this symbol file
-  uint32_t m_loaded_dwo_file_count = 0;
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin

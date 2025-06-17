@@ -323,6 +323,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t num_stripped_modules = 0;
   uint32_t symtab_symbol_count = 0;
   uint32_t total_loaded_dwo_file_count = 0;
+  uint32_t total_dwo_file_count = 0;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
     Module *module = target != nullptr
                          ? target->GetImages().GetModuleAtIndex(image_idx).get()
@@ -354,9 +355,30 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         for (const auto &symbol_module : symbol_modules.Modules())
           module_stat.symfile_modules.push_back((intptr_t)symbol_module.get());
       }
-      // Add DWO file count from this symbol file (will be 0 for non-DWARF
-      // symbol files)
-      total_loaded_dwo_file_count += sym_file->GetLoadedDwoFileCount();
+      // Count DWO files from this symbol file using GetSeparateDebugInfo
+      StructuredData::Dictionary separate_debug_info;
+      if (sym_file->GetSeparateDebugInfo(separate_debug_info,
+                                         /*errors_only=*/false,
+                                         /*load_all_debug_info*/ false)) {
+        llvm::StringRef type;
+        if (separate_debug_info.GetValueForKeyAsString("type", type) &&
+            type == "dwo") {
+          StructuredData::Array *files;
+          if (separate_debug_info.GetValueForKeyAsArray(
+                  "separate-debug-info-files", files)) {
+            files->ForEach([&](StructuredData::Object *obj) {
+              if (auto dict = obj->GetAsDictionary()) {
+                total_dwo_file_count++;
+
+                bool loaded = false;
+                if (dict->GetValueForKeyAsBoolean("loaded", loaded) && loaded)
+                  total_loaded_dwo_file_count++;
+              }
+              return true;
+            });
+          }
+        }
+      }
       module_stat.debug_info_index_loaded_from_cache =
           sym_file->GetDebugInfoIndexWasLoadedFromCache();
       if (module_stat.debug_info_index_loaded_from_cache)
@@ -432,6 +454,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       {"totalSymbolTableStripped", num_stripped_modules},
       {"totalSymbolTableSymbolCount", symtab_symbol_count},
       {"totalLoadedDwoFileCount", total_loaded_dwo_file_count},
+      {"totalDwoFileCount", total_dwo_file_count},
   };
 
   if (include_targets) {

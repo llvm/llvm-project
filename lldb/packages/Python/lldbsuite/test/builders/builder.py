@@ -254,6 +254,7 @@ class Builder:
             "dwo": {"MAKE_DSYM": "NO", "MAKE_DWO": "YES"},
             "gmodules": {"MAKE_DSYM": "NO", "MAKE_GMODULES": "YES"},
             "debug_names": {"MAKE_DEBUG_NAMES": "YES"},
+            "dwp": {"MAKE_DSYM": "NO", "MAKE_DWP": "YES"},
         }
         
         # Collect all flags, with later options overriding earlier ones

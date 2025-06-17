@@ -425,11 +425,6 @@ public:
   /// Reset the statistics for the symbol file.
   virtual void ResetStatistics() {}
 
-  /// Get the number of loaded DWO files for this symbol file.
-  /// This is used for statistics gathering and will return 0 for most
-  /// symbol file implementations except DWARF symbol files.
-  virtual uint32_t GetLoadedDwoFileCount() const { return 0; }
-
   /// Get the additional modules that this symbol file uses to parse debug info.
   ///
   /// Some debug info is stored in stand alone object files that are represented
@@ -472,8 +467,12 @@ public:
   ///     If true, then only return separate debug info files that encountered
   ///     errors during loading. If false, then return all expected separate
   ///     debug info files, regardless of whether they were successfully loaded.
+  /// \param load_all_debug_info
+  ///   If true, force loading any symbol files if they are not yet loaded and
+  ///   add its info to the debug info files. Default to true.
   virtual bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                                    bool errors_only) {
+                                    bool errors_only,
+                                    bool load_all_debug_info = true) {
     return false;
   };
 
