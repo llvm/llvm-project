@@ -2896,8 +2896,6 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
 
   if (isSVE) {
-    assert(-ObjectOffset > (int64_t)AFI->getSVECalleeSavedStackSize() &&
-           "Math isn't correct for CSRs with FPAfterSVECalleeSaves");
     StackOffset FPOffset =
         StackOffset::get(-AFI->getCalleeSaveBaseToFrameRecordOffset(), ObjectOffset);
     StackOffset SPOffset =
@@ -2905,6 +2903,8 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         StackOffset::get(MFI.getStackSize() - AFI->getCalleeSavedStackSize(),
                          ObjectOffset);
     if (FPAfterSVECalleeSaves) {
+      assert(-ObjectOffset > (int64_t)AFI->getSVECalleeSavedStackSize() &&
+             "Math isn't correct for CSRs with FPAfterSVECalleeSaves");
       FPOffset += StackOffset::getScalable(AFI->getSVECalleeSavedStackSize());
     }
     // Always use the FP for SVE spills if available and beneficial.
