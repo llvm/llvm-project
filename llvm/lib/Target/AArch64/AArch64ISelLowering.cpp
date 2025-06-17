@@ -30044,7 +30044,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
             DAG.getConstant(Intrinsic::aarch64_sve_dup_laneq, DL, MVT::i64);
         return convertFromScalableVector(
             DAG, VT,
-            DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {ContainerVT, MVT::i64},
+            DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
                         {IID, Op1,
                          DAG.getConstant(*Lane, DL, MVT::i64,
                                          /*isTarget=*/true)}));
