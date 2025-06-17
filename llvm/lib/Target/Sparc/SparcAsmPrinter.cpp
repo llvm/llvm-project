@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/SparcInstPrinter.h"
-#include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "MCTargetDesc/SparcTargetStreamer.h"
 #include "Sparc.h"
@@ -82,7 +82,7 @@ public:
 static MCOperand createSparcMCOperand(uint16_t Kind, MCSymbol *Sym,
                                       MCContext &OutContext) {
   const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(Sym, OutContext);
-  const SparcMCExpr *expr = MCSpecifierExpr::create(MCSym, Kind, OutContext);
+  auto *expr = MCSpecifierExpr::create(MCSym, Kind, OutContext);
   return MCOperand::createExpr(expr);
 }
 static MCOperand createPCXCallOP(MCSymbol *Label,
@@ -101,7 +101,7 @@ static MCOperand createPCXRelExprOp(uint16_t Spec, MCSymbol *GOTLabel,
 
   const MCBinaryExpr *Sub = MCBinaryExpr::createSub(Cur, Start, OutContext);
   const MCBinaryExpr *Add = MCBinaryExpr::createAdd(GOT, Sub, OutContext);
-  const SparcMCExpr *expr = MCSpecifierExpr::create(Add, Spec, OutContext);
+  auto *expr = MCSpecifierExpr::create(Add, Spec, OutContext);
   return MCOperand::createExpr(expr);
 }
 
