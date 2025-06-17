@@ -78,7 +78,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.assertFalse(breakpoint["verified"])
         self.assertEqual(other_basename, breakpoint["source"]["name"])
         self.assertEqual(new_other_path, breakpoint["source"]["path"])
-        other_breakpoint_id = breakpoint["id"]
+        other_breakpoint_id = str(breakpoint["id"])
 
         self.dap_server.request_continue()
         self.verify_breakpoint_hit([other_breakpoint_id])
@@ -379,7 +379,8 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
             self.assertEqual(breakpoint["line"], loop_line)
             self.assertEqual(breakpoint["column"], columns[index])
             self.assertTrue(breakpoint["verified"], "expect breakpoint verified")
-            breakpoint_ids.append(breakpoint["id"])
+            self.assertIn("id", breakpoint, "expected breakpoint id")
+            breakpoint_ids.append(str(breakpoint["id"]))
 
         # Continue to the first breakpoint,
         self.continue_to_breakpoints([breakpoint_ids[0]])
