@@ -103,10 +103,13 @@ struct RuntimeLibcallsInfo {
 
 private:
   /// Stores the name each libcall.
-  const char *LibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1];
+  const char *LibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1] = {nullptr};
+
+  static_assert(static_cast<int>(CallingConv::C) == 0,
+                "default calling conv should be encoded as 0");
 
   /// Stores the CallingConv that should be used for each libcall.
-  CallingConv::ID LibcallCallingConvs[RTLIB::UNKNOWN_LIBCALL];
+  CallingConv::ID LibcallCallingConvs[RTLIB::UNKNOWN_LIBCALL] = {};
 
   /// The condition type that should be used to test the result of each of the
   /// soft floating-point comparison libcall against integer zero.

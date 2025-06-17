@@ -284,8 +284,7 @@ void RuntimeLibcallsInfo::initSoftFloatCmpLibcallPredicates() {
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
-  std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames),
-            nullptr);
+  initSoftFloatCmpLibcallPredicates();
 
   initSoftFloatCmpLibcallPredicates();
 
@@ -294,10 +293,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
 #undef LIBCALL_NO_NAME
-
-  // Initialize calling conventions to their default.
-  for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
-    setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
 
   // Use the f128 variants of math functions on x86
   if (TT.isX86() && TT.isGNUEnvironment()) {
