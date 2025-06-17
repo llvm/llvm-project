@@ -17,13 +17,7 @@
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
-#include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
 #include <stack>
 
 #define DEBUG_TYPE "spirv-postlegalizer"
@@ -34,9 +28,7 @@ namespace {
 class SPIRVPostLegalizer : public MachineFunctionPass {
 public:
   static char ID;
-  SPIRVPostLegalizer() : MachineFunctionPass(ID) {
-    initializeSPIRVPostLegalizerPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVPostLegalizer() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 } // namespace

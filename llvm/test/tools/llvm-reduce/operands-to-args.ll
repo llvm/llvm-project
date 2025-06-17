@@ -77,7 +77,7 @@ define void @f(ptr %a) {
 @gv_init_use = global [1 x ptr] [ptr @has_global_init_user]
 
 ; INTERESTING-LABEL: define void @has_global_init_user(
-; REDUCED-LABEL: define void @has_global_init_user() {
+; REDUCED-LABEL: define void @has_global_init_user(ptr %Local) {
 define void @has_global_init_user() {
   %Local = alloca i32, align 4
   store i32 42, ptr %Local, align 4
@@ -85,7 +85,7 @@ define void @has_global_init_user() {
 }
 
 ; INTERESTING-LABEL: define void @has_callee_and_arg_user(
-; REDUCED-LABEL: define void @has_callee_and_arg_user(ptr %orig.arg) {
+; REDUCED-LABEL: define void @has_callee_and_arg_user(ptr %orig.arg, ptr %Local) {
 define void @has_callee_and_arg_user(ptr %orig.arg) {
   %Local = alloca i32, align 4
   store i32 42, ptr %Local, align 4
@@ -96,7 +96,7 @@ declare void @ptr_user(ptr)
 
 ; INTERESTING-LABEL: define void @calls_and_passes_func(
 ; REDUCED-LABEL: define void @calls_and_passes_func(ptr %has_callee_and_arg_user) {
-; REDUCED: call void @has_callee_and_arg_user(ptr %has_callee_and_arg_user)
+; REDUCED: call void @has_callee_and_arg_user(ptr %has_callee_and_arg_user, ptr null)
 define void @calls_and_passes_func() {
   call void @has_callee_and_arg_user(ptr @has_callee_and_arg_user)
   ret void

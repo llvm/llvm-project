@@ -561,7 +561,7 @@ void native(SmallVectorImpl<char> &Path, Style style) {
       Path = PathHome;
     }
   } else {
-    std::replace(Path.begin(), Path.end(), '\\', '/');
+    llvm::replace(Path, '\\', '/');
   }
 }
 
@@ -570,7 +570,7 @@ std::string convert_to_slash(StringRef path, Style style) {
     return std::string(path);
 
   std::string s = path.str();
-  std::replace(s.begin(), s.end(), '\\', '/');
+  llvm::replace(s, '\\', '/');
   return s;
 }
 

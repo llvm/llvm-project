@@ -105,6 +105,9 @@ def My_IntegerType : MyDialect_Type<"Integer", "int"> {
 
   /// Indicate that our type will add additional verification to the parameters.
   let genVerifyDecl = 1;
+
+  /// Indicate that our type will use the mnemonic as alias in assembly.
+  let genMnemonicAlias = 1;
 }
 ```
 
@@ -160,6 +163,9 @@ def My_IntegerAttr : MyDialect_Attr<"Integer", "int"> {
   /// Indicate to the ODS generator that we do not want the default builders,
   /// as we have defined our own simpler ones.
   let skipDefaultBuilders = 1;
+
+  /// Indicate that our attribute will use the mnemonic as alias in assembly.
+  let genMnemonicAlias = 1;
 }
 ```
 
@@ -842,9 +848,9 @@ if they are not present.
 
 ###### `struct` Directive
 
-The `struct` directive accepts a list of variables to capture and will generate
-a parser and printer for a comma-separated list of key-value pairs. If an
-optional parameter is included in the `struct`, it can be elided. The variables
+The `struct` directive accepts a list of variables or directives to capture and 
+will generate a parser and printer for a comma-separated list of key-value pairs. 
+If an optional parameter is included in the `struct`, it can be elided. The variables
 are printed in the order they are specified in the argument list **but can be
 parsed in any order**. For example:
 
@@ -875,6 +881,13 @@ assembly format of `` `<` struct(params) `>` `` will result in:
 
 The order in which the parameters are printed is the order in which they are
 declared in the attribute's or type's `parameter` list.
+
+Passing `custom<Foo>($variable)` allows providing a custom printer and parser
+for the encapsulated variable. Check the
+[custom and ref directive](#custom-and-ref-directive) section for more
+information about how to define the printer and parser functions. Note that a
+custom directive within a struct directive can only encapsulate a single
+variable.
 
 ###### `custom` and `ref` directive
 
@@ -1181,6 +1194,13 @@ by the Attribute or Type's C++ class name.
 Note that these are mechanisms intended for long-tail cases by power users; for
 not-yet-implemented widely-applicable cases, improving the infrastructure is
 preferable.
+
+### Mnemonic Alias in Assembly
+
+Attribute and Type can use aliases in the assembly to reduce verbosity.
+In such cases, `OpAsmAttrInterface` and `OpAsmTypeInterface` can be used to generate aliases.
+Often, a simple mnemonic alias is enough; then enabling `genMnemonicAlias` automatically
+generates an `getAlias` implementation using the Attribute or Type's mnemonic.
 
 ### Registering with the Dialect
 

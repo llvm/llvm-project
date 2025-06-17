@@ -73,3 +73,36 @@ bb14:                                             ; preds = %bb12
 bb16:                                             ; preds = %bb14, %bb11, %bb10, %bb
   ret void
 }
+
+; We must not try to replace CMP with AND_NF as it sets no flags
+define void @cmp_peephole_and_nf(i64 %arg0, ptr %ptr1, ptr %ptr2) {
+; CHECK-LABEL: cmp_peephole_and_nf:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    negq %rdi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    {nf} andl $1, %eax
+; CHECK-NEXT:    jb .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %true
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    sete (%rsi)
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB1_2: # %false
+; CHECK-NEXT:    movq %rdi, (%rsi)
+; CHECK-NEXT:    movq %rax, (%rdx)
+; CHECK-NEXT:    retq
+entry:
+  %sub_flag = sub i64 0, %arg0
+  %and_nf = and i64 %sub_flag, 1
+  %elim = icmp eq i64 0, %arg0
+  br i1 %elim, label %true, label %false
+
+true:
+  %8 = icmp eq i64 %and_nf, 0
+  store i1 %8, ptr %ptr1
+  ret void
+
+false:
+  store i64 %sub_flag, ptr %ptr1
+  store i64 %and_nf, ptr %ptr2
+  ret void
+}

@@ -48,6 +48,8 @@ class VPInterleavedAccessInfo {
 
 public:
   VPInterleavedAccessInfo(VPlan &Plan, InterleavedAccessInfo &IAI);
+  VPInterleavedAccessInfo(const VPInterleavedAccessInfo &) = delete;
+  VPInterleavedAccessInfo &operator=(const VPInterleavedAccessInfo &) = delete;
 
   ~VPInterleavedAccessInfo() {
     // Avoid releasing a pointer twice.
@@ -71,30 +73,8 @@ public:
 class VPlanSlp {
   enum class OpMode { Failed, Load, Opcode };
 
-  /// A DenseMapInfo implementation for using SmallVector<VPValue *, 4> as
-  /// DenseMap keys.
-  struct BundleDenseMapInfo {
-    static SmallVector<VPValue *, 4> getEmptyKey() {
-      return {reinterpret_cast<VPValue *>(-1)};
-    }
-
-    static SmallVector<VPValue *, 4> getTombstoneKey() {
-      return {reinterpret_cast<VPValue *>(-2)};
-    }
-
-    static unsigned getHashValue(const SmallVector<VPValue *, 4> &V) {
-      return static_cast<unsigned>(hash_combine_range(V.begin(), V.end()));
-    }
-
-    static bool isEqual(const SmallVector<VPValue *, 4> &LHS,
-                        const SmallVector<VPValue *, 4> &RHS) {
-      return LHS == RHS;
-    }
-  };
-
   /// Mapping of values in the original VPlan to a combined VPInstruction.
-  DenseMap<SmallVector<VPValue *, 4>, VPInstruction *, BundleDenseMapInfo>
-      BundleToCombined;
+  DenseMap<SmallVector<VPValue *, 4>, VPInstruction *> BundleToCombined;
 
   VPInterleavedAccessInfo &IAI;
 

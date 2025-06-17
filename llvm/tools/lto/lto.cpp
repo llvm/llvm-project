@@ -496,8 +496,7 @@ void lto_codegen_debug_options_array(lto_code_gen_t cg,
                                      const char *const *options, int number) {
   assert(optionParsingState != OptParsingState::Early &&
          "early option processing already happened");
-  SmallVector<StringRef, 4> Options;
-  llvm::append_range(Options, ArrayRef(options, number));
+  SmallVector<StringRef, 4> Options(ArrayRef(options, number));
   unwrap(cg)->setCodeGenDebugOptions(ArrayRef(Options));
 }
 

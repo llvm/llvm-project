@@ -223,6 +223,11 @@ static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
 
+static llvm::cl::opt<bool>
+    disableCUDAWarpFunction("fcuda-disable-warp-function",
+                            llvm::cl::desc("Disable CUDA Warp Function"),
+                            llvm::cl::init(false));
+
 static llvm::cl::opt<std::string>
     enableGPUMode("gpu", llvm::cl::desc("Enable GPU Mode managed|unified"),
                   llvm::cl::init(""));
@@ -251,14 +256,11 @@ static llvm::cl::opt<bool>
                                  "the LHS of the intrinsic assignment"),
                   llvm::cl::init(true));
 
-// TODO: -fstack-arrays is currently only used for fir.pack_array,
-// but it should probably be used for deciding how arrays/temporaries
-// are allocated during lowering.
-static llvm::cl::opt<bool>
-    stackArrays("fstack-arrays",
-                llvm::cl::desc("Allocate all arrays of unknown size and "
-                               "temporary arrays in stack memory"),
-                llvm::cl::init(false));
+static llvm::cl::opt<bool> stackRepackArrays(
+    "fstack-repack-arrays",
+    llvm::cl::desc("Allocate temporary arrays for -frepack-arrays "
+                   "in stack memory"),
+    llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
     repackArrays("frepack-arrays",
@@ -429,9 +431,11 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);
   loweringOptions.setReallocateLHS(reallocateLHS);
-  loweringOptions.setStackArrays(stackArrays);
+  loweringOptions.setStackRepackArrays(stackRepackArrays);
   loweringOptions.setRepackArrays(repackArrays);
   loweringOptions.setRepackArraysWhole(repackArraysWhole);
+  if (enableCUDA)
+    loweringOptions.setCUDARuntimeCheck(true);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   Fortran::frontend::TargetOptions targetOpts;
   Fortran::frontend::CodeGenOptions cgOpts;
@@ -601,6 +605,11 @@ int main(int argc, char **argv) {
   // enable parsing of CUDA Fortran
   if (enableCUDA) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
+  }
+
+  if (disableCUDAWarpFunction) {
+    options.features.Enable(
+        Fortran::common::LanguageFeature::CudaWarpMatchFunction, false);
   }
 
   if (enableGPUMode == "managed") {

@@ -105,6 +105,7 @@ class CheckRunner:
         self.fixes = MessagePrefix("CHECK-FIXES")
         self.messages = MessagePrefix("CHECK-MESSAGES")
         self.notes = MessagePrefix("CHECK-NOTES")
+        self.match_partial_fixes = args.match_partial_fixes
 
         file_name_with_extension = self.assume_file_name or self.input_file_name
         _, extension = os.path.splitext(file_name_with_extension)
@@ -248,10 +249,14 @@ class CheckRunner:
             try_run(
                 [
                     "FileCheck",
-                    "-input-file=" + self.temp_file_name,
+                    "--input-file=" + self.temp_file_name,
                     self.input_file_name,
-                    "-check-prefixes=" + ",".join(self.fixes.prefixes),
-                    "-strict-whitespace",
+                    "--check-prefixes=" + ",".join(self.fixes.prefixes),
+                    (
+                        "--match-full-lines"
+                        if not self.match_partial_fixes
+                        else "--strict-whitespace"  # Keeping past behavior.
+                    ),
                 ]
             )
 
@@ -371,6 +376,11 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
         type=csv,
         default=["c++11-or-later"],
         help="Passed to clang. Special -or-later values are expanded.",
+    )
+    parser.add_argument(
+        "--match-partial-fixes",
+        action="store_true",
+        help="allow partial line matches for fixes",
     )
     return parser.parse_known_args()
 

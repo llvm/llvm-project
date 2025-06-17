@@ -73,7 +73,10 @@ entry:
 ; Check which jump table entries are created
 ; FULL: define private void @.cfi.jumptable(){{.*}}
 ; FULL-NEXT: entry:
-; FULL-NEXT: call void asm{{.*}}local_func1.cfi{{.*}}local_func2.cfi{{.*}}extern_weak{{.*}}extern_decl
+; FULL-NEXT: call void asm{{.*}}local_func1.cfi
+; FULL-NEXT: call void asm{{.*}}local_func2.cfi
+; FULL-NEXT: call void asm{{.*}}extern_weak
+; FULL-NEXT: call void asm{{.*}}extern_decl
 
 ; Make sure all local functions have been renamed to <name>.cfi
 ; THIN: define hidden i32 @local_func1.cfi()

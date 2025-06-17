@@ -55,7 +55,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/Support/Endian.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -162,7 +161,7 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
     // symbol, the R_MIPS_GOT16 relocation creates a GOT entry to hold
     // the high 16 bits of the symbol's value. A paired R_MIPS_LO16
     // relocations handle low 16 bits of the address. That allows
-    // to allocate only one GOT entry for every 64 KBytes of local data.
+    // to allocate only one GOT entry for every 64 KiB of local data.
     return isLocal ? R_MIPS_LO16 : R_MIPS_NONE;
   case R_MICROMIPS_GOT16:
     return isLocal ? R_MICROMIPS_LO16 : R_MIPS_NONE;
@@ -847,9 +846,8 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   Partition &part = isec.getPartition(ctx);
 
   if (sym.isTagged()) {
-    std::lock_guard<std::mutex> lock(ctx.relocMutex);
-    part.relaDyn->addRelativeReloc(ctx.target->relativeRel, isec, offsetInSec,
-                                   sym, addend, type, expr);
+    part.relaDyn->addRelativeReloc<shard>(ctx.target->relativeRel, isec,
+                                          offsetInSec, sym, addend, type, expr);
     // With MTE globals, we always want to derive the address tag by `ldg`-ing
     // the symbol. When we have a RELATIVE relocation though, we no longer have
     // a reference to the symbol. Because of this, when we have an addend that
@@ -992,10 +990,17 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // only the low bits are used.
   if (e == R_GOT || e == R_PLT)
     return ctx.target->usesOnlyLowPageBits(type) || !ctx.arg.isPic;
-
   // R_AARCH64_AUTH_ABS64 requires a dynamic relocation.
-  if (sym.isPreemptible || e == RE_AARCH64_AUTH)
+  if (e == RE_AARCH64_AUTH)
     return false;
+
+  // The behavior of an undefined weak reference is implementation defined.
+  // (We treat undefined non-weak the same as undefined weak.) For static
+  // -no-pie linking, dynamic relocations are generally avoided (except
+  // IRELATIVE). Emitting dynamic relocations for -shared aligns with its -z
+  // undefs default. Dynamic -no-pie linking and -pie allow flexibility.
+  if (sym.isPreemptible)
+    return sym.isUndefined() && !ctx.arg.isPic;
   if (!ctx.arg.isPic)
     return true;
 
@@ -1115,19 +1120,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // If the relocation is known to be a link-time constant, we know no dynamic
   // relocation will be created, pass the control to relocateAlloc() or
   // relocateNonAlloc() to resolve it.
-  //
-  // The behavior of an undefined weak reference is implementation defined. For
-  // non-link-time constants, we resolve relocations statically (let
-  // relocate{,Non}Alloc() resolve them) for -no-pie and try producing dynamic
-  // relocations for -pie and -shared.
-  //
-  // The general expectation of -no-pie static linking is that there is no
-  // dynamic relocation (except IRELATIVE). Emitting dynamic relocations for
-  // -shared matches the spirit of its -z undefs default. -pie has freedom on
-  // choices, and we choose dynamic relocations to be consistent with the
-  // handling of GOT-generating relocations.
-  if (isStaticLinkTimeConstant(expr, type, sym, offset) ||
-      (!ctx.arg.isPic && sym.isUndefWeak())) {
+  if (isStaticLinkTimeConstant(expr, type, sym, offset)) {
     sec->addReloc({expr, type, offset, addend, &sym});
     return;
   }
@@ -1376,6 +1369,11 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
+  // LoongArch supports IE to LE optimization in non-extreme code model.
+  bool execOptimizeInLoongArch =
+      ctx.arg.emachine == EM_LOONGARCH &&
+      (type == R_LARCH_TLS_IE_PC_HI20 || type == R_LARCH_TLS_IE_PC_LO12);
+
   // ARM, Hexagon, LoongArch and RISC-V do not support GD/LD to IE/LE
   // optimizations.
   // RISC-V supports TLSDESC to IE/LE optimizations.
@@ -1383,7 +1381,8 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
   // optimization as well.
   bool execOptimize =
       !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
-      ctx.arg.emachine != EM_HEXAGON && ctx.arg.emachine != EM_LOONGARCH &&
+      ctx.arg.emachine != EM_HEXAGON &&
+      (ctx.arg.emachine != EM_LOONGARCH || execOptimizeInLoongArch) &&
       !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
       !sec->file->ppc64DisableTLSRelax;
 
@@ -1474,6 +1473,15 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
       else
         sec->addReloc({expr, type, offset, addend, &sym});
     }
+    return 1;
+  }
+
+  // LoongArch TLS GD/LD relocs reuse the RE_LOONGARCH_GOT, in which
+  // NEEDS_TLSIE shouldn't set. So we check independently.
+  if (ctx.arg.emachine == EM_LOONGARCH && expr == RE_LOONGARCH_GOT &&
+      execOptimize && isLocalInExecutable) {
+    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
+    sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     return 1;
   }
 

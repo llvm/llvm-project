@@ -10,14 +10,14 @@
 
 using namespace llvm;
 
-bool MipsTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) {
+bool MipsTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) const {
   EVT VT = TLI->getValueType(DL, DataType);
   return TLI->isOperationLegalOrCustom(IsSigned ? ISD::SDIVREM : ISD::UDIVREM,
                                        VT);
 }
 
 bool MipsTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
-                                const TargetTransformInfo::LSRCost &C2) {
+                                const TargetTransformInfo::LSRCost &C2) const {
   // MIPS specific here are "instruction number 1st priority".
   // If we need to emit adds inside the loop to add up base registers, then
   // we need at least one extra temporary register.

@@ -3,6 +3,7 @@
 typedef double double2 __attribute__((ext_vector_type(2)));
 typedef double double4 __attribute__((ext_vector_type(4)));
 typedef float float2 __attribute__((ext_vector_type(2)));
+typedef float float3 __attribute__((ext_vector_type(3)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 
 typedef int int2 __attribute__((ext_vector_type(2)));
@@ -88,7 +89,7 @@ void test_builtin_elementwise_add_sat(int i, short s, double d, float4 v, int3 i
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_add_sat(ext, ext);
 
-  const int ci;
+  const int ci = 0;
   i = __builtin_elementwise_add_sat(ci, i);
   i = __builtin_elementwise_add_sat(i, ci);
   i = __builtin_elementwise_add_sat(ci, ci);
@@ -154,7 +155,7 @@ void test_builtin_elementwise_sub_sat(int i, short s, double d, float4 v, int3 i
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_sub_sat(ext, ext);
 
-  const int ci;
+  const int ci = 0;
   i = __builtin_elementwise_sub_sat(ci, i);
   i = __builtin_elementwise_sub_sat(i, ci);
   i = __builtin_elementwise_sub_sat(ci, ci);
@@ -214,7 +215,7 @@ void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, u
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_max(ext, ext);
 
-  const int ci;
+  const int ci = 0;
   i = __builtin_elementwise_max(ci, i);
   i = __builtin_elementwise_max(i, ci);
   i = __builtin_elementwise_max(ci, ci);
@@ -274,7 +275,7 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, u
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_min(ext, ext);
 
-  const int ci;
+  const int ci = 0;
   i = __builtin_elementwise_min(ci, i);
   i = __builtin_elementwise_min(i, ci);
   i = __builtin_elementwise_min(ci, ci);
@@ -1070,7 +1071,7 @@ void test_builtin_elementwise_copysign(int i, short s, double d, float f, float4
   ext = __builtin_elementwise_copysign(ext, ext);
   // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was '_BitInt(32)')}}
 
-  const float cf32;
+  const float cf32 = 0.0f;
   f = __builtin_elementwise_copysign(cf32, f);
   f = __builtin_elementwise_copysign(f, cf32);
   f = __builtin_elementwise_copysign(cf32, f);
@@ -1201,4 +1202,14 @@ void test_builtin_elementwise_fma(int i32, int2 v2i32, short i16,
 
   c3 = __builtin_elementwise_fma(f32, f32, c3);
   // expected-error@-1 {{3rd argument must be a scalar or vector of floating-point types (was '_Complex float')}}
+}
+
+typedef struct {
+  float3 b;
+} struct_float3;
+// This example uncovered a bug #141397 :
+// Type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed
+float3 foo(float3 a,const struct_float3* hi) {
+  float3 b = __builtin_elementwise_max((float3)(0.0f), a);
+  return __builtin_elementwise_pow(b, hi->b.yyy);
 }

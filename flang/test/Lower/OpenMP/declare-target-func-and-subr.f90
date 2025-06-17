@@ -85,6 +85,13 @@ FUNCTION FUNC_DEFAULT_EXTENDEDLIST() RESULT(I)
     I = 1
 END FUNCTION FUNC_DEFAULT_EXTENDEDLIST
 
+! ALL-LABEL: func.func @_QPfunc_name_as_result()
+! ALL-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>{{.*}}
+FUNCTION FUNC_NAME_AS_RESULT()
+!$omp declare target(FUNC_NAME_AS_RESULT)
+  FUNC_NAME_AS_RESULT = 1.0
+END FUNCTION FUNC_NAME_AS_RESULT
+
 !! -----
 
 ! Check specification valid forms of declare target with subroutines 

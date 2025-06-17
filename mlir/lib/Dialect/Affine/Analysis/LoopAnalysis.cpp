@@ -233,8 +233,9 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
             std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
       else
         tripCount = constExpr.getValue();
-    } else
+    } else {
       return std::nullopt;
+    }
   }
   return tripCount;
 }
@@ -401,9 +402,7 @@ isVectorizableLoopBodyWithOpCond(AffineForOp loop,
           return !VectorType::isValidElementType(type);
         }))
       return true;
-    return llvm::any_of(op.getResultTypes(), [](Type type) {
-      return !VectorType::isValidElementType(type);
-    });
+    return !llvm::all_of(op.getResultTypes(), VectorType::isValidElementType);
   });
   SmallVector<NestedMatch, 8> opsMatched;
   types.match(forOp, &opsMatched);

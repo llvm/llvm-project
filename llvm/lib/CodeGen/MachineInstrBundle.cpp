@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineInstrBundle.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -134,102 +135,81 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       BuildMI(MF, getDebugLoc(FirstMI, LastMI), TII->get(TargetOpcode::BUNDLE));
   Bundle.prepend(MIB);
 
-  SmallVector<Register, 32> LocalDefs;
-  SmallSet<Register, 32> LocalDefSet;
+  SmallSetVector<Register, 32> LocalDefs;
   SmallSet<Register, 8> DeadDefSet;
   SmallSet<Register, 16> KilledDefSet;
-  SmallVector<Register, 8> ExternUses;
-  SmallSet<Register, 8> ExternUseSet;
+  SmallSetVector<Register, 8> ExternUses;
   SmallSet<Register, 8> KilledUseSet;
   SmallSet<Register, 8> UndefUseSet;
-  SmallVector<MachineOperand*, 4> Defs;
   for (auto MII = FirstMI; MII != LastMI; ++MII) {
     // Debug instructions have no effects to track.
     if (MII->isDebugInstr())
       continue;
 
-    for (MachineOperand &MO : MII->operands()) {
-      if (!MO.isReg())
-        continue;
-      if (MO.isDef()) {
-        Defs.push_back(&MO);
-        continue;
-      }
-
+    for (MachineOperand &MO : MII->all_uses()) {
       Register Reg = MO.getReg();
       if (!Reg)
         continue;
 
-      if (LocalDefSet.count(Reg)) {
+      if (LocalDefs.contains(Reg)) {
         MO.setIsInternalRead();
-        if (MO.isKill())
+        if (MO.isKill()) {
           // Internal def is now killed.
           KilledDefSet.insert(Reg);
+        }
       } else {
-        if (ExternUseSet.insert(Reg).second) {
-          ExternUses.push_back(Reg);
+        if (ExternUses.insert(Reg)) {
           if (MO.isUndef())
             UndefUseSet.insert(Reg);
         }
-        if (MO.isKill())
+        if (MO.isKill()) {
           // External def is now killed.
           KilledUseSet.insert(Reg);
+        }
       }
     }
 
-    for (MachineOperand *MO : Defs) {
-      Register Reg = MO->getReg();
+    for (MachineOperand &MO : MII->all_defs()) {
+      Register Reg = MO.getReg();
       if (!Reg)
         continue;
 
-      if (LocalDefSet.insert(Reg).second) {
-        LocalDefs.push_back(Reg);
-        if (MO->isDead()) {
+      if (LocalDefs.insert(Reg)) {
+        if (MO.isDead())
           DeadDefSet.insert(Reg);
-        }
       } else {
         // Re-defined inside the bundle, it's no longer killed.
         KilledDefSet.erase(Reg);
-        if (!MO->isDead())
+        if (!MO.isDead()) {
           // Previously defined but dead.
           DeadDefSet.erase(Reg);
-      }
-
-      if (!MO->isDead() && Reg.isPhysical()) {
-        for (MCPhysReg SubReg : TRI->subregs(Reg)) {
-          if (LocalDefSet.insert(SubReg).second)
-            LocalDefs.push_back(SubReg);
         }
       }
+
+      if (!MO.isDead() && Reg.isPhysical())
+        LocalDefs.insert_range(TRI->subregs(Reg));
     }
 
-    Defs.clear();
-  }
-
-  SmallSet<Register, 32> Added;
-  for (Register Reg : LocalDefs) {
-    if (Added.insert(Reg).second) {
-      // If it's not live beyond end of the bundle, mark it dead.
-      bool isDead = DeadDefSet.count(Reg) || KilledDefSet.count(Reg);
-      MIB.addReg(Reg, getDefRegState(true) | getDeadRegState(isDead) |
-                 getImplRegState(true));
-    }
-  }
-
-  for (Register Reg : ExternUses) {
-    bool isKill = KilledUseSet.count(Reg);
-    bool isUndef = UndefUseSet.count(Reg);
-    MIB.addReg(Reg, getKillRegState(isKill) | getUndefRegState(isUndef) |
-               getImplRegState(true));
-  }
-
-  // Set FrameSetup/FrameDestroy for the bundle. If any of the instructions got
-  // the property, then also set it on the bundle.
-  for (auto MII = FirstMI; MII != LastMI; ++MII) {
+    // Set FrameSetup/FrameDestroy for the bundle. If any of the instructions
+    // got the property, then also set it on the bundle.
     if (MII->getFlag(MachineInstr::FrameSetup))
       MIB.setMIFlag(MachineInstr::FrameSetup);
     if (MII->getFlag(MachineInstr::FrameDestroy))
       MIB.setMIFlag(MachineInstr::FrameDestroy);
+  }
+
+  for (Register Reg : LocalDefs) {
+    // If it's not live beyond end of the bundle, mark it dead.
+    bool isDead = DeadDefSet.contains(Reg) || KilledDefSet.contains(Reg);
+    MIB.addReg(Reg, getDefRegState(true) | getDeadRegState(isDead) |
+                        getImplRegState(true));
+  }
+
+  for (Register Reg : ExternUses) {
+    bool isKill = KilledUseSet.contains(Reg);
+    bool isUndef = UndefUseSet.contains(Reg);
+    MIB.addReg(Reg, getKillRegState(isKill) | getUndefRegState(isUndef) |
+               getImplRegState(true));
   }
 }
 

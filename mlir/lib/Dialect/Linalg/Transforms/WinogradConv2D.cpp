@@ -904,6 +904,10 @@ static bool hasAllOneValues(DenseIntElementsAttr attr) {
 static FailureOr<Operation *>
 winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
                      int64_t m, int64_t r) {
+  if (!convOp.hasPureTensorSemantics())
+    return rewriter.notifyMatchFailure(
+        convOp, "expected pure tensor semantics for linalg.conv_2d_nhwc_fhwc");
+
   Value input = convOp.getInputs()[0];
   Value filter = convOp.getInputs()[1];
   Value output = convOp.getOutputs()[0];
@@ -960,7 +964,7 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
       F_2_3, F_4_3, F_2_5};
 
   TransformMapKeyTy key = {m, r};
-  auto it = std::find(validConfigs.begin(), validConfigs.end(), key);
+  auto it = llvm::find(validConfigs, key);
   // If we cannot find the constant transformation matrix, it means we do
   // not support this configuration yet.
   if (it == validConfigs.end())

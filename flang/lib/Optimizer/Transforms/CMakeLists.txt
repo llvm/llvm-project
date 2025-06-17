@@ -16,6 +16,7 @@ add_flang_library(FIRTransforms
   CUFComputeSharedMemoryOffsetsAndSize.cpp
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
+  FIRToSCF.cpp
   MemoryUtils.cpp
   MemoryAllocation.cpp
   StackArrays.cpp
@@ -47,6 +48,7 @@ add_flang_library(FIRTransforms
   FIRAnalysis
   FIRBuilder
   FIRCodeGen
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport

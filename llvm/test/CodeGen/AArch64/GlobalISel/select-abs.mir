@@ -13,10 +13,11 @@ body:             |
 
     ; CHECK-LABEL: name: v4s16
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[ABSv4i16_:%[0-9]+]]:fpr64 = ABSv4i16 [[COPY]]
-    ; CHECK: $d0 = COPY [[ABSv4i16_]]
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[ABSv4i16_:%[0-9]+]]:fpr64 = ABSv4i16 [[COPY]]
+    ; CHECK-NEXT: $d0 = COPY [[ABSv4i16_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:fpr(<4 x s16>) = COPY $d0
     %1:fpr(<4 x s16>) = G_ABS %0
     $d0 = COPY %1(<4 x s16>)
@@ -34,10 +35,11 @@ body:             |
 
     ; CHECK-LABEL: name: v8s16
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[ABSv8i16_:%[0-9]+]]:fpr128 = ABSv8i16 [[COPY]]
-    ; CHECK: $q0 = COPY [[ABSv8i16_]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[ABSv8i16_:%[0-9]+]]:fpr128 = ABSv8i16 [[COPY]]
+    ; CHECK-NEXT: $q0 = COPY [[ABSv8i16_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr(<8 x s16>) = COPY $q0
     %1:fpr(<8 x s16>) = G_ABS %0
     $q0 = COPY %1(<8 x s16>)
@@ -55,10 +57,11 @@ body:             |
 
     ; CHECK-LABEL: name: v2s32
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[ABSv2i32_:%[0-9]+]]:fpr64 = ABSv2i32 [[COPY]]
-    ; CHECK: $d0 = COPY [[ABSv2i32_]]
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[ABSv2i32_:%[0-9]+]]:fpr64 = ABSv2i32 [[COPY]]
+    ; CHECK-NEXT: $d0 = COPY [[ABSv2i32_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:fpr(<2 x s32>) = COPY $d0
     %1:fpr(<2 x s32>) = G_ABS %0
     $d0 = COPY %1(<2 x s32>)
@@ -76,10 +79,11 @@ body:             |
 
     ; CHECK-LABEL: name: v4s32
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[ABSv4i32_:%[0-9]+]]:fpr128 = ABSv4i32 [[COPY]]
-    ; CHECK: $q0 = COPY [[ABSv4i32_]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[ABSv4i32_:%[0-9]+]]:fpr128 = ABSv4i32 [[COPY]]
+    ; CHECK-NEXT: $q0 = COPY [[ABSv4i32_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr(<4 x s32>) = COPY $q0
     %1:fpr(<4 x s32>) = G_ABS %0
     $q0 = COPY %1(<4 x s32>)
@@ -97,10 +101,11 @@ body:             |
 
     ; CHECK-LABEL: name: v4s8
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[ABSv8i8_:%[0-9]+]]:fpr64 = ABSv8i8 [[COPY]]
-    ; CHECK: $d0 = COPY [[ABSv8i8_]]
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[ABSv8i8_:%[0-9]+]]:fpr64 = ABSv8i8 [[COPY]]
+    ; CHECK-NEXT: $d0 = COPY [[ABSv8i8_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:fpr(<8 x s8>) = COPY $d0
     %1:fpr(<8 x s8>) = G_ABS %0
     $d0 = COPY %1(<8 x s8>)
@@ -118,10 +123,11 @@ body:             |
 
     ; CHECK-LABEL: name: v16s8
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[ABSv16i8_:%[0-9]+]]:fpr128 = ABSv16i8 [[COPY]]
-    ; CHECK: $q0 = COPY [[ABSv16i8_]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[ABSv16i8_:%[0-9]+]]:fpr128 = ABSv16i8 [[COPY]]
+    ; CHECK-NEXT: $q0 = COPY [[ABSv16i8_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr(<16 x s8>) = COPY $q0
     %1:fpr(<16 x s8>) = G_ABS %0
     $q0 = COPY %1(<16 x s8>)

@@ -1996,10 +1996,8 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:           %[[OUTARR_IDX0:.*]] = arith.constant 0 : index
 // CHECK:           %[[OUTARR_ITEM0:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[OUTARR_IDX0]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
 // CHECK:           fir.store %[[INIT_OUT_IDX]] to %[[OUTARR_ITEM0]] : !fir.ref<i32>
-// CHECK:           %[[BOX_MASK:.*]] = fir.convert %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<1x!fir.logical<4>>>
-// CHECK:           %[[MASK_IDX0:.*]] = arith.constant 0 : index
-// CHECK:           %[[MASK_ITEM:.*]] = fir.coordinate_of %[[BOX_MASK]], %[[MASK_IDX0]] : (!fir.box<!fir.array<1x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
-// CHECK:           %[[MASK_LOGICAL:.*]] = fir.load %[[MASK_ITEM]] : !fir.ref<!fir.logical<4>>
+// CHECK:           %[[MASK_ADDR:.*]] = fir.box_addr %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.ref<!fir.logical<4>>
+// CHECK:           %[[MASK_LOGICAL:.*]] = fir.load %[[MASK_ADDR]] : !fir.ref<!fir.logical<4>>
 // CHECK:           %[[MASK:.*]] = fir.convert %[[MASK_LOGICAL]] : (!fir.logical<4>) -> i1
 // CHECK:           %[[INIT_RES:.*]] = fir.if %[[MASK]] -> (f64) {
 // CHECK:             %[[C_INDEX0:.*]] = arith.constant 0 : index
@@ -2574,10 +2572,8 @@ func.func @_QPtestmaxloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:           %[[OUTARR_IDX0:.*]] = arith.constant 0 : index
 // CHECK:           %[[OUTARR_ITEM0:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[OUTARR_IDX0]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
 // CHECK:           fir.store %[[INIT_OUT_IDX]] to %[[OUTARR_ITEM0]] : !fir.ref<i32>
-// CHECK:           %[[BOX_MASK:.*]] = fir.convert %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<1x!fir.logical<4>>>
-// CHECK:           %[[MASK_IDX0:.*]] = arith.constant 0 : index
-// CHECK:           %[[MASK_ITEM:.*]] = fir.coordinate_of %[[BOX_MASK]], %[[MASK_IDX0]] : (!fir.box<!fir.array<1x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
-// CHECK:           %[[MASK_LOGICAL:.*]] = fir.load %[[MASK_ITEM]] : !fir.ref<!fir.logical<4>>
+// CHECK:           %[[MASK_ADDR:.*]] = fir.box_addr %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.ref<!fir.logical<4>>
+// CHECK:           %[[MASK_LOGICAL:.*]] = fir.load %[[MASK_ADDR]] : !fir.ref<!fir.logical<4>>
 // CHECK:           %[[MASK:.*]] = fir.convert %[[MASK_LOGICAL]] : (!fir.logical<4>) -> i1
 // CHECK:           %[[INIT_RES:.*]] = fir.if %[[MASK]] -> (f64) {
 // CHECK:             %[[C_INDEX0:.*]] = arith.constant 0 : index

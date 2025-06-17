@@ -427,8 +427,7 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
     if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(CLI.Callee)) {
       Mips16Libcall Find = { RTLIB::UNKNOWN_LIBCALL, S->getSymbol() };
 
-      if (std::binary_search(std::begin(HardFloatLibCalls),
-                             std::end(HardFloatLibCalls), Find))
+      if (llvm::binary_search(HardFloatLibCalls, Find))
         LookupHelper = false;
       else {
         const char *Symbol = S->getSymbol();
@@ -469,8 +468,7 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
       Mips16Libcall Find = { RTLIB::UNKNOWN_LIBCALL,
                              G->getGlobal()->getName().data() };
 
-      if (std::binary_search(std::begin(HardFloatLibCalls),
-                             std::end(HardFloatLibCalls), Find))
+      if (llvm::binary_search(HardFloatLibCalls, Find))
         LookupHelper = false;
     }
     if (LookupHelper)

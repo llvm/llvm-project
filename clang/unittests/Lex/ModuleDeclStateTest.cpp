@@ -55,10 +55,10 @@ class ModuleDeclStateTest : public ::testing::Test {
 protected:
   ModuleDeclStateTest()
       : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
-        Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
+        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-unknown-linux-gnu";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   std::unique_ptr<Preprocessor>
@@ -77,11 +77,10 @@ protected:
 
     HeaderInfo.emplace(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
 
-    return std::make_unique<Preprocessor>(
-        std::make_shared<PreprocessorOptions>(), Diags, LangOpts, SourceMgr,
-        *HeaderInfo, ModLoader,
-        /*IILookup =*/nullptr,
-        /*OwnsHeaderSearch =*/false);
+    return std::make_unique<Preprocessor>(PPOpts, Diags, LangOpts, SourceMgr,
+                                          *HeaderInfo, ModLoader,
+                                          /*IILookup=*/nullptr,
+                                          /*OwnsHeaderSearch=*/false);
   }
 
   void preprocess(Preprocessor &PP, std::unique_ptr<PPCallbacks> C) {
@@ -95,6 +94,7 @@ protected:
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   std::shared_ptr<TargetOptions> TargetOpts;
@@ -103,6 +103,7 @@ protected:
   TrivialModuleLoader ModLoader;
   HeaderSearchOptions HSOpts;
   std::optional<HeaderSearch> HeaderInfo;
+  PreprocessorOptions PPOpts;
 };
 
 TEST_F(ModuleDeclStateTest, NamedModuleInterface) {

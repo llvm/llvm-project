@@ -6385,16 +6385,16 @@ define <2 x i64> @clpeak_imad_pat_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; GFX1200-GISEL-NEXT:    v_add_co_ci_u32_e64 v2, null, 0, v2, vcc_lo
 ; GFX1200-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1200-GISEL-NEXT:    v_mul_hi_u32 v1, v10, v9
-; GFX1200-GISEL-NEXT:    v_mul_lo_u32 v14, v10, v9
+; GFX1200-GISEL-NEXT:    v_mul_lo_u32 v15, v10, v9
 ; GFX1200-GISEL-NEXT:    v_add_co_u32 v12, vcc_lo, v7, 1
 ; GFX1200-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX1200-GISEL-NEXT:    v_add_co_ci_u32_e64 v13, null, 0, v3, vcc_lo
-; GFX1200-GISEL-NEXT:    v_add_co_u32 v15, vcc_lo, v10, 1
+; GFX1200-GISEL-NEXT:    v_add_co_u32 v14, vcc_lo, v10, 1
 ; GFX1200-GISEL-NEXT:    v_mul_lo_u32 v11, v7, v8
 ; GFX1200-GISEL-NEXT:    v_mad_co_u64_u32 v[5:6], null, v7, v5, v[0:1]
 ; GFX1200-GISEL-NEXT:    v_mad_co_u64_u32 v[1:2], null, v10, v2, v[1:2]
 ; GFX1200-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_4)
-; GFX1200-GISEL-NEXT:    v_mul_hi_u32 v2, v14, v15
+; GFX1200-GISEL-NEXT:    v_mul_hi_u32 v2, v15, v14
 ; GFX1200-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX1200-GISEL-NEXT:    v_add_co_ci_u32_e64 v10, null, 0, v4, vcc_lo
 ; GFX1200-GISEL-NEXT:    v_mul_hi_u32 v0, v11, v12
@@ -6403,11 +6403,11 @@ define <2 x i64> @clpeak_imad_pat_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; GFX1200-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1200-GISEL-NEXT:    v_mad_co_u64_u32 v[6:7], null, v11, v13, v[0:1]
 ; GFX1200-GISEL-NEXT:    v_mul_lo_u32 v0, v11, v12
-; GFX1200-GISEL-NEXT:    v_mad_co_u64_u32 v[7:8], null, v14, v10, v[2:3]
+; GFX1200-GISEL-NEXT:    v_mad_co_u64_u32 v[7:8], null, v15, v10, v[2:3]
 ; GFX1200-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1200-GISEL-NEXT:    v_mad_co_u64_u32 v[1:2], null, v5, v12, v[6:7]
-; GFX1200-GISEL-NEXT:    v_mul_lo_u32 v2, v14, v15
-; GFX1200-GISEL-NEXT:    v_mad_co_u64_u32 v[3:4], null, v3, v15, v[7:8]
+; GFX1200-GISEL-NEXT:    v_mul_lo_u32 v2, v15, v14
+; GFX1200-GISEL-NEXT:    v_mad_co_u64_u32 v[3:4], null, v3, v14, v[7:8]
 ; GFX1200-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %y18 = add <2 x i64> %x, <i64 1, i64 1>
@@ -9659,13 +9659,13 @@ define <4 x i16> @multi_use_mul_mad_v2i16_var(<2 x i16> %x, <2 x i16> %y, <2 x i
 ; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
 ; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
 ; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
+; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
 ; GFX8-GISEL-NEXT:    v_mad_u16 v6, v4, v5, v6
 ; GFX8-GISEL-NEXT:    v_mad_u16 v2, v0, v1, v2
 ; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v2, v2, v6
-; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
 ; GFX8-GISEL-NEXT:    v_mad_u16 v0, v0, v1, v3
-; GFX8-GISEL-NEXT:    v_mad_u16 v1, v4, v5, v6
+; GFX8-GISEL-NEXT:    v_mad_u16 v1, v4, v5, v7
+; GFX8-GISEL-NEXT:    v_or_b32_e32 v2, v2, v6
 ; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v0, v1
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, v2

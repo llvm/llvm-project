@@ -83,6 +83,7 @@ public:
     SiFive7,
     VentanaVeyron,
     MIPSP8700,
+    Andes45,
   };
   enum RISCVVRGatherCostModelEnum : uint8_t {
     Quadratic,
@@ -99,6 +100,7 @@ private:
   bool ATTRIBUTE = DEFAULT;
 #include "RISCVGenSubtargetInfo.inc"
 
+  unsigned XSfmmTE = 0;
   unsigned ZvlLen = 0;
   unsigned RVVVectorBitsMin;
   unsigned RVVVectorBitsMax;

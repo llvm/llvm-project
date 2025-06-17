@@ -727,12 +727,7 @@ void SymbolFileDWARFDebugMap::ForEachSymbolFile(
                     Progress::kDefaultHighFrequencyReportTime);
   for (uint32_t oso_idx = 0; oso_idx < num_oso_idxs; ++oso_idx) {
     if (SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx)) {
-      progress.Increment(oso_idx, oso_dwarf->GetObjectFile()
-                                      ? oso_dwarf->GetObjectFile()
-                                            ->GetFileSpec()
-                                            .GetFilename()
-                                            .GetString()
-                                      : "");
+      progress.Increment(oso_idx, oso_dwarf->GetObjectName());
       if (closure(*oso_dwarf) == IterationAction::Stop)
         return;
     }
@@ -1272,9 +1267,9 @@ CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
   return matching_namespace;
 }
 
-void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
-  ForEachSymbolFile("Dumping clang AST", [&s](SymbolFileDWARF &oso_dwarf) {
-    oso_dwarf.DumpClangAST(s);
+void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s, llvm::StringRef filter) {
+  ForEachSymbolFile("Dumping clang AST", [&](SymbolFileDWARF &oso_dwarf) {
+    oso_dwarf.DumpClangAST(s, filter);
     // The underlying assumption is that DumpClangAST(...) will obtain the
     // AST from the underlying TypeSystem and therefore we only need to do
     // this once and can stop after the first iteration hence we return true.

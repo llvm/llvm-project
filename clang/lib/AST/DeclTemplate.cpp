@@ -33,7 +33,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <memory>
 #include <optional>
 #include <utility>
 
@@ -172,7 +171,7 @@ unsigned TemplateParameterList::getMinRequiredArguments() const {
   unsigned NumRequiredArgs = 0;
   for (const NamedDecl *P : asArray()) {
     if (P->isTemplateParameterPack()) {
-      if (std::optional<unsigned> Expansions = getExpandedPackSize(P)) {
+      if (UnsignedOrNone Expansions = getExpandedPackSize(P)) {
         NumRequiredArgs += *Expansions;
         continue;
       }
@@ -230,7 +229,7 @@ void TemplateParameterList::getAssociatedConstraints(
       if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
         if (const auto *TC = TTP->getTypeConstraint())
           ACs.emplace_back(TC->getImmediatelyDeclaredConstraint(),
-                           TC->getArgumentPackSubstitutionIndex());
+                           TC->getArgPackSubstIndex());
       } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
         if (const Expr *E = NTTP->getPlaceholderTypeConstraint())
           ACs.emplace_back(E);
@@ -291,7 +290,7 @@ void TemplateDecl::getAssociatedConstraints(
     llvm::SmallVectorImpl<AssociatedConstraint> &ACs) const {
   TemplateParams->getAssociatedConstraints(ACs);
   if (auto *FD = dyn_cast_or_null<FunctionDecl>(getTemplatedDecl()))
-    if (const Expr *TRC = FD->getTrailingRequiresClause())
+    if (const AssociatedConstraint &TRC = FD->getTrailingRequiresClause())
       ACs.emplace_back(TRC);
 }
 
@@ -299,7 +298,7 @@ bool TemplateDecl::hasAssociatedConstraints() const {
   if (TemplateParams->hasAssociatedConstraints())
     return true;
   if (auto *FD = dyn_cast_or_null<FunctionDecl>(getTemplatedDecl()))
-    return FD->getTrailingRequiresClause();
+    return static_cast<bool>(FD->getTrailingRequiresClause());
   return false;
 }
 
@@ -359,7 +358,6 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl(
 
   ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
                                               OnlyPartial);
-  return;
 }
 
 bool RedeclarableTemplateDecl::loadLazySpecializationsImpl(
@@ -382,12 +380,11 @@ template <class EntryType, typename... ProfileArguments>
 typename RedeclarableTemplateDecl::SpecEntryTraits<EntryType>::DeclType *
 RedeclarableTemplateDecl::findSpecializationLocally(
     llvm::FoldingSetVector<EntryType> &Specs, void *&InsertPos,
-    ProfileArguments &&...ProfileArgs) {
+    ProfileArguments... ProfileArgs) {
   using SETraits = RedeclarableTemplateDecl::SpecEntryTraits<EntryType>;
 
   llvm::FoldingSetNodeID ID;
-  EntryType::Profile(ID, std::forward<ProfileArguments>(ProfileArgs)...,
-                     getASTContext());
+  EntryType::Profile(ID, ProfileArgs..., getASTContext());
   EntryType *Entry = Specs.FindNodeOrInsertPos(ID, InsertPos);
   return Entry ? SETraits::getDecl(Entry)->getMostRecentDecl() : nullptr;
 }
@@ -396,18 +393,15 @@ template <class EntryType, typename... ProfileArguments>
 typename RedeclarableTemplateDecl::SpecEntryTraits<EntryType>::DeclType *
 RedeclarableTemplateDecl::findSpecializationImpl(
     llvm::FoldingSetVector<EntryType> &Specs, void *&InsertPos,
-    ProfileArguments &&...ProfileArgs) {
+    ProfileArguments... ProfileArgs) {
 
-  if (auto *Found = findSpecializationLocally(
-          Specs, InsertPos, std::forward<ProfileArguments>(ProfileArgs)...))
+  if (auto *Found = findSpecializationLocally(Specs, InsertPos, ProfileArgs...))
     return Found;
 
-  if (!loadLazySpecializationsImpl(
-          std::forward<ProfileArguments>(ProfileArgs)...))
+  if (!loadLazySpecializationsImpl(ProfileArgs...))
     return nullptr;
 
-  return findSpecializationLocally(
-      Specs, InsertPos, std::forward<ProfileArguments>(ProfileArgs)...);
+  return findSpecializationLocally(Specs, InsertPos, ProfileArgs...);
 }
 
 template<class Derived, class EntryType>
@@ -671,8 +665,11 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
   ASTContext &Context = getASTContext();
   TemplateName Name = Context.getQualifiedTemplateName(
       /*NNS=*/nullptr, /*TemplateKeyword=*/false, TemplateName(this));
-  CommonPtr->InjectedClassNameType = Context.getTemplateSpecializationType(
-      Name, getTemplateParameters()->getInjectedTemplateArgs(Context));
+  auto TemplateArgs = getTemplateParameters()->getInjectedTemplateArgs(Context);
+  CommonPtr->InjectedClassNameType =
+      Context.getTemplateSpecializationType(Name,
+                                            /*SpecifiedArgs=*/TemplateArgs,
+                                            /*CanonicalArgs=*/std::nullopt);
   return CommonPtr->InjectedClassNameType;
 }
 
@@ -684,7 +681,7 @@ TemplateTypeParmDecl *TemplateTypeParmDecl::Create(
     const ASTContext &C, DeclContext *DC, SourceLocation KeyLoc,
     SourceLocation NameLoc, unsigned D, unsigned P, IdentifierInfo *Id,
     bool Typename, bool ParameterPack, bool HasTypeConstraint,
-    std::optional<unsigned> NumExpanded) {
+    UnsignedOrNone NumExpanded) {
   auto *TTPDecl =
       new (C, DC,
            additionalSizeToAlloc<TypeConstraint>(HasTypeConstraint ? 1 : 0))
@@ -750,14 +747,14 @@ bool TemplateTypeParmDecl::isParameterPack() const {
 
 void TemplateTypeParmDecl::setTypeConstraint(
     ConceptReference *Loc, Expr *ImmediatelyDeclaredConstraint,
-    int ArgumentPackSubstitutionIndex) {
+    UnsignedOrNone ArgPackSubstIndex) {
   assert(HasTypeConstraint &&
          "HasTypeConstraint=true must be passed at construction in order to "
          "call setTypeConstraint");
   assert(!TypeConstraintInitialized &&
          "TypeConstraint was already initialized!");
-  new (getTrailingObjects<TypeConstraint>()) TypeConstraint(
-      Loc, ImmediatelyDeclaredConstraint, ArgumentPackSubstitutionIndex);
+  new (getTrailingObjects())
+      TypeConstraint(Loc, ImmediatelyDeclaredConstraint, ArgPackSubstIndex);
   TypeConstraintInitialized = true;
 }
 
@@ -881,9 +878,7 @@ TemplateTemplateParmDecl::TemplateTemplateParmDecl(
     : TemplateDecl(TemplateTemplateParm, DC, L, Id, Params),
       TemplateParmPosition(D, P), Typename(Typename), ParameterPack(true),
       ExpandedParameterPack(true), NumExpandedParams(Expansions.size()) {
-  if (!Expansions.empty())
-    std::uninitialized_copy(Expansions.begin(), Expansions.end(),
-                            getTrailingObjects<TemplateParameterList *>());
+  llvm::uninitialized_copy(Expansions, getTrailingObjects());
 }
 
 TemplateTemplateParmDecl *
@@ -941,8 +936,7 @@ void TemplateTemplateParmDecl::setDefaultArgument(
 //===----------------------------------------------------------------------===//
 TemplateArgumentList::TemplateArgumentList(ArrayRef<TemplateArgument> Args)
     : NumArguments(Args.size()) {
-  std::uninitialized_copy(Args.begin(), Args.end(),
-                          getTrailingObjects<TemplateArgument>());
+  llvm::uninitialized_copy(Args, getTrailingObjects());
 }
 
 TemplateArgumentList *
@@ -1169,8 +1163,7 @@ ImplicitConceptSpecializationDecl::CreateDeserialized(
 void ImplicitConceptSpecializationDecl::setTemplateArguments(
     ArrayRef<TemplateArgument> Converted) {
   assert(Converted.size() == NumTemplateArgs);
-  std::uninitialized_copy(Converted.begin(), Converted.end(),
-                          getTrailingObjects<TemplateArgument>());
+  llvm::uninitialized_copy(Converted, getTrailingObjects());
 }
 
 //===----------------------------------------------------------------------===//

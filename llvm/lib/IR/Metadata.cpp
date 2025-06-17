@@ -1223,6 +1223,26 @@ MDNode *MDNode::mergeDirectCallProfMetadata(MDNode *A, MDNode *B,
 MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
                                       const Instruction *AInstr,
                                       const Instruction *BInstr) {
+  // Check that it is legal to merge prof metadata based on the opcode.
+  auto IsLegal = [](const Instruction &I) -> bool {
+    switch (I.getOpcode()) {
+    case Instruction::Invoke:
+    case Instruction::Br:
+    case Instruction::Switch:
+    case Instruction::Call:
+    case Instruction::IndirectBr:
+    case Instruction::Select:
+    case Instruction::CallBr:
+      return true;
+    default:
+      return false;
+    }
+  };
+  if (AInstr && !IsLegal(*AInstr))
+    return nullptr;
+  if (BInstr && !IsLegal(*BInstr))
+    return nullptr;
+
   if (!(A && B)) {
     return A ? A : B;
   }

@@ -470,7 +470,6 @@ struct InheritFromSealed : SealedType {};
 class SealedDestructor { // expected-note {{mark 'SealedDestructor' as 'sealed' to silence this warning}}
     // expected-warning@+1 {{'sealed' keyword is a Microsoft extension}}
     virtual ~SealedDestructor() sealed; // expected-warning {{class with destructor marked 'sealed' cannot be inherited from}}
-                                      // expected-warning@-1 {{virtual method '~SealedDestructor' is inside a 'final' class}}
 };
 
 // expected-warning@+1 {{'abstract' keyword is a Microsoft extension}}
@@ -614,7 +613,7 @@ typedef char __unaligned *aligned_type; // expected-error {{expected ';' after t
 
 namespace PR32750 {
 template<typename T> struct A {};
-template<typename T> struct B : A<A<T>> { A<T>::C::D d; }; // expected-warning {{implicit 'typename' is a C++20 extension}}
+template<typename T> struct B : A<A<T>> { A<T>::C::D d; }; // expected-warning {{missing 'typename' prior to dependent type name 'A<T>::C::D' is a C++20 extension}}
 }
 
 #endif

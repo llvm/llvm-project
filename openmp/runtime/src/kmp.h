@@ -821,7 +821,7 @@ private:
 typedef KMPAffinity::Mask kmp_affin_mask_t;
 extern KMPAffinity *__kmp_affinity_dispatch;
 
-#ifndef KMP_OS_AIX
+#if !KMP_OS_AIX
 class kmp_affinity_raii_t {
   kmp_affin_mask_t *mask;
   bool restored;
@@ -1046,7 +1046,13 @@ typedef enum {
   omp_atk_fallback = 5,
   omp_atk_fb_data = 6,
   omp_atk_pinned = 7,
-  omp_atk_partition = 8
+  omp_atk_partition = 8,
+  omp_atk_pin_device = 9,
+  omp_atk_preferred_device = 10,
+  omp_atk_device_access = 11,
+  omp_atk_target_access = 12,
+  omp_atk_atomic_scope = 13,
+  omp_atk_part_size = 14
 } omp_alloctrait_key_t;
 
 typedef enum {
@@ -1057,7 +1063,7 @@ typedef enum {
   omp_atv_serialized = 5,
   omp_atv_sequential = omp_atv_serialized, // (deprecated)
   omp_atv_private = 6,
-  omp_atv_all = 7,
+  omp_atv_device = 7,
   omp_atv_thread = 8,
   omp_atv_pteam = 9,
   omp_atv_cgroup = 10,
@@ -1068,11 +1074,16 @@ typedef enum {
   omp_atv_environment = 15,
   omp_atv_nearest = 16,
   omp_atv_blocked = 17,
-  omp_atv_interleaved = 18
+  omp_atv_interleaved = 18,
+  omp_atv_all = 19,
+  omp_atv_single = 20,
+  omp_atv_multiple = 21,
+  omp_atv_memspace = 22
 } omp_alloctrait_value_t;
 #define omp_atv_default ((omp_uintptr_t)-1)
 
 typedef void *omp_memspace_handle_t;
+extern omp_memspace_handle_t const omp_null_mem_space;
 extern omp_memspace_handle_t const omp_default_mem_space;
 extern omp_memspace_handle_t const omp_large_cap_mem_space;
 extern omp_memspace_handle_t const omp_const_mem_space;
@@ -1081,6 +1092,7 @@ extern omp_memspace_handle_t const omp_low_lat_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_host_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_shared_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_device_mem_space;
+extern omp_memspace_handle_t const kmp_max_mem_space;
 
 typedef struct {
   omp_alloctrait_key_t key;
@@ -1109,8 +1121,15 @@ extern omp_allocator_handle_t __kmp_def_allocator;
 extern int __kmp_memkind_available;
 extern bool __kmp_hwloc_available;
 
-typedef omp_memspace_handle_t kmp_memspace_t; // placeholder
+/// Memory space informaition is shared with offload runtime.
+typedef struct kmp_memspace_t {
+  omp_memspace_handle_t memspace; // predefined input memory space
+  int num_resources = 0; // number of available resources
+  int *resources = nullptr; // available resources
+  kmp_memspace_t *next = nullptr; // next memory space handle
+} kmp_memspace_t;
 
+/// Memory allocator information is shared with offload runtime.
 typedef struct kmp_allocator_t {
   omp_memspace_handle_t memspace;
   void **memkind; // pointer to memkind
@@ -1120,6 +1139,12 @@ typedef struct kmp_allocator_t {
   kmp_uint64 pool_size;
   kmp_uint64 pool_used;
   bool pinned;
+  omp_alloctrait_value_t partition;
+  int pin_device;
+  int preferred_device;
+  omp_alloctrait_value_t target_access;
+  omp_alloctrait_value_t atomic_scope;
+  size_t part_size;
 #if KMP_USE_HWLOC
   omp_alloctrait_value_t membind;
 #endif
@@ -1155,6 +1180,21 @@ extern void ___kmpc_free(int gtid, void *ptr, omp_allocator_handle_t al);
 extern void __kmp_init_memkind();
 extern void __kmp_fini_memkind();
 extern void __kmp_init_target_mem();
+extern void __kmp_fini_target_mem();
+
+// OpenMP 6.0 (TR11) Memory Management support
+extern omp_memspace_handle_t __kmp_get_devices_memspace(int ndevs,
+                                                        const int *devs,
+                                                        omp_memspace_handle_t,
+                                                        int host);
+extern omp_allocator_handle_t __kmp_get_devices_allocator(int ndevs,
+                                                          const int *devs,
+                                                          omp_memspace_handle_t,
+                                                          int host);
+extern int __kmp_get_memspace_num_resources(omp_memspace_handle_t memspace);
+extern omp_memspace_handle_t
+__kmp_get_submemspace(omp_memspace_handle_t memspace, int num_resources,
+                      int *resources);
 
 /* ------------------------------------------------------------------------ */
 

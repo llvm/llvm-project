@@ -378,3 +378,38 @@ bool CombinerHelper::matchCastOfInteger(const MachineInstr &CastMI,
     return false;
   }
 }
+
+bool CombinerHelper::matchRedundantSextInReg(MachineInstr &Root,
+                                             MachineInstr &Other,
+                                             BuildFnTy &MatchInfo) const {
+  assert(Root.getOpcode() == TargetOpcode::G_SEXT_INREG &&
+         Other.getOpcode() == TargetOpcode::G_SEXT_INREG);
+
+  unsigned RootWidth = Root.getOperand(2).getImm();
+  unsigned OtherWidth = Other.getOperand(2).getImm();
+
+  Register Dst = Root.getOperand(0).getReg();
+  Register OtherDst = Other.getOperand(0).getReg();
+  Register Src = Other.getOperand(1).getReg();
+
+  if (RootWidth >= OtherWidth) {
+    // The root sext_inreg is entirely redundant because the other one
+    // is narrower.
+    if (!canReplaceReg(Dst, OtherDst, MRI))
+      return false;
+
+    MatchInfo = [=](MachineIRBuilder &B) {
+      Observer.changingAllUsesOfReg(MRI, Dst);
+      MRI.replaceRegWith(Dst, OtherDst);
+      Observer.finishedChangingAllUsesOfReg();
+    };
+  } else {
+    // RootWidth < OtherWidth, rewrite this G_SEXT_INREG with the source of the
+    // other G_SEXT_INREG.
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildSExtInReg(Dst, Src, RootWidth);
+    };
+  }
+
+  return true;
+}

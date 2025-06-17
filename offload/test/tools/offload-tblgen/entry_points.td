@@ -20,7 +20,7 @@ def : Function {
 
 // The validation function should call the implementation function
 // CHECK: FunctionA_val
-// CHECK: return FunctionA_impl(ParamA, ParamB);
+// CHECK: return llvm::offload::FunctionA_impl(ParamA, ParamB);
 
 // CHECK: ol_result_t{{.*}} FunctionA(
 
@@ -28,7 +28,7 @@ def : Function {
 // CHECK: if (offloadConfig().TracingEnabled) {
 // CHECK-NEXT: "---> FunctionA";
 
-// CHECK: Result = FunctionA_val(ParamA, ParamB);
+// CHECK: Result = llvmErrorToOffloadError(FunctionA_val(ParamA, ParamB));
 
 // Tracing should construct a param struct for printing
 // CHECK: if (offloadConfig().TracingEnabled) {

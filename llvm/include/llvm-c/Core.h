@@ -393,6 +393,12 @@ typedef enum {
   LLVMAtomicRMWBinOpUSubCond, /**<Subtracts the value only if no unsigned
                                  overflow */
   LLVMAtomicRMWBinOpUSubSat,  /**<Subtracts the value, clamping to zero */
+  LLVMAtomicRMWBinOpFMaximum, /**< Sets the value if it's greater than the
+                           original using an floating point comparison and
+                           return the old one */
+  LLVMAtomicRMWBinOpFMinimum, /**< Sets the value if it's smaller than the
+                           original using an floating point comparison and
+                           return the old one */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {
@@ -2351,6 +2357,16 @@ LLVMBool LLVMIsConstantString(LLVMValueRef c);
 const char *LLVMGetAsString(LLVMValueRef c, size_t *Length);
 
 /**
+ * Get the raw, underlying bytes of the given constant data sequential.
+ *
+ * This is the same as LLVMGetAsString except it works for all constant data
+ * sequentials, not just i8 arrays.
+ *
+ * @see ConstantDataSequential::getRawDataValues()
+ */
+const char *LLVMGetRawDataValues(LLVMValueRef c, size_t *SizeInBytes);
+
+/**
  * Create an anonymous ConstantStruct with the specified values.
  *
  * @see llvm::ConstantStruct::getAnon()
@@ -2387,6 +2403,18 @@ LLVMValueRef LLVMConstArray(LLVMTypeRef ElementTy,
  */
 LLVMValueRef LLVMConstArray2(LLVMTypeRef ElementTy, LLVMValueRef *ConstantVals,
                              uint64_t Length);
+
+/**
+ * Create a ConstantDataArray from raw values.
+ *
+ * ElementTy must be one of i8, i16, i32, i64, half, bfloat, float, or double.
+ * Data points to a contiguous buffer of raw values in the host endianness. The
+ * element count is inferred from the element type and the data size in bytes.
+ *
+ * @see llvm::ConstantDataArray::getRaw()
+ */
+LLVMValueRef LLVMConstDataArray(LLVMTypeRef ElementTy, const char *Data,
+                                size_t SizeInBytes);
 
 /**
  * Create a non-anonymous ConstantStruct from values.

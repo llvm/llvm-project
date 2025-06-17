@@ -8,7 +8,7 @@
 
 #include "AArch64MCTargetDesc.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -61,8 +61,7 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
     FixupKind = FK_PCRel_4;
   }
 
-  auto Modifier = Target.isAbsolute() ? MCSymbolRefExpr::VK_None
-                                      : Target.getSymA()->getKind();
+  auto Spec = Target.getSpecifier();
   const MCExpr *Expr = Fixup.getValue();
 
   if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
@@ -74,7 +73,7 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
       break;
     default:
       Ctx.reportError(Fixup.getLoc(), "relocation specifier " +
-                                          A64E->getSpecifierName() +
+                                          AArch64::getSpecifierName(*A64E) +
                                           " unsupported on COFF targets");
       return COFF::IMAGE_REL_ARM64_ABSOLUTE; // Dummy return value
     }
@@ -84,10 +83,10 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
   default: {
     if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
       Ctx.reportError(Fixup.getLoc(), "relocation specifier " +
-                                          A64E->getSpecifierName() +
+                                          AArch64::getSpecifierName(*A64E) +
                                           " unsupported on COFF targets");
     } else {
-      const MCFixupKindInfo &Info = MAB.getFixupKindInfo(Fixup.getKind());
+      MCFixupKindInfo Info = MAB.getFixupKindInfo(Fixup.getKind());
       Ctx.reportError(Fixup.getLoc(), Twine("relocation type ") + Info.Name +
                                           " unsupported on COFF targets");
     }
@@ -98,7 +97,7 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
     return COFF::IMAGE_REL_ARM64_REL32;
 
   case FK_Data_4:
-    switch (Modifier) {
+    switch (Spec) {
     default:
       return COFF::IMAGE_REL_ARM64_ADDR32;
     case MCSymbolRefExpr::VK_COFF_IMGREL32:

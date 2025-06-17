@@ -16,7 +16,7 @@ void func(int *restrict a, int *restrict b) {
 // CHECK256-COUNT-8: str
 // CHECK512-COUNT-4: str
 // CHECK1024-COUNT-2: str
-// CHECK2048-COUNT-1: st1w
+// CHECK2048-COUNT-1: str
 #pragma clang loop vectorize(enable)
   for (int i = 0; i < 64; ++i)
     a[i] += b[i];

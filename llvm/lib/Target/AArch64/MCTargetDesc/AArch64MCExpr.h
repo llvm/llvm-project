@@ -21,10 +21,12 @@
 
 namespace llvm {
 
-class AArch64MCExpr : public MCTargetExpr {
+class AArch64MCExpr : public MCSpecifierExpr {
 public:
-  enum Specifier : uint16_t {
+  using Specifier = uint16_t;
+  enum {
     // clang-format off
+    None          = 0,
     // Symbol locations specifying (roughly speaking) what calculation should be
     // performed to construct the final address for the relocated
     // symbol. E.g. direct, via the GOT, ...
@@ -120,38 +122,31 @@ public:
     VK_SECREL_LO12       = VK_SECREL       | VK_PAGEOFF,
     VK_SECREL_HI12       = VK_SECREL       | VK_HI12,
 
+    // ELF relocation specifiers in data directives:
+    VK_PLT          = 0x400,
+    VK_GOTPCREL,
+
+    // Mach-O @ relocation specifiers:
+    M_GOT,
+    M_GOTPAGE,
+    M_GOTPAGEOFF,
+    M_PAGE,
+    M_PAGEOFF,
+    M_TLVP,
+    M_TLVPPAGE,
+    M_TLVPPAGEOFF,
+
     VK_INVALID  = 0xfff
     // clang-format on
   };
 
-private:
-  const MCExpr *Expr;
-  const Specifier specifier;
-
 protected:
   explicit AArch64MCExpr(const MCExpr *Expr, Specifier S)
-      : Expr(Expr), specifier(S) {}
+      : MCSpecifierExpr(Expr, S) {}
 
 public:
-  /// @name Construction
-  /// @{
-
   static const AArch64MCExpr *create(const MCExpr *Expr, Specifier,
                                      MCContext &Ctx);
-
-  /// @}
-  /// @name Accessors
-  /// @{
-
-  /// Get the kind of this expression.
-  Specifier getSpecifier() const { return specifier; }
-
-  /// Get the expression this modifier applies to.
-  const MCExpr *getSubExpr() const { return Expr; }
-
-  /// @}
-  /// @name VariantKind information extractors.
-  /// @{
 
   static Specifier getSymbolLoc(Specifier S) {
     return static_cast<Specifier>(S & VK_SymLocBits);
@@ -162,24 +157,6 @@ public:
   }
 
   static bool isNotChecked(Specifier S) { return S & VK_NC; }
-
-  /// @}
-
-  /// Return the string representation of the ELF relocation specifier
-  /// (e.g. ":got:", ":lo12:").
-  StringRef getSpecifierName() const;
-
-  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-
-  void visitUsedExpr(MCStreamer &Streamer) const override;
-
-  MCFragment *findAssociatedFragment() const override;
-
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAssembler *Asm) const override;
-  static bool classof(const MCExpr *E) {
-    return E->getKind() == MCExpr::Target;
-  }
 };
 
 class AArch64AuthMCExpr final : public AArch64MCExpr {
@@ -200,11 +177,7 @@ public:
   uint16_t getDiscriminator() const { return Discriminator; }
   bool hasAddressDiversity() const { return getSpecifier() == VK_AUTHADDR; }
 
-  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-
-  void visitUsedExpr(MCStreamer &Streamer) const override;
-
-  MCFragment *findAssociatedFragment() const override;
+  void print(raw_ostream &OS, const MCAsmInfo *MAI) const;
 
   static bool classof(const MCExpr *E) {
     return isa<AArch64MCExpr>(E) && classof(cast<AArch64MCExpr>(E));

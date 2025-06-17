@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 
 using namespace clang;
@@ -18,19 +17,7 @@ using namespace ento;
 
 int ImplicitNullDerefEvent::Tag;
 
-void CheckerBase::printState(raw_ostream &Out, ProgramStateRef State,
-                             const char *NL, const char *Sep) const {}
+StringRef CheckerBase::getDebugTag() const { return getName(); }
 
-CheckerProgramPointTag::CheckerProgramPointTag(StringRef CheckerName,
-                                               StringRef Msg)
-  : SimpleProgramPointTag(CheckerName, Msg) {}
-
-CheckerProgramPointTag::CheckerProgramPointTag(const CheckerBase *Checker,
-                                               StringRef Msg)
-    : SimpleProgramPointTag(Checker->getName(), Msg) {}
-
-raw_ostream& clang::ento::operator<<(raw_ostream &Out,
-                                     const CheckerBase &Checker) {
-  Out << Checker.getName();
-  return Out;
-}
+void CheckerBackend::printState(raw_ostream &Out, ProgramStateRef State,
+                                const char *NL, const char *Sep) const {}

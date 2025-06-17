@@ -207,7 +207,7 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
   DebugLoc DL;
 
   SmallVector<const MachineOperand *> BaseOps;
-  LocationSize Width = 0;
+  LocationSize Width = LocationSize::precise(0);
   int64_t Offset;
   bool OffsetIsScalable;
 
@@ -294,7 +294,7 @@ TEST_P(RISCVInstrInfoTest, DescribeLoadedValue) {
   DebugLoc DL;
 
   MachineBasicBlock *MBB = MF->CreateMachineBasicBlock();
-  MF->getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+  MF->getProperties().setNoVRegs();
 
   // Register move.
   auto *MI1 = BuildMI(*MBB, MBB->begin(), DL, TII->get(RISCV::ADDI), RISCV::X1)

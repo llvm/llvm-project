@@ -388,7 +388,7 @@ void ProcessSwitchInst(SwitchInst *SI,
   ConstantInt *UpperBound = nullptr;
   bool DefaultIsUnreachableFromSwitch = false;
 
-  if (isa<UnreachableInst>(Default->getFirstNonPHIOrDbg())) {
+  if (SI->defaultDestUnreachable()) {
     // Make the bounds tightly fitted around the case value range, because we
     // know that the value passed to the switch must be exactly one of the case
     // values.
@@ -406,7 +406,7 @@ void ProcessSwitchInst(SwitchInst *SI,
     //    roughly C icmp's per switch, where C is the number of cases in the
     //    switch, while LowerSwitch only needs to call LVI once per switch.
     const DataLayout &DL = F->getDataLayout();
-    KnownBits Known = computeKnownBits(Val, DL, /*Depth=*/0, AC, SI);
+    KnownBits Known = computeKnownBits(Val, DL, AC, SI);
     // TODO Shouldn't this create a signed range?
     ConstantRange KnownBitsRange =
         ConstantRange::fromKnownBits(Known, /*IsSigned=*/false);

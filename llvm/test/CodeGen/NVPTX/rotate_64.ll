@@ -12,7 +12,7 @@ define i64 @rotate64(i64 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [rotate64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [rotate64_param_0];
 ; CHECK-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-NEXT:    shf.l.wrap.b32 %r3, %r1, %r2, 3;
 ; CHECK-NEXT:    shf.l.wrap.b32 %r4, %r2, %r1, 3;
@@ -30,7 +30,7 @@ define i64 @rotateright64(i64 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [rotateright64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [rotateright64_param_0];
 ; CHECK-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-NEXT:    shf.r.wrap.b32 %r3, %r2, %r1, 3;
 ; CHECK-NEXT:    shf.r.wrap.b32 %r4, %r1, %r2, 3;

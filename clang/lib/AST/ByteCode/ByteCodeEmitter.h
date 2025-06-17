@@ -60,6 +60,7 @@ protected:
 
   /// We're always emitting bytecode.
   bool isActive() const { return true; }
+  bool checkingForUndefinedBehavior() const { return false; }
 
   /// Callback for local registration.
   Local createLocal(Descriptor *D);

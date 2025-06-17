@@ -10,8 +10,13 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECLIENTBASE_H
 
 #include "GDBRemoteCommunication.h"
-
+#include "lldb/Utility/Broadcaster.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include <chrono>
 #include <condition_variable>
+#include <cstdint>
+#include <mutex>
 
 namespace lldb_private {
 namespace process_gdb_remote {

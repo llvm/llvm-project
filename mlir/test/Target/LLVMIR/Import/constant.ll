@@ -199,12 +199,12 @@ define i32 @function_address_after_def() {
 @nested_agg = global %nested_agg_type { %simple_agg_type{i32 1, i8 2, i16 3, i32 4}, ptr null }
 
 ; CHECK-DAG:  %[[NULL:.+]] = llvm.mlir.zero : !llvm.ptr
-; CHECK-DAG:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.vec<2 x ptr>
+; CHECK-DAG:  %[[ROOT:.+]] = llvm.mlir.undef : vector<2x!llvm.ptr>
 ; CHECK-DAG:  %[[P0:.+]] = llvm.mlir.constant(0 : i32) : i32
-; CHECK-DAG:  %[[CHAIN0:.+]] = llvm.insertelement %[[NULL]], %[[ROOT]][%[[P0]] : i32] : !llvm.vec<2 x ptr>
+; CHECK-DAG:  %[[CHAIN0:.+]] = llvm.insertelement %[[NULL]], %[[ROOT]][%[[P0]] : i32] : vector<2x!llvm.ptr>
 ; CHECK-DAG:  %[[P1:.+]] = llvm.mlir.constant(1 : i32) : i32
-; CHECK-DAG:  %[[CHAIN1:.+]] = llvm.insertelement %[[NULL]], %[[CHAIN0]][%[[P1]] : i32] : !llvm.vec<2 x ptr>
-; CHECK-DAG:  llvm.return %[[CHAIN1]] : !llvm.vec<2 x ptr>
+; CHECK-DAG:  %[[CHAIN1:.+]] = llvm.insertelement %[[NULL]], %[[CHAIN0]][%[[P1]] : i32] : vector<2x!llvm.ptr>
+; CHECK-DAG:  llvm.return %[[CHAIN1]] : vector<2x!llvm.ptr>
 @vector_agg = global <2 x ptr> <ptr null, ptr null>
 
 ; // -----

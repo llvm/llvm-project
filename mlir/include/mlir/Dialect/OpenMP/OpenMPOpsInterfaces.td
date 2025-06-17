@@ -222,6 +222,15 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
     single region with a single block in which there's a single operation and a
     terminator. That nested operation must be another loop wrapper or an
     `omp.loop_nest`.
+
+    Operation-specific verifiers should make the following checks in their
+    verifier, additionally to what the interface itself checks:
+      - If `getNestedWrapper() != nullptr`, is the type of the nested wrapper
+      allowed in that context? This check might require looking at the parent as
+      well.
+      - If the operation is a `ComposableOpInterface`, check that it is
+      consistent with the potential existence of a `LoopWrapperInterface` parent
+      and whether `getNestedWrapper() != nullptr`.
   }];
 
   let cppNamespace = "::mlir::omp";
@@ -255,7 +264,7 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
   ];
 
   let extraClassDeclaration = [{
-    /// Interface verifier imlementation.
+    /// Interface verifier implementation.
     llvm::LogicalResult verifyImpl();
   }];
 

@@ -1,4 +1,7 @@
-// RUN: %check_clang_tidy %s readability-qualified-auto %t
+// RUN: %check_clang_tidy %s readability-qualified-auto %t \
+// RUN: -config='{CheckOptions: { \
+// RUN:   readability-qualified-auto.AllowedTypes: "[iI]terator$;my::ns::Ignored1;std::array<.*>::Ignored2;MyIgnoredPtr" \
+// RUN: }}'
 
 namespace typedefs {
 typedef int *MyPtr;
@@ -237,4 +240,146 @@ void baz() {
   // CHECK-FIXES-NOT: {{^}}  auto *MyFunctionRef = *getPtrFunction();
 
   auto &MyFunctionRef2 = *getPtrFunction();
+}
+
+namespace std {
+
+template<typename T, int N>
+struct array {
+  typedef T value_type;
+
+  typedef value_type* iterator;
+  typedef value_type* Iterator;
+  using using_iterator = T*;
+  typedef const value_type* const_iterator;
+  typedef const value_type* constIterator;
+
+  struct Ignored2 {};
+  using NotIgnored2 = Ignored2;
+
+  iterator begin() { return nullptr; }
+  const_iterator begin() const { return nullptr; }
+  iterator end() { return nullptr; }
+  const_iterator end() const { return nullptr; }
+};
+
+struct Iterator {};
+
+struct Ignored2 {}; // should not be ignored
+
+} // namespace std
+
+typedef std::Iterator iterator;
+
+namespace my {
+namespace ns {
+
+struct Ignored1 {};
+
+using NotIgnored1 = Ignored1;
+typedef Ignored1 NotIgnored2;
+
+} // namespace ns
+
+struct Ignored1 {}; // should not be ignored
+
+} // namespace my
+
+typedef int *MyIgnoredPtr;
+MyIgnoredPtr getIgnoredPtr();
+
+void ignored_types() {
+  auto ignored_ptr = getIgnoredPtr();
+  // CHECK-MESSAGES-NOT: warning: 'auto ignored_ptr' can be declared as 'auto *ignored_ptr'
+  // CHECK-FIXES-NOT: auto *ignored_ptr = getIgnoredPtr();
+
+  std::array<int, 4> arr;
+  std::array<int, 4> carr;
+
+  auto it1 = arr.begin();
+  // CHECK-MESSAGES-NOT: warning: 'auto it' can be declared as 'auto *it'
+  // CHECK-FIXES-NOT: auto *it = vec.it_begin();
+  
+  auto it2 = carr.begin();
+  // CHECK-MESSAGES-NOT: warning: 'auto it2' can be declared as 'auto *it2'
+  // CHECK-FIXES-NOT: auto *it2 = carr.begin();
+
+  auto it3 = std::array<int, 4>::iterator{};
+  // CHECK-MESSAGES-NOT: warning: 'auto it3' can be declared as 'auto *it3'
+  // CHECK-FIXES-NOT: auto *it3 = std::array<int, 4>::iterator{};
+
+  auto it4 = std::array<int, 4>::Iterator{};
+  // CHECK-MESSAGES-NOT: warning: 'auto it4' can be declared as 'auto *it4'
+  // CHECK-FIXES-NOT: auto *it4 = std::array<int, 4>::Iterator{};
+
+  auto it5 = std::array<int, 4>::using_iterator{};
+  // CHECK-MESSAGES-NOT: warning: 'auto it5' can be declared as 'auto *it5'
+  // CHECK-FIXES-NOT: auto *it5 = std::array<int, 4>::using_iterator{};
+
+  auto it6 = std::array<int, 4>::const_iterator{};
+  // CHECK-MESSAGES-NOT: warning: 'auto it6' can be declared as 'auto *it6'
+  // CHECK-FIXES-NOT: auto *it6 = std::array<int, 4>::const_iterator{};
+
+  auto it7 = std::array<int, 4>::constIterator{};
+  // CHECK-MESSAGES-NOT: warning: 'auto it7' can be declared as 'auto *it7'
+  // CHECK-FIXES-NOT: auto *it7 = std::array<int, 4>::constIterator{};
+
+  auto it8 = new std::Iterator();
+  // CHECK-MESSAGES-NOT: warning: 'auto it8' can be declared as 'auto *it8'
+  // CHECK-FIXES-NOT: auto *it8 = new std::Iterator();
+
+  auto it9 = new iterator();
+  // CHECK-MESSAGES-NOT: warning: 'auto it9' can be declared as 'auto *it9'
+  // CHECK-FIXES-NOT: auto *it9 = new iterator();
+
+  auto arr_ignored2 = new std::array<int, 4>::Ignored2();
+  // CHECK-MESSAGES-NOT: warning: 'auto arr_ignored2' can be declared as 'auto *arr_ignored2'
+  // CHECK-FIXES-NOT: auto *arr_ignored2 = new std::array<int, 4>::Ignored2();
+
+  auto arr_not_ignored2 = new std::array<int, 4>::NotIgnored2();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'auto arr_not_ignored2' can be declared as 'auto *arr_not_ignored2'
+  // CHECK-FIXES: auto *arr_not_ignored2 = new std::array<int, 4>::NotIgnored2();
+
+  auto not_ignored2 = new std::Ignored2();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'auto not_ignored2' can be declared as 'auto *not_ignored2'
+  // CHECK-FIXES: auto *not_ignored2 = new std::Ignored2();
+
+  auto ignored1 = new my::ns::Ignored1();
+  // CHECK-MESSAGES-NOT: warning: 'auto ignored1' can be declared as 'auto *ignored1'
+  // CHECK-FIXES-NOT: auto *ignored1 = new my::ns::Ignored1();
+
+  auto not_ignored1 = new my::ns::NotIgnored1();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'auto not_ignored1' can be declared as 'auto *not_ignored1'
+  // CHECK-FIXES: auto *not_ignored1 = new my::ns::NotIgnored1();
+
+  auto not2_ignored1 = new my::ns::NotIgnored2();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'auto not2_ignored1' can be declared as 'auto *not2_ignored1'
+  // CHECK-FIXES: auto *not2_ignored1 = new my::ns::NotIgnored2();
+
+  auto not3_ignored1 = new my::Ignored1();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'auto not3_ignored1' can be declared as 'auto *not3_ignored1'
+  // CHECK-FIXES: auto *not3_ignored1 = new my::Ignored1();
+}
+
+template <typename T>
+void ignored_types_template(std::array<T, 4> arr, const std::array<T, 4>& carr) {
+  auto it1 = arr.begin();
+  // CHECK-MESSAGES-NOT: warning: 'auto it' can be declared as 'auto *it'
+  // CHECK-FIXES-NOT: auto *it = arr.it_begin();
+  
+  auto it2 = carr.begin();
+  // CHECK-MESSAGES-NOT: warning: 'auto it2' can be declared as 'auto *it2'
+  // CHECK-FIXES-NOT: auto *it2 = carr.begin();
+
+  for (auto Data : arr) {
+    // CHECK-MESSAGES-NOT: warning: 'auto Data' can be declared as 'auto *Data'
+    // CHECK-FIXES-NOT: {{^}}    for (auto *Data : MClassTemplate) {
+    change(*Data);
+  }
+
+  for (auto Data : carr) {
+    // CHECK-MESSAGES-NOT: warning: 'auto Data' can be declared as 'const auto *Data'
+    // CHECK-FIXES-NOT: {{^}}    for (const auto *Data : MClassTemplate) {
+    change(*Data);
+  }
 }
