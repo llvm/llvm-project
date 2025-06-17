@@ -1,4 +1,6 @@
 !RUN: rm -rf %t && mkdir -p %t
+! The next line is a temporary clean-up for the buildbots to pass.
+!RUN: rm -f modfile75a.mod modfile75b.mod
 !RUN: %flang -c -fhermetic-module-files -DWHICH=1 -J%t %s && %flang -c -fhermetic-module-files -DWHICH=2 -J%t %s && %flang_fc1 -fdebug-unparse -J%t %s | FileCheck %s
 
 #if WHICH == 1
