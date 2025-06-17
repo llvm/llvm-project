@@ -968,6 +968,24 @@ RawShadow *MemToShadow(uptr x) {
   return reinterpret_cast<RawShadow *>(SelectMapping<MemToShadowImpl>(x));
 }
 
+struct MemToEndShadowImpl {
+  template <typename Mapping>
+  static uptr Apply(uptr x) {
+    return (((x + kShadowCell - 1) &
+             ~(Mapping::kShadowMsk | (kShadowCell - 1))) ^
+            Mapping::kShadowXor) *
+               kShadowMultiplier +
+           Mapping::kShadowAdd;
+  }
+};
+
+// If addr % kShadowCell == 0, then MemToEndShadow(addr) == MemToShadow(addr)
+// Otherwise, MemToEndShadow(addr) == MemToShadow(addr) + kShadowCnt
+ALWAYS_INLINE
+RawShadow *MemToEndShadow(uptr x) {
+  return reinterpret_cast<RawShadow *>(SelectMapping<MemToEndShadowImpl>(x));
+}
+
 struct MemToMetaImpl {
   template <typename Mapping>
   static u32 *Apply(uptr x) {
