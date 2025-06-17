@@ -99,10 +99,10 @@ static bool isUnorderedMap(ConstString type_name) {
 
 CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     GetElementType(CompilerType table_type) {
-  auto element_type = table_type.GetTypedefedType().GetTypeTemplateArgument(0);
+  auto element_type = table_type.GetDirectNestedTypeWithName("value_type").GetTypedefedType();
 
   // This synthetic provider is used for both unordered_(multi)map and
-  // unordered_(multi)set. For unordered_map, the element type has an
+  // unordered_(multi)set. For older unordered_map layouts, the element type has an
   // additional type layer, an internal struct (`__hash_value_type`)
   // that wraps a std::pair. Peel away the internal wrapper type - whose
   // structure is of no value to users, to expose the std::pair. This
