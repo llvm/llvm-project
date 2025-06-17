@@ -419,7 +419,7 @@ private:
   std::thread progress_event_thread;
   /// @}
 
-  /// list of addresses mapped by sourceReference(index - 1)
+  /// List of addresses mapped by sourceReference.
   std::vector<lldb::addr_t> m_source_references;
   std::mutex m_source_references_mutex;
 

@@ -61,9 +61,8 @@ std::optional<protocol::Source> CreateAssemblySource(
     name = GetLoadAddressString(load_addr);
   }
 
-  if (load_addr == LLDB_INVALID_ADDRESS) {
+  if (load_addr == LLDB_INVALID_ADDRESS)
     return std::nullopt;
-  }
 
   protocol::Source source;
   source.sourceReference = create_reference(load_addr);
