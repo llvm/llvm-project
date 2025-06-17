@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFCFIProgram.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnwindTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <memory>
@@ -38,7 +39,7 @@ class CIE;
 ///
 /// \returns An error if the DWARF Call Frame Information opcodes have state
 /// machine errors, or a valid UnwindTable otherwise.
-Expected<UnwindTable> createUnwindTable(const CIE *Cie);
+LLVM_ABI Expected<UnwindTable> createUnwindTable(const CIE *Cie);
 
 class FDE;
 
@@ -50,7 +51,7 @@ class FDE;
 ///
 /// \returns An error if the DWARF Call Frame Information opcodes have state
 /// machine errors, or a valid UnwindTable otherwise.
-Expected<UnwindTable> createUnwindTable(const FDE *Fde);
+LLVM_ABI Expected<UnwindTable> createUnwindTable(const FDE *Fde);
 
 /// An entry in either debug_frame or eh_frame. This entry can be a CIE or an
 /// FDE.
