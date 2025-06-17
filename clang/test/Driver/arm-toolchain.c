@@ -136,7 +136,8 @@
 
 // ARM-BAREMETAL-COMPILER-RT: "{{.*}}crt0.o"
 // ARM-BAREMETAL-COMPILER-RT: "{{.*}}clang_rt.crtbegin.o"
-// ARM-BAREMETAL-COMPILER-RT: "--start-group" "{{.*}}libclang_rt.builtins.a" "-lc" "-lgloss" "--end-group"
+// ARM-BAREMETAL-COMPILER-RT: "--start-group" "{{.*}}libclang_rt.builtins.a"
+// ARM-BAREMETAL-COMPILER-RT: "-lc" "-lgloss" "--end-group"
 // ARM-BAREMETAL-COMPILER-RT: "{{.*}}clang_rt.crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
