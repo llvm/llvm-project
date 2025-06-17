@@ -10,7 +10,6 @@
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/XcodeSDK.h"
-#include "lldb/Utility/XcodeSDKPath.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
