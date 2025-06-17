@@ -490,7 +490,8 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
       unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
       assert((TermBr && (!TermBr->getSuccessor(idx) ||
                          (isa<VPIRBasicBlock>(this) &&
-                          TermBr->getSuccessor(idx) == NewBB))) &&
+                          (TermBr->getSuccessor(idx) == NewBB ||
+                           PredVPBlock == getPlan()->getEntry())))) &&
              "Trying to reset an existing successor block.");
       TermBr->setSuccessor(idx, NewBB);
     }

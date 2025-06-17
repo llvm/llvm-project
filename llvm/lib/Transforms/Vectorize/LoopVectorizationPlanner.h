@@ -28,6 +28,10 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/InstructionCost.h"
 
+namespace {
+class GeneratedRTChecks;
+}
+
 namespace llvm {
 
 class LoopInfo;
@@ -559,6 +563,9 @@ private:
   void adjustRecipesForReductions(VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
+
+  /// Add the runtime checks from \p RTChecks to \p VPlan.
+  void addRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks) const;
 
 #ifndef NDEBUG
   /// \return The most profitable vectorization factor for the available VPlans

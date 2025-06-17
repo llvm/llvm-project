@@ -74,6 +74,13 @@ struct VPlanTransforms {
   /// flat CFG into a hierarchical CFG.
   static void createLoopRegions(VPlan &Plan);
 
+  /// Connect the blocks in \p Checks to \p Plan, using the corresponding
+  /// VPValue as branch condition.
+  static void
+  connectCheckBlocks(VPlan &Plan,
+                     ArrayRef<std::pair<VPValue *, VPIRBasicBlock *>> Checks,
+                     bool AddBranchWeights);
+
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
   /// to a wide recipe if needed.

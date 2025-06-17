@@ -20,6 +20,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/MDBuilder.h"
 
 #define DEBUG_TYPE "vplan"
 
@@ -588,4 +589,42 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   TopRegion->setName("vector loop");
   TopRegion->getEntryBasicBlock()->setName("vector.body");
+}
+
+// Likelyhood of bypassing the vectorized loop because SCEV assumptions or
+// memory runtime checks.
+static constexpr uint32_t CheckBypassWeights[] = {1, 127};
+
+void VPlanTransforms::connectCheckBlocks(
+    VPlan &Plan, ArrayRef<std::pair<VPValue *, VPIRBasicBlock *>> Checks,
+    bool AddBranchWeights) {
+  VPBlockBase *VectorPH = Plan.getVectorPreheader();
+  VPBlockBase *ScalarPH = Plan.getScalarPreheader();
+  for (const auto &[Cond, CheckBlock] : Checks) {
+    VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
+    VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckBlock);
+    VPBlockUtils::connectBlocks(CheckBlock, ScalarPH);
+    CheckBlock->swapSuccessors();
+
+    // We just connected a new block to the scalar preheader. Update all
+    // VPPhis by adding an incoming value for it, replicating the last value.
+    unsigned NumPredecessors = ScalarPH->getNumPredecessors();
+    for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
+      assert(isa<VPPhi>(&R) && "Phi expected to be VPPhi");
+      assert(cast<VPPhi>(&R)->getNumIncoming() == NumPredecessors - 1 &&
+             "must have incoming values for all operands");
+      R.addOperand(R.getOperand(NumPredecessors - 2));
+    }
+
+    VPIRMetadata VPBranchWeights;
+    auto *Term = VPBuilder(CheckBlock)
+                     .createNaryOp(VPInstruction::BranchOnCond, {Cond},
+                                   Plan.getCanonicalIV()->getDebugLoc());
+    if (AddBranchWeights) {
+      MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
+      MDNode *BranchWeights =
+          MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
+      Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
+    }
+  }
 }
