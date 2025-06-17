@@ -35,7 +35,6 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <utility>
 
 using namespace clang;
 using namespace CodeGen;
@@ -469,14 +468,6 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     if (const auto *RSAttr = dyn_cast<RootSignatureAttr>(Attr))
       addRootSignature(RSAttr->getSignatureDecl()->getRootElements(), EntryFn,
                        M);
-  }
-}
-
-void CGHLSLRuntime::setHLSLFunctionAttributes(const FunctionDecl *FD,
-                                              llvm::Function *Fn) {
-  if (FD->isInExportDeclContext()) {
-    const StringRef ExportAttrKindStr = "hlsl.export";
-    Fn->addFnAttr(ExportAttrKindStr);
   }
 }
 
