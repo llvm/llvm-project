@@ -41,7 +41,7 @@ LIBC_INLINE uint64_t next_random_seed() {
     while (count > 0) {
       auto len = internal::getrandom(buffer, count, 0);
       if (len.error()) {
-        if (libc_errno == ENOSYS)
+        if (len.error() == ENOSYS)
           break;
         continue;
       }
