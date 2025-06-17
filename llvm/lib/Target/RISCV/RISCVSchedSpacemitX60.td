@@ -101,6 +101,20 @@ class SMX60GetVIWideLatency<string mx> {
   );
 }
 
+// Latency for FP FMA operations (vfmacc, vfmadd, vfmsac, etc.)
+// Uses worst-case latency across element widths: 6,6,7,8
+class SMX60GetVFFMALatency<string mx> {
+  int c = !cond(
+    !eq(mx, "M1") : 6,
+    !eq(mx, "M2") : 6,
+    !eq(mx, "M4") : 7,
+    !eq(mx, "M8") : 8,
+    !eq(mx, "MF2") : 6,
+    !eq(mx, "MF4") : 6,
+    !eq(mx, "MF8") : 6
+  );
+}
+
 class SMX60GetVIRedLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 7,
@@ -557,6 +571,7 @@ foreach mx = SchedMxListF in {
   foreach sew = SchedSEWSet<mx, isF=1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, isF=1>.c;
     defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
+    defvar FMALat = SMX60GetVFFMALatency<mx>.c;
 
     defm "" : LMULSEWWriteResMXSEW<"WriteVFALUV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
     let Latency = ArithLat in {
@@ -564,8 +579,10 @@ foreach mx = SchedMxListF in {
     }
     defm "" : LMULSEWWriteResMXSEW<"WriteVFMulV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
     defm "" : LMULSEWWriteResMXSEW<"WriteVFMulF",  [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddV", [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddF", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    let Latency = FMALat in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddF", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
   }
 }
 
