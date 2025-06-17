@@ -627,6 +627,7 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
                                   CXXCtorInitializer *MemberInit,
                                   const CXXConstructorDecl *Constructor,
                                   FunctionArgList &Args) {
+  ApplyAtomGroup Grp(CGF.getDebugInfo());
   ApplyDebugLocation Loc(CGF, MemberInit->getSourceLocation());
   assert(MemberInit->isAnyMemberInitializer() &&
          "Must have member initializer!");
@@ -1114,6 +1115,7 @@ namespace {
       }
 
       pushEHDestructors();
+      ApplyAtomGroup Grp(CGF.getDebugInfo());
       emitMemcpy();
       AggregatedInits.clear();
     }
@@ -1249,6 +1251,7 @@ namespace {
         reset();
       }
 
+      ApplyAtomGroup Grp(CGF.getDebugInfo());
       emitMemcpy();
       AggregatedStmts.clear();
     }
@@ -1339,11 +1342,9 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
     assert(!Member->isBaseInitializer());
     assert(Member->isAnyMemberInitializer() &&
            "Delegating initializer on non-delegating constructor");
-    ApplyAtomGroup Grp(getDebugInfo());
     CM.addMemberInitializer(Member);
   }
 
-  ApplyAtomGroup Grp(getDebugInfo());
   CM.finish();
 }
 
@@ -1566,6 +1567,7 @@ void CodeGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &Args) 
   AssignmentMemcpyizer AM(*this, AssignOp, Args);
   for (auto *I : RootCS->body())
     AM.emitAssignment(I);
+
   AM.finish();
 }
 
