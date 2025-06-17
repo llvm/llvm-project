@@ -38,8 +38,7 @@ enum AssignFlags {
   ComponentCanBeDefinedAssignment = 1 << 3,
   ExplicitLengthCharacterLHS = 1 << 4,
   PolymorphicLHS = 1 << 5,
-  DeallocateLHS = 1 << 6,
-  UpdateLHSBounds = 1 << 7,
+  DeallocateLHS = 1 << 6
 };
 
 #ifdef RT_DEVICE_COMPILATION
