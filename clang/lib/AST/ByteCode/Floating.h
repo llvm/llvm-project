@@ -38,8 +38,7 @@ private:
     uint64_t Val = 0;
     uint64_t *Memory;
   };
-  llvm::APFloatBase::Semantics Semantics =
-      llvm::APFloatBase::Semantics::S_IEEEhalf;
+  llvm::APFloatBase::Semantics Semantics;
 
   APFloat getValue() const {
     unsigned BitWidth = bitWidth();
