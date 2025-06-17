@@ -684,9 +684,9 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   for (StringRef Input :
        {"rv64i_xqcia0p7", "rv64i_xqciac0p3", "rv64i_xqcibi0p2",
         "rv64i_xqcibm0p8", "rv64i_xqcicli0p3", "rv64i_xqcicm0p2",
-        "rv64i_xqcics0p2", "rv64i_xqcicsr0p3", "rv64i_xqciint0p7",
+        "rv64i_xqcics0p2", "rv64i_xqcicsr0p4", "rv64i_xqciint0p10",
         "rv64i_xqciio0p1", "rv64i_xqcilb0p2", "rv64i_xqcili0p2",
-        "rv64i_xqcilia0p2", "rv64i_xqcilo0p3", "rv64i_xqcilsm0p5",
+        "rv64i_xqcilia0p2", "rv64i_xqcilo0p3", "rv64i_xqcilsm0p6",
         "rv64i_xqcisim0p2", "rv64i_xqcisls0p2", "rv64i_xqcisync0p3"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
@@ -695,13 +695,13 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
 
   for (StringRef Input :
        {"rv32idc_xqciac0p3", "rv32i_zcd_xqciac0p3", "rv32idc_xqcicm0p2",
-        "rv32i_zcd_xqcicm0p2", "rv32idc_xqccmp0p1", "rv32i_zcd_xqccmp0p1"}) {
+        "rv32i_zcd_xqcicm0p2", "rv32idc_xqccmp0p3", "rv32i_zcd_xqccmp0p3"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith("extension when 'd' extension is enabled"));
   }
 
-  for (StringRef Input : {"rv32i_zcmp_xqccmp0p1", "rv64i_zcmp_xqccmp0p1"}) {
+  for (StringRef Input : {"rv32i_zcmp_xqccmp0p3", "rv64i_zcmp_xqccmp0p3"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zcmp' and 'xqccmp' extensions are incompatible");
   }
@@ -1184,7 +1184,7 @@ Experimental extensions
     smctr                1.0
     ssctr                1.0
     svukte               0.3
-    xqccmp               0.1
+    xqccmp               0.3
     xqcia                0.7
     xqciac               0.3
     xqcibi               0.2
@@ -1192,14 +1192,14 @@ Experimental extensions
     xqcicli              0.3
     xqcicm               0.2
     xqcics               0.2
-    xqcicsr              0.3
-    xqciint              0.7
+    xqcicsr              0.4
+    xqciint              0.10
     xqciio               0.1
     xqcilb               0.2
     xqcili               0.2
     xqcilia              0.2
     xqcilo               0.3
-    xqcilsm              0.5
+    xqcilsm              0.6
     xqcisim              0.2
     xqcisls              0.2
     xqcisync             0.3

@@ -403,6 +403,7 @@ struct VOPMAsmOnlyInfo {
 
 struct VOPMPseudoInfo {
   uint16_t Opcode;
+  bool IsConvolve;
 };
 
 struct VOPDComponentInfo {
@@ -592,6 +593,11 @@ bool isVOPCAsmOnly(unsigned Opc) { return isVOPCAsmOnlyOpcodeHelper(Opc); }
 bool isVOPMAsmOnly(unsigned Opc) { return isVOPMAsmOnlyOpcodeHelper(Opc); }
 
 bool isVOPMPseudo(unsigned Opc) { return isVOPMPseudoOpcodeHelper(Opc); }
+
+bool isConvolve(unsigned Opc) {
+  const VOPMPseudoInfo *VOPMInfo = isVOPMPseudoOpcodeHelper(Opc);
+  return VOPMInfo ? VOPMInfo->IsConvolve : false;
+}
 
 bool getMAIIsDGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
