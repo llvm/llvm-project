@@ -748,10 +748,6 @@ FailureOr<BaseMemRefType> castToMemRef(FailureOr<BufferLikeType> bufferType);
 /// bufferization::ConversionInterface to verify the types in tensor and buffer
 /// worlds match.
 bool typesMatchAfterBufferization(Operation &op, Value tensor, Value buffer);
-
-/// This function is a free-standing helper that relies on
-/// bufferization::ConversionInterface to perform the conversion.
-Type getTensorFromBuffer(Type buffer);
 } // namespace detail
 
 } // namespace bufferization

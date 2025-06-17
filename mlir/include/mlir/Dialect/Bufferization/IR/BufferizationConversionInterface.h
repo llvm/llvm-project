@@ -35,10 +35,6 @@ struct ConversionDialectInterface
   virtual LogicalResult typesMatch(
       TensorLikeType tensor, BufferLikeType buffer,
       function_ref<InFlightDiagnostic(const Twine &)> emitError) const = 0;
-
-  /// Hook to customize buffer-like -> tensor-like conversion, which is the
-  /// opposite of bufferization.
-  virtual TensorLikeType getTensorFromBuffer(BufferLikeType buffer) const = 0;
 };
 
 /// Interface collection for conversion between tensor-like and buffer-like
@@ -60,10 +56,6 @@ struct ConversionInterface
   LogicalResult
   typesMatch(TensorLikeType tensor, BufferLikeType buffer,
              function_ref<InFlightDiagnostic(const Twine &)> emitError) const;
-
-  /// Dispatches to ConversionDialectInterface::getTensorFromBuffer() of the
-  /// dialect associated with the value type.
-  TensorLikeType getTensorFromBuffer(BufferLikeType buffer) const;
 };
 
 } // namespace bufferization

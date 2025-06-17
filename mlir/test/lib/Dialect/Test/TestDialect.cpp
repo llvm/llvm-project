@@ -319,15 +319,6 @@ struct TestConverter : bufferization::ConversionDialectInterface {
         testTensor.getElementType() == testMemref.getElementType();
     return success(valid);
   }
-
-  bufferization::TensorLikeType
-  getTensorFromBuffer(bufferization::BufferLikeType buffer) const override {
-    auto testMemref = dyn_cast<TestMemrefType>(buffer);
-    assert(testMemref && "expected TestMemrefType");
-    return cast<bufferization::TensorLikeType>(
-        TestTensorType::get(testMemref.getContext(), testMemref.getShape(),
-                            testMemref.getElementType()));
-  }
 };
 
 } // namespace

@@ -172,7 +172,9 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   if (llvm::isa<RankedTensorType>(shapedValue.getType())) {
     tensor = shapedValue;
   } else if (llvm::isa<MemRefType>(shapedValue.getType())) {
-    tensor = b.create<ToTensorOp>(loc, shapedValue);
+    tensor = b.create<ToTensorOp>(
+        loc, memref::getTensorTypeFromMemRefType(shapedValue.getType()),
+        shapedValue);
   } else if (llvm::isa<UnrankedTensorType>(shapedValue.getType()) ||
              llvm::isa<UnrankedMemRefType>(shapedValue.getType())) {
     return getOwnerOfValue(shapedValue)
@@ -1063,10 +1065,4 @@ bool bufferization::detail::typesMatchAfterBufferization(Operation &op,
       cast<TensorLikeType>(tensor.getType()),
       cast<BufferLikeType>(buffer.getType()),
       [&](const Twine &message) { return op.emitError(message); }));
-}
-
-Type bufferization::detail::getTensorFromBuffer(Type buffer) {
-  assert(isa<BufferLikeType>(buffer) && "expected BufferLikeType");
-  bufferization::ConversionInterface iface(buffer.getContext());
-  return iface.getTensorFromBuffer(cast<BufferLikeType>(buffer));
 }

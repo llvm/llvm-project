@@ -643,8 +643,9 @@ Value MaterializeInDestinationOp::buildSubsetExtraction(OpBuilder &builder,
   assert(getRestrict() &&
          "expected that ops with memrefs dest have 'restrict'");
   setRestrict(false);
-  return builder.create<ToTensorOp>(loc, getDest(), /*restrict=*/true,
-                                    getWritable());
+  return builder.create<ToTensorOp>(
+      loc, memref::getTensorTypeFromMemRefType(getDest().getType()), getDest(),
+      /*restrict=*/true, getWritable());
 }
 
 bool MaterializeInDestinationOp::isEquivalentSubset(

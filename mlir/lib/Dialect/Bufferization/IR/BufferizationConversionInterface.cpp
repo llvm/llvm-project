@@ -54,14 +54,5 @@ LogicalResult ConversionInterface::typesMatch(
   return success();
 }
 
-TensorLikeType
-ConversionInterface::getTensorFromBuffer(BufferLikeType buffer) const {
-  Dialect *dialect = &buffer.getDialect();
-  if (const ConversionDialectInterface *iface = getInterfaceFor(dialect))
-    return iface->getTensorFromBuffer(buffer);
-
-  return cast<TensorLikeType>(memref::getTensorTypeFromMemRefType(buffer));
-}
-
 } // namespace bufferization
 } // namespace mlir

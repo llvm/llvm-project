@@ -490,13 +490,6 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
       `:` type($buffer) `to` type($result)
   }];
 
-  let builders = [
-    OpBuilder<(ins "Value":$buffer, CArg<"bool", "false">:$restrict, CArg<"bool", "false">:$writeable), [{
-      auto rtt = bufferization::detail::getTensorFromBuffer(buffer.getType());
-      build($_builder, $_state, rtt, buffer, restrict, writeable);
-    }]>
-  ];
-
   let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
