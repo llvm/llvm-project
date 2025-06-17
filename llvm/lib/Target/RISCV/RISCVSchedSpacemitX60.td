@@ -547,7 +547,6 @@ foreach mx = ["M2", "M4"] in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
   defvar ALULat = SMX60GetVIALULatency<mx>.c;
-
   defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
 
   let Latency = ArithLat in {
@@ -592,11 +591,10 @@ foreach mx = SchedMxListF in {
     defvar ALULat = SMX60GetVIALULatency<mx>.c;
     defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     let Latency = ArithLat in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxF", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
-
     let Latency = ALULat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRecpV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFSgnjV", [SMX60_VIEU], mx, sew, IsWorstCase>;
