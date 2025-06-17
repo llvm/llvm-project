@@ -83,11 +83,9 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
   OS << ") {\n";
 
   // Emit pre-call prints
-  if (F.getTraceEnabled()) {
-    OS << TAB_1 "if (llvm::offload::isTracingEnabled()) {\n";
-    OS << formatv(TAB_2 "llvm::errs() << \"---> {0}\";\n", F.getName());
-    OS << TAB_1 "}\n\n";
-  }
+  OS << TAB_1 "if (llvm::offload::isTracingEnabled()) {\n";
+  OS << formatv(TAB_2 "llvm::errs() << \"---> {0}\";\n", F.getName());
+  OS << TAB_1 "}\n\n";
 
   // Perform actual function call to the validation wrapper
   ParamNameList = ParamNameList.substr(0, ParamNameList.size() - 2);
@@ -96,28 +94,26 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
       PrefixLower, F.getName(), ParamNameList);
 
   // Emit post-call prints
-  if (F.getTraceEnabled()) {
-    OS << TAB_1 "if (llvm::offload::isTracingEnabled()) {\n";
-    if (F.getParams().size() > 0) {
-      OS << formatv(TAB_2 "{0} Params = {{", F.getParamStructName());
-      for (const auto &Param : F.getParams()) {
-        OS << "&" << Param.getName();
-        if (Param != F.getParams().back()) {
-          OS << ", ";
-        }
+  OS << TAB_1 "if (llvm::offload::isTracingEnabled()) {\n";
+  if (F.getParams().size() > 0) {
+    OS << formatv(TAB_2 "{0} Params = {{", F.getParamStructName());
+    for (const auto &Param : F.getParams()) {
+      OS << "&" << Param.getName();
+      if (Param != F.getParams().back()) {
+        OS << ", ";
       }
-      OS << formatv("};\n");
-      OS << TAB_2 "llvm::errs() << \"(\" << &Params << \")\";\n";
-    } else {
-      OS << TAB_2 "llvm::errs() << \"()\";\n";
     }
-    OS << TAB_2 "llvm::errs() << \"-> \" << Result << \"\\n\";\n";
-    OS << TAB_2 "if (Result && Result->Details) {\n";
-    OS << TAB_3 "llvm::errs() << \"     *Error Details* \" << Result->Details "
-                "<< \" \\n\";\n";
-    OS << TAB_2 "}\n";
-    OS << TAB_1 "}\n";
+    OS << formatv("};\n");
+    OS << TAB_2 "llvm::errs() << \"(\" << &Params << \")\";\n";
+  } else {
+    OS << TAB_2 "llvm::errs() << \"()\";\n";
   }
+  OS << TAB_2 "llvm::errs() << \"-> \" << Result << \"\\n\";\n";
+  OS << TAB_2 "if (Result && Result->Details) {\n";
+  OS << TAB_3 "llvm::errs() << \"     *Error Details* \" << Result->Details "
+              "<< \" \\n\";\n";
+  OS << TAB_2 "}\n";
+  OS << TAB_1 "}\n";
 
   OS << TAB_1 "return Result;\n";
   OS << "}\n";

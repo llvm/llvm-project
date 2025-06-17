@@ -116,7 +116,10 @@ struct OffloadContext {
   }
 };
 
-bool isTracingEnabled() { return OffloadContext::get().TracingEnabled; }
+// If the context is uninited, then we assume tracing is disabled
+bool isTracingEnabled() {
+  return OffloadContextVal && OffloadContext::get().TracingEnabled;
+}
 bool isValidationEnabled() { return OffloadContext::get().ValidationEnabled; }
 
 template <typename HandleT> Error olDestroy(HandleT Handle) {

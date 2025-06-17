@@ -167,8 +167,6 @@ def : Function {
   ];
   let params = [];
   let returns = [];
-  // Since olInit sets up the tracing infrastructure, it can't be traced itself
-  let trace = 0;
 }
 
 def : Function {

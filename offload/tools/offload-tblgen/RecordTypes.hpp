@@ -224,7 +224,6 @@ public:
   std::vector<StringRef> getAnalogues() const {
     return rec->getValueAsListOfStrings("analogues");
   }
-  bool getTraceEnabled() const { return rec->getValueAsBit("trace"); }
 
 private:
   std::vector<ReturnRec> rets;
