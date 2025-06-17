@@ -1,5 +1,5 @@
 ! Test do concurrent reduction
-! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false --enable-delayed-privatization=false -o - %s | FileCheck %s
 
 ! CHECK-LABEL: loop_test
 subroutine loop_test
