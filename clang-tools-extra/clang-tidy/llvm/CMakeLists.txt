@@ -9,6 +9,7 @@ add_clang_library(clangTidyLLVMModule STATIC
   LLVMTidyModule.cpp
   PreferIsaOrDynCastInConditionalsCheck.cpp
   PreferRegisterOverUnsignedCheck.cpp
+  PreferStaticOverAnonymousNamespaceCheck.cpp
   TwineLocalCheck.cpp
 
   LINK_LIBS
