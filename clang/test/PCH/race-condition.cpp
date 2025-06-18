@@ -37,6 +37,6 @@ constexpr enable_if_t<meta<F>::value == 2, void> midpoint(F) {}
 // change in the ODR hash calculation this error isn't triggered anymore.
 
 int x = N::something;
-// expected-error@38{{no member named 'something' in namespace 'N'}}
+// expected-error@39{{no member named 'something' in namespace 'N'}}
 
 #endif
