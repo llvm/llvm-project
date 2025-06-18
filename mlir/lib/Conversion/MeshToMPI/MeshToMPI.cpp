@@ -519,23 +519,23 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
   }
 };
 
-static mpi::MPI_OpClassEnumAttr getMPIReduction(ReductionKindAttr kind) {
+static mpi::MPI_ReductionOpEnumAttr getMPIReductionOp(ReductionKindAttr kind) {
   auto ctx = kind.getContext();
   switch (kind.getValue()) {
   case ReductionKind::Sum:
-    return mpi::MPI_OpClassEnumAttr::get(ctx, mpi::MPI_OpClassEnum::MPI_SUM);
+    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_SUM);
   case ReductionKind::Product:
-    return mpi::MPI_OpClassEnumAttr::get(ctx, mpi::MPI_OpClassEnum::MPI_PROD);
+    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_PROD);
   case ReductionKind::Min:
-    return mpi::MPI_OpClassEnumAttr::get(ctx, mpi::MPI_OpClassEnum::MPI_MIN);
+    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_MIN);
   case ReductionKind::Max:
-    return mpi::MPI_OpClassEnumAttr::get(ctx, mpi::MPI_OpClassEnum::MPI_MAX);
+    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_MAX);
   case ReductionKind::BitwiseAnd:
-    return mpi::MPI_OpClassEnumAttr::get(ctx, mpi::MPI_OpClassEnum::MPI_BAND);
+    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_BAND);
   case ReductionKind::BitwiseOr:
-    return mpi::MPI_OpClassEnumAttr::get(ctx, mpi::MPI_OpClassEnum::MPI_BOR);
+    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_BOR);
   case ReductionKind::BitwiseXor:
-    return mpi::MPI_OpClassEnumAttr::get(ctx, mpi::MPI_OpClassEnum::MPI_BXOR);
+    return mpi::MPI_ReductionOpEnumAttr::get(ctx, mpi::MPI_ReductionOpEnum::MPI_BXOR);
   default:
     assert(false && "Unknown/unsupported reduction kind");
   }
@@ -626,7 +626,7 @@ struct ConvertAllReduceOp : public OpConversionPattern<AllReduceOp> {
     // Create the MPI AllReduce operation.
     iBuilder.create<mpi::AllReduceOp>(
         TypeRange(), buffer1d, buffer1d,
-        getMPIReduction(adaptor.getReductionAttr()), comm);
+        getMPIReductionOp(adaptor.getReductionAttr()), comm);
 
     // If the destination is a memref, cast it to a tensor
     if (isa<RankedTensorType>(op.getType()))
