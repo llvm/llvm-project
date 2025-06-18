@@ -1502,16 +1502,6 @@ VarLocInsertPt getNextNode(VarLocInsertPt InsertPt) {
   return getNextNode(cast<const DbgRecord *>(InsertPt));
 }
 
-DbgAssignIntrinsic *CastToDbgAssign(DbgVariableIntrinsic *DVI) {
-  return cast<DbgAssignIntrinsic>(DVI);
-}
-
-DbgVariableRecord *CastToDbgAssign(DbgVariableRecord *DVR) {
-  assert(DVR->isDbgAssign() &&
-         "Attempted to cast non-assign DbgVariableRecord to DVRAssign.");
-  return DVR;
-}
-
 void AssignmentTrackingLowering::emitDbgValue(
     AssignmentTrackingLowering::LocKind Kind, DbgVariableRecord *Source,
     VarLocInsertPt After) {
@@ -1539,7 +1529,8 @@ void AssignmentTrackingLowering::emitDbgValue(
 
   // NOTE: This block can mutate Kind.
   if (Kind == LocKind::Mem) {
-    const auto *Assign = CastToDbgAssign(Source);
+    assert(Source->isDbgAssign());
+    const DbgVariableRecord *Assign = Source;
     // Check the address hasn't been dropped (e.g. the debug uses may not have
     // been replaced before deleting a Value).
     if (Assign->isKillAddress()) {
@@ -2138,14 +2129,6 @@ AllocaInst *getUnknownStore(const Instruction &I, const DataLayout &Layout) {
   return dyn_cast<AllocaInst>(Base);
 }
 
-DbgDeclareInst *DynCastToDbgDeclare(DbgVariableIntrinsic *DVI) {
-  return dyn_cast<DbgDeclareInst>(DVI);
-}
-
-DbgVariableRecord *DynCastToDbgDeclare(DbgVariableRecord *DVR) {
-  return DVR->isDbgDeclare() ? DVR : nullptr;
-}
-
 /// Build a map of {Variable x: Variables y} where all variable fragments
 /// contained within the variable fragment x are in set y. This means that
 /// y does not contain all overlaps because partial overlaps are excluded.
@@ -2184,8 +2167,8 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
   // clobber overlapped fragment locations later.
   SmallVector<DbgVariableRecord *> DPDeclares;
   auto ProcessDbgRecord = [&](DbgVariableRecord *Record) {
-    if (auto *Declare = DynCastToDbgDeclare(Record)) {
-      DPDeclares.push_back(Declare);
+    if (Record->isDbgDeclare()) {
+      DPDeclares.push_back(Record);
       return;
     }
     DebugVariable DV = DebugVariable(Record);
