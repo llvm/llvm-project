@@ -1754,33 +1754,6 @@ static uint8_t getOsAbi(const Triple &t) {
   }
 }
 
-// For DTLTO, bitcode member names must be valid paths to files on disk.
-// For thin archives, resolve `memberPath` relative to the archive's location.
-// Returns true if adjusted; false otherwise. Non-thin archives are unsupported.
-static bool dtltoAdjustMemberPathIfThinArchive(Ctx &ctx, StringRef archivePath,
-                                               std::string &memberPath) {
-  assert(!archivePath.empty() && !ctx.arg.dtltoDistributor.empty());
-
-  // Check if the archive file is a thin archive by reading its header.
-  auto bufferOrErr =
-      MemoryBuffer::getFileSlice(archivePath, sizeof(ThinArchiveMagic) - 1, 0);
-  if (std::error_code ec = bufferOrErr.getError()) {
-    ErrAlways(ctx) << "cannot open " << archivePath << ": " << ec.message();
-    return false;
-  }
-
-  if (!bufferOrErr->get()->getBuffer().starts_with(ThinArchiveMagic))
-    return false;
-
-  SmallString<64> resolvedPath;
-  if (path::is_relative(memberPath)) {
-    resolvedPath = path::parent_path(archivePath);
-    path::append(resolvedPath, memberPath);
-    memberPath = resolvedPath.str();
-  }
-  return true;
-}
-
 BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive, bool lazy)
     : InputFile(ctx, BitcodeKind, mb) {
@@ -1798,13 +1771,10 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   // symbols later in the link stage). So we append file offset to make
   // filename unique.
   StringSaver &ss = ctx.saver;
-  StringRef name =
-      (archiveName.empty() ||
-       (!ctx.arg.dtltoDistributor.empty() &&
-        dtltoAdjustMemberPathIfThinArchive(ctx, archiveName, path)))
-          ? ss.save(path)
-          : ss.save(archiveName + "(" + path::filename(path) + " at " +
-                    utostr(offsetInArchive) + ")");
+  StringRef name = archiveName.empty()
+                       ? ss.save(path)
+                       : ss.save(archiveName + "(" + path::filename(path) +
+                                 " at " + utostr(offsetInArchive) + ")");
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK2(lto::InputFile::create(mbref), this);
