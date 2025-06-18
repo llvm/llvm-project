@@ -582,7 +582,6 @@ namespace {
     SDValue reassociateReduction(unsigned RedOpc, unsigned Opc, const SDLoc &DL,
                                  EVT VT, SDValue N0, SDValue N1,
                                  SDNodeFlags Flags = SDNodeFlags());
-    SDValue foldReductionWithUndefLane(SDNode *N);
 
     SDValue visitShiftByConstant(SDNode *N);
 
@@ -1348,75 +1347,6 @@ SDValue DAGCombiner::reassociateReduction(unsigned RedOpc, unsigned Opc,
                                    N0.getOperand(0), N1.getOperand(0)));
   }
   return SDValue();
-}
-
-// Convert:
-// (op.x2 (vector_shuffle<i,u> A), B) -> <(op A:i, B:0)   undef>
-// ...or...
-// (op.x2 (vector_shuffle<u,i> A), B) -> <undef   (op A:i, B:1)>
-// ...where i is a valid index and u is poison.
-SDValue DAGCombiner::foldReductionWithUndefLane(SDNode *N) {
-  const EVT VectorVT = N->getValueType(0);
-
-  // Only support 2-packed vectors for now.
-  if (!VectorVT.isVector() || VectorVT.isScalableVector()
-        || VectorVT.getVectorNumElements() != 2)
-    return SDValue();
-
-  // If the operation is already unsupported, we don't need to do this
-  // operation.
-  if (!TLI.isOperationLegal(N->getOpcode(), VectorVT))
-    return SDValue();
-
-  // If vector shuffle is supported on the target, this optimization may
-  // increase register pressure.
-  if (TLI.isOperationLegalOrCustomOrPromote(ISD::VECTOR_SHUFFLE, VectorVT))
-      return SDValue();
-
-  SDLoc DL(N);
-
-  SDValue ShufOp = N->getOperand(0);
-  SDValue VectOp = N->getOperand(1);
-  bool Swapped = false;
-
-  // canonicalize shuffle op
-  if (VectOp.getOpcode() == ISD::VECTOR_SHUFFLE) {
-    std::swap(ShufOp, VectOp);
-    Swapped = true;
-  }
-
-  if (ShufOp.getOpcode() != ISD::VECTOR_SHUFFLE)
-    return SDValue();
-
-  auto *ShuffleOp = cast<ShuffleVectorSDNode>(ShufOp);
-  int LiveLane; // exclusively live lane
-  for (LiveLane = 0; LiveLane < 2; ++LiveLane) {
-    // check if the current lane is live and the other lane is dead
-    if (ShuffleOp->getMaskElt(LiveLane) != PoisonMaskElem &&
-        ShuffleOp->getMaskElt(!LiveLane) == PoisonMaskElem)
-      break;
-  }
-  if (LiveLane == 2)
-    return SDValue();
-
-  const int ElementIdx = ShuffleOp->getMaskElt(LiveLane);
-  const EVT ScalarVT = VectorVT.getScalarType();
-  SDValue Lanes[2] = {};
-  for (auto [LaneID, LaneVal] : enumerate(Lanes)) {
-    if (LaneID == (unsigned)LiveLane) {
-      SDValue Operands[2] = {
-          DAG.getExtractVectorElt(DL, ScalarVT, ShufOp.getOperand(0),
-                                  ElementIdx),
-          DAG.getExtractVectorElt(DL, ScalarVT, VectOp, LiveLane)};
-      // preserve the order of operands
-      if (Swapped)
-        std::swap(Operands[0], Operands[1]);
-      LaneVal = DAG.getNode(N->getOpcode(), DL, ScalarVT, Operands);
-    } else {
-      LaneVal = DAG.getUNDEF(ScalarVT);
-    }
-  }
-  return DAG.getBuildVector(VectorVT, DL, Lanes);
 }
 
 SDValue DAGCombiner::CombineTo(SDNode *N, const SDValue *To, unsigned NumTo,
@@ -3127,9 +3057,6 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
     SDValue SV = DAG.getStepVector(DL, VT, NewStep);
     return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), SV);
   }
-
-  if (SDValue R = foldReductionWithUndefLane(N))
-    return R;
 
   return SDValue();
 }
@@ -6074,9 +6001,6 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
                                         SDLoc(N), VT, N0, N1))
     return SD;
 
-  if (SDValue SD = foldReductionWithUndefLane(N))
-    return SD;
-
   // Simplify the operands using demanded-bits information.
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
@@ -7377,9 +7301,6 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
         }
       }
     }
-
-    if (SDValue R = foldReductionWithUndefLane(N))
-      return R;
   }
 
   // fold (and x, -1) -> x
@@ -8339,9 +8260,6 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
         }
       }
     }
-
-    if (SDValue R = foldReductionWithUndefLane(N))
-      return R;
   }
 
   // fold (or x, 0) -> x
@@ -10022,9 +9940,6 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
 
   if (SDValue Combined = combineCarryDiamond(DAG, TLI, N0, N1, N))
     return Combined;
-
-  if (SDValue R = foldReductionWithUndefLane(N))
-    return R;
 
   return SDValue();
 }
@@ -17642,10 +17557,6 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
       AddToWorklist(Fused.getNode());
     return Fused;
   }
-
-  if (SDValue R = foldReductionWithUndefLane(N))
-    return R;
-
   return SDValue();
 }
 
@@ -18012,9 +17923,6 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   // Don't do `combineFMulOrFDivWithIntPow2` until after FMUL -> FMA has been
   // able to run.
   if (SDValue R = combineFMulOrFDivWithIntPow2(N))
-    return R;
-
-  if (SDValue R = foldReductionWithUndefLane(N))
     return R;
 
   return SDValue();
@@ -19120,9 +19028,6 @@ SDValue DAGCombiner::visitFMinMax(SDNode *N) {
               ? (IsMin ? ISD::VECREDUCE_FMINIMUM : ISD::VECREDUCE_FMAXIMUM)
               : (IsMin ? ISD::VECREDUCE_FMIN : ISD::VECREDUCE_FMAX),
           Opc, SDLoc(N), VT, N0, N1, Flags))
-    return SD;
-
-  if (SDValue SD = foldReductionWithUndefLane(N))
     return SD;
 
   return SDValue();

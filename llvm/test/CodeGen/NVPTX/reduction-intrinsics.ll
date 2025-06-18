@@ -43,22 +43,45 @@ define half @reduce_fadd_half(<8 x half> %in) {
 }
 
 define half @reduce_fadd_half_reassoc(<8 x half> %in) {
-; CHECK-LABEL: reduce_fadd_half_reassoc(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<6>;
-; CHECK-NEXT:    .reg .b32 %r<8>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fadd_half_reassoc_param_0];
-; CHECK-NEXT:    add.rn.f16x2 %r5, %r2, %r4;
-; CHECK-NEXT:    add.rn.f16x2 %r6, %r1, %r3;
-; CHECK-NEXT:    add.rn.f16x2 %r7, %r6, %r5;
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r7;
-; CHECK-NEXT:    add.rn.f16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    mov.b16 %rs4, 0x0000;
-; CHECK-NEXT:    add.rn.f16 %rs5, %rs3, %rs4;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs5;
-; CHECK-NEXT:    ret;
+; CHECK-SM80-LABEL: reduce_fadd_half_reassoc(
+; CHECK-SM80:       {
+; CHECK-SM80-NEXT:    .reg .b16 %rs<6>;
+; CHECK-SM80-NEXT:    .reg .b32 %r<10>;
+; CHECK-SM80-EMPTY:
+; CHECK-SM80-NEXT:  // %bb.0:
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fadd_half_reassoc_param_0];
+; CHECK-SM80-NEXT:    add.rn.f16x2 %r5, %r2, %r4;
+; CHECK-SM80-NEXT:    add.rn.f16x2 %r6, %r1, %r3;
+; CHECK-SM80-NEXT:    add.rn.f16x2 %r7, %r6, %r5;
+; CHECK-SM80-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r7; }
+; CHECK-SM80-NEXT:    // implicit-def: %rs2
+; CHECK-SM80-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM80-NEXT:    add.rn.f16x2 %r9, %r7, %r8;
+; CHECK-SM80-NEXT:    { .reg .b16 tmp; mov.b32 {%rs3, tmp}, %r9; }
+; CHECK-SM80-NEXT:    mov.b16 %rs4, 0x0000;
+; CHECK-SM80-NEXT:    add.rn.f16 %rs5, %rs3, %rs4;
+; CHECK-SM80-NEXT:    st.param.b16 [func_retval0], %rs5;
+; CHECK-SM80-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: reduce_fadd_half_reassoc(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b16 %rs<6>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<10>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fadd_half_reassoc_param_0];
+; CHECK-SM100-NEXT:    add.rn.f16x2 %r5, %r2, %r4;
+; CHECK-SM100-NEXT:    add.rn.f16x2 %r6, %r1, %r3;
+; CHECK-SM100-NEXT:    add.rn.f16x2 %r7, %r6, %r5;
+; CHECK-SM100-NEXT:    mov.b32 {_, %rs1}, %r7;
+; CHECK-SM100-NEXT:    // implicit-def: %rs2
+; CHECK-SM100-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM100-NEXT:    add.rn.f16x2 %r9, %r7, %r8;
+; CHECK-SM100-NEXT:    mov.b32 {%rs3, _}, %r9;
+; CHECK-SM100-NEXT:    mov.b16 %rs4, 0x0000;
+; CHECK-SM100-NEXT:    add.rn.f16 %rs5, %rs3, %rs4;
+; CHECK-SM100-NEXT:    st.param.b16 [func_retval0], %rs5;
+; CHECK-SM100-NEXT:    ret;
   %res = call reassoc half @llvm.vector.reduce.fadd(half 0.0, <8 x half> %in)
   ret half %res
 }
@@ -182,20 +205,41 @@ define half @reduce_fmul_half(<8 x half> %in) {
 }
 
 define half @reduce_fmul_half_reassoc(<8 x half> %in) {
-; CHECK-LABEL: reduce_fmul_half_reassoc(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<8>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmul_half_reassoc_param_0];
-; CHECK-NEXT:    mul.rn.f16x2 %r5, %r2, %r4;
-; CHECK-NEXT:    mul.rn.f16x2 %r6, %r1, %r3;
-; CHECK-NEXT:    mul.rn.f16x2 %r7, %r6, %r5;
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r7;
-; CHECK-NEXT:    mul.rn.f16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs3;
-; CHECK-NEXT:    ret;
+; CHECK-SM80-LABEL: reduce_fmul_half_reassoc(
+; CHECK-SM80:       {
+; CHECK-SM80-NEXT:    .reg .b16 %rs<4>;
+; CHECK-SM80-NEXT:    .reg .b32 %r<10>;
+; CHECK-SM80-EMPTY:
+; CHECK-SM80-NEXT:  // %bb.0:
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmul_half_reassoc_param_0];
+; CHECK-SM80-NEXT:    mul.rn.f16x2 %r5, %r2, %r4;
+; CHECK-SM80-NEXT:    mul.rn.f16x2 %r6, %r1, %r3;
+; CHECK-SM80-NEXT:    mul.rn.f16x2 %r7, %r6, %r5;
+; CHECK-SM80-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r7; }
+; CHECK-SM80-NEXT:    // implicit-def: %rs2
+; CHECK-SM80-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM80-NEXT:    mul.rn.f16x2 %r9, %r7, %r8;
+; CHECK-SM80-NEXT:    { .reg .b16 tmp; mov.b32 {%rs3, tmp}, %r9; }
+; CHECK-SM80-NEXT:    st.param.b16 [func_retval0], %rs3;
+; CHECK-SM80-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: reduce_fmul_half_reassoc(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b16 %rs<4>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<10>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmul_half_reassoc_param_0];
+; CHECK-SM100-NEXT:    mul.rn.f16x2 %r5, %r2, %r4;
+; CHECK-SM100-NEXT:    mul.rn.f16x2 %r6, %r1, %r3;
+; CHECK-SM100-NEXT:    mul.rn.f16x2 %r7, %r6, %r5;
+; CHECK-SM100-NEXT:    mov.b32 {_, %rs1}, %r7;
+; CHECK-SM100-NEXT:    // implicit-def: %rs2
+; CHECK-SM100-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM100-NEXT:    mul.rn.f16x2 %r9, %r7, %r8;
+; CHECK-SM100-NEXT:    mov.b32 {%rs3, _}, %r9;
+; CHECK-SM100-NEXT:    st.param.b16 [func_retval0], %rs3;
+; CHECK-SM100-NEXT:    ret;
   %res = call reassoc half @llvm.vector.reduce.fmul(half 1.0, <8 x half> %in)
   ret half %res
 }
@@ -844,17 +888,20 @@ define i16 @reduce_add_i16(<8 x i16> %in) {
 ; CHECK-SM100-LABEL: reduce_add_i16(
 ; CHECK-SM100:       {
 ; CHECK-SM100-NEXT:    .reg .b16 %rs<4>;
-; CHECK-SM100-NEXT:    .reg .b32 %r<9>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<11>;
 ; CHECK-SM100-EMPTY:
 ; CHECK-SM100-NEXT:  // %bb.0:
 ; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_add_i16_param_0];
 ; CHECK-SM100-NEXT:    add.s16x2 %r5, %r2, %r4;
 ; CHECK-SM100-NEXT:    add.s16x2 %r6, %r1, %r3;
 ; CHECK-SM100-NEXT:    add.s16x2 %r7, %r6, %r5;
-; CHECK-SM100-NEXT:    mov.b32 {%rs1, %rs2}, %r7;
-; CHECK-SM100-NEXT:    add.s16 %rs3, %rs1, %rs2;
-; CHECK-SM100-NEXT:    cvt.u32.u16 %r8, %rs3;
-; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r8;
+; CHECK-SM100-NEXT:    mov.b32 {_, %rs1}, %r7;
+; CHECK-SM100-NEXT:    // implicit-def: %rs2
+; CHECK-SM100-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM100-NEXT:    add.s16x2 %r9, %r7, %r8;
+; CHECK-SM100-NEXT:    mov.b32 {%rs3, _}, %r9;
+; CHECK-SM100-NEXT:    cvt.u32.u16 %r10, %rs3;
+; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r10;
 ; CHECK-SM100-NEXT:    ret;
   %res = call i16 @llvm.vector.reduce.add(<8 x i16> %in)
   ret i16 %res
@@ -1067,17 +1114,20 @@ define i16 @reduce_umax_i16(<8 x i16> %in) {
 ; CHECK-SM100-LABEL: reduce_umax_i16(
 ; CHECK-SM100:       {
 ; CHECK-SM100-NEXT:    .reg .b16 %rs<4>;
-; CHECK-SM100-NEXT:    .reg .b32 %r<9>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<11>;
 ; CHECK-SM100-EMPTY:
 ; CHECK-SM100-NEXT:  // %bb.0:
 ; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_umax_i16_param_0];
 ; CHECK-SM100-NEXT:    max.u16x2 %r5, %r2, %r4;
 ; CHECK-SM100-NEXT:    max.u16x2 %r6, %r1, %r3;
 ; CHECK-SM100-NEXT:    max.u16x2 %r7, %r6, %r5;
-; CHECK-SM100-NEXT:    mov.b32 {%rs1, %rs2}, %r7;
-; CHECK-SM100-NEXT:    max.u16 %rs3, %rs1, %rs2;
-; CHECK-SM100-NEXT:    cvt.u32.u16 %r8, %rs3;
-; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r8;
+; CHECK-SM100-NEXT:    mov.b32 {_, %rs1}, %r7;
+; CHECK-SM100-NEXT:    // implicit-def: %rs2
+; CHECK-SM100-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM100-NEXT:    max.u16x2 %r9, %r7, %r8;
+; CHECK-SM100-NEXT:    mov.b32 {%rs3, _}, %r9;
+; CHECK-SM100-NEXT:    cvt.u32.u16 %r10, %rs3;
+; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r10;
 ; CHECK-SM100-NEXT:    ret;
   %res = call i16 @llvm.vector.reduce.umax(<8 x i16> %in)
   ret i16 %res
@@ -1198,17 +1248,20 @@ define i16 @reduce_umin_i16(<8 x i16> %in) {
 ; CHECK-SM100-LABEL: reduce_umin_i16(
 ; CHECK-SM100:       {
 ; CHECK-SM100-NEXT:    .reg .b16 %rs<4>;
-; CHECK-SM100-NEXT:    .reg .b32 %r<9>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<11>;
 ; CHECK-SM100-EMPTY:
 ; CHECK-SM100-NEXT:  // %bb.0:
 ; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_umin_i16_param_0];
 ; CHECK-SM100-NEXT:    min.u16x2 %r5, %r2, %r4;
 ; CHECK-SM100-NEXT:    min.u16x2 %r6, %r1, %r3;
 ; CHECK-SM100-NEXT:    min.u16x2 %r7, %r6, %r5;
-; CHECK-SM100-NEXT:    mov.b32 {%rs1, %rs2}, %r7;
-; CHECK-SM100-NEXT:    min.u16 %rs3, %rs1, %rs2;
-; CHECK-SM100-NEXT:    cvt.u32.u16 %r8, %rs3;
-; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r8;
+; CHECK-SM100-NEXT:    mov.b32 {_, %rs1}, %r7;
+; CHECK-SM100-NEXT:    // implicit-def: %rs2
+; CHECK-SM100-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM100-NEXT:    min.u16x2 %r9, %r7, %r8;
+; CHECK-SM100-NEXT:    mov.b32 {%rs3, _}, %r9;
+; CHECK-SM100-NEXT:    cvt.u32.u16 %r10, %rs3;
+; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r10;
 ; CHECK-SM100-NEXT:    ret;
   %res = call i16 @llvm.vector.reduce.umin(<8 x i16> %in)
   ret i16 %res
@@ -1329,17 +1382,20 @@ define i16 @reduce_smax_i16(<8 x i16> %in) {
 ; CHECK-SM100-LABEL: reduce_smax_i16(
 ; CHECK-SM100:       {
 ; CHECK-SM100-NEXT:    .reg .b16 %rs<4>;
-; CHECK-SM100-NEXT:    .reg .b32 %r<9>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<11>;
 ; CHECK-SM100-EMPTY:
 ; CHECK-SM100-NEXT:  // %bb.0:
 ; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_smax_i16_param_0];
 ; CHECK-SM100-NEXT:    max.s16x2 %r5, %r2, %r4;
 ; CHECK-SM100-NEXT:    max.s16x2 %r6, %r1, %r3;
 ; CHECK-SM100-NEXT:    max.s16x2 %r7, %r6, %r5;
-; CHECK-SM100-NEXT:    mov.b32 {%rs1, %rs2}, %r7;
-; CHECK-SM100-NEXT:    max.s16 %rs3, %rs1, %rs2;
-; CHECK-SM100-NEXT:    cvt.u32.u16 %r8, %rs3;
-; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r8;
+; CHECK-SM100-NEXT:    mov.b32 {_, %rs1}, %r7;
+; CHECK-SM100-NEXT:    // implicit-def: %rs2
+; CHECK-SM100-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM100-NEXT:    max.s16x2 %r9, %r7, %r8;
+; CHECK-SM100-NEXT:    mov.b32 {%rs3, _}, %r9;
+; CHECK-SM100-NEXT:    cvt.u32.u16 %r10, %rs3;
+; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r10;
 ; CHECK-SM100-NEXT:    ret;
   %res = call i16 @llvm.vector.reduce.smax(<8 x i16> %in)
   ret i16 %res
@@ -1460,17 +1516,20 @@ define i16 @reduce_smin_i16(<8 x i16> %in) {
 ; CHECK-SM100-LABEL: reduce_smin_i16(
 ; CHECK-SM100:       {
 ; CHECK-SM100-NEXT:    .reg .b16 %rs<4>;
-; CHECK-SM100-NEXT:    .reg .b32 %r<9>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<11>;
 ; CHECK-SM100-EMPTY:
 ; CHECK-SM100-NEXT:  // %bb.0:
 ; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_smin_i16_param_0];
 ; CHECK-SM100-NEXT:    min.s16x2 %r5, %r2, %r4;
 ; CHECK-SM100-NEXT:    min.s16x2 %r6, %r1, %r3;
 ; CHECK-SM100-NEXT:    min.s16x2 %r7, %r6, %r5;
-; CHECK-SM100-NEXT:    mov.b32 {%rs1, %rs2}, %r7;
-; CHECK-SM100-NEXT:    min.s16 %rs3, %rs1, %rs2;
-; CHECK-SM100-NEXT:    cvt.u32.u16 %r8, %rs3;
-; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r8;
+; CHECK-SM100-NEXT:    mov.b32 {_, %rs1}, %r7;
+; CHECK-SM100-NEXT:    // implicit-def: %rs2
+; CHECK-SM100-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM100-NEXT:    min.s16x2 %r9, %r7, %r8;
+; CHECK-SM100-NEXT:    mov.b32 {%rs3, _}, %r9;
+; CHECK-SM100-NEXT:    cvt.u32.u16 %r10, %rs3;
+; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r10;
 ; CHECK-SM100-NEXT:    ret;
   %res = call i16 @llvm.vector.reduce.smin(<8 x i16> %in)
   ret i16 %res
@@ -1566,21 +1625,43 @@ define i32 @reduce_smin_i32_nonpow2(<7 x i32> %in) {
 }
 
 define i16 @reduce_and_i16(<8 x i16> %in) {
-; CHECK-LABEL: reduce_and_i16(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<9>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_and_i16_param_0];
-; CHECK-NEXT:    and.b32 %r5, %r2, %r4;
-; CHECK-NEXT:    and.b32 %r6, %r1, %r3;
-; CHECK-NEXT:    and.b32 %r7, %r6, %r5;
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r7;
-; CHECK-NEXT:    and.b16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r8, %rs3;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
-; CHECK-NEXT:    ret;
+; CHECK-SM80-LABEL: reduce_and_i16(
+; CHECK-SM80:       {
+; CHECK-SM80-NEXT:    .reg .b16 %rs<4>;
+; CHECK-SM80-NEXT:    .reg .b32 %r<11>;
+; CHECK-SM80-EMPTY:
+; CHECK-SM80-NEXT:  // %bb.0:
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_and_i16_param_0];
+; CHECK-SM80-NEXT:    and.b32 %r5, %r2, %r4;
+; CHECK-SM80-NEXT:    and.b32 %r6, %r1, %r3;
+; CHECK-SM80-NEXT:    and.b32 %r7, %r6, %r5;
+; CHECK-SM80-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r7; }
+; CHECK-SM80-NEXT:    // implicit-def: %rs2
+; CHECK-SM80-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM80-NEXT:    and.b32 %r9, %r7, %r8;
+; CHECK-SM80-NEXT:    { .reg .b16 tmp; mov.b32 {%rs3, tmp}, %r9; }
+; CHECK-SM80-NEXT:    cvt.u32.u16 %r10, %rs3;
+; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r10;
+; CHECK-SM80-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: reduce_and_i16(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b16 %rs<4>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<11>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_and_i16_param_0];
+; CHECK-SM100-NEXT:    and.b32 %r5, %r2, %r4;
+; CHECK-SM100-NEXT:    and.b32 %r6, %r1, %r3;
+; CHECK-SM100-NEXT:    and.b32 %r7, %r6, %r5;
+; CHECK-SM100-NEXT:    mov.b32 {_, %rs1}, %r7;
+; CHECK-SM100-NEXT:    // implicit-def: %rs2
+; CHECK-SM100-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM100-NEXT:    and.b32 %r9, %r7, %r8;
+; CHECK-SM100-NEXT:    mov.b32 {%rs3, _}, %r9;
+; CHECK-SM100-NEXT:    cvt.u32.u16 %r10, %rs3;
+; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r10;
+; CHECK-SM100-NEXT:    ret;
   %res = call i16 @llvm.vector.reduce.and(<8 x i16> %in)
   ret i16 %res
 }
@@ -1655,21 +1736,43 @@ define i32 @reduce_and_i32_nonpow2(<7 x i32> %in) {
 }
 
 define i16 @reduce_or_i16(<8 x i16> %in) {
-; CHECK-LABEL: reduce_or_i16(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<9>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_or_i16_param_0];
-; CHECK-NEXT:    or.b32 %r5, %r2, %r4;
-; CHECK-NEXT:    or.b32 %r6, %r1, %r3;
-; CHECK-NEXT:    or.b32 %r7, %r6, %r5;
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r7;
-; CHECK-NEXT:    or.b16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r8, %rs3;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
-; CHECK-NEXT:    ret;
+; CHECK-SM80-LABEL: reduce_or_i16(
+; CHECK-SM80:       {
+; CHECK-SM80-NEXT:    .reg .b16 %rs<4>;
+; CHECK-SM80-NEXT:    .reg .b32 %r<11>;
+; CHECK-SM80-EMPTY:
+; CHECK-SM80-NEXT:  // %bb.0:
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_or_i16_param_0];
+; CHECK-SM80-NEXT:    or.b32 %r5, %r2, %r4;
+; CHECK-SM80-NEXT:    or.b32 %r6, %r1, %r3;
+; CHECK-SM80-NEXT:    or.b32 %r7, %r6, %r5;
+; CHECK-SM80-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r7; }
+; CHECK-SM80-NEXT:    // implicit-def: %rs2
+; CHECK-SM80-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM80-NEXT:    or.b32 %r9, %r7, %r8;
+; CHECK-SM80-NEXT:    { .reg .b16 tmp; mov.b32 {%rs3, tmp}, %r9; }
+; CHECK-SM80-NEXT:    cvt.u32.u16 %r10, %rs3;
+; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r10;
+; CHECK-SM80-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: reduce_or_i16(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b16 %rs<4>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<11>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_or_i16_param_0];
+; CHECK-SM100-NEXT:    or.b32 %r5, %r2, %r4;
+; CHECK-SM100-NEXT:    or.b32 %r6, %r1, %r3;
+; CHECK-SM100-NEXT:    or.b32 %r7, %r6, %r5;
+; CHECK-SM100-NEXT:    mov.b32 {_, %rs1}, %r7;
+; CHECK-SM100-NEXT:    // implicit-def: %rs2
+; CHECK-SM100-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM100-NEXT:    or.b32 %r9, %r7, %r8;
+; CHECK-SM100-NEXT:    mov.b32 {%rs3, _}, %r9;
+; CHECK-SM100-NEXT:    cvt.u32.u16 %r10, %rs3;
+; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r10;
+; CHECK-SM100-NEXT:    ret;
   %res = call i16 @llvm.vector.reduce.or(<8 x i16> %in)
   ret i16 %res
 }
@@ -1744,21 +1847,43 @@ define i32 @reduce_or_i32_nonpow2(<7 x i32> %in) {
 }
 
 define i16 @reduce_xor_i16(<8 x i16> %in) {
-; CHECK-LABEL: reduce_xor_i16(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<9>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_xor_i16_param_0];
-; CHECK-NEXT:    xor.b32 %r5, %r2, %r4;
-; CHECK-NEXT:    xor.b32 %r6, %r1, %r3;
-; CHECK-NEXT:    xor.b32 %r7, %r6, %r5;
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r7;
-; CHECK-NEXT:    xor.b16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r8, %rs3;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
-; CHECK-NEXT:    ret;
+; CHECK-SM80-LABEL: reduce_xor_i16(
+; CHECK-SM80:       {
+; CHECK-SM80-NEXT:    .reg .b16 %rs<4>;
+; CHECK-SM80-NEXT:    .reg .b32 %r<11>;
+; CHECK-SM80-EMPTY:
+; CHECK-SM80-NEXT:  // %bb.0:
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_xor_i16_param_0];
+; CHECK-SM80-NEXT:    xor.b32 %r5, %r2, %r4;
+; CHECK-SM80-NEXT:    xor.b32 %r6, %r1, %r3;
+; CHECK-SM80-NEXT:    xor.b32 %r7, %r6, %r5;
+; CHECK-SM80-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r7; }
+; CHECK-SM80-NEXT:    // implicit-def: %rs2
+; CHECK-SM80-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM80-NEXT:    xor.b32 %r9, %r7, %r8;
+; CHECK-SM80-NEXT:    { .reg .b16 tmp; mov.b32 {%rs3, tmp}, %r9; }
+; CHECK-SM80-NEXT:    cvt.u32.u16 %r10, %rs3;
+; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r10;
+; CHECK-SM80-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: reduce_xor_i16(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b16 %rs<4>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<11>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_xor_i16_param_0];
+; CHECK-SM100-NEXT:    xor.b32 %r5, %r2, %r4;
+; CHECK-SM100-NEXT:    xor.b32 %r6, %r1, %r3;
+; CHECK-SM100-NEXT:    xor.b32 %r7, %r6, %r5;
+; CHECK-SM100-NEXT:    mov.b32 {_, %rs1}, %r7;
+; CHECK-SM100-NEXT:    // implicit-def: %rs2
+; CHECK-SM100-NEXT:    mov.b32 %r8, {%rs1, %rs2};
+; CHECK-SM100-NEXT:    xor.b32 %r9, %r7, %r8;
+; CHECK-SM100-NEXT:    mov.b32 {%rs3, _}, %r9;
+; CHECK-SM100-NEXT:    cvt.u32.u16 %r10, %rs3;
+; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r10;
+; CHECK-SM100-NEXT:    ret;
   %res = call i16 @llvm.vector.reduce.xor(<8 x i16> %in)
   ret i16 %res
 }
