@@ -905,8 +905,8 @@ Inclusive make(const parser::OmpClause::Inclusive &inp,
 
 Indirect make(const parser::OmpClause::Indirect &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: indirect");
+  // inp.v.v -> std::optional<parser::ScalarLogicalExpr>
+  return Indirect{maybeApply(makeExprFn(semaCtx), inp.v.v)};
 }
 
 Init make(const parser::OmpClause::Init &inp,
