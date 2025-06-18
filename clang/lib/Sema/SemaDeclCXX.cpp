@@ -11135,9 +11135,9 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
         // In Microsoft ABI whenever a class has a defined operator delete,
         // scalar deleting destructors check the 3rd bit of the implicit
         // parameter and if it is set, then, global operator delete must be
-        // called instead of the class-specific one. Find and save the global operator
-        // delete for that case. Do not diagnose at this point because the
-        // lack of a global operator delete is not an error if there are no
+        // called instead of the class-specific one. Find and save the global
+        // operator delete for that case. Do not diagnose at this point because
+        // the lack of a global operator delete is not an error if there are no
         // delete calls that require it.
         FunctionDecl *GlobalOperatorDelete =
             FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
