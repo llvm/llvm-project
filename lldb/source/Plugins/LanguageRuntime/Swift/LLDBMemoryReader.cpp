@@ -214,7 +214,7 @@ LLDBMemoryReader::resolvePointerAsSymbol(swift::remote::RemoteAddress address) {
     // aware of local symbols, so avoid returning those.
     using namespace swift::Demangle;
     if (isSwiftSymbol(mangledName) && !isOldFunctionTypeMangling(mangledName))
-      return {{mangledName, 0}};
+      return swift::remote::RemoteAbsolutePointer{mangledName, 0, address};
   }
 
   return {};
@@ -228,15 +228,16 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
   // We may have gotten a pointer to a process address, try to map it back
   // to a tagged address so further memory reads originating from it benefit
   // from the file-cache optimization.
-  swift::remote::RemoteAbsolutePointer process_pointer("", readValue);
+  swift::remote::RemoteAbsolutePointer process_pointer{
+      swift::remote::RemoteAddress{readValue}};
 
   if (!readMetadataFromFileCacheEnabled())
     return process_pointer;
 
   // Try to strip the pointer before checking if we have it mapped.
   auto strippedPointer = signedPointerStripper(process_pointer);
-  if (strippedPointer.isResolved())
-    readValue = strippedPointer.getOffset();
+  if (auto resolved = strippedPointer.getResolvedAddress())
+    readValue = resolved.getAddressData();
 
   auto &target = m_process.GetTarget();
   Address addr;
@@ -293,9 +294,12 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
     return process_pointer;
   }
 
-  swift::remote::RemoteAbsolutePointer tagged_pointer("", tagged_address);
-  if (tagged_address !=
-      (uint64_t)signedPointerStripper(tagged_pointer).getOffset()) {
+  swift::remote::RemoteAbsolutePointer tagged_pointer{
+      swift::remote::RemoteAddress{tagged_address}};
+
+  if (tagged_address != (uint64_t)signedPointerStripper(tagged_pointer)
+                            .getResolvedAddress()
+                            .getAddressData()) {
     lldbassert(false &&
                "Tagged pointer runs into pointer authentication mask!");
     return process_pointer;
@@ -534,9 +538,11 @@ LLDBMemoryReader::addModuleToAddressMap(ModuleSP module,
   auto module_end_address = module_start_address + size;
 
   if (module_end_address !=
-      (uint64_t)signedPointerStripper(
-          swift::remote::RemoteAbsolutePointer("", module_end_address))
-          .getOffset()) {
+      signedPointerStripper(
+          swift::remote::RemoteAbsolutePointer{
+              swift::remote::RemoteAddress{module_end_address}})
+          .getResolvedAddress()
+          .getAddressData()) {
     LLDB_LOG(GetLog(LLDBLog::Types),
              "[MemoryReader] module to address map ran into pointer "
              "authentication mask!");
