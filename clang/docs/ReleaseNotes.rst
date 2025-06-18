@@ -359,6 +359,8 @@ Modified Compiler Flags
 
 - The ``-fchar8_t`` flag is no longer considered in non-C++ languages modes. (#GH55373)
 
+- The ``-fveclib=libmvec`` option now supports AArch64 targets (requires GLIBC 2.40 or newer).
+
 Removed Compiler Flags
 -------------------------
 
