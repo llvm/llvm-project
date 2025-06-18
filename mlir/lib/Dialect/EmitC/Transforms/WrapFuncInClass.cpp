@@ -95,9 +95,8 @@ public:
     }
 
     llvm::BitVector argsToErase(newFuncOp.getNumArguments(), true);
-    if (failed(newFuncOp.eraseArguments(argsToErase))) {
+    if (failed(newFuncOp.eraseArguments(argsToErase)))
       newFuncOp->emitOpError("failed to erase all arguments using BitVector");
-    }
 
     rewriter.replaceOp(funcOp, newClassOp);
     return success();
