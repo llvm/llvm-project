@@ -30,8 +30,9 @@ def SIEncodingFamily {
   int GFX90A = 8;
   int GFX940 = 9;
   int GFX11 = 10;
-  int GFX12 = 11;
-  int GFX1250 = 12;
+  int GFX1170 = 11;
+  int GFX12 = 12;
+  int GFX1250 = 13;
 }
 
 //===----------------------------------------------------------------------===//
@@ -48,8 +49,9 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
 def GFX1250Gen       : GFXGen<isGFX125xOnly, "GFX1250", "_gfx1250", SIEncodingFamily.GFX1250>;
 def GFX12Not12_50Gen : GFXGen<isGFX12Not12_50, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX12Gen         : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
+def GFX1170Gen       : GFXGen<isGFX1170Only, "GFX1170", "_gfx1170", SIEncodingFamily.GFX1170>;
 def GFX11Not12_50Gen : GFXGen<isGFX11Not12_50, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
-def GFX1170Gen       : GFXGen<isGFX11Only, "GFX1170", "_gfx1170", SIEncodingFamily.GFX11>;
+def GFX11Not11_70Gen : GFXGen<isGFX11Not11_70, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
 def GFX11Gen         : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
 def GFX10Gen         : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
 
@@ -3253,6 +3255,7 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX90A)],
                    [!cast<string>(SIEncodingFamily.GFX940)],
                    [!cast<string>(SIEncodingFamily.GFX11)],
+                   [!cast<string>(SIEncodingFamily.GFX1170)],
                    [!cast<string>(SIEncodingFamily.GFX12)],
                    [!cast<string>(SIEncodingFamily.GFX1250)]];
 }
