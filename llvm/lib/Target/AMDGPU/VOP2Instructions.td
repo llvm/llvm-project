@@ -2172,6 +2172,7 @@ defm V_LDEXP_F16       : VOP2_Real_gfx10<0x03b>;
 let IsSingle = 1 in {
   defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx10<0x03c>;
 }
+defm V_PK_FMAC_F16     :  VOP2_Real_dpp_gfx10<0x03c>, VOP2_Real_dpp8_gfx10<0x03c>;
 
 // VOP2 no carry-in, carry-out.
 defm V_ADD_NC_U32 :
@@ -2504,6 +2505,11 @@ multiclass VOP2_Real_e32e64_gfx9 <bits<6> op> {
       VOP2_DPPe<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp")>;
 }
 
+  multiclass VOP2_Real_dpp_gfx9<bits<6> op> {
+    if !cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExtDPP then
+      def _dpp_gfx9 : VOP2_DPP16<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp"), SIEncodingFamily.GFX9>;
+  }
+
 } // End DecoderNamespace = "GFX9"
 
 multiclass VOP2_Real_e32e64_vi <bits<6> op> :
@@ -2560,6 +2566,8 @@ defm V_SUBBREV_CO_U32     : VOP2be_Real_e32e64_gfx9 <0x1e, "V_SUBBREV_U32", "v_s
 defm V_ADD_U32            : VOP2_Real_e32e64_gfx9 <0x34>;
 defm V_SUB_U32            : VOP2_Real_e32e64_gfx9 <0x35>;
 defm V_SUBREV_U32         : VOP2_Real_e32e64_gfx9 <0x36>;
+
+defm V_PK_FMAC_F16     : VOP2_Real_dpp_gfx9<0x03c>;
 } // End AssemblerPredicate = isGFX9Only
 
 defm V_BFM_B32            : VOP2_Real_e64only_vi <0x293>;
