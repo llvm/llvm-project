@@ -249,7 +249,8 @@ static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
   case R_WASM_TABLE_INDEX_REL_SLEB:
     return encodeSLEB128(static_cast<int64_t>(value), buf);
   default:
-    llvm_unreachable("unexpected relocation type");
+    fatal("relocation compression not supported for " +
+          relocTypeToString(rel.Type));
   }
 }
 
@@ -275,7 +276,8 @@ static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
   case R_WASM_MEMORY_ADDR_TLS_SLEB64:
     return 10;
   default:
-    llvm_unreachable("unexpected relocation type");
+    fatal("relocation compression not supported for " +
+          relocTypeToString(rel.Type));
   }
 }
 
