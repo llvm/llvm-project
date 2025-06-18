@@ -27081,7 +27081,7 @@ bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
     // only allow an offset that's equal to the store size.
     EVT MemType = cast<MemSDNode>(N)->getMemoryVT();
     if (!Subtarget->isLittleEndian() && MemType.isVector() &&
-        RHSC != MemType.getStoreSize())
+        (uint64_t)RHSC != MemType.getStoreSize())
       return false;
     // Always emit pre-inc/post-inc addressing mode. Use negated constant offset
     // when dealing with subtraction.
