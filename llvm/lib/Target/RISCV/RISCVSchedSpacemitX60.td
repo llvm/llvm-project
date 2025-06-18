@@ -557,7 +557,7 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
   }
 }
 
-// Narrowing Shift and Clips
+// Simple Narrowing Shift and Clips
 foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
 
@@ -572,7 +572,7 @@ foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
   }
 }
 
-// Complex Slide
+// Complex Narrowing Shift and Clips
 foreach mx = ["M2", "M4"] in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
 
