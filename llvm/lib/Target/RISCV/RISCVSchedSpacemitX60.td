@@ -722,28 +722,33 @@ foreach mx = SchedMxListFW in {
 foreach mx = SchedMxListFW in {
   foreach sew = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFW, isF=1>.c;
-    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
-    defvar FMALat = SMX60GetVFFMALatency<mx>.c;
-    defvar WideLat = SMX60GetVIWideLatency<mx>.c;
 
-    // FP widening ALU operations: .vv/.vf variants measured 4,6,8 but .wf/.wv variants measured 5,9,17
-    // Using SMX60GetLMulCycles * 4 as compromise (gives 4,8,16 pattern)
-    // TODO: Split .wf/.wv variants into separate scheduling classes to use accurate 5,9,17 latencies
+    // Pattern for vfwsub/vfwadd.vv, vfwsub/vfwadd.vf: 4/4/5/8
+    // Pattern for vfwsub/vfwadd.wv, vfwsub/vfwadd.wf: 5/5/9/17
+    // TODO: Split .wf/.wv variants into separate scheduling classes to use 5/5/9/17
+    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
     let Latency = !mul(LMulLat, 4) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUF", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
-    // FP widening multiply operations: measured 4,6,8 - use WideLat (4,5,8) as approximation
-    let Latency = WideLat in {
+
+    // Pattern for vfwmul.vv, vfwmul.vf: e16 = 4/4/4/6/8. We use 4/4/5/8 as approximation
+    // TODO: e32m4 = 8, but it's set to 5 here
+    defvar FPMulLat = SMX60GetVIMulE32Latency<mx>.c;
+    defvar WideLat = SMX60GetVIWideLatency<mx>.c;
+    let Latency = !cond(!eq(sew, 32) : FPMulLat, true : WideLat) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulF", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
-    // FP widening multiply-add operations: e16 has 5,5,8; e32 has 6,7,8
-    // Use existing FMALat (6,6,7,8) as close approximation
+
+    // Pattern for vfwmacc, vfwnmacc, etc: e16 = 5/5/5/8; e32 = 6/6/7/8
+    // Use existing 6,6,7,8 as close approximation
+    defvar FMALat = SMX60GetVFFMALatency<mx>.c;
     let Latency = FMALat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulAddV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulAddF", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
+
     let Latency = !mul(LMulLat, 4) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWCvtFToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
