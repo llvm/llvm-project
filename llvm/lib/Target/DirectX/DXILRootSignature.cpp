@@ -365,6 +365,12 @@ static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
   if (popcount(llvm::to_underlying(Flags & DataFlags)) > 1)
     return false;
 
+  // The descriptor-specific flags are mutually exclusive.
+  FlagT DescriptorFlags = FlagT::DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS | 
+                          FlagT::DESCRIPTORS_VOLATILE;
+  if (popcount(llvm::to_underlying(Flags & DescriptorFlags)) > 1)
+    return false;
+
   // For volatile descriptors, DATA_STATIC is never valid.
   if ((Flags & FlagT::DESCRIPTORS_VOLATILE) == FlagT::DESCRIPTORS_VOLATILE) {
     FlagT Mask = FlagT::DESCRIPTORS_VOLATILE;
