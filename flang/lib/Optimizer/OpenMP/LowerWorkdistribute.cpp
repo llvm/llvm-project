@@ -357,55 +357,77 @@ struct SplitTargetResult {
 /// original data region and avoid unnecessary data movement at each of the
 /// subkernels - we split the target region into a target_data{target}
 /// nest where only the outer one moves the data
-std::optional<SplitTargetResult> splitTargetData(omp::TargetOp targetOp, RewriterBase &rewriter) {
-
+std::optional<SplitTargetResult> splitTargetData(omp::TargetOp targetOp,
+                                                 RewriterBase &rewriter) {
   auto loc = targetOp->getLoc();
   if (targetOp.getMapVars().empty()) {
     LLVM_DEBUG(llvm::dbgs() << DEBUG_TYPE << " target region has no data maps\n");
     return std::nullopt;
   }
 
-  // Collect all map_entries with capture(ByRef)
-  SmallVector<mlir::Value> byRefMapInfos;
-  SmallVector<omp::MapInfoOp> MapInfos;
+  SmallVector<omp::MapInfoOp> mapInfos;
   for (auto opr : targetOp.getMapVars()) {
     auto mapInfo = cast<omp::MapInfoOp>(opr.getDefiningOp());
-    MapInfos.push_back(mapInfo);
-    if (mapInfo.getMapCaptureType() == omp::VariableCaptureKind::ByRef)
-      byRefMapInfos.push_back(opr);
+    mapInfos.push_back(mapInfo);
   }
 
-  // Create the new omp.target_data op with these collected map_entries
+  rewriter.setInsertionPoint(targetOp);
+  SmallVector<Value> innerMapInfos;
+  SmallVector<Value> outerMapInfos;
+
+  for (auto mapInfo : mapInfos) {
+    auto originalMapType =
+        (llvm::omp::OpenMPOffloadMappingFlags)(mapInfo.getMapType());
+    auto originalCaptureType = mapInfo.getMapCaptureType();
+    llvm::omp::OpenMPOffloadMappingFlags newMapType;
+    mlir::omp::VariableCaptureKind newCaptureType;
+
+    if (originalCaptureType == mlir::omp::VariableCaptureKind::ByCopy) {
+      newMapType = originalMapType;
+      newCaptureType = originalCaptureType;
+    } else if (originalCaptureType == mlir::omp::VariableCaptureKind::ByRef) {
+      newMapType = llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+      newCaptureType = originalCaptureType;
+      outerMapInfos.push_back(mapInfo);
+    } else {
+      llvm_unreachable("Unhandled case");
+    }
+    auto innerMapInfo = cast<omp::MapInfoOp>(rewriter.clone(*mapInfo));
+    innerMapInfo.setMapTypeAttr(rewriter.getIntegerAttr(
+        rewriter.getIntegerType(64, false),
+        static_cast<
+            std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+            newMapType)));
+    innerMapInfo.setMapCaptureType(newCaptureType);
+    innerMapInfos.push_back(innerMapInfo.getResult());
+  }
+
   rewriter.setInsertionPoint(targetOp);
   auto device = targetOp.getDevice();
   auto ifExpr = targetOp.getIfExpr();
   auto deviceAddrVars = targetOp.getHasDeviceAddrVars();
   auto devicePtrVars = targetOp.getIsDevicePtrVars();
-  auto targetDataOp = rewriter.create<omp::TargetDataOp>(loc, device, ifExpr, 
-                                                          mlir::ValueRange{byRefMapInfos},
-                                                          deviceAddrVars,
-                                                          devicePtrVars);
-
+  auto targetDataOp = rewriter.create<omp::TargetDataOp>(
+      loc, device, ifExpr, outerMapInfos, deviceAddrVars, devicePtrVars);
   auto taregtDataBlock = rewriter.createBlock(&targetDataOp.getRegion());
   rewriter.create<mlir::omp::TerminatorOp>(loc);
   rewriter.setInsertionPointToStart(taregtDataBlock);
 
-  // Clone mapInfo ops inside omp.target_data region
-  IRMapping mapping;
-  for (auto mapInfo : MapInfos) {
-    rewriter.clone(*mapInfo, mapping);
-  }
-  // Clone omp.target from exisiting targetOp inside target_data region.
-  auto newTargetOp = rewriter.clone(*targetOp, mapping);
+  auto newTargetOp = rewriter.create<omp::TargetOp>(
+      targetOp.getLoc(), targetOp.getAllocateVars(),
+      targetOp.getAllocatorVars(), targetOp.getBareAttr(),
+      targetOp.getDependKindsAttr(), targetOp.getDependVars(),
+      targetOp.getDevice(), targetOp.getHasDeviceAddrVars(),
+      targetOp.getHostEvalVars(), targetOp.getIfExpr(),
+      targetOp.getInReductionVars(), targetOp.getInReductionByrefAttr(),
+      targetOp.getInReductionSymsAttr(), targetOp.getIsDevicePtrVars(),
+      innerMapInfos, targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
+      targetOp.getPrivateSymsAttr(), targetOp.getThreadLimit(),
+      targetOp.getPrivateMapsAttr());
+  rewriter.inlineRegionBefore(targetOp.getRegion(), newTargetOp.getRegion(),
+                              newTargetOp.getRegion().begin());
 
-  // Erase TargetOp and its MapInfoOps
-  rewriter.eraseOp(targetOp);
-  
-  for (auto mapInfo : MapInfos) {
-    auto mapInfoRes = mapInfo.getResult();
-    if (mapInfoRes.getUsers().empty()) 
-      rewriter.eraseOp(mapInfo);
-  }
+  rewriter.replaceOp(targetOp, newTargetOp);
   return SplitTargetResult{cast<omp::TargetOp>(newTargetOp), targetDataOp};
 }
 
@@ -520,25 +542,6 @@ static bool isOpToBeCached(Operation *op) {
 static bool isRecomputableAfterFission(Operation *op, Operation *splitBefore) {
   if (isa<fir::DeclareOp>(op))
     return true;
-
-  if (auto loadOp = dyn_cast<fir::LoadOp>(op)) {  
-    Value memref = loadOp.getMemref();  
-    if (auto blockArg = dyn_cast<BlockArgument>(memref)) {  
-      // 'op' is an operation within the targetOp that 'splitBefore' is also in.
-      Operation *parentOpOfLoadBlock = op->getBlock()->getParentOp();  
-      // Ensure the blockArg belongs to the entry block of this parent omp.TargetOp.  
-      // This implies the load is from a variable directly mapped into the target region.  
-      if (isa<omp::TargetOp>(parentOpOfLoadBlock) &&  
-          !parentOpOfLoadBlock->getRegions().empty()) {  
-        Block *targetOpEntryBlock = &parentOpOfLoadBlock->getRegions().front().front();  
-        if (blockArg.getOwner() == targetOpEntryBlock) {  
-          // This load is from a direct argument of the target op.  
-          // It's safe to recompute.
-          return true;  
-        }  
-      }  
-    }  
-  } 
 
   llvm::SmallVector<MemoryEffects::EffectInstance> effects;
   MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
