@@ -1413,7 +1413,7 @@ define dso_local fp128 @acos_f128(fp128 %x) {
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl acosl
+; CHECK-NEXT:    bl acosf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -1427,7 +1427,7 @@ define dso_local fp128 @acos_f128(fp128 %x) {
 ; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    bl acosl
+; CHECK-P8-NEXT:    bl acosf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -1445,7 +1445,7 @@ define dso_local fp128 @asin_f128(fp128 %x) {
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl asinl
+; CHECK-NEXT:    bl asinf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -1459,7 +1459,7 @@ define dso_local fp128 @asin_f128(fp128 %x) {
 ; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    bl asinl
+; CHECK-P8-NEXT:    bl asinf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -1477,7 +1477,7 @@ define dso_local fp128 @atan_f128(fp128 %x) {
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl atanl
+; CHECK-NEXT:    bl atanf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -1491,7 +1491,7 @@ define dso_local fp128 @atan_f128(fp128 %x) {
 ; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    bl atanl
+; CHECK-P8-NEXT:    bl atanf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -1509,7 +1509,7 @@ define dso_local fp128 @atan2_f128(fp128 %x, fp128 %y) {
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl atan2l
+; CHECK-NEXT:    bl atan2f128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -1523,7 +1523,7 @@ define dso_local fp128 @atan2_f128(fp128 %x, fp128 %y) {
 ; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    bl atan2l
+; CHECK-P8-NEXT:    bl atan2f128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -1566,7 +1566,7 @@ define dso_local fp128 @cosh_f128(fp128 %x) {
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl coshl
+; CHECK-NEXT:    bl coshf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -1580,7 +1580,7 @@ define dso_local fp128 @cosh_f128(fp128 %x) {
 ; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    bl coshl
+; CHECK-P8-NEXT:    bl coshf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -1598,7 +1598,7 @@ define dso_local fp128 @exp10_f128(fp128 %x) {
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl exp10l
+; CHECK-NEXT:    bl exp10f128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -1612,7 +1612,7 @@ define dso_local fp128 @exp10_f128(fp128 %x) {
 ; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    bl exp10l
+; CHECK-P8-NEXT:    bl exp10f128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -1655,7 +1655,7 @@ define dso_local fp128 @ldexp_f128(fp128 %x, i32 %y) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    extsw r5, r5
-; CHECK-NEXT:    bl ldexpl
+; CHECK-NEXT:    bl ldexpf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -1670,7 +1670,7 @@ define dso_local fp128 @ldexp_f128(fp128 %x, i32 %y) {
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    extsw r5, r5
-; CHECK-P8-NEXT:    bl ldexpl
+; CHECK-P8-NEXT:    bl ldexpf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -1689,7 +1689,7 @@ define dso_local { fp128, fp128 } @modf_f128(fp128 %x) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addi r5, r1, 32
-; CHECK-NEXT:    bl modfl
+; CHECK-NEXT:    bl modff128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lxv v3, 32(r1)
 ; CHECK-NEXT:    addi r1, r1, 48
@@ -1708,7 +1708,7 @@ define dso_local { fp128, fp128 } @modf_f128(fp128 %x) {
 ; CHECK-P8-NEXT:    addi r30, r1, 32
 ; CHECK-P8-NEXT:    std r0, 80(r1)
 ; CHECK-P8-NEXT:    mr r5, r30
-; CHECK-P8-NEXT:    bl modfl
+; CHECK-P8-NEXT:    bl modff128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    xxswapd v3, vs0
@@ -1729,7 +1729,7 @@ define dso_local fp128 @roundeven_f128(fp128 %x) {
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl roundevenl
+; CHECK-NEXT:    bl roundevenf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -1743,7 +1743,7 @@ define dso_local fp128 @roundeven_f128(fp128 %x) {
 ; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    bl roundevenl
+; CHECK-P8-NEXT:    bl roundevenf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -1761,7 +1761,7 @@ define dso_local fp128 @sinh_f128(fp128 %x) {
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl sinhl
+; CHECK-NEXT:    bl sinhf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -1775,7 +1775,7 @@ define dso_local fp128 @sinh_f128(fp128 %x) {
 ; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    bl sinhl
+; CHECK-P8-NEXT:    bl sinhf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -1793,7 +1793,7 @@ define dso_local fp128 @tanh_f128(fp128 %x) {
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl tanhl
+; CHECK-NEXT:    bl tanhf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -1807,7 +1807,7 @@ define dso_local fp128 @tanh_f128(fp128 %x) {
 ; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    bl tanhl
+; CHECK-P8-NEXT:    bl tanhf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -1825,7 +1825,7 @@ define dso_local fp128 @tan_f128(fp128 %x) {
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl tanl
+; CHECK-NEXT:    bl tanf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -1839,7 +1839,7 @@ define dso_local fp128 @tan_f128(fp128 %x) {
 ; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    bl tanl
+; CHECK-P8-NEXT:    bl tanf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
