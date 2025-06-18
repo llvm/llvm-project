@@ -94,3 +94,19 @@ void library_builtins() {
 // OGCG: define dso_local void @_Z16library_builtinsv()
 // OGCG: call i32 (ptr, ...) @printf(ptr noundef null)
 // OGCG: call void @abort()
+
+void assume(bool arg) {
+  __builtin_assume(arg);
+}
+
+// CIR: cir.func @_Z6assumeb
+// CIR:   cir.assume %{{.+}} : !cir.bool
+// CIR: }
+
+// LLVM: define void @_Z6assumeb
+// LLVM:   call void @llvm.assume(i1 %{{.+}})
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z6assumeb
+// OGCG:   call void @llvm.assume(i1 %{{.+}})
+// OGCG: }
