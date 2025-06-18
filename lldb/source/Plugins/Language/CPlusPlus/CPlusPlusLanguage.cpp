@@ -360,7 +360,7 @@ static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
 
   auto info_or_err = GetAndValidateInfo(sc);
   if (!info_or_err) {
-    info_or_err.takeError();
+    llvm::consumeError(info_or_err.takeError());
     return false;
   }
   auto [demangled_name, info] = *info_or_err;
