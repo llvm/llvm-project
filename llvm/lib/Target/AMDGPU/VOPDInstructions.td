@@ -139,7 +139,8 @@ defvar VOPDXPseudosGFX12 = VOPDPseudosCommon;
 defvar VOPDYPseudosGFX11 = !listconcat(VOPDXPseudosGFX11, VOPDYOnlyPseudosCommon);
 defvar VOPDYPseudosGFX12 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon);
 
-def GFX11GenD : GFXGenD<GFX11Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
+def GFX11GenD : GFXGenD<GFX11Not11_70Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
+def GFX1170GenD : GFXGenD<GFX1170Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
 def GFX12GenD : GFXGenD<GFX12Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX12>;
 
 
@@ -148,16 +149,13 @@ def VOPDDstYOperand : RegisterOperand<VGPR_32, "printRegularOperand"> {
 }
 
 class getRenamed<string VOPDName, GFXGen Gen> {
-  string ret = !if(!eq(Gen.Subtarget, GFX12Gen.Subtarget),
-                   !if(!eq(VOPDName, "v_dual_max_f32"),
-                       "v_dual_max_num_f32",
-                       !if(!eq(VOPDName, "v_dual_min_f32"),
-                           "v_dual_min_num_f32",
-                           VOPDName)),
-                   VOPDName);
+  string ret = !cond(!eq(Gen.Subtarget, GFX11Gen.Subtarget) : VOPDName,
+                     !eq(VOPDName, "v_dual_max_f32")        : "v_dual_max_num_f32",
+                     !eq(VOPDName, "v_dual_min_f32")        : "v_dual_min_num_f32",
+                     true                                   : VOPDName);
 }
 
-foreach Gen = [GFX11GenD, GFX12GenD] in {
+foreach Gen = [GFX11GenD, GFX1170GenD, GFX12GenD] in {
   foreach x = Gen.VOPDXPseudos in {
     foreach y = Gen.VOPDYPseudos in {
       defvar xInst = !cast<VOP_Pseudo>(x);
