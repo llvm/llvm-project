@@ -12,20 +12,20 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef __LIBSYCL_PLATFORM_HPP
-#define __LIBSYCL_PLATFORM_HPP
+#ifndef _LIBSYCL_PLATFORM_HPP
+#define _LIBSYCL_PLATFORM_HPP
 
 #include <sycl/detail/config.hpp>
 
-__LIBSYCL_BEGIN_VERSIONED_NAMESPACE
+_LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-class __LIBSYCL_EXPORT platform {
+class _LIBSYCL_EXPORT platform {
 public:
   /// Constructs a SYCL platform using the default device.
   platform();
 
 }; // class platform
 
-__LIBSYCL_END_VERSIONED_NAMESPACE
+_LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // __LIBSYCL_PLATFORM_HPP
+#endif // _LIBSYCL_PLATFORM_HPP

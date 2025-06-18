@@ -8,7 +8,7 @@ set(LLVM_SUBPROJECT_TITLE "libsycl")
 set(LIBSYCL_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBSYCL_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 
-set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -17,6 +17,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 #===============================================================================
 
 option(LIBSYCL_ENABLE_WERROR "Treat all warnings as errors in the libsycl project" OFF)
+option(LIBSYCL_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 
 #===============================================================================
 # Configure System
@@ -60,25 +61,6 @@ set(LIBSYCL_PATCH_VERSION 0)
 set(LIBSYCL_VERSION_STRING "${LIBSYCL_MAJOR_VERSION}.${LIBSYCL_MINOR_VERSION}.${LIBSYCL_PATCH_VERSION}")
 set(LIBSYCL_ABI_NAMESPACE "V${LIBSYCL_MAJOR_VERSION}" CACHE STRING
     "The inline ABI namespace used by libsycl. It defaults to Vn where `n` is the current ABI version.")
-
-#===============================================================================
-# Setup Compiler Flags
-#===============================================================================
-
-# Enable all warnings by default
-if(MSVC)
-  append("/W4" CMAKE_CXX_FLAGS)
-else()
-  append("-Wall -Wextra" CMAKE_CXX_FLAGS)
-endif()
-
-if(LIBSYCL_ENABLE_WERROR)
-  if(MSVC)
-    append("/WX" CMAKE_CXX_FLAGS)
-  else()
-    append("-Werror" CMAKE_CXX_FLAGS)
-  endif()
-endif()
 
 #===============================================================================
 # Setup build & install rules

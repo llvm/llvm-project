@@ -12,53 +12,48 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef __LIBSYCL_DETAIL_CONFIG_HPP
-#define __LIBSYCL_DETAIL_CONFIG_HPP
+#ifndef _LIBSYCL_DETAIL_CONFIG_HPP
+#define _LIBSYCL_DETAIL_CONFIG_HPP
 
 #include <sycl/version.hpp>
 
-#define __LIBSYCL_BEGIN_UNVERSIONED_NAMESPACE namespace sycl {
-#define __LIBSYCL_END_UNVERSIONED_NAMESPACE }
+#define _LIBSYCL_BEGIN_UNVERSIONED_NAMESPACE_SYCL namespace sycl {
+#define _LIBSYCL_END_UNVERSIONED_NAMESPACE_SYCL }
 
-#define __LIBSYCL_BEGIN_VERSIONED_NAMESPACE                                    \
-  __LIBSYCL_BEGIN_UNVERSIONED_NAMESPACE inline namespace __LIBSYCL_ABI_NAMESPACE {
-#define __LIBSYCL_END_VERSIONED_NAMESPACE                                      \
+#define _LIBSYCL_BEGIN_NAMESPACE_SYCL                                          \
+  _LIBSYCL_BEGIN_UNVERSIONED_NAMESPACE_SYCL inline namespace _LIBSYCL_ABI_NAMESPACE {
+#define _LIBSYCL_END_NAMESPACE_SYCL                                            \
   }                                                                            \
-  __LIBSYCL_END_UNVERSIONED_NAMESPACE
+  _LIBSYCL_END_UNVERSIONED_NAMESPACE_SYCL
 
 #ifndef __SYCL_DEVICE_ONLY__
-#ifndef __LIBSYCL_EXPORT
+
+#ifndef _LIBSYCL_EXPORT
 #ifdef _WIN32
 
-#define __LIBSYCL_DLL_LOCAL
+#define _LIBSYCL_DLL_LOCAL
 
-#if __LIBSYCL_BUILD_SYCL_DLL
-#define __LIBSYCL_EXPORT __declspec(dllexport)
-#define __LIBSYCL_EXPORT_DEPRECATED(x) __declspec(dllexport, deprecated(x))
+#if _LIBSYCL_BUILD_SYCL_DLL
+#define _LIBSYCL_EXPORT __declspec(dllexport)
 #else
-#define __LIBSYCL_EXPORT __declspec(dllimport)
-#define __LIBSYCL_EXPORT_DEPRECATED(x) __declspec(dllimport, deprecated(x))
-#endif //__LIBSYCL_BUILD_SYCL_DLL
+#define _LIBSYCL_EXPORT __declspec(dllimport)
+#endif //_LIBSYCL_BUILD_SYCL_DLL
 
 #else // _WIN32
 
-#define __LIBSYCL_DLL_LOCAL __attribute__((visibility("hidden")))
-
-#define __LIBSYCL_EXPORT __attribute__((visibility("default")))
-#define __LIBSYCL_EXPORT_DEPRECATED(x)                                         \
-  __attribute__((visibility("default"), deprecated(x)))
+#define _LIBSYCL_DLL_LOCAL __attribute__((visibility("hidden")))
+#define _LIBSYCL_EXPORT __attribute__((visibility("default")))
 
 #endif // _WIN32
-#endif // __LIBSYCL_EXPORT
+#endif // _LIBSYCL_EXPORT
 
 #else // __SYCL_DEVICE_ONLY__
 
-#ifndef __LIBSYCL_EXPORT
-#define __LIBSYCL_EXPORT
-#define __LIBSYCL_EXPORT_DEPRECATED(x)
-#define __LIBSYCL_DLL_LOCAL
+#ifndef _LIBSYCL_EXPORT
+#define _LIBSYCL_EXPORT
+#define _LIBSYCL_DLL_LOCAL
 #endif
 
 #endif // __SYCL_DEVICE_ONLY__
 
-#endif // __LIBSYCL_DETAIL_CONFIG_HPP
+#endif // _LIBSYCL_DETAIL_CONFIG_HPP

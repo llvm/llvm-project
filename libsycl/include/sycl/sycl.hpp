@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LIBSYCL_SYCL_HPP
-#define __LIBSYCL_SYCL_HPP
+#ifndef _LIBSYCL_SYCL_HPP
+#define _LIBSYCL_SYCL_HPP
 
 #include <sycl/platform.hpp>
 
-#endif // __LIBSYCL_SYCL_HPP
+#endif // _LIBSYCL_SYCL_HPP

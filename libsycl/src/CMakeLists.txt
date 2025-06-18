@@ -1,3 +1,6 @@
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes/cmake/Modules")
+include(WarningFlags)
+
 function(add_sycl_rt_library LIB_NAME LIB_OBJ_NAME)
   # Add an optional argument so we can get the library name to
   # link with for Windows Debug version
@@ -6,7 +9,8 @@ function(add_sycl_rt_library LIB_NAME LIB_OBJ_NAME)
   add_library(${LIB_OBJ_NAME} OBJECT ${ARG_SOURCES})
 
   # Common compilation step setup
-  target_compile_definitions(${LIB_OBJ_NAME} PRIVATE $<$<BOOL:${MSVC}>:__LIBSYCL_BUILD_SYCL_DLL>)
+  target_compile_definitions(${LIB_OBJ_NAME} PRIVATE $<$<BOOL:${MSVC}>:_LIBSYCL_BUILD_SYCL_DLL>)
+
   target_include_directories(
     ${LIB_OBJ_NAME}
     PRIVATE
@@ -20,6 +24,8 @@ function(add_sycl_rt_library LIB_NAME LIB_OBJ_NAME)
   if (ARG_COMPILE_OPTIONS)
     target_compile_options(${LIB_OBJ_NAME} PRIVATE ${ARG_COMPILE_OPTIONS})
   endif()
+
+  cxx_add_warning_flags(${LIB_OBJ_NAME} ${LIBSYCL_ENABLE_WERROR} ${LIBSYCL_ENABLE_PEDANTIC})
 
   add_dependencies(${LIB_OBJ_NAME}
     sycl-headers
