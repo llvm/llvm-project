@@ -802,3 +802,54 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// Test hoisting of vector.transfer_read/transfer_write pairs with same location
+// and this location is marked with assume_align.
+
+// CHECK-LABEL:  func.func @hoist_vector_transfer_read_write() {
+// CHECK:          %c0 = arith.constant 0 : index
+// CHECK-NEXT:     %c256 = arith.constant 256 : index
+// CHECK-NEXT:     %c4096 = arith.constant 4096 : index
+// CHECK-NEXT:     %cst = arith.constant 0.000000e+00 : f16
+// CHECK-NEXT:     %alloc = memref.alloc() : memref<4096x4096xf16>
+// CHECK-NEXT:     %alloc_0 = memref.alloc() : memref<4096x4096xf16>
+// CHECK-NEXT:     %assume_align = memref.assume_alignment %alloc, 64 : memref<4096x4096xf16>
+// CHECK-NEXT:     scf.for %arg0 = %c256 to %c4096 step %c256 {
+// CHECK-NEXT:       %0 = vector.transfer_read %assume_align[%c0, %c0], %cst {in_bounds = [true, true]} : memref<4096x4096xf16>, vector<16x16xf16>
+// CHECK-NEXT:       %1 = vector.transfer_read %alloc_0[%arg0, %arg0], %cst {in_bounds = [true, true]} : memref<4096x4096xf16>, vector<16x16xf16>
+// CHECK-NEXT:       %2 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %1, %1, %0 : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
+// CHECK-NEXT:       vector.transfer_write %2, %assume_align[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<4096x4096xf16>
+// CHECK-NEXT:     }
+// CHECK-NEXT:     return
+// CHECK-NEXT:   }
+
+func.func @hoist_vector_transfer_read_write() {
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  %c256 = arith.constant 256 : index
+  %c4096 = arith.constant 4096 : index
+  %cst_0 = arith.constant 0.000000e+00 : f16
+  %m0 = memref.alloc() : memref<4096x4096xf16>
+  %m1 = memref.alloc() : memref<4096x4096xf16>
+  %assume_align_0 = memref.assume_alignment %m0, 64 : memref<4096x4096xf16>
+  %assume_align_1 = memref.assume_alignment %m1, 64 : memref<4096x4096xf16>
+  scf.for %arg0 = %c256 to %c4096 step %c256 {
+    %1 = vector.transfer_read %assume_align_0[%c0, %c0], %cst_0 {in_bounds = [true, true]} : memref<4096x4096xf16>, vector<16x16xf16>
+    %2 = vector.transfer_read %m1[%arg0, %arg0], %cst_0 {in_bounds = [true, true]} : memref<4096x4096xf16>, vector<16x16xf16>
+    %3 = vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d2, d1)>, affine_map<(d0, d1, d2) -> (d0, d1)>], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %2, %2, %1 : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
+    vector.transfer_write %3, %assume_align_0[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<4096x4096xf16>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+        transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
