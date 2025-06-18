@@ -899,6 +899,10 @@ public:
     return WritingModule && WritingModule->isNamedModule();
   }
 
+  bool isWritingStdCXXHeaderUnit() const {
+    return WritingModule && WritingModule->isHeaderUnit();
+  }
+
   bool isGeneratingReducedBMI() const { return GeneratingReducedBMI; }
 
   bool getDoneWritingDeclsAndTypes() const { return DoneWritingDeclsAndTypes; }

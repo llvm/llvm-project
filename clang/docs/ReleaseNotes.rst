@@ -65,8 +65,10 @@ C++ Specific Potentially Breaking Changes
   standard library already have their own bespoke builtins.
 - A workaround for libstdc++4.7 has been removed. Note that 4.8.3 remains the oldest
   supported libstdc++ version.
-
 - Added ``!nonnull/!align`` metadata to load of references for better codegen.
+- Checking for int->enum conversions in constant expressions is more strict;
+  in particular, ``const E x = (E)-1;`` is not treated as a constant if it's
+  out of range. This impacts old versions of Boost.  (#GH143034)
 
 ABI Changes in This Version
 ---------------------------
@@ -339,6 +341,8 @@ New Compiler Flags
 
 - New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunities.
 
+- New option ``-ignore-pch`` added to disable precompiled headers. It overrides ``-emit-pch`` and ``-include-pch``. (#GH142409, `PCHDocs <https://clang.llvm.org/docs/UsersManual.html#ignoring-a-pch-file>`_).
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -356,6 +360,8 @@ Modified Compiler Flags
 - The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
 
 - The ``-fchar8_t`` flag is no longer considered in non-C++ languages modes. (#GH55373)
+
+- The ``-fveclib=libmvec`` option now supports AArch64 targets (requires GLIBC 2.40 or newer).
 
 Removed Compiler Flags
 -------------------------
@@ -688,6 +694,8 @@ Bug Fixes in This Version
   ``#include`` directive. (#GH138094)
 - Fixed a crash during constant evaluation involving invalid lambda captures
   (#GH138832)
+- Fixed compound literal is not constant expression inside initializer list
+  (#GH87867)
 - Fixed a crash when instantiating an invalid dependent friend template specialization.
   (#GH139052)
 - Fixed a crash with an invalid member function parameter list with a default
