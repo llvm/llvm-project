@@ -111,6 +111,7 @@ td_library(
     name = "TestOpTdFiles",
     srcs = glob(["lib/Dialect/Test/*.td"]),
     deps = [
+        "//mlir:BufferizableOpInterfaceTdFiles",
         "//mlir:BufferizationTypeInterfacesTdFiles",
         "//mlir:BuiltinDialectTdFiles",
         "//mlir:CallInterfacesTdFiles",
@@ -242,6 +243,7 @@ gentbl_cc_library(
     test = True,
     deps = [
         ":TestOpTdFiles",
+        "//mlir:BufferizableOpInterfaceTdFiles",
         "//mlir:BufferizationTypeInterfacesTdFiles",
         "//mlir:BuiltinDialectTdFiles",
     ],
