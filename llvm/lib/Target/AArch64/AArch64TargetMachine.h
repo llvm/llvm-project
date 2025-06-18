@@ -76,10 +76,6 @@ public:
   ScheduleDAGInstrs *
   createPostMachineScheduler(MachineSchedContext *C) const override;
 
-  /// In AArch64, true if FEAT_CPA is present. Allows pointer arithmetic
-  /// semantics to be preserved for instruction selection.
-  bool shouldPreservePtrArith(const Function &F) const override;
-
 private:
   bool isLittle;
 };
