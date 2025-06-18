@@ -175,7 +175,6 @@ static bool parseRootDescriptors(LLVMContext *Ctx,
 }
 
 static bool parseDescriptorRange(LLVMContext *Ctx,
-                                 mcdxbc::RootSignatureDesc &RSD,
                                  mcdxbc::DescriptorTable &Table,
                                  MDNode *RangeDescriptorNode) {
 
@@ -197,9 +196,9 @@ static bool parseDescriptorRange(LLVMContext *Ctx,
           .Case("UAV", llvm::to_underlying(dxbc::DescriptorRangeType::UAV))
           .Case("Sampler",
                 llvm::to_underlying(dxbc::DescriptorRangeType::Sampler))
-          .Default(-1u);
+          .Default(~0U);
 
-  if (Range.RangeType == -1u)
+  if (Range.RangeType == ~0U)
     return reportError(Ctx, "Invalid Descriptor Range type: " + *ElementText);
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 1))
@@ -254,7 +253,7 @@ static bool parseDescriptorTable(LLVMContext *Ctx,
     if (Element == nullptr)
       return reportError(Ctx, "Missing Root Element Metadata Node.");
 
-    if (parseDescriptorRange(Ctx, RSD, Table, Element))
+    if (parseDescriptorRange(Ctx, Table, Element))
       return true;
   }
 
@@ -354,8 +353,8 @@ static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
 
   if (Version == 1) {
     if (IsSampler)
-      return Flags == FlagT::NONE;
-    return Flags == FlagT::DESCRIPTORS_VOLATILE;
+      return Flags == FlagT::DESCRIPTORS_VOLATILE;
+    return Flags == (FlagT::DATA_VOLATILE | FlagT::DESCRIPTORS_VOLATILE);
   }
 
   // The data-specific flags are mutually exclusive.
@@ -392,7 +391,10 @@ static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
       Mask |= FlagT::DATA_STATIC;
       Mask |= FlagT::DATA_STATIC_WHILE_SET_AT_EXECUTE;
     }
-    return (Flags & ~Mask) == FlagT::NONE;
+
+    if (!IsSampler)
+      return (Flags & ~Mask) == FlagT::NONE;
+    return false;
   }
 
   // When no descriptor flag is set, any data flag is allowed.
