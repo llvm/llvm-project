@@ -131,7 +131,6 @@ namespace {
 class RISCVMCInstrAnalysis : public MCInstrAnalysis {
   int64_t GPRState[31] = {};
   std::bitset<31> GPRValidMask;
-  unsigned int ArchRegWidth;
 
   static bool isGPR(MCRegister Reg) {
     return Reg >= RISCV::X0 && Reg <= RISCV::X31;
@@ -168,8 +167,8 @@ class RISCVMCInstrAnalysis : public MCInstrAnalysis {
   }
 
 public:
-  explicit RISCVMCInstrAnalysis(const MCInstrInfo *Info, unsigned int ArchRegWidth)
-      : MCInstrAnalysis(Info), ArchRegWidth(ArchRegWidth) {}
+  explicit RISCVMCInstrAnalysis(const MCInstrInfo *Info)
+      : MCInstrAnalysis(Info) {}
 
   void resetState() override { GPRValidMask.reset(); }
 
@@ -245,7 +244,8 @@ public:
   }
 
   bool evaluateInstruction(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                           uint64_t &Target) const override {
+                           uint64_t &Target, const MCSubtargetInfo &STI) const override {
+    unsigned int ArchRegWidth = STI.getTargetTriple().getArchPointerBitWidth();
     switch(Inst.getOpcode()) {
     default:
       return false;
@@ -420,12 +420,8 @@ private:
 
 } // end anonymous namespace
 
-static MCInstrAnalysis *createRISCV32InstrAnalysis(const MCInstrInfo *Info) {
-  return new RISCVMCInstrAnalysis(Info, 32);
-}
-
-static MCInstrAnalysis *createRISCV64InstrAnalysis(const MCInstrInfo *Info) {
-  return new RISCVMCInstrAnalysis(Info, 64);
+static MCInstrAnalysis *createRISCVInstrAnalysis(const MCInstrInfo *Info) {
+  return new RISCVMCInstrAnalysis(Info);
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTargetMC() {
@@ -446,9 +442,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTargetMC() {
     // Register the null target streamer.
     TargetRegistry::RegisterNullTargetStreamer(*T,
                                                createRISCVNullTargetStreamer);
+    TargetRegistry::RegisterMCInstrAnalysis(*T,
+                                            createRISCVInstrAnalysis);
   }
-  TargetRegistry::RegisterMCInstrAnalysis(getTheRISCV32Target(),
-                                          createRISCV32InstrAnalysis);
-  TargetRegistry::RegisterMCInstrAnalysis(getTheRISCV64Target(),
-                                          createRISCV64InstrAnalysis);
 }

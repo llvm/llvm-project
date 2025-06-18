@@ -32,7 +32,8 @@ bool MCInstrAnalysis::evaluateBranch(const MCInst & /*Inst*/, uint64_t /*Addr*/,
 
 bool MCInstrAnalysis::evaluateInstruction(const MCInst &Inst, uint64_t Addr,
                                           uint64_t Size,
-                                          uint64_t &Target) const {
+                                          uint64_t &Target,
+                                          const MCSubtargetInfo &STI) const {
   return false;
 }
 
