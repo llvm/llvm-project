@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -117,7 +118,7 @@ static void dumpExpression(raw_ostream &OS, DIDumpOptions DumpOpts,
   if (U)
     Format = U->getFormat();
   DWARFExpression E(Extractor, AddressSize, Format);
-  DWARFExpressionPrinter::print(&E, OS, DumpOpts, U);
+  printDwarfExpression(&E, OS, DumpOpts, U);
 }
 
 bool DWARFLocationTable::dumpLocationList(
