@@ -9580,19 +9580,19 @@ static bool isValidSplatLoad(const PPCSubtarget &Subtarget, const SDValue &Op,
   return false;
 }
 
-bool isValidMtVsrbmi(APInt &BMI, BuildVectorSDNode &BVN) {
+bool isValidMtVsrBmi(APInt &BitMask, BuildVectorSDNode &BVN) {
   unsigned int NumOps = BVN.getNumOperands();
-  assert(NumOps > 0 && "isConstantSplat has 0-size build vector");
+  assert(NumOps > 0 && "Unexpected 0-size build vector");
 
-  BMI.clearAllBits();
+  BitMask.clearAllBits();
   EVT VT = BVN.getValueType(0);
   APInt ConstValue(VT.getSizeInBits(), 0);
 
   unsigned EltWidth = VT.getScalarSizeInBits();
 
-  for (unsigned j = 0; j < NumOps; ++j) {
-    SDValue OpVal = BVN.getOperand(j);
-    unsigned BitPos = j * EltWidth;
+  for (unsigned J = 0; J < NumOps; ++J) {
+    SDValue OpVal = BVN.getOperand(J);
+    unsigned BitPos = J * EltWidth;
     auto *CN = dyn_cast<ConstantSDNode>(OpVal);
 
     if (!CN)
@@ -9601,12 +9601,12 @@ bool isValidMtVsrbmi(APInt &BMI, BuildVectorSDNode &BVN) {
     ConstValue.insertBits(CN->getAPIntValue().zextOrTrunc(EltWidth), BitPos);
   }
 
-  for (unsigned J = 0; J < 16; J++) {
+  for (unsigned J = 0; J < 16; ++J) {
     APInt ExtractValue = ConstValue.extractBits(8, J * 8);
     if (ExtractValue != 0x00 && ExtractValue != 0xFF)
       return false;
     if (ExtractValue == 0xFF)
-      BMI.setBit(J);
+      BitMask.setBit(J);
   }
   return true;
 }
@@ -9623,19 +9623,19 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   assert(BVN && "Expected a BuildVectorSDNode in LowerBUILD_VECTOR");
 
   if(Subtarget.hasP10Vector()) {
-    APInt BMI(32, 0);
+    APInt BitMask(32, 0);
     // If the value of the vector is all zeros or all ones,
     // we do not convert it to MTVSRBMI.
     // The xxleqv instruction sets a vector with all ones.
     // The xxlxor instruction sets a vector with all zeros.
-    if (isValidMtVsrbmi(BMI, *BVN) && BMI != 0 && BMI!=0xffff ) {
-      SDValue  SDConstant= DAG.getTargetConstant(BMI, dl, MVT::i32);
+    if (isValidMtVsrBmi(BitMask, *BVN) && BitMask != 0 && BitMask != 0xffff) {
+      SDValue SDConstant = DAG.getTargetConstant(BitMask, dl, MVT::i32);
       MachineSDNode* MSDNode = DAG.getMachineNode(PPC::MTVSRBMI, dl,MVT::v16i8, SDConstant);
-      SDValue  SDV = SDValue(MSDNode,0);
+      SDValue SDV = SDValue(MSDNode, 0);
       EVT DVT = BVN->getValueType(0);
       EVT SVT = SDV.getValueType();
       if (SVT != DVT ) {
-	SDV = DAG.getNode(ISD::BITCAST, dl, DVT, SDV);
+        SDV = DAG.getNode(ISD::BITCAST, dl, DVT, SDV);
       }
       return SDV;
     }
