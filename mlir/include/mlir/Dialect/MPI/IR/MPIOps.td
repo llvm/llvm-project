@@ -283,7 +283,7 @@ def MPI_AllReduceOp : MPI_Op<"allreduce", []> {
   let arguments = (
     ins AnyMemRef : $sendbuf,
     AnyMemRef : $recvbuf,
-    MPI_OpClassEnum : $op,
+    MPI_ReductionOpEnum : $op,
     MPI_Comm : $comm
   );
 
