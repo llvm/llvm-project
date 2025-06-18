@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp  -fopenmp-version=50
 ! OpenMP Version 4.5
 ! Various checks with the nesting of BARRIER construct
 
@@ -75,7 +75,6 @@ program omp_nest_barrier
   end do
   !$omp end critical
 
-  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead.
   !$omp master
   do i = 1, 10
     k = k + 1
@@ -108,7 +107,6 @@ program omp_nest_barrier
   end do
   !$omp end ordered
 
-  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead.
   !$omp master
   do i = 1, 10
     !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
