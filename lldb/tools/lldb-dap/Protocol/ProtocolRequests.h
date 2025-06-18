@@ -872,7 +872,6 @@ struct ReadMemoryResponseBody {
   /// request, and `unreadableBytes` is zero or omitted, then the client should
   /// assume it's reached the end of readable memory.
   std::vector<std::byte> data;
-  // std::optional<std::string> data;
 };
 llvm::json::Value toJSON(const ReadMemoryResponseBody &);
 
