@@ -243,10 +243,8 @@ TEST(Remarks, LinkingError) {
     // Check that the prepend path is propagated and fails with the full path.
     // Also ensures that the remark format is correctly auto-detected.
     RL.setExternalFilePrependPath("/baddir/");
-    Error E = RL.link(
-        StringRef("REMARKS\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0badfile.opt.yaml",
-                  40),
-        /*RemarkFormat=*/std::nullopt);
+    Error E = RL.link(StringRef(
+        "REMARKS\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0badfile.opt.yaml", 40));
     EXPECT_TRUE(static_cast<bool>(E));
     std::string ErrorMessage = toString(std::move(E));
     EXPECT_EQ(StringRef(ErrorMessage).lower(),

@@ -23,13 +23,16 @@ namespace remarks {
 constexpr StringLiteral Magic("REMARKS");
 
 /// The format used for serializing/deserializing remarks.
-enum class Format { Unknown, YAML, Bitstream };
+enum class Format { Unknown, Auto, YAML, Bitstream };
 
 /// Parse and validate a string for the remark format.
 LLVM_ABI Expected<Format> parseFormat(StringRef FormatStr);
 
 /// Parse and validate a magic number to a remark format.
 LLVM_ABI Expected<Format> magicToFormat(StringRef Magic);
+
+/// Detect format based on selected format and magic number
+LLVM_ABI Expected<Format> detectFormat(Format Selected, StringRef Magic);
 
 } // end namespace remarks
 } // end namespace llvm
