@@ -22,10 +22,10 @@ struct mbstate {
 
   /*
   Progress towards a conversion
-    For utf8  -> utf32, increases with each CharacterConverter::push(utf8_byte)
-    For utf32 ->  utf8, increases with each CharacterConverter::pop_utf8()
+    Increases with each push(...) until it reaches total_bytes
+    Decreases with each pop(...) until it reaches 0
   */
-  uint8_t bytes_processed;
+  uint8_t bytes_stored;
 
   // Total number of bytes that will be needed to represent this character
   uint8_t total_bytes;
