@@ -47591,27 +47591,19 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
 static SDValue combineLogicBlendIntoConditionalNegate(
     EVT VT, SDValue Mask, SDValue X, SDValue Y, const SDLoc &DL,
     SelectionDAG &DAG, const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
   EVT MaskVT = Mask.getValueType();
   assert(MaskVT.isInteger() &&
          DAG.ComputeNumSignBits(Mask) == MaskVT.getScalarSizeInBits() &&
          "Mask must be zero/all-bits");
 
-  if (X.getValueType() != MaskVT || Y.getValueType() != MaskVT)
+  if (X.getValueType() != MaskVT || Y.getValueType() != MaskVT ||
+      !DAG.getTargetLoweringInfo().isOperationLegal(ISD::SUB, MaskVT))
     return SDValue();
-  if (!DAG.getTargetLoweringInfo().isOperationLegal(ISD::SUB, MaskVT))
-    return SDValue();
-
-  auto IsNegV = [](SDNode *N, SDValue V) {
-    return N->getOpcode() == ISD::SUB && N->getOperand(1) == V &&
-           ISD::isBuildVectorAllZeros(N->getOperand(0).getNode());
-  };
 
   SDValue V;
-  if (IsNegV(Y.getNode(), X))
-    V = X;
-  else if (IsNegV(X.getNode(), Y))
-    V = Y;
-  else
+  if (!sd_match(Y, m_Neg(m_AllOf(m_Specific(X), m_Value(V)))) &&
+      !sd_match(X, m_Neg(m_AllOf(m_Specific(Y), m_Value(V)))))
     return SDValue();
 
   SDValue SubOp1 = DAG.getNode(ISD::XOR, DL, MaskVT, V, Mask);
