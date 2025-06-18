@@ -31,6 +31,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -492,6 +493,17 @@ public:
   /// ordinal position to actual condition ID. This is done via PosToID[].
   CondState getTVCondition(unsigned TestVectorIndex, unsigned Condition) {
     return TV[TestVectorIndex].first[PosToID[Condition]];
+  }
+
+  /// Return the number of True and False decisions for all executed test
+  /// vectors.
+  std::pair<unsigned, unsigned> getDecisions() const {
+    const unsigned TrueDecisions =
+        std::count_if(TV.begin(), TV.end(), [](const auto &TestVec) {
+          return TestVec.second == CondState::MCDC_True;
+        });
+
+    return {TrueDecisions, TV.size() - TrueDecisions};
   }
 
   /// Return the Result evaluation for an executed test vector.
