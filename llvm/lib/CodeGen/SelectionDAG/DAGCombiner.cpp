@@ -421,7 +421,6 @@ namespace {
     SDValue visitADDLike(SDNode *N);
     SDValue visitADDLikeCommutative(SDValue N0, SDValue N1,
                                     SDNode *LocReference);
-    SDValue visitPTRADD(SDNode *N);
     SDValue visitSUB(SDNode *N);
     SDValue visitADDSAT(SDNode *N);
     SDValue visitSUBSAT(SDNode *N);
