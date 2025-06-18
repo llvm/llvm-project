@@ -14910,25 +14910,47 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
 
   Cost += ExtractCost;
   auto &&ResizeToVF = [this, &Cost](const TreeEntry *TE, ArrayRef<int> Mask,
-                                    bool) {
+                                    bool ForSingleMask) {
     InstructionCost C = 0;
     unsigned VF = Mask.size();
     unsigned VecVF = TE->getVectorFactor();
-    if (VF != VecVF &&
-        (any_of(Mask, [VF](int Idx) { return Idx >= static_cast<int>(VF); }) ||
-         !ShuffleVectorInst::isIdentityMask(Mask, VF))) {
-      SmallVector<int> OrigMask(VecVF, PoisonMaskElem);
-      std::copy(Mask.begin(), std::next(Mask.begin(), std::min(VF, VecVF)),
-                OrigMask.begin());
-      C = ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
-                           getWidenedType(TE->getMainOp()->getType(), VecVF),
-                           OrigMask);
-      LLVM_DEBUG(
-          dbgs() << "SLP: Adding cost " << C
-                 << " for final shuffle of insertelement external users.\n";
-          TE->dump(); dbgs() << "SLP: Current total cost = " << Cost << "\n");
-      Cost += C;
-      return std::make_pair(TE, true);
+    bool HasLargeIndex =
+        any_of(Mask, [VF](int Idx) { return Idx >= static_cast<int>(VF); });
+    if ((VF != VecVF && HasLargeIndex) ||
+        !ShuffleVectorInst::isIdentityMask(Mask, VF)) {
+
+      if (HasLargeIndex) {
+        SmallVector<int> OrigMask(VecVF, PoisonMaskElem);
+        std::copy(Mask.begin(), std::next(Mask.begin(), std::min(VF, VecVF)),
+                  OrigMask.begin());
+        C = ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
+                             getWidenedType(TE->getMainOp()->getType(), VecVF),
+                             OrigMask);
+        LLVM_DEBUG(
+            dbgs() << "SLP: Adding cost " << C
+                   << " for final shuffle of insertelement external users.\n";
+            TE->dump(); dbgs() << "SLP: Current total cost = " << Cost << "\n");
+        Cost += C;
+        return std::make_pair(TE, true);
+      }
+
+      if (!ForSingleMask) {
+        SmallVector<int> ResizeMask(VF, PoisonMaskElem);
+        for (unsigned I = 0; I < VF; ++I) {
+          if (Mask[I] != PoisonMaskElem)
+            ResizeMask[Mask[I]] = Mask[I];
+        }
+        if (!ShuffleVectorInst::isIdentityMask(ResizeMask, VF))
+          C = ::getShuffleCost(
+              *TTI, TTI::SK_PermuteSingleSrc,
+              getWidenedType(TE->getMainOp()->getType(), VecVF), ResizeMask);
+        LLVM_DEBUG(
+            dbgs() << "SLP: Adding cost " << C
+                   << " for final shuffle of insertelement external users.\n";
+            TE->dump(); dbgs() << "SLP: Current total cost = " << Cost << "\n");
+
+        Cost += C;
+      }
     }
     return std::make_pair(TE, false);
   };
