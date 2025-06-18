@@ -18,22 +18,25 @@
 using namespace llvm;
 
 namespace llvm {
-template class LLVM_EXPORT_TEMPLATE DominatorTreeBase<MachineBasicBlock, true>; // PostDomTreeBase
+template class LLVM_EXPORT_TEMPLATE
+    DominatorTreeBase<MachineBasicBlock, true>; // PostDomTreeBase
 
 namespace DomTreeBuilder {
 
-template LLVM_EXPORT_TEMPLATE void Calculate<MBBPostDomTree>(MBBPostDomTree &DT);
-template LLVM_EXPORT_TEMPLATE void InsertEdge<MBBPostDomTree>(MBBPostDomTree &DT,
-                                         MachineBasicBlock *From,
-                                         MachineBasicBlock *To);
-template LLVM_EXPORT_TEMPLATE void DeleteEdge<MBBPostDomTree>(MBBPostDomTree &DT,
-                                         MachineBasicBlock *From,
-                                         MachineBasicBlock *To);
-template LLVM_EXPORT_TEMPLATE void ApplyUpdates<MBBPostDomTree>(MBBPostDomTree &DT,
-                                           MBBPostDomTreeGraphDiff &,
-                                           MBBPostDomTreeGraphDiff *);
-template LLVM_EXPORT_TEMPLATE bool Verify<MBBPostDomTree>(const MBBPostDomTree &DT,
-                                     MBBPostDomTree::VerificationLevel VL);
+template LLVM_EXPORT_TEMPLATE void
+Calculate<MBBPostDomTree>(MBBPostDomTree &DT);
+template LLVM_EXPORT_TEMPLATE void
+InsertEdge<MBBPostDomTree>(MBBPostDomTree &DT, MachineBasicBlock *From,
+                           MachineBasicBlock *To);
+template LLVM_EXPORT_TEMPLATE void
+DeleteEdge<MBBPostDomTree>(MBBPostDomTree &DT, MachineBasicBlock *From,
+                           MachineBasicBlock *To);
+template LLVM_EXPORT_TEMPLATE void
+ApplyUpdates<MBBPostDomTree>(MBBPostDomTree &DT, MBBPostDomTreeGraphDiff &,
+                             MBBPostDomTreeGraphDiff *);
+template LLVM_EXPORT_TEMPLATE bool
+Verify<MBBPostDomTree>(const MBBPostDomTree &DT,
+                       MBBPostDomTree::VerificationLevel VL);
 
 } // namespace DomTreeBuilder
 extern bool VerifyMachineDomInfo;

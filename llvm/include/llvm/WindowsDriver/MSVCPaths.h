@@ -9,9 +9,9 @@
 #ifndef LLVM_WINDOWSDRIVER_MSVCPATHS_H
 #define LLVM_WINDOWSDRIVER_MSVCPATHS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <string>
@@ -45,50 +45,56 @@ LLVM_ABI const char *archToLegacyVCArch(llvm::Triple::ArchType Arch);
 // Similar to the above function, but for DevDiv internal builds.
 LLVM_ABI const char *archToDevDivInternalArch(llvm::Triple::ArchType Arch);
 
-LLVM_ABI bool appendArchToWindowsSDKLibPath(int SDKMajor, llvm::SmallString<128> LibPath,
-                                   llvm::Triple::ArchType Arch,
-                                   std::string &path);
+LLVM_ABI bool appendArchToWindowsSDKLibPath(int SDKMajor,
+                                            llvm::SmallString<128> LibPath,
+                                            llvm::Triple::ArchType Arch,
+                                            std::string &path);
 
 // Get the path to a specific subdirectory in the current toolchain for
 // a given target architecture.
 // VS2017 changed the VC toolchain layout, so this should be used instead
 // of hardcoding paths.
-LLVM_ABI std::string getSubDirectoryPath(SubDirectoryType Type, ToolsetLayout VSLayout,
-                                const std::string &VCToolChainPath,
-                                llvm::Triple::ArchType TargetArch,
-                                llvm::StringRef SubdirParent = "");
+LLVM_ABI std::string getSubDirectoryPath(SubDirectoryType Type,
+                                         ToolsetLayout VSLayout,
+                                         const std::string &VCToolChainPath,
+                                         llvm::Triple::ArchType TargetArch,
+                                         llvm::StringRef SubdirParent = "");
 
 // Check if the Include path of a specified version of Visual Studio contains
 // specific header files. If not, they are probably shipped with Universal CRT.
-LLVM_ABI bool useUniversalCRT(ToolsetLayout VSLayout, const std::string &VCToolChainPath,
-                     llvm::Triple::ArchType TargetArch,
-                     llvm::vfs::FileSystem &VFS);
+LLVM_ABI bool useUniversalCRT(ToolsetLayout VSLayout,
+                              const std::string &VCToolChainPath,
+                              llvm::Triple::ArchType TargetArch,
+                              llvm::vfs::FileSystem &VFS);
 
 /// Get Windows SDK installation directory.
 LLVM_ABI bool getWindowsSDKDir(vfs::FileSystem &VFS,
+                               std::optional<llvm::StringRef> WinSdkDir,
+                               std::optional<llvm::StringRef> WinSdkVersion,
+                               std::optional<llvm::StringRef> WinSysRoot,
+                               std::string &Path, int &Major,
+                               std::string &WindowsSDKIncludeVersion,
+                               std::string &WindowsSDKLibVersion);
+
+LLVM_ABI bool
+getUniversalCRTSdkDir(vfs::FileSystem &VFS,
                       std::optional<llvm::StringRef> WinSdkDir,
                       std::optional<llvm::StringRef> WinSdkVersion,
                       std::optional<llvm::StringRef> WinSysRoot,
-                      std::string &Path, int &Major,
-                      std::string &WindowsSDKIncludeVersion,
-                      std::string &WindowsSDKLibVersion);
-
-LLVM_ABI bool getUniversalCRTSdkDir(vfs::FileSystem &VFS,
-                           std::optional<llvm::StringRef> WinSdkDir,
-                           std::optional<llvm::StringRef> WinSdkVersion,
-                           std::optional<llvm::StringRef> WinSysRoot,
-                           std::string &Path, std::string &UCRTVersion);
+                      std::string &Path, std::string &UCRTVersion);
 
 // Check command line arguments to try and find a toolchain.
-LLVM_ABI bool findVCToolChainViaCommandLine(
-    vfs::FileSystem &VFS, std::optional<llvm::StringRef> VCToolsDir,
-    std::optional<llvm::StringRef> VCToolsVersion,
-    std::optional<llvm::StringRef> WinSysRoot, std::string &Path,
-    ToolsetLayout &VSLayout);
+LLVM_ABI bool
+findVCToolChainViaCommandLine(vfs::FileSystem &VFS,
+                              std::optional<llvm::StringRef> VCToolsDir,
+                              std::optional<llvm::StringRef> VCToolsVersion,
+                              std::optional<llvm::StringRef> WinSysRoot,
+                              std::string &Path, ToolsetLayout &VSLayout);
 
 // Check various environment variables to try and find a toolchain.
-LLVM_ABI bool findVCToolChainViaEnvironment(vfs::FileSystem &VFS, std::string &Path,
-                                   ToolsetLayout &VSLayout);
+LLVM_ABI bool findVCToolChainViaEnvironment(vfs::FileSystem &VFS,
+                                            std::string &Path,
+                                            ToolsetLayout &VSLayout);
 
 // Query the Setup Config server for installs, then pick the newest version
 // and find its default VC toolchain. If `VCToolsVersion` is specified, that
@@ -104,7 +110,8 @@ findVCToolChainViaSetupConfig(vfs::FileSystem &VFS,
 // Look in the registry for Visual Studio installs, and use that to get
 // a toolchain path. VS2017 and newer don't get added to the registry.
 // So if we find something here, we know that it's an older version.
-LLVM_ABI bool findVCToolChainViaRegistry(std::string &Path, ToolsetLayout &VSLayout);
+LLVM_ABI bool findVCToolChainViaRegistry(std::string &Path,
+                                         ToolsetLayout &VSLayout);
 
 } // namespace llvm
 

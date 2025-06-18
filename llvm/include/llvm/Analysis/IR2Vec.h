@@ -29,10 +29,10 @@
 #ifndef LLVM_ANALYSIS_IR2VEC_H
 #define LLVM_ANALYSIS_IR2VEC_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/JSON.h"
 #include <map>
@@ -116,7 +116,8 @@ public:
 
   /// Returns true if the embedding is approximately equal to the RHS embedding
   /// within the specified tolerance.
-  LLVM_ABI bool approximatelyEquals(const Embedding &RHS, double Tolerance = 1e-6) const;
+  LLVM_ABI bool approximatelyEquals(const Embedding &RHS,
+                                    double Tolerance = 1e-6) const;
 };
 
 using InstEmbeddingsMap = DenseMap<const Instruction *, Embedding>;
@@ -226,7 +227,7 @@ public:
   LLVM_ABI const ir2vec::Vocab &getVocabulary() const;
   LLVM_ABI unsigned getDimension() const;
   LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &Inv) const;
+                           ModuleAnalysisManager::Invalidator &Inv) const;
 };
 
 /// This analysis provides the vocabulary for IR2Vec. The vocabulary provides a

@@ -93,7 +93,8 @@ public:
 
   // Returns a reference to the first RangeInfo that overlaps with
   // [Info.LowerBound;Info.UpperBound], or, std::nullopt if there is no overlap
-  LLVM_ABI std::optional<const RangeInfo *> getOverlapping(const RangeInfo &Info) const;
+  LLVM_ABI std::optional<const RangeInfo *>
+  getOverlapping(const RangeInfo &Info) const;
 
   // Return the mapped RangeInfo at X or nullptr if no mapping exists
   LLVM_ABI const RangeInfo *lookup(uint32_t X) const;

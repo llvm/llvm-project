@@ -28,8 +28,10 @@
 using namespace llvm;
 
 // Explicitly instantiate methods in LoopInfoImpl.h for MI-level Loops.
-template class LLVM_EXPORT_TEMPLATE llvm::LoopBase<MachineBasicBlock, MachineLoop>;
-template class LLVM_EXPORT_TEMPLATE llvm::LoopInfoBase<MachineBasicBlock, MachineLoop>;
+template class LLVM_EXPORT_TEMPLATE
+    llvm::LoopBase<MachineBasicBlock, MachineLoop>;
+template class LLVM_EXPORT_TEMPLATE
+    llvm::LoopInfoBase<MachineBasicBlock, MachineLoop>;
 
 AnalysisKey MachineLoopAnalysis::Key;
 

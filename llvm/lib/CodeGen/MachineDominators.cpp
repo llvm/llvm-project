@@ -37,23 +37,28 @@ static cl::opt<bool, true> VerifyMachineDomInfoX(
 
 namespace llvm {
 template class LLVM_EXPORT_TEMPLATE DomTreeNodeBase<MachineBasicBlock>;
-template class LLVM_EXPORT_TEMPLATE DominatorTreeBase<MachineBasicBlock, false>; // DomTreeBase
+template class LLVM_EXPORT_TEMPLATE
+    DominatorTreeBase<MachineBasicBlock, false>; // DomTreeBase
 
 namespace DomTreeBuilder {
 template LLVM_EXPORT_TEMPLATE void Calculate<MBBDomTree>(MBBDomTree &DT);
-template LLVM_EXPORT_TEMPLATE void CalculateWithUpdates<MBBDomTree>(MBBDomTree &DT, MBBUpdates U);
+template LLVM_EXPORT_TEMPLATE void
+CalculateWithUpdates<MBBDomTree>(MBBDomTree &DT, MBBUpdates U);
 
-template LLVM_EXPORT_TEMPLATE void InsertEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
-                                     MachineBasicBlock *To);
+template LLVM_EXPORT_TEMPLATE void
+InsertEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
+                       MachineBasicBlock *To);
 
-template LLVM_EXPORT_TEMPLATE void DeleteEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
-                                     MachineBasicBlock *To);
+template LLVM_EXPORT_TEMPLATE void
+DeleteEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
+                       MachineBasicBlock *To);
 
-template LLVM_EXPORT_TEMPLATE void ApplyUpdates<MBBDomTree>(MBBDomTree &DT, MBBDomTreeGraphDiff &,
-                                       MBBDomTreeGraphDiff *);
+template LLVM_EXPORT_TEMPLATE void
+ApplyUpdates<MBBDomTree>(MBBDomTree &DT, MBBDomTreeGraphDiff &,
+                         MBBDomTreeGraphDiff *);
 
-template LLVM_EXPORT_TEMPLATE bool Verify<MBBDomTree>(const MBBDomTree &DT,
-                                 MBBDomTree::VerificationLevel VL);
+template LLVM_EXPORT_TEMPLATE bool
+Verify<MBBDomTree>(const MBBDomTree &DT, MBBDomTree::VerificationLevel VL);
 } // namespace DomTreeBuilder
 }
 

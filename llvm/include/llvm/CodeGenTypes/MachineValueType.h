@@ -16,8 +16,8 @@
 #ifndef LLVM_CODEGEN_MACHINEVALUETYPE_H
 #define LLVM_CODEGEN_MACHINEVALUETYPE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
