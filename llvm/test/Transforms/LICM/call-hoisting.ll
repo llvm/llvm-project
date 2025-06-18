@@ -84,6 +84,38 @@ exit:
   ret void
 }
 
+declare i32 @load_not_argmemonly() readonly nounwind willreturn
+
+define void @test_load_not_argmemonly(ptr noalias %sink) {
+; CHECK-LABEL: define void @test_load_not_argmemonly(
+; CHECK-SAME: ptr noalias [[SINK:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @load_not_argmemonly()
+; CHECK-NEXT:    store i32 [[RET]], ptr [[SINK]], align 4
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  %ret = call i32 @load_not_argmemonly()
+  store i32 %ret, ptr %sink
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 declare void @store(i32 %val, ptr %p) argmemonly writeonly nounwind
 
 define void @test(ptr %loc) {
