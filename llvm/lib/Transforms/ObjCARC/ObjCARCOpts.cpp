@@ -132,11 +132,8 @@ static const Value *FindSingleUseIdentifiedObject(const Value *Arg) {
 //
 // The second retain and autorelease can be deleted.
 
-// TODO: It should be possible to delete
-// objc_autoreleasePoolPush and objc_autoreleasePoolPop
-// pairs if nothing is actually autoreleased between them. Also, autorelease
-// calls followed by objc_autoreleasePoolPop calls (perhaps in ObjC++ code
-// after inlining) can be turned into plain release calls.
+// TODO: Autorelease calls followed by objc_autoreleasePoolPop calls (perhaps in
+// ObjC++ code after inlining) can be turned into plain release calls.
 
 // TODO: Critical-edge splitting. If the optimial insertion point is
 // a critical edge, the current algorithm has to fail, because it doesn't
@@ -565,6 +562,8 @@ class ObjCARCOpt {
   bool OptimizeSequences(Function &F);
 
   void OptimizeReturns(Function &F);
+
+  void OptimizeAutoreleasePools(Function &F);
 
   template <typename PredicateT>
   static void cloneOpBundlesIf(CallBase *CI,
@@ -2473,6 +2472,11 @@ bool ObjCARCOpt::run(Function &F, AAResults &AA) {
                             (1 << unsigned(ARCInstKind::AutoreleaseRV))))
     OptimizeReturns(F);
 
+  // Optimizations for autorelease pools.
+  if (UsedInThisFunction & ((1 << unsigned(ARCInstKind::AutoreleasepoolPush)) |
+                            (1 << unsigned(ARCInstKind::AutoreleasepoolPop))))
+    OptimizeAutoreleasePools(F);
+
   // Gather statistics after optimization.
 #ifndef NDEBUG
   if (AreStatisticsEnabled()) {
@@ -2483,6 +2487,106 @@ bool ObjCARCOpt::run(Function &F, AAResults &AA) {
   LLVM_DEBUG(dbgs() << "\n");
 
   return Changed;
+}
+
+/// Optimize autorelease pools by eliminating empty push/pop pairs.
+void ObjCARCOpt::OptimizeAutoreleasePools(Function &F) {
+  LLVM_DEBUG(dbgs() << "\n== ObjCARCOpt::OptimizeAutoreleasePools ==\n");
+
+  // Track empty autorelease pool push/pop pairs
+  SmallVector<std::pair<CallInst *, CallInst *>, 4> EmptyPoolPairs;
+
+  // Process each basic block independently for now (can be extended to
+  // inter-block later)
+  for (BasicBlock &BB : F) {
+    CallInst *PendingPush = nullptr;
+    bool HasAutoreleaseInScope = false;
+
+    for (Instruction &Inst : BB) {
+      ARCInstKind Class = GetBasicARCInstKind(&Inst);
+
+      switch (Class) {
+      case ARCInstKind::AutoreleasepoolPush: {
+        // Start tracking a new autorelease pool scope
+        PendingPush = cast<CallInst>(&Inst);
+        HasAutoreleaseInScope = false;
+        LLVM_DEBUG(dbgs() << "Found autorelease pool push: " << *PendingPush
+                          << "\n");
+        break;
+      }
+
+      case ARCInstKind::AutoreleasepoolPop: {
+        CallInst *Pop = cast<CallInst>(&Inst);
+
+        if (PendingPush) {
+          // Check if this pop matches the pending push by comparing the token
+          Value *PopArg = Pop->getArgOperand(0);
+          bool IsMatchingPop = (PopArg == PendingPush);
+
+          // Also handle bitcast case
+          if (!IsMatchingPop && isa<BitCastInst>(PopArg)) {
+            Value *BitcastSrc = cast<BitCastInst>(PopArg)->getOperand(0);
+            IsMatchingPop = (BitcastSrc == PendingPush);
+          }
+
+          if (IsMatchingPop && !HasAutoreleaseInScope) {
+            LLVM_DEBUG(dbgs() << "Eliminating empty autorelease pool pair: "
+                              << *PendingPush << " and " << *Pop << "\n");
+
+            // Store the pair for careful deletion later
+            EmptyPoolPairs.push_back({PendingPush, Pop});
+
+            Changed = true;
+            ++NumNoops;
+          }
+        }
+
+        PendingPush = nullptr;
+        HasAutoreleaseInScope = false;
+        break;
+      }
+      case ARCInstKind::CallOrUser:
+      case ARCInstKind::Call:
+      case ARCInstKind::Autorelease:
+      case ARCInstKind::AutoreleaseRV: {
+        // Track that we have autorelease calls in the current pool scope
+        if (PendingPush) {
+          HasAutoreleaseInScope = true;
+          LLVM_DEBUG(
+              dbgs()
+              << "Found autorelease or potiential autorelease in pool scope: "
+              << Inst << "\n");
+        }
+        break;
+      }
+
+      default:
+        break;
+      }
+    }
+  }
+
+  // Handle empty pool pairs carefully to avoid use-after-delete
+  SmallVector<CallInst *, 8> DeadInsts;
+  for (auto &Pair : EmptyPoolPairs) {
+    CallInst *Push = Pair.first;
+    CallInst *Pop = Pair.second;
+
+    // Replace the pop's argument with undef before deleting the push
+    Value *UndefToken = UndefValue::get(Push->getType());
+    Pop->setArgOperand(0, UndefToken);
+
+    LLVM_DEBUG(dbgs() << "Erasing empty pool pair: " << *Push << " and " << *Pop
+                      << "\n");
+    DeadInsts.push_back(Pop);
+    DeadInsts.push_back(Push);
+  }
+
+  // Remove dead instructions
+  for (CallInst *DeadInst : DeadInsts) {
+    LLVM_DEBUG(dbgs() << "Erasing dead instruction: " << *DeadInst << "\n");
+    DeadInst->eraseFromParent();
+  }
 }
 
 /// @}
