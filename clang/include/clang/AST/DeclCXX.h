@@ -2892,8 +2892,11 @@ public:
   }
 
   void setOperatorGlobalDelete(FunctionDecl *OD) {
+    assert(!OD ||
+           (OD->getDeclName().getCXXOverloadedOperator() == OO_Delete &&
+            OD->isUsableAsGlobalAllocationFunctionInConstantEvaluation()));
     auto *Canonical = cast<CXXDestructorDecl>(getCanonicalDecl());
-    if (OD && !Canonical->OperatorGlobalDelete)
+    if (!Canonical->OperatorGlobalDelete)
       Canonical->OperatorGlobalDelete = OD;
   }
 
