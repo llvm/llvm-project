@@ -970,31 +970,33 @@ class BinOpSameOpcodeHelper {
         return Instruction::Xor;
       llvm_unreachable("Cannot find interchangeable instruction.");
     }
+
     /// Return true if the instruction can be converted to \p Opcode.
     bool hasCandidateOpcode(unsigned Opcode) const {
       MaskType Candidate = Mask & SeenBefore;
       switch (Opcode) {
-        case Instruction::Shl:
-          return Candidate & ShlBIT;
-        case Instruction::AShr:
-          return Candidate & AShrBIT;
-        case Instruction::Mul:
-          return Candidate & MulBIT;
-        case Instruction::Add:
-          return Candidate & AddBIT;
-        case Instruction::Sub:
-          return Candidate & SubBIT;
-        case Instruction::And:
-          return Candidate & AndBIT;
-        case Instruction::Or:
-          return Candidate & OrBIT;
-        case Instruction::Xor:
-          return Candidate & XorBIT;
-        default:
+      case Instruction::Shl:
+        return Candidate & ShlBIT;
+      case Instruction::AShr:
+        return Candidate & AShrBIT;
+      case Instruction::Mul:
+        return Candidate & MulBIT;
+      case Instruction::Add:
+        return Candidate & AddBIT;
+      case Instruction::Sub:
+        return Candidate & SubBIT;
+      case Instruction::And:
+        return Candidate & AndBIT;
+      case Instruction::Or:
+        return Candidate & OrBIT;
+      case Instruction::Xor:
+        return Candidate & XorBIT;
+      default:
         break;
       }
       llvm_unreachable("Cannot find interchangeable instruction.");
     }
+
     SmallVector<Value *> getOperand(const Instruction *To) const {
       unsigned ToOpcode = To->getOpcode();
       unsigned FromOpcode = I->getOpcode();
