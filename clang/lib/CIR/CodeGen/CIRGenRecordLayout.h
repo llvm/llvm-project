@@ -42,26 +42,26 @@ namespace clang::CIRGen {
 ///   };
 ///
 /// This will end up as the following cir.record. The bitfield members are
-/// represented by two !u8i values, and the array provides padding to align the
+/// represented by one !u16i value, and the array provides padding to align the
 /// struct to a 4-byte alignment.
 ///
-///   !rec_S = !cir.record<struct "S" padded {!s8i, !s8i, !s8i, !u8i, !u8i,
+///   !rec_S = !cir.record<struct "S" padded {!s8i, !s8i, !s8i, !u16i,
 ///   !cir.array<!u8i x 3>}>
 ///
 /// When generating code to access more_bits, we'll generate something
 /// essentially like this:
 ///
 ///   #bfi_more_bits = #cir.bitfield_info<name = "more_bits", storage_type =
-///   !u8i, size = 4, offset = 3, is_signed = false>
+///   !u16i, size = 4, offset = 3, is_signed = false>
 ///
 ///   cir.func @store_field() {
 ///     %0 = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s"] {alignment = 4 : i64}
 ///     %1 = cir.const #cir.int<2> : !s32i
 ///     %2 = cir.cast(integral, %1 : !s32i), !u32i
 ///     %3 = cir.get_member %0[3] {name = "more_bits"} : !cir.ptr<!rec_S> ->
-///     !cir.ptr<!u8i>
+///     !cir.ptr<!u16i>
 ///     %4 = cir.set_bitfield(#bfi_more_bits, %3 :
-///     !cir.ptr<!u8i>, %2 : !u32i) -> !u32i
+///     !cir.ptr<!u16i>, %2 : !u32i) -> !u32i
 ///     cir.return
 ///   }
 ///
