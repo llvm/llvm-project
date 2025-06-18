@@ -571,10 +571,24 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfo",
+        ":DebugInfoDWARFLowLevel",
         ":MC",
         ":Object",
         ":Support",
         ":TargetParser",
+    ],
+)
+
+cc_library(
+    name = "DebugInfoDWARFLowLevel",
+    srcs = glob([
+        "lib/DebugInfo/DWARF/LowLevel/*.cpp",
+    ]),
+    hdrs = glob(["include/llvm/DebugInfo/DWARF/LowLevel/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":Support",
     ],
 )
 
