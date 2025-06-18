@@ -108,7 +108,7 @@ struct ConditionOpInterface
             getBuffer(rewriter, value, options, state);
         if (failed(maybeBuffer))
           return failure();
-        FailureOr<BaseMemRefType> resultType = bufferization::getBufferType(
+        FailureOr<BufferLikeType> resultType = bufferization::getBufferType(
             whileOp.getAfterArguments()[it.index()], options, state);
         if (failed(resultType))
           return failure();
@@ -292,8 +292,9 @@ struct IfOpInterface
       // True branch was already bufferized.
       thenBufferType = cast<BaseMemRefType>(thenValue.getType());
     } else {
-      auto maybeBufferType = bufferization::getBufferType(
-          thenValue, options, state, invocationStack);
+      auto maybeBufferType =
+          bufferization::detail::asMemRefType(bufferization::getBufferType(
+              thenValue, options, state, invocationStack));
       if (failed(maybeBufferType))
         return failure();
       thenBufferType = *maybeBufferType;
@@ -302,8 +303,9 @@ struct IfOpInterface
       // False branch was already bufferized.
       elseBufferType = cast<BaseMemRefType>(elseValue.getType());
     } else {
-      auto maybeBufferType = bufferization::getBufferType(
-          elseValue, options, state, invocationStack);
+      auto maybeBufferType =
+          bufferization::detail::asMemRefType(bufferization::getBufferType(
+              elseValue, options, state, invocationStack));
       if (failed(maybeBufferType))
         return failure();
       elseBufferType = *maybeBufferType;
@@ -406,9 +408,7 @@ struct IndexSwitchOpInterface
         return bufferType;
       auto maybeBufferType = bufferization::getBufferType(
           yieldedValue, options, state, invocationStack);
-      if (failed(maybeBufferType))
-        return failure();
-      return maybeBufferType;
+      return bufferization::detail::asMemRefType(maybeBufferType);
     };
 
     // Compute buffer type of the default case.
@@ -527,8 +527,8 @@ static FailureOr<BaseMemRefType> computeLoopRegionIterArgBufferType(
     const BufferizationOptions &options, const BufferizationState &state,
     SmallVector<Value> &invocationStack) {
   // Determine the buffer type of the init_arg.
-  auto initArgBufferType =
-      bufferization::getBufferType(initArg, options, state, invocationStack);
+  auto initArgBufferType = bufferization::detail::asMemRefType(
+      bufferization::getBufferType(initArg, options, state, invocationStack));
   if (failed(initArgBufferType))
     return failure();
 
@@ -554,8 +554,9 @@ static FailureOr<BaseMemRefType> computeLoopRegionIterArgBufferType(
   } else {
     // Note: This typically triggers a recursive call for the buffer type of
     // the iter_arg.
-    auto maybeBufferType = bufferization::getBufferType(yieldedValue, options,
-                                                        state, invocationStack);
+    auto maybeBufferType =
+        bufferization::detail::asMemRefType(bufferization::getBufferType(
+            yieldedValue, options, state, invocationStack));
     if (failed(maybeBufferType))
       return failure();
     yieldedValueBufferType = *maybeBufferType;
@@ -718,8 +719,12 @@ struct ForOpInterface
     if (auto opResult = dyn_cast<OpResult>(value)) {
       // The type of an OpResult must match the corresponding iter_arg type.
       BlockArgument bbArg = forOp.getTiedLoopRegionIterArg(opResult);
-      return bufferization::getBufferType(bbArg, options, state,
-                                          invocationStack);
+      auto bufferType =
+          bufferization::getBufferType(bbArg, options, state, invocationStack);
+      if (failed(bufferType))
+        return failure();
+      assert(isa<BaseMemRefType>(*bufferType) && "expected memref type");
+      return cast<BaseMemRefType>(*bufferType);
     }
 
     // Compute result/argument number.
@@ -1078,8 +1083,8 @@ struct WhileOpInterface
       // scf.condition was already bufferized.
       return cast<BaseMemRefType>(conditionYieldedVal.getType());
     }
-    return bufferization::getBufferType(conditionYieldedVal, options, state,
-                                        invocationStack);
+    return bufferization::detail::asMemRefType(bufferization::getBufferType(
+        conditionYieldedVal, options, state, invocationStack));
   }
 
   /// Assert that yielded values of an scf.while op are equivalent to their
@@ -1185,14 +1190,14 @@ struct YieldOpInterface
         // We may have to cast the value before yielding it.
         if (isa<scf::ForOp, scf::IfOp, scf::IndexSwitchOp>(
                 yieldOp->getParentOp())) {
-          FailureOr<BaseMemRefType> resultType = bufferization::getBufferType(
+          FailureOr<BufferLikeType> resultType = bufferization::getBufferType(
               yieldOp->getParentOp()->getResult(it.index()), options, state);
           if (failed(resultType))
             return failure();
           buffer = castBuffer(rewriter, buffer, *resultType);
         } else if (auto whileOp =
                        dyn_cast<scf::WhileOp>(yieldOp->getParentOp())) {
-          FailureOr<BaseMemRefType> resultType = bufferization::getBufferType(
+          FailureOr<BufferLikeType> resultType = bufferization::getBufferType(
               whileOp.getBeforeArguments()[it.index()], options, state);
           if (failed(resultType))
             return failure();
@@ -1307,15 +1312,15 @@ struct ForallOpInterface
     if (auto bbArg = dyn_cast<BlockArgument>(value))
       // A tensor block argument has the same bufferized type as the
       // corresponding output operand.
-      return bufferization::getBufferType(
-          forallOp.getTiedOpOperand(bbArg)->get(), options, state,
-          invocationStack);
+      return bufferization::detail::asMemRefType(
+          bufferization::getBufferType(forallOp.getTiedOpOperand(bbArg)->get(),
+                                       options, state, invocationStack));
 
     // The bufferized result type is the same as the bufferized type of the
     // corresponding output operand.
-    return bufferization::getBufferType(
+    return bufferization::detail::asMemRefType(bufferization::getBufferType(
         forallOp.getOutputs()[cast<OpResult>(value).getResultNumber()], options,
-        state, invocationStack);
+        state, invocationStack));
   }
 
   bool isRepetitiveRegion(Operation *op, unsigned index) const {
