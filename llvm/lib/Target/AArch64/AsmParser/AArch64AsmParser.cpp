@@ -3307,8 +3307,8 @@ ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
         ELFSpec == AArch64MCExpr::VK_INVALID) {
       // No modifier was specified at all; this is the syntax for an ELF basic
       // ADRP relocation (unfortunately).
-      Expr =
-          AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_PAGE, getContext());
+      Expr = MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_PAGE,
+                                     getContext());
     } else if ((DarwinSpec == AArch64MCExpr::M_GOTPAGE ||
                 DarwinSpec == AArch64MCExpr::M_TLVPPAGE) &&
                Addend != 0) {
@@ -3361,7 +3361,7 @@ ParseStatus AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
         ELFSpec == AArch64MCExpr::VK_INVALID) {
       // No modifier was specified at all; this is the syntax for an ELF basic
       // ADR relocation (unfortunately).
-      Expr = AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS, getContext());
+      Expr = MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS, getContext());
     } else if (ELFSpec != AArch64MCExpr::VK_GOT_AUTH_PAGE) {
       // For tiny code model, we use :got_auth: operator to fill 21-bit imm of
       // adr. It's not actually GOT entry page address but the GOT address
@@ -4478,7 +4478,7 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
     return true;
 
   if (HasELFModifier)
-    ImmVal = AArch64MCExpr::create(ImmVal, RefKind, getContext());
+    ImmVal = MCSpecifierExpr::create(ImmVal, RefKind, getContext());
 
   SMLoc EndLoc;
   if (getContext().getAsmInfo()->hasSubsectionsViaSymbols()) {
@@ -7360,7 +7360,7 @@ bool AArch64AsmParser::parseDirectiveTLSDescCall(SMLoc L) {
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, getContext());
-  Expr = AArch64MCExpr::create(Expr, AArch64MCExpr::VK_TLSDESC, getContext());
+  Expr = MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_TLSDESC, getContext());
 
   MCInst Inst;
   Inst.setOpcode(AArch64::TLSDESCCALL);
@@ -8288,7 +8288,7 @@ bool AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
   DarwinSpec = AArch64MCExpr::None;
   Addend = 0;
 
-  if (const AArch64MCExpr *AE = dyn_cast<AArch64MCExpr>(Expr)) {
+  if (auto *AE = dyn_cast<MCSpecifierExpr>(Expr)) {
     ELFSpec = AE->getSpecifier();
     Expr = AE->getSubExpr();
   }
