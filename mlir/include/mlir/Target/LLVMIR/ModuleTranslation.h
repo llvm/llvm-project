@@ -15,6 +15,7 @@
 #define MLIR_TARGET_LLVMIR_MODULETRANSLATION_H
 
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
@@ -23,6 +24,7 @@
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/FPEnv.h"
 
 namespace llvm {
@@ -105,6 +107,41 @@ public:
   /// Finds an LLVM IR basic block that corresponds to the given MLIR block.
   llvm::BasicBlock *lookupBlock(Block *block) const {
     return blockMapping.lookup(block);
+  }
+
+  /// Find the LLVM-IR loop that represents an MLIR loop.
+  llvm::CanonicalLoopInfo *lookupOMPLoop(omp::NewCliOp mlir) const {
+    llvm::CanonicalLoopInfo *result = loopMapping.lookup(mlir);
+    assert(result && "attempt to get non-existing loop");
+    return result;
+  }
+
+  /// Find the LLVM-IR loop that represents an MLIR loop.
+  llvm::CanonicalLoopInfo *lookupOMPLoop(Value mlir) const {
+    return lookupOMPLoop(mlir.getDefiningOp<omp::NewCliOp>());
+  }
+
+  /// Mark an OpenMP loop as having been consumed.
+  void invalidateOmpLoop(omp::NewCliOp mlir) { loopMapping.erase(mlir); }
+
+  /// Mark an OpenMP loop as having been consumed.
+  void invalidateOmpLoop(Value mlir) {
+    invalidateOmpLoop(mlir.getDefiningOp<omp::NewCliOp>());
+  }
+
+  /// Map an MLIR OpenMP dialect CanonicalLoopInfo to its lowered LLVM-IR
+  /// OpenMPIRBuilder CanonicalLoopInfo
+  void mapOmpLoop(omp::NewCliOp mlir, llvm::CanonicalLoopInfo *llvm) {
+    assert(llvm && "argument must be non-null");
+    llvm::CanonicalLoopInfo *&cur = loopMapping[mlir];
+    assert(cur == nullptr && "attempting to map a loop that is already mapped");
+    cur = llvm;
+  }
+
+  /// Map an MLIR OpenMP dialect CanonicalLoopInfo to its lowered LLVM-IR
+  /// OpenMPIRBuilder CanonicalLoopInfo
+  void mapOmpLoop(Value mlir, llvm::CanonicalLoopInfo *llvm) {
+    mapOmpLoop(mlir.getDefiningOp<omp::NewCliOp>(), llvm);
   }
 
   /// Stores the mapping between an MLIR operation with successors and a
@@ -430,6 +467,12 @@ private:
   llvm::StringMap<llvm::Function *> functionMapping;
   DenseMap<Value, llvm::Value *> valueMapping;
   DenseMap<Block *, llvm::BasicBlock *> blockMapping;
+
+  /// List of not yet consumed MLIR loop handles (represented by an omp.new_cli
+  /// operation which creates a value of type CanonicalLoopInfoType) and their
+  /// LLVM-IR representation as CanonicalLoopInfo which is managed by the
+  /// OpenMPIRBuilder.
+  DenseMap<omp::NewCliOp, llvm::CanonicalLoopInfo *> loopMapping;
 
   /// A mapping between MLIR LLVM dialect terminators and LLVM IR terminators
   /// they are converted to. This allows for connecting PHI nodes to the source
