@@ -877,10 +877,26 @@ foreach mx = SchedMxListF in {
   }
 }
 
-// vfredosum operations with measured latencies
-// Use the same pattern as other FP operations: iterate over SchedMxListF with valid SEW combinations
+// Simple vfredosum operations
+foreach mx = ["MF4", "MF2"] in {
+  foreach sew = SchedSEWSet<mx, 1>.val in {
+    defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
+
+    // Slightly increased latencies for e32mf2=24 (should be 12)
+    defvar SimpleLatency = !cond(
+      !eq(mx, "MF4") : 12,
+      !eq(mx, "MF2") : 24
+    );
+
+    let Latency = SimpleLatency in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFRedOV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
+  }
+}
+
+// Complex vfredosum operations (integer LMULs)
 // From CSV: e16 = 48,96,192; e32 = 24,48,96,192; e64 = 12,24,48,96
-foreach mx = SchedMxListF in {
+foreach mx = ["M1", "M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
     defvar LMulLat = SMX60GetLMulCycles<mx>.c;
