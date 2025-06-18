@@ -227,7 +227,7 @@ bool FrontendAction::generateRtTypeTables() {
 template <unsigned N>
 bool FrontendAction::reportFatalErrors(const char (&message)[N]) {
   bool echoSourceLine{true};
-  auto &features{instance->getInvocation().getFortranOpts().features};
+  const auto &features{instance->getInvocation().getFortranOpts().features};
   if (!instance->getParsing().messages().empty() &&
       (instance->getInvocation().getWarnAsErr() ||
        instance->getParsing().messages().AnyFatalError())) {
