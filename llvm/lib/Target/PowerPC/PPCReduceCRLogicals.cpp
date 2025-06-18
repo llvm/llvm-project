@@ -474,8 +474,7 @@ PPCReduceCRLogicals::createCRLogicalOpInfo(MachineInstr &MIParam) {
   } else {
     MachineInstr *Def1 = lookThroughCRCopy(MIParam.getOperand(1).getReg(),
                                            Ret.SubregDef1, Ret.CopyDefs.first);
-    if (Ret.SubregDef1 == 0)
-      Ret.SubregDef1 = MIParam.getOperand(1).getSubReg();
+    Ret.SubregDef1 = MIParam.getOperand(1).getSubReg();
     assert(Def1 && "Must be able to find a definition of operand 1.");
     Ret.DefsSingleUse &=
       MRI->hasOneNonDBGUse(Def1->getOperand(0).getReg());
@@ -486,8 +485,7 @@ PPCReduceCRLogicals::createCRLogicalOpInfo(MachineInstr &MIParam) {
       MachineInstr *Def2 = lookThroughCRCopy(MIParam.getOperand(2).getReg(),
                                              Ret.SubregDef2,
                                              Ret.CopyDefs.second);
-      if (Ret.SubregDef2 == 0)
-        Ret.SubregDef2 = MIParam.getOperand(2).getSubReg();
+      Ret.SubregDef2 = MIParam.getOperand(2).getSubReg();
       assert(Def2 && "Must be able to find a definition of operand 2.");
       Ret.DefsSingleUse &=
         MRI->hasOneNonDBGUse(Def2->getOperand(0).getReg());
@@ -549,8 +547,6 @@ MachineInstr *PPCReduceCRLogicals::lookThroughCRCopy(unsigned Reg,
   if (!Copy->isCopy())
     return Copy;
   Register CopySrc = Copy->getOperand(1).getReg();
-  // If the copy defines a register with a subreg, set that as the Subreg.
-  Subreg = Copy->getOperand(0).getSubReg();
   if (!CopySrc.isVirtual()) {
     const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
     // Loop backwards and return the first MI that modifies the physical CR Reg.
