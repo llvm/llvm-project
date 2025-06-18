@@ -837,14 +837,15 @@ foreach mx = SchedMxListF in {
 foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
-    defvar RedLat = SMX60GetVIRedLatency<mx>.c;
 
+    defvar RedLat = SMX60GetVIRedLatency<mx>.c;
     let Latency = RedLat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
 
-      // WriteVIRedV_From includes vredand, vredor, vredxor, and vredsum. Only the vredsum have the
-      // the latency of 5/5/5/7/11/19/35, while vredand, vredor, vredxor have latencies of
-      // 4/4/4/6/10/18/34, but since they are all in the same group, we use the worst case.
+      // Pattern for vredsum:                  5/5/5/7/11/19/35
+      // Pattern for vredand, vredor, vredxor: 4/4/4/6/10/18/34
+      // They are grouped together, so we use the worst-case vredsum latency.
+      // TODO: split vredand, vredor, vredxor into separate scheduling classe.
       defm "" : LMULSEWWriteResMXSEW<"WriteVIRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
   }
@@ -853,8 +854,8 @@ foreach mx = SchedMxList in {
 foreach mx = SchedMxListWRed in {
   foreach sew = SchedSEWSet<mx, 0, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListWRed>.c;
-    defvar RedLat = SMX60GetVIRedLatency<mx>.c;
 
+    defvar RedLat = SMX60GetVIRedLatency<mx>.c;
     let Latency = RedLat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIWRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
