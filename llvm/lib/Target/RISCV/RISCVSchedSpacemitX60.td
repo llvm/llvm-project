@@ -867,15 +867,13 @@ foreach mx = SchedMxListF in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
     defvar FPRedLat = SMX60GetVFRedLatency<mx>.c;
 
-    // FP reduction operations: vfredusum.vs, vfredmax.vs, vfredmin.vs use
-    // worst-case 12,12,15,21,33,57
+    // Pattern for vfredmax.vs, vfredmin.vs: 12,12,15,21,33,57
+    // Pattern for vfredusum.vs is slightly lower for e16/e32
+    // We use the worst-case for simplificity
     let Latency = FPRedLat in {
-      defm "" : LMULSEWWriteResMXSEW<"WriteVFRedV_From", [SMX60_VIEU],
-                                     mx, sew, IsWorstCase>;
-      defm "" : LMULSEWWriteResMXSEW<"WriteVFRedMinMaxV_From",
-                                     [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
-
   }
 }
 
