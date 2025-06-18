@@ -351,7 +351,7 @@ std::optional<int64_t> DILParser::ParseIntegerConstant() {
   std::string number_spelling;
   if (CurToken().GetKind() == Token::minus) {
     // StringRef::getAsInteger<>() can parse negative numbers.
-    // Remove this once unary minus operator is added.
+    // FIXME: Remove this once unary minus operator is added.
     number_spelling = "-";
     m_dil_lexer.Advance();
   }
