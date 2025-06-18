@@ -620,23 +620,21 @@ define i128 @lshr128_shamt32(i128 %a, i32 signext %b) nounwind {
 ;
 ; RV64I-LABEL: lshr128_shamt32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a4, a2, 32
-; RV64I-NEXT:    srli a4, a4, 32
-; RV64I-NEXT:    addi a3, a4, -64
-; RV64I-NEXT:    bltz a3, .LBB14_2
+; RV64I-NEXT:    addi a4, a2, -64
+; RV64I-NEXT:    srl a3, a1, a2
+; RV64I-NEXT:    bltz a4, .LBB14_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    srl a0, a1, a4
+; RV64I-NEXT:    mv a0, a3
 ; RV64I-NEXT:    j .LBB14_3
 ; RV64I-NEXT:  .LBB14_2:
 ; RV64I-NEXT:    srl a0, a0, a2
-; RV64I-NEXT:    slli a5, a1, 1
-; RV64I-NEXT:    not a4, a4
-; RV64I-NEXT:    sll a4, a5, a4
-; RV64I-NEXT:    or a0, a0, a4
+; RV64I-NEXT:    not a2, a2
+; RV64I-NEXT:    slli a1, a1, 1
+; RV64I-NEXT:    sll a1, a1, a2
+; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:  .LBB14_3:
-; RV64I-NEXT:    srl a1, a1, a2
-; RV64I-NEXT:    srai a3, a3, 63
-; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srai a1, a4, 63
+; RV64I-NEXT:    and a1, a1, a3
 ; RV64I-NEXT:    ret
   %zext = zext nneg i32 %b to i128
   %1 = lshr i128 %a, %zext
@@ -692,21 +690,21 @@ define i128 @ashr128_shamt32(i128 %a, i32 signext %b) nounwind {
 ;
 ; RV64I-LABEL: ashr128_shamt32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a3, a2, 32
-; RV64I-NEXT:    srli a3, a3, 32
-; RV64I-NEXT:    addi a4, a3, -64
+; RV64I-NEXT:    mv a3, a1
+; RV64I-NEXT:    addi a4, a2, -64
+; RV64I-NEXT:    sra a1, a1, a2
 ; RV64I-NEXT:    bltz a4, .LBB15_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    sra a0, a1, a3
-; RV64I-NEXT:    srai a1, a1, 63
+; RV64I-NEXT:    srai a3, a3, 63
+; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    mv a1, a3
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB15_2:
 ; RV64I-NEXT:    srl a0, a0, a2
-; RV64I-NEXT:    slli a4, a1, 1
-; RV64I-NEXT:    not a3, a3
-; RV64I-NEXT:    sll a3, a4, a3
-; RV64I-NEXT:    or a0, a0, a3
-; RV64I-NEXT:    sra a1, a1, a2
+; RV64I-NEXT:    not a2, a2
+; RV64I-NEXT:    slli a3, a3, 1
+; RV64I-NEXT:    sll a2, a3, a2
+; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    ret
   %zext = zext nneg i32 %b to i128
   %1 = ashr i128 %a, %zext
@@ -761,23 +759,21 @@ define i128 @shl128_shamt32(i128 %a, i32 signext %b) nounwind {
 ;
 ; RV64I-LABEL: shl128_shamt32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a4, a2, 32
-; RV64I-NEXT:    srli a4, a4, 32
-; RV64I-NEXT:    addi a3, a4, -64
-; RV64I-NEXT:    bltz a3, .LBB16_2
+; RV64I-NEXT:    addi a4, a2, -64
+; RV64I-NEXT:    sll a3, a0, a2
+; RV64I-NEXT:    bltz a4, .LBB16_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    sll a1, a0, a4
+; RV64I-NEXT:    mv a1, a3
 ; RV64I-NEXT:    j .LBB16_3
 ; RV64I-NEXT:  .LBB16_2:
 ; RV64I-NEXT:    sll a1, a1, a2
-; RV64I-NEXT:    srli a5, a0, 1
-; RV64I-NEXT:    not a4, a4
-; RV64I-NEXT:    srl a4, a5, a4
-; RV64I-NEXT:    or a1, a1, a4
+; RV64I-NEXT:    not a2, a2
+; RV64I-NEXT:    srli a0, a0, 1
+; RV64I-NEXT:    srl a0, a0, a2
+; RV64I-NEXT:    or a1, a1, a0
 ; RV64I-NEXT:  .LBB16_3:
-; RV64I-NEXT:    sll a0, a0, a2
-; RV64I-NEXT:    srai a3, a3, 63
-; RV64I-NEXT:    and a0, a3, a0
+; RV64I-NEXT:    srai a0, a4, 63
+; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    ret
   %zext = zext nneg i32 %b to i128
   %1 = shl i128 %a, %zext
