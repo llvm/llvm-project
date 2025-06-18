@@ -31,11 +31,12 @@ constexpr enable_if_t<meta<F>::value == 2, void> midpoint(F) {}
 
 #else
 
-// expected-error@27{{'N::midpoint' has different definitions in different modules; defined here first difference is 1st parameter with type 'F'}}
-// expected-error@24{{'N::midpoint' has different definitions in different modules; defined here first difference is 1st parameter with type 'U'}}
-// expected-note@21{{but in '' found 1st parameter with type 'T'}}
+// FIXME: Change the test to trigger a suitable error: previously the test
+// asserted the ODR error ("'N::midpoint' has different definitions in different
+// modules"), which isn't fully correct as there's only one module, and since a
+// change in the ODR hash calculation this error isn't triggered anymore.
+
 int x = N::something;
-// expected-error@37{{no member named 'something' in namespace 'N'}}
-// expected-note@21{{but in '' found 1st parameter with type 'T'}}
+// expected-error@38{{no member named 'something' in namespace 'N'}}
 
 #endif

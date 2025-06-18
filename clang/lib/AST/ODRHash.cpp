@@ -828,7 +828,23 @@ void ODRHash::AddDecl(const Decl *D) {
     return;
   }
 
-  AddDeclarationName(ND->getDeclName());
+  // For template parameters, use depth+index instead of name, because type
+  // canonicalization can change the name of the template parameter.
+  if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(ND)) {
+    ID.AddInteger(TTPD->getDepth());
+    ID.AddInteger(TTPD->getIndex());
+    AddBoolean(TTPD->isParameterPack());
+  } else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(ND)) {
+    ID.AddInteger(NTTPD->getDepth());
+    ID.AddInteger(NTTPD->getIndex());
+    AddBoolean(NTTPD->isParameterPack());
+  } else if (auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(ND)) {
+    ID.AddInteger(TTPD->getDepth());
+    ID.AddInteger(TTPD->getIndex());
+    AddBoolean(TTPD->isParameterPack());
+  } else {
+    AddDeclarationName(ND->getDeclName());
+  }
 
   // If this was a specialization we should take into account its template
   // arguments. This helps to reduce collisions coming when visiting template
