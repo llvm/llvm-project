@@ -1134,7 +1134,8 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
          DefaultValuedAttr<
           TypedArrayAttrBase<I64ArrayAttr, "array of arrays of i64">,
           "{}">:$transpose_paddings,
-         DefaultValuedAttr<StrAttr, "::mlir::bufferization::MaterializeInDestinationOp::getOperationName()">:$copy_back_op);
+         DefaultValuedAttr<StrAttr, "::mlir::bufferization::MaterializeInDestinationOp::getOperationName()">:$copy_back_op,
+         DefaultValuedAttr<UnitAttr, "false">:$use_prescribed_tensor_shapes);
   let results = (outs TransformHandleTypeInterface:$padded,
                       TransformHandleTypeInterface:$pad,
                       TransformHandleTypeInterface:$copy);
@@ -1142,6 +1143,7 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
   let assemblyFormat = [{
     $target 
     (`pad_to_multiple_of` custom<DynamicIndexList>($pad_to_multiple_of, $static_pad_to_multiple_of)^)?
+    (`use_prescribed_tensor_shapes` $use_prescribed_tensor_shapes^)?
     attr-dict
     `:` functional-type(operands, results)
   }];
@@ -1159,13 +1161,15 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
                    CArg<"ArrayRef<int64_t>", "{}">:$staticPadToMultipleOf,
                    CArg<"ArrayRef<int64_t>", "{}">:$nofoldFlags,
                    CArg<"ArrayRef<Attribute>", "{}">:$transposePaddings,
-                   CArg<"StringRef", "::mlir::bufferization::MaterializeInDestinationOp::getOperationName()">:$copyBackOp)>,
+                   CArg<"StringRef", "::mlir::bufferization::MaterializeInDestinationOp::getOperationName()">:$copyBackOp,
+                   CArg<"bool", "false">:$usePrescribedTensorShapes)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<int64_t>":$paddingDimensions,
                    "ArrayRef<OpFoldResult>":$mixedPadToMultipleOf,
                    CArg<"ArrayRef<int64_t>", "{}">:$nofoldFlags,
                    CArg<"ArrayRef<Attribute>", "{}">:$transposePaddings,
-                   CArg<"StringRef", "::mlir::bufferization::MaterializeInDestinationOp::getOperationName()">:$copyBackOp)>
+                   CArg<"StringRef", "::mlir::bufferization::MaterializeInDestinationOp::getOperationName()">:$copyBackOp,
+                   CArg<"bool", "false">:$usePrescribedTensorShapes)>
   ];
 
   let extraClassDeclaration = [{

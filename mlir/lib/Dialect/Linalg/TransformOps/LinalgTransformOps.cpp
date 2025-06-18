@@ -1907,7 +1907,8 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                              ArrayRef<int64_t> padToMultipleOf,
                              ArrayRef<int64_t> nofoldFlags,
                              ArrayRef<Attribute> transposePaddings,
-                             StringRef copyBackOp) {
+                             StringRef copyBackOp,
+                             bool usePrescribedTensorShapes) {
   auto resultType = transform::AnyOpType::get(b.getContext());
   return build(/*builder=*/b,
                /*result=*/result,
@@ -1922,7 +1923,9 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                     : b.getDenseI64ArrayAttr(padToMultipleOf)),
                /*nofoldFlags=*/b.getI64ArrayAttr(nofoldFlags),
                /*transposePaddings=*/b.getArrayAttr(transposePaddings),
-               /*copyBackOp=*/b.getStringAttr(copyBackOp));
+               /*copyBackOp=*/b.getStringAttr(copyBackOp),
+               /*usePrescribedTensorShapes=*/
+               usePrescribedTensorShapes ? b.getUnitAttr() : nullptr);
 }
 
 void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
@@ -1930,7 +1933,8 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                              ArrayRef<OpFoldResult> mixedPadToMultipleOf,
                              ArrayRef<int64_t> nofoldFlags,
                              ArrayRef<Attribute> transposePaddings,
-                             StringRef copyBackOp) {
+                             StringRef copyBackOp,
+                             bool usePrescribedTensorShapes) {
   auto resultType = transform::AnyOpType::get(b.getContext());
   SmallVector<int64_t> staticPadToMultipleOf;
   SmallVector<Value> dynamicPadToMultipleOf;
@@ -1946,7 +1950,8 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                /*padToMultipleOf=*/staticPadToMultipleOf,
                /*nofoldFlags=*/b.getI64ArrayAttr(nofoldFlags),
                /*transposePaddings=*/b.getArrayAttr(transposePaddings),
-               /*copyBackOp=*/b.getStringAttr(copyBackOp));
+               /*copyBackOp=*/copyBackOp,
+               /*usePrescribedTensorShapes=*/usePrescribedTensorShapes);
 }
 
 void PadOp::getEffects(
@@ -2051,11 +2056,34 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     } else {
       llvm_unreachable("unsupported copy_back op");
     }
+    // Populate `sizeToPadTo` with the dynamic tensor sizes for each operand.
+    bool irChanged = false;
+    if (getUsePrescribedTensorShapes() &&
+        linalgTarget.hasPureTensorSemantics()) {
+      OpBuilder::InsertionGuard g(rewriter);
+      rewriter.setInsertionPoint(linalgTarget);
+      for (OpOperand &operand : linalgTarget->getOpOperands()) {
+        for (auto [i, dim] : llvm::enumerate(linalgTarget.getShape(&operand))) {
+          if (!ShapedType::isDynamic(dim))
+            continue;
+          options.setSizeToPadTo(operand.getOperandNumber(), i,
+                                 tensor::getMixedSize(rewriter,
+                                                      operand.get().getLoc(),
+                                                      operand.get(), i));
+          irChanged = true;
+        }
+      }
+    }
 
     SmallVector<Value> replacements;
     SmallVector<tensor::PadOp> newPadOps;
     if (failed(rewriteAsPaddedOp(rewriter, linalgTarget, options, paddedOp,
                                  replacements, newPadOps))) {
+      if (irChanged) {
+        auto diag = emitDefiniteFailure() << "failed to pad op";
+        diag.attachNote(target->getLoc()) << "target op";
+        return diag;
+      }
       auto diag = emitSilenceableError() << "failed to pad op";
       diag.attachNote(target->getLoc()) << "target op";
       return diag;
