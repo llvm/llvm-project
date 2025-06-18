@@ -81,6 +81,7 @@ template <class _ToPad> class __compressed_pair_padding {
                    is_reference<_ToPad>::value)
                       ? 0
                       : sizeof(_ToPad) - __datasizeof_v<_ToPad>];
+};
 #else
 template <class _ToPad>
 inline const bool __is_reference_or_unpadded_object =
