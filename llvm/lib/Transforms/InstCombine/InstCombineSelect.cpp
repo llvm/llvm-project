@@ -3194,8 +3194,23 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
 /// Return true if V is poison or \p Expected given that ValAssumedPoison is
 /// already poison. For example, if ValAssumedPoison is `icmp samesign X, 10`
 /// and V is `icmp ne X, 5`, impliesPoisonOrCond returns true.
-static bool impliesPoisonOrCond(const Value *ValAssumedPoison, const Value *V,
-                                bool Expected) {
+static bool impliesPoisonOrCond(
+    const Value *ValAssumedPoison, const Value *V, bool Expected,
+    llvm::function_ref<bool(unsigned, unsigned)> isValidAddrSpaceCast) {
+  // Handle the case that ValAssumedPoison is `icmp eq ptr addrspace(3) X, null`
+  // and X is `addrspacecast ptr addrspace(1) Y to ptr addrspace(3)`. Target can
+  // replace X with poison if the addrspacecast is invalid. However, `V` might
+  // not be poison.
+  if (auto *ICmp = dyn_cast<ICmpInst>(ValAssumedPoison)) {
+    auto CanCreatePoison = [&](Value *Op) {
+      auto *ASC = dyn_cast<AddrSpaceCastInst>(Op);
+      return ASC && !isValidAddrSpaceCast(ASC->getDestAddressSpace(),
+                                          ASC->getSrcAddressSpace());
+    };
+    if (llvm::any_of(ICmp->operands(), CanCreatePoison))
+      return false;
+  }
+
   if (impliesPoison(ValAssumedPoison, V))
     return true;
 
@@ -3241,17 +3256,23 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   auto *Zero = ConstantInt::getFalse(SelType);
   Value *A, *B, *C, *D;
 
+  auto IsValidAddrSpaceCast = [&](unsigned FromAS, unsigned ToAS) {
+    return isValidAddrSpaceCast(FromAS, ToAS);
+  };
+
   // Folding select to and/or i1 isn't poison safe in general. impliesPoison
   // checks whether folding it does not convert a well-defined value into
   // poison.
   if (match(TrueVal, m_One())) {
-    if (impliesPoisonOrCond(FalseVal, CondVal, /*Expected=*/false)) {
+    if (impliesPoisonOrCond(FalseVal, CondVal, /*Expected=*/false,
+                            IsValidAddrSpaceCast)) {
       // Change: A = select B, true, C --> A = or B, C
       return BinaryOperator::CreateOr(CondVal, FalseVal);
     }
 
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_One(), m_Value(B)))) &&
-        impliesPoisonOrCond(FalseVal, B, /*Expected=*/false)) {
+        impliesPoisonOrCond(FalseVal, B, /*Expected=*/false,
+                            IsValidAddrSpaceCast)) {
       // (A || B) || C --> A || (B | C)
       return replaceInstUsesWith(
           SI, Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal)));
@@ -3287,13 +3308,15 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   }
 
   if (match(FalseVal, m_Zero())) {
-    if (impliesPoisonOrCond(TrueVal, CondVal, /*Expected=*/true)) {
+    if (impliesPoisonOrCond(TrueVal, CondVal, /*Expected=*/true,
+                            IsValidAddrSpaceCast)) {
       // Change: A = select B, C, false --> A = and B, C
       return BinaryOperator::CreateAnd(CondVal, TrueVal);
     }
 
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_Value(B), m_Zero()))) &&
-        impliesPoisonOrCond(TrueVal, B, /*Expected=*/true)) {
+        impliesPoisonOrCond(TrueVal, B, /*Expected=*/true,
+                            IsValidAddrSpaceCast)) {
       // (A && B) && C --> A && (B & C)
       return replaceInstUsesWith(
           SI, Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal)));
