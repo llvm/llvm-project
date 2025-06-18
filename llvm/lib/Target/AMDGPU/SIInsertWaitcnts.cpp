@@ -2324,9 +2324,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   bool Modified = false;
 
   LLVM_DEBUG({
-    dbgs() << "*** Block " << Block.getNumber() << ": ";
+    dbgs() << "*** Begin Block: ";
     Block.printName(dbgs());
-    dbgs() << " ***";
     ScoreBrackets.dump();
   });
 
@@ -2458,7 +2457,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                               OldWaitcntInstr);
 
   LLVM_DEBUG({
-    dbgs() << "*** Block end state: " << Block.getNumber() << ": ";
+    dbgs() << "*** End Block: ";
     Block.printName(dbgs());
     ScoreBrackets.dump();
   });
