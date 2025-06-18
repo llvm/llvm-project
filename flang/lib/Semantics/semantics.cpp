@@ -648,7 +648,8 @@ bool Semantics::Perform() {
       PerformStatementSemantics(context_, program_) &&
       CanonicalizeDirectives(context_.messages(), program_) &&
       ModFileWriter{context_}
-          .set_hermeticModuleFileOutput(hermeticModuleFileOutput_)
+          .set_hermeticModuleFileOutput(
+              hermeticModuleFileOutput_ || getenv("PMK_HERMETIC"))
           .WriteAll();
 }
 

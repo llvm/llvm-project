@@ -25,9 +25,10 @@ enum DependenceCollectionFlags {
   IncludeSpecificsOfGenerics = 1 << 2,
   IncludeComponentsInExprs = 1 << 3,
 };
-UnorderedSymbolSet CollectAllDependences(
+
+SymbolVector CollectAllDependences(
     const UnorderedSymbolSet &, int = NoDependenceCollectionFlags);
-UnorderedSymbolSet CollectAllDependences(
+SymbolVector CollectAllDependences(
     const Scope &, int = NoDependenceCollectionFlags);
 
 } // namespace Fortran::semantics

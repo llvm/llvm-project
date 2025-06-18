@@ -16,9 +16,13 @@ class Collector {
 public:
   explicit Collector(int flags) : flags_{flags} {}
 
-  UnorderedSymbolSet Collected() { return std::move(set_); }
+  SymbolVector CollectedVector() { return std::move(vector_); }
 
-  void operator()(const Symbol &x) { set_.insert(x); }
+  void operator()(const Symbol &x) {
+    if (set_.insert(x).second) {
+      vector_.emplace_back(x);
+    }
+  }
   void operator()(SymbolRef x) { (*this)(*x); }
   template <typename A> void operator()(const std::optional<A> &x) {
     if (x) {
@@ -81,10 +85,11 @@ public:
 
 private:
   UnorderedSymbolSet set_;
+  SymbolVector vector_;
   int flags_{NoDependenceCollectionFlags};
 };
 
-UnorderedSymbolSet CollectAllDependences(const Scope &scope, int flags) {
+SymbolVector CollectAllDependences(const Scope &scope, int flags) {
   UnorderedSymbolSet basis;
   for (const auto &[_, symbol] : scope) {
     basis.insert(*symbol);
@@ -92,13 +97,23 @@ UnorderedSymbolSet CollectAllDependences(const Scope &scope, int flags) {
   return CollectAllDependences(basis, flags);
 }
 
-UnorderedSymbolSet CollectAllDependences(
+SymbolVector CollectAllDependences(
     const UnorderedSymbolSet &original, int flags) {
-  UnorderedSymbolSet result;
+  UnorderedSymbolSet resultSet;
+  SymbolVector resultVector;
+  SymbolVector work;
   if (flags & IncludeOriginalSymbols) {
-    result = original;
+    resultSet = original;
   }
-  UnorderedSymbolSet work{original};
+  for (const Symbol &symbol : original) {
+    work.emplace_back(symbol);
+    if (flags & IncludeOriginalSymbols) {
+      resultVector.emplace_back(symbol);
+    }
+  }
+  // Sort the initial work list by source position to make the module
+  // file output order deterministic.
+  std::sort(work.begin(), work.end(), SymbolSourcePositionCompare{});
   while (!work.empty()) {
     Collector collect{flags};
     for (const Symbol &symbol : work) {
@@ -137,8 +152,12 @@ UnorderedSymbolSet CollectAllDependences(
                   collect(x.result());
                 }
               },
-              [&collect, &symbol](
-                  const DerivedTypeDetails &) { collect(symbol.scope()); },
+              [&collect, &symbol](const DerivedTypeDetails &x) {
+                collect(symbol.scope());
+                for (const auto &[_, symbolRef] : x.finals()) {
+                  collect(*symbolRef);
+                }
+              },
               [&collect, flags](const GenericDetails &x) {
                 collect(x.derivedType());
                 collect(x.specific());
@@ -172,16 +191,17 @@ UnorderedSymbolSet CollectAllDependences(
           symbol.details());
     }
     work.clear();
-    for (const Symbol &symbol : collect.Collected()) {
-      if (result.find(symbol) == result.end() &&
+    for (const Symbol &symbol : collect.CollectedVector()) {
+      if (resultSet.find(symbol) == resultSet.end() &&
           ((flags & IncludeOriginalSymbols) ||
               original.find(symbol) == original.end())) {
-        result.insert(symbol);
-        work.insert(symbol);
+        resultSet.insert(symbol);
+        resultVector.emplace_back(symbol);
+        work.emplace_back(symbol);
       }
     }
   }
-  return result;
+  return resultVector;
 }
 
 } // namespace Fortran::semantics
