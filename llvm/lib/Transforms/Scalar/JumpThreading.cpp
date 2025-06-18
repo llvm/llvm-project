@@ -249,7 +249,7 @@ PreservedAnalyses JumpThreadingPass::run(Function &F,
       runImpl(F, &AM, &TLI, &TTI, &LVI, &AA,
               std::make_unique<DomTreeUpdater>(
                   &DT, nullptr, DomTreeUpdater::UpdateStrategy::Lazy),
-              std::nullopt, std::nullopt);
+              nullptr, nullptr);
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -283,8 +283,8 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
                                 TargetTransformInfo *TTI_, LazyValueInfo *LVI_,
                                 AliasAnalysis *AA_,
                                 std::unique_ptr<DomTreeUpdater> DTU_,
-                                std::optional<BlockFrequencyInfo *> BFI_,
-                                std::optional<BranchProbabilityInfo *> BPI_) {
+                                BlockFrequencyInfo *BFI_,
+                                BranchProbabilityInfo *BPI_) {
   LLVM_DEBUG(dbgs() << "Jump threading on function '" << F_.getName() << "'\n");
   F = &F_;
   FAM = FAM_;
@@ -3215,7 +3215,7 @@ BranchProbabilityInfo *JumpThreadingPass::getBPI() {
     assert(FAM && "Can't create BPI without FunctionAnalysisManager");
     BPI = FAM->getCachedResult<BranchProbabilityAnalysis>(*F);
   }
-  return *BPI;
+  return BPI;
 }
 
 BlockFrequencyInfo *JumpThreadingPass::getBFI() {
@@ -3223,7 +3223,7 @@ BlockFrequencyInfo *JumpThreadingPass::getBFI() {
     assert(FAM && "Can't create BFI without FunctionAnalysisManager");
     BFI = FAM->getCachedResult<BlockFrequencyAnalysis>(*F);
   }
-  return *BFI;
+  return BFI;
 }
 
 // Important note on validity of BPI/BFI. JumpThreading tries to preserve
@@ -3237,7 +3237,7 @@ BranchProbabilityInfo *JumpThreadingPass::getOrCreateBPI(bool Force) {
   if (Force)
     BPI = runExternalAnalysis<BranchProbabilityAnalysis>();
 
-  return *BPI;
+  return BPI;
 }
 
 BlockFrequencyInfo *JumpThreadingPass::getOrCreateBFI(bool Force) {
@@ -3248,5 +3248,5 @@ BlockFrequencyInfo *JumpThreadingPass::getOrCreateBFI(bool Force) {
   if (Force)
     BFI = runExternalAnalysis<BlockFrequencyAnalysis>();
 
-  return *BFI;
+  return BFI;
 }

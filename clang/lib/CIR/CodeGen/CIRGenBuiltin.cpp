@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCall.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
@@ -66,6 +67,32 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitLibraryCall(*this, fd, e,
                            cgm.getBuiltinLibFunction(fd, builtinID));
 
+  assert(!cir::MissingFeatures::builtinCallF128());
+
+  // If the builtin has been declared explicitly with an assembler label,
+  // disable the specialized emitting below. Ideally we should communicate the
+  // rename in IR, or at least avoid generating the intrinsic calls that are
+  // likely to get lowered to the renamed library functions.
+  unsigned builtinIDIfNoAsmLabel = fd->hasAttr<AsmLabelAttr>() ? 0 : builtinID;
+
+  assert(!cir::MissingFeatures::builtinCallMathErrno());
+  assert(!cir::MissingFeatures::builtinCall());
+
+  switch (builtinIDIfNoAsmLabel) {
+  default:
+    break;
+
+  case Builtin::BI__assume:
+  case Builtin::BI__builtin_assume: {
+    if (e->getArg(0)->HasSideEffects(getContext()))
+      return RValue::get(nullptr);
+
+    mlir::Value argValue = emitCheckedArgForAssume(e->getArg(0));
+    builder.create<cir::AssumeOp>(getLoc(e->getExprLoc()), argValue);
+    return RValue::get(nullptr);
+  }
+  }
+
   cgm.errorNYI(e->getSourceRange(), "unimplemented builtin call");
   return getUndefRValue(e->getType());
 }
@@ -87,4 +114,15 @@ cir::FuncOp CIRGenModule::getBuiltinLibFunction(const FunctionDecl *fd,
   GlobalDecl d(fd);
   mlir::Type type = convertType(fd->getType());
   return getOrCreateCIRFunction(name, type, d, /*forVTable=*/false);
+}
+
+mlir::Value CIRGenFunction::emitCheckedArgForAssume(const Expr *e) {
+  mlir::Value argValue = evaluateExprAsBool(e);
+  if (!sanOpts.has(SanitizerKind::Builtin))
+    return argValue;
+
+  assert(!cir::MissingFeatures::sanitizers());
+  cgm.errorNYI(e->getSourceRange(),
+               "emitCheckedArgForAssume: sanitizers are NYI");
+  return {};
 }
