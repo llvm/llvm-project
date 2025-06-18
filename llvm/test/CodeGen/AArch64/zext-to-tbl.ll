@@ -2835,14 +2835,13 @@ define i32 @test_widening_instr_mull(ptr %p1, ptr %p2, i32 %h) {
 ; CHECK-BE:       // %bb.0: // %entry
 ; CHECK-BE-NEXT:  .LBB24_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ld1 { v0.16b }, [x1]
-; CHECK-BE-NEXT:    ld1 { v1.8h }, [x0]
+; CHECK-BE-NEXT:    ld1 { v0.16b }, [x1], #16
 ; CHECK-BE-NEXT:    add x8, x0, #16
+; CHECK-BE-NEXT:    ld1 { v1.8h }, [x0]
 ; CHECK-BE-NEXT:    ld1 { v3.8h }, [x8]
 ; CHECK-BE-NEXT:    add x9, x0, #48
 ; CHECK-BE-NEXT:    add x10, x0, #32
 ; CHECK-BE-NEXT:    subs w2, w2, #1
-; CHECK-BE-NEXT:    add x1, x1, #16
 ; CHECK-BE-NEXT:    ushll v2.8h, v0.8b, #0
 ; CHECK-BE-NEXT:    ushll2 v0.8h, v0.16b, #0
 ; CHECK-BE-NEXT:    umull v4.4s, v1.4h, v2.4h
@@ -3094,7 +3093,7 @@ define i32 @test_widening_instr_mull_2(ptr %p1, ptr %p2, i32 %h) {
 ; CHECK-BE-NEXT:    ld1 { v3.16b }, [x8]
 ; CHECK-BE-NEXT:  .LBB26_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ld1 { v4.16b }, [x1]
+; CHECK-BE-NEXT:    ld1 { v4.16b }, [x1], #16
 ; CHECK-BE-NEXT:    add x8, x0, #32
 ; CHECK-BE-NEXT:    ld1 { v16.4s }, [x0]
 ; CHECK-BE-NEXT:    add x9, x0, #48
@@ -3107,7 +3106,6 @@ define i32 @test_widening_instr_mull_2(ptr %p1, ptr %p2, i32 %h) {
 ; CHECK-BE-NEXT:    tbl v6.16b, { v4.16b }, v3.16b
 ; CHECK-BE-NEXT:    tbl v7.16b, { v4.16b }, v2.16b
 ; CHECK-BE-NEXT:    tbl v4.16b, { v4.16b }, v0.16b
-; CHECK-BE-NEXT:    add x1, x1, #16
 ; CHECK-BE-NEXT:    rev32 v5.16b, v5.16b
 ; CHECK-BE-NEXT:    rev32 v6.16b, v6.16b
 ; CHECK-BE-NEXT:    rev32 v7.16b, v7.16b
@@ -3175,19 +3173,18 @@ define i32 @mul_zext_16i8_sext_16i8(ptr %p1, ptr %p2, i32 %h) {
 ; CHECK-BE:       // %bb.0: // %entry
 ; CHECK-BE-NEXT:  .LBB27_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ld1 { v0.16b }, [x0]
-; CHECK-BE-NEXT:    ld1 { v1.16b }, [x1]
+; CHECK-BE-NEXT:    ld1 { v0.16b }, [x1], #16
 ; CHECK-BE-NEXT:    add x8, x0, #48
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x0]
 ; CHECK-BE-NEXT:    subs w2, w2, #1
-; CHECK-BE-NEXT:    add x1, x1, #16
-; CHECK-BE-NEXT:    sshll2 v2.8h, v0.16b, #0
-; CHECK-BE-NEXT:    ushll2 v3.8h, v1.16b, #0
-; CHECK-BE-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-BE-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-BE-NEXT:    sshll2 v2.8h, v1.16b, #0
+; CHECK-BE-NEXT:    ushll2 v3.8h, v0.16b, #0
+; CHECK-BE-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-BE-NEXT:    smull2 v4.4s, v2.8h, v3.8h
 ; CHECK-BE-NEXT:    smull v2.4s, v2.4h, v3.4h
-; CHECK-BE-NEXT:    smull v3.4s, v0.4h, v1.4h
-; CHECK-BE-NEXT:    smull2 v0.4s, v0.8h, v1.8h
+; CHECK-BE-NEXT:    smull v3.4s, v1.4h, v0.4h
+; CHECK-BE-NEXT:    smull2 v0.4s, v1.8h, v0.8h
 ; CHECK-BE-NEXT:    st1 { v4.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x0, #32
 ; CHECK-BE-NEXT:    st1 { v3.4s }, [x0]
@@ -3249,14 +3246,13 @@ define i32 @mul_zext_16i8_sext_16i16(ptr %p1, ptr %p2, i32 %h) {
 ; CHECK-BE:       // %bb.0: // %entry
 ; CHECK-BE-NEXT:  .LBB28_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ld1 { v0.16b }, [x1]
-; CHECK-BE-NEXT:    ld1 { v1.8h }, [x0]
+; CHECK-BE-NEXT:    ld1 { v0.16b }, [x1], #16
 ; CHECK-BE-NEXT:    add x8, x0, #16
+; CHECK-BE-NEXT:    ld1 { v1.8h }, [x0]
 ; CHECK-BE-NEXT:    ld1 { v3.8h }, [x8]
 ; CHECK-BE-NEXT:    add x9, x0, #48
 ; CHECK-BE-NEXT:    add x10, x0, #32
 ; CHECK-BE-NEXT:    subs w2, w2, #1
-; CHECK-BE-NEXT:    add x1, x1, #16
 ; CHECK-BE-NEXT:    ushll v2.8h, v0.8b, #0
 ; CHECK-BE-NEXT:    ushll2 v0.8h, v0.16b, #0
 ; CHECK-BE-NEXT:    smull v4.4s, v1.4h, v2.4h
