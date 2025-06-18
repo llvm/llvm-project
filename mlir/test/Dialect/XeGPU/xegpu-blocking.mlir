@@ -4,7 +4,7 @@
 #b = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [16, 1]>
 #c = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>
 gpu.module @test_kernel {
-  gpu.func @test_gemm_with_one_to_n_lowering(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf32>) {
+  gpu.func @gemm_with_one_to_n_lowering(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf32>) {
     %c0 = arith.constant 0 : index
     %c16 = arith.constant 16 : index
     %c32 = arith.constant 32 : index
@@ -45,7 +45,7 @@ gpu.module @test_kernel {
 #l1 = #xegpu.layout<inst_data = [8, 16]>
 #l2 = #xegpu.layout<inst_data = [16, 16]>
 gpu.module @test_kernel {
-  gpu.func @test_gemm_with_inst_data_only_attribute(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf32>) {
+  gpu.func @gemm_with_inst_data_only_attribute(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf32>) {
     %c0 = arith.constant 0 : index
     %c16 = arith.constant 16 : index
     %c32 = arith.constant 32 : index
@@ -86,7 +86,7 @@ gpu.module @test_kernel {
 #l1 = #xegpu.layout<inst_data = [8, 16]>
 #l2 = #xegpu.layout<inst_data = [16, 16]>
 gpu.module @test_kernel {
-  gpu.func @test_gemm_with_one_to_one_lowering(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf32>) {
+  gpu.func @gemm_with_one_to_one_lowering(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf32>) {
     %c0 = arith.constant 0 : index
     %c8 = arith.constant 8 : index
     %c16 = arith.constant 16 : index
@@ -130,7 +130,7 @@ gpu.module @test_kernel {
 #b = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [16, 1]>
 #c = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>
 gpu.module @test_kernel {
-  gpu.func @test_gemm_with_elemwise_preop(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf32>) {
+  gpu.func @gemm_with_elemwise_preop(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf32>) {
     %c0 = arith.constant 0 : index
     %c16 = arith.constant 16 : index
     %c32 = arith.constant 32 : index
@@ -172,7 +172,7 @@ gpu.module @test_kernel {
 // -----
 #l = #xegpu.layout<inst_data = [8, 16]>
 gpu.module @test_kernel {
-  gpu.func @test_elementwise_with_inst_data_only(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf16>) {
+  gpu.func @elementwise_with_inst_data_only(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf16>) {
     %c0 = arith.constant 0 : index
     %c32 = arith.constant 32 : index
     %c1024 = arith.constant 1024 : index
@@ -211,7 +211,7 @@ gpu.module @test_kernel {
 // -----
 #l = #xegpu.layout<inst_data = [8]>
 gpu.module @test_kernel {
-  gpu.func @test_elementwise_1D(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf16>) {
+  gpu.func @elementwise_1D(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf16>) {
     %c0 = arith.constant 0 : index
     %c32 = arith.constant 32 : index
     %c1024 = arith.constant 1024 : index
