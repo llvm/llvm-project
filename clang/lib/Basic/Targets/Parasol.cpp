@@ -47,3 +47,9 @@ void ParasolTargetInfo::getTargetDefines(const LangOptions &Opts,
   // Define the __Parasol__ macro when building for this target
   Builder.defineMacro("__Parasol__");
 }
+
+bool ParasolTargetInfo::validateAsmConstraint(
+  const char *&Name, TargetInfo::ConstraintInfo &info
+) const {
+  return false;
+}

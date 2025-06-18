@@ -617,3 +617,26 @@ SDValue ParasolTargetLowering::LowerOperation(SDValue Op,
     llvm_unreachable("unimplemented operand");
   }
 }
+
+std::pair<unsigned, const TargetRegisterClass *>
+ParasolTargetLowering::getRegForInlineAsmConstraint(
+    const TargetRegisterInfo *TRI, StringRef Constraint, MVT VT) const {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    case 'r':
+      return std::make_pair(0U, &Parasol::IRRegClass);
+    default:
+      return std::make_pair(0u, static_cast<TargetRegisterClass *>(nullptr));
+    }
+  } else {
+    return std::make_pair(0u, static_cast<TargetRegisterClass *>(nullptr));
+  }
+}
+
+MVT ParasolTargetLowering::getRegVTForConstraintVT(const TargetRegisterInfo *TRI, const TargetRegisterClass *RC, MVT ConstraintVT) const {
+  if (!ConstraintVT.isInteger()) {
+    return TargetLowering::getRegVTForConstraintVT(TRI, RC, ConstraintVT);
+  }
+
+  return ConstraintVT;
+}

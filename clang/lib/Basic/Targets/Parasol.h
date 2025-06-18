@@ -63,14 +63,12 @@ public:
     return std::nullopt;
   }
 
-  bool validateAsmConstraint(const char *&Name,
-                             TargetInfo::ConstraintInfo &info) const override {
-    return false;
-  }
-
   std::string_view getClobbers() const override {
     return "";
   }
+
+  bool validateAsmConstraint(const char *&Name,
+                             TargetInfo::ConstraintInfo &info) const override;
 };
 
 } // namespace targets

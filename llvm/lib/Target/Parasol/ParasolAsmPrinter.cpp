@@ -47,6 +47,9 @@ public:
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);
 
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                       const char *ExtraCode, raw_ostream &OS) override;
+
 private:
   void LowerInstruction(const MachineInstr *MI, MCInst &OutMI) const;
   MCOperand LowerOperand(const MachineOperand &MO) const;
@@ -136,4 +139,44 @@ MCOperand ParasolAsmPrinter::LowerSymbolOperand(const MachineOperand &MO,
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeParasolAsmPrinter() {
   RegisterAsmPrinter<ParasolAsmPrinter> X(getTheParasolTarget());
+}
+
+bool ParasolAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                        const char *ExtraCode,
+                                        raw_ostream &OS) {
+  // First try the generic code, which knows about modifiers like 'c' and 'n'.
+  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS))
+    return false;
+
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  if (ExtraCode && ExtraCode[0]) {
+    if (ExtraCode[1] != 0)
+      return true; // Unknown modifier.
+
+    switch (ExtraCode[0]) {
+    default:
+      return true; // Unknown modifier.
+    }
+  }
+
+  switch (MO.getType()) {
+  case MachineOperand::MO_Immediate:
+    OS << MO.getImm();
+    return false;
+  case MachineOperand::MO_Register:
+    OS << ParasolInstPrinter::getRegisterName(MO.getReg());
+    return false;
+  case MachineOperand::MO_GlobalAddress:
+    PrintSymbolOperand(MO, OS);
+    return false;
+  case MachineOperand::MO_BlockAddress: {
+    MCSymbol *Sym = GetBlockAddressSymbol(MO.getBlockAddress());
+    Sym->print(OS, MAI);
+    return false;
+  }
+  default:
+    break;
+  }
+
+  return true;
 }

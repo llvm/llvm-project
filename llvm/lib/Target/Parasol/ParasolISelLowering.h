@@ -58,6 +58,8 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
 
+  MVT getRegVTForConstraintVT(const TargetRegisterInfo *TRI, const TargetRegisterClass *RC, MVT ConstraintVT) const override;
+
 protected:
   // Subtarget Info
   const ParasolSubtarget &Subtarget;
@@ -108,6 +110,10 @@ private:
 
   void analyzeOutputArgs(MachineFunction &MF, CCState &CCInfo,
                          const SmallVectorImpl<ISD::OutputArg> &Outs) const;
+
+  std::pair<unsigned, const TargetRegisterClass *>
+  getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                               StringRef Constraint, MVT VT) const override;
 };
 } // namespace llvm
 

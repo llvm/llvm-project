@@ -4895,6 +4895,15 @@ public:
     return InlineAsm::ConstraintCode::Unknown;
   }
 
+  /// For the given register class and constraint type, determine the
+  /// register MVT.
+  virtual MVT getRegVTForConstraintVT(const TargetRegisterInfo *TRI, const TargetRegisterClass *RC, MVT ConstraintVT) const {
+    // Get the actual register value type.  This is important, because the user
+    // may have asked for (e.g.) the AX register in i32 type.  We need to
+    // remember that AX is actually i16 to get the right extension.
+    return *TRI->legalclasstypes_begin(*RC);
+  }
+
   /// Try to replace an X constraint, which matches anything, with another that
   /// has more specific requirements based on the type of the corresponding
   /// operand.  This returns null if there is no replacement to make.
