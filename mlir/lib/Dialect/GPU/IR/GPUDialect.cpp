@@ -1351,8 +1351,6 @@ LogicalResult RotateOp::verify() {
 
   auto offsetIntAttr =
       llvm::dyn_cast<mlir::IntegerAttr>(offsetConstOp.getValue());
-  if (!offsetIntAttr)
-    return emitOpError() << "offset is not an integer value";
 
   auto widthConstOp = getWidth().getDefiningOp<arith::ConstantOp>();
   if (!widthConstOp)
@@ -1360,8 +1358,6 @@ LogicalResult RotateOp::verify() {
 
   auto widthIntAttr =
       llvm::dyn_cast<mlir::IntegerAttr>(widthConstOp.getValue());
-  if (!widthIntAttr)
-    return emitOpError() << "width is not an integer value";
 
   llvm::APInt offsetValue = offsetIntAttr.getValue();
   llvm::APInt widthValue = widthIntAttr.getValue();
