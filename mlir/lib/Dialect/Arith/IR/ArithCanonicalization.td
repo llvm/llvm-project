@@ -273,7 +273,7 @@ def RedundantSelectFalse :
     Pat<(SelectOp $pred, $a, (SelectOp $pred, $b, $c)),
         (SelectOp $pred, $a, $c)>;
 
-// select(pred, false, true) => not(pred) 
+// select(pred, false, true) => not(pred)
 def SelectI1ToNot :
     Pat<(SelectOp $pred,
                   (ConstantLikeMatcher ConstantAttr<I1Attr, "0">),
@@ -376,6 +376,12 @@ def TruncationMatchesShiftAmount :
       CPred<"(getScalarOrElementWidth($0) - getScalarOrElementWidth($1)) == "
               "*getIntOrSplatIntValue($2)">]>>;
 
+def ValueWidthMatchesShiftAmount :
+    Constraint<And<[
+      CPred<"succeeded(getIntOrSplatIntValue($1))">,
+      CPred<"getScalarOrElementWidth($0) == "
+              "*getIntOrSplatIntValue($1)">]>>;
+
 // trunci(extsi(x)) -> extsi(x), when only the sign-extension bits are truncated
 def TruncIExtSIToExtSI :
     Pat<(Arith_TruncIOp:$tr (Arith_ExtSIOp:$ext $x)),
@@ -406,7 +412,8 @@ def TruncIShrUIMulIToMulSIExtended :
         (Arith_MulSIExtendedOp:$res__1 $x, $y),
       [(ValuesWithSameType $tr, $x, $y),
        (ValueWiderThan $mul, $x),
-       (TruncationMatchesShiftAmount $mul, $x, $c0)]>;
+       (TruncationMatchesShiftAmount $mul, $x, $c0),
+       (ValueWidthMatchesShiftAmount $x, $c0)]>;
 
 // trunci(shrui(mul(zext(x), zext(y)), c)) -> mului_extended(x, y)
 def TruncIShrUIMulIToMulUIExtended :
@@ -417,7 +424,8 @@ def TruncIShrUIMulIToMulUIExtended :
         (Arith_MulUIExtendedOp:$res__1 $x, $y),
       [(ValuesWithSameType $tr, $x, $y),
        (ValueWiderThan $mul, $x),
-       (TruncationMatchesShiftAmount $mul, $x, $c0)]>;
+       (TruncationMatchesShiftAmount $mul, $x, $c0),
+       (ValueWidthMatchesShiftAmount $x, $c0)]>;
 
 //===----------------------------------------------------------------------===//
 // TruncIOp

@@ -1000,7 +1000,7 @@ func.func @tripleAddAddOvf2(%arg0: index) -> index {
 
 
 // CHECK-LABEL: @foldSubXX_tensor
-//       CHECK:   %[[c0:.+]] = arith.constant dense<0> : tensor<10xi32> 
+//       CHECK:   %[[c0:.+]] = arith.constant dense<0> : tensor<10xi32>
 //       CHECK:   %[[sub:.+]] = arith.subi
 //       CHECK:   return %[[c0]], %[[sub]]
 func.func @foldSubXX_tensor(%static : tensor<10xi32>, %dyn : tensor<?x?xi32>) -> (tensor<10xi32>, tensor<?x?xi32>) {
@@ -2966,6 +2966,21 @@ func.func @wideMulToMulSIExtended(%a: i32, %b: i32) -> i32 {
   return %hi : i32
 }
 
+// Verify that the signed extended multiplication pattern does not match
+// if the right shift does not match the bitwidth of the multipliers.
+
+// CHECK-LABEL: @wideMulToMulSIExtendedWithWrongShift
+//   CHECK-NOT: arith.mulsi_extended
+func.func @wideMulToMulSIExtendedWithWrongShift(%a: i32, %b: i32) -> i32 {
+  %x = arith.extsi %a: i32 to i33
+  %y = arith.extsi %b: i32 to i33
+  %m = arith.muli %x, %y: i33
+  %c1 = arith.constant 1: i33
+  %sh = arith.shrui %m, %c1 : i33
+  %hi = arith.trunci %sh: i33 to i32
+  return %hi : i32
+}
+
 // CHECK-LABEL: @wideMulToMulSIExtendedVector
 //  CHECK-SAME:   (%[[A:.+]]: vector<3xi32>, %[[B:.+]]: vector<3xi32>)
 //  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mulsi_extended %[[A]], %[[B]] : vector<3xi32>
@@ -2991,6 +3006,21 @@ func.func @wideMulToMulUIExtended(%a: i32, %b: i32) -> i32 {
   %c32 = arith.constant 32: i64
   %sh = arith.shrui %m, %c32 : i64
   %hi = arith.trunci %sh: i64 to i32
+  return %hi : i32
+}
+
+// Verify that the unsigned extended multiplication pattern does not match
+// if the right shift does not match the bitwidth of the multipliers.
+
+// CHECK-LABEL: @wideMulToMulUIExtendedWithWrongShift
+//   CHECK-NOT: arith.mului_extended
+func.func @wideMulToMulUIExtendedWithWrongShift(%a: i32, %b: i32) -> i32 {
+  %x = arith.extui %a: i32 to i33
+  %y = arith.extui %b: i32 to i33
+  %m = arith.muli %x, %y: i33
+  %c1 = arith.constant 1: i33
+  %sh = arith.shrui %m, %c1 : i33
+  %hi = arith.trunci %sh: i33 to i32
   return %hi : i32
 }
 
