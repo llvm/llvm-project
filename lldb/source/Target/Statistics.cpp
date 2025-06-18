@@ -42,7 +42,7 @@ static void UpdateDwoFileCounts(SymbolFile *sym_file,
   StructuredData::Dictionary separate_debug_info;
   if (sym_file->GetSeparateDebugInfo(separate_debug_info,
                                      /*errors_only=*/false,
-                                     /*load_all_debug_info*/ false)) {
+                                     /*load_all_debug_info=*/false)) {
     llvm::StringRef type;
     if (separate_debug_info.GetValueForKeyAsString("type", type) &&
         type == "dwo") {
@@ -104,6 +104,8 @@ json::Value ModuleStats::ToJSON() const {
                      debug_info_had_incomplete_types);
   module.try_emplace("symbolTableStripped", symtab_stripped);
   module.try_emplace("symbolTableSymbolCount", symtab_symbol_count);
+  module.try_emplace("dwoFileCount", dwo_file_count);
+  module.try_emplace("loadedDwoFileCount", loaded_dwo_file_count);
 
   if (!symbol_locator_time.map.empty()) {
     json::Object obj;
@@ -117,7 +119,7 @@ json::Value ModuleStats::ToJSON() const {
 
   if (!symfile_modules.empty()) {
     json::Array symfile_ids;
-    for (const auto symfile_id: symfile_modules)
+    for (const auto symfile_id : symfile_modules)
       symfile_ids.emplace_back(symfile_id);
     module.try_emplace("symbolFileModuleIdentifiers", std::move(symfile_ids));
   }
@@ -386,8 +388,10 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         for (const auto &symbol_module : symbol_modules.Modules())
           module_stat.symfile_modules.push_back((intptr_t)symbol_module.get());
       }
-      UpdateDwoFileCounts(sym_file, total_dwo_file_count,
-                          total_loaded_dwo_file_count);
+      UpdateDwoFileCounts(sym_file, module_stat.dwo_file_count,
+                          module_stat.loaded_dwo_file_count);
+      total_dwo_file_count += module_stat.dwo_file_count;
+      total_loaded_dwo_file_count += module_stat.loaded_dwo_file_count;
       module_stat.debug_info_index_loaded_from_cache =
           sym_file->GetDebugInfoIndexWasLoadedFromCache();
       if (module_stat.debug_info_index_loaded_from_cache)

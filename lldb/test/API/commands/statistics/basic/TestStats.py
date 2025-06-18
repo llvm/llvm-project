@@ -405,6 +405,8 @@ class TestCase(TestBase):
             "symbolTableLoadedFromCache",
             "symbolTableParseTime",
             "symbolTableSavedToCache",
+            "dwoFileCount",
+            "loadedDwoFileCount",
             "triple",
             "uuid",
         ]
@@ -541,7 +543,7 @@ class TestCase(TestBase):
         self.assertEqual(debug_stats["totalDwoFileCount"], 0)
         self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 0)
     
-    def test_debug_names_eager_loads_dwo_files(self):
+    def test_no_debug_names_eager_loads_dwo_files(self):
         """
         Test the eager loading behavior of DWO files when debug_names is absent by
         building a split-dwarf binary without debug_names and then running "statistics dump".
@@ -582,23 +584,36 @@ class TestCase(TestBase):
         target = self.createTestTarget(file_path=exe)
         debug_stats = self.get_stats()
 
-        # Initially: 2 DWO files available but none loaded yet
+        # 1) 2 DWO files available but none loaded yet
+        self.assertEqual(len(debug_stats["modules"]), 1)
         self.assertIn("totalLoadedDwoFileCount", debug_stats)
         self.assertIn("totalDwoFileCount", debug_stats)
         self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 0)
         self.assertEqual(debug_stats["totalDwoFileCount"], 2)
         
-        # Setting breakpoint in main triggers loading of third.dwo (contains main function)
+        # Since there's only one module, module stats should have the same counts as total counts
+        self.assertIn("dwoFileCount", debug_stats["modules"][0])
+        self.assertIn("loadedDwoFileCount", debug_stats["modules"][0])
+        self.assertEqual(debug_stats["modules"][0]["loadedDwoFileCount"], 0)
+        self.assertEqual(debug_stats["modules"][0]["dwoFileCount"], 2)
+        
+        # 2) Setting breakpoint in main triggers loading of third.dwo (contains main function)
         self.runCmd("b main")
         debug_stats = self.get_stats()
         self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 1)
         self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+
+        self.assertEqual(debug_stats["modules"][0]["loadedDwoFileCount"], 1)
+        self.assertEqual(debug_stats["modules"][0]["dwoFileCount"], 2)
         
-        # Type lookup forces loading of baz.dwo (contains struct Baz definition)
+        # 3) Type lookup forces loading of baz.dwo (contains struct Baz definition)
         self.runCmd("type lookup Baz")
         debug_stats = self.get_stats()
         self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 2)
         self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+
+        self.assertEqual(debug_stats["modules"][0]["loadedDwoFileCount"], 2)
+        self.assertEqual(debug_stats["modules"][0]["dwoFileCount"], 2)
     
     def test_dwp_dwo_file_count(self):
         """
