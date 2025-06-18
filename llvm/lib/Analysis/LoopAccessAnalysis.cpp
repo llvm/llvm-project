@@ -189,7 +189,7 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
 }
 
 /// Returns \p A + \p B, if it is guaranteed not to unsigned wrap. Otherwise
-/// return nullptr.
+/// return nullptr. \p A and \p B must have the same type.
 static const SCEV *addSCEVOverflow(const SCEV *A, const SCEV *B,
                                    ScalarEvolution &SE) {
   if (!SE.willNotOverflow(Instruction::Add, false, A, B))
@@ -198,7 +198,7 @@ static const SCEV *addSCEVOverflow(const SCEV *A, const SCEV *B,
 }
 
 /// Returns \p A * \p B, if it is guaranteed not to unsigned wrap. Otherwise
-/// return nullptr.
+/// return nullptr. \p A and \p B must have the same type.
 static const SCEV *mulSCEVOverflow(const SCEV *A, const SCEV *B,
                                    ScalarEvolution &SE) {
   if (!SE.willNotOverflow(Instruction::Mul, false, A, B))
@@ -225,6 +225,10 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
     return false;
 
   const SCEV *Step = AR->getStepRecurrence(SE);
+  bool IsKnownNonNegative = SE.isKnownNonNegative(Step);
+  if (!IsKnownNonNegative && !SE.isKnownNegative(Step))
+    return false;
+
   Type *WiderTy = SE.getWiderType(MaxBTC->getType(), Step->getType());
   Step = SE.getNoopOrSignExtend(Step, WiderTy);
   MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
@@ -232,7 +236,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
   // For the computations below, make sure they don't unsigned wrap.
   if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, AR->getStart(), StartPtr))
     return false;
-  const SCEV *StartOffset = SE.getNoopOrSignExtend(
+  const SCEV *StartOffset = SE.getNoopOrZeroExtend(
       SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
 
   const SCEV *OffsetAtLastIter =
@@ -240,34 +244,29 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
   if (!OffsetAtLastIter)
     return false;
 
-  const SCEV *OffsetLastAccessedByte = addSCEVOverflow(
+  const SCEV *OffsetEndBytes = addSCEVOverflow(
       OffsetAtLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
-  if (!OffsetLastAccessedByte)
+  if (!OffsetEndBytes)
     return false;
 
-  if (SE.isKnownPositive(Step)) {
+  if (IsKnownNonNegative) {
     // For positive steps, check if
     //  (AR->getStart() - StartPtr) + (MaxBTC  * Step) + EltSize <= DerefBytes,
     // while making sure none of the computations unsigned wrap themselves.
-    const SCEV *LastAccessedByte =
-        addSCEVOverflow(StartOffset, OffsetLastAccessedByte, SE);
-    if (!LastAccessedByte)
+    const SCEV *EndBytes = addSCEVOverflow(StartOffset, OffsetEndBytes, SE);
+    if (!EndBytes)
       return false;
-    return SE.isKnownPredicate(CmpInst::ICMP_ULE, LastAccessedByte,
+    return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes,
                                SE.getConstant(WiderTy, DerefBytes));
   }
 
-  if (SE.isKnownNegative(Step)) {
-    // For negative steps check if
-    //  * StartOffset >= (MaxBTC * Step + EltSize)
-    //  * StartOffset <= DerefBytes.
-    return SE
-        .isKnownPredicate(CmpInst::ICMP_SGE, StartOffset,
-                          OffsetLastAccessedByte)
-            SE.isKnownPredicate(CmpInst::ICMP_ULE, StartOffset,
-                                SE.getConstant(WiderTy, DerefBytes));
-  }
-  return false;
+  // For negative steps check if
+  //  * StartOffset >= (MaxBTC * Step + EltSize)
+  //  * StartOffset <= DerefBytes.
+  assert(SE.isKnownNegative(Step) && "must be known negative");
+  return SE.isKnownPredicate(CmpInst::ICMP_SGE, StartOffset, OffsetEndBytes) &&
+         SE.isKnownPredicate(CmpInst::ICMP_ULE, StartOffset,
+                             SE.getConstant(WiderTy, DerefBytes));
 }
 
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
