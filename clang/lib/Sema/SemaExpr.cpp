@@ -6576,7 +6576,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   // without any additional checking.
   if (Fn->getType() == Context.BuiltinFnTy && ArgExprs.size() == 1 &&
       ArgExprs[0]->getType() == Context.BuiltinFnTy) {
-    auto *FD = cast<FunctionDecl>(Fn->getReferencedDeclOfCallee());
+    const auto *FD = cast<FunctionDecl>(Fn->getReferencedDeclOfCallee());
 
     if (FD->getName() == "__builtin_amdgcn_is_invocable") {
       QualType FnPtrTy = Context.getPointerType(FD->getType());

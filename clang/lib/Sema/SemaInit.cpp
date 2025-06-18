@@ -9103,7 +9103,7 @@ bool InitializationSequence::Diagnose(Sema &S,
   case FK_ConversionFailed: {
     QualType FromType = OnlyArg->getType();
     // __amdgpu_feature_predicate_t can be explicitly cast to the logical op
-    // type, although this is almost always an error and we advise against it
+    // type, although this is almost always an error and we advise against it.
     if (FromType == S.Context.AMDGPUFeaturePredicateTy &&
         DestType == S.Context.getLogicalOperationType()) {
       S.Diag(OnlyArg->getExprLoc(),
