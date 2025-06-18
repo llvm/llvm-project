@@ -16,7 +16,7 @@ module {
     cir.return %6 : !cir.complex<!s32i>
   }
 
-// CHECK: cir.func @fold_complex_create_test() -> !cir.complex<!s32i> {
+// CHECK: cir.func{{.*}} @fold_complex_create_test() -> !cir.complex<!s32i> {
 // CHECK:   %[[RET:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["__retval"]
 // CHECK:   %[[INIT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
 // CHECK:   %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>

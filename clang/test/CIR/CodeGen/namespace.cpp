@@ -23,9 +23,9 @@ namespace test {
 // CHECK-DAG: cir.global "private" internal dso_local @_ZN12_GLOBAL__N_12g1E = #cir.int<1> : !s32i
 // CHECK-DAG: cir.global external @_ZN4test2g2E = #cir.int<2> : !s32i
 // CHECK-DAG: cir.global external @_ZN4test5test22g3E = #cir.int<3> : !s32i
-// CHECK-DAG: cir.func @_ZN12_GLOBAL__N_12f1Ev()
-// CHECK-DAG: cir.func @_ZN4test2f2Ev()
-// CHECK-DAG: cir.func @_ZN4test5test22f3Ev()
+// CHECK-DAG: cir.func{{.*}} @_ZN12_GLOBAL__N_12f1Ev()
+// CHECK-DAG: cir.func{{.*}} @_ZN4test2f2Ev()
+// CHECK-DAG: cir.func{{.*}} @_ZN4test5test22f3Ev()
 
 using namespace test;
 
@@ -38,7 +38,7 @@ int f4(void) {
 }
 
 // The namespace gets added during name mangling, so this is wrong but expected.
-// CHECK: cir.func @_Z2f4v()
+// CHECK: cir.func{{.*}} @_Z2f4v()
 // CHECK:   cir.call @_ZN12_GLOBAL__N_12f1Ev()
 // CHECK:   cir.call @_ZN4test2f2Ev()
 // CHECK:   cir.call @_ZN4test5test22f3Ev()
@@ -59,7 +59,7 @@ int f5() {
   return g3;
 }
 
-// CHECK: cir.func @_Z2f5v()
+// CHECK: cir.func{{.*}} @_Z2f5v()
 // CHECK:   cir.call @_ZN4test5test22f3Ev()
 // CHECK:   %[[G3_ADDR:.*]] = cir.get_global @_ZN4test5test22g3E : !cir.ptr<!s32i>
 // CHECK:   %[[G3_VAL:.*]] = cir.load{{.*}} %[[G3_ADDR]] : !cir.ptr<!s32i>, !s32i
@@ -76,7 +76,7 @@ int f6() {
   return s.a;
 }
 
-// CHECK: cir.func @_Z2f6v()
+// CHECK: cir.func{{.*}} @_Z2f6v()
 // CHECK:   cir.get_global @_ZN5test31sE : !cir.ptr<!rec_test33A3AS>
 // CHECK:   cir.get_member %{{.*}}[0] {name = "a"}
 
@@ -92,4 +92,4 @@ void f7() {
   shadow::shadowedFunc();
 }
 
-// CHECK: cir.func @_Z2f7v()
+// CHECK: cir.func{{.*}} @_Z2f7v()
