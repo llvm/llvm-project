@@ -21,7 +21,8 @@ using namespace llvm;
 using FeatureMapTy = DenseMap<const Record *, unsigned>;
 using ConstRecVec = std::vector<const Record *>;
 
-TargetFeaturesEmitter::TargetFeaturesEmitter(const RecordKeeper &R) : Records(R) {
+TargetFeaturesEmitter::TargetFeaturesEmitter(const RecordKeeper &R)
+    : Records(R) {
   ArrayRef<const Record *> Targets = Records.getAllDerivedDefinitions("Target");
   if (Targets.size() == 0)
     PrintFatalError("No 'Target' subclasses defined!");
@@ -63,9 +64,9 @@ FeatureMapTy TargetFeaturesEmitter::enumeration(raw_ostream &OS) {
   return FeatureMap;
 }
 
-void TargetFeaturesEmitter::printFeatureMask(raw_ostream &OS,
-                                         ArrayRef<const Record *> FeatureList,
-                                         const FeatureMapTy &FeatureMap) {
+void TargetFeaturesEmitter::printFeatureMask(
+    raw_ostream &OS, ArrayRef<const Record *> FeatureList,
+    const FeatureMapTy &FeatureMap) {
   std::array<uint64_t, MAX_SUBTARGET_WORDS> Mask = {};
   for (const Record *Feature : FeatureList) {
     unsigned Bit = FeatureMap.lookup(Feature);
@@ -81,8 +82,8 @@ void TargetFeaturesEmitter::printFeatureMask(raw_ostream &OS,
   OS << "} } }";
 }
 
-void TargetFeaturesEmitter::printFeatureKeyValues(raw_ostream &OS,
-                                              const FeatureMapTy &FeatureMap) {
+void TargetFeaturesEmitter::printFeatureKeyValues(
+    raw_ostream &OS, const FeatureMapTy &FeatureMap) {
   std::vector<const Record *> FeatureList =
       Records.getAllDerivedDefinitions("SubtargetFeature");
 
@@ -122,7 +123,7 @@ void TargetFeaturesEmitter::printFeatureKeyValues(raw_ostream &OS,
 }
 
 void TargetFeaturesEmitter::printCPUKeyValues(raw_ostream &OS,
-                                          const FeatureMapTy &FeatureMap) {
+                                              const FeatureMapTy &FeatureMap) {
   // Gather and sort processor information
   std::vector<const Record *> ProcessorList =
       Records.getAllDerivedDefinitions("Processor");
