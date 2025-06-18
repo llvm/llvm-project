@@ -2434,8 +2434,7 @@ LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
 ///   user_op %a
 ///
 static OpFoldResult foldFromElementsToElements(FromElementsOp fromElementsOp) {
-  auto fromElemsOperands = fromElementsOp.getElements();
-
+  OperandRange fromElemsOperands = fromElementsOp.getElements();
   if (fromElemsOperands.empty())
     return {};
 
