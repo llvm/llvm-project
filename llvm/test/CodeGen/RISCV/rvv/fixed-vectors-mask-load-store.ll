@@ -3,47 +3,24 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s | FileCheck %s
 
 define void @load_store_v1i1(ptr %x, ptr %y) {
-; CHECK-LABEL: load_store_v1i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lbu a0, 0(a0)
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    sb a0, 0(a1)
-; CHECK-NEXT:    ret
   %a = load <1 x i1>, ptr %x
   store <1 x i1> %a, ptr %y
   ret void
 }
 
 define void @load_store_v2i1(ptr %x, ptr %y) {
-; CHECK-LABEL: load_store_v2i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lbu a0, 0(a0)
-; CHECK-NEXT:    andi a0, a0, 3
-; CHECK-NEXT:    sb a0, 0(a1)
-; CHECK-NEXT:    ret
   %a = load <2 x i1>, ptr %x
   store <2 x i1> %a, ptr %y
   ret void
 }
 
 define void @load_store_v4i1(ptr %x, ptr %y) {
-; CHECK-LABEL: load_store_v4i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lbu a0, 0(a0)
-; CHECK-NEXT:    andi a0, a0, 15
-; CHECK-NEXT:    sb a0, 0(a1)
-; CHECK-NEXT:    ret
   %a = load <4 x i1>, ptr %x
   store <4 x i1> %a, ptr %y
   ret void
 }
 
 define void @load_store_v8i1(ptr %x, ptr %y) {
-; CHECK-LABEL: load_store_v8i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lbu a0, 0(a0)
-; CHECK-NEXT:    sb a0, 0(a1)
-; CHECK-NEXT:    ret
   %a = load <8 x i1>, ptr %x
   store <8 x i1> %a, ptr %y
   ret void

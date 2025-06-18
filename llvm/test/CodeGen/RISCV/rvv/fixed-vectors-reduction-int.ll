@@ -5842,14 +5842,23 @@ define i8 @vreduce_mul_v1i8(<1 x i8> %v) {
 declare i8 @llvm.vector.reduce.mul.v2i8(<2 x i8>)
 
 define i8 @vreduce_mul_v2i8(ptr %x) {
-; CHECK-LABEL: vreduce_mul_v2i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    lbu a0, 1(a0)
-; CHECK-NEXT:    vmul.vx v8, v8, a0
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    ret
+; RV32-LABEL: vreduce_mul_v2i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; RV32-NEXT:    vle8.v v8, (a0)
+; RV32-NEXT:    lbu a0, 1(a0)
+; RV32-NEXT:    vmul.vx v8, v8, a0
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vreduce_mul_v2i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; RV64-NEXT:    vle8.v v8, (a0)
+; RV64-NEXT:    lb a0, 1(a0)
+; RV64-NEXT:    vmul.vx v8, v8, a0
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    ret
   %v = load <2 x i8>, ptr %x
   %red = call i8 @llvm.vector.reduce.mul.v2i8(<2 x i8> %v)
   ret i8 %red

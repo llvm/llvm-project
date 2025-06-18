@@ -653,7 +653,7 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; RV64I-NEXT:    blt a0, sp, .LBB11_3
 ; RV64I-NEXT:  # %bb.4:
 ; RV64I-NEXT:    mv sp, a0
-; RV64I-NEXT:    lbu zero, 0(a0)
+; RV64I-NEXT:    lb zero, 0(a0)
 ; RV64I-NEXT:    addi sp, s0, -2032
 ; RV64I-NEXT:    .cfi_def_cfa sp, 2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload

@@ -2903,7 +2903,7 @@ define half @fsgnjx_f16(half %x, half %y) nounwind {
 ; RV64IZFHMIN-LABEL: fsgnjx_f16:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV64IZFHMIN-NEXT:    lhu a0, %lo(.LCPI23_0)(a0)
+; RV64IZFHMIN-NEXT:    lh a0, %lo(.LCPI23_0)(a0)
 ; RV64IZFHMIN-NEXT:    fmv.x.h a1, fa0
 ; RV64IZFHMIN-NEXT:    lui a2, 1048568
 ; RV64IZFHMIN-NEXT:    and a1, a1, a2

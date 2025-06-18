@@ -3,13 +3,21 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,RV64 %s
 
 define void @gather_const_v16i8(ptr %x) {
-; CHECK-LABEL: gather_const_v16i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lbu a1, 12(a0)
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vse8.v v8, (a0)
-; CHECK-NEXT:    ret
+; RV32-LABEL: gather_const_v16i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lbu a1, 12(a0)
+; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV32-NEXT:    vmv.v.x v8, a1
+; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: gather_const_v16i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lb a1, 12(a0)
+; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a1
+; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    ret
   %a = load <16 x i8>, ptr %x
   %b = extractelement <16 x i8> %a, i32 12
   %c = insertelement <16 x i8> poison, i8 %b, i32 0
@@ -75,14 +83,23 @@ define void @gather_const_v2i64(ptr %x) {
 }
 
 define void @gather_const_v64i8(ptr %x) {
-; CHECK-LABEL: gather_const_v64i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lbu a1, 32(a0)
-; CHECK-NEXT:    li a2, 64
-; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vse8.v v8, (a0)
-; CHECK-NEXT:    ret
+; RV32-LABEL: gather_const_v64i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lbu a1, 32(a0)
+; RV32-NEXT:    li a2, 64
+; RV32-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
+; RV32-NEXT:    vmv.v.x v8, a1
+; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: gather_const_v64i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lb a1, 32(a0)
+; RV64-NEXT:    li a2, 64
+; RV64-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a1
+; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    ret
   %a = load <64 x i8>, ptr %x
   %b = extractelement <64 x i8> %a, i32 32
   %c = insertelement <64 x i8> poison, i8 %b, i32 0

@@ -29,7 +29,7 @@ define <512 x i8> @single_source(<512 x i8> %a) {
 ; CHECK-NEXT:    lbu a0, 770(sp)
 ; CHECK-NEXT:    li a1, 431
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    lbu a0, 1012(sp)
+; CHECK-NEXT:    lb a0, 1012(sp)
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v24, a1
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
@@ -127,11 +127,11 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    li a3, 465
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vse8.v v24, (a1)
-; CHECK-NEXT:    lbu a1, 985(sp)
+; CHECK-NEXT:    lb a1, 985(sp)
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v0, a3
 ; CHECK-NEXT:    li a2, 478
-; CHECK-NEXT:    lbu a3, 1012(sp)
+; CHECK-NEXT:    lb a3, 1012(sp)
 ; CHECK-NEXT:    vmv.s.x v24, a1
 ; CHECK-NEXT:    li a1, 477
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, tu, ma

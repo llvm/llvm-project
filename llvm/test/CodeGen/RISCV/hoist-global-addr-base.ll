@@ -367,13 +367,21 @@ define void @store_sh3add() {
 }
 
 define dso_local void @rmw_addi_addi() nounwind {
-; CHECK-LABEL: rmw_addi_addi:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a0, %hi(bar+3211)
-; CHECK-NEXT:    lbu a1, %lo(bar+3211)(a0)
-; CHECK-NEXT:    addi a1, a1, 10
-; CHECK-NEXT:    sb a1, %lo(bar+3211)(a0)
-; CHECK-NEXT:    ret
+; RV32-LABEL: rmw_addi_addi:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lui a0, %hi(bar+3211)
+; RV32-NEXT:    lbu a1, %lo(bar+3211)(a0)
+; RV32-NEXT:    addi a1, a1, 10
+; RV32-NEXT:    sb a1, %lo(bar+3211)(a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: rmw_addi_addi:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lui a0, %hi(bar+3211)
+; RV64-NEXT:    lb a1, %lo(bar+3211)(a0)
+; RV64-NEXT:    addi a1, a1, 10
+; RV64-NEXT:    sb a1, %lo(bar+3211)(a0)
+; RV64-NEXT:    ret
 entry:
   %0 = load i8, ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 3211)
   %1 = add i8 %0, 10

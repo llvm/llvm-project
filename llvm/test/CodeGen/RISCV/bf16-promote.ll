@@ -14,25 +14,40 @@ define void @test_load_store(ptr %p, ptr %q) nounwind {
 }
 
 define float @test_fpextend_float(ptr %p) nounwind {
-; CHECK-LABEL: test_fpextend_float:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lhu a0, 0(a0)
-; CHECK-NEXT:    slli a0, a0, 16
-; CHECK-NEXT:    fmv.w.x fa0, a0
-; CHECK-NEXT:    ret
+; RV64-LABEL: test_fpextend_float:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lh a0, 0(a0)
+; RV64-NEXT:    slli a0, a0, 16
+; RV64-NEXT:    fmv.w.x fa0, a0
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: test_fpextend_float:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lhu a0, 0(a0)
+; RV32-NEXT:    slli a0, a0, 16
+; RV32-NEXT:    fmv.w.x fa0, a0
+; RV32-NEXT:    ret
   %a = load bfloat, ptr %p
   %r = fpext bfloat %a to float
   ret float %r
 }
 
 define double @test_fpextend_double(ptr %p) nounwind {
-; CHECK-LABEL: test_fpextend_double:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lhu a0, 0(a0)
-; CHECK-NEXT:    slli a0, a0, 16
-; CHECK-NEXT:    fmv.w.x fa5, a0
-; CHECK-NEXT:    fcvt.d.s fa0, fa5
-; CHECK-NEXT:    ret
+; RV64-LABEL: test_fpextend_double:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lh a0, 0(a0)
+; RV64-NEXT:    slli a0, a0, 16
+; RV64-NEXT:    fmv.w.x fa5, a0
+; RV64-NEXT:    fcvt.d.s fa0, fa5
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: test_fpextend_double:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lhu a0, 0(a0)
+; RV32-NEXT:    slli a0, a0, 16
+; RV32-NEXT:    fmv.w.x fa5, a0
+; RV32-NEXT:    fcvt.d.s fa0, fa5
+; RV32-NEXT:    ret
   %a = load bfloat, ptr %p
   %r = fpext bfloat %a to double
   ret double %r
@@ -111,8 +126,8 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    mv s0, a0
-; RV64-NEXT:    lhu a0, 0(a1)
-; RV64-NEXT:    lhu a1, 0(s0)
+; RV64-NEXT:    lh a0, 0(a1)
+; RV64-NEXT:    lh a1, 0(s0)
 ; RV64-NEXT:    slli a0, a0, 16
 ; RV64-NEXT:    slli a1, a1, 16
 ; RV64-NEXT:    fmv.w.x fa5, a0

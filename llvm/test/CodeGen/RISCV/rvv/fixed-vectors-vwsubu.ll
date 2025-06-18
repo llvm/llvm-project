@@ -644,14 +644,23 @@ define <16 x i64> @vwsubu_vx_v16i64(ptr %x, i32 %y) {
 }
 
 define <8 x i16> @vwsubu_vx_v8i16_i8(ptr %x, ptr %y) {
-; CHECK-LABEL: vwsubu_vx_v8i16_i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lbu a1, 0(a1)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vwsubu.vv v8, v10, v9
-; CHECK-NEXT:    ret
+; RV32-LABEL: vwsubu_vx_v8i16_i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lbu a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vle8.v v9, (a0)
+; RV32-NEXT:    vmv.v.x v10, a1
+; RV32-NEXT:    vwsubu.vv v8, v10, v9
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwsubu_vx_v8i16_i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lb a1, 0(a1)
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vle8.v v9, (a0)
+; RV64-NEXT:    vmv.v.x v10, a1
+; RV64-NEXT:    vwsubu.vv v8, v10, v9
+; RV64-NEXT:    ret
   %a = load <8 x i8>, ptr %x
   %b = load i8, ptr %y
   %c = zext i8 %b to i16
@@ -701,14 +710,23 @@ define <4 x i32> @vwsubu_vx_v4i32_i8(ptr %x, ptr %y) {
 }
 
 define <4 x i32> @vwsubu_vx_v4i32_i16(ptr %x, ptr %y) {
-; CHECK-LABEL: vwsubu_vx_v4i32_i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lhu a1, 0(a1)
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vwsubu.vv v8, v10, v9
-; CHECK-NEXT:    ret
+; RV32-LABEL: vwsubu_vx_v4i32_i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lhu a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; RV32-NEXT:    vle16.v v9, (a0)
+; RV32-NEXT:    vmv.v.x v10, a1
+; RV32-NEXT:    vwsubu.vv v8, v10, v9
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwsubu_vx_v4i32_i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lh a1, 0(a1)
+; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; RV64-NEXT:    vle16.v v9, (a0)
+; RV64-NEXT:    vmv.v.x v10, a1
+; RV64-NEXT:    vwsubu.vv v8, v10, v9
+; RV64-NEXT:    ret
   %a = load <4 x i16>, ptr %x
   %b = load i16, ptr %y
   %c = zext i16 %b to i32
@@ -821,7 +839,7 @@ define <2 x i64> @vwsubu_vx_v2i64_i32(ptr %x, ptr %y) nounwind {
 ;
 ; RV64-LABEL: vwsubu_vx_v2i64_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lwu a1, 0(a1)
+; RV64-NEXT:    lw a1, 0(a1)
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vle32.v v9, (a0)
 ; RV64-NEXT:    vmv.v.x v10, a1

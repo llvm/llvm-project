@@ -71,6 +71,8 @@ public:
                       const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
   bool appendWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
                        const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
+  bool convertZExtLoads(MachineFunction &MF, const RISCVInstrInfo &TII,
+                       const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -788,6 +790,47 @@ bool RISCVOptWInstrs::appendWSuffixes(MachineFunction &MF,
   return MadeChange;
 }
 
+bool RISCVOptWInstrs::convertZExtLoads(MachineFunction &MF,
+                                      const RISCVInstrInfo &TII,
+                                      const RISCVSubtarget &ST,
+                                      MachineRegisterInfo &MRI) {
+  bool MadeChange = false;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      unsigned WOpc;
+      int UsersWidth;
+      switch (MI.getOpcode()) {
+      default:
+        continue;
+      case RISCV::LBU:
+        WOpc = RISCV::LB;
+        UsersWidth = 8;
+        break;
+      case RISCV::LHU:
+        WOpc = RISCV::LH;
+        UsersWidth = 16;
+        break;
+      case RISCV::LWU:
+        WOpc = RISCV::LW;
+        UsersWidth = 32;
+        break;
+      }
+
+      if (hasAllNBitUsers(MI, ST, MRI, UsersWidth)) {
+        LLVM_DEBUG(dbgs() << "Replacing " << MI);
+        MI.setDesc(TII.get(WOpc));
+        MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
+        MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
+        MI.clearFlag(MachineInstr::MIFlag::IsExact);
+        LLVM_DEBUG(dbgs() << "     with " << MI);
+        MadeChange = true;
+      }
+    }
+  }
+
+  return MadeChange;
+}
+
 bool RISCVOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -807,6 +850,8 @@ bool RISCVOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
 
   if (ST.preferWInst())
     MadeChange |= appendWSuffixes(MF, TII, ST, MRI);
+
+  MadeChange |= convertZExtLoads(MF, TII, ST, MRI);
 
   return MadeChange;
 }
