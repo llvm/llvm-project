@@ -479,8 +479,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   }
 
   auto addTargetOpDISP = [&](bool lineTableOnly,
-                             const llvm::SmallVector<mlir::LLVM::DINodeAttr>
-                                 &entities) {
+                             llvm::ArrayRef<mlir::LLVM::DINodeAttr> entities) {
     // When we process the DeclareOp inside the OpenMP target region, all the
     // variables get the DISubprogram of the parent function of the target op as
     // the scope. In the codegen (to llvm ir), OpenMP target op results in the
@@ -559,7 +558,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
         line, line, subprogramFlags, subTypeAttr, /*retainedNodes=*/{},
         /*annotations=*/{});
     funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
-    addTargetOpDISP(true, {});
+    addTargetOpDISP(/*lineTableOnly=*/true, /*entities=*/{});
     return;
   }
 
@@ -617,7 +616,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
       funcName, fullName, funcFileAttr, line, line, subprogramFlags,
       subTypeAttr, entities, /*annotations=*/{});
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
-  addTargetOpDISP(false, entities);
+  addTargetOpDISP(/*lineTableOnly=*/false, entities);
 
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
     mlir::LLVM::DISubprogramAttr spTy = spAttr;
