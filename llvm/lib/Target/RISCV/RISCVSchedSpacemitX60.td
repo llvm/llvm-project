@@ -37,7 +37,9 @@ class SMX60GetLMulCycles<string mx> {
   );
 }
 
-class SMX60GetVIALULatency<string mx> {
+// Basic scaling pattern (4,4,4,4,4,8,16): doubles at higher LMULs
+// Used for: logical ops, shifts, sign ext, merge/move, FP sign/recip/convert, mask ops, slides
+class SMX60GetBasicLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 4,
     !eq(mx, "M2") : 4,
@@ -49,8 +51,9 @@ class SMX60GetVIALULatency<string mx> {
   );
 }
 
-// Latency for arithmetic operations (vadd, vsub, vmax, vmin, etc.)
-class SMX60GetVIArithLatency<string mx> {
+// Arithmetic scaling pattern (4,4,4,4,4,5,8): minimal increase at M4
+// Used for: arithmetic (add/sub/min/max), saturating/averaging, FP add/sub/min/max
+class SMX60GetArithmeticLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 4,
     !eq(mx, "M2") : 4,
@@ -62,8 +65,9 @@ class SMX60GetVIArithLatency<string mx> {
   );
 }
 
-// Latency for mask-producing operations (vmadc, vmsbc, vmseq, etc.)
-class SMX60GetVIMaskLatency<string mx> {
+// Progressive scaling pattern (4,4,4,4,6,10,18): gradual increase from M2
+// Used for: mask-producing comparisons, carry ops with mask, FP comparisons
+class SMX60GetProgressiveLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 4,
     !eq(mx, "M2") : 6,
@@ -75,8 +79,9 @@ class SMX60GetVIMaskLatency<string mx> {
   );
 }
 
-// Latency for widening operations (vwadd, vwsub, vwmul, etc.)
-class SMX60GetVIWideLatency<string mx> {
+// Widening scaling pattern (4,4,4,4,5,8,8): plateaus at higher LMULs
+// Used for: widening operations
+class SMX60GetWideningLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 4,
     !eq(mx, "M2") : 5,
@@ -88,9 +93,9 @@ class SMX60GetVIWideLatency<string mx> {
   );
 }
 
-// Latency for FP FMA operations (vfmacc, vfmadd, vfmsac, etc.)
-// Uses worst-case latency across element widths: 6,6,7,8
-class SMX60GetVFFMALatency<string mx> {
+// Complex FP scaling pattern (6,6,6,6,6,7,8): minimal increase
+// Used for: FP FMA operations, complex FP ops
+class SMX60GetComplexFPLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 6,
     !eq(mx, "M2") : 6,
@@ -102,10 +107,9 @@ class SMX60GetVFFMALatency<string mx> {
   );
 }
 
-// Latency for FP reduction operations (vfredusum, vfredmax, vfredmin)
-// Pattern: e16=12,12,15,21,33,57; e32=9,12,18,30,54; e64=9,15,27,51
-// Worst-case latency across element widths is used: 15,21,33,57
-class SMX60GetVFRedLatency<string mx> {
+// High reduction scaling pattern (12,12,12,15,21,33,57): progressive from M1
+// Used for: FP reductions (fractional=12)
+class SMX60GetHighReductionLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 15,
     !eq(mx, "M2") : 21,
@@ -117,7 +121,9 @@ class SMX60GetVFRedLatency<string mx> {
   );
 }
 
-class SMX60GetVIRedLatency<string mx> {
+// Reduction scaling pattern (5,5,5,7,11,19,35): progressive from M1
+// Used for: integer reductions (fractional=5)
+class SMX60GetReductionLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 7,
     !eq(mx, "M2") : 11,
@@ -129,8 +135,9 @@ class SMX60GetVIRedLatency<string mx> {
   );
 }
 
-// Latency for integer multiply operations with e32 (5,5,5,8 pattern)
-class SMX60GetVIMulE32Latency<string mx> {
+// Flat scaling pattern (5,5,5,5,5,5,8): constant until final jump
+// Used for: e32 multiply pattern, some FP ops
+class SMX60GetFlatLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 5,
     !eq(mx, "M2") : 5,
@@ -142,8 +149,9 @@ class SMX60GetVIMulE32Latency<string mx> {
   );
 }
 
-// Latency for integer multiply operations with e64 (7,8,16,32 pattern)
-class SMX60GetVIMulE64Latency<string mx> {
+// Exponential scaling pattern (7,7,7,7,8,16,32): exponential at M4/M8
+// Used for: e64 multiply pattern, complex ops
+class SMX60GetExponentialLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 7,
     !eq(mx, "M2") : 8,
@@ -447,8 +455,7 @@ def : WriteRes<!cast<SchedWrite>("WriteVMov8V"), [SMX60_VIEU]> { let Latency = 1
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
-  let Latency = ArithLat in {
+  let Latency = SMX60GetArithmeticLatency<mx>.c in {
     defm "" : LMULWriteResMX<"WriteVIMinMaxV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMinMaxX", [SMX60_VIEU], mx, IsWorstCase>;
 
@@ -461,8 +468,7 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVIALUI",    [SMX60_VIEU], mx, IsWorstCase>;
   }
 
-  defvar ALULat = SMX60GetVIALULatency<mx>.c;
-  let Latency = ALULat in {
+  let Latency = SMX60GetBasicLatency<mx>.c in {
     defm "" : LMULWriteResMX<"WriteVExtV",     [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMergeV",  [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMergeX",  [SMX60_VIEU], mx, IsWorstCase>;
@@ -480,8 +486,7 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVICALUI",   [SMX60_VIEU], mx, IsWorstCase>;
   }
 
-  defvar MaskLat = SMX60GetVIMaskLatency<mx>.c;
-  let Latency = MaskLat in {
+  let Latency = SMX60GetProgressiveLatency<mx>.c in {
     // Pattern of vmadc, vmsbc, vmseq, etc: 4/4/4/4/6/10/18, except for e8m8 = 17
     // We set e8m8 to 18
     defm "" : LMULWriteResMX<"WriteVICALUMV",  [SMX60_VIEU], mx, IsWorstCase>;
@@ -495,8 +500,7 @@ foreach mx = SchedMxList in {
   // Pattern of vmacc, vmadd, vmul, vmulh, etc.: e8/e16 = 4/4/5/8, e32 = 5,5,5,8,
   // e64 = 7,8,16,32. We use the worst-case until we can split the SEW.
   // TODO: change WriteVIMulV, etc to be defined with LMULSEWSchedWrites
-  defvar MulLat = SMX60GetVIMulE64Latency<mx>.c;
-  let Latency = MulLat in {
+  let Latency = SMX60GetExponentialLatency<mx>.c in {
     defm "" : LMULWriteResMX<"WriteVIMulV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMulX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMulAddV", [SMX60_VIEU], mx, IsWorstCase>;
@@ -510,8 +514,7 @@ foreach mx = SchedMxList in {
 foreach mx = SchedMxListW in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
 
-  defvar WideLat = SMX60GetVIWideLatency<mx>.c;
-  let Latency = WideLat in {
+  let Latency = SMX60GetWideningLatency<mx>.c in {
     defm "" : LMULWriteResMX<"WriteVIWALUV",    [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIWALUX",    [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIWALUI",    [SMX60_VIEU], mx, IsWorstCase>;
@@ -531,7 +534,6 @@ foreach mx = ["MF8", "MF4", "MF2"] in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
 
-    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
     let Latency = 12 in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivV", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivX", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
@@ -549,8 +551,7 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
 
-    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
-    let Latency = !mul(LMulLat, 24) in {
+    let Latency = !mul(SMX60GetLMulCycles<mx>.c, 24) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivV", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivX", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
     }
@@ -561,8 +562,7 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
 foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
 
-  defvar ALULat = SMX60GetVIALULatency<mx>.c;
-  let Latency = ALULat in {
+  let Latency = SMX60GetBasicLatency<mx>.c in {
     defm "" : LMULWriteResMX<"WriteVNShiftV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVNShiftX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVNShiftI", [SMX60_VIEU], mx, IsWorstCase>;
@@ -576,8 +576,7 @@ foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
 foreach mx = ["M2", "M4"] in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
 
-  defvar ALULat = SMX60GetVIALULatency<mx>.c;
-  let Latency = !mul(ALULat, 2) in {
+  let Latency = !mul(SMX60GetBasicLatency<mx>.c, 2) in {
     defm "" : LMULWriteResMX<"WriteVNShiftV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVNShiftX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVNShiftI", [SMX60_VIEU], mx, IsWorstCase>;
@@ -591,8 +590,7 @@ foreach mx = ["M2", "M4"] in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
-  let Latency = ArithLat in {
+  let Latency = SMX60GetArithmeticLatency<mx>.c in {
     defm "" : LMULWriteResMX<"WriteVSALUV",   [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSALUX",   [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSALUI",   [SMX60_VIEU], mx, IsWorstCase>;
@@ -603,14 +601,12 @@ foreach mx = SchedMxList in {
   // Pattern of vsmul: e8/e16 = 4/4/5/8, e32 = 5,5,5,8, e64 = 7,8,16,32
   // We use the worst-case until we can split the SEW.
   // TODO: change WriteVSMulV/X to be defined with LMULSEWSchedWrites
-  defvar SMulLat = SMX60GetVIMulE64Latency<mx>.c;
-  let Latency = SMulLat in {
+  let Latency = SMX60GetExponentialLatency<mx>.c in {
     defm "" : LMULWriteResMX<"WriteVSMulV",   [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSMulX",   [SMX60_VIEU], mx, IsWorstCase>;
   }
 
-  defvar ALULat = SMX60GetVIALULatency<mx>.c;
-  let Latency = ALULat in {
+  let Latency = SMX60GetBasicLatency<mx>.c in {
     defm "" : LMULWriteResMX<"WriteVSShiftV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSShiftX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSShiftI", [SMX60_VIEU], mx, IsWorstCase>;
@@ -649,29 +645,27 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx, isF=1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, isF=1>.c;
 
-    defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
+    defvar ArithLat = SMX60GetArithmeticLatency<mx>.c;
     let Latency = ArithLat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFALUF",  [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxF", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
 
-    defvar FPMulLat = SMX60GetVIMulE32Latency<mx>.c;
-    let Latency = !cond(!eq(sew, 64) : FPMulLat, true : ArithLat) in {
+    defvar FlatLat = SMX60GetFlatLatency<mx>.c;
+    let Latency = !cond(!eq(sew, 64) : FlatLat, true : ArithLat) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFALUV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulF",  [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
 
-    defvar FMALat = SMX60GetVFFMALatency<mx>.c;
-    // TODO: for some reason, the following cond is not working, and always use FPMulLat
-    let Latency = !cond(!eq(sew, 64) : FMALat, true : FPMulLat) in {
+    // TODO: for some reason, the following cond is not working, and always use FlatLat
+    let Latency = !cond(!eq(sew, 64) : SMX60GetComplexFPLatency<mx>.c, true : FlatLat) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddF", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
 
-    defvar ALULat = SMX60GetVIALULatency<mx>.c;
-    let Latency = ALULat in {
+    let Latency = SMX60GetBasicLatency<mx>.c in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRecpV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFSgnjV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFSgnjF", [SMX60_VIEU], mx, sew, IsWorstCase>;
@@ -683,14 +677,12 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defvar MaskLat = SMX60GetVIMaskLatency<mx>.c;
-  let Latency = MaskLat in {
+  let Latency = SMX60GetProgressiveLatency<mx>.c in {
     defm "" : LMULWriteResMX<"WriteVFCmpV",  [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFCmpF",  [SMX60_VIEU], mx, IsWorstCase>;
   }
 
-  defvar ALULat = SMX60GetVIALULatency<mx>.c;
-  let Latency = ALULat in {
+  let Latency = SMX60GetBasicLatency<mx>.c in {
     defm "" : LMULWriteResMX<"WriteVFClassV",  [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFMergeV",  [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFMovV",    [SMX60_VIEU], mx, IsWorstCase>;
@@ -703,8 +695,7 @@ foreach mx = SchedMxListW in {
   foreach sew = SchedSEWSet<mx, isF=0, isWidening=1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListW>.c;
 
-    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
-    let Latency = !mul(LMulLat, 4) in {
+    let Latency = !mul(SMX60GetLMulCycles<mx>.c, 4) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWCvtIToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
   }
@@ -713,8 +704,7 @@ foreach mx = SchedMxListW in {
 foreach mx = SchedMxListFW in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListFW>.c;
 
-  defvar LMulLat = SMX60GetLMulCycles<mx>.c;
-  let Latency = !mul(LMulLat, 4) in {
+  let Latency = !mul(SMX60GetLMulCycles<mx>.c, 4) in {
     defm "" : LMULWriteResMX<"WriteVFWCvtFToIV", [SMX60_VIEU], mx, IsWorstCase>;
   }
 }
@@ -734,17 +724,19 @@ foreach mx = SchedMxListFW in {
 
     // Pattern for vfwmul.vv, vfwmul.vf: e16 = 4/4/4/6/8. We use 4/4/5/8 as approximation
     // TODO: e32m4 = 8, but it's set to 5 here
-    defvar FPMulLat = SMX60GetVIMulE32Latency<mx>.c;
-    defvar WideLat = SMX60GetVIWideLatency<mx>.c;
-    let Latency = !cond(!eq(sew, 32) : FPMulLat, true : WideLat) in {
+    defvar VFWMulLat = !cond(
+      !eq(sew, 32) : SMX60GetFlatLatency<mx>.c,
+      true : SMX60GetWideningLatency<mx>.c
+    );
+
+    let Latency = VFWMulLat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulF", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
 
     // Pattern for vfwmacc, vfwnmacc, etc: e16 = 5/5/5/8; e32 = 6/6/7/8
     // Use existing 6,6,7,8 as close approximation
-    defvar FMALat = SMX60GetVFFMALatency<mx>.c;
-    let Latency = FMALat in {
+    let Latency = SMX60GetComplexFPLatency<mx>.c in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulAddV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulAddF", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
@@ -759,8 +751,7 @@ foreach mx = SchedMxListFW in {
 foreach mx = SchedMxListW in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
 
-  defvar LMulLat = SMX60GetLMulCycles<mx>.c;
-  let Latency = !mul(LMulLat, 4) in {
+  let Latency = !mul(SMX60GetLMulCycles<mx>.c, 4) in {
     defm "" : LMULWriteResMX<"WriteVFNCvtFToIV", [SMX60_VIEU], mx, IsWorstCase>;
   }
 }
@@ -769,8 +760,7 @@ foreach mx = SchedMxListFW in {
   foreach sew = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFW, isF=1>.c;
 
-    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
-    let Latency = !mul(LMulLat, 4) in {
+    let Latency = !mul(SMX60GetLMulCycles<mx>.c, 4) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFNCvtIToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFNCvtFToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
@@ -818,7 +808,6 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
 foreach mx = SchedMxListF in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
-    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
     // Compute latency based on SEW and LMUL combination
     defvar LatencyMul = !cond(
@@ -827,7 +816,7 @@ foreach mx = SchedMxListF in {
       !eq(sew, 64) : 40   // e64: 40*LMUL
     );
 
-    let Latency = !mul(LMulLat, LatencyMul) in {
+    let Latency = !mul(SMX60GetLMulCycles<mx>.c, LatencyMul) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFSqrtV", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
     }
   }
@@ -838,8 +827,7 @@ foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
 
-    defvar RedLat = SMX60GetVIRedLatency<mx>.c;
-    let Latency = RedLat in {
+    let Latency = SMX60GetReductionLatency<mx>.c in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
 
       // Pattern for vredsum:                  5/5/5/7/11/19/35
@@ -855,8 +843,7 @@ foreach mx = SchedMxListWRed in {
   foreach sew = SchedSEWSet<mx, 0, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListWRed>.c;
 
-    defvar RedLat = SMX60GetVIRedLatency<mx>.c;
-    let Latency = RedLat in {
+    let Latency = SMX60GetReductionLatency<mx>.c in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIWRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
   }
@@ -865,12 +852,10 @@ foreach mx = SchedMxListWRed in {
 foreach mx = SchedMxListF in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
-    defvar FPRedLat = SMX60GetVFRedLatency<mx>.c;
-
     // Pattern for vfredmax.vs, vfredmin.vs: 12,12,15,21,33,57
     // Pattern for vfredusum.vs is slightly lower for e16/e32
     // We use the worst-case for simplificity
-    let Latency = FPRedLat in {
+    let Latency = SMX60GetHighReductionLatency<mx>.c in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
@@ -898,7 +883,6 @@ foreach mx = ["MF4", "MF2"] in {
 foreach mx = ["M1", "M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
-    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
     // Compute latency based on SEW and LMUL combination
     defvar LatencyMul = !cond(
@@ -907,7 +891,7 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
       !eq(sew, 64) : 12   // e64: 12*LMUL
     );
 
-    let Latency = !mul(LMulLat, LatencyMul) in {
+    let Latency = !mul(SMX60GetLMulCycles<mx>.c, LatencyMul) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRedOV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
   }
@@ -935,7 +919,6 @@ foreach mx = ["MF4", "MF2"] in {
 foreach mx = ["M1", "M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx, 1, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFWRed, 1>.c;
-    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
     // Compute latency based on SEW and LMUL combination
     defvar LatencyMul = !cond(
@@ -943,7 +926,7 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
       !eq(sew, 32) : 32   // e32: 32*LMUL
     );
 
-    let Latency = !mul(LMulLat, LatencyMul) in {
+    let Latency = !mul(SMX60GetLMulCycles<mx>.c, LatencyMul) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedV_From",  [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedOV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
@@ -964,8 +947,7 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVMFFSV", [SMX60_VIEU], mx, IsWorstCase>;
   }
 
-  defvar ALULat = SMX60GetVIALULatency<mx>.c;
-  let Latency = ALULat in {
+  let Latency = SMX60GetBasicLatency<mx>.c in {
     defm "" : LMULWriteResMX<"WriteVIotaV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIdxV", [SMX60_VIEU], mx, IsWorstCase>;
   }
@@ -975,12 +957,11 @@ foreach mx = SchedMxList in {
 // Slide
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
-  defvar ALULat = SMX60GetVIALULatency<mx>.c;
 
   // Pattern for vslide1down.vx, vslidedown.vi/vx: 4/5/9/17
   // Pattern for vslide1up.vx: 4/4/8/16
   // We use 4/4/8/16 for simplicity
-  let Latency = ALULat in {
+  let Latency = SMX60GetBasicLatency<mx>.c in {
     defm "" : LMULWriteResMX<"WriteVSlideI",  [SMX60_VIEU], mx, IsWorstCase>;
 
     defm "" : LMULWriteResMX<"WriteVISlide1X", [SMX60_VIEU], mx, IsWorstCase>;
@@ -1013,8 +994,7 @@ foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
 foreach mx = ["M2", "M4", "M8"] in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defvar LMulLat = SMX60GetLMulCycles<mx>.c;
-  let Latency = !mul(LMulLat, 2) in {
+  let Latency = !mul(SMX60GetLMulCycles<mx>.c, 2) in {
     defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVRGatherVI", [SMX60_VIEU], mx, IsWorstCase>;
   }
@@ -1022,9 +1002,9 @@ foreach mx = ["M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCaseSEW = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
 
-    defvar ALULat = SMX60GetVIALULatency<mx>.c;
-    defvar ExpLat = !mul(ALULat, ALULat);
-    let Latency = !mul(ALULat, ALULat) in {
+    defvar BasicLat = SMX60GetBasicLatency<mx>.c;
+    defvar ExpLat = !mul(BasicLat, BasicLat);
+    let Latency = !mul(BasicLat, BasicLat) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
 
