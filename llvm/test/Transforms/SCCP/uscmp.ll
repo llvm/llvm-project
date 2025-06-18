@@ -4,7 +4,7 @@
 define i32 @scmp_to_sub(i32 range(i32 -1, 2) %a) {
 ; CHECK-LABEL: define i32 @scmp_to_sub(
 ; CHECK-SAME: i32 range(i32 -1, 2) [[A:%.*]]) {
-; CHECK-NEXT:    [[SCMP:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 0)
+; CHECK-NEXT:    [[SCMP:%.*]] = sub nsw i32 [[A]], 0
 ; CHECK-NEXT:    ret i32 [[SCMP]]
 ;
   %scmp = call i32 @llvm.scmp(i32 %a, i32 0)
@@ -16,7 +16,7 @@ define i32 @scmp_zext_to_sub(i1 %a, i1 %b) {
 ; CHECK-SAME: i1 [[A:%.*]], i1 [[B:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A]] to i32
 ; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i1 [[B]] to i32
-; CHECK-NEXT:    [[SCMP:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[ZEXT_A]], i32 [[ZEXT_B]])
+; CHECK-NEXT:    [[SCMP:%.*]] = sub nsw i32 [[ZEXT_A]], [[ZEXT_B]]
 ; CHECK-NEXT:    ret i32 [[SCMP]]
 ;
   %zext_a = zext i1 %a to i32
@@ -28,7 +28,8 @@ define i32 @scmp_zext_to_sub(i1 %a, i1 %b) {
 define i8 @scmp_to_sub_trunc(i32 range(i32 -1, 2) %a) {
 ; CHECK-LABEL: define i8 @scmp_to_sub_trunc(
 ; CHECK-SAME: i32 range(i32 -1, 2) [[A:%.*]]) {
-; CHECK-NEXT:    [[SCMP:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A]], i32 0)
+; CHECK-NEXT:    [[SCMP1:%.*]] = sub nsw i32 [[A]], 0
+; CHECK-NEXT:    [[SCMP:%.*]] = trunc i32 [[SCMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[SCMP]]
 ;
   %scmp = call i8 @llvm.scmp(i32 %a, i32 0)
@@ -38,7 +39,8 @@ define i8 @scmp_to_sub_trunc(i32 range(i32 -1, 2) %a) {
 define i64 @scmp_to_sub_sext(i32 range(i32 -1, 2) %a) {
 ; CHECK-LABEL: define i64 @scmp_to_sub_sext(
 ; CHECK-SAME: i32 range(i32 -1, 2) [[A:%.*]]) {
-; CHECK-NEXT:    [[SCMP:%.*]] = call i64 @llvm.scmp.i64.i32(i32 [[A]], i32 0)
+; CHECK-NEXT:    [[SCMP1:%.*]] = sub nsw i32 [[A]], 0
+; CHECK-NEXT:    [[SCMP:%.*]] = sext i32 [[SCMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[SCMP]]
 ;
   %scmp = call i64 @llvm.scmp(i32 %a, i32 0)
@@ -48,7 +50,7 @@ define i64 @scmp_to_sub_sext(i32 range(i32 -1, 2) %a) {
 define i32 @scmp_to_sub_small_range(i32 range(i32 -1, 1) %a) {
 ; CHECK-LABEL: define i32 @scmp_to_sub_small_range(
 ; CHECK-SAME: i32 range(i32 -1, 1) [[A:%.*]]) {
-; CHECK-NEXT:    [[SCMP:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 0)
+; CHECK-NEXT:    [[SCMP:%.*]] = sub nsw i32 [[A]], 0
 ; CHECK-NEXT:    ret i32 [[SCMP]]
 ;
   %scmp = call i32 @llvm.scmp(i32 %a, i32 0)
@@ -58,7 +60,7 @@ define i32 @scmp_to_sub_small_range(i32 range(i32 -1, 1) %a) {
 define i32 @ucmp_to_sub(i32 range(i32 0, 3) %a) {
 ; CHECK-LABEL: define i32 @ucmp_to_sub(
 ; CHECK-SAME: i32 range(i32 0, 3) [[A:%.*]]) {
-; CHECK-NEXT:    [[SCMP:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 1)
+; CHECK-NEXT:    [[SCMP:%.*]] = sub nsw i32 [[A]], 1
 ; CHECK-NEXT:    ret i32 [[SCMP]]
 ;
   %scmp = call i32 @llvm.scmp(i32 %a, i32 1)

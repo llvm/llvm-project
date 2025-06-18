@@ -245,9 +245,44 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
   const APInt *RHSC;
   // Remove masking operations.
   if (match(&Inst, m_And(m_Value(X), m_LowBitMask(RHSC)))) {
-    ConstantRange LRange = GetRange(Inst.getOperand(0));
+    ConstantRange LRange = GetRange(X);
     if (LRange.getUnsignedMax().ule(*RHSC))
       return X;
+  }
+
+  if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
+    Intrinsic::ID IID = II->getIntrinsicID();
+    // Check if we can simplify [us]cmp(X, Y) to X - Y.
+    if (IID == Intrinsic::scmp || IID == Intrinsic::ucmp) {
+      Value *LHS = II->getOperand(0);
+      Value *RHS = II->getOperand(1);
+      unsigned BitWidth = LHS->getType()->getScalarSizeInBits();
+      ConstantRange LRange = GetRange(LHS);
+      if (LRange.isSizeLargerThan(3))
+        return nullptr;
+      ConstantRange RRange = GetRange(RHS);
+      if (RRange.isSizeLargerThan(3))
+        return nullptr;
+      ConstantRange RHSLower = RRange.sub(APInt(BitWidth, 1));
+      ConstantRange RHSUpper = RRange.add(APInt(BitWidth, 1));
+      ICmpInst::Predicate Pred =
+          IID == Intrinsic::scmp ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
+      if (!RHSLower.icmp(Pred, LRange) || !LRange.icmp(Pred, RHSUpper))
+        return nullptr;
+      Instruction *Sub = BinaryOperator::CreateSub(LHS, RHS, Inst.getName(),
+                                                   Inst.getIterator());
+      if (IID == Intrinsic::scmp)
+        Sub->setHasNoSignedWrap(true);
+      Sub->setDebugLoc(Inst.getDebugLoc());
+      InsertedValues.insert(Sub);
+      if (Sub->getType() != Inst.getType()) {
+        Sub = CastInst::CreateIntegerCast(Sub, Inst.getType(), true, "",
+                                          Inst.getIterator());
+        Sub->setDebugLoc(Inst.getDebugLoc());
+        InsertedValues.insert(Sub);
+      }
+      return Sub;
+    }
   }
 
   return nullptr;
