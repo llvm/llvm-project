@@ -174,8 +174,8 @@ static void replaceCliCanonicalSpelling(
     std::unordered_map<std::string, std::variant<LanguageFeature, UsageWarning>> &cliOptions,
     std::array<std::string, ENUM_SIZE> &canonicalSpelling, T t, std::string &input) {
   cliOptions.erase({canonicalSpelling[EnumToInt(t)]});
-  canonicalSpelling[EnumToInt(t)] = std::string{input};
   cliOptions.insert({std::string{input}, {t}});
+  canonicalSpelling[EnumToInt(t)] = std::move(input);
 }
 
 void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
