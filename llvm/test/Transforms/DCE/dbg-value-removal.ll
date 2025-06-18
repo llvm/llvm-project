@@ -23,6 +23,8 @@ define dso_local i16 @main(i16 %a1, i16 %a2) local_unnamed_addr !dbg !7 {
 ; CHECK-NEXT:      #dbg_value(i16 [[A2]], [[META12]], !DIExpression(DW_OP_constu, 2, DW_OP_shr, DW_OP_stack_value), [[META18]])
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
+; CHECK-NEXT:      #dbg_declare(i16 %a1, !19, !DIExpression(), [[META18]])
+; CHECK-NEXT:      #dbg_label([[META21:![0-9]+]], [[META18]])
 ; CHECK-NEXT:      #dbg_value(i16 [[A1]], [[META13]], !DIExpression(DW_OP_LLVM_fragment, 0, 8), [[META18]])
 ; CHECK-NEXT:      #dbg_value(i16 [[A1]], [[META13]], !DIExpression(DW_OP_LLVM_fragment, 8, 8), [[META18]])
 ; CHECK-NEXT:    [[T2:%.*]] = call i16 @bar(i16 [[T1]])
@@ -63,6 +65,9 @@ bb1:
 bb2:
     #dbg_value(i16 %a1, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 8), !19)
     #dbg_value(i16 %a1, !13, !DIExpression(DW_OP_LLVM_fragment, 8, 8), !19)
+    ; Check dbg_declare and dbg_label don't interfere with the backward scan.
+    #dbg_declare(i16 %a1, !21, !DIExpression(), !16)
+    #dbg_label(!20, !16)
     #dbg_value(i16 %a1, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 8), !16)
     #dbg_value(i16 %a1, !13, !DIExpression(DW_OP_LLVM_fragment, 8, 8), !16)
   %t2 = call i16 @bar(i16 %t1)
@@ -105,3 +110,5 @@ declare i16 @bar(i16)
 !17 = !DILocation(line: 0, scope: !7, inlinedAt: !18)
 !18 = !DILocation(line: 1, scope: !7)
 !19 = !DILocation(line: 77, scope: !7)
+!20 = !DILabel(scope: !7, name: "label", file: !1, line: 3)
+!21 = !DILocalVariable(name: "z", scope: !7, file: !1, line: 10, type: !10)
