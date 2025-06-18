@@ -10752,23 +10752,54 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
     const SCEVMulExpr *LMul = cast<SCEVMulExpr>(LHS);
     const SCEVMulExpr *RMul = cast<SCEVMulExpr>(RHS);
 
-    if (LMul->getNumOperands() == 2 && RMul->getNumOperands() == 2 &&
-        LMul->getOperand(1) == RMul->getOperand(1)) {
-      // (X * Z) uicmp (Y * Z) ==> X uicmp Y
-      //     when neither multiply wraps and Z is non-zero.
-      if (ICmpInst::isUnsigned(Pred) && isKnownNonZero(LMul->getOperand(1)) &&
-          LMul->hasNoUnsignedWrap() && RMul->hasNoUnsignedWrap()) {
-        LHS = LMul->getOperand(0);
-        RHS = RMul->getOperand(0);
-        Changed = true;
+    auto FindCommonFactor =
+        [&](const SCEVMulExpr *LHS, const SCEVMulExpr *RHS,
+            bool (ScalarEvolution::*Predicate)(
+                const SCEV *)) -> std::optional<std::pair<int, int>> {
+      for (int i = 0, e = LHS->getNumOperands(); i != e; ++i)
+        for (int j = 0, e = RHS->getNumOperands(); j != e; ++j)
+          if (LHS->getOperand(i) == RHS->getOperand(j) &&
+              (this->*Predicate)(LHS->getOperand(i)))
+            return std::make_pair(i, j);
+
+      return std::nullopt;
+    };
+
+    // (X * Z) uicmp (Z * Y) ==> X uicmp Y
+    //     when neither multiply wraps and Z is non-zero.
+    if (ICmpInst::isUnsigned(Pred)) {
+      if (LMul->hasNoUnsignedWrap() && RMul->hasNoUnsignedWrap()) {
+        if (auto Indices = FindCommonFactor(LMul, RMul,
+                                            &ScalarEvolution::isKnownNonZero)) {
+          SmallVector<const SCEV *, 2> LHSOps;
+          append_range(LHSOps, LHS->operands().take_front(Indices->first));
+          append_range(LHSOps, LHS->operands().drop_front(Indices->first + 1));
+          LHS = getMulExpr(LHSOps);
+
+          SmallVector<const SCEV *, 2> RHSOps;
+          append_range(RHSOps, RHS->operands().take_front(Indices->second));
+          append_range(RHSOps, RHS->operands().drop_front(Indices->second + 1));
+          RHS = getMulExpr(RHSOps);
+
+          Changed = true;
+        }
       }
-      // (X * Z) sicmp (Y * Z) ==> X sicmp Y
-      //     when neither multiply wraps and Z is positive.
-      else if (ICmpInst::isSigned(Pred) &&
-               isKnownPositive(LMul->getOperand(1)) &&
-               LMul->hasNoSignedWrap() && RMul->hasNoSignedWrap()) {
-        LHS = LMul->getOperand(0);
-        RHS = RMul->getOperand(0);
+    }
+    // (X * Z) sicmp (Z * Y) ==> X sicmp Y
+    //     when neither multiply wraps and Z is positive.
+    else if (LMul->hasNoSignedWrap() && RMul->hasNoSignedWrap()) {
+      if (auto Indices =
+              FindCommonFactor(LMul, RMul, &ScalarEvolution::isKnownPositive)) {
+        SmallVector<const SCEV *, 2> LHSOps;
+        append_range(LHSOps, LHS->operands().take_front(Indices->first));
+        append_range(LHSOps, LHS->operands().drop_front(Indices->first + 1));
+        LHS = getMulExpr(LHSOps);
+
+        SmallVector<const SCEV *, 2> RHSOps;
+        append_range(RHSOps, RHS->operands().take_front(Indices->second));
+        append_range(RHSOps, RHS->operands().drop_front(Indices->second + 1));
+        RHS = getMulExpr(RHSOps);
+
         Changed = true;
       }
     }
