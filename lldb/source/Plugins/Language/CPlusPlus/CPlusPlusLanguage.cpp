@@ -360,7 +360,8 @@ static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
 
   auto info_or_err = GetAndValidateInfo(sc);
   if (!info_or_err) {
-    llvm::consumeError(info_or_err.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Language), info_or_err.takeError(),
+                   "Failed to retrieve demangled info: {0}");
     return false;
   }
   auto [demangled_name, info] = *info_or_err;
@@ -1897,7 +1898,8 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   case FormatEntity::Entry::Type::FunctionScope: {
     auto scope_or_err = GetDemangledScope(sc);
     if (!scope_or_err) {
-      llvm::consumeError(scope_or_err.takeError());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Language), scope_or_err.takeError(),
+                     "Failed to retrieve scope: {0}");
       return false;
     }
 
@@ -1909,7 +1911,8 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   case FormatEntity::Entry::Type::FunctionBasename: {
     auto name_or_err = GetDemangledBasename(sc);
     if (!name_or_err) {
-      llvm::consumeError(name_or_err.takeError());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Language), name_or_err.takeError(),
+                     "Failed to retrieve basename: {0}");
       return false;
     }
 
@@ -1921,7 +1924,9 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   case FormatEntity::Entry::Type::FunctionTemplateArguments: {
     auto template_args_or_err = GetDemangledTemplateArguments(sc);
     if (!template_args_or_err) {
-      llvm::consumeError(template_args_or_err.takeError());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Language),
+                     template_args_or_err.takeError(),
+                     "Failed to retrieve template arguments: {0}");
       return false;
     }
 
@@ -1956,7 +1961,8 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   case FormatEntity::Entry::Type::FunctionReturnRight: {
     auto return_rhs_or_err = GetDemangledReturnTypeRHS(sc);
     if (!return_rhs_or_err) {
-      llvm::consumeError(return_rhs_or_err.takeError());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Language), return_rhs_or_err.takeError(),
+                     "Failed to retrieve RHS return type: {0}");
       return false;
     }
 
@@ -1967,7 +1973,8 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   case FormatEntity::Entry::Type::FunctionReturnLeft: {
     auto return_lhs_or_err = GetDemangledReturnTypeLHS(sc);
     if (!return_lhs_or_err) {
-      llvm::consumeError(return_lhs_or_err.takeError());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Language), return_lhs_or_err.takeError(),
+                     "Failed to retrieve LHS return type: {0}");
       return false;
     }
 
@@ -1978,7 +1985,8 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   case FormatEntity::Entry::Type::FunctionQualifiers: {
     auto quals_or_err = GetDemangledFunctionQualifiers(sc);
     if (!quals_or_err) {
-      llvm::consumeError(quals_or_err.takeError());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Language), quals_or_err.takeError(),
+                     "Failed to retrieve function qualifiers: {0}");
       return false;
     }
 
@@ -1989,7 +1997,8 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   case FormatEntity::Entry::Type::FunctionSuffix: {
     auto suffix_or_err = GetDemangledFunctionSuffix(sc);
     if (!suffix_or_err) {
-      llvm::consumeError(suffix_or_err.takeError());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Language), suffix_or_err.takeError(),
+                     "Failed to retrieve suffix: {0}");
       return false;
     }
 
