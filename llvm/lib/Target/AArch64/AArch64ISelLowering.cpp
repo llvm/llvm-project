@@ -30427,5 +30427,5 @@ bool AArch64TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
 
 bool AArch64TargetLowering::shouldPreservePtrArith(const Function &F,
                                                    EVT VT) const {
-  return Subtarget->hasCPA() && Subtarget->hasCPACodegen();
+  return Subtarget->hasCPA() && UseFEATCPACodegen;
 }
