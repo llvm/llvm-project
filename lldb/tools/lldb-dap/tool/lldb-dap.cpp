@@ -127,7 +127,7 @@ EXAMPLES:
   parent over stdio. Passing a --connection URI will cause lldb-dap to listen
   for a connection in the specified mode.
 
-    lldb-dap --connection connection://localhost:<port>
+    lldb-dap --connection listen://localhost:<port>
 
   Passing --wait-for-debugger will pause the process at startup and wait for a
   debugger to attach to the process.
@@ -228,7 +228,7 @@ validateConnection(llvm::StringRef conn) {
 
   auto make_error = [conn]() -> llvm::Error {
     return llvm::createStringError(
-        "Unsupported connection specifier, expected 'accept://path' or "
+        "Unsupported connection specifier, expected 'accept:///path' or "
         "'listen://[host]:port', got '%s'.",
         conn.str().c_str());
   };
