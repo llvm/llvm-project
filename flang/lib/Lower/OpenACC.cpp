@@ -3028,6 +3028,8 @@ static Op createComputeOp(
   builder.setInsertionPointAfter(computeOp);
 
   // Create the exit operations after the region.
+  genDataExitOperations<mlir::acc::ReductionOp, mlir::acc::CopyoutOp>(
+      builder, reductionEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
       builder, copyEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::DeleteOp>(
@@ -3042,8 +3044,6 @@ static Op createComputeOp(
       builder, nocreateEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::PresentOp, mlir::acc::DeleteOp>(
       builder, presentEntryOperands, /*structured=*/true);
-  genDataExitOperations<mlir::acc::ReductionOp, mlir::acc::CopyoutOp>(
-      builder, reductionEntryOperands, /*structured=*/true);
 
   builder.restoreInsertionPoint(insPt);
   return computeOp;
