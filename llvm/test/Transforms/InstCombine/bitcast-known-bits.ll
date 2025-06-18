@@ -3,79 +3,32 @@
 
 ; PR125228
 
-define <16 x i8> @knownbits_bitcast_masked_shift(<16 x i8> %arg) {
+define <16 x i8> @knownbits_bitcast_masked_shift(<16 x i8> %arg1, <16 x i8> %arg2)  {
 ; CHECK-LABEL: define <16 x i8> @knownbits_bitcast_masked_shift(
-; CHECK-SAME: <16 x i8> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <16 x i8> [[ARG]] to <8 x i16>
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <8 x i16> [[BITCAST]], splat (i16 4)
-; CHECK-NEXT:    [[BITCAST1:%.*]] = bitcast <8 x i16> [[LSHR]] to <16 x i8>
-; CHECK-NEXT:    [[AND:%.*]] = and <16 x i8> [[BITCAST1]], splat (i8 3)
-; CHECK-NEXT:    [[SHL:%.*]] = shl <8 x i16> [[BITCAST]], splat (i16 4)
-; CHECK-NEXT:    [[BITCAST2:%.*]] = bitcast <8 x i16> [[SHL]] to <16 x i8>
-; CHECK-NEXT:    [[AND3:%.*]] = and <16 x i8> [[BITCAST2]], splat (i8 48)
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint <16 x i8> [[AND]], [[AND3]]
+; CHECK-SAME: <16 x i8> [[ARG1:%.*]], <16 x i8> [[ARG2:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = and <16 x i8> [[ARG1]], splat (i8 3)
+; CHECK-NEXT:    [[AND3:%.*]] = and <16 x i8> [[ARG2]], splat (i8 48)
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint <16 x i8> [[AND3]], [[AND]]
 ; CHECK-NEXT:    [[BITCAST4:%.*]] = bitcast <16 x i8> [[OR]] to <8 x i16>
 ; CHECK-NEXT:    [[SHL5:%.*]] = shl nuw <8 x i16> [[BITCAST4]], splat (i16 2)
 ; CHECK-NEXT:    [[BITCAST6:%.*]] = bitcast <8 x i16> [[SHL5]] to <16 x i8>
-; CHECK-NEXT:    [[AND7:%.*]] = and <16 x i8> [[BITCAST6]], splat (i8 -4)
+; CHECK-NEXT:    [[AND7:%.*]] = and <16 x i8> [[BITCAST6]], splat (i8 -52)
 ; CHECK-NEXT:    ret <16 x i8> [[AND7]]
 ;
-  %bitcast = bitcast <16 x i8> %arg to <8 x i16>
-  %lshr = lshr <8 x i16> %bitcast, splat (i16 4)
-  %bitcast1 = bitcast <8 x i16> %lshr to <16 x i8>
-  %and = and <16 x i8> %bitcast1, splat (i8 3)
-  %shl = shl <8 x i16> %bitcast, splat (i16 4)
-  %bitcast2 = bitcast <8 x i16> %shl to <16 x i8>
-  %and3 = and <16 x i8> %bitcast2, splat (i8 48)
-  %or = or disjoint <16 x i8> %and, %and3
+  %and = and <16 x i8> %arg1, splat (i8 3)
+  %and3 = and <16 x i8> %arg2, splat (i8 48)
+  %or = or disjoint <16 x i8> %and3, %and
   %bitcast4 = bitcast <16 x i8> %or to <8 x i16>
   %shl5 = shl nuw <8 x i16> %bitcast4, splat (i16 2)
   %bitcast6 = bitcast <8 x i16> %shl5 to <16 x i8>
-  %and7 = and <16 x i8> %bitcast6, splat (i8 -4)
+  %and7 = and <16 x i8> %bitcast6, splat (i8 -52)
   ret <16 x i8> %and7
 }
 
-define <16 x i8> @knownbits_shuffle_bitcast_masked_shift(<8 x i16> %arg) {
-; CHECK-LABEL: define <16 x i8> @knownbits_shuffle_bitcast_masked_shift(
-; CHECK-SAME: <8 x i16> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <8 x i16> [[ARG]] to <16 x i8>
-; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <16 x i8> [[BITCAST]], <16 x i8> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
-; CHECK-NEXT:    [[BITCAST1:%.*]] = bitcast <16 x i8> [[SHUFFLEVECTOR]] to <8 x i16>
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <8 x i16> [[BITCAST1]], splat (i16 4)
-; CHECK-NEXT:    [[BITCAST2:%.*]] = bitcast <8 x i16> [[LSHR]] to <16 x i8>
-; CHECK-NEXT:    [[AND:%.*]] = and <16 x i8> [[BITCAST2]], splat (i8 3)
-; CHECK-NEXT:    [[SHL:%.*]] = shl <8 x i16> [[BITCAST1]], splat (i16 4)
-; CHECK-NEXT:    [[BITCAST3:%.*]] = bitcast <8 x i16> [[SHL]] to <16 x i8>
-; CHECK-NEXT:    [[AND4:%.*]] = and <16 x i8> [[BITCAST3]], splat (i8 48)
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint <16 x i8> [[AND]], [[AND4]]
-; CHECK-NEXT:    [[BITCAST5:%.*]] = bitcast <16 x i8> [[OR]] to <8 x i16>
-; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw <8 x i16> [[BITCAST5]], splat (i16 2)
-; CHECK-NEXT:    [[BITCAST7:%.*]] = bitcast <8 x i16> [[SHL6]] to <16 x i8>
-; CHECK-NEXT:    [[AND8:%.*]] = and <16 x i8> [[BITCAST7]], splat (i8 -4)
-; CHECK-NEXT:    ret <16 x i8> [[AND8]]
-;
-  %bitcast = bitcast <8 x i16> %arg to <16 x i8>
-  %shufflevector = shufflevector <16 x i8> %bitcast, <16 x i8> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
-  %bitcast1 = bitcast <16 x i8> %shufflevector to <8 x i16>
-  %lshr = lshr <8 x i16> %bitcast1, splat (i16 4)
-  %bitcast2 = bitcast <8 x i16> %lshr to <16 x i8>
-  %and = and <16 x i8> %bitcast2, splat (i8 3)
-  %shl = shl <8 x i16> %bitcast1, splat (i16 4)
-  %bitcast3 = bitcast <8 x i16> %shl to <16 x i8>
-  %and4 = and <16 x i8> %bitcast3, splat (i8 48)
-  %or = or disjoint <16 x i8> %and, %and4
-  %bitcast5 = bitcast <16 x i8> %or to <8 x i16>
-  %shl6 = shl nuw <8 x i16> %bitcast5, splat (i16 2)
-  %bitcast7 = bitcast <8 x i16> %shl6 to <16 x i8>
-  %and8 = and <16 x i8> %bitcast7, splat (i8 -4)
-  ret <16 x i8> %and8
-}
-
-define <16 x i8> @knownbits_shuffle_masked_nibble_shift(<8 x i16> %arg) {
+define <16 x i8> @knownbits_shuffle_masked_nibble_shift(<16 x i8> %arg)  {
 ; CHECK-LABEL: define <16 x i8> @knownbits_shuffle_masked_nibble_shift(
-; CHECK-SAME: <8 x i16> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <8 x i16> [[ARG]] to <16 x i8>
-; CHECK-NEXT:    [[AND:%.*]] = and <16 x i8> [[BITCAST]], splat (i8 15)
+; CHECK-SAME: <16 x i8> [[ARG:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = and <16 x i8> [[ARG]], splat (i8 15)
 ; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <16 x i8> [[AND]], <16 x i8> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
 ; CHECK-NEXT:    [[BITCAST1:%.*]] = bitcast <16 x i8> [[SHUFFLEVECTOR]] to <8 x i16>
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <8 x i16> [[BITCAST1]], splat (i16 4)
@@ -83,8 +36,7 @@ define <16 x i8> @knownbits_shuffle_masked_nibble_shift(<8 x i16> %arg) {
 ; CHECK-NEXT:    [[AND3:%.*]] = and <16 x i8> [[BITCAST2]], splat (i8 -16)
 ; CHECK-NEXT:    ret <16 x i8> [[AND3]]
 ;
-  %bitcast = bitcast <8 x i16> %arg to <16 x i8>
-  %and = and <16 x i8> %bitcast, splat (i8 15)
+  %and = and <16 x i8> %arg, splat (i8 15)
   %shufflevector = shufflevector <16 x i8> %and, <16 x i8> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
   %bitcast1 = bitcast <16 x i8> %shufflevector to <8 x i16>
   %shl = shl nuw <8 x i16> %bitcast1, splat (i16 4)
@@ -93,11 +45,10 @@ define <16 x i8> @knownbits_shuffle_masked_nibble_shift(<8 x i16> %arg) {
   ret <16 x i8> %and3
 }
 
-define <16 x i8> @knownbits_reverse_shuffle_masked_shift(<8 x i16> %arg) {
+define <16 x i8> @knownbits_reverse_shuffle_masked_shift(<16 x i8> %arg)  {
 ; CHECK-LABEL: define <16 x i8> @knownbits_reverse_shuffle_masked_shift(
-; CHECK-SAME: <8 x i16> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <8 x i16> [[ARG]] to <16 x i8>
-; CHECK-NEXT:    [[AND:%.*]] = and <16 x i8> [[BITCAST]], splat (i8 15)
+; CHECK-SAME: <16 x i8> [[ARG:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = and <16 x i8> [[ARG]], splat (i8 15)
 ; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <16 x i8> [[AND]], <16 x i8> poison, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
 ; CHECK-NEXT:    [[BITCAST1:%.*]] = bitcast <16 x i8> [[SHUFFLEVECTOR]] to <8 x i16>
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <8 x i16> [[BITCAST1]], splat (i16 4)
@@ -105,8 +56,7 @@ define <16 x i8> @knownbits_reverse_shuffle_masked_shift(<8 x i16> %arg) {
 ; CHECK-NEXT:    [[AND3:%.*]] = and <16 x i8> [[BITCAST2]], splat (i8 -16)
 ; CHECK-NEXT:    ret <16 x i8> [[AND3]]
 ;
-  %bitcast = bitcast <8 x i16> %arg to <16 x i8>
-  %and = and <16 x i8> %bitcast, splat (i8 15)
+  %and = and <16 x i8> %arg, splat (i8 15)
   %shufflevector = shufflevector <16 x i8> %and, <16 x i8> poison, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
   %bitcast1 = bitcast <16 x i8> %shufflevector to <8 x i16>
   %shl = shl nuw <8 x i16> %bitcast1, splat (i16 4)
@@ -115,173 +65,63 @@ define <16 x i8> @knownbits_reverse_shuffle_masked_shift(<8 x i16> %arg) {
   ret <16 x i8> %and3
 }
 
-define <16 x i8> @knownbits_interleave_mul_extract_bit(<16 x i8> %arg) {
-; CHECK-LABEL: define <16 x i8> @knownbits_interleave_mul_extract_bit(
-; CHECK-SAME: <16 x i8> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <16 x i8> [[ARG]], <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <16 x i8> [[SHUFFLEVECTOR]] to <8 x i16>
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <8 x i16> [[BITCAST]], <i16 171, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <8 x i16> [[MUL]], splat (i16 15)
+define <16 x i8> @knownbits_extract_bit(<8 x i16> %arg)  {
+; CHECK-LABEL: define <16 x i8> @knownbits_extract_bit(
+; CHECK-SAME: <8 x i16> [[ARG:%.*]]) {
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <8 x i16> [[ARG]], splat (i16 15)
 ; CHECK-NEXT:    [[BITCAST1:%.*]] = bitcast <8 x i16> [[LSHR]] to <16 x i8>
 ; CHECK-NEXT:    [[AND:%.*]] = and <16 x i8> [[BITCAST1]], splat (i8 1)
 ; CHECK-NEXT:    ret <16 x i8> [[AND]]
 ;
-  %shufflevector = shufflevector <16 x i8> %arg, <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
-  %bitcast = bitcast <16 x i8> %shufflevector to <8 x i16>
-  %mul = mul nuw <8 x i16> %bitcast, <i16 171, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
-  %lshr = lshr <8 x i16> %mul, splat (i16 15)
+  %lshr = lshr <8 x i16> %arg, splat (i16 15)
   %bitcast1 = bitcast <8 x i16> %lshr to <16 x i8>
   %and = and <16 x i8> %bitcast1, splat (i8 1)
   ret <16 x i8> %and
 }
 
-define <16 x i8> @knownbits_reverse_shuffle_masked_ops(<8 x i16> %arg) {
-; CHECK-LABEL: define <16 x i8> @knownbits_reverse_shuffle_masked_ops(
-; CHECK-SAME: <8 x i16> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <8 x i16> [[ARG]] to <16 x i8>
-; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <16 x i8> [[BITCAST]], <16 x i8> poison, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
-; CHECK-NEXT:    [[BITCAST1:%.*]] = bitcast <16 x i8> [[SHUFFLEVECTOR]] to <8 x i16>
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <8 x i16> [[BITCAST1]], splat (i16 4)
-; CHECK-NEXT:    [[BITCAST2:%.*]] = bitcast <8 x i16> [[LSHR]] to <16 x i8>
-; CHECK-NEXT:    [[AND:%.*]] = and <16 x i8> [[BITCAST2]], splat (i8 3)
-; CHECK-NEXT:    [[SHL:%.*]] = shl <8 x i16> [[BITCAST1]], splat (i16 4)
-; CHECK-NEXT:    [[BITCAST3:%.*]] = bitcast <8 x i16> [[SHL]] to <16 x i8>
-; CHECK-NEXT:    [[AND4:%.*]] = and <16 x i8> [[BITCAST3]], splat (i8 48)
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint <16 x i8> [[AND]], [[AND4]]
-; CHECK-NEXT:    [[BITCAST5:%.*]] = bitcast <16 x i8> [[OR]] to <8 x i16>
-; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw <8 x i16> [[BITCAST5]], splat (i16 2)
-; CHECK-NEXT:    [[BITCAST7:%.*]] = bitcast <8 x i16> [[SHL6]] to <16 x i8>
-; CHECK-NEXT:    [[AND8:%.*]] = and <16 x i8> [[BITCAST7]], splat (i8 -4)
-; CHECK-NEXT:    ret <16 x i8> [[AND8]]
-;
-  %bitcast = bitcast <8 x i16> %arg to <16 x i8>
-  %shufflevector = shufflevector <16 x i8> %bitcast, <16 x i8> poison, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
-  %bitcast1 = bitcast <16 x i8> %shufflevector to <8 x i16>
-  %lshr = lshr <8 x i16> %bitcast1, splat (i16 4)
-  %bitcast2 = bitcast <8 x i16> %lshr to <16 x i8>
-  %and = and <16 x i8> %bitcast2, splat (i8 3)
-  %shl = shl <8 x i16> %bitcast1, splat (i16 4)
-  %bitcast3 = bitcast <8 x i16> %shl to <16 x i8>
-  %and4 = and <16 x i8> %bitcast3, splat (i8 48)
-  %or = or disjoint <16 x i8> %and, %and4
-  %bitcast5 = bitcast <16 x i8> %or to <8 x i16>
-  %shl6 = shl nuw <8 x i16> %bitcast5, splat (i16 2)
-  %bitcast7 = bitcast <8 x i16> %shl6 to <16 x i8>
-  %and8 = and <16 x i8> %bitcast7, splat (i8 -4)
-  ret <16 x i8> %and8
-}
-
-define <16 x i8> @knownbits_v4i32_to_v16i8_shuffle_masked_pipeline(<4 x i32> %arg) {
-; CHECK-LABEL: define <16 x i8> @knownbits_v4i32_to_v16i8_shuffle_masked_pipeline(
-; CHECK-SAME: <4 x i32> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <4 x i32> [[ARG]] to <16 x i8>
-; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <16 x i8> [[BITCAST]], <16 x i8> poison, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
-; CHECK-NEXT:    [[BITCAST1:%.*]] = bitcast <16 x i8> [[SHUFFLEVECTOR]] to <8 x i16>
-; CHECK-NEXT:    [[SHL:%.*]] = shl <8 x i16> [[BITCAST1]], splat (i16 4)
-; CHECK-NEXT:    [[BITCAST2:%.*]] = bitcast <8 x i16> [[SHL]] to <16 x i8>
-; CHECK-NEXT:    [[AND:%.*]] = and <16 x i8> [[BITCAST2]], splat (i8 48)
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <8 x i16> [[BITCAST1]], splat (i16 4)
-; CHECK-NEXT:    [[BITCAST3:%.*]] = bitcast <8 x i16> [[LSHR]] to <16 x i8>
-; CHECK-NEXT:    [[AND4:%.*]] = and <16 x i8> [[BITCAST3]], splat (i8 3)
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint <16 x i8> [[AND4]], [[AND]]
-; CHECK-NEXT:    [[BITCAST5:%.*]] = bitcast <16 x i8> [[OR]] to <8 x i16>
-; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw <8 x i16> [[BITCAST5]], splat (i16 2)
-; CHECK-NEXT:    [[BITCAST7:%.*]] = bitcast <8 x i16> [[SHL6]] to <16 x i8>
-; CHECK-NEXT:    [[AND8:%.*]] = and <16 x i8> [[BITCAST7]], splat (i8 -4)
-; CHECK-NEXT:    ret <16 x i8> [[AND8]]
-;
-  %bitcast = bitcast <4 x i32> %arg to <16 x i8>
-  %shufflevector = shufflevector <16 x i8> %bitcast, <16 x i8> poison, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
-  %bitcast1 = bitcast <16 x i8> %shufflevector to <8 x i16>
-  %shl = shl <8 x i16> %bitcast1, splat (i16 4)
-  %bitcast2 = bitcast <8 x i16> %shl to <16 x i8>
-  %and = and <16 x i8> %bitcast2, splat (i8 48)
-  %lshr = lshr <8 x i16> %bitcast1, splat (i16 4)
-  %bitcast3 = bitcast <8 x i16> %lshr to <16 x i8>
-  %and4 = and <16 x i8> %bitcast3, splat (i8 3)
-  %or = or disjoint <16 x i8> %and4, %and
-  %bitcast5 = bitcast <16 x i8> %or to <8 x i16>
-  %shl6 = shl nuw <8 x i16> %bitcast5, splat (i16 2)
-  %bitcast7 = bitcast <8 x i16> %shl6 to <16 x i8>
-  %and8 = and <16 x i8> %bitcast7, splat (i8 -4)
-  ret <16 x i8> %and8
-}
-
-define { i32, i1 } @knownbits_popcount_add_with_overflow(i32 %arg, i32 %arg1, i32 %arg2, i32 %arg3) {
+define { i32, i1 } @knownbits_popcount_add_with_overflow(<2 x i64> %arg1, <2 x i64> %arg2)  {
 ; CHECK-LABEL: define { i32, i1 } @knownbits_popcount_add_with_overflow(
-; CHECK-SAME: i32 [[ARG:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 [[ARG3:%.*]]) {
-; CHECK-NEXT:    [[INSERTELEMENT:%.*]] = insertelement <4 x i32> poison, i32 [[ARG2]], i64 0
-; CHECK-NEXT:    [[INSERTELEMENT4:%.*]] = insertelement <4 x i32> [[INSERTELEMENT]], i32 [[ARG3]], i64 1
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <4 x i32> [[INSERTELEMENT4]] to <2 x i64>
-; CHECK-NEXT:    [[CALL:%.*]] = tail call range(i64 0, 65) <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[BITCAST]])
+; CHECK-SAME: <2 x i64> [[ARG1:%.*]], <2 x i64> [[ARG2:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = tail call range(i64 0, 65) <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[ARG1]])
 ; CHECK-NEXT:    [[BITCAST5:%.*]] = bitcast <2 x i64> [[CALL]] to <4 x i32>
 ; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = extractelement <4 x i32> [[BITCAST5]], i64 0
-; CHECK-NEXT:    [[INSERTELEMENT6:%.*]] = insertelement <4 x i32> poison, i32 [[ARG]], i64 0
-; CHECK-NEXT:    [[INSERTELEMENT7:%.*]] = insertelement <4 x i32> [[INSERTELEMENT6]], i32 [[ARG1]], i64 1
-; CHECK-NEXT:    [[BITCAST8:%.*]] = bitcast <4 x i32> [[INSERTELEMENT7]] to <2 x i64>
-; CHECK-NEXT:    [[CALL9:%.*]] = tail call range(i64 0, 65) <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[BITCAST8]])
+; CHECK-NEXT:    [[CALL9:%.*]] = tail call range(i64 0, 65) <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[ARG2]])
 ; CHECK-NEXT:    [[BITCAST10:%.*]] = bitcast <2 x i64> [[CALL9]] to <4 x i32>
 ; CHECK-NEXT:    [[EXTRACTELEMENT11:%.*]] = extractelement <4 x i32> [[BITCAST10]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[EXTRACTELEMENT]], i32 [[EXTRACTELEMENT11]])
 ; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
 ;
-  %insertelement = insertelement <4 x i32> poison, i32 %arg2, i64 0
-  %insertelement4 = insertelement <4 x i32> %insertelement, i32 %arg3, i64 1
-  %bitcast = bitcast <4 x i32> %insertelement4 to <2 x i64>
-  %call = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %bitcast)
+  %call = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %arg1)
   %bitcast5 = bitcast <2 x i64> %call to <4 x i32>
   %extractelement = extractelement <4 x i32> %bitcast5, i64 0
-  %insertelement6 = insertelement <4 x i32> poison, i32 %arg, i64 0
-  %insertelement7 = insertelement <4 x i32> %insertelement6, i32 %arg1, i64 1
-  %bitcast8 = bitcast <4 x i32> %insertelement7 to <2 x i64>
-  %call9 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %bitcast8)
+  %call9 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %arg2)
   %bitcast10 = bitcast <2 x i64> %call9 to <4 x i32>
   %extractelement11 = extractelement <4 x i32> %bitcast10, i64 0
   %call12 = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %extractelement, i32 %extractelement11)
   ret { i32, i1 } %call12
 }
 
-define <16 x i8> @knownbits_shuffle_add_shift_v32i8(<32 x i8> %arg, <32 x i8> %arg1) local_unnamed_addr #0 {
+define <16 x i8> @knownbits_shuffle_add_shift_v32i8(<16 x i8> %arg1, <8 x i16> %arg2, <8 x i16> %arg3)  {
 ; CHECK-LABEL: define <16 x i8> @knownbits_shuffle_add_shift_v32i8(
-; CHECK-SAME: <32 x i8> [[ARG:%.*]], <32 x i8> [[ARG1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <32 x i8> [[ARG]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[SHUFFLEVECTOR2:%.*]] = shufflevector <32 x i8> [[ARG]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[ADD:%.*]] = add <16 x i8> [[SHUFFLEVECTOR]], [[SHUFFLEVECTOR2]]
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <16 x i8> [[ADD]] to <8 x i16>
-; CHECK-NEXT:    [[SHL:%.*]] = shl <8 x i16> [[BITCAST]], splat (i16 8)
-; CHECK-NEXT:    [[BITCAST3:%.*]] = bitcast <8 x i16> [[SHL]] to <16 x i8>
-; CHECK-NEXT:    [[BITCAST4:%.*]] = bitcast <32 x i8> [[ARG1]] to <16 x i16>
-; CHECK-NEXT:    [[SHUFFLEVECTOR5:%.*]] = shufflevector <16 x i16> [[BITCAST4]], <16 x i16> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[SHL6:%.*]] = shl <8 x i16> [[SHUFFLEVECTOR5]], splat (i16 8)
+; CHECK-SAME: <16 x i8> [[ARG1:%.*]], <8 x i16> [[ARG2:%.*]], <8 x i16> [[ARG3:%.*]]) {
+; CHECK-NEXT:    [[SHL6:%.*]] = shl <8 x i16> [[ARG2]], splat (i16 8)
 ; CHECK-NEXT:    [[BITCAST7:%.*]] = bitcast <8 x i16> [[SHL6]] to <16 x i8>
-; CHECK-NEXT:    [[BITCAST8:%.*]] = bitcast <32 x i8> [[ARG1]] to <16 x i16>
-; CHECK-NEXT:    [[SHUFFLEVECTOR9:%.*]] = shufflevector <16 x i16> [[BITCAST8]], <16 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[SHL10:%.*]] = shl <8 x i16> [[SHUFFLEVECTOR9]], splat (i16 8)
+; CHECK-NEXT:    [[SHL10:%.*]] = shl <8 x i16> [[ARG3]], splat (i16 8)
 ; CHECK-NEXT:    [[BITCAST11:%.*]] = bitcast <8 x i16> [[SHL10]] to <16 x i8>
 ; CHECK-NEXT:    [[ADD12:%.*]] = add <16 x i8> [[BITCAST11]], [[BITCAST7]]
-; CHECK-NEXT:    [[ADD13:%.*]] = add <16 x i8> [[ADD12]], [[BITCAST3]]
+; CHECK-NEXT:    [[ADD14:%.*]] = add <16 x i8> [[ADD12]], [[ARG1]]
 ; CHECK-NEXT:    [[BITCAST14:%.*]] = bitcast <16 x i8> [[ADD12]] to <8 x i16>
 ; CHECK-NEXT:    [[SHL15:%.*]] = shl <8 x i16> [[BITCAST14]], splat (i16 8)
 ; CHECK-NEXT:    [[BITCAST16:%.*]] = bitcast <8 x i16> [[SHL15]] to <16 x i8>
-; CHECK-NEXT:    [[ADD17:%.*]] = add <16 x i8> [[ADD13]], [[BITCAST16]]
-; CHECK-NEXT:    ret <16 x i8> [[ADD17]]
+; CHECK-NEXT:    [[ADD13:%.*]] = add <16 x i8> [[ADD14]], [[BITCAST16]]
+; CHECK-NEXT:    ret <16 x i8> [[ADD13]]
 ;
-  %shufflevector = shufflevector <32 x i8> %arg, <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %shufflevector2 = shufflevector <32 x i8> %arg, <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %add = add <16 x i8> %shufflevector, %shufflevector2
-  %bitcast = bitcast <16 x i8> %add to <8 x i16>
-  %shl = shl <8 x i16> %bitcast, splat (i16 8)
-  %bitcast3 = bitcast <8 x i16> %shl to <16 x i8>
-  %bitcast4 = bitcast <32 x i8> %arg1 to <16 x i16>
-  %shufflevector5 = shufflevector <16 x i16> %bitcast4, <16 x i16> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %shl6 = shl <8 x i16> %shufflevector5, splat (i16 8)
+  %shl6 = shl <8 x i16> %arg2, splat (i16 8)
   %bitcast7 = bitcast <8 x i16> %shl6 to <16 x i8>
-  %bitcast8 = bitcast <32 x i8> %arg1 to <16 x i16>
-  %shufflevector9 = shufflevector <16 x i16> %bitcast8, <16 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %shl10 = shl <8 x i16> %shufflevector9, splat (i16 8)
+  %shl10 = shl <8 x i16> %arg3, splat (i16 8)
   %bitcast11 = bitcast <8 x i16> %shl10 to <16 x i8>
   %add12 = add <16 x i8> %bitcast11, %bitcast7
-  %add13 = add <16 x i8> %add12, %bitcast3
+  %add13 = add <16 x i8> %add12, %arg1
   %bitcast14 = bitcast <16 x i8> %add12 to <8 x i16>
   %shl15 = shl <8 x i16> %bitcast14, splat (i16 8)
   %bitcast16 = bitcast <8 x i16> %shl15 to <16 x i8>
@@ -289,8 +129,6 @@ define <16 x i8> @knownbits_shuffle_add_shift_v32i8(<32 x i8> %arg, <32 x i8> %a
   ret <16 x i8> %add17
 }
 
-declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>) #0
+declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>)
 
-declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32) #0
-
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)
