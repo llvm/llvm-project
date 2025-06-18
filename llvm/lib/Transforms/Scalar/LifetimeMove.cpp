@@ -13,6 +13,8 @@
 #include "llvm/Transforms/Scalar/LifetimeMove.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
@@ -20,7 +22,7 @@
 #define DEBUG_TYPE "lifetime-move"
 
 namespace llvm {
-static bool mayEscape(Value *V, User *U) {
+static bool mayEscape(Value *V, User *U) { // TODO: Use PtrUseVisitor
   if (V == U->stripInBoundsOffsets() || isa<PHINode>(U))
     return true;
 
@@ -39,6 +41,8 @@ static bool mayEscape(Value *V, User *U) {
 namespace {
 class LifetimeMover {
   const DominatorTree &DT;
+  const PostDominatorTree &PDT;
+  const LoopInfo &LI;
 
   SmallVector<AllocaInst *, 4> Allocas;
   // Critical points are instructions where the crossing of a variable's
@@ -52,7 +56,8 @@ class LifetimeMover {
   SmallPtrSet<BasicBlock *, 2> UserBBs;
 
 public:
-  LifetimeMover(Function &F, const DominatorTree &DT);
+  LifetimeMover(Function &F, const DominatorTree &DT,
+                const PostDominatorTree &PDT, const LoopInfo &LI);
 
   void run();
 
@@ -64,7 +69,9 @@ private:
 };
 } // namespace
 
-LifetimeMover::LifetimeMover(Function &F, const DominatorTree &DT) : DT(DT) {
+LifetimeMover::LifetimeMover(Function &F, const DominatorTree &DT,
+                             const PostDominatorTree &PDT, const LoopInfo &LI)
+    : DT(DT), PDT(PDT), LI(LI) {
   for (Instruction &I : instructions(F)) {
     if (auto *AI = dyn_cast<AllocaInst>(&I))
       Allocas.push_back(AI);
@@ -115,15 +122,15 @@ void LifetimeMover::sinkLifetimeStartMarkers(AllocaInst *AI) {
 
     bool DomAll = llvm::all_of(UserBBs, [this, New](BasicBlock *UserBB) {
       // Instruction level analysis if lifetime and users share a common BB
-      if (UserBB == New->getParent()) {
-        return llvm::all_of(OtherUsers, [this, New, UserBB](Instruction *I) {
-          return UserBB != I->getParent() || DT.dominates(New, I);
+      BasicBlock *NewBB = New->getParent();
+      if (UserBB == NewBB) {
+        return llvm::all_of(OtherUsers, [New, UserBB](Instruction *I) {
+          return UserBB != I->getParent() || New->comesBefore(I);
         });
       }
       // Otherwise, BB level analysis is enough
       return DT.dominates(New, UserBB);
     });
-
     return DomAll ? New : Old;
   };
 
@@ -136,9 +143,11 @@ void LifetimeMover::sinkLifetimeStartMarkers(AllocaInst *AI) {
   // only used outside the region.
   if (DomPoint != AI) {
     // If existing position is better, do nothing
-    for (auto *P : LifetimeStarts)
-      if (isPotentiallyReachable(DomPoint, P) && (P == Update(DomPoint, P)))
+    for (auto *P : LifetimeStarts) {
+      bool Reachable = isPotentiallyReachable(DomPoint, P, nullptr, &DT, &LI);
+      if (Reachable && (P == Update(DomPoint, P)))
         return;
+    }
 
     auto *NewStart = LifetimeStarts[0]->clone();
     NewStart->replaceUsesOfWith(NewStart->getOperand(1), AI);
@@ -146,7 +155,7 @@ void LifetimeMover::sinkLifetimeStartMarkers(AllocaInst *AI) {
 
     // All the outsided lifetime.start markers are no longer necessary.
     for (auto *I : LifetimeStarts)
-      if (DT.dominates(I, DomPoint))
+      if (PDT.dominates(DomPoint, I))
         I->eraseFromParent();
   }
 }
@@ -158,12 +167,22 @@ void LifetimeMover::riseLifetimeEndMarkers() {
       return Old;
 
     bool DomAll = llvm::all_of(UserBBs, [this, New](BasicBlock *UserBB) {
-      if (UserBB == New->getParent()) {
-        return llvm::all_of(OtherUsers, [this, New, UserBB](Instruction *I) {
-          return UserBB != I->getParent() || DT.dominates(I, New);
+      BasicBlock *NewBB = New->getParent();
+      if (UserBB == NewBB) {
+        return llvm::all_of(OtherUsers, [New, UserBB](Instruction *I) {
+          return UserBB != I->getParent() || I->comesBefore(New);
         });
       }
-      return DT.dominates(UserBB, New->getParent());
+
+      if (auto *L = LI.getLoopFor(UserBB)) {
+        SmallVector<BasicBlock *, 2> EBs;
+        L->getOutermostLoop()->getExitingBlocks(EBs);
+        return llvm::all_of(EBs, [this, NewBB](BasicBlock *EB) {
+          return DT.dominates(EB, NewBB);
+        });
+      }
+
+      return DT.dominates(UserBB, NewBB);
     });
     return DomAll ? New : Old;
   };
@@ -173,9 +192,11 @@ void LifetimeMover::riseLifetimeEndMarkers() {
     DomPoint = Update(DomPoint, P);
 
   if (DomPoint != nullptr) {
-    for (auto *P : LifetimeEnds)
-      if (isPotentiallyReachable(P, DomPoint) && (P == Update(DomPoint, P)))
+    for (auto *P : LifetimeEnds) {
+      bool Reachable = isPotentiallyReachable(P, DomPoint, nullptr, &DT, &LI);
+      if (Reachable && (P == Update(DomPoint, P)))
         return;
+    }
 
     auto *NewEnd = LifetimeEnds[0]->clone();
     NewEnd->insertBefore(DomPoint->getIterator());
@@ -216,7 +237,9 @@ PreservedAnalyses LifetimeMovePass::run(Function &F,
     return PreservedAnalyses::all();
 
   const DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  LifetimeMover Mover(F, DT);
+  const PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
+  const LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
+  LifetimeMover Mover(F, DT, PDT, LI);
   Mover.run();
 
   PreservedAnalyses PA;
