@@ -223,10 +223,9 @@ public:
     return m_sym_file_impl->SetDebugInfoHadFrameVariableErrors();
   }
 
-  bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
-                            bool load_all_debug_info = true) override {
-    return m_sym_file_impl->GetSeparateDebugInfo(d, errors_only,
-                                                 load_all_debug_info);
+  bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
+                            bool errors_only) override {
+    return m_sym_file_impl->GetSeparateDebugInfo(d, errors_only);
   }
 
   lldb::TypeSP MakeType(lldb::user_id_t uid, ConstString name,
