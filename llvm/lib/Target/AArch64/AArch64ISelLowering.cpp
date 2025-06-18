@@ -29318,8 +29318,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthConcatVectorsToSVE(
   EVT SrcVT = SrcOp1.getValueType();
 
   // Match a splat of 128b segments that fit in a single register.
-  if (SrcVT.is128BitVector() && all_equal(Op.getNode()->op_values()) &&
-      VT.getSizeInBits() <= Subtarget->getMinSVEVectorSizeInBits()) {
+  if (SrcVT.is128BitVector() && all_equal(Op.getNode()->op_values())) {
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
     SDValue Splat =
         DAG.getNode(AArch64ISD::DUPLANE128, DL, ContainerVT,
