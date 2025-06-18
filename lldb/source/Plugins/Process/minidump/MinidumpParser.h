@@ -51,6 +51,8 @@ struct Range {
   }
 
   friend bool operator<(const Range &lhs, const Range &rhs) {
+    if (lhs.start == rhs.start)
+      return lhs.range_ref.size() < rhs.range_ref.size();
     return lhs.start < rhs.start;
   }
 };
