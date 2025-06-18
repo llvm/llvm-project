@@ -18,9 +18,23 @@
 #include <omp.h>
 
 namespace Fortran::runtime {
+namespace omp {
+
+typedef int32_t OMPDeviceTy;
+
+template <typename T> static T *getDevicePtr(T *anyPtr, OMPDeviceTy ompDevice) {
+  auto voidAnyPtr = reinterpret_cast<void *>(anyPtr);
+  // If not present on the device it should already be a device ptr
+  if (!omp_target_is_present(voidAnyPtr, ompDevice))
+    return anyPtr;
+  T *device_ptr = nullptr;
+#pragma omp target data use_device_ptr(anyPtr) device(ompDevice)
+  device_ptr = anyPtr;
+  return device_ptr;
+}
 
 RT_API_ATTRS static void Assign(Descriptor &to, const Descriptor &from,
-    Terminator &terminator, int flags, int32_t omp_device) {
+    Terminator &terminator, int flags, OMPDeviceTy omp_device) {
   std::size_t toElementBytes{to.ElementBytes()};
   std::size_t fromElementBytes{from.ElementBytes()};
   std::size_t toElements{to.Elements()};
@@ -31,42 +45,34 @@ RT_API_ATTRS static void Assign(Descriptor &to, const Descriptor &from,
   if (toElements != fromElements)
     terminator.Crash("Assign: toElements != fromElements");
 
-  void *host_to_ptr = to.raw().base_addr;
-  void *host_from_ptr = from.raw().base_addr;
+  // Get base addresses and calculate length
+  void *to_base = to.raw().base_addr;
+  void *from_base = from.raw().base_addr;
   size_t length = toElements * toElementBytes;
 
-  printf("assign length: %zu\n", length);
+  // Get device pointers after ensuring data is on device
+  void *to_ptr = getDevicePtr(to_base, omp_device);
+  void *from_ptr = getDevicePtr(from_base, omp_device);
 
-  if (!omp_target_is_present(host_to_ptr, omp_device))
-    terminator.Crash("Assign: !omp_target_is_present(host_to_ptr, omp_device)");
-  if (!omp_target_is_present(host_from_ptr, omp_device))
-    terminator.Crash(
-        "Assign: !omp_target_is_present(host_from_ptr, omp_device)");
+  // Perform copy between device pointers
+  int result = omp_target_memcpy(to_ptr, from_ptr, length,
+      /*dst_offset*/ 0, /*src_offset*/ 0, omp_device, omp_device);
 
-  printf("host_to_ptr: %p\n", host_to_ptr);
-#pragma omp target data use_device_ptr(host_to_ptr, host_from_ptr) device(omp_device)
-  {
-    printf("device_to_ptr: %p\n", host_to_ptr);
-    // TODO do we need to handle overlapping memory? does this function do that?
-    omp_target_memcpy(host_to_ptr, host_from_ptr, length, /*dst_offset*/ 0,
-        /*src_offset*/ 0, /*dst*/ omp_device, /*src*/ omp_device);
-  }
-
+  if (result != 0)
+    terminator.Crash("Assign: omp_target_memcpy failed");
   return;
 }
 
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 void RTDEF(Assign_omp)(Descriptor &to, const Descriptor &from,
-    const char *sourceFile, int sourceLine, int32_t omp_device) {
+    const char *sourceFile, int sourceLine, omp::OMPDeviceTy omp_device) {
   Terminator terminator{sourceFile, sourceLine};
-  // All top-level defined assignments can be recognized in semantics and
-  // will have been already been converted to calls, so don't check for
-  // defined assignment apart from components.
-  Assign(to, from, terminator,
+  omp::Assign(to, from, terminator,
       MaybeReallocate | NeedFinalization | ComponentCanBeDefinedAssignment,
       omp_device);
 }
-} // extern "C"
 
-}
+} // extern "C"
+} // namespace omp
+} // namespace Fortran::runtime
