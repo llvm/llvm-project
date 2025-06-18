@@ -79,9 +79,9 @@ test_simple_index_relocs:
 # COMPRESS:   24 01              global.set  1
 # COMPRESS:   08 00              throw       0
 
-  .globl test_special_relocs
-test_special_relocs:
-  .functype test_special_relocs () -> ()
+  .globl test_relative_relocs
+test_relative_relocs:
+  .functype test_relative_relocs () -> ()
   i32.const indirect_func_ret_i64@MBREL # R_WASM_MEMORY_ADDR_REL_SLEB
   drop
   i32.const func_ret_i32@TBREL          # R_WASM_TABLE_INDEX_REL_SLEB
@@ -90,11 +90,11 @@ test_special_relocs:
   drop
   end_function
 
-# CHECK:    test_special_relocs
+# CHECK:    test_relative_relocs
 # CHECK:      41 90 88 80 80 00  i32.const  1040
 # CHECK:      41 81 80 80 80 00  i32.const  1
 # CHECK:      41 83 80 80 80 00  i32.const  3
-# COMPRESS: test_special_relocs
+# COMPRESS: test_relative_relocs
 # COMPRESS:   41 90 08           i32.const  1040
 # COMPRESS:   41 01              i32.const  1
 # COMPRESS:   41 03              i32.const  3
@@ -127,4 +127,3 @@ indirect_func_ret_i32:
   .int8 43
   .int8 11
   .ascii  "bulk-memory"
-

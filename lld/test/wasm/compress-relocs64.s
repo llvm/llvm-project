@@ -44,9 +44,9 @@ test_memory_and_indirect_call_relocs:
 # COMPRESS:   29 03 98 08                          i64.load  1048
 # COMPRESS:   42 01                                i64.const 1
 
-  .globl test_special_relocs
-test_special_relocs:
-  .functype test_special_relocs () -> ()
+  .globl test_relative_relocs
+test_relative_relocs:
+  .functype test_relative_relocs () -> ()
   i64.const indirect_func_ret_i64@MBREL # R_WASM_MEMORY_ADDR_REL_SLEB64
   drop
   i64.const func_ret_i32@TBREL          # R_WASM_TABLE_INDEX_REL_SLEB64
@@ -55,11 +55,11 @@ test_special_relocs:
   drop
   end_function
 
-# CHECK:    test_special_relocs
+# CHECK:    test_relative_relocs
 # CHECK:      42 90 88 80 80 80 80 80 80 80 00  i64.const 1040
 # CHECK:      42 81 80 80 80 80 80 80 80 80 00  i64.const 1
 # CHECK:      42 83 80 80 80 80 80 80 80 80 00  i64.const 3
-# COMPRESS: test_special_relocs
+# COMPRESS: test_relative_relocs
 # COMPRESS:   42 90 08                          i64.const 1040
 # COMPRESS:   42 01                             i64.const 1
 # COMPRESS:   42 03                             i64.const 3
@@ -90,4 +90,3 @@ indirect_func_ret_i32:
   .int8 43
   .int8 11
   .ascii  "bulk-memory"
-
