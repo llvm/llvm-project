@@ -20,7 +20,7 @@
 ]
 
 //
-// Test the lowering of `vector.contract` using the `LowerContractionToSMMLAPattern`
+// Test the lowering of `vector.contract` using the `LowerContractionToNeonI8MMPattern`
 //
 // The operation that the `vector.contract` in this test performs is matrix
 // multiplication with accumulate
