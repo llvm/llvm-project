@@ -363,6 +363,17 @@ LLVM_ABI void updateProfileCallee(
     Function *Callee, int64_t EntryDelta,
     const ValueMap<const Value *, WeakTrackingVH> *VMap = nullptr);
 
+/// Adds `!noalias` and `!alias.scope` metadata for `CB`'s called function's
+/// `noalias` argument based memory accesses.
+void addAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
+                           const DataLayout &DL, AAResults *CalleeAAR,
+                           ClonedCodeInfo &InlinedFunctionInfo,
+                           bool UseNoAliasIntrinsic);
+
+/// Adds `!noalias` and `!alias.scope` metadata for `F`'s `noalias` argument
+/// based memory accesses.
+void addAliasScopeMetadata(Function &F);
+
 /// Find the 'llvm.experimental.noalias.scope.decl' intrinsics in the specified
 /// basic blocks and extract their scope. These are candidates for duplication
 /// when cloning.
