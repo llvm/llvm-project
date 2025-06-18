@@ -1001,8 +1001,10 @@ foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
 
     foreach sew = SchedSEWSet<mx>.val in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SMX60_VIEU], mx, sew, IsWorstCase>;
-      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+
+      // Slightly reduced latencies for e8mf1=4 (should be 8)
+      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
   }
 }
@@ -1010,8 +1012,8 @@ foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
 // Complex Gather and Compress
 foreach mx = ["M2", "M4", "M8"] in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
-  defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
+  defvar LMulLat = SMX60GetLMulCycles<mx>.c;
   let Latency = !mul(LMulLat, 2) in {
     defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVRGatherVI", [SMX60_VIEU], mx, IsWorstCase>;
@@ -1019,14 +1021,18 @@ foreach mx = ["M2", "M4", "M8"] in {
 
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCaseSEW = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
-    defvar GatherLat = !cond(!eq(mx, "M2"): 16, !eq(mx, "M4"): 64, /* mx=M8 */ true: 256);
-    defvar CompressLat = !cond(!eq(mx, "M2"): 10, !eq(mx, "M4"): 36, /* mx=M8 */ true: 136);
 
-    let Latency = GatherLat in {
+    defvar ALULat = SMX60GetVIALULatency<mx>.c;
+    defvar ExpLat = !mul(ALULat, ALULat);
+    let Latency = !mul(ALULat, ALULat) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
+    }
+
+    let Latency = !cond(!eq(sew, 8) : !mul(ExpLat, 2), true : ExpLat) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
 
+    defvar CompressLat = !cond(!eq(mx, "M2"): 10, !eq(mx, "M4"): 36, /* mx=M8 */ true: 136);
     let Latency = CompressLat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
