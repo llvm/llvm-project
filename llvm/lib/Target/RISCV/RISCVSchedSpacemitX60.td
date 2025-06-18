@@ -116,17 +116,17 @@ class SMX60GetVFFMALatency<string mx> {
 }
 
 // Latency for FP reduction operations (vfredusum, vfredmax, vfredmin)
-// Pattern: e16=15,21,33,57; e32=12,18,30,54; e64=9,15,27,51
-// Use worst-case e16 pattern: 15,21,33,57
+// Pattern: e16=12,12,15,21,33,57; e32=9,12,18,30,54; e64=9,15,27,51
+// Worst-case latency across element widths is used: 15,21,33,57
 class SMX60GetVFRedLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 15,
     !eq(mx, "M2") : 21,
     !eq(mx, "M4") : 33,
     !eq(mx, "M8") : 57,
-    !eq(mx, "MF2") : 15,
-    !eq(mx, "MF4") : 15,
-    !eq(mx, "MF8") : 15
+    !eq(mx, "MF2") : 12,
+    !eq(mx, "MF4") : 12,
+    !eq(mx, "MF8") : 12
   );
 }
 
@@ -841,7 +841,8 @@ foreach mx = SchedMxListF in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
     defvar FPRedLat = SMX60GetVFRedLatency<mx>.c;
 
-    // FP reduction operations: vfredusum.vs, vfredmax.vs, vfredmin.vs use worst-case 15,21,33,57
+    // FP reduction operations: vfredusum.vs, vfredmax.vs, vfredmin.vs use
+    // worst-case 12,12,15,21,33,57
     let Latency = FPRedLat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRedV_From", [SMX60_VIEU],
                                      mx, sew, IsWorstCase>;
