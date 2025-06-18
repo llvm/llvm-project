@@ -3,6 +3,7 @@
 // The tests here are similar to those in aarch64-toolchain.c, however
 // these tests need to create symlinks to test directory trees in order to
 // set up the environment and therefore shell support is required.
+// XFAIL: target={{.*}}-fuchsia{{.*}}
 // REQUIRES: shell
 // UNSUPPORTED: system-windows
 
