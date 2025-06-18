@@ -1522,7 +1522,7 @@ enum NodeType {
   // Outputs: [rv], output chain, glue
   PATCHPOINT,
 
-  // PTRADD represents pointer arithmatic semantics, for targets that opt in
+  // PTRADD represents pointer arithmetic semantics, for targets that opt in
   // using shouldPreservePtrArith().
   // ptr = PTRADD ptr, offset
   PTRADD,
