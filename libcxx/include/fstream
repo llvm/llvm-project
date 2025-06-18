@@ -696,7 +696,7 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const char*
   if (!__mdstr)
     return nullptr;
 
-  return __do_open(fopen(__s, __mdstr), __mode);
+  return __do_open(std::fopen(__s, __mdstr), __mode);
 }
 
 template <class _CharT, class _Traits>
@@ -761,7 +761,7 @@ typename basic_filebuf<_CharT, _Traits>::int_type basic_filebuf<_CharT, _Traits>
     std::memmove(this->eback(), this->egptr() - __unget_sz, __unget_sz * sizeof(char_type));
     if (__always_noconv_) {
       size_t __nmemb = static_cast<size_t>(this->egptr() - this->eback() - __unget_sz);
-      __nmemb        = ::fread(this->eback() + __unget_sz, 1, __nmemb, __file_);
+      __nmemb        = std::fread(this->eback() + __unget_sz, 1, __nmemb, __file_);
       if (__nmemb != 0) {
         this->setg(this->eback(), this->eback() + __unget_sz, this->eback() + __unget_sz + __nmemb);
         __c = traits_type::to_int_type(*this->gptr());
@@ -778,7 +778,7 @@ typename basic_filebuf<_CharT, _Traits>::int_type basic_filebuf<_CharT, _Traits>
           std::min(static_cast<size_t>(__ibs_ - __unget_sz), static_cast<size_t>(__extbufend_ - __extbufnext_));
       codecvt_base::result __r;
       __st_last_  = __st_;
-      size_t __nr = fread((void*)const_cast<char*>(__extbufnext_), 1, __nmemb, __file_);
+      size_t __nr = std::fread((void*)const_cast<char*>(__extbufnext_), 1, __nmemb, __file_);
       if (__nr != 0) {
         if (!__cv_)
           std::__throw_bad_cast();
@@ -855,7 +855,7 @@ typename basic_filebuf<_CharT, _Traits>::int_type basic_filebuf<_CharT, _Traits>
             return traits_type::eof();
         } else if (__r == codecvt_base::ok || __r == codecvt_base::partial) {
           size_t __nmemb = static_cast<size_t>(__extbe - __extbuf_);
-          if (fwrite(__extbuf_, 1, __nmemb, __file_) != __nmemb)
+          if (std::fwrite(__extbuf_, 1, __nmemb, __file_) != __nmemb)
             return traits_type::eof();
           if (__r == codecvt_base::partial) {
             this->setp(const_cast<char_type*>(__e), this->pptr());
@@ -990,12 +990,12 @@ int basic_filebuf<_CharT, _Traits>::sync() {
       char* __extbe;
       __r            = __cv_->unshift(__st_, __extbuf_, __extbuf_ + __ebs_, __extbe);
       size_t __nmemb = static_cast<size_t>(__extbe - __extbuf_);
-      if (fwrite(__extbuf_, 1, __nmemb, __file_) != __nmemb)
+      if (std::fwrite(__extbuf_, 1, __nmemb, __file_) != __nmemb)
         return -1;
     } while (__r == codecvt_base::partial);
     if (__r == codecvt_base::error)
       return -1;
-    if (fflush(__file_))
+    if (std::fflush(__file_))
       return -1;
   } else if (__cm_ & ios_base::in) {
     off_type __c;

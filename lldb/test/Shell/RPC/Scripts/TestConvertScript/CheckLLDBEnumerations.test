@@ -1,0 +1,17 @@
+RUN: mkdir -p %t/Outputs
+
+# Run the convert script on lldb-enumerations.h.
+RUN: %python %p/../../../../../scripts/convert-lldb-header-to-rpc-header.py %p/Inputs/lldb-enumerations.h %t/Outputs/lldb-rpc-enumerations.h
+
+# Check the output
+RUN: cat %t/Outputs/lldb-rpc-enumerations.h | FileCheck %s
+
+# The include guards must change from LLDB_LLDB_ENUMERATIONS_H to LLDB_RPC_ENUMERATIONS_H.
+CHECK: #ifndef LLDB_RPC_ENUMERATIONS_H
+CHECK: #define LLDB_RPC_ENUMERATIONS_H
+
+# Change the namespace to lldb_rpc. Also, the comment that closes the namespace should match the namespace.
+CHECK: namespace lldb_rpc {} // namespace lldb_rpc
+
+# The comment that closes the include guard should match the guard.
+CHECK: #endif // LLDB_RPC_ENUMERATIONS_H

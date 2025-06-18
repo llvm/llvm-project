@@ -13,6 +13,9 @@
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_VERSION_MAJOR
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "spirv-binary-utils"
 
 using namespace mlir;
 
@@ -67,8 +70,19 @@ uint32_t spirv::getPrefixedOpcode(uint32_t wordCount, spirv::Opcode opcode) {
 void spirv::encodeStringLiteralInto(SmallVectorImpl<uint32_t> &binary,
                                     StringRef literal) {
   // We need to encode the literal and the null termination.
-  auto encodingSize = literal.size() / 4 + 1;
-  auto bufferStartSize = binary.size();
+  size_t encodingSize = literal.size() / 4 + 1;
+  size_t sizeOfDataToCopy = literal.size();
+  if (encodingSize >= kMaxLiteralWordCount) {
+    // Reserve one word for the null termination.
+    encodingSize = kMaxLiteralWordCount - 1;
+    // Do not override the last word (null termination) when copying.
+    sizeOfDataToCopy = (encodingSize - 1) * 4;
+    LLVM_DEBUG(llvm::dbgs()
+               << "Truncating string literal to max size ("
+               << (kMaxLiteralWordCount - 1) << "): " << literal << "\n");
+  }
+  size_t bufferStartSize = binary.size();
   binary.resize(bufferStartSize + encodingSize, 0);
-  std::memcpy(binary.data() + bufferStartSize, literal.data(), literal.size());
+  std::memcpy(binary.data() + bufferStartSize, literal.data(),
+              sizeOfDataToCopy);
 }

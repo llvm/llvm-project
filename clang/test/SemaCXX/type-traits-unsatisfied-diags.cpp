@@ -166,7 +166,7 @@ static_assert(__builtin_is_replaceable(const volatile int));
 static_assert(__builtin_is_replaceable(void()));
 // expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(void ())}} \
 // expected-note@-1 {{'void ()' is not replaceable}} \
-// expected-note@-1 {{because it not a scalar or class type}}
+// expected-note@-1 {{because it is not a scalar or class type}}
 
 struct B {
  virtual ~B();
@@ -319,6 +319,29 @@ static_assert(__builtin_is_cpp_trivially_relocatable(UnionOfPolymorphic));
 // expected-note@#GH143325-UnionOfPolymorphic {{'UnionOfPolymorphic' defined here}}
 
 }
+
+struct GH143599 {  // expected-note 2 {{'GH143599' defined here}}
+    ~GH143599 ();
+     GH143599(const GH143599&);
+     GH143599& operator=(const GH143599&);
+};
+GH143599::~GH143599 () = default;
+GH143599::GH143599 (const GH143599&) = default;
+GH143599& GH143599::operator=(const GH143599&) = default;
+
+static_assert (__builtin_is_cpp_trivially_relocatable(GH143599));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_cpp_trivially_relocatable(GH143599)'}} \
+// expected-note@-1 {{'GH143599' is not trivially relocatable}} \
+// expected-note@-1 {{because it has a user provided copy constructor}} \
+// expected-note@-1 {{because it has a user provided copy assignment operator}} \
+// expected-note@-1 {{because it has a user-provided destructor}}
+
+static_assert (__builtin_is_replaceable(GH143599));
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(GH143599)'}} \
+// expected-note@-1 {{'GH143599' is not replaceable}} \
+// expected-note@-1 {{because it has a user provided copy constructor}} \
+// expected-note@-1 {{because it has a user provided copy assignment operator}} \
+// expected-note@-1 {{because it has a user-provided destructor}}
 
 namespace trivially_copyable {
 struct B {
