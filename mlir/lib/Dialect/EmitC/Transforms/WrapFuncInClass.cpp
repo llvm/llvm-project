@@ -62,11 +62,8 @@ public:
       Attribute argAttr = nullptr;
 
       fieldName = rewriter.getStringAttr("fieldName" + std::to_string(idx));
-      if (argAttrs && idx < argAttrs->size()) {
-        if (DictionaryAttr dictAttr =
-                dyn_cast<mlir::DictionaryAttr>((*argAttrs)[idx]))
-          argAttr = (*argAttrs)[idx];
-      }
+      if (argAttrs && idx < argAttrs->size())
+        argAttr = (*argAttrs)[idx];
 
       TypeAttr typeAttr = TypeAttr::get(val.getType());
       fields.push_back({fieldName, typeAttr});
