@@ -792,10 +792,7 @@ def Vector_FMAOp :
 
 def Vector_ToElementsOp : Vector_Op<"to_elements", [
     Pure,
-    TypesMatchWith<"operand element type matches result types",
-                   "source", "elements", "SmallVector<Type>("
-                   "::llvm::cast<VectorType>($_self).getNumElements(), "
-                   "::llvm::cast<VectorType>($_self).getElementType())">]> {
+    ShapedTypeMatchesElementCountAndTypes<"source", "elements">]> {
   let summary = "operation that decomposes a vector into all its scalar elements";
   let description = [{
     This operation decomposes all the scalar elements from a vector. The
@@ -843,10 +840,7 @@ def Vector_ToElementsOp : Vector_Op<"to_elements", [
 
 def Vector_FromElementsOp : Vector_Op<"from_elements", [
     Pure,
-    TypesMatchWith<"operand types match result element type",
-                   "dest", "elements", "SmallVector<Type>("
-                   "::llvm::cast<VectorType>($_self).getNumElements(), "
-                   "::llvm::cast<VectorType>($_self).getElementType())">]> {
+    ShapedTypeMatchesElementCountAndTypes<"dest", "elements">]> {
   let summary = "operation that defines a vector from scalar elements";
   let description = [{
     This operation defines a vector from one or multiple scalar elements. The
