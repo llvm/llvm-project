@@ -959,7 +959,7 @@ def Vector_InsertOp :
 def Vector_ScalableInsertOp :
   Vector_Op<"scalable.insert", [Pure,
        AllElementTypesMatch<["valueToStore", "dest"]>,
-       AllTypesMatch<["dest", "res"]>,
+       AllTypesMatch<["dest", "result"]>,
        PredOpTrait<"position is a multiple of the source length.",
         CPred<
           "(getPos() % getSourceVectorType().getNumElements()) == 0"
@@ -967,7 +967,7 @@ def Vector_ScalableInsertOp :
      Arguments<(ins VectorOfRank<[1]>:$valueToStore,
                     ScalableVectorOfRank<[1]>:$dest,
                     I64Attr:$pos)>,
-     Results<(outs ScalableVectorOfRank<[1]>:$res)> {
+     Results<(outs ScalableVectorOfRank<[1]>:$result)> {
   let summary = "insert subvector into scalable vector operation";
   // NOTE: This operation is designed to map to `llvm.vector.insert`, and its
   //       documentation should be kept aligned with LLVM IR:
@@ -1015,14 +1015,14 @@ def Vector_ScalableInsertOp :
 
 def Vector_ScalableExtractOp :
   Vector_Op<"scalable.extract", [Pure,
-       AllElementTypesMatch<["source", "res"]>,
+       AllElementTypesMatch<["source", "result"]>,
        PredOpTrait<"position is a multiple of the result length.",
         CPred<
           "(getPos() % getResultVectorType().getNumElements()) == 0"
         >>]>,
      Arguments<(ins ScalableVectorOfRank<[1]>:$source,
                     I64Attr:$pos)>,
-     Results<(outs VectorOfRank<[1]>:$res)> {
+     Results<(outs VectorOfRank<[1]>:$result)> {
   let summary = "extract subvector from scalable vector operation";
   // NOTE: This operation is designed to map to `llvm.vector.extract`, and its
   //       documentation should be kept aligned with LLVM IR:
@@ -1051,7 +1051,7 @@ def Vector_ScalableExtractOp :
   }];
 
   let assemblyFormat = [{
-    $source `[` $pos `]` attr-dict `:` type($res) `from` type($source)
+    $source `[` $pos `]` attr-dict `:` type($result) `from` type($source)
   }];
 
   let extraClassDeclaration = extraPoisonClassDeclaration # [{
@@ -1059,7 +1059,7 @@ def Vector_ScalableExtractOp :
       return ::llvm::cast<VectorType>(getSource().getType());
     }
     VectorType getResultVectorType() {
-      return ::llvm::cast<VectorType>(getRes().getType());
+      return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
 }
@@ -1068,10 +1068,10 @@ def Vector_InsertStridedSliceOp :
   Vector_Op<"insert_strided_slice", [Pure,
     PredOpTrait<"operand #0 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-    AllTypesMatch<["dest", "res"]>]>,
+    AllTypesMatch<["dest", "result"]>]>,
     Arguments<(ins AnyVectorOfNonZeroRank:$valueToStore, AnyVectorOfNonZeroRank:$dest, I64ArrayAttr:$offsets,
                I64ArrayAttr:$strides)>,
-    Results<(outs AnyVectorOfNonZeroRank:$res)> {
+    Results<(outs AnyVectorOfNonZeroRank:$result)> {
   let summary = "strided_slice operation";
   let description = [{
     Takes a k-D valueToStore vector, an n-D destination vector (n >= k), n-sized
