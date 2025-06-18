@@ -1138,23 +1138,11 @@ bool LoopIdiomRecognize::processLoopStridedStore(
              isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
     assert(isa<SCEVConstant>(StoreSizeSCEV) && "Expected constant store size");
 
-    Value *PatternArg;
-    IntegerType *PatternArgTy =
-        Builder.getIntNTy(DL->getTypeSizeInBits(PatternValue->getType()));
-
-    if (isa<ConstantInt>(PatternValue))
-      PatternArg = PatternValue;
-    else if (isa<ConstantFP>(PatternValue))
-      PatternArg = Builder.CreateBitCast(PatternValue, PatternArgTy);
-    else if (isa<PointerType>(PatternValue->getType()))
-      PatternArg = Builder.CreatePtrToInt(PatternValue, PatternArgTy);
-    else
-      report_fatal_error("Unexpected PatternValue type");
-
-    NewCall = Builder.CreateIntrinsic(Intrinsic::experimental_memset_pattern,
-                                      {DestInt8PtrTy, PatternArgTy, IntIdxTy},
-                                      {BasePtr, PatternArg, MemsetArg,
-                                       ConstantInt::getFalse(M->getContext())});
+    NewCall = Builder.CreateIntrinsic(
+        Intrinsic::experimental_memset_pattern,
+        {DestInt8PtrTy, PatternValue->getType(), IntIdxTy},
+        {BasePtr, PatternValue, MemsetArg,
+         ConstantInt::getFalse(M->getContext())});
     if (StoreAlignment)
       cast<MemSetPatternInst>(NewCall)->setDestAlignment(*StoreAlignment);
     NewCall->setAAMetadata(AATags);
