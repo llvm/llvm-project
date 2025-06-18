@@ -57,7 +57,6 @@ class TestMetadataRegisters(TestBase):
             + "'"
         )
 
-        print(cmd)
         call(cmd, shell=True)
 
         # Now load the corefile
