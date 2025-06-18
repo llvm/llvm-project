@@ -244,11 +244,13 @@ bool isReductionIterator(utils::IteratorType iteratorType) {
 }
 
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
-                            Value source, Value pad, bool nofold) {
+                            Value source, Value pad, bool nofold,
+                            ValueRange typeDynDims) {
   // Exit if `source` is not defined by an ExtractSliceOp.
   auto sliceOp = source.getDefiningOp<tensor::ExtractSliceOp>();
   if (!sliceOp)
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Search the `source` use-def chain for padded LinalgOps.
   Value current = sliceOp.getSource();
@@ -264,24 +266,28 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
   // Exit if the search fails to match a tensor::PadOp at the end of the matched
   // LinalgOp sequence.
   if (!padOp)
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if the padded result type does not match.
   if (sliceOp.getSource().getType() != type)
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if the LinalgOps are not high padded.
   if (llvm::any_of(padOp.getMixedLowPad(), [](OpFoldResult ofr) {
         return getConstantIntValue(ofr) != static_cast<int64_t>(0);
       }))
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if `padOpSliceOp`, which defines the slice used by
   // `padOp`, is rank-reducing.
   auto padOpSliceOp = padOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
   if (!padOpSliceOp ||
       sliceOp.getMixedSizes().size() != padOpSliceOp.getMixedSizes().size())
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if the sizes of the dynamic sizes of `sliceOp` do not match the size
   // of the slice padded by `padOp`.
@@ -290,14 +296,16 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
           [](std::tuple<OpFoldResult, OpFoldResult> it) {
             return !isEqualConstantIntOrValue(std::get<0>(it), std::get<1>(it));
           }))
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if the padding values do not match.
   Attribute padOpPadAttr, padAttr;
   Value padOpPad = padOp.getConstantPaddingValue();
   if (!padOpPad || !matchPattern(padOpPad, m_Constant(&padOpPadAttr)) ||
       !matchPattern(pad, m_Constant(&padAttr)) || padOpPadAttr != padAttr)
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Return the padded result if the padding values and sizes match.
   return sliceOp.getSource();

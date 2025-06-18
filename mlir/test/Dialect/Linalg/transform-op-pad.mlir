@@ -300,7 +300,7 @@ func.func @negative_no_ub_estimate(%arg0: tensor<?x12xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    // expected-error @below {{ailed to pad op}}
+    // expected-error @below {{failed to pad op}}
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       // Note - attempting to pad non-static dim
@@ -416,6 +416,6 @@ module attributes {transform.with_named_sequence} {
       padding_dimensions=[0, 1, 2],
       nofold_flags=[1, 1, 1]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
-    transform.yield
+    transform.yield 
   }
 }
