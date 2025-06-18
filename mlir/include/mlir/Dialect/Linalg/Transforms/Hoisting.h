@@ -27,8 +27,8 @@ namespace linalg {
 ///   dominated by the transfer_write (i.e. no aliasing between the write and
 ///   the read across the loop)
 ///   4. The source operands for vector.transfer_{read|write} do not originate
-///   from Ops implementing ViewLikeOpInterface (to reduce the risk of
-///   aliasing).
+///   from ops implementing ViewLikeOpInterface (to reduce the risk of
+///   aliasing), except memref::AssumeAlignmentOp.
 ///   5. If `verifyNonZeroTrip` is true, then the lower bound of the loop must
 ///   be statically smaller than the upper bound of the loop, guaranteeing that
 ///   the loop body will execute at least once.
@@ -39,8 +39,8 @@ namespace linalg {
 ///
 /// TODO: To further improve hoisting opportunities, fold aliasing memref
 /// operations into respective vector.transfer{read|write} operations and
-/// avoid using ops implementing ViewLikeOpInterface as the source for transfer
-/// Ops.
+/// avoid using ops implementing ViewLikeOpInterface, except
+/// memref::AssumeAlignmentOp, as the source for transfer ops.
 ///
 /// WARNING: This hoisting does not model parallelism and is generally incorrect
 /// when used on distributed loops with memref semantics!

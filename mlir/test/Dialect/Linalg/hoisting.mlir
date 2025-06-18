@@ -18,11 +18,13 @@ func.func @hoist_vector_transfer_pairs(
     %val: index, %lb : index, %ub : index, %step: index, %cmp: i1) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
+  %assume_align = memref.assume_alignment %memref0, 64 : memref<?x?xf32>
 
 // CHECK: vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<1xf32>
-// CHECK: scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args({{.*}}) -> (vector<1xf32>) {
+// CHECK: vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<1xf32>
+// CHECK: scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args({{.*}}) -> (vector<1xf32>, vector<1xf32>) {
 // CHECK:   vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<2xf32>
-// CHECK:   scf.for %[[J:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args({{.*}}) -> (vector<1xf32>, vector<2xf32>) {
+// CHECK:   scf.for %[[J:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args({{.*}}) -> (vector<1xf32>, vector<2xf32>, vector<1xf32>) {
 // CHECK:     vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<3xf32>
 // CHECK:     vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<4xf32>
 // CHECK:     "some_crippling_use"(%[[MEMREF4]]) : (memref<?x?xf32>) -> ()
@@ -43,6 +45,7 @@ func.func @hoist_vector_transfer_pairs(
 // CHECK:   scf.yield {{.*}} : vector<1xf32>
 // CHECK: }
 // CHECK: vector.transfer_write %{{.*}} : vector<1xf32>, memref<?x?xf32>
+// CHECK: vector.transfer_write %{{.*}} : vector<1xf32>, memref<?x?xf32>
 // CHECK: "unrelated_use"(%[[MEMREF1]]) : (memref<?x?xf32>) -> ()
   scf.for %i = %lb to %ub step %step {
     scf.for %j = %lb to %ub step %step {
@@ -53,6 +56,7 @@ func.func @hoist_vector_transfer_pairs(
       "some_crippling_use"(%memref4) : (memref<?x?xf32>) -> ()
       %r4 = vector.transfer_read %memref4[%c0, %c0], %cst: memref<?x?xf32>, vector<5xf32>
       %r5 = vector.transfer_read %memref5[%c0, %c0], %cst: memref<?x?xf32>, vector<6xf32>
+      %r6 = vector.transfer_read %assume_align[%c0, %c0], %cst: memref<?x?xf32>, vector<1xf32>
       "some_crippling_use"(%memref5) : (memref<?x?xf32>) -> ()
       %u0 = "some_use"(%r0) : (vector<1xf32>) -> vector<1xf32>
       %u1 = "some_use"(%r1) : (vector<2xf32>) -> vector<2xf32>
@@ -60,12 +64,14 @@ func.func @hoist_vector_transfer_pairs(
       %u3 = "some_use"(%r3) : (vector<4xf32>) -> vector<4xf32>
       %u4 = "some_use"(%r4) : (vector<5xf32>) -> vector<5xf32>
       %u5 = "some_use"(%r5) : (vector<6xf32>) -> vector<6xf32>
+      %u6 = "some_use"(%r6) : (vector<1xf32>) -> vector<1xf32>
       vector.transfer_write %u0, %memref1[%c0, %c0] : vector<1xf32>, memref<?x?xf32>
       vector.transfer_write %u1, %memref0[%i, %i] : vector<2xf32>, memref<?x?xf32>
       vector.transfer_write %u2, %memref2[%c0, %c0] : vector<3xf32>, memref<?x?xf32>
       vector.transfer_write %u3, %memref3[%c0, %c0] : vector<4xf32>, memref<?x?xf32>
       vector.transfer_write %u4, %memref4[%c0, %c0] : vector<5xf32>, memref<?x?xf32>
       vector.transfer_write %u5, %memref5[%c0, %c0] : vector<6xf32>, memref<?x?xf32>
+      vector.transfer_write %u6, %assume_align[%c0, %c0] : vector<1xf32>, memref<?x?xf32>
       "some_crippling_use"(%memref3) : (memref<?x?xf32>) -> ()
     }
     "unrelated_use"(%memref0) : (memref<?x?xf32>) -> ()
