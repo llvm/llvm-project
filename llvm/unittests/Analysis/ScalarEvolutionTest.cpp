@@ -1737,4 +1737,55 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering2) {
   SE.getAddExpr(Ops);
 }
 
+TEST_F(ScalarEvolutionsTest, SimplifyICmpOperandsCommutability) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "define i32 @foo(ptr %loc, i32 range(i32 0, 10) %a,"
+      "    i32 range(i32 100, 200) %b) vscale_range(1,1073741824) {"
+      "entry: "
+      "  %c = call i32 @llvm.vscale.i32()"
+      "  ret i32 %c "
+      "} ",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *VS = SE.getSCEV(getInstructionByName(F, "c"));
+    const SCEV *Two = SE.getConstant(A->getType(), 2);
+    SCEV::NoWrapFlags Flags = ScalarEvolution::setFlags(SCEV::FlagNUW,
+                                                        SCEV::FlagNSW);
+
+    SmallVector<const SCEV *, 2> Ops0 = {A, VS};
+    SmallVector<const SCEV *, 2> Ops1 = {B, VS};
+    SmallVector<const SCEV *, 3> Ops2 = {A, Two, VS};
+    SmallVector<const SCEV *, 3> Ops3 = {B, Two, VS};
+
+    const SCEV *AxVS = SE.getMulExpr(Ops0, Flags);
+    const SCEV *BxVS = SE.getMulExpr(Ops1, Flags);
+    const SCEV *Ax2xVS = SE.getMulExpr(Ops2, Flags);
+    const SCEV *Bx2xVS = SE.getMulExpr(Ops3, Flags);
+
+    // Verify VScale factor is available at different indices.
+    EXPECT_TRUE(isa<SCEVVScale>(cast<SCEVMulExpr>(AxVS)->getOperand(0)) !=
+                isa<SCEVVScale>(cast<SCEVMulExpr>(Ax2xVS)->getOperand(0)));
+    EXPECT_TRUE(isa<SCEVVScale>(cast<SCEVMulExpr>(BxVS)->getOperand(0)) !=
+                isa<SCEVVScale>(cast<SCEVMulExpr>(Bx2xVS)->getOperand(0)));
+
+    // Verify the common factor's position does not impede simplification.
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_SLT, AxVS, BxVS));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_SLT, AxVS, Bx2xVS));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_SLT, Ax2xVS, BxVS));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_SLT, Ax2xVS, Bx2xVS));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, AxVS, BxVS));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, AxVS, Bx2xVS));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, Ax2xVS, BxVS));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, Ax2xVS, Bx2xVS));
+  });
+}
+
 }  // end namespace llvm
