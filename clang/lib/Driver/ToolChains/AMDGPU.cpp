@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "CommonArgs.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"

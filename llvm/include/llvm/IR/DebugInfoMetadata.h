@@ -2437,25 +2437,21 @@ public:
   inline std::optional<const DILocation *>
   cloneByMultiplyingDuplicationFactor(unsigned DF) const;
 
-  /// When two instructions are combined into a single instruction we also
-  /// need to combine the original locations into a single location.
-  /// When the locations are the same we can use either location.
-  /// When they differ, we need a third location which is distinct from either.
-  /// If they share a common scope, use this scope and compare the line/column
-  /// pair of the locations with the common scope:
-  /// * if both match, keep the line and column;
-  /// * if only the line number matches, keep the line and set the column as 0;
-  /// * otherwise set line and column as 0.
-  /// If they do not share a common scope the location is ambiguous and can't be
-  /// represented in a line entry. In this case, set line and column as 0 and
-  /// use the scope of any location.
-  ///
-  /// \p LocA \p LocB: The locations to be merged.
+  /// Attempts to merge \p LocA and \p LocB into a single location; see
+  /// DebugLoc::getMergedLocation for more details.
+  /// NB: When merging the locations of instructions, prefer to use
+  /// DebugLoc::getMergedLocation(), as an instruction's DebugLoc may contain
+  /// additional metadata that will not be preserved when merging the unwrapped
+  /// DILocations.
   LLVM_ABI static DILocation *getMergedLocation(DILocation *LocA,
                                                 DILocation *LocB);
 
   /// Try to combine the vector of locations passed as input in a single one.
   /// This function applies getMergedLocation() repeatedly left-to-right.
+  /// NB: When merging the locations of instructions, prefer to use
+  /// DebugLoc::getMergedLocations(), as an instruction's DebugLoc may contain
+  /// additional metadata that will not be preserved when merging the unwrapped
+  /// DILocations.
   ///
   /// \p Locs: The locations to be merged.
   LLVM_ABI static DILocation *getMergedLocations(ArrayRef<DILocation *> Locs);

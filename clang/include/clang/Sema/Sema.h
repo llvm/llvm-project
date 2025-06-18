@@ -972,6 +972,13 @@ public:
   /// Calls \c Lexer::getLocForEndOfToken()
   SourceLocation getLocForEndOfToken(SourceLocation Loc, unsigned Offset = 0);
 
+  /// Calls \c Lexer::findNextToken() to find the next token, and if the
+  /// locations of both ends of the token can be resolved it return that
+  /// range; Otherwise it returns an invalid SourceRange.
+  SourceRange getRangeForNextToken(
+      SourceLocation Loc, bool IncludeMacros, bool IncludeComments,
+      std::optional<tok::TokenKind> ExpectedToken = std::nullopt);
+
   /// Retrieve the module loader associated with the preprocessor.
   ModuleLoader &getModuleLoader() const;
 
@@ -2644,6 +2651,16 @@ public:
   /// we do not want to diagnose such misaligned access (e.g. in conversions to
   /// void*).
   void DiscardMisalignedMemberAddress(const Type *T, Expr *E);
+
+  /// Returns true if `From` is a function or pointer to a function with the
+  /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
+  /// function without this attribute.
+  bool DiscardingCFIUncheckedCallee(QualType From, QualType To) const;
+
+  /// Returns true if `From` is a function or pointer to a function without the
+  /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
+  /// function with this attribute.
+  bool AddingCFIUncheckedCallee(QualType From, QualType To) const;
 
   /// This function calls Action when it determines that E designates a
   /// misaligned member due to the packed attribute. This is used to emit
@@ -6696,10 +6713,6 @@ public:
     /// this expression evaluation context.
     unsigned NumCleanupObjects;
 
-    /// The number of typos encountered during this expression evaluation
-    /// context (i.e. the number of TypoExprs created).
-    unsigned NumTypos;
-
     MaybeODRUseExprSet SavedMaybeODRUseExprs;
 
     /// The lambdas that are present within this context, if it
@@ -6796,7 +6809,7 @@ public:
                                       Decl *ManglingContextDecl,
                                       ExpressionKind ExprContext)
         : Context(Context), ParentCleanup(ParentCleanup),
-          NumCleanupObjects(NumCleanupObjects), NumTypos(0),
+          NumCleanupObjects(NumCleanupObjects),
           ManglingContextDecl(ManglingContextDecl), ExprContext(ExprContext),
           InDiscardedStatement(false), InImmediateFunctionContext(false),
           InImmediateEscalatingFunctionContext(false) {}
@@ -7129,8 +7142,7 @@ public:
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
                       ArrayRef<Expr *> Args = {},
-                      DeclContext *LookupCtx = nullptr,
-                      TypoExpr **Out = nullptr);
+                      DeclContext *LookupCtx = nullptr);
 
   /// If \p D cannot be odr-used in the current expression evaluation context,
   /// return a reason explaining why. Otherwise, return NOUR_None.
@@ -8663,6 +8675,7 @@ public:
   // FIXME: This is in Sema because it requires
   // overload resolution, can we move to ASTContext?
   bool IsCXXTriviallyRelocatableType(QualType T);
+  bool IsCXXTriviallyRelocatableType(const CXXRecordDecl &RD);
 
   //// Determines if a type is replaceable
   /// according to the C++26 rules.
@@ -8729,40 +8742,6 @@ public:
   ExprResult IgnoredValueConversions(Expr *E);
 
   ExprResult CheckUnevaluatedOperand(Expr *E);
-
-  /// Process any TypoExprs in the given Expr and its children,
-  /// generating diagnostics as appropriate and returning a new Expr if there
-  /// were typos that were all successfully corrected and ExprError if one or
-  /// more typos could not be corrected.
-  ///
-  /// \param E The Expr to check for TypoExprs.
-  ///
-  /// \param InitDecl A VarDecl to avoid because the Expr being corrected is its
-  /// initializer.
-  ///
-  /// \param RecoverUncorrectedTypos If true, when typo correction fails, it
-  /// will rebuild the given Expr with all TypoExprs degraded to RecoveryExprs.
-  ///
-  /// \param Filter A function applied to a newly rebuilt Expr to determine if
-  /// it is an acceptable/usable result from a single combination of typo
-  /// corrections. As long as the filter returns ExprError, different
-  /// combinations of corrections will be tried until all are exhausted.
-  ExprResult CorrectDelayedTyposInExpr(
-      Expr *E, VarDecl *InitDecl = nullptr,
-      bool RecoverUncorrectedTypos = false,
-      llvm::function_ref<ExprResult(Expr *)> Filter =
-          [](Expr *E) -> ExprResult { return E; });
-
-  ExprResult CorrectDelayedTyposInExpr(
-      ExprResult ER, VarDecl *InitDecl = nullptr,
-      bool RecoverUncorrectedTypos = false,
-      llvm::function_ref<ExprResult(Expr *)> Filter =
-          [](Expr *E) -> ExprResult { return E; }) {
-    return ER.isInvalid()
-               ? ER
-               : CorrectDelayedTyposInExpr(ER.get(), InitDecl,
-                                           RecoverUncorrectedTypos, Filter);
-  }
 
   IfExistsResult
   CheckMicrosoftIfExistsSymbol(Scope *S, CXXScopeSpec &SS,
@@ -9134,6 +9113,7 @@ public:
   /// Diagnose if an explicit lambda capture is unused. Returns true if a
   /// diagnostic is emitted.
   bool DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
+                                   SourceRange FixItRange,
                                    const sema::Capture &From);
 
   /// Build a FieldDecl suitable to hold the given capture.
@@ -9264,12 +9244,6 @@ public:
   /// for C++ records.
   llvm::FoldingSet<SpecialMemberOverloadResultEntry> SpecialMemberCache;
 
-  /// Holds TypoExprs that are created from `createDelayedTypo`. This is used by
-  /// `TransformTypos` in order to keep track of any TypoExprs that are created
-  /// recursively during typo correction and wipe them away if the correction
-  /// fails.
-  llvm::SmallVector<TypoExpr *, 2> TypoExprs;
-
   enum class AcceptableKind { Visible, Reachable };
 
   // Members have to be NamespaceDecl* or TranslationUnitDecl*.
@@ -9356,10 +9330,6 @@ public:
   LookupSpecialMember(CXXRecordDecl *D, CXXSpecialMemberKind SM, bool ConstArg,
                       bool VolatileArg, bool RValueThis, bool ConstThis,
                       bool VolatileThis);
-
-  typedef std::function<void(const TypoCorrection &)> TypoDiagnosticGenerator;
-  typedef std::function<ExprResult(Sema &, TypoExpr *, TypoCorrection)>
-      TypoRecoveryCallback;
 
   RedeclarationKind forRedeclarationInCurContext() const;
 
@@ -9714,51 +9684,6 @@ public:
                              const ObjCObjectPointerType *OPT = nullptr,
                              bool RecordFailure = true);
 
-  /// Try to "correct" a typo in the source code by finding
-  /// visible declarations whose names are similar to the name that was
-  /// present in the source code.
-  ///
-  /// \param TypoName the \c DeclarationNameInfo structure that contains
-  /// the name that was present in the source code along with its location.
-  ///
-  /// \param LookupKind the name-lookup criteria used to search for the name.
-  ///
-  /// \param S the scope in which name lookup occurs.
-  ///
-  /// \param SS the nested-name-specifier that precedes the name we're
-  /// looking for, if present.
-  ///
-  /// \param CCC A CorrectionCandidateCallback object that provides further
-  /// validation of typo correction candidates. It also provides flags for
-  /// determining the set of keywords permitted.
-  ///
-  /// \param TDG A TypoDiagnosticGenerator functor that will be used to print
-  /// diagnostics when the actual typo correction is attempted.
-  ///
-  /// \param TRC A TypoRecoveryCallback functor that will be used to build an
-  /// Expr from a typo correction candidate.
-  ///
-  /// \param MemberContext if non-NULL, the context in which to look for
-  /// a member access expression.
-  ///
-  /// \param EnteringContext whether we're entering the context described by
-  /// the nested-name-specifier SS.
-  ///
-  /// \param OPT when non-NULL, the search for visible declarations will
-  /// also walk the protocols in the qualified interfaces of \p OPT.
-  ///
-  /// \returns a new \c TypoExpr that will later be replaced in the AST with an
-  /// Expr representing the result of performing typo correction, or nullptr if
-  /// typo correction is not possible. If nullptr is returned, no diagnostics
-  /// will be emitted and it is the responsibility of the caller to emit any
-  /// that are needed.
-  TypoExpr *CorrectTypoDelayed(
-      const DeclarationNameInfo &Typo, Sema::LookupNameKind LookupKind,
-      Scope *S, CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
-      TypoDiagnosticGenerator TDG, TypoRecoveryCallback TRC,
-      CorrectTypoKind Mode, DeclContext *MemberContext = nullptr,
-      bool EnteringContext = false, const ObjCObjectPointerType *OPT = nullptr);
-
   /// Kinds of missing import. Note, the values of these enumerators correspond
   /// to %select values in diagnostics.
   enum class MissingImportKind {
@@ -9776,20 +9701,6 @@ public:
   void diagnoseMissingImport(SourceLocation Loc, const NamedDecl *Decl,
                              SourceLocation DeclLoc, ArrayRef<Module *> Modules,
                              MissingImportKind MIK, bool Recover);
-
-  struct TypoExprState {
-    std::unique_ptr<TypoCorrectionConsumer> Consumer;
-    TypoDiagnosticGenerator DiagHandler;
-    TypoRecoveryCallback RecoveryHandler;
-    TypoExprState();
-    TypoExprState(TypoExprState &&other) noexcept;
-    TypoExprState &operator=(TypoExprState &&other) noexcept;
-  };
-
-  const TypoExprState &getTypoExprState(TypoExpr *TE) const;
-
-  /// Clears the state of the given TypoExpr.
-  void clearDelayedTypo(TypoExpr *TE);
 
   /// Called on #pragma clang __debug dump II
   void ActOnPragmaDump(Scope *S, SourceLocation Loc, IdentifierInfo *II);
@@ -9813,22 +9724,14 @@ private:
   /// Determine if we could use all the declarations in the module.
   bool isUsableModule(const Module *M);
 
-  /// Helper for CorrectTypo and CorrectTypoDelayed used to create and
-  /// populate a new TypoCorrectionConsumer. Returns nullptr if typo correction
-  /// should be skipped entirely.
+  /// Helper for CorrectTypo used to create and populate a new
+  /// TypoCorrectionConsumer. Returns nullptr if typo correction should be
+  /// skipped entirely.
   std::unique_ptr<TypoCorrectionConsumer> makeTypoCorrectionConsumer(
       const DeclarationNameInfo &Typo, Sema::LookupNameKind LookupKind,
       Scope *S, CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
       DeclContext *MemberContext, bool EnteringContext,
       const ObjCObjectPointerType *OPT, bool ErrorRecovery);
-
-  /// The set of unhandled TypoExprs and their associated state.
-  llvm::MapVector<TypoExpr *, TypoExprState> DelayedTypos;
-
-  /// Creates a new TypoExpr AST node.
-  TypoExpr *createDelayedTypo(std::unique_ptr<TypoCorrectionConsumer> TCC,
-                              TypoDiagnosticGenerator TDG,
-                              TypoRecoveryCallback TRC, SourceLocation TypoLoc);
 
   /// Cache for module units which is usable for current module.
   llvm::DenseSet<const Module *> UsableModuleUnitsCache;
@@ -10254,9 +10157,15 @@ public:
                                  bool CStyle, bool &ObjCLifetimeConversion);
 
   /// Determine whether the conversion from FromType to ToType is a valid
-  /// conversion that strips "noexcept" or "noreturn" off the nested function
-  /// type.
-  bool IsFunctionConversion(QualType FromType, QualType ToType) const;
+  /// conversion that strips "noexcept" or "noreturn" or "cfi_unchecked_callee"
+  /// off the nested function type. This also checks if "cfi_unchecked_callee"
+  /// was added to the function type. If "cfi_unchecked_callee" is added and
+  /// `AddingCFIUncheckedCallee` is provided, it will be set to true. The same
+  /// thing applies for `DiscardingCFIUncheckedCallee` if the attribute is
+  /// discarded.
+  bool IsFunctionConversion(QualType FromType, QualType ToType,
+                            bool *DiscardingCFIUncheckedCallee = nullptr,
+                            bool *AddingCFIUncheckedCallee = nullptr) const;
 
   /// Same as `IsFunctionConversion`, but if this would return true, it sets
   /// `ResultTy` to `ToType`.
@@ -14007,7 +13916,7 @@ public:
                               Decl *D)
         : TmplAttr(A), Scope(S), NewDecl(D) {}
   };
-  typedef SmallVector<LateInstantiatedAttribute, 16> LateInstantiatedAttrVec;
+  typedef SmallVector<LateInstantiatedAttribute, 1> LateInstantiatedAttrVec;
 
   void InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                         const Decl *Pattern, Decl *Inst,

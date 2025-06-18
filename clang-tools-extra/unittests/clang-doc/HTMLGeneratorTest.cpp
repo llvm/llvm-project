@@ -407,37 +407,37 @@ TEST(HTMLGeneratorTest, emitCommentHTML) {
   I.Access = AccessSpecifier::AS_none;
 
   CommentInfo Top;
-  Top.Kind = "FullComment";
+  Top.Kind = CommentKind::CK_FullComment;
 
   Top.Children.emplace_back(std::make_unique<CommentInfo>());
   CommentInfo *BlankLine = Top.Children.back().get();
-  BlankLine->Kind = "ParagraphComment";
+  BlankLine->Kind = CommentKind::CK_ParagraphComment;
   BlankLine->Children.emplace_back(std::make_unique<CommentInfo>());
-  BlankLine->Children.back()->Kind = "TextComment";
+  BlankLine->Children.back()->Kind = CommentKind::CK_TextComment;
 
   Top.Children.emplace_back(std::make_unique<CommentInfo>());
   CommentInfo *Brief = Top.Children.back().get();
-  Brief->Kind = "ParagraphComment";
+  Brief->Kind = CommentKind::CK_ParagraphComment;
   Brief->Children.emplace_back(std::make_unique<CommentInfo>());
-  Brief->Children.back()->Kind = "TextComment";
+  Brief->Children.back()->Kind = CommentKind::CK_TextComment;
   Brief->Children.back()->Name = "ParagraphComment";
   Brief->Children.back()->Text = " Brief description.";
 
   Top.Children.emplace_back(std::make_unique<CommentInfo>());
   CommentInfo *Extended = Top.Children.back().get();
-  Extended->Kind = "ParagraphComment";
+  Extended->Kind = CommentKind::CK_ParagraphComment;
   Extended->Children.emplace_back(std::make_unique<CommentInfo>());
-  Extended->Children.back()->Kind = "TextComment";
+  Extended->Children.back()->Kind = CommentKind::CK_TextComment;
   Extended->Children.back()->Text = " Extended description that";
   Extended->Children.emplace_back(std::make_unique<CommentInfo>());
-  Extended->Children.back()->Kind = "TextComment";
+  Extended->Children.back()->Kind = CommentKind::CK_TextComment;
   Extended->Children.back()->Text = " continues onto the next line.";
 
   Top.Children.emplace_back(std::make_unique<CommentInfo>());
   CommentInfo *Entities = Top.Children.back().get();
-  Entities->Kind = "ParagraphComment";
+  Entities->Kind = CommentKind::CK_ParagraphComment;
   Entities->Children.emplace_back(std::make_unique<CommentInfo>());
-  Entities->Children.back()->Kind = "TextComment";
+  Entities->Children.back()->Kind = CommentKind::CK_TextComment;
   Entities->Children.back()->Name = "ParagraphComment";
   Entities->Children.back()->Text =
       " Comment with html entities: &, <, >, \", \'.";

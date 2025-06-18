@@ -67,8 +67,6 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
 
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
 
 namespace {
@@ -1057,7 +1055,7 @@ LogicalResult ModuleTranslation::convertBlockImpl(Block &bb,
       return failure();
 
     // Set the branch weight metadata on the translated instruction.
-    if (auto iface = dyn_cast<BranchWeightOpInterface>(op))
+    if (auto iface = dyn_cast<WeightedBranchOpInterface>(op))
       setBranchWeightsMetadata(iface);
   }
 
@@ -1549,6 +1547,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto tuneCpu = func.getTuneCpu())
     llvmFunc->addFnAttr("tune-cpu", *tuneCpu);
 
+  if (auto reciprocalEstimates = func.getReciprocalEstimates())
+    llvmFunc->addFnAttr("reciprocal-estimates", *reciprocalEstimates);
+
   if (auto preferVectorWidth = func.getPreferVectorWidth())
     llvmFunc->addFnAttr("prefer-vector-width", *preferVectorWidth);
 
@@ -2025,14 +2026,15 @@ void ModuleTranslation::setDereferenceableMetadata(
   inst->setMetadata(kindId, derefSizeNode);
 }
 
-void ModuleTranslation::setBranchWeightsMetadata(BranchWeightOpInterface op) {
-  DenseI32ArrayAttr weightsAttr = op.getBranchWeightsOrNull();
-  if (!weightsAttr)
+void ModuleTranslation::setBranchWeightsMetadata(WeightedBranchOpInterface op) {
+  SmallVector<uint32_t> weights;
+  llvm::transform(op.getWeights(), std::back_inserter(weights),
+                  [](int32_t value) { return static_cast<uint32_t>(value); });
+  if (weights.empty())
     return;
 
   llvm::Instruction *inst = isa<CallOp>(op) ? lookupCall(op) : lookupBranch(op);
   assert(inst && "expected the operation to have a mapping to an instruction");
-  SmallVector<uint32_t> weights(weightsAttr.asArrayRef());
   inst->setMetadata(
       llvm::LLVMContext::MD_prof,
       llvm::MDBuilder(getLLVMContext()).createBranchWeights(weights));
@@ -2230,9 +2232,6 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
                   StringRef name) {
   m->getContext()->getOrLoadDialect<LLVM::LLVMDialect>();
   auto llvmModule = std::make_unique<llvm::Module>(name, llvmContext);
-  // ModuleTranslation can currently only construct modules in the old debug
-  // info format, so set the flag accordingly.
-  llvmModule->setNewDbgInfoFormatFlag(false);
   if (auto dataLayoutAttr =
           m->getDiscardableAttr(LLVM::LLVMDialect::getDataLayoutAttrName())) {
     llvmModule->setDataLayout(cast<StringAttr>(dataLayoutAttr).getValue());
@@ -2328,7 +2327,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // Once we've finished constructing elements in the module, we should convert
   // it to use the debug info format desired by LLVM.
   // See https://llvm.org/docs/RemoveDIsDebugInfo.html
-  translator.llvmModule->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
+  translator.llvmModule->convertToNewDbgValues();
 
   // Add the necessary debug info module flags, if they were not encoded in MLIR
   // beforehand.
