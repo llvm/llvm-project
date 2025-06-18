@@ -250,8 +250,11 @@ struct __copy_impl {
         __storage_type __w   = *__result.__seg_;
         __storage_type __m   = std::__middle_mask<__storage_type>(__clz - __dn, __result.__ctz_);
         __w &= ~__m;
-        for (__storage_type __i = 0; __i < __dn; ++__i, ++__first)
-          __w |= static_cast<__storage_type>(*__first) << __result.__ctz_++;
+        for (__storage_type __i = 0; __i < __dn; ++__i, ++__first) {
+          if (*__first)
+            __w |= static_cast<__storage_type>(1) << (__result.__ctz_ + __i);
+        }
+        __result.__ctz_ += __dn;
         *__result.__seg_ = __w;
         if (__result.__ctz_ == __bits_per_word) {
           __result.__ctz_ = 0;
@@ -265,15 +268,19 @@ struct __copy_impl {
     __n -= __nw * __bits_per_word;
     for (; __nw; --__nw) {
       __storage_type __w = 0;
-      for (__storage_type __i = 0; __i < __bits_per_word; ++__i, ++__first)
-        __w |= static_cast<__storage_type>(*__first) << __i;
+      for (__storage_type __i = 0; __i < __bits_per_word; ++__i, ++__first) {
+        if (*__first)
+          __w |= static_cast<__storage_type>(1) << __i;
+      }
       *__result.__seg_++ = __w;
     }
     // do last partial word, if present
     if (__n) {
       __storage_type __w = 0;
-      for (__storage_type __i = 0; __i < __n; ++__i, ++__first)
-        __w |= static_cast<__storage_type>(*__first) << __i;
+      for (__storage_type __i = 0; __i < __n; ++__i, ++__first) {
+        if (*__first)
+          __w |= static_cast<__storage_type>(1) << __i;
+      }
       __storage_type __m = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
       *__result.__seg_ &= ~__m;
       *__result.__seg_ |= __w;

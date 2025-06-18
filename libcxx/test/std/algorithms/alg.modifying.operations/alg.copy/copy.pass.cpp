@@ -140,12 +140,12 @@ test_segmented_iterator() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::dequ
     assert(in == out);
   }
   { // Copy from segmented input to vector<bool> output
-    std::deque<bool> in(199, false);
-    for (std::size_t i = 0; i < in.size(); i += 2)
-      in[i] = true;
+    int a[] = {8, 4, 2, 1, 0};
+    std::deque<int> in(a, a + sizeof(a) / sizeof(int));
     std::vector<bool> out(in.size());
     std::copy(in.begin(), in.end(), out.begin());
-    assert(std::equal(in.begin(), in.end(), out.begin()));
+    for (std::deque<int>::size_type i = 0; i != in.size(); ++i)
+      assert(out[i] == (in[i] != 0));
   }
   { // Copy from vector<bool> input to segmented output
     std::vector<bool> in(199, false);
@@ -175,12 +175,14 @@ test_segmented_iterator() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::dequ
     assert(out == expected);
   }
   { // Copy from segmented input to vector<bool> output
-    std::vector<std::vector<int>> v{{1, 1}, {1, 0, 1}, {0, 0}, {1, 1, 1}, {1}, {1, 1, 1, 1}, {0, 0, 1, 1, 0, 1, 1}};
+    std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {0, 0}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
     auto jv = std::ranges::join_view(v);
-    std::vector<bool> expected(jv.begin(), jv.end());
-    std::vector<bool> out(expected.size());
+    std::vector<bool> out(std::ranges::distance(jv.begin(), jv.end()));
     std::copy(jv.begin(), jv.end(), out.begin());
-    assert(out == expected);
+    std::size_t i = 0;
+    for (auto it = jv.begin(); it != jv.end(); ++it, ++i)
+      assert(out[i] == (*it != 0));
+    assert(i == out.size());
   }
 #endif
 }
