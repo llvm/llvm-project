@@ -100,7 +100,9 @@ public:
       std::shared_ptr<swift::reflection::MemoryReader> reader,
       SwiftMetadataCache *swift_metadata_cache)
       : m_reflection_ctx(reader, swift_metadata_cache, &m_forwader),
-        m_type_converter(m_reflection_ctx.getBuilder()) {}
+        m_type_converter(m_reflection_ctx.getBuilder()) {
+    m_type_converter.enableErrorCache();
+  }
 
   std::optional<uint32_t> AddImage(
       llvm::function_ref<std::pair<swift::remote::RemoteRef<void>, uint64_t>(
@@ -180,8 +182,7 @@ public:
     auto *rti =
         m_type_converter.getClassInstanceTypeInfo(&type_ref, *start, provider);
     if (!rti)
-      return llvm::createStringError(
-          "converter returned nullptr typeinfo but no error");
+      return llvm::createStringError(m_type_converter.takeLastError());
     return *rti;
   }
 
@@ -201,23 +202,21 @@ public:
                provider ? provider->getId() : 0, ss.str());
     }
 
-    auto type_info = m_reflection_ctx.getTypeInfo(&type_ref, provider);
-    if (!type_info) {
-      std::stringstream ss;
-      ss << "Could not find type info for ";
-      type_ref.dump(ss);
-      ss << " in reflection metadata";
-      return llvm::createStringError(ss.str());
-    }
+    auto type_info_or_err = m_reflection_ctx.getTypeInfo(type_ref, provider);
+    if (!type_info_or_err)
+      return llvm::joinErrors(
+          llvm::createStringError(
+              "Could not find reflection metadata for type"),
+          type_info_or_err.takeError());
 
     if (log && log->GetVerbose()) {
       std::stringstream ss;
-      type_info->dump(ss);
+      type_info_or_err->dump(ss);
       LLDB_LOG(log,
                "[TargetReflectionContext::getTypeInfo] Found type info {0}",
                ss.str());
     }
-    return *type_info;
+    return *type_info_or_err;
   }
 
   llvm::Expected<const swift::reflection::TypeInfo &> GetTypeInfoFromInstance(
