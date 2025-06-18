@@ -1253,7 +1253,7 @@ void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
     return;
   }
 
-  if (RISCV::isFaultFirstLoad(MI)) {
+  if (RISCVInstrInfo::isFaultOnlyFirstLoad(MI)) {
     // Update AVL to vl-output of the fault first load.
     assert(MI.getOperand(1).getReg().isVirtual());
     if (LIS) {
@@ -1698,13 +1698,24 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
           MI.getOperand(0).setReg(DefReg);
           MI.getOperand(0).setIsDead(false);
 
+          // Move the AVL from NextMI to MI
+          dropAVLUse(MI.getOperand(1));
+          if (NextMI->getOperand(1).isImm())
+            MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
+          else
+            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(),
+                                              false);
+          dropAVLUse(NextMI->getOperand(1));
+
           // The def of DefReg moved to MI, so extend the LiveInterval up to
           // it.
           if (DefReg.isVirtual() && LIS) {
             LiveInterval &DefLI = LIS->getInterval(DefReg);
             SlotIndex MISlot = LIS->getInstructionIndex(MI).getRegSlot();
-            VNInfo *DefVNI = DefLI.getVNInfoAt(DefLI.beginIndex());
-            LiveInterval::Segment S(MISlot, DefLI.beginIndex(), DefVNI);
+            SlotIndex NextMISlot =
+                LIS->getInstructionIndex(*NextMI).getRegSlot();
+            VNInfo *DefVNI = DefLI.getVNInfoAt(NextMISlot);
+            LiveInterval::Segment S(MISlot, NextMISlot, DefVNI);
             DefLI.addSegment(S);
             DefVNI->def = MISlot;
             // Mark DefLI as spillable if it was previously unspillable
@@ -1714,13 +1725,6 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
             // the LiveInterval up to MI.
             LIS->shrinkToUses(&DefLI);
           }
-
-          dropAVLUse(MI.getOperand(1));
-          if (NextMI->getOperand(1).isImm())
-            MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
-          else
-            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(),
-                                              false);
 
           MI.setDesc(NextMI->getDesc());
         }
@@ -1752,7 +1756,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
 void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
   for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
     MachineInstr &MI = *I++;
-    if (RISCV::isFaultFirstLoad(MI)) {
+    if (RISCVInstrInfo::isFaultOnlyFirstLoad(MI)) {
       Register VLOutput = MI.getOperand(1).getReg();
       assert(VLOutput.isVirtual());
       if (!MI.getOperand(1).isDead()) {
@@ -1770,6 +1774,7 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
       }
       // We don't use the vl output of the VLEFF/VLSEGFF anymore.
       MI.getOperand(1).setReg(RISCV::X0);
+      MI.addRegisterDefined(RISCV::VL, MRI->getTargetRegisterInfo());
     }
   }
 }

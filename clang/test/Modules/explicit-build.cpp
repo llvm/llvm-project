@@ -153,7 +153,7 @@
 // RUN:            -fmodule-file=%t/a.pch \
 // RUN:            %s 2>&1 | FileCheck --check-prefix=CHECK-A-AS-PCH %s
 //
-// CHECK-A-AS-PCH: fatal error: AST file '{{.*}}a.pch' was not built as a module
+// CHECK-A-AS-PCH: fatal error: precompiled file '{{.*}}a.pch' was not built as a module
 
 // -------------------------------
 // Try to import a non-AST file with -fmodule-file=
@@ -164,7 +164,7 @@
 // RUN:            -fmodule-file=%t/not.pcm \
 // RUN:            %s 2>&1 | FileCheck --check-prefix=CHECK-BAD-FILE %s
 //
-// CHECK-BAD-FILE: fatal error: file '{{.*}}not.pcm' is not a valid precompiled module file: file too small to contain AST file magic
+// CHECK-BAD-FILE: fatal error: file '{{.*}}not.pcm' is not a valid module file: file too small to contain precompiled file magic
 
 // RUN: not %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
 // RUN:            -fmodule-file=%t/nonexistent.pcm \

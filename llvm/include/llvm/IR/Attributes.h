@@ -160,6 +160,8 @@ public:
   LLVM_ABI static Attribute
   getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
                        const std::optional<unsigned> &NumElemsArg);
+  LLVM_ABI static Attribute getWithAllocKind(LLVMContext &Context,
+                                             AllocFnKind Kind);
   LLVM_ABI static Attribute getWithVScaleRangeArgs(LLVMContext &Context,
                                                    unsigned MinValue,
                                                    unsigned MaxValue);

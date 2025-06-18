@@ -170,8 +170,6 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
     const auto PointerToStructType =
         hasUnqualifiedDesugaredType(pointerType(pointee(recordType())));
-    const auto PointerToStructTypeWithBinding =
-        type(PointerToStructType).bind("struct-type");
     const auto PointerToStructExpr =
         expr(hasType(hasCanonicalType(PointerToStructType)));
 
@@ -188,12 +186,10 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
         ignoringParenImpCasts(unaryOperator(hasOperatorName("*")));
 
     Finder->addMatcher(
-        expr(sizeOfExpr(anyOf(has(ignoringParenImpCasts(
-                                  expr(PointerToDetectedExpr, unless(DerefExpr),
-                                       unless(SubscriptExprWithZeroIndex),
-                                       unless(VarWithConstStrLiteralDecl),
-                                       unless(cxxThisExpr())))),
-                              has(PointerToStructTypeWithBinding))))
+        expr(sizeOfExpr(has(ignoringParenImpCasts(expr(
+                 PointerToDetectedExpr, unless(DerefExpr),
+                 unless(SubscriptExprWithZeroIndex),
+                 unless(VarWithConstStrLiteralDecl), unless(cxxThisExpr()))))))
             .bind("sizeof-pointer"),
         this);
   }
@@ -354,16 +350,9 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
          "suspicious usage of 'sizeof(char*)'; do you mean 'strlen'?")
         << E->getSourceRange();
   } else if (const auto *E = Result.Nodes.getNodeAs<Expr>("sizeof-pointer")) {
-    if (Result.Nodes.getNodeAs<Type>("struct-type")) {
-      diag(E->getBeginLoc(),
-           "suspicious usage of 'sizeof(A*)' on pointer-to-aggregate type; did "
-           "you mean 'sizeof(A)'?")
-          << E->getSourceRange();
-    } else {
-      diag(E->getBeginLoc(), "suspicious usage of 'sizeof()' on an expression "
-                             "of pointer type")
-          << E->getSourceRange();
-    }
+    diag(E->getBeginLoc(), "suspicious usage of 'sizeof()' on an expression "
+                           "of pointer type")
+        << E->getSourceRange();
   } else if (const auto *E = Result.Nodes.getNodeAs<BinaryOperator>(
                  "sizeof-compare-constant")) {
     diag(E->getOperatorLoc(),

@@ -45,13 +45,7 @@ define <1 x i64> @sqadd1d(ptr %A, ptr %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    adds x8, x9, x8
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x8, x9, x8, vs
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    sqadd d0, d0, d1
 ; CHECK-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp2 = load <1 x i64>, ptr %B
@@ -104,11 +98,7 @@ define <1 x i64> @uqadd1d(ptr %A, ptr %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    adds x8, x9, x8
-; CHECK-NEXT:    csinv x8, x8, xzr, lo
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    uqadd d0, d0, d1
 ; CHECK-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp2 = load <1 x i64>, ptr %B

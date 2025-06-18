@@ -72,7 +72,7 @@ else()
   # Note that we check this later (for both build types) but we can provide a
   # more useful error message when built in-tree. We assume that LLVM tools are
   # always available so don't warn here.
-  if( NOT clang IN_LIST LLVM_ENABLE_PROJECTS )
+  if( NOT LLVM_RUNTIMES_BUILD AND NOT clang IN_LIST LLVM_ENABLE_PROJECTS )
     message(FATAL_ERROR "Clang is not enabled, but is required to build libclc in-tree")
   endif()
 

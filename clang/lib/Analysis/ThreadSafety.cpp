@@ -1066,9 +1066,9 @@ private:
         return;
       }
 
-      FSet.removeLock(FactMan, Cp);
-      FSet.addLock(FactMan,
-                   std::make_unique<LockableFactEntry>(!Cp, LK_Exclusive, loc));
+      FSet.replaceLock(
+          FactMan, It,
+          std::make_unique<LockableFactEntry>(!Cp, LK_Exclusive, loc));
     } else if (Handler) {
       SourceLocation PrevLoc;
       if (const FactEntry *Neg = FSet.findLock(FactMan, !Cp))
