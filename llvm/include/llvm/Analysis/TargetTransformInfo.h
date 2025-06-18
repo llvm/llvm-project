@@ -1850,9 +1850,8 @@ public:
   /// \name Vector Predication Information
   /// @{
   /// Whether the target supports the %evl parameter of VP intrinsic efficiently
-  /// in hardware, for the given opcode and type/alignment. (see LLVM Language
-  /// Reference - "Vector Predication Intrinsics").
-  /// Use of %evl is discouraged when that is not the case.
+  /// in hardware. (see LLVM Language Reference - "Vector Predication
+  /// Intrinsics"). Use of %evl is discouraged when that is not the case.
   LLVM_ABI bool hasActiveVectorLength() const;
 
   /// Return true if sinking I's operands to the same basic block as I is
