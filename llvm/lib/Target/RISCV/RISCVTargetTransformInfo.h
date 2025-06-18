@@ -90,7 +90,7 @@ public:
 
   /// \name EVL Support for predicated vectorization.
   /// Whether the target supports the %evl parameter of VP intrinsic efficiently
-  /// in hardware (see LLVM Language Reference - "Vector Predication
+  /// in hardware. (see LLVM Language Reference - "Vector Predication
   /// Intrinsics",
   /// https://llvm.org/docs/LangRef.html#vector-predication-intrinsics and
   /// "IR-level VP intrinsics",
