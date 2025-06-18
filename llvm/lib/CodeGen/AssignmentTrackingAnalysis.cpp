@@ -2549,10 +2549,8 @@ removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
   // FnVarLocs, because wedges in FnVarLocs may only be separated by debug
   // instructions.
   for (const Instruction &I : reverse(*BB)) {
-    if (!isa<DbgVariableIntrinsic>(I)) {
-      // Sequence of consecutive defs ended. Clear map for the next one.
-      VariableDefinedBytes.clear();
-    }
+    // Sequence of consecutive defs ended. Clear map for the next one.
+    VariableDefinedBytes.clear();
 
     auto HandleLocsForWedge = [&](auto *WedgePosition) {
       // Get the location defs that start just before this instruction.
