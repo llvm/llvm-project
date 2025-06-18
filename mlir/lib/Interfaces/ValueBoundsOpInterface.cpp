@@ -146,7 +146,7 @@ ValueBoundsConstraintSet::Variable::Variable(AffineMap map,
 }
 
 ValueBoundsConstraintSet::Variable::Variable(AffineMap map,
-                                             ArrayRef<Value> mapOperands)
+                                             ValueRange mapOperands)
     : Variable(map, llvm::map_to_vector(mapOperands,
                                         [](Value v) { return Variable(v); })) {}
 
