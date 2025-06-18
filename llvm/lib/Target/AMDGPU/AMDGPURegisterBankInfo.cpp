@@ -5007,9 +5007,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_wave_reduce_add:
-    case Intrinsic::amdgcn_wave_reduce_uadd:
     case Intrinsic::amdgcn_wave_reduce_sub:
-    case Intrinsic::amdgcn_wave_reduce_usub:
     case Intrinsic::amdgcn_wave_reduce_min:
     case Intrinsic::amdgcn_wave_reduce_umin:
     case Intrinsic::amdgcn_wave_reduce_max:

@@ -306,9 +306,9 @@ def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
 // clang-format off
 defvar int_amdgcn_wave_reduce_ = "int_amdgcn_wave_reduce_";
 multiclass
-    AMDGPUWaveReducePseudoGenerator<string Op, string DataType, string Size> {
+    AMDGPUWaveReducePseudoGenerator<string Op, string DataType> {
   let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
-    def !toupper(Op) #"_PSEUDO_" #DataType #Size
+    def !toupper(Op) #"_PSEUDO_" #DataType
         : VPseudoInstSI<(outs SGPR_32 : $sdst),
                         (ins VSrc_b32 : $src, VSrc_b32 : $strategy),
                         [(set i32 : $sdst, (!cast<AMDGPUWaveReduce>(int_amdgcn_wave_reduce_ #Op) i32 : $src, i32 : $strategy))]> {}
@@ -317,17 +317,15 @@ multiclass
 // clang-format on
 
 // Input list : [Operation_name,
-//              type - Signed(I)/Unsigned(U)/Float(F)/Bitwise(B),
-//              Size_in_bits]
+//              type - Signed(I)/Unsigned(U)/Float(F)/Bitwise(B)]
 defvar Operations = [
-  ["umin", "U", "32"], ["min", "I", "32"], ["umax", "U", "32"],
-  ["max", "I", "32"], ["uadd", "U", "32"], ["add", "I", "32"],
-  ["usub", "U", "32"], ["sub", "I", "32"], ["and", "B", "32"],
-  ["or", "B", "32"], ["xor", "B", "32"]
+  ["umin", "U32"], ["min", "I32"], ["umax", "U32"], ["max", "I32"],
+  ["add", "I32"], ["sub", "I32"], ["and", "B32"], ["or", "B32"],
+  ["xor", "B32"]
 ];
 
 foreach Op = Operations in {
-  defm WAVE_REDUCE_ : AMDGPUWaveReducePseudoGenerator<Op[0], Op[1], Op[2]>;
+  defm WAVE_REDUCE_ : AMDGPUWaveReducePseudoGenerator<Op[0], Op[1]>;
 }
 
 let usesCustomInserter = 1, Defs = [VCC] in {

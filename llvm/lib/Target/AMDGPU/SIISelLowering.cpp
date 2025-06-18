@@ -5097,7 +5097,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
 
       bool IsWave32 = ST.isWave32();
       unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-      MCRegister ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+      unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
       unsigned CountReg =
           IsWave32 ? AMDGPU::S_BCNT1_I32_B32 : AMDGPU::S_BCNT1_I32_B64;
 
@@ -5262,12 +5262,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MAX_U32);
   case AMDGPU::WAVE_REDUCE_MAX_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MAX_I32);
-  case AMDGPU::WAVE_REDUCE_UADD_PSEUDO_U32:
-    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_ADD_I32);
   case AMDGPU::WAVE_REDUCE_ADD_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_ADD_I32);
-  case AMDGPU::WAVE_REDUCE_USUB_PSEUDO_U32:
-    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_SUB_I32);
   case AMDGPU::WAVE_REDUCE_SUB_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_SUB_I32);
   case AMDGPU::WAVE_REDUCE_AND_PSEUDO_B32:
