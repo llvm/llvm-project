@@ -894,8 +894,7 @@ foreach mx = ["MF4", "MF2"] in {
   }
 }
 
-// Complex vfredosum operations (integer LMULs)
-// From CSV: e16 = 48,96,192; e32 = 24,48,96,192; e64 = 12,24,48,96
+// Complex vfredosum operations
 foreach mx = ["M1", "M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
@@ -914,9 +913,26 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
   }
 }
 
-// vfwredosum.vs and vfwredusum.vs operations with measured latencies
-// From CSV: e16 = 64,128,256,512 = 64*LMUL; e32 = 32,64,128,256 = 32*LMUL; e64 = no data
-foreach mx = SchedMxListFWRed in {
+// Simple vfwredosum.vs and vfwredusum.vs operations
+foreach mx = ["MF4", "MF2"] in {
+  foreach sew = SchedSEWSet<mx, 1, 1>.val in {
+    defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFWRed, 1>.c;
+
+    // Slightly increased latencies for e32mf2=32 (should be 16)
+    defvar SimpleLatency = !cond(
+      !eq(mx, "MF4") : 16,
+      !eq(mx, "MF2") : 32
+    );
+
+    let Latency = SimpleLatency in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedV_From",  [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedOV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
+  }
+}
+
+// Complex vfwredosum.vs and vfwredusum.vs operations (integer LMULs)
+foreach mx = ["M1", "M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx, 1, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFWRed, 1>.c;
     defvar LMulLat = SMX60GetLMulCycles<mx>.c;
@@ -924,14 +940,12 @@ foreach mx = SchedMxListFWRed in {
     // Compute latency based on SEW and LMUL combination
     defvar LatencyMul = !cond(
       !eq(sew, 16) : 64,  // e16: 64*LMUL
-      !eq(sew, 32) : 32   // e32: 32*LMUL (e64 has no data, will use fallback)
+      !eq(sew, 32) : 32   // e32: 32*LMUL
     );
 
     let Latency = !mul(LMulLat, LatencyMul) in {
-      defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedV_From",  [SMX60_VIEU],
-                                      mx, sew, IsWorstCase>;
-      defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedOV_From", [SMX60_VIEU],
-                                     mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedV_From",  [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedOV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
   }
 }
