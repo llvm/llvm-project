@@ -404,6 +404,29 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
+define i16 @not.crc.non.canonical.not.multiple.8(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.non.canonical.not.multiple.8'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Unable to find a small constant byte-multiple trip count
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 4129
+  %check.sb = icmp slt i16 %crc, 0
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond = icmp samesign eq i32 %iv, 3
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
 define i16 @not.crc.non.canonical.loop.countdown(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.non.canonical.loop.countdown'
 ; CHECK-NEXT:  Did not find a hash algorithm
