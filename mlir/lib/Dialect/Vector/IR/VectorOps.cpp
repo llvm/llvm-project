@@ -2407,16 +2407,13 @@ foldToElementsFromElements(ToElementsOp toElementsOp,
   if (!fromElementsOp)
     return failure();
 
-  results.append(fromElementsOp.getElements().begin(),
-                 fromElementsOp.getElements().end());
+  llvm::append_range(results, fromElementsOp.getElements());
   return success();
 }
 
 LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
                                  SmallVectorImpl<OpFoldResult> &results) {
-  if (succeeded(foldToElementsFromElements(*this, results)))
-    return success();
-  return failure();
+  return foldToElementsFromElements(*this, results);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2462,9 +2459,7 @@ static OpFoldResult foldFromElementsToElements(FromElementsOp fromElementsOp) {
 }
 
 OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
-  if (auto result = foldFromElementsToElements(*this))
-    return result;
-  return {};
+  return foldFromElementsToElements(*this);
 }
 
 /// Rewrite a vector.from_elements into a vector.splat if all elements are the
