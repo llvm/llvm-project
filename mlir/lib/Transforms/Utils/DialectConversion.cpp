@@ -144,6 +144,8 @@ struct ConversionValueMapping {
   template <typename OldVal, typename NewVal>
   std::enable_if_t<IsValueVector<OldVal>::value && IsValueVector<NewVal>::value>
   map(OldVal &&oldVal, NewVal &&newVal) {
+    assert(mapping.find(oldVal) == mapping.end() &&
+           "attempting to overwrite mapping");
     LLVM_DEBUG({
       ValueVector next(newVal);
       while (true) {
