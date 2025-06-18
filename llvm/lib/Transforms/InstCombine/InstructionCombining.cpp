@@ -217,6 +217,26 @@ Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
   return Offset;
 }
 
+Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
+                                        GEPNoWrapFlags NW, Type *IdxTy,
+                                        bool RewriteGEPs) {
+  Value *Sum = nullptr;
+  for (GEPOperator *GEP : reverse(GEPs)) {
+    Value *Offset = EmitGEPOffset(GEP, RewriteGEPs);
+    if (Offset->getType() != IdxTy)
+      Offset = Builder.CreateVectorSplat(
+          cast<VectorType>(IdxTy)->getElementCount(), Offset);
+    if (Sum)
+      Sum = Builder.CreateAdd(Sum, Offset, "", NW.hasNoUnsignedWrap(),
+                              NW.isInBounds());
+    else
+      Sum = Offset;
+  }
+  if (!Sum)
+    return Constant::getNullValue(IdxTy);
+  return Sum;
+}
+
 /// Legal integers and common types are considered desirable. This is used to
 /// avoid creating instructions with types that may not be supported well by the
 /// the backend.
@@ -1718,6 +1738,15 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   // Bool selects with constant operands can be folded to logical ops.
   if (SI->getType()->isIntOrIntVectorTy(1))
     return nullptr;
+
+  // Avoid breaking min/max reduction pattern,
+  // which is necessary for vectorization later.
+  if (isa<MinMaxIntrinsic>(&Op))
+    for (Value *IntrinOp : Op.operands())
+      if (auto *PN = dyn_cast<PHINode>(IntrinOp))
+        for (Value *PhiOp : PN->operands())
+          if (PhiOp == &Op)
+            return nullptr;
 
   // Test if a FCmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
@@ -4758,11 +4787,7 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
     MoveBefore = *MoveBeforeOpt;
   }
 
-  // Don't move to the position of a debug intrinsic.
-  if (isa<DbgInfoIntrinsic>(MoveBefore))
-    MoveBefore = MoveBefore->getNextNonDebugInstruction()->getIterator();
-  // Re-point iterator to come after any debug-info records, if we're
-  // running in "RemoveDIs" mode
+  // Re-point iterator to come after any debug-info records.
   MoveBefore.setHeadBit(false);
 
   bool Changed = false;
@@ -5553,11 +5578,9 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
       continue;
 
     unsigned NumDeadInstInBB;
-    unsigned NumDeadDbgInstInBB;
-    std::tie(NumDeadInstInBB, NumDeadDbgInstInBB) =
-        removeAllNonTerminatorAndEHPadInstructions(&BB);
+    NumDeadInstInBB = removeAllNonTerminatorAndEHPadInstructions(&BB);
 
-    MadeIRChange |= NumDeadInstInBB + NumDeadDbgInstInBB > 0;
+    MadeIRChange |= NumDeadInstInBB != 0;
     NumDeadInst += NumDeadInstInBB;
   }
 
