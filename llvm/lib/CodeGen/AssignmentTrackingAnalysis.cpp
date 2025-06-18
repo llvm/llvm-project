@@ -1689,7 +1689,7 @@ void AssignmentTrackingLowering::processTaggedInstruction(
     return;
 
   LLVM_DEBUG(dbgs() << "processTaggedInstruction on " << I << "\n");
-  auto ProcessLinkedAssign = [&](DbgVariableRecord *Assign) {
+  for (DbgVariableRecord *Assign : LinkedDPAssigns) {
     VariableID Var = getVariableID(DebugVariable(Assign));
     // Something has gone wrong if VarsWithStackSlot doesn't contain a variable
     // that is linked to a store.
@@ -1760,54 +1760,49 @@ void AssignmentTrackingLowering::processTaggedInstruction(
       setLocKind(LiveSet, Var, LocKind::None);
     } break;
     }
-  };
-  for (DbgVariableRecord *DVR : LinkedDPAssigns)
-    ProcessLinkedAssign(DVR);
+  }
 }
 
-void AssignmentTrackingLowering::processDbgAssign(DbgVariableRecord *Assign,
+void AssignmentTrackingLowering::processDbgAssign(DbgVariableRecord *DbgAssign,
                                                   BlockInfo *LiveSet) {
-  auto ProcessDbgAssignImpl = [&](DbgVariableRecord *DbgAssign) {
-    // Only bother tracking variables that are at some point stack homed. Other
-    // variables can be dealt with trivially later.
-    if (!VarsWithStackSlot->count(getAggregate(DbgAssign)))
-      return;
+  // Only bother tracking variables that are at some point stack homed. Other
+  // variables can be dealt with trivially later.
+  if (!VarsWithStackSlot->count(getAggregate(DbgAssign)))
+    return;
 
-    VariableID Var = getVariableID(DebugVariable(DbgAssign));
-    Assignment AV = Assignment::make(getIDFromMarker(*DbgAssign), DbgAssign);
-    addDbgDef(LiveSet, Var, AV);
+  VariableID Var = getVariableID(DebugVariable(DbgAssign));
+  Assignment AV = Assignment::make(getIDFromMarker(*DbgAssign), DbgAssign);
+  addDbgDef(LiveSet, Var, AV);
 
-    LLVM_DEBUG(dbgs() << "processDbgAssign on " << *DbgAssign << "\n";);
-    LLVM_DEBUG(dbgs() << "   LiveLoc " << locStr(getLocKind(LiveSet, Var))
-                      << " -> ");
+  LLVM_DEBUG(dbgs() << "processDbgAssign on " << *DbgAssign << "\n";);
+  LLVM_DEBUG(dbgs() << "   LiveLoc " << locStr(getLocKind(LiveSet, Var))
+                    << " -> ");
 
-    // Check if the DebugValue and StackHomeValue both hold the same
-    // Assignment.
-    if (hasVarWithAssignment(LiveSet, BlockInfo::Stack, Var, AV)) {
-      // They match. We can use the stack home because the debug intrinsics
-      // state that an assignment happened here, and we know that specific
-      // assignment was the last one to take place in memory for this variable.
-      LocKind Kind;
-      if (DbgAssign->isKillAddress()) {
-        LLVM_DEBUG(
-            dbgs()
-                << "Val, Stack matches Debug program but address is killed\n";);
-        Kind = LocKind::Val;
-      } else {
-        LLVM_DEBUG(dbgs() << "Mem, Stack matches Debug program\n";);
-        Kind = LocKind::Mem;
-      };
-      setLocKind(LiveSet, Var, Kind);
-      emitDbgValue(Kind, DbgAssign, DbgAssign);
+  // Check if the DebugValue and StackHomeValue both hold the same
+  // Assignment.
+  if (hasVarWithAssignment(LiveSet, BlockInfo::Stack, Var, AV)) {
+    // They match. We can use the stack home because the debug intrinsics
+    // state that an assignment happened here, and we know that specific
+    // assignment was the last one to take place in memory for this variable.
+    LocKind Kind;
+    if (DbgAssign->isKillAddress()) {
+      LLVM_DEBUG(
+          dbgs()
+              << "Val, Stack matches Debug program but address is killed\n";);
+      Kind = LocKind::Val;
     } else {
-      // The last assignment to the memory location isn't the one that we want
-      // to show to the user so emit a dbg.value(Value). Value may be undef.
-      LLVM_DEBUG(dbgs() << "Val, Stack contents is unknown\n";);
-      setLocKind(LiveSet, Var, LocKind::Val);
-      emitDbgValue(LocKind::Val, DbgAssign, DbgAssign);
-    }
-  };
-  ProcessDbgAssignImpl(Assign);
+      LLVM_DEBUG(dbgs() << "Mem, Stack matches Debug program\n";);
+      Kind = LocKind::Mem;
+    };
+    setLocKind(LiveSet, Var, Kind);
+    emitDbgValue(Kind, DbgAssign, DbgAssign);
+  } else {
+    // The last assignment to the memory location isn't the one that we want
+    // to show to the user so emit a dbg.value(Value). Value may be undef.
+    LLVM_DEBUG(dbgs() << "Val, Stack contents is unknown\n";);
+    setLocKind(LiveSet, Var, LocKind::Val);
+    emitDbgValue(LocKind::Val, DbgAssign, DbgAssign);
+  }
 }
 
 void AssignmentTrackingLowering::processDbgValue(DbgVariableRecord *DbgValue,
