@@ -15583,7 +15583,7 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
   // instantiated.
   if (SemaRef.CurContext->isDependentContext())
     return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt,
-                                       nullptr, nullptr);
+                                       NumLoops, nullptr, nullptr);
 
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting a single-dimensional loop iteration space");
@@ -15742,7 +15742,7 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
       ForStmt(Context, Init.get(), Cond.get(), nullptr, Incr.get(),
               ReversedBody, LoopHelper.Init->getBeginLoc(),
               LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
-  return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt,
+  return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt, NumLoops,
                                      ReversedFor,
                                      buildPreInits(Context, PreInits));
 }
