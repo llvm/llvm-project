@@ -15,7 +15,7 @@
 #ifndef _LIBSYCL_PLATFORM_HPP
 #define _LIBSYCL_PLATFORM_HPP
 
-#include <sycl/detail/config.hpp>
+#include <sycl/__detail/config.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
