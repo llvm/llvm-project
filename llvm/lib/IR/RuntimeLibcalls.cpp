@@ -36,9 +36,6 @@ static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
   LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, __aarch64_ldset)
   LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, __aarch64_ldclr)
   LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, __aarch64_ldeor)
-#undef LCALLNAMES
-#undef LCALLNAME4
-#undef LCALLNAME5
 
   if (TT.isWindowsArm64EC()) {
     // FIXME: are there calls we need to exclude from this?
@@ -54,7 +51,18 @@ static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
 #undef LIBCALL_NO_NAME
+
+    LCALLNAME5(RTLIB::OUTLINE_ATOMIC_CAS, #__aarch64_cas)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_SWP, #__aarch64_swp)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDADD, #__aarch64_ldadd)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, #__aarch64_ldset)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, #__aarch64_ldclr)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, #__aarch64_ldeor)
   }
+
+#undef LCALLNAMES
+#undef LCALLNAME4
+#undef LCALLNAME5
 }
 
 static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT) {
