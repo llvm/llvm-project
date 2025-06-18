@@ -1117,13 +1117,6 @@ bool isHoistableAndSinkableInst(Instruction &I) {
           isa<ShuffleVectorInst>(I) || isa<ExtractValueInst>(I) ||
           isa<InsertValueInst>(I) || isa<FreezeInst>(I));
 }
-/// Return true if MSSA knows there are no MemoryDefs in the loop.
-bool isReadOnly(const MemorySSAUpdater &MSSAU, const Loop *L) {
-  for (auto *BB : L->getBlocks())
-    if (MSSAU.getMemorySSA()->getBlockDefs(BB))
-      return false;
-  return true;
-}
 
 /// Return true if I is the only Instruction with a MemoryAccess in L.
 bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
@@ -1234,24 +1227,11 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (Behavior.doesNotAccessMemory())
       return true;
     if (Behavior.onlyReadsMemory()) {
-      // A readonly argmemonly function only reads from memory pointed to by
-      // it's arguments with arbitrary offsets.  If we can prove there are no
-      // writes to this memory in the loop, we can hoist or sink.
-      if (Behavior.onlyAccessesArgPointees()) {
-        // TODO: expand to writeable arguments
-        for (Value *Op : CI->args())
-          if (Op->getType()->isPointerTy() &&
-              pointerInvalidatedByLoop(
-                  MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(CI)), CurLoop, I,
-                  Flags, /*InvariantGroup=*/false))
-            return false;
-        return true;
-      }
-
-      // If this call only reads from memory and there are no writes to memory
-      // in the loop, we can hoist or sink the call as appropriate.
-      if (isReadOnly(MSSAU, CurLoop))
-        return true;
+      // If we can prove there are no writes to the memory read by the call, we
+      // can hoist or sink.
+      return !pointerInvalidatedByLoop(
+          MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(CI)), CurLoop, I, Flags,
+          /*InvariantGroup=*/false);
     }
 
     // FIXME: This should use mod/ref information to see if we can hoist or
