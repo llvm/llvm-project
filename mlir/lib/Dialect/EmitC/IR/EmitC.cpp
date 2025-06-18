@@ -1404,39 +1404,19 @@ void FileOp::build(OpBuilder &builder, OperationState &state, StringRef id) {
 // FieldOp
 //===----------------------------------------------------------------------===//
 LogicalResult FieldOp::verify() {
-  if (!isSupportedEmitCType(getType())) {
+  if (!isSupportedEmitCType(getType()))
     return emitOpError("expected valid emitc type");
-  }
 
-  if (!getInitialValue()) {
+  Operation *parentOp = getOperation()->getParentOp();
+  if (!parentOp || !isa<emitc::ClassOp>(parentOp))
+    return emitOpError("field must be nested within an emitc.class operation");
+
+  StringAttr symName = getSymNameAttr();
+  if (!symName || symName.getValue().empty())
+    return emitOpError("field must have a non-empty symbol name");
+
+  if (!getAttrs())
     return success();
-  }
-
-  Attribute initValue = *getInitialValue();
-  // Check that the type of the initial value is compatible with the type of
-  // the global variable.
-  if (ElementsAttr elementsAttr = llvm::dyn_cast<ElementsAttr>(initValue)) {
-    Type initialValueType = elementsAttr.getType();
-    if (!initialValueType) {
-      return emitOpError("initial value attribute must have a type");
-    }
-    Type fieldType = getType();
-    if (initialValueType != fieldType) {
-      if (LValueType lvalueType = dyn_cast<LValueType>(fieldType)) {
-        Type innerFieldType = lvalueType.getValueType();
-        if (innerFieldType != initialValueType) {
-          return emitOpError("initial value type ")
-                 << initialValueType << " is not compatible with field type '"
-                 << fieldType << "' its inner type '" << innerFieldType << "'";
-        }
-
-      } else {
-        return emitOpError("initial value type '")
-               << initialValueType << "' is not compatible with field type '"
-               << fieldType << "'";
-      }
-    }
-  }
 
   return success();
 }
@@ -1446,27 +1426,19 @@ LogicalResult FieldOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   mlir::FlatSymbolRefAttr fieldNameAttr = getFieldNameAttr();
-  if (!fieldNameAttr) {
-    return emitError("field name attribute is mandatory");
-  }
-
-  StringRef fieldName = fieldNameAttr.getValue();
-
   FieldOp fieldOp =
-      symbolTable.lookupNearestSymbolFrom<FieldOp>(*this, getFieldNameAttr());
-
-  if (!fieldOp) {
-    return emitOpError("field '") << fieldName << "' not found in the class '";
-  }
+      symbolTable.lookupNearestSymbolFrom<FieldOp>(*this, fieldNameAttr);
+  if (!fieldOp)
+    return emitOpError("field '")
+           << fieldNameAttr << "' not found in the class";
 
   Type getFieldResultType = getResult().getType();
   Type fieldType = fieldOp.getType();
 
-  if (fieldType != getFieldResultType) {
+  if (fieldType != getFieldResultType)
     return emitOpError("result type ")
-           << getFieldResultType << " does not match field '" << fieldName
+           << getFieldResultType << " does not match field '" << fieldNameAttr
            << "' type " << fieldType;
-  }
 
   return success();
 }

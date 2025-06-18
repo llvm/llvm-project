@@ -1586,18 +1586,13 @@ def EmitC_ClassOp
     MLIR region, similar to how C++ classes encapsulate their internals.
 
     Example:
+
     ```mlir
-    emitc.func @model(%input_data : !emitc.array<1xf32> {emitc.opaque = ["input_tensor"]}) attributes { } {
-      %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
-      %1 = subscript %input_data[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
-      return
-    }
-    // becomes 
     emitc.class @modelClass {
-      emitc.field @input_tensor : !emitc.array<1xf32> = {emitc.opaque = ["input_tensor"]}
+      emitc.field @fieldName0 : !emitc.array<1xf32> = {emitc.opaque = "input_tensor"}
       emitc.func @execute() {
         %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
-        %1 = get_field @input_tensor : !emitc.array<1xf32>
+        %1 = get_field @fieldName0 : !emitc.array<1xf32>
         %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
         return
       }
@@ -1608,8 +1603,6 @@ def EmitC_ClassOp
   let arguments = (ins SymbolNameAttr:$sym_name);
 
   let regions = (region AnyRegion:$body);
-
-  let builders = [];
 
   let extraClassDeclaration = [{
     // Returns the body block containing class members and methods.
@@ -1626,29 +1619,21 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
   let description = [{
     The `emitc.field` operation declares a named field within an `emitc.class`
     operation. The field's type must be an EmitC type. 
-    If the corresponding function argument has attributes (accessed via `argAttrs`), 
-    these attributes are attached to the field operation. 
-    Otherwise, the field is created without additional attributes.
 
-    Example of func argument with attributes:
+    Example:
+
     ```mlir
-    %arg0: !emitc.array<1xf32> {emitc.opaque = ["another_feature"]} 
-    // becomes
-    emitc.field @another_feature : !emitc.array<1xf32> = {emitc.opaque = ["another_feature"]}
-    ```
-    Example of func argument without attributes:
-    ```mlir
-    %arg0 : !emitc.array<1xf32>
-    // becomes
+    // Example with an attribute:
+    emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.opaque = "another_feature"}
+    // Example with no attribute:
     emitc.field @fieldName0 : !emitc.array<1xf32>
     ```
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type,
-      OptionalAttr<AnyAttr>:$initial_value);
+      OptionalAttr<AnyAttr>:$attrs);
 
-  let assemblyFormat =
-      [{ $sym_name `:` $type (`=` $initial_value^)? attr-dict}];
+  let assemblyFormat = [{ $sym_name `:` $type ($attrs^)? attr-dict}];
 
   let hasVerifier = 1;
 }
