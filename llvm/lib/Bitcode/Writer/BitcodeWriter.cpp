@@ -388,8 +388,6 @@ private:
                              unsigned Abbrev);
   void writeDILocalVariable(const DILocalVariable *N,
                             SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
-  void writeDIFragment(const DIFragment *N, SmallVectorImpl<uint64_t> &Record,
-                       unsigned Abbrev);
   void writeDILabel(const DILabel *N,
                     SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
 
@@ -399,8 +397,6 @@ private:
                             SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIExpression(const DIExpression *N,
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
-  void writeDIExpr(const DIExpr *N, SmallVectorImpl<uint64_t> &Record,
-                   unsigned Abbrev);
   void writeDIGlobalVariableExpression(const DIGlobalVariableExpression *N,
                                        SmallVectorImpl<uint64_t> &Record,
                                        unsigned Abbrev);
@@ -409,8 +405,6 @@ private:
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
-  void writeDILifetime(const DILifetime *N, SmallVectorImpl<uint64_t> &Record,
-                       unsigned Abbrev);
   unsigned createNamedMetadataAbbrev();
   void writeNamedMetadata(SmallVectorImpl<uint64_t> &Record);
   unsigned createMetadataStringsAbbrev();
@@ -2350,12 +2344,6 @@ void ModuleBitcodeWriter::writeDILocalVariable(
   Record.clear();
 }
 
-void ModuleBitcodeWriter::writeDIFragment(const DIFragment *N,
-                                          SmallVectorImpl<uint64_t> &Record,
-                                          unsigned Abbrev) {
-  report_fatal_error("unsupported DIExpr-based metadata");
-}
-
 void ModuleBitcodeWriter::writeDILabel(
     const DILabel *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
@@ -2462,12 +2450,6 @@ void ModuleBitcodeWriter::writeDIExpression(const DIExpression *N,
   Record.clear();
 }
 
-void ModuleBitcodeWriter::writeDIExpr(const DIExpr *N,
-                                      SmallVectorImpl<uint64_t> &Record,
-                                      unsigned Abbrev) {
-  report_fatal_error("unsupported DIExpr-based metadata");
-}
-
 void ModuleBitcodeWriter::writeDIGlobalVariableExpression(
     const DIGlobalVariableExpression *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
@@ -2509,12 +2491,6 @@ void ModuleBitcodeWriter::writeDIImportedEntity(
 
   Stream.EmitRecord(bitc::METADATA_IMPORTED_ENTITY, Record, Abbrev);
   Record.clear();
-}
-
-void ModuleBitcodeWriter::writeDILifetime(const DILifetime *N,
-                                          SmallVectorImpl<uint64_t> &Record,
-                                          unsigned Abbrev) {
-  report_fatal_error("unsupported DIExpr-based metadata");
 }
 
 unsigned ModuleBitcodeWriter::createNamedMetadataAbbrev() {
@@ -3848,7 +3824,8 @@ void ModuleBitcodeWriter::writeFunction(
         /// without the ValueAsMetadata wrapper.
         auto PushValueOrMetadata = [&Vals, InstID,
                                     this](Metadata *RawLocation) {
-          assert(RawLocation && "RawLocation unexpectedly null in DPValue");
+          assert(RawLocation &&
+                 "RawLocation unexpectedly null in DbgVariableRecord");
           if (ValueAsMetadata *VAM = dyn_cast<ValueAsMetadata>(RawLocation)) {
             SmallVector<unsigned, 2> ValAndType;
             // If the value is a fwd-ref the type is also pushed. We don't

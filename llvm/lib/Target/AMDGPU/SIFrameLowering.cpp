@@ -78,11 +78,8 @@ createScaledCFAInPrivateWave(const GCNSubtarget &ST,
           << uint8_t(dwarf::DW_OP_shl)
           << uint8_t(dwarf::DW_OP_lit0 +
                      dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave);
-  if (EmitHeterogeneousDwarfAsUserOps)
     OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-            << uint8_t(dwarf::DW_OP_LLVM_USER_form_aspace_address);
-  else
-    OSBlock << uint8_t(dwarf::DW_OP_LLVM_form_aspace_address);
+            << uint8_t(dwarf::DW_OP_LLVM_form_aspace_address);
 
   SmallString<20> CFIInst;
   raw_svector_ostream OSCFIInst(CFIInst);
@@ -778,15 +775,6 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   if (NeedsFrameMoves) {
     // On entry the SP/FP are not set up, so we need to define the CFA in terms
     // of a literal location expression.
-    static const char CFAEncodedInstArr[] = {
-        dwarf::DW_CFA_def_cfa_expression,
-        3, // length
-        static_cast<char>(dwarf::DW_OP_lit0),
-        static_cast<char>(dwarf::DW_OP_lit0 +
-                          dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave),
-        static_cast<char>(dwarf::DW_OP_LLVM_form_aspace_address)};
-    static StringRef CFAEncodedInst =
-        StringRef(CFAEncodedInstArr, sizeof(CFAEncodedInstArr));
     static const char CFAEncodedInstUserOpsArr[] = {
         dwarf::DW_CFA_def_cfa_expression,
         4, // length
@@ -794,14 +782,11 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
         static_cast<char>(dwarf::DW_OP_lit0 +
                           dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave),
         static_cast<char>(dwarf::DW_OP_LLVM_user),
-        static_cast<char>(dwarf::DW_OP_LLVM_USER_form_aspace_address)};
+        static_cast<char>(dwarf::DW_OP_LLVM_form_aspace_address)};
     static StringRef CFAEncodedInstUserOps =
         StringRef(CFAEncodedInstUserOpsArr, sizeof(CFAEncodedInstUserOpsArr));
-    buildCFI(
-        MBB, I, DL,
-        MCCFIInstruction::createEscape(nullptr, EmitHeterogeneousDwarfAsUserOps
-                                                    ? CFAEncodedInstUserOps
-                                                    : CFAEncodedInst));
+    buildCFI(MBB, I, DL,
+             MCCFIInstruction::createEscape(nullptr, CFAEncodedInstUserOps));
     // Unwinding halts when the return address (PC) is undefined.
     buildCFI(MBB, I, DL,
              MCCFIInstruction::createUndefined(

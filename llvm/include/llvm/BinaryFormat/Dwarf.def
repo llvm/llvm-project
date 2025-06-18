@@ -25,11 +25,10 @@
       defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||              \
       defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                 \
       defined HANDLE_DW_END || defined HANDLE_DW_SECT ||                       \
-      defined HANDLE_DW_APPLE_ENUM_KIND ||                       \
-      defined HANDLE_HETEROGENEOUS_OP ||                                       \
+      defined HANDLE_DW_APPLE_ENUM_KIND ||                                     \
       defined HANDLE_DW_MSPACE ||                                              \
       ( defined HANDLE_DW_ASPACE && defined HANDLE_DW_ASPACE_PRED) )
-      #error "Missing macro definition of HANDLE_DW*"
+#error "Missing macro definition of HANDLE_DW*"
 #endif
 
 #ifndef HANDLE_DW_TAG
@@ -60,10 +59,6 @@
 
 #ifndef HANDLE_DW_OP_LLVM_USEROP
 #define HANDLE_DW_OP_LLVM_USEROP(ID, NAME)
-#endif
-
-#ifndef HANDLE_HETEROGENEOUS_OP
-#define HANDLE_HETEROGENEOUS_OP(NAME)
 #endif
 
 #ifndef HANDLE_DW_LANG
@@ -915,13 +910,13 @@ HANDLE_DW_OP(0xa9, reinterpret, 1, 1, 5, DWARF)
 HANDLE_DW_OP(0xe0, GNU_push_tls_address, 0, 0, 0, GNU)
 // Conflicting:
 // HANDLE_DW_OP(0xe0, HP_unknown, -1, -1, 0, HP)
-//HANDLE_DW_OP(0xe1, HP_is_value, -1, -1, 0, HP)
-//HANDLE_DW_OP(0xe2, HP_fltconst4, -1, -1, 0, HP)
-//HANDLE_DW_OP(0xe3, HP_fltconst8, -1, -1, 0, HP)
-//HANDLE_DW_OP(0xe4, HP_mod_range, -1, -1, 0, HP)
-//HANDLE_DW_OP(0xe5, HP_unmod_range, -1, -1, 0, HP)
-//HANDLE_DW_OP(0xe6, HP_tls, -1, -1, 0, HP)
-//HANDLE_DW_OP(0xe8, INTEL_bit_piece, -1, -1, 0, INTEL)
+HANDLE_DW_OP(0xe1, HP_is_value, -1, -1, 0, HP)
+HANDLE_DW_OP(0xe2, HP_fltconst4, -1, -1, 0, HP)
+HANDLE_DW_OP(0xe3, HP_fltconst8, -1, -1, 0, HP)
+HANDLE_DW_OP(0xe4, HP_mod_range, -1, -1, 0, HP)
+HANDLE_DW_OP(0xe5, HP_unmod_range, -1, -1, 0, HP)
+HANDLE_DW_OP(0xe6, HP_tls, -1, -1, 0, HP)
+HANDLE_DW_OP(0xe8, INTEL_bit_piece, -1, -1, 0, INTEL)
 
 // Extensions for WebAssembly.
 HANDLE_DW_OP(0xed, WASM_location, -1, -1, 0, WASM)
@@ -935,22 +930,6 @@ HANDLE_DW_OP(0xf8, PGI_omp_thread_num, -1, -1, 0, PGI)
 // Extensions for Fission proposal.
 HANDLE_DW_OP(0xfb, GNU_addr_index, 1, 0, 0, GNU)
 HANDLE_DW_OP(0xfc, GNU_const_index, 1, 0, 0, GNU)
-// Heterogeneous Debugging Extension defined at
-// https://llvm.org/docs/AMDGPUDwarfProposalForHeterogeneousDebugging.html.
-// These collide with some HP and PGI vendor extensions, but this ambiguity is
-// resolved by ensuring CIE augmentation strings and compilation unit
-// DW_AT_LLVM_augmentation strings include "[llvm:v0.0]".
-HANDLE_DW_OP(0xe1, LLVM_form_aspace_address, 1, 0, 0, LLVM)
-HANDLE_DW_OP(0xe2, LLVM_push_lane, 1, 0, 0, LLVM)
-HANDLE_DW_OP(0xe3, LLVM_offset, 1, 0, 0, LLVM)
-HANDLE_DW_OP(0xe4, LLVM_offset_uconst, 1, 0, 0, LLVM)
-HANDLE_DW_OP(0xe5, LLVM_bit_offset, 1, 0, 0, LLVM)
-HANDLE_DW_OP(0xe6, LLVM_call_frame_entry_reg, 1, 0, 0, LLVM)
-HANDLE_DW_OP(0xe7, LLVM_undefined, 1, 0, 0, LLVM)
-HANDLE_DW_OP(0xe8, LLVM_aspace_bregx, 1, 0, 0, LLVM)
-HANDLE_DW_OP(0xea, LLVM_piece_end, 1, 0, 0, LLVM)
-HANDLE_DW_OP(0xeb, LLVM_extend, 1, 0, 0, LLVM)
-HANDLE_DW_OP(0xec, LLVM_select_bit_piece, 1, 0, 0, LLVM)
 
 // DW_OP_LLVM_user has two operands:
 //   (1) An unsigned LEB128 "LLVM Vendor Extension Opcode".
@@ -982,20 +961,6 @@ HANDLE_DW_OP_LLVM_USEROP(0x0009, aspace_bregx)
 HANDLE_DW_OP_LLVM_USEROP(0x000a, piece_end)
 HANDLE_DW_OP_LLVM_USEROP(0x000b, extend)
 HANDLE_DW_OP_LLVM_USEROP(0x000c, select_bit_piece)
-
-// FIXME: This is just to link the two encodings cleanly until we
-// drop support for the non-user encoding.
-HANDLE_HETEROGENEOUS_OP(form_aspace_address)
-HANDLE_HETEROGENEOUS_OP(push_lane)
-HANDLE_HETEROGENEOUS_OP(offset)
-HANDLE_HETEROGENEOUS_OP(offset_uconst)
-HANDLE_HETEROGENEOUS_OP(bit_offset)
-HANDLE_HETEROGENEOUS_OP(call_frame_entry_reg)
-HANDLE_HETEROGENEOUS_OP(undefined)
-HANDLE_HETEROGENEOUS_OP(aspace_bregx)
-HANDLE_HETEROGENEOUS_OP(piece_end)
-HANDLE_HETEROGENEOUS_OP(extend)
-HANDLE_HETEROGENEOUS_OP(select_bit_piece)
 
 // DWARF languages.
 HANDLE_DW_LANG(0x0001, C89, 0, 2, DWARF)
@@ -1442,7 +1407,6 @@ HANDLE_DW_SECT(8, RNGLISTS)
 #undef HANDLE_DW_FORM
 #undef HANDLE_DW_OP
 #undef HANDLE_DW_OP_LLVM_USEROP
-#undef HANDLE_HETEROGENEOUS_OP
 #undef HANDLE_DW_LANG
 #undef HANDLE_DW_LNAME
 #undef HANDLE_DW_ATE

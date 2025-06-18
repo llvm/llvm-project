@@ -37,49 +37,30 @@
 #include <iterator>
 #include <optional>
 #include <vector>
-#include <variant>
 
 // Helper macros for defining get() overrides.
 #define DEFINE_MDNODE_GET_UNPACK_IMPL(...) __VA_ARGS__
 #define DEFINE_MDNODE_GET_UNPACK(ARGS) DEFINE_MDNODE_GET_UNPACK_IMPL ARGS
-// FIXME: When the DEFINE_MDNODE_GET alias below is removed this could be
-// renamed to just DEFINE_MDNODE_GET.
-#define DEFINE_MDNODE_GET_ONLY(CLASS, FORMAL, ARGS)                            \
-  static CLASS *get(LLVMContext &Context, DEFINE_MDNODE_GET_UNPACK(FORMAL)) {  \
-    return getImpl(Context, DEFINE_MDNODE_GET_UNPACK(ARGS), Uniqued);          \
-  }
-#define DEFINE_MDNODE_GET_IF_EXISTS(CLASS, FORMAL, ARGS)                       \
-  static CLASS *getIfExists(LLVMContext &Context,                              \
-                            DEFINE_MDNODE_GET_UNPACK(FORMAL)) {                \
-    return getImpl(Context, DEFINE_MDNODE_GET_UNPACK(ARGS), Uniqued,           \
-                   /* ShouldCreate */ false);                                  \
-  }
-#define DEFINE_MDNODE_GET_DISTINCT(CLASS, FORMAL, ARGS)                        \
+#define DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(CLASS, FORMAL, ARGS)              \
   static CLASS *getDistinct(LLVMContext &Context,                              \
                             DEFINE_MDNODE_GET_UNPACK(FORMAL)) {                \
     return getImpl(Context, DEFINE_MDNODE_GET_UNPACK(ARGS), Distinct);         \
-  }
-#define DEFINE_MDNODE_GET_TEMPORARY(CLASS, FORMAL, ARGS)                       \
+  }                                                                            \
   static Temp##CLASS getTemporary(LLVMContext &Context,                        \
                                   DEFINE_MDNODE_GET_UNPACK(FORMAL)) {          \
     return Temp##CLASS(                                                        \
         getImpl(Context, DEFINE_MDNODE_GET_UNPACK(ARGS), Temporary));          \
   }
-#define DEFINE_ALL_MDNODE_GET_METHODS(CLASS, FORMAL, ARGS)                     \
-  DEFINE_MDNODE_GET_ONLY(CLASS, FORMAL, ARGS)                                  \
-  DEFINE_MDNODE_GET_IF_EXISTS(CLASS, FORMAL, ARGS)                             \
-  DEFINE_MDNODE_GET_DISTINCT(CLASS, FORMAL, ARGS)                              \
-  DEFINE_MDNODE_GET_TEMPORARY(CLASS, FORMAL, ARGS)
-// FIXME: This old naming is retained as an alias to make the diff smaller, but
-// could eventually be eliminated and the references updated.
-#define DEFINE_MDNODE_GET(CLASS, FORMAL, ARGS) DEFINE_ALL_MDNODE_GET_METHODS(CLASS, FORMAL, ARGS)
-#define DEFINE_ALWAYS_DISTINCT_MDNODE_GET_METHODS(CLASS, FORMAL, ARGS)         \
-  DEFINE_MDNODE_GET_DISTINCT(CLASS, FORMAL, ARGS)                              \
-  DEFINE_MDNODE_GET_TEMPORARY(CLASS, FORMAL, ARGS)
-#define DEFINE_ALWAYS_UNIQUED_MDNODE_GET_METHODS(CLASS, FORMAL, ARGS)          \
-  DEFINE_MDNODE_GET_ONLY(CLASS, FORMAL, ARGS)                                  \
-  DEFINE_MDNODE_GET_IF_EXISTS(CLASS, FORMAL, ARGS)                             \
-  DEFINE_MDNODE_GET_TEMPORARY(CLASS, FORMAL, ARGS)
+#define DEFINE_MDNODE_GET(CLASS, FORMAL, ARGS)                                 \
+  static CLASS *get(LLVMContext &Context, DEFINE_MDNODE_GET_UNPACK(FORMAL)) {  \
+    return getImpl(Context, DEFINE_MDNODE_GET_UNPACK(ARGS), Uniqued);          \
+  }                                                                            \
+  static CLASS *getIfExists(LLVMContext &Context,                              \
+                            DEFINE_MDNODE_GET_UNPACK(FORMAL)) {                \
+    return getImpl(Context, DEFINE_MDNODE_GET_UNPACK(ARGS), Uniqued,           \
+                   /* ShouldCreate */ false);                                  \
+  }                                                                            \
+  DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(CLASS, FORMAL, ARGS)
 
 namespace llvm {
 
@@ -244,7 +225,6 @@ public:
     case DIModuleKind:
     case DIGenericSubrangeKind:
     case DIAssignIDKind:
-    case DILifetimeKind:
       return true;
     }
   }
@@ -1225,9 +1205,10 @@ private:
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
           unsigned Line, Metadata *Scope, Metadata *BaseType,
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
-          std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS, 
-          std::optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData, Metadata *Annotations,
-          StorageType Storage, bool ShouldCreate = true);
+          std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
+          std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
+          Metadata *ExtraData, Metadata *Annotations, StorageType Storage,
+          bool ShouldCreate = true);
 
   TempDIDerivedType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getName(), getFile(), getLine(),
@@ -1285,12 +1266,14 @@ public:
   LLVM_ABI std::optional<PtrAuthData> getPtrAuthData() const;
 
   /// Get extra data associated with this derived type.
+  ///
   /// Class type for pointer-to-members, objective-c property node for ivars,
   /// global constant wrapper for static members, virtual base pointer offset
   /// for inheritance, a tuple of template parameters for template aliases,
   /// discriminant for a variant, or storage offset for a bit field.
   ///
   /// TODO: Separate out types that need this extra operand: pointer-to-member
+  /// types and member fields (static members and ivars).
   Metadata *getExtraData() const { return getRawExtraData(); }
   Metadata *getRawExtraData() const { return getOperand(4); }
 
@@ -1838,7 +1821,7 @@ public:
   static void get() = delete;
   static void getIfExists() = delete;
 
-  DEFINE_ALWAYS_DISTINCT_MDNODE_GET_METHODS(
+  DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
       (unsigned SourceLanguage, DIFile *File, StringRef Producer,
        bool IsOptimized, StringRef Flags, unsigned RuntimeVersion,
@@ -1854,7 +1837,7 @@ public:
        GlobalVariables, ImportedEntities, Macros, DWOId, SplitDebugInlining,
        DebugInfoForProfiling, (unsigned)NameTableKind, RangesBaseAddress,
        SysRoot, SDK))
-  DEFINE_ALWAYS_DISTINCT_MDNODE_GET_METHODS(
+  DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
       (unsigned SourceLanguage, Metadata *File, MDString *Producer,
        bool IsOptimized, MDString *Flags, unsigned RuntimeVersion,
@@ -3005,68 +2988,17 @@ public:
   }
 };
 
-/// Base class for program objects.
-class DIObject : public DINode {
-protected:
-  DIObject(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Tag,
-           ArrayRef<Metadata *> Ops)
-      : DINode(C, ID, Storage, Tag, Ops) {}
-  ~DIObject() = default;
-
-public:
-  static bool classof(const Metadata *MD) {
-    switch (MD->getMetadataID()) {
-    default:
-      return false;
-    case DIFragmentKind:
-    case DILocalVariableKind:
-    case DIGlobalVariableKind:
-      return true;
-    }
-  }
-};
-
-/// Non-source program objects, and pieces of source program objects.
-class DIFragment : public DIObject {
-  friend class LLVMContextImpl;
-  friend class MDNode;
-
-private:
-  static DIFragment *getImpl(LLVMContext &Context, StorageType Storage);
-
-protected:
-  DIFragment(LLVMContext &C, StorageType Storage);
-  ~DIFragment() = default;
-
-public:
-  static void get() = delete;
-  static void getIfExists() = delete;
-
-  static DIFragment *getDistinct(LLVMContext &Context) {
-    return getImpl(Context, Distinct);
-  }
-
-  static TempDIFragment getTemporary(LLVMContext &Context) {
-    return TempDIFragment(getImpl(Context, Temporary));
-  }
-
-  TempDIFragment cloneImpl() const { return getTemporary(getContext()); }
-
-  static bool classof(const Metadata *MD) {
-    return MD->getMetadataID() == DIFragmentKind;
-  }
-};
-
-/// Base class for source variable program objects.
-class DIVariable : public DIObject {
+/// Base class for variables.
+///
+/// Uses the SubclassData32 Metadata slot.
+class DIVariable : public DINode {
   unsigned Line;
   dwarf::MemorySpace MemorySpace;
 
 protected:
   LLVM_ABI DIVariable(LLVMContext &C, unsigned ID, StorageType Storage,
                       signed Line, ArrayRef<Metadata *> Ops,
-                      dwarf::MemorySpace MS,
-                      uint32_t AlignInBits = 0);
+                      dwarf::MemorySpace MS, uint32_t AlignInBits = 0);
   ~DIVariable() = default;
 
 public:
@@ -3612,18 +3544,20 @@ private:
   ~DIExpression() = default;
 
   // FIXME: workaround to avoid updating callsites for now
-  LLVM_ABI
-  static DIExpression *getImpl(LLVMContext &Context, std::nullopt_t Elements,
-                               StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DIExpression *getImpl(LLVMContext &Context,
+                                        std::nullopt_t Elements,
+                                        StorageType Storage,
+                                        bool ShouldCreate = true);
 
-  LLVM_ABI
-  static DIExpression *getImpl(LLVMContext &Context, OldElementsRef Elements,
-                               StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DIExpression *getImpl(LLVMContext &Context,
+                                        OldElementsRef Elements,
+                                        StorageType Storage,
+                                        bool ShouldCreate = true);
 
-  LLVM_ABI
-  static DIExpression *getImpl(LLVMContext &Context, bool /*ignored*/,
-                               NewElementsRef Elements, StorageType Storage,
-                               bool ShouldCreate = true);
+  LLVM_ABI static DIExpression *getImpl(LLVMContext &Context, bool /*ignored*/,
+                                        NewElementsRef Elements,
+                                        StorageType Storage,
+                                        bool ShouldCreate = true);
 
   TempDIExpression cloneImpl() const {
     return getTemporary(getContext(), getElements());
@@ -3820,8 +3754,8 @@ public:
   /// @}
 
   LLVM_ABI bool isValid(std::optional<DIExpressionEnv> Env = std::nullopt,
-               std::optional<std::reference_wrapper<llvm::raw_ostream>> ErrS =
-                   std::nullopt) const;
+                        std::optional<std::reference_wrapper<llvm::raw_ostream>>
+                            ErrS = std::nullopt) const;
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIExpressionKind;
@@ -4197,8 +4131,6 @@ public:
   /// Create a builder for a new expression for the sequence of ops in \p V.
   explicit DIExprBuilder(LLVMContext &C, ArrayRef<DIOp::Variant> V);
   /// Create a builder for a new expression, initially a copy of \p E.
-  explicit DIExprBuilder(const DIExpr &E);
-  /// Create a builder for a new expression, initially a copy of \p E.
   explicit DIExprBuilder(const DIExpression &E);
 
   class Iterator
@@ -4291,54 +4223,7 @@ public:
   ///
   /// This leaves the Builder in a valid but unspecified state, as if it were
   /// moved from.
-  DIExpr *intoExpr();
-
-  /// Get the uniqued, immutable expression metadata from the current state
-  /// of the builder.
-  ///
-  /// This leaves the Builder in a valid but unspecified state, as if it were
-  /// moved from.
   DIExpression *intoExpression();
-};
-
-/// Immutable debug info expression.
-///
-/// This is an opaque, uniqued metadata node type defined by an immutable
-/// sequence of DIOp. In order to view or mutate an expression, use
-/// DIExpr::Builder.
-class DIExpr : public MDNode {
-  friend class LLVMContextImpl;
-  friend class MDNode;
-  friend struct MDNodeKeyImpl<DIExpr>;
-  friend class DIExprBuilder;
-
-  const SmallVector<DIOp::Variant> Elements;
-
-  DIExpr(LLVMContext &C, StorageType Storage,
-         SmallVector<DIOp::Variant> &&Elements)
-      : MDNode(C, DIExprKind, Storage, std::nullopt), Elements(std::move(Elements)) {}
-  ~DIExpr() = default;
-
-  static DIExpr *getImpl(LLVMContext &Context,
-                         SmallVector<DIOp::Variant> &&Elements,
-                         StorageType Storage, bool ShouldCreate = true);
-
-  TempDIExpr cloneImpl() const {
-    auto Copy = Elements;
-    return getTemporary(getContext(), std::move(Copy));
-  }
-
-  DEFINE_ALWAYS_UNIQUED_MDNODE_GET_METHODS(
-      DIExpr, (SmallVector<DIOp::Variant> && Elements), (std::move(Elements)))
-
-public:
-  static bool classof(const Metadata *MD) {
-    return MD->getMetadataID() == DIExprKind;
-  }
-  TempDIExpr clone() const { return cloneImpl(); }
-
-  /// Convenience method to get a builder by copying the current expression.
-  DIExprBuilder builder() const { return DIExprBuilder(*this); }
 };
 
 /// Holds a DIExpression and keeps track of how many operands have been consumed
@@ -4602,8 +4487,8 @@ class DILocalVariable : public DIVariable {
   LLVM_ABI static DILocalVariable *
   getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name, Metadata *File,
           unsigned Line, Metadata *Type, unsigned Arg, DIFlags Flags,
-          dwarf::MemorySpace MS, uint32_t AlignInBits, Metadata *Annotations, StorageType Storage,
-          bool ShouldCreate = true);
+          dwarf::MemorySpace MS, uint32_t AlignInBits, Metadata *Annotations,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDILocalVariable cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getFile(),
@@ -5131,95 +5016,6 @@ public:
   LLVM_ABI void handleChangedOperand(void *Ref, Metadata *New);
 };
 
-/// Represents one lifetime segment of a DIObject.
-class DILifetime : public DINode {
-  friend class LLVMContextImpl;
-  friend class MDNode;
-
-  // FIXME: DILifetime must derive from DINode in order to be added to
-  // retainedNodes, but it has no meaningful "Tag".
-  DILifetime(LLVMContext &C, StorageType Storage, ArrayRef<Metadata *> Ops,
-             ArrayRef<Metadata *> Args)
-      : DINode(C, DILifetimeKind, Storage, 0, Ops, Args) {
-    assert(Storage != Uniqued);
-  }
-  ~DILifetime() = default;
-
-  static DILifetime *getImpl(LLVMContext &Context, Metadata *Obj, Metadata *Loc,
-                             ArrayRef<Metadata *> Args, StorageType Storage);
-
-  TempDILifetime cloneImpl() const {
-    SmallVector<Metadata *> ArgObjects(argObjectsBegin(), argObjectsEnd());
-    return getTemporary(getContext(), getRawObject(), getRawLocation(),
-                        ArgObjects);
-  }
-
-public:
-  static DILifetime *getDistinct(LLVMContext &Context, Metadata *Obj,
-                                 Metadata *Loc,
-                                 ArrayRef<Metadata *> Args = std::nullopt) {
-    return getImpl(Context, Obj, Loc, Args, Distinct);
-  }
-  static TempDILifetime getTemporary(LLVMContext &Context, Metadata *Obj,
-                                     Metadata *Loc,
-                                     ArrayRef<Metadata *> Args = std::nullopt) {
-    return TempDILifetime(getImpl(Context, Obj, Loc, Args, Temporary));
-  }
-
-  TempDILifetime clone() const { return cloneImpl(); }
-
-  Metadata *getRawObject() const { return getOperand(0); }
-  Metadata *getRawLocation() const { return getOperand(1); }
-  MDNode::op_iterator rawArgObjectsBegin() const { return op_begin() + 2; }
-  MDNode::op_iterator rawArgObjectsEnd() const { return op_end(); }
-  MDNode::op_range rawArgObjects() const {
-    return {rawArgObjectsBegin(), rawArgObjectsEnd()};
-  }
-
-  DIObject *getObject() const { return cast<DIObject>(getRawObject()); }
-  DIExpr *getLocation() const { return cast<DIExpr>(getRawLocation()); }
-  void setLocation(DIExpr *E) { setOperand(1, E); }
-  class ArgObjectIterator
-      : public llvm::iterator_facade_base<
-            ArgObjectIterator, std::random_access_iterator_tag, DIObject> {
-    friend DILifetime;
-    MDNode::op_iterator I;
-    explicit ArgObjectIterator(MDNode::op_iterator I) : I(I) {}
-
-  public:
-    ArgObjectIterator() = delete;
-    ArgObjectIterator(const ArgObjectIterator &) = default;
-    bool operator==(const ArgObjectIterator &R) const { return R.I == I; }
-    DIObject *operator*() const { return cast_or_null<DIObject>(*I); }
-    friend iterator_facade_base::difference_type
-    operator-(ArgObjectIterator LHS, ArgObjectIterator RHS) {
-      return LHS.I - RHS.I;
-    }
-    ArgObjectIterator &operator+=(iterator_facade_base::difference_type D) {
-      I += D;
-      return *this;
-    }
-    ArgObjectIterator &operator-=(iterator_facade_base::difference_type D) {
-      I -= D;
-      return *this;
-    }
-  };
-  using ArgObjectRange = iterator_range<ArgObjectIterator>;
-  ArgObjectIterator argObjectsBegin() const {
-    return ArgObjectIterator(rawArgObjectsBegin());
-  }
-  ArgObjectIterator argObjectsEnd() const {
-    return ArgObjectIterator(rawArgObjectsEnd());
-  }
-  ArgObjectRange argObjects() const {
-    return {argObjectsBegin(), argObjectsEnd()};
-  }
-
-  static bool classof(const Metadata *MD) {
-    return MD->getMetadataID() == DILifetimeKind;
-  }
-};
-
 /// Identifies a unique instance of a variable.
 ///
 /// Storage for identifying a potentially inlined instance of a variable,
@@ -5323,13 +5119,6 @@ struct DenseMapInfo<DebugVariableAggregate>
 
 #undef DEFINE_MDNODE_GET_UNPACK_IMPL
 #undef DEFINE_MDNODE_GET_UNPACK
-#undef DEFINE_MDNODE_GET_ONLY
-#undef DEFINE_MDNODE_GET_IF_EXISTS
-#undef DEFINE_MDNODE_GET_DISTINCT
-#undef DEFINE_MDNODE_GET_TEMPORARY
-#undef DEFINE_ALL_MDNODE_GET_METHODS
 #undef DEFINE_MDNODE_GET
-#undef DEFINE_ALWAYS_DISTINCT_MDNODE_GET_METHODS
-#undef DEFINE_ALWAYS_UNIQUED_MDNODE_GET_METHODS
 
 #endif // LLVM_IR_DEBUGINFOMETADATA_H

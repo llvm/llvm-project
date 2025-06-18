@@ -2627,11 +2627,6 @@ static void writeDILocalVariable(raw_ostream &Out, const DILocalVariable *N,
   Out << ")";
 }
 
-static void writeDIFragment(raw_ostream &Out, const DIFragment *N,
-                            AsmWriterContext &WriterCtx) {
-  report_fatal_error("unsupported DIExpr-based metadata");
-}
-
 static void writeDILabel(raw_ostream &Out, const DILabel *N,
                          AsmWriterContext &WriterCtx) {
   Out << "!DILabel(";
@@ -2757,11 +2752,6 @@ static void writeDIArgList(raw_ostream &Out, const DIArgList *N,
   Out << ")";
 }
 
-static void writeDIExpr(raw_ostream &Out, const DIExpr *N,
-                        AsmWriterContext &WriterCtx) {
-  report_fatal_error("unsupported DIExpr-based metadata");
-}
-
 static void writeDIGlobalVariableExpression(raw_ostream &Out,
                                             const DIGlobalVariableExpression *N,
                                             AsmWriterContext &WriterCtx) {
@@ -2798,11 +2788,6 @@ static void writeDIImportedEntity(raw_ostream &Out, const DIImportedEntity *N,
   Printer.printInt("line", N->getLine());
   Printer.printMetadata("elements", N->getRawElements());
   Out << ")";
-}
-
-static void writeDILifetime(raw_ostream &Out, const DILifetime *N,
-                            AsmWriterContext &WriterCtx) {
-  report_fatal_error("unsupported DIExpr-based metadata");
 }
 
 static void WriteMDNodeBodyInternal(raw_ostream &Out, const MDNode *Node,

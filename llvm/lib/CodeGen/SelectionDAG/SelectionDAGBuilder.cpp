@@ -6697,9 +6697,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                        DI.getDebugLoc());
     return;
   }
-  case Intrinsic::dbg_def:
-  case Intrinsic::dbg_kill:
-    report_fatal_error("unsupported DIExpr-based metadata");
   case Intrinsic::dbg_label: {
     const DbgLabelInst &DI = cast<DbgLabelInst>(I);
     DILabel *Label = DI.getLabel();

@@ -104,25 +104,6 @@ static std::vector<Desc> getOpDescriptions() {
   Descriptions[DW_OP_GNU_addr_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_const_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_entry_value] = Desc(Op::Dwarf4, Op::SizeLEB);
-  Descriptions[DW_OP_LLVM_form_aspace_address] = Desc(Op::Dwarf4);
-  Descriptions[DW_OP_LLVM_push_lane] = Desc(Op::Dwarf4);
-  Descriptions[DW_OP_LLVM_offset] = Desc(Op::Dwarf4);
-  Descriptions[DW_OP_LLVM_offset_uconst] = Desc(Op::Dwarf4, Op::SizeLEB);
-  Descriptions[DW_OP_LLVM_bit_offset] = Desc(Op::Dwarf4);
-  Descriptions[DW_OP_LLVM_call_frame_entry_reg] = Desc(Op::Dwarf4, Op::SizeLEB);
-  Descriptions[DW_OP_LLVM_undefined] = Desc(Op::Dwarf4);
-  Descriptions[DW_OP_LLVM_aspace_bregx] =
-      Desc(Op::Dwarf4, Op::SizeLEB, Op::SizeLEB);
-  Descriptions[DW_OP_LLVM_piece_end] = Desc(Op::Dwarf4);
-  Descriptions[DW_OP_LLVM_extend] = Desc(Op::Dwarf4, Op::SizeLEB, Op::SizeLEB);
-  Descriptions[DW_OP_LLVM_select_bit_piece] =
-      Desc(Op::Dwarf4, Op::SizeLEB, Op::SizeLEB);
-  Descriptions[DW_OP_addrx] = Desc(Op::Dwarf5, Op::SizeLEB);
-  Descriptions[DW_OP_constx] = Desc(Op::Dwarf5, Op::SizeLEB);
-  Descriptions[DW_OP_convert] = Desc(Op::Dwarf5, Op::BaseTypeRef);
-  Descriptions[DW_OP_entry_value] = Desc(Op::Dwarf5, Op::SizeLEB);
-  Descriptions[DW_OP_regval_type] =
-      Desc(Op::Dwarf5, Op::SizeLEB, Op::BaseTypeRef);
   Descriptions[DW_OP_GNU_implicit_pointer] =
       Desc(Op::Dwarf4, Op::SizeRefAddr, Op::SignedSizeLEB);
   // This Description acts as a marker that getSubOpDesc must be called
@@ -151,23 +132,23 @@ static std::vector<Desc> getSubOpDescriptions() {
       ;
   std::vector<Desc> Descriptions;
   Descriptions.resize(LlvmUserDescriptionsSize);
-  Descriptions[DW_OP_LLVM_USER_nop] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
-  Descriptions[DW_OP_LLVM_USER_form_aspace_address] =
+  Descriptions[DW_OP_LLVM_nop] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_form_aspace_address] =
       Desc(Op::Dwarf5, Op::SizeSubOpLEB);
-  Descriptions[DW_OP_LLVM_USER_push_lane] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
-  Descriptions[DW_OP_LLVM_USER_offset] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
-  Descriptions[DW_OP_LLVM_USER_offset_uconst] =
+  Descriptions[DW_OP_LLVM_push_lane] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_offset] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_offset_uconst] =
       Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB);
-  Descriptions[DW_OP_LLVM_USER_bit_offset] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
-  Descriptions[DW_OP_LLVM_USER_call_frame_entry_reg] =
+  Descriptions[DW_OP_LLVM_bit_offset] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_call_frame_entry_reg] =
       Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB);
-  Descriptions[DW_OP_LLVM_USER_undefined] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
-  Descriptions[DW_OP_LLVM_USER_aspace_bregx] =
+  Descriptions[DW_OP_LLVM_undefined] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_aspace_bregx] =
       Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB, Op::SizeLEB);
-  Descriptions[DW_OP_LLVM_USER_piece_end] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
-  Descriptions[DW_OP_LLVM_USER_extend] =
+  Descriptions[DW_OP_LLVM_piece_end] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_extend] =
       Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB, Op::SizeLEB);
-  Descriptions[DW_OP_LLVM_USER_select_bit_piece] =
+  Descriptions[DW_OP_LLVM_select_bit_piece] =
       Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB, Op::SizeLEB);
   return Descriptions;
 }
@@ -327,10 +308,10 @@ bool DWARFExpressionPrinter::prettyPrintRegisterOp(
 
   if (Opcode == DW_OP_bregx || Opcode == DW_OP_regx ||
       Opcode == DW_OP_regval_type ||
-      (SubOpcode && *SubOpcode == DW_OP_LLVM_USER_aspace_bregx))
+      (SubOpcode && *SubOpcode == DW_OP_LLVM_aspace_bregx))
     DwarfRegNum = Operands[OpNum++];
   else if (Opcode == DW_OP_LLVM_call_frame_entry_reg ||
-           (SubOpcode && *SubOpcode == DW_OP_LLVM_USER_call_frame_entry_reg))
+           (SubOpcode && *SubOpcode == DW_OP_LLVM_call_frame_entry_reg))
     DwarfRegNum = Operands[OpNum];
   else if (Opcode >= DW_OP_breg0 && Opcode < DW_OP_bregx)
     DwarfRegNum = Opcode - DW_OP_breg0;
@@ -342,7 +323,7 @@ bool DWARFExpressionPrinter::prettyPrintRegisterOp(
     if ((Opcode >= DW_OP_breg0 && Opcode <= DW_OP_breg31) ||
         Opcode == DW_OP_bregx ||
         (Opcode == DW_OP_LLVM_aspace_bregx ||
-         (SubOpcode && *SubOpcode == DW_OP_LLVM_USER_aspace_bregx)))
+         (SubOpcode && *SubOpcode == DW_OP_LLVM_aspace_bregx)))
       OS << ' ' << RegName << format("%+" PRId64, Operands[OpNum]);
     else
       OS << ' ' << RegName.data();
@@ -368,49 +349,32 @@ bool DWARFExpressionPrinter::printOp(const DWARFExpression::Operation *Op,
   assert(!Name.empty() && "DW_OP has no name!");
   OS << Name;
 
-#if 0//<<<<<<< HEAD
-  std::optional<unsigned> SubOpcode = getSubCode();
+  std::optional<unsigned> SubOpcode = Op->getSubCode();
   if (SubOpcode) {
-    StringRef SubName = SubOperationEncodingString(Opcode, *SubOpcode);
+    StringRef SubName = SubOperationEncodingString(Op->Opcode, *SubOpcode);
     assert(!SubName.empty() && "DW_OP SubOp has no name!");
     OS << " " << SubName;
   }
 
-  if ((Opcode >= DW_OP_breg0 && Opcode <= DW_OP_breg31) ||
-      (Opcode >= DW_OP_reg0 && Opcode <= DW_OP_reg31) ||
-      Opcode == DW_OP_bregx || Opcode == DW_OP_regx ||
-      Opcode == DW_OP_regval_type ||
-      Opcode == DW_OP_LLVM_call_frame_entry_reg ||
-      Opcode == DW_OP_LLVM_aspace_bregx ||
-      (SubOpcode && (*SubOpcode == DW_OP_LLVM_USER_call_frame_entry_reg ||
-                     *SubOpcode == DW_OP_LLVM_USER_aspace_bregx)))
-    if (prettyPrintRegisterOp(U, OS, DumpOpts, Opcode, Operands))
-#else//=======
   if ((Op->Opcode >= DW_OP_breg0 && Op->Opcode <= DW_OP_breg31) ||
       (Op->Opcode >= DW_OP_reg0 && Op->Opcode <= DW_OP_reg31) ||
       Op->Opcode == DW_OP_bregx || Op->Opcode == DW_OP_regx ||
-      Op->Opcode == DW_OP_regval_type)
+      Op->Opcode == DW_OP_regval_type ||
+      Op->Opcode == DW_OP_LLVM_call_frame_entry_reg ||
+      Op->Opcode == DW_OP_LLVM_aspace_bregx ||
+      (SubOpcode && (*SubOpcode == DW_OP_LLVM_call_frame_entry_reg ||
+                     *SubOpcode == DW_OP_LLVM_aspace_bregx)))
     if (prettyPrintRegisterOp(U, OS, DumpOpts, Op->Opcode, Op->Operands))
-#endif//>>>>>>> 68bb005ae021cbfaef8fe9fa8b3efcdf0e13e2b3
       return true;
 
   for (unsigned Operand = 0; Operand < Op->Desc.Op.size(); ++Operand) {
     unsigned Size = Op->Desc.Op[Operand];
     unsigned Signed = Size & DWARFExpression::Operation::SignBit;
 
-#if 0//<<<<<<< HEAD
-    if (Size == Operation::SizeSubOpLEB) {
+    if (Size ==  DWARFExpression::Operation::SizeSubOpLEB) {
       assert(Operand == 0);
       assert(SubOpcode);
-    } else if (Size == Operation::BaseTypeRef && U) {
-#else//=======
-    if (Size == DWARFExpression::Operation::SizeSubOpLEB) {
-      StringRef SubName =
-          SubOperationEncodingString(Op->Opcode, Op->Operands[Operand]);
-      assert(!SubName.empty() && "DW_OP SubOp has no name!");
-      OS << " " << SubName;
     } else if (Size == DWARFExpression::Operation::BaseTypeRef && U) {
-#endif//>>>>>>> 68bb005ae021cbfaef8fe9fa8b3efcdf0e13e2b3
       // For DW_OP_convert the operand may be 0 to indicate that conversion to
       // the generic type should be done. The same holds for DW_OP_reinterpret,
       // which is currently not supported.

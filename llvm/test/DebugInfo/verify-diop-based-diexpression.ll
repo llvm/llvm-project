@@ -18,22 +18,22 @@ entry:
   %i = alloca i32, align 4
 
   ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpComposite(2, %struct.type)), ![[#]])
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpComposite(2, %struct.type))), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpComposite(2, %struct.type)), !22)
 
-  ; CHECK: #dbg_value(i16 42, ![[#]], !DIExpression(DIOpArg(0, i16), DIOpFragment(16, 16)), ![[#]])
-  call void @llvm.dbg.value(metadata i16 42, metadata !21, metadata !DIExpression(DIOpArg(0, i16), DIOpFragment(16, 16))), !dbg !22
+  ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpFragment(16, 16)), ![[#]])
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpFragment(16, 16)), !22)
 
-  ; CHECK: #dbg_value(i8 poison, ![[#]], !DIExpression(DIOpArg(0, i32)), ![[#]])
-  call void @llvm.dbg.value(metadata i8 poison, metadata !24, metadata !DIExpression(DIOpArg(0, i32))), !dbg !22
+  ; CHECK: #dbg_declare(ptr poison, ![[#]], !DIExpression(DIOpArg(0, ptr)), ![[#]])
+    #dbg_declare(ptr poison, !24, !DIExpression(DIOpArg(0, ptr)), !22)
 
   ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 64), DIOpBitOffset(ptr)), ![[#]])
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !26, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 64), DIOpBitOffset(ptr))), !dbg !22
+    #dbg_declare(ptr %i, !26, !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 64), DIOpBitOffset(ptr)), !22)
 
   ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 8), DIOpByteOffset(ptr)), ![[#]])
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !27, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 8), DIOpByteOffset(ptr))), !dbg !22
+    #dbg_declare(ptr %i, !27, !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 8), DIOpByteOffset(ptr)), !22)
 
-  ; CHECK: #dbg_value(i32 3, ![[#]], !DIExpression(DIOpArg(0, i32), DIOpConstant(<2 x i32> <i32 1, i32 2>), DIOpConstant(<2 x i32> <i32 3, i32 4>), DIOpSelect()), ![[#]])
-  call void @llvm.dbg.value(metadata i32 3, metadata !28, metadata !DIExpression(DIOpArg(0, i32), DIOpConstant(<2 x i32> <i32 1, i32 2>), DIOpConstant(<2 x i32> <i32 3, i32 4>), DIOpSelect())), !dbg !22
+  ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(i32), DIOpConstant(<2 x i32> <i32 1, i32 2>), DIOpConstant(<2 x i32> <i32 3, i32 4>), DIOpSelect()), ![[#]])
+    #dbg_declare(ptr %i, !28, !DIExpression(DIOpArg(0, ptr), DIOpDeref(i32), DIOpConstant(<2 x i32> <i32 1, i32 2>), DIOpConstant(<2 x i32> <i32 3, i32 4>), DIOpSelect()), !22)
 
   ret void
 }
@@ -85,85 +85,85 @@ entry:
   %i = alloca i32, align 4
 
   ; CHECK: DIOpReferrer type must be same size in bits as argument
-  call void @llvm.dbg.declare(metadata ptr %x, metadata !18, metadata !DIExpression(DIOpReferrer(i32), DIOpDeref(ptr))), !dbg !20
+    #dbg_declare(ptr %x, !18, !DIExpression(DIOpReferrer(i32), DIOpDeref(ptr)), !20)
 
   ; CHECK: DIOpArg index out of range
-  call void @llvm.dbg.declare(metadata ptr %x, metadata !18, metadata !DIExpression(DIOpArg(1, ptr))), !dbg !20
+    #dbg_declare(ptr %x, !18, !DIExpression(DIOpArg(1, ptr)), !20)
 
   ; CHECK: DIOpArg type must be same size in bits as argument
-  call void @llvm.dbg.declare(metadata ptr %x, metadata !18, metadata !DIExpression(DIOpArg(0, i32))), !dbg !20
+    #dbg_declare(ptr %x, !18, !DIExpression(DIOpArg(0, i32)), !20)
 
   ; CHECK: DIOpReinterpret must not alter bitsize of child
-  call void @llvm.dbg.declare(metadata ptr %x, metadata !18, metadata !DIExpression(DIOpArg(0, ptr), DIOpReinterpret(i32))), !dbg !20
+    #dbg_declare(ptr %x, !18, !DIExpression(DIOpArg(0, ptr), DIOpReinterpret(i32)), !20)
 
   ; CHECK: DIOpBitOffset requires first input be integer typed
-  call void @llvm.dbg.declare(metadata ptr %x, metadata !18, metadata !DIExpression(DIOpConstant(float 0.0), DIOpArg(0, ptr), DIOpBitOffset(ptr))), !dbg !20
+    #dbg_declare(ptr %x, !18, !DIExpression(DIOpConstant(float 0.0), DIOpArg(0, ptr), DIOpBitOffset(ptr)), !20)
 
   ; CHECK: DIOpByteOffset requires first input be integer typed
-  call void @llvm.dbg.declare(metadata ptr %x, metadata !18, metadata !DIExpression(DIOpConstant(ptr undef), DIOpArg(0, ptr), DIOpByteOffset(ptr))), !dbg !20
+    #dbg_declare(ptr %x, !18, !DIExpression(DIOpConstant(ptr undef), DIOpArg(0, ptr), DIOpByteOffset(ptr)), !20)
 
   ; CHECK: DIOpComposite bitsize does not match sum of child bitsizes
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpConstant(i8 0), DIOpComposite(2, i32))), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpConstant(i8 0), DIOpComposite(2, i32)), !22)
 
   ; CHECK: DIOpExtend child must have integer, floating point, or ptr type
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpConstant(<2 x i32> <i32 0, i32 0>), DIOpExtend(2))), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpConstant(<2 x i32> <i32 0, i32 0>), DIOpExtend(2)), !22)
 
   ; CHECK: DIOpDeref requires input to be pointer typed
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(i32), DIOpDeref(i32))), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpArg(0, ptr), DIOpDeref(i32), DIOpDeref(i32)), !22)
 
   ; CHECK: DIOpAdd requires identical type inputs
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpConstant(i32 0), DIOpConstant(i8 0), DIOpAdd())), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpConstant(i32 0), DIOpConstant(i8 0), DIOpAdd()), !22)
 
   ; CHECK: DIOpPushLane requires integer result type
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpPushLane(ptr))), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpPushLane(ptr)), !22)
 
   ; CHECK: DIOpAdd requires more inputs
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpConstant(i32 0), DIOpAdd())), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpConstant(i32 0), DIOpAdd()), !22)
 
   ; CHECK: DIOpArg type must be same size in bits as argument
-  call void @llvm.dbg.declare(metadata !DIArgList(ptr %x, ptr %i), metadata !21, metadata !DIExpression(DIOpArg(0, i32), DIOpArg(1, i32), DIOpAdd())), !dbg !22
+    #dbg_declare(!DIArgList(ptr %x, ptr %i), !21, !DIExpression(DIOpArg(0, i32), DIOpArg(1, i32), DIOpAdd()), !22)
 
   ; CHECK: DIOpArg type must be same size in bits as argument
-  call void @llvm.dbg.declare(metadata !DIArgList(ptr %x, ptr %i), metadata !21, metadata !DIExpression(DIOpArg(0, i8), DIOpArg(1, i8), DIOpAdd())), !dbg !22
+    #dbg_declare(!DIArgList(ptr %x, ptr %i), !21, !DIExpression(DIOpArg(0, i8), DIOpArg(1, i8), DIOpAdd()), !22)
 
   ; CHECK: DIOp expression requires one element on stack after evaluating
-  call void @llvm.dbg.declare(metadata !DIArgList(ptr %x, ptr %i), metadata !21, metadata !DIExpression(DIOpArg(0, i64), DIOpArg(1, i64))), !dbg !22
+    #dbg_declare(!DIArgList(ptr %x, ptr %i), !21, !DIExpression(DIOpArg(0, i64), DIOpArg(1, i64)), !22)
 
   ; CHECK: DIOpZExt requires integer typed input
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpZExt(i64))), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpArg(0, ptr), DIOpZExt(i64)), !22)
 
   ; CHECK: DIOpZExt requires result type to be wider than input type
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, i64), DIOpZExt(i64))), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpArg(0, i64), DIOpZExt(i64)), !22)
 
   ; CHECK: DIOpSExt requires integer typed input
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpSExt(i64))), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpArg(0, ptr), DIOpSExt(i64)), !22)
 
   ; CHECK: DIOpSExt requires result type to be wider than input type
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, i64), DIOpSExt(i64))), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpArg(0, i64), DIOpSExt(i64)), !22)
 
   ; CHECK: DIOpLShr requires all integer inputs
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpLShr())), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpLShr()), !22)
 
   ; CHECK: DIOpAShr requires all integer inputs
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpAShr())), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpAShr()), !22)
 
   ; CHECK: DIOpShl requires all integer inputs
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpShl())), !dbg !22
+    #dbg_declare(ptr %i, !21, !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpShl()), !22)
 
   ; CHECK: DIOpConvert on integers requires result type to be no wider than input type
-  call void @llvm.dbg.value(metadata i8 42, metadata !21, metadata !DIExpression(DIOpArg(0, i8), DIOpConvert(i16))), !dbg !22
+    #dbg_declare(i8 42, !21, !DIExpression(DIOpArg(0, i8), DIOpConvert(i16)), !22)
 
   ; FIXME(diexpression-poison): DIExpression must yield a location at least as wide as the variable or fragment it describes
-  ;call void @llvm.dbg.value(metadata i8 42, metadata !21, metadata !DIExpression(DIOpArg(0, i8))), !dbg !22
+  ;  #dbg_declare(i8 42, !21, !DIExpression(DIOpArg(0, i8)), !22)
 
   ; FIXME(diexpression-poison): DIExpression must yield a location at least as wide as the variable or fragment it describes
-  ;call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpConstant(i16 1), DIOpAdd())), !dbg !22
+  ;  #dbg_declare(ptr %i, !21, !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpConstant(i16 1), DIOpAdd()), !22)
 
   ; FIXME(diexpression-poison): DIExpression must yield a location at least as wide as the variable or fragment it describes
-  ;call void @llvm.dbg.value(metadata i8 42, metadata !21, metadata !DIExpression(DIOpArg(0, i8), DIOpFragment(0, 16))), !dbg !22
+  ;  #dbg_declare(i8 42, !21, !DIExpression(DIOpArg(0, i8), DIOpFragment(0, 16)), !22)
 
   ; CHECK: DIOpFragment must be contained within variable
-  call void @llvm.dbg.value(metadata i16 42, metadata !21, metadata !DIExpression(DIOpArg(0, i16), DIOpFragment(24, 16))), !dbg !22
+    #dbg_declare(i16 42, !21, !DIExpression(DIOpArg(0, i16), DIOpFragment(24, 16)), !22)
 
   ret void
 }

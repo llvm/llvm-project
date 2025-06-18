@@ -541,7 +541,7 @@ public:
 
   DIELoc *finalize() {
     if (!IsImplemented) {
-      emitUserOp(dwarf::DW_OP_LLVM_USER_undefined);
+      emitUserOp(dwarf::DW_OP_LLVM_undefined);
     }
     DwarfExpression::finalize();
     return &OutDIE;

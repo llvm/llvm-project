@@ -966,9 +966,6 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_IMPORTED_ENTITY:
       case bitc::METADATA_GLOBAL_VAR_EXPR:
       case bitc::METADATA_GENERIC_SUBRANGE:
-      case bitc::METADATA_EXPR:
-      case bitc::METADATA_FRAGMENT:
-      case bitc::METADATA_LIFETIME:
         // We don't expect to see any of these, if we see one, give up on
         // lazy-loading and fallback.
         MDStringRef.clear();
@@ -2461,23 +2458,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
     break;
   }
-  case bitc::METADATA_EXPR: {
-    if (Record.size() < 1)
-      return error("Invalid record");
-
-    uint64_t Version = Record[0];
-    if (Version != 0)
-      return error("Invalid record: unknown DIExpr version " + Twine(Version));
-
-    DIExprBuilder Builder(Context);
-    if (Error Err =
-            appendDIOpsToBuilder(Builder, ArrayRef<uint64_t>(Record).slice(1)))
-      return Err;
-
-    MetadataList.assignValue(Builder.intoExpr(), NextMetadataNo);
-    NextMetadataNo++;
-    break;
-  }
   case bitc::METADATA_GLOBAL_VAR_EXPR: {
     if (Record.size() != 3)
       return error("Invalid record");
@@ -2559,15 +2539,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         return Err;
     break;
   }
-  case bitc::METADATA_FRAGMENT: {
-    if (Record.size() != 0)
-      return error("Invalid record");
-    IsDistinct = true;
-    MetadataList.assignValue(DIFragment::getDistinct(Context),
-                             NextMetadataNo);
-    NextMetadataNo++;
-    break;
-  }
   case bitc::METADATA_KIND: {
     // Support older bitcode files that had METADATA_KIND records in a
     // block with METADATA_BLOCK_ID.
@@ -2589,19 +2560,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     MetadataList.assignValue(DIArgList::get(Context, Elts), NextMetadataNo);
-    NextMetadataNo++;
-    break;
-  }
-  case bitc::METADATA_LIFETIME: {
-    if (Record.size() < 2)
-      return error("Invalid record");
-    Metadata *Obj = getMD(Record[0]);
-    Metadata *Loc = getMD(Record[1]);
-    SmallVector<Metadata *> Args;
-    for (auto ArgID : ArrayRef<uint64_t>(Record).slice(2))
-      Args.push_back(getMD(ArgID));
-    MetadataList.assignValue(DILifetime::getDistinct(Context, Obj, Loc, Args),
-                             NextMetadataNo);
     NextMetadataNo++;
     break;
   }

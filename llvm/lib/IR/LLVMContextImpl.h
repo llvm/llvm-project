@@ -1368,19 +1368,6 @@ template <> struct MDNodeKeyImpl<DIExpression> {
   unsigned getHashValue() const { return hash_value(Elements); }
 };
 
-template <> struct MDNodeKeyImpl<DIExpr> {
-  ArrayRef<DIOp::Variant> Elements;
-
-  MDNodeKeyImpl(ArrayRef<DIOp::Variant> Elements) : Elements(Elements) {}
-  MDNodeKeyImpl(const DIExpr *N) : Elements(N->Elements) {}
-
-  bool isKeyOf(const DIExpr *RHS) const {
-    return Elements == ArrayRef<DIOp::Variant>(RHS->Elements);
-  }
-
-  unsigned getHashValue() const { return hash_combine_range(Elements); }
-};
-
 template <> struct MDNodeKeyImpl<DIGlobalVariableExpression> {
   Metadata *Variable;
   Metadata *Expression;

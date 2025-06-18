@@ -544,8 +544,7 @@ bool DwarfExpression::addExpression(
 
     switch (OpNum) {
     case dwarf::DW_OP_LLVM_poisoned:
-      emitOp(dwarf::DW_OP_LLVM_user);
-      emitOp(dwarf::DW_OP_LLVM_USER_undefined);
+      emitUserOp(dwarf::DW_OP_LLVM_undefined);
       LocationKind = Unknown;
       break;
     case dwarf::DW_OP_LLVM_arg:
@@ -753,7 +752,7 @@ void DwarfExpression::addExpression(DIExpression::NewElementsRef Expr,
   if (FragOp)
     addOpPiece(FragOp->getBitSize());
   if (!IsImplemented)
-    emitUserOp(dwarf::DW_OP_LLVM_USER_undefined);
+    emitUserOp(dwarf::DW_OP_LLVM_undefined);
   IsFragment = false;
   ASTRoot.reset();
   this->TRI = nullptr;
@@ -770,12 +769,6 @@ void DwarfExpression::maskSubRegister() {
 }
 
 void DwarfExpression::emitUserOp(uint8_t UserOp, const char *Comment) {
-  auto OptNonUserOp = dwarf::getNonUserOp(UserOp);
-  assert(OptNonUserOp && "non-user op passed to DwarfExpression::emitUserOp");
-  if (!EmitHeterogeneousDwarfAsUserOps) {
-    emitOp(*OptNonUserOp, Comment);
-    return;
-  }
   emitOp(dwarf::DW_OP_LLVM_user);
   emitOp(UserOp);
 }
@@ -984,10 +977,10 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
     auto focusThreadIfRequired = [this](int64_t DwarfRegNo) {
       // FIXME: This should be represented in the DIExpression.
       if (auto LaneSize = TRI->getDwarfRegLaneSize(DwarfRegNo, false)) {
-        emitUserOp(dwarf::DW_OP_LLVM_USER_push_lane);
+        emitUserOp(dwarf::DW_OP_LLVM_push_lane);
         emitConstu(*LaneSize);
         emitOp(dwarf::DW_OP_mul);
-        emitUserOp(dwarf::DW_OP_LLVM_USER_offset);
+        emitUserOp(dwarf::DW_OP_LLVM_offset);
       }
     };
 
@@ -996,7 +989,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
       focusThreadIfRequired(Regs[0].DwarfRegNo);
 
       if (SubRegOffset) {
-        emitUserOp(dwarf::DW_OP_LLVM_USER_offset_uconst);
+        emitUserOp(dwarf::DW_OP_LLVM_offset_uconst);
         emitUnsigned(SubRegOffset);
       }
 
@@ -1025,7 +1018,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
       emitOp(dwarf::DW_OP_piece);
       emitUnsigned(Reg.SubRegSize / 8);
     }
-    emitUserOp(dwarf::DW_OP_LLVM_USER_piece_end);
+    emitUserOp(dwarf::DW_OP_LLVM_piece_end);
 
     if (IsFragment) {
       emitOp(dwarf::DW_OP_swap);
@@ -1189,7 +1182,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Deref Deref,
   emitOp(dwarf::DW_OP_deref_size);
   emitData1(PointerSizeInBytes);
   emitConstu(*PointerDWARFAddrSpace);
-  emitUserOp(dwarf::DW_OP_LLVM_USER_form_aspace_address);
+  emitUserOp(dwarf::DW_OP_LLVM_form_aspace_address);
 
   // FIXME(KZHURAVL): Is the following result type correct?
   return NewOpResult{Deref.getResultType(), ValueKind::LocationDesc};
@@ -1239,7 +1232,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Composite Composite,
     emitOp(dwarf::DW_OP_piece);
     emitUnsigned(Size.getFixedValue() / 8);
   }
-  emitUserOp(dwarf::DW_OP_LLVM_USER_piece_end);
+  emitUserOp(dwarf::DW_OP_LLVM_piece_end);
 
   if (IsFragment) {
     emitOp(dwarf::DW_OP_swap);
@@ -1271,7 +1264,7 @@ DwarfExpression::traverse(DIOp::ByteOffset ByteOffset, ChildrenT Children) {
   if (!RHS)
     return std::nullopt;
 
-  emitUserOp(dwarf::DW_OP_LLVM_USER_offset);
+  emitUserOp(dwarf::DW_OP_LLVM_offset);
   return NewOpResult{ByteOffset.getResultType(), ValueKind::LocationDesc};
 }
 
@@ -1284,7 +1277,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::BitOffset BitOffset,
   if (!RHS)
     return std::nullopt;
 
-  emitUserOp(dwarf::DW_OP_LLVM_USER_bit_offset);
+  emitUserOp(dwarf::DW_OP_LLVM_bit_offset);
   return NewOpResult{BitOffset.getResultType(), ValueKind::LocationDesc};
 }
 

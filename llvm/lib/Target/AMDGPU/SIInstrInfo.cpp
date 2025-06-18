@@ -9926,7 +9926,6 @@ bool llvm::execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
     return true;
 
   const int MaxInstScan = 20;
-  int NumInst = 0;
 
   // Stop scan at the use.
   bool canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
