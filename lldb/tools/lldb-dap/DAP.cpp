@@ -624,19 +624,52 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
 }
 
 std::optional<protocol::Source> DAP::ResolveSource(lldb::SBAddress address) {
-
-  if (DisplayAssemblySource(debugger, address)) {
-    auto create_reference = [this](lldb::addr_t addr) {
-      return CreateSourceReference(addr);
-    };
-    return CreateAssemblySource(target, address, create_reference);
-  }
+  if (DisplayAssemblySource(debugger, address))
+    return ResolveAssemblySource(address);
 
   lldb::SBLineEntry line_entry = GetLineEntryForAddress(target, address);
   if (!line_entry.IsValid())
     return std::nullopt;
 
   return CreateSource(line_entry.GetFileSpec());
+}
+
+std::optional<protocol::Source>
+DAP::ResolveAssemblySource(lldb::SBAddress address) {
+  lldb::SBSymbol symbol = address.GetSymbol();
+  lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
+  std::string name;
+  if (symbol.IsValid()) {
+    load_addr = symbol.GetStartAddress().GetLoadAddress(target);
+    name = symbol.GetName();
+  } else {
+    load_addr = address.GetLoadAddress(target);
+    name = GetLoadAddressString(load_addr);
+  }
+
+  if (load_addr == LLDB_INVALID_ADDRESS)
+    return std::nullopt;
+
+  protocol::Source source;
+  source.sourceReference = CreateSourceReference(load_addr);
+  lldb::SBModule module = address.GetModule();
+  if (module.IsValid()) {
+    lldb::SBFileSpec file_spec = module.GetFileSpec();
+    if (file_spec.IsValid()) {
+      std::string path = GetSBFileSpecPath(file_spec);
+      if (!path.empty())
+        source.path = path + '`' + name;
+    }
+  }
+
+  source.name = std::move(name);
+
+  // Mark the source as deemphasized since users will only be able to view
+  // assembly for these frames.
+  source.presentationHint =
+      protocol::Source::eSourcePresentationHintDeemphasize;
+
+  return source;
 }
 
 bool DAP::RunLLDBCommands(llvm::StringRef prefix,

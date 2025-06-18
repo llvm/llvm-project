@@ -46,46 +46,6 @@ static bool ShouldDisplayAssemblySource(
   return false;
 }
 
-std::optional<protocol::Source> CreateAssemblySource(
-    const lldb::SBTarget &target, lldb::SBAddress address,
-    llvm::function_ref<int32_t(lldb::addr_t)> create_reference) {
-
-  lldb::SBSymbol symbol = address.GetSymbol();
-  lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
-  std::string name;
-  if (symbol.IsValid()) {
-    load_addr = symbol.GetStartAddress().GetLoadAddress(target);
-    name = symbol.GetName();
-  } else {
-    load_addr = address.GetLoadAddress(target);
-    name = GetLoadAddressString(load_addr);
-  }
-
-  if (load_addr == LLDB_INVALID_ADDRESS)
-    return std::nullopt;
-
-  protocol::Source source;
-  source.sourceReference = create_reference(load_addr);
-  lldb::SBModule module = address.GetModule();
-  if (module.IsValid()) {
-    lldb::SBFileSpec file_spec = module.GetFileSpec();
-    if (file_spec.IsValid()) {
-      std::string path = GetSBFileSpecPath(file_spec);
-      if (!path.empty())
-        source.path = path + '`' + name;
-    }
-  }
-
-  source.name = std::move(name);
-
-  // Mark the source as deemphasized since users will only be able to view
-  // assembly for these frames.
-  source.presentationHint =
-      protocol::Source::PresentationHint::eSourcePresentationHintDeemphasize;
-
-  return source;
-}
-
 std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file) {
   if (!file.IsValid())
     return std::nullopt;
