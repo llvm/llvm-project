@@ -43,7 +43,7 @@ define void @test_multiple_autoreleases() {
 ; CHECK-NEXT:    call void @use_object(ptr [[OBJ1]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.autorelease(ptr [[OBJ1]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @use_object(ptr [[OBJ2]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.objc.autorelease(ptr [[OBJ2]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ2]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
 ; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[POOL]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;

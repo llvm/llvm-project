@@ -120,6 +120,44 @@ static const Value *FindSingleUseIdentifiedObject(const Value *Arg) {
 /// \defgroup ARCOpt ARC Optimization.
 /// @{
 
+/// Check if there is an autoreleasePoolPop after the given autorelease
+/// instruction in the same basic block with no intervening calls that
+/// could affect the autorelease pool.
+static bool HasFollowingAutoreleasePoolPop(Instruction *AutoreleaseInst) {
+  BasicBlock *BB = AutoreleaseInst->getParent();
+
+  // Look forward from the autorelease instruction
+  for (BasicBlock::iterator I = std::next(AutoreleaseInst->getIterator()),
+                            E = BB->end();
+       I != E; ++I) {
+    ARCInstKind Class = GetBasicARCInstKind(&*I);
+
+    switch (Class) {
+    case ARCInstKind::AutoreleasepoolPop:
+      // Found a pool pop - the autorelease will be drained
+      return true;
+
+    case ARCInstKind::AutoreleasepoolPush:
+      // A new pool started - this autorelease won't be drained by a later pop
+      return false;
+
+    case ARCInstKind::CallOrUser:
+    case ARCInstKind::Call:
+      // Unknown call could affect autorelease pool state or return autoreleased
+      // objects
+      return false;
+
+    default:
+      // Known ObjC runtime calls and other instructions are safe to continue
+      // through
+      break;
+    }
+  }
+
+  // Reached end of basic block without finding a pool pop
+  return false;
+}
+
 // TODO: On code like this:
 //
 // objc_retain(%x)
@@ -977,12 +1015,22 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(Function &F, Instruction *Inst,
     break;
   }
 
-  // objc_autorelease(x) -> objc_release(x) if x is otherwise unused.
+  // objc_autorelease(x) -> objc_release(x) if x is otherwise unused
+  // OR if this autorelease is followed by an autoreleasePoolPop.
   if (IsAutorelease(Class) && Inst->use_empty()) {
     CallInst *Call = cast<CallInst>(Inst);
     const Value *Arg = Call->getArgOperand(0);
     Arg = FindSingleUseIdentifiedObject(Arg);
-    if (Arg) {
+    bool ShouldConvert = (Arg != nullptr);
+    const char *Reason = "since x is otherwise unused";
+
+    // Also convert if this autorelease is followed by a pool pop
+    if (!ShouldConvert && HasFollowingAutoreleasePoolPop(Inst)) {
+      ShouldConvert = true;
+      Reason = "since it's followed by autoreleasePoolPop";
+    }
+
+    if (ShouldConvert) {
       Changed = true;
       ++NumAutoreleases;
 
@@ -996,8 +1044,8 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(Function &F, Instruction *Inst,
                            MDNode::get(C, {}));
 
       LLVM_DEBUG(dbgs() << "Replacing autorelease{,RV}(x) with objc_release(x) "
-                           "since x is otherwise unused.\nOld: "
-                        << *Call << "\nNew: " << *NewCall << "\n");
+                        << Reason << ".\nOld: " << *Call
+                        << "\nNew: " << *NewCall << "\n");
 
       EraseInstruction(Call);
       Inst = NewCall;
