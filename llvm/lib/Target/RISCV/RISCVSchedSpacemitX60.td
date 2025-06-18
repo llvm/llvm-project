@@ -977,7 +977,9 @@ foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
   defvar ALULat = SMX60GetVIALULatency<mx>.c;
 
-  // TODO: vslide*down seems to be 1 cycle slower than vslide*up in our tests
+  // Pattern for vslide1down.vx, vslidedown.vi/vx: 4/5/9/17
+  // Pattern for vslide1up.vx: 4/4/8/16
+  // We use 4/4/8/16 for simplicity
   let Latency = ALULat in {
     defm "" : LMULWriteResMX<"WriteVSlideI",  [SMX60_VIEU], mx, IsWorstCase>;
 
