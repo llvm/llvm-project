@@ -17,6 +17,7 @@
 #include <optional>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizationEnums.h.inc"
+#include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h"
 
 namespace mlir {
 class OpBuilder;
@@ -615,7 +616,7 @@ FailureOr<Value> getBuffer(RewriterBase &rewriter, Value value,
 /// IR, this function can be used.
 ///
 /// This function is a wrapper around BufferizableOpInterface::getBufferType.
-FailureOr<BaseMemRefType> getBufferType(Value value,
+FailureOr<BufferLikeType> getBufferType(Value value,
                                         const BufferizationOptions &options,
                                         const BufferizationState &state);
 
@@ -629,7 +630,7 @@ FailureOr<BaseMemRefType> getBufferType(Value value,
 /// IR, this function can be used.
 ///
 /// This function is a wrapper around `BufferizableOpInterface::getBufferType`.
-FailureOr<BaseMemRefType> getBufferType(Value value,
+FailureOr<BufferLikeType> getBufferType(Value value,
                                         const BufferizationOptions &options,
                                         const BufferizationState &state,
                                         SmallVector<Value> &invocationStack);
@@ -739,6 +740,19 @@ AliasingValueList unknownGetAliasingValues(OpOperand &opOperand);
 /// This is the default implementation of
 /// BufferizableOpInterface::hasTensorSemantics
 bool defaultHasTensorSemantics(Operation *op);
+
+/// This is a helper function used when buffer type is guaranteed to be memref.
+/// It performs two actions: failure state checking and an explicit llvm::cast<>
+/// from the buffer-like type interface to a BaseMemRefType. This allows easier
+/// management of differences in C++ types at the API boundaries. Valid buffer
+/// type is casted to the memref type. Otherwise, the failure state is
+/// propagated i.e. asMemRefType(mlir::failure()) returns mlir::failure().
+FailureOr<BaseMemRefType> asMemRefType(FailureOr<BufferLikeType> bufferType);
+
+/// This function is a free-standing helper that relies on
+/// bufferization::TensorLikeTypeInterface to verify the types in tensor and
+/// buffer worlds match.
+bool typesMatchAfterBufferization(Operation &op, Value tensor, Value buffer);
 } // namespace detail
 
 } // namespace bufferization
