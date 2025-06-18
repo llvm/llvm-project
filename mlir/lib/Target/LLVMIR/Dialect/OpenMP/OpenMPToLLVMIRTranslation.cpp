@@ -5312,9 +5312,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   // get the correct debug locations. For outlined functions, the normal MLIR op
   // conversion will automatically pick the correct location.
   llvm::BasicBlock *parentBB = builder.GetInsertBlock();
-  assert(parentBB);
+  assert(parentBB && "No insert block is set for the builder");
   llvm::Function *parentLLVMFn = parentBB->getParent();
-  assert(parentLLVMFn);
+  assert(parentLLVMFn && "Parent Function must be valid");
   if (llvm::DISubprogram *SP = parentLLVMFn->getSubprogram())
     builder.SetCurrentDebugLocation(llvm::DILocation::get(
         parentLLVMFn->getContext(), outlinedFnLoc.getLine(),
