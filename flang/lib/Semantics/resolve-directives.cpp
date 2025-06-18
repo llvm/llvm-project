@@ -23,6 +23,7 @@
 #include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Support/Debug.h"
 #include <list>
 #include <map>
@@ -740,9 +741,7 @@ public:
   }
 
   const parser::OmpClause *associatedClause{nullptr};
-  void SetAssociatedClause(const parser::OmpClause &c) {
-    associatedClause = &c;
-  }
+  void SetAssociatedClause(const parser::OmpClause *c) { associatedClause = c; }
   const parser::OmpClause *GetAssociatedClause() { return associatedClause; }
 
 private:
@@ -1919,12 +1918,17 @@ std::int64_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
   }
 
   if (orderedLevel && (!collapseLevel || orderedLevel >= collapseLevel)) {
-    SetAssociatedClause(*ordClause);
+    SetAssociatedClause(ordClause);
     return orderedLevel;
   } else if (!orderedLevel && collapseLevel) {
-    SetAssociatedClause(*collClause);
+    SetAssociatedClause(collClause);
     return collapseLevel;
-  } // orderedLevel < collapseLevel is an error handled in structural checks
+  } else {
+    SetAssociatedClause(nullptr);
+  }
+  // orderedLevel < collapseLevel is an error handled in structural
+  // checks
+
   return 1; // default is outermost loop
 }
 
@@ -1952,9 +1956,31 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     ivDSA = Symbol::Flag::OmpLastPrivate;
   }
 
+  bool isLoopConstruct{
+      GetContext().directive == llvm::omp::Directive::OMPD_loop};
+  const parser::OmpClause *clause{GetAssociatedClause()};
+  bool hasCollapseClause{
+      clause ? (clause->Id() == llvm::omp::OMPC_collapse) : false};
+
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
   if (outer.has_value()) {
     for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
+      if (loop->IsDoConcurrent()) {
+        // DO CONCURRENT is explicitly allowed for the LOOP construct so long as
+        // there isn't a COLLAPSE clause
+        if (isLoopConstruct) {
+          if (hasCollapseClause) {
+            // hasCollapseClause implies clause != nullptr
+            context_.Say(clause->source,
+                "DO CONCURRENT loops cannot be used with the COLLAPSE clause."_err_en_US);
+          }
+        } else {
+          auto &stmt =
+              std::get<parser::Statement<parser::NonLabelDoStmt>>(loop->t);
+          context_.Say(stmt.source,
+              "DO CONCURRENT loops cannot form part of a loop nest."_err_en_US);
+        }
+      }
       // go through all the nested do-loops and resolve index variables
       const parser::Name *iv{GetLoopIndex(*loop)};
       if (iv) {
