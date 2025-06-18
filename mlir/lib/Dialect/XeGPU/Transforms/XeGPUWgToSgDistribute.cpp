@@ -343,14 +343,21 @@ struct WgToSgVectorBroadcastOp
     if (!layout || !layout.getSgLayout())
       return failure();
 
+    // TODO: Currently only supports cases where the source and result ranks
+    // are the same.
+    auto srcType =
+        dyn_cast<VectorType>(adaptor.getOperands().front()[0].getType());
+    if (!srcType || srcType.getRank() != resultType.getRank())
+      return failure();
+
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
     SmallVector<Value> newBroadcastOps;
-    for (size_t i = 0; i < adaptor.getOperands().front().size(); ++i) {
+    for (auto operand : adaptor.getOperands().front()) {
       auto newBroadcast = rewriter.create<vector::BroadcastOp>(
-          op.getLoc(), newResultType, adaptor.getOperands().front()[i]);
+          op.getLoc(), newResultType, operand);
       xegpu::setLayoutAttr(newBroadcast->getResult(0),
                            layout.dropSgLayoutAndData());
       newBroadcastOps.push_back(newBroadcast.getResult());
