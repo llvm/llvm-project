@@ -103,11 +103,11 @@ TargetCodeGenInfo::getDependentLibraryOption(llvm::StringRef Lib,
   Opt += Lib;
 }
 
-unsigned TargetCodeGenInfo::getOpenCLKernelCallingConv() const {
-  // OpenCL kernels are called via an explicit runtime API with arguments
-  // set with clSetKernelArg(), not as normal sub-functions.
+unsigned TargetCodeGenInfo::getDeviceKernelCallingConv() const {
+  // Device kernels are called via an explicit runtime API with arguments,
+  // such as set with clSetKernelArg() for OpenCL, not as normal sub-functions.
   // Return SPIR_KERNEL by default as the kernel calling convention to
-  // ensure the fingerprint is fixed such way that each OpenCL argument
+  // ensure the fingerprint is fixed such way that each kernel argument
   // gets one matching argument in the produced kernel function argument
   // list to enable feasible implementation of clSetKernelArg() with
   // aggregates etc. In case we would use the default C calling conv here,
