@@ -2292,10 +2292,7 @@ public:
 
     // finalizeLowering() may also insert instructions in some cases. The safe
     // place for those is at the end of the initial block of PHIs.
-    auto IP = Inst->getInsertionPointAfterDef();
-    assert(IP.has_value() &&
-           "expected to find a valid insertion point after the phi");
-    Builder.SetInsertPoint(*IP);
+    Builder.SetInsertPoint(Inst->getParent()->getFirstInsertionPt());
     return PhiM;
   }
 
