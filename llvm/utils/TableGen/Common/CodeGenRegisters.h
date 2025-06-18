@@ -564,7 +564,7 @@ struct RegUnit {
   // Weight assigned to this RegUnit for estimating register pressure.
   // This is useful when equalizing weights in register classes with mixed
   // register topologies.
-  unsigned Weight;
+  unsigned Weight = 0;
 
   // Each native RegUnit corresponds to one or two root registers. The full
   // set of registers containing this unit can be computed as the union of
@@ -573,14 +573,12 @@ struct RegUnit {
 
   // Index into RegClassUnitSets where we can find the list of UnitSets that
   // contain this unit.
-  unsigned RegClassUnitSetsIdx;
+  unsigned RegClassUnitSetsIdx = 0;
   // A register unit is artificial if at least one of its roots is
   // artificial.
-  bool Artificial;
+  bool Artificial = false;
 
-  RegUnit() : Weight(0), RegClassUnitSetsIdx(0), Artificial(false) {
-    Roots[0] = Roots[1] = nullptr;
-  }
+  RegUnit() { Roots[0] = Roots[1] = nullptr; }
 
   ArrayRef<const CodeGenRegister *> getRoots() const {
     assert(!(Roots[1] && !Roots[0]) && "Invalid roots array");
