@@ -4347,8 +4347,15 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
     ElementCount VF) const {
   // Cross iteration phis such as reductions need special handling and are
   // currently unsupported.
-  if (any_of(OrigLoop->getHeader()->phis(),
-             [&](PHINode &Phi) { return Legal->isFixedOrderRecurrence(&Phi); }))
+  if (any_of(OrigLoop->getHeader()->phis(), [&](PHINode &Phi) {
+        if (Legal->isReductionVariable(&Phi)) {
+          RecurKind RK =
+              Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind();
+          return RK == RecurKind::FMinNumNoFMFs ||
+                 RK == RecurKind::FMaxNumNoFMFs;
+        }
+        return Legal->isFixedOrderRecurrence(&Phi);
+      }))
     return false;
 
   // Phis with uses outside of the loop require special handling and are
@@ -8769,6 +8776,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
+  if (!VPlanTransforms::runPass(
+          VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath, *Plan))
+    return nullptr;
 
   // Transform recipes to abstract recipes if it is legal and beneficial and
   // clamp the range for better cost estimation.

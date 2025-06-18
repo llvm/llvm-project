@@ -103,6 +103,11 @@ struct VPlanTransforms {
   /// not valid.
   static bool adjustFixedOrderRecurrences(VPlan &Plan, VPBuilder &Builder);
 
+  /// Check if \p Plan contains any FMaxNumNoFMFs or FMinNumNoFMFs reductions.
+  /// If they do, try to update the vector loop to exit early if any input is
+  /// NaN and resume executing in the scalar loop to handle the NaNs there.
+  static bool handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan);
+
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
 
