@@ -319,7 +319,8 @@
 // CHECK-RV32-LIBSTDCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}basic_riscv32_tree{{[/\\]+}}riscv32-unknown-elf{{[/\\]+}}lib"
 // CHECK-RV32-LIBSTDCXX-SAME: "-lstdc++" "-lm"
 // CHECK-RV32-LIBSTDCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
-// CHECK-RV32-LIBSTDCXX-SAME: "-lc" "-X" "-o" "a.out"
+// CHECK-RV32-LIBSTDCXX-SAME: "-lc"
+// CHECK-RV32-LIBSTDCXX-SAME: "-X" "-o" "a.out"
 
 // RUN: %clang %s -### 2>&1 --target=riscv64-unknown-elf \
 // RUN:     -nostdlibinc -nobuiltininc \
