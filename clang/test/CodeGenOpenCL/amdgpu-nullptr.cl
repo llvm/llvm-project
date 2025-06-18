@@ -503,19 +503,21 @@ void cast_bool_generic(generic char* p) {
     *p = 0;
 }
 
-// Test initialization of a struct with a private member.
+// Test initialize a struct using memset.
+// For large structures which is mostly zero, clang generats llvm.memset for
+// the zero part and store for non-zero members.
 typedef struct {
   long a, b, c, d;
   private char *p;
 } StructTy3;
 
-// CHECK-LABEL: test_struct_private_member
-// CHECK:  store <32 x i8> zeroinitializer, ptr addrspace(5) {{.*}}, align 8
+// CHECK-LABEL: test_memset_private
+// CHECK: call void @llvm.memset.p5.i64(ptr addrspace(5) noundef align 8 {{.*}}, i8 0, i64 32, i1 false)
 // CHECK: [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) %ptr, i32 32
 // CHECK: store ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5)), ptr addrspace(5) [[GEP]]
 // CHECK: [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) {{.*}}, i32 36
 // CHECK: store i32 0, ptr addrspace(5) [[GEP1]], align 4
-void test_struct_private_member(private StructTy3 *ptr) {
+void test_memset_private(private StructTy3 *ptr) {
   StructTy3 S3 = {0, 0, 0, 0, 0};
   *ptr = S3;
 }

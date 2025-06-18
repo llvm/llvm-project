@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes='sroa' -S | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64"
 
-%struct_a = type { [32 x i8] }
+%struct_a = type { <32 x i8> }
 define i8 @vector_promote_a(ptr %arg0) {
 ; CHECK-LABEL: @vector_promote_a(
 ; CHECK-NEXT:    [[V0:%.*]] = load i8, ptr [[ARG0:%.*]], align 1
@@ -19,7 +19,7 @@ define i8 @vector_promote_a(ptr %arg0) {
   ret i8 %v1
 }
 
-%struct_b = type { [16 x i16] }
+%struct_b = type { <16 x i16> }
 define i16 @vector_promote_b(ptr %arg0) {
 ; CHECK-LABEL: @vector_promote_b(
 ; CHECK-NEXT:    [[V0:%.*]] = load i16, ptr [[ARG0:%.*]], align 1
@@ -37,7 +37,7 @@ define i16 @vector_promote_b(ptr %arg0) {
   ret i16 %v1
 }
 
-%struct_c = type { [4 x i32] }
+%struct_c = type { <4 x i32> }
 define i32 @vector_promote_c(ptr %arg0) {
 ; CHECK-LABEL: @vector_promote_c(
 ; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[ARG0:%.*]], align 1
@@ -55,65 +55,91 @@ define i32 @vector_promote_c(ptr %arg0) {
   ret i32 %v1
 }
 
-; We currently prevent promotion if the vector would require padding
-%struct_d = type { [6 x i32] }
+; These memsets do not get promoted because getTypePartition does not break
+; vectors into smaller vectors.
+%struct_d = type { <8 x i32> }
 define i32 @vector_promote_d(ptr %arg0) {
 ; CHECK-LABEL: @vector_promote_d(
-; CHECK-NEXT:    [[A0_SROA_3:%.*]] = alloca [3 x i32], align 4
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A0_SROA_3]], i8 0, i64 12, i1 false)
+; CHECK-NEXT:    [[A0_SROA_0:%.*]] = alloca [3 x i32], align 32
+; CHECK-NEXT:    [[A0_SROA_4:%.*]] = alloca [3 x i32], align 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 32 [[A0_SROA_0]], i8 0, i64 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A0_SROA_4]], i8 1, i64 12, i1 false)
 ; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[ARG0:%.*]], align 1
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 16843009
 ;
   %a0 = alloca %struct_d, align 32
-  call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 24, i1 false)
+
+  call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 16, i1 false)
+  %p0 = getelementptr inbounds i32, ptr %a0, i64 4
+  call void @llvm.memset.p0.i64(ptr align 32 %p0, i8 1, i64 16, i1 false)
+
   %v0 = load i32, ptr %arg0, align 1
-  %p0 = getelementptr inbounds i32, ptr %a0, i64 1
-  store i32 %v0, ptr %p0, align 1
-  %p1 = getelementptr inbounds i32, ptr %a0, i64 2
-  %v1 = load i32, ptr %p1, align 1
+  %p1 = getelementptr inbounds i32, ptr %a0, i64 3
+  store i32 %v0, ptr %p1, align 1
+  %p2 = getelementptr inbounds i32, ptr %a0, i64 4
+  %v1 = load i32, ptr %p2, align 1
   ret i32 %v1
 }
 
-; We shouldn't promote memsets larger than the max value of `unsigned short`.
-; See getMaxNumFixedVectorElements().
-%struct_e = type { [65536 x i8] }
-define i8 @vector_promote_e(ptr %arg0) {
+%struct_e = type { %struct_c, %struct_c }
+define i32 @vector_promote_e(ptr %arg0) {
 ; CHECK-LABEL: @vector_promote_e(
-; CHECK-NEXT:    [[A0_SROA_3:%.*]] = alloca [65532 x i8], align 4
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A0_SROA_3]], i8 0, i64 65532, i1 false)
+; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[ARG0:%.*]], align 1
+; CHECK-NEXT:    [[A0_SROA_0_12_VEC_INSERT:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[V0]], i32 3
+; CHECK-NEXT:    [[A0_SROA_2_16_VEC_EXTRACT:%.*]] = extractelement <4 x i32> splat (i32 16843009), i32 0
+; CHECK-NEXT:    ret i32 [[A0_SROA_2_16_VEC_EXTRACT]]
+;
+  %a0 = alloca %struct_e, align 32
+
+  call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 16, i1 false)
+  %p0 = getelementptr inbounds i32, ptr %a0, i64 4
+  call void @llvm.memset.p0.i64(ptr align 32 %p0, i8 1, i64 16, i1 false)
+
+  %v0 = load i32, ptr %arg0, align 1
+  %p1 = getelementptr inbounds i32, ptr %a0, i64 3
+  store i32 %v0, ptr %p1, align 1
+  %p2 = getelementptr inbounds i32, ptr %a0, i64 4
+  %v1 = load i32, ptr %p2, align 1
+  ret i32 %v1
+}
+
+; Don't promote non-vector alloca type
+%struct_f = type { [32 x i8] }
+define i8 @vector_promote_f(ptr %arg0) {
+; CHECK-LABEL: @vector_promote_f(
+; CHECK-NEXT:    [[A0_SROA_2:%.*]] = alloca [3 x i8], align 1
+; CHECK-NEXT:    [[A0_SROA_3:%.*]] = alloca [27 x i8], align 1
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[A0_SROA_2]], i8 0, i64 3, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[A0_SROA_3]], i8 0, i64 27, i1 false)
 ; CHECK-NEXT:    [[V0:%.*]] = load i8, ptr [[ARG0:%.*]], align 1
 ; CHECK-NEXT:    ret i8 0
 ;
-  %a0 = alloca %struct_e, align 32
-  call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 65536, i1 false)
+  %a0 = alloca %struct_f, align 32
+  call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 32, i1 false)
   %v0 = load i8, ptr %arg0, align 1
-  %p0 = getelementptr inbounds i8, ptr %a0, i64 3
-  store i8 %v0, ptr %p0, align 1
-  %p1 = getelementptr inbounds i8, ptr %a0, i64 2
-  %v1 = load i8, ptr %p1, align 1
+  store i8 %v0, ptr %a0, align 1
+  %p0 = getelementptr inbounds i8, ptr %a0, i64 4
+  %v1 = load i8, ptr %p0, align 1
   ret i8 %v1
 }
 
-; Largest memset we currently promote
-%struct_f = type { [32768 x i8] }
-define i8 @vector_promote_f(ptr %arg0) {
-; CHECK-LABEL: @vector_promote_f(
-; CHECK-NEXT:    [[V0:%.*]] = load i8, ptr [[ARG0:%.*]], align 1
-; CHECK-NEXT:    [[A0_SROA_0_12345_VEC_INSERT:%.*]] = insertelement <32768 x i8> zeroinitializer, i8 [[V0]], i32 12345
-; CHECK-NEXT:    [[A0_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <32768 x i8> [[A0_SROA_0_12345_VEC_INSERT]], i32 2
-; CHECK-NEXT:    ret i8 [[A0_SROA_0_2_VEC_EXTRACT]]
+; Don't promote memset that crosses vector partition boundary
+%struct_g = type { i8, i8, i8, i8, <32 x i8> }
+define i8 @vector_promote_g(ptr %arg0) {
+; CHECK-LABEL: @vector_promote_g(
+; CHECK-NEXT:    [[A0_SROA_2:%.*]] = alloca [27 x i8], align 1
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[A0_SROA_2]], i8 0, i64 27, i1 false)
+; CHECK-NEXT:    ret i8 0
 ;
-  %a0 = alloca %struct_f, align 32
-  call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 32768, i1 false)
-  %v0 = load i8, ptr %arg0, align 1
-  %p0 = getelementptr inbounds i8, ptr %a0, i64 12345
-  store i8 %v0, ptr %p0, align 1
-  %p1 = getelementptr inbounds i8, ptr %a0, i64 2
-  %v1 = load i8, ptr %p1, align 1
-  ret i8 %v1
+  %a0 = alloca %struct_g, align 32
+  call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 36, i1 false)
+  %p0 = getelementptr inbounds i8, ptr %a0, i64 8
+  %v0 = load i8, ptr %p0, align 1
+  ret i8 %v0
 }
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
 declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immarg) #0
+declare void @llvm.memset.p0.i32(ptr writeonly captures(none), i8, i32, i1 immarg) #0
 
 attributes #0 = { nocallback nofree nounwind willreturn memory(argmem: write) }

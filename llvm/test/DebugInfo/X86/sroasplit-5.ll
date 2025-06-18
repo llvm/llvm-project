@@ -21,9 +21,10 @@ target triple = "x86_64-unknown-linux-gnu"
 ;
 ; There should be no debug info for the padding.
 ; CHECK-NOT: DW_OP_LLVM_fragment, 56
-; CHECK: ![[a:[0-9]+]], !DIExpression(),
+; CHECK: DIExpression(DW_OP_LLVM_fragment, 0, 32)
 ; CHECK-NOT: DW_OP_LLVM_fragment, 56
-; CHECK: ![[a]] = !DILocalVariable(name: "a",
+; CHECK: DIExpression(DW_OP_LLVM_fragment, 32, 24)
+; CHECK-NOT: DW_OP_LLVM_fragment, 56
 %struct.prog_src_register = type { i32, i24 }
 
 ; Function Attrs: nounwind

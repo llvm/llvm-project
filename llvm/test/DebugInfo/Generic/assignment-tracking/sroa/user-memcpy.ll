@@ -21,7 +21,8 @@
 ;; Allocas have been promoted - the linked dbg.assigns have been removed.
 
 ;; | V3i point = {0, 0, 0};
-; CHECK-NEXT: #dbg_value(<16 x i8> zeroinitializer, ![[point:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 128),
+; CHECK-NEXT: #dbg_value(i64 0, ![[point:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64),
+; CHECK-NEXT: #dbg_value(i64 0, ![[point]], !DIExpression(DW_OP_LLVM_fragment, 64, 64),
 
 ;; point.z = 5000;
 ; CHECK-NEXT: #dbg_value(i64 5000, ![[point]], !DIExpression(DW_OP_LLVM_fragment, 128, 64),
@@ -31,20 +32,17 @@
 ;;     local.other.x = global.other.x
 ;;     local.other.y = global.other.y
 ;;     local.other.z = global.other.z
-; CHECK-NEXT: %other.sroa.0.0.copyload = load <8 x i8>, ptr @__const._Z3funv.other
+; CHECK-NEXT: %other.sroa.0.0.copyload = load i64, ptr @__const._Z3funv.other
 ; CHECK-NEXT: %other.sroa.2.0.copyload = load i64, ptr getelementptr inbounds (i8, ptr @__const._Z3funv.other, i64 8)
 ; CHECK-NEXT: %other.sroa.3.0.copyload = load i64, ptr getelementptr inbounds (i8, ptr @__const._Z3funv.other, i64 16)
-; CHECK-NEXT: #dbg_value(<8 x i8> %other.sroa.0.0.copyload, ![[other:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64),
+; CHECK-NEXT: #dbg_value(i64 %other.sroa.0.0.copyload, ![[other:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64),
 ; CHECK-NEXT: #dbg_value(i64 %other.sroa.2.0.copyload, ![[other]], !DIExpression(DW_OP_LLVM_fragment, 64, 64),
 ; CHECK-NEXT: #dbg_value(i64 %other.sroa.3.0.copyload, ![[other]], !DIExpression(DW_OP_LLVM_fragment, 128, 64),
 
 ;; | std::memcpy(&point.y, &other.x, sizeof(long) * 2);
 ;;   other is now 3 scalars:
 ;;     point.y = other.x
-; CHECK-NEXT: %point.sroa.0.sroa.0.8.vec.expand = shufflevector <8 x i8> %other.sroa.0.0.copyload, <8 x i8> poison, <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>,
-; CHECK-NEXT: %point.sroa.0.sroa.0.8.vecblend = select <16 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i8> %point.sroa.0.sroa.0.8.vec.expand, <16 x i8> zeroinitializer,
-; CHECK-NEXT: #dbg_value(<16 x i8> %point.sroa.0.sroa.0.8.vecblend, ![[point]], !DIExpression(DW_OP_LLVM_fragment, 64, 64),
-
+; CHECK-NEXT: #dbg_value(i64 %other.sroa.0.0.copyload, ![[point]], !DIExpression(DW_OP_LLVM_fragment, 64, 64),
 ;;
 ;;     point.z = other.y
 ; CHECK-NEXT: #dbg_value(i64 %other.sroa.2.0.copyload, ![[point]], !DIExpression(DW_OP_LLVM_fragment, 128, 64),
