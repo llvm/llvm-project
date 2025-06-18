@@ -997,7 +997,7 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
 
   auto *SignatureDecl = HLSLRootSignatureDecl::Create(
       SemaRef.getASTContext(), /*DeclContext=*/SemaRef.CurContext, Loc,
-      DeclIdent, Elements);
+      DeclIdent, SemaRef.getLangOpts().HLSLRootSigVer, Elements);
 
   SignatureDecl->setImplicit();
   SemaRef.PushOnScopeChains(SignatureDecl, SemaRef.getCurScope());
