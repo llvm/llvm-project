@@ -295,7 +295,7 @@ static void restoreByValRefArgumentType(
         cast<TypeAttr>(byValRefAttr->getValue()).getValue());
 
     auto valueArg = rewriter.create<LLVM::LoadOp>(arg.getLoc(), resTy, arg);
-    rewriter.replaceUsesOfBlockArgument(oldArg, valueArg);
+    rewriter.replaceUsesOfBlockArgument(arg, valueArg);
   }
 }
 
