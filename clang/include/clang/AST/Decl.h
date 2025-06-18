@@ -41,6 +41,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -5179,6 +5180,8 @@ class HLSLRootSignatureDecl final
                                     llvm::hlsl::rootsig::RootElement> {
   friend TrailingObjects;
 
+  llvm::dxbc::RootSignatureVersion Version;
+
   unsigned NumElems;
 
   llvm::hlsl::rootsig::RootElement *getElems() { return getTrailingObjects(); }
@@ -5188,15 +5191,19 @@ class HLSLRootSignatureDecl final
   }
 
   HLSLRootSignatureDecl(DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+                        llvm::dxbc::RootSignatureVersion Verison,
                         unsigned NumElems);
 
 public:
   static HLSLRootSignatureDecl *
   Create(ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+         llvm::dxbc::RootSignatureVersion Version,
          ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements);
 
   static HLSLRootSignatureDecl *CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID);
+
+  llvm::dxbc::RootSignatureVersion getVersion() const { return Version; }
 
   ArrayRef<llvm::hlsl::rootsig::RootElement> getRootElements() const {
     return {getElems(), NumElems};

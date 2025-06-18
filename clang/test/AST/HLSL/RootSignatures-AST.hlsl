@@ -1,5 +1,11 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -ast-dump \
 // RUN:  -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -ast-dump \
+// RUN:  -fdx-rootsig-ver=rootsig_1_0 \
+// RUN:  -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-V1_0
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -ast-dump \
+// RUN:  -fdx-rootsig-ver=rootsig_1_1 \
+// RUN:  -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-V1_1
 
 // This test ensures that the sample root signature is parsed without error and
 // the Attr AST Node is created succesfully. If an invalid root signature was
@@ -16,6 +22,8 @@
   "DescriptorTable(Sampler(s0, numDescriptors = 4, space = 1))"
 
 // CHECK: -HLSLRootSignatureDecl 0x{{.*}} {{.*}} implicit [[SAMPLE_RS_DECL:__hlsl_rootsig_decl_\d*]]
+// CHECK-V1_0: version: 1.0,
+// CHECK-V1_1: version: 1.1,
 // CHECK-SAME: RootElements{
 // CHECK-SAME:   CBV(b1, numDescriptors = 1, space = 0,
 // CHECK-SAME:     offset = DescriptorTableOffsetAppend, flags = DataStaticWhileSetAtExecute),
