@@ -997,7 +997,6 @@ public:
 
       // Recognize UnmergeSrc that can be unmerged to DstTy directly.
       // Types have to be either both vector or both non-vector types.
-      // In case of vector types, the scalar elements need to match.
       // Merge-like opcodes are combined one at the time. First one creates new
       // unmerge, following should use the same unmerge (builder performs CSE).
       //
@@ -1006,9 +1005,7 @@ public:
       // %AnotherDst:_(DstTy) = G_merge_like_opcode %2:_(EltTy), %3
       //
       // %Dst:_(DstTy), %AnotherDst = G_UNMERGE_VALUES %UnmergeSrc
-      if (((!DstTy.isVector() && !UnmergeSrcTy.isVector()) ||
-           (DstTy.isVector() && UnmergeSrcTy.isVector() &&
-            DstTy.getScalarType() == UnmergeSrcTy.getScalarType())) &&
+      if ((DstTy.isVector() == UnmergeSrcTy.isVector()) &&
           (Elt0UnmergeIdx % NumMIElts == 0) &&
           getCoverTy(UnmergeSrcTy, DstTy) == UnmergeSrcTy) {
         if (!isSequenceFromUnmerge(MI, 0, Unmerge, Elt0UnmergeIdx, NumMIElts,
