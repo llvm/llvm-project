@@ -22,6 +22,7 @@ include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/EnumAttr.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 
@@ -354,6 +355,212 @@ def SingleOp : OpenMP_Op<"single", traits = [
   }];
 
   let hasVerifier = 1;
+}
+
+//===---------------------------------------------------------------------===//
+// OpenMP Canonical Loop Info Type
+//===---------------------------------------------------------------------===//
+
+def CanonicalLoopInfoType : OpenMP_Type<"CanonicalLoopInfo", "cli"> {
+  let summary = "Type for representing a reference to a canonical loop";
+  let description = [{
+    A variable of type CanonicalLoopInfo refers to an OpenMP-compatible
+    canonical loop in the same function. Values of this type are not
+    available at runtime and therefore cannot be used by the program itself,
+    i.e. an opaque type. It is similar to the transform dialect's
+    `!transform.interface` type, but instead of implementing an interface
+    for each transformation, the OpenMP dialect itself defines possible
+    operations on this type.
+
+    A value of type CanonicalLoopInfoType (in the following: CLI) value can be
+
+    1. created by omp.new_cli.
+    2. passed to omp.canonical_loop to associate the loop to that CLI. A CLI
+       can only be associated once.
+    3. passed to an omp loop transformation operation that modifies the loop
+       associated with the CLI. The CLI is the "applyee" and the operation is
+       the consumer. A CLI can only be consumed once.
+    4. passed to an omp loop transformation operation to associate the cli with
+       a result of that transformation. The CLI is the "generatee" and the
+       operation is the generator.
+
+    A CLI cannot
+
+    1. be returned from a function.
+    2. be passed to operations that are not specifically designed to take a
+       CanonicalLoopInfoType, including AnyType.
+
+    A CLI directly corresponds to an object of
+    OpenMPIRBuilder's CanonicalLoopInfo struct when lowering to LLVM-IR.
+  }];
+}
+
+//===---------------------------------------------------------------------===//
+// OpenMP Canonical Loop Info Creation
+//===---------------------------------------------------------------------===//
+
+def NewCliOp : OpenMP_Op<"new_cli",
+    [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
+  let summary = "Create a new Canonical Loop Info value.";
+  let description = [{
+    Create a new CLI that can be passed as an argument to a CanonicalLoopOp
+    and to loop transformation operations to handle dependencies between
+    loop transformation operations.
+  }];
+
+  let arguments = (ins );
+  let results = (outs CanonicalLoopInfoType:$result);
+  let assemblyFormat = [{
+      attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins )>,
+  ];
+
+  let hasVerifier = 1;
+}
+
+//===---------------------------------------------------------------------===//
+// OpenMP Canonical Loop Operation
+//===---------------------------------------------------------------------===//
+def CanonicalLoopOp : OpenMPTransform_Op<"canonical_loop", 
+    [DeclareOpInterfaceMethods<OpAsmOpInterface, [ "getAsmBlockNames", "getAsmBlockArgumentNames"]>]> {
+  let summary = "OpenMP Canonical Loop Operation";
+  let description = [{
+    All loops that conform to OpenMP's definition of a canonical loop can be
+    simplified to a CanonicalLoopOp. In particular, there are no loop-carried
+    variables and the number of iterations it will execute is know before the
+    operation. This allows e.g. to determine the number of threads and chunks
+    the iterations space is split into before executing any iteration. More
+    restrictions may apply in cases such as (collapsed) loop nests, doacross
+    loops, etc.
+
+    In contrast to other loop operations such as `scf.for`, the number of
+    iterations is determined by only a single variable, the trip-count. The
+    induction variable value is the logical iteration number of that iteration,
+    which OpenMP defines to be between 0 and the trip-count (exclusive).
+    Loop representation having lower-bound, upper-bound, and step-size operands,
+    require passes to do more work than necessary, including handling special
+    cases such as upper-bound smaller than lower-bound, upper-bound equal to
+    the integer type's maximal value, negative step size, etc. This complexity
+    is better only handled once by the front-end and can apply its semantics
+    for such cases while still being able to represent any kind of loop, which
+    kind of the point of a mid-end intermediate representation. User-defined
+    types such as random-access iterators in C++ could not directly be
+    represented anyway.
+
+    The induction variable is always of the same type as the tripcount argument.
+    Since it can never be negative, tripcount is always interpreted as an
+    unsigned integer. It is the caller's responsibility to ensure the tripcount
+    is not negative when its interpretation is signed, i.e.
+    `%tripcount = max(0,%tripcount)`.
+
+    An optional argument to a omp.canonical_loop that can be passed in
+    is a CanonicalLoopInfo value that can be used to refer to the canonical
+    loop to apply transformations -- such as tiling, unrolling, or
+    work-sharing -- to the loop, similar to the transform dialect but
+    with OpenMP-specific semantics. Because it is optional, it has to be the
+    last of the operands, but appears first in the pretty format printing.
+
+    The pretty assembly format is inspired by python syntax, where `range(n)`
+    returns an iterator that runs from $0$ to $n-1$. The pretty assembly syntax
+    is one of:
+
+     omp.canonical_loop(%cli) %iv : !type in range(%tripcount)
+     omp.canonical_loop       %iv : !type in range(%tripcount)
+
+    A CanonicalLoopOp is lowered to LLVM-IR using
+    `OpenMPIRBuilder::createCanonicalLoop`.
+
+    #### Examples
+
+    Translation from lower-bound, upper-bound, step-size to trip-count.
+    ```c
+    for (int i = 3; i < 42; i+=2) {
+      B[i] = A[i];
+    }
+    ```
+
+    ```mlir
+    %lb = arith.constant 3 : i32
+    %ub = arith.constant 42 : i32
+    %step = arith.constant 2 : i32
+    %range = arith.sub %ub, %lb : i32
+    %tripcount = arith.div %range, %step : i32
+    omp.canonical_loop %iv : i32 in range(%tripcount) {
+      %offset = arith.mul %iv, %step : i32
+      %i = arith.add %offset, %lb : i32
+      %a = load %arrA[%i] : memref<?xf32>
+      store %a, %arrB[%i] : memref<?xf32>
+    }
+    ```
+
+    Nested canonical loop with transformation of the inner loop.
+    ```mlir
+    %outer = omp.new_cli : !omp.cli
+    %inner = omp.new_cli : !omp.cli
+    omp.canonical_loop(%outer) %iv1 : i32 in range(%tc1) {
+      omp.canonical_loop(%inner) %iv2 : i32 in range(%tc2) {
+        %a = load %arrA[%iv1, %iv2] : memref<?x?xf32>
+        store %a, %arrB[%iv1, %iv2] : memref<?x?xf32>
+      }
+    }
+    omp.unroll_full(%inner)
+    ```
+  }];
+
+
+  let arguments = (ins IntLikeType:$tripCount,
+                       Optional<CanonicalLoopInfoType>:$cli);
+  let regions = (region AnyRegion:$region);
+
+  let extraClassDeclaration = [{
+    ::mlir::Value getInductionVar();
+  }];
+
+  let builders = [
+    OpBuilder<(ins "::mlir::Value":$tripCount)>,
+    OpBuilder<(ins "::mlir::Value":$tripCount, "::mlir::Value":$cli)>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// OpenMP unroll_heuristic operation
+//===----------------------------------------------------------------------===//
+
+def UnrollHeuristicOp : OpenMPTransform_Op<"unroll_heuristic", []> {
+  let summary = "OpenMP heuristic unroll operation";
+  let description = [{
+    Represents a `#pragma omp unroll` construct introduced in OpenMP 5.1.
+
+    The operation has one applyee and no generatees. The applyee is unrolled
+    according to implementation-defined heuristics. Implementations may choose
+    to not unroll the loop, partially unroll by a chosen factor, or fully
+    unroll it. Even if the implementation chooses to partially unroll the
+    applyee, the resulting unrolled loop is not accessible as a generatee. Use
+    omp.unroll_partial if a generatee is required.
+
+    The lowering is implemented using `OpenMPIRBuilder::unrollLoopHeuristic`,
+    which just attaches `llvm.loop.unroll.enable` metadata to the loop so the
+    unrolling is carried-out by LLVM's LoopUnroll pass. That is, unrolling only
+    actually performed in optimized builds.
+
+    Assembly formats:
+      omp.unroll_heuristic(%cli)
+      omp.unroll_heuristic(%cli) -> ()
+  }];
+
+  let arguments = (ins CanonicalLoopInfoType:$applyee);
+
+  let builders = [
+    OpBuilder<(ins "::mlir::Value":$cli)>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
