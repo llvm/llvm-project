@@ -560,8 +560,8 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
 // Narrowing Shift and Clips
 foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
-  defvar ALULat = SMX60GetVIALULatency<mx>.c;
 
+  defvar ALULat = SMX60GetVIALULatency<mx>.c;
   let Latency = ALULat in {
     defm "" : LMULWriteResMX<"WriteVNShiftV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVNShiftX", [SMX60_VIEU], mx, IsWorstCase>;
@@ -575,8 +575,8 @@ foreach mx = ["MF8", "MF4", "MF2", "M1"] in {
 // Complex Slide
 foreach mx = ["M2", "M4"] in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
-  defvar ALULat = SMX60GetVIALULatency<mx>.c;
 
+  defvar ALULat = SMX60GetVIALULatency<mx>.c;
   let Latency = !mul(ALULat, 2) in {
     defm "" : LMULWriteResMX<"WriteVNShiftV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVNShiftX", [SMX60_VIEU], mx, IsWorstCase>;
