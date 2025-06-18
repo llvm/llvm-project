@@ -1573,18 +1573,22 @@ define <2 x half> @vid_addend1_v2f16() {
 ;
 ; RV32ZVFHMIN-LABEL: vid_addend1_v2f16:
 ; RV32ZVFHMIN:       # %bb.0:
-; RV32ZVFHMIN-NEXT:    lui a0, 262148
-; RV32ZVFHMIN-NEXT:    addi a0, a0, -1024
-; RV32ZVFHMIN-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32ZVFHMIN-NEXT:    vmv.s.x v8, a0
+; RV32ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV32ZVFHMIN-NEXT:    vid.v v8
+; RV32ZVFHMIN-NEXT:    li a0, 15
+; RV32ZVFHMIN-NEXT:    vsll.vi v8, v8, 10
+; RV32ZVFHMIN-NEXT:    slli a0, a0, 10
+; RV32ZVFHMIN-NEXT:    vadd.vx v8, v8, a0
 ; RV32ZVFHMIN-NEXT:    ret
 ;
 ; RV64ZVFHMIN-LABEL: vid_addend1_v2f16:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    lui a0, 262148
-; RV64ZVFHMIN-NEXT:    addi a0, a0, -1024
-; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV64ZVFHMIN-NEXT:    vmv.s.x v8, a0
+; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV64ZVFHMIN-NEXT:    vid.v v8
+; RV64ZVFHMIN-NEXT:    li a0, 15
+; RV64ZVFHMIN-NEXT:    vsll.vi v8, v8, 10
+; RV64ZVFHMIN-NEXT:    slli a0, a0, 10
+; RV64ZVFHMIN-NEXT:    vadd.vx v8, v8, a0
 ; RV64ZVFHMIN-NEXT:    ret
   ret <2 x half> <half 1.0, half 2.0>
 }
@@ -1608,18 +1612,22 @@ define <2 x half> @vid_denominator2_v2f16() {
 ;
 ; RV32ZVFHMIN-LABEL: vid_denominator2_v2f16:
 ; RV32ZVFHMIN:       # %bb.0:
-; RV32ZVFHMIN-NEXT:    lui a0, 245764
-; RV32ZVFHMIN-NEXT:    addi a0, a0, -2048
-; RV32ZVFHMIN-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32ZVFHMIN-NEXT:    vmv.s.x v8, a0
+; RV32ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV32ZVFHMIN-NEXT:    vid.v v8
+; RV32ZVFHMIN-NEXT:    li a0, 7
+; RV32ZVFHMIN-NEXT:    vsll.vi v8, v8, 10
+; RV32ZVFHMIN-NEXT:    slli a0, a0, 11
+; RV32ZVFHMIN-NEXT:    vadd.vx v8, v8, a0
 ; RV32ZVFHMIN-NEXT:    ret
 ;
 ; RV64ZVFHMIN-LABEL: vid_denominator2_v2f16:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    lui a0, 245764
-; RV64ZVFHMIN-NEXT:    addi a0, a0, -2048
-; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV64ZVFHMIN-NEXT:    vmv.s.x v8, a0
+; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV64ZVFHMIN-NEXT:    vid.v v8
+; RV64ZVFHMIN-NEXT:    li a0, 7
+; RV64ZVFHMIN-NEXT:    vsll.vi v8, v8, 10
+; RV64ZVFHMIN-NEXT:    slli a0, a0, 11
+; RV64ZVFHMIN-NEXT:    vadd.vx v8, v8, a0
 ; RV64ZVFHMIN-NEXT:    ret
   ret <2 x half> <half 0.5, half 1.0>
 }
