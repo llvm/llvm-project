@@ -277,6 +277,7 @@ protected:
   bool HasForceVALUThrottle = false;
   bool HasAshrPkInsts = false;
   bool HasMLMathInsts = false;
+  bool HasIEEEMinimumMaximumInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
   bool HasMin3Max3PKF16 = false;
@@ -288,6 +289,7 @@ protected:
   bool HasIndexedResources = false;
   bool HasSGPRVMEM = false;
   bool HasParallelBitInsts = false;
+  bool HasMadU32Inst = false;
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
@@ -1584,10 +1586,7 @@ public:
   bool hasIEEEMode() const { return !isGFX1170Plus(); }
 
   // \returns true if the target has IEEE fminimum/fmaximum instructions
-  bool hasIEEEMinMax() const { return getGeneration() >= GFX12; }
-
-  // \returns true if the target has IEEE fminimum3/fmaximum3 instructions
-  bool hasIEEEMinMax3() const { return hasIEEEMinMax(); }
+  bool hasIEEEMinimumMaximumInsts() const { return HasIEEEMinimumMaximumInsts; }
 
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }
@@ -1604,6 +1603,9 @@ public:
 
   // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
   bool hasAddSubU64Insts() const { return HasAddSubU64Insts; }
+
+  // \returns true if the target has V_MAD_U32 instruction.
+  bool hasMadU32Inst() const { return HasMadU32Inst; }
 
   // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
   bool hasVectorMulU64() const { return GFX1250Insts && !GFX13Insts; }

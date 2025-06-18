@@ -2122,7 +2122,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        G_SADDO, G_SSUBO})
       .lower();
 
-  if (ST.hasIEEEMinMax()) {
+  if (ST.hasIEEEMinimumMaximumInsts()) {
     getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
         .legalFor(FPTypesPK16)
         .clampMaxNumElements(0, S16, 2)
