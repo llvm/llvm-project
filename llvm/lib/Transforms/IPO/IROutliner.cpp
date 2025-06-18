@@ -744,9 +744,6 @@ static void moveFunctionData(Function &Old, Function &New,
         continue;
       }
 
-      // From this point we are only handling call instructions.
-      CallInst *CI = cast<CallInst>(&Val);
-
       // Edit the scope of called functions inside of outlined functions.
       if (DISubprogram *SP = New.getSubprogram()) {
         DILocation *DI = DILocation::get(New.getContext(), 0, 0, SP);
