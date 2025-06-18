@@ -3277,9 +3277,9 @@ static bool isRemovableWrite(CallBase &CB, Value *UsedV,
   return Dest && Dest->Ptr == UsedV;
 }
 
-static std::optional<ModRefInfo> isAllocSiteRemovable(Instruction *AI,
-                                 SmallVectorImpl<WeakTrackingVH> &Users,
-                                 const TargetLibraryInfo &TLI, bool KnowInit) {
+static std::optional<ModRefInfo>
+isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<WeakTrackingVH> &Users,
+                     const TargetLibraryInfo &TLI, bool KnowInit) {
   SmallVector<Instruction*, 4> Worklist;
   const std::optional<StringRef> Family = getAllocationFamily(AI, &TLI);
   Worklist.push_back(AI);
@@ -3454,8 +3454,8 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   // allocating the result.
   bool KnowInitUndef = false;
   bool KnowInitZero = false;
-  Constant *Init = getInitialValueOfAllocation(
-      &MI, &TLI, Type::getInt8Ty(MI.getContext()));
+  Constant *Init =
+      getInitialValueOfAllocation(&MI, &TLI, Type::getInt8Ty(MI.getContext()));
   if (Init) {
     if (isa<UndefValue>(Init))
       KnowInitUndef = true;
@@ -3469,7 +3469,8 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
       F.hasFnAttribute(Attribute::SanitizeAddress))
     KnowInitUndef = false;
 
-  auto Removable = isAllocSiteRemovable(&MI, Users, TLI, KnowInitZero | KnowInitUndef);
+  auto Removable =
+      isAllocSiteRemovable(&MI, Users, TLI, KnowInitZero | KnowInitUndef);
   if (Removable) {
     for (unsigned i = 0, e = Users.size(); i != e; ++i) {
       // Lowering all @llvm.objectsize and MTI calls first because they may use
