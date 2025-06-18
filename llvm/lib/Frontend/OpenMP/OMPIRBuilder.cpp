@@ -7558,10 +7558,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     // StaleCI is exactly OffloadingArraysToPrivatize.size() + 2
     const unsigned int NumStaleCIArgs = StaleCI->arg_size();
     bool HasShareds = NumStaleCIArgs > OffloadingArraysToPrivatize.size() + 1;
-    assert(
-        !HasShareds ||
-        NumStaleCIArgs == (OffloadingArraysToPrivatize.size() + 2) &&
-            "Wrong number of arguments for StaleCI when shareds are present");
+    assert((!HasShareds ||
+            NumStaleCIArgs == (OffloadingArraysToPrivatize.size() + 2)) &&
+           "Wrong number of arguments for StaleCI when shareds are present");
     int SharedArgOperandNo =
         HasShareds ? OffloadingArraysToPrivatize.size() + 1 : 0;
 

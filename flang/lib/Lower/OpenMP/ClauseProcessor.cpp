@@ -727,12 +727,15 @@ public:
   // Is the type inside a box?
   bool isBox() const { return inBox; }
 
+  bool isBoxChar() const { return inBoxChar; }
+
 private:
   void typeScan(mlir::Type type);
 
   std::optional<fir::CharacterType::LenType> charLen;
   llvm::SmallVector<int64_t> shape;
   bool inBox = false;
+  bool inBoxChar = false;
 };
 
 void TypeInfo::typeScan(mlir::Type ty) {
@@ -748,6 +751,9 @@ void TypeInfo::typeScan(mlir::Type ty) {
     typeScan(cty.getEleTy());
   } else if (auto cty = mlir::dyn_cast<fir::CharacterType>(ty)) {
     charLen = cty.getLen();
+  } else if (auto cty = mlir::dyn_cast<fir::BoxCharType>(ty)) {
+    inBoxChar = true;
+    typeScan(cty.getEleTy());
   } else if (auto hty = mlir::dyn_cast<fir::HeapType>(ty)) {
     typeScan(hty.getEleTy());
   } else if (auto pty = mlir::dyn_cast<fir::PointerType>(ty)) {
@@ -791,12 +797,6 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   fir::FortranVariableFlagsAttr attrs;
   if (varAttrs != fir::FortranVariableFlagsEnum::None)
     attrs = fir::FortranVariableFlagsAttr::get(builder.getContext(), varAttrs);
-  llvm::SmallVector<mlir::Value> typeparams;
-  if (typeInfo.getCharLength().has_value()) {
-    mlir::Value charLen = builder.createIntegerConstant(
-        loc, builder.getCharacterLengthType(), *typeInfo.getCharLength());
-    typeparams.push_back(charLen);
-  }
   mlir::Value shape;
   if (!typeInfo.isBox() && !typeInfo.getShape().empty()) {
     llvm::SmallVector<mlir::Value> extents;
@@ -805,11 +805,34 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
           builder.createIntegerConstant(loc, builder.getIndexType(), extent));
     shape = builder.create<fir::ShapeOp>(loc, extents);
   }
+  mlir::Value dst = funcOp.getArgument(0);
+  mlir::Value src = funcOp.getArgument(1);
+  llvm::SmallVector<mlir::Value> typeparams;
+  if (typeInfo.isBoxChar()) {
+    // fir.boxchar will be passed here as fir.ref<fir.boxchar>
+    auto loadDst = builder.create<fir::LoadOp>(loc, dst);
+    auto loadSrc = builder.create<fir::LoadOp>(loc, src);
+    // get the actual fir.ref<fir.char> type
+    mlir::Type refType =
+        fir::ReferenceType::get(mlir::cast<fir::BoxCharType>(eleTy).getEleTy());
+    auto unboxedDst = builder.create<fir::UnboxCharOp>(
+        loc, refType, builder.getIndexType(), loadDst);
+    auto unboxedSrc = builder.create<fir::UnboxCharOp>(
+        loc, refType, builder.getIndexType(), loadSrc);
+    // Add length to type parameters
+    typeparams.push_back(unboxedDst.getResult(1));
+    dst = unboxedDst.getResult(0);
+    src = unboxedSrc.getResult(0);
+  } else if (typeInfo.getCharLength().has_value()) {
+    mlir::Value charLen = builder.createIntegerConstant(
+        loc, builder.getCharacterLengthType(), *typeInfo.getCharLength());
+    typeparams.push_back(charLen);
+  }
   auto declDst = builder.create<hlfir::DeclareOp>(
-      loc, funcOp.getArgument(0), copyFuncName + "_dst", shape, typeparams,
+      loc, dst, copyFuncName + "_dst", shape, typeparams,
       /*dummy_scope=*/nullptr, attrs);
   auto declSrc = builder.create<hlfir::DeclareOp>(
-      loc, funcOp.getArgument(1), copyFuncName + "_src", shape, typeparams,
+      loc, src, copyFuncName + "_src", shape, typeparams,
       /*dummy_scope=*/nullptr, attrs);
   converter.copyVar(loc, declDst.getBase(), declSrc.getBase(), varAttrs);
   builder.create<mlir::func::ReturnOp>(loc);
@@ -835,10 +858,13 @@ bool ClauseProcessor::processCopyprivate(
 
     // CopyPrivate variables must be passed by reference. However, in the case
     // of assumed shapes/vla the type is not a !fir.ref, but a !fir.box.
-    // In these cases to retrieve the appropriate !fir.ref<!fir.box<...>> to
-    // access the data we need we must perform an alloca and then store to it
-    // and retrieve the data from the new alloca.
-    if (mlir::isa<fir::BaseBoxType>(symType)) {
+    // In the case of character types, the passed in type can also be
+    // !fir.boxchar. In these cases to retrieve the appropriate
+    // !fir.ref<!fir.box<...>> or !fir.ref<!fir.boxchar<..>> to access the data
+    // we need we must perform an alloca and then store to it and retrieve the
+    // data from the new alloca.
+    if (mlir::isa<fir::BaseBoxType>(symType) ||
+        mlir::isa<fir::BoxCharType>(symType)) {
       fir::FirOpBuilder &builder = converter.getFirOpBuilder();
       auto alloca = builder.create<fir::AllocaOp>(currentLocation, symType);
       builder.create<fir::StoreOp>(currentLocation, symVal, alloca);
