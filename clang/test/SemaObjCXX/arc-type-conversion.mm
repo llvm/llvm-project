@@ -81,12 +81,16 @@ void test_reinterpret_cast(__strong id *sip, __weak id *wip,
   auto *wp = reinterpret_cast<__weak NSString *>(sip);
   (void)reinterpret_cast<__strong id *>(wp);
   (void)reinterpret_cast<unsigned long *>(csip); // expected-error {{reinterpret_cast from '__strong id const *' to 'unsigned long *' casts away qualifiers}}
+  (void)reinterpret_cast<const unsigned long *>(csip);
   const unsigned long *cul = nullptr;
   (void)reinterpret_cast<__strong id *>(cul); // expected-error {{reinterpret_cast from 'const unsigned long *' to '__strong id *' casts away qualifiers}}
+  (void)reinterpret_cast<const __strong id *>(cul);
   volatile __strong id *vsip = nullptr;
   (void)reinterpret_cast<unsigned long *>(vsip); // expected-error {{reinterpret_cast from '__strong id volatile *' to 'unsigned long *' casts away qualifiers}}
+  (void)reinterpret_cast<volatile unsigned long *>(vsip);
   volatile unsigned long *vul = nullptr;
   (void)reinterpret_cast<__strong id *>(vul); // expected-error {{reinterpret_cast from 'volatile unsigned long *' to '__strong id *' casts away qualifiers}}
+  (void)reinterpret_cast<volatile __strong id *>(vul);
   auto uip = reinterpret_cast<uintptr_t>(sip);
   (void)reinterpret_cast<__strong id *>(uip); // expected-error {{to '__strong id *' is disallowed with ARC}}
 }
