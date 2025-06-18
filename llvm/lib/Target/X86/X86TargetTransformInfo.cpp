@@ -6586,10 +6586,9 @@ bool llvm::X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   case Intrinsic::vector_reduce_smax:
     auto *VType = cast<FixedVectorType>(II->getOperand(0)->getType());
     auto SType = VType->getScalarType();
-    bool CanUsePHMINPOSUW = 
-        ST->hasSSE41() && II->getType() == SType &&
-        (VType->getPrimitiveSizeInBits() % 128) == 0 &&
-        (SType->isIntegerTy(8) || SType->isIntegerTy(16));
+    bool CanUsePHMINPOSUW = ST->hasSSE41() && II->getType() == SType &&
+                            (VType->getPrimitiveSizeInBits() % 128) == 0 &&
+                            (SType->isIntegerTy(8) || SType->isIntegerTy(16));
     return !CanUsePHMINPOSUW;
   }
 }

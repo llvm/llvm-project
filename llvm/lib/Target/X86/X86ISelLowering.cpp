@@ -1436,16 +1436,18 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   // Vector min/max reductions
-  if (Subtarget.hasSSE41())
-  {
+  // These are lowered to PHMINPOSUW if possible,
+  // otherwise they are expaned to shuffles + binops.
+  if (Subtarget.hasSSE41()) {
     for (MVT VT : MVT::vector_valuetypes()) {
-      if (VT.getScalarType() == MVT::i8 || VT.getScalarType() == MVT::i16)
-      {
-        setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
-      }
+      if (!VT.isFixedLengthVector() || (VT.getSizeInBits() % 128) != 0 ||
+          !(VT.getScalarType() == MVT::i8 || VT.getScalarType() == MVT::i16))
+        continue;
+
+      setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
     }
   }
 
@@ -25426,9 +25428,11 @@ static SDValue LowerEXTEND_VECTOR_INREG(SDValue Op,
 // Create a min/max v8i16/v16i8 horizontal reduction with PHMINPOSUW.
 static SDValue createMinMaxReduction(SDValue Src, EVT TargetVT, SDLoc DL,
                                      ISD::NodeType BinOp, SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget)
-{
-  assert(Subtarget.hasSSE41() && "The caller must check if SSE4.1 is available");
+                                     const X86Subtarget &Subtarget) {
+  assert(Subtarget.hasSSE41() &&
+         "The caller must check if SSE4.1 is available");
+  assert(TargetVT == MVT::i16 ||
+         TargetVT == MVT::i8 && "Unexpected return type");
 
   EVT SrcVT = Src.getValueType();
   EVT SrcSVT = SrcVT.getScalarType();
@@ -25484,31 +25488,11 @@ static SDValue createMinMaxReduction(SDValue Src, EVT TargetVT, SDLoc DL,
 }
 
 static SDValue LowerVECTOR_REDUCE_MINMAX(SDValue Op,
-    const X86Subtarget& Subtarget,
-    SelectionDAG& DAG)
-{
-  ISD::NodeType BinOp;
-  switch (Op.getOpcode())
-  {
-    default: 
-      assert(false && "Expected min/max reduction");
-      break;
-    case ISD::VECREDUCE_UMIN:
-      BinOp = ISD::UMIN;
-      break;
-    case ISD::VECREDUCE_UMAX:
-      BinOp = ISD::UMAX;
-      break;
-    case ISD::VECREDUCE_SMIN:
-      BinOp = ISD::SMIN;
-      break;
-    case ISD::VECREDUCE_SMAX:
-      BinOp = ISD::SMAX;
-      break;
-  }
-
+                                         const X86Subtarget &Subtarget,
+                                         SelectionDAG &DAG) {
+  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Op.getOpcode());
   return createMinMaxReduction(Op->getOperand(0), Op.getValueType(), SDLoc(Op),
-      BinOp, DAG, Subtarget);
+                               BinOp, DAG, Subtarget);
 }
 
 static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
@@ -46299,8 +46283,8 @@ static SDValue combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
   if (!Src)
     return SDValue();
 
-  return createMinMaxReduction(Src, ExtractVT, SDLoc(Extract),
-      BinOp, DAG, Subtarget);
+  return createMinMaxReduction(Src, ExtractVT, SDLoc(Extract), BinOp, DAG,
+                               Subtarget);
 }
 
 // Attempt to replace an all_of/any_of/parity style horizontal reduction with a MOVMSK.
@@ -47136,8 +47120,8 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
 /// scalars back, while for x64 we should use 64-bit extracts and shifts.
 static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
                                        TargetLowering::DAGCombinerInfo &DCI,
-                                       const X86Subtarget &Subtarget, 
-                                       bool& TransformedBinOpReduction) {
+                                       const X86Subtarget &Subtarget,
+                                       bool &TransformedBinOpReduction) {
   if (SDValue NewOp = combineExtractWithShuffle(N, DAG, DCI, Subtarget))
     return NewOp;
 
@@ -47321,26 +47305,27 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineExtractVectorEltAndOperand(SDNode* N, SelectionDAG& DAG,
-    TargetLowering::DAGCombinerInfo& DCI,
-    const X86Subtarget& Subtarget)
-{
+static SDValue
+combineExtractVectorEltAndOperand(SDNode *N, SelectionDAG &DAG,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  const X86Subtarget &Subtarget) {
   bool TransformedBinOpReduction = false;
-  auto Op = combineExtractVectorElt(N, DAG, DCI, Subtarget, TransformedBinOpReduction);
+  auto Op = combineExtractVectorElt(N, DAG, DCI, Subtarget,
+                                    TransformedBinOpReduction);
 
-  if (TransformedBinOpReduction)
-  {
+  if (TransformedBinOpReduction) {
     // In case we simplified N = extract_vector_element(V, 0) with Op and V
     // resulted from a reduction, then we need to replace all uses of V with
     // scalar_to_vector(Op) to make sure that we eliminated the binop + shuffle
-    // pyramid. This is safe to do, because the elements of V are undefined except 
-    // for the zeroth element and Op does not depend on V.
+    // pyramid. This is safe to do, because the elements of V are undefined
+    // except for the zeroth element and Op does not depend on V.
 
     auto OldV = N->getOperand(0);
-    assert(!Op.getNode()->hasPredecessor(OldV.getNode()) && 
-        "Op must not depend on the converted reduction");
+    assert(!Op.getNode()->hasPredecessor(OldV.getNode()) &&
+           "Op must not depend on the converted reduction");
 
-    auto NewV = DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), OldV->getValueType(0), Op);
+    auto NewV =
+        DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), OldV->getValueType(0), Op);
 
     auto NV = DCI.CombineTo(N, Op);
     DCI.CombineTo(OldV.getNode(), NewV);
