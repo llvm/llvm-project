@@ -90,30 +90,6 @@ int main(int argc, char** argv) {
 #endif
   }
 
-  // {std,ranges}::copy(random_access_iterator, random_access_iterator, vector<bool>)
-  {
-    auto bm = []<template <class> class Iter>(std::string name, auto copy) {
-      benchmark::RegisterBenchmark(name, [copy](auto& st) {
-        std::size_t const n = st.range(0);
-        std::vector<int> in(n, 1);
-        std::vector<bool> out(n);
-        auto first = Iter(in.begin());
-        auto last  = Iter(in.end());
-        auto dst   = out.begin();
-        for ([[maybe_unused]] auto _ : st) {
-          benchmark::DoNotOptimize(in);
-          benchmark::DoNotOptimize(out);
-          auto result = copy(first, last, dst);
-          benchmark::DoNotOptimize(result);
-        }
-      })->Range(64, 1 << 20);
-    };
-    bm.operator()<random_access_iterator>("std::copy(random_access_iterator, vector<bool>)", std_copy);
-#if TEST_STD_VER >= 23 // vector<bool>::iterator is not an output_iterator before C++23
-    bm.operator()<random_access_iterator>("rng::copy(random_access_iterator, vector<bool>)", std::ranges::copy);
-#endif
-  }
-
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
   benchmark::Shutdown();

@@ -530,13 +530,13 @@ void sequence_container_benchmarks(std::string container) {
 
 #if defined(__cpp_lib_containers_ranges) && __cpp_lib_containers_ranges >= 202202L
     { // Range-ctor
-      auto bm = [&generators, &bench_vb, &tostr]<template <class, class> class Range>(std::string range) {
+      auto bm = [&generators, &bench_vb, &tostr]<template <class> class Iter>(std::string range) {
         for (auto gen : generators)
           bench_vb("ctor(" + range + ")" + tostr(gen), [gen](auto& st) {
             auto const size = st.range(0);
             std::vector<int> in;
             std::generate_n(std::back_inserter(in), size, gen);
-            Range rg(std::ranges::begin(in), std::ranges::end(in));
+            std::ranges::subrange rg(Iter(std::ranges::begin(in)), Iter(std::ranges::end(in)));
             benchmark::DoNotOptimize(in);
 
             for ([[maybe_unused]] auto _ : st) {
@@ -545,18 +545,18 @@ void sequence_container_benchmarks(std::string container) {
             }
           });
       };
-      bm.template operator()<random_access_range_wrapper>("ra_range");
+      bm.template operator()<cpp20_random_access_iterator>("ra_range");
     }
     { // Range-assignment
-      auto bm = [&generators, &bench_vb, &tostr]<template <class, class> class Range>(std::string range) {
+      auto bm = [&generators, &bench_vb, &tostr]<template <class> class Iter>(std::string range) {
         for (auto gen : generators)
           bench_vb("assign_range(" + range + ")" + tostr(gen), [gen](auto& st) {
             auto const size = st.range(0);
             std::vector<int> in1, in2;
             std::generate_n(std::back_inserter(in1), size, gen);
             std::generate_n(std::back_inserter(in2), size, gen);
-            Range rg1(std::ranges::begin(in1), std::ranges::end(in1));
-            Range rg2(std::ranges::begin(in2), std::ranges::end(in2));
+            std::ranges::subrange rg1(Iter(std::ranges::begin(in1)), Iter(std::ranges::end(in1)));
+            std::ranges::subrange rg2(Iter(std::ranges::begin(in2)), Iter(std::ranges::end(in2)));
             DoNotOptimizeData(in1);
             DoNotOptimizeData(in2);
 
@@ -570,10 +570,10 @@ void sequence_container_benchmarks(std::string container) {
             }
           });
       };
-      bm.template operator()<random_access_range_wrapper>("ra_range");
+      bm.template operator()<cpp20_random_access_iterator>("ra_range");
     }
     { // Range-insertion
-      auto bm = [&generators, &bench_vb, &tostr]<template <class, class> class Range>(std::string range) {
+      auto bm = [&generators, &bench_vb, &tostr]<template <class> class Iter>(std::string range) {
         for (auto gen : generators)
           bench_vb("insert_range(" + range + ")" + tostr(gen), [gen](auto& st) {
             auto const size = st.range(0);
@@ -581,38 +581,38 @@ void sequence_container_benchmarks(std::string container) {
             Container c;
             std::generate_n(std::back_inserter(in), size, gen);
             std::generate_n(std::back_inserter(c), size, gen);
-            Range rg(std::ranges::begin(in), std::ranges::end(in));
+            std::ranges::subrange rg(Iter(std::ranges::begin(in)), Iter(std::ranges::end(in)));
             DoNotOptimizeData(in);
             DoNotOptimizeData(c);
 
             for ([[maybe_unused]] auto _ : st) {
-              c.insert_range(c.begin(), in);
+              c.insert_range(c.begin(), rg);
               c.erase(c.begin() + size, c.end()); // avoid growing indefinitely
               DoNotOptimizeData(c);
             }
           });
       };
-      bm.template operator()<random_access_range_wrapper>("ra_range");
+      bm.template operator()<cpp20_random_access_iterator>("ra_range");
     }
     { // Range-append
-      auto bm = [&generators, &bench_vb, &tostr]<template <class, class> class Range>(std::string range) {
+      auto bm = [&generators, &bench_vb, &tostr]<template <class> class Iter>(std::string range) {
         for (auto gen : generators)
           bench_vb("append_range(" + range + ")" + tostr(gen), [gen](auto& st) {
             auto const size = st.range(0);
             std::vector<int> in;
             std::generate_n(std::back_inserter(in), size, gen);
-            Range rg(std::ranges::begin(in), std::ranges::end(in));
+            std::ranges::subrange rg(Iter(std::ranges::begin(in)), Iter(std::ranges::end(in)));
             DoNotOptimizeData(in);
 
             Container c;
             for ([[maybe_unused]] auto _ : st) {
-              c.append_range(in);
+              c.append_range(rg);
               c.erase(c.begin(), c.end()); // avoid growing indefinitely
               DoNotOptimizeData(c);
             }
           });
       };
-      bm.template operator()<random_access_range_wrapper>("ra_range");
+      bm.template operator()<cpp20_random_access_iterator>("ra_range");
     }
 #endif
   }

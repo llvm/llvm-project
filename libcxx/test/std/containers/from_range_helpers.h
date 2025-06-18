@@ -50,25 +50,6 @@ constexpr auto wrap_input(std::vector<T>& input) {
   return std::ranges::subrange(std::move(b), std::move(e));
 }
 
-template <class Iter, class Sent>
-class random_access_range_wrapper {
-public:
-  using _Iter = cpp20_random_access_iterator<Iter>;
-  using _Sent = sized_sentinel<_Iter>;
-
-  random_access_range_wrapper() = default;
-  random_access_range_wrapper(Iter begin, Iter end) : begin_(std::move(begin)), end_(std::move(end)) {}
-  _Iter begin() { return _Iter(std::move(begin_)); }
-  _Sent end() { return _Sent(_Iter(std::move(end_))); }
-
-private:
-  Iter begin_;
-  Sent end_;
-};
-
-template <class Iter, class Sent>
-random_access_range_wrapper(Iter, Sent) -> random_access_range_wrapper<Iter, Sent>;
-
 struct KeyValue {
   int key;    // Only the key is considered for equality comparison.
   char value; // Allows distinguishing equivalent instances.
