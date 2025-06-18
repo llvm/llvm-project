@@ -384,7 +384,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.non.const.tc(i16 %crc.init, i32 %loop.limit) {
 ; CHECK-LABEL: 'not.crc.non.const.tc'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Unable to find a small constant trip count
+; CHECK-NEXT:  Reason: Unable to find a small constant byte-multiple trip count
 ;
 entry:
   br label %loop
@@ -430,7 +430,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.tc.limit(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.tc.limit'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Unable to find a small constant trip count
+; CHECK-NEXT:  Reason: Unable to find a small constant byte-multiple trip count
 ;
 entry:
   br label %loop
@@ -617,7 +617,7 @@ loop:                                              ; preds = %loop, %entry
   %crc.xor = xor i16 %crc.lshr, -24575
   %crc.next = select i1 %check.sb, i16 %crc.lshr, i16 %crc.xor
   %iv.next = add nuw nsw i8 %iv, 1
-  %exit.cond = icmp samesign ult i8 %iv, 20
+  %exit.cond = icmp samesign ult i8 %iv, 31
   br i1 %exit.cond, label %loop, label %exit
 
 exit:                                              ; preds = %loop

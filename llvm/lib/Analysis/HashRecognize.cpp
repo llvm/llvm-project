@@ -561,14 +561,14 @@ std::variant<PolynomialInfo, ErrBits, StringRef>
 HashRecognize::recognizeCRC() const {
   if (!L.isInnermost())
     return "Loop is not innermost";
-  unsigned TC = SE.getSmallConstantMaxTripCount(&L);
-  if (!TC || TC > 256)
-    return "Unable to find a small constant trip count";
   BasicBlock *Latch = L.getLoopLatch();
   BasicBlock *Exit = L.getExitBlock();
   const PHINode *IndVar = L.getCanonicalInductionVariable();
-  if (!Latch || !Exit || !IndVar)
+  if (!Latch || !Exit || !IndVar || L.getNumBlocks() != 1)
     return "Loop not in canonical form";
+  unsigned TC = SE.getSmallConstantTripCount(&L);
+  if (!TC || TC > 256 || TC % 8)
+    return "Unable to find a small constant byte-multiple trip count";
 
   auto R = getRecurrences(Latch, IndVar, L);
   if (!R)
