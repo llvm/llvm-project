@@ -27,7 +27,7 @@ public:
       lldb::RegisterContextSP core_thread_regctx_sp,
       lldb_private::StructuredData::ObjectSP metadata_thread_registers);
 
-  void InvalidateAllRegisters() override{};
+  void InvalidateAllRegisters() override {};
 
   size_t GetRegisterCount() override;
 
