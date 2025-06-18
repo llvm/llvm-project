@@ -9,265 +9,957 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-MINREG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-MINREG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GCN-MINREG-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; GCN-MINREG-NEXT:    v_mov_b32_e32 v2, 1.0
-; GCN-MINREG-NEXT:    v_mov_b32_e32 v1, 2.0
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v40, 1.0
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v39, 2.0
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MINREG-NEXT:    v_add_u32_e32 v4, s0, v0
-; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v4 offset:112
-; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v4 offset:96
-; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v4 offset:80
-; GCN-MINREG-NEXT:    ds_read_b128 a[16:19], v4 offset:64
-; GCN-MINREG-NEXT:    ds_read_b128 a[0:3], v4
-; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v4 offset:16
-; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v4 offset:32
-; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v4 offset:48
+; GCN-MINREG-NEXT:    v_add_u32_e32 v5, s0, v0
+; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v5 offset:112
+; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v5 offset:96
+; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v5 offset:80
+; GCN-MINREG-NEXT:    ds_read_b128 a[16:19], v5 offset:64
+; GCN-MINREG-NEXT:    ds_read_b128 a[0:3], v5
+; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v5 offset:16
+; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v5 offset:32
+; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v5 offset:48
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v1, a[0:31]
-; GCN-MINREG-NEXT:    v_add_u32_e32 v5, s1, v0
-; GCN-MINREG-NEXT:    v_mov_b32_e32 v0, s1
-; GCN-MINREG-NEXT:    v_add_u32_e32 v3, 0x6000, v4
+; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v40, v39, a[0:31]
+; GCN-MINREG-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
+; GCN-MINREG-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
+; GCN-MINREG-NEXT:    ds_read_b128 v[6:9], v5 offset:8192
+; GCN-MINREG-NEXT:    s_mov_b32 s14, -1
+; GCN-MINREG-NEXT:    s_mov_b32 s15, 0xe00000
+; GCN-MINREG-NEXT:    s_add_u32 s12, s12, s11
+; GCN-MINREG-NEXT:    s_addc_u32 s13, s13, 0
+; GCN-MINREG-NEXT:    ds_read_b128 v[34:37], v5 offset:8304
+; GCN-MINREG-NEXT:    ds_read_b128 v[30:33], v5 offset:8288
+; GCN-MINREG-NEXT:    ds_read_b128 v[26:29], v5 offset:8272
+; GCN-MINREG-NEXT:    ds_read_b128 v[22:25], v5 offset:8256
+; GCN-MINREG-NEXT:    ds_read_b128 v[18:21], v5 offset:8240
+; GCN-MINREG-NEXT:    ds_read_b128 v[14:17], v5 offset:8224
+; GCN-MINREG-NEXT:    ds_read_b128 v[10:13], v5 offset:8208
+; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(7)
+; GCN-MINREG-NEXT:    buffer_store_dword v6, off, s[12:15], 0 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    v_add_u32_e32 v4, 0x6000, v5
+; GCN-MINREG-NEXT:    buffer_store_dword v7, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v8, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v9, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(6)
+; GCN-MINREG-NEXT:    buffer_store_dword v37, off, s[12:15], 0 offset:124 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    ds_read_b128 v[6:9], v5 offset:24576
+; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(1)
+; GCN-MINREG-NEXT:    buffer_store_dword v10, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v11, off, s[12:15], 0 offset:20 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v12, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v13, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v14, off, s[12:15], 0 offset:32 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v15, off, s[12:15], 0 offset:36 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v16, off, s[12:15], 0 offset:40 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v17, off, s[12:15], 0 offset:44 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v18, off, s[12:15], 0 offset:48 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v19, off, s[12:15], 0 offset:52 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v20, off, s[12:15], 0 offset:56 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v21, off, s[12:15], 0 offset:60 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v22, off, s[12:15], 0 offset:64 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v23, off, s[12:15], 0 offset:68 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v24, off, s[12:15], 0 offset:72 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v25, off, s[12:15], 0 offset:76 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v26, off, s[12:15], 0 offset:80 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v27, off, s[12:15], 0 offset:84 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v28, off, s[12:15], 0 offset:88 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v29, off, s[12:15], 0 offset:92 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v30, off, s[12:15], 0 offset:96 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v31, off, s[12:15], 0 offset:100 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v32, off, s[12:15], 0 offset:104 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v33, off, s[12:15], 0 offset:108 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v34, off, s[12:15], 0 offset:112 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v35, off, s[12:15], 0 offset:116 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v36, off, s[12:15], 0 offset:120 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    ds_read_b128 v[34:37], v5 offset:24688
+; GCN-MINREG-NEXT:    ds_read_b128 v[30:33], v5 offset:24672
+; GCN-MINREG-NEXT:    ds_read_b128 v[26:29], v5 offset:24656
+; GCN-MINREG-NEXT:    ds_read_b128 v[22:25], v5 offset:24640
+; GCN-MINREG-NEXT:    ds_read_b128 v[18:21], v5 offset:24624
+; GCN-MINREG-NEXT:    ds_read_b128 v[14:17], v5 offset:24608
+; GCN-MINREG-NEXT:    ds_read_b128 v[10:13], v5 offset:24592
+; GCN-MINREG-NEXT:    ds_read_b128 a[60:63], v5 offset:49264
+; GCN-MINREG-NEXT:    ds_read_b128 a[56:59], v5 offset:49248
+; GCN-MINREG-NEXT:    ds_read_b128 a[52:55], v5 offset:49232
+; GCN-MINREG-NEXT:    ds_read_b128 a[48:51], v5 offset:49216
+; GCN-MINREG-NEXT:    ds_read_b128 a[44:47], v5 offset:49200
+; GCN-MINREG-NEXT:    ds_read_b128 a[40:43], v5 offset:49184
+; GCN-MINREG-NEXT:    ds_read_b128 a[36:39], v5 offset:49168
+; GCN-MINREG-NEXT:    ds_read_b128 a[32:35], v5 offset:49152
+; GCN-MINREG-NEXT:    buffer_store_dword a0, off, s[12:15], 0 offset:128 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    v_add_u32_e32 v41, s1, v0
+; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(14)
+; GCN-MINREG-NEXT:    buffer_store_dword v6, off, s[12:15], 0 offset:256 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v63, a10 ; Reload Reuse
+; GCN-MINREG-NEXT:    buffer_store_dword a1, off, s[12:15], 0 offset:132 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword a2, off, s[12:15], 0 offset:136 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword a3, off, s[12:15], 0 offset:140 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword a4, off, s[12:15], 0 offset:144 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword a5, off, s[12:15], 0 offset:148 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword a6, off, s[12:15], 0 offset:152 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword a7, off, s[12:15], 0 offset:156 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword a8, off, s[12:15], 0 offset:160 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword a9, off, s[12:15], 0 offset:164 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v62, a11 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v61, a12 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v60, a13 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v59, a14 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v58, a15 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v57, a16 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v56, a17 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v55, a18 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v54, a19 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v53, a20 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v52, a21 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v51, a22 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v50, a23 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v49, a24 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v48, a25 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v47, a26 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v46, a27 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v45, a28 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v44, a29 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v43, a30 ; Reload Reuse
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v42, a31 ; Reload Reuse
+; GCN-MINREG-NEXT:    buffer_store_dword v7, off, s[12:15], 0 offset:260 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v8, off, s[12:15], 0 offset:264 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v9, off, s[12:15], 0 offset:268 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(8)
+; GCN-MINREG-NEXT:    buffer_store_dword v10, off, s[12:15], 0 offset:272 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v11, off, s[12:15], 0 offset:276 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v12, off, s[12:15], 0 offset:280 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v13, off, s[12:15], 0 offset:284 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v14, off, s[12:15], 0 offset:288 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v15, off, s[12:15], 0 offset:292 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v16, off, s[12:15], 0 offset:296 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v17, off, s[12:15], 0 offset:300 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v18, off, s[12:15], 0 offset:304 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v19, off, s[12:15], 0 offset:308 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v20, off, s[12:15], 0 offset:312 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v21, off, s[12:15], 0 offset:316 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v22, off, s[12:15], 0 offset:320 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v23, off, s[12:15], 0 offset:324 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v24, off, s[12:15], 0 offset:328 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v25, off, s[12:15], 0 offset:332 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v26, off, s[12:15], 0 offset:336 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v27, off, s[12:15], 0 offset:340 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v28, off, s[12:15], 0 offset:344 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v29, off, s[12:15], 0 offset:348 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v30, off, s[12:15], 0 offset:352 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v31, off, s[12:15], 0 offset:356 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v37, off, s[12:15], 0 offset:380 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v40, v39, a[32:63]
+; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v4 offset:57456
+; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v4 offset:57440
+; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v4 offset:57424
+; GCN-MINREG-NEXT:    ds_read_b128 a[16:19], v4 offset:57408
+; GCN-MINREG-NEXT:    ds_read_b128 a[0:3], v4 offset:57344
+; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v4 offset:57360
+; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v4 offset:57376
+; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v4 offset:57392
+; GCN-MINREG-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:128 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:132 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:136 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:140 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword v4, off, s[12:15], 0 offset:144 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword v5, off, s[12:15], 0 offset:148 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:152 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword v7, off, s[12:15], 0 offset:156 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword v8, off, s[12:15], 0 offset:160 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword v9, off, s[12:15], 0 offset:164 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v38, s1
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v10, v63
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v11, v62
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v12, v61
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v13, v60
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v14, v59
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v15, v58
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v16, v57
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v17, v56
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v18, v55
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v19, v54
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v20, v53
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v21, v52
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v22, v51
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v23, v50
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v24, v49
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v25, v48
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v26, v47
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v27, v46
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v28, v45
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v29, v44
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v30, v43
+; GCN-MINREG-NEXT:    s_waitcnt vmcnt(0)
+; GCN-MINREG-NEXT:    v_mov_b32_e32 v31, v42
+; GCN-MINREG-NEXT:    ds_write_b128 v41, v[28:31] offset:112
+; GCN-MINREG-NEXT:    ds_write_b128 v41, v[24:27] offset:96
+; GCN-MINREG-NEXT:    ds_write_b128 v41, v[20:23] offset:80
+; GCN-MINREG-NEXT:    ds_write_b128 v41, v[16:19] offset:64
+; GCN-MINREG-NEXT:    ds_write_b128 v41, v[12:15] offset:48
+; GCN-MINREG-NEXT:    buffer_store_dword v32, off, s[12:15], 0 offset:360 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v33, off, s[12:15], 0 offset:364 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v34, off, s[12:15], 0 offset:368 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v35, off, s[12:15], 0 offset:372 ; 4-byte Folded Spill
+; GCN-MINREG-NEXT:    buffer_store_dword v36, off, s[12:15], 0 offset:376 ; 4-byte Folded Spill
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    ds_write_b128 v5, a[28:31] offset:112
-; GCN-MINREG-NEXT:    ds_write_b128 v5, a[24:27] offset:96
-; GCN-MINREG-NEXT:    ds_write_b128 v5, a[20:23] offset:80
-; GCN-MINREG-NEXT:    ds_write_b128 v5, a[16:19] offset:64
-; GCN-MINREG-NEXT:    ds_write_b128 v5, a[12:15] offset:48
-; GCN-MINREG-NEXT:    ds_write_b128 v5, a[8:11] offset:32
-; GCN-MINREG-NEXT:    ds_write_b128 v5, a[4:7] offset:16
-; GCN-MINREG-NEXT:    ds_write_b128 v5, a[0:3]
-; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v4 offset:8304
-; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v4 offset:8288
-; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v4 offset:8272
-; GCN-MINREG-NEXT:    ds_read_b128 a[16:19], v4 offset:8256
-; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v4 offset:8240
-; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v4 offset:8224
-; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v4 offset:8208
-; GCN-MINREG-NEXT:    ds_read_b128 a[0:3], v4 offset:8192
-; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v1, a[0:31]
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
+; GCN-MINREG-NEXT:    ds_write_b128 v41, v[0:3]
+; GCN-MINREG-NEXT:    ds_write_b128 v41, v[4:7] offset:16
+; GCN-MINREG-NEXT:    ds_write_b128 v41, v[8:11] offset:32
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[56:59] offset:24672
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[60:63] offset:24688
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[48:51] offset:24640
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[52:55] offset:24656
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[40:43] offset:24608
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[44:47] offset:24624
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[32:35] offset:24576
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[36:39] offset:24592
+; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(14)
+; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v40, v39, a[0:31]
+; GCN-MINREG-NEXT:    buffer_load_dword a32, off, s[12:15], 0 offset:256 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a33, off, s[12:15], 0 offset:260 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a34, off, s[12:15], 0 offset:264 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a35, off, s[12:15], 0 offset:268 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a36, off, s[12:15], 0 offset:272 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a37, off, s[12:15], 0 offset:276 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a38, off, s[12:15], 0 offset:280 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a39, off, s[12:15], 0 offset:284 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a40, off, s[12:15], 0 offset:288 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a41, off, s[12:15], 0 offset:292 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a42, off, s[12:15], 0 offset:296 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a43, off, s[12:15], 0 offset:300 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a44, off, s[12:15], 0 offset:304 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a45, off, s[12:15], 0 offset:308 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a46, off, s[12:15], 0 offset:312 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a47, off, s[12:15], 0 offset:316 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a48, off, s[12:15], 0 offset:320 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a49, off, s[12:15], 0 offset:324 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a50, off, s[12:15], 0 offset:328 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[24:27] offset:32864
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[28:31] offset:32880
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[16:19] offset:32832
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[20:23] offset:32848
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[8:11] offset:32800
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[12:15] offset:32816
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[0:3] offset:32768
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[4:7] offset:32784
+; GCN-MINREG-NEXT:    buffer_load_dword a0, off, s[12:15], 0 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a1, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a2, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a3, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a4, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a5, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a6, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a7, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a8, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a9, off, s[12:15], 0 offset:36 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a10, off, s[12:15], 0 offset:40 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a11, off, s[12:15], 0 offset:44 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a12, off, s[12:15], 0 offset:48 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a13, off, s[12:15], 0 offset:52 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a14, off, s[12:15], 0 offset:56 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a15, off, s[12:15], 0 offset:60 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a16, off, s[12:15], 0 offset:64 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a17, off, s[12:15], 0 offset:68 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a18, off, s[12:15], 0 offset:72 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a19, off, s[12:15], 0 offset:76 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a20, off, s[12:15], 0 offset:80 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a21, off, s[12:15], 0 offset:84 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a22, off, s[12:15], 0 offset:88 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a23, off, s[12:15], 0 offset:92 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a24, off, s[12:15], 0 offset:96 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a25, off, s[12:15], 0 offset:100 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a26, off, s[12:15], 0 offset:104 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a27, off, s[12:15], 0 offset:108 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a28, off, s[12:15], 0 offset:112 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a29, off, s[12:15], 0 offset:116 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a30, off, s[12:15], 0 offset:120 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a31, off, s[12:15], 0 offset:124 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a51, off, s[12:15], 0 offset:332 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a52, off, s[12:15], 0 offset:336 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a53, off, s[12:15], 0 offset:340 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a54, off, s[12:15], 0 offset:344 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a55, off, s[12:15], 0 offset:348 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a56, off, s[12:15], 0 offset:352 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a57, off, s[12:15], 0 offset:356 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a58, off, s[12:15], 0 offset:360 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a59, off, s[12:15], 0 offset:364 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a60, off, s[12:15], 0 offset:368 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a61, off, s[12:15], 0 offset:372 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a62, off, s[12:15], 0 offset:376 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    buffer_load_dword a63, off, s[12:15], 0 offset:380 ; 4-byte Folded Reload
+; GCN-MINREG-NEXT:    s_waitcnt vmcnt(13)
+; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v40, v39, a[0:31]
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    s_nop 7
 ; GCN-MINREG-NEXT:    s_nop 7
 ; GCN-MINREG-NEXT:    s_nop 2
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[24:27] offset:8288
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[28:31] offset:8304
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[16:19] offset:8256
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[20:23] offset:8272
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[8:11] offset:8224
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[12:15] offset:8240
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[0:3] offset:8192
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[4:7] offset:8208
-; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v4 offset:24688
-; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v4 offset:24672
-; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v4 offset:24656
-; GCN-MINREG-NEXT:    ds_read_b128 a[16:19], v4 offset:24640
-; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v4 offset:24624
-; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v4 offset:24608
-; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v4 offset:24592
-; GCN-MINREG-NEXT:    ds_read_b128 a[0:3], v4 offset:24576
-; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v1, a[0:31]
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 2
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[24:27] offset:16480
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[28:31] offset:16496
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[16:19] offset:16448
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[20:23] offset:16464
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[8:11] offset:16416
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[12:15] offset:16432
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[0:3] offset:16384
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[4:7] offset:16400
-; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v4 offset:49264
-; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v4 offset:49248
-; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v4 offset:49232
-; GCN-MINREG-NEXT:    ds_read_b128 a[16:19], v4 offset:49216
-; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v4 offset:49200
-; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v4 offset:49184
-; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v4 offset:49168
-; GCN-MINREG-NEXT:    ds_read_b128 a[0:3], v4 offset:49152
-; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v1, a[0:31]
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 2
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[24:27] offset:24672
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[28:31] offset:24688
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[16:19] offset:24640
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[20:23] offset:24656
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[8:11] offset:24608
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[12:15] offset:24624
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[0:3] offset:24576
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[4:7] offset:24592
-; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v3 offset:57456
-; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v3 offset:57440
-; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v3 offset:57424
-; GCN-MINREG-NEXT:    ds_read_b128 a[16:19], v3 offset:57408
-; GCN-MINREG-NEXT:    ds_read_b128 a[0:3], v3 offset:57344
-; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v3 offset:57360
-; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v3 offset:57376
-; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v3 offset:57392
-; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v1, a[0:31]
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 2
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[24:27] offset:32864
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[28:31] offset:32880
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[16:19] offset:32832
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[20:23] offset:32848
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[8:11] offset:32800
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[12:15] offset:32816
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[0:3] offset:32768
-; GCN-MINREG-NEXT:    ds_write_b128 v0, a[4:7] offset:32784
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v33, a31
+; GCN-MINREG-NEXT:    s_waitcnt vmcnt(0)
+; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v40, v39, a[32:63]
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v32, a30
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v31, a29
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v30, a28
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v29, a27
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v28, a26
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v27, a25
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v26, a24
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v25, a23
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v24, a22
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v23, a21
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v22, a20
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v21, a19
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v20, a18
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v19, a17
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v18, a16
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v17, a15
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v16, a14
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v15, a13
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v14, a12
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v13, a11
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v12, a10
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v11, a9
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v10, a8
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v9, a7
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v8, a6
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v7, a5
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v6, a4
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v5, a3
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v4, a2
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v3, a1
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v2, a0
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[56:59] offset:16480
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[60:63] offset:16496
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[48:51] offset:16448
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[52:55] offset:16464
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[40:43] offset:16416
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[44:47] offset:16432
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[32:35] offset:16384
+; GCN-MINREG-NEXT:    ds_write_b128 v38, a[36:39] offset:16400
+; GCN-MINREG-NEXT:    ds_write_b128 v38, v[26:29] offset:8288
+; GCN-MINREG-NEXT:    ds_write_b128 v38, v[30:33] offset:8304
+; GCN-MINREG-NEXT:    ds_write_b128 v38, v[18:21] offset:8256
+; GCN-MINREG-NEXT:    ds_write_b128 v38, v[22:25] offset:8272
+; GCN-MINREG-NEXT:    ds_write_b128 v38, v[10:13] offset:8224
+; GCN-MINREG-NEXT:    ds_write_b128 v38, v[14:17] offset:8240
+; GCN-MINREG-NEXT:    ds_write_b128 v38, v[2:5] offset:8192
+; GCN-MINREG-NEXT:    ds_write_b128 v38, v[6:9] offset:8208
 ; GCN-MINREG-NEXT:    s_endpgm
 ;
 ; GCN-MAXOCC-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave:
 ; GCN-MAXOCC:       ; %bb.0: ; %entry
 ; GCN-MAXOCC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-MAXOCC-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-MAXOCC-NEXT:    v_lshlrev_b32_e32 v1, 7, v0
+; GCN-MAXOCC-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; GCN-MAXOCC-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
+; GCN-MAXOCC-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
+; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-MAXOCC-NEXT:    v_add_u32_e32 v1, s0, v0
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[2:5], v1
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[30:33], v1 offset:112
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[26:29], v1 offset:96
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[22:25], v1 offset:80
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[18:21], v1 offset:64
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[6:9], v1 offset:16
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[10:13], v1 offset:32
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[14:17], v1 offset:48
+; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a0, v2
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a1, v3
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a2, v4
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a3, v5
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a4, v6
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a5, v7
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a6, v8
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a7, v9
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a8, v10
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a9, v11
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a10, v12
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a11, v13
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a12, v14
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a13, v15
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a14, v16
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a15, v17
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a16, v18
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a17, v19
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a18, v20
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a19, v21
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a20, v22
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a21, v23
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a22, v24
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a23, v25
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a24, v26
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a25, v27
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a26, v28
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a27, v29
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a28, v30
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a29, v31
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a30, v32
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a31, v33
 ; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v2, 1.0
 ; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v3, 2.0
-; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MAXOCC-NEXT:    v_add_u32_e32 v0, s0, v1
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:112
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:96
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:80
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:64
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:16
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:32
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:48
-; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-MAXOCC-NEXT:    s_mov_b32 s14, -1
+; GCN-MAXOCC-NEXT:    s_mov_b32 s15, 0xe00000
 ; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
-; GCN-MAXOCC-NEXT:    v_add_u32_e32 v1, s1, v1
+; GCN-MAXOCC-NEXT:    s_add_u32 s12, s12, s11
+; GCN-MAXOCC-NEXT:    s_addc_u32 s13, s13, 0
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v4, v3
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v3, v2
+; GCN-MAXOCC-NEXT:    v_add_u32_e32 v2, 0x6000, v1
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MAXOCC-NEXT:    s_nop 7
-; GCN-MAXOCC-NEXT:    s_nop 7
-; GCN-MAXOCC-NEXT:    s_nop 1
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[28:31] offset:112
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[24:27] offset:96
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[20:23] offset:80
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[16:19] offset:64
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[12:15] offset:48
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[8:11] offset:32
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[4:7] offset:16
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[0:3]
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:8304
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:8288
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:8272
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:8256
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:8240
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:8224
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:8208
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:8192
+; GCN-MAXOCC-NEXT:    s_nop 5
+; GCN-MAXOCC-NEXT:    buffer_store_dword a0, off, s[12:15], 0 offset:128 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v63, a4 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    buffer_store_dword a1, off, s[12:15], 0 offset:132 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a2, off, s[12:15], 0 offset:136 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a3, off, s[12:15], 0 offset:140 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v62, a5 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v61, a6 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v60, a7 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v59, a8 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v58, a9 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v57, a10 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v56, a11 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v55, a12 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v54, a13 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v53, a14 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v52, a15 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v51, a16 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v50, a17 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v49, a18 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v48, a19 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v47, a20 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v46, a21 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v45, a22 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v44, a23 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v43, a24 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v42, a25 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v41, a26 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v40, a27 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v39, a28 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v38, a29 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v37, a30 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v36, a31 ; Reload Reuse
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v1 offset:8304
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v1 offset:8288
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v1 offset:8272
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v1 offset:8256
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v1 offset:8240
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v1 offset:8224
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v1 offset:8208
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v1 offset:8192
 ; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
-; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
-; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
-; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
+; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v3, v4, a[0:31]
 ; GCN-MAXOCC-NEXT:    s_nop 7
 ; GCN-MAXOCC-NEXT:    s_nop 7
-; GCN-MAXOCC-NEXT:    s_nop 1
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[24:27] offset:8288
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[28:31] offset:8304
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[16:19] offset:8256
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[20:23] offset:8272
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[8:11] offset:8224
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[12:15] offset:8240
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[0:3] offset:8192
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[4:7] offset:8208
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:24688
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:24672
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:24656
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:24640
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:24624
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:24608
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:24592
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:24576
+; GCN-MAXOCC-NEXT:    s_nop 2
+; GCN-MAXOCC-NEXT:    buffer_store_dword a0, off, s[12:15], 0 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    s_nop 0
+; GCN-MAXOCC-NEXT:    buffer_store_dword a1, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a2, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a3, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a4, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a5, off, s[12:15], 0 offset:20 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a6, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a7, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a8, off, s[12:15], 0 offset:32 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a9, off, s[12:15], 0 offset:36 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a10, off, s[12:15], 0 offset:40 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a11, off, s[12:15], 0 offset:44 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a12, off, s[12:15], 0 offset:48 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a13, off, s[12:15], 0 offset:52 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a14, off, s[12:15], 0 offset:56 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a15, off, s[12:15], 0 offset:60 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a16, off, s[12:15], 0 offset:64 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a17, off, s[12:15], 0 offset:68 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a18, off, s[12:15], 0 offset:72 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a19, off, s[12:15], 0 offset:76 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a20, off, s[12:15], 0 offset:80 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a21, off, s[12:15], 0 offset:84 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a22, off, s[12:15], 0 offset:88 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a23, off, s[12:15], 0 offset:92 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a24, off, s[12:15], 0 offset:96 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a25, off, s[12:15], 0 offset:100 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a26, off, s[12:15], 0 offset:104 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a27, off, s[12:15], 0 offset:108 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a28, off, s[12:15], 0 offset:112 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a29, off, s[12:15], 0 offset:116 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a30, off, s[12:15], 0 offset:120 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword a31, off, s[12:15], 0 offset:124 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v1 offset:24688
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v1 offset:24672
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v1 offset:24656
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v1 offset:24640
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v1 offset:24624
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v1 offset:24608
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v1 offset:24592
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v1 offset:24576
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[60:63], v1 offset:49264
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[56:59], v1 offset:49248
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[52:55], v1 offset:49232
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[48:51], v1 offset:49216
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[44:47], v1 offset:49200
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[40:43], v1 offset:49184
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[36:39], v1 offset:49168
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[32:35], v1 offset:49152
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[4:7], v2 offset:57344
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[32:35], v2 offset:57456
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[28:31], v2 offset:57440
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[24:27], v2 offset:57424
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[20:23], v2 offset:57408
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[8:11], v2 offset:57360
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[12:15], v2 offset:57376
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[16:19], v2 offset:57392
+; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(7)
+; GCN-MAXOCC-NEXT:    buffer_store_dword v4, off, s[12:15], 0 offset:256 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    s_nop 0
+; GCN-MAXOCC-NEXT:    buffer_store_dword v5, off, s[12:15], 0 offset:260 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v6, off, s[12:15], 0 offset:264 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v7, off, s[12:15], 0 offset:268 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(2)
+; GCN-MAXOCC-NEXT:    buffer_store_dword v8, off, s[12:15], 0 offset:272 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v9, off, s[12:15], 0 offset:276 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v10, off, s[12:15], 0 offset:280 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v11, off, s[12:15], 0 offset:284 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(1)
+; GCN-MAXOCC-NEXT:    buffer_store_dword v12, off, s[12:15], 0 offset:288 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v13, off, s[12:15], 0 offset:292 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v14, off, s[12:15], 0 offset:296 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v15, off, s[12:15], 0 offset:300 ; 4-byte Folded Spill
 ; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
+; GCN-MAXOCC-NEXT:    buffer_store_dword v16, off, s[12:15], 0 offset:304 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v17, off, s[12:15], 0 offset:308 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v18, off, s[12:15], 0 offset:312 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v19, off, s[12:15], 0 offset:316 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v20, off, s[12:15], 0 offset:320 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v21, off, s[12:15], 0 offset:324 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v22, off, s[12:15], 0 offset:328 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v23, off, s[12:15], 0 offset:332 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v24, off, s[12:15], 0 offset:336 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v25, off, s[12:15], 0 offset:340 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v26, off, s[12:15], 0 offset:344 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v27, off, s[12:15], 0 offset:348 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v28, off, s[12:15], 0 offset:352 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v29, off, s[12:15], 0 offset:356 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v30, off, s[12:15], 0 offset:360 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v31, off, s[12:15], 0 offset:364 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v32, off, s[12:15], 0 offset:368 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    buffer_store_dword v35, off, s[12:15], 0 offset:380 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    v_add_u32_e32 v32, s1, v0
+; GCN-MAXOCC-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:128 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:132 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:136 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:140 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v4, v63
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v5, v62
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v6, v61
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v7, v60
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v8, v59
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v9, v58
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v10, v57
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v11, v56
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v12, v55
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v13, v54
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v14, v53
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v15, v52
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v16, v51
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v17, v50
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v18, v49
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v19, v48
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v20, v47
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v21, v46
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v22, v45
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v23, v44
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v24, v43
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v25, v42
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v26, v41
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v27, v40
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v28, v39
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v29, v38
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v30, v37
+; GCN-MAXOCC-NEXT:    s_waitcnt vmcnt(0)
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v31, v36
+; GCN-MAXOCC-NEXT:    buffer_store_dword v33, off, s[12:15], 0 offset:372 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    ds_write_b128 v32, v[28:31] offset:112
+; GCN-MAXOCC-NEXT:    ds_write_b128 v32, v[24:27] offset:96
+; GCN-MAXOCC-NEXT:    ds_write_b128 v32, v[20:23] offset:80
+; GCN-MAXOCC-NEXT:    ds_write_b128 v32, v[16:19] offset:64
+; GCN-MAXOCC-NEXT:    ds_write_b128 v32, v[12:15] offset:48
+; GCN-MAXOCC-NEXT:    ds_write_b128 v32, v[8:11] offset:32
+; GCN-MAXOCC-NEXT:    ds_write_b128 v32, v[4:7] offset:16
+; GCN-MAXOCC-NEXT:    buffer_store_dword v34, off, s[12:15], 0 offset:376 ; 4-byte Folded Spill
+; GCN-MAXOCC-NEXT:    ds_write_b128 v32, v[0:3]
+; GCN-MAXOCC-NEXT:    buffer_load_dword v2, off, s[12:15], 0 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v26, off, s[12:15], 0 offset:96 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v27, off, s[12:15], 0 offset:100 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v28, off, s[12:15], 0 offset:104 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v29, off, s[12:15], 0 offset:108 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v0, s1
+; GCN-MAXOCC-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v4, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v5, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v7, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v8, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v9, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v10, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v11, off, s[12:15], 0 offset:36 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v12, off, s[12:15], 0 offset:40 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v13, off, s[12:15], 0 offset:44 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v14, off, s[12:15], 0 offset:48 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v15, off, s[12:15], 0 offset:52 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v16, off, s[12:15], 0 offset:56 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v17, off, s[12:15], 0 offset:60 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v18, off, s[12:15], 0 offset:64 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v19, off, s[12:15], 0 offset:68 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v20, off, s[12:15], 0 offset:72 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v21, off, s[12:15], 0 offset:76 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v22, off, s[12:15], 0 offset:80 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v23, off, s[12:15], 0 offset:84 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v24, off, s[12:15], 0 offset:88 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v25, off, s[12:15], 0 offset:92 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v30, off, s[12:15], 0 offset:112 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v31, off, s[12:15], 0 offset:116 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v32, off, s[12:15], 0 offset:120 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v33, off, s[12:15], 0 offset:124 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v1, 1.0
+; GCN-MAXOCC-NEXT:    s_waitcnt vmcnt(27)
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, v[26:29] offset:8288
+; GCN-MAXOCC-NEXT:    buffer_load_dword v2, off, s[12:15], 0 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v30, off, s[12:15], 0 offset:112 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v31, off, s[12:15], 0 offset:116 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v32, off, s[12:15], 0 offset:120 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v33, off, s[12:15], 0 offset:124 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v4, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v5, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v7, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v8, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v9, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v10, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v11, off, s[12:15], 0 offset:36 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v12, off, s[12:15], 0 offset:40 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v13, off, s[12:15], 0 offset:44 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v14, off, s[12:15], 0 offset:48 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v15, off, s[12:15], 0 offset:52 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v16, off, s[12:15], 0 offset:56 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v17, off, s[12:15], 0 offset:60 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v18, off, s[12:15], 0 offset:64 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v19, off, s[12:15], 0 offset:68 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v20, off, s[12:15], 0 offset:72 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v21, off, s[12:15], 0 offset:76 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v22, off, s[12:15], 0 offset:80 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v23, off, s[12:15], 0 offset:84 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v24, off, s[12:15], 0 offset:88 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v25, off, s[12:15], 0 offset:92 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v26, off, s[12:15], 0 offset:96 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v27, off, s[12:15], 0 offset:100 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v28, off, s[12:15], 0 offset:104 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v29, off, s[12:15], 0 offset:108 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    s_waitcnt vmcnt(27)
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, v[30:33] offset:8304
+; GCN-MAXOCC-NEXT:    buffer_load_dword v2, off, s[12:15], 0 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v18, off, s[12:15], 0 offset:64 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v19, off, s[12:15], 0 offset:68 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v20, off, s[12:15], 0 offset:72 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v21, off, s[12:15], 0 offset:76 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v4, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v5, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v7, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v8, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v9, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v10, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v11, off, s[12:15], 0 offset:36 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v12, off, s[12:15], 0 offset:40 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v13, off, s[12:15], 0 offset:44 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v14, off, s[12:15], 0 offset:48 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v15, off, s[12:15], 0 offset:52 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v16, off, s[12:15], 0 offset:56 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v17, off, s[12:15], 0 offset:60 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v22, off, s[12:15], 0 offset:80 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v23, off, s[12:15], 0 offset:84 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v24, off, s[12:15], 0 offset:88 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v25, off, s[12:15], 0 offset:92 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v26, off, s[12:15], 0 offset:96 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v27, off, s[12:15], 0 offset:100 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v28, off, s[12:15], 0 offset:104 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v29, off, s[12:15], 0 offset:108 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v30, off, s[12:15], 0 offset:112 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v31, off, s[12:15], 0 offset:116 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v32, off, s[12:15], 0 offset:120 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v33, off, s[12:15], 0 offset:124 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    s_waitcnt vmcnt(27)
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, v[18:21] offset:8256
+; GCN-MAXOCC-NEXT:    buffer_load_dword v2, off, s[12:15], 0 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v22, off, s[12:15], 0 offset:80 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v23, off, s[12:15], 0 offset:84 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v24, off, s[12:15], 0 offset:88 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v25, off, s[12:15], 0 offset:92 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v4, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v5, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v7, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v8, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v9, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v10, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v11, off, s[12:15], 0 offset:36 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v12, off, s[12:15], 0 offset:40 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v13, off, s[12:15], 0 offset:44 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v14, off, s[12:15], 0 offset:48 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v15, off, s[12:15], 0 offset:52 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v16, off, s[12:15], 0 offset:56 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v17, off, s[12:15], 0 offset:60 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v18, off, s[12:15], 0 offset:64 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v19, off, s[12:15], 0 offset:68 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v20, off, s[12:15], 0 offset:72 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v21, off, s[12:15], 0 offset:76 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v26, off, s[12:15], 0 offset:96 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v27, off, s[12:15], 0 offset:100 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v28, off, s[12:15], 0 offset:104 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v29, off, s[12:15], 0 offset:108 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v30, off, s[12:15], 0 offset:112 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v31, off, s[12:15], 0 offset:116 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v32, off, s[12:15], 0 offset:120 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v33, off, s[12:15], 0 offset:124 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    s_waitcnt vmcnt(27)
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, v[22:25] offset:8272
+; GCN-MAXOCC-NEXT:    buffer_load_dword v2, off, s[12:15], 0 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v10, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v11, off, s[12:15], 0 offset:36 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v12, off, s[12:15], 0 offset:40 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v13, off, s[12:15], 0 offset:44 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v4, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v5, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v7, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v8, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v9, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v14, off, s[12:15], 0 offset:48 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v15, off, s[12:15], 0 offset:52 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v16, off, s[12:15], 0 offset:56 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v17, off, s[12:15], 0 offset:60 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v18, off, s[12:15], 0 offset:64 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v19, off, s[12:15], 0 offset:68 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v20, off, s[12:15], 0 offset:72 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v21, off, s[12:15], 0 offset:76 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v22, off, s[12:15], 0 offset:80 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v23, off, s[12:15], 0 offset:84 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v24, off, s[12:15], 0 offset:88 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v25, off, s[12:15], 0 offset:92 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v26, off, s[12:15], 0 offset:96 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v27, off, s[12:15], 0 offset:100 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v28, off, s[12:15], 0 offset:104 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v29, off, s[12:15], 0 offset:108 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v30, off, s[12:15], 0 offset:112 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v31, off, s[12:15], 0 offset:116 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v32, off, s[12:15], 0 offset:120 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v33, off, s[12:15], 0 offset:124 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    s_waitcnt vmcnt(27)
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, v[10:13] offset:8224
+; GCN-MAXOCC-NEXT:    buffer_load_dword v2, off, s[12:15], 0 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v14, off, s[12:15], 0 offset:48 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v15, off, s[12:15], 0 offset:52 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v16, off, s[12:15], 0 offset:56 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v17, off, s[12:15], 0 offset:60 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v4, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v5, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v7, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v8, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v9, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v10, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v11, off, s[12:15], 0 offset:36 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v12, off, s[12:15], 0 offset:40 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v13, off, s[12:15], 0 offset:44 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v18, off, s[12:15], 0 offset:64 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v19, off, s[12:15], 0 offset:68 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v20, off, s[12:15], 0 offset:72 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v21, off, s[12:15], 0 offset:76 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v22, off, s[12:15], 0 offset:80 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v23, off, s[12:15], 0 offset:84 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v24, off, s[12:15], 0 offset:88 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v25, off, s[12:15], 0 offset:92 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v26, off, s[12:15], 0 offset:96 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v27, off, s[12:15], 0 offset:100 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v28, off, s[12:15], 0 offset:104 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v29, off, s[12:15], 0 offset:108 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v30, off, s[12:15], 0 offset:112 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v31, off, s[12:15], 0 offset:116 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v32, off, s[12:15], 0 offset:120 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v33, off, s[12:15], 0 offset:124 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    s_waitcnt vmcnt(27)
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, v[14:17] offset:8240
+; GCN-MAXOCC-NEXT:    buffer_load_dword v2, off, s[12:15], 0 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v4, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v5, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v7, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v8, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v9, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v10, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v11, off, s[12:15], 0 offset:36 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v12, off, s[12:15], 0 offset:40 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v13, off, s[12:15], 0 offset:44 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v14, off, s[12:15], 0 offset:48 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v15, off, s[12:15], 0 offset:52 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v16, off, s[12:15], 0 offset:56 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v17, off, s[12:15], 0 offset:60 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v18, off, s[12:15], 0 offset:64 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v19, off, s[12:15], 0 offset:68 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v20, off, s[12:15], 0 offset:72 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v21, off, s[12:15], 0 offset:76 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v22, off, s[12:15], 0 offset:80 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v23, off, s[12:15], 0 offset:84 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v24, off, s[12:15], 0 offset:88 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v25, off, s[12:15], 0 offset:92 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v26, off, s[12:15], 0 offset:96 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v27, off, s[12:15], 0 offset:100 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v28, off, s[12:15], 0 offset:104 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v29, off, s[12:15], 0 offset:108 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v30, off, s[12:15], 0 offset:112 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v31, off, s[12:15], 0 offset:116 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v32, off, s[12:15], 0 offset:120 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v33, off, s[12:15], 0 offset:124 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    s_waitcnt vmcnt(28)
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, v[2:5] offset:8192
+; GCN-MAXOCC-NEXT:    buffer_load_dword v2, off, s[12:15], 0 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    s_waitcnt vmcnt(0)
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v2, 2.0
+; GCN-MAXOCC-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v7, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
+; GCN-MAXOCC-NEXT:    buffer_load_dword v8, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v9, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v4, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v5, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v10, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v11, off, s[12:15], 0 offset:36 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v12, off, s[12:15], 0 offset:40 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v13, off, s[12:15], 0 offset:44 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v14, off, s[12:15], 0 offset:48 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v15, off, s[12:15], 0 offset:52 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v16, off, s[12:15], 0 offset:56 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v17, off, s[12:15], 0 offset:60 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v18, off, s[12:15], 0 offset:64 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v19, off, s[12:15], 0 offset:68 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v20, off, s[12:15], 0 offset:72 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v21, off, s[12:15], 0 offset:76 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v22, off, s[12:15], 0 offset:80 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v23, off, s[12:15], 0 offset:84 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[24:27] offset:16480
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[28:31] offset:16496
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[16:19] offset:16448
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[20:23] offset:16464
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[8:11] offset:16416
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[12:15] offset:16432
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[0:3] offset:16384
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[4:7] offset:16400
+; GCN-MAXOCC-NEXT:    buffer_load_dword a0, off, s[12:15], 0 offset:256 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a1, off, s[12:15], 0 offset:260 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a2, off, s[12:15], 0 offset:264 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a3, off, s[12:15], 0 offset:268 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a4, off, s[12:15], 0 offset:272 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a5, off, s[12:15], 0 offset:276 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a6, off, s[12:15], 0 offset:280 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a7, off, s[12:15], 0 offset:284 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a8, off, s[12:15], 0 offset:288 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a9, off, s[12:15], 0 offset:292 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a10, off, s[12:15], 0 offset:296 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a11, off, s[12:15], 0 offset:300 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a12, off, s[12:15], 0 offset:304 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a13, off, s[12:15], 0 offset:308 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a14, off, s[12:15], 0 offset:312 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a15, off, s[12:15], 0 offset:316 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a16, off, s[12:15], 0 offset:320 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a17, off, s[12:15], 0 offset:324 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a18, off, s[12:15], 0 offset:328 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a19, off, s[12:15], 0 offset:332 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a20, off, s[12:15], 0 offset:336 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a21, off, s[12:15], 0 offset:340 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a22, off, s[12:15], 0 offset:344 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a23, off, s[12:15], 0 offset:348 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a24, off, s[12:15], 0 offset:352 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a25, off, s[12:15], 0 offset:356 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a26, off, s[12:15], 0 offset:360 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a27, off, s[12:15], 0 offset:364 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a28, off, s[12:15], 0 offset:368 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a29, off, s[12:15], 0 offset:372 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a30, off, s[12:15], 0 offset:376 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword a31, off, s[12:15], 0 offset:380 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v24, off, s[12:15], 0 offset:88 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v25, off, s[12:15], 0 offset:92 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v26, off, s[12:15], 0 offset:96 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v27, off, s[12:15], 0 offset:100 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v28, off, s[12:15], 0 offset:104 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v29, off, s[12:15], 0 offset:108 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v30, off, s[12:15], 0 offset:112 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v31, off, s[12:15], 0 offset:116 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v32, off, s[12:15], 0 offset:120 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    buffer_load_dword v33, off, s[12:15], 0 offset:124 ; 4-byte Folded Reload
+; GCN-MAXOCC-NEXT:    s_waitcnt vmcnt(10)
+; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
+; GCN-MAXOCC-NEXT:    s_nop 7
+; GCN-MAXOCC-NEXT:    s_nop 7
+; GCN-MAXOCC-NEXT:    s_nop 2
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[24:27] offset:32864
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[28:31] offset:32880
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[16:19] offset:32832
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[20:23] offset:32848
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[8:11] offset:32800
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[12:15] offset:32816
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[0:3] offset:32768
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[4:7] offset:32784
+; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v1, v2, a[32:63]
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MAXOCC-NEXT:    s_nop 7
 ; GCN-MAXOCC-NEXT:    s_nop 7
 ; GCN-MAXOCC-NEXT:    s_nop 2
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[24:27] offset:16480
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[28:31] offset:16496
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[16:19] offset:16448
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[20:23] offset:16464
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[8:11] offset:16416
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[12:15] offset:16432
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[0:3] offset:16384
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[4:7] offset:16400
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:49264
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:49248
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:49232
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:49216
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:49200
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:49184
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:49168
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:49152
-; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
-; GCN-MAXOCC-NEXT:    v_add_u32_e32 v0, 0x6000, v0
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[56:59] offset:24672
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[60:63] offset:24688
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[48:51] offset:24640
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[52:55] offset:24656
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[40:43] offset:24608
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[44:47] offset:24624
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[32:35] offset:24576
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, a[36:39] offset:24592
+; GCN-MAXOCC-NEXT:    ds_write_b128 v0, v[6:9] offset:8208
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-MAXOCC-NEXT:    s_nop 7
-; GCN-MAXOCC-NEXT:    s_nop 7
-; GCN-MAXOCC-NEXT:    s_nop 1
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[24:27] offset:24672
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[28:31] offset:24688
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[16:19] offset:24640
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[20:23] offset:24656
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[8:11] offset:24608
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[12:15] offset:24624
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[0:3] offset:24576
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[4:7] offset:24592
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:57456
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:57440
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:57424
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:57408
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:57344
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:57360
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:57376
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:57392
-; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-MAXOCC-NEXT:    s_nop 7
-; GCN-MAXOCC-NEXT:    s_nop 7
-; GCN-MAXOCC-NEXT:    s_nop 2
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[24:27] offset:32864
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[28:31] offset:32880
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[16:19] offset:32832
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[20:23] offset:32848
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[8:11] offset:32800
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[12:15] offset:32816
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[0:3] offset:32768
-; GCN-MAXOCC-NEXT:    ds_write_b128 v1, a[4:7] offset:32784
+; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
+; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
+; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    s_endpgm
 ;
@@ -275,11 +967,11 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-ILP:       ; %bb.0: ; %entry
 ; GCN-ILP-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-ILP-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-ILP-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; GCN-ILP-NEXT:    v_mov_b32_e32 v1, 1.0
-; GCN-ILP-NEXT:    v_mov_b32_e32 v2, 2.0
+; GCN-ILP-NEXT:    v_lshlrev_b32_e32 v2, 7, v0
+; GCN-ILP-NEXT:    v_mov_b32_e32 v0, 1.0
+; GCN-ILP-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-ILP-NEXT:    v_add_u32_e32 v3, s0, v0
+; GCN-ILP-NEXT:    v_add_u32_e32 v3, s0, v2
 ; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:48
 ; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:32
 ; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:16
@@ -289,119 +981,355 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:96
 ; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:112
 ; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
-; GCN-ILP-NEXT:    v_add_u32_e32 v0, s1, v0
+; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
+; GCN-ILP-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
+; GCN-ILP-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
+; GCN-ILP-NEXT:    ds_read_b128 v[4:7], v3 offset:8192
+; GCN-ILP-NEXT:    s_mov_b32 s14, -1
+; GCN-ILP-NEXT:    s_mov_b32 s15, 0xe00000
+; GCN-ILP-NEXT:    s_add_u32 s12, s12, s11
+; GCN-ILP-NEXT:    s_addc_u32 s13, s13, 0
+; GCN-ILP-NEXT:    ds_read_b128 v[32:35], v3 offset:8304
+; GCN-ILP-NEXT:    ds_read_b128 v[28:31], v3 offset:8288
+; GCN-ILP-NEXT:    ds_read_b128 v[24:27], v3 offset:8272
+; GCN-ILP-NEXT:    ds_read_b128 v[20:23], v3 offset:8256
+; GCN-ILP-NEXT:    ds_read_b128 v[16:19], v3 offset:8240
+; GCN-ILP-NEXT:    ds_read_b128 v[12:15], v3 offset:8224
+; GCN-ILP-NEXT:    ds_read_b128 v[8:11], v3 offset:8208
+; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(7)
+; GCN-ILP-NEXT:    buffer_store_dword v4, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-ILP-NEXT:    s_nop 7
-; GCN-ILP-NEXT:    s_nop 7
-; GCN-ILP-NEXT:    s_nop 1
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[28:31] offset:112
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[24:27] offset:96
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[20:23] offset:80
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[16:19] offset:64
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[12:15] offset:48
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[8:11] offset:32
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[4:7] offset:16
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[0:3]
-; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3 offset:8192
-; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:8208
-; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:8224
-; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:8240
-; GCN-ILP-NEXT:    ds_read_b128 a[16:19], v3 offset:8256
-; GCN-ILP-NEXT:    ds_read_b128 a[20:23], v3 offset:8272
-; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:8288
-; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:8304
-; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
-; GCN-ILP-NEXT:    v_mov_b32_e32 v0, s1
-; GCN-ILP-NEXT:    s_nop 7
-; GCN-ILP-NEXT:    s_nop 7
-; GCN-ILP-NEXT:    s_nop 1
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[24:27] offset:8288
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[28:31] offset:8304
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[16:19] offset:8256
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[20:23] offset:8272
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[8:11] offset:8224
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[12:15] offset:8240
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[0:3] offset:8192
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[4:7] offset:8208
-; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3 offset:24576
-; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:24592
-; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:24608
-; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:24624
-; GCN-ILP-NEXT:    ds_read_b128 a[16:19], v3 offset:24640
-; GCN-ILP-NEXT:    ds_read_b128 a[20:23], v3 offset:24656
-; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:24672
-; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:24688
-; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
-; GCN-ILP-NEXT:    s_nop 7
-; GCN-ILP-NEXT:    s_nop 7
 ; GCN-ILP-NEXT:    s_nop 2
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[4:7] offset:16400
-; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:49168
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[0:3] offset:16384
-; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3 offset:49152
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[12:15] offset:16432
-; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:49200
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[8:11] offset:16416
-; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:49184
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[20:23] offset:16464
-; GCN-ILP-NEXT:    ds_read_b128 a[20:23], v3 offset:49232
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[16:19] offset:16448
-; GCN-ILP-NEXT:    ds_read_b128 a[16:19], v3 offset:49216
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[28:31] offset:16496
-; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:49264
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[24:27] offset:16480
-; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:49248
+; GCN-ILP-NEXT:    buffer_store_dword a0, off, s[12:15], 0 offset:132 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v63, a4 ; Reload Reuse
+; GCN-ILP-NEXT:    buffer_store_dword v5, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v6, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v7, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
 ; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
+; GCN-ILP-NEXT:    buffer_store_dword v8, off, s[12:15], 0 offset:20 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v9, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v10, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v11, off, s[12:15], 0 offset:32 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v12, off, s[12:15], 0 offset:36 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v13, off, s[12:15], 0 offset:40 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v14, off, s[12:15], 0 offset:44 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v15, off, s[12:15], 0 offset:48 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v16, off, s[12:15], 0 offset:52 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v17, off, s[12:15], 0 offset:56 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v18, off, s[12:15], 0 offset:60 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v19, off, s[12:15], 0 offset:64 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v20, off, s[12:15], 0 offset:68 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v21, off, s[12:15], 0 offset:72 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v22, off, s[12:15], 0 offset:76 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v23, off, s[12:15], 0 offset:80 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v24, off, s[12:15], 0 offset:84 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v25, off, s[12:15], 0 offset:88 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v26, off, s[12:15], 0 offset:92 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v27, off, s[12:15], 0 offset:96 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v28, off, s[12:15], 0 offset:100 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v29, off, s[12:15], 0 offset:104 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v30, off, s[12:15], 0 offset:108 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v31, off, s[12:15], 0 offset:112 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v32, off, s[12:15], 0 offset:116 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v33, off, s[12:15], 0 offset:120 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v34, off, s[12:15], 0 offset:124 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v35, off, s[12:15], 0 offset:128 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    ds_read_b128 v[32:35], v3 offset:24688
+; GCN-ILP-NEXT:    ds_read_b128 v[28:31], v3 offset:24672
+; GCN-ILP-NEXT:    ds_read_b128 v[24:27], v3 offset:24656
+; GCN-ILP-NEXT:    ds_read_b128 v[20:23], v3 offset:24640
+; GCN-ILP-NEXT:    ds_read_b128 v[16:19], v3 offset:24624
+; GCN-ILP-NEXT:    ds_read_b128 v[12:15], v3 offset:24608
+; GCN-ILP-NEXT:    ds_read_b128 v[8:11], v3 offset:24592
+; GCN-ILP-NEXT:    ds_read_b128 v[4:7], v3 offset:24576
+; GCN-ILP-NEXT:    ds_read_b128 a[60:63], v3 offset:49264
+; GCN-ILP-NEXT:    ds_read_b128 a[56:59], v3 offset:49248
+; GCN-ILP-NEXT:    ds_read_b128 a[52:55], v3 offset:49232
+; GCN-ILP-NEXT:    ds_read_b128 a[48:51], v3 offset:49216
+; GCN-ILP-NEXT:    ds_read_b128 a[44:47], v3 offset:49200
+; GCN-ILP-NEXT:    ds_read_b128 a[40:43], v3 offset:49184
+; GCN-ILP-NEXT:    ds_read_b128 a[36:39], v3 offset:49168
+; GCN-ILP-NEXT:    ds_read_b128 a[32:35], v3 offset:49152
 ; GCN-ILP-NEXT:    v_add_u32_e32 v3, 0x6000, v3
+; GCN-ILP-NEXT:    buffer_store_dword a1, off, s[12:15], 0 offset:136 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword a2, off, s[12:15], 0 offset:140 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword a3, off, s[12:15], 0 offset:144 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v62, a5 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v61, a6 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v60, a7 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v59, a8 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v58, a9 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v57, a10 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v56, a11 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v55, a12 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v54, a13 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v53, a14 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v52, a15 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v51, a16 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v50, a17 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v49, a18 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v48, a19 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v47, a20 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v46, a21 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v45, a22 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v44, a23 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v43, a24 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v42, a25 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v41, a26 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v40, a27 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v39, a28 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v38, a29 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v37, a30 ; Reload Reuse
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v36, a31 ; Reload Reuse
+; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:57392
+; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:57376
+; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:57360
+; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3 offset:57344
+; GCN-ILP-NEXT:    ds_read_b128 a[16:19], v3 offset:57408
+; GCN-ILP-NEXT:    ds_read_b128 a[20:23], v3 offset:57424
+; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:57440
+; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:57456
+; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
+; GCN-ILP-NEXT:    v_add_u32_e32 v0, s1, v2
+; GCN-ILP-NEXT:    buffer_store_dword v4, off, s[12:15], 0 offset:264 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    s_nop 0
+; GCN-ILP-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    v_mov_b32_e32 v0, s1
+; GCN-ILP-NEXT:    buffer_store_dword v5, off, s[12:15], 0 offset:268 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v6, off, s[12:15], 0 offset:272 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v7, off, s[12:15], 0 offset:276 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v8, off, s[12:15], 0 offset:280 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v9, off, s[12:15], 0 offset:284 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v10, off, s[12:15], 0 offset:288 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v11, off, s[12:15], 0 offset:292 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v12, off, s[12:15], 0 offset:296 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v13, off, s[12:15], 0 offset:300 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v14, off, s[12:15], 0 offset:304 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v15, off, s[12:15], 0 offset:308 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v16, off, s[12:15], 0 offset:312 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v17, off, s[12:15], 0 offset:316 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v18, off, s[12:15], 0 offset:320 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v19, off, s[12:15], 0 offset:324 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v20, off, s[12:15], 0 offset:328 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v21, off, s[12:15], 0 offset:332 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v22, off, s[12:15], 0 offset:336 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v23, off, s[12:15], 0 offset:340 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v24, off, s[12:15], 0 offset:344 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v25, off, s[12:15], 0 offset:348 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v26, off, s[12:15], 0 offset:352 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v27, off, s[12:15], 0 offset:356 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v28, off, s[12:15], 0 offset:360 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v29, off, s[12:15], 0 offset:364 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v30, off, s[12:15], 0 offset:368 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v31, off, s[12:15], 0 offset:372 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v35, off, s[12:15], 0 offset:388 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:260 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:132 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    v_mov_b32_e32 v4, v63
+; GCN-ILP-NEXT:    buffer_store_dword v32, off, s[12:15], 0 offset:376 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:136 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:140 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:144 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    v_mov_b32_e32 v5, v62
+; GCN-ILP-NEXT:    buffer_load_dword v32, off, s[12:15], 0 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    v_mov_b32_e32 v6, v61
+; GCN-ILP-NEXT:    v_mov_b32_e32 v7, v60
+; GCN-ILP-NEXT:    v_mov_b32_e32 v8, v59
+; GCN-ILP-NEXT:    v_mov_b32_e32 v9, v58
+; GCN-ILP-NEXT:    v_mov_b32_e32 v10, v57
+; GCN-ILP-NEXT:    v_mov_b32_e32 v11, v56
+; GCN-ILP-NEXT:    v_mov_b32_e32 v12, v55
+; GCN-ILP-NEXT:    v_mov_b32_e32 v13, v54
+; GCN-ILP-NEXT:    v_mov_b32_e32 v14, v53
+; GCN-ILP-NEXT:    v_mov_b32_e32 v15, v52
+; GCN-ILP-NEXT:    v_mov_b32_e32 v16, v51
+; GCN-ILP-NEXT:    v_mov_b32_e32 v17, v50
+; GCN-ILP-NEXT:    v_mov_b32_e32 v18, v49
+; GCN-ILP-NEXT:    v_mov_b32_e32 v19, v48
+; GCN-ILP-NEXT:    v_mov_b32_e32 v20, v47
+; GCN-ILP-NEXT:    v_mov_b32_e32 v21, v46
+; GCN-ILP-NEXT:    v_mov_b32_e32 v22, v45
+; GCN-ILP-NEXT:    v_mov_b32_e32 v23, v44
+; GCN-ILP-NEXT:    v_mov_b32_e32 v24, v43
+; GCN-ILP-NEXT:    v_mov_b32_e32 v25, v42
+; GCN-ILP-NEXT:    v_mov_b32_e32 v26, v41
+; GCN-ILP-NEXT:    v_mov_b32_e32 v27, v40
+; GCN-ILP-NEXT:    v_mov_b32_e32 v28, v39
+; GCN-ILP-NEXT:    v_mov_b32_e32 v29, v38
+; GCN-ILP-NEXT:    v_mov_b32_e32 v30, v37
+; GCN-ILP-NEXT:    s_waitcnt vmcnt(1)
+; GCN-ILP-NEXT:    v_mov_b32_e32 v31, v36
+; GCN-ILP-NEXT:    buffer_store_dword v33, off, s[12:15], 0 offset:380 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    buffer_store_dword v34, off, s[12:15], 0 offset:384 ; 4-byte Folded Spill
+; GCN-ILP-NEXT:    s_waitcnt vmcnt(2)
+; GCN-ILP-NEXT:    ds_write_b128 v32, v[0:3]
+; GCN-ILP-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:260 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    v_mov_b32_e32 v1, 2.0
+; GCN-ILP-NEXT:    s_waitcnt vmcnt(1)
+; GCN-ILP-NEXT:    ds_write_b128 v0, v[4:7] offset:16
+; GCN-ILP-NEXT:    ds_write_b128 v0, v[8:11] offset:32
+; GCN-ILP-NEXT:    ds_write_b128 v0, v[12:15] offset:48
+; GCN-ILP-NEXT:    ds_write_b128 v0, v[16:19] offset:64
+; GCN-ILP-NEXT:    ds_write_b128 v0, v[20:23] offset:80
+; GCN-ILP-NEXT:    ds_write_b128 v0, v[24:27] offset:96
+; GCN-ILP-NEXT:    ds_write_b128 v0, v[28:31] offset:112
+; GCN-ILP-NEXT:    v_mov_b32_e32 v0, 1.0
+; GCN-ILP-NEXT:    s_nop 1
+; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v0, v1, a[32:63]
+; GCN-ILP-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-ILP-NEXT:    s_nop 7
 ; GCN-ILP-NEXT:    s_nop 7
 ; GCN-ILP-NEXT:    s_nop 1
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[4:7] offset:24592
-; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:57360
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[0:3] offset:24576
-; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3 offset:57344
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[12:15] offset:24624
-; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:57392
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[8:11] offset:24608
-; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:57376
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[20:23] offset:24656
-; GCN-ILP-NEXT:    ds_read_b128 a[20:23], v3 offset:57424
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[16:19] offset:24640
-; GCN-ILP-NEXT:    ds_read_b128 a[16:19], v3 offset:57408
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[28:31] offset:24688
-; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:57456
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[24:27] offset:24672
-; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:57440
-; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
-; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
-; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[56:59] offset:24672
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[60:63] offset:24688
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[48:51] offset:24640
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[52:55] offset:24656
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[40:43] offset:24608
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[44:47] offset:24624
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[32:35] offset:24576
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[36:39] offset:24592
+; GCN-ILP-NEXT:    buffer_load_dword a32, off, s[12:15], 0 offset:264 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a33, off, s[12:15], 0 offset:268 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a34, off, s[12:15], 0 offset:272 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a35, off, s[12:15], 0 offset:276 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a36, off, s[12:15], 0 offset:280 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a37, off, s[12:15], 0 offset:284 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a38, off, s[12:15], 0 offset:288 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a39, off, s[12:15], 0 offset:292 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a40, off, s[12:15], 0 offset:296 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a41, off, s[12:15], 0 offset:300 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a42, off, s[12:15], 0 offset:304 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a43, off, s[12:15], 0 offset:308 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a44, off, s[12:15], 0 offset:312 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a45, off, s[12:15], 0 offset:316 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a46, off, s[12:15], 0 offset:320 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a47, off, s[12:15], 0 offset:324 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a48, off, s[12:15], 0 offset:328 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a49, off, s[12:15], 0 offset:332 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a50, off, s[12:15], 0 offset:336 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a51, off, s[12:15], 0 offset:340 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a52, off, s[12:15], 0 offset:344 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a53, off, s[12:15], 0 offset:348 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a54, off, s[12:15], 0 offset:352 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a55, off, s[12:15], 0 offset:356 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a56, off, s[12:15], 0 offset:360 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a57, off, s[12:15], 0 offset:364 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a58, off, s[12:15], 0 offset:368 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a59, off, s[12:15], 0 offset:372 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a60, off, s[12:15], 0 offset:376 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a61, off, s[12:15], 0 offset:380 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a62, off, s[12:15], 0 offset:384 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a63, off, s[12:15], 0 offset:388 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    s_waitcnt vmcnt(0)
+; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v0, v1, a[32:63]
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[24:27] offset:32864
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[28:31] offset:32880
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[16:19] offset:32832
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[20:23] offset:32848
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[8:11] offset:32800
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[12:15] offset:32816
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[0:3] offset:32768
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[4:7] offset:32784
+; GCN-ILP-NEXT:    buffer_load_dword a0, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a1, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a2, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a3, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a4, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a5, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a6, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a7, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a8, off, s[12:15], 0 offset:36 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a9, off, s[12:15], 0 offset:40 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a10, off, s[12:15], 0 offset:44 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a11, off, s[12:15], 0 offset:48 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a12, off, s[12:15], 0 offset:52 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a13, off, s[12:15], 0 offset:56 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a14, off, s[12:15], 0 offset:60 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a15, off, s[12:15], 0 offset:64 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a16, off, s[12:15], 0 offset:68 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a17, off, s[12:15], 0 offset:72 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a18, off, s[12:15], 0 offset:76 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a19, off, s[12:15], 0 offset:80 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a20, off, s[12:15], 0 offset:84 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a21, off, s[12:15], 0 offset:88 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a22, off, s[12:15], 0 offset:92 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a23, off, s[12:15], 0 offset:96 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a24, off, s[12:15], 0 offset:100 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a25, off, s[12:15], 0 offset:104 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a26, off, s[12:15], 0 offset:108 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a27, off, s[12:15], 0 offset:112 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a28, off, s[12:15], 0 offset:116 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a29, off, s[12:15], 0 offset:120 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a30, off, s[12:15], 0 offset:124 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    buffer_load_dword a31, off, s[12:15], 0 offset:128 ; 4-byte Folded Reload
+; GCN-ILP-NEXT:    s_waitcnt vmcnt(0)
+; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    s_nop 7
 ; GCN-ILP-NEXT:    s_nop 7
 ; GCN-ILP-NEXT:    s_nop 2
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[24:27] offset:32864
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[28:31] offset:32880
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[16:19] offset:32832
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[20:23] offset:32848
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[8:11] offset:32800
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[12:15] offset:32816
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[0:3] offset:32768
-; GCN-ILP-NEXT:    ds_write_b128 v0, a[4:7] offset:32784
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v35, a31
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v34, a30
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v33, a29
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v32, a28
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v31, a27
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v30, a26
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v29, a25
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v28, a24
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v27, a23
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v26, a22
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v25, a21
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v24, a20
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v23, a19
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v22, a18
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v21, a17
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v20, a16
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v19, a15
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v18, a14
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v17, a13
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v16, a12
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v15, a11
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v14, a10
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v13, a9
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v12, a8
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v11, a7
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v10, a6
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v9, a5
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v8, a4
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v7, a3
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v6, a2
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v5, a1
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v4, a0
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[28:31] offset:8288
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[32:35] offset:8304
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[20:23] offset:8256
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[24:27] offset:8272
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[12:15] offset:8224
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[16:19] offset:8240
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[4:7] offset:8192
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[8:11] offset:8208
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[56:59] offset:16480
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[60:63] offset:16496
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[48:51] offset:16448
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[52:55] offset:16464
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[40:43] offset:16416
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[44:47] offset:16432
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[32:35] offset:16384
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[36:39] offset:16400
+; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
+; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
+; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
+; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
-; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
-; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    s_endpgm
 entry:
@@ -485,12 +1413,20 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v3 offset:48
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v0, a[0:31]
+; GCN-MINREG-NEXT:    ds_read_b128 a[60:63], v3 offset:8304
+; GCN-MINREG-NEXT:    ds_read_b128 a[56:59], v3 offset:8288
+; GCN-MINREG-NEXT:    ds_read_b128 a[52:55], v3 offset:8272
+; GCN-MINREG-NEXT:    ds_read_b128 a[48:51], v3 offset:8256
+; GCN-MINREG-NEXT:    ds_read_b128 a[44:47], v3 offset:8240
+; GCN-MINREG-NEXT:    ds_read_b128 a[40:43], v3 offset:8224
+; GCN-MINREG-NEXT:    ds_read_b128 a[36:39], v3 offset:8208
+; GCN-MINREG-NEXT:    ds_read_b128 a[32:35], v3 offset:8192
 ; GCN-MINREG-NEXT:    v_add_u32_e32 v2, s1, v2
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
+; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v1, v0, a[32:63]
 ; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 1
 ; GCN-MINREG-NEXT:    ds_write_b128 v2, a[28:31] offset:112
 ; GCN-MINREG-NEXT:    ds_write_b128 v2, a[24:27] offset:96
 ; GCN-MINREG-NEXT:    ds_write_b128 v2, a[20:23] offset:80
@@ -499,31 +1435,19 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MINREG-NEXT:    ds_write_b128 v2, a[8:11] offset:32
 ; GCN-MINREG-NEXT:    ds_write_b128 v2, a[4:7] offset:16
 ; GCN-MINREG-NEXT:    ds_write_b128 v2, a[0:3]
-; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v3 offset:8304
-; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v3 offset:8288
-; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v3 offset:8272
-; GCN-MINREG-NEXT:    ds_read_b128 a[16:19], v3 offset:8256
-; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v3 offset:8240
-; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v3 offset:8224
-; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v3 offset:8208
-; GCN-MINREG-NEXT:    ds_read_b128 a[0:3], v3 offset:8192
-; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v0, a[0:31]
 ; GCN-MINREG-NEXT:    v_mov_b32_e32 v2, s1
+; GCN-MINREG-NEXT:    s_nop 1
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[56:59] offset:8288
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[60:63] offset:8304
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[48:51] offset:8256
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[52:55] offset:8272
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[40:43] offset:8224
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[44:47] offset:8240
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[32:35] offset:8192
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[36:39] offset:8208
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 1
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[24:27] offset:8288
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[28:31] offset:8304
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[16:19] offset:8256
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[20:23] offset:8272
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[8:11] offset:8224
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[12:15] offset:8240
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[0:3] offset:8192
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[4:7] offset:8208
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_barrier mask(0x00000000)
 ; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v3 offset:24688
@@ -536,44 +1460,54 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v3 offset:24624
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v0, a[0:31]
+; GCN-MINREG-NEXT:    ds_read_b128 a[60:63], v3 offset:49264
+; GCN-MINREG-NEXT:    ds_read_b128 a[56:59], v3 offset:49248
+; GCN-MINREG-NEXT:    ds_read_b128 a[52:55], v3 offset:49232
+; GCN-MINREG-NEXT:    ds_read_b128 a[48:51], v3 offset:49216
+; GCN-MINREG-NEXT:    ds_read_b128 a[44:47], v3 offset:49200
+; GCN-MINREG-NEXT:    ds_read_b128 a[40:43], v3 offset:49184
+; GCN-MINREG-NEXT:    ds_read_b128 a[36:39], v3 offset:49168
+; GCN-MINREG-NEXT:    ds_read_b128 a[32:35], v3 offset:49152
 ; GCN-MINREG-NEXT:    v_add_u32_e32 v4, 0x6000, v3
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 1
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[28:31] offset:16496
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[24:27] offset:16480
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[20:23] offset:16464
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[16:19] offset:16448
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[12:15] offset:16432
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[8:11] offset:16416
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[4:7] offset:16400
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[0:3] offset:16384
-; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v3 offset:49264
-; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v3 offset:49248
-; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v3 offset:49232
-; GCN-MINREG-NEXT:    ds_read_b128 a[16:19], v3 offset:49216
-; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v3 offset:49200
-; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v3 offset:49184
-; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v3 offset:49168
-; GCN-MINREG-NEXT:    ds_read_b128 a[0:3], v3 offset:49152
-; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v0, a[0:31]
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
+; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v1, v0, a[32:63]
 ; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 7
-; GCN-MINREG-NEXT:    s_nop 2
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[28:31] offset:24688
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[24:27] offset:24672
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[20:23] offset:24656
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[16:19] offset:24640
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[12:15] offset:24624
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[8:11] offset:24608
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[4:7] offset:24592
-; GCN-MINREG-NEXT:    ds_write_b128 v2, a[0:3] offset:24576
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v37, a31
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v36, a30
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v35, a29
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v34, a28
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v33, a27
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v32, a26
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v31, a25
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v30, a24
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v29, a23
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v28, a22
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v27, a21
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v26, a20
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v25, a19
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v24, a18
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v23, a17
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v22, a16
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v21, a15
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v20, a14
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v19, a13
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v18, a12
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v17, a11
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v16, a10
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v15, a9
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v14, a8
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v13, a7
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v12, a6
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v11, a5
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v10, a4
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v9, a3
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v8, a2
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v7, a1
+; GCN-MINREG-NEXT:    v_accvgpr_read_b32 v6, a0
 ; GCN-MINREG-NEXT:    ds_read_b128 a[28:31], v4 offset:57456
 ; GCN-MINREG-NEXT:    ds_read_b128 a[24:27], v4 offset:57440
 ; GCN-MINREG-NEXT:    ds_read_b128 a[20:23], v4 offset:57424
@@ -582,12 +1516,28 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MINREG-NEXT:    ds_read_b128 a[4:7], v4 offset:57360
 ; GCN-MINREG-NEXT:    ds_read_b128 a[8:11], v4 offset:57376
 ; GCN-MINREG-NEXT:    ds_read_b128 a[12:15], v4 offset:57392
-; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[60:63] offset:24688
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[56:59] offset:24672
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[52:55] offset:24656
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[48:51] offset:24640
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[44:47] offset:24624
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[40:43] offset:24608
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[36:39] offset:24592
+; GCN-MINREG-NEXT:    ds_write_b128 v2, a[32:35] offset:24576
+; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(8)
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v0, a[0:31]
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-MINREG-NEXT:    s_nop 7
+; GCN-MINREG-NEXT:    ds_write_b128 v2, v[34:37] offset:16496
+; GCN-MINREG-NEXT:    ds_write_b128 v2, v[30:33] offset:16480
+; GCN-MINREG-NEXT:    ds_write_b128 v2, v[26:29] offset:16464
+; GCN-MINREG-NEXT:    ds_write_b128 v2, v[22:25] offset:16448
+; GCN-MINREG-NEXT:    ds_write_b128 v2, v[18:21] offset:16432
+; GCN-MINREG-NEXT:    ds_write_b128 v2, v[14:17] offset:16416
+; GCN-MINREG-NEXT:    ds_write_b128 v2, v[10:13] offset:16400
+; GCN-MINREG-NEXT:    ds_write_b128 v2, v[6:9] offset:16384
 ; GCN-MINREG-NEXT:    s_nop 7
 ; GCN-MINREG-NEXT:    s_nop 2
 ; GCN-MINREG-NEXT:    ds_write_b128 v2, a[28:31] offset:32880
@@ -605,134 +1555,210 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MAXOCC:       ; %bb.0: ; %entry
 ; GCN-MAXOCC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-MAXOCC-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-MAXOCC-NEXT:    v_lshlrev_b32_e32 v3, 7, v0
-; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v1, 1.0
-; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v2, 2.0
+; GCN-MAXOCC-NEXT:    v_lshlrev_b32_e32 v2, 7, v0
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v0, 1.0
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MAXOCC-NEXT:    v_add_u32_e32 v0, s0, v3
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:112
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:96
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:80
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:64
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:16
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:32
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:48
+; GCN-MAXOCC-NEXT:    v_add_u32_e32 v3, s0, v2
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v3 offset:112
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v3 offset:96
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v3 offset:80
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v3 offset:64
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v3
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v3 offset:16
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v3 offset:32
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v3 offset:48
 ; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
-; GCN-MAXOCC-NEXT:    v_add_u32_e32 v3, s1, v3
+; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[60:63], v3 offset:8304
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[56:59], v3 offset:8288
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[52:55], v3 offset:8272
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[48:51], v3 offset:8256
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[44:47], v3 offset:8240
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[40:43], v3 offset:8224
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[36:39], v3 offset:8208
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[32:35], v3 offset:8192
+; GCN-MAXOCC-NEXT:    v_add_u32_e32 v2, s1, v2
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-MAXOCC-NEXT:    s_nop 7
-; GCN-MAXOCC-NEXT:    s_nop 7
-; GCN-MAXOCC-NEXT:    s_nop 1
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[28:31] offset:112
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[24:27] offset:96
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[20:23] offset:80
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[16:19] offset:64
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[12:15] offset:48
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[8:11] offset:32
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[4:7] offset:16
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[0:3]
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:8304
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:8288
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:8272
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:8256
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:8240
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:8224
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:8208
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:8192
 ; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
-; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v3, s1
+; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v0, v1, a[32:63]
+; GCN-MAXOCC-NEXT:    s_nop 7
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[28:31] offset:112
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[24:27] offset:96
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[20:23] offset:80
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[16:19] offset:64
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[12:15] offset:48
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[8:11] offset:32
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[4:7] offset:16
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[0:3]
+; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v2, s1
+; GCN-MAXOCC-NEXT:    s_nop 1
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[56:59] offset:8288
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[60:63] offset:8304
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[48:51] offset:8256
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[52:55] offset:8272
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[40:43] offset:8224
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[44:47] offset:8240
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[32:35] offset:8192
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[36:39] offset:8208
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-MAXOCC-NEXT:    s_nop 7
-; GCN-MAXOCC-NEXT:    s_nop 7
-; GCN-MAXOCC-NEXT:    s_nop 1
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[24:27] offset:8288
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[28:31] offset:8304
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[16:19] offset:8256
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[20:23] offset:8272
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[8:11] offset:8224
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[12:15] offset:8240
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[0:3] offset:8192
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[4:7] offset:8208
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_barrier mask(0x00000000)
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:24688
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:24672
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:24656
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:24640
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:24576
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:24592
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:24608
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:24624
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[4:7], v3 offset:24576
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[32:35], v3 offset:24688
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[28:31], v3 offset:24672
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[24:27], v3 offset:24656
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[20:23], v3 offset:24640
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[8:11], v3 offset:24592
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[12:15], v3 offset:24608
+; GCN-MAXOCC-NEXT:    ds_read_b128 v[16:19], v3 offset:24624
 ; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a0, v4
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a1, v5
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a2, v6
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a3, v7
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a4, v8
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a5, v9
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a6, v10
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a7, v11
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a8, v12
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a9, v13
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a10, v14
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a11, v15
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a12, v16
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a13, v17
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a14, v18
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a15, v19
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a16, v20
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a17, v21
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a18, v22
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a19, v23
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a20, v24
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a21, v25
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a22, v26
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a23, v27
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a24, v28
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a25, v29
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a26, v30
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a27, v31
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a28, v32
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a29, v33
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a30, v34
+; GCN-MAXOCC-NEXT:    v_accvgpr_write_b32 a31, v35
+; GCN-MAXOCC-NEXT:    v_add_u32_e32 v4, 0x6000, v3
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
+; GCN-MAXOCC-NEXT:    s_nop 0
+; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[60:63], v3 offset:49264
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[56:59], v3 offset:49248
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[52:55], v3 offset:49232
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[48:51], v3 offset:49216
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[44:47], v3 offset:49200
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[40:43], v3 offset:49184
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[36:39], v3 offset:49168
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[32:35], v3 offset:49152
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MAXOCC-NEXT:    s_nop 7
-; GCN-MAXOCC-NEXT:    s_nop 7
 ; GCN-MAXOCC-NEXT:    s_nop 2
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[28:31] offset:16496
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[24:27] offset:16480
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[20:23] offset:16464
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[16:19] offset:16448
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[12:15] offset:16432
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[8:11] offset:16416
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[4:7] offset:16400
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[0:3] offset:16384
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:49264
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:49248
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:49232
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:49216
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:49200
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:49184
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:49168
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:49152
-; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
-; GCN-MAXOCC-NEXT:    v_add_u32_e32 v0, 0x6000, v0
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v37, a31
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v35, a29
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v34, a28
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v33, a27
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v32, a26
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v31, a25
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v30, a24
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v29, a23
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v28, a22
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v27, a21
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v26, a20
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v25, a19
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v24, a18
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v23, a17
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v22, a16
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v21, a15
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v20, a14
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v19, a13
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v18, a12
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v17, a11
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v16, a10
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v15, a9
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v14, a8
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v13, a7
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v12, a6
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v11, a5
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v10, a4
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v9, a3
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v8, a2
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v7, a1
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v6, a0
+; GCN-MAXOCC-NEXT:    v_accvgpr_read_b32 v36, a30
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v4 offset:57456
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v4 offset:57440
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v4 offset:57424
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v4 offset:57408
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v4 offset:57344
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v4 offset:57360
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v4 offset:57376
+; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v4 offset:57392
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[4:5], v[6:7], v[6:7] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[6:7], v[8:9], v[8:9] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[8:9], v[10:11], v[10:11] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[10:11], v[12:13], v[12:13] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[12:13], v[14:15], v[14:15] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[14:15], v[16:17], v[16:17] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[16:17], v[18:19], v[18:19] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[18:19], v[20:21], v[20:21] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[20:21], v[22:23], v[22:23] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[22:23], v[24:25], v[24:25] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[24:25], v[26:27], v[26:27] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[26:27], v[28:29], v[28:29] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[28:29], v[30:31], v[30:31] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[30:31], v[32:33], v[32:33] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[32:33], v[34:35], v[34:35] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    v_pk_mov_b32 v[34:35], v[36:37], v[36:37] op_sel:[0,1]
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, v[32:35] offset:16496
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, v[28:31] offset:16480
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, v[24:27] offset:16464
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, v[20:23] offset:16448
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, v[16:19] offset:16432
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, v[12:15] offset:16416
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, v[8:11] offset:16400
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, v[4:7] offset:16384
+; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(14)
+; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v0, v1, a[32:63]
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MAXOCC-NEXT:    s_nop 7
 ; GCN-MAXOCC-NEXT:    s_nop 7
-; GCN-MAXOCC-NEXT:    s_nop 1
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[28:31] offset:24688
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[24:27] offset:24672
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[20:23] offset:24656
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[16:19] offset:24640
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[12:15] offset:24624
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[8:11] offset:24608
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[4:7] offset:24592
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[0:3] offset:24576
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[28:31], v0 offset:57456
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[24:27], v0 offset:57440
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[20:23], v0 offset:57424
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[16:19], v0 offset:57408
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[0:3], v0 offset:57344
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[4:7], v0 offset:57360
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[8:11], v0 offset:57376
-; GCN-MAXOCC-NEXT:    ds_read_b128 a[12:15], v0 offset:57392
-; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
+; GCN-MAXOCC-NEXT:    s_nop 2
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[60:63] offset:24688
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[56:59] offset:24672
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[52:55] offset:24656
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[48:51] offset:24640
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[44:47] offset:24624
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[40:43] offset:24608
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[36:39] offset:24592
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[32:35] offset:24576
+; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(14)
+; GCN-MAXOCC-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MAXOCC-NEXT:    s_nop 7
 ; GCN-MAXOCC-NEXT:    s_nop 7
 ; GCN-MAXOCC-NEXT:    s_nop 2
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[28:31] offset:32880
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[24:27] offset:32864
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[20:23] offset:32848
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[16:19] offset:32832
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[12:15] offset:32816
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[8:11] offset:32800
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[4:7] offset:32784
-; GCN-MAXOCC-NEXT:    ds_write_b128 v3, a[0:3] offset:32768
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[28:31] offset:32880
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[24:27] offset:32864
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[20:23] offset:32848
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[16:19] offset:32832
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[12:15] offset:32816
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[8:11] offset:32800
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[4:7] offset:32784
+; GCN-MAXOCC-NEXT:    ds_write_b128 v2, a[0:3] offset:32768
 ; GCN-MAXOCC-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-MAXOCC-NEXT:    s_endpgm
 ;
@@ -745,47 +1771,40 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-ILP-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-ILP-NEXT:    v_add_u32_e32 v3, s0, v2
-; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:48
-; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:32
-; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:16
-; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3
-; GCN-ILP-NEXT:    ds_read_b128 a[16:19], v3 offset:64
-; GCN-ILP-NEXT:    ds_read_b128 a[20:23], v3 offset:80
-; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:96
-; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:112
+; GCN-ILP-NEXT:    ds_read_b128 a[44:47], v3 offset:48
+; GCN-ILP-NEXT:    ds_read_b128 a[40:43], v3 offset:32
+; GCN-ILP-NEXT:    ds_read_b128 a[36:39], v3 offset:16
+; GCN-ILP-NEXT:    ds_read_b128 a[32:35], v3
+; GCN-ILP-NEXT:    ds_read_b128 a[48:51], v3 offset:64
+; GCN-ILP-NEXT:    ds_read_b128 a[52:55], v3 offset:80
+; GCN-ILP-NEXT:    ds_read_b128 a[56:59], v3 offset:96
+; GCN-ILP-NEXT:    ds_read_b128 a[60:63], v3 offset:112
 ; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
-; GCN-ILP-NEXT:    v_add_u32_e32 v2, s1, v2
-; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
-; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-ILP-NEXT:    s_nop 7
-; GCN-ILP-NEXT:    s_nop 7
-; GCN-ILP-NEXT:    s_nop 1
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[0:3]
+; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v0, v1, a[32:63]
 ; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3 offset:8192
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[4:7] offset:16
 ; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:8208
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[8:11] offset:32
 ; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:8224
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[12:15] offset:48
 ; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:8240
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[16:19] offset:64
 ; GCN-ILP-NEXT:    ds_read_b128 a[16:19], v3 offset:8256
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[20:23] offset:80
 ; GCN-ILP-NEXT:    ds_read_b128 a[20:23], v3 offset:8272
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[24:27] offset:96
 ; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:8288
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[28:31] offset:112
 ; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:8304
-; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
+; GCN-ILP-NEXT:    v_add_u32_e32 v4, s1, v2
 ; GCN-ILP-NEXT:    v_mov_b32_e32 v2, s1
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
-; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-ILP-NEXT:    s_nop 7
-; GCN-ILP-NEXT:    s_nop 7
-; GCN-ILP-NEXT:    s_nop 1
+; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
+; GCN-ILP-NEXT:    s_nop 6
+; GCN-ILP-NEXT:    ds_write_b128 v4, a[32:35]
+; GCN-ILP-NEXT:    ds_write_b128 v4, a[36:39] offset:16
+; GCN-ILP-NEXT:    ds_write_b128 v4, a[40:43] offset:32
+; GCN-ILP-NEXT:    ds_write_b128 v4, a[44:47] offset:48
+; GCN-ILP-NEXT:    ds_write_b128 v4, a[48:51] offset:64
+; GCN-ILP-NEXT:    ds_write_b128 v4, a[52:55] offset:80
+; GCN-ILP-NEXT:    ds_write_b128 v4, a[56:59] offset:96
+; GCN-ILP-NEXT:    ds_write_b128 v4, a[60:63] offset:112
+; GCN-ILP-NEXT:    s_nop 3
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[24:27] offset:8288
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[28:31] offset:8304
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[16:19] offset:8256
@@ -794,6 +1813,9 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[12:15] offset:8240
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[0:3] offset:8192
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[4:7] offset:8208
+; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
+; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
+; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_barrier mask(0x00000000)
 ; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:24624
@@ -806,52 +1828,81 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:24688
 ; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
+; GCN-ILP-NEXT:    ds_read_b128 a[60:63], v3 offset:49264
+; GCN-ILP-NEXT:    ds_read_b128 a[56:59], v3 offset:49248
+; GCN-ILP-NEXT:    ds_read_b128 a[52:55], v3 offset:49232
+; GCN-ILP-NEXT:    ds_read_b128 a[48:51], v3 offset:49216
+; GCN-ILP-NEXT:    ds_read_b128 a[44:47], v3 offset:49200
+; GCN-ILP-NEXT:    ds_read_b128 a[40:43], v3 offset:49184
+; GCN-ILP-NEXT:    ds_read_b128 a[36:39], v3 offset:49168
+; GCN-ILP-NEXT:    ds_read_b128 a[32:35], v3 offset:49152
+; GCN-ILP-NEXT:    v_add_u32_e32 v3, 0x6000, v3
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-ILP-NEXT:    s_nop 7
-; GCN-ILP-NEXT:    s_nop 7
-; GCN-ILP-NEXT:    s_nop 2
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[28:31] offset:16496
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[24:27] offset:16480
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[20:23] offset:16464
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[16:19] offset:16448
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[12:15] offset:16432
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[8:11] offset:16416
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[4:7] offset:16400
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[0:3] offset:16384
-; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3 offset:49152
-; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:49168
-; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:49184
-; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:49200
-; GCN-ILP-NEXT:    ds_read_b128 a[16:19], v3 offset:49216
-; GCN-ILP-NEXT:    ds_read_b128 a[20:23], v3 offset:49232
-; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:49248
-; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:49264
 ; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
-; GCN-ILP-NEXT:    v_add_u32_e32 v3, 0x6000, v3
+; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v0, v1, a[32:63]
 ; GCN-ILP-NEXT:    s_nop 7
-; GCN-ILP-NEXT:    s_nop 7
-; GCN-ILP-NEXT:    s_nop 1
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[0:3] offset:24576
-; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3 offset:57344
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[4:7] offset:24592
-; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:57360
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[8:11] offset:24608
-; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:57376
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[12:15] offset:24624
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v35, a31
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v34, a30
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v33, a29
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v32, a28
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v31, a27
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v30, a26
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v29, a25
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v28, a24
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v27, a23
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v26, a22
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v25, a21
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v24, a20
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v23, a19
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v22, a18
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v21, a17
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v20, a16
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v19, a15
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v18, a14
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v17, a13
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v16, a12
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v15, a11
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v14, a10
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v13, a9
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v12, a8
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v11, a7
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v10, a6
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v9, a5
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v8, a4
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v7, a3
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v6, a2
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v5, a1
+; GCN-ILP-NEXT:    v_accvgpr_read_b32 v4, a0
 ; GCN-ILP-NEXT:    ds_read_b128 a[12:15], v3 offset:57392
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[16:19] offset:24640
+; GCN-ILP-NEXT:    ds_read_b128 a[8:11], v3 offset:57376
+; GCN-ILP-NEXT:    ds_read_b128 a[4:7], v3 offset:57360
+; GCN-ILP-NEXT:    ds_read_b128 a[0:3], v3 offset:57344
 ; GCN-ILP-NEXT:    ds_read_b128 a[16:19], v3 offset:57408
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[20:23] offset:24656
 ; GCN-ILP-NEXT:    ds_read_b128 a[20:23], v3 offset:57424
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[24:27] offset:24672
 ; GCN-ILP-NEXT:    ds_read_b128 a[24:27], v3 offset:57440
-; GCN-ILP-NEXT:    ds_write_b128 v2, a[28:31] offset:24688
 ; GCN-ILP-NEXT:    ds_read_b128 a[28:31], v3 offset:57456
-; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[60:63] offset:24688
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[56:59] offset:24672
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[52:55] offset:24656
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[48:51] offset:24640
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[44:47] offset:24624
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[40:43] offset:24608
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[36:39] offset:24592
+; GCN-ILP-NEXT:    ds_write_b128 v2, a[32:35] offset:24576
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[32:35] offset:16496
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[28:31] offset:16480
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[24:27] offset:16464
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[20:23] offset:16448
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[16:19] offset:16432
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[12:15] offset:16416
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[8:11] offset:16400
+; GCN-ILP-NEXT:    ds_write_b128 v2, v[4:7] offset:16384
+; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(14)
 ; GCN-ILP-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
+; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
+; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
@@ -866,8 +1917,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[8:11] offset:32800
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[4:7] offset:32784
 ; GCN-ILP-NEXT:    ds_write_b128 v2, a[0:3] offset:32768
-; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
-; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-ILP-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-ILP-NEXT:    s_endpgm
 entry:
