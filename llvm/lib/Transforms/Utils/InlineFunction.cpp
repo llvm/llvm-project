@@ -51,6 +51,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -1114,17 +1115,30 @@ void ScopedAliasMetadataDeepCloner::remap(Function::iterator FStart,
 /// then add new alias scopes for each noalias argument, tag the mapped noalias
 /// parameters with noalias metadata specifying the new scope, and tag all
 /// non-derived loads, stores and memory intrinsics with the new alias scopes.
-static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
-                                  const DataLayout &DL, AAResults *CalleeAAR,
-                                  ClonedCodeInfo &InlinedFunctionInfo) {
-  if (!EnableNoAliasConversion)
-    return;
-
-  const Function *CalledFunc = CB.getCalledFunction();
+static void addAliasScopeMetadataImpl(CallBase *CB, Function *F,
+                                      ValueToValueMapTy *VMap,
+                                      const DataLayout &DL,
+                                      AAResults *CalleeAAR,
+                                      ClonedCodeInfo *InlinedFunctionInfo,
+                                      bool UseNoAliasIntrinsic) {
+  assert(CB || F);
+  const Function *CalledFunc = CB ? CB->getCalledFunction() : F;
   SmallVector<const Argument *, 4> NoAliasArgs;
 
+  std::function<bool(const Argument *, Attribute::AttrKind)> paramHasAttr;
+  if (CB) {
+    paramHasAttr = [&](const Argument *Arg, Attribute::AttrKind Attr) -> bool {
+      return CB->paramHasAttr(Arg->getArgNo(), Attr);
+    };
+
+  } else {
+    paramHasAttr = [&](const Argument *Arg, Attribute::AttrKind Attr) -> bool {
+      return Arg->hasAttribute(Attr);
+    };
+  }
+
   for (const Argument &Arg : CalledFunc->args())
-    if (CB.paramHasAttr(Arg.getArgNo(), Attribute::NoAlias) && !Arg.use_empty())
+    if (paramHasAttr(&Arg, Attribute::NoAlias) && !Arg.use_empty())
       NoAliasArgs.push_back(&Arg);
 
   if (NoAliasArgs.empty())
@@ -1166,29 +1180,20 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
     NewScopes.insert(std::make_pair(A, NewScope));
 
     if (UseNoAliasIntrinsic) {
+      assert(CB);
       // Introduce a llvm.experimental.noalias.scope.decl for the noalias
       // argument.
       MDNode *AScopeList = MDNode::get(CalledFunc->getContext(), NewScope);
       auto *NoAliasDecl =
-          IRBuilder<>(&CB).CreateNoAliasScopeDeclaration(AScopeList);
+          IRBuilder<>(CB).CreateNoAliasScopeDeclaration(AScopeList);
       // Ignore the result for now. The result will be used when the
       // llvm.noalias intrinsic is introduced.
       (void)NoAliasDecl;
     }
   }
 
-  // Iterate over all new instructions in the map; for all memory-access
-  // instructions, add the alias scope metadata.
-  for (ValueToValueMapTy::iterator VMI = VMap.begin(), VMIE = VMap.end();
-       VMI != VMIE; ++VMI) {
-    if (const Instruction *I = dyn_cast<Instruction>(VMI->first)) {
-      if (!VMI->second)
-        continue;
-
-      Instruction *NI = dyn_cast<Instruction>(VMI->second);
-      if (!NI || InlinedFunctionInfo.isSimplified(I, NI))
-        continue;
-
+  {
+    auto addAliasMD = [&](const Instruction *I, Instruction *NI) -> void {
       bool IsArgMemOnlyCall = false, IsFuncCall = false;
       SmallVector<const Value *, 2> PtrArgs;
 
@@ -1207,7 +1212,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         // know that about the inlined clone of this call site, and we don't
         // need to add metadata.
         if (Call->doesNotAccessMemory())
-          continue;
+          return;
 
         IsFuncCall = true;
         if (CalleeAAR) {
@@ -1215,7 +1220,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
 
           // We'll retain this knowledge without additional metadata.
           if (ME.onlyAccessesInaccessibleMem())
-            continue;
+            return;
 
           if (ME.onlyAccessesArgPointees())
             IsArgMemOnlyCall = true;
@@ -1237,7 +1242,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
       // However, if this is a call, this we might just alias with none of the
       // noalias arguments.
       if (PtrArgs.empty() && !IsFuncCall)
-        continue;
+        return;
 
       // It is possible that there is only one underlying object, but you
       // need to go through several PHIs to see it, and thus could be
@@ -1270,7 +1275,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         // completely describe the aliasing properties using alias.scope
         // metadata (and, thus, won't add any).
         if (const Argument *A = dyn_cast<Argument>(V)) {
-          if (!CB.paramHasAttr(A->getArgNo(), Attribute::NoAlias))
+          if (!paramHasAttr(A, Attribute::NoAlias))
             UsesAliasingPtr = true;
         } else {
           UsesAliasingPtr = true;
@@ -1292,7 +1297,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
       // Nothing we can do if the used underlying object cannot be reliably
       // determined.
       if (UsesUnknownObject)
-        continue;
+        return;
 
       // A function call can always get captured noalias pointers (via other
       // parameters, globals, etc.).
@@ -1353,8 +1358,47 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
             LLVMContext::MD_alias_scope,
             MDNode::concatenate(NI->getMetadata(LLVMContext::MD_alias_scope),
                                 MDNode::get(CalledFunc->getContext(), Scopes)));
+    };
+
+    if (VMap) {
+      assert(InlinedFunctionInfo);
+
+      for (ValueToValueMapTy::iterator VMI = VMap->begin(), VMIE = VMap->end();
+           VMI != VMIE; ++VMI) {
+        const Instruction *I = dyn_cast<Instruction>(VMI->first);
+        if (!I || !VMI->second)
+          continue;
+
+        Instruction *NI = dyn_cast<Instruction>(VMI->second);
+        if (!NI || InlinedFunctionInfo->isSimplified(I, NI))
+          continue;
+
+        addAliasMD(I, NI);
+      }
+
+    } else {
+      for (auto It = inst_begin(F), End = inst_end(F); It != End; ++It) {
+        Instruction *I = &(*It);
+        addAliasMD(I, I);
+      }
     }
   }
+}
+
+void llvm::addAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
+                                 const DataLayout &DL, AAResults *CalleeAAR,
+                                 ClonedCodeInfo &InlinedFunctionInfo,
+                                 bool UseNoAliasIntrinsic) {
+  addAliasScopeMetadataImpl(&CB, /* F */ nullptr, &VMap, DL, CalleeAAR,
+                            &InlinedFunctionInfo, UseNoAliasIntrinsic);
+}
+
+void llvm::addAliasScopeMetadata(Function &F) {
+  addAliasScopeMetadataImpl(/* CB */ nullptr, &F, /* VMap */ nullptr,
+                            F.getParent()->getDataLayout(),
+                            /* CalleeAAR */ nullptr,
+                            /* InlinedFunctionInfo */ nullptr,
+                            /* UseNoAliasIntrinsic */ false);
 }
 
 static bool MayContainThrowingOrExitingCallAfterCB(CallBase *Begin,
@@ -2797,7 +2841,9 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     SAMetadataCloner.remap(FirstNewBlock, Caller->end());
 
     // Add noalias metadata if necessary.
-    AddAliasScopeMetadata(CB, VMap, DL, CalleeAAR, InlinedFunctionInfo);
+    if (EnableNoAliasConversion)
+      addAliasScopeMetadata(CB, VMap, DL, CalleeAAR, InlinedFunctionInfo,
+                            UseNoAliasIntrinsic);
 
     // Clone return attributes on the callsite into the calls within the inlined
     // function which feed into its return value.
