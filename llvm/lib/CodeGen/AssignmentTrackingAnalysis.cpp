@@ -1731,17 +1731,16 @@ void AssignmentTrackingLowering::processUntaggedInstruction(
 
 void AssignmentTrackingLowering::processTaggedInstruction(
     Instruction &I, AssignmentTrackingLowering::BlockInfo *LiveSet) {
-  auto Linked = at::getAssignmentMarkers(&I);
   auto LinkedDPAssigns = at::getDVRAssignmentMarkers(&I);
   // No dbg.assign intrinsics linked.
   // FIXME: All vars that have a stack slot this store modifies that don't have
   // a dbg.assign linked to it should probably treat this like an untagged
   // store.
-  if (Linked.empty() && LinkedDPAssigns.empty())
+  if (LinkedDPAssigns.empty())
     return;
 
   LLVM_DEBUG(dbgs() << "processTaggedInstruction on " << I << "\n");
-  auto ProcessLinkedAssign = [&](auto *Assign) {
+  auto ProcessLinkedAssign = [&](DbgVariableRecord *Assign) {
     VariableID Var = getVariableID(DebugVariable(Assign));
     // Something has gone wrong if VarsWithStackSlot doesn't contain a variable
     // that is linked to a store.
@@ -1813,8 +1812,6 @@ void AssignmentTrackingLowering::processTaggedInstruction(
     } break;
     }
   };
-  for (DbgAssignIntrinsic *DAI : Linked)
-    ProcessLinkedAssign(DAI);
   for (DbgVariableRecord *DVR : LinkedDPAssigns)
     ProcessLinkedAssign(DVR);
 }
@@ -2810,9 +2807,6 @@ static DenseSet<DebugAggregate> findVarsWithStackSlot(Function &Fn) {
       // DIAssignID might get dropped from an alloca but not stores. In that
       // case, we need to consider the variable interesting for NFC behaviour
       // with this change. TODO: Consider only looking at allocas.
-      for (DbgAssignIntrinsic *DAI : at::getAssignmentMarkers(&I)) {
-        Result.insert({DAI->getVariable(), DAI->getDebugLoc().getInlinedAt()});
-      }
       for (DbgVariableRecord *DVR : at::getDVRAssignmentMarkers(&I)) {
         Result.insert({DVR->getVariable(), DVR->getDebugLoc().getInlinedAt()});
       }
