@@ -2,7 +2,6 @@
 #define LLVM_TOOLS_LLVM_MC_CFI_ANALYSIS_H
 
 #include "CFIState.h"
-#include "ExtendedMCInstrAnalysis.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
@@ -16,7 +15,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
-#include <memory>
 #include <set>
 
 namespace llvm {
@@ -25,7 +23,6 @@ class CFIAnalysis {
   MCContext *Context;
   MCInstrInfo const &MCII;
   MCRegisterInfo const *MCRI;
-  std::unique_ptr<ExtendedMCInstrAnalysis> EMCIA;
   CFIState State;
   bool IsEH;
 
