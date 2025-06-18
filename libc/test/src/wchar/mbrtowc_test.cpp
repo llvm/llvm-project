@@ -113,6 +113,7 @@ TEST(LlvmLibcMBRToWC, InvalidMultiByte) {
   // Trying to push the second and third should correspond to null wc
   n = LIBC_NAMESPACE::mbrtowc(dest, ch + 1, 2, mb);
   ASSERT_EQ(static_cast<int>(n), 0);
+  ASSERT_TRUE(*dest == L'\0');
 }
 
 TEST(LlvmLibcMBRToWC, InvalidLastByte) {
@@ -157,12 +158,13 @@ TEST(LlvmLibcMBRToWC, TwoValidTwoBytes) {
 }
 
 TEST(LlvmLibcMBRToWC, NullString) {
-  wchar_t dest[2];
+  wchar_t dest[2] = {L'O', L'K'};
   mbstate_t *mb;
   LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
   // reading on nullptr should return 0
   size_t n = LIBC_NAMESPACE::mbrtowc(dest, nullptr, 2, mb);
   ASSERT_EQ(static_cast<int>(n), 0);
+  ASSERT_TRUE(dest[0] == L'O');
   // reading a null terminator should return 0
   const char *ch = "\0";
   n = LIBC_NAMESPACE::mbrtowc(dest, ch, 1, mb);

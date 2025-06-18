@@ -27,6 +27,7 @@ public:
 
   void clear();
   bool isComplete();
+  bool isFull();
 
   int push(char8_t utf8_byte);
   int push(char32_t utf32);

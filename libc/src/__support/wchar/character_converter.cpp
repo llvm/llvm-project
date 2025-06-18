@@ -31,6 +31,11 @@ bool CharacterConverter::isComplete() {
   return state->bytes_processed == state->total_bytes;
 }
 
+bool CharacterConverter::isFull() {
+  return (state->bytes_processed == state->total_bytes) &&
+         (state->total_bytes != 0);
+}
+
 int CharacterConverter::push(char8_t utf8_byte) {
   uint8_t num_ones = static_cast<uint8_t>(cpp::countl_one(utf8_byte));
   // Checking the first byte if first push
@@ -62,7 +67,7 @@ int CharacterConverter::push(char8_t utf8_byte) {
   // Any subsequent push
   // Adding 6 more bits so need to left shift
   constexpr size_t ENCODED_BITS_PER_UTF8 = 6;
-  if (num_ones == 1 && !isComplete()) {
+  if (num_ones == 1 && !isFull()) {
     char32_t byte =
         utf8_byte & mask_trailing_ones<uint32_t, ENCODED_BITS_PER_UTF8>();
     state->partial = state->partial << ENCODED_BITS_PER_UTF8;
@@ -102,7 +107,7 @@ int CharacterConverter::push(char32_t utf32) {
 ErrorOr<char32_t> CharacterConverter::pop_utf32() {
   // If pop is called too early, do not reset the state, use error to determine
   // whether enough bytes have been pushed
-  if (!isComplete() || state->bytes_processed == 0)
+  if (!isFull() || state->bytes_processed == 0)
     return Error(-1);
   char32_t utf32 = state->partial;
   // reset if successful pop

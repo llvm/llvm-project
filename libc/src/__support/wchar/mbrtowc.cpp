@@ -25,15 +25,14 @@ ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict s,
   if (s == nullptr)
     return 0;
   size_t i = 0;
-  auto wc = char_conv.pop_utf32();
   // Reading in bytes until we have a complete wc or error
-  for (; i < n && !wc.has_value(); ++i) {
+  for (; i < n && !char_conv.isFull(); ++i) {
     int err = char_conv.push(static_cast<char8_t>(s[i]));
     // Encoding error
     if (err == -1)
       return Error(-1);
-    wc = char_conv.pop_utf32();
   }
+  auto wc = char_conv.pop_utf32();
   if (wc.has_value()) {
     *pwc = wc.value();
     // null terminator -> return 0
@@ -42,7 +41,7 @@ ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict s,
     return i;
   }
   // Incomplete but potentially valid
-  return Error(-2);
+  return -2;
 }
 
 } // namespace internal
