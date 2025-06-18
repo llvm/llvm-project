@@ -125,6 +125,7 @@ static T getPerfectlyNested(Operation *op) {
 /// E()
 
 struct FissionWorkdistribute : public OpRewritePattern<omp::WorkdistributeOp> {
+  static bool fissionWorkdistributePatternMatched;
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(omp::WorkdistributeOp workdistribute,
                                 PatternRewriter &rewriter) const override {
@@ -210,9 +211,12 @@ struct FissionWorkdistribute : public OpRewritePattern<omp::WorkdistributeOp> {
         changed = true;
       }
     }
+    if (changed)
+      fissionWorkdistributePatternMatched = true;
     return success(changed);
   }
 };
+bool FissionWorkdistribute::fissionWorkdistributePatternMatched = false;
 
 /// If fir.do_loop is present inside teams workdistribute
 ///
@@ -296,6 +300,7 @@ static void genWsLoopOp(mlir::PatternRewriter &rewriter, fir::DoLoopOp doLoop,
 }
 
 struct WorkdistributeDoLower : public OpRewritePattern<omp::WorkdistributeOp> {
+  static bool workdistributeDoLowerPatternMatched;
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(omp::WorkdistributeOp workdistribute,
                                 PatternRewriter &rewriter) const override {
@@ -309,11 +314,14 @@ struct WorkdistributeDoLower : public OpRewritePattern<omp::WorkdistributeOp> {
       genLoopNestClauseOps(rewriter, doLoop, loopNestClauseOps);
       genWsLoopOp(rewriter, doLoop, loopNestClauseOps, true);
       rewriter.eraseOp(workdistribute);
+      workdistributeDoLowerPatternMatched = true;
       return success();
     }
     return failure();
   }
 };
+
+bool WorkdistributeDoLower::workdistributeDoLowerPatternMatched = false;
 
 /// If A() and B () are present inside teams workdistribute
 ///
@@ -331,6 +339,7 @@ struct WorkdistributeDoLower : public OpRewritePattern<omp::WorkdistributeOp> {
 ///
 
 struct TeamsWorkdistributeToSingle : public OpRewritePattern<omp::TeamsOp> {
+  static bool teamsWorkdistributeToSinglePatternMatched;
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(omp::TeamsOp teamsOp,
                                 PatternRewriter &rewriter) const override {
@@ -343,9 +352,12 @@ struct TeamsWorkdistributeToSingle : public OpRewritePattern<omp::TeamsOp> {
     rewriter.eraseOp(workdistributeBlock->getTerminator());
     rewriter.inlineBlockBefore(workdistributeBlock, teamsOp);
     rewriter.eraseOp(workdistributeOp);
+    teamsWorkdistributeToSinglePatternMatched = true;
     return success();
   }
 };
+bool TeamsWorkdistributeToSingle::teamsWorkdistributeToSinglePatternMatched =
+    false;
 
 struct SplitTargetResult {
   omp::TargetOp targetOp;
@@ -516,28 +528,6 @@ static bool usedOutsideSplit(Value v, Operation *split) {
   }
   return false;
 };
-
-static bool isOpToBeCached(Operation *op) {
-  if (auto loadOp = dyn_cast<fir::LoadOp>(op)) {  
-    Value memref = loadOp.getMemref();  
-    if (auto blockArg = dyn_cast<BlockArgument>(memref)) {  
-      // 'op' is an operation within the targetOp that 'splitBefore' is also in.
-      Operation *parentOpOfLoadBlock = op->getBlock()->getParentOp();  
-      // Ensure the blockArg belongs to the entry block of this parent omp.TargetOp.  
-      // This implies the load is from a variable directly mapped into the target region.  
-      if (isa<omp::TargetOp>(parentOpOfLoadBlock) &&  
-          !parentOpOfLoadBlock->getRegions().empty()) {  
-        Block *targetOpEntryBlock = &parentOpOfLoadBlock->getRegions().front().front();  
-        if (blockArg.getOwner() == targetOpEntryBlock) {  
-          // This load is from a direct argument of the target op.  
-          // It's safe to recompute.
-          return false;  
-        }  
-      }  
-    }  
-  }
-  return true;
-}
 
 static bool isRecomputableAfterFission(Operation *op, Operation *splitBefore) {
   if (isa<fir::DeclareOp>(op))
@@ -892,6 +882,7 @@ public:
     config.setRegionSimplificationLevel(GreedySimplifyRegionLevel::Disabled);
 
     Operation *op = getOperation();
+    bool anyPatternChanged = false;
     {
       RewritePatternSet patterns(&context);
       patterns.insert<FissionWorkdistribute, WorkdistributeDoLower>(&context);
@@ -899,16 +890,23 @@ public:
         emitError(op->getLoc(), DEBUG_TYPE " pass failed\n");
         signalPassFailure();
       }
+      anyPatternChanged |=
+          FissionWorkdistribute::fissionWorkdistributePatternMatched;
+      anyPatternChanged |=
+          WorkdistributeDoLower::workdistributeDoLowerPatternMatched;
     }
     {
       RewritePatternSet patterns(&context);
-      patterns.insert<TeamsWorkdistributeToSingle>(&context);
+      patterns.insert<WorkdistributeDoLower, TeamsWorkdistributeToSingle>(
+          &context);
       if (failed(applyPatternsGreedily(op, std::move(patterns), config))) {
         emitError(op->getLoc(), DEBUG_TYPE " pass failed\n");
         signalPassFailure();
       }
+      anyPatternChanged |= TeamsWorkdistributeToSingle::
+          teamsWorkdistributeToSinglePatternMatched;
     }
-    {
+    if (anyPatternChanged) {
       SmallVector<omp::TargetOp> targetOps;
       op->walk([&](omp::TargetOp targetOp) { targetOps.push_back(targetOp); });
       IRRewriter rewriter(&context);
@@ -917,7 +915,6 @@ public:
         if (res) fissionTarget(res->targetOp, rewriter);
       }
     }
-
   }
 };
 } // namespace

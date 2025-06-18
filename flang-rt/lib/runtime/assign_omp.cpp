@@ -68,7 +68,7 @@ RT_EXT_API_GROUP_BEGIN
 void RTDEF(Assign_omp)(Descriptor &to, const Descriptor &from,
     const char *sourceFile, int sourceLine, omp::OMPDeviceTy omp_device) {
   Terminator terminator{sourceFile, sourceLine};
-  omp::Assign(to, from, terminator,
+  Fortran::runtime::omp::Assign(to, from, terminator,
       MaybeReallocate | NeedFinalization | ComponentCanBeDefinedAssignment,
       omp_device);
 }
