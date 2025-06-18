@@ -9288,6 +9288,15 @@ def fcgl : DXCFlag<"fcgl">, Alias<emit_pristine_llvm>;
 def enable_16bit_types : DXCFlag<"enable-16bit-types">, Alias<fnative_half_type>,
   HelpText<"Enable 16-bit types and disable min precision types."
            "Available in HLSL 2018 and shader model 6.2.">;
+def hlsl_rootsig_ver :
+  Option<["-"], "hlsl-rootsig-ver", KIND_SEPARATE>,
+  Group<dxc_Group>,
+  Visibility<[ClangOption, CC1Option, DXCOption]>,
+  HelpText<"Root Signature Version">,
+  Values<"rootsig_1_0,rootsig_1_1">,
+  NormalizedValuesScope<"llvm::dxil::RootSignatureVersion">,
+  NormalizedValues<["rootsig_1_0", "rootsig_1_1"]>,
+  MarshallingInfoEnum<LangOpts<"HLSLRootSigVer">, "rootsig_1_1">;
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
                       Group<dxc_Group>,
                       Visibility<[ClangOption, CC1Option]>,
