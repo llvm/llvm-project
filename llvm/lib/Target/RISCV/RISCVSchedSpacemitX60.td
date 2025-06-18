@@ -653,14 +653,22 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
     }
 
     defvar FlatLat = SMX60GetFlatLatency<mx>.c;
-    let Latency = !cond(!eq(sew, 64) : FlatLat, true : ArithLat) in {
+    defvar VFALUMulLat = !cond(
+      !eq(sew, 64) : FlatLat,
+      true : ArithLat
+    );
+    let Latency = VFALUMulLat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFALUV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulF",  [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
 
     // TODO: for some reason, the following cond is not working, and always use FlatLat
-    let Latency = !cond(!eq(sew, 64) : SMX60GetComplexFPLatency<mx>.c, true : FlatLat) in {
+    defvar VFMulAddLat = !cond(
+      !eq(sew, 64) : SMX60GetComplexFPLatency<mx>.c,
+      true : FlatLat
+    );
+    let Latency = VFMulAddLat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddF", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
@@ -1008,11 +1016,19 @@ foreach mx = ["M2", "M4", "M8"] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
 
-    let Latency = !cond(!eq(sew, 8) : !mul(ExpLat, 2), true : ExpLat) in {
+    defvar GatherEI16Lat = !cond(
+      !eq(sew, 8) : !mul(ExpLat, 2),
+      true : ExpLat
+    );
+    let Latency = GatherEI16Lat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
 
-    defvar CompressLat = !cond(!eq(mx, "M2"): 10, !eq(mx, "M4"): 36, /* mx=M8 */ true: 136);
+    defvar CompressLat = !cond(
+      !eq(mx, "M2") : 10,
+      !eq(mx, "M4") : 36,
+      true : 136  // M8
+    );
     let Latency = CompressLat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
