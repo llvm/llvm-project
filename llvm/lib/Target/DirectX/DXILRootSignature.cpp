@@ -564,32 +564,27 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       continue;
     const auto &RS = It->second;
     OS << "Definition for '" << F.getName() << "':\n";
-
     // start root signature header
-    OS << "Flags: " << format_hex(RS.Flags, 8) << "\n";
-    OS << "Version: " << RS.Version << "\n";
-    OS << "RootParametersOffset: " << RS.RootParameterOffset << "\n";
-    OS << "NumParameters: " << RS.ParametersContainer.size() << "\n";
+    OS << "Flags: " << format_hex(RS.Flags, 8) << "\n"
+       << "Version: " << RS.Version << "\n"
+       << "RootParametersOffset: " << RS.RootParameterOffset << "\n"
+       << "NumParameters: " << RS.ParametersContainer.size() << "\n";
     for (size_t I = 0; I < RS.ParametersContainer.size(); I++) {
       const auto &[Type, Loc] =
           RS.ParametersContainer.getTypeAndLocForParameter(I);
       const dxbc::RTS0::v1::RootParameterHeader Header =
           RS.ParametersContainer.getHeader(I);
 
-      OS << "- Parameter Type: " << Type << "\n";
-      OS << indent(2) << "Shader Visibility: " << Header.ShaderVisibility
-         << "\n";
+      OS << "- Parameter Type: " << Type << "\n"
+         << "  Shader Visibility: " << Header.ShaderVisibility << "\n";
 
       switch (Type) {
       case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
         const dxbc::RTS0::v1::RootConstants &Constants =
             RS.ParametersContainer.getConstant(Loc);
-        OS << indent(2) << "Register Space: " << Constants.RegisterSpace
-           << "\n";
-        OS << indent(2) << "Shader Register: " << Constants.ShaderRegister
-           << "\n";
-        OS << indent(2) << "Num 32 Bit Values: " << Constants.Num32BitValues
-           << "\n";
+        OS << "  Register Space: " << Constants.RegisterSpace << "\n"
+           << "  Shader Register: " << Constants.ShaderRegister << "\n"
+           << "  Num 32 Bit Values: " << Constants.Num32BitValues << "\n";
         break;
       }
       case llvm::to_underlying(dxbc::RootParameterType::CBV):
@@ -597,30 +592,26 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       case llvm::to_underlying(dxbc::RootParameterType::SRV): {
         const dxbc::RTS0::v2::RootDescriptor &Descriptor =
             RS.ParametersContainer.getRootDescriptor(Loc);
-        OS << indent(2) << "Register Space: " << Descriptor.RegisterSpace
-           << "\n";
-        OS << indent(2) << "Shader Register: " << Descriptor.ShaderRegister
-           << "\n";
+        OS << "  Register Space: " << Descriptor.RegisterSpace << "\n"
+           << "  Shader Register: " << Descriptor.ShaderRegister << "\n";
         if (RS.Version > 1)
-          OS << indent(2) << "Flags: " << Descriptor.Flags << "\n";
+          OS << "  Flags: " << Descriptor.Flags << "\n";
         break;
       }
       case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
         const mcdxbc::DescriptorTable &Table =
             RS.ParametersContainer.getDescriptorTable(Loc);
-        OS << indent(2) << "NumRanges: " << Table.Ranges.size() << "\n";
+        OS << "  NumRanges: " << Table.Ranges.size() << "\n";
 
         for (const dxbc::RTS0::v2::DescriptorRange Range : Table) {
-          OS << indent(2) << "- Range Type: " << Range.RangeType << "\n";
-          OS << indent(4) << "Register Space: " << Range.RegisterSpace << "\n";
-          OS << indent(4)
-             << "Base Shader Register: " << Range.BaseShaderRegister << "\n";
-          OS << indent(4) << "Num Descriptors: " << Range.NumDescriptors
-             << "\n";
-          OS << indent(4) << "Offset In Descriptors From Table Start: "
+          OS << "  - Range Type: " << Range.RangeType << "\n"
+             << "    Register Space: " << Range.RegisterSpace << "\n"
+             << "    Base Shader Register: " << Range.BaseShaderRegister << "\n"
+             << "    Num Descriptors: " << Range.NumDescriptors << "\n"
+             << "    Offset In Descriptors From Table Start: "
              << Range.OffsetInDescriptorsFromTableStart << "\n";
           if (RS.Version > 1)
-            OS << indent(4) << "Flags: " << Range.Flags << "\n";
+            OS << "    Flags: " << Range.Flags << "\n";
         }
         break;
       }
