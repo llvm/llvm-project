@@ -45,7 +45,8 @@ void NORETURN reportInvalidChunkState(AllocatorAction Action, const void *Ptr);
 void NORETURN reportMisalignedPointer(AllocatorAction Action, const void *Ptr);
 void NORETURN reportDeallocTypeMismatch(AllocatorAction Action, const void *Ptr,
                                         u8 TypeA, u8 TypeB);
-void NORETURN reportDeleteSizeMismatch(const void *Ptr, uptr Size, uptr ExpectedSize);
+void NORETURN reportDeleteSizeMismatch(const void *Ptr, uptr Size,
+                                       uptr ExpectedSize);
 
 // C wrappers errors.
 void NORETURN reportAlignmentNotPowerOfTwo(uptr Alignment);
