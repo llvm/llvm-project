@@ -6508,50 +6508,39 @@ entry:
 }
 
 ; Found by fuzzer, reduced with llvm-reduce.
-define amdgpu_kernel void @insert_very_small_from_very_large(<32 x i16> %L3, ptr %ptr) {
+define void @insert_very_small_from_very_large(<32 x i16> %L3, ptr %ptr) {
 ; GPRIDX-LABEL: insert_very_small_from_very_large:
 ; GPRIDX:       ; %bb.0: ; %bb
-; GPRIDX-NEXT:    s_load_dwordx16 s[12:27], s[8:9], 0x0
-; GPRIDX-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x40
-; GPRIDX-NEXT:    s_waitcnt lgkmcnt(0)
-; GPRIDX-NEXT:    s_lshr_b32 s2, s12, 1
-; GPRIDX-NEXT:    s_and_b32 s2, s2, 1
-; GPRIDX-NEXT:    s_lshl_b32 s2, s2, 1
-; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
-; GPRIDX-NEXT:    v_mov_b32_e32 v2, s2
-; GPRIDX-NEXT:    v_mov_b32_e32 v1, s1
-; GPRIDX-NEXT:    flat_store_byte v[0:1], v2
-; GPRIDX-NEXT:    s_endpgm
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
+; GPRIDX-NEXT:    v_and_b32_e32 v0, 1, v0
+; GPRIDX-NEXT:    v_lshlrev_b16_e32 v0, 1, v0
+; GPRIDX-NEXT:    v_and_b32_e32 v0, 3, v0
+; GPRIDX-NEXT:    flat_store_byte v[16:17], v0
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: insert_very_small_from_very_large:
 ; GFX10:       ; %bb.0: ; %bb
-; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    s_load_dwordx16 s[12:27], s[8:9], 0x0
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x40
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
+; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX10-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX10-NEXT:    flat_store_byte v[16:17], v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_lshr_b32 s2, s12, 1
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    s_and_b32 s2, s2, 1
-; GFX10-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-NEXT:    s_lshl_b32 s2, s2, 1
-; GFX10-NEXT:    v_mov_b32_e32 v2, s2
-; GFX10-NEXT:    flat_store_byte v[0:1], v2
-; GFX10-NEXT:    s_endpgm
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: insert_very_small_from_very_large:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b512 s[8:23], s[4:5], 0x0
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x40
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_lshrrev_b16 v0.l, 1, v0.l
+; GFX11-NEXT:    v_and_b16 v0.l, v0.l, 1
+; GFX11-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
+; GFX11-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX11-NEXT:    flat_store_b8 v[16:17], v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_lshr_b32 s2, s8, 1
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    s_and_b32 s2, s2, 1
-; GFX11-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-NEXT:    s_lshl_b32 s2, s2, 1
-; GFX11-NEXT:    v_mov_b32_e32 v2, s2
-; GFX11-NEXT:    flat_store_b8 v[0:1], v2
-; GFX11-NEXT:    s_endpgm
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %a = bitcast <32 x i16> %L3 to i512
   %b = trunc i512 %a to i8
