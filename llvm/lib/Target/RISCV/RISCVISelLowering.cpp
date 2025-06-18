@@ -16946,7 +16946,7 @@ canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
                          Root, LHS, /*LHSExt=*/{ExtKind::FPExt}, RHS,
                          /*RHSExt=*/{ExtKind::FPExt});
   if ((AllowExtMask & ExtKind::BF16Ext) && LHS.SupportsBF16Ext &&
-      RHS.SupportsBF16Ext && Root->getOpcode() == RISCVISD::VFMADD_VL)
+      RHS.SupportsBF16Ext)
     return CombineResult(NodeExtensionHelper::getFPExtOpcode(Root->getOpcode()),
                          Root, LHS, /*LHSExt=*/{ExtKind::BF16Ext}, RHS,
                          /*RHSExt=*/{ExtKind::BF16Ext});
@@ -16963,10 +16963,9 @@ static std::optional<CombineResult>
 canFoldToVWWithSameExtension(SDNode *Root, const NodeExtensionHelper &LHS,
                              const NodeExtensionHelper &RHS, SelectionDAG &DAG,
                              const RISCVSubtarget &Subtarget) {
-  return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS,
-                                          ExtKind::ZExt | ExtKind::SExt |
-                                              ExtKind::FPExt | ExtKind::BF16Ext,
-                                          DAG, Subtarget);
+  return canFoldToVWWithSameExtensionImpl(
+      Root, LHS, RHS, ExtKind::ZExt | ExtKind::SExt | ExtKind::FPExt, DAG,
+      Subtarget);
 }
 
 /// Check if \p Root follows a pattern Root(LHS, ext(RHS))
@@ -17033,6 +17032,18 @@ canFoldToVWWithFPEXT(SDNode *Root, const NodeExtensionHelper &LHS,
                                           Subtarget);
 }
 
+/// Check if \p Root follows a pattern Root(bf16ext(LHS), bf16ext(RHS))
+///
+/// \returns std::nullopt if the pattern doesn't match or a CombineResult that
+/// can be used to apply the pattern.
+static std::optional<CombineResult>
+canFoldToVWWithBF16EXT(SDNode *Root, const NodeExtensionHelper &LHS,
+                       const NodeExtensionHelper &RHS, SelectionDAG &DAG,
+                       const RISCVSubtarget &Subtarget) {
+  return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, ExtKind::BF16Ext, DAG,
+                                          Subtarget);
+}
+
 /// Check if \p Root follows a pattern Root(sext(LHS), zext(RHS))
 ///
 /// \returns std::nullopt if the pattern doesn't match or a CombineResult that
@@ -17072,6 +17083,8 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
   case RISCVISD::VFNMADD_VL:
   case RISCVISD::VFNMSUB_VL:
     Strategies.push_back(canFoldToVWWithSameExtension);
+    if (Root->getOpcode() == RISCVISD::VFMADD_VL)
+      Strategies.push_back(canFoldToVWWithBF16EXT);
     break;
   case ISD::MUL:
   case RISCVISD::MUL_VL:
