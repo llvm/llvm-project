@@ -342,9 +342,6 @@ public:
   void setFlags(uint16_t bits) {
     flags.fetch_or(bits, std::memory_order_relaxed);
   }
-  void clearFlags(uint16_t bits) {
-    flags.fetch_and(~bits, std::memory_order_relaxed);
-  }
   bool hasFlag(uint16_t bit) const {
     assert(llvm::has_single_bit(bit) && "bit must be a power of 2");
     return flags.load(std::memory_order_relaxed) & bit;
