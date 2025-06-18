@@ -404,8 +404,8 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
-define i16 @not.crc.non.canonical.loop(i16 %crc.init) {
-; CHECK-LABEL: 'not.crc.non.canonical.loop'
+define i16 @not.crc.non.canonical.loop.countdown(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.non.canonical.loop.countdown'
 ; CHECK-NEXT:  Did not find a hash algorithm
 ; CHECK-NEXT:  Reason: Loop not in canonical form
 ;
@@ -421,6 +421,35 @@ loop:                                              ; preds = %loop, %entry
   %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
   %iv.next = sub nuw nsw i32 %iv, 1
   %exit.cond = icmp samesign eq i32 %iv, 0
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @not.crc.non.canonical.loop.multiple.blocks(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.non.canonical.loop.multiple.blocks'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Loop not in canonical form
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %continue ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %continue ]
+  %check.sb = icmp slt i16 %crc, 0
+  %crc.shl = shl i16 %crc, 1
+  br i1 %check.sb, label %xor, label %continue
+
+xor:
+  %crc.xor = xor i16 %crc.shl, 4129
+  br label %continue
+
+continue:
+  %crc.next = phi i16 [ %crc.xor, %xor ], [ %crc.shl, %loop ]
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond = icmp samesign eq i32 %iv, 7
   br i1 %exit.cond, label %exit, label %loop
 
 exit:                                              ; preds = %loop
