@@ -908,8 +908,8 @@ struct ConvertMeshToMPIPass
 
     // No mesh dialect should left after conversion...
     target.addIllegalDialect<mesh::MeshDialect>();
-    // ...except the global MeshOp
-    target.addLegalOp<mesh::MeshOp>();
+    // ...except the global MeshOp. MeshShapeOp which will get folded separately.
+    target.addLegalOp<mesh::MeshOp, mesh::MeshShapeOp>();
     // Allow all the stuff that our patterns will convert to
     target.addLegalDialect<
         BuiltinDialect, mpi::MPIDialect, scf::SCFDialect, arith::ArithDialect,
@@ -926,8 +926,6 @@ struct ConvertMeshToMPIPass
                  ConvertProcessMultiIndexOp, ConvertGetShardingOp,
                  ConvertShardingOp, ConvertShardShapeOp, ConvertAllReduceOp,
                  ConvertProcessLinearIndexOp>(typeConverter, ctxt);
-    SymbolTableCollection symbolTableCollection;
-    mlir::mesh::populateFoldingPatterns(patterns, symbolTableCollection);
 
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
         patterns, typeConverter);
@@ -935,6 +933,12 @@ struct ConvertMeshToMPIPass
     populateReturnOpTypeConversionPattern(patterns, typeConverter);
 
     (void)applyPartialConversion(getOperation(), target, std::move(patterns));
+
+    // Folding patterns cannot be mixed with conversion patterns -> extra pass.
+    patterns.clear();
+    SymbolTableCollection symbolTableCollection;
+    mlir::mesh::populateFoldingPatterns(patterns, symbolTableCollection);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
