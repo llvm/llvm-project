@@ -220,13 +220,21 @@ define i32 @test_v4i32(<4 x i8> %a0) {
 ; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: test_v4i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; AVX1-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    retq
+; AVX1-SLOW-LABEL: test_v4i32:
+; AVX1-SLOW:       # %bb.0:
+; AVX1-SLOW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
+; AVX1-SLOW-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX1-SLOW-NEXT:    vmovd %xmm0, %eax
+; AVX1-SLOW-NEXT:    retq
+;
+; AVX1-FAST-LABEL: test_v4i32:
+; AVX1-FAST:       # %bb.0:
+; AVX1-FAST-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
+; AVX1-FAST-NEXT:    retq
 ;
 ; AVX2-LABEL: test_v4i32:
 ; AVX2:       # %bb.0:
@@ -257,12 +265,37 @@ define i32 @test_v8i32_v8i8(<8 x i8> %a0) {
 ; SSE-NEXT:    movd %xmm1, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_v8i32_v8i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    retq
+; AVX1-SLOW-LABEL: test_v8i32_v8i8:
+; AVX1-SLOW:       # %bb.0:
+; AVX1-SLOW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-SLOW-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX1-SLOW-NEXT:    vmovd %xmm0, %eax
+; AVX1-SLOW-NEXT:    retq
+;
+; AVX1-FAST-LABEL: test_v8i32_v8i8:
+; AVX1-FAST:       # %bb.0:
+; AVX1-FAST-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; AVX1-FAST-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX1-FAST-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
+; AVX1-FAST-NEXT:    retq
+;
+; AVX2-LABEL: test_v8i32_v8i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_v8i32_v8i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    retq
   %1 = zext <8 x i8> %a0 to <8 x i32>
   %2 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %1)
   ret i32 %2

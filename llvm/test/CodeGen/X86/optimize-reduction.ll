@@ -89,6 +89,7 @@ define { i16, i16 } @test_reduce_v16i16_with_add(<16 x i16> %x, <16 x i16> %y) {
 ; AVX2-NEXT:    vphaddw %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vphaddw %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vmovd %xmm2, %eax
+; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vpbroadcastw %xmm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
