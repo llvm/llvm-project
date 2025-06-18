@@ -1,4 +1,4 @@
-//===- TestSingleFold.cpp - Pass to test single-pass folding ---------------===//
+//===- TestSingleFold.cpp - Pass to test single-pass folding --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@ using namespace mlir;
 
 namespace {
 /// Test pass for single-pass constant folding.
-/// 
+///
 /// This pass tests the behavior of operations when folded exactly once. Unlike
 /// canonicalization passes that may apply multiple rounds of folding, this pass
 /// ensures that each operation is folded at most once, which is useful for
@@ -59,7 +59,8 @@ void TestSingleFold::runOnOperation() {
 
   // Collect and fold the operations within the operation.
   SmallVector<Operation *, 8> ops;
-  getOperation()->walk<mlir::WalkOrder::PreOrder>([&](Operation *op) { ops.push_back(op); });
+  getOperation()->walk<mlir::WalkOrder::PreOrder>(
+      [&](Operation *op) { ops.push_back(op); });
 
   // Fold the constants in reverse so that the last generated constants from
   // folding are at the beginning. This creates somewhat of a linear ordering to
