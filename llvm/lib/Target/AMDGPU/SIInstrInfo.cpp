@@ -7744,11 +7744,12 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
                                                     ? &AMDGPU::VGPR_16RegClass
                                                     : &AMDGPU::VGPR_32RegClass);
     auto NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
-                        .addImm(0) // src0_modifiers
+                        .add(Inst.getOperand(1)) // src0_modifiers
                         .add(Inst.getOperand(2))
-                        .addImm(0)  // clamp
-                        .addImm(0); // omod
-    if (ST.useRealTrue16Insts())
+                        .add(Inst.getOperand(3)) // clamp
+                        .add(Inst.getOperand(4)) // omod
+                        .setMIFlags(Inst.getFlags());
+    if (AMDGPU::hasNamedOperand(NewOpcode, AMDGPU::OpName::op_sel))
       NewInstr.addImm(0); // opsel0
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
     legalizeOperandsVALUt16(*NewInstr, MRI);
