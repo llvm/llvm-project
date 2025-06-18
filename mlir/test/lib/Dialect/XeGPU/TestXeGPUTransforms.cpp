@@ -116,12 +116,9 @@ struct TestXeGPUUnrollingPatterns
                 if (!instData.empty())
                   blockedChunkSize = instData.asArrayRef().back();
 
-                auto chunkSizeAttr = mlir::IntegerAttr::get(
-                    mlir::IntegerType::get(ctx, 64), blockedChunkSize);
-
                 // To create a new attribute with a different chunk_size:
                 auto newEncoding = xegpu::ScatterTensorDescAttr::get(
-                    ctx, scatterAttr.getMemorySpace(), chunkSizeAttr);
+                    ctx, scatterAttr.getMemorySpace().getValue(), blockedChunkSize);
 
                 encoding = newEncoding;
               }
