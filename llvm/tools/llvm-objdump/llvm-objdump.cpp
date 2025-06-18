@@ -2358,7 +2358,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             bool PrintTarget = DT->InstrAnalysis->evaluateBranch(
                                    Inst, SectionAddr + Index, Size, Target) ||
                                DT->InstrAnalysis->evaluateInstruction(
-                                   Inst, SectionAddr + Index, Size, Target, *DT->SubtargetInfo);
+                                   Inst, SectionAddr + Index, Size, Target,
+                                   *DT->SubtargetInfo);
             if (!PrintTarget) {
               if (std::optional<uint64_t> MaybeTarget =
                       DT->InstrAnalysis->evaluateMemoryOperandAddress(

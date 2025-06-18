@@ -244,7 +244,8 @@ public:
   }
 
   bool evaluateInstruction(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                           uint64_t &Target, const MCSubtargetInfo &STI) const override {
+                           uint64_t &Target,
+                           const MCSubtargetInfo &STI) const override {
     unsigned int ArchRegWidth = STI.getTargetTriple().getArchPointerBitWidth();
     switch(Inst.getOpcode()) {
     default:
@@ -442,7 +443,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTargetMC() {
     // Register the null target streamer.
     TargetRegistry::RegisterNullTargetStreamer(*T,
                                                createRISCVNullTargetStreamer);
-    TargetRegistry::RegisterMCInstrAnalysis(*T,
-                                            createRISCVInstrAnalysis);
+    TargetRegistry::RegisterMCInstrAnalysis(*T, createRISCVInstrAnalysis);
   }
 }
