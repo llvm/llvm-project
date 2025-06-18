@@ -2272,8 +2272,8 @@ public:
       if (auto *MatrixInst = dyn_cast<Instruction>(MatrixVal)) {
         if (auto MaybeIP = MatrixInst->getInsertionPointAfterDef())
           Builder.SetInsertPoint(*MaybeIP);
-      } else
-        Builder.SetInsertPoint(Inst->getIterator());
+      } else if (auto MaybeIP = Inst->getInsertionPointAfterDef())
+        Builder.SetInsertPoint(*MaybeIP);
 
       return this->getMatrix(MatrixVal, SI, Builder);
     };
