@@ -338,24 +338,12 @@ template <class... Ts> OverloadedVisit(Ts...) -> OverloadedVisit<Ts...>;
 
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
   const auto Visitor = OverloadedVisit{
-      [&OS](const RootFlags &Flags) -> raw_ostream& {
-        return OS << Flags;
-      },
-      [&OS](const RootConstants &Constants) -> raw_ostream& {
-        return OS << Constants;
-      },
-      [&OS](const RootDescriptor &Descriptor) -> raw_ostream& {
-        return OS << Descriptor;
-      },
-      [&OS](const DescriptorTableClause &Clause) -> raw_ostream& {
-        return OS << Clause;
-      },
-      [&OS](const DescriptorTable &Table) -> raw_ostream& {
-        return OS << Table;
-      },
-      [&OS](const StaticSampler &Sampler) -> raw_ostream& {
-        return OS << Sampler;
-      },
+      [&OS](const RootFlags &Flags) { OS << Flags; },
+      [&OS](const RootConstants &Constants) { OS << Constants; },
+      [&OS](const RootDescriptor &Descriptor) { OS << Descriptor; },
+      [&OS](const DescriptorTableClause &Clause) { OS << Clause; },
+      [&OS](const DescriptorTable &Table) { OS << Table; },
+      [&OS](const StaticSampler &Sampler) { OS << Sampler; },
   };
 
   OS << " RootElements{";
