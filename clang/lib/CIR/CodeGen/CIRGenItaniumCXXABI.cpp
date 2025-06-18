@@ -161,7 +161,6 @@ void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
   auto *md = cast<CXXMethodDecl>(gd.getDecl());
   StructorCIRGen cirGenType = getCIRGenToUse(cgm, md);
   const auto *cd = dyn_cast<CXXConstructorDecl>(md);
-  const CXXDestructorDecl *dd = cd ? nullptr : cast<CXXDestructorDecl>(md);
 
   if (cd ? gd.getCtorType() == Ctor_Complete
          : gd.getDtorType() == Dtor_Complete) {

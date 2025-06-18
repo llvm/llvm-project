@@ -570,7 +570,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
   if (dtorType == Dtor_Deleting) {
-    cgm.errorNYI("deleting destructor");
+    cgm.errorNYI(dtor->getSourceRange(), "deleting destructor");
     return;
   }
 
@@ -578,7 +578,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // anything else.
   const bool isTryBody = isa_and_nonnull<CXXTryStmt>(body);
   if (isTryBody) {
-    cgm.errorNYI("function-try-block destructor");
+    cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
   }
 
   assert(!cir::MissingFeatures::sanitizers());
@@ -617,7 +617,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     assert(!cir::MissingFeatures::vtableInitialization());
 
     if (isTryBody) {
-      cgm.errorNYI("function-try-block destructor");
+      cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
     } else if (body) {
       (void)emitStmt(body, /*useCurrentScope=*/true);
     } else {
@@ -635,7 +635,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
 
   // Exit the try if applicable.
   if (isTryBody)
-    cgm.errorNYI("function-try-block destructor");
+    cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
 }
 
 /// Given a value of type T* that may not be to a complete object, construct
