@@ -7138,8 +7138,7 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   switch (CC) {
   default:
     NestReg = 0x0f; // X15
-    LLVM_FALLTHROUGH;
-  case CallingConv::ARM64EC_Thunk_Native:
+    break;
   case CallingConv::ARM64EC_Thunk_X64:
     // Must be kept in sync with AArch64CallingConv.td
     NestReg = 0x04; // X4
@@ -27081,7 +27080,7 @@ bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
     // only allow an offset that's equal to the store size.
     EVT MemType = cast<MemSDNode>(N)->getMemoryVT();
     if (!Subtarget->isLittleEndian() && MemType.isVector() &&
-        RHSC != MemType.getStoreSize())
+        (uint64_t)RHSC != MemType.getStoreSize())
       return false;
     // Always emit pre-inc/post-inc addressing mode. Use negated constant offset
     // when dealing with subtraction.

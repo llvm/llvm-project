@@ -78,6 +78,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   assert(!cir::MissingFeatures::builtinCallMathErrno());
   assert(!cir::MissingFeatures::builtinCall());
 
+  mlir::Location loc = getLoc(e->getExprLoc());
+
   switch (builtinIDIfNoAsmLabel) {
   default:
     break;
@@ -88,8 +90,15 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       return RValue::get(nullptr);
 
     mlir::Value argValue = emitCheckedArgForAssume(e->getArg(0));
-    builder.create<cir::AssumeOp>(getLoc(e->getExprLoc()), argValue);
+    builder.create<cir::AssumeOp>(loc, argValue);
     return RValue::get(nullptr);
+  }
+
+  case Builtin::BI__builtin_complex: {
+    mlir::Value real = emitScalarExpr(e->getArg(0));
+    mlir::Value imag = emitScalarExpr(e->getArg(1));
+    mlir::Value complex = builder.createComplexCreate(loc, real, imag);
+    return RValue::get(complex);
   }
   }
 
