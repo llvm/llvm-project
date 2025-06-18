@@ -829,9 +829,11 @@ for.end:
 }
 
 
-; Don't this into a max reduction. The no-nans-fp-math attribute is missing
+; Turn this into a max reduction with extra checks, as no-nans-fp-math
+; attribute is missing.
 ; CHECK-LABEL: @max_red_float_nans(
-; CHECK-NOT: <2 x float>
+; CHECK:       <2 x float>
+; CHECK:       select <2 x i1>
 
 define float @max_red_float_nans(float %max) {
 entry:
@@ -852,9 +854,12 @@ for.end:
   ret float %max.red.0
 }
 
-; As above, with the no-signed-zeros-fp-math attribute missing
+; Turn this into a max reduction with extra checks, as no-signed-zeros-fp-math
+; attribute is missing.
 ; CHECK-LABEL: @max_red_float_nsz(
-; CHECK-NOT: <2 x float>
+; CHECK:       <2 x float>
+; CHECK-NEXT:  <2 x float>
+; CHECK:       select <2 x i1>
 
 define float @max_red_float_nsz(float %max) #1 {
 entry:

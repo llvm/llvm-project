@@ -25,6 +25,7 @@
 #define DEBUG_TYPE "vplan"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 namespace {
 // Class that is used to build the plain CFG for the incoming IR.
@@ -427,7 +428,6 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                   VPBasicBlock *LatchVPBB, Type *IdxTy,
                                   DebugLoc DL) {
-  using namespace VPlanPatternMatch;
   Value *StartIdx = ConstantInt::get(IdxTy, 0);
   auto *StartV = Plan.getOrAddLiveIn(StartIdx);
 
@@ -627,4 +627,115 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
         MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
     Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
   }
+}
+
+bool VPlanTransforms::handleFMaxReductionsWithoutFastMath(VPlan &Plan) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPReductionPHIRecipe *RedPhiR = nullptr;
+  VPRecipeWithIRFlags *MinMaxOp = nullptr;
+  VPWidenIntOrFpInductionRecipe *WideIV = nullptr;
+
+  // Check if there are any FMaxNoFMFs reductions using wide selects that we can
+  // fix up. To do so, we also need a  wide canonical IV to keep track of the
+  // indices of the max values.
+  for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
+    // We need a wide canonical IV
+    if (auto *CurIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
+      if (!CurIV->isCanonical())
+        continue;
+      WideIV = CurIV;
+      continue;
+    }
+
+    // And a single FMaxNoFMFs reduction phi.
+    // TODO: Support FMin reductions as well.
+    auto *CurRedPhiR = dyn_cast<VPReductionPHIRecipe>(&R);
+    if (!CurRedPhiR)
+      continue;
+    if (RedPhiR)
+      return false;
+    if (CurRedPhiR->getRecurrenceKind() != RecurKind::FMaxNoFMFs ||
+        CurRedPhiR->isInLoop() || CurRedPhiR->isOrdered())
+      continue;
+    RedPhiR = CurRedPhiR;
+
+    // MaxOp feeding the reduction phi must be a select (either wide or a
+    // replicate recipe), where the phi is the last operand, and the compare
+    // predicate is strict. This ensures NaNs won't get propagated unless the
+    // initial value is NaN
+    VPRecipeBase *Inc = RedPhiR->getBackedgeValue()->getDefiningRecipe();
+    auto *RepR = dyn_cast<VPReplicateRecipe>(Inc);
+    if (!isa<VPWidenSelectRecipe>(Inc) &&
+        !(RepR && (isa<SelectInst>(RepR->getUnderlyingInstr()))))
+      return false;
+
+    MinMaxOp = cast<VPRecipeWithIRFlags>(Inc);
+    auto *Cmp = cast<VPRecipeWithIRFlags>(MinMaxOp->getOperand(0));
+    if (MinMaxOp->getOperand(1) == RedPhiR ||
+        !CmpInst::isStrictPredicate(Cmp->getPredicate()))
+      return false;
+  }
+
+  // Nothing to do.
+  if (!RedPhiR)
+    return true;
+
+  // A wide canonical IV is currently required.
+  // TODO: Create an induction if no suitable existing one is available.
+  if (!WideIV)
+    return false;
+
+  // Create a reduction that tracks the first indices where the latest maximum
+  // value has been selected. This is later used to select the max value from
+  // the partial reductions in a way that correctly handles signed zeros and
+  // NaNs in the input.
+  // Note that we do not need to check if the induction may hit the sentinel
+  // value. If the sentinel value gets hit, the final reduction value is at the
+  // last index or the maximum was never set and all lanes contain the start
+  // value. In either case, the correct value is selected.
+  unsigned IVWidth =
+      VPTypeAnalysis(Plan).inferScalarType(WideIV)->getScalarSizeInBits();
+  LLVMContext &Ctx = Plan.getScalarHeader()->getIRBasicBlock()->getContext();
+  VPValue *UMinSentinel =
+      Plan.getOrAddLiveIn(ConstantInt::get(Ctx, APInt::getMaxValue(IVWidth)));
+  auto *IdxPhi = new VPReductionPHIRecipe(nullptr, RecurKind::FindFirstIVUMin,
+                                          *UMinSentinel, false, false, 1);
+  IdxPhi->insertBefore(RedPhiR);
+  auto *MinIdxSel = new VPInstruction(
+      Instruction::Select, {MinMaxOp->getOperand(0), WideIV, IdxPhi});
+  MinIdxSel->insertAfter(MinMaxOp);
+  IdxPhi->addOperand(MinIdxSel);
+
+  // Find the first index of with the maximum value. This is used to extract the
+  // lane with the final max value and is needed to handle signed zeros and NaNs
+  // in the input.
+  auto *MiddleVPBB = Plan.getMiddleBlock();
+  auto *OrigRdxResult = cast<VPSingleDefRecipe>(&MiddleVPBB->front());
+  VPBuilder Builder(OrigRdxResult->getParent(),
+                    std::next(OrigRdxResult->getIterator()));
+
+  // Create mask for lanes that have the max value and use it to mask out
+  // indices that don't contain maximum values.
+  auto *MaskFinalMaxValue = Builder.createNaryOp(
+      Instruction::FCmp, {OrigRdxResult->getOperand(1), OrigRdxResult},
+      VPIRFlags(CmpInst::FCMP_OEQ));
+  auto *IndicesWithMaxValue = Builder.createNaryOp(
+      Instruction::Select, {MaskFinalMaxValue, MinIdxSel, UMinSentinel});
+  auto *FirstMaxIdx = Builder.createNaryOp(
+      VPInstruction::ComputeFindIVResult,
+      {IdxPhi, WideIV->getStartValue(), UMinSentinel, IndicesWithMaxValue});
+  // Convert the index of the first max value to an index in the vector lanes of
+  // the partial reduction results. This ensures we select the first max value
+  // and acts as a tie-breaker if the partial reductions contain signed zeros.
+  auto *FirstMaxLane =
+      Builder.createNaryOp(Instruction::URem, {FirstMaxIdx, &Plan.getVFxUF()});
+
+  // Extract the final max value and update the users.
+  auto *Res = Builder.createNaryOp(
+      VPInstruction::ExtractLane, {FirstMaxLane, OrigRdxResult->getOperand(1)});
+  OrigRdxResult->replaceUsesWithIf(Res,
+                                   [MaskFinalMaxValue](VPUser &U, unsigned) {
+                                     return &U != MaskFinalMaxValue;
+                                   });
+  return true;
 }
