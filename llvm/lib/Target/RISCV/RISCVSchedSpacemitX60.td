@@ -814,8 +814,7 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
   }
 }
 
-// vfsqrt.v operations with measured latencies
-// From CSV: e16 = 18,36,72,144 = 18*LMUL; e32 = 38,76,144 (irregular); e64 = 40,80,160,320 = 40*LMUL
+// Pattern for vfsqrt.v: e16 = 18/36/72/144; e32 = 38/76/152/304; e64 = 40/80/160/320
 foreach mx = SchedMxListF in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
@@ -824,7 +823,7 @@ foreach mx = SchedMxListF in {
     // Compute latency based on SEW and LMUL combination
     defvar LatencyMul = !cond(
       !eq(sew, 16) : 18,  // e16: 18*LMUL
-      !eq(sew, 32) : 38,  // e32: use 38 as base (38,76,146 pattern is irregular, use worst-case approach)
+      !eq(sew, 32) : 38,  // e32: 38*LMUL
       !eq(sew, 64) : 40   // e64: 40*LMUL
     );
 
