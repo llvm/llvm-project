@@ -255,6 +255,12 @@ int f() {
 }
 }
 
+namespace GH71675 {
+constexpr unsigned _BitInt(__BITINT_MAXWIDTH__ >> 6) F = ~0; // expected-warning {{Clang extension}}
+static_assert(F == 1,""); // expected-error {{static assertion failed due to requirement 'F == 1'}} \
+                          // expected-note {{expression evaluates to 'FFFFFFFFFFFFFFFFFFFF...FFFFFFFFFFFFFFFFFFFF == 1'}}
+} // namespace GH71675
+
 namespace Diagnostics {
   /// No notes for literals.
   static_assert(false, ""); // expected-error {{failed}}

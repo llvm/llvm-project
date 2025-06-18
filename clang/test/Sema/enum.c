@@ -196,7 +196,7 @@ enum GH59352 { // expected-warning {{enumeration values exceed range of largest 
  BigVal = 66666666666666666666wb
 };
 _Static_assert(BigVal == 66666666666666666666wb); /* expected-error {{static assertion failed due to requirement 'BigVal == 66666666666666666666wb'}}
-                                                     expected-note {{expression evaluates to '11326434445538011818 == 66666666666666666666'}}
+                                                     expected-note {{expression evaluates to '11326434445538011818 == 39D2F941E420AAAAA<U+0000><U+0000><U+0000>...<U+0000><U+0000><U+0000>39D2F941E420AAAAA'}}
                                                    */
 _Static_assert(
     _Generic(BigVal,                             // expected-error {{static assertion failed}}
