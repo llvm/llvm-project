@@ -365,6 +365,9 @@ LLVM_DUMP_METHOD void ScheduleDAG::dumpNodeName(const SUnit &SU) const {
 LLVM_DUMP_METHOD void ScheduleDAG::dumpNodeAll(const SUnit &SU) const {
   dumpNode(SU);
   SU.dumpAttributes();
+  if (SU.ParentClusterIdx != InvalidClusterId)
+    dbgs() << "  Parent Cluster Index: " << SU.ParentClusterIdx << '\n';
+
   if (SU.Preds.size() > 0) {
     dbgs() << "  Predecessors:\n";
     for (const SDep &Dep : SU.Preds) {

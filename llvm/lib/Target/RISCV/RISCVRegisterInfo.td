@@ -846,6 +846,7 @@ foreach m = LMULList in {
 
 def FFLAGS : RISCVReg<0, "fflags">;
 def FRM    : RISCVReg<0, "frm">;
+def FCSR   : RISCVReg<0, "fcsr">;
 
 // Shadow Stack register
 def SSP    : RISCVReg<0, "ssp">;
@@ -855,4 +856,17 @@ def SF_VCIX_STATE : RISCVReg<0, "sf.vcix_state">;
 def : RISCVRegisterClass<[XLenVT], 32, (add SF_VCIX_STATE)> {
   let RegInfos = XLenRI;
   let isAllocatable = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// XSfmmbase tiles
+//===----------------------------------------------------------------------===//
+foreach Index = 0-15 in
+  def T#Index : RISCVReg<Index, "mt"#Index, []>,
+                DwarfRegNum<[!add(Index, 3072)]>;
+
+let RegInfos = XLenRI in {
+  def TR   : RISCVRegisterClass<[untyped], 32, (add (sequence "T%u", 0, 15))>;
+  def TRM2 : RISCVRegisterClass<[untyped], 32, (add (decimate TR, 2))>;
+  def TRM4 : RISCVRegisterClass<[untyped], 32, (add (decimate TR, 4))>;
 }

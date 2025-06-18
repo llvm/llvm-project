@@ -47,6 +47,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+shcounterenw %s -o - | FileCheck --check-prefixes=CHECK,RV32SHCOUNTERENW %s
 ; RUN: llc -mtriple=riscv32 -mattr=+shgatpa %s -o - | FileCheck --check-prefixes=CHECK,RV32SHGATPA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+shvsatpa %s -o - | FileCheck --check-prefixes=CHECK,RV32SHVSATPA %s
+; RUN: llc -mtriple=riscv32 -mattr=+shlcofideleg %s -o - | FileCheck --check-prefixes=CHECK,RV32SHLCOFIDELEG %s
 ; RUN: llc -mtriple=riscv32 -mattr=+ssccfg %s -o - | FileCheck --check-prefixes=CHECK,RV32SSCCFG %s
 ; RUN: llc -mtriple=riscv32 -mattr=+ssccptr %s -o - | FileCheck --check-prefixes=CHECK,RV32SSCCPTR %s
 ; RUN: llc -mtriple=riscv32 -mattr=+sscofpmf %s -o - | FileCheck --check-prefixes=CHECK,RV32SSCOFPMF %s
@@ -222,6 +223,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+shcounterenw %s -o - | FileCheck --check-prefixes=CHECK,RV64SHCOUNTERENW %s
 ; RUN: llc -mtriple=riscv64 -mattr=+shgatpa %s -o - | FileCheck --check-prefixes=CHECK,RV64SHGATPA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+shvsatpa %s -o - | FileCheck --check-prefixes=CHECK,RV64SHVSATPA %s
+; RUN: llc -mtriple=riscv64 -mattr=+shlcofideleg %s -o - | FileCheck --check-prefixes=CHECK,RV64SHLCOFIDELEG %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ssccfg %s -o - | FileCheck --check-prefixes=CHECK,RV64SSCCFG %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ssccptr %s -o - | FileCheck --check-prefixes=CHECK,RV64SSCCPTR %s
 ; RUN: llc -mtriple=riscv64 -mattr=+sscofpmf %s -o - | FileCheck --check-prefixes=CHECK,RV64SSCOFPMF %s
@@ -396,6 +398,7 @@
 ; RV32SHCOUNTERENW: .attribute 5, "rv32i2p1_shcounterenw1p0"
 ; RV32SHGATPA: .attribute 5, "rv32i2p1_shgatpa1p0"
 ; RV32SHVSATPA: .attribute 5, "rv32i2p1_shvsatpa1p0"
+; RV32SHLCOFIDELEG: .attribute 5, "rv32i2p1_shlcofideleg1p0"
 ; RV32SSCCFG: .attribute 5, "rv32i2p1_ssccfg1p0"
 ; RV32SSCCPTR: .attribute 5, "rv32i2p1_ssccptr1p0"
 ; RV32SSCOFPMF: .attribute 5, "rv32i2p1_sscofpmf1p0"
@@ -434,7 +437,7 @@
 ; RV32XTHEADMEMPAIR: .attribute 5, "rv32i2p1_xtheadmempair1p0"
 ; RV32XTHEADSYNC: .attribute 5, "rv32i2p1_xtheadsync1p0"
 ; RV32XWCHC: .attribute 5, "rv32i2p1_zca1p0_xwchc2p2"
-; RV32XQCCMP: .attribute 5, "rv32i2p1_zca1p0_xqccmp0p1"
+; RV32XQCCMP: .attribute 5, "rv32i2p1_zca1p0_xqccmp0p3"
 ; RV32XQCIA: .attribute 5, "rv32i2p1_xqcia0p7"
 ; RV32XQCIAC: .attribute 5, "rv32i2p1_zca1p0_xqciac0p3"
 ; RV32XQCIBI: .attribute 5, "rv32i2p1_zca1p0_xqcibi0p2"
@@ -442,14 +445,14 @@
 ; RV32XQCICLI: .attribute 5, "rv32i2p1_xqcicli0p3"
 ; RV32XQCICM: .attribute 5, "rv32i2p1_zca1p0_xqcicm0p2"
 ; RV32XQCICS: .attribute 5, "rv32i2p1_xqcics0p2"
-; RV32XQCICSR: .attribute 5, "rv32i2p1_xqcicsr0p3"
-; RV32XQCIINT: .attribute 5, "rv32i2p1_zca1p0_xqciint0p7"
+; RV32XQCICSR: .attribute 5, "rv32i2p1_xqcicsr0p4"
+; RV32XQCIINT: .attribute 5, "rv32i2p1_zca1p0_xqciint0p10"
 ; RV32XQCIIO: .attribute 5, "rv32i2p1_xqciio0p1"
 ; RV32XQCILB: .attribute 5, "rv32i2p1_zca1p0_xqcilb0p2"
 ; RV32XQCILI: .attribute 5, "rv32i2p1_zca1p0_xqcili0p2"
 ; RV32XQCILIA: .attribute 5, "rv32i2p1_zca1p0_xqcilia0p2"
 ; RV32XQCILO: .attribute 5, "rv32i2p1_zca1p0_xqcilo0p3"
-; RV32XQCILSM: .attribute 5, "rv32i2p1_xqcilsm0p5"
+; RV32XQCILSM: .attribute 5, "rv32i2p1_xqcilsm0p6"
 ; RV32XQCISIM: attribute 5, "rv32i2p1_zca1p0_xqcisim0p2"
 ; RV32XQCISLS: .attribute 5, "rv32i2p1_xqcisls0p2"
 ; RV32XQCISYNC: attribute 5, "rv32i2p1_zca1p0_xqcisync0p3"
@@ -496,8 +499,8 @@
 ; RV32SSAIA: .attribute 5, "rv32i2p1_ssaia1p0"
 ; RV32SMCSRIND: .attribute 5, "rv32i2p1_smcsrind1p0"
 ; RV32SSCSRIND: .attribute 5, "rv32i2p1_sscsrind1p0"
-; RV32SMDBLTRP: .attribute 5, "rv32i2p1_smdbltrp1p0"
-; RV32SSDBLTRP: .attribute 5, "rv32i2p1_ssdbltrp1p0"
+; RV32SMDBLTRP: .attribute 5, "rv32i2p1_zicsr2p0_smdbltrp1p0"
+; RV32SSDBLTRP: .attribute 5, "rv32i2p1_zicsr2p0_ssdbltrp1p0"
 ; RV32SSQOSID: .attribute 5, "rv32i2p1_ssqosid1p0"
 ; RV32SMCDELEG: .attribute 5, "rv32i2p1_smcdeleg1p0"
 ; RV32SMCNTRPMF: .attribute 5, "rv32i2p1_smcntrpmf1p0"
@@ -572,6 +575,7 @@
 ; RV64SHCOUNTERENW: .attribute 5, "rv64i2p1_shcounterenw1p0"
 ; RV64SHGATPA: .attribute 5, "rv64i2p1_shgatpa1p0"
 ; RV64SHVSATPA: .attribute 5, "rv64i2p1_shvsatpa1p0"
+; RV64SHLCOFIDELEG: .attribute 5, "rv64i2p1_shlcofideleg1p0"
 ; RV64SSCCFG: .attribute 5, "rv64i2p1_ssccfg1p0"
 ; RV64SSCCPTR: .attribute 5, "rv64i2p1_ssccptr1p0"
 ; RV64SSCOFPMF: .attribute 5, "rv64i2p1_sscofpmf1p0"
@@ -653,8 +657,8 @@
 ; RV64SSAIA: .attribute 5, "rv64i2p1_ssaia1p0"
 ; RV64SMCSRIND: .attribute 5, "rv64i2p1_smcsrind1p0"
 ; RV64SSCSRIND: .attribute 5, "rv64i2p1_sscsrind1p0"
-; RV64SMDBLTRP: .attribute 5, "rv64i2p1_smdbltrp1p0"
-; RV64SSDBLTRP: .attribute 5, "rv64i2p1_ssdbltrp1p0"
+; RV64SMDBLTRP: .attribute 5, "rv64i2p1_zicsr2p0_smdbltrp1p0"
+; RV64SSDBLTRP: .attribute 5, "rv64i2p1_zicsr2p0_ssdbltrp1p0"
 ; RV64SSQOSID: .attribute 5, "rv64i2p1_ssqosid1p0"
 ; RV64SMCDELEG: .attribute 5, "rv64i2p1_smcdeleg1p0"
 ; RV64SMCNTRPMF: .attribute 5, "rv64i2p1_smcntrpmf1p0"
@@ -679,7 +683,7 @@
 ; RV64SSCTR: .attribute 5, "rv64i2p1_sscsrind1p0_ssctr1p0"
 ; RV64SDEXT: .attribute 5, "rv64i2p1_sdext1p0"
 ; RV64SDTRIG: .attribute 5, "rv64i2p1_sdtrig1p0"
-; RV64XQCCMP: .attribute 5, "rv64i2p1_zca1p0_xqccmp0p1"
+; RV64XQCCMP: .attribute 5, "rv64i2p1_zca1p0_xqccmp0p3"
 
 ; RVI20U32: .attribute 5, "rv32i2p1"
 ; RVI20U64: .attribute 5, "rv64i2p1"

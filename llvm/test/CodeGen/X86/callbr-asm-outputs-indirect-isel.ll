@@ -19,7 +19,7 @@ define i32 @test0() {
   ; CHECK-NEXT:   $eax = COPY [[MOV32ri]]
   ; CHECK-NEXT:   RET 0, $eax
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.z.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.z.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   $eax = COPY %1
   ; CHECK-NEXT:   RET 0, $eax
   %direct = callbr i32 asm "", "=r,!i"()
@@ -43,7 +43,7 @@ define i32 @test1() {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY %4
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.z.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.1.z.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY %4
@@ -77,7 +77,7 @@ define i32 @test2() {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY %5
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.z.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.1.z.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY %5
@@ -112,7 +112,7 @@ define i32 @test3() {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.z.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.1.z.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $ebx
   ; CHECK-NEXT: {{  $}}
@@ -150,7 +150,7 @@ define i32 @test4() {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.z.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.1.z.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $ebx, $edx
   ; CHECK-NEXT: {{  $}}
@@ -187,7 +187,7 @@ define i32 @test5() {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.cleanup (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.1.cleanup (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   liveins: $ebx
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $ebx
@@ -227,7 +227,7 @@ define i64 @test6() {
   ; CHECK-NEXT:   $rax = COPY [[PHI]]
   ; CHECK-NEXT:   RET 0, $rax
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.foo.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.3.foo.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $rdx
   ; CHECK-NEXT: {{  $}}
@@ -235,7 +235,7 @@ define i64 @test6() {
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gr64 = COPY [[COPY4]]
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.4.foo.split2 (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.4.foo.split2 (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $rbx
   ; CHECK-NEXT: {{  $}}
@@ -286,7 +286,7 @@ define i32 @test7() {
   ; CHECK-NEXT:   $eax = COPY [[COPY2]]
   ; CHECK-NEXT:   RET 0, $eax
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.retry.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.3.retry.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $edx
   ; CHECK-NEXT: {{  $}}
@@ -321,7 +321,7 @@ define i32 @test8() {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY %1
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.cleanup (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.1.cleanup (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   $eax = COPY %1
   ; CHECK-NEXT:   RET 0, $eax
 entry:
@@ -348,7 +348,7 @@ define i64 @condition_code() {
   ; CHECK-NEXT:   $rax = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT:   RET 0, $rax
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.c (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.c (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NEXT:   [[MOVZX32rr8_1:%[0-9]+]]:gr32 = MOVZX32rr8 killed [[SETCCr1]]
   ; CHECK-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, killed [[MOVZX32rr8_1]], %subreg.sub_32bit

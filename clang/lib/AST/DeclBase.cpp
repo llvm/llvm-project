@@ -1132,6 +1132,12 @@ bool Decl::isInExportDeclContext() const {
   return isa_and_nonnull<ExportDecl>(DC);
 }
 
+bool Decl::isModuleLocal() const {
+  auto *M = getOwningModule();
+  return M && M->isNamedModule() &&
+         getModuleOwnershipKind() == ModuleOwnershipKind::ReachableWhenImported;
+}
+
 bool Decl::isInAnotherModuleUnit() const {
   auto *M = getOwningModule();
 

@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "DAPLog.h"
 #include "EventHelper.h"
+#include "ExceptionBreakpoint.h"
 #include "Handler/RequestHandler.h"
 #include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
@@ -17,6 +18,7 @@
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
+#include "ProtocolUtils.h"
 #include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
@@ -70,6 +72,7 @@
 
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
+using namespace lldb_private;
 
 namespace {
 #ifdef _WIN32
@@ -128,93 +131,81 @@ DAP::DAP(Log *log, const ReplMode default_repl_mode,
 DAP::~DAP() = default;
 
 void DAP::PopulateExceptionBreakpoints() {
-  llvm::call_once(init_exception_breakpoints_flag, [this]() {
-    exception_breakpoints = std::vector<ExceptionBreakpoint>{};
+  if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
+    exception_breakpoints.emplace_back(*this, "cpp_catch", "C++ Catch",
+                                       lldb::eLanguageTypeC_plus_plus,
+                                       eExceptionKindCatch);
+    exception_breakpoints.emplace_back(*this, "cpp_throw", "C++ Throw",
+                                       lldb::eLanguageTypeC_plus_plus,
+                                       eExceptionKindThrow);
+  }
 
-    if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
-      exception_breakpoints->emplace_back(*this, "cpp_catch", "C++ Catch",
-                                          lldb::eLanguageTypeC_plus_plus);
-      exception_breakpoints->emplace_back(*this, "cpp_throw", "C++ Throw",
-                                          lldb::eLanguageTypeC_plus_plus);
+  if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeObjC)) {
+    exception_breakpoints.emplace_back(*this, "objc_catch", "Objective-C Catch",
+                                       lldb::eLanguageTypeObjC,
+                                       eExceptionKindCatch);
+    exception_breakpoints.emplace_back(*this, "objc_throw", "Objective-C Throw",
+                                       lldb::eLanguageTypeObjC,
+                                       eExceptionKindThrow);
+  }
+
+  if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeSwift)) {
+    exception_breakpoints.emplace_back(*this, "swift_catch", "Swift Catch",
+                                       lldb::eLanguageTypeSwift,
+                                       eExceptionKindCatch);
+    exception_breakpoints.emplace_back(*this, "swift_throw", "Swift Throw",
+                                       lldb::eLanguageTypeSwift,
+                                       eExceptionKindThrow);
+  }
+
+  // Besides handling the hardcoded list of languages from above, we try to find
+  // any other languages that support exception breakpoints using the SB API.
+  for (int raw_lang = lldb::eLanguageTypeUnknown;
+       raw_lang < lldb::eNumLanguageTypes; ++raw_lang) {
+    lldb::LanguageType lang = static_cast<lldb::LanguageType>(raw_lang);
+
+    // We first discard any languages already handled above.
+    if (lldb::SBLanguageRuntime::LanguageIsCFamily(lang) ||
+        lang == lldb::eLanguageTypeSwift)
+      continue;
+
+    if (!lldb::SBDebugger::SupportsLanguage(lang))
+      continue;
+
+    const char *name = lldb::SBLanguageRuntime::GetNameForLanguageType(lang);
+    if (!name)
+      continue;
+    std::string raw_lang_name = name;
+    std::string capitalized_lang_name = capitalize(name);
+
+    if (lldb::SBLanguageRuntime::SupportsExceptionBreakpointsOnThrow(lang)) {
+      const char *raw_throw_keyword =
+          lldb::SBLanguageRuntime::GetThrowKeywordForLanguage(lang);
+      std::string throw_keyword =
+          raw_throw_keyword ? raw_throw_keyword : "throw";
+
+      exception_breakpoints.emplace_back(
+          *this, raw_lang_name + "_" + throw_keyword,
+          capitalized_lang_name + " " + capitalize(throw_keyword), lang,
+          eExceptionKindThrow);
     }
-    if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeObjC)) {
-      exception_breakpoints->emplace_back(
-          *this, "objc_catch", "Objective-C Catch", lldb::eLanguageTypeObjC);
-      exception_breakpoints->emplace_back(
-          *this, "objc_throw", "Objective-C Throw", lldb::eLanguageTypeObjC);
+
+    if (lldb::SBLanguageRuntime::SupportsExceptionBreakpointsOnCatch(lang)) {
+      const char *raw_catch_keyword =
+          lldb::SBLanguageRuntime::GetCatchKeywordForLanguage(lang);
+      std::string catch_keyword =
+          raw_catch_keyword ? raw_catch_keyword : "catch";
+
+      exception_breakpoints.emplace_back(
+          *this, raw_lang_name + "_" + catch_keyword,
+          capitalized_lang_name + " " + capitalize(catch_keyword), lang,
+          eExceptionKindCatch);
     }
-    if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeSwift)) {
-      exception_breakpoints->emplace_back(*this, "swift_catch", "Swift Catch",
-                                          lldb::eLanguageTypeSwift);
-      exception_breakpoints->emplace_back(*this, "swift_throw", "Swift Throw",
-                                          lldb::eLanguageTypeSwift);
-    }
-    // Besides handling the hardcoded list of languages from above, we try to
-    // find any other languages that support exception breakpoints using the
-    // SB API.
-    for (int raw_lang = lldb::eLanguageTypeUnknown;
-         raw_lang < lldb::eNumLanguageTypes; ++raw_lang) {
-      lldb::LanguageType lang = static_cast<lldb::LanguageType>(raw_lang);
-
-      // We first discard any languages already handled above.
-      if (lldb::SBLanguageRuntime::LanguageIsCFamily(lang) ||
-          lang == lldb::eLanguageTypeSwift)
-        continue;
-
-      if (!lldb::SBDebugger::SupportsLanguage(lang))
-        continue;
-
-      const char *name = lldb::SBLanguageRuntime::GetNameForLanguageType(lang);
-      if (!name)
-        continue;
-      std::string raw_lang_name = name;
-      std::string capitalized_lang_name = capitalize(name);
-
-      if (lldb::SBLanguageRuntime::SupportsExceptionBreakpointsOnThrow(lang)) {
-        const char *raw_throw_keyword =
-            lldb::SBLanguageRuntime::GetThrowKeywordForLanguage(lang);
-        std::string throw_keyword =
-            raw_throw_keyword ? raw_throw_keyword : "throw";
-
-        exception_breakpoints->emplace_back(
-            *this, raw_lang_name + "_" + throw_keyword,
-            capitalized_lang_name + " " + capitalize(throw_keyword), lang);
-      }
-
-      if (lldb::SBLanguageRuntime::SupportsExceptionBreakpointsOnCatch(lang)) {
-        const char *raw_catch_keyword =
-            lldb::SBLanguageRuntime::GetCatchKeywordForLanguage(lang);
-        std::string catch_keyword =
-            raw_catch_keyword ? raw_catch_keyword : "catch";
-
-        exception_breakpoints->emplace_back(
-            *this, raw_lang_name + "_" + catch_keyword,
-            capitalized_lang_name + " " + capitalize(catch_keyword), lang);
-      }
-    }
-    assert(!exception_breakpoints->empty() && "should not be empty");
-  });
+  }
 }
 
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(llvm::StringRef filter) {
-  // PopulateExceptionBreakpoints() is called after g_dap.debugger is created
-  // in a request-initialize.
-  //
-  // But this GetExceptionBreakpoint() method may be called before attaching, in
-  // which case, we may not have populated the filter yet.
-  //
-  // We also cannot call PopulateExceptionBreakpoints() in DAP::DAP() because
-  // we need SBDebugger::Initialize() to have been called before this.
-  //
-  // So just calling PopulateExceptionBreakoints(),which does lazy-populating
-  // seems easiest. Two other options include:
-  //  + call g_dap.PopulateExceptionBreakpoints() in lldb-dap.cpp::main()
-  //    right after the call to SBDebugger::Initialize()
-  //  + Just call PopulateExceptionBreakpoints() to get a fresh list  everytime
-  //    we query (a bit overkill since it's not likely to change?)
-  PopulateExceptionBreakpoints();
-
-  for (auto &bp : *exception_breakpoints) {
+  for (auto &bp : exception_breakpoints) {
     if (bp.GetFilter() == filter)
       return &bp;
   }
@@ -222,10 +213,7 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(llvm::StringRef filter) {
 }
 
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
-  // See comment in the other GetExceptionBreakpoint().
-  PopulateExceptionBreakpoints();
-
-  for (auto &bp : *exception_breakpoints) {
+  for (auto &bp : exception_breakpoints) {
     if (bp.GetID() == bp_id)
       return &bp;
   }
@@ -820,7 +808,7 @@ void DAP::SendTerminatedEvent() {
   });
 }
 
-llvm::Error DAP::Disconnect() { return Disconnect(is_attach); }
+llvm::Error DAP::Disconnect() { return Disconnect(!is_attach); }
 
 llvm::Error DAP::Disconnect(bool terminateDebuggee) {
   lldb::SBError error;
@@ -893,14 +881,14 @@ llvm::Error DAP::Loop() {
 
         while (!disconnecting) {
           llvm::Expected<Message> next =
-              transport.Read(std::chrono::seconds(1));
-          if (next.errorIsA<EndOfFileError>()) {
+              transport.Read<protocol::Message>(std::chrono::seconds(1));
+          if (next.errorIsA<TransportEOFError>()) {
             consumeError(next.takeError());
             break;
           }
 
           // If the read timed out, continue to check if we should disconnect.
-          if (next.errorIsA<TimeoutError>()) {
+          if (next.errorIsA<TransportTimeoutError>()) {
             consumeError(next.takeError());
             continue;
           }
@@ -1117,8 +1105,9 @@ protocol::Capabilities DAP::GetCapabilities() {
   }
 
   // Available filters or options for the setExceptionBreakpoints request.
+  PopulateExceptionBreakpoints();
   std::vector<protocol::ExceptionBreakpointsFilter> filters;
-  for (const auto &exc_bp : *exception_breakpoints)
+  for (const auto &exc_bp : exception_breakpoints)
     filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
   capabilities.exceptionBreakpointFilters = std::move(filters);
 
@@ -1240,7 +1229,10 @@ void DAP::EventThread() {
             // automatically restarted.
             if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
               SendStdOutStdErr(*this, process);
-              SendThreadStoppedEvent(*this);
+              if (llvm::Error err = SendThreadStoppedEvent(*this))
+                DAP_LOG_ERROR(log, std::move(err),
+                              "({1}) reporting thread stopped: {0}",
+                              transport.GetClientName());
             }
             break;
           case lldb::eStateRunning:
@@ -1292,15 +1284,7 @@ void DAP::EventThread() {
 
             llvm::StringRef reason;
             bool id_only = false;
-            if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded) {
-              modules.insert(module_id);
-              reason = "new";
-            } else {
-              // If this is a module we've never told the client about, don't
-              // send an event.
-              if (!modules.contains(module_id))
-                continue;
-
+            if (modules.contains(module_id)) {
               if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded) {
                 modules.erase(module_id);
                 reason = "removed";
@@ -1308,6 +1292,9 @@ void DAP::EventThread() {
               } else {
                 reason = "changed";
               }
+            } else {
+              modules.insert(module_id);
+              reason = "new";
             }
 
             llvm::json::Object body;
@@ -1367,6 +1354,89 @@ void DAP::EventThread() {
       }
     }
   }
+}
+
+std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
+    const protocol::Source &source,
+    const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints) {
+  std::vector<protocol::Breakpoint> response_breakpoints;
+  if (source.sourceReference) {
+    // Breakpoint set by assembly source.
+    auto &existing_breakpoints =
+        m_source_assembly_breakpoints[*source.sourceReference];
+    response_breakpoints =
+        SetSourceBreakpoints(source, breakpoints, existing_breakpoints);
+  } else {
+    // Breakpoint set by a regular source file.
+    const auto path = source.path.value_or("");
+    auto &existing_breakpoints = m_source_breakpoints[path];
+    response_breakpoints =
+        SetSourceBreakpoints(source, breakpoints, existing_breakpoints);
+  }
+
+  return response_breakpoints;
+}
+
+std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
+    const protocol::Source &source,
+    const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints,
+    SourceBreakpointMap &existing_breakpoints) {
+  std::vector<protocol::Breakpoint> response_breakpoints;
+
+  SourceBreakpointMap request_breakpoints;
+  if (breakpoints) {
+    for (const auto &bp : *breakpoints) {
+      SourceBreakpoint src_bp(*this, bp);
+      std::pair<uint32_t, uint32_t> bp_pos(src_bp.GetLine(),
+                                           src_bp.GetColumn());
+      request_breakpoints.try_emplace(bp_pos, src_bp);
+
+      const auto [iv, inserted] =
+          existing_breakpoints.try_emplace(bp_pos, src_bp);
+      // We check if this breakpoint already exists to update it.
+      if (inserted) {
+        if (llvm::Error error = iv->second.SetBreakpoint(source)) {
+          protocol::Breakpoint invalid_breakpoint;
+          invalid_breakpoint.message = llvm::toString(std::move(error));
+          invalid_breakpoint.verified = false;
+          response_breakpoints.push_back(std::move(invalid_breakpoint));
+          existing_breakpoints.erase(iv);
+          continue;
+        }
+      } else {
+        iv->second.UpdateBreakpoint(src_bp);
+      }
+
+      protocol::Breakpoint response_breakpoint =
+          iv->second.ToProtocolBreakpoint();
+      response_breakpoint.source = source;
+
+      if (!response_breakpoint.line &&
+          src_bp.GetLine() != LLDB_INVALID_LINE_NUMBER)
+        response_breakpoint.line = src_bp.GetLine();
+      if (!response_breakpoint.column &&
+          src_bp.GetColumn() != LLDB_INVALID_COLUMN_NUMBER)
+        response_breakpoint.column = src_bp.GetColumn();
+      response_breakpoints.push_back(std::move(response_breakpoint));
+    }
+  }
+
+  // Delete any breakpoints in this source file that aren't in the
+  // request_bps set. There is no call to remove breakpoints other than
+  // calling this function with a smaller or empty "breakpoints" list.
+  for (auto it = existing_breakpoints.begin();
+       it != existing_breakpoints.end();) {
+    auto request_pos = request_breakpoints.find(it->first);
+    if (request_pos == request_breakpoints.end()) {
+      // This breakpoint no longer exists in this source file, delete it
+      target.BreakpointDelete(it->second.GetID());
+      it = existing_breakpoints.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
+  return response_breakpoints;
 }
 
 void DAP::RegisterRequests() {

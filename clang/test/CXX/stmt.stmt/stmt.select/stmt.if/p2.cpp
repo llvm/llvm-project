@@ -208,6 +208,14 @@ void test() {
 
     }
 }
+
+void regression() {
+  if constexpr (false) {
+    auto lam = []() { return 0; };
+    1 | lam(); // expected-warning {{unused}}
+  }
+}
+
 }
 
 #endif
