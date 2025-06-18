@@ -7,7 +7,7 @@ define void @memcpy()  {
 ; CHECK-LABEL: define void @memcpy() local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALLOCA1:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    [[ALLOCA2:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    [[ALLOCA2:%.*]] = alloca [5 x i8], align 1
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @bar(ptr nonnull [[ALLOCA1]])
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @bar(ptr nonnull [[ALLOCA2]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(3) [[ALLOCA1]], ptr noundef nonnull align 1 dereferenceable(3) @.i8, i32 4, i1 false)

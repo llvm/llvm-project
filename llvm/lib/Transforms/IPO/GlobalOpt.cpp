@@ -2103,6 +2103,10 @@ static void widenDestArray(CallInst *CI, const unsigned NumBytesToPad,
     unsigned ElementByteWidth = SourceDataArray->getElementByteSize();
     unsigned int TotalBytes = NumBytesToCopy + NumBytesToPad;
     unsigned NumElementsToCopy = divideCeil(TotalBytes, ElementByteWidth);
+    // Don't change size if already wide enough.
+    if (Alloca->getAllocatedType()->getArrayNumElements() >= NumElementsToCopy)
+      return;
+
     // Update destination array to be word aligned (memcpy(X,...,...))
     IRBuilder<> BuildAlloca(Alloca);
     AllocaInst *NewAlloca = BuildAlloca.CreateAlloca(ArrayType::get(
