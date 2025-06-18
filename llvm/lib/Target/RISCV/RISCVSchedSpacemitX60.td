@@ -505,10 +505,12 @@ foreach mx = SchedMxList in {
 }
 
 // Widening
+// Pattern of vwmul, vwmacc, etc: e8/e16 = 4/4/5/8, e32 = 5,5,5,8
+// We use the worst-case for all.
 foreach mx = SchedMxListW in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
-  defvar WideLat = SMX60GetVIWideLatency<mx>.c;
 
+  defvar WideLat = SMX60GetVIWideLatency<mx>.c;
   let Latency = WideLat in {
     defm "" : LMULWriteResMX<"WriteVIWALUV",    [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIWALUX",    [SMX60_VIEU], mx, IsWorstCase>;
