@@ -248,6 +248,66 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
                                      });
         }
       }
+
+      // Only perform D16 folding if every user of the image sample is
+      // an ExtractElementInst immediately followed by an FPTrunc to half.
+      SmallVector<std::pair<ExtractElementInst *, FPTruncInst *>, 4>
+          ExtractTruncPairs;
+      bool AllHalfExtracts = true;
+
+      for (User *U : II.users()) {
+        auto *Ext = dyn_cast<ExtractElementInst>(U);
+        if (!Ext || !Ext->hasOneUse()) {
+          AllHalfExtracts = false;
+          break;
+        }
+
+        auto *Tr = dyn_cast<FPTruncInst>(*Ext->user_begin());
+        if (!Tr || !Tr->getType()->isHalfTy()) {
+          AllHalfExtracts = false;
+          break;
+        }
+
+        ExtractTruncPairs.emplace_back(Ext, Tr);
+      }
+
+      if (!ExtractTruncPairs.empty() && AllHalfExtracts) {
+        auto *VecTy = cast<VectorType>(II.getType());
+        Type *HalfVecTy =
+            VecTy->getWithNewType(Type::getHalfTy(II.getContext()));
+
+        // Obtain the original image sample intrinsic's signature
+        // and replace its return type with the half-vector for D16 folding
+        SmallVector<Type *, 8> SigTys;
+        Intrinsic::getIntrinsicSignature(II.getCalledFunction(), SigTys);
+        SigTys[0] = HalfVecTy;
+
+        Module *M = II.getModule();
+        Function *HalfDecl =
+            Intrinsic::getOrInsertDeclaration(M, ImageDimIntr->Intr, SigTys);
+
+        II.mutateType(HalfVecTy);
+        II.setCalledFunction(HalfDecl);
+
+        IRBuilder<> Builder(II.getContext());
+        for (auto &[Ext, Tr] : ExtractTruncPairs) {
+          Value *Idx = Ext->getIndexOperand();
+
+          Builder.SetInsertPoint(Tr);
+
+          Value *HalfExtract = Builder.CreateExtractElement(&II, Idx);
+          HalfExtract->takeName(Tr);
+
+          Tr->replaceAllUsesWith(HalfExtract);
+        }
+
+        for (auto &[Ext, Tr] : ExtractTruncPairs) {
+          IC.eraseInstFromFunction(*Tr);
+          IC.eraseInstFromFunction(*Ext);
+        }
+
+        return &II;
+      }
     }
   }
 
