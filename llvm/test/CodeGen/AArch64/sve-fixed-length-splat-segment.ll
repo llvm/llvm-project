@@ -6,9 +6,8 @@
 define void @concat_i8q_256(<16 x i8> %data, ptr %addr) #0 {
 ; CHECK-LABEL: concat_i8q_256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    splice z0.b, p0, z0.b, z0.b
+; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <16 x i8> %data, <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
@@ -20,9 +19,8 @@ define void @concat_i8q_256(<16 x i8> %data, ptr %addr) #0 {
 define void @concat_i16q_256(<8 x i16> %data, ptr %addr) #0 {
 ; CHECK-LABEL: concat_i16q_256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    splice z0.h, p0, z0.h, z0.h
+; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <8 x i16> poison, <8 x i16> %data, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
@@ -34,9 +32,8 @@ define void @concat_i16q_256(<8 x i16> %data, ptr %addr) #0 {
 define void @concat_i32q_256(<4 x i32> %data, ptr %addr) #0 {
 ; CHECK-LABEL: concat_i32q_256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z0.s
+; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <4 x i32> %data, <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3,
@@ -48,9 +45,8 @@ define void @concat_i32q_256(<4 x i32> %data, ptr %addr) #0 {
 define void @concat_i64q_256(<2 x i64> %data, ptr %addr) #0 {
 ; CHECK-LABEL: concat_i64q_256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    splice z0.d, p0, z0.d, z0.d
+; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <2 x i64> poison, <2 x i64> %data, <4 x i32> <i32 2, i32 3,
@@ -62,9 +58,8 @@ define void @concat_i64q_256(<2 x i64> %data, ptr %addr) #0 {
 define void @concat_f16q_256(<8 x half> %data, ptr %addr) #0 {
 ; CHECK-LABEL: concat_f16q_256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    splice z0.h, p0, z0.h, z0.h
+; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <8 x half> poison, <8 x half> %data, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
@@ -87,9 +82,8 @@ define void @concat_bf16q_256(<8 x bfloat> %data, ptr %addr) #0 {
 define void @concat_f32q_256(<4 x float> %data, ptr %addr) #0 {
 ; CHECK-LABEL: concat_f32q_256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z0.s
+; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <4 x float> %data, <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3,
@@ -101,9 +95,8 @@ define void @concat_f32q_256(<4 x float> %data, ptr %addr) #0 {
 define void @concat_f64q_256(<2 x double> %data, ptr %addr) #0 {
 ; CHECK-LABEL: concat_f64q_256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    splice z0.d, p0, z0.d, z0.d
+; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <2 x double> poison, <2 x double> %data, <4 x i32> <i32 2, i32 3,
@@ -117,9 +110,8 @@ define void @concat_f64q_256(<2 x double> %data, ptr %addr) #0 {
 define void @concat_i32q_512_with_256_vectors(<4 x i32> %data, ptr %addr) #0 {
 ; CHECK-LABEL: concat_i32q_512_with_256_vectors:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z0.s
+; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    str z0, [x0, #1, mul vl]
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
@@ -134,11 +126,8 @@ define void @concat_i32q_512_with_256_vectors(<4 x i32> %data, ptr %addr) #0 {
 define void @concat_i32q_512_with_512_vectors(<4 x i32> %data, ptr %addr) #1 {
 ; CHECK-LABEL: concat_i32q_512_with_512_vectors:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z0.s
-; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z0.s
+; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <4 x i32> %data, <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3,
