@@ -236,6 +236,7 @@ struct MissingFeatures {
   static bool runCleanupsScope() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
+  static bool asmLabelAttr() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
@@ -251,7 +252,6 @@ struct MissingFeatures {
   // Future CIR operations
   static bool awaitOp() { return false; }
   static bool callOp() { return false; }
-  static bool complexCreateOp() { return false; }
   static bool complexImagOp() { return false; }
   static bool complexRealOp() { return false; }
   static bool ifOp() { return false; }
