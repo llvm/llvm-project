@@ -273,10 +273,10 @@ static llvm::raw_ostream::Colors PrefixColor(Severity severity) {
   return llvm::raw_ostream::SAVEDCOLOR;
 }
 
-static std::string hintLanguageControlFlag(
-  const common::LanguageFeatureControl *hintFlagPtr, 
-  std::optional<common::LanguageFeature> feature,
-  std::optional<common::UsageWarning> warning) {
+static std::string HintLanguageControlFlag(
+    const common::LanguageFeatureControl *hintFlagPtr,
+    std::optional<common::LanguageFeature> feature,
+    std::optional<common::UsageWarning> warning) {
   if (hintFlagPtr) {
     std::string_view flag{""};
     if (warning) {
@@ -286,7 +286,6 @@ static std::string hintLanguageControlFlag(
     }
     if (!flag.empty()) {
       std::string s{" [-Wno-" + std::string(flag) + "]"};
-      llvm::errs() << "hint: " << s << "\n";
       return s;
     }
   }
@@ -300,8 +299,9 @@ void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
     bool echoSourceLine, const common::LanguageFeatureControl *hintFlagPtr) const {
   std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(allCooked)};
   const AllSources &sources{allCooked.allSources()};
-  std::string text{ToString()};
-  std::string hint{hintLanguageControlFlag(hintFlagPtr, languageFeature_, usageWarning_)};
+  const std::string text{ToString()};
+  const std::string hint{
+      HintLanguageControlFlag(hintFlagPtr, languageFeature_, usageWarning_)};
   sources.EmitMessage(o, provenanceRange, text + hint, Prefix(severity()),
       PrefixColor(severity()), echoSourceLine);
   // Refers to whether the attachment in the loop below is a context, but can't

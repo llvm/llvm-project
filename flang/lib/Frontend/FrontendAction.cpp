@@ -172,7 +172,7 @@ bool FrontendAction::runParse(bool emitMessages) {
     // Report any non-fatal diagnostics from getParsing now rather than
     // combining them with messages from semantics.
     bool echoSourceLine{true};
-    auto &features {ci.getInvocation().getFortranOpts().features};
+    const auto &features{ci.getInvocation().getFortranOpts().features};
     ci.getParsing().messages().Emit(llvm::errs(), ci.getAllCookedSources(), echoSourceLine, &features);
   }
   return true;
