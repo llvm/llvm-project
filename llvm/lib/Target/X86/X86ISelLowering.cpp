@@ -52084,36 +52084,14 @@ static SDValue canonicalizeBitSelect(SDNode *N, const SDLoc &DL,
   return DAG.getNode(ISD::OR, DL, VT, X, Y);
 }
 
-// Try to match OR(AND(~MASK,X),AND(MASK,Y)) logic pattern.
+// Try to match OR(ANDNP(MASK,X),AND(MASK,Y)) logic pattern.
+// TODO: Try to match OR(AND(~MASK,X),AND(MASK,Y)) logic pattern.
+// Waiting for ANDNP combine allows other combines to happen that prevent
+// matching.
 static bool matchLogicBlend(SDNode *N, SDValue &X, SDValue &Y, SDValue &Mask) {
-  if (N->getOpcode() != ISD::OR)
-    return false;
-
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
-  // Canonicalize AND to LHS.
-  if (N1.getOpcode() == ISD::AND)
-    std::swap(N0, N1);
-
-  // Attempt to match OR(AND(M,Y),ANDNP(M,X)).
-  if (N0.getOpcode() != ISD::AND || N1.getOpcode() != X86ISD::ANDNP)
-    return false;
-
-  Mask = N1.getOperand(0);
-  X = N1.getOperand(1);
-
-  // Check to see if the mask appeared in both the AND and ANDNP.
-  if (N0.getOperand(0) == Mask)
-    Y = N0.getOperand(1);
-  else if (N0.getOperand(1) == Mask)
-    Y = N0.getOperand(0);
-  else
-    return false;
-
-  // TODO: Attempt to match against AND(XOR(-1,M),Y) as well, waiting for
-  // ANDNP combine allows other combines to happen that prevent matching.
-  return true;
+  using namespace SDPatternMatch;
+  return sd_match(N, m_Or(m_BinOp(X86ISD::ANDNP, m_Value(Mask), m_Value(X)),
+                          m_And(m_Deferred(Mask), m_Value(Y))));
 }
 
 // Try to fold:
