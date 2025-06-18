@@ -1,4 +1,4 @@
-//===- TestConstantFold.cpp - Pass to test constant folding ---------------===//
+//===- TestSingleFold.cpp - Pass to test single-pass folding ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,14 +12,23 @@
 using namespace mlir;
 
 namespace {
-/// Simple constant folding pass.
-struct TestConstantFold : public PassWrapper<TestConstantFold, OperationPass<>>,
-                          public RewriterBase::Listener {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestConstantFold)
+/// Test pass for single-pass constant folding.
+/// 
+/// This pass tests the behavior of operations when folded exactly once. Unlike
+/// canonicalization passes that may apply multiple rounds of folding, this pass
+/// ensures that each operation is folded at most once, which is useful for
+/// testing scenarios where the fold implementation should handle complex cases
+/// without requiring multiple iterations.
+///
+/// The pass also removes dead constants after folding to clean up unused
+/// intermediate results.
+struct TestSingleFold : public PassWrapper<TestSingleFold, OperationPass<>>,
+                        public RewriterBase::Listener {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSingleFold)
 
-  StringRef getArgument() const final { return "test-constant-fold"; }
+  StringRef getArgument() const final { return "test-single-fold"; }
   StringRef getDescription() const final {
-    return "Test operation constant folding";
+    return "Test single-pass operation folding and dead constant elimination";
   }
   // All constants in the operation post folding.
   SmallVector<Operation *> existingConstants;
@@ -39,13 +48,13 @@ struct TestConstantFold : public PassWrapper<TestConstantFold, OperationPass<>>,
 };
 } // namespace
 
-void TestConstantFold::foldOperation(Operation *op, OperationFolder &helper) {
+void TestSingleFold::foldOperation(Operation *op, OperationFolder &helper) {
   // Attempt to fold the specified operation, including handling unused or
   // duplicated constants.
   (void)helper.tryToFold(op);
 }
 
-void TestConstantFold::runOnOperation() {
+void TestSingleFold::runOnOperation() {
   existingConstants.clear();
 
   // Collect and fold the operations within the operation.
@@ -70,6 +79,6 @@ void TestConstantFold::runOnOperation() {
 
 namespace mlir {
 namespace test {
-void registerTestConstantFold() { PassRegistration<TestConstantFold>(); }
+void registerTestSingleFold() { PassRegistration<TestSingleFold>(); }
 } // namespace test
 } // namespace mlir
