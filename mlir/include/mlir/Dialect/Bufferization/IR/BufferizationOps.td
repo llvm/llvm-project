@@ -461,11 +461,8 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
   let extraClassDeclaration = [{
     /// The result of a to_tensor is always a tensor.
-    TensorType getType() {
-      Type resultType = getResult().getType();
-      if (::llvm::isa<TensorType>(resultType))
-        return ::llvm::cast<TensorType>(resultType);
-      return {};
+    ::mlir::bufferization::TensorLikeType getType() {
+      return getResult().getType();
     }
 
     //===------------------------------------------------------------------===//
