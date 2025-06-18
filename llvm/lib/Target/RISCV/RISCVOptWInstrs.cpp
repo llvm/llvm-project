@@ -72,7 +72,7 @@ public:
   bool appendWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
                        const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
   bool convertZExtLoads(MachineFunction &MF, const RISCVInstrInfo &TII,
-                       const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
+                        const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -791,9 +791,9 @@ bool RISCVOptWInstrs::appendWSuffixes(MachineFunction &MF,
 }
 
 bool RISCVOptWInstrs::convertZExtLoads(MachineFunction &MF,
-                                      const RISCVInstrInfo &TII,
-                                      const RISCVSubtarget &ST,
-                                      MachineRegisterInfo &MRI) {
+                                       const RISCVInstrInfo &TII,
+                                       const RISCVSubtarget &ST,
+                                       MachineRegisterInfo &MRI) {
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
