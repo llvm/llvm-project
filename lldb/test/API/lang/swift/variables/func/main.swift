@@ -10,13 +10,12 @@
 //
 // -----------------------------------------------------------------------------
 func bar() {
-    print ("bar()")
+    print("bar()")
 }
 
-func main() -> Int {
+func main(_ c : (@convention(thin) () -> ())) {
     var func_ptr = bar
-    func_ptr(); // Set breakpoint here
-    return 0
+    func_ptr() // Set breakpoint here
 }
 
-main()
+main() {}
