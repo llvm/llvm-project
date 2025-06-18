@@ -609,7 +609,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     };
     static RTLibCallMapping RTLibCallCommon[] = {
 #define HANDLE_LIBCALL(code, name) {RTLIB::code, name},
-#include "ZOSLibcallNames.def"
+#include "llvm/IR/ZOSLibcallNames.def"
     };
     for (auto &E : RTLibCallCommon)
       setLibcallName(E.Code, E.Name);
