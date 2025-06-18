@@ -628,7 +628,7 @@ FUNCTION_PASS_WITH_PARAMS(
     [](SROAOptions PreserveCFG) { return SROAPass(PreserveCFG); },
     parseSROAOptions, "preserve-cfg;modify-cfg")
 FUNCTION_PASS_WITH_PARAMS(
-  "structurizecfg", "StructurizeCFG",
+  "structurize-cfg", "StructurizeCFGPass",
   [](bool SkipUniformRegions) {
     return StructurizeCFGPass(SkipUniformRegions);
   },
