@@ -1363,9 +1363,7 @@ private:
                                      BlockInfo *LiveSet);
   void processDbgAssign(AssignRecord Assign, BlockInfo *LiveSet);
   void processDbgVariableRecord(DbgVariableRecord &DVR, BlockInfo *LiveSet);
-  void processDbgValue(
-      PointerUnion<DbgValueInst *, DbgVariableRecord *> DbgValueRecord,
-      BlockInfo *LiveSet);
+  void processDbgValue(DbgVariableRecord *DbgValue, BlockInfo *LiveSet);
   /// Add an assignment to memory for the variable /p Var.
   void addMemDef(BlockInfo *LiveSet, VariableID Var, const Assignment &AV);
   /// Add an assignment to the variable /p Var.
@@ -1868,35 +1866,29 @@ void AssignmentTrackingLowering::processDbgAssign(AssignRecord Assign,
   return ProcessDbgAssignImpl(cast<DbgAssignIntrinsic *>(Assign));
 }
 
-void AssignmentTrackingLowering::processDbgValue(
-    PointerUnion<DbgValueInst *, DbgVariableRecord *> DbgValueRecord,
-    BlockInfo *LiveSet) {
-  auto ProcessDbgValueImpl = [&](auto *DbgValue) {
-    // Only other tracking variables that are at some point stack homed.
-    // Other variables can be dealt with trivally later.
-    if (!VarsWithStackSlot->count(getAggregate(DbgValue)))
-      return;
+void AssignmentTrackingLowering::processDbgValue(DbgVariableRecord *DbgValue,
+                                                 BlockInfo *LiveSet) {
+  // Only other tracking variables that are at some point stack homed.
+  // Other variables can be dealt with trivally later.
+  if (!VarsWithStackSlot->count(getAggregate(DbgValue)))
+    return;
 
-    VariableID Var = getVariableID(DebugVariable(DbgValue));
-    // We have no ID to create an Assignment with so we mark this assignment as
-    // NoneOrPhi. Note that the dbg.value still exists, we just cannot determine
-    // the assignment responsible for setting this value.
-    // This is fine; dbg.values are essentially interchangable with unlinked
-    // dbg.assigns, and some passes such as mem2reg and instcombine add them to
-    // PHIs for promoted variables.
-    Assignment AV = Assignment::makeNoneOrPhi();
-    addDbgDef(LiveSet, Var, AV);
+  VariableID Var = getVariableID(DebugVariable(DbgValue));
+  // We have no ID to create an Assignment with so we mark this assignment as
+  // NoneOrPhi. Note that the dbg.value still exists, we just cannot determine
+  // the assignment responsible for setting this value.
+  // This is fine; dbg.values are essentially interchangable with unlinked
+  // dbg.assigns, and some passes such as mem2reg and instcombine add them to
+  // PHIs for promoted variables.
+  Assignment AV = Assignment::makeNoneOrPhi();
+  addDbgDef(LiveSet, Var, AV);
 
-    LLVM_DEBUG(dbgs() << "processDbgValue on " << *DbgValue << "\n";);
-    LLVM_DEBUG(dbgs() << "   LiveLoc " << locStr(getLocKind(LiveSet, Var))
-                      << " -> Val, dbg.value override");
+  LLVM_DEBUG(dbgs() << "processDbgValue on " << *DbgValue << "\n";);
+  LLVM_DEBUG(dbgs() << "   LiveLoc " << locStr(getLocKind(LiveSet, Var))
+                    << " -> Val, dbg.value override");
 
-    setLocKind(LiveSet, Var, LocKind::Val);
-    emitDbgValue(LocKind::Val, DbgValue, DbgValue);
-  };
-  if (isa<DbgVariableRecord *>(DbgValueRecord))
-    return ProcessDbgValueImpl(cast<DbgVariableRecord *>(DbgValueRecord));
-  return ProcessDbgValueImpl(cast<DbgValueInst *>(DbgValueRecord));
+  setLocKind(LiveSet, Var, LocKind::Val);
+  emitDbgValue(LocKind::Val, DbgValue, DbgValue);
 }
 
 template <typename T> static bool hasZeroSizedFragment(T &DbgValue) {
