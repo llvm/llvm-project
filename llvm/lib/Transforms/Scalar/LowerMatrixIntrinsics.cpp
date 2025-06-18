@@ -2265,24 +2265,21 @@ public:
   }
 
   MatrixTy VisitPHI(PHINode *Inst, const ShapeInfo &SI, IRBuilder<> &Builder) {
-    // Shim this->getMatrix to adjust where it creates new instructions, which
-    // it may need to insert for re-shaping.
-    auto GetMatrix = [this, &Builder, SI, Inst](Value *MatrixVal) -> MatrixTy {
-      IRBuilder<>::InsertPointGuard IPG(Builder);
-      if (auto *MatrixInst = dyn_cast<Instruction>(MatrixVal)) {
-        if (auto MaybeIP = MatrixInst->getInsertionPointAfterDef())
-          Builder.SetInsertPoint(*MaybeIP);
-      } else if (auto MaybeIP = Inst->getInsertionPointAfterDef())
-        Builder.SetInsertPoint(*MaybeIP);
-
-      return this->getMatrix(MatrixVal, SI, Builder);
-    };
-
-    MatrixTy PhiM = GetMatrix(Inst);
+    auto BlockIP = Inst->getParent()->getFirstInsertionPt();
+    Builder.SetInsertPoint(BlockIP);
+    MatrixTy PhiM = getMatrix(Inst, SI, Builder);
 
     for (auto [IncomingV, IncomingB] :
          llvm::zip_equal(Inst->incoming_values(), Inst->blocks())) {
-      MatrixTy OpM = GetMatrix(IncomingV);
+      // getMatrix() may insert some instructions to help with reshaping. The
+      // safest place for those is at the top of the block after the rest of the
+      // PHI's. Even better, if we can put it in the incoming block.
+      Builder.SetInsertPoint(BlockIP);
+      if (auto *IncomingInst = dyn_cast<Instruction>(IncomingV))
+        if (auto MaybeIP = IncomingInst->getInsertionPointAfterDef())
+          Builder.SetInsertPoint(*MaybeIP);
+
+      MatrixTy OpM = getMatrix(IncomingV, SI, Builder);
 
       for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI) {
         PHINode *NewPHI = cast<PHINode>(PhiM.getVector(VI));
@@ -2292,7 +2289,7 @@ public:
 
     // finalizeLowering() may also insert instructions in some cases. The safe
     // place for those is at the end of the initial block of PHIs.
-    Builder.SetInsertPoint(Inst->getParent()->getFirstInsertionPt());
+    Builder.SetInsertPoint(BlockIP);
     return PhiM;
   }
 
