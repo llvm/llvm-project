@@ -3455,6 +3455,7 @@ def NVVM_Tcgen05MmaSmemDescOp : NVVM_Op<"tcgen05.mma_smem_desc", []> {
     properties of multiplicand matrix in shared memory including its location
     in the shared memory of the current CTA.
 
+    ```
     +-----------+------+------------------------------------------------------+
     | Bit-field | Size | Description                                          |
     +-----------+------+------------------------------------------------------+
@@ -3477,6 +3478,7 @@ def NVVM_Tcgen05MmaSmemDescOp : NVVM_Op<"tcgen05.mma_smem_desc", []> {
     |           |      |   6: 32-Byte swizzling                               |
     |           |      |   (Values 3, 5 and 7 are invalid)                    |
     +-----------+------+------------------------------------------------------+    
+    ```
 
     Example:
     ```mlir
@@ -3578,7 +3580,8 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
     elements from adjacent columns into a single 32-bit element during the load.
 
     The following table describes the size of the vector for various combinations
-    of `num` and `shape` attributes
+    of `num` and `shape` attributes:
+    ```
     |=====================================================================|
     | num/shape      |     16x32bx2/16x64b/32x32b |  16x128b   | 16x256b  |
     |=====================================================================|
@@ -3591,6 +3594,7 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
     | x64            |          64                |    128     |    NA    |
     | x128           |          128               |    NA      |    NA    |
     |=====================================================================|
+    ```
 
     Example:
     ```mlir
@@ -3666,7 +3670,8 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
     in the register into two 16-bit elements and store them in adjacent columns.
 
     The following table describes the size of the vector for various combinations
-    of `num` and `shape` attributes
+    of `num` and `shape` attributes:
+    ```
     |=====================================================================|
     | num/shape      |     16x32bx2/16x64b/32x32b |  16x128b   | 16x256b  |
     |=====================================================================|
@@ -3679,6 +3684,7 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
     | x64            |          64                |    128     |    NA    |
     | x128           |          128               |    NA      |    NA    |
     |=====================================================================|
+    ```
 
     Example:
     ```mlir
