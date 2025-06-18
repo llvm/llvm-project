@@ -18,6 +18,28 @@ static cl::opt<bool>
 
 static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
                                    const Triple &TT) {
+#define LCALLNAMES(A, B, N)                                                    \
+  Info.setLibcallName(A##N##_RELAX, #B #N "_relax");                           \
+  Info.setLibcallName(A##N##_ACQ, #B #N "_acq");                               \
+  Info.setLibcallName(A##N##_REL, #B #N "_rel");                               \
+  Info.setLibcallName(A##N##_ACQ_REL, #B #N "_acq_rel");
+#define LCALLNAME4(A, B)                                                       \
+  LCALLNAMES(A, B, 1)                                                          \
+  LCALLNAMES(A, B, 2) LCALLNAMES(A, B, 4) LCALLNAMES(A, B, 8)
+#define LCALLNAME5(A, B)                                                       \
+  LCALLNAMES(A, B, 1)                                                          \
+  LCALLNAMES(A, B, 2)                                                          \
+  LCALLNAMES(A, B, 4) LCALLNAMES(A, B, 8) LCALLNAMES(A, B, 16)
+  LCALLNAME5(RTLIB::OUTLINE_ATOMIC_CAS, __aarch64_cas)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_SWP, __aarch64_swp)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDADD, __aarch64_ldadd)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, __aarch64_ldset)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, __aarch64_ldclr)
+  LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, __aarch64_ldeor)
+#undef LCALLNAMES
+#undef LCALLNAME4
+#undef LCALLNAME5
+
   if (TT.isWindowsArm64EC()) {
     // FIXME: are there calls we need to exclude from this?
 #define HANDLE_LIBCALL(code, name)                                             \
@@ -520,7 +542,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     }
   }
 
-  if (TT.getArch() == Triple::ArchType::aarch64)
+  if (TT.isAArch64())
     setAArch64LibcallNames(*this, TT);
   else if (TT.isARM() || TT.isThumb())
     setARMLibcallNames(*this, TT);
