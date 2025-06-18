@@ -373,6 +373,25 @@ struct LazySpecializationInfoLookupTable;
 
 } // namespace serialization
 
+struct VisibleLookupBlockOffsets {
+  uint64_t VisibleOffset = 0;
+  uint64_t ModuleLocalOffset = 0;
+  uint64_t TULocalOffset = 0;
+
+  operator bool() const {
+    return VisibleOffset || ModuleLocalOffset || // ModuleUnitLocalOffset ||
+           TULocalOffset;
+  }
+};
+
+struct LookupBlockOffsets : VisibleLookupBlockOffsets {
+  uint64_t LexicalOffset = 0;
+
+  operator bool() const {
+    return VisibleLookupBlockOffsets::operator bool() || LexicalOffset;
+  }
+};
+
 /// Reads an AST files chain containing the contents of a translation
 /// unit.
 ///
@@ -534,13 +553,6 @@ private:
   /// Declarations that have modifications residing in a later file
   /// in the chain.
   DeclUpdateOffsetsMap DeclUpdateOffsets;
-
-  struct LookupBlockOffsets {
-    uint64_t LexicalOffset;
-    uint64_t VisibleOffset;
-    uint64_t ModuleLocalOffset;
-    uint64_t TULocalOffset;
-  };
 
   using DelayedNamespaceOffsetMapTy =
       llvm::DenseMap<GlobalDeclID, LookupBlockOffsets>;
