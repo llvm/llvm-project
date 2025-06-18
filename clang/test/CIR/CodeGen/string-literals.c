@@ -5,6 +5,18 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-android21 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
+char g_str[] = "1234";
+
+// CIR: cir.global external @g_str = #cir.const_array<"1234\00" : !cir.array<!s8i x 5>> : !cir.array<!s8i x 5>
+
+char g_oversized[100] = "123";
+
+// CIR: cir.global external @g_oversized = #cir.const_array<"123" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 100>
+
+char g_exact[4] = "123";
+
+// CIR: cir.global external @g_exact = #cir.const_array<"123\00" : !cir.array<!s8i x 4>> : !cir.array<!s8i x 4>
+
 // CIR: cir.global "private" cir_private dsolocal @[[STR1_GLOBAL:.*]] = #cir.const_array<"1\00" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2>
 // CIR: cir.global "private" cir_private dsolocal @[[STR2_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 1>
 // CIR: cir.global "private" cir_private dsolocal @[[STR3_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 2>
