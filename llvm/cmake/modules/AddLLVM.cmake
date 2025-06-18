@@ -2192,7 +2192,7 @@ endfunction()
 
 function(add_lit_testsuites project directory)
   if (NOT LLVM_ENABLE_IDE)
-    cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "FOLDER" "PARAMS;DEPENDS;ARGS" ${ARGN})
+    cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "FOLDER;BINARY_DIR" "PARAMS;DEPENDS;ARGS" ${ARGN})
 
     if (NOT ARG_FOLDER)
       get_subproject_title(subproject_title)
@@ -2213,13 +2213,18 @@ function(add_lit_testsuites project directory)
       endif()
 
       # Create a check- target for the directory.
-      string(REPLACE ${directory} "" name_slash ${lit_suite})
+      string(REPLACE "${directory}/" "" name_slash ${lit_suite})
       if (name_slash)
+        set(filter ${name_slash})
         string(REPLACE "/" "-" name_slash ${name_slash})
         string(REPLACE "\\" "-" name_dashes ${name_slash})
-        string(TOLOWER "${project}${name_dashes}" name_var)
+        string(TOLOWER "${project}-${name_dashes}" name_var)
+        set(lit_args ${lit_suite})
+        if (ARG_BINARY_DIR)
+          set(lit_args ${ARG_BINARY_DIR} --filter=${filter})
+        endif()
         add_lit_target("check-${name_var}" "Running lit suite ${lit_suite}"
-          ${lit_suite}
+          ${lit_args}
           ${EXCLUDE_FROM_CHECK_ALL}
           PARAMS ${ARG_PARAMS}
           DEPENDS ${ARG_DEPENDS}
