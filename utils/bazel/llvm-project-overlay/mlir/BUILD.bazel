@@ -323,7 +323,6 @@ cc_library(
     ]) + [
         "include/mlir/IR/OpAsmOpInterface.h.inc",
         "include/mlir/IR/PDLPatternMatch.h.inc",
-        "include/mlir/Interfaces/CallInterfaces.h",
         "include/mlir/Interfaces/DataLayoutInterfaces.h",
         "include/mlir/Interfaces/InferIntRangeInterface.h",
         "include/mlir/Interfaces/SideEffectInterfaces.h",
@@ -332,6 +331,7 @@ cc_library(
         "include/mlir/IR/*.h",
     ]) + [
         "include/mlir/Interfaces/FoldInterfaces.h",
+        "include/mlir/Interfaces/CallInterfaces.h",
     ],
     includes = ["include"],
     deps = [
@@ -1650,6 +1650,7 @@ td_library(
     srcs = [
         "include/mlir/Dialect/EmitC/IR/EmitC.td",
         "include/mlir/Dialect/EmitC/IR/EmitCAttributes.td",
+        "include/mlir/Dialect/EmitC/IR/EmitCInterfaces.td",
         "include/mlir/Dialect/EmitC/IR/EmitCBase.td",
         "include/mlir/Dialect/EmitC/IR/EmitCTypes.td",
     ],
@@ -1663,6 +1664,17 @@ td_library(
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "EmitCInterfacesIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/EmitC/IR/EmitCInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/EmitC/IR/EmitCInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/EmitC/IR/EmitCInterfaces.td",
+    deps = [":EmitCTdFiles"],
 )
 
 gentbl_cc_library(
@@ -3679,6 +3691,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":CastInterfaces",
         ":ControlFlowInterfaces",
+        ":EmitCInterfacesIncGen",
         ":EmitCAttributesIncGen",
         ":EmitCOpsIncGen",
         ":FunctionInterfaces",
