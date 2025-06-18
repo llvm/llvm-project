@@ -523,11 +523,15 @@ foreach mx = SchedMxListW in {
 }
 
 // Simple division and remainder operations
+// Pattern of vdiu: 11/11/11
+// Pattern of vdiv: 12/12/12
+// Pattern of vremu: 12/12/12
+// Pattern of vrem: 13/13/13
 foreach mx = ["MF8", "MF4", "MF2"] in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
-    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
+    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
     let Latency = 12 in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivV", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivX", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
@@ -536,11 +540,16 @@ foreach mx = ["MF8", "MF4", "MF2"] in {
 }
 
 // Complex division and remainder operations
+// Pattern of vdiu: 20/40/80/160
+// Pattern of vdiv: 22/44/88/176
+// Pattern of vremu: 22/44/88/176
+// Pattern of vrem: 24/48/96/192
+// TODO: Create separate WriteVIRem to more closely match the latencies
 foreach mx = ["M1", "M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
-    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
+    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
     let Latency = !mul(LMulLat, 24) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivV", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivX", [SMX60_VIEU, SMX60_VFP], mx, sew, IsWorstCase>;
