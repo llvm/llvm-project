@@ -1190,12 +1190,12 @@ TEST(RootSignature, ParseStaticSamplers) {
     ASSERT_EQ(Sampler.AddressU, 1u);
     ASSERT_EQ(Sampler.AddressV, 2u);
     ASSERT_EQ(Sampler.AddressW, 5u);
-    ASSERT_FLOAT_EQ(Sampler.MipLODBias, 1.23);
+    ASSERT_FLOAT_EQ(Sampler.MipLODBias, 1.23f);
     ASSERT_EQ(Sampler.MaxAnisotropy, 20u);
     ASSERT_EQ(Sampler.ComparisonFunc, 4u);
     ASSERT_EQ(Sampler.BorderColor, 0u);
-    ASSERT_FLOAT_EQ(Sampler.MinLOD, 4.56);
-    ASSERT_FLOAT_EQ(Sampler.MaxLOD, 8.9);
+    ASSERT_FLOAT_EQ(Sampler.MinLOD, 4.56f);
+    ASSERT_FLOAT_EQ(Sampler.MaxLOD, 8.9f);
     ASSERT_EQ(Sampler.ShaderRegister, 31u);
     ASSERT_EQ(Sampler.RegisterSpace, 32u);
     ASSERT_EQ(Sampler.ShaderVisibility, 7u);

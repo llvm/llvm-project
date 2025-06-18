@@ -209,7 +209,7 @@
 #define LLVM_ABI_FRIEND LLVM_ABI
 #define LLVM_ABI_EXPORT __declspec(dllexport)
 #elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
-    defined(__MVS__)
+    defined(__MVS__) || defined(__CYGWIN__)
 #define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_ABI_FRIEND
 #define LLVM_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
@@ -236,6 +236,12 @@
 #define LLVM_PREFETCH(addr, rw, locality) __builtin_prefetch(addr, rw, locality)
 #else
 #define LLVM_PREFETCH(addr, rw, locality)
+#endif
+
+#if __has_attribute(uninitialized)
+#define LLVM_ATTRIBUTE_UNINITIALIZED __attribute__((uninitialized))
+#else
+#define LLVM_ATTRIBUTE_UNINITIALIZED
 #endif
 
 #if __has_attribute(used)

@@ -5553,6 +5553,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
   case ISD::SPLAT_VECTOR:
+  case ISD::VSELECT:
     return false;
 
   case ISD::SELECT_CC:
@@ -5579,6 +5580,12 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::ADD:
   case ISD::SUB:
   case ISD::MUL:
+  case ISD::FNEG:
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+  case ISD::FDIV:
+  case ISD::FREM:
     // No poison except from flags (which is handled above)
     return false;
 
@@ -7370,6 +7377,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if ((Opcode == ISD::ADD || Opcode == ISD::SUB) &&
         VT.getScalarType() == MVT::i1)
       return getNode(ISD::XOR, DL, VT, N1, N2);
+    // Fold (add (vscale * C0), (vscale * C1)) to (vscale * (C0 + C1)).
+    if (Opcode == ISD::ADD && N1.getOpcode() == ISD::VSCALE &&
+        N2.getOpcode() == ISD::VSCALE) {
+      const APInt &C1 = N1->getConstantOperandAPInt(0);
+      const APInt &C2 = N2->getConstantOperandAPInt(0);
+      return getVScale(DL, VT, C1 + C2);
+    }
     break;
   case ISD::MUL:
     assert(VT.isInteger() && "This operator does not apply to FP types!");
@@ -7890,7 +7904,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
   case ISD::INSERT_VECTOR_ELT: {
-    ConstantSDNode *N3C = dyn_cast<ConstantSDNode>(N3);
+    assert(VT.isVector() && VT == N1.getValueType() &&
+           "INSERT_VECTOR_ELT vector type mismatch");
+    assert(VT.isFloatingPoint() == N2.getValueType().isFloatingPoint() &&
+           "INSERT_VECTOR_ELT scalar fp/int mismatch");
+    assert((!VT.isFloatingPoint() ||
+            VT.getVectorElementType() == N2.getValueType()) &&
+           "INSERT_VECTOR_ELT fp scalar type mismatch");
+    assert((!VT.isInteger() ||
+            VT.getScalarSizeInBits() <= N2.getScalarValueSizeInBits()) &&
+           "INSERT_VECTOR_ELT int scalar size mismatch");
+
+    auto *N3C = dyn_cast<ConstantSDNode>(N3);
     // INSERT_VECTOR_ELT into out-of-bounds element is an UNDEF, except
     // for scalable vectors where we will generate appropriate code to
     // deal with out-of-bounds cases correctly.
@@ -7975,7 +8000,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
   case ISD::PARTIAL_REDUCE_UMLA:
-  case ISD::PARTIAL_REDUCE_SMLA: {
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA: {
     [[maybe_unused]] EVT AccVT = N1.getValueType();
     [[maybe_unused]] EVT Input1VT = N2.getValueType();
     [[maybe_unused]] EVT Input2VT = N3.getValueType();

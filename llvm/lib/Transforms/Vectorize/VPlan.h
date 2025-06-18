@@ -320,6 +320,20 @@ public:
     std::swap(Successors[0], Successors[1]);
   }
 
+  /// Returns the index for \p Pred in the blocks predecessors list.
+  unsigned getIndexForPredecessor(const VPBlockBase *Pred) const {
+    assert(count(Predecessors, Pred) == 1 &&
+           "must have Pred exactly once in Predecessors");
+    return std::distance(Predecessors.begin(), find(Predecessors, Pred));
+  }
+
+  /// Returns the index for \p Succ in the blocks successor list.
+  unsigned getIndexForSuccessor(const VPBlockBase *Succ) const {
+    assert(count(Successors, Succ) == 1 &&
+           "must have Succ exactly once in Successors");
+    return std::distance(Successors.begin(), find(Successors, Succ));
+  }
+
   /// The method which generates the output IR that correspond to this
   /// VPBlockBase, thereby "executing" the VPlan.
   virtual void execute(VPTransformState *State) = 0;
@@ -868,11 +882,40 @@ protected:
   unsigned getUnrollPart(VPUser &U) const;
 };
 
+/// Helper to manage IR metadata for recipes. It filters out metadata that
+/// cannot be propagated.
+class VPIRMetadata {
+  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+
+public:
+  VPIRMetadata() {}
+
+  /// Adds metatadata that can be preserved from the original instruction
+  /// \p I.
+  VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
+
+  /// Adds metatadata that can be preserved from the original instruction
+  /// \p I and noalias metadata guaranteed by runtime checks using \p LVer.
+  VPIRMetadata(Instruction &I, LoopVersioning *LVer);
+
+  /// Copy constructor for cloning.
+  VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
+
+  /// Add all metadata to \p I.
+  void applyMetadata(Instruction &I) const;
+
+  /// Add metadata with kind \p Kind and \p Node.
+  void addMetadata(unsigned Kind, MDNode *Node) {
+    Metadata.emplace_back(Kind, Node);
+  }
+};
+
 /// This is a concrete Recipe that models a single VPlan-level instruction.
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
 /// the VPInstruction is also a single def-use vertex.
 class VPInstruction : public VPRecipeWithIRFlags,
+                      public VPIRMetadata,
                       public VPUnrollPartAccessor<1> {
   friend class VPlanSlp;
 
@@ -893,6 +936,7 @@ public:
     BranchOnCount,
     BranchOnCond,
     Broadcast,
+    ComputeAnyOfResult,
     ComputeFindLastIVResult,
     ComputeReductionResult,
     // Extracts the last lane from its operand if it is a vector, or the last
@@ -919,6 +963,10 @@ public:
     /// Scale the first operand (vector step) by the second operand
     /// (scalar-step).  Casts both operands to the result type if needed.
     WideIVStep,
+    /// Start vector for reductions with 3 operands: the original start value,
+    /// the identity value for the reduction and an integer indicating the
+    /// scaling factor.
+    ReductionStartVector,
     // Creates a step vector starting from 0 to VF with a step of 1.
     StepVector,
 
@@ -957,7 +1005,7 @@ public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL = {},
                 const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
-        Opcode(Opcode), Name(Name.str()) {}
+        VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags, DebugLoc DL = {},
@@ -1122,6 +1170,10 @@ public:
     return getAsRecipe()->getNumOperands();
   }
 
+  /// Removes the incoming value for \p IncomingBlock, which must be a
+  /// predecessor.
+  void removeIncomingValueFor(VPBlockBase *IncomingBlock) const;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void printPhiOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
@@ -1243,29 +1295,6 @@ struct VPIRPhi : public VPIRInstruction, public VPPhiAccessors {
 
 protected:
   const VPRecipeBase *getAsRecipe() const override { return this; }
-};
-
-/// Helper to manage IR metadata for recipes. It filters out metadata that
-/// cannot be propagated.
-class VPIRMetadata {
-  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
-
-public:
-  VPIRMetadata() {}
-
-  /// Adds metatadata that can be preserved from the original instruction
-  /// \p I.
-  VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
-
-  /// Adds metatadata that can be preserved from the original instruction
-  /// \p I and noalias metadata guaranteed by runtime checks using \p LVer.
-  VPIRMetadata(Instruction &I, LoopVersioning *LVer);
-
-  /// Copy constructor for cloning.
-  VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
-
-  /// Add all metadata to \p I.
-  void applyMetadata(Instruction &I) const;
 };
 
 /// VPWidenRecipe is a recipe for producing a widened instruction using the
@@ -1424,10 +1453,9 @@ public:
   VPWidenIntrinsicRecipe *clone() override {
     if (Value *CI = getUnderlyingValue())
       return new VPWidenIntrinsicRecipe(*cast<CallInst>(CI), VectorIntrinsicID,
-                                        {op_begin(), op_end()}, ResultTy,
-                                        getDebugLoc());
-    return new VPWidenIntrinsicRecipe(VectorIntrinsicID, {op_begin(), op_end()},
-                                      ResultTy, getDebugLoc());
+                                        operands(), ResultTy, getDebugLoc());
+    return new VPWidenIntrinsicRecipe(VectorIntrinsicID, operands(), ResultTy,
+                                      getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntrinsicSC)
@@ -1487,8 +1515,8 @@ public:
   ~VPWidenCallRecipe() override = default;
 
   VPWidenCallRecipe *clone() override {
-    return new VPWidenCallRecipe(getUnderlyingValue(), Variant,
-                                 {op_begin(), op_end()}, getDebugLoc());
+    return new VPWidenCallRecipe(getUnderlyingValue(), Variant, operands(),
+                                 getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)
@@ -1504,11 +1532,9 @@ public:
     return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
   }
 
-  operand_range arg_operands() {
-    return make_range(op_begin(), op_begin() + getNumOperands() - 1);
-  }
-  const_operand_range arg_operands() const {
-    return make_range(op_begin(), op_begin() + getNumOperands() - 1);
+  operand_range args() { return make_range(op_begin(), std::prev(op_end())); }
+  const_operand_range args() const {
+    return make_range(op_begin(), std::prev(op_end()));
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1796,9 +1822,9 @@ public:
 class VPHeaderPHIRecipe : public VPSingleDefRecipe, public VPPhiAccessors {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
-                    VPValue *Start, DebugLoc DL = {})
-      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}), UnderlyingInstr, DL) {
-  }
+                    VPValue *Start, DebugLoc DL = DebugLoc::getUnknown())
+      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}),
+                          UnderlyingInstr, DL) {}
 
   const VPRecipeBase *getAsRecipe() const override { return this; }
 
@@ -1925,12 +1951,13 @@ public:
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
-/// producing their vector values.
+/// producing their vector values. This is an abstract recipe and must be
+/// converted to concrete recipes before executing.
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
   // If this recipe is unrolled it will have 2 additional operands.
-  bool isUnrolled() const { return getNumOperands() == 6; }
+  bool isUnrolled() const { return getNumOperands() == 5; }
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
@@ -1966,9 +1993,10 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
 
-  /// Generate the vectorized and scalarized versions of the phi node as
-  /// needed by their users.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("cannot execute this recipe, should be expanded via "
+                     "expandVPWidenIntOrFpInductionRecipe");
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1978,16 +2006,6 @@ public:
 
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
-
-  // TODO: Remove once VPWidenIntOrFpInduction is fully expanded in
-  // convertToConcreteRecipes.
-  VPInstructionWithType *getStepVector() {
-    auto *StepVector =
-        cast<VPInstructionWithType>(getOperand(3)->getDefiningRecipe());
-    assert(StepVector->getOpcode() == VPInstruction::StepVector &&
-           "step vector operand must be a VPInstruction::StepVector");
-    return StepVector;
-  }
 
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled return the VPValue for the induction
@@ -2094,7 +2112,7 @@ public:
   VPWidenPHIRecipe *clone() override {
     auto *C = new VPWidenPHIRecipe(cast<PHINode>(getUnderlyingValue()),
                                    getOperand(0), getDebugLoc(), Name);
-    for (VPValue *Op : make_range(std::next(op_begin()), op_end()))
+    for (VPValue *Op : llvm::drop_begin(operands()))
       C->addOperand(Op);
     return C;
   }
@@ -2215,7 +2233,7 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return Op == getStartValue();
+    return isOrdered() || isInLoop();
   }
 };
 
@@ -3534,14 +3552,13 @@ template <> struct CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
 };
 /// Support casting from VPRecipeBase -> VPPhiAccessors, by down-casting to the
 /// recipe types implementing VPPhiAccessors. Used by cast<>, dyn_cast<> & co.
-template <>
-struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
-    : public CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
+template <typename SrcTy>
+struct CastInfoVPPhiAccessors : public CastIsPossible<VPPhiAccessors, SrcTy> {
 
-  using Self = CastInfo<VPPhiAccessors, const VPRecipeBase *>;
+  using Self = CastInfo<VPPhiAccessors, SrcTy>;
 
   /// doCast is used by cast<>.
-  static inline VPPhiAccessors *doCast(const VPRecipeBase *R) {
+  static inline VPPhiAccessors *doCast(SrcTy R) {
     return const_cast<VPPhiAccessors *>([R]() -> const VPPhiAccessors * {
       switch (R->getVPDefID()) {
       case VPDef::VPInstructionSC:
@@ -3557,12 +3574,18 @@ struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
   }
 
   /// doCastIfPossible is used by dyn_cast<>.
-  static inline VPPhiAccessors *doCastIfPossible(const VPRecipeBase *f) {
+  static inline VPPhiAccessors *doCastIfPossible(SrcTy f) {
     if (!Self::isPossible(f))
       return nullptr;
     return doCast(f);
   }
 };
+template <>
+struct CastInfo<VPPhiAccessors, VPRecipeBase *>
+    : CastInfoVPPhiAccessors<VPRecipeBase *> {};
+template <>
+struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
+    : CastInfoVPPhiAccessors<const VPRecipeBase *> {};
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of

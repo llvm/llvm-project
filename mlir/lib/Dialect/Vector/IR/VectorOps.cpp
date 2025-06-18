@@ -33,6 +33,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
@@ -2387,9 +2388,129 @@ static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
   return success();
 }
 
+/// Rewrite from_elements on multiple scalar extracts as a shape_cast
+/// on a single extract. Example:
+///   %0 = vector.extract %source[0, 0] : i8 from vector<2x2xi8>
+///   %1 = vector.extract %source[0, 1] : i8 from vector<2x2xi8>
+///   %2 = vector.from_elements %0, %1 : vector<2xi8>
+///
+/// becomes
+///   %1 = vector.extract %source[0] : vector<1x2xi8> from vector<2x2xi8>
+///   %2 = vector.shape_cast %1 : vector<1x2xi8> to vector<2xi8>
+///
+/// The requirements for this to be valid are
+///
+///   i) The elements are extracted from the same vector (%source).
+///
+///  ii) The elements form a suffix of %source. Specifically, the number
+///      of elements is the same as the product of the last N dimension sizes
+///      of %source, for some N.
+///
+/// iii) The elements are extracted contiguously in ascending order.
+
+class FromElementsToShapeCast : public OpRewritePattern<FromElementsOp> {
+
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FromElementsOp fromElements,
+                                PatternRewriter &rewriter) const override {
+
+    // Handled by `rewriteFromElementsAsSplat`
+    if (fromElements.getType().getNumElements() == 1)
+      return failure();
+
+    // The common source that all elements are extracted from, if one exists.
+    TypedValue<VectorType> source;
+    // The position of the combined extract operation, if one is created.
+    ArrayRef<int64_t> combinedPosition;
+    // The expected index of extraction of the current element in the loop, if
+    // elements are extracted contiguously in ascending order.
+    SmallVector<int64_t> expectedPosition;
+
+    for (auto [insertIndex, element] :
+         llvm::enumerate(fromElements.getElements())) {
+
+      // Check that the element is from a vector.extract operation.
+      auto extractOp =
+          dyn_cast_if_present<vector::ExtractOp>(element.getDefiningOp());
+      if (!extractOp) {
+        return rewriter.notifyMatchFailure(fromElements,
+                                           "element not from vector.extract");
+      }
+
+      // Check condition (i) by checking that all elements have the same source
+      // as the first element.
+      if (insertIndex == 0) {
+        source = extractOp.getVector();
+      } else if (extractOp.getVector() != source) {
+        return rewriter.notifyMatchFailure(fromElements,
+                                           "element from different vector");
+      }
+
+      ArrayRef<int64_t> position = extractOp.getStaticPosition();
+      int64_t rank = position.size();
+      assert(rank == source.getType().getRank() &&
+             "scalar extract must have full rank position");
+
+      // Check condition (ii) by checking that the position that the first
+      // element is extracted from has sufficient trailing 0s. For example, in
+      //
+      //   %elm0 = vector.extract %source[1, 0, 0] : i8 from vector<2x3x4xi8>
+      //   [...]
+      //   %elms = vector.from_elements %elm0, [...] : vector<12xi8>
+      //
+      // The 2 trailing 0s in the position of extraction of %elm0 cover 3*4 = 12
+      // elements, which is the number of elements of %n, so this is valid.
+      if (insertIndex == 0) {
+        const int64_t numElms = fromElements.getType().getNumElements();
+        int64_t numSuffixElms = 1;
+        int64_t index = rank;
+        while (index > 0 && position[index - 1] == 0 &&
+               numSuffixElms < numElms) {
+          numSuffixElms *= source.getType().getDimSize(index - 1);
+          --index;
+        }
+        if (numSuffixElms != numElms) {
+          return rewriter.notifyMatchFailure(
+              fromElements, "elements do not form a suffix of source");
+        }
+        expectedPosition = llvm::to_vector(position);
+        combinedPosition = position.drop_back(rank - index);
+      }
+
+      // Check condition (iii).
+      else if (expectedPosition != position) {
+        return rewriter.notifyMatchFailure(
+            fromElements, "elements not in ascending order (static order)");
+      }
+      increment(expectedPosition, source.getType().getShape());
+    }
+
+    auto extracted = rewriter.createOrFold<vector::ExtractOp>(
+        fromElements.getLoc(), source, combinedPosition);
+
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
+        fromElements, fromElements.getType(), extracted);
+
+    return success();
+  }
+
+  /// Increments n-D `indices` by 1 starting from the innermost dimension.
+  static void increment(MutableArrayRef<int64_t> indices,
+                        ArrayRef<int64_t> shape) {
+    for (int dim : llvm::reverse(llvm::seq<int>(0, indices.size()))) {
+      indices[dim] += 1;
+      if (indices[dim] < shape[dim])
+        break;
+      indices[dim] = 0;
+    }
+  }
+};
+
 void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
   results.add(rewriteFromElementsAsSplat);
+  results.add<FromElementsToShapeCast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2399,6 +2520,10 @@ void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
 void BroadcastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                     SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), argRanges.front());
+}
+
+std::optional<SmallVector<int64_t, 4>> BroadcastOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
 /// Return the dimensions of the result vector that were formerly ones in the
@@ -4543,11 +4668,14 @@ struct TransferReadAfterWriteToBroadcast
 
   LogicalResult matchAndRewrite(TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
-    if (readOp.hasOutOfBoundsDim() ||
-        !llvm::isa<RankedTensorType>(readOp.getShapedType()))
-      return failure();
     auto defWrite = readOp.getBase().getDefiningOp<vector::TransferWriteOp>();
     if (!defWrite)
+      return failure();
+    // Bail if we need an alias analysis.
+    if (!readOp.hasPureTensorSemantics() || !defWrite.hasPureTensorSemantics())
+      return failure();
+    // Bail if we need a bounds analysis.
+    if (readOp.hasOutOfBoundsDim() || defWrite.hasOutOfBoundsDim())
       return failure();
     // TODO: If the written transfer chunk is a superset of the read transfer
     // chunk we could do an extract_strided_slice.
@@ -4559,15 +4687,28 @@ struct TransferReadAfterWriteToBroadcast
     if (getUnusedDimsBitVector({readOp.getPermutationMap()}) !=
         getUnusedDimsBitVector({defWrite.getPermutationMap()}))
       return failure();
-    if (readOp.getIndices() != defWrite.getIndices() ||
-        readOp.getMask() != defWrite.getMask())
+    // This pattern should only catch the broadcast case, the non-broadcast case
+    // should be done separately to keep application conditions clean and
+    // separate.
+    AffineMap readMap = compressUnusedDims(readOp.getPermutationMap());
+    AffineMap writeMap = compressUnusedDims(defWrite.getPermutationMap());
+    bool bcast = !readMap.getBroadcastDims().empty() ||
+                 !writeMap.getBroadcastDims().empty();
+    if (!bcast)
       return failure();
+    // At this point, we know we have a bcast.
+    // Bail in the masked case (too complex atm and needed to properly account
+    // for padding).
+    if (readOp.getMask() || defWrite.getMask())
+      return failure();
+    // If indices are not the same a shift may be required, bail.
+    if (readOp.getIndices() != defWrite.getIndices())
+      return failure();
+
     Value vec = defWrite.getVector();
     // TODO: loop through the chain of transfer_write if we can prove that they
     // don't overlap with the transfer_read. This requires improving
     // `isDisjointTransferIndices` helper.
-    AffineMap readMap = compressUnusedDims(readOp.getPermutationMap());
-    AffineMap writeMap = compressUnusedDims(defWrite.getPermutationMap());
     AffineMap map = readMap.compose(writeMap);
     if (map.getNumResults() == 0)
       return failure();
@@ -4913,7 +5054,7 @@ void TransferWriteOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   if (llvm::isa<MemRefType>(getShapedType()))
-    effects.emplace_back(MemoryEffects::Write::get(), &getValueToStoreMutable(),
+    effects.emplace_back(MemoryEffects::Write::get(), &getBaseMutable(),
                          SideEffects::DefaultResource::get());
 }
 

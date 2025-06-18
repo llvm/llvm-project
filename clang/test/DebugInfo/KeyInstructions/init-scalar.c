@@ -10,8 +10,10 @@ void a() {
 // CHECK: %add = add {{.*}}, !dbg [[G2R2:!.*]]
 // CHECK: store i32 %add, ptr %B, align 4, !dbg [[G2R1:!.*]]
     int B = 2 * A + 1;
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK: [[G2R2]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 2)
 // CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
+// CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)

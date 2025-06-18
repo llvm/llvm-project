@@ -938,6 +938,10 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Trunc(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::TRUNCATE, Op);
 }
 
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_Abs(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::ABS, Op);
+}
+
 /// Match a zext or identity
 /// Allows to peek through optional extensions
 template <typename Opnd> inline auto m_ZExtOrSelf(const Opnd &Op) {

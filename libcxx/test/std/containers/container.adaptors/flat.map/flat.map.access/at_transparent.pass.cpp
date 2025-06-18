@@ -106,6 +106,13 @@ int main(int, char**) {
     TEST_IGNORE_NODISCARD m.at(Transparent<int>{3});
     assert(transparent_used);
   }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_map<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"epsilon", 1}, {"eta", 3}, {"gamma", 3}};
+    int& x = m.at("alpha");
+    assert(x == 1);
+  }
 
   return 0;
 }

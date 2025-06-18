@@ -22,10 +22,10 @@ define void @test64(ptr nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9LE-NEXT:    lfdx 0, 3, 4
 ; P9LE-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
 ; P9LE-NEXT:    xxlxor 2, 2, 2
-; P9LE-NEXT:    vspltisw 4, 8
+; P9LE-NEXT:    xxspltib 4, 16
 ; P9LE-NEXT:    lxsd 3, 4(5)
 ; P9LE-NEXT:    addi 3, 3, .LCPI0_0@toc@l
-; P9LE-NEXT:    vadduwm 4, 4, 4
+; P9LE-NEXT:    vextsb2w 4, 4
 ; P9LE-NEXT:    lxv 1, 0(3)
 ; P9LE-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
 ; P9LE-NEXT:    addi 3, 3, .LCPI0_1@toc@l
@@ -45,10 +45,10 @@ define void @test64(ptr nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9BE-NEXT:    lxsdx 2, 3, 4
 ; P9BE-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
 ; P9BE-NEXT:    xxlxor 1, 1, 1
-; P9BE-NEXT:    vspltisw 4, 8
+; P9BE-NEXT:    xxspltib 4, 16
 ; P9BE-NEXT:    lxsd 3, 4(5)
 ; P9BE-NEXT:    addi 3, 3, .LCPI0_0@toc@l
-; P9BE-NEXT:    vadduwm 4, 4, 4
+; P9BE-NEXT:    vextsb2w 4, 4
 ; P9BE-NEXT:    lxv 0, 0(3)
 ; P9BE-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
 ; P9BE-NEXT:    addi 3, 3, .LCPI0_1@toc@l
@@ -68,11 +68,11 @@ define void @test64(ptr nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9BE-AIX-NEXT:    lxsdx 2, 3, 4
 ; P9BE-AIX-NEXT:    ld 3, L..C0(2) # %const.0
 ; P9BE-AIX-NEXT:    xxlxor 1, 1, 1
-; P9BE-AIX-NEXT:    vspltisw 4, 8
+; P9BE-AIX-NEXT:    xxspltib 4, 16
 ; P9BE-AIX-NEXT:    lxsd 3, 4(5)
 ; P9BE-AIX-NEXT:    lxv 0, 0(3)
 ; P9BE-AIX-NEXT:    ld 3, L..C1(2) # %const.1
-; P9BE-AIX-NEXT:    vadduwm 4, 4, 4
+; P9BE-AIX-NEXT:    vextsb2w 4, 4
 ; P9BE-AIX-NEXT:    xxperm 2, 1, 0
 ; P9BE-AIX-NEXT:    lxv 0, 0(3)
 ; P9BE-AIX-NEXT:    xxperm 3, 3, 0
@@ -89,10 +89,10 @@ define void @test64(ptr nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9BE-AIX32-NEXT:    lxvwsx 0, 3, 4
 ; P9BE-AIX32-NEXT:    li 3, 4
 ; P9BE-AIX32-NEXT:    xxlxor 2, 2, 2
-; P9BE-AIX32-NEXT:    vspltisw 4, 8
+; P9BE-AIX32-NEXT:    xxspltib 4, 16
 ; P9BE-AIX32-NEXT:    lxvwsx 1, 5, 3
 ; P9BE-AIX32-NEXT:    lwz 3, L..C0(2) # %const.0
-; P9BE-AIX32-NEXT:    vadduwm 4, 4, 4
+; P9BE-AIX32-NEXT:    vextsb2w 4, 4
 ; P9BE-AIX32-NEXT:    xxmrghw 2, 0, 1
 ; P9BE-AIX32-NEXT:    lxv 0, 0(3)
 ; P9BE-AIX32-NEXT:    li 3, 8
@@ -137,11 +137,11 @@ define void @test32(ptr nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9LE-NEXT:    lxsiwzx 2, 3, 4
 ; P9LE-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
 ; P9LE-NEXT:    xxlxor 0, 0, 0
-; P9LE-NEXT:    vspltisw 4, 8
+; P9LE-NEXT:    xxspltib 4, 16
 ; P9LE-NEXT:    addi 3, 3, .LCPI1_0@toc@l
 ; P9LE-NEXT:    lxv 1, 0(3)
 ; P9LE-NEXT:    li 3, 4
-; P9LE-NEXT:    vadduwm 4, 4, 4
+; P9LE-NEXT:    vextsb2w 4, 4
 ; P9LE-NEXT:    lxsiwzx 3, 5, 3
 ; P9LE-NEXT:    xxperm 2, 0, 1
 ; P9LE-NEXT:    xxperm 3, 0, 1
@@ -158,11 +158,11 @@ define void @test32(ptr nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9BE-NEXT:    lxsiwzx 2, 3, 4
 ; P9BE-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
 ; P9BE-NEXT:    xxlxor 0, 0, 0
-; P9BE-NEXT:    vspltisw 4, 8
+; P9BE-NEXT:    xxspltib 4, 16
 ; P9BE-NEXT:    addi 3, 3, .LCPI1_0@toc@l
 ; P9BE-NEXT:    lxv 1, 0(3)
 ; P9BE-NEXT:    li 3, 4
-; P9BE-NEXT:    vadduwm 4, 4, 4
+; P9BE-NEXT:    vextsb2w 4, 4
 ; P9BE-NEXT:    lxsiwzx 3, 5, 3
 ; P9BE-NEXT:    xxperm 2, 0, 1
 ; P9BE-NEXT:    xxperm 3, 0, 1
@@ -179,10 +179,10 @@ define void @test32(ptr nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9BE-AIX-NEXT:    lxsiwzx 2, 3, 4
 ; P9BE-AIX-NEXT:    ld 3, L..C2(2) # %const.0
 ; P9BE-AIX-NEXT:    xxlxor 0, 0, 0
-; P9BE-AIX-NEXT:    vspltisw 4, 8
+; P9BE-AIX-NEXT:    xxspltib 4, 16
 ; P9BE-AIX-NEXT:    lxv 1, 0(3)
 ; P9BE-AIX-NEXT:    li 3, 4
-; P9BE-AIX-NEXT:    vadduwm 4, 4, 4
+; P9BE-AIX-NEXT:    vextsb2w 4, 4
 ; P9BE-AIX-NEXT:    lxsiwzx 3, 5, 3
 ; P9BE-AIX-NEXT:    xxperm 2, 0, 1
 ; P9BE-AIX-NEXT:    xxperm 3, 0, 1
@@ -199,10 +199,10 @@ define void @test32(ptr nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9BE-AIX32-NEXT:    lxsiwzx 2, 3, 4
 ; P9BE-AIX32-NEXT:    lwz 3, L..C2(2) # %const.0
 ; P9BE-AIX32-NEXT:    xxlxor 0, 0, 0
-; P9BE-AIX32-NEXT:    vspltisw 4, 8
+; P9BE-AIX32-NEXT:    xxspltib 4, 16
 ; P9BE-AIX32-NEXT:    lxv 1, 0(3)
 ; P9BE-AIX32-NEXT:    li 3, 4
-; P9BE-AIX32-NEXT:    vadduwm 4, 4, 4
+; P9BE-AIX32-NEXT:    vextsb2w 4, 4
 ; P9BE-AIX32-NEXT:    lxsiwzx 3, 5, 3
 ; P9BE-AIX32-NEXT:    xxperm 2, 0, 1
 ; P9BE-AIX32-NEXT:    xxperm 3, 0, 1

@@ -405,7 +405,7 @@ public:
 
   bool equals(const MCExpr &A, const MCExpr &B, CompFuncTy Comp) const;
 
-  virtual bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
+  virtual bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
                       CompFuncTy Comp) const;
 
   virtual bool isBranch(const MCInst &Inst) const {

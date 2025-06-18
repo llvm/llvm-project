@@ -1320,10 +1320,7 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
     HandlePHINodesInSuccessorBlocks(I.getParent());
   }
 
-  // Increase the SDNodeOrder if dealing with a non-debug instruction.
-  if (!isa<DbgInfoIntrinsic>(I))
-    ++SDNodeOrder;
-
+  ++SDNodeOrder;
   CurInst = &I;
 
   // Set inserted listener only if required.
@@ -1791,8 +1788,26 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
   if (const Constant *C = dyn_cast<Constant>(V)) {
     EVT VT = TLI.getValueType(DAG.getDataLayout(), V->getType(), true);
 
-    if (const ConstantInt *CI = dyn_cast<ConstantInt>(C))
-      return DAG.getConstant(*CI, getCurSDLoc(), VT);
+    if (const ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
+      SDLoc DL = getCurSDLoc();
+
+      // DAG.getConstant() may attempt to legalise the vector constant which can
+      // significantly change the combines applied to the DAG. To reduce the
+      // divergence when enabling ConstantInt based vectors we try to construct
+      // the DAG in the same way as shufflevector based splats. TODO: The
+      // divergence sometimes leads to better optimisations. Ideally we should
+      // prevent DAG.getConstant() from legalising too early but there are some
+      // degradations preventing this.
+      if (VT.isScalableVector())
+        return DAG.getNode(
+            ISD::SPLAT_VECTOR, DL, VT,
+            DAG.getConstant(CI->getValue(), DL, VT.getVectorElementType()));
+      if (VT.isFixedLengthVector())
+        return DAG.getSplatBuildVector(
+            VT, DL,
+            DAG.getConstant(CI->getValue(), DL, VT.getVectorElementType()));
+      return DAG.getConstant(*CI, DL, VT);
+    }
 
     if (const GlobalValue *GV = dyn_cast<GlobalValue>(C))
       return DAG.getGlobalAddress(GV, getCurSDLoc(), VT);
@@ -3037,8 +3052,9 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
 
   // First create the loads to the guard/stack slot for the comparison.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
-  EVT PtrMemTy = TLI.getPointerMemTy(DAG.getDataLayout());
+  auto &DL = DAG.getDataLayout();
+  EVT PtrTy = TLI.getFrameIndexTy(DL);
+  EVT PtrMemTy = TLI.getPointerMemTy(DL, DL.getAllocaAddrSpace());
 
   MachineFrameInfo &MFI = ParentBB->getParent()->getFrameInfo();
   int FI = MFI.getStackProtectorIndex();
@@ -3047,8 +3063,8 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   SDLoc dl = getCurSDLoc();
   SDValue StackSlotPtr = DAG.getFrameIndex(FI, PtrTy);
   const Module &M = *ParentBB->getParent()->getFunction().getParent();
-  Align Align =
-      DAG.getDataLayout().getPrefTypeAlign(PointerType::get(M.getContext(), 0));
+  Align Align = DL.getPrefTypeAlign(
+      PointerType::get(M.getContext(), DL.getAllocaAddrSpace()));
 
   // Generate code to load the content of the guard slot.
   SDValue GuardVal = DAG.getLoad(
@@ -3059,8 +3075,14 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   if (TLI.useStackGuardXorFP())
     GuardVal = TLI.emitStackGuardXorFP(DAG, GuardVal, dl);
 
-  // Retrieve guard check function, nullptr if instrumentation is inlined.
-  if (const Function *GuardCheckFn = TLI.getSSPStackGuardCheck(M)) {
+  // If we're using function-based instrumentation, call the guard check
+  // function
+  if (SPD.shouldEmitFunctionBasedCheckStackProtector()) {
+    // Get the guard check function from the target and verify it exists since
+    // we're using function-based instrumentation
+    const Function *GuardCheckFn = TLI.getSSPStackGuardCheck(M);
+    assert(GuardCheckFn && "Guard check function is null");
+
     // The target provides a guard check function to validate the guard value.
     // Generate a call to that function with the content of the guard slot as
     // argument.
@@ -3101,10 +3123,9 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   }
 
   // Perform the comparison via a getsetcc.
-  SDValue Cmp = DAG.getSetCC(dl, TLI.getSetCCResultType(DAG.getDataLayout(),
-                                                        *DAG.getContext(),
-                                                        Guard.getValueType()),
-                             Guard, GuardVal, ISD::SETNE);
+  SDValue Cmp = DAG.getSetCC(
+      dl, TLI.getSetCCResultType(DL, *DAG.getContext(), Guard.getValueType()),
+      Guard, GuardVal, ISD::SETNE);
 
   // If the guard/stackslot do not equal, branch to failure MBB.
   SDValue BrCond = DAG.getNode(ISD::BRCOND, dl,
@@ -3126,14 +3147,69 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
 /// For a high level explanation of how this fits into the stack protector
 /// generation see the comment on the declaration of class
 /// StackProtectorDescriptor.
-void
-SelectionDAGBuilder::visitSPDescriptorFailure(StackProtectorDescriptor &SPD) {
+void SelectionDAGBuilder::visitSPDescriptorFailure(
+    StackProtectorDescriptor &SPD) {
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setDiscardResult(true);
-  SDValue Chain = TLI.makeLibCall(DAG, RTLIB::STACKPROTECTOR_CHECK_FAIL,
-                                  MVT::isVoid, {}, CallOptions, getCurSDLoc())
-                      .second;
+  MachineBasicBlock *ParentBB = SPD.getParentMBB();
+  const Module &M = *ParentBB->getParent()->getFunction().getParent();
+  SDValue Chain;
+
+  // For -Oz builds with a guard check function, we use function-based
+  // instrumentation. Otherwise, if we have a guard check function, we call it
+  // in the failure block.
+  auto *GuardCheckFn = TLI.getSSPStackGuardCheck(M);
+  if (GuardCheckFn && !SPD.shouldEmitFunctionBasedCheckStackProtector()) {
+    // First create the loads to the guard/stack slot for the comparison.
+    auto &DL = DAG.getDataLayout();
+    EVT PtrTy = TLI.getFrameIndexTy(DL);
+    EVT PtrMemTy = TLI.getPointerMemTy(DL, DL.getAllocaAddrSpace());
+
+    MachineFrameInfo &MFI = ParentBB->getParent()->getFrameInfo();
+    int FI = MFI.getStackProtectorIndex();
+
+    SDLoc dl = getCurSDLoc();
+    SDValue StackSlotPtr = DAG.getFrameIndex(FI, PtrTy);
+    Align Align = DL.getPrefTypeAlign(
+        PointerType::get(M.getContext(), DL.getAllocaAddrSpace()));
+
+    // Generate code to load the content of the guard slot.
+    SDValue GuardVal = DAG.getLoad(
+        PtrMemTy, dl, DAG.getEntryNode(), StackSlotPtr,
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), Align,
+        MachineMemOperand::MOVolatile);
+
+    if (TLI.useStackGuardXorFP())
+      GuardVal = TLI.emitStackGuardXorFP(DAG, GuardVal, dl);
+
+    // The target provides a guard check function to validate the guard value.
+    // Generate a call to that function with the content of the guard slot as
+    // argument.
+    FunctionType *FnTy = GuardCheckFn->getFunctionType();
+    assert(FnTy->getNumParams() == 1 && "Invalid function signature");
+
+    TargetLowering::ArgListTy Args;
+    TargetLowering::ArgListEntry Entry;
+    Entry.Node = GuardVal;
+    Entry.Ty = FnTy->getParamType(0);
+    if (GuardCheckFn->hasParamAttribute(0, Attribute::AttrKind::InReg))
+      Entry.IsInReg = true;
+    Args.push_back(Entry);
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(getCurSDLoc())
+        .setChain(DAG.getEntryNode())
+        .setCallee(GuardCheckFn->getCallingConv(), FnTy->getReturnType(),
+                   getValue(GuardCheckFn), std::move(Args));
+
+    Chain = TLI.LowerCallTo(CLI).second;
+  } else {
+    TargetLowering::MakeLibCallOptions CallOptions;
+    CallOptions.setDiscardResult(true);
+    Chain = TLI.makeLibCall(DAG, RTLIB::STACKPROTECTOR_CHECK_FAIL, MVT::isVoid,
+                            {}, CallOptions, getCurSDLoc())
+                .second;
+  }
 
   // Emit a trap instruction if we are required to do so.
   const TargetOptions &TargetOpts = DAG.getTarget().Options;
@@ -3275,12 +3351,13 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
 
   // Deopt and ptrauth bundles are lowered in helper functions, and we don't
   // have to do anything here to lower funclet bundles.
-  assert(!I.hasOperandBundlesOtherThan(
-             {LLVMContext::OB_deopt, LLVMContext::OB_gc_transition,
-              LLVMContext::OB_gc_live, LLVMContext::OB_funclet,
-              LLVMContext::OB_cfguardtarget, LLVMContext::OB_ptrauth,
-              LLVMContext::OB_clang_arc_attachedcall}) &&
-         "Cannot lower invokes with arbitrary operand bundles yet!");
+  if (I.hasOperandBundlesOtherThan(
+          {LLVMContext::OB_deopt, LLVMContext::OB_gc_transition,
+           LLVMContext::OB_gc_live, LLVMContext::OB_funclet,
+           LLVMContext::OB_cfguardtarget, LLVMContext::OB_ptrauth,
+           LLVMContext::OB_clang_arc_attachedcall}))
+    reportFatalUsageError(
+        "cannot lower invokes with arbitrary operand bundles!");
 
   const Value *Callee(I.getCalledOperand());
   const Function *Fn = dyn_cast<Function>(Callee);
@@ -3380,9 +3457,10 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
 
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
-  assert(!I.hasOperandBundlesOtherThan(
-             {LLVMContext::OB_deopt, LLVMContext::OB_funclet}) &&
-         "Cannot lower callbrs with arbitrary operand bundles yet!");
+  if (I.hasOperandBundlesOtherThan(
+          {LLVMContext::OB_deopt, LLVMContext::OB_funclet}))
+    reportFatalUsageError(
+        "cannot lower callbrs with arbitrary operand bundles!");
 
   assert(I.isInlineAsm() && "Only know how to handle inlineasm callbr");
   visitInlineAsm(I);
@@ -3399,7 +3477,11 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
     BasicBlock *Dest = I.getIndirectDest(i);
     MachineBasicBlock *Target = FuncInfo.getMBB(Dest);
     Target->setIsInlineAsmBrIndirectTarget();
-    Target->setMachineBlockAddressTaken();
+    // If we introduce a type of asm goto statement that is permitted to use an
+    // indirect call instruction to jump to its labels, then we should add a
+    // call to Target->setMachineBlockAddressTaken() here, to mark the target
+    // block as requiring a BTI.
+
     Target->setLabelMustBeEmitted();
     // Don't add duplicate machine successors.
     if (Dests.insert(Dest).second)
@@ -7378,6 +7460,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, getValue(I.getOperand(0)));
     return;
 
+  case Intrinsic::type_test:
+  case Intrinsic::public_type_test:
+    setValue(&I, getValue(ConstantInt::getTrue(I.getType())));
+    return;
+
   case Intrinsic::assume:
   case Intrinsic::experimental_noalias_scope_decl:
   case Intrinsic::var_annotation:
@@ -9545,12 +9632,12 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
   // CFGuardTarget bundles are lowered in LowerCallTo.
-  assert(!I.hasOperandBundlesOtherThan(
-             {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
-              LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
-              LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
-              LLVMContext::OB_convergencectrl}) &&
-         "Cannot lower calls with arbitrary operand bundles!");
+  if (I.hasOperandBundlesOtherThan(
+          {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
+           LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
+           LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
+           LLVMContext::OB_convergencectrl}))
+    reportFatalUsageError("cannot lower calls with arbitrary operand bundles!");
 
   SDValue Callee = getValue(I.getCalledOperand());
 

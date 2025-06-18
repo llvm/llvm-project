@@ -386,10 +386,7 @@ SelectionDAGISel::SelectionDAGISel(TargetMachine &tm, CodeGenOptLevel OL)
   initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-SelectionDAGISel::~SelectionDAGISel() {
-  delete CurDAG;
-  delete SwiftError;
-}
+SelectionDAGISel::~SelectionDAGISel() { delete CurDAG; }
 
 void SelectionDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   CodeGenOptLevel OptLevel = Selector->OptLevel;
@@ -1510,7 +1507,6 @@ static bool isFoldedOrDeadInstruction(const Instruction *I,
                                       const FunctionLoweringInfo &FuncInfo) {
   return !I->mayWriteToMemory() && // Side-effecting instructions aren't folded.
          !I->isTerminator() &&     // Terminators aren't folded.
-         !isa<DbgInfoIntrinsic>(I) && // Debug instructions aren't folded.
          !I->isEHPad() &&             // EH pad instructions aren't folded.
          !FuncInfo.isExportedInst(I); // Exported instrs must be computed.
 }
@@ -1880,7 +1876,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
     if (SP->shouldEmitSDCheck(*LLVMBB)) {
       bool FunctionBasedInstrumentation =
-          TLI->getSSPStackGuardCheck(*Fn.getParent());
+          TLI->getSSPStackGuardCheck(*Fn.getParent()) && Fn.hasMinSize();
       SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->getMBB(LLVMBB),
                                    FunctionBasedInstrumentation);
     }
@@ -1953,8 +1949,7 @@ SelectionDAGISel::FinishBasicBlock() {
 
     // Add load and check to the basicblock.
     FuncInfo->MBB = ParentMBB;
-    FuncInfo->InsertPt =
-        findSplitPointForStackProtector(ParentMBB, *TII);
+    FuncInfo->InsertPt = findSplitPointForStackProtector(ParentMBB, *TII);
     SDB->visitSPDescriptorParent(SDB->SPDescriptor, ParentMBB);
     CurDAG->setRoot(SDB->getRoot());
     SDB->clear();
@@ -1976,8 +1971,7 @@ SelectionDAGISel::FinishBasicBlock() {
         findSplitPointForStackProtector(ParentMBB, *TII);
 
     // Splice the terminator of ParentMBB into SuccessMBB.
-    SuccessMBB->splice(SuccessMBB->end(), ParentMBB,
-                       SplitPoint,
+    SuccessMBB->splice(SuccessMBB->end(), ParentMBB, SplitPoint,
                        ParentMBB->end());
 
     // Add compare/jump on neq/jump to the parent BB.

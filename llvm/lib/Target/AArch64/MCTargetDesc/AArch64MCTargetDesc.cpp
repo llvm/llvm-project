@@ -27,6 +27,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
@@ -436,7 +437,7 @@ public:
       // architecturally defined to zero extend the upper 32 bits on a write.
       if (GPR32RC.contains(Reg))
         return true;
-      // SIMD&FP instructions operating on scalar data only acccess the lower
+      // SIMD&FP instructions operating on scalar data only access the lower
       // bits of a register, the upper bits are zero extended on a write. For
       // SIMD vector registers smaller than 128-bits, the upper 64-bits of the
       // register are zero extended on a write.
@@ -503,7 +504,8 @@ static MCInstrAnalysis *createAArch64InstrAnalysis(const MCInstrInfo *Info) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64TargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAArch64TargetMC() {
   for (Target *T : {&getTheAArch64leTarget(), &getTheAArch64beTarget(),
                     &getTheAArch64_32Target(), &getTheARM64Target(),
                     &getTheARM64_32Target()}) {

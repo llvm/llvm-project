@@ -464,27 +464,39 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
 
 template <typename UniformOp, typename NonUniformOp>
 static Value createGroupReduceOpImpl(OpBuilder &builder, Location loc,
-                                     Value arg, bool isGroup, bool isUniform) {
+                                     Value arg, bool isGroup, bool isUniform,
+                                     std::optional<uint32_t> clusterSize) {
   Type type = arg.getType();
   auto scope = mlir::spirv::ScopeAttr::get(builder.getContext(),
                                            isGroup ? spirv::Scope::Workgroup
                                                    : spirv::Scope::Subgroup);
-  auto groupOp = spirv::GroupOperationAttr::get(builder.getContext(),
-                                                spirv::GroupOperation::Reduce);
+  auto groupOp = spirv::GroupOperationAttr::get(
+      builder.getContext(), clusterSize.has_value()
+                                ? spirv::GroupOperation::ClusteredReduce
+                                : spirv::GroupOperation::Reduce);
   if (isUniform) {
     return builder.create<UniformOp>(loc, type, scope, groupOp, arg)
         .getResult();
   }
-  return builder.create<NonUniformOp>(loc, type, scope, groupOp, arg, Value{})
+
+  Value clusterSizeValue;
+  if (clusterSize.has_value())
+    clusterSizeValue = builder.create<spirv::ConstantOp>(
+        loc, builder.getI32Type(),
+        builder.getIntegerAttr(builder.getI32Type(), *clusterSize));
+
+  return builder
+      .create<NonUniformOp>(loc, type, scope, groupOp, arg, clusterSizeValue)
       .getResult();
 }
 
-static std::optional<Value> createGroupReduceOp(OpBuilder &builder,
-                                                Location loc, Value arg,
-                                                gpu::AllReduceOperation opType,
-                                                bool isGroup, bool isUniform) {
+static std::optional<Value>
+createGroupReduceOp(OpBuilder &builder, Location loc, Value arg,
+                    gpu::AllReduceOperation opType, bool isGroup,
+                    bool isUniform, std::optional<uint32_t> clusterSize) {
   enum class ElemType { Float, Boolean, Integer };
-  using FuncT = Value (*)(OpBuilder &, Location, Value, bool, bool);
+  using FuncT = Value (*)(OpBuilder &, Location, Value, bool, bool,
+                          std::optional<uint32_t>);
   struct OpHandler {
     gpu::AllReduceOperation kind;
     ElemType elemType;
@@ -548,7 +560,7 @@ static std::optional<Value> createGroupReduceOp(OpBuilder &builder,
 
   for (const OpHandler &handler : handlers)
     if (handler.kind == opType && elementType == handler.elemType)
-      return handler.func(builder, loc, arg, isGroup, isUniform);
+      return handler.func(builder, loc, arg, isGroup, isUniform, clusterSize);
 
   return std::nullopt;
 }
@@ -571,7 +583,7 @@ public:
 
     auto result =
         createGroupReduceOp(rewriter, op.getLoc(), adaptor.getValue(), *opType,
-                            /*isGroup*/ true, op.getUniform());
+                            /*isGroup*/ true, op.getUniform(), std::nullopt);
     if (!result)
       return failure();
 
@@ -589,16 +601,17 @@ public:
   LogicalResult
   matchAndRewrite(gpu::SubgroupReduceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (op.getClusterSize())
+    if (op.getClusterStride() > 1) {
       return rewriter.notifyMatchFailure(
-          op, "lowering for clustered reduce not implemented");
+          op, "lowering for cluster stride > 1 is not implemented");
+    }
 
     if (!isa<spirv::ScalarType>(adaptor.getValue().getType()))
       return rewriter.notifyMatchFailure(op, "reduction type is not a scalar");
 
-    auto result = createGroupReduceOp(rewriter, op.getLoc(), adaptor.getValue(),
-                                      adaptor.getOp(),
-                                      /*isGroup=*/false, adaptor.getUniform());
+    auto result = createGroupReduceOp(
+        rewriter, op.getLoc(), adaptor.getValue(), adaptor.getOp(),
+        /*isGroup=*/false, adaptor.getUniform(), op.getClusterSize());
     if (!result)
       return failure();
 
