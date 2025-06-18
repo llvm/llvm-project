@@ -386,10 +386,6 @@ protected:
   /// Map for SourceLocation and OpenMP runtime library debug locations.
   typedef llvm::DenseMap<SourceLocation, llvm::Value *> OpenMPDebugLocMapTy;
   OpenMPDebugLocMapTy OpenMPDebugLocMap;
-  /// The type for a microtask which gets passed to __kmpc_fork_call().
-  /// Original representation is:
-  /// typedef void (kmpc_micro)(kmp_int32 global_tid, kmp_int32 bound_tid,...);
-  llvm::FunctionType *Kmpc_MicroTy = nullptr;
   /// Stores debug location and ThreadID for the function.
   struct DebugLocThreadIdTy {
     llvm::Value *DebugLoc;
@@ -529,9 +525,6 @@ protected:
 
   /// Build type kmp_routine_entry_t (if not built yet).
   void emitKmpRoutineEntryT(QualType KmpInt32Ty);
-
-  /// Returns pointer to kmpc_micro type.
-  llvm::Type *getKmpc_MicroPointerTy();
 
   /// If the specified mangled name is not in the module, create and
   /// return threadprivate cache object. This object is a pointer's worth of
@@ -1208,8 +1201,20 @@ public:
   struct ReductionOptionsTy {
     bool WithNowait;
     bool SimpleReduction;
+    llvm::SmallVector<bool, 8> IsPrivateVarReduction;
     OpenMPDirectiveKind ReductionKind;
   };
+
+  /// Emits code for private variable reduction
+  /// \param Privates List of private copies for original reduction arguments.
+  /// \param LHSExprs List of LHS in \a ReductionOps reduction operations.
+  /// \param RHSExprs List of RHS in \a ReductionOps reduction operations.
+  /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
+  /// or 'operator binop(LHS, RHS)'.
+  void emitPrivateReduction(CodeGenFunction &CGF, SourceLocation Loc,
+                            const Expr *Privates, const Expr *LHSExprs,
+                            const Expr *RHSExprs, const Expr *ReductionOps);
+
   /// Emit a code for reduction clause. Next code should be emitted for
   /// reduction:
   /// \code

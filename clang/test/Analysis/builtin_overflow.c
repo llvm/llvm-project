@@ -26,7 +26,7 @@ void test_add_overflow(void)
    int res;
 
    if (__builtin_add_overflow(__INT_MAX__, 1, &res)) {
-     clang_analyzer_dump_int(res); //expected-warning{{1st function call argument is an uninitialized value}}
+     clang_analyzer_dump_int(res); //expected-warning{{-2147483648 S32b}}
      return;
    }
 
@@ -38,7 +38,7 @@ void test_add_underoverflow(void)
    int res;
 
    if (__builtin_add_overflow(__INT_MIN__, -1, &res)) {
-     clang_analyzer_dump_int(res); //expected-warning{{1st function call argument is an uninitialized value}}
+     clang_analyzer_dump_int(res); //expected-warning{{2147483647 S32b}}
      return;
    }
 
@@ -160,7 +160,7 @@ void test_bool_assign(void)
 {
     int res;
 
-    // Reproduce issue from GH#111147. __builtin_*_overflow funcions
+    // Reproduce issue from GH#111147. __builtin_*_overflow functions
     // should return _Bool, but not int.
     _Bool ret = __builtin_mul_overflow(10, 20, &res); // no crash
 }

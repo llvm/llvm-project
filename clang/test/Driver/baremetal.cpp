@@ -196,6 +196,22 @@
 // CHECK-AARCH64-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-AARCH64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
 
+// RUN: %clang -no-canonical-prefixes %s -### --target=riscv32-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-RISCV32-NO-HOST-INC %s
+// CHECK-RISCV32-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-RISCV32-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-RISCV32-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-RISCV32-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-RISCV32-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+
+// RUN: %clang -no-canonical-prefixes %s -### --target=riscv64-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-RISCV64-NO-HOST-INC %s
+// CHECK-RISCV64-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-RISCV64-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+
 // RUN: %clang %s -### --target=riscv64-unknown-elf -o %t.out -L some/directory/user/asked/for \
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-RV64 %s
@@ -203,7 +219,7 @@
 // CHECK-RV64-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-RV64-SAME: "-isysroot" "[[SYSROOT:[^"]*]]"
 // CHECK-RV64-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
-// CHECk-RV64-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}include"
+// CHECK-RV64-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}include"
 // CHECK-RV64-SAME: "-x" "c++" "{{.*}}baremetal.cpp"
 // CHECK-RV64-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV64-SAME: "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
@@ -337,7 +353,7 @@
 // CHECK-RV64FD-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-RV64FD-SAME: "-isysroot" "[[SYSROOT:[^"]*]]"
 // CHECK-RV64FD-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}rv64imafdc{{[/\\]+}}lp64d{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
-// CHECk-RV64FD-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}rv64imafdc{{[/\\]+}}lp64d{{[/\\]+}}include"
+// CHECK-RV64FD-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}rv64imafdc{{[/\\]+}}lp64d{{[/\\]+}}include"
 // CHECK-RV64FD-SAME: "-x" "c++" "{{.*}}baremetal.cpp"
 // CHECK-RV64FD-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV64FD-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}rv64imafdc{{[/\\]+}}lp64d{{[/\\]+}}lib"

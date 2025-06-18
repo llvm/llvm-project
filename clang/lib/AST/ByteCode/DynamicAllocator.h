@@ -59,6 +59,8 @@ private:
 
 public:
   DynamicAllocator() = default;
+  DynamicAllocator(DynamicAllocator &) = delete;
+  DynamicAllocator(DynamicAllocator &&) = delete;
   ~DynamicAllocator();
 
   void cleanup();

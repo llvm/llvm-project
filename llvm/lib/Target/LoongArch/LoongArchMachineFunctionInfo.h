@@ -41,7 +41,7 @@ private:
 
   /// Pairs of `jr` instructions and corresponding JTI operands, used for the
   /// `annotate-tablejump` option.
-  SmallVector<std::pair<MachineInstr *, MachineOperand *>, 4> JumpInfos;
+  SmallVector<std::pair<MachineInstr *, int>, 4> JumpInfos;
 
 public:
   LoongArchMachineFunctionInfo(const Function &F,
@@ -76,14 +76,12 @@ public:
     return is_contained(SExt32Registers, Reg);
   }
 
-  void setJumpInfo(MachineInstr *JrMI, MachineOperand *JTIMO) {
-    JumpInfos.push_back(std::make_pair(JrMI, JTIMO));
+  void setJumpInfo(MachineInstr *JrMI, int JTIIdx) {
+    JumpInfos.push_back(std::make_pair(JrMI, JTIIdx));
   }
   unsigned getJumpInfoSize() { return JumpInfos.size(); }
   MachineInstr *getJumpInfoJrMI(unsigned Idx) { return JumpInfos[Idx].first; }
-  MachineOperand *getJumpInfoJTIMO(unsigned Idx) {
-    return JumpInfos[Idx].second;
-  }
+  int getJumpInfoJTIIndex(unsigned Idx) { return JumpInfos[Idx].second; }
 };
 
 } // end namespace llvm

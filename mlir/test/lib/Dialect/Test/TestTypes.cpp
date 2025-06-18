@@ -284,7 +284,9 @@ TestTypeWithLayoutType::getIndexBitwidth(const DataLayout &dataLayout,
 }
 
 bool TestTypeWithLayoutType::areCompatible(
-    DataLayoutEntryListRef oldLayout, DataLayoutEntryListRef newLayout) const {
+    DataLayoutEntryListRef oldLayout, DataLayoutEntryListRef newLayout,
+    DataLayoutSpecInterface newSpec,
+    const DataLayoutIdentifiedEntryMap &map) const {
   unsigned old = extractKind(oldLayout, "alignment");
   return old == 1 || extractKind(newLayout, "alignment") <= old;
 }
@@ -536,4 +538,10 @@ void TestRecursiveAliasType::print(AsmPrinter &printer) const {
 void TestTypeOpAsmTypeInterfaceType::getAsmName(
     OpAsmSetNameFn setNameFn) const {
   setNameFn("op_asm_type_interface");
+}
+
+::mlir::OpAsmDialectInterface::AliasResult
+TestTypeOpAsmTypeInterfaceType::getAlias(::llvm::raw_ostream &os) const {
+  os << "op_asm_type_interface_type";
+  return ::mlir::OpAsmDialectInterface::AliasResult::FinalAlias;
 }

@@ -27,8 +27,8 @@ int main()
 
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
-  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_sections_begin: parallel_id=[[PARALLEL_ID:[0-9]+]], task_id=[[TASK_ID:[0-9]+]], codeptr_ra=[[SECT_BEGIN:0x[0-f]+]], count=2
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_sections_end: parallel_id=[[PARALLEL_ID]], task_id={{[0-9]+}}, codeptr_ra=[[SECT_END:0x[0-f]+]]
+  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_sections_begin: parallel_id=[[PARALLEL_ID:[0-9]+]], task_id=[[TASK_ID:[0-9]+]], codeptr_ra=[[SECT_BEGIN:(0x)?[0-f]+]], count=2
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_sections_end: parallel_id=[[PARALLEL_ID]], task_id={{[0-9]+}}, codeptr_ra=[[SECT_END:(0x)?[0-f]+]]
 
   // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_sections_begin: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID:[0-9]+]], codeptr_ra=[[SECT_BEGIN]], count=2
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_sections_end: parallel_id=[[PARALLEL_ID]], task_id={{[0-9]+}}, codeptr_ra=[[SECT_END]]

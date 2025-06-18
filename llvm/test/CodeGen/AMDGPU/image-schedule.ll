@@ -14,7 +14,7 @@ define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg %arg, i32 inreg %arg1
 .entry:
   %tmp = call i64 @llvm.amdgcn.s.getpc() #1
   %tmp6 = bitcast i64 %tmp to <2 x i32>
-  %.0.vec.insert = insertelement <2 x i32> undef, i32 %arg2, i32 0
+  %.0.vec.insert = insertelement <2 x i32> poison, i32 %arg2, i32 0
   %.4.vec.insert = shufflevector <2 x i32> %.0.vec.insert, <2 x i32> %tmp6, <2 x i32> <i32 0, i32 3>
   %tmp7 = bitcast <2 x i32> %.4.vec.insert to i64
   %tmp8 = inttoptr i64 %tmp7 to ptr addrspace(4)

@@ -19,7 +19,7 @@ static const Align MIPS_NACL_BUNDLE_ALIGN = Align(16);
 
 bool isBasePlusOffsetMemoryAccess(unsigned Opcode, unsigned *AddrIdx,
                                   bool *IsStore = nullptr);
-bool baseRegNeedsLoadStoreMask(unsigned Reg);
+bool baseRegNeedsLoadStoreMask(MCRegister Reg);
 
 // This function creates an MCELFStreamer for Mips NaCl.
 MCELFStreamer *

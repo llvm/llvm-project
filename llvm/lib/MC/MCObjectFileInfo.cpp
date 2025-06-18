@@ -599,6 +599,11 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
   if (T.getArch() == Triple::aarch64) {
     ImportCallSection =
         Ctx->getCOFFSection(".impcall", COFF::IMAGE_SCN_LNK_INFO);
+  } else if (T.getArch() == Triple::x86_64) {
+    // Import Call Optimization on x64 leverages the same metadata as the
+    // retpoline mitigation, hence the unusual section name.
+    ImportCallSection =
+        Ctx->getCOFFSection(".retplne", COFF::IMAGE_SCN_LNK_INFO);
   }
 
   // Debug info.
@@ -1066,7 +1071,7 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
                               utostr(Hash), /*IsComdat=*/true);
   case Triple::Wasm:
     return Ctx->getWasmSection(Name, SectionKind::getMetadata(), 0,
-                               utostr(Hash), MCContext::GenericSectionID);
+                               utostr(Hash), MCSection::NonUniqueID);
   case Triple::MachO:
   case Triple::COFF:
   case Triple::GOFF:

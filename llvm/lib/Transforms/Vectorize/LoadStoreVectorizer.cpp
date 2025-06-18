@@ -1269,14 +1269,12 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
     // When computing known bits, use the GEPs as context instructions, since
     // they likely are in the same BB as the load/store.
     KnownBits Known(BitWidth);
-    computeKnownBits((IdxDiff.sge(0) ? ValA : OpB), Known, DL, 0, &AC,
-                     ContextInst, &DT);
+    computeKnownBits((IdxDiff.sge(0) ? ValA : OpB), Known, DL, &AC, ContextInst,
+                     &DT);
     APInt BitsAllowedToBeSet = Known.Zero.zext(IdxDiff.getBitWidth());
     if (Signed)
       BitsAllowedToBeSet.clearBit(BitWidth - 1);
-    if (BitsAllowedToBeSet.ult(IdxDiff.abs()))
-      return std::nullopt;
-    Safe = true;
+    Safe = BitsAllowedToBeSet.uge(IdxDiff.abs());
   }
 
   if (Safe)
@@ -1335,8 +1333,9 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
     const auto &Key = EC.first;
     EqClassReducedKey RedKey{std::get<1>(Key), std::get<2>(Key),
                              std::get<3>(Key)};
-    RedKeyToUOMap[RedKey].insert(std::get<0>(Key));
-    if (RedKeyToUOMap[RedKey].size() > 1)
+    auto &UOMap = RedKeyToUOMap[RedKey];
+    UOMap.insert(std::get<0>(Key));
+    if (UOMap.size() > 1)
       FoundPotentiallyOptimizableEC = true;
   }
   if (!FoundPotentiallyOptimizableEC)

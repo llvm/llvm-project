@@ -216,7 +216,7 @@ define float @test_v16f32(<16 x float> %a0) {
 ; AVX512-LABEL: test_v16f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vminps %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vminps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vminps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
@@ -310,7 +310,7 @@ define double @test_v8f64(<8 x double> %a0) {
 ; AVX512-LABEL: test_v8f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vminpd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vminpd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vminpd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
@@ -352,7 +352,7 @@ define double @test_v16f64(<16 x double> %a0) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vminpd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vminpd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vminpd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vminpd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
@@ -426,18 +426,17 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; AVX512VL-LABEL: test_v2f16:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX512VL-NEXT:    vcvtph2ps %xmm0, %ymm2
-; AVX512VL-NEXT:    vcvtph2ps %xmm1, %ymm3
-; AVX512VL-NEXT:    vcmpltps %ymm3, %ymm2, %k1
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm3
+; AVX512VL-NEXT:    vcmpltss %xmm3, %xmm2, %k1
 ; AVX512VL-NEXT:    vmovdqu16 %xmm0, %xmm1 {%k1}
 ; AVX512VL-NEXT:    vmovdqa %xmm1, %xmm0
-; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512FP16-LABEL: test_v2f16:
 ; AVX512FP16:       # %bb.0:
 ; AVX512FP16-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX512FP16-NEXT:    vcmpltph %xmm1, %xmm0, %k1
+; AVX512FP16-NEXT:    vcmpltsh %xmm1, %xmm0, %k1
 ; AVX512FP16-NEXT:    vmovsh %xmm0, %xmm0, %xmm1 {%k1}
 ; AVX512FP16-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512FP16-NEXT:    retq

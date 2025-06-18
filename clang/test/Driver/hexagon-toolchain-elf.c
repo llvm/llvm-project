@@ -555,6 +555,7 @@
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=lld %s 2>&1 | FileCheck -check-prefix=CHECK382 %s
+// CHECK382:          "--eh-frame-hdr
 // CHECK382-NOT:      "-march=
 // CHECK382-NOT:      "-mcpu=
 // -----------------------------------------------------------------------------

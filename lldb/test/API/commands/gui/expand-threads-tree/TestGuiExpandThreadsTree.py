@@ -15,7 +15,7 @@ class TestGuiExpandThreadsTree(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfCursesSupportMissing
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     @skipIf(bugnumber="rdar://97460266")
     def test_gui(self):
         self.build()
@@ -48,7 +48,7 @@ class TestGuiExpandThreadsTree(PExpectTest):
         self.child.expect_exact("Threads")
 
         # The main thread should be expanded.
-        self.child.expect("#\d+: main")
+        self.child.expect(r"#\d+: main")
 
         # Quit the GUI
         self.child.send(escape_key)

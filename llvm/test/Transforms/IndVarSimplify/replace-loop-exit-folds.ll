@@ -4,20 +4,21 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
 define i32 @remove_loop(i32 %size) {
-; CHECK-LABEL: @remove_loop(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[SIZE:%.*]], 31
+; CHECK-LABEL: define i32 @remove_loop(
+; CHECK-SAME: i32 [[SIZE:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK:       [[WHILE_COND]]:
+; CHECK-NEXT:    [[SIZE_ADDR_0:%.*]] = phi i32 [ [[SIZE]], %[[ENTRY]] ], [ [[SUB:%.*]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[SIZE_ADDR_0]], 31
+; CHECK-NEXT:    [[SUB]] = add i32 [[SIZE_ADDR_0]], -32
+; CHECK-NEXT:    br i1 [[CMP]], label %[[WHILE_COND]], label %[[WHILE_END:.*]]
+; CHECK:       [[WHILE_END]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[SIZE]], 31
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SIZE]], i32 31)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 5
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 5
-; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
-; CHECK:       while.cond:
-; CHECK-NEXT:    [[SIZE_ADDR_0:%.*]] = phi i32 [ [[SIZE]], [[ENTRY:%.*]] ], [ [[SUB:%.*]], [[WHILE_COND]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[SIZE_ADDR_0]], 31
-; CHECK-NEXT:    [[SUB]] = add i32 [[SIZE_ADDR_0]], -32
-; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_COND]], label [[WHILE_END:%.*]]
-; CHECK:       while.end:
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[SIZE]], [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;

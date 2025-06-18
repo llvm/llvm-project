@@ -501,13 +501,13 @@ protected:
 
   /// ID for the next instruction variable defined with
   /// implicitlyDefineInsnVar()
-  unsigned NextInsnVarID;
+  unsigned NextInsnVarID = 0;
 
   /// ID for the next output instruction allocated with allocateOutputInsnID()
-  unsigned NextOutputInsnID;
+  unsigned NextOutputInsnID = 0;
 
   /// ID for the next temporary register ID allocated with allocateTempRegID()
-  unsigned NextTempRegID;
+  unsigned NextTempRegID = 0;
 
   /// ID for the next recorded type. Starts at -1 and counts down.
   TempTypeIdx NextTempTypeIdx = -1;
@@ -545,9 +545,7 @@ protected:
                              StringRef FlagName, GISelFlags FlagBit);
 
 public:
-  RuleMatcher(ArrayRef<SMLoc> SrcLoc)
-      : NextInsnVarID(0), NextOutputInsnID(0), NextTempRegID(0), SrcLoc(SrcLoc),
-        RuleID(NextRuleID++) {}
+  RuleMatcher(ArrayRef<SMLoc> SrcLoc) : SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
 
@@ -824,6 +822,7 @@ public:
     IPM_OneUse,
     IPM_GenericPredicate,
     IPM_MIFlags,
+    OPM_LeafPredicate,
     OPM_SameOperand,
     OPM_ComplexPattern,
     OPM_IntrinsicID,
@@ -1255,6 +1254,26 @@ public:
                             RuleMatcher &Rule) const override;
 };
 
+/// Generates code to check that this operand is a register whose value meets
+/// the predicate.
+class OperandLeafPredicateMatcher : public OperandPredicateMatcher {
+protected:
+  TreePredicateFn Predicate;
+
+public:
+  OperandLeafPredicateMatcher(unsigned InsnVarID, unsigned OpIdx,
+                              const TreePredicateFn &Predicate)
+      : OperandPredicateMatcher(OPM_LeafPredicate, InsnVarID, OpIdx),
+        Predicate(Predicate) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == OPM_LeafPredicate;
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override;
+};
+
 /// Generates code to check that a set of predicates match for a particular
 /// operand.
 class OperandMatcher : public PredicateListMatcher<OperandPredicateMatcher> {
@@ -1285,7 +1304,7 @@ public:
   StringRef getSymbolicName() const { return SymbolicName; }
   void setSymbolicName(StringRef Name) {
     assert(SymbolicName.empty() && "Operand already has a symbolic name");
-    SymbolicName = std::string(Name);
+    SymbolicName = Name.str();
   }
 
   /// Construct a new operand predicate and add it to the matcher.
@@ -1400,7 +1419,7 @@ public:
   }
 
   bool hasValue() const override {
-    return Insts.size() == 1 && OpcodeValues.count(Insts[0]);
+    return Insts.size() == 1 && OpcodeValues.contains(Insts[0]);
   }
 
   // TODO: This is used for the SwitchMatcher optimization. We should be able to
@@ -2018,12 +2037,12 @@ protected:
   unsigned NewInsnID;
   /// The name of the operand.
   const std::string SymbolicName;
-  bool Signed;
+  bool Signed = true;
 
 public:
   CopyConstantAsImmRenderer(unsigned NewInsnID, StringRef SymbolicName)
       : OperandRenderer(OR_CopyConstantAsImm), NewInsnID(NewInsnID),
-        SymbolicName(SymbolicName), Signed(true) {}
+        SymbolicName(SymbolicName) {}
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_CopyConstantAsImm;
@@ -2321,8 +2340,7 @@ private:
   std::string S;
 
 public:
-  DebugCommentAction(StringRef S)
-      : MatchAction(AK_DebugComment), S(std::string(S)) {}
+  DebugCommentAction(StringRef S) : MatchAction(AK_DebugComment), S(S.str()) {}
 
   static bool classof(const MatchAction *A) {
     return A->getKind() == AK_DebugComment;
@@ -2339,7 +2357,7 @@ class BuildMIAction : public MatchAction {
 private:
   unsigned InsnID;
   const CodeGenInstruction *I;
-  InstructionMatcher *Matched;
+  InstructionMatcher *Matched = nullptr;
   std::vector<std::unique_ptr<OperandRenderer>> OperandRenderers;
   SmallPtrSet<const Record *, 4> DeadImplicitDefs;
 
@@ -2352,7 +2370,7 @@ private:
 
 public:
   BuildMIAction(unsigned InsnID, const CodeGenInstruction *I)
-      : MatchAction(AK_BuildMI), InsnID(InsnID), I(I), Matched(nullptr) {}
+      : MatchAction(AK_BuildMI), InsnID(InsnID), I(I) {}
 
   static bool classof(const MatchAction *A) {
     return A->getKind() == AK_BuildMI;

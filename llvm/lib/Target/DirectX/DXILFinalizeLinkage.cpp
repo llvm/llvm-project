@@ -18,15 +18,17 @@
 using namespace llvm;
 
 static bool finalizeLinkage(Module &M) {
-  SmallPtrSet<Function *, 8> Funcs;
+  SmallVector<Function *> Funcs;
 
   // Collect non-entry and non-exported functions to set to internal linkage.
   for (Function &EF : M.functions()) {
     if (EF.isIntrinsic())
       continue;
-    if (EF.hasFnAttribute("hlsl.shader") || EF.hasFnAttribute("hlsl.export"))
+    if (EF.hasExternalLinkage() && EF.hasDefaultVisibility())
       continue;
-    Funcs.insert(&EF);
+    if (EF.hasFnAttribute("hlsl.shader"))
+      continue;
+    Funcs.push_back(&EF);
   }
 
   for (Function *F : Funcs) {

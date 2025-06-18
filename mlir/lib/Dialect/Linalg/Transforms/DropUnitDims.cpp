@@ -606,8 +606,7 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
     int64_t padRank = sourceShape.size();
 
     auto isStaticZero = [](OpFoldResult f) {
-      std::optional<int64_t> maybeInt = getConstantIntValue(f);
-      return maybeInt && *maybeInt == 0;
+      return getConstantIntValue(f) == 0;
     };
 
     llvm::SmallDenseSet<unsigned> unitDimsFilter(allowedUnitDims.begin(),
@@ -906,6 +905,10 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
 
   LogicalResult matchAndRewrite(FromOpTy contractionOp,
                                 PatternRewriter &rewriter) const override {
+    if (contractionOp.hasUserDefinedMaps()) {
+      return rewriter.notifyMatchFailure(
+          contractionOp, "ops with user-defined maps are not supported");
+    }
 
     auto loc = contractionOp.getLoc();
     auto inputs = contractionOp.getDpsInputs();
@@ -935,7 +938,8 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
         loc, collapsedResultTy, ValueRange{collapsedLhs, collapsedRhs},
         ValueRange{collapsedInit});
     for (auto attr : contractionOp->getAttrs()) {
-      if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName)
+      if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName ||
+          attr.getName() == "indexing_maps")
         continue;
       collapsedOp->setAttr(attr.getName(), attr.getValue());
     }

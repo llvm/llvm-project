@@ -70,6 +70,11 @@ public:
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
     return getPointerSize(SrcAS) == getPointerSize(DestAS);
   }
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 
   /// In AArch64, true if FEAT_CPA is present. Allows pointer arithmetic
   /// semantics to be preserved for instruction selection.

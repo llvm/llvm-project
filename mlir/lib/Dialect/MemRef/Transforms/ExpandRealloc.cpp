@@ -16,7 +16,7 @@
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_EXPANDREALLOC
+#define GEN_PASS_DEF_EXPANDREALLOCPASS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -142,11 +142,9 @@ private:
 };
 
 struct ExpandReallocPass
-    : public memref::impl::ExpandReallocBase<ExpandReallocPass> {
-  ExpandReallocPass(bool emitDeallocs)
-      : memref::impl::ExpandReallocBase<ExpandReallocPass>() {
-    this->emitDeallocs.setValue(emitDeallocs);
-  }
+    : public memref::impl::ExpandReallocPassBase<ExpandReallocPass> {
+  using Base::Base;
+
   void runOnOperation() override {
     MLIRContext &ctx = getContext();
 
@@ -168,8 +166,4 @@ struct ExpandReallocPass
 void mlir::memref::populateExpandReallocPatterns(RewritePatternSet &patterns,
                                                  bool emitDeallocs) {
   patterns.add<ExpandReallocOpPattern>(patterns.getContext(), emitDeallocs);
-}
-
-std::unique_ptr<Pass> mlir::memref::createExpandReallocPass(bool emitDeallocs) {
-  return std::make_unique<ExpandReallocPass>(emitDeallocs);
 }

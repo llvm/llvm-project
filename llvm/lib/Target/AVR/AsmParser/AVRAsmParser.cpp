@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AVRRegisterInfo.h"
+#include "MCTargetDesc/AVRMCAsmInfo.h"
 #include "MCTargetDesc/AVRMCELFStreamer.h"
-#include "MCTargetDesc/AVRMCExpr.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
@@ -16,7 +16,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
@@ -24,6 +24,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -100,7 +101,7 @@ public:
   }
 
   MCAsmParser &getParser() const { return Parser; }
-  MCAsmLexer &getLexer() const { return Parser.getLexer(); }
+  AsmLexer &getLexer() const { return Parser.getLexer(); }
 };
 
 /// An parsed AVR assembly operand.
@@ -447,7 +448,7 @@ bool AVRAsmParser::tryParseExpression(OperandVector &Operands, int64_t offset) {
 
 bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
   bool isNegated = false;
-  AVRMCExpr::VariantKind ModifierKind = AVRMCExpr::VK_AVR_None;
+  AVR::Specifier ModifierKind = AVR::S_AVR_NONE;
 
   SMLoc S = Parser.getTok().getLoc();
 
@@ -471,16 +472,16 @@ bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
     return true;
   }
   StringRef ModifierName = Parser.getTok().getString();
-  ModifierKind = AVRMCExpr::getKindByName(ModifierName);
+  ModifierKind = AVRMCExpr::parseSpecifier(ModifierName);
 
-  if (ModifierKind != AVRMCExpr::VK_AVR_None) {
+  if (ModifierKind != AVR::S_AVR_NONE) {
     Parser.Lex();
     Parser.Lex(); // Eat modifier name and parenthesis
     if (Parser.getTok().getString() == GENERATE_STUBS &&
         Parser.getTok().getKind() == AsmToken::Identifier) {
       std::string GSModName = ModifierName.str() + "_" + GENERATE_STUBS;
-      ModifierKind = AVRMCExpr::getKindByName(GSModName);
-      if (ModifierKind != AVRMCExpr::VK_AVR_None)
+      ModifierKind = AVRMCExpr::parseSpecifier(GSModName);
+      if (ModifierKind != AVR::S_AVR_NONE)
         Parser.Lex(); // Eat gs modifier name
     }
   } else {
@@ -698,16 +699,15 @@ ParseStatus AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
       Tokens[1].getKind() == AsmToken::Identifier) {
     MCSymbol *Symbol = getContext().getOrCreateSymbol(".text");
     AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L,
-                                        AVRMCExpr::VK_AVR_None);
+                                        AVR::S_AVR_NONE);
     return ParseStatus::NoMatch;
   }
 
   if (Parser.getTok().getKind() == AsmToken::Identifier &&
       Parser.getLexer().peekTok().getKind() == AsmToken::LParen) {
     StringRef ModifierName = Parser.getTok().getString();
-    AVRMCExpr::VariantKind ModifierKind =
-        AVRMCExpr::getKindByName(ModifierName);
-    if (ModifierKind != AVRMCExpr::VK_AVR_None) {
+    AVR::Specifier Spec = AVRMCExpr::parseSpecifier(ModifierName);
+    if (Spec != AVR::S_AVR_NONE) {
       Parser.Lex();
       Parser.Lex(); // Eat the modifier and parenthesis
     } else {
@@ -715,7 +715,7 @@ ParseStatus AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
     }
     MCSymbol *Symbol =
         getContext().getOrCreateSymbol(Parser.getTok().getString());
-    AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L, ModifierKind);
+    AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L, Spec);
     Lex(); // Eat the symbol name.
     if (parseToken(AsmToken::RParen))
       return ParseStatus::Failure;
@@ -732,7 +732,7 @@ ParseStatus AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
   return (parseMany(parseOne));
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRAsmParser() {
   RegisterMCAsmParser<AVRAsmParser> X(getTheAVRTarget());
 }
 

@@ -199,26 +199,36 @@ endif()
 string(TOUPPER "${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}" uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING)
 
 if( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE" )
-  set( ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
+  set( LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE 1 )
+elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE_AND_ORIGIN" )
+  set( LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE 1 )
+  set( LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN 1 )
 elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "DISABLED" OR NOT DEFINED LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING )
-  # The DISABLED setting is default and requires no additional defines.
+  # The DISABLED setting is default.
+  set( LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE 0 )
 else()
   message(FATAL_ERROR "Unknown value for LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING: \"${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}\"!")
+endif()
+# LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE (non-cached) is expected to be
+# 1 or 0 here, assuming referenced in #cmakedefine01.
+
+if(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS)
+  add_compile_definitions(EXPERIMENTAL_KEY_INSTRUCTIONS)
 endif()
 
 if( LLVM_REVERSE_ITERATION )
   set( LLVM_ENABLE_REVERSE_ITERATION 1 )
 endif()
 
-if(WIN32)
+if(WIN32 OR CYGWIN)
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
   if(CYGWIN)
     set(LLVM_ON_WIN32 0)
     set(LLVM_ON_UNIX 1)
-  else(CYGWIN)
+  else()
     set(LLVM_ON_WIN32 1)
     set(LLVM_ON_UNIX 0)
-  endif(CYGWIN)
+  endif()
 elseif(FUCHSIA OR UNIX)
   set(LLVM_ON_WIN32 0)
   set(LLVM_ON_UNIX 1)
@@ -688,7 +698,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   append("-Werror=unguarded-availability-new" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND LLVM_ENABLE_LTO)
   # LLVM data structures like llvm::User and llvm::MDNode rely on
   # the value of object storage persisting beyond the lifetime of the
   # object (#24952).  This is not standard compliant and causes a runtime
@@ -1231,6 +1241,8 @@ if(LLVM_PROFDATA_FILE AND EXISTS ${LLVM_PROFDATA_FILE})
   else()
     message(FATAL_ERROR "LLVM_PROFDATA_FILE can only be specified when compiling with clang")
   endif()
+elseif(LLVM_PROFDATA_FILE)
+  message(WARNING "LLVM_PROFDATA_FILE specified, but ${LLVM_PROFDATA_FILE} not found")
 endif()
 
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)

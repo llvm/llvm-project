@@ -44,10 +44,8 @@ struct DynamicScheduleTracker {
 #define NOT_FINISHED 1
 #define LAST_CHUNK 2
 
-#pragma omp begin declare target device_type(nohost)
-
 // TODO: This variable is a hack inherited from the old runtime.
-static uint64_t SHARED(Cnt);
+[[clang::loader_uninitialized]] static Local<uint64_t> Cnt;
 
 template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
   ////////////////////////////////////////////////////////////////////////////////
@@ -459,7 +457,8 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
 //
 //  __kmpc_dispatch_deinit
 //
-static DynamicScheduleTracker **SHARED(ThreadDST);
+[[clang::loader_uninitialized]] static Local<DynamicScheduleTracker **>
+    ThreadDST;
 
 // Create a new DST, link the current one, and define the new as current.
 static DynamicScheduleTracker *pushDST() {
@@ -821,7 +820,6 @@ public:
     Ty ThreadChunk = 0;
     Ty NumThreads = 1;
     Ty TId = 0;
-    ASSERT(TId == mapping::getThreadIdInBlock(), "Bad thread id");
 
     // All teams need to participate.
     Ty NumBlocks = mapping::getNumberOfBlocksInKernel();
@@ -913,19 +911,19 @@ public:
           IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,       \
           TY num_threads, TY block_chunk, TY thread_chunk) {                   \
     ompx::StaticLoopChunker<TY>::DistributeFor(                                \
-        loc, fn, arg, num_iters + 1, num_threads, block_chunk, thread_chunk);  \
+        loc, fn, arg, num_iters, num_threads, block_chunk, thread_chunk);      \
   }                                                                            \
   [[gnu::flatten, clang::always_inline]] void                                  \
       __kmpc_distribute_static_loop##BW(IdentTy *loc, void (*fn)(TY, void *),  \
                                         void *arg, TY num_iters,               \
                                         TY block_chunk) {                      \
-    ompx::StaticLoopChunker<TY>::Distribute(loc, fn, arg, num_iters + 1,       \
+    ompx::StaticLoopChunker<TY>::Distribute(loc, fn, arg, num_iters,           \
                                             block_chunk);                      \
   }                                                                            \
   [[gnu::flatten, clang::always_inline]] void __kmpc_for_static_loop##BW(      \
       IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,           \
       TY num_threads, TY thread_chunk) {                                       \
-    ompx::StaticLoopChunker<TY>::For(loc, fn, arg, num_iters + 1, num_threads, \
+    ompx::StaticLoopChunker<TY>::For(loc, fn, arg, num_iters, num_threads,     \
                                      thread_chunk);                            \
   }
 
@@ -935,5 +933,3 @@ OMP_LOOP_ENTRY(_4u, uint32_t)
 OMP_LOOP_ENTRY(_8, int64_t)
 OMP_LOOP_ENTRY(_8u, uint64_t)
 }
-
-#pragma omp end declare target

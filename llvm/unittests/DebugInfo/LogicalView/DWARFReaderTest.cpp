@@ -30,6 +30,10 @@ extern const char *TestMainArgv0;
 namespace {
 
 const char *DwarfClang = "test-dwarf-clang.o";
+// Two compile units: one declares `extern int foo_printf(const char *, ...);`
+// and another one that defines the function.
+const char *DwarfClangUnspecParams = "test-dwarf-clang-unspec-params.elf";
+const char *DwarfClangModule = "test-dwarf-clang-module.o";
 const char *DwarfGcc = "test-dwarf-gcc.o";
 
 // Helper function to get the first compile unit.
@@ -37,7 +41,7 @@ LVScopeCompileUnit *getFirstCompileUnit(LVScopeRoot *Root) {
   EXPECT_NE(Root, nullptr);
   const LVScopes *CompileUnits = Root->getScopes();
   EXPECT_NE(CompileUnits, nullptr);
-  EXPECT_EQ(CompileUnits->size(), 1u);
+  EXPECT_GT(CompileUnits->size(), 0u);
 
   LVScopes::const_iterator Iter = CompileUnits->begin();
   EXPECT_NE(Iter, nullptr);
@@ -72,6 +76,10 @@ void checkElementProperties(LVReader *Reader) {
   EXPECT_EQ(CompileUnit->getBaseAddress(), 0u);
   EXPECT_TRUE(CompileUnit->getProducer().starts_with("clang"));
   EXPECT_EQ(CompileUnit->getName(), "test.cpp");
+  LVSourceLanguage Language = CompileUnit->getSourceLanguage();
+  EXPECT_TRUE(Language.isValid());
+  EXPECT_EQ(Language, LVSourceLanguage::DW_LANG_C_plus_plus_14);
+  EXPECT_EQ(Language.getName(), "DW_LANG_C_plus_plus_14");
 
   EXPECT_EQ(CompileUnit->lineCount(), 0u);
   EXPECT_EQ(CompileUnit->scopeCount(), 1u);
@@ -122,6 +130,65 @@ void checkElementProperties(LVReader *Reader) {
   const LVLines *Lines = Function->getLines();
   ASSERT_NE(Lines, nullptr);
   ASSERT_EQ(Lines->size(), 0x12u);
+
+  // Check size of types in CompileUnit.
+  const LVTypes *Types = CompileUnit->getTypes();
+  ASSERT_NE(Types, nullptr);
+  EXPECT_EQ(Types->size(), 7u);
+
+  const auto BoolType = llvm::find_if(
+      *Types, [](const LVElement *elt) { return elt->getName() == "bool"; });
+  ASSERT_NE(BoolType, Types->end());
+  const auto IntType = llvm::find_if(
+      *Types, [](const LVElement *elt) { return elt->getName() == "int"; });
+  ASSERT_NE(IntType, Types->end());
+  EXPECT_EQ(static_cast<LVType *>(*BoolType)->getBitSize(), 8u);
+  EXPECT_EQ(static_cast<LVType *>(*BoolType)->getStorageSizeInBytes(), 1u);
+  EXPECT_EQ(static_cast<LVType *>(*IntType)->getBitSize(), 32u);
+  EXPECT_EQ(static_cast<LVType *>(*IntType)->getStorageSizeInBytes(), 4u);
+}
+
+// Check proper handling of DW_AT_unspecified_parameters in
+// LVScope::addMissingElements().
+void checkUnspecifiedParameters(LVReader *Reader) {
+  LVScopeRoot *Root = Reader->getScopesRoot();
+  LVScopeCompileUnit *CompileUnit = getFirstCompileUnit(Root);
+
+  EXPECT_EQ(Root->getFileFormatName(), "elf64-x86-64");
+  EXPECT_EQ(Root->getName(), DwarfClangUnspecParams);
+
+  const LVPublicNames &PublicNames = CompileUnit->getPublicNames();
+  ASSERT_EQ(PublicNames.size(), 1u);
+
+  LVPublicNames::const_iterator IterNames = PublicNames.cbegin();
+  LVScope *Function = (*IterNames).first;
+  EXPECT_EQ(Function->getName(), "foo_printf");
+  const LVElements *Elements = Function->getChildren();
+  ASSERT_NE(Elements, nullptr);
+  // foo_printf is a variadic function whose prototype is
+  // `int foo_printf(const char *, ...)`, where the '...' is represented by a
+  // DW_TAG_unspecified_parameters, i.e. we expect to find at least one child
+  // for which getIsUnspecified() returns true.
+  EXPECT_TRUE(llvm::any_of(*Elements, [](const LVElement *elt) {
+    return elt->getIsSymbol() &&
+           static_cast<const LVSymbol *>(elt)->getIsUnspecified();
+  }));
+}
+
+// Check the basic properties on parsed DW_TAG_module.
+void checkScopeModule(LVReader *Reader) {
+  LVScopeRoot *Root = Reader->getScopesRoot();
+  LVScopeCompileUnit *CompileUnit = getFirstCompileUnit(Root);
+
+  EXPECT_EQ(Root->getFileFormatName(), "Mach-O 64-bit x86-64");
+  EXPECT_EQ(Root->getName(), DwarfClangModule);
+
+  ASSERT_NE(CompileUnit->getChildren(), nullptr);
+  LVElement *FirstChild = *(CompileUnit->getChildren()->begin());
+  EXPECT_EQ(FirstChild->getIsScope(), 1);
+  LVScopeModule *Module = static_cast<LVScopeModule *>(FirstChild);
+  EXPECT_EQ(Module->getIsModule(), 1);
+  EXPECT_EQ(Module->getName(), "DebugModule");
 }
 
 // Check the logical elements selection.
@@ -252,7 +319,10 @@ void elementProperties(SmallString<128> &InputsDir) {
   ReaderOptions.setAttributeProducer();
   ReaderOptions.setAttributePublics();
   ReaderOptions.setAttributeRange();
+  ReaderOptions.setAttributeLanguage();
   ReaderOptions.setAttributeLocation();
+  ReaderOptions.setAttributeInserted();
+  ReaderOptions.setAttributeSize();
   ReaderOptions.setPrintAll();
   ReaderOptions.resolveDependencies();
 
@@ -264,6 +334,12 @@ void elementProperties(SmallString<128> &InputsDir) {
   std::unique_ptr<LVReader> Reader =
       createReader(ReaderHandler, InputsDir, DwarfClang);
   checkElementProperties(Reader.get());
+
+  Reader = createReader(ReaderHandler, InputsDir, DwarfClangUnspecParams);
+  checkUnspecifiedParameters(Reader.get());
+
+  Reader = createReader(ReaderHandler, InputsDir, DwarfClangModule);
+  checkScopeModule(Reader.get());
 }
 
 // Logical elements selection.
@@ -338,7 +414,7 @@ TEST(LogicalViewTest, DWARFReader) {
   TT.setOS(Triple::UnknownOS);
 
   std::string TargetLookupError;
-  if (!TargetRegistry::lookupTarget(std::string(TT.str()), TargetLookupError))
+  if (!TargetRegistry::lookupTarget(TT, TargetLookupError))
     GTEST_SKIP();
 
   SmallString<128> InputsDir = unittest::getInputFileDirectory(TestMainArgv0);

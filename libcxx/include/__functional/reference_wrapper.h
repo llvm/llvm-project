@@ -11,13 +11,14 @@
 #define _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
 
 #include <__compare/synth_three_way.h>
-#include <__concepts/boolean_testable.h>
 #include <__config>
 #include <__functional/weak_result_type.h>
 #include <__memory/addressof.h>
+#include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_const.h>
+#include <__type_traits/is_core_convertible.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
@@ -30,7 +31,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS reference_wrapper : public __weak_result_type<_Tp> {
+class reference_wrapper : public __weak_result_type<_Tp> {
 public:
   // types
   typedef _Tp type;
@@ -74,7 +75,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, reference_wrapper __y)
     requires requires {
-      { __x.get() == __y.get() } -> __boolean_testable;
+      { __x.get() == __y.get() } -> __core_convertible_to<bool>;
     }
   {
     return __x.get() == __y.get();
@@ -82,7 +83,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, const _Tp& __y)
     requires requires {
-      { __x.get() == __y } -> __boolean_testable;
+      { __x.get() == __y } -> __core_convertible_to<bool>;
     }
   {
     return __x.get() == __y;
@@ -90,7 +91,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, reference_wrapper<const _Tp> __y)
     requires(!is_const_v<_Tp>) && requires {
-      { __x.get() == __y.get() } -> __boolean_testable;
+      { __x.get() == __y.get() } -> __core_convertible_to<bool>;
     }
   {
     return __x.get() == __y.get();
@@ -148,6 +149,11 @@ template <class _Tp>
 void ref(const _Tp&&) = delete;
 template <class _Tp>
 void cref(const _Tp&&) = delete;
+
+// Let desugars-to pass through std::reference_wrapper
+template <class _CanonicalTag, class _Operation, class... _Args>
+inline const bool __desugars_to_v<_CanonicalTag, reference_wrapper<_Operation>, _Args...> =
+    __desugars_to_v<_CanonicalTag, _Operation, _Args...>;
 
 _LIBCPP_END_NAMESPACE_STD
 

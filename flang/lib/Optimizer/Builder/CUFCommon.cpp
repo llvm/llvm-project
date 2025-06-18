@@ -12,6 +12,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 
 /// Retrieve or create the CUDA Fortran GPU module in the give in \p mod.
 mlir::gpu::GPUModuleOp cuf::getOrCreateGPUModule(mlir::ModuleOp mod,
@@ -31,30 +32,45 @@ mlir::gpu::GPUModuleOp cuf::getOrCreateGPUModule(mlir::ModuleOp mod,
   return gpuMod;
 }
 
-bool cuf::isInCUDADeviceContext(mlir::Operation *op) {
-  if (!op)
+bool cuf::isCUDADeviceContext(mlir::Operation *op) {
+  if (!op || !op->getParentRegion())
     return false;
-  if (op->getParentOfType<cuf::KernelOp>() ||
-      op->getParentOfType<mlir::gpu::GPUFuncOp>())
+  return isCUDADeviceContext(*op->getParentRegion());
+}
+
+// Check if the insertion point is currently in a device context. HostDevice
+// subprogram are not considered fully device context so it will return false
+// for it.
+// If the insertion point is inside an OpenACC region op, it is considered
+// device context.
+bool cuf::isCUDADeviceContext(mlir::Region &region) {
+  if (region.getParentOfType<cuf::KernelOp>())
     return true;
-  if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
-    if (auto cudaProcAttr = funcOp->getAttrOfType<cuf::ProcAttributeAttr>(
-            cuf::getProcAttrName())) {
-      return cudaProcAttr.getValue() != cuf::ProcAttribute::Host;
+  if (region.getParentOfType<mlir::acc::ComputeRegionOpInterface>())
+    return true;
+  if (auto funcOp = region.getParentOfType<mlir::func::FuncOp>()) {
+    if (auto cudaProcAttr =
+            funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
+                cuf::getProcAttrName())) {
+      return cudaProcAttr.getValue() != cuf::ProcAttribute::Host &&
+             cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
     }
   }
+  return false;
+}
+
+bool cuf::isRegisteredDeviceAttr(std::optional<cuf::DataAttribute> attr) {
+  if (attr && (*attr == cuf::DataAttribute::Device ||
+               *attr == cuf::DataAttribute::Managed ||
+               *attr == cuf::DataAttribute::Constant))
+    return true;
   return false;
 }
 
 bool cuf::isRegisteredDeviceGlobal(fir::GlobalOp op) {
   if (op.getConstant())
     return false;
-  auto attr = op.getDataAttr();
-  if (attr && (*attr == cuf::DataAttribute::Device ||
-               *attr == cuf::DataAttribute::Managed ||
-               *attr == cuf::DataAttribute::Constant))
-    return true;
-  return false;
+  return isRegisteredDeviceAttr(op.getDataAttr());
 }
 
 void cuf::genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder) {

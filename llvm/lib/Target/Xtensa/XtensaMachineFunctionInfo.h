@@ -27,6 +27,7 @@ class XtensaMachineFunctionInfo : public MachineFunctionInfo {
   unsigned VarArgsFirstGPR;
   int VarArgsOnStackFrameIndex;
   int VarArgsInRegsFrameIndex;
+  bool SaveFrameRegister = false;
 
 public:
   explicit XtensaMachineFunctionInfo(const Function &F,
@@ -50,6 +51,9 @@ public:
   // Get and set the frame index of the first stack vararg.
   int getVarArgsInRegsFrameIndex() const { return VarArgsInRegsFrameIndex; }
   void setVarArgsInRegsFrameIndex(int FI) { VarArgsInRegsFrameIndex = FI; }
+
+  bool isSaveFrameRegister() const { return SaveFrameRegister; }
+  void setSaveFrameRegister() { SaveFrameRegister = true; }
 };
 
 } // namespace llvm

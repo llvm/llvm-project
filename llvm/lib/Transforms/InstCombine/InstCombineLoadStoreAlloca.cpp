@@ -18,7 +18,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PatternMatch.h"
@@ -360,7 +359,10 @@ void PointerReplacer::replace(Instruction *I) {
 
     IC.InsertNewInstWith(NewI, LT->getIterator());
     IC.replaceInstUsesWith(*LT, NewI);
-    WorkMap[LT] = NewI;
+    // LT has actually been replaced by NewI. It is useless to insert LT into
+    // the map. Instead, we insert NewI into the map to indicate this is the
+    // replacement (new value).
+    WorkMap[NewI] = NewI;
   } else if (auto *PHI = dyn_cast<PHINode>(I)) {
     Type *NewTy = getReplacement(PHI->getIncomingValue(0))->getType();
     auto *NewPHI = PHINode::Create(NewTy, PHI->getNumIncomingValues(),
@@ -915,7 +917,7 @@ static bool canReplaceGEPIdxWithZero(InstCombinerImpl &IC,
   // first non-zero index.
   auto IsAllNonNegative = [&]() {
     for (unsigned i = Idx+1, e = GEPI->getNumOperands(); i != e; ++i) {
-      KnownBits Known = IC.computeKnownBits(GEPI->getOperand(i), 0, MemI);
+      KnownBits Known = IC.computeKnownBits(GEPI->getOperand(i), MemI);
       if (Known.isNonNegative())
         continue;
       return false;
@@ -980,6 +982,53 @@ static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
        !NullPointerIsDefined(LI.getFunction(), LI.getPointerAddressSpace())))
     return true;
   return false;
+}
+
+Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
+                                                bool HasDereferenceable,
+                                                unsigned Depth) {
+  if (auto *Sel = dyn_cast<SelectInst>(V)) {
+    if (isa<ConstantPointerNull>(Sel->getOperand(1)))
+      return Sel->getOperand(2);
+
+    if (isa<ConstantPointerNull>(Sel->getOperand(2)))
+      return Sel->getOperand(1);
+  }
+
+  if (!V->hasOneUse())
+    return nullptr;
+
+  constexpr unsigned RecursionLimit = 3;
+  if (Depth == RecursionLimit)
+    return nullptr;
+
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
+    if (HasDereferenceable || GEP->isInBounds()) {
+      if (auto *Res = simplifyNonNullOperand(GEP->getPointerOperand(),
+                                             HasDereferenceable, Depth + 1)) {
+        replaceOperand(*GEP, 0, Res);
+        addToWorklist(GEP);
+        return nullptr;
+      }
+    }
+  }
+
+  if (auto *PHI = dyn_cast<PHINode>(V)) {
+    bool Changed = false;
+    for (Use &U : PHI->incoming_values()) {
+      // We set Depth to RecursionLimit to avoid expensive recursion.
+      if (auto *Res = simplifyNonNullOperand(U.get(), HasDereferenceable,
+                                             RecursionLimit)) {
+        replaceUse(U, Res);
+        Changed = true;
+      }
+    }
+    if (Changed)
+      addToWorklist(PHI);
+    return nullptr;
+  }
+
+  return nullptr;
 }
 
 Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
@@ -1059,20 +1108,13 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         V2->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
         return SelectInst::Create(SI->getCondition(), V1, V2);
       }
-
-      // load (select (cond, null, P)) -> load P
-      if (isa<ConstantPointerNull>(SI->getOperand(1)) &&
-          !NullPointerIsDefined(SI->getFunction(),
-                                LI.getPointerAddressSpace()))
-        return replaceOperand(LI, 0, SI->getOperand(2));
-
-      // load (select (cond, P, null)) -> load P
-      if (isa<ConstantPointerNull>(SI->getOperand(2)) &&
-          !NullPointerIsDefined(SI->getFunction(),
-                                LI.getPointerAddressSpace()))
-        return replaceOperand(LI, 0, SI->getOperand(1));
     }
   }
+
+  if (!NullPointerIsDefined(LI.getFunction(), LI.getPointerAddressSpace()))
+    if (Value *V = simplifyNonNullOperand(Op, /*HasDereferenceable=*/true))
+      return replaceOperand(LI, 0, V);
+
   return nullptr;
 }
 
@@ -1437,6 +1479,10 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   if (isa<UndefValue>(Val))
     return eraseInstFromFunction(SI);
 
+  if (!NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()))
+    if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))
+      return replaceOperand(SI, 1, V);
+
   return nullptr;
 }
 
@@ -1534,8 +1580,8 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   // Insert a PHI node now if we need it.
   Value *MergedVal = OtherStore->getValueOperand();
   // The debug locations of the original instructions might differ. Merge them.
-  DebugLoc MergedLoc = DILocation::getMergedLocation(SI.getDebugLoc(),
-                                                     OtherStore->getDebugLoc());
+  DebugLoc MergedLoc =
+      DebugLoc::getMergedLocation(SI.getDebugLoc(), OtherStore->getDebugLoc());
   if (MergedVal != SI.getValueOperand()) {
     PHINode *PN =
         PHINode::Create(SI.getValueOperand()->getType(), 2, "storemerge");

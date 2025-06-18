@@ -13,6 +13,7 @@
 #include <climits>
 #include <concepts>
 #include <cstddef>
+#include <initializer_list>
 #include <random>
 #include <string>
 #include <vector>
@@ -190,6 +191,7 @@ struct Generate<T> {
   static T arbitrary() { return 42; }
   static T cheap() { return 42; }
   static T expensive() { return 42; }
+  static T random() { return getRandomInteger<T>(std::numeric_limits<T>::min(), std::numeric_limits<T>::max()); }
 };
 
 template <>
@@ -197,6 +199,19 @@ struct Generate<std::string> {
   static std::string arbitrary() { return "hello world"; }
   static std::string cheap() { return "small"; }
   static std::string expensive() { return std::string(256, 'x'); }
+  static std::string random() {
+    auto length = getRandomInteger<std::size_t>(1, 1024);
+    return getRandomString(length);
+  }
 };
+
+template <class T>
+T random_different_from(std::initializer_list<T> others) {
+  T value;
+  do {
+    value = Generate<T>::random();
+  } while (std::find(others.begin(), others.end(), value) != others.end());
+  return value;
+}
 
 #endif // BENCHMARK_GENERATE_INPUT_H

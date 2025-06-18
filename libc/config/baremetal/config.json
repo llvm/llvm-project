@@ -5,6 +5,9 @@
     }
   },
   "printf": {
+    "LIBC_CONF_PRINTF_DISABLE_FIXED_POINT": {
+      "value": true
+    },
     "LIBC_CONF_PRINTF_DISABLE_FLOAT": {
       "value": true
     },

@@ -1,0 +1,119 @@
+// RUN: split-file %s %t
+// RUN: cd %t
+//
+
+//--- foo.c
+int foo() { return 3; }
+
+//--- main.c
+int foo();
+int main() { return foo() - 3; }
+
+// # no LTO
+// ## PGO, with and without function-sections, and all permutations of -bcdtors
+// RUN: %clang_pgogen -O2 -c -fno-function-sections foo.c
+// RUN: %clang_pgogen -O2 -c -fno-function-sections main.c
+//
+// RUN: %clang_pgogen -Wl,-bcdtors:all foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=BOTH
+//
+// RUN: %clang_pgogen -Wl,-bcdtors:mbr foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=BOTH
+
+// RUN: %clang_pgogen -O2 -c -ffunction-sections foo.c
+// RUN: %clang_pgogen -O2 -c -ffunction-sections main.c
+//
+// RUN: %clang_pgogen -Wl,-bcdtors:all foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=BOTH
+//
+// RUN: %clang_pgogen -Wl,-bcdtors:mbr foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=BOTH
+
+// ## no PGO at compile step, but PGO at link step.
+// RUN: %clang -O2 -c  foo.c
+// RUN: %clang -O2 -c  main.c
+//
+// RUN: %clang_pgogen -Wl,-bcdtors:all foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=NONE
+//
+// RUN: %clang_pgogen -Wl,-bcdtors:mbr foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=NONE
+
+// # LTO, with and without function-sections, and all permutations of -bcdtors
+// ## LTO one file, no PGO at compile, PGO at link
+// RUN: %clang -O2 -c  foo.c
+// RUN: %clang -O2 -c -flto main.c
+//
+// RUN: %clang_pgogen -flto -fno-function-sections -Wl,-bcdtors:all foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=NONE
+//
+// RUN: %clang_pgogen -flto -fno-function-sections -Wl,-bcdtors:mbr foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=NONE
+//
+// RUN: %clang_pgogen -flto -ffunction-sections -Wl,-bcdtors:all foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=NONE
+//
+// RUN: %clang_pgogen -flto -ffunction-sections -Wl,-bcdtors:mbr foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=NONE
+
+// ## LTO one file, PGO at compile and link
+// RUN: %clang -O2 -c -fno-function-sections foo.c
+// RUN: %clang_pgogen -O2 -c -flto main.c
+// RUN: %clang_pgogen -flto -fno-function-sections -Wl,-bcdtors:all foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=MAIN
+
+// RUN: %clang -O2 -c -flto foo.c
+// RUN: %clang_pgogen -O2 -c -fno-function-sections main.c
+// RUN: %clang_pgogen -flto -fno-function-sections -Wl,-bcdtors:mbr foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=MAIN
+
+// RUN: %clang -O2 -c -flto foo.c
+// RUN: %clang_pgogen -O2 -c -ffunction-sections main.c
+// RUN: %clang_pgogen -flto -ffunction-sections -Wl,-bcdtors:all foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=MAIN
+
+// RUN: %clang -O2 -c -ffunction-sections foo.c
+// RUN: %clang_pgogen -O2 -c -flto main.c
+// RUN: %clang_pgogen -flto -ffunction-sections -Wl,-bcdtors:mbr foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=MAIN
+
+// ## LTO and PGO both files
+// RUN: %clang_pgogen -O2 -c -flto foo.c
+// RUN: %clang_pgogen -O2 -c -flto main.c
+//
+// RUN: %clang_pgogen -flto -fno-function-sections -Wl,-bcdtors:all foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=BOTH
+//
+// RUN: %clang_pgogen -flto -fno-function-sections -Wl,-bcdtors:mbr foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=BOTH
+//
+// RUN: %clang_pgogen -flto -ffunction-sections -Wl,-bcdtors:all foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=BOTH
+//
+// RUN: %clang_pgogen -flto -ffunction-sections -Wl,-bcdtors:mbr foo.o main.o
+// RUN: rm -f default* && %run ./a.out
+// RUN: llvm-profdata show --all-functions default* | FileCheck  %s -check-prefix=BOTH
+
+// BOTH-DAG: foo:
+// BOTH-DAG: main:
+// MAIN-NOT: foo:
+// MAIN: main:
+// MAIN-NOT: foo:
+// NONE: Total functions: 0

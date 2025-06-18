@@ -116,7 +116,7 @@ void ref_map() {
   // CK35-DAG: store ptr [[S_ADDR]], ptr [[BP3]],
   // CK35-DAG: store ptr [[B_ADDR:%.+]], ptr [[P3]],
 
-  // CK35-DAG: [[B_ADDR]] = load ptr, ptr [[B_REF:%.+]],
+  // CK35-DAG: [[B_ADDR]] = load ptr, ptr [[B_REF:%.+]], align {{[0-9]+}}, !nonnull !{{[0-9]+}}, !align !{{[0-9]+}}
   // CK35-DAG: [[B_REF]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1
 
   #pragma omp target map(to: s, s.b)

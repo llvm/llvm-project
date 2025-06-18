@@ -280,42 +280,15 @@ static void removeBufferizationAttributes(BlockArgument bbArg) {
 }
 
 /// Return the func::FuncOp called by `callOp`.
-static func::FuncOp getCalledFunction(func::CallOp callOp) {
+static func::FuncOp
+getCalledFunction(func::CallOp callOp,
+                  mlir::SymbolTableCollection &symbolTable) {
   SymbolRefAttr sym =
       llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
   if (!sym)
     return nullptr;
   return dyn_cast_or_null<func::FuncOp>(
-      SymbolTable::lookupNearestSymbolFrom(callOp, sym));
-}
-
-/// Gather equivalence info of CallOps.
-/// Note: This only adds new equivalence info if the called function was already
-/// analyzed.
-// TODO: This does not handle cyclic function call graphs etc.
-static void equivalenceAnalysis(func::FuncOp funcOp,
-                                OneShotAnalysisState &state,
-                                FuncAnalysisState &funcState) {
-  funcOp->walk([&](func::CallOp callOp) {
-    func::FuncOp calledFunction = getCalledFunction(callOp);
-    assert(calledFunction && "could not retrieved called func::FuncOp");
-
-    // No equivalence info available for the called function.
-    if (!funcState.equivalentFuncArgs.count(calledFunction))
-      return WalkResult::skip();
-
-    for (auto it : funcState.equivalentFuncArgs[calledFunction]) {
-      int64_t returnIdx = it.first;
-      int64_t bbargIdx = it.second;
-      if (!state.isInPlace(callOp->getOpOperand(bbargIdx)))
-        continue;
-      Value returnVal = callOp.getResult(returnIdx);
-      Value argVal = callOp->getOperand(bbargIdx);
-      state.unionEquivalenceClasses(returnVal, argVal);
-    }
-
-    return WalkResult::advance();
-  });
+      symbolTable.lookupNearestSymbolFrom(callOp, sym));
 }
 
 /// Return "true" if the given function signature has tensor semantics.
@@ -329,7 +302,7 @@ static bool hasTensorSignature(func::FuncOp funcOp) {
 /// Store all functions of the `moduleOp` in `orderedFuncOps`, sorted by
 /// callee-caller order (i.e., callees without callers first). Store all
 /// remaining functions (i.e., the ones that call each other recursively) in
-/// `remainingFuncOps`.
+/// `remainingFuncOps`. Does not traverse nested symbol tables.
 ///
 /// Store the map of FuncOp to all its callers in `callerMap`.
 ///
@@ -337,17 +310,19 @@ static bool hasTensorSignature(func::FuncOp funcOp) {
 /// any func::CallOp.
 static LogicalResult getFuncOpsOrderedByCalls(
     ModuleOp moduleOp, SmallVectorImpl<func::FuncOp> &orderedFuncOps,
-    SmallVectorImpl<func::FuncOp> &remainingFuncOps, FuncCallerMap &callerMap) {
+    SmallVectorImpl<func::FuncOp> &remainingFuncOps, FuncCallerMap &callerMap,
+    SymbolTableCollection &symbolTables) {
   // For each FuncOp, the set of functions called by it (i.e. the union of
   // symbols of all nested func::CallOp).
   DenseMap<func::FuncOp, DenseSet<func::FuncOp>> calledBy;
   // For each FuncOp, the number of func::CallOp it contains.
   DenseMap<func::FuncOp, unsigned> numberCallOpsContainedInFuncOp;
-  WalkResult res = moduleOp.walk([&](func::FuncOp funcOp) -> WalkResult {
+
+  for (func::FuncOp funcOp : moduleOp.getOps<func::FuncOp>()) {
     // Collect function calls and populate the caller map.
     numberCallOpsContainedInFuncOp[funcOp] = 0;
-    return funcOp.walk([&](func::CallOp callOp) -> WalkResult {
-      func::FuncOp calledFunction = getCalledFunction(callOp);
+    WalkResult res = funcOp.walk([&](func::CallOp callOp) -> WalkResult {
+      func::FuncOp calledFunction = getCalledFunction(callOp, symbolTables);
       assert(calledFunction && "could not retrieved called func::FuncOp");
       // If the called function does not have any tensors in its signature, then
       // it is not necessary to bufferize the callee before the caller.
@@ -360,21 +335,31 @@ static LogicalResult getFuncOpsOrderedByCalls(
       }
       return WalkResult::advance();
     });
-  });
-  if (res.wasInterrupted())
-    return failure();
+    if (res.wasInterrupted())
+      return failure();
+  }
 
   // Iteratively remove function operations that do not call any of the
   // functions remaining in the callCounter map and add them to ordered list.
-  while (!numberCallOpsContainedInFuncOp.empty()) {
-    auto it = llvm::find_if(numberCallOpsContainedInFuncOp,
-                            [](auto entry) { return entry.getSecond() == 0; });
-    if (it == numberCallOpsContainedInFuncOp.end())
-      break;
-    orderedFuncOps.push_back(it->getFirst());
-    for (auto callee : calledBy[it->getFirst()])
-      numberCallOpsContainedInFuncOp[callee]--;
-    numberCallOpsContainedInFuncOp.erase(it);
+  SmallVector<func::FuncOp> worklist;
+
+  for (const auto &entry : numberCallOpsContainedInFuncOp) {
+    if (entry.second == 0)
+      worklist.push_back(entry.first);
+  }
+
+  while (!worklist.empty()) {
+    func::FuncOp func = worklist.pop_back_val();
+    orderedFuncOps.push_back(func);
+
+    for (func::FuncOp caller : calledBy[func]) {
+      auto &count = numberCallOpsContainedInFuncOp[caller];
+
+      if (--count == 0)
+        worklist.push_back(caller);
+    }
+
+    numberCallOpsContainedInFuncOp.erase(func);
   }
 
   // Put all other functions in the list of remaining functions. These are
@@ -481,7 +466,8 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
   FuncCallerMap callerMap;
 
   if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps,
-                                      remainingFuncOps, callerMap)))
+                                      remainingFuncOps, callerMap,
+                                      funcState.symbolTables)))
     return failure();
 
   // Analyze functions in order. Starting with functions that are not calling
@@ -492,9 +478,6 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
 
     // Now analyzing function.
     funcState.startFunctionAnalysis(funcOp);
-
-    // Gather equivalence info for CallOps.
-    equivalenceAnalysis(funcOp, state, funcState);
 
     // Analyze funcOp.
     if (failed(analyzeOp(funcOp, state, statistics)))
@@ -514,9 +497,6 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
     if (!state.getOptions().isOpAllowed(funcOp))
       continue;
 
-    // Gather equivalence info for CallOps.
-    equivalenceAnalysis(funcOp, state, funcState);
-
     // Analyze funcOp.
     if (failed(analyzeOp(funcOp, state, statistics)))
       return failure();
@@ -533,15 +513,15 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
 
 void mlir::bufferization::removeBufferizationAttributesInModule(
     ModuleOp moduleOp) {
-  moduleOp.walk([&](func::FuncOp op) {
+  for (auto op : moduleOp.getOps<func::FuncOp>()) {
     for (BlockArgument bbArg : op.getArguments())
       removeBufferizationAttributes(bbArg);
-  });
+  }
 }
 
 LogicalResult mlir::bufferization::bufferizeModuleOp(
     ModuleOp moduleOp, const OneShotBufferizationOptions &options,
-    BufferizationStatistics *statistics) {
+    BufferizationState &state, BufferizationStatistics *statistics) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   IRRewriter rewriter(moduleOp.getContext());
@@ -563,7 +543,8 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   // each other recursively are bufferized in an unspecified order at the end.
   // We may use unnecessarily "complex" (in terms of layout map) buffer types.
   if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps,
-                                      remainingFuncOps, callerMap)))
+                                      remainingFuncOps, callerMap,
+                                      state.getSymbolTables())))
     return failure();
   llvm::append_range(orderedFuncOps, remainingFuncOps);
 
@@ -577,10 +558,10 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
       // Buffer copies must be inserted before every write.
       OneShotBufferizationOptions updatedOptions = options;
       updatedOptions.copyBeforeWrite = true;
-      if (failed(bufferizeOp(funcOp, updatedOptions, statistics)))
+      if (failed(bufferizeOp(funcOp, updatedOptions, state, statistics)))
         return failure();
     } else {
-      if (failed(bufferizeOp(funcOp, options, statistics)))
+      if (failed(bufferizeOp(funcOp, options, state, statistics)))
         return failure();
     }
 
@@ -592,9 +573,9 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   // Bufferize all other ops.
   for (Operation &op : llvm::make_early_inc_range(moduleOp.getOps())) {
     // Functions were already bufferized.
-    if (isa<func::FuncOp>(&op))
+    if (isa<func::FuncOp>(&op) || op.hasTrait<OpTrait::SymbolTable>())
       continue;
-    if (failed(bufferizeOp(&op, options, statistics)))
+    if (failed(bufferizeOp(&op, options, state, statistics)))
       return failure();
   }
 
@@ -606,14 +587,14 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
 
 LogicalResult mlir::bufferization::runOneShotModuleBufferize(
     ModuleOp moduleOp, const OneShotBufferizationOptions &options,
-    BufferizationStatistics *statistics) {
+    BufferizationState &state, BufferizationStatistics *statistics) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
          "invalid combination of bufferization flags");
   if (!options.copyBeforeWrite) {
     if (options.noAnalysisFuncFilter.empty()) {
-      if (failed(insertTensorCopies(moduleOp, options, statistics)))
+      if (failed(insertTensorCopies(moduleOp, options, state, statistics)))
         return failure();
     } else {
       // FuncOps whose names are specified in options.noAnalysisFuncFilter will
@@ -629,13 +610,14 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
       };
       OneShotBufferizationOptions updatedOptions(options);
       updatedOptions.opFilter.denyOperation(analysisFilterFn);
-      if (failed(insertTensorCopies(moduleOp, updatedOptions, statistics)))
+      if (failed(
+              insertTensorCopies(moduleOp, updatedOptions, state, statistics)))
         return failure();
     }
   }
   if (options.testAnalysisOnly)
     return success();
-  if (failed(bufferizeModuleOp(moduleOp, options, statistics)))
+  if (failed(bufferizeModuleOp(moduleOp, options, state, statistics)))
     return failure();
   return success();
 }

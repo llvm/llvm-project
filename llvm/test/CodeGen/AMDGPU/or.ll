@@ -355,15 +355,15 @@ define amdgpu_kernel void @scalar_or_literal_multi_use_i64(ptr addrspace(1) %out
 ;
 ; GFX8-LABEL: scalar_or_literal_multi_use_i64:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x4c
+; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x74
 ; GFX8-NEXT:    s_movk_i32 s8, 0x3039
 ; GFX8-NEXT:    s_mov_b32 s9, 0xf237b
-; GFX8-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
+; GFX8-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s2, -1
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX8-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
@@ -401,7 +401,7 @@ define amdgpu_kernel void @scalar_or_literal_multi_use_i64(ptr addrspace(1) %out
   store i64 %or, ptr addrspace(1) %out
 
   %foo = add i64 %b, 4261135838621753
-  store volatile i64 %foo, ptr addrspace(1) undef
+  store volatile i64 %foo, ptr addrspace(1) poison
   ret void
 }
 
@@ -514,7 +514,7 @@ define amdgpu_kernel void @scalar_or_inline_imm_multi_use_i64(ptr addrspace(1) %
   %or = or i64 %a, 63
   store i64 %or, ptr addrspace(1) %out
   %foo = add i64 %b, 63
-  store volatile i64 %foo, ptr addrspace(1) undef
+  store volatile i64 %foo, ptr addrspace(1) poison
   ret void
 }
 

@@ -857,11 +857,9 @@ define <2 x i16> @test44vecminval(<2 x i16> %x) {
   ret <2 x i16> %sub
 }
 
-; FIXME: This isn't combined to xor as above because the pattern in visitSub
-; uses m_ImmConstant which matches Constant but (explicitly) not ConstantExpr.
 define <vscale x 2 x i16> @test44scalablevecminval(<vscale x 2 x i16> %x) {
 ; CHECK-LABEL: @test44scalablevecminval(
-; CHECK-NEXT:    [[SUB:%.*]] = add <vscale x 2 x i16> [[X:%.*]], splat (i16 -32768)
+; CHECK-NEXT:    [[SUB:%.*]] = xor <vscale x 2 x i16> [[X:%.*]], splat (i16 -32768)
 ; CHECK-NEXT:    ret <vscale x 2 x i16> [[SUB]]
 ;
   %sub = sub nsw <vscale x 2 x i16> %x, splat (i16 -32768)

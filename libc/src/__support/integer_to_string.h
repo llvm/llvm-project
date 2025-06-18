@@ -231,7 +231,7 @@ extract_decimal_digit(T &value) {
   // Having multiplied it by 6, add the lowest half-word, and then reduce mod
   // 10 by normal integer division to finish.
   acc_remainder += value.val[0] & HALFWORD_MASK;
-  uint8_t digit = acc_remainder % 10;
+  uint8_t digit = static_cast<uint8_t>(acc_remainder % 10);
 
   // Now we have the output digit. Subtract it from the input value, and shift
   // right to divide by 2.
@@ -405,7 +405,7 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
     // Returns the absolute value of 'value' as 'UNSIGNED_T'.
     LIBC_INLINE static UNSIGNED_T abs(T value) {
       if (cpp::is_unsigned_v<T> || value >= 0)
-        return value; // already of the right sign.
+        return static_cast<UNSIGNED_T>(value); // already of the right sign.
 
       // Signed integers are asymmetric (e.g., int8_t ∈ [-128, 127]).
       // Thus negating the type's minimum value would overflow.
@@ -422,7 +422,8 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
       if (value == cpp::numeric_limits<T>::min()) {
         return cpp::bit_cast<UNSIGNED_T>(value);
       } else {
-        return -value; // legal and representable both as T and UNSIGNED_T.`
+        return static_cast<UNSIGNED_T>(
+            -value); // legal and representable both as T and UNSIGNED_T.`
       }
     }
 
