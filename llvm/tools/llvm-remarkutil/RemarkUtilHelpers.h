@@ -35,9 +35,12 @@
 // Keep Input format and names consistent accross the modes via a macro.
 #define INPUT_FORMAT_COMMAND_LINE_OPTIONS(SUBOPT)                              \
   static cl::opt<Format> InputFormat(                                          \
-      "parser", cl::desc("Input remark format to parse"),                      \
-      cl::values(clEnumValN(Format::YAML, "yaml", "YAML"),                     \
-                 clEnumValN(Format::Bitstream, "bitstream", "Bitstream")),     \
+      "parser", cl::init(Format::Auto),                                        \
+      cl::desc("Input remark format to parse"),                                \
+      cl::values(                                                              \
+          clEnumValN(Format::Auto, "auto", "Automatic detection (default)"),   \
+          clEnumValN(Format::YAML, "yaml", "YAML"),                            \
+          clEnumValN(Format::Bitstream, "bitstream", "Bitstream")),            \
       cl::sub(SUBOPT));
 
 #define DEBUG_LOC_INFO_COMMAND_LINE_OPTIONS(SUBOPT)                            \
