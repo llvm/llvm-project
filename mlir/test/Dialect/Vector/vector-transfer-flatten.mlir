@@ -188,7 +188,7 @@ func.func @transfer_read_leading_dynamic_dims(
 
 // -----
 
-// The vector could be a non-contiguous slice of the input
+// The vector is a non-contiguous slice of the input
 // memref.
 
 func.func @negative_transfer_read_dynamic_dim_to_flatten(
@@ -619,8 +619,6 @@ func.func @negative_out_of_bound_transfer_read(
 // CHECK-NOT:   memref.collapse_shape
 
 // -----
-
-// Can flatten the righmost dynamic dimension
 
 func.func @negative_out_of_bound_transfer_write(
     %mem : memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, %vec : vector<1x1x3x2xi8>) {

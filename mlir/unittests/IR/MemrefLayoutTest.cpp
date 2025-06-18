@@ -15,7 +15,7 @@
 using namespace mlir;
 using namespace mlir::memref;
 
-TEST(MemRefLayout, maxContigDim) {
+TEST(MemRefLayout, numContigDim) {
   MLIRContext ctx;
   OpBuilder b(&ctx);
 
