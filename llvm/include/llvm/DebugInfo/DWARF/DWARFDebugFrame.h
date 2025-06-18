@@ -333,11 +333,6 @@ public:
   }
   void insertRow(const UnwindRow &Row) { Rows.push_back(Row); }
 
-  /// Set the last address that this unwinding table refers to.
-  ///
-  /// This is used when this table is created based on a FDE.
-  void setEndAddress(uint64_t Addr) { EndAddress = Addr; }
-
   /// Dump the UnwindTable to the stream.
   ///
   /// \param OS the stream to use for output.
@@ -375,9 +370,6 @@ public:
 
 private:
   RowContainer Rows;
-  /// The end address when data is extracted from a FDE. This value will be
-  /// invalid when a UnwindTable is extracted from a CIE.
-  std::optional<uint64_t> EndAddress;
 };
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindTable &Rows);

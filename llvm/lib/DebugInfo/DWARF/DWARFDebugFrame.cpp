@@ -217,7 +217,6 @@ Expected<UnwindTable> llvm::dwarf::createUnwindTable(const FDE *Fde) {
   UnwindTable UT;
   UnwindRow Row;
   Row.setAddress(Fde->getInitialLocation());
-  UT.setEndAddress(Fde->getInitialLocation() + Fde->getAddressRange());
   if (Error CieError = UT.parseRows(Cie->cfis(), Row, nullptr))
     return std::move(CieError);
   // We need to save the initial locations of registers from the CIE parsing
