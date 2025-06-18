@@ -655,8 +655,10 @@ bool Semantics::Perform() {
 void Semantics::EmitMessages(llvm::raw_ostream &os) {
   // Resolve the CharBlock locations of the Messages to ProvenanceRanges
   // so messages from parsing and semantics are intermixed in source order.
+  bool echoSourceLine{true};
+  auto &features {context_.languageFeatures()};
   context_.messages().ResolveProvenances(context_.allCookedSources());
-  context_.messages().Emit(os, context_.allCookedSources());
+  context_.messages().Emit(os, context_.allCookedSources(), echoSourceLine, &features);
 }
 
 void SemanticsContext::DumpSymbols(llvm::raw_ostream &os) {
