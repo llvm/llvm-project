@@ -494,7 +494,7 @@ foreach mx = SchedMxList in {
 
   // Pattern of vmacc, vmadd, vmul, vmulh, etc.: e8/e16 = 4/4/5/8, e32 = 5,5,5,8,
   // e64 = 7,8,16,32. We use the worst-case until we can split the SEW.
-  // TODO: change WriteVIMulV to be defined with LMULSEWSchedWrites
+  // TODO: change WriteVIMulV, etc to be defined with LMULSEWSchedWrites
   defvar MulLat = SMX60GetVIMulE64Latency<mx>.c;
   let Latency = MulLat in {
     defm "" : LMULWriteResMX<"WriteVIMulV", [SMX60_VIEU], mx, IsWorstCase>;
@@ -590,9 +590,8 @@ foreach mx = ["M2", "M4"] in {
 // 12. Vector Fixed-Point Arithmetic Instructions
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
-  defvar ALULat = SMX60GetVIALULatency<mx>.c;
-  defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
 
+  defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
   let Latency = ArithLat in {
     defm "" : LMULWriteResMX<"WriteVSALUV",   [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSALUX",   [SMX60_VIEU], mx, IsWorstCase>;
@@ -600,13 +599,17 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVAALUV",   [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVAALUX",   [SMX60_VIEU], mx, IsWorstCase>;
   }
-  // Vector saturating multiply (vsmul): same latency pattern as integer multiply
-  // TODO: Change WriteVSMul* to use LMULSEWSchedWrites in RISCVScheduleV.td for SEW-dependent latencies
+
+  // Pattern of vsmul: e8/e16 = 4/4/5/8, e32 = 5,5,5,8, e64 = 7,8,16,32
+  // We use the worst-case until we can split the SEW.
+  // TODO: change WriteVSMulV/X to be defined with LMULSEWSchedWrites
   defvar SMulLat = SMX60GetVIMulE64Latency<mx>.c;
   let Latency = SMulLat in {
     defm "" : LMULWriteResMX<"WriteVSMulV",   [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSMulX",   [SMX60_VIEU], mx, IsWorstCase>;
   }
+
+  defvar ALULat = SMX60GetVIALULatency<mx>.c;
   let Latency = ALULat in {
     defm "" : LMULWriteResMX<"WriteVSShiftV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSShiftX", [SMX60_VIEU], mx, IsWorstCase>;
