@@ -292,7 +292,8 @@ define protected amdgpu_kernel void @arith_phi(ptr addrspace(3) %inptr0, ptr %ou
 ; VECI8-NEXT:    [[OTHERELE1:%.*]] = load i8, ptr addrspace(3) [[GEP1]], align 1
 ; VECI8-NEXT:    [[OTHERELE2:%.*]] = load i8, ptr addrspace(3) [[GEP2]], align 2
 ; VECI8-NEXT:    [[OTHERELE3:%.*]] = load i8, ptr addrspace(3) [[GEP3]], align 1
-; VECI8-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; VECI8-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; VECI8-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i8> [[TMP5]], <16 x i8> poison, <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; VECI8-NEXT:    store <16 x i8> [[TMP4]], ptr [[OUT:%.*]], align 2
 ; VECI8-NEXT:    ret void
 ;

@@ -960,6 +960,18 @@ StringRef llvm::dwarf::AddressSpaceString(unsigned AS, llvm::Triple TT) {
   return "";
 }
 
+StringRef (*const llvm::dwarf::EnumTraits<Tag>::StringFn)(unsigned) = TagString;
+StringRef (*const llvm::dwarf::EnumTraits<Attribute>::StringFn)(unsigned) =
+    AttributeString;
+StringRef (*const llvm::dwarf::EnumTraits<Form>::StringFn)(unsigned) =
+    FormEncodingString;
+StringRef (*const llvm::dwarf::EnumTraits<LocationAtom>::StringFn)(unsigned) =
+    OperationEncodingString;
+StringRef (*const llvm::dwarf::EnumTraits<LineNumberOps>::StringFn)(unsigned) =
+    LNStandardString;
+StringRef (*const llvm::dwarf::EnumTraits<Index>::StringFn)(unsigned) =
+    IndexString;
+
 constexpr char llvm::dwarf::EnumTraits<Attribute>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Form>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Index>::Type[];

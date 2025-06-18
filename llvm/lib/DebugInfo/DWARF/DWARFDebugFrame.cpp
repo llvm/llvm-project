@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFCFIPrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFCFIProgram.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
@@ -602,7 +603,8 @@ void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     OS << "\n";
   }
   OS << "\n";
-  CFIs.dump(OS, DumpOpts, /*IndentLevel=*/1, /*InitialLocation=*/{});
+  printCFIProgram(CFIs, OS, DumpOpts, /*IndentLevel=*/1,
+                  /*InitialLocation=*/{});
   OS << "\n";
 
   if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
@@ -630,7 +632,7 @@ void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   OS << "  Format:       " << FormatString(IsDWARF64) << "\n";
   if (LSDAAddress)
     OS << format("  LSDA Address: %016" PRIx64 "\n", *LSDAAddress);
-  CFIs.dump(OS, DumpOpts, /*IndentLevel=*/1, InitialLocation);
+  printCFIProgram(CFIs, OS, DumpOpts, /*IndentLevel=*/1, InitialLocation);
   OS << "\n";
 
   if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
