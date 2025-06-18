@@ -58,9 +58,21 @@ struct AArch64MCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {
 };
 
 namespace AArch64 {
+using Specifier = uint16_t;
+
 /// Return the string representation of the ELF relocation specifier
 /// (e.g. ":got:", ":lo12:").
 StringRef getSpecifierName(const MCSpecifierExpr &Expr);
+
+inline Specifier getSymbolLoc(Specifier S) {
+  return static_cast<Specifier>(S & AArch64MCExpr::VK_SymLocBits);
+}
+
+inline Specifier getAddressFrag(Specifier S) {
+  return static_cast<Specifier>(S & AArch64MCExpr::VK_AddressFragBits);
+}
+
+inline bool isNotChecked(Specifier S) { return S & AArch64MCExpr::VK_NC; }
 } // namespace AArch64
 
 } // namespace llvm
