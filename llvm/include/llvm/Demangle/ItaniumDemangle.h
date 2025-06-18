@@ -4468,7 +4468,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
         return nullptr;
       if (!consumeIf('_'))
         return nullptr;
-      // The FE expects this to be available for Substitution
+      // The front end expects this to be available for Substitution
       Result = make<BitIntType>(Size, Signed);
       break;
     }
