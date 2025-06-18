@@ -32,6 +32,7 @@ add_object_library(
     libc.hdr.types.mbstate_t
     libc.hdr.types.wchar_t
     libc.src.__support.error_or
+    libc.src.__support.common
     .character_converter
     .mbstate
 )

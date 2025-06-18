@@ -10,7 +10,6 @@
 #include "hdr/types/char8_t.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
-#include "src/__support/libc_errno.h" // for error numbers
 #include "src/__support/math_extras.h"
 #include "src/__support/wchar/mbstate.h"
 
@@ -52,7 +51,7 @@ int CharacterConverter::push(char32_t utf32) {
   // `utf32` contains a value that is too large to actually represent a valid
   // unicode character
   clear();
-  return EILSEQ;
+  return -1;
 }
 
 ErrorOr<char8_t> CharacterConverter::pop_utf8() {

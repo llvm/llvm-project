@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(size_t, wcrtomb,
       internal::wcrtomb(s, wc, ps == nullptr ? &internal_mbstate : ps);
 
   if (!result.has_value()) {
-    libc_errno = result.error();
+    libc_errno = EILSEQ;
     return -1;
   }
 

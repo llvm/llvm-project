@@ -24,6 +24,7 @@ ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
                         mbstate_t *__restrict ps) {
   CharacterConverter cr((internal::mbstate *)ps);
 
+  // when s is nullptr, this is equivalent to wcrtomb(buf, L'\0', ps)
   char buf[sizeof(wchar_t) / sizeof(char)];
   if (s == nullptr) {
     s = buf;
