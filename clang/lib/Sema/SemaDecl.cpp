@@ -4100,12 +4100,33 @@ static bool mergeFunctionDeclBoundsAttributes(FunctionDecl *New,
     }
     return MergeTy;
   };
+
+  auto hasBoundsAttributesAtAnyLevel = [](QualType Ty) -> bool {
+    while (Ty->isPointerType()) {
+      if (!Ty->isUnspecifiedPointerType())
+        return true;
+      Ty = Ty->getPointeeType();
+    }
+    return false;
+  };
+
+  auto mergePointersWithAttributes = [&](QualType NewTy,
+                                         QualType OldTy) -> QualType {
+    // Do not attempt to merge if there is no need to do so. This will let us
+    // keep the sugars used in the new declaration.
+    if (!hasBoundsAttributesAtAnyLevel(NewTy) &&
+        !hasBoundsAttributesAtAnyLevel(OldTy))
+      return NewTy;
+    return Self.Context.mergeBoundsSafetyPointerTypes(NewTy, OldTy,
+                                                      mergeBoundsAttributes);
+  };
+
   QualType NewRetTy = New->getReturnType();
   if (NewRetTy->isBoundsAttributedType() ||
       NewRetTy->isValueTerminatedType())
     return false;
-  QualType MergeRetTy = Self.Context.mergeBoundsSafetyPointerTypes(
-      New->getReturnType(), Old->getReturnType(), mergeBoundsAttributes);
+  QualType MergeRetTy =
+      mergePointersWithAttributes(New->getReturnType(), Old->getReturnType());
   if (MergeRetTy.isNull())
     return false;
 
@@ -4115,9 +4136,8 @@ static bool mergeFunctionDeclBoundsAttributes(FunctionDecl *New,
     if (NewParmTy->isBoundsAttributedType() ||
         NewParmTy->isValueTerminatedType())
       return false;
-    QualType MergeParamTy = Self.Context.mergeBoundsSafetyPointerTypes(
-        NewParmTy, Old->getParamDecl(i)->getType(),
-        mergeBoundsAttributes);
+    QualType MergeParamTy =
+        mergePointersWithAttributes(NewParmTy, Old->getParamDecl(i)->getType());
     if (MergeParamTy.isNull())
       return false;
     if (const auto *CATy = MergeParamTy->getAs<CountAttributedType>()) {

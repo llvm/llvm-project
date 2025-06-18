@@ -29,6 +29,9 @@
 // CHECK: FunctionDecl {{.+}} eb
 // CHECK: |-ParmVarDecl {{.+}} eb_p 'void *'
 // CHECK: `-ParmVarDecl {{.+}} end 'void *'
+// CHECK: FunctionDecl {{.+}} cb_array
+// CHECK: |-ParmVarDecl {{.+}} array 'int *'
+// CHECK: `-ParmVarDecl {{.+}} len 'int'
 
 
 // Check if we can override them.
@@ -39,6 +42,7 @@ void cb_out_count(int *__counted_by(*len) cb_out_len_p, int *len);
 void cbn(int *__counted_by_or_null(len) cbn_p, int len);
 void sb(void *__sized_by(size) sb_p, int size);
 void eb(void *__ended_by(end) eb_p, void *end);
+void cb_array(int array[__counted_by(len)], int len);
 
 // CHECK: FunctionDecl {{.+}} prev {{.+}} cb_in
 // CHECK: |-ParmVarDecl {{.+}} cb_in_p 'int *{{.*}} __counted_by(len)'
@@ -58,6 +62,9 @@ void eb(void *__ended_by(end) eb_p, void *end);
 // CHECK: FunctionDecl {{.+}} prev {{.+}} eb
 // CHECK: |-ParmVarDecl {{.+}} used eb_p 'void *{{.*}} __ended_by(end)'
 // CHECK: `-ParmVarDecl {{.+}} used end 'void *{{.*}} /* __started_by(eb_p) */ '
+// CHECK: FunctionDecl {{.+}} prev {{.+}} cb_array
+// CHECK: |-ParmVarDecl {{.+}} array 'int *{{.*}} __counted_by(len)'
+// CHECK: `-ParmVarDecl {{.+}} used len 'int'
 
 
 // Check if the attributes are merged.
@@ -82,3 +89,6 @@ void eb(void *__ended_by(end) eb_p, void *end);
 // CHECK: FunctionDecl {{.+}} prev {{.+}} eb
 // CHECK: |-ParmVarDecl {{.+}} used eb_p 'void *{{.*}} __ended_by(end)'
 // CHECK: `-ParmVarDecl {{.+}} used end 'void *{{.*}} /* __started_by(eb_p) */ '
+// CHECK: FunctionDecl {{.+}} prev {{.+}} cb_array
+// CHECK: |-ParmVarDecl {{.+}} array 'int *{{.*}} __counted_by(len)'
+// CHECK: `-ParmVarDecl {{.+}} used len 'int'
