@@ -127,8 +127,6 @@ void *lsan_aligned_alloc(uptr alignment, uptr size, const StackTrace &stack);
 void *lsan_memalign(uptr alignment, uptr size, const StackTrace &stack);
 void *lsan_malloc(uptr size, const StackTrace &stack);
 void lsan_free(void *p);
-void lsan_free_sized(void *p, uptr size);
-void lsan_free_aligned_sized(void *p, uptr alignment, uptr size);
 void *lsan_realloc(void *p, uptr size, const StackTrace &stack);
 void *lsan_reallocarray(void *p, uptr nmemb, uptr size,
                         const StackTrace &stack);
