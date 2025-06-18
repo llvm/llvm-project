@@ -1353,7 +1353,6 @@ private:
   /// location information).
   ///@{
   void processNonDbgInstruction(Instruction &I, BlockInfo *LiveSet);
-  void processDbgInstruction(DbgInfoIntrinsic &I, BlockInfo *LiveSet);
   /// Update \p LiveSet after encountering an instruction with a DIAssignID
   /// attachment, \p I.
   void processTaggedInstruction(Instruction &I, BlockInfo *LiveSet);
@@ -1906,21 +1905,6 @@ template <typename T> static bool hasZeroSizedFragment(T &DbgValue) {
   return false;
 }
 
-void AssignmentTrackingLowering::processDbgInstruction(
-    DbgInfoIntrinsic &I, AssignmentTrackingLowering::BlockInfo *LiveSet) {
-  auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I);
-  if (!DVI)
-    return;
-
-  // Ignore assignments to zero bits of the variable.
-  if (hasZeroSizedFragment(*DVI))
-    return;
-
-  if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
-    processDbgAssign(DAI, LiveSet);
-  else if (auto *DVI = dyn_cast<DbgValueInst>(&I))
-    processDbgValue(DVI, LiveSet);
-}
 void AssignmentTrackingLowering::processDbgVariableRecord(
     DbgVariableRecord &DVR, AssignmentTrackingLowering::BlockInfo *LiveSet) {
   // Ignore assignments to zero bits of the variable.
@@ -1987,15 +1971,6 @@ void AssignmentTrackingLowering::process(BasicBlock &BB, BlockInfo *LiveSet) {
       }
     }
     ProcessedLeadingDbgRecords = true;
-    while (II != EI) {
-      auto *Dbg = dyn_cast<DbgInfoIntrinsic>(&*II);
-      if (!Dbg)
-        break;
-      resetInsertionPoint(*II);
-      processDbgInstruction(*Dbg, LiveSet);
-      assert(LiveSet->isValid());
-      ++II;
-    }
     // II is now a non-debug instruction either with no attached DbgRecords, or
     // with attached processed DbgRecords. II has not been processed, and all
     // debug instructions or DbgRecords in the frame preceding II have been
