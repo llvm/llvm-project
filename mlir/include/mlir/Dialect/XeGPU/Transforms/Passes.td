@@ -29,7 +29,7 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
                            "vector::VectorDialect"];
 }
 
-def XeGPULayoutPropagate : Pass<"xegpu-propagate-layout"> {
+def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
   let summary = "Propagate and assign XeGPU layout information";
   let description = [{
     This pass propagates the XeGPU layout information accross ops. Starting
@@ -40,6 +40,10 @@ def XeGPULayoutPropagate : Pass<"xegpu-propagate-layout"> {
   }];
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
                            "vector::VectorDialect"];
+  let options = [Option<
+    "printOnly", "print-analysis-only", "bool",
+    /*default=*/"false",
+    "Print the result of layout propagation analysis and exit.">];
 }
 
 def XeGPUWgToSgDistribute : Pass<"xegpu-wg-to-sg-distribute"> {

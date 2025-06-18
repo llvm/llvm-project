@@ -1,4 +1,4 @@
-//===- XeGPULayoutPropagate.cpp - XeGPU Layout Propagation ------*- C++ -*-===//
+//===- XeGPUPropagateLayout.cpp - XeGPU Layout Propagation ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,7 +38,7 @@
 
 namespace mlir {
 namespace xegpu {
-#define GEN_PASS_DEF_XEGPULAYOUTPROPAGATE
+#define GEN_PASS_DEF_XEGPUPROPAGATELAYOUT
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h.inc"
 } // namespace xegpu
 } // namespace mlir
@@ -622,8 +622,7 @@ LayoutInfo RunLayoutInfoPropagation::getLayoutInfo(Value val) {
 }
 
 // Print the analysis result for debugging purposes.
-[[maybe_unused]] void
-RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
+void RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
   auto printFunctionResult = [&](FunctionOpInterface funcOp) {
     os << "function: " << funcOp.getName() << ":\n";
     // Function arguments
@@ -828,15 +827,25 @@ static LogicalResult updateFunctionOpInterface(mlir::OpBuilder &builder,
 }
 
 namespace {
-struct XeGPULayoutPropagatePass final
-    : public xegpu::impl::XeGPULayoutPropagateBase<XeGPULayoutPropagatePass> {
+struct XeGPUPropagateLayoutPass final
+    : public xegpu::impl::XeGPUPropagateLayoutBase<XeGPUPropagateLayoutPass> {
+  XeGPUPropagateLayoutPass() = default;
+  XeGPUPropagateLayoutPass(const XeGPUPropagateLayoutPass &other) = default;
+  XeGPUPropagateLayoutPass(xegpu::XeGPUPropagateLayoutOptions options)
+      : XeGPUPropagateLayoutBase(options) {}
   void runOnOperation() override;
 };
 
 } // namespace
 
-void XeGPULayoutPropagatePass::runOnOperation() {
+void XeGPUPropagateLayoutPass::runOnOperation() {
   auto &analysis = getAnalysis<RunLayoutInfoPropagation>();
+  // Print the analysis result and exit. (for debugging purposes)
+  if (printOnly) {
+    auto &os = llvm::outs();
+    analysis.printAnalysisResult(os);
+    return;
+  }
   // Helper to convert LayoutInfo to xegpu::LayoutAttr.
   auto getXeGPULayoutForValue = [&](Value val) -> xegpu::LayoutAttr {
     LayoutInfo layout = analysis.getLayoutInfo(val);
