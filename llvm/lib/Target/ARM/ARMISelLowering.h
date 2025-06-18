@@ -34,6 +34,7 @@
 
 namespace llvm {
 
+class ARMBaseTargetMachine;
 class ARMSubtarget;
 class DataLayout;
 class FastISel;
@@ -413,6 +414,8 @@ class VectorType;
   public:
     explicit ARMTargetLowering(const TargetMachine &TM,
                                const ARMSubtarget &STI);
+
+    const ARMBaseTargetMachine &getTM() const;
 
     unsigned getJumpTableEncoding() const override;
     bool useSoftFloat() const override;
