@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-fuchsia{{.*}}
 // UNSUPPORTED: system-windows
 
 // RUN: %clang -### %s -fuse-ld= \
