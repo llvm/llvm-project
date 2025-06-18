@@ -46058,22 +46058,18 @@ static bool detectExtMul(SelectionDAG &DAG, const SDValue &Mul, SDValue &Op0,
 // Given a ABS node, detect the following pattern:
 // (ABS (SUB (ZERO_EXTEND a), (ZERO_EXTEND b))).
 // This is useful as it is the input into a SAD pattern.
-static bool detectZextAbsDiff(const SDValue &Abs, SDValue &Op0, SDValue &Op1) {
-  SDValue AbsOp1 = Abs->getOperand(0);
-  if (AbsOp1.getOpcode() != ISD::SUB)
-    return false;
-
-  Op0 = AbsOp1.getOperand(0);
-  Op1 = AbsOp1.getOperand(1);
+static bool detectZextAbsDiff(SDValue Abs, SDValue &Op0, SDValue &Op1) {
+  using namespace SDPatternMatch;
 
   // Check if the operands of the sub are zero-extended from vectors of i8.
-  if (Op0.getOpcode() != ISD::ZERO_EXTEND ||
-      Op0.getOperand(0).getValueType().getVectorElementType() != MVT::i8 ||
-      Op1.getOpcode() != ISD::ZERO_EXTEND ||
-      Op1.getOperand(0).getValueType().getVectorElementType() != MVT::i8)
-    return false;
-
-  return true;
+  EVT SrcVT0, SrcVT1;
+  return sd_match(
+             Abs,
+             m_UnaryOp(ISD::ABS,
+                       m_Sub(m_AllOf(m_Value(Op0), m_ZExt(m_VT(SrcVT0))),
+                             m_AllOf(m_Value(Op1), m_ZExt(m_VT(SrcVT1)))))) &&
+         SrcVT0.getVectorElementType() == MVT::i8 &&
+         SrcVT1.getVectorElementType() == MVT::i8;
 }
 
 static SDValue createVPDPBUSD(SelectionDAG &DAG, SDValue LHS, SDValue RHS,
@@ -46455,6 +46451,8 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   // Match shuffle + add pyramid.
   ISD::NodeType BinOp;
   SDValue Root = DAG.matchBinOpReduction(Extract, BinOp, {ISD::ADD});
+  if (!Root)
+    return SDValue();
 
   // The operand is expected to be zero extended from i8
   // (verified in detectZextAbsDiff).
@@ -46464,15 +46462,10 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   // Also the sign extend is basically zero extend
   // (extends the sign bit which is zero).
   // So it is correct to skip the sign/zero extend instruction.
-  if (Root && (Root.getOpcode() == ISD::SIGN_EXTEND ||
-               Root.getOpcode() == ISD::ZERO_EXTEND ||
-               Root.getOpcode() == ISD::ANY_EXTEND))
+  if (Root.getOpcode() == ISD::SIGN_EXTEND ||
+      Root.getOpcode() == ISD::ZERO_EXTEND ||
+      Root.getOpcode() == ISD::ANY_EXTEND)
     Root = Root.getOperand(0);
-
-  // If there was a match, we want Root to be a select that is the root of an
-  // abs-diff pattern.
-  if (!Root || Root.getOpcode() != ISD::ABS)
-    return SDValue();
 
   // Check whether we have an abs-diff pattern feeding into the select.
   SDValue Zext0, Zext1;
