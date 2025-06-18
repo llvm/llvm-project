@@ -22,7 +22,7 @@ int throwsAndCallsRethrower() noexcept {
     }
     return 1;
 }
-// CHECK-MESSAGES: :[[@LINE-6]]:9: note: frame #0: unhandled exception may be thrown in function 'throwsAndCallsRethrower' here
+// CHECK-MESSAGES: :[[@LINE-6]]:9: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throwsAndCallsRethrower' here
 
 int throwsAndCallsCallsRethrower() noexcept {
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'throwsAndCallsCallsRethrower' which should not throw exceptions
@@ -33,7 +33,7 @@ int throwsAndCallsCallsRethrower() noexcept {
     }
     return 1;
 }
-// CHECK-MESSAGES: :[[@LINE-6]]:9: note: frame #0: unhandled exception may be thrown in function 'throwsAndCallsCallsRethrower' here
+// CHECK-MESSAGES: :[[@LINE-6]]:9: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throwsAndCallsCallsRethrower' here
 
 void rethrowerNoexcept() noexcept {
     throw;
