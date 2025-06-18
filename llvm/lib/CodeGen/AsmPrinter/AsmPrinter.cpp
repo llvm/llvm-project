@@ -1933,9 +1933,8 @@ void AsmPrinter::emitFunctionBody() {
 
         auto CountInstruction = [&](const MachineInstr &MI) {
           // Skip Meta instructions inside bundles.
-          if (MI.isMetaInstruction()) {
+          if (MI.isMetaInstruction())
             return;
-          }
           ++NumInstsInFunction;
           if (CanDoExtraAnalysis) {
             StringRef Name = getMIMnemonic(MI, *OutStreamer);
