@@ -47,6 +47,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -17575,7 +17576,14 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
           break;
         }
       }
-      V.getInt().toString(Str);
+
+      llvm::APSInt vInt = V.getInt();
+      if (vInt > std::numeric_limits<uint64_t>::max() ||
+          vInt < std::numeric_limits<int64_t>::min()) {
+            vInt.toString(Str,16);
+      } else {
+        vInt.toString(Str);
+      }
     }
 
     break;

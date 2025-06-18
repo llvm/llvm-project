@@ -35,6 +35,11 @@ struct S {
   void member() requires(sizeof(T) > 1);
 };
 
+namespace GH71675 {
+  constexpr unsigned _BitInt(__BITINT_MAXWIDTH__ >> 6) F = ~0;
+  static_assert(F == 1); // no-error
+}
+
 template<typename T>
 void ContainingFunction() {
   // expected-error@+1 {{non-templated function cannot have a requires clause}}
