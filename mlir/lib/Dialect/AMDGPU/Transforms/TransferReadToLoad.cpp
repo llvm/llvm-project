@@ -222,8 +222,8 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
 } // namespace
 
 void mlir::amdgpu::populateAmdgpuTransferReadToLoadPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<TransferReadLowering>(patterns.getContext());
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<TransferReadLowering>(patterns.getContext(), benefit);
 }
 
 struct AmdgpuTransferReadToLoadPass final

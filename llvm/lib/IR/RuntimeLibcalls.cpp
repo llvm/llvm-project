@@ -281,6 +281,69 @@ void RuntimeLibcallsInfo::initSoftFloatCmpLibcallPredicates() {
   SoftFloatCompareLibcallPredicates[RTLIB::UO_PPCF128] = CmpInst::ICMP_NE;
 }
 
+static void setLongDoubleIsF128Libm(RuntimeLibcallsInfo &Info,
+                                    bool FiniteOnlyFuncs = false) {
+  Info.setLibcallName(RTLIB::REM_F128, "fmodf128");
+  Info.setLibcallName(RTLIB::FMA_F128, "fmaf128");
+  Info.setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
+  Info.setLibcallName(RTLIB::CBRT_F128, "cbrtf128");
+  Info.setLibcallName(RTLIB::LOG_F128, "logf128");
+  Info.setLibcallName(RTLIB::LOG2_F128, "log2f128");
+  Info.setLibcallName(RTLIB::LOG10_F128, "log10f128");
+  Info.setLibcallName(RTLIB::EXP_F128, "expf128");
+  Info.setLibcallName(RTLIB::EXP2_F128, "exp2f128");
+  Info.setLibcallName(RTLIB::EXP10_F128, "exp10f128");
+  Info.setLibcallName(RTLIB::SIN_F128, "sinf128");
+  Info.setLibcallName(RTLIB::COS_F128, "cosf128");
+  Info.setLibcallName(RTLIB::TAN_F128, "tanf128");
+  Info.setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
+  Info.setLibcallName(RTLIB::ASIN_F128, "asinf128");
+  Info.setLibcallName(RTLIB::ACOS_F128, "acosf128");
+  Info.setLibcallName(RTLIB::ATAN_F128, "atanf128");
+  Info.setLibcallName(RTLIB::ATAN2_F128, "atan2f128");
+  Info.setLibcallName(RTLIB::SINH_F128, "sinhf128");
+  Info.setLibcallName(RTLIB::COSH_F128, "coshf128");
+  Info.setLibcallName(RTLIB::TANH_F128, "tanhf128");
+  Info.setLibcallName(RTLIB::POW_F128, "powf128");
+  Info.setLibcallName(RTLIB::CEIL_F128, "ceilf128");
+  Info.setLibcallName(RTLIB::TRUNC_F128, "truncf128");
+  Info.setLibcallName(RTLIB::RINT_F128, "rintf128");
+  Info.setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
+  Info.setLibcallName(RTLIB::ROUND_F128, "roundf128");
+  Info.setLibcallName(RTLIB::ROUNDEVEN_F128, "roundevenf128");
+  Info.setLibcallName(RTLIB::FLOOR_F128, "floorf128");
+  Info.setLibcallName(RTLIB::COPYSIGN_F128, "copysignf128");
+  Info.setLibcallName(RTLIB::FMIN_F128, "fminf128");
+  Info.setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
+  Info.setLibcallName(RTLIB::FMINIMUM_F128, "fminimumf128");
+  Info.setLibcallName(RTLIB::FMAXIMUM_F128, "fmaximumf128");
+  Info.setLibcallName(RTLIB::FMINIMUM_NUM_F128, "fminimum_numf128");
+  Info.setLibcallName(RTLIB::FMAXIMUM_NUM_F128, "fmaximum_numf128");
+  Info.setLibcallName(RTLIB::LROUND_F128, "lroundf128");
+  Info.setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
+  Info.setLibcallName(RTLIB::LRINT_F128, "lrintf128");
+  Info.setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
+  Info.setLibcallName(RTLIB::LDEXP_F128, "ldexpf128");
+  Info.setLibcallName(RTLIB::FREXP_F128, "frexpf128");
+  Info.setLibcallName(RTLIB::MODF_F128, "modff128");
+
+  if (FiniteOnlyFuncs) {
+    Info.setLibcallName(RTLIB::LOG_FINITE_F128, "__logf128_finite");
+    Info.setLibcallName(RTLIB::LOG2_FINITE_F128, "__log2f128_finite");
+    Info.setLibcallName(RTLIB::LOG10_FINITE_F128, "__log10f128_finite");
+    Info.setLibcallName(RTLIB::EXP_FINITE_F128, "__expf128_finite");
+    Info.setLibcallName(RTLIB::EXP2_FINITE_F128, "__exp2f128_finite");
+    Info.setLibcallName(RTLIB::POW_FINITE_F128, "__powf128_finite");
+  } else {
+    Info.setLibcallName(RTLIB::LOG_FINITE_F128, nullptr);
+    Info.setLibcallName(RTLIB::LOG2_FINITE_F128, nullptr);
+    Info.setLibcallName(RTLIB::LOG10_FINITE_F128, nullptr);
+    Info.setLibcallName(RTLIB::EXP_FINITE_F128, nullptr);
+    Info.setLibcallName(RTLIB::EXP2_FINITE_F128, nullptr);
+    Info.setLibcallName(RTLIB::POW_FINITE_F128, nullptr);
+  }
+}
+
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
@@ -295,57 +358,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
 #undef LIBCALL_NO_NAME
 
   // Use the f128 variants of math functions on x86
-  if (TT.isX86() && TT.isGNUEnvironment()) {
-    setLibcallName(RTLIB::REM_F128, "fmodf128");
-    setLibcallName(RTLIB::FMA_F128, "fmaf128");
-    setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
-    setLibcallName(RTLIB::CBRT_F128, "cbrtf128");
-    setLibcallName(RTLIB::LOG_F128, "logf128");
-    setLibcallName(RTLIB::LOG_FINITE_F128, "__logf128_finite");
-    setLibcallName(RTLIB::LOG2_F128, "log2f128");
-    setLibcallName(RTLIB::LOG2_FINITE_F128, "__log2f128_finite");
-    setLibcallName(RTLIB::LOG10_F128, "log10f128");
-    setLibcallName(RTLIB::LOG10_FINITE_F128, "__log10f128_finite");
-    setLibcallName(RTLIB::EXP_F128, "expf128");
-    setLibcallName(RTLIB::EXP_FINITE_F128, "__expf128_finite");
-    setLibcallName(RTLIB::EXP2_F128, "exp2f128");
-    setLibcallName(RTLIB::EXP2_FINITE_F128, "__exp2f128_finite");
-    setLibcallName(RTLIB::EXP10_F128, "exp10f128");
-    setLibcallName(RTLIB::SIN_F128, "sinf128");
-    setLibcallName(RTLIB::COS_F128, "cosf128");
-    setLibcallName(RTLIB::TAN_F128, "tanf128");
-    setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
-    setLibcallName(RTLIB::ASIN_F128, "asinf128");
-    setLibcallName(RTLIB::ACOS_F128, "acosf128");
-    setLibcallName(RTLIB::ATAN_F128, "atanf128");
-    setLibcallName(RTLIB::ATAN2_F128, "atan2f128");
-    setLibcallName(RTLIB::SINH_F128, "sinhf128");
-    setLibcallName(RTLIB::COSH_F128, "coshf128");
-    setLibcallName(RTLIB::TANH_F128, "tanhf128");
-    setLibcallName(RTLIB::POW_F128, "powf128");
-    setLibcallName(RTLIB::POW_FINITE_F128, "__powf128_finite");
-    setLibcallName(RTLIB::CEIL_F128, "ceilf128");
-    setLibcallName(RTLIB::TRUNC_F128, "truncf128");
-    setLibcallName(RTLIB::RINT_F128, "rintf128");
-    setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
-    setLibcallName(RTLIB::ROUND_F128, "roundf128");
-    setLibcallName(RTLIB::ROUNDEVEN_F128, "roundevenf128");
-    setLibcallName(RTLIB::FLOOR_F128, "floorf128");
-    setLibcallName(RTLIB::COPYSIGN_F128, "copysignf128");
-    setLibcallName(RTLIB::FMIN_F128, "fminf128");
-    setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
-    setLibcallName(RTLIB::FMINIMUM_F128, "fminimumf128");
-    setLibcallName(RTLIB::FMAXIMUM_F128, "fmaximumf128");
-    setLibcallName(RTLIB::FMINIMUM_NUM_F128, "fminimum_numf128");
-    setLibcallName(RTLIB::FMAXIMUM_NUM_F128, "fmaximum_numf128");
-    setLibcallName(RTLIB::LROUND_F128, "lroundf128");
-    setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
-    setLibcallName(RTLIB::LRINT_F128, "lrintf128");
-    setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
-    setLibcallName(RTLIB::LDEXP_F128, "ldexpf128");
-    setLibcallName(RTLIB::FREXP_F128, "frexpf128");
-    setLibcallName(RTLIB::MODF_F128, "modff128");
-  }
+  if (TT.isX86() && TT.isGNUEnvironment())
+    setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/true);
 
   // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".
   if (TT.isPPC()) {
@@ -379,31 +393,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::OGT_F128, "__gtkf2");
     setLibcallName(RTLIB::UO_F128, "__unordkf2");
 
-    setLibcallName(RTLIB::LOG_F128, "logf128");
-    setLibcallName(RTLIB::LOG2_F128, "log2f128");
-    setLibcallName(RTLIB::LOG10_F128, "log10f128");
-    setLibcallName(RTLIB::EXP_F128, "expf128");
-    setLibcallName(RTLIB::EXP2_F128, "exp2f128");
-    setLibcallName(RTLIB::SIN_F128, "sinf128");
-    setLibcallName(RTLIB::COS_F128, "cosf128");
-    setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
-    setLibcallName(RTLIB::POW_F128, "powf128");
-    setLibcallName(RTLIB::FMIN_F128, "fminf128");
-    setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
-    setLibcallName(RTLIB::REM_F128, "fmodf128");
-    setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
-    setLibcallName(RTLIB::CEIL_F128, "ceilf128");
-    setLibcallName(RTLIB::FLOOR_F128, "floorf128");
-    setLibcallName(RTLIB::TRUNC_F128, "truncf128");
-    setLibcallName(RTLIB::ROUND_F128, "roundf128");
-    setLibcallName(RTLIB::LROUND_F128, "lroundf128");
-    setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
-    setLibcallName(RTLIB::RINT_F128, "rintf128");
-    setLibcallName(RTLIB::LRINT_F128, "lrintf128");
-    setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
-    setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
-    setLibcallName(RTLIB::FMA_F128, "fmaf128");
-    setLibcallName(RTLIB::FREXP_F128, "frexpf128");
+    // TODO: Do the finite only functions exist?
+    setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/false);
 
     if (TT.isOSAIX()) {
       bool isPPC64 = TT.isPPC64();
