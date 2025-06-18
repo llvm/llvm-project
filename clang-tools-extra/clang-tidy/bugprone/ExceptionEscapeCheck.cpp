@@ -81,26 +81,24 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   const utils::ExceptionAnalyzer::ExceptionInfo Info =
       Tracer.analyze(MatchedDecl);
 
-  if (Info.getBehaviour() != utils::ExceptionAnalyzer::State::Throwing) {
+  if (Info.getBehaviour() != utils::ExceptionAnalyzer::State::Throwing)
     return;
-  }
 
   diag(MatchedDecl->getLocation(), "an exception may be thrown in function "
                                    "%0 which should not throw exceptions")
       << MatchedDecl;
 
-  const utils::ExceptionAnalyzer::ExceptionInfo::ThrowInfo ThrowInfo =
-      Info.getExceptions().begin()->getSecond();
+  const auto &[ThrowType, ThrowInfo] = *Info.getExceptions().begin();
 
-  if (ThrowInfo.Loc.isInvalid()) {
+  if (ThrowInfo.Loc.isInvalid())
     return;
-  }
 
   const utils::ExceptionAnalyzer::CallStack &Stack = ThrowInfo.Stack;
   diag(ThrowInfo.Loc,
-       "frame #0: unhandled exception may be thrown in function %0 here",
+       "frame #0: unhandled exception of type %0 may be thrown in function %1 "
+       "here",
        DiagnosticIDs::Note)
-      << Stack.back().first;
+      << QualType(ThrowType, 0U) << Stack.back().first;
 
   size_t FrameNo = 1;
   for (auto CurrIt = ++Stack.rbegin(), PrevIt = Stack.rbegin();
