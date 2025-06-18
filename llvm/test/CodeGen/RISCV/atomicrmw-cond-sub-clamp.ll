@@ -786,7 +786,7 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; RV64I-NEXT:    .cfi_offset s0, -16
 ; RV64I-NEXT:    .cfi_offset s1, -24
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lb a3, 0(a0)
+; RV64I-NEXT:    lbu a3, 0(a0)
 ; RV64I-NEXT:    zext.b s1, a1
 ; RV64I-NEXT:  .LBB4_1: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1

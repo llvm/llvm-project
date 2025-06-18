@@ -144,8 +144,8 @@ define void @i8_i16_rotate(ptr %p, ptr %q) {
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    .cfi_offset s2, -32
-; CHECK-NEXT:    lb s1, 0(a0)
-; CHECK-NEXT:    lb s2, 1(a0)
+; CHECK-NEXT:    lbu s1, 0(a0)
+; CHECK-NEXT:    lbu s2, 1(a0)
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sb s2, 0(s0)
@@ -189,10 +189,10 @@ define void @i8_i16_resched_readnone_ld(ptr %p, ptr %q) {
 ; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    .cfi_offset s2, -32
 ; CHECK-NEXT:    mv s0, a0
-; CHECK-NEXT:    lb s2, 0(a0)
+; CHECK-NEXT:    lbu s2, 0(a0)
 ; CHECK-NEXT:    mv s1, a1
 ; CHECK-NEXT:    call g
-; CHECK-NEXT:    lb s0, 1(s0)
+; CHECK-NEXT:    lbu s0, 1(s0)
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sb s2, 0(s1)
 ; CHECK-NEXT:    sb s0, 1(s1)
@@ -235,8 +235,8 @@ define void @i8_i16_resched_readnone_st(ptr %p, ptr %q) {
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    .cfi_offset s2, -32
-; CHECK-NEXT:    lb s1, 0(a0)
-; CHECK-NEXT:    lb s2, 1(a0)
+; CHECK-NEXT:    lbu s1, 0(a0)
+; CHECK-NEXT:    lbu s2, 1(a0)
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sb s1, 0(s0)

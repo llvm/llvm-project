@@ -318,17 +318,11 @@ define void @extract_v8i32_nxv16i32_8(<vscale x 16 x i32> %x, ptr %y) {
 }
 
 define void @extract_v8i1_v64i1_0(ptr %x, ptr %y) {
-; CHECK32-LABEL: extract_v8i1_v64i1_0:
-; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    lbu a0, 0(a0)
-; CHECK32-NEXT:    sb a0, 0(a1)
-; CHECK32-NEXT:    ret
-;
-; CHECK64-LABEL: extract_v8i1_v64i1_0:
-; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    lb a0, 0(a0)
-; CHECK64-NEXT:    sb a0, 0(a1)
-; CHECK64-NEXT:    ret
+; CHECK-LABEL: extract_v8i1_v64i1_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lbu a0, 0(a0)
+; CHECK-NEXT:    sb a0, 0(a1)
+; CHECK-NEXT:    ret
   %a = load <64 x i1>, ptr %x
   %c = call <8 x i1> @llvm.vector.extract.v8i1.v64i1(<64 x i1> %a, i64 0)
   store <8 x i1> %c, ptr %y
@@ -336,17 +330,11 @@ define void @extract_v8i1_v64i1_0(ptr %x, ptr %y) {
 }
 
 define void @extract_v8i1_v64i1_8(ptr %x, ptr %y) {
-; CHECK32-LABEL: extract_v8i1_v64i1_8:
-; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    lbu a0, 1(a0)
-; CHECK32-NEXT:    sb a0, 0(a1)
-; CHECK32-NEXT:    ret
-;
-; CHECK64-LABEL: extract_v8i1_v64i1_8:
-; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    lb a0, 1(a0)
-; CHECK64-NEXT:    sb a0, 0(a1)
-; CHECK64-NEXT:    ret
+; CHECK-LABEL: extract_v8i1_v64i1_8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lbu a0, 1(a0)
+; CHECK-NEXT:    sb a0, 0(a1)
+; CHECK-NEXT:    ret
   %a = load <64 x i1>, ptr %x
   %c = call <8 x i1> @llvm.vector.extract.v8i1.v64i1(<64 x i1> %a, i64 8)
   store <8 x i1> %c, ptr %y
@@ -354,17 +342,11 @@ define void @extract_v8i1_v64i1_8(ptr %x, ptr %y) {
 }
 
 define void @extract_v8i1_v64i1_48(ptr %x, ptr %y) {
-; CHECK32-LABEL: extract_v8i1_v64i1_48:
-; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    lbu a0, 6(a0)
-; CHECK32-NEXT:    sb a0, 0(a1)
-; CHECK32-NEXT:    ret
-;
-; CHECK64-LABEL: extract_v8i1_v64i1_48:
-; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    lb a0, 6(a0)
-; CHECK64-NEXT:    sb a0, 0(a1)
-; CHECK64-NEXT:    ret
+; CHECK-LABEL: extract_v8i1_v64i1_48:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lbu a0, 6(a0)
+; CHECK-NEXT:    sb a0, 0(a1)
+; CHECK-NEXT:    ret
   %a = load <64 x i1>, ptr %x
   %c = call <8 x i1> @llvm.vector.extract.v8i1.v64i1(<64 x i1> %a, i64 48)
   store <8 x i1> %c, ptr %y

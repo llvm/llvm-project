@@ -406,7 +406,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    mv s0, a0
-; RV64-NEXT:    lb a0, 12(a0)
+; RV64-NEXT:    lbu a0, 12(a0)
 ; RV64-NEXT:    ld s3, 0(s0)
 ; RV64-NEXT:    lwu a1, 8(s0)
 ; RV64-NEXT:    slli a0, a0, 32
@@ -609,7 +609,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64M:       # %bb.0:
 ; RV64M-NEXT:    ld a1, 0(a0)
 ; RV64M-NEXT:    lwu a2, 8(a0)
-; RV64M-NEXT:    lb a3, 12(a0)
+; RV64M-NEXT:    lbu a3, 12(a0)
 ; RV64M-NEXT:    lui a4, %hi(.LCPI3_0)
 ; RV64M-NEXT:    lui a5, 699051
 ; RV64M-NEXT:    addi a5, a5, -1365
@@ -794,7 +794,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64MV:       # %bb.0:
 ; RV64MV-NEXT:    ld a1, 0(a0)
 ; RV64MV-NEXT:    lwu a2, 8(a0)
-; RV64MV-NEXT:    lb a3, 12(a0)
+; RV64MV-NEXT:    lbu a3, 12(a0)
 ; RV64MV-NEXT:    lui a4, %hi(.LCPI3_0)
 ; RV64MV-NEXT:    lui a5, %hi(.LCPI3_1)
 ; RV64MV-NEXT:    lui a6, %hi(.LCPI3_2)

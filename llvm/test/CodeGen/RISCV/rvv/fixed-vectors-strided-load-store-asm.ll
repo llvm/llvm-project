@@ -144,7 +144,7 @@ define void @gather_zero_stride(ptr noalias nocapture %A, ptr noalias nocapture 
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
 ; CHECK-NEXT:  .LBB3_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lb a3, 0(a1)
+; CHECK-NEXT:    lbu a3, 0(a1)
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vadd.vx v8, v8, a3
 ; CHECK-NEXT:    vse8.v v8, (a0)
@@ -221,7 +221,7 @@ define void @gather_zero_stride_unfold(ptr noalias nocapture %A, ptr noalias noc
 ; V-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
 ; V-NEXT:  .LBB5_1: # %vector.body
 ; V-NEXT:    # =>This Inner Loop Header: Depth=1
-; V-NEXT:    lb a3, 0(a1)
+; V-NEXT:    lbu a3, 0(a1)
 ; V-NEXT:    vle8.v v8, (a0)
 ; V-NEXT:    vmv.v.x v9, a3
 ; V-NEXT:    vdivu.vv v8, v9, v8
@@ -239,7 +239,7 @@ define void @gather_zero_stride_unfold(ptr noalias nocapture %A, ptr noalias noc
 ; ZVE32F-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
 ; ZVE32F-NEXT:  .LBB5_1: # %vector.body
 ; ZVE32F-NEXT:    # =>This Inner Loop Header: Depth=1
-; ZVE32F-NEXT:    lb a3, 0(a1)
+; ZVE32F-NEXT:    lbu a3, 0(a1)
 ; ZVE32F-NEXT:    vle8.v v8, (a0)
 ; ZVE32F-NEXT:    vmv.v.x v9, a3
 ; ZVE32F-NEXT:    vdivu.vv v8, v9, v8
@@ -939,8 +939,8 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:  .LBB14_6: # %bb35
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lb a3, 0(a1)
-; CHECK-NEXT:    lb a4, 0(a2)
+; CHECK-NEXT:    lbu a3, 0(a1)
+; CHECK-NEXT:    lbu a4, 0(a2)
 ; CHECK-NEXT:    add a3, a4, a3
 ; CHECK-NEXT:    sb a3, 0(a2)
 ; CHECK-NEXT:    addi a2, a2, 1

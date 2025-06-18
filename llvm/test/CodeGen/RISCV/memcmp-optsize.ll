@@ -5444,12 +5444,12 @@ define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind optsize {
 ;
 ; CHECK-ALIGNED-RV64-ZBKB-LABEL: memcmp_eq_zero:
 ; CHECK-ALIGNED-RV64-ZBKB:       # %bb.0: # %entry
-; CHECK-ALIGNED-RV64-ZBKB-NEXT:    lb a2, 0(a1)
-; CHECK-ALIGNED-RV64-ZBKB-NEXT:    lb a3, 1(a1)
+; CHECK-ALIGNED-RV64-ZBKB-NEXT:    lbu a2, 0(a1)
+; CHECK-ALIGNED-RV64-ZBKB-NEXT:    lbu a3, 1(a1)
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    lbu a4, 2(a1)
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    lb a1, 3(a1)
-; CHECK-ALIGNED-RV64-ZBKB-NEXT:    lb a5, 0(a0)
-; CHECK-ALIGNED-RV64-ZBKB-NEXT:    lb a6, 1(a0)
+; CHECK-ALIGNED-RV64-ZBKB-NEXT:    lbu a5, 0(a0)
+; CHECK-ALIGNED-RV64-ZBKB-NEXT:    lbu a6, 1(a0)
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    packh a2, a2, a3
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    lbu a3, 2(a0)
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    lb a0, 3(a0)

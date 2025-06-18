@@ -799,13 +799,11 @@ bool RISCVOptWInstrs::convertZExtLoads(MachineFunction &MF,
     for (MachineInstr &MI : MBB) {
       unsigned WOpc;
       int UsersWidth;
+      // LBU is intentionally not converted to LB, as there is a compressed
+      // form of LBU in Zcb but no compressed LB.
       switch (MI.getOpcode()) {
       default:
         continue;
-      case RISCV::LBU:
-        WOpc = RISCV::LB;
-        UsersWidth = 8;
-        break;
       case RISCV::LHU:
         WOpc = RISCV::LH;
         UsersWidth = 16;

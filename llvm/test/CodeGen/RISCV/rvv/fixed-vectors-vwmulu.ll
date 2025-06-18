@@ -656,6 +656,13 @@ define <16 x i64> @vwmulu_vx_v16i64(ptr %x, i32 %y) {
 }
 
 define <8 x i16> @vwmulu_vx_v8i16_i8(ptr %x, ptr %y) {
+; CHECK-LABEL: vwmulu_vx_v8i16_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    lbu a0, 0(a1)
+; CHECK-NEXT:    vwmulu.vx v8, v9, a0
+; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %x
   %b = load i8, ptr %y
   %c = zext i8 %b to i16

@@ -21,7 +21,7 @@ define void @unaligned_memcpy1(ptr nocapture %dest, ptr %src) nounwind {
 ;
 ; RV64-BOTH-LABEL: unaligned_memcpy1:
 ; RV64-BOTH:       # %bb.0: # %entry
-; RV64-BOTH-NEXT:    lb a1, 0(a1)
+; RV64-BOTH-NEXT:    lbu a1, 0(a1)
 ; RV64-BOTH-NEXT:    sb a1, 0(a0)
 ; RV64-BOTH-NEXT:    ret
 entry:
@@ -72,7 +72,7 @@ define void @unaligned_memcpy3(ptr nocapture %dest, ptr %src) nounwind {
 ;
 ; RV64-LABEL: unaligned_memcpy3:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    lb a2, 2(a1)
+; RV64-NEXT:    lbu a2, 2(a1)
 ; RV64-NEXT:    sb a2, 2(a0)
 ; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a1)
@@ -89,7 +89,7 @@ define void @unaligned_memcpy3(ptr nocapture %dest, ptr %src) nounwind {
 ;
 ; RV64-FAST-LABEL: unaligned_memcpy3:
 ; RV64-FAST:       # %bb.0: # %entry
-; RV64-FAST-NEXT:    lb a2, 2(a1)
+; RV64-FAST-NEXT:    lbu a2, 2(a1)
 ; RV64-FAST-NEXT:    sb a2, 2(a0)
 ; RV64-FAST-NEXT:    lh a1, 0(a1)
 ; RV64-FAST-NEXT:    sh a1, 0(a0)
@@ -147,7 +147,7 @@ define void @unaligned_memcpy7(ptr nocapture %dest, ptr %src) nounwind {
 ;
 ; RV64-LABEL: unaligned_memcpy7:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    lb a2, 6(a1)
+; RV64-NEXT:    lbu a2, 6(a1)
 ; RV64-NEXT:    sb a2, 6(a0)
 ; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a1)
@@ -233,7 +233,7 @@ define void @unaligned_memcpy15(ptr nocapture %dest, ptr %src) nounwind {
 ;
 ; RV64-LABEL: unaligned_memcpy15:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    lb a2, 14(a1)
+; RV64-NEXT:    lbu a2, 14(a1)
 ; RV64-NEXT:    sb a2, 14(a0)
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a1)
@@ -552,13 +552,13 @@ define void @unaligned_memcpy196(ptr nocapture %dest, ptr %src) nounwind {
 ; RV64-NEXT:    vle8.v v8, (a2)
 ; RV64-NEXT:    addi a2, a0, 128
 ; RV64-NEXT:    vse8.v v8, (a2)
-; RV64-NEXT:    lb a2, 195(a1)
+; RV64-NEXT:    lbu a2, 195(a1)
 ; RV64-NEXT:    sb a2, 195(a0)
-; RV64-NEXT:    lb a2, 194(a1)
+; RV64-NEXT:    lbu a2, 194(a1)
 ; RV64-NEXT:    sb a2, 194(a0)
-; RV64-NEXT:    lb a2, 193(a1)
+; RV64-NEXT:    lbu a2, 193(a1)
 ; RV64-NEXT:    sb a2, 193(a0)
-; RV64-NEXT:    lb a1, 192(a1)
+; RV64-NEXT:    lbu a1, 192(a1)
 ; RV64-NEXT:    sb a1, 192(a0)
 ; RV64-NEXT:    ret
 ;
@@ -677,7 +677,7 @@ define void @aligned_memcpy3(ptr nocapture %dest, ptr %src) nounwind {
 ;
 ; RV64-BOTH-LABEL: aligned_memcpy3:
 ; RV64-BOTH:       # %bb.0: # %entry
-; RV64-BOTH-NEXT:    lb a2, 2(a1)
+; RV64-BOTH-NEXT:    lbu a2, 2(a1)
 ; RV64-BOTH-NEXT:    sb a2, 2(a0)
 ; RV64-BOTH-NEXT:    lh a1, 0(a1)
 ; RV64-BOTH-NEXT:    sh a1, 0(a0)
@@ -717,7 +717,7 @@ define void @aligned_memcpy7(ptr nocapture %dest, ptr %src) nounwind {
 ;
 ; RV64-LABEL: aligned_memcpy7:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    lb a2, 6(a1)
+; RV64-NEXT:    lbu a2, 6(a1)
 ; RV64-NEXT:    sb a2, 6(a0)
 ; RV64-NEXT:    lh a2, 4(a1)
 ; RV64-NEXT:    sh a2, 4(a0)
@@ -779,7 +779,7 @@ define void @aligned_memcpy15(ptr nocapture %dest, ptr %src) nounwind {
 ;
 ; RV64-LABEL: aligned_memcpy15:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    lb a2, 14(a1)
+; RV64-NEXT:    lbu a2, 14(a1)
 ; RV64-NEXT:    sb a2, 14(a0)
 ; RV64-NEXT:    lh a2, 12(a1)
 ; RV64-NEXT:    sh a2, 12(a0)
@@ -1080,7 +1080,7 @@ define i32 @memcpy11_align8(ptr nocapture %dest, ptr %src) {
 ;
 ; RV64-LABEL: memcpy11_align8:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    lb a2, 10(a1)
+; RV64-NEXT:    lbu a2, 10(a1)
 ; RV64-NEXT:    sb a2, 10(a0)
 ; RV64-NEXT:    lh a2, 8(a1)
 ; RV64-NEXT:    sh a2, 8(a0)

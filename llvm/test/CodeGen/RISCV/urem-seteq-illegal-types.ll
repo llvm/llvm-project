@@ -525,7 +525,7 @@ define void @test_urem_vec(ptr %X) nounwind {
 ;
 ; RV64M-LABEL: test_urem_vec:
 ; RV64M:       # %bb.0:
-; RV64M-NEXT:    lb a1, 4(a0)
+; RV64M-NEXT:    lbu a1, 4(a0)
 ; RV64M-NEXT:    lwu a2, 0(a0)
 ; RV64M-NEXT:    li a3, 683
 ; RV64M-NEXT:    li a4, 1463

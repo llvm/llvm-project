@@ -1474,7 +1474,7 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV64V-ONLY-NEXT:    .cfi_def_cfa_offset 16
 ; RV64V-ONLY-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
 ; RV64V-ONLY-NEXT:    .cfi_offset s0, -8
-; RV64V-ONLY-NEXT:    lb a1, 0(a0)
+; RV64V-ONLY-NEXT:    lbu a1, 0(a0)
 ; RV64V-ONLY-NEXT:    lbu a2, 1(a0)
 ; RV64V-ONLY-NEXT:    lbu a3, 2(a0)
 ; RV64V-ONLY-NEXT:    lbu a4, 3(a0)
@@ -1482,7 +1482,7 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV64V-ONLY-NEXT:    lbu a6, 5(a0)
 ; RV64V-ONLY-NEXT:    lbu a7, 6(a0)
 ; RV64V-ONLY-NEXT:    lbu t0, 7(a0)
-; RV64V-ONLY-NEXT:    lb t1, 8(a0)
+; RV64V-ONLY-NEXT:    lbu t1, 8(a0)
 ; RV64V-ONLY-NEXT:    lbu t2, 9(a0)
 ; RV64V-ONLY-NEXT:    lbu t3, 10(a0)
 ; RV64V-ONLY-NEXT:    lbu t4, 11(a0)
@@ -1526,7 +1526,7 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RVA22U64-NEXT:    lbu a5, 4(a0)
 ; RVA22U64-NEXT:    lbu a1, 5(a0)
 ; RVA22U64-NEXT:    lbu a7, 6(a0)
-; RVA22U64-NEXT:    lb t0, 7(a0)
+; RVA22U64-NEXT:    lbu t0, 7(a0)
 ; RVA22U64-NEXT:    slli a2, a2, 8
 ; RVA22U64-NEXT:    slli a3, a3, 16
 ; RVA22U64-NEXT:    slli a4, a4, 24
@@ -1550,7 +1550,7 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RVA22U64-NEXT:    lbu a2, 12(a0)
 ; RVA22U64-NEXT:    lbu a5, 13(a0)
 ; RVA22U64-NEXT:    lbu a3, 14(a0)
-; RVA22U64-NEXT:    lb a0, 15(a0)
+; RVA22U64-NEXT:    lbu a0, 15(a0)
 ; RVA22U64-NEXT:    slli a2, a2, 32
 ; RVA22U64-NEXT:    slli a5, a5, 40
 ; RVA22U64-NEXT:    or a2, a2, a5
@@ -1570,26 +1570,26 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ;
 ; RVA22U64-PACK-LABEL: buildvec_v16i8_loads_contigous:
 ; RVA22U64-PACK:       # %bb.0:
-; RVA22U64-PACK-NEXT:    lb a1, 0(a0)
-; RVA22U64-PACK-NEXT:    lb a2, 1(a0)
-; RVA22U64-PACK-NEXT:    lb a6, 2(a0)
-; RVA22U64-PACK-NEXT:    lb a7, 3(a0)
-; RVA22U64-PACK-NEXT:    lb t0, 4(a0)
-; RVA22U64-PACK-NEXT:    lb a3, 5(a0)
-; RVA22U64-PACK-NEXT:    lb a4, 6(a0)
-; RVA22U64-PACK-NEXT:    lb a5, 7(a0)
+; RVA22U64-PACK-NEXT:    lbu a1, 0(a0)
+; RVA22U64-PACK-NEXT:    lbu a2, 1(a0)
+; RVA22U64-PACK-NEXT:    lbu a6, 2(a0)
+; RVA22U64-PACK-NEXT:    lbu a7, 3(a0)
+; RVA22U64-PACK-NEXT:    lbu t0, 4(a0)
+; RVA22U64-PACK-NEXT:    lbu a3, 5(a0)
+; RVA22U64-PACK-NEXT:    lbu a4, 6(a0)
+; RVA22U64-PACK-NEXT:    lbu a5, 7(a0)
 ; RVA22U64-PACK-NEXT:    packh t1, a1, a2
-; RVA22U64-PACK-NEXT:    lb t2, 8(a0)
-; RVA22U64-PACK-NEXT:    lb t3, 9(a0)
-; RVA22U64-PACK-NEXT:    lb t4, 10(a0)
-; RVA22U64-PACK-NEXT:    lb a1, 11(a0)
+; RVA22U64-PACK-NEXT:    lbu t2, 8(a0)
+; RVA22U64-PACK-NEXT:    lbu t3, 9(a0)
+; RVA22U64-PACK-NEXT:    lbu t4, 10(a0)
+; RVA22U64-PACK-NEXT:    lbu a1, 11(a0)
 ; RVA22U64-PACK-NEXT:    packh a6, a6, a7
 ; RVA22U64-PACK-NEXT:    packh a7, t0, a3
 ; RVA22U64-PACK-NEXT:    packh t0, a4, a5
-; RVA22U64-PACK-NEXT:    lb a5, 12(a0)
-; RVA22U64-PACK-NEXT:    lb a3, 13(a0)
-; RVA22U64-PACK-NEXT:    lb a2, 14(a0)
-; RVA22U64-PACK-NEXT:    lb a0, 15(a0)
+; RVA22U64-PACK-NEXT:    lbu a5, 12(a0)
+; RVA22U64-PACK-NEXT:    lbu a3, 13(a0)
+; RVA22U64-PACK-NEXT:    lbu a2, 14(a0)
+; RVA22U64-PACK-NEXT:    lbu a0, 15(a0)
 ; RVA22U64-PACK-NEXT:    packh a4, t2, t3
 ; RVA22U64-PACK-NEXT:    packh a1, t4, a1
 ; RVA22U64-PACK-NEXT:    packh a3, a5, a3
@@ -1611,7 +1611,7 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV64ZVE32-NEXT:    .cfi_def_cfa_offset 16
 ; RV64ZVE32-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
 ; RV64ZVE32-NEXT:    .cfi_offset s0, -8
-; RV64ZVE32-NEXT:    lb a1, 0(a0)
+; RV64ZVE32-NEXT:    lbu a1, 0(a0)
 ; RV64ZVE32-NEXT:    lbu a2, 1(a0)
 ; RV64ZVE32-NEXT:    lbu a3, 2(a0)
 ; RV64ZVE32-NEXT:    lbu a4, 3(a0)
@@ -1619,7 +1619,7 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV64ZVE32-NEXT:    lbu a6, 5(a0)
 ; RV64ZVE32-NEXT:    lbu a7, 6(a0)
 ; RV64ZVE32-NEXT:    lbu t0, 7(a0)
-; RV64ZVE32-NEXT:    lb t1, 8(a0)
+; RV64ZVE32-NEXT:    lbu t1, 8(a0)
 ; RV64ZVE32-NEXT:    lbu t2, 9(a0)
 ; RV64ZVE32-NEXT:    lbu t3, 10(a0)
 ; RV64ZVE32-NEXT:    lbu t4, 11(a0)
@@ -1848,7 +1848,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV64V-ONLY-NEXT:    .cfi_def_cfa_offset 16
 ; RV64V-ONLY-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
 ; RV64V-ONLY-NEXT:    .cfi_offset s0, -8
-; RV64V-ONLY-NEXT:    lb a1, 0(a0)
+; RV64V-ONLY-NEXT:    lbu a1, 0(a0)
 ; RV64V-ONLY-NEXT:    lbu a2, 1(a0)
 ; RV64V-ONLY-NEXT:    lbu a3, 22(a0)
 ; RV64V-ONLY-NEXT:    lbu a4, 31(a0)
@@ -1856,7 +1856,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV64V-ONLY-NEXT:    lbu a6, 44(a0)
 ; RV64V-ONLY-NEXT:    lbu a7, 55(a0)
 ; RV64V-ONLY-NEXT:    lbu t0, 75(a0)
-; RV64V-ONLY-NEXT:    lb t1, 82(a0)
+; RV64V-ONLY-NEXT:    lbu t1, 82(a0)
 ; RV64V-ONLY-NEXT:    lbu t2, 154(a0)
 ; RV64V-ONLY-NEXT:    lbu t3, 161(a0)
 ; RV64V-ONLY-NEXT:    lbu t4, 163(a0)
@@ -1900,7 +1900,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RVA22U64-NEXT:    lbu a6, 623(a0)
 ; RVA22U64-NEXT:    lbu a5, 44(a0)
 ; RVA22U64-NEXT:    lbu a1, 55(a0)
-; RVA22U64-NEXT:    lb t0, 75(a0)
+; RVA22U64-NEXT:    lbu t0, 75(a0)
 ; RVA22U64-NEXT:    lbu t1, 82(a0)
 ; RVA22U64-NEXT:    slli a2, a2, 8
 ; RVA22U64-NEXT:    slli a3, a3, 16
@@ -1920,7 +1920,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RVA22U64-NEXT:    or a3, t0, a6
 ; RVA22U64-NEXT:    or a4, t1, a4
 ; RVA22U64-NEXT:    lbu a5, 161(a0)
-; RVA22U64-NEXT:    lb a1, 154(a0)
+; RVA22U64-NEXT:    lbu a1, 154(a0)
 ; RVA22U64-NEXT:    lbu a0, 163(a0)
 ; RVA22U64-NEXT:    slli t4, t4, 16
 ; RVA22U64-NEXT:    slli a5, a5, 24
@@ -1948,26 +1948,26 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RVA22U64-PACK-NEXT:    .cfi_def_cfa_offset 16
 ; RVA22U64-PACK-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
 ; RVA22U64-PACK-NEXT:    .cfi_offset s0, -8
-; RVA22U64-PACK-NEXT:    lb a1, 0(a0)
-; RVA22U64-PACK-NEXT:    lb a2, 1(a0)
-; RVA22U64-PACK-NEXT:    lb a6, 22(a0)
-; RVA22U64-PACK-NEXT:    lb a7, 31(a0)
-; RVA22U64-PACK-NEXT:    lb t0, 623(a0)
-; RVA22U64-PACK-NEXT:    lb t3, 44(a0)
-; RVA22U64-PACK-NEXT:    lb t4, 55(a0)
-; RVA22U64-PACK-NEXT:    lb t5, 75(a0)
-; RVA22U64-PACK-NEXT:    lb t1, 82(a0)
+; RVA22U64-PACK-NEXT:    lbu a1, 0(a0)
+; RVA22U64-PACK-NEXT:    lbu a2, 1(a0)
+; RVA22U64-PACK-NEXT:    lbu a6, 22(a0)
+; RVA22U64-PACK-NEXT:    lbu a7, 31(a0)
+; RVA22U64-PACK-NEXT:    lbu t0, 623(a0)
+; RVA22U64-PACK-NEXT:    lbu t3, 44(a0)
+; RVA22U64-PACK-NEXT:    lbu t4, 55(a0)
+; RVA22U64-PACK-NEXT:    lbu t5, 75(a0)
+; RVA22U64-PACK-NEXT:    lbu t1, 82(a0)
 ; RVA22U64-PACK-NEXT:    packh t2, a1, a2
-; RVA22U64-PACK-NEXT:    lb t6, 154(a0)
-; RVA22U64-PACK-NEXT:    lb s0, 161(a0)
-; RVA22U64-PACK-NEXT:    lb a3, 163(a0)
+; RVA22U64-PACK-NEXT:    lbu t6, 154(a0)
+; RVA22U64-PACK-NEXT:    lbu s0, 161(a0)
+; RVA22U64-PACK-NEXT:    lbu a3, 163(a0)
 ; RVA22U64-PACK-NEXT:    packh a6, a6, a7
 ; RVA22U64-PACK-NEXT:    packh a7, t3, t4
 ; RVA22U64-PACK-NEXT:    packh a2, t0, t5
-; RVA22U64-PACK-NEXT:    lb a4, 93(a0)
-; RVA22U64-PACK-NEXT:    lb a5, 105(a0)
-; RVA22U64-PACK-NEXT:    lb a1, 124(a0)
-; RVA22U64-PACK-NEXT:    lb a0, 144(a0)
+; RVA22U64-PACK-NEXT:    lbu a4, 93(a0)
+; RVA22U64-PACK-NEXT:    lbu a5, 105(a0)
+; RVA22U64-PACK-NEXT:    lbu a1, 124(a0)
+; RVA22U64-PACK-NEXT:    lbu a0, 144(a0)
 ; RVA22U64-PACK-NEXT:    packh a4, t1, a4
 ; RVA22U64-PACK-NEXT:    packh a5, a5, s0
 ; RVA22U64-PACK-NEXT:    packh a1, a1, a3
@@ -1993,7 +1993,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV64ZVE32-NEXT:    .cfi_def_cfa_offset 16
 ; RV64ZVE32-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
 ; RV64ZVE32-NEXT:    .cfi_offset s0, -8
-; RV64ZVE32-NEXT:    lb a1, 0(a0)
+; RV64ZVE32-NEXT:    lbu a1, 0(a0)
 ; RV64ZVE32-NEXT:    lbu a2, 1(a0)
 ; RV64ZVE32-NEXT:    lbu a3, 22(a0)
 ; RV64ZVE32-NEXT:    lbu a4, 31(a0)
@@ -2001,7 +2001,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV64ZVE32-NEXT:    lbu a6, 44(a0)
 ; RV64ZVE32-NEXT:    lbu a7, 55(a0)
 ; RV64ZVE32-NEXT:    lbu t0, 75(a0)
-; RV64ZVE32-NEXT:    lb t1, 82(a0)
+; RV64ZVE32-NEXT:    lbu t1, 82(a0)
 ; RV64ZVE32-NEXT:    lbu t2, 154(a0)
 ; RV64ZVE32-NEXT:    lbu t3, 161(a0)
 ; RV64ZVE32-NEXT:    lbu t4, 163(a0)
@@ -2165,7 +2165,7 @@ define <16 x i8> @buildvec_v16i8_undef_low_half(ptr %p) {
 ;
 ; RV64V-ONLY-LABEL: buildvec_v16i8_undef_low_half:
 ; RV64V-ONLY:       # %bb.0:
-; RV64V-ONLY-NEXT:    lb a1, 82(a0)
+; RV64V-ONLY-NEXT:    lbu a1, 82(a0)
 ; RV64V-ONLY-NEXT:    lbu a2, 93(a0)
 ; RV64V-ONLY-NEXT:    lbu a3, 105(a0)
 ; RV64V-ONLY-NEXT:    lbu a4, 124(a0)
@@ -2194,7 +2194,7 @@ define <16 x i8> @buildvec_v16i8_undef_low_half(ptr %p) {
 ; RVA22U64-NEXT:    or a6, a2, a1
 ; RVA22U64-NEXT:    lbu a2, 161(a0)
 ; RVA22U64-NEXT:    lbu a5, 144(a0)
-; RVA22U64-NEXT:    lb a1, 154(a0)
+; RVA22U64-NEXT:    lbu a1, 154(a0)
 ; RVA22U64-NEXT:    lbu a0, 163(a0)
 ; RVA22U64-NEXT:    slli a3, a3, 16
 ; RVA22U64-NEXT:    slli a2, a2, 24
@@ -2215,14 +2215,14 @@ define <16 x i8> @buildvec_v16i8_undef_low_half(ptr %p) {
 ;
 ; RVA22U64-PACK-LABEL: buildvec_v16i8_undef_low_half:
 ; RVA22U64-PACK:       # %bb.0:
-; RVA22U64-PACK-NEXT:    lb a6, 82(a0)
-; RVA22U64-PACK-NEXT:    lb a7, 93(a0)
-; RVA22U64-PACK-NEXT:    lb t0, 105(a0)
-; RVA22U64-PACK-NEXT:    lb a4, 124(a0)
-; RVA22U64-PACK-NEXT:    lb a5, 161(a0)
-; RVA22U64-PACK-NEXT:    lb a1, 163(a0)
-; RVA22U64-PACK-NEXT:    lb a2, 144(a0)
-; RVA22U64-PACK-NEXT:    lb a0, 154(a0)
+; RVA22U64-PACK-NEXT:    lbu a6, 82(a0)
+; RVA22U64-PACK-NEXT:    lbu a7, 93(a0)
+; RVA22U64-PACK-NEXT:    lbu t0, 105(a0)
+; RVA22U64-PACK-NEXT:    lbu a4, 124(a0)
+; RVA22U64-PACK-NEXT:    lbu a5, 161(a0)
+; RVA22U64-PACK-NEXT:    lbu a1, 163(a0)
+; RVA22U64-PACK-NEXT:    lbu a2, 144(a0)
+; RVA22U64-PACK-NEXT:    lbu a0, 154(a0)
 ; RVA22U64-PACK-NEXT:    packh a3, a6, a7
 ; RVA22U64-PACK-NEXT:    packh a5, t0, a5
 ; RVA22U64-PACK-NEXT:    packh a1, a4, a1
@@ -2240,7 +2240,7 @@ define <16 x i8> @buildvec_v16i8_undef_low_half(ptr %p) {
 ;
 ; RV64ZVE32-LABEL: buildvec_v16i8_undef_low_half:
 ; RV64ZVE32:       # %bb.0:
-; RV64ZVE32-NEXT:    lb a1, 82(a0)
+; RV64ZVE32-NEXT:    lbu a1, 82(a0)
 ; RV64ZVE32-NEXT:    lbu a2, 93(a0)
 ; RV64ZVE32-NEXT:    lbu a3, 105(a0)
 ; RV64ZVE32-NEXT:    lbu a4, 124(a0)
@@ -2366,7 +2366,7 @@ define <16 x i8> @buildvec_v16i8_undef_high_half(ptr %p) {
 ;
 ; RV64V-ONLY-LABEL: buildvec_v16i8_undef_high_half:
 ; RV64V-ONLY:       # %bb.0:
-; RV64V-ONLY-NEXT:    lb a1, 0(a0)
+; RV64V-ONLY-NEXT:    lbu a1, 0(a0)
 ; RV64V-ONLY-NEXT:    lbu a2, 1(a0)
 ; RV64V-ONLY-NEXT:    lbu a3, 22(a0)
 ; RV64V-ONLY-NEXT:    lbu a4, 31(a0)
@@ -2400,7 +2400,7 @@ define <16 x i8> @buildvec_v16i8_undef_high_half(ptr %p) {
 ; RVA22U64-NEXT:    slli a4, a4, 24
 ; RVA22U64-NEXT:    or a3, a3, a4
 ; RVA22U64-NEXT:    lbu a4, 623(a0)
-; RVA22U64-NEXT:    lb a0, 75(a0)
+; RVA22U64-NEXT:    lbu a0, 75(a0)
 ; RVA22U64-NEXT:    slli a2, a2, 32
 ; RVA22U64-NEXT:    slli a5, a5, 40
 ; RVA22U64-NEXT:    or a2, a2, a5
@@ -2417,14 +2417,14 @@ define <16 x i8> @buildvec_v16i8_undef_high_half(ptr %p) {
 ;
 ; RVA22U64-PACK-LABEL: buildvec_v16i8_undef_high_half:
 ; RVA22U64-PACK:       # %bb.0:
-; RVA22U64-PACK-NEXT:    lb a6, 0(a0)
-; RVA22U64-PACK-NEXT:    lb a7, 1(a0)
-; RVA22U64-PACK-NEXT:    lb t0, 22(a0)
-; RVA22U64-PACK-NEXT:    lb a4, 31(a0)
-; RVA22U64-PACK-NEXT:    lb a5, 623(a0)
-; RVA22U64-PACK-NEXT:    lb a1, 44(a0)
-; RVA22U64-PACK-NEXT:    lb a2, 55(a0)
-; RVA22U64-PACK-NEXT:    lb a0, 75(a0)
+; RVA22U64-PACK-NEXT:    lbu a6, 0(a0)
+; RVA22U64-PACK-NEXT:    lbu a7, 1(a0)
+; RVA22U64-PACK-NEXT:    lbu t0, 22(a0)
+; RVA22U64-PACK-NEXT:    lbu a4, 31(a0)
+; RVA22U64-PACK-NEXT:    lbu a5, 623(a0)
+; RVA22U64-PACK-NEXT:    lbu a1, 44(a0)
+; RVA22U64-PACK-NEXT:    lbu a2, 55(a0)
+; RVA22U64-PACK-NEXT:    lbu a0, 75(a0)
 ; RVA22U64-PACK-NEXT:    packh a3, a6, a7
 ; RVA22U64-PACK-NEXT:    packh a4, t0, a4
 ; RVA22U64-PACK-NEXT:    packh a1, a1, a2
@@ -2442,7 +2442,7 @@ define <16 x i8> @buildvec_v16i8_undef_high_half(ptr %p) {
 ;
 ; RV64ZVE32-LABEL: buildvec_v16i8_undef_high_half:
 ; RV64ZVE32:       # %bb.0:
-; RV64ZVE32-NEXT:    lb a1, 0(a0)
+; RV64ZVE32-NEXT:    lbu a1, 0(a0)
 ; RV64ZVE32-NEXT:    lbu a2, 1(a0)
 ; RV64ZVE32-NEXT:    lbu a3, 22(a0)
 ; RV64ZVE32-NEXT:    lbu a4, 31(a0)
@@ -2580,14 +2580,14 @@ define <16 x i8> @buildvec_v16i8_undef_edges(ptr %p) {
 ; RV64V-ONLY-LABEL: buildvec_v16i8_undef_edges:
 ; RV64V-ONLY:       # %bb.0:
 ; RV64V-ONLY-NEXT:    lbu a1, 623(a0)
-; RV64V-ONLY-NEXT:    lb a2, 31(a0)
+; RV64V-ONLY-NEXT:    lbu a2, 31(a0)
 ; RV64V-ONLY-NEXT:    lbu a3, 44(a0)
 ; RV64V-ONLY-NEXT:    lbu a4, 55(a0)
 ; RV64V-ONLY-NEXT:    lbu a5, 75(a0)
 ; RV64V-ONLY-NEXT:    li a6, 255
 ; RV64V-ONLY-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; RV64V-ONLY-NEXT:    vmv.s.x v0, a6
-; RV64V-ONLY-NEXT:    lb a6, 82(a0)
+; RV64V-ONLY-NEXT:    lbu a6, 82(a0)
 ; RV64V-ONLY-NEXT:    lbu a7, 93(a0)
 ; RV64V-ONLY-NEXT:    lbu t0, 105(a0)
 ; RV64V-ONLY-NEXT:    lbu a0, 161(a0)
@@ -2610,8 +2610,8 @@ define <16 x i8> @buildvec_v16i8_undef_edges(ptr %p) {
 ; RVA22U64-NEXT:    lbu a1, 623(a0)
 ; RVA22U64-NEXT:    lbu a2, 44(a0)
 ; RVA22U64-NEXT:    lbu a3, 55(a0)
-; RVA22U64-NEXT:    lb a6, 31(a0)
-; RVA22U64-NEXT:    lb a5, 75(a0)
+; RVA22U64-NEXT:    lbu a6, 31(a0)
+; RVA22U64-NEXT:    lbu a5, 75(a0)
 ; RVA22U64-NEXT:    slli a2, a2, 32
 ; RVA22U64-NEXT:    slli a3, a3, 40
 ; RVA22U64-NEXT:    slli a1, a1, 48
@@ -2638,15 +2638,15 @@ define <16 x i8> @buildvec_v16i8_undef_edges(ptr %p) {
 ;
 ; RVA22U64-PACK-LABEL: buildvec_v16i8_undef_edges:
 ; RVA22U64-PACK:       # %bb.0:
-; RVA22U64-PACK-NEXT:    lb a7, 623(a0)
-; RVA22U64-PACK-NEXT:    lb a6, 31(a0)
-; RVA22U64-PACK-NEXT:    lb t0, 44(a0)
-; RVA22U64-PACK-NEXT:    lb a4, 55(a0)
-; RVA22U64-PACK-NEXT:    lb a5, 75(a0)
-; RVA22U64-PACK-NEXT:    lb a2, 82(a0)
-; RVA22U64-PACK-NEXT:    lb a1, 93(a0)
-; RVA22U64-PACK-NEXT:    lb a3, 105(a0)
-; RVA22U64-PACK-NEXT:    lb a0, 161(a0)
+; RVA22U64-PACK-NEXT:    lbu a7, 623(a0)
+; RVA22U64-PACK-NEXT:    lbu a6, 31(a0)
+; RVA22U64-PACK-NEXT:    lbu t0, 44(a0)
+; RVA22U64-PACK-NEXT:    lbu a4, 55(a0)
+; RVA22U64-PACK-NEXT:    lbu a5, 75(a0)
+; RVA22U64-PACK-NEXT:    lbu a2, 82(a0)
+; RVA22U64-PACK-NEXT:    lbu a1, 93(a0)
+; RVA22U64-PACK-NEXT:    lbu a3, 105(a0)
+; RVA22U64-PACK-NEXT:    lbu a0, 161(a0)
 ; RVA22U64-PACK-NEXT:    packh a4, t0, a4
 ; RVA22U64-PACK-NEXT:    packh a5, a7, a5
 ; RVA22U64-PACK-NEXT:    packh a1, a2, a1
@@ -2667,14 +2667,14 @@ define <16 x i8> @buildvec_v16i8_undef_edges(ptr %p) {
 ; RV64ZVE32-LABEL: buildvec_v16i8_undef_edges:
 ; RV64ZVE32:       # %bb.0:
 ; RV64ZVE32-NEXT:    lbu a1, 623(a0)
-; RV64ZVE32-NEXT:    lb a2, 31(a0)
+; RV64ZVE32-NEXT:    lbu a2, 31(a0)
 ; RV64ZVE32-NEXT:    lbu a3, 44(a0)
 ; RV64ZVE32-NEXT:    lbu a4, 55(a0)
 ; RV64ZVE32-NEXT:    lbu a5, 75(a0)
 ; RV64ZVE32-NEXT:    li a6, 255
 ; RV64ZVE32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; RV64ZVE32-NEXT:    vmv.s.x v0, a6
-; RV64ZVE32-NEXT:    lb a6, 82(a0)
+; RV64ZVE32-NEXT:    lbu a6, 82(a0)
 ; RV64ZVE32-NEXT:    lbu a7, 93(a0)
 ; RV64ZVE32-NEXT:    lbu t0, 105(a0)
 ; RV64ZVE32-NEXT:    lbu a0, 161(a0)
@@ -2820,12 +2820,12 @@ define <16 x i8> @buildvec_v16i8_loads_undef_scattered(ptr %p) {
 ;
 ; RV64V-ONLY-LABEL: buildvec_v16i8_loads_undef_scattered:
 ; RV64V-ONLY:       # %bb.0:
-; RV64V-ONLY-NEXT:    lb a1, 0(a0)
+; RV64V-ONLY-NEXT:    lbu a1, 0(a0)
 ; RV64V-ONLY-NEXT:    lbu a2, 1(a0)
 ; RV64V-ONLY-NEXT:    lbu a3, 44(a0)
 ; RV64V-ONLY-NEXT:    lbu a4, 55(a0)
 ; RV64V-ONLY-NEXT:    lbu a5, 75(a0)
-; RV64V-ONLY-NEXT:    lb a6, 82(a0)
+; RV64V-ONLY-NEXT:    lbu a6, 82(a0)
 ; RV64V-ONLY-NEXT:    lbu a7, 93(a0)
 ; RV64V-ONLY-NEXT:    lbu t0, 124(a0)
 ; RV64V-ONLY-NEXT:    li t1, 255
@@ -2859,7 +2859,7 @@ define <16 x i8> @buildvec_v16i8_loads_undef_scattered(ptr %p) {
 ; RVA22U64-NEXT:    lbu a4, 55(a0)
 ; RVA22U64-NEXT:    slli a1, a1, 8
 ; RVA22U64-NEXT:    or a6, a2, a1
-; RVA22U64-NEXT:    lb a7, 75(a0)
+; RVA22U64-NEXT:    lbu a7, 75(a0)
 ; RVA22U64-NEXT:    lbu a5, 82(a0)
 ; RVA22U64-NEXT:    lbu a1, 93(a0)
 ; RVA22U64-NEXT:    lbu a2, 124(a0)
@@ -2867,7 +2867,7 @@ define <16 x i8> @buildvec_v16i8_loads_undef_scattered(ptr %p) {
 ; RVA22U64-NEXT:    slli a4, a4, 40
 ; RVA22U64-NEXT:    or a3, a3, a4
 ; RVA22U64-NEXT:    lbu a4, 144(a0)
-; RVA22U64-NEXT:    lb a0, 154(a0)
+; RVA22U64-NEXT:    lbu a0, 154(a0)
 ; RVA22U64-NEXT:    slli a1, a1, 8
 ; RVA22U64-NEXT:    or a1, a1, a5
 ; RVA22U64-NEXT:    slli a4, a4, 48
@@ -2886,18 +2886,18 @@ define <16 x i8> @buildvec_v16i8_loads_undef_scattered(ptr %p) {
 ;
 ; RVA22U64-PACK-LABEL: buildvec_v16i8_loads_undef_scattered:
 ; RVA22U64-PACK:       # %bb.0:
-; RVA22U64-PACK-NEXT:    lb a1, 0(a0)
-; RVA22U64-PACK-NEXT:    lb a2, 1(a0)
-; RVA22U64-PACK-NEXT:    lb a6, 44(a0)
-; RVA22U64-PACK-NEXT:    lb a7, 55(a0)
-; RVA22U64-PACK-NEXT:    lb t1, 82(a0)
-; RVA22U64-PACK-NEXT:    lb a3, 93(a0)
+; RVA22U64-PACK-NEXT:    lbu a1, 0(a0)
+; RVA22U64-PACK-NEXT:    lbu a2, 1(a0)
+; RVA22U64-PACK-NEXT:    lbu a6, 44(a0)
+; RVA22U64-PACK-NEXT:    lbu a7, 55(a0)
+; RVA22U64-PACK-NEXT:    lbu t1, 82(a0)
+; RVA22U64-PACK-NEXT:    lbu a3, 93(a0)
 ; RVA22U64-PACK-NEXT:    packh t0, a1, a2
-; RVA22U64-PACK-NEXT:    lb a2, 144(a0)
-; RVA22U64-PACK-NEXT:    lb a4, 154(a0)
+; RVA22U64-PACK-NEXT:    lbu a2, 144(a0)
+; RVA22U64-PACK-NEXT:    lbu a4, 154(a0)
 ; RVA22U64-PACK-NEXT:    packh a1, a6, a7
-; RVA22U64-PACK-NEXT:    lb a5, 75(a0)
-; RVA22U64-PACK-NEXT:    lb a0, 124(a0)
+; RVA22U64-PACK-NEXT:    lbu a5, 75(a0)
+; RVA22U64-PACK-NEXT:    lbu a0, 124(a0)
 ; RVA22U64-PACK-NEXT:    packh a3, t1, a3
 ; RVA22U64-PACK-NEXT:    packh a2, a2, a4
 ; RVA22U64-PACK-NEXT:    packh a4, a0, a5
@@ -2916,12 +2916,12 @@ define <16 x i8> @buildvec_v16i8_loads_undef_scattered(ptr %p) {
 ;
 ; RV64ZVE32-LABEL: buildvec_v16i8_loads_undef_scattered:
 ; RV64ZVE32:       # %bb.0:
-; RV64ZVE32-NEXT:    lb a1, 0(a0)
+; RV64ZVE32-NEXT:    lbu a1, 0(a0)
 ; RV64ZVE32-NEXT:    lbu a2, 1(a0)
 ; RV64ZVE32-NEXT:    lbu a3, 44(a0)
 ; RV64ZVE32-NEXT:    lbu a4, 55(a0)
 ; RV64ZVE32-NEXT:    lbu a5, 75(a0)
-; RV64ZVE32-NEXT:    lb a6, 82(a0)
+; RV64ZVE32-NEXT:    lbu a6, 82(a0)
 ; RV64ZVE32-NEXT:    lbu a7, 93(a0)
 ; RV64ZVE32-NEXT:    lbu t0, 124(a0)
 ; RV64ZVE32-NEXT:    li t1, 255

@@ -644,21 +644,13 @@ define <16 x i64> @vwaddu_vx_v16i64(ptr %x, i32 %y) {
 }
 
 define <8 x i16> @vwaddu_vx_v8i16_i8(ptr %x, ptr %y) {
-; RV32-LABEL: vwaddu_vx_v8i16_i8:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vle8.v v9, (a0)
-; RV32-NEXT:    lbu a0, 0(a1)
-; RV32-NEXT:    vwaddu.vx v8, v9, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vwaddu_vx_v8i16_i8:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV64-NEXT:    vle8.v v9, (a0)
-; RV64-NEXT:    lb a0, 0(a1)
-; RV64-NEXT:    vwaddu.vx v8, v9, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: vwaddu_vx_v8i16_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    lbu a0, 0(a1)
+; CHECK-NEXT:    vwaddu.vx v8, v9, a0
+; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %x
   %b = load i8, ptr %y
   %c = zext i8 %b to i16
