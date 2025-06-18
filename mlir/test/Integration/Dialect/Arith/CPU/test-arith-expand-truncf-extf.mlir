@@ -1,9 +1,9 @@
 // Check various edge cases for truncf/extf ops involving f32 and f4e2m1 types.
 
-// RUN: mlir-opt %s --convert-vector-to-llvm \
-// RUN:             --convert-func-to-llvm \
+// RUN: mlir-opt %s --convert-func-to-llvm \
 // RUN:             --arith-expand="include-f4e2m1=true" \
-// RUN:             --convert-arith-to-llvm -reconcile-unrealized-casts | \
+// RUN:             --convert-arith-to-llvm --convert-vector-to-llvm \
+// RUN:             --reconcile-unrealized-casts | \
 // RUN:   mlir-runner -e entry --entry-point-result=void \
 // RUN:               --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines

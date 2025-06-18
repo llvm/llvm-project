@@ -13,6 +13,7 @@
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 namespace mlir {
 namespace arith {
@@ -240,9 +241,8 @@ struct BFloat16ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultETy = getElementTypeOrSelf(resultTy);
 
-    if (!operandETy.isBF16() || !resultETy.isF32()) {
+    if (!operandETy.isBF16() || !resultETy.isF32())
       return rewriter.notifyMatchFailure(op, "not a ext of bf16 to f32.");
-    }
 
     Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
     Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
@@ -270,9 +270,8 @@ struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultETy = getElementTypeOrSelf(resultTy);
 
-    if (!operandETy.isF32() || !resultETy.isBF16()) {
+    if (!operandETy.isF32() || !resultETy.isBF16())
       return rewriter.notifyMatchFailure(op, "not a trunc of f32 to bf16.");
-    }
 
     if (op.getRoundingmodeAttr()) {
       return rewriter.notifyMatchFailure(
@@ -336,6 +335,8 @@ struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
 
 struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
   using OpRewritePattern::OpRewritePattern;
+  F4E2M1ExtFOpConverter(MLIRContext *context, PatternBenefit benefit = 1)
+      : OpRewritePattern<arith::ExtFOp>(context, benefit) {}
   LogicalResult matchAndRewrite(arith::ExtFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -402,6 +403,71 @@ struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
   }
 };
 
+struct ScalarF4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
+  using OpRewritePattern::OpRewritePattern;
+  ScalarF4E2M1ExtFOpConverter(MLIRContext *context, PatternBenefit benefit = 2)
+      : OpRewritePattern<arith::ExtFOp>(context, benefit) {}
+  LogicalResult matchAndRewrite(arith::ExtFOp op,
+                                PatternRewriter &rewriter) const final {
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value operand = op.getOperand();
+    Type operandTy = operand.getType();
+    Type resultTy = op.getType();
+    Type operandETy = getElementTypeOrSelf(operandTy);
+    Type resultETy = getElementTypeOrSelf(resultTy);
+
+    if (isa<ShapedType>(operandTy))
+      return failure();
+
+    if (!isa<Float4E2M1FNType>(operandETy))
+      return rewriter.notifyMatchFailure(op, "not a ext of F4E2M1FN");
+
+    SmallVector<int> values = {
+        0x00000000, // 0.0
+        0x3f000000, // 0.5
+        0x3f800000, // 1.0
+        0x3fc00000, // 1.5
+        0x40000000, // 2.0
+        0x40400000, // 3.0
+        0x40800000, // 4.0
+        0x40c00000  // 6.0
+    };
+    // auto type = RankedTensorType::get({8}, b.getI32Type());
+    VectorType type = VectorType::get({8}, b.getI32Type());
+    SmallVector<Attribute> lookupTableAttr = llvm::map_to_vector(
+        values, [&](int v) -> Attribute { return b.getI32IntegerAttr(v); });
+    Value lookupTable = b.create<arith::ConstantOp>(
+        DenseIntElementsAttr::get(type, lookupTableAttr));
+
+    Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
+    Type i4Ty = cloneToShapedType(operandTy, b.getI4Type());
+    Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
+    Type i64Ty = cloneToShapedType(operandTy, b.getI64Type());
+
+    Value i4Bits = b.create<arith::BitcastOp>(i4Ty, operand);
+
+    Value expManBitmask = createConst(op.getLoc(), i4Ty, 0x7, rewriter);
+    Value indexI4 = b.create<arith::AndIOp>(i4Bits, expManBitmask);
+    Value indexI64 = b.create<arith::ExtUIOp>(i64Ty, indexI4);
+    Value index = b.create<arith::IndexCastOp>(b.getIndexType(), indexI64);
+
+    Value c0x0000001c = createConst(op->getLoc(), i32Ty, 28, rewriter);
+    Value signBitmask = createConst(op.getLoc(), i4Ty, 0x8, rewriter);
+    Value signBitI4 = b.create<arith::AndIOp>(i4Bits, signBitmask);
+    Value signBitI32 = b.create<arith::ExtUIOp>(i32Ty, signBitI4);
+    signBitI32 = b.create<arith::ShLIOp>(signBitI32, c0x0000001c);
+
+    Value unsignedBits = b.create<vector::ExtractOp>(lookupTable, index);
+    Value f32Bits = b.create<arith::OrIOp>(signBitI32, unsignedBits);
+    Value result = b.create<arith::BitcastOp>(f32Ty, f32Bits);
+    if (!isa<Float32Type>(resultETy))
+      result = b.create<arith::TruncFOp>(resultETy, operand);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(arith::ExtFOp op,
@@ -413,9 +479,8 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultETy = getElementTypeOrSelf(resultTy);
 
-    if (!llvm::isa<Float8E8M0FNUType>(operandETy)) {
+    if (!llvm::isa<Float8E8M0FNUType>(operandETy))
       return rewriter.notifyMatchFailure(op, "not a ext of F8E8M0FNU");
-    }
 
     Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
     Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
@@ -485,12 +550,10 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultETy = getElementTypeOrSelf(resultTy);
 
-    if (!isa<Float32Type>(operandETy)) {
+    if (!isa<Float32Type>(operandETy))
       operand = b.create<arith::ExtFOp>(b.getF32Type(), operand);
-    }
-    if (!isa<Float4E2M1FNType>(resultETy)) {
+    if (!isa<Float4E2M1FNType>(resultETy))
       return rewriter.notifyMatchFailure(op, "not a trunc of F4E2M1FN");
-    }
 
     Type i4Ty = cloneToShapedType(operandTy, b.getI4Type());
     Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
@@ -509,8 +572,8 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
         createFloatConst(op->getLoc(), f32Ty, APFloat(6.0f), rewriter);
     Value cLowerBound =
         createFloatConst(op->getLoc(), f32Ty, APFloat(-6.0f), rewriter);
-    Value operandClamped = b.create<arith::MinimumFOp>(cHigherBound, operand);
-    operandClamped = b.create<arith::MaximumFOp>(cLowerBound, operandClamped);
+    Value operandClamped = b.create<arith::MinNumFOp>(cHigherBound, operand);
+    operandClamped = b.create<arith::MaxNumFOp>(cLowerBound, operandClamped);
     Value f32Bits = b.create<arith::BitcastOp>(i32Ty, operandClamped);
 
     // Step 1: Set sign bit.
@@ -594,14 +657,12 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultTy = op.getType();
     Type resultETy = getElementTypeOrSelf(resultTy);
-    if (!llvm::isa<Float8E8M0FNUType>(resultETy)) {
+    if (!llvm::isa<Float8E8M0FNUType>(resultETy))
       return rewriter.notifyMatchFailure(op, "not a truncf to f8E8M0FNU");
-    }
 
-    if (op.getRoundingmodeAttr()) {
+    if (op.getRoundingmodeAttr())
       return rewriter.notifyMatchFailure(
           op, "only applicable to default rounding mode.");
-    }
 
     Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
     Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
@@ -711,6 +772,8 @@ struct ArithExpandOpsPass
     arith::populateArithExpandOpsPatterns(patterns);
 
     target.addLegalDialect<arith::ArithDialect>();
+    target.addLegalDialect<vector::VectorDialect>();
+
     // clang-format off
     target.addIllegalOp<
       arith::CeilDivSIOp,
@@ -728,30 +791,24 @@ struct ArithExpandOpsPass
       arith::ScalingTruncFOp
     >();
 
-    if (includeBf16) {
+    if (includeBf16)
       arith::populateExpandBFloat16Patterns(patterns);
-    }
-    if (includeF8E8M0) {
+    if (includeF8E8M0)
       arith::populateExpandF8E8M0Patterns(patterns);
-    }
-    if (includeF4E2M1) {
+    if (includeF4E2M1)
       arith::populateExpandF4E2M1Patterns(patterns);
-    }
 
     target.addDynamicallyLegalOp<arith::ExtFOp>(
       [=](arith::ExtFOp op) {
         Type inETy = getElementTypeOrSelf(op.getOperand().getType());
         Type outETy = getElementTypeOrSelf(op.getType());
         bool legalTypes = true;
-        if (includeBf16) {
+        if (includeBf16)
           legalTypes &= !(inETy.isBF16() && outETy.isF32());
-        } 
-        if (includeF8E8M0) {
+        if (includeF8E8M0)
           legalTypes &= !llvm::isa<Float8E8M0FNUType>(inETy);
-        } 
-        if (includeF4E2M1) {
+        if (includeF4E2M1)
           legalTypes &= !llvm::isa<Float4E2M1FNType>(inETy);
-        }
         return legalTypes;
       });
 
@@ -760,15 +817,12 @@ struct ArithExpandOpsPass
         Type inETy = getElementTypeOrSelf(op.getOperand().getType());
         Type outETy = getElementTypeOrSelf(op.getType());
         bool legalTypes = true;
-        if (includeBf16) {
+        if (includeBf16)
           legalTypes &= !(inETy.isF32() && outETy.isBF16());
-        }
-        if (includeF8E8M0) {
+        if (includeF8E8M0)
           legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy)); 
-        }
-        if (includeF4E2M1) {
+        if (includeF4E2M1)
           legalTypes &= !llvm::isa<Float4E2M1FNType>(outETy);
-        }
         return legalTypes;
       });
 
@@ -794,8 +848,8 @@ void mlir::arith::populateExpandBFloat16Patterns(RewritePatternSet &patterns) {
 }
 
 void mlir::arith::populateExpandF4E2M1Patterns(RewritePatternSet &patterns) {
-  patterns.add<F4E2M1ExtFOpConverter, F4E2M1TruncFOpConverter>(
-      patterns.getContext());
+  patterns.add<F4E2M1ExtFOpConverter, ScalarF4E2M1ExtFOpConverter,
+               F4E2M1TruncFOpConverter>(patterns.getContext());
 }
 
 void mlir::arith::populateExpandF8E8M0Patterns(RewritePatternSet &patterns) {
