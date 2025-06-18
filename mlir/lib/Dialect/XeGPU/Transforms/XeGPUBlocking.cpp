@@ -134,9 +134,11 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
 
 std::optional<SmallVector<int64_t>>
 XeGPUBlockingPass::getTileShape(Operation *op) const {
-  if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp, xegpu::CreateDescOp, xegpu::UpdateOffsetOp>(op))
+  if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp, xegpu::CreateDescOp,
+          xegpu::UpdateOffsetOp>(op))
     return getTileShape(op->getOpResult(0));
-  if (isa<xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::PrefetchOp, xegpu::LoadGatherOp>(op))
+  if (isa<xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::PrefetchOp,
+          xegpu::LoadGatherOp>(op))
     return getTileShape(op->getOpOperand(0));
   if (isa<xegpu::StoreNdOp, xegpu::StoreScatterOp>(op))
     return getTileShape(op->getOpOperand(1));
@@ -322,13 +324,13 @@ void XeGPUBlockingPass::runOnOperation() {
         }
       }
 
-      newTy = xegpu::TensorDescType::get(
-          ctx, tileShape, elemTy, encoding,
-          tdescTy.getLayoutAttr().dropInstData());
+      newTy =
+          xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
+                                     tdescTy.getLayoutAttr().dropInstData());
     } else {
       newTy = type.clone(tileShape, elemTy);
     }
-    
+
     std::optional<SmallVector<int64_t>> ratio =
         computeShapeRatio(type.getShape(), tileShape);
     assert(ratio && "The shape of the type must be a multiple of tileShape.");
