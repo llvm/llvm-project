@@ -2985,20 +2985,13 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   }
 
   if (IsZeroCmp && ST->hasVInstructions()) {
-    unsigned RealMinVLen = ST->getRealMinVLen();
-    // Support Fractional LMULs if the lengths are larger than XLen.
-    // TODO: Support non-power-of-2 types.
-    for (unsigned FLMUL = 8; FLMUL >= 2; FLMUL /= 2) {
-      unsigned Len = RealMinVLen / FLMUL;
-      if (Len > ST->getXLen())
-        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
-    }
-    for (unsigned LMUL = 1; LMUL <= ST->getMaxLMULForFixedLengthVectors();
-         LMUL *= 2) {
-      unsigned Len = RealMinVLen * LMUL;
-      if (Len > ST->getXLen())
-        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
-    }
+    unsigned VLenB = ST->getRealMinVLen() / 8;
+    // The minimum size should be `XLen / 8 + 1`, and the maxinum size should be
+    // `VLenB * MaxLMUL` so that it fits in a single register group.
+    unsigned MinSize = ST->getXLen() / 8 + 1;
+    unsigned MaxSize = VLenB * ST->getMaxLMULForFixedLengthVectors();
+    for (unsigned Size = MinSize; Size <= MaxSize; Size++)
+      Options.LoadSizes.insert(Options.LoadSizes.begin(), Size);
   }
   return Options;
 }

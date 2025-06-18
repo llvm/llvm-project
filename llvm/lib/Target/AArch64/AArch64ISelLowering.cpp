@@ -2087,12 +2087,18 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::STRICT_FSETCC, VT, Expand);
   setOperationAction(ISD::STRICT_FSETCCS, VT, Expand);
 
+  // When little-endian we can use ordinary d and q register loads/stores for
+  // vector types, but when big-endian we need to use structure load/store which
+  // only allow post-index addressing.
   if (Subtarget->isLittleEndian()) {
     for (unsigned im = (unsigned)ISD::PRE_INC;
          im != (unsigned)ISD::LAST_INDEXED_MODE; ++im) {
       setIndexedLoadAction(im, VT, Legal);
       setIndexedStoreAction(im, VT, Legal);
     }
+  } else {
+    setIndexedLoadAction(ISD::POST_INC, VT, Legal);
+    setIndexedStoreAction(ISD::POST_INC, VT, Legal);
   }
 
   if (Subtarget->hasD128()) {
@@ -13384,6 +13390,30 @@ static bool isUZP_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
   }
 
   return true;
+}
+
+/// isDUPQMask - matches a splat of equivalent lanes within 128b segments in
+/// the first vector operand.
+static std::optional<unsigned> isDUPQMask(ArrayRef<int> M, EVT VT) {
+  assert(VT.getFixedSizeInBits() % 128 == 0 && "Unsupported SVE vector size");
+  unsigned Lane = (unsigned)M[0];
+  unsigned Segments = VT.getFixedSizeInBits() / 128;
+  unsigned SegmentElts = VT.getVectorNumElements() / Segments;
+
+  // Make sure there's no size changes.
+  if (SegmentElts * Segments != M.size())
+    return std::nullopt;
+
+  // Check the first index corresponds to one of the lanes in the first segment.
+  if (Lane >= SegmentElts)
+    return std::nullopt;
+
+  // Check that all lanes match the first, adjusted for segment.
+  for (unsigned I = 0; I < M.size(); ++I)
+    if ((unsigned)M[I] != (Lane + ((I / SegmentElts) * SegmentElts)))
+      return std::nullopt;
+
+  return Lane;
 }
 
 /// isTRN_v_undef_Mask - Special case of isTRNMask for canonical form of
@@ -27047,6 +27077,12 @@ bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
       RHSC = -(uint64_t)RHSC;
     if (!isInt<9>(RHSC))
       return false;
+    // When big-endian VLD1/VST1 are used for vector load and store, and these
+    // only allow an offset that's equal to the store size.
+    EVT MemType = cast<MemSDNode>(N)->getMemoryVT();
+    if (!Subtarget->isLittleEndian() && MemType.isVector() &&
+        RHSC != MemType.getStoreSize())
+      return false;
     // Always emit pre-inc/post-inc addressing mode. Use negated constant offset
     // when dealing with subtraction.
     Offset = DAG.getConstant(RHSC, SDLoc(N), RHS->getValueType(0));
@@ -29968,6 +30004,19 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
       unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
       return convertFromScalableVector(
           DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));
+    }
+
+    if (Subtarget->hasSVE2p1()) {
+      if (std::optional<unsigned> Lane = isDUPQMask(ShuffleMask, VT)) {
+        SDValue IID =
+            DAG.getConstant(Intrinsic::aarch64_sve_dup_laneq, DL, MVT::i64);
+        return convertFromScalableVector(
+            DAG, VT,
+            DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
+                        {IID, Op1,
+                         DAG.getConstant(*Lane, DL, MVT::i64,
+                                         /*isTarget=*/true)}));
+      }
     }
   }
 

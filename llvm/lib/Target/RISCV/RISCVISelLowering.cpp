@@ -7353,20 +7353,25 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     uint64_t Val = Op.getConstantOperandVal(0);
     if (isPowerOf2_64(Val)) {
       uint64_t Log2 = Log2_64(Val);
-      if (Log2 < 3)
+      if (Log2 < 3) {
+        SDNodeFlags Flags;
+        Flags.setExact(true);
         Res = DAG.getNode(ISD::SRL, DL, XLenVT, Res,
-                          DAG.getConstant(3 - Log2, DL, VT));
-      else if (Log2 > 3)
+                          DAG.getConstant(3 - Log2, DL, XLenVT), Flags);
+      } else if (Log2 > 3) {
         Res = DAG.getNode(ISD::SHL, DL, XLenVT, Res,
                           DAG.getConstant(Log2 - 3, DL, XLenVT));
+      }
     } else if ((Val % 8) == 0) {
       // If the multiplier is a multiple of 8, scale it down to avoid needing
       // to shift the VLENB value.
       Res = DAG.getNode(ISD::MUL, DL, XLenVT, Res,
                         DAG.getConstant(Val / 8, DL, XLenVT));
     } else {
+      SDNodeFlags Flags;
+      Flags.setExact(true);
       SDValue VScale = DAG.getNode(ISD::SRL, DL, XLenVT, Res,
-                                   DAG.getConstant(3, DL, XLenVT));
+                                   DAG.getConstant(3, DL, XLenVT), Flags);
       Res = DAG.getNode(ISD::MUL, DL, XLenVT, VScale,
                         DAG.getConstant(Val, DL, XLenVT));
     }
@@ -16185,10 +16190,6 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
     return SDValue();
 
   unsigned OpSize = OpVT.getSizeInBits();
-  // TODO: Support non-power-of-2 types.
-  if (!isPowerOf2_32(OpSize))
-    return SDValue();
-
   // The size should be larger than XLen and smaller than the maximum vector
   // size.
   if (OpSize <= Subtarget.getXLen() ||
@@ -16209,14 +16210,25 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
           Attribute::NoImplicitFloat))
     return SDValue();
 
+  // Bail out for non-byte-sized types.
+  if (!OpVT.isByteSized())
+    return SDValue();
+
   unsigned VecSize = OpSize / 8;
-  EVT VecVT = MVT::getVectorVT(MVT::i8, VecSize);
-  EVT CmpVT = MVT::getVectorVT(MVT::i1, VecSize);
+  EVT VecVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8, VecSize);
+  EVT CmpVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, VecSize);
 
   SDValue VecX = DAG.getBitcast(VecVT, X);
   SDValue VecY = DAG.getBitcast(VecVT, Y);
-  SDValue Cmp = DAG.getSetCC(DL, CmpVT, VecX, VecY, ISD::SETNE);
-  return DAG.getSetCC(DL, VT, DAG.getNode(ISD::VECREDUCE_OR, DL, XLenVT, Cmp),
+  SDValue Mask = DAG.getAllOnesConstant(DL, CmpVT);
+  SDValue VL = DAG.getConstant(VecSize, DL, XLenVT);
+
+  SDValue Cmp = DAG.getNode(ISD::VP_SETCC, DL, CmpVT, VecX, VecY,
+                            DAG.getCondCode(ISD::SETNE), Mask, VL);
+  return DAG.getSetCC(DL, VT,
+                      DAG.getNode(ISD::VP_REDUCE_OR, DL, XLenVT,
+                                  DAG.getConstant(0, DL, XLenVT), Cmp, Mask,
+                                  VL),
                       DAG.getConstant(0, DL, XLenVT), CC);
 }
 

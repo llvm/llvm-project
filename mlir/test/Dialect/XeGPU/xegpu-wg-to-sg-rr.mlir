@@ -1,9 +1,9 @@
 // RUN: mlir-opt --xegpu-wg-to-sg-distribute -split-input-file %s | FileCheck %s
 
 gpu.module @test_round_robin_assignment {
-  // CHECK-LABEL: test_create_nd_tdesc
+  // CHECK-LABEL: create_nd_tdesc
   // CHECK-SAME: %[[ARG_0:.*]]: memref<24x32xf32>
-  gpu.func @test_create_nd_tdesc(%src: memref<24x32xf32>) {
+  gpu.func @create_nd_tdesc(%src: memref<24x32xf32>) {
       // CHECK-COUNT-12: xegpu.create_nd_tdesc %[[ARG_0]][%{{.*}}, %{{.*}}] : memref<24x32xf32>
       // CHECK-SAME: -> !xegpu.tensor_desc<2x2xf32, #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>>
       // CHECK-NOT: xegpu.create_nd_tdesc
@@ -12,9 +12,9 @@ gpu.module @test_round_robin_assignment {
       gpu.return
     }
 
-  // CHECK-LABEL: test_load_nd_tdesc
+  // CHECK-LABEL: load_nd_tdesc
   // CHECK-SAME: %[[ARG_0:.*]]: memref<24x32xf32>
-  gpu.func @test_load_nd_tdesc(%src: memref<24x32xf32>) {
+  gpu.func @load_nd_tdesc(%src: memref<24x32xf32>) {
       %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32>
         -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>>
       // CHECK-COUNT-12: xegpu.load_nd %{{.*}}
@@ -27,9 +27,9 @@ gpu.module @test_round_robin_assignment {
       gpu.return
     }
 
-  // CHECK-LABEL: test_store_nd
+  // CHECK-LABEL: store_nd
   // CHECK-SAME: %[[ARG_0:.*]]: memref<24x32xf32>
-  gpu.func @test_store_nd(%src: memref<24x32xf32>) {
+  gpu.func @store_nd(%src: memref<24x32xf32>) {
       %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32>
         -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>>
       // CHECK-COUNT-12: xegpu.store_nd %{{.*}}, %{{.*}}
@@ -43,9 +43,9 @@ gpu.module @test_round_robin_assignment {
       gpu.return
   }
 
-  // CHECK-LABEL: test_update_nd
+  // CHECK-LABEL: update_nd
   // CHECK-SAME: %[[ARG_0:.*]]: memref<24x32xf32>
-  gpu.func @test_update_nd(%src: memref<24x32xf32>){
+  gpu.func @update_nd(%src: memref<24x32xf32>){
     %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32>
       ->  !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>>
     // CHECK-COUNT-12: xegpu.update_nd_offset %{{.*}}, [0, 16]
@@ -56,9 +56,9 @@ gpu.module @test_round_robin_assignment {
     gpu.return
   }
 
-  // CHECK-LABEL: test_dpas
+  // CHECK-LABEL: dpas
   // CHECK-SAME: (%[[ARG_0:.*]]: memref<8x8xf32>, %[[ARG_1:.*]]: memref<8x8xf32>, %[[ARG_2:.*]]: memref<8x8xf32>)
-  gpu.func @test_dpas(%a: memref<8x8xf32>, %b: memref<8x8xf32>, %c: memref<8x8xf32>) {
+  gpu.func @dpas(%a: memref<8x8xf32>, %b: memref<8x8xf32>, %c: memref<8x8xf32>) {
     // CHECK-COUNT-4: xegpu.create_nd_tdesc %[[ARG_0]][%{{.*}}, %{{.*}}] : memref<8x8xf32>
     // CHECK-SAME-COUNT-4: -> !xegpu.tensor_desc<2x2xf32, #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>>
     // CHECK-NOT: xegpu.create_nd_tdesc
@@ -90,9 +90,9 @@ gpu.module @test_round_robin_assignment {
     gpu.return
   }
 
-  // CHECK-LABEL: test_prefetch_nd_tdesc
+  // CHECK-LABEL: prefetch_nd_tdesc
   // CHECK-SAME: %[[ARG_0:.*]]: memref<24x32xf32>
-  gpu.func @test_prefetch_nd_tdesc(%src: memref<24x32xf32>) {
+  gpu.func @prefetch_nd_tdesc(%src: memref<24x32xf32>) {
     // CHECK-COUNT-12: xegpu.prefetch_nd %{{.*}}
     // CHECK-SAME-COUNT-12 : !xegpu.tensor_desc<2x2xf32, #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>>
     // CHECK-NOT: xegpu.prefetch_nd
@@ -103,7 +103,7 @@ gpu.module @test_round_robin_assignment {
     gpu.return
   }
 
-  gpu.func @test_scf_for(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
+  gpu.func @scf_for(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
     %c1 = arith.constant 1 : index
     %c10 = arith.constant 10 : index
     %c0 = arith.constant 0 : index
@@ -126,7 +126,7 @@ gpu.module @test_round_robin_assignment {
     gpu.return
   }
 
-  gpu.func @test_scf_while_and_condition(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
+  gpu.func @scf_while_and_condition(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
     %c1_i32 = arith.constant 1 : i32
     %c10_i32 = arith.constant 10 : i32
     %c0_i32 = arith.constant 0 : i32
@@ -150,7 +150,7 @@ gpu.module @test_round_robin_assignment {
     gpu.return
   }
 
-  gpu.func @test_scf_if(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
+  gpu.func @scf_if(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
     %c10 = arith.constant 10 : index
     %0 = gpu.subgroup_id : index
     %1 = xegpu.create_nd_tdesc %arg0[0] : memref<1024xf32> -> !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>>
@@ -173,7 +173,7 @@ gpu.module @test_round_robin_assignment {
     gpu.return
   }
 
-  gpu.func @test_scf_if_tensor_desc(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
+  gpu.func @scf_if_tensor_desc(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
     %c10 = arith.constant 10 : index
     %id = gpu.subgroup_id : index
 
