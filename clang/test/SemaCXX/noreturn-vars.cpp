@@ -43,50 +43,171 @@ void (*global_fptr)() = noret;
 [[noreturn]] void test_global_assign() {
   global_fptr = noret;
   global_fptr();
-}
-
-[[noreturn]] void test_global_override() {
-  global_fptr = ordinary;
-  global_fptr = noret;
-  global_fptr();
-}
-
-[[noreturn]] void test_global_switch_01(int x) {
-  switch(x) {
-  case 1:
-    global_fptr = noret;
-	break;
-  default:
-    global_fptr = noret2;
-	break;
-  }
-  global_fptr();
-}
-
-[[noreturn]] void test_global_switch_02(int x) {
-  switch(x) {
-  case 1:
-    global_fptr = ordinary;
-	break;
-  default:
-    global_fptr = noret;
-	break;
-  }
-  global_fptr();
-}
+} // expected-warning {{function declared 'noreturn' should not return}}
 
 // Local variable assignment.
 
-[[noreturn]] void test_local_init() {
+[[noreturn]] void test_init() {
   func_type func_ptr = noret;
   func_ptr();
 }
 
-[[noreturn]] void test_local_assign() {
+[[noreturn]] void test_assign() {
   void (*func_ptr)(void);
   func_ptr = noret;
   func_ptr();
 }
+
+[[noreturn]] void test_override() {
+  func_type func_ptr;
+  func_ptr = ordinary;
+  func_ptr = noret;
+  func_ptr();
+}
+
+[[noreturn]] void test_if_all(int x) {
+  func_type func_ptr;
+  if (x > 0)
+    func_ptr = noret;
+  else
+    func_ptr = noret2;
+  func_ptr();
+}
+
+[[noreturn]] void test_if_mix(int x) {
+  func_type func_ptr;
+  if (x > 0)
+    func_ptr = noret;
+  else
+    func_ptr = ordinary;
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
+
+[[noreturn]] void test_if_opt(int x) {
+  func_type func_ptr = noret;
+  if (x > 0)
+    func_ptr = ordinary;
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
+
+[[noreturn]] void test_if_opt2(int x) {
+  func_type func_ptr = ordinary;
+  if (x > 0)
+    func_ptr = noret;
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
+
+[[noreturn]] void test_if_nest_all(int x, int y) {
+  func_type func_ptr;
+  if (x > 0) {
+    if (y > 0)
+      func_ptr = noret;
+    else
+      func_ptr = noret2;
+  } else {
+    if (y < 0)
+      func_ptr = noret2;
+    else
+      func_ptr = noret;
+  }
+  func_ptr();
+}
+
+[[noreturn]] void test_if_nest_mix(int x, int y) {
+  func_type func_ptr;
+  if (x > 0) {
+    if (y > 0)
+      func_ptr = noret;
+    else
+      func_ptr = noret2;
+  } else {
+    if (y < 0)
+      func_ptr = ordinary;
+    else
+      func_ptr = noret;
+  }
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
+
+[[noreturn]] void test_switch_all(int x) {
+  func_type func_ptr;
+  switch(x) {
+  case 1:
+    func_ptr = noret;
+    break;
+  default:
+    func_ptr = noret2;
+    break;
+  }
+  func_ptr();
+}
+
+[[noreturn]] void test_switch_mix(int x) {
+  func_type func_ptr;
+  switch(x) {
+  case 1:
+    func_ptr = ordinary;
+    break;
+  default:
+    func_ptr = noret;
+    break;
+  }
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
+
+[[noreturn]] void test_switch_fall(int x) {
+  func_type func_ptr;
+  switch(x) {
+  case 1:
+    func_ptr = ordinary;
+  default:
+    func_ptr = noret;
+    break;
+  }
+  func_ptr();
+}
+
+[[noreturn]] void test_switch_all_nest(int x, int y) {
+  func_type func_ptr;
+  switch(x) {
+  case 1:
+    func_ptr = noret;
+    break;
+  default:
+    if (y > 0)
+      func_ptr = noret2;
+    else
+      func_ptr = noret;
+    break;
+  }
+  func_ptr();
+}
+
+[[noreturn]] void test_switch_mix_nest(int x, int y) {
+  func_type func_ptr;
+  switch(x) {
+  case 1:
+    func_ptr = noret;
+    break;
+  default:
+    if (y > 0)
+      func_ptr = noret2;
+    else
+      func_ptr = ordinary;
+    break;
+  }
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
+
+// Function parameters.
+
+[[noreturn]] void test_param(void (*func_ptr)() = noret) {
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
+
+[[noreturn]] void test_const_param(void (* const func_ptr)() = noret) {
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
 
 // Escaped value.
 
@@ -104,4 +225,3 @@ extern void abc_02(func_type *);
   abc_02(&func_ptr);
   func_ptr();
 } // expected-warning {{function declared 'noreturn' should not return}}
-
