@@ -227,12 +227,12 @@ public:
   getRegSeqInit(SmallVectorImpl<std::pair<MachineOperand *, unsigned>> &Defs,
                 Register UseReg) const;
 
-  std::pair<MachineOperand *, const TargetRegisterClass *>
+  std::pair<int64_t, const TargetRegisterClass *>
   isRegSeqSplat(MachineInstr &RegSeg) const;
 
-  MachineOperand *tryFoldRegSeqSplat(MachineInstr *UseMI, unsigned UseOpIdx,
-                                     MachineOperand *SplatVal,
-                                     const TargetRegisterClass *SplatRC) const;
+  bool tryFoldRegSeqSplat(MachineInstr *UseMI, unsigned UseOpIdx,
+                          int64_t SplatVal,
+                          const TargetRegisterClass *SplatRC) const;
 
   bool tryToFoldACImm(const FoldableDef &OpToFold, MachineInstr *UseMI,
                       unsigned UseOpIdx,
@@ -966,15 +966,15 @@ const TargetRegisterClass *SIFoldOperandsImpl::getRegSeqInit(
   return getRegSeqInit(*Def, Defs);
 }
 
-std::pair<MachineOperand *, const TargetRegisterClass *>
+std::pair<int64_t, const TargetRegisterClass *>
 SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
   SmallVector<std::pair<MachineOperand *, unsigned>, 32> Defs;
   const TargetRegisterClass *SrcRC = getRegSeqInit(RegSeq, Defs);
   if (!SrcRC)
     return {};
 
-  // TODO: Recognize 64-bit splats broken into 32-bit pieces (i.e. recognize
-  // every other other element is 0 for 64-bit immediates)
+  bool TryToMatchSplat64 = false;
+
   int64_t Imm;
   for (unsigned I = 0, E = Defs.size(); I != E; ++I) {
     const MachineOperand *Op = Defs[I].first;
@@ -986,38 +986,75 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
       Imm = SubImm;
       continue;
     }
-    if (Imm != SubImm)
+
+    if (Imm != SubImm) {
+      if (I == 1 && (E & 1) == 0) {
+        // If we have an even number of inputs, there's a chance this is a
+        // 64-bit element splat broken into 32-bit pieces.
+        TryToMatchSplat64 = true;
+        break;
+      }
+
       return {}; // Can only fold splat constants
+    }
   }
 
-  return {Defs[0].first, SrcRC};
+  if (!TryToMatchSplat64)
+    return {Defs[0].first->getImm(), SrcRC};
+
+  // Fallback to recognizing 64-bit splats broken into 32-bit pieces
+  // (i.e. recognize every other other element is 0 for 64-bit immediates)
+  int64_t SplatVal64;
+  for (unsigned I = 0, E = Defs.size(); I != E; I += 2) {
+    const MachineOperand *Op0 = Defs[I].first;
+    const MachineOperand *Op1 = Defs[I + 1].first;
+
+    if (!Op0->isImm() || !Op1->isImm())
+      return {};
+
+    unsigned SubReg0 = Defs[I].second;
+    unsigned SubReg1 = Defs[I + 1].second;
+
+    // Assume we're going to generally encounter reg_sequences with sorted
+    // subreg indexes, so reject any that aren't consecutive.
+    if (TRI->getChannelFromSubReg(SubReg0) + 1 !=
+        TRI->getChannelFromSubReg(SubReg1))
+      return {};
+
+    int64_t MergedVal = Make_64(Op1->getImm(), Op0->getImm());
+    if (I == 0)
+      SplatVal64 = MergedVal;
+    else if (SplatVal64 != MergedVal)
+      return {};
+  }
+
+  const TargetRegisterClass *RC64 = TRI->getSubRegisterClass(
+      MRI->getRegClass(RegSeq.getOperand(0).getReg()), AMDGPU::sub0_sub1);
+
+  return {SplatVal64, RC64};
 }
 
-MachineOperand *SIFoldOperandsImpl::tryFoldRegSeqSplat(
-    MachineInstr *UseMI, unsigned UseOpIdx, MachineOperand *SplatVal,
+bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
+    MachineInstr *UseMI, unsigned UseOpIdx, int64_t SplatVal,
     const TargetRegisterClass *SplatRC) const {
   const MCInstrDesc &Desc = UseMI->getDesc();
   if (UseOpIdx >= Desc.getNumOperands())
-    return nullptr;
+    return false;
 
   // Filter out unhandled pseudos.
   if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
-    return nullptr;
+    return false;
 
   int16_t RCID = Desc.operands()[UseOpIdx].RegClass;
   if (RCID == -1)
-    return nullptr;
+    return false;
+
+  const TargetRegisterClass *OpRC = TRI->getRegClass(RCID);
 
   // Special case 0/-1, since when interpreted as a 64-bit element both halves
-  // have the same bits. Effectively this code does not handle 64-bit element
-  // operands correctly, as the incoming 64-bit constants are already split into
-  // 32-bit sequence elements.
-  //
-  // TODO: We should try to figure out how to interpret the reg_sequence as a
-  // split 64-bit splat constant, or use 64-bit pseudos for materializing f64
-  // constants.
-  if (SplatVal->getImm() != 0 && SplatVal->getImm() != -1) {
-    const TargetRegisterClass *OpRC = TRI->getRegClass(RCID);
+  // have the same bits. These are the only cases where a splat has the same
+  // interpretation for 32-bit and 64-bit splats.
+  if (SplatVal != 0 && SplatVal != -1) {
     // We need to figure out the scalar type read by the operand. e.g. the MFMA
     // operand will be AReg_128, and we want to check if it's compatible with an
     // AReg_32 constant.
@@ -1031,17 +1068,18 @@ MachineOperand *SIFoldOperandsImpl::tryFoldRegSeqSplat(
       OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0_sub1);
       break;
     default:
-      return nullptr;
+      return false;
     }
 
     if (!TRI->getCommonSubClass(OpRC, SplatRC))
-      return nullptr;
+      return false;
   }
 
-  if (!TII->isOperandLegal(*UseMI, UseOpIdx, SplatVal))
-    return nullptr;
+  MachineOperand TmpOp = MachineOperand::CreateImm(SplatVal);
+  if (!TII->isOperandLegal(*UseMI, UseOpIdx, &TmpOp))
+    return false;
 
-  return SplatVal;
+  return true;
 }
 
 bool SIFoldOperandsImpl::tryToFoldACImm(
@@ -1119,7 +1157,7 @@ void SIFoldOperandsImpl::foldOperand(
     Register RegSeqDstReg = UseMI->getOperand(0).getReg();
     unsigned RegSeqDstSubReg = UseMI->getOperand(UseOpIdx + 1).getImm();
 
-    MachineOperand *SplatVal;
+    int64_t SplatVal;
     const TargetRegisterClass *SplatRC;
     std::tie(SplatVal, SplatRC) = isRegSeqSplat(*UseMI);
 
@@ -1130,10 +1168,9 @@ void SIFoldOperandsImpl::foldOperand(
       MachineInstr *RSUseMI = RSUse->getParent();
       unsigned OpNo = RSUseMI->getOperandNo(RSUse);
 
-      if (SplatVal) {
-        if (MachineOperand *Foldable =
-                tryFoldRegSeqSplat(RSUseMI, OpNo, SplatVal, SplatRC)) {
-          FoldableDef SplatDef(*Foldable, SplatRC);
+      if (SplatRC) {
+        if (tryFoldRegSeqSplat(RSUseMI, OpNo, SplatVal, SplatRC)) {
+          FoldableDef SplatDef(SplatVal, SplatRC);
           appendFoldCandidate(FoldList, RSUseMI, OpNo, SplatDef);
           continue;
         }
