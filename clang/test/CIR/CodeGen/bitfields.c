@@ -62,8 +62,7 @@ typedef struct {
     int j: 3;
     int k: 8;
 
-    int l: 14; // need to be a part of the new storage
-               // because (tail - startOffset) is 65 after 'l' field
+    int l: 14;
 } U;
 
 // CIR-DAG:  !rec_U = !cir.record<struct "U" packed {!s8i, !s8i, !s8i, !u8i, !u64i}>
