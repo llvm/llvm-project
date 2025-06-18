@@ -86,19 +86,17 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
 
   mlir::Value thisPtr = cgf.loadCXXThis();
   QualType recordTy = cgf.getContext().getTypeDeclType(classDecl);
-  LValue lhs;
 
   // If a base constructor is being emitted, create an LValue that has the
   // non-virtual alignment.
-  if (cgf.curGD.getCtorType() == Ctor_Base)
-    lhs = cgf.makeNaturalAlignPointeeAddrLValue(thisPtr, recordTy);
-  else
-    lhs = cgf.makeNaturalAlignAddrLValue(thisPtr, recordTy);
+  LValue lhs = (cgf.curGD.getCtorType() == Ctor_Base) ?
+                  cgf.makeNaturalAlignPointeeAddrLValue(thisPtr, recordTy) :
+                  cgf.makeNaturalAlignAddrLValue(thisPtr, recordTy);
 
   emitLValueForAnyFieldInitialization(cgf, memberInit, lhs);
 
   // Special case: If we are in a copy or move constructor, and we are copying
-  // an array off PODs or classes with tirival copy constructors, ignore the AST
+  // an array off PODs or classes with trivial copy constructors, ignore the AST
   // and perform the copy we know is equivalent.
   // FIXME: This is hacky at best... if we had a bit more explicit information
   // in the AST, we could generalize it more easily.
@@ -205,12 +203,11 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   QualType fieldType = field->getType();
   switch (getEvaluationKind(fieldType)) {
   case cir::TEK_Scalar:
-    if (lhs.isSimple()) {
+    if (lhs.isSimple())
       emitExprAsInit(init, field, lhs, false);
-    } else {
+    else
       cgm.errorNYI(field->getSourceRange(),
                    "emitInitializerForField: non-simple scalar");
-    }
     break;
   case cir::TEK_Complex:
     cgm.errorNYI(field->getSourceRange(), "emitInitializerForField: complex");
