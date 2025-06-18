@@ -1587,6 +1587,11 @@ namespace {
     }
   };
 
+  // This function implements generation of scalar deleting destructor body for
+  // the case when the destructor also accepts an implicit flag. Right now only
+  // Microsoft ABI requires deleting destructors to accept implicit flags.
+  // The flag indicates whether an operator delete should be called and whether
+  // it should be a class-specific operator delete or a global one.
   void EmitConditionalDtorDeleteCall(CodeGenFunction &CGF,
                                      llvm::Value *ShouldDeleteCondition,
                                      bool ReturnAfterDelete) {
