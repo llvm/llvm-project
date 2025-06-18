@@ -87,7 +87,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr uint32_t __substitute_arg_id(basic_format_arg<_C
   //   [...] The option is valid only if the corresponding formatting argument is of standard signed or unsigned integer
   //   type. [...]
   // This means 128-bit extented integer types are invalid here.
-  return std::__visit_format_arg<__format::__directly_visit_i128::__no>(
+  return std::__visit_format_arg(
       [](auto __arg) -> uint32_t {
         using _Type = decltype(__arg);
         if constexpr (same_as<_Type, monostate>)

@@ -275,7 +275,7 @@ __handle_replacement_field(_Iterator __begin, _Iterator __end, _ParseCtx& __pars
     else if (__parse)
       __format::__compile_time_visit_format_arg(__parse_ctx, __ctx, __type);
   } else
-    std::__visit_format_arg<__format::__directly_visit_i128::__yes>(
+    std::__directly_visit_format_arg(
         [&](auto __arg) {
           if constexpr (same_as<decltype(__arg), monostate>)
             std::__throw_format_error("The argument index value is too large for the number of arguments supplied");
@@ -468,7 +468,7 @@ template <class _CharT>
   if (auto __only_first_arg = __fmt == _LIBCPP_STATICALLY_WIDEN(_CharT, "{}");
       __builtin_constant_p(__only_first_arg) && __only_first_arg) {
     if (auto __arg = __args.get(0); __builtin_constant_p(__arg.__type_)) {
-      return std::__visit_format_arg<__format::__directly_visit_i128::__yes>(
+      return std::__directly_visit_format_arg(
           []<class _Tp>(_Tp&& __argument) -> optional<basic_string<_CharT>> {
             if constexpr (is_same_v<remove_cvref_t<_Tp>, basic_string_view<_CharT>>) {
               return basic_string<_CharT>{__argument};
