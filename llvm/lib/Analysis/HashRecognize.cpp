@@ -478,7 +478,7 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
   Table[0] = APInt::getZero(BW);
 
   if (ByteOrderSwapped) {
-    APInt CRCInit(BW, 128);
+    APInt CRCInit = APInt::getSignedMinValue(BW);
     for (unsigned I = 1; I < 256; I <<= 1) {
       CRCInit = CRCInit.shl(1) ^
                 (CRCInit.isSignBitSet() ? GenPoly : APInt::getZero(BW));
