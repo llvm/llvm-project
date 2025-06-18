@@ -1124,15 +1124,7 @@ private:
   void resetInsertionPoint(Instruction &After);
   void resetInsertionPoint(DbgVariableRecord &After);
 
-  // emitDbgValue can be called with:
-  //   Source=[AssignRecord|DbgValueInst*|DbgAssignIntrinsic*|DbgVariableRecord*]
-  // Since AssignRecord can be cast to one of the latter two types, and all
-  // other types have a shared interface, we use a template to handle the latter
-  // three types, and an explicit overload for AssignRecord that forwards to
-  // the template version with the right type.
-  void emitDbgValue(LocKind Kind, AssignRecord Source, VarLocInsertPt After);
-  template <typename T>
-  void emitDbgValue(LocKind Kind, const T Source, VarLocInsertPt After);
+  void emitDbgValue(LocKind Kind, DbgVariableRecord *, VarLocInsertPt After);
 
   static bool mapsAreEqual(const BitVector &Mask, const AssignmentMap &A,
                            const AssignmentMap &B) {
@@ -1521,16 +1513,7 @@ DbgVariableRecord *CastToDbgAssign(DbgVariableRecord *DVR) {
 }
 
 void AssignmentTrackingLowering::emitDbgValue(
-    AssignmentTrackingLowering::LocKind Kind,
-    AssignmentTrackingLowering::AssignRecord Source, VarLocInsertPt After) {
-  if (isa<DbgAssignIntrinsic *>(Source))
-    emitDbgValue(Kind, cast<DbgAssignIntrinsic *>(Source), After);
-  else
-    emitDbgValue(Kind, cast<DbgVariableRecord *>(Source), After);
-}
-template <typename T>
-void AssignmentTrackingLowering::emitDbgValue(
-    AssignmentTrackingLowering::LocKind Kind, const T Source,
+    AssignmentTrackingLowering::LocKind Kind, DbgVariableRecord *Source,
     VarLocInsertPt After) {
 
   DILocation *DL = Source->getDebugLoc();
@@ -1617,7 +1600,7 @@ void AssignmentTrackingLowering::processUnknownStoreToVariable(
     LLVM_DEBUG(dbgs() << "Switching to fallback debug value: ";
                DbgAV.dump(dbgs()); dbgs() << "\n");
     setLocKind(LiveSet, Var, LocKind::Val);
-    emitDbgValue(LocKind::Val, DbgAV.Source, &I);
+    emitDbgValue(LocKind::Val, cast<DbgVariableRecord *>(DbgAV.Source), &I);
     return;
   }
   // Otherwise, find a suitable insert point, before the next instruction or
@@ -1790,7 +1773,7 @@ void AssignmentTrackingLowering::processTaggedInstruction(
         LLVM_DEBUG(dbgs() << "Val, Debug value is Known\n";);
         setLocKind(LiveSet, Var, LocKind::Val);
         if (DbgAV.Source) {
-          emitDbgValue(LocKind::Val, DbgAV.Source, &I);
+          emitDbgValue(LocKind::Val, cast<DbgVariableRecord *>(DbgAV.Source), &I);
         } else {
           // PrevAV.Source is nullptr so we must emit undef here.
           emitDbgValue(LocKind::None, Assign, &I);
