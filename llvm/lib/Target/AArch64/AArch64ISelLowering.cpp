@@ -2087,12 +2087,18 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::STRICT_FSETCC, VT, Expand);
   setOperationAction(ISD::STRICT_FSETCCS, VT, Expand);
 
+  // When little-endian we can use ordinary d and q register loads/stores for
+  // vector types, but when big-endian we need to use structure load/store which
+  // only allow post-index addressing.
   if (Subtarget->isLittleEndian()) {
     for (unsigned im = (unsigned)ISD::PRE_INC;
          im != (unsigned)ISD::LAST_INDEXED_MODE; ++im) {
       setIndexedLoadAction(im, VT, Legal);
       setIndexedStoreAction(im, VT, Legal);
     }
+  } else {
+    setIndexedLoadAction(ISD::POST_INC, VT, Legal);
+    setIndexedStoreAction(ISD::POST_INC, VT, Legal);
   }
 
   if (Subtarget->hasD128()) {
@@ -27046,6 +27052,12 @@ bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
     if (Op->getOpcode() == ISD::SUB)
       RHSC = -(uint64_t)RHSC;
     if (!isInt<9>(RHSC))
+      return false;
+    // When big-endian VLD1/VST1 are used for vector load and store, and these
+    // only allow an offset that's equal to the store size.
+    EVT MemType = cast<MemSDNode>(N)->getMemoryVT();
+    if (!Subtarget->isLittleEndian() && MemType.isVector() &&
+        RHSC != MemType.getStoreSize())
       return false;
     // Always emit pre-inc/post-inc addressing mode. Use negated constant offset
     // when dealing with subtraction.
