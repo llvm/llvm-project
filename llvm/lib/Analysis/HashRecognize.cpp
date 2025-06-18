@@ -442,11 +442,13 @@ getRecurrences(BasicBlock *LoopLatch, const PHINode *IndVar, const Loop &L) {
   return std::make_pair(SimpleRecurrence, ConditionalRecurrence);
 }
 
-PolynomialInfo::PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
-                               Value *ComputedValue, bool ByteOrderSwapped,
-                               Value *LHSAux)
+PolynomialInfo::PolynomialInfo(
+    unsigned TripCount, Value *LHS, const APInt &RHS, Value *ComputedValue,
+    bool ByteOrderSwapped,
+    function_ref<CRCTable(const APInt &, bool)> GenSarwateTable, Value *LHSAux)
     : TripCount(TripCount), LHS(LHS), RHS(RHS), ComputedValue(ComputedValue),
-      ByteOrderSwapped(ByteOrderSwapped), LHSAux(LHSAux) {}
+      ByteOrderSwapped(ByteOrderSwapped), GenSarwateTable(GenSarwateTable),
+      LHSAux(LHSAux) {}
 
 /// In the big-endian case, checks the bottom N bits against CheckFn, and that
 /// the rest are unknown. In the little-endian case, checks the top N bits
@@ -471,8 +473,7 @@ static bool checkExtractBits(const KnownBits &Known, unsigned N,
 /// Generate a lookup table of 256 entries by interleaving the generating
 /// polynomial. The optimization technique of table-lookup for CRC is also
 /// called the Sarwate algorithm.
-CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
-                                        bool ByteOrderSwapped) const {
+static CRCTable genSarwateTable(const APInt &GenPoly, bool ByteOrderSwapped) {
   unsigned BW = GenPoly.getBitWidth();
   CRCTable Table;
   Table[0] = APInt::getZero(BW);
@@ -625,7 +626,7 @@ HashRecognize::recognizeCRC() const {
 
   Value *LHSAux = SimpleRecurrence ? SimpleRecurrence.Start : nullptr;
   return PolynomialInfo(TC, ConditionalRecurrence.Start, GenPoly, ComputedValue,
-                        *ByteOrderSwapped, LHSAux);
+                        *ByteOrderSwapped, genSarwateTable, LHSAux);
 }
 
 void CRCTable::print(raw_ostream &OS) const {
@@ -679,12 +680,19 @@ void HashRecognize::print(raw_ostream &OS) const {
     OS << "\n";
   }
   OS.indent(2) << "Computed CRC lookup table:\n";
-  genSarwateTable(Info.RHS, Info.ByteOrderSwapped).print(OS);
+  Info.GenSarwateTable(Info.RHS, Info.ByteOrderSwapped).print(OS);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void HashRecognize::dump() const { print(dbgs()); }
 #endif
+
+std::optional<PolynomialInfo> HashRecognize::getResult() const {
+  auto Res = HashRecognize(L, SE).recognizeCRC();
+  if (std::holds_alternative<PolynomialInfo>(Res))
+    return std::get<PolynomialInfo>(Res);
+  return std::nullopt;
+}
 
 HashRecognize::HashRecognize(const Loop &L, ScalarEvolution &SE)
     : L(L), SE(SE) {}
@@ -693,13 +701,6 @@ PreservedAnalyses HashRecognizePrinterPass::run(Loop &L,
                                                 LoopAnalysisManager &AM,
                                                 LoopStandardAnalysisResults &AR,
                                                 LPMUpdater &) {
-  AM.getResult<HashRecognizeAnalysis>(L, AR).print(OS);
+  HashRecognize(L, AR.SE).print(OS);
   return PreservedAnalyses::all();
 }
-
-HashRecognize HashRecognizeAnalysis::run(Loop &L, LoopAnalysisManager &AM,
-                                         LoopStandardAnalysisResults &AR) {
-  return {L, AR.SE};
-}
-
-AnalysisKey HashRecognizeAnalysis::Key;

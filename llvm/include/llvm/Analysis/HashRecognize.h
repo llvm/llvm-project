@@ -66,6 +66,10 @@ struct PolynomialInfo {
   // Set to true in the case of big-endian.
   bool ByteOrderSwapped;
 
+  // A function_ref to generate the Sarwate lookup-table, which can be used to
+  // optimize CRC in the absence of target-specific instructions.
+  function_ref<CRCTable(const APInt &, bool)> GenSarwateTable;
+
   // An optional auxiliary checksum that augments the LHS. In the case of CRC,
   // it is XOR'ed with the LHS, so that the computation's final remainder is
   // zero.
@@ -73,6 +77,7 @@ struct PolynomialInfo {
 
   PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
                  Value *ComputedValue, bool ByteOrderSwapped,
+                 function_ref<CRCTable(const APInt &, bool)> GenSarwateTable,
                  Value *LHSAux = nullptr);
 };
 
@@ -84,12 +89,9 @@ class HashRecognize {
 public:
   HashRecognize(const Loop &L, ScalarEvolution &SE);
 
-  // The main analysis entry point.
+  // The main analysis entry points.
   std::variant<PolynomialInfo, ErrBits, StringRef> recognizeCRC() const;
-
-  // Auxilary entry point after analysis to interleave the generating polynomial
-  // and return a 256-entry CRC table.
-  CRCTable genSarwateTable(const APInt &GenPoly, bool ByteOrderSwapped) const;
+  std::optional<PolynomialInfo> getResult() const;
 
   void print(raw_ostream &OS) const;
 
@@ -106,15 +108,6 @@ public:
   explicit HashRecognizePrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &);
-};
-
-class HashRecognizeAnalysis : public AnalysisInfoMixin<HashRecognizeAnalysis> {
-  friend AnalysisInfoMixin<HashRecognizeAnalysis>;
-  static AnalysisKey Key;
-
-public:
-  using Result = HashRecognize;
-  Result run(Loop &L, LoopAnalysisManager &AM, LoopStandardAnalysisResults &AR);
 };
 } // namespace llvm
 
