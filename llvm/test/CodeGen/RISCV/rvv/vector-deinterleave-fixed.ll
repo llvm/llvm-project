@@ -338,16 +338,14 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @v
 ; CHECK-NEXT:    vsetvli zero, a3, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v10, v9, a1
 ; CHECK-NEXT:    vslideup.vx v8, v12, a1
-; CHECK-NEXT:    slli a3, a1, 1
+; CHECK-NEXT:    add a3, a0, a0
+; CHECK-NEXT:    add a1, a4, a1
 ; CHECK-NEXT:    vsetvli zero, a4, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v10, v11, a2
 ; CHECK-NEXT:    vslideup.vx v8, v13, a2
-; CHECK-NEXT:    add a2, a0, a0
-; CHECK-NEXT:    add a3, a3, a1
-; CHECK-NEXT:    add a1, a3, a1
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v8, v14, a3
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
+; CHECK-NEXT:    vslideup.vx v8, v14, a4
+; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v10, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs1r.v v8, (a0)
@@ -381,20 +379,18 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    add a3, a1, a1
 ; CHECK-NEXT:    add a4, a2, a1
-; CHECK-NEXT:    slli a5, a1, 1
-; CHECK-NEXT:    add a6, a0, a0
+; CHECK-NEXT:    add a5, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a3, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v10, v9, a1
-; CHECK-NEXT:    add a5, a5, a1
 ; CHECK-NEXT:    vslideup.vx v8, v13, a1
+; CHECK-NEXT:    add a1, a4, a1
 ; CHECK-NEXT:    vsetvli zero, a4, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v10, v11, a2
-; CHECK-NEXT:    add a1, a5, a1
 ; CHECK-NEXT:    vslideup.vx v8, v14, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v10, v12, a5
-; CHECK-NEXT:    vslideup.vx v8, v15, a5
-; CHECK-NEXT:    vsetvli zero, a6, e8, m1, ta, ma
+; CHECK-NEXT:    vslideup.vx v10, v12, a4
+; CHECK-NEXT:    vslideup.vx v8, v15, a4
+; CHECK-NEXT:    vsetvli zero, a5, e8, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v10, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs1r.v v8, (a0)
