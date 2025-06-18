@@ -102,8 +102,15 @@ OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value val,
 
 namespace mlir {
 namespace linalg {
+
+/// Converts the given `m` and `r` parameters to a WinogradConv2DFmr enumeration
+/// value.
 WinogradConv2DFmr getWinogradConv2DFmr(int64_t m, int64_t r);
+
+/// Converts the given WinogradConv2DFmr enumeration value to a pair of
+/// m and r parameters.
 std::pair<int64_t, int64_t> getFmrFromWinogradConv2DFmr(WinogradConv2DFmr fmr);
+
 } // namespace linalg
 } // namespace mlir
 
