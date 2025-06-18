@@ -38,7 +38,7 @@ let SchedModel = CortexA320Model in {
 // Cortex-A320 is in-order.
 let BufferSize = 0 in {
   def CortexA320UnitALU    : ProcResource<1>;    // Int ALU
-  def CortexA320UnitMAC    : ProcResource<1>;    // Int MAC, 64-bi wide
+  def CortexA320UnitMAC    : ProcResource<1>;    // Int MAC, 64-bit wide
   def CortexA320UnitDiv    : ProcResource<1>;    // Int Division, not pipelined
   def CortexA320UnitLdSt   : ProcResource<1>;    // Load/Store shared pipe
   def CortexA320UnitB      : ProcResource<1>;    // Branch
