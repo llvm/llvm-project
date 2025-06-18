@@ -586,8 +586,7 @@ bool acc::CreateOp::isCreateZero() {
   // The zero modifier is encoded in the data clause.
   return getDataClause() == acc::DataClause::acc_create_zero ||
          getDataClause() == acc::DataClause::acc_copyout_zero ||
-         acc::bitEnumContainsAny(getModifiers(),
-                                 acc::DataClauseModifier::zero);
+         acc::bitEnumContainsAny(getModifiers(), acc::DataClauseModifier::zero);
 }
 
 //===----------------------------------------------------------------------===//
