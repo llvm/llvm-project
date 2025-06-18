@@ -174,6 +174,7 @@
 ; CHECK-NEXT:   ventana-veyron                   - Ventana Veyron-Series processors.
 ; CHECK-NEXT:   vxrm-pipeline-flush              - VXRM writes causes pipeline flush.
 ; CHECK-NEXT:   xandesperf                       - 'XAndesPerf' (Andes Performance Extension).
+; CHECK-NEXT:   xandesvbfhcvt                    - 'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension).
 ; CHECK-NEXT:   xandesvdot                       - 'XAndesVDot' (Andes Vector Dot Product Extension).
 ; CHECK-NEXT:   xandesvpackfph                   - 'XAndesVPackFPH' (Andes Vector Packed FP16 Extension).
 ; CHECK-NEXT:   xcvalu                           - 'XCValu' (CORE-V ALU Operations).
