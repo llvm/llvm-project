@@ -30,7 +30,7 @@ void populateExpressionPatterns(RewritePatternSet &patterns);
 
 /// Populates 'patterns' with func-related patterns.
 void populateFuncPatterns(RewritePatternSet &patterns,
-                          const std::string &namedAttribute);
+                          StringRef namedAttribute);
 
 } // namespace emitc
 } // namespace mlir

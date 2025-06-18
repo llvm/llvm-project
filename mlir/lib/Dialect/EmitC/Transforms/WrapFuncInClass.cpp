@@ -1,4 +1,4 @@
-//===- ConvertFuncToClass.cpp - Convert functions to classes -------------===//
+//===- WrapFuncInClass.cpp - Wrap Emitc Funcs in classes -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir-c/Rewrite.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/EmitC/Transforms/Passes.h"
 #include "mlir/Dialect/EmitC/Transforms/Transforms.h"
@@ -14,66 +13,44 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/TypeRange.h"
-#include "mlir/IR/Value.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/LogicalResult.h"
-#include <string>
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
+
+using namespace mlir;
+using namespace emitc;
 
 namespace mlir {
 namespace emitc {
-
 #define GEN_PASS_DEF_WRAPFUNCINCLASSPASS
 #include "mlir/Dialect/EmitC/Transforms/Passes.h.inc"
 
 namespace {
-
 struct WrapFuncInClassPass
     : public impl::WrapFuncInClassPassBase<WrapFuncInClassPass> {
   using WrapFuncInClassPassBase::WrapFuncInClassPassBase;
   void runOnOperation() override {
     Operation *rootOp = getOperation();
-    MLIRContext *context = rootOp->getContext();
 
-    RewritePatternSet patterns(context);
+    RewritePatternSet patterns(&getContext());
     populateFuncPatterns(patterns, namedAttribute);
 
-    if (failed(applyPatternsGreedily(rootOp, std::move(patterns))))
-      return signalPassFailure();
-  }
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<emitc::EmitCDialect>();
+    walkAndApplyPatterns(rootOp, std::move(patterns));
   }
 };
 
 } // namespace
-
 } // namespace emitc
 } // namespace mlir
 
-using namespace mlir;
-using namespace mlir::emitc;
-
 class WrapFuncInClass : public OpRewritePattern<emitc::FuncOp> {
-private:
-  std::string attributeName;
-
 public:
-  WrapFuncInClass(MLIRContext *context, const std::string &attrName)
+  WrapFuncInClass(MLIRContext *context, StringRef attrName)
       : OpRewritePattern<emitc::FuncOp>(context), attributeName(attrName) {}
 
   LogicalResult matchAndRewrite(emitc::FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
-    if (funcOp->getParentOfType<emitc::ClassOp>()) {
-      return failure();
-    }
+
     auto className = funcOp.getSymNameAttr().str() + "Class";
-    mlir::emitc::ClassOp newClassOp =
-        rewriter.create<emitc::ClassOp>(funcOp.getLoc(), className);
+    ClassOp newClassOp = rewriter.create<ClassOp>(funcOp.getLoc(), className);
 
     SmallVector<std::pair<StringAttr, TypeAttr>> fields;
     rewriter.createBlock(&newClassOp.getBody());
@@ -84,19 +61,11 @@ public:
       StringAttr fieldName;
       Attribute argAttr = nullptr;
 
+      fieldName = rewriter.getStringAttr("fieldName" + std::to_string(idx));
       if (argAttrs && idx < argAttrs->size()) {
         if (DictionaryAttr dictAttr =
-                dyn_cast<mlir::DictionaryAttr>((*argAttrs)[idx])) {
-          if (auto namedAttr = dictAttr.getNamed(attributeName)) {
-            Attribute nv = namedAttr->getValue();
-            fieldName = cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(nv)[0]);
-            argAttr = (*argAttrs)[idx];
-          }
-        }
-      }
-
-      if (!fieldName) {
-        fieldName = rewriter.getStringAttr("fieldName" + std::to_string(idx));
+                dyn_cast<mlir::DictionaryAttr>((*argAttrs)[idx]))
+          argAttr = (*argAttrs)[idx];
       }
 
       TypeAttr typeAttr = TypeAttr::get(val.getType());
@@ -106,19 +75,17 @@ public:
     }
 
     rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());
-    MLIRContext *funcContext = funcOp.getContext();
-    ArrayRef<Type> inputTypes = funcOp.getFunctionType().getInputs();
-    ArrayRef<Type> results = funcOp.getFunctionType().getResults();
-    FunctionType funcType = FunctionType::get(funcContext, inputTypes, results);
+    FunctionType funcType = funcOp.getFunctionType();
     Location loc = funcOp.getLoc();
-    FuncOp newFuncOp = rewriter.create<emitc::FuncOp>(
-        loc, rewriter.getStringAttr("execute"), funcType);
+    FuncOp newFuncOp =
+        rewriter.create<emitc::FuncOp>(loc, ("execute"), funcType);
 
     rewriter.createBlock(&newFuncOp.getBody());
     newFuncOp.getBody().takeBody(funcOp.getBody());
 
     rewriter.setInsertionPointToStart(&newFuncOp.getBody().front());
     std::vector<Value> newArguments;
+    newArguments.reserve(fields.size());
     for (auto &[fieldName, attr] : fields) {
       GetFieldOp arg =
           rewriter.create<emitc::GetFieldOp>(loc, attr.getValue(), fieldName);
@@ -132,15 +99,18 @@ public:
 
     llvm::BitVector argsToErase(newFuncOp.getNumArguments(), true);
     if (failed(newFuncOp.eraseArguments(argsToErase))) {
-      newFuncOp->emitOpError("Failed to erase all arguments using BitVector.");
+      newFuncOp->emitOpError("failed to erase all arguments using BitVector");
     }
 
     rewriter.replaceOp(funcOp, newClassOp);
     return success();
   }
+
+private:
+  StringRef attributeName;
 };
 
 void mlir::emitc::populateFuncPatterns(RewritePatternSet &patterns,
-                                       const std::string &namedAttribute) {
+                                       StringRef namedAttribute) {
   patterns.add<WrapFuncInClass>(patterns.getContext(), namedAttribute);
 }
