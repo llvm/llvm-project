@@ -618,38 +618,59 @@ foreach mx = SchedMxList in {
 }
 
 // 13. Vector Floating-Point Instructions
-foreach mx = SchedMxListF in {
+
+// Simple Vector Floating-Point Instructions
+foreach mx = ["MF4", "MF2"] in {
   foreach sew = SchedSEWSet<mx, isF=1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, isF=1>.c;
-    defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
-    defvar FMALat = SMX60GetVFFMALatency<mx>.c;
 
-    // Floating-point ALU/Mul operations: e16 has 4,4,5,8; e32 has 4,4,5,8; e64 has 5,5,5,8
-    // Use worst-case 5,5,5,8 for simplicity
-    defvar FPMulLat = SMX60GetVIMulE32Latency<mx>.c;
-    let Latency = FPMulLat in {
+    let Latency = 4 in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFALUV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFALUF",  [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulF",  [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxF", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFRecpV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFSgnjV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFSgnjF", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFCvtIToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
-    let Latency = FMALat in {
+
+    let Latency = 5 in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddF", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
   }
 }
 
-foreach mx = SchedMxListF in {
+// Complex Vector Floating-Point Instructions
+foreach mx = ["M1", "M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx, isF=1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, isF=1>.c;
-    defvar ALULat = SMX60GetVIALULatency<mx>.c;
-    defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
 
+    defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
     let Latency = ArithLat in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFALUF",  [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxF", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
+
+    defvar FPMulLat = SMX60GetVIMulE32Latency<mx>.c;
+    let Latency = !cond(!eq(sew, 64) : FPMulLat, true : ArithLat) in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFALUV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMulV",  [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMulF",  [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
+
+    defvar FMALat = SMX60GetVFFMALatency<mx>.c;
+    // TODO: for some reason, the following cond is not working, and always use FPMulLat
+    let Latency = !cond(!eq(sew, 64) : FMALat, true : FPMulLat) in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddV", [SMX60_VIEU], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddF", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
+
+    defvar ALULat = SMX60GetVIALULatency<mx>.c;
     let Latency = ALULat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRecpV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFSgnjV", [SMX60_VIEU], mx, sew, IsWorstCase>;
