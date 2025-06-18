@@ -47,6 +47,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -434,6 +435,8 @@ struct TransferFunctions : public StmtVisitor<TransferFunctions> {
 
   TransferFunctions(const VarDecl *VD) : Var(VD) {}
 
+  void reset() { AllValuesAreNoReturn = std::nullopt; }
+
   void VisitDeclStmt(DeclStmt *DS) {
     for (auto *DI : DS->decls())
       if (auto *VD = dyn_cast<VarDecl>(DI))
@@ -477,28 +480,63 @@ struct TransferFunctions : public StmtVisitor<TransferFunctions> {
 static bool areAllValuesNoReturn(const VarDecl *VD, const CFGBlock &VarBlk,
                                  AnalysisDeclContext &AC) {
   // The set of possible values of a constant variable is determined by
-  // its initializer.
-  if (VD->getType().isConstant(AC.getASTContext())) {
+  // its initializer, unless it is a function parameter.
+  if (!isa<ParmVarDecl>(VD) && VD->getType().isConstant(AC.getASTContext())) {
     if (const VarDecl *Def = VD->getDefinition())
       return isInitializedWithNoReturn(Def);
     return false;
   }
 
-  // Scan function statements for definitions of the given variable.
+  // In multithreaded environment the value of a global variable may be changed
+  // asynchronously.
+  if (!VD->getDeclContext()->isFunctionOrMethod())
+    return false;
+
+  // Check the condition "all values are noreturn". It is satisfied if the
+  // variable is set to "noreturn" value in the current block or all its
+  // predecessors satisfies the condition.
+  using MapTy = llvm::DenseMap<const CFGBlock *, std::optional<bool>>;
+  using ValueTy = MapTy::value_type;
+  MapTy BlocksToCheck;
+  BlocksToCheck[&VarBlk] = std::nullopt;
+  const auto BlockSatisfiesCondition = [](ValueTy Item) {
+    return Item.getSecond().value_or(false);
+  };
+
   TransferFunctions TF(VD);
   BackwardDataflowWorklist Worklist(*AC.getCFG(), AC);
   Worklist.enqueueBlock(&VarBlk);
   while (const CFGBlock *B = Worklist.dequeue()) {
+    // First check the current block.
     for (CFGBlock::const_reverse_iterator ri = B->rbegin(), re = B->rend();
          ri != re; ++ri) {
       if (std::optional<CFGStmt> cs = ri->getAs<CFGStmt>()) {
         const Stmt *S = cs->getStmt();
+        TF.reset();
         TF.Visit(const_cast<Stmt *>(S));
-        if (TF.AllValuesAreNoReturn)
-          return *TF.AllValuesAreNoReturn;
+        if (TF.AllValuesAreNoReturn) {
+          if (!TF.AllValuesAreNoReturn.value())
+            return false;
+          BlocksToCheck[B] = true;
+          break;
+        }
       }
     }
-    Worklist.enqueuePredecessors(B);
+
+    // If all checked blocks satisfy the condition, the check is finished.
+    if (std::all_of(BlocksToCheck.begin(), BlocksToCheck.end(),
+                    BlockSatisfiesCondition))
+      return true;
+
+    // If this block does not contain the variable definition, check
+    // its predecessors.
+    if (!BlocksToCheck[B]) {
+      Worklist.enqueuePredecessors(B);
+      BlocksToCheck.erase(B);
+      for (const auto &PredBlk : B->preds())
+        if (!BlocksToCheck.contains(PredBlk))
+          BlocksToCheck[PredBlk] = std::nullopt;
+    }
   }
 
   return false;
