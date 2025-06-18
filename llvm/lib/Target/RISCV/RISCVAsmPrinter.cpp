@@ -38,6 +38,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
@@ -610,7 +611,8 @@ void RISCVAsmPrinter::emitFunctionEntryLabel() {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeRISCVAsmPrinter() {
   RegisterAsmPrinter<RISCVAsmPrinter> X(getTheRISCV32Target());
   RegisterAsmPrinter<RISCVAsmPrinter> Y(getTheRISCV64Target());
 }
@@ -630,7 +632,7 @@ void RISCVAsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
     Sym = OutContext.getOrCreateSymbol(SymName);
   }
   auto Res = MCSymbolRefExpr::create(Sym, OutContext);
-  auto Expr = RISCVMCExpr::create(Res, ELF::R_RISCV_CALL_PLT, OutContext);
+  auto Expr = MCSpecifierExpr::create(Res, ELF::R_RISCV_CALL_PLT, OutContext);
 
   EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::PseudoCALL).addExpr(Expr));
 }
@@ -741,8 +743,8 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 
   const MCSymbolRefExpr *HwasanTagMismatchV2Ref =
       MCSymbolRefExpr::create(HwasanTagMismatchV2Sym, OutContext);
-  auto Expr = RISCVMCExpr::create(HwasanTagMismatchV2Ref, ELF::R_RISCV_CALL_PLT,
-                                  OutContext);
+  auto Expr = MCSpecifierExpr::create(HwasanTagMismatchV2Ref,
+                                      ELF::R_RISCV_CALL_PLT, OutContext);
 
   for (auto &P : HwasanMemaccessSymbols) {
     unsigned Reg = std::get<0>(P.first);
@@ -957,7 +959,7 @@ void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
 static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
                                     const AsmPrinter &AP) {
   MCContext &Ctx = AP.OutContext;
-  RISCVMCExpr::Specifier Kind;
+  RISCV::Specifier Kind;
 
   switch (MO.getTargetFlags()) {
   default:
@@ -1019,7 +1021,7 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
         ME, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
   if (Kind != RISCV::S_None)
-    ME = RISCVMCExpr::create(ME, Kind, Ctx);
+    ME = MCSpecifierExpr::create(ME, Kind, Ctx);
   return MCOperand::createExpr(ME);
 }
 
