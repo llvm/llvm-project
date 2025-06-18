@@ -1042,6 +1042,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_iand()
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>)   -> !fir.ref<i32> {name = "i"}
 ! CHECK: acc.parallel   reduction(@reduction_iand_ref_i32 -> %[[RED]] : !fir.ref<i32>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<i32>) to varPtr(%{{.*}} : !fir.ref<i32>) {dataClause = #acc<data_clause acc_reduction>, name = "i"}
 
 subroutine acc_reduction_ior()
   integer :: i
@@ -1052,6 +1053,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_ior()
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>)   -> !fir.ref<i32> {name = "i"}
 ! CHECK: acc.parallel reduction(@reduction_ior_ref_i32 -> %[[RED]] : !fir.ref<i32>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<i32>) to varPtr(%{{.*}} : !fir.ref<i32>) {dataClause = #acc<data_clause acc_reduction>, name = "i"}
 
 subroutine acc_reduction_ieor()
   integer :: i
@@ -1062,6 +1064,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_ieor()
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) -> !fir.ref<i32> {name = "i"}
 ! CHECK: acc.parallel reduction(@reduction_xor_ref_i32 -> %[[RED]] : !fir.ref<i32>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<i32>) to varPtr(%{{.*}} : !fir.ref<i32>) {dataClause = #acc<data_clause acc_reduction>, name = "i"}
 
 subroutine acc_reduction_and()
   logical :: l
@@ -1074,6 +1077,7 @@ end subroutine
 ! CHECK: %[[DECLL:.*]]:2 = hlfir.declare %[[L]]
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLL]]#0 : !fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>> {name = "l"}
 ! CHECK: acc.parallel reduction(@reduction_land_ref_l32 -> %[[RED]] : !fir.ref<!fir.logical<4>>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<!fir.logical<4>>) to varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) {dataClause = #acc<data_clause acc_reduction>, name = "l"}
 
 subroutine acc_reduction_or()
   logical :: l
@@ -1084,6 +1088,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_or()
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>> {name = "l"}
 ! CHECK: acc.parallel reduction(@reduction_lor_ref_l32 -> %[[RED]] : !fir.ref<!fir.logical<4>>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<!fir.logical<4>>) to varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) {dataClause = #acc<data_clause acc_reduction>, name = "l"}
 
 subroutine acc_reduction_eqv()
   logical :: l
@@ -1094,6 +1099,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_eqv()
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>> {name = "l"}
 ! CHECK: acc.parallel reduction(@reduction_eqv_ref_l32 -> %[[RED]] : !fir.ref<!fir.logical<4>>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<!fir.logical<4>>) to varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) {dataClause = #acc<data_clause acc_reduction>, name = "l"}
 
 subroutine acc_reduction_neqv()
   logical :: l
@@ -1104,6 +1110,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_neqv()
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>> {name = "l"}
 ! CHECK: acc.parallel reduction(@reduction_neqv_ref_l32 -> %[[RED]] : !fir.ref<!fir.logical<4>>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<!fir.logical<4>>) to varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) {dataClause = #acc<data_clause acc_reduction>, name = "l"}
 
 subroutine acc_reduction_add_cmplx()
   complex :: c
@@ -1114,6 +1121,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_cmplx()
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<complex<f32>>) -> !fir.ref<complex<f32>> {name = "c"}
 ! CHECK: acc.parallel reduction(@reduction_add_ref_z32 -> %[[RED]] : !fir.ref<complex<f32>>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<complex<f32>>) to varPtr(%{{.*}} : !fir.ref<complex<f32>>) {dataClause = #acc<data_clause acc_reduction>, name = "c"}
 
 subroutine acc_reduction_mul_cmplx()
   complex :: c
@@ -1124,6 +1132,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_cmplx()
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<complex<f32>>) -> !fir.ref<complex<f32>> {name = "c"}
 ! CHECK: acc.parallel reduction(@reduction_mul_ref_z32 -> %[[RED]] : !fir.ref<complex<f32>>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<complex<f32>>) to varPtr(%{{.*}} : !fir.ref<complex<f32>>) {dataClause = #acc<data_clause acc_reduction>, name = "c"}
 
 subroutine acc_reduction_add_alloc()
   integer, allocatable :: i
@@ -1137,6 +1146,7 @@ end subroutine
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ALLOCA]]
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<!fir.heap<i32>>> {name = "i"}
 ! CHECK: acc.parallel reduction(@reduction_add_ref_box_heap_i32 -> %[[RED]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<!fir.box<!fir.heap<i32>>>) to varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>) {dataClause = #acc<data_clause acc_reduction>, name = "i"}
 
 subroutine acc_reduction_add_pointer(i)
   integer, pointer :: i
@@ -1149,6 +1159,7 @@ end subroutine
 ! CHECK: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>> {name = "i"}
 ! CHECK: acc.parallel reduction(@reduction_add_ref_box_ptr_i32 -> %[[RED]] : !fir.ref<!fir.box<!fir.ptr<i32>>>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<!fir.box<!fir.ptr<i32>>>) to varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>) {dataClause = #acc<data_clause acc_reduction>, name = "i"}
 
 subroutine acc_reduction_add_static_slice(a)
   integer :: a(100)
@@ -1166,6 +1177,7 @@ end subroutine
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[C100]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xi32>> {name = "a(11:20)"}
 ! CHECK: acc.parallel reduction(@reduction_add_section_lb10.ub19_ref_100xi32 -> %[[RED]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) to varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<100xi32>>) {dataClause = #acc<data_clause acc_reduction>, name = "a(11:20)"}
 
 subroutine acc_reduction_add_dynamic_extent_add(a)
   integer :: a(:)
@@ -1178,6 +1190,7 @@ end subroutine
 ! CHECK: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK: %[[RED:.*]] = acc.reduction var(%{{.*}} : !fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>> {name = "a"}
 ! CHECK: acc.parallel reduction(@reduction_add_box_Uxi32 -> %[[RED:.*]] : !fir.box<!fir.array<?xi32>>)
+! CHECK: acc.copyout accVar(%[[RED]] : !fir.box<!fir.array<?xi32>>) to var(%{{.*}} : !fir.box<!fir.array<?xi32>>) {dataClause = #acc<data_clause acc_reduction>, name = "a"}
 
 subroutine acc_reduction_add_assumed_shape_max(a)
   real :: a(:)
@@ -1190,6 +1203,7 @@ end subroutine
 ! CHECK: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK: %[[RED:.*]] = acc.reduction var(%{{.*}} : !fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>> {name = "a"}
 ! CHECK: acc.parallel reduction(@reduction_max_box_Uxf32 -> %[[RED]] : !fir.box<!fir.array<?xf32>>) {
+! CHECK: acc.copyout accVar(%[[RED]] : !fir.box<!fir.array<?xf32>>) to var(%{{.*}} : !fir.box<!fir.array<?xf32>>) {dataClause = #acc<data_clause acc_reduction>, name = "a"}
 
 subroutine acc_reduction_add_dynamic_extent_add_with_section(a)
   integer :: a(:)
@@ -1202,7 +1216,8 @@ end subroutine
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFacc_reduction_add_dynamic_extent_add_with_sectionEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c3{{.*}} : index) extent(%{{.*}}#1 : index) stride(%{{.*}}#2 : index) startIdx(%{{.*}} : index) {strideInBytes = true}
 ! CHECK: %[[RED:.*]] = acc.reduction var(%[[DECL]]#0 : !fir.box<!fir.array<?xi32>>) bounds(%[[BOUND]]) -> !fir.box<!fir.array<?xi32>> {name = "a(2:4)"}
-! CHECK: acc.parallel reduction(@reduction_add_section_lb1.ub3_box_Uxi32 -> %[[RED]] : !fir.box<!fir.array<?xi32>>)
+! CHECK: acc.parallel reduction(@reduction_add_section_lb1.ub3_box_Uxi32 -> %[[RED]] : !fir.box<!fir.array<?xi32>>
+! CHECK: acc.copyout accVar(%[[RED]] : !fir.box<!fir.array<?xi32>>) bounds(%[[BOUND]]) to var(%[[DECL]]#0 : !fir.box<!fir.array<?xi32>>) {dataClause = #acc<data_clause acc_reduction>, name = "a(2:4)"}
 
 subroutine acc_reduction_add_allocatable(a)
   real, allocatable :: a(:)
@@ -1215,6 +1230,7 @@ end subroutine
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFacc_reduction_add_allocatableEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "a"}
 ! CHECK: acc.parallel reduction(@reduction_max_ref_box_heap_Uxf32 -> %[[RED]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) to varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {dataClause = #acc<data_clause acc_reduction>, name = "a"}
 
 subroutine acc_reduction_add_pointer_array(a)
   real, pointer :: a(:)
@@ -1227,6 +1243,7 @@ end subroutine
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFacc_reduction_add_pointer_arrayEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {name = "a"}
 ! CHECK: acc.parallel reduction(@reduction_max_ref_box_ptr_Uxf32 -> %[[RED]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+! CHECK: acc.copyout accPtr(%[[RED]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) to varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) {dataClause = #acc<data_clause acc_reduction>, name = "a"}
 
 subroutine acc_reduction_max_dynamic_extent_max(a, n)
   integer :: n
@@ -1240,3 +1257,4 @@ end subroutine
 ! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} {uniq_name = "_QFacc_reduction_max_dynamic_extent_maxEa"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
 ! CHECK: %[[RED:.*]] = acc.reduction var(%[[DECL_A]]#0 : !fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>> {name = "a"}
 ! CHECK: acc.parallel reduction(@reduction_max_box_UxUxf32 -> %[[RED]] : !fir.box<!fir.array<?x?xf32>>)
+! CHECK: acc.copyout accVar(%[[RED]] : !fir.box<!fir.array<?x?xf32>>) to var(%[[DECL_A]]#0 : !fir.box<!fir.array<?x?xf32>>) {dataClause = #acc<data_clause acc_reduction>, name = "a"}

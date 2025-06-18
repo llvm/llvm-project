@@ -2676,7 +2676,8 @@ static Op createComputeOp(
   llvm::SmallVector<mlir::Value> waitOperands, attachEntryOperands,
       copyEntryOperands, copyinEntryOperands, copyoutEntryOperands,
       createEntryOperands, nocreateEntryOperands, presentEntryOperands,
-      dataClauseOperands, numGangs, numWorkers, vectorLength, async;
+      reductionEntryOperands, dataClauseOperands, numGangs, numWorkers,
+      vectorLength, async;
   llvm::SmallVector<mlir::Attribute> numGangsDeviceTypes, numWorkersDeviceTypes,
       vectorLengthDeviceTypes, asyncDeviceTypes, asyncOnlyDeviceTypes,
       waitOperandsDeviceTypes, waitOnlyDeviceTypes;
@@ -2912,9 +2913,12 @@ static Op createComputeOp(
       // combined construct implies a copy clause so issue an implicit copy
       // instead.
       if (!combinedConstructs) {
+        auto crtDataStart = reductionOperands.size();
         genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
                       reductionOperands, reductionRecipes, async,
                       asyncDeviceTypes, asyncOnlyDeviceTypes);
+        reductionEntryOperands.append(reductionOperands.begin() + crtDataStart,
+                                      reductionOperands.end());
       } else {
         auto crtDataStart = dataClauseOperands.size();
         genDataOperandOperations<mlir::acc::CopyinOp>(
@@ -3038,6 +3042,8 @@ static Op createComputeOp(
       builder, nocreateEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::PresentOp, mlir::acc::DeleteOp>(
       builder, presentEntryOperands, /*structured=*/true);
+  genDataExitOperations<mlir::acc::ReductionOp, mlir::acc::CopyoutOp>(
+      builder, reductionEntryOperands, /*structured=*/true);
 
   builder.restoreInsertionPoint(insPt);
   return computeOp;
