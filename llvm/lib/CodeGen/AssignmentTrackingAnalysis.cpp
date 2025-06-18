@@ -2213,11 +2213,10 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
   //                     we can't determine the fragment overlap.
   // We need to add fragments for untagged stores too so that we can correctly
   // clobber overlapped fragment locations later.
-  SmallVector<DbgDeclareInst *> InstDeclares;
   SmallVector<DbgVariableRecord *> DPDeclares;
-  auto ProcessDbgRecord = [&](auto *Record, auto &DeclareList) {
+  auto ProcessDbgRecord = [&](DbgVariableRecord *Record) {
     if (auto *Declare = DynCastToDbgDeclare(Record)) {
-      DeclareList.push_back(Declare);
+      DPDeclares.push_back(Declare);
       return;
     }
     DebugVariable DV = DebugVariable(Record);
@@ -2230,13 +2229,10 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
   for (auto &BB : Fn) {
     for (auto &I : BB) {
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
-        ProcessDbgRecord(&DVR, DPDeclares);
-      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
-        ProcessDbgRecord(DII, InstDeclares);
-      } else if (auto Info = getUntaggedStoreAssignmentInfo(
-                     I, Fn.getDataLayout())) {
+        ProcessDbgRecord(&DVR);
+      if (auto Info = getUntaggedStoreAssignmentInfo(I, Fn.getDataLayout())) {
         // Find markers linked to this alloca.
-        auto HandleDbgAssignForStore = [&](auto *Assign) {
+        auto HandleDbgAssignForStore = [&](DbgVariableRecord *Assign) {
           std::optional<DIExpression::FragmentInfo> FragInfo;
 
           // Skip this assignment if the affected bits are outside of the
@@ -2269,13 +2265,11 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
           if (Seen.insert(DV).second)
             FragmentMap[DA].push_back(DV);
         };
-        for (DbgAssignIntrinsic *DAI : at::getAssignmentMarkers(Info->Base))
-          HandleDbgAssignForStore(DAI);
         for (DbgVariableRecord *DVR : at::getDVRAssignmentMarkers(Info->Base))
           HandleDbgAssignForStore(DVR);
       } else if (auto *AI = getUnknownStore(I, Fn.getDataLayout())) {
         // Find markers linked to this alloca.
-        auto HandleDbgAssignForUnknownStore = [&](auto *Assign) {
+        auto HandleDbgAssignForUnknownStore = [&](DbgVariableRecord *Assign) {
           // Because we can't currently represent the fragment info for this
           // store, we treat it as an unusable store to the whole variable.
           DebugVariable DV =
@@ -2288,8 +2282,6 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
           // Cache this info for later.
           UnknownStoreVars[&I].push_back(FnVarLocs->insertVariable(DV));
         };
-        for (DbgAssignIntrinsic *DAI : at::getAssignmentMarkers(AI))
-          HandleDbgAssignForUnknownStore(DAI);
         for (DbgVariableRecord *DVR : at::getDVRAssignmentMarkers(AI))
           HandleDbgAssignForUnknownStore(DVR);
       }
@@ -2338,9 +2330,6 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
 
   // Finally, insert the declares afterwards, so the first IDs are all
   // partially stack homed vars.
-  for (auto *DDI : InstDeclares)
-    FnVarLocs->addSingleLocVar(DebugVariable(DDI), DDI->getExpression(),
-                               DDI->getDebugLoc(), DDI->getWrappedLocation());
   for (auto *DVR : DPDeclares)
     FnVarLocs->addSingleLocVar(DebugVariable(DVR), DVR->getExpression(),
                                DVR->getDebugLoc(),
