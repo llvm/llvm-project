@@ -66,14 +66,22 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   DXILValMD->addOperand(Val);
 }
 
-void addRootSignature(ArrayRef<llvm::hlsl::rootsig::RootElement> Elements,
+void addRootSignature(llvm::dxil::RootSignatureVersion RootSigVer,
+                      ArrayRef<llvm::hlsl::rootsig::RootElement> Elements,
                       llvm::Function *Fn, llvm::Module &M) {
   auto &Ctx = M.getContext();
+  IRBuilder<> Builder(Ctx);
 
-  llvm::hlsl::rootsig::MetadataBuilder Builder(Ctx, Elements);
-  MDNode *RootSignature = Builder.BuildRootSignature();
-  MDNode *FnPairing =
-      MDNode::get(Ctx, {ValueAsMetadata::get(Fn), RootSignature});
+  llvm::hlsl::rootsig::MetadataBuilder RSBuilder(Ctx, Elements);
+  MDNode *RootSignature = RSBuilder.BuildRootSignature();
+
+  Metadata *Operands[] = {
+      ValueAsMetadata::get(Fn),
+      RootSignature,
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(RootSigVer))),
+  };
+  MDNode *FnPairing = MDNode::get(Ctx, Operands);
 
   StringRef RootSignatureValKey = "dx.rootsignatures";
   auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
@@ -465,9 +473,11 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
 
   // Add and identify root signature to function, if applicable
   for (const Attr *Attr : FD->getAttrs()) {
-    if (const auto *RSAttr = dyn_cast<RootSignatureAttr>(Attr))
-      addRootSignature(RSAttr->getSignatureDecl()->getRootElements(), EntryFn,
+    if (const auto *RSAttr = dyn_cast<RootSignatureAttr>(Attr)) {
+      auto *RSDecl = RSAttr->getSignatureDecl();
+      addRootSignature(RSDecl->getVersion(), RSDecl->getRootElements(), EntryFn,
                        M);
+    }
   }
 }
 
