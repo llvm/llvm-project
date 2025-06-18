@@ -1025,14 +1025,13 @@ public:
   /// i.e. for all values x and y where x != y:
   /// join(x, x) = x
   /// join(x, y) = NoneOrPhi
-  using AssignRecord = PointerUnion<DbgAssignIntrinsic *, DbgVariableRecord *>;
   struct Assignment {
     enum S { Known, NoneOrPhi } Status;
     /// ID of the assignment. nullptr if Status is not Known.
     DIAssignID *ID;
     /// The dbg.assign that marks this dbg-def. Mem-defs don't use this field.
     /// May be nullptr.
-    AssignRecord Source;
+    DbgVariableRecord *Source = nullptr;
 
     bool isSameSourceAssignment(const Assignment &Other) const {
       // Don't include Source in the equality check. Assignments are
@@ -1047,24 +1046,17 @@ public:
       else
         OS << "null";
       OS << ", s=";
-      if (Source.isNull())
+      if (!Source)
         OS << "null";
-      else if (const auto *DAI = dyn_cast<DbgAssignIntrinsic *>(Source))
-        OS << DAI;
       else
-        OS << cast<DbgVariableRecord *>(Source);
+        OS << Source;
       OS << ")";
     }
 
-    static Assignment make(DIAssignID *ID, DbgAssignIntrinsic *Source) {
-      return Assignment(Known, ID, Source);
-    }
     static Assignment make(DIAssignID *ID, DbgVariableRecord *Source) {
-      assert(Source->isDbgAssign() &&
-             "Cannot make an assignment from a non-assign DbgVariableRecord");
-      return Assignment(Known, ID, Source);
-    }
-    static Assignment make(DIAssignID *ID, AssignRecord Source) {
+      assert((!Source ||
+             Source->isDbgAssign()) &&
+              "Cannot make an assignment from a non-assign DbgVariableRecord");
       return Assignment(Known, ID, Source);
     }
     static Assignment makeFromMemDef(DIAssignID *ID) {
@@ -1077,17 +1069,7 @@ public:
       // If the Status is Known then we expect there to be an assignment ID.
       assert(Status == NoneOrPhi || ID);
     }
-    Assignment(S Status, DIAssignID *ID, DbgAssignIntrinsic *Source)
-        : Status(Status), ID(ID), Source(Source) {
-      // If the Status is Known then we expect there to be an assignment ID.
-      assert(Status == NoneOrPhi || ID);
-    }
     Assignment(S Status, DIAssignID *ID, DbgVariableRecord *Source)
-        : Status(Status), ID(ID), Source(Source) {
-      // If the Status is Known then we expect there to be an assignment ID.
-      assert(Status == NoneOrPhi || ID);
-    }
-    Assignment(S Status, DIAssignID *ID, AssignRecord Source)
         : Status(Status), ID(ID), Source(Source) {
       // If the Status is Known then we expect there to be an assignment ID.
       assert(Status == NoneOrPhi || ID);
@@ -1350,7 +1332,7 @@ private:
   void processUntaggedInstruction(Instruction &I, BlockInfo *LiveSet);
   void processUnknownStoreToVariable(Instruction &I, VariableID &Var,
                                      BlockInfo *LiveSet);
-  void processDbgAssign(AssignRecord Assign, BlockInfo *LiveSet);
+  void processDbgAssign(DbgVariableRecord *Assign, BlockInfo *LiveSet);
   void processDbgVariableRecord(DbgVariableRecord &DVR, BlockInfo *LiveSet);
   void processDbgValue(DbgVariableRecord *DbgValue, BlockInfo *LiveSet);
   /// Add an assignment to memory for the variable /p Var.
@@ -1591,7 +1573,7 @@ void AssignmentTrackingLowering::processUnknownStoreToVariable(
     LLVM_DEBUG(dbgs() << "Switching to fallback debug value: ";
                DbgAV.dump(dbgs()); dbgs() << "\n");
     setLocKind(LiveSet, Var, LocKind::Val);
-    emitDbgValue(LocKind::Val, cast<DbgVariableRecord *>(DbgAV.Source), &I);
+    emitDbgValue(LocKind::Val, DbgAV.Source, &I);
     return;
   }
   // Otherwise, find a suitable insert point, before the next instruction or
@@ -1764,7 +1746,7 @@ void AssignmentTrackingLowering::processTaggedInstruction(
         LLVM_DEBUG(dbgs() << "Val, Debug value is Known\n";);
         setLocKind(LiveSet, Var, LocKind::Val);
         if (DbgAV.Source) {
-          emitDbgValue(LocKind::Val, cast<DbgVariableRecord *>(DbgAV.Source), &I);
+          emitDbgValue(LocKind::Val, DbgAV.Source, &I);
         } else {
           // PrevAV.Source is nullptr so we must emit undef here.
           emitDbgValue(LocKind::None, Assign, &I);
@@ -1783,7 +1765,7 @@ void AssignmentTrackingLowering::processTaggedInstruction(
     ProcessLinkedAssign(DVR);
 }
 
-void AssignmentTrackingLowering::processDbgAssign(AssignRecord Assign,
+void AssignmentTrackingLowering::processDbgAssign(DbgVariableRecord *Assign,
                                                   BlockInfo *LiveSet) {
   auto ProcessDbgAssignImpl = [&](DbgVariableRecord *DbgAssign) {
     // Only bother tracking variables that are at some point stack homed. Other
@@ -1825,7 +1807,7 @@ void AssignmentTrackingLowering::processDbgAssign(AssignRecord Assign,
       emitDbgValue(LocKind::Val, DbgAssign, DbgAssign);
     }
   };
-  ProcessDbgAssignImpl(cast<DbgVariableRecord *>(Assign));
+  ProcessDbgAssignImpl(Assign);
 }
 
 void AssignmentTrackingLowering::processDbgValue(DbgVariableRecord *DbgValue,
@@ -1983,24 +1965,16 @@ AssignmentTrackingLowering::joinAssignment(const Assignment &A,
   // Here the same assignment (!1) was performed in both preds in the source,
   // but we can't use either one unless they are identical (e.g. .we don't
   // want to arbitrarily pick between constant values).
-  auto JoinSource = [&]() -> AssignRecord {
+  auto JoinSource = [&]() -> DbgVariableRecord * {
     if (A.Source == B.Source)
       return A.Source;
     if (!A.Source || !B.Source)
-      return AssignRecord();
-    assert(isa<DbgVariableRecord *>(A.Source) ==
-           isa<DbgVariableRecord *>(B.Source));
-    if (isa<DbgVariableRecord *>(A.Source) &&
-        cast<DbgVariableRecord *>(A.Source)->isEquivalentTo(
-            *cast<DbgVariableRecord *>(B.Source)))
+      return nullptr;
+    if (A.Source->isEquivalentTo(*B.Source))
       return A.Source;
-    if (isa<DbgAssignIntrinsic *>(A.Source) &&
-        cast<DbgAssignIntrinsic *>(A.Source)->isIdenticalTo(
-            cast<DbgAssignIntrinsic *>(B.Source)))
-      return A.Source;
-    return AssignRecord();
+    return nullptr;
   };
-  AssignRecord Source = JoinSource();
+  DbgVariableRecord *Source = JoinSource();
   assert(A.Status == B.Status && A.Status == Assignment::Known);
   assert(A.ID == B.ID);
   return Assignment::make(A.ID, Source);
