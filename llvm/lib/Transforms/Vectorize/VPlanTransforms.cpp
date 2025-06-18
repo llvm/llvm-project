@@ -3328,8 +3328,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
 /// Add branch weight metadata, if the \p Plan's middle block is terminated by a
 /// BranchOnCond recipe.
-void VPlanTransforms::addBranchWeightToMiddleTerminator(VPlan &Plan,
-                                                        ElementCount VF) {
+void VPlanTransforms::addBranchWeightToMiddleTerminator(
+    VPlan &Plan, ElementCount VF, std::optional<unsigned> VScale) {
   VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
   auto *MiddleTerm =
       dyn_cast_or_null<VPInstruction>(MiddleVPBB->getTerminator());
@@ -3341,6 +3341,8 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(VPlan &Plan,
          "must have a BranchOnCond");
   // Assume that `TripCount % VectorStep ` is equally distributed.
   unsigned VectorStep = Plan.getUF() * VF.getKnownMinValue();
+  if (VF.isScalable() && VScale.has_value())
+    VectorStep *= *VScale;
   assert(VectorStep > 0 && "trip count should not be zero");
   MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
   MDNode *BranchWeights =
