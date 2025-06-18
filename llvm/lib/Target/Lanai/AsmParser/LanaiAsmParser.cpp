@@ -25,6 +25,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
@@ -1223,6 +1224,7 @@ bool LanaiAsmParser::parseInstruction(ParseInstructionInfo & /*Info*/,
 #define GET_MATCHER_IMPLEMENTATION
 #include "LanaiGenAsmMatcher.inc"
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLanaiAsmParser() {
   RegisterMCAsmParser<LanaiAsmParser> x(getTheLanaiTarget());
 }
