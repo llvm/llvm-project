@@ -102,7 +102,6 @@ int main() {
 //
 // main() shouldn't be emitted in device code. It is not annotated with
 // sycl_kernel_entry_point or sycl_external attributes.
-// Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 // CHECK-NOT: define {{[a-z_ ]*}}noundef i32 @main() #0
 
 // IR for the SYCL kernel caller function generated for

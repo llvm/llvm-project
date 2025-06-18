@@ -203,10 +203,9 @@ void SemaSYCL::handleKernelAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 void SemaSYCL::handleExternalAttr(Decl *D, const ParsedAttr &AL) {
-  auto *ND = cast<NamedDecl>(D);
-  if (!ND->isExternallyVisible()) {
-    Diag(AL.getLoc(), diag::err_sycl_attribute_invalid_linkage)
-        << AL << !isa<FunctionDecl>(ND);
+  auto *FD = cast<FunctionDecl>(D);
+  if (!FD->isExternallyVisible()) {
+    Diag(AL.getLoc(), diag::err_sycl_attribute_invalid_linkage);
     return;
   }
 
