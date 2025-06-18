@@ -282,7 +282,7 @@ RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return TTI::TCC_Free;
 }
 
-bool RISCVTTIImpl::hasActiveVectorLength(unsigned, Type *DataTy, Align) const {
+bool RISCVTTIImpl::hasActiveVectorLength() const {
   return ST->hasVInstructions();
 }
 
