@@ -31,6 +31,8 @@ public:
   bool checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
                                unsigned NumDataArgs);
 
+  bool checkImageImmArgFunctionCall(CallExpr *TheCall, unsigned ArgCount);
+
   /// Create an AMDGPUWavesPerEUAttr attribute.
   AMDGPUFlatWorkGroupSizeAttr *
   CreateAMDGPUFlatWorkGroupSizeAttr(const AttributeCommonInfo &CI, Expr *Min,
