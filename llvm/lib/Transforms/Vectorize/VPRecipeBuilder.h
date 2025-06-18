@@ -172,7 +172,7 @@ public:
   /// along with binary operation and reduction phi operands.
   VPRecipeBase *tryToCreatePartialReduction(Instruction *Reduction,
                                             ArrayRef<VPValue *> Operands,
-                                            unsigned ScaleFactor);
+                                            ElementCount ScaleFactor);
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {

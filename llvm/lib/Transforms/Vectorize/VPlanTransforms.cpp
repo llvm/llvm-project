@@ -2545,7 +2545,8 @@ static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
 
   auto *Red = new VPReductionRecipe(
       ExtRed->getRecurrenceKind(), FastMathFlags(), ExtRed->getChainOp(), Ext,
-      ExtRed->getCondOp(), ExtRed->isOrdered(), ExtRed->getDebugLoc());
+      ExtRed->getCondOp(), ExtRed->isOrdered(), ExtRed->getVFScaleFactor(),
+      ExtRed->getDebugLoc());
   Ext->insertBefore(ExtRed);
   Red->insertBefore(ExtRed);
   ExtRed->replaceAllUsesWith(Red);
@@ -2600,7 +2601,8 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
 
   auto *Red = new VPReductionRecipe(
       MulAcc->getRecurrenceKind(), FastMathFlags(), MulAcc->getChainOp(), Mul,
-      MulAcc->getCondOp(), MulAcc->isOrdered(), MulAcc->getDebugLoc());
+      MulAcc->getCondOp(), MulAcc->isOrdered(), MulAcc->getVFScaleFactor(),
+      MulAcc->getDebugLoc());
   Red->insertBefore(MulAcc);
 
   MulAcc->replaceAllUsesWith(Red);

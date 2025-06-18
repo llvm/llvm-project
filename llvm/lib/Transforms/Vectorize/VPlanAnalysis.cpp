@@ -281,10 +281,10 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
                 VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-                VPVectorEndPointerRecipe, VPWidenCanonicalIVRecipe,
-                VPPartialReductionRecipe>([this](const VPRecipeBase *R) {
-            return inferScalarType(R->getOperand(0));
-          })
+                VPVectorEndPointerRecipe, VPWidenCanonicalIVRecipe>(
+              [this](const VPRecipeBase *R) {
+                return inferScalarType(R->getOperand(0));
+              })
           // VPInstructionWithType must be handled before VPInstruction.
           .Case<VPInstructionWithType, VPWidenIntrinsicRecipe,
                 VPWidenCastRecipe>(
@@ -393,9 +393,9 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
 /// one.
 static unsigned getVFScaleFactor(VPRecipeBase *R) {
   if (auto *RR = dyn_cast<VPReductionPHIRecipe>(R))
-    return RR->getVFScaleFactor();
-  if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
-    return RR->getVFScaleFactor();
+    return RR->getVFScaleFactor().getFixedValue();
+  if (auto *RR = dyn_cast<VPReductionRecipe>(R))
+    return RR->getVFScaleFactor().getFixedValue();
   assert(
       (!isa<VPInstruction>(R) || cast<VPInstruction>(R)->getOpcode() !=
                                      VPInstruction::ReductionStartVector) &&
@@ -564,8 +564,9 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
         } else {
           // The output from scaled phis and scaled reductions actually has
           // fewer lanes than the VF.
-          unsigned ScaleFactor = getVFScaleFactor(R);
-          ElementCount VF = VFs[J].divideCoefficientBy(ScaleFactor);
+          ElementCount VF = VFs[J];
+          if (unsigned ScaleFactor = getVFScaleFactor(R); ScaleFactor > 1)
+            VF = VF.divideCoefficientBy(ScaleFactor);
           LLVM_DEBUG(if (VF != VFs[J]) {
             dbgs() << "LV(REG): Scaled down VF from " << VFs[J] << " to " << VF
                    << " for " << *R << "\n";

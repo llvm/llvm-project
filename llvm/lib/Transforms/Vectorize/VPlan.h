@@ -553,7 +553,6 @@ public:
     case VPRecipeBase::VPWidenIntOrFpInductionSC:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
-    case VPRecipeBase::VPPartialReductionSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveSC:
@@ -2189,18 +2188,21 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
 
   /// When expanding the reduction PHI, the plan's VF element count is divided
   /// by this factor to form the reduction phi's VF.
-  unsigned VFScaleFactor = 1;
+  ElementCount VFScaleFactor;
 
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi described by \p
   /// RdxDesc.
   VPReductionPHIRecipe(PHINode *Phi, const RecurrenceDescriptor &RdxDesc,
                        VPValue &Start, bool IsInLoop = false,
-                       bool IsOrdered = false, unsigned VFScaleFactor = 1)
+                       bool IsOrdered = false,
+                       ElementCount VFScaleFactor = ElementCount::getFixed(1))
       : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start),
         RdxDesc(RdxDesc), IsInLoop(IsInLoop), IsOrdered(IsOrdered),
         VFScaleFactor(VFScaleFactor) {
     assert((!IsOrdered || IsInLoop) && "IsOrdered requires IsInLoop");
+    assert(((!IsInLoop && !IsOrdered) || VFScaleFactor.isZero()) &&
+           "Invalid VFScaleFactor");
   }
 
   ~VPReductionPHIRecipe() override = default;
@@ -2219,7 +2221,7 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Get the factor that the VF of this recipe's output should be scaled by.
-  unsigned getVFScaleFactor() const { return VFScaleFactor; }
+  ElementCount getVFScaleFactor() const { return VFScaleFactor; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2236,6 +2238,10 @@ public:
 
   /// Returns true, if the phi is part of an in-loop reduction.
   bool isInLoop() const { return IsInLoop; }
+
+  bool isPartialReduction() const {
+    return ElementCount::isKnownGT(VFScaleFactor, ElementCount::getFixed(1));
+  }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
@@ -2408,23 +2414,32 @@ public:
   Instruction *getInsertPos() const { return IG->getInsertPos(); }
 };
 
-/// A recipe to represent inloop reduction operations, performing a reduction on
-/// a vector operand into a scalar value, and adding the result to a chain.
-/// The Operands are {ChainOp, VecOp, [Condition]}.
+/// A recipe to represent inloop, ordered or partial reduction operations. It
+/// performs a reduction on a vector operand into a scalar (vector in the case
+/// of a partial reduction) value, and adds the result to a chain. The Operands
+/// are {ChainOp, VecOp, [Condition]}.
 class VPReductionRecipe : public VPRecipeWithIRFlags {
   /// The recurrence kind for the reduction in question.
   RecurKind RdxKind;
   bool IsOrdered;
   /// Whether the reduction is conditional.
   bool IsConditional = false;
+  /// The scaling factor, relative to the VF, that this recipe's output is
+  /// divided by.
+  /// For outer-loop reductions this is equal to 1.
+  /// For in-loop reductions this is equal to 0, to specify that this is equal
+  /// to the VF (which may not be known yet). For partial-reductions this is
+  /// equal to another scalar value.
+  ElementCount VFScaleFactor;
 
 protected:
   VPReductionRecipe(const unsigned char SC, RecurKind RdxKind,
                     FastMathFlags FMFs, Instruction *I,
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
-                    bool IsOrdered, DebugLoc DL)
+                    bool IsOrdered, ElementCount VFScaleFactor, DebugLoc DL)
       : VPRecipeWithIRFlags(SC, Operands, FMFs, DL), RdxKind(RdxKind),
-        IsOrdered(IsOrdered) {
+        IsOrdered(IsOrdered), VFScaleFactor(VFScaleFactor) {
+    assert((!IsOrdered || VFScaleFactor.isZero()) && "Invalid scale factor");
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
@@ -2436,9 +2451,11 @@ protected:
   /// Note that the debug location is from the extend.
   VPReductionRecipe(const unsigned char SC, const RecurKind RdxKind,
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
-                    bool IsOrdered, DebugLoc DL)
+                    bool IsOrdered, ElementCount VFScaleFactor, DebugLoc DL)
       : VPRecipeWithIRFlags(SC, Operands, DL), RdxKind(RdxKind),
-        IsOrdered(IsOrdered), IsConditional(CondOp) {
+        IsOrdered(IsOrdered), IsConditional(CondOp),
+        VFScaleFactor(VFScaleFactor) {
+    assert((!IsOrdered || VFScaleFactor.isZero()) && "Invalid scale factor");
     if (CondOp)
       addOperand(CondOp);
   }
@@ -2447,9 +2464,12 @@ protected:
   /// Note that the NUW/NSW flags and the debug location are from the Mul.
   VPReductionRecipe(const unsigned char SC, const RecurKind RdxKind,
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
-                    bool IsOrdered, WrapFlagsTy WrapFlags, DebugLoc DL)
+                    bool IsOrdered, ElementCount VFScaleFactor,
+                    WrapFlagsTy WrapFlags, DebugLoc DL)
       : VPRecipeWithIRFlags(SC, Operands, WrapFlags, DL), RdxKind(RdxKind),
-        IsOrdered(IsOrdered), IsConditional(CondOp) {
+        IsOrdered(IsOrdered), IsConditional(CondOp),
+        VFScaleFactor(VFScaleFactor) {
+    assert((!IsOrdered || VFScaleFactor.isZero()) && "Invalid scale factor");
     if (CondOp)
       addOperand(CondOp);
   }
@@ -2457,24 +2477,26 @@ protected:
 public:
   VPReductionRecipe(RecurKind RdxKind, FastMathFlags FMFs, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    bool IsOrdered, DebugLoc DL = {})
+                    bool IsOrdered, ElementCount VFScaleFactor,
+                    DebugLoc DL = {})
       : VPReductionRecipe(VPDef::VPReductionSC, RdxKind, FMFs, I,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
-                          IsOrdered, DL) {}
+                          IsOrdered, VFScaleFactor, DL) {}
 
   VPReductionRecipe(const RecurKind RdxKind, FastMathFlags FMFs,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    bool IsOrdered, DebugLoc DL = {})
+                    bool IsOrdered, ElementCount VFScaleFactor,
+                    DebugLoc DL = {})
       : VPReductionRecipe(VPDef::VPReductionSC, RdxKind, FMFs, nullptr,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
-                          IsOrdered, DL) {}
+                          IsOrdered, VFScaleFactor, DL) {}
 
   ~VPReductionRecipe() override = default;
 
   VPReductionRecipe *clone() override {
-    return new VPReductionRecipe(RdxKind, getFastMathFlags(),
-                                 getUnderlyingInstr(), getChainOp(), getVecOp(),
-                                 getCondOp(), IsOrdered, getDebugLoc());
+    return new VPReductionRecipe(
+        RdxKind, getFastMathFlags(), getUnderlyingInstr(), getChainOp(),
+        getVecOp(), getCondOp(), IsOrdered, VFScaleFactor, getDebugLoc());
   }
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -2508,6 +2530,10 @@ public:
   bool isOrdered() const { return IsOrdered; };
   /// Return true if the in-loop reduction is conditional.
   bool isConditional() const { return IsConditional; };
+  /// Return true if the reduction is a partial reduction.
+  bool isPartialReduction() const {
+    return ElementCount::isKnownGT(VFScaleFactor, ElementCount::getFixed(1));
+  }
   /// The VPValue of the scalar Chain being accumulated.
   VPValue *getChainOp() const { return getOperand(0); }
   /// The VPValue of the vector value to be reduced.
@@ -2516,65 +2542,8 @@ public:
   VPValue *getCondOp() const {
     return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
   }
-};
-
-/// A recipe for forming partial reductions. In the loop, an accumulator and
-/// vector operand are added together and passed to the next iteration as the
-/// next accumulator. After the loop body, the accumulator is reduced to a
-/// scalar value.
-class VPPartialReductionRecipe : public VPReductionRecipe {
-  unsigned Opcode;
-
-  /// The divisor by which the VF of this recipe's output should be divided
-  /// during execution.
-  unsigned VFScaleFactor;
-
-public:
-  VPPartialReductionRecipe(Instruction *ReductionInst, VPValue *Op0,
-                           VPValue *Op1, VPValue *Cond, unsigned VFScaleFactor)
-      : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1, Cond,
-                                 VFScaleFactor, ReductionInst) {}
-  VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
-                           VPValue *Cond, unsigned ScaleFactor,
-                           Instruction *ReductionInst = nullptr)
-      : VPReductionRecipe(VPDef::VPPartialReductionSC, RecurKind::Add,
-                          FastMathFlags(), ReductionInst,
-                          ArrayRef<VPValue *>({Op0, Op1}), Cond, false, {}),
-        Opcode(Opcode), VFScaleFactor(ScaleFactor) {
-    [[maybe_unused]] auto *AccumulatorRecipe =
-        getChainOp()->getDefiningRecipe();
-    assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
-            isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
-           "Unexpected operand order for partial reduction recipe");
-  }
-  ~VPPartialReductionRecipe() override = default;
-
-  VPPartialReductionRecipe *clone() override {
-    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
-                                        getCondOp(), VFScaleFactor,
-                                        getUnderlyingInstr());
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
-
-  /// Generate the reduction in the loop.
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPPartialReductionRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
-  /// Get the binary op's opcode.
-  unsigned getOpcode() const { return Opcode; }
-
   /// Get the factor that the VF of this recipe's output should be scaled by.
-  unsigned getVFScaleFactor() const { return VFScaleFactor; }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
+  ElementCount getVFScaleFactor() const { return VFScaleFactor; }
 };
 
 /// A recipe to represent inloop reduction operations with vector-predication
@@ -2590,7 +2559,7 @@ public:
             R.getFastMathFlags(),
             cast_or_null<Instruction>(R.getUnderlyingValue()),
             ArrayRef<VPValue *>({R.getChainOp(), R.getVecOp(), &EVL}), CondOp,
-            R.isOrdered(), DL) {}
+            R.isOrdered(), ElementCount::getFixed(0), DL) {}
 
   ~VPReductionEVLRecipe() override = default;
 
@@ -2634,10 +2603,11 @@ class VPExtendedReductionRecipe : public VPReductionRecipe {
 
   /// For cloning VPExtendedReductionRecipe.
   VPExtendedReductionRecipe(VPExtendedReductionRecipe *ExtRed)
-      : VPReductionRecipe(
-            VPDef::VPExtendedReductionSC, ExtRed->getRecurrenceKind(),
-            {ExtRed->getChainOp(), ExtRed->getVecOp()}, ExtRed->getCondOp(),
-            ExtRed->isOrdered(), ExtRed->getDebugLoc()),
+      : VPReductionRecipe(VPDef::VPExtendedReductionSC,
+                          ExtRed->getRecurrenceKind(),
+                          {ExtRed->getChainOp(), ExtRed->getVecOp()},
+                          ExtRed->getCondOp(), ExtRed->isOrdered(),
+                          ExtRed->getVFScaleFactor(), ExtRed->getDebugLoc()),
         ExtOp(ExtRed->getExtOpcode()), ResultTy(ExtRed->getResultType()) {
     transferFlags(*ExtRed);
     setUnderlyingValue(ExtRed->getUnderlyingValue());
@@ -2647,7 +2617,8 @@ public:
   VPExtendedReductionRecipe(VPReductionRecipe *R, VPWidenCastRecipe *Ext)
       : VPReductionRecipe(VPDef::VPExtendedReductionSC, R->getRecurrenceKind(),
                           {R->getChainOp(), Ext->getOperand(0)}, R->getCondOp(),
-                          R->isOrdered(), Ext->getDebugLoc()),
+                          R->isOrdered(), R->getVFScaleFactor(),
+                          Ext->getDebugLoc()),
         ExtOp(Ext->getOpcode()), ResultTy(Ext->getResultType()) {
     assert((ExtOp == Instruction::CastOps::ZExt ||
             ExtOp == Instruction::CastOps::SExt) &&
@@ -2711,6 +2682,7 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
             VPDef::VPMulAccumulateReductionSC, MulAcc->getRecurrenceKind(),
             {MulAcc->getChainOp(), MulAcc->getVecOp0(), MulAcc->getVecOp1()},
             MulAcc->getCondOp(), MulAcc->isOrdered(),
+            MulAcc->getVFScaleFactor(),
             WrapFlagsTy(MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap()),
             MulAcc->getDebugLoc()),
         ExtOp(MulAcc->getExtOpcode()), IsNonNeg(MulAcc->isNonNeg()),
@@ -2726,7 +2698,7 @@ public:
       : VPReductionRecipe(
             VPDef::VPMulAccumulateReductionSC, R->getRecurrenceKind(),
             {R->getChainOp(), Ext0->getOperand(0), Ext1->getOperand(0)},
-            R->getCondOp(), R->isOrdered(),
+            R->getCondOp(), R->isOrdered(), R->getVFScaleFactor(),
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
             R->getDebugLoc()),
         ExtOp(Ext0->getOpcode()), ResultTy(ResultTy) {
@@ -2748,7 +2720,7 @@ public:
       : VPReductionRecipe(
             VPDef::VPMulAccumulateReductionSC, R->getRecurrenceKind(),
             {R->getChainOp(), Mul->getOperand(0), Mul->getOperand(1)},
-            R->getCondOp(), R->isOrdered(),
+            R->getCondOp(), R->isOrdered(), R->getVFScaleFactor(),
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
             R->getDebugLoc()),
         ExtOp(Instruction::CastOps::CastOpsEnd), ResultTy(ResultTy) {

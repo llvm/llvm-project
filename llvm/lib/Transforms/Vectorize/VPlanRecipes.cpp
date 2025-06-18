@@ -293,83 +293,6 @@ bool VPRecipeBase::isScalarCast() const {
   return VPI && Instruction::isCast(VPI->getOpcode());
 }
 
-InstructionCost
-VPPartialReductionRecipe::computeCost(ElementCount VF,
-                                      VPCostContext &Ctx) const {
-  std::optional<unsigned> Opcode = std::nullopt;
-  VPValue *BinOp = getOperand(1);
-
-  // If the partial reduction is predicated, a select will be operand 0 rather
-  // than the binary op
-  using namespace llvm::VPlanPatternMatch;
-  if (match(getOperand(1), m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
-    BinOp = BinOp->getDefiningRecipe()->getOperand(1);
-
-  // If BinOp is a negation, use the side effect of match to assign the actual
-  // binary operation to BinOp
-  match(BinOp, m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(BinOp)));
-  VPRecipeBase *BinOpR = BinOp->getDefiningRecipe();
-
-  if (auto *WidenR = dyn_cast<VPWidenRecipe>(BinOpR))
-    Opcode = std::make_optional(WidenR->getOpcode());
-
-  VPRecipeBase *ExtAR = BinOpR->getOperand(0)->getDefiningRecipe();
-  VPRecipeBase *ExtBR = BinOpR->getOperand(1)->getDefiningRecipe();
-
-  auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
-  auto *InputTypeA = Ctx.Types.inferScalarType(ExtAR ? ExtAR->getOperand(0)
-                                                     : BinOpR->getOperand(0));
-  auto *InputTypeB = Ctx.Types.inferScalarType(ExtBR ? ExtBR->getOperand(0)
-                                                     : BinOpR->getOperand(1));
-
-  auto GetExtendKind = [](VPRecipeBase *R) {
-    // The extend could come from outside the plan.
-    if (!R)
-      return TargetTransformInfo::PR_None;
-    auto *WidenCastR = dyn_cast<VPWidenCastRecipe>(R);
-    if (!WidenCastR)
-      return TargetTransformInfo::PR_None;
-    if (WidenCastR->getOpcode() == Instruction::CastOps::ZExt)
-      return TargetTransformInfo::PR_ZeroExtend;
-    if (WidenCastR->getOpcode() == Instruction::CastOps::SExt)
-      return TargetTransformInfo::PR_SignExtend;
-    return TargetTransformInfo::PR_None;
-  };
-
-  return Ctx.TTI.getPartialReductionCost(getOpcode(), InputTypeA, InputTypeB,
-                                         PhiType, VF, GetExtendKind(ExtAR),
-                                         GetExtendKind(ExtBR), Opcode);
-}
-
-void VPPartialReductionRecipe::execute(VPTransformState &State) {
-  auto &Builder = State.Builder;
-
-  assert(getOpcode() == Instruction::Add &&
-         "Unhandled partial reduction opcode");
-
-  Value *BinOpVal = State.get(getOperand(1));
-  Value *PhiVal = State.get(getOperand(0));
-  assert(PhiVal && BinOpVal && "Phi and Mul must be set");
-
-  Type *RetTy = PhiVal->getType();
-
-  CallInst *V = Builder.CreateIntrinsic(
-      RetTy, Intrinsic::experimental_vector_partial_reduce_add,
-      {PhiVal, BinOpVal}, nullptr, "partial.reduce");
-
-  State.set(this, V);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPPartialReductionRecipe::print(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const {
-  O << Indent << "PARTIAL-REDUCE ";
-  printAsOperand(O, SlotTracker);
-  O << " = " << Instruction::getOpcodeName(getOpcode()) << " ";
-  printOperands(O, SlotTracker);
-}
-#endif
-
 FastMathFlags VPIRFlags::getFastMathFlags() const {
   assert(OpType == OperationType::FPMathOp &&
          "recipe doesn't have fast math flags");
@@ -2474,7 +2397,6 @@ void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPReductionRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "Reduction being replicated.");
-  Value *PrevInChain = State.get(getChainOp(), /*IsScalar*/ true);
   RecurKind Kind = getRecurrenceKind();
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
          "In-loop AnyOf reductions aren't currently supported");
@@ -2497,6 +2419,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   Value *NewRed;
   Value *NextInChain;
   if (IsOrdered) {
+    Value *PrevInChain = State.get(getChainOp(), /*IsScalar*/ true);
     if (State.VF.isVector())
       NewRed =
           createOrderedReduction(State.Builder, Kind, NewVecOp, PrevInChain);
@@ -2506,8 +2429,17 @@ void VPReductionRecipe::execute(VPTransformState &State) {
           PrevInChain, NewVecOp);
     PrevInChain = NewRed;
     NextInChain = NewRed;
+  } else if (isPartialReduction()) {
+    assert(Kind == RecurKind::Add && "Unexpected partial reduction kind");
+    Value *PrevInChain = State.get(getChainOp(), /*IsScalar*/ false);
+    NewRed = State.Builder.CreateIntrinsic(
+        PrevInChain->getType(),
+        Intrinsic::experimental_vector_partial_reduce_add,
+        {PrevInChain, NewVecOp}, nullptr, "partial.reduce");
+    PrevInChain = NewRed;
+    NextInChain = NewRed;
   } else {
-    PrevInChain = State.get(getChainOp(), /*IsScalar*/ true);
+    Value *PrevInChain = State.get(getChainOp(), /*IsScalar*/ true);
     NewRed = createSimpleReduction(State.Builder, NewVecOp, Kind);
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
       NextInChain = createMinMaxOp(State.Builder, Kind, NewRed, PrevInChain);
@@ -2516,7 +2448,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
           (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(Kind), NewRed,
           PrevInChain);
   }
-  State.set(this, NextInChain, /*IsScalar*/ true);
+  State.set(this, NextInChain, /*IsScalar*/ !isPartialReduction());
 }
 
 void VPReductionEVLRecipe::execute(VPTransformState &State) {
@@ -2563,6 +2495,30 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   std::optional<FastMathFlags> OptionalFMF =
       ElementTy->isFloatingPointTy() ? std::make_optional(FMFs) : std::nullopt;
 
+  if (isPartialReduction()) {
+    using namespace llvm::VPlanPatternMatch;
+    VPValue *Mul = getVecOp();
+    // Some chained partial reductions used for complex numbers will have a
+    // negation between the mul and reduction. This extracts the mul from that
+    // pattern to use it for further checking.
+    match(Mul, m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(Mul)));
+    if (match(Mul,
+              m_Mul(m_ZExtOrSExt(m_VPValue()), m_ZExtOrSExt(m_VPValue())))) {
+      auto *MulR = cast<VPWidenRecipe>(Mul);
+      auto *Ext0R = cast<VPWidenCastRecipe>(MulR->getOperand(0));
+      auto *Ext1R = cast<VPWidenCastRecipe>(MulR->getOperand(1));
+      return Ctx.TTI.getPartialReductionCost(
+          Opcode, Ctx.Types.inferScalarType(Ext0R->getOperand(0)),
+          Ctx.Types.inferScalarType(Ext1R->getOperand(0)),
+          Ctx.Types.inferScalarType(getChainOp()), VF,
+          TargetTransformInfo::getPartialReductionExtendKind(
+              Ext0R->getOpcode()),
+          TargetTransformInfo::getPartialReductionExtendKind(
+              Ext1R->getOpcode()),
+          Instruction::Mul);
+    }
+  }
+
   // TODO: Support any-of reductions.
   assert(
       (!RecurrenceDescriptor::isAnyOfRecurrenceKind(RdxKind) ||
@@ -2598,6 +2554,16 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
 InstructionCost
 VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
                                             VPCostContext &Ctx) const {
+  if (isPartialReduction())
+    return Ctx.TTI.getPartialReductionCost(
+        RecurrenceDescriptor::getOpcode(getRecurrenceKind()),
+        Ctx.Types.inferScalarType(getVecOp0()),
+        Ctx.Types.inferScalarType(getVecOp1()),
+        Ctx.Types.inferScalarType(getChainOp()), VF,
+        TargetTransformInfo::getPartialReductionExtendKind(getExtOpcode()),
+        TargetTransformInfo::getPartialReductionExtendKind(getExtOpcode()),
+        Instruction::Mul);
+
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy =
       cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
@@ -2608,7 +2574,10 @@ VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << Indent << "REDUCE ";
+  if (isPartialReduction())
+    O << Indent << "PARTIAL-REDUCE ";
+  else
+    O << Indent << "REDUCE ";
   printAsOperand(O, SlotTracker);
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
@@ -2676,6 +2645,8 @@ void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " + ";
+  if (isPartialReduction())
+    O << "partial.";
   O << "reduce."
     << Instruction::getOpcodeName(
            RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
@@ -3865,8 +3836,8 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);
-  if (VFScaleFactor != 1)
-    O << " (VF scaled by 1/" << VFScaleFactor << ")";
+  if (VFScaleFactor != ElementCount::getFixed(1))
+    O << " (VF scaled by 1/" << VFScaleFactor.getFixedValue() << ")";
 }
 #endif
 
