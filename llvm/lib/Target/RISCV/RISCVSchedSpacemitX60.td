@@ -682,14 +682,14 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
 
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
-  defvar ALULat = SMX60GetVIALULatency<mx>.c;
-  defvar MaskLat = SMX60GetVIMaskLatency<mx>.c;
 
+  defvar MaskLat = SMX60GetVIMaskLatency<mx>.c;
   let Latency = MaskLat in {
     defm "" : LMULWriteResMX<"WriteVFCmpV",  [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFCmpF",  [SMX60_VIEU], mx, IsWorstCase>;
   }
 
+  defvar ALULat = SMX60GetVIALULatency<mx>.c;
   let Latency = ALULat in {
     defm "" : LMULWriteResMX<"WriteVFClassV",  [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFMergeV",  [SMX60_VIEU], mx, IsWorstCase>;
@@ -702,8 +702,8 @@ foreach mx = SchedMxList in {
 foreach mx = SchedMxListW in {
   foreach sew = SchedSEWSet<mx, isF=0, isWidening=1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListW>.c;
-    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
+    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
     let Latency = !mul(LMulLat, 4) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWCvtIToFV", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
@@ -712,8 +712,8 @@ foreach mx = SchedMxListW in {
 
 foreach mx = SchedMxListFW in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListFW>.c;
-  defvar LMulLat = SMX60GetLMulCycles<mx>.c;
 
+  defvar LMulLat = SMX60GetLMulCycles<mx>.c;
   let Latency = !mul(LMulLat, 4) in {
     defm "" : LMULWriteResMX<"WriteVFWCvtFToIV", [SMX60_VIEU], mx, IsWorstCase>;
   }
