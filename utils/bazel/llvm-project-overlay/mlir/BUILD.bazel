@@ -323,7 +323,6 @@ cc_library(
     ]) + [
         "include/mlir/IR/OpAsmOpInterface.h.inc",
         "include/mlir/IR/PDLPatternMatch.h.inc",
-        "include/mlir/Interfaces/CallInterfaces.h",
         "include/mlir/Interfaces/DataLayoutInterfaces.h",
         "include/mlir/Interfaces/InferIntRangeInterface.h",
         "include/mlir/Interfaces/SideEffectInterfaces.h",
@@ -332,6 +331,7 @@ cc_library(
         "include/mlir/IR/*.h",
     ]) + [
         "include/mlir/Interfaces/FoldInterfaces.h",
+        "include/mlir/Interfaces/CallInterfaces.h",
     ],
     includes = ["include"],
     deps = [
