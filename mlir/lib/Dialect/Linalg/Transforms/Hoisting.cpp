@@ -199,6 +199,24 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
   return true;
 }
 
+static bool skipViewLike(Operation *source0, Operation *source1) {
+  bool viewLikeCheck = true;
+  auto assumeAlignOp = dyn_cast_or_null<memref::AssumeAlignmentOp>(source0);
+  if (assumeAlignOp && source0 == source1) {
+    Value sourceMemRef = assumeAlignOp.getMemref();
+    Operation *sourceOp = sourceMemRef.getDefiningOp();
+    return isa_and_nonnull<ViewLikeOpInterface>(sourceOp);
+  }
+
+  if (source0 && isa_and_nonnull<ViewLikeOpInterface>(source0))
+    return true;
+
+  if (source1 && isa_and_nonnull<ViewLikeOpInterface>(source1))
+    return true;
+
+  return false;
+}
+
 void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
                                                  bool verifyNonZeroTrip) {
   bool changed = true;
@@ -312,12 +330,10 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
           transferRead.getPermutationMap() != transferWrite.getPermutationMap())
         return WalkResult::advance();
 
-      auto *source = transferRead.getBase().getDefiningOp();
-      if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
-        return WalkResult::advance();
+      auto *source0 = transferRead.getBase().getDefiningOp();
+      auto *source1 = transferWrite.getBase().getDefiningOp();
 
-      source = transferWrite.getBase().getDefiningOp();
-      if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
+      if (skipViewLike(source0, source1))
         return WalkResult::advance();
 
       // TODO: may want to memoize this information for performance but it

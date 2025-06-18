@@ -816,12 +816,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK-NEXT:     %alloc = memref.alloc() : memref<4096x4096xf16>
 // CHECK-NEXT:     %alloc_0 = memref.alloc() : memref<4096x4096xf16>
 // CHECK-NEXT:     %assume_align = memref.assume_alignment %alloc, 64 : memref<4096x4096xf16>
-// CHECK-NEXT:     scf.for %arg0 = %c256 to %c4096 step %c256 {
-// CHECK-NEXT:       %0 = vector.transfer_read %assume_align[%c0, %c0], %cst {in_bounds = [true, true]} : memref<4096x4096xf16>, vector<16x16xf16>
-// CHECK-NEXT:       %1 = vector.transfer_read %alloc_0[%arg0, %arg0], %cst {in_bounds = [true, true]} : memref<4096x4096xf16>, vector<16x16xf16>
-// CHECK-NEXT:       %2 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %1, %1, %0 : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
-// CHECK-NEXT:       vector.transfer_write %2, %assume_align[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<4096x4096xf16>
+// CHECK-NEXT:     %0 = vector.transfer_read %assume_align[%c0, %c0], %cst {in_bounds = [true, true]} : memref<4096x4096xf16>, vector<16x16xf16>
+// CHECK-NEXT:     %1 = scf.for %arg0 = %c256 to %c4096 step %c256 iter_args(%arg1 = %0) -> (vector<16x16xf16>) {
+// CHECK-NEXT:       %2 = vector.transfer_read %alloc_0[%arg0, %arg0], %cst {in_bounds = [true, true]} : memref<4096x4096xf16>, vector<16x16xf16>
+// CHECK-NEXT:       %3 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %2, %2, %arg1 : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
+// CHECK-NEXT:       scf.yield %3 : vector<16x16xf16>
 // CHECK-NEXT:     }
+// CHECK-NEXT:     vector.transfer_write %1, %assume_align[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<4096x4096xf16>
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
 
