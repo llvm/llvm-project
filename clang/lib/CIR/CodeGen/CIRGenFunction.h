@@ -779,6 +779,7 @@ public:
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
 
   void emitConstructorBody(FunctionArgList &args);
+  void emitDestructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
 

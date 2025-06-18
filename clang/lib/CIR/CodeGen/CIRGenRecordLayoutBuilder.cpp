@@ -359,7 +359,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       !rd->hasAttr<FinalAttr>()) {
     if (lowering.astRecordLayout.getNonVirtualSize() !=
         lowering.astRecordLayout.getSize()) {
-      cgm.errorNYI(rd->getSourceRange(), "computeRecordLayout: CXXRecordDecl");
+      cgm.errorNYI(rd->getSourceRange(),
+                   "computeRecordLayout: non-POD record layouts");
     }
   }
 
