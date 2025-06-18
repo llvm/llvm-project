@@ -2498,7 +2498,7 @@ bool AssignmentTrackingLowering::emitPromotedVarLocs(
   bool InsertedAnyIntrinsics = false;
   // Go through every block, translating debug intrinsics for fully promoted
   // variables into FnVarLocs location defs. No analysis required for these.
-  auto TranslateDbgRecord = [&](auto *Record) {
+  auto TranslateDbgRecord = [&](DbgVariableRecord *Record) {
     // Skip variables that haven't been promoted - we've dealt with those
     // already.
     if (VarsWithStackSlot->contains(getAggregate(Record)))
@@ -2516,9 +2516,6 @@ bool AssignmentTrackingLowering::emitPromotedVarLocs(
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
         if (DVR.isDbgValue() || DVR.isDbgAssign())
           TranslateDbgRecord(&DVR);
-      auto *DVI = dyn_cast<DbgValueInst>(&I);
-      if (DVI)
-        TranslateDbgRecord(DVI);
     }
   }
   return InsertedAnyIntrinsics;
