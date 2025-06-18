@@ -14,10 +14,7 @@
 #include <limits>
 #include <climits>
 #include <cassert>
-
-#ifndef TEST_HAS_NO_EXCEPTIONS
-#  include <stdexcept>
-#endif
+#include <stdexcept>
 
 #include "test_macros.h"
 

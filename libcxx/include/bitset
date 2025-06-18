@@ -226,27 +226,17 @@ protected:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void flip() _NOEXCEPT;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long __to_ulong() const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const {
+    if _LIBCPP_CONSTEXPR (_Size > sizeof(unsigned long) * CHAR_BIT) {
+      if (auto __e = __make_iter(_Size); std::find(__make_iter(sizeof(unsigned long) * CHAR_BIT), __e, true) != __e)
+        std::__throw_overflow_error("__bitset<_N_words, _Size>::to_ulong overflow error");
+    }
+
     static_assert(sizeof(__storage_type) >= sizeof(unsigned long),
                   "libc++ only supports platforms where sizeof(size_t) >= sizeof(unsigned long), such as 32-bit and "
                   "64-bit platforms. If you're interested in supporting a platform where that is not the case, please "
                   "contact the libc++ developers.");
     return static_cast<unsigned long>(__first_[0]);
-  }
-
-  // _Bit_size > sizeof(unsigned long) * CHAR_BIT: overflow check needed
-  template <size_t _Bit_size = _Size, __enable_if_t<(_Bit_size > sizeof(unsigned long) * CHAR_BIT), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const {
-    if (auto __e = __make_iter(_Bit_size); std::find(__make_iter(sizeof(unsigned long) * CHAR_BIT), __e, true) != __e)
-      std::__throw_overflow_error("__bitset<_N_words, _Size>::to_ulong overflow error");
-
-    return __to_ulong();
-  }
-
-  // _Bit_size <= sizeof(unsigned long) * CHAR_BIT: no overflow check needed
-  template <size_t _Bit_size = _Size, __enable_if_t<(_Bit_size <= sizeof(unsigned long) * CHAR_BIT), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const {
-    return __to_ulong();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long to_ullong() const {
@@ -466,16 +456,11 @@ protected:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void flip() _NOEXCEPT;
 
-  template <size_t _Bit_size = _Size, __enable_if_t<(_Bit_size > sizeof(unsigned long) * CHAR_BIT), int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const {
-    if (auto __e = __make_iter(_Bit_size); std::find(__make_iter(sizeof(unsigned long) * CHAR_BIT), __e, true) != __e)
-      __throw_overflow_error("__bitset<1, _Size>::to_ulong overflow error");
-
-    return static_cast<unsigned long>(__first_);
-  }
-
-  template <size_t _Bit_size = _Size, __enable_if_t<(_Bit_size <= sizeof(unsigned long) * CHAR_BIT), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const {
+    if _LIBCPP_CONSTEXPR (_Size > sizeof(unsigned long) * CHAR_BIT) {
+      if (auto __e = __make_iter(_Size); std::find(__make_iter(sizeof(unsigned long) * CHAR_BIT), __e, true) != __e)
+        __throw_overflow_error("__bitset<1, _Size>::to_ulong overflow error");
+    }
     return static_cast<unsigned long>(__first_);
   }
 
@@ -519,7 +504,6 @@ inline _LIBCPP_CONSTEXPR __bitset<1, _Size>::__bitset(unsigned long long __v) _N
     // TODO: We must refer to __bits_per_word in order to work around an issue with the GDB pretty-printers.
     //       Without it, the pretty-printers complain about a missing __bits_per_word member. This needs to
     //       be investigated further.
-    // See: https://github.com/llvm/llvm-project/actions/runs/15071518915/job/42368867929?pr=121348#logs
     : __first_(_Size == __bits_per_word ? static_cast<__storage_type>(__v) : static_cast<__storage_type>(__v)) {}
 
 template <size_t _Size>
