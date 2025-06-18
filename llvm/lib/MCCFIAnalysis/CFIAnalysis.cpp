@@ -16,7 +16,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/MCCFIAnalysis/CFIState.h"
-#include "llvm/MCCFIAnalysis/ExtendedMCInstrAnalysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -43,7 +42,7 @@ CFIAnalysis::getAllSuperRegs() {
   for (auto &&RegClass : MCRI->regclasses()) {
     for (unsigned I = 0; I < RegClass.getNumRegs(); I++) {
       MCPhysReg Reg = RegClass.getRegister(I);
-      if (!isSuperReg(Reg))
+      if (!isSuperReg(Reg) || MCRI->isArtificial(Reg) || MCRI->isConstant(Reg))
         continue;
       SuperRegs[Reg] = &RegClass;
     }
@@ -71,7 +70,6 @@ CFIAnalysis::CFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
                          ArrayRef<MCCFIInstruction> PrologueCFIDirectives)
     : Context(Context), MCII(MCII), MCRI(Context->getRegisterInfo()),
       State(Context), IsEH(IsEH) {
-  EMCIA.reset(new ExtendedMCInstrAnalysis(Context, MCII, MCIA));
 
   for (auto &&[Reg, RegClass] : getAllSuperRegs()) {
     if (MCRI->get(Reg).IsArtificial || MCRI->get(Reg).IsConstant)
@@ -102,10 +100,6 @@ CFIAnalysis::CFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
   State.apply(MCCFIInstruction::createOffset(
       nullptr, LastRow->getCFAValue().getRegister(),
       0)); // sp's old value is CFA
-
-  State.apply(MCCFIInstruction::createUndefined(
-      nullptr, MCRI->getDwarfRegNum(EMCIA->getFlagsReg(),
-                                    IsEH))); // Flags cannot be caller-saved
 
   // Applying the prologue after default assumptions to overwrite them.
   for (auto &&PrologueCFIDirective : PrologueCFIDirectives) {
