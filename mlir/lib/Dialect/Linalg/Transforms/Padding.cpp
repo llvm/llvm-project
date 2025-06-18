@@ -6,14 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Value.h"
 
 #define DEBUG_TYPE "linalg-padding"
 
@@ -23,152 +27,95 @@ using namespace mlir::linalg;
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 #define DBGSNL() (llvm::dbgs() << "\n")
 
-namespace {
-/// Helper class for storing padding information.
-struct PaddingInfo {
-  PaddingInfo(int64_t padToMultipleOf = 1, OpFoldResult size = {})
-      : padToMultipleOf(padToMultipleOf), size(size) {}
-  /// Pad the tensor to a multiple of.
-  int64_t padToMultipleOf = 1;
-  /// The size used for padding.
-  OpFoldResult size = {};
-};
-
-/// Helper class for storing and computing the padded shape.
-struct PaddedShape {
-  /// Initializes the shape information and on success it returns whether the
-  /// shape of the operand will change. Returns failure if the operand cannot be
-  /// padded.
-  FailureOr<bool> initialize(linalg::LinalgOp opToPad, OpOperand *opOperand,
-                             const LinalgPaddingOptions &options);
-
-  /// Computs the padded shape.
-  void computePadding(OpBuilder &builder, Value operand);
-
-  /// Returns the new tensor type.
-  RankedTensorType getType(Type elemTy) {
-    return RankedTensorType::get(shape, elemTy);
-  }
-
-  SmallVector<Value> dynDims;
-
-private:
-  SmallVector<int64_t> shape;
-  DenseMap<int64_t, PaddingInfo> dimToInfo;
-};
-} // namespace
-
-FailureOr<bool> PaddedShape::initialize(linalg::LinalgOp opToPad,
-                                        OpOperand *opOperand,
-                                        const LinalgPaddingOptions &options) {
+/// Compute the padded shape of the given operand, combining multiples from all
+/// contributing dimensions using affine.apply operations.
+static void computePaddedShape(RewriterBase &rewriter, linalg::LinalgOp opToPad,
+                               OpOperand *opOperand,
+                               ArrayRef<OpFoldResult> loopRanges,
+                               const LinalgPaddingOptions &options,
+                               SmallVector<OpFoldResult> &paddedShape,
+                               bool &alreadyHasRequestedShape) {
+  Location loc = opToPad.getLoc();
   AffineMap indexingMap = opToPad.getMatchingIndexingMap(opOperand);
+  auto tensorType = cast<RankedTensorType>(opOperand->get().getType());
+  paddedShape.resize_for_overwrite(tensorType.getRank());
 
-  // Initialize the padded shape.
-  llvm::append_range(shape, opToPad.getShape(opOperand));
+  // For each dimension in the operand's shape
+  for (const auto &enResults : enumerate(indexingMap.getResults())) {
+    int64_t resultIndex = enResults.index();
+    AffineMap partialIndexingMap = indexingMap.getSubMap(
+        ArrayRef<unsigned>{static_cast<unsigned>(resultIndex)});
 
-  // Collect the shape dimensions that are a function of "paddingDimensions",
-  // along with the multiple that they should be padded to ("1" if none).
-  bool alreadyHasRequestedShape = true;
-  for (const auto &dimEn : enumerate(options.paddingDimensions)) {
-    for (const auto &en : enumerate(indexingMap.getResults())) {
-      if (en.value().isFunctionOfDim(dimEn.value())) {
-        PaddingInfo paddingInfo;
-        int64_t dimSize = shape[en.index()];
-        if (options.padToMultipleOf.has_value()) {
-          paddingInfo.padToMultipleOf =
-              (*options.padToMultipleOf)[dimEn.index()];
-        } else {
-          paddingInfo.padToMultipleOf = 1;
-        }
+    LLVM_DEBUG(DBGS() << "----resultIndex: " << resultIndex
+                      << " with partialIndexingMap: " << partialIndexingMap
+                      << "\n");
 
-        // Check if the user provided a size in the options.
-        paddingInfo.size =
-            options.getSizeToPadTo(opOperand->getOperandNumber(), en.index());
+    // TODO: mult could be a dynamic value, then we'd want a symbol.
+    // For now at least the API forces us to get a staic value.
+    // Note: if mult is 1 just let it go and compose properly; fill missing
+    // entries with 1s.
+    llvm::SmallDenseMap<int64_t, int64_t> dimsToMult;
+    for (const auto &en : enumerate(options.paddingDimensions)) {
+      auto mult = (*options.padToMultipleOf)[en.index()];
+      dimsToMult[en.value()] = mult;
+    }
+    for (int64_t idx = 0, e = opToPad.getNumLoops(); idx != e; ++idx) {
+      if (dimsToMult.find(idx) != dimsToMult.end())
+        continue;
+      dimsToMult[idx] = 1;
+    }
 
-        // Set the padding info.
-        dimToInfo[en.index()] = paddingInfo;
-        if (ShapedType::isDynamic(dimSize) ||
-            dimSize % paddingInfo.padToMultipleOf != 0 ||
-            !paddingInfo.size.isNull()) {
-          alreadyHasRequestedShape = false;
-        }
+    // Find all padding dimensions that contribute to this operand dimension
+    // and compute the padded term contribution to the final padded shape.
+    SmallVector<OpFoldResult> terms;
+    for (const auto &[paddingDim, mult] : dimsToMult) {
+      LLVM_DEBUG(DBGS() << "------apply padding of dim: " << paddingDim
+                        << " to mult: " << mult << "\n");
+      if (enResults.value().isFunctionOfDim(paddingDim)) {
+        // Project non-'paddingDim' dimensions and compress the result.
+        llvm::SmallBitVector projectedDims(partialIndexingMap.getNumDims(),
+                                           true);
+        projectedDims.flip(paddingDim);
+        AffineMap projectedMap =
+            mlir::projectDims(partialIndexingMap, projectedDims,
+                              /*compressDims=*/true);
+
+        // Compose with ceil(mult) and construct the term.
+        AffineExpr d0;
+        bindDims(rewriter.getContext(), d0);
+        AffineMap ceilMap = AffineMap::get(1, 0, d0.ceilDiv(mult) * mult);
+        AffineMap composedMap = projectedMap.compose(ceilMap);
+        OpFoldResult paddingDimOfr = affine::makeComposedFoldedAffineApply(
+            rewriter, loc, composedMap, loopRanges[paddingDim]);
+        terms.push_back(paddingDimOfr);
+        LLVM_DEBUG(DBGS() << "------new term: " << terms.back() << "\n");
       }
     }
-  }
 
-  // Upper bound the sizes to obtain a static bounding box.
-  for (int64_t i = 0, e = shape.size(); i < e; ++i) {
-    LLVM_DEBUG(DBGS() << "--computing un-padded size for dim " << i << "\n");
-    // Skip dimensions that do not require padding.
-    if (!dimToInfo.contains(i)) {
-      LLVM_DEBUG(DBGS() << "----dim does not require padding, SKIP\n");
-      continue;
-    }
-    PaddingInfo &info = dimToInfo[i];
-    if (info.size) {
-      LLVM_DEBUG(DBGS() << "----the user provided the size: " << info.size
-                        << "\n");
-      continue;
-    }
-    // Otherwise, try to compute a constant upper bound for the size value.
-    FailureOr<int64_t> upperBound =
-        ValueBoundsConstraintSet::computeConstantBound(
-            presburger::BoundType::UB,
-            {opOperand->get(),
-             /*dim=*/i},
-            /*stopCondition=*/nullptr, /*closedUB=*/true);
-    if (failed(upperBound)) {
-      LLVM_DEBUG(
-          DBGS() << "----could not compute a bounding box for padding\n");
-      return failure();
-    }
-    info.size =
-        IntegerAttr::get(IndexType::get(opToPad.getContext()), *upperBound);
-    LLVM_DEBUG(DBGS() << "----new un-padded size: " << info.size << "\n");
-  }
-  return alreadyHasRequestedShape;
-}
-
-void PaddedShape::computePadding(OpBuilder &builder, Value operand) {
-  Location loc = operand.getLoc();
-  AffineExpr sizeSym = builder.getAffineSymbolExpr(0);
-
-  // Compute the padding for each dimension.
-  for (auto &&[i, dim] : llvm::enumerate(shape)) {
-    LLVM_DEBUG(DBGS() << "--computing padded size for dim " << i << "\n");
-
-    // Get the padding info or default info for the shape dimension.
-    PaddingInfo paddingInfo = dimToInfo.lookup(i);
-
-    // Skip dimensions that do not require padding.
-    if (paddingInfo.size.isNull()) {
-      LLVM_DEBUG(DBGS() << "----dim does not require padding, SKIP\n");
-
-      // We still need to push the size as `makeComposedPadHighOp` expects a
-      // range with all the dynamic sizes, whether they're being padded or not.
-      if (ShapedType::isDynamic(dim)) {
-        dynDims.push_back(
-            cast<Value>(tensor::getMixedSize(builder, loc, operand, i)));
-      }
-      continue;
-    }
-
-    // Compute the padded size to be a multiple of `padToMultipleOf`.
-    AffineExpr szExpr = (sizeSym).ceilDiv(paddingInfo.padToMultipleOf) *
-                        paddingInfo.padToMultipleOf;
-    OpFoldResult paddedSize = affine::makeComposedFoldedAffineApply(
-        builder, loc, szExpr, paddingInfo.size);
-    assert(paddedSize && "invalid arguments to affine apply");
-
-    if (auto cstSzAttr = dyn_cast<Attribute>(paddedSize)) {
-      // Update the shape as the size is static.
-      dim = cast<IntegerAttr>(cstSzAttr).getValue().getZExtValue();
+    if (!terms.empty()) {
+      SmallVector<AffineExpr> dims(terms.size());
+      bindDimsList(rewriter.getContext(), MutableArrayRef{dims});
+      AffineExpr sumExpr = dims.front();
+      for (unsigned i = 1; i < dims.size(); ++i)
+        sumExpr = sumExpr + dims[i];
+      OpFoldResult paddedDimOfr =
+          affine::makeComposedFoldedAffineApply(rewriter, loc, sumExpr, terms);
+      paddedShape[resultIndex] = paddedDimOfr;
     } else {
-      // Add a dynamic dimension.
-      dim = ShapedType::kDynamic;
-      dynDims.push_back(cast<Value>(paddedSize));
+      paddedShape[resultIndex] =
+          createFoldedDimOp(rewriter, loc, opOperand->get(), resultIndex);
     }
-    LLVM_DEBUG(DBGS() << "----new dim size: " << paddedSize << "\n");
+
+    bool dimNeedsPad = false;
+    auto maybeVal = getConstantIntValue(paddedShape[resultIndex]);
+    dimNeedsPad = !maybeVal.has_value() ||
+                  (*maybeVal != tensorType.getShape()[resultIndex]);
+    alreadyHasRequestedShape &= !dimNeedsPad;
+
+    LLVM_DEBUG(DBGS() << "----padded shape: " << paddedShape[resultIndex]
+                      << " vs existing shape: "
+                      << tensorType.getShape()[resultIndex]
+                      << " ---> needs pad: " << dimNeedsPad << "\n");
   }
 }
 
@@ -184,35 +131,34 @@ void PaddedShape::computePadding(OpBuilder &builder, Value operand) {
 /// Otherwise, try to pad the shape dimensions that match the iterator
 /// dimensions "paddingDimensions" and return the tensor::PadOp result if
 /// padding succeeds or failure otherwise.
-static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
-    RewriterBase &rewriter, linalg::LinalgOp opToPad, OpOperand *opOperand,
-    const LinalgPaddingOptions &options) {
+static Value padOperand(RewriterBase &rewriter, linalg::LinalgOp opToPad,
+                        OpOperand *opOperand, ArrayRef<OpFoldResult> loopRanges,
+                        const LinalgPaddingOptions &options) {
   assert(
       (!options.padToMultipleOf.has_value() ||
        options.padToMultipleOf->size() == options.paddingDimensions.size()) &&
       "invalid number of elements in padToMultipleOf");
 
-  // Initialize the padded shape and get whether it requires padding.
-  PaddedShape shape;
-  FailureOr<bool> alreadyHasRequestedShape =
-      shape.initialize(opToPad, opOperand, options);
-  if (failed(alreadyHasRequestedShape)) {
-    return rewriter.notifyMatchFailure(opToPad,
-                                       "--failed to compute padded shape");
-  }
+  // Compute padded shape.
+  SmallVector<OpFoldResult> paddedShape;
+  bool alreadyHasRequestedShape = false;
+  computePaddedShape(rewriter, opToPad, opOperand, loopRanges, options,
+                     paddedShape, alreadyHasRequestedShape);
 
-  // Return the un-padded operand if padding to a static shape is not needed and
-  // if the nofold flag is not set.
+  // Return the unpadded operand if padding to a static shape is not needed
+  // and if the nofold flag is not set.
   bool nofold = opOperand->getOperandNumber() < options.nofoldFlags.size()
                     ? bool(options.nofoldFlags[opOperand->getOperandNumber()])
                     : false;
-  if (!nofold && *alreadyHasRequestedShape)
+  if (!nofold && alreadyHasRequestedShape)
     return opOperand->get();
 
-  // Fail if `paddingValues` specifies no padding value.
-  if (opOperand->getOperandNumber() >= options.paddingValues.size()) {
-    return rewriter.notifyMatchFailure(opToPad, "--no padding value specified");
-  }
+  // Expect proper `paddingValues`.
+  // TODO: we may want to allow garbage padding in the future, in which case
+  // we would just not assert.
+  assert(opOperand->getOperandNumber() < options.paddingValues.size() &&
+         "--no padding value specified");
+
   Attribute paddingAttr = options.paddingValues[opOperand->getOperandNumber()];
 
   Value paddingValue;
@@ -226,18 +172,21 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
         opToPad.getLoc(), cast<TypedAttr>(paddingAttr));
   }
 
-  // Computes the padded shape.
-  if (!*alreadyHasRequestedShape)
-    shape.computePadding(rewriter, opOperand->get());
-
   // Pad the operand to the bounding box defined by `paddedShape`.
-  RankedTensorType paddedTensorType =
-      shape.getType(getElementTypeOrSelf(opOperand->get()));
+  SmallVector<int64_t> tensorShape;
+  SmallVector<Value> dynDims;
+  for (OpFoldResult ofr : paddedShape) {
+    std::optional<int64_t> cst = getConstantIntValue(ofr);
+    tensorShape.push_back(cst.has_value() ? *cst : ShapedType::kDynamic);
+    if (!cst.has_value())
+      dynDims.push_back(ofr.dyn_cast<Value>());
+  }
+  auto paddedTensorType = RankedTensorType::get(
+      tensorShape, getElementTypeOrSelf(opOperand->get()));
   LLVM_DEBUG(DBGS() << "--SUCCESS, makeComposedPadHighOp with type: "
                     << paddedTensorType);
   return makeComposedPadHighOp(rewriter, opToPad->getLoc(), paddedTensorType,
-                               opOperand->get(), paddingValue, nofold,
-                               shape.dynDims);
+                               opOperand->get(), paddingValue, nofold, dynDims);
 }
 
 LogicalResult
@@ -269,21 +218,24 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
   // Set IP after op because we also take the dims of the original output.
   rewriter.setInsertionPointAfter(opToPad);
 
+  SmallVector<OpFoldResult> allShapes =
+      opToPad.createFlatListOfOperandDims(rewriter, loc);
+  AffineMap shapesToLoops = opToPad.getShapesToLoopsMap();
+  SmallVector<OpFoldResult> loopRanges =
+      affine::makeComposedFoldedMultiResultAffineApply(
+          rewriter, opToPad.getLoc(), shapesToLoops, allShapes);
+
   // Make a copy of the shaped operands and update it.
   SmallVector<Value> newOperands;
   newOperands.reserve(opToPad->getNumOperands());
   for (OpOperand &opOperand : opToPad->getOpOperands()) {
-    FailureOr<Value> paddedOperand = padOperandToSmallestStaticBoundingBox(
-        rewriter, opToPad, &opOperand, options);
-    // Exit if `paddingDimensions` cannot be bounded statically.
-    if (failed(paddedOperand)) {
-      LLVM_DEBUG(DBGS() << "--operand cannot be bound statically : "
-                        << opOperand.get() << " -> FAIL\n");
-      return rewriter.notifyMatchFailure(opToPad,
-                                         "operand cannot be bound statically");
-    }
-    newOperands.push_back(*paddedOperand);
-    if (auto padOp = paddedOperand->getDefiningOp<tensor::PadOp>())
+    LLVM_DEBUG(DBGS() << "--start padding operand: " << opOperand.get()
+                      << "\n");
+    Value paddedOperand =
+        padOperand(rewriter, opToPad, &opOperand, loopRanges, options);
+    LLVM_DEBUG(DBGS() << "--done padding operand: " << paddedOperand << "\n");
+    newOperands.push_back(paddedOperand);
+    if (auto padOp = paddedOperand.getDefiningOp<tensor::PadOp>())
       padOps.push_back(padOp);
   }
 
