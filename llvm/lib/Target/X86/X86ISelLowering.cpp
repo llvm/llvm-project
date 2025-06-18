@@ -25431,8 +25431,8 @@ static SDValue createMinMaxReduction(SDValue Src, EVT TargetVT, SDLoc DL,
                                      const X86Subtarget &Subtarget) {
   assert(Subtarget.hasSSE41() &&
          "The caller must check if SSE4.1 is available");
-  assert(TargetVT == MVT::i16 ||
-         TargetVT == MVT::i8 && "Unexpected return type");
+  assert((TargetVT == MVT::i16 || TargetVT == MVT::i8) &&
+         "Unexpected return type");
 
   EVT SrcVT = Src.getValueType();
   EVT SrcSVT = SrcVT.getScalarType();
