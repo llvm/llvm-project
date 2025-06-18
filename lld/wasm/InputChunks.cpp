@@ -228,7 +228,7 @@ void InputFunction::setTableIndex(uint32_t index) {
 // witten.
 static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
                                      uint64_t value) {
-  switch (rel.Type) {
+  switch (rel.getType()) {
   case R_WASM_TYPE_INDEX_LEB:
   case R_WASM_FUNCTION_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_LEB:
@@ -248,14 +248,24 @@ static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
   case R_WASM_MEMORY_ADDR_TLS_SLEB64:
   case R_WASM_TABLE_INDEX_REL_SLEB:
     return encodeSLEB128(static_cast<int64_t>(value), buf);
-  default:
+  case R_WASM_TABLE_INDEX_I32:
+  case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_SECTION_OFFSET_I32:
+  case R_WASM_GLOBAL_INDEX_I32:
+  case R_WASM_MEMORY_ADDR_I64:
+  case R_WASM_TABLE_INDEX_I64:
+  case R_WASM_FUNCTION_OFFSET_I64:
+  case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_FUNCTION_INDEX_I32:
     fatal("relocation compression not supported for " +
           relocTypeToString(rel.Type));
   }
+  llvm_unreachable("unhandled relocation type");
 }
 
 static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
-  switch (rel.Type) {
+  switch (rel.getType()) {
   case R_WASM_TYPE_INDEX_LEB:
   case R_WASM_FUNCTION_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_LEB:
@@ -275,10 +285,20 @@ static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
   case R_WASM_MEMORY_ADDR_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_TLS_SLEB64:
     return 10;
-  default:
+  case R_WASM_TABLE_INDEX_I32:
+  case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_SECTION_OFFSET_I32:
+  case R_WASM_GLOBAL_INDEX_I32:
+  case R_WASM_MEMORY_ADDR_I64:
+  case R_WASM_TABLE_INDEX_I64:
+  case R_WASM_FUNCTION_OFFSET_I64:
+  case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_FUNCTION_INDEX_I32:
     fatal("relocation compression not supported for " +
           relocTypeToString(rel.Type));
   }
+  llvm_unreachable("unhandled relocation type");
 }
 
 static unsigned getRelocWidth(const WasmRelocation &rel, uint64_t value) {
