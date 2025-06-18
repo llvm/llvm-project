@@ -1627,7 +1627,7 @@ VPIRFlags::FastMathFlagsTy::FastMathFlagsTy(const FastMathFlags &FMF) {
 #if !defined(NDEBUG)
 bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   switch (OpType) {
-  case OperationType::OverflowingOp:
+  case OperationType::WrappingOp:
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
            Opcode == Instruction::Mul || Opcode == Instruction::Trunc ||
            Opcode == VPInstruction::VPInstruction::CanonicalIVIncrementForPart;
@@ -1672,7 +1672,7 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     if (ExactFlags.IsExact)
       O << " exact";
     break;
-  case OperationType::OverflowingOp:
+  case OperationType::WrappingOp:
     if (WrapFlags.HasNUW)
       O << " nuw";
     if (WrapFlags.HasNSW)

@@ -73,9 +73,9 @@ public:
 };
 
 /// Utility class for integer operators which may exhibit overflow - Add, Sub,
-/// Mul, Shl and Trunc. It does not include SDiv, despite that operator having
-/// the potential for overflow.
-class OverflowingOperator : public Operator {
+/// Mul, and Shl. It does not include SDiv, despite that operator having the
+/// potential for overflow.
+class OverflowingBinaryOperator : public Operator {
 public:
   enum {
     AnyWrap        = 0,
@@ -97,6 +97,9 @@ private:
   }
 
 public:
+  /// Transparently provide more efficient getOperand methods.
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
   /// Test whether this operation is known to never
   /// undergo unsigned overflow, aka the nuw property.
   bool hasNoUnsignedWrap() const {
@@ -128,32 +131,11 @@ public:
     return I->getOpcode() == Instruction::Add ||
            I->getOpcode() == Instruction::Sub ||
            I->getOpcode() == Instruction::Mul ||
-           I->getOpcode() == Instruction::Shl ||
-           I->getOpcode() == Instruction::Trunc;
+           I->getOpcode() == Instruction::Shl;
   }
   static bool classof(const ConstantExpr *CE) {
     return CE->getOpcode() == Instruction::Add ||
-           CE->getOpcode() == Instruction::Sub ||
-           CE->getOpcode() == Instruction::Trunc;
-  }
-  static bool classof(const Value *V) {
-    return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||
-           (isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V)));
-  }
-};
-
-/// The subset of OverflowingOperators that are also BinaryOperators.
-class OverflowingBinaryOperator : public OverflowingOperator {
-public:
-  /// Transparently provide more efficient getOperand methods.
-  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-
-  static bool classof(const Instruction *I) {
-    return OverflowingOperator::classof(I) && isa<BinaryOperator>(I);
-  }
-  static bool classof(const ConstantExpr *CE) {
-    return OverflowingOperator::classof(CE) &&
-           Instruction::isBinaryOp(CE->getOpcode());
+           CE->getOpcode() == Instruction::Sub;
   }
   static bool classof(const Value *V) {
     return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||

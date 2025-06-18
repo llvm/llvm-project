@@ -595,7 +595,7 @@ public:
 class VPIRFlags {
   enum class OperationType : unsigned char {
     Cmp,
-    OverflowingOp,
+    WrappingOp,
     DisjointOp,
     PossiblyExactOp,
     GEPOp,
@@ -661,9 +661,9 @@ public:
     } else if (auto *Op = dyn_cast<PossiblyDisjointInst>(&I)) {
       OpType = OperationType::DisjointOp;
       DisjointFlags.IsDisjoint = Op->isDisjoint();
-    } else if (auto *Op = dyn_cast<OverflowingOperator>(&I)) {
-      OpType = OperationType::OverflowingOp;
-      WrapFlags = {Op->hasNoUnsignedWrap(), Op->hasNoSignedWrap()};
+    } else if (isa<OverflowingBinaryOperator, TruncInst>(&I)) {
+      OpType = OperationType::WrappingOp;
+      WrapFlags = {I.hasNoUnsignedWrap(), I.hasNoSignedWrap()};
     } else if (auto *Op = dyn_cast<PossiblyExactOperator>(&I)) {
       OpType = OperationType::PossiblyExactOp;
       ExactFlags.IsExact = Op->isExact();
@@ -686,7 +686,7 @@ public:
       : OpType(OperationType::Cmp), CmpPredicate(Pred) {}
 
   VPIRFlags(WrapFlagsTy WrapFlags)
-      : OpType(OperationType::OverflowingOp), WrapFlags(WrapFlags) {}
+      : OpType(OperationType::WrappingOp), WrapFlags(WrapFlags) {}
 
   VPIRFlags(FastMathFlags FMFs) : OpType(OperationType::FPMathOp), FMFs(FMFs) {}
 
@@ -710,7 +710,7 @@ public:
     // NOTE: This needs to be kept in-sync with
     // Instruction::dropPoisonGeneratingFlags.
     switch (OpType) {
-    case OperationType::OverflowingOp:
+    case OperationType::WrappingOp:
       WrapFlags.HasNUW = false;
       WrapFlags.HasNSW = false;
       break;
@@ -739,7 +739,7 @@ public:
   /// Apply the IR flags to \p I.
   void applyFlags(Instruction &I) const {
     switch (OpType) {
-    case OperationType::OverflowingOp:
+    case OperationType::WrappingOp:
       I.setHasNoUnsignedWrap(WrapFlags.HasNUW);
       I.setHasNoSignedWrap(WrapFlags.HasNSW);
       break;
@@ -799,13 +799,13 @@ public:
   }
 
   bool hasNoUnsignedWrap() const {
-    assert(OpType == OperationType::OverflowingOp &&
+    assert(OpType == OperationType::WrappingOp &&
            "recipe doesn't have a NUW flag");
     return WrapFlags.HasNUW;
   }
 
   bool hasNoSignedWrap() const {
-    assert(OpType == OperationType::OverflowingOp &&
+    assert(OpType == OperationType::WrappingOp &&
            "recipe doesn't have a NSW flag");
     return WrapFlags.HasNSW;
   }
