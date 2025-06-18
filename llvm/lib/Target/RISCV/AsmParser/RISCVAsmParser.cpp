@@ -534,14 +534,14 @@ public:
   }
 
   // True if operand is a symbol with no modifiers, or a constant with no
-  // modifiers and isShiftedInt<N-K, K>(Op).
-  template <int N, int K> bool isBareSimmNLsbK() const {
+  // modifiers and isShiftedInt<N-1, 1>(Op).
+  template <int N> bool isBareSimmNLsb0() const {
     if (!isImm())
       return false;
 
     int64_t Imm;
     if (evaluateConstantImm(getImm(), Imm))
-      return isShiftedInt<N - K, K>(fixImmediateForRV32(Imm, isRV64Imm()));
+      return isShiftedInt<N - 1, 1>(fixImmediateForRV32(Imm, isRV64Imm()));
 
     RISCV::Specifier VK = RISCV::S_None;
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -945,6 +945,22 @@ public:
   bool isSImm5Plus1() const {
     return isSImmPred(
         [](int64_t Imm) { return Imm != INT64_MIN && isInt<5>(Imm - 1); });
+  }
+
+  bool isSImm18() const {
+    return isSImmPred([](int64_t Imm) { return isInt<18>(Imm); });
+  }
+
+  bool isSImm18Lsb0() const {
+    return isSImmPred([](int64_t Imm) { return isShiftedInt<17, 1>(Imm); });
+  }
+
+  bool isSImm19Lsb00() const {
+    return isSImmPred([](int64_t Imm) { return isShiftedInt<17, 2>(Imm); });
+  }
+
+  bool isSImm20Lsb000() const {
+    return isSImmPred([](int64_t Imm) { return isShiftedInt<17, 3>(Imm); });
   }
 
   bool isSImm32Lsb0() const {
@@ -1603,18 +1619,18 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                       (1 << 4),
                                       "immediate must be in the range");
   }
-  case Match_InvalidBareSImm18:
+  case Match_InvalidSImm18:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 17),
                                       (1 << 17) - 1);
-  case Match_InvalidBareSImm18Lsb0:
+  case Match_InvalidSImm18Lsb0:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 17), (1 << 17) - 2,
         "immediate must be a multiple of 2 bytes in the range");
-  case Match_InvalidBareSImm19Lsb00:
+  case Match_InvalidSImm19Lsb00:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 18), (1 << 18) - 4,
         "immediate must be a multiple of 4 bytes in the range");
-  case Match_InvalidBareSImm20Lsb000:
+  case Match_InvalidSImm20Lsb000:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 19), (1 << 19) - 8,
         "immediate must be a multiple of 8 bytes in the range");

@@ -27,46 +27,38 @@
 // Format specifies the encoding used by the instruction. This is used by
 // RISCVMCCodeEmitter to determine which form of fixup to use. These
 // definitions must be kept in-sync with RISCVBaseInfo.h.
-class InstFormat<bits<6> val> {
-  bits<6> Value = val;
+class InstFormat<bits<5> val> {
+  bits<5> Value = val;
 }
-def InstFormatPseudo           : InstFormat<0>;
-def InstFormatR                : InstFormat<1>;
-def InstFormatR4               : InstFormat<2>;
-def InstFormatI                : InstFormat<3>;
-def InstFormatS                : InstFormat<4>;
-def InstFormatB                : InstFormat<5>;
-def InstFormatU                : InstFormat<6>;
-def InstFormatJ                : InstFormat<7>;
-def InstFormatCR               : InstFormat<8>;
-def InstFormatCI               : InstFormat<9>;
-def InstFormatCSS              : InstFormat<10>;
-def InstFormatCIW              : InstFormat<11>;
-def InstFormatCL               : InstFormat<12>;
-def InstFormatCS               : InstFormat<13>;
-def InstFormatCA               : InstFormat<14>;
-def InstFormatCB               : InstFormat<15>;
-def InstFormatCJ               : InstFormat<16>;
-def InstFormatCU               : InstFormat<17>;
-def InstFormatCLB              : InstFormat<18>;
-def InstFormatCLH              : InstFormat<19>;
-def InstFormatCSB              : InstFormat<20>;
-def InstFormatCSH              : InstFormat<21>;
-def InstFormatQC_EAI           : InstFormat<22>;
-def InstFormatQC_EI            : InstFormat<23>;
-def InstFormatQC_EB            : InstFormat<24>;
-def InstFormatQC_EJ            : InstFormat<25>;
-def InstFormatQC_ES            : InstFormat<26>;
-def InstFormatNDS_BRANCH_10    : InstFormat<27>;
-def InstFormatNDS_GPREL_18S0_I : InstFormat<28>;
-def InstFormatNDS_GPREL_17S1_I : InstFormat<29>;
-def InstFormatNDS_GPREL_17S2_I : InstFormat<30>;
-def InstFormatNDS_GPREL_17S3_I : InstFormat<31>;
-def InstFormatNDS_GPREL_18S0_S : InstFormat<32>;
-def InstFormatNDS_GPREL_17S1_S : InstFormat<33>;
-def InstFormatNDS_GPREL_17S2_S : InstFormat<34>;
-def InstFormatNDS_GPREL_17S3_S : InstFormat<35>;
-def InstFormatOther            : InstFormat<63>;
+def InstFormatPseudo        : InstFormat<0>;
+def InstFormatR             : InstFormat<1>;
+def InstFormatR4            : InstFormat<2>;
+def InstFormatI             : InstFormat<3>;
+def InstFormatS             : InstFormat<4>;
+def InstFormatB             : InstFormat<5>;
+def InstFormatU             : InstFormat<6>;
+def InstFormatJ             : InstFormat<7>;
+def InstFormatCR            : InstFormat<8>;
+def InstFormatCI            : InstFormat<9>;
+def InstFormatCSS           : InstFormat<10>;
+def InstFormatCIW           : InstFormat<11>;
+def InstFormatCL            : InstFormat<12>;
+def InstFormatCS            : InstFormat<13>;
+def InstFormatCA            : InstFormat<14>;
+def InstFormatCB            : InstFormat<15>;
+def InstFormatCJ            : InstFormat<16>;
+def InstFormatCU            : InstFormat<17>;
+def InstFormatCLB           : InstFormat<18>;
+def InstFormatCLH           : InstFormat<19>;
+def InstFormatCSB           : InstFormat<20>;
+def InstFormatCSH           : InstFormat<21>;
+def InstFormatQC_EAI        : InstFormat<22>;
+def InstFormatQC_EI         : InstFormat<23>;
+def InstFormatQC_EB         : InstFormat<24>;
+def InstFormatQC_EJ         : InstFormat<25>;
+def InstFormatQC_ES         : InstFormat<26>;
+def InstFormatNDS_BRANCH_10 : InstFormat<27>;
+def InstFormatOther         : InstFormat<31>;
 
 
 class RISCVVConstraint<bits<3> val> {
@@ -201,42 +193,42 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let AsmString = opcodestr # !if(!empty(argstr), "", "\t" # argstr);
   let Pattern = pattern;
 
-  let TSFlags{5-0} = format.Value;
+  let TSFlags{4-0} = format.Value;
 
   // Defaults
   RISCVVConstraint RVVConstraint = NoConstraint;
-  let TSFlags{8-6} = RVVConstraint.Value;
+  let TSFlags{7-5} = RVVConstraint.Value;
 
   bits<3> VLMul = 0;
-  let TSFlags{11-9} = VLMul;
+  let TSFlags{10-8} = VLMul;
 
   bit IsTiedPseudo = 0;
-  let TSFlags{12} = IsTiedPseudo;
+  let TSFlags{11} = IsTiedPseudo;
 
   bit HasSEWOp = 0;
-  let TSFlags{13} = HasSEWOp;
+  let TSFlags{12} = HasSEWOp;
 
   bit HasVLOp = 0;
-  let TSFlags{14} = HasVLOp;
+  let TSFlags{13} = HasVLOp;
 
   bit HasVecPolicyOp = 0;
-  let TSFlags{15} = HasVecPolicyOp;
+  let TSFlags{14} = HasVecPolicyOp;
 
   bit IsRVVWideningReduction = 0;
-  let TSFlags{16} = IsRVVWideningReduction;
+  let TSFlags{15} = IsRVVWideningReduction;
 
   bit UsesMaskPolicy = 0;
-  let TSFlags{17} = UsesMaskPolicy;
+  let TSFlags{16} = UsesMaskPolicy;
 
   // Indicates that the result can be considered sign extended from bit 31. Some
   // instructions with this flag aren't W instructions, but are either sign
   // extended from a smaller size, always outputs a small integer, or put zeros
   // in bits 63:31. Used by the SExtWRemoval pass.
   bit IsSignExtendingOpW = 0;
-  let TSFlags{18} = IsSignExtendingOpW;
+  let TSFlags{17} = IsSignExtendingOpW;
 
   bit HasRoundModeOp = 0;
-  let TSFlags{19} =  HasRoundModeOp;
+  let TSFlags{18} =  HasRoundModeOp;
 
   // This is only valid when HasRoundModeOp is set to 1. HasRoundModeOp is set
   // to 1 for vector fixed-point or floating-point intrinsics. This bit is
@@ -244,7 +236,7 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // fixed-point / floating-point instructions and emit appropriate read/write
   // to the correct CSR.
   bit UsesVXRM = 0;
-  let TSFlags{20} =  UsesVXRM;
+  let TSFlags{19} =  UsesVXRM;
 
   // Indicates whether these instructions can partially overlap between source
   // registers and destination registers according to the vector spec.
@@ -253,19 +245,19 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // 2 -> narrowing case
   // 3 -> widening case
   bits<2> TargetOverlapConstraintType = 0;
-  let TSFlags{22-21} = TargetOverlapConstraintType;
+  let TSFlags{21-20} = TargetOverlapConstraintType;
 
   // Most vector instructions are elementwise, but some may depend on the value
   // of VL (e.g. vslide1down.vx), and others may depend on the VL and mask
   // (e.g. vredsum.vs, viota.m). Mark these instructions so that peepholes avoid
   // changing their VL and/or mask.
   EltDeps ElementsDependOn = EltDepsNone;
-  let TSFlags{23} = ElementsDependOn.VL;
-  let TSFlags{24} = ElementsDependOn.Mask;
+  let TSFlags{22} = ElementsDependOn.VL;
+  let TSFlags{23} = ElementsDependOn.Mask;
 
   // Indicates the EEW of a vector instruction's destination operand.
   EEW DestEEW = EEWSEWx1;
-  let TSFlags{26-25} = DestEEW.Value;
+  let TSFlags{25-24} = DestEEW.Value;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,

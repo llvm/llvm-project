@@ -649,22 +649,6 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       RelaxCandidate = true;
     } else if (MIFrm == RISCVII::InstFormatNDS_BRANCH_10) {
       FixupKind = RISCV::fixup_riscv_nds_branch_10;
-    } else if (MIFrm == RISCVII::InstFormatNDS_GPREL_18S0_I) {
-      FixupKind = ELF::R_RISCV_NDS_GPREL_18S0_I;
-    } else if (MIFrm == RISCVII::InstFormatNDS_GPREL_17S1_I) {
-      FixupKind = ELF::R_RISCV_NDS_GPREL_17S1_I;
-    } else if (MIFrm == RISCVII::InstFormatNDS_GPREL_17S2_I) {
-      FixupKind = ELF::R_RISCV_NDS_GPREL_17S2_I;
-    } else if (MIFrm == RISCVII::InstFormatNDS_GPREL_17S3_I) {
-      FixupKind = ELF::R_RISCV_NDS_GPREL_17S3_I;
-    } else if (MIFrm == RISCVII::InstFormatNDS_GPREL_18S0_S) {
-      FixupKind = ELF::R_RISCV_NDS_GPREL_18S0_S;
-    } else if (MIFrm == RISCVII::InstFormatNDS_GPREL_17S1_S) {
-      FixupKind = ELF::R_RISCV_NDS_GPREL_17S1_S;
-    } else if (MIFrm == RISCVII::InstFormatNDS_GPREL_17S2_S) {
-      FixupKind = ELF::R_RISCV_NDS_GPREL_17S2_S;
-    } else if (MIFrm == RISCVII::InstFormatNDS_GPREL_17S3_S) {
-      FixupKind = ELF::R_RISCV_NDS_GPREL_17S3_S;
     }
   }
 
