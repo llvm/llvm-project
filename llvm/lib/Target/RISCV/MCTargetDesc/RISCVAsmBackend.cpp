@@ -8,7 +8,6 @@
 
 #include "RISCVAsmBackend.h"
 #include "RISCVFixupKinds.h"
-#include "RISCVMCExpr.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
@@ -86,7 +85,7 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_qc_e_branch", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_riscv_qc_e_32", 16, 32, 0},
       {"fixup_riscv_qc_abs20_u", 12, 20, 0},
-      {"fixup_riscv_qc_e_jump_plt", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_qc_e_call_plt", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
   };
   static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
@@ -131,22 +130,42 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
     // For conditional branch instructions the immediate must be
     // in the range [-4096, 4094].
     return Offset > 4094 || Offset < -4096;
+  case RISCV::fixup_riscv_jal:
+    // For jump instructions the immediate must be in the range
+    // [-1048576, 1048574]
+    return Offset > 1048574 || Offset < -1048576;
   }
 }
 
 // Given a compressed control flow instruction this function returns
-// the expanded instruction.
-static unsigned getRelaxedOpcode(unsigned Op) {
-  switch (Op) {
-  default:
-    return Op;
+// the expanded instruction, or the original instruction code if no
+// expansion is available.
+static unsigned getRelaxedOpcode(const MCInst &Inst,
+                                 const MCSubtargetInfo &STI) {
+  switch (Inst.getOpcode()) {
   case RISCV::C_BEQZ:
     return RISCV::BEQ;
   case RISCV::C_BNEZ:
     return RISCV::BNE;
   case RISCV::C_J:
   case RISCV::C_JAL: // fall through.
+    // This only relaxes one "step" - i.e. from C.J to JAL, not from C.J to
+    // QC.E.J, because we can always relax again if needed.
     return RISCV::JAL;
+  case RISCV::JAL: {
+    // We can only relax JAL if we have Xqcilb
+    if (!STI.hasFeature(RISCV::FeatureVendorXqcilb))
+      break;
+
+    // And only if it is using X0 or X1 for rd.
+    MCRegister Reg = Inst.getOperand(0).getReg();
+    if (Reg == RISCV::X0)
+      return RISCV::QC_E_J;
+    if (Reg == RISCV::X1)
+      return RISCV::QC_E_JAL;
+
+    break;
+  }
   case RISCV::BEQ:
     return RISCV::PseudoLongBEQ;
   case RISCV::BNE:
@@ -184,6 +203,9 @@ static unsigned getRelaxedOpcode(unsigned Op) {
   case RISCV::QC_E_BGEUI:
     return RISCV::PseudoLongQC_E_BGEUI;
   }
+
+  // Returning the original opcode means we cannot relax the instruction.
+  return Inst.getOpcode();
 }
 
 void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
@@ -201,6 +223,20 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   case RISCV::C_JAL: {
     [[maybe_unused]] bool Success = RISCVRVC::uncompress(Res, Inst, STI);
     assert(Success && "Can't uncompress instruction");
+    assert(Res.getOpcode() == getRelaxedOpcode(Inst, STI) &&
+           "Branch Relaxation Error");
+    break;
+  }
+  case RISCV::JAL: {
+    // This has to be written manually because the QC.E.J -> JAL is
+    // compression-only, so that it is not used when printing disassembly.
+    assert(STI.hasFeature(RISCV::FeatureVendorXqcilb) &&
+           "JAL is only relaxable with Xqcilb");
+    assert((Inst.getOperand(0).getReg() == RISCV::X0 ||
+            Inst.getOperand(0).getReg() == RISCV::X1) &&
+           "JAL only relaxable with rd=x0 or rd=x1");
+    Res.setOpcode(getRelaxedOpcode(Inst, STI));
+    Res.addOperand(Inst.getOperand(1));
     break;
   }
   case RISCV::BEQ:
@@ -221,7 +257,7 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   case RISCV::QC_E_BGEI:
   case RISCV::QC_E_BLTUI:
   case RISCV::QC_E_BGEUI:
-    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode()));
+    Res.setOpcode(getRelaxedOpcode(Inst, STI));
     Res.addOperand(Inst.getOperand(0));
     Res.addOperand(Inst.getOperand(1));
     Res.addOperand(Inst.getOperand(2));
@@ -370,7 +406,7 @@ bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
   if (STI.hasFeature(RISCV::FeatureExactAssembly))
     return false;
 
-  return getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode();
+  return getRelaxedOpcode(Inst, STI) != Inst.getOpcode();
 }
 
 bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
@@ -516,7 +552,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     Value = (Bit19 << 31) | (Bit14_0 << 16) | (Bit18_15 << 12);
     return Value;
   }
-  case RISCV::fixup_riscv_qc_e_jump_plt: {
+  case RISCV::fixup_riscv_qc_e_call_plt: {
     if (!isInt<32>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     if (Value & 0x1)
@@ -554,6 +590,57 @@ bool RISCVAsmBackend::isPCRelFixupResolved(const MCSymbol *SymA,
   return !Res.getSubSym();
 }
 
+// Get the corresponding PC-relative HI fixup that a S_PCREL_LO points to, and
+// optionally the fragment containing it.
+//
+// \returns nullptr if this isn't a S_PCREL_LO pointing to a known PC-relative
+// HI fixup.
+static const MCFixup *getPCRelHiFixup(const MCSpecifierExpr &Expr,
+                                      const MCFragment **DFOut) {
+  MCValue AUIPCLoc;
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr))
+    return nullptr;
+
+  const MCSymbol *AUIPCSymbol = AUIPCLoc.getAddSym();
+  if (!AUIPCSymbol)
+    return nullptr;
+  const auto *DF = dyn_cast_or_null<MCDataFragment>(AUIPCSymbol->getFragment());
+
+  if (!DF)
+    return nullptr;
+
+  uint64_t Offset = AUIPCSymbol->getOffset();
+  if (DF->getContents().size() == Offset) {
+    DF = dyn_cast_or_null<MCDataFragment>(DF->getNext());
+    if (!DF)
+      return nullptr;
+    Offset = 0;
+  }
+
+  for (const MCFixup &F : DF->getFixups()) {
+    if (F.getOffset() != Offset)
+      continue;
+    auto Kind = F.getTargetKind();
+    if (!mc::isRelocation(F.getKind())) {
+      if (Kind == RISCV::fixup_riscv_pcrel_hi20) {
+        *DFOut = DF;
+        return &F;
+      }
+      break;
+    }
+    switch (Kind) {
+    case ELF::R_RISCV_GOT_HI20:
+    case ELF::R_RISCV_TLS_GOT_HI20:
+    case ELF::R_RISCV_TLS_GD_HI20:
+    case ELF::R_RISCV_TLSDESC_HI20:
+      *DFOut = DF;
+      return &F;
+    }
+  }
+
+  return nullptr;
+}
+
 bool RISCVAsmBackend::evaluateTargetFixup(const MCFixup &Fixup,
                                           const MCValue &Target,
                                           uint64_t &Value) {
@@ -565,7 +652,8 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCFixup &Fixup,
     llvm_unreachable("Unexpected fixup kind!");
   case RISCV::fixup_riscv_pcrel_lo12_i:
   case RISCV::fixup_riscv_pcrel_lo12_s: {
-    AUIPCFixup = cast<RISCVMCExpr>(Fixup.getValue())->getPCRelHiFixup(&AUIPCDF);
+    AUIPCFixup =
+        getPCRelHiFixup(cast<MCSpecifierExpr>(*Fixup.getValue()), &AUIPCDF);
     if (!AUIPCFixup) {
       getContext().reportError(Fixup.getLoc(),
                                "could not find corresponding %pcrel_hi");
@@ -611,7 +699,7 @@ void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F,
   case RISCV::fixup_riscv_qc_e_branch:
   case RISCV::fixup_riscv_qc_abs20_u:
   case RISCV::fixup_riscv_qc_e_32:
-  case RISCV::fixup_riscv_qc_e_jump_plt:
+  case RISCV::fixup_riscv_qc_e_call_plt:
     VendorIdentifier = "QUALCOMM";
     break;
   }

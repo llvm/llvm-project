@@ -1442,6 +1442,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setMinimumJumpTableEntries(PPCMinimumJumpTableEntries);
 
   setMinFunctionAlignment(Align(4));
+  setMinCmpXchgSizeInBits(Subtarget.hasPartwordAtomics() ? 8 : 32);
 
   auto CPUDirective = Subtarget.getCPUDirective();
   switch (CPUDirective) {
@@ -7766,7 +7767,9 @@ SDValue PPCTargetLowering::LowerCall_AIX(
           DAG.getConstant(VA.getLocMemOffset(), dl, StackPtr.getValueType());
       PtrOff = DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr, PtrOff);
       MemOpChains.push_back(
-          DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo()));
+          DAG.getStore(Chain, dl, Arg, PtrOff,
+                       MachinePointerInfo::getStack(MF, VA.getLocMemOffset()),
+                       Subtarget.getFrameLowering()->getStackAlign()));
 
       continue;
     }
@@ -12688,6 +12691,76 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
 
 static Instruction *callIntrinsic(IRBuilderBase &Builder, Intrinsic::ID Id) {
   return Builder.CreateIntrinsic(Id, {});
+}
+
+Value *PPCTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
+                                         Value *Addr,
+                                         AtomicOrdering Ord) const {
+  unsigned SZ = ValueTy->getPrimitiveSizeInBits();
+
+  assert((SZ == 8 || SZ == 16 || SZ == 32 || SZ == 64) &&
+         "Only 8/16/32/64-bit atomic loads supported");
+  Intrinsic::ID IntID;
+  switch (SZ) {
+  default:
+    llvm_unreachable("Unexpected PrimitiveSize");
+  case 8:
+    IntID = Intrinsic::ppc_lbarx;
+    assert(Subtarget.hasPartwordAtomics() && "No support partword atomics.");
+    break;
+  case 16:
+    IntID = Intrinsic::ppc_lharx;
+    assert(Subtarget.hasPartwordAtomics() && "No support partword atomics.");
+    break;
+  case 32:
+    IntID = Intrinsic::ppc_lwarx;
+    break;
+  case 64:
+    IntID = Intrinsic::ppc_ldarx;
+    break;
+  }
+  Value *Call =
+      Builder.CreateIntrinsic(IntID, Addr, /*FMFSource=*/nullptr, "larx");
+
+  return Builder.CreateTruncOrBitCast(Call, ValueTy);
+}
+
+// Perform a store-conditional operation to Addr. Return the status of the
+// store. This should be 0 if the store succeeded, non-zero otherwise.
+Value *PPCTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
+                                               Value *Val, Value *Addr,
+                                               AtomicOrdering Ord) const {
+  Type *Ty = Val->getType();
+  unsigned SZ = Ty->getPrimitiveSizeInBits();
+
+  assert((SZ == 8 || SZ == 16 || SZ == 32 || SZ == 64) &&
+         "Only 8/16/32/64-bit atomic loads supported");
+  Intrinsic::ID IntID;
+  switch (SZ) {
+  default:
+    llvm_unreachable("Unexpected PrimitiveSize");
+  case 8:
+    IntID = Intrinsic::ppc_stbcx;
+    assert(Subtarget.hasPartwordAtomics() && "No support partword atomics.");
+    break;
+  case 16:
+    IntID = Intrinsic::ppc_sthcx;
+    assert(Subtarget.hasPartwordAtomics() && "No support partword atomics.");
+    break;
+  case 32:
+    IntID = Intrinsic::ppc_stwcx;
+    break;
+  case 64:
+    IntID = Intrinsic::ppc_stdcx;
+    break;
+  }
+
+  if (SZ == 8 || SZ == 16)
+    Val = Builder.CreateZExt(Val, Builder.getInt32Ty());
+
+  Value *Call = Builder.CreateIntrinsic(IntID, {Addr, Val},
+                                        /*FMFSource=*/nullptr, "stcx");
+  return Builder.CreateXor(Call, Builder.getInt32(1));
 }
 
 // The mappings for emitLeading/TrailingFence is taken from
@@ -19651,7 +19724,7 @@ PPCTargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
   unsigned Size = AI->getNewValOperand()->getType()->getPrimitiveSizeInBits();
   if (shouldInlineQuadwordAtomics() && Size == 128)
     return AtomicExpansionKind::MaskedIntrinsic;
-  return TargetLowering::shouldExpandAtomicCmpXchgInIR(AI);
+  return AtomicExpansionKind::LLSC;
 }
 
 static Intrinsic::ID
