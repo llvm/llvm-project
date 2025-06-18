@@ -129,8 +129,8 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t Type,
   lck.unlock();
 
   // Schedule the full buffer for flushing till the corresponding cursor.
-  if (ToBeFlushedCursor)
-    setComplete(ToBeFlushedCursor, ToBeFlushedBuf);
+  if (OMPX_FlushOnBufferFull && ToBeFlushedCursor)
+    triggerFlushOnBufferFull(ToBeFlushedCursor, ToBeFlushedBuf);
 
   DP("Thread %lu: Assigned %lu bytes at %p in new buffer with id %lu for "
      "device %ld\n",
@@ -148,10 +148,10 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t Type,
  * called without holding any lock.
  * Note lock order: buf_lock -> flush_lock
  */
-void OmptTracingBufferMgr::setComplete(void *cursor, BufPtr Buf) {
+void OmptTracingBufferMgr::triggerFlushOnBufferFull(void *cursor, BufPtr Buf) {
   std::unique_lock<std::mutex> buf_lock(BufferMgrMutex);
 
-  // Between calling setComplete and this check, a flush-all may have
+  // Between calling this function and this check, a flush-all may have
   // delivered this buffer to the tool and deleted it. So the buffer
   // may not exist.
   if (Id2BufferMap.find(Buf->Id) == Id2BufferMap.end())
@@ -729,7 +729,8 @@ void OmptTracingBufferMgr::shutdownHelperThreads() {
 void OmptTracingBufferMgr::flushAndShutdownHelperThreads() {
   std::unique_lock<std::mutex> Lock(llvm::omp::target::ompt::TraceControlMutex);
   // Flush buffers for all devices.
-  flushAllBuffers(MAX_NUM_DEVICES);
+  if (OMPX_FlushOnShutdown)
+    flushAllBuffers(MAX_NUM_DEVICES);
   shutdownHelperThreads();
 }
 
@@ -746,10 +747,5 @@ void OmptTracingBufferMgr::destroyHelperThreads() {
     thd.join();
   CompletionThreads.clear();
   HelperThreadIdMap.clear();
-}
-
-OmptTracingBufferMgr::OmptTracingBufferMgr() {
-  // no need to hold locks for init() since object is getting constructed here
-  init();
 }
 #endif

@@ -31,6 +31,8 @@
 
 #include <omp-tools.h>
 
+#include "Shared/EnvironmentVar.h"
+
 // Maximum number of devices supported in device tracing. No device tracing
 // will be performed for any device-id larger than 1023.
 #define MAX_NUM_DEVICES 1024
@@ -102,6 +104,12 @@ public:
   using BufPtr = std::shared_ptr<Buffer>;
 
 private:
+  /// Envar to control whether a buffer should be flushed when it gets full.
+  BoolEnvar OMPX_FlushOnBufferFull;
+
+  /// Envar to control whether all buffers should be flushed during shutdown.
+  BoolEnvar OMPX_FlushOnShutdown;
+
   // Internal variable for tracking threads to wait for flush
   uint32_t ThreadFlushTracker;
 
@@ -216,8 +224,8 @@ private:
 
   /// Called when a buffer \p Buf may be flushed with \p Cursor as the
   /// last allocated trace record in the buffer.
-  /// setComplete should be called without holding any lock.
-  void setComplete(void *Cursor, BufPtr Buf);
+  /// triggerFlushOnBufferFull should be called without holding any lock.
+  void triggerFlushOnBufferFull(void *Cursor, BufPtr Buf);
 
   // Called to dispatch buffer-completion callbacks for the trace records in
   // this buffer
@@ -350,7 +358,14 @@ private:
   void destroyHelperThreads();
 
 public:
-  OmptTracingBufferMgr();
+  OmptTracingBufferMgr()
+      : OMPX_FlushOnBufferFull("LIBOMPTARGET_OMPT_FLUSH_ON_BUFFER_FULL", true),
+        OMPX_FlushOnShutdown("LIBOMPTARGET_OMPT_FLUSH_ON_SHUTDOWN", true) {
+    // no need to hold locks for init() since object is getting constructed
+    // here.
+    init();
+  }
+
   OmptTracingBufferMgr(const OmptTracingBufferMgr &) = delete;
   OmptTracingBufferMgr &operator=(const OmptTracingBufferMgr &) = delete;
 
