@@ -29,7 +29,6 @@ add_object_library(
   DEPENDS
     libc.hdr.types.char32_t
     libc.hdr.types.size_t
-    libc.hdr.types.mbstate_t
     libc.hdr.types.wchar_t
     libc.src.__support.error_or
     libc.src.__support.common

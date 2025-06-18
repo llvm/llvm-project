@@ -12,7 +12,6 @@
 #include "src/__support/wchar/mbstate.h"
 
 #include "hdr/types/char32_t.h"
-#include "hdr/types/mbstate_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
@@ -21,8 +20,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
-                        mbstate_t *__restrict ps) {
-  CharacterConverter cr((internal::mbstate *)ps);
+                        mbstate *__restrict ps) {
+  static_assert(sizeof(wchar_t) == 4);
+
+  CharacterConverter cr(ps);
 
   // when s is nullptr, this is equivalent to wcrtomb(buf, L'\0', ps)
   char buf[sizeof(wchar_t) / sizeof(char)];
@@ -31,7 +32,7 @@ ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
     wc = L'\0';
   }
 
-  int status = cr.push((char32_t)wc);
+  int status = cr.push(static_cast<char32_t>(wc));
   if (status != 0)
     return Error(status);
 

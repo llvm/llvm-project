@@ -9,17 +9,16 @@
 #ifndef LLVM_LIBC_SRC__SUPPORT_WCHAR_WCRTOMB_H
 #define LLVM_LIBC_SRC__SUPPORT_WCHAR_WCRTOMB_H
 
-#include "hdr/types/mbstate_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/error_or.h"
+#include "src/__support/wchar/mbstate.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
-                        mbstate_t *__restrict ps);
+ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc, mbstate *__restrict ps);
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL

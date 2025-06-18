@@ -45,6 +45,7 @@ add_entrypoint_object(
     libc.hdr.types.mbstate_t
     libc.src.__support.libc_errno
     libc.src.__support.wchar.wcrtomb
+    libc.src.__support.wchar.mbstate
 )
 
 add_entrypoint_object(

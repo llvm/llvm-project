@@ -12,16 +12,19 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/wcrtomb.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(size_t, wcrtomb,
                    (char *__restrict s, wchar_t wc, mbstate_t *__restrict ps)) {
-  static mbstate_t internal_mbstate{0, 0, 0};
+  static internal::mbstate internal_mbstate;
 
-  auto result =
-      internal::wcrtomb(s, wc, ps == nullptr ? &internal_mbstate : ps);
+  auto result = internal::wcrtomb(
+      s, wc,
+      ps == nullptr ? &internal_mbstate
+                    : reinterpret_cast<internal::mbstate *>(ps));
 
   if (!result.has_value()) {
     libc_errno = EILSEQ;
