@@ -4476,8 +4476,10 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
   if (failed(result))
     return failure();
-  if (!isOffloadEntry)
-    return success();
+  if (!isOffloadEntry) {
+    // Pretend we have IF(false) if we're not doing offload.
+    ifCond = builder.getFalse();
+  }
 
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   MapInfoData mapData;
