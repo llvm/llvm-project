@@ -214,7 +214,7 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   if (copy)
     return allocTensorOp.getResult();
   auto copyBufferType =
-      detail::castToMemRef(getBufferType(tensor, options, state));
+      detail::asMemRefType(getBufferType(tensor, options, state));
   if (failed(copyBufferType))
     return failure();
   std::optional<Attribute> memorySpace = copyBufferType->getMemorySpace();
@@ -720,8 +720,9 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
     return bufferizableOp.getBufferType(value, options, state, invocationStack);
 
   // Op is not bufferizable.
-  return cast<TensorLikeType>(value.getType())
-      .getBufferType(options, state, [&]() { return op->emitError(); });
+  return cast<TensorLikeType>(value.getType()).getBufferType(options, [&]() {
+    return op->emitError();
+  });
 }
 
 bool bufferization::hasTensorSemantics(Operation *op) {
@@ -965,7 +966,7 @@ FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
     // If the OpResult has an equivalent OpOperand, both OpResult and
     // OpOperand bufferize to the exact same buffer type.
     Value equivalentOperand = aliases.getAliases().front().opOperand->get();
-    return castToMemRef(getBufferType(equivalentOperand, options,
+    return asMemRefType(getBufferType(equivalentOperand, options,
                                       bufferizationState, invocationStack));
   }
 
@@ -1043,19 +1044,15 @@ bool bufferization::detail::defaultHasTensorSemantics(Operation *op) {
 }
 
 FailureOr<BaseMemRefType>
-bufferization::detail::castToMemRef(FailureOr<BufferLikeType> bufferType) {
+bufferization::detail::asMemRefType(FailureOr<BufferLikeType> bufferType) {
   if (failed(bufferType))
     return failure();
-  assert(isa<BaseMemRefType>(*bufferType) && "expected memref type");
   return cast<BaseMemRefType>(*bufferType);
 }
 
 bool bufferization::detail::typesMatchAfterBufferization(Operation &op,
                                                          Value tensor,
                                                          Value buffer) {
-  assert(isa<TensorLikeType>(tensor.getType()) && "expected TensorLikeType");
-  assert(isa<BufferLikeType>(buffer.getType()) && "expected BufferLikeType");
-
   return mlir::succeeded(
       cast<TensorLikeType>(tensor.getType())
           .verifyCompatibleBufferType(cast<BufferLikeType>(buffer.getType()),

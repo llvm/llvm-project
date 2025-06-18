@@ -432,7 +432,6 @@ def TestTensorType : Test_Type<"TestTensor",
     // TensorLikeTypeInterface:
     ::mlir::FailureOr<::mlir::bufferization::BufferLikeType>
     getBufferType(const ::mlir::bufferization::BufferizationOptions& options,
-                  const ::mlir::bufferization::BufferizationState& state,
                   ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError);
 
     ::mlir::LogicalResult verifyCompatibleBufferType(

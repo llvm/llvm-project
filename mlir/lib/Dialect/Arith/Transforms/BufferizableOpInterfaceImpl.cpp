@@ -164,7 +164,7 @@ struct SelectOpInterface
     // buffers have different types, they differ only in their layout map. Cast
     // both of them to the most dynamic MemRef type.
     if (trueBuffer.getType() != falseBuffer.getType()) {
-      auto targetType = bufferization::detail::castToMemRef(
+      auto targetType = bufferization::detail::asMemRefType(
           bufferization::getBufferType(selectOp.getResult(), options, state));
       if (failed(targetType))
         return failure();
@@ -188,10 +188,10 @@ struct SelectOpInterface
     auto selectOp = cast<arith::SelectOp>(op);
     assert(value == selectOp.getResult() && "invalid value");
     auto trueType =
-        bufferization::detail::castToMemRef(bufferization::getBufferType(
+        bufferization::detail::asMemRefType(bufferization::getBufferType(
             selectOp.getTrueValue(), options, state, invocationStack));
     auto falseType =
-        bufferization::detail::castToMemRef(bufferization::getBufferType(
+        bufferization::detail::asMemRefType(bufferization::getBufferType(
             selectOp.getFalseValue(), options, state, invocationStack));
     if (failed(trueType) || failed(falseType))
       return failure();

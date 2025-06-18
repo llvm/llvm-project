@@ -60,10 +60,8 @@ struct BuiltinTensorExternalModel
                                     Tensor> {
   llvm::FailureOr<BufferLikeType> getBufferType(
       mlir::Type tensor, const BufferizationOptions &options,
-      const BufferizationState &state,
       llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
     auto tensorType = cast<TensorType>(tensor);
-    // Fall back to tensor -> memref conversion.
     auto memSpace = options.defaultMemorySpaceFn(tensorType);
     if (!memSpace.has_value())
       return emitError() << "could not infer memory space";
@@ -75,7 +73,6 @@ struct BuiltinTensorExternalModel
   mlir::LogicalResult verifyCompatibleBufferType(
       mlir::Type tensor, BufferLikeType bufferType,
       llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
-    // Fall back to tensor, memref checking.
     assert(isa<TensorType>(tensor) && "expected tensor type");
     assert(isa<BaseMemRefType>(bufferType) && "expected memref type");
 

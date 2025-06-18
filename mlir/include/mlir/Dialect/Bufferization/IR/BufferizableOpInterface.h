@@ -742,7 +742,12 @@ AliasingValueList unknownGetAliasingValues(OpOperand &opOperand);
 bool defaultHasTensorSemantics(Operation *op);
 
 /// This is a helper function used when buffer type is guaranteed to be memref.
-FailureOr<BaseMemRefType> castToMemRef(FailureOr<BufferLikeType> bufferType);
+/// It performs two actions: failure state checking and an explicit llvm::cast<>
+/// from the buffer-like type interface to a BaseMemRefType. This allows easier
+/// management of differences in C++ types at the API boundaries. Valid buffer
+/// type is casted to the memref type. Otherwise, the failure state is
+/// propagated i.e. asMemRefType(mlir::failure()) returns mlir::failure().
+FailureOr<BaseMemRefType> asMemRefType(FailureOr<BufferLikeType> bufferType);
 
 /// This function is a free-standing helper that relies on
 /// bufferization::TensorLikeTypeInterface to verify the types in tensor and

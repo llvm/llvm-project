@@ -234,7 +234,7 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
     memorySpace = *getMemorySpace();
   } else if (getCopy()) {
     auto copyBufferType =
-        bufferization::detail::castToMemRef(bufferization::getBufferType(
+        bufferization::detail::asMemRefType(bufferization::getBufferType(
             getCopy(), options, state, invocationStack));
     if (failed(copyBufferType))
       return failure();

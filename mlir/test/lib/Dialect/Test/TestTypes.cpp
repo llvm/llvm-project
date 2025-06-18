@@ -549,7 +549,6 @@ TestTypeOpAsmTypeInterfaceType::getAlias(::llvm::raw_ostream &os) const {
 ::mlir::FailureOr<::mlir::bufferization::BufferLikeType>
 TestTensorType::getBufferType(
     const ::mlir::bufferization::BufferizationOptions &,
-    const ::mlir::bufferization::BufferizationState &,
     ::llvm::function_ref<::mlir::InFlightDiagnostic()>) {
   return cast<bufferization::BufferLikeType>(
       TestMemrefType::get(getContext(), getShape(), getElementType(), nullptr));

@@ -31,7 +31,6 @@ def Bufferization_TensorLikeTypeInterface
       /*methodName=*/"getBufferType",
       /*args=*/(ins
         "const ::mlir::bufferization::BufferizationOptions &":$options,
-        "const ::mlir::bufferization::BufferizationState &":$state,
         "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError
       )
     >,

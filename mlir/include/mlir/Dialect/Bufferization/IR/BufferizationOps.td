@@ -404,7 +404,10 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
   let summary = "create a buffer-like type from a tensor-like type";
   let description = [{
     An operation that creates a tensor from a buffer. The result value is a
-    tensor-like type whose shape and element type match the buffer-like operand.
+    tensor-like type that must match the corresponding buffer-like operand as
+    per TensorLikeType::verifyCompatibleBufferType(). For builtins (TensorType
+    and BaseMemRefType), this means that shapes and element types match between
+    the tensor and the buffer.
 
     The opposite of this op is `to_buffer`. Together, these two ops are
     useful for source/target materializations when doing type conversions
