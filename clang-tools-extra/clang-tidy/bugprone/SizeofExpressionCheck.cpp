@@ -99,7 +99,8 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   auto LoopExpr =
       [](const ast_matchers::internal::Matcher<Stmt> &InnerMatcher) {
-        return stmt(anyOf(forStmt(InnerMatcher), whileStmt(InnerMatcher), doStmt(InnerMatcher)));
+        return stmt(anyOf(forStmt(InnerMatcher), whileStmt(InnerMatcher),
+                          doStmt(InnerMatcher)));
       };
 
   const auto IntegerExpr = ignoringParenImpCasts(integerLiteral());
@@ -140,10 +141,11 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   }
 
   if (WarnOnSizeOfInLoopTermination) {
-    Finder->addMatcher(
-        LoopExpr(hasDescendant(
-           binaryOperator(allOf(has(SizeOfExpr.bind("sizeof-expr")), isComparisonOperator()))
-        )).bind("loop-expr"), this);
+    Finder->addMatcher(LoopExpr(hasDescendant(binaryOperator(
+                                    allOf(has(SizeOfExpr.bind("sizeof-expr")),
+                                          isComparisonOperator()))))
+                           .bind("loop-expr"),
+                       this);
   }
 
   // Detect sizeof(kPtr) where kPtr is 'const char* kPtr = "abc"';
@@ -373,7 +375,7 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     auto *SizeofArgTy = Result.Nodes.getNodeAs<Type>("sizeof-arg-type");
     if (const auto member = dyn_cast<MemberPointerType>(SizeofArgTy))
       SizeofArgTy = member->getPointeeType().getTypePtr();
- 
+
     auto Loc = Result.Nodes.getNodeAs<Expr>("sizeof-expr");
 
     if (const auto type = dyn_cast<ArrayType>(SizeofArgTy)) {
