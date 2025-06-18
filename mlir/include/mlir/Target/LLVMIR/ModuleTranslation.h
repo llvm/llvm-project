@@ -189,7 +189,7 @@ public:
                                   llvm::Instruction *inst);
 
   /// Sets LLVM profiling metadata for operations that have branch weights.
-  void setBranchWeightsMetadata(BranchWeightOpInterface op);
+  void setBranchWeightsMetadata(WeightedBranchOpInterface op);
 
   /// Sets LLVM loop metadata for branch operations that have a loop annotation
   /// attribute.

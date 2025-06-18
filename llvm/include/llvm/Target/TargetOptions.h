@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/Compiler.h"
 
 #include <memory>
 
@@ -158,12 +159,12 @@ public:
 
   /// DisableFramePointerElim - This returns true if frame pointer elimination
   /// optimization should be disabled for the given machine function.
-  bool DisableFramePointerElim(const MachineFunction &MF) const;
+  LLVM_ABI bool DisableFramePointerElim(const MachineFunction &MF) const;
 
   /// FramePointerIsReserved - This returns true if the frame pointer must
   /// always either point to a new frame record or be un-modified in the given
   /// function.
-  bool FramePointerIsReserved(const MachineFunction &MF) const;
+  LLVM_ABI bool FramePointerIsReserved(const MachineFunction &MF) const;
 
   /// If greater than 0, override the default value of
   /// MCAsmInfo::BinutilsVersion.
@@ -219,7 +220,7 @@ public:
   /// truncations).  If this is enabled (set to true), the code generator must
   /// assume that the rounding mode may dynamically change.
   unsigned HonorSignDependentRoundingFPMathOption : 1;
-  bool HonorSignDependentRoundingFPMath() const;
+  LLVM_ABI bool HonorSignDependentRoundingFPMath() const;
 
   /// NoZerosInBSS - By default some codegens place zero-initialized data to
   /// .bss section. This flag disables such behaviour (necessary, e.g. for
@@ -346,7 +347,7 @@ public:
   unsigned EnableDebugEntryValues : 1;
   /// NOTE: There are targets that still do not support the debug entry values
   /// production.
-  bool ShouldEmitDebugEntryValues() const;
+  LLVM_ABI bool ShouldEmitDebugEntryValues() const;
 
   // When set to true, use experimental new debug variable location tracking,
   // which seeks to follow the values of variables rather than their location,
@@ -450,7 +451,7 @@ public:
 
   DenormalMode getRawFP32DenormalMode() const { return FP32DenormalMode; }
 
-  DenormalMode getDenormalMode(const fltSemantics &FPType) const;
+  LLVM_ABI DenormalMode getDenormalMode(const fltSemantics &FPType) const;
 
   /// What exception model to use
   ExceptionHandling ExceptionModel = ExceptionHandling::None;

@@ -1211,13 +1211,13 @@ public:
 
     switch (Inst->getCalledFunction()->getIntrinsicID()) {
     case Intrinsic::matrix_multiply:
-      return LowerMultiply(Inst);
+      return LowerMultiply(Inst, Builder);
     case Intrinsic::matrix_transpose:
-      return LowerTranspose(Inst);
+      return LowerTranspose(Inst, Builder);
     case Intrinsic::matrix_column_major_load:
-      return LowerColumnMajorLoad(Inst);
+      return LowerColumnMajorLoad(Inst, Builder);
     case Intrinsic::matrix_column_major_store:
-      return LowerColumnMajorStore(Inst);
+      return LowerColumnMajorStore(Inst, Builder);
     case Intrinsic::abs:
     case Intrinsic::fabs: {
       MatrixTy Result;
@@ -1312,8 +1312,8 @@ public:
 
   /// Lower a load instruction with shape information.
   MatrixTy LowerLoad(Instruction *Inst, Value *Ptr, MaybeAlign Align,
-                     Value *Stride, bool IsVolatile, ShapeInfo Shape) {
-    IRBuilder<> Builder(Inst);
+                     Value *Stride, bool IsVolatile, ShapeInfo Shape,
+                     IRBuilder<> &Builder) {
     return loadMatrix(Inst->getType(), Ptr, Align, Stride, IsVolatile, Shape,
                       Builder);
   }
@@ -1321,14 +1321,14 @@ public:
   /// Lowers llvm.matrix.column.major.load.
   ///
   /// The intrinsic loads a matrix from memory using a stride between columns.
-  MatrixTy LowerColumnMajorLoad(CallInst *Inst) {
+  MatrixTy LowerColumnMajorLoad(CallInst *Inst, IRBuilder<> &Builder) {
     assert(MatrixLayout == MatrixLayoutTy::ColumnMajor &&
            "Intrinsic only supports column-major layout!");
     Value *Ptr = Inst->getArgOperand(0);
     Value *Stride = Inst->getArgOperand(1);
     return LowerLoad(Inst, Ptr, Inst->getParamAlign(0), Stride,
                      cast<ConstantInt>(Inst->getArgOperand(2))->isOne(),
-                     {Inst->getArgOperand(3), Inst->getArgOperand(4)});
+                     {Inst->getArgOperand(3), Inst->getArgOperand(4)}, Builder);
   }
 
   /// Stores a sub-matrix \p StoreVal into the \p R x \p C matrix starting at \p
@@ -1373,8 +1373,7 @@ public:
   /// Lower a store instruction with shape information.
   MatrixTy LowerStore(Instruction *Inst, Value *Matrix, Value *Ptr,
                       MaybeAlign A, Value *Stride, bool IsVolatile,
-                      ShapeInfo Shape) {
-    IRBuilder<> Builder(Inst);
+                      ShapeInfo Shape, IRBuilder<> &Builder) {
     auto StoreVal = getMatrix(Matrix, Shape, Builder);
     return storeMatrix(Matrix->getType(), StoreVal, Ptr, A, Stride, IsVolatile,
                        Builder);
@@ -1383,7 +1382,7 @@ public:
   /// Lowers llvm.matrix.column.major.store.
   ///
   /// The intrinsic store a matrix back memory using a stride between columns.
-  MatrixTy LowerColumnMajorStore(CallInst *Inst) {
+  MatrixTy LowerColumnMajorStore(CallInst *Inst, IRBuilder<> &Builder) {
     assert(MatrixLayout == MatrixLayoutTy::ColumnMajor &&
            "Intrinsic only supports column-major layout!");
     Value *Matrix = Inst->getArgOperand(0);
@@ -1391,7 +1390,8 @@ public:
     Value *Stride = Inst->getArgOperand(2);
     return LowerStore(Inst, Matrix, Ptr, Inst->getParamAlign(1), Stride,
                       cast<ConstantInt>(Inst->getArgOperand(3))->isOne(),
-                      {Inst->getArgOperand(4), Inst->getArgOperand(5)});
+                      {Inst->getArgOperand(4), Inst->getArgOperand(5)},
+                      Builder);
   }
 
   // Set elements I..I+NumElts-1 to Block
@@ -2166,8 +2166,7 @@ public:
   }
 
   /// Lowers llvm.matrix.multiply.
-  MatrixTy LowerMultiply(CallInst *MatMul) {
-    IRBuilder<> Builder(MatMul);
+  MatrixTy LowerMultiply(CallInst *MatMul, IRBuilder<> &Builder) {
     auto *EltType = cast<FixedVectorType>(MatMul->getType())->getElementType();
     ShapeInfo LShape(MatMul->getArgOperand(2), MatMul->getArgOperand(3));
     ShapeInfo RShape(MatMul->getArgOperand(3), MatMul->getArgOperand(4));
@@ -2192,9 +2191,8 @@ public:
   }
 
   /// Lowers llvm.matrix.transpose.
-  MatrixTy LowerTranspose(CallInst *Inst) {
+  MatrixTy LowerTranspose(CallInst *Inst, IRBuilder<> &Builder) {
     MatrixTy Result;
-    IRBuilder<> Builder(Inst);
     Value *InputVal = Inst->getArgOperand(0);
     FixedVectorType *VectorTy = cast<FixedVectorType>(InputVal->getType());
     ShapeInfo ArgShape(Inst->getArgOperand(1), Inst->getArgOperand(2));
@@ -2230,13 +2228,15 @@ public:
   MatrixTy VisitLoad(LoadInst *Inst, const ShapeInfo &SI, Value *Ptr,
                      IRBuilder<> &Builder) {
     return LowerLoad(Inst, Ptr, Inst->getAlign(),
-                     Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI);
+                     Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI,
+                     Builder);
   }
 
   MatrixTy VisitStore(StoreInst *Inst, const ShapeInfo &SI, Value *StoredVal,
                       Value *Ptr, IRBuilder<> &Builder) {
     return LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
-                      Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI);
+                      Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI,
+                      Builder);
   }
 
   /// Lower binary operators.
