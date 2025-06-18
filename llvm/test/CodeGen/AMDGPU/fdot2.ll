@@ -34,11 +34,11 @@ entry:
   %src1.el2 = extractelement <2 x half> %src1.vec, i64 1
   %src2.el2 = extractelement <2 x half> %src2.vec, i64 1
 
-  %mul2 = fmul fast half %src1.el2, %src2.el2
-  %mul1 = fmul fast half %src1.el1, %src2.el1
+  %mul2 = fmul contract half %src1.el2, %src2.el2
+  %mul1 = fmul contract half %src1.el1, %src2.el1
   %acc = load half, ptr addrspace(1) %dst, align 2
-  %acc1 = fadd fast half %mul2, %acc
-  %acc2 = fadd fast half %mul1, %acc1
+  %acc1 = fadd contract half %mul2, %acc
+  %acc2 = fadd contract half %mul1, %acc1
   store half %acc2, ptr addrspace(1) %dst, align 2
   ret void
 }
@@ -101,11 +101,11 @@ entry:
   %src2.el2 = extractelement <2 x half> %src2.vec, i64 1
   %csrc2.el2 = fpext half %src2.el2 to float
 
-  %mul2 = fmul fast float %csrc1.el2, %csrc2.el2
-  %mul1 = fmul fast float %csrc1.el1, %csrc2.el1
+  %mul2 = fmul contract float %csrc1.el2, %csrc2.el2
+  %mul1 = fmul contract float %csrc1.el1, %csrc2.el1
   %acc = load float, ptr addrspace(1) %dst, align 4
-  %acc1 = fadd fast float %mul2, %acc
-  %acc2 = fadd fast float %mul1, %acc1
+  %acc1 = fadd contract float %mul2, %acc
+  %acc2 = fadd contract float %mul1, %acc1
   store float %acc2, ptr addrspace(1) %dst, align 4
   ret void
 }
@@ -172,11 +172,11 @@ entry:
   %src2.el2 = extractelement <2 x half> %src2.vec, i64 1
   %csrc2.el2 = fpext half %src2.el2 to float
 
-  %mul2 = fmul fast float %csrc2.el2, %csrc1.el2
-  %mul1 = fmul fast float %csrc1.el1, %csrc2.el1
+  %mul2 = fmul contract float %csrc2.el2, %csrc1.el2
+  %mul1 = fmul contract float %csrc1.el1, %csrc2.el1
   %acc = load float, ptr addrspace(1) %dst, align 4
-  %acc1 = fadd fast float %mul2, %acc
-  %acc2 = fadd fast float %mul1, %acc1
+  %acc1 = fadd contract float %mul2, %acc
+  %acc2 = fadd contract float %mul1, %acc1
   store float %acc2, ptr addrspace(1) %dst, align 4
   ret void
 }
@@ -239,11 +239,11 @@ entry:
   %src2.el2 = extractelement <4 x half> %src2.vec, i64 1
   %csrc2.el2 = fpext half %src2.el2 to float
 
-  %mul2 = fmul fast float %csrc1.el2, %csrc2.el2
+  %mul2 = fmul contract float %csrc1.el2, %csrc2.el2
   %mul1 = fmul float %csrc1.el1, %csrc2.el1
   %acc = load float, ptr addrspace(1) %dst, align 4
-  %acc1 = fadd fast float %mul2, %acc
-  %acc2 = fadd fast float %mul1, %acc1
+  %acc1 = fadd contract float %mul2, %acc
+  %acc2 = fadd contract float %mul1, %acc1
   store float %acc2, ptr addrspace(1) %dst, align 4
   ret void
 }
@@ -304,11 +304,11 @@ entry:
   %src2.el2 = extractelement <2 x half> %src2.vec, i64 1
   %csrc2.el2 = fpext half %src2.el2 to float
 
-  %mul2 = fmul fast float %csrc1.el2, %csrc1.el1
-  %mul1 = fmul fast float %csrc2.el1, %csrc2.el2
+  %mul2 = fmul contract float %csrc1.el2, %csrc1.el1
+  %mul1 = fmul contract float %csrc2.el1, %csrc2.el2
   %acc = load float, ptr addrspace(1) %dst, align 4
-  %acc1 = fadd fast float %mul2, %acc
-  %acc2 = fadd fast float %mul1, %acc1
+  %acc1 = fadd contract float %mul2, %acc
+  %acc2 = fadd contract float %mul1, %acc1
   store float %acc2, ptr addrspace(1) %dst, align 4
   ret void
 }
@@ -370,11 +370,11 @@ entry:
   %src2.el2 = extractelement <2 x half> %src2.vec, i64 1
   %csrc2.el2 = fpext half %src2.el2 to float
 
-  %mul2 = fmul fast float %csrc1.el2, %csrc2.el1
-  %mul1 = fmul fast float %csrc1.el1, %csrc2.el2
+  %mul2 = fmul contract float %csrc1.el2, %csrc2.el1
+  %mul1 = fmul contract float %csrc1.el1, %csrc2.el2
   %acc = load float, ptr addrspace(1) %dst, align 4
-  %acc1 = fadd fast float %mul2, %acc
-  %acc2 = fadd fast float %mul1, %acc1
+  %acc1 = fadd contract float %mul2, %acc
+  %acc2 = fadd contract float %mul1, %acc1
   store float %acc2, ptr addrspace(1) %dst, align 4
   ret void
 }
