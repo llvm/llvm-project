@@ -60,28 +60,6 @@ static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
   return maxnum(Src0, Src1);
 }
 
-enum class KnownIEEEMode { Unknown, On, Off };
-
-/// Return KnownIEEEMode::On if we know if the use context can assume
-/// "amdgpu-ieee"="true" and KnownIEEEMode::Off if we can assume
-/// "amdgpu-ieee"="false".
-static KnownIEEEMode fpenvIEEEMode(const Instruction &I,
-                                   const GCNSubtarget &ST) {
-  if (!ST.hasIEEEMode()) // Only mode on gfx12
-    return KnownIEEEMode::On;
-
-  const Function *F = I.getFunction();
-  if (!F)
-    return KnownIEEEMode::Unknown;
-
-  Attribute IEEEAttr = F->getFnAttribute("amdgpu-ieee");
-  if (IEEEAttr.isValid())
-    return IEEEAttr.getValueAsBool() ? KnownIEEEMode::On : KnownIEEEMode::Off;
-
-  return AMDGPU::isShader(F->getCallingConv()) ? KnownIEEEMode::Off
-                                               : KnownIEEEMode::On;
-}
-
 // Check if a value can be converted to a 16-bit value without losing
 // precision.
 // The value is expected to be either a float (IsFloat = true) or an unsigned
@@ -1004,7 +982,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // TODO: Also can fold to 2 operands with infinities.
     if ((match(Src0, m_APFloat(ConstSrc0)) && ConstSrc0->isNaN()) ||
         isa<UndefValue>(Src0)) {
-      switch (fpenvIEEEMode(II, *ST)) {
+      switch (fpenvIEEEMode(II)) {
       case KnownIEEEMode::On:
         // TODO: If Src2 is snan, does it need quieting?
         if (ConstSrc0 && ConstSrc0->isSignaling())
@@ -1019,7 +997,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
     } else if ((match(Src1, m_APFloat(ConstSrc1)) && ConstSrc1->isNaN()) ||
                isa<UndefValue>(Src1)) {
-      switch (fpenvIEEEMode(II, *ST)) {
+      switch (fpenvIEEEMode(II)) {
       case KnownIEEEMode::On:
         // TODO: If Src2 is snan, does it need quieting?
         if (ConstSrc1 && ConstSrc1->isSignaling())
@@ -1035,7 +1013,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
     } else if ((match(Src2, m_APFloat(ConstSrc2)) && ConstSrc2->isNaN()) ||
                isa<UndefValue>(Src2)) {
-      switch (fpenvIEEEMode(II, *ST)) {
+      switch (fpenvIEEEMode(II)) {
       case KnownIEEEMode::On:
         if (ConstSrc2 && ConstSrc2->isSignaling()) {
           auto *Quieted = ConstantFP::get(II.getType(), ConstSrc2->makeQuiet());
