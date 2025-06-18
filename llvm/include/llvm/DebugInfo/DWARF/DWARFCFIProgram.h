@@ -106,11 +106,11 @@ public:
   };
 
   /// Get the OperandType as a "const char *".
-  static const char *operandTypeString(OperandType OT);
+  LLVM_ABI static const char *operandTypeString(OperandType OT);
 
   /// Retrieve the array describing the types of operands according to the enum
   /// above. This is indexed by opcode.
-  static ArrayRef<OperandType[MaxOperands]> getOperandTypes();
+  LLVM_ABI static ArrayRef<OperandType[MaxOperands]> getOperandTypes();
 
 private:
   std::vector<Instruction> Instructions;
