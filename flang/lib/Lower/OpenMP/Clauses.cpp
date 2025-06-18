@@ -1043,7 +1043,7 @@ Map make(const parser::OmpClause::Map &inp,
   auto type = [&]() -> std::optional<Map::MapType> {
     if (t3)
       return convert1(t3->v);
-    return Map::MapType::Tofrom;
+    return std::nullopt;
   }();
 
   Map::MapTypeModifiers typeMods;
