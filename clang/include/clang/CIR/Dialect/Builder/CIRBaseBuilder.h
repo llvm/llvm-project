@@ -90,6 +90,8 @@ public:
       return cir::IntAttr::get(ty, 0);
     if (cir::isAnyFloatingPointType(ty))
       return cir::FPAttr::getZero(ty);
+    if (auto complexType = mlir::dyn_cast<cir::ComplexType>(ty))
+      return cir::ZeroAttr::get(complexType);
     if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty))
       return cir::ZeroAttr::get(arrTy);
     if (auto vecTy = mlir::dyn_cast<cir::VectorType>(ty))
@@ -183,9 +185,23 @@ public:
                                     global.getSymName());
   }
 
+  mlir::Value createGetGlobal(cir::GlobalOp global) {
+    return createGetGlobal(global.getLoc(), global);
+  }
+
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
                            mlir::IntegerAttr align = {}) {
     return create<cir::StoreOp>(loc, val, dst, align);
+  }
+
+  [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
+                                           mlir::Location loc,
+                                           mlir::StringRef name,
+                                           mlir::Type type,
+                                           cir::GlobalLinkageKind linkage) {
+    mlir::OpBuilder::InsertionGuard guard(*this);
+    setInsertionPointToStart(mlirModule.getBody());
+    return create<cir::GlobalOp>(loc, name, type, linkage);
   }
 
   cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
@@ -276,6 +292,11 @@ public:
     return createCast(loc, cir::CastKind::bitcast, src, newTy);
   }
 
+  mlir::Value createPtrBitcast(mlir::Value src, mlir::Type newPointeeTy) {
+    assert(mlir::isa<cir::PointerType>(src.getType()) && "expected ptr src");
+    return createBitcast(src, getPointerTo(newPointeeTy));
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -298,6 +319,24 @@ public:
 
   mlir::Value createOr(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     return createBinop(loc, lhs, cir::BinOpKind::Or, rhs);
+  }
+
+  mlir::Value createSelect(mlir::Location loc, mlir::Value condition,
+                           mlir::Value trueValue, mlir::Value falseValue) {
+    assert(trueValue.getType() == falseValue.getType() &&
+           "trueValue and falseValue should have the same type");
+    return create<cir::SelectOp>(loc, trueValue.getType(), condition, trueValue,
+                                 falseValue);
+  }
+
+  mlir::Value createLogicalAnd(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    return createSelect(loc, lhs, rhs, getBool(false, loc));
+  }
+
+  mlir::Value createLogicalOr(mlir::Location loc, mlir::Value lhs,
+                              mlir::Value rhs) {
+    return createSelect(loc, lhs, getBool(true, loc), rhs);
   }
 
   mlir::Value createMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,

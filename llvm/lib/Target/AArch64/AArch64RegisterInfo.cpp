@@ -655,9 +655,8 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
     // Since hasBasePointer() is called before we know if we have hazard padding
     // or an emergency spill slot we need to enable the basepointer
     // conservatively.
-    if (AFI->hasStackHazardSlotIndex() ||
-        (ST.getStreamingHazardSize() &&
-         !SMEAttrs(MF.getFunction()).hasNonStreamingInterfaceAndBody())) {
+    if (ST.getStreamingHazardSize() &&
+        !AFI->getSMEFnAttrs().hasNonStreamingInterfaceAndBody()) {
       return true;
     }
 
@@ -1219,7 +1218,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       //   is valid but { z1, z2, z3, z5 } is not.
       // * One or more of the registers used by FORM_TRANSPOSED_X4 is already
       //   assigned a physical register, which means only checking that a
-      //   consectutive range of free tuple registers exists which includes
+      //   consecutive range of free tuple registers exists which includes
       //   the assigned register.
       //   e.g. in the example above, if { z0, z8 } is already allocated for
       //   %v0, we just need to ensure that { z1, z9 }, { z2, z10 } and

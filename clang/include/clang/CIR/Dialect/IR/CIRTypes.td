@@ -162,6 +162,56 @@ def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexType
+//===----------------------------------------------------------------------===//
+
+def CIR_ComplexType : CIR_Type<"Complex", "complex",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+
+  let summary = "CIR complex type";
+  let description = [{
+    CIR type that represents a C complex number. `cir.complex` models the C type
+    `T _Complex`.
+
+    `cir.complex` type is not directly mapped to `std::complex`.
+
+    The type models complex values, per C99 6.2.5p11. It supports the C99
+    complex float types as well as the GCC integer complex extensions.
+
+    The parameter `elementType` gives the type of the real and imaginary part of
+    the complex number. `elementType` must be either a CIR integer type or a CIR
+    floating-point type.
+
+    ```mlir
+    !cir.complex<!s32i>
+    !cir.complex<!cir.float>
+    ```
+  }];
+
+  let parameters = (ins CIR_AnyIntOrFloatType:$elementType);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType), [{
+      return $_get(elementType.getContext(), elementType);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` $elementType `>`
+  }];
+
+  let extraClassDeclaration = [{
+    bool isFloatingPointComplex() const {
+      return isAnyFloatingPointType(getElementType());
+    }
+
+    bool isIntegerComplex() const {
+      return mlir::isa<cir::IntType>(getElementType());
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // PointerType
 //===----------------------------------------------------------------------===//
 
@@ -431,6 +481,11 @@ def CIR_RecordType : CIR_Type<"Record", "record",
     will be the same type. Attempting to build a record with an existing name,
     but a different body will result in an error.
 
+    Each record type will have a `RecordKind` that is either `Class`, `Struct`,
+    or `Union`, depending on the C/C++ type that it is representing. Note that
+    `Class` and `Struct` are semantically identical, but the kind preserves the
+    keyword that was used to declare the type in the original source code.
+
     A few examples:
 
     ```mlir
@@ -469,6 +524,18 @@ def CIR_RecordType : CIR_Type<"Record", "record",
   let genVerifyDecl = 1;
 
   let builders = [
+    // Create an identified and complete record type.
+    TypeBuilder<(ins
+      "llvm::ArrayRef<mlir::Type>":$members,
+      "mlir::StringAttr":$name,
+      "bool":$packed,
+      "bool":$padded,
+      "RecordKind":$kind
+    ), [{
+      return $_get($_ctxt, members, name, /*complete=*/true, packed, padded,
+                   kind);
+    }]>,
+
     // Create an identified and incomplete record type.
     TypeBuilder<(ins
       "mlir::StringAttr":$name,
@@ -482,8 +549,9 @@ def CIR_RecordType : CIR_Type<"Record", "record",
   let extraClassDeclaration = [{
     using Base::verifyInvariants;
 
-    enum RecordKind : uint32_t { Struct, Union };
+    enum RecordKind : uint32_t { Class, Struct, Union };
 
+    bool isClass() const { return getKind() == RecordKind::Class; };
     bool isStruct() const { return getKind() == RecordKind::Struct; };
     bool isUnion() const { return getKind() == RecordKind::Union; };
     bool isComplete() const { return !isIncomplete(); };
@@ -493,6 +561,8 @@ def CIR_RecordType : CIR_Type<"Record", "record",
     size_t getNumElements() const { return getMembers().size(); };
     std::string getKindAsStr() {
       switch (getKind()) {
+      case RecordKind::Class:
+        return "class";
       case RecordKind::Union:
         return "union";
       case RecordKind::Struct:
@@ -530,7 +600,8 @@ def CIRRecordType : Type<
 
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
-  CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_RecordType
+  CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_RecordType,
+  CIR_ComplexType
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES
