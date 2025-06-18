@@ -1,4 +1,4 @@
-// UNSUPPORTED: system-windows
+// UNSUPPORTED: system-windows, target={{.*}}-fuchsia{{.*}}
 
 // RUN: %clang -### %s -fuse-ld= \
 // RUN:   --target=aarch64-none-elf --rtlib=libgcc \

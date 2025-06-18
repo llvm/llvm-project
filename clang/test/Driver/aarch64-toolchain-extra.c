@@ -4,7 +4,7 @@
 // these tests need to create symlinks to test directory trees in order to
 // set up the environment and therefore shell support is required.
 // REQUIRES: shell
-// UNSUPPORTED: system-windows
+// UNSUPPORTED: system-windows, target={{.*}}-fuchsia{{.*}}
 
 // If there is no GCC install detected then the driver searches for executables
 // and runtime starting from the directory tree above the driver itself.
