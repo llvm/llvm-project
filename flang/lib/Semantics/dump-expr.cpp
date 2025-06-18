@@ -151,7 +151,7 @@ void DumpEvaluateExpr::Show(const evaluate::StructureConstructor &x) {
 }
 
 void DumpEvaluateExpr::Show(const evaluate::Relational<evaluate::SomeType> &x) {
-  Indent("expr some type");
+  Indent("relational some type");
   Show(x.u);
   Outdent();
 }
