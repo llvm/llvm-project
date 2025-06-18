@@ -26,4 +26,4 @@ define void @func1() {
 }
 
 ; Currently no ELF support for bitstream remarks
-; CHECK-LINUX-DEFAULT-BITSTREAM: warning: Current object file format does not support remarks sections.
+; CHECK-LINUX-DEFAULT-BITSTREAM: warning: Current object file format does not support remarks sections. Use the yaml remark format instead.
