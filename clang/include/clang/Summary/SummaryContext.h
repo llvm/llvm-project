@@ -10,14 +10,16 @@ class FunctionSummary {
   SmallVector<char> ID;
   std::set<const SummaryAttr *> Attrs;
   std::set<SmallVector<char>> Calls;
+  bool CallsOpaque;
 
 public:
   FunctionSummary(SmallVector<char> ID, std::set<const SummaryAttr *> Attrs,
-                  std::set<SmallVector<char>> Calls);
+                  std::set<SmallVector<char>> Calls, bool CallsOpaque);
 
   SmallVector<char> getID() const { return ID; }
   const std::set<const SummaryAttr *> &getAttributes() const { return Attrs; }
   const std::set<SmallVector<char>> &getCalls() const { return Calls; }
+  bool callsOpaqueObject() const { return CallsOpaque; }
 
   template <typename T> bool hasAttribute() const {
     for (auto &&attr : Attrs) {
@@ -41,7 +43,7 @@ class SummaryContext {
   std::vector<std::unique_ptr<SummaryAttr>> Attributes;
 
   void CreateSummary(SmallVector<char> ID, std::set<const SummaryAttr *> Attrs,
-                     std::set<SmallVector<char>> Calls);
+                     std::set<SmallVector<char>> Calls, bool CallsOpaque);
   bool ReduceFunctionSummary(FunctionSummary &FunctionSummary);
 
   template <typename T> void registerAttr();

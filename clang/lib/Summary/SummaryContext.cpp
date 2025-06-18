@@ -15,6 +15,7 @@ SmallVector<char> GetUSR(const FunctionDecl *FD) {
 
 class CallCollector : public ast_matchers::MatchFinder::MatchCallback {
   std::set<SmallVector<char>> Calls;
+  bool callsOpaqueSymbol = false;
 
   virtual void
   run(const ast_matchers::MatchFinder::MatchResult &Result) override {
@@ -23,11 +24,22 @@ class CallCollector : public ast_matchers::MatchFinder::MatchCallback {
       return;
 
     const auto *Callee = llvm::dyn_cast<FunctionDecl>(Call->getCalleeDecl());
+    if (!Callee) {
+      callsOpaqueSymbol = true;
+      return;
+    }
+
+    if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(Callee);
+        MD && MD->isVirtual()) {
+      callsOpaqueSymbol = true;
+      return;
+    }
+
     Calls.emplace(GetUSR(Callee));
   }
 
 public:
-  std::set<SmallVector<char>> collect(const FunctionDecl *FD) {
+  std::pair<std::set<SmallVector<char>>, bool> collect(const FunctionDecl *FD) {
     using namespace ast_matchers;
     MatchFinder Finder;
 
@@ -35,16 +47,17 @@ public:
                       this);
     Finder.match(*FD, FD->getASTContext());
 
-    return Calls;
+    return {Calls, callsOpaqueSymbol};
   }
 };
 } // namespace
 
 FunctionSummary::FunctionSummary(SmallVector<char> ID,
                                  std::set<const SummaryAttr *> FunctionAttrs,
-                                 std::set<SmallVector<char>> Calls)
+                                 std::set<SmallVector<char>> Calls,
+                                 bool CallsOpaque)
     : ID(std::move(ID)), Attrs(std::move(FunctionAttrs)),
-      Calls(std::move(Calls)) {}
+      Calls(std::move(Calls)), CallsOpaque(CallsOpaque) {}
 
 template <typename T> void SummaryContext::registerAttr() {
   std::unique_ptr<T> attr(new T());
@@ -60,9 +73,10 @@ SummaryContext::SummaryContext() { registerAttr<NoWriteGlobalAttr>(); }
 
 void SummaryContext::CreateSummary(SmallVector<char> ID,
                                    std::set<const SummaryAttr *> Attrs,
-                                   std::set<SmallVector<char>> Calls) {
+                                   std::set<SmallVector<char>> Calls,
+                                   bool CallsOpaque) {
   auto Summary = std::make_unique<FunctionSummary>(
-      std::move(ID), std::move(Attrs), std::move(Calls));
+      std::move(ID), std::move(Attrs), std::move(Calls), CallsOpaque);
   auto *SummaryPtr = FunctionSummaries.emplace_back(std::move(Summary)).get();
   IDToSummary[SummaryPtr->getID()] = SummaryPtr;
 }
@@ -81,7 +95,9 @@ void SummaryContext::SummarizeFunctionBody(const FunctionDecl *FD) {
       Attrs.emplace(Attr.get());
   }
 
-  CreateSummary(GetUSR(FD), std::move(Attrs), CallCollector().collect(FD));
+  auto [calls, opaque] = CallCollector().collect(FD);
+
+  CreateSummary(GetUSR(FD), std::move(Attrs), std::move(calls), opaque);
 }
 
 void SummaryContext::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
@@ -101,14 +117,18 @@ void SummaryContext::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
     }
 
     std::set<SmallVector<char>> Calls;
-    const llvm::json::Array *CallEntries = FunctionSummary->getArray("calls");
+    const llvm::json::Object *CallsObject = FunctionSummary->getObject("calls");
+    bool callsOpaue = *CallsObject->getBoolean("opaque");
+
+    const llvm::json::Array *CallEntries = CallsObject->getArray("functions");
     for (auto callIt = CallEntries->begin(); callIt != CallEntries->end();
          ++callIt) {
       auto *Obj = callIt->getAsObject();
       Calls.emplace(SmallString<128>(*Obj->getString("id")));
     }
 
-    CreateSummary(std::move(ID), std::move(FunctionAttrs), std::move(Calls));
+    CreateSummary(std::move(ID), std::move(FunctionAttrs), std::move(Calls),
+                  callsOpaue);
   }
 }
 
@@ -118,17 +138,10 @@ bool SummaryContext::ReduceFunctionSummary(FunctionSummary &Function) {
   for (auto &&call : Function.getCalls()) {
     std::set<const SummaryAttr *> reducedAttrs;
 
-    // If we don't have a summary about a called function, we forget
-    // everything about the current one as well.
-    if (!IDToSummary.count(call)) {
-      Function.replaceAttributes(std::move(reducedAttrs));
-      return true;
-    }
-
-    const FunctionSummary *callSummary = IDToSummary[call];
-
+    const FunctionSummary *callSummary =
+        IDToSummary.count(call) ? IDToSummary[call] : nullptr;
     for (auto &&Attr : Attributes) {
-      if (Attr->merge(Function, *callSummary))
+      if (Attr->merge(Function, callSummary))
         reducedAttrs.emplace(Attr.get());
     }
 

@@ -13,10 +13,13 @@ void JSONPrintingSummaryConsumer::ProcessFunctionSummary(
         }
       });
     });
-    JOS.attributeArray("calls", [&] {
-      for (auto &&Call : Summary.getCalls()) {
-        JOS.object([&] { JOS.attribute("id", llvm::json::Value(Call)); });
-      }
+    JOS.attributeObject("calls", [&] {
+      JOS.attribute("opaque", llvm::json::Value(Summary.callsOpaqueObject()));
+      JOS.attributeArray("functions", [&] {
+        for (auto &&Call : Summary.getCalls()) {
+          JOS.object([&] { JOS.attribute("id", llvm::json::Value(Call)); });
+        }
+      });
     });
   });
 }

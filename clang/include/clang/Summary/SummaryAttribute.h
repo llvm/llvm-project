@@ -28,7 +28,7 @@ public:
 
   virtual bool infer(const FunctionDecl *FD) const = 0;
   virtual bool merge(const FunctionSummary &Caller,
-                     const FunctionSummary &Callee) const = 0;
+                     const FunctionSummary *Callee) const = 0;
 
   virtual std::string serialize() const { return std::string(Spelling); };
   virtual bool parse(std::string_view input) const {
@@ -42,7 +42,7 @@ class NoWriteGlobalAttr : public SummaryAttr {
 public:
   bool infer(const FunctionDecl *FD) const override final;
   bool merge(const FunctionSummary &Caller,
-             const FunctionSummary &Callee) const override final;
+             const FunctionSummary *Callee) const override final;
 
   static bool classof(const SummaryAttr *A) {
     return A->getKind() == NO_WRITE_GLOBAL;

@@ -32,8 +32,8 @@ bool NoWriteGlobalAttr::infer(const FunctionDecl *FD) const {
 }
 
 bool NoWriteGlobalAttr::merge(const FunctionSummary &Caller,
-                              const FunctionSummary &Callee) const {
-  return Caller.getAttributes().count(this) &&
-         Callee.getAttributes().count(this);
+                              const FunctionSummary *Callee) const {
+  return !Caller.callsOpaqueObject() && Caller.getAttributes().count(this) &&
+         Callee && Callee->getAttributes().count(this);
 }
 } // namespace clang
