@@ -111,8 +111,17 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         # VS Code sends those in order to check if a `memoryReference` can actually be dereferenced.
         mem = self.dap_server.request_readMemory(memref, 0, 0)
         self.assertEqual(mem["success"], True)
-        self.assertEqual(mem["body"]["data"], "")
+        self.assertNotIn(
+            "data", mem["body"], f"expects no data key in response: {mem!r}"
+        )
 
-        # Reads at offset 0x0 fail
-        mem = self.dap_server.request_readMemory("0x0", 0, 6)
-        self.assertEqual(mem["success"], False)
+        # Reads at offset 0x0 return unreadable bytes
+        bytes_to_read = 6
+        mem = self.dap_server.request_readMemory("0x0", 0, bytes_to_read)
+        self.assertEqual(mem["body"]["unreadableBytes"], bytes_to_read)
+
+        # Reads with invalid address fails.
+        mem = self.dap_server.request_readMemory("-3204", 0, 10)
+        self.assertFalse(mem["success"], "expect fail on reading memory.")
+
+        self.continue_to_exit()
