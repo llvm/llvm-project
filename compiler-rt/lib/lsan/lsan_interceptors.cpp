@@ -84,24 +84,6 @@ INTERCEPTOR(void, free, void *p) {
   lsan_free(p);
 }
 
-INTERCEPTOR(void, free_sized, void *p, uptr size) {
-  if (UNLIKELY(!p))
-    return;
-  if (DlsymAlloc::PointerIsMine(p))
-    return DlsymAlloc::Free(p);
-  ENSURE_LSAN_INITED;
-  lsan_free_sized(p, size);
-}
-
-INTERCEPTOR(void, free_aligned_sized, void *p, uptr alignment, uptr size) {
-  if (UNLIKELY(!p))
-    return;
-  if (DlsymAlloc::PointerIsMine(p))
-    return DlsymAlloc::Free(p);
-  ENSURE_LSAN_INITED;
-  lsan_free_aligned_sized(p, alignment, size);
-}
-
 INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Callocate(nmemb, size);
