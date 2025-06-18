@@ -20,7 +20,6 @@ using namespace llvm::remarks;
 Expected<Format> llvm::remarks::parseFormat(StringRef FormatStr) {
   auto Result = StringSwitch<Format>(FormatStr)
                     .Cases("", "yaml", Format::YAML)
-                    .Case("yaml-strtab", Format::YAMLStrTab)
                     .Case("bitstream", Format::Bitstream)
                     .Default(Format::Unknown);
 
@@ -36,7 +35,8 @@ Expected<Format> llvm::remarks::magicToFormat(StringRef MagicStr) {
   auto Result =
       StringSwitch<Format>(MagicStr)
           .StartsWith("--- ", Format::YAML) // This is only an assumption.
-          .StartsWith(remarks::Magic, Format::YAMLStrTab)
+          .StartsWith(remarks::Magic,
+                      Format::YAML) // Needed for remark meta section
           .StartsWith(remarks::ContainerMagic, Format::Bitstream)
           .Default(Format::Unknown);
 
