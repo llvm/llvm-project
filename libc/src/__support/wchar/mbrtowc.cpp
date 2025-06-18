@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/wchar/mbrtowc.h"
+#include "hdr/types/mbstate_t.h"
+#include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -18,21 +20,25 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict s,
-                        size_t n, mbstate_t *__restrict ps) {
-  CharacterConverter char_conv((internal::mbstate *)ps);
+                        size_t n, mbstate *__restrict ps) {
+  CharacterConverter char_conv(ps);
   if (s == nullptr)
     return 0;
   size_t i = 0;
+  auto wc = char_conv.pop_utf32();
   // Reading in bytes until we have a complete wc or error
-  for (; i < n & !char_conv.isComplete(); ++i) {
+  for (; i < n && !wc.has_value(); ++i) {
     int err = char_conv.push(static_cast<char8_t>(s[i]));
     // Encoding error
     if (err == -1)
       return Error(-1);
+    wc = char_conv.pop_utf32();
   }
-  auto wc = char_conv.pop_utf32();
   if (wc.has_value()) {
     *pwc = wc.value();
+    // null terminator -> return 0
+    if (wc.value() == L'\0')
+      return 0;
     return i;
   }
   // Incomplete but potentially valid

@@ -8,22 +8,31 @@
 
 #include "src/wchar/mbrtowc.h"
 
+#include "hdr/types/mbstate_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/wchar/mbrtowc.h"
+#include "src/__support/wchar/mbstate.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(size_t, mbrtowc,
                    (wchar_t *__restrict pwc, const char *__restrict s, size_t n,
                     mbstate_t *__restrict ps)) {
-  auto ret = internal::mbrtowc(pwc, s, n, ps);
+  static mbstate_t internal_mbstate{0, 0, 0};
+  auto ret = internal::mbrtowc(
+      pwc, s, n, (internal::mbstate *)(ps == nullptr ? &internal_mbstate : ps));
   if (!ret.has_value()) {
+    // Encoding failure
     if (ret.error() == -1) {
-        
+      libc_errno = EILSEQ;
+      return -1;
     }
+    // Could potentially read a valid wide character.
+    return -2;
   }
   return ret.value();
 }

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_WCHAR_MBRTOWC
 #define LLVM_LIBC_SRC___SUPPORT_WCHAR_MBRTOWC
 
+#include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -19,7 +20,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict s,
-                        size_t n, mbstate_t *__restrict ps);
+                        size_t n, mbstate *__restrict ps);
 
 } // namespace internal
 
