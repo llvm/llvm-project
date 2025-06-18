@@ -13433,6 +13433,7 @@ static bool isUZP_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
 /// isDUPQMask - matches a splat of equivalent lanes within 128b segments in
 /// the first vector operand.
 static std::optional<unsigned> isDUPQMask(ArrayRef<int> M, EVT VT) {
+  assert(VT.getFixedSizeInBits() % 128 == 0 && "Unsupported SVE vector size");
   unsigned Lane = (unsigned)M[0];
   unsigned Segments = VT.getFixedSizeInBits() / 128;
   unsigned SegmentElts = VT.getVectorNumElements() / Segments;
@@ -13441,14 +13442,13 @@ static std::optional<unsigned> isDUPQMask(ArrayRef<int> M, EVT VT) {
   if (SegmentElts * Segments != M.size())
     return std::nullopt;
 
-  // Check that the first index corresponds to one of the lanes in the first
-  // segment.
-  if ((unsigned)M[0] >= SegmentElts)
+  // Check the first index corresponds to one of the lanes in the first segment.
+  if (Lane >= SegmentElts)
     return std::nullopt;
 
   // Check that all lanes match the first, adjusted for segment.
   for (unsigned I = 0; I < M.size(); ++I)
-    if ((unsigned)M[I] != ((unsigned)M[0] + ((I / SegmentElts) * SegmentElts)))
+    if ((unsigned)M[I] != (Lane + ((I / SegmentElts) * SegmentElts)))
       return std::nullopt;
 
   return Lane;
