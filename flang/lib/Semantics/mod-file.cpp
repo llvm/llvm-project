@@ -48,8 +48,8 @@ struct ModHeader {
 };
 
 static std::optional<SourceName> GetSubmoduleParent(const parser::Program &);
-static void CollectSymbols(
-    const Scope &, SymbolVector &, SymbolVector &, SourceOrderedSymbolSet &);
+static void CollectSymbols(const Scope &, SymbolVector &, SymbolVector &,
+    SourceOrderedSymbolSet &, UnorderedSymbolSet *);
 static void PutPassName(llvm::raw_ostream &, const std::optional<SourceName> &);
 static void PutInit(llvm::raw_ostream &, const Symbol &, const MaybeExpr &,
     const parser::Expr *, SemanticsContext &);
@@ -131,7 +131,7 @@ static std::string ModFileName(const SourceName &name,
   return ancestorName.empty() ? result : ancestorName + '-' + result;
 }
 
-// Write the module file for symbol, which must be a module or submodule.
+// Writes the module file for symbol, which must be a module or submodule.
 void ModFileWriter::Write(const Symbol &symbol) {
   const auto &module{symbol.get<ModuleDetails>()};
   if (symbol.test(Symbol::Flag::ModFile) || module.moduleFileHash()) {
@@ -143,21 +143,30 @@ void ModFileWriter::Write(const Symbol &symbol) {
   std::string path{context_.moduleDirectory() + '/' +
       ModFileName(symbol.name(), ancestorName, context_.moduleFileSuffix())};
 
-  std::set<std::string> hermeticModuleNames;
-  hermeticModuleNames.insert(symbol.name().ToString());
   UnorderedSymbolSet additionalModules;
+  UnorderedSymbolSet dependenceClosure;
+  if (hermeticModuleFileOutput_) {
+    dependenceClosure = CollectAllDependences(
+        DEREF(symbol.scope()), IncludeOriginalSymbols | FollowUseAssociations);
+  }
   PutSymbols(DEREF(symbol.scope()),
-      hermeticModuleFileOutput_ ? &additionalModules : nullptr);
+      hermeticModuleFileOutput_ ? &additionalModules : nullptr,
+      hermeticModuleFileOutput_ ? &dependenceClosure : nullptr);
+  std::set<std::string> emittedModuleNames;
+  emittedModuleNames.insert(symbol.name().ToString());
   auto asStr{GetAsString(symbol)};
+
+  // Emit additional modules for a hermetic module file
   while (!additionalModules.empty()) {
     UnorderedSymbolSet nextPass{std::move(additionalModules)};
     additionalModules.clear();
     for (const Symbol &modSym : nextPass) {
       if (!modSym.owner().IsIntrinsicModules() &&
-          hermeticModuleNames.find(modSym.name().ToString()) ==
-              hermeticModuleNames.end()) {
-        hermeticModuleNames.insert(modSym.name().ToString());
-        PutSymbols(DEREF(modSym.scope()), &additionalModules);
+          emittedModuleNames.find(modSym.name().ToString()) ==
+              emittedModuleNames.end()) {
+        emittedModuleNames.insert(modSym.name().ToString());
+        PutSymbols(
+            DEREF(modSym.scope()), &additionalModules, &dependenceClosure);
         asStr += GetAsString(modSym);
       }
     }
@@ -178,7 +187,8 @@ void ModFileWriter::WriteClosure(llvm::raw_ostream &out, const Symbol &symbol,
       !nonIntrinsicModulesWritten.insert(symbol).second) {
     return;
   }
-  PutSymbols(DEREF(symbol.scope()), /*hermeticModules=*/nullptr);
+  PutSymbols(DEREF(symbol.scope()), /*hermeticModules=*/nullptr,
+      /*dependenceClosure=*/nullptr);
   needsBuf_.clear(); // omit module checksums
   auto str{GetAsString(symbol)};
   for (auto depRef : std::move(usedNonIntrinsicModules_)) {
@@ -231,10 +241,11 @@ static void HarvestSymbolsNeededFromOtherModules(
   }
 }
 
-void ModFileWriter::PrepareRenamings(const Scope &scope) {
+void ModFileWriter::PrepareRenamings(
+    const Scope &scope, const UnorderedSymbolSet *dependenceClosure) {
   // Identify use-associated symbols already in scope under some name
   std::map<const Symbol *, const Symbol *> useMap;
-  for (const auto &[name, symbolRef] : scope) {
+  for (const auto &[_, symbolRef] : scope) {
     const Symbol *symbol{&*symbolRef};
     while (const auto *hostAssoc{symbol->detailsIf<HostAssocDetails>()}) {
       symbol = &hostAssoc->symbol();
@@ -249,38 +260,42 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
   // Establish any necessary renamings of symbols in other modules
   // to their names in this scope, creating those new names when needed.
   auto &renamings{context_.moduleFileOutputRenamings()};
-  for (SymbolRef s : symbolsNeeded) {
-    if (s->owner().kind() != Scope::Kind::Module) {
+  for (const Symbol &sym : symbolsNeeded) {
+    if (sym.owner().kind() != Scope::Kind::Module) {
       // Not a USE'able name from a module's top scope;
       // component, binding, dummy argument, &c.
       continue;
     }
-    const Scope *sMod{FindModuleContaining(s->owner())};
+    const Scope *sMod{FindModuleContaining(sym.owner())};
     if (!sMod || sMod == &scope) {
       continue;
     }
-    if (auto iter{useMap.find(&*s)}; iter != useMap.end()) {
-      renamings.emplace(&*s, iter->second->name());
+    if (dependenceClosure &&
+        dependenceClosure->find(sym) == dependenceClosure->end()) {
       continue;
     }
-    SourceName rename{s->name()};
-    if (const Symbol * found{scope.FindSymbol(s->name())}) {
-      if (found == &*s) {
+    if (auto iter{useMap.find(&sym)}; iter != useMap.end()) {
+      renamings.emplace(&sym, iter->second->name());
+      continue;
+    }
+    SourceName rename{sym.name()};
+    if (const Symbol *found{scope.FindSymbol(sym.name())}) {
+      if (found == &sym) {
         continue; // available in scope
       }
       if (const auto *generic{found->detailsIf<GenericDetails>()}) {
-        if (generic->derivedType() == &*s || generic->specific() == &*s) {
+        if (generic->derivedType() == &sym || generic->specific() == &sym) {
           continue;
         }
       } else if (found->has<UseDetails>()) {
-        if (&found->GetUltimate() == &*s) {
+        if (&found->GetUltimate() == &sym) {
           continue; // already use-associated with same name
         }
       }
-      if (&s->owner() != &found->owner()) { // Symbol needs renaming
+      if (&sym.owner() != &found->owner()) { // Symbol needs renaming
         rename = scope.context().SaveTempName(
             DEREF(sMod->symbol()).name().ToString() + "$" +
-            s->name().ToString());
+            sym.name().ToString());
       }
     }
     // Symbol is used in this scope but not visible under its name
@@ -290,25 +305,26 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
       uses_ << "use ";
     }
     uses_ << DEREF(sMod->symbol()).name() << ",only:";
-    if (rename != s->name()) {
+    if (rename != sym.name()) {
       uses_ << rename << "=>";
-      renamings.emplace(&s->GetUltimate(), rename);
+      renamings.emplace(&sym.GetUltimate(), rename);
     }
-    uses_ << s->name() << '\n';
+    uses_ << sym.name() << '\n';
     useExtraAttrs_ << "private::" << rename << '\n';
   }
 }
 
 // Put out the visible symbols from scope.
-void ModFileWriter::PutSymbols(
-    const Scope &scope, UnorderedSymbolSet *hermeticModules) {
+void ModFileWriter::PutSymbols(const Scope &scope,
+    UnorderedSymbolSet *hermeticModules,
+    UnorderedSymbolSet *dependenceClosure) {
   SymbolVector sorted;
   SymbolVector uses;
   auto &renamings{context_.moduleFileOutputRenamings()};
   auto previousRenamings{std::move(renamings)};
-  PrepareRenamings(scope);
+  PrepareRenamings(scope, dependenceClosure);
   SourceOrderedSymbolSet modules;
-  CollectSymbols(scope, sorted, uses, modules);
+  CollectSymbols(scope, sorted, uses, modules, dependenceClosure);
   // Write module files for dependences first so that their
   // hashes are known.
   for (const Symbol &mod : modules) {
@@ -792,12 +808,17 @@ void ModFileWriter::PutUseExtraAttr(
 // Collect the symbols of this scope sorted by their original order, not name.
 // Generics and namelists are exceptions: they are sorted after other symbols.
 void CollectSymbols(const Scope &scope, SymbolVector &sorted,
-    SymbolVector &uses, SourceOrderedSymbolSet &modules) {
+    SymbolVector &uses, SourceOrderedSymbolSet &modules,
+    UnorderedSymbolSet *dependenceClosure) {
   SymbolVector namelist, generics;
   auto symbols{scope.GetSymbols()};
   std::size_t commonSize{scope.commonBlocks().size()};
   sorted.reserve(symbols.size() + commonSize);
   for (const Symbol &symbol : symbols) {
+    if (dependenceClosure &&
+        dependenceClosure->find(symbol) == dependenceClosure->end()) {
+      continue; // needless for the main module
+    }
     const auto *generic{symbol.detailsIf<GenericDetails>()};
     if (generic) {
       uses.insert(uses.end(), generic->uses().begin(), generic->uses().end());
