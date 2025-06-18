@@ -45,3 +45,46 @@ define void @storev2f64(<2 x double> %0) {
       <2 x double> %0)
   ret void
 }
+
+define { double, i1 } @loadAndReturnf64() {
+; CHECK-LABEL: define { double, i1 } @loadAndReturnf64() {
+; CHECK-NEXT:    [[BUFFER:%.*]] = tail call target("dx.TypedBuffer", double, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+; CHECK-NEXT:    [[TMP1:%.*]] = call { <2 x i32>, i1 } @llvm.dx.resource.load.typedbuffer.v2i32.tdx.TypedBuffer_f64_1_0_0t(target("dx.TypedBuffer", double, 1, 0, 0) [[BUFFER]], i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x i32>, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = call double @llvm.dx.asdouble.i32(i32 [[TMP3]], i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { double, i1 } poison, double [[TMP5]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <2 x i32>, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } [[TMP6]], i1 [[TMP7]], 1
+; CHECK-NEXT:    ret { double, i1 } [[TMP8]]
+;
+  %buffer = tail call target("dx.TypedBuffer", double, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  %result = call { double, i1 } @llvm.dx.resource.load.typedbuffer.tdx.TypedBuffer_f64_1_0_0t(
+  target("dx.TypedBuffer", double, 1, 0, 0) %buffer, i32 0)
+  ret { double, i1 } %result
+}
+
+define { <2 x double>, i1 } @loadAndReturnv2f64() {
+; CHECK-LABEL: define { <2 x double>, i1 } @loadAndReturnv2f64() {
+; CHECK-NEXT:    [[BUFFER:%.*]] = tail call target("dx.TypedBuffer", <2 x double>, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f64_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+; CHECK-NEXT:    [[TMP1:%.*]] = call { <4 x i32>, i1 } @llvm.dx.resource.load.typedbuffer.v4i32.tdx.TypedBuffer_v2f64_1_0_0t(target("dx.TypedBuffer", <2 x double>, 1, 0, 0) [[BUFFER]], i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x i32>, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP2]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = call double @llvm.dx.asdouble.i32(i32 [[TMP3]], i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> poison, double [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = call double @llvm.dx.asdouble.i32(i32 [[TMP5]], i32 [[TMP6]])
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> [[TMP8]], double [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertvalue { <2 x double>, i1 } poison, <2 x double> [[TMP10]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { <4 x i32>, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertvalue { <2 x double>, i1 } [[TMP11]], i1 [[TMP12]], 1
+; CHECK-NEXT:    ret { <2 x double>, i1 } [[TMP13]]
+;
+  %buffer = tail call target("dx.TypedBuffer", <2 x double>, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f64_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  %result = call { <2 x double>, i1 } @llvm.dx.resource.load.typedbuffer.tdx.TypedBuffer_v2f64_1_0_0t(
+  target("dx.TypedBuffer", <2 x double>, 1, 0, 0) %buffer, i32 0)
+  ret { <2 x double>, i1 } %result
+}
