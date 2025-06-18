@@ -1818,7 +1818,7 @@ void AssignmentTrackingLowering::processTaggedInstruction(
 
 void AssignmentTrackingLowering::processDbgAssign(AssignRecord Assign,
                                                   BlockInfo *LiveSet) {
-  auto ProcessDbgAssignImpl = [&](auto *DbgAssign) {
+  auto ProcessDbgAssignImpl = [&](DbgVariableRecord *DbgAssign) {
     // Only bother tracking variables that are at some point stack homed. Other
     // variables can be dealt with trivially later.
     if (!VarsWithStackSlot->count(getAggregate(DbgAssign)))
@@ -1858,9 +1858,7 @@ void AssignmentTrackingLowering::processDbgAssign(AssignRecord Assign,
       emitDbgValue(LocKind::Val, DbgAssign, DbgAssign);
     }
   };
-  if (isa<DbgVariableRecord *>(Assign))
-    return ProcessDbgAssignImpl(cast<DbgVariableRecord *>(Assign));
-  return ProcessDbgAssignImpl(cast<DbgAssignIntrinsic *>(Assign));
+  ProcessDbgAssignImpl(cast<DbgVariableRecord *>(Assign));
 }
 
 void AssignmentTrackingLowering::processDbgValue(DbgVariableRecord *DbgValue,
