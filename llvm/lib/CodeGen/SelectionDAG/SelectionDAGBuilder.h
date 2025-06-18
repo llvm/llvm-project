@@ -56,6 +56,7 @@ class CleanupPadInst;
 class CleanupReturnInst;
 class Constant;
 class ConstrainedFPIntrinsic;
+class DbgValueInst;
 class DataLayout;
 class DIExpression;
 class DILocalVariable;

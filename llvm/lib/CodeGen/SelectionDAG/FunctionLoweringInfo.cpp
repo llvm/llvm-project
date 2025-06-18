@@ -369,6 +369,7 @@ void FunctionLoweringInfo::clear() {
   StatepointStackSlots.clear();
   StatepointRelocationMaps.clear();
   PreferredExtendType.clear();
+  PreprocessedDbgDeclares.clear();
   PreprocessedDVRDeclares.clear();
 }
 
