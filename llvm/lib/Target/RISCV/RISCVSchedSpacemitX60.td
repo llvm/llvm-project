@@ -62,19 +62,6 @@ class SMX60GetVIArithLatency<string mx> {
   );
 }
 
-// Latency for carry arithmetic operations (vadc, vsbc)
-class SMX60GetVICarryLatency<string mx> {
-  int c = !cond(
-    !eq(mx, "M1") : 4,
-    !eq(mx, "M2") : 4,
-    !eq(mx, "M4") : 8,
-    !eq(mx, "M8") : 9,
-    !eq(mx, "MF2") : 4,
-    !eq(mx, "MF4") : 4,
-    !eq(mx, "MF8") : 4
-  );
-}
-
 // Latency for mask-producing operations (vmadc, vmsbc, vmseq, etc.)
 class SMX60GetVIMaskLatency<string mx> {
   int c = !cond(
@@ -458,43 +445,25 @@ def : WriteRes<!cast<SchedWrite>("WriteVMov8V"), [SMX60_VIEU]> { let Latency = 1
 
 // 11. Vector Integer Arithmetic Instructions
 foreach mx = SchedMxList in {
-  defvar ALULat = SMX60GetVIALULatency<mx>.c;
-  defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
-  defvar CarryLat = SMX60GetVICarryLatency<mx>.c;
-  defvar MaskLat = SMX60GetVIMaskLatency<mx>.c;
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  // WriteVIALUV/X/I includes vadd, vsub, vrsub, vand, vor, vxor. The arithmetic operations
-  // (vadd, vsub, vrsub) have latencies of 4/4/5/8, while logical operations (vand, vor, vxor)
-  // have latencies of 4/4/8/16, but since they are all in the same group, we use ArithLat (4/4/5/8).
+  defvar ArithLat = SMX60GetVIArithLatency<mx>.c;
   let Latency = ArithLat in {
+    defm "" : LMULWriteResMX<"WriteVIMinMaxV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMinMaxX", [SMX60_VIEU], mx, IsWorstCase>;
+
+    // Pattern of vadd, vsub, vrsub: 4/4/5/8
+    // Pattern of vand, vor, vxor:   4/4/8/16
+    // They are grouped together, so we used 4/4/5/8
+    // TODO: this is the only case where we don't use the worst case, should we?
     defm "" : LMULWriteResMX<"WriteVIALUV",    [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIALUX",    [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIALUI",    [SMX60_VIEU], mx, IsWorstCase>;
   }
+
+  defvar ALULat = SMX60GetVIALULatency<mx>.c;
   let Latency = ALULat in {
     defm "" : LMULWriteResMX<"WriteVExtV",     [SMX60_VIEU], mx, IsWorstCase>;
-  }
-  let Latency = CarryLat in {
-    defm "" : LMULWriteResMX<"WriteVICALUV",   [SMX60_VIEU], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVICALUX",   [SMX60_VIEU], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVICALUI",   [SMX60_VIEU], mx, IsWorstCase>;
-  }
-  let Latency = MaskLat in {
-    defm "" : LMULWriteResMX<"WriteVICALUMV",  [SMX60_VIEU], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVICALUMX",  [SMX60_VIEU], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVICALUMI",  [SMX60_VIEU], mx, IsWorstCase>;
-  }
-  let Latency = MaskLat in {
-    defm "" : LMULWriteResMX<"WriteVICmpV",    [SMX60_VIEU], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVICmpX",    [SMX60_VIEU], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVICmpI",    [SMX60_VIEU], mx, IsWorstCase>;
-  }
-  let Latency = ArithLat in {
-    defm "" : LMULWriteResMX<"WriteVIMinMaxV", [SMX60_VIEU], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVIMinMaxX", [SMX60_VIEU], mx, IsWorstCase>;
-  }
-  let Latency = ALULat in {
     defm "" : LMULWriteResMX<"WriteVIMergeV",  [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMergeX",  [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMergeI",  [SMX60_VIEU], mx, IsWorstCase>;
@@ -504,11 +473,28 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVShiftV",   [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVShiftX",   [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVShiftI",   [SMX60_VIEU], mx, IsWorstCase>;
+
+    // Pattern of vadc, vsbc: 4/4/4/4/4/8/16, except for e8m8 = 9. We set e8m8 to 16
+    defm "" : LMULWriteResMX<"WriteVICALUV",   [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUX",   [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUI",   [SMX60_VIEU], mx, IsWorstCase>;
   }
 
-  // Integer multiply operations: e8/e16 have 4,4,5,8; e32 has 5,5,5,8; e64 has 7,8,16,32
-  // Since multiply operations use LMUL-only scheduling classes, we use worst-case 7,8,16,32
-  // TODO: Change WriteVIMul* to use LMULSEWSchedWrites in RISCVScheduleV.td for SEW-dependent latencies
+  defvar MaskLat = SMX60GetVIMaskLatency<mx>.c;
+  let Latency = MaskLat in {
+    // Pattern of vmadc, vmsbc, vmseq, etc: 4/4/4/4/6/10/18, except for e8m8 = 17
+    // We set e8m8 to 18
+    defm "" : LMULWriteResMX<"WriteVICALUMV",  [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMX",  [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMI",  [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICmpV",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICmpX",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICmpI",    [SMX60_VIEU], mx, IsWorstCase>;
+  }
+
+  // Pattern of vmacc, vmadd, vmul, vmulh, etc.: e8/e16 = 4/4/5/8, e32 = 5,5,5,8,
+  // e64 = 7,8,16,32. We use the worst-case until we can split the SEW.
+  // TODO: change WriteVIMulV to be defined with LMULSEWSchedWrites
   defvar MulLat = SMX60GetVIMulE64Latency<mx>.c;
   let Latency = MulLat in {
     defm "" : LMULWriteResMX<"WriteVIMulV", [SMX60_VIEU], mx, IsWorstCase>;
