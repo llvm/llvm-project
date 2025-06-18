@@ -952,9 +952,6 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
     return rewriter.notifyMatchFailure(
         convOp, "only support filter (r x r), (r x 1) or (1 x r)");
 
-  if (fmr == WinogradConv2DFmr::Unknown)
-    return failure();
-
   // All the criterias are satisfied. We can do Winograd Conv2D.
   Location loc = convOp.getLoc();
 

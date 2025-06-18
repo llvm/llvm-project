@@ -105,7 +105,7 @@ namespace linalg {
 
 /// Converts the given `m` and `r` parameters to a WinogradConv2DFmr enumeration
 /// value.
-WinogradConv2DFmr getWinogradConv2DFmr(int64_t m, int64_t r);
+std::optional<WinogradConv2DFmr> getWinogradConv2DFmr(int64_t m, int64_t r);
 
 /// Converts the given WinogradConv2DFmr enumeration value to a pair of
 /// m and r parameters.

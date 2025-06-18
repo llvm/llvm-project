@@ -3631,14 +3631,14 @@ verifyExtendedBatchVariantMatmulSemantic(OpTy batchVariantMatmulOp,
 namespace mlir {
 namespace linalg {
 
-WinogradConv2DFmr getWinogradConv2DFmr(int64_t m, int64_t r) {
+std::optional<WinogradConv2DFmr> getWinogradConv2DFmr(int64_t m, int64_t r) {
   if (m == 2 && r == 3)
     return WinogradConv2DFmr::F_2_3;
   if (m == 4 && r == 3)
     return WinogradConv2DFmr::F_4_3;
   if (m == 2 && r == 5)
     return WinogradConv2DFmr::F_2_5;
-  return WinogradConv2DFmr::Unknown;
+  return std::nullopt;
 }
 
 std::pair<int64_t, int64_t> getFmrFromWinogradConv2DFmr(WinogradConv2DFmr fmr) {
@@ -3649,8 +3649,6 @@ std::pair<int64_t, int64_t> getFmrFromWinogradConv2DFmr(WinogradConv2DFmr fmr) {
     return {4, 3};
   case WinogradConv2DFmr::F_2_5:
     return {2, 5};
-  default:
-    return {-1, -1};
   }
 }
 
