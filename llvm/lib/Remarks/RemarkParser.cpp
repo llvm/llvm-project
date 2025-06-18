@@ -15,6 +15,7 @@
 #include "BitstreamRemarkParser.h"
 #include "YAMLRemarkParser.h"
 #include "llvm-c/Remarks.h"
+#include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include <optional>
 
@@ -50,14 +51,18 @@ Expected<StringRef> ParsedStringTable::operator[](size_t Index) const {
 
 Expected<std::unique_ptr<RemarkParser>>
 llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf) {
-  switch (ParserFormat) {
+  auto DetectedFormat = detectFormat(ParserFormat, Buf);
+  if (!DetectedFormat)
+    return DetectedFormat.takeError();
+
+  switch (*DetectedFormat) {
   case Format::YAML:
     return std::make_unique<YAMLRemarkParser>(Buf);
   case Format::Bitstream:
     return std::make_unique<BitstreamRemarkParser>(Buf);
   case Format::Unknown:
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Unknown remark parser format.");
+  case Format::Auto:
+    break;
   }
   llvm_unreachable("unhandled ParseFormat");
 }
@@ -66,15 +71,19 @@ Expected<std::unique_ptr<RemarkParser>>
 llvm::remarks::createRemarkParserFromMeta(
     Format ParserFormat, StringRef Buf,
     std::optional<StringRef> ExternalFilePrependPath) {
-  switch (ParserFormat) {
+  auto DetectedFormat = detectFormat(ParserFormat, Buf);
+  if (!DetectedFormat)
+    return DetectedFormat.takeError();
+
+  switch (*DetectedFormat) {
   case Format::YAML:
     return createYAMLParserFromMeta(Buf, std::move(ExternalFilePrependPath));
   case Format::Bitstream:
     return createBitstreamParserFromMeta(Buf,
                                          std::move(ExternalFilePrependPath));
   case Format::Unknown:
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Unknown remark parser format.");
+  case Format::Auto:
+    break;
   }
   llvm_unreachable("unhandled ParseFormat");
 }
