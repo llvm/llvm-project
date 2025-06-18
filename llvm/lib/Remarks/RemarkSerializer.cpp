@@ -26,8 +26,6 @@ remarks::createRemarkSerializer(Format RemarksFormat, SerializerMode Mode,
                              "Unknown remark serializer format.");
   case Format::YAML:
     return std::make_unique<YAMLRemarkSerializer>(OS, Mode);
-  case Format::YAMLStrTab:
-    return std::make_unique<YAMLStrTabRemarkSerializer>(OS, Mode);
   case Format::Bitstream:
     return std::make_unique<BitstreamRemarkSerializer>(OS, Mode);
   }
@@ -43,9 +41,6 @@ remarks::createRemarkSerializer(Format RemarksFormat, SerializerMode Mode,
                              "Unknown remark serializer format.");
   case Format::YAML:
     return std::make_unique<YAMLRemarkSerializer>(OS, Mode, std::move(StrTab));
-  case Format::YAMLStrTab:
-    return std::make_unique<YAMLStrTabRemarkSerializer>(OS, Mode,
-                                                        std::move(StrTab));
   case Format::Bitstream:
     return std::make_unique<BitstreamRemarkSerializer>(OS, Mode,
                                                        std::move(StrTab));
