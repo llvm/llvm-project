@@ -443,7 +443,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       mlir::Value v;
       if (arg.isAggregate())
         cgm.errorNYI(loc, "emitCall: aggregate call argument");
-      v = arg.getKnownRValue().getScalarVal();
+      v = arg.getKnownRValue().getValue();
 
       // We might have to widen integers, but we should never truncate.
       if (argType != v.getType() && mlir::isa<cir::IntType>(v.getType()))
