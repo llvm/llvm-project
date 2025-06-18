@@ -1,4 +1,4 @@
-//===- LowerContractionToSMMLAPattern.cpp - Contract to SMMLA ---*- C++ -*-===//
+//===- LowerContractionToNeonI8MMPattern.cpp - Contract to I8MM -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements lowering patterns from vector.contract to
-// arm_neon.intr.smmla
+// This file implements lowering patterns from vector.contract to operations
+// that map to instructions from the Neon FEAT_I8MM extension.
 //
 //===---
 
@@ -117,7 +117,7 @@ Value createMMLA(PatternRewriter &rewriter, MMLA op, Location loc,
 /// as [2,2,8] is a divisor of its shape. It can also process vecmats with dimM
 /// = 1 (either explicitly or inferred if LHS has only dimK) If no unrolling is
 /// necessary, a single smmla instruction is emitted.
-class LowerContractionToSMMLAPattern
+class LowerContractionToNeonI8MMPattern
     : public OpRewritePattern<vector::ContractionOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -352,8 +352,8 @@ public:
 
 } // namespace
 
-void mlir::arm_neon::populateLowerContractionToSMMLAPatternPatterns(
+void mlir::arm_neon::populateLowerContractionToNeonI8MMPatternPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
-  patterns.add<LowerContractionToSMMLAPattern>(context, /*benefit=*/2);
+  patterns.add<LowerContractionToNeonI8MMPattern>(context, /*benefit=*/2);
 }
