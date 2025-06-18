@@ -7,11 +7,11 @@
 
 define i32 @workitem_id_x() {
 ; ALL-LABEL: 'workitem_id_x'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.x()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.x()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 %result
 ;
 ; SIZE-LABEL: 'workitem_id_x'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.x()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.x()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %result
 ;
   %result = call i32 @llvm.amdgcn.workitem.id.x()
@@ -20,12 +20,12 @@ define i32 @workitem_id_x() {
 
 define amdgpu_kernel void @kernel_workitem_id_x(ptr addrspace(1) %ptr) {
 ; ALL-LABEL: 'kernel_workitem_id_x'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.x()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.x()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %result, ptr addrspace(1) %ptr, align 4
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SIZE-LABEL: 'kernel_workitem_id_x'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.x()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.x()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %result, ptr addrspace(1) %ptr, align 4
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
@@ -36,11 +36,11 @@ define amdgpu_kernel void @kernel_workitem_id_x(ptr addrspace(1) %ptr) {
 
 define i32 @workitem_id_y() {
 ; ALL-LABEL: 'workitem_id_y'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.y()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.y()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 %result
 ;
 ; SIZE-LABEL: 'workitem_id_y'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.y()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.y()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %result
 ;
   %result = call i32 @llvm.amdgcn.workitem.id.y()
@@ -49,12 +49,12 @@ define i32 @workitem_id_y() {
 
 define amdgpu_kernel void @kernel_workitem_id_y(ptr addrspace(1) %ptr) {
 ; ALL-LABEL: 'kernel_workitem_id_y'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.y()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.y()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %result, ptr addrspace(1) %ptr, align 4
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SIZE-LABEL: 'kernel_workitem_id_y'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.y()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.y()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %result, ptr addrspace(1) %ptr, align 4
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
@@ -65,11 +65,11 @@ define amdgpu_kernel void @kernel_workitem_id_y(ptr addrspace(1) %ptr) {
 
 define i32 @workitem_id_z() {
 ; ALL-LABEL: 'workitem_id_z'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.y()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.y()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 %result
 ;
 ; SIZE-LABEL: 'workitem_id_z'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.y()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.y()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %result
 ;
   %result = call i32 @llvm.amdgcn.workitem.id.y()
@@ -78,12 +78,12 @@ define i32 @workitem_id_z() {
 
 define amdgpu_kernel void @kernel_workitem_id_z(ptr addrspace(1) %ptr) {
 ; ALL-LABEL: 'kernel_workitem_id_z'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.z()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.z()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %result, ptr addrspace(1) %ptr, align 4
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SIZE-LABEL: 'kernel_workitem_id_z'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.z()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workitem.id.z()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %result, ptr addrspace(1) %ptr, align 4
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
@@ -94,11 +94,11 @@ define amdgpu_kernel void @kernel_workitem_id_z(ptr addrspace(1) %ptr) {
 
 define i32 @workgroup_id_x() {
 ; ALL-LABEL: 'workgroup_id_x'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workgroup.id.x()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workgroup.id.x()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 %result
 ;
 ; SIZE-LABEL: 'workgroup_id_x'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workgroup.id.x()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workgroup.id.x()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %result
 ;
   %result = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -107,11 +107,11 @@ define i32 @workgroup_id_x() {
 
 define i32 @workgroup_id_y() {
 ; ALL-LABEL: 'workgroup_id_y'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workgroup.id.y()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workgroup.id.y()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 %result
 ;
 ; SIZE-LABEL: 'workgroup_id_y'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workgroup.id.y()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workgroup.id.y()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %result
 ;
   %result = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -120,11 +120,11 @@ define i32 @workgroup_id_y() {
 
 define i32 @workgroup_id_z() {
 ; ALL-LABEL: 'workgroup_id_z'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workgroup.id.y()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workgroup.id.y()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 %result
 ;
 ; SIZE-LABEL: 'workgroup_id_z'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.workgroup.id.y()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.workgroup.id.y()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %result
 ;
   %result = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -133,11 +133,11 @@ define i32 @workgroup_id_z() {
 
 define i32 @lds_kernel_id() {
 ; ALL-LABEL: 'lds_kernel_id'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.lds.kernel.id()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.lds.kernel.id()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 %result
 ;
 ; SIZE-LABEL: 'lds_kernel_id'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i32 @llvm.amdgcn.lds.kernel.id()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i32 @llvm.amdgcn.lds.kernel.id()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %result
 ;
   %result = call i32 @llvm.amdgcn.lds.kernel.id()
@@ -146,11 +146,11 @@ define i32 @lds_kernel_id() {
 
 define ptr addrspace(4) @dispatch_ptr() {
 ; ALL-LABEL: 'dispatch_ptr'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret ptr addrspace(4) %result
 ;
 ; SIZE-LABEL: 'dispatch_ptr'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret ptr addrspace(4) %result
 ;
   %result = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
@@ -159,11 +159,11 @@ define ptr addrspace(4) @dispatch_ptr() {
 
 define i64 @dispatch_id_() {
 ; ALL-LABEL: 'dispatch_id_'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i64 @llvm.amdgcn.dispatch.id()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i64 @llvm.amdgcn.dispatch.id()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i64 %result
 ;
 ; SIZE-LABEL: 'dispatch_id_'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call i64 @llvm.amdgcn.dispatch.id()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call i64 @llvm.amdgcn.dispatch.id()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %result
 ;
   %result = call i64 @llvm.amdgcn.dispatch.id()
@@ -172,11 +172,11 @@ define i64 @dispatch_id_() {
 
 define ptr addrspace(4) @implicitarg_ptr() {
 ; ALL-LABEL: 'implicitarg_ptr'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret ptr addrspace(4) %result
 ;
 ; SIZE-LABEL: 'implicitarg_ptr'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret ptr addrspace(4) %result
 ;
   %result = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -185,11 +185,11 @@ define ptr addrspace(4) @implicitarg_ptr() {
 
 define ptr addrspace(4) @queue_ptr() {
 ; ALL-LABEL: 'queue_ptr'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret ptr addrspace(4) %result
 ;
 ; SIZE-LABEL: 'queue_ptr'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %result = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %result = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret ptr addrspace(4) %result
 ;
   %result = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
