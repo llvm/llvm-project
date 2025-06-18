@@ -152,6 +152,20 @@ public:
   template <StringElementType element_type>
   static bool
   ReadBufferAndDumpToStream(const ReadBufferAndDumpToStreamOptions &options);
+
+  template <StringElementType element_type>
+  static constexpr uint64_t ElementByteSize() {
+    switch (element_type) {
+    case StringElementType::ASCII:
+    case StringElementType::UTF8:
+      return 1;
+    case StringElementType::UTF16:
+      return 2;
+    case StringElementType::UTF32:
+      return 3;
+    }
+    return 0;
+  }
 };
 
 } // namespace formatters
