@@ -296,7 +296,8 @@ static constexpr int MAX_CONTEXTS_EMITTED{2};
 static constexpr bool OMIT_SHARED_CONTEXTS{true};
 
 void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
-    bool echoSourceLine, const common::LanguageFeatureControl *hintFlagPtr) const {
+    bool echoSourceLine,
+    const common::LanguageFeatureControl *hintFlagPtr) const {
   std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(allCooked)};
   const AllSources &sources{allCooked.allSources()};
   const std::string text{ToString()};
@@ -452,7 +453,8 @@ void Messages::ResolveProvenances(const AllCookedSources &allCooked) {
 }
 
 void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
-    bool echoSourceLines, const common::LanguageFeatureControl *hintFlagPtr) const {
+    bool echoSourceLines,
+    const common::LanguageFeatureControl *hintFlagPtr) const {
   std::vector<const Message *> sorted;
   for (const auto &msg : messages_) {
     sorted.push_back(&msg);

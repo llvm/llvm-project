@@ -292,7 +292,7 @@ public:
   std::optional<ProvenanceRange> GetProvenanceRange(
       const AllCookedSources &) const;
   void Emit(llvm::raw_ostream &, const AllCookedSources &,
-      bool echoSourceLine = true, 
+      bool echoSourceLine = true,
       const common::LanguageFeatureControl *hintFlags = nullptr) const;
 
   // If this Message or any of its attachments locates itself via a CharBlock,
