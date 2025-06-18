@@ -2403,7 +2403,8 @@ static bool haveSameDefiningOp(OperandRange operands, Operation *defOp) {
 static LogicalResult
 foldToElementsFromElements(ToElementsOp toElementsOp,
                            SmallVectorImpl<OpFoldResult> &results) {
-  auto fromElementsOp = toElementsOp.getSource().getDefiningOp<FromElementsOp>();
+  auto fromElementsOp =
+      toElementsOp.getSource().getDefiningOp<FromElementsOp>();
   if (!fromElementsOp)
     return failure();
 
