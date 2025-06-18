@@ -145,7 +145,7 @@ unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
     return 1;
   if (auto *RR = dyn_cast<VPReductionPHIRecipe>(R))
     return RR->getVFScaleFactor();
-  if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
+  if (auto *RR = dyn_cast<VPReductionRecipe>(R))
     return RR->getVFScaleFactor();
   assert(
       (!isa<VPInstruction>(R) || cast<VPInstruction>(R)->getOpcode() !=
