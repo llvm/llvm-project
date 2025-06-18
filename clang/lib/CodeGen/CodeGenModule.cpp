@@ -1472,6 +1472,106 @@ void CodeGenModule::Release() {
       }
     }
   }
+  
+      // 1. Get source file name
+  /*  std::string FileName = getModule().getSourceFileName(); // like "foo.c"
+    llvm::StringRef BaseName = llvm::sys::path::filename(FileName);
+
+    // 2. Create variable name like __cli_foo_c
+    std::string VarName = "__cli_" + BaseName.str();
+    std::replace(VarName.begin(), VarName.end(), '.', '_');
+
+    // 3. Get the compilation command line from options
+    std::string CmdLineStr;
+    for (const std::string &Arg : CodeGenOpts.CommandLineArgs) {
+        CmdLineStr += Arg + " ";
+    }
+
+    // 4. Create LLVM IR string global
+    llvm::Constant *CmdStr = llvm::ConstantDataArray::getString(getLLVMContext(), CmdLineStr, true);
+    // 1. Prepare internal string global variable
+auto *GV = new llvm::GlobalVariable(
+    getModule(),
+    CmdStr->getType(),
+    true,
+    llvm::GlobalValue::InternalLinkage,
+    CmdStr,
+    VarName + ".data"
+);
+GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
+// 2. Create external pointer global pointing to internal string
+llvm::Constant *Zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(getLLVMContext()), 0);
+llvm::Constant *Indices[] = {Zero, Zero};
+llvm::Constant *PtrToStr = llvm::ConstantExpr::getGetElementPtr(CmdStr->getType(), GV, Indices);
+
+auto *ExternGV = new llvm::GlobalVariable(
+    getModule(),
+    PtrToStr->getType(),
+    true,
+    llvm::GlobalValue::ExternalLinkage,
+    PtrToStr,
+    VarName
+);
+ExternGV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+(void)ExternGV;
+    llvm::errs() << "✅ Emitting __cli global variable!\n";
+
+  */
+  
+  // === BEGIN: Emit global __cli_<file> variable ===
+
+std::string FileName = getModule().getSourceFileName();
+llvm::StringRef BaseName = llvm::sys::path::filename(FileName);
+std::string VarName = "__cli_" + BaseName.str();
+std::replace(VarName.begin(), VarName.end(), '.', '_');
+
+// Join command line args into one string
+std::string CmdLineStr;
+for (const std::string &Arg : CodeGenOpts.CommandLineArgs) {
+    CmdLineStr += Arg + " ";
+}
+
+// Step 1: Create string constant (char[] data)
+llvm::Constant *CmdStr = llvm::ConstantDataArray::getString(getLLVMContext(), CmdLineStr, true);
+
+// Step 2: Emit internal variable: @__cli_foo_c.data
+auto *DataGV = new llvm::GlobalVariable(
+    getModule(),
+    CmdStr->getType(),                         // [N x i8]
+    true,                                     // constant
+    llvm::GlobalValue::InternalLinkage,
+    CmdStr,
+    VarName + ".data"
+);
+DataGV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);
+
+// Step 3: Pointer to string
+llvm::Constant *PtrToStr = llvm::ConstantExpr::getPointerCast(
+    DataGV, llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(getLLVMContext()))
+);
+
+
+// Step 4: Remove dummy external if exists
+if (auto *Old = getModule().getNamedGlobal(VarName)) {
+    Old->eraseFromParent();
+}
+
+// ✅ Step 5: Emit the real global variable
+auto *FinalGV = new llvm::GlobalVariable(
+    getModule(),
+    PtrToStr->getType(),                       // i8*
+    true,                                     // constant
+    llvm::GlobalValue::ExternalLinkage,       // important: this makes it visible!
+    PtrToStr,
+    VarName
+);
+//FinalGV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);
+
+llvm::errs() << "✅ Emitting " << VarName << " global variable!\n";
+
+// === END ===
+
 }
 
 void CodeGenModule::EmitOpenCLMetadata() {
