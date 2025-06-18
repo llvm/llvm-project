@@ -328,9 +328,6 @@ getDerefOffsetInBytes(const DIExpression *DIExpr) {
 
 /// A whole (unfragmented) source variable.
 using DebugAggregate = std::pair<const DILocalVariable *, const DILocation *>;
-static DebugAggregate getAggregate(const DbgVariableIntrinsic *DII) {
-  return DebugAggregate(DII->getVariable(), DII->getDebugLoc().getInlinedAt());
-}
 static DebugAggregate getAggregate(const DebugVariable &Var) {
   return DebugAggregate(Var.getVariable(), Var.getInlinedAt());
 }
@@ -1459,10 +1456,6 @@ static DIAssignID *getIDFromInst(const Instruction &I) {
   return cast<DIAssignID>(I.getMetadata(LLVMContext::MD_DIAssignID));
 }
 
-static DIAssignID *getIDFromMarker(const DbgAssignIntrinsic &DAI) {
-  return cast<DIAssignID>(DAI.getAssignID());
-}
-
 static DIAssignID *getIDFromMarker(const DbgVariableRecord &DVR) {
   assert(DVR.isDbgAssign() &&
          "Cannot get a DIAssignID from a non-assign DbgVariableRecord!");
@@ -1886,7 +1879,7 @@ void AssignmentTrackingLowering::processDbgValue(DbgVariableRecord *DbgValue,
   emitDbgValue(LocKind::Val, DbgValue, DbgValue);
 }
 
-template <typename T> static bool hasZeroSizedFragment(T &DbgValue) {
+static bool hasZeroSizedFragment(DbgVariableRecord &DbgValue) {
   if (auto F = DbgValue.getExpression()->getFragmentInfo())
     return F->SizeInBits == 0;
   return false;
@@ -1935,14 +1928,12 @@ void AssignmentTrackingLowering::process(BasicBlock &BB, BlockInfo *LiveSet) {
       // attached DbgRecords, or a non-debug instruction with attached processed
       // DbgRecords.
       // II has not been processed.
-      if (!isa<DbgInfoIntrinsic>(&*II)) {
-        if (II->isTerminator())
-          break;
-        resetInsertionPoint(*II);
-        processNonDbgInstruction(*II, LiveSet);
-        assert(LiveSet->isValid());
-        ++II;
-      }
+      if (II->isTerminator())
+        break;
+      resetInsertionPoint(*II);
+      processNonDbgInstruction(*II, LiveSet);
+      assert(LiveSet->isValid());
+      ++II;
     }
     // II is now either a debug intrinsic, a non-debug instruction with no
     // attached DbgRecords, or a non-debug instruction with attached unprocessed
