@@ -46,8 +46,10 @@ void call_snprintf(double d, int n, int *ptr) {
   __builtin_snprintf(buf, 6, "%5.1f", 9.f);
   __builtin_snprintf(buf, 6, "%+5.1f", 9.f);
   __builtin_snprintf(buf, 6, "% 5.1f", 9.f);
+  __builtin_snprintf(buf, 6, "%   5.1f", 9.f);
   __builtin_snprintf(buf, 6, "%+6.1f", 9.f); // kprintf-warning {{'snprintf' will always be truncated; specified size is 6, but format string expands to at least 7}}
   __builtin_snprintf(buf, 6, "% 6.1f", 9.f); // kprintf-warning {{'snprintf' will always be truncated; specified size is 6, but format string expands to at least 7}}
+  __builtin_snprintf(buf, 6, "%   6.1f", 9.f); // kprintf-warning {{'snprintf' will always be truncated; specified size is 6, but format string expands to at least 7}}
 }
 
 void call_vsnprintf(void) {
@@ -161,6 +163,8 @@ void call_sprintf(void) {
   sprintf(buf, "%5.1f", 9.f);
   sprintf(buf, "%+5.1f", 9.f);
   sprintf(buf, "% 5.1f", 9.f);
+  sprintf(buf, "%   5.1f", 9.f);
   sprintf(buf, "%+6.1f", 9.f); // kprintf-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
   sprintf(buf, "% 6.1f", 9.f); // kprintf-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "%   6.1f", 9.f); // kprintf-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
 }
