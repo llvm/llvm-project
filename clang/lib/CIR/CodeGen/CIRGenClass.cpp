@@ -89,9 +89,9 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
 
   // If a base constructor is being emitted, create an LValue that has the
   // non-virtual alignment.
-  LValue lhs = (cgf.curGD.getCtorType() == Ctor_Base) ?
-                  cgf.makeNaturalAlignPointeeAddrLValue(thisPtr, recordTy) :
-                  cgf.makeNaturalAlignAddrLValue(thisPtr, recordTy);
+  LValue lhs = (cgf.curGD.getCtorType() == Ctor_Base)
+                   ? cgf.makeNaturalAlignPointeeAddrLValue(thisPtr, recordTy)
+                   : cgf.makeNaturalAlignAddrLValue(thisPtr, recordTy);
 
   emitLValueForAnyFieldInitialization(cgf, memberInit, lhs);
 
