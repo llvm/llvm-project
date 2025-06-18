@@ -35,8 +35,7 @@ void CharacterConverter::clear() {
 }
 
 bool CharacterConverter::isFull() {
-  return state->bytes_stored == state->total_bytes &&
-         state->total_bytes != 0;
+  return state->bytes_stored == state->total_bytes && state->total_bytes != 0;
 }
 
 bool CharacterConverter::isEmpty() { return state->bytes_stored == 0; }
@@ -128,8 +127,7 @@ ErrorOr<char8_t> CharacterConverter::pop_utf8() {
   char32_t output;
 
   // Shift to get the next 6 bits from the utf32 encoding
-  const size_t shift_amount =
-      (state->bytes_stored - 1) * ENCODED_BITS_PER_UTF8;
+  const size_t shift_amount = (state->bytes_stored - 1) * ENCODED_BITS_PER_UTF8;
   if (isFull()) {
     /*
       Choose the correct set of most significant bits to encode the length
