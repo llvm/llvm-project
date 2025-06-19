@@ -117,10 +117,10 @@ try.cont:
 ; CHECK-X64: [[CONT]]:
 ;     *Handlers[UFC.__callsite]
 ; CHECK-X64: leaq .[[TABLE:LJTI[0-9]+_[0-9]+]](%rip), %rcx
-; CHECK-X64: movl (%rcx,%rax,4), %eax
-; CHECK-X64: cltq
-; CHECK-X64: addq %rcx, %rax
-; CHECK-X64: jmpq *%rax
+; CHECK-X64: movl (%rcx,%rax,4), %rax
+; CHECK-X64: leaq __ImageBase@IMGREL(%rip), %rcx
+; CHECK-X64: addq %rax, %rcx
+; CHECK-X64: jmpq *%rcx
 
 ; CHECK-X64-LINUX: .[[RESUME:LBB[0-9]+_[0-9]+]]:
 ;     assert(UFC.__callsite < 1);
