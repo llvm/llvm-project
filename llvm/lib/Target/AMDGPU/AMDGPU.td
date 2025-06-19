@@ -2290,7 +2290,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureAddSubU64Insts,
    FeatureWMMA128bInsts,
    FeatureIEEEMinimumMaximumInsts,
-   FeatureMadU32Inst,
 ]>;
 
 //===----------------------------------------------------------------------===//

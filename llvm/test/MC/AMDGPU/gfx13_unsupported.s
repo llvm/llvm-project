@@ -372,3 +372,6 @@ v_pk_fma_f32 v[0:1], v[0:1], v[0:1], v[0:1]
 
 v_pk_mul_f32 v[0:1], v[0:1], v[0:1]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mad_u32 v0, v0, v0, v0
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
