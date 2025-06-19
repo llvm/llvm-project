@@ -72,7 +72,7 @@ static MCInst loadPPRImmediate(MCRegister Reg, unsigned RegBitWidth,
 // Generates instructions to load an immediate value into an FPCR register.
 static std::vector<MCInst>
 loadFPCRImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
-  MCRegister TempReg = AArch64::X8;
+  MCRegister TempReg = AArch64::X16;
   MCInst LoadImm = MCInstBuilder(AArch64::MOVi64imm).addReg(TempReg).addImm(0);
   MCInst MoveToFPCR =
       MCInstBuilder(AArch64::MSR).addImm(AArch64SysReg::FPCR).addReg(TempReg);
