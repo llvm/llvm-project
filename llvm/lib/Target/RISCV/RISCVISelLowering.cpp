@@ -3724,7 +3724,7 @@ static SDValue lowerBuildVectorViaVID(SDValue Op, SelectionDAG &DAG,
       SplatStepVal = Log2_64(std::abs(StepNumerator));
     }
 
-    // Only emit VIDs with suitably-small steps. We use imm5 is a threshold
+    // Only emit VIDs with suitably-small steps. We use imm5 as a threshold
     // since it's the immediate value many RVV instructions accept. There is
     // no vmul.vi instruction so ensure multiply constant can fit in a
     // single addi instruction.  For the addend, we allow up to 32 bits..
