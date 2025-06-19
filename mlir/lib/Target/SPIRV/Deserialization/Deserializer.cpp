@@ -1271,7 +1271,8 @@ spirv::Deserializer::processTensorARMType(ArrayRef<uint32_t> operands) {
     return success();
   }
 
-  std::optional<std::pair<Attribute, Type>> shapeInfo = getConstant(operands[3]);
+  std::optional<std::pair<Attribute, Type>> shapeInfo =
+      getConstant(operands[3]);
   if (!shapeInfo)
     return emitError(unknownLoc, "OpTypeTensorARM shape must come from a "
                                  "constant instruction of type OpTypeArray");

@@ -1243,7 +1243,7 @@ struct spirv::detail::TensorArmTypeStorage final : TypeStorage {
     auto [shape, elementType] = key;
     shape = allocator.copyInto(shape);
     return new (allocator.allocate<TensorArmTypeStorage>())
-        TensorArmTypeStorage(std::move(shape), std::move(elementType));
+        TensorArmTypeStorage(shape, elementType);
   }
 
   static llvm::hash_code hashKey(const KeyTy &key) {
