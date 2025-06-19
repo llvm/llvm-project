@@ -2169,10 +2169,7 @@ defm V_MAX_F16         : VOP2_Real_gfx10<0x039>;
 defm V_MIN_F16         : VOP2_Real_gfx10<0x03a>;
 defm V_LDEXP_F16       : VOP2_Real_gfx10<0x03b>;
 
-let IsSingle = 1 in {
-  defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx10<0x03c>;
-}
-defm V_PK_FMAC_F16     :  VOP2_Real_dpp_gfx10<0x03c>, VOP2_Real_dpp8_gfx10<0x03c>;
+defm V_PK_FMAC_F16     :  VOP2_Real_gfx10<0x03c>;
 
 // VOP2 no carry-in, carry-out.
 defm V_ADD_NC_U32 :
