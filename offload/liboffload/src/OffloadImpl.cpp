@@ -99,6 +99,8 @@ static OffloadContext *OffloadContextVal;
 struct OffloadContext {
   OffloadContext(OffloadContext &) = delete;
   OffloadContext(OffloadContext &&) = delete;
+  OffloadContext &operator=(OffloadContext &) = delete;
+  OffloadContext &operator=(OffloadContext &&) = delete;
 
   bool TracingEnabled = false;
   bool ValidationEnabled = true;
