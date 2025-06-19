@@ -123,11 +123,12 @@ TEST(TrailingObjects, OneArg) {
   EXPECT_EQ(Class1::totalSizeToAlloc<short>(3),
             sizeof(Class1) + sizeof(short) * 3);
 
-  EXPECT_EQ(C->getTrailingObjects<short>(), reinterpret_cast<short *>(C + 1));
+  EXPECT_EQ(C->getTrailingObjects(), reinterpret_cast<short *>(C + 1));
   EXPECT_EQ(C->get(0), 1);
   EXPECT_EQ(C->get(2), 3);
 
-  EXPECT_EQ(C->getTrailingObjects(), C->getTrailingObjects<short>());
+  EXPECT_EQ(C->getTrailingObjects(),
+            (C->getTrailingObjects<short, /*Strict=*/false>()));
 
   delete C;
 }
