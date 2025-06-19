@@ -1364,36 +1364,33 @@ public:
       return;
     }
 
-    if (!ForceTailFoldingStyle.getNumOccurrences()) {
-      ChosenTailFoldingStyle = {
-          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
-          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false)};
-      return;
-    }
+    // Default to TTI preference, but allow command line override.
+    ChosenTailFoldingStyle = {
+        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
+        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false)};
+    if (ForceTailFoldingStyle.getNumOccurrences())
+      ChosenTailFoldingStyle = {ForceTailFoldingStyle.getValue(),
+                                ForceTailFoldingStyle.getValue()};
 
-    // Set styles when forced.
-    ChosenTailFoldingStyle = {ForceTailFoldingStyle.getValue(),
-                              ForceTailFoldingStyle.getValue()};
     if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL)
       return;
     // Override forced styles if needed.
     // FIXME: Investigate opportunity for fixed vector factor.
     bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
                       TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
-    if (!EVLIsLegal) {
-      // If for some reason EVL mode is unsupported, fallback to
-      // DataWithoutLaneMask to try to vectorize the loop with folded tail
-      // in a generic way.
-      ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
-                                TailFoldingStyle::DataWithoutLaneMask};
-      LLVM_DEBUG(
-          dbgs()
-          << "LV: Preference for VP intrinsics indicated. Will "
-             "not try to generate VP Intrinsics "
-          << (UserIC > 1
-                  ? "since interleave count specified is greater than 1.\n"
-                  : "due to non-interleaving reasons.\n"));
-    }
+    if (EVLIsLegal)
+      return;
+    // If for some reason EVL mode is unsupported, fallback to
+    // DataWithoutLaneMask to try to vectorize the loop with folded tail
+    // in a generic way.
+    ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
+                              TailFoldingStyle::DataWithoutLaneMask};
+    LLVM_DEBUG(
+        dbgs() << "LV: Preference for VP intrinsics indicated. Will "
+                  "not try to generate VP Intrinsics "
+               << (UserIC > 1
+                       ? "since interleave count specified is greater than 1.\n"
+                       : "due to non-interleaving reasons.\n"));
   }
 
   /// Returns true if all loop blocks should be masked to fold tail loop.
