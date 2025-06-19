@@ -93,6 +93,7 @@ function(tablegen project ofn)
     list(APPEND LLVM_TABLEGEN_FLAGS "-no-warn-on-unused-template-args")
   endif()
 
+  # Build the absolute path for the current input file.
   if (IS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
     set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
   else()
@@ -108,7 +109,7 @@ function(tablegen project ofn)
       "  includes: \"${tblgen_includes}\"\n"
   )
 
-  # Filter out empty items before prepending each entry with -I
+  # Prepend each include entry with -I for arguments.
   list(TRANSFORM tblgen_includes PREPEND -I)
 
   # We need both _TABLEGEN_TARGET and _TABLEGEN_EXE in the  DEPENDS list
