@@ -512,6 +512,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setAllocKind(F, AllocFnKind::Alloc | AllocFnKind::Uninitialized | AllocFnKind::Aligned);
     [[fallthrough]];
   case LibFunc_valloc:
+  case LibFunc_pvalloc:
   case LibFunc_malloc:
   case LibFunc_vec_malloc:
     Changed |= setAllocFamily(F, TheLibFunc == LibFunc_vec_malloc ? "vec_malloc"

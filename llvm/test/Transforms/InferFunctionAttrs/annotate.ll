@@ -812,6 +812,9 @@ declare i32 @putchar_unlocked(i32)
 ; CHECK: declare noundef i32 @puts(ptr noundef readonly captures(none)) [[NOFREE_NOUNWIND]]
 declare i32 @puts(ptr)
 
+; CHECK: declare noalias noundef ptr @pvalloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE0_FAMILY_MALLOC]]
+declare ptr @pvalloc(i64)
+
 ; CHECK: declare noundef i64 @pwrite(i32 noundef, ptr noundef readonly captures(none), i64 noundef, i64 noundef) [[NOFREE]]
 declare i64 @pwrite(i32, ptr, i64, i64)
 
