@@ -29,8 +29,8 @@
 #include <__type_traits/copy_cvref.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
-#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_const.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
@@ -1165,8 +1165,7 @@ public:
   __insert_unique_from_orphaned_node(const_iterator __p, __get_node_value_type_t<_Tp>&& __value) {
     using __key_type = typename _NodeTypes::key_type;
     // fails here for move_alloc.pass.cpp
-    if(__libcpp_is_constant_evaluated()) {
-
+    if (__libcpp_is_constant_evaluated()) {
       // __node_allocator& __na = __value.__node_alloc();
       // __node_traits::destroy(__na, std::addressof(__lhs));
       // __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
@@ -1175,7 +1174,7 @@ public:
       // __node_traits::construct(__na, std::addressof(__kk), std::move(__value.first));
       __emplace_hint_unique(__p, std::move(__kk), std::move(__value.second));
     } else {
-    __emplace_hint_unique(__p, const_cast<__key_type&&>(__value.first), std::move(__value.second));
+      __emplace_hint_unique(__p, const_cast<__key_type&&>(__value.first), std::move(__value.second));
     }
   }
 
@@ -1375,7 +1374,7 @@ private:
     using __key_type = typename _NodeTypes::key_type;
 
     if (__libcpp_is_constant_evaluated()) {
-      __get_node_value_type_t<value_type> __tmp {__rhs.first, __rhs.second};
+      __get_node_value_type_t<value_type> __tmp{__rhs.first, __rhs.second};
       // const_cast is not allowed at constexpr time.
       // we get around this by deleting and creating a new node value
       __lhs.~__node_value_type();
