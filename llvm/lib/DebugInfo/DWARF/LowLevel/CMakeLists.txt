@@ -10,4 +10,5 @@ add_llvm_component_library(LLVMDebugInfoDWARFLowLevel
   LINK_COMPONENTS
   BinaryFormat
   Support
+  TargetParser
   )
