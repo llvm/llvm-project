@@ -1820,14 +1820,23 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetWithClause &x) {
     const parser::OmpClause *toClause = FindClause(llvm::omp::Clause::OMPC_to);
     const parser::OmpClause *linkClause =
         FindClause(llvm::omp::Clause::OMPC_link);
+    const parser::OmpClause *indirectClause =
+        FindClause(llvm::omp::Clause::OMPC_indirect);
     if (!enterClause && !toClause && !linkClause) {
       context_.Say(x.source,
           "If the DECLARE TARGET directive has a clause, it must contain at least one ENTER clause or LINK clause"_err_en_US);
+    }
+    if (indirectClause && !enterClause) {
+      context_.Say(x.source,
+          "The INDIRECT clause cannot be used without the ENTER clause with the DECLARE TARGET directive."_err_en_US);
     }
     unsigned version{context_.langOptions().OpenMPVersion};
     if (toClause && version >= 52) {
       context_.Warn(common::UsageWarning::OpenMPUsage, toClause->source,
           "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
+    }
+    if (indirectClause) {
+      CheckAllowedClause(llvm::omp::Clause::OMPC_indirect);
     }
   }
 }
@@ -3501,37 +3510,56 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
         operation::ToString(top.first));
     return;
   }
-  // Check if `atom` occurs exactly once in the argument list.
+  // Check how many times `atom` occurs as an argument, if it's a subexpression
+  // of an argument, and collect the non-atom arguments.
   std::vector<SomeExpr> nonAtom;
-  auto unique{[&]() { // -> iterator
-    auto found{top.second.end()};
-    for (auto i{top.second.begin()}, e{top.second.end()}; i != e; ++i) {
-      if (IsSameOrConvertOf(*i, atom)) {
-        if (found != top.second.end()) {
-          return top.second.end();
-        }
-        found = i;
+  MaybeExpr subExpr;
+  auto atomCount{[&]() {
+    int count{0};
+    for (const SomeExpr &arg : top.second) {
+      if (IsSameOrConvertOf(arg, atom)) {
+        ++count;
       } else {
-        nonAtom.push_back(*i);
+        if (!subExpr && IsSubexpressionOf(atom, arg)) {
+          subExpr = arg;
+        }
+        nonAtom.push_back(arg);
       }
     }
-    return found;
+    return count;
   }()};
 
-  if (unique == top.second.end()) {
-    if (top.first == operation::Operator::Identity) {
-      // This is "x = y".
+  bool hasError{false};
+  if (subExpr) {
+    context_.Say(rsrc,
+        "The atomic variable %s cannot be a proper subexpression of an argument (here: %s) in the update operation"_err_en_US,
+        atom.AsFortran(), subExpr->AsFortran());
+    hasError = true;
+  }
+  if (top.first == operation::Operator::Identity) {
+    // This is "x = y".
+    assert((atomCount == 0 || atomCount == 1) && "Unexpected count");
+    if (atomCount == 0) {
       context_.Say(rsrc,
           "The atomic variable %s should appear as an argument in the update operation"_err_en_US,
           atom.AsFortran());
-    } else {
-      assert(top.first != operation::Operator::Identity &&
-          "Handle this separately");
-      context_.Say(rsrc,
-          "The atomic variable %s should occur exactly once among the arguments of the top-level %s operator"_err_en_US,
-          atom.AsFortran(), operation::ToString(top.first));
+      hasError = true;
     }
   } else {
+    if (atomCount == 0) {
+      context_.Say(rsrc,
+          "The atomic variable %s should appear as an argument of the top-level %s operator"_err_en_US,
+          atom.AsFortran(), operation::ToString(top.first));
+      hasError = true;
+    } else if (atomCount > 1) {
+      context_.Say(rsrc,
+          "The atomic variable %s should be exactly one of the arguments of the top-level %s operator"_err_en_US,
+          atom.AsFortran(), operation::ToString(top.first));
+      hasError = true;
+    }
+  }
+
+  if (!hasError) {
     CheckStorageOverlap(atom, nonAtom, source);
   }
 }

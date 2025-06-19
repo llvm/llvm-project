@@ -83,17 +83,8 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::AArch64_SVE_VectorCall;
   case CC_SpirFunction:
     return llvm::CallingConv::SPIR_FUNC;
-  case CC_DeviceKernel: {
-    if (CGM.getLangOpts().OpenCL)
-      return CGM.getTargetCodeGenInfo().getOpenCLKernelCallingConv();
-    if (CGM.getTriple().isSPIROrSPIRV())
-      return llvm::CallingConv::SPIR_KERNEL;
-    if (CGM.getTriple().isAMDGPU())
-      return llvm::CallingConv::AMDGPU_KERNEL;
-    if (CGM.getTriple().isNVPTX())
-      return llvm::CallingConv::PTX_Kernel;
-    llvm_unreachable("Unknown kernel calling convention");
-  }
+  case CC_DeviceKernel:
+    return CGM.getTargetCodeGenInfo().getDeviceKernelCallingConv();
   case CC_PreserveMost:
     return llvm::CallingConv::PreserveMost;
   case CC_PreserveAll:

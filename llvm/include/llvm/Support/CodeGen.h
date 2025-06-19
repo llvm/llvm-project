@@ -50,6 +50,22 @@ namespace llvm {
     };
   }
 
+  namespace FloatABI {
+  enum ABIType {
+    Default, // Target-specific (either soft or hard depending on triple, etc).
+    Soft,    // Soft float.
+    Hard     // Hard float.
+  };
+  }
+
+  enum class EABI {
+    Unknown,
+    Default, // Default means not specified
+    EABI4,   // Target-specific (either 4, 5 or gnu depending on triple).
+    EABI5,
+    GNU
+  };
+
   /// Code generation optimization level.
   enum class CodeGenOptLevel {
     None = 0,      ///< -O0
@@ -128,6 +144,15 @@ namespace llvm {
     Keep = 0,    ///< No function return thunk.
     Extern = 1,  ///< Replace returns with jump to thunk, don't emit thunk.
     Invalid = 2, ///< Not used.
+  };
+
+  enum class WinX64EHUnwindV2Mode {
+    // Don't use unwind v2 (i.e., use v1).
+    Disabled = 0,
+    // Use unwind v2 here possible, otherwise fallback to v1.
+    BestEffort = 1,
+    // Use unwind v2 everywhere, otherwise raise an error.
+    Required = 2,
   };
 
   } // namespace llvm
