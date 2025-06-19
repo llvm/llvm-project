@@ -2449,7 +2449,7 @@ define hidden void @func_call_clobber() #0 {
 ; GFX900-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX900-NEXT:    s_addk_i32 s32, 0x400
 ; GFX900-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX900-NEXT:    .cfi_llvm_vector_registers 16, 2815, 0, 32, 2815, 1, 32
+; GFX900-NEXT:    .cfi_llvm_vector_registers 16, 2600, 0, 32, 2600, 1, 32
 ; GFX900-NEXT:    s_getpc_b64 s[16:17]
 ; GFX900-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
 ; GFX900-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
@@ -2723,7 +2723,7 @@ define hidden void @func_call_clobber() #0 {
 ; GFX90A-V2A-DIS-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX90A-V2A-DIS-NEXT:    s_addk_i32 s32, 0x400
 ; GFX90A-V2A-DIS-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_registers 16, 2815, 0, 32, 2815, 1, 32
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_registers 16, 2600, 0, 32, 2600, 1, 32
 ; GFX90A-V2A-DIS-NEXT:    s_getpc_b64 s[16:17]
 ; GFX90A-V2A-DIS-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
 ; GFX90A-V2A-DIS-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
@@ -2997,7 +2997,7 @@ define hidden void @func_call_clobber() #0 {
 ; GFX90A-V2A-EN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX90A-V2A-EN-NEXT:    s_addk_i32 s32, 0x400
 ; GFX90A-V2A-EN-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_registers 16, 2815, 0, 32, 2815, 1, 32
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_registers 16, 2600, 0, 32, 2600, 1, 32
 ; GFX90A-V2A-EN-NEXT:    s_getpc_b64 s[16:17]
 ; GFX90A-V2A-EN-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
 ; GFX90A-V2A-EN-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
@@ -3240,7 +3240,7 @@ define hidden void @func_call_clobber() #0 {
 ; WAVE32-NEXT:    v_writelane_b32 v40, s30, 0
 ; WAVE32-NEXT:    s_addk_i32 s32, 0x200
 ; WAVE32-NEXT:    v_writelane_b32 v40, s31, 1
-; WAVE32-NEXT:    .cfi_llvm_vector_registers 16, 1791, 0, 32, 1791, 1, 32
+; WAVE32-NEXT:    .cfi_llvm_vector_registers 16, 1576, 0, 32, 1576, 1, 32
 ; WAVE32-NEXT:    s_getpc_b64 s[16:17]
 ; WAVE32-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
 ; WAVE32-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
