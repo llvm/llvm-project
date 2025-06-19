@@ -239,8 +239,7 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
       // A PseudoProbeInst has the IntrInaccessibleMemOnly tag hence it is
       // considered accessing memory and will be marked as a tail call if we
       // don't bail out here.
-      if (!CI || CI->isTailCall() || isa<DbgInfoIntrinsic>(&I) ||
-          isa<PseudoProbeInst>(&I))
+      if (!CI || CI->isTailCall() || isa<PseudoProbeInst>(&I))
         continue;
 
       // Bail out for intrinsic stackrestore call because it can modify
@@ -335,9 +334,6 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
 /// instructions between the call and this instruction are movable.
 ///
 static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
-  if (isa<DbgInfoIntrinsic>(I))
-    return true;
-
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
     if (II->getIntrinsicID() == Intrinsic::lifetime_end &&
         llvm::findAllocaForValue(II->getArgOperand(1)))
@@ -394,12 +390,6 @@ static bool canTransformAccumulatorRecursion(Instruction *I, CallInst *CI) {
     return false;
 
   return true;
-}
-
-static Instruction *firstNonDbg(BasicBlock::iterator I) {
-  while (isa<DbgInfoIntrinsic>(I))
-    ++I;
-  return &*I;
 }
 
 namespace {
@@ -493,9 +483,8 @@ CallInst *TailRecursionEliminator::findTRECandidate(BasicBlock *BB) {
   //   double fabs(double f) { return __builtin_fabs(f); } // a 'fabs' call
   // and disable this xform in this case, because the code generator will
   // lower the call to fabs into inline code.
-  if (BB == &F.getEntryBlock() &&
-      firstNonDbg(BB->front().getIterator()) == CI &&
-      firstNonDbg(std::next(BB->begin())) == TI && CI->getCalledFunction() &&
+  if (BB == &F.getEntryBlock() && &BB->front() == CI &&
+      &*std::next(BB->begin()) == TI && CI->getCalledFunction() &&
       !TTI->isLoweredToCall(CI->getCalledFunction())) {
     // A single-block function with just a call and a return. Check that
     // the arguments match.

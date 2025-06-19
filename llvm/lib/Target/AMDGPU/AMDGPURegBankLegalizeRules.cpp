@@ -26,6 +26,10 @@
 using namespace llvm;
 using namespace AMDGPU;
 
+bool AMDGPU::isAnyPtr(LLT Ty, unsigned Width) {
+  return Ty.isPointer() && Ty.getSizeInBits() == Width;
+}
+
 RegBankLLTMapping::RegBankLLTMapping(
     std::initializer_list<RegBankLLTMappingApplyID> DstOpMappingList,
     std::initializer_list<RegBankLLTMappingApplyID> SrcOpMappingList,
@@ -50,6 +54,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::scalar(32);
   case S64:
     return MRI.getType(Reg) == LLT::scalar(64);
+  case S128:
+    return MRI.getType(Reg) == LLT::scalar(128);
   case P0:
     return MRI.getType(Reg) == LLT::pointer(0, 64);
   case P1:
@@ -60,6 +66,12 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(4, 64);
   case P5:
     return MRI.getType(Reg) == LLT::pointer(5, 32);
+  case Ptr32:
+    return isAnyPtr(MRI.getType(Reg), 32);
+  case Ptr64:
+    return isAnyPtr(MRI.getType(Reg), 64);
+  case Ptr128:
+    return isAnyPtr(MRI.getType(Reg), 128);
   case V2S32:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 32);
   case V4S32:
@@ -84,6 +96,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::scalar(32) && MUI.isUniform(Reg);
   case UniS64:
     return MRI.getType(Reg) == LLT::scalar(64) && MUI.isUniform(Reg);
+  case UniS128:
+    return MRI.getType(Reg) == LLT::scalar(128) && MUI.isUniform(Reg);
   case UniP0:
     return MRI.getType(Reg) == LLT::pointer(0, 64) && MUI.isUniform(Reg);
   case UniP1:
@@ -94,6 +108,12 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(4, 64) && MUI.isUniform(Reg);
   case UniP5:
     return MRI.getType(Reg) == LLT::pointer(5, 32) && MUI.isUniform(Reg);
+  case UniPtr32:
+    return isAnyPtr(MRI.getType(Reg), 32) && MUI.isUniform(Reg);
+  case UniPtr64:
+    return isAnyPtr(MRI.getType(Reg), 64) && MUI.isUniform(Reg);
+  case UniPtr128:
+    return isAnyPtr(MRI.getType(Reg), 128) && MUI.isUniform(Reg);
   case UniV2S16:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 16) && MUI.isUniform(Reg);
   case UniB32:
@@ -116,6 +136,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::scalar(32) && MUI.isDivergent(Reg);
   case DivS64:
     return MRI.getType(Reg) == LLT::scalar(64) && MUI.isDivergent(Reg);
+  case DivS128:
+    return MRI.getType(Reg) == LLT::scalar(128) && MUI.isDivergent(Reg);
   case DivP0:
     return MRI.getType(Reg) == LLT::pointer(0, 64) && MUI.isDivergent(Reg);
   case DivP1:
@@ -126,6 +148,12 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(4, 64) && MUI.isDivergent(Reg);
   case DivP5:
     return MRI.getType(Reg) == LLT::pointer(5, 32) && MUI.isDivergent(Reg);
+  case DivPtr32:
+    return isAnyPtr(MRI.getType(Reg), 32) && MUI.isDivergent(Reg);
+  case DivPtr64:
+    return isAnyPtr(MRI.getType(Reg), 64) && MUI.isDivergent(Reg);
+  case DivPtr128:
+    return isAnyPtr(MRI.getType(Reg), 128) && MUI.isDivergent(Reg);
   case DivV2S16:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 16) && MUI.isDivergent(Reg);
   case DivB32:
@@ -199,17 +227,14 @@ UniformityLLTOpPredicateID LLTToId(LLT Ty) {
 
 UniformityLLTOpPredicateID LLTToBId(LLT Ty) {
   if (Ty == LLT::scalar(32) || Ty == LLT::fixed_vector(2, 16) ||
-      Ty == LLT::pointer(3, 32) || Ty == LLT::pointer(5, 32) ||
-      Ty == LLT::pointer(6, 32))
+      isAnyPtr(Ty, 32))
     return B32;
   if (Ty == LLT::scalar(64) || Ty == LLT::fixed_vector(2, 32) ||
-      Ty == LLT::fixed_vector(4, 16) || Ty == LLT::pointer(1, 64) ||
-      Ty == LLT::pointer(4, 64) ||
-      (Ty.isPointer() && Ty.getAddressSpace() > AMDGPUAS::MAX_AMDGPU_ADDRESS))
+      Ty == LLT::fixed_vector(4, 16) || isAnyPtr(Ty, 64))
     return B64;
   if (Ty == LLT::fixed_vector(3, 32))
     return B96;
-  if (Ty == LLT::fixed_vector(4, 32))
+  if (Ty == LLT::fixed_vector(4, 32) || isAnyPtr(Ty, 128))
     return B128;
   return _;
 }
@@ -693,7 +718,21 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivP1}, {{VgprP1}, {VgprP1, Vgpr64}}})
       .Any({{DivP0}, {{VgprP0}, {VgprP0, Vgpr64}}});
 
-  addRulesForGOpcs({G_INTTOPTR}).Any({{UniP4}, {{SgprP4}, {Sgpr64}}});
+  addRulesForGOpcs({G_INTTOPTR})
+      .Any({{UniPtr32}, {{SgprPtr32}, {Sgpr32}}})
+      .Any({{DivPtr32}, {{VgprPtr32}, {Vgpr32}}})
+      .Any({{UniPtr64}, {{SgprPtr64}, {Sgpr64}}})
+      .Any({{DivPtr64}, {{VgprPtr64}, {Vgpr64}}})
+      .Any({{UniPtr128}, {{SgprPtr128}, {Sgpr128}}})
+      .Any({{DivPtr128}, {{VgprPtr128}, {Vgpr128}}});
+
+  addRulesForGOpcs({G_PTRTOINT})
+      .Any({{UniS32}, {{Sgpr32}, {SgprPtr32}}})
+      .Any({{DivS32}, {{Vgpr32}, {VgprPtr32}}})
+      .Any({{UniS64}, {{Sgpr64}, {SgprPtr64}}})
+      .Any({{DivS64}, {{Vgpr64}, {VgprPtr64}}})
+      .Any({{UniS128}, {{Sgpr128}, {SgprPtr128}}})
+      .Any({{DivS128}, {{Vgpr128}, {VgprPtr128}}});
 
   addRulesForGOpcs({G_ABS}, Standard).Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}});
 

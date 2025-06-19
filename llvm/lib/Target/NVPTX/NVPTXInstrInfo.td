@@ -135,11 +135,7 @@ def hasAtomAddF64 : Predicate<"Subtarget->hasAtomAddF64()">;
 def hasAtomScope : Predicate<"Subtarget->hasAtomScope()">;
 def hasAtomBitwise64 : Predicate<"Subtarget->hasAtomBitwise64()">;
 def hasAtomMinMax64 : Predicate<"Subtarget->hasAtomMinMax64()">;
-def hasVote : Predicate<"Subtarget->hasVote()">;
-def hasDouble : Predicate<"Subtarget->hasDouble()">;
 def hasClusters : Predicate<"Subtarget->hasClusters()">;
-def hasLDG : Predicate<"Subtarget->hasLDG()">;
-def hasLDU : Predicate<"Subtarget->hasLDU()">;
 def hasPTXASUnreachableBug : Predicate<"Subtarget->hasPTXASUnreachableBug()">;
 def noPTXASUnreachableBug : Predicate<"!Subtarget->hasPTXASUnreachableBug()">;
 def hasOptEnabled : Predicate<"TM.getOptLevel() != CodeGenOptLevel::None">;
@@ -162,10 +158,10 @@ class hasPTX<int version>: Predicate<"Subtarget->getPTXVersion() >= " # version>
 class hasSM<int version>: Predicate<"Subtarget->getSmVersion() >= " # version>;
 
 // Explicit records for arch-accelerated SM versions
-def hasSM90a : Predicate<"Subtarget->getFullSmVersion() == 901">;
-def hasSM100a : Predicate<"Subtarget->getFullSmVersion() == 1001">;
-def hasSM101a : Predicate<"Subtarget->getFullSmVersion() == 1011">;
-def hasSM120a : Predicate<"Subtarget->getFullSmVersion() == 1201">;
+def hasSM90a : Predicate<"Subtarget->getSmVersion() == 90 && Subtarget->hasArchAccelFeatures()">;
+def hasSM100a : Predicate<"Subtarget->getSmVersion() == 100 && Subtarget->hasArchAccelFeatures()">;
+def hasSM101a : Predicate<"Subtarget->getSmVersion() == 101 && Subtarget->hasArchAccelFeatures()">;
+def hasSM120a : Predicate<"Subtarget->getSmVersion() == 120 && Subtarget->hasArchAccelFeatures()">;
 
 // non-sync shfl instructions are not available on sm_70+ in PTX6.4+
 def hasSHFL : Predicate<"!(Subtarget->getSmVersion() >= 70"
