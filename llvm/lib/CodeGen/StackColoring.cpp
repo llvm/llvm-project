@@ -442,7 +442,6 @@ private:
   void dump() const;
   void dumpIntervals() const;
   void dumpBB(MachineBasicBlock *MBB) const;
-  void dumpBV(const char *tag, const BitVector &BV) const;
 
   /// Removes all of the lifetime marker instructions from the function.
   /// \returns true if any markers were removed.
@@ -526,12 +525,39 @@ void StackColoringLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void StackColoring::dumpBV(const char *tag,
-                                            const BitVector &BV) const {
-  dbgs() << tag << " : { ";
-  for (unsigned I = 0, E = BV.size(); I != E; ++I)
-    dbgs() << BV.test(I) << " ";
-  dbgs() << "}\n";
+
+LLVM_DUMP_METHOD void dumpBV(StringRef tag, const BitVector &BV) {
+  constexpr unsigned ColumnWidth = 150;
+  unsigned LineStartOffset = tag.size() + /*" : "*/ 3;
+  unsigned WidthAfterTag = ColumnWidth - LineStartOffset;
+  unsigned NumBitsPerColumn = WidthAfterTag / 2;
+  unsigned BitsCount = BV.size();
+  for (unsigned Bits = 0; Bits < BitsCount; Bits += NumBitsPerColumn) {
+    unsigned Start = Bits;
+    unsigned End = std::min(Start + NumBitsPerColumn, BitsCount);
+
+    dbgs() << tag << " : ";
+
+    for (unsigned I = Start; I < End; ++I)
+      dbgs() << BV.test(I) << " ";
+    dbgs() << '\n';
+    dbgs() << tag << " : ";
+    unsigned next = Start;
+    for (unsigned I = Start; I < End; ++I) {
+      if (I < next)
+        continue;
+      if (BV.test(I)) {
+        int numDigits = NumDigitsBase10(I);
+        // Make sure number have spacing while staying aligned to the line above
+        next = I + 1 + numDigits / 2;
+        dbgs() << I << ' ';
+        if (numDigits % 2 == 0)
+          dbgs() << ' ';
+      } else
+        dbgs() << "  ";
+    }
+    dbgs() << '\n';
+  }
 }
 
 LLVM_DUMP_METHOD void StackColoring::dumpBB(MachineBasicBlock *MBB) const {
@@ -553,8 +579,14 @@ LLVM_DUMP_METHOD void StackColoring::dump() const {
 
 LLVM_DUMP_METHOD void StackColoring::dumpIntervals() const {
   for (unsigned I = 0, E = Intervals.size(); I != E; ++I) {
-    dbgs() << "Interval[" << I << "]:\n";
-    Intervals[I]->dump();
+    dbgs() << "Interval[" << I << "]:";
+    if (MFI->getObjectAllocation(I))
+      dbgs() << *MFI->getObjectAllocation(I);
+    dbgs() << '\n' << *Intervals[I] << '\n';
+    dbgs() << "LiveStarts:";
+    for (SlotIndex SIdx : LiveStarts[I])
+      dbgs() << ' ' << SIdx;
+    dbgs() << '\n';
   }
 }
 #endif
