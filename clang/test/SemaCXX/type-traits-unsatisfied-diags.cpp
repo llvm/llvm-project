@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wno-vla-cxx-extension -Wno-c++26-extensions -std=c++20 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-vla-cxx-extension -Wno-c++26-extensions -std=c++20 -fms-extensions %s
 
 struct S : A {}; // expected-error{{expected class name}}
 
@@ -573,4 +573,63 @@ struct BaseY {};                                              // #sl-BaseY
 struct MultiBase : BaseX, BaseY {};                          // #sl-MultiBase
 static_assert(__is_standard_layout(MultiBase));
 
- }
+struct A {
+  int x;
+};
+
+struct B : A {
+};
+// Indirect base with data members
+struct C : B { int y; }; // #sl-C
+static_assert(__is_standard_layout(C));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::C)'}} \
+// expected-note@-1 {{'C' is not standard-layout}} \
+// expected-note@-1 {{because it has an indirect base 'A' with data members}} \
+// expected-note@#sl-C {{'C' defined here}}
+
+struct D {
+    union { int a; float b; };
+  }; // #sl-D
+static_assert(__is_standard_layout(D)); // no diagnostics
+
+// E inherits D but adds a new member
+struct E : D { int x; }; // #sl-E
+static_assert(__is_standard_layout(E));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::E)'}} \
+// expected-note@-1 {{'E' is not standard-layout}} \
+// expected-note@-1 {{because it has an indirect base 'D' with data members}} \
+// expected-note@#sl-E {{'E' defined here}}
+
+// F inherits D but only an unnamed bitfield
+// This should still fail because F ends up with a 
+// base class with a data member and its own unnamed bitfield
+// which is not allowed in standard layout
+struct F : D { int : 0; }; // #sl-F
+static_assert(__is_standard_layout(F));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::F)'}} \
+// expected-note@-1 {{'F' is not standard-layout}} \
+// expected-note@#sl-F {{'F' defined here}}
+
+struct Empty {};
+struct G { Empty a, b; }; // #sl-G
+static_assert(__is_standard_layout(G)); // no diagnostics
+
+struct H { Empty a; int x; }; // #sl-H
+static_assert(__is_standard_layout(H)); // no diagnostics
+
+ struct I { Empty a; int : 0; int x; }; // #sl-I
+static_assert(__is_standard_layout(I)); // no diagnostics
+
+//  [[no_unique_address]] or [[msvc::no_unique_address]] should not affect standard layout
+#if __has_cpp_attribute(no_unique_address)
+  #define NO_UNIQUE_ADDRESS [[no_unique_address]]
+#elif __has_cpp_attribute(msvc::no_unique_address)
+  #define NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#elif defined(_MSC_VER)
+  #define NO_UNIQUE_ADDRESS __declspec(no_unique_address)
+#else
+  #define NO_UNIQUE_ADDRESS /* nothing */
+#endif
+struct J { NO_UNIQUE_ADDRESS Empty a; int x; };
+static_assert(__is_standard_layout(J)); // no diagnostics
+}

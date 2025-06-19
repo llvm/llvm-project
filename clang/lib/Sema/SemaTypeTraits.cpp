@@ -2286,21 +2286,6 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
-static bool hasMixedAccessSpecifier(const CXXRecordDecl *D) {
-  AccessSpecifier FirstAccess = AS_none;
-  for (const FieldDecl *Field : D->fields()) {
-
-    if (Field->isUnnamedBitField())
-      continue;
-    AccessSpecifier FieldAccess = Field->getAccess();
-    if (FirstAccess == AS_none)
-      FirstAccess = FieldAccess;
-    else if (FieldAccess != FirstAccess)
-      return true;
-  }
-  return false;
-}
-
 static bool hasMultipleDataBaseClassesWithFields(const CXXRecordDecl *D) {
   int NumBasesWithFields = 0;
   for (const CXXBaseSpecifier &Base : D->bases()) {
@@ -2334,30 +2319,37 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
           << B.getSourceRange();
     }
   }
-  if (hasMixedAccessSpecifier(D)) {
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::MixedAccess;
+  // Check for mixed access specifiers in fields.
+  const FieldDecl *FirstField = nullptr;
+  AccessSpecifier FirstAccess = AS_none;
 
-    const FieldDecl *FirstField = nullptr;
-    AccessSpecifier FirstAcc = AS_none;
-    for (const FieldDecl *F : D->fields()) {
-      if (F->isUnnamedBitField())
-        continue;
-      if (FirstField == nullptr) {
-        FirstField = F;
-        FirstAcc = F->getAccess();
-      } else if (F->getAccess() != FirstAcc) {
-        SemaRef.Diag(FirstField->getLocation(), diag::note_defined_here)
-            << FirstField;
+  for (const FieldDecl *Field : D->fields()) {
+    if (Field->isUnnamedBitField())
+      continue;
 
-        SemaRef.Diag(F->getLocation(), diag::note_unsatisfied_trait_reason)
-            << diag::TraitNotSatisfiedReason::MixedAccessField
-            << F           // %0: second field
-            << FirstField; // %1: first field
-        break;
-      }
+    // Record the first field we see
+    if (!FirstField) {
+      FirstField = Field;
+      FirstAccess = Field->getAccess();
+      continue;
     }
-    return;
+
+    // Check if the field has a different access specifier than the first one.
+    if (Field->getAccess() != FirstAccess) {
+      // Emit a diagnostic about mixed access specifiers.
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::MixedAccess;
+
+      SemaRef.Diag(FirstField->getLocation(), diag::note_defined_here)
+          << FirstField;
+
+      SemaRef.Diag(Field->getLocation(), diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::MixedAccessField << Field
+          << FirstField;
+
+      // No need to check further fields, as we already found mixed access.
+      return;
+    }
   }
   if (hasMultipleDataBaseClassesWithFields(D)) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
