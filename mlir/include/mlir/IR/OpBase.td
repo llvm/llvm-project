@@ -556,6 +556,25 @@ class AllShapesMatch<list<string> names> :
 class AllTypesMatch<list<string> names> :
     AllMatchSameOperatorTrait<names, "$_self.getType()", "type">;
 
+// A type constraint that verifies that a shaped type matches the size and
+// element type of a container with element types. More specifically, it denotes
+// shapedArg.getType().getNumElements() == elementsArg.size() &&
+// shapedArg.getType().getElementType() == elementsArg[i].getType(), for i in
+// [0, elementsArg.size()).
+class ShapedTypeMatchesElementCountAndTypes<string shapedArg,
+                                            string elementsArg> :
+    PredOpTrait<"shaped type '" # shapedArg # "' matches '" # elementsArg # "' "
+                "element count and types",
+        And<[CPred<ElementCount<shapedArg>.result # " == "
+                     "$" # elementsArg # ".getTypes().size()">,
+             CPred<"::llvm::all_of($" # elementsArg # ".getTypes(), "
+                     "[&](::mlir::Type t) { return t == "
+                       # ElementType<shapedArg>.result # "; })">]>> {
+
+  string shaped = shapedArg;
+  string elements = elementsArg;
+}
+
 // A type constraint that denotes `transform(lhs.getType()) == rhs.getType()`.
 // An optional comparator function may be provided that changes the above form
 // into: `comparator(transform(lhs.getType()), rhs.getType())`.
