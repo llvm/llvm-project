@@ -2512,6 +2512,21 @@ void VPlanTransforms::createInterleaveGroups(
       Addr = InBounds ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
                       : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
     }
+    // If the group is reverse, adjust the index to refer to the last vector
+    // lane instead of the first. We adjust the index from the first vector
+    // lane, rather than directly getting the pointer for lane VF - 1, because
+    // the pointer operand of the interleaved access is supposed to be uniform.
+    if (IG->isReverse()) {
+      auto *GEP = dyn_cast<GetElementPtrInst>(
+          getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts());
+      auto *ReversePtr = new VPReverseInterleavePtrRecipe(
+          Addr, &Plan.getVF(), getLoadStoreType(IRInsertPos), IG->getFactor(),
+          GEP && GEP->isInBounds() ? GEPNoWrapFlags::inBounds()
+                                   : GEPNoWrapFlags::none(),
+          InsertPos->getDebugLoc());
+      ReversePtr->insertBefore(InsertPos);
+      Addr = ReversePtr;
+    }
     auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
                                         InsertPos->getMask(), NeedsMaskForGaps, InsertPos->getDebugLoc());
     VPIG->insertBefore(InsertPos);

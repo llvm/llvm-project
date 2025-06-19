@@ -532,6 +532,7 @@ public:
     case VPRecipeBase::VPInstructionSC:
     case VPRecipeBase::VPReductionEVLSC:
     case VPRecipeBase::VPReductionSC:
+    case VPRecipeBase::VPReverseInterleavePtrSC:
     case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
     case VPRecipeBase::VPVectorPointerSC:
@@ -851,6 +852,7 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPDefID() == VPRecipeBase::VPReductionSC ||
            R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
+           R->getVPDefID() == VPRecipeBase::VPReverseInterleavePtrSC ||
            R->getVPDefID() == VPRecipeBase::VPVectorEndPointerSC ||
            R->getVPDefID() == VPRecipeBase::VPVectorPointerSC;
   }
@@ -1796,6 +1798,53 @@ public:
                               VPCostContext &Ctx) const override {
     // TODO: Compute accurate cost after retiring the legacy cost model.
     return 0;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+class VPReverseInterleavePtrRecipe : public VPRecipeWithIRFlags {
+  Type *IndexedTy;
+  unsigned Factor;
+
+public:
+  VPReverseInterleavePtrRecipe(VPValue *Ptr, VPValue *VF, Type *IndexedTy,
+                               unsigned Factor, GEPNoWrapFlags GEPFlags,
+                               DebugLoc DL)
+      : VPRecipeWithIRFlags(VPDef::VPReverseInterleavePtrSC,
+                            ArrayRef<VPValue *>({Ptr, VF}), GEPFlags, DL),
+        IndexedTy(IndexedTy), Factor(Factor) {
+    assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPReverseInterleavePtrSC)
+
+  VPValue *getPtr() const { return getOperand(0); }
+
+  VPValue *getVFValue() const { return getOperand(1); }
+
+  void execute(VPTransformState &State) override;
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
+
+  VPReverseInterleavePtrRecipe *clone() override {
+    return new VPReverseInterleavePtrRecipe(getPtr(), getVFValue(), IndexedTy,
+                                            Factor, getGEPNoWrapFlags(),
+                                            getDebugLoc());
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

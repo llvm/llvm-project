@@ -367,8 +367,8 @@ define void @test_reversed_load2_store2(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_ST2:%.*]], ptr [[A:%.*]], i64 [[OFFSET_IDX]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i32 [[TMP5]], 3
+; CHECK-NEXT:    [[TMP15:%.*]] = trunc nuw nsw i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i32 [[TMP15]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw i32 2, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext i32 [[TMP7]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 [[TMP8]]
@@ -381,8 +381,8 @@ define void @test_reversed_load2_store2(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <vscale x 4 x i32> [[REVERSE]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub nsw <vscale x 4 x i32> [[REVERSE1]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_ST2]], ptr [[B:%.*]], i64 [[OFFSET_IDX]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP16:%.*]] = shl nuw nsw i32 [[TMP15]], 3
+; CHECK-NEXT:    [[TMP21:%.*]] = trunc nuw nsw i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP16:%.*]] = shl nuw nsw i32 [[TMP21]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = sub nsw i32 2, [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = sext i32 [[TMP17]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i64 [[TMP18]]
@@ -1577,8 +1577,8 @@ define void @interleave_deinterleave_reverse(ptr noalias nocapture readonly %A, 
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_XYZT:%.*]], ptr [[A:%.*]], i64 [[OFFSET_IDX]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i32 [[TMP6]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc nuw nsw i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i32 [[TMP6]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub nsw i32 4, [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP8]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 [[TMP9]]
@@ -1597,8 +1597,8 @@ define void @interleave_deinterleave_reverse(ptr noalias nocapture readonly %A, 
 ; CHECK-NEXT:    [[TMP19:%.*]] = mul nsw <vscale x 4 x i32> [[REVERSE4]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shl nuw nsw <vscale x 4 x i32> [[REVERSE5]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_XYZT]], ptr [[B:%.*]], i64 [[OFFSET_IDX]], i32 0
-; CHECK-NEXT:    [[TMP22:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP23:%.*]] = shl nuw nsw i32 [[TMP22]], 4
+; CHECK-NEXT:    [[TMP22:%.*]] = trunc nuw nsw i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP23:%.*]] = shl nuw nsw i32 [[TMP22]], 2
 ; CHECK-NEXT:    [[TMP24:%.*]] = sub nsw i32 4, [[TMP23]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = sext i32 [[TMP24]] to i64
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[TMP21]], i64 [[TMP25]]
