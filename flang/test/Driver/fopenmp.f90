@@ -74,6 +74,6 @@
 ! CHECK-LD-ANYMD: "{{.*}}ld{{(.exe)?}}"
 ! CHECK-LD-ANYMD: "-l{{(omp|gomp|iomp5md)}}"
 !
-! RUN: %flang -fopenmp -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-EXPERIMENTAL
+! RUN: %flang -fopenmp -fopenmp-version=40 -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-EXPERIMENTAL
 !
-! CHECK-EXPERIMENTAL: flang{{.*}}: warning: OpenMP support in flang is still experimental
+! CHECK-EXPERIMENTAL: flang{{.*}}: warning: OpenMP support for version 4.0 in flang is still incomplete

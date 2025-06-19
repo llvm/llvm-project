@@ -11,6 +11,7 @@
 
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/CommonArgs.h"
+#include "clang/Driver/OptionUtils.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/Path.h"
@@ -772,6 +773,13 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
+static std::string OpenMPVersionToString(int Version) {
+  int Major = Version / 10;
+  int Minor = Version % 10;
+
+  return llvm::Twine{Major}.concat(".").concat(llvm::Twine{Minor}).str();
+}
+
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
@@ -906,9 +914,14 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
         CmdArgs.push_back("-fopenmp-force-usm");
-      // TODO: OpenMP support isn't "done" yet, so for now we warn that it
-      // is experimental.
-      D.Diag(diag::warn_openmp_experimental);
+
+      // TODO: OpenMP support for newer versions of the standard is incomplete.
+      if (int Version =
+              getLastArgIntValue(Args, options::OPT_fopenmp_version_EQ, 0)) {
+        if (Version >= 40)
+          D.Diag(diag::warn_openmp_incomplete)
+              << OpenMPVersionToString(Version);
+      }
 
       // FIXME: Clang supports a whole bunch more flags here.
       break;
