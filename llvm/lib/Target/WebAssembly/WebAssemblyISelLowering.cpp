@@ -3239,6 +3239,42 @@ static SDValue performBitcastCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performAnyTrueCombine(SDNode *N, SelectionDAG &DAG) {
+  // any_true (setcc <X>, 0, eq)
+  // => not (all_true X)
+
+  SDLoc DL(N);
+  assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN);
+  if (N->getConstantOperandVal(0) != Intrinsic::wasm_anytrue)
+    return SDValue();
+
+  SDValue SetCC = N->getOperand(1);
+  if (SetCC.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  SDValue LHS = SetCC->getOperand(0);
+  SDValue RHS = SetCC->getOperand(1);
+  ISD::CondCode Cond = cast<CondCodeSDNode>(SetCC->getOperand(2))->get();
+  EVT LT = LHS.getValueType();
+  unsigned NumElts = LT.getVectorNumElements();
+  if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
+    return SDValue();
+
+  EVT Width = MVT::getIntegerVT(128 / NumElts);
+
+  if (!isNullOrNullSplat(RHS) || Cond != ISD::SETEQ)
+    return SDValue();
+
+  SDValue Ret = DAG.getZExtOrTrunc(
+      DAG.getNode(
+          ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+          {DAG.getConstant(Intrinsic::wasm_alltrue, DL, MVT::i32),
+           DAG.getSExtOrTrunc(LHS, DL, LT.changeVectorElementType(Width))}),
+      DL, MVT::i1);
+  Ret = DAG.getNOT(DL, Ret, MVT::i1);
+  return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
+}
+
 template <int MatchRHS, ISD::CondCode MatchCond, bool RequiresNegate,
           Intrinsic::ID Intrin>
 static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
@@ -3427,8 +3463,11 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performVectorTruncZeroCombine(N, DCI);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DCI);
-  case ISD::INTRINSIC_WO_CHAIN:
+  case ISD::INTRINSIC_WO_CHAIN: {
+    if (auto AnyTrueCombine = performAnyTrueCombine(N, DCI.DAG))
+      return AnyTrueCombine;
     return performLowerPartialReduction(N, DCI.DAG);
+  }
   case ISD::MUL:
     return performMulCombine(N, DCI.DAG);
   }
