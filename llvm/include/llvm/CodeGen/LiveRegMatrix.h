@@ -41,6 +41,7 @@ class LiveRegMatrix {
   friend class LiveRegMatrixWrapperLegacy;
   friend class LiveRegMatrixAnalysis;
   const TargetRegisterInfo *TRI = nullptr;
+  const MachineRegisterInfo *MRI;
   LiveIntervals *LIS = nullptr;
   VirtRegMap *VRM = nullptr;
 
@@ -107,6 +108,12 @@ public:
   /// with the highest enum value is returned.
   InterferenceKind checkInterference(const LiveInterval &VirtReg,
                                      MCRegister PhysReg);
+
+  /// Check for target interference before assigning VirtReg to PhysReg.Add
+  /// commentMore actions
+  SmallVector<const LiveInterval *, 8>
+  getTargetInterferenceLiveI(const LiveInterval &VirtReg,
+                             MCRegister PhysReg) const;
 
   /// Check for interference in the segment [Start, End) that may prevent
   /// assignment to PhysReg. If this function returns true, there is

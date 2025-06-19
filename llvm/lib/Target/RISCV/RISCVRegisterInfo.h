@@ -156,6 +156,24 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   static bool isRVVRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags);
   }
+
+  bool enableTargetInterference() const override;
+
+  BitVector getTargetInterferenceReg(const LiveInterval &VirtReg,
+                                     MCRegister PhysReg,
+                                     const MachineRegisterInfo *MRI,
+                                     const VirtRegMap *VRM) const override;
+
+  bool needConstraintsMI(const MachineInstr *MI) const;
+
+  bool needUpdateECSlot(const llvm::LiveRange &LR, llvm::LiveRange &newLR,
+                        const LiveIntervals &LIS) const override;
+  static unsigned getMCRegIndex(MCRegister Reg, const MachineRegisterInfo *MRI);
+  static unsigned getMCRegLMUL(MCRegister Reg);
+  static bool isRVVConstraintsType2(unsigned DestRegIndex, unsigned DestRegLMUL,
+                                    unsigned SrcRegIndex, unsigned SrcRegLMUL);
+  static bool isRVVConstraintsType3(unsigned DestRegIndex, unsigned DestRegLMUL,
+                                    unsigned SrcRegIndex, unsigned SrcRegLMUL);
 };
 } // namespace llvm
 

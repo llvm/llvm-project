@@ -2655,6 +2655,86 @@ void RISCVInstrInfo::genAlternativeCodeSequence(
   }
 }
 
+int RISCVInstrInfo::getOverlapConstraintsFromMI(uint16_t RVVPseudoOpcode) {
+  const RISCVVPseudosTable::PseudoInfo *RVV =
+      RISCVVPseudosTable::getPseudoInfo(RVVPseudoOpcode);
+
+  if (!RVV)
+    return 0;
+
+  return RVV->TargetOverlapConstraintType;
+}
+
+static bool getConstrainsBetweenDstAndSrc(const MachineInstr *MBBI,
+                                          MachineOperand DestMO,
+                                          MachineOperand SrcMO,
+                                          int OverlapConstraintsType) {
+  MCRegister DestReg = DestMO.getReg();
+  MCRegister SrcReg = SrcMO.getReg();
+
+  unsigned DestRegIndex = RISCVRegisterInfo::getMCRegIndex(
+      DestReg, &MBBI->getParent()->getParent()->getRegInfo());
+  unsigned DestRegLMUL = RISCVRegisterInfo::getMCRegLMUL(DestReg);
+  unsigned SrcRegIndex = RISCVRegisterInfo::getMCRegIndex(
+      SrcReg, &MBBI->getParent()->getParent()->getRegInfo());
+  unsigned SrcRegLMUL = RISCVRegisterInfo::getMCRegLMUL(SrcReg);
+
+  if (OverlapConstraintsType == 2)
+    return RISCVRegisterInfo::isRVVConstraintsType2(DestRegIndex, DestRegLMUL,
+                                                    SrcRegIndex, SrcRegLMUL);
+  if (OverlapConstraintsType == 3)
+    return RISCVRegisterInfo::isRVVConstraintsType3(DestRegIndex, DestRegLMUL,
+                                                    SrcRegIndex, SrcRegLMUL);
+
+  return false;
+}
+
+// FIXME: Are we need support register like V26_V27?
+static bool isVectorPhyRegClass(MCRegister Reg) {
+  return (RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg) ||
+          RISCVMCRegisterClasses[RISCV::VRM2RegClassID].contains(Reg) ||
+          RISCVMCRegisterClasses[RISCV::VRM4RegClassID].contains(Reg) ||
+          RISCVMCRegisterClasses[RISCV::VRM8RegClassID].contains(Reg));
+}
+
+static bool getConstraintsWithDestAndAllSrc(const MachineInstr *MBBI,
+                                            int OverlapConstraintsType) {
+  bool NeedConstraint = false;
+  int DestOperand = 0; // assume Early-Clobber Operand is 0.
+
+  if (!MBBI->getOperand(DestOperand).isReg() ||
+      !MBBI->getOperand(DestOperand).getReg().isPhysical())
+    return false;
+
+  for (auto &MO : MBBI->uses()) {
+    if (!MO.isReg())
+      continue;
+    if (MO.isTied())
+      continue;
+    if (MO.getReg().isPhysical() && !MO.isImplicit() &&
+        isVectorPhyRegClass(MO.getReg()))
+      NeedConstraint |= getConstrainsBetweenDstAndSrc(
+          MBBI, MBBI->getOperand(DestOperand), MO, OverlapConstraintsType);
+  }
+
+  return NeedConstraint;
+}
+
+static bool hasTargetInterference(const MachineInstr *MBBI) {
+  int OverlapConstraintsType =
+      RISCVInstrInfo::getOverlapConstraintsFromMI(MBBI->getOpcode());
+  if (OverlapConstraintsType == 2 || OverlapConstraintsType == 3)
+    return getConstraintsWithDestAndAllSrc(MBBI, OverlapConstraintsType);
+
+  return false;
+}
+
+static bool isEarlyClobberMI(const MachineInstr *MBBI) {
+  return llvm::any_of(MBBI->defs(), [](const MachineOperand &DefMO) {
+    return DefMO.isReg() && DefMO.isEarlyClobber();
+  });
+}
+
 bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
                                        StringRef &ErrInfo) const {
   MCInstrDesc const &Desc = MI.getDesc();
@@ -2921,6 +3001,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
     ErrInfo = "dynamic rounding mode should read FRM";
     return false;
   }
+
+  if (hasTargetInterference(&MI) && isEarlyClobberMI(&MI))
+    return false;
 
   return true;
 }

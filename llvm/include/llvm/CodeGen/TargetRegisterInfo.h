@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_TARGETREGISTERINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -42,6 +43,7 @@ class RegScavenger;
 class VirtRegMap;
 class LiveIntervals;
 class LiveInterval;
+class LiveRange;
 class TargetRegisterClass {
 public:
   using iterator = const MCPhysReg *;
@@ -1227,6 +1229,20 @@ public:
   /// of the explicit callee saved register list, but should be handled as such
   /// in certain cases.
   virtual bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const {
+    return false;
+  }
+
+  virtual bool enableTargetInterference() const { return false; }
+
+  virtual BitVector getTargetInterferenceReg(const LiveInterval &VirtReg,
+                                             MCRegister PhysReg,
+                                             const MachineRegisterInfo *MRI,
+                                             const VirtRegMap *VRM) const {
+    return BitVector();
+  }
+
+  virtual bool needUpdateECSlot(const LiveRange &LR, LiveRange &newLR,
+                                const LiveIntervals &LIS) const {
     return false;
   }
 
