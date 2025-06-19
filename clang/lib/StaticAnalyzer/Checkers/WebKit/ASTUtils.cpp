@@ -236,6 +236,26 @@ bool isConstOwnerPtrMemberExpr(const clang::Expr *E) {
   return isOwnerPtrType(T) && T.isConstQualified();
 }
 
+bool isExprToGetCheckedPtrCapableMember(const clang::Expr *E) {
+  auto *ME = dyn_cast<MemberExpr>(E);
+  if (!ME)
+    return false;
+  auto *Base = ME->getBase();
+  if (!Base)
+    return false;
+  if (!isa<CXXThisExpr>(Base->IgnoreParenCasts()))
+    return false;
+  auto *D = ME->getMemberDecl();
+  if (!D)
+    return false;
+  auto T = D->getType();
+  auto *CXXRD = T->getAsCXXRecordDecl();
+  if (!CXXRD)
+    return false;
+  auto result = isCheckedPtrCapable(CXXRD);
+  return result && *result;
+}
+
 class EnsureFunctionVisitor
     : public ConstStmtVisitor<EnsureFunctionVisitor, bool> {
 public:

@@ -282,7 +282,7 @@ RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return TTI::TCC_Free;
 }
 
-bool RISCVTTIImpl::hasActiveVectorLength(unsigned, Type *DataTy, Align) const {
+bool RISCVTTIImpl::hasActiveVectorLength() const {
   return ST->hasVInstructions();
 }
 
@@ -305,8 +305,7 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
   if (!ST->hasStdExtZvqdotq() || ST->getELen() < 64 ||
       Opcode != Instruction::Add || !BinOp || *BinOp != Instruction::Mul ||
       InputTypeA != InputTypeB || !InputTypeA->isIntegerTy(8) ||
-      OpAExtend != OpBExtend || !AccumType->isIntegerTy(32) ||
-      !VF.isKnownMultipleOf(4))
+      !AccumType->isIntegerTy(32) || !VF.isKnownMultipleOf(4))
     return InstructionCost::getInvalid();
 
   Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
@@ -841,33 +840,64 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     return LT.first * getRISCVInstructionCost(Opcodes, LT.second, CostKind);
   }
   case TTI::SK_Reverse: {
+
+    if (!LT.second.isVector())
+      return InstructionCost::getInvalid();
+
     // TODO: Cases to improve here:
     // * Illegal vector types
     // * i64 on RV32
-    // * i1 vector
-    // At low LMUL, most of the cost is producing the vrgather index register.
-    // At high LMUL, the cost of the vrgather itself will dominate.
-    // Example sequence:
-    //   csrr a0, vlenb
-    //   srli a0, a0, 3
-    //   addi a0, a0, -1
-    //   vsetvli a1, zero, e8, mf8, ta, mu (ignored)
-    //   vid.v v9
-    //   vrsub.vx v10, v9, a0
-    //   vrgather.vv v9, v8, v10
-    InstructionCost LenCost = 3;
+    if (Tp->getElementType()->isIntegerTy(1)) {
+      VectorType *WideTy =
+          VectorType::get(IntegerType::get(Tp->getContext(), 8),
+                          cast<VectorType>(Tp)->getElementCount());
+      return getCastInstrCost(Instruction::ZExt, WideTy, Tp,
+                              TTI::CastContextHint::None, CostKind) +
+             getShuffleCost(TTI::SK_Reverse, WideTy, {}, CostKind, 0, nullptr) +
+             getCastInstrCost(Instruction::Trunc, Tp, WideTy,
+                              TTI::CastContextHint::None, CostKind);
+    }
+
+    MVT ContainerVT = LT.second;
     if (LT.second.isFixedLengthVector())
-      // vrsub.vi has a 5 bit immediate field, otherwise an li suffices
-      LenCost = isInt<5>(LT.second.getVectorNumElements() - 1) ? 0 : 1;
-    unsigned Opcodes[] = {RISCV::VID_V, RISCV::VRSUB_VX, RISCV::VRGATHER_VV};
-    if (LT.second.isFixedLengthVector() &&
-        isInt<5>(LT.second.getVectorNumElements() - 1))
-      Opcodes[1] = RISCV::VRSUB_VI;
+      ContainerVT = TLI->getContainerForFixedLengthVector(LT.second);
+    MVT M1VT = RISCVTargetLowering::getM1VT(ContainerVT);
+    if (ContainerVT.bitsLE(M1VT)) {
+      // Example sequence:
+      //   csrr a0, vlenb
+      //   srli a0, a0, 3
+      //   addi a0, a0, -1
+      //   vsetvli a1, zero, e8, mf8, ta, mu (ignored)
+      //   vid.v v9
+      //   vrsub.vx v10, v9, a0
+      //   vrgather.vv v9, v8, v10
+      InstructionCost LenCost = 3;
+      if (LT.second.isFixedLengthVector())
+        // vrsub.vi has a 5 bit immediate field, otherwise an li suffices
+        LenCost = isInt<5>(LT.second.getVectorNumElements() - 1) ? 0 : 1;
+      unsigned Opcodes[] = {RISCV::VID_V, RISCV::VRSUB_VX, RISCV::VRGATHER_VV};
+      if (LT.second.isFixedLengthVector() &&
+          isInt<5>(LT.second.getVectorNumElements() - 1))
+        Opcodes[1] = RISCV::VRSUB_VI;
+      InstructionCost GatherCost =
+          getRISCVInstructionCost(Opcodes, LT.second, CostKind);
+      return LT.first * (LenCost + GatherCost);
+    }
+
+    // At high LMUL, we split into a series of M1 reverses (see
+    // lowerVECTOR_REVERSE) and then do a single slide at the end to eliminate
+    // the resulting gap at the bottom (for fixed vectors only).  The important
+    // bit is that the cost scales linearly, not quadratically with LMUL.
+    unsigned M1Opcodes[] = {RISCV::VID_V, RISCV::VRSUB_VX};
+    InstructionCost FixedCost =
+        getRISCVInstructionCost(M1Opcodes, M1VT, CostKind) + 3;
+    unsigned Ratio =
+        ContainerVT.getVectorMinNumElements() / M1VT.getVectorMinNumElements();
     InstructionCost GatherCost =
-        getRISCVInstructionCost(Opcodes, LT.second, CostKind);
-    // Mask operation additionally required extend and truncate
-    InstructionCost ExtendCost = Tp->getElementType()->isIntegerTy(1) ? 3 : 0;
-    return LT.first * (LenCost + GatherCost + ExtendCost);
+        getRISCVInstructionCost({RISCV::VRGATHER_VV}, M1VT, CostKind) * Ratio;
+    InstructionCost SlideCost = !LT.second.isFixedLengthVector() ? 0 :
+      getRISCVInstructionCost({RISCV::VSLIDEDOWN_VX}, LT.second, CostKind);
+    return FixedCost + LT.first * (GatherCost + SlideCost);
   }
   }
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
@@ -2952,6 +2982,16 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   } else {
     Options.LoadSizes = {4, 2, 1};
     Options.AllowedTailExpansions = {3};
+  }
+
+  if (IsZeroCmp && ST->hasVInstructions()) {
+    unsigned VLenB = ST->getRealMinVLen() / 8;
+    // The minimum size should be `XLen / 8 + 1`, and the maxinum size should be
+    // `VLenB * MaxLMUL` so that it fits in a single register group.
+    unsigned MinSize = ST->getXLen() / 8 + 1;
+    unsigned MaxSize = VLenB * ST->getMaxLMULForFixedLengthVectors();
+    for (unsigned Size = MinSize; Size <= MaxSize; Size++)
+      Options.LoadSizes.insert(Options.LoadSizes.begin(), Size);
   }
   return Options;
 }

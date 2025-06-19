@@ -64,7 +64,7 @@ define void @func_regular_call() #1 {
 ; GCN-NEXT: s_addc_u32 s17,
 ; GCN-NEXT: s_setpc_b64 s[16:17]
 
-; GCN: ; TotalNumSgprs: 18
+; GCN: ; TotalNumSgprs: 32
 ; GCN: ; NumVgprs: 8
 define void @func_tail_call() #1 {
   tail call void @func()

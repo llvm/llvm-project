@@ -18,6 +18,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+namespace {
+
 AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
 
 AST_MATCHER(CXXMethodDecl, hasTrivialBody) { return Node.hasTrivialBody(); }
@@ -73,6 +75,8 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
 
   return UsageOfThis.Used;
 }
+
+} // namespace
 
 void ConvertMemberFunctionsToStatic::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(

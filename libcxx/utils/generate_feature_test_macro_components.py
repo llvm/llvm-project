@@ -358,6 +358,11 @@ feature_test_macros = [
             "headers": ["memory"],
         },
         {
+            "name": "__cpp_lib_constexpr_forward_list",
+            "values": {"c++26": 202502},
+            "headers": ["forward_list"],
+        },
+        {
             "name": "__cpp_lib_constexpr_functional",
             "values": {"c++20": 201907},
             "headers": ["functional"],
@@ -371,6 +376,11 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_map",
             "values": {"c++26": 202502},
             "headers": ["map"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_list",
+            "values": {"c++26": 202502},
+            "headers": ["list"],
         },
         {
             "name": "__cpp_lib_constexpr_memory",

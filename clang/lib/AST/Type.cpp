@@ -3981,7 +3981,7 @@ CountAttributedType::CountAttributedType(
   CountAttributedTypeBits.NumCoupledDecls = CoupledDecls.size();
   CountAttributedTypeBits.CountInBytes = CountInBytes;
   CountAttributedTypeBits.OrNull = OrNull;
-  auto *DeclSlot = getTrailingObjects<TypeCoupledDeclRefInfo>();
+  auto *DeclSlot = getTrailingObjects();
   Decls = llvm::ArrayRef(DeclSlot, CoupledDecls.size());
   for (unsigned i = 0; i != CoupledDecls.size(); ++i)
     DeclSlot[i] = CoupledDecls[i];
@@ -4013,13 +4013,13 @@ StringRef CountAttributedType::getAttributeName(bool WithMacroPrefix) const {
 }
 
 TypedefType::TypedefType(TypeClass tc, const TypedefNameDecl *D,
-                         QualType Underlying, QualType can)
-    : Type(tc, can, toSemanticDependence(can->getDependence())),
+                         QualType UnderlyingType, bool HasTypeDifferentFromDecl)
+    : Type(tc, UnderlyingType.getCanonicalType(),
+           toSemanticDependence(UnderlyingType->getDependence())),
       Decl(const_cast<TypedefNameDecl *>(D)) {
-  assert(!isa<TypedefType>(can) && "Invalid canonical type");
-  TypedefBits.hasTypeDifferentFromDecl = !Underlying.isNull();
+  TypedefBits.hasTypeDifferentFromDecl = HasTypeDifferentFromDecl;
   if (!typeMatchesDecl())
-    *getTrailingObjects() = Underlying;
+    *getTrailingObjects() = UnderlyingType;
 }
 
 QualType TypedefType::desugar() const {

@@ -45,6 +45,10 @@ template <typename T> class ArrayRef;
 
 constexpr unsigned MaxAnalysisRecursionDepth = 6;
 
+/// The max limit of the search depth in DecomposeGEPExpression() and
+/// getUnderlyingObject().
+constexpr unsigned MaxLookupSearchDepth = 10;
+
 /// Determine which bits of V are known to be either zero or one and return
 /// them in the KnownZero/KnownOne bit sets.
 ///
@@ -432,9 +436,10 @@ LLVM_ABI bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
 /// original object being addressed. Note that the returned value has pointer
 /// type if the specified value does. If the \p MaxLookup value is non-zero, it
 /// limits the number of instructions to be stripped off.
-LLVM_ABI const Value *getUnderlyingObject(const Value *V,
-                                          unsigned MaxLookup = 6);
-inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
+LLVM_ABI const Value *
+getUnderlyingObject(const Value *V, unsigned MaxLookup = MaxLookupSearchDepth);
+inline Value *getUnderlyingObject(Value *V,
+                                  unsigned MaxLookup = MaxLookupSearchDepth) {
   // Force const to avoid infinite recursion.
   const Value *VConst = V;
   return const_cast<Value *>(getUnderlyingObject(VConst, MaxLookup));
@@ -475,7 +480,7 @@ LLVM_ABI const Value *getUnderlyingObjectAggressive(const Value *V);
 LLVM_ABI void getUnderlyingObjects(const Value *V,
                                    SmallVectorImpl<const Value *> &Objects,
                                    const LoopInfo *LI = nullptr,
-                                   unsigned MaxLookup = 6);
+                                   unsigned MaxLookup = MaxLookupSearchDepth);
 
 /// This is a wrapper around getUnderlyingObjects and adds support for basic
 /// ptrtoint+arithmetic+inttoptr sequences.

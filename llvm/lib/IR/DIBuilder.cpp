@@ -25,8 +25,7 @@ using namespace llvm;
 using namespace llvm::dwarf;
 
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
-    : M(m), VMContext(M.getContext()), CUNode(CU), DeclareFn(nullptr),
-      ValueFn(nullptr), LabelFn(nullptr), AssignFn(nullptr),
+    : M(m), VMContext(M.getContext()), CUNode(CU),
       AllowUnresolvedNodes(AllowUnresolvedNodes) {
   if (CUNode) {
     if (const auto &ETs = CUNode->getEnumTypes())
@@ -1047,36 +1046,13 @@ DbgInstPtr DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
       LinkedInstr->getMetadata(LLVMContext::MD_DIAssignID));
   assert(Link && "Linked instruction must have DIAssign metadata attached");
 
-  if (M.IsNewDbgInfoFormat) {
-    DbgVariableRecord *DVR = DbgVariableRecord::createDVRAssign(
-        Val, SrcVar, ValExpr, Link, Addr, AddrExpr, DL);
-    // Insert after LinkedInstr.
-    BasicBlock::iterator NextIt = std::next(LinkedInstr->getIterator());
-    NextIt.setHeadBit(true);
-    insertDbgVariableRecord(DVR, NextIt);
-    return DVR;
-  }
-
-  LLVMContext &Ctx = LinkedInstr->getContext();
-  Module *M = LinkedInstr->getModule();
-  if (!AssignFn)
-    AssignFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_assign);
-
-  std::array<Value *, 6> Args = {
-      MetadataAsValue::get(Ctx, ValueAsMetadata::get(Val)),
-      MetadataAsValue::get(Ctx, SrcVar),
-      MetadataAsValue::get(Ctx, ValExpr),
-      MetadataAsValue::get(Ctx, Link),
-      MetadataAsValue::get(Ctx, ValueAsMetadata::get(Addr)),
-      MetadataAsValue::get(Ctx, AddrExpr),
-  };
-
-  IRBuilder<> B(Ctx);
-  B.SetCurrentDebugLocation(DL);
-
-  auto *DVI = cast<DbgAssignIntrinsic>(B.CreateCall(AssignFn, Args));
-  DVI->insertAfter(LinkedInstr->getIterator());
-  return DVI;
+  DbgVariableRecord *DVR = DbgVariableRecord::createDVRAssign(
+      Val, SrcVar, ValExpr, Link, Addr, AddrExpr, DL);
+  // Insert after LinkedInstr.
+  BasicBlock::iterator NextIt = std::next(LinkedInstr->getIterator());
+  NextIt.setHeadBit(true);
+  insertDbgVariableRecord(DVR, NextIt);
+  return DVR;
 }
 
 /// Initialize IRBuilder for inserting dbg.declare and dbg.value intrinsics.
@@ -1092,27 +1068,15 @@ static Value *getDbgIntrinsicValueImpl(LLVMContext &VMContext, Value *V) {
   return MetadataAsValue::get(VMContext, ValueAsMetadata::get(V));
 }
 
-static Function *getDeclareIntrin(Module &M) {
-  return Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_declare);
-}
-
 DbgInstPtr DIBuilder::insertDbgValueIntrinsic(llvm::Value *Val,
                                               DILocalVariable *VarInfo,
                                               DIExpression *Expr,
                                               const DILocation *DL,
                                               InsertPosition InsertPt) {
-  if (M.IsNewDbgInfoFormat) {
-    DbgVariableRecord *DVR =
-        DbgVariableRecord::createDbgVariableRecord(Val, VarInfo, Expr, DL);
-    insertDbgVariableRecord(DVR, InsertPt);
-    return DVR;
-  }
-
-  if (!ValueFn)
-    ValueFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_value);
-  auto *DVI = insertDbgIntrinsic(ValueFn, Val, VarInfo, Expr, DL, InsertPt);
-  cast<CallInst>(DVI)->setTailCall();
-  return DVI;
+  DbgVariableRecord *DVR =
+      DbgVariableRecord::createDbgVariableRecord(Val, VarInfo, Expr, DL);
+  insertDbgVariableRecord(DVR, InsertPt);
+  return DVR;
 }
 
 DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
@@ -1124,25 +1088,10 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
              VarInfo->getScope()->getSubprogram() &&
          "Expected matching subprograms");
 
-  if (M.IsNewDbgInfoFormat) {
-    DbgVariableRecord *DVR =
-        DbgVariableRecord::createDVRDeclare(Storage, VarInfo, Expr, DL);
-    insertDbgVariableRecord(DVR, InsertPt);
-    return DVR;
-  }
-
-  if (!DeclareFn)
-    DeclareFn = getDeclareIntrin(M);
-
-  trackIfUnresolved(VarInfo);
-  trackIfUnresolved(Expr);
-  Value *Args[] = {getDbgIntrinsicValueImpl(VMContext, Storage),
-                   MetadataAsValue::get(VMContext, VarInfo),
-                   MetadataAsValue::get(VMContext, Expr)};
-
-  IRBuilder<> B(DL->getContext());
-  initIRBuilder(B, DL, InsertPt);
-  return B.CreateCall(DeclareFn, Args);
+  DbgVariableRecord *DVR =
+      DbgVariableRecord::createDVRDeclare(Storage, VarInfo, Expr, DL);
+  insertDbgVariableRecord(DVR, InsertPt);
+  return DVR;
 }
 
 void DIBuilder::insertDbgVariableRecord(DbgVariableRecord *DVR,
@@ -1191,23 +1140,12 @@ DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
          "Expected matching subprograms");
 
   trackIfUnresolved(LabelInfo);
-  if (M.IsNewDbgInfoFormat) {
-    DbgLabelRecord *DLR = new DbgLabelRecord(LabelInfo, DL);
-    if (InsertPt.isValid()) {
-      auto *BB = InsertPt.getBasicBlock();
-      BB->insertDbgRecordBefore(DLR, InsertPt);
-    }
-    return DLR;
+  DbgLabelRecord *DLR = new DbgLabelRecord(LabelInfo, DL);
+  if (InsertPt.isValid()) {
+    auto *BB = InsertPt.getBasicBlock();
+    BB->insertDbgRecordBefore(DLR, InsertPt);
   }
-
-  if (!LabelFn)
-    LabelFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_label);
-
-  Value *Args[] = {MetadataAsValue::get(VMContext, LabelInfo)};
-
-  IRBuilder<> B(DL->getContext());
-  initIRBuilder(B, DL, InsertPt);
-  return B.CreateCall(LabelFn, Args);
+  return DLR;
 }
 
 void DIBuilder::replaceVTableHolder(DICompositeType *&T, DIType *VTableHolder) {
