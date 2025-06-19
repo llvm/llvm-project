@@ -26,6 +26,7 @@ set(NVPTXCodeGen_sources
   NVPTXISelLowering.cpp
   NVPTXLowerAggrCopies.cpp
   NVPTXLowerAlloca.cpp
+  NVPTXIncreaseAlignment.cpp
   NVPTXLowerArgs.cpp
   NVPTXLowerUnreachable.cpp
   NVPTXMCExpr.cpp
