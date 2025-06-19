@@ -35,8 +35,8 @@ AVRInstrInfo::AVRInstrInfo(AVRSubtarget &STI)
 
 void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
-                               const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc,
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
                                bool RenamableDest, bool RenamableSrc) const {
   const AVRRegisterInfo &TRI = *STI.getRegisterInfo();
   unsigned Opc;
@@ -127,7 +127,8 @@ Register AVRInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 void AVRInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
 
@@ -161,7 +162,8 @@ void AVRInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         Register DestReg, int FrameIndex,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+                                        Register VReg,
+                                        MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 

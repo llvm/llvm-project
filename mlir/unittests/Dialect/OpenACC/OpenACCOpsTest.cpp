@@ -78,6 +78,54 @@ TEST_F(OpenACCOpsTest, asyncOnlyTest) {
 }
 
 template <typename Op>
+void testAsyncOnlyDataEntry(OpBuilder &b, MLIRContext &context, Location loc,
+                            llvm::SmallVector<DeviceType> &dtypes) {
+  auto memrefTy = MemRefType::get({}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> varPtrOp =
+      b.create<memref::AllocaOp>(loc, memrefTy);
+
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(varPtrOp->getResult());
+  OwningOpRef<Op> op = b.create<Op>(loc, varPtr,
+                                    /*structured=*/true, /*implicit=*/true);
+
+  EXPECT_FALSE(op->hasAsyncOnly());
+  for (auto d : dtypes)
+    EXPECT_FALSE(op->hasAsyncOnly(d));
+
+  auto dtypeNone = DeviceTypeAttr::get(&context, DeviceType::None);
+  op->setAsyncOnlyAttr(b.getArrayAttr({dtypeNone}));
+  EXPECT_TRUE(op->hasAsyncOnly());
+  EXPECT_TRUE(op->hasAsyncOnly(DeviceType::None));
+  op->removeAsyncOnlyAttr();
+
+  auto dtypeHost = DeviceTypeAttr::get(&context, DeviceType::Host);
+  op->setAsyncOnlyAttr(b.getArrayAttr({dtypeHost}));
+  EXPECT_TRUE(op->hasAsyncOnly(DeviceType::Host));
+  EXPECT_FALSE(op->hasAsyncOnly());
+  op->removeAsyncOnlyAttr();
+
+  auto dtypeStar = DeviceTypeAttr::get(&context, DeviceType::Star);
+  op->setAsyncOnlyAttr(b.getArrayAttr({dtypeHost, dtypeStar}));
+  EXPECT_TRUE(op->hasAsyncOnly(DeviceType::Star));
+  EXPECT_TRUE(op->hasAsyncOnly(DeviceType::Host));
+  EXPECT_FALSE(op->hasAsyncOnly());
+
+  op->removeAsyncOnlyAttr();
+}
+
+TEST_F(OpenACCOpsTest, asyncOnlyTestDataEntry) {
+  testAsyncOnlyDataEntry<DevicePtrOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<PresentOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<CopyinOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<CreateOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<NoCreateOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<AttachOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<UpdateDeviceOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<UseDeviceOp>(b, context, loc, dtypes);
+}
+
+template <typename Op>
 void testAsyncValue(OpBuilder &b, MLIRContext &context, Location loc,
                     llvm::SmallVector<DeviceType> &dtypes) {
   OwningOpRef<Op> op = b.create<Op>(loc, TypeRange{}, ValueRange{});
@@ -103,6 +151,46 @@ TEST_F(OpenACCOpsTest, asyncValueTest) {
   testAsyncValue<ParallelOp>(b, context, loc, dtypes);
   testAsyncValue<KernelsOp>(b, context, loc, dtypes);
   testAsyncValue<SerialOp>(b, context, loc, dtypes);
+}
+
+template <typename Op>
+void testAsyncValueDataEntry(OpBuilder &b, MLIRContext &context, Location loc,
+                             llvm::SmallVector<DeviceType> &dtypes) {
+  auto memrefTy = MemRefType::get({}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> varPtrOp =
+      b.create<memref::AllocaOp>(loc, memrefTy);
+
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(varPtrOp->getResult());
+  OwningOpRef<Op> op = b.create<Op>(loc, varPtr,
+                                    /*structured=*/true, /*implicit=*/true);
+
+  mlir::Value empty;
+  EXPECT_EQ(op->getAsyncValue(), empty);
+  for (auto d : dtypes)
+    EXPECT_EQ(op->getAsyncValue(d), empty);
+
+  OwningOpRef<arith::ConstantIndexOp> val =
+      b.create<arith::ConstantIndexOp>(loc, 1);
+  auto dtypeNvidia = DeviceTypeAttr::get(&context, DeviceType::Nvidia);
+  op->setAsyncOperandsDeviceTypeAttr(b.getArrayAttr({dtypeNvidia}));
+  op->getAsyncOperandsMutable().assign(val->getResult());
+  EXPECT_EQ(op->getAsyncValue(), empty);
+  EXPECT_EQ(op->getAsyncValue(DeviceType::Nvidia), val->getResult());
+
+  op->getAsyncOperandsMutable().clear();
+  op->removeAsyncOperandsDeviceTypeAttr();
+}
+
+TEST_F(OpenACCOpsTest, asyncValueTestDataEntry) {
+  testAsyncValueDataEntry<DevicePtrOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<PresentOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<CopyinOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<CreateOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<NoCreateOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<AttachOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<UpdateDeviceOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<UseDeviceOp>(b, context, loc, dtypes);
 }
 
 template <typename Op>

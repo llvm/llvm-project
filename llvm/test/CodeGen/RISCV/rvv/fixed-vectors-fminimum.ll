@@ -290,17 +290,14 @@ define <2 x half> @vfmin_v2f16_vv_nnan(<2 x half> %a, <2 x half> %b) {
   ret <2 x half> %v
 }
 
-; FIXME: The nnan from fadd isn't propagating.
 define <2 x half> @vfmin_v2f16_vv_nnana(<2 x half> %a, <2 x half> %b) {
 ; ZVFH-LABEL: vfmin_v2f16_vv_nnana:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
 ; ZVFH-NEXT:    vmfeq.vv v0, v9, v9
-; ZVFH-NEXT:    vfadd.vv v8, v8, v8
-; ZVFH-NEXT:    vmerge.vvm v10, v9, v8, v0
-; ZVFH-NEXT:    vmfeq.vv v0, v8, v8
-; ZVFH-NEXT:    vmerge.vvm v8, v8, v9, v0
-; ZVFH-NEXT:    vfmin.vv v8, v10, v8
+; ZVFH-NEXT:    vmv1r.v v10, v9
+; ZVFH-NEXT:    vfadd.vv v10, v8, v8, v0.t
+; ZVFH-NEXT:    vfmin.vv v8, v10, v9
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfmin_v2f16_vv_nnana:
@@ -327,16 +324,13 @@ define <2 x half> @vfmin_v2f16_vv_nnana(<2 x half> %a, <2 x half> %b) {
   ret <2 x half> %v
 }
 
-; FIXME: The nnan from fadd isn't propagating.
 define <2 x half> @vfmin_v2f16_vv_nnanb(<2 x half> %a, <2 x half> %b) {
 ; ZVFH-LABEL: vfmin_v2f16_vv_nnanb:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
 ; ZVFH-NEXT:    vmfeq.vv v0, v8, v8
-; ZVFH-NEXT:    vfadd.vv v9, v9, v9
-; ZVFH-NEXT:    vmerge.vvm v10, v8, v9, v0
-; ZVFH-NEXT:    vmfeq.vv v0, v9, v9
-; ZVFH-NEXT:    vmerge.vvm v8, v9, v8, v0
+; ZVFH-NEXT:    vmv1r.v v10, v8
+; ZVFH-NEXT:    vfadd.vv v10, v9, v9, v0.t
 ; ZVFH-NEXT:    vfmin.vv v8, v8, v10
 ; ZVFH-NEXT:    ret
 ;
@@ -362,4 +356,53 @@ define <2 x half> @vfmin_v2f16_vv_nnanb(<2 x half> %a, <2 x half> %b) {
   %c = fadd nnan <2 x half> %b, %b
   %v = call <2 x half> @llvm.minimum.v2f16(<2 x half> %a, <2 x half> %c)
   ret <2 x half> %v
+}
+
+declare <4 x half> @llvm.vector.insert.v2f32.v4f32(<4 x half>, <2 x half>, i64)
+
+define <4 x half> @vfmin_v2f16_vv_nnan_insert_subvector(<2 x half> %a, <2 x half> %b, <4 x half> %c) {
+; ZVFH-LABEL: vfmin_v2f16_vv_nnan_insert_subvector:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFH-NEXT:    vfadd.vv v8, v8, v8
+; ZVFH-NEXT:    vfadd.vv v9, v9, v9
+; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFH-NEXT:    vmfeq.vv v0, v10, v10
+; ZVFH-NEXT:    vslideup.vi v8, v9, 2
+; ZVFH-NEXT:    vmerge.vvm v8, v10, v8, v0
+; ZVFH-NEXT:    vfmin.vv v8, v8, v10
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: vfmin_v2f16_vv_nnan_insert_subvector:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v9
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vfadd.vv v9, v11, v11
+; ZVFHMIN-NEXT:    vfadd.vv v8, v8, v8
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v11, v9
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v9, v8
+; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vslideup.vi v11, v9, 2
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v11
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; ZVFHMIN-NEXT:    vmfeq.vv v0, v8, v8
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v10
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; ZVFHMIN-NEXT:    vmerge.vvm v10, v8, v9, v0
+; ZVFHMIN-NEXT:    vmfeq.vv v0, v9, v9
+; ZVFHMIN-NEXT:    vmerge.vvm v8, v9, v8, v0
+; ZVFHMIN-NEXT:    vfmin.vv v9, v8, v10
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
+; ZVFHMIN-NEXT:    ret
+  %d = fadd nnan <2 x half> %a, %a
+  %e = fadd nnan <2 x half> %b, %b
+  %f = call <4 x half> @llvm.vector.insert.v2f32.v4f32(<4 x half> undef, <2 x half> %d, i64 0)
+  %g = call <4 x half> @llvm.vector.insert.v2f32.v4f32(<4 x half> %f, <2 x half> %e, i64 2)
+  %v = call <4 x half> @llvm.minimum.v4f16(<4 x half> %g, <4 x half> %c)
+  ret <4 x half> %v
 }

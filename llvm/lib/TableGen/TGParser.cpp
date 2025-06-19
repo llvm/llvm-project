@@ -286,11 +286,13 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
       InitType = (Twine("' of type bit initializer with length ") +
                   Twine(BI->getNumBits())).str();
     else if (const auto *TI = dyn_cast<TypedInit>(V))
-      InitType = (Twine("' of type '") + TI->getType()->getAsString()).str();
+      InitType =
+          (Twine("' of type '") + TI->getType()->getAsString() + "'").str();
+
     return Error(Loc, "Field '" + ValName->getAsUnquotedString() +
                           "' of type '" + RV->getType()->getAsString() +
-                          "' is incompatible with value '" +
-                          V->getAsString() + InitType + "'");
+                          "' is incompatible with value '" + V->getAsString() +
+                          InitType);
   }
   return false;
 }
@@ -330,17 +332,10 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
 
   // Since everything went well, we can now set the "superclass" list for the
   // current record.
-  for (const auto &[SC, Loc] : SC->getSuperClasses()) {
-    if (CurRec->isSubClassOf(SC))
-      return Error(SubClass.RefRange.Start,
-                   "Already subclass of '" + SC->getName() + "'!\n");
-    CurRec->addSuperClass(SC, Loc);
-  }
-
   if (CurRec->isSubClassOf(SC))
     return Error(SubClass.RefRange.Start,
                  "Already subclass of '" + SC->getName() + "'!\n");
-  CurRec->addSuperClass(SC, SubClass.RefRange);
+  CurRec->addDirectSuperClass(SC, SubClass.RefRange);
   return false;
 }
 
@@ -1453,7 +1448,51 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     return (ExistsOpInit::get(Type, Expr))->Fold(CurRec);
   }
 
+  case tgtok::XInstances: {
+    // Value ::= !instances '<' Type '>' '(' Regex? ')'
+    Lex.Lex(); // eat the operation.
+
+    const RecTy *Type = ParseOperatorType();
+    if (!Type)
+      return nullptr;
+
+    if (!consume(tgtok::l_paren)) {
+      TokError("expected '(' after type of !instances");
+      return nullptr;
+    }
+
+    // The Regex can be optional.
+    const Init *Regex;
+    if (Lex.getCode() != tgtok::r_paren) {
+      SMLoc RegexLoc = Lex.getLoc();
+      Regex = ParseValue(CurRec);
+
+      const auto *RegexType = dyn_cast<TypedInit>(Regex);
+      if (!RegexType) {
+        Error(RegexLoc, "expected string type argument in !instances operator");
+        return nullptr;
+      }
+
+      const auto *SType = dyn_cast<StringRecTy>(RegexType->getType());
+      if (!SType) {
+        Error(RegexLoc, "expected string type argument in !instances operator");
+        return nullptr;
+      }
+    } else {
+      // Use wildcard when Regex is not specified.
+      Regex = StringInit::get(Records, ".*");
+    }
+
+    if (!consume(tgtok::r_paren)) {
+      TokError("expected ')' in !instances");
+      return nullptr;
+    }
+
+    return InstancesOpInit::get(Type, Regex)->Fold(CurRec);
+  }
+
   case tgtok::XConcat:
+  case tgtok::XMatch:
   case tgtok::XADD:
   case tgtok::XSUB:
   case tgtok::XMUL:
@@ -1486,6 +1525,9 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     switch (OpTok) {
     default: llvm_unreachable("Unhandled code!");
     case tgtok::XConcat: Code = BinOpInit::CONCAT; break;
+    case tgtok::XMatch:
+      Code = BinOpInit::MATCH;
+      break;
     case tgtok::XADD:    Code = BinOpInit::ADD; break;
     case tgtok::XSUB:    Code = BinOpInit::SUB; break;
     case tgtok::XMUL:    Code = BinOpInit::MUL; break;
@@ -1523,6 +1565,10 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     switch (OpTok) {
     default:
       llvm_unreachable("Unhandled code!");
+    case tgtok::XMatch:
+      Type = BitRecTy::get(Records);
+      ArgType = StringRecTy::get(Records);
+      break;
     case tgtok::XConcat:
     case tgtok::XSetDagOp:
       Type = DagRecTy::get(Records);
@@ -1882,9 +1928,10 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
         const auto *Arg2 = cast<TypedInit>(Args[2]);
         assert(isa<IntRecTy>(Arg2->getType()));
         RHS = Arg2;
-      } else
+      } else {
         // (start, end, 1)
         RHS = IntInit::get(Records, 1);
+      }
     }
     return TernOpInit::get(TernOpInit::RANGE, LHS, MHS, RHS,
                            IntRecTy::get(Records)->getListTy())
@@ -1900,7 +1947,7 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     const RecTy *Type = nullptr;
 
     tgtok::TokKind LexCode = Lex.getCode();
-    Lex.Lex();  // eat the operation
+    Lex.Lex(); // Eat the operation.
     switch (LexCode) {
     default: llvm_unreachable("Unhandled code!");
     case tgtok::XDag:
@@ -3162,7 +3209,7 @@ void TGParser::ParseDagArgList(
         Lex.Lex();  // eat the VarName.
       }
 
-      Result.push_back(std::make_pair(Val, VarName));
+      Result.emplace_back(Val, VarName);
     }
     if (!consume(tgtok::comma))
       break;
@@ -4003,7 +4050,7 @@ bool TGParser::ParseClass() {
   if (CurRec) {
     // If the body was previously defined, this is an error.
     if (!CurRec->getValues().empty() ||
-        !CurRec->getSuperClasses().empty() ||
+        !CurRec->getDirectSuperClasses().empty() ||
         !CurRec->getTemplateArgs().empty())
       return TokError("Class '" + CurRec->getNameInitAsString() +
                       "' already defined");
@@ -4152,9 +4199,8 @@ bool TGParser::ParseMultiClass() {
     return TokError("expected identifier after multiclass for name");
   std::string Name = Lex.getCurStrVal();
 
-  auto Result =
-    MultiClasses.insert(std::make_pair(Name,
-                    std::make_unique<MultiClass>(Name, Lex.getLoc(),Records)));
+  auto Result = MultiClasses.try_emplace(
+      Name, std::make_unique<MultiClass>(Name, Lex.getLoc(), Records));
 
   if (!Result.second)
     return TokError("multiclass '" + Name + "' already defined");
@@ -4281,7 +4327,7 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
     // through its template argument names. Substs contains a substitution
     // value for each argument, either the value specified or the default.
     // Then we can resolve the template arguments.
-    MultiClass *MC = MultiClasses[std::string(Ref.Rec->getName())].get();
+    MultiClass *MC = MultiClasses[Ref.Rec->getName().str()].get();
     assert(MC && "Didn't lookup multiclass correctly?");
 
     SubstStack Substs;

@@ -31,35 +31,36 @@ def uimm2_lsb0 : RISCVOp,
 
 def uimm8ge32 : RISCVOp {
   let ParserMatchClass = UImmAsmOperand<8, "GE32">;
-  let DecoderMethod = "decodeUImmOperand<8>";
+  let DecoderMethod = "decodeUImmOperandGE<8, 32>";
   let OperandType = "OPERAND_UIMM8_GE32";
 }
 
-def RlistAsmOperand : AsmOperandClass {
-  let Name = "Rlist";
-  let ParserMethod = "parseReglist";
-  let DiagnosticType = "InvalidRlist";
+def RegListAsmOperand : AsmOperandClass {
+  let Name = "RegList";
+  let ParserMethod = "parseRegList";
+  let DiagnosticType = "InvalidRegList";
+  let DiagnosticString = "operand must be {ra [, s0[-sN]]} or {x1 [, x8[-x9][, x18[-xN]]]}";
 }
 
 def StackAdjAsmOperand : AsmOperandClass {
   let Name = "StackAdj";
   let ParserMethod = "parseZcmpStackAdj";
   let DiagnosticType = "InvalidStackAdj";
-  let PredicateMethod = "isSpimm";
-  let RenderMethod = "addSpimmOperands";
+  let PredicateMethod = "isStackAdj";
+  let RenderMethod = "addStackAdjOperands";
 }
 
 def NegStackAdjAsmOperand : AsmOperandClass {
   let Name = "NegStackAdj";
   let ParserMethod = "parseZcmpNegStackAdj";
   let DiagnosticType = "InvalidStackAdj";
-  let PredicateMethod = "isSpimm";
-  let RenderMethod = "addSpimmOperands";
+  let PredicateMethod = "isStackAdj";
+  let RenderMethod = "addStackAdjOperands";
 }
 
-def rlist : Operand<OtherVT> {
-   let ParserMatchClass = RlistAsmOperand;
-   let PrintMethod = "printRlist";
+def reglist : RISCVOp<OtherVT> {
+   let ParserMatchClass = RegListAsmOperand;
+   let PrintMethod = "printRegList";
    let DecoderMethod = "decodeZcmpRlist";
    let EncoderMethod = "getRlistOpValue";
    let MCOperandPredicate = [{
@@ -67,15 +68,16 @@ def rlist : Operand<OtherVT> {
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
     // 0~3 Reserved for EABI
-    return isUInt<4>(Imm) && Imm >= 4;
+    return isUInt<4>(Imm) && Imm >= RISCVZC::RA;
   }];
+
+  let OperandType = "OPERAND_RLIST";
 }
 
 def stackadj : RISCVOp<OtherVT> {
   let ParserMatchClass = StackAdjAsmOperand;
   let PrintMethod = "printStackAdj";
-  let DecoderMethod = "decodeZcmpSpimm";
-  let OperandType = "OPERAND_SPIMM";
+  let OperandType = "OPERAND_STACKADJ";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -87,8 +89,7 @@ def stackadj : RISCVOp<OtherVT> {
 def negstackadj : RISCVOp<OtherVT> {
   let ParserMatchClass = NegStackAdjAsmOperand;
   let PrintMethod = "printNegStackAdj";
-  let DecoderMethod = "decodeZcmpSpimm";
-  let OperandType = "OPERAND_SPIMM";
+  let OperandType = "OPERAND_STACKADJ";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -152,7 +153,7 @@ class RVZcArith_r<bits<5> funct5, string OpcodeStr> :
 
 class RVInstZcCPPP<bits<5> funct5, string opcodestr,
                    DAGOperand immtype = stackadj>
-    : RVInst16<(outs), (ins rlist:$rlist, immtype:$stackadj),
+    : RVInst16<(outs), (ins reglist:$rlist, immtype:$stackadj),
                opcodestr, "$rlist, $stackadj", [], InstFormatOther> {
   bits<4> rlist;
   bits<16> stackadj;
@@ -215,7 +216,7 @@ def C_SH_INX : CStoreH_rri<0b100011, 0b0, "c.sh", GPRF16C>,
 } // Predicates = [HasStdExtZcb]
 
 // Zcmp
-let DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp],
+let DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp],
     hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 let Defs = [X10, X11] in
 def CM_MVA01S : RVInst16CA<0b101011, 0b11, 0b10, (outs),
@@ -226,9 +227,9 @@ let Uses = [X10, X11] in
 def CM_MVSA01 : RVInst16CA<0b101011, 0b01, 0b10, (outs SR07:$rs1, SR07:$rs2),
                             (ins), "cm.mvsa01", "$rs1, $rs2">,
                 Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
-} // DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp]...
+} // DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp]...
 
-let DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp] in {
+let DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1, Uses = [X2], Defs = [X2] in
 def CM_PUSH : RVInstZcCPPP<0b11000, "cm.push", negstackadj>,
               Sched<[WriteIALU, ReadIALU, ReadStoreData, ReadStoreData,
@@ -257,9 +258,9 @@ def CM_POP : RVInstZcCPPP<0b11010, "cm.pop">,
              Sched<[WriteIALU, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
                     WriteLDW, WriteLDW, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
                     WriteLDW, WriteLDW, WriteLDW, ReadIALU]>;
-} // DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp]...
+} // DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp]...
 
-let DecoderNamespace = "RVZcmt", Predicates = [HasStdExtZcmt],
+let DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmt],
     hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 def CM_JT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm5:$index),
                        "cm.jt", "$index">{
@@ -277,7 +278,7 @@ def CM_JALT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm8ge32:$index),
   let Inst{12-10} = 0b000;
   let Inst{9-2} = index;
 }
-} // DecoderNamespace = "RVZcmt", Predicates = [HasStdExtZcmt]...
+} // DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmt]...
 
 
 let Predicates = [HasStdExtZcb, HasStdExtZmmul] in{

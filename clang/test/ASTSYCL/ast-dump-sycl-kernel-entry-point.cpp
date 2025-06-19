@@ -143,16 +143,14 @@ void skep6() {
 // CHECK:      |-FunctionDecl {{.*}} skep6 'void ()'
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<6>
 // CHECK-NEXT: |-FunctionDecl {{.*}} prev {{.*}} skep6 'void ()'
-// CHECK-NEXT: | |-CompoundStmt {{.*}}
-// CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<6>
+// CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN<6>
 
 // Ensure that matching attributes from the same declaration are ok.
 [[clang::sycl_kernel_entry_point(KN<7>), clang::sycl_kernel_entry_point(KN<7>)]]
 void skep7() {
 }
 // CHECK:      |-FunctionDecl {{.*}} skep7 'void ()'
-// CHECK-NEXT: | |-CompoundStmt {{.*}}
-// CHECK-NEXT: | |-SYCLKernelEntryPointAttr {{.*}} KN<7>
+// CHECK:      | |-SYCLKernelEntryPointAttr {{.*}} KN<7>
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<7>
 
 void the_end() {}

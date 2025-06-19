@@ -44,7 +44,6 @@ set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
 set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")
 set(CLANG_DEFAULT_RTLIB compiler-rt CACHE STRING "")
 set(CLANG_DEFAULT_UNWINDLIB libunwind CACHE STRING "")
-set(CLANG_ENABLE_ARCMT OFF CACHE BOOL "")
 set(CLANG_ENABLE_STATIC_ANALYZER ON CACHE BOOL "")
 set(CLANG_PLUGIN_SUPPORT OFF CACHE BOOL "")
 
@@ -190,6 +189,10 @@ foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unkn
     set(RUNTIMES_${target}_LLVM_TOOLS_DIR "${CMAKE_BINARY_DIR}/bin" CACHE BOOL "")
     set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
+    # Enable FatLTO for Linux and baremetal runtimes
+    set(RUNTIMES_${target}_LLVM_ENABLE_LTO OFF CACHE BOOL "")
+    set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO OFF CACHE BOOL "")
+
     # Use .build-id link.
     list(APPEND RUNTIME_BUILD_ID_LINK "${target}")
   endif()
@@ -272,6 +275,10 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}+asan+noexcept_LIBCXXABI_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
     set(RUNTIMES_${target}+asan+noexcept_LIBCXX_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
 
+    # Enable FatLTO for Fuchsia runtimes
+    set(RUNTIMES_${target}_LLVM_ENABLE_LTO OFF CACHE BOOL "")
+    set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO OFF CACHE BOOL "")
+
     # Use .build-id link.
     list(APPEND RUNTIME_BUILD_ID_LINK "${target}")
   endforeach()
@@ -300,7 +307,7 @@ if(FUCHSIA_SDK)
   set(LLVM_RUNTIME_MULTILIB_hwasan+noexcept_TARGETS "aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
 endif()
 
-foreach(target armv6m-none-eabi;armv7m-none-eabi;armv8m.main-none-eabi;armv8.1m.main-none-eabi;aarch64-none-elf)
+foreach(target armv6m-none-eabi;armv7m-none-eabi;armv7em-none-eabi;armv8m.main-none-eabi;armv8.1m.main-none-eabi;aarch64-none-elf)
   list(APPEND BUILTIN_TARGETS "${target}")
   set(BUILTINS_${target}_CMAKE_SYSTEM_NAME Generic CACHE STRING "")
   set(BUILTINS_${target}_CMAKE_SYSTEM_PROCESSOR arm CACHE STRING "")
@@ -369,6 +376,10 @@ foreach(target armv6m-none-eabi;armv7m-none-eabi;armv8m.main-none-eabi;armv8.1m.
   set(RUNTIMES_${target}_LLVM_INCLUDE_TESTS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "libc;libcxx" CACHE STRING "")
+
+  # Enable FatLTO for baremetal runtimes
+  set(RUNTIMES_${target}_LLVM_ENABLE_LTO OFF CACHE BOOL "")
+  set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO OFF CACHE BOOL "")
 endforeach()
 
 foreach(target riscv32-unknown-elf)
@@ -420,6 +431,10 @@ foreach(target riscv32-unknown-elf)
   set(RUNTIMES_${target}_LLVM_INCLUDE_TESTS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "libc;libcxx" CACHE STRING "")
+
+  # Enable FatLTO for baremetal runtimes
+  set(RUNTIMES_${target}_LLVM_ENABLE_LTO OFF CACHE BOOL "")
+  set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO OFF CACHE BOOL "")
 endforeach()
 
 set(LLVM_BUILTIN_TARGETS "${BUILTIN_TARGETS}" CACHE STRING "")

@@ -14,8 +14,11 @@
 #ifndef LLVM_TARGETPARSER_TARGETPARSER_H
 #define LLVM_TARGETPARSER_TARGETPARSER_H
 
+#include "SubtargetFeature.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -83,8 +86,6 @@ enum GPUKind : uint32_t {
   GK_GFX909 = 65,
   GK_GFX90A = 66,
   GK_GFX90C = 67,
-  GK_GFX940 = 68,
-  GK_GFX941 = 69,
   GK_GFX942 = 70,
   GK_GFX950 = 71,
 
@@ -166,31 +167,56 @@ enum FeatureError : uint32_t {
   UNSUPPORTED_TARGET_FEATURE
 };
 
-StringRef getArchFamilyNameAMDGCN(GPUKind AK);
+LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
 
-StringRef getArchNameAMDGCN(GPUKind AK);
-StringRef getArchNameR600(GPUKind AK);
-StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
-GPUKind parseArchAMDGCN(StringRef CPU);
-GPUKind parseArchR600(StringRef CPU);
-unsigned getArchAttrAMDGCN(GPUKind AK);
-unsigned getArchAttrR600(GPUKind AK);
+LLVM_ABI StringRef getArchNameAMDGCN(GPUKind AK);
+LLVM_ABI StringRef getArchNameR600(GPUKind AK);
+LLVM_ABI StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
+LLVM_ABI GPUKind parseArchAMDGCN(StringRef CPU);
+LLVM_ABI GPUKind parseArchR600(StringRef CPU);
+LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
+LLVM_ABI unsigned getArchAttrR600(GPUKind AK);
 
-void fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values);
-void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI void fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
 
-IsaVersion getIsaVersion(StringRef GPU);
+LLVM_ABI IsaVersion getIsaVersion(StringRef GPU);
 
 /// Fills Features map with default values for given target GPU
-void fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
-                          StringMap<bool> &Features);
+LLVM_ABI void fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
+                                   StringMap<bool> &Features);
 
 /// Inserts wave size feature for given GPU into features map
-std::pair<FeatureError, StringRef>
+LLVM_ABI std::pair<FeatureError, StringRef>
 insertWaveSizeFeature(StringRef GPU, const Triple &T,
                       StringMap<bool> &Features);
 
 } // namespace AMDGPU
+
+struct BasicSubtargetFeatureKV {
+  const char *Key;         ///< K-V key string
+  unsigned Value;          ///< K-V integer value
+  FeatureBitArray Implies; ///< K-V bit mask
+};
+
+/// Used to provide key value pairs for feature and CPU bit flags.
+struct BasicSubtargetSubTypeKV {
+  const char *Key;         ///< K-V key string
+  FeatureBitArray Implies; ///< K-V bit mask
+
+  /// Compare routine for std::lower_bound
+  bool operator<(StringRef S) const { return StringRef(Key) < S; }
+
+  /// Compare routine for std::is_sorted.
+  bool operator<(const BasicSubtargetSubTypeKV &Other) const {
+    return StringRef(Key) < StringRef(Other.Key);
+  }
+};
+
+std::optional<llvm::StringMap<bool>>
+getCPUDefaultTargetFeatures(StringRef CPU,
+                            ArrayRef<BasicSubtargetSubTypeKV> ProcDesc,
+                            ArrayRef<BasicSubtargetFeatureKV> ProcFeatures);
 } // namespace llvm
 
 #endif

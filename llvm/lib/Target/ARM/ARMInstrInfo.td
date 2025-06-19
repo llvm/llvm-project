@@ -421,7 +421,7 @@ def imm16_31 : ImmLeaf<i32, [{
 
 // sext_16_node predicate - True if the SDNode is sign-extended 16 or more bits.
 def sext_16_node : PatLeaf<(i32 GPR:$a), [{
-  return CurDAG->ComputeNumSignBits(SDValue(N,0)) >= 17;
+  return CurDAG->ComputeNumSignBits(Op) >= 17;
 }]>;
 
 def sext_bottom_16 : PatFrag<(ops node:$a),
@@ -451,33 +451,30 @@ def lo16AllZero : PatLeaf<(i32 imm), [{
 
 // top16Zero - answer true if the upper 16 bits of $src are 0, false otherwise
 def top16Zero: PatLeaf<(i32 GPR:$src), [{
-  return !SDValue(N,0)->getValueType(0).isVector() &&
-         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 16));
+  return !Op.getValueType().isVector() &&
+         CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 16));
   }]>;
 
 // topbitsallzero - Return true if all bits except the lowest bit are known zero
 def topbitsallzero32 : PatLeaf<(i32 GPRwithZR:$src), [{
-  return SDValue(N,0)->getValueType(0) == MVT::i32 &&
-         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 31));
+  return Op.getValueType() == MVT::i32 &&
+         CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 31));
   }]>;
 
 class BinOpFrag<dag res> : PatFrag<(ops node:$LHS, node:$RHS), res>;
 class UnOpFrag <dag res> : PatFrag<(ops node:$Src), res>;
 
 // An 'and' node with a single use.
-def and_su : PatFrag<(ops node:$lhs, node:$rhs), (and node:$lhs, node:$rhs), [{
-  return N->hasOneUse();
-}]>;
+let HasOneUse = 1 in
+def and_su : PatFrag<(ops node:$lhs, node:$rhs), (and node:$lhs, node:$rhs)>;
 
 // An 'xor' node with a single use.
-def xor_su : PatFrag<(ops node:$lhs, node:$rhs), (xor node:$lhs, node:$rhs), [{
-  return N->hasOneUse();
-}]>;
+let HasOneUse = 1 in
+def xor_su : PatFrag<(ops node:$lhs, node:$rhs), (xor node:$lhs, node:$rhs)>;
 
 // An 'fmul' node with a single use.
-def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (fmul node:$lhs, node:$rhs),[{
-  return N->hasOneUse();
-}]>;
+let HasOneUse = 1 in
+def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (fmul node:$lhs, node:$rhs)>;
 
 // An 'fadd' node which checks for single non-hazardous use.
 def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
@@ -3388,6 +3385,8 @@ def STRD_POST: AI3ldstidx<0b1111, 0, 0, (outs GPR:$Rn_wb),
 
 // STRT, STRBT, and STRHT
 
+let mayStore = 1, hasSideEffects = 0 in {
+
 def STRBT_POST_REG : AI2ldstidx<0, 1, 0, (outs GPR:$Rn_wb),
                    (ins GPR:$Rt, addr_offset_none:$addr, am2offset_reg:$offset),
                    IndexModePost, StFrm, IIC_iStore_bh_ru,
@@ -3428,7 +3427,6 @@ def STRBT_POST
   : ARMAsmPseudo<"strbt${q} $Rt, $addr",
                  (ins GPR:$Rt, addr_offset_none:$addr, pred:$q)>;
 
-let mayStore = 1, hasSideEffects = 0 in {
 def STRT_POST_REG : AI2ldstidx<0, 0, 0, (outs GPR:$Rn_wb),
                    (ins GPR:$Rt, addr_offset_none:$addr, am2offset_reg:$offset),
                    IndexModePost, StFrm, IIC_iStore_ru,
@@ -3464,7 +3462,6 @@ def STRT_POST_IMM
   let Inst{11-0} = offset{11-0};
   let DecoderMethod = "DecodeAddrMode2IdxInstruction";
 }
-}
 
 def STRT_POST
   : ARMAsmPseudo<"strt${q} $Rt, $addr",
@@ -3493,7 +3490,6 @@ multiclass AI3strT<bits<4> op, string opc> {
   }
 }
 
-
 defm STRHT : AI3strT<0b1011, "strht">;
 
 def STL : AIstrrel<0b00, (outs), (ins GPR:$Rt, addr_offset_none:$addr),
@@ -3502,6 +3498,8 @@ def STLB : AIstrrel<0b10, (outs), (ins GPR:$Rt, addr_offset_none:$addr),
                     NoItinerary, "stlb", "\t$Rt, $addr", []>;
 def STLH : AIstrrel<0b11, (outs), (ins GPR:$Rt, addr_offset_none:$addr),
                     NoItinerary, "stlh", "\t$Rt, $addr", []>;
+
+} // mayStore = 1, hasSideEffects = 0
 
 //===----------------------------------------------------------------------===//
 //  Load / store multiple Instructions.
@@ -5378,15 +5376,15 @@ def : ARMPat<(stlex_1 (and GPR:$Rt, 0xff), addr_offset_none:$addr),
 def : ARMPat<(stlex_2 (and GPR:$Rt, 0xffff), addr_offset_none:$addr),
              (STLEXH GPR:$Rt, addr_offset_none:$addr)>;
 
-class acquiring_load<PatFrag base>
+class acquiring_load<PatFrags base>
   : PatFrag<(ops node:$ptr), (base node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getSuccessOrdering();
   return isAcquireOrStronger(Ordering);
 }]>;
 
-def atomic_load_acquire_8  : acquiring_load<atomic_load_8>;
-def atomic_load_acquire_16 : acquiring_load<atomic_load_16>;
-def atomic_load_acquire_32 : acquiring_load<atomic_load_32>;
+def atomic_load_azext_acquire_8  : acquiring_load<atomic_load_azext_8>;
+def atomic_load_azext_acquire_16 : acquiring_load<atomic_load_azext_16>;
+def atomic_load_nonext_acquire_32 : acquiring_load<atomic_load_nonext_32>;
 
 class releasing_store<PatFrag base>
   : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr), [{
@@ -5399,9 +5397,9 @@ def atomic_store_release_16 : releasing_store<atomic_store_16>;
 def atomic_store_release_32 : releasing_store<atomic_store_32>;
 
 let AddedComplexity = 8 in {
-  def : ARMPat<(atomic_load_acquire_8 addr_offset_none:$addr),  (LDAB addr_offset_none:$addr)>;
-  def : ARMPat<(atomic_load_acquire_16 addr_offset_none:$addr), (LDAH addr_offset_none:$addr)>;
-  def : ARMPat<(atomic_load_acquire_32 addr_offset_none:$addr), (LDA  addr_offset_none:$addr)>;
+  def : ARMPat<(atomic_load_azext_acquire_8 addr_offset_none:$addr),  (LDAB addr_offset_none:$addr)>;
+  def : ARMPat<(atomic_load_azext_acquire_16 addr_offset_none:$addr), (LDAH addr_offset_none:$addr)>;
+  def : ARMPat<(atomic_load_nonext_acquire_32 addr_offset_none:$addr), (LDA  addr_offset_none:$addr)>;
   def : ARMPat<(atomic_store_release_8 addr_offset_none:$addr, GPR:$val),  (STLB GPR:$val, addr_offset_none:$addr)>;
   def : ARMPat<(atomic_store_release_16 addr_offset_none:$addr, GPR:$val), (STLH GPR:$val, addr_offset_none:$addr)>;
   def : ARMPat<(atomic_store_release_32 addr_offset_none:$addr, GPR:$val), (STL  GPR:$val, addr_offset_none:$addr)>;
@@ -5633,15 +5631,19 @@ multiclass LdSt2Cop<bit load, bit Dbit, string asm, list<dag> pattern> {
   }
 }
 
+let mayLoad = 1 in {
 defm LDC   : LdStCop <1, 0, "ldc", [(int_arm_ldc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm LDCL  : LdStCop <1, 1, "ldcl", [(int_arm_ldcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm LDC2  : LdSt2Cop<1, 0, "ldc2", [(int_arm_ldc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
 defm LDC2L : LdSt2Cop<1, 1, "ldc2l", [(int_arm_ldc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
+}
 
+let mayStore = 1 in {
 defm STC   : LdStCop <0, 0, "stc", [(int_arm_stc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm STCL  : LdStCop <0, 1, "stcl", [(int_arm_stcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm STC2  : LdSt2Cop<0, 0, "stc2", [(int_arm_stc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
 defm STC2L : LdSt2Cop<0, 1, "stc2l", [(int_arm_stc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
+}
 
 } // DecoderNamespace = "CoProc"
 
@@ -6212,15 +6214,15 @@ def : ARMV6Pat<(add GPR:$Rn, (sext_inreg GPRnopc:$Rm, i16)),
                (SXTAH GPR:$Rn, GPRnopc:$Rm, 0)>;
 
 // Atomic load/store patterns
-def : ARMPat<(atomic_load_8 ldst_so_reg:$src),
+def : ARMPat<(atomic_load_azext_8 ldst_so_reg:$src),
              (LDRBrs ldst_so_reg:$src)>;
-def : ARMPat<(atomic_load_8 addrmode_imm12:$src),
+def : ARMPat<(atomic_load_azext_8 addrmode_imm12:$src),
              (LDRBi12 addrmode_imm12:$src)>;
-def : ARMPat<(atomic_load_16 addrmode3:$src),
+def : ARMPat<(atomic_load_azext_16 addrmode3:$src),
              (LDRH addrmode3:$src)>;
-def : ARMPat<(atomic_load_32 ldst_so_reg:$src),
+def : ARMPat<(atomic_load_nonext_32 ldst_so_reg:$src),
              (LDRrs ldst_so_reg:$src)>;
-def : ARMPat<(atomic_load_32 addrmode_imm12:$src),
+def : ARMPat<(atomic_load_nonext_32 addrmode_imm12:$src),
              (LDRi12 addrmode_imm12:$src)>;
 def : ARMPat<(atomic_store_8 GPR:$val, ldst_so_reg:$ptr),
              (STRBrs GPR:$val, ldst_so_reg:$ptr)>;

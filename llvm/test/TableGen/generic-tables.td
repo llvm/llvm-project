@@ -113,8 +113,7 @@ def lookupBTableByNameAndFlag : SearchIndex {
 // CHECK: const CEntry *lookupCEntry(StringRef Name, unsigned Kind);
 // CHECK-LABEL: GET_CTable_IMPL
 // CHECK: const CEntry *lookupCEntryByEncoding(uint16_t Encoding) {
-// CHECK:   if ((Encoding < 0xA) ||
-// CHECK:       (Encoding > 0xF))
+// CHECK:   if ((uint16_t)Encoding != std::clamp((uint16_t)Encoding, (uint16_t)0xA, (uint16_t)0xF))
 // CHECK:     return nullptr;
 
 // CHECK: const CEntry *lookupCEntry(StringRef Name, unsigned Kind) {

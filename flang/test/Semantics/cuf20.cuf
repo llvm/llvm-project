@@ -1,0 +1,42 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+
+! Test case 1: Device arrays with ignore_tkr(c)
+subroutine test_device_arrays()
+  interface bar
+    subroutine bar1(a)
+!dir$ ignore_tkr(c) a
+      real :: a(..)
+!@cuf attributes(device) :: a
+    end subroutine
+  end interface
+
+  integer :: n = 10, k = 2
+  real, device :: a(10), b(10), c(10)
+  
+  call bar(a(1:n))     ! Should not warn about contiguity
+  call bar(b(1:n:k))   ! Should not warn about contiguity
+  call bar(c(1:n:2))   ! Should not warn about contiguity
+end subroutine
+
+! Test case 2: Managed arrays with ignore_tkr(c)
+subroutine test_managed_arrays()
+  interface bar
+    subroutine bar1(a)
+!dir$ ignore_tkr(c) a
+      real :: a(..)
+!@cuf attributes(device) :: a
+    end subroutine
+  end interface
+
+  integer :: n = 10, k = 2
+  real, managed :: a(10), b(10), c(10)
+  
+  call bar(a(1:n))     ! Should not warn about contiguity
+  call bar(b(1:n:k))   ! Should not warn about contiguity
+  call bar(c(1:n:2))   ! Should not warn about contiguity
+end subroutine
+
+program main
+  call test_device_arrays()
+  call test_managed_arrays()
+end program 

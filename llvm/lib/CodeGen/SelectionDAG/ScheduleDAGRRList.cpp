@@ -370,7 +370,7 @@ void ScheduleDAGRRList::Schedule() {
   assert(Interferences.empty() && LRegsMap.empty() && "stale Interferences");
 
   // Build the scheduling graph.
-  BuildSchedGraph(nullptr);
+  BuildSchedGraph();
 
   LLVM_DEBUG(dump());
   Topo.MarkDirty();
@@ -1292,7 +1292,7 @@ static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
 
 /// CheckForLiveRegDef - Return true and update live register vector if the
 /// specified register def of the specified SUnit clobbers any "live" registers.
-static void CheckForLiveRegDef(SUnit *SU, unsigned Reg, SUnit **LiveRegDefs,
+static void CheckForLiveRegDef(SUnit *SU, MCRegister Reg, SUnit **LiveRegDefs,
                                SmallSet<unsigned, 4> &RegAdded,
                                SmallVectorImpl<unsigned> &LRegs,
                                const TargetRegisterInfo *TRI,

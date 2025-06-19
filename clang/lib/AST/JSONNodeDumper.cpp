@@ -4,7 +4,6 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringExtras.h"
-#include <optional>
 
 using namespace clang;
 
@@ -818,7 +817,7 @@ void JSONNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *OIT) {
 }
 
 void JSONNodeDumper::VisitPackExpansionType(const PackExpansionType *PET) {
-  if (std::optional<unsigned> N = PET->getNumExpansions())
+  if (UnsignedOrNone N = PET->getNumExpansions())
     JOS.attribute("numExpansions", *N);
 }
 
@@ -1002,6 +1001,11 @@ void JSONNodeDumper::VisitRecordDecl(const RecordDecl *RD) {
 }
 void JSONNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *RD) {
   VisitRecordDecl(RD);
+
+  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+    if (CTSD->hasStrictPackMatch())
+      JOS.attribute("strict-pack-match", true);
+  }
 
   // All other information requires a complete definition.
   if (!RD->isCompleteDefinition())
@@ -1357,6 +1361,9 @@ void JSONNodeDumper::VisitSYCLUniqueStableNameExpr(
 void JSONNodeDumper::VisitOpenACCAsteriskSizeExpr(
     const OpenACCAsteriskSizeExpr *E) {}
 
+void JSONNodeDumper::VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D) {}
+void JSONNodeDumper::VisitOpenACCRoutineDecl(const OpenACCRoutineDecl *D) {}
+
 void JSONNodeDumper::VisitPredefinedExpr(const PredefinedExpr *PE) {
   JOS.attribute("name", PredefinedExpr::getIdentKindName(PE->getIdentKind()));
 }
@@ -1537,9 +1544,9 @@ void JSONNodeDumper::VisitExprWithCleanups(const ExprWithCleanups *EWC) {
   if (EWC->getNumObjects()) {
     JOS.attributeArray("cleanups", [this, EWC] {
       for (const ExprWithCleanups::CleanupObject &CO : EWC->getObjects())
-        if (auto *BD = CO.dyn_cast<BlockDecl *>()) {
+        if (auto *BD = dyn_cast<BlockDecl *>(CO)) {
           JOS.value(createBareDeclRef(BD));
-        } else if (auto *CLE = CO.dyn_cast<CompoundLiteralExpr *>()) {
+        } else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(CO)) {
           llvm::json::Object Obj;
           Obj["id"] = createPointerRepresentation(CLE);
           Obj["kind"] = CLE->getStmtClassName();
@@ -1700,6 +1707,10 @@ void JSONNodeDumper::VisitNullPtrTemplateArgument(const TemplateArgument &TA) {
 void JSONNodeDumper::VisitIntegralTemplateArgument(const TemplateArgument &TA) {
   JOS.attribute("value", TA.getAsIntegral().getSExtValue());
 }
+void JSONNodeDumper::VisitStructuralValueTemplateArgument(
+    const TemplateArgument &TA) {
+  Visit(TA.getAsStructuralValue(), TA.getStructuralValueType());
+}
 void JSONNodeDumper::VisitTemplateTemplateArgument(const TemplateArgument &TA) {
   // FIXME: cannot just call dump() on the argument, as that doesn't specify
   // the output format.
@@ -1712,6 +1723,8 @@ void JSONNodeDumper::VisitTemplateExpansionTemplateArgument(
 void JSONNodeDumper::VisitExpressionTemplateArgument(
     const TemplateArgument &TA) {
   JOS.attribute("isExpr", true);
+  if (TA.isCanonicalExpr())
+    JOS.attribute("isCanonical", true);
 }
 void JSONNodeDumper::VisitPackTemplateArgument(const TemplateArgument &TA) {
   JOS.attribute("isPack", true);
@@ -1850,7 +1863,7 @@ void JSONNodeDumper::visitVerbatimLineComment(
 
 llvm::json::Object JSONNodeDumper::createFPOptions(FPOptionsOverride FPO) {
   llvm::json::Object Ret;
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   if (FPO.has##NAME##Override())                                               \
     Ret.try_emplace(#NAME, static_cast<unsigned>(FPO.get##NAME##Override()));
 #include "clang/Basic/FPOptions.def"

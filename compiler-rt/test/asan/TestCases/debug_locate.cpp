@@ -3,7 +3,7 @@
 // that it correctly finds out which region (and name and size) the address
 // belongs to.
 // RUN: %clangxx_asan -O0 %s -o %t && %run %t 2>&1
-
+// UNSUPPORTED: msvc
 #include <assert.h>
 #include <sanitizer/asan_interface.h>
 #include <stdio.h>

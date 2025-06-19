@@ -2389,6 +2389,9 @@ void testDiagnostics(void) {
   MlirLocation fileLineColLoc = mlirLocationFileLineColGet(
       ctx, mlirStringRefCreateFromCString("file.c"), 1, 2);
   mlirEmitError(fileLineColLoc, "test diagnostics");
+  MlirLocation fileLineColRange = mlirLocationFileLineColRangeGet(
+      ctx, mlirStringRefCreateFromCString("other-file.c"), 1, 2, 3, 4);
+  mlirEmitError(fileLineColRange, "test diagnostics");
   MlirLocation callSiteLoc = mlirLocationCallSiteGet(
       mlirLocationFileLineColGet(
           ctx, mlirStringRefCreateFromCString("other-file.c"), 2, 3),
@@ -2415,6 +2418,10 @@ void testDiagnostics(void) {
   // CHECK: processing diagnostic (userData: 42) <<
   // CHECK:   test diagnostics
   // CHECK:   loc("file.c":1:2)
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test diagnostics
+  // CHECK:   loc("other-file.c":1:2 to 3:4)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
   // CHECK:   test diagnostics

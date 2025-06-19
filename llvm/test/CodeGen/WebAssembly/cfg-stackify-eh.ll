@@ -857,6 +857,7 @@ invoke.cont:                                      ; preds = %entry
 ; NOSORT:         loop
 ; NOSORT:           call  foo
 ; NOSORT:         end_loop
+; NOSORT:         unreachable
 ; NOSORT:       end_block                                      # label[[L3]]:
 ; NOSORT:       throw_ref
 ; NOSORT:     end_try_table

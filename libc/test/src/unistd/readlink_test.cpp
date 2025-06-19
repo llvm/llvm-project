@@ -7,23 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
-#include "src/errno/libc_errno.h"
 #include "src/string/string_utils.h"
 #include "src/unistd/readlink.h"
 #include "src/unistd/symlink.h"
 #include "src/unistd/unlink.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 namespace cpp = LIBC_NAMESPACE::cpp;
+using LlvmLibcReadlinkTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcReadlinkTest, CreateAndUnlink) {
+TEST_F(LlvmLibcReadlinkTest, CreateAndUnlink) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *FILENAME = "readlink_test_file";
   auto LINK_VAL = libc_make_test_file_path(FILENAME);
   constexpr const char *FILENAME2 = "readlink_test_file.link";
   auto LINK = libc_make_test_file_path(FILENAME2);
-  LIBC_NAMESPACE::libc_errno = 0;
 
   // The test strategy is as follows:
   //   1. Create a symlink with value LINK_VAL.
@@ -40,10 +40,10 @@ TEST(LlvmLibcReadlinkTest, CreateAndUnlink) {
   ASSERT_THAT(LIBC_NAMESPACE::unlink(LINK), Succeeds(0));
 }
 
-TEST(LlvmLibcReadlinkTest, ReadlinkInNonExistentPath) {
+TEST_F(LlvmLibcReadlinkTest, ReadlinkInNonExistentPath) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   constexpr auto LEN = 8;
   char buf[LEN];
   ASSERT_THAT(LIBC_NAMESPACE::readlink("non-existent-link", buf, LEN),
-              Fails(ENOENT));
+              Fails<ssize_t>(ENOENT));
 }

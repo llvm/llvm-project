@@ -18,14 +18,14 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_builtin(__add_lvalue_reference)
+#if __has_builtin(__add_lvalue_reference) && !defined(_LIBCPP_COMPILER_GCC)
 
 template <class _Tp>
 using __add_lvalue_reference_t _LIBCPP_NODEBUG = __add_lvalue_reference(_Tp);
 
 #else
 
-template <class _Tp, bool = __libcpp_is_referenceable<_Tp>::value>
+template <class _Tp, bool = __is_referenceable_v<_Tp>>
 struct __add_lvalue_reference_impl {
   using type _LIBCPP_NODEBUG = _Tp;
 };
@@ -40,7 +40,7 @@ using __add_lvalue_reference_t = typename __add_lvalue_reference_impl<_Tp>::type
 #endif // __has_builtin(__add_lvalue_reference)
 
 template <class _Tp>
-struct add_lvalue_reference {
+struct _LIBCPP_NO_SPECIALIZATIONS add_lvalue_reference {
   using type _LIBCPP_NODEBUG = __add_lvalue_reference_t<_Tp>;
 };
 

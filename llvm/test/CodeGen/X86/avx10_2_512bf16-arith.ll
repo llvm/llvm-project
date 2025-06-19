@@ -2,26 +2,26 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown --show-mc-encoding -mattr=+avx10.2-512 | FileCheck %s --check-prefixes=CHECK,X64
 ; RUN: llc < %s -verify-machineinstrs -mtriple=i686-unknown-unknown --show-mc-encoding -mattr=+avx10.2-512 | FileCheck %s --check-prefixes=CHECK,X86
 
-define <32 x bfloat> @test_int_x86_avx10_vaddnepbf16512(<32 x bfloat> %x1, <32 x bfloat> %x2) {
-; CHECK-LABEL: test_int_x86_avx10_vaddnepbf16512:
+define <32 x bfloat> @test_int_x86_avx10_vaddbf16512(<32 x bfloat> %x1, <32 x bfloat> %x2) {
+; CHECK-LABEL: test_int_x86_avx10_vaddbf16512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vaddnepbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x58,0xc1]
+; CHECK-NEXT:    vaddbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x58,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = fadd <32 x bfloat>  %x1, %x2
   ret <32 x bfloat> %res
 }
 
-define <32 x bfloat> @test_int_x86_avx10_mask_add_nepbf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
-; X64-LABEL: test_int_x86_avx10_mask_add_nepbf16_512:
+define <32 x bfloat> @test_int_x86_avx10_mask_add_bf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
+; X64-LABEL: test_int_x86_avx10_mask_add_bf16_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vaddnepbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x58,0xc2]
+; X64-NEXT:    vaddbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x58,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_int_x86_avx10_mask_add_nepbf16_512:
+; X86-LABEL: test_int_x86_avx10_mask_add_bf16_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vaddnepbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x58,0xc2]
+; X86-NEXT:    vaddbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x58,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %mask = bitcast i32 %msk to <32 x i1>
   %res0 = fadd <32 x bfloat>  %x1, %x2
@@ -29,22 +29,22 @@ define <32 x bfloat> @test_int_x86_avx10_mask_add_nepbf16_512(<32 x bfloat> %src
   ret <32 x bfloat> %res
 }
 
-define <32 x bfloat> @test_int_x86_avx10_maskz_add_nepbf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
-; X64-LABEL: test_int_x86_avx10_maskz_add_nepbf16_512:
+define <32 x bfloat> @test_int_x86_avx10_maskz_add_bf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
+; X64-LABEL: test_int_x86_avx10_maskz_add_bf16_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vaddnepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x58,0xc2]
-; X64-NEXT:    vaddnepbf16 (%rsi), %zmm1, %zmm1 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x58,0x0e]
-; X64-NEXT:    vaddnepbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x58,0xc1]
+; X64-NEXT:    vaddbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x58,0xc2]
+; X64-NEXT:    vaddbf16 (%rsi), %zmm1, %zmm1 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x58,0x0e]
+; X64-NEXT:    vaddbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x58,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_int_x86_avx10_maskz_add_nepbf16_512:
+; X86-LABEL: test_int_x86_avx10_maskz_add_bf16_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vaddnepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x58,0xc2]
-; X86-NEXT:    vaddnepbf16 (%eax), %zmm1, %zmm1 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x58,0x08]
-; X86-NEXT:    vaddnepbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x58,0xc1]
+; X86-NEXT:    vaddbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x58,0xc2]
+; X86-NEXT:    vaddbf16 (%eax), %zmm1, %zmm1 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x58,0x08]
+; X86-NEXT:    vaddbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x58,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %mask = bitcast i32 %msk to <32 x i1>
   %val = load <32 x bfloat>, ptr %ptr
@@ -56,26 +56,26 @@ define <32 x bfloat> @test_int_x86_avx10_maskz_add_nepbf16_512(<32 x bfloat> %sr
   ret <32 x bfloat> %res3
 }
 
-define <32 x bfloat> @test_int_x86_avx10_sub_nepbf16_512(<32 x bfloat> %x1, <32 x bfloat> %x2) {
-; CHECK-LABEL: test_int_x86_avx10_sub_nepbf16_512:
+define <32 x bfloat> @test_int_x86_avx10_sub_bf16_512(<32 x bfloat> %x1, <32 x bfloat> %x2) {
+; CHECK-LABEL: test_int_x86_avx10_sub_bf16_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsubnepbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x5c,0xc1]
+; CHECK-NEXT:    vsubbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x5c,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = fsub <32 x bfloat> %x1, %x2
   ret <32 x bfloat> %res
 }
 
-define <32 x bfloat> @test_int_x86_avx10_mask_sub_nepbf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
-; X64-LABEL: test_int_x86_avx10_mask_sub_nepbf16_512:
+define <32 x bfloat> @test_int_x86_avx10_mask_sub_bf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
+; X64-LABEL: test_int_x86_avx10_mask_sub_bf16_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vsubnepbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x5c,0xc2]
+; X64-NEXT:    vsubbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x5c,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_int_x86_avx10_mask_sub_nepbf16_512:
+; X86-LABEL: test_int_x86_avx10_mask_sub_bf16_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vsubnepbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x5c,0xc2]
+; X86-NEXT:    vsubbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x5c,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %mask = bitcast i32 %msk to <32 x i1>
   %res0 = fsub <32 x bfloat> %x1, %x2
@@ -83,22 +83,22 @@ define <32 x bfloat> @test_int_x86_avx10_mask_sub_nepbf16_512(<32 x bfloat> %src
   ret <32 x bfloat> %res
 }
 
-define <32 x bfloat> @test_int_x86_avx10_maskz_sub_nepbf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
-; X64-LABEL: test_int_x86_avx10_maskz_sub_nepbf16_512:
+define <32 x bfloat> @test_int_x86_avx10_maskz_sub_bf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
+; X64-LABEL: test_int_x86_avx10_maskz_sub_bf16_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vsubnepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x5c,0xc2]
-; X64-NEXT:    vsubnepbf16 (%rsi), %zmm1, %zmm1 # encoding: [0x62,0xf5,0x75,0x48,0x5c,0x0e]
-; X64-NEXT:    vsubnepbf16 %zmm1, %zmm0, %zmm0 {%k1} # encoding: [0x62,0xf5,0x7d,0x49,0x5c,0xc1]
+; X64-NEXT:    vsubbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x5c,0xc2]
+; X64-NEXT:    vsubbf16 (%rsi), %zmm1, %zmm1 # encoding: [0x62,0xf5,0x75,0x48,0x5c,0x0e]
+; X64-NEXT:    vsubbf16 %zmm1, %zmm0, %zmm0 {%k1} # encoding: [0x62,0xf5,0x7d,0x49,0x5c,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_int_x86_avx10_maskz_sub_nepbf16_512:
+; X86-LABEL: test_int_x86_avx10_maskz_sub_bf16_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vsubnepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x5c,0xc2]
-; X86-NEXT:    vsubnepbf16 (%eax), %zmm1, %zmm1 # encoding: [0x62,0xf5,0x75,0x48,0x5c,0x08]
-; X86-NEXT:    vsubnepbf16 %zmm1, %zmm0, %zmm0 {%k1} # encoding: [0x62,0xf5,0x7d,0x49,0x5c,0xc1]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
+; X86-NEXT:    vsubbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x5c,0xc2]
+; X86-NEXT:    vsubbf16 (%eax), %zmm1, %zmm1 # encoding: [0x62,0xf5,0x75,0x48,0x5c,0x08]
+; X86-NEXT:    vsubbf16 %zmm1, %zmm0, %zmm0 {%k1} # encoding: [0x62,0xf5,0x7d,0x49,0x5c,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %mask = bitcast i32 %msk to <32 x i1>
   %val = load <32 x bfloat>, ptr %ptr
@@ -110,28 +110,28 @@ define <32 x bfloat> @test_int_x86_avx10_maskz_sub_nepbf16_512(<32 x bfloat> %sr
   ret <32 x bfloat> %res3
 }
 
-declare <32 x bfloat> @llvm.x86.avx10.vmulnepbf16512(<32 x bfloat>, <32 x bfloat>)
+declare <32 x bfloat> @llvm.x86.avx10.vmulbf16512(<32 x bfloat>, <32 x bfloat>)
 
-define <32 x bfloat> @test_int_x86_avx10_mul_nepbf16_512(<32 x bfloat> %x1, <32 x bfloat> %x2) {
-; CHECK-LABEL: test_int_x86_avx10_mul_nepbf16_512:
+define <32 x bfloat> @test_int_x86_avx10_mul_bf16_512(<32 x bfloat> %x1, <32 x bfloat> %x2) {
+; CHECK-LABEL: test_int_x86_avx10_mul_bf16_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmulnepbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x59,0xc1]
+; CHECK-NEXT:    vmulbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x59,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = fmul <32 x bfloat> %x1, %x2
   ret <32 x bfloat> %res
 }
 
-define <32 x bfloat> @test_int_x86_avx10_mask_mul_nepbf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
-; X64-LABEL: test_int_x86_avx10_mask_mul_nepbf16_512:
+define <32 x bfloat> @test_int_x86_avx10_mask_mul_bf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
+; X64-LABEL: test_int_x86_avx10_mask_mul_bf16_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vmulnepbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x59,0xc2]
+; X64-NEXT:    vmulbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x59,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_int_x86_avx10_mask_mul_nepbf16_512:
+; X86-LABEL: test_int_x86_avx10_mask_mul_bf16_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vmulnepbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x59,0xc2]
+; X86-NEXT:    vmulbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x59,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %mask = bitcast i32 %msk to <32 x i1>
   %res0 = fmul <32 x bfloat> %x1, %x2
@@ -139,22 +139,22 @@ define <32 x bfloat> @test_int_x86_avx10_mask_mul_nepbf16_512(<32 x bfloat> %src
   ret <32 x bfloat> %res
 }
 
-define <32 x bfloat> @test_int_x86_avx10_maskz_mul_nepbf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
-; X64-LABEL: test_int_x86_avx10_maskz_mul_nepbf16_512:
+define <32 x bfloat> @test_int_x86_avx10_maskz_mul_bf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
+; X64-LABEL: test_int_x86_avx10_maskz_mul_bf16_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vmulnepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x59,0xc2]
-; X64-NEXT:    vmulnepbf16 (%rsi), %zmm1, %zmm1 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x59,0x0e]
-; X64-NEXT:    vmulnepbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x59,0xc1]
+; X64-NEXT:    vmulbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x59,0xc2]
+; X64-NEXT:    vmulbf16 (%rsi), %zmm1, %zmm1 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x59,0x0e]
+; X64-NEXT:    vmulbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x59,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_int_x86_avx10_maskz_mul_nepbf16_512:
+; X86-LABEL: test_int_x86_avx10_maskz_mul_bf16_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vmulnepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x59,0xc2]
-; X86-NEXT:    vmulnepbf16 (%eax), %zmm1, %zmm1 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x59,0x08]
-; X86-NEXT:    vmulnepbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x59,0xc1]
+; X86-NEXT:    vmulbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x59,0xc2]
+; X86-NEXT:    vmulbf16 (%eax), %zmm1, %zmm1 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x59,0x08]
+; X86-NEXT:    vmulbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x59,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %mask = bitcast i32 %msk to <32 x i1>
   %val = load <32 x bfloat>, ptr %ptr
@@ -166,26 +166,26 @@ define <32 x bfloat> @test_int_x86_avx10_maskz_mul_nepbf16_512(<32 x bfloat> %sr
   ret <32 x bfloat> %res3
 }
 
-define <32 x bfloat> @test_int_x86_avx10_div_nepbf16_512(<32 x bfloat> %x1, <32 x bfloat> %x2) {
-; CHECK-LABEL: test_int_x86_avx10_div_nepbf16_512:
+define <32 x bfloat> @test_int_x86_avx10_div_bf16_512(<32 x bfloat> %x1, <32 x bfloat> %x2) {
+; CHECK-LABEL: test_int_x86_avx10_div_bf16_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vdivnepbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x5e,0xc1]
+; CHECK-NEXT:    vdivbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x5e,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = fdiv <32 x bfloat> %x1, %x2
   ret <32 x bfloat> %res
 }
 
-define <32 x bfloat> @test_int_x86_avx10_mask_div_nepbf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
-; X64-LABEL: test_int_x86_avx10_mask_div_nepbf16_512:
+define <32 x bfloat> @test_int_x86_avx10_mask_div_bf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
+; X64-LABEL: test_int_x86_avx10_mask_div_bf16_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vdivnepbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x5e,0xc2]
+; X64-NEXT:    vdivbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x5e,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_int_x86_avx10_mask_div_nepbf16_512:
+; X86-LABEL: test_int_x86_avx10_mask_div_bf16_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vdivnepbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x5e,0xc2]
+; X86-NEXT:    vdivbf16 %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x75,0x49,0x5e,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %mask = bitcast i32 %msk to <32 x i1>
   %res0 = fdiv <32 x bfloat> %x1, %x2
@@ -193,22 +193,22 @@ define <32 x bfloat> @test_int_x86_avx10_mask_div_nepbf16_512(<32 x bfloat> %src
   ret <32 x bfloat> %res
 }
 
-define <32 x bfloat> @test_int_x86_avx10_maskz_div_nepbf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
-; X64-LABEL: test_int_x86_avx10_maskz_div_nepbf16_512:
+define <32 x bfloat> @test_int_x86_avx10_maskz_div_bf16_512(<32 x bfloat> %src, <32 x bfloat> %x1, <32 x bfloat> %x2, i32 %msk, ptr %ptr) {
+; X64-LABEL: test_int_x86_avx10_maskz_div_bf16_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vdivnepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x5e,0xc2]
-; X64-NEXT:    vdivnepbf16 (%rsi), %zmm1, %zmm1 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x5e,0x0e]
-; X64-NEXT:    vdivnepbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x5e,0xc1]
+; X64-NEXT:    vdivbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x5e,0xc2]
+; X64-NEXT:    vdivbf16 (%rsi), %zmm1, %zmm1 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x5e,0x0e]
+; X64-NEXT:    vdivbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x5e,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_int_x86_avx10_maskz_div_nepbf16_512:
+; X86-LABEL: test_int_x86_avx10_maskz_div_bf16_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vdivnepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x5e,0xc2]
-; X86-NEXT:    vdivnepbf16 (%eax), %zmm1, %zmm1 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x5e,0x08]
-; X86-NEXT:    vdivnepbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x5e,0xc1]
+; X86-NEXT:    vdivbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x5e,0xc2]
+; X86-NEXT:    vdivbf16 (%eax), %zmm1, %zmm1 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x5e,0x08]
+; X86-NEXT:    vdivbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x5e,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %mask = bitcast i32 %msk to <32 x i1>
   %val = load <32 x bfloat>, ptr %ptr
@@ -220,10 +220,10 @@ define <32 x bfloat> @test_int_x86_avx10_maskz_div_nepbf16_512(<32 x bfloat> %sr
   ret <32 x bfloat> %res3
 }
 
-define i32 @test_int_x86_avx10_vcmppbf16512(<32 x bfloat> %x1, <32 x bfloat> %x2) {
-; CHECK-LABEL: test_int_x86_avx10_vcmppbf16512:
+define i32 @test_int_x86_avx10_vcmpbf16512(<32 x bfloat> %x1, <32 x bfloat> %x2) {
+; CHECK-LABEL: test_int_x86_avx10_vcmpbf16512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpunordpbf16 %zmm1, %zmm0, %k0 # encoding: [0x62,0xf3,0x7f,0x48,0xc2,0xc1,0x03]
+; CHECK-NEXT:    vcmpunordbf16 %zmm1, %zmm0, %k0 # encoding: [0x62,0xf3,0x7f,0x48,0xc2,0xc1,0x03]
 ; CHECK-NEXT:    kmovd %k0, %eax # encoding: [0xc5,0xfb,0x93,0xc0]
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
@@ -233,10 +233,10 @@ define i32 @test_int_x86_avx10_vcmppbf16512(<32 x bfloat> %x1, <32 x bfloat> %x2
 }
 
 ; FIXME: _mm512_mask_cmp_p[s|h]_mask is not using {k2} but gcc does
-define i32 @test_int_x86_avx10_vcmppbf16512_mask2(<32 x bfloat> %x1, <32 x bfloat> %x2) {
-; CHECK-LABEL: test_int_x86_avx10_vcmppbf16512_mask2:
+define i32 @test_int_x86_avx10_vcmpbf16512_mask2(<32 x bfloat> %x1, <32 x bfloat> %x2) {
+; CHECK-LABEL: test_int_x86_avx10_vcmpbf16512_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpeqpbf16 %zmm1, %zmm0, %k0 # encoding: [0x62,0xf3,0x7f,0x48,0xc2,0xc1,0x00]
+; CHECK-NEXT:    vcmpeqbf16 %zmm1, %zmm0, %k0 # encoding: [0x62,0xf3,0x7f,0x48,0xc2,0xc1,0x00]
 ; CHECK-NEXT:    kmovd %k0, %eax # encoding: [0xc5,0xfb,0x93,0xc0]
 ; CHECK-NEXT:    andl $3, %eax # encoding: [0x83,0xe0,0x03]
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
@@ -247,10 +247,10 @@ define i32 @test_int_x86_avx10_vcmppbf16512_mask2(<32 x bfloat> %x1, <32 x bfloa
   ret i32 %3
 }
 
-define <32 x bfloat> @test_sqrt_nepbf16_512(<32 x bfloat> %a0) {
-; CHECK-LABEL: test_sqrt_nepbf16_512:
+define <32 x bfloat> @test_sqrt_bf16_512(<32 x bfloat> %a0) {
+; CHECK-LABEL: test_sqrt_bf16_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsqrtnepbf16 %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x51,0xc0]
+; CHECK-NEXT:    vsqrtbf16 %zmm0, %zmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x51,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %1 = tail call <32 x bfloat> @llvm.sqrt.v32bf16(<32 x bfloat> %a0)
   ret <32 x bfloat> %1
@@ -260,13 +260,13 @@ define <32 x bfloat> @test_mm512_mask_sqrt_pbh(<32 x bfloat> %__W, i32 %__U, <32
 ; X64-LABEL: test_mm512_mask_sqrt_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vsqrtnepbf16 %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x7d,0x49,0x51,0xc1]
+; X64-NEXT:    vsqrtbf16 %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x7d,0x49,0x51,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_mask_sqrt_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vsqrtnepbf16 %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x7d,0x49,0x51,0xc1]
+; X86-NEXT:    vsqrtbf16 %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf5,0x7d,0x49,0x51,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %0 = tail call <32 x bfloat> @llvm.sqrt.v32bf16(<32 x bfloat> %__A)
@@ -279,13 +279,13 @@ define <32 x bfloat> @test_mm512_maskz_sqrt_pbh(i32 %__U, <32 x bfloat>%__A) {
 ; X64-LABEL: test_mm512_maskz_sqrt_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vsqrtnepbf16 %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7d,0xc9,0x51,0xc0]
+; X64-NEXT:    vsqrtbf16 %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7d,0xc9,0x51,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_maskz_sqrt_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vsqrtnepbf16 %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7d,0xc9,0x51,0xc0]
+; X86-NEXT:    vsqrtbf16 %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7d,0xc9,0x51,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %0 = tail call <32 x bfloat> @llvm.sqrt.v32bf16(<32 x bfloat> %__A)
@@ -297,7 +297,7 @@ entry:
 define <32 x bfloat> @test_mm512_fmaddne_pbh(<32 x bfloat> %__A, <32 x bfloat> %__B, <32 x bfloat> %__C) {
 ; CHECK-LABEL: test_mm512_fmaddne_pbh:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfmadd213nepbf16 %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf6,0x74,0x48,0xa8,0xc2]
+; CHECK-NEXT:    vfmadd213bf16 %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf6,0x74,0x48,0xa8,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
   %0 = tail call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %__A, <32 x bfloat> %__B, <32 x bfloat> %__C)
@@ -308,13 +308,13 @@ define <32 x bfloat> @test_mm512_mask_fmaddne_pbh(<32 x bfloat> %__A, i32 %__U, 
 ; X64-LABEL: test_mm512_mask_fmaddne_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vfmadd132nepbf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x98,0xc1]
+; X64-NEXT:    vfmadd132bf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x98,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_mask_fmaddne_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfmadd132nepbf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x98,0xc1]
+; X86-NEXT:    vfmadd132bf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x98,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %0 = tail call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %__A, <32 x bfloat> %__B, <32 x bfloat> %__C)
@@ -327,14 +327,14 @@ define <32 x bfloat> @test_mm512_mask3_fmaddne_pbh(<32 x bfloat> %__A, <32 x bfl
 ; X64-LABEL: test_mm512_mask3_fmaddne_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vfmadd231nepbf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xb8,0xd1]
+; X64-NEXT:    vfmadd231bf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xb8,0xd1]
 ; X64-NEXT:    vmovaps %zmm2, %zmm0 # encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_mask3_fmaddne_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfmadd231nepbf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xb8,0xd1]
+; X86-NEXT:    vfmadd231bf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xb8,0xd1]
 ; X86-NEXT:    vmovaps %zmm2, %zmm0 # encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
@@ -348,13 +348,13 @@ define <32 x bfloat> @test_mm512_maskz_fmaddne_pbh(i32 %__U, <32 x bfloat> %__A,
 ; X64-LABEL: test_mm512_maskz_fmaddne_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vfmadd213nepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xa8,0xc2]
+; X64-NEXT:    vfmadd213bf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xa8,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_maskz_fmaddne_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfmadd213nepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xa8,0xc2]
+; X86-NEXT:    vfmadd213bf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xa8,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %0 = tail call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %__A, <32 x bfloat> %__B, <32 x bfloat> %__C)
@@ -366,7 +366,7 @@ entry:
 define <32 x bfloat> @test_mm512_fmsubne_pbh(<32 x bfloat> %__A, <32 x bfloat> %__B, <32 x bfloat> %__C) {
 ; CHECK-LABEL: test_mm512_fmsubne_pbh:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfmsub213nepbf16 %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf6,0x74,0x48,0xaa,0xc2]
+; CHECK-NEXT:    vfmsub213bf16 %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf6,0x74,0x48,0xaa,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
   %fneg.i = fneg <32 x bfloat> %__C
@@ -378,13 +378,13 @@ define <32 x bfloat> @test_mm512_mask_fmsubne_pbh(<32 x bfloat> %__A, i32 %__U, 
 ; X64-LABEL: test_mm512_mask_fmsubne_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vfmsub132nepbf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x9a,0xc1]
+; X64-NEXT:    vfmsub132bf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x9a,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_mask_fmsubne_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfmsub132nepbf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x9a,0xc1]
+; X86-NEXT:    vfmsub132bf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x9a,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %fneg.i.i = fneg <32 x bfloat> %__C
@@ -398,14 +398,14 @@ define <32 x bfloat> @test_mm512_mask3_fmsubne_pbh(<32 x bfloat> %__A, <32 x bfl
 ; X64-LABEL: test_mm512_mask3_fmsubne_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vfmsub231nepbf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xba,0xd1]
+; X64-NEXT:    vfmsub231bf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xba,0xd1]
 ; X64-NEXT:    vmovaps %zmm2, %zmm0 # encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_mask3_fmsubne_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfmsub231nepbf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xba,0xd1]
+; X86-NEXT:    vfmsub231bf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xba,0xd1]
 ; X86-NEXT:    vmovaps %zmm2, %zmm0 # encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
@@ -420,13 +420,13 @@ define <32 x bfloat> @test_mm512_maskz_fmsubne_pbh(i32 %__U, <32 x bfloat> %__A,
 ; X64-LABEL: test_mm512_maskz_fmsubne_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vfmsub213nepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xaa,0xc2]
+; X64-NEXT:    vfmsub213bf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xaa,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_maskz_fmsubne_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfmsub213nepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xaa,0xc2]
+; X86-NEXT:    vfmsub213bf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xaa,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %fneg.i.i = fneg <32 x bfloat> %__C
@@ -439,7 +439,7 @@ entry:
 define <32 x bfloat> @test_mm512_fnmaddne_pbh(<32 x bfloat> %__A, <32 x bfloat> %__B, <32 x bfloat> %__C) {
 ; CHECK-LABEL: test_mm512_fnmaddne_pbh:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfnmadd213nepbf16 %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf6,0x74,0x48,0xac,0xc2]
+; CHECK-NEXT:    vfnmadd213bf16 %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf6,0x74,0x48,0xac,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
   %fneg.i = fneg <32 x bfloat> %__B
@@ -451,13 +451,13 @@ define <32 x bfloat> @test_mm512_mask_fnmaddne_pbh(<32 x bfloat> %__A, i32 %__U,
 ; X64-LABEL: test_mm512_mask_fnmaddne_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vfnmadd132nepbf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x9c,0xc1]
+; X64-NEXT:    vfnmadd132bf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x9c,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_mask_fnmaddne_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfnmadd132nepbf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x9c,0xc1]
+; X86-NEXT:    vfnmadd132bf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x9c,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %fneg.i.i = fneg <32 x bfloat> %__B
@@ -471,14 +471,14 @@ define <32 x bfloat> @test_mm512_mask3_fnmaddne_pbh(<32 x bfloat> %__A, <32 x bf
 ; X64-LABEL: test_mm512_mask3_fnmaddne_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vfnmadd231nepbf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xbc,0xd1]
+; X64-NEXT:    vfnmadd231bf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xbc,0xd1]
 ; X64-NEXT:    vmovaps %zmm2, %zmm0 # encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_mask3_fnmaddne_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfnmadd231nepbf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xbc,0xd1]
+; X86-NEXT:    vfnmadd231bf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xbc,0xd1]
 ; X86-NEXT:    vmovaps %zmm2, %zmm0 # encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
@@ -493,13 +493,13 @@ define <32 x bfloat> @test_mm512_maskz_fnmaddne_pbh(i32 %__U, <32 x bfloat> %__A
 ; X64-LABEL: test_mm512_maskz_fnmaddne_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vfnmadd213nepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xac,0xc2]
+; X64-NEXT:    vfnmadd213bf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xac,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_maskz_fnmaddne_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfnmadd213nepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xac,0xc2]
+; X86-NEXT:    vfnmadd213bf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xac,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %fneg.i.i = fneg <32 x bfloat> %__B
@@ -512,7 +512,7 @@ entry:
 define <32 x bfloat> @test_mm512_fnmsubne_pbh(<32 x bfloat> %__A, <32 x bfloat> %__B, <32 x bfloat> %__C) {
 ; CHECK-LABEL: test_mm512_fnmsubne_pbh:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfnmsub213nepbf16 %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf6,0x74,0x48,0xae,0xc2]
+; CHECK-NEXT:    vfnmsub213bf16 %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf6,0x74,0x48,0xae,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
   %fneg.i = fneg <32 x bfloat> %__B
@@ -525,13 +525,13 @@ define <32 x bfloat> @test_mm512_mask_fnmsubne_pbh(<32 x bfloat> %__A, i32 %__U,
 ; X64-LABEL: test_mm512_mask_fnmsubne_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vfnmsub132nepbf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x9e,0xc1]
+; X64-NEXT:    vfnmsub132bf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x9e,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_mask_fnmsubne_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfnmsub132nepbf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x9e,0xc1]
+; X86-NEXT:    vfnmsub132bf16 %zmm1, %zmm2, %zmm0 {%k1} # encoding: [0x62,0xf6,0x6c,0x49,0x9e,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %fneg.i.i = fneg <32 x bfloat> %__B
@@ -546,14 +546,14 @@ define <32 x bfloat> @test_mm512_mask3_fnmsubne_pbh(<32 x bfloat> %__A, <32 x bf
 ; X64-LABEL: test_mm512_mask3_fnmsubne_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vfnmsub231nepbf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xbe,0xd1]
+; X64-NEXT:    vfnmsub231bf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xbe,0xd1]
 ; X64-NEXT:    vmovaps %zmm2, %zmm0 # encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_mask3_fnmsubne_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfnmsub231nepbf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xbe,0xd1]
+; X86-NEXT:    vfnmsub231bf16 %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf6,0x7c,0x49,0xbe,0xd1]
 ; X86-NEXT:    vmovaps %zmm2, %zmm0 # encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
@@ -569,13 +569,13 @@ define <32 x bfloat> @test_mm512_maskz_fnmsubne_pbh(i32 %__U, <32 x bfloat> %__A
 ; X64-LABEL: test_mm512_maskz_fnmsubne_pbh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vfnmsub213nepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xae,0xc2]
+; X64-NEXT:    vfnmsub213bf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xae,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mm512_maskz_fnmsubne_pbh:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfnmsub213nepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xae,0xc2]
+; X86-NEXT:    vfnmsub213bf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf6,0x74,0xc9,0xae,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %fneg.i.i = fneg <32 x bfloat> %__B

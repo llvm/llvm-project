@@ -106,14 +106,6 @@ Expected<std::string> getDefaultDebuginfodCacheDirectory() {
   return std::string(CacheDirectory);
 }
 
-Expected<llvm::CachePruningPolicy> getDefaultDebuginfodCachePruningPolicy() {
-  Expected<CachePruningPolicy> PruningPolicyOrErr =
-      parseCachePruningPolicy(std::getenv("DEBUGINFOD_CACHE_POLICY"));
-  if (!PruningPolicyOrErr)
-    return PruningPolicyOrErr.takeError();
-  return *PruningPolicyOrErr;
-}
-
 std::chrono::milliseconds getDefaultDebuginfodTimeout() {
   long Timeout;
   const char *DebuginfodTimeoutEnv = std::getenv("DEBUGINFOD_TIMEOUT");
@@ -177,15 +169,9 @@ Expected<std::string> getCachedOrDownloadArtifact(StringRef UniqueKey,
     return CacheDirOrErr.takeError();
   CacheDir = *CacheDirOrErr;
 
-  Expected<llvm::CachePruningPolicy> PruningPolicyOrErr =
-      getDefaultDebuginfodCachePruningPolicy();
-  if (!PruningPolicyOrErr)
-    return PruningPolicyOrErr.takeError();
-  llvm::CachePruningPolicy PruningPolicy = *PruningPolicyOrErr;
-
-  return getCachedOrDownloadArtifact(
-      UniqueKey, UrlPath, CacheDir, getDefaultDebuginfodUrls(),
-      getDefaultDebuginfodTimeout(), PruningPolicy);
+  return getCachedOrDownloadArtifact(UniqueKey, UrlPath, CacheDir,
+                                     getDefaultDebuginfodUrls(),
+                                     getDefaultDebuginfodTimeout());
 }
 
 namespace {
@@ -202,6 +188,11 @@ class StreamedHTTPResponseHandler : public HTTPResponseHandler {
 public:
   StreamedHTTPResponseHandler(CreateStreamFn CreateStream, HTTPClient &Client)
       : CreateStream(CreateStream), Client(Client) {}
+
+  /// Must be called exactly once after the writes have been completed
+  /// but before the StreamedHTTPResponseHandler object is destroyed.
+  Error commit();
+
   virtual ~StreamedHTTPResponseHandler() = default;
 
   Error handleBodyChunk(StringRef BodyChunk) override;
@@ -221,6 +212,12 @@ Error StreamedHTTPResponseHandler::handleBodyChunk(StringRef BodyChunk) {
     FileStream = std::move(*FileStreamOrError);
   }
   *FileStream->OS << BodyChunk;
+  return Error::success();
+}
+
+Error StreamedHTTPResponseHandler::commit() {
+  if (FileStream)
+    return FileStream->commit();
   return Error::success();
 }
 
@@ -248,8 +245,7 @@ static SmallVector<std::string, 0> getHeaders() {
   uint64_t LineNumber = 0;
   for (StringRef Line : llvm::split((*HeadersFile)->getBuffer(), '\n')) {
     LineNumber++;
-    if (!Line.empty() && Line.back() == '\r')
-      Line = Line.drop_back();
+    Line.consume_back("\r");
     if (!isHeader(Line)) {
       if (!all_of(Line, llvm::isSpace))
         WithColor::warning()
@@ -264,8 +260,7 @@ static SmallVector<std::string, 0> getHeaders() {
 
 Expected<std::string> getCachedOrDownloadArtifact(
     StringRef UniqueKey, StringRef UrlPath, StringRef CacheDirectoryPath,
-    ArrayRef<StringRef> DebuginfodUrls, std::chrono::milliseconds Timeout,
-    llvm::CachePruningPolicy policy) {
+    ArrayRef<StringRef> DebuginfodUrls, std::chrono::milliseconds Timeout) {
   SmallString<64> AbsCachedArtifactPath;
   sys::path::append(AbsCachedArtifactPath, CacheDirectoryPath,
                     "llvmcache-" + UniqueKey);
@@ -313,13 +308,19 @@ Expected<std::string> getCachedOrDownloadArtifact(
       Error Err = Client.perform(Request, Handler);
       if (Err)
         return std::move(Err);
+      if ((Err = Handler.commit()))
+        return std::move(Err);
 
       unsigned Code = Client.responseCode();
       if (Code && Code != 200)
         continue;
     }
 
-    pruneCache(CacheDirectoryPath, policy);
+    Expected<CachePruningPolicy> PruningPolicyOrErr =
+        parseCachePruningPolicy(std::getenv("DEBUGINFOD_CACHE_POLICY"));
+    if (!PruningPolicyOrErr)
+      return PruningPolicyOrErr.takeError();
+    pruneCache(CacheDirectoryPath, *PruningPolicyOrErr);
 
     // Return the path to the artifact on disk.
     return std::string(AbsCachedArtifactPath);

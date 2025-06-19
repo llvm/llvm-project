@@ -1,0 +1,8 @@
+// RUN: cir-translate -verify-diagnostics --cir-to-llvmir --target foobar --disable-cc-lowering %s 2>&1
+
+// expected-error@below {{invalid target triple 'foobar'}}
+module {
+  cir.func @foo() {
+    cir.return
+  }
+}

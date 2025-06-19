@@ -63,6 +63,9 @@ def IsTensorTypePred : CPred<"::llvm::isa<::mlir::TensorType>($_self)">;
 // Whether a type is a MemRefType.
 def IsMemRefTypePred : CPred<"::llvm::isa<::mlir::MemRefType>($_self)">;
 
+// Whether a type is a TensorType or a MemRefType.
+def IsTensorOrMemRefTypePred : Or<[IsTensorTypePred, IsMemRefTypePred]>;
+
 // Whether a type is an UnrankedMemRefType
 def IsUnrankedMemRefTypePred
         : CPred<"::llvm::isa<::mlir::UnrankedMemRefType>($_self)">;
@@ -329,32 +332,32 @@ def F64 : F<64>;
 def F80 : F<80>;
 def F128 : F<128>;
 
-def BF16 : Type<CPred<"$_self.isBF16()">, "bfloat16 type">,
-           BuildableType<"$_builder.getBF16Type()">;
-def TF32 : Type<CPred<"$_self.isTF32()">, "tf32 type">,
-           BuildableType<"$_builder.getTF32Type()">;
-def F8E4M3FN : Type<CPred<"$_self.isFloat8E4M3FN()">, "f8E4M3FN type">,
-               BuildableType<"$_builder.getFloat8E4M3FNType()">;
-def F8E5M2 : Type<CPred<"$_self.isFloat8E5M2()">, "f8E5M2 type">,
-             BuildableType<"$_builder.getFloat8E5M2Type()">;
-def F8E4M3 : Type<CPred<"$_self.isFloat8E4M3()">, "f8E4M3 type">,
-             BuildableType<"$_builder.getFloat8E4M3Type()">;
-def F8E4M3FNUZ : Type<CPred<"$_self.isFloat8E4M3FNUZ()">, "f8E4M3FNUZ type">,
-                 BuildableType<"$_builder.getFloat8E4M3FNUZType()">;
-def F8E4M3B11FNUZ : Type<CPred<"$_self.isFloat8E4M3B11FNUZ()">, "f8E4M3B11FNUZ type">,
-                 BuildableType<"$_builder.getFloat8E4M3B11FNUZType()">;
-def F8E5M2FNUZ : Type<CPred<"$_self.isFloat8E5M2FNUZ()">, "f8E5M2FNUZ type">,
-                 BuildableType<"$_builder.getFloat8E5M2FNUZType()">;
-def F8E3M4 : Type<CPred<"$_self.isFloat8E3M4()">, "f8E3M4 type">,
-             BuildableType<"$_builder.getFloat8E3M4Type()">;
-def F4E2M1FN : Type<CPred<"$_self.isFloat4E2M1FN()">, "f4E2M1FN type">,
-               BuildableType<"$_builder.getFloat4E2M1FNType()">;
-def F6E2M3FN : Type<CPred<"$_self.isFloat6E2M3FN()">, "f6E2M3FN type">,
-               BuildableType<"$_builder.getFloat6E2M3FNType()">;
-def F6E3M2FN : Type<CPred<"$_self.isFloat6E3M2FN()">, "f6E3M2FN type">,
-               BuildableType<"$_builder.getFloat6E3M2FNType()">;
-def F8E8M0FNU : Type<CPred<"$_self.isFloat8E8M0FNU()">, "f8E8M0FNU type">,
-                BuildableType<"$_builder.getFloat8E8M0FNUType()">;
+def BF16 : Type<CPred<"::llvm::isa<::mlir::BFloat16Type>($_self)">, "bfloat16 type">,
+           BuildableType<"$_builder.getType<BFloat16Type>()">;
+def TF32 : Type<CPred<"::llvm::isa<::mlir::FloatTF32Type>($_self)">, "tf32 type">,
+           BuildableType<"$_builder.getType<FloatTF32Type>()">;
+def F8E4M3FN : Type<CPred<"::llvm::isa<::mlir::Float8E4M3FNType>($_self)">, "f8E4M3FN type">,
+               BuildableType<"$_builder.getType<Float8E4M3FNType>()">;
+def F8E5M2 : Type<CPred<"::llvm::isa<::mlir::Float8E5M2Type>($_self)">, "f8E5M2 type">,
+             BuildableType<"$_builder.getType<Float8E5M2Type>()">;
+def F8E4M3 : Type<CPred<"::llvm::isa<::mlir::Float8E4M3Type>($_self)">, "f8E4M3 type">,
+             BuildableType<"$_builder.getType<Float8E4M3Type>()">;
+def F8E4M3FNUZ : Type<CPred<"::llvm::isa<::mlir::Float8E4M3FNUZType>($_self)">, "f8E4M3FNUZ type">,
+                 BuildableType<"$_builder.getType<Float8E4M3FNUZType>()">;
+def F8E4M3B11FNUZ : Type<CPred<"::llvm::isa<::mlir::Float8E4M3B11FNUZType>($_self)">, "f8E4M3B11FNUZ type">,
+                 BuildableType<"$_builder.getType<Float8E4M3B11FNUZType>()">;
+def F8E5M2FNUZ : Type<CPred<"::llvm::isa<::mlir::Float8E5M2FNUZType>($_self)">, "f8E5M2FNUZ type">,
+                 BuildableType<"$_builder.getType<Float8E5M2FNUZType>()">;
+def F8E3M4 : Type<CPred<"::llvm::isa<::mlir::Float8E3M4Type>($_self)">, "f8E3M4 type">,
+             BuildableType<"$_builder.getType<Float8E3M4Type>()">;
+def F4E2M1FN : Type<CPred<"::llvm::isa<::mlir::Float4E2M1FNType>($_self)">, "f4E2M1FN type">,
+               BuildableType<"$_builder.getType<Float4E2M1FNType>()">;
+def F6E2M3FN : Type<CPred<"::llvm::isa<::mlir::Float6E2M3FNType>($_self)">, "f6E2M3FN type">,
+               BuildableType<"$_builder.getType<Float6E2M3FNType>()">;
+def F6E3M2FN : Type<CPred<"::llvm::isa<::mlir::Float6E3M2FNType>($_self)">, "f6E3M2FN type">,
+               BuildableType<"$_builder.getType<Float6E3M2FNType>()">;
+def F8E8M0FNU : Type<CPred<"::llvm::isa<::mlir::Float8E8M0FNUType>($_self)">, "f8E8M0FNU type">,
+                BuildableType<"$_builder.getType<Float8E8M0FNUType>()">;
 
 def AnyComplex : Type<CPred<"::llvm::isa<::mlir::ComplexType>($_self)">,
                       "complex-type", "::mlir::ComplexType">;
@@ -426,7 +429,9 @@ class ValueSemanticsContainerOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, HasValueSemanticsPred,
   "container with value semantics">;
 
+//===----------------------------------------------------------------------===//
 // Vector types.
+//===----------------------------------------------------------------------===//
 
 class VectorOfNonZeroRankOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorOfNonZeroRankTypePred, "vector",
@@ -679,6 +684,7 @@ def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped",
 
 //===----------------------------------------------------------------------===//
 // Tensor types.
+//===----------------------------------------------------------------------===//
 
 // Unranked tensor type whose element type is from the given `allowedTypes`
 // list, and which additionally satisfies an optional list of predicates.
@@ -754,7 +760,8 @@ class StaticShapeTensorOf<list<Type> allowedTypes>
 def AnyStaticShapeTensor : StaticShapeTensorOf<[AnyType]>;
 
 //===----------------------------------------------------------------------===//
-// Memref type.
+// Memref types.
+//===----------------------------------------------------------------------===//
 
 // Any unranked memref whose element type is from the given `allowedTypes` list.
 class UnrankedMemRefOf<list<Type> allowedTypes> :
@@ -820,7 +827,7 @@ class StaticShapeMemRefOf<list<Type> allowedTypes> :
 def AnyStaticShapeMemRef : StaticShapeMemRefOf<[AnyType]>;
 
 // For a MemRefType, verify that it has strides.
-def HasStridesPred : CPred<[{ isStrided(::llvm::cast<::mlir::MemRefType>($_self)) }]>;
+def HasStridesPred : CPred<[{ ::llvm::cast<::mlir::MemRefType>($_self).isStrided() }]>;
 
 class StridedMemRefOf<list<Type> allowedTypes> :
     ConfinedType<MemRefOf<allowedTypes>, [HasStridesPred],
@@ -877,52 +884,51 @@ class NestedTupleOf<list<Type> allowedTypes> :
                        "nested tuple">;
 
 //===----------------------------------------------------------------------===//
+// Mixed types
+//===----------------------------------------------------------------------===//
+
+class TensorOrMemRef<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsTensorOrMemRefTypePred, "Tensor or MemRef",
+                      "::mlir::ShapedType">;
+
+//===----------------------------------------------------------------------===//
 // Common type constraints
 //===----------------------------------------------------------------------===//
-// Type constraint for types that are "like" some type or set of types T, that is
-// they're either a T, a vector of Ts, or a tensor of Ts.
-class TypeOrContainer<Type allowedType, string name> : TypeConstraint<Or<[
-  allowedType.predicate,
-  ValueSemanticsContainerOf<[allowedType]>.predicate]>,
-  name>;
 
 // Type constraint for types that are "like" some type or set of types T, that is
 // they're either a T or a mapable container of Ts.
 class TypeOrValueSemanticsContainer<Type allowedType, string name>
-    : TypeConstraint<Or<[
+    : Type<Or<[
   allowedType.predicate,
   ValueSemanticsContainerOf<[allowedType]>.predicate]>,
   name>;
 
-// Temporary constraint to allow gradual transition to supporting 0-D vectors.
-// TODO: Remove this when all ops support 0-D vectors.
-class TypeOrContainerOfAnyRank<Type allowedType, string name> : TypeConstraint<Or<[
-  allowedType.predicate, VectorOfAnyRankOf<[allowedType]>.predicate,
-  TensorOf<[allowedType]>.predicate]>,
-  name>;
-
-
 // Type constraint for bool-like types: bools, vectors of bools, tensors of
 // bools.
-def BoolLike : TypeOrContainer<I1, "bool-like">;
+def BoolLike : TypeOrValueSemanticsContainer<I1, "bool-like">;
 
-def BoolLikeOfAnyRank : TypeOrContainerOfAnyRank<I1, "bool-like">;
+// Type constraint for signless-integer-like types: signless integers or
+// value-semantics containers of signless integers.
+def SignlessIntegerLike : TypeOrValueSemanticsContainer<
+    AnySignlessInteger, "signless-integer">;
 
 // Type constraint for signless-integer-like types: signless integers, indices,
-// vectors of signless integers or indices, tensors of signless integers.
-def SignlessIntegerLike : TypeOrValueSemanticsContainer<
+// or value-semantics containers of signless integers or indices.
+def SignlessIntegerOrIndexLike : TypeOrValueSemanticsContainer<
     AnySignlessIntegerOrIndex, "signless-integer-like">;
 
-def SignlessIntegerLikeOfAnyRank : TypeOrContainerOfAnyRank<
-    AnySignlessIntegerOrIndex,
-    "signless-integer-like">;
+// Type constraint for float-like types: floats or value-semantics containers
+// of floats.
+def FloatLike : TypeOrValueSemanticsContainer<AnyFloat, "floating-point-like">;
 
-// Type constraint for float-like types: floats, vectors or tensors thereof.
-def FloatLike : TypeOrContainer<AnyFloat, "floating-point-like">;
-
-// Type constraint for signless-integer-like or float-like types.
+// Type constraint for signless-integer-or-index-like or float-like types.
 def SignlessIntegerOrFloatLike : TypeConstraint<Or<[
     SignlessIntegerLike.predicate, FloatLike.predicate]>,
     "signless-integer-like or floating-point-like">;
+
+// Type constraint for signless-integer-or-index-like or float-like types.
+def SignlessIntegerOrIndexOrFloatLike : TypeConstraint<Or<[
+    SignlessIntegerOrIndexLike.predicate, FloatLike.predicate]>,
+    "signless-integer-or-index-like or floating-point-like">;
 
 #endif // COMMON_TYPE_CONSTRAINTS_TD

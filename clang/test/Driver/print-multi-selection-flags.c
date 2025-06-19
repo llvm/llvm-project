@@ -69,8 +69,18 @@
 // CHECK-BRANCH-PROTECTION: -mbranch-protection=standard
 
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -mno-unaligned-access | FileCheck --check-prefix=CHECK-NO-UNALIGNED-ACCESS %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -mstrict-align | FileCheck --check-prefix=CHECK-NO-UNALIGNED-ACCESS %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi | FileCheck --check-prefix=CHECK-NO-UNALIGNED-ACCESS %s
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-elf -mno-unaligned-access | FileCheck --check-prefix=CHECK-NO-UNALIGNED-ACCESS %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-elf -mstrict-align | FileCheck --check-prefix=CHECK-NO-UNALIGNED-ACCESS %s
 // CHECK-NO-UNALIGNED-ACCESS: -mno-unaligned-access
+
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -mno-strict-align | FileCheck --check-prefix=CHECK-UNALIGNED-ACCESS %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -munaligned-access | FileCheck --check-prefix=CHECK-UNALIGNED-ACCESS %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-elf | FileCheck --check-prefix=CHECK-UNALIGNED-ACCESS %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-elf -mno-strict-align | FileCheck --check-prefix=CHECK-UNALIGNED-ACCESS %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-elf -munaligned-access | FileCheck --check-prefix=CHECK-UNALIGNED-ACCESS %s
+// CHECK-UNALIGNED-ACCESS: -munaligned-access
 
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -mbig-endian | FileCheck --check-prefix=CHECK-BIG-ENDIAN %s
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-elf -mbig-endian | FileCheck --check-prefix=CHECK-BIG-ENDIAN %s
@@ -90,3 +100,10 @@
 // CHECK-RV32E-ORDER: --target=riscv32-unknown-none-elf
 // CHECK-RV32E-ORDER: -mabi=ilp32e
 // CHECK-RV32E-ORDER: -march=rv32e{{[0-9]+p[0-9]+}}_c{{[0-9]+p[0-9]+}}_zicsr{{[0-9]+p[0-9]+}}
+
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/multilib-custom-flags.yaml -print-multi-flags-experimental --target=armv8m.main-none-eabi -fmultilib-flag=foo -fmultilib-flag=bar | FileCheck --check-prefixes=CHECK-MULTILIB-CUSTOM-FLAG,CHECK-ARM-MULTILIB-CUSTOM-FLAG %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/multilib-custom-flags.yaml -print-multi-flags-experimental --target=aarch64-none-eabi     -fmultilib-flag=foo -fmultilib-flag=bar | FileCheck --check-prefixes=CHECK-MULTILIB-CUSTOM-FLAG,CHECK-AARCH64-MULTILIB-CUSTOM-FLAG %s
+// CHECK-ARM-MULTILIB-CUSTOM-FLAG:     --target=thumbv8m.main-unknown-none-eabi
+// CHECK-AARCH64-MULTILIB-CUSTOM-FLAG: --target=aarch64-unknown-none-eabi
+// CHECK-MULTILIB-CUSTOM-FLAG-DAG:     -fmultilib-flag=foo
+// CHECK-MULTILIB-CUSTOM-FLAG-DAG:     -fmultilib-flag=bar

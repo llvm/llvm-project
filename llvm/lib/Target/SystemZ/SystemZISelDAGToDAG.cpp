@@ -1001,6 +1001,16 @@ bool SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
   if (Count == 1 && N->getOpcode() != ISD::AND)
     return false;
 
+  // Prefer LOAD LOGICAL INDEXED ADDRESS over RISBG in the case where we
+  // can use its displacement to pull in an addition.
+  if (Subtarget->hasMiscellaneousExtensions4() &&
+      RISBG.Rotate >= 1 && RISBG.Rotate <= 4 &&
+      RISBG.Mask == (((uint64_t)1 << 32) - 1) << RISBG.Rotate &&
+      RISBG.Input.getOpcode() == ISD::ADD)
+    if (auto *C = dyn_cast<ConstantSDNode>(RISBG.Input.getOperand(1)))
+      if (isInt<20>(C->getSExtValue()))
+        return false;
+
   // Prefer register extensions like LLC over RISBG.  Also prefer to start
   // out with normal ANDs if one instruction would be enough.  We can convert
   // these ANDs into an RISBG later if a three-address instruction is useful.
@@ -1194,9 +1204,10 @@ void SystemZDAGToDAGISel::loadVectorConstant(
     SDValue BitCast = CurDAG->getNode(ISD::BITCAST, DL, VT, Op);
     ReplaceNode(Node, BitCast.getNode());
     SelectCode(BitCast.getNode());
-  } else { // float or double
-    unsigned SubRegIdx =
-        (VT.getSizeInBits() == 32 ? SystemZ::subreg_h32 : SystemZ::subreg_h64);
+  } else { // half, float or double
+    unsigned SubRegIdx = (VT.getSizeInBits() == 16   ? SystemZ::subreg_h16
+                          : VT.getSizeInBits() == 32 ? SystemZ::subreg_h32
+                                                     : SystemZ::subreg_h64);
     ReplaceNode(
         Node, CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, Op).getNode());
   }
@@ -1488,8 +1499,8 @@ bool SystemZDAGToDAGISel::canUseBlockOperation(StoreSDNode *Store,
   if (V1 == V2 && End1 == End2)
     return false;
 
-  return AA->isNoAlias(MemoryLocation(V1, End1, Load->getAAInfo()),
-                       MemoryLocation(V2, End2, Store->getAAInfo()));
+  return BatchAA->isNoAlias(MemoryLocation(V1, End1, Load->getAAInfo()),
+                            MemoryLocation(V2, End2, Store->getAAInfo()));
 }
 
 bool SystemZDAGToDAGISel::storeLoadCanUseMVC(SDNode *N) const {

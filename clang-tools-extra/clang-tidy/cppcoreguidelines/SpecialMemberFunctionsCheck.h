@@ -84,13 +84,12 @@ struct DenseMapInfo<
       clang::tidy::cppcoreguidelines::SpecialMemberFunctionsCheck::ClassDefId;
 
   static inline ClassDefId getEmptyKey() {
-    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
-                      "EMPTY"};
+    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(), "EMPTY"};
   }
 
   static inline ClassDefId getTombstoneKey() {
     return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
-                      "TOMBSTONE"};
+            "TOMBSTONE"};
   }
 
   static unsigned getHashValue(ClassDefId Val) {

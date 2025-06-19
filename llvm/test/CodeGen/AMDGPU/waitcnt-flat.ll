@@ -23,6 +23,6 @@ define amdgpu_kernel void @test(ptr %out, i32 %in) {
 ; GFX9-NEXT: ds_write_b32 [[LD]]
 define amdgpu_kernel void @test_waitcnt_type_flat_global(ptr addrspace(1) %in) {
   %val = load volatile i32, ptr addrspace(1) %in
-  store volatile i32 %val, ptr addrspace(3) undef
+  store volatile i32 %val, ptr addrspace(3) poison
   ret void
 }

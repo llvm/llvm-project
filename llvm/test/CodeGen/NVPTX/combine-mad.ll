@@ -11,8 +11,8 @@ define i32 @test1(i32 %n, i32 %m) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test1_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test1_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test1_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test1_param_1];
 ; CHECK-NEXT:    mad.lo.s32 %r3, %r2, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
@@ -28,8 +28,8 @@ define i32 @test1_rev(i32 %n, i32 %m) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test1_rev_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test1_rev_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test1_rev_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test1_rev_param_1];
 ; CHECK-NEXT:    mad.lo.s32 %r3, %r2, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
@@ -47,9 +47,9 @@ define i32 @test2(i32 %n, i32 %m, i32 %s) {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test2_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test2_param_1];
-; CHECK-NEXT:    ld.param.u32 %r3, [test2_param_2];
+; CHECK-NEXT:    ld.param.b32 %r1, [test2_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test2_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [test2_param_2];
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r3, 1;
 ; CHECK-NEXT:    mad.lo.s32 %r4, %r2, %r1, %r2;
 ; CHECK-NEXT:    selp.b32 %r5, %r2, %r4, %p1;
@@ -71,9 +71,9 @@ define i32 @test2_rev1(i32 %n, i32 %m, i32 %s) {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test2_rev1_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test2_rev1_param_1];
-; CHECK-NEXT:    ld.param.u32 %r3, [test2_rev1_param_2];
+; CHECK-NEXT:    ld.param.b32 %r1, [test2_rev1_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test2_rev1_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [test2_rev1_param_2];
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r3, 1;
 ; CHECK-NEXT:    mad.lo.s32 %r4, %r2, %r1, %r2;
 ; CHECK-NEXT:    selp.b32 %r5, %r4, %r2, %p1;
@@ -95,9 +95,9 @@ define i32 @test2_rev2(i32 %n, i32 %m, i32 %s) {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test2_rev2_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test2_rev2_param_1];
-; CHECK-NEXT:    ld.param.u32 %r3, [test2_rev2_param_2];
+; CHECK-NEXT:    ld.param.b32 %r1, [test2_rev2_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test2_rev2_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [test2_rev2_param_2];
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r3, 1;
 ; CHECK-NEXT:    mad.lo.s32 %r4, %r2, %r1, %r2;
 ; CHECK-NEXT:    selp.b32 %r5, %r4, %r2, %p1;
@@ -119,10 +119,10 @@ define i32 @test3(i32 %n, i32 %m, i32 %s) {
 ; CHECK-NEXT:    .reg .b32 %r<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test3_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test3_param_0];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 3;
-; CHECK-NEXT:    ld.param.u32 %r3, [test3_param_1];
-; CHECK-NEXT:    ld.param.u32 %r4, [test3_param_2];
+; CHECK-NEXT:    ld.param.b32 %r3, [test3_param_1];
+; CHECK-NEXT:    ld.param.b32 %r4, [test3_param_2];
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r4, 1;
 ; CHECK-NEXT:    selp.b32 %r5, 1, %r2, %p1;
 ; CHECK-NEXT:    mul.lo.s32 %r6, %r5, %r3;
@@ -144,12 +144,12 @@ define i32 @test4(i32 %a, i32 %b, i32 %c, i1 %p) {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [test4_param_3];
+; CHECK-NEXT:    ld.param.b8 %rs1, [test4_param_3];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
-; CHECK-NEXT:    setp.eq.b16 %p1, %rs2, 1;
-; CHECK-NEXT:    ld.param.u32 %r1, [test4_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test4_param_1];
-; CHECK-NEXT:    ld.param.u32 %r3, [test4_param_2];
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
+; CHECK-NEXT:    ld.param.b32 %r1, [test4_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test4_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [test4_param_2];
 ; CHECK-NEXT:    mad.lo.s32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    selp.b32 %r5, %r4, %r3, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
@@ -168,12 +168,12 @@ define i32 @test4_rev(i32 %a, i32 %b, i32 %c, i1 %p) {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [test4_rev_param_3];
+; CHECK-NEXT:    ld.param.b8 %rs1, [test4_rev_param_3];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
-; CHECK-NEXT:    setp.eq.b16 %p1, %rs2, 1;
-; CHECK-NEXT:    ld.param.u32 %r1, [test4_rev_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test4_rev_param_1];
-; CHECK-NEXT:    ld.param.u32 %r3, [test4_rev_param_2];
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
+; CHECK-NEXT:    ld.param.b32 %r1, [test4_rev_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test4_rev_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [test4_rev_param_2];
 ; CHECK-NEXT:    mad.lo.s32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    selp.b32 %r5, %r3, %r4, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
@@ -182,4 +182,59 @@ define i32 @test4_rev(i32 %a, i32 %b, i32 %c, i1 %p) {
   %sel = select i1 %p, i32 0, i32 %mul
   %add = add i32 %c, %sel
   ret i32 %add
+}
+
+declare i32 @use(i32 %0, i32 %1)
+
+define i32 @test_mad_multi_use(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: test_mad_multi_use(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<8>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_mad_multi_use_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_mad_multi_use_param_1];
+; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
+; CHECK-NEXT:    ld.param.b32 %r4, [test_mad_multi_use_param_2];
+; CHECK-NEXT:    add.s32 %r5, %r3, %r4;
+; CHECK-NEXT:    { // callseq 0, 0
+; CHECK-NEXT:    .param .b32 param0;
+; CHECK-NEXT:    st.param.b32 [param0], %r3;
+; CHECK-NEXT:    .param .b32 param1;
+; CHECK-NEXT:    st.param.b32 [param1], %r5;
+; CHECK-NEXT:    .param .b32 retval0;
+; CHECK-NEXT:    call.uni (retval0),
+; CHECK-NEXT:    use,
+; CHECK-NEXT:    (
+; CHECK-NEXT:    param0,
+; CHECK-NEXT:    param1
+; CHECK-NEXT:    );
+; CHECK-NEXT:    ld.param.b32 %r6, [retval0];
+; CHECK-NEXT:    } // callseq 0
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    ret;
+  %mul = mul i32 %a, %b
+  %add = add i32 %mul, %c
+  %res = call i32 @use(i32 %mul, i32 %add)
+  ret i32 %res
+}
+
+;; This case relies on mad x 1 y => add x y, previously we emit:
+;;     mad.lo.s32      %r3, %r1, 1, %r2;
+define i32 @test_mad_fold(i32 %x) {
+; CHECK-LABEL: test_mad_fold(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_mad_fold_param_0];
+; CHECK-NEXT:    mul.hi.s32 %r2, %r1, -2147221471;
+; CHECK-NEXT:    add.s32 %r3, %r2, %r1;
+; CHECK-NEXT:    shr.u32 %r4, %r3, 31;
+; CHECK-NEXT:    shr.s32 %r5, %r3, 12;
+; CHECK-NEXT:    add.s32 %r6, %r5, %r4;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    ret;
+  %div = sdiv i32 %x, 8191
+  ret i32 %div
 }

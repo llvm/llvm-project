@@ -286,6 +286,7 @@ protected:
   static lldb_private::ConstString GetSegmentNameDWARF();
   static lldb_private::ConstString GetSegmentNameLLVM_COV();
   static lldb_private::ConstString GetSectionNameEHFrame();
+  static lldb_private::ConstString GetSectionNameLLDBNoNlist();
 
   llvm::MachO::dysymtab_command m_dysymtab;
   std::vector<llvm::MachO::section_64> m_mach_sections;

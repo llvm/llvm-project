@@ -7,9 +7,9 @@
 define <vscale x 2 x i1> @vfptosi_nxv2i1_nxv2bf16(<vscale x 2 x bfloat> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptosi_nxv2i1_nxv2bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v8, v9, v0.t
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0, v0.t
 ; CHECK-NEXT:    ret
@@ -20,9 +20,9 @@ define <vscale x 2 x i1> @vfptosi_nxv2i1_nxv2bf16(<vscale x 2 x bfloat> %va, <vs
 define <vscale x 2 x i1> @vfptosi_nxv2i1_nxv2bf16_unmasked(<vscale x 2 x bfloat> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptosi_nxv2i1_nxv2bf16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v8, v9
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret

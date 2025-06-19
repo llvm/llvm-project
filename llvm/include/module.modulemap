@@ -178,9 +178,10 @@ module LLVM_DebugInfo_CodeView {
   module * { export * }
 
   // These are intended for (repeated) textual inclusion.
+  textual header "llvm/DebugInfo/CodeView/CodeViewLanguages.def"
   textual header "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
-  textual header "llvm/DebugInfo/CodeView/CodeViewTypes.def"
   textual header "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
+  textual header "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 }
 
 module LLVM_DWARFLinker {
@@ -348,6 +349,7 @@ extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
 module TargetParserGen {
   module AArch64TargetParserDef {
     textual header "llvm/TargetParser/AArch64CPUFeatures.inc"
+    textual header "llvm/TargetParser/AArch64FeatPriorities.inc"
     header "llvm/TargetParser/AArch64TargetParser.h"
     extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
     export *

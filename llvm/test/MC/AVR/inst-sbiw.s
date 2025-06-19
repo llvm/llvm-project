@@ -30,9 +30,7 @@ foo:
 ; CHECK: sbiw r24,  2                  ; encoding: [0x02,0x97]
 
 ; CHECK: sbiw    r24, SYMBOL-1         ; encoding: [0b00AAAAAA,0x97]
-                                       ;   fixup A - offset: 0, value: SYMBOL-1, kind: fixup_6_adiw
 ; CHECK: sbiw    r24, z+15             ; encoding: [0b00AAAAAA,0x97]
-                                       ;   fixup A - offset: 0, value: z+15, kind: fixup_6_adiw
 
 ; CHECK-INST: sbiw r26, 54
 ; CHECK-INST: sbiw r26, 63

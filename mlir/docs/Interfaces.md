@@ -256,7 +256,7 @@ struct ExampleTypeInterfaceTraits {
   struct ExternalModel : public FallbackModel<ConcreteModel> {
     unsigned exampleInterfaceHook(Type type) const override {
       // Default implementation can be provided here.
-      return type.cast<ConcreteType>().callSomeTypeSpecificMethod();
+      return cast<ConcreteType>(type).callSomeTypeSpecificMethod();
     }
   };
 };
@@ -753,14 +753,19 @@ interface section goes as follows:
     -   (`C++ class` -- `ODS class`(if applicable))
 
 ##### CallInterfaces
-
 *   `CallOpInterface` - Used to represent operations like 'call'
     -   `CallInterfaceCallable getCallableForCallee()`
     -   `void setCalleeFromCallable(CallInterfaceCallable)`
+    -   `ArrayAttr getArgAttrsAttr()`
+    -   `ArrayAttr getResAttrsAttr()`
+    -   `void setArgAttrsAttr(ArrayAttr)`
+    -   `void setResAttrsAttr(ArrayAttr)`
+    -   `Attribute removeArgAttrsAttr()`
+    -   `Attribute removeResAttrsAttr()`
 *   `CallableOpInterface` - Used to represent the target callee of call.
     -   `Region * getCallableRegion()`
     -   `ArrayRef<Type> getArgumentTypes()`
-    -   `ArrayRef<Type> getResultsTypes()`
+    -   `ArrayRef<Type> getResultTypes()`
     -   `ArrayAttr getArgAttrsAttr()`
     -   `ArrayAttr getResAttrsAttr()`
     -   `void setArgAttrsAttr(ArrayAttr)`

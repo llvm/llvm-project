@@ -1,4 +1,5 @@
 add_subdirectory(CUF)
+add_subdirectory(FIRCG)
 
 # This replicates part of the add_mlir_dialect cmake function from MLIR that
 # cannot be used her because it expects to be run inside MLIR directory which
@@ -28,6 +29,11 @@ set(LLVM_TARGET_DEFINITIONS FirAliasTagOpInterface.td)
 mlir_tablegen(FirAliasTagOpInterface.h.inc -gen-op-interface-decls)
 mlir_tablegen(FirAliasTagOpInterface.cpp.inc -gen-op-interface-defs)
 
+set(LLVM_TARGET_DEFINITIONS SafeTempArrayCopyAttrInterface.td)
+mlir_tablegen(SafeTempArrayCopyAttrInterface.h.inc -gen-attr-interface-decls)
+mlir_tablegen(SafeTempArrayCopyAttrInterface.cpp.inc -gen-attr-interface-defs)
+add_public_tablegen_target(FIRSafeTempArrayCopyAttrInterfaceIncGen)
+
 set(LLVM_TARGET_DEFINITIONS CanonicalizationPatterns.td)
 mlir_tablegen(CanonicalizationPatterns.inc -gen-rewriters)
 add_public_tablegen_target(CanonicalizationPatternsIncGen)
@@ -37,7 +43,7 @@ set_target_properties(flang-doc PROPERTIES FOLDER "Flang/Docs")
 set(dialect_doc_filename "FIRLangRef")
 
 set(LLVM_TARGET_DEFINITIONS FIROps.td)
-tablegen(MLIR ${dialect_doc_filename}.md -gen-op-doc "-I${MLIR_INCLUDE_DIR}")
+tablegen(MLIR ${dialect_doc_filename}.md -gen-op-doc)
 set(GEN_DOC_FILE ${FLANG_BINARY_DIR}/docs/Dialect/${dialect_doc_filename}.md)
 add_custom_command(
         OUTPUT ${GEN_DOC_FILE}

@@ -149,6 +149,9 @@ After choosing the module and the name for the check, run the
 ``clang-tidy/add_new_check.py`` script to create the skeleton of the check and
 plug it to :program:`clang-tidy`. It's the recommended way of adding new checks.
 
+By default, the new check will apply only to C++ code. If it should apply under
+different language options, use the ``--language`` script's parameter.
+
 If we want to create a `readability-awesome-function-names`, we would run:
 
 .. code-block:: console
@@ -171,9 +174,7 @@ Let's see in more detail at the check class definition:
 
   #include "../ClangTidyCheck.h"
 
-  namespace clang {
-  namespace tidy {
-  namespace readability {
+  namespace clang::tidy::readability {
 
   ...
   class AwesomeFunctionNamesCheck : public ClangTidyCheck {
@@ -182,11 +183,12 @@ Let's see in more detail at the check class definition:
         : ClangTidyCheck(Name, Context) {}
     void registerMatchers(ast_matchers::MatchFinder *Finder) override;
     void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+    bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+      return LangOpts.CPlusPlus;
+    }
   };
 
-  } // namespace readability
-  } // namespace tidy
-  } // namespace clang
+  } // namespace clang::tidy::readability
 
   ...
 
@@ -230,9 +232,6 @@ If you need to interact with macros or preprocessor directives, you will want to
 override the method ``registerPPCallbacks``.  The ``add_new_check.py`` script
 does not generate an override for this method in the starting point for your
 new check.
-
-If your check applies only under a specific set of language options, be sure
-to override the method ``isLanguageVersionSupported`` to reflect that.
 
 Check development tips
 ----------------------
@@ -331,7 +330,7 @@ a starting point for your test cases.  A rough outline of the process looks like
 - Issue the necessary diagnostics and fix-its in the ``check`` method.
 - Add the necessary ``CHECK-MESSAGES`` and ``CHECK-FIXES`` annotations to your
   test case to validate the diagnostics and fix-its.
-- Build the target ``check-clang-tool`` to confirm the test passes.
+- Build the target ``check-clang-tools`` to confirm the test passes.
 - Repeat the process until all aspects of your check are covered by tests.
 
 The quickest way to prototype your matcher is to use :program:`clang-query` to
@@ -519,8 +518,8 @@ the check implements and what the current values are (e.g. for the
   public:
     MyCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        SomeOption(Options.get("SomeOption1", -1U)),
-        SomeOption(Options.get("SomeOption2", "some default")) {}
+        SomeOption1(Options.get("SomeOption1", -1U)),
+        SomeOption2(Options.get("SomeOption2", "some default")) {}
 
     void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
       Options.store(Opts, "SomeOption1", SomeOption1);

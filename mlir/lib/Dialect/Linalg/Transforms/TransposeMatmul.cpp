@@ -88,6 +88,11 @@ FailureOr<Operation *>
 mlir::linalg::transposeBatchMatmul(RewriterBase &rewriter,
                                    linalg::BatchMatmulOp batchMatmulOp,
                                    bool transposeLHS) {
+  if (batchMatmulOp.hasUserDefinedMaps()) {
+    return rewriter.notifyMatchFailure(
+        batchMatmulOp, "ops with user-defined maps are not supported");
+  }
+
   if (!bufferization::hasTensorSemantics(batchMatmulOp))
     return rewriter.notifyMatchFailure(
         batchMatmulOp, "only matmul ops with tensors are supported");

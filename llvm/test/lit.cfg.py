@@ -91,6 +91,7 @@ config.substitutions.append(("%llvmshlibdir", config.llvm_shlib_dir))
 config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
 config.substitutions.append(("%pluginext", config.llvm_plugin_ext))
 config.substitutions.append(("%exeext", config.llvm_exe_ext))
+config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
 
 
 lli_args = []
@@ -311,6 +312,9 @@ def enable_ptxas(ptxas_executable):
             (12, 2),
             (12, 3),
             (12, 4),
+            (12, 5),
+            (12, 6),
+            (12, 8),
         ]
 
         def version_int(ver):
@@ -379,6 +383,13 @@ if sys.platform in ["win32"]:
 else:
     # Others/can-execute.txt
     config.available_features.add("can-execute")
+
+# Detect Windows Subsystem for Linux (WSL)
+uname_r = platform.uname().release
+if uname_r.endswith("-Microsoft"):
+    config.available_features.add("wsl1")
+elif uname_r.endswith("microsoft-standard-WSL2"):
+    config.available_features.add("wsl2")
 
 # Loadable module
 if config.has_plugins:
@@ -563,6 +574,54 @@ def have_ld64_plugin_support():
 if have_ld64_plugin_support():
     config.available_features.add("ld64_plugin")
 
+def host_unwind_supports_jit():
+    # Do we expect the host machine to support JIT registration of clang's
+    # default unwind info format for the host (e.g. eh-frames, compact-unwind,
+    # etc.).
+
+    # Linux and the BSDs use DWARF eh-frames and all known unwinders support
+    # register_frame at minimum.
+    if platform.system() in [ "Linux", "FreeBSD", "NetBSD" ]:
+        return True
+
+    # Windows does not support frame info without the ORC runtime.
+    if platform.system() == "Windows":
+        return False
+
+    # On Darwin/x86-64 clang produces both eh-frames and compact-unwind, and
+    # libunwind supports register_frame. On Darwin/arm64 clang produces
+    # compact-unwind only, and JIT'd registration is not available before
+    # macOS 14.0.
+    if platform.system() == "Darwin":
+
+        assert (
+            "arm64" in config.host_triple
+            or "x86_64" in config.host_triple
+        )
+
+        if "x86_64" in config.host_triple:
+            return True
+
+        # Must be arm64. Check the macOS version.
+        try:
+            osx_version = subprocess.check_output(
+                ["sw_vers", "-productVersion"], universal_newlines=True
+            )
+            osx_version = tuple(int(x) for x in osx_version.split("."))
+            if len(osx_version) == 2:
+                osx_version = (osx_version[0], osx_version[1], 0)
+            if osx_version >= (14, 0):
+                return True
+        except:
+            pass
+
+        return False
+
+    return False
+
+if host_unwind_supports_jit():
+    config.available_features.add("host-unwind-supports-jit")
+
 # Ask llvm-config about asserts
 llvm_config.feature_config(
     [
@@ -596,6 +655,9 @@ if not re.match(
     config.target_triple,
 ) and not re.match(r"^arm64(e)?-apple-(macos|darwin)", config.target_triple):
     config.available_features.add("debug_frame")
+
+if config.enable_backtrace:
+    config.available_features.add("backtrace")
 
 if config.enable_threads:
     config.available_features.add("thread_support")

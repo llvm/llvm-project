@@ -85,7 +85,7 @@ bb3:                                              ; preds = %bb3, %bb
   %i4 = zext i32 %i to i64
   %i5 = getelementptr inbounds i16, ptr addrspace(1) %arg, i64 %i4
   %i6 = load volatile i16, ptr addrspace(1) %i5, align 4
-  %insertelt = insertelement <2 x i16> undef, i16 %i6, i32 1
+  %insertelt = insertelement <2 x i16> poison, i16 %i6, i32 1
   %i8 =  bitcast <2 x i16> %insertelt to i32
   %i9 = icmp eq i32 %i8, 256
   br i1 %i9, label %bb2, label %bb3

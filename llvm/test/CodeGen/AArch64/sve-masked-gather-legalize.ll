@@ -18,7 +18,7 @@ define <vscale x 2 x i64> @masked_sgather_sext(ptr %base, <vscale x 2 x i64> %of
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z2.d
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr i8, ptr %base, <vscale x 2 x i64> %offsets
-  %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x ptr> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
+  %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x ptr> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
   %data.sext = sext <vscale x 2 x i8> %data to <vscale x 2 x i64>
   %add = add <vscale x 2 x i8> %data, %vals
   %add.sext = sext <vscale x 2 x i8> %add to <vscale x 2 x i64>
@@ -37,7 +37,7 @@ define <vscale x 2 x i64> @masked_sgather_zext(ptr %base, <vscale x 2 x i64> %of
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr i8, ptr %base, <vscale x 2 x i64> %offsets
-  %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x ptr> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
+  %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x ptr> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
   %data.zext = zext <vscale x 2 x i8> %data to <vscale x 2 x i64>
   %add = add <vscale x 2 x i8> %data, %vals
   %add.zext = zext <vscale x 2 x i8> %add to <vscale x 2 x i64>
@@ -53,7 +53,7 @@ define <vscale x 2 x i8> @masked_gather_nxv2i8(<vscale x 2 x ptr> %ptrs, <vscale
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ret
-  %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x ptr> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
+  %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x ptr> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
   ret <vscale x 2 x i8> %data
 }
 
@@ -63,7 +63,7 @@ define <vscale x 2 x i16> @masked_gather_nxv2i16(<vscale x 2 x ptr> %ptrs, <vsca
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ret
-  %data = call <vscale x 2 x i16> @llvm.masked.gather.nxv2i16(<vscale x 2 x ptr> %ptrs, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
+  %data = call <vscale x 2 x i16> @llvm.masked.gather.nxv2i16(<vscale x 2 x ptr> %ptrs, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> poison)
   ret <vscale x 2 x i16> %data
 }
 
@@ -73,7 +73,7 @@ define <vscale x 2 x i32> @masked_gather_nxv2i32(<vscale x 2 x ptr> %ptrs, <vsca
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ret
-  %data = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x ptr> %ptrs, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> undef)
+  %data = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x ptr> %ptrs, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> poison)
   ret <vscale x 2 x i32> %data
 }
 
@@ -86,7 +86,7 @@ define <vscale x 4 x half> @masked_gather_nxv4f16(<vscale x 4 x ptr> %ptrs, <vsc
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %data = call <vscale x 4 x half> @llvm.masked.gather.nxv4f16(<vscale x 4 x ptr> %ptrs, i32 0, <vscale x 4 x i1> %mask, <vscale x 4 x half> undef)
+  %data = call <vscale x 4 x half> @llvm.masked.gather.nxv4f16(<vscale x 4 x ptr> %ptrs, i32 0, <vscale x 4 x i1> %mask, <vscale x 4 x half> poison)
   ret <vscale x 4 x half> %data
 }
 
@@ -98,7 +98,7 @@ define <vscale x 2 x float> @masked_gather_nxv2f32(ptr %base, <vscale x 2 x i16>
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, z0.d, lsl #2]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr float, ptr %base, <vscale x 2 x i16> %indices
-  %data = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x ptr> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x float> undef)
+  %data = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x ptr> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x float> poison)
   ret <vscale x 2 x float> %data
 }
 
@@ -119,7 +119,7 @@ define <vscale x 8 x half> @masked_gather_nxv8f16(<vscale x 8 x ptr> %ptrs, <vsc
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
 ; CHECK-NEXT:    ret
-  %data = call <vscale x 8 x half> @llvm.masked.gather.nxv8f16(<vscale x 8 x ptr> %ptrs, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x half> undef)
+  %data = call <vscale x 8 x half> @llvm.masked.gather.nxv8f16(<vscale x 8 x ptr> %ptrs, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x half> poison)
   ret <vscale x 8 x half> %data
 }
 
@@ -135,7 +135,7 @@ define <vscale x 8 x bfloat> @masked_gather_nxv8bf16(ptr %base, <vscale x 8 x i1
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr bfloat, ptr %base, <vscale x 8 x i16> %indices
-  %data = call <vscale x 8 x bfloat> @llvm.masked.gather.nxv8bf16(<vscale x 8 x ptr> %ptrs, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> undef)
+  %data = call <vscale x 8 x bfloat> @llvm.masked.gather.nxv8bf16(<vscale x 8 x ptr> %ptrs, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> poison)
   ret <vscale x 8 x bfloat> %data
 }
 
@@ -153,7 +153,7 @@ define <vscale x 4 x double> @masked_gather_nxv4f64(ptr %base, <vscale x 4 x i16
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, z1.d, lsl #3]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr double, ptr %base, <vscale x 4 x i16> %indices
-  %data = call <vscale x 4 x double> @llvm.masked.gather.nxv4f64(<vscale x 4 x ptr> %ptrs, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x double> undef)
+  %data = call <vscale x 4 x double> @llvm.masked.gather.nxv4f64(<vscale x 4 x ptr> %ptrs, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x double> poison)
   ret <vscale x 4 x double> %data
 }
 
@@ -167,7 +167,7 @@ define <vscale x 8 x float> @masked_gather_nxv8f32(ptr %base, <vscale x 8 x i32>
 ; CHECK-NEXT:    ret
   %offsets.zext = zext <vscale x 8 x i32> %offsets to <vscale x 8 x i64>
   %ptrs = getelementptr float, ptr %base, <vscale x 8 x i64> %offsets.zext
-  %vals = call <vscale x 8 x float> @llvm.masked.gather.nxv8f32(<vscale x 8 x ptr> %ptrs, i32 4, <vscale x 8 x i1> %mask, <vscale x 8 x float> undef)
+  %vals = call <vscale x 8 x float> @llvm.masked.gather.nxv8f32(<vscale x 8 x ptr> %ptrs, i32 4, <vscale x 8 x i1> %mask, <vscale x 8 x float> poison)
   ret <vscale x 8 x float> %vals
 }
 
@@ -196,7 +196,7 @@ define <vscale x 16 x i8> @masked_gather_nxv16i8(ptr %base, <vscale x 16 x i8> %
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr i8, ptr %base, <vscale x 16 x i8> %indices
-  %data = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8(<vscale x 16 x ptr> %ptrs, i32 1, <vscale x 16 x i1> %mask, <vscale x 16 x i8> undef)
+  %data = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8(<vscale x 16 x ptr> %ptrs, i32 1, <vscale x 16 x i1> %mask, <vscale x 16 x i8> poison)
   ret <vscale x 16 x i8> %data
 }
 
@@ -226,7 +226,7 @@ define <vscale x 32 x i32> @masked_gather_nxv32i32(ptr %base, <vscale x 32 x i32
 ; CHECK-NEXT:    ld1w { z7.s }, p0/z, [x0, z7.s, sxtw #2]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr i32, ptr %base, <vscale x 32 x i32> %indices
-  %data = call <vscale x 32 x i32> @llvm.masked.gather.nxv32i32(<vscale x 32 x ptr> %ptrs, i32 4, <vscale x 32 x i1> %mask, <vscale x 32 x i32> undef)
+  %data = call <vscale x 32 x i32> @llvm.masked.gather.nxv32i32(<vscale x 32 x ptr> %ptrs, i32 4, <vscale x 32 x i1> %mask, <vscale x 32 x i32> poison)
   ret <vscale x 32 x i32> %data
 }
 
@@ -245,7 +245,7 @@ define <vscale x 4 x i32> @masked_sgather_nxv4i8(<vscale x 4 x ptr> %ptrs, <vsca
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    sxtb z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
-  %vals = call <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x ptr> %ptrs, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> undef)
+  %vals = call <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x ptr> %ptrs, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> poison)
   %svals = sext <vscale x 4 x i8> %vals to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %svals
 }

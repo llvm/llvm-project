@@ -57,8 +57,9 @@ checkOperandAffineExprRecursively(AffineExpr expr,
     } else if (rhs.getKind() == AffineExprKind::DimId &&
                lhs.getKind() == AffineExprKind::Constant) {
       dimExpr = rhs;
-    } else
+    } else {
       return failure();
+    }
     unsigned position = cast<AffineDimExpr>(dimExpr).getPosition();
     if ((size_t)position >= seenIds.size() || seenIds[position])
       return failure();
@@ -168,16 +169,11 @@ LogicalResult mesh::ShardingInterface::verifyShardingInterfaceImpl() {
 
   // check operands and results type
   for (Type type : op->getOperandTypes())
-    if (!llvm::isa<RankedTensorType>(type))
+    if (!llvm::isa<RankedTensorType>(type) && !type.isIntOrIndexOrFloat())
       return failure();
   for (Type type : op->getResultTypes())
-    if (!llvm::isa<RankedTensorType>(type))
+    if (!llvm::isa<RankedTensorType>(type) && !type.isIntOrIndexOrFloat())
       return failure();
-
-  // check loop types
-  SmallVector<utils::IteratorType> loopTypes = getLoopIteratorTypes();
-  if (loopTypes.empty())
-    return failure();
 
   // check maps
   SmallVector<AffineMap> maps = getIndexingMaps();
@@ -286,18 +282,22 @@ mesh::detail::defaultGetShardingOption(Operation *op,
       continue;
     AffineMap map = maps[numOperands + shardingIt.index()];
     anyShardingInResultsOrOperands = true;
-    // Handle the split axes: calculate the corresponding loop index for each
-    // split axes sub-array, and then store the sub-array to
-    // shardingOption[index]
-    for (auto it : llvm::zip(map.getResults(), shardAttr.getSplitAxes())) {
-      AffineExpr expr = std::get<0>(it);
-      ArrayRef<MeshAxis> axes = std::get<1>(it).asArrayRef();
-      auto dim = cast<AffineDimExpr>(expr);
-      unsigned index = dim.getPosition();
-      visitedLoopIndices.insert(index);
-      if (failed(fillShardingOption(op, shardingOption, shardAttr.getMeshAttr(),
-                                    axes, index)))
-        return failure();
+    if (shardAttr.getSplitAxes().empty() || map.getResults().empty()) {
+      shardingOption.mesh = shardAttr.getMeshAttr();
+    } else {
+      // Handle the split axes: calculate the corresponding loop index for each
+      // split axes sub-array, and then store the sub-array to
+      // shardingOption[index]
+      for (auto it : llvm::zip(map.getResults(), shardAttr.getSplitAxes())) {
+        AffineExpr expr = std::get<0>(it);
+        ArrayRef<MeshAxis> axes = std::get<1>(it).asArrayRef();
+        auto dim = cast<AffineDimExpr>(expr);
+        unsigned index = dim.getPosition();
+        visitedLoopIndices.insert(index);
+        if (failed(fillShardingOption(op, shardingOption,
+                                      shardAttr.getMeshAttr(), axes, index)))
+          return failure();
+      }
     }
 
     // Handle the partial axes: at this stage, the exact loop index/indices
@@ -323,7 +323,7 @@ mesh::detail::defaultGetShardingOption(Operation *op,
     if (!shardAttr)
       continue;
 
-    anyShardingInResultsOrOperands = true;
+    anyShardingInResultsOrOperands = !shardAttr.getSplitAxes().empty();
     AffineMap map = maps[shardingIt.index()];
     unsigned numDims = map.getNumDims();
 
@@ -410,7 +410,6 @@ MeshSharding getSharding(OpResult result, const ShardingOption &shardingOption,
 
   // process the split axes
   for (auto it : llvm::enumerate(map.getResults())) {
-    SmallVector<MeshAxis> tmp_axes;
     AffineExpr expr = it.value();
     // `expr` must be an `AffineDimExpr` because `map` is verified by
     // isProjectedPermutation
@@ -448,7 +447,16 @@ static FailureOr<MeshSharding> getSharding(OpOperand &opOperand,
                                            const ShardingOption &shardingOption,
                                            AffineMap map) {
   Value operandValue = opOperand.get();
-  auto operandType = cast<RankedTensorType>(operandValue.getType());
+  auto operandType = dyn_cast<RankedTensorType>(operandValue.getType());
+  if (!operandType) {
+    if (operandValue.getType().isIntOrIndexOrFloat())
+      return MeshSharding();
+    return failure();
+  }
+  // 0d tensors cannot be sharded and must get replicated
+  if (operandType.getRank() == 0) {
+    return MeshSharding(shardingOption.mesh);
+  }
   SmallVector<SmallVector<MeshAxis>> splitAxes(operandType.getRank());
   unsigned numDims = map.getNumDims();
   for (auto it : llvm::enumerate(map.getResults())) {
@@ -579,7 +587,7 @@ static bool
 isValueCompatibleWithFullReplicationSharding(Value value,
                                              MeshSharding sharding) {
   if (isa<RankedTensorType>(value.getType())) {
-    return sharding && isFullReplication(sharding);
+    return isFullReplication(sharding);
   }
 
   return !sharding;
@@ -708,8 +716,8 @@ void mesh::spmdizeTriviallyShardableOperation(
   // Set the result types to the sharded counterparts.
   for (auto [oldResult, newResult, sharding] :
        llvm::zip_equal(op.getResults(), newOp->getResults(), resultShardings)) {
-    newResult.setType(
-        shardType(newResult.getType(),
-                  getMesh(&op, sharding.getMeshAttr(), symbolTable), sharding));
+    newResult.setType(shardType(
+        newResult.getType(),
+        getMeshOrNull(&op, sharding.getMeshAttr(), symbolTable), sharding));
   }
 }

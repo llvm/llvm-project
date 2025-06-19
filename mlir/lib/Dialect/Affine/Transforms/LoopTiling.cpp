@@ -110,13 +110,20 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
     return;
   }
 
-  // Use tileSizes and fill them with default tile size if it's short.
+  // Use supplied tile sizes and fill them with default tile size if it's short.
   if (!this->tileSizes.empty()) {
     tileSizes->assign(this->tileSizes.begin(), this->tileSizes.end());
     tileSizes->resize(band.size(), kDefaultTileSize);
     return;
   }
   tileSizes->resize(band.size());
+
+  // If the cache size is zero, set the minimum valid tile size. No good reason
+  // to pick another specific size over this.
+  if (cacheSizeInKiB == 0) {
+    std::fill(tileSizes->begin(), tileSizes->end(), 1);
+    return;
+  }
 
   // The first loop in the band.
   AffineForOp rootForOp = band[0];

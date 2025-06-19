@@ -12,26 +12,26 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]], !dbg [[DBG21]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_COND_CLEANUP32:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_COND_CLEANUP32:%.*]] ], !dbg [[DBG222:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER1:%.*]], !dbg [[DBG21]]
 ; CHECK:       for.cond5.preheader1:
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, [[VECTOR_BODY]] ], [ [[TMP4:%.*]], [[FOR_COND5_PREHEADER1]] ], !dbg [[DBG21]]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[H]], <4 x i64> [[VEC_PHI]], !dbg [[DBG21]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> [[TMP0]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG22:![0-9]+]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, <4 x ptr> [[TMP0]], i64 1, !dbg [[DBG22]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 1), <4 x ptr> [[TMP1]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG22]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, <4 x ptr> [[TMP0]], i64 2, !dbg [[DBG22]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 2), <4 x ptr> [[TMP2]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG22]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, <4 x ptr> [[TMP0]], i64 3, !dbg [[DBG22]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 3), <4 x ptr> [[TMP3]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG22]]
-; CHECK-NEXT:    [[TMP4]] = add nuw nsw <4 x i64> [[VEC_PHI]], splat (i64 1), !dbg [[DBG24:![0-9]+]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i64> [[TMP4]], splat (i64 5), !dbg [[DBG25:![0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0, !dbg [[DBG26:![0-9]+]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[FOR_COND_CLEANUP32]], label [[FOR_COND5_PREHEADER1]], !dbg [[DBG26]]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, [[VECTOR_BODY]] ], [ [[TMP4:%.*]], [[FOR_COND5_PREHEADER1]] ], !dbg [[DBG22:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[H]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> [[TMP0]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG23:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, <4 x ptr> [[TMP0]], i64 1, !dbg [[DBG25:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 1), <4 x ptr> [[TMP1]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG23]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, <4 x ptr> [[TMP0]], i64 2, !dbg [[DBG25]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 2), <4 x ptr> [[TMP2]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG23]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, <4 x ptr> [[TMP0]], i64 3, !dbg [[DBG25]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 3), <4 x ptr> [[TMP3]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG23]]
+; CHECK-NEXT:    [[TMP4]] = add nuw nsw <4 x i64> [[VEC_PHI]], splat (i64 1), !dbg [[DBG26:![0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i64> [[TMP4]], splat (i64 5), !dbg [[DBG27:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0, !dbg [[DBG28:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[FOR_COND_CLEANUP32]], label [[FOR_COND5_PREHEADER1]], !dbg [[DBG28]]
 ; CHECK:       vector.latch:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG222]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20, !dbg [[DBG222]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !dbg [[DBG222]], !llvm.loop [[LOOP29:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]], !dbg [[DBG21]]
 ; CHECK:       scalar.ph:
@@ -40,27 +40,27 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK:       for.cond1.preheader:
 ; CHECK-NEXT:    [[I_023:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC13:%.*]], [[FOR_COND_CLEANUP3:%.*]] ]
 ; CHECK-NEXT:      #dbg_value(i64 [[I_023]], [[META11]], !DIExpression(), [[META20]])
-; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER:%.*]], !dbg [[DBG26]]
+; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER:%.*]], !dbg [[DBG28]]
 ; CHECK:       for.cond5.preheader:
-; CHECK-NEXT:    [[L_022:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER]] ], [ [[INC10:%.*]], [[FOR_COND5_PREHEADER]] ]
+; CHECK-NEXT:    [[L_022:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER]] ], [ [[INC10:%.*]], [[FOR_COND5_PREHEADER]] ], !dbg [[DBG22]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[H]], i64 [[L_022]]
-; CHECK-NEXT:    store i32 0, ptr [[TMP10]], align 4, !dbg [[DBG22]]
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i32, ptr [[TMP10]], i64 1, !dbg [[DBG31:![0-9]+]]
-; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX_1]], align 4, !dbg [[DBG22]]
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr i32, ptr [[TMP10]], i64 2, !dbg [[DBG31]]
-; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX_2]], align 4, !dbg [[DBG22]]
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr i32, ptr [[TMP10]], i64 3, !dbg [[DBG31]]
-; CHECK-NEXT:    store i32 3, ptr [[ARRAYIDX_3]], align 4, !dbg [[DBG22]]
-; CHECK-NEXT:    [[INC10]] = add nuw nsw i64 [[L_022]], 1, !dbg [[DBG24]]
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC10]], 5, !dbg [[DBG25]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_COND5_PREHEADER]], !dbg [[DBG26]]
+; CHECK-NEXT:    store i32 0, ptr [[TMP10]], align 4, !dbg [[DBG23]]
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i32, ptr [[TMP10]], i64 1, !dbg [[DBG25]]
+; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX_1]], align 4, !dbg [[DBG23]]
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr i32, ptr [[TMP10]], i64 2, !dbg [[DBG25]]
+; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX_2]], align 4, !dbg [[DBG23]]
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr i32, ptr [[TMP10]], i64 3, !dbg [[DBG25]]
+; CHECK-NEXT:    store i32 3, ptr [[ARRAYIDX_3]], align 4, !dbg [[DBG23]]
+; CHECK-NEXT:    [[INC10]] = add nuw nsw i64 [[L_022]], 1, !dbg [[DBG26]]
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC10]], 5, !dbg [[DBG27]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_COND5_PREHEADER]], !dbg [[DBG28]]
 ; CHECK:       for.cond.cleanup3:
-; CHECK-NEXT:    [[INC13]] = add nuw nsw i64 [[I_023]], 1, !dbg [[DBG32:![0-9]+]]
+; CHECK-NEXT:    [[INC13]] = add nuw nsw i64 [[I_023]], 1, !dbg [[DBG33:![0-9]+]]
 ; CHECK-NEXT:      #dbg_value(i64 [[INC13]], [[META11]], !DIExpression(), [[META20]])
-; CHECK-NEXT:    [[EXITCOND24_NOT:%.*]] = icmp eq i64 [[INC13]], 23, !dbg [[DBG33:![0-9]+]]
-; CHECK-NEXT:    br i1 [[EXITCOND24_NOT]], label [[EXIT]], label [[FOR_COND1_PREHEADER]], !dbg [[DBG21]], !llvm.loop [[LOOP34:![0-9]+]]
+; CHECK-NEXT:    [[EXITCOND24_NOT:%.*]] = icmp eq i64 [[INC13]], 23, !dbg [[DBG34:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND24_NOT]], label [[EXIT]], label [[FOR_COND1_PREHEADER]], !dbg [[DBG21]], !llvm.loop [[LOOP35:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret void, !dbg [[DBG35:![0-9]+]]
+; CHECK-NEXT:    ret void, !dbg [[DBG36:![0-9]+]]
 ;
 entry:
   call void @llvm.dbg.value(metadata i64 0, metadata !11, metadata !DIExpression()), !dbg !20
@@ -72,7 +72,7 @@ for.cond1.preheader:                              ; preds = %entry, %for.cond.cl
   br label %for.cond5.preheader, !dbg !22
 
 for.cond5.preheader:                              ; preds = %for.cond1.preheader, %for.cond5.preheader
-  %l.022 = phi i64 [ 0, %for.cond1.preheader ], [ %inc10, %for.cond5.preheader ]
+  %l.022 = phi i64 [ 0, %for.cond1.preheader ], [ %inc10, %for.cond5.preheader ], !dbg !34
   %0 = getelementptr i32, ptr %h, i64 %l.022
   store i32 0, ptr %0, align 4, !dbg !24
   %arrayidx.1 = getelementptr i32, ptr %0, i64 1, !dbg !26
@@ -134,6 +134,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !31 = distinct !{!31, !21, !32, !33}
 !32 = !DILocation(line: 13, column: 13, scope: !12)
 !33 = !{!"llvm.loop.vectorize.enable", i1 true}
+!34 = !DILocation(line: 10, column: 5, scope: !12)
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: [[META1]] = !DIFile(filename: "outer-loop-vect.c", directory: {{.*}})
@@ -155,18 +156,19 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; CHECK: [[META19]] = distinct !DILexicalBlock(scope: [[META15]], file: [[META1]], line: 11, column: 5)
 ; CHECK: [[META20]] = !DILocation(line: 0, scope: [[META12]])
 ; CHECK: [[DBG21]] = !DILocation(line: 10, column: 3, scope: [[META12]])
-; CHECK: [[DBG22]] = !DILocation(line: 13, column: 11, scope: [[META23:![0-9]+]])
-; CHECK: [[META23]] = distinct !DILexicalBlock(scope: [[META18]], file: [[META1]], line: 12, column: 7)
-; CHECK: [[DBG24]] = !DILocation(line: 11, column: 32, scope: [[META19]])
-; CHECK: [[DBG25]] = !DILocation(line: 11, column: 26, scope: [[META19]])
-; CHECK: [[DBG26]] = !DILocation(line: 11, column: 5, scope: [[META15]])
-; CHECK: [[LOOP27]] = distinct !{[[LOOP27]], [[DBG21]], [[META28:![0-9]+]], [[META29:![0-9]+]], [[META30:![0-9]+]]}
-; CHECK: [[META28]] = !DILocation(line: 13, column: 13, scope: [[META12]])
-; CHECK: [[META29]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META30]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[DBG31]] = !DILocation(line: 13, column: 2, scope: [[META23]])
-; CHECK: [[DBG32]] = !DILocation(line: 10, column: 30, scope: [[META16]])
-; CHECK: [[DBG33]] = !DILocation(line: 10, column: 24, scope: [[META16]])
-; CHECK: [[LOOP34]] = distinct !{[[LOOP34]], [[DBG21]], [[META28]], [[META29]]}
-; CHECK: [[DBG35]] = !DILocation(line: 14, column: 1, scope: [[DBG4]])
+; CHECK: [[DBG222]] = !DILocation(line: 10, column: 30, scope: [[META16]])
+; CHECK: [[DBG22]] = !DILocation(line: 10, column: 5, scope: [[META12]])
+; CHECK: [[DBG23]] = !DILocation(line: 13, column: 11, scope: [[META24:![0-9]+]])
+; CHECK: [[META24]] = distinct !DILexicalBlock(scope: [[META18]], file: [[META1]], line: 12, column: 7)
+; CHECK: [[DBG25]] = !DILocation(line: 13, column: 2, scope: [[META24]])
+; CHECK: [[DBG26]] = !DILocation(line: 11, column: 32, scope: [[META19]])
+; CHECK: [[DBG27]] = !DILocation(line: 11, column: 26, scope: [[META19]])
+; CHECK: [[DBG28]] = !DILocation(line: 11, column: 5, scope: [[META15]])
+; CHECK: [[LOOP29]] = distinct !{[[LOOP29]], [[DBG21]], [[META30:![0-9]+]], [[META31:![0-9]+]], [[META32:![0-9]+]]}
+; CHECK: [[META30]] = !DILocation(line: 13, column: 13, scope: [[META12]])
+; CHECK: [[META31]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META32]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[DBG34]] = !DILocation(line: 10, column: 24, scope: [[META16]])
+; CHECK: [[LOOP35]] = distinct !{[[LOOP35]], [[DBG21]], [[META30]], [[META31]]}
+; CHECK: [[DBG36]] = !DILocation(line: 14, column: 1, scope: [[DBG4]])
 ;.

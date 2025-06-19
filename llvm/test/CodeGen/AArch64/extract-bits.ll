@@ -492,7 +492,6 @@ define i32 @bextr64_32_b1(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
 ; CHECK-LABEL: bextr64_32_b1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    lsr x9, x0, x1
 ; CHECK-NEXT:    lsl w8, w8, w2
 ; CHECK-NEXT:    bic w0, w9, w8
@@ -512,7 +511,6 @@ define i32 @bextr64_32_b2(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
 ; CHECK-LABEL: bextr64_32_b2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    lsr x9, x0, x1
 ; CHECK-NEXT:    lsl w8, w8, w2
 ; CHECK-NEXT:    bic w0, w9, w8
@@ -552,7 +550,6 @@ define i32 @bextr32_c1_indexzext(i32 %val, i8 %numskipbits, i8 %numlowbits) noun
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #32 // =0x20
 ; CHECK-NEXT:    mov w9, #-1 // =0xffffffff
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsr w10, w0, w1
 ; CHECK-NEXT:    sub w8, w8, w2
 ; CHECK-NEXT:    lsr w8, w9, w8
@@ -592,7 +589,6 @@ define i32 @bextr32_c3_load_indexzext(ptr %w, i8 %numskipbits, i8 %numlowbits) n
 ; CHECK-NEXT:    mov w9, #32 // =0x20
 ; CHECK-NEXT:    mov w10, #-1 // =0xffffffff
 ; CHECK-NEXT:    sub w9, w9, w2
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsr w8, w8, w1
 ; CHECK-NEXT:    lsr w9, w10, w9
 ; CHECK-NEXT:    and w0, w9, w8
@@ -797,7 +793,6 @@ define i32 @bextr32_d0(i32 %val, i32 %numskipbits, i32 %numlowbits) nounwind {
 define i32 @bextr32_d1_indexzext(i32 %val, i8 %numskipbits, i8 %numlowbits) nounwind {
 ; CHECK-LABEL: bextr32_d1_indexzext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsr w8, w0, w1
 ; CHECK-NEXT:    mov w9, #32 // =0x20
 ; CHECK-NEXT:    sub w9, w9, w2
@@ -834,7 +829,6 @@ define i32 @bextr32_d3_load_indexzext(ptr %w, i8 %numskipbits, i8 %numlowbits) n
 ; CHECK-LABEL: bextr32_d3_load_indexzext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    mov w9, #32 // =0x20
 ; CHECK-NEXT:    sub w9, w9, w2
 ; CHECK-NEXT:    lsr w8, w8, w1

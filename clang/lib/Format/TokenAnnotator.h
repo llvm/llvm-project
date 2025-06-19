@@ -154,6 +154,11 @@ public:
            startsWith(tok::kw_export, tok::kw_namespace);
   }
 
+  /// \c true if this line starts a C++ export block.
+  bool startsWithExportBlock() const {
+    return startsWith(tok::kw_export, tok::l_brace);
+  }
+
   FormatToken *getFirstNonComment() const {
     assert(First);
     return First->is(tok::comment) ? First->getNextNonComment() : First;
@@ -219,9 +224,7 @@ class TokenAnnotator {
 public:
   TokenAnnotator(const FormatStyle &Style, const AdditionalKeywords &Keywords)
       : Style(Style), IsCpp(Style.isCpp()),
-        LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords) {
-    assert(IsCpp == LangOpts.CXXOperatorNames);
-  }
+        LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords) {}
 
   /// Adapts the indent levels of comment lines to the indent of the
   /// subsequent line.

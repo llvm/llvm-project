@@ -6,4 +6,5 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.errno
     libc.include.fenv
     libc.include.math
+    libc.include.unistd
 )

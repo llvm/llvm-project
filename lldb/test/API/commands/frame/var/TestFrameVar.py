@@ -2,7 +2,6 @@
 Make sure the frame variable -g, -a, and -l flags work.
 """
 
-
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
@@ -78,6 +77,14 @@ class TestFrameVar(TestBase):
         self.assertIn("argv", output, "Args didn't find argv")
         self.assertNotIn("test_var", output, "Args found a local")
         self.assertNotIn("g_var", output, "Args found a global")
+
+        value_list = command_result.GetValues(lldb.eNoDynamicValues)
+        self.assertGreaterEqual(value_list.GetSize(), 2)
+        value_names = []
+        for value in value_list:
+            value_names.append(value.GetName())
+        self.assertIn("argc", value_names)
+        self.assertIn("argv", value_names)
 
         # Just get locals:
         result = interp.HandleCommand("frame var -a", command_result)

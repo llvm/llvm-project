@@ -45,6 +45,20 @@ svuint8x4_t test_svzip_u8_x4(svuint8x4_t zn) __arm_streaming {
   return SVE_ACLE_FUNC(svzip,_u8_x4)(zn);
 }
 
+// CHECK-LABEL: @test_svzip_mf8_x4(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.zip.x4.nxv16i8(<vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZN_COERCE2:%.*]], <vscale x 16 x i8> [[ZN_COERCE3:%.*]])
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z17test_svzip_mf8_x413svmfloat8x4_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.zip.x4.nxv16i8(<vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZN_COERCE2:%.*]], <vscale x 16 x i8> [[ZN_COERCE3:%.*]])
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
+//
+svmfloat8x4_t test_svzip_mf8_x4(svmfloat8x4_t zn) __arm_streaming {
+  return SVE_ACLE_FUNC(svzip,_mf8_x4)(zn);
+}
+
 // 16-bit ZIPs
 
 // CHECK-LABEL: @test_svzip_s16_x4(
@@ -219,6 +233,20 @@ svint8x4_t test_svzipq_s8_x4(svint8x4_t zn) __arm_streaming {
 //
 svuint8x4_t test_svzipq_u8_x4(svuint8x4_t zn) __arm_streaming {
   return SVE_ACLE_FUNC(svzipq,_u8_x4)(zn);
+}
+
+// CHECK-LABEL: @test_svzipq_mf8_x4(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.zipq.x4.nxv16i8(<vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZN_COERCE2:%.*]], <vscale x 16 x i8> [[ZN_COERCE3:%.*]])
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z18test_svzipq_mf8_x413svmfloat8x4_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.zipq.x4.nxv16i8(<vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZN_COERCE2:%.*]], <vscale x 16 x i8> [[ZN_COERCE3:%.*]])
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
+//
+svmfloat8x4_t test_svzipq_mf8_x4(svmfloat8x4_t zn) __arm_streaming {
+  return SVE_ACLE_FUNC(svzipq,_mf8_x4)(zn);
 }
 
 // CHECK-LABEL: @test_svzipq_s16_x4(

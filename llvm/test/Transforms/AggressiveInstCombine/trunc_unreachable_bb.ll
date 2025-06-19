@@ -4,12 +4,12 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; Aggressive Instcombine should be able ignore unreachable basic block.
 
-define void @func_20() {
+define void @func_20(i32 %arg) {
 ; CHECK-LABEL: @func_20(
 ; CHECK-NEXT:  for.body94:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       for.cond641:
-; CHECK-NEXT:    [[OR722:%.*]] = or i32 [[OR722]], undef
+; CHECK-NEXT:    [[OR722:%.*]] = or i32 [[OR722]], %arg
 ; CHECK-NEXT:    [[OR723:%.*]] = or i32 [[OR722]], 1
 ; CHECK-NEXT:    [[CONV724:%.*]] = trunc i32 [[OR723]] to i16
 ; CHECK-NEXT:    br label [[FOR_COND641:%.*]]
@@ -18,19 +18,19 @@ for.body94:
   unreachable
 
 for.cond641:
-  %or722 = or i32 %or722, undef
+  %or722 = or i32 %or722, %arg
   %or723 = or i32 %or722, 1
   %conv724 = trunc i32 %or723 to i16
   br label %for.cond641
 }
 
-define void @func_21() {
+define void @func_21(i32 %arg) {
 ; CHECK-LABEL: @func_21(
 ; CHECK-NEXT:  for.body94:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       for.cond641:
-; CHECK-NEXT:    [[OR722:%.*]] = or i32 [[A:%.*]], undef
-; CHECK-NEXT:    [[A]] = or i32 [[OR722]], undef
+; CHECK-NEXT:    [[OR722:%.*]] = or i32 [[A:%.*]], %arg
+; CHECK-NEXT:    [[A]] = or i32 [[OR722]], %arg
 ; CHECK-NEXT:    [[OR723:%.*]] = or i32 [[OR722]], 1
 ; CHECK-NEXT:    [[CONV724:%.*]] = trunc i32 [[OR723]] to i16
 ; CHECK-NEXT:    br label [[FOR_COND641:%.*]]
@@ -39,8 +39,8 @@ for.body94:
   unreachable
 
 for.cond641:
-  %or722 = or i32 %a, undef
-  %a = or i32 %or722, undef
+  %or722 = or i32 %a, %arg
+  %a = or i32 %or722, %arg
   %or723 = or i32 %or722, 1
   %conv724 = trunc i32 %or723 to i16
   br label %for.cond641

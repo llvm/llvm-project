@@ -18,10 +18,12 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include <optional>
 
 using namespace llvm;
@@ -43,7 +45,7 @@ struct SemaRecord {
   unsigned Log2LMULMask;
 
   // Required extensions for this intrinsic.
-  uint32_t RequiredExtensions;
+  std::string RequiredExtensions;
 
   // Prototype for this intrinsic.
   SmallVector<PrototypeDescriptor> Prototype;
@@ -498,31 +500,68 @@ void RVVEmitter::createBuiltins(raw_ostream &OS) {
   std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
   createRVVIntrinsics(Defs);
 
-  // Map to keep track of which builtin names have already been emitted.
-  StringMap<RVVIntrinsic *> BuiltinMap;
+  llvm::StringToOffsetTable Table;
+  // Ensure offset zero is the empty string.
+  Table.GetOrAddStringOffset("");
+  // Hard coded strings used in the builtin structures.
+  Table.GetOrAddStringOffset("n");
+  Table.GetOrAddStringOffset("zve32x");
 
-  OS << "#if defined(TARGET_BUILTIN) && !defined(RISCVV_BUILTIN)\n";
-  OS << "#define RISCVV_BUILTIN(ID, TYPE, ATTRS) TARGET_BUILTIN(ID, TYPE, "
-        "ATTRS, \"zve32x\")\n";
-  OS << "#endif\n";
+  // Map to unique the builtin names.
+  StringMap<RVVIntrinsic *> BuiltinMap;
+  std::vector<RVVIntrinsic *> UniqueDefs;
   for (auto &Def : Defs) {
-    auto P =
-        BuiltinMap.insert(std::make_pair(Def->getBuiltinName(), Def.get()));
-    if (!P.second) {
-      // Verf that this would have produced the same builtin definition.
-      if (P.first->second->hasBuiltinAlias() != Def->hasBuiltinAlias())
-        PrintFatalError("Builtin with same name has different hasAutoDef");
-      else if (!Def->hasBuiltinAlias() &&
-               P.first->second->getBuiltinTypeStr() != Def->getBuiltinTypeStr())
-        PrintFatalError("Builtin with same name has different type string");
+    auto P = BuiltinMap.insert({Def->getBuiltinName(), Def.get()});
+    if (P.second) {
+      Table.GetOrAddStringOffset(Def->getBuiltinName());
+      if (!Def->hasBuiltinAlias())
+        Table.GetOrAddStringOffset(Def->getBuiltinTypeStr());
+      UniqueDefs.push_back(Def.get());
       continue;
     }
-    OS << "RISCVV_BUILTIN(__builtin_rvv_" << Def->getBuiltinName() << ",\"";
-    if (!Def->hasBuiltinAlias())
-      OS << Def->getBuiltinTypeStr();
-    OS << "\", \"n\")\n";
+
+    // Verf that this would have produced the same builtin definition.
+    if (P.first->second->hasBuiltinAlias() != Def->hasBuiltinAlias())
+      PrintFatalError("Builtin with same name has different hasAutoDef");
+    else if (!Def->hasBuiltinAlias() &&
+             P.first->second->getBuiltinTypeStr() != Def->getBuiltinTypeStr())
+      PrintFatalError("Builtin with same name has different type string");
   }
-  OS << "#undef RISCVV_BUILTIN\n";
+
+  // Emit the enumerators of RVV builtins. Note that these are emitted without
+  // any outer context to enable concatenating them.
+  OS << "// RISCV Vector builtin enumerators\n";
+  OS << "#ifdef GET_RISCVV_BUILTIN_ENUMERATORS\n";
+  for (RVVIntrinsic *Def : UniqueDefs)
+    OS << "  BI__builtin_rvv_" << Def->getBuiltinName() << ",\n";
+  OS << "#endif // GET_RISCVV_BUILTIN_ENUMERATORS\n\n";
+
+  // Emit the string table for the RVV builtins.
+  OS << "// RISCV Vector builtin enumerators\n";
+  OS << "#ifdef GET_RISCVV_BUILTIN_STR_TABLE\n";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << "#endif // GET_RISCVV_BUILTIN_STR_TABLE\n\n";
+
+  // Emit the info structs of RVV builtins. Note that these are emitted without
+  // any outer context to enable concatenating them.
+  OS << "// RISCV Vector builtin infos\n";
+  OS << "#ifdef GET_RISCVV_BUILTIN_INFOS\n";
+  for (RVVIntrinsic *Def : UniqueDefs) {
+    OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+       << Table.GetStringOffset(Def->getBuiltinName()) << " /* "
+       << Def->getBuiltinName() << " */, ";
+    if (Def->hasBuiltinAlias()) {
+      OS << "0, ";
+    } else {
+      OS << Table.GetStringOffset(Def->getBuiltinTypeStr()) << " /* "
+         << Def->getBuiltinTypeStr() << " */, ";
+    }
+    OS << Table.GetStringOffset("n") << " /* n */, ";
+    OS << Table.GetStringOffset("zve32x") << " /* zve32x */}, ";
+
+    OS << "HeaderDesc::NO_HEADER, ALL_LANGUAGES},\n";
+  }
+  OS << "#endif // GET_RISCVV_BUILTIN_INFOS\n\n";
 }
 
 void RVVEmitter::createCodeGen(raw_ostream &OS) {
@@ -729,36 +768,9 @@ void RVVEmitter::createRVVIntrinsics(
       Log2LMULMask |= 1 << (Log2LMUL + 3);
 
     SR.Log2LMULMask = Log2LMULMask;
-
-    SR.RequiredExtensions = 0;
-    for (auto RequiredFeature : RequiredFeatures) {
-      RVVRequire RequireExt =
-          StringSwitch<RVVRequire>(RequiredFeature)
-              .Case("RV64", RVV_REQ_RV64)
-              .Case("Zvfhmin", RVV_REQ_Zvfhmin)
-              .Case("Xsfvcp", RVV_REQ_Xsfvcp)
-              .Case("Xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf)
-              .Case("Xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq)
-              .Case("Xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod)
-              .Case("Xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq)
-              .Case("Zvbb", RVV_REQ_Zvbb)
-              .Case("Zvbc", RVV_REQ_Zvbc)
-              .Case("Zvkb", RVV_REQ_Zvkb)
-              .Case("Zvkg", RVV_REQ_Zvkg)
-              .Case("Zvkned", RVV_REQ_Zvkned)
-              .Case("Zvknha", RVV_REQ_Zvknha)
-              .Case("Zvknhb", RVV_REQ_Zvknhb)
-              .Case("Zvksed", RVV_REQ_Zvksed)
-              .Case("Zvksh", RVV_REQ_Zvksh)
-              .Case("Zvfbfwma", RVV_REQ_Zvfbfwma)
-              .Case("Zvfbfmin", RVV_REQ_Zvfbfmin)
-              .Case("Zvfh", RVV_REQ_Zvfh)
-              .Case("Experimental", RVV_REQ_Experimental)
-              .Default(RVV_REQ_None);
-      assert(RequireExt != RVV_REQ_None && "Unrecognized required feature?");
-      SR.RequiredExtensions |= RequireExt;
-    }
-
+    std::string RFs =
+        join(RequiredFeatures.begin(), RequiredFeatures.end(), ",");
+    SR.RequiredExtensions = RFs;
     SR.NF = NF;
     SR.HasMasked = HasMasked;
     SR.HasVL = HasVL;
@@ -800,7 +812,7 @@ void RVVEmitter::createRVVIntrinsicRecords(std::vector<RVVIntrinsicRecord> &Out,
     R.PrototypeLength = SR.Prototype.size();
     R.SuffixLength = SR.Suffix.size();
     R.OverloadedSuffixSize = SR.OverloadedSuffix.size();
-    R.RequiredExtensions = SR.RequiredExtensions;
+    R.RequiredExtensions = SR.RequiredExtensions.c_str();
     R.TypeRangeMask = SR.TypeRangeMask;
     R.Log2LMULMask = SR.Log2LMULMask;
     R.NF = SR.NF;

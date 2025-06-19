@@ -21,11 +21,11 @@
 #include "formatting.h"
 #include "type.h"
 #include "variable.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/template.h"
 #include "flang/Parser/char-block.h"
+#include "flang/Support/Fortran.h"
 #include <algorithm>
 #include <list>
 #include <tuple>

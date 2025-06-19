@@ -32,13 +32,13 @@
 
 using namespace llvm;
 
-static MCSymbolRefExpr::VariantKind
-getModifierVariantKind(XtensaCP::XtensaCPModifier Modifier) {
+static Xtensa::Specifier
+getModifierSpecifier(XtensaCP::XtensaCPModifier Modifier) {
   switch (Modifier) {
   case XtensaCP::no_modifier:
-    return MCSymbolRefExpr::VK_None;
+    return Xtensa::S_None;
   case XtensaCP::TPOFF:
-    return MCSymbolRefExpr::VK_TPOFF;
+    return Xtensa::S_TPOFF;
   }
   report_fatal_error("Invalid XtensaCPModifier!");
 }
@@ -92,7 +92,7 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
   MCSymbol *LblSym = GetCPISymbol(ACPV->getLabelId());
   auto *TS =
       static_cast<XtensaTargetStreamer *>(OutStreamer->getTargetStreamer());
-  MCSymbolRefExpr::VariantKind VK = getModifierVariantKind(ACPV->getModifier());
+  auto Spec = getModifierSpecifier(ACPV->getModifier());
 
   if (ACPV->getModifier() != XtensaCP::no_modifier) {
     std::string SymName(MCSym->getName());
@@ -101,7 +101,7 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
     MCSym = OutContext.getOrCreateSymbol(SymName);
   }
 
-  const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, VK, OutContext);
+  const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, Spec, OutContext);
   TS->emitLiteral(LblSym, Expr, false);
 }
 
@@ -227,8 +227,6 @@ XtensaAsmPrinter::LowerSymbolOperand(const MachineOperand &MO,
                                      MachineOperand::MachineOperandType MOTy,
                                      unsigned Offset) const {
   const MCSymbol *Symbol;
-  XtensaMCExpr::VariantKind Kind = XtensaMCExpr::VK_Xtensa_None;
-
   switch (MOTy) {
   case MachineOperand::MO_GlobalAddress:
     Symbol = getSymbol(MO.getGlobal());
@@ -256,10 +254,7 @@ XtensaAsmPrinter::LowerSymbolOperand(const MachineOperand &MO,
     report_fatal_error("<unknown operand type>");
   }
 
-  const MCExpr *ME =
-      MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None, OutContext);
-  ME = XtensaMCExpr::create(ME, Kind, OutContext);
-
+  const MCExpr *ME = MCSymbolRefExpr::create(Symbol, OutContext);
   if (Offset) {
     // Assume offset is never negative.
     assert(Offset > 0);
@@ -312,6 +307,11 @@ void XtensaAsmPrinter::lowerToMCInst(const MachineInstr *MI,
       OutMI.addOperand(MCOp);
   }
 }
+
+char XtensaAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(XtensaAsmPrinter, "xtensa-asm-printer",
+                "Xtensa Assembly Printer", false, false)
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaAsmPrinter() {
   RegisterAsmPrinter<XtensaAsmPrinter> A(getTheXtensaTarget());

@@ -936,7 +936,7 @@ define i1 @recursiveGEP_withPtrSub_scalableGEP(ptr %val1) {
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TEST_0_I]] = getelementptr i8, ptr [[A_PN_I]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TEST_0_I]], align 1
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP2]], 0
@@ -970,7 +970,7 @@ define i1 @recursiveGEP_withPtrSub_scalableGEP_inbounds(ptr %val1) {
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TEST_0_I]], align 1
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP2]], 0
@@ -1111,4 +1111,42 @@ if.end4:
 cleanup:
   %retval.0 = phi i1 [ %cmp, %if.then ], [ %tobool, %if.end4 ]
   ret i1 %retval.0
+}
+
+
+define i32 @issue_124275_wrong_br_direction(i32 noundef %inp) {
+; CHECK-LABEL: @issue_124275_wrong_br_direction(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[INP:%.*]], -2
+; CHECK-NEXT:    [[XOR_INP_NEG:%.*]] = add i32 [[TMP0]], 1
+; CHECK-NEXT:    [[CMP_NE_NOT:%.*]] = icmp eq i32 [[XOR_INP_NEG]], 0
+; CHECK-NEXT:    br i1 [[CMP_NE_NOT]], label [[B1:%.*]], label [[B0:%.*]]
+; CHECK:       B0:
+; CHECK-NEXT:    [[PHI_B0:%.*]] = phi i32 [ [[PHI_B1:%.*]], [[B1]] ], [ [[XOR_INP_NEG]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[B1]]
+; CHECK:       B1:
+; CHECK-NEXT:    [[PHI_B1]] = phi i32 [ [[PHI_B0]], [[B0]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[CMP_NE_B1_NOT:%.*]] = icmp eq i32 [[PHI_B1]], 0
+; CHECK-NEXT:    br i1 [[CMP_NE_B1_NOT]], label [[B0]], label [[END:%.*]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %xor_inp = xor i32 %inp, 1
+  %sub = sub i32 0, %xor_inp
+  %cmp_ne = icmp ne i32 %sub, 0
+  br i1 %cmp_ne, label %B0, label %B1
+
+B0:
+  %phi_B0 = phi i32 [ %phi_B1, %B1 ], [ %sub, %entry ]
+  br label %B1
+
+B1:
+  %phi_B1 = phi i32 [ %phi_B0, %B0 ], [ 0, %entry ]
+  %cmp_ne_B1 = icmp ne i32 %phi_B1, 0
+  %cmp_eq_B1 = xor i1 %cmp_ne_B1, true
+  br i1 %cmp_eq_B1, label %B0, label %end
+
+end:
+  ret i32 0
 }

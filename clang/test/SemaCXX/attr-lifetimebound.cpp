@@ -33,6 +33,10 @@ namespace usage_invalid {
 namespace usage_ok {
   struct IntRef { int *target; };
 
+  const int &crefparam(const int &param); // Omitted in first decl
+  const int &crefparam(const int &param); // Omitted in second decl
+  const int &crefparam(const int &param [[clang::lifetimebound]]); // Add LB
+  const int &crefparam(const int &param) { return param; } // Omit in impl
   int &refparam(int &param [[clang::lifetimebound]]);
   int &classparam(IntRef param [[clang::lifetimebound]]);
 
@@ -62,12 +66,13 @@ namespace usage_ok {
   int *p = A().class_member(); // expected-warning {{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
   int *q = A(); // expected-warning {{temporary whose address is used as value of local variable 'q' will be destroyed at the end of the full-expression}}
   int *r = A(1); // expected-warning {{temporary whose address is used as value of local variable 'r' will be destroyed at the end of the full-expression}}
+  const int& s = crefparam(2); // expected-warning {{temporary bound to local reference 's' will be destroyed at the end of the full-expression}}
 
   void test_assignment() {
-    p = A().class_member(); // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
-    p = {A().class_member()}; // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
-    q = A(); // expected-warning {{object backing the pointer q will be destroyed at the end of the full-expression}}
-    r = A(1); // expected-warning {{object backing the pointer r will be destroyed at the end of the full-expression}}
+    p = A().class_member(); // expected-warning {{object backing the pointer 'p' will be destroyed at the end of the full-expression}}
+    p = {A().class_member()}; // expected-warning {{object backing the pointer 'p' will be destroyed at the end of the full-expression}}
+    q = A(); // expected-warning {{object backing the pointer 'q' will be destroyed at the end of the full-expression}}
+    r = A(1); // expected-warning {{object backing the pointer 'r' will be destroyed at the end of the full-expression}}
   }
 
   struct FieldCheck {
@@ -80,7 +85,7 @@ namespace usage_ok {
       Set c;
       int * d;
     };
-    Pair p;  
+    Pair p;
     FieldCheck(const int& a): p(a){}
     Pair& getR() [[clang::lifetimebound]] { return p; }
     Pair* getP() [[clang::lifetimebound]] { return &p; }
@@ -351,8 +356,8 @@ struct StatusOr {
 };
 
 void test(StatusOr<FooView> foo1, StatusOr<NonAnnotatedFooView> foo2) {
-  foo1 = Foo(); // expected-warning {{object backing foo1 will be destroyed at the end}}
+  foo1 = Foo(); // expected-warning {{object backing 'foo1' will be destroyed at the end}}
   // This warning is triggered by the lifetimebound annotation, regardless of whether the class type is annotated with GSL.
-  foo2 = NonAnnotatedFoo(); // expected-warning {{object backing foo2 will be destroyed at the end}}
+  foo2 = NonAnnotatedFoo(); // expected-warning {{object backing 'foo2' will be destroyed at the end}}
 }
 } // namespace GH106372

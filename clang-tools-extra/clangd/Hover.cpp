@@ -1193,12 +1193,13 @@ void maybeAddSymbolProviders(ParsedAST &AST, HoverInfo &HI,
                              include_cleaner::Symbol Sym) {
   trace::Span Tracer("Hover::maybeAddSymbolProviders");
 
-  const SourceManager &SM = AST.getSourceManager();
   llvm::SmallVector<include_cleaner::Header> RankedProviders =
-      include_cleaner::headersForSymbol(Sym, SM, &AST.getPragmaIncludes());
+      include_cleaner::headersForSymbol(Sym, AST.getPreprocessor(),
+                                        &AST.getPragmaIncludes());
   if (RankedProviders.empty())
     return;
 
+  const SourceManager &SM = AST.getSourceManager();
   std::string Result;
   include_cleaner::Includes ConvertedIncludes = convertIncludes(AST);
   for (const auto &P : RankedProviders) {
@@ -1269,9 +1270,8 @@ void maybeAddUsedSymbols(ParsedAST &AST, HoverInfo &HI, const Inclusion &Inc) {
   for (const auto &UsedSymbolDecl : UsedSymbols)
     HI.UsedSymbolNames.push_back(getSymbolName(UsedSymbolDecl));
   llvm::sort(HI.UsedSymbolNames);
-  HI.UsedSymbolNames.erase(
-      std::unique(HI.UsedSymbolNames.begin(), HI.UsedSymbolNames.end()),
-      HI.UsedSymbolNames.end());
+  HI.UsedSymbolNames.erase(llvm::unique(HI.UsedSymbolNames),
+                           HI.UsedSymbolNames.end());
 }
 
 } // namespace

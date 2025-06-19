@@ -24,7 +24,7 @@ entry:
   %v.0 = load i32, ptr addrspace(3) %ptr, align 8
   %v.1 = load i32, ptr addrspace(3) %ptr.gep.1
 
-  %r.0 = insertelement <2 x i32> undef, i32 %v.0, i32 0
+  %r.0 = insertelement <2 x i32> poison, i32 %v.0, i32 0
   %r.1 = insertelement <2 x i32> %r.0, i32 %v.1, i32 1
   %bc = bitcast <2 x i32> %r.1 to <2 x float>
   ret <2 x float> %bc
@@ -54,7 +54,7 @@ entry:
   %v.0 = load i32, ptr addrspace(3) %ptr.a
   %v.1 = load i32, ptr addrspace(3) %ptr.b
 
-  %r.0 = insertelement <2 x i32> undef, i32 %v.0, i32 0
+  %r.0 = insertelement <2 x i32> poison, i32 %v.0, i32 0
   %r.1 = insertelement <2 x i32> %r.0, i32 %v.1, i32 1
   %bc = bitcast <2 x i32> %r.1 to <2 x float>
   ret <2 x float> %bc
@@ -88,7 +88,7 @@ entry:
   %v.0 = load i32, ptr addrspace(3) %ptr.a
   %v.1 = load i32, ptr addrspace(3) %ptr.b
 
-  %r.0 = insertelement <2 x i32> undef, i32 %v.0, i32 0
+  %r.0 = insertelement <2 x i32> poison, i32 %v.0, i32 0
   %r.1 = insertelement <2 x i32> %r.0, i32 %v.1, i32 1
   %bc = bitcast <2 x i32> %r.1 to <2 x float>
   ret <2 x float> %bc
@@ -120,7 +120,7 @@ entry:
   %v.0 = load i32, ptr addrspace(3) %ptr.a
   %v.1 = load i32, ptr addrspace(3) %ptr.b
 
-  %r.0 = insertelement <2 x i32> undef, i32 %v.0, i32 0
+  %r.0 = insertelement <2 x i32> poison, i32 %v.0, i32 0
   %r.1 = insertelement <2 x i32> %r.0, i32 %v.1, i32 1
   %bc = bitcast <2 x i32> %r.1 to <2 x float>
   ret <2 x float> %bc

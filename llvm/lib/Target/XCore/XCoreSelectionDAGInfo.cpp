@@ -10,10 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "XCoreSelectionDAGInfo.h"
 #include "XCoreTargetMachine.h"
+
+#define GET_SDNODE_DESC
+#include "XCoreGenSDNodeInfo.inc"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "xcore-selectiondag-info"
+
+XCoreSelectionDAGInfo::XCoreSelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(XCoreGenSDNodeInfo) {}
 
 SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,

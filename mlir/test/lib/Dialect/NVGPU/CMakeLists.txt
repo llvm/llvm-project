@@ -3,8 +3,8 @@ add_mlir_library(MLIRNVGPUTestPasses
   TestNVGPUTransforms.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRNVGPUTestPasses PUBLIC
   MLIRIR
   MLIRAffineDialect
   MLIRAnalysis

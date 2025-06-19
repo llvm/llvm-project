@@ -137,10 +137,9 @@ define <2 x i16> @freeze_v2i16() {
 ; CHECK-GI-LABEL: freeze_v2i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov h0, v0.h[1]
-; CHECK-GI-NEXT:    mov v1.s[0], w8
 ; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov v1.s[1], w8
-; CHECK-GI-NEXT:    add v0.2s, v1.2s, v1.2s
+; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-GI-NEXT:    ret
   %y1 = freeze <2 x i16> undef
   %t1 = add <2 x i16> %y1, %y1

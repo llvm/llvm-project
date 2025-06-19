@@ -41,6 +41,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
@@ -82,7 +83,7 @@ namespace llvm {
   void initializeARMExecutionDomainFixPass(PassRegistry&);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   // Register the target.
   RegisterTargetMachine<ARMLETargetMachine> X(getTheARMLETarget());
   RegisterTargetMachine<ARMLETargetMachine> A(getTheThumbLETarget());
@@ -91,6 +92,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
 
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
+  initializeARMAsmPrinterPass(Registry);
   initializeARMLoadStoreOptPass(Registry);
   initializeARMPreAllocLoadStoreOptPass(Registry);
   initializeARMParallelDSPPass(Registry);
@@ -269,6 +271,22 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
 
 ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;
 
+bool ARMBaseTargetMachine::isAPCS_ABI() const {
+  assert(TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
+  return TargetABI == ARMBaseTargetMachine::ARM_ABI_APCS;
+}
+
+bool ARMBaseTargetMachine::isAAPCS_ABI() const {
+  assert(TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
+  return TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS ||
+         TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
+}
+
+bool ARMBaseTargetMachine::isAAPCS16_ABI() const {
+  assert(TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
+  return TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
+}
+
 MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
@@ -322,7 +340,29 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 ARMBaseTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(ARMTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<ARMTTIImpl>(this, F));
+}
+
+ScheduleDAGInstrs *
+ARMBaseTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMILive *DAG = createSchedLive(C);
+  // add DAG Mutations here.
+  const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
+  if (ST.hasFusion())
+    DAG->addMutation(createARMMacroFusionDAGMutation());
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+ARMBaseTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
+  // add DAG Mutations here.
+  const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
+  if (ST.hasFusion())
+    DAG->addMutation(createARMMacroFusionDAGMutation());
+  if (auto Mutation = createARMLatencyMutations(ST, C->AA))
+    DAG->addMutation(std::move(Mutation));
+  return DAG;
 }
 
 ARMLETargetMachine::ARMLETargetMachine(const Target &T, const Triple &TT,
@@ -351,28 +391,6 @@ public:
 
   ARMBaseTargetMachine &getARMTargetMachine() const {
     return getTM<ARMBaseTargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-    // add DAG Mutations here.
-    const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
-    if (ST.hasFusion())
-      DAG->addMutation(createARMMacroFusionDAGMutation());
-    return DAG;
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
-    // add DAG Mutations here.
-    const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
-    if (ST.hasFusion())
-      DAG->addMutation(createARMMacroFusionDAGMutation());
-    if (auto Mutation = createARMLatencyMutations(ST, C->AA))
-      DAG->addMutation(std::move(Mutation));
-    return DAG;
   }
 
   void addIRPasses() override;
@@ -620,7 +638,7 @@ void ARMPassConfig::addPreEmitPass2() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardCatchretPass());
+    addPass(createEHContGuardTargetsPass());
   }
 }
 

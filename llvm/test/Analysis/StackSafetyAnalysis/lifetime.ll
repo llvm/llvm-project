@@ -576,8 +576,8 @@ block2:                                           ; preds = %entry
 
 %struct.Klass = type { i32, i32 }
 
-define i32 @shady_range(i32 %argc, ptr nocapture %argv) {
-; CHECK-LABEL: define i32 @shady_range(i32 %argc, ptr nocapture %argv)
+define i32 @shady_range(i32 %argc, ptr captures(none) %argv) {
+; CHECK-LABEL: define i32 @shady_range(i32 %argc, ptr captures(none) %argv)
 entry:
 ; CHECK: entry:
 ; CHECK-NEXT: Alive: <>
@@ -1047,8 +1047,8 @@ if.end:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr captures(none))
+declare void @llvm.lifetime.end.p0(i64, ptr captures(none))
 declare void @capture8(ptr)
 declare void @capture32(ptr)
 declare void @capture64(ptr)

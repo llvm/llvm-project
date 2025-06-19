@@ -1,5 +1,5 @@
-; RUN: opt -passes=print-memderefs -S < %s -disable-output  -use-dereferenceable-at-point-semantics=0 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL
-; RUN: opt -passes=print-memderefs -S < %s -disable-output  -use-dereferenceable-at-point-semantics=1 2>&1 | FileCheck %s --check-prefixes=CHECK,POINT
+; RUN: opt -passes=print-memderefs -S < %s -disable-output  -use-dereferenceable-at-point-semantics=false 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL
+; RUN: opt -passes=print-memderefs -S < %s -disable-output  -use-dereferenceable-at-point-semantics 2>&1 | FileCheck %s --check-prefixes=CHECK,POINT
 
 
 ; Uses the print-deref (+ analyze to print) pass to run

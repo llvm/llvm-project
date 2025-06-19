@@ -374,7 +374,7 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
 }
 
 Value *WinEHStatePass::emitEHLSDA(IRBuilder<> &Builder, Function *F) {
-  return Builder.CreateIntrinsic(Intrinsic::x86_seh_lsda, {}, F);
+  return Builder.CreateIntrinsic(Intrinsic::x86_seh_lsda, F);
 }
 
 /// Generate a thunk that puts the LSDA of ParentFunc in EAX and then calls
@@ -513,7 +513,7 @@ int WinEHStatePass::getBaseStateForBB(
   assert(BBColors.size() == 1 && "multi-color BB not removed by preparation");
   BasicBlock *FuncletEntryBB = BBColors.front();
   if (auto *FuncletPad =
-          dyn_cast<FuncletPadInst>(FuncletEntryBB->getFirstNonPHI())) {
+          dyn_cast<FuncletPadInst>(FuncletEntryBB->getFirstNonPHIIt())) {
     auto BaseStateI = FuncInfo.FuncletBaseStateMap.find(FuncletPad);
     if (BaseStateI != FuncInfo.FuncletBaseStateMap.end())
       BaseState = BaseStateI->second;
@@ -649,13 +649,13 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
   // that it can recover the original frame pointer.
   IRBuilder<> Builder(RegNode->getNextNode());
   Value *RegNodeI8 = Builder.CreateBitCast(RegNode, Builder.getPtrTy());
-  Builder.CreateIntrinsic(Intrinsic::x86_seh_ehregnode, {}, {RegNodeI8});
+  Builder.CreateIntrinsic(Intrinsic::x86_seh_ehregnode, {RegNodeI8});
 
   if (EHGuardNode) {
     IRBuilder<> Builder(EHGuardNode->getNextNode());
     Value *EHGuardNodeI8 =
         Builder.CreateBitCast(EHGuardNode, Builder.getPtrTy());
-    Builder.CreateIntrinsic(Intrinsic::x86_seh_ehguard, {}, {EHGuardNodeI8});
+    Builder.CreateIntrinsic(Intrinsic::x86_seh_ehguard, {EHGuardNodeI8});
   }
 
   // Calculate state numbers.
@@ -722,7 +722,7 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
     InitialStates.insert({BB, PredState});
     FinalStates.insert({BB, PredState});
     for (BasicBlock *SuccBB : successors(BB))
-      Worklist.push_back(SuccBB);
+       Worklist.push_back(SuccBB);
   }
 
   // Try to hoist stores from successors.
@@ -741,7 +741,7 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
   for (BasicBlock *BB : RPOT) {
     auto &BBColors = BlockColors[BB];
     BasicBlock *FuncletEntryBB = BBColors.front();
-    if (isa<CleanupPadInst>(FuncletEntryBB->getFirstNonPHI()))
+    if (isa<CleanupPadInst>(FuncletEntryBB->getFirstNonPHIIt()))
       continue;
 
     int PrevState = getPredState(FinalStates, F, ParentBaseState, BB);
@@ -783,7 +783,7 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
   for (CallBase *Call : SetJmp3Calls) {
     auto &BBColors = BlockColors[Call->getParent()];
     BasicBlock *FuncletEntryBB = BBColors.front();
-    bool InCleanup = isa<CleanupPadInst>(FuncletEntryBB->getFirstNonPHI());
+    bool InCleanup = isa<CleanupPadInst>(FuncletEntryBB->getFirstNonPHIIt());
 
     IRBuilder<> Builder(Call);
     Value *State;

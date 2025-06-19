@@ -16,7 +16,7 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    lui a2, %hi(.LJTI0_0)
 ; CHECK-NEXT:    addi a2, a2, %lo(.LJTI0_0)
-; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    lw t2, 0(a0)
 ; CHECK-NEXT:    jr t2
 ; CHECK-NEXT:  .LBB0_2: # %bb1
@@ -50,7 +50,7 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; NO-ZICFILP-NEXT:    slli a0, a0, 2
 ; NO-ZICFILP-NEXT:    lui a2, %hi(.LJTI0_0)
 ; NO-ZICFILP-NEXT:    addi a2, a2, %lo(.LJTI0_0)
-; NO-ZICFILP-NEXT:    add a0, a0, a2
+; NO-ZICFILP-NEXT:    add a0, a2, a0
 ; NO-ZICFILP-NEXT:    lw a0, 0(a0)
 ; NO-ZICFILP-NEXT:    jr a0
 ; NO-ZICFILP-NEXT:  .LBB0_2: # %bb1
