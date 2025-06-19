@@ -1014,3 +1014,24 @@ module {
 //   CHECK-DAG:     %[[T3:.+]] = arith.addf %[[T2]], %[[B1]]
 //       CHECK:     linalg.yield %[[T3]] : f32
 //       CHECK:   return %[[GENERIC]]
+
+// -----
+
+func.func @map_ops(%in1: tensor<8xf32>, %in2: tensor<8xf32>) -> tensor<8xf32> {
+    %fill = tensor.empty() : tensor<8xf32>
+    %add = linalg.map {arith.addf} ins(%in1, %in2: tensor<8xf32>, tensor<8xf32>) outs(%fill: tensor<8xf32>)
+    %mapped_65 = linalg.map { math.sqrt } ins(%add : tensor<8xf32>) outs(%fill : tensor<8xf32>)
+    return %mapped_65 : tensor<8xf32>
+}
+
+// CHECK-LABEL: func @map_ops
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: tensor<8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: tensor<8xf32>
+//       CHECK:   %[[EMPTY:.+]] = tensor.empty() : tensor<8xf32>
+//       CHECK:   %[[FUSED_OP:.+]] = linalg.generic
+//  CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] : {{.*}}) outs(%[[EMPTY]] :
+//  CHECK-NEXT:   ^bb0(%[[IN0:.*]]: f32, %[[IN1:.*]]: f32, %[[OUT:.*]]: f32):
+//  CHECK-NEXT:     %[[ADD:.*]] = arith.addf %[[IN0]], %[[IN1]]
+//  CHECK-NEXT:     %[[SQRT:.*]] = math.sqrt %[[ADD]]
+//  CHECK-NEXT:     linalg.yield %[[SQRT]] 
+//   CHECK-NOT:   linalg.generic
