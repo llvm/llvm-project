@@ -651,11 +651,11 @@ void MCStreamer::emitCFILLVMRegisterPair(int64_t Register, int64_t R1,
 }
 
 void MCStreamer::emitCFILLVMVectorRegisters(
-    int64_t Register, std::vector<MCCFIInstruction::VectorRegisterWithLane> VRs,
+    int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
     SMLoc Loc) {
   MCSymbol *Label = emitCFILabel();
-  MCCFIInstruction Instruction = MCCFIInstruction::createLLVMVectorRegisters(
-      Label, Register, std::move(VRs), Loc);
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createLLVMVectorRegisters(Label, Register, VRs, Loc);
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;

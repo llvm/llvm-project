@@ -1038,8 +1038,7 @@ public:
                                        int64_t R1SizeInBits, int64_t R2,
                                        int64_t R2SizeInBits, SMLoc Loc = {});
   virtual void emitCFILLVMVectorRegisters(
-      int64_t Register,
-      std::vector<MCCFIInstruction::VectorRegisterWithLane> VRs,
+      int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
       SMLoc Loc = {});
   virtual void emitCFILLVMVectorOffset(int64_t Register,
                                        int64_t RegisterSizeInBits,

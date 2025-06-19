@@ -2850,6 +2850,10 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   case MIToken::kw_cfi_aarch64_negate_ra_sign_state:
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
     break;
+  case MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc:
+    CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createNegateRAStateWithPC(nullptr));
+    break;
   case MIToken::kw_cfi_llvm_register_pair: {
     unsigned Reg, R1, R2;
     unsigned R1Size, R2Size;
@@ -2913,10 +2917,6 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
         nullptr, Reg, SpillReg, SpillRegLaneSize, MaskReg, MaskRegSize));
     break;
   }
-  case MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc:
-    CFIIndex =
-        MF.addFrameInst(MCCFIInstruction::createNegateRAStateWithPC(nullptr));
-    break;
   case MIToken::kw_cfi_escape: {
     std::string Values;
     if (parseCFIEscapeValues(Values))
@@ -3298,11 +3298,11 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::kw_cfi_undefined:
   case MIToken::kw_cfi_window_save:
   case MIToken::kw_cfi_aarch64_negate_ra_sign_state:
+  case MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc:
   case MIToken::kw_cfi_llvm_register_pair:
   case MIToken::kw_cfi_llvm_vector_registers:
   case MIToken::kw_cfi_llvm_vector_offset:
   case MIToken::kw_cfi_llvm_vector_register_mask:
-  case MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc:
     return parseCFIOperand(Dest);
   case MIToken::kw_blockaddress:
     return parseBlockAddressOperand(Dest);
