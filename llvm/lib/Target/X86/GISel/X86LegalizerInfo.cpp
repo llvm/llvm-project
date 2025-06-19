@@ -467,7 +467,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       });
 
   getActionDefinitionsBuilder(G_FABS)
-      .legalFor(UseX87 && !HasSSE2 && !HasSSE1, {s32, s64, s80})
+      .legalFor(UseX87 && !HasSSE2 && !HasSSE1, {s64, s80})
       .lower();
 
   // fp comparison
