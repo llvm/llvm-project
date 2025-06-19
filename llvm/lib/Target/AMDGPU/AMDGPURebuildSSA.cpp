@@ -41,7 +41,6 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
   DenseMap<unsigned, SmallPtrSet<MachineBasicBlock *, 8>> LiveInBlocks;
   DenseMap<unsigned, SmallSet<unsigned, 4>> PHINodes;
   DenseMap<MachineInstr *, unsigned> PHIMap;
-  DenseMap<unsigned, VRegDefStack> VregNames;
   DenseSet<unsigned> DefSeen;
   DenseSet<unsigned> Renamed;
 
@@ -57,7 +56,8 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
     IDF.calculate(PHIBlocks);
   }
 
-  void renameVRegs(MachineBasicBlock &MBB) {
+  void renameVRegs(MachineBasicBlock &MBB,
+                   DenseMap<unsigned, VRegDefStack> VregNames) {
     for (auto &PHI : MBB.phis()) {
       Register Res = PHI.getOperand(0).getReg();
       const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, Res);
@@ -69,12 +69,17 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
     }
     for (auto &I : make_range(MBB.getFirstNonPHI(), MBB.end())) {
 
+      // Sub-reg handling:
       // 1. if UseMask > DefMask => search names stack to construct REG_SEQUENCE
       // 2. if UseMask < DefMask => search names stack for the corresponding
       // sub-register def. Replace reg in use only if VReg found != current VReg
       // in use!
       // 3. UseMask == DefMask => just replace the reg if the reg found !=
       // current reg in use
+      // DefinedLanes serves as a result of the expression mentioned above.
+      // UndefSubRegs initially is set to UseMask but is updated on each
+      // iteration if we are looking for the sub-regs definitions to compose
+      // REG_SEQUENCE.
       for (auto &Op : I.uses()) {
         if (Op.isReg() && Op.getReg().isVirtual() &&
             Renamed.contains(Op.getReg())) {
@@ -213,20 +218,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
     for (auto *Child : Node->children()) {
       MachineBasicBlock *ChildMBB = Child->getBlock();
       // Process child in the dominator tree
-      renameVRegs(*ChildMBB);
-    }
-
-    // FIXME: Instead of poping the names VregNames need to be passed to the
-    // recursion by value. This makes the names stack valid on exit from the
-    // recursion!
-    for (auto &I : MBB) {
-      for (auto Op : I.defs()) {
-        if (Op.getReg().isVirtual()) {
-          Register VReg = Op.getReg();
-          if (!VregNames[VReg].empty())
-            VregNames[VReg].pop_back();
-        }
-      }
+      renameVRegs(*ChildMBB, VregNames);
     }
   }
 
@@ -279,7 +271,6 @@ bool AMDGPURebuildSSALegacy::runOnMachineFunction(MachineFunction &MF) {
   DefBlocks.clear();
   LiveInBlocks.clear();
   PHINodes.clear();
-  VregNames.clear();
   DefSeen.clear();
   Renamed.clear();
 
@@ -333,7 +324,8 @@ bool AMDGPURebuildSSALegacy::runOnMachineFunction(MachineFunction &MF) {
   }
 
     // Rename virtual registers in the basic block.
-  renameVRegs(MF.front());
+  DenseMap<unsigned, VRegDefStack> VregNames;
+  renameVRegs(MF.front(), VregNames);
   MF.getProperties().set(MachineFunctionProperties::Property::IsSSA);
   MF.getProperties().reset(MachineFunctionProperties::Property ::NoPHIs);
   return MRI->isSSA();
