@@ -1101,7 +1101,7 @@ void ento::registerObjCGenericsChecker(CheckerManager &Mgr) {
   Mgr.getChecker<DynamicTypePropagation>()->ObjCGenericsChecker.enable(Mgr);
 }
 
-bool ento::shouldRegisterObjCGenericsChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterObjCGenericsChecker(const CheckerManager &) {
   return true;
 }
 
@@ -1113,6 +1113,6 @@ void ento::registerDynamicTypePropagation(CheckerManager &Mgr) {
   Mgr.getChecker<DynamicTypePropagation>();
 }
 
-bool ento::shouldRegisterDynamicTypePropagation(const CheckerManager &mgr) {
+bool ento::shouldRegisterDynamicTypePropagation(const CheckerManager &) {
   return true;
 }
