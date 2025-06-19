@@ -32,10 +32,6 @@
 #    error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
 #  endif
 
-#  ifdef __cpp_lib_constexpr_map
-#    error "__cpp_lib_constexpr_map should not be defined before c++26"
-#  endif
-
 #  ifdef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should not be defined before c++23"
 #  endif
