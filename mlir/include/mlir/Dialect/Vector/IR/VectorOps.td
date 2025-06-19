@@ -691,7 +691,7 @@ def Vector_ExtractOp :
      InferTypeOpAdaptorWithIsCompatible]> {
   let summary = "extract operation";
   let description = [{
-    Extracts an (n − k)-D subvector (the result) from an n-D vector at a
+    Extracts an (n − k)-D result sub-vector from an n-D source vector at a
     specified k-D position. When n = k, the result degenerates to a scalar
     element.
 
@@ -886,10 +886,9 @@ def Vector_InsertOp :
      AllTypesMatch<["dest", "result"]>]> {
   let summary = "insert operation";
   let description = [{
-    Inserts an n-D source vector (the value to store) into an (n + k)-D
-    destination vector at a specified k-D position. When n = 0, the source
-    degenerates to a scalar element inserted into the (0 + k)-D destination
-    vector.
+    Inserts an n-D value-to-store vector into an (n + k)-D destination vector
+    at a specified k-D position. When n = 0, value-to-store degenerates to
+    a scalar element inserted into the (0 + k)-D destination vector.
 
     Static and dynamic indices must be greater or equal to zero and less than
     the size of the corresponding dimension. The result is undefined if any
