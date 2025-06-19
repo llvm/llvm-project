@@ -20,7 +20,6 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <iterator>
 #include <numeric>
 
 using namespace mlir;
@@ -127,7 +126,7 @@ unsigned CompositeType::getNumElements() const {
     return structType.getNumElements();
   if (auto vectorType = llvm::dyn_cast<VectorType>(*this))
     return vectorType.getNumElements();
-  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(*this))
+  if (auto tensorArmType = dyn_cast<TensorArmType>(*this))
     return tensorArmType.getNumElements();
   if (llvm::isa<CooperativeMatrixType>(*this)) {
     llvm_unreachable(
@@ -156,9 +155,7 @@ void CompositeType::getExtensions(
             .getExtensions(extensions, storage);
       })
       .Case<TensorArmType>([&](TensorArmType type) {
-        static const Extension exts[] = {Extension::SPV_ARM_tensors};
-        ArrayRef<Extension> ref(exts, std::size(exts));
-        extensions.push_back(ref);
+        extensions.push_back({Extension::SPV_ARM_tensors});
         return llvm::cast<ScalarType>(type.getElementType())
             .getExtensions(extensions, storage);
       })
@@ -184,9 +181,7 @@ void CompositeType::getCapabilities(
             .getCapabilities(capabilities, storage);
       })
       .Case<TensorArmType>([&](TensorArmType type) {
-        static const Capability caps[] = {Capability::TensorsARM};
-        ArrayRef<Capability> ref(caps, std::size(caps));
-        capabilities.push_back(ref);
+        capabilities.push_back({Capability::TensorsARM});
         return llvm::cast<ScalarType>(type.getElementType())
             .getCapabilities(capabilities, storage);
       })
@@ -1245,15 +1240,15 @@ struct spirv::detail::TensorArmTypeStorage final : TypeStorage {
 
   static TensorArmTypeStorage *construct(TypeStorageAllocator &allocator,
                                          const KeyTy &key) {
-    auto shape = std::get<0>(key);
-    auto elementType = std::get<1>(key);
+    auto [shape, elementType] = key;
     shape = allocator.copyInto(shape);
     return new (allocator.allocate<TensorArmTypeStorage>())
         TensorArmTypeStorage(std::move(shape), std::move(elementType));
   }
 
   static llvm::hash_code hashKey(const KeyTy &key) {
-    return llvm::hash_combine(std::get<0>(key), std::get<1>(key));
+    auto [shape, elementType] = key;
+    return llvm::hash_combine(shape, elementType);
   }
 
   bool operator==(const KeyTy &key) const {
@@ -1280,7 +1275,7 @@ Type TensorArmType::getElementType() const { return getImpl()->elementType; }
 ArrayRef<int64_t> TensorArmType::getShape() const { return getImpl()->shape; }
 
 unsigned TensorArmType::getNumElements() const {
-  auto shape = getShape();
+  ArrayRef<int64_t> shape = getShape();
   return std::accumulate(shape.begin(), shape.end(), unsigned(1),
                          std::multiplies<unsigned>());
 }
@@ -1290,8 +1285,7 @@ void TensorArmType::getExtensions(
     std::optional<StorageClass> storage) {
 
   llvm::cast<SPIRVType>(getElementType()).getExtensions(extensions, storage);
-  static constexpr Extension exts[] = {Extension::SPV_ARM_tensors};
-  extensions.push_back(exts);
+  extensions.push_back({Extension::SPV_ARM_tensors});
 }
 
 void TensorArmType::getCapabilities(
@@ -1299,20 +1293,16 @@ void TensorArmType::getCapabilities(
     std::optional<StorageClass> storage) {
   llvm::cast<SPIRVType>(getElementType())
       .getCapabilities(capabilities, storage);
-  static constexpr Capability caps[] = {Capability::TensorsARM};
-  capabilities.push_back(caps);
+  capabilities.push_back({Capability::TensorsARM});
 }
 
 LogicalResult
 TensorArmType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
                                 ArrayRef<int64_t> shape, Type elementType) {
-  if (std::any_of(shape.begin(), shape.end(),
-                  [](int64_t dim) { return dim == 0; }))
+  if (llvm::is_contained(shape, 0))
     return emitError() << "arm.tensor do not support dimensions = 0";
-  if (std::any_of(shape.begin(), shape.end(),
-                  [](int64_t dim) { return dim < 0; }) &&
-      std::any_of(shape.begin(), shape.end(),
-                  [](int64_t dim) { return dim > 0; }))
+  if (llvm::any_of(shape, [](int64_t dim) { return dim < 0; }) &&
+      llvm::any_of(shape, [](int64_t dim) { return dim > 0; }))
     return emitError()
            << "arm.tensor shape dimensions must be either fully dynamic or "
               "completed shaped";

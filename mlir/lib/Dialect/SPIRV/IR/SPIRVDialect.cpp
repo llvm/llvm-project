@@ -194,8 +194,8 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
           << t.getNumElements();
       return Type();
     }
-  } else if (auto t = llvm::dyn_cast<TensorArmType>(type)) {
-    if (!llvm::isa<ScalarType>(t.getElementType())) {
+  } else if (auto t = dyn_cast<TensorArmType>(type)) {
+    if (!isa<ScalarType>(t.getElementType())) {
       parser.emitError(
           typeLoc, "only scalar element type allowed in tensor type but found ")
           << t.getElementType();
@@ -385,24 +385,22 @@ static Type parseTensorArmType(SPIRVDialect const &dialect,
     unranked = true;
     if (parser.parseXInDimensionList())
       return {};
-  } else if (parser.parseDimensionList(dims, /*allowDynamic=*/true))
+  } else if (parser.parseDimensionList(dims, /*allowDynamic=*/true)) {
     return {};
+  }
 
   if (!unranked && dims.empty()) {
     parser.emitError(countLoc, "arm.tensors do not support rank zero");
     return {};
   }
 
-  if (std::any_of(dims.begin(), dims.end(),
-                  [](int64_t dim) { return dim == 0; })) {
+  if (llvm::is_contained(dims, 0)) {
     parser.emitError(countLoc, "arm.tensors do not support zero dimensions");
     return {};
   }
 
-  if (std::any_of(dims.begin(), dims.end(),
-                  [](int64_t dim) { return dim < 0; }) &&
-      std::any_of(dims.begin(), dims.end(),
-                  [](int64_t dim) { return dim > 0; })) {
+  if (llvm::any_of(dims, [](int64_t dim) { return dim < 0; }) &&
+      llvm::any_of(dims, [](int64_t dim) { return dim > 0; })) {
     parser.emitError(countLoc, "arm.tensor shape dimensions must be either "
                                "fully dynamic or completed shaped");
     return {};

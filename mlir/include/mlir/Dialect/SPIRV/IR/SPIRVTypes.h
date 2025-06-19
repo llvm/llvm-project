@@ -97,8 +97,8 @@ public:
   std::optional<int64_t> getSizeInBytes();
 };
 
-// SPIR-V composite type: TensorArmType, VectorType, SPIR-V ArrayType, or SPIR-V
-// StructType.
+// SPIR-V composite type: VectorType, SPIR-V ArrayType, SPIR-V
+// StructType, or SPIR-V TensorArmType.
 class CompositeType : public SPIRVType {
 public:
   using SPIRVType::SPIRVType;
@@ -479,7 +479,7 @@ public:
                        std::optional<StorageClass> storage = std::nullopt);
 };
 
-// SPIR-V TensorARM Type
+/// SPIR-V TensorARM Type
 class TensorArmType
     : public Type::TypeBase<TensorArmType, CompositeType,
                             detail::TensorArmTypeStorage, ShapedType::Trait> {
