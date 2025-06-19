@@ -388,7 +388,7 @@ struct MatchableInfo {
     StringRef Token;
 
     /// The unique class instance this operand should match.
-    ClassInfo *Class;
+    ClassInfo *Class = nullptr;
 
     /// The operand name this is, if anything.
     StringRef SrcOpName;
@@ -397,18 +397,17 @@ struct MatchableInfo {
     StringRef OrigSrcOpName;
 
     /// The suboperand index within SrcOpName, or -1 for the entire operand.
-    int SubOpIdx;
+    int SubOpIdx = -1;
 
     /// Whether the token is "isolated", i.e., it is preceded and followed
     /// by separators.
     bool IsIsolatedToken;
 
     /// Register record if this token is singleton register.
-    const Record *SingletonReg;
+    const Record *SingletonReg = nullptr;
 
     explicit AsmOperand(bool IsIsolatedToken, StringRef T)
-        : Token(T), Class(nullptr), SubOpIdx(-1),
-          IsIsolatedToken(IsIsolatedToken), SingletonReg(nullptr) {}
+        : Token(T), IsIsolatedToken(IsIsolatedToken) {}
   };
 
   /// ResOperand - This represents a single operand in the result instruction

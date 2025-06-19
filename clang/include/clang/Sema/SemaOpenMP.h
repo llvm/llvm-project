@@ -283,7 +283,7 @@ public:
   /// mapper' construct.
   QualType ActOnOpenMPDeclareMapperType(SourceLocation TyLoc,
                                         TypeResult ParsedType);
-  /// Called on start of '#pragma omp declare mapper'.
+  /// Called for '#pragma omp declare mapper'.
   DeclGroupPtrTy ActOnOpenMPDeclareMapperDirective(
       Scope *S, DeclContext *DC, DeclarationName Name, QualType MapperType,
       SourceLocation StartLoc, DeclarationName VN, AccessSpecifier AS,

@@ -17,6 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -151,5 +152,18 @@ std::optional<uint32_t> MCAsmInfo::getSpecifierForName(StringRef Name) const {
 }
 
 void MCAsmInfo::printExpr(raw_ostream &OS, const MCExpr &Expr) const {
-  Expr.print(OS, this);
+  if (auto *SE = dyn_cast<MCSpecifierExpr>(&Expr))
+    printSpecifierExpr(OS, *SE);
+  else
+    Expr.print(OS, this);
+}
+
+bool MCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &E,
+                                          MCValue &Res,
+                                          const MCAssembler *Asm) const {
+  if (!E.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+
+  Res.setSpecifier(E.getSpecifier());
+  return !Res.getSubSym();
 }

@@ -73,7 +73,7 @@ static cl::opt<AArch64PAuth::AuthCheckMethod>
                                cl::values(AUTH_CHECK_METHOD_CL_VALUES_LR));
 
 static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
-    "aarch64-min-jump-table-entries", cl::init(13), cl::Hidden,
+    "aarch64-min-jump-table-entries", cl::init(10), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on AArch64"));
 
 static cl::opt<unsigned> AArch64StreamingHazardSize(

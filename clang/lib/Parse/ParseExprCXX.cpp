@@ -1234,8 +1234,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       if (Tok.is(tok::kw___noinline__)) {
         IdentifierInfo *AttrName = Tok.getIdentifierInfo();
         SourceLocation AttrNameLoc = ConsumeToken();
-        Attributes.addNew(AttrName, AttrNameLoc, /*ScopeName=*/nullptr,
-                          AttrNameLoc, /*ArgsUnion=*/nullptr,
+        Attributes.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(),
+                          /*ArgsUnion=*/nullptr,
                           /*numArgs=*/0, tok::kw___noinline__);
       } else if (Tok.is(tok::kw___attribute))
         ParseGNUAttributes(Attributes, /*LatePArsedAttrList=*/nullptr, &D);

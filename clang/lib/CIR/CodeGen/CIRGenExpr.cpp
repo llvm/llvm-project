@@ -219,7 +219,7 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
       const mlir::Value vector =
           builder.createLoad(loc, dst.getVectorAddress());
       const mlir::Value newVector = builder.create<cir::VecInsertOp>(
-          loc, vector, src.getScalarVal(), dst.getVectorIdx());
+          loc, vector, src.getValue(), dst.getVectorIdx());
       builder.createStore(loc, newVector, dst.getVectorAddress());
       return;
     }
@@ -232,7 +232,7 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
   assert(!cir::MissingFeatures::opLoadStoreObjC());
 
   assert(src.isScalar() && "Can't emit an aggregate store with this method");
-  emitStoreOfScalar(src.getScalarVal(), dst, isInit);
+  emitStoreOfScalar(src.getValue(), dst, isInit);
 }
 
 static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
@@ -949,7 +949,7 @@ LValue CIRGenFunction::emitCallExprLValue(const CallExpr *e) {
          "Can't have a scalar return unless the return type is a "
          "reference type!");
 
-  return makeNaturalAlignPointeeAddrLValue(rv.getScalarVal(), e->getType());
+  return makeNaturalAlignPointeeAddrLValue(rv.getValue(), e->getType());
 }
 
 LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
@@ -1056,7 +1056,8 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
     bool isPredefinedLibFunction =
         cgm.getASTContext().BuiltinInfo.isPredefinedLibFunction(builtinID);
-    bool hasAttributeNoBuiltin = false;
+    // Assume nobuiltins everywhere until we actually read the attributes.
+    bool hasAttributeNoBuiltin = true;
     assert(!cir::MissingFeatures::attributeNoBuiltin());
 
     // When directing calling an inline builtin, call it through it's mangled
@@ -1688,4 +1689,15 @@ mlir::Value CIRGenFunction::emitScalarConstant(
     return {};
   }
   return builder.getConstant(getLoc(e->getSourceRange()), constant.getValue());
+}
+
+/// An LValue is a candidate for having its loads and stores be made atomic if
+/// we are operating under /volatile:ms *and* the LValue itself is volatile and
+/// performing such an operation can be performed without a libcall.
+bool CIRGenFunction::isLValueSuitableForInlineAtomic(LValue lv) {
+  if (!cgm.getLangOpts().MSVolatile)
+    return false;
+
+  cgm.errorNYI("LValueSuitableForInlineAtomic LangOpts MSVolatile");
+  return false;
 }
