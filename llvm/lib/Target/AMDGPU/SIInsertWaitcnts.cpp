@@ -104,24 +104,25 @@ struct HardwareLimits {
   unsigned KmcntMax;     // gfx12+ only.
 };
 
-#define AMDGPU_DECLARE_WAIT_EVENTS(DECL)                                    \
-  DECL(VMEM_ACCESS)              /* vmem read & write */                    \
-  DECL(VMEM_READ_ACCESS)         /* vmem read */                            \
-  DECL(VMEM_SAMPLER_READ_ACCESS) /* vmem SAMPLER read (gfx12+ only) */      \
-  DECL(VMEM_BVH_READ_ACCESS)     /* vmem BVH read (gfx12+ only) */          \
-  DECL(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */       \
-  DECL(SCRATCH_WRITE_ACCESS)     /* vmem write that may be scratch */       \
-  DECL(LDS_ACCESS)               /* lds read & write */                     \
-  DECL(GDS_ACCESS)               /* gds read & write */                     \
-  DECL(SQ_MESSAGE)               /* send message */                         \
-  DECL(SMEM_ACCESS)              /* scalar-memory read & write */           \
-  DECL(EXP_GPR_LOCK)             /* export holding on its data src */       \
-  DECL(GDS_GPR_LOCK)             /* GDS holding on its data and addr src */ \
-  DECL(EXP_POS_ACCESS)           /* write to export position */             \
-  DECL(EXP_PARAM_ACCESS)         /* write to export parameter */            \
-  DECL(VMW_GPR_LOCK)             /* vmem write holding on its data src */   \
+#define AMDGPU_DECLARE_WAIT_EVENTS(DECL)                                       \
+  DECL(VMEM_ACCESS)              /* vmem read & write */                       \
+  DECL(VMEM_READ_ACCESS)         /* vmem read */                               \
+  DECL(VMEM_SAMPLER_READ_ACCESS) /* vmem SAMPLER read (gfx12+ only) */         \
+  DECL(VMEM_BVH_READ_ACCESS)     /* vmem BVH read (gfx12+ only) */             \
+  DECL(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */          \
+  DECL(SCRATCH_WRITE_ACCESS)     /* vmem write that may be scratch */          \
+  DECL(LDS_ACCESS)               /* lds read & write */                        \
+  DECL(GDS_ACCESS)               /* gds read & write */                        \
+  DECL(SQ_MESSAGE)               /* send message */                            \
+  DECL(SMEM_ACCESS)              /* scalar-memory read & write */              \
+  DECL(EXP_GPR_LOCK)             /* export holding on its data src */          \
+  DECL(GDS_GPR_LOCK)             /* GDS holding on its data and addr src */    \
+  DECL(EXP_POS_ACCESS)           /* write to export position */                \
+  DECL(EXP_PARAM_ACCESS)         /* write to export parameter */               \
+  DECL(VMW_GPR_LOCK)             /* vmem write holding on its data src */      \
   DECL(EXP_LDS_ACCESS)           /* read by ldsdir counting as export */
 
+// clang-format off
 #define AMDGPU_EVENT_ENUM(Name) Name,
 enum WaitEventType {
   AMDGPU_DECLARE_WAIT_EVENTS(AMDGPU_EVENT_ENUM)
@@ -134,6 +135,7 @@ static constexpr StringLiteral WaitEventTypeName[] = {
   AMDGPU_DECLARE_WAIT_EVENTS(AMDGPU_EVENT_NAME)
 };
 #undef AMDGPU_EVENT_NAME
+// clang-format on
 
 // The mapping is:
 //  0                .. SQ_MAX_PGM_VGPRS-1               real VGPRs
