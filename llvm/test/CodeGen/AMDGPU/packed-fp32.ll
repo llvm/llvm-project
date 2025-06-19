@@ -3068,7 +3068,7 @@ define amdgpu_kernel void @add_vector_neg_bitcast_scalar_lo(ptr addrspace(1) %ou
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s3
-; GFX1250-SDAG-NEXT:    ds_load_2addr_b32 v[0:1], v0 offset1:1
+; GFX1250-SDAG-NEXT:    ds_load_b64 v[0:1], v0
 ; GFX1250-SDAG-NEXT:    ds_load_b32 v2, v2
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3] op_sel_hi:[1,0] neg_lo:[0,1] neg_hi:[0,1]
@@ -3080,7 +3080,7 @@ define amdgpu_kernel void @add_vector_neg_bitcast_scalar_lo(ptr addrspace(1) %ou
 ; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v2, s3
-; GFX1250-GISEL-NEXT:    ds_load_2addr_b32 v[0:1], v0 offset1:1
+; GFX1250-GISEL-NEXT:    ds_load_b64 v[0:1], v0
 ; GFX1250-GISEL-NEXT:    ds_load_b32 v2, v2
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    v_max_num_f32_e64 v2, -v2, -v2
@@ -3163,8 +3163,8 @@ define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo_scalar_hi(ptr addrspa
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v6, 0 :: v_dual_mov_b32 v2, s2
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v5, s3
-; GFX1250-SDAG-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
-; GFX1250-SDAG-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset0:2 offset1:3
+; GFX1250-SDAG-NEXT:    ds_load_b64 v[0:1], v2
+; GFX1250-SDAG-NEXT:    ds_load_b64 v[2:3], v2 offset:8
 ; GFX1250-SDAG-NEXT:    ds_load_b32 v4, v5
 ; GFX1250-SDAG-NEXT:    ds_load_b32 v5, v5 offset:8
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
@@ -3177,8 +3177,8 @@ define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo_scalar_hi(ptr addrspa
 ; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v5, s3
-; GFX1250-GISEL-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
-; GFX1250-GISEL-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset0:2 offset1:3
+; GFX1250-GISEL-NEXT:    ds_load_b64 v[0:1], v2
+; GFX1250-GISEL-NEXT:    ds_load_b64 v[2:3], v2 offset:8
 ; GFX1250-GISEL-NEXT:    ds_load_b32 v4, v5
 ; GFX1250-GISEL-NEXT:    ds_load_b32 v5, v5 offset:8
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
