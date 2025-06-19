@@ -1719,6 +1719,22 @@ void OmpStructureChecker::Leave(const parser::OpenMPDepobjConstruct &x) {
 void OmpStructureChecker::Enter(const parser::OpenMPRequiresConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_requires);
+
+  if (visitedAtomicSource_.empty()) {
+    return;
+  }
+  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
+  for (const parser::OmpClause &clause : clauseList.v) {
+    llvm::omp::Clause id{clause.Id()};
+    if (id == llvm::omp::Clause::OMPC_atomic_default_mem_order) {
+      parser::MessageFormattedText txt(
+          "REQUIRES directive with '%s' clause found lexically after atomic operation without a memory order clause"_err_en_US,
+          parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
+      parser::Message message(clause.source, txt);
+      message.Attach(visitedAtomicSource_, "Previous atomic construct"_en_US);
+      context_.Say(std::move(message));
+    }
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPRequiresConstruct &) {
@@ -4056,6 +4072,9 @@ void OmpStructureChecker::CheckAtomicUpdate(
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
+  if (visitedAtomicSource_.empty())
+    visitedAtomicSource_ = x.source;
+
   // All of the following groups have the "exclusive" property, i.e. at
   // most one clause from each group is allowed.
   // The exclusivity-checking code should eventually be unified for all
