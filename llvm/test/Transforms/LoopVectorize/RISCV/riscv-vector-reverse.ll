@@ -214,7 +214,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.memcheck>:
 ; CHECK-NEXT:    IR %11 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    IR %12 = mul i64 %11, 4
+; CHECK-NEXT:    IR %12 = mul nuw i64 %11, 4
 ; CHECK-NEXT:    IR %13 = mul i64 %12, 4
 ; CHECK-NEXT:    IR %14 = sub i64 %B1, %A2
 ; CHECK-NEXT:    IR %diff.check = icmp ult i64 %14, %13
@@ -222,11 +222,11 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.ph>:
 ; CHECK-NEXT:    IR %15 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    IR %16 = mul i64 %15, 4
+; CHECK-NEXT:    IR %16 = mul nuw i64 %15, 4
 ; CHECK-NEXT:    IR %n.mod.vf = urem i64 %0, %16
 ; CHECK-NEXT:    IR %n.vec = sub i64 %0, %n.mod.vf
 ; CHECK-NEXT:    IR %17 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    IR %18 = mul i64 %17, 4
+; CHECK-NEXT:    IR %18 = mul nuw i64 %17, 4
 ; CHECK-NEXT:    vp<%1> = DERIVED-IV ir<%0> + ir<%n.vec> * ir<-1>
 ; CHECK-NEXT:    vp<%2> = DERIVED-IV ir<%n> + ir<%n.vec> * ir<-1>
 ; CHECK-NEXT:  Successor(s): vector.body
@@ -279,7 +279,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  for.body.preheader: ; preds = %entry
 ; CHECK-NEXT:    %0 = zext i32 %n to i64
 ; CHECK-NEXT:    %1 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    %2 = mul i64 %1, 4
+; CHECK-NEXT:    %2 = mul nuw i64 %1, 4
 ; CHECK-NEXT:    %min.iters.check = icmp ult i64 %0, %2
 ; CHECK-NEXT:    br i1 %min.iters.check, label %scalar.ph, label %vector.scevcheck
 ; CHECK-NEXT:  LV: vectorizing VPBB:ir-bb<vector.scevcheck> in BB:vector.scevcheck
@@ -302,7 +302,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: filled BB:
 ; CHECK-NEXT:  vector.memcheck: ; preds = %vector.scevcheck
 ; CHECK-NEXT:    %11 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    %12 = mul i64 %11, 4
+; CHECK-NEXT:    %12 = mul nuw i64 %11, 4
 ; CHECK-NEXT:    %13 = mul i64 %12, 4
 ; CHECK-NEXT:    %14 = sub i64 %B1, %A2
 ; CHECK-NEXT:    %diff.check = icmp ult i64 %14, %13
@@ -312,11 +312,11 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: filled BB:
 ; CHECK-NEXT:  vector.ph: ; preds = %vector.memcheck
 ; CHECK-NEXT:    %15 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    %16 = mul i64 %15, 4
+; CHECK-NEXT:    %16 = mul nuw i64 %15, 4
 ; CHECK-NEXT:    %n.mod.vf = urem i64 %0, %16
 ; CHECK-NEXT:    %n.vec = sub i64 %0, %n.mod.vf
 ; CHECK-NEXT:    %17 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    %18 = mul i64 %17, 4
+; CHECK-NEXT:    %18 = mul nuw i64 %17, 4
 ; CHECK-NEXT:    %19 = sub i64 %0, %n.vec
 ; CHECK-NEXT:    %.cast = trunc i64 %n.vec to i32
 ; CHECK-NEXT:    %20 = sub i32 %n, %.cast
@@ -623,7 +623,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.memcheck>:
 ; CHECK-NEXT:    IR %11 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    IR %12 = mul i64 %11, 4
+; CHECK-NEXT:    IR %12 = mul nuw i64 %11, 4
 ; CHECK-NEXT:    IR %13 = mul i64 %12, 4
 ; CHECK-NEXT:    IR %14 = sub i64 %B1, %A2
 ; CHECK-NEXT:    IR %diff.check = icmp ult i64 %14, %13
@@ -631,11 +631,11 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.ph>:
 ; CHECK-NEXT:    IR %15 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    IR %16 = mul i64 %15, 4
+; CHECK-NEXT:    IR %16 = mul nuw i64 %15, 4
 ; CHECK-NEXT:    IR %n.mod.vf = urem i64 %0, %16
 ; CHECK-NEXT:    IR %n.vec = sub i64 %0, %n.mod.vf
 ; CHECK-NEXT:    IR %17 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    IR %18 = mul i64 %17, 4
+; CHECK-NEXT:    IR %18 = mul nuw i64 %17, 4
 ; CHECK-NEXT:    vp<%1> = DERIVED-IV ir<%0> + ir<%n.vec> * ir<-1>
 ; CHECK-NEXT:    vp<%2> = DERIVED-IV ir<%n> + ir<%n.vec> * ir<-1>
 ; CHECK-NEXT:  Successor(s): vector.body
@@ -688,7 +688,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  for.body.preheader: ; preds = %entry
 ; CHECK-NEXT:    %0 = zext i32 %n to i64
 ; CHECK-NEXT:    %1 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    %2 = mul i64 %1, 4
+; CHECK-NEXT:    %2 = mul nuw i64 %1, 4
 ; CHECK-NEXT:    %min.iters.check = icmp ult i64 %0, %2
 ; CHECK-NEXT:    br i1 %min.iters.check, label %scalar.ph, label %vector.scevcheck
 ; CHECK-NEXT:  LV: vectorizing VPBB:ir-bb<vector.scevcheck> in BB:vector.scevcheck
@@ -711,7 +711,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: filled BB:
 ; CHECK-NEXT:  vector.memcheck: ; preds = %vector.scevcheck
 ; CHECK-NEXT:    %11 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    %12 = mul i64 %11, 4
+; CHECK-NEXT:    %12 = mul nuw i64 %11, 4
 ; CHECK-NEXT:    %13 = mul i64 %12, 4
 ; CHECK-NEXT:    %14 = sub i64 %B1, %A2
 ; CHECK-NEXT:    %diff.check = icmp ult i64 %14, %13
@@ -721,11 +721,11 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: filled BB:
 ; CHECK-NEXT:  vector.ph: ; preds = %vector.memcheck
 ; CHECK-NEXT:    %15 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    %16 = mul i64 %15, 4
+; CHECK-NEXT:    %16 = mul nuw i64 %15, 4
 ; CHECK-NEXT:    %n.mod.vf = urem i64 %0, %16
 ; CHECK-NEXT:    %n.vec = sub i64 %0, %n.mod.vf
 ; CHECK-NEXT:    %17 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    %18 = mul i64 %17, 4
+; CHECK-NEXT:    %18 = mul nuw i64 %17, 4
 ; CHECK-NEXT:    %19 = sub i64 %0, %n.vec
 ; CHECK-NEXT:    %.cast = trunc i64 %n.vec to i32
 ; CHECK-NEXT:    %20 = sub i32 %n, %.cast
