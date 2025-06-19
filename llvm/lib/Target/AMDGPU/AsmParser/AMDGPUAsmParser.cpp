@@ -3002,9 +3002,8 @@ struct RegInfo {
 };
 
 static constexpr RegInfo RegularRegisters[] = {
-    {{"v"}, IS_VGPR},   {{"s"}, IS_SGPR},  {{"ttmp"}, IS_TTMP},
-    {{"acc"}, IS_AGPR}, {{"a"}, IS_AGPR},  {{"idx"}, IS_IDX_REG},
-    {{"g1"}, IS_VGPR},  {{"g2"}, IS_VGPR}, {{"g3"}, IS_VGPR}};
+    {{"v"}, IS_VGPR},   {{"s"}, IS_SGPR}, {{"ttmp"}, IS_TTMP},
+    {{"acc"}, IS_AGPR}, {{"a"}, IS_AGPR}, {{"idx"}, IS_IDX_REG}};
 
 static bool isRegularReg(RegisterKind Kind) {
   return Kind == IS_VGPR || Kind == IS_SGPR || Kind == IS_TTMP ||
@@ -3036,6 +3035,8 @@ AMDGPUAsmParser::isRegister(const AsmToken &Token,
   // A single register like s0 or a range of registers like s[0:1]
 
   StringRef Str = Token.getString();
+  if (Str == "g1" || Str == "g2" || Str == "g3")
+    return true;
   const RegInfo *Reg = getRegularRegInfo(Str);
   if (Reg) {
     StringRef RegName = Reg->Name;
@@ -3191,17 +3192,22 @@ MCRegister AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
   StringRef RegName = getTokenStr();
   auto Loc = getLoc();
 
-  const RegInfo *RI = getRegularRegInfo(RegName);
-  if (!RI) {
-    Error(Loc, "invalid register name");
-    return MCRegister();
+  StringRef RegSuffix = "";
+  if (RegName == "g1" || RegName == "g2" || RegName == "g3") {
+    RegKind = IS_VGPR;
+  } else {
+    const RegInfo *RI = getRegularRegInfo(RegName);
+    if (!RI) {
+      Error(Loc, "invalid register name");
+      return MCRegister();
+    }
+    RegKind = RI->Kind;
+    RegSuffix = RegName.substr(RI->Name.size());
   }
 
   Tokens.push_back(getToken());
   lex(); // skip register name
 
-  RegKind = RI->Kind;
-  StringRef RegSuffix = RegName.substr(RI->Name.size());
   unsigned SubReg = NoSubRegister;
   if (!RegSuffix.empty()) {
     if (RegSuffix.consume_back(".l"))
@@ -4943,10 +4949,15 @@ bool AMDGPUAsmParser::validateRegOperands(const MCInst &Inst,
     if (!Op->isReg())
       continue;
     unsigned Reg = Op->getReg();
-    if (!isGFX13Plus() && AMDGPU::isVGPR(Reg, MRI) &&
-        AMDGPU::getHWRegIndex(Reg, MRI) > 255) {
-      Error(getRegLoc(Reg, Operands), "register index is out of range");
-      return false;
+    if (AMDGPU::isVGPR(Reg, MRI)) {
+      unsigned RegIdx = AMDGPU::getHWRegIndex(Reg, MRI);
+      unsigned RegWidth =
+          getRegBitWidth(getVGPRPhysRegClass(Reg, MRI)->getID());
+      if (RegIdx >= 0x100 ||
+          (!isGFX1250Plus() && RegIdx + RegWidth / 32 > 0x100)) {
+        Error(getRegLoc(Reg, Operands), "register index is out of range");
+        return false;
+      }
     }
   }
   return true;
