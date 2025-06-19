@@ -725,7 +725,7 @@ entry:
 
 define void @sincos_f32_value_is_different_constexpr(ptr addrspace(1) nocapture writeonly %sin_out, ptr addrspace(1) nocapture writeonly %cos_out) {
 ; CHECK-LABEL: define void @sincos_f32_value_is_different_constexpr
-; CHECK-SAME: (ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[SIN_OUT:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[COS_OUT:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: (ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[SIN_OUT:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[COS_OUT:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call contract float @_Z3sinf(float bitcast (i32 ptrtoint (ptr @func to i32) to float))
 ; CHECK-NEXT:    store float [[CALL]], ptr addrspace(1) [[SIN_OUT]], align 4
@@ -881,7 +881,7 @@ entry:
 
 define float @sincos_f32_unused_result_cos(float %x) {
 ; CHECK-LABEL: define float @sincos_f32_unused_result_cos
-; CHECK-SAME: (float [[X:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: (float [[X:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SIN:%.*]] = tail call contract float @_Z3sinf(float [[X]])
 ; CHECK-NEXT:    ret float [[SIN]]
@@ -896,7 +896,7 @@ entry:
 
 define float @sincos_f32_unused_result_sin(float %x) {
 ; CHECK-LABEL: define float @sincos_f32_unused_result_sin
-; CHECK-SAME: (float [[X:%.*]]) local_unnamed_addr #[[ATTR7]] {
+; CHECK-SAME: (float [[X:%.*]]) local_unnamed_addr #[[ATTR6]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COS:%.*]] = tail call contract float @_Z3cosf(float [[X]])
 ; CHECK-NEXT:    ret float [[COS]]
@@ -911,7 +911,7 @@ entry:
 
 define void @sincos_f32_repeated_uses(float %x, ptr addrspace(1) %sin_out, ptr addrspace(1) %cos_out) {
 ; CHECK-LABEL: define void @sincos_f32_repeated_uses
-; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) [[SIN_OUT:%.*]], ptr addrspace(1) [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR8:[0-9]+]] {
+; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) [[SIN_OUT:%.*]], ptr addrspace(1) [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])

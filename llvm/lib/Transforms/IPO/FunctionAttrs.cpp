@@ -2063,6 +2063,7 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
                               SmallSet<Function *, 8> &Changed,
                               bool NoFunctionsAddressIsTaken) {
   // Try and identify functions that do not recurse.
+
   // If the SCC contains multiple nodes we know for sure there is recursion.
   if (SCCNodes.size() != 1)
     return;
