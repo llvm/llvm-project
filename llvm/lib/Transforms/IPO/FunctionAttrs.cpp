@@ -2094,18 +2094,16 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
         if (Callee->doesNotRecurse())
           continue;
 
-        if (Callee->isDeclaration()) {
-          if (Callee->hasFnAttribute(Attribute::NoCallback) ||
-              NoFunctionsAddressIsTaken)
-            continue;
-          return;
-        } else if (F->hasAddressTaken() || !F->hasLocalLinkage()) {
-          // Control reaches here only for callees which are defined in this
-          // module and do not satisfy conditions for norecurse attribute.
-          // In such a case, if function F has external linkage or address
-          // taken, conversatively avoid adding norecurse.
-          return;
-        }
+        // If there are no functions with external linkage and none of the
+        // functions' address is taken, it ensures that this Callee does not
+        // have any path leading back to the Caller F.
+        // The 'NoFunctionsAddressIsTaken' flag is only set during post-link
+        // LTO phase after examining all available function definitions.
+        if (NoFunctionsAddressIsTaken ||
+            (Callee->isDeclaration() &&
+             Callee->hasFnAttribute(Attribute::NoCallback)))
+          continue;
+        return;
       }
     }
   }
@@ -2330,10 +2328,11 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
   }
 
   bool NoFunctionsAddressIsTaken = false;
-  // Check if any function in the whole program has its address taken.
+  // Check if any function in the whole program has its address taken or has
+  // potentially external linkage.
   // We use this information when inferring norecurse attribute: If there is
-  // no function whose address is taken, we conclude that any external function
-  // cannot callback into any user function.
+  // no function whose address is taken and all functions have internal
+  // linkage, there is no path for a callback to any user function.
   if (IsLTOPostLink) {
     bool AnyFunctionsAddressIsTaken = false;
     // Get the parent Module of the Function
@@ -2344,6 +2343,12 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
       if (F.isDeclaration())
         continue;
 
+      // If the function is already marked as norecurse, this should not block
+      // norecurse inference even though it may have external linkage.
+      // For ex: main() in C++.
+      if (F.doesNotRecurse())
+        continue;
+
       if (!F.hasLocalLinkage() || F.hasAddressTaken()) {
         AnyFunctionsAddressIsTaken = true;
         break; // break if we found one
@@ -2351,6 +2356,7 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
     }
     NoFunctionsAddressIsTaken = !AnyFunctionsAddressIsTaken;
   }
+
   auto ChangedFunctions = deriveAttrsInPostOrder(
       Functions, AARGetter, ArgAttrsOnly, NoFunctionsAddressIsTaken);
 
