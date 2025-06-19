@@ -26,6 +26,7 @@ jobs:
   check-clang-python:
     # Build libclang and then run the libclang Python binding's unit tests.
     name: Build and run Python unit tests
+    runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     strategy:
       fail-fast: false
