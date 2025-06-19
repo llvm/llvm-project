@@ -1599,6 +1599,15 @@ def HasVendorXAndesPerf
       AssemblerPredicate<(all_of FeatureVendorXAndesPerf),
                          "'XAndesPerf' (Andes Performance Extension)">;
 
+def FeatureVendorXAndesVBFHCvt
+    : RISCVExtension<5, 0, "Andes Vector BFLOAT16 Conversion Extension",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXAndesVBFHCvt
+    : Predicate<"Subtarget->hasVendorXAndesVBFHCvt()">,
+      AssemblerPredicate<(all_of FeatureVendorXAndesVBFHCvt),
+                         "'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)">;
+
+
 def FeatureVendorXAndesVPackFPH
     : RISCVExtension<5, 0, "Andes Vector Packed FP16 Extension",
                      [FeatureStdExtZvfhmin]>;
