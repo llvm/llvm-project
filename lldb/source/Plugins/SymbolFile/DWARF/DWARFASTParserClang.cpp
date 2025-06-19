@@ -163,8 +163,9 @@ static bool TagIsRecordType(dw_tag_t tag) {
 /// a default DWARFDIE. If \c containing_decl_ctx is not a valid
 /// C++ declaration context for class methods, assume no object
 /// parameter exists for the given \c subprogram.
-static DWARFDIE GetCXXObjectParameter(const DWARFDIE &subprogram,
-                                      const DWARFDIE &decl_ctx_die) {
+DWARFDIE
+DWARFASTParserClang::GetCXXObjectParameter(const DWARFDIE &subprogram,
+                                           const DWARFDIE &decl_ctx_die) {
   assert(subprogram);
   assert(subprogram.Tag() == DW_TAG_subprogram ||
          subprogram.Tag() == DW_TAG_inlined_subroutine ||
