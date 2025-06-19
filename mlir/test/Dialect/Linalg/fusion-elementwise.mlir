@@ -115,21 +115,25 @@ func.func @map_ops_mixed_types(%arg0: tensor<8xf32>, %arg1: tensor<8xf32>) -> te
 
 // -----
 
-func.func @elementwise_ops(%in1: tensor<8xf32>, %in2: tensor<8xf32>) -> tensor<8xf32> {
-    %fill = tensor.empty() : tensor<8xf32>
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#bcast = affine_map<(d0, d1) -> (d0)>
+func.func @elementwise_ops(%in1: tensor<8xf32>, %in2: tensor<8x10xf32>) -> tensor<8x10xf32> {
+    %fill = tensor.empty() : tensor<8x10xf32>
     %add = linalg.elementwise
       kind=#linalg.elementwise_kind<add>
-      ins(%in1, %in2: tensor<8xf32>, tensor<8xf32>) outs(%fill: tensor<8xf32>) -> tensor<8xf32>
-    %wqrt = linalg.elementwise
+      indexing_maps = [#bcast, #identity, #identity]
+      ins(%in1, %in2: tensor<8xf32>, tensor<8x10xf32>) outs(%fill: tensor<8x10xf32>) -> tensor<8x10xf32>
+    %sqrt = linalg.elementwise
       kind=#linalg.elementwise_kind<sqrt>
-      ins(%add : tensor<8xf32>) outs(%fill : tensor<8xf32>) -> tensor<8xf32>
-    return %wqrt : tensor<8xf32>
+      indexing_maps = [#identity, #identity]
+      ins(%add : tensor<8x10xf32>) outs(%fill : tensor<8x10xf32>) -> tensor<8x10xf32>
+    return %sqrt : tensor<8x10xf32>
 }
 
 // CHECK-LABEL: func @elementwise_ops
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: tensor<8xf32>
-//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: tensor<8xf32>
-//       CHECK:   %[[EMPTY:.+]] = tensor.empty() : tensor<8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: tensor<8x10xf32>
+//       CHECK:   %[[EMPTY:.+]] = tensor.empty() : tensor<8x10xf32>
 //       CHECK:   %[[FUSED_OP:.+]] = linalg.generic
 //  CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] : {{.*}}) outs(%[[EMPTY]] :
 //  CHECK-NEXT:   ^bb0(%[[IN0:.*]]: f32, %[[IN1:.*]]: f32, %[[OUT:.*]]: f32):
