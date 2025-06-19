@@ -1165,18 +1165,18 @@ public:
   __insert_unique_from_orphaned_node(const_iterator __p, __get_node_value_type_t<_Tp>&& __value) {
     using __key_type = typename _NodeTypes::key_type;
     // fails here for move_alloc.pass.cpp
-    // if(std::is_constant_evaluated()) {
-    //   using __node_value_type = __get_node_value_type_t<_Tp>;
-    //   // __node_value_type tmp {__value.first, __value.second};
-    //   // __value.~__node_value_type();
-    //   // new (std::addressof(__value))(__node_value_type)(tmp);
-    //   // __emplace_hint_unique(__p, tmp);
-    //   __key_type kk;
-    //   new (std::addressof(kk))(__key_type)(__value.first);
-    //   __emplace_hint_unique(__p, std::move(kk), std::move(__value.second));
-    // } else {
+    if(__libcpp_is_constant_evaluated()) {
+
+      // __node_allocator& __na = __value.__node_alloc();
+      // __node_traits::destroy(__na, std::addressof(__lhs));
+      // __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
+      __key_type __kk;
+      new (std::addressof(__kk))(__key_type)(__value.first);
+      // __node_traits::construct(__na, std::addressof(__kk), std::move(__value.first));
+      __emplace_hint_unique(__p, std::move(__kk), std::move(__value.second));
+    } else {
     __emplace_hint_unique(__p, const_cast<__key_type&&>(__value.first), std::move(__value.second));
-    // }
+    }
   }
 
   template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type<_ValueT>::value, int> = 0>
@@ -1374,19 +1374,17 @@ private:
   __assign_value(__get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
     using __key_type = typename _NodeTypes::key_type;
 
-    if (std::is_constant_evaluated()) {
-      __get_node_value_type_t<value_type>
-      // pair< typename std::remove_const<value_type::first_type>::type, typename value_type::second_type > 
-      tmp {__rhs.first, __rhs.second};
-      tmp.first = const_cast<__copy_cvref_t<_From, __key_type>&&>(__rhs.first);
-      tmp.second                         = std::forward<_From>(__rhs).second;
-      // __lhs = pair<const int, double>
-      using __node_value_type = __get_node_value_type_t<value_type>;
+    if (__libcpp_is_constant_evaluated()) {
+      __get_node_value_type_t<value_type> __tmp {__rhs.first, __rhs.second};
       // const_cast is not allowed at constexpr time.
       // we get around this by deleting and creating a new node value
-      // __lhs.~__node_value_type();
-      // new (std::addressof(__lhs))(__node_value_type)(std::move(tmp));
-      __lhs = std::move(tmp);
+      __lhs.~__node_value_type();
+      // todo: use __node_traits::construct
+      // __node_allocator& __na = __lhs.__node_alloc();
+      // __node_allocator& __na = __rhs.__node_alloc();
+      // __node_traits::destroy(__na, std::addressof(__lhs));
+      // __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
+      new (std::addressof(__lhs))(__node_value_type)(std::move(__tmp));
     } else {
       // This is technically UB, since the object was constructed as `const`.
       // Clang doesn't optimize on this currently though.
