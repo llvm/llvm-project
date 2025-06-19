@@ -282,6 +282,7 @@ private:
     // Function return is a pseudo-instruction that needs to be expanded
     PM.add(createAArch64ExpandPseudoPass());
   }
+};
 
 } // namespace
 
