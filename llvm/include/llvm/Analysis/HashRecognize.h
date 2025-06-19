@@ -66,10 +66,6 @@ struct PolynomialInfo {
   // Set to true in the case of big-endian.
   bool ByteOrderSwapped;
 
-  // A function_ref to generate the Sarwate lookup-table, which can be used to
-  // optimize CRC in the absence of target-specific instructions.
-  function_ref<CRCTable(const APInt &, bool)> GenSarwateTable;
-
   // An optional auxiliary checksum that augments the LHS. In the case of CRC,
   // it is XOR'ed with the LHS, so that the computation's final remainder is
   // zero.
@@ -77,7 +73,6 @@ struct PolynomialInfo {
 
   PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
                  Value *ComputedValue, bool ByteOrderSwapped,
-                 function_ref<CRCTable(const APInt &, bool)> GenSarwateTable,
                  Value *LHSAux = nullptr);
 };
 
@@ -92,6 +87,10 @@ public:
   // The main analysis entry points.
   std::variant<PolynomialInfo, ErrBits, StringRef> recognizeCRC() const;
   std::optional<PolynomialInfo> getResult() const;
+
+  // Auxilary entry point after analysis to interleave the generating polynomial
+  // and return a 256-entry CRC table.
+  static CRCTable genSarwateTable(const APInt &GenPoly, bool ByteOrderSwapped);
 
   void print(raw_ostream &OS) const;
 

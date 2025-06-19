@@ -442,13 +442,11 @@ getRecurrences(BasicBlock *LoopLatch, const PHINode *IndVar, const Loop &L) {
   return std::make_pair(SimpleRecurrence, ConditionalRecurrence);
 }
 
-PolynomialInfo::PolynomialInfo(
-    unsigned TripCount, Value *LHS, const APInt &RHS, Value *ComputedValue,
-    bool ByteOrderSwapped,
-    function_ref<CRCTable(const APInt &, bool)> GenSarwateTable, Value *LHSAux)
+PolynomialInfo::PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
+                               Value *ComputedValue, bool ByteOrderSwapped,
+                               Value *LHSAux)
     : TripCount(TripCount), LHS(LHS), RHS(RHS), ComputedValue(ComputedValue),
-      ByteOrderSwapped(ByteOrderSwapped), GenSarwateTable(GenSarwateTable),
-      LHSAux(LHSAux) {}
+      ByteOrderSwapped(ByteOrderSwapped), LHSAux(LHSAux) {}
 
 /// In the big-endian case, checks the bottom N bits against CheckFn, and that
 /// the rest are unknown. In the little-endian case, checks the top N bits
@@ -473,7 +471,8 @@ static bool checkExtractBits(const KnownBits &Known, unsigned N,
 /// Generate a lookup table of 256 entries by interleaving the generating
 /// polynomial. The optimization technique of table-lookup for CRC is also
 /// called the Sarwate algorithm.
-static CRCTable genSarwateTable(const APInt &GenPoly, bool ByteOrderSwapped) {
+CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
+                                        bool ByteOrderSwapped) {
   unsigned BW = GenPoly.getBitWidth();
   CRCTable Table;
   Table[0] = APInt::getZero(BW);
@@ -626,7 +625,7 @@ HashRecognize::recognizeCRC() const {
 
   Value *LHSAux = SimpleRecurrence ? SimpleRecurrence.Start : nullptr;
   return PolynomialInfo(TC, ConditionalRecurrence.Start, GenPoly, ComputedValue,
-                        *ByteOrderSwapped, genSarwateTable, LHSAux);
+                        *ByteOrderSwapped, LHSAux);
 }
 
 void CRCTable::print(raw_ostream &OS) const {
@@ -680,7 +679,7 @@ void HashRecognize::print(raw_ostream &OS) const {
     OS << "\n";
   }
   OS.indent(2) << "Computed CRC lookup table:\n";
-  Info.GenSarwateTable(Info.RHS, Info.ByteOrderSwapped).print(OS);
+  genSarwateTable(Info.RHS, Info.ByteOrderSwapped).print(OS);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
