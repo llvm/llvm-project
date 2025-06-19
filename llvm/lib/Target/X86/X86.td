@@ -1334,10 +1334,14 @@ def ProcessorFeatures {
 
 
   // Clearwaterforest
-  list<SubtargetFeature> CWFAdditionalFeatures = [FeatureCLDEMOTE,
+  list<SubtargetFeature> CWFAdditionalFeatures = [FeaturePREFETCHI,
+                                                  FeatureAVXVNNIINT16,
+                                                  FeatureSHA512,
+                                                  FeatureSM3,
+                                                  FeatureSM4,
                                                   FeatureUSERMSR];
   list<SubtargetFeature> CWFFeatures =
-    !listconcat(PTLFeatures, CWFAdditionalFeatures);
+    !listconcat(SRFFeatures, CWFAdditionalFeatures);
 
   // Knights Landing
   list<SubtargetFeature> KNLFeatures = [FeatureX87,
