@@ -870,6 +870,8 @@ public:
   /// returning the result.
   mlir::Value emitComplexExpr(const Expr *e);
 
+  LValue emitComplexAssignmentLValue(const BinaryOperator *e);
+
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
   void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
