@@ -1,4 +1,5 @@
-# RUN: llvm-objdump -d %p/Inputs/riscv64-ar-coverage | FileCheck %s
+# RUN: %clang --target=fuchsia-elf-riscv64 -march=rv64gc_zcb %s -nostdlib -o %t
+# RUN: llvm-objdump -d %t | FileCheck %s
 
 # CHECK: 0000000000001000 <_start>:
 # CHECK-NEXT:     1000: 00001517     	auipc	a0, 0x1
