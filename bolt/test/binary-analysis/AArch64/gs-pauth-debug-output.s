@@ -223,7 +223,7 @@ nocfg:
 // PAUTH-NEXT:     SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI{{[ \t]*$}}
 // CHECK-NEXT:   Found RET inst:     00000000:         ret # Offset: 8 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: >
 // CHECK-NEXT:     RetReg: LR
-// CHECK-NEXT:     SafeToDerefRegs:{{[ \t]*$}}
+// CHECK-NEXT:     SafeToDerefRegs: LR W30 W30_HI{{[ \t]*$}}
 
         .globl  auth_oracle
         .type   auth_oracle,@function
