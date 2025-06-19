@@ -69,80 +69,100 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
     }
     for (auto &I : make_range(MBB.getFirstNonPHI(), MBB.end())) {
 
-      // We to support the RENAIMED set to avoid replacing the registers
-      // which were not renamed in uses!
+      // 1. if UseMask > DefMask => search names stack to construct REG_SEQUENCE
+      // 2. if UseMask < DefMask => search names stack for the corresponding
+      // sub-register def. Replace reg in use only if VReg found != current VReg
+      // in use!
+      // 3. UseMask == DefMask => just replace the reg if the reg found !=
+      // current reg in use
       for (auto &Op : I.uses()) {
         if (Op.isReg() && Op.getReg().isVirtual() &&
             Renamed.contains(Op.getReg())) {
+          bool RewriteOp = true;
           unsigned VReg = Op.getReg();
           assert(!VregNames[VReg].empty() &&
                  "Error: use does not dominated by definition!\n");
-          CurVRegInfo VRInfo = VregNames[VReg].back();
-          unsigned CurVReg = VRInfo.CurName;
-          // Does it meet the TODO above ?
-          if (CurVReg == VReg)
-            continue;
-          unsigned DefSubregIdx = VRInfo.PrevSubRegIdx;
-          LaneBitmask DefMask = VRInfo.PrevMask;
-          MachineInstr *DefMI = VregNames[VReg].back().DefMI;
-          MachineOperand *DefOp = DefMI->findRegisterDefOperand(CurVReg,
-          TRI);
-
-          // LaneBitmask DefMask = getOperandLaneMask(*DefOp);
-          dbgs() << "Def mask : " << PrintLaneMask(DefMask) << "\n";
+          SmallVector<std::tuple<unsigned, unsigned, unsigned>> RegSeqOps;
           LaneBitmask UseMask = getOperandLaneMask(Op, TRI, MRI);
           dbgs() << "Use mask : " << PrintLaneMask(UseMask) << "\n";
-          LaneBitmask UndefSubRegs = UseMask & ~DefMask;
-          dbgs() << "UndefSubRegs: " << PrintLaneMask(UndefSubRegs) << "\n";
-
+          LaneBitmask UndefSubRegs = UseMask;
           unsigned SubRegIdx = AMDGPU::NoRegister;
-          
-          if (UndefSubRegs.any()) {
-            // The closest Def defines not all the subregs used here!
-            SmallVector<std::tuple<unsigned, unsigned, unsigned>> RegSeqOps;
+          dbgs() << "Looking for appropriate definiton...\n";
+          Register CurVReg = AMDGPU::NoRegister;
+          VRegDefStack VregDefs = VregNames[VReg];
+          VRegDefStack::reverse_iterator It = VregDefs.rbegin();
+          for (; It != VregDefs.rend(); ++It) {
+            CurVRegInfo VRInfo = *It;
+            dbgs() << "Def:\n";
+            CurVReg = VRInfo.CurName;
+            MachineInstr *DefMI = VRInfo.DefMI;
+            MachineOperand *DefOp = DefMI->findRegisterDefOperand(CurVReg, TRI);
+            dbgs() << "DefMI: " << *DefMI << "\n";
+            dbgs() << "Operand: " << *DefOp << "\n";
+            LaneBitmask DefMask = VRInfo.PrevMask;
+            dbgs() << "Def mask : " << PrintLaneMask(DefMask) << "\n";
 
-            RegSeqOps.push_back({CurVReg, DefOp->getSubReg(), DefSubregIdx});
+            LaneBitmask DefinedLanes = (UndefSubRegs & DefMask) & UseMask;
+            dbgs() << "Defined lanes: " << PrintLaneMask(DefinedLanes)
+                   << "\n";
 
-            VRegDefStack VregDefs = VregNames[VReg];
+            if (DefinedLanes == UseMask) {
+              // All lanes used here are defined by this def.
+              if (CurVReg == VReg && Op.getSubReg() == DefOp->getSubReg()) {
+                // Need nothing - bail out.
+                RewriteOp = false;
+                break;
+              }
+              SubRegIdx = DefOp->getSubReg();
+              if ((DefMask | UseMask) != UseMask) {
+                // Definition defines more lanes then used. Need su register
+                // index;
+                SubRegIdx = getSubRegIndexForLaneMask(UseMask, TRI);
+              }
+              break;
+            }
 
-            VRegDefStack::reverse_iterator It = ++VregDefs.rbegin();
-            for (; It != VregDefs.rend(); ++It) {
-              // auto CurDef = It->CurDefMI;
-              auto R = It->CurName;
-              // auto CurDefOp = CurDef->findRegisterDefOperand(R, TRI);
-              LaneBitmask DefMask = It->PrevMask;
-              dbgs() << "Lanes defined for VReg before renaming : "
-                     << PrintLaneMask(DefMask) << "\n";
-              LaneBitmask CurDefinedBits = DefMask & UndefSubRegs;
-              dbgs() << "Defined bits are : " << PrintLaneMask(CurDefinedBits)
-                     << "\n";
- 
-              if (unsigned SubRegIdx = getSubRegIndexForLaneMask(CurDefinedBits, TRI))
-                RegSeqOps.push_back({R, SubRegIdx, SubRegIdx});
-              // clear subregs for which definition is found
-              UndefSubRegs &= ~CurDefinedBits;
+            if (DefinedLanes.any()) {
+              // Current definition defines some of the lanes used here.
+              RegSeqOps.push_back({CurVReg, DefOp->getSubReg(), It->PrevSubRegIdx});
+              UndefSubRegs = UseMask & ~DefMask;
               dbgs() << "UndefSubRegs: " << PrintLaneMask(UndefSubRegs) << "\n";
               if (UndefSubRegs.none())
                 break;
+            } else {
+              // The current definition does not define any of the lanes used
+              // here. Continue to search for the definition.
+              dbgs() << "No lanes defined by this def!\n";
+              continue;
             }
+          }
+
+          if (!RegSeqOps.empty()) {
             // All subreg defs are found. Insert REG_SEQUENCE.
-            auto *RC = TRI->getRegClassForOperandReg(*MRI, Op);
+            auto *RC = TRI->getRegClassForReg(*MRI, VReg);
             CurVReg = MRI->createVirtualRegister(RC);
-            auto RS = BuildMI(MBB, I, I.getDebugLoc(), TII->get(AMDGPU::REG_SEQUENCE),
-                    CurVReg);
+            auto RS = BuildMI(MBB, I, I.getDebugLoc(),
+                              TII->get(AMDGPU::REG_SEQUENCE), CurVReg);
             for (auto O : RegSeqOps) {
               auto [R, SrcSubreg, DstSubreg] = O;
               RS.addReg(R, 0, SrcSubreg);
               RS.addImm(DstSubreg);
             }
-          } else {
-            if ((DefMask | UseMask) != UseMask) {
-              SubRegIdx = getSubRegIndexForLaneMask(UseMask & DefMask, TRI);
-            }
+            VregNames[VReg].push_back(
+                {CurVReg, getFullMaskForRC(*RC, TRI), AMDGPU::NoRegister, RS});
           }
-          Op.setReg(CurVReg);
-          Op.setSubReg(SubRegIdx);
-        }
+
+          assert(CurVReg != AMDGPU::NoRegister &&
+                 "Use is not dominated by definition!\n");
+
+          if (RewriteOp) {
+            Op.setReg(CurVReg);
+            Op.setSubReg(SubRegIdx);
+          }
+
+          dbgs() << "Rewriting use: " << Op << " to " << CurVReg
+                 << " with subreg: " << SubRegIdx << "\n";
+          }
       }
 
       for (auto &Op : I.defs()) {
@@ -196,6 +216,9 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
       renameVRegs(*ChildMBB);
     }
 
+    // FIXME: Instead of poping the names VregNames need to be passed to the
+    // recursion by value. This makes the names stack valid on exit from the
+    // recursion!
     for (auto &I : MBB) {
       for (auto Op : I.defs()) {
         if (Op.getReg().isVirtual()) {

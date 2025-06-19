@@ -55,15 +55,15 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
 
   // return existing stack slot if any or assigns the new one
   unsigned assignVirt2StackSlot(VRegMaskPair VMP) {
-    assert(VMP.VReg.isVirtual());
+    assert(VMP.getVReg().isVirtual());
     if (Virt2StackSlotMap.contains(VMP))
       return Virt2StackSlotMap[VMP];
-    const TargetRegisterClass *RC = MRI->getRegClass(VMP.VReg);
+    const TargetRegisterClass *RC = MRI->getRegClass(VMP.getVReg());
     return Virt2StackSlotMap[VMP] = createSpillSlot(RC);
   }
 
   unsigned getStackSlot(VRegMaskPair VMP) {
-    assert(VMP.VReg.isVirtual());
+    assert(VMP.getVReg().isVirtual());
     return Virt2StackSlotMap[VMP];
   }
 
@@ -151,11 +151,7 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   unsigned limit(MachineBasicBlock &MBB, RegisterSet &Active, RegisterSet &Spilled,
              MachineBasicBlock::iterator I, unsigned Limit);
 
-  unsigned getSizeInRegs(const VRegMaskPair VMP);
-  unsigned getSizeInRegs(const RegisterSet VRegs);
-
-  const TargetRegisterClass *getRegClassForVregMaskPair(VRegMaskPair VMP,
-                                                        unsigned &SubRegIdx);
+  unsigned getRegSetSizeInRegs(const RegisterSet VRegs);
 
   bool takeReg(Register R) {
     return ((IsVGPRsPass && TRI->isVGPR(*MRI, R)) ||
@@ -177,11 +173,13 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
     SmallVector<VRegMaskPair> Tmp(VRegs.takeVector());
     sort(Tmp, SortByDist);
     VRegs.insert(Tmp.begin(), Tmp.end());
-    LLVM_DEBUG(dbgs() << "\nActive set sorted at " << *I;
-    for (auto P : VRegs) {
-      printVRegMaskPair(P);
-      dbgs() << " : " << M[P] << "\n";
-    });
+    LLVM_DEBUG(dbgs() << "\nActive set sorted at ";
+               if (BlockEnd) dbgs() << "end of MBB_" << MBB.getNumber() << "."
+                                    << MBB.getName() << "\n";
+               else dbgs() << *I; for (auto P : VRegs) {
+                 printVRegMaskPair(P);
+                 dbgs() << " : " << M[P] << "\n";
+               });
   }
 
   // Fills Active until reaches the NumAvailableRegs. If @Capacity is passed
@@ -225,14 +223,14 @@ AMDGPUSSASpiller::dumpRegSet(SetVector<VRegMaskPair> VMPs) {
 
 LLVM_ATTRIBUTE_NOINLINE void
 AMDGPUSSASpiller::printVRegMaskPair(const VRegMaskPair P) {
-  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, P.VReg);
+  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, P.getVReg());
   LaneBitmask FullMask = getFullMaskForRC(*RC, TRI);
   dbgs() << "Vreg: [";
-  if (P.LaneMask == FullMask) {
-    dbgs() << printReg(P.VReg) << "] ";
+  if (P.getLaneMask() == FullMask) {
+    dbgs() << printReg(P.getVReg()) << "] ";
   } else {
-    unsigned SubRegIndex = getSubRegIndexForLaneMask(P.LaneMask, TRI);
-    dbgs() << printReg(P.VReg, TRI, SubRegIndex, MRI) << "] ";
+    unsigned SubRegIndex = getSubRegIndexForLaneMask(P.getLaneMask(), TRI);
+    dbgs() << printReg(P.getVReg(), TRI, SubRegIndex, MRI) << "] ";
   }
 }
 
@@ -366,7 +364,7 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
     
     limit(MBB, Active, Spilled, I, NumAvailableRegs);
     unsigned NSpills = limit(MBB, Active, Spilled, std::next(I),
-           NumAvailableRegs - getSizeInRegs(Defs));
+           NumAvailableRegs - getRegSetSizeInRegs(Defs));
 
     // T4->startTimer();
 
@@ -377,7 +375,7 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
       LLVM_DEBUG(dbgs() << "\nReloading "; printVRegMaskPair(R);
                  dbgs() << "\n");
       Register NewVReg = reloadBefore(MBB, I, R);
-      rewriteUses(MBB, R.VReg, NewVReg);
+      rewriteUses(MBB, R.getVReg(), NewVReg);
     }
 
     std::advance(I, NSpills);
@@ -552,7 +550,7 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
 
       for (auto R : ReloadInPred) {
         Register NewVReg = reloadAtEnd(*Pred, R);
-        rewriteUses(*Pred, R.VReg, NewVReg);
+        rewriteUses(*Pred, R.getVReg(), NewVReg);
       }
     }
 
@@ -652,7 +650,7 @@ void AMDGPUSSASpiller::initActiveSetLoopHeader(MachineBasicBlock &MBB) {
   MachineLoop *L = LI.getLoopFor(&MBB);
   for (auto B : L->blocks()) {
     RegisterSet Tmp = NU.usedInBlock(*B);
-    Tmp.remove_if([&](VRegMaskPair P) { return !takeReg(P.VReg); });
+    Tmp.remove_if([&](VRegMaskPair P) { return !takeReg(P.getVReg()); });
     LLVM_DEBUG(dbgs() << "\nBlock " << B->getName()
                       << " is part of the loop. Used in block: ";
                dumpRegSet(Tmp));
@@ -689,30 +687,6 @@ void AMDGPUSSASpiller::initActiveSetLoopHeader(MachineBasicBlock &MBB) {
              dumpRegSet(getBlockInfo(MBB).ActiveSet));
 }
 
-const TargetRegisterClass *
-AMDGPUSSASpiller::getRegClassForVregMaskPair(VRegMaskPair VMP,
-                                             unsigned &SubRegIdx) {
-  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VMP.VReg);
-  LaneBitmask Mask = getFullMaskForRC(*RC, TRI);
-  if (VMP.LaneMask != Mask) {
-    unsigned SubRegIdx = getSubRegIndexForLaneMask(VMP.LaneMask, TRI);
-    RC = TRI->getSubRegisterClass(RC, SubRegIdx);
-  }
-
-  // if (!VMP.LaneMask.all()) {
-  //   SmallVector<unsigned> Idxs;
-  //   if (TRI->getCoveringSubRegIndexes(*MRI, RC, VMP.LaneMask, Idxs)) {
-  //     SubRegIdx = Idxs[0];
-  //     // FIXME:  Idxs.size() - 1 ?
-  //     for (unsigned i = 1; i < Idxs.size() - 1; i++)
-  //       SubRegIdx = TRI->composeSubRegIndices(SubRegIdx, Idxs[i]);
-  //     RC = TRI->getSubRegisterClass(RC, SubRegIdx);
-  //   }
-  // }
-
-  return RC;
-}
-
 Register AMDGPUSSASpiller::reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP) {
   return reloadBefore(MBB, MBB.getFirstInstrTerminator(), VMP);
 }
@@ -724,8 +698,7 @@ void AMDGPUSSASpiller::spillAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP) {
 Register AMDGPUSSASpiller::reloadBefore(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator InsertBefore,
                                     VRegMaskPair VMP) {
-  unsigned SubRegIdx = 0;
-  const TargetRegisterClass *RC = getRegClassForVregMaskPair(VMP, SubRegIdx);
+  const TargetRegisterClass *RC = VMP.getRegClass(MRI, TRI);
   int FI = getStackSlot(VMP);
   Register NewVReg = MRI->createVirtualRegister(RC);
   TII->loadRegFromStackSlot(MBB, InsertBefore, NewVReg, FI, RC, TRI, NewVReg);
@@ -742,30 +715,18 @@ Register AMDGPUSSASpiller::reloadBefore(MachineBasicBlock &MBB,
 void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator InsertBefore,
                                    VRegMaskPair VMP) {
-  unsigned SubRegIdx = getSubRegIndexForLaneMask(VMP.LaneMask, TRI);
-  const TargetRegisterClass *RC = getRegClassForVregMaskPair(VMP, SubRegIdx);
+  unsigned SubRegIdx = getSubRegIndexForLaneMask(VMP.getLaneMask(), TRI);
+  const TargetRegisterClass *RC = VMP.getRegClass(MRI, TRI);
 
   int FI = assignVirt2StackSlot(VMP);
-  TII->storeRegToStackSlot(MBB, InsertBefore, VMP.VReg, true, FI, RC, TRI,
-                           VMP.VReg, SubRegIdx);
+  TII->storeRegToStackSlot(MBB, InsertBefore, VMP.getVReg(), true, FI, RC, TRI,
+                           VMP.getVReg(), SubRegIdx);
   // FIXME: dirty hack! To avoid further changing the TargetInstrInfo interface.
   MachineInstr &Spill = *(--InsertBefore);
   LIS.InsertMachineInstrInMaps(Spill);
 
-  if (LIS.hasInterval(VMP.VReg)) {
-    
-    LIS.removeInterval(VMP.VReg);
-
-    // LiveInterval &LI = LIS.getInterval(VMP.VReg);
-    // SlotIndex KillIdx = LIS.getInstructionIndex(Spill);
-    // auto LR = LI.find(KillIdx);
-    // if (LR != LI.end()) {
-    //   SlotIndex Start = LR->start;
-    //   SlotIndex End = LR->end;
-    //   if (Start < KillIdx) {
-    //     LI.removeSegment(KillIdx, End);
-    //   }
-    // }
+  if (LIS.hasInterval(VMP.getVReg())) {
+    LIS.removeInterval(VMP.getVReg());
   }
   SpillPoints[VMP] = &Spill;
 }
@@ -825,7 +786,7 @@ unsigned AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
   LLVM_DEBUG(dbgs() << "\n\"limit\": Active set after DEAD VRegs removed:\n";
              dumpRegSet(Active));
 
-  unsigned CurRP = getSizeInRegs(Active);
+  unsigned CurRP = getRegSetSizeInRegs(Active);
   if (CurRP <= Limit) {
     // T2->stopTimer();
     return NumSpills;
@@ -838,27 +799,29 @@ unsigned AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
 
   while (CurRP > Limit) {
     auto P = Active.pop_back_val();
-    unsigned RegSize = getSizeInRegs(P);
+    unsigned RegSize = P.getSizeInRegs(MRI, TRI);
     unsigned SizeToSpill = CurRP - Limit;
     if (RegSize > SizeToSpill) {
 
-      LaneBitmask ActiveMask = P.LaneMask;
+      LaneBitmask ActiveMask = P.getLaneMask();
 
-      SmallVector<VRegMaskPair> Sorted = NU.getSortedSubregUses(I, P);
+      SmallVector<VRegMaskPair> Sorted = I == MBB.end()
+                                             ? NU.getSortedSubregUses(MBB, P)
+                                             : NU.getSortedSubregUses(I, P);
 
       for (auto S : Sorted) {
-        unsigned Size = getSizeInRegs(S);
+        unsigned Size = S.getSizeInRegs(MRI, TRI);
         CurRP -= Size;
         if (!Spilled.contains(S))
           ToSpill.insert(S);
-        ActiveMask &= (~S.LaneMask);
+        ActiveMask &= (~S.getLaneMask());
         if (CurRP == Limit)
           break;
       }
 
       if (ActiveMask.any()) {
         // Insert the remaining part of the P to the Active set.
-        VRegMaskPair Q(P.VReg, ActiveMask);
+        VRegMaskPair Q(P.getVReg(), ActiveMask);
         // printVRegMaskPair(Q);
         Active.insert(Q);
       }
@@ -895,16 +858,16 @@ unsigned AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
   return NumSpills;
 }
 
-unsigned AMDGPUSSASpiller::getSizeInRegs(const VRegMaskPair VMP) {
-  unsigned SubRegIdx = 0;
-  const TargetRegisterClass *RC = getRegClassForVregMaskPair(VMP, SubRegIdx);
-  return TRI->getRegClassWeight(RC).RegWeight;
-}
 
-unsigned AMDGPUSSASpiller::getSizeInRegs(const RegisterSet VRegs) {
+
+
+
+unsigned AMDGPUSSASpiller::getRegSetSizeInRegs(const RegisterSet VRegs) {
   unsigned Size = 0;
-  for (auto VMP : VRegs) {
-    Size += getSizeInRegs(VMP);
+  for (auto &VMP : VRegs) {
+    printVRegMaskPair(VMP);
+    dbgs() << "\n";
+    Size += VMP.getSizeInRegs(MRI, TRI);
   }
   return Size;
 }
@@ -913,10 +876,10 @@ unsigned AMDGPUSSASpiller::fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
                                          unsigned Capacity) {
   unsigned Limit = Capacity ? Capacity : NumAvailableRegs;
   auto &Active = RegisterMap[MBB.getNumber()].ActiveSet;
-  unsigned Size = Capacity ? 0 : getSizeInRegs(Active);
+  unsigned Size = Capacity ? 0 : getRegSetSizeInRegs(Active);
   sortRegSetAt(MBB, MBB.getFirstNonPHI(), S);
   for (auto VMP : S) {
-    unsigned RSize = getSizeInRegs(VMP);
+    unsigned RSize = VMP.getSizeInRegs(MRI, TRI);
     if (Size + RSize <= Limit) {
       Active.insert(VMP);
       Size += RSize;
@@ -930,8 +893,8 @@ bool AMDGPUSSASpiller::isCoveredActive(VRegMaskPair VMP,
   // printVRegMaskPair(VMP);
   // dumpRegSet(Active);
   for (auto P : Active) {
-    if (P.VReg == VMP.VReg) {
-      return (P.LaneMask & VMP.LaneMask) == VMP.LaneMask;
+    if (P.getVReg() == VMP.getVReg()) {
+      return (P.getLaneMask() & VMP.getLaneMask()) == VMP.getLaneMask();
     }
   }
   return false;

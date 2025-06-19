@@ -17,6 +17,7 @@
 #include "SIRegisterInfo.h"
 #include "GCNSubtarget.h"
 #include "AMDGPUSSARAUtils.h"
+#include "VRegMaskPair.h"
 
 #include <algorithm>
 #include <limits>
@@ -26,55 +27,6 @@ using namespace llvm;
 
 // namespace {
 
-struct VRegMaskPair {
-public:
-  Register VReg;
-  LaneBitmask LaneMask;
-
-  VRegMaskPair(Register VReg, LaneBitmask LaneMask)
-      : VReg(VReg), LaneMask(LaneMask) {}
-
-  VRegMaskPair(const MachineOperand MO, const SIRegisterInfo *TRI, const MachineRegisterInfo *MRI) {
-    assert(MO.isReg() && "Not a register operand!");
-    Register R = MO.getReg();
-    const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, R);
-    assert(R.isVirtual() && "Not a virtual register!");
-    VReg = R;
-    LaneMask = getFullMaskForRC(*RC, TRI);
-    unsigned subRegIndex = MO.getSubReg();
-    if (subRegIndex) {
-      LaneMask = TRI->getSubRegIndexLaneMask(subRegIndex);
-    }
-  }
-
-  bool operator==(const VRegMaskPair &other) const {
-    return VReg == other.VReg && LaneMask == other.LaneMask;
-  }
-};
-
-template<>
-struct DenseMapInfo<VRegMaskPair> {
-  static inline VRegMaskPair getEmptyKey() {
-    return {Register(DenseMapInfo<unsigned>::getEmptyKey()),
-            LaneBitmask(0xFFFFFFFFFFFFFFFFULL)};
-  }
-
-  static inline VRegMaskPair getTombstoneKey() {
-    return { Register(DenseMapInfo<unsigned>::getTombstoneKey()),
-                    LaneBitmask(0xFFFFFFFFFFFFFFFEULL) };
-  }
-
-  static unsigned getHashValue(const VRegMaskPair &P) {
-    return DenseMapInfo<unsigned>::getHashValue(P.VReg.id()) ^
-           DenseMapInfo<uint64_t>::getHashValue(P.LaneMask.getAsInteger());
-  }
-
-  static bool isEqual(const VRegMaskPair &LHS, const VRegMaskPair &RHS) {
-    return DenseMapInfo<unsigned>::isEqual(LHS.VReg.id(), RHS.VReg.id()) &&
-           DenseMapInfo<uint64_t>::isEqual(LHS.LaneMask.getAsInteger(),
-                                           RHS.LaneMask.getAsInteger());
-  }
-};
 
 class NextUseResult {
   friend class AMDGPUNextUseAnalysisWrapper;
@@ -128,9 +80,9 @@ class NextUseResult {
     }
 
     bool insert(VRegMaskPair VMP, unsigned Dist) {
-      Record R(VMP.LaneMask, Dist);
-      if (NextUseMap.contains(VMP.VReg)) {
-        SortedRecords &Dists = NextUseMap[VMP.VReg];
+      Record R(VMP.getLaneMask(), Dist);
+      if (NextUseMap.contains(VMP.getVReg())) {
+        SortedRecords &Dists = NextUseMap[VMP.getVReg()];
 
         if (!Dists.contains(R)) {
           for (auto D : Dists) {
@@ -151,16 +103,16 @@ class NextUseResult {
           return false;
         }
       } else
-        return NextUseMap[VMP.VReg].insert(R).second;
+        return NextUseMap[VMP.getVReg()].insert(R).second;
     }
 
-    bool clear(VRegMaskPair VMP) {
-      if (NextUseMap.contains(VMP.VReg)) {
-        auto &Dists = NextUseMap[VMP.VReg];
-        remove_if(Dists,
-                  [&](Record R) { return (R.first &= ~VMP.LaneMask).none(); });
+    void clear(VRegMaskPair VMP) {
+      if (NextUseMap.contains(VMP.getVReg())) {
+        auto &Dists = NextUseMap[VMP.getVReg()];
+        std::erase_if(Dists,
+                  [&](Record R) { return (R.first &= ~VMP.getLaneMask()).none(); });
         if (Dists.empty())
-          NextUseMap.erase(VMP.VReg);
+          NextUseMap.erase(VMP.getVReg());
       }
     }
 
@@ -303,9 +255,13 @@ public:
   getSortedSubregUses(const MachineBasicBlock::iterator I,
                       const VRegMaskPair VMP);
 
-      bool isDead(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                  const VRegMaskPair VMP) {
-    if (!VMP.VReg.isVirtual())
+  SmallVector<VRegMaskPair>
+  getSortedSubregUses(const MachineBasicBlock &MBB,
+                      const VRegMaskPair VMP);
+
+  bool isDead(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+              const VRegMaskPair VMP) {
+    if (!VMP.getVReg().isVirtual())
       report_fatal_error("Only virtual registers allowed!\n", true);
     // FIXME: We use the same Infinity value to indicate both invalid distance
     // and too long for out of block values. It is okay if the use out of block
