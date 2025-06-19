@@ -5,8 +5,7 @@ define void @fmul_indexed_f16_256b(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fmul_indexed_f16_256b:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    dupq z1.h, z0.h[2]
-; CHECK-NEXT:    fmul z0.h, z0.h, z1.h
+; CHECK-NEXT:    fmul z0.h, z0.h, z0.h[2]
 ; CHECK-NEXT:    str z0, [x2]
 ; CHECK-NEXT:    ret
   %ld.a = load <16 x half>, ptr %a
@@ -55,10 +54,9 @@ define void @fmul_indexed_bf16_256b(ptr %a, ptr %b, ptr %c) #0 {
 define void @fmul_indexed_f32_256b(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fmul_indexed_f32_256b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x1]
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    dupq z0.s, z0.s[3]
-; CHECK-NEXT:    fmul z0.s, z0.s, z1.s
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
+; CHECK-NEXT:    fmul z0.s, z0.s, z1.s[3]
 ; CHECK-NEXT:    str z0, [x2]
 ; CHECK-NEXT:    ret
   %ld.a = load <8 x float>, ptr %a
@@ -73,10 +71,9 @@ define void @fmul_indexed_f32_256b(ptr %a, ptr %b, ptr %c) #0 {
 define void @fmul_indexed_f64_256b_trn1(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fmul_indexed_f64_256b_trn1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x1]
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    trn1 z0.d, z0.d, z0.d
-; CHECK-NEXT:    fmul z0.d, z0.d, z1.d
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
+; CHECK-NEXT:    fmul z0.d, z0.d, z1.d[0]
 ; CHECK-NEXT:    str z0, [x2]
 ; CHECK-NEXT:    ret
   %ld.a = load <4 x double>, ptr %a
@@ -90,10 +87,9 @@ define void @fmul_indexed_f64_256b_trn1(ptr %a, ptr %b, ptr %c) #0 {
 define void @fmul_indexed_f64_256b_trn2(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fmul_indexed_f64_256b_trn2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x1]
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    trn2 z0.d, z0.d, z0.d
-; CHECK-NEXT:    fmul z0.d, z1.d, z0.d
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
+; CHECK-NEXT:    fmul z0.d, z0.d, z1.d[1]
 ; CHECK-NEXT:    str z0, [x2]
 ; CHECK-NEXT:    ret
   %ld.a = load <4 x double>, ptr %a
@@ -109,10 +105,8 @@ define void @fmla_indexed_f16_256b(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ldr z1, [x2]
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    dupq z2.h, z0.h[2]
-; CHECK-NEXT:    fmad z0.h, p0/m, z2.h, z1.h
-; CHECK-NEXT:    str z0, [x2]
+; CHECK-NEXT:    fmla z1.h, z0.h, z0.h[2]
+; CHECK-NEXT:    str z1, [x2]
 ; CHECK-NEXT:    ret
   %ld.a = load <16 x half>, ptr %a
   %ld.b = load <16 x half>, ptr %b
@@ -179,13 +173,11 @@ define void @fmla_indexed_bf16_256b(ptr %a, ptr %b, ptr %c) #0 {
 define void @fmla_indexed_f32_256b(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fmla_indexed_f32_256b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x1]
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
 ; CHECK-NEXT:    ldr z2, [x2]
-; CHECK-NEXT:    dupq z0.s, z0.s[3]
-; CHECK-NEXT:    fmad z0.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    str z0, [x2]
+; CHECK-NEXT:    fmla z2.s, z0.s, z1.s[3]
+; CHECK-NEXT:    str z2, [x2]
 ; CHECK-NEXT:    ret
   %ld.a = load <8 x float>, ptr %a
   %ld.b = load <8 x float>, ptr %b
@@ -200,13 +192,11 @@ define void @fmla_indexed_f32_256b(ptr %a, ptr %b, ptr %c) #0 {
 define void @fmla_indexed_f64_256b_trn1(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fmla_indexed_f64_256b_trn1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x1]
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
 ; CHECK-NEXT:    ldr z2, [x2]
-; CHECK-NEXT:    trn1 z0.d, z0.d, z0.d
-; CHECK-NEXT:    fmad z0.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    str z0, [x2]
+; CHECK-NEXT:    fmla z2.d, z0.d, z1.d[0]
+; CHECK-NEXT:    str z2, [x2]
 ; CHECK-NEXT:    ret
   %ld.a = load <4 x double>, ptr %a
   %ld.b = load <4 x double>, ptr %b
@@ -220,13 +210,11 @@ define void @fmla_indexed_f64_256b_trn1(ptr %a, ptr %b, ptr %c) #0 {
 define void @fmla_indexed_f64_256b_trn2(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fmla_indexed_f64_256b_trn2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x1]
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
 ; CHECK-NEXT:    ldr z2, [x2]
-; CHECK-NEXT:    trn2 z0.d, z0.d, z0.d
-; CHECK-NEXT:    fmad z0.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    str z0, [x2]
+; CHECK-NEXT:    fmla z2.d, z0.d, z1.d[1]
+; CHECK-NEXT:    str z2, [x2]
 ; CHECK-NEXT:    ret
   %ld.a = load <4 x double>, ptr %a
   %ld.b = load <4 x double>, ptr %b
@@ -242,10 +230,8 @@ define void @fmls_indexed_f16_256b(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ldr z1, [x2]
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    dupq z2.h, z0.h[2]
-; CHECK-NEXT:    fmsb z0.h, p0/m, z2.h, z1.h
-; CHECK-NEXT:    str z0, [x2]
+; CHECK-NEXT:    fmls z1.h, z0.h, z0.h[2]
+; CHECK-NEXT:    str z1, [x2]
 ; CHECK-NEXT:    ret
   %ld.a = load <16 x half>, ptr %a
   %ld.b = load <16 x half>, ptr %b
@@ -314,13 +300,11 @@ define void @fmls_indexed_bf16_256b(ptr %a, ptr %b, ptr %c) #0 {
 define void @fmls_indexed_f32_256b(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fmls_indexed_f32_256b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x1]
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
 ; CHECK-NEXT:    ldr z2, [x2]
-; CHECK-NEXT:    dupq z0.s, z0.s[3]
-; CHECK-NEXT:    fmsb z0.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    str z0, [x2]
+; CHECK-NEXT:    fmls z2.s, z0.s, z1.s[3]
+; CHECK-NEXT:    str z2, [x2]
 ; CHECK-NEXT:    ret
   %ld.a = load <8 x float>, ptr %a
   %ld.b = load <8 x float>, ptr %b
@@ -336,13 +320,11 @@ define void @fmls_indexed_f32_256b(ptr %a, ptr %b, ptr %c) #0 {
 define void @fmls_indexed_f64_256b_trn1(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fmls_indexed_f64_256b_trn1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x1]
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
 ; CHECK-NEXT:    ldr z2, [x2]
-; CHECK-NEXT:    trn1 z0.d, z0.d, z0.d
-; CHECK-NEXT:    fmsb z0.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    str z0, [x2]
+; CHECK-NEXT:    fmls z2.d, z0.d, z1.d[0]
+; CHECK-NEXT:    str z2, [x2]
 ; CHECK-NEXT:    ret
   %ld.a = load <4 x double>, ptr %a
   %ld.b = load <4 x double>, ptr %b
@@ -357,13 +339,11 @@ define void @fmls_indexed_f64_256b_trn1(ptr %a, ptr %b, ptr %c) #0 {
 define void @fmls_indexed_f64_256b_trn2(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fmls_indexed_f64_256b_trn2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x1]
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
 ; CHECK-NEXT:    ldr z2, [x2]
-; CHECK-NEXT:    trn2 z0.d, z0.d, z0.d
-; CHECK-NEXT:    fmsb z0.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    str z0, [x2]
+; CHECK-NEXT:    fmls z2.d, z0.d, z1.d[1]
+; CHECK-NEXT:    str z2, [x2]
 ; CHECK-NEXT:    ret
   %ld.a = load <4 x double>, ptr %a
   %ld.b = load <4 x double>, ptr %b
