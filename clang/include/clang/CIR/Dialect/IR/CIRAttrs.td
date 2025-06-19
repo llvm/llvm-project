@@ -42,6 +42,11 @@ class CIR_TypedAttr<string name, string attrMnemonic, list<Trait> traits = []>
   let assemblyFormat = [{}];
 }
 
+class CIR_I32EnumAttr<string name, string summary, list<I32EnumAttrCase> cases>
+    : I32EnumAttr<name, summary, cases> {
+  let cppNamespace = "::cir";
+}
+
 class CIRUnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
     : CIR_Attr<name, attrMnemonic, traits> {
   let returnType = "bool";
