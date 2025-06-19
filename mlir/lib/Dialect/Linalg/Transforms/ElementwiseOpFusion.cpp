@@ -230,22 +230,16 @@ static void generateFusedElementwiseOpRegion(
   Block &producerBlock = producer->getRegion(0).front();
   if (producer.getOpOperandsMatchingBBargs() ==
       producer.getDpsInputOperands()) {
-    for (auto init : producer.getDpsInits()) {
-      Type bbType = isa<ShapedType>(init.getType())
-                        ? cast<ShapedType>(init.getType()).getElementType()
-                        : init.getType();
-      producerBlock.addArgument(bbType, producer.getLoc());
-    }
+    for (auto init : producer.getDpsInits())
+      producerBlock.addArgument(getElementTypeOrSelf(init.getType()),
+                                producer.getLoc());
   }
   Block &consumerBlock = consumer->getRegion(0).front();
   if (consumer.getOpOperandsMatchingBBargs() ==
       consumer.getDpsInputOperands()) {
-    for (auto init : consumer.getDpsInits()) {
-      Type bbType = isa<ShapedType>(init.getType())
-                        ? cast<ShapedType>(init.getType()).getElementType()
-                        : init.getType();
-      consumerBlock.addArgument(bbType, consumer.getLoc());
-    }
+    for (auto init : consumer.getDpsInits())
+      consumerBlock.addArgument(getElementTypeOrSelf(init.getType()),
+                                consumer.getLoc());
   }
   OpBuilder::InsertionGuard guard(rewriter);
   Block *fusedBlock = rewriter.createBlock(&fusedOp->getRegion(0));
