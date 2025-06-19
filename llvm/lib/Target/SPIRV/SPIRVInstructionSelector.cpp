@@ -346,9 +346,9 @@ bool sampledTypeIsSignedInteger(const llvm::Type *HandleType) {
   if (TET->getTargetExtName() == "spirv.Image") {
     return false;
   }
-  assert(TET->getTargetExtName() == "spirv.SignedImage") {
-    return TET->getTypeParameter(0)->isIntegerTy();
-  }
+  assert(TET->getTargetExtName() == "spirv.SignedImage");
+  return TET->getTypeParameter(0)->isIntegerTy();
+}
 } // end anonymous namespace
 
 #define GET_GLOBALISEL_IMPL
