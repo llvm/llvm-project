@@ -1423,9 +1423,18 @@ static uint64_t getSVETypeSize(ASTContext &Context, const BuiltinType *Ty,
 
 bool SemaARM::areCompatibleSveTypes(QualType FirstType, QualType SecondType) {
   bool IsStreaming = false;
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true))
+  if (const FunctionDecl *FD =
+          SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
+    // For streaming-compatible functions, we don't know vector length.
+    if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
+      if (T->getAArch64SMEAttributes() &
+          FunctionType::SME_PStateSMCompatibleMask)
+        return false;
+
     if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true))
       IsStreaming = true;
+  }
+
   auto IsValidCast = [&](QualType FirstType, QualType SecondType) {
     if (const auto *BT = FirstType->getAs<BuiltinType>()) {
       if (const auto *VT = SecondType->getAs<VectorType>()) {
@@ -1455,9 +1464,17 @@ bool SemaARM::areCompatibleSveTypes(QualType FirstType, QualType SecondType) {
 bool SemaARM::areLaxCompatibleSveTypes(QualType FirstType,
                                        QualType SecondType) {
   bool IsStreaming = false;
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true))
+  if (const FunctionDecl *FD =
+          SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
+    // For streaming-compatible functions, we don't know vector length.
+    if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
+      if (T->getAArch64SMEAttributes() &
+          FunctionType::SME_PStateSMCompatibleMask)
+        return false;
+
     if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true))
       IsStreaming = true;
+  }
 
   auto IsLaxCompatible = [&](QualType FirstType, QualType SecondType) {
     const auto *BT = FirstType->getAs<BuiltinType>();

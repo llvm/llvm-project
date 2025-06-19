@@ -51,3 +51,19 @@ __arm_locally_streaming void streaming_fixed() {
   *(volatile svbool_t*)0 = fb;
   *(volatile svbool_t*)0 = fb_wrong; // expected-error {{incompatible}}
 }
+
+void streaming_compatible() __arm_streaming_compatible {
+  gnu_fixed_int32_t fi_ns;
+  gnu_fixed_float32_t_streaming fi_s;
+  gnu_fixed_float32_t ff_ns;
+  gnu_fixed_float32_t_streaming ff_s;
+  gnu_fixed_bool_t fb_ns;
+  gnu_fixed_bool_t_streaming fb_s;
+  *(volatile svint32_t*)0 = fi_ns; // expected-error {{incompatible}}
+  *(volatile svint32_t*)0 = fi_s; // expected-error {{incompatible}}
+  *(volatile svfloat32_t*)0 = ff_ns; // expected-error {{incompatible}}
+  *(volatile svfloat32_t*)0 = ff_s; // expected-error {{incompatible}}
+  *(volatile svbool_t*)0 = fb_ns; // expected-error {{incompatible}}
+  *(volatile svbool_t*)0 = fb_s; // expected-error {{incompatible}}
+}
+
