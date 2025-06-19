@@ -137,7 +137,7 @@ define i16 @abd_ext_i16(i16 %a, i16 %b) nounwind {
 ; RV64I-LABEL: abd_ext_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    sub a0, a0, a1
@@ -228,7 +228,7 @@ define i16 @abd_ext_i16_undef(i16 %a, i16 %b) nounwind {
 ; RV64I-LABEL: abd_ext_i16_undef:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    sub a0, a0, a1
@@ -992,7 +992,7 @@ define i16 @abd_minmax_i16(i16 %a, i16 %b) nounwind {
 ; RV64I-LABEL: abd_minmax_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    sub a0, a0, a1
@@ -1382,7 +1382,7 @@ define i16 @abd_cmp_i16(i16 %a, i16 %b) nounwind {
 ; RV64I-LABEL: abd_cmp_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    sub a0, a0, a1
@@ -1776,7 +1776,7 @@ define i16 @abd_select_i16(i16 %a, i16 %b) nounwind {
 ; RV64I-LABEL: abd_select_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    sub a0, a0, a1

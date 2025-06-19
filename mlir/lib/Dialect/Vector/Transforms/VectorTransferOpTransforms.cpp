@@ -886,17 +886,31 @@ class RewriteScalarExtractOfTransferRead
     SmallVector<Value> newIndices(xferOp.getIndices().begin(),
                                   xferOp.getIndices().end());
     for (auto [i, pos] : llvm::enumerate(extractOp.getMixedPosition())) {
-      assert(isa<Attribute>(pos) && "Unexpected non-constant index");
-      int64_t offset = cast<IntegerAttr>(cast<Attribute>(pos)).getInt();
       int64_t idx = newIndices.size() - extractOp.getNumIndices() + i;
-      OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
-          rewriter, extractOp.getLoc(),
-          rewriter.getAffineSymbolExpr(0) + offset, {newIndices[idx]});
-      if (auto value = dyn_cast<Value>(ofr)) {
+
+      // Compute affine expression `newIndices[idx] + pos` where `pos` can be
+      // either a constant or a value.
+      OpFoldResult composedIdx;
+      if (auto attr = dyn_cast<Attribute>(pos)) {
+        int64_t offset = cast<IntegerAttr>(attr).getInt();
+        composedIdx = affine::makeComposedFoldedAffineApply(
+            rewriter, extractOp.getLoc(),
+            rewriter.getAffineSymbolExpr(0) + offset, {newIndices[idx]});
+      } else {
+        Value dynamicOffset = cast<Value>(pos);
+        AffineExpr sym0, sym1;
+        bindSymbols(rewriter.getContext(), sym0, sym1);
+        composedIdx = affine::makeComposedFoldedAffineApply(
+            rewriter, extractOp.getLoc(), sym0 + sym1,
+            {newIndices[idx], dynamicOffset});
+      }
+
+      // Update the corresponding index with the folded result.
+      if (auto value = dyn_cast<Value>(composedIdx)) {
         newIndices[idx] = value;
       } else {
         newIndices[idx] = rewriter.create<arith::ConstantIndexOp>(
-            extractOp.getLoc(), *getConstantIntValue(ofr));
+            extractOp.getLoc(), *getConstantIntValue(composedIdx));
       }
     }
     if (isa<MemRefType>(xferOp.getBase().getType())) {

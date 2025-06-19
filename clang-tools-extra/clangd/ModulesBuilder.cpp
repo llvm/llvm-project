@@ -84,7 +84,8 @@ public:
 
   // We shouldn't adjust the compilation commands based on
   // FailedPrerequisiteModules.
-  void adjustHeaderSearchOptions(HeaderSearchOptions &Options) const override {}
+  void adjustHeaderSearchOptions(HeaderSearchOptions &Options) const override {
+  }
 
   // FailedPrerequisiteModules can never be reused.
   bool
@@ -438,7 +439,7 @@ llvm::SmallVector<std::string> getAllRequiredModules(PathRef RequiredSource,
   auto VisitDeps = [&](StringRef ModuleName, auto Visitor) -> void {
     ModuleNamesSet.insert(ModuleName);
 
-    for (const std::string &RequiredModuleName : MDB.getRequiredModules(
+    for (StringRef RequiredModuleName : MDB.getRequiredModules(
              MDB.getSourceForModuleName(ModuleName, RequiredSource)))
       if (ModuleNamesSet.insert(RequiredModuleName).second)
         Visitor(RequiredModuleName, Visitor);

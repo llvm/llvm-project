@@ -6,7 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines various SVE builtin types.  The macros are:
+//  This file defines various Neon and SVE builtin types.  The macros are:
+//
+//    NEON_VECTOR_TYPE:
+//    - (Name, BaseType, ElBits, NumEls, VectorKind)
+//    Unlike the SVE types, the Neon vector types are not builtin types and
+//    mapped to the equivalent __attribute__(neon_vector_type(...)) vector type.
+//    They are not builtin types.
 //
 //    SVE_TYPE:
 //    - (Name, MangledName, Id, SingletonId)
@@ -56,6 +62,10 @@
 //
 //  - IsBF true for vector of brain float elements.
 //===----------------------------------------------------------------------===//
+
+#ifndef NEON_VECTOR_TYPE
+#define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)
+#endif
 
 #ifndef SVE_TYPE
 #define SVE_TYPE(Name, Id, SingletonId)
@@ -111,7 +121,38 @@
   SVE_TYPE(Name, Id, SingletonId)
 #endif
 
-//===- Vector point types -----------------------------------------------===//
+//===- Neon Vector point types --------------------------------------------===//
+
+NEON_VECTOR_TYPE(__Int8x8_t, SignedCharTy, 8, 8, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Int16x4_t, ShortTy, 16, 4, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Int32x2_t, IntTy, 32, 2, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Uint8x8_t, UnsignedCharTy, 8, 8, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Uint16x4_t, UnsignedShortTy, 16, 4, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Uint32x2_t, UnsignedIntTy, 32, 2, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Float16x4_t, HalfTy, 16, 4, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Float32x2_t, FloatTy, 32, 2, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Poly8x8_t, UnsignedCharTy, 8, 8, VectorKind::NeonPoly)
+NEON_VECTOR_TYPE(__Poly16x4_t, UnsignedShortTy, 16, 4, VectorKind::NeonPoly)
+NEON_VECTOR_TYPE(__Bfloat16x4_t, BFloat16Ty, 16, 4, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Int8x16_t, SignedCharTy, 8, 16, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Int16x8_t, ShortTy, 16, 8, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Int32x4_t, IntTy, 32, 4, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Int64x2_t, LongTy, 64, 2, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Uint8x16_t, UnsignedCharTy, 8, 16, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Uint16x8_t, UnsignedShortTy, 16, 8, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Uint32x4_t, UnsignedIntTy, 32, 4, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Uint64x2_t, UnsignedLongTy, 64, 2, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Float16x8_t, HalfTy, 16, 8, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Float32x4_t, FloatTy, 32, 4, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Float64x2_t, DoubleTy, 64, 2, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Poly8x16_t, UnsignedCharTy, 8, 16, VectorKind::NeonPoly)
+NEON_VECTOR_TYPE(__Poly16x8_t, UnsignedShortTy, 16, 8, VectorKind::NeonPoly)
+NEON_VECTOR_TYPE(__Poly64x2_t, UnsignedLongTy, 64, 2, VectorKind::NeonPoly)
+NEON_VECTOR_TYPE(__Bfloat16x8_t, BFloat16Ty, 16, 8, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Mfloat8x8_t, MFloat8Ty, 8, 8, VectorKind::Neon)
+NEON_VECTOR_TYPE(__Mfloat8x16_t, MFloat8Ty, 8, 16, VectorKind::Neon)
+
+//===- SVE Vector point types ---------------------------------------------===//
 
 SVE_VECTOR_TYPE_INT(__SVInt8_t,  __SVInt8_t,  SveInt8,  SveInt8Ty, 16,  8, 1, true)
 SVE_VECTOR_TYPE_INT(__SVInt16_t, __SVInt16_t, SveInt16, SveInt16Ty, 8, 16, 1, true)
@@ -205,6 +246,7 @@ SVE_OPAQUE_TYPE(__SVCount_t, __SVCount_t, SveCount, SveCountTy)
 
 SVE_SCALAR_TYPE(__mfp8, __mfp8, MFloat8, MFloat8Ty, 8)
 
+#undef NEON_VECTOR_TYPE
 #undef SVE_VECTOR_TYPE
 #undef SVE_VECTOR_TYPE_MFLOAT
 #undef SVE_VECTOR_TYPE_BFLOAT

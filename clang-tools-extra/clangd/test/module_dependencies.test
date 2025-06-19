@@ -1,5 +1,8 @@
 # A smoke test to check that a simple dependency chain for modules can work.
 #
+# FIXME: The test fails on Windows; see comments on https://github.com/llvm/llvm-project/pull/142828
+# UNSUPPORTED: system-windows
+#
 # RUN: rm -fr %t
 # RUN: mkdir -p %t
 # RUN: split-file %s %t

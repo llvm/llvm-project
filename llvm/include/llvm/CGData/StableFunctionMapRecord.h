@@ -16,6 +16,7 @@
 #ifndef LLVM_CGDATA_STABLEFUNCTIONMAPRECORD_H
 #define LLVM_CGDATA_STABLEFUNCTIONMAPRECORD_H
 
+#include "llvm/CGData/CGDataPatchItem.h"
 #include "llvm/CGData/StableFunctionMap.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Compiler.h"
@@ -36,13 +37,16 @@ struct StableFunctionMapRecord {
   /// A static helper function to serialize the stable function map without
   /// owning the stable function map.
   LLVM_ABI static void serialize(raw_ostream &OS,
-                                 const StableFunctionMap *FunctionMap);
+                                 const StableFunctionMap *FunctionMap,
+                                 std::vector<CGDataPatchItem> &PatchItems);
 
   /// Serialize the stable function map to a raw_ostream.
-  LLVM_ABI void serialize(raw_ostream &OS) const;
+  LLVM_ABI void serialize(raw_ostream &OS,
+                          std::vector<CGDataPatchItem> &PatchItems) const;
 
   /// Deserialize the stable function map from a raw_ostream.
-  LLVM_ABI void deserialize(const unsigned char *&Ptr);
+  LLVM_ABI void deserialize(const unsigned char *&Ptr,
+                            bool ReadStableFunctionMapNames = true);
 
   /// Serialize the stable function map to a YAML stream.
   LLVM_ABI void serializeYAML(yaml::Output &YOS) const;

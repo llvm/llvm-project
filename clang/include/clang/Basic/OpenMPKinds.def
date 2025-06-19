@@ -214,6 +214,7 @@ OPENMP_ORIGINAL_SHARING_MODIFIER(default)
 // Adjust-op kinds for the 'adjust_args' clause.
 OPENMP_ADJUST_ARGS_KIND(nothing)
 OPENMP_ADJUST_ARGS_KIND(need_device_ptr)
+OPENMP_ADJUST_ARGS_KIND(need_device_addr)
 
 // Binding kinds for the 'bind' clause.
 OPENMP_BIND_KIND(teams)

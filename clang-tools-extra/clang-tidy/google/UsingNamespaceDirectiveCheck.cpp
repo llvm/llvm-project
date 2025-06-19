@@ -16,7 +16,7 @@ namespace clang::tidy::google::build {
 
 void UsingNamespaceDirectiveCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-    Finder->addMatcher(usingDirectiveDecl().bind("usingNamespace"), this);
+  Finder->addMatcher(usingDirectiveDecl().bind("usingNamespace"), this);
 }
 
 void UsingNamespaceDirectiveCheck::check(

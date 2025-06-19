@@ -295,6 +295,23 @@ struct LinalgPaddingOptions {
     padToMultipleOf.emplace(m.begin(), m.end());
     return *this;
   }
+  /// A mapping between an operand and shape dim, and a size for a padding
+  /// dimension. Each size is expected to be greater or equal than the
+  /// corresponding shape dim. If no value is provided then the constant upper
+  /// bound will be used.
+  DenseMap<std::pair<unsigned, unsigned>, OpFoldResult> sizeToPadTo;
+  LinalgPaddingOptions &setSizeToPadTo(unsigned operandIndex, unsigned dimIndex,
+                                       OpFoldResult size) {
+    assert(size && "expected non-null size");
+    sizeToPadTo[{operandIndex, dimIndex}] = size;
+    return *this;
+  }
+  /// Given the operand index and shape dim it returns the size to pad to.
+  OpFoldResult getSizeToPadTo(unsigned operandIndex, unsigned dimIndex) const {
+    return sizeToPadTo.lookup_or(
+        std::pair<unsigned, unsigned>(operandIndex, dimIndex), nullptr);
+  }
+
   /// A flag for every operand to mark the PadOp as nofold which enables
   /// packing for statically shaped operands.
   SmallVector<bool> nofoldFlags;

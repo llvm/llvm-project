@@ -857,13 +857,13 @@ bool llvm::isEscapeSource(const Value *V) {
     return !CB->hasArgumentWithAdditionalReturnCaptureComponents();
   }
 
-  // The load case works because isNonEscapingLocalObject considers all
+  // The load case works because isNotCapturedBefore considers all
   // stores to be escapes (it passes true for the StoreCaptures argument
   // to PointerMayBeCaptured).
   if (isa<LoadInst>(V))
     return true;
 
-  // The inttoptr case works because isNonEscapingLocalObject considers all
+  // The inttoptr case works because isNotCapturedBefore considers all
   // means of converting or equating a pointer to an int (ptrtoint, ptr store
   // which could be followed by an integer load, ptr<->int compare) as
   // escaping, and objects located at well-known addresses via platform-specific

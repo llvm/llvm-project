@@ -377,6 +377,9 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   Sampler.Reg = Params->Reg.value();
 
   // Fill in optional values
+  if (Params->Filter.has_value())
+    Sampler.Filter = Params->Filter.value();
+
   if (Params->AddressU.has_value())
     Sampler.AddressU = Params->AddressU.value();
 
@@ -392,11 +395,23 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   if (Params->MaxAnisotropy.has_value())
     Sampler.MaxAnisotropy = Params->MaxAnisotropy.value();
 
+  if (Params->CompFunc.has_value())
+    Sampler.CompFunc = Params->CompFunc.value();
+
+  if (Params->BorderColor.has_value())
+    Sampler.BorderColor = Params->BorderColor.value();
+
   if (Params->MinLOD.has_value())
     Sampler.MinLOD = Params->MinLOD.value();
 
   if (Params->MaxLOD.has_value())
     Sampler.MaxLOD = Params->MaxLOD.value();
+
+  if (Params->Space.has_value())
+    Sampler.Space = Params->Space.value();
+
+  if (Params->Visibility.has_value())
+    Sampler.Visibility = Params->Visibility.value();
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
@@ -684,6 +699,23 @@ RootSignatureParser::parseStaticSamplerParams() {
       Params.Reg = Reg;
     }
 
+    // `filter` `=` FILTER
+    if (tryConsumeExpectedToken(TokenKind::kw_filter)) {
+      if (Params.Filter.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Filter = parseSamplerFilter();
+      if (!Filter.has_value())
+        return std::nullopt;
+      Params.Filter = Filter;
+    }
+
     // `addressU` `=` TEXTURE_ADDRESS
     if (tryConsumeExpectedToken(TokenKind::kw_addressU)) {
       if (Params.AddressU.has_value()) {
@@ -769,6 +801,40 @@ RootSignatureParser::parseStaticSamplerParams() {
       Params.MaxAnisotropy = MaxAnisotropy;
     }
 
+    // `comparisonFunc` `=` COMPARISON_FUNC
+    if (tryConsumeExpectedToken(TokenKind::kw_comparisonFunc)) {
+      if (Params.CompFunc.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto CompFunc = parseComparisonFunc();
+      if (!CompFunc.has_value())
+        return std::nullopt;
+      Params.CompFunc = CompFunc;
+    }
+
+    // `borderColor` `=` STATIC_BORDER_COLOR
+    if (tryConsumeExpectedToken(TokenKind::kw_borderColor)) {
+      if (Params.BorderColor.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto BorderColor = parseStaticBorderColor();
+      if (!BorderColor.has_value())
+        return std::nullopt;
+      Params.BorderColor = BorderColor;
+    }
+
     // `minLOD` `=` NUMBER
     if (tryConsumeExpectedToken(TokenKind::kw_minLOD)) {
       if (Params.MinLOD.has_value()) {
@@ -801,6 +867,40 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!MaxLOD.has_value())
         return std::nullopt;
       Params.MaxLOD = MaxLOD;
+    }
+
+    // `space` `=` POS_INT
+    if (tryConsumeExpectedToken(TokenKind::kw_space)) {
+      if (Params.Space.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Space = parseUIntParam();
+      if (!Space.has_value())
+        return std::nullopt;
+      Params.Space = Space;
+    }
+
+    // `visibility` `=` SHADER_VISIBILITY
+    if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
+      if (Params.Visibility.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Visibility = parseShaderVisibility();
+      if (!Visibility.has_value())
+        return std::nullopt;
+      Params.Visibility = Visibility;
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
@@ -909,6 +1009,32 @@ RootSignatureParser::parseShaderVisibility() {
   return std::nullopt;
 }
 
+std::optional<llvm::hlsl::rootsig::SamplerFilter>
+RootSignatureParser::parseSamplerFilter() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  TokenKind Expected[] = {
+#define FILTER_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  if (!tryConsumeExpectedToken(Expected))
+    return std::nullopt;
+
+  switch (CurToken.TokKind) {
+#define FILTER_ENUM(NAME, LIT)                                                 \
+  case TokenKind::en_##NAME:                                                   \
+    return SamplerFilter::NAME;                                                \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  default:
+    llvm_unreachable("Switch for consumed enum token was not provided");
+  }
+
+  return std::nullopt;
+}
+
 std::optional<llvm::hlsl::rootsig::TextureAddressMode>
 RootSignatureParser::parseTextureAddressMode() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
@@ -926,6 +1052,58 @@ RootSignatureParser::parseTextureAddressMode() {
 #define TEXTURE_ADDRESS_MODE_ENUM(NAME, LIT)                                   \
   case TokenKind::en_##NAME:                                                   \
     return TextureAddressMode::NAME;                                           \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  default:
+    llvm_unreachable("Switch for consumed enum token was not provided");
+  }
+
+  return std::nullopt;
+}
+
+std::optional<llvm::hlsl::rootsig::ComparisonFunc>
+RootSignatureParser::parseComparisonFunc() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  TokenKind Expected[] = {
+#define COMPARISON_FUNC_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  if (!tryConsumeExpectedToken(Expected))
+    return std::nullopt;
+
+  switch (CurToken.TokKind) {
+#define COMPARISON_FUNC_ENUM(NAME, LIT)                                        \
+  case TokenKind::en_##NAME:                                                   \
+    return ComparisonFunc::NAME;                                               \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  default:
+    llvm_unreachable("Switch for consumed enum token was not provided");
+  }
+
+  return std::nullopt;
+}
+
+std::optional<llvm::hlsl::rootsig::StaticBorderColor>
+RootSignatureParser::parseStaticBorderColor() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  TokenKind Expected[] = {
+#define STATIC_BORDER_COLOR_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  if (!tryConsumeExpectedToken(Expected))
+    return std::nullopt;
+
+  switch (CurToken.TokKind) {
+#define STATIC_BORDER_COLOR_ENUM(NAME, LIT)                                    \
+  case TokenKind::en_##NAME:                                                   \
+    return StaticBorderColor::NAME;                                            \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:

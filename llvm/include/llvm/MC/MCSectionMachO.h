@@ -16,12 +16,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 /// This represents a section on a Mach-O system (used by Mac OS X).  On a Mac
 /// system, these are also described in /usr/include/mach-o/loader.h.
-class MCSectionMachO final : public MCSection {
+class LLVM_ABI MCSectionMachO final : public MCSection {
   char SegmentName[16];  // Not necessarily null terminated!
 
   /// This is the SECTION_TYPE and SECTION_ATTRIBUTES field of a section, drawn

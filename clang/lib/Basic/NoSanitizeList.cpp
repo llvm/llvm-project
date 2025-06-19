@@ -44,7 +44,7 @@ bool NoSanitizeList::containsPrefix(SanitizerMask Mask, StringRef Prefix,
 
 bool NoSanitizeList::containsGlobal(SanitizerMask Mask, StringRef GlobalName,
                                     StringRef Category) const {
-  return SSCL->inSection(Mask, "global", GlobalName, Category);
+  return containsPrefix(Mask, "global", GlobalName, Category);
 }
 
 bool NoSanitizeList::containsType(SanitizerMask Mask, StringRef MangledTypeName,
@@ -54,7 +54,7 @@ bool NoSanitizeList::containsType(SanitizerMask Mask, StringRef MangledTypeName,
 
 bool NoSanitizeList::containsFunction(SanitizerMask Mask,
                                       StringRef FunctionName) const {
-  return SSCL->inSection(Mask, "fun", FunctionName);
+  return containsPrefix(Mask, "fun", FunctionName, {});
 }
 
 bool NoSanitizeList::containsFile(SanitizerMask Mask, StringRef FileName,
@@ -64,7 +64,7 @@ bool NoSanitizeList::containsFile(SanitizerMask Mask, StringRef FileName,
 
 bool NoSanitizeList::containsMainFile(SanitizerMask Mask, StringRef FileName,
                                       StringRef Category) const {
-  return SSCL->inSection(Mask, "mainfile", FileName, Category);
+  return containsPrefix(Mask, "mainfile", FileName, Category);
 }
 
 bool NoSanitizeList::containsLocation(SanitizerMask Mask, SourceLocation Loc,

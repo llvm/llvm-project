@@ -216,7 +216,7 @@ Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
 static DenseSet<StringRef> buildPreservedSymbolsSet(const Triple &TT) {
   DenseSet<StringRef> PreservedSymbolSet(std::begin(PreservedSymbols),
                                          std::end(PreservedSymbols));
-
+  // FIXME: Do we need to pass in ABI fields from TargetOptions?
   RTLIB::RuntimeLibcallsInfo Libcalls(TT);
   for (const char *Name : Libcalls.getLibcallNames()) {
     if (Name)

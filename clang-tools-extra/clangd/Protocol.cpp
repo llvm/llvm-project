@@ -497,10 +497,19 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
       if (auto Cancel = StaleRequestSupport->getBoolean("cancel"))
         R.CancelsStaleRequests = *Cancel;
     }
+    if (auto *PositionEncodings = General->get("positionEncodings")) {
+      R.PositionEncodings.emplace();
+      if (!fromJSON(*PositionEncodings, *R.PositionEncodings,
+                    P.field("general").field("positionEncodings")))
+        return false;
+    }
   }
   if (auto *OffsetEncoding = O->get("offsetEncoding")) {
-    R.offsetEncoding.emplace();
-    if (!fromJSON(*OffsetEncoding, *R.offsetEncoding,
+    R.PositionEncodings.emplace();
+    elog("offsetEncoding capability is a deprecated clangd extension that'll "
+         "go away with clangd 23. Migrate to standard positionEncodings "
+         "capability introduced by LSP 3.17");
+    if (!fromJSON(*OffsetEncoding, *R.PositionEncodings,
                   P.field("offsetEncoding")))
       return false;
   }
@@ -536,8 +545,11 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
       }
     }
     if (auto *OffsetEncoding = Experimental->get("offsetEncoding")) {
-      R.offsetEncoding.emplace();
-      if (!fromJSON(*OffsetEncoding, *R.offsetEncoding,
+      R.PositionEncodings.emplace();
+      elog("offsetEncoding capability is a deprecated clangd extension that'll "
+           "go away with clangd 23. Migrate to standard positionEncodings "
+           "capability introduced by LSP 3.17");
+      if (!fromJSON(*OffsetEncoding, *R.PositionEncodings,
                     P.field("offsetEncoding")))
         return false;
     }

@@ -530,7 +530,6 @@ void ClangTidyCheck::OptionsView::store<bool>(
     ClangTidyOptions::OptionMap &Options, StringRef LocalName,
     bool Value) const;
 
-
 } // namespace tidy
 } // namespace clang
 

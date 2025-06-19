@@ -161,12 +161,14 @@ namespace {
       Self.CheckCastAlign(SrcExpr.get(), DestType, OpRange);
     }
 
-    void checkObjCConversion(CheckedConversionKind CCK) {
+    void checkObjCConversion(CheckedConversionKind CCK,
+                             bool IsReinterpretCast = false) {
       assert(Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers());
 
       Expr *src = SrcExpr.get();
-      if (Self.ObjC().CheckObjCConversion(OpRange, DestType, src, CCK) ==
-          SemaObjC::ACR_unbridged)
+      if (Self.ObjC().CheckObjCConversion(
+              OpRange, DestType, src, CCK, true, false, BO_PtrMemD,
+              IsReinterpretCast) == SemaObjC::ACR_unbridged)
         IsARCUnbridgedCast = true;
       SrcExpr = src;
     }
@@ -1263,7 +1265,8 @@ void CastOperation::CheckReinterpretCast() {
 
   if (isValidCast(tcr)) {
     if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
-      checkObjCConversion(CheckedConversionKind::OtherCast);
+      checkObjCConversion(CheckedConversionKind::OtherCast,
+                          /*IsReinterpretCast=*/true);
     DiagnoseReinterpretUpDownCast(Self, SrcExpr.get(), DestType, OpRange);
 
     if (unsigned DiagID = checkCastFunctionType(Self, SrcExpr, DestType))

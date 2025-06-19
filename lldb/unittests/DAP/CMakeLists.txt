@@ -7,16 +7,15 @@ add_lldb_unittest(DAPTests
   LLDBUtilsTest.cpp
   ProtocolTypesTest.cpp
   TestBase.cpp
-  TransportTest.cpp
   VariablesTest.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     liblldb
     lldbDAP
     lldbUtilityHelpers
     LLVMTestingSupport
-  LINK_COMPONENTS
-    Support
   )
 
 set(test_inputs

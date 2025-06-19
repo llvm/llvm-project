@@ -240,8 +240,7 @@ public:
     return static_cast<bool>(getDependence() & ExprDependence::UnexpandedPack);
   }
 
-  /// Whether this expression contains subexpressions which had errors, e.g. a
-  /// TypoExpr.
+  /// Whether this expression contains subexpressions which had errors.
   bool containsErrors() const {
     return static_cast<bool>(getDependence() & ExprDependence::Error);
   }
@@ -4579,7 +4578,6 @@ class ShuffleVectorExpr : public Expr {
   // indices.  The number of values in this list is always
   // 2+the number of indices in the vector type.
   Stmt **SubExprs;
-  unsigned NumExprs;
 
 public:
   ShuffleVectorExpr(const ASTContext &C, ArrayRef<Expr*> args, QualType Type,
@@ -4605,25 +4603,28 @@ public:
   /// getNumSubExprs - Return the size of the SubExprs array.  This includes the
   /// constant expression, the actual arguments passed in, and the function
   /// pointers.
-  unsigned getNumSubExprs() const { return NumExprs; }
+  unsigned getNumSubExprs() const { return ShuffleVectorExprBits.NumExprs; }
 
   /// Retrieve the array of expressions.
   Expr **getSubExprs() { return reinterpret_cast<Expr **>(SubExprs); }
 
   /// getExpr - Return the Expr at the specified index.
   Expr *getExpr(unsigned Index) {
-    assert((Index < NumExprs) && "Arg access out of range!");
+    assert((Index < ShuffleVectorExprBits.NumExprs) &&
+           "Arg access out of range!");
     return cast<Expr>(SubExprs[Index]);
   }
   const Expr *getExpr(unsigned Index) const {
-    assert((Index < NumExprs) && "Arg access out of range!");
+    assert((Index < ShuffleVectorExprBits.NumExprs) &&
+           "Arg access out of range!");
     return cast<Expr>(SubExprs[Index]);
   }
 
   void setExprs(const ASTContext &C, ArrayRef<Expr *> Exprs);
 
   llvm::APSInt getShuffleMaskIdx(unsigned N) const {
-    assert((N < NumExprs - 2) && "Shuffle idx out of range!");
+    assert((N < ShuffleVectorExprBits.NumExprs - 2) &&
+           "Shuffle idx out of range!");
     assert(isa<ConstantExpr>(getExpr(N + 2)) &&
            "Index expression must be a ConstantExpr");
     return cast<ConstantExpr>(getExpr(N + 2))->getAPValueResult().getInt();
@@ -4631,10 +4632,12 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(&SubExprs[0], &SubExprs[0]+NumExprs);
+    return child_range(&SubExprs[0],
+                       &SubExprs[0] + ShuffleVectorExprBits.NumExprs);
   }
   const_child_range children() const {
-    return const_child_range(&SubExprs[0], &SubExprs[0] + NumExprs);
+    return const_child_range(&SubExprs[0],
+                             &SubExprs[0] + ShuffleVectorExprBits.NumExprs);
   }
 };
 
@@ -4776,13 +4779,13 @@ class ChooseExpr : public Expr {
   enum { COND, LHS, RHS, END_EXPR };
   Stmt* SubExprs[END_EXPR]; // Left/Middle/Right hand sides.
   SourceLocation BuiltinLoc, RParenLoc;
-  bool CondIsTrue;
+
 public:
   ChooseExpr(SourceLocation BLoc, Expr *cond, Expr *lhs, Expr *rhs, QualType t,
              ExprValueKind VK, ExprObjectKind OK, SourceLocation RP,
              bool condIsTrue)
-      : Expr(ChooseExprClass, t, VK, OK), BuiltinLoc(BLoc), RParenLoc(RP),
-        CondIsTrue(condIsTrue) {
+      : Expr(ChooseExprClass, t, VK, OK), BuiltinLoc(BLoc), RParenLoc(RP) {
+    ChooseExprBits.CondIsTrue = condIsTrue;
     SubExprs[COND] = cond;
     SubExprs[LHS] = lhs;
     SubExprs[RHS] = rhs;
@@ -4798,9 +4801,9 @@ public:
   bool isConditionTrue() const {
     assert(!isConditionDependent() &&
            "Dependent condition isn't true or false");
-    return CondIsTrue;
+    return ChooseExprBits.CondIsTrue;
   }
-  void setIsConditionTrue(bool isTrue) { CondIsTrue = isTrue; }
+  void setIsConditionTrue(bool isTrue) { ChooseExprBits.CondIsTrue = isTrue; }
 
   bool isConditionDependent() const {
     return getCond()->isTypeDependent() || getCond()->isValueDependent();
@@ -6959,36 +6962,6 @@ public:
   std::unique_ptr<AtomicScopeModel> getScopeModel() const {
     return getScopeModel(getOp());
   }
-};
-
-/// TypoExpr - Internal placeholder for expressions where typo correction
-/// still needs to be performed and/or an error diagnostic emitted.
-class TypoExpr : public Expr {
-  // The location for the typo name.
-  SourceLocation TypoLoc;
-
-public:
-  TypoExpr(QualType T, SourceLocation TypoLoc)
-      : Expr(TypoExprClass, T, VK_LValue, OK_Ordinary), TypoLoc(TypoLoc) {
-    assert(T->isDependentType() && "TypoExpr given a non-dependent type");
-    setDependence(ExprDependence::TypeValueInstantiation |
-                  ExprDependence::Error);
-  }
-
-  child_range children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-  const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
-  }
-
-  SourceLocation getBeginLoc() const LLVM_READONLY { return TypoLoc; }
-  SourceLocation getEndLoc() const LLVM_READONLY { return TypoLoc; }
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == TypoExprClass;
-  }
-
 };
 
 /// This class represents BOTH the OpenMP Array Section and OpenACC 'subarray',

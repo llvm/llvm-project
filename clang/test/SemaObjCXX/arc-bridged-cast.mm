@@ -30,7 +30,7 @@ void to_cf(id obj) {
   CFTypeRef cf1 = (__bridge_retained IdType)CreateSomething();
   CFStringRef cf2 = (__bridge_retained StringType)CreateNSString();
   CFTypeRef cf3 = (__bridge IdType)CreateSomething();
-  CFStringRef cf4 = (__bridge StringType)CreateNSString(); 
+  CFStringRef cf4 = (__bridge StringType)CreateNSString();
 }
 
 template void to_cf<CFTypeRef, CFStringRef>(id);

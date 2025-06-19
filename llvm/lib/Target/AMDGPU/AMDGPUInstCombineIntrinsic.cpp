@@ -60,28 +60,6 @@ static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
   return maxnum(Src0, Src1);
 }
 
-enum class KnownIEEEMode { Unknown, On, Off };
-
-/// Return KnownIEEEMode::On if we know if the use context can assume
-/// "amdgpu-ieee"="true" and KnownIEEEMode::Off if we can assume
-/// "amdgpu-ieee"="false".
-static KnownIEEEMode fpenvIEEEMode(const Instruction &I,
-                                   const GCNSubtarget &ST) {
-  if (!ST.hasIEEEMode()) // Only mode on gfx12
-    return KnownIEEEMode::On;
-
-  const Function *F = I.getFunction();
-  if (!F)
-    return KnownIEEEMode::Unknown;
-
-  Attribute IEEEAttr = F->getFnAttribute("amdgpu-ieee");
-  if (IEEEAttr.isValid())
-    return IEEEAttr.getValueAsBool() ? KnownIEEEMode::On : KnownIEEEMode::Off;
-
-  return AMDGPU::isShader(F->getCallingConv()) ? KnownIEEEMode::Off
-                                               : KnownIEEEMode::On;
-}
-
 // Check if a value can be converted to a 16-bit value without losing
 // precision.
 // The value is expected to be either a float (IsFloat = true) or an unsigned
@@ -270,6 +248,66 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
                                      });
         }
       }
+
+      // Only perform D16 folding if every user of the image sample is
+      // an ExtractElementInst immediately followed by an FPTrunc to half.
+      SmallVector<std::pair<ExtractElementInst *, FPTruncInst *>, 4>
+          ExtractTruncPairs;
+      bool AllHalfExtracts = true;
+
+      for (User *U : II.users()) {
+        auto *Ext = dyn_cast<ExtractElementInst>(U);
+        if (!Ext || !Ext->hasOneUse()) {
+          AllHalfExtracts = false;
+          break;
+        }
+
+        auto *Tr = dyn_cast<FPTruncInst>(*Ext->user_begin());
+        if (!Tr || !Tr->getType()->isHalfTy()) {
+          AllHalfExtracts = false;
+          break;
+        }
+
+        ExtractTruncPairs.emplace_back(Ext, Tr);
+      }
+
+      if (!ExtractTruncPairs.empty() && AllHalfExtracts) {
+        auto *VecTy = cast<VectorType>(II.getType());
+        Type *HalfVecTy =
+            VecTy->getWithNewType(Type::getHalfTy(II.getContext()));
+
+        // Obtain the original image sample intrinsic's signature
+        // and replace its return type with the half-vector for D16 folding
+        SmallVector<Type *, 8> SigTys;
+        Intrinsic::getIntrinsicSignature(II.getCalledFunction(), SigTys);
+        SigTys[0] = HalfVecTy;
+
+        Module *M = II.getModule();
+        Function *HalfDecl =
+            Intrinsic::getOrInsertDeclaration(M, ImageDimIntr->Intr, SigTys);
+
+        II.mutateType(HalfVecTy);
+        II.setCalledFunction(HalfDecl);
+
+        IRBuilder<> Builder(II.getContext());
+        for (auto &[Ext, Tr] : ExtractTruncPairs) {
+          Value *Idx = Ext->getIndexOperand();
+
+          Builder.SetInsertPoint(Tr);
+
+          Value *HalfExtract = Builder.CreateExtractElement(&II, Idx);
+          HalfExtract->takeName(Tr);
+
+          Tr->replaceAllUsesWith(HalfExtract);
+        }
+
+        for (auto &[Ext, Tr] : ExtractTruncPairs) {
+          IC.eraseInstFromFunction(*Tr);
+          IC.eraseInstFromFunction(*Ext);
+        }
+
+        return &II;
+      }
     }
   }
 
@@ -365,8 +403,7 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
   }
 
   SimplifyQuery SQ = IC.getSimplifyQuery().getWithInstruction(&I);
-  if (isKnownNeverInfOrNaN(Op0, /*Depth=*/0, SQ) &&
-      isKnownNeverInfOrNaN(Op1, /*Depth=*/0, SQ)) {
+  if (isKnownNeverInfOrNaN(Op0, SQ) && isKnownNeverInfOrNaN(Op1, SQ)) {
     // Neither operand is infinity or NaN.
     return true;
   }
@@ -463,6 +500,8 @@ static bool isTriviallyUniform(const Use &U) {
   Value *V = U.get();
   if (isa<Constant>(V))
     return true;
+  if (const auto *A = dyn_cast<Argument>(V))
+    return AMDGPU::isArgPassedInSGPR(A);
   if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
     if (!AMDGPU::isIntrinsicAlwaysUniform(II->getIntrinsicID()))
       return false;
@@ -1003,7 +1042,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // TODO: Also can fold to 2 operands with infinities.
     if ((match(Src0, m_APFloat(ConstSrc0)) && ConstSrc0->isNaN()) ||
         isa<UndefValue>(Src0)) {
-      switch (fpenvIEEEMode(II, *ST)) {
+      switch (fpenvIEEEMode(II)) {
       case KnownIEEEMode::On:
         // TODO: If Src2 is snan, does it need quieting?
         if (ConstSrc0 && ConstSrc0->isSignaling())
@@ -1018,7 +1057,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
     } else if ((match(Src1, m_APFloat(ConstSrc1)) && ConstSrc1->isNaN()) ||
                isa<UndefValue>(Src1)) {
-      switch (fpenvIEEEMode(II, *ST)) {
+      switch (fpenvIEEEMode(II)) {
       case KnownIEEEMode::On:
         // TODO: If Src2 is snan, does it need quieting?
         if (ConstSrc1 && ConstSrc1->isSignaling())
@@ -1034,7 +1073,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
     } else if ((match(Src2, m_APFloat(ConstSrc2)) && ConstSrc2->isNaN()) ||
                isa<UndefValue>(Src2)) {
-      switch (fpenvIEEEMode(II, *ST)) {
+      switch (fpenvIEEEMode(II)) {
       case KnownIEEEMode::On:
         if (ConstSrc2 && ConstSrc2->isSignaling()) {
           auto *Quieted = ConstantFP::get(II.getType(), ConstSrc2->makeQuiet());

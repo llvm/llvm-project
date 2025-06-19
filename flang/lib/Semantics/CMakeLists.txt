@@ -32,6 +32,7 @@ add_flang_library(FortranSemantics
   dump-expr.cpp
   expression.cpp
   mod-file.cpp
+  openmp-dsa.cpp
   openmp-modifiers.cpp
   pointer-assignment.cpp
   program-tree.cpp
@@ -39,7 +40,6 @@ add_flang_library(FortranSemantics
   resolve-directives.cpp
   resolve-names-utils.cpp
   resolve-names.cpp
-  rewrite-directives.cpp
   rewrite-parse-tree.cpp
   runtime-type-info.cpp
   scope.cpp

@@ -11,10 +11,12 @@
 
 #include "Address.h"
 #include "CIRGenTypeCache.h"
+#include "clang/CIR/Interfaces/CIRFPTypeInterface.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 
 namespace clang::CIRGen {
@@ -22,6 +24,7 @@ namespace clang::CIRGen {
 class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
   llvm::StringMap<unsigned> recordNames;
+  llvm::StringMap<unsigned> globalsVersioning;
 
 public:
   CIRGenBuilderTy(mlir::MLIRContext &mlirContext, const CIRGenTypeCache &tc)
@@ -83,6 +86,7 @@ public:
   cir::RecordType::RecordKind getRecordKind(const clang::TagTypeKind kind) {
     switch (kind) {
     case clang::TagTypeKind::Class:
+      return cir::RecordType::Class;
     case clang::TagTypeKind::Struct:
       return cir::RecordType::Struct;
     case clang::TagTypeKind::Union:
@@ -93,6 +97,34 @@ public:
       llvm_unreachable("enums are not records");
     }
     llvm_unreachable("Unsupported record kind");
+  }
+
+  /// Get a CIR named record type.
+  ///
+  /// If a record already exists and is complete, but the client tries to fetch
+  /// it with a different set of attributes, this method will crash.
+  cir::RecordType getCompleteRecordTy(llvm::ArrayRef<mlir::Type> members,
+                                      llvm::StringRef name, bool packed,
+                                      bool padded) {
+    const auto nameAttr = getStringAttr(name);
+    auto kind = cir::RecordType::RecordKind::Struct;
+    assert(!cir::MissingFeatures::astRecordDeclAttr());
+
+    // Create or get the record.
+    auto type =
+        getType<cir::RecordType>(members, nameAttr, packed, padded, kind);
+
+    // If we found an existing type, verify that either it is incomplete or
+    // it matches the requested attributes.
+    assert(!type.isIncomplete() ||
+           (type.getMembers() == members && type.getPacked() == packed &&
+            type.getPadded() == padded));
+
+    // Complete an incomplete record or ensure the existing complete record
+    // matches the requested attributes.
+    type.complete(members, packed, padded);
+
+    return type;
   }
 
   /// Get an incomplete CIR struct type. If we have a complete record
@@ -108,8 +140,9 @@ public:
   }
 
   bool isSized(mlir::Type ty) {
-    if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType,
-                  cir::IntType>(ty))
+    if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType, cir::IntType,
+                  cir::CIRFPTypeInterface, cir::ComplexType, cir::RecordType>(
+            ty))
       return true;
 
     if (const auto vt = mlir::dyn_cast<cir::VectorType>(ty))
@@ -200,6 +233,15 @@ public:
   cir::IntType getUInt32Ty() { return typeCache.UInt32Ty; }
   cir::IntType getUInt64Ty() { return typeCache.UInt64Ty; }
 
+  cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal);
+
+  cir::ConstantOp getConstInt(mlir::Location loc, llvm::APInt intVal);
+
+  cir::ConstantOp getConstInt(mlir::Location loc, mlir::Type t, uint64_t c);
+
+  cir::ConstantOp getConstFP(mlir::Location loc, mlir::Type t,
+                             llvm::APFloat fpVal);
+
   bool isInt8Ty(mlir::Type i) {
     return i == typeCache.UInt8Ty || i == typeCache.SInt8Ty;
   }
@@ -280,6 +322,30 @@ public:
     return create<cir::BinOp>(loc, cir::BinOpKind::Div, lhs, rhs);
   }
 
+  Address createBaseClassAddr(mlir::Location loc, Address addr,
+                              mlir::Type destType, unsigned offset,
+                              bool assumeNotNull) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    auto ptrTy = getPointerTo(destType);
+    auto baseAddr = create<cir::BaseClassAddrOp>(
+        loc, ptrTy, addr.getPointer(), mlir::APInt(64, offset), assumeNotNull);
+    return Address(baseAddr, destType, addr.getAlignment());
+  }
+
+  /// Cast the element type of the given address to a different type,
+  /// preserving information like the alignment.
+  Address createElementBitCast(mlir::Location loc, Address addr,
+                               mlir::Type destType) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    auto ptrTy = getPointerTo(destType);
+    return Address(createBitcast(loc, addr.getPointer(), ptrTy), destType,
+                   addr.getAlignment());
+  }
+
   cir::LoadOp createLoad(mlir::Location loc, Address addr,
                          bool isVolatile = false) {
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
@@ -294,6 +360,12 @@ public:
     return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), align);
   }
 
+  mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
+                                  mlir::Value imag) {
+    auto resultComplexTy = cir::ComplexType::get(real.getType());
+    return create<cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
+  }
+
   /// Create a cir.ptr_stride operation to get access to an array element.
   /// \p idx is the index of the element to access, \p shouldDecay is true if
   /// the result should decay to a pointer to the element type.
@@ -306,6 +378,23 @@ public:
   /// pointed to by \p arrayPtr.
   mlir::Value maybeBuildArrayDecay(mlir::Location loc, mlir::Value arrayPtr,
                                    mlir::Type eltTy);
+
+  /// Creates a versioned global variable. If the symbol is already taken, an ID
+  /// will be appended to the symbol. The returned global must always be queried
+  /// for its name so it can be referenced correctly.
+  [[nodiscard]] cir::GlobalOp
+  createVersionedGlobal(mlir::ModuleOp module, mlir::Location loc,
+                        mlir::StringRef name, mlir::Type type,
+                        cir::GlobalLinkageKind linkage) {
+    // Create a unique name if the given name is already taken.
+    std::string uniqueName;
+    if (unsigned version = globalsVersioning[name.str()]++)
+      uniqueName = name.str() + "." + std::to_string(version);
+    else
+      uniqueName = name.str();
+
+    return createGlobal(module, loc, uniqueName, type, linkage);
+  }
 };
 
 } // namespace clang::CIRGen

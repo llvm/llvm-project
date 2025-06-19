@@ -361,6 +361,25 @@ class NDSRVInstVD4DOT<bits<6> funct6, string opcodestr>
   let RVVConstraint = VMConstraint;
 }
 
+class NDSRVInstVBFHCvt<bits<7> funct7, bits<5> vs1, string opcodestr>
+    : RVInst<(outs VR:$vd), (ins VR:$vs2, VMaskOp:$vm),
+             opcodestr, "$vd, $vs2", [], InstFormatR> {
+  bits<5> vs2;
+  bits<5> vd;
+
+  let Inst{31-25} = funct7;
+  let Inst{24-20} = vs2;
+  let Inst{19-15} = vs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = vd;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+
+  let Uses = [VL, VTYPE];
+}
+
 //===----------------------------------------------------------------------===//
 // Multiclass
 //===----------------------------------------------------------------------===//
@@ -459,6 +478,18 @@ def NDS_LDGP  : NDSRVInstLDGP<0b011, "nds.ldgp">;
 
 def NDS_SDGP  : NDSRVInstSDGP<0b111, "nds.sdgp">;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
+
+//===----------------------------------------------------------------------===//
+// XAndesVBFHCvt
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXAndesVBFHCvt], Constraints = "@earlyclobber $vd",
+    mayRaiseFPException = true in {
+let RVVConstraint = VS2Constraint, DestEEW = EEWSEWx2 in
+def NDS_VFWCVT_S_BF16 : NDSRVInstVBFHCvt<0b0000000, 0b00000, "nds.vfwcvt.s.bf16">;
+let Uses = [FRM, VL, VTYPE] in
+def NDS_VFNCVT_BF16_S : NDSRVInstVBFHCvt<0b0000000, 0b00001, "nds.vfncvt.bf16.s">;
+}
 
 //===----------------------------------------------------------------------===//
 // XAndesVPackFPH

@@ -140,7 +140,7 @@ public:
     // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
     // reference the null symbol.
     auto Target = TargetVal;
-    if (Target.getSpecifier() == PPCMCExpr::VK_TOCBASE)
+    if (Target.getSpecifier() == PPC::S_TOCBASE)
       Target.setAddSym(nullptr);
     return MCAsmBackend::addReloc(F, Fixup, Target, FixedValue, IsResolved);
   }

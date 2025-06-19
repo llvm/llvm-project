@@ -393,7 +393,6 @@ def VOP_PERMLANE_SWAP : VOPProfile<[i32, i32, untyped, untyped]> {
   let Ins64 = (ins Src0RC64:$vdst_in, Src0RC64:$src0, Dpp16FI:$fi, DppBoundCtrl:$bound_ctrl);
   let InsVOP3OpSel = (ins Src0RC64:$vdst_in, Src0RC64:$src0, Dpp16FI:$fi, DppBoundCtrl:$bound_ctrl);
   let Asm64 = "$vdst, $src0$bound_ctrl$fi";
-  let AsmVOP3OpSel = "$vdst, $src0$bound_ctrl$fi";
 }
 
 // Special case because there are no true output operands.  Hack vdst

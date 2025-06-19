@@ -49,8 +49,8 @@ public:
     FilesToRecord.erase(File);
   }
 
-  /// Makes sure we have contents for all the files we were interested in. Ideally
-  /// `FilesToRecord` should be empty.
+  /// Makes sure we have contents for all the files we were interested in.
+  /// Ideally `FilesToRecord` should be empty.
   void checkAllFilesRecorded() {
     LLVM_DEBUG({
       for (auto FileEntry : FilesToRecord)

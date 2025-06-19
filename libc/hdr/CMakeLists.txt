@@ -127,6 +127,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  sys_ioctl_macros
+  HDRS
+    sys_ioctl_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_ioctl
+    libc.include.llvm-libc-macros.sys_ioctl_macros
+)
+
+add_proxy_header_library(
   sys_stat_macros
   HDRS
     sys_stat_macros.h
@@ -211,6 +220,8 @@ add_proxy_header_library(
 )
 
 add_header_library(wchar_overlay HDRS wchar_overlay.h)
+
+add_header_library(uchar_overlay HDRS uchar_overlay.h)
 
 add_proxy_header_library(
   wchar_macros

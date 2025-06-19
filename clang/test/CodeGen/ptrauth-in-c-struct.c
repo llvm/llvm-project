@@ -158,7 +158,7 @@ void test_copy_constructor_SI(SI *s) {
   SI t = *s;
 }
 
-// CHECK: define void @test_parameter_SI(i64 %{{.*}})
+// CHECK: define void @test_parameter_SI(ptr %{{.*}})
 // CHECK-NOT: call
 // CHECK: ret void
 

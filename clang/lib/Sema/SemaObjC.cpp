@@ -124,17 +124,12 @@ ExprResult SemaObjC::CheckObjCForCollectionOperand(SourceLocation forLoc,
   if (!collection)
     return ExprError();
 
-  ExprResult result = SemaRef.CorrectDelayedTyposInExpr(collection);
-  if (!result.isUsable())
-    return ExprError();
-  collection = result.get();
-
   // Bail out early if we've got a type-dependent expression.
   if (collection->isTypeDependent())
     return collection;
 
   // Perform normal l-value conversion.
-  result = SemaRef.DefaultFunctionArrayLvalueConversion(collection);
+  ExprResult result = SemaRef.DefaultFunctionArrayLvalueConversion(collection);
   if (result.isInvalid())
     return ExprError();
   collection = result.get();

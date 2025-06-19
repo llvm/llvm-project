@@ -8,7 +8,7 @@
 // CHECK-NEXT: extractvalue { i32, i32 } [[VALRET]], 0
 // CHECK-NEXT: extractvalue { i32, i32 } [[VALRET]], 1
 //
-// SPIRV: define spir_func {{.*}} i32 {{.*}}test_scalar{{.*}}(double {{.*}} [[VALD:%.*]])
+// SPIRV: define hidden spir_func {{.*}} i32 {{.*}}test_scalar{{.*}}(double {{.*}} [[VALD:%.*]])
 // SPIRV-NOT:  @llvm.dx.splitdouble.i32
 // SPIRV:      [[LOAD:%.*]] = load double, ptr [[VALD]].addr, align 8
 // SPIRV-NEXT: [[CAST:%.*]] = bitcast double [[LOAD]] to <2 x i32>
@@ -26,7 +26,7 @@ uint test_scalar(double D) {
 // CHECK-NEXT: extractvalue { i32, i32 } [[VALRET]], 0
 // CHECK-NEXT: extractvalue { i32, i32 } [[VALRET]], 1
 //
-// SPIRV: define spir_func {{.*}} <1 x i32> {{.*}}test_double1{{.*}}(<1 x double> {{.*}} [[VALD:%.*]])
+// SPIRV: define hidden spir_func {{.*}} <1 x i32> {{.*}}test_double1{{.*}}(<1 x double> {{.*}} [[VALD:%.*]])
 // SPIRV-NOT:  @llvm.dx.splitdouble.i32
 // SPIRV:      [[LOAD:%.*]] = load <1 x double>, ptr [[VALD]].addr, align 8
 // SPIRV-NEXT: [[TRUNC:%.*]] = extractelement <1 x double> [[LOAD]], i64 0
@@ -44,7 +44,7 @@ uint1 test_double1(double1 D) {
 // CHECK-NEXT: extractvalue { <2 x i32>, <2 x i32> } [[VALRET]], 0
 // CHECK-NEXT: extractvalue { <2 x i32>, <2 x i32> } [[VALRET]], 1
 //
-// SPIRV: define spir_func {{.*}} <2 x i32> {{.*}}test_vector2{{.*}}(<2 x double> {{.*}} [[VALD:%.*]])
+// SPIRV: define hidden spir_func {{.*}} <2 x i32> {{.*}}test_vector2{{.*}}(<2 x double> {{.*}} [[VALD:%.*]])
 // SPIRV-NOT:  @llvm.dx.splitdouble.i32
 // SPIRV:      [[LOAD:%.*]] = load <2 x double>, ptr [[VALD]].addr, align 16
 // SPIRV-NEXT: [[CAST1:%.*]] = bitcast <2 x double> [[LOAD]] to <4 x i32>
@@ -61,7 +61,7 @@ uint2 test_vector2(double2 D) {
 // CHECK-NEXT: extractvalue { <3 x i32>, <3 x i32> } [[VALRET]], 0
 // CHECK-NEXT: extractvalue { <3 x i32>, <3 x i32> } [[VALRET]], 1
 //
-// SPIRV: define spir_func {{.*}} <3 x i32> {{.*}}test_vector3{{.*}}(<3 x double> {{.*}} [[VALD:%.*]])
+// SPIRV: define hidden spir_func {{.*}} <3 x i32> {{.*}}test_vector3{{.*}}(<3 x double> {{.*}} [[VALD:%.*]])
 // SPIRV-NOT:  @llvm.dx.splitdouble.i32
 // SPIRV:      [[LOAD:%.*]] = load <3 x double>, ptr [[VALD]].addr, align 32
 // SPIRV-NEXT: [[CAST1:%.*]] = bitcast <3 x double> [[LOAD]] to <6 x i32>
@@ -78,7 +78,7 @@ uint3 test_vector3(double3 D) {
 // CHECK-NEXT: extractvalue { <4 x i32>, <4 x i32> } [[VALRET]], 0
 // CHECK-NEXT: extractvalue { <4 x i32>, <4 x i32> } [[VALRET]], 1
 //
-// SPIRV: define spir_func {{.*}} <4 x i32> {{.*}}test_vector4{{.*}}(<4 x double> {{.*}} [[VALD:%.*]])
+// SPIRV: define hidden spir_func {{.*}} <4 x i32> {{.*}}test_vector4{{.*}}(<4 x double> {{.*}} [[VALD:%.*]])
 // SPIRV-NOT: @llvm.dx.splitdouble.i32
 // SPIRV:      [[LOAD:%.*]] = load <4 x double>, ptr [[VALD]].addr, align 32
 // SPIRV-NEXT: [[CAST1:%.*]] = bitcast <4 x double> [[LOAD]] to <8 x i32>

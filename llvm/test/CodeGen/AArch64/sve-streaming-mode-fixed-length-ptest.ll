@@ -125,14 +125,14 @@ define i1 @ptest_or_v16i1(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q2, q3, [x1, #32]
 ; CHECK-NEXT:    ldp q4, q5, [x0]
 ; CHECK-NEXT:    fcmne p1.s, p0/z, z1.s, #0.0
-; CHECK-NEXT:    ldp q1, q6, [x1]
+; CHECK-NEXT:    ldp q6, q1, [x1]
 ; CHECK-NEXT:    fcmne p3.s, p0/z, z3.s, #0.0
 ; CHECK-NEXT:    fcmne p2.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    fcmne p5.s, p0/z, z2.s, #0.0
 ; CHECK-NEXT:    fcmne p4.s, p0/z, z5.s, #0.0
 ; CHECK-NEXT:    fcmne p7.s, p0/z, z4.s, #0.0
-; CHECK-NEXT:    fcmne p6.s, p0/z, z6.s, #0.0
-; CHECK-NEXT:    fcmne p0.s, p0/z, z1.s, #0.0
+; CHECK-NEXT:    fcmne p6.s, p0/z, z1.s, #0.0
+; CHECK-NEXT:    fcmne p0.s, p0/z, z6.s, #0.0
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z2.s, p3/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z1.s, p2/z, #-1 // =0xffffffffffffffff
@@ -334,14 +334,14 @@ define i1 @ptest_and_v16i1(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q2, q3, [x1, #32]
 ; CHECK-NEXT:    ldp q4, q5, [x0]
 ; CHECK-NEXT:    fcmne p1.s, p0/z, z1.s, #0.0
-; CHECK-NEXT:    ldp q1, q6, [x1]
+; CHECK-NEXT:    ldp q6, q1, [x1]
 ; CHECK-NEXT:    fcmne p3.s, p0/z, z3.s, #0.0
 ; CHECK-NEXT:    fcmne p2.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    fcmne p5.s, p0/z, z2.s, #0.0
 ; CHECK-NEXT:    fcmne p4.s, p0/z, z5.s, #0.0
 ; CHECK-NEXT:    fcmne p7.s, p0/z, z4.s, #0.0
-; CHECK-NEXT:    fcmne p6.s, p0/z, z6.s, #0.0
-; CHECK-NEXT:    fcmne p0.s, p0/z, z1.s, #0.0
+; CHECK-NEXT:    fcmne p6.s, p0/z, z1.s, #0.0
+; CHECK-NEXT:    fcmne p0.s, p0/z, z6.s, #0.0
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z2.s, p3/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z1.s, p2/z, #-1 // =0xffffffffffffffff

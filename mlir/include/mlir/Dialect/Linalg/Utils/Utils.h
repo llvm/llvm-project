@@ -71,12 +71,14 @@ bool isParallelIterator(utils::IteratorType iteratorType);
 /// Check if iterator type  has "reduction" semantics.
 bool isReductionIterator(utils::IteratorType iteratorType);
 
-/// Create a tensor::PadOp that pads `source` to the size of the statically
-/// sized `type` whose static sizes are assumed to be greater than the dynamic
-/// `source` size. The padding introduces trailing `pad` values until the
-/// target size is met. If `source` is defined by one or more LinalgOps that
-/// have been padded with the same value and sizes, return their padded result
-/// instead of creating a tensor::PadOp.
+/// Create a tensor::PadOp that pads `source` to the shape of `type` whose sizes
+/// are assumed to be greater than the dynamic `source` size. If `typeDynDims`
+/// is specified, then it must contain the sizes of all the dynamic dimensions
+/// in order of appearance in `type`, otherwise the function will pad those
+/// values to `0`. The padding introduces trailing `pad` values until the target
+/// size is met. If `source` is defined by one or more LinalgOps that have been
+/// padded with the same  value and sizes, return their padded result instead of
+/// creating a tensor::PadOp.
 ///
 /// Example:
 /// ```
@@ -91,7 +93,8 @@ bool isReductionIterator(utils::IteratorType iteratorType);
 /// %4 = tensor.pad %3 low[0, 0] high[...] { tensor.yield %other_cst }
 /// ```
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
-                            Value source, Value pad, bool nofold);
+                            Value source, Value padding, bool nofold,
+                            ValueRange typeDynDims = std::nullopt);
 
 /// Returns GenericOp that copies an n-D memref. Unlike the current
 /// implementation of memref::CopyOp, this op can further tile, lower to loops

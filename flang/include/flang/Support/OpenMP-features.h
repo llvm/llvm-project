@@ -42,6 +42,9 @@ void setOpenMPMacro(int version, FortranPredefinitions &predefinitions) {
   case 52:
     predefinitions.emplace_back("_OPENMP", "202111");
     break;
+  case 60:
+    predefinitions.emplace_back("_OPENMP", "202411");
+    break;
   case 11:
   default:
     predefinitions.emplace_back("_OPENMP", "199911");

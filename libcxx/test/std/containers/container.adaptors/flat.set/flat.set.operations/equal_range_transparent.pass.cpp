@@ -16,6 +16,7 @@
 #include <cassert>
 #include <deque>
 #include <flat_set>
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -100,6 +101,14 @@ void test() {
     auto p = m.equal_range(Transparent<int>{3});
     assert(p.first != p.second);
     assert(transparent_used);
+  }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_set<std::string, std::less<>>;
+    M m{"alpha", "beta", "epsilon", "eta", "gamma"};
+    auto [first, last] = m.equal_range("beta");
+    assert(first == m.begin() + 1);
+    assert(last == m.begin() + 2);
   }
 }
 

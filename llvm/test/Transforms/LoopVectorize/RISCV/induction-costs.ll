@@ -21,7 +21,7 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[UMIN21]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.umax.i64(i64 128, i64 [[TMP7]])
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP5]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
@@ -58,13 +58,13 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP45:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP46:%.*]] = mul i64 [[TMP45]], 8
+; CHECK-NEXT:    [[TMP46:%.*]] = mul nuw i64 [[TMP45]], 8
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP5]], [[TMP46]]
 ; CHECK-NEXT:    [[TMP47:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP48:%.*]] = select i1 [[TMP47]], i64 [[TMP46]], i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP5]], [[TMP48]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP52:%.*]] = mul i64 [[TMP51]], 8
+; CHECK-NEXT:    [[TMP52:%.*]] = mul nuw i64 [[TMP51]], 8
 ; CHECK-NEXT:    [[TMP49:%.*]] = mul i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[X_I64]], [[TMP49]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32

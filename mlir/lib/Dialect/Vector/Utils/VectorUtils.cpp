@@ -337,15 +337,16 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   auto sourceShape = sourceShapedType.getShape();
   assert(sourceShape.size() == inputVectorSizes.size() &&
          "expected same ranks.");
-  auto maskType = VectorType::get(inputVectorSizes, builder.getI1Type());
   auto vectorType = VectorType::get(inputVectorSizes, padValue.getType());
   assert(padValue.getType() == sourceShapedType.getElementType() &&
          "expected same pad element type to match source element type");
   int64_t readRank = inputVectorSizes.size();
   auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
   SmallVector<bool> inBoundsVal(readRank, true);
+
   if (useInBoundsInsteadOfMasking) {
     // Update the inBounds attribute.
+    // FIXME: This computation is too weak - it ignores the read indices.
     for (unsigned i = 0; i < readRank; i++)
       inBoundsVal[i] = (sourceShape[i] == inputVectorSizes[i]) &&
                        !ShapedType::isDynamic(sourceShape[i]);
@@ -362,6 +363,8 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
     return transferReadOp;
   SmallVector<OpFoldResult> mixedSourceDims =
       tensor::getMixedSizes(builder, loc, source);
+
+  auto maskType = VectorType::get(inputVectorSizes, builder.getI1Type());
   Value mask =
       builder.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
   return mlir::vector::maskOperation(builder, transferReadOp, mask)

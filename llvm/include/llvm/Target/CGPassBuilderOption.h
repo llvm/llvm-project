@@ -15,6 +15,7 @@
 #define LLVM_TARGET_CGPASSBUILDEROPTION_H
 
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
 
@@ -82,7 +83,7 @@ struct CGPassBuilderOption {
   std::optional<bool> DebugifyCheckAndStripAll;
 };
 
-CGPassBuilderOption getCGPassBuilderOption();
+LLVM_ABI CGPassBuilderOption getCGPassBuilderOption();
 
 } // namespace llvm
 

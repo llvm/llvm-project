@@ -9,20 +9,21 @@
 #include "src/stdio/fdopen.h"
 
 #include "hdr/fcntl_macros.h"
-#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fgets.h"
 #include "src/stdio/fputs.h"
 #include "src/unistd/close.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <sys/stat.h> // For S_IRWXU
 
-TEST(LlvmLibcStdioFdopenTest, WriteAppendRead) {
+using LlvmLibcStdioFdopenTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcStdioFdopenTest, WriteAppendRead) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  LIBC_NAMESPACE::libc_errno = 0;
   constexpr const char *TEST_FILE_NAME = "testdata/write_read_append.test";
   auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC | O_RDWR, S_IRWXU);
@@ -52,8 +53,7 @@ TEST(LlvmLibcStdioFdopenTest, WriteAppendRead) {
   ASSERT_ERRNO_SUCCESS();
 }
 
-TEST(LlvmLibcStdioFdopenTest, InvalidFd) {
-  LIBC_NAMESPACE::libc_errno = 0;
+TEST_F(LlvmLibcStdioFdopenTest, InvalidFd) {
   constexpr const char *TEST_FILE_NAME = "testdata/invalid_fd.test";
   auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC);
@@ -64,8 +64,7 @@ TEST(LlvmLibcStdioFdopenTest, InvalidFd) {
   ASSERT_TRUE(nullptr == fp);
 }
 
-TEST(LlvmLibcStdioFdopenTest, InvalidMode) {
-  LIBC_NAMESPACE::libc_errno = 0;
+TEST_F(LlvmLibcStdioFdopenTest, InvalidMode) {
   constexpr const char *TEST_FILE_NAME = "testdata/invalid_mode.test";
   auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_RDONLY, S_IRWXU);
@@ -83,7 +82,6 @@ TEST(LlvmLibcStdioFdopenTest, InvalidMode) {
   auto *fp2 = LIBC_NAMESPACE::fdopen(fd, "w");
   ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_TRUE(nullptr == fp2);
-  LIBC_NAMESPACE::libc_errno = 0;
   LIBC_NAMESPACE::close(fd);
   ASSERT_ERRNO_SUCCESS();
 }

@@ -128,7 +128,7 @@ define ptr addrspace(3) @inbounds_bitcast_vec_to_array_addrspace_matching_alloc_
 define ptr @test_accumulate_constant_offset_vscale_nonzero(<vscale x 16 x i1> %pg, ptr %base) {
 ; CHECK-LABEL: @test_accumulate_constant_offset_vscale_nonzero(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP3]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP]]

@@ -2102,7 +2102,7 @@
 // CHECK_ADL_M32: #define __AVX__ 1
 // CHECK_ADL_M32: #define __BMI2__ 1
 // CHECK_ADL_M32: #define __BMI__ 1
-// CHECK_ADL_M32: #define __CLDEMOTE__ 1
+// CHECK_ADL_M32-NOT: #define __CLDEMOTE__ 1
 // CHECK_ADL_M32: #define __CLFLUSHOPT__ 1
 // CHECK_ADL_M32: #define __CLWB__ 1
 // CHECK_ADL_M32: #define __F16C__ 1
@@ -2173,7 +2173,7 @@
 // CHECK_ADL_M64: #define __AVX__ 1
 // CHECK_ADL_M64: #define __BMI2__ 1
 // CHECK_ADL_M64: #define __BMI__ 1
-// CHECK_ADL_M64: #define __CLDEMOTE__ 1
+// CHECK_ADL_M64-NOT: #define __CLDEMOTE__ 1
 // CHECK_ADL_M64: #define __CLFLUSHOPT__ 1
 // CHECK_ADL_M64: #define __CLWB__ 1
 // CHECK_ADL_M64: #define __F16C__ 1

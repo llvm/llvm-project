@@ -130,7 +130,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
   const MCExpr *Expr = MO.getExpr();
   MCExpr::ExprKind Kind = Expr->getKind();
   unsigned FixupKind = LoongArch::fixup_loongarch_invalid;
-  if (Kind == MCExpr::Target) {
+  if (Kind == MCExpr::Specifier) {
     const LoongArchMCExpr *LAExpr = cast<LoongArchMCExpr>(Expr);
     FixupKind = LAExpr->getSpecifier();
     RelaxCandidate = LAExpr->getRelaxHint();

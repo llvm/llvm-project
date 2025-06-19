@@ -1668,10 +1668,14 @@ void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
   ExecutionContext exe_ctx(shared_from_this());
 
   const FormatEntity::Entry *thread_format;
-  if (stop_format)
-    thread_format = exe_ctx.GetTargetRef().GetDebugger().GetThreadStopFormat();
-  else
-    thread_format = exe_ctx.GetTargetRef().GetDebugger().GetThreadFormat();
+  FormatEntity::Entry format_entry;
+  if (stop_format) {
+    format_entry = exe_ctx.GetTargetRef().GetDebugger().GetThreadStopFormat();
+    thread_format = &format_entry;
+  } else {
+    format_entry = exe_ctx.GetTargetRef().GetDebugger().GetThreadFormat();
+    thread_format = &format_entry;
+  }
 
   assert(thread_format);
 
