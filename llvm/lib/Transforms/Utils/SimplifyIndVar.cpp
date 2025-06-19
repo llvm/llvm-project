@@ -339,13 +339,13 @@ bool SimplifyIndvar::forceEqualityForICmp(ICmpInst *ICmp,
         return false;
       }
 
-      unsigned IVBitWigth = IVStep->getAPInt().getBitWidth();
-      unsigned CountBitWigth = SameIterCount->getAPInt().getBitWidth();
+      unsigned IVBitWidth = IVStep->getAPInt().getBitWidth();
+      unsigned CountBitWidth = SameIterCount->getAPInt().getBitWidth();
       APInt SameIterCountA = SameIterCount->getAPInt();
-      if (IVBitWigth < CountBitWigth) {
-        SameIterCountA = SameIterCountA.trunc(IVBitWigth);
-      } else if (IVBitWigth > CountBitWigth) {
-        SameIterCountA = SameIterCountA.zext(IVBitWigth);
+      if (IVBitWidth < CountBitWidth) {
+        SameIterCountA = SameIterCountA.trunc(IVBitWidth);
+      } else if (IVBitWidth > CountBitWidth) {
+        SameIterCountA = SameIterCountA.zext(IVBitWidth);
       }
       NewBoundA = IVStart->getAPInt() + (IVStep->getAPInt() * SameIterCountA);
       NewPredicate = ExitIfTrue ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
