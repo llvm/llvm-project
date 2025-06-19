@@ -25,11 +25,8 @@ using namespace llvm;
 VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan)
     : Ctx(Plan.getScalarHeader()->getIRBasicBlock()->getContext()) {
   if (auto LoopRegion = Plan.getVectorLoopRegion()) {
-    if (const auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(
-            &LoopRegion->getEntryBasicBlock()->front())) {
-      CanonicalIVTy = CanIV->getScalarType();
-      return;
-    }
+    CanonicalIVTy = LoopRegion->getCanonicalIV()->getScalarType();
+    return;
   }
 
   // If there's no canonical IV, retrieve the type from the trip count
@@ -436,7 +433,13 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   // first and last occurrences of each recipe.
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getVectorLoopRegion());
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+  for (VPBlockBase *VPB : RPOT) {
+    if (auto *R = dyn_cast<VPRegionBlock>(VPB)) {
+      if (auto *CanIV = R->getCanonicalIV())
+        Idx2Recipe.push_back(CanIV);
+      continue;
+    }
+    auto *VPBB = cast<VPBasicBlock>(VPB);
     if (!VPBB->getParent())
       break;
     for (VPRecipeBase &R : *VPBB) {

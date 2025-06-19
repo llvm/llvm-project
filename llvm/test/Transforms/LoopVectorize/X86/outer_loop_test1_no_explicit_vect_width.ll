@@ -52,8 +52,7 @@
 ; AVX: %[[Splat:.*]] = shufflevector <8 x i32> %[[SplatVal]], <8 x i32> poison, <8 x i32> zeroinitializer
 
 ; AVX-LABEL: vector.body:
-; AVX: %[[Ind:.*]] = phi i64 [ 0, %vector.ph ], [ %[[IndNext:.*]], %[[ForInc:.*]] ]
-; AVX: %[[VecInd:.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %vector.ph ], [ %[[VecIndNext:.*]], %[[ForInc]] ]
+; AVX: %[[VecInd:.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %vector.ph ], [ %[[VecIndNext:.*]], %[[ForInc:.*]] ]
 ; AVX: %[[AAddr:.*]] = getelementptr inbounds [8 x i32], ptr @arr2, i64 0, <8 x i64> %[[VecInd]]
 ; AVX: %[[VecIndTr:.*]] = trunc <8 x i64> %[[VecInd]] to <8 x i32>
 ; AVX: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %[[VecIndTr]], <8 x ptr> %[[AAddr]], i32 4, <8 x i1> splat (i1 true))
@@ -71,7 +70,6 @@
 ; AVX: br i1 %[[InnerCond]], label %[[ForInc]], label %[[InnerLoop]]
 
 ; AVX: [[ForInc]]:
-; AVX: %[[IndNext]] = add nuw i64 %[[Ind]], 8
 ; AVX: %[[VecIndNext]] = add <8 x i64> %[[VecInd]], splat (i64 8)
 ; AVX: br i1 true, label %middle.block, label %vector.body
 

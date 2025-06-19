@@ -554,8 +554,20 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
     // The recipes in the block are processed in reverse order, to catch chains
     // of dead recipes.
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (isDeadRecipe(R))
+      if (isDeadRecipe(R)) {
         R.eraseFromParent();
+        continue;
+      }
+
+      // Check if R is a dead VPPhi <-> update cycle and remove it
+      auto *PhiR = dyn_cast<VPPhi>(&R);
+      if (!PhiR || PhiR->getNumOperands() != 2 || PhiR->getNumUsers() != 1 ||
+          *PhiR->user_begin() != PhiR->getOperand(1)->getDefiningRecipe() ||
+          PhiR->getOperand(1)->getNumUsers() != 1)
+        continue;
+      PhiR->replaceAllUsesWith(PhiR->getOperand(0));
+      PhiR->setOperand(0, PhiR->getOperand(0));
+      PhiR->eraseFromParent();
     }
   }
 }
@@ -1385,7 +1397,7 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
 
   auto *CanIV = Plan.getCanonicalIV();
   if (!match(Cond, m_Binary<Instruction::ICmp>(
-                       m_Specific(CanIV->getBackedgeValue()),
+                       m_Add(m_Specific(CanIV), m_Specific(&Plan.getVFxUF())),
                        m_Specific(&Plan.getVectorTripCount()))) ||
       cast<VPRecipeWithIRFlags>(Cond->getDefiningRecipe())->getPredicate() !=
           CmpInst::ICMP_EQ)
@@ -1446,14 +1458,14 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   // (BranchOnCond true).
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
   auto *CanIVTy = Plan.getCanonicalIV()->getScalarType();
-  if (all_of(
-          Header->phis(),
-          IsaPred<VPCanonicalIVPHIRecipe, VPFirstOrderRecurrencePHIRecipe>)) {
+  if (all_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>)) {
     for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
       auto *HeaderPhiR = cast<VPHeaderPHIRecipe>(&HeaderR);
       HeaderPhiR->replaceAllUsesWith(HeaderPhiR->getStartValue());
       HeaderPhiR->eraseFromParent();
     }
+    Plan.getCanonicalIV()->replaceAllUsesWith(
+        Plan.getCanonicalIV()->getStartValue());
 
     VPBlockBase *Preheader = VectorRegion->getSinglePredecessor();
     VPBlockBase *Exit = VectorRegion->getSingleSuccessor();
@@ -1947,11 +1959,11 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
   auto *CanonicalIVIncrement =
-      cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
+      cast<VPInstruction>(EB->getTerminator()->getOperand(0));
   // TODO: Check if dropping the flags is needed if
   // !DataAndControlFlowWithoutRuntimeCheck.
   CanonicalIVIncrement->dropPoisonGeneratingFlags();
-  DebugLoc DL = CanonicalIVIncrement->getDebugLoc();
+  DebugLoc DL = CanonicalIVPHI->getDebugLoc();
   // We can't use StartV directly in the ActiveLaneMask VPInstruction, since
   // we have to take unrolling into account. Each part needs to start at
   //   Part * VF
@@ -1988,7 +2000,8 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   // Now create the ActiveLaneMaskPhi recipe in the main loop using the
   // preheader ActiveLaneMask instruction.
   auto *LaneMaskPhi = new VPActiveLaneMaskPHIRecipe(EntryALM, DebugLoc());
-  LaneMaskPhi->insertAfter(CanonicalIVPHI);
+  auto *HeaderVPBB = TopRegion->getEntryBasicBlock();
+  LaneMaskPhi->insertBefore(*HeaderVPBB, HeaderVPBB->begin());
 
   // Create the active lane mask for the next iteration of the loop before the
   // original terminator.
@@ -2287,10 +2300,15 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
+  auto *CanonicalIVIncrement =
+      dyn_cast<VPInstruction>(Plan.getVectorLoopRegion()
+                                  ->getExitingBasicBlock()
+                                  ->getTerminator()
+                                  ->getOperand(0));
 
   // Create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
-  EVLPhi->insertAfter(CanonicalIVPHI);
+  EVLPhi->insertBefore(*Header, Header->begin());
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   // Compute original TC - IV as the AVL (application vector length).
   VPValue *AVL = Builder.createNaryOp(
@@ -2305,15 +2323,13 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
                                      DebugLoc());
 
-  auto *CanonicalIVIncrement =
-      cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
   Builder.setInsertPoint(CanonicalIVIncrement);
   VPSingleDefRecipe *OpVPEVL = VPEVL;
   if (unsigned IVSize = CanonicalIVPHI->getScalarType()->getScalarSizeInBits();
       IVSize != 32) {
     OpVPEVL = Builder.createScalarCast(
         IVSize < 32 ? Instruction::Trunc : Instruction::ZExt, OpVPEVL,
-        CanonicalIVPHI->getScalarType(), CanonicalIVIncrement->getDebugLoc());
+        CanonicalIVPHI->getScalarType(), CanonicalIVPHI->getDebugLoc());
   }
   auto *NextEVLIV = Builder.createOverflowingOp(
       Instruction::Add, {OpVPEVL, EVLPhi},
@@ -2327,7 +2343,12 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   // Replace all uses of VPCanonicalIVPHIRecipe by
   // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
   CanonicalIVPHI->replaceAllUsesWith(EVLPhi);
+
   CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
+  Plan.getVectorLoopRegion()
+      ->getExitingBasicBlock()
+      ->getTerminator()
+      ->setOperand(0, CanonicalIVIncrement);
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
   return true;
@@ -3297,7 +3318,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   // Adjust induction to reflect that the transformed plan only processes one
   // original iteration.
   auto *CanIV = Plan.getCanonicalIV();
-  auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
+  auto *Inc = cast<VPInstruction>(
+      VectorLoop->getExitingBasicBlock()->getTerminator()->getOperand(0));
   Inc->setOperand(1, Plan.getOrAddLiveIn(ConstantInt::get(
                          CanIV->getScalarType(), 1 * Plan.getUF())));
   Plan.getVF().replaceAllUsesWith(
