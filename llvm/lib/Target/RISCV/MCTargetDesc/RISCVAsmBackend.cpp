@@ -720,6 +720,9 @@ void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F,
   case RISCV::fixup_riscv_qc_e_call_plt:
     VendorIdentifier = "QUALCOMM";
     break;
+  case RISCV::fixup_riscv_nds_branch_10:
+    VendorIdentifier = "ANDES";
+    break;
   }
 
   // Create a local symbol for the vendor relocation to reference. It's fine if
