@@ -15,6 +15,7 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP)
@@ -71,27 +72,35 @@ LIBC_INLINE int set_env(const fenv_t *) { return 0; }
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-LIBC_INLINE int clear_except_if_required(int excepts) {
+LIBC_INLINE static int clear_except_if_required([[maybe_unused]] int excepts) {
+#ifndef LIBC_MATH_HAS_NO_EXCEPT
   if (math_errhandling & MATH_ERREXCEPT)
     return clear_except(excepts);
+#endif // LIBC_MATH_HAS_NO_EXCEPT
   return 0;
 }
 
-LIBC_INLINE int set_except_if_required(int excepts) {
+LIBC_INLINE static int set_except_if_required([[maybe_unused]] int excepts) {
+#ifndef LIBC_MATH_HAS_NO_EXCEPT
   if (math_errhandling & MATH_ERREXCEPT)
     return set_except(excepts);
+#endif // LIBC_MATH_HAS_NO_EXCEPT
   return 0;
 }
 
-LIBC_INLINE int raise_except_if_required(int excepts) {
+LIBC_INLINE static int raise_except_if_required([[maybe_unused]] int excepts) {
+#ifndef LIBC_MATH_HAS_NO_EXCEPT
   if (math_errhandling & MATH_ERREXCEPT)
     return raise_except(excepts);
+#endif // LIBC_MATH_HAS_NO_EXCEPT
   return 0;
 }
 
-LIBC_INLINE void set_errno_if_required(int err) {
+LIBC_INLINE static void set_errno_if_required([[maybe_unused]] int err) {
+#ifndef LIBC_MATH_HAS_NO_ERRNO
   if (math_errhandling & MATH_ERRNO)
     libc_errno = err;
+#endif // LIBC_MATH_HAS_NO_ERRNO
 }
 
 } // namespace fputil
