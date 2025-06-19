@@ -172,8 +172,9 @@ constexpr FeatureBitset FeaturesArrowlake =
     FeatureENQCMD | FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
 constexpr FeatureBitset FeaturesSierraforest =
     FeaturesArrowlake | FeatureCLDEMOTE;
-constexpr FeatureBitset FeaturesArrowlakeS = FeaturesArrowlake |
-    FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 | FeatureSM4;
+constexpr FeatureBitset FeaturesArrowlakeS =
+    FeaturesArrowlake | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
+    FeatureSM4;
 constexpr FeatureBitset FeaturesPantherlake =
     FeaturesArrowlakeS | FeaturePREFETCHI;
 constexpr FeatureBitset FeaturesClearwaterforest =
