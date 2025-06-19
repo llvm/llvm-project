@@ -1387,7 +1387,7 @@ def GPU_RotateOp : GPU_Op<
     ```
 
     Returns the `rotateResult` and `true` if the current lane id is smaller than
-    `width`, and an unspecified value and `false` otherwise.
+    `width`, and poison value and `false` otherwise.
 
     example:
 
