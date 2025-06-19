@@ -194,18 +194,38 @@ NextUseResult::getSortedSubregUses(const MachineBasicBlock::iterator I,
   unsigned MBBNum = MBB->getNumber();
   if (NextUseMap.contains(MBBNum) &&
       NextUseMap[MBBNum].InstrDist.contains(&*I)) {
-    VRegDistances Dists = NextUseMap[MBBNum].InstrDist[&*I];
-    if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP.VReg)) {
+    // VRegDistances Dists = NextUseMap[MBBNum].InstrDist[&*I];
+    if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP.getVReg())) {
       VRegDistances::SortedRecords Dists =
-          NextUseMap[MBBNum].InstrDist[&*I][VMP.VReg];
-      LLVM_DEBUG(dbgs() << "Mask : [" << PrintLaneMask(VMP.LaneMask) << "]\n");
+          NextUseMap[MBBNum].InstrDist[&*I][VMP.getVReg()];
+      LLVM_DEBUG(dbgs() << "Mask : [" << PrintLaneMask(VMP.getLaneMask()) << "]\n");
       for (auto P : reverse(Dists)) {
         LaneBitmask UseMask = P.first;
         LLVM_DEBUG(dbgs() << "Used mask : [" << PrintLaneMask(UseMask)
                           << "]\n");
-        if ((UseMask & VMP.LaneMask) == UseMask) {
-          Result.push_back({VMP.VReg, UseMask});
+        if ((UseMask & VMP.getLaneMask()) == UseMask) {
+          Result.push_back({VMP.getVReg(), UseMask});
         }
+      }
+    }
+  }
+  return Result;
+}
+
+SmallVector<VRegMaskPair>
+NextUseResult::getSortedSubregUses(const MachineBasicBlock &MBB,
+                                   const VRegMaskPair VMP) {
+  SmallVector<VRegMaskPair> Result;
+  unsigned MBBNum = MBB.getNumber();
+  if (NextUseMap.contains(MBBNum) &&
+      NextUseMap[MBBNum].Bottom.contains(VMP.getVReg())) {
+    VRegDistances::SortedRecords Dists = NextUseMap[MBBNum].Bottom[VMP.getVReg()];
+    LLVM_DEBUG(dbgs() << "Mask : [" << PrintLaneMask(VMP.getLaneMask()) << "]\n");
+    for (auto P : reverse(Dists)) {
+      LaneBitmask UseMask = P.first;
+      LLVM_DEBUG(dbgs() << "Used mask : [" << PrintLaneMask(UseMask) << "]\n");
+      if ((UseMask & VMP.getLaneMask()) == UseMask) {
+        Result.push_back({VMP.getVReg(), UseMask});
       }
     }
   }
@@ -217,8 +237,8 @@ void NextUseResult::dumpUsedInBlock() {
                   : UsedInBlock) {
     dbgs() << "MBB_" << P.first << ":\n";
     for (auto VMP : P.second) {
-      dbgs() << "[ " << printReg(VMP.VReg) << " : <"
-             << PrintLaneMask(VMP.LaneMask) << "> ]\n";
+      dbgs() << "[ " << printReg(VMP.getVReg()) << " : <"
+             << PrintLaneMask(VMP.getLaneMask()) << "> ]\n";
     }
   });
 }
@@ -231,9 +251,9 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
   if (NextUseMap.contains(MBBNum) &&
       NextUseMap[MBBNum].InstrDist.contains(&*I)) {
     VRegDistances Dists = NextUseMap[MBBNum].InstrDist[&*I];
-    if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP.VReg)) {
+    if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP.getVReg())) {
       // printSortedRecords(Dists[VMP.VReg], VMP.VReg);
-      getFromSortedRecords(Dists[VMP.VReg], VMP.LaneMask, Dist);
+      getFromSortedRecords(Dists[VMP.getVReg()], VMP.getLaneMask(), Dist);
     }
   }
 
@@ -245,8 +265,8 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock &MBB,
   unsigned Dist = Infinity;
   unsigned MBBNum = MBB.getNumber();
   if (NextUseMap.contains(MBBNum)) {
-    if (NextUseMap[MBBNum].Bottom.contains(VMP.VReg)) {
-      getFromSortedRecords(NextUseMap[MBBNum].Bottom[VMP.VReg], VMP.LaneMask,
+    if (NextUseMap[MBBNum].Bottom.contains(VMP.getVReg())) {
+      getFromSortedRecords(NextUseMap[MBBNum].Bottom[VMP.getVReg()], VMP.getLaneMask(),
                            Dist);
     }
   }
