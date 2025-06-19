@@ -13153,6 +13153,20 @@ TEST_F(FormatTest, BreaksLongVariableDeclarations) {
                getLLVMStyleWithColumns(40));
 }
 
+TEST_F(FormatTest, BreaksBeforeConstWithPointerAlignmentLeftAndColumnLimit) {
+  FormatStyle Style = getLLVMStyle();
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.ColumnLimit = 80;
+  verifyFormat(
+      "void foo(\n"
+      "    const MySuperSuperSuperSuperSuperSuperSuperSuperSuperSuperLongTypeName*\n"
+      "        const my_super_super_super_super_super_long_variable_name) {}",
+      "void foo(\n"
+      "    const MySuperSuperSuperSuperSuperSuperSuperSuperSuperSuperLongTypeName* const\n"
+      "        my_super_super_super_super_super_long_variable_name) {}",
+      Style);
+}
+
 TEST_F(FormatTest, BreaksLongDeclarations) {
   verifyFormat("typedef LoooooooooooooooooooooooooooooooooooooooongType\n"
                "    AnotherNameForTheLongType;");
