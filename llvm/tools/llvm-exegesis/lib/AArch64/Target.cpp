@@ -28,12 +28,6 @@
 #endif                   // HAVE_LIBPFM
 #include <linux/prctl.h> // For PR_PAC_* constants
 #include <sys/prctl.h>
-#ifndef PR_PAC_SET_ENABLED_KEYS
-#define PR_PAC_SET_ENABLED_KEYS 60
-#endif
-#ifndef PR_PAC_GET_ENABLED_KEYS
-#define PR_PAC_GET_ENABLED_KEYS 61
-#endif
 #ifndef PR_PAC_APIAKEY
 #define PR_PAC_APIAKEY (1UL << 0)
 #endif
@@ -287,6 +281,35 @@ private:
   void addTargetSpecificPasses(PassManagerBase &PM) const override {
     // Function return is a pseudo-instruction that needs to be expanded
     PM.add(createAArch64ExpandPseudoPass());
+  }
+
+  const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
+                                           unsigned Opcode) const override {
+    if (const char *Reason =
+            ExegesisTarget::getIgnoredOpcodeReasonOrNull(State, Opcode))
+      return Reason;
+
+    if (isPointerAuth(Opcode)) {
+#if defined(__aarch64__) && defined(__linux__)
+      // Disable all PAC keys. Note that while we expect the measurements to
+      // be the same with PAC keys disabled, they could potentially be lower
+      // since authentication checks are bypassed.
+      if (prctl(PR_PAC_SET_ENABLED_KEYS,
+                PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
+                    PR_PAC_APDBKEY, // all keys
+                0,                  // disable all
+                0, 0) < 0) {
+        return "Failed to disable PAC keys";
+      }
+#else
+      return "Unsupported opcode: isPointerAuth";
+#endif
+    }
+
+    if (isLoadTagMultiple(Opcode))
+      return "Unsupported opcode: load tag multiple";
+
+    return nullptr;
   }
 };
 
