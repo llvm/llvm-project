@@ -417,3 +417,15 @@ void HIPAMDToolChain::checkTargetID(
     getDriver().Diag(clang::diag::err_drv_bad_target_id)
         << *PTID.OptionalTargetID;
 }
+
+SPIRVAMDToolChain::SPIRVAMDToolChain(const Driver &D,
+                                     const llvm::Triple &Triple,
+                                     const ArgList &Args)
+    : ROCMToolChain(D, Triple, Args) {
+  getProgramPaths().push_back(getDriver().Dir);
+}
+
+Tool *SPIRVAMDToolChain::buildLinker() const {
+  assert(getTriple().getArch() == llvm::Triple::spirv64);
+  return new tools::AMDGCN::Linker(*this);
+}
