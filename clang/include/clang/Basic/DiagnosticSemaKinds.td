@@ -1767,8 +1767,7 @@ def note_unsatisfied_trait
     : Note<"%0 is not %enum_select<TraitName>{"
            "%TriviallyRelocatable{trivially relocatable}|"
            "%Replaceable{replaceable}|"
-           "%TriviallyCopyable{trivially copyable}|"
-           "%Constructible{constructible with provided types}"
+           "%TriviallyCopyable{trivially copyable}"
            "}1">;
 
 def note_unsatisfied_trait_reason
