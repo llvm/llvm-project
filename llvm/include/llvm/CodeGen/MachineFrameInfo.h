@@ -772,7 +772,7 @@ public:
     // If ID == 0, MaxAlignment will need to be updated separately.
   }
 
-  int getUnderlyingSlot(int ObjectIdx) {
+  int getUnderlyingSlot(int ObjectIdx) const {
     assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     return Objects[ObjectIdx + NumFixedObjects].UnderlyingSlot;

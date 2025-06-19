@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
@@ -99,7 +100,6 @@ static cl::opt<unsigned> MaxCandidatesOpt(
         "Max number of candidates that will be evaluated, 0 means no limit"));
 
 STATISTIC(NumMarkerSeen, "Number of lifetime markers found.");
-STATISTIC(GeneratedWorse, "Number of times worse layout were generated");
 STATISTIC(StackSpaceSaved, "Number of bytes saved due to merging slots.");
 STATISTIC(StackSlotMerged, "Number of stack slot merged.");
 STATISTIC(EscapedAllocas, "Number of allocas that escaped the lifetime region");
@@ -400,7 +400,9 @@ class StackColoring {
     // Use to make overlap queries faster
     SmallVector<unsigned, 4> StartLiveness;
 
-    uint64_t SlotPriority = 0;
+    int64_t SlotPriority = 0;
+
+    unsigned UseCount = 0;
 
     unsigned Offset = InvalidIdx;
 
@@ -653,9 +655,11 @@ StackColoring::SlotInfo::dump(const StackColoring *State) const {
   dbgs() << ":";
   if (Offset != InvalidIdx)
     dbgs() << " offset=" << Offset;
+  dbgs() << " uses=" << UseCount;
+  dbgs() << " prio=" << SlotPriority;
   if (State) {
     if (State->MFI->getObjectAllocation(Slot))
-      dbgs() << " \"" << State->MFI->getObjectAllocation(Slot)->getName()
+      dbgs() << " alloca=\"" << State->MFI->getObjectAllocation(Slot)->getName()
              << "\"";
     if (State->MFI->isSpillSlotObjectIndex(Slot))
       dbgs() << " spill";
@@ -803,6 +807,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
           int Slot = MO.getIndex();
           if (Slot < 0)
             continue;
+          Slot2Info[Slot].UseCount++;
           if (!BetweenStartEnd.test(Slot)) {
             ConservativeSlots.set(Slot);
           }
@@ -1525,35 +1530,24 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
   if (SlotStack.size() <= 1)
     return InvalidIdx;
 
-  // This Whole block is only used to try and order the stack, such that the
-  // Slots are processed in an order that helps getting good packing
-  {
-    // Find how much usage of every livepoint there is.
-    SmallVector<unsigned> CumulatedUsage;
-    CumulatedUsage.resize(LivenessSize, 0);
+  // This logic is optimized for x86_64, it probably needs to be adapted to
+  // other targets to get good code-size/stack-size balance.
+  // Its inspired from X86FrameLowering::orderFrameObjects, but modified weight
+  // in alignments helping with stack size
+  auto IsLower = [&](unsigned Lhs, unsigned Rhs) {
+    SlotInfo &L = Slot2Info[Lhs];
+    SlotInfo &R = Slot2Info[Rhs];
+    uint64_t DensityLScaled = static_cast<uint64_t>(L.UseCount) *
+                              static_cast<uint64_t>(R.Size + Log2(R.Align));
+    uint64_t DensityRScaled = static_cast<uint64_t>(R.UseCount) *
+                              static_cast<uint64_t>(L.Size + Log2(L.Align));
+    return DensityLScaled < DensityRScaled;
+  };
+  std::stable_sort(SlotStack.begin(), SlotStack.end(), IsLower);
 
-    for (unsigned Idx = 0; Idx < SlotStack.size(); Idx++) {
-      SlotInfo &Info = Slot2Info[SlotStack[Idx]];
-      for (unsigned Pt : Info.Liveness.set_bits()) {
-        CumulatedUsage[Pt] += Info.Size;
-      }
-    }
-
-    for (unsigned Idx = 0; Idx < SlotStack.size(); Idx++) {
-      SlotInfo &Info = Slot2Info[SlotStack[Idx]];
-      for (unsigned Pt : Info.Liveness.set_bits()) {
-        // Since the goal is to minimize the max usage, blocks that are in high
-        // contention areas are given more priority
-        Info.SlotPriority +=
-            (uint64_t)CumulatedUsage[Pt] * (uint64_t)CumulatedUsage[Pt] +
-            (uint64_t)Info.Size * (uint64_t)Info.Align.value();
-      }
-    }
-    std::stable_sort(
-        SlotStack.begin(), SlotStack.end(), [&](unsigned Lhs, unsigned Rhs) {
-          return Slot2Info[Lhs].SlotPriority < Slot2Info[Rhs].SlotPriority;
-        });
-  }
+  int Prio = 0;
+  for (int Slot : SlotStack)
+    Slot2Info[Slot].SlotPriority = Prio++;
 
   SlotInfo *LastQueryLhs = nullptr;
   SlotInfo *LastQueryRhs = nullptr;
@@ -1666,24 +1660,27 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
 
       Offset = alignTo(Offset, Info.Align);
 
-      LLVM_DEBUG(dbgs() << "fi#" << Candidates[K] << "@" << Offset << "->";
-                 if (PrevSlot == InvalidIdx) dbgs() << "bottom";
-                 else dbgs() << "fi#" << PrevSlot; dbgs() << ", ";);
+      LLVM_DEBUG({
+        dbgs() << "fi#" << Candidates[K] << "@" << Offset;
+        if (PrevSlot != InvalidIdx)
+          dbgs() << "->" << "fi#" << PrevSlot;
+        dbgs() << ", ";
+      });
 
       bool IsBetter = [&] {
+        if (BestIdx == InvalidIdx)
+          return true;
+        SlotInfo &Best = Slot2Info[Candidates[BestIdx]];
         if (BestOffset != Offset)
           return BestOffset > Offset;
-        SlotInfo &Other = Slot2Info[Candidates[K]];
-        if (Other.Align != Info.Align)
-          return Other.Align < Info.Align;
-        if (Other.Size != Info.Size)
-          return Other.Size < Info.Size;
-        if (Other.SlotPriority != Info.SlotPriority)
-          return Other.SlotPriority < Info.SlotPriority;
+        if (Best.SlotPriority != Info.SlotPriority)
+          return Best.SlotPriority < Info.SlotPriority;
+        if (Best.Align != Info.Align)
+          return Best.Align < Info.Align;
 
         // Both are always stored in Slot2Info, so this is equivalent to
         // FrameIndex comparaison
-        return &Other < &Info;
+        return &Best < &Info;
       }();
 
       if (IsBetter) {
@@ -1726,7 +1723,6 @@ unsigned StackColoring::doMerging(unsigned NumSlots) {
   LLVM_DEBUG(dbgs() << "MergedSize=" << FinalSize << " OrigPesSize="
                     << OrigPesSize << " OrigOptSize" << OrigOptSize << "\n");
   if (FinalSize >= OrigPesSize) {
-    GeneratedWorse++;
     return InvalidIdx;
   }
 
@@ -1774,6 +1770,7 @@ bool StackColoring::run(MachineFunction &Func) {
   Intervals.reserve(NumSlots);
   LiveStarts.resize(NumSlots);
 
+  Slot2Info.resize(NumSlots);
   unsigned NumMarkers = collectMarkers(NumSlots);
 
   unsigned TotalSize = 0;
@@ -1792,7 +1789,6 @@ bool StackColoring::run(MachineFunction &Func) {
     return removeAllMarkers();
   }
 
-  Slot2Info.resize(NumSlots);
   for (unsigned i = 0; i < NumSlots; ++i) {
     std::unique_ptr<LiveRange> LI(new LiveRange());
     LI->getNextValue(Indexes->getZeroIndex(), VNInfoAllocator);
