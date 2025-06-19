@@ -330,9 +330,7 @@ GetDemangledReturnTypeRHS(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (info.QualifiersRange.first <
-      info.ArgumentsRange.second) // TODO: Replace with .hasArgumentsRange()
-                                  // once #144549 lands.
+  if (info.QualifiersRange.first < info.ArgumentsRange.second)
     return llvm::createStringError(
         "Qualifiers range for '%s' RHS return type  is invalid.",
         demangled_name.data());
