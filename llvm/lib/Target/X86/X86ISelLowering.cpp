@@ -513,10 +513,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
   setOperationAction(ISD::EH_SJLJ_SETUP_DISPATCH, MVT::Other, Custom);
 
-  // FIXME: This should be set in RuntimeLibcallsInfo
-  if (TM.Options.ExceptionModel == ExceptionHandling::SjLj)
-    setLibcallName(RTLIB::UNWIND_RESUME, "_Unwind_SjLj_Resume");
-
   // Darwin ABI issue.
   for (auto VT : { MVT::i32, MVT::i64 }) {
     if (VT == MVT::i64 && !Subtarget.is64Bit())
@@ -46009,11 +46005,9 @@ static bool detectZextAbsDiff(SDValue Abs, SDValue &Op0, SDValue &Op1) {
 
   // Check if the operands of the sub are zero-extended from vectors of i8.
   EVT SrcVT0, SrcVT1;
-  return sd_match(
-             Abs,
-             m_UnaryOp(ISD::ABS,
-                       m_Sub(m_AllOf(m_Value(Op0), m_ZExt(m_VT(SrcVT0))),
-                             m_AllOf(m_Value(Op1), m_ZExt(m_VT(SrcVT1)))))) &&
+  return sd_match(Abs,
+                  m_Abs(m_Sub(m_AllOf(m_Value(Op0), m_ZExt(m_VT(SrcVT0))),
+                              m_AllOf(m_Value(Op1), m_ZExt(m_VT(SrcVT1)))))) &&
          SrcVT0.getVectorElementType() == MVT::i8 &&
          SrcVT1.getVectorElementType() == MVT::i8;
 }

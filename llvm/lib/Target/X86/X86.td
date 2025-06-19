@@ -1284,7 +1284,6 @@ def ProcessorFeatures {
                                                   FeatureAVXVNNI,
                                                   FeaturePKU,
                                                   FeatureHRESET,
-                                                  FeatureCLDEMOTE,
                                                   FeatureMOVDIRI,
                                                   FeatureMOVDIR64B,
                                                   FeatureWAITPKG];
@@ -1311,6 +1310,7 @@ def ProcessorFeatures {
                                                   FeatureAVXNECONVERT,
                                                   FeatureENQCMD,
                                                   FeatureUINTR,
+                                                  FeatureCLDEMOTE,
                                                   FeatureAVXVNNIINT8];
   list<SubtargetFeature> SRFFeatures =
     !listconcat(ADLFeatures, SRFAdditionalFeatures);

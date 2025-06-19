@@ -1108,10 +1108,7 @@ public:
 
   virtual bool enableScalableVectorization() const { return false; }
 
-  virtual bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
-                                     Align Alignment) const {
-    return false;
-  }
+  virtual bool hasActiveVectorLength() const { return false; }
 
   virtual bool isProfitableToSinkOperands(Instruction *I,
                                           SmallVectorImpl<Use *> &Ops) const {
