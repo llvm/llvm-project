@@ -11,16 +11,16 @@ define i32 @vqdot(ptr %a, ptr %b) #0 {
 ; V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; V-NEXT:  entry:
 ; V-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; V-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; V-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; V-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; V:       vector.ph:
 ; V-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; V-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; V-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; V-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; V-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; V-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; V-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; V:       vector.body:
 ; V-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -48,16 +48,16 @@ define i32 @vqdot(ptr %a, ptr %b) #0 {
 ; ZVQDOTQ-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ZVQDOTQ-NEXT:  entry:
 ; ZVQDOTQ-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; ZVQDOTQ-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; ZVQDOTQ-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; ZVQDOTQ-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; ZVQDOTQ:       vector.ph:
 ; ZVQDOTQ-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; ZVQDOTQ-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVQDOTQ-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVQDOTQ-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; ZVQDOTQ-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; ZVQDOTQ-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ZVQDOTQ:       vector.body:
 ; ZVQDOTQ-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -183,16 +183,16 @@ define i32 @vqdotu(ptr %a, ptr %b) #0 {
 ; V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; V-NEXT:  entry:
 ; V-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; V-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; V-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; V-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; V:       vector.ph:
 ; V-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; V-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; V-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; V-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; V-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; V-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; V-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; V:       vector.body:
 ; V-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -220,16 +220,16 @@ define i32 @vqdotu(ptr %a, ptr %b) #0 {
 ; ZVQDOTQ-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; ZVQDOTQ-NEXT:  entry:
 ; ZVQDOTQ-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; ZVQDOTQ-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; ZVQDOTQ-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; ZVQDOTQ-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; ZVQDOTQ:       vector.ph:
 ; ZVQDOTQ-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; ZVQDOTQ-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVQDOTQ-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVQDOTQ-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; ZVQDOTQ-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; ZVQDOTQ-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ZVQDOTQ:       vector.body:
 ; ZVQDOTQ-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -355,16 +355,16 @@ define i32 @vqdotsu(ptr %a, ptr %b) #0 {
 ; V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; V-NEXT:  entry:
 ; V-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; V-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; V-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; V-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; V:       vector.ph:
 ; V-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; V-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; V-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; V-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; V-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; V-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; V-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; V:       vector.body:
 ; V-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -392,16 +392,16 @@ define i32 @vqdotsu(ptr %a, ptr %b) #0 {
 ; ZVQDOTQ-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; ZVQDOTQ-NEXT:  entry:
 ; ZVQDOTQ-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; ZVQDOTQ-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; ZVQDOTQ-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; ZVQDOTQ-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; ZVQDOTQ:       vector.ph:
 ; ZVQDOTQ-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; ZVQDOTQ-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVQDOTQ-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVQDOTQ-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; ZVQDOTQ-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; ZVQDOTQ-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ZVQDOTQ:       vector.body:
 ; ZVQDOTQ-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -526,16 +526,16 @@ define i32 @vqdotsu2(ptr %a, ptr %b) #0 {
 ; V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; V-NEXT:  entry:
 ; V-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; V-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; V-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; V-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; V:       vector.ph:
 ; V-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; V-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; V-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; V-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; V-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; V-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; V-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; V:       vector.body:
 ; V-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -563,16 +563,16 @@ define i32 @vqdotsu2(ptr %a, ptr %b) #0 {
 ; ZVQDOTQ-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; ZVQDOTQ-NEXT:  entry:
 ; ZVQDOTQ-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; ZVQDOTQ-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; ZVQDOTQ-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; ZVQDOTQ-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; ZVQDOTQ:       vector.ph:
 ; ZVQDOTQ-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; ZVQDOTQ-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVQDOTQ-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVQDOTQ-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; ZVQDOTQ-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; ZVQDOTQ-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ZVQDOTQ:       vector.body:
 ; ZVQDOTQ-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

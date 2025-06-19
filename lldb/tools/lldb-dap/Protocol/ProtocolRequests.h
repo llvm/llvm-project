@@ -839,6 +839,42 @@ bool fromJSON(const llvm::json::Value &, DisassembleResponseBody &,
               llvm::json::Path);
 llvm::json::Value toJSON(const DisassembleResponseBody &);
 
+/// Arguments for `readMemory` request.
+struct ReadMemoryArguments {
+  /// Memory reference to the base location from which data should be read.
+  lldb::addr_t memoryReference;
+
+  /// Offset (in bytes) to be applied to the reference location before reading
+  /// data. Can be negative.
+  int64_t offset = 0;
+
+  /// Number of bytes to read at the specified location and offset.
+  uint64_t count;
+};
+bool fromJSON(const llvm::json::Value &, ReadMemoryArguments &,
+              llvm::json::Path);
+
+/// Response to `readMemory` request.
+struct ReadMemoryResponseBody {
+  /// The address of the first byte of data returned.
+  /// Treated as a hex value if prefixed with `0x`, or as a decimal value
+  /// otherwise.
+  std::string address;
+
+  /// The number of unreadable bytes encountered after the last successfully
+  /// read byte.
+  /// This can be used to determine the number of bytes that should be skipped
+  /// before a subsequent `readMemory` request succeeds.
+  uint64_t unreadableBytes = 0;
+
+  /// The bytes read from memory, encoded using base64. If the decoded length
+  /// of `data` is less than the requested `count` in the original `readMemory`
+  /// request, and `unreadableBytes` is zero or omitted, then the client should
+  /// assume it's reached the end of readable memory.
+  std::vector<std::byte> data;
+};
+llvm::json::Value toJSON(const ReadMemoryResponseBody &);
+
 } // namespace lldb_dap::protocol
 
 #endif
