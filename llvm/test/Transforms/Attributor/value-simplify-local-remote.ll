@@ -135,7 +135,7 @@ define internal %S @foo.1(ptr %foo.this) {
 ; TUNIT-NEXT:    [[RETVAL:%.*]] = alloca [[S:%.*]], i32 0, align 8
 ; TUNIT-NEXT:    store ptr [[FOO_THIS]], ptr [[FOO_THIS]], align 8
 ; TUNIT-NEXT:    call void @bar.2(ptr noalias nofree noundef nonnull writeonly align 8 captures(none) [[RETVAL]], ptr nofree noundef nonnull writeonly align 8 dereferenceable(8) [[FOO_THIS]]) #[[ATTR5:[0-9]+]]
-; TUNIT-NEXT:    [[FOO_RET:%.*]] = load [[S]], ptr [[RETVAL]], align 8, !invariant.load [[META8:![0-9]+]]
+; TUNIT-NEXT:    [[FOO_RET:%.*]] = load [[S]], ptr [[RETVAL]], align 8
 ; TUNIT-NEXT:    ret [[S]] [[FOO_RET]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
@@ -145,7 +145,7 @@ define internal %S @foo.1(ptr %foo.this) {
 ; CGSCC-NEXT:    [[RETVAL:%.*]] = alloca [[S:%.*]], i32 0, align 8
 ; CGSCC-NEXT:    store ptr [[FOO_THIS]], ptr [[FOO_THIS]], align 8
 ; CGSCC-NEXT:    call void @bar.2(ptr noalias nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[RETVAL]], ptr nofree noundef nonnull writeonly align 8 dereferenceable(8) [[FOO_THIS]]) #[[ATTR6]]
-; CGSCC-NEXT:    [[FOO_RET:%.*]] = load [[S]], ptr [[RETVAL]], align 8, !invariant.load [[META8:![0-9]+]]
+; CGSCC-NEXT:    [[FOO_RET:%.*]] = load [[S]], ptr [[RETVAL]], align 8
 ; CGSCC-NEXT:    ret [[S]] [[FOO_RET]]
 ;
 entry:
@@ -234,7 +234,7 @@ define internal %S @bar.5(ptr %this) {
 ; TUNIT-NEXT:    [[RETVAL:%.*]] = alloca [[S:%.*]], i32 0, align 8
 ; TUNIT-NEXT:    store ptr [[THIS]], ptr [[THIS]], align 8
 ; TUNIT-NEXT:    call void @baz.6(ptr noalias nofree noundef nonnull writeonly align 8 captures(none) [[RETVAL]], ptr nofree noundef nonnull align 8 dereferenceable(8) [[THIS]]) #[[ATTR4]]
-; TUNIT-NEXT:    [[BAR_RET:%.*]] = load [[S]], ptr [[RETVAL]], align 8, !invariant.load [[META8]]
+; TUNIT-NEXT:    [[BAR_RET:%.*]] = load [[S]], ptr [[RETVAL]], align 8
 ; TUNIT-NEXT:    ret [[S]] [[BAR_RET]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
@@ -244,7 +244,7 @@ define internal %S @bar.5(ptr %this) {
 ; CGSCC-NEXT:    [[RETVAL:%.*]] = alloca [[S:%.*]], i32 0, align 8
 ; CGSCC-NEXT:    store ptr [[THIS]], ptr [[THIS]], align 8
 ; CGSCC-NEXT:    call void @baz.6(ptr noalias nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[RETVAL]], ptr nofree noundef nonnull align 8 dereferenceable(8) [[THIS]]) #[[ATTR9:[0-9]+]]
-; CGSCC-NEXT:    [[BAR_RET:%.*]] = load [[S]], ptr [[RETVAL]], align 8, !invariant.load [[META8]]
+; CGSCC-NEXT:    [[BAR_RET:%.*]] = load [[S]], ptr [[RETVAL]], align 8
 ; CGSCC-NEXT:    ret [[S]] [[BAR_RET]]
 ;
 entry:
@@ -286,7 +286,7 @@ define internal void @boom(ptr %this, ptr %data) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[DATA_ADDR:%.*]] = alloca ptr, i32 0, align 8
 ; TUNIT-NEXT:    store ptr [[DATA]], ptr [[DATA_ADDR]], align 8
-; TUNIT-NEXT:    [[V:%.*]] = load ptr, ptr [[DATA_ADDR]], align 8, !invariant.load [[META8]]
+; TUNIT-NEXT:    [[V:%.*]] = load ptr, ptr [[DATA_ADDR]], align 8
 ; TUNIT-NEXT:    store ptr [[V]], ptr [[THIS]], align 8
 ; TUNIT-NEXT:    ret void
 ;
@@ -342,6 +342,14 @@ define %S.2 @t3.helper() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca [[S_2:%.*]], align 8
 ; CHECK-NEXT:    call void @ext1(ptr noundef nonnull align 8 dereferenceable(24) [[RETVAL]])
+; CHECK-NEXT:    [[DOTFCA_0_LOAD:%.*]] = load ptr, ptr [[RETVAL]], align 8
+; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [[S_2]] poison, ptr [[DOTFCA_0_LOAD]], 0
+; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [[S_2]], ptr [[RETVAL]], i32 0, i32 1
+; CHECK-NEXT:    [[DOTFCA_1_LOAD:%.*]] = load i64, ptr [[DOTFCA_1_GEP]], align 8
+; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [[S_2]] [[DOTFCA_0_INSERT]], i64 [[DOTFCA_1_LOAD]], 1
+; CHECK-NEXT:    [[DOTFCA_2_GEP:%.*]] = getelementptr inbounds [[S_2]], ptr [[RETVAL]], i32 0, i32 2
+; CHECK-NEXT:    [[DOTFCA_2_LOAD:%.*]] = load i64, ptr [[DOTFCA_2_GEP]], align 8
+; CHECK-NEXT:    [[DOTFCA_2_INSERT:%.*]] = insertvalue [[S_2]] [[DOTFCA_1_INSERT]], i64 [[DOTFCA_2_LOAD]], 2
 ; CHECK-NEXT:    ret [[S_2]] zeroinitializer
 ;
 entry:
@@ -500,7 +508,7 @@ define internal %S @t4a(ptr %this) {
 ; CGSCC-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, i32 0, align 8
 ; CGSCC-NEXT:    store ptr [[THIS]], ptr [[THIS]], align 8
 ; CGSCC-NEXT:    call void @t4b(ptr noalias nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[RETVAL]], ptr nofree noundef nonnull writeonly align 8 dereferenceable(8) [[THIS]]) #[[ATTR6]]
-; CGSCC-NEXT:    [[TMP0:%.*]] = load [[S]], ptr [[RETVAL]], align 8, !invariant.load [[META8]]
+; CGSCC-NEXT:    [[TMP0:%.*]] = load [[S]], ptr [[RETVAL]], align 8
 ; CGSCC-NEXT:    ret [[S]] [[TMP0]]
 ;
 entry:
@@ -615,7 +623,6 @@ entry:
 ; TUNIT: [[META5:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
 ; TUNIT: [[META6:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 2}
 ; TUNIT: [[META7:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
-; TUNIT: [[META8]] = !{}
 ;.
 ; CGSCC: [[META0:![0-9]+]] = !{i32 2, !"SDK Version", [2 x i32] [i32 11, i32 5]}
 ; CGSCC: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
@@ -625,5 +632,4 @@ entry:
 ; CGSCC: [[META5:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
 ; CGSCC: [[META6:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 2}
 ; CGSCC: [[META7:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
-; CGSCC: [[META8]] = !{}
 ;.
