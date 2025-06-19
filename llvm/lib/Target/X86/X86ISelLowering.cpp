@@ -1443,8 +1443,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         ISD::VECREDUCE_SMAX, ISD::VECREDUCE_SMIN, ISD::VECREDUCE_UMAX,
         ISD::VECREDUCE_UMIN}) {
     for (MVT VT : MVT::vector_valuetypes())
-      if (VT.isFixedLengthVector() &&
-          X86::isVectorReductionFast(Subtarget, VectorOp, VT))
+      if (X86::isVectorReductionFast(Subtarget, VectorOp, VT))
         setOperationAction(VectorOp, VT, Custom);
   }
 
