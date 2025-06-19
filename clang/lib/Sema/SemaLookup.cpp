@@ -3382,8 +3382,29 @@ Sema::SpecialMemberOverloadResult
 Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
                           bool ConstArg, bool VolatileArg, bool RValueThis,
                           bool ConstThis, bool VolatileThis) {
-  assert(CanDeclareSpecialMemberFunction(RD) &&
-         "doing special member lookup into record that isn't fully complete");
+  
+  if (!CanDeclareSpecialMemberFunction(RD)) {
+
+    llvm::FoldingSetNodeID ID;
+    ID.AddPointer(RD);
+    ID.AddInteger(llvm::to_underlying(SM));
+    ID.AddInteger(ConstArg);
+    ID.AddInteger(VolatileArg);
+    ID.AddInteger(RValueThis);
+    ID.AddInteger(ConstThis);
+    ID.AddInteger(VolatileThis);
+    void *InsertPoint;
+
+    SpecialMemberOverloadResultEntry* Result = BumpAlloc.Allocate<SpecialMemberOverloadResultEntry>();
+    Result = new (Result) SpecialMemberOverloadResultEntry(ID);
+    Result->setMethod(nullptr);
+    Result->setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
+    SpecialMemberCache.InsertNode(Result, InsertPoint);
+    return *Result;
+  }
+  
+  // assert(CanDeclareSpecialMemberFunction(RD) &&
+  //        "doing special member lookup into record that isn't fully complete");
   RD = RD->getDefinition();
   if (RValueThis || ConstThis || VolatileThis)
     assert((SM == CXXSpecialMemberKind::CopyAssignment ||
