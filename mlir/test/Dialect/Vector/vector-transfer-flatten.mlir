@@ -210,7 +210,11 @@ func.func @negative_transfer_read_dynamic_dim_to_flatten(
 
 // -----
 
-// Can flatten the righmost dynamic dimension
+// When collapsing memref dimensions, we may include the rightmost dynamic
+// dimension (e.g., at position `k`) provided that the strides for dimensions
+// `k+1`, `k+2`, etc., ensure contiguity in memory. The stride at position `k`
+// itself does not factor into this. (Here "strides" mean both explicit and
+// implied by identity map)
 
 func.func @transfer_read_dynamic_dim_to_flatten(
     %idx_1: index,
@@ -486,8 +490,8 @@ func.func @transfer_write_leading_dynamic_dims(
 //       CHECK-128B:   memref.collapse_shape
 
 // -----
- 
-// The vector could be a non-contiguous slice of the input
+
+// The vector is a non-contiguous slice of the input
 // memref.
 
 func.func @negative_transfer_write_dynamic_to_flatten(
@@ -509,7 +513,9 @@ func.func @negative_transfer_write_dynamic_to_flatten(
 
 // -----
 
-func.func @transfer_write_dynamic_to_flatten(
+// See the comment in front of @transfer_read_dynamic_dim_to_flatten.
+
+func.func @transfer_write_dynamic_dim_to_flatten(
     %idx_1: index,
     %idx_2: index,
     %vec : vector<1x2x6xi32>,
@@ -524,7 +530,7 @@ func.func @transfer_write_dynamic_to_flatten(
 
 // CHECK: #[[$MAP:.*]] = affine_map<()[s0, s1] -> (s0 * 24 + s1 * 6)>
 
-// CHECK-LABEL: func.func @transfer_write_dynamic_to_flatten
+// CHECK-LABEL: func.func @transfer_write_dynamic_dim_to_flatten
 // CHECK-SAME:    %[[IDX_1:arg0]]: index
 // CHECK-SAME:    %[[IDX_2:arg1]]: index
 // CHECK-SAME:    %[[VEC:arg2]]: vector<1x2x6xi32>
@@ -539,7 +545,7 @@ func.func @transfer_write_dynamic_to_flatten(
 // CHECK:              vector.transfer_write %[[VEC_1D]], %[[COLLAPSED_MEM]][%[[C0]], %[[COLLAPSED_IDX]]]
 // CHECK-SAME:           {in_bounds = [true]} : vector<12xi32>, memref<1x?xi32>
 
-// CHECK-128B-LABEL: func @transfer_write_dynamic_to_flatten
+// CHECK-128B-LABEL: func @transfer_write_dynamic_dim_to_flatten
 //   CHECK-128B-NOT:   memref.collapse_shape
 
 // -----
