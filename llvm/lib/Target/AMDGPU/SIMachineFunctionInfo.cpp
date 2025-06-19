@@ -386,6 +386,9 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
     if (RegItr != SpillPhysVGPRs.end()) {
       unsigned Idx = std::distance(SpillPhysVGPRs.begin(), RegItr);
       SpillPhysVGPRs[Idx] = NewReg;
+
+      // For replacing registers used in the CFI instructions.
+      MF.replaceFrameInstRegister(Reg, NewReg);
     }
 
     // The generic `determineCalleeSaves` might have set the old register if it
