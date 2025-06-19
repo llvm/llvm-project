@@ -357,6 +357,7 @@ static void setLongDoubleIsF128Libm(RuntimeLibcallsInfo &Info,
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
+                                       ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
                                        EABI EABIVersion) {
   initSoftFloatCmpLibcallPredicates();
@@ -372,6 +373,11 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
   // Use the f128 variants of math functions on x86
   if (TT.isX86() && TT.isGNUEnvironment())
     setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/true);
+
+  if (TT.isX86() || TT.isVE()) {
+    if (ExceptionModel == ExceptionHandling::SjLj)
+      setLibcallName(RTLIB::UNWIND_RESUME, "_Unwind_SjLj_Resume");
+  }
 
   // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".
   if (TT.isPPC()) {
