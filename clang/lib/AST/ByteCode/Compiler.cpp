@@ -748,8 +748,7 @@ bool Compiler<Emitter>::VisitFloatingLiteral(const FloatingLiteral *E) {
   if (DiscardResult)
     return true;
 
-  APFloat F = E->getValue();
-  return this->emitFloat(F, E);
+  return this->emitConstFloat(E->getValue(), E);
 }
 
 template <class Emitter>
@@ -4186,10 +4185,8 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
                              nullptr, E);
   case PT_MemberPtr:
     return this->emitNullMemberPtr(0, nullptr, E);
-  case PT_Float: {
-    APFloat F = APFloat::getZero(Ctx.getFloatSemantics(QT));
-    return this->emitFloat(F, E);
-  }
+  case PT_Float:
+    return this->emitConstFloat(APFloat::getZero(Ctx.getFloatSemantics(QT)), E);
   case PT_FixedPoint: {
     auto Sem = Ctx.getASTContext().getFixedPointSemantics(E->getType());
     return this->emitConstFixedPoint(FixedPoint::zero(Sem), E);
@@ -4677,7 +4674,10 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
       if (!visitInitializer(Init))
         return false;
 
-      return this->emitFinishInitGlobal(Init);
+      if (!this->emitFinishInit(Init))
+        return false;
+
+      return this->emitPopPtr(Init);
     };
 
     DeclScope<Emitter> LocalScope(this, VD);
@@ -4698,45 +4698,51 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
       return false;
 
     return !Init || (checkDecl() && initGlobal(*GlobalIndex));
-  }
-  // Local variables.
-  InitLinkScope<Emitter> ILS(this, InitLink::Decl(VD));
-
-  if (VarT) {
-    unsigned Offset = this->allocateLocalPrimitive(
-        VD, *VarT, VD->getType().isConstQualified(), nullptr, ScopeKind::Block,
-        IsConstexprUnknown);
-    if (Init) {
-      // If this is a toplevel declaration, create a scope for the
-      // initializer.
-      if (Toplevel) {
-        LocalScope<Emitter> Scope(this);
-        if (!this->visit(Init))
-          return false;
-        return this->emitSetLocal(*VarT, Offset, VD) && Scope.destroyLocals();
-      } else {
-        if (!this->visit(Init))
-          return false;
-        return this->emitSetLocal(*VarT, Offset, VD);
-      }
-    }
   } else {
-    if (std::optional<unsigned> Offset = this->allocateLocal(
-            VD, VD->getType(), nullptr, ScopeKind::Block, IsConstexprUnknown)) {
-      if (!Init)
-        return true;
+    InitLinkScope<Emitter> ILS(this, InitLink::Decl(VD));
 
-      if (!this->emitGetPtrLocal(*Offset, Init))
-        return false;
+    if (VarT) {
+      unsigned Offset = this->allocateLocalPrimitive(
+          VD, *VarT, VD->getType().isConstQualified(), nullptr,
+          ScopeKind::Block, IsConstexprUnknown);
+      if (Init) {
+        // If this is a toplevel declaration, create a scope for the
+        // initializer.
+        if (Toplevel) {
+          LocalScope<Emitter> Scope(this);
+          if (!this->visit(Init))
+            return false;
+          return this->emitSetLocal(*VarT, Offset, VD) && Scope.destroyLocals();
+        } else {
+          if (!this->visit(Init))
+            return false;
+          return this->emitSetLocal(*VarT, Offset, VD);
+        }
+      }
+    } else {
+      if (std::optional<unsigned> Offset =
+              this->allocateLocal(VD, VD->getType(), nullptr, ScopeKind::Block,
+                                  IsConstexprUnknown)) {
+        if (!Init)
+          return true;
 
-      if (!visitInitializer(Init))
-        return false;
+        if (!this->emitGetPtrLocal(*Offset, Init))
+          return false;
 
-      return this->emitFinishInitPop(Init);
+        if (!visitInitializer(Init))
+          return false;
+
+        if (!this->emitFinishInit(Init))
+          return false;
+
+        return this->emitPopPtr(Init);
+      }
+      return false;
     }
-    return false;
+    return true;
   }
-  return true;
+
+  return false;
 }
 
 template <class Emitter>
@@ -4745,10 +4751,8 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
   assert(!DiscardResult);
   if (Val.isInt())
     return this->emitConst(Val.getInt(), ValType, E);
-  else if (Val.isFloat()) {
-    APFloat F = Val.getFloat();
-    return this->emitFloat(F, E);
-  }
+  else if (Val.isFloat())
+    return this->emitConstFloat(Val.getFloat(), E);
 
   if (Val.isLValue()) {
     if (Val.isNullPointer())
@@ -6129,10 +6133,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       const auto &TargetSemantics = Ctx.getFloatSemantics(E->getType());
       if (!this->emitLoadFloat(E))
         return false;
-      APFloat F(TargetSemantics, 1);
-      if (!this->emitFloat(F, E))
+      if (!this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E))
         return false;
-
       if (!this->emitAddf(getFPOptions(E), E))
         return false;
       if (!this->emitStoreFloat(E))
@@ -6174,10 +6176,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       const auto &TargetSemantics = Ctx.getFloatSemantics(E->getType());
       if (!this->emitLoadFloat(E))
         return false;
-      APFloat F(TargetSemantics, 1);
-      if (!this->emitFloat(F, E))
+      if (!this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E))
         return false;
-
       if (!this->emitSubf(getFPOptions(E), E))
         return false;
       if (!this->emitStoreFloat(E))
@@ -6951,20 +6951,6 @@ bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E) {
     return false;
   }
   return true;
-}
-
-template <class Emitter>
-bool Compiler<Emitter>::emitFloat(const APFloat &F, const Expr *E) {
-  assert(!DiscardResult && "Should've been checked before");
-
-  if (Floating::singleWord(F.getSemantics()))
-    return this->emitConstFloat(Floating(F), E);
-
-  APInt I = F.bitcastToAPInt();
-  return this->emitConstFloat(
-      Floating(const_cast<uint64_t *>(I.getRawData()),
-               llvm::APFloatBase::SemanticsToEnum(F.getSemantics())),
-      E);
 }
 
 //  This function is constexpr if and only if To, From, and the types of

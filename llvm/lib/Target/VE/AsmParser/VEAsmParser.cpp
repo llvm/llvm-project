@@ -25,6 +25,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -1510,7 +1511,7 @@ ParseStatus VEAsmParser::parseVEAsmOperand(std::unique_ptr<VEOperand> &Op) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEAsmParser() {
   RegisterMCAsmParser<VEAsmParser> A(getTheVETarget());
 }
 

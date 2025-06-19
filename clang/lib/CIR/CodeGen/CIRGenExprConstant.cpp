@@ -254,8 +254,8 @@ public:
   }
 
   mlir::Attribute VisitStringLiteral(StringLiteral *e, QualType t) {
-    cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitStringLiteral");
-    return {};
+    // This is a string literal initializing an array in an initializer.
+    return cgm.getConstantArrayFromStringLiteral(e);
   }
 
   mlir::Attribute VisitObjCEncodeExpr(ObjCEncodeExpr *e, QualType t) {

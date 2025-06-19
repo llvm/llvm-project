@@ -3598,7 +3598,7 @@ private:
   /// keyword.
   bool isClassCompatibleKeyword(Token Tok) const;
 
-  void ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs);
+  void ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs);
 
   ///@}
 

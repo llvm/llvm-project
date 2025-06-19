@@ -2387,4 +2387,26 @@ def ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
   let hasFolder = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// Assume Operations
+//===----------------------------------------------------------------------===//
+
+def AssumeOp : CIR_Op<"assume"> {
+  let summary = "Tell the optimizer that a boolean value is true";
+  let description = [{
+    The `cir.assume` operation takes a single boolean prediate as its only
+    argument and does not have any results. The operation tells the optimizer
+    that the predicate is always true.
+
+    This operation corresponds to the `__assume` and the `__builtin_assume`
+    builtin functions.
+  }];
+
+  let arguments = (ins CIR_BoolType:$predicate);
+
+  let assemblyFormat = [{
+    $predicate `:` type($predicate) attr-dict
+  }];
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

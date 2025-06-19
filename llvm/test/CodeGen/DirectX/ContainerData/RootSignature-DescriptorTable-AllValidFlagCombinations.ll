@@ -10,7 +10,7 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
 
 !dx.rootsignatures = !{!2} ; list of function/root signature pairs
-!2 = !{ ptr @main, !3 } ; function, root signature
+!2 = !{ ptr @main, !3, i32 2 } ; function, root signature
 !3 = !{ !5 } ; list of root signature elements
 !5 = !{ !"DescriptorTable", i32 0, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20 }
 

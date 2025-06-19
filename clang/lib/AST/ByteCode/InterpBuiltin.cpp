@@ -57,21 +57,6 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   assert(T);
 
   unsigned BitWidth = S.getASTContext().getTypeSize(QT);
-
-  if (T == PT_IntAPS) {
-    auto Result = S.allocAP<IntegralAP<true>>(BitWidth);
-    Result.copy(Val);
-    S.Stk.push<IntegralAP<true>>(Result);
-    return;
-  }
-
-  if (T == PT_IntAP) {
-    auto Result = S.allocAP<IntegralAP<false>>(BitWidth);
-    Result.copy(Val);
-    S.Stk.push<IntegralAP<false>>(Result);
-    return;
-  }
-
   if (QT->isSignedIntegerOrEnumerationType()) {
     int64_t V = Val.getSExtValue();
     INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V, BitWidth)); });
@@ -342,13 +327,13 @@ static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
       S.getASTContext().getFloatTypeSemantics(
           Call->getDirectCallee()->getReturnType());
 
-  Floating Result = S.allocFloat(TargetSemantics);
+  Floating Result;
   if (S.getASTContext().getTargetInfo().isNan2008()) {
     if (Signaling)
-      Result.copy(
+      Result = Floating(
           llvm::APFloat::getSNaN(TargetSemantics, /*Negative=*/false, &Fill));
     else
-      Result.copy(
+      Result = Floating(
           llvm::APFloat::getQNaN(TargetSemantics, /*Negative=*/false, &Fill));
   } else {
     // Prior to IEEE 754-2008, architectures were allowed to choose whether
@@ -357,10 +342,10 @@ static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
     // 2008 revisions, MIPS interpreted sNaN-2008 as qNan and qNaN-2008 as
     // sNaN. This is now known as "legacy NaN" encoding.
     if (Signaling)
-      Result.copy(
+      Result = Floating(
           llvm::APFloat::getQNaN(TargetSemantics, /*Negative=*/false, &Fill));
     else
-      Result.copy(
+      Result = Floating(
           llvm::APFloat::getSNaN(TargetSemantics, /*Negative=*/false, &Fill));
   }
 
@@ -375,9 +360,7 @@ static bool interp__builtin_inf(InterpState &S, CodePtr OpPC,
       S.getASTContext().getFloatTypeSemantics(
           Call->getDirectCallee()->getReturnType());
 
-  Floating Result = S.allocFloat(TargetSemantics);
-  Result.copy(APFloat::getInf(TargetSemantics));
-  S.Stk.push<Floating>(Result);
+  S.Stk.push<Floating>(Floating::getInf(TargetSemantics));
   return true;
 }
 
@@ -385,12 +368,10 @@ static bool interp__builtin_copysign(InterpState &S, CodePtr OpPC,
                                      const InterpFrame *Frame) {
   const Floating &Arg2 = S.Stk.pop<Floating>();
   const Floating &Arg1 = S.Stk.pop<Floating>();
-  Floating Result = S.allocFloat(Arg1.getSemantics());
 
   APFloat Copy = Arg1.getAPFloat();
   Copy.copySign(Arg2.getAPFloat());
-  Result.copy(Copy);
-  S.Stk.push<Floating>(Result);
+  S.Stk.push<Floating>(Floating(Copy));
 
   return true;
 }
@@ -399,13 +380,11 @@ static bool interp__builtin_fmin(InterpState &S, CodePtr OpPC,
                                  const InterpFrame *Frame, bool IsNumBuiltin) {
   const Floating &RHS = S.Stk.pop<Floating>();
   const Floating &LHS = S.Stk.pop<Floating>();
-  Floating Result = S.allocFloat(LHS.getSemantics());
 
   if (IsNumBuiltin)
-    Result.copy(llvm::minimumnum(LHS.getAPFloat(), RHS.getAPFloat()));
+    S.Stk.push<Floating>(llvm::minimumnum(LHS.getAPFloat(), RHS.getAPFloat()));
   else
-    Result.copy(minnum(LHS.getAPFloat(), RHS.getAPFloat()));
-  S.Stk.push<Floating>(Result);
+    S.Stk.push<Floating>(minnum(LHS.getAPFloat(), RHS.getAPFloat()));
   return true;
 }
 
@@ -413,13 +392,11 @@ static bool interp__builtin_fmax(InterpState &S, CodePtr OpPC,
                                  const InterpFrame *Frame, bool IsNumBuiltin) {
   const Floating &RHS = S.Stk.pop<Floating>();
   const Floating &LHS = S.Stk.pop<Floating>();
-  Floating Result = S.allocFloat(LHS.getSemantics());
 
   if (IsNumBuiltin)
-    Result.copy(llvm::maximumnum(LHS.getAPFloat(), RHS.getAPFloat()));
+    S.Stk.push<Floating>(llvm::maximumnum(LHS.getAPFloat(), RHS.getAPFloat()));
   else
-    Result.copy(maxnum(LHS.getAPFloat(), RHS.getAPFloat()));
-  S.Stk.push<Floating>(Result);
+    S.Stk.push<Floating>(maxnum(LHS.getAPFloat(), RHS.getAPFloat()));
   return true;
 }
 
@@ -594,16 +571,8 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_fabs(InterpState &S, CodePtr OpPC,
                                  const InterpFrame *Frame) {
   const Floating &Val = S.Stk.pop<Floating>();
-  APFloat F = Val.getAPFloat();
-  if (!F.isNegative()) {
-    S.Stk.push<Floating>(Val);
-    return true;
-  }
 
-  Floating Result = S.allocFloat(Val.getSemantics());
-  F.changeSign();
-  Result.copy(F);
-  S.Stk.push<Floating>(Result);
+  S.Stk.push<Floating>(Floating::abs(Val));
   return true;
 }
 

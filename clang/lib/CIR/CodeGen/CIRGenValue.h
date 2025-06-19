@@ -88,7 +88,6 @@ public:
     return er;
   }
 
-  // FIXME: Aggregate rvalues need to retain information about whether they are
   // volatile or not.  Remove default to find all places that probably get this
   // wrong.
 

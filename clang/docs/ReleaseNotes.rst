@@ -65,8 +65,10 @@ C++ Specific Potentially Breaking Changes
   standard library already have their own bespoke builtins.
 - A workaround for libstdc++4.7 has been removed. Note that 4.8.3 remains the oldest
   supported libstdc++ version.
-
 - Added ``!nonnull/!align`` metadata to load of references for better codegen.
+- Checking for int->enum conversions in constant expressions is more strict;
+  in particular, ``const E x = (E)-1;`` is not treated as a constant if it's
+  out of range. This impacts old versions of Boost.  (#GH143034)
 
 ABI Changes in This Version
 ---------------------------
@@ -325,6 +327,9 @@ Non-comprehensive list of changes in this release
   ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
 - Added `__builtin_get_vtable_pointer` to directly load the primary vtable pointer from a
   polymorphic object.
+- Clang no longer rejects reinterpret_cast conversions between indirect
+  ARC-managed pointers and other pointer types. The prior behavior was overly
+  strict and inconsistent with the ARC specification.
 
 New Compiler Flags
 ------------------
