@@ -448,6 +448,7 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
   // Check global first. On AIX, some global data defined in shared libraries
   // are put to the STACK region for unknown reasons. Check global first can
   // workaround this issue.
+  // TODO: Look into whether there's a different solution to this problem.
   if (GetGlobalAddressInformation(addr, access_size, &data.global)) {
     data.kind = kAddressKindGlobal;
     return;
