@@ -43,7 +43,16 @@ public:
                                   CIRGenFunction &cgf) override;
 
   void emitCXXConstructors(const clang::CXXConstructorDecl *d) override;
+  void emitCXXDestructors(const clang::CXXDestructorDecl *d) override;
   void emitCXXStructor(clang::GlobalDecl gd) override;
+
+  bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
+                              CXXDtorType dt) const override {
+    // Itanium does not emit any destructor variant as an inline thunk.
+    // Delegating may occur as an optimization, but all variants are either
+    // emitted with external linkage or as linkonce if they are inline and used.
+    return false;
+  }
 };
 
 } // namespace
@@ -81,12 +90,6 @@ void CIRGenItaniumCXXABI::emitInstanceFunctionProlog(SourceLocation loc,
 
 void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
   auto *md = cast<CXXMethodDecl>(gd.getDecl());
-  auto *cd = dyn_cast<CXXConstructorDecl>(md);
-
-  if (!cd) {
-    cgm.errorNYI(md->getSourceRange(), "CXCABI emit destructor");
-    return;
-  }
 
   if (cgm.getCodeGenOpts().CXXCtorDtorAliases)
     cgm.errorNYI(md->getSourceRange(), "Ctor/Dtor aliases");
@@ -110,6 +113,22 @@ void CIRGenItaniumCXXABI::emitCXXConstructors(const CXXConstructorDecl *d) {
     // We don't need to emit the complete ctro if the class is abstract.
     cgm.emitGlobal(GlobalDecl(d, Ctor_Complete));
   }
+}
+
+void CIRGenItaniumCXXABI::emitCXXDestructors(const CXXDestructorDecl *d) {
+  // The destructor used for destructing this as a base class; ignores
+  // virtual bases.
+  cgm.emitGlobal(GlobalDecl(d, Dtor_Base));
+
+  // The destructor used for destructing this as a most-derived class;
+  // call the base destructor and then destructs any virtual bases.
+  cgm.emitGlobal(GlobalDecl(d, Dtor_Complete));
+
+  // The destructor in a virtual table is always a 'deleting'
+  // destructor, which calls the complete destructor and then uses the
+  // appropriate operator delete.
+  if (d->isVirtual())
+    cgm.emitGlobal(GlobalDecl(d, Dtor_Deleting));
 }
 
 /// Return whether the given global decl needs a VTT (virtual table table)

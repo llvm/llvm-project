@@ -347,7 +347,7 @@ public:
 
   cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd,
                                                     bool isConstant);
-
+  cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
   /// Helpers to emit "not yet implemented" error diagnostics
   DiagnosticBuilder errorNYI(SourceLocation, llvm::StringRef);
 
