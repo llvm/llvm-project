@@ -490,6 +490,8 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
 
   LLVMContext &Ctx;
 
+  BumpPtrAllocator PredicateInfoAllocator;
+
 private:
   ConstantInt *getConstantInt(const ValueLatticeElement &IV, Type *Ty) const {
     return dyn_cast_or_null<ConstantInt>(getConstant(IV, Ty));
@@ -761,7 +763,8 @@ private:
 
 public:
   void addPredicateInfo(Function &F, DominatorTree &DT, AssumptionCache &AC) {
-    FnPredicateInfo.insert({&F, std::make_unique<PredicateInfo>(F, DT, AC)});
+    FnPredicateInfo.insert({&F, std::make_unique<PredicateInfo>(
+                                    F, DT, AC, PredicateInfoAllocator)});
   }
 
   void removeSSACopies(Function &F) {
