@@ -4047,8 +4047,9 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
 /// Split the 64-bit value \p LHS into two 32-bit components, and perform the
 /// binary operation \p Opc to it with the corresponding constant operands.
 SDValue AMDGPUTargetLowering::splitBinaryBitConstantOpImpl(
-    DAGCombinerInfo &DCI, const SDLoc &SL, unsigned Opc, SDValue LHS,
-    uint32_t ValLo, uint32_t ValHi) const {
+  DAGCombinerInfo &DCI, const SDLoc &SL,
+  unsigned Opc, SDValue LHS,
+  uint32_t ValLo, uint32_t ValHi) const {
   SelectionDAG &DAG = DCI.DAG;
   SDValue Lo, Hi;
   std::tie(Lo, Hi) = split64BitValue(LHS, DAG);
