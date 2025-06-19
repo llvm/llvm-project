@@ -563,7 +563,7 @@ enum VectorizationStatus {
   // TODO: support values if Op vectorized to Many-Ops whose results we need to
   // aggregate for replacement.
 };
-struct VectorizationResult {
+struct VectorizationHookResult {
   /// Return status from vectorizing the current op.
   enum VectorizationStatus status = VectorizationStatus::Failure;
   /// New vectorized operation to replace the current op.
@@ -727,7 +727,7 @@ using CustomVectorizationPrecondition =
 // assuming all its vectorized operands are already in the IRMapping.
 // Return nullptr if the Operation cannot be vectorized.
 using CustomVectorizationHook =
-    std::function<VectorizationResult(Operation *, const IRMapping &)>;
+    std::function<VectorizationHookResult(Operation *, const IRMapping &)>;
 
 /// Helper function to vectorize the terminator of a `linalgOp`. New result
 /// vector values are appended to `newResults`. Return
@@ -736,13 +736,13 @@ using CustomVectorizationHook =
 /// using the `newResults` vector making them available to the vectorization
 /// algorithm for RAUW. This function is meant to be used as a
 /// CustomVectorizationHook.
-static VectorizationResult
+static VectorizationHookResult
 vectorizeLinalgYield(RewriterBase &rewriter, Operation *op,
                      const IRMapping &bvm, VectorizationState &state,
                      LinalgOp linalgOp, SmallVectorImpl<Value> &newResults) {
   auto yieldOp = dyn_cast<linalg::YieldOp>(op);
   if (!yieldOp)
-    return VectorizationResult{VectorizationStatus::Failure, nullptr};
+    return VectorizationHookResult{VectorizationStatus::Failure, nullptr};
   for (const auto &output : llvm::enumerate(yieldOp.getValues())) {
     // TODO: Scan for an opportunity for reuse.
     // TODO: use a map.
@@ -754,20 +754,20 @@ vectorizeLinalgYield(RewriterBase &rewriter, Operation *op,
       newResults.push_back(newResult);
   }
 
-  return VectorizationResult{VectorizationStatus::NoReplace, nullptr};
+  return VectorizationHookResult{VectorizationStatus::NoReplace, nullptr};
 }
 
 /// Helper function to vectorize the index operations of a `linalgOp`. Return
 /// VectorizationStatus::NewOp to signal the vectorization algorithm that it
 /// should map the produced operations. This function is meant to be used as a
 /// CustomVectorizationHook.
-static VectorizationResult vectorizeLinalgIndex(RewriterBase &rewriter,
-                                                VectorizationState &state,
-                                                Operation *op,
-                                                LinalgOp linalgOp) {
+static VectorizationHookResult vectorizeLinalgIndex(RewriterBase &rewriter,
+                                                    VectorizationState &state,
+                                                    Operation *op,
+                                                    LinalgOp linalgOp) {
   IndexOp indexOp = dyn_cast<linalg::IndexOp>(op);
   if (!indexOp)
-    return VectorizationResult{VectorizationStatus::Failure, nullptr};
+    return VectorizationHookResult{VectorizationStatus::Failure, nullptr};
   auto loc = indexOp.getLoc();
   // Compute the static loop sizes of the index op.
   ArrayRef<int64_t> targetShape = state.getCanonicalVecShape();
@@ -781,7 +781,7 @@ static VectorizationResult vectorizeLinalgIndex(RewriterBase &rewriter,
   // dimension of the iteration space since the vectorization algorithm in this
   // case can handle the broadcast.
   if (dim == targetShape.size() - 1)
-    return VectorizationResult{VectorizationStatus::NewOp, indexSteps};
+    return VectorizationHookResult{VectorizationStatus::NewOp, indexSteps};
   // Otherwise permute the targetShape to move the index dimension last,
   // broadcast the one-dimensional index vector to the permuted shape, and
   // finally transpose the broadcasted index vector to undo the permutation.
@@ -799,7 +799,7 @@ static VectorizationResult vectorizeLinalgIndex(RewriterBase &rewriter,
   std::swap(transposition.back(), transposition[dim]);
   auto transposeOp =
       rewriter.create<vector::TransposeOp>(loc, broadCastOp, transposition);
-  return VectorizationResult{VectorizationStatus::NewOp, transposeOp};
+  return VectorizationHookResult{VectorizationStatus::NewOp, transposeOp};
 }
 
 /// Helper function to check if the tensor.extract can be vectorized by the
@@ -1100,12 +1100,12 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
 /// VectorizationStatus::NewOp to signal the vectorization algorithm that it
 /// should map the produced operations. This function is meant to be used as a
 /// CustomVectorizationHook.
-static VectorizationResult
+static VectorizationHookResult
 vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
                        Operation *op, LinalgOp linalgOp, const IRMapping &bvm) {
   tensor::ExtractOp extractOp = dyn_cast<tensor::ExtractOp>(op);
   if (!extractOp)
-    return VectorizationResult{VectorizationStatus::Failure, nullptr};
+    return VectorizationHookResult{VectorizationStatus::Failure, nullptr};
   auto loc = extractOp.getLoc();
 
   // Compute the static loop sizes of the extract op.
@@ -1137,7 +1137,7 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
     gatherOp = state.maskOperation(rewriter, gatherOp, linalgOp);
 
     LDBG("Vectorised as gather load: " << extractOp << "\n");
-    return VectorizationResult{VectorizationStatus::NewOp, gatherOp};
+    return VectorizationHookResult{VectorizationStatus::NewOp, gatherOp};
   }
 
   // 2. Handle:
@@ -1201,7 +1201,7 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
         mlir::vector::maskOperation(rewriter, transferReadOp, allTrue);
 
     LDBG("Vectorised as scalar broadcast load: " << extractOp << "\n");
-    return VectorizationResult{VectorizationStatus::NewOp, maskedReadOp};
+    return VectorizationHookResult{VectorizationStatus::NewOp, maskedReadOp};
   }
 
   // 2b. Handle contiguous access.
@@ -1227,7 +1227,7 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
       inBounds);
 
   LDBG("Vectorised as contiguous load: " << extractOp);
-  return VectorizationResult{VectorizationStatus::NewOp, transferReadOp};
+  return VectorizationHookResult{VectorizationStatus::NewOp, transferReadOp};
 }
 
 /// Emit reduction operations if the shapes of the value to reduce is different
@@ -1269,7 +1269,7 @@ static Operation *reduceIfNeeded(OpBuilder &b, LinalgOp linalgOp, Operation *op,
 /// a topologically-sorted list of ops.
 /// This function does not update `bvm` but returns a VectorizationStatus that
 /// instructs the caller what `bvm` update needs to occur.
-static VectorizationResult
+static VectorizationHookResult
 vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
                LinalgOp linalgOp, Operation *op, const IRMapping &bvm,
                ArrayRef<CustomVectorizationHook> customVectorizationHooks) {
@@ -1278,7 +1278,7 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
   // 1. Try to apply any CustomVectorizationHook.
   if (!customVectorizationHooks.empty()) {
     for (auto &customFunc : customVectorizationHooks) {
-      VectorizationResult result = customFunc(op, bvm);
+      VectorizationHookResult result = customFunc(op, bvm);
       if (result.status == VectorizationStatus::Failure)
         continue;
       return result;
@@ -1288,11 +1288,12 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
   // 2. Constant ops don't get vectorized but rather broadcasted at their users.
   // Clone so that the constant is not confined to the linalgOp block .
   if (isa<arith::ConstantOp, func::ConstantOp>(op))
-    return VectorizationResult{VectorizationStatus::NewOp, rewriter.clone(*op)};
+    return VectorizationHookResult{VectorizationStatus::NewOp,
+                                   rewriter.clone(*op)};
 
   // 3. Only ElementwiseMappable are allowed in the generic vectorization.
   if (!OpTrait::hasElementwiseMappableTraits(op))
-    return VectorizationResult{VectorizationStatus::Failure, nullptr};
+    return VectorizationHookResult{VectorizationStatus::Failure, nullptr};
 
   // 4 . Check if the operation is a reduction.
   SmallVector<std::pair<Value, Value>> reductionOperands;
@@ -1315,7 +1316,7 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
         reduceIfNeeded(rewriter, linalgOp, op, reductionOperands[0].first,
                        reductionOperands[0].second, bvm);
     if (reduceOp)
-      return VectorizationResult{VectorizationStatus::NewOp, reduceOp};
+      return VectorizationHookResult{VectorizationStatus::NewOp, reduceOp};
   }
 
   // 5. Generic vectorization path for ElementwiseMappable ops.
@@ -1355,7 +1356,7 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
             : resultType);
   }
   //   d. Build and return the new op.
-  return VectorizationResult{
+  return VectorizationHookResult{
       VectorizationStatus::NewOp,
       rewriter.create(op->getLoc(), op->getName().getIdentifier(), vecOperands,
                       resultTypes, op->getAttrs())};
@@ -1460,28 +1461,28 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
   SmallVector<CustomVectorizationHook> hooks;
   // 4a. Register CustomVectorizationHook for yieldOp.
   CustomVectorizationHook vectorizeYield =
-      [&](Operation *op, const IRMapping &bvm) -> VectorizationResult {
+      [&](Operation *op, const IRMapping &bvm) -> VectorizationHookResult {
     return vectorizeLinalgYield(rewriter, op, bvm, state, linalgOp, newResults);
   };
   hooks.push_back(vectorizeYield);
 
   // 4b. Register CustomVectorizationHook for indexOp.
   CustomVectorizationHook vectorizeIndex =
-      [&](Operation *op, const IRMapping &bvm) -> VectorizationResult {
+      [&](Operation *op, const IRMapping &bvm) -> VectorizationHookResult {
     return vectorizeLinalgIndex(rewriter, state, op, linalgOp);
   };
   hooks.push_back(vectorizeIndex);
 
   // 4c. Register CustomVectorizationHook for extractOp.
   CustomVectorizationHook vectorizeExtract =
-      [&](Operation *op, const IRMapping &bvm) -> VectorizationResult {
+      [&](Operation *op, const IRMapping &bvm) -> VectorizationHookResult {
     return vectorizeTensorExtract(rewriter, state, op, linalgOp, bvm);
   };
   hooks.push_back(vectorizeExtract);
 
   // 5. Iteratively call `vectorizeOneOp` to each op in the slice.
   for (Operation &op : block->getOperations()) {
-    VectorizationResult result =
+    VectorizationHookResult result =
         vectorizeOneOp(rewriter, state, linalgOp, &op, bvm, hooks);
     if (result.status == VectorizationStatus::Failure) {
       LDBG("failed to vectorize: " << op << "\n");
@@ -2522,17 +2523,11 @@ bool mlir::linalg::hasVectorizationImpl(Operation *op) {
              tensor::InsertSliceOp>(op);
 }
 
-/// Emit a suitable vector form for an operation. If provided,
-/// `inputVectorSizes` are used to vectorize this operation.
-/// `inputVectorSizes` must match the rank of the iteration space of the
-/// operation and the input vector sizes must be greater than or equal to
-/// their counterpart iteration space sizes, if static. `inputVectorShapes`
-/// also allows the vectorization of operations with dynamic shapes.
-LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
-                                      ArrayRef<int64_t> inputVectorSizes,
-                                      ArrayRef<bool> inputScalableVecDims,
-                                      bool vectorizeNDExtract,
-                                      bool flatten1DDepthwiseConv) {
+FailureOr<VectorizationResult>
+mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
+                        ArrayRef<int64_t> inputVectorSizes,
+                        ArrayRef<bool> inputScalableVecDims,
+                        bool vectorizeNDExtract, bool flatten1DDepthwiseConv) {
   LDBG("Attempting to vectorize:\n" << *op << "\n");
   LDBG("Input vector sizes: ");
   LLVM_DEBUG(llvm::interleaveComma(inputVectorSizes, llvm::dbgs()));
@@ -2614,12 +2609,7 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
     return failure();
   }
 
-  if (!results.empty())
-    rewriter.replaceOp(op, results);
-  else
-    rewriter.eraseOp(op);
-
-  return success();
+  return VectorizationResult({results});
 }
 
 LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
