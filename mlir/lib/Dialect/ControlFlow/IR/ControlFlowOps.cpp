@@ -265,9 +265,9 @@ struct SimplifyPassThroughCondBranch : public OpRewritePattern<CondBranchOp> {
       return failure();
 
     // Create a new branch with the collapsed successors.
-    rewriter.replaceOpWithNewOp<CondBranchOp>(condbr, condbr.getCondition(),
-                                              trueDest, trueDestOperands,
-                                              falseDest, falseDestOperands);
+    rewriter.replaceOpWithNewOp<CondBranchOp>(
+        condbr, condbr.getCondition(), trueDest, trueDestOperands, falseDest,
+        falseDestOperands, condbr.getWeights());
     return success();
   }
 };
