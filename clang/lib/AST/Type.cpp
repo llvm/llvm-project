@@ -4090,7 +4090,7 @@ CountAttributedType::CountAttributedType(
   CountAttributedTypeBits.NumCoupledDecls = CoupledDecls.size();
   CountAttributedTypeBits.CountInBytes = CountInBytes;
   CountAttributedTypeBits.OrNull = OrNull;
-  auto *DeclSlot = getTrailingObjects<TypeCoupledDeclRefInfo>();
+  auto *DeclSlot = getTrailingObjects();
   Decls = llvm::ArrayRef(DeclSlot, CoupledDecls.size());
   for (unsigned i = 0; i != CoupledDecls.size(); ++i)
     DeclSlot[i] = CoupledDecls[i];
