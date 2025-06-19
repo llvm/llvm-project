@@ -56,9 +56,8 @@ bool DWARFExpressionList::ContainsAddress(lldb::addr_t func_load_addr,
 llvm::Expected<DWARFExpressionList::DWARFExpressionEntry>
 DWARFExpressionList::GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
                                                  lldb::addr_t load_addr) const {
-  if (const DWARFExpression *expr = GetAlwaysValidExpr()) {
+  if (const DWARFExpression *expr = GetAlwaysValidExpr())
     return DWARFExpressionEntry{0, LLDB_INVALID_ADDRESS, expr};
-  }
 
   if (func_load_addr == LLDB_INVALID_ADDRESS)
     func_load_addr = m_func_file_addr;
