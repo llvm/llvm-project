@@ -308,7 +308,8 @@ public:
     return std::make_unique<SavedState>();
   }
 
-  virtual std::vector<MCInst> _generateRegisterStackPop(MCRegister Reg, int imm = 0) const {
+  virtual std::vector<MCInst> _generateRegisterStackPop(MCRegister Reg,
+                                                        int imm = 0) const {
     return {};
   }
 

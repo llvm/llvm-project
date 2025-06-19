@@ -223,7 +223,7 @@ public:
   std::vector<MCInst> _generateRegisterStackPop(MCRegister Reg,
                                                 int imm = 0) const override {
     std::vector<MCInst> Insts;
-    if (AArch64::GPR32RegClass.contains(Reg) || 
+    if (AArch64::GPR32RegClass.contains(Reg) ||
         AArch64::GPR64RegClass.contains(Reg)) {
       generateRegisterStackPop(Reg, Insts, imm);
       return Insts;
@@ -282,36 +282,6 @@ private:
     // Function return is a pseudo-instruction that needs to be expanded
     PM.add(createAArch64ExpandPseudoPass());
   }
-
-  const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
-                                           unsigned Opcode) const override {
-    if (const char *Reason =
-            ExegesisTarget::getIgnoredOpcodeReasonOrNull(State, Opcode))
-      return Reason;
-
-    if (isPointerAuth(Opcode)) {
-#if defined(__aarch64__) && defined(__linux__)
-      // Disable all PAC keys. Note that while we expect the measurements to
-      // be the same with PAC keys disabled, they could potentially be lower
-      // since authentication checks are bypassed.
-      if (prctl(PR_PAC_SET_ENABLED_KEYS,
-                PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
-                    PR_PAC_APDBKEY, // all keys
-                0,                  // disable all
-                0, 0) < 0) {
-        return "Failed to disable PAC keys";
-      }
-#else
-      return "Unsupported opcode: isPointerAuth";
-#endif
-    }
-
-    if (isLoadTagMultiple(Opcode))
-      return "Unsupported opcode: load tag multiple";
-
-    return nullptr;
-  }
-};
 
 } // namespace
 
