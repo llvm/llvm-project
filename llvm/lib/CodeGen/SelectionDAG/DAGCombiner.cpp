@@ -15740,8 +15740,12 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       N0.getOpcode() == ISD::SIGN_EXTEND ||
       N0.getOpcode() == ISD::ANY_EXTEND) {
     // if the source is smaller than the dest, we still need an extend.
-    if (N0.getOperand(0).getValueType().bitsLT(VT))
-      return DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(0));
+    if (N0.getOperand(0).getValueType().bitsLT(VT)) {
+      SDNodeFlags Flags;
+      if (N0.getOpcode() == ISD::ZERO_EXTEND)
+        Flags.setNonNeg(N0->getFlags().hasNonNeg());
+      return DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(0), Flags);
+    }
     // if the source is larger than the dest, than we just need the truncate.
     if (N0.getOperand(0).getValueType().bitsGT(VT))
       return DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));

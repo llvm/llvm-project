@@ -719,7 +719,7 @@ void ASTStmtReader::VisitParenListExpr(ParenListExpr *E) {
   unsigned NumExprs = Record.readInt();
   assert((NumExprs == E->getNumExprs()) && "Wrong NumExprs!");
   for (unsigned I = 0; I != NumExprs; ++I)
-    E->getTrailingObjects<Stmt *>()[I] = Record.readSubStmt();
+    E->getTrailingObjects()[I] = Record.readSubStmt();
   E->LParenLoc = readSourceLocation();
   E->RParenLoc = readSourceLocation();
 }
@@ -1892,7 +1892,7 @@ void ASTStmtReader::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   E->CXXDefaultArgExprBits.Loc = readSourceLocation();
   E->CXXDefaultArgExprBits.HasRewrittenInit = Record.readInt();
   if (E->CXXDefaultArgExprBits.HasRewrittenInit)
-    *E->getTrailingObjects<Expr *>() = Record.readSubExpr();
+    *E->getTrailingObjects() = Record.readSubExpr();
 }
 
 void ASTStmtReader::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
@@ -1902,7 +1902,7 @@ void ASTStmtReader::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   E->UsedContext = readDeclAs<DeclContext>();
   E->CXXDefaultInitExprBits.Loc = readSourceLocation();
   if (E->CXXDefaultInitExprBits.HasRewrittenInit)
-    *E->getTrailingObjects<Expr *>() = Record.readSubExpr();
+    *E->getTrailingObjects() = Record.readSubExpr();
 }
 
 void ASTStmtReader::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
@@ -1999,7 +1999,7 @@ void ASTStmtReader::VisitExprWithCleanups(ExprWithCleanups *E) {
       Obj = cast<CompoundLiteralExpr>(Record.readSubExpr());
     else
       llvm_unreachable("unexpected cleanup object type");
-    E->getTrailingObjects<ExprWithCleanups::CleanupObject>()[i] = Obj;
+    E->getTrailingObjects()[i] = Obj;
   }
 
   E->ExprWithCleanupsBits.CleanupsHaveSideEffects = Record.readInt();
@@ -2198,9 +2198,8 @@ void ASTStmtReader::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
   E->Pack = Record.readDeclAs<NamedDecl>();
   if (E->isPartiallySubstituted()) {
     assert(E->Length == NumPartialArgs);
-    for (auto *I = E->getTrailingObjects<TemplateArgument>(),
-              *E = I + NumPartialArgs;
-         I != E; ++I)
+    for (auto *I = E->getTrailingObjects(), *E = I + NumPartialArgs; I != E;
+         ++I)
       new (I) TemplateArgument(Record.readTemplateArgument());
   } else if (!E->isValueDependent()) {
     E->Length = Record.readInt();
@@ -2215,7 +2214,7 @@ void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
   E->RSquareLoc = readSourceLocation();
   E->SubExprs[0] = Record.readStmt();
   E->SubExprs[1] = Record.readStmt();
-  auto **Exprs = E->getTrailingObjects<Expr *>();
+  auto **Exprs = E->getTrailingObjects();
   for (unsigned I = 0; I < E->PackIndexingExprBits.TransformedExpressions; ++I)
     Exprs[I] = Record.readExpr();
 }
@@ -2252,7 +2251,7 @@ void ASTStmtReader::VisitFunctionParmPackExpr(FunctionParmPackExpr *E) {
   E->NumParameters = Record.readInt();
   E->ParamPack = readDeclAs<ValueDecl>();
   E->NameLoc = readSourceLocation();
-  auto **Parms = E->getTrailingObjects<ValueDecl *>();
+  auto **Parms = E->getTrailingObjects();
   for (unsigned i = 0, n = E->NumParameters; i != n; ++i)
     Parms[i] = readDeclAs<ValueDecl>();
 }
@@ -2289,7 +2288,7 @@ void ASTStmtReader::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
   E->LParenLoc = readSourceLocation();
   E->RParenLoc = readSourceLocation();
   for (unsigned I = 0; I < ExpectedNumExprs; I++)
-    E->getTrailingObjects<Expr *>()[I] = Record.readSubExpr();
+    E->getTrailingObjects()[I] = Record.readSubExpr();
 
   bool HasArrayFillerOrUnionDecl = Record.readBool();
   if (HasArrayFillerOrUnionDecl) {

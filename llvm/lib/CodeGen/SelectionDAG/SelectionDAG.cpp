@@ -6474,8 +6474,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         OpOpcode == ISD::ANY_EXTEND) {
       // If the source is smaller than the dest, we still need an extend.
       if (N1.getOperand(0).getValueType().getScalarType().bitsLT(
-              VT.getScalarType()))
-        return getNode(OpOpcode, DL, VT, N1.getOperand(0));
+              VT.getScalarType())) {
+        SDNodeFlags Flags;
+        if (OpOpcode == ISD::ZERO_EXTEND)
+          Flags.setNonNeg(N1->getFlags().hasNonNeg());
+        return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
+      }
       if (N1.getOperand(0).getValueType().bitsGT(VT))
         return getNode(ISD::TRUNCATE, DL, VT, N1.getOperand(0));
       return N1.getOperand(0);
