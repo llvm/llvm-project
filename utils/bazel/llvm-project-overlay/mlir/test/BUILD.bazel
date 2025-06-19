@@ -37,7 +37,6 @@ expand_template(
         # All disabled, but required to substituted because they are not in quotes.
         "@LLVM_BUILD_EXAMPLES@": "0",
         "@LLVM_HAS_NVPTX_TARGET@": "0",
-        "@LLVM_INCLUDE_SPIRV_TOOLS_TESTS@": "0",
         "@MLIR_ENABLE_CUDA_RUNNER@": "0",
         "@MLIR_ENABLE_ROCM_CONVERSIONS@": "0",
         "@MLIR_ENABLE_ROCM_RUNNER@": "0",
