@@ -27,9 +27,7 @@ template <typename T> static T *getDevicePtr(T *anyPtr, OMPDeviceTy ompDevice) {
   // If not present on the device it should already be a device ptr
   if (!omp_target_is_present(voidAnyPtr, ompDevice))
     return anyPtr;
-  T *device_ptr = nullptr;
-#pragma omp target data use_device_ptr(anyPtr) device(ompDevice)
-  device_ptr = anyPtr;
+  T *device_ptr = omp_get_mapped_ptr(anyPtr, ompDevice);
   return device_ptr;
 }
 
