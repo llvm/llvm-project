@@ -191,6 +191,22 @@ let Definition = "debugger" in {
             "${separator}${thread.stop-reason}}{ "
             "${separator}{${progress.count} }${progress.message}}">,
         Desc<"The default statusline format string.">;
+
+  def ShowDisabledAnsiPrefix
+      : Property<"disable-ansi-prefix", "String">,
+        Global,
+        DefaultStringValue<"${ansi.faint}">,
+        Desc<"If something has been disabled in a color-enabled terminal, use "
+             "the ANSI terminal code specified immediately before whatever has "
+             "been disabled.">;
+  def ShowDisabledAnsiSuffix
+      : Property<"disable-ansi-suffix", "String">,
+        Global,
+        DefaultStringValue<"${ansi.normal}">,
+        Desc<"When somehing has been disabled in a color-enabled terminal, use "
+             "the ANSI terminal code specified immediately after whatever has "
+             "been disabled.">;
+
   def UseSourceCache: Property<"use-source-cache", "Boolean">,
     Global,
     DefaultTrue,
