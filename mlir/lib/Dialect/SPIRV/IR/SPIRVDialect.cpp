@@ -1065,8 +1065,15 @@ LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
   return verifyRegionAttribute(op->getLoc(), argType, attribute);
 }
 
-LogicalResult SPIRVDialect::verifyRegionResultAttribute(
-    Operation *op, unsigned /*regionIndex*/, unsigned /*resultIndex*/,
-    NamedAttribute attribute) {
-  return op->emitError("cannot attach SPIR-V attributes to region result");
+LogicalResult
+SPIRVDialect::verifyRegionResultAttribute(Operation *op, unsigned regionIndex,
+                                          unsigned resultIndex,
+                                          NamedAttribute attribute) {
+  auto funcOp = dyn_cast<FunctionOpInterface>(op);
+  if (!funcOp)
+    return op->emitError(
+        "cannot attach SPIR-V attributes to region result which is "
+        "not a FunctionOpInterface type");
+  return verifyRegionAttribute(op->getLoc(),
+                               funcOp.getResultTypes()[resultIndex], attribute);
 }

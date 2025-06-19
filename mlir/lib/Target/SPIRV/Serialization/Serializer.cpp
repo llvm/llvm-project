@@ -133,7 +133,7 @@ void Serializer::collect(SmallVectorImpl<uint32_t> &binary) {
                     extensions.size() + extendedSets.size() +
                     memoryModel.size() + entryPoints.size() +
                     executionModes.size() + decorations.size() +
-                    typesGlobalValues.size() + functions.size();
+                    typesGlobalValues.size() + functions.size() + graphs.size();
 
   binary.clear();
   binary.reserve(moduleSize);
@@ -151,6 +151,7 @@ void Serializer::collect(SmallVectorImpl<uint32_t> &binary) {
   binary.append(decorations.begin(), decorations.end());
   binary.append(typesGlobalValues.begin(), typesGlobalValues.end());
   binary.append(functions.begin(), functions.end());
+  binary.append(graphs.begin(), graphs.end());
 }
 
 #ifndef NDEBUG
@@ -490,9 +491,12 @@ Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
   auto typeEnum = spirv::Opcode::OpTypeVoid;
   bool deferSerialization = false;
 
-  if ((isa<FunctionType>(type) &&
-       succeeded(prepareFunctionType(loc, cast<FunctionType>(type), typeEnum,
-                                     operands))) ||
+  if ((llvm::isa<FunctionType>(type) &&
+       succeeded(prepareFunctionType(loc, llvm::cast<FunctionType>(type),
+                                     typeEnum, operands))) ||
+      (llvm::isa<GraphType>(type) &&
+       succeeded(prepareGraphType(loc, llvm::cast<GraphType>(type), typeEnum,
+                                  operands))) ||
       succeeded(prepareBasicType(loc, type, typeID, typeEnum, operands,
                                  deferSerialization, serializationCtx))) {
     if (deferSerialization)
@@ -523,6 +527,7 @@ Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
     return success();
   }
 
+  emitError(loc, "failed to process type: ") << type;
   return failure();
 }
 
@@ -859,6 +864,35 @@ Serializer::prepareFunctionType(Location loc, FunctionType type,
   return success();
 }
 
+LogicalResult
+Serializer::prepareGraphType(Location loc, GraphType type,
+                             spirv::Opcode &typeEnum,
+                             SmallVectorImpl<uint32_t> &operands) {
+  typeEnum = spirv::Opcode::OpTypeGraphARM;
+  assert(type.getNumResults() >= 1 &&
+         "serialization requires at least a return value");
+
+  operands.push_back(type.getNumInputs());
+
+  for (auto &res : type.getInputs()) {
+    uint32_t argTypeID = 0;
+    if (failed(processType(loc, res, argTypeID))) {
+      return failure();
+    }
+    operands.push_back(argTypeID);
+  }
+
+  for (auto &res : type.getResults()) {
+    uint32_t resultID = 0;
+    if (failed(processType(loc, res, resultID))) {
+      return failure();
+    }
+    operands.push_back(resultID);
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Constant
 //===----------------------------------------------------------------------===//
@@ -1131,6 +1165,41 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
   if (!isSpec) {
     constIDMap[intAttr] = resultID;
   }
+  return resultID;
+}
+
+uint32_t Serializer::prepareGraphConstantId(Location loc, Type graphConstType,
+                                            IntegerAttr intAttr) {
+  // De-duplicate graph constants.
+  if (auto id = getGraphConstantARMId(intAttr)) {
+    return id;
+  }
+
+  // Process the type for this graph constant.
+  uint32_t typeID = 0;
+  if (failed(processType(loc, graphConstType, typeID))) {
+    return 0;
+  }
+
+  auto resultID = getNextID();
+  APInt value = intAttr.getValue();
+  unsigned bitwidth = value.getBitWidth();
+  if (bitwidth > 32) {
+    emitError(loc, "Too wide attribute for OpGraphConstantARM: ")
+        << bitwidth << " bits";
+    return 0;
+  }
+  bool isSigned = value.isSignedIntN(bitwidth);
+
+  uint32_t word = 0;
+  if (isSigned) {
+    word = static_cast<int32_t>(value.getSExtValue());
+  } else {
+    word = static_cast<uint32_t>(value.getZExtValue());
+  }
+  encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpGraphConstantARM,
+                        {typeID, resultID, word});
+  graphConstIDMap[intAttr] = resultID;
   return resultID;
 }
 
@@ -1468,8 +1537,18 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
         return processConstantCompositeReplicateOp(op);
       })
       .Case([&](spirv::FuncOp op) { return processFuncOp(op); })
+      .Case([&](spirv::GraphARMOp op) { return processGraphARMOp(op); })
+      .Case([&](spirv::GraphEntryPointARMOp op) {
+        return processGraphEntryPointARMOp(op);
+      })
+      .Case([&](spirv::GraphOutputsARMOp op) {
+        return processGraphOutputsARMOp(op);
+      })
       .Case([&](spirv::GlobalVariableOp op) {
         return processGlobalVariableOp(op);
+      })
+      .Case([&](spirv::GraphConstantARMOp op) {
+        return processGraphConstantARMOp(op);
       })
       .Case([&](spirv::LoopOp op) { return processLoopOp(op); })
       .Case([&](spirv::ReferenceOfOp op) { return processReferenceOfOp(op); })
