@@ -1030,8 +1030,7 @@ void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
   // There used to be various other llvm.dbg.* nodes, but we don't support
   // upgrading them and we want to reserve the namespace for future uses.
   if (NMD.getName().starts_with("llvm.dbg."))
-    CheckDI(NMD.getName() == "llvm.dbg.cu" ||
-                NMD.getName() == "llvm.dbg.retainedNodes",
+    CheckDI(NMD.getName() == "llvm.dbg.cu",
             "unrecognized named metadata node in the llvm.dbg namespace", &NMD);
   for (const MDNode *MD : NMD.operands()) {
     if (NMD.getName() == "llvm.dbg.cu")
@@ -1707,13 +1706,9 @@ void Verifier::visitDILabel(const DILabel &N) {
           "label requires a valid scope", &N, N.getRawScope());
 }
 
-void Verifier::visitDIFragment(const DIFragment &N) {}
-
 void Verifier::visitDIExpression(const DIExpression &N) {
   CheckDI(N.isValid(), "invalid expression", &N);
 }
-
-void Verifier::visitDIExpr(const DIExpr &N) {}
 
 void Verifier::visitDIGlobalVariableExpression(
     const DIGlobalVariableExpression &GVE) {
@@ -1744,8 +1739,6 @@ void Verifier::visitDIImportedEntity(const DIImportedEntity &N) {
   CheckDI(isDINode(N.getRawEntity()), "invalid imported entity", &N,
           N.getRawEntity());
 }
-
-void Verifier::visitDILifetime(const DILifetime &N) {}
 
 void Verifier::visitComdat(const Comdat &C) {
   // In COFF the Module is invalid if the GlobalValue has private linkage.
@@ -5661,9 +5654,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   case Intrinsic::dbg_label: // llvm.dbg.label
     visitDbgLabelIntrinsic("label", cast<DbgLabelInst>(Call));
-    break;
-  case Intrinsic::dbg_def:  // llvm.dbg.def
-  case Intrinsic::dbg_kill: // llvm.dbg.kill
     break;
   case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline:

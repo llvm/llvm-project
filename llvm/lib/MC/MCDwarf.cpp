@@ -1662,11 +1662,8 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
 
     if (VRs.size() == 1 && VRs[0].SizeInBits % 8 == 0) {
       encodeDwarfRegisterLocation(VRs[0].Register, OSBlock);
-      if (EmitHeterogeneousDwarfAsUserOps) {
-        OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-                << uint8_t(dwarf::DW_OP_LLVM_USER_offset_uconst);
-      } else
-        OSBlock << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
+      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+              << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
       encodeULEB128((VRs[0].SizeInBits / 8) * VRs[0].Lane, OSBlock);
     } else {
       for (const auto &VR : VRs) {
@@ -1706,25 +1703,16 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     raw_svector_ostream OSBlock(Block);
     encodeDwarfRegisterLocation(Instr.getRegister(), OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_swap);
-    if (EmitHeterogeneousDwarfAsUserOps)
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-              << uint8_t(dwarf::DW_OP_LLVM_USER_offset_uconst);
-    else
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
+    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+            << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
     encodeULEB128(Instr.getOffset(), OSBlock);
-    if (EmitHeterogeneousDwarfAsUserOps)
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-              << uint8_t(dwarf::DW_OP_LLVM_USER_call_frame_entry_reg);
-    else
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_call_frame_entry_reg);
+    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+            << uint8_t(dwarf::DW_OP_LLVM_call_frame_entry_reg);
     encodeULEB128(Fields.MaskRegister, OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_deref_size);
     OSBlock << uint8_t(Fields.MaskRegisterSizeInBits / 8);
-    if (EmitHeterogeneousDwarfAsUserOps)
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-              << uint8_t(dwarf::DW_OP_LLVM_USER_select_bit_piece);
-    else
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_select_bit_piece);
+    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+            << uint8_t(dwarf::DW_OP_LLVM_select_bit_piece);
     encodeULEB128(Fields.RegisterSizeInBits, OSBlock);
     encodeULEB128(Fields.MaskRegisterSizeInBits, OSBlock);
 
@@ -1753,19 +1741,13 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     raw_svector_ostream OSBlock(Block);
     encodeDwarfRegisterLocation(Instr.getRegister(), OSBlock);
     encodeDwarfRegisterLocation(Fields.SpillRegister, OSBlock);
-    if (EmitHeterogeneousDwarfAsUserOps)
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-              << uint8_t(dwarf::DW_OP_LLVM_USER_call_frame_entry_reg);
-    else
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_call_frame_entry_reg);
+    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+            << uint8_t(dwarf::DW_OP_LLVM_call_frame_entry_reg);
     encodeULEB128(Fields.MaskRegister, OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_deref_size)
             << uint8_t(Fields.MaskRegisterSizeInBits / 8);
-    if (EmitHeterogeneousDwarfAsUserOps)
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-              << uint8_t(dwarf::DW_OP_LLVM_USER_select_bit_piece);
-    else
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_select_bit_piece);
+    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+            << uint8_t(dwarf::DW_OP_LLVM_select_bit_piece);
     encodeULEB128(Fields.SpillRegisterLaneSizeInBits, OSBlock);
     encodeULEB128(Fields.MaskRegisterSizeInBits, OSBlock);
 

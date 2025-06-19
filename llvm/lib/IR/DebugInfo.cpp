@@ -586,11 +586,6 @@ bool llvm::stripDebugInfo(Function &F) {
   DenseMap<MDNode *, MDNode *> LoopIDsMap;
   for (BasicBlock &BB : F) {
     for (Instruction &I : llvm::make_early_inc_range(BB)) {
-      if (isa<DbgInfoIntrinsic>(&I)) {
-        I.eraseFromParent();
-        Changed = true;
-        continue;
-      }
       if (I.getDebugLoc()) {
         Changed = true;
         I.setDebugLoc(DebugLoc());
@@ -633,7 +628,6 @@ bool llvm::StripDebugInfo(Module &M) {
 
   for (auto &GV : M.globals()) {
     Changed |= GV.eraseMetadata(LLVMContext::MD_dbg);
-    Changed |= GV.eraseMetadata(M.getContext().getMDKindID("dbg.def"));
   }
 
   if (GVMaterializer *Materializer = M.getMaterializer())

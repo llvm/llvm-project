@@ -1590,20 +1590,10 @@ DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                        Ops);
 }
 
-DIFragment::DIFragment(LLVMContext &C, StorageType Storage)
-    : DIObject(C, DIFragmentKind, Storage, dwarf::DW_TAG_dwarf_procedure, {}) {
-  assert(Storage != Uniqued);
-}
-
-DIFragment *DIFragment::getImpl(LLVMContext &Context, StorageType Storage) {
-  assert(Storage != Uniqued && "Cannot unique DIFragment");
-  return storeImpl(new (0, Storage) DIFragment(Context, Storage), Storage);
-}
-
 DIVariable::DIVariable(LLVMContext &C, unsigned ID, StorageType Storage,
                        signed Line, ArrayRef<Metadata *> Ops,
                        dwarf::MemorySpace MS, uint32_t AlignInBits)
-    : DIObject(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
+    : DINode(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
       MemorySpace(MS) {
   SubclassData32 = AlignInBits;
 }
@@ -3069,8 +3059,6 @@ DIExprBuilder::DIExprBuilder(LLVMContext &C,
     : C(C), Elements(IL) {}
 DIExprBuilder::DIExprBuilder(LLVMContext &C, ArrayRef<DIOp::Variant> V)
     : C(C), Elements(V) {}
-DIExprBuilder::DIExprBuilder(const DIExpr &E)
-    : C(E.getContext()), Elements(E.Elements) {}
 DIExprBuilder::DIExprBuilder(const DIExpression &E)
     : C(E.getContext()), Elements(*E.getNewElementsRef()) {}
 
@@ -3089,14 +3077,6 @@ DIExprBuilder::Iterator DIExprBuilder::erase(Iterator I) {
 
 DIExprBuilder::Iterator DIExprBuilder::erase(Iterator From, Iterator To) {
   return Elements.erase(From.Op, To.Op);
-}
-
-DIExpr *DIExprBuilder::intoExpr() {
-#ifndef NDEBUG
-  assert(!StateIsUnspecified);
-  StateIsUnspecified = true;
-#endif
-  return DIExpr::get(C, std::move(Elements));
 }
 
 DIExpression *DIExprBuilder::intoExpression() {
@@ -3122,14 +3102,6 @@ DIExprBuilder &DIExprBuilder::removeReferrerIndirection(Type *PointeeType) {
     }
   }
   return *this;
-}
-
-DIExpr *DIExpr::getImpl(LLVMContext &Context,
-                        SmallVector<DIOp::Variant> &&Elements,
-                        StorageType Storage, bool ShouldCreate) {
-  assert(Storage != Distinct && "DIExpr cannot be distinct");
-  DEFINE_GETIMPL_LOOKUP(DIExpr, (Elements));
-  DEFINE_GETIMPL_STORE_NO_OPS(DIExpr, (std::move(Elements)));
 }
 
 DIGlobalVariableExpression *
@@ -3247,13 +3219,4 @@ void DIArgList::dropAllReferences(bool Untrack) {
     untrack();
   Args.clear();
   ReplaceableMetadataImpl::resolveAllUses(/* ResolveUsers */ false);
-}
-
-DILifetime *DILifetime::getImpl(LLVMContext &Context, Metadata *Obj,
-                                Metadata *Loc, ArrayRef<Metadata *> Args,
-                                StorageType Storage) {
-  Metadata *Ops[] = {Obj, Loc};
-  return storeImpl(new (std::size(Ops) + Args.size(), Storage)
-                       DILifetime(Context, Storage, Ops, Args),
-                   Storage);
 }

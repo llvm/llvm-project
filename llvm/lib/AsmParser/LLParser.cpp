@@ -967,10 +967,6 @@ bool LLParser::parseNamedMetadata() {
           Lex.getStrVal() == "DIExpression") {
         if (parseDIExpression(N, /*IsDistinct=*/false))
           return true;
-      } else if (Lex.getKind() == lltok::MetadataVar &&
-                 Lex.getStrVal() == "DIExpr") {
-        if (parseDIExpr(N, /*IsDistinct=*/false))
-          return true;
         // DIArgLists should only appear inline in a function, as they may
         // contain LocalAsMetadata arguments which require a function context.
       } else if (Lex.getKind() == lltok::MetadataVar &&
@@ -6140,9 +6136,9 @@ bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
 // An empty DIExpr is permitted (although currently has no use), but an empty
 // DIOp-based DIExpression is not as at least one DIOp token is required to
 // disambiguate with an empty "OldElements" DIExpression.
-bool LLParser::parseDIOpExpression(MDNode *&Result, bool IsDIExpr) {
+bool LLParser::parseDIOpExpression(MDNode *&Result) {
   DIExprBuilder Builder(Context);
-  if (!IsDIExpr || Lex.getKind() != lltok::rparen)
+  if (Lex.getKind() != lltok::rparen)
     do {
       if (Lex.getKind() != lltok::DIOp)
         return tokError("expected DIOp");
@@ -6267,10 +6263,7 @@ bool LLParser::parseDIOpExpression(MDNode *&Result, bool IsDIExpr) {
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  if (IsDIExpr)
-    Result = Builder.intoExpr();
-  else
-    Result = Builder.intoExpression();
+  Result = Builder.intoExpression();
   return false;
 }
 
@@ -6281,7 +6274,7 @@ bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
     return true;
 
   if (Lex.getKind() == lltok::DIOp)
-    return parseDIOpExpression(Result, /*IsDIExpr=*/false);
+    return parseDIOpExpression(Result);
 
   SmallVector<uint64_t, 8> Elements;
   if (Lex.getKind() != lltok::rparen)
@@ -6358,29 +6351,6 @@ bool LLParser::parseDIArgList(Metadata *&MD, PerFunctionState *PFS) {
   return false;
 }
 
-bool LLParser::parseDIExpr(MDNode *&Result, bool IsDistinct) {
-  if (IsDistinct)
-    return tokError("'distinct' not allowed for !DIExpr");
-
-  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
-  Lex.Lex();
-
-  if (parseToken(lltok::lparen, "expected '(' here"))
-    return true;
-
-  return parseDIOpExpression(Result, /*IsDIExpr=*/true);
-}
-
-bool LLParser::parseDIFragment(MDNode *&Result, bool IsDistinct) {
-  if (!IsDistinct)
-    return tokError("missing 'distinct', required for !DIFragment");
-#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)
-  PARSE_MD_FIELDS();
-#undef VISIT_MD_FIELDS
-  Result = DIFragment::getDistinct(Context);
-  return false;
-}
-
 /// parseDIGlobalVariableExpression:
 ///   ::= !DIGlobalVariableExpression(var: !0, expr: !1)
 bool LLParser::parseDIGlobalVariableExpression(MDNode *&Result,
@@ -6435,23 +6405,6 @@ bool LLParser::parseDIImportedEntity(MDNode *&Result, bool IsDistinct) {
   Result = GET_OR_DISTINCT(DIImportedEntity,
                            (Context, tag.Val, scope.Val, entity.Val, file.Val,
                             line.Val, name.Val, elements.Val));
-  return false;
-}
-
-/// parseDILifetime:
-///   ::= !DILifetime(object: !0, location: !1, argObjects: {...})
-bool LLParser::parseDILifetime(MDNode *&Result, bool IsDistinct) {
-  if (!IsDistinct)
-    return tokError("missing 'distinct', required for !DILifetime");
-#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
-  REQUIRED(object, MDField, );                                                 \
-  REQUIRED(location, MDField, );                                               \
-  OPTIONAL(argObjects, MDFieldList, );
-  PARSE_MD_FIELDS();
-#undef VISIT_MD_FIELDS
-
-  Result = DILifetime::getDistinct(Context, object.Val, location.Val,
-                                   argObjects.Val);
   return false;
 }
 

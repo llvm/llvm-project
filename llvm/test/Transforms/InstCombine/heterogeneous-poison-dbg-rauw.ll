@@ -21,7 +21,7 @@ define void @test_int_ptr_int(i64 %A) !dbg !5 {
 ; CHECK-NEXT:    ret void
 ;
   %1 = inttoptr i64 %A to ptr
-  tail call void @llvm.dbg.value(metadata ptr %1, metadata !9, metadata !DIExpression(DIOpArg(0, ptr))), !dbg !12
+    #dbg_value(ptr %1, !9, !DIExpression(DIOpArg(0, ptr)), !12)
   %2 = ptrtoint ptr %1 to i64
   call void @use_i64(i64 %2)
   ret void
@@ -35,7 +35,7 @@ define void @test_ptr_int_ptr(ptr %A) !dbg !13 {
 ; CHECK-NEXT:    ret void
 ;
   %1 = ptrtoint ptr %A to i64
-  tail call void @llvm.dbg.value(metadata i64 %1, metadata !15, metadata !DIExpression(DIOpArg(0, i64))), !dbg !17
+    #dbg_value(i64 %1, !15, !DIExpression(DIOpArg(0, i64)), !17)
   %2 = inttoptr i64 %1 to ptr
   call void @use_ptr(ptr %2)
   ret void
@@ -49,7 +49,7 @@ define void @test_zext_trunc(i32 %A) !dbg !18 {
 ; CHECK-NEXT:    ret void
 ;
   %1 = zext i32 %A to i64
-  tail call void @llvm.dbg.value(metadata i64 %1, metadata !20, metadata !DIExpression(DIOpArg(0, i64))), !dbg !23
+    #dbg_value(i64 %1, !20, !DIExpression(DIOpArg(0, i64)), !23)
   %2 = trunc i64 %1 to i32
   call void @use_i32(i32 %2)
   ret void
@@ -64,7 +64,7 @@ define void @test_trunc_zext(i64 %A) !dbg !24 {
 ; CHECK-NEXT:    ret void
 ;
   %1 = trunc i64 %A to i32
-  tail call void @llvm.dbg.value(metadata i32 %1, metadata !26, metadata !DIExpression(DIOpArg(0, i32))), !dbg !28
+    #dbg_value(i32 %1, !26, !DIExpression(DIOpArg(0, i32)), !28)
   %2 = zext i32 %1 to i64
   call void @use_i64(i64 %2)
   ret void
@@ -78,7 +78,7 @@ define void @test_sext_trunc(i32 %A) !dbg !29 {
 ; CHECK-NEXT:    ret void
 ;
   %1 = sext i32 %A to i64
-  tail call void @llvm.dbg.value(metadata i64 %1, metadata !31, metadata !DIExpression(DIOpArg(0, i64))), !dbg !33
+    #dbg_value(i64 %1, !31, !DIExpression(DIOpArg(0, i64)), !33)
   %2 = trunc i64 %1 to i32
   call void @use_i32(i32 %2)
   ret void
@@ -94,12 +94,12 @@ define void @test_asc_asc(ptr addrspace(1) %A, ptr %B) !dbg !34 {
 ; CHECK-NEXT:    ret void
 ;
   %1 = addrspacecast ptr addrspace(1) %A to ptr addrspace(4)
-  tail call void @llvm.dbg.value(metadata ptr addrspace(4) %1, metadata !36, metadata !DIExpression(DIOpArg(0, ptr addrspace(4)))), !dbg !38
+    #dbg_value(ptr addrspace(4) %1, !36, !DIExpression(DIOpArg(0, ptr addrspace(4))), !38)
   %2 = addrspacecast ptr addrspace(4) %1 to ptr addrspace(1)
   call void @use_ptr1(ptr addrspace(1) %2)
 
   %3 = addrspacecast ptr %B to ptr addrspace(3)
-  tail call void @llvm.dbg.value(metadata ptr addrspace(3) %3, metadata !39, metadata !DIExpression(DIOpArg(0, ptr addrspace(3)))), !dbg !38
+    #dbg_value(ptr addrspace(3) %3, !39, !DIExpression(DIOpArg(0, ptr addrspace(3))), !38)
   %4 = addrspacecast ptr addrspace(3) %3 to ptr
   call void @use_ptr(ptr %4)
 

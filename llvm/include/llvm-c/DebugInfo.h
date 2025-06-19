@@ -199,9 +199,6 @@ enum {
   LLVMDIGenericSubrangeMetadataKind,
   LLVMDIArgListMetadataKind,
   LLVMDIAssignIDMetadataKind,
-  LLVMDIExprMetadataKind,
-  LLVMDIFragmentMetadataKind,
-  LLVMDILifetimeMetadataKind,
   LLVMDISubrangeTypeMetadataKind,
   LLVMDIFixedPointTypeMetadataKind,
 };
