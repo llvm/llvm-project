@@ -378,14 +378,14 @@ def TruncationMatchesShiftAmount :
 
 // trunci(extsi(x)) -> extsi(x), when only the sign-extension bits are truncated
 def TruncIExtSIToExtSI :
-    Pat<(Arith_TruncIOp:$tr (Arith_ExtSIOp:$ext $x)),
+    Pat<(Arith_TruncIOp:$tr (Arith_ExtSIOp:$ext $x), $overflow),
         (Arith_ExtSIOp $x),
         [(ValueWiderThan $ext, $tr),
          (ValueWiderThan $tr, $x)]>;
 
 // trunci(extui(x)) -> extui(x), when only the zero-extension bits are truncated
 def TruncIExtUIToExtUI :
-    Pat<(Arith_TruncIOp:$tr (Arith_ExtUIOp:$ext $x)),
+    Pat<(Arith_TruncIOp:$tr (Arith_ExtUIOp:$ext $x), $overflow),
         (Arith_ExtUIOp $x),
         [(ValueWiderThan $ext, $tr),
          (ValueWiderThan $tr, $x)]>;
@@ -393,8 +393,8 @@ def TruncIExtUIToExtUI :
 // trunci(shrsi(x, c)) -> trunci(shrui(x, c))
 def TruncIShrSIToTrunciShrUI :
     Pat<(Arith_TruncIOp:$tr
-          (Arith_ShRSIOp $x, (ConstantLikeMatcher TypedAttrInterface:$c0))),
-        (Arith_TruncIOp (Arith_ShRUIOp $x, (Arith_ConstantOp (cast<"TypedAttr"> $c0)))),
+          (Arith_ShRSIOp $x, (ConstantLikeMatcher TypedAttrInterface:$c0)), $overflow),
+        (Arith_TruncIOp (Arith_ShRUIOp $x, (Arith_ConstantOp (cast<"TypedAttr"> $c0))), $overflow),
         [(TruncationMatchesShiftAmount $x, $tr, $c0)]>;
 
 // trunci(shrui(mul(sext(x), sext(y)), c)) -> mulsi_extended(x, y)
@@ -402,7 +402,7 @@ def TruncIShrUIMulIToMulSIExtended :
     Pat<(Arith_TruncIOp:$tr (Arith_ShRUIOp
                               (Arith_MulIOp:$mul
                                 (Arith_ExtSIOp $x), (Arith_ExtSIOp $y), $ovf1),
-                              (ConstantLikeMatcher AnyAttr:$c0))),
+                              (ConstantLikeMatcher AnyAttr:$c0)), $overflow),
         (Arith_MulSIExtendedOp:$res__1 $x, $y),
       [(ValuesWithSameType $tr, $x, $y),
        (ValueWiderThan $mul, $x),
@@ -413,7 +413,7 @@ def TruncIShrUIMulIToMulUIExtended :
     Pat<(Arith_TruncIOp:$tr (Arith_ShRUIOp
                               (Arith_MulIOp:$mul
                                 (Arith_ExtUIOp $x), (Arith_ExtUIOp $y), $ovf1),
-                              (ConstantLikeMatcher AnyAttr:$c0))),
+                              (ConstantLikeMatcher AnyAttr:$c0)), $overflow),
         (Arith_MulUIExtendedOp:$res__1 $x, $y),
       [(ValuesWithSameType $tr, $x, $y),
        (ValueWiderThan $mul, $x),
