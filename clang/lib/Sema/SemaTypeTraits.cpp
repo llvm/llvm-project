@@ -2293,11 +2293,10 @@ static bool hasMixedAccessSpecifier(const CXXRecordDecl *D) {
     if (Field->isUnnamedBitField())
       continue;
     AccessSpecifier FieldAccess = Field->getAccess();
-    if (FirstAccess == AS_none) {
+    if (FirstAccess == AS_none)
       FirstAccess = FieldAccess;
-    } else if (FieldAccess != FirstAccess) {
+    else if (FieldAccess != FirstAccess)
       return true;
-    }
   }
   return false;
 }
@@ -2311,12 +2310,13 @@ static bool hasMultipleDataBaseClassesWithFields(const CXXRecordDecl *D) {
 
     for (const FieldDecl *Field : BaseRD->fields()) {
       if (!Field->isUnnamedBitField()) {
-        ++NumBasesWithFields;
-        break; // Only count the base once.
+        if (++NumBasesWithFields > 1)
+          return true; // found more than one base class with fields
+        break;         // no need to check further fields in this base class
       }
     }
   }
-  return NumBasesWithFields > 1;
+  return false;
 }
 
 static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
@@ -2353,7 +2353,7 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
           << Field->getType() << Field->getSourceRange();
     }
   }
-  // find any indirect base classes that have fields
+  // Find any indirect base classes that have fields.
   if (D->hasDirectFields()) {
     const CXXRecordDecl *Indirect = nullptr;
     D->forallBases([&](const CXXRecordDecl *BaseDef) {
@@ -2376,7 +2376,7 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
   SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
       << T << diag::TraitName::StandardLayout;
 
-  // Check type-level exclusion first
+  // Check type-level exclusion first.
   if (T->isVariablyModifiedType()) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::VLA;

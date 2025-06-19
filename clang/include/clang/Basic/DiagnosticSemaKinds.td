@@ -1791,7 +1791,7 @@ def note_unsatisfied_trait_reason
            "%NonStdLayoutBase{has a non-standard-layout base %1}|"
            "%MixedAccess{has mixed access specifiers}|"
            "%MultipleDataBase{has multiple base classes with data members}|"
-           "%VirtualFunction{has virtual functions}|"
+           "%VirtualFunction{has a virtual function}|"
            "%NonStdLayoutMember{has a non-standard-layout member %1 of type %2}|"
            "%IndirectBaseWithFields{has an indirect base %1 with data members}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
