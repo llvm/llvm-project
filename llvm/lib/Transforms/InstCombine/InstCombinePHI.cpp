@@ -1290,6 +1290,8 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   //         ...      ...
   //          \       /
   //       phi [v1] [v2]
+  if (!PN.getType()->isIntegerTy())
+    return nullptr;
   // Make sure all inputs are constants.
   if (!all_of(PN.operands(), [](Value *V) { return isa<ConstantInt>(V); }))
     return nullptr;
