@@ -222,8 +222,31 @@ static void generateFusedElementwiseOpRegion(
   auto producer = cast<LinalgOp>(fusedOperand->get().getDefiningOp());
   auto consumer = cast<LinalgOp>(fusedOperand->getOwner());
   // Build the region of the fused op.
+
+  // Since some ops, like `linalg.map`, do not have block arguments for init operands
+  // then we first "generalize" the block by adding arguments for init operands when
+  // they aren't present. We detect this case by checking if
+  // `getOpOperandsMatchingBBargs() == getDpsInputOperands(); 
   Block &producerBlock = producer->getRegion(0).front();
+  if (producer.getOpOperandsMatchingBBargs() ==
+      producer.getDpsInputOperands()) {
+    for (auto init : producer.getDpsInits()) {
+      Type bbType = isa<ShapedType>(init.getType())
+                        ? cast<ShapedType>(init.getType()).getElementType()
+                        : init.getType();
+      producerBlock.addArgument(bbType, producer.getLoc());
+    }
+  }
   Block &consumerBlock = consumer->getRegion(0).front();
+  if (consumer.getOpOperandsMatchingBBargs() ==
+      consumer.getDpsInputOperands()) {
+    for (auto init : consumer.getDpsInits()) {
+      Type bbType = isa<ShapedType>(init.getType())
+                        ? cast<ShapedType>(init.getType()).getElementType()
+                        : init.getType();
+      consumerBlock.addArgument(bbType, consumer.getLoc());
+    }
+  }
   OpBuilder::InsertionGuard guard(rewriter);
   Block *fusedBlock = rewriter.createBlock(&fusedOp->getRegion(0));
   IRMapping mapper;
