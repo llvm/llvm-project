@@ -288,6 +288,7 @@ static bool isUniformShape(Value *V) {
     }
 
   switch (I->getOpcode()) {
+  case Instruction::PHI:
   case Instruction::FNeg:
     return true;
   default:
@@ -1136,7 +1137,27 @@ public:
 
     Changed |= !FusedInsts.empty();
 
-    // Fourth, lower remaining instructions with shape information.
+    // Fourth, pre-process all the PHINode's. The incoming values will be
+    // assigned later in VisitPHI.
+    for (Instruction *Inst : MatrixInsts) {
+      auto *PHI = dyn_cast<PHINode>(Inst);
+      if (!PHI)
+        continue;
+
+      const ShapeInfo &SI = ShapeMap.at(Inst);
+      auto *EltTy = cast<FixedVectorType>(PHI->getType())->getElementType();
+      MatrixTy PhiM(SI.NumRows, SI.NumColumns, EltTy);
+
+      IRBuilder<> Builder(Inst);
+      for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI)
+        PhiM.setVector(VI, Builder.CreatePHI(PhiM.getVectorTy(),
+                                             PHI->getNumIncomingValues(),
+                                             PHI->getName()));
+      assert(!Inst2ColumnMatrix.contains(PHI) && "map already contains phi?");
+      Inst2ColumnMatrix[PHI] = PhiM;
+    }
+
+    // Fifth, lower remaining instructions with shape information.
     for (Instruction *Inst : MatrixInsts) {
       if (FusedInsts.count(Inst))
         continue;
@@ -1161,6 +1182,8 @@ public:
         Result = VisitLoad(cast<LoadInst>(Inst), SI, Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
         Result = VisitStore(cast<StoreInst>(Inst), SI, Op1, Op2, Builder);
+      else if (auto *PHI = dyn_cast<PHINode>(Inst))
+        Result = VisitPHI(PHI, SI, Builder);
       else
         continue;
 
@@ -1458,7 +1481,8 @@ public:
                         IRBuilder<> &Builder) {
     auto inserted = Inst2ColumnMatrix.insert(std::make_pair(Inst, Matrix));
     (void)inserted;
-    assert(inserted.second && "multiple matrix lowering mapping");
+    assert((inserted.second || isa<PHINode>(Inst)) &&
+           "multiple matrix lowering mapping");
 
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
@@ -2237,6 +2261,35 @@ public:
     return LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
                       Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI,
                       Builder);
+  }
+
+  MatrixTy VisitPHI(PHINode *Inst, const ShapeInfo &SI, IRBuilder<> &Builder) {
+    auto BlockIP = Inst->getParent()->getFirstInsertionPt();
+    Builder.SetInsertPoint(BlockIP);
+    MatrixTy PhiM = getMatrix(Inst, SI, Builder);
+
+    for (auto [IncomingV, IncomingB] :
+         llvm::zip_equal(Inst->incoming_values(), Inst->blocks())) {
+      // getMatrix() may insert some instructions to help with reshaping. The
+      // safest place for those is at the top of the block after the rest of the
+      // PHI's. Even better, if we can put it in the incoming block.
+      Builder.SetInsertPoint(BlockIP);
+      if (auto *IncomingInst = dyn_cast<Instruction>(IncomingV))
+        if (auto MaybeIP = IncomingInst->getInsertionPointAfterDef())
+          Builder.SetInsertPoint(*MaybeIP);
+
+      MatrixTy OpM = getMatrix(IncomingV, SI, Builder);
+
+      for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI) {
+        PHINode *NewPHI = cast<PHINode>(PhiM.getVector(VI));
+        NewPHI->addIncoming(OpM.getVector(VI), IncomingB);
+      }
+    }
+
+    // finalizeLowering() may also insert instructions in some cases. The safe
+    // place for those is at the end of the initial block of PHIs.
+    Builder.SetInsertPoint(BlockIP);
+    return PhiM;
   }
 
   /// Lower binary operators.
