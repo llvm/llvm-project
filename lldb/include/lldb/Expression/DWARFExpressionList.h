@@ -59,7 +59,7 @@ public:
 
   lldb::addr_t GetFuncFileAddress() { return m_func_file_addr; }
 
-  /// Represents an entry in the DWARFExpressionList with all needed metadata
+  /// Represents an entry in the DWARFExpressionList with all needed metadata.
   struct DWARFExpressionEntry {
     lldb::addr_t base;
     lldb::addr_t end;
