@@ -320,7 +320,7 @@ namespace {
     GCOVBlock(GCOVProfiler *P, uint32_t Number)
         : GCOVRecord(P), Number(Number) {}
 
-    SmallVector<GCOVLines, 4> Lines;
+    SmallVector<GCOVLines> Lines;
   };
 
   // A function has a unique identifier, a checksum (we leave as zero) and a

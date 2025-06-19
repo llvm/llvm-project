@@ -271,12 +271,10 @@ public:
   DenseSet<const GCOVBlock *> visited;
 };
 
-/// GCOVLocation - Represent file of lines same with block_location_info in gcc.
-class GCOVLocation {
-public:
-  GCOVLocation(unsigned idx) : srcIdx(idx) {}
+/// Represent file of lines same with block_location_info in gcc.
+struct GCOVBlockLocation {
+  GCOVBlockLocation(unsigned idx) : srcIdx(idx) {}
 
-public:
   unsigned srcIdx;
   SmallVector<uint32_t, 4> lines;
 };
@@ -326,7 +324,7 @@ public:
   uint64_t count = 0;
   SmallVector<GCOVArc *, 2> pred;
   SmallVector<GCOVArc *, 2> succ;
-  SmallVector<GCOVLocation, 4> locations;
+  SmallVector<GCOVBlockLocation> locations;
   uint32_t lastLine;
   bool traversable = false;
   GCOVArc *incoming = nullptr;

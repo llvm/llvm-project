@@ -457,7 +457,7 @@ void GCOVBlock::print(raw_ostream &OS) const {
     OS << "\n";
   }
   if (!locations.empty()) {
-    for (const GCOVLocation &loc : locations) {
+    for (const GCOVBlockLocation &loc : locations) {
       OS << "\tFile: " << loc.srcIdx << ": ";
       for (uint32_t N : loc.lines)
         OS << (N) << ",";
@@ -705,7 +705,7 @@ void Context::collectFunction(GCOVFunction &f, Summary &summary) {
   for (const GCOVBlock &b : f.blocksRange()) {
     if (b.locations.empty())
       continue;
-    for (const GCOVLocation &loc : b.locations) {
+    for (const GCOVBlockLocation &loc : b.locations) {
       SourceInfo &locSource = sources[loc.srcIdx];
       uint32_t maxLineNum = *llvm::max_element(loc.lines);
       if (maxLineNum >= locSource.lines.size())

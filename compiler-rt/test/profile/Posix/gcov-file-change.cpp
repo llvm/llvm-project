@@ -32,8 +32,8 @@ int main(int argc, char *argv[]) { // CHECK:      1: [[#]]:int main
 //--- a.h
 /// Apple targets doesn't enable -mconstructor-aliases by default and the count may be 4.
 struct A { A() { } };              // CHECK:      {{[24]}}: [[#]]:struct A
-inline auto *const inl_var_a =     // CHECK:      1: [[#]]:
-    new A;                         // CHECK:      1: [[#]]:
+inline auto *const inl_var_a =     // CHECK-NEXT: 1: [[#]]:
+    new A;                         // CHECK-NEXT: 1: [[#]]:
 
 //--- a.inc
 puts(""); // CHECK:      1: [[#]]:puts
