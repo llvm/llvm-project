@@ -453,9 +453,7 @@ struct WasmRelocation {
   uint64_t Offset; // Offset from the start of the section.
   int64_t Addend;  // A value to add to the symbol.
 
-  WasmRelocType getType() const {
-    return static_cast<WasmRelocType>(Type);
-  }
+  WasmRelocType getType() const { return static_cast<WasmRelocType>(Type); }
 };
 
 struct WasmInitFunc {
