@@ -47,6 +47,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "correlated-value-propagation"
 
+STATISTIC(NumGEPs, "Number of geps propagated");
 STATISTIC(NumPhis,      "Number of phis propagated");
 STATISTIC(NumPhiCommon, "Number of phis deleted via common incoming value");
 STATISTIC(NumSelects,   "Number of selects propagated");
@@ -1252,6 +1253,23 @@ static bool processTrunc(TruncInst *TI, LazyValueInfo *LVI) {
   return Changed;
 }
 
+// remove a GEP if all indices are in range [0, 1)
+static bool processGEP(GetElementPtrInst *GEP, LazyValueInfo *LVI) {
+  for (unsigned i = 1, e = GEP->getNumOperands(); i != e; ++i) {
+    ConstantRange Range = LVI->getConstantRangeAtUse(GEP->getOperandUse(i),
+                                                     /*UndefAllowed=*/false);
+    const APInt *C = Range.getSingleElement();
+    if (!C || !C->isZero())
+      return false;
+  }
+
+  // all indices are zero
+  Value *Ptr = GEP->getPointerOperand();
+  GEP->replaceAllUsesWith(Ptr);
+  ++NumGEPs;
+  return true;
+}
+
 static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
                     const SimplifyQuery &SQ) {
   bool FnChanged = false;
@@ -1317,6 +1335,9 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::Trunc:
         BBChanged |= processTrunc(cast<TruncInst>(&II), LVI);
+        break;
+      case Instruction::GetElementPtr:
+        BBChanged |= processGEP(cast<GetElementPtrInst>(&II), LVI);
         break;
       }
     }

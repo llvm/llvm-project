@@ -5,7 +5,7 @@ define ptr @noop_gep(ptr %ptr, i8 range(i8 0, 1) %index) {
 ; CHECK-LABEL: define ptr @noop_gep(
 ; CHECK-SAME: ptr [[PTR:%.*]], i8 range(i8 0, 1) [[INDEX:%.*]]) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i1, ptr [[PTR]], i8 [[INDEX]]
-; CHECK-NEXT:    ret ptr [[GEP]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %gep = getelementptr i1, ptr %ptr, i8 %index
   ret ptr %gep
@@ -16,7 +16,7 @@ define ptr @noop_gep_with_constant(ptr %ptr, i8 range(i8 0, 1) %index) {
 ; CHECK-LABEL: define ptr @noop_gep_with_constant(
 ; CHECK-SAME: ptr [[PTR:%.*]], i8 range(i8 0, 1) [[INDEX:%.*]]) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i1], ptr [[PTR]], i8 0, i8 [[INDEX]]
-; CHECK-NEXT:    ret ptr [[GEP]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %gep = getelementptr [2 x i1], ptr %ptr, i8 0, i8 %index
   ret ptr %gep
