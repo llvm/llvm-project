@@ -97,6 +97,7 @@ namespace {
     bool eliminateIVUser(Instruction *UseInst, Instruction *IVOperand);
     bool makeIVComparisonInvariant(ICmpInst *ICmp, Instruction *IVOperand);
     void eliminateIVComparison(ICmpInst *ICmp, Instruction *IVOperand);
+    bool forceEqualityForICmp(ICmpInst *ICmp, Instruction *IVOperand);
     void simplifyIVRemainder(BinaryOperator *Rem, Instruction *IVOperand,
                              bool IsSigned);
     void replaceRemWithNumerator(BinaryOperator *Rem);
@@ -244,6 +245,128 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   return true;
 }
 
+/// Try to change predicate of ICmp to EQ/NE to facilitate better work of OSR.
+/// This can be done only if all possible IV values but one lead to the same
+/// produced comparison result, while the 'chosen one' value gives the opposite
+/// result.
+bool SimplifyIndvar::forceEqualityForICmp(ICmpInst *ICmp,
+                                          Instruction *IVOperand) {
+  if (ICmp->isEquality()) {
+    // nothing to do
+    return false;
+  }
+
+  unsigned BoundOperandIdx = IVOperand == ICmp->getOperand(0) ? 1 : 0;
+  const SCEV *BoundSCEV = SE->getSCEV(ICmp->getOperand(BoundOperandIdx));
+  const SCEVConstant *BoundC = dyn_cast<SCEVConstant>(BoundSCEV);
+  CmpInst::Predicate OrigPredicate = ICmp->getPredicate();
+  CmpInst::Predicate NewPredicate = CmpInst::BAD_ICMP_PREDICATE;
+  Type *Ty = IVOperand->getType();
+  APInt NewBoundA;
+
+  if (BoundC) {
+    // Try to find the 'chosen one' value basing on predicate type and bound
+    const APInt &BoundA = BoundC->getAPInt();
+    ConstantRange ExactCR =
+        ConstantRange::makeExactICmpRegion(OrigPredicate, BoundA);
+    if (!ExactCR.getEquivalentICmp(NewPredicate, NewBoundA)) {
+      NewPredicate = CmpInst::BAD_ICMP_PREDICATE;
+    }
+  }
+
+  if (!ICmpInst::isEquality(NewPredicate)) {
+    const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(IVOperand));
+    if (!AR) {
+      return false;
+    }
+    const SCEVConstant *IVStart = dyn_cast<SCEVConstant>(AR->getStart());
+    const SCEVConstant *IVStep =
+        dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE));
+    if (!IVStart || !IVStep || !IVStep->getValue()->getValue()) {
+      return false;
+    }
+
+    if (BoundC) {
+      // Check to see the 'chosen one' value is the IV start value
+      bool HasNoWrap = ICmpInst::isSigned(OrigPredicate)
+                           ? AR->hasNoSignedWrap()
+                           : AR->hasNoUnsignedWrap();
+      if (HasNoWrap) {
+        const DataLayout &DL = ICmp->getParent()->getDataLayout();
+        Constant *SecondIterIV =
+            ConstantInt::get(Ty, IVStart->getAPInt() + IVStep->getAPInt());
+        Constant *FirstIterResult = ConstantFoldCompareInstOperands(
+            OrigPredicate, IVStart->getValue(), BoundC->getValue(), DL);
+        Constant *SecondIterResult = ConstantFoldCompareInstOperands(
+            OrigPredicate, SecondIterIV, BoundC->getValue(), DL);
+        if (FirstIterResult != SecondIterResult) {
+          NewBoundA = IVStart->getAPInt();
+          NewPredicate = FirstIterResult->isAllOnesValue() ? CmpInst::ICMP_EQ
+                                                           : CmpInst::ICMP_NE;
+        }
+      }
+    }
+
+    if (!ICmpInst::isEquality(NewPredicate)) {
+      // Check to see the 'chosen one' value is the very last IV value.
+      // To put it differently, check to see if ICmp directly or indirectly
+      // defines maximum loop trip count (or simply has aligned behavior by
+      // accident). This is different from loop exit condition rewriting as here
+      // not only ICmp instructions directly writing to exiting branch are
+      // considered.
+
+      // check to see if max trip count and IV parameters are constant
+      const SCEVConstant *MaxBackCount =
+          dyn_cast<SCEVConstant>(SE->getConstantMaxBackedgeTakenCount(L));
+      if (!MaxBackCount) {
+        return false;
+      }
+
+      // compute the number of consecutive iterations in which produced
+      // predicate value will be the same
+      bool ExitIfTrue = false;
+      auto EL = SE->computeExitLimitFromCond(L, ICmp, ExitIfTrue, false);
+      const SCEVConstant *SameIterCount =
+          dyn_cast<SCEVConstant>(EL.ExactNotTaken);
+      if (!SameIterCount || SameIterCount->getValue()->isZero()) {
+        ExitIfTrue = !ExitIfTrue;
+        EL = SE->computeExitLimitFromCond(L, ICmp, ExitIfTrue, false);
+        SameIterCount = dyn_cast<SCEVConstant>(EL.ExactNotTaken);
+      }
+
+      if (SameIterCount != MaxBackCount) {
+        // ICmp isn't aligned with maximum trip count
+        return false;
+      }
+
+      unsigned IVBitWigth = IVStep->getAPInt().getBitWidth();
+      unsigned CountBitWigth = SameIterCount->getAPInt().getBitWidth();
+      APInt SameIterCountA = SameIterCount->getAPInt();
+      if (IVBitWigth < CountBitWigth) {
+        SameIterCountA = SameIterCountA.trunc(IVBitWigth);
+      } else if (IVBitWigth > CountBitWigth) {
+        SameIterCountA = SameIterCountA.zext(IVBitWigth);
+      }
+      NewBoundA = IVStart->getAPInt() + (IVStep->getAPInt() * SameIterCountA);
+      NewPredicate = ExitIfTrue ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
+    }
+  }
+
+  if (!TTI->isLegalICmpImmediate(NewBoundA.getSExtValue())) {
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "INDVARS: Force EQ/NE predicate for max trip count: "
+                    << *ICmp << '\n');
+
+  assert(Ty->getPrimitiveSizeInBits() == NewBoundA.getBitWidth() &&
+         "bit widths should be aligned");
+  ICmp->setOperand(BoundOperandIdx, ConstantInt::get(Ty, NewBoundA));
+  ICmp->setPredicate(NewPredicate);
+
+  return true;
+}
+
 /// SimplifyIVUsers helper for eliminating useless
 /// comparisons against an induction variable.
 void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
@@ -267,6 +390,7 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
   // If the condition is always true or always false in the given context,
   // replace it with a constant value.
   SmallVector<Instruction *, 4> Users;
+  bool IsDead = false;
   for (auto *U : ICmp->users())
     Users.push_back(cast<Instruction>(U));
   const Instruction *CtxI = findCommonDominator(Users, *DT);
@@ -274,26 +398,35 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
     SE->forgetValue(ICmp);
     ICmp->replaceAllUsesWith(ConstantInt::getBool(ICmp->getContext(), *Ev));
     DeadInsts.emplace_back(ICmp);
+    IsDead = true;
     LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
   } else if (makeIVComparisonInvariant(ICmp, IVOperand)) {
-    // fallthrough to end of function
-  } else if (ICmpInst::isSigned(OriginalPred) &&
-             SE->isKnownNonNegative(S) && SE->isKnownNonNegative(X)) {
+    IsDead = true;
+  } else {
     // If we were unable to make anything above, all we can is to canonicalize
     // the comparison hoping that it will open the doors for other
-    // optimizations. If we find out that we compare two non-negative values,
-    // we turn the instruction's predicate to its unsigned version. Note that
-    // we cannot rely on Pred here unless we check if we have swapped it.
-    assert(ICmp->getPredicate() == OriginalPred && "Predicate changed?");
-    LLVM_DEBUG(dbgs() << "INDVARS: Turn to unsigned comparison: " << *ICmp
-                      << '\n');
-    ICmp->setPredicate(ICmpInst::getUnsignedPredicate(OriginalPred));
-    ICmp->setSameSign();
-  } else
-    return;
+    // optimizations.
+    if (ICmpInst::isSigned(OriginalPred) && SE->isKnownNonNegative(S) &&
+        SE->isKnownNonNegative(X)) {
+      // If we find out that we compare two non-negative values,
+      // we turn the instruction's predicate to its unsigned version. Note that
+      // we cannot rely on Pred here unless we check if we have swapped it.
+      assert(ICmp->getPredicate() == OriginalPred && "Predicate changed?");
+      LLVM_DEBUG(dbgs() << "INDVARS: Turn to unsigned comparison: " << *ICmp
+                        << '\n');
+      ICmp->setPredicate(ICmpInst::getUnsignedPredicate(OriginalPred));
+      ICmp->setSameSign();
+      Changed = true;
+    }
+    if (forceEqualityForICmp(ICmp, IVOperand)) {
+      Changed = true;
+    }
+  }
 
-  ++NumElimCmp;
-  Changed = true;
+  if (IsDead) {
+    NumElimCmp++;
+    Changed = true;
+  }
 }
 
 bool SimplifyIndvar::eliminateSDiv(BinaryOperator *SDiv) {
