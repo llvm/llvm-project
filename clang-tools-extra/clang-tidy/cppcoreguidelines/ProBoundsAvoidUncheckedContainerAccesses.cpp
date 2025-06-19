@@ -151,7 +151,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
            "possibly unsafe 'operator[]', use safe function '" +
                FixFunction.str() + "()' instead")
           << MatchedExpr->getCallee()->getSourceRange()
-          << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),
+          << FixItHint::CreateInsertion(OCE->getArg(0)->getBeginLoc(),
                                         FixFunction.str() + "(")
           // Since C++23, the subscript operator may also be called without an
           // argument, which makes the following distinction necessary
