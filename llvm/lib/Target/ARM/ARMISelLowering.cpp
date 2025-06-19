@@ -499,9 +499,16 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
   setOperationAction(ISD::TRUNCATE, MVT::v16i16, Custom);
 }
 
-ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
+const ARMBaseTargetMachine &ARMTargetLowering::getTM() const {
+  return static_cast<const ARMBaseTargetMachine &>(getTargetMachine());
+}
+
+ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                                      const ARMSubtarget &STI)
-    : TargetLowering(TM), Subtarget(&STI) {
+    : TargetLowering(TM_), Subtarget(&STI) {
+
+  const auto &TM = static_cast<const ARMBaseTargetMachine &>(TM_);
+
   RegInfo = Subtarget->getRegisterInfo();
   Itins = Subtarget->getInstrItineraryData();
 
@@ -591,7 +598,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   }
 
   // RTLIB
-  if (Subtarget->isAAPCS_ABI() &&
+  if (TM.isAAPCS_ABI() &&
       (Subtarget->isTargetAEABI() || Subtarget->isTargetGNUAEABI() ||
        Subtarget->isTargetMuslAEABI() || Subtarget->isTargetAndroid())) {
     // clang-format off
@@ -716,7 +723,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   // non-watchos platforms, but are needed for some targets which use a
   // hard-float calling convention by default.
   if (!Subtarget->isTargetWatchABI()) {
-    if (Subtarget->isAAPCS_ABI()) {
+    if (TM.isAAPCS_ABI()) {
       setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_AAPCS);
       setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_AAPCS);
       setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_AAPCS);
@@ -2070,7 +2077,7 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
     return isVarArg ? CallingConv::ARM_AAPCS : CallingConv::ARM_AAPCS_VFP;
   case CallingConv::C:
   case CallingConv::Tail:
-    if (!Subtarget->isAAPCS_ABI())
+    if (!getTM().isAAPCS_ABI())
       return CallingConv::ARM_APCS;
     else if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() &&
              getTargetMachine().Options.FloatABIType == FloatABI::Hard &&
@@ -2080,12 +2087,12 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
       return CallingConv::ARM_AAPCS;
   case CallingConv::Fast:
   case CallingConv::CXX_FAST_TLS:
-    if (!Subtarget->isAAPCS_ABI()) {
+    if (!getTM().isAAPCS_ABI()) {
       if (Subtarget->hasVFP2Base() && !Subtarget->isThumb1Only() && !isVarArg)
         return CallingConv::Fast;
       return CallingConv::ARM_APCS;
-    } else if (Subtarget->hasVFP2Base() &&
-               !Subtarget->isThumb1Only() && !isVarArg)
+    } else if (Subtarget->hasVFP2Base() && !Subtarget->isThumb1Only() &&
+               !isVarArg)
       return CallingConv::ARM_AAPCS_VFP;
     else
       return CallingConv::ARM_AAPCS;
@@ -3273,7 +3280,7 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     SDValue Arg = OutVals[realRVLocIdx];
     bool ReturnF16 = false;
 
-    if (Subtarget->hasFullFP16() && Subtarget->isTargetHardFloat()) {
+    if (Subtarget->hasFullFP16() && getTM().isTargetHardFloat()) {
       // Half-precision return values can be returned like this:
       //
       // t11 f16 = fadd ...
@@ -9937,7 +9944,7 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
   auto &DL = DAG.getDataLayout();
 
   ArgListTy Args;
-  bool ShouldUseSRet = Subtarget->isAPCS_ABI();
+  bool ShouldUseSRet = getTM().isAPCS_ABI();
   SDValue SRet;
   if (ShouldUseSRet) {
     // Create stack object for sret.

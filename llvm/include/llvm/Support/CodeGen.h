@@ -50,6 +50,22 @@ namespace llvm {
     };
   }
 
+  namespace FloatABI {
+  enum ABIType {
+    Default, // Target-specific (either soft or hard depending on triple, etc).
+    Soft,    // Soft float.
+    Hard     // Hard float.
+  };
+  }
+
+  enum class EABI {
+    Unknown,
+    Default, // Default means not specified
+    EABI4,   // Target-specific (either 4, 5 or gnu depending on triple).
+    EABI5,
+    GNU
+  };
+
   /// Code generation optimization level.
   enum class CodeGenOptLevel {
     None = 0,      ///< -O0

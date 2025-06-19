@@ -2169,7 +2169,7 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
 
     unsigned NumBytesToCopy = BytesToCopyOp->getZExtValue();
 
-    auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
+    auto *Alloca = cast<AllocaInst>(CI->getArgOperand(0));
     uint64_t DZSize = Alloca->getAllocatedType()->getArrayNumElements();
     uint64_t SZSize = SourceDataArray->getType()->getNumElements();
     unsigned ElementByteWidth = SourceDataArray->getElementByteSize();
