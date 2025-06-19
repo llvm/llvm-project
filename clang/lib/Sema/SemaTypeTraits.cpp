@@ -2337,6 +2337,27 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
   if (hasMixedAccessSpecifier(D)) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::MixedAccess;
+
+    const FieldDecl *FirstField = nullptr;
+    AccessSpecifier FirstAcc = AS_none;
+    for (const FieldDecl *F : D->fields()) {
+      if (F->isUnnamedBitField())
+        continue;
+      if (FirstField == nullptr) {
+        FirstField = F;
+        FirstAcc = F->getAccess();
+      } else if (F->getAccess() != FirstAcc) {
+        SemaRef.Diag(FirstField->getLocation(), diag::note_defined_here)
+            << FirstField;
+
+        SemaRef.Diag(F->getLocation(), diag::note_unsatisfied_trait_reason)
+            << diag::TraitNotSatisfiedReason::MixedAccessField
+            << F           // %0: second field
+            << FirstField; // %1: first field
+        break;
+      }
+    }
+    return;
   }
   if (hasMultipleDataBaseClassesWithFields(D)) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
