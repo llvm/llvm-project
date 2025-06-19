@@ -109,8 +109,9 @@ static bool isOpOperandCanBeDroppedAfterFusedLinalgs(
 /// * There is a chance that the implementation of the transformation does not
 /// agree with the result of this method. This function gives a prediction based
 /// on an optimized fusion.
-llvm::SmallDenseSet<int> mlir::linalg::getPreservedProducerResults(
-    LinalgOp producer, LinalgOp consumer, OpOperand *fusedOperand) {
+llvm::SmallDenseSet<int>
+mlir::linalg::getPreservedProducerResults(LinalgOp producer, LinalgOp consumer,
+                                          OpOperand *fusedOperand) {
   llvm::SmallDenseSet<int> preservedProducerResults;
   llvm::SmallVector<OpOperand *> opOperandsToIgnore;
 
@@ -416,14 +417,9 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   }
 
   // Generate the fused op.
-  // auto fusedOp = cloneWithoutRegions(rewriter, consumer,
-  //                              fusedResultTypes, fusedInputOperands);
-  // fusedOp.setIndexingMapsAttr(idxMap);
-  // fusedOp.setIteratorTypesAttr(itTp);
   auto fusedOp = rewriter.create<GenericOp>(
       consumer.getLoc(), fusedResultTypes, fusedInputOperands,
-      fusedOutputOperands, fusedIndexMaps,
-      consumer.getIteratorTypesArray());
+      fusedOutputOperands, fusedIndexMaps, consumer.getIteratorTypesArray());
   if (!fusedOp.getShapesToLoopsMap()) {
     // Fused op has invalid indexing maps. Typically this means something is off
     // in the input, but going ahead here would result in verification errors.
