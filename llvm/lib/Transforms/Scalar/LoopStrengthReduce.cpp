@@ -1278,6 +1278,7 @@ struct LSRFixup {
   LSRFixup() = default;
 
   bool isUseFullyOutsideLoop(const Loop *L) const;
+  bool isUseUnconditional(const Loop *L) const;
 
   void print(raw_ostream &OS) const;
   void dump() const;
@@ -1317,6 +1318,11 @@ public:
   /// This records whether all of the fixups using this LSRUse are outside of
   /// the loop, in which case some special-case heuristics may be used.
   bool AllFixupsOutsideLoop = true;
+
+  /// This records whether all of the fixups using this LSRUse are unconditional
+  /// within the loop, meaning they will be executed in every iteration of the
+  /// loop.
+  bool AllFixupsUnconditional = true;
 
   /// RigidFormula is set to true to guarantee that this use will be associated
   /// with a single formula--the one that initially matched. Some SCEV
@@ -1422,15 +1428,19 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
         TTI->isIndexedStoreLegal(TTI->MIM_PostInc, AR->getType())) {
       const SCEV *Start;
       const SCEVConstant *Step;
-      if (match(AR, m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant(Step))))
+      if (match(AR, m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant(Step)))) {
         // If the step size matches the base offset, we could use pre-indexed
         // addressing.
-        if (((AMK & TTI::AMK_PreIndexed) && F.BaseOffset.isFixed() &&
-             Step->getAPInt() == F.BaseOffset.getFixedValue()) ||
-            ((AMK & TTI::AMK_PostIndexed) && !isa<SCEVConstant>(Start) &&
-             SE->isLoopInvariant(Start, L)))
+        bool CanPreIndex = (AMK & TTI::AMK_PreIndexed) && F.BaseOffset.isFixed() &&
+          Step->getAPInt() == F.BaseOffset.getFixedValue();
+        bool CanPostIndex = (AMK & TTI::AMK_PostIndexed) && !isa<SCEVConstant>(Start) &&
+          SE->isLoopInvariant(Start, L);
+        // We can only pre or post index when the load/store is unconditional.
+        if ((CanPreIndex || CanPostIndex) && LU.AllFixupsUnconditional)
           LoopCost = 0;
+      }
     }
+
     // If the loop counts down to zero and we'll be using a hardware loop then
     // the addrec will be combined into the hardware loop instruction.
     if (LU.Kind == LSRUse::ICmpZero && F.countsDownToZero() &&
@@ -1647,6 +1657,12 @@ bool LSRFixup::isUseFullyOutsideLoop(const Loop *L) const {
   return !L->contains(UserInst);
 }
 
+/// Test whether this fixup is for an instruction that's unconditional, i.e.
+/// it's executed in every loop iteration.
+bool LSRFixup::isUseUnconditional(const Loop *L) const {
+  return isGuaranteedToExecuteForEveryIteration(UserInst, L);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LSRFixup::print(raw_ostream &OS) const {
   OS << "UserInst=";
@@ -1782,6 +1798,9 @@ void LSRUse::print(raw_ostream &OS) const {
 
   if (AllFixupsOutsideLoop)
     OS << ", all-fixups-outside-loop";
+
+  if (AllFixupsUnconditional)
+    OS << ", all-fixups-unconditional";
 
   if (WidestFixupType)
     OS << ", widest fixup type: " << *WidestFixupType;
@@ -3607,6 +3626,7 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
     LF.PostIncLoops = TmpPostIncLoops;
     LF.Offset = Offset;
     LU.AllFixupsOutsideLoop &= LF.isUseFullyOutsideLoop(L);
+    LU.AllFixupsUnconditional &= LF.isUseUnconditional(L);
 
     // Create SCEV as Formula for calculating baseline cost
     if (!VisitedLSRUse.count(LUIdx) && !LF.isUseFullyOutsideLoop(L)) {
@@ -3803,6 +3823,7 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
         LF.OperandValToReplace = U;
         LF.Offset = Offset;
         LU.AllFixupsOutsideLoop &= LF.isUseFullyOutsideLoop(L);
+        LU.AllFixupsUnconditional &= LF.isUseUnconditional(L);
         if (!LU.WidestFixupType ||
             SE.getTypeSizeInBits(LU.WidestFixupType) <
             SE.getTypeSizeInBits(LF.OperandValToReplace->getType()))
@@ -4940,6 +4961,7 @@ void LSRInstance::NarrowSearchSpaceByCollapsingUnrolledCode() {
       LLVM_DEBUG(dbgs() << "  Deleting use "; LU.print(dbgs()); dbgs() << '\n');
 
       LUThatHas->AllFixupsOutsideLoop &= LU.AllFixupsOutsideLoop;
+      LUThatHas->AllFixupsUnconditional &= LU.AllFixupsUnconditional;
 
       // Transfer the fixups of LU to LUThatHas.
       for (LSRFixup &Fixup : LU.Fixups) {
