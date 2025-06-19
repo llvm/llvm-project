@@ -1039,7 +1039,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     const APFloat *ConstSrc1 = nullptr;
     const APFloat *ConstSrc2 = nullptr;
 
-    // TODO: Also can fold to 2 operands with infinities.
     if ((match(Src0, m_APFloat(ConstSrc0)) && ConstSrc0->isNaN()) ||
         isa<UndefValue>(Src0)) {
       switch (fpenvIEEEMode(II)) {
@@ -1084,6 +1083,45 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         break;
       case KnownIEEEMode::Off:
         V = IC.Builder.CreateMaximumNum(Src0, Src1);
+        break;
+      case KnownIEEEMode::Unknown:
+        break;
+      }
+    } else if (match(Src0, m_APFloat(ConstSrc0)) && ConstSrc0->isInfinity()) {
+      switch (fpenvIEEEMode(II)) {
+      case KnownIEEEMode::On:
+        V = ConstSrc0->isNegative() ? IC.Builder.CreateMinNum(Src1, Src2)
+                                    : IC.Builder.CreateMaxNum(Src1, Src2);
+        break;
+      case KnownIEEEMode::Off:
+        V = ConstSrc0->isNegative() ? IC.Builder.CreateMinimumNum(Src1, Src2)
+                                    : IC.Builder.CreateMaximumNum(Src1, Src2);
+        break;
+      case KnownIEEEMode::Unknown:
+        break;
+      }
+    } else if (match(Src1, m_APFloat(ConstSrc1)) && ConstSrc1->isInfinity()) {
+      switch (fpenvIEEEMode(II)) {
+      case KnownIEEEMode::On:
+        V = ConstSrc1->isNegative() ? IC.Builder.CreateMinNum(Src0, Src2)
+                                    : IC.Builder.CreateMaxNum(Src0, Src2);
+        break;
+      case KnownIEEEMode::Off:
+        V = ConstSrc1->isNegative() ? IC.Builder.CreateMinimumNum(Src0, Src2)
+                                    : IC.Builder.CreateMaximumNum(Src0, Src2);
+        break;
+      case KnownIEEEMode::Unknown:
+        break;
+      }
+    } else if (match(Src2, m_APFloat(ConstSrc2)) && ConstSrc2->isInfinity()) {
+      switch (fpenvIEEEMode(II)) {
+      case KnownIEEEMode::On:
+        V = ConstSrc2->isNegative() ? IC.Builder.CreateMinNum(Src0, Src1)
+                                    : IC.Builder.CreateMaxNum(Src0, Src1);
+        break;
+      case KnownIEEEMode::Off:
+        V = ConstSrc2->isNegative() ? IC.Builder.CreateMinimumNum(Src0, Src1)
+                                    : IC.Builder.CreateMaximumNum(Src0, Src1);
         break;
       case KnownIEEEMode::Unknown:
         break;
