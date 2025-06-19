@@ -97,7 +97,7 @@ define void @test2(ptr %a, ptr %b, i8 %limit, i1 %arg) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[LIMIT:%.*]] to i32
-; CHECK-NEXT:    br i1 %arg, label [[FOR_COND1_PREHEADER_PREHEADER:%.*]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_COND1_PREHEADER_PREHEADER:%.*]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader.us.preheader:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[CONV]], i32 1)
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
@@ -110,7 +110,7 @@ define void @test2(ptr %a, ptr %b, i8 %limit, i1 %arg) {
 ; CHECK-NEXT:    br label [[FOR_INC13_US]]
 ; CHECK:       for.inc13.us:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT4]] = add nuw nsw i64 [[INDVARS_IV3]], 1
-; CHECK-NEXT:    [[EXITCOND6:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT4]], 4
+; CHECK-NEXT:    [[EXITCOND6:%.*]] = icmp samesign ne i64 [[INDVARS_IV_NEXT4]], 4
 ; CHECK-NEXT:    br i1 [[EXITCOND6]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_END_LOOPEXIT1:%.*]]
 ; CHECK:       for.body4.us:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY4_LR_PH_US]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY4_US:%.*]] ]
@@ -237,8 +237,7 @@ define i32 @test4(i32 %a) {
 ; CHECK-NEXT:    [[CONV3:%.*]] = trunc i32 [[OR]] to i8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn1(i8 signext [[CONV3]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i32 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw i32 [[INDVARS_IV_NEXT]] to i8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[TMP0]], -14
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[INDVARS_IV_NEXT]], 242
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 0
@@ -517,8 +516,8 @@ define i32 @test10(i32 %v) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], [[SEXT]]
 ; CHECK-NEXT:    call void @consume.i1(i1 [[TMP1]])
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp samesign ne i64 [[INDVARS_IV_NEXT]], 11
 ; CHECK-NEXT:    call void @consume.i64(i64 [[TMP0]])
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 11
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LEAVE:%.*]]
 ; CHECK:       leave:
 ; CHECK-NEXT:    ret i32 22
