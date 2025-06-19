@@ -683,7 +683,18 @@ StateType Process::WaitForProcessToStop(
 
   while (state != eStateInvalid) {
     EventSP event_sp;
-    state = GetStateChangedEvents(event_sp, timeout, hijack_listener_sp);
+
+    // A stop event may have been queued in the non-hijack listener before
+    // the hijack listener was installed (e.g., if a breakpoint is hit
+    // around the same time SBProcess::Kill() is called). Check and process
+    // those events first to avoid missing them.
+    if (PeekAtStateChangedEvents()) {
+      // Get event from non-hijack listener
+      state = GetStateChangedEvents(event_sp, timeout, nullptr);
+    } else {
+      state = GetStateChangedEvents(event_sp, timeout, hijack_listener_sp);
+    }
+
     if (event_sp_ptr && event_sp)
       *event_sp_ptr = event_sp;
 
