@@ -104,18 +104,36 @@ struct HardwareLimits {
   unsigned KmcntMax;     // gfx12+ only.
 };
 
-#define AMDGPU_WAIT_EVENT(Name) Name,
+#define AMDGPU_DECLARE_WAIT_EVENTS(DECL)                                    \
+  DECL(VMEM_ACCESS)              /* vmem read & write */                    \
+  DECL(VMEM_READ_ACCESS)         /* vmem read */                            \
+  DECL(VMEM_SAMPLER_READ_ACCESS) /* vmem SAMPLER read (gfx12+ only) */      \
+  DECL(VMEM_BVH_READ_ACCESS)     /* vmem BVH read (gfx12+ only) */          \
+  DECL(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */       \
+  DECL(SCRATCH_WRITE_ACCESS)     /* vmem write that may be scratch */       \
+  DECL(LDS_ACCESS)               /* lds read & write */                     \
+  DECL(GDS_ACCESS)               /* gds read & write */                     \
+  DECL(SQ_MESSAGE)               /* send message */                         \
+  DECL(SMEM_ACCESS)              /* scalar-memory read & write */           \
+  DECL(EXP_GPR_LOCK)             /* export holding on its data src */       \
+  DECL(GDS_GPR_LOCK)             /* GDS holding on its data and addr src */ \
+  DECL(EXP_POS_ACCESS)           /* write to export position */             \
+  DECL(EXP_PARAM_ACCESS)         /* write to export parameter */            \
+  DECL(VMW_GPR_LOCK)             /* vmem write holding on its data src */   \
+  DECL(EXP_LDS_ACCESS)           /* read by ldsdir counting as export */
 
+#define AMDGPU_EVENT_ENUM(Name) Name,
 enum WaitEventType {
-#include "AMDGPUWaitEventType.def"
+  AMDGPU_DECLARE_WAIT_EVENTS(AMDGPU_EVENT_ENUM)
   NUM_WAIT_EVENTS
 };
+#undef AMDGPU_EVENT_ENUM
 
-#define AMDGPU_WAIT_EVENT(Name) #Name,
-
+#define AMDGPU_EVENT_NAME(Name) #Name,
 static constexpr StringLiteral WaitEventTypeName[] = {
-#include "AMDGPUWaitEventType.def"
+  AMDGPU_DECLARE_WAIT_EVENTS(AMDGPU_EVENT_NAME)
 };
+#undef AMDGPU_EVENT_NAME
 
 // The mapping is:
 //  0                .. SQ_MAX_PGM_VGPRS-1               real VGPRs
@@ -1272,13 +1290,13 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
   MachineInstr *WaitcntInstr = nullptr;
   MachineInstr *WaitcntVsCntInstr = nullptr;
 
-  LLVM_DEBUG(dbgs() << "PreGFX12::applyPreexistingWaitcnt at: " << *It << "\n");
+  LLVM_DEBUG(dbgs() << "PreGFX12::applyPreexistingWaitcnt at: " << *It);
 
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
-    LLVM_DEBUG(dbgs() << "pre-existing iter: " << II << "\n");
+    LLVM_DEBUG(dbgs() << "pre-existing iter: " << II);
     if (II.isMetaInstruction()) {
-      LLVM_DEBUG(dbgs() << "------ skipped\n");
+      LLVM_DEBUG(dbgs() << "skipped meta instruction\n");
       continue;
     }
 
@@ -1332,9 +1350,9 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
 
     LLVM_DEBUG(It == WaitcntInstr->getParent()->end()
                    ? dbgs()
-                         << "applyPreexistingWaitcnt\n"
+                         << "applied pre-existing waitcnt\n"
                          << "New Instr at block end: " << *WaitcntInstr << '\n'
-                   : dbgs() << "applyPreexistingWaitcnt\n"
+                   : dbgs() << "applied pre-existing waitcnt\n"
                             << "Old Instr: " << *It
                             << "New Instr: " << *WaitcntInstr << '\n');
   }
@@ -1348,10 +1366,10 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     Wait.StoreCnt = ~0u;
 
     LLVM_DEBUG(It == WaitcntVsCntInstr->getParent()->end()
-                   ? dbgs() << "applyPreexistingWaitcnt\n"
+                   ? dbgs() << "applied pre-existing waitcnt\n"
                             << "New Instr at block end: " << *WaitcntVsCntInstr
                             << '\n'
-                   : dbgs() << "applyPreexistingWaitcnt\n"
+                   : dbgs() << "applied pre-existing waitcnt\n"
                             << "Old Instr: " << *It
                             << "New Instr: " << *WaitcntVsCntInstr << '\n');
   }
@@ -1425,14 +1443,13 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   MachineInstr *CombinedStoreDsCntInstr = nullptr;
   MachineInstr *WaitInstrs[NUM_EXTENDED_INST_CNTS] = {};
 
-  LLVM_DEBUG(dbgs() << "GFX12Plus::applyPreexistingWaitcnt at: " << *It
-                    << "\n");
+  LLVM_DEBUG(dbgs() << "GFX12Plus::applyPreexistingWaitcnt at: " << *It);
 
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
-    LLVM_DEBUG(dbgs() << "pre-existing iter: " << II << "\n");
+    LLVM_DEBUG(dbgs() << "pre-existing iter: " << II);
     if (II.isMetaInstruction()) {
-      LLVM_DEBUG(dbgs() << "------ skipped\n");
+      LLVM_DEBUG(dbgs() << "skipped meta instruction\n");
       continue;
     }
 
@@ -1504,10 +1521,10 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Wait.DsCnt = ~0u;
 
       LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
+                     ? dbgs() << "applied pre-existing waitcnt\n"
                               << "New Instr at block end: "
                               << *CombinedLoadDsCntInstr << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
+                     : dbgs() << "applied pre-existing waitcnt\n"
                               << "Old Instr: " << *It << "New Instr: "
                               << *CombinedLoadDsCntInstr << '\n');
     } else {
@@ -1529,10 +1546,10 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Wait.DsCnt = ~0u;
 
       LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
+                     ? dbgs() << "applied pre-existing waitcnt\n"
                               << "New Instr at block end: "
                               << *CombinedStoreDsCntInstr << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
+                     : dbgs() << "applied pre-existing waitcnt\n"
                               << "Old Instr: " << *It << "New Instr: "
                               << *CombinedStoreDsCntInstr << '\n');
     } else {
@@ -1588,10 +1605,10 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       setNoWait(Wait, CT);
 
       LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
+                     ? dbgs() << "applied pre-existing waitcnt\n"
                               << "New Instr at block end: " << *WaitInstrs[CT]
                               << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
+                     : dbgs() << "applied pre-existing waitcnt\n"
                               << "Old Instr: " << *It
                               << "New Instr: " << *WaitInstrs[CT] << '\n');
     } else {
