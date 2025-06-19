@@ -373,14 +373,14 @@ feature_test_macros = [
             "headers": ["iterator"],
         },
         {
-            "name": "__cpp_lib_constexpr_map",
-            "values": {"c++26": 202502},
-            "headers": ["map"],
-        },
-        {
             "name": "__cpp_lib_constexpr_list",
             "values": {"c++26": 202502},
             "headers": ["list"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_map",
+            "values": {"c++26": 202502},
+            "headers": ["map"],
         },
         {
             "name": "__cpp_lib_constexpr_memory",
