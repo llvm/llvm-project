@@ -536,6 +536,79 @@ public:
     return std::nullopt;
   }
 
+  bool
+  isSafeJumpTableBranchForPtrAuth(MCInstReference BranchInst) const override {
+    MCInstReference CurRef = BranchInst;
+    auto StepBack = [&]() {
+      do {
+        auto PredInst = CurRef.getSinglePredecessor();
+        if (!PredInst)
+          return false;
+        CurRef = *PredInst;
+      } while (isCFI(CurRef));
+
+      return true;
+    };
+
+    // Match this contiguous sequence:
+    //    cmp   Xm, #count
+    //    csel  Xm, Xm, xzr, ls
+    //    adrp  Xn, .LJTIxyz
+    //    add   Xn, Xn, :lo12:.LJTIxyz
+    //    ldrsw Xm, [Xn, Xm, lsl #2]
+    //  .Ltmp:
+    //    adr   Xn, .Ltmp
+    //    add   Xm, Xn, Xm
+    //    br    Xm
+
+    // FIXME: Check label operands of ADR/ADRP+ADD and #count operand of CMP.
+
+    using namespace MCInstMatcher;
+    Reg Xm, Xn;
+
+    if (!matchInst(CurRef, AArch64::BR, Xm) || !StepBack())
+      return false;
+
+    if (!matchInst(CurRef, AArch64::ADDXrs, Xm, Xn, Xm, Imm(0)) || !StepBack())
+      return false;
+
+    if (!matchInst(CurRef, AArch64::ADR, Xn /*, .Ltmp*/) || !StepBack())
+      return false;
+
+    if (!matchInst(CurRef, AArch64::LDRSWroX, Xm, Xn, Xm, Imm(0), Imm(1)) ||
+        !StepBack())
+      return false;
+
+    if (matchInst(CurRef, AArch64::ADR, Xn /*, .LJTIxyz*/)) {
+      if (!StepBack())
+        return false;
+      if (!matchInst(CurRef, AArch64::HINT, Imm(0)) || !StepBack())
+        return false;
+    } else if (matchInst(CurRef, AArch64::ADDXri, Xn,
+                         Xn /*, :lo12:.LJTIxyz*/)) {
+      if (!StepBack())
+        return false;
+      if (!matchInst(CurRef, AArch64::ADRP, Xn /*, .LJTIxyz*/) || !StepBack())
+        return false;
+    } else {
+      return false;
+    }
+
+    if (!matchInst(CurRef, AArch64::CSELXr, Xm, Xm, Reg(AArch64::XZR),
+                   Imm(AArch64CC::LS)) ||
+        !StepBack())
+      return false;
+
+    if (!matchInst(CurRef, AArch64::SUBSXri, Reg(AArch64::XZR),
+                   Xm /*, #count*/))
+      return false;
+
+    // Some platforms treat X16 and X17 as more protected registers, others
+    // do not make such distinction. So far, accept any registers as Xm and Xn.
+
+    return true;
+  }
+
   bool isADRP(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::ADRP;
   }
