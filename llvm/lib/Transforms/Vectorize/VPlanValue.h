@@ -337,7 +337,6 @@ public:
     VPReductionSC,
     VPMulAccumulateReductionSC,
     VPExtendedReductionSC,
-    VPPartialReductionSC,
     VPReplicateSC,
     VPScalarIVStepsSC,
     VPVectorPointerSC,
