@@ -1368,7 +1368,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
                         const TargetLibraryInfo *LibraryInfo,
                         UniformityInfo *NewUA, ProfileSummaryInfo *PSIin,
                         BlockFrequencyInfo *BFIin, MachineModuleInfo &MMIin,
-                        FunctionVarLocs const *VarLocs) {
+                        FunctionVarLocs const *VarLocs, bool HasDivergency) {
   MF = &NewMF;
   SDAGISelPass = PassPtr;
   ORE = &NewORE;
@@ -1381,6 +1381,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
   BFI = BFIin;
   MMI = &MMIin;
   FnVarLocs = VarLocs;
+  DivergentTarget = HasDivergency;
 }
 
 SelectionDAG::~SelectionDAG() {
@@ -2327,7 +2328,8 @@ SDValue SelectionDAG::getRegister(Register Reg, EVT VT) {
     return SDValue(E, 0);
 
   auto *N = newSDNode<RegisterSDNode>(Reg, VTs);
-  N->SDNodeBits.IsDivergent = TLI->isSDNodeSourceOfDivergence(N, FLI, UA);
+  N->SDNodeBits.IsDivergent =
+      DivergentTarget ? TLI->isSDNodeSourceOfDivergence(N, FLI, UA) : false;
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -10929,7 +10931,8 @@ SDNode *SelectionDAG::UpdateNodeOperands(SDNode *N, SDValue Op) {
   // Now we update the operands.
   N->OperandList[0].set(Op);
 
-  updateDivergence(N);
+  if (DivergentTarget)
+    updateDivergence(N);
   // If this gets put into a CSE map, add it.
   if (InsertPos) CSEMap.InsertNode(N, InsertPos);
   return N;
@@ -10958,7 +10961,8 @@ SDNode *SelectionDAG::UpdateNodeOperands(SDNode *N, SDValue Op1, SDValue Op2) {
   if (N->OperandList[1] != Op2)
     N->OperandList[1].set(Op2);
 
-  updateDivergence(N);
+  if (DivergentTarget)
+    updateDivergence(N);
   // If this gets put into a CSE map, add it.
   if (InsertPos) CSEMap.InsertNode(N, InsertPos);
   return N;
@@ -11009,7 +11013,8 @@ UpdateNodeOperands(SDNode *N, ArrayRef<SDValue> Ops) {
     if (N->OperandList[i] != Ops[i])
       N->OperandList[i].set(Ops[i]);
 
-  updateDivergence(N);
+  if (DivergentTarget)
+    updateDivergence(N);
   // If this gets put into a CSE map, add it.
   if (InsertPos) CSEMap.InsertNode(N, InsertPos);
   return N;
@@ -11796,8 +11801,9 @@ void SelectionDAG::ReplaceAllUsesWith(SDValue FromN, SDValue To) {
       SDUse &Use = *UI;
       ++UI;
       Use.set(To);
-      if (To->isDivergent() != From->isDivergent())
-        updateDivergence(User);
+      if (DivergentTarget)
+        if (To->isDivergent() != From->isDivergent())
+          updateDivergence(User);
     } while (UI != UE && UI->getUser() == User);
     // Now that we have modified User, add it back to the CSE maps.  If it
     // already exists there, recursively merge the results together.
@@ -11854,8 +11860,9 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, SDNode *To) {
       SDUse &Use = *UI;
       ++UI;
       Use.setNode(To);
-      if (To->isDivergent() != From->isDivergent())
-        updateDivergence(User);
+      if (DivergentTarget)
+        if (To->isDivergent() != From->isDivergent())
+          updateDivergence(User);
     } while (UI != UE && UI->getUser() == User);
 
     // Now that we have modified User, add it back to the CSE maps.  If it
@@ -11907,8 +11914,9 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
       To_IsDivergent |= ToOp->isDivergent();
     } while (UI != UE && UI->getUser() == User);
 
-    if (To_IsDivergent != From->isDivergent())
-      updateDivergence(User);
+    if (DivergentTarget)
+      if (To_IsDivergent != From->isDivergent())
+        updateDivergence(User);
 
     // Now that we have modified User, add it back to the CSE maps.  If it
     // already exists there, recursively merge the results together.
@@ -11968,8 +11976,9 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
 
       ++UI;
       Use.set(To);
-      if (To->isDivergent() != From->isDivergent())
-        updateDivergence(User);
+      if (DivergentTarget)
+        if (To->isDivergent() != From->isDivergent())
+          updateDivergence(User);
     } while (UI != UE && UI->getUser() == User);
     // We are iterating over all uses of the From node, so if a use
     // doesn't use the specific value, no changes are made.
