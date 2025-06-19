@@ -979,9 +979,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     }
 
     attr = rewriter.getArrayAttr(components);
-  }
-
-  else {
+  } else {
     return op.emitError() << "unsupported constant type " << op.getType();
   }
 
