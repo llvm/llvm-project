@@ -253,10 +253,6 @@ class PredicateInfoBuilder {
   // whether it returned a valid result.
   DenseMap<Value *, unsigned int> ValueInfoNums;
 
-  // The set of edges along which we can only handle phi uses, due to critical
-  // edges.
-  DenseSet<std::pair<BasicBlock *, BasicBlock *>> EdgeUsesOnly;
-
   ValueInfo &getOrCreateValueInfo(Value *);
   const ValueInfo &getValueInfo(Value *) const;
 
@@ -459,8 +455,6 @@ void PredicateInfoBuilder::processBranch(
           PredicateBase *PB =
               new PredicateBranch(V, BranchBB, Succ, Cond, TakenEdge);
           addInfoFor(OpsToRename, V, PB);
-          if (!Succ->getSinglePredecessor())
-            EdgeUsesOnly.insert({BranchBB, Succ});
         }
       }
     }
@@ -487,8 +481,6 @@ void PredicateInfoBuilder::processSwitch(
       PredicateSwitch *PS = new PredicateSwitch(
           Op, SI->getParent(), TargetBlock, C.getCaseValue(), SI);
       addInfoFor(OpsToRename, Op, PS);
-      if (!TargetBlock->getSinglePredecessor())
-        EdgeUsesOnly.insert({BranchBB, TargetBlock});
     }
   }
 }
@@ -637,7 +629,7 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
         // block, and handle it specially. We know that it goes last, and only
         // dominate phi uses.
         auto BlockEdge = getBlockEdge(PossibleCopy);
-        if (EdgeUsesOnly.count(BlockEdge)) {
+        if (!BlockEdge.second->getSinglePredecessor()) {
           VD.LocalNum = LN_Last;
           auto *DomNode = DT.getNode(BlockEdge.first);
           if (DomNode) {
