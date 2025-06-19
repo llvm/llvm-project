@@ -66,6 +66,8 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
       assert(MM.Address % getpagesize() == 0 &&
              "Memory mappings need to be aligned to page boundaries.");
 #endif
+      // FIXME: file descriptor for aux memory seems not initialized.
+      // TODO: Invoke openat syscall to get correct fd for aux memory
       const MemoryValue &MemVal = Key.MemoryValues.at(MM.MemoryValueName);
       BBF.addInstructions(ET.generateMmap(
           MM.Address, MemVal.SizeBytes,
@@ -78,15 +80,47 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
   Register StackPointerRegister = BBF.MF.getSubtarget()
                                       .getTargetLowering()
                                       ->getStackPointerRegisterToSaveRestore();
+#define DEBUG_TYPE "register-initial-values"
+  // FIXME: Only loading first register with memory address is hacky.
+  bool isFirstRegister = true;
   for (const RegisterValue &RV : Key.RegisterInitialValues) {
+    // Debug: register name and class name and value from BenchmarkKey
+    const MCRegisterInfo *RegInfo = BBF.MF.getTarget().getMCRegisterInfo();
+    const char *RegName = RegInfo->getName(RV.Register);
+    const char *regClassName = "Unknown";
+    for (unsigned i = 0, e = RegInfo->getNumRegClasses(); i < e; ++i) {
+      const MCRegisterClass &RC = RegInfo->getRegClass(i);
+      if (RC.contains(RV.Register)) {
+        regClassName = RegInfo->getRegClassName(&RC);
+        break;
+      }
+    }
+    LLVM_DEBUG(
+        dbgs() << "Setting register (Class: " << regClassName << ") " << RegName
+               << std::string(
+                      std::max(0, 3 - static_cast<int>(strlen(RegName))), ' '));
+
     if (GenerateMemoryInstructions) {
       // If we're generating memory instructions, don't load in the value for
       // the register with the stack pointer as it will be used later to finish
       // the setup.
       if (Register(RV.Register) == StackPointerRegister)
         continue;
+#if defined(__aarch64__)
+      auto StackLoadInsts = ET._generateRegisterStackPop(RV.Register, 16);
+      if (!StackLoadInsts.empty() && isFirstRegister) {
+        for (const auto &Inst : StackLoadInsts)
+          BBF.addInstruction(Inst);
+        isFirstRegister = false;
+        LLVM_DEBUG(dbgs() << "from stack with post-increment offset of " << 16
+                          << " bytes\n");
+        continue;
+      }
+#endif
     }
     // Load a constant in the register.
+    LLVM_DEBUG(dbgs() << " to " << RV.Value << "\n");
+#undef DEBUG_TYPE
     const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);
     if (SetRegisterCode.empty())
       IsSnippetSetupComplete = false;
