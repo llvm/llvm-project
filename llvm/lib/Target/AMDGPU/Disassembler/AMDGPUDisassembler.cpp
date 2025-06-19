@@ -34,6 +34,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -687,6 +688,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (isGFX11Plus() && Bytes.size() >= 12 ) {
       DecoderUInt128 DecW = eat12Bytes(Bytes);
 
+      if (isGFX1170() &&
+          tryDecodeInst(DecoderTableGFX117096, DecoderTableGFX1170_FAKE1696, MI,
+                        DecW, Address, CS))
+        break;
+
       if (isGFX11() &&
           tryDecodeInst(DecoderTableGFX1196, DecoderTableGFX11_FAKE1696, MI,
                         DecW, Address, CS))
@@ -792,7 +798,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
 
       if (isGFX1170() &&
-          tryDecodeInst(DecoderTableGFX117064, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX117064, DecoderTableGFX1170_FAKE1664, MI,
+                        QW, Address, CS))
         break;
 
       if (isGFX11() &&
@@ -848,6 +855,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
 
       if (isGFX10() && tryDecodeInst(DecoderTableGFX1032, MI, DW, Address, CS))
+        break;
+
+      if (isGFX1170() &&
+          tryDecodeInst(DecoderTableGFX117032, DecoderTableGFX1170_FAKE1632, MI,
+                        DW, Address, CS))
         break;
 
       if (isGFX1250Only() &&
@@ -3045,7 +3057,8 @@ static MCDisassembler *createAMDGPUDisassembler(const Target &T,
   return new AMDGPUDisassembler(STI, Ctx, T.createMCInstrInfo());
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAMDGPUDisassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheGCNTarget(),
                                          createAMDGPUDisassembler);
   TargetRegistry::RegisterMCSymbolizer(getTheGCNTarget(),

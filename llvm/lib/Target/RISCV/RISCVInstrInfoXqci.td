@@ -1452,6 +1452,11 @@ def : Pat<(i32 (and GPRNoX0:$rs, 1023)), (QC_EXTU GPRNoX0:$rs, 10, 0)>;
 def : Pat<(i32 (and GPRNoX0:$rs, 2047)), (QC_EXTU GPRNoX0:$rs, 11, 0)>;
 } // Predicates = [HasVendorXqcibm, IsRV32]
 
+let Predicates = [HasVendorXqcibm, HasStdExtZbb, IsRV32] in {
+def: Pat<(i32 (cttz (not (i32 GPR:$rs1)))), (QC_CTO GPR:$rs1)>;
+def: Pat<(i32 (ctlz (not (i32 GPR:$rs1)))), (QC_CLO GPR:$rs1)>;
+} // Predicates = [HasVendorXqcibm, HasStdExtZbb, IsRV32]
+
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
 

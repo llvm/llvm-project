@@ -208,6 +208,10 @@
 #    error "__cpp_lib_constexpr_iterator should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_list
+#    error "__cpp_lib_constexpr_list should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should not be defined before c++20"
 #  endif
@@ -1098,6 +1102,10 @@
 
 #  ifdef __cpp_lib_constexpr_iterator
 #    error "__cpp_lib_constexpr_iterator should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_list
+#    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_memory
@@ -2092,6 +2100,10 @@
 
 #  ifdef __cpp_lib_constexpr_iterator
 #    error "__cpp_lib_constexpr_iterator should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_list
+#    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_memory
@@ -3332,6 +3344,10 @@
 #  endif
 #  if __cpp_lib_constexpr_iterator != 201811L
 #    error "__cpp_lib_constexpr_iterator should have the value 201811L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_list
+#    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_memory
@@ -4788,6 +4804,10 @@
 #  endif
 #  if __cpp_lib_constexpr_iterator != 201811L
 #    error "__cpp_lib_constexpr_iterator should have the value 201811L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_list
+#    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_memory
@@ -6466,6 +6486,13 @@
 #  endif
 #  if __cpp_lib_constexpr_iterator != 201811L
 #    error "__cpp_lib_constexpr_iterator should have the value 201811L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_constexpr_list
+#    error "__cpp_lib_constexpr_list should be defined in c++26"
+#  endif
+#  if __cpp_lib_constexpr_list != 202502L
+#    error "__cpp_lib_constexpr_list should have the value 202502L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_memory

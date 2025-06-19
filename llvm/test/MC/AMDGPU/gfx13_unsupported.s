@@ -363,3 +363,15 @@ global_prefetch_b8 v4, s[2:3]
 
 flat_prefetch_b8 v3, s[2:3]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_pk_add_f32 v[0:1], v[0:1], v[0:1]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_pk_fma_f32 v[0:1], v[0:1], v[0:1], v[0:1]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_pk_mul_f32 v[0:1], v[0:1], v[0:1]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mad_u32 v0, v0, v0, v0
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

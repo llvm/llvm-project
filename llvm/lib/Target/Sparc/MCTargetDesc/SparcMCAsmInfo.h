@@ -36,6 +36,11 @@ public:
                           const MCSpecifierExpr &Expr) const override;
 };
 
+namespace Sparc {
+uint16_t parseSpecifier(StringRef name);
+StringRef getSpecifierName(uint16_t S);
+} // namespace Sparc
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_SPARC_MCTARGETDESC_SPARCMCASMINFO_H

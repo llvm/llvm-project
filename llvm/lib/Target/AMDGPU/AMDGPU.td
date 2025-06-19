@@ -157,6 +157,12 @@ def FeatureFmaMixBF16Insts : SubtargetFeature<"fma-mix-bf16-insts",
   "Has v_fma_mix_f32_bf16, v_fma_mixlo_bf16, v_fma_mixhi_bf16 instructions"
 >;
 
+def FeatureIEEEMinimumMaximumInsts : SubtargetFeature<"ieee-minimum-maximum-insts",
+  "HasIEEEMinimumMaximumInsts",
+  "true",
+  "Has v_minimum/maximum_f16/f32/f64, v_minimummaximum/maximumminimum_f16/f32 and v_pk_minimum/maximum_f16 instructions"
+>;
+
 def FeatureMinimum3Maximum3F32 : SubtargetFeature<"minimum3-maximum3-f32",
   "HasMinimum3Maximum3F32",
   "true",
@@ -1494,6 +1500,9 @@ def FeatureAddSubU64Insts
     : SubtargetFeature<"add-sub-u64-insts", "HasAddSubU64Insts", "true",
                        "Has v_add_u64 and v_sub_u64 instructions">;
 
+def FeatureMadU32Inst : SubtargetFeature<"mad-u32-inst", "HasMadU32Inst",
+                                         "true", "Has v_mad_u32 instruction">;
+
 def FeatureMemToLDSLoad : SubtargetFeature<"vmem-to-lds-load-insts",
   "HasVMemToLDSLoad",
   "true",
@@ -1646,8 +1655,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
-   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
-   FeatureAgentScopeFineGrainedRemoteMemoryAtomics
+   FeatureIEEEMinimumMaximumInsts, FeatureMinimum3Maximum3F32,
+   FeatureMinimum3Maximum3F16, FeatureAgentScopeFineGrainedRemoteMemoryAtomics
   ]
 >;
 
@@ -2087,10 +2096,12 @@ def FeatureISAVersion11_7_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureRequiredExportPriority,
      FeatureFP8ConversionInsts,
      FeatureDot11Insts,
-     FeatureWMMA128bInsts])>;
+     FeatureWMMA128bInsts,
+     FeatureIEEEMinimumMaximumInsts,
+     FeatureMinimum3Maximum3F32,
+     FeatureMinimum3Maximum3F16])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -2120,6 +2131,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureExtendedImageInsts,
    FeatureFP8ConversionInsts,
    FeatureWMMA128bInsts,
+   FeatureIEEEMinimumMaximumInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
@@ -2196,6 +2208,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureVmemPrefInsts,
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
+   FeatureMadU32Inst,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
 ]>;
@@ -2225,7 +2238,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureDLInsts,
    FeatureFmacF64Inst,
    FeatureDPALU_DPP,
-   FeaturePackedFP32Ops,
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureNSAEncoding,
@@ -2276,6 +2288,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
    FeatureWMMA128bInsts,
+   FeatureIEEEMinimumMaximumInsts,
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -2577,6 +2590,26 @@ def isGFX11Not12_50 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11 && !Subtarget->hasGFX1250Insts()">,
   AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX1250Insts))>;
 
+def isGFX11Not11_70 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11 &&"
+            "!Subtarget->hasIEEEMinimumMaximumInsts()">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureIEEEMinimumMaximumInsts))>;
+
+def isGFX1170Only :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11 &&"
+            "Subtarget->hasIEEEMinimumMaximumInsts()">,
+  AssemblerPredicate<(all_of FeatureIEEEMinimumMaximumInsts, (not FeatureGFX12Insts))>;
+
+def isGFX1170Plus :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 ||"
+            "Subtarget->hasIEEEMinimumMaximumInsts()">,
+  AssemblerPredicate<(any_of FeatureGFX12Insts, FeatureIEEEMinimumMaximumInsts)>;
+
+def isNotGFX1170Plus :
+  Predicate<"Subtarget->getGeneration() <= AMDGPUSubtarget::GFX11 &&"
+            "!Subtarget->hasIEEEMinimumMaximumInsts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX12Insts), (not FeatureIEEEMinimumMaximumInsts))>;
+
 def isGFX11Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
   AssemblerPredicate<(all_of FeatureGFX11Insts)>;
@@ -2635,6 +2668,10 @@ def isGFX13Only :
 def isGFX13Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13">,
   AssemblerPredicate<(all_of FeatureGFX13Insts)>;
+
+def HasIEEEMinimumMaximumInsts :
+  Predicate<"Subtarget->hasIEEEMinimumMaximumInsts()">,
+  AssemblerPredicate<(all_of FeatureIEEEMinimumMaximumInsts)>;
 
 def HasMinimum3Maximum3F32 :
   Predicate<"Subtarget->hasMinimum3Maximum3F32()">,
@@ -3135,6 +3172,9 @@ def HasSGPRVMEM : Predicate<"Subtarget->hasSGPRVMEM()">,
 
 def HasParallelBitInsts : Predicate<"Subtarget->hasParallelBitInsts()">,
   AssemblerPredicate<(all_of FeatureParallelBitInsts)>;
+
+def HasMadU32Inst : Predicate<"Subtarget->hasMadU32Inst()">,
+                    AssemblerPredicate<(all_of FeatureMadU32Inst)>;
 
 def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic()">,
   AssemblerPredicate<(all_of FeatureLdsBarrierArriveAtomic)>;

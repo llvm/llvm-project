@@ -730,49 +730,53 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
   return true;
 }
 
+bool DataAggregator::checkReturn(uint64_t Addr) {
+  auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
+  if (llvm::is_contained(Returns, Addr))
+    return true;
+
+  BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
+  if (!Func)
+    return false;
+
+  const uint64_t Offset = Addr - Func->getAddress();
+  if (Func->hasInstructions()
+          ? isReturn(Func->getInstructionAtOffset(Offset))
+          : isReturn(Func->disassembleInstructionAtOffset(Offset))) {
+    Returns.emplace(Addr);
+    return true;
+  }
+  return false;
+}
+
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                               uint64_t Mispreds) {
-  // Returns whether \p Offset in \p Func contains a return instruction.
-  auto checkReturn = [&](const BinaryFunction &Func, const uint64_t Offset) {
-    auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
-    return Func.hasInstructions()
-               ? isReturn(Func.getInstructionAtOffset(Offset))
-               : isReturn(Func.disassembleInstructionAtOffset(Offset));
-  };
-
   // Mutates \p Addr to an offset into the containing function, performing BAT
   // offset translation and parent lookup.
   //
-  // Returns the containing function (or BAT parent) and whether the address
-  // corresponds to a return (if \p IsFrom) or a call continuation (otherwise).
+  // Returns the containing function (or BAT parent).
   auto handleAddress = [&](uint64_t &Addr, bool IsFrom) {
     BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
     if (!Func) {
       Addr = 0;
-      return std::pair{Func, false};
+      return Func;
     }
 
     Addr -= Func->getAddress();
-
-    bool IsRet = IsFrom && checkReturn(*Func, Addr);
 
     if (BAT)
       Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
 
     if (BinaryFunction *ParentFunc = getBATParentFunction(*Func))
-      Func = ParentFunc;
+      return ParentFunc;
 
-    return std::pair{Func, IsRet};
+    return Func;
   };
 
-  auto [FromFunc, IsReturn] = handleAddress(From, /*IsFrom*/ true);
-  auto [ToFunc, _] = handleAddress(To, /*IsFrom*/ false);
+  BinaryFunction *FromFunc = handleAddress(From, /*IsFrom*/ true);
+  BinaryFunction *ToFunc = handleAddress(To, /*IsFrom*/ false);
   if (!FromFunc && !ToFunc)
     return false;
-
-  // Ignore returns.
-  if (IsReturn)
-    return true;
 
   // Treat recursive control transfers as inter-branches.
   if (FromFunc == ToFunc && To != 0) {
@@ -783,7 +787,8 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   return doInterBranch(FromFunc, ToFunc, From, To, Count, Mispreds);
 }
 
-bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count) {
+bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count,
+                             bool IsReturn) {
   const uint64_t From = Trace.From, To = Trace.To;
   BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(From);
   BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(To);
@@ -808,8 +813,8 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count) {
   const uint64_t FuncAddress = FromFunc->getAddress();
   std::optional<BoltAddressTranslation::FallthroughListTy> FTs =
       BAT && BAT->isBATFunction(FuncAddress)
-          ? BAT->getFallthroughsInTrace(FuncAddress, From, To)
-          : getFallthroughsInTrace(*FromFunc, Trace, Count);
+          ? BAT->getFallthroughsInTrace(FuncAddress, From - IsReturn, To)
+          : getFallthroughsInTrace(*FromFunc, Trace, Count, IsReturn);
   if (!FTs) {
     LLVM_DEBUG(dbgs() << "Invalid trace " << Trace << '\n');
     NumInvalidTraces += Count;
@@ -831,7 +836,7 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count) {
 
 std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
 DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
-                                       uint64_t Count) const {
+                                       uint64_t Count, bool IsReturn) const {
   SmallVector<std::pair<uint64_t, uint64_t>, 16> Branches;
 
   BinaryContext &BC = BF.getBinaryContext();
@@ -865,9 +870,13 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
 
   // Adjust FromBB if the first LBR is a return from the last instruction in
   // the previous block (that instruction should be a call).
-  if (Trace.Branch != Trace::FT_ONLY && !BF.containsAddress(Trace.Branch) &&
-      From == FromBB->getOffset() && !FromBB->isEntryPoint() &&
-      !FromBB->isLandingPad()) {
+  if (IsReturn) {
+    if (From)
+      FromBB = BF.getBasicBlockContainingOffset(From - 1);
+    else
+      LLVM_DEBUG(dbgs() << "return to the function start: " << Trace << '\n');
+  } else if (Trace.Branch == Trace::EXTERNAL && From == FromBB->getOffset() &&
+             !FromBB->isEntryPoint() && !FromBB->isLandingPad()) {
     const BinaryBasicBlock *PrevBB =
         BF.getLayout().getBlock(FromBB->getIndex() - 1);
     if (PrevBB->getSuccessor(FromBB->getLabel())) {
@@ -1557,11 +1566,13 @@ void DataAggregator::processBranchEvents() {
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
   for (const auto &[Trace, Info] : Traces) {
-    if (Trace.Branch != Trace::FT_ONLY &&
+    bool IsReturn = checkReturn(Trace.Branch);
+    // Ignore returns.
+    if (!IsReturn && Trace.Branch != Trace::FT_ONLY &&
         Trace.Branch != Trace::FT_EXTERNAL_ORIGIN)
       doBranch(Trace.Branch, Trace.From, Info.TakenCount, Info.MispredCount);
     if (Trace.To != Trace::BR_ONLY)
-      doTrace(Trace, Info.TakenCount);
+      doTrace(Trace, Info.TakenCount, IsReturn);
   }
   printBranchSamplesDiagnostics();
 }

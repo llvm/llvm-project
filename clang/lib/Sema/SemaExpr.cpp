@@ -7176,6 +7176,7 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
   //   void func(char *para[(int [1]){ 0 }[0]);
   const Scope *S = getCurScope();
   bool IsFileScope = !CurContext->isFunctionOrMethod() &&
+                     !S->isInCFunctionScope() &&
                      (!S || !S->isFunctionPrototypeScope());
 
   // In C, compound literals are l-values for some reason.

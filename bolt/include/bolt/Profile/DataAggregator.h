@@ -132,6 +132,9 @@ private:
   /// and use them later for processing and assigning profile.
   std::unordered_map<Trace, TakenBranchInfo, TraceHash> TraceMap;
   std::vector<std::pair<Trace, TakenBranchInfo>> Traces;
+  /// Pre-populated addresses of returns, coming from pre-aggregated data or
+  /// disassembly. Used to disambiguate call-continuation fall-throughs.
+  std::unordered_set<uint64_t> Returns;
   std::unordered_map<uint64_t, uint64_t> BasicSamples;
   std::vector<PerfMemSample> MemSamples;
 
@@ -204,8 +207,8 @@ private:
   /// Return a vector of offsets corresponding to a trace in a function
   /// if the trace is valid, std::nullopt otherwise.
   std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
-  getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
-                         uint64_t Count) const;
+  getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace, uint64_t Count,
+                         bool IsReturn) const;
 
   /// Record external entry into the function \p BF.
   ///
@@ -265,11 +268,14 @@ private:
                      uint64_t From, uint64_t To, uint64_t Count,
                      uint64_t Mispreds);
 
+  /// Checks if \p Addr corresponds to a return instruction.
+  bool checkReturn(uint64_t Addr);
+
   /// Register a \p Branch.
   bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds);
 
   /// Register a trace between two LBR entries supplied in execution order.
-  bool doTrace(const Trace &Trace, uint64_t Count);
+  bool doTrace(const Trace &Trace, uint64_t Count, bool IsReturn);
 
   /// Parser helpers
   /// Return false if we exhausted our parser buffer and finished parsing

@@ -33,11 +33,7 @@ class RValue {
   enum Flavor { Scalar, Complex, Aggregate };
 
   union {
-    // Stores first and second value.
-    struct {
-      mlir::Value first;
-      mlir::Value second;
-    } vals;
+    mlir::Value value;
 
     // Stores aggregate address.
     Address aggregateAddr;
@@ -47,7 +43,7 @@ class RValue {
   unsigned flavor : 2;
 
 public:
-  RValue() : vals{nullptr, nullptr}, flavor(Scalar) {}
+  RValue() : value(nullptr), flavor(Scalar) {}
 
   bool isScalar() const { return flavor == Scalar; }
   bool isComplex() const { return flavor == Complex; }
@@ -56,14 +52,9 @@ public:
   bool isVolatileQualified() const { return isVolatile; }
 
   /// Return the value of this scalar value.
-  mlir::Value getScalarVal() const {
+  mlir::Value getValue() const {
     assert(isScalar() && "Not a scalar!");
-    return vals.first;
-  }
-
-  /// Return the real/imag components of this complex value.
-  std::pair<mlir::Value, mlir::Value> getComplexVal() const {
-    return std::make_pair(vals.first, vals.second);
+    return value;
   }
 
   /// Return the value of the address of the aggregate.
@@ -83,22 +74,20 @@ public:
 
   static RValue get(mlir::Value v) {
     RValue er;
-    er.vals.first = v;
+    er.value = v;
     er.flavor = Scalar;
     er.isVolatile = false;
     return er;
   }
 
-  static RValue getComplex(mlir::Value v1, mlir::Value v2) {
+  static RValue getComplex(mlir::Value v) {
     RValue er;
-    er.vals = {v1, v2};
+    er.value = v;
     er.flavor = Complex;
     er.isVolatile = false;
     return er;
   }
-  static RValue getComplex(const std::pair<mlir::Value, mlir::Value> &c) {
-    return getComplex(c.first, c.second);
-  }
+
   // FIXME: Aggregate rvalues need to retain information about whether they are
   // volatile or not.  Remove default to find all places that probably get this
   // wrong.
