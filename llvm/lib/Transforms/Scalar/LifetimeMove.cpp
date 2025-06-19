@@ -15,6 +15,7 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
@@ -22,24 +23,11 @@
 #define DEBUG_TYPE "lifetime-move"
 
 namespace llvm {
-static bool mayEscape(Value *V, User *U) { // TODO: Use PtrUseVisitor
-  if (V == U->stripInBoundsOffsets() || isa<PHINode>(U))
-    return true;
-
-  if (auto *SI = dyn_cast<StoreInst>(U))
-    return SI->getValueOperand() == V;
-
-  if (auto *CB = dyn_cast<CallBase>(U)) {
-    unsigned OpCount = CB->arg_size();
-    for (unsigned Op = 0; Op < OpCount; ++Op)
-      if (V == CB->getArgOperand(Op) && !CB->doesNotCapture(Op))
-        return true;
-  }
-  return false;
-}
-
 namespace {
-class LifetimeMover {
+class LifetimeMover : public PtrUseVisitor<LifetimeMover> {
+  using This = LifetimeMover;
+  using Base = PtrUseVisitor<LifetimeMover>;
+
   const DominatorTree &DT;
   const PostDominatorTree &PDT;
   const LoopInfo &LI;
@@ -61,17 +49,23 @@ public:
 
   void run();
 
+  void visitInstruction(Instruction &I);
+  void visitPHINode(PHINode &I);
+  void visitSelectInst(SelectInst &I);
+  void visitStoreInst(StoreInst &SI);
+  void visitIntrinsicInst(IntrinsicInst &II);
+  void visitCallBase(CallBase &CB);
+
 private:
   void sinkLifetimeStartMarkers(AllocaInst *AI);
   void riseLifetimeEndMarkers();
-  bool collectLifetime(Instruction *I);
   void reset();
 };
 } // namespace
 
 LifetimeMover::LifetimeMover(Function &F, const DominatorTree &DT,
                              const PostDominatorTree &PDT, const LoopInfo &LI)
-    : DT(DT), PDT(PDT), LI(LI) {
+    : Base(F.getDataLayout()), DT(DT), PDT(PDT), LI(LI) {
   for (Instruction &I : instructions(F)) {
     if (auto *AI = dyn_cast<AllocaInst>(&I))
       Allocas.push_back(AI);
@@ -83,33 +77,112 @@ LifetimeMover::LifetimeMover(Function &F, const DominatorTree &DT,
 void LifetimeMover::run() {
   for (auto *AI : Allocas) {
     reset();
-
-    bool Escape = false;
-    for (User *U : AI->users()) {
-      auto *I = cast<Instruction>(U);
-      // lifetime markers are not actual uses
-      if (collectLifetime(I))
-        continue;
-
-      // GEP and bitcast used by lifetime markers
-      if (U->hasOneUse() && U->stripPointerCasts() == AI) {
-        auto *U1 = cast<Instruction>(U->user_back());
-        if (collectLifetime(U1))
-          continue;
-      }
-
-      Escape |= mayEscape(AI, U);
-      OtherUsers.push_back(I);
-      UserBBs.insert(I->getParent());
-    }
+    Base::visitPtr(*AI);
 
     if (!LifetimeStarts.empty())
       sinkLifetimeStartMarkers(AI);
 
     // Do not move lifetime.end if alloca escapes
-    if (!LifetimeEnds.empty() && !Escape)
+    if (!LifetimeEnds.empty() && !PI.isEscaped())
       riseLifetimeEndMarkers();
   }
+}
+
+void LifetimeMover::visitInstruction(Instruction &I) {
+  OtherUsers.push_back(&I);
+  UserBBs.insert(I.getParent());
+}
+
+void LifetimeMover::visitPHINode(PHINode &I) {
+  enqueueUsers(I);
+}
+
+void LifetimeMover::visitSelectInst(SelectInst &I) {
+  enqueueUsers(I);
+}
+
+void LifetimeMover::visitStoreInst(StoreInst &SI) {
+  if (SI.getPointerOperand() == U->get())
+    return InstVisitor<This>::visitStoreInst(SI);
+
+  // We are storing the pointer into a memory location, potentially escaping.
+  // As an optimization, we try to detect simple cases where it doesn't
+  // actually escape, for example:
+  //   %ptr = alloca ..
+  //   %addr = alloca ..
+  //   store %ptr, %addr
+  //   %x = load %addr
+  //   ..
+  // If %addr is only used by loading from it, we could simply treat %x as
+  // another alias of %ptr, and not considering %ptr being escaped.
+  auto IsSimpleStoreThenLoad = [&]() {
+    auto *AI = dyn_cast<AllocaInst>(SI.getPointerOperand());
+    // If the memory location we are storing to is not an alloca, it
+    // could be an alias of some other memory locations, which is difficult
+    // to analyze.
+    if (!AI)
+      return false;
+    // StoreAliases contains aliases of the memory location stored into.
+    SmallVector<Instruction *, 4> StoreAliases = {AI};
+    while (!StoreAliases.empty()) {
+      Instruction *I = StoreAliases.pop_back_val();
+      for (User *U : I->users()) {
+        // If we are loading from the memory location, we are creating an
+        // alias of the original pointer.
+        if (auto *LI = dyn_cast<LoadInst>(U)) {
+          enqueueUsers(*LI);
+          continue;
+        }
+        // If we are overriding the memory location, the pointer certainly
+        // won't escape.
+        if (auto *S = dyn_cast<StoreInst>(U))
+          if (S->getPointerOperand() == I)
+            continue;
+        if (isa<LifetimeIntrinsic>(U))
+          continue;
+        // BitCastInst creats aliases of the memory location being stored
+        // into.
+        if (auto *BI = dyn_cast<BitCastInst>(U)) {
+          StoreAliases.push_back(BI);
+          continue;
+        }
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  if (!IsSimpleStoreThenLoad())
+    PI.setEscaped(&SI);
+  InstVisitor<This>::visitStoreInst(SI);
+}
+
+void LifetimeMover::visitIntrinsicInst(IntrinsicInst &II) {
+  // When we found the lifetime markers refers to a
+  // subrange of the original alloca, ignore the lifetime
+  // markers to avoid misleading the analysis.
+  if (!IsOffsetKnown || !Offset.isZero())
+    return Base::visitIntrinsicInst(II);
+
+  // lifetime markers are not actual uses
+  switch (II.getIntrinsicID()) {
+  case Intrinsic::lifetime_start:
+    LifetimeStarts.push_back(&II);
+    break;
+  case Intrinsic::lifetime_end:
+    LifetimeEnds.push_back(&II);
+    break;
+  default:
+    Base::visitIntrinsicInst(II);
+  }
+}
+
+void LifetimeMover::visitCallBase(CallBase &CB) {
+  for (unsigned Op = 0, OpCount = CB.arg_size(); Op < OpCount; ++Op)
+    if (U->get() == CB.getArgOperand(Op) && !CB.doesNotCapture(Op))
+      PI.setEscaped(&CB);
+  InstVisitor<This>::visitCallBase(CB);
 }
 /// For each local variable that all of its user are dominated by one of the
 /// critical point, we sink their lifetime.start markers to the place where
@@ -207,23 +280,11 @@ void LifetimeMover::riseLifetimeEndMarkers() {
   }
 }
 
-bool LifetimeMover::collectLifetime(Instruction *I) {
-  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    auto ID = II->getIntrinsicID();
-    if (ID == Intrinsic::lifetime_start) {
-      LifetimeStarts.push_back(I);
-      return true;
-    }
-
-    if (ID == Intrinsic::lifetime_end) {
-      LifetimeEnds.push_back(I);
-      return true;
-    }
-  }
-  return false;
-}
-
 void LifetimeMover::reset() {
+  PI.reset();
+  Worklist.clear();
+  VisitedUses.clear();
+
   LifetimeStarts.clear();
   LifetimeEnds.clear();
   OtherUsers.clear();

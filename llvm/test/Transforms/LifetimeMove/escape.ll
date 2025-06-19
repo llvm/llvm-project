@@ -7,7 +7,6 @@ define void @fn() presplitcoroutine {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ESCAPE_GEP:%.*]] = alloca [500 x i8], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 500, ptr [[ESCAPE_GEP]])
 ; CHECK-NEXT:    [[GEP_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[ESCAPE_GEP]], i64 8
 ; CHECK-NEXT:    [[ESCAPE_STORE:%.*]] = alloca [500 x i8], align 16
 ; CHECK-NEXT:    [[STORE_PTR:%.*]] = alloca ptr, align 8
@@ -18,8 +17,9 @@ define void @fn() presplitcoroutine {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 500, ptr [[ESCAPE_CALL]])
 ; CHECK-NEXT:    call void @capture(ptr [[ESCAPE_CALL]])
 ; CHECK-NEXT:    [[UNUSED:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
-; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[GEP_PTR]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[STORE_PTR]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 500, ptr [[ESCAPE_GEP]])
+; CHECK-NEXT:    call void @capture(ptr [[GEP_PTR]])
+; CHECK-NEXT:    call void @capture(ptr [[STORE_PTR]])
 ; CHECK-NEXT:    br label %[[END:.*]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 500, ptr [[ESCAPE_GEP]])
@@ -44,8 +44,8 @@ entry:
   call void @capture(ptr %escape.call)
 
   %unused = call i8 @llvm.coro.suspend(token none, i1 false)
-  %1 = load ptr, ptr %gep.ptr, align 8
-  %2 = load ptr, ptr %store.ptr, align 8
+  call void @capture(ptr %gep.ptr)
+  call void @capture(ptr %store.ptr)
   br label %end
 end:
   call void @llvm.lifetime.end.p0(i64 500, ptr %escape.gep)
