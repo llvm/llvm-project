@@ -70,6 +70,9 @@ C++ Specific Potentially Breaking Changes
   in particular, ``const E x = (E)-1;`` is not treated as a constant if it's
   out of range. This impacts old versions of Boost.  (#GH143034)
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 
