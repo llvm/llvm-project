@@ -223,10 +223,10 @@ static void generateFusedElementwiseOpRegion(
   auto consumer = cast<LinalgOp>(fusedOperand->getOwner());
   // Build the region of the fused op.
 
-  // Since some ops, like `linalg.map`, do not have block arguments for init operands
-  // then we first "generalize" the block by adding arguments for init operands when
-  // they aren't present. We detect this case by checking if
-  // `getOpOperandsMatchingBBargs() == getDpsInputOperands(); 
+  // Since some ops, like `linalg.map`, do not have block arguments for init
+  // operands then we first "generalize" the block by adding arguments for init
+  // operands when they aren't present. We detect this case by checking if
+  // `getOpOperandsMatchingBBargs() == getDpsInputOperands()
   Block &producerBlock = producer->getRegion(0).front();
   if (producer.getOpOperandsMatchingBBargs() ==
       producer.getDpsInputOperands()) {
