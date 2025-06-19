@@ -674,7 +674,7 @@ InstructionCost PPCTTIImpl::getCmpSelInstrCost(
 
 InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                TTI::TargetCostKind CostKind,
-                                               unsigned Index, const Value *Op0,
+                                               int Index, const Value *Op0,
                                                const Value *Op1) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
@@ -702,7 +702,8 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     // Computing on 1 bit values requires extra mask or compare operations.
     unsigned MaskCostForOneBitSize = (VecMaskCost && EltSize == 1) ? 1 : 0;
     // Computing on non const index requires extra mask or compare operations.
-    unsigned MaskCostForIdx = (Index != -1U) ? 0 : 1;
+    unsigned MaskCostForIdx =
+        TargetTransformInfo::isKnownVectorIndex(Index) ? 0 : 1;
     if (ST->hasP9Altivec()) {
       // P10 has vxform insert which can handle non const index. The
       // MaskCostForIdx is for masking the index.
@@ -711,13 +712,13 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       if (ISD == ISD::INSERT_VECTOR_ELT) {
         if (ST->hasP10Vector())
           return CostFactor + MaskCostForIdx;
-        if (Index != -1U)
+        if (TargetTransformInfo::isKnownVectorIndex(Index))
           return 2 * CostFactor;
       } else if (ISD == ISD::EXTRACT_VECTOR_ELT) {
         // It's an extract.  Maybe we can do a cheap move-from VSR.
         unsigned EltSize = Val->getScalarSizeInBits();
         // P9 has both mfvsrd and mfvsrld for 64 bit integer.
-        if (EltSize == 64 && Index != -1U)
+        if (EltSize == 64 && TargetTransformInfo::isKnownVectorIndex(Index))
           return 1;
         if (EltSize == 32) {
           unsigned MfvsrwzIndex = ST->isLittleEndian() ? 2 : 1;
@@ -734,7 +735,8 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
         // (invariant, easily schedulable).
         return CostFactor + MaskCostForOneBitSize + MaskCostForIdx;
       }
-    } else if (ST->hasDirectMove() && Index != -1U) {
+    } else if (ST->hasDirectMove() &&
+               TargetTransformInfo::isKnownVectorIndex(Index)) {
       // Assume permute has standard cost.
       // Assume move-to/move-from VSR have 2x standard cost.
       if (ISD == ISD::INSERT_VECTOR_ELT)

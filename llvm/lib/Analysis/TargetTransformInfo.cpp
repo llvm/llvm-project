@@ -1058,7 +1058,7 @@ InstructionCost TargetTransformInfo::getCastInstrCost(
 }
 
 InstructionCost TargetTransformInfo::getExtractWithExtendCost(
-    unsigned Opcode, Type *Dst, VectorType *VecTy, unsigned Index,
+    unsigned Opcode, Type *Dst, VectorType *VecTy, int Index,
     TTI::TargetCostKind CostKind) const {
   InstructionCost Cost =
       TTIImpl->getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
@@ -1088,7 +1088,7 @@ InstructionCost TargetTransformInfo::getCmpSelInstrCost(
 }
 
 InstructionCost TargetTransformInfo::getVectorInstrCost(
-    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, int Index,
     const Value *Op0, const Value *Op1) const {
   assert((Opcode == Instruction::InsertElement ||
           Opcode == Instruction::ExtractElement) &&
@@ -1100,7 +1100,7 @@ InstructionCost TargetTransformInfo::getVectorInstrCost(
 }
 
 InstructionCost TargetTransformInfo::getVectorInstrCost(
-    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, int Index,
     Value *Scalar,
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
   assert((Opcode == Instruction::InsertElement ||
@@ -1115,7 +1115,7 @@ InstructionCost TargetTransformInfo::getVectorInstrCost(
 InstructionCost
 TargetTransformInfo::getVectorInstrCost(const Instruction &I, Type *Val,
                                         TTI::TargetCostKind CostKind,
-                                        unsigned Index) const {
+                                        int Index) const {
   // FIXME: Assert that Opcode is either InsertElement or ExtractElement.
   // This is mentioned in the interface description and respected by all
   // callers, but never asserted upon.
