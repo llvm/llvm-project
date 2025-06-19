@@ -102,6 +102,9 @@ public:
   // Return the mapped RangeInfo at X or nullptr if no mapping exists
   const RangeInfo *lookup(uint32_t X) const;
 
+  // Removes all entries of the ResourceRange
+  void clear();
+
   // Insert the required (sub-)intervals such that the interval of [a;b] =
   // [Info.LowerBound, Info.UpperBound] is covered and points to a valid
   // RangeInfo &.
