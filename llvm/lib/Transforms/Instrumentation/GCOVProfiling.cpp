@@ -583,10 +583,6 @@ static bool functionHasLines(const Function &F, unsigned &EndLine) {
   EndLine = 0;
   for (const auto &BB : F) {
     for (const auto &I : BB) {
-      // Debug intrinsic locations correspond to the location of the
-      // declaration, not necessarily any statements or expressions.
-      if (isa<DbgInfoIntrinsic>(&I)) continue;
-
       const DebugLoc &Loc = I.getDebugLoc();
       if (!Loc)
         continue;
@@ -874,10 +870,6 @@ bool GCOVProfiler::emitProfileNotes(
         }
 
         for (const auto &I : BB) {
-          // Debug intrinsic locations correspond to the location of the
-          // declaration, not necessarily any statements or expressions.
-          if (isa<DbgInfoIntrinsic>(&I)) continue;
-
           const DebugLoc &Loc = I.getDebugLoc();
           if (!Loc)
             continue;

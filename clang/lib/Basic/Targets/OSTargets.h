@@ -395,36 +395,6 @@ public:
   }
 };
 
-// Managarm Target
-template <typename Target>
-class LLVM_LIBRARY_VISIBILITY ManagarmTargetInfo : public OSTargetInfo<Target> {
-protected:
-  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {
-    DefineStd(Builder, "unix", Opts);
-    Builder.defineMacro("__managarm__");
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
-    if (Opts.CPlusPlus)
-      Builder.defineMacro("_GNU_SOURCE");
-    if (this->HasFloat128)
-      Builder.defineMacro("__FLOAT128__");
-  }
-
-public:
-  ManagarmTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {
-    switch (Triple.getArch()) {
-    default:
-      break;
-    case llvm::Triple::x86:
-    case llvm::Triple::x86_64:
-      this->HasFloat128 = true;
-      break;
-    }
-  }
-};
-
 // NetBSD Target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY NetBSDTargetInfo : public OSTargetInfo<Target> {
