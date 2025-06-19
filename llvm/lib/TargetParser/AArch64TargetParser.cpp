@@ -60,7 +60,7 @@ uint64_t AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
   ExtensionSet FeatureBits;
   for (const StringRef Feature : Features) {
     std::optional<FMVInfo> FMV = parseFMVExtension(Feature);
-    if (!FMV) {
+    if (!FMV && Feature.starts_with('+')) {
       if (std::optional<ExtensionInfo> Info = targetFeatureToExtension(Feature))
         FMV = lookupFMVByID(Info->ID);
     }
@@ -181,7 +181,8 @@ std::optional<AArch64::FMVInfo> AArch64::parseFMVExtension(StringRef FMVExt) {
 std::optional<AArch64::ExtensionInfo>
 AArch64::targetFeatureToExtension(StringRef TargetFeature) {
   for (const auto &E : Extensions)
-    if (TargetFeature == E.PosTargetFeature)
+    if (TargetFeature == E.PosTargetFeature ||
+        TargetFeature == E.NegTargetFeature)
       return E;
   return {};
 }

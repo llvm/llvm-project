@@ -896,13 +896,11 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       } // end of PHI handling
 
       // We handle calls that:
-      //   * Are debug info intrinsics.
       //   * Have a mapping to an IR intrinsic.
       //   * Have a vector version available.
       auto *CI = dyn_cast<CallInst>(&I);
 
       if (CI && !getVectorIntrinsicIDForCall(CI, TLI) &&
-          !isa<DbgInfoIntrinsic>(CI) &&
           !(CI->getCalledFunction() && TLI &&
             (!VFDatabase::getMappings(*CI).empty() ||
              isTLIScalarize(*TLI, *CI)))) {

@@ -2310,10 +2310,6 @@ void ASTStmtReader::VisitOpaqueValueExpr(OpaqueValueExpr *E) {
   E->setIsUnique(Record.readInt());
 }
 
-void ASTStmtReader::VisitTypoExpr(TypoExpr *E) {
-  llvm_unreachable("Cannot read TypoExpr nodes");
-}
-
 void ASTStmtReader::VisitRecoveryExpr(RecoveryExpr *E) {
   VisitExpr(E);
   unsigned NumArgs = Record.readInt();
@@ -3606,11 +3602,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     }
 
     case STMT_OMP_REVERSE_DIRECTIVE: {
-      assert(Record[ASTStmtReader::NumStmtFields] == 1 &&
-             "Reverse directive accepts only a single loop");
+      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
       assert(Record[ASTStmtReader::NumStmtFields + 1] == 0 &&
              "Reverse directive has no clauses");
-      S = OMPReverseDirective::CreateEmpty(Context);
+      S = OMPReverseDirective::CreateEmpty(Context, NumLoops);
       break;
     }
 

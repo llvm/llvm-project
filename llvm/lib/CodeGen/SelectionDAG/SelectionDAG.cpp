@@ -5553,6 +5553,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
   case ISD::SPLAT_VECTOR:
+  case ISD::VSELECT:
     return false;
 
   case ISD::SELECT_CC:
@@ -7376,6 +7377,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if ((Opcode == ISD::ADD || Opcode == ISD::SUB) &&
         VT.getScalarType() == MVT::i1)
       return getNode(ISD::XOR, DL, VT, N1, N2);
+    // Fold (add (vscale * C0), (vscale * C1)) to (vscale * (C0 + C1)).
+    if (Opcode == ISD::ADD && N1.getOpcode() == ISD::VSCALE &&
+        N2.getOpcode() == ISD::VSCALE) {
+      const APInt &C1 = N1->getConstantOperandAPInt(0);
+      const APInt &C2 = N2->getConstantOperandAPInt(0);
+      return getVScale(DL, VT, C1 + C2);
+    }
     break;
   case ISD::MUL:
     assert(VT.isInteger() && "This operator does not apply to FP types!");

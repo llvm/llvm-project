@@ -726,11 +726,12 @@ void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
   // Output the rows.
   OS << "  static const " << getMinimalTypeForRange(SubRegIndicesSize + 1, 32)
      << " Rows[" << Rows.size() << "][" << SubRegIndicesSize << "] = {\n";
-  for (unsigned r = 0, re = Rows.size(); r != re; ++r) {
+  for (const auto &Row : Rows) {
     OS << "    { ";
-    for (unsigned i = 0, e = SubRegIndicesSize; i != e; ++i)
-      if (Rows[r][i])
-        OS << Rows[r][i]->getQualifiedName() << ", ";
+    for (const llvm::CodeGenSubRegIndex *Elem :
+         ArrayRef(&Row[0], SubRegIndicesSize))
+      if (Elem)
+        OS << Elem->getQualifiedName() << ", ";
       else
         OS << "0, ";
     OS << "},\n";
@@ -830,8 +831,7 @@ void RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
   for (size_t s = 0, se = Sequences.size(); s != se; ++s) {
     OS << "    ";
     const SmallVectorImpl<MaskRolPair> &Sequence = Sequences[s];
-    for (size_t p = 0, pe = Sequence.size(); p != pe; ++p) {
-      const MaskRolPair &P = Sequence[p];
+    for (const MaskRolPair &P : Sequence) {
       printMask(OS << "{ ", P.Mask);
       OS << format(", %2u }, ", P.RotateLeft);
     }

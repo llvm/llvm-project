@@ -9272,11 +9272,10 @@ class BuiltinOperatorOverloadBuilder {
     /// the candidates into a unique set, then move from that set into the list
     /// of arithmetic types.
     llvm::SmallSetVector<CanQualType, 2> BitIntCandidates;
-    llvm::for_each(CandidateTypes, [&BitIntCandidates](
-                                       BuiltinCandidateTypeSet &Candidate) {
+    for (BuiltinCandidateTypeSet &Candidate : CandidateTypes) {
       for (QualType BitTy : Candidate.bitint_types())
         BitIntCandidates.insert(CanQualType::CreateUnsafe(BitTy));
-    });
+    }
     llvm::move(BitIntCandidates, std::back_inserter(ArithmeticTypes));
     LastPromotedIntegralType = ArithmeticTypes.size();
     LastPromotedArithmeticType = ArithmeticTypes.size();
@@ -11322,9 +11321,9 @@ OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
                                                            SourceLocation Loc,
                                                            iterator &Best) {
 
-  assert(shouldDeferTemplateArgumentDeduction(S.getLangOpts()) ||
-         DeferredCandidatesCount == 0 &&
-             "Unexpected deferred template candidates");
+  assert((shouldDeferTemplateArgumentDeduction(S.getLangOpts()) ||
+          DeferredCandidatesCount == 0) &&
+         "Unexpected deferred template candidates");
 
   bool TwoPhaseResolution =
       DeferredCandidatesCount != 0 && !ResolutionByPerfectCandidateIsDisabled;
@@ -14055,8 +14054,10 @@ FunctionDecl *Sema::ResolveSingleFunctionTemplateSpecialization(
     //   specified and it, along with any default template arguments,
     //   identifies a single function template specialization, then the
     //   template-id is an lvalue for the function template specialization.
-    FunctionTemplateDecl *FunctionTemplate
-      = cast<FunctionTemplateDecl>((*I)->getUnderlyingDecl());
+    FunctionTemplateDecl *FunctionTemplate =
+        dyn_cast<FunctionTemplateDecl>((*I)->getUnderlyingDecl());
+    if (!FunctionTemplate)
+      continue;
 
     // C++ [over.over]p2:
     //   If the name is a function template, template argument deduction is

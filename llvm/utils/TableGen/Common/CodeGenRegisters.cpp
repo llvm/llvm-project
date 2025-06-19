@@ -164,8 +164,8 @@ CodeGenRegister::CodeGenRegister(const Record *R, unsigned Enum)
     : TheDef(R), EnumValue(Enum),
       CostPerUse(R->getValueAsListOfInts("CostPerUse")),
       CoveredBySubRegs(R->getValueAsBit("CoveredBySubRegs")),
-      HasDisjunctSubRegs(false), Constant(R->getValueAsBit("isConstant")),
-      SubRegsComplete(false), SuperRegsComplete(false), TopoSig(~0u) {
+      Constant(R->getValueAsBit("isConstant")), SubRegsComplete(false),
+      SuperRegsComplete(false), TopoSig(~0u) {
   Artificial = R->getValueAsBit("isArtificial");
 }
 
@@ -933,9 +933,7 @@ bool CodeGenRegisterClass::Key::operator<(
 static bool testSubClass(const CodeGenRegisterClass *A,
                          const CodeGenRegisterClass *B) {
   return A->RSI.isSubClassOf(B->RSI) &&
-         std::includes(A->getMembers().begin(), A->getMembers().end(),
-                       B->getMembers().begin(), B->getMembers().end(),
-                       deref<std::less<>>());
+         llvm::includes(A->getMembers(), B->getMembers(), deref<std::less<>>());
 }
 
 /// Sorting predicate for register classes.  This provides a topological
@@ -1990,8 +1988,7 @@ findRegUnitSet(const std::vector<RegUnitSet> &UniqueSets,
 // Return true if the RUSubSet is a subset of RUSuperSet.
 static bool isRegUnitSubSet(const std::vector<unsigned> &RUSubSet,
                             const std::vector<unsigned> &RUSuperSet) {
-  return std::includes(RUSuperSet.begin(), RUSuperSet.end(), RUSubSet.begin(),
-                       RUSubSet.end());
+  return llvm::includes(RUSuperSet, RUSubSet);
 }
 
 /// Iteratively prune unit sets. Prune subsets that are close to the superset,

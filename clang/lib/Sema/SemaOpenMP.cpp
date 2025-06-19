@@ -7122,6 +7122,7 @@ void SemaOpenMP::ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(
       getASTContext(), VariantFuncRef, DVScope.TI,
       /*NothingArgs=*/nullptr, /*NothingArgsSize=*/0,
       /*NeedDevicePtrArgs=*/nullptr, /*NeedDevicePtrArgsSize=*/0,
+      /*NeedDeviceAddrArgs=*/nullptr, /*NeedDeviceAddrArgsSize=*/0,
       /*AppendArgs=*/nullptr, /*AppendArgsSize=*/0);
   for (FunctionDecl *BaseFD : Bases)
     BaseFD->addAttr(OMPDeclareVariantA);
@@ -7553,6 +7554,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     FunctionDecl *FD, Expr *VariantRef, OMPTraitInfo &TI,
     ArrayRef<Expr *> AdjustArgsNothing,
     ArrayRef<Expr *> AdjustArgsNeedDevicePtr,
+    ArrayRef<Expr *> AdjustArgsNeedDeviceAddr,
     ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
     SourceLocation AppendArgsLoc, SourceRange SR) {
 
@@ -7564,6 +7566,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
   SmallVector<Expr *, 8> AllAdjustArgs;
   llvm::append_range(AllAdjustArgs, AdjustArgsNothing);
   llvm::append_range(AllAdjustArgs, AdjustArgsNeedDevicePtr);
+  llvm::append_range(AllAdjustArgs, AdjustArgsNeedDeviceAddr);
 
   if (!AllAdjustArgs.empty() || !AppendArgs.empty()) {
     VariantMatchInfo VMI;
@@ -7614,6 +7617,8 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
       const_cast<Expr **>(AdjustArgsNothing.data()), AdjustArgsNothing.size(),
       const_cast<Expr **>(AdjustArgsNeedDevicePtr.data()),
       AdjustArgsNeedDevicePtr.size(),
+      const_cast<Expr **>(AdjustArgsNeedDeviceAddr.data()),
+      AdjustArgsNeedDeviceAddr.size(),
       const_cast<OMPInteropInfo *>(AppendArgs.data()), AppendArgs.size(), SR);
   FD->addAttr(NewAttr);
 }
@@ -15135,7 +15140,7 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
   // instantiated.
   if (SemaRef.CurContext->isDependentContext())
     return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt,
-                                       nullptr, nullptr);
+                                       NumLoops, nullptr, nullptr);
 
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting a single-dimensional loop iteration space");
@@ -15294,7 +15299,7 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
       ForStmt(Context, Init.get(), Cond.get(), nullptr, Incr.get(),
               ReversedBody, LoopHelper.Init->getBeginLoc(),
               LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
-  return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt,
+  return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt, NumLoops,
                                      ReversedFor,
                                      buildPreInits(Context, PreInits));
 }
@@ -22057,20 +22062,34 @@ static void checkMappableExpressionList(
         Type.getCanonicalType(), UnresolvedMapper);
     if (ER.isInvalid())
       continue;
-    if (!ER.get() && isa<ArraySectionExpr>(VE)) {
-      // Create implicit mapper as needed.
-      QualType BaseType = VE->getType().getCanonicalType();
-      if (BaseType->isSpecificBuiltinType(BuiltinType::ArraySection)) {
-        const auto *OASE = cast<ArraySectionExpr>(VE->IgnoreParenImpCasts());
-        QualType BType = ArraySectionExpr::getBaseOriginalType(OASE->getBase());
-        QualType ElemType;
-        if (const auto *ATy = BType->getAsArrayTypeUnsafe())
-          ElemType = ATy->getElementType();
-        else
-          ElemType = BType->getPointeeType();
+
+    // If no user-defined mapper is found, we need to create an implicit one for
+    // arrays/array-sections on structs that have members that have
+    // user-defined mappers. This is needed to ensure that the mapper for the
+    // member is invoked when mapping each element of the array/array-section.
+    if (!ER.get()) {
+      QualType BaseType;
+
+      if (isa<ArraySectionExpr>(VE)) {
+        BaseType = VE->getType().getCanonicalType();
+        if (BaseType->isSpecificBuiltinType(BuiltinType::ArraySection)) {
+          const auto *OASE = cast<ArraySectionExpr>(VE->IgnoreParenImpCasts());
+          QualType BType =
+              ArraySectionExpr::getBaseOriginalType(OASE->getBase());
+          QualType ElemType;
+          if (const auto *ATy = BType->getAsArrayTypeUnsafe())
+            ElemType = ATy->getElementType();
+          else
+            ElemType = BType->getPointeeType();
+          BaseType = ElemType.getCanonicalType();
+        }
+      } else if (VE->getType()->isArrayType()) {
+        const ArrayType *AT = VE->getType()->getAsArrayTypeUnsafe();
+        const QualType ElemType = AT->getElementType();
         BaseType = ElemType.getCanonicalType();
       }
-      if (BaseType->getAsRecordDecl() &&
+
+      if (!BaseType.isNull() && BaseType->getAsRecordDecl() &&
           isImplicitMapperNeeded(SemaRef, DSAS, BaseType, VE)) {
         ER = buildImplicitMapper(SemaRef, BaseType, DSAS);
       }

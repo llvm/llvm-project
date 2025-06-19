@@ -34,6 +34,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/HexagonAttributes.h"
 #include "llvm/Support/raw_ostream.h"
@@ -775,7 +776,8 @@ static MCInstrAnalysis *createHexagonMCInstrAnalysis(const MCInstrInfo *Info) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeHexagonTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfoFn X(getTheHexagonTarget(), createHexagonMCAsmInfo);
 

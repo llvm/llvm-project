@@ -39,8 +39,8 @@ define void @drop_scalar_nuw_nsw(ptr noalias nocapture readonly %input, ptr %out
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[OUTPUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
@@ -91,8 +91,8 @@ define void @drop_scalar_gep_nusw(ptr noalias nocapture readonly %input, ptr %ou
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr nusw float, ptr [[OUTPUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr nusw float, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
@@ -143,8 +143,8 @@ define void @drop_scalar_gep_nuw(ptr noalias nocapture readonly %input, ptr %out
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr nuw float, ptr [[OUTPUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr nuw float, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
@@ -196,8 +196,8 @@ define void @drop_nonpred_scalar_nuw_nsw(ptr noalias nocapture readonly %input, 
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[OUTPUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
@@ -248,8 +248,8 @@ define void @preserve_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr 
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[OUTPUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
@@ -305,8 +305,8 @@ define void @drop_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr %out
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[OUTPUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP9]], align 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
@@ -356,8 +356,8 @@ define void @preserve_nuw_nsw_no_addr(ptr %output) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[OUTPUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
@@ -409,8 +409,8 @@ define void @drop_scalar_exact(ptr noalias nocapture readonly %input, ptr %outpu
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[OUTPUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP9]], align 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
@@ -518,8 +518,8 @@ define void @preserve_vector_exact_no_addr(ptr noalias nocapture readonly %input
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[OUTPUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP8]], align 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
@@ -570,8 +570,8 @@ define void @preserve_exact_no_addr(ptr %output) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[OUTPUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
@@ -698,8 +698,8 @@ define void @pr70590_recipe_without_underlying_instr(i64 %n, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP15]], i32 0
 ; CHECK-NEXT:    store <4 x i8> [[PREDPHI]], ptr [[TMP16]], align 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
@@ -778,8 +778,8 @@ define void @recipe_without_underlying_instr_lanes_used(i64 %n, ptr noalias %dst
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    store <4 x i8> [[PREDPHI]], ptr [[TMP11]], align 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;

@@ -625,6 +625,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
 
+  if (HasCSSC)
+    Builder.defineMacro("__ARM_FEATURE_CSSC", "1");
+
   if (HasRCPC3)
     Builder.defineMacro("__ARM_FEATURE_RCPC", "3");
   else if (HasRCPC)
@@ -874,6 +877,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("rdm", HasRDM)
       .Case("lse", HasLSE)
       .Case("crc", HasCRC)
+      .Case("cssc", HasCSSC)
       .Case("sha2", HasSHA2)
       .Case("sha3", HasSHA3)
       .Cases("aes", "pmull", HasAES)
@@ -1249,6 +1253,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasPAuthLR = true;
       HasPAuth = true;
     }
+    if (Feature == "+cssc")
+      HasCSSC = true;
   }
 
   // Check features that are manually disabled by command line options.
