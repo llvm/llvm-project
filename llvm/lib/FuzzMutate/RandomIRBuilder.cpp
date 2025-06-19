@@ -108,31 +108,46 @@ Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
   return findOrCreateSource(BB, Insts, {}, anyType());
 }
 
-// Some architectures do not allow arbitrary load instructions on any sort of
-// pointer. This function takes into account the target triple and legally
-// loads a value from memory.
-static std::pair<Instruction *, SmallVector<Instruction *>>
-buildTargetLegalLoad(Type *AccessTy, Value *Ptr, InsertPosition IP, Module *M,
-                     const Twine &LoadName) {
-  SmallVector<Instruction *> NewInsts;
-  Value *LoadPtr = Ptr;
-
+// Adapts the current pointer for a legal mem operation on the target arch.
+static Value *buildTargetLegalPtr(Module *M, Value *Ptr, InsertPosition IP,
+                                  const Twine &Name,
+                                  SmallVector<Instruction *> *NewInsts) {
   if (M && M->getTargetTriple().isAMDGCN()) {
     // Check if we should perform an address space cast
     PointerType *pointerType = dyn_cast<PointerType>(Ptr->getType());
     if (pointerType && pointerType->getAddressSpace() == 8) {
       // Perform address space cast from address space 8 to address space 7
       auto NewPtr = new AddrSpaceCastInst(
-          Ptr, PointerType::get(M->getContext(), 7), LoadName + ".ASC", IP);
-      NewInsts.push_back(NewPtr);
-      LoadPtr = NewPtr;
+          Ptr, PointerType::get(M->getContext(), 7), Name + ".ASC", IP);
+      if (NewInsts)
+        NewInsts->push_back(NewPtr);
+      return NewPtr;
     }
   }
 
-  Instruction *L = new LoadInst(AccessTy, LoadPtr, LoadName, IP);
-  NewInsts.push_back(L);
+  return Ptr;
+}
 
-  return std::make_pair(L, NewInsts);
+// Stores a value to memory, considering the target triple's restrictions.
+static Instruction *buildTargetLegalStore(Value *Val, Value *Ptr,
+                                          InsertPosition IP, Module *M) {
+  Value *StorePtr = buildTargetLegalPtr(M, Ptr, IP, "", nullptr);
+  Instruction *Store = new StoreInst(Val, StorePtr, IP);
+  return Store;
+}
+
+// Loads a value from memory, considering the target triple's restrictions.
+static std::pair<Instruction *, SmallVector<Instruction *>>
+buildTargetLegalLoad(Type *AccessTy, Value *Ptr, InsertPosition IP, Module *M,
+                     const Twine &LoadName) {
+  SmallVector<Instruction *> NewInsts;
+
+  Value *LoadPtr = buildTargetLegalPtr(M, Ptr, IP, LoadName, &NewInsts);
+
+  Instruction *Load = new LoadInst(AccessTy, LoadPtr, LoadName, IP);
+  NewInsts.push_back(Load);
+
+  return std::make_pair(Load, NewInsts);
 }
 
 static void eraseNewInstructions(SmallVector<Instruction *> &NewInsts) {
@@ -360,8 +375,10 @@ Instruction *RandomIRBuilder::connectToSink(BasicBlock &BB,
       std::shuffle(Dominators.begin(), Dominators.end(), Rand);
       for (BasicBlock *Dom : Dominators) {
         for (Instruction &I : *Dom) {
-          if (isa<PointerType>(I.getType()))
-            return new StoreInst(V, &I, Insts.back()->getIterator());
+          if (isa<PointerType>(I.getType())) {
+            return buildTargetLegalStore(V, &I, Insts.back()->getIterator(),
+                                         I.getModule());
+          }
         }
       }
       break;
@@ -384,10 +401,10 @@ Instruction *RandomIRBuilder::connectToSink(BasicBlock &BB,
       /// TODO: allocate a new stack memory.
       return newSink(BB, Insts, V);
     case SinkToGlobalVariable: {
-      Module *M = BB.getParent()->getParent();
+      Module *M = BB.getModule();
       auto [GV, DidCreate] =
           findOrCreateGlobalVariable(M, {}, fuzzerop::onlyType(V->getType()));
-      return new StoreInst(V, GV, Insts.back()->getIterator());
+      return buildTargetLegalStore(V, GV, Insts.back()->getIterator(), M);
     }
     case EndOfValueSink:
     default:
@@ -409,7 +426,8 @@ Instruction *RandomIRBuilder::newSink(BasicBlock &BB,
     }
   }
 
-  return new StoreInst(V, Ptr, Insts.back()->getIterator());
+  return buildTargetLegalStore(V, Ptr, Insts.back()->getIterator(),
+                               BB.getModule());
 }
 
 Value *RandomIRBuilder::findPointer(BasicBlock &BB,
