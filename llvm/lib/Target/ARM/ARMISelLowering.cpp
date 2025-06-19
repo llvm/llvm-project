@@ -590,9 +590,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   }
 
   // RTLIB
-  if (TM.isAAPCS_ABI() &&
-      (TT.isTargetAEABI() || TT.isTargetGNUAEABI() || TT.isTargetMuslAEABI() ||
-       TT.isAndroid())) {
+  if (TM.isAAPCS_ABI() && (TT.isTargetAEABI() || TT.isTargetGNUAEABI() ||
+                           TT.isTargetMuslAEABI() || TT.isAndroid())) {
     // clang-format off
     static const struct {
       const RTLIB::Libcall Op;
