@@ -416,6 +416,22 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::IncompleteArray: {
+    const IncompleteArrayType *arrTy = cast<IncompleteArrayType>(ty);
+    if (arrTy->getIndexTypeCVRQualifiers() != 0)
+      cgm.errorNYI(SourceLocation(), "non trivial array types", type);
+
+    mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
+    // int X[] -> [0 x int], unless the element type is not sized.  If it is
+    // unsized (e.g. an incomplete record) just use [0 x i8].
+    if (!builder.isSized(elemTy)) {
+      elemTy = cgm.SInt8Ty;
+    }
+
+    resultType = cir::ArrayType::get(elemTy, 0);
+    break;
+  }
+
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
