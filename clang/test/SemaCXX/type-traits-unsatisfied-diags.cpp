@@ -502,14 +502,16 @@ static_assert(__is_standard_layout(WithVirtual));
 
 struct MixedAccess { // #sl-Mixed
 public:
-    int a;
+    int a; // #sl-MixedF1
 private:
-    int b;
+    int b; // #sl-MixedF2
 };
 static_assert(__is_standard_layout(MixedAccess));
 // expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::MixedAccess)'}} \
 // expected-note@-1 {{'MixedAccess' is not standard-layout}} \
 // expected-note@-1 {{because it has mixed access specifiers}} \
+// expected-note@#sl-MixedF1 {{'a' defined here}}
+// expected-note@#sl-MixedF2 {{field 'b' has a different access specifier than field 'a'}}
 // expected-note@#sl-Mixed {{'MixedAccess' defined here}}
 
 struct VirtualBase { virtual ~VirtualBase(); };               // #sl-VirtualBase
@@ -525,14 +527,16 @@ static_assert(__is_standard_layout(VB));
 
 union U {      // #sl-U
 public:
-    int x;
+    int x; // #sl-UF1
 private:
-    int y;
+    int y; // #sl-UF2
 };                                                       
 static_assert(__is_standard_layout(U));
 // expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::U)'}} \
 // expected-note@-1 {{'U' is not standard-layout}} \
 // expected-note@-1 {{because it has mixed access specifiers}}
+// expected-note@#sl-UF1 {{'x' defined here}}
+// expected-note@#sl-UF2 {{field 'y' has a different access specifier than field 'x'}}
 // expected-note@#sl-U {{'U' defined here}}
 
 // Single base class is OK

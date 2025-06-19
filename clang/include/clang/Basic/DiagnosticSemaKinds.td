@@ -1790,6 +1790,7 @@ def note_unsatisfied_trait_reason
            "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
            "%NonStdLayoutBase{has a non-standard-layout base %1}|"
            "%MixedAccess{has mixed access specifiers}|"
+           "%MixedAccessField{field %1 has a different access specifier than field %2}|"
            "%MultipleDataBase{has multiple base classes with data members}|"
            "%VirtualFunction{has a virtual function}|"
            "%NonStdLayoutMember{has a non-standard-layout member %1 of type %2}|"
