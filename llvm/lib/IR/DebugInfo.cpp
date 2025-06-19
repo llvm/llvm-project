@@ -586,11 +586,6 @@ bool llvm::stripDebugInfo(Function &F) {
   DenseMap<MDNode *, MDNode *> LoopIDsMap;
   for (BasicBlock &BB : F) {
     for (Instruction &I : llvm::make_early_inc_range(BB)) {
-      if (isa<DbgInfoIntrinsic>(&I)) {
-        I.eraseFromParent();
-        Changed = true;
-        continue;
-      }
       if (I.getDebugLoc()) {
         Changed = true;
         I.setDebugLoc(DebugLoc());
@@ -2127,7 +2122,6 @@ static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
       &StoreLikeInst, Val, VarRec.Var, Expr, Dest, AddrExpr, VarRec.DL);
   (void)Assign;
   LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
-  return;
 }
 
 #undef DEBUG_TYPE // Silence redefinition warning (from ConstantsContext.h).

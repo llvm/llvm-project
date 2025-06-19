@@ -7,16 +7,16 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK-LABEL: @reduction_add_trunc(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP30:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP31:%.*]] = mul i32 [[TMP30]], 16
+; CHECK-NEXT:    [[TMP31:%.*]] = mul nuw i32 [[TMP30]], 16
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 256, [[TMP31]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i32 [[TMP2]], 16
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 256, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 256, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i32 [[TMP4]], 16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -27,7 +27,7 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 8
+; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP10]], 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 8 x i8>, ptr [[TMP12]], align 4

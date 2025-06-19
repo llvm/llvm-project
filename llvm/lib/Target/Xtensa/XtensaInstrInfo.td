@@ -500,6 +500,18 @@ def EXTW : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
 }
 
 //===----------------------------------------------------------------------===//
+// Illegal instructions
+//===----------------------------------------------------------------------===//
+
+def ILL : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins),
+                    "ill", []> {
+  let m = 0x0;
+  let n = 0x0;
+  let r = 0;
+  let s = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // Processor control instructions
 //===----------------------------------------------------------------------===//
 
@@ -1042,6 +1054,109 @@ let Predicates = [HasRegionProtection] in {
                       "witlb\t$t, $s", []> {
     let r = 0x6;
   }
+}
+
+//===----------------------------------------------------------------------===//
+// Debug instructions
+//===----------------------------------------------------------------------===//
+
+let isBarrier = 1, isTerminator = 1 in {
+  def BREAK : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins uimm4:$s, uimm4:$t),
+                      "break\t$s, $t", []>, Requires<[HasDebug]> {
+    let r = 0x04;
+  }
+
+  def BREAK_N : RRRN_Inst<0x0C, (outs), (ins uimm4:$imm),
+                         "break.n\t$imm", []>, Requires<[HasDensity, HasDebug]> {
+    bits<4> imm;
+
+    let r = 0xf;
+    let s = imm;
+    let t = 0x2;
+  }
+}
+
+def : InstAlias<"_break.n\t$imm", (BREAK_N uimm4:$imm)>;
+
+def : Pat<(trap), (BREAK (i32 1), (i32 15))>;
+
+// Load instruction
+def LDDR32P : RRR_Inst<0x00, 0x00, 0x00, (outs AR:$s), (ins),
+                       "lddr32.p\t$s", []>, Requires<[HasDebug]> {
+  let r = 0x7;
+  let t = 0xe;
+  let mayLoad = 1;
+}
+
+// Store instruction
+def SDDR32P : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins AR:$s),
+                       "sddr32.p\t$s", []>, Requires<[HasDebug]> {
+  let r = 0x7;
+  let t = 0xf;
+  let mayStore = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Exception feature instructions
+//===----------------------------------------------------------------------===//
+
+def EXCW : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
+                   "excw", []>, Requires<[HasException]> {
+  let r = 0x2;
+  let s = 0x0;
+  let t = 0x8;
+}
+
+def RFDE : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
+                   "rfde", []>, Requires<[HasException]> {
+  let r = 0x3;
+  let s = 0x2;
+  let t = 0x0;
+}
+
+
+def RFE : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
+                  "rfe", []>, Requires<[HasException]> {
+  let r = 0x3;
+  let s = 0x0;
+  let t = 0x0;
+}
+
+def SYSCALL : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
+                      "syscall", []>, Requires<[HasException]> {
+  let r = 0x5;
+  let s = 0x0;
+  let t = 0x0;
+}
+
+//===----------------------------------------------------------------------===//
+// Interrupt feature instructions
+//===----------------------------------------------------------------------===//
+
+def RSIL : RRR_Inst<0x00, 0x00, 0x00, (outs AR:$t), (ins uimm4:$imm),
+                   "rsil\t$t, $imm", []>, Requires<[HasInterrupt]> {
+  bits<4> imm;
+
+  let r = 0x6;
+  let s = imm{3-0};
+}
+
+def WAITI : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins uimm4:$imm),
+                   "waiti\t$imm", []>, Requires<[HasInterrupt]> {
+  bits<4> imm;
+
+  let r = 0x7;
+  let s = imm{3-0};
+  let t = 0;
+}
+
+def RFI : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins uimm4:$imm),
+                  "rfi\t$imm", []>, Requires<[HasHighPriInterrupts]> {
+  bits<4> imm;
+
+  let r = 0x3;
+  let s = imm{3-0};
+  let t = 0x1;
 }
 
 //===----------------------------------------------------------------------===//

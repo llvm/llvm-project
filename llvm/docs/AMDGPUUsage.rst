@@ -1215,12 +1215,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    denormalization mode, enabled traps, and floating point exceptions.
                                                    The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
 
-  :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specifies state.
+  :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specified state.
   llvm.amdgcn.load.to.lds.p<1/7>                   Loads values from global memory (either in the form of a global
                                                    a raw fat buffer pointer) to LDS. The size of the data copied can be 1, 2,
                                                    or 4 bytes (and gfx950 also allows 12 or 16 bytes). The LDS pointer
                                                    argument should be wavefront-uniform; the global pointer need not be.
-                                                   The LDS pointer is implicitly offset by 4 * lane_id bytes for sies <= 4 bytes
+                                                   The LDS pointer is implicitly offset by 4 * lane_id bytes for size <= 4 bytes
                                                    and 16 * lane_id bytes for larger sizes. This lowers to `global_load_lds`,
                                                    `buffer_load_* ... lds`, or `global_load__* ... lds` depending on address
                                                    space and architecture. `amdgcn.global.load.lds` has the same semantics as
@@ -1401,6 +1401,10 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    and ds_cond_sub_u32 based on address space on gfx12 targets. This
                                                    performs subtraction only if the memory value is greater than or
                                                    equal to the data value.
+
+  llvm.amdgcn.s.barrier.signal.isfirst             Provides access to the s_barrier_signal_first instruction;
+                                                   additionally ensures that the result value is valid even when the
+                                                   intrinsic is used from a wave that is not running in a workgroup.
 
   llvm.amdgcn.s.getpc                              Provides access to the s_getpc_b64 instruction, but with the return value
                                                    sign-extended from the width of the underlying PC hardware register even on
@@ -2709,7 +2713,8 @@ The following relocation types are supported:
 the ``mesa3d`` OS, which does not support ``R_AMDGPU_ABS64``.
 
 There is no current OS loader support for 32-bit programs and so
-``R_AMDGPU_ABS32`` is not used.
+``R_AMDGPU_ABS32`` is only generated for static relocations, for example to
+implement some DWARF32 forms.
 
 .. _amdgpu-loaded-code-object-path-uniform-resource-identifier:
 
