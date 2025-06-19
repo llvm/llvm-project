@@ -108,6 +108,40 @@ Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
   return findOrCreateSource(BB, Insts, {}, anyType());
 }
 
+// Some architectures do not allow arbitrary load instructions on any sort of
+// pointer. This function takes into account the target triple and legally
+// loads a value from memory.
+static std::pair<Instruction *, SmallVector<Instruction *>>
+buildTargetLegalLoad(Type *AccessTy, Value *Ptr, InsertPosition IP, Module *M,
+                     const Twine &LoadName) {
+  SmallVector<Instruction *> NewInsts;
+  Value *LoadPtr = Ptr;
+
+  if (M && M->getTargetTriple().isAMDGCN()) {
+    // Check if we should perform an address space cast
+    PointerType *pointerType = dyn_cast<PointerType>(Ptr->getType());
+    if (pointerType && pointerType->getAddressSpace() == 8) {
+      // Perform address space cast from address space 8 to address space 7
+      auto NewPtr = new AddrSpaceCastInst(
+          Ptr, PointerType::get(M->getContext(), 7), LoadName + ".ASC", IP);
+      NewInsts.push_back(NewPtr);
+      LoadPtr = NewPtr;
+    }
+  }
+
+  Instruction *L = new LoadInst(AccessTy, LoadPtr, LoadName, IP);
+  NewInsts.push_back(L);
+
+  return std::make_pair(L, NewInsts);
+}
+
+static void eraseNewInstructions(SmallVector<Instruction *> &NewInsts) {
+  // Remove in reverse order (uses before defs)
+  for (auto it = NewInsts.rbegin(); it != NewInsts.rend(); ++it) {
+    (*it)->eraseFromParent();
+  }
+}
+
 Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
                                            ArrayRef<Instruction *> Insts,
                                            ArrayRef<Value *> Srcs,
@@ -158,19 +192,20 @@ Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
       Module *M = BB.getParent()->getParent();
       auto [GV, DidCreate] = findOrCreateGlobalVariable(M, Srcs, Pred);
       Type *Ty = GV->getValueType();
-      LoadInst *LoadGV = nullptr;
-      if (BB.getTerminator()) {
-        LoadGV = new LoadInst(Ty, GV, "LGV", BB.getFirstInsertionPt());
-      } else {
-        LoadGV = new LoadInst(Ty, GV, "LGV", &BB);
-      }
+      InsertPosition IP = BB.getTerminator()
+                              ? InsertPosition(BB.getFirstInsertionPt())
+                              : InsertPosition(&BB);
+      // Build a legal load and track new instructions in case a rollback is
+      // needed.
+      auto [LoadGV, NewInsts] = buildTargetLegalLoad(Ty, GV, IP, M, "LGV");
       // Because we might be generating new values, we have to check if it
       // matches again.
       if (DidCreate) {
         if (Pred.matches(Srcs, LoadGV)) {
           return LoadGV;
         }
-        LoadGV->eraseFromParent();
+        // Remove newly inserted instructions
+        eraseNewInstructions(NewInsts);
         // If no one is using this GlobalVariable, delete it too.
         if (GV->use_empty()) {
           GV->eraseFromParent();
@@ -208,13 +243,18 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
     }
     // Pick the type independently.
     Type *AccessTy = RS.getSelection()->getType();
-    auto *NewLoad = new LoadInst(AccessTy, Ptr, "L", IP);
+    // Build a legal load and track new instructions in case a rollback is
+    // needed.
+    auto [NewLoad, NewInsts] =
+        buildTargetLegalLoad(AccessTy, Ptr, IP, BB.getModule(), "L");
 
     // Only sample this load if it really matches the descriptor
     if (Pred.matches(Srcs, NewLoad))
       RS.sample(NewLoad, RS.totalWeight());
-    else
-      NewLoad->eraseFromParent();
+    else {
+      // Remove newly inserted instructions
+      eraseNewInstructions(NewInsts);
+    }
   }
 
   Value *newSrc = RS.getSelection();
