@@ -6,24 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
-#include "gtest/gtest.h"
 
-// This custom main entry point for the AllClangUnitTests binary registers all
-// tests on startup, so the tests don't become sensitive to target registration
-// within the test suite.
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  llvm::cl::ParseCommandLineOptions(argc, argv);
+namespace {
+struct RegisterAllLLVMTargets {
+  RegisterAllLLVMTargets();
+} gv;
+} // namespace
 
-  // Initialize all levels of target components. Keep this in sync with
-  // cc1_main.
+// This dynamic initializer initializes all layers (TargetInfo, MC, CodeGen,
+// AsmPrinter, etc) of all LLVM targets. This matches what cc1_main does on
+// startup, and prevents tests from initializing some of the Target layers,
+// which can interfere with tests that assume that lower target layers are
+// registered if the TargetInfo is registered.
+RegisterAllLLVMTargets::RegisterAllLLVMTargets() {
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmPrinters();
   llvm::InitializeAllAsmParsers();
-
-  return RUN_ALL_TESTS();
 }
