@@ -1570,6 +1570,11 @@ def : CompressPat<(QC_E_ADDI X2, X2, simm10_lsb0000nonzero:$imm),
                   (C_ADDI16SP X2, simm10_lsb0000nonzero:$imm)>;
 } // let isCompressOnly = true, Predicates = [HasVendorXqcilia, IsRV32]
 
+let Predicates = [HasVendorXqciac, IsRV32] in {
+def : CompressPat<(QC_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5),
+                  (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5)>;
+}
+
 let isCompressOnly = true, Predicates = [HasVendorXqcibi, IsRV32] in {
 def : CompressPat<(QC_E_BEQI GPRNoX0:$rs1, simm5nonzero:$imm5, bare_simm13_lsb0:$imm12),
                   (QC_BEQI GPRNoX0:$rs1, simm5nonzero:$imm5, bare_simm13_lsb0:$imm12)>;
