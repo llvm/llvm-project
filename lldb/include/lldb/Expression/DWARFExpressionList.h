@@ -66,7 +66,7 @@ public:
     const DWARFExpression *expr;
   };
 
-  /// Returns the entry (base, end, data) for a given PC address
+  /// Returns the DWARFExpressionEntry for a given PC address.
   llvm::Expected<DWARFExpressionEntry>
   GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
                               lldb::addr_t load_addr) const;
