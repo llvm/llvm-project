@@ -643,6 +643,8 @@ Improvements to Clang's diagnostics
   #GH36703, #GH32903, #GH23312, #GH69874.
 
 
+- Clang now diagnoses ``-Wunused-member-function`` with a specific message for constructors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
