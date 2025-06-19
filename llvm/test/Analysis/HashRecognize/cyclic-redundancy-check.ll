@@ -144,6 +144,34 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
+define i8 @crc8.le.tc16(i16 %msg, i8 %checksum) {
+; CHECK-LABEL: 'crc8.le.tc16'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Simple recurrence doesn't use conditional recurrence with XOR
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i8 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %data.trunc = trunc i16 %data to i8
+  %xor.crc.data = xor i8 %crc, %data.trunc
+  %and.crc.data = and i8 %xor.crc.data, 1
+  %data.next = lshr i16 %data, 1
+  %check.sb = icmp eq i8 %and.crc.data, 0
+  %crc.lshr = lshr i8 %crc, 1
+  %crc.xor = xor i8 %crc.lshr, 29
+  %crc.next = select i1 %check.sb, i8 %crc.lshr, i8 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i8 %crc.next
+}
+
 define i16 @crc16.be.tc8.crc.init.li(i16 %checksum, i8 %msg) {
 ; CHECK-LABEL: 'crc16.be.tc8.crc.init.li'
 ; CHECK-NEXT:  Found big-endian CRC-16 loop with trip count 8
@@ -610,9 +638,8 @@ loop:                                              ; preds = %loop, %entry
   %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
   %data = phi i8 [ %msg, %entry ], [ %data.next, %loop ]
   %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
-  %crc.lshr = lshr i16 %crc, 8
   %data.ext = zext i8 %data to i16
-  %xor.crc.data = xor i16 %crc.lshr, %data.ext
+  %xor.crc.data = xor i16 %crc, %data.ext
   %check.sb = icmp samesign ult i16 %xor.crc.data, 128
   %crc.shl = shl i16 %crc, 1
   %crc.xor = xor i16 %crc.shl, 258
@@ -830,6 +857,33 @@ loop:                                              ; preds = %loop, %entry
   %crc.lshr = lshr i16 %crc, 1
   %crc.xor = xor i16 %crc.lshr, -24575
   %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.lshr
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @not.crc.bad.cast(i8 %msg, i16 %checksum) {
+; CHECK-LABEL: 'not.crc.bad.cast'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Simple recurrence doesn't use conditional recurrence with XOR
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %data = phi i8 [ %msg, %entry ], [ %data.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data.ext = zext i8 %data to i16
+  %xor.crc.data = xor i16 %crc, %data.ext
+  %check.sb = icmp slt i16 %xor.crc.data, 0
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 29
+  %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %crc.xor
+  %data.next = shl i8 %data, 1
   %iv.next = add nuw nsw i8 %iv, 1
   %exit.cond = icmp samesign ult i8 %iv, 7
   br i1 %exit.cond, label %loop, label %exit
