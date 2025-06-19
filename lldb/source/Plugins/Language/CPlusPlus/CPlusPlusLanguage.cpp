@@ -244,15 +244,20 @@ GetAndValidateInfo(const SymbolContext &sc) {
 
   auto demangled_name = mangled.GetDemangledName().GetStringRef();
   if (demangled_name.empty())
-    return llvm::createStringError("Function does not have a demangled name.");
+    return llvm::createStringError(
+        "Function '%s' does not have a demangled name.",
+        mangled.GetMangledName().AsCString(""));
 
   const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
   if (!info)
-    return llvm::createStringError("Function does not have demangled info.");
+    return llvm::createStringError(
+        "Function '%s' does not have demangled info.", demangled_name.data());
 
   // Function without a basename is nonsense.
   if (!info->hasBasename())
-    return llvm::createStringError("Info do not have basename range.");
+    return llvm::createStringError(
+        "DemangledInfo for '%s does not have basename range.",
+        demangled_name.data());
 
   return std::make_pair(demangled_name, *info);
 }
@@ -278,7 +283,8 @@ GetDemangledTemplateArguments(const SymbolContext &sc) {
   auto [demangled_name, info] = *info_or_err;
 
   if (info.ArgumentsRange.first < info.BasenameRange.second)
-    return llvm::createStringError("Arguments in info are invalid.");
+    return llvm::createStringError("Arguments range for '%s' is invalid.",
+                                   demangled_name.data());
 
   return demangled_name.slice(info.BasenameRange.second,
                               info.ArgumentsRange.first);
@@ -293,7 +299,9 @@ GetDemangledReturnTypeLHS(const SymbolContext &sc) {
   auto [demangled_name, info] = *info_or_err;
 
   if (info.ScopeRange.first >= demangled_name.size())
-    return llvm::createStringError("Scope range is invalid.");
+    return llvm::createStringError(
+        "Scope range for '%s' LHS return type is invalid.",
+        demangled_name.data());
 
   return demangled_name.substr(0, info.ScopeRange.first);
 }
@@ -307,7 +315,8 @@ GetDemangledFunctionQualifiers(const SymbolContext &sc) {
   auto [demangled_name, info] = *info_or_err;
 
   if (info.QualifiersRange.second < info.QualifiersRange.first)
-    return llvm::createStringError("Qualifiers range is invalid.");
+    return llvm::createStringError("Qualifiers range for '%s' is invalid.",
+                                   demangled_name.data());
 
   return demangled_name.slice(info.QualifiersRange.first,
                               info.QualifiersRange.second);
@@ -321,8 +330,12 @@ GetDemangledReturnTypeRHS(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (info.QualifiersRange.first < info.ArgumentsRange.second)
-    return llvm::createStringError("Qualifiers range is invalid.");
+  if (info.QualifiersRange.first <
+      info.ArgumentsRange.second) // TODO: Replace with .hasArgumentsRange()
+                                  // once #144549 lands.
+    return llvm::createStringError(
+        "Qualifiers range for '%s' RHS return type  is invalid.",
+        demangled_name.data());
 
   return demangled_name.slice(info.ArgumentsRange.second,
                               info.QualifiersRange.first);
@@ -337,7 +350,8 @@ GetDemangledScope(const SymbolContext &sc) {
   auto [demangled_name, info] = *info_or_err;
 
   if (info.ScopeRange.second < info.ScopeRange.first)
-    return llvm::createStringError("Info do not have basename range.");
+    return llvm::createStringError("Scope range for '%s' is invalid.",
+                                   demangled_name.data());
 
   return demangled_name.slice(info.ScopeRange.first, info.ScopeRange.second);
 }
@@ -360,8 +374,9 @@ static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
 
   auto info_or_err = GetAndValidateInfo(sc);
   if (!info_or_err) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Language), info_or_err.takeError(),
-                   "Failed to retrieve demangled info: {0}");
+    LLDB_LOG_ERROR(
+        GetLog(LLDBLog::Language), info_or_err.takeError(),
+        "Failed to handle ${function.basename} frame-format variable: {0}");
     return false;
   }
   auto [demangled_name, info] = *info_or_err;
@@ -1898,8 +1913,9 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   case FormatEntity::Entry::Type::FunctionScope: {
     auto scope_or_err = GetDemangledScope(sc);
     if (!scope_or_err) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Language), scope_or_err.takeError(),
-                     "Failed to retrieve scope: {0}");
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Language), scope_or_err.takeError(),
+          "Failed to handle ${function.scope} frame-format variable: {0}");
       return false;
     }
 
@@ -1911,8 +1927,9 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   case FormatEntity::Entry::Type::FunctionBasename: {
     auto name_or_err = GetDemangledBasename(sc);
     if (!name_or_err) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Language), name_or_err.takeError(),
-                     "Failed to retrieve basename: {0}");
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Language), name_or_err.takeError(),
+          "Failed to handle ${function.basename} frame-format variable: {0}");
       return false;
     }
 
@@ -1926,7 +1943,8 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     if (!template_args_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language),
                      template_args_or_err.takeError(),
-                     "Failed to retrieve template arguments: {0}");
+                     "Failed to handle ${function.template-arguments} "
+                     "frame-format variable: {0}");
       return false;
     }
 
@@ -1962,7 +1980,8 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     auto return_rhs_or_err = GetDemangledReturnTypeRHS(sc);
     if (!return_rhs_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language), return_rhs_or_err.takeError(),
-                     "Failed to retrieve RHS return type: {0}");
+                     "Failed to handle ${function.return-right} frame-format "
+                     "variable: {0}");
       return false;
     }
 
@@ -1974,7 +1993,8 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     auto return_lhs_or_err = GetDemangledReturnTypeLHS(sc);
     if (!return_lhs_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language), return_lhs_or_err.takeError(),
-                     "Failed to retrieve LHS return type: {0}");
+                     "Failed to handle ${function.return-left} frame-format "
+                     "variable: {0}");
       return false;
     }
 
@@ -1985,8 +2005,9 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   case FormatEntity::Entry::Type::FunctionQualifiers: {
     auto quals_or_err = GetDemangledFunctionQualifiers(sc);
     if (!quals_or_err) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Language), quals_or_err.takeError(),
-                     "Failed to retrieve function qualifiers: {0}");
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Language), quals_or_err.takeError(),
+          "Failed to handle ${function.qualifiers} frame-format variable: {0}");
       return false;
     }
 
@@ -1997,8 +2018,9 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   case FormatEntity::Entry::Type::FunctionSuffix: {
     auto suffix_or_err = GetDemangledFunctionSuffix(sc);
     if (!suffix_or_err) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Language), suffix_or_err.takeError(),
-                     "Failed to retrieve suffix: {0}");
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Language), suffix_or_err.takeError(),
+          "Failed to handle ${function.suffix} frame-format variable: {0}");
       return false;
     }
 
