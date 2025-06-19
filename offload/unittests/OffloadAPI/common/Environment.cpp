@@ -15,6 +15,7 @@
 
 using namespace llvm;
 
+#ifndef DISABLE_WRAPPER
 // Wrapper so we don't have to constantly init and shutdown Offload in every
 // test, while having sensible lifetime for the platform environment
 struct OffloadInitWrapper {
@@ -22,6 +23,7 @@ struct OffloadInitWrapper {
   ~OffloadInitWrapper() { olShutDown(); }
 };
 static OffloadInitWrapper Wrapper{};
+#endif
 
 static cl::opt<std::string>
     SelectedPlatform("platform", cl::desc("Only test the specified platform"),

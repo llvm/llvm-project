@@ -94,16 +94,15 @@ struct AllocInfo {
 };
 
 using AllocInfoMapT = DenseMap<void *, AllocInfo>;
-AllocInfoMapT &allocInfoMap() {
-  static AllocInfoMapT AllocInfoMap{};
-  return AllocInfoMap;
-}
+static AllocInfoMapT *AllocInfoMap;
+AllocInfoMapT &allocInfoMap() { return *AllocInfoMap; }
 
 using PlatformVecT = SmallVector<ol_platform_impl_t, 4>;
-PlatformVecT &Platforms() {
-  static PlatformVecT Platforms;
-  return Platforms;
-}
+static PlatformVecT *PlatformList;
+PlatformVecT &Platforms() { return *PlatformList; }
+
+static std::mutex InitDeinitMtx;
+static uint32_t RefCount = 0;
 
 ol_device_handle_t HostDevice() {
   // The host platform is always inserted last
@@ -130,6 +129,9 @@ constexpr ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 #include "Shared/Targets.def"
 
 void initPlugins() {
+  PlatformList = new PlatformVecT();
+  AllocInfoMap = new AllocInfoMapT();
+
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
@@ -168,15 +170,39 @@ void initPlugins() {
       !std::getenv("OFFLOAD_DISABLE_VALIDATION");
 }
 
-// TODO: We can properly reference count here and manage the resources in a more
-// clever way
 Error olInit_impl() {
-  static std::once_flag InitFlag;
-  std::call_once(InitFlag, initPlugins);
+  std::lock_guard<std::mutex> Guard{InitDeinitMtx};
+
+  if (++RefCount == 1)
+    initPlugins();
 
   return Error::success();
 }
-Error olShutDown_impl() { return Error::success(); }
+
+Error olShutDown_impl() {
+  std::lock_guard<std::mutex> Guard{InitDeinitMtx};
+
+  if (--RefCount != 0)
+    return Error::success();
+
+  llvm::Error Result = Error::success();
+
+  for (auto &P : Platforms()) {
+    // Host plugin is nullptr and has no deinit
+    if (!P.Plugin)
+      continue;
+
+    if (auto Res = P.Plugin->deinit())
+      Result = llvm::joinErrors(std::move(Result), std::move(Res));
+  }
+
+  delete PlatformList;
+  PlatformList = nullptr;
+  delete AllocInfoMap;
+  AllocInfoMap = nullptr;
+
+  return Result;
+}
 
 Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
                                   ol_platform_info_t PropName, size_t PropSize,
@@ -458,6 +484,9 @@ Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
 }
 
 Error olDestroyProgram_impl(ol_program_handle_t Program) {
+  if (auto Err = Program->Image->getDevice().unloadBinary(Program->Image))
+    return Err;
+
   return olDestroy(Program);
 }
 
