@@ -511,8 +511,8 @@ fuseElementwiseOps(RewriterBase &rewriter, OpOperand *fusedOperand);
 /// * There is a chance that the implementation of the transformation does not
 /// agree with the result of this method. This function gives a prediction based
 /// on an optimized fusion.
-llvm::SmallDenseSet<int> getPreservedProducerResults(GenericOp producer,
-                                                     GenericOp consumer,
+llvm::SmallDenseSet<int> getPreservedProducerResults(LinalgOp producer,
+                                                     LinalgOp consumer,
                                                      OpOperand *fusedOperand);
 
 /// Try to peel and canonicalize loop `op` and return the new result.
