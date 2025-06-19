@@ -1192,7 +1192,7 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
       attrs.name.GetCString());
 
   // In DWARF, a C++ method is static if it has no object parameter child.
-  const bool is_static = object_parameter.IsValid();
+  const bool is_static = !object_parameter.IsValid();
 
   // We have a C++ member function with no children (this pointer!) and clang
   // will get mad if we try and make a function that isn't well formed in the
