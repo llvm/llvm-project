@@ -11,7 +11,7 @@ define void @main() !dbg !5 {
   ; CHECK-NEXT: DW_AT_decl_file
   ; CHECK-NEXT: DW_AT_decl_line
   ; CHECK-NEXT: DW_AT_type (0x{{[0-9a-z]+}} "i32")
-  tail call void @llvm.dbg.value(metadata i8 -1, metadata !10, metadata !DIExpression(DIOpArg(0, i8), DIOpSExt(i32))), !dbg !15
+    #dbg_value(i8 -1, !10, !DIExpression(DIOpArg(0, i8), DIOpSExt(i32)), !15)
 
   ; CHECK: 0x{{[0-9a-z]+}}: DW_TAG_variable
   ; CHECK-NEXT: DW_AT_location (DW_OP_constu 0xff, DW_OP_constu 0xff, DW_OP_and, DW_OP_stack_value)
@@ -19,7 +19,7 @@ define void @main() !dbg !5 {
   ; CHECK-NEXT: DW_AT_decl_file
   ; CHECK-NEXT: DW_AT_decl_line
   ; CHECK-NEXT: DW_AT_type (0x{{[0-9a-z]+}} "i32")
-  tail call void @llvm.dbg.value(metadata i8 -1, metadata !11, metadata !DIExpression(DIOpArg(0, i8), DIOpZExt(i32))), !dbg !15
+    #dbg_value(i8 -1, !11, !DIExpression(DIOpArg(0, i8), DIOpZExt(i32)), !15)
 
   ; CHECK: 0x{{[0-9a-z]+}}: DW_TAG_variable
   ; CHECK-NEXT: DW_AT_location (DW_OP_constu 0xfffffffffffffff6, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_stack_value)
@@ -27,7 +27,7 @@ define void @main() !dbg !5 {
   ; CHECK-NEXT: DW_AT_decl_file
   ; CHECK-NEXT: DW_AT_decl_line
   ; CHECK-NEXT: DW_AT_type (0x{{[0-9a-z]+}} "i32")
-  tail call void @llvm.dbg.value(metadata i64 -10, metadata !12, metadata !DIExpression(DIOpArg(0, i64), DIOpConvert(i32))), !dbg !15
+    #dbg_value(i64 -10, !12, !DIExpression(DIOpArg(0, i64), DIOpConvert(i32)), !15)
 
   ; CHECK: 0x{{[0-9a-z]+}}: DW_TAG_variable
   ; CHECK-NEXT: DW_AT_location (DW_OP_constu 0xff, DW_OP_dup, DW_OP_constu 0x7, DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_constu 0x8, DW_OP_shl, DW_OP_or, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value)
@@ -35,7 +35,7 @@ define void @main() !dbg !5 {
   ; CHECK-NEXT: DW_AT_decl_file
   ; CHECK-NEXT: DW_AT_decl_line
   ; CHECK-NEXT: DW_AT_type (0x{{[0-9a-z]+}} "i32")
-  tail call void @llvm.dbg.value(metadata i8 -1, metadata !13, metadata !DIExpression(DIOpArg(0, i8), DIOpSExt(i32), DIOpConstant(i32 1), DIOpAdd())), !dbg !15
+    #dbg_value(i8 -1, !13, !DIExpression(DIOpArg(0, i8), DIOpSExt(i32), DIOpConstant(i32 1), DIOpAdd()), !15)
 
   ; CHECK: 0x{{[0-9a-z]+}}: DW_TAG_variable
   ; CHECK-NEXT: DW_AT_location (DW_OP_constu 0x2a, DW_OP_stack_value)
@@ -43,7 +43,7 @@ define void @main() !dbg !5 {
   ; CHECK-NEXT: DW_AT_decl_file
   ; CHECK-NEXT: DW_AT_decl_line
   ; CHECK-NEXT: DW_AT_type (0x{{[0-9a-z]+}} "i32")
-  tail call void @llvm.dbg.value(metadata i32 42, metadata !14, metadata !DIExpression(DIOpArg(0, i32), DIOpConvert(i32))), !dbg !15
+    #dbg_value(i32 42, !14, !DIExpression(DIOpArg(0, i32), DIOpConvert(i32)), !15)
 
   ret void, !dbg !15
 }
