@@ -278,3 +278,20 @@ func.func @set_mesh_outputs(%0 : i32, %1 : i32) -> () {
   spirv.EXT.SetMeshOutputs %0, %1 : i32, i32
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// GraphARM ops
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: graph_arm
+spirv.ARM.Graph @graph_arm(%arg0: !spirv.arm.tensor<1x16x16x16xi8>) -> !spirv.arm.tensor<1x16x16x16xi8> {
+  // CHECK: spirv.ARM.GraphOutputs min version: v1.0
+  // CHECK: spirv.ARM.GraphOutputs max version: v1.6
+  // CHECK: spirv.ARM.GraphOutputs extensions: [ [SPV_ARM_graph, SPV_ARM_tensors, SPV_KHR_vulkan_memory_model] ]
+  // CHECK: spirv.ARM.GraphOutputs capabilities: [ [GraphARM] ]
+  spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<1x16x16x16xi8>
+// CHECK: spirv.ARM.Graph min version: v1.0
+// CHECK: spirv.ARM.Graph max version: v1.6
+// CHECK: spirv.ARM.Graph extensions: [ [SPV_ARM_graph, SPV_ARM_tensors, SPV_KHR_vulkan_memory_model] ]
+// CHECK: spirv.ARM.Graph capabilities: [ [GraphARM] ]
+}
