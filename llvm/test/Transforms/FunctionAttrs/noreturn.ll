@@ -2,25 +2,25 @@
 
 declare i32 @f()
 
-; CHECK: Function Attrs: {{.*}}noreturn
+; CHECK: Function Attrs: noreturn
 ; CHECK-NEXT: @noreturn()
 declare i32 @noreturn() noreturn
 
-; CHECK: Function Attrs: {{.*}}noreturn
+; CHECK: Function Attrs: noreturn
 ; CHECK-NEXT: @caller()
 define i32 @caller() {
   %c = call i32 @noreturn()
   ret i32 %c
 }
 
-; CHECK: Function Attrs: {{.*}}noreturn
+; CHECK: Function Attrs: noreturn
 ; CHECK-NEXT: @caller2()
 define i32 @caller2() {
   %c = call i32 @caller()
   ret i32 %c
 }
 
-; CHECK: Function Attrs: {{.*}}noreturn
+; CHECK: Function Attrs: noreturn
 ; CHECK-NEXT: @caller3()
 define i32 @caller3() {
 entry:
