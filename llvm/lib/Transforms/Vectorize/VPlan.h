@@ -1304,24 +1304,15 @@ protected:
 class VPWidenRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   unsigned Opcode;
 
-protected:
-  VPWidenRecipe(unsigned VPDefOpcode, Instruction &I,
-                ArrayRef<VPValue *> Operands)
-      : VPRecipeWithIRFlags(VPDefOpcode, Operands, I), VPIRMetadata(I),
-        Opcode(I.getOpcode()) {}
-
-  VPWidenRecipe(unsigned VPDefOpcode, unsigned Opcode,
-                ArrayRef<VPValue *> Operands, bool NUW, bool NSW, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDefOpcode, Operands, WrapFlagsTy(NUW, NSW), DL),
+public:
+  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                const VPIRFlags &Flags, DebugLoc DL)
+      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
         Opcode(Opcode) {}
 
-public:
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands)
-      : VPWidenRecipe(VPDef::VPWidenSC, I, Operands) {}
-
-  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands, bool NUW,
-                bool NSW, DebugLoc DL)
-      : VPWidenRecipe(VPDef::VPWidenSC, Opcode, Operands, NUW, NSW, DL) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I), VPIRMetadata(I),
+        Opcode(I.getOpcode()) {}
 
   ~VPWidenRecipe() override = default;
 
