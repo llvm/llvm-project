@@ -154,7 +154,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
       The `assume_alignment` operation takes a memref and an integer alignment
       value. It returns a new SSA value of the same memref type, but associated
       with the assumption that the underlying buffer is aligned to the given
-      alignment. 
+      alignment.
 
       If the buffer isn't aligned to the given alignment, its result is poison.
       This operation doesn't affect the semantics of a program where the
@@ -169,7 +169,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
   let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
   let extraClassDeclaration = [{
     MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
-    
+
     Value getViewSource() { return getMemref(); }
   }];
 
@@ -1160,7 +1160,7 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       OptionalAttr<StrAttr>:$sym_visibility,
+                       OptionalAttr<SymbolVisibilityAttr>:$sym_visibility,
                        MemRefTypeAttr:$type,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$constant,
