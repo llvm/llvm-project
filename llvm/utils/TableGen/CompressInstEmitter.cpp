@@ -278,8 +278,9 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
                    << (IsSourceInst ? "input " : "output ")
                    << "Dag. No validation time check possible for values of "
                       "fixed immediate.\n");
-      } else
+      } else {
         llvm_unreachable("Unhandled CompressPat argument type!");
+      }
     }
   }
 }
@@ -540,9 +541,9 @@ getReqFeatures(std::set<std::pair<bool, StringRef>> &FeaturesSet,
           !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
         PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
       if (IsOr)
-        AnyOfSet.insert({IsNot, cast<DefInit>(Arg)->getDef()->getName()});
+        AnyOfSet.emplace(IsNot, cast<DefInit>(Arg)->getDef()->getName());
       else
-        FeaturesSet.insert({IsNot, cast<DefInit>(Arg)->getDef()->getName()});
+        FeaturesSet.emplace(IsNot, cast<DefInit>(Arg)->getDef()->getName());
     }
 
     if (IsOr)

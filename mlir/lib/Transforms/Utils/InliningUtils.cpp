@@ -248,7 +248,6 @@ static void handleResultImpl(InlinerInterface &interface, OpBuilder &builder,
   }
 
   // Run the result attribute handler for the given result and attribute.
-  SmallVector<DictionaryAttr> resultAttributes;
   for (auto [result, resAttr] : llvm::zip(results, resAttrs)) {
     // Store the original result users before running the handler.
     DenseSet<Operation *> resultUsers(llvm::from_range, result.getUsers());

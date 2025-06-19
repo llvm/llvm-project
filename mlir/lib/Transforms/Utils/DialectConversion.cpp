@@ -848,7 +848,7 @@ namespace detail {
 struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   explicit ConversionPatternRewriterImpl(MLIRContext *ctx,
                                          const ConversionConfig &config)
-      : context(ctx), eraseRewriter(ctx), config(config) {}
+      : context(ctx), config(config) {}
 
   //===--------------------------------------------------------------------===//
   // State Management
@@ -981,8 +981,11 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// no new IR is created between calls to `eraseOp`/`eraseBlock`.
   struct SingleEraseRewriter : public RewriterBase, RewriterBase::Listener {
   public:
-    SingleEraseRewriter(MLIRContext *context)
-        : RewriterBase(context, /*listener=*/this) {}
+    SingleEraseRewriter(
+        MLIRContext *context,
+        std::function<void(Operation *)> opErasedCallback = nullptr)
+        : RewriterBase(context, /*listener=*/this),
+          opErasedCallback(opErasedCallback) {}
 
     /// Erase the given op (unless it was already erased).
     void eraseOp(Operation *op) override {
@@ -1003,13 +1006,20 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
 
     bool wasErased(void *ptr) const { return erased.contains(ptr); }
 
-    void notifyOperationErased(Operation *op) override { erased.insert(op); }
+    void notifyOperationErased(Operation *op) override {
+      erased.insert(op);
+      if (opErasedCallback)
+        opErasedCallback(op);
+    }
 
     void notifyBlockErased(Block *block) override { erased.insert(block); }
 
   private:
     /// Pointers to all erased operations and blocks.
     DenseSet<void *> erased;
+
+    /// A callback that is invoked when an operation is erased.
+    std::function<void(Operation *)> opErasedCallback;
   };
 
   //===--------------------------------------------------------------------===//
@@ -1018,11 +1028,6 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
 
   /// MLIR context.
   MLIRContext *context;
-
-  /// A rewriter that keeps track of ops/block that were already erased and
-  /// skips duplicate op/block erasures. This rewriter is used during the
-  /// "cleanup" phase.
-  SingleEraseRewriter eraseRewriter;
 
   // Mapping between replaced values that differ in type. This happens when
   // replacing a value with one of a different type.
@@ -1195,6 +1200,11 @@ void ConversionPatternRewriterImpl::applyRewrites() {
     rewrites[i]->commit(rewriter);
 
   // Clean up all rewrites.
+  SingleEraseRewriter eraseRewriter(
+      context, /*opErasedCallback=*/[&](Operation *op) {
+        if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
+          unresolvedMaterializations.erase(castOp);
+      });
   for (auto &rewrite : rewrites)
     rewrite->cleanup(eraseRewriter);
 }
@@ -1605,7 +1615,7 @@ void ConversionPatternRewriterImpl::notifyBlockInserted(
                              << "'(" << parent << ")\n";
         } else {
           logger.startLine()
-              << "** Insert Block into detached Region (nullptr parent op)'";
+              << "** Insert Block into detached Region (nullptr parent op)'\n";
         }
       });
 
@@ -2520,19 +2530,19 @@ unsigned OperationLegalizer::applyCostModelToPatterns(
     return minDepth;
 
   // Sort the patterns by those likely to be the most beneficial.
-  std::stable_sort(patternsByDepth.begin(), patternsByDepth.end(),
-                   [](const std::pair<const Pattern *, unsigned> &lhs,
-                      const std::pair<const Pattern *, unsigned> &rhs) {
-                     // First sort by the smaller pattern legalization
-                     // depth.
-                     if (lhs.second != rhs.second)
-                       return lhs.second < rhs.second;
+  llvm::stable_sort(patternsByDepth,
+                    [](const std::pair<const Pattern *, unsigned> &lhs,
+                       const std::pair<const Pattern *, unsigned> &rhs) {
+                      // First sort by the smaller pattern legalization
+                      // depth.
+                      if (lhs.second != rhs.second)
+                        return lhs.second < rhs.second;
 
-                     // Then sort by the larger pattern benefit.
-                     auto lhsBenefit = lhs.first->getBenefit();
-                     auto rhsBenefit = rhs.first->getBenefit();
-                     return lhsBenefit > rhsBenefit;
-                   });
+                      // Then sort by the larger pattern benefit.
+                      auto lhsBenefit = lhs.first->getBenefit();
+                      auto rhsBenefit = rhs.first->getBenefit();
+                      return lhsBenefit > rhsBenefit;
+                    });
 
   // Update the legalization pattern to use the new sorted list.
   patterns.clear();
@@ -2714,11 +2724,8 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   SmallVector<UnrealizedConversionCastOp> allCastOps;
   const DenseMap<UnrealizedConversionCastOp, UnresolvedMaterializationRewrite *>
       &materializations = rewriterImpl.unresolvedMaterializations;
-  for (auto it : materializations) {
-    if (rewriterImpl.eraseRewriter.wasErased(it.first))
-      continue;
+  for (auto it : materializations)
     allCastOps.push_back(it.first);
-  }
 
   // Reconcile all UnrealizedConversionCastOps that were inserted by the
   // dialect conversion frameworks. (Not the one that were inserted by
@@ -2880,6 +2887,8 @@ LogicalResult TypeConverter::convertType(Type t,
       if (t.getContext()->isMultithreadingEnabled())
         cacheWriteLock.lock();
       if (!succeeded(*result)) {
+        assert(results.size() == currentCount &&
+               "failed type conversion should not change results");
         cachedDirectConversions.try_emplace(t, nullptr);
         return failure();
       }
@@ -2889,6 +2898,9 @@ LogicalResult TypeConverter::convertType(Type t,
       else
         cachedMultiConversions.try_emplace(t, llvm::to_vector<2>(newTypes));
       return success();
+    } else {
+      assert(results.size() == currentCount &&
+             "failed type conversion should not change results");
     }
   }
   return failure();
@@ -2959,7 +2971,7 @@ TypeConverter::convertSignatureArgs(TypeRange types,
 Value TypeConverter::materializeSourceConversion(OpBuilder &builder,
                                                  Location loc, Type resultType,
                                                  ValueRange inputs) const {
-  for (const MaterializationCallbackFn &fn :
+  for (const SourceMaterializationCallbackFn &fn :
        llvm::reverse(sourceMaterializations))
     if (Value result = fn(builder, resultType, inputs, loc))
       return result;

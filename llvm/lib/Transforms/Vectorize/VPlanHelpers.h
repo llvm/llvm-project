@@ -39,7 +39,6 @@ class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
 class Value;
-class LoopVersioning;
 
 /// Returns a calculation for the total number of elements for a given \p VF.
 /// For fixed width vectors this value is a constant, whereas for scalable
@@ -284,13 +283,6 @@ struct VPTransformState {
     Iter->second[CacheIdx] = V;
   }
 
-  /// Add additional metadata to \p To that was not present on \p Orig.
-  ///
-  /// Currently this is used to add the noalias annotations based on the
-  /// inserted memchecks.  Use this for instructions that are *cloned* into the
-  /// vector loop.
-  void addNewMetadata(Instruction *To, const Instruction *Orig);
-
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
@@ -321,10 +313,6 @@ struct VPTransformState {
 
     CFGState(DominatorTree *DT)
         : DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy) {}
-
-    /// Returns the BasicBlock* mapped to the pre-header of the loop region
-    /// containing \p R.
-    BasicBlock *getPreheaderBBFor(VPRecipeBase *R);
   } CFG;
 
   /// Hold a pointer to LoopInfo to register new basic blocks in the loop.
@@ -342,13 +330,6 @@ struct VPTransformState {
 
   /// The parent loop object for the current scope, or nullptr.
   Loop *CurrentParentLoop = nullptr;
-
-  /// LoopVersioning.  It's only set up (non-null) if memchecks were
-  /// used.
-  ///
-  /// This is currently only used to add no-alias metadata based on the
-  /// memchecks.  The actually versioning is performed manually.
-  LoopVersioning *LVer = nullptr;
 
   /// VPlan-based type analysis.
   VPTypeAnalysis TypeAnalysis;
@@ -383,6 +364,11 @@ struct VPCostContext {
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
+
+  /// Return true if \p I is considered uniform-after-vectorization in the
+  /// legacy cost model for \p VF. Only used to check for additional VPlan
+  /// simplifications.
+  bool isLegacyUniformAfterVectorization(Instruction *I, ElementCount VF) const;
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without

@@ -430,8 +430,15 @@ class Sema;
       if (!ReferenceBinding) {
 #ifndef NDEBUG
         auto Decay = [&](QualType T) {
-          return (T->isArrayType() || T->isFunctionType()) ? C.getDecayedType(T)
-                                                           : T;
+          if (T->isArrayType() || T->isFunctionType())
+            T = C.getDecayedType(T);
+
+          // A function pointer type can be resolved to a member function type,
+          // which is still an identity conversion.
+          if (auto *N = T->getAs<MemberPointerType>();
+              N && N->isMemberFunctionPointer())
+            T = C.getDecayedType(N->getPointeeType());
+          return T;
         };
         // The types might differ if there is an array-to-pointer conversion
         // an function-to-pointer conversion, or lvalue-to-rvalue conversion.
@@ -980,7 +987,8 @@ class Sema;
     /// Have we matched any packs on the parameter side, versus any non-packs on
     /// the argument side, in a context where the opposite matching is also
     /// allowed?
-    bool StrictPackMatch : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned StrictPackMatch : 1;
 
     /// True if the candidate was found using ADL.
     LLVM_PREFERRED_TYPE(CallExpr::ADLCallKind)
@@ -996,7 +1004,8 @@ class Sema;
 
     /// FailureKind - The reason why this candidate is not viable.
     /// Actually an OverloadFailureKind.
-    unsigned char FailureKind;
+    LLVM_PREFERRED_TYPE(OverloadFailureKind)
+    unsigned FailureKind : 8;
 
     /// The number of call arguments that were explicitly provided,
     /// to be used while performing partial ordering of function templates.

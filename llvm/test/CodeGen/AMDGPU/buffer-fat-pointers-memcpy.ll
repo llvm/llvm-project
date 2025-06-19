@@ -18,7 +18,7 @@ target triple = "amdgcn--"
 
 declare void @llvm.memcpy.p7.p7.i32(ptr addrspace(7), ptr addrspace(7), i32, i1)
 
-define amdgpu_kernel void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspace(7) inreg %dst) {
+define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) %dst) {
 ; SDAG-LABEL: memcpy_known:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -235,14 +235,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspa
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ; SDAG-GFX942-LABEL: memcpy_known:
-; SDAG-GFX942:       ; %bb.3:
-; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; SDAG-GFX942-NEXT:    s_load_dword s12, s[4:5], 0x10
-; SDAG-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX942-NEXT:    s_branch .LBB0_0
-; SDAG-GFX942-NEXT:    .p2align 8
-; SDAG-GFX942-NEXT:  ; %bb.4:
-; SDAG-GFX942-NEXT:  .LBB0_0:
+; SDAG-GFX942:       ; %bb.0:
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX942-NEXT:    s_load_dword s17, s[4:5], 0x34
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x44
@@ -594,7 +587,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr addrspace(7) inreg %dst) {
+define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrspace(7) %dst) {
 ; SDAG-LABEL: memcpy_known_medium:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -802,14 +795,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ; SDAG-GFX942-LABEL: memcpy_known_medium:
-; SDAG-GFX942:       ; %bb.3:
-; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; SDAG-GFX942-NEXT:    s_load_dword s12, s[4:5], 0x10
-; SDAG-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX942-NEXT:    s_branch .LBB1_0
-; SDAG-GFX942-NEXT:    .p2align 8
-; SDAG-GFX942-NEXT:  ; %bb.4:
-; SDAG-GFX942-NEXT:  .LBB1_0:
+; SDAG-GFX942:       ; %bb.0:
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX942-NEXT:    s_load_dword s13, s[4:5], 0x34
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x44
@@ -1154,7 +1140,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
   ret void
 }
 
-define amdgpu_kernel void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr addrspace(7) inreg %dst) {
+define amdgpu_kernel void @memcpy_known_small(ptr addrspace(7) %src, ptr addrspace(7) %dst) {
 ; SDAG-LABEL: memcpy_known_small:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1191,14 +1177,7 @@ define amdgpu_kernel void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr a
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ; SDAG-GFX942-LABEL: memcpy_known_small:
-; SDAG-GFX942:       ; %bb.1:
-; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; SDAG-GFX942-NEXT:    s_load_dword s12, s[4:5], 0x10
-; SDAG-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX942-NEXT:    s_branch .LBB2_0
-; SDAG-GFX942-NEXT:    .p2align 8
-; SDAG-GFX942-NEXT:  ; %bb.2:
-; SDAG-GFX942-NEXT:  .LBB2_0:
+; SDAG-GFX942:       ; %bb.0:
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX942-NEXT:    s_load_dword s13, s[4:5], 0x34
 ; SDAG-GFX942-NEXT:    s_mov_b32 s12, 0
@@ -1253,12 +1232,12 @@ define amdgpu_kernel void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr a
 ; SDAG-GFX1100-NEXT:    s_load_b128 s[0:3], s[4:5], 0x44
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s5, s12
 ; SDAG-GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_mov_b32_e32 v5, s0
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s4, s3
-; SDAG-GFX1100-NEXT:    s_mov_b32 s3, s12
+; SDAG-GFX1100-NEXT:    v_mov_b32_e32 v5, s0
 ; SDAG-GFX1100-NEXT:    s_or_b64 s[6:7], s[4:5], s[12:13]
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s13, s2
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s2, s1
+; SDAG-GFX1100-NEXT:    s_mov_b32 s3, s12
 ; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-GFX1100-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0)
@@ -1324,12 +1303,12 @@ define amdgpu_kernel void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr a
 ; GISEL-GFX1100-NEXT:    s_load_b32 s7, s[4:5], 0x54
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s4, s13
 ; GISEL-GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX1100-NEXT:    v_mov_b32_e32 v5, s8
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s12, s9
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s5, s10
-; GISEL-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GISEL-GFX1100-NEXT:    v_mov_b32_e32 v5, s8
 ; GISEL-GFX1100-NEXT:    s_or_b64 s[4:5], s[12:13], s[4:5]
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s12, s11
+; GISEL-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-GFX1100-NEXT:    s_or_b64 s[6:7], s[12:13], s[6:7]
 ; GISEL-GFX1100-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-GFX1100-NEXT:    buffer_store_b128 v[0:3], v5, s[4:7], 0 offen

@@ -347,6 +347,7 @@ def Vector_MultiDimReductionOp :
 
 def Vector_BroadcastOp :
   Vector_Op<"broadcast", [Pure,
+     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
@@ -789,40 +790,89 @@ def Vector_FMAOp :
   }];
 }
 
+def Vector_ToElementsOp : Vector_Op<"to_elements", [
+    Pure,
+    ShapedTypeMatchesElementCountAndTypes<"source", "elements">]> {
+  let summary = "operation that decomposes a vector into all its scalar elements";
+  let description = [{
+    This operation decomposes all the scalar elements from a vector. The
+    decomposed scalar elements are returned in row-major order. The number of
+    scalar results must match the number of elements in the input vector type.
+    All the result elements have the same result type, which must match the
+    element type of the input vector. Scalable vectors are not supported.
+
+    Examples:
+
+    ```mlir
+    // Decompose a 0-D vector.
+    %0 = vector.to_elements %v0 : vector<f32>
+    // %0 = %v0[0]
+
+    // Decompose a 1-D vector.
+    %0:2 = vector.to_elements %v1 : vector<2xf32>
+    // %0#0 = %v1[0]
+    // %0#1 = %v1[1]
+
+    // Decompose a 2-D.
+    %0:6 = vector.to_elements %v2 : vector<2x3xf32>
+    // %0#0 = %v2[0, 0]
+    // %0#1 = %v2[0, 1]
+    // %0#2 = %v2[0, 2]
+    // %0#3 = %v2[1, 0]
+    // %0#4 = %v2[1, 1]
+    // %0#5 = %v2[1, 2]
+
+    // Decompose a 3-D vector.
+    %0:6 = vector.to_elements %v3 : vector<3x1x2xf32>
+    // %0#0 = %v3[0, 0, 0]
+    // %0#1 = %v3[0, 0, 1]
+    // %0#2 = %v3[1, 0, 0]
+    // %0#3 = %v3[1, 0, 1]
+    // %0#4 = %v3[2, 0, 0]
+    // %0#5 = %v3[2, 0, 1]
+    ```
+  }];
+
+  let arguments = (ins AnyVectorOfAnyRank:$source);
+  let results = (outs Variadic<AnyType>:$elements);
+  let assemblyFormat = "$source attr-dict `:` type($source)";
+}
+
 def Vector_FromElementsOp : Vector_Op<"from_elements", [
     Pure,
-    TypesMatchWith<"operand types match result element type",
-                   "result", "elements", "SmallVector<Type>("
-                   "::llvm::cast<VectorType>($_self).getNumElements(), "
-                   "::llvm::cast<VectorType>($_self).getElementType())">]> {
+    ShapedTypeMatchesElementCountAndTypes<"dest", "elements">]> {
   let summary = "operation that defines a vector from scalar elements";
   let description = [{
     This operation defines a vector from one or multiple scalar elements. The
-    number of elements must match the number of elements in the result type.
-    All elements must have the same type, which must match the element type of
-    the result vector type.
+    scalar elements are arranged in row-major within the vector. The number of
+    elements must match the number of elements in the result type. All elements
+    must have the same type, which must match the element type of the result
+    vector type. Scalable vectors are not supported.
 
-    `elements` are a flattened version of the result vector in row-major order.
-
-    Example:
+    Examples:
 
     ```mlir
-    // %f1
+    // Define a 0-D vector.
     %0 = vector.from_elements %f1 : vector<f32>
-    // [%f1, %f2]
-    %1 = vector.from_elements %f1, %f2 : vector<2xf32>
-    // [[%f1, %f2, %f3], [%f4, %f5, %f6]]
-    %2 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<2x3xf32>
-    // [[[%f1, %f2]], [[%f3, %f4]], [[%f5, %f6]]]
-    %3 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<3x1x2xf32>
-    ```
+    // [%f1]
 
-    Note, scalable vectors are not supported.
+    // Define a 1-D vector.
+    %1 = vector.from_elements %f1, %f2 : vector<2xf32>
+    // [%f1, %f2]
+
+    // Define a 2-D vector.
+    %2 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<2x3xf32>
+    // [[%f1, %f2, %f3], [%f4, %f5, %f6]]
+
+    // Define a 3-D vector.
+    %3 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<3x1x2xf32>
+    // [[[%f1, %f2]], [[%f3, %f4]], [[%f5, %f6]]]
+    ```
   }];
 
   let arguments = (ins Variadic<AnyType>:$elements);
-  let results = (outs AnyFixedVectorOfAnyRank:$result);
-  let assemblyFormat = "$elements attr-dict `:` type($result)";
+  let results = (outs AnyFixedVectorOfAnyRank:$dest);
+  let assemblyFormat = "$elements attr-dict `:` type($dest)";
   let hasCanonicalizer = 1;
 }
 
@@ -1273,7 +1323,7 @@ def Vector_TransferReadOp :
       AttrSizedOperandSegments,
       DestinationStyleOpInterface
     ]>,
-    Arguments<(ins AnyShaped:$source,
+    Arguments<(ins AnyShaped:$base,
                    Variadic<Index>:$indices,
                    AffineMapAttr:$permutation_map,
                    AnyType:$padding,
@@ -1522,7 +1572,7 @@ def Vector_TransferWriteOp :
       DestinationStyleOpInterface
   ]>,
     Arguments<(ins AnyVectorOfAnyRank:$valueToStore,
-                   AnyShaped:$source,
+                   AnyShaped:$base,
                    Variadic<Index>:$indices,
                    AffineMapAttr:$permutation_map,
                    Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
@@ -1663,7 +1713,7 @@ def Vector_TransferWriteOp :
     ///  ops of other dialects.
     Value getValue() { return getVector(); }
 
-    MutableOperandRange getDpsInitsMutable() { return getSourceMutable(); }
+    MutableOperandRange getDpsInitsMutable() { return getBaseMutable(); }
   }];
 
   let hasFolder = 1;
@@ -2482,8 +2532,13 @@ def Vector_MaskOp : Vector_Op<"mask", [
     masked. Values used within the region are captured from above. Only one
     *maskable* operation can be masked with a `vector.mask` operation at a time.
     An operation is *maskable* if it implements the `MaskableOpInterface`. The
-    terminator yields all results of the maskable operation to the result of
-    this operation.
+    terminator yields all results from the maskable operation to the result of
+    this operation. No other values are allowed to be yielded.
+
+    An empty `vector.mask` operation is currently legal to enable optimizations
+    across the `vector.mask` region. However, this might change in the future
+    once vector transformations gain better support for `vector.mask`.
+    TODO: Consider making empty `vector.mask` illegal.
 
     The vector mask argument holds a bit for each vector lane and determines
     which vector lanes should execute the maskable operation and which ones

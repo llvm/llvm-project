@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Analysis
   Core
+  FrontendHLSL
   FrontendOpenACC
   FrontendOpenMP
   Passes
@@ -10,6 +11,8 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(LLVMFrontendTests
+  HLSLRootSignatureDumpTest.cpp
+  HLSLRootSignatureRangesTest.cpp
   OpenACCTest.cpp
   OpenMPContextTest.cpp
   OpenMPIRBuilderTest.cpp

@@ -107,11 +107,12 @@ private:
 class AbstractListFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    size_t idx = ExtractIndexFromString(name.GetCString());
-    if (idx == UINT32_MAX)
+    auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+    if (!optional_idx) {
       return llvm::createStringError("Type has no child named '%s'",
                                      name.AsCString());
-    return idx;
+    }
+    return *optional_idx;
   }
   lldb::ChildCacheState Update() override;
 
@@ -387,7 +388,7 @@ lldb::ValueObjectSP ListFrontEnd::GetChildAtIndex(uint32_t idx) {
       return lldb::ValueObjectSP();
 
     // if we grabbed the __next_ pointer, then the child is one pointer deep-er
-    lldb::addr_t addr = current_sp->GetParent()->GetPointerValue();
+    lldb::addr_t addr = current_sp->GetParent()->GetPointerValue().address;
     addr = addr + 2 * process_sp->GetAddressByteSize();
     ExecutionContext exe_ctx(process_sp);
     current_sp =

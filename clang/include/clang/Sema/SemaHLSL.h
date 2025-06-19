@@ -119,16 +119,33 @@ public:
                                        bool IsCompAssign);
   void emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS, BinaryOperatorKind Opc);
 
+  /// Computes the unique Root Signature identifier from the given signature,
+  /// then lookup if there is a previousy created Root Signature decl.
+  ///
+  /// Returns the identifier and if it was found
+  std::pair<IdentifierInfo *, bool>
+  ActOnStartRootSignatureDecl(StringRef Signature);
+
+  /// Creates the Root Signature decl of the parsed Root Signature elements
+  /// onto the AST and push it onto current Scope
+  void ActOnFinishRootSignatureDecl(
+      SourceLocation Loc, IdentifierInfo *DeclIdent,
+      SmallVector<llvm::hlsl::rootsig::RootElement> &Elements);
+
+  void handleRootSignatureAttr(Decl *D, const ParsedAttr &AL);
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL);
+  void handleSV_PositionAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
+
+  void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   QualType ProcessResourceTypeAttributes(QualType Wrapped);
@@ -143,6 +160,7 @@ public:
 
   // Diagnose whether the input ID is uint/unit2/uint3 type.
   bool diagnoseInputIDType(QualType T, const ParsedAttr &AL);
+  bool diagnosePositionType(QualType T, const ParsedAttr &AL);
 
   bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
   bool ContainsBitField(QualType BaseTy);
@@ -174,6 +192,8 @@ private:
   // buffer which will be created at the end of the translation unit.
   llvm::SmallVector<Decl *> DefaultCBufferDecls;
 
+  uint32_t ImplicitBindingNextOrderID = 0;
+
 private:
   void collectResourceBindingsOnVarDecl(VarDecl *D);
   void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
@@ -181,6 +201,11 @@ private:
   void processExplicitBindingsOnDecl(VarDecl *D);
 
   void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);
+
+  bool initGlobalResourceDecl(VarDecl *VD);
+  uint32_t getNextImplicitBindingOrderID() {
+    return ImplicitBindingNextOrderID++;
+  }
 };
 
 } // namespace clang

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-constant-fold -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -test-single-fold -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @affine_apply
 func.func @affine_apply(%variable : index) -> (index, index, index) {

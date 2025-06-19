@@ -58,6 +58,7 @@ libc_test_library(
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_fpbits_str",
         "//libc:__support_fputil_rounding_mode",
+        "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
         "//libc:__support_macros_properties_architectures",
         "//libc:__support_macros_properties_types",
@@ -80,6 +81,7 @@ libc_test_library(
     ],
     deps = [
         ":LibcUnitTest",
+        "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
         "//libc:errno",
     ],

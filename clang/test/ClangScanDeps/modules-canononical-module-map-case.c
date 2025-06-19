@@ -36,6 +36,17 @@ framework module FW {
       ],
       "name": "DIR/frameworks/FW.framework/Headers",
       "type": "directory"
+    },
+    {
+      "contents": [
+        {
+          "external-contents": "DIR/frameworks/FW.framework/Modules/module.modulemap",
+          "name": "module.modulemap",
+          "type": "file"
+        }
+      ],
+      "name": "DIR/frameworks/FW.framework/Modules",
+      "type": "directory"
     }
   ]
 }

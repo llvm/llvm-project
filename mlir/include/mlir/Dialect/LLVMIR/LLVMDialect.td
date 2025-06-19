@@ -92,6 +92,9 @@ def LLVM_Dialect : Dialect {
     static StringRef getModuleFlagKeyCGProfileName() {
       return "CG Profile";
     }
+    static StringRef getModuleFlagKeyProfileSummaryName() {
+      return "ProfileSummary";
+    }
 
     /// Returns `true` if the given type is compatible with the LLVM dialect.
     static bool isCompatibleType(Type);

@@ -10,9 +10,9 @@ from lldbsuite.test import lldbutil
 import lldbdap_testcase
 import os
 
-# DAP tests are flakey, see https://github.com/llvm/llvm-project/issues/137660.
-@skip
+
 class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
+    @skipIfWindows
     def test_memory_refs_variables(self):
         """
         Tests memory references for evaluate
@@ -34,6 +34,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         # Non-pointers should also have memory-references
         self.assertIn("memoryReference", locals["not_a_ptr"].keys())
 
+    @skipIfWindows
     def test_memory_refs_evaluate(self):
         """
         Tests memory references for evaluate
@@ -53,6 +54,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
             self.dap_server.request_evaluate("rawptr")["body"].keys(),
         )
 
+    @skipIfWindows
     def test_memory_refs_set_variable(self):
         """
         Tests memory references for `setVariable`
@@ -75,6 +77,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
             ].keys(),
         )
 
+    @skipIfWindows
     def test_readMemory(self):
         """
         Tests the 'readMemory' request
@@ -108,8 +111,17 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         # VS Code sends those in order to check if a `memoryReference` can actually be dereferenced.
         mem = self.dap_server.request_readMemory(memref, 0, 0)
         self.assertEqual(mem["success"], True)
-        self.assertEqual(mem["body"]["data"], "")
+        self.assertNotIn(
+            "data", mem["body"], f"expects no data key in response: {mem!r}"
+        )
 
-        # Reads at offset 0x0 fail
-        mem = self.dap_server.request_readMemory("0x0", 0, 6)
-        self.assertEqual(mem["success"], False)
+        # Reads at offset 0x0 return unreadable bytes
+        bytes_to_read = 6
+        mem = self.dap_server.request_readMemory("0x0", 0, bytes_to_read)
+        self.assertEqual(mem["body"]["unreadableBytes"], bytes_to_read)
+
+        # Reads with invalid address fails.
+        mem = self.dap_server.request_readMemory("-3204", 0, 10)
+        self.assertFalse(mem["success"], "expect fail on reading memory.")
+
+        self.continue_to_exit()

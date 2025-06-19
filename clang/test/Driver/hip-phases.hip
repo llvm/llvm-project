@@ -12,6 +12,9 @@
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --offload-new-driver --cuda-gpu-arch=gfx803 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=BIN,NEW,NEWN %s
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
+// RUN: --offload-new-driver --cuda-gpu-arch=gfx803 -flto -c %s 2>&1 \
+// RUN: | FileCheck -check-prefixes=BIN,NEW,NEWLTO %s
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 -fgpu-rdc %s 2>&1 \
@@ -45,10 +48,14 @@
 // OLDR-DAG: [[P11:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P10]]}, object
 // OLDN-DAG: [[P12:[0-9]+]]: backend, {[[P11]]}, assembler, (host-[[T]])
 // OLDN-DAG: [[P13:[0-9]+]]: assembler, {[[P12]]}, object, (host-[[T]])
-// NEW-DAG: [[P12:[0-9]+]]: backend, {[[P11]]}, assembler, (host-[[T]])
-// NEW-DAG: [[P13:[0-9]+]]: assembler, {[[P12]]}, object, (host-[[T]])
+// NEWN-DAG: [[P12:[0-9]+]]: backend, {[[P11]]}, assembler, (host-[[T]])
+// NEWN-DAG: [[P13:[0-9]+]]: assembler, {[[P12]]}, object, (host-[[T]])
+// NEWLTO-DAG: [[P13:[0-9]+]]: backend, {[[P11]]}, lto-bc, (host-hip)
+// NEWR-DAG: [[P12:[0-9]+]]: backend, {[[P11]]}, assembler, (host-[[T]])
+// NEWR-DAG: [[P13:[0-9]+]]: assembler, {[[P12]]}, object, (host-[[T]])
 // OLDN-DAG: [[P14:[0-9]+]]: linker, {[[P13]]}, image, (host-[[T]])
 // NEWN-DAG: [[P14:[0-9]+]]: clang-linker-wrapper, {[[P13]]}, object, (host-[[T]])
+// NEWLTO-DAG: [[P14:[0-9]+]]: clang-linker-wrapper, {[[P13]]}, object, (host-[[T]])
 // OLDR-DAG: [[P14:[0-9]+]]: linker, {[[P13]], [[P11]]}, image, (host-[[T]])
 // NEWR-DAG: [[P14:[0-9]+]]: clang-linker-wrapper, {[[P13]]}, image, (host-[[T]])
 // NEWN-DAG: [[P15:[0-9]+]]: linker, {[[P14]]}, image

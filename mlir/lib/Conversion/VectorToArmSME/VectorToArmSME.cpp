@@ -58,7 +58,7 @@ struct TransferReadToArmSMELowering
       return rewriter.notifyMatchFailure(transferReadOp,
                                          "not a valid vector type for SME");
 
-    if (!llvm::isa<MemRefType>(transferReadOp.getSource().getType()))
+    if (!llvm::isa<MemRefType>(transferReadOp.getBase().getType()))
       return rewriter.notifyMatchFailure(transferReadOp, "not a memref source");
 
     // Out-of-bounds dims are not supported.
@@ -84,7 +84,7 @@ struct TransferReadToArmSMELowering
     auto mask = transferReadOp.getMask();
     auto padding = mask ? transferReadOp.getPadding() : nullptr;
     rewriter.replaceOpWithNewOp<arm_sme::TileLoadOp>(
-        transferReadOp, vectorType, transferReadOp.getSource(),
+        transferReadOp, vectorType, transferReadOp.getBase(),
         transferReadOp.getIndices(), padding, mask, layout);
 
     return success();
@@ -128,7 +128,7 @@ struct TransferWriteToArmSMELowering
     if (!arm_sme::isValidSMETileVectorType(vType))
       return failure();
 
-    if (!llvm::isa<MemRefType>(writeOp.getSource().getType()))
+    if (!llvm::isa<MemRefType>(writeOp.getBase().getType()))
       return failure();
 
     // Out-of-bounds dims are not supported.
@@ -149,7 +149,7 @@ struct TransferWriteToArmSMELowering
                    : arm_sme::TileSliceLayout::Horizontal;
 
     rewriter.replaceOpWithNewOp<arm_sme::TileStoreOp>(
-        writeOp, writeOp.getVector(), writeOp.getSource(), writeOp.getIndices(),
+        writeOp, writeOp.getVector(), writeOp.getBase(), writeOp.getIndices(),
         writeOp.getMask(), layout);
     return success();
   }
@@ -686,7 +686,7 @@ struct FoldTransferWriteOfExtractTileSlice
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const final {
-    if (!isa<MemRefType>(writeOp.getSource().getType()))
+    if (!isa<MemRefType>(writeOp.getBase().getType()))
       return rewriter.notifyMatchFailure(writeOp, "destination not a memref");
 
     if (writeOp.hasOutOfBoundsDim())
@@ -713,7 +713,7 @@ struct FoldTransferWriteOfExtractTileSlice
 
     rewriter.replaceOpWithNewOp<arm_sme::StoreTileSliceOp>(
         writeOp, extractTileSlice.getTile(),
-        extractTileSlice.getTileSliceIndex(), mask, writeOp.getSource(),
+        extractTileSlice.getTileSliceIndex(), mask, writeOp.getBase(),
         writeOp.getIndices(), extractTileSlice.getLayout());
     return success();
   }

@@ -12,11 +12,9 @@
 
 #include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
-#include "CIRGenOpenACCClause.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "clang/AST/OpenACCClause.h"
 #include "clang/AST/StmtOpenACC.h"
-
-#include "mlir/Dialect/OpenACC/OpenACC.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -34,14 +32,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
   llvm::SmallVector<mlir::Value> operands;
   auto op = builder.create<Op>(start, retTy, operands);
 
-  {
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
-    // Sets insertion point before the 'op', since every new expression needs to
-    // be before the operation.
-    builder.setInsertionPoint(op);
-    makeClauseEmitter(op, *this, builder, dirKind, dirLoc)
-        .VisitClauseList(clauses);
-  }
+  emitOpenACCClauses(op, dirKind, dirLoc, clauses);
 
   {
     mlir::Block &block = op.getRegion().emplaceBlock();
@@ -56,6 +47,69 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
   return res;
 }
 
+namespace {
+template <typename Op> struct CombinedType;
+template <> struct CombinedType<ParallelOp> {
+  static constexpr mlir::acc::CombinedConstructsType value =
+      mlir::acc::CombinedConstructsType::ParallelLoop;
+};
+template <> struct CombinedType<SerialOp> {
+  static constexpr mlir::acc::CombinedConstructsType value =
+      mlir::acc::CombinedConstructsType::SerialLoop;
+};
+template <> struct CombinedType<KernelsOp> {
+  static constexpr mlir::acc::CombinedConstructsType value =
+      mlir::acc::CombinedConstructsType::KernelsLoop;
+};
+} // namespace
+
+template <typename Op, typename TermOp>
+mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
+    mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
+    SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
+    const Stmt *loopStmt) {
+  mlir::LogicalResult res = mlir::success();
+
+  llvm::SmallVector<mlir::Type> retTy;
+  llvm::SmallVector<mlir::Value> operands;
+
+  auto computeOp = builder.create<Op>(start, retTy, operands);
+  computeOp.setCombinedAttr(builder.getUnitAttr());
+  mlir::acc::LoopOp loopOp;
+
+  // First, emit the bodies of both operations, with the loop inside the body of
+  // the combined construct.
+  {
+    mlir::Block &block = computeOp.getRegion().emplaceBlock();
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    builder.setInsertionPointToEnd(&block);
+
+    LexicalScope ls{*this, start, builder.getInsertionBlock()};
+    auto loopOp = builder.create<LoopOp>(start, retTy, operands);
+    loopOp.setCombinedAttr(mlir::acc::CombinedConstructsTypeAttr::get(
+        builder.getContext(), CombinedType<Op>::value));
+
+    {
+      mlir::Block &innerBlock = loopOp.getRegion().emplaceBlock();
+      mlir::OpBuilder::InsertionGuard guardCase(builder);
+      builder.setInsertionPointToEnd(&innerBlock);
+
+      LexicalScope ls{*this, start, builder.getInsertionBlock()};
+      res = emitStmt(loopStmt, /*useCurrentScope=*/true);
+
+      builder.create<mlir::acc::YieldOp>(end);
+    }
+
+    emitOpenACCClauses(computeOp, loopOp, dirKind, dirLoc, clauses);
+
+    updateLoopOpParallelism(loopOp, /*isOrphan=*/false, dirKind);
+
+    builder.create<TermOp>(end);
+  }
+
+  return res;
+}
+
 template <typename Op>
 Op CIRGenFunction::emitOpenACCOp(
     mlir::Location start, OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
@@ -64,14 +118,7 @@ Op CIRGenFunction::emitOpenACCOp(
   llvm::SmallVector<mlir::Value> operands;
   auto op = builder.create<Op>(start, retTy, operands);
 
-  {
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
-    // Sets insertion point before the 'op', since every new expression needs to
-    // be before the operation.
-    builder.setInsertionPoint(op);
-    makeClauseEmitter(op, *this, builder, dirKind, dirLoc)
-        .VisitClauseList(clauses);
-  }
+  emitOpenACCClauses(op, dirKind, dirLoc, clauses);
   return op;
 }
 
@@ -170,9 +217,37 @@ CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
 
 mlir::LogicalResult CIRGenFunction::emitOpenACCCombinedConstruct(
     const OpenACCCombinedConstruct &s) {
-  cgm.errorNYI(s.getSourceRange(), "OpenACC Combined Construct");
-  return mlir::failure();
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  mlir::Location end = getLoc(s.getSourceRange().getEnd());
+
+  switch (s.getDirectiveKind()) {
+  case OpenACCDirectiveKind::ParallelLoop:
+    return emitOpenACCOpCombinedConstruct<ParallelOp, mlir::acc::YieldOp>(
+        start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
+        s.getLoop());
+  case OpenACCDirectiveKind::SerialLoop:
+    return emitOpenACCOpCombinedConstruct<SerialOp, mlir::acc::YieldOp>(
+        start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
+        s.getLoop());
+  case OpenACCDirectiveKind::KernelsLoop:
+    return emitOpenACCOpCombinedConstruct<KernelsOp, mlir::acc::TerminatorOp>(
+        start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
+        s.getLoop());
+  default:
+    llvm_unreachable("invalid compute construct kind");
+  }
 }
+
+mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
+    const OpenACCHostDataConstruct &s) {
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  mlir::Location end = getLoc(s.getSourceRange().getEnd());
+
+  return emitOpenACCOpAssociatedStmt<HostDataOp, mlir::acc::TerminatorOp>(
+      start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
+      s.getStructuredBlock());
+}
+
 mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
     const OpenACCEnterDataConstruct &s) {
   cgm.errorNYI(s.getSourceRange(), "OpenACC EnterData Construct");
@@ -181,11 +256,6 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
 mlir::LogicalResult CIRGenFunction::emitOpenACCExitDataConstruct(
     const OpenACCExitDataConstruct &s) {
   cgm.errorNYI(s.getSourceRange(), "OpenACC ExitData Construct");
-  return mlir::failure();
-}
-mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
-    const OpenACCHostDataConstruct &s) {
-  cgm.errorNYI(s.getSourceRange(), "OpenACC HostData Construct");
   return mlir::failure();
 }
 mlir::LogicalResult

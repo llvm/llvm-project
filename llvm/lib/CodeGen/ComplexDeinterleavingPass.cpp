@@ -1034,6 +1034,9 @@ ComplexDeinterleavingGraph::identifyPartialReduction(Value *R, Value *I) {
   if (!isa<VectorType>(R->getType()) || !isa<VectorType>(I->getType()))
     return nullptr;
 
+  if (!R->hasUseList() || !I->hasUseList())
+    return nullptr;
+
   auto CommonUser =
       findCommonBetweenCollections<Value *>(R->users(), I->users());
   if (!CommonUser)
@@ -1731,6 +1734,10 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
     if (Processed[i] || Real->getNumOperands() < 2)
       continue;
 
+    // Can only combined integer reductions at the moment.
+    if (!ReductionInfo[Real].second->getType()->isIntegerTy())
+      continue;
+
     RealPHI = ReductionInfo[Real].first;
     ImagPHI = nullptr;
     PHIsFound = false;
@@ -1997,6 +2004,9 @@ ComplexDeinterleavingGraph::identifySplat(Value *R, Value *I) {
     // Fixed-width vector with constants
     if (isa<ConstantDataVector>(V))
       return true;
+
+    if (isa<ConstantInt>(V) || isa<ConstantFP>(V))
+      return isa<VectorType>(V->getType());
 
     VectorType *VTy;
     ArrayRef<int> Mask;

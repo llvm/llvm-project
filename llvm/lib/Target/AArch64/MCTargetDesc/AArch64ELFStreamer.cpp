@@ -55,6 +55,14 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     OS << "\t.variant_pcs\t" << Symbol->getName() << "\n";
   }
 
+  void emitDirectiveArch(StringRef Name) override {
+    OS << "\t.arch\t" << Name << "\n";
+  }
+
+  void emitDirectiveArchExtension(StringRef Name) override {
+    OS << "\t.arch_extension\t" << Name << "\n";
+  }
+
   void emitARM64WinCFIAllocStack(unsigned Size) override {
     OS << "\t.seh_stackalloc\t" << Size << "\n";
   }
@@ -223,7 +231,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     OS << "\n";
   }
 
-  void emitAtributesSubsection(
+  void emitAttributesSubsection(
       StringRef SubsectionName,
       AArch64BuildAttributes::SubsectionOptional Optional,
       AArch64BuildAttributes::SubsectionType ParameterType) override {
@@ -270,7 +278,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
        << ", " << ParameterStr;
     // Keep the data structure consistent with the case of ELF emission
     // (important for llvm-mc asm parsing)
-    AArch64TargetStreamer::emitAtributesSubsection(SubsectionName, Optional,
+    AArch64TargetStreamer::emitAttributesSubsection(SubsectionName, Optional,
                                                    ParameterType);
     OS << "\n";
   }
@@ -425,10 +433,10 @@ AArch64ELFStreamer &AArch64TargetELFStreamer::getStreamer() {
   return static_cast<AArch64ELFStreamer &>(Streamer);
 }
 
-void AArch64TargetELFStreamer::emitAtributesSubsection(
+void AArch64TargetELFStreamer::emitAttributesSubsection(
     StringRef VendorName, AArch64BuildAttributes::SubsectionOptional IsOptional,
     AArch64BuildAttributes::SubsectionType ParameterType) {
-  AArch64TargetStreamer::emitAtributesSubsection(VendorName, IsOptional,
+  AArch64TargetStreamer::emitAttributesSubsection(VendorName, IsOptional,
                                                  ParameterType);
 }
 

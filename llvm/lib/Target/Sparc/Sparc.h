@@ -29,6 +29,7 @@ class SparcTargetMachine;
 FunctionPass *createSparcISelDag(SparcTargetMachine &TM);
 FunctionPass *createSparcDelaySlotFillerPass();
 
+void initializeSparcAsmPrinterPass(PassRegistry &);
 void initializeSparcDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeErrataWorkaroundPass(PassRegistry &);
 } // namespace llvm

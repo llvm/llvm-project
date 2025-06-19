@@ -10,9 +10,9 @@
 
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
-//  template<class T, class U> complex<__promote<T, U>::type> pow(const complex<T>&, const U&);
-//  template<class T, class U> complex<__promote<T, U>::type> pow(const complex<T>&, const complex<U>&);
-//  template<class T, class U> complex<__promote<T, U>::type> pow(const T&, const complex<U>&);
+//  template<class T, class U> complex<__promote_t<T, U>> pow(const complex<T>&, const U&);
+//  template<class T, class U> complex<__promote_t<T, U>> pow(const complex<T>&, const complex<U>&);
+//  template<class T, class U> complex<__promote_t<T, U>> pow(const T&, const complex<U>&);
 
 // Test that these additional overloads are free from catching std::complex<non-floating-point>,
 // which is expected by several 3rd party libraries, see https://github.com/llvm/llvm-project/issues/109858.

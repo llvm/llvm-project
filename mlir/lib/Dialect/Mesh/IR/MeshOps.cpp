@@ -275,13 +275,12 @@ Type mesh::shardType(Type type, MeshOp mesh, MeshSharding sharding) {
   return type;
 }
 
-void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
-                                                     OpOperand &operand,
-                                                     OpBuilder &builder,
-                                                     ShardOp &newShardOp) {
+static void maybeInsertTargetShardingAnnotationImpl(MeshSharding sharding,
+                                                    Value &operandValue,
+                                                    Operation *operandOp,
+                                                    OpBuilder &builder,
+                                                    ShardOp &newShardOp) {
   OpBuilder::InsertionGuard insertionGuard(builder);
-  Value operandValue = operand.get();
-  Operation *operandOp = operand.getOwner();
   builder.setInsertionPointAfterValue(operandValue);
   ShardOp shardOp = dyn_cast<ShardOp>(operandOp);
   if (shardOp && sharding == shardOp.getSharding() &&
@@ -300,9 +299,8 @@ void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
         builder.create<ShardOp>(operandValue.getLoc(), operandValue, shardingOp,
                                 /*annotate_for_users*/ false);
   }
-  IRRewriter rewriter(builder);
-  rewriter.replaceUsesWithIf(
-      operandValue, newShardOp, [operandOp, operandValue](OpOperand &use) {
+  operandValue.replaceUsesWithIf(
+      newShardOp, [operandOp, operandValue](OpOperand &use) {
         return use.getOwner() == operandOp && use.get() == operandValue;
       });
 
@@ -313,16 +311,20 @@ void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
   auto newShardOp2 = builder.create<ShardOp>(operandValue.getLoc(), newShardOp,
                                              newShardOp.getSharding(),
                                              /*annotate_for_users*/ true);
-  rewriter.replaceAllUsesExcept(newShardOp, newShardOp2, newShardOp2);
-  return;
+  newShardOp.getResult().replaceAllUsesExcept(newShardOp2, newShardOp2);
 }
 
 void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
                                                      OpResult result,
                                                      OpBuilder &builder) {
   ShardOp newShardOp;
-  for (auto &use : llvm::make_early_inc_range(result.getUses())) {
-    maybeInsertTargetShardingAnnotation(sharding, use, builder, newShardOp);
+  SmallVector<std::pair<Value, Operation *>> uses;
+  for (auto &use : result.getUses()) {
+    uses.emplace_back(use.get(), use.getOwner());
+  }
+  for (auto &[operandValue, operandOp] : uses) {
+    maybeInsertTargetShardingAnnotationImpl(sharding, operandValue, operandOp,
+                                            builder, newShardOp);
   }
 }
 
@@ -1505,7 +1507,7 @@ LogicalResult ShiftOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   auto meshAxes = getMeshAxes();
   auto shiftAxis = getShiftAxis().getZExtValue();
-  if (llvm::find(meshAxes, shiftAxis) == meshAxes.end()) {
+  if (!llvm::is_contained(meshAxes, shiftAxis)) {
     return emitError() << "Invalid shift axis " << shiftAxis
                        << ". It must be one of the grouping mesh axes.";
   }

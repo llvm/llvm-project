@@ -24,12 +24,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/Support/BinaryStreamReader.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Parallel.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -1374,7 +1371,7 @@ void Writer::createExportTable() {
       }
     }
   }
-  ctx.forEachSymtab([&](SymbolTable &symtab) {
+  ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
     if (symtab.edataStart) {
       if (symtab.hadExplicitExports)
         Warn(ctx) << "literal .edata sections override exports";
@@ -1776,7 +1773,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   assert(coffHeaderOffset == buf - buffer->getBufferStart());
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
-  SymbolTable &symtab = ctx.hybridSymtab ? *ctx.hybridSymtab : ctx.symtab;
+  SymbolTable &symtab =
+      ctx.config.machine == ARM64X ? *ctx.hybridSymtab : ctx.symtab;
   coff->Machine = symtab.isEC() ? AMD64 : symtab.machine;
   coff->NumberOfSections = ctx.outputSections.size();
   coff->Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE;
@@ -2433,7 +2431,7 @@ void Writer::setECSymbols() {
     return a.first->getRVA() < b.first->getRVA();
   });
 
-  ChunkRange &chpePdata = ctx.hybridSymtab ? hybridPdata : pdata;
+  ChunkRange &chpePdata = ctx.config.machine == ARM64X ? hybridPdata : pdata;
   Symbol *rfeTableSym = ctx.symtab.findUnderscore("__arm64x_extra_rfe_table");
   replaceSymbol<DefinedSynthetic>(rfeTableSym, "__arm64x_extra_rfe_table",
                                   chpePdata.first);
@@ -2478,7 +2476,7 @@ void Writer::setECSymbols() {
       delayIdata.getAuxIatCopy().empty() ? nullptr
                                          : delayIdata.getAuxIatCopy().front());
 
-  if (ctx.hybridSymtab) {
+  if (ctx.config.machine == ARM64X) {
     // For the hybrid image, set the alternate entry point to the EC entry
     // point. In the hybrid view, it is swapped to the native entry point
     // using ARM64X relocations.
@@ -2497,22 +2495,16 @@ void Writer::setECSymbols() {
               offsetof(data_directory, Size),
           ctx.symtab.edataEnd->getRVA() - ctx.symtab.edataStart->getRVA() +
               ctx.symtab.edataEnd->getSize());
-    if (hybridPdata.first) {
+    if (hybridPdata.first)
       ctx.dynamicRelocs->set(
           dataDirOffset64 + EXCEPTION_TABLE * sizeof(data_directory) +
               offsetof(data_directory, Size),
           hybridPdata.last->getRVA() - hybridPdata.first->getRVA() +
               hybridPdata.last->getSize());
-      if (chpeSym) {
-        size_t size = 0;
-        if (pdata.first)
-          size = pdata.last->getRVA() + pdata.last->getSize() -
-                 pdata.first->getRVA();
-        ctx.dynamicRelocs->set(chpeSym->getRVA() +
-                                   offsetof(chpe_metadata, ExtraRFETableSize),
-                               size);
-      }
-    }
+    if (chpeSym && pdata.first)
+      ctx.dynamicRelocs->set(
+          chpeSym->getRVA() + offsetof(chpe_metadata, ExtraRFETableSize),
+          pdata.last->getRVA() + pdata.last->getSize() - pdata.first->getRVA());
   }
 }
 
@@ -2868,7 +2860,7 @@ void Writer::fixTlsAlignment() {
 }
 
 void Writer::prepareLoadConfig() {
-  ctx.forEachSymtab([&](SymbolTable &symtab) {
+  ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
     if (!symtab.loadConfigSym)
       return;
 
@@ -2928,7 +2920,7 @@ void Writer::prepareLoadConfig(SymbolTable &symtab, T *loadConfig) {
   IF_CONTAINS(CHPEMetadataPointer) {
     // On ARM64X, only the EC version of the load config contains
     // CHPEMetadataPointer. Copy its value to the native load config.
-    if (ctx.hybridSymtab && !symtab.isEC() &&
+    if (ctx.config.machine == ARM64X && !symtab.isEC() &&
         ctx.symtab.loadConfigSize >=
             offsetof(T, CHPEMetadataPointer) + sizeof(T::CHPEMetadataPointer)) {
       OutputSection *sec =

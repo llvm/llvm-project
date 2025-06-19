@@ -19,17 +19,19 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "ve"
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETarget() {
   // Register the target.
   RegisterTargetMachine<VETargetMachine> X(getTheVETarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeVEAsmPrinterPass(PR);
   initializeVEDAGToDAGISelLegacyPass(PR);
 }
 

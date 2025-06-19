@@ -1087,10 +1087,7 @@ public:
   }
   virtual bool preferAlternateOpcodeVectorization() const { return true; }
 
-  virtual bool preferPredicatedReductionSelect(unsigned Opcode,
-                                               Type *Ty) const {
-    return false;
-  }
+  virtual bool preferPredicatedReductionSelect() const { return false; }
 
   virtual bool preferEpilogueVectorization() const { return true; }
 
@@ -1111,10 +1108,7 @@ public:
 
   virtual bool enableScalableVectorization() const { return false; }
 
-  virtual bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
-                                     Align Alignment) const {
-    return false;
-  }
+  virtual bool hasActiveVectorLength() const { return false; }
 
   virtual bool isProfitableToSinkOperands(Instruction *I,
                                           SmallVectorImpl<Use *> &Ops) const {

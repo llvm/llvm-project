@@ -175,7 +175,7 @@ template <size_t Bits> struct DyadicFloat {
   LIBC_INLINE constexpr cpp::enable_if_t<
       cpp::is_floating_point_v<T> && (FPBits<T>::FRACTION_LEN < Bits), T>
   generic_as() const {
-    using FPBits = FPBits<float16>;
+    using FPBits = FPBits<T>;
     using StorageType = typename FPBits::StorageType;
 
     constexpr int EXTRA_FRACTION_LEN = Bits - 1 - FPBits::FRACTION_LEN;
@@ -465,7 +465,10 @@ template <size_t Bits> struct DyadicFloat {
         // exponents coming in to this function _shouldn't_ be that large). The
         // result should always end up as a positive size_t.
         size_t shift = -static_cast<size_t>(exponent);
-        new_mant >>= shift;
+        if (shift >= Bits)
+          new_mant = 0;
+        else
+          new_mant >>= shift;
         round_dir = rounding_direction(mantissa, shift, sign);
         if (round_dir > 0)
           ++new_mant;

@@ -1471,7 +1471,8 @@ struct SparseDisassembleOpConverter
     // Converts MemRefs back to Tensors.
     SmallVector<Value> retValues = llvm::to_vector(
         llvm::map_range(retMem, [&rewriter, loc](Value v) -> Value {
-          return rewriter.create<bufferization::ToTensorOp>(loc, v);
+          return rewriter.create<bufferization::ToTensorOp>(
+              loc, memref::getTensorTypeFromMemRefType(v.getType()), v);
         }));
     // Appends the actual memory length used in each buffer returned.
     retValues.append(retLen.begin(), retLen.end());

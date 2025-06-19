@@ -534,6 +534,13 @@ public:
   MCInst getNop() const override;
 };
 
+/// \brief Create RegSubRegPair from a register MachineOperand
+inline TargetInstrInfo::RegSubRegPair
+getRegSubRegPair(const MachineOperand &O) {
+  assert(O.isReg());
+  return TargetInstrInfo::RegSubRegPair(O.getReg(), O.getSubReg());
+}
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_HEXAGON_HEXAGONINSTRINFO_H

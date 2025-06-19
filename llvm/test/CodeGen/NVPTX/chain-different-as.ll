@@ -9,8 +9,8 @@ define i64 @test() nounwind readnone {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %rd1, 1;
 ; CHECK-NEXT:    mov.b64 %rd2, 42;
-; CHECK-NEXT:    st.u64 [%rd1], %rd2;
-; CHECK-NEXT:    ld.global.u64 %rd3, [%rd1];
+; CHECK-NEXT:    st.b64 [%rd1], %rd2;
+; CHECK-NEXT:    ld.global.b64 %rd3, [%rd1];
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
   %addr0 = inttoptr i64 1 to ptr
