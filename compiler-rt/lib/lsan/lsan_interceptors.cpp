@@ -147,7 +147,8 @@ INTERCEPTOR(void*, valloc, uptr size) {
   return lsan_valloc(size, stack);
 }
 #else // !SANITIZER_APPLE
-#  define LSAN_MAYBE_INTERCEPT_FREE_SIZED
+#define LSAN_MAYBE_INTERCEPT_FREE_SIZED
+#define LSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED
 #endif
 
 #if SANITIZER_INTERCEPT_MEMALIGN
