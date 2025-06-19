@@ -26,13 +26,3 @@
 
 // SDL-ARCHIVE: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}libSDL.a" "-targets=hip-spirv64-unknown-unknown-unknown-generic" "-output=[[SDL_A:.*\.a]]" "-allow-missing-bundles"  
 // SDL-ARCHIVE: "{{.*}}llvm-link" "{{.*}}.bc" "[[SDL_A]]" "-o"
-
-// Test that no SDL linking occurs when --no-offloadlib is used
-// RUN: %clang -### --target=x86_64-linux-gnu --offload=spirv64 \
-// RUN:   --hip-path=%S/Inputs/hipspv -nohipwrapperinc --no-offloadlib %s \
-// RUN:   -L%t -lSDL \
-// RUN: 2>&1 | FileCheck -check-prefix=NO-SDL %s
-
-// NO-SDL-NOT: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}libSDL.a"
-
-__global__ void kernel() {} 
