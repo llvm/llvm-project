@@ -3571,6 +3571,25 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::experimental_vp_reverse: {
+    Value *X;
+    Value *Vec = II->getArgOperand(0);
+    Value *Mask = II->getArgOperand(1);
+    if (!match(Mask, m_AllOnes()))
+      break;
+    Value *EVL = II->getArgOperand(2);
+    // rev(unop rev(X)) --> unop X
+    if (match(Vec,
+              m_OneUse(m_UnOp(m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                  m_Value(X), m_AllOnes(), m_Specific(EVL)))))) {
+      auto *OldUnOp = cast<UnaryOperator>(Vec);
+      auto *NewUnOp = UnaryOperator::CreateWithCopiedFlags(
+          OldUnOp->getOpcode(), X, OldUnOp, OldUnOp->getName(),
+          II->getIterator());
+      return replaceInstUsesWith(CI, NewUnOp);
+    }
+    break;
+  }
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_and: {
     // Canonicalize logical or/and reductions:
