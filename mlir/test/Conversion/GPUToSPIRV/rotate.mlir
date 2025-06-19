@@ -45,12 +45,10 @@ gpu.module @kernels {
     // CHECK: %[[OFFSET:.+]] = spirv.Constant 4 : i32
     // CHECK: %[[WIDTH:.+]] = spirv.Constant 8 : i32
     // CHECK: %[[VAL:.+]] = spirv.Constant 4.200000e+01 : f32
-    // CHECK: %[[ROTATE_VAL:.+]] = spirv.GroupNonUniformRotateKHR <Subgroup> %[[VAL]], %[[OFFSET]], cluster_size(%[[WIDTH]]) : f32, i32, i32 -> f32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformRotateKHR <Subgroup> %[[VAL]], %[[OFFSET]], cluster_size(%[[WIDTH]]) : f32, i32, i32 -> f32
     // CHECK: %[[INVOCATION_ID_ADDR:.+]] = spirv.mlir.addressof @__builtin__SubgroupLocalInvocationId__
     // CHECK: %[[INVOCATION_ID:.+]] = spirv.Load "Input" %[[INVOCATION_ID_ADDR]]
-    // CHECK: %[[VALID:.+]] = spirv.ULessThan %[[INVOCATION_ID]], %[[WIDTH]]
-    // CHECK: %[[UNDEF:.+]] = spirv.Undef : f32
-    // CHECK: %[[RESULT:.+]] = spirv.Select %[[VALID]], %[[ROTATE_VAL]], %[[UNDEF]] : i1, f32
+    // CHECK: %{{.+}} = spirv.ULessThan %[[INVOCATION_ID]], %[[WIDTH]]
     %result, %valid = gpu.rotate %val, %offset, %width : f32
     gpu.return
   }

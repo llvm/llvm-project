@@ -488,22 +488,16 @@ LogicalResult GPURotateConversion::matchAndRewrite(
   auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
   Value rotateResult = rewriter.create<spirv::GroupNonUniformRotateKHROp>(
       loc, scope, adaptor.getValue(), adaptor.getOffset(), adaptor.getWidth());
-  Value result;
   Value validVal;
   if (widthAttr.getValue().getZExtValue() == subgroupSize) {
-    result = rotateResult;
     validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(), loc, rewriter);
   } else {
     Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
     validVal = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
                                               laneId, adaptor.getWidth());
-    Value undefVal =
-        rewriter.create<spirv::UndefOp>(loc, rotateResult.getType());
-    result =
-        rewriter.create<spirv::SelectOp>(loc, validVal, rotateResult, undefVal);
   }
 
-  rewriter.replaceOp(rotateOp, {result, validVal});
+  rewriter.replaceOp(rotateOp, {rotateResult, validVal});
   return success();
 }
 
