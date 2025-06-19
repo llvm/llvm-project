@@ -1394,11 +1394,11 @@ void llvm::addAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
 }
 
 void llvm::addAliasScopeMetadata(Function &F) {
-  addAliasScopeMetadataImpl(/*CB=*/ nullptr, &F, /*VMap=*/ nullptr,
+  addAliasScopeMetadataImpl(/*CB=*/nullptr, &F, /*VMap=*/nullptr,
                             F.getParent()->getDataLayout(),
-                            /*CalleeAAR=*/ nullptr,
-                            /*InlinedFunctionInfo=*/ nullptr,
-                            /*UseNoAliasIntrinsic=*/ false);
+                            /*CalleeAAR=*/nullptr,
+                            /*InlinedFunctionInfo=*/nullptr,
+                            /*UseNoAliasIntrinsic=*/false);
 }
 
 static bool MayContainThrowingOrExitingCallAfterCB(CallBase *Begin,
