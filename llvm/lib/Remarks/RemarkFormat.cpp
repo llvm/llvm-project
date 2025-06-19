@@ -42,6 +42,22 @@ Expected<Format> llvm::remarks::magicToFormat(StringRef MagicStr) {
 
   if (Result == Format::Unknown)
     return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Unknown remark magic: '%s'", MagicStr.data());
+                             "Automatic detection of remark format failed. "
+                             "Unknown magic number: '%.4s'",
+                             MagicStr.data());
   return Result;
+}
+
+Expected<Format> llvm::remarks::detectFormat(Format Selected,
+                                             StringRef MagicStr) {
+  if (Selected == Format::Unknown)
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "Unknown remark parser format.");
+  if (Selected != Format::Auto)
+    return Selected;
+
+  // Empty files are valid bitstream files
+  if (MagicStr.empty())
+    return Format::Bitstream;
+  return magicToFormat(MagicStr);
 }
