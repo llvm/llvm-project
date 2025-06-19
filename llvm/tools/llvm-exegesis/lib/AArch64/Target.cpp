@@ -223,7 +223,7 @@ public:
   std::vector<MCInst> _generateRegisterStackPop(MCRegister Reg,
                                                 int imm = 0) const override {
     std::vector<MCInst> Insts;
-    if (AArch64::GPR32RegClass.contains(Reg) || 
+    if (AArch64::GPR32RegClass.contains(Reg) ||
         AArch64::GPR64RegClass.contains(Reg)) {
       generateRegisterStackPop(Reg, Insts, imm);
       return Insts;
@@ -283,7 +283,6 @@ private:
     PM.add(createAArch64ExpandPseudoPass());
   }
 
-  
 } // namespace
 
 #ifdef __linux__
