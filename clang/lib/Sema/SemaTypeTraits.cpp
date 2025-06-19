@@ -2351,9 +2351,8 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
             << FirstField;
 
         SemaRef.Diag(F->getLocation(), diag::note_unsatisfied_trait_reason)
-            << diag::TraitNotSatisfiedReason::MixedAccessField
-            << F           // %0: second field
-            << FirstField; // %1: first field
+            << diag::TraitNotSatisfiedReason::MixedAccessField << F
+            << FirstField;
         break;
       }
     }
