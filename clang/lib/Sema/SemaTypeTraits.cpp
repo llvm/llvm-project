@@ -1956,6 +1956,7 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
             TypeTrait::UTT_IsCppTriviallyRelocatable)
       .Case("is_replaceable", TypeTrait::UTT_IsReplaceable)
       .Case("is_trivially_copyable", TypeTrait::UTT_IsTriviallyCopyable)
+      .Case("is_assignable", TypeTrait::BTT_IsAssignable)
       .Default(std::nullopt);
 }
 
@@ -2285,6 +2286,31 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
+static void DiagnoseNonAssignableReason(Sema &SemaRef, SourceLocation Loc,
+                                        QualType T, QualType U) {
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+
+  if (T->isObjectType() || T->isFunctionType())
+    T = SemaRef.Context.getRValueReferenceType(T);
+  if (U->isObjectType() || U->isFunctionType())
+    U = SemaRef.Context.getRValueReferenceType(U);
+  OpaqueValueExpr LHS(Loc, T.getNonLValueExprType(SemaRef.Context),
+                      Expr::getValueKindForType(T));
+  OpaqueValueExpr RHS(Loc, U.getNonLValueExprType(SemaRef.Context),
+                      Expr::getValueKindForType(U));
+
+  EnterExpressionEvaluationContext Unevaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
+  Sema::ContextRAII TUContext(SemaRef,
+                              SemaRef.Context.getTranslationUnitDecl());
+  SemaRef.BuildBinOp(/*S=*/nullptr, Loc, BO_Assign, &LHS, &RHS);
+
+  if (!D || D->isInvalidDecl())
+    return;
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
 void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   E = E->IgnoreParenImpCasts();
   if (E->containsErrors())
@@ -2304,6 +2330,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     break;
   case UTT_IsTriviallyCopyable:
     DiagnoseNonTriviallyCopyableReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case BTT_IsAssignable:
+    DiagnoseNonAssignableReason(*this, E->getBeginLoc(), Args[0], Args[1]);
     break;
   default:
     break;
