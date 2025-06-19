@@ -7683,6 +7683,8 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
+    // FIXME: See test Transforms/LoopVectorize/branch-weights.ll. I don't
+    // think the MainLoopStep is correct.
     unsigned MainLoopStep = UF * VF.getKnownMinValue();
     unsigned EpilogueLoopStep =
         EPI.EpilogueUF * EPI.EpilogueVF.getKnownMinValue();
