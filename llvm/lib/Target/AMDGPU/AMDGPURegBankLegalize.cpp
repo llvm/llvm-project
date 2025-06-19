@@ -23,6 +23,7 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -137,7 +138,109 @@ public:
     return {MatchMI, MatchMI->getOperand(1).getReg()};
   }
 
+  std::pair<GUnmerge *, int> tryMatchRALFromUnmerge(Register Src) {
+    MachineInstr *ReadAnyLane = MRI.getVRegDef(Src);
+    if (ReadAnyLane->getOpcode() == AMDGPU::G_AMDGPU_READANYLANE) {
+      Register RALSrc = ReadAnyLane->getOperand(1).getReg();
+      if (auto *UnMerge = getOpcodeDef<GUnmerge>(RALSrc, MRI))
+        return {UnMerge, UnMerge->findRegisterDefOperandIdx(RALSrc, nullptr)};
+    }
+    return {nullptr, -1};
+  }
+
+  Register getReadAnyLaneSrc(Register Src) {
+    // Src = G_AMDGPU_READANYLANE RALSrc
+    auto [RAL, RALSrc] = tryMatch(Src, AMDGPU::G_AMDGPU_READANYLANE);
+    if (RAL)
+      return RALSrc;
+
+    // LoVgpr, HiVgpr = G_UNMERGE_VALUES UnmergeSrc
+    // LoSgpr = G_AMDGPU_READANYLANE LoVgpr
+    // HiSgpr = G_AMDGPU_READANYLANE HiVgpr
+    // Src G_MERGE_VALUES LoSgpr, HiSgpr
+    auto *Merge = getOpcodeDef<GMergeLikeInstr>(Src, MRI);
+    if (Merge) {
+      unsigned NumElts = Merge->getNumSources();
+      auto [Unmerge, Idx] = tryMatchRALFromUnmerge(Merge->getSourceReg(0));
+      if (!Unmerge || Unmerge->getNumDefs() != NumElts || Idx != 0)
+        return {};
+
+      // check if all elements are from same unmerge and there is no shuffling
+      for (unsigned i = 1; i < NumElts; ++i) {
+        auto [UnmergeI, IdxI] = tryMatchRALFromUnmerge(Merge->getSourceReg(i));
+        if (UnmergeI != Unmerge || (unsigned)IdxI != i)
+          return {};
+      }
+      return Unmerge->getSourceReg();
+    }
+
+    // ..., VgprI, ... = G_UNMERGE_VALUES VgprLarge
+    // SgprI = G_AMDGPU_READANYLANE VgprI
+    // SgprLarge G_MERGE_VALUES ..., SgprI, ...
+    // ..., Src, ... = G_UNMERGE_VALUES SgprLarge
+    auto *UnMerge = getOpcodeDef<GUnmerge>(Src, MRI);
+    if (UnMerge) {
+      int Idx = UnMerge->findRegisterDefOperandIdx(Src, nullptr);
+      auto *Merge = getOpcodeDef<GMergeLikeInstr>(UnMerge->getSourceReg(), MRI);
+      if (Merge) {
+        auto [RAL, RALSrc] =
+            tryMatch(Merge->getSourceReg(Idx), AMDGPU::G_AMDGPU_READANYLANE);
+        if (RAL)
+          return RALSrc;
+      }
+    }
+
+    return {};
+  }
+
+  void replaceRegWithOrBuildCopy(Register Dst, Register Src) {
+    if (Dst.isVirtual())
+      MRI.replaceRegWith(Dst, Src);
+    else
+      B.buildCopy(Dst, Src);
+  }
+
+  bool tryEliminateReadAnyLane(MachineInstr &Copy) {
+    Register Dst = Copy.getOperand(0).getReg();
+    Register Src = Copy.getOperand(1).getReg();
+    if (!Src.isVirtual())
+      return false;
+
+    Register RALDst = Src;
+    MachineInstr &SrcMI = *MRI.getVRegDef(Src);
+    if (SrcMI.getOpcode() == AMDGPU::G_BITCAST)
+      RALDst = SrcMI.getOperand(1).getReg();
+
+    Register RALSrc = getReadAnyLaneSrc(RALDst);
+    if (!RALSrc)
+      return false;
+
+    B.setInstr(Copy);
+    if (SrcMI.getOpcode() != AMDGPU::G_BITCAST) {
+      // Src = READANYLANE RALSrc     Src = READANYLANE RALSrc
+      // Dst = Copy Src               $Dst = Copy Src
+      // ->                           ->
+      // Dst = RALSrc                 $Dst = Copy RALSrc
+      replaceRegWithOrBuildCopy(Dst, RALSrc);
+    } else {
+      // RALDst = READANYLANE RALSrc  RALDst = READANYLANE RALSrc
+      // Src = G_BITCAST RALDst       Src = G_BITCAST RALDst
+      // Dst = Copy Src               Dst = Copy Src
+      // ->                          ->
+      // NewVgpr = G_BITCAST RALDst   NewVgpr = G_BITCAST RALDst
+      // Dst = NewVgpr                $Dst = Copy NewVgpr
+      auto Bitcast = B.buildBitcast({VgprRB, MRI.getType(Src)}, RALSrc);
+      replaceRegWithOrBuildCopy(Dst, Bitcast.getReg(0));
+    }
+
+    eraseInstr(Copy, MRI, nullptr);
+    return true;
+  }
+
   void tryCombineCopy(MachineInstr &MI) {
+    if (tryEliminateReadAnyLane(MI))
+      return;
+
     Register Dst = MI.getOperand(0).getReg();
     Register Src = MI.getOperand(1).getReg();
     // Skip copies of physical registers.
@@ -160,24 +263,7 @@ public:
       auto One = B.buildConstant({SgprRB, S32}, 1);
       auto BoolSrc = B.buildAnd({SgprRB, S32}, TruncS32Src, One);
       B.buildInstr(AMDGPU::G_AMDGPU_COPY_VCC_SCC, {Dst}, {BoolSrc});
-      cleanUpAfterCombine(MI, Trunc);
-      return;
-    }
-
-    // Src = G_AMDGPU_READANYLANE RALSrc
-    // Dst = COPY Src
-    // ->
-    // Dst = RALSrc
-    if (MRI.getRegBankOrNull(Dst) == VgprRB &&
-        MRI.getRegBankOrNull(Src) == SgprRB) {
-      auto [RAL, RALSrc] = tryMatch(Src, AMDGPU::G_AMDGPU_READANYLANE);
-      if (!RAL)
-        return;
-
-      assert(MRI.getRegBank(RALSrc) == VgprRB);
-      MRI.replaceRegWith(Dst, RALSrc);
-      cleanUpAfterCombine(MI, RAL);
-      return;
+      eraseInstr(MI, MRI, nullptr);
     }
   }
 
