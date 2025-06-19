@@ -2244,10 +2244,6 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoExt;
   case bitc::ATTR_KIND_CAPTURES:
     return Attribute::Captures;
-  // case bitc::ATTR_KIND_ALLOW_DIRECT_ACCESS_IN_HOT_PATCH_FUNCTION:
-  //   return Attribute::AllowDirectAccessInHotPatchFunction;
-  // case bitc::ATTR_KIND_MARKED_FOR_WINDOWS_SECURE_HOT_PATCHING:
-  //   return Attribute::MarkedForWindowsSecureHotPatching;
   }
 }
 
