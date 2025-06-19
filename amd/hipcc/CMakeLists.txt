@@ -1,15 +1,12 @@
 cmake_minimum_required(VERSION 3.13.4)
+if(POLICY CMP0177)
+  cmake_policy(SET CMP0177 NEW)
+endif()
 
 project(hipcc VERSION "1.1.1" LANGUAGES C CXX)
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
-
-find_package(ROCM QUIET)
-if(ROCM_FOUND)
-  include(ROCMSetupVersion)
-  rocm_setup_version(VERSION "${hipcc_VERSION}")
-endif()
 
 # Generate static package, when BUILD_SHARED_LIBS is set to OFF.
 # Default to ON
