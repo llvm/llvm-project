@@ -342,6 +342,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                      << " disconnected failed: "
                      << llvm::toString(std::move(error)) << "\n";
       }
+      dap->StopEventHandlers();
       // Close the socket to ensure the DAP::Loop read finishes.
       sock->Close();
     }

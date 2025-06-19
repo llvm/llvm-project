@@ -101,7 +101,8 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         # Interrupt the server which should disconnect all clients.
         process.send_signal(signal.SIGINT)
 
-        self.dap_server.wait_for_terminated()
+        self.dap_server.wait_for_event(["terminated", "exited"])
+        self.dap_server.wait_for_event(["terminated", "exited"])
         self.assertIsNotNone(
             self.dap_server.exit_status,
             "Process exited before interrupting lldb-dap server",

@@ -489,7 +489,7 @@ class DebugCommunication(object):
         return event_dict
 
     def wait_for_terminated(self, timeout: Optional[float] = None):
-        event_dict = self.wait_for_event("terminated", timeout)
+        event_dict = self.wait_for_event("terminated", timeout=timeout)
         if event_dict is None:
             raise ValueError("didn't get terminated event")
         return event_dict
