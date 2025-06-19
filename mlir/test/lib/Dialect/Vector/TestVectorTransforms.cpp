@@ -163,7 +163,7 @@ struct TestVectorUnrollingPatterns
             .setFilterConstraint([](Operation *op) {
               return success(
                   isa<arith::AddFOp, vector::FMAOp, vector::MultiDimReductionOp,
-                      vector::BroadcastOp>(op));
+                      vector::BroadcastOp, vector::LoadOp, vector::StoreOp>(op));
             }));
     populateVectorUnrollPatterns(
         patterns, UnrollVectorOptions()
@@ -178,16 +178,6 @@ struct TestVectorUnrollingPatterns
                         return success(isa<vector::TransposeOp>(op));
                       }));
 
-    populateVectorUnrollPatterns(
-        patterns, UnrollVectorOptions()
-                      .setNativeShape(ArrayRef<int64_t>{2, 2})
-                      .setFilterConstraint([](Operation *op) {
-                        if (auto loadOp = dyn_cast<vector::LoadOp>(op))
-                          return success(loadOp.getType().getRank() > 1);
-                        if (auto storeOp = dyn_cast<vector::StoreOp>(op))
-                          return success(storeOp.getVectorType().getRank() > 1);
-                        return failure();
-                      }));
     if (unrollBasedOnType) {
       UnrollVectorOptions::NativeShapeFnType nativeShapeFn =
           [](Operation *op) -> std::optional<SmallVector<int64_t>> {

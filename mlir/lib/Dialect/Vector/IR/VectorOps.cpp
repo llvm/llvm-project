@@ -5266,6 +5266,10 @@ OpFoldResult LoadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
+std::optional<SmallVector<int64_t, 4>> LoadOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getVectorType().getShape());
+}
+
 //===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//
@@ -5299,6 +5303,10 @@ LogicalResult vector::StoreOp::verify() {
 LogicalResult StoreOp::fold(FoldAdaptor adaptor,
                             SmallVectorImpl<OpFoldResult> &results) {
   return memref::foldMemRefCast(*this);
+}
+
+std::optional<SmallVector<int64_t, 4>> StoreOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getVectorType().getShape());
 }
 
 //===----------------------------------------------------------------------===//
