@@ -1320,10 +1320,7 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
     HandlePHINodesInSuccessorBlocks(I.getParent());
   }
 
-  // Increase the SDNodeOrder if dealing with a non-debug instruction.
-  if (!isa<DbgInfoIntrinsic>(I))
-    ++SDNodeOrder;
-
+  ++SDNodeOrder;
   CurInst = &I;
 
   // Set inserted listener only if required.
@@ -1791,8 +1788,26 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
   if (const Constant *C = dyn_cast<Constant>(V)) {
     EVT VT = TLI.getValueType(DAG.getDataLayout(), V->getType(), true);
 
-    if (const ConstantInt *CI = dyn_cast<ConstantInt>(C))
-      return DAG.getConstant(*CI, getCurSDLoc(), VT);
+    if (const ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
+      SDLoc DL = getCurSDLoc();
+
+      // DAG.getConstant() may attempt to legalise the vector constant which can
+      // significantly change the combines applied to the DAG. To reduce the
+      // divergence when enabling ConstantInt based vectors we try to construct
+      // the DAG in the same way as shufflevector based splats. TODO: The
+      // divergence sometimes leads to better optimisations. Ideally we should
+      // prevent DAG.getConstant() from legalising too early but there are some
+      // degradations preventing this.
+      if (VT.isScalableVector())
+        return DAG.getNode(
+            ISD::SPLAT_VECTOR, DL, VT,
+            DAG.getConstant(CI->getValue(), DL, VT.getVectorElementType()));
+      if (VT.isFixedLengthVector())
+        return DAG.getSplatBuildVector(
+            VT, DL,
+            DAG.getConstant(CI->getValue(), DL, VT.getVectorElementType()));
+      return DAG.getConstant(*CI, DL, VT);
+    }
 
     if (const GlobalValue *GV = dyn_cast<GlobalValue>(C))
       return DAG.getGlobalAddress(GV, getCurSDLoc(), VT);
@@ -6657,69 +6672,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         DAG.getVTList(TLI.getPointerTy(DAG.getDataLayout()), MVT::Other), Ops);
     setValue(&I, Res);
     DAG.setRoot(Res.getValue(1));
-    return;
-  }
-  case Intrinsic::dbg_declare: {
-    const auto &DI = cast<DbgDeclareInst>(I);
-    // Debug intrinsics are handled separately in assignment tracking mode.
-    // Some intrinsics are handled right after Argument lowering.
-    if (AssignmentTrackingEnabled ||
-        FuncInfo.PreprocessedDbgDeclares.count(&DI))
-      return;
-    LLVM_DEBUG(dbgs() << "SelectionDAG visiting dbg_declare: " << DI << "\n");
-    DILocalVariable *Variable = DI.getVariable();
-    DIExpression *Expression = DI.getExpression();
-    dropDanglingDebugInfo(Variable, Expression);
-    // Assume dbg.declare can not currently use DIArgList, i.e.
-    // it is non-variadic.
-    assert(!DI.hasArgList() && "Only dbg.value should currently use DIArgList");
-    handleDebugDeclare(DI.getVariableLocationOp(0), Variable, Expression,
-                       DI.getDebugLoc());
-    return;
-  }
-  case Intrinsic::dbg_label: {
-    const DbgLabelInst &DI = cast<DbgLabelInst>(I);
-    DILabel *Label = DI.getLabel();
-    assert(Label && "Missing label");
-
-    SDDbgLabel *SDV;
-    SDV = DAG.getDbgLabel(Label, dl, SDNodeOrder);
-    DAG.AddDbgLabel(SDV);
-    return;
-  }
-  case Intrinsic::dbg_assign: {
-    // Debug intrinsics are handled separately in assignment tracking mode.
-    if (AssignmentTrackingEnabled)
-      return;
-    // If assignment tracking hasn't been enabled then fall through and treat
-    // the dbg.assign as a dbg.value.
-    [[fallthrough]];
-  }
-  case Intrinsic::dbg_value: {
-    // Debug intrinsics are handled separately in assignment tracking mode.
-    if (AssignmentTrackingEnabled)
-      return;
-    const DbgValueInst &DI = cast<DbgValueInst>(I);
-    assert(DI.getVariable() && "Missing variable");
-
-    DILocalVariable *Variable = DI.getVariable();
-    DIExpression *Expression = DI.getExpression();
-    dropDanglingDebugInfo(Variable, Expression);
-
-    if (DI.isKillLocation()) {
-      handleKillDebugValue(Variable, Expression, DI.getDebugLoc(), SDNodeOrder);
-      return;
-    }
-
-    SmallVector<Value *, 4> Values(DI.getValues());
-    if (Values.empty())
-      return;
-
-    bool IsVariadic = DI.hasArgList();
-    if (!handleDebugValue(Values, Variable, Expression, DI.getDebugLoc(),
-                          SDNodeOrder, IsVariadic))
-      addDanglingDebugInfo(Values, Variable, Expression, IsVariadic,
-                           DI.getDebugLoc(), SDNodeOrder);
     return;
   }
 

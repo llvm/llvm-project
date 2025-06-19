@@ -362,6 +362,9 @@ static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
 //===----------------------------------------------------------------------===//
 struct ShardingPropagation
     : public mesh::impl::ShardingPropagationBase<ShardingPropagation> {
+
+  using ShardingPropagationBase<ShardingPropagation>::ShardingPropagationBase;
+
   void runOnOperation() override {
     FunctionOpInterface funcOp = getOperation();
     MLIRContext *ctx = funcOp.getContext();
@@ -382,18 +385,31 @@ struct ShardingPropagation
             shardingOp.printLoopTypesAndIndexingMaps(llvm::dbgs());
         });
 
-    // 1. propagate in reversed order
-    for (Operation &op : llvm::make_early_inc_range(llvm::reverse(block)))
-      if (failed(visitOp(&op, builder)))
-        return signalPassFailure();
+    auto traverse = [&](auto &&range, OpBuilder &builder,
+                        const char *order) -> bool {
+      for (Operation &op : range) {
+        if (failed(visitOp(&op, builder))) {
+          signalPassFailure();
+          return true;
+        }
+      }
+      LLVM_DEBUG(DBGS() << "After " << order << " order propagation:\n"
+                        << funcOp << "\n");
+      LLVM_DEBUG(assert(succeeded(mlir::verify(funcOp))));
+      return false;
+    };
 
-    LLVM_DEBUG(DBGS() << "After reversed order propagation:\n"
-                      << funcOp << "\n");
-    LLVM_DEBUG(assert(succeeded(mlir::verify(funcOp))));
+    // 1. Propagate in reversed order.
+    if (traversal == TraversalOrder::Backward ||
+        traversal == TraversalOrder::BackwardForward)
+      traverse(llvm::reverse(block), builder, "backward");
 
-    // 2. propagate in original order
-    for (Operation &op : llvm::make_early_inc_range(block))
-      if (failed(visitOp(&op, builder)))
-        return signalPassFailure();
+    // 2. Propagate in original order.
+    if (traversal != TraversalOrder::Backward)
+      traverse(block, builder, "forward");
+
+    // 3. Propagate in backward order if needed.
+    if (traversal == TraversalOrder::ForwardBackward)
+      traverse(llvm::reverse(block), builder, "backward");
   }
 };

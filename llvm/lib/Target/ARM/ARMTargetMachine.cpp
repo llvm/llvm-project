@@ -41,6 +41,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
@@ -82,7 +83,7 @@ namespace llvm {
   void initializeARMExecutionDomainFixPass(PassRegistry&);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   // Register the target.
   RegisterTargetMachine<ARMLETargetMachine> X(getTheARMLETarget());
   RegisterTargetMachine<ARMLETargetMachine> A(getTheThumbLETarget());
@@ -269,6 +270,22 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
 }
 
 ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;
+
+bool ARMBaseTargetMachine::isAPCS_ABI() const {
+  assert(TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
+  return TargetABI == ARMBaseTargetMachine::ARM_ABI_APCS;
+}
+
+bool ARMBaseTargetMachine::isAAPCS_ABI() const {
+  assert(TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
+  return TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS ||
+         TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
+}
+
+bool ARMBaseTargetMachine::isAAPCS16_ABI() const {
+  assert(TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
+  return TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
+}
 
 MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,

@@ -92,6 +92,46 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
 // Helpers
 //===----------------------------------------------------------------------===//
 
+// Parses one of the keywords provided in the list `keywords` and returns the
+// position of the parsed keyword in the list. If none of the keywords from the
+// list is parsed, returns -1.
+static int parseOptionalKeywordAlternative(AsmParser &parser,
+                                           ArrayRef<llvm::StringRef> keywords) {
+  for (auto en : llvm::enumerate(keywords)) {
+    if (succeeded(parser.parseOptionalKeyword(en.value())))
+      return en.index();
+  }
+  return -1;
+}
+
+namespace {
+template <typename Ty> struct EnumTraits {};
+
+#define REGISTER_ENUM_TYPE(Ty)                                                 \
+  template <> struct EnumTraits<cir::Ty> {                                     \
+    static llvm::StringRef stringify(cir::Ty value) {                          \
+      return stringify##Ty(value);                                             \
+    }                                                                          \
+    static unsigned getMaxEnumVal() { return cir::getMaxEnumValFor##Ty(); }    \
+  }
+
+REGISTER_ENUM_TYPE(SideEffect);
+} // namespace
+
+/// Parse an enum from the keyword, return failure if the keyword is not found.
+template <typename EnumTy, typename RetTy = EnumTy>
+static ParseResult parseCIRKeyword(AsmParser &parser, RetTy &result) {
+  llvm::SmallVector<llvm::StringRef, 10> names;
+  for (unsigned i = 0, e = EnumTraits<EnumTy>::getMaxEnumVal(); i <= e; ++i)
+    names.push_back(EnumTraits<EnumTy>::stringify(static_cast<EnumTy>(i)));
+
+  int index = parseOptionalKeywordAlternative(parser, names);
+  if (index == -1)
+    return failure();
+  result = static_cast<RetTy>(index);
+  return success();
+}
+
 // Check if a region's termination omission is valid and, if so, creates and
 // inserts the omitted terminator into the region.
 static LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
@@ -534,6 +574,18 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   if (parser.parseRParen())
     return mlir::failure();
 
+  if (parser.parseOptionalKeyword("side_effect").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    cir::SideEffect sideEffect;
+    if (parseCIRKeyword<cir::SideEffect>(parser, sideEffect).failed())
+      return failure();
+    if (parser.parseRParen().failed())
+      return failure();
+    auto attr = cir::SideEffectAttr::get(parser.getContext(), sideEffect);
+    result.addAttribute("side_effect", attr);
+  }
+
   if (parser.parseOptionalAttrDict(result.attributes))
     return ::mlir::failure();
 
@@ -556,7 +608,8 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
 static void printCallCommon(mlir::Operation *op,
                             mlir::FlatSymbolRefAttr calleeSym,
                             mlir::Value indirectCallee,
-                            mlir::OpAsmPrinter &printer) {
+                            mlir::OpAsmPrinter &printer,
+                            cir::SideEffect sideEffect) {
   printer << ' ';
 
   auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
@@ -572,7 +625,13 @@ static void printCallCommon(mlir::Operation *op,
   }
   printer << "(" << ops << ")";
 
-  printer.printOptionalAttrDict(op->getAttrs(), {"callee"});
+  if (sideEffect != cir::SideEffect::All) {
+    printer << " side_effect(";
+    printer << stringifySideEffect(sideEffect);
+    printer << ")";
+  }
+
+  printer.printOptionalAttrDict(op->getAttrs(), {"callee", "side_effect"});
 
   printer << " : ";
   printer.printFunctionalType(op->getOperands().getTypes(),
@@ -586,7 +645,8 @@ mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
 
 void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
-  printCallCommon(*this, getCalleeAttr(), indirectCallee, p);
+  cir::SideEffect sideEffect = getSideEffect();
+  printCallCommon(*this, getCalleeAttr(), indirectCallee, p, sideEffect);
 }
 
 static LogicalResult
