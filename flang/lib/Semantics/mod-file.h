@@ -67,8 +67,9 @@ private:
   void WriteOne(const Scope &);
   void Write(const Symbol &);
   std::string GetAsString(const Symbol &);
-  void PrepareRenamings(const Scope &);
-  void PutSymbols(const Scope &, UnorderedSymbolSet *hermetic);
+  void PrepareRenamings(const Scope &, const UnorderedSymbolSet *);
+  void PutSymbols(const Scope &, UnorderedSymbolSet *hermetic,
+      UnorderedSymbolSet *dependenceClosure);
   // Returns true if a derived type with bindings and "contains" was emitted
   bool PutComponents(const Symbol &);
   void PutSymbol(llvm::raw_ostream &, const Symbol &);
