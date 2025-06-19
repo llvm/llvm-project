@@ -3196,7 +3196,7 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
 /// and V is `icmp ne X, 5`, impliesPoisonOrCond returns true.
 static bool impliesPoisonOrCond(
     const Value *ValAssumedPoison, const Value *V, bool Expected,
-    llvm::function_ref<bool(unsigned, unsigned)> isValidAddrSpaceCast) {
+    function_ref<bool(unsigned, unsigned)> isValidAddrSpaceCast) {
   // Handle the case that ValAssumedPoison is `icmp eq ptr addrspace(3) X, null`
   // and X is `addrspacecast ptr addrspace(1) Y to ptr addrspace(3)`. Target can
   // replace X with poison if the addrspacecast is invalid. However, `V` might

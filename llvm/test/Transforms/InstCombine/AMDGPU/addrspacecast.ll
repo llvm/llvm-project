@@ -10,14 +10,15 @@ define i1 @not_fold_select(ptr addrspace(1) noundef %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i1 @llvm.amdgcn.is.shared(ptr [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(1) [[X]] to ptr addrspace(3)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq ptr addrspace(3) [[TMP2]], null
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], i1 true, i1 [[TMP3]]
+; CHECK-NEXT:    [[NOT_IS_SHARED:%.*]] = xor i1 [[TMP1]], true
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[NOT_IS_SHARED]], i1 true, i1 [[TMP3]]
 ; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   entry:
-  %0 = addrspacecast ptr addrspace(1) %x to ptr
-  %1 = tail call i1 @llvm.amdgcn.is.shared(ptr %0)
-  %2 = addrspacecast ptr %0 to ptr addrspace(3)
-  %3 = select i1 %1, ptr addrspace(3) null, ptr addrspace(3) %2
-  %4 = icmp eq ptr addrspace(3) %3, null
-  ret i1 %4
+  %asc.flat = addrspacecast ptr addrspace(1) %x to ptr
+  %is.shared = tail call i1 @llvm.amdgcn.is.shared(ptr %asc.flat)
+  %asc.shared = addrspacecast ptr %asc.flat to ptr addrspace(3)
+  %shared.addr = select i1 %is.shared, ptr addrspace(3) %asc.shared, ptr addrspace(3) null
+  %result = icmp eq ptr addrspace(3) %shared.addr, null
+  ret i1 %result
 }
