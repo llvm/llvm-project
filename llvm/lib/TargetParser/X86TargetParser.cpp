@@ -165,11 +165,11 @@ constexpr FeatureBitset FeaturesAlderlake =
     FeaturesTremont | FeatureADX | FeatureBMI | FeatureBMI2 | FeatureF16C |
     FeatureFMA | FeatureINVPCID | FeatureLZCNT | FeaturePCONFIG | FeaturePKU |
     FeatureSERIALIZE | FeatureSHSTK | FeatureVAES | FeatureVPCLMULQDQ |
-    FeatureCLDEMOTE | FeatureMOVDIR64B | FeatureMOVDIRI | FeatureWAITPKG |
-    FeatureAVXVNNI | FeatureHRESET | FeatureWIDEKL;
+    FeatureMOVDIR64B | FeatureMOVDIRI | FeatureWAITPKG | FeatureAVXVNNI |
+    FeatureHRESET | FeatureWIDEKL;
 constexpr FeatureBitset FeaturesSierraforest =
     FeaturesAlderlake | FeatureCMPCCXADD | FeatureAVXIFMA | FeatureUINTR |
-    FeatureENQCMD | FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
+    FeatureCLDEMOTE | FeatureENQCMD | FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
 constexpr FeatureBitset FeaturesArrowlakeS = FeaturesSierraforest |
     FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 | FeatureSM4;
 constexpr FeatureBitset FeaturesPantherlake =
