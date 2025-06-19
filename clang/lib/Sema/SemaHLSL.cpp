@@ -119,40 +119,6 @@ static ResourceClass getResourceClass(RegisterType RT) {
   llvm_unreachable("unexpected RegisterType value");
 }
 
-static Builtin::ID getSpecConstBuiltinId(QualType Type) {
-  const auto *BT = dyn_cast<BuiltinType>(Type);
-  if (!BT) {
-    if (!Type->isEnumeralType())
-      return Builtin::NotBuiltin;
-    return Builtin::BI__builtin_get_spirv_spec_constant_int;
-  }
-
-  switch (BT->getKind()) {
-  case BuiltinType::Bool:
-    return Builtin::BI__builtin_get_spirv_spec_constant_bool;
-  case BuiltinType::Short:
-    return Builtin::BI__builtin_get_spirv_spec_constant_short;
-  case BuiltinType::Int:
-    return Builtin::BI__builtin_get_spirv_spec_constant_int;
-  case BuiltinType::LongLong:
-    return Builtin::BI__builtin_get_spirv_spec_constant_longlong;
-  case BuiltinType::UShort:
-    return Builtin::BI__builtin_get_spirv_spec_constant_ushort;
-  case BuiltinType::UInt:
-    return Builtin::BI__builtin_get_spirv_spec_constant_uint;
-  case BuiltinType::ULongLong:
-    return Builtin::BI__builtin_get_spirv_spec_constant_ulonglong;
-  case BuiltinType::Half:
-    return Builtin::BI__builtin_get_spirv_spec_constant_half;
-  case BuiltinType::Float:
-    return Builtin::BI__builtin_get_spirv_spec_constant_float;
-  case BuiltinType::Double:
-    return Builtin::BI__builtin_get_spirv_spec_constant_double;
-  default:
-    return Builtin::NotBuiltin;
-  }
-}
-
 DeclBindingInfo *ResourceBindings::addDeclBindingInfo(const VarDecl *VD,
                                                       ResourceClass ResClass) {
   assert(getDeclBindingInfo(VD, ResClass) == nullptr &&
@@ -638,41 +604,6 @@ HLSLWaveSizeAttr *SemaHLSL::mergeWaveSizeAttr(Decl *D,
   HLSLWaveSizeAttr *Result = ::new (getASTContext())
       HLSLWaveSizeAttr(getASTContext(), AL, Min, Max, Preferred);
   Result->setSpelledArgsCount(SpelledArgsCount);
-  return Result;
-}
-
-HLSLVkConstantIdAttr *
-SemaHLSL::mergeVkConstantIdAttr(Decl *D, const AttributeCommonInfo &AL,
-                                int Id) {
-
-  auto &TargetInfo = getASTContext().getTargetInfo();
-  if (TargetInfo.getTriple().getArch() != llvm::Triple::spirv) {
-    Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
-    return nullptr;
-  }
-
-  auto *VD = cast<VarDecl>(D);
-
-  if (getSpecConstBuiltinId(VD->getType()) == Builtin::NotBuiltin) {
-    Diag(VD->getLocation(), diag::err_specialization_const);
-    return nullptr;
-  }
-
-  if (!VD->getType().isConstQualified()) {
-    Diag(VD->getLocation(), diag::err_specialization_const);
-    return nullptr;
-  }
-
-  if (HLSLVkConstantIdAttr *CI = D->getAttr<HLSLVkConstantIdAttr>()) {
-    if (CI->getId() != Id) {
-      Diag(CI->getLocation(), diag::err_hlsl_attribute_param_mismatch) << AL;
-      Diag(AL.getLoc(), diag::note_conflicting_attribute);
-    }
-    return nullptr;
-  }
-
-  HLSLVkConstantIdAttr *Result =
-      ::new (getASTContext()) HLSLVkConstantIdAttr(getASTContext(), AL, Id);
   return Result;
 }
 
@@ -1224,15 +1155,6 @@ void SemaHLSL::handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL) {
     return;
   D->addAttr(::new (getASTContext())
                  HLSLVkExtBuiltinInputAttr(getASTContext(), AL, ID));
-}
-
-void SemaHLSL::handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL) {
-  uint32_t Id;
-  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Id))
-    return;
-  HLSLVkConstantIdAttr *NewAttr = mergeVkConstantIdAttr(D, AL, Id);
-  if (NewAttr)
-    D->addAttr(NewAttr);
 }
 
 bool SemaHLSL::diagnoseInputIDType(QualType T, const ParsedAttr &AL) {
@@ -3284,7 +3206,6 @@ static bool IsDefaultBufferConstantDecl(VarDecl *VD) {
   return VD->getDeclContext()->isTranslationUnit() &&
          QT.getAddressSpace() == LangAS::Default &&
          VD->getStorageClass() != SC_Static &&
-         !VD->hasAttr<HLSLVkConstantIdAttr>() &&
          !isInvalidConstantBufferLeafElementType(QT.getTypePtr());
 }
 
@@ -3352,8 +3273,7 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     const Type *VarType = VD->getType().getTypePtr();
     while (VarType->isArrayType())
       VarType = VarType->getArrayElementTypeNoTypeQual();
-    if (VarType->isHLSLResourceRecord() ||
-        VD->hasAttr<HLSLVkConstantIdAttr>()) {
+    if (VarType->isHLSLResourceRecord()) {
       // Make the variable for resources static. The global externally visible
       // storage is accessed through the handle, which is a member. The variable
       // itself is not externally visible.
@@ -3774,43 +3694,5 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   Init->resizeInits(Ctx, NewInit->getNumInits());
   for (unsigned I = 0; I < NewInit->getNumInits(); ++I)
     Init->updateInit(Ctx, I, NewInit->getInit(I));
-  return true;
-}
-
-bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
-  const HLSLVkConstantIdAttr *ConstIdAttr =
-      VDecl->getAttr<HLSLVkConstantIdAttr>();
-  if (!ConstIdAttr)
-    return true;
-
-  ASTContext &Context = SemaRef.getASTContext();
-
-  APValue InitValue;
-  if (!Init->isCXX11ConstantExpr(Context, &InitValue)) {
-    Diag(VDecl->getLocation(), diag::err_specialization_const);
-    VDecl->setInvalidDecl();
-    return false;
-  }
-
-  Builtin::ID BID = getSpecConstBuiltinId(VDecl->getType());
-
-  // Argument 1: The ID from the attribute
-  int ConstantID = ConstIdAttr->getId();
-  llvm::APInt IDVal(Context.getIntWidth(Context.IntTy), ConstantID);
-  Expr *IdExpr = IntegerLiteral::Create(Context, IDVal, Context.IntTy,
-                                        ConstIdAttr->getLocation());
-
-  SmallVector<Expr *, 2> Args = {IdExpr, Init};
-  Expr *C = SemaRef.BuildBuiltinCallExpr(Init->getExprLoc(), BID, Args);
-  if (C->getType()->getCanonicalTypeUnqualified() !=
-      VDecl->getType()->getCanonicalTypeUnqualified()) {
-    C = SemaRef
-            .BuildCStyleCastExpr(SourceLocation(),
-                                 Context.getTrivialTypeSourceInfo(
-                                     Init->getType(), Init->getExprLoc()),
-                                 SourceLocation(), C)
-            .get();
-  }
-  Init = C;
   return true;
 }
