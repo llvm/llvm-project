@@ -147,7 +147,7 @@ exit:                                              ; preds = %loop
 define i8 @crc8.le.tc16(i16 %msg, i8 %checksum) {
 ; CHECK-LABEL: 'crc8.le.tc16'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Simple recurrence doesn't use conditional recurrence with XOR
+; CHECK-NEXT:  Reason: Loop iterations exceed bitwidth of result
 ;
 entry:
   br label %loop
@@ -629,7 +629,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.wrong.sb.check.const(i8 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.wrong.sb.check.const'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Simple recurrence doesn't use conditional recurrence with XOR
+; CHECK-NEXT:  Reason: Bad RHS of significant-bit-check
 ;
 entry:
   br label %loop
@@ -868,7 +868,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.bad.cast(i8 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.bad.cast'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Simple recurrence doesn't use conditional recurrence with XOR
+; CHECK-NEXT:  Reason: Expected bottom 8 bits zero (????????00001011)
 ;
 entry:
   br label %loop
@@ -895,7 +895,7 @@ exit:                                              ; preds = %loop
 define i32 @not.crc.dead.msg.bad.use(i32 %checksum, i32 %msg) {
 ; CHECK-LABEL: 'not.crc.dead.msg.bad.use'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Simple recurrence doesn't use conditional recurrence with XOR
+; CHECK-NEXT:  Reason: Recurrences not intertwined with XOR
 ;
 entry:
   br label %loop
@@ -923,7 +923,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.dead.msg.no.use(i8 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.dead.msg.no.use'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Simple recurrence doesn't use conditional recurrence with XOR
+; CHECK-NEXT:  Reason: Recurrences not intertwined with XOR
 ;
 entry:
   br label %loop
@@ -952,7 +952,7 @@ exit:                                              ; preds = %loop
 define i32 @not.crc.dead.msg.wrong.op(i32 %checksum, i32 %msg) {
 ; CHECK-LABEL: 'not.crc.dead.msg.wrong.op'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Simple recurrence doesn't use conditional recurrence with XOR
+; CHECK-NEXT:  Reason: Recurrences not intertwined with XOR
 ;
 entry:
   br label %loop
