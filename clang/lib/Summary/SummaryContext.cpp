@@ -23,7 +23,8 @@ class CallCollector : public ast_matchers::MatchFinder::MatchCallback {
     if (!Call)
       return;
 
-    const auto *Callee = llvm::dyn_cast<FunctionDecl>(Call->getCalleeDecl());
+    const auto *Callee =
+        llvm::dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl());
     if (!Callee) {
       callsOpaqueSymbol = true;
       return;

@@ -16695,7 +16695,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (FD && !FD->isDeleted())
     checkTypeSupport(FD->getType(), FD->getLocation(), FD);
 
-  if (SummaryCnsmr) {
+  if (SummaryCnsmr && !LateTemplateParser) {
     SummaryCtx->SummarizeFunctionBody(FD);
     SummaryCnsmr->ProcessFunctionSummary(*SummaryCtx->GetSummary(FD));
   }
