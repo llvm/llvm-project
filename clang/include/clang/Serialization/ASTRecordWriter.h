@@ -115,6 +115,13 @@ public:
     Record->push_back(BitOffset);
   }
 
+  void AddLookupOffsets(const LookupBlockOffsets &Offsets) {
+    AddOffset(Offsets.LexicalOffset);
+    AddOffset(Offsets.VisibleOffset);
+    AddOffset(Offsets.ModuleLocalOffset);
+    AddOffset(Offsets.TULocalOffset);
+  }
+
   /// Add the given statement or expression to the queue of
   /// statements to emit.
   ///
