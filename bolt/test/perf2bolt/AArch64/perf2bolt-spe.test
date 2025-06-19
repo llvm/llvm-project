@@ -8,5 +8,5 @@ RUN: perf record -e cycles -q -o %t.perf.data -- %t.exe 2> /dev/null
 
 RUN: (perf2bolt -p %t.perf.data -o %t.perf.boltdata --spe %t.exe 2> /dev/null; exit 0) | FileCheck %s --check-prefix=CHECK-SPE-LBR
 
-CHECK-SPE-LBR: PERF2BOLT: spawning perf job to read SPE brstack events
+CHECK-SPE-LBR: PERF2BOLT: parse SPE branch events in LBR-format
 

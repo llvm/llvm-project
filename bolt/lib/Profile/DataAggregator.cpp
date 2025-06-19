@@ -190,10 +190,12 @@ void DataAggregator::start() {
     // P/M: whether branch was Predicted or Mispredicted.
     // N: optionally appears when the branch was Not-Taken (ie fall-through)
     // 12345  0x123/0x456/PN/-/-/8/RET/-
-    launchPerfProcess("SPE brstack events", MainEventsPPI,
-                      "script -F pid,brstack --itrace=bl",
-                      /*Wait = */ false);
-  } else if (opts::BasicAggregation) {
+    opts::ITraceAggregation = "bl";
+    opts::ParseMemProfile = true;
+    opts::BasicAggregation = false;
+  }
+
+  if (opts::BasicAggregation) {
     launchPerfProcess("events without LBR", MainEventsPPI,
                       "script -F pid,event,ip",
                       /*Wait = */ false);
@@ -1524,8 +1526,8 @@ std::error_code DataAggregator::parseBranchEvents() {
   std::string BranchEventTypeStr =
       opts::ArmSPE ? "SPE branch events in LBR-format" : "branch events";
   outs() << "PERF2BOLT: parse " << BranchEventTypeStr << "...\n";
-  NamedRegionTimer T("parseBranch", "Parsing " + BranchEventTypeStr,
-                     TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
+  NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
+                     TimerGroupDesc, opts::TimeAggregator);
 
   uint64_t NumEntries = 0;
   uint64_t NumSamples = 0;
