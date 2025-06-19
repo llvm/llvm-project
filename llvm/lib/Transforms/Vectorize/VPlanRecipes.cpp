@@ -323,8 +323,9 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     return TargetTransformInfo::PR_None;
   };
 
-  // Pick out opcode, type/ext information and use sub side effects from a widen recipe.
-  auto HandleWiden = [&](VPWidenRecipe* Widen){
+  // Pick out opcode, type/ext information and use sub side effects from a widen
+  // recipe.
+  auto HandleWiden = [&](VPWidenRecipe *Widen) {
     if (match(Widen,
               m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(Op)))) {
       Widen = dyn_cast<VPWidenRecipe>(Op->getDefiningRecipe());
@@ -333,9 +334,9 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     VPRecipeBase *ExtAR = Widen->getOperand(0)->getDefiningRecipe();
     VPRecipeBase *ExtBR = Widen->getOperand(1)->getDefiningRecipe();
     InputTypeA = Ctx.Types.inferScalarType(ExtAR ? ExtAR->getOperand(0)
-                                                  : Widen->getOperand(0));
+                                                 : Widen->getOperand(0));
     InputTypeB = Ctx.Types.inferScalarType(ExtBR ? ExtBR->getOperand(0)
-                                                  : Widen->getOperand(1));
+                                                 : Widen->getOperand(1));
     ExtAType = GetExtendKind(ExtAR);
     ExtBType = GetExtendKind(ExtBR);
   };
