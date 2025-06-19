@@ -27,23 +27,23 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 #define CUDA_NOEXCEPT
 #endif
 
-#ifdef _GLIBCXX_VERBOSE_ASSERT
 __attribute__((device, noreturn)) inline void
 __glibcxx_assert_fail(const char *file, int line, const char *function,
                       const char *condition) CUDA_NOEXCEPT {
+#ifdef _GLIBCXX_VERBOSE_ASSERT
   if (file && function && condition)
     __builtin_printf("%s:%d: %s: Assertion '%s' failed.\n", file, line,
                      function, condition);
   else if (function)
     __builtin_printf("%s: Undefined behavior detected.\n", function);
+#endif
   __builtin_abort();
 }
-#endif
 
 #endif
 __attribute__((device, noreturn, __always_inline__,
                __visibility__("default"))) inline void
-__glibcxx_assert_fail(...) CUDA_NOEXCEPT {
+__glibcxx_assert_fail() CUDA_NOEXCEPT {
   __builtin_abort();
 }
 
