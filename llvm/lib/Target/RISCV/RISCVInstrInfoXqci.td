@@ -1439,8 +1439,6 @@ def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC
 } // let Predicates = [HasVendorXqcibi, IsRV32], AddedComplexity = 2
 
 let Predicates = [HasVendorXqcibm, IsRV32] in {
-def : Pat<(sext_inreg (i32 GPR:$rs1), i16), (QC_EXT GPR:$rs1, 16, 0)>;
-def : Pat<(sext_inreg (i32 GPR:$rs1), i8), (QC_EXT GPR:$rs1, 8, 0)>;
 def : Pat<(sext_inreg (i32 GPR:$rs1), i1), (QC_EXT GPR:$rs1, 1, 0)>;
 
 // Prefer qc.extu to andi for the following cases since the former can be compressed
@@ -1451,6 +1449,12 @@ def : Pat<(i32 (and GPRNoX0:$rs, 511)), (QC_EXTU GPRNoX0:$rs, 9, 0)>;
 def : Pat<(i32 (and GPRNoX0:$rs, 1023)), (QC_EXTU GPRNoX0:$rs, 10, 0)>;
 def : Pat<(i32 (and GPRNoX0:$rs, 2047)), (QC_EXTU GPRNoX0:$rs, 11, 0)>;
 } // Predicates = [HasVendorXqcibm, IsRV32]
+
+// If Zbb is enabled sext.b/h is preferred since they are compressible
+let Predicates = [HasVendorXqcibm, NoStdExtZbb, IsRV32] in {
+def : Pat<(sext_inreg (i32 GPR:$rs1), i16), (QC_EXT GPR:$rs1, 16, 0)>;
+def : Pat<(sext_inreg (i32 GPR:$rs1), i8), (QC_EXT GPR:$rs1, 8, 0)>;
+} // Predicates = [HasVendorXqcibm, NoStdExtZbb, IsRV32]
 
 let Predicates = [HasVendorXqcibm, HasStdExtZbb, IsRV32] in {
 def: Pat<(i32 (cttz (not (i32 GPR:$rs1)))), (QC_CTO GPR:$rs1)>;
