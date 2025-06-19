@@ -12,6 +12,7 @@
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
@@ -2986,6 +2987,8 @@ static bool IsPointerAssignment(const evaluate::Assignment &x) {
   return std::holds_alternative<evaluate::Assignment::BoundsSpec>(x.u) ||
       std::holds_alternative<evaluate::Assignment::BoundsRemapping>(x.u);
 }
+
+namespace operation = Fortran::evaluate::operation;
 
 static bool IsCheckForAssociated(const SomeExpr &cond) {
   return GetTopLevelOperation(cond).first == operation::Operator::Associated;
