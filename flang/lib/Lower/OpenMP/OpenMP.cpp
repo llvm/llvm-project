@@ -1831,7 +1831,8 @@ static void genTargetClauses(
   }
   cp.processIf(llvm::omp::Directive::OMPD_target, clauseOps);
   cp.processIsDevicePtr(clauseOps, isDevicePtrSyms);
-  cp.processMap(loc, stmtCtx, clauseOps, &mapSyms);
+  cp.processMap(loc, stmtCtx, clauseOps, llvm::omp::Directive::OMPD_unknown,
+                &mapSyms);
   cp.processNowait(clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
 
@@ -1884,7 +1885,7 @@ static void genTargetEnterExitUpdateDataClauses(
   if (directive == llvm::omp::Directive::OMPD_target_update)
     cp.processMotionClauses(stmtCtx, clauseOps);
   else
-    cp.processMap(loc, stmtCtx, clauseOps);
+    cp.processMap(loc, stmtCtx, clauseOps, directive);
 
   cp.processNowait(clauseOps);
 }
