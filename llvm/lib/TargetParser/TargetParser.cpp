@@ -56,7 +56,7 @@ std::optional<llvm::StringMap<bool>> llvm::getCPUDefaultTargetFeatures(
   llvm::StringMap<bool> DefaultFeatures;
   setImpliedBits(Bits, CPUEntry->Implies.getAsBitset(), ProcFeatures);
 
-  unsigned BitSize = Bits.size();
+  [[maybe_unused]] unsigned BitSize = Bits.size();
   for (const BasicSubtargetFeatureKV &FE : ProcFeatures) {
     assert(FE.Value < BitSize && "Target Feature is out of range");
     if (Bits[FE.Value])
