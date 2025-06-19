@@ -632,8 +632,8 @@ void RTLIB::initCmpLibcallCCs(ISD::CondCode *CmpLibcallCCs) {
 
 /// NOTE: The TargetMachine owns TLOF.
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
-    : TM(tm), Libcalls(TM.getTargetTriple(), TM.Options.FloatABIType,
-                       TM.Options.EABIVersion) {
+    : TM(tm), Libcalls(TM.getTargetTriple(), TM.Options.ExceptionModel,
+                       TM.Options.FloatABIType, TM.Options.EABIVersion) {
   initActions();
 
   // Perform these initializations only once.

@@ -54,10 +54,12 @@ static inline auto libcalls() {
 
 /// A simple container for information about the supported runtime calls.
 struct RuntimeLibcallsInfo {
-  explicit RuntimeLibcallsInfo(const Triple &TT,
-                               FloatABI::ABIType FloatABI = FloatABI::Default,
-                               EABI EABIVersion = EABI::Default) {
-    initLibcalls(TT, FloatABI, EABIVersion);
+  explicit RuntimeLibcallsInfo(
+      const Triple &TT,
+      ExceptionHandling ExceptionModel = ExceptionHandling::None,
+      FloatABI::ABIType FloatABI = FloatABI::Default,
+      EABI EABIVersion = EABI::Default) {
+    initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion);
   }
 
   /// Rename the default libcall routine name for the specified libcall.
@@ -147,8 +149,8 @@ private:
 
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.
-  LLVM_ABI void initLibcalls(const Triple &TT, FloatABI::ABIType FloatABI,
-                             EABI ABIType);
+  LLVM_ABI void initLibcalls(const Triple &TT, ExceptionHandling ExceptionModel,
+                             FloatABI::ABIType FloatABI, EABI ABIType);
 };
 
 } // namespace RTLIB
