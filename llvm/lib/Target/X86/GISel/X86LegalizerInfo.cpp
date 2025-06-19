@@ -842,7 +842,6 @@ bool X86LegalizerInfo::legalizeBitcast(MachineInstr &MI,
                                        LegalizerHelper &Helper) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
-  assert(!SrcTy.isVector() && "G_BITCAST does not support vectors yet");
   bool isCopy =
       (SrcTy == DstTy) || (SrcTy.getSizeInBits() == DstTy.getSizeInBits());
   if (isCopy) {
