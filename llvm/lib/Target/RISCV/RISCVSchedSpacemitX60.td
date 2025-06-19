@@ -196,8 +196,13 @@ let BufferSize = 0 in {
   def SMX60_FP : ProcResource<1>;
 
   // Vector pipeline
-  def SMX60_VIEU : ProcResource<1>;
+  // Single issue for vector store/load instructions
   def SMX60_VLS : ProcResource<1>;
+
+  def SMX60_VIEU : ProcResource<1>;
+
+  // The C908 user manual says: "The vector execution unit is developed by
+  // extending the floating-point unit", so let's assume single issue for now
   def SMX60_VFP : ProcResource<1>;
 }
 
