@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextAIX.cpp ------------------------------------===//
+//===---- NativeRegisterContextAIX.cpp ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@ using namespace lldb_private;
 using namespace lldb_private::process_aix;
 
 lldb::ByteOrder NativeRegisterContextAIX::GetByteOrder() const {
-  return m_thread.GetProcess().GetByteOrder();
+  return lldb::eByteOrderInvalid;
 }
 
 Status NativeRegisterContextAIX::ReadRegisterRaw(uint32_t reg_index,
@@ -50,17 +50,5 @@ Status NativeRegisterContextAIX::ReadRegisterSet(void *buf, size_t buf_size,
 
 Status NativeRegisterContextAIX::WriteRegisterSet(void *buf, size_t buf_size,
                                                   unsigned int regset) {
-  return Status("unimplemented");
-}
-
-Status NativeRegisterContextAIX::DoReadRegisterValue(uint32_t offset,
-                                                     const char *reg_name,
-                                                     uint32_t size,
-                                                     RegisterValue &value) {
-  return Status("unimplemented");
-}
-
-Status NativeRegisterContextAIX::DoWriteRegisterValue(
-    uint32_t offset, const char *reg_name, const RegisterValue &value) {
   return Status("unimplemented");
 }

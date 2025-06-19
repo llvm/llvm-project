@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextAIX.h ----------------------------*- C++ -*-===//
+//===---- NativeRegisterContextAIX.h ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_NativeRegisterContextAIX_h
-#define lldb_NativeRegisterContextAIX_h
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTERCONTEXTAIX_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTERCONTEXTAIX_H
 
 #include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
 
-namespace lldb_private {
-namespace process_aix {
-
-class NativeThreadAIX;
+namespace lldb_private::process_aix {
 
 class NativeRegisterContextAIX
     : public virtual NativeRegisterContextRegisterInfo {
@@ -58,17 +55,8 @@ protected:
   virtual void *GetFPRBuffer() = 0;
 
   virtual size_t GetFPRSize() = 0;
-
-  // The Do*** functions are executed on the privileged thread and can perform
-  // ptrace operations directly.
-  virtual Status DoReadRegisterValue(uint32_t offset, const char *reg_name,
-                                     uint32_t size, RegisterValue &value);
-
-  virtual Status DoWriteRegisterValue(uint32_t offset, const char *reg_name,
-                                      const RegisterValue &value);
 };
 
-} // namespace process_aix
-} // namespace lldb_private
+} // namespace lldb_private::process_aix
 
-#endif // #ifndef lldb_NativeRegisterContextAIX_h
+#endif // #ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTERCONTEXTAIX_H
