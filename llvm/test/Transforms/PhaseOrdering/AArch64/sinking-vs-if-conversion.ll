@@ -156,7 +156,7 @@ define void @cond_select_loop(ptr noalias nocapture noundef readonly %a, ptr noa
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[I_07]]
 ; CHECK-NEXT:    store float [[COND]], ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_07]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 1000
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp samesign eq i64 [[I_07]], 999
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
