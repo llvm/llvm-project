@@ -20,7 +20,7 @@ define ptx_kernel void @kernel_func(ptr %a) {
 entry:
   %buf = alloca [16 x i8], align 4
 
-; CHECK: .local .align 4 .b8 	__local_depot0[16]
+; CHECK: .local .align 16 .b8 	__local_depot0[16]
 ; CHECK: mov.b64 %SPL
 
 ; CHECK: ld.param.b64 %rd[[A_REG:[0-9]+]], [kernel_func_param_0]
