@@ -325,7 +325,7 @@ public:
   SmallVector<GCOVArc *, 2> pred;
   SmallVector<GCOVArc *, 2> succ;
   SmallVector<GCOVBlockLocation> locations;
-  uint32_t lastLine;
+  uint32_t lastLine = 0;
   bool traversable = false;
   GCOVArc *incoming = nullptr;
 };
