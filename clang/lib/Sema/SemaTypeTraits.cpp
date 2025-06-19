@@ -2345,6 +2345,13 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
   if (D->isPolymorphic()) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::VirtualFunction;
+
+    for (const CXXMethodDecl *Method : D->methods()) {
+      if (Method->isVirtual()) {
+        SemaRef.Diag(Method->getLocation(), diag::note_defined_here) << Method;
+        break;
+      }
+    }
   }
   for (const FieldDecl *Field : D->fields()) {
     if (!Field->getType()->isStandardLayoutType()) {
