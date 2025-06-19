@@ -1736,17 +1736,27 @@ def VOP3_V3I32_I32_I64_V2I32 : VOP3_Profile<VOPProfile<[v3i32, i32, i64, v2i32]>
 def VOP3_V4I32_I64_I64_V2I32 : VOP3_Profile<VOPProfile<[v4i32, i64, i64, v2i32]>>;
 }
 
-class VOP3_CVT_PK_F8_F16_Profile<RegisterOperand RC> : VOP3_Profile<VOP_I16_V2F16, VOP3_OPSEL> {
+class VOP3_CVT_PK_F8_F16_Profile<RegisterOperand RC> : VOP3_Profile<VOP_I16_V2F16> {
+  let Src0RC64 = RC;
+}
+class VOP3_CVT_PK_F8_F16_True16_Profile<RegisterOperand RC> : VOP3_Profile_True16<VOP3_CVT_PK_F8_F16_Profile<RC>> {
+  let Src0RC64 = RC;
+}
+class VOP3_CVT_PK_F8_F16_Fake16_Profile<RegisterOperand RC> : VOP3_Profile_Fake16<VOP3_CVT_PK_F8_F16_Profile<RC>> {
   let Src0RC64 = RC;
 }
 
 let ReadsModeReg = 0, IsPacked = 0, SubtargetPredicate = isGFX125xOnly in {
-  defm V_CVT_PK_FP8_F16_gfx1250 : VOP3Inst<"v_cvt_pk_fp8_f16_gfx1250",
-                                           VOP3_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
-                                           int_amdgcn_cvt_pk_fp8_f16>;
-  defm V_CVT_PK_BF8_F16_gfx1250 : VOP3Inst<"v_cvt_pk_bf8_f16_gfx1250",
-                                           VOP3_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
-                                           int_amdgcn_cvt_pk_bf8_f16>;
+  defm V_CVT_PK_FP8_F16_gfx1250 : VOP3Inst_t16_with_profiles<"v_cvt_pk_fp8_f16_gfx1250",
+                                               VOP3_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
+                                               VOP3_CVT_PK_F8_F16_True16_Profile<VSrc_NoInline_v2f16>,
+                                               VOP3_CVT_PK_F8_F16_Fake16_Profile<VSrc_NoInline_v2f16>,
+                                               int_amdgcn_cvt_pk_fp8_f16>;
+  defm V_CVT_PK_BF8_F16_gfx1250 : VOP3Inst_t16_with_profiles<"v_cvt_pk_bf8_f16_gfx1250",
+                                               VOP3_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
+                                               VOP3_CVT_PK_F8_F16_True16_Profile<VSrc_NoInline_v2f16>,
+                                               VOP3_CVT_PK_F8_F16_Fake16_Profile<VSrc_NoInline_v2f16>,
+                                               int_amdgcn_cvt_pk_bf8_f16>;
 }
 
 let HasClamp = 0, HasOpSel = 1 in {
@@ -2423,8 +2433,8 @@ defm V_CVT_PK_BF16_F32               : VOP3Only_Realtriple_gfx1250_gfx13<0x36d, 
 defm V_CVT_SR_PK_BF16_F32            : VOP3Only_Realtriple_gfx1250_gfx13<0x36e, 0x2c2>;
 defm V_CVT_PK_F16_F32                : VOP3Only_Realtriple_gfx1250_gfx13<0x36f, 0x374>;
 defm V_CVT_SR_PK_F16_F32             : VOP3Only_Realtriple_gfx1250_gfx13<0x370, 0x2c3>;
-defm V_CVT_PK_FP8_F16_gfx1250        : VOP3Only_Realtriple_with_name<GFX1250Gen, 0x372, "V_CVT_PK_FP8_F16_gfx1250", "v_cvt_pk_fp8_f16">;
-defm V_CVT_PK_BF8_F16_gfx1250        : VOP3Only_Realtriple_with_name<GFX1250Gen, 0x373, "V_CVT_PK_BF8_F16_gfx1250", "v_cvt_pk_bf8_f16">;
+defm V_CVT_PK_FP8_F16_gfx1250        : VOP3Only_Realtriple_t16_and_fake16_gfx1250<0x372, "v_cvt_pk_fp8_f16">;
+defm V_CVT_PK_BF8_F16_gfx1250        : VOP3Only_Realtriple_t16_and_fake16_gfx1250<0x373, "v_cvt_pk_bf8_f16">;
 defm V_CVT_SR_FP8_F16                : VOP3Only_Realtriple_t16_and_fake16_gfx1250_gfx13<0x374, 0x335>;
 defm V_CVT_SR_BF8_F16                : VOP3Only_Realtriple_t16_and_fake16_gfx1250_gfx13<0x375, 0x336>;
 
