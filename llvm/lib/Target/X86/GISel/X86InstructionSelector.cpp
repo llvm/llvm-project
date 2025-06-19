@@ -1054,7 +1054,6 @@ bool X86InstructionSelector::selectCmp(MachineInstr &I,
   I.eraseFromParent();
   return true;
 }
-
 bool X86InstructionSelector::selectFAbs(MachineInstr &I,
                                         MachineRegisterInfo &MRI,
                                         MachineFunction &MF) const {
@@ -1064,21 +1063,22 @@ bool X86InstructionSelector::selectFAbs(MachineInstr &I,
   LLT Ty = MRI.getType(SrcReg);
   unsigned OpAbs;
   const TargetRegisterClass *DstRC;
-  switch(Ty.getSizeInBits()) {
-    default:
-      return false;
-    case 32:
-      OpAbs = X86::ABS_Fp32;
-      DstRC = &X86::FR32RegClass;
-      break;
-    case 64:
-      OpAbs = X86::ABS_Fp64;
-      DstRC = &X86::FR64RegClass;
-      break;
+  switch (Ty.getSizeInBits()) {
+  default:
+    return false;
+  case 32:
+    OpAbs = X86::ABS_Fp32;
+    DstRC = &X86::FR32RegClass;
+    break;
+  case 64:
+    OpAbs = X86::ABS_Fp64;
+    DstRC = &X86::FR64RegClass;
+    break;
   }
   MRI.setRegClass(DstReg, DstRC);
-  MachineInstr &FAbsInst = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-        TII.get(OpAbs), DstReg).addReg(SrcReg);
+  MachineInstr &FAbsInst =
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpAbs), DstReg)
+           .addReg(SrcReg);
   constrainSelectedInstRegOperands(FAbsInst, TII, TRI, RBI);
   I.eraseFromParent();
   return true;
