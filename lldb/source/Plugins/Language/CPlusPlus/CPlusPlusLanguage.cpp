@@ -364,6 +364,10 @@ GetDemangledFunctionSuffix(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
+  if (!info.hasSuffix())
+    return llvm::createStringError("Suffix range for '%s' is invalid.",
+                                   demangled_name.data());
+
   return demangled_name.slice(info.SuffixRange.first, info.SuffixRange.second);
 }
 
