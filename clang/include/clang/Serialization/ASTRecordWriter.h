@@ -17,6 +17,7 @@
 #include "clang/AST/AbstractBasicWriter.h"
 #include "clang/AST/OpenACCClause.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Serialization/SourceLocationEncoding.h"
 
