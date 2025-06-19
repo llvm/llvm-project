@@ -5599,6 +5599,26 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
     SrcTy = DstTy;
   }
 
+  // Segmented shuffle matching.
+  if (ST->hasSVE2p1() && CostKind == TTI::TCK_RecipThroughput &&
+      Kind == TTI::SK_PermuteSingleSrc && isa<FixedVectorType>(Tp) &&
+      Tp->getPrimitiveSizeInBits().isKnownMultipleOf(128)) {
+
+    FixedVectorType *VTy = cast<FixedVectorType>(Tp);
+    unsigned Segments = VTy->getPrimitiveSizeInBits() / 128;
+    unsigned SegmentElts = VTy->getNumElements() / Segments;
+
+    // dupq zd.t, zn.t[idx]
+    unsigned Lane = (unsigned)Mask[0];
+    if (SegmentElts * Segments == Mask.size() && Lane < SegmentElts) {
+      bool IsDupQ = true;
+      for (unsigned I = 1; I < Mask.size(); ++I)
+        IsDupQ &= (unsigned)Mask[I] == Lane + ((I / SegmentElts) * SegmentElts);
+      if (IsDupQ)
+        return LT.first;
+    }
+  }
+
   // Check for broadcast loads, which are supported by the LD1R instruction.
   // In terms of code-size, the shuffle vector is free when a load + dup get
   // folded into a LD1R. That's what we check and return here. For performance
