@@ -314,7 +314,7 @@ GetDemangledFunctionQualifiers(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (info.QualifiersRange.second < info.QualifiersRange.first)
+  if (!info.hasQualifiers())
     return llvm::createStringError("Qualifiers range for '%s' is invalid.",
                                    demangled_name.data());
 
@@ -349,7 +349,7 @@ GetDemangledScope(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (info.ScopeRange.second < info.ScopeRange.first)
+  if (!info.hasScope())
     return llvm::createStringError("Scope range for '%s' is invalid.",
                                    demangled_name.data());
 
@@ -381,7 +381,7 @@ static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
   }
   auto [demangled_name, info] = *info_or_err;
 
-  if (info.ArgumentsRange.second < info.ArgumentsRange.first)
+  if (!info.hasArguments())
     return false;
 
   s << demangled_name.slice(info.ArgumentsRange.first,
