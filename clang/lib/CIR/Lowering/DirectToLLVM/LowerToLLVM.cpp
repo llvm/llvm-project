@@ -220,6 +220,39 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
   return value;
 }
 
+void convertSideEffectForCall(mlir::Operation *callOp,
+                              cir::SideEffect sideEffect,
+                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
+                              bool &noUnwind, bool &willReturn) {
+  using mlir::LLVM::ModRefInfo;
+
+  switch (sideEffect) {
+  case cir::SideEffect::All:
+    memoryEffect = {};
+    noUnwind = false;
+    willReturn = false;
+    break;
+
+  case cir::SideEffect::Pure:
+    memoryEffect = mlir::LLVM::MemoryEffectsAttr::get(
+        callOp->getContext(), /*other=*/ModRefInfo::Ref,
+        /*argMem=*/ModRefInfo::Ref,
+        /*inaccessibleMem=*/ModRefInfo::Ref);
+    noUnwind = true;
+    willReturn = true;
+    break;
+
+  case cir::SideEffect::Const:
+    memoryEffect = mlir::LLVM::MemoryEffectsAttr::get(
+        callOp->getContext(), /*other=*/ModRefInfo::NoModRef,
+        /*argMem=*/ModRefInfo::NoModRef,
+        /*inaccessibleMem=*/ModRefInfo::NoModRef);
+    noUnwind = true;
+    willReturn = true;
+    break;
+  }
+}
+
 /// IntAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::IntAttr intAttr) {
   mlir::Location loc = parentOp->getLoc();
@@ -745,12 +778,18 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                     mlir::FlatSymbolRefAttr calleeAttr) {
   llvm::SmallVector<mlir::Type, 8> llvmResults;
   mlir::ValueTypeRange<mlir::ResultRange> cirResults = op->getResultTypes();
+  auto call = cast<cir::CIRCallOpInterface>(op);
 
   if (converter->convertTypes(cirResults, llvmResults).failed())
     return mlir::failure();
 
   assert(!cir::MissingFeatures::opCallCallConv());
-  assert(!cir::MissingFeatures::opCallSideEffect());
+
+  mlir::LLVM::MemoryEffectsAttr memoryEffects;
+  bool noUnwind = false;
+  bool willReturn = false;
+  convertSideEffectForCall(op, call.getSideEffect(), memoryEffects, noUnwind,
+                           willReturn);
 
   mlir::LLVM::LLVMFunctionType llvmFnTy;
   if (calleeAttr) { // direct call
@@ -775,10 +814,14 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
   assert(!cir::MissingFeatures::opCallLandingPad());
   assert(!cir::MissingFeatures::opCallContinueBlock());
   assert(!cir::MissingFeatures::opCallCallConv());
-  assert(!cir::MissingFeatures::opCallSideEffect());
 
-  rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(op, llvmFnTy, calleeAttr,
-                                                  callOperands);
+  auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+      op, llvmFnTy, calleeAttr, callOperands);
+  if (memoryEffects)
+    newOp.setMemoryEffectsAttr(memoryEffects);
+  newOp.setNoUnwind(noUnwind);
+  newOp.setWillReturn(willReturn);
+
   return mlir::success();
 }
 
