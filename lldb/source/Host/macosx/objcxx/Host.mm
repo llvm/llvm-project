@@ -624,16 +624,12 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
 
           Environment &proc_env = process_info.GetEnvironment();
           bool is_simulator = false;
-          while ((cstr = data.GetCStr(&offset))) {
-            if (cstr[0] == '\0')
-              break;
-
+          for (llvm::StringRef env_var;
+               !(env_var = data.GetCStr(&offset)).empty();) {
             if (check_for_ios_simulator &&
-                strncmp(cstr, "SIMULATOR_UDID=", strlen("SIMULATOR_UDID=")) ==
-                    0)
+                env_var.starts_with("SIMULATOR_UDID="))
               is_simulator = true;
-
-            proc_env.insert(cstr);
+            proc_env.insert(env_var);
           }
           llvm::Triple &triple = process_info.GetArchitecture().GetTriple();
           if (is_simulator) {
