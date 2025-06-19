@@ -515,16 +515,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 
-  if (!Subtarget->isTargetDarwin() && !Subtarget->isTargetIOS() &&
-      !Subtarget->isTargetWatchOS() && !Subtarget->isTargetDriverKit()) {
-    bool IsHFTarget = TM.Options.FloatABIType == FloatABI::Hard;
-
-    for (RTLIB::Libcall LC : RTLIB::libcalls()) {
-      setLibcallCallingConv(LC, IsHFTarget ? CallingConv::ARM_AAPCS_VFP
-                                           : CallingConv::ARM_AAPCS);
-    }
-  }
-
   if (Subtarget->isTargetMachO()) {
     // Uses VFP for Thumb libfuncs if available.
     if (Subtarget->isThumb() && Subtarget->hasVFP2Base() &&

@@ -19,6 +19,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -53,8 +54,10 @@ static inline auto libcalls() {
 
 /// A simple container for information about the supported runtime calls.
 struct RuntimeLibcallsInfo {
-  explicit RuntimeLibcallsInfo(const Triple &TT) {
-    initLibcalls(TT);
+  explicit RuntimeLibcallsInfo(const Triple &TT,
+                               FloatABI::ABIType FloatABI = FloatABI::Default,
+                               EABI EABIVersion = EABI::Default) {
+    initLibcalls(TT, FloatABI, EABIVersion);
   }
 
   /// Rename the default libcall routine name for the specified libcall.
@@ -144,7 +147,8 @@ private:
 
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.
-  LLVM_ABI void initLibcalls(const Triple &TT);
+  LLVM_ABI void initLibcalls(const Triple &TT, FloatABI::ABIType FloatABI,
+                             EABI ABIType);
 };
 
 } // namespace RTLIB
