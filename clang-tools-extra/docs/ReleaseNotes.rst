@@ -136,17 +136,17 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
-- New :doc:`portability-avoid-pragma-once
-  <clang-tidy/checks/portability/avoid-pragma-once>` check.
-
-  Finds uses of ``#pragma once`` and suggests replacing them with standard
-  include guards (``#ifndef``/``#define``/``#endif``) for improved portability.
-
 - New :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check.
 
   Finds uses of ``std::lock_guard`` and suggests replacing them with C++17's
   alternative ``std::scoped_lock``.
+
+- New :doc:`portability-avoid-pragma-once
+  <clang-tidy/checks/portability/avoid-pragma-once>` check.
+
+  Finds uses of ``#pragma once`` and suggests replacing them with standard
+  include guards (``#ifndef``/``#define``/``#endif``) for improved portability.
 
 - New :doc:`readability-ambiguous-smartptr-reset-call
   <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.
