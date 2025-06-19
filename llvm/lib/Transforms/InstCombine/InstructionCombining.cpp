@@ -3355,8 +3355,8 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<WeakTrackingVH> &Users,
             if ((Access & ~NewAccess) != ModRefInfo::NoModRef)
               return std::nullopt;
             Access |= NewAccess;
-          }
             [[fallthrough]];
+          }
           case Intrinsic::assume:
           case Intrinsic::invariant_start:
           case Intrinsic::invariant_end:
