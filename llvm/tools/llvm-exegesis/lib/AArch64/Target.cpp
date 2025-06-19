@@ -105,6 +105,89 @@ static MCInst loadFPImmediate(MCRegister Reg, unsigned RegBitWidth,
   return Instructions;
 }
 
+static void generateRegisterStackPush(unsigned int RegToPush,
+                                      std::vector<MCInst> &GeneratedCode,
+                                      int imm = -16) {
+  // STR [X|W]t, [SP, #simm]!: SP is decremented by default 16 bytes
+  //                           before the store to maintain 16-bytes alignment.
+  if (AArch64::GPR64RegClass.contains(RegToPush)) {
+    GeneratedCode.push_back(MCInstBuilder(AArch64::STRXpre)
+                                .addReg(AArch64::SP)
+                                .addReg(RegToPush)
+                                .addReg(AArch64::SP)
+                                .addImm(imm));
+  } else if (AArch64::GPR32RegClass.contains(RegToPush)) {
+    GeneratedCode.push_back(MCInstBuilder(AArch64::STRWpre)
+                                .addReg(AArch64::SP)
+                                .addReg(RegToPush)
+                                .addReg(AArch64::SP)
+                                .addImm(imm));
+  } else {
+    llvm_unreachable("Unsupported register class for stack push");
+  }
+}
+
+static void generateRegisterStackPop(unsigned int RegToPopTo,
+                                     std::vector<MCInst> &GeneratedCode,
+                                     int imm = 16) {
+  // LDR Xt, [SP], #simm: SP is incremented by default 16 bytes after the load.
+  if (AArch64::GPR64RegClass.contains(RegToPopTo)) {
+    GeneratedCode.push_back(MCInstBuilder(AArch64::LDRXpost)
+                                .addReg(AArch64::SP)
+                                .addReg(RegToPopTo)
+                                .addReg(AArch64::SP)
+                                .addImm(imm));
+  } else if (AArch64::GPR32RegClass.contains(RegToPopTo)) {
+    GeneratedCode.push_back(MCInstBuilder(AArch64::LDRWpost)
+                                .addReg(AArch64::SP)
+                                .addReg(RegToPopTo)
+                                .addReg(AArch64::SP)
+                                .addImm(imm));
+  } else {
+    llvm_unreachable("Unsupported register class for stack pop");
+  }
+}
+
+void generateSysCall(long SyscallNumber, std::vector<MCInst> &GeneratedCode) {
+  GeneratedCode.push_back(
+      loadImmediate(AArch64::X8, 64, APInt(64, SyscallNumber)));
+  GeneratedCode.push_back(MCInstBuilder(AArch64::SVC).addImm(0));
+}
+
+/// Functions to save/restore system call registers
+#ifdef __linux__
+constexpr std::array<unsigned, 6> SyscallArgumentRegisters{
+    AArch64::X0, AArch64::X1, AArch64::X2,
+    AArch64::X3, AArch64::X4, AArch64::X5,
+};
+
+static void saveSysCallRegisters(std::vector<MCInst> &GeneratedCode,
+                                 unsigned ArgumentCount) {
+  // AArch64 Linux typically uses X0-X5 for the first 6 arguments.
+  // Some syscalls can take up to 8 arguments in X0-X7.
+  assert(ArgumentCount <= 6 &&
+         "This implementation saves up to 6 argument registers (X0-X5)");
+  // generateRegisterStackPush(ArgumentRegisters::TempRegister, GeneratedCode);
+  // Preserve X8 (used for the syscall number/return value).
+  generateRegisterStackPush(AArch64::X8, GeneratedCode);
+  // Preserve the registers used to pass arguments to the system call.
+  for (unsigned I = 0; I < ArgumentCount; ++I) {
+    generateRegisterStackPush(SyscallArgumentRegisters[I], GeneratedCode);
+  }
+}
+
+static void restoreSysCallRegisters(std::vector<MCInst> &GeneratedCode,
+                                    unsigned ArgumentCount) {
+  assert(ArgumentCount <= 6 &&
+         "This implementation restores up to 6 argument registers (X0-X5)");
+  // Restore argument registers, in opposite order of the way they are saved.
+  for (int I = ArgumentCount - 1; I >= 0; --I) {
+    generateRegisterStackPop(SyscallArgumentRegisters[I], GeneratedCode);
+  }
+  generateRegisterStackPop(AArch64::X8, GeneratedCode);
+  // generateRegisterStackPop(ArgumentRegisters::TempRegister, GeneratedCode);
+}
+#endif // __linux__
 #include "AArch64GenExegesis.inc"
 
 namespace {
