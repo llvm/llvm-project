@@ -1058,11 +1058,6 @@ namespace llvm {
     /// functions.
     bool isExtendedSwiftAsyncFrameSupported(const X86Subtarget &Subtarget,
                                             const MachineFunction &MF);
-
-    /// True if the target supports a fast implementation for the specific
-    /// operation and vector type combination.
-    bool isVectorReductionFast(const X86Subtarget &Subtarget, ISD::NodeType VectorOp, MVT VT);
-
   } // end namespace X86
 
   //===--------------------------------------------------------------------===//

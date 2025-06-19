@@ -6575,44 +6575,6 @@ X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   return Options;
 }
 
-bool llvm::X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
-  ISD::NodeType OpCode;
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::vector_reduce_add:
-    OpCode = ISD::VECREDUCE_ADD;
-    break;
-  case Intrinsic::vector_reduce_fadd:
-    OpCode = ISD::VECREDUCE_FADD;
-    break;
-  case Intrinsic::vector_reduce_mul:
-    OpCode = ISD::VECREDUCE_MUL;
-    break;
-  case Intrinsic::vector_reduce_umin:
-    OpCode = ISD::VECREDUCE_UMIN;
-    break;
-  case Intrinsic::vector_reduce_umax:
-    OpCode = ISD::VECREDUCE_UMAX;
-    break;
-  case Intrinsic::vector_reduce_smin:
-    OpCode = ISD::VECREDUCE_SMIN;
-    break;
-  case Intrinsic::vector_reduce_smax:
-    OpCode = ISD::VECREDUCE_SMAX;
-    break;
-
-  default:
-    return true;
-  }
-
-  auto *VType = dyn_cast<FixedVectorType>(
-      II->getOperand(II->getIntrinsicID() == Intrinsic::vector_reduce_fadd ? 1
-                                                                           : 0)
-          ->getType());
-  auto VT = EVT::getEVT(VType).getSimpleVT();
-
-  return !X86::isVectorReductionFast(*ST, OpCode, VT);
-}
-
 bool X86TTIImpl::prefersVectorizedAddressing() const {
   return supportsGather();
 }
