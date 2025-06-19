@@ -273,7 +273,7 @@ def RedundantSelectFalse :
     Pat<(SelectOp $pred, $a, (SelectOp $pred, $b, $c)),
         (SelectOp $pred, $a, $c)>;
 
-// select(pred, false, true) => not(pred) 
+// select(pred, false, true) => not(pred)
 def SelectI1ToNot :
     Pat<(SelectOp $pred,
                   (ConstantLikeMatcher ConstantAttr<I1Attr, "0">),
@@ -361,10 +361,6 @@ def OrOfExtSI :
 // TruncIOp
 //===----------------------------------------------------------------------===//
 
-def ValuesWithSameType :
-    Constraint<
-      CPred<"llvm::all_equal({$0.getType(), $1.getType(), $2.getType()})">>;
-
 def ValueWiderThan :
     Constraint<And<[
       CPred<"getScalarOrElementWidth($0) > getScalarOrElementWidth($1)">,
@@ -396,28 +392,6 @@ def TruncIShrSIToTrunciShrUI :
           (Arith_ShRSIOp $x, (ConstantLikeMatcher TypedAttrInterface:$c0)), $overflow),
         (Arith_TruncIOp (Arith_ShRUIOp $x, (Arith_ConstantOp (cast<"TypedAttr"> $c0))), $overflow),
         [(TruncationMatchesShiftAmount $x, $tr, $c0)]>;
-
-// trunci(shrui(mul(sext(x), sext(y)), c)) -> mulsi_extended(x, y)
-def TruncIShrUIMulIToMulSIExtended :
-    Pat<(Arith_TruncIOp:$tr (Arith_ShRUIOp
-                              (Arith_MulIOp:$mul
-                                (Arith_ExtSIOp $x), (Arith_ExtSIOp $y), $ovf1),
-                              (ConstantLikeMatcher AnyAttr:$c0)), $overflow),
-        (Arith_MulSIExtendedOp:$res__1 $x, $y),
-      [(ValuesWithSameType $tr, $x, $y),
-       (ValueWiderThan $mul, $x),
-       (TruncationMatchesShiftAmount $mul, $x, $c0)]>;
-
-// trunci(shrui(mul(zext(x), zext(y)), c)) -> mului_extended(x, y)
-def TruncIShrUIMulIToMulUIExtended :
-    Pat<(Arith_TruncIOp:$tr (Arith_ShRUIOp
-                              (Arith_MulIOp:$mul
-                                (Arith_ExtUIOp $x), (Arith_ExtUIOp $y), $ovf1),
-                              (ConstantLikeMatcher AnyAttr:$c0)), $overflow),
-        (Arith_MulUIExtendedOp:$res__1 $x, $y),
-      [(ValuesWithSameType $tr, $x, $y),
-       (ValueWiderThan $mul, $x),
-       (TruncationMatchesShiftAmount $mul, $x, $c0)]>;
 
 //===----------------------------------------------------------------------===//
 // TruncIOp
