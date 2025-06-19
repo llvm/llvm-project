@@ -414,9 +414,7 @@ public:
   void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
   void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
 
-  void VisitDeclContext(DeclContext *DC, uint64_t &LexicalOffset,
-                        uint64_t &VisibleOffset, uint64_t &ModuleLocalOffset,
-                        uint64_t &TULocalOffset);
+  void VisitDeclContext(DeclContext *DC, LookupBlockOffsets &Offsets);
 
   template <typename T>
   RedeclarableResult VisitRedeclarable(Redeclarable<T> *D);
@@ -1875,12 +1873,8 @@ void ASTDeclReader::VisitNamespaceDecl(NamespaceDecl *D) {
 
 void ASTDeclReader::VisitHLSLBufferDecl(HLSLBufferDecl *D) {
   VisitNamedDecl(D);
-  uint64_t LexicalOffset = 0;
-  uint64_t VisibleOffset = 0;
-  uint64_t ModuleLocalOffset = 0;
-  uint64_t TULocalOffset = 0;
-  VisitDeclContext(D, LexicalOffset, VisibleOffset, ModuleLocalOffset,
-                   TULocalOffset);
+  LookupBlockOffsets Offsets;
+  VisitDeclContext(D, Offsets);
   D->IsCBuffer = Record.readBool();
   D->KwLoc = readSourceLocation();
   D->LBraceLoc = readSourceLocation();
@@ -2794,14 +2788,12 @@ void ASTDeclReader::VisitLifetimeExtendedTemporaryDecl(
   mergeMergeable(D);
 }
 
-void ASTDeclReader::VisitDeclContext(DeclContext *DC, uint64_t &LexicalOffset,
-                                     uint64_t &VisibleOffset,
-                                     uint64_t &ModuleLocalOffset,
-                                     uint64_t &TULocalOffset) {
-  LexicalOffset = ReadLocalOffset();
-  VisibleOffset = ReadLocalOffset();
-  ModuleLocalOffset = ReadLocalOffset();
-  TULocalOffset = ReadLocalOffset();
+void ASTDeclReader::VisitDeclContext(DeclContext *DC,
+                                     LookupBlockOffsets &Offsets) {
+  Offsets.LexicalOffset = ReadLocalOffset();
+  Offsets.VisibleOffset = ReadLocalOffset();
+  Offsets.ModuleLocalOffset = ReadLocalOffset();
+  Offsets.TULocalOffset = ReadLocalOffset();
 }
 
 template <typename T>
@@ -4249,42 +4241,37 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   // If this declaration is also a declaration context, get the
   // offsets for its tables of lexical and visible declarations.
   if (auto *DC = dyn_cast<DeclContext>(D)) {
-    uint64_t LexicalOffset = 0;
-    uint64_t VisibleOffset = 0;
-    uint64_t ModuleLocalOffset = 0;
-    uint64_t TULocalOffset = 0;
+    LookupBlockOffsets Offsets;
 
-    Reader.VisitDeclContext(DC, LexicalOffset, VisibleOffset, ModuleLocalOffset,
-                            TULocalOffset);
+    Reader.VisitDeclContext(DC, Offsets);
 
     // Get the lexical and visible block for the delayed namespace.
     // It is sufficient to judge if ID is in DelayedNamespaceOffsetMap.
     // But it may be more efficient to filter the other cases.
-    if (!LexicalOffset && !VisibleOffset && !ModuleLocalOffset &&
-        isa<NamespaceDecl>(D))
+    if (!Offsets && isa<NamespaceDecl>(D))
       if (auto Iter = DelayedNamespaceOffsetMap.find(ID);
-          Iter != DelayedNamespaceOffsetMap.end()) {
-        LexicalOffset = Iter->second.LexicalOffset;
-        VisibleOffset = Iter->second.VisibleOffset;
-        ModuleLocalOffset = Iter->second.ModuleLocalOffset;
-        TULocalOffset = Iter->second.TULocalOffset;
-      }
+          Iter != DelayedNamespaceOffsetMap.end())
+        Offsets = Iter->second;
 
-    if (LexicalOffset &&
-        ReadLexicalDeclContextStorage(*Loc.F, DeclsCursor, LexicalOffset, DC))
-      return nullptr;
-    if (VisibleOffset && ReadVisibleDeclContextStorage(
-                             *Loc.F, DeclsCursor, VisibleOffset, ID,
-                             VisibleDeclContextStorageKind::GenerallyVisible))
-      return nullptr;
-    if (ModuleLocalOffset &&
+    if (Offsets.VisibleOffset &&
         ReadVisibleDeclContextStorage(
-            *Loc.F, DeclsCursor, ModuleLocalOffset, ID,
+            *Loc.F, DeclsCursor, Offsets.VisibleOffset, ID,
+            VisibleDeclContextStorageKind::GenerallyVisible))
+      return nullptr;
+    if (Offsets.ModuleLocalOffset &&
+        ReadVisibleDeclContextStorage(
+            *Loc.F, DeclsCursor, Offsets.ModuleLocalOffset, ID,
             VisibleDeclContextStorageKind::ModuleLocalVisible))
       return nullptr;
-    if (TULocalOffset && ReadVisibleDeclContextStorage(
-                             *Loc.F, DeclsCursor, TULocalOffset, ID,
-                             VisibleDeclContextStorageKind::TULocalVisible))
+    if (Offsets.TULocalOffset &&
+        ReadVisibleDeclContextStorage(
+            *Loc.F, DeclsCursor, Offsets.TULocalOffset, ID,
+            VisibleDeclContextStorageKind::TULocalVisible))
+      return nullptr;
+
+    if (Offsets.LexicalOffset &&
+        ReadLexicalDeclContextStorage(*Loc.F, DeclsCursor,
+                                      Offsets.LexicalOffset, DC))
       return nullptr;
   }
   assert(Record.getIdx() == Record.size());
