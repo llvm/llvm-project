@@ -199,6 +199,41 @@ def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
 def OpenACC_DataClauseAttr : EnumAttr<OpenACC_Dialect, OpenACC_DataClauseEnum,
                                       "data_clause">;
 
+// Data clause modifiers:
+// * readonly: Added in OpenACC 2.7 to copyin and cache.
+// * zero: Added in OpenACC 3.0 for create and copyout.
+// * always, alwaysin, alwaysout: Added in OpenACC 3.4 for
+//       copy, copyin, and copyout clauses.
+// * capture: Added in OpenACC 3.4 for copy, copyin, copyout and create clauses.
+def OpenACC_DataClauseModifierNone : I32BitEnumAttrCaseNone<"none">;
+// All of the modifiers below are bit flags - so the value noted is `1 << bit`.
+// Thus the `zero` modifier is `1 << 0` = 1, `readonly` is `1 << 1` = 2, etc.
+def OpenACC_DataClauseModifierZero : I32BitEnumAttrCaseBit<"zero", 0>;
+def OpenACC_DataClauseModifierReadonly : I32BitEnumAttrCaseBit<"readonly", 1>;
+def OpenACC_DataClauseModifierAlwaysIn : I32BitEnumAttrCaseBit<"alwaysin", 2>;
+def OpenACC_DataClauseModifierAlwaysOut : I32BitEnumAttrCaseBit<"alwaysout", 3>;
+def OpenACC_DataClauseModifierAlways : I32BitEnumAttrCaseGroup<"always",
+  [OpenACC_DataClauseModifierAlwaysIn, OpenACC_DataClauseModifierAlwaysOut]>;
+def OpenACC_DataClauseModifierCapture : I32BitEnumAttrCaseBit<"capture", 4>;
+
+def OpenACC_DataClauseModifierEnum : I32BitEnumAttr<
+    "DataClauseModifier",
+    "Captures data clause modifiers",
+    [
+      OpenACC_DataClauseModifierNone, OpenACC_DataClauseModifierZero,
+      OpenACC_DataClauseModifierReadonly, OpenACC_DataClauseModifierAlwaysIn,
+      OpenACC_DataClauseModifierAlwaysOut, OpenACC_DataClauseModifierAlways,
+      OpenACC_DataClauseModifierCapture]> {
+  let separator = ",";
+  let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def OpenACC_DataClauseModifierAttr : EnumAttr<OpenACC_Dialect,
+                                      OpenACC_DataClauseModifierEnum,
+                                      "data_clause_modifier">;
+
 class OpenACC_Attr<string name, string attrMnemonic,
                    list<Trait> traits = [],
                    string baseCppClass = "::mlir::Attribute">
@@ -477,6 +512,8 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
           DefaultValuedAttr<OpenACC_DataClauseAttr, clause>:$dataClause,
           DefaultValuedAttr<BoolAttr, "true">:$structured,
           DefaultValuedAttr<BoolAttr, "false">:$implicit,
+          DefaultValuedAttr<OpenACC_DataClauseModifierAttr,
+            "mlir::acc::DataClauseModifier::none">:$modifiers,
           OptionalAttr<StrAttr>:$name));
 
   let description = !strconcat(extraDescription, [{
@@ -506,6 +543,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
     counters (2.6.7).
     - `implicit`: Whether this is an implicitly generated operation, such as copies
     done to satisfy "Variables with Implicitly Determined Data Attributes" in 2.6.2.
+    - `modifiers`: Keeps track of the data clause modifiers (eg zero, readonly, etc)
     - `name`: Holds the name of variable as specified in user clause (including bounds).
 
     The async values attached to the data entry operation imply that the data
@@ -584,7 +622,8 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
+          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*name=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
@@ -601,9 +640,23 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
           /*name=*/$_builder.getStringAttr(name));
-      }]>];
+      }]>,
+    OpBuilder<(ins "::mlir::Type":$accVarType, "::mlir::Value":$var,
+                   "::mlir::Type":$varType, "::mlir::Value":$varPtrPtr,
+                   "::mlir::ValueRange":$bounds,
+                   "::mlir::ValueRange":$asyncOperands,
+                   "::mlir::ArrayAttr":$asyncOperandsDeviceType,
+                   "::mlir::ArrayAttr":$asyncOnly,
+                   "::mlir::acc::DataClause":$dataClause, "bool":$structured,
+                   "bool":$implicit, "::mlir::StringAttr":$name),
+      [{
+        build($_builder, $_state, accVarType, var, varType, varPtrPtr, bounds,
+          asyncOperands, asyncOperandsDeviceType, asyncOnly, dataClause,
+          structured, implicit, ::mlir::acc::DataClauseModifier::none, name);
+      }]>,
+    ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -817,9 +870,7 @@ def OpenACC_CacheOp : OpenACC_DataEntryOp<"cache",
 
   let extraClassDeclaration = extraClassDeclarationBase # [{
     /// Check if this is a cache with readonly modifier.
-    bool isCacheReadonly() {
-      return getDataClause() == acc::DataClause::acc_cache_readonly;
-    }
+    bool isCacheReadonly();
   }];
 }
 
@@ -840,6 +891,8 @@ class OpenACC_DataExitOp<string mnemonic, string clause, string extraDescription
                        DefaultValuedAttr<OpenACC_DataClauseAttr,clause>:$dataClause,
                        DefaultValuedAttr<BoolAttr, "true">:$structured,
                        DefaultValuedAttr<BoolAttr, "false">:$implicit,
+                       DefaultValuedAttr<OpenACC_DataClauseModifierAttr,
+                         "mlir::acc::DataClauseModifier::none">:$modifiers,
                        OptionalAttr<StrAttr>:$name));
 
   let description = !strconcat(extraDescription, [{
@@ -861,6 +914,7 @@ class OpenACC_DataExitOp<string mnemonic, string clause, string extraDescription
     counters (2.6.7).
     - `implicit`: Whether this is an implicitly generated operation, such as copies
     done to satisfy "Variables with Implicitly Determined Data Attributes" in 2.6.2.
+    - `modifiers`: Keeps track of the data clause modifiers (eg zero, always, etc)
     - `name`: Holds the name of variable as specified in user clause (including bounds).
 
     The async values attached to the data exit operation imply that the data
@@ -944,7 +998,8 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
+          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*name=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Value":$accVar,
                    "::mlir::Value":$var,
@@ -961,9 +1016,22 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
           /*name=*/$_builder.getStringAttr(name));
-      }]>];
+      }]>,
+    OpBuilder<(ins "::mlir::Value":$accVar, "::mlir::Value":$var,
+                   "::mlir::Type":$varType, "::mlir::ValueRange":$bounds,
+                   "::mlir::ValueRange":$asyncOperands,
+                   "::mlir::ArrayAttr":$asyncOperandsDeviceType,
+                   "::mlir::ArrayAttr":$asyncOnly,
+                   "::mlir::acc::DataClause":$dataClause, "bool":$structured,
+                   "bool":$implicit, "::mlir::StringAttr":$name),
+      [{
+        build($_builder, $_state, accVar, var, varType, bounds,
+          asyncOperands, asyncOperandsDeviceType, asyncOnly, dataClause,
+          structured, implicit, ::mlir::acc::DataClauseModifier::none, name);
+      }]>,
+    ];
 
   code extraClassDeclarationDataExit = [{
     mlir::TypedValue<mlir::acc::PointerLikeType> getVarPtr() {
@@ -998,7 +1066,8 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause> :
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
+          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*name=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Value":$accVar,
                    "bool":$structured, "bool":$implicit,
@@ -1009,9 +1078,20 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause> :
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
           /*name=*/$_builder.getStringAttr(name));
-      }]>
+      }]>,
+    OpBuilder<(ins "::mlir::Value":$accVar, "::mlir::ValueRange":$bounds,
+                   "::mlir::ValueRange":$asyncOperands,
+                   "::mlir::ArrayAttr":$asyncOperandsDeviceType,
+                   "::mlir::ArrayAttr":$asyncOnly,
+                   "::mlir::acc::DataClause":$dataClause, "bool":$structured,
+                   "bool":$implicit, "::mlir::StringAttr":$name),
+      [{
+        build($_builder, $_state, accVar, bounds, asyncOperands,
+              asyncOperandsDeviceType, asyncOnly, dataClause, structured,
+              implicit, ::mlir::acc::DataClauseModifier::none, name);
+      }]>,
   ];
 
   code extraClassDeclarationDataExit = [{
