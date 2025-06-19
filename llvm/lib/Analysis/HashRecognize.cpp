@@ -497,45 +497,37 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
   return Table;
 }
 
-/// Checks if \p Reference is reachable from \p Needle on the use-def chain, and
-/// that there are no stray PHI nodes while digging the use-def chain. \p
-/// BOToMatch is a CRC peculiarity: at least one of the Users of Needle needs to
-/// match this OpCode, which is XOR for CRC.
+/// Checks that \p Needle and \p Reference are used together in a
+/// BinaryOperator, which is a recurrence over both, ignoring zext and trunc.
+/// Additionally checks that the BinaryOperator has opcode \p BOToMatch, which
+/// is XOR in the case of CRC. In other words, it checks for the following
+/// pattern:
+///
+/// loop:
+///   %needle = phi [_, %entry], [%needle.next, %loop]
+///   %reference = phi [_, %entry], [%reference.next, %loop]
+///   ...
+///   _ = BOTOMatch ((trunc|zext|self) %needle) ((trunc|zext|self) %reference)
+///
 static bool arePHIsIntertwined(
     const PHINode *Needle, const PHINode *Reference, const Loop &L,
     Instruction::BinaryOps BOToMatch = Instruction::BinaryOpsEnd) {
-  // Initialize the worklist with Users of the Needle.
-  SmallVector<const Instruction *> Worklist;
-  for (const User *U : Needle->users()) {
-    if (auto *UI = dyn_cast<Instruction>(U))
-      if (L.contains(UI))
-        Worklist.push_back(UI);
-  }
-
-  // BOToMatch is usually XOR for CRC.
-  if (BOToMatch != Instruction::BinaryOpsEnd) {
-    if (count_if(Worklist, [BOToMatch](const Instruction *I) {
-          return I->getOpcode() == BOToMatch;
-        }) != 1)
-      return false;
-  }
-
-  while (!Worklist.empty()) {
-    const Instruction *I = Worklist.pop_back_val();
-
-    // Since Needle is never pushed onto the Worklist, I must either be the
-    // Reference PHI node (in which case we're done), or a stray PHI node (in
-    // which case we abort).
-    if (isa<PHINode>(I))
-      return I == Reference;
-
-    for (const Use &U : I->operands())
-      if (auto *UI = dyn_cast<Instruction>(U))
-        // Don't push Needle back onto the Worklist.
-        if (UI != Needle && L.contains(UI))
-          Worklist.push_back(UI);
-  }
-  return false;
+  return any_of(ArrayRef({Needle, Reference}), [&](const PHINode *S) {
+    return count_if(S->users(), [&](const User *U) {
+             auto *BO = dyn_cast<BinaryOperator>(U);
+             if (!BO)
+               return false;
+             if (BOToMatch != Instruction::BinaryOpsEnd &&
+                 BO->getOpcode() != BOToMatch)
+               return false;
+             return all_of(BO->operands(), [Needle, Reference](const Use &U) {
+               return match(
+                   U.get(),
+                   m_CombineOr(m_ZExtOrTruncOrSelf(m_Specific(Reference)),
+                               m_ZExtOrTruncOrSelf(m_Specific(Needle))));
+             });
+           }) == 1;
+  });
 }
 
 // Recognizes a multiplication or division by the constant two, using SCEV. By
@@ -588,7 +580,7 @@ HashRecognize::recognizeCRC() const {
       return "Loop with non-unit bitshifts";
     if (!arePHIsIntertwined(SimpleRecurrence.Phi, ConditionalRecurrence.Phi, L,
                             Instruction::BinaryOps::Xor))
-      return "Simple recurrence doesn't use conditional recurrence with XOR";
+      return "Recurrences not intertwined with XOR";
   }
 
   // Make sure that the computed value is used in the exit block: this should be
