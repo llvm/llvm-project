@@ -131,11 +131,11 @@ public:
   mlir::Value emitLoadOfLValue(const Expr *e) {
     LValue lv = cgf.emitLValue(e);
     // FIXME: add some akin to EmitLValueAlignmentAssumption(E, V);
-    return cgf.emitLoadOfLValue(lv, e->getExprLoc()).getScalarVal();
+    return cgf.emitLoadOfLValue(lv, e->getExprLoc()).getValue();
   }
 
   mlir::Value emitLoadOfLValue(LValue lv, SourceLocation loc) {
-    return cgf.emitLoadOfLValue(lv, loc).getScalarVal();
+    return cgf.emitLoadOfLValue(lv, loc).getValue();
   }
 
   // l-values
@@ -400,10 +400,10 @@ public:
       cgf.cgm.errorNYI(e->getSourceRange(), "Atomic inc/dec");
       // TODO(cir): This is not correct, but it will produce reasonable code
       // until atomic operations are implemented.
-      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getScalarVal();
+      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getValue();
       input = value;
     } else {
-      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getScalarVal();
+      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getValue();
       input = value;
     }
 
@@ -1805,7 +1805,7 @@ mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *e) {
   if (e->getCallReturnType(cgf.getContext())->isReferenceType())
     return emitLoadOfLValue(e);
 
-  auto v = cgf.emitCallExpr(e).getScalarVal();
+  auto v = cgf.emitCallExpr(e).getValue();
   assert(!cir::MissingFeatures::emitLValueAlignmentAssumption());
   return v;
 }

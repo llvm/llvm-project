@@ -4089,7 +4089,7 @@ private:
       for (Value *V : Scalars)
         dbgs().indent(2) << *V << "\n";
       dbgs() << "State: ";
-      if (hasCopyableElements())
+      if (S && hasCopyableElements())
         dbgs() << "[[Copyable]] ";
       switch (State) {
       case Vectorize:
@@ -9990,11 +9990,10 @@ class InstructionsCompatibilityAnalysis {
   SmallVector<Value *> getOperands(const InstructionsState &S, Value *V) const {
     if (isa<PoisonValue>(V))
       return {V, V};
-    bool MatchesMainOp = !S.isCopyableElement(V);
+    if (!S.isCopyableElement(V))
+      return convertTo(cast<Instruction>(V), S).second;
     switch (MainOpcode) {
     case Instruction::Add:
-      if (MatchesMainOp)
-        return SmallVector<Value *>(cast<Instruction>(V)->operands());
       return {V, selectBestIdempotentValue()};
     default:
       break;

@@ -1055,7 +1055,7 @@ LogicalResult ModuleTranslation::convertBlockImpl(Block &bb,
       return failure();
 
     // Set the branch weight metadata on the translated instruction.
-    if (auto iface = dyn_cast<BranchWeightOpInterface>(op))
+    if (auto iface = dyn_cast<WeightedBranchOpInterface>(op))
       setBranchWeightsMetadata(iface);
   }
 
@@ -2026,14 +2026,15 @@ void ModuleTranslation::setDereferenceableMetadata(
   inst->setMetadata(kindId, derefSizeNode);
 }
 
-void ModuleTranslation::setBranchWeightsMetadata(BranchWeightOpInterface op) {
-  DenseI32ArrayAttr weightsAttr = op.getBranchWeightsOrNull();
-  if (!weightsAttr)
+void ModuleTranslation::setBranchWeightsMetadata(WeightedBranchOpInterface op) {
+  SmallVector<uint32_t> weights;
+  llvm::transform(op.getWeights(), std::back_inserter(weights),
+                  [](int32_t value) { return static_cast<uint32_t>(value); });
+  if (weights.empty())
     return;
 
   llvm::Instruction *inst = isa<CallOp>(op) ? lookupCall(op) : lookupBranch(op);
   assert(inst && "expected the operation to have a mapping to an instruction");
-  SmallVector<uint32_t> weights(weightsAttr.asArrayRef());
   inst->setMetadata(
       llvm::LLVMContext::MD_prof,
       llvm::MDBuilder(getLLVMContext()).createBranchWeights(weights));

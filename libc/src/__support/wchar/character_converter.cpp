@@ -19,6 +19,13 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
+// This is for utf-8 bytes other than the first byte
+constexpr size_t ENCODED_BITS_PER_UTF8 = 6;
+// The number of bits per utf-8 byte that actually encode character
+// Information not metadata (# of bits excluding the byte headers)
+constexpr uint32_t MASK_ENCODED_BITS =
+    mask_trailing_ones<uint32_t, ENCODED_BITS_PER_UTF8>();
+
 CharacterConverter::CharacterConverter(mbstate *mbstate) { state = mbstate; }
 
 void CharacterConverter::clear() {
@@ -61,10 +68,8 @@ int CharacterConverter::push(char8_t utf8_byte) {
   }
   // Any subsequent push
   // Adding 6 more bits so need to left shift
-  constexpr size_t ENCODED_BITS_PER_UTF8 = 6;
   if (num_ones == 1 && !isComplete()) {
-    char32_t byte =
-        utf8_byte & mask_trailing_ones<uint32_t, ENCODED_BITS_PER_UTF8>();
+    char32_t byte = utf8_byte & MASK_ENCODED_BITS;
     state->partial = state->partial << ENCODED_BITS_PER_UTF8;
     state->partial |= byte;
     state->bytes_processed++;
@@ -116,12 +121,6 @@ ErrorOr<char8_t> CharacterConverter::pop_utf8() {
 
   constexpr char8_t FIRST_BYTE_HEADERS[] = {0, 0xC0, 0xE0, 0xF0};
   constexpr char8_t CONTINUING_BYTE_HEADER = 0x80;
-
-  // the number of bits per utf-8 byte that actually encode character
-  // information not metadata (# of bits excluding the byte headers)
-  constexpr size_t ENCODED_BITS_PER_UTF8 = 6;
-  constexpr int MASK_ENCODED_BITS =
-      mask_trailing_ones<unsigned int, ENCODED_BITS_PER_UTF8>();
 
   char32_t output;
 
