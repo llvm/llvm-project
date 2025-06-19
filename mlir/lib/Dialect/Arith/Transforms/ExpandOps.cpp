@@ -243,8 +243,9 @@ struct BFloat16ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultETy = getElementTypeOrSelf(resultTy);
 
-    if (!operandETy.isBF16() || !resultETy.isF32())
+    if (!operandETy.isBF16() || !resultETy.isF32()) {
       return rewriter.notifyMatchFailure(op, "not a ext of bf16 to f32.");
+    }
 
     Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
     Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
@@ -272,8 +273,9 @@ struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultETy = getElementTypeOrSelf(resultTy);
 
-    if (!operandETy.isF32() || !resultETy.isBF16())
+    if (!operandETy.isF32() || !resultETy.isBF16()) {
       return rewriter.notifyMatchFailure(op, "not a trunc of f32 to bf16.");
+    }
 
     if (op.getRoundingmodeAttr()) {
       return rewriter.notifyMatchFailure(
@@ -422,7 +424,7 @@ struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Value bits1To32 = b.create<arith::AddIOp>(bits1To31, bit32);
     Value result = b.create<arith::BitcastOp>(f32Ty, bits1To32);
     if (!isa<Float32Type>(resultETy))
-      result = b.create<arith::TruncFOp>(resultETy, operand);
+      result = b.create<arith::TruncFOp>(resultTy, result);
 
     rewriter.replaceOp(op, result);
     return success();
@@ -440,8 +442,9 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultETy = getElementTypeOrSelf(resultTy);
 
-    if (!llvm::isa<Float8E8M0FNUType>(operandETy))
+    if (!llvm::isa<Float8E8M0FNUType>(operandETy)) {
       return rewriter.notifyMatchFailure(op, "not a ext of F8E8M0FNU");
+    }
 
     Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
     Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
@@ -512,15 +515,15 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultETy = getElementTypeOrSelf(resultTy);
 
-    if (!isa<Float32Type>(operandETy))
-      operand = b.create<arith::ExtFOp>(b.getF32Type(), operand);
-    if (!isa<Float4E2M1FNType>(resultETy))
-      return rewriter.notifyMatchFailure(op, "not a trunc of F4E2M1FN");
-
     Type i4Ty = cloneToShapedType(operandTy, b.getI4Type());
     Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
     Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
+
+    if (!isa<Float32Type>(operandETy))
+      operand = b.create<arith::ExtFOp>(f32Ty, operand);
+    if (!isa<Float4E2M1FNType>(resultETy))
+      return rewriter.notifyMatchFailure(op, "not a trunc of F4E2M1FN");
 
     Value c0x1 = createConst(loc, i4Ty, 1, rewriter);
     Value c0x3 = createConst(loc, i4Ty, 3, rewriter);
@@ -611,12 +614,14 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultTy = op.getType();
     Type resultETy = getElementTypeOrSelf(resultTy);
-    if (!llvm::isa<Float8E8M0FNUType>(resultETy))
+    if (!llvm::isa<Float8E8M0FNUType>(resultETy)) {
       return rewriter.notifyMatchFailure(op, "not a truncf to f8E8M0FNU");
+    }
 
-    if (op.getRoundingmodeAttr())
+    if (op.getRoundingmodeAttr()) {
       return rewriter.notifyMatchFailure(
           op, "only applicable to default rounding mode.");
+    }
 
     Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
     Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
