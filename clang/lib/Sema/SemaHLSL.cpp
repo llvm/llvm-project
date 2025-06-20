@@ -1116,9 +1116,8 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       Info.Space = Descriptor->Space;
       Info.Visibility = Descriptor->Visibility;
       Infos.push_back(Info);
-    }
-    if (const auto *Constants =
-            std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
+    } else if (const auto *Constants =
+                   std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
       RangeInfo Info;
       Info.LowerBound = Constants->Reg.Number;
       Info.UpperBound = Info.LowerBound; // use inclusive ranges []
@@ -1127,9 +1126,8 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       Info.Space = Constants->Space;
       Info.Visibility = Constants->Visibility;
       Infos.push_back(Info);
-    }
-    if (const auto *Sampler =
-            std::get_if<llvm::hlsl::rootsig::StaticSampler>(&Elem)) {
+    } else if (const auto *Sampler =
+                   std::get_if<llvm::hlsl::rootsig::StaticSampler>(&Elem)) {
       RangeInfo Info;
       Info.LowerBound = Sampler->Reg.Number;
       Info.UpperBound = Info.LowerBound; // use inclusive ranges []
@@ -1138,9 +1136,9 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       Info.Space = Sampler->Space;
       Info.Visibility = Sampler->Visibility;
       Infos.push_back(Info);
-    }
-    if (const auto *Clause =
-            std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(&Elem)) {
+    } else if (const auto *Clause =
+                   std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(
+                       &Elem)) {
       RangeInfo Info;
       Info.LowerBound = Clause->Reg.Number;
       assert(0 < Clause->NumDescriptors && "Verified as part of TODO(#129940)");
@@ -1153,9 +1151,8 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       Info.Space = Clause->Space;
       // Note: Clause does not hold the visibility this will need to
       Infos.push_back(Info);
-    }
-    if (const auto *Table =
-            std::get_if<llvm::hlsl::rootsig::DescriptorTable>(&Elem)) {
+    } else if (const auto *Table =
+                   std::get_if<llvm::hlsl::rootsig::DescriptorTable>(&Elem)) {
       // Table holds the Visibility of all owned Clauses in Table, so iterate
       // owned Clauses and update their corresponding RangeInfo
       assert(Table->NumClauses <= Infos.size() && "RootElement");
