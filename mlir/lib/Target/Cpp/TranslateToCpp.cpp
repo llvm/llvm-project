@@ -1004,6 +1004,7 @@ static LogicalResult printOperation(CppEmitter &emitter, ClassOp classOp) {
   os << "public:\n";
 
   os.indent();
+<<<<<<< Updated upstream
   for (Operation &op : classOp) {
     if (isa<FieldOp>(op)) {
       if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
@@ -1011,6 +1012,9 @@ static LogicalResult printOperation(CppEmitter &emitter, ClassOp classOp) {
     }
   }
   os << "\nconst std::map<std::string, char*> _buffer_map {\n";
+=======
+  os << "const std::map<std::string, char*> _buffer_map {\n";
+>>>>>>> Stashed changes
   for (Operation &op : classOp) {
     if (auto fieldOp = dyn_cast<FieldOp>(op)) {
       os << "  { \"" << fieldOp.getSymName() << "\", reinterpret_cast<char*>(&"
@@ -1022,12 +1026,19 @@ static LogicalResult printOperation(CppEmitter &emitter, ClassOp classOp) {
   os << "char* getBufferForName(const std::string& name) const {\n";
   os << "  auto it = _buffer_map.find(name);\n";
   os << "  return (it == _buffer_map.end()) ? nullptr : it->second;\n";
+<<<<<<< Updated upstream
   os << "}\n\n";
   for (Operation &op : classOp) {
     if (!isa<FieldOp>(op)) {
       if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/false)))
         return failure();
     }
+=======
+  os << "}\n";
+  for (Operation &op : classOp) {
+    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/false)))
+      return failure();
+>>>>>>> Stashed changes
   }
 
   os.unindent();
@@ -1037,11 +1048,17 @@ static LogicalResult printOperation(CppEmitter &emitter, ClassOp classOp) {
 
 static LogicalResult printOperation(CppEmitter &emitter, FieldOp fieldOp) {
   raw_ostream &os = emitter.ostream();
+<<<<<<< Updated upstream
   Location loc = fieldOp->getLoc();
   Type type = fieldOp.getType();
   if (failed(emitter.emitType(loc, type)))
     return failure();
   os << " " << fieldOp.getSymName();
+=======
+  if (failed(emitter.emitType(fieldOp->getLoc(), fieldOp.getType())))
+    return failure();
+  os << " " << fieldOp.getSymName() << ";";
+>>>>>>> Stashed changes
   return success();
 }
 
