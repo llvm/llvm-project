@@ -1,0 +1,163 @@
+[section:chi_squared_dist Chi Squared Distribution]
+
+``#include <boost/math/distributions/chi_squared.hpp>``
+
+   namespace boost{ namespace math{ 
+
+   template <class RealType = double, 
+             class ``__Policy``   = ``__policy_class`` >
+   class chi_squared_distribution;
+
+   typedef chi_squared_distribution<> chi_squared;
+
+   template <class RealType, class ``__Policy``>
+   class chi_squared_distribution
+   {
+   public:
+      typedef RealType  value_type;
+      typedef Policy    policy_type;
+
+      // Constructor:
+      BOOST_MATH_GPU_ENABLED chi_squared_distribution(RealType i);
+
+      // Accessor to parameter:
+      BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom()const;
+
+      // Parameter estimation:
+      BOOST_MATH_GPU_ENABLED static RealType find_degrees_of_freedom(
+         RealType difference_from_mean,
+         RealType alpha,
+         RealType beta,
+         RealType sd,
+         RealType hint = 100);
+   };
+   
+   }} // namespaces
+   
+The Chi-Squared distribution is one of the most widely used distributions
+in statistical tests.  If [chi][sub i] are [nu] 
+independent, normally distributed
+random variables with means [mu][sub i] and variances [sigma][sub i][super 2], 
+then the random variable:
+
+[equation chi_squ_ref1]
+
+is distributed according to the Chi-Squared distribution.
+
+The Chi-Squared distribution is a special case of the gamma distribution
+and has a single parameter [nu] that specifies the number of degrees of
+freedom.  The following graph illustrates how the distribution changes
+for different values of [nu]:
+
+[graph chi_squared_pdf]
+
+[h4 Member Functions]
+
+      chi_squared_distribution(RealType v);
+      
+Constructs a Chi-Squared distribution with /v/ degrees of freedom.
+
+Requires v > 0, otherwise calls __domain_error.
+
+      RealType degrees_of_freedom()const;
+      
+Returns the parameter /v/ from which this object was constructed.
+
+      static RealType find_degrees_of_freedom(
+         RealType difference_from_variance,
+         RealType alpha,
+         RealType beta,
+         RealType variance,
+         RealType hint = 100);
+
+Estimates the sample size required to detect a difference from a nominal
+variance in a Chi-Squared test for equal standard deviations.
+
+[variablelist
+[[difference_from_variance][The difference from the assumed nominal variance 
+   that is to be detected: Note that the sign of this value is critical, see below.]]
+[[alpha][The maximum acceptable risk of rejecting the null hypothesis when it is
+         in fact true.]]
+[[beta][The maximum acceptable risk of falsely failing to reject the null hypothesis.]]
+[[variance][The nominal variance being tested against.]]
+[[hint][An optional hint on where to start looking for a result: the current sample
+      size would be a good choice.]]
+]
+
+Note that this calculation works with /variances/ and not /standard deviations/.
+
+The sign of the parameter /difference_from_variance/ is important: the Chi
+Squared distribution is asymmetric, and the caller must decide in advance
+whether they are testing for a variance greater than a nominal value (positive
+/difference_from_variance/) or testing for a variance less than a nominal value
+(negative /difference_from_variance/).  If the latter, then obviously it is
+a requirement that `variance + difference_from_variance > 0`, since no sample
+can have a negative variance!
+
+This procedure uses the method in Diamond, W. J. (1989). 
+Practical Experiment Designs, Van-Nostrand Reinhold, New York.
+  
+See also section on Sample sizes required in
+[@http://www.itl.nist.gov/div898/handbook/prc/section2/prc232.htm the NIST Engineering Statistics Handbook, Section 7.2.3.2].
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+(We have followed the usual restriction of the mode to degrees of freedom >= 2,
+but note that the maximum of the pdf is actually zero for degrees of freedom from 2 down to 0,
+and provide an extended definition that would avoid a discontinuity in the mode
+as alternative code in a comment).
+
+The domain of the random variable is \[0, +[infin]\].
+
+[h4 Examples]
+
+Various [link math_toolkit.stat_tut.weg.cs_eg worked examples] 
+are available illustrating the use of the Chi Squared Distribution.
+
+[h4 Accuracy]
+
+The Chi-Squared distribution is implemented in terms of the 
+[link math_toolkit.sf_gamma.igamma incomplete gamma functions]:
+please refer to the accuracy data for those functions.
+
+[h4 Implementation]
+
+In the following table /v/ is the number of degrees of freedom of the distribution,
+/x/ is the random variate, /p/ is the probability, and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = __gamma_p_derivative(v / 2, x / 2) / 2 ]]
+[[cdf][Using the relation: p = __gamma_p(v / 2, x / 2) ]]
+[[cdf complement][Using the relation: q = __gamma_q(v / 2, x / 2) ]]
+[[quantile][Using the relation: x = 2 * __gamma_p_inv(v / 2, p) ]]
+[[quantile from the complement][Using the relation: x = 2 * __gamma_q_inv(v / 2, p) ]]
+[[mean][v]]
+[[variance][2v]]
+[[mode][v - 2 (if v >= 2)]]
+[[skewness][2 * sqrt(2 / v) == sqrt(8 / v)]]
+[[kurtosis][3 + 12 / v]]
+[[kurtosis excess][12 / v]]
+]
+
+[h4 References]
+
+* [@http://www.itl.nist.gov/div898/handbook/eda/section3/eda3666.htm NIST Exploratory Data Analysis]
+* [@http://en.wikipedia.org/wiki/Chi-square_distribution Chi-square distribution]
+* [@http://mathworld.wolfram.com/Chi-SquaredDistribution.html Weisstein, Eric W. "Chi-Squared Distribution." From MathWorld--A Wolfram Web Resource.]
+
+
+[endsect] [/section:chi_squared_dist Chi Squared]
+
+[/ chi_squared.qbk
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

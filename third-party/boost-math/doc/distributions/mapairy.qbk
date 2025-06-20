@@ -1,0 +1,121 @@
+﻿[section:mapairy_dist Map-Airy Distribution]
+
+``#include <boost/math/distributions/mapairy.hpp>``
+
+   template <class RealType = double,
+             class ``__Policy``   = ``__policy_class`` >
+   class mapairy_distribution;
+
+   typedef mapairy_distribution<> mapairy;
+
+   template <class RealType, class ``__Policy``>
+   class mapairy_distribution
+   {
+   public:
+      typedef RealType  value_type;
+      typedef Policy    policy_type;
+
+      BOOST_MATH_GPU_ENABLED mapairy_distribution(RealType location = 0, RealType scale = 1);
+
+      BOOST_MATH_GPU_ENABLED RealType location()const;
+      BOOST_MATH_GPU_ENABLED RealType scale()const;
+   };
+
+It is special case of a [@http://en.wikipedia.org/wiki/Stable_distribution stable distribution]
+with shape parameter [alpha]=3/2, [beta]=1.
+
+This distribution is also defined as [beta] = −1, which is inverted about the x-axis.
+
+[@http://en.wikipedia.org/wiki/Probability_distribution probability distribution function PDF]
+given by:
+
+[equation mapairy_ref1]  [/f(x; \mu=0, c=1/\sqrt[3]{18}) = 2 \exp \left( \frac{2}{3} x^3 \right) \left( -x \mathrm{Ai}(x^2) - \mathrm{Ai}'(x^2) \right)]
+
+The location parameter [mu] is the location of the distribution,
+while the scale parameter [c] determines the width of the distribution.  If the location is
+zero, and the scale 1, then the result is a standard map-airy
+distribution.
+
+The distribution describes the probability distribution of the area under a Brownian excursion over a unit interval.
+
+The following graph shows how the distributions moves as the
+location parameter changes:
+
+[graph mapairy_pdf1]
+
+While the following graph shows how the shape (scale) parameter alters
+the distribution:
+
+[graph mapairy_pdf2]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED mapairy_distribution(RealType location = 0, RealType scale = 1);
+
+Constructs a mapairy distribution, with location parameter /location/
+and scale parameter /scale/.  When these parameters take their default
+values (location = 0, scale = 1)
+then the result is a Standard map-airy Distribution.
+
+Requires scale > 0, otherwise calls __domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType location()const;
+
+Returns the location parameter of the distribution.
+
+   BOOST_MATH_GPU_ENABLED RealType scale()const;
+
+Returns the scale parameter of the distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+Note however that the map-airy distribution does not have a skewness,
+kurtosis, etc. See __math_undefined
+[/link math_toolkit.pol_ref.assert_undefined mathematically undefined function]
+to control whether these should fail to compile with a BOOST_STATIC_ASSERTION_FAILURE,
+which is the default.
+
+Alternately, the functions __skewness, __kurtosis and __kurtosis_excess will all
+return a __domain_error if called.
+
+The domain of the random variable is \[-[max_value], +[min_value]\].
+
+[h4 Accuracy]
+
+The error is within 4 epsilon except for the rapidly decaying left tail.
+
+Errors in the PDF at 64-bit double precision:
+
+[$../graphs/mapairy_pdf_accuracy_64.png]
+
+Errors in the CDF at 64-bit double precision:
+
+[$../graphs/mapairy_cdf_accuracy_64.png]
+
+Errors in the CDF-complement at 64-bit double precision:
+
+[$../graphs/mapairy_ccdf_accuracy_64.png]
+
+[h4 Implementation]
+
+See references.
+
+[h4 References]
+
+* [@https://mathworld.wolfram.com/Map-AiryDistribution.html Wolfram MathWorld: Map-Airy Distribution]
+* T. Yoshimura, Numerical Evaluation and High Precision Approximation Formula for Map-Airy Distribution,
+DOI: 10.36227/techrxiv.172053942.27675733/v1, 2024.
+
+[endsect][/section:mapairy_dist mapairy]
+
+[/ mapairy.qbk
+  Copyright Takuma Yoshimura 2024.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

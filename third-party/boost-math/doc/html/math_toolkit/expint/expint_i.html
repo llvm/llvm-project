@@ -1,0 +1,337 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Exponential Integral Ei</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../expint.html" title="Exponential Integrals">
+<link rel="prev" href="expint_n.html" title="Exponential Integral En">
+<link rel="next" href="../hypergeometric.html" title="Hypergeometric Functions">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="expint_n.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../expint.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../hypergeometric.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.expint.expint_i"></a><a class="link" href="expint_i.html" title="Exponential Integral Ei">Exponential Integral Ei</a>
+</h3></div></div></div>
+<h5>
+<a name="math_toolkit.expint.expint_i.h0"></a>
+        <span class="phrase"><a name="math_toolkit.expint.expint_i.synopsis"></a></span><a class="link" href="expint_i.html#math_toolkit.expint.expint_i.synopsis">Synopsis</a>
+      </h5>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">expint</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">expint</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">expint</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+        The return type of these functions is computed using the <a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>result
+        type calculation rules</em></span></a>: the return type is <code class="computeroutput"><span class="keyword">double</span></code> if T is an integer type, and T otherwise.
+      </p>
+<p>
+        The final <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> argument is optional and can
+        be used to control the behaviour of the function: how it handles errors,
+        what level of precision to use etc. Refer to the <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">policy
+        documentation for more details</a>.
+      </p>
+<h5>
+<a name="math_toolkit.expint.expint_i.h1"></a>
+        <span class="phrase"><a name="math_toolkit.expint.expint_i.description"></a></span><a class="link" href="expint_i.html#math_toolkit.expint.expint_i.description">Description</a>
+      </h5>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">expint</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">expint</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+</pre>
+<p>
+        Returns the <a href="http://mathworld.wolfram.com/ExponentialIntegral.html" target="_top">exponential
+        integral</a> of z:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/expint_i_1.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/expint_i.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<h5>
+<a name="math_toolkit.expint.expint_i.h2"></a>
+        <span class="phrase"><a name="math_toolkit.expint.expint_i.accuracy"></a></span><a class="link" href="expint_i.html#math_toolkit.expint.expint_i.accuracy">Accuracy</a>
+      </h5>
+<p>
+        The following table shows the peak errors (in units of epsilon) found on
+        various platforms with various floating point types, along with comparisons
+        to Cody's SPECFUN implementation and the <a href="http://www.gnu.org/software/gsl/" target="_top">GSL-1.9</a>
+        library. Unless otherwise specified any floating point type that is narrower
+        than the one shown will have <a class="link" href="../relative_error.html#math_toolkit.relative_error.zero_error">effectively
+        zero error</a>.
+      </p>
+<div class="table">
+<a name="math_toolkit.expint.expint_i.table_expint_Ei_"></a><p class="title"><b>Table 8.78. Error rates for expint (Ei)</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for expint (Ei)">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> double
+                </p>
+              </th>
+<th>
+                <p>
+                  Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Microsoft Visual C++ version 14.1<br> Win32<br> double
+                </p>
+              </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  Exponential Integral Ei
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 5.05ε (Mean = 0.821ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 14.1ε (Mean = 2.43ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_expint_Ei___cmath__Exponential_Integral_Ei">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.994ε (Mean = 0.142ε)</span><br> <br>
+                  (<span class="emphasis"><em>GSL 2.1:</em></span> Max = 8.96ε (Mean = 0.703ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 5.05ε (Mean = 0.835ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.43ε (Mean = 0.54ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Exponential Integral Ei: double exponent range
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.72ε (Mean = 0.593ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 3.11ε (Mean = 1.13ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.998ε (Mean = 0.156ε)</span><br> <br>
+                  (<span class="emphasis"><em>GSL 2.1:</em></span> Max = 1.5ε (Mean = 0.612ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.72ε (Mean = 0.607ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.7ε (Mean = 0.66ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Exponential Integral Ei: long exponent range
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.98ε (Mean = 0.595ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 1.93ε (Mean = 0.855ε))
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.98ε (Mean = 0.575ε)</span>
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><p>
+        It should be noted that all three libraries tested above offer sub-epsilon
+        precision over most of their range.
+      </p>
+<p>
+        GSL has the greatest difficulty near the positive root of En, while Cody's
+        SPECFUN along with this implementation increase their error rates very slightly
+        over the range [4,6].
+      </p>
+<p>
+        The following error plot are based on an exhaustive search of the functions
+        domain, MSVC-15.5 at <code class="computeroutput"><span class="keyword">double</span></code>
+        precision, and GCC-7.1/Ubuntu for <code class="computeroutput"><span class="keyword">long</span>
+        <span class="keyword">double</span></code> and <code class="computeroutput"><span class="identifier">__float128</span></code>.
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/exponential_integral_ei__double.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/exponential_integral_ei__80_bit_long_double.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/exponential_integral_ei____float128.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<h5>
+<a name="math_toolkit.expint.expint_i.h3"></a>
+        <span class="phrase"><a name="math_toolkit.expint.expint_i.testing"></a></span><a class="link" href="expint_i.html#math_toolkit.expint.expint_i.testing">Testing</a>
+      </h5>
+<p>
+        The tests for these functions come in two parts: basic sanity checks use
+        spot values calculated using <a href="http://functions.wolfram.com/webMathematica/FunctionEvaluation.jsp?name=ExpIntegralEi" target="_top">Mathworld's
+        online evaluator</a>, while accuracy checks use high-precision test values
+        calculated at 1000-bit precision with <a href="http://shoup.net/ntl/doc/RR.txt" target="_top">NTL::RR</a>
+        and this implementation. Note that the generic and type-specific versions
+        of these functions use differing implementations internally, so this gives
+        us reasonably independent test data. Using our test data to test other "known
+        good" implementations also provides an additional sanity check.
+      </p>
+<h5>
+<a name="math_toolkit.expint.expint_i.h4"></a>
+        <span class="phrase"><a name="math_toolkit.expint.expint_i.implementation"></a></span><a class="link" href="expint_i.html#math_toolkit.expint.expint_i.implementation">Implementation</a>
+      </h5>
+<p>
+        For x &lt; 0 this function just calls <a class="link" href="expint_n.html" title="Exponential Integral En">zeta</a>(1,
+        -x): which in turn is implemented in terms of rational approximations when
+        the type of x has 113 or fewer bits of precision.
+      </p>
+<p>
+        For x &gt; 0 the generic version is implemented using the infinite series:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/expint_i_2.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        However, when the precision of the argument type is known at compile time
+        and is 113 bits or less, then rational approximations <a class="link" href="../sf_implementation.html#math_toolkit.sf_implementation.rational_approximations_used">devised
+        by JM</a> are used.
+      </p>
+<p>
+        For 0 &lt; z &lt; 6 a root-preserving approximation of the form:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/expint_i_3.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        is used, where z<sub>0</sub> is the positive root of the function, and R(z/3 - 1) is
+        a minimax rational approximation rescaled so that it is evaluated over [-1,1].
+        Note that while the rational approximation over [0,6] converges rapidly to
+        the minimax solution it is rather ill-conditioned in practice. Cody and Thacher
+        <a href="#ftn.math_toolkit.expint.expint_i.f0" class="footnote" name="math_toolkit.expint.expint_i.f0"><sup class="footnote">[11]</sup></a> experienced the same issue and converted the polynomials into
+        Chebeshev form to ensure stable computation. By experiment we found that
+        the polynomials are just as stable in polynomial as Chebyshev form, <span class="emphasis"><em>provided</em></span>
+        they are computed over the interval [-1,1].
+      </p>
+<p>
+        Over the a series of intervals <span class="emphasis"><em>[a, b]</em></span> and <span class="emphasis"><em>[b,
+        INF]</em></span> the rational approximation takes the form:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/expint_i_4.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        where <span class="emphasis"><em>c</em></span> is a constant, and <span class="emphasis"><em>R(t)</em></span>
+        is a minimax solution optimised for low absolute error compared to <span class="emphasis"><em>c</em></span>.
+        Variable <span class="emphasis"><em>t</em></span> is <code class="computeroutput"><span class="number">1</span><span class="special">/</span><span class="identifier">z</span></code> when
+        the range in infinite and <code class="computeroutput"><span class="number">2</span><span class="identifier">z</span><span class="special">/(</span><span class="identifier">b</span><span class="special">-</span><span class="identifier">a</span><span class="special">)</span> <span class="special">-</span>
+        <span class="special">(</span><span class="number">2</span><span class="identifier">a</span><span class="special">/(</span><span class="identifier">b</span><span class="special">-</span><span class="identifier">a</span><span class="special">)</span>
+        <span class="special">+</span> <span class="number">1</span><span class="special">)</span></code> otherwise: this has the effect of scaling
+        z to the interval [-1,1]. As before rational approximations over arbitrary
+        intervals were found to be ill-conditioned: Cody and Thacher solved this
+        issue by converting the polynomials to their J-Fraction equivalent. However,
+        as long as the interval of evaluation was [-1,1] and the number of terms
+        carefully chosen, it was found that the polynomials <span class="emphasis"><em>could</em></span>
+        be evaluated to suitable precision: error rates are typically 2 to 3 epsilon
+        which is comparable to the error rate that Cody and Thacher achieved using
+        J-Fractions, but marginally more efficient given that fewer divisions are
+        involved.
+      </p>
+<div class="footnotes">
+<br><hr style="width:100; text-align:left;margin-left: 0">
+<div id="ftn.math_toolkit.expint.expint_i.f0" class="footnote"><p><a href="#math_toolkit.expint.expint_i.f0" class="para"><sup class="para">[11] </sup></a>
+          W. J. Cody and H. C. Thacher, Jr., Rational Chebyshev approximations for
+          the exponential integral E<sub>1</sub>(x), Math. Comp. 22 (1968), 641-649, and W.
+          J. Cody and H. C. Thacher, Jr., Chebyshev approximations for the exponential
+          integral Ei(x), Math. Comp. 23 (1969), 289-303.
+        </p></div>
+</div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="expint_n.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../expint.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../hypergeometric.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Performance Overview</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../perf.html" title="Chapter 23. Performance">
+<link rel="prev" href="../perf.html" title="Chapter 23. Performance">
+<link rel="next" href="interp.html" title="Interpreting these Results">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../perf.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../perf.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="interp.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.perf_over2"></a><a class="link" href="perf_over2.html" title="Performance Overview">Performance Overview</a>
+</h2></div></div></div>
+<p>
+      By and large the performance of this library should be acceptable for most
+      needs. However, often the library has to make a choice whether to be accurate
+      or fast and by default it chooses accuracy over speed. If you would rather
+      have fast rather than fully accurate routines, then refer to the <a class="link" href="../perf.html" title="Chapter 23. Performance">performance
+      section</a> for information and examples on how to achieve this.
+    </p>
+<p>
+      In terms of the algorithms used, this library aims to use the same "best
+      of breed" algorithms as many other libraries: the principle difference
+      is that this library is implemented in C++ - taking advantage of all the abstraction
+      mechanisms that C++ offers - where as most traditional numeric libraries are
+      implemented in C or FORTRAN. Traditionally languages such as C or FORTRAN are
+      perceived as easier to optimise than more complex languages like C++, so in
+      a sense this library provides a good test of current compiler technology, and
+      the "abstraction penalty" - if any - of C++ compared to other languages.
+    </p>
+<p>
+      The three most important things you can do to ensure the best performance from
+      this library are:
+    </p>
+<div class="orderedlist"><ol class="orderedlist" type="1">
+<li class="listitem">
+          Turn on your compilers optimisations: the difference between "release"
+          and "debug" builds can easily be a <a class="link" href="getting_best.html" title="Getting the Best Performance from this Library: Compiler and Compiler Options">factor
+          of 20</a>.
+        </li>
+<li class="listitem">
+          Pick your compiler carefully: <a class="link" href="comp_compilers.html" title="Comparing Different Compilers">performance
+          differences of up to 8 fold</a> have been found between some Windows
+          compilers for example.
+        </li>
+<li class="listitem">
+          Disable internal use of <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>, this will reduce accuracy but typically
+          yield a 2x speedup on modern x64 hardware/compilers.
+        </li>
+</ol></div>
+<p>
+      The <a class="link" href="../perf.html" title="Chapter 23. Performance">performance section</a> contains more information
+      on the performance of this library, what you can do to fine tune it, and how
+      this library compares to some other open source alternatives.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../perf.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../perf.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="interp.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

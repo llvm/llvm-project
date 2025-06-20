@@ -1,0 +1,203 @@
+[/
+Copyright (c) 2020 Nick Thompson
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:cubic_hermite Cubic Hermite interpolation]
+
+[heading Synopsis]
+``
+  #include <boost/math/interpolators/cubic_hermite.hpp>
+``
+
+    namespace boost::math::interpolators {
+
+    template <class RandomAccessContainer>
+    class cubic_hermite
+    {
+    public:
+
+        using Real = RandomAccessContainer::value_type;
+
+        cubic_hermite(RandomAccessContainer&& abscissas, RandomAccessContainer&& ordinates, RandomAccessContainer&& derivatives);
+
+        Real operator()(Real x) const;
+
+        Real prime(Real x) const;
+
+        void push_back(Real x, Real y, Real dydx);
+
+        std::pair<Real, Real> domain() const;
+
+        friend std::ostream& operator<<(std::ostream & os, const cubic_hermite & m);
+    };
+
+    template<class RandomAccessContainer>
+    class cardinal_cubic_hermite {
+    public:
+        using Real = typename RandomAccessContainer::value_type;
+
+        cardinal_cubic_hermite(RandomAccessContainer && y, RandomAccessContainer && dydx, Real x0, Real dx)
+
+        inline Real operator()(Real x) const;
+
+        inline Real prime(Real x) const;
+
+        std::pair<Real, Real> domain() const;
+    };
+
+
+    template<class RandomAccessContainer>
+    class cardinal_cubic_hermite_aos {
+    public:
+        using Point = typename RandomAccessContainer::value_type;
+        using Real = typename Point::value_type;
+
+        cardinal_cubic_hermite_aos(RandomAccessContainer && data, Real x0, Real dx);
+
+        inline Real operator()(Real x) const;
+
+        inline Real prime(Real x) const;
+
+        std::pair<Real, Real> domain() const;
+    };
+
+    } // namespaces
+
+[heading Cubic Hermite Interpolation]
+
+The cubic Hermite interpolant takes non-equispaced data and interpolates between them via cubic Hermite polynomials whose slopes must be provided.
+This is a very nice interpolant for solution skeletons of ODEs steppers, since numerically solving /y/' = /f/(/x/, /y/) produces a list of positions, values, and their derivatives, i.e. (/x/,/y/,/y/')=(/x/,/y/,/f/(/x/,/y/))-which is exactly what is required for the cubic Hermite interpolator.
+The interpolant is /C/[super 1] and evaluation has [bigo](log(/N/)) complexity.
+An example usage is as follows:
+
+    std::vector<double> x{1, 5, 9 , 12};
+    std::vector<double> y{8,17, 4, -3};
+    std::vector<double dydx{5, -2, -1};
+    using boost::math::interpolators::cubic_hermite;
+    auto spline = cubic_hermite(std::move(x), std::move(y), std::move(dydx));
+    // evaluate at a point:
+    double z = spline(3.4);
+    // evaluate derivative at a point:
+    double zprime = spline.prime(3.4);
+
+Sanity checking of the interpolator can be achieved via:
+
+    std::cout << spline << "\n";
+
+Note that the interpolator is pimpl'd, so that copying the class is cheap, and hence it can be shared between threads.
+(The call operator and `.prime()` are threadsafe; `push_back` is not.)
+
+This interpolant can be updated in constant time.
+Hence we can use `boost::circular_buffer` to do real-time interpolation:
+
+    #include <boost/circular_buffer.hpp>
+    ...
+    boost::circular_buffer<double> initial_x{1,2,3,4};
+    boost::circular_buffer<double> initial_y{4,5,6,7};
+    boost::circular_buffer<double> initial_dydx{1,1,1,1};
+    auto circular_hermite = cubic_hermite(std::move(initial_x), std::move(initial_y), std::move(initial_dydx));
+    // interpolate via call operation:
+    double y = circular_hermite(3.5);
+    // add new data:
+    circular_hermite.push_back(5, 8);
+    // interpolate at 4.5:
+    y = circular_hermite(4.5);
+
+For the equispaced case, we can either use `cardinal_cubic_hermite`, which accepts two separate arrays of `y` and `dydx`, or we can use `cardinal_cubic_hermite_aos`,
+which takes a vector of `(y, dydx)`, i.e., and array of structs (`aos`).
+The array of structs should be preferred as it uses cache more effectively.
+
+Usage is as follows:
+
+    using boost::math::interpolators::cardinal_cubic_hermite;
+    double x0 = 0;
+    double dx = 1;
+    std::vector<double> y(128, 1);
+    std::vector<double> dydx(128, 0);
+    auto ch = cardinal_cubic_hermite(std::move(y), std::move(dydx), x0, dx);
+
+For the "array of structs" version:
+
+    using boost::math::interpolators::cardinal_cubic_hermite_aos;
+    std::vector<std::array<double, 2>> data(128);
+    for (auto & datum : data) {
+        datum[0] = 1; // y
+        datum[1] = 0; // y'
+    }
+
+    auto ch = cardinal_cubic_hermite_aos(std::move(data), x0, dx);
+
+For a quick sanity check, we can call `ch.domain()`:
+
+    auto [x_min, x_max] = ch.domain();
+
+[heading Performance]
+
+Google benchmark was used to evaluate the performance.
+
+```
+Run on (16 X 4300 MHz CPU s)
+CPU Caches:
+  L1 Data 32 KiB (x8)
+  L1 Instruction 32 KiB (x8)
+  L2 Unified 1024 KiB (x8)
+  L3 Unified 11264 KiB (x1)
+Load Average: 1.16, 1.11, 0.99
+-----------------------------------------------------
+Benchmark                                        Time
+-----------------------------------------------------
+CubicHermite<double>/256                      9.67 ns
+CubicHermite<double>/512                      10.4 ns
+CubicHermite<double>/1024                     10.9 ns
+CubicHermite<double>/2048                     12.3 ns
+CubicHermite<double>/4096                     13.4 ns
+CubicHermite<double>/8192                     14.9 ns
+CubicHermite<double>/16384                    15.5 ns
+CubicHermite<double>/32768                    18.0 ns
+CubicHermite<double>/65536                    19.9 ns
+CubicHermite<double>/131072                   23.0 ns
+CubicHermite<double>/262144                   25.3 ns
+CubicHermite<double>/524288                   28.9 ns
+CubicHermite<double>/1048576                  31.0 ns
+CubicHermite<double>_BigO                     1.32 lgN
+CubicHermite<double>_RMS                        13 %
+CardinalCubicHermite<double>/256              3.14 ns
+CardinalCubicHermite<double>/512              3.13 ns
+CardinalCubicHermite<double>/1024             3.19 ns
+CardinalCubicHermite<double>/2048             3.14 ns
+CardinalCubicHermite<double>/4096             3.38 ns
+CardinalCubicHermite<double>/8192             3.54 ns
+CardinalCubicHermite<double>/16384            3.51 ns
+CardinalCubicHermite<double>/32768            3.76 ns
+CardinalCubicHermite<double>/65536            5.82 ns
+CardinalCubicHermite<double>/131072           5.76 ns
+CardinalCubicHermite<double>/262144           5.85 ns
+CardinalCubicHermite<double>/524288           5.69 ns
+CardinalCubicHermite<double>/1048576          5.77 ns
+CardinalCubicHermite<double>_BigO             4.28 (1)
+CardinalCubicHermite<double>_RMS                28 %
+CardinalCubicHermiteAOS<double>/256           3.22 ns
+CardinalCubicHermiteAOS<double>/512           3.22 ns
+CardinalCubicHermiteAOS<double>/1024          3.26 ns
+CardinalCubicHermiteAOS<double>/2048          3.23 ns
+CardinalCubicHermiteAOS<double>/4096          3.49 ns
+CardinalCubicHermiteAOS<double>/8192          3.57 ns
+CardinalCubicHermiteAOS<double>/16384         3.73 ns
+CardinalCubicHermiteAOS<double>/32768         4.12 ns
+CardinalCubicHermiteAOS<double>/65536         4.13 ns
+CardinalCubicHermiteAOS<double>/131072        4.12 ns
+CardinalCubicHermiteAOS<double>/262144        4.12 ns
+CardinalCubicHermiteAOS<double>/524288        4.12 ns
+CardinalCubicHermiteAOS<double>/1048576       4.19 ns
+CardinalCubicHermiteAOS<double>_BigO          3.73 (1)
+CardinalCubicHermiteAOS<double>_RMS             11 %
+```
+
+The logarithmic complexity of the non-equispaced version is evident, as is the better cache utilization of the "array of structs" version as the problem size gets larger.
+
+
+[endsect]
+[/section:cubic_hermite]

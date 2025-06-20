@@ -1,0 +1,190 @@
+# Copyright Daryle Walker, Hubert Holin, John Maddock 2006 - 2007
+# copyright Paul A. Bristow 2006 - 2010
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt.
+# \math_toolkit\libs\math\test\jamfile.v2
+# Runs all math toolkit tests, functions & distributions,
+# and build math examples.
+
+# bring in the rules for testing
+import testing ;
+import modules ;
+import path ;
+import pch ;
+import-search /boost/config/checks ;
+import config : requires ;
+using quickbook ;
+using auto-index ;
+
+import-search /boost/predef/tools/check ;
+import predef
+    : check require
+    : predef-check predef-require ;
+
+project
+    : requirements
+      <include>../../include_private
+    ;
+
+if $(is_unix)
+{
+	local osname = [ SHELL uname ] ;
+
+	switch $(osname)
+	{
+		case "Sun*" : OTHERFLAGS = "-lpthread -lrt" ;
+		case "*BSD*" : OTHERFLAGS = "-lpthread" ;
+	}
+}
+
+#
+# Configuration first:
+#
+searched-lib gsl ;
+searched-lib gslcblas ;
+searched-lib Rmath ;
+obj has_libstdcxx_tr1 : ../accuracy/has_libstdcxx_tr1.cpp ;
+explicit has_libstdcxx_tr1 ;
+obj has_c99_cmath : has_c99_cmath.cpp ;
+explicit has_c99_cmath ;
+exe has_gsl : has_gsl.cpp gsl gslcblas ;
+explicit has_gsl ;
+exe has_rmath : has_rmath.cpp Rmath ;
+explicit has_rmath ;
+obj is_intel_win : is_intel_win.cpp ;
+explicit is_intel_win ;
+
+CEPHES_SOURCE = acosh.c airy.c asin.c asinh.c atan.c atanh.c bdtr.c beta.c
+btdtr.c cbrt.c chbevl.c chdtr.c clog.c cmplx.c const.c
+cosh.c dawsn.c drand.c ei.c ellie.c ellik.c ellpe.c ellpj.c ellpk.c
+exp.c exp10.c exp2.c expn.c expx2.c fabs.c fac.c fdtr.c
+fresnl.c gamma.c gdtr.c hyp2f1.c hyperg.c i0.c i1.c igami.c incbet.c
+incbi.c igam.c isnan.c iv.c j0.c j1.c jn.c jv.c k0.c k1.c kn.c kolmogorov.c
+log.c log2.c log10.c lrand.c nbdtr.c ndtr.c ndtri.c pdtr.c planck.c
+polevl.c polmisc.c polylog.c polyn.c pow.c powi.c psi.c rgamma.c round.c
+shichi.c sici.c sin.c sindg.c sinh.c spence.c stdtr.c struve.c
+tan.c tandg.c tanh.c unity.c yn.c zeta.c zetac.c
+sqrt.c floor.c setprec.c mtherr.c ;
+
+DCDFLIB_SOURCE = dcdflib.c ipmpar.c ;
+
+path-constant here : . ;
+make $(here)/third_party/cephes_double/acosh.c : : @check_exists ;
+make $(here)/third_party/dcdflib/dcdflib.c : : @check_exists ;
+actions check_exists
+{
+    stat $(<)
+}
+explicit $(here)/third_party/cephes_double/acosh.c ;
+explicit $(here)/third_party/dcdflib/dcdflib.c ;
+
+lib cephes_double : $(here)/third_party/cephes_double/$(CEPHES_SOURCE)
+    :
+        release
+        <link>static
+        [ check-target-builds $(here)/third_party/cephes_double/acosh.c : : <build>no ]
+   ;
+
+explicit cephes_double ;
+
+lib dcdflib : $(here)/third_party/dcdflib/$(DCDFLIB_SOURCE)
+    :
+        release
+        <link>static
+        [ check-target-builds $(here)/third_party/dcdflib/dcdflib.c : : <build>no ]
+   ;
+
+explicit dcdflib ;
+
+obj table_helper : table_helper.cpp /boost/filesystem//boost_filesystem /boost/interprocess//boost_interprocess ;
+
+rule all-tests {
+     local result ;
+     for local source in [ glob test*.cpp ]
+     {
+        result += [ run $(source) /boost/regex//boost_regex /boost/system//boost_system /boost/chrono//boost_chrono /boost/filesystem//boost_filesystem /boost/multiprecision//boost_multiprecision /boost/filesystem//boost_filesystem table_helper
+        : : : <variant>release <include>../../test
+        [ check-target-builds ../accuracy//has_c99_cmath : <define>TEST_C99 ]
+        [ check-target-builds has_libstdcxx_tr1 : <define>TEST_LIBSTDCXX ]
+        [ check-target-builds ../accuracy//has_gsl : <define>TEST_GSL <source>gsl <source>gslcblas ]
+        [ check-target-builds ../accuracy//has_rmath : <define>TEST_RMATH <source>Rmath ]
+       # [ check-target-builds is_intel_win : <build>no : ]
+        [ check-target-builds $(here)/third_party/dcdflib/dcdflib.c : <define>TEST_DCDFLIB <source>dcdflib ]
+        <target-os>linux:<linkflags>-lpthread <target-os>linux:<linkflags>-lrt
+        #<toolset>msvc:<address-model>64
+        ] ;
+     }
+     return $(result) ;
+}
+
+#
+# Special cases to test different compiler options,
+# cbrt first as an example of a trivial function:
+#
+run test_cbrt.cpp /boost/regex//boost_regex /boost/system//boost_system /boost/chrono//boost_chrono /boost/filesystem//boost_filesystem table_helper
+     : : : debug <define>COMPILER_COMPARISON_TABLES [ predef-require "BOOST_COMP_MSVC" ] <address-model>32 : test_cbrt_msvc_debug ;
+run test_cbrt.cpp /boost/regex//boost_regex /boost/system//boost_system /boost/chrono//boost_chrono /boost/filesystem//boost_filesystem table_helper
+     : : : release <define>COMPILER_COMPARISON_TABLES [ predef-require "BOOST_COMP_MSVC" ] <cxxflags>-Ox <address-model>32 : test_cbrt_msvc_release_32 ;
+run test_cbrt.cpp /boost/regex//boost_regex /boost/system//boost_system /boost/chrono//boost_chrono /boost/filesystem//boost_filesystem table_helper
+     : : : release <define>COMPILER_COMPARISON_TABLES [ predef-require "BOOST_COMP_MSVC" ] <cxxflags>-Ox <address-model>64 : test_cbrt_msvc_release_64 ;
+run test_cbrt.cpp /boost/regex//boost_regex /boost/system//boost_system /boost/chrono//boost_chrono /boost/filesystem//boost_filesystem table_helper
+     : : : release <define>COMPILER_COMPARISON_TABLES [ check-target-builds is_intel_win : : <build>no ] <toolset>intel:<cxxflags>-Ox <address-model>64 : test_cbrt_intel_release ;
+#
+# Now jn as a little more complex:
+#
+run test_jn.cpp /boost/regex//boost_regex /boost/system//boost_system /boost/chrono//boost_chrono /boost/filesystem//boost_filesystem table_helper
+   : : : debug <define>COMPILER_COMPARISON_TABLES <include>../../test [ predef-require "BOOST_COMP_MSVC" ] <address-model>32 : test_jn_msvc_debug ;
+run test_jn.cpp /boost/regex//boost_regex /boost/system//boost_system /boost/chrono//boost_chrono /boost/filesystem//boost_filesystem table_helper
+   : : : release <define>COMPILER_COMPARISON_TABLES <include>../../test [ predef-require "BOOST_COMP_MSVC" ] <cxxflags>-Ox <address-model>32 : test_jn_msvc_release_32 ;
+run test_jn.cpp /boost/regex//boost_regex /boost/system//boost_system /boost/chrono//boost_chrono /boost/filesystem//boost_filesystem table_helper
+   : : : release <define>COMPILER_COMPARISON_TABLES <include>../../test [ predef-require "BOOST_COMP_MSVC" ] <cxxflags>-Ox <address-model>64 : test_jn_msvc_release_64 ;
+run test_jn.cpp /boost/regex//boost_regex /boost/system//boost_system /boost/chrono//boost_chrono /boost/filesystem//boost_filesystem table_helper
+   : : : release <define>COMPILER_COMPARISON_TABLES <include>../../test [ check-target-builds is_intel_win : : <build>no ] <address-model>64 : test_jn_intel_release ;
+#
+# Then something really expensive, like the inverse-incomplete-beta:
+#
+run test_ibeta_inv.cpp /boost/regex//boost_regex /boost/system//boost_system /boost/chrono//boost_chrono /boost/filesystem//boost_filesystem table_helper
+   : : : debug <define>COMPILER_COMPARISON_TABLES <include>../../test [ predef-require "BOOST_COMP_MSVC" ] <address-model>32 : test_ibeta_inv_msvc_debug ;
+run test_ibeta_inv.cpp /boost/regex//boost_regex /boost/system//boost_system /boost/chrono//boost_chrono /boost/filesystem//boost_filesystem table_helper
+   : : : release <define>COMPILER_COMPARISON_TABLES <include>../../test [ predef-require "BOOST_COMP_MSVC" ] <cxxflags>-Ox <address-model>32 : test_ibeta_inv_msvc_release_32 ;
+run test_ibeta_inv.cpp /boost/regex//boost_regex /boost/system//boost_system /boost/chrono//boost_chrono /boost/filesystem//boost_filesystem table_helper
+   : : : release <define>COMPILER_COMPARISON_TABLES <include>../../test [ predef-require "BOOST_COMP_MSVC" ] <cxxflags>-Ox <address-model>64 : test_ibeta_inv_msvc_release_64 ;
+run test_ibeta_inv.cpp /boost/regex//boost_regex /boost/system//boost_system /boost/chrono//boost_chrono /boost/filesystem//boost_filesystem table_helper
+   : : : release <define>COMPILER_COMPARISON_TABLES <include>../../test [ check-target-builds is_intel_win : : <build>no ] <toolset>intel:<cxxflags>-Ox <address-model>64 : test_ibeta_inv_intel_release ;
+
+test-suite report_gen : [ all-tests ] test_cbrt_msvc_debug test_cbrt_msvc_release_32 test_cbrt_msvc_release_64 test_cbrt_intel_release
+   test_jn_msvc_debug test_jn_msvc_release_32 test_jn_msvc_release_64 test_jn_intel_release test_ibeta_inv_msvc_debug
+   test_ibeta_inv_msvc_release_32 test_ibeta_inv_msvc_release_64 test_ibeta_inv_intel_release ;
+
+path-constant images_location : html ;
+path-constant here : . ;
+
+xml report : doc/report.qbk : <dependency>report_gen ;
+boostbook standalone
+    :
+        report
+    :
+        # Path for links to Boost:
+        <xsl:param>boost.root=../../../../..
+
+        # Some general style settings:
+        <xsl:param>table.footnote.number.format=1
+        <xsl:param>footnote.number.format=1
+        <xsl:param>html.stylesheet=boostbook.css
+
+        # HTML options first:
+        # Use graphics not text for navigation:
+        <xsl:param>navig.graphics=1
+        # How far down we chunk nested sections, basically all of them:
+        <xsl:param>chunk.section.depth=0
+        # Don't put the first section on the same page as the TOC:
+        <xsl:param>chunk.first.sections=0
+        # How far down sections get TOC's
+        <xsl:param>toc.section.depth=2
+        # Max depth in each TOC:
+        <xsl:param>toc.max.depth=4
+        # How far down we go with TOC's
+        <xsl:param>generate.section.toc.level=10
+    ;
+

@@ -1,0 +1,115 @@
+[/
+Copyright (c) 2021 Nick Thompson
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:cubic_roots Roots of Cubic Polynomials]
+
+[heading Synopsis]
+
+```
+#include <boost/math/tools/cubic_roots.hpp>
+
+namespace boost::math::tools {
+
+// Solves ax³ + bx² + cx + d = 0.
+std::array<Real,3> cubic_roots(Real a, Real b, Real c, Real d);
+
+// Computes the empirical residual p(r) (first element) and expected residual ε|rṗ(r)| (second element) for a root.
+// Recall that for a numerically computed root r satisfying r = r⁎(1+ε) for the exact root r⁎ of a function p, |p(r)| ≲ ε|rṗ(r)|.
+template<typename Real>
+std::array<Real, 2> cubic_root_residual(Real a, Real b, Real c, Real d, Real root);
+
+// Computes the condition number of rootfinding. Computed via Corless, A Graduate Introduction to Numerical Methods, Section 3.2.1:
+template<typename Real>
+Real cubic_root_condition_number(Real a, Real b, Real c, Real d, Real root);
+}
+```
+
+[heading Background]
+
+The `cubic_roots` function extracts all real roots of a cubic polynomial ax³ + bx² + cx + d.
+The result is a `std::array<Real, 3>`, which has length three, irrespective of whether there are 3 real roots.
+There is always 1 real root, and hence (barring overflow or other exceptional circumstances), the first element of the
+`std::array` is always populated.
+If there is only one real root of the polynomial, then the second and third elements are set to `nans`.
+The roots are returned in nondecreasing order.
+
+Be careful with double roots.
+First, if you have a real double root, it is numerically indistinguishable from a complex conjugate pair of roots,
+where the complex part is tiny.
+Second, the condition number of rootfinding is infinite at a double root,
+so even changes as subtle as different instruction generation can change the outcome.
+We have some heuristics in place to detect double roots, but these should be regarded with suspicion.
+
+
+[heading Example]
+
+```
+#include <iostream>
+#include <sstream>
+#include <boost/math/tools/cubic_roots.hpp>
+
+using boost::math::tools::cubic_roots;
+using boost::math::tools::cubic_root_residual;
+
+template<typename Real>
+std::string print_roots(std::array<Real, 3> const & roots) {
+    std::ostringstream out;
+    out << "{" << roots[0] << ", " << roots[1] << ", " << roots[2] << "}";
+    return out.str();
+}
+
+int main() {
+    // Solves x³ - 6x² + 11x - 6 = (x-1)(x-2)(x-3).
+    auto roots = cubic_roots(1.0, -6.0, 11.0, -6.0);
+    std::cout << "The roots of x³ - 6x² + 11x - 6 are " << print_roots(roots) << ".\n";
+
+    // Double root; YMMV:
+    // (x+1)²(x-2) = x³ - 3x - 2:
+    roots = cubic_roots(1.0, 0.0, -3.0, -2.0);
+    std::cout << "The roots of x³ - 3x - 2 are " << print_roots(roots) << ".\n";
+
+    // Single root: (x-i)(x+i)(x-3) = x³ - 3x² + x - 3:
+    roots = cubic_roots(1.0, -3.0, 1.0, -3.0);
+    std::cout << "The real roots of x³ - 3x² + x - 3 are " << print_roots(roots) << ".\n";
+
+    // I don't know the roots of x³ + 6.28x² + 2.3x + 3.6;
+    // how can I see if they've been computed correctly?
+    roots = cubic_roots(1.0, 6.28, 2.3, 3.6);
+    std::cout << "The real root of x³ +6.28x² + 2.3x + 3.6 is " << roots[0] << ".\n";
+    auto res = cubic_root_residual(1.0, 6.28, 2.3, 3.6, roots[0]);
+    std::cout << "The residual is " << res[0] << ", and the expected residual is " << res[1] << ". ";
+    if (abs(res[0]) <= res[1]) {
+        std::cout << "This is an expected accuracy.\n";
+    } else {
+        std::cerr << "The residual is unexpectedly large.\n";
+    }
+}
+```
+
+This prints:
+
+[pre
+The roots of  x[super 3] - 6x[super 2] + 11x - 6 are {1, 2, 3}.
+The roots of  x[super 3] - 3x - 2 are {-1, -1, 2}.
+The real roots of x[super 3] - 3x[super 2] + x - 3 are {3, nan, nan}.
+The real root of x[super 3] +6.28x[super 2] + 2.3x + 3.6 is -5.99656.
+The residual is -1.56586e-14, and the expected residual is 4.64155e-14. This is an expected accuracy.
+]
+
+[heading Performance and Accuracy]
+
+On an Intel laptop chip running at 2700 MHz, we observe 3 roots taking ~90ns to compute.
+If the polynomial only possesses a single real root, it takes ~50ns.
+See `reporting/performance/cubic_roots_performance.cpp`.
+
+The forward error cannot be effectively bounded.
+However, for an approximate root r returned by this routine, the residuals should be constrained by |p(r)| ≲ ε|rṗ(r)|,
+where '≲' should be interpreted as an order of magnitude estimate.
+
+
+[endsect]
+[/section:cubic_roots]

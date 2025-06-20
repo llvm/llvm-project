@@ -1,0 +1,109 @@
+#  Boost.cstdfloat documentation Jamfile.v2
+#
+#  Copyright Paul A. Bristow 2014.
+#  Use, modification and distribution is subject to 
+#  the Boost Software License, Version 1.0.
+#  (See accompanying file LICENSE_1_0.txt or copy at
+#  http://www.boost.org/LICENSE_1_0.txt)
+
+#  boost-no-inspect
+
+# This builds a standalone version of the cstdfloat docs
+# using the same cstdfloat.qbk called from cstdfloat_header.qbk
+# The full math only uses cstdfloat.qbk.
+
+import modules ;
+
+path-constant images_location : html ;
+path-constant nav_images : html/images ;
+path-constant here : . ;
+using quickbook ;
+
+xml cstdfloat : cstdfloat_header.qbk ;
+
+using boostbook ;
+
+boostbook standalone
+   :
+      cstdfloat
+   :
+   
+   # General settings
+   # =================
+   # Path for links to Boost folder, for example: boost_1_55_0 or boost-trunk, relative to folder /doc/html. 
+   <xsl:param>boost.root=../../../../..
+   # Path for libraries index:
+	 <xsl:param>boost.libraries=../../../../../../libs/libraries.htm
+
+
+		# Or a local custom stylesheet:
+		#<xsl:param>html.stylesheet=boostbook.css
+		<xsl:param>html.stylesheet=boostbook.css
+
+		#<xsl:param>nav.layout=none # No navigation bar (home, prev, next).
+		# Defining creates a runtime error: Global parameter nav.layout already defined.
+		<xsl:param>nav.layout=horizontal # to get a horizontal navigation bar (you probably DO want this).
+
+		# Path for links to Boost logo.
+		#<xsl:param>boost.image=Boost # options are: none (no logo), Boost (for boost.png), or your own logo, for example, inspired_by_boost.png
+		#<xsl:param>boost.image.src=boost.png #
+		#<xsl:param>boost.image.w=180 # Width of logo in pixels. (JM has W = 162, h = 46)
+    #<xsl:param>boost.image.h=90 # Height of logo in pixels.
+  
+     # Some general style settings:
+			<xsl:param>table.footnote.number.format=1
+			<xsl:param>footnote.number.format=1
+
+			# HTML options first:
+			# Use graphics not text for navigation:
+			<xsl:param>navig.graphics=1
+			# How far down we chunk nested sections, basically all of them:
+			<xsl:param>chunk.section.depth=10
+			# Don't put the first section on the same page as the TOC:
+			<xsl:param>chunk.first.sections=1
+			# How far down sections get TOC's
+			<xsl:param>toc.section.depth=10
+			# Max depth in each TOC:
+			<xsl:param>toc.max.depth=4
+			# How far down we go with TOC's
+			<xsl:param>generate.section.toc.level=10
+			# Index on type:
+			<xsl:param>index.on.type=1
+			<xsl:param>boost.noexpand.chapter.toc=1
+
+			#<xsl:param>root.filename="sf_dist_and_tools"
+			#<xsl:param>graphicsize.extension=1
+			#<xsl:param>use.extensions=1
+
+			# PDF Options:
+			# TOC Generation: this is needed for FOP-0.9 and later:
+			<xsl:param>fop1.extensions=0
+			<format>pdf:<xsl:param>xep.extensions=1
+			# TOC generation: this is needed for FOP 0.2, but must not be set to zero for FOP-0.9!
+			<format>pdf:<xsl:param>fop.extensions=0
+			<format>pdf:<xsl:param>fop1.extensions=0
+			# No indent on body text:
+			<format>pdf:<xsl:param>body.start.indent=0pt
+			# Margin size:
+			<format>pdf:<xsl:param>page.margin.inner=0.5in
+			# Margin size:
+			<format>pdf:<xsl:param>page.margin.outer=0.5in
+			# Paper type = A4
+			<format>pdf:<xsl:param>paper.type=A4
+			# Yes, we want graphics for admonishments:
+			<xsl:param>admon.graphics=1
+			# Set this one for PDF generation *only*:
+			# default pnd graphics are awful in PDF form,
+			# better use SVG's instead:
+			<format>pdf:<xsl:param>admon.graphics.extension=".svg"
+			<format>pdf:<xsl:param>use.role.for.mediaobject=1 
+			<format>pdf:<xsl:param>preferred.mediaobject.role=print
+			<format>pdf:<xsl:param>img.src.path=$(images_location)/
+			<format>pdf:<xsl:param>draft.mode="no"
+			<format>pdf:<xsl:param>boost.url.prefix=http://www.boost.org/doc/libs/release/libs/math/doc/html
+			<format>pdf:<xsl:param>index.on.type=1
+    ;
+    
+    
+install pdf-install : standalone : <install-type>PDF <location>. <name>cstdfloat.pdf ;
+
