@@ -627,4 +627,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 
   if (TT.isSystemZ() && TT.isOSzOS())
     setZOSLibCallNameOverrides();
+
+  if (TT.getArch() == Triple::ArchType::xcore)
+    setLibcallImpl(RTLIB::MEMCPY_ALIGN_4, RTLIB::__memcpy_4);
 }
