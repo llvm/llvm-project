@@ -59,7 +59,8 @@ LogicalResult mlir::memref::foldMemRefCast(Operation *op, Value inner) {
 /// type.
 Type mlir::memref::getTensorTypeFromMemRefType(Type type) {
   if (auto memref = llvm::dyn_cast<MemRefType>(type))
-    return RankedTensorType::get(memref.getShape(), memref.getElementType());
+    return RankedTensorType::get(memref.getShape(), memref.getElementType(),
+                                 memref.getMemorySpace());
   if (auto memref = llvm::dyn_cast<UnrankedMemRefType>(type))
     return UnrankedTensorType::get(memref.getElementType());
   return NoneType::get(type.getContext());
