@@ -3490,6 +3490,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
           replaceInstUsesWith(*I, Result);
           eraseInstFromFunction(*I);
           Users[i] = nullptr; // Skip examining in the next loop.
+          continue;
         }
         if (auto *MTI = dyn_cast<MemTransferInst>(I)) {
           if (KnowInitZero && isRefSet(*Removable)) {
