@@ -1,4 +1,4 @@
-; RUN: opt -passes=metarenamer -rename-only-inst=1 -S < %s | FileCheck %s
+; RUN: opt -passes='metarenamer<rename-only-inst>' -S < %s | FileCheck %s
 target triple = "x86_64-pc-linux-gnu"
 
 ; CHECK: %struct.foo_xxx = type { i32, float, %struct.bar_xxx }
