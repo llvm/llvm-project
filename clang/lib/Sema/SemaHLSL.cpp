@@ -1142,10 +1142,10 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       RangeInfo Info;
       Info.LowerBound = Clause->Reg.Number;
       assert(0 < Clause->NumDescriptors && "Verified as part of TODO(#129940)");
-      Info.UpperBound =
-        Clause->NumDescriptors == RangeInfo::Unbounded
-        ? RangeInfo::Unbounded
-        : Info.LowerBound + Clause->NumDescriptors - 1; // use inclusive ranges []
+      Info.UpperBound = Clause->NumDescriptors == RangeInfo::Unbounded
+                            ? RangeInfo::Unbounded
+                            : Info.LowerBound + Clause->NumDescriptors -
+                                  1; // use inclusive ranges []
 
       Info.Class = Clause->Type;
       Info.Space = Clause->Space;
@@ -1158,7 +1158,8 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       assert(Table->NumClauses <= Infos.size() && "RootElement");
       // The last Table->NumClauses elements of Infos are the owned Clauses
       // generated RangeInfo
-      auto TableInfos = MutableArrayRef<RangeInfo>(Infos).take_back(Table->NumClauses);
+      auto TableInfos =
+          MutableArrayRef<RangeInfo>(Infos).take_back(Table->NumClauses);
       for (RangeInfo &Info : TableInfos)
         Info.Visibility = Table->Visibility;
     }
