@@ -724,9 +724,8 @@ static inline bool isPushOpcode(int Opc) {
 }
 
 static inline bool isSubImmOpcode(int Opc) {
-  return Opc == ARM::SUBri ||
-         Opc == ARM::tSUBi3 || Opc == ARM::tSUBi8 ||
-         Opc == ARM::tSUBSi3 || Opc == ARM::tSUBSi8 ||
+  return Opc == ARM::SUBri || Opc == ARM::SUBSri || Opc == ARM::tSUBi3 ||
+         Opc == ARM::tSUBi8 || Opc == ARM::tSUBSi3 || Opc == ARM::tSUBSi8 ||
          Opc == ARM::t2SUBri || Opc == ARM::t2SUBri12 || Opc == ARM::t2SUBSri;
 }
 
