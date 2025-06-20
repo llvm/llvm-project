@@ -17,6 +17,7 @@
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRTypes.td"
 include "clang/CIR/Dialect/IR/CIRAttrs.td"
+include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
 
 include "clang/CIR/Interfaces/CIROpInterfaces.td"
 include "clang/CIR/Interfaces/CIRLoopOpInterface.td"
@@ -1857,6 +1858,36 @@ def FuncOp : CIR_Op<"func", [
 // CallOp
 //===----------------------------------------------------------------------===//
 
+def CIR_SideEffect : CIR_I32EnumAttr<
+    "SideEffect", "allowed side effects of a function", [
+      I32EnumAttrCase<"All", 1, "all">,
+      I32EnumAttrCase<"Pure", 2, "pure">,
+      I32EnumAttrCase<"Const", 3, "const">
+    ]> {
+  let description = [{
+    The side effect attribute specifies the possible side effects of the callee
+    of a call operation. This is an enumeration attribute and all possible
+    enumerators are:
+
+    - all: The callee can have any side effects. This is the default if no side
+      effects are explicitly listed.
+    - pure: The callee may read data from memory, but it cannot write data to
+      memory. This has the same effect as the GNU C/C++ attribute
+      `__attribute__((pure))`.
+    - const: The callee may not read or write data from memory. This has the
+      same effect as the GNU C/C++ attribute `__attribute__((const))`.
+
+    Examples:
+
+    ```mlir
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
+    ```
+  }];
+  let cppNamespace = "::cir";
+}
+
 class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     : Op<CIR_Dialect, mnemonic,
          !listconcat(extra_traits,
@@ -1910,7 +1941,8 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   // will add in the future.
 
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
-      Variadic<CIR_AnyType>:$args);
+      Variadic<CIR_AnyType>:$args,
+      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect);
 }
 
 def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
@@ -1941,20 +1973,26 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let builders = [
     // Build a call op for a direct call
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
-                   "mlir::ValueRange":$operands), [{
+                   "mlir::ValueRange":$operands,
+                   CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
       assert(callee && "callee attribute is required for direct call");
       $_state.addOperands(operands);
       $_state.addAttribute("callee", callee);
+      $_state.addAttribute("side_effect",
+        SideEffectAttr::get($_builder.getContext(), sideEffect));
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
     }]>,
     // Build a call op for an indirect call
     OpBuilder<(ins "mlir::Value":$calleePtr, "mlir::Type":$resType,
-                   "mlir::ValueRange":$operands), [{
+                   "mlir::ValueRange":$operands,
+                   CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
       $_state.addOperands(calleePtr);
       $_state.addOperands(operands);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
+      $_state.addAttribute("side_effect",
+        SideEffectAttr::get($_builder.getContext(), sideEffect));
     }]>,
   ];
 }
@@ -2058,6 +2096,7 @@ def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2153,6 +2192,56 @@ def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
     `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
     qualified(type($result)) attr-dict
   }];
+
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VecShuffleOp
+//===----------------------------------------------------------------------===//
+
+// TODO: Create an interface that both VecShuffleOp and VecShuffleDynamicOp
+// implement.  This could be useful for passes that don't care how the vector
+// shuffle was specified.
+
+def VecShuffleOp : CIR_Op<"vec.shuffle",
+                   [Pure, AllTypesMatch<["vec1", "vec2"]>]> {
+  let summary = "Combine two vectors using indices passed as constant integers";
+  let description = [{
+    The `cir.vec.shuffle` operation implements the documented form of Clang's
+    `__builtin_shufflevector`, where the indices of the shuffled result are
+    integer constants.
+
+    The two input vectors, which must have the same type, are concatenated.
+    Each of the integer constant arguments is interpreted as an index into that
+    concatenated vector, with a value of -1 meaning that the result value
+    doesn't matter. The result vector, which must have the same element type as
+    the input vectors and the same number of elements as the list of integer
+    constant indices, is constructed by taking the elements at the given
+    indices from the concatenated vector. The size of the result vector does
+    not have to match the size of the individual input vectors or of the
+    concatenated vector.
+
+    ```mlir
+    %new_vec = cir.vec.shuffle(%vec_1, %vec_2 : !cir.vector<2 x !s32i>)
+        [#cir.int<3> : !s64i, #cir.int<1> : !s64i] : !cir.vector<2 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VectorType:$vec1,
+    CIR_VectorType:$vec2,
+    CIR_IntArrayAttr:$indices
+  );
+
+  let results = (outs CIR_VectorType:$result);
+  let assemblyFormat = [{
+    `(` $vec1 `,` $vec2 `:` qualified(type($vec1)) `)` $indices `:`
+     qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2223,7 +2312,138 @@ def VecTernaryOp : CIR_Op<"vec.ternary",
     `(` $cond `,` $lhs`,` $rhs `)` `:` qualified(type($cond)) `,`
     qualified(type($lhs)) attr-dict
   }];
+
   let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VecSplatOp
+//===----------------------------------------------------------------------===//
+
+def VecSplatOp : CIR_Op<"vec.splat", [Pure,
+  TypesMatchWith<"type of 'value' matches element type of 'result'", "result",
+                 "value", "cast<VectorType>($_self).getElementType()">]> {
+
+  let summary = "Convert a scalar into a vector";
+  let description = [{
+    The `cir.vec.splat` operation creates a vector value from a scalar value.
+    All elements of the vector have the same value, that of the given scalar.
+
+    It's a separate operation from `cir.vec.create` because more
+    efficient LLVM IR can be generated for it, and because some optimization and
+    analysis passes can benefit from knowing that all elements of the vector
+    have the same value.
+
+    ```mlir
+    %value = cir.const #cir.int<3> : !s32i
+    %value_vec = cir.vec.splat %value : !s32i, !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_VectorElementType:$value);
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    $value `:` type($value) `,` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// BaseClassAddrOp
+//===----------------------------------------------------------------------===//
+
+def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
+  let summary = "Get the base class address for a class/struct";
+  let description = [{
+    The `cir.base_class_addr` operaration gets the address of a particular
+    non-virtual base class given a derived class pointer. The offset in bytes
+    of the base class must be passed in, since it is easier for the front end
+    to calculate that than the MLIR passes. The operation contains a flag for
+    whether or not the operand may be nullptr. That depends on the context and
+    cannot be known by the operation, and that information affects how the
+    operation is lowered.
+
+    Example:
+    ```c++
+    struct Base { };
+    struct Derived : Base { };
+    Derived d;
+    Base& b = d;
+    ```
+    will generate
+    ```mlir
+    %3 = cir.base_class_addr %1 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+    ```
+  }];
+
+  // The validity of the relationship of derived and base cannot yet be
+  // verified, currently not worth adding a verifier.
+  let arguments = (ins
+    Arg<CIR_PointerType, "derived class pointer", [MemRead]>:$derived_addr,
+    IndexAttr:$offset, UnitAttr:$assume_not_null);
+
+  let results = (outs Res<CIR_PointerType, "">:$base_addr);
+
+  let assemblyFormat = [{
+      $derived_addr `:` qualified(type($derived_addr))
+      (`nonnull` $assume_not_null^)?
+      ` ` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexCreateOp
+//===----------------------------------------------------------------------===//
+
+def ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
+  let summary = "Create a complex value from its real and imaginary parts";
+  let description = [{
+    The `cir.complex.create` operation takes two operands that represent the
+    real and imaginary part of a complex number, and yields the complex number.
+
+    ```mlir
+    %0 = cir.const #cir.fp<1.000000e+00> : !cir.double
+    %1 = cir.const #cir.fp<2.000000e+00> : !cir.double
+    %2 = cir.complex.create %0, %1 : !cir.double -> !cir.complex<!cir.double>
+    ```
+  }];
+
+  let results = (outs CIR_ComplexType:$result);
+  let arguments = (ins
+    CIR_AnyIntOrFloatType:$real,
+    CIR_AnyIntOrFloatType:$imag
+  );
+
+  let assemblyFormat = [{
+    $real `,` $imag
+    `:` qualified(type($real)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Assume Operations
+//===----------------------------------------------------------------------===//
+
+def AssumeOp : CIR_Op<"assume"> {
+  let summary = "Tell the optimizer that a boolean value is true";
+  let description = [{
+    The `cir.assume` operation takes a single boolean prediate as its only
+    argument and does not have any results. The operation tells the optimizer
+    that the predicate is always true.
+
+    This operation corresponds to the `__assume` and the `__builtin_assume`
+    builtin functions.
+  }];
+
+  let arguments = (ins CIR_BoolType:$predicate);
+
+  let assemblyFormat = [{
+    $predicate `:` type($predicate) attr-dict
+  }];
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

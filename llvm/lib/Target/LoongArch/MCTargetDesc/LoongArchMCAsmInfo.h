@@ -23,7 +23,14 @@ class LoongArchMCAsmInfo : public MCAsmInfoELF {
 
 public:
   explicit LoongArchMCAsmInfo(const Triple &TargetTriple);
+  void printSpecifierExpr(raw_ostream &OS,
+                          const MCSpecifierExpr &Expr) const override;
 };
+
+namespace LoongArch {
+StringRef getSpecifierName(uint16_t S);
+uint16_t parseSpecifier(StringRef name);
+} // namespace LoongArch
 
 } // end namespace llvm
 

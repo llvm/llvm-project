@@ -815,6 +815,12 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       return new ICmpInst(ICmpInst::ICMP_EQ, X, CmpC);
     }
 
+    if (match(Src, m_Shr(m_Value(X), m_SpecificInt(SrcWidth - 1)))) {
+      // trunc (ashr X, BW-1) to i1 --> icmp slt X, 0
+      // trunc (lshr X, BW-1) to i1 --> icmp slt X, 0
+      return new ICmpInst(ICmpInst::ICMP_SLT, X, Zero);
+    }
+
     Constant *C;
     if (match(Src, m_OneUse(m_LShr(m_Value(X), m_ImmConstant(C))))) {
       // trunc (lshr X, C) to i1 --> icmp ne (and X, C'), 0
@@ -935,12 +941,9 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
         Trunc.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
       Attribute Attr =
           Trunc.getFunction()->getFnAttribute(Attribute::VScaleRange);
-      if (std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
-        if (Log2_32(*MaxVScale) < DestWidth) {
-          Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
-          return replaceInstUsesWith(Trunc, VScale);
-        }
-      }
+      if (std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax())
+        if (Log2_32(*MaxVScale) < DestWidth)
+          return replaceInstUsesWith(Trunc, Builder.CreateVScale(DestTy));
     }
   }
 
@@ -1314,10 +1317,8 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
           Zext.getFunction()->getFnAttribute(Attribute::VScaleRange);
       if (std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
         unsigned TypeWidth = Src->getType()->getScalarSizeInBits();
-        if (Log2_32(*MaxVScale) < TypeWidth) {
-          Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
-          return replaceInstUsesWith(Zext, VScale);
-        }
+        if (Log2_32(*MaxVScale) < TypeWidth)
+          return replaceInstUsesWith(Zext, Builder.CreateVScale(DestTy));
       }
     }
   }
@@ -1604,12 +1605,9 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
         Sext.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
       Attribute Attr =
           Sext.getFunction()->getFnAttribute(Attribute::VScaleRange);
-      if (std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
-        if (Log2_32(*MaxVScale) < (SrcBitSize - 1)) {
-          Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
-          return replaceInstUsesWith(Sext, VScale);
-        }
-      }
+      if (std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax())
+        if (Log2_32(*MaxVScale) < (SrcBitSize - 1))
+          return replaceInstUsesWith(Sext, Builder.CreateVScale(DestTy));
     }
   }
 
@@ -1925,7 +1923,9 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
       II->getOperandBundlesAsDefs(OpBundles);
       CallInst *NewCI =
           CallInst::Create(Overload, {InnerTrunc}, OpBundles, II->getName());
-      NewCI->copyFastMathFlags(II);
+      // A normal value may be converted to an infinity. It means that we cannot
+      // propagate ninf from the intrinsic. So we propagate FMF from fptrunc.
+      NewCI->copyFastMathFlags(&FPT);
       return NewCI;
     }
     }

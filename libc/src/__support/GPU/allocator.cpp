@@ -129,6 +129,14 @@ static inline constexpr T round_up(const T x) {
   return (x + N) & ~(N - 1);
 }
 
+// Perform a lane parallel memset on a uint32_t pointer.
+void uniform_memset(uint32_t *s, uint32_t c, uint32_t n, uint64_t uniform) {
+  uint64_t mask = gpu::get_lane_mask();
+  uint32_t workers = cpp::popcount(uniform);
+  for (uint32_t i = impl::lane_count(mask & uniform); i < n; i += workers)
+    s[i] = c;
+}
+
 } // namespace impl
 
 /// A slab allocator used to hand out identically sized slabs of memory.
@@ -157,10 +165,15 @@ struct Slab {
     Header *header = reinterpret_cast<Header *>(memory);
     header->chunk_size = chunk_size;
     header->global_index = global_index;
+  }
 
-    // This memset is expensive and likely not necessary for the current 'kfd'
-    // driver. Until zeroed pages are exposed by the API we must be careful.
-    __builtin_memset(get_bitfield(), 0, bitfield_bytes(chunk_size));
+  // Set the necessary bitfield bytes to zero in parallel using many lanes. This
+  // must be called before the bitfield can be accessed safely, memory is not
+  // guaranteed to be zero initialized in the current implementation.
+  void initialize(uint64_t uniform) {
+    uint32_t size = (bitfield_bytes(get_chunk_size()) + sizeof(uint32_t) - 1) /
+                    sizeof(uint32_t);
+    impl::uniform_memset(get_bitfield(), 0, size, uniform);
   }
 
   // Get the number of chunks that can theoretically fit inside this slab.
@@ -283,7 +296,7 @@ struct Slab {
 
 /// A wait-free guard around a pointer resource to be created dynamically if
 /// space is available and freed once there are no more users.
-template <typename T> struct GuardPtr {
+struct GuardPtr {
 private:
   struct RefCounter {
     // Indicates that the object is in its deallocation phase and thus invalid.
@@ -339,32 +352,25 @@ private:
     cpp::Atomic<uint64_t> counter{0};
   };
 
-  cpp::Atomic<T *> ptr{nullptr};
+  cpp::Atomic<Slab *> ptr{nullptr};
   RefCounter ref{};
 
   // Should be called be a single lane for each different pointer.
   template <typename... Args>
-  T *try_lock_impl(uint32_t n, uint64_t &count, Args &&...args) {
-    T *expected = ptr.load(cpp::MemoryOrder::RELAXED);
+  Slab *try_lock_impl(uint32_t n, uint64_t &count, Args &&...args) {
+    Slab *expected = ptr.load(cpp::MemoryOrder::RELAXED);
     if (!expected &&
-        ptr.compare_exchange_strong(expected, reinterpret_cast<T *>(SENTINEL),
-                                    cpp::MemoryOrder::RELAXED,
-                                    cpp::MemoryOrder::RELAXED)) {
+        ptr.compare_exchange_strong(
+            expected, reinterpret_cast<Slab *>(SENTINEL),
+            cpp::MemoryOrder::RELAXED, cpp::MemoryOrder::RELAXED)) {
       count = cpp::numeric_limits<uint64_t>::max();
-      void *raw = impl::rpc_allocate(sizeof(T));
+      void *raw = impl::rpc_allocate(sizeof(Slab));
       if (!raw)
         return nullptr;
-      T *mem = new (raw) T(cpp::forward<Args>(args)...);
-
-      cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
-      ptr.store(mem, cpp::MemoryOrder::RELAXED);
-      cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
-      if (!ref.acquire(n, count))
-        ref.reset(n, count);
-      return mem;
+      return new (raw) Slab(cpp::forward<Args>(args)...);
     }
 
-    if (!expected || expected == reinterpret_cast<T *>(SENTINEL))
+    if (!expected || expected == reinterpret_cast<Slab *>(SENTINEL))
       return nullptr;
 
     if (!ref.acquire(n, count))
@@ -374,15 +380,25 @@ private:
     return ptr.load(cpp::MemoryOrder::RELAXED);
   }
 
+  // Finalize the associated memory and signal that it is ready to use by
+  // resetting the counter.
+  void finalize(Slab *mem, uint32_t n, uint64_t &count) {
+    cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
+    ptr.store(mem, cpp::MemoryOrder::RELAXED);
+    cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
+    if (!ref.acquire(n, count))
+      ref.reset(n, count);
+  }
+
 public:
   // Attempt to lock access to the pointer, potentially creating it if empty.
   // The uniform mask represents which lanes share the same pointer. For each
   // uniform value we elect a leader to handle it on behalf of the other lanes.
   template <typename... Args>
-  T *try_lock(uint64_t lane_mask, uint64_t uniform, uint64_t &count,
-              Args &&...args) {
+  Slab *try_lock(uint64_t lane_mask, uint64_t uniform, uint64_t &count,
+                 Args &&...args) {
     count = 0;
-    T *result = nullptr;
+    Slab *result = nullptr;
     if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(uniform)))
       result = try_lock_impl(cpp::popcount(uniform), count,
                              cpp::forward<Args>(args)...);
@@ -391,6 +407,14 @@ public:
 
     if (!result)
       return nullptr;
+
+    // We defer storing the newly allocated slab until now so that we can use
+    // multiple lanes to initialize it and release it for use.
+    if (count == cpp::numeric_limits<uint64_t>::max()) {
+      result->initialize(uniform);
+      if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(uniform)))
+        finalize(result, cpp::popcount(uniform), count);
+    }
 
     if (count != cpp::numeric_limits<uint64_t>::max())
       count = count - cpp::popcount(uniform) + impl::lane_count(uniform) + 1;
@@ -403,8 +427,8 @@ public:
     cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
     if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(mask)) &&
         ref.release(cpp::popcount(mask))) {
-      T *p = ptr.load(cpp::MemoryOrder::RELAXED);
-      p->~T();
+      Slab *p = ptr.load(cpp::MemoryOrder::RELAXED);
+      p->~Slab();
       impl::rpc_free(p);
       cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
       ptr.store(nullptr, cpp::MemoryOrder::RELAXED);
@@ -417,7 +441,7 @@ public:
 };
 
 // The global array used to search for a valid slab to allocate from.
-static GuardPtr<Slab> slots[ARRAY_SIZE] = {};
+static GuardPtr slots[ARRAY_SIZE] = {};
 
 // Tries to find a slab in the table that can support the given chunk size.
 static Slab *find_slab(uint32_t chunk_size) {

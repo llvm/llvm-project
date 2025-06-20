@@ -12,6 +12,7 @@
 
 #include "VEInstPrinter.h"
 #include "VE.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -61,7 +62,7 @@ void VEInstPrinter::printOperand(const MCInst *MI, int OpNum,
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
-  MO.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MO.getExpr());
 }
 
 void VEInstPrinter::printMemASXOperand(const MCInst *MI, int OpNum,

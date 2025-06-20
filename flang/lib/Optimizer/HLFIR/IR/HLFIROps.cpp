@@ -180,16 +180,26 @@ void hlfir::AssignOp::getEffects(
 // DeclareOp
 //===----------------------------------------------------------------------===//
 
-/// Given a FIR memory type, and information about non default lower bounds, get
-/// the related HLFIR variable type.
-mlir::Type hlfir::DeclareOp::getHLFIRVariableType(mlir::Type inputType,
-                                                  bool hasExplicitLowerBounds) {
+static std::pair<mlir::Type, mlir::Type>
+getDeclareOutputTypes(mlir::Type inputType, bool hasExplicitLowerBounds) {
+  // Drop pointer/allocatable attribute of descriptor values. Only descriptor
+  // addresses are ALLOCATABLE/POINTER. The HLFIR box result of an hlfir.declare
+  // without those attributes should not have these attributes set.
+  if (auto baseBoxType = mlir::dyn_cast<fir::BaseBoxType>(inputType))
+    if (baseBoxType.isPointerOrAllocatable()) {
+      mlir::Type boxWithoutAttributes =
+          baseBoxType.getBoxTypeWithNewAttr(fir::BaseBoxType::Attribute::None);
+      return {boxWithoutAttributes, boxWithoutAttributes};
+    }
   mlir::Type type = fir::unwrapRefType(inputType);
   if (mlir::isa<fir::BaseBoxType>(type))
-    return inputType;
+    return {inputType, inputType};
   if (auto charType = mlir::dyn_cast<fir::CharacterType>(type))
-    if (charType.hasDynamicLen())
-      return fir::BoxCharType::get(charType.getContext(), charType.getFKind());
+    if (charType.hasDynamicLen()) {
+      mlir::Type hlfirType =
+          fir::BoxCharType::get(charType.getContext(), charType.getFKind());
+      return {hlfirType, inputType};
+    }
 
   auto seqType = mlir::dyn_cast<fir::SequenceType>(type);
   bool hasDynamicExtents =
@@ -197,9 +207,19 @@ mlir::Type hlfir::DeclareOp::getHLFIRVariableType(mlir::Type inputType,
   mlir::Type eleType = seqType ? seqType.getEleTy() : type;
   bool hasDynamicLengthParams = fir::characterWithDynamicLen(eleType) ||
                                 fir::isRecordWithTypeParameters(eleType);
-  if (hasExplicitLowerBounds || hasDynamicExtents || hasDynamicLengthParams)
-    return fir::BoxType::get(type, fir::isa_volatile_type(inputType));
-  return inputType;
+  if (hasExplicitLowerBounds || hasDynamicExtents || hasDynamicLengthParams) {
+    mlir::Type boxType =
+        fir::BoxType::get(type, fir::isa_volatile_type(inputType));
+    return {boxType, inputType};
+  }
+  return {inputType, inputType};
+}
+
+/// Given a FIR memory type, and information about non default lower bounds, get
+/// the related HLFIR variable type.
+mlir::Type hlfir::DeclareOp::getHLFIRVariableType(mlir::Type inputType,
+                                                  bool hasExplicitLowerBounds) {
+  return getDeclareOutputTypes(inputType, hasExplicitLowerBounds).first;
 }
 
 static bool hasExplicitLowerBounds(mlir::Value shape) {
@@ -256,17 +276,18 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
     std::tie(inputType, memref) = updateDeclaredInputTypeWithVolatility(
         inputType, memref, builder, flags);
   }
-  mlir::Type hlfirVariableType =
-      getHLFIRVariableType(inputType, hasExplicitLbs);
-  build(builder, result, {hlfirVariableType, inputType}, memref, shape,
+  auto [hlfirVariableType, firVarType] =
+      getDeclareOutputTypes(inputType, hasExplicitLbs);
+  build(builder, result, {hlfirVariableType, firVarType}, memref, shape,
         typeparams, dummy_scope, nameAttr, fortran_attrs, data_attr);
 }
 
 llvm::LogicalResult hlfir::DeclareOp::verify() {
-  if (getMemref().getType() != getResult(1).getType())
-    return emitOpError("second result type must match input memref type");
-  mlir::Type hlfirVariableType = getHLFIRVariableType(
+  auto [hlfirVariableType, firVarType] = getDeclareOutputTypes(
       getMemref().getType(), hasExplicitLowerBounds(getShape()));
+  if (firVarType != getResult(1).getType())
+    return emitOpError("second result type must match input memref type, "
+                       "unless it is a box with heap or pointer attribute");
   if (hlfirVariableType != getResult(0).getType())
     return emitOpError("first result type is inconsistent with variable "
                        "properties: expected ")
@@ -1608,7 +1629,7 @@ void hlfir::AssociateOp::build(
   mlir::Type firVarType;
   auto sourceExprType = mlir::dyn_cast<hlfir::ExprType>(source.getType());
   if (sourceExprType && sourceExprType.isPolymorphic())
-    firVarType = fir::ClassType::get(fir::HeapType::get(dataType));
+    firVarType = fir::ClassType::get(dataType);
   else
     firVarType = fir::ReferenceType::get(dataType);
 

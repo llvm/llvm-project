@@ -321,7 +321,7 @@ void SemaCUDA::EraseUnwantedMatches(
   if (Matches.size() <= 1)
     return;
 
-  using Pair = std::pair<DeclAccessPair, FunctionDecl*>;
+  using Pair = std::pair<DeclAccessPair, FunctionDecl *>;
 
   // Gets the CUDA function preference for a call from Caller to Match.
   auto GetCFP = [&](const Pair &Match) {
@@ -504,7 +504,6 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     }
   }
 
-
   // If no target was inferred, mark this member as __host__ __device__;
   // it's the least restrictive option that can be invoked from any target.
   bool NeedsH = true, NeedsD = true;
@@ -679,16 +678,22 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
       FD && FD->isDependentContext())
     return;
 
+  bool IsSharedVar = VD->hasAttr<CUDASharedAttr>();
+  bool IsDeviceOrConstantVar =
+      !IsSharedVar &&
+      (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>());
+  if ((IsSharedVar || IsDeviceOrConstantVar) &&
+      VD->getType().getQualifiers().getAddressSpace() != LangAS::Default) {
+    Diag(VD->getLocation(), diag::err_cuda_address_space_gpuvar);
+    VD->setInvalidDecl();
+    return;
+  }
   // Do not check dependent variables since the ctor/dtor/initializer are not
   // determined. Do it after instantiation.
   if (VD->isInvalidDecl() || !VD->hasInit() || !VD->hasGlobalStorage() ||
       IsDependentVar(VD))
     return;
   const Expr *Init = VD->getInit();
-  bool IsSharedVar = VD->hasAttr<CUDASharedAttr>();
-  bool IsDeviceOrConstantVar =
-      !IsSharedVar &&
-      (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>());
   if (IsDeviceOrConstantVar || IsSharedVar) {
     if (HasAllowedCUDADeviceStaticInitializer(
             *this, VD, IsSharedVar ? CICK_Shared : CICK_DeviceOrConstant))

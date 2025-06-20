@@ -728,16 +728,12 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
 
 PredicateInfoBuilder::ValueInfo &
 PredicateInfoBuilder::getOrCreateValueInfo(Value *Operand) {
-  auto OIN = ValueInfoNums.find(Operand);
-  if (OIN == ValueInfoNums.end()) {
-    // This will grow it
+  auto Res = ValueInfoNums.try_emplace(Operand, ValueInfos.size());
+  if (Res.second) {
+    // Allocate space for new ValueInfo.
     ValueInfos.resize(ValueInfos.size() + 1);
-    // This will use the new size and give us a 0 based number of the info
-    auto InsertResult = ValueInfoNums.insert({Operand, ValueInfos.size() - 1});
-    assert(InsertResult.second && "Value info number already existed?");
-    return ValueInfos[InsertResult.first->second];
   }
-  return ValueInfos[OIN->second];
+  return ValueInfos[Res.first->second];
 }
 
 const PredicateInfoBuilder::ValueInfo &

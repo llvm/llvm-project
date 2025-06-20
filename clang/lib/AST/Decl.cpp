@@ -5380,7 +5380,7 @@ PragmaCommentDecl *PragmaCommentDecl::Create(const ASTContext &C,
       new (C, DC, additionalSizeToAlloc<char>(Arg.size() + 1))
           PragmaCommentDecl(DC, CommentLoc, CommentKind);
   memcpy(PCD->getTrailingObjects(), Arg.data(), Arg.size());
-  PCD->getTrailingObjects<char>()[Arg.size()] = '\0';
+  PCD->getTrailingObjects()[Arg.size()] = '\0';
   return PCD;
 }
 
@@ -5713,8 +5713,7 @@ SourceRange TypeAliasDecl::getSourceRange() const {
 void FileScopeAsmDecl::anchor() {}
 
 FileScopeAsmDecl *FileScopeAsmDecl::Create(ASTContext &C, DeclContext *DC,
-                                           StringLiteral *Str,
-                                           SourceLocation AsmLoc,
+                                           Expr *Str, SourceLocation AsmLoc,
                                            SourceLocation RParenLoc) {
   return new (C, DC) FileScopeAsmDecl(DC, Str, AsmLoc, RParenLoc);
 }
@@ -5723,6 +5722,10 @@ FileScopeAsmDecl *FileScopeAsmDecl::CreateDeserialized(ASTContext &C,
                                                        GlobalDeclID ID) {
   return new (C, ID) FileScopeAsmDecl(nullptr, nullptr, SourceLocation(),
                                       SourceLocation());
+}
+
+std::string FileScopeAsmDecl::getAsmString() const {
+  return GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(getAsmStringExpr());
 }
 
 void TopLevelStmtDecl::anchor() {}

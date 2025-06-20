@@ -356,26 +356,26 @@ getSource(const semantics::SemanticsContext &semaCtx,
   const parser::CharBlock *source = nullptr;
 
   auto ompConsVisit = [&](const parser::OpenMPConstruct &x) {
-    std::visit(common::visitors{
-                   [&](const parser::OpenMPSectionsConstruct &x) {
-                     source = &std::get<0>(x.t).source;
-                   },
-                   [&](const parser::OpenMPLoopConstruct &x) {
-                     source = &std::get<0>(x.t).source;
-                   },
-                   [&](const parser::OpenMPBlockConstruct &x) {
-                     source = &std::get<0>(x.t).source;
-                   },
-                   [&](const parser::OpenMPCriticalConstruct &x) {
-                     source = &std::get<0>(x.t).source;
-                   },
-                   [&](const parser::OpenMPAtomicConstruct &x) {
-                     std::visit([&](const auto &x) { source = &x.source; },
-                                x.u);
-                   },
-                   [&](const auto &x) { source = &x.source; },
-               },
-               x.u);
+    std::visit(
+        common::visitors{
+            [&](const parser::OpenMPSectionsConstruct &x) {
+              source = &std::get<0>(x.t).source;
+            },
+            [&](const parser::OpenMPLoopConstruct &x) {
+              source = &std::get<0>(x.t).source;
+            },
+            [&](const parser::OpenMPBlockConstruct &x) {
+              source = &std::get<0>(x.t).source;
+            },
+            [&](const parser::OpenMPCriticalConstruct &x) {
+              source = &std::get<0>(x.t).source;
+            },
+            [&](const parser::OpenMPAtomicConstruct &x) {
+              source = &std::get<parser::OmpDirectiveSpecification>(x.t).source;
+            },
+            [&](const auto &x) { source = &x.source; },
+        },
+        x.u);
   };
 
   eval.visit(common::visitors{
@@ -388,19 +388,43 @@ getSource(const semantics::SemanticsContext &semaCtx,
   return source;
 }
 
+bool DataSharingProcessor::isOpenMPPrivatizingConstruct(
+    const parser::OpenMPConstruct &omp) {
+  return common::visit(
+      [](auto &&s) {
+        using BareS = llvm::remove_cvref_t<decltype(s)>;
+        return std::is_same_v<BareS, parser::OpenMPBlockConstruct> ||
+               std::is_same_v<BareS, parser::OpenMPLoopConstruct> ||
+               std::is_same_v<BareS, parser::OpenMPSectionsConstruct>;
+      },
+      omp.u);
+}
+
+bool DataSharingProcessor::isOpenMPPrivatizingEvaluation(
+    const pft::Evaluation &eval) const {
+  return eval.visit([](auto &&s) {
+    using BareS = llvm::remove_cvref_t<decltype(s)>;
+    if constexpr (std::is_same_v<BareS, parser::OpenMPConstruct>) {
+      return isOpenMPPrivatizingConstruct(s);
+    } else {
+      return false;
+    }
+  });
+}
+
 void DataSharingProcessor::collectSymbolsInNestedRegions(
     lower::pft::Evaluation &eval, semantics::Symbol::Flag flag,
     llvm::SetVector<const semantics::Symbol *> &symbolsInNestedRegions) {
-  for (lower::pft::Evaluation &nestedEval : eval.getNestedEvaluations()) {
-    if (nestedEval.hasNestedEvaluations()) {
-      if (nestedEval.isConstruct())
-        // Recursively look for OpenMP constructs within `nestedEval`'s region
-        collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
-      else {
-        converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
-                                   /*collectSymbols=*/true,
-                                   /*collectHostAssociatedSymbols=*/false);
-      }
+  if (!eval.hasNestedEvaluations())
+    return;
+  for (pft::Evaluation &nestedEval : eval.getNestedEvaluations()) {
+    if (isOpenMPPrivatizingEvaluation(nestedEval)) {
+      converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
+                                 /*collectSymbols=*/true,
+                                 /*collectHostAssociatedSymbols=*/false);
+    } else {
+      // Recursively look for OpenMP constructs within `nestedEval`'s region
+      collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
     }
   }
 }

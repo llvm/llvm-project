@@ -16,29 +16,31 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace ast_matchers {
+namespace clang::tidy::readability {
+
+namespace {
 
 AST_POLYMORPHIC_MATCHER_P2(hasAnyArgumentWithParam,
                            AST_POLYMORPHIC_SUPPORTED_TYPES(CallExpr,
                                                            CXXConstructExpr),
-                           internal::Matcher<Expr>, ArgMatcher,
-                           internal::Matcher<ParmVarDecl>, ParamMatcher) {
-  BoundNodesTreeBuilder Result;
+                           ast_matchers::internal::Matcher<Expr>, ArgMatcher,
+                           ast_matchers::internal::Matcher<ParmVarDecl>,
+                           ParamMatcher) {
+  ast_matchers::internal::BoundNodesTreeBuilder Result;
   // The first argument of an overloaded member operator is the implicit object
   // argument of the method which should not be matched against a parameter, so
   // we skip over it here.
-  BoundNodesTreeBuilder Matches;
+  ast_matchers::internal::BoundNodesTreeBuilder Matches;
   unsigned ArgIndex = cxxOperatorCallExpr(callee(cxxMethodDecl()))
                               .matches(Node, Finder, &Matches)
                           ? 1
                           : 0;
   int ParamIndex = 0;
   for (; ArgIndex < Node.getNumArgs(); ++ArgIndex) {
-    BoundNodesTreeBuilder ArgMatches(*Builder);
+    ast_matchers::internal::BoundNodesTreeBuilder ArgMatches(*Builder);
     if (ArgMatcher.matches(*(Node.getArg(ArgIndex)->IgnoreParenCasts()), Finder,
                            &ArgMatches)) {
-      BoundNodesTreeBuilder ParamMatches(ArgMatches);
+      ast_matchers::internal::BoundNodesTreeBuilder ParamMatches(ArgMatches);
       if (expr(anyOf(cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
                          hasParameter(ParamIndex, ParamMatcher)))),
                      callExpr(callee(functionDecl(
@@ -80,9 +82,10 @@ AST_MATCHER(Expr, usedInBooleanContext) {
                      binaryOperator(hasAnyOperatorName("&&", "||")),
                      unaryOperator(hasOperatorName("!")).bind("NegOnSize"))))))
           .matches(Node, Finder, Builder);
-  Builder->removeBindings([ExprName](const BoundNodesMap &Nodes) {
-    return Nodes.getNode(ExprName).getNodeKind().isNone();
-  });
+  Builder->removeBindings(
+      [ExprName](const ast_matchers::internal::BoundNodesMap &Nodes) {
+        return Nodes.getNode(ExprName).getNodeKind().isNone();
+      });
   return Result;
 }
 
@@ -107,8 +110,7 @@ AST_MATCHER_P(UserDefinedLiteral, hasLiteral,
   return false;
 }
 
-} // namespace ast_matchers
-namespace tidy::readability {
+} // namespace
 
 using utils::isBinaryOrTernary;
 
@@ -407,5 +409,4 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
       << Container;
 }
 
-} // namespace tidy::readability
-} // namespace clang
+} // namespace clang::tidy::readability

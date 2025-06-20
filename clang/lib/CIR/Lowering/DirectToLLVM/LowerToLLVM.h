@@ -29,6 +29,21 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 
+void convertSideEffectForCall(mlir::Operation *callOp,
+                              cir::SideEffect sideEffect,
+                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
+                              bool &noUnwind, bool &willReturn);
+
+class CIRToLLVMAssumeOpLowering
+    : public mlir::OpConversionPattern<cir::AssumeOp> {
+public:
+  using mlir::OpConversionPattern<cir::AssumeOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::AssumeOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMBrCondOpLowering
     : public mlir::OpConversionPattern<cir::BrCondOp> {
 public:
@@ -297,6 +312,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMBaseClassAddrOpLowering
+    : public mlir::OpConversionPattern<cir::BaseClassAddrOp> {
+public:
+  using mlir::OpConversionPattern<cir::BaseClassAddrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BaseClassAddrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMStackSaveOpLowering
     : public mlir::OpConversionPattern<cir::StackSaveOp> {
 public:
@@ -357,6 +382,26 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMVecSplatOpLowering
+    : public mlir::OpConversionPattern<cir::VecSplatOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecSplatOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecSplatOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVecShuffleOpLowering
+    : public mlir::OpConversionPattern<cir::VecShuffleOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecShuffleOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecShuffleOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMVecShuffleDynamicOpLowering
     : public mlir::OpConversionPattern<cir::VecShuffleDynamicOp> {
 public:
@@ -375,6 +420,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::VecTernaryOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMComplexCreateOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexCreateOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexCreateOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexCreateOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

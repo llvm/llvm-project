@@ -217,11 +217,10 @@ public:
   using DiagLevelAndFormatString = std::pair<DiagnosticIDs::Level, std::string>;
   DiagLevelAndFormatString getDiagLevelAndFormatString(unsigned DiagnosticID,
                                                        SourceLocation Loc) {
-    return {
-        static_cast<DiagnosticIDs::Level>(
-            DiagEngine->getDiagnosticLevel(DiagnosticID, Loc)),
-        std::string(
-            DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID))};
+    return {static_cast<DiagnosticIDs::Level>(
+                DiagEngine->getDiagnosticLevel(DiagnosticID, Loc)),
+            std::string(
+                DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID))};
   }
 
   void setOptionsCollector(llvm::StringSet<> *Collector) {

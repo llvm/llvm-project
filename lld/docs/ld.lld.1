@@ -793,6 +793,14 @@ Specify how to report the missing GNU_PROPERTY_X86_FEATURE_1_IBT or GNU_PROPERTY
 .Cm none
 is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
 .Pp
+.It Cm dynamic-undefined-weak
+Make undefined weak symbols dynamic when the dynamic symbol table is present, if they are referenced from
+relocatable object files and not forced local by symbol visibility or versioning. Do not make them dynamic when
+.Cm nodynamic-undefined-weak
+is specified.
+.Cm dynamic-undefined-weak
+is the default when building a shared object, or when an input shared object is present.
+.Pp
 .It Cm pauth-report Ns = Ns Ar [none|warning|error]
 Specify how to report the missing GNU_PROPERTY_AARCH64_FEATURE_PAUTH property.
 .Cm none

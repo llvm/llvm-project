@@ -1400,42 +1400,46 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
 /// try to shuffle after the intrinsic.
 Instruction *
 InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
-  // TODO: This should be extended to handle other intrinsics like fshl, ctpop,
-  //       etc. Use llvm::isTriviallyVectorizable() and related to determine
-  //       which intrinsics are safe to shuffle?
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::smax:
-  case Intrinsic::smin:
-  case Intrinsic::umax:
-  case Intrinsic::umin:
-  case Intrinsic::fma:
-  case Intrinsic::fshl:
-  case Intrinsic::fshr:
-    break;
-  default:
+  if (!isTriviallyVectorizable(II->getIntrinsicID()) ||
+      !II->getCalledFunction()->isSpeculatable())
     return nullptr;
-  }
+
+  // fabs is canonicalized to fabs (shuffle ...) in foldShuffleOfUnaryOps, so
+  // avoid undoing it.
+  if (match(II, m_FAbs(m_Value())))
+    return nullptr;
 
   Value *X;
   Constant *C;
   ArrayRef<int> Mask;
-  auto *NonConstArg = find_if_not(II->args(), IsaPred<Constant>);
+  auto *NonConstArg = find_if_not(II->args(), [&II](Use &Arg) {
+    return isa<Constant>(Arg.get()) ||
+           isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(),
+                                              Arg.getOperandNo(), nullptr);
+  });
   if (!NonConstArg ||
       !match(NonConstArg, m_Shuffle(m_Value(X), m_Poison(), m_Mask(Mask))))
     return nullptr;
 
-  // At least 1 operand must have 1 use because we are creating 2 instructions.
-  if (none_of(II->args(), [](Value *V) { return V->hasOneUse(); }))
+  // At least 1 operand must be a shuffle with 1 use because we are creating 2
+  // instructions.
+  if (none_of(II->args(), [](Value *V) {
+        return isa<ShuffleVectorInst>(V) && V->hasOneUse();
+      }))
     return nullptr;
 
   // See if all arguments are shuffled with the same mask.
   SmallVector<Value *, 4> NewArgs;
   Type *SrcTy = X->getType();
-  for (Value *Arg : II->args()) {
-    if (match(Arg, m_Shuffle(m_Value(X), m_Poison(), m_SpecificMask(Mask))) &&
-        X->getType() == SrcTy)
+  for (Use &Arg : II->args()) {
+    if (isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(),
+                                           Arg.getOperandNo(), nullptr))
+      NewArgs.push_back(Arg);
+    else if (match(&Arg,
+                   m_Shuffle(m_Value(X), m_Poison(), m_SpecificMask(Mask))) &&
+             X->getType() == SrcTy)
       NewArgs.push_back(X);
-    else if (match(Arg, m_ImmConstant(C))) {
+    else if (match(&Arg, m_ImmConstant(C))) {
       // If it's a constant, try find the constant that would be shuffled to C.
       if (Constant *ShuffledC =
               unshuffleConstant(Mask, C, cast<VectorType>(SrcTy)))
@@ -1448,8 +1452,12 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
 
   // intrinsic (shuf X, M), (shuf Y, M), ... --> shuf (intrinsic X, Y, ...), M
   Instruction *FPI = isa<FPMathOperator>(II) ? II : nullptr;
+  // Result type might be a different vector width.
+  // TODO: Check that the result type isn't widened?
+  VectorType *ResTy =
+      VectorType::get(II->getType()->getScalarType(), cast<VectorType>(SrcTy));
   Value *NewIntrinsic =
-      Builder.CreateIntrinsic(II->getIntrinsicID(), SrcTy, NewArgs, FPI);
+      Builder.CreateIntrinsic(ResTy, II->getIntrinsicID(), NewArgs, FPI);
   return new ShuffleVectorInst(NewIntrinsic, Mask);
 }
 
@@ -3076,9 +3084,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::arm_neon_aesd:
   case Intrinsic::arm_neon_aese:
   case Intrinsic::aarch64_crypto_aesd:
-  case Intrinsic::aarch64_crypto_aese: {
+  case Intrinsic::aarch64_crypto_aese:
+  case Intrinsic::aarch64_sve_aesd:
+  case Intrinsic::aarch64_sve_aese: {
     Value *DataArg = II->getArgOperand(0);
     Value *KeyArg  = II->getArgOperand(1);
+
+    // Accept zero on either operand.
+    if (!match(KeyArg, m_ZeroInt()))
+      std::swap(KeyArg, DataArg);
 
     // Try to use the builtin XOR in AESE and AESD to eliminate a prior XOR
     Value *Data, *Key;
@@ -3541,33 +3555,33 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::vector_reverse: {
-    Value *BO0, *BO1, *X, *Y;
     Value *Vec = II->getArgOperand(0);
-    if (match(Vec, m_OneUse(m_BinOp(m_Value(BO0), m_Value(BO1))))) {
-      auto *OldBinOp = cast<BinaryOperator>(Vec);
-      if (match(BO0, m_VecReverse(m_Value(X)))) {
-        // rev(binop rev(X), rev(Y)) --> binop X, Y
-        if (match(BO1, m_VecReverse(m_Value(Y))))
-          return replaceInstUsesWith(CI, BinaryOperator::CreateWithCopiedFlags(
-                                             OldBinOp->getOpcode(), X, Y,
-                                             OldBinOp, OldBinOp->getName(),
-                                             II->getIterator()));
-        // rev(binop rev(X), BO1Splat) --> binop X, BO1Splat
-        if (isSplatValue(BO1))
-          return replaceInstUsesWith(CI, BinaryOperator::CreateWithCopiedFlags(
-                                             OldBinOp->getOpcode(), X, BO1,
-                                             OldBinOp, OldBinOp->getName(),
-                                             II->getIterator()));
-      }
-      // rev(binop BO0Splat, rev(Y)) --> binop BO0Splat, Y
-      if (match(BO1, m_VecReverse(m_Value(Y))) && isSplatValue(BO0))
-        return replaceInstUsesWith(CI,
-                                   BinaryOperator::CreateWithCopiedFlags(
-                                       OldBinOp->getOpcode(), BO0, Y, OldBinOp,
-                                       OldBinOp->getName(), II->getIterator()));
-    }
+    // Note: We canonicalize reverse after binops, so we don't need a
+    // corresponding binop case here. TODO: Consider canonicalizing
+    // reverse after fneg?
+
     // rev(unop rev(X)) --> unop X
+    Value *X;
     if (match(Vec, m_OneUse(m_UnOp(m_VecReverse(m_Value(X)))))) {
+      auto *OldUnOp = cast<UnaryOperator>(Vec);
+      auto *NewUnOp = UnaryOperator::CreateWithCopiedFlags(
+          OldUnOp->getOpcode(), X, OldUnOp, OldUnOp->getName(),
+          II->getIterator());
+      return replaceInstUsesWith(CI, NewUnOp);
+    }
+    break;
+  }
+  case Intrinsic::experimental_vp_reverse: {
+    Value *X;
+    Value *Vec = II->getArgOperand(0);
+    Value *Mask = II->getArgOperand(1);
+    if (!match(Mask, m_AllOnes()))
+      break;
+    Value *EVL = II->getArgOperand(2);
+    // rev(unop rev(X)) --> unop X
+    if (match(Vec,
+              m_OneUse(m_UnOp(m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                  m_Value(X), m_AllOnes(), m_Specific(EVL)))))) {
       auto *OldUnOp = cast<UnaryOperator>(Vec);
       auto *NewUnOp = UnaryOperator::CreateWithCopiedFlags(
           OldUnOp->getOpcode(), X, OldUnOp, OldUnOp->getName(),

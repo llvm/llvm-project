@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,apiModeling,nullability.NullableDereferenced,nullability.NullabilityBase -x objective-c %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,apiModeling,nullability.NullableDereferenced -x objective-c %s
 /*
   This test is reduced from a static analyzer crash. The bug causing
   the crash is explained in #124477.  It can only be triggered in some

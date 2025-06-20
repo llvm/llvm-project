@@ -1058,48 +1058,54 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
   assert(succeeded(tilingResult) &&
          "expected tiling result to be computed after loop generation");
 
-  SmallVector<Value> partialResults;
   if (loops.empty()) {
     // If loops are empty, the tiled op is used as the replacement for the
     // untiled op.
-    partialResults = tilingResult->tiledValues;
-  } else {
-    partialResults = llvm::map_to_vector(loops.front()->getResults(),
-                                         [](OpResult r) -> Value { return r; });
+    return scf::SCFTilingResult{tilingResult->tiledOps,
+                                initTensors,
+                                loops,
+                                tilingResult->tiledValues,
+                                tilingResult->generatedSlices,
+                                {}};
   }
 
+  auto loopResults = llvm::map_to_vector(loops.front()->getResults(),
+                                         [](OpResult r) -> Value { return r; });
+
+  // For the full reduction case, there is nothing more to do.
+  if (options.reductionStrategy ==
+      scf::SCFTilingOptions::ReductionTilingStrategy::FullReduction) {
+    return scf::SCFTilingResult{
+        tilingResult->tiledOps,        initTensors, loops, loopResults,
+        tilingResult->generatedSlices, {}};
+  }
+
+  // The results of the loop needs to be merged.
   FailureOr<MergeResult> mergeResult =
-      mergeTilingResults(rewriter, op, partialResults, options);
+      mergeTilingResults(rewriter, op, loopResults, options);
   if (failed(mergeResult)) {
     return rewriter.notifyMatchFailure(
         op, "Failed to merge partial results from tiling");
   }
-
-  return scf::SCFTilingResult{tilingResult->tiledOps, initTensors, loops,
-                              mergeResult.value(),
-                              tilingResult->generatedSlices};
+  return scf::SCFTilingResult{tilingResult->tiledOps,
+                              initTensors,
+                              loops,
+                              mergeResult->replacements,
+                              tilingResult->generatedSlices,
+                              mergeResult->mergeOps};
 }
 
 FailureOr<scf::SCFTilingResult>
 mlir::scf::tileReductionUsingScf(RewriterBase &b,
                                  PartialReductionOpInterface op,
-                                 ArrayRef<OpFoldResult> tileSizes) {
-  SCFTilingOptions options;
-  options.setLoopType(SCFTilingOptions::LoopType::ForOp);
-  options.setReductionTilingStrategy(SCFTilingOptions::ReductionTilingStrategy::
-                                         PartialReductionOuterReduction);
-  options.setTileSizes(tileSizes);
-
-  TilingInterface tilingInterfaceOp =
-      dyn_cast<TilingInterface>(op.getOperation());
-  if (!tilingInterfaceOp) {
-    return b.notifyMatchFailure(
-        op,
-        "Operation implementing PartialReductionOpInterface should implement "
-        "TilingInterface");
-  }
-
-  return tileUsingSCF(b, tilingInterfaceOp, options);
+                                 ArrayRef<OpFoldResult> tileSize) {
+  scf::SCFTilingOptions options;
+  options.setLoopType(scf::SCFTilingOptions::LoopType::ForOp);
+  options.setReductionTilingStrategy(
+      scf::SCFTilingOptions::ReductionTilingStrategy::
+          PartialReductionOuterReduction);
+  options.setTileSizes(tileSize);
+  return tileUsingSCF(b, op, options);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1539,8 +1545,8 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
   tiledAndFusedOps.insert_range(tilingResult->tiledOps);
 
   DenseMap<Value, Value> replacements;
-  for (auto [origVal, replacement] : llvm::zip_equal(
-           consumer->getResults(), tilingResult->mergeResult.replacements)) {
+  for (auto [origVal, replacement] :
+       llvm::zip_equal(consumer->getResults(), tilingResult->replacements)) {
     replacements[origVal] = replacement;
   }
 

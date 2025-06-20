@@ -414,8 +414,11 @@ void LTOModule::addDefinedFunctionSymbol(StringRef Name, const GlobalValue *F) {
 
 void LTOModule::addDefinedSymbol(StringRef Name, const GlobalValue *def,
                                  bool isFunction) {
-  const GlobalObject *go = dyn_cast<GlobalObject>(def);
-  uint32_t attr = go ? Log2(go->getAlign().valueOrOne()) : 0;
+  uint32_t attr = 0;
+  if (auto *gv = dyn_cast<GlobalVariable>(def))
+    attr = Log2(gv->getAlign().valueOrOne());
+  else if (auto *f = dyn_cast<Function>(def))
+    attr = Log2(f->getAlign().valueOrOne());
 
   // set permissions part
   if (isFunction) {

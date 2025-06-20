@@ -372,22 +372,22 @@ define void @store_i32_stride6_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vshufps {{.*#+}} ymm7 = ymm8[3,3],ymm7[3,3],ymm8[7,7],ymm7[7,7]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm6 = ymm6[0],ymm7[1],ymm6[2],ymm7[3,4],ymm6[5],ymm7[6],ymm6[7]
 ; AVX-NEXT:    vpermilps {{.*#+}} ymm6 = ymm6[0,2,1,3,4,6,7,5]
-; AVX-NEXT:    vunpcklps {{.*#+}} xmm7 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
-; AVX-NEXT:    vunpcklps {{.*#+}} xmm8 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX-NEXT:    vblendps {{.*#+}} xmm7 = xmm7[0,1],xmm8[2,3]
-; AVX-NEXT:    vmovlhps {{.*#+}} xmm8 = xmm3[0],xmm2[0]
-; AVX-NEXT:    vunpcklps {{.*#+}} xmm9 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX-NEXT:    vshufps {{.*#+}} xmm8 = xmm9[0,1],xmm8[2,0]
-; AVX-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
+; AVX-NEXT:    vunpcklps {{.*#+}} xmm7 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX-NEXT:    vunpcklps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
+; AVX-NEXT:    vblendps {{.*#+}} xmm5 = xmm4[0,1],xmm7[2,3]
+; AVX-NEXT:    vunpcklps {{.*#+}} xmm8 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; AVX-NEXT:    vmovlhps {{.*#+}} xmm7 = xmm7[0],xmm8[0]
+; AVX-NEXT:    vinsertf128 $1, %xmm5, %ymm7, %ymm5
 ; AVX-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = zero,zero,xmm2[2],xmm3[2]
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm3[2,2,2,2]
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm2[0,1,2],xmm1[3]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[1],xmm3[1],zero,zero
-; AVX-NEXT:    vunpcklps {{.*#+}} xmm2 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
-; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3]
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX-NEXT:    vmovaps %ymm0, 32(%rax)
-; AVX-NEXT:    vmovaps %ymm7, (%rax)
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[1,1,1,1]
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm3[1],xmm1[2,3]
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1],xmm4[2,3]
+; AVX-NEXT:    vmovaps %xmm1, 32(%rax)
+; AVX-NEXT:    vmovaps %xmm0, 48(%rax)
+; AVX-NEXT:    vmovaps %ymm5, (%rax)
 ; AVX-NEXT:    vmovaps %ymm6, 64(%rax)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq

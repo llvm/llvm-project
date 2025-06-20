@@ -318,6 +318,25 @@ m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
       {Op0, Op1, Op2});
 }
 
+template <typename Op0_t, typename Op1_t, typename Op2_t, typename Op3_t,
+          unsigned Opcode, bool Commutative, typename... RecipeTys>
+using Recipe4Op_match = Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t, Op3_t>,
+                                     Opcode, Commutative, RecipeTys...>;
+
+template <typename Op0_t, typename Op1_t, typename Op2_t, typename Op3_t,
+          unsigned Opcode>
+using VPInstruction4Op_match =
+    Recipe4Op_match<Op0_t, Op1_t, Op2_t, Op3_t, Opcode, /*Commutative*/ false,
+                    VPInstruction>;
+
+template <unsigned Opcode, typename Op0_t, typename Op1_t, typename Op2_t,
+          typename Op3_t>
+inline VPInstruction4Op_match<Op0_t, Op1_t, Op2_t, Op3_t, Opcode>
+m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2,
+                const Op3_t &Op3) {
+  return VPInstruction4Op_match<Op0_t, Op1_t, Op2_t, Op3_t, Opcode>(
+      {Op0, Op1, Op2, Op3});
+}
 template <typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, Instruction::Freeze>
 m_Freeze(const Op0_t &Op0) {
