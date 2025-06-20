@@ -878,9 +878,22 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   NumMemCmpInlined++;
 
   if (Value *Res = Expansion.getMemCmpExpansion()) {
+    auto *GV = dyn_cast<GlobalVariable>(CI->getArgOperand(1));
     // Replace call with result of expansion and erase call.
     CI->replaceAllUsesWith(Res);
     CI->eraseFromParent();
+
+    // If the memcmp call used a global constant to merge comparisons and
+    // the global constant was folded then the variable can be deleted
+    // since it isn't used anymore.
+    // This is mostly done when mergeicmps used a global constant to merge
+    // constant comparisons.
+    if (GV && GV->hasPrivateLinkage() && GV->isConstant() &&
+        !GV->isConstantUsed()) {
+      LLVM_DEBUG(dbgs() << "Removing global constant " << GV->getName()
+                        << " that was used by the dead memcmp() call\n");
+      GV->eraseFromParent();
+    }
   }
 
   return true;
