@@ -16631,12 +16631,8 @@ struct NodeExtensionHelper {
   }
 
   bool isSupportedFPExtend(MVT NarrowEltVT, const RISCVSubtarget &Subtarget) {
-    if (NarrowEltVT == MVT::f32)
-      return true;
-    // Any f16 extension will need zvfh
-    if (NarrowEltVT == MVT::f16 && Subtarget.hasVInstructionsF16())
-      return true;
-    return false;
+    return (NarrowEltVT == MVT::f32 ||
+            (NarrowEltVT == MVT::f16 && Subtarget.hasVInstructionsF16()));
   }
 
   bool isSupportedBF16Extend(MVT NarrowEltVT, const RISCVSubtarget &Subtarget) {
