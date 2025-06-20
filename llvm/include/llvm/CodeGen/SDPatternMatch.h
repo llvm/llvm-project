@@ -142,6 +142,8 @@ inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
 
 inline Opcode_match m_Undef() { return Opcode_match(ISD::UNDEF); }
 
+inline Opcode_match m_Poison() { return Opcode_match(ISD::POISON); }
+
 template <unsigned NumUses, typename Pattern> struct NUses_match {
   Pattern P;
 

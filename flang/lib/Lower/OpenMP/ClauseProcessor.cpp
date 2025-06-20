@@ -1269,7 +1269,7 @@ void ClauseProcessor::processMapObjects(
 
 bool ClauseProcessor::processMap(
     mlir::Location currentLocation, lower::StatementContext &stmtCtx,
-    mlir::omp::MapClauseOps &result,
+    mlir::omp::MapClauseOps &result, llvm::omp::Directive directive,
     llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms) const {
   // We always require tracking of symbols, even if the caller does not,
   // so we create an optionally used local set of symbols when the mapSyms
@@ -1287,9 +1287,18 @@ bool ClauseProcessor::processMap(
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
     std::string mapperIdName = "__implicit_mapper";
-    // If the map type is specified, then process it else Tofrom is the
-    // default.
-    Map::MapType type = mapType.value_or(Map::MapType::Tofrom);
+    // If the map type is specified, then process it else set the appropriate
+    // default value
+    Map::MapType type;
+    if (directive == llvm::omp::Directive::OMPD_target_enter_data &&
+        semaCtx.langOptions().OpenMPVersion >= 52)
+      type = mapType.value_or(Map::MapType::To);
+    else if (directive == llvm::omp::Directive::OMPD_target_exit_data &&
+             semaCtx.langOptions().OpenMPVersion >= 52)
+      type = mapType.value_or(Map::MapType::From);
+    else
+      type = mapType.value_or(Map::MapType::Tofrom);
+
     switch (type) {
     case Map::MapType::To:
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
