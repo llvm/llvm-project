@@ -3002,6 +3002,7 @@ public:
     case ISD::AVGCEILU:
     case ISD::ABDS:
     case ISD::ABDU:
+    case ISD::CLMUL:
       return true;
     default: return false;
     }
