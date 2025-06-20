@@ -537,8 +537,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
 
 heatmap:
   // Sort parsed traces for faster processing.
-  if (!opts::BasicAggregation)
-    llvm::sort(Traces, llvm::less_first());
+  llvm::sort(Traces, llvm::less_first());
 
   if (!opts::HeatmapMode)
     return Error::success();
@@ -883,13 +882,9 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
 
   // Adjust FromBB if the first LBR is a return from the last instruction in
   // the previous block (that instruction should be a call).
-  if (IsReturn) {
-    if (From)
-      FromBB = BF.getBasicBlockContainingOffset(From - 1);
-    else
-      LLVM_DEBUG(dbgs() << "return to the function start: " << Trace << '\n');
-  } else if (Trace.Branch == Trace::EXTERNAL && From == FromBB->getOffset() &&
-             !FromBB->isEntryPoint() && !FromBB->isLandingPad()) {
+  if (Trace.Branch != Trace::FT_ONLY && !BF.containsAddress(Trace.Branch) &&
+      From == FromBB->getOffset() &&
+      (IsReturn ? From : !(FromBB->isEntryPoint() || FromBB->isLandingPad()))) {
     const BinaryBasicBlock *PrevBB =
         BF.getLayout().getBlock(FromBB->getIndex() - 1);
     if (PrevBB->getSuccessor(FromBB->getLabel())) {
@@ -1228,12 +1223,14 @@ ErrorOr<Location> DataAggregator::parseLocationOrOffset() {
 std::error_code DataAggregator::parseAggregatedLBREntry() {
   enum AggregatedLBREntry : char {
     INVALID = 0,
-    EVENT_NAME,        // E
-    TRACE,             // T
-    SAMPLE,            // S
-    BRANCH,            // B
-    FT,                // F
-    FT_EXTERNAL_ORIGIN // f
+    EVENT_NAME,         // E
+    TRACE,              // T
+    RETURN,             // R
+    SAMPLE,             // S
+    BRANCH,             // B
+    FT,                 // F
+    FT_EXTERNAL_ORIGIN, // f
+    FT_EXTERNAL_RETURN  // r
   } Type = INVALID;
 
   /// The number of fields to parse, set based on \p Type.
@@ -1261,20 +1258,22 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
 
     Type = StringSwitch<AggregatedLBREntry>(Str)
                .Case("T", TRACE)
+               .Case("R", RETURN)
                .Case("S", SAMPLE)
                .Case("E", EVENT_NAME)
                .Case("B", BRANCH)
                .Case("F", FT)
                .Case("f", FT_EXTERNAL_ORIGIN)
+               .Case("r", FT_EXTERNAL_RETURN)
                .Default(INVALID);
 
     if (Type == INVALID) {
-      reportError("expected T, S, E, B, F or f");
+      reportError("expected T, R, S, E, B, F, f or r");
       return make_error_code(llvm::errc::io_error);
     }
 
     using SSI = StringSwitch<int>;
-    AddrNum = SSI(Str).Case("T", 3).Case("S", 1).Case("E", 0).Default(2);
+    AddrNum = SSI(Str).Cases("T", "R", 3).Case("S", 1).Case("E", 0).Default(2);
     CounterNum = SSI(Str).Case("B", 2).Case("E", 0).Default(1);
   }
 
@@ -1331,17 +1330,30 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   if (ToFunc)
     ToFunc->setHasProfileAvailable();
 
-  /// For legacy fall-through types, adjust locations to match Trace container.
-  if (Type == FT || Type == FT_EXTERNAL_ORIGIN) {
+  /// For fall-through types, adjust locations to match Trace container.
+  if (Type == FT || Type == FT_EXTERNAL_ORIGIN || Type == FT_EXTERNAL_RETURN) {
     Addr[2] = Location(Addr[1]->Offset); // Trace To
     Addr[1] = Location(Addr[0]->Offset); // Trace From
-    // Put a magic value into Trace Branch to differentiate from a full trace.
-    Addr[0] = Location(Type == FT ? Trace::FT_ONLY : Trace::FT_EXTERNAL_ORIGIN);
+    // Put a magic value into Trace Branch to differentiate from a full trace:
+    if (Type == FT)
+      Addr[0] = Location(Trace::FT_ONLY);
+    else if (Type == FT_EXTERNAL_ORIGIN)
+      Addr[0] = Location(Trace::FT_EXTERNAL_ORIGIN);
+    else if (Type == FT_EXTERNAL_RETURN)
+      Addr[0] = Location(Trace::FT_EXTERNAL_RETURN);
+    else
+      llvm_unreachable("Unexpected fall-through type");
   }
 
-  /// For legacy branch type, mark Trace To to differentite from a full trace.
-  if (Type == BRANCH) {
+  /// For branch type, mark Trace To to differentiate from a full trace.
+  if (Type == BRANCH)
     Addr[2] = Location(Trace::BR_ONLY);
+
+  if (Type == RETURN) {
+    if (!Addr[0]->Offset)
+      Addr[0]->Offset = Trace::FT_EXTERNAL_RETURN;
+    else
+      Returns.emplace(Addr[0]->Offset);
   }
 
   /// Record a trace.
@@ -1602,6 +1614,7 @@ void DataAggregator::processBranchEvents() {
   NamedRegionTimer T("processBranch", "Processing branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
+  Returns.emplace(Trace::FT_EXTERNAL_RETURN);
   for (const auto &[Trace, Info] : Traces) {
     bool IsReturn = checkReturn(Trace.Branch);
     // Ignore returns.
