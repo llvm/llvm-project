@@ -22,7 +22,6 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/OpenMPClause.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
@@ -48,7 +47,6 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/IR/Assumptions.h"
 #include <optional>
-#include <queue>
 
 using namespace clang;
 using namespace llvm::omp;
@@ -14201,7 +14199,6 @@ template <typename T, typename F> static bool tryHandleAs(T *t, F &&) {
   return false;
 }
 
-///
 /// Tries to recursively cast `t` to one of the given types and invokes `f` if
 /// successful.
 ///
@@ -14274,7 +14271,7 @@ bool SemaOpenMP::checkTransformableLoopNest(
 
 /// Counts the total number of nested loops, including the outermost loop (the
 /// original loop). PRECONDITION of this visitor is that it must be invoked from
-/// the original loop to be analyzed. The traversal is stop for Decl's and
+/// the original loop to be analyzed. The traversal stops for Decl's and
 /// Expr's given that they may contain inner loops that must not be counted.
 ///
 /// Example AST structure for the code:
@@ -15945,7 +15942,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
 
   // Select the type with the largest bit width among all induction variables
   QualType IVType = LoopHelpers[FirstVal - 1].IterationVarRef->getType();
-  for (unsigned int I = FirstVal; I < LastVal; ++I) {
+  for (unsigned I = FirstVal; I < LastVal; ++I) {
     QualType CurrentIVType = LoopHelpers[I].IterationVarRef->getType();
     if (Context.getTypeSize(CurrentIVType) > Context.getTypeSize(IVType)) {
       IVType = CurrentIVType;
@@ -16054,9 +16051,8 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
     auto [IVVD, IVDStmt] =
         CreateHelperVarAndStmt(LoopHelpers[I].IterationVarRef, "iv", J);
 
-    if (!LBVD || !STVD || !NIVD || !IVVD)
-      assert(LBVD && STVD && NIVD && IVVD &&
-             "OpenMP Fuse Helper variables creation failed");
+    assert(LBVD && STVD && NIVD && IVVD &&
+           "OpenMP Fuse Helper variables creation failed");
 
     UBVarDecls.push_back(UBVD);
     LBVarDecls.push_back(LBVD);
@@ -16097,11 +16093,10 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   //      original.indexk = ivk
   //      body(k);  Expr *InitVal = IntegerLiteral::Create(Context,
   //      llvm::APInt(IVWidth, 0),
-
   //    }
 
   // 1. Create the initialized fuse index
-  const std::string IndexName = Twine(".omp.fuse.index").str();
+  StringRef IndexName = ".omp.fuse.index";
   Expr *InitVal = IntegerLiteral::Create(Context, llvm::APInt(IVBitWidth, 0),
                                          IVType, SourceLocation());
   VarDecl *IndexDecl =

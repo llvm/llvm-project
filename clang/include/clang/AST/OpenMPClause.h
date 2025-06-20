@@ -1197,12 +1197,16 @@ public:
   void setFirstLoc(SourceLocation Loc) { FirstLoc = Loc; }
   void setCountLoc(SourceLocation Loc) { CountLoc = Loc; }
 
-  /// Get looprange arguments: first and count
+  /// Get looprange 'first' expression
   Expr *getFirst() const { return getArgs()[0]; }
+
+  /// Get looprange 'count' expression
   Expr *getCount() const { return getArgs()[1]; }
 
-  /// Set looprange arguments: first and count
+  /// Set looprange 'first' expression
   void setFirst(Expr *E) { getArgs()[0] = E; }
+
+  /// Set looprange 'count' expression
   void setCount(Expr *E) { getArgs()[1] = E; }
 
   MutableArrayRef<Expr *> getArgs() {
