@@ -1352,6 +1352,11 @@ public:
     return const_cast<VarDecl *>(this)->getInitializingDeclaration();
   }
 
+  /// Checks whether this declaration has an initializer with side effects,
+  /// without triggering deserialization if the initializer is not yet
+  /// deserialized.
+  bool hasInitWithSideEffects() const;
+
   /// Determine whether this variable's value might be usable in a
   /// constant expression, according to the relevant language standard.
   /// This only checks properties of the declaration, and does not check
