@@ -314,7 +314,7 @@ GetDemangledFunctionQualifiers(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (!info.hasQualifiers())
+  if (!info.hasQualifiers() && !info.isQualifiersEmpty())
     return llvm::createStringError("Qualifiers range for '%s' is invalid.",
                                    demangled_name.data());
 
@@ -347,7 +347,7 @@ GetDemangledScope(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (!info.hasScope())
+  if (!info.hasScope() && !info.isScopeEmpty())
     return llvm::createStringError("Scope range for '%s' is invalid.",
                                    demangled_name.data());
 
@@ -364,7 +364,7 @@ GetDemangledFunctionSuffix(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (!info.hasSuffix())
+  if (!info.hasSuffix() && !info.isSuffixEmpty())
     return llvm::createStringError("Suffix range for '%s' is invalid.",
                                    demangled_name.data());
 
