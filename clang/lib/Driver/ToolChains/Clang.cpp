@@ -5331,6 +5331,39 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
+  if (Args.getLastArg(options::OPT_summaries_dir_EQ))
+    Args.AddLastArg(CmdArgs, options::OPT_summaries_dir_EQ);
+
+  if (const Arg *A = Args.getLastArg(options::OPT_emit_summaries_EQ)) {
+    llvm::SmallString<10> input;
+    for (const auto &II : Inputs) {
+      if (!II.isFilename())
+        continue;
+
+      input = II.getFilename();
+      break;
+    }
+
+    if (!input.empty()) {
+      Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o);
+      StringRef filename = llvm::sys::path::filename(input);
+      llvm::SmallString<10> summaryFile;
+
+      if (A->containsValue("cwd") || !FinalOutput) {
+        summaryFile = filename;
+      } else if (A->containsValue("obj") && FinalOutput) {
+        summaryFile = llvm::sys::path::parent_path(FinalOutput->getValue());
+        llvm::sys::path::append(summaryFile, filename);
+      }
+
+      if (!summaryFile.empty()) {
+        llvm::sys::path::replace_extension(summaryFile, "json");
+        CmdArgs.push_back(
+            Args.MakeArgString(Twine("-summary-file=") + summaryFile));
+      }
+    }
+  }
+
   auto *MemProfArg = Args.getLastArg(options::OPT_fmemory_profile,
                                      options::OPT_fmemory_profile_EQ,
                                      options::OPT_fno_memory_profile);
