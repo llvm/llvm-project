@@ -3023,6 +3023,58 @@ func.func @extract_from_0d_splat_broadcast_regression(%a: f32, %b: vector<f32>, 
 
 // -----
 
+// CHECK-LABEL: func @to_elements_from_elements_no_op(
+// CHECK-SAME:     %[[A:.*]]: f32, %[[B:.*]]: f32
+func.func @to_elements_from_elements_no_op(%a: f32, %b: f32) -> (f32, f32) {
+  // CHECK-NOT: vector.from_elements
+  // CHECK-NOT: vector.to_elements
+  %0 = vector.from_elements %b, %a : vector<2xf32>
+  %1:2 = vector.to_elements %0 : vector<2xf32>
+  // CHECK: return %[[B]], %[[A]]
+  return %1#0, %1#1 : f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: func @from_elements_to_elements_no_op(
+// CHECK-SAME:     %[[A:.*]]: vector<4x2xf32>
+func.func @from_elements_to_elements_no_op(%a: vector<4x2xf32>) -> vector<4x2xf32> {
+  // CHECK-NOT: vector.from_elements
+  // CHECK-NOT: vector.to_elements
+  %0:8 = vector.to_elements %a : vector<4x2xf32>
+  %1 = vector.from_elements %0#0, %0#1, %0#2, %0#3, %0#4, %0#5, %0#6, %0#7 : vector<4x2xf32>
+  // CHECK: return %[[A]]
+  return %1 : vector<4x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @from_elements_to_elements_dup_elems(
+// CHECK-SAME:     %[[A:.*]]: vector<4xf32>
+func.func @from_elements_to_elements_dup_elems(%a: vector<4xf32>) -> vector<4x2xf32> {
+  // CHECK: %[[TO_EL:.*]]:4 = vector.to_elements %[[A]]
+  // CHECK: %[[FROM_EL:.*]] = vector.from_elements %[[TO_EL]]#0, %[[TO_EL]]#1, %[[TO_EL]]#2
+  %0:4 = vector.to_elements %a : vector<4xf32> // 4 elements
+  %1 = vector.from_elements %0#0, %0#1, %0#2, %0#3, %0#0, %0#1, %0#2, %0#3 : vector<4x2xf32>
+  // CHECK: return %[[FROM_EL]]
+  return %1 : vector<4x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @from_elements_to_elements_shuffle(
+// CHECK-SAME:     %[[A:.*]]: vector<4x2xf32>
+func.func @from_elements_to_elements_shuffle(%a: vector<4x2xf32>) -> vector<4x2xf32> {
+  // CHECK: %[[TO_EL:.*]]:8 = vector.to_elements %[[A]]
+  // CHECK: %[[FROM_EL:.*]] = vector.from_elements %[[TO_EL]]#7, %[[TO_EL]]#0, %[[TO_EL]]#6
+  %0:8 = vector.to_elements %a : vector<4x2xf32>
+  %1 = vector.from_elements %0#7, %0#0, %0#6, %0#1, %0#5, %0#2, %0#4, %0#3 : vector<4x2xf32>
+  // CHECK: return %[[FROM_EL]]
+  return %1 : vector<4x2xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @vector_insert_const_regression(
 //       CHECK:   llvm.mlir.undef
 //       CHECK:   vector.insert

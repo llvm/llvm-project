@@ -2429,7 +2429,7 @@ Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
       // check is known to be true, or known to be false.
       CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
     } // else step known to be < trip count, use CheckMinIters preset to false.
-  } else if (VF.isScalable() &&
+  } else if (VF.isScalable() && !TTI->isVScaleKnownToBeAPowerOfTwo() &&
              !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
              Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
     // vscale is not necessarily a power-of-2, which means we cannot guarantee

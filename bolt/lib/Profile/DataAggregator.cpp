@@ -835,13 +835,8 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count,
 
   LLVM_DEBUG(dbgs() << "Processing " << FTs->size() << " fallthroughs for "
                     << FromFunc->getPrintName() << ":" << Trace << '\n');
-  for (auto [From, To] : *FTs) {
-    if (BAT) {
-      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
-      To = BAT->translate(FromFunc->getAddress(), To, /*IsBranchSrc=*/false);
-    }
+  for (const auto &[From, To] : *FTs)
     doIntraBranch(*ParentFunc, From, To, Count, false);
-  }
 
   return true;
 }

@@ -836,6 +836,7 @@ def Vector_ToElementsOp : Vector_Op<"to_elements", [
   let arguments = (ins AnyVectorOfAnyRank:$source);
   let results = (outs Variadic<AnyType>:$elements);
   let assemblyFormat = "$source attr-dict `:` type($source)";
+  let hasFolder = 1;
 }
 
 def Vector_FromElementsOp : Vector_Op<"from_elements", [
@@ -873,6 +874,7 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
   let arguments = (ins Variadic<AnyType>:$elements);
   let results = (outs AnyFixedVectorOfAnyRank:$dest);
   let assemblyFormat = "$elements attr-dict `:` type($dest)";
+  let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
 

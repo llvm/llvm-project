@@ -1751,6 +1751,11 @@ let OtherPredicates = [HasExportInsts] in
                 [(int_amdgcn_s_wait_kmcnt timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX12Plus, hasSideEffects = 1
 
+let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
+  def S_WAIT_XCNT :
+    SOPP_Pseudo<"s_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
+} // End SubtargetPredicate = hasWaitXcnt, hasSideEffects = 1
+
 //===----------------------------------------------------------------------===//
 // SOP1 Patterns
 //===----------------------------------------------------------------------===//
@@ -2559,6 +2564,11 @@ defm S_WAIT_DSCNT           : SOPP_Real_32_gfx12<0x046>;
 defm S_WAIT_KMCNT           : SOPP_Real_32_gfx12<0x047>;
 defm S_WAIT_LOADCNT_DSCNT   : SOPP_Real_32_gfx12<0x048>;
 defm S_WAIT_STORECNT_DSCNT  : SOPP_Real_32_gfx12<0x049>;
+
+//===----------------------------------------------------------------------===//
+// SOPP - GFX1250 only.
+//===----------------------------------------------------------------------===//
+defm S_WAIT_XCNT      : SOPP_Real_32_gfx12<0x045>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX11, GFX12.

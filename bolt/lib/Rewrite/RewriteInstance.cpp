@@ -1567,6 +1567,11 @@ void RewriteInstance::registerFragments() {
 
     uint64_t ParentAddress{0};
 
+    // Check if containing FILE symbol is BOLT emitted synthetic symbol marking
+    // local fragments of global parents.
+    if (cantFail(FSI[-1].getName()) == getBOLTFileSymbolName())
+      goto registerParent;
+
     // BOLT split fragment symbols are emitted just before the main function
     // symbol.
     for (ELFSymbolRef NextSymbol = Symbol; NextSymbol < StopSymbol;

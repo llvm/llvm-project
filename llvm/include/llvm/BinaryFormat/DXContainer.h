@@ -13,6 +13,7 @@
 #ifndef LLVM_BINARYFORMAT_DXCONTAINER_H
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -39,6 +40,8 @@ template <typename T> struct EnumEntry;
 // └────────────────────────────────┘
 
 namespace dxbc {
+
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 inline Triple::EnvironmentType getShaderStage(uint32_t Kind) {
   assert(Kind <= Triple::Amplification - Triple::Pixel &&
@@ -167,6 +170,8 @@ enum class RootDescriptorFlag : uint32_t {
 #define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = Num,
 enum class DescriptorRangeFlag : uint32_t {
 #include "DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS)
 };
 
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
