@@ -4,7 +4,7 @@ add_entrypoint_object(
     fprintf.cpp
   HDRS
     ../fprintf.h
-    DEPENDS
+  DEPENDS
     libc.src.__support.CPP.string_view
     libc.src.stdio.printf_core.printf_main
     .baremetal_write_utils
