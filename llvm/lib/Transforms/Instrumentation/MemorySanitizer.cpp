@@ -1450,12 +1450,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         CB->addParamAttr(1, Attribute::ZExt);
       } else {
         FunctionCallee Fn = MS.MaybeWarningVarSizeFn;
-
-        // Note: we can only dump the current shadow value, not an entire
-        // neighborhood shadow map (as ASan does). This is because the shadow
-        // value does not necessarily correspond to a user variable: MSan code
-        // often combines shadows (e.g., convertShadowToScalar,
-        // handleSSEVectorConvertIntrinsic, materializeInstructionChecks).
         Value *ShadowAlloca = IRB.CreateAlloca(ConvertedShadow2->getType(), 0u);
         IRB.CreateStore(ConvertedShadow2, ShadowAlloca);
         unsigned ShadowSize = DL.getTypeAllocSize(ConvertedShadow2->getType());
