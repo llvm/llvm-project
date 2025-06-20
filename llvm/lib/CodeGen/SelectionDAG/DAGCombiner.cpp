@@ -7214,9 +7214,8 @@ static SDValue foldMaskedMerge(SDNode *Node, SelectionDAG &DAG,
                                const TargetLowering &TLI, const SDLoc &DL) {
   // Note that masked-merge variants using XOR or ADD expressions are
   // normalized to OR by InstCombine so we only check for OR or AND.
-  assert(Node->getOpcode() == ISD::OR ||
-         Node->getOpcode() == ISD::AND &&
-             "Must be called with ISD::OR or ISD::AND node");
+  assert((Node->getOpcode() == ISD::OR || Node->getOpcode() == ISD::AND) &&
+         "Must be called with ISD::OR or ISD::AND node");
 
   // If the target supports and-not, don't fold this.
   if (TLI.hasAndNot(SDValue(Node, 0)))
