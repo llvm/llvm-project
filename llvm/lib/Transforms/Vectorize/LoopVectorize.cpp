@@ -2432,14 +2432,20 @@ Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
       // check is known to be true, or known to be false.
       CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
     } // else step known to be < trip count, use CheckMinIters preset to false.
-  } else {
-    // If we're tail folding, then as long as our VF is a factor of two
-    // we'll wrap to zero and don't need an explicit iterations check.
-    // Per the LangRef, vscale is not necessarily a power-of-2, but all
-    // in tree targets are
-    assert(VF.isKnownMultipleOf(2) ||
-           (!VF.isScalable() && 1 == VF.getKnownMinValue()) ||
-           (VF.isScalable() && TTI->isVScaleKnownToBeAPowerOfTwo()));
+  } else if (VF.isScalable() && !TTI->isVScaleKnownToBeAPowerOfTwo() &&
+             !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
+             Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
+    // vscale is not necessarily a power-of-2, which means we cannot guarantee
+    // an overflow to zero when updating induction variables and so an
+    // additional overflow check is required before entering the vector loop.
+
+    // Get the maximum unsigned value for the type.
+    Value *MaxUIntTripCount =
+        ConstantInt::get(CountTy, cast<IntegerType>(CountTy)->getMask());
+    Value *LHS = Builder.CreateSub(MaxUIntTripCount, Count);
+
+    // Don't execute the vector loop if (UMax - n) < (VF * UF).
+    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, CreateStep());
   }
   return CheckMinIters;
 }
