@@ -16,8 +16,9 @@ class FakeSmartPtrDataFormatterTestCase(TestBase):
 
     def test_frame_var(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "Set a breakpoint here",
-                                          lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
+        )
 
         self.runCmd("settings set target.experimental.use-DIL true")
         self.runCmd("script from smartPtrSynthProvider import *")
