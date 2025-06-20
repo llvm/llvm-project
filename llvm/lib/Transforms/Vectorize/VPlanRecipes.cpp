@@ -1631,6 +1631,8 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
            Opcode == Instruction::Mul ||
            Opcode == VPInstruction::VPInstruction::CanonicalIVIncrementForPart;
+  case OperationType::Trunc:
+    return Opcode == Instruction::Trunc;
   case OperationType::DisjointOp:
     return Opcode == Instruction::Or;
   case OperationType::PossiblyExactOp:
@@ -1676,6 +1678,12 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     if (WrapFlags.HasNUW)
       O << " nuw";
     if (WrapFlags.HasNSW)
+      O << " nsw";
+    break;
+  case OperationType::Trunc:
+    if (TruncFlags.HasNUW)
+      O << " nuw";
+    if (TruncFlags.HasNSW)
       O << " nsw";
     break;
   case OperationType::FPMathOp:
