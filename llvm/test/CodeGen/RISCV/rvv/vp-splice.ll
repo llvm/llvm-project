@@ -509,10 +509,8 @@ define <vscale x 2 x bfloat> @test_vp_splice_nxv2bf16_masked(<vscale x 2 x bfloa
 define <vscale x 2 x i32> @test_vp_splice_nxv2i32_with_firstelt(i32 %first, <vscale x 2 x i32> %vb, <vscale x 2 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_splice_nxv2i32_with_firstelt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, a0
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
-; CHECK-NEXT:    vslideup.vi v9, v8, 1, v0.t
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vslide1up.vx v9, v8, a0, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %va = insertelement <vscale x 2 x i32> poison, i32 %first, i32 0
@@ -523,10 +521,8 @@ define <vscale x 2 x i32> @test_vp_splice_nxv2i32_with_firstelt(i32 %first, <vsc
 define <vscale x 2 x i32> @test_vp_splice_nxv2i32_with_splat_firstelt(i32 %first, <vscale x 2 x i32> %vb, <vscale x 2 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_splice_nxv2i32_with_splat_firstelt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
-; CHECK-NEXT:    vslideup.vi v9, v8, 1, v0.t
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vslide1up.vx v9, v8, a0, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 2 x i32> poison, i32 %first, i32 0
@@ -538,10 +534,8 @@ define <vscale x 2 x i32> @test_vp_splice_nxv2i32_with_splat_firstelt(i32 %first
 define <vscale x 2 x float> @test_vp_splice_nxv2f32_with_firstelt(float %first, <vscale x 2 x float> %vb, <vscale x 2 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_splice_nxv2f32_with_firstelt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    vslideup.vi v9, v8, 1, v0.t
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vfslide1up.vf v9, v8, fa0, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %va = insertelement <vscale x 2 x float> poison, float %first, i32 0
@@ -552,20 +546,16 @@ define <vscale x 2 x float> @test_vp_splice_nxv2f32_with_firstelt(float %first, 
 define <vscale x 2 x half> @test_vp_splice_nxv2f16_with_firstelt(half %first, <vscale x 2 x half> %vb, <vscale x 2 x i1> %mask, i32 zeroext %evl) {
 ; ZVFH-LABEL: test_vp_splice_nxv2f16_with_firstelt:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; ZVFH-NEXT:    vfmv.s.f v9, fa0
-; ZVFH-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
-; ZVFH-NEXT:    vslideup.vi v9, v8, 1, v0.t
+; ZVFH-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; ZVFH-NEXT:    vfslide1up.vf v9, v8, fa0, v0.t
 ; ZVFH-NEXT:    vmv1r.v v8, v9
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: test_vp_splice_nxv2f16_with_firstelt:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fmv.x.h a1, fa0
-; ZVFHMIN-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vmv.s.x v9, a1
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
-; ZVFHMIN-NEXT:    vslideup.vi v9, v8, 1, v0.t
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vslide1up.vx v9, v8, a1, v0.t
 ; ZVFHMIN-NEXT:    vmv1r.v v8, v9
 ; ZVFHMIN-NEXT:    ret
   %va = insertelement <vscale x 2 x half> poison, half %first, i32 0
@@ -577,10 +567,8 @@ define <vscale x 2 x bfloat> @test_vp_splice_nxv2bf16_with_firstelt(bfloat %firs
 ; CHECK-LABEL: test_vp_splice_nxv2bf16_with_firstelt:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.x.h a1, fa0
-; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, a1
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
-; CHECK-NEXT:    vslideup.vi v9, v8, 1, v0.t
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-NEXT:    vslide1up.vx v9, v8, a1, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %va = insertelement <vscale x 2 x bfloat> poison, bfloat %first, i32 0

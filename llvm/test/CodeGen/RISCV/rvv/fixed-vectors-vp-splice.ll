@@ -303,10 +303,8 @@ define <8 x half> @test_vp_splice_v8f16_masked(<8 x half> %va, <8 x half> %vb, <
 define <4 x i32> @test_vp_splice_v4i32_with_firstelt(i32 %first, <4 x i32> %vb, <4 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_splice_v4i32_with_firstelt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, a0
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
-; CHECK-NEXT:    vslideup.vi v9, v8, 1, v0.t
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vslide1up.vx v9, v8, a0, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %va = insertelement <4 x i32> poison, i32 %first, i32 0
@@ -317,10 +315,8 @@ define <4 x i32> @test_vp_splice_v4i32_with_firstelt(i32 %first, <4 x i32> %vb, 
 define <4 x i32> @test_vp_splice_v4i32_with_splat_firstelt(i32 %first, <4 x i32> %vb, <4 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_splice_v4i32_with_splat_firstelt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
-; CHECK-NEXT:    vslideup.vi v9, v8, 1, v0.t
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vslide1up.vx v9, v8, a0, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %ins = insertelement <4 x i32> poison, i32 %first, i32 0
@@ -332,10 +328,8 @@ define <4 x i32> @test_vp_splice_v4i32_with_splat_firstelt(i32 %first, <4 x i32>
 define <4 x float> @test_vp_splice_nxv2f32_with_firstelt(float %first, <4 x float> %vb, <4 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_splice_nxv2f32_with_firstelt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    vslideup.vi v9, v8, 1, v0.t
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vfslide1up.vf v9, v8, fa0, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %va = insertelement <4 x float> poison, float %first, i32 0
@@ -346,10 +340,8 @@ define <4 x float> @test_vp_splice_nxv2f32_with_firstelt(float %first, <4 x floa
 define <4 x half> @test_vp_splice_nxv2f16_with_firstelt(half %first, <4 x half> %vb, <4 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_splice_nxv2f16_with_firstelt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
-; CHECK-NEXT:    vslideup.vi v9, v8, 1, v0.t
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-NEXT:    vfslide1up.vf v9, v8, fa0, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %va = insertelement <4 x half> poison, half %first, i32 0
