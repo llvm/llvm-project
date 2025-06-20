@@ -592,7 +592,25 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare i8* @memrchr(i8*, i32, i64)\n"
 
       "declare void @__atomic_load(i64, i8*, i8*, i32)\n"
+      "declare i8 @__atomic_load_1(ptr, i32)\n"
+      "declare i16 @__atomic_load_2(ptr, i32)\n"
+      "declare i32 @__atomic_load_4(ptr, i32)\n"
+      "declare i64 @__atomic_load_8(ptr, i32)\n"
+      "declare i128 @__atomic_load_16(ptr, i32)\n"
+
       "declare void @__atomic_store(i64, i8*, i8*, i32)\n"
+      "declare void @__atomic_store_1(ptr, i8, i32)\n"
+      "declare void @__atomic_store_2(ptr, i16, i32)\n"
+      "declare void @__atomic_store_4(ptr, i32, i32)\n"
+      "declare void @__atomic_store_8(ptr, i64, i32)\n"
+      "declare void @__atomic_store_16(ptr, i128, i32)\n"
+
+      "declare i8 @__atomic_compare_exchange(i64, ptr, ptr, ptr, i32, i32)\n"
+      "declare i8 @__atomic_compare_exchange_1(ptr, ptr, i8, i32, i32)\n"
+      "declare i8 @__atomic_compare_exchange_2(ptr, ptr, i16, i32, i32)\n"
+      "declare i8 @__atomic_compare_exchange_4(ptr, ptr, i32, i32, i32)\n"
+      "declare i8 @__atomic_compare_exchange_8(ptr, ptr, i64, i32, i32)\n"
+      "declare i8 @__atomic_compare_exchange_16(ptr, ptr, i128, i32, i32)\n"
 
       // These are similar to the FILE* fgetc/fputc.
       "declare i32 @_IO_getc(%struct*)\n"

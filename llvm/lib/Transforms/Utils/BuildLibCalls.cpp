@@ -1383,6 +1383,29 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setWillReturn(F);
     Changed |= setOnlyWritesArgMemOrErrnoMem(F);
     break;
+  case LibFunc_atomic_load:
+  case LibFunc_atomic_load_1:
+  case LibFunc_atomic_load_2:
+  case LibFunc_atomic_load_4:
+  case LibFunc_atomic_load_8:
+  case LibFunc_atomic_load_16:
+  case LibFunc_atomic_store:
+  case LibFunc_atomic_store_1:
+  case LibFunc_atomic_store_2:
+  case LibFunc_atomic_store_4:
+  case LibFunc_atomic_store_8:
+  case LibFunc_atomic_store_16:
+  case LibFunc_atomic_compare_exchange:
+  case LibFunc_atomic_compare_exchange_1:
+  case LibFunc_atomic_compare_exchange_2:
+  case LibFunc_atomic_compare_exchange_4:
+  case LibFunc_atomic_compare_exchange_8:
+  case LibFunc_atomic_compare_exchange_16:
+    Changed |= setArgsNoUndef(F);
+    Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
+    Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
+    break;
   default:
     // FIXME: It'd be really nice to cover all the library functions we're
     // aware of here.
@@ -1478,6 +1501,49 @@ FunctionCallee llvm::getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
     break;
   case LibFunc_memccpy:
     setArgExtAttr(*F, 2, TLI);
+    break;
+
+  case LibFunc_atomic_load:
+    setArgExtAttr(*F, 4, TLI); // Memorder
+    break;
+
+  case LibFunc_atomic_load_1:
+  case LibFunc_atomic_load_2:
+  case LibFunc_atomic_load_4:
+  case LibFunc_atomic_load_8:
+  case LibFunc_atomic_load_16:
+    setRetExtAttr(*F, TLI);    // return
+    setArgExtAttr(*F, 3, TLI); // Memorder
+    break;
+
+  case LibFunc_atomic_store:
+    setArgExtAttr(*F, 4, TLI); // Memorder
+    break;
+
+  case LibFunc_atomic_store_1:
+  case LibFunc_atomic_store_2:
+  case LibFunc_atomic_store_4:
+  case LibFunc_atomic_store_8:
+  case LibFunc_atomic_store_16:
+    setArgExtAttr(*F, 2, TLI); // Val
+    setArgExtAttr(*F, 3, TLI); // Memorder
+    break;
+
+  case LibFunc_atomic_compare_exchange:
+    setRetExtAttr(*F, TLI);    // return
+    setArgExtAttr(*F, 4, TLI); // SuccessMemorder
+    setArgExtAttr(*F, 5, TLI); // FailureMemorder
+    break;
+
+  case LibFunc_atomic_compare_exchange_1:
+  case LibFunc_atomic_compare_exchange_2:
+  case LibFunc_atomic_compare_exchange_4:
+  case LibFunc_atomic_compare_exchange_8:
+  case LibFunc_atomic_compare_exchange_16:
+    setRetExtAttr(*F, TLI);    // return
+    setArgExtAttr(*F, 2, TLI); // Desired
+    setArgExtAttr(*F, 3, TLI); // SuccessMemorder
+    setArgExtAttr(*F, 4, TLI); // FailureMemorder
     break;
 
     // These are functions that are known to not need any argument extension
@@ -1605,7 +1671,8 @@ static Value *emitLibCall(LibFunc TheLibFunc, Type *ReturnType,
   FunctionType *FuncType = FunctionType::get(ReturnType, ParamTypes, IsVaArgs);
   FunctionCallee Callee = getOrInsertLibFunc(M, *TLI, TheLibFunc, FuncType);
   inferNonMandatoryLibFuncAttrs(M, FuncName, *TLI);
-  CallInst *CI = B.CreateCall(Callee, Operands, FuncName);
+  CallInst *CI = B.CreateCall(Callee, Operands,
+                              ReturnType->isVoidTy() ? Twine() : FuncName);
   if (const Function *F =
           dyn_cast<Function>(Callee.getCallee()->stripPointerCasts()))
     CI->setCallingConv(F->getCallingConv());
@@ -1842,6 +1909,153 @@ Value *llvm::emitVSPrintf(Value *Dest, Value *Fmt, Value *VAList,
   return emitLibCall(LibFunc_vsprintf, IntTy,
                      {CharPtrTy, CharPtrTy, VAList->getType()},
                      {Dest, Fmt, VAList}, B, TLI);
+}
+
+Value *llvm::emitAtomicLoad(Value *Size, Value *Ptr, Value *Ret,
+                            Value *Memorder, IRBuilderBase &B,
+                            const DataLayout &DL,
+                            const TargetLibraryInfo *TLI) {
+  Type *VoidTy = B.getVoidTy();
+  Type *SizeTTy = getSizeTTy(B, TLI);
+  Type *PtrTy = B.getPtrTy();
+  Type *IntTy = getIntTy(B, TLI);
+  return emitLibCall(LibFunc_atomic_load, VoidTy,
+                     {SizeTTy, PtrTy, PtrTy, IntTy}, {Size, Ptr, Ret, Memorder},
+                     B, TLI);
+}
+
+Value *llvm::emitAtomicLoadN(size_t Size, Value *Ptr, Value *Memorder,
+                             IRBuilderBase &B, const DataLayout &DL,
+                             const TargetLibraryInfo *TLI) {
+  LibFunc TheLibFunc;
+  switch (Size) {
+  case 1:
+    TheLibFunc = LibFunc_atomic_load_1;
+    break;
+  case 2:
+    TheLibFunc = LibFunc_atomic_load_2;
+    break;
+  case 4:
+    TheLibFunc = LibFunc_atomic_load_4;
+    break;
+  case 8:
+    TheLibFunc = LibFunc_atomic_load_8;
+    break;
+  case 16:
+    TheLibFunc = LibFunc_atomic_load_16;
+    break;
+  default:
+    // emitLibCall below is also allowed to return nullptr, e.g. if
+    // TargetLibraryInfo says the backend does not support the libcall function.
+    return nullptr;
+  }
+
+  Type *PtrTy = B.getPtrTy();
+  Type *ValTy = B.getIntNTy(Size * 8);
+  Type *IntTy = getIntTy(B, TLI);
+  return emitLibCall(TheLibFunc, ValTy, {PtrTy, IntTy}, {Ptr, Memorder}, B,
+                     TLI);
+}
+
+Value *llvm::emitAtomicStore(Value *Size, Value *Ptr, Value *ValPtr,
+                             Value *Memorder, IRBuilderBase &B,
+                             const DataLayout &DL,
+                             const TargetLibraryInfo *TLI) {
+  Type *VoidTy = B.getVoidTy();
+  Type *SizeTTy = getSizeTTy(B, TLI);
+  Type *PtrTy = B.getPtrTy();
+  Type *IntTy = getIntTy(B, TLI);
+  return emitLibCall(LibFunc_atomic_store, VoidTy,
+                     {SizeTTy, PtrTy, PtrTy, IntTy},
+                     {Size, Ptr, ValPtr, Memorder}, B, TLI);
+}
+
+Value *llvm::emitAtomicStoreN(size_t Size, Value *Ptr, Value *Val,
+                              Value *Memorder, IRBuilderBase &B,
+                              const DataLayout &DL,
+                              const TargetLibraryInfo *TLI) {
+  LibFunc TheLibFunc;
+  switch (Size) {
+  case 1:
+    TheLibFunc = LibFunc_atomic_store_1;
+    break;
+  case 2:
+    TheLibFunc = LibFunc_atomic_store_2;
+    break;
+  case 4:
+    TheLibFunc = LibFunc_atomic_store_4;
+    break;
+  case 8:
+    TheLibFunc = LibFunc_atomic_store_8;
+    break;
+  case 16:
+    TheLibFunc = LibFunc_atomic_store_16;
+    break;
+  default:
+    // emitLibCall below is also allowed to return nullptr, e.g. if
+    // TargetLibraryInfo says the backend does not support the libcall function.
+    return nullptr;
+  }
+
+  Type *VoidTy = B.getVoidTy();
+  Type *PtrTy = B.getPtrTy();
+  Type *ValTy = B.getIntNTy(Size * 8);
+  Type *IntTy = getIntTy(B, TLI);
+  return emitLibCall(TheLibFunc, VoidTy, {PtrTy, ValTy, IntTy},
+                     {Ptr, Val, Memorder}, B, TLI);
+}
+
+Value *llvm::emitAtomicCompareExchange(Value *Size, Value *Ptr, Value *Expected,
+                                       Value *Desired, Value *SuccessMemorder,
+                                       Value *FailureMemorder, IRBuilderBase &B,
+                                       const DataLayout &DL,
+                                       const TargetLibraryInfo *TLI) {
+  Type *BoolTy = B.getInt8Ty();
+  Type *SizeTTy = getSizeTTy(B, TLI);
+  Type *PtrTy = B.getPtrTy();
+  Type *IntTy = getIntTy(B, TLI);
+  return emitLibCall(
+      LibFunc_atomic_compare_exchange, BoolTy,
+      {SizeTTy, PtrTy, PtrTy, PtrTy, IntTy, IntTy},
+      {Size, Ptr, Expected, Desired, SuccessMemorder, FailureMemorder}, B, TLI);
+}
+
+Value *llvm::emitAtomicCompareExchangeN(size_t Size, Value *Ptr,
+                                        Value *Expected, Value *Desired,
+                                        Value *SuccessMemorder,
+                                        Value *FailureMemorder,
+                                        IRBuilderBase &B, const DataLayout &DL,
+                                        const TargetLibraryInfo *TLI) {
+  LibFunc TheLibFunc;
+  switch (Size) {
+  case 1:
+    TheLibFunc = LibFunc_atomic_compare_exchange_1;
+    break;
+  case 2:
+    TheLibFunc = LibFunc_atomic_compare_exchange_2;
+    break;
+  case 4:
+    TheLibFunc = LibFunc_atomic_compare_exchange_4;
+    break;
+  case 8:
+    TheLibFunc = LibFunc_atomic_compare_exchange_8;
+    break;
+  case 16:
+    TheLibFunc = LibFunc_atomic_compare_exchange_16;
+    break;
+  default:
+    // emitLibCall below is also allowed to return nullptr, e.g. if
+    // TargetLibraryInfo says the backend does not support the libcall function.
+    return nullptr;
+  }
+
+  Type *BoolTy = B.getInt8Ty();
+  Type *PtrTy = B.getPtrTy();
+  Type *ValTy = B.getIntNTy(Size * 8);
+  Type *IntTy = getIntTy(B, TLI);
+  return emitLibCall(TheLibFunc, BoolTy, {PtrTy, PtrTy, ValTy, IntTy, IntTy},
+                     {Ptr, Expected, Desired, SuccessMemorder, FailureMemorder},
+                     B, TLI);
 }
 
 /// Append a suffix to the function name according to the type of 'Op'.

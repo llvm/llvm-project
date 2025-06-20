@@ -80,6 +80,48 @@ private:
   M Matcher;
 };
 
+template <typename RefT> class StoreResultMatcher {
+  class Impl : public testing::MatcherInterface<
+                   const llvm::detail::ExpectedHolder<RefT> &> {
+  public:
+    explicit Impl(RefT &Ref) : Ref(Ref) {}
+
+    bool
+    MatchAndExplain(const llvm::detail::ExpectedHolder<RefT> &Holder,
+                    testing::MatchResultListener *listener) const override {
+      // If failed to get a value, fail the ASSERT/EXPECT and do not store any
+      // value
+      if (!Holder.Success())
+        return false;
+
+      // Succeeded with a value, remember it
+      Ref = *Holder.Exp;
+
+      return true;
+    }
+
+    void DescribeTo(std::ostream *OS) const override { *OS << "succeeded"; }
+
+    void DescribeNegationTo(std::ostream *OS) const override {
+      *OS << "failed";
+    }
+
+  private:
+    RefT &Ref;
+  };
+
+public:
+  explicit StoreResultMatcher(RefT &Ref) : Ref(Ref) {}
+
+  template <typename T>
+  operator testing::Matcher<const llvm::detail::ExpectedHolder<T> &>() const {
+    return MakeMatcher(new Impl(Ref));
+  }
+
+private:
+  RefT &Ref;
+};
+
 template <typename InfoT>
 class ErrorMatchesMono : public testing::MatcherInterface<const ErrorHolder &> {
 public:
@@ -220,6 +262,13 @@ testing::Matcher<const detail::ErrorHolder &> FailedWithMessageArray(M Matcher) 
 template <typename M>
 detail::ValueMatchesPoly<M> HasValue(M Matcher) {
   return detail::ValueMatchesPoly<M>(Matcher);
+}
+
+/// Matches on Expected<T> values that succeed, but also stores its value into a
+/// variable.
+template <typename RefT>
+detail::StoreResultMatcher<RefT> StoreResult(RefT &Ref) {
+  return detail::StoreResultMatcher<RefT>(Ref);
 }
 
 } // namespace llvm

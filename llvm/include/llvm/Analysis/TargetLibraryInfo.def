@@ -462,10 +462,90 @@ TLI_DEFINE_ENUM_INTERNAL(atomic_load)
 TLI_DEFINE_STRING_INTERNAL("__atomic_load")
 TLI_DEFINE_SIG_INTERNAL(Void, SizeT, Ptr, Ptr, Int)
 
+/// int8_t __atomic_load_1(void *ptr, int memorder);
+TLI_DEFINE_ENUM_INTERNAL(atomic_load_1)
+TLI_DEFINE_STRING_INTERNAL("__atomic_load_1")
+TLI_DEFINE_SIG_INTERNAL(Int8, Ptr, Int)
+
+/// int16_t __atomic_load_2(void *ptr, int memorder);
+TLI_DEFINE_ENUM_INTERNAL(atomic_load_2)
+TLI_DEFINE_STRING_INTERNAL("__atomic_load_2")
+TLI_DEFINE_SIG_INTERNAL(Int16, Ptr, Int)
+
+/// int32_t __atomic_load_4(void *ptr, int memorder);
+TLI_DEFINE_ENUM_INTERNAL(atomic_load_4)
+TLI_DEFINE_STRING_INTERNAL("__atomic_load_4")
+TLI_DEFINE_SIG_INTERNAL(Int32, Ptr, Int)
+
+/// int64_t __atomic_load_8(void *ptr int memorder);
+TLI_DEFINE_ENUM_INTERNAL(atomic_load_8)
+TLI_DEFINE_STRING_INTERNAL("__atomic_load_8")
+TLI_DEFINE_SIG_INTERNAL(Int64, Ptr, Int)
+
+/// int128_t __atomic_load_16(void *ptr, int memorder);
+TLI_DEFINE_ENUM_INTERNAL(atomic_load_16)
+TLI_DEFINE_STRING_INTERNAL("__atomic_load_16")
+TLI_DEFINE_SIG_INTERNAL(Int128, Ptr, Int)
+
 /// void __atomic_store(size_t size, void *mptr, void *vptr, int smodel);
 TLI_DEFINE_ENUM_INTERNAL(atomic_store)
 TLI_DEFINE_STRING_INTERNAL("__atomic_store")
 TLI_DEFINE_SIG_INTERNAL(Void, SizeT, Ptr, Ptr, Int)
+
+/// void __atomic_store_1(void *ptr, int8_t val, int smodel);
+TLI_DEFINE_ENUM_INTERNAL(atomic_store_1)
+TLI_DEFINE_STRING_INTERNAL("__atomic_store_1")
+TLI_DEFINE_SIG_INTERNAL(Void, Ptr, Int8, Int)
+
+/// void __atomic_store_2(void *ptr, int16_t val, int smodel);
+TLI_DEFINE_ENUM_INTERNAL(atomic_store_2)
+TLI_DEFINE_STRING_INTERNAL("__atomic_store_2")
+TLI_DEFINE_SIG_INTERNAL(Void, Ptr, Int16, Int)
+
+/// void __atomic_store_4(void *ptr, int32_t val, int smodel);
+TLI_DEFINE_ENUM_INTERNAL(atomic_store_4)
+TLI_DEFINE_STRING_INTERNAL("__atomic_store_4")
+TLI_DEFINE_SIG_INTERNAL(Void, Ptr, Int32, Int)
+
+/// void __atomic_store_8(void *ptr, int64_t val, int smodel);
+TLI_DEFINE_ENUM_INTERNAL(atomic_store_8)
+TLI_DEFINE_STRING_INTERNAL("__atomic_store_8")
+TLI_DEFINE_SIG_INTERNAL(Void, Ptr, Int64, Int)
+
+/// void __atomic_store_16(void *ptr, int128_t val, int smodel);
+TLI_DEFINE_ENUM_INTERNAL(atomic_store_16)
+TLI_DEFINE_STRING_INTERNAL("__atomic_store_16")
+TLI_DEFINE_SIG_INTERNAL(Void, Ptr, Int128, Int)
+
+/// bool __atomic_compare_exchange(size_t size, void *ptr, void *expected, void *desired, int success, int failure);
+TLI_DEFINE_ENUM_INTERNAL(atomic_compare_exchange)
+TLI_DEFINE_STRING_INTERNAL("__atomic_compare_exchange")
+TLI_DEFINE_SIG_INTERNAL(Bool, SizeT, Ptr, Ptr, Ptr, Int, Int)
+
+/// bool __atomic_compare_exchange_1(void *ptr, void *expected, uint8_t desired, int success, int failure);
+TLI_DEFINE_ENUM_INTERNAL(atomic_compare_exchange_1)
+TLI_DEFINE_STRING_INTERNAL("__atomic_compare_exchange_1")
+TLI_DEFINE_SIG_INTERNAL(Bool, Ptr, Ptr, Int8, Int, Int)
+
+/// bool __atomic_compare_exchange_2(void *ptr, void *expected, uint16_t desired, int success, int failure);
+TLI_DEFINE_ENUM_INTERNAL(atomic_compare_exchange_2)
+TLI_DEFINE_STRING_INTERNAL("__atomic_compare_exchange_2")
+TLI_DEFINE_SIG_INTERNAL(Bool, Ptr, Ptr, Int16, Int, Int)
+
+/// bool __atomic_compare_exchange_4(void *ptr, void *expected, uint32_t desired, int success, int failure);
+TLI_DEFINE_ENUM_INTERNAL(atomic_compare_exchange_4)
+TLI_DEFINE_STRING_INTERNAL("__atomic_compare_exchange_4")
+TLI_DEFINE_SIG_INTERNAL(Bool, Ptr, Ptr, Int32, Int, Int)
+
+/// bool __atomic_compare_exchange_8(void *ptr, void *expected, uint64_t desired, int success, int failure);
+TLI_DEFINE_ENUM_INTERNAL(atomic_compare_exchange_8)
+TLI_DEFINE_STRING_INTERNAL("__atomic_compare_exchange_8")
+TLI_DEFINE_SIG_INTERNAL(Bool, Ptr, Ptr, Int64, Int, Int)
+
+/// bool __atomic_compare_exchange_16(void *ptr, void *expected, uint128_t desired, int success, int failure);
+TLI_DEFINE_ENUM_INTERNAL(atomic_compare_exchange_16)
+TLI_DEFINE_STRING_INTERNAL("__atomic_compare_exchange_16")
+TLI_DEFINE_SIG_INTERNAL(Bool, Ptr, Ptr, Int128, Int, Int)
 
 /// double __cosh_finite(double x);
 TLI_DEFINE_ENUM_INTERNAL(cosh_finite)
