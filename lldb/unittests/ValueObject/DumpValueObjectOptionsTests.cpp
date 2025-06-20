@@ -88,6 +88,7 @@ public:
                                                       var_name, data_extractor);
       if (llvm::Error error = valobj_sp->Dump(strm, options))
         llvm::consumeError(std::move(error));
+      
       ASSERT_STREQ(strm.GetString().str().c_str(), expected);
       strm.Clear();
     }
