@@ -70,6 +70,9 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- The abbreviate function template tweak was introduced.
+  It allows converting function templates to their abbreviated form using auto parameters.
+
 Signature help
 ^^^^^^^^^^^^^^
 
