@@ -743,9 +743,11 @@ void Linux::AddHIPRuntimeLibArgs(const ArgList &Args,
       Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
 
   if (Args.hasFlag(options::OPT_frtlib_add_rpath,
-                   options::OPT_fno_rtlib_add_rpath, false))
-    CmdArgs.append(
-        {"-rpath", Args.MakeArgString(RocmInstallation->getLibPath())});
+                   options::OPT_fno_rtlib_add_rpath, false)) {
+    SmallString<0> p = RocmInstallation->getLibPath();
+    llvm::sys::path::remove_dots(p, true);
+    CmdArgs.append({"-rpath", Args.MakeArgString(p)});
+  }
 
   CmdArgs.push_back("-lamdhip64");
 }

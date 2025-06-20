@@ -703,6 +703,8 @@ def ANDES_A25 : RISCVProcessorModel<"andes-a25",
                                      FeatureStdExtF,
                                      FeatureStdExtD,
                                      FeatureStdExtC,
+                                     FeatureStdExtB,
+                                     FeatureStdExtZbc,
                                      FeatureVendorXAndesPerf]>;
 
 def ANDES_AX25 : RISCVProcessorModel<"andes-ax25",
@@ -716,6 +718,8 @@ def ANDES_AX25 : RISCVProcessorModel<"andes-ax25",
                                       FeatureStdExtF,
                                       FeatureStdExtD,
                                       FeatureStdExtC,
+                                      FeatureStdExtB,
+                                      FeatureStdExtZbc,
                                       FeatureVendorXAndesPerf]>;
 
 defvar Andes45TuneFeatures = [TuneAndes45,
@@ -737,6 +741,7 @@ def ANDES_N45 : RISCVProcessorModel<"andes-n45",
                                      FeatureStdExtF,
                                      FeatureStdExtD,
                                      FeatureStdExtC,
+                                     FeatureStdExtB,
                                      FeatureVendorXAndesPerf],
                                     Andes45TuneFeatures>;
 
@@ -751,6 +756,7 @@ def ANDES_NX45 : RISCVProcessorModel<"andes-nx45",
                                       FeatureStdExtF,
                                       FeatureStdExtD,
                                       FeatureStdExtC,
+                                      FeatureStdExtB,
                                       FeatureVendorXAndesPerf],
                                      Andes45TuneFeatures>;
 
@@ -765,6 +771,7 @@ def ANDES_A45 : RISCVProcessorModel<"andes-a45",
                                      FeatureStdExtF,
                                      FeatureStdExtD,
                                      FeatureStdExtC,
+                                     FeatureStdExtB,
                                      FeatureVendorXAndesPerf],
                                     Andes45TuneFeatures>;
 
@@ -779,5 +786,6 @@ def ANDES_AX45 : RISCVProcessorModel<"andes-ax45",
                                       FeatureStdExtF,
                                       FeatureStdExtD,
                                       FeatureStdExtC,
+                                      FeatureStdExtB,
                                       FeatureVendorXAndesPerf],
                                      Andes45TuneFeatures>;

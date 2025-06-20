@@ -184,8 +184,7 @@ void AArch64MCAsmInfoDarwin::printSpecifierExpr(
     raw_ostream &OS, const MCSpecifierExpr &Expr) const {
   if (auto *AE = dyn_cast<AArch64AuthMCExpr>(&Expr))
     return AE->print(OS, this);
-  // FIXME: tryParseAdrLabel should not use VK_ABS for Mach-O
-  assert(Expr.getSpecifier() == AArch64MCExpr::VK_ABS);
+  OS << AArch64::getSpecifierName(Expr);
   printExpr(OS, *Expr.getSubExpr());
 }
 
