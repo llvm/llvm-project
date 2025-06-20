@@ -1,5 +1,6 @@
 import lldb
 
+
 class smartPtrSynthProvider:
     def __init__(self, valobj, dict):
         self.valobj = valobj
