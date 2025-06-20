@@ -1207,8 +1207,11 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
             : Info->Visibility;
     this->Diag(Loc, diag::err_hlsl_resource_range_overlap)
         << llvm::to_underlying(Info->Class) << Info->LowerBound
+        << /*unbounded=*/(Info->UpperBound == RangeInfo::Unbounded)
         << Info->UpperBound << llvm::to_underlying(OInfo->Class)
-        << OInfo->LowerBound << OInfo->UpperBound << Info->Space << CommonVis;
+        << OInfo->LowerBound
+        << /*unbounded=*/(OInfo->UpperBound == RangeInfo::Unbounded)
+        << OInfo->UpperBound << Info->Space << CommonVis;
   };
 
   // 3: Iterate through collected RangeInfos

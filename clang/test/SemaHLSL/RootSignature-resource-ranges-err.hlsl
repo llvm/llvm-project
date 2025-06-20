@@ -32,7 +32,7 @@ void bad_root_signature_6() {}
 [RootSignature("DescriptorTable(SRV(t0, numDescriptors=4), SRV(t2, numDescriptors=4))")]
 void bad_root_signature_7() {}
 
-// expected-error@+1 {{resource ranges u[2;5] and u[0;4294967295] overlap within space = 0 and visibility = Hull}}
+// expected-error@+1 {{resource ranges u[2;5] and u[0;unbounded) overlap within space = 0 and visibility = Hull}}
 [RootSignature("DescriptorTable(UAV(u0, numDescriptors=unbounded), visibility = SHADER_VISIBILITY_HULL), DescriptorTable(UAV(u2, numDescriptors=4))")]
 void bad_root_signature_8() {}
 
@@ -40,11 +40,11 @@ void bad_root_signature_8() {}
 [RootSignature("RootConstants(num32BitConstants=4, b2), DescriptorTable(CBV(b0, numDescriptors=3))")]
 void bad_root_signature_9() {}
 
-// expected-error@+1 {{resource ranges s[4;4294967295] and s[17;17] overlap within space = 0 and visibility = All}}
+// expected-error@+1 {{resource ranges s[4;unbounded) and s[17;17] overlap within space = 0 and visibility = All}}
 [RootSignature("StaticSampler(s17), DescriptorTable(Sampler(s0, numDescriptors=3),Sampler(s4, numDescriptors=unbounded))")]
 void bad_root_signature_10() {}
 
-// expected-error@+1 {{resource ranges b[45;45] and b[4;4294967295] overlap within space = 0 and visibility = Geometry}}
+// expected-error@+1 {{resource ranges b[45;45] and b[4;unbounded) overlap within space = 0 and visibility = Geometry}}
 [RootSignature("DescriptorTable(CBV(b4, numDescriptors=unbounded)), CBV(b45, visibility = SHADER_VISIBILITY_GEOMETRY)")]
 void bad_root_signature_11() {}
 
