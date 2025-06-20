@@ -135,8 +135,15 @@ class CrashLogScriptedThread(ScriptedThread):
 
         for reg in self.register_info["registers"]:
             reg_name = reg["name"]
+            reg_alt_name = None
+            if "alt-name" in reg:
+                reg_alt_name = reg["alt-name"]
             if reg_name in self.backing_thread.registers:
                 self.register_ctx[reg_name] = self.backing_thread.registers[reg_name]
+            elif reg_alt_name and reg_alt_name in self.backing_thread.registers:
+                self.register_ctx[reg_name] = self.backing_thread.registers[
+                    reg_alt_name
+                ]
             else:
                 self.register_ctx[reg_name] = 0
 
