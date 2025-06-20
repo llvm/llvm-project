@@ -9,9 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_COMPARISIONOPERATIONS_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_COMPARISIONOPERATIONS_H
 
-#include "FEnvImpl.h"                    // raise_except_if_required
-#include "FPBits.h"                      // FPBits<T>
-#include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
+#include "FEnvImpl.h"                      // raise_except_if_required
+#include "FPBits.h"                        // FPBits<T>
+#include "src/__support/CPP/type_traits.h" // enable_if, is_floating_point
+#include "src/__support/macros/config.h"   // LIBC_NAMESPACE_DECL
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
