@@ -22,6 +22,8 @@
 #include "lldb/lldb-private-types.h"
 #include "lldb/lldb-types.h"
 
+#include "llvm/Support/Error.h"
+
 #include <cstddef>
 #include <cstdint>
 
@@ -44,12 +46,18 @@ public:
 
   virtual BreakpointLocations GetBreakpointLocations(Status &status);
 
-  virtual unsigned GetBreakpointSize(lldb::addr_t, Status &) { return 4; }
+  virtual llvm::Expected<unsigned> GetBreakpointSize(lldb::addr_t bp_addr) {
+    return 4;
+  }
 
   virtual ~SingleStepBreakpointLocationsPredictor() = default;
 
 protected:
-  lldb::addr_t GetSequentiallyNextInstructionPC(Status &error);
+  // This function retrieves the address of the next instruction as it appears
+  // in the binary file. Essentially, it reads the value of the PC register,
+  // determines the size of the current instruction (where the PC is pointing),
+  // and returns the sum of these two values.
+  lldb::addr_t GetNextInstructionAddress(Status &error);
 
   lldb::addr_t GetBreakpointLocationAddress(lldb::addr_t entry_pc,
                                             Status &error);
@@ -547,6 +555,13 @@ protected:
 private:
   virtual BreakpointLocationsPredictorCreator
   GetSingleStepBreakpointLocationsPredictorCreator() {
+    if (!m_arch.IsMIPS() && !m_arch.GetTriple().isPPC64() &&
+        !m_arch.GetTriple().isLoongArch()) {
+      // Unsupported architecture
+      return [](std::unique_ptr<EmulateInstruction> emulator_up) {
+        return nullptr;
+      };
+    }
     return [](std::unique_ptr<EmulateInstruction> emulator_up) {
       return std::make_unique<SingleStepBreakpointLocationsPredictor>(
           std::move(emulator_up));

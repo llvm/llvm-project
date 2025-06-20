@@ -131,11 +131,11 @@ Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
     return error;
 
   for (auto &&bp_addr : bp_locations) {
-    unsigned bp_size = bp_locaions_predictor->GetBreakpointSize(bp_addr, error);
-    if (error.Fail())
-      return error;
+    auto bp_size = bp_locaions_predictor->GetBreakpointSize(bp_addr);
+    if (auto err = bp_size.takeError())
+      return Status(toString(std::move(err)));
 
-    error = SetSoftwareBreakpoint(bp_addr, bp_size, process);
+    error = SetSoftwareBreakpoint(bp_addr, *bp_size, process);
     if (error.Fail())
       return error;
 

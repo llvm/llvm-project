@@ -1809,14 +1809,15 @@ RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
               "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
               "corresponding load reserve insturuction",
               __FUNCTION__);
-    return {*pc + 4};
+    return {*pc + inst->is_rvc ? 2u : 4u};
   }
 
   return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(status);
 }
 
-unsigned RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointSize(
-    lldb::addr_t bp_addr, Status &error) {
+llvm::Expected<unsigned>
+RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointSize(
+    lldb::addr_t bp_addr) {
   EmulateInstructionRISCV *riscv_emulator =
       static_cast<EmulateInstructionRISCV *>(m_emulator_up.get());
 

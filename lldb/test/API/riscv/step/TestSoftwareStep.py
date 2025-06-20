@@ -1,5 +1,5 @@
 """
-Test software step-inst
+Test software step-inst, also known as instruction level single step, in risc-v atomic sequence.
 """
 
 import lldb
@@ -9,11 +9,13 @@ from lldbsuite.test import lldbutil
 
 
 class TestSoftwareStep(TestBase):
-    @skipIf(archs=no_match(re.compile("rv*")))
-    def test_cas(self):
-        self.build()
+    def do_sequence_test(filename, bkpt_name):
+        source_file = filename + ".c"
+        exe_file = filename + ".x"
+
+        self.build(dictionary={"C_SOURCES": source_file, "EXE": exe_file})
         (target, process, cur_thread, bkpt) = lldbutil.run_to_name_breakpoint(
-            self, "cas"
+            self, bkpt_name, exe_name=exe_file
         )
         entry_pc = cur_thread.GetFrameAtIndex(0).GetPC()
 
@@ -24,67 +26,49 @@ class TestSoftwareStep(TestBase):
         )
 
         pc = cur_thread.GetFrameAtIndex(0).GetPC()
-        self.assertTrue((pc - entry_pc) > 0x10)
+
+        return pc - entry_pc
+
+    @skipIf(archs=no_match(re.compile("rv*")))
+    def test_cas(self):
+        """
+        This test verifies LLDB instruction step handling of a proper lr/sc pair.
+        """
+        difference = do_sequence_test("main", "cas")
+        self.assertTrue(difference > 0x10)
 
     @skipIf(archs=no_match(re.compile("rv*")))
     def test_branch_cas(self):
-        self.build(dictionary={"C_SOURCES": "branch.c", "EXE": "branch.x"})
-        (target, process, cur_thread, bkpt) = lldbutil.run_to_name_breakpoint(
-            self, "branch_cas", exe_name="branch.x"
-        )
-        entry_pc = cur_thread.GetFrameAtIndex(0).GetPC()
+        """
+        LLDB cannot predict the actual state of registers within a critical section (i.e., inside an atomic
+        sequence). Therefore, it should identify all forward branches inside the atomic sequence and set
+        breakpoints at every jump address that lies beyond the end of the sequence (after the sc instruction).
+        This ensures that if any such branch is taken, execution will pause at its target address.
 
-        self.runCmd("thread step-inst")
-        self.expect(
-            "thread list",
-            substrs=["stopped", "stop reason = instruction step into"],
-        )
-
-        pc = cur_thread.GetFrameAtIndex(0).GetPC()
-        self.assertTrue((pc - entry_pc) > 0x10)
+        This test includes an lr/sc sequence containing an active forward branch with a jump address located
+        after the end of the atomic section. LLDB should correctly stop at this branch's target address. The
+        test is nearly identical to the previous one, except for the branch condition, which is inverted and
+        will result in a taken jump.
+        """
+        difference = do_sequence_test("branch", "branch_cas")
+        self.assertTrue(difference > 0x10)
 
     @skipIf(archs=no_match(re.compile("rv*")))
     def test_incomplete_sequence_without_lr(self):
-        self.build(
-            dictionary={
-                "C_SOURCES": "incomplete_sequence_without_lr.c",
-                "EXE": "incomplete_lr.x",
-            }
-        )
-        (target, process, cur_thread, bkpt) = lldbutil.run_to_name_breakpoint(
-            self, "incomplete_cas", exe_name="incomplete_lr.x"
-        )
-        entry_pc = cur_thread.GetFrameAtIndex(0).GetPC()
-
-        self.runCmd("thread step-inst")
-
-        self.expect(
-            "thread list",
-            substrs=["stopped", "stop reason = instruction step into"],
-        )
-
-        pc = cur_thread.GetFrameAtIndex(0).GetPC()
-        self.assertTrue((pc - entry_pc) == 0x4)
+        """
+        This test verifies the behavior of a standalone sc instruction without a preceding lr. Since the sc
+        lacks the required lr pairing, LLDB should treat it as a non-atomic store rather than part of an
+        atomic sequence.
+        """
+        difference = do_sequence_test("incomplete_sequence_without_lr", "incomplete_cas")
+        self.assertTrue(difference == 0x4)
 
     @skipIf(archs=no_match(re.compile("rv*")))
     def test_incomplete_sequence_without_sc(self):
-        self.build(
-            dictionary={
-                "C_SOURCES": "incomplete_sequence_without_sc.c",
-                "EXE": "incomplete_sc.x",
-            }
-        )
-        (target, process, cur_thread, bkpt) = lldbutil.run_to_name_breakpoint(
-            self, "incomplete_cas", exe_name="incomplete_sc.x"
-        )
-        entry_pc = cur_thread.GetFrameAtIndex(0).GetPC()
-
-        self.runCmd("thread step-inst")
-
-        self.expect(
-            "thread list",
-            substrs=["stopped", "stop reason = instruction step into"],
-        )
-
-        pc = cur_thread.GetFrameAtIndex(0).GetPC()
-        self.assertTrue((pc - entry_pc) == 0x4)
+        """
+        This test checks the behavior of a standalone lr instruction without a subsequent sc. Since the lr
+        lacks its required sc counterpart, LLDB should treat it as a non-atomic load rather than part of an
+        atomic sequence.
+        """
+        difference = do_sequence_test("incomplete_sequence_without_sc", "incomplete_cas")
+        self.assertTrue(difference == 0x4)

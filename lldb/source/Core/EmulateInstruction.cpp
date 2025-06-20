@@ -620,7 +620,7 @@ BreakpointLocations
 SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(Status &status) {
   if (!m_emulator_up->ReadInstruction()) {
     // try to get at least the size of next instruction to set breakpoint.
-    lldb::addr_t next_pc = GetSequentiallyNextInstructionPC(status);
+    lldb::addr_t next_pc = GetNextInstructionAddress(status);
     return BreakpointLocations{next_pc};
   }
 
@@ -637,8 +637,7 @@ SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(Status &status) {
   return BreakpointLocations{next_pc};
 }
 
-lldb::addr_t
-SingleStepBreakpointLocationsPredictor::GetSequentiallyNextInstructionPC(
+lldb::addr_t SingleStepBreakpointLocationsPredictor::GetNextInstructionAddress(
     Status &error) {
   auto instr_size = m_emulator_up->GetLastInstrSize();
   if (!instr_size) {
@@ -672,10 +671,10 @@ SingleStepBreakpointLocationsPredictor::GetBreakpointLocationAddress(
   }
 
   if (entry_pc == pc) {
-    // Emulate instruction failed and it haven't changed PC. Advance PC with
+    // Emulate instruction failed and it hasn't changed PC. Advance PC with
     // the size of the current opcode because the emulation of all
     // PC modifying instruction should be successful. The failure most
-    // likely caused by a not supported instruction which don't modify PC.
+    // likely caused by an unsupported instruction which does not modify PC.
     return pc + m_emulator_up->GetOpcode().GetByteSize();
   }
 

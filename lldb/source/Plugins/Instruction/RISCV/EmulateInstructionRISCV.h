@@ -29,7 +29,7 @@ public:
 
   BreakpointLocations GetBreakpointLocations(Status &status) override;
 
-  unsigned GetBreakpointSize(lldb::addr_t bp_addr, Status &error) override;
+  llvm::Expected<unsigned> GetBreakpointSize(lldb::addr_t bp_addr) override;
 
 private:
   static bool FoundLoadReserve(const RISCVInst &inst) {

@@ -23,7 +23,7 @@ public:
       std::unique_ptr<EmulateInstruction> emulator_up)
       : SingleStepBreakpointLocationsPredictor{std::move(emulator_up)} {}
 
-  unsigned GetBreakpointSize(lldb::addr_t bp_addr, Status &error) override;
+  llvm::Expected<unsigned> GetBreakpointSize(lldb::addr_t bp_addr) override;
 };
 
 // ITSession - Keep track of the IT Block progression.
