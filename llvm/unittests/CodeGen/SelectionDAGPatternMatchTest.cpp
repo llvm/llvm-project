@@ -110,6 +110,10 @@ TEST_F(SelectionDAGPatternMatchTest, matchValueType) {
 
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(Op0, m_SpecificVT(Int32VT)));
+  EXPECT_TRUE(sd_match(Op0, m_SpecificScalarVT(Int32VT)));
+  EXPECT_FALSE(sd_match(Op0, m_SpecificScalarVT(Float32VT)));
+  EXPECT_TRUE(sd_match(Op2, m_SpecificVectorElementVT(Int32VT)));
+  EXPECT_FALSE(sd_match(Op2, m_SpecificVectorElementVT(Float32VT)));
   EVT BindVT;
   EXPECT_TRUE(sd_match(Op1, m_VT(BindVT)));
   EXPECT_EQ(BindVT, Float32VT);
