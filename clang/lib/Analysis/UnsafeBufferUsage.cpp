@@ -1059,7 +1059,9 @@ static bool hasUnsafeSnprintfBuffer(const CallExpr &Node,
 
   // Pattern 1:
   static StringRef SizedObjs[] = {"span", "array", "vector",
-                                  "basic_string_view", "basic_string"};
+                                  "basic_string_view", "basic_string",
+                                   // Support absl::Span and absl::string_view
+                                  "Span", "string_view" };
   Buf = Buf->IgnoreParenImpCasts();
   Size = Size->IgnoreParenImpCasts();
   if (auto *MCEPtr = dyn_cast<CXXMemberCallExpr>(Buf))
