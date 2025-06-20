@@ -107,7 +107,8 @@ class Driver {
     CPPMode,
     CLMode,
     FlangMode,
-    DXCMode
+    DXCMode,
+    C2000Mode
   } Mode;
 
   enum SaveTempsMode {
@@ -252,6 +253,9 @@ public:
 
   /// Whether the driver should follow dxc.exe like behavior.
   bool IsDXCMode() const { return Mode == DXCMode; }
+
+  // Whether the driver should follow cl2000.exe like behaviour.
+  bool IsC2000Mode() const { return Mode == C2000Mode; }
 
   /// Only print tool bindings, don't build any jobs.
   LLVM_PREFERRED_TYPE(bool)
