@@ -18,7 +18,7 @@
 .text
 _start:
   auipc a0, 0x0
-  addi a0, a0, 0x16   # addi -- behavior changes with differentr architectures
+  addi a0, a0, 0x16   # addi -- behavior changes with different architectures
 
   auipc a0, 0x0
   c.ld a2, 0x10(a0)   # zclsd instruction
