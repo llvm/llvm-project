@@ -3954,6 +3954,13 @@ void CodeGenFunction::EmitFunctionEpilog(
     return;
   }
 
+  // If there is no valid insert point, we won't emit a return.
+  // The insert point could be null if we have already emitted a return
+  // (e.g. if musttail)
+  if (!HaveInsertPoint()) {
+    return;
+  }
+
   llvm::DebugLoc RetDbgLoc;
   llvm::Value *RV = nullptr;
   QualType RetTy = FI.getReturnType();
@@ -6038,7 +6045,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     else
       Builder.CreateRet(CI);
     Builder.ClearInsertionPoint();
-    EnsureInsertPoint();
     return GetUndefRValue(RetTy);
   }
 
