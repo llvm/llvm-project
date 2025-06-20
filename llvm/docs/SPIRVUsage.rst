@@ -217,6 +217,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix. 
    * - ``SPV_INTEL_int4``
      - Adds support for 4-bit integer type, and allow this type to be used in cooperative matrices.
+   * - ``SPV_INTEL_fpga_buffer_location``
+     - Adds a pointer decoration for FPGA targets, indicating that a global memory pointer accesses only a specific physical memory location.
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 

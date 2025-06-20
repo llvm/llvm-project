@@ -920,6 +920,9 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
   } else if (Dec == SPIRV::Decoration::FPMaxErrorDecorationINTEL) {
     Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
+  } else if (Dec == SPIRV::Decoration::BufferLocationINTEL) {
+    Reqs.addRequirements(SPIRV::Capability::FPGABufferLocationINTEL);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fpga_buffer_location);
   }
 }
 
