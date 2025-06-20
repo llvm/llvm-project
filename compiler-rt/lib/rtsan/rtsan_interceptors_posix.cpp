@@ -869,6 +869,48 @@ INTERCEPTOR(void, free, void *ptr) {
   return REAL(free)(ptr);
 }
 
+#if SANITIZER_INTERCEPT_FREE_SIZED
+INTERCEPTOR(void, free_sized, void *ptr, SIZE_T size) {
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+
+  // According to the C and C++ standard, freeing a nullptr is guaranteed to be
+  // a no-op (and thus real-time safe). This can be confirmed for looking at
+  // __libc_free in the glibc source.
+  if (ptr != nullptr)
+    __rtsan_notify_intercepted_call("free_sized");
+
+  if (REAL(free_sized))
+    return REAL(free_sized)(ptr, size);
+  return REAL(free)(ptr);
+}
+#define RTSAN_MAYBE_INTERCEPT_FREE_SIZED INTERCEPT_FUNCTION(free_sized)
+#else
+#define RTSAN_MAYBE_INTERCEPT_FREE_SIZED
+#endif
+
+#if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+INTERCEPTOR(void, free_aligned_sized, void *ptr, SIZE_T alignment,
+            SIZE_T size) {
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+
+  // According to the C and C++ standard, freeing a nullptr is guaranteed to be
+  // a no-op (and thus real-time safe). This can be confirmed for looking at
+  // __libc_free in the glibc source.
+  if (ptr != nullptr)
+    __rtsan_notify_intercepted_call("free_aligned_sized");
+
+  if (REAL(free_aligned_sized))
+    return REAL(free_aligned_sized)(ptr, alignment, size);
+  return REAL(free)(ptr);
+}
+#define RTSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED                               \
+  INTERCEPT_FUNCTION(free_aligned_sized)
+#else
+#define RTSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED
+#endif
+
 INTERCEPTOR(void *, malloc, SIZE_T size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Allocate(size);
@@ -1493,6 +1535,8 @@ INTERCEPTOR(INT_TYPE_SYSCALL, syscall, INT_TYPE_SYSCALL number, ...) {
 void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(calloc);
   INTERCEPT_FUNCTION(free);
+  RTSAN_MAYBE_INTERCEPT_FREE_SIZED;
+  RTSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED;
   INTERCEPT_FUNCTION(malloc);
   INTERCEPT_FUNCTION(realloc);
   INTERCEPT_FUNCTION(reallocf);
