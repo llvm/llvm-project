@@ -154,10 +154,6 @@ struct CodeGenIntrinsic {
 
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
 
-  /// Goes through all IntrProperties that have IsDefault value set and sets
-  /// the property.
-  void setDefaultProperties(ArrayRef<const Record *> DefaultProperties);
-
   /// Helper function to set property \p Name to true.
   void setProperty(const Record *R);
 
