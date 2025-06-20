@@ -738,22 +738,6 @@ func.func @transpose_int_0d(%arg0: vector<i32>) -> vector<i32> {
   return %0 : vector<i32>
 }
 
-// CHECK-LABEL: @flat_transpose_fp
-func.func @flat_transpose_fp(%arg0: vector<16xf32>) -> vector<16xf32> {
-  // CHECK: %[[X:.*]] = vector.flat_transpose %{{.*}} {columns = 4 : i32, rows = 4 : i32} : vector<16xf32> -> vector<16xf32>
-  %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 } : vector<16xf32> -> vector<16xf32>
-  // CHECK: return %[[X]] : vector<16xf32>
-  return %0 : vector<16xf32>
-}
-
-// CHECK-LABEL: @flat_transpose_int
-func.func @flat_transpose_int(%arg0: vector<16xi32>) -> vector<16xi32> {
-  // CHECK: %[[X:.*]] = vector.flat_transpose %{{.*}} {columns = 8 : i32, rows = 2 : i32} : vector<16xi32> -> vector<16xi32>
-  %0 = vector.flat_transpose %arg0 { rows = 2: i32, columns = 8: i32 } : vector<16xi32> -> vector<16xi32>
-  // CHECK: return %[[X]] : vector<16xi32>
-  return %0 : vector<16xi32>
-}
-
 // CHECK-LABEL: @vector_load_and_store_0d_scalar_memref
 func.func @vector_load_and_store_0d_scalar_memref(%memref : memref<200x100xf32>,
                                                   %i : index, %j : index) {
