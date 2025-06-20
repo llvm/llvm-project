@@ -19,7 +19,6 @@ class TestProgressReporting(TestBase):
 
     def test_wait_attach_progress_reporting(self):
         """Test that progress reports for wait attaching work as intended."""
-        self.build()
         target = self.dbg.CreateTarget(None)
 
         # Wait attach to a process, then check to see that a progress report was created
