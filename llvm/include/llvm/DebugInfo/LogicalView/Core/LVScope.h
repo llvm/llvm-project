@@ -473,7 +473,7 @@ class LLVM_ABI LVScopeCompileUnit final : public LVScope {
 
   // Record scope sizes indexed by lexical level.
   // Setting an initial size that will cover a very deep nested scopes.
-  const size_t TotalInitialSize = 8;
+  static constexpr size_t TotalInitialSize = 8;
   using LVTotalsEntry = std::pair<unsigned, float>;
   SmallVector<LVTotalsEntry> Totals;
   // Maximum seen lexical level. It is used to control how many entries
@@ -510,7 +510,7 @@ public:
   void addMapping(LVLine *Line, LVSectionIndex SectionIndex);
   LVLineRange lineRange(LVLocation *Location) const;
 
-  LVNameInfo NameNone = {UINT64_MAX, 0};
+  static constexpr LVNameInfo NameNone = {UINT64_MAX, 0};
   void addPublicName(LVScope *Scope, LVAddress LowPC, LVAddress HighPC) {
     PublicNames.emplace(std::piecewise_construct, std::forward_as_tuple(Scope),
                         std::forward_as_tuple(LowPC, HighPC - LowPC));

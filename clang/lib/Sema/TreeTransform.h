@@ -16222,7 +16222,7 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
   return getDerived().RebuildSizeOfPackExpr(
       E->getOperatorLoc(), E->getPack(), E->getPackLoc(), E->getRParenLoc(),
       /*Length=*/static_cast<unsigned>(Args.size()),
-      /*PartialArgs=*/std::nullopt);
+      /*PartialArgs=*/{});
 }
 
 template <typename Derived>

@@ -14283,7 +14283,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
         ::getCommonTemplateNameChecked(Ctx, TX->getTemplateName(),
                                        TY->getTemplateName(),
                                        /*IgnoreDeduced=*/true),
-        As, /*CanonicalArgs=*/std::nullopt, X->getCanonicalTypeInternal());
+        As, /*CanonicalArgs=*/{}, X->getCanonicalTypeInternal());
   }
   case Type::Decltype: {
     const auto *DX = cast<DecltypeType>(X);
@@ -14529,7 +14529,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
                                    TY->template_arguments()))
       return QualType();
     return Ctx.getTemplateSpecializationType(CTN, As,
-                                             /*CanonicalArgs=*/std::nullopt,
+                                             /*CanonicalArgs=*/{},
                                              Ctx.getQualifiedType(Underlying));
   }
   case Type::Typedef: {

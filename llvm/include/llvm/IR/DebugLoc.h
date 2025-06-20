@@ -26,7 +26,7 @@ namespace llvm {
   class DILocation;
   class Function;
 
-#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
   // Used to represent different "kinds" of DebugLoc, expressing that the
   // instruction it is part of is either normal and should contain a valid
   // DILocation, or otherwise describing the reason why the instruction does
@@ -90,7 +90,7 @@ namespace llvm {
   using DebugLocTrackingRef = DILocAndCoverageTracking;
 #else
   using DebugLocTrackingRef = TrackingMDNodeRef;
-#endif // LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 
   /// A debug info location.
   ///
@@ -117,12 +117,12 @@ namespace llvm {
     /// IR.
     LLVM_ABI explicit DebugLoc(const MDNode *N);
 
-#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
     DebugLoc(DebugLocKind Kind) : Loc(Kind) {}
     DebugLocKind getKind() const { return Loc.Kind; }
 #endif
 
-#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
     static inline DebugLoc getTemporary() {
       return DebugLoc(DebugLocKind::Temporary);
     }
@@ -140,7 +140,7 @@ namespace llvm {
     static inline DebugLoc getUnknown() { return DebugLoc(); }
     static inline DebugLoc getCompilerGenerated() { return DebugLoc(); }
     static inline DebugLoc getDropped() { return DebugLoc(); }
-#endif // LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 
     /// When two instructions are combined into a single instruction we also
     /// need to combine the original locations into a single location.
@@ -174,7 +174,7 @@ namespace llvm {
     DebugLoc orElse(DebugLoc Other) const {
       if (*this)
         return *this;
-#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
       if (Other)
         return Other;
       if (getKind() != DebugLocKind::Normal)
@@ -184,7 +184,7 @@ namespace llvm {
       return *this;
 #else
       return Other;
-#endif // LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
     }
 
     /// Get the underlying \a DILocation.

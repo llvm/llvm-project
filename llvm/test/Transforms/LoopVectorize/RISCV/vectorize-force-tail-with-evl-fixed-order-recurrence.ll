@@ -17,21 +17,21 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:  [[ENTRY:.*]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[TC]]
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
+; IF-EVL-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; IF-EVL-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TC]], [[TMP6]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-NEXT:    [[TMP25:%.*]] = trunc i64 [[TMP8]] to i32
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], 4
+; IF-EVL-NEXT:    [[TMP10:%.*]] = mul nuw i32 [[TMP9]], 4
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP10]], 1
 ; IF-EVL-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 33, i32 [[TMP11]]
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -79,18 +79,18 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[TC:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; NO-VP-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TC]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; NO-VP-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], 4
+; NO-VP-NEXT:    [[TMP7:%.*]] = mul nuw i32 [[TMP6]], 4
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP7]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 33, i32 [[TMP8]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -110,7 +110,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP18:%.*]] = mul i32 [[TMP17]], 4
+; NO-VP-NEXT:    [[TMP18:%.*]] = mul nuw i32 [[TMP17]], 4
 ; NO-VP-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP18]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_LOAD]], i32 [[TMP19]]
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TC]], [[N_VEC]]
@@ -158,25 +158,25 @@ define void @second_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:  [[ENTRY:.*]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[TC]]
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
+; IF-EVL-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; IF-EVL-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TC]], [[TMP6]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-NEXT:    [[TMP32:%.*]] = trunc i64 [[TMP8]] to i32
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], 4
+; IF-EVL-NEXT:    [[TMP10:%.*]] = mul nuw i32 [[TMP9]], 4
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP10]], 1
 ; IF-EVL-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 33, i32 [[TMP11]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 4
+; IF-EVL-NEXT:    [[TMP13:%.*]] = mul nuw i32 [[TMP12]], 4
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], 1
 ; IF-EVL-NEXT:    [[VECTOR_RECUR_INIT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 22, i32 [[TMP14]]
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -228,22 +228,22 @@ define void @second_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[TC:%.*]]) #[[ATTR0]] {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; NO-VP-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TC]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; NO-VP-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], 4
+; NO-VP-NEXT:    [[TMP7:%.*]] = mul nuw i32 [[TMP6]], 4
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP7]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 33, i32 [[TMP8]]
 ; NO-VP-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], 4
+; NO-VP-NEXT:    [[TMP10:%.*]] = mul nuw i32 [[TMP9]], 4
 ; NO-VP-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP10]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_INIT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 22, i32 [[TMP11]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -265,11 +265,11 @@ define void @second_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP22:%.*]] = mul i32 [[TMP21]], 4
+; NO-VP-NEXT:    [[TMP22:%.*]] = mul nuw i32 [[TMP21]], 4
 ; NO-VP-NEXT:    [[TMP23:%.*]] = sub i32 [[TMP22]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_LOAD]], i32 [[TMP23]]
 ; NO-VP-NEXT:    [[TMP24:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP25:%.*]] = mul i32 [[TMP24]], 4
+; NO-VP-NEXT:    [[TMP25:%.*]] = mul nuw i32 [[TMP24]], 4
 ; NO-VP-NEXT:    [[TMP26:%.*]] = sub i32 [[TMP25]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <vscale x 4 x i32> [[TMP15]], i32 [[TMP26]]
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TC]], [[N_VEC]]
@@ -320,29 +320,29 @@ define void @third_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:  [[ENTRY:.*]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[TC]]
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
+; IF-EVL-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; IF-EVL-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TC]], [[TMP6]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-NEXT:    [[TMP39:%.*]] = trunc i64 [[TMP8]] to i32
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], 4
+; IF-EVL-NEXT:    [[TMP10:%.*]] = mul nuw i32 [[TMP9]], 4
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP10]], 1
 ; IF-EVL-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 33, i32 [[TMP11]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 4
+; IF-EVL-NEXT:    [[TMP13:%.*]] = mul nuw i32 [[TMP12]], 4
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], 1
 ; IF-EVL-NEXT:    [[VECTOR_RECUR_INIT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 22, i32 [[TMP14]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], 4
+; IF-EVL-NEXT:    [[TMP16:%.*]] = mul nuw i32 [[TMP15]], 4
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = sub i32 [[TMP16]], 1
 ; IF-EVL-NEXT:    [[VECTOR_RECUR_INIT3:%.*]] = insertelement <vscale x 4 x i32> poison, i32 11, i32 [[TMP17]]
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -400,26 +400,26 @@ define void @third_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[TC:%.*]]) #[[ATTR0]] {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; NO-VP-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TC]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; NO-VP-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], 4
+; NO-VP-NEXT:    [[TMP7:%.*]] = mul nuw i32 [[TMP6]], 4
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP7]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 33, i32 [[TMP8]]
 ; NO-VP-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], 4
+; NO-VP-NEXT:    [[TMP10:%.*]] = mul nuw i32 [[TMP9]], 4
 ; NO-VP-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP10]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_INIT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 22, i32 [[TMP11]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = mul nuw i32 [[TMP12]], 4
 ; NO-VP-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_INIT3:%.*]] = insertelement <vscale x 4 x i32> poison, i32 11, i32 [[TMP14]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -444,15 +444,15 @@ define void @third_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[TMP26:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP27:%.*]] = mul i32 [[TMP26]], 4
+; NO-VP-NEXT:    [[TMP27:%.*]] = mul nuw i32 [[TMP26]], 4
 ; NO-VP-NEXT:    [[TMP28:%.*]] = sub i32 [[TMP27]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_LOAD]], i32 [[TMP28]]
 ; NO-VP-NEXT:    [[TMP29:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP30:%.*]] = mul i32 [[TMP29]], 4
+; NO-VP-NEXT:    [[TMP30:%.*]] = mul nuw i32 [[TMP29]], 4
 ; NO-VP-NEXT:    [[TMP31:%.*]] = sub i32 [[TMP30]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_EXTRACT5:%.*]] = extractelement <vscale x 4 x i32> [[TMP18]], i32 [[TMP31]]
 ; NO-VP-NEXT:    [[TMP32:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP33:%.*]] = mul i32 [[TMP32]], 4
+; NO-VP-NEXT:    [[TMP33:%.*]] = mul nuw i32 [[TMP32]], 4
 ; NO-VP-NEXT:    [[TMP34:%.*]] = sub i32 [[TMP33]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_EXTRACT6:%.*]] = extractelement <vscale x 4 x i32> [[TMP19]], i32 [[TMP34]]
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TC]], [[N_VEC]]
@@ -526,18 +526,18 @@ define i32 @FOR_reduction(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[TC:%.*]]) #[[ATTR0]] {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; NO-VP-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TC]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; NO-VP-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], 4
+; NO-VP-NEXT:    [[TMP7:%.*]] = mul nuw i32 [[TMP6]], 4
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP7]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 33, i32 [[TMP8]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -557,11 +557,11 @@ define i32 @FOR_reduction(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP18:%.*]] = mul i32 [[TMP17]], 4
+; NO-VP-NEXT:    [[TMP18:%.*]] = mul nuw i32 [[TMP17]], 4
 ; NO-VP-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP18]], 2
 ; NO-VP-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_LOAD]], i32 [[TMP19]]
 ; NO-VP-NEXT:    [[TMP20:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP21:%.*]] = mul i32 [[TMP20]], 4
+; NO-VP-NEXT:    [[TMP21:%.*]] = mul nuw i32 [[TMP20]], 4
 ; NO-VP-NEXT:    [[TMP22:%.*]] = sub i32 [[TMP21]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_LOAD]], i32 [[TMP22]]
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TC]], [[N_VEC]]

@@ -151,22 +151,23 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
 }
 
-// Take a string from the Cli and apply it to the LanguageFeatureControl.
-bool LanguageFeatureControl::ApplyCliOption(std::string input) {
+std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(
+    std::string_view input) {
   bool negated{false};
   if (input.size() > 3 && input.substr(0, 3) == "no-") {
     negated = true;
     input = input.substr(3);
   }
-  if (auto it{cliOptions_.find(input)}; it != cliOptions_.end()) {
-    if (std::holds_alternative<LanguageFeature>(it->second)) {
-      EnableWarning(std::get<LanguageFeature>(it->second), !negated);
-      return true;
-    }
-    if (std::holds_alternative<UsageWarning>(it->second)) {
-      EnableWarning(std::get<UsageWarning>(it->second), !negated);
-      return true;
-    }
+  if (auto it{cliOptions_.find(std::string{input})}; it != cliOptions_.end()) {
+    return std::make_pair(it->second, !negated);
+  }
+  return std::nullopt;
+}
+
+bool LanguageFeatureControl::EnableWarning(std::string_view input) {
+  if (auto warningAndEnabled{FindWarning(input)}) {
+    EnableWarning(warningAndEnabled->first, warningAndEnabled->second);
+    return true;
   }
   return false;
 }

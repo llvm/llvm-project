@@ -309,7 +309,7 @@ analyzeModule(Module &M) {
     return RSDMap;
 
   for (const auto &RSDefNode : RootSignatureNode->operands()) {
-    if (RSDefNode->getNumOperands() != 2) {
+    if (RSDefNode->getNumOperands() != 3) {
       reportError(Ctx, "Invalid format for Root Signature Definition. Pairs "
                        "of function, root signature expected.");
       continue;
@@ -348,8 +348,14 @@ analyzeModule(Module &M) {
       reportError(Ctx, "Root Element is not a metadata node.");
       continue;
     }
-
     mcdxbc::RootSignatureDesc RSD;
+    if (std::optional<uint32_t> Version = extractMdIntValue(RSDefNode, 2))
+      RSD.Version = *Version;
+    else {
+      reportError(Ctx, "Invalid RSDefNode value, expected constant int");
+      continue;
+    }
+
     // Clang emits the root signature data in dxcontainer following a specific
     // sequence. First the header, then the root parameters. So the header
     // offset will always equal to the header size.

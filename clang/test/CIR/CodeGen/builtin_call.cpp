@@ -76,3 +76,37 @@ float constant_fp_builtin_single() {
 // OGCG: define {{.*}}float @_Z26constant_fp_builtin_singlev()
 // OGCG: ret float 0x3FB99999A0000000
 // OGCG: }
+
+void library_builtins() {
+  __builtin_printf(nullptr);
+  __builtin_abort();
+}
+
+// CIR: cir.func @_Z16library_builtinsv() {
+// CIR: %[[NULL:.+]] = cir.const #cir.ptr<null> : !cir.ptr<!s8i>
+// CIR: cir.call @printf(%[[NULL]]) : (!cir.ptr<!s8i>) -> !s32i
+// CIR: cir.call @abort() : () -> ()
+
+// LLVM: define void @_Z16library_builtinsv()
+// LLVM: call i32 (ptr, ...) @printf(ptr null)
+// LLVM: call void @abort()
+
+// OGCG: define dso_local void @_Z16library_builtinsv()
+// OGCG: call i32 (ptr, ...) @printf(ptr noundef null)
+// OGCG: call void @abort()
+
+void assume(bool arg) {
+  __builtin_assume(arg);
+}
+
+// CIR: cir.func @_Z6assumeb
+// CIR:   cir.assume %{{.+}} : !cir.bool
+// CIR: }
+
+// LLVM: define void @_Z6assumeb
+// LLVM:   call void @llvm.assume(i1 %{{.+}})
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z6assumeb
+// OGCG:   call void @llvm.assume(i1 %{{.+}})
+// OGCG: }

@@ -14,6 +14,8 @@
 #ifndef LLVM_TARGETPARSER_TARGETPARSER_H
 #define LLVM_TARGETPARSER_TARGETPARSER_H
 
+#include "SubtargetFeature.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -110,9 +112,10 @@ enum GPUKind : uint32_t {
 
   GK_GFX1200 = 100,
   GK_GFX1201 = 101,
+  GK_GFX1250 = 102,
 
   GK_AMDGCN_FIRST = GK_GFX600,
-  GK_AMDGCN_LAST = GK_GFX1201,
+  GK_AMDGCN_LAST = GK_GFX1250,
 
   GK_GFX9_GENERIC = 192,
   GK_GFX10_1_GENERIC = 193,
@@ -190,6 +193,31 @@ insertWaveSizeFeature(StringRef GPU, const Triple &T,
                       StringMap<bool> &Features);
 
 } // namespace AMDGPU
+
+struct BasicSubtargetFeatureKV {
+  const char *Key;         ///< K-V key string
+  unsigned Value;          ///< K-V integer value
+  FeatureBitArray Implies; ///< K-V bit mask
+};
+
+/// Used to provide key value pairs for feature and CPU bit flags.
+struct BasicSubtargetSubTypeKV {
+  const char *Key;         ///< K-V key string
+  FeatureBitArray Implies; ///< K-V bit mask
+
+  /// Compare routine for std::lower_bound
+  bool operator<(StringRef S) const { return StringRef(Key) < S; }
+
+  /// Compare routine for std::is_sorted.
+  bool operator<(const BasicSubtargetSubTypeKV &Other) const {
+    return StringRef(Key) < StringRef(Other.Key);
+  }
+};
+
+std::optional<llvm::StringMap<bool>>
+getCPUDefaultTargetFeatures(StringRef CPU,
+                            ArrayRef<BasicSubtargetSubTypeKV> ProcDesc,
+                            ArrayRef<BasicSubtargetFeatureKV> ProcFeatures);
 } // namespace llvm
 
 #endif

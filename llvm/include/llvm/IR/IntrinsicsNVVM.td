@@ -1341,9 +1341,11 @@ foreach scope = ["cta", "cluster", "gpu", "sys"] in {
         Intrinsic<[], [], [IntrNoCallback],
         "llvm.nvvm.fence.proxy.tensormap_generic.release." # scope>;
 
+  // The imm-arg 'size' can only be 128.
   def int_nvvm_fence_proxy_tensormap_generic_acquire_ # scope :
         Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
-                  [IntrNoCallback, IntrArgMemOnly, ImmArg<ArgIndex<1>>],
+                  [IntrNoCallback, IntrArgMemOnly, ImmArg<ArgIndex<1>>,
+                   Range<ArgIndex<1>, 128, 129>],
                   "llvm.nvvm.fence.proxy.tensormap_generic.acquire." # scope>;
 }
 
@@ -1989,10 +1991,12 @@ def int_nvvm_is_explicit_cluster
               "llvm.nvvm.is_explicit_cluster">;
 
 // Setmaxnreg inc/dec intrinsics
+// The imm-arg should be in the range: 24 <= val <= 256
 foreach op = ["dec", "inc"] in
   def int_nvvm_setmaxnreg_ # op # _sync_aligned_u32
     : DefaultAttrsIntrinsic<[], [llvm_i32_ty],
-              [IntrConvergent, IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+              [IntrConvergent, IntrNoMem, IntrHasSideEffects,
+               ImmArg<ArgIndex<0>>, Range<ArgIndex<0>, 24, 257>]>;
 
 // Exit
 def int_nvvm_exit : NVVMBuiltin,

@@ -468,6 +468,37 @@ void Operator::populateTypeInferenceInfo(
       continue;
     }
 
+    // The `ShapedTypeMatchesElementCountAndTypes` trait represents a 1 -> 1
+    // type inference edge where a shaped type matches element count and types
+    // of variadic elements.
+    if (def.isSubClassOf("ShapedTypeMatchesElementCountAndTypes")) {
+      StringRef shapedArg = def.getValueAsString("shaped");
+      StringRef elementsArg = def.getValueAsString("elements");
+
+      int shapedIndex = argumentsAndResultsIndex.lookup(shapedArg);
+      int elementsIndex = argumentsAndResultsIndex.lookup(elementsArg);
+
+      // Handle result type inference from shaped type to variadic elements.
+      if (InferredResultType::isResultIndex(elementsIndex) &&
+          InferredResultType::isArgIndex(shapedIndex)) {
+        int resultIndex = InferredResultType::unmapResultIndex(elementsIndex);
+        ResultTypeInference &infer = inference[resultIndex];
+        if (!infer.inferred) {
+          infer.sources.emplace_back(
+              shapedIndex,
+              "::llvm::SmallVector<::mlir::Type>(::llvm::cast<::mlir::"
+              "ShapedType>($_self).getNumElements(), "
+              "::llvm::cast<::mlir::ShapedType>($_self).getElementType())");
+          infer.inferred = true;
+        }
+      }
+
+      // Type inference in the opposite direction is not possible as the actual
+      // shaped type can't be inferred from the variadic elements.
+
+      continue;
+    }
+
     if (!def.isSubClassOf("AllTypesMatch"))
       continue;
 

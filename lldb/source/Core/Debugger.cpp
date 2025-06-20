@@ -510,6 +510,18 @@ llvm::StringRef Debugger::GetSeparator() const {
       idx, g_debugger_properties[idx].default_cstr_value);
 }
 
+llvm::StringRef Debugger::GetDisabledAnsiPrefix() const {
+  const uint32_t idx = ePropertyShowDisabledAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetDisabledAnsiSuffix() const {
+  const uint32_t idx = ePropertyShowDisabledAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
 bool Debugger::SetSeparator(llvm::StringRef s) {
   constexpr uint32_t idx = ePropertySeparator;
   bool ret = SetPropertyAtIndex(idx, s);

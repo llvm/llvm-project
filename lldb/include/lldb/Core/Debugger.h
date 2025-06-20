@@ -307,6 +307,10 @@ public:
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
 
+  llvm::StringRef GetDisabledAnsiPrefix() const;
+
+  llvm::StringRef GetDisabledAnsiSuffix() const;
+
   bool GetUseAutosuggestion() const;
 
   llvm::StringRef GetAutosuggestionAnsiPrefix() const;

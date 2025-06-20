@@ -28,6 +28,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -419,6 +420,6 @@ INITIALIZE_PASS(VEAsmPrinter, "ve-asm-printer", "VE Assembly Printer", false,
                 false)
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEAsmPrinter() {
   RegisterAsmPrinter<VEAsmPrinter> X(getTheVETarget());
 }

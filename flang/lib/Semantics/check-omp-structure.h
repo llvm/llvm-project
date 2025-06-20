@@ -360,6 +360,7 @@ private:
   };
   int directiveNest_[LastType + 1] = {0};
 
+  parser::CharBlock visitedAtomicSource_;
   SymbolSourceMap deferredNonVariables_;
 
   using LoopConstruct = std::variant<const parser::DoConstruct *,

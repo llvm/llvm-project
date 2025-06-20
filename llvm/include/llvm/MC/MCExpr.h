@@ -512,7 +512,6 @@ protected:
 
   explicit MCSpecifierExpr(const MCExpr *Expr, Spec S, SMLoc Loc = SMLoc())
       : MCExpr(Specifier, Loc), Expr(Expr), specifier(S) {}
-  virtual ~MCSpecifierExpr() = default;
 
 public:
   LLVM_ABI static const MCSpecifierExpr *
@@ -522,12 +521,6 @@ public:
 
   Spec getSpecifier() const { return specifier; }
   const MCExpr *getSubExpr() const { return Expr; }
-
-  virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-    llvm_unreachable("Replace MCExpr::print calls with MCAsmInfo::printExpr");
-  }
-  virtual bool evaluateAsRelocatableImpl(MCValue &Res,
-                                         const MCAssembler *Asm) const;
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Specifier;

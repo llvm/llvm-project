@@ -12,6 +12,7 @@ source_set("Basic") {
     "RISCVTargetDefEmitter.cpp",
     "SDNodeProperties.cpp",
     "TableGen.cpp",
+    "TargetFeaturesEmitter.cpp",
     "VTEmitter.cpp",
   ]
 }

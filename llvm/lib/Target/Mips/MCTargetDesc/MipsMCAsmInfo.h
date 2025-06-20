@@ -13,7 +13,6 @@
 #ifndef LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCASMINFO_H
 #define LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCASMINFO_H
 
-#include "MCTargetDesc/MipsMCExpr.h"
 #include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCAsmInfoELF.h"
 #include "llvm/MC/MCFixup.h"
@@ -77,6 +76,8 @@ enum {
 };
 
 bool isGpOff(const MCSpecifierExpr &E);
+const MCSpecifierExpr *createGpOff(const MCExpr *Expr, Specifier S,
+                                   MCContext &Ctx);
 }
 
 } // namespace llvm

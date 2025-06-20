@@ -2702,8 +2702,8 @@ llvm::Constant *CGObjCCommonMac::getBitmapBlockLayout(bool ComputeByrefLayout) {
   unsigned char inst = (BLOCK_LAYOUT_OPERATOR << 4) | 0;
   Layout.push_back(inst);
   std::string BitMap;
-  for (unsigned i = 0, e = Layout.size(); i != e; i++)
-    BitMap += Layout[i];
+  for (unsigned char C : Layout)
+    BitMap += C;
 
   if (CGM.getLangOpts().ObjCGCBitmapPrint) {
     if (ComputeByrefLayout)
@@ -4225,9 +4225,8 @@ FragileHazards::FragileHazards(CodeGenFunction &CGF) : CGF(CGF) {
     return;
 
   // Collect all the blocks in the function.
-  for (llvm::Function::iterator I = CGF.CurFn->begin(), E = CGF.CurFn->end();
-       I != E; ++I)
-    BlocksBeforeTry.insert(&*I);
+  for (llvm::BasicBlock &BB : *CGF.CurFn)
+    BlocksBeforeTry.insert(&BB);
 
   llvm::FunctionType *AsmFnTy = GetAsmFnType();
 
@@ -4299,9 +4298,7 @@ void FragileHazards::emitHazardsInNewBlocks() {
   CGBuilderTy Builder(CGF, CGF.getLLVMContext());
 
   // Iterate through all blocks, skipping those prior to the try.
-  for (llvm::Function::iterator FI = CGF.CurFn->begin(), FE = CGF.CurFn->end();
-       FI != FE; ++FI) {
-    llvm::BasicBlock &BB = *FI;
+  for (llvm::BasicBlock &BB : *CGF.CurFn) {
     if (BlocksBeforeTry.count(&BB))
       continue;
 
@@ -4348,10 +4345,9 @@ void FragileHazards::collectLocals() {
   // Collect all the allocas currently in the function.  This is
   // probably way too aggressive.
   llvm::BasicBlock &Entry = CGF.CurFn->getEntryBlock();
-  for (llvm::BasicBlock::iterator I = Entry.begin(), E = Entry.end(); I != E;
-       ++I)
-    if (isa<llvm::AllocaInst>(*I) && !AllocasToIgnore.count(&*I))
-      Locals.push_back(&*I);
+  for (llvm::Instruction &I : Entry)
+    if (isa<llvm::AllocaInst>(I) && !AllocasToIgnore.count(&I))
+      Locals.push_back(&I);
 }
 
 llvm::FunctionType *FragileHazards::GetAsmFnType() {

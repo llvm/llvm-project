@@ -917,3 +917,10 @@ StringRef Module::getTargetABIFromMD() {
     TargetABI = TargetABIMD->getString();
   return TargetABI;
 }
+
+WinX64EHUnwindV2Mode Module::getWinX64EHUnwindV2Mode() const {
+  Metadata *MD = getModuleFlag("winx64-eh-unwindv2");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return static_cast<WinX64EHUnwindV2Mode>(CI->getZExtValue());
+  return WinX64EHUnwindV2Mode::Disabled;
+}

@@ -112,6 +112,10 @@ public:
   void MapDeclDIEToDefDIE(const lldb_private::plugin::dwarf::DWARFDIE &decl_die,
                           const lldb_private::plugin::dwarf::DWARFDIE &def_die);
 
+  lldb_private::plugin::dwarf::DWARFDIE GetCXXObjectParameter(
+      const lldb_private::plugin::dwarf::DWARFDIE &subprogram,
+      const lldb_private::plugin::dwarf::DWARFDIE &decl_ctx_die);
+
 protected:
   /// Protected typedefs and members.
   /// @{

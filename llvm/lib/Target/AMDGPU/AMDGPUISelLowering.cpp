@@ -848,7 +848,7 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(
        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
        (isa<LoadSDNode>(N) && AS == AMDGPUAS::GLOBAL_ADDRESS &&
         MN->isInvariant())) &&
-      AMDGPUInstrInfo::isUniformMMO(MN->getMemOperand()))
+      AMDGPU::isUniformMMO(MN->getMemOperand()))
     return false;
 
   // Don't produce extloads from sub 32-bit types. SI doesn't have scalar

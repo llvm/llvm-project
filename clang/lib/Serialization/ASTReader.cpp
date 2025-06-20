@@ -4097,8 +4097,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         uint64_t TULocalOffset =
             TULocalLocalOffset ? BaseOffset + TULocalLocalOffset : 0;
 
-        DelayedNamespaceOffsetMap[ID] = {LexicalOffset, VisibleOffset,
-                                         ModuleLocalOffset, TULocalOffset};
+        DelayedNamespaceOffsetMap[ID] = {
+            {VisibleOffset, TULocalOffset, ModuleLocalOffset}, LexicalOffset};
 
         assert(!GetExistingDecl(ID) &&
                "We shouldn't load the namespace in the front of delayed "
@@ -8544,17 +8544,21 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
   SmallVector<NamedDecl *, 64> Decls;
   llvm::SmallPtrSet<NamedDecl *, 8> Found;
 
+  auto Find = [&, this](auto &&Table, auto &&Key) {
+    for (GlobalDeclID ID : Table.find(Key)) {
+      NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
+      if (ND->getDeclName() == Name && Found.insert(ND).second)
+        Decls.push_back(ND);
+    }
+  };
+
   Deserializing LookupResults(this);
 
   // FIXME: Clear the redundancy with templated lambda in C++20 when that's
   // available.
   if (auto It = Lookups.find(DC); It != Lookups.end()) {
     ++NumVisibleDeclContextsRead;
-    for (GlobalDeclID ID : It->second.Table.find(Name)) {
-      NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-      if (ND->getDeclName() == Name && Found.insert(ND).second)
-        Decls.push_back(ND);
-    }
+    Find(It->second.Table, Name);
   }
 
   if (auto *NamedModule =
@@ -8562,21 +8566,13 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
                      : nullptr) {
     if (auto It = ModuleLocalLookups.find(DC); It != ModuleLocalLookups.end()) {
       ++NumModuleLocalVisibleDeclContexts;
-      for (GlobalDeclID ID : It->second.Table.find({Name, NamedModule})) {
-        NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-        if (ND->getDeclName() == Name && Found.insert(ND).second)
-          Decls.push_back(ND);
-      }
+      Find(It->second.Table, std::make_pair(Name, NamedModule));
     }
   }
 
   if (auto It = TULocalLookups.find(DC); It != TULocalLookups.end()) {
     ++NumTULocalVisibleDeclContexts;
-    for (GlobalDeclID ID : It->second.Table.find(Name)) {
-      NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-      if (ND->getDeclName() == Name && Found.insert(ND).second)
-        Decls.push_back(ND);
-    }
+    Find(It->second.Table, Name);
   }
 
   SetExternalVisibleDeclsForName(DC, Name, Decls);

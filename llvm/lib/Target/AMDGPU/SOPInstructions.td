@@ -472,6 +472,7 @@ def S_BARRIER_SIGNAL_M0 : SOP1_Pseudo <"s_barrier_signal m0", (outs), (ins),
 def S_BARRIER_SIGNAL_ISFIRST_M0 : SOP1_Pseudo <"s_barrier_signal_isfirst m0", (outs), (ins),
   "", []>{
   let Defs = [SCC];
+  let Uses = [M0, SCC];
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
 }
@@ -487,6 +488,8 @@ def S_BARRIER_SIGNAL_IMM : SOP1_Pseudo <"s_barrier_signal", (outs),
 def S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_Pseudo <"s_barrier_signal_isfirst", (outs),
   (ins SplitBarrier:$src0), "$src0", [(set SCC, (int_amdgcn_s_barrier_signal_isfirst timm:$src0))]>{
   let Defs = [SCC];
+  let Uses = [SCC];
+  let usesCustomInserter = 1;
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
 }

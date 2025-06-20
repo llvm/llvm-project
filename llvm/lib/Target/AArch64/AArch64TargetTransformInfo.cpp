@@ -4353,15 +4353,26 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     }
   }
 
-  // Treat the icmp in icmp(and, 0) as free, as we can make use of ands.
-  // FIXME: This can apply to more conditions and add/sub if it can be shown to
-  // be profitable.
+  // Treat the icmp in icmp(and, 0) or icmp(and, -1/1) when it can be folded to
+  // icmp(and, 0) as free, as we can make use of ands, but only if the
+  // comparison is not unsigned.
   if (ValTy->isIntegerTy() && ISD == ISD::SETCC && I &&
-      ICmpInst::isEquality(VecPred) &&
+      !CmpInst::isUnsigned(VecPred) &&
       TLI->isTypeLegal(TLI->getValueType(DL, ValTy)) &&
-      match(I->getOperand(1), m_Zero()) &&
-      match(I->getOperand(0), m_And(m_Value(), m_Value())))
-    return 0;
+      match(I->getOperand(0), m_And(m_Value(), m_Value()))) {
+    if (match(I->getOperand(1), m_Zero()))
+      return 0;
+
+    // x >= 1 / x < 1 -> x > 0 / x <= 0
+    if (match(I->getOperand(1), m_One()) &&
+        (VecPred == CmpInst::ICMP_SLT || VecPred == CmpInst::ICMP_SGE))
+      return 0;
+
+    // x <= -1 / x > -1 -> x > 0 / x <= 0
+    if (match(I->getOperand(1), m_AllOnes()) &&
+        (VecPred == CmpInst::ICMP_SLE || VecPred == CmpInst::ICMP_SGT))
+      return 0;
+  }
 
   // The base case handles scalable vectors fine for now, since it treats the
   // cost as 1 * legalization cost.
@@ -5384,10 +5395,13 @@ AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index,
 InstructionCost AArch64TTIImpl::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
-    TTI::PartialReductionExtendKind OpBExtend,
-    std::optional<unsigned> BinOp) const {
+    TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+    TTI::TargetCostKind CostKind) const {
   InstructionCost Invalid = InstructionCost::getInvalid();
   InstructionCost Cost(TTI::TCC_Basic);
+
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return Invalid;
 
   // Sub opcodes currently only occur in chained cases.
   // Independent partial reduction subtractions are still costed as an add

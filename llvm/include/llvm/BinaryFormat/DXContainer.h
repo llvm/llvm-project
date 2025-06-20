@@ -154,17 +154,17 @@ enum class FeatureFlags : uint64_t {
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
-#define ROOT_ELEMENT_FLAG(Num, Val) Val = 1ull << Num,
+#define ROOT_ELEMENT_FLAG(Num, Val) Val = Num,
 enum class RootElementFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = 1ull << Num,
+#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = Num,
 enum class RootDescriptorFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = 1ull << Num,
+#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = Num,
 enum class DescriptorRangeFlag : uint32_t {
 #include "DXContainerConstants.def"
 };

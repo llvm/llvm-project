@@ -59,20 +59,44 @@ define <2 x double> @test_v2f64_blend_movsd_optsize(<2 x double> %a0, <2 x doubl
   ret <2 x double> %r
 }
 
-define <2 x double> @test_v2f64_blend_movsd_load(<2 x double> %a0, ptr %p1, <2 x double> %a2) {
+define <2 x double> @test_v2f64_blend_movsd_load(ptr %p0, <2 x double> %a1, <2 x double> %a2) {
 ; SSE2-LABEL: test_v2f64_blend_movsd_load:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movlpd {{.*#+}} xmm0 = mem[0],xmm0[1]
+; SSE2-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[0],mem[1]
 ; SSE2-NEXT:    addpd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: test_v2f64_blend_movsd_load:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    blendpd {{.*#+}} xmm0 = mem[0],xmm0[1]
+; SSE4-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
 ; SSE4-NEXT:    addpd %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2f64_blend_movsd_load:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
+; AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %a0 = load <2 x double>, ptr %p0
+  %s = shufflevector <2 x double> %a0, <2 x double> %a1, <2 x i32> <i32 2, i32 1>
+  %r = fadd <2 x double> %s, %a2
+  ret <2 x double> %r
+}
+
+define <2 x double> @test_v2f64_blend_movsd_load_commute(<2 x double> %a0, ptr %p1, <2 x double> %a2) {
+; SSE2-LABEL: test_v2f64_blend_movsd_load_commute:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movlpd {{.*#+}} xmm0 = mem[0],xmm0[1]
+; SSE2-NEXT:    addpd %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_v2f64_blend_movsd_load_commute:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    blendpd {{.*#+}} xmm0 = mem[0],xmm0[1]
+; SSE4-NEXT:    addpd %xmm1, %xmm0
+; SSE4-NEXT:    retq
+;
+; AVX-LABEL: test_v2f64_blend_movsd_load_commute:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = mem[0],xmm0[1]
 ; AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
@@ -178,26 +202,56 @@ define <2 x i64> @test_v2i64_blend_movsd_optsize(<2 x i64> %a0, <2 x i64> %a1, <
   ret <2 x i64> %r
 }
 
-define <2 x i64> @test_v2i64_blend_movsd_load(<2 x i64> %a0, ptr %p1, <2 x i64> %a2) {
+define <2 x i64> @test_v2i64_blend_movsd_load(ptr %p0, <2 x i64> %a1, <2 x i64> %a2) {
 ; SSE2-LABEL: test_v2i64_blend_movsd_load:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; SSE2-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[0],mem[1]
 ; SSE2-NEXT:    paddq %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: test_v2i64_blend_movsd_load:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = mem[0,1,2,3],xmm0[4,5,6,7]
+; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],mem[4,5,6,7]
 ; SSE4-NEXT:    paddq %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v2i64_blend_movsd_load:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = mem[0,1,2,3],xmm0[4,5,6,7]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],mem[4,5,6,7]
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_v2i64_blend_movsd_load:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %a0 = load <2 x i64>, ptr %p0
+  %s = shufflevector <2 x i64> %a0, <2 x i64> %a1, <2 x i32> <i32 2, i32 1>
+  %r = add <2 x i64> %s, %a2
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @test_v2i64_blend_movsd_load_commute(<2 x i64> %a0, ptr %p1, <2 x i64> %a2) {
+; SSE2-LABEL: test_v2i64_blend_movsd_load_commute:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; SSE2-NEXT:    paddq %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_v2i64_blend_movsd_load_commute:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = mem[0,1,2,3],xmm0[4,5,6,7]
+; SSE4-NEXT:    paddq %xmm1, %xmm0
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: test_v2i64_blend_movsd_load_commute:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = mem[0,1,2,3],xmm0[4,5,6,7]
+; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_v2i64_blend_movsd_load_commute:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
@@ -338,21 +392,47 @@ define <4 x float> @test_v4f32_blend_movsd_optsize(<4 x float> %a0, <4 x float> 
   ret <4 x float> %r
 }
 
-define <4 x float> @test_v4f32_blend_movss_load(<4 x float> %a0, ptr %p1, <4 x float> %a2) {
+define <4 x float> @test_v4f32_blend_movss_load(ptr %p0, <4 x float> %a1, <4 x float> %a2) {
 ; SSE2-LABEL: test_v4f32_blend_movss_load:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps (%rdi), %xmm2
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
+; SSE2-NEXT:    addps %xmm1, %xmm2
+; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_v4f32_blend_movss_load:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],mem[1,2,3]
+; SSE4-NEXT:    addps %xmm1, %xmm0
+; SSE4-NEXT:    retq
+;
+; AVX-LABEL: test_v4f32_blend_movss_load:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],mem[1,2,3]
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %a0 = load <4 x float>, ptr %p0
+  %s = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+  %r = fadd <4 x float> %s, %a2
+  ret <4 x float> %r
+}
+
+define <4 x float> @test_v4f32_blend_movss_load_commute(<4 x float> %a0, ptr %p1, <4 x float> %a2) {
+; SSE2-LABEL: test_v4f32_blend_movss_load_commute:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm2
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
 ; SSE2-NEXT:    addps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; SSE4-LABEL: test_v4f32_blend_movss_load:
+; SSE4-LABEL: test_v4f32_blend_movss_load_commute:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    blendps {{.*#+}} xmm0 = mem[0],xmm0[1,2,3]
 ; SSE4-NEXT:    addps %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
-; AVX-LABEL: test_v4f32_blend_movss_load:
+; AVX-LABEL: test_v4f32_blend_movss_load_commute:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = mem[0],xmm0[1,2,3]
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
@@ -363,20 +443,44 @@ define <4 x float> @test_v4f32_blend_movss_load(<4 x float> %a0, ptr %p1, <4 x f
   ret <4 x float> %r
 }
 
-define <4 x float> @test_v4f32_blend_movsd_load(<4 x float> %a0, ptr %p1, <4 x float> %a2) {
+define <4 x float> @test_v4f32_blend_movsd_load(ptr %p0, <4 x float> %a1, <4 x float> %a2) {
 ; SSE2-LABEL: test_v4f32_blend_movsd_load:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; SSE2-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[0],mem[1]
 ; SSE2-NEXT:    addps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: test_v4f32_blend_movsd_load:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    blendps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; SSE4-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
 ; SSE4-NEXT:    addps %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX-LABEL: test_v4f32_blend_movsd_load:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %a0 = load <4 x float>, ptr %p0
+  %s = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  %r = fadd <4 x float> %s, %a2
+  ret <4 x float> %r
+}
+
+define <4 x float> @test_v4f32_blend_movsd_load_commute(<4 x float> %a0, ptr %p1, <4 x float> %a2) {
+; SSE2-LABEL: test_v4f32_blend_movsd_load_commute:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; SSE2-NEXT:    addps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_v4f32_blend_movsd_load_commute:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    blendps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; SSE4-NEXT:    addps %xmm1, %xmm0
+; SSE4-NEXT:    retq
+;
+; AVX-LABEL: test_v4f32_blend_movsd_load_commute:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
@@ -580,27 +684,59 @@ define <4 x i32> @test_v4i32_blend_movsd_optsize(<4 x i32> %a0, <4 x i32> %a1, <
   ret <4 x i32> %r
 }
 
-define <4 x i32> @test_v4i32_blend_movss_load(<4 x i32> %a0, ptr %p1, <4 x i32> %a2) {
+define <4 x i32> @test_v4i32_blend_movss_load(ptr %p0, <4 x i32> %a1, <4 x i32> %a2) {
 ; SSE2-LABEL: test_v4i32_blend_movss_load:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps (%rdi), %xmm2
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
+; SSE2-NEXT:    paddd %xmm1, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_v4i32_blend_movss_load:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],mem[2,3,4,5,6,7]
+; SSE4-NEXT:    paddd %xmm1, %xmm0
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: test_v4i32_blend_movss_load:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],mem[2,3,4,5,6,7]
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_v4i32_blend_movss_load:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],mem[1,2,3]
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %a0 = load <4 x i32>, ptr %p0
+  %s = shufflevector <4 x i32> %a0, <4 x i32> %a1, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+  %r = add <4 x i32> %s, %a2
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @test_v4i32_blend_movss_load_commute(<4 x i32> %a0, ptr %p1, <4 x i32> %a2) {
+; SSE2-LABEL: test_v4i32_blend_movss_load_commute:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm2
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; SSE4-LABEL: test_v4i32_blend_movss_load:
+; SSE4-LABEL: test_v4i32_blend_movss_load_commute:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = mem[0,1],xmm0[2,3,4,5,6,7]
 ; SSE4-NEXT:    paddd %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
-; AVX1-LABEL: test_v4i32_blend_movss_load:
+; AVX1-LABEL: test_v4i32_blend_movss_load_commute:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = mem[0,1],xmm0[2,3,4,5,6,7]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: test_v4i32_blend_movss_load:
+; AVX2-LABEL: test_v4i32_blend_movss_load_commute:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = mem[0],xmm0[1,2,3]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
@@ -611,26 +747,56 @@ define <4 x i32> @test_v4i32_blend_movss_load(<4 x i32> %a0, ptr %p1, <4 x i32> 
   ret <4 x i32> %r
 }
 
-define <4 x i32> @test_v4i32_blend_movsd_load(<4 x i32> %a0, ptr %p1, <4 x i32> %a2) {
+define <4 x i32> @test_v4i32_blend_movsd_load(ptr %p0, <4 x i32> %a1, <4 x i32> %a2) {
 ; SSE2-LABEL: test_v4i32_blend_movsd_load:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; SSE2-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[0],mem[1]
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: test_v4i32_blend_movsd_load:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = mem[0,1,2,3],xmm0[4,5,6,7]
+; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],mem[4,5,6,7]
 ; SSE4-NEXT:    paddd %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v4i32_blend_movsd_load:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = mem[0,1,2,3],xmm0[4,5,6,7]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],mem[4,5,6,7]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_v4i32_blend_movsd_load:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %a0 = load <4 x i32>, ptr %p0
+  %s = shufflevector <4 x i32> %a0, <4 x i32> %a1, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  %r = add <4 x i32> %s, %a2
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @test_v4i32_blend_movsd_load_commute(<4 x i32> %a0, ptr %p1, <4 x i32> %a2) {
+; SSE2-LABEL: test_v4i32_blend_movsd_load_commute:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_v4i32_blend_movsd_load_commute:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = mem[0,1,2,3],xmm0[4,5,6,7]
+; SSE4-NEXT:    paddd %xmm1, %xmm0
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: test_v4i32_blend_movsd_load_commute:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = mem[0,1,2,3],xmm0[4,5,6,7]
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_v4i32_blend_movsd_load_commute:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0

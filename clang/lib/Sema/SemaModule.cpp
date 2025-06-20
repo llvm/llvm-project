@@ -136,6 +136,7 @@ makeTransitiveImportsVisible(ASTContext &Ctx, VisibleModuleSet &VisibleModules,
          "modules only.");
 
   llvm::SmallVector<Module *, 4> Worklist;
+  llvm::SmallSet<Module *, 16> Visited;
   Worklist.push_back(Imported);
 
   Module *FoundPrimaryModuleInterface =
@@ -144,18 +145,22 @@ makeTransitiveImportsVisible(ASTContext &Ctx, VisibleModuleSet &VisibleModules,
   while (!Worklist.empty()) {
     Module *Importing = Worklist.pop_back_val();
 
-    if (VisibleModules.isVisible(Importing))
+    if (Visited.count(Importing))
       continue;
+    Visited.insert(Importing);
 
     // FIXME: The ImportLoc here is not meaningful. It may be problematic if we
     // use the sourcelocation loaded from the visible modules.
     VisibleModules.setVisible(Importing, ImportLoc);
 
     if (isImportingModuleUnitFromSameModule(Ctx, Importing, CurrentModule,
-                                            FoundPrimaryModuleInterface))
+                                            FoundPrimaryModuleInterface)) {
       for (Module *TransImported : Importing->Imports)
-        if (!VisibleModules.isVisible(TransImported))
-          Worklist.push_back(TransImported);
+        Worklist.push_back(TransImported);
+
+      for (auto [Exports, _] : Importing->Exports)
+        Worklist.push_back(Exports);
+    }
   }
 }
 

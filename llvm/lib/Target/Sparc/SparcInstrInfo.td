@@ -24,7 +24,8 @@ include "SparcInstrFormats.td"
 def Is32Bit : Predicate<"!Subtarget->is64Bit()">;
 
 // True when generating 64-bit code. This also implies HasV9.
-def Is64Bit : Predicate<"Subtarget->is64Bit()">;
+def Is64Bit : Predicate<"Subtarget->is64Bit()">,
+              AssemblerPredicate<(all_of FeatureV9)>;
 
 def UseSoftMulDiv : Predicate<"Subtarget->useSoftMulDiv()">,
               AssemblerPredicate<(all_of FeatureSoftMulDiv)>;

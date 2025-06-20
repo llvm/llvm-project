@@ -645,8 +645,10 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = RISCV::fixup_riscv_qc_e_32;
       RelaxCandidate = true;
     } else if (MIFrm == RISCVII::InstFormatQC_EJ) {
-      FixupKind = RISCV::fixup_riscv_qc_e_jump_plt;
+      FixupKind = RISCV::fixup_riscv_qc_e_call_plt;
       RelaxCandidate = true;
+    } else if (MIFrm == RISCVII::InstFormatNDS_BRANCH_10) {
+      FixupKind = RISCV::fixup_riscv_nds_branch_10;
     }
   }
 

@@ -858,6 +858,16 @@ print *, [(j,j=1,10)]
   warning since such values may have become defined by the time the nested
   expression's value is required.
 
+* Intrinsic assignment of arrays is defined elementally, and intrinsic
+  assignment of derived type components is defined componentwise.
+  However, when intrinsic assignment takes place for an array of derived
+  type, the order of the loop nesting is not defined.
+  Some compilers will loop over the elements, assigning all of the components
+  of each element before proceeding to the next element.
+  This compiler loops over all of the components, and assigns all of
+  the elements for each component before proceeding to the next component.
+  A program using defined assignment might be able to detect the difference.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the

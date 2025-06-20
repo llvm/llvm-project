@@ -229,6 +229,8 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
   ModuleSpec module_spec;
   module_spec.GetUUID() = uuid;
   FileSpec name_filespec(name);
+  if (FileSystem::Instance().Exists(name_filespec))
+    module_spec.GetFileSpec() = name_filespec;
 
   if (uuid.IsValid()) {
     Progress progress("Locating binary", prog_str.GetString().str());

@@ -161,4 +161,15 @@ std::vector<protocol::Thread> GetThreads(lldb::SBProcess process,
   return threads;
 }
 
+protocol::ExceptionBreakpointsFilter
+CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
+  protocol::ExceptionBreakpointsFilter filter;
+  filter.filter = bp.GetFilter();
+  filter.label = bp.GetLabel();
+  filter.description = bp.GetLabel();
+  filter.defaultState = ExceptionBreakpoint::kDefaultValue;
+  filter.supportsCondition = true;
+  return filter;
+}
+
 } // namespace lldb_dap

@@ -1130,17 +1130,14 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     Instruction *NewBonusInst = BonusInst.clone();
 
-    if (!isa<DbgInfoIntrinsic>(BonusInst)) {
-      if (!NewBonusInst->getDebugLoc().isSameSourceLocation(
-              PTI->getDebugLoc())) {
-        // Unless the instruction has the same !dbg location as the original
-        // branch, drop it. When we fold the bonus instructions we want to make
-        // sure we reset their debug locations in order to avoid stepping on
-        // dead code caused by folding dead branches.
-        NewBonusInst->setDebugLoc(DebugLoc::getDropped());
-      } else if (const DebugLoc &DL = NewBonusInst->getDebugLoc()) {
-        mapAtomInstance(DL, VMap);
-      }
+    if (!NewBonusInst->getDebugLoc().isSameSourceLocation(PTI->getDebugLoc())) {
+      // Unless the instruction has the same !dbg location as the original
+      // branch, drop it. When we fold the bonus instructions we want to make
+      // sure we reset their debug locations in order to avoid stepping on
+      // dead code caused by folding dead branches.
+      NewBonusInst->setDebugLoc(DebugLoc::getDropped());
+    } else if (const DebugLoc &DL = NewBonusInst->getDebugLoc()) {
+      mapAtomInstance(DL, VMap);
     }
 
     RemapInstruction(NewBonusInst, VMap,
@@ -1157,9 +1154,6 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     auto Range = NewBonusInst->cloneDebugInfoFrom(&BonusInst);
     RemapDbgRecordRange(NewBonusInst->getModule(), Range, VMap,
                         RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-
-    if (isa<DbgInfoIntrinsic>(BonusInst))
-      continue;
 
     NewBonusInst->takeName(&BonusInst);
     BonusInst.setName(NewBonusInst->getName() + ".old");
@@ -1903,21 +1897,6 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
 
     Instruction *I1 = &*BB1ItrPair.first;
 
-    // Skip debug info if it is not identical.
-    bool AllDbgInstsAreIdentical = all_of(OtherSuccIterRange, [I1](auto &Iter) {
-      Instruction *I2 = &*Iter;
-      return I1->isIdenticalToWhenDefined(I2);
-    });
-    if (!AllDbgInstsAreIdentical) {
-      while (isa<DbgInfoIntrinsic>(I1))
-        I1 = &*++BB1ItrPair.first;
-      for (auto &SuccIter : OtherSuccIterRange) {
-        Instruction *I2 = &*SuccIter;
-        while (isa<DbgInfoIntrinsic>(I2))
-          I2 = &*++SuccIter;
-      }
-    }
-
     bool AllInstsAreIdentical = true;
     bool HasTerminator = I1->isTerminator();
     for (auto &SuccIter : OtherSuccIterRange) {
@@ -1965,49 +1944,33 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
 
     if (AllInstsAreIdentical) {
       BB1ItrPair.first++;
-      if (isa<DbgInfoIntrinsic>(I1)) {
-        // The debug location is an integral part of a debug info intrinsic
-        // and can't be separated from it or replaced.  Instead of attempting
-        // to merge locations, simply hoist both copies of the intrinsic.
-        hoistLockstepIdenticalDbgVariableRecords(TI, I1, OtherInsts);
-        // We've just hoisted DbgVariableRecords; move I1 after them (before TI)
-        // and leave any that were not hoisted behind (by calling moveBefore
-        // rather than moveBeforePreserving).
-        I1->moveBefore(TI->getIterator());
-        for (auto &SuccIter : OtherSuccIterRange) {
-          auto *I2 = &*SuccIter++;
-          assert(isa<DbgInfoIntrinsic>(I2));
-          I2->moveBefore(TI->getIterator());
+      // For a normal instruction, we just move one to right before the
+      // branch, then replace all uses of the other with the first.  Finally,
+      // we remove the now redundant second instruction.
+      hoistLockstepIdenticalDbgVariableRecords(TI, I1, OtherInsts);
+      // We've just hoisted DbgVariableRecords; move I1 after them (before TI)
+      // and leave any that were not hoisted behind (by calling moveBefore
+      // rather than moveBeforePreserving).
+      I1->moveBefore(TI->getIterator());
+      for (auto &SuccIter : OtherSuccIterRange) {
+        Instruction *I2 = &*SuccIter++;
+        assert(I2 != I1);
+        if (!I2->use_empty())
+          I2->replaceAllUsesWith(I1);
+        I1->andIRFlags(I2);
+        if (auto *CB = dyn_cast<CallBase>(I1)) {
+          bool Success = CB->tryIntersectAttributes(cast<CallBase>(I2));
+          assert(Success && "We should not be trying to hoist callbases "
+                            "with non-intersectable attributes");
+          // For NDEBUG Compile.
+          (void)Success;
         }
-      } else {
-        // For a normal instruction, we just move one to right before the
-        // branch, then replace all uses of the other with the first.  Finally,
-        // we remove the now redundant second instruction.
-        hoistLockstepIdenticalDbgVariableRecords(TI, I1, OtherInsts);
-        // We've just hoisted DbgVariableRecords; move I1 after them (before TI)
-        // and leave any that were not hoisted behind (by calling moveBefore
-        // rather than moveBeforePreserving).
-        I1->moveBefore(TI->getIterator());
-        for (auto &SuccIter : OtherSuccIterRange) {
-          Instruction *I2 = &*SuccIter++;
-          assert(I2 != I1);
-          if (!I2->use_empty())
-            I2->replaceAllUsesWith(I1);
-          I1->andIRFlags(I2);
-          if (auto *CB = dyn_cast<CallBase>(I1)) {
-            bool Success = CB->tryIntersectAttributes(cast<CallBase>(I2));
-            assert(Success && "We should not be trying to hoist callbases "
-                              "with non-intersectable attributes");
-            // For NDEBUG Compile.
-            (void)Success;
-          }
 
-          combineMetadataForCSE(I1, I2, true);
-          // I1 and I2 are being combined into a single instruction.  Its debug
-          // location is the merged locations of the original instructions.
-          I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
-          I2->eraseFromParent();
-        }
+        combineMetadataForCSE(I1, I2, true);
+        // I1 and I2 are being combined into a single instruction.  Its debug
+        // location is the merged locations of the original instructions.
+        I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
+        I2->eraseFromParent();
       }
       if (!Changed)
         NumHoistCommonCode += SuccIterPairs.size();
@@ -2297,11 +2260,8 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   SmallVector<Instruction*,4> Insts;
   for (auto *BB : Blocks) {
     Instruction *I = BB->getTerminator();
-    do {
-      I = I->getPrevNode();
-    } while (isa<DbgInfoIntrinsic>(I) && I != &BB->front());
-    if (!isa<DbgInfoIntrinsic>(I))
-      Insts.push_back(I);
+    I = I->getPrevNode();
+    Insts.push_back(I);
   }
 
   // We don't need to do any more checking here; canSinkInstructions should
@@ -3234,7 +3194,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // - All of their uses are in ThenBB.
   SmallDenseMap<Instruction *, unsigned, 4> SinkCandidateUseCounts;
 
-  SmallVector<Instruction *, 4> SpeculatedDbgIntrinsics;
+  SmallVector<Instruction *, 4> SpeculatedPseudoProbes;
 
   unsigned SpeculatedInstructions = 0;
   bool HoistLoadsStores = Options.HoistLoadsStoresWithCondFaulting;
@@ -3243,12 +3203,6 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   StoreInst *SpeculatedStore = nullptr;
   EphemeralValueTracker EphTracker;
   for (Instruction &I : reverse(drop_end(*ThenBB))) {
-    // Skip debug info.
-    if (isa<DbgInfoIntrinsic>(I)) {
-      SpeculatedDbgIntrinsics.push_back(&I);
-      continue;
-    }
-
     // Skip pseudo probes. The consequence is we lose track of the branch
     // probability for ThenBB, which is fine since the optimization here takes
     // place regardless of the branch probability.
@@ -3257,7 +3211,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
       // the samples collected on the non-conditional path are counted towards
       // the conditional path. We leave it for the counts inference algorithm to
       // figure out a proper count for an unknown probe.
-      SpeculatedDbgIntrinsics.push_back(&I);
+      SpeculatedPseudoProbes.push_back(&I);
       continue;
     }
 
@@ -3388,9 +3342,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // hoisting above.
   for (auto &I : make_early_inc_range(*ThenBB)) {
     if (!SpeculatedStoreValue || &I != SpeculatedStore) {
-      // Don't update the DILocation of dbg.assign intrinsics.
-      if (!isa<DbgAssignIntrinsic>(&I))
-        I.setDebugLoc(DebugLoc::getDropped());
+      I.setDebugLoc(DebugLoc::getDropped());
     }
     I.dropUBImplyingAttrsAndMetadata();
 
@@ -3402,9 +3354,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   }
 
   // Hoist the instructions.
-  // In "RemoveDIs" non-instr debug-info mode, drop DbgVariableRecords attached
-  // to these instructions, in the same way that dbg.value intrinsics are
-  // dropped at the end of this block.
+  // Drop DbgVariableRecords attached to these instructions.
   for (auto &It : *ThenBB)
     for (DbgRecord &DR : make_early_inc_range(It.getDbgRecordRange()))
       // Drop all records except assign-kind DbgVariableRecords (dbg.assign
@@ -3442,15 +3392,9 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     PN.setIncomingValue(ThenI, V);
   }
 
-  // Remove speculated dbg intrinsics.
-  // FIXME: Is it possible to do this in a more elegant way? Moving/merging the
-  // dbg value for the different flows and inserting it after the select.
-  for (Instruction *I : SpeculatedDbgIntrinsics) {
-    // We still want to know that an assignment took place so don't remove
-    // dbg.assign intrinsics.
-    if (!isa<DbgAssignIntrinsic>(I))
-      I->eraseFromParent();
-  }
+  // Remove speculated pseudo probes.
+  for (Instruction *I : SpeculatedPseudoProbes)
+    I->eraseFromParent();
 
   ++NumSpeculations;
   return true;
@@ -4162,8 +4106,8 @@ bool llvm::foldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     // Don't check the branch condition comparison itself.
     if (&I == Cond)
       continue;
-    // Ignore dbg intrinsics, and the terminator.
-    if (isa<DbgInfoIntrinsic>(I) || isa<BranchInst>(I))
+    // Ignore the terminator.
+    if (isa<BranchInst>(I))
       continue;
     // I must be safe to execute unconditionally.
     if (!isSafeToSpeculativelyExecute(&I))
@@ -7762,8 +7706,7 @@ static bool tryToMergeLandingPad(LandingPadInst *LPad, BranchInst *BI,
     LandingPadInst *LPad2 = dyn_cast<LandingPadInst>(I);
     if (!LPad2 || !LPad2->isIdenticalTo(LPad))
       continue;
-    for (++I; isa<DbgInfoIntrinsic>(I); ++I)
-      ;
+    ++I;
     BranchInst *BI2 = dyn_cast<BranchInst>(I);
     if (!BI2 || !BI2->isIdenticalTo(BI))
       continue;
@@ -7783,12 +7726,6 @@ static bool tryToMergeLandingPad(LandingPadInst *LPad, BranchInst *BI,
         Updates.push_back({DominatorTree::Delete, Pred, BB});
       }
     }
-
-    // The debug info in OtherPred doesn't cover the merged control flow that
-    // used to go through BB.  We need to delete it or update it.
-    for (Instruction &Inst : llvm::make_early_inc_range(*OtherPred))
-      if (isa<DbgInfoIntrinsic>(Inst))
-        Inst.eraseFromParent();
 
     SmallSetVector<BasicBlock *, 16> UniqueSuccs(succ_begin(BB), succ_end(BB));
     for (BasicBlock *Succ : UniqueSuccs) {
@@ -7837,8 +7774,7 @@ bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
   // constant, try to simplify the block.
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(I))
     if (ICI->isEquality() && isa<ConstantInt>(ICI->getOperand(1))) {
-      for (++I; isa<DbgInfoIntrinsic>(I); ++I)
-        ;
+      ++I;
       if (I->isTerminator() &&
           tryToSimplifyUncondBranchWithICmpInIt(ICI, Builder))
         return true;
@@ -7847,8 +7783,7 @@ bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
   // See if we can merge an empty landing pad block with another which is
   // equivalent.
   if (LandingPadInst *LPad = dyn_cast<LandingPadInst>(I)) {
-    for (++I; isa<DbgInfoIntrinsic>(I); ++I)
-      ;
+    ++I;
     if (I->isTerminator() && tryToMergeLandingPad(LPad, BI, BB, DTU))
       return true;
   }

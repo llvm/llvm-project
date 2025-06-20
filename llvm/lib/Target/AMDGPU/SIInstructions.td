@@ -1390,6 +1390,55 @@ def : GCNPat<
   (S_ADD_U64_PSEUDO $src0, $src1)>;
 }
 
+//===----------------------------------------------------------------------===//
+// FP min/max patterns
+//===----------------------------------------------------------------------===//
+
+
+class FPBinOpPat <SDPatternOperator node, ValueType vt, Instruction inst>
+  : GCNPat <(vt (node (vt (VOP3Mods vt:$src0, i32:$src0_mods)),
+                      (vt (VOP3Mods vt:$src1, i32:$src1_mods)))),
+    (inst $src0_mods, $src0, $src1_mods, $src1, DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
+class FPPkBinOpPat <SDPatternOperator node, ValueType vt, Instruction inst>
+  : GCNPat <(vt (node (VOP3PMods v2f16:$src0, i32:$src0_mods),
+                      (VOP3PMods v2f16:$src1, i32:$src1_mods))),
+  (inst $src0_mods, $src0, $src1_mods, $src1, DSTCLAMP.NONE)
+>;
+
+/// With IEEE=0, signalingness is ignored and the non-nan input will
+/// be directly returned.
+let OtherPredicates = [IEEEModeDisabled] in {
+  def : FPBinOpPat<fminimumnum, f32, V_MIN_F32_e64>;
+  def : FPBinOpPat<fmaximumnum, f32, V_MAX_F32_e64>;
+  def : FPBinOpPat<fminimumnum, f64, V_MIN_F64_e64>;
+  def : FPBinOpPat<fmaximumnum, f64, V_MAX_F64_e64>;
+
+  let SubtargetPredicate = Has16BitInsts,
+      True16Predicate = NotHasTrue16BitInsts in {
+    def : FPBinOpPat<fminimumnum, f16, V_MIN_F16_e64>;
+    def : FPBinOpPat<fmaximumnum, f16, V_MAX_F16_e64>;
+  }
+
+  let SubtargetPredicate = Has16BitInsts,
+      True16Predicate = UseRealTrue16Insts in {
+    def : FPBinOpPat<fminimumnum, f16, V_MIN_F16_t16_e64>;
+    def : FPBinOpPat<fmaximumnum, f16, V_MAX_F16_t16_e64>;
+  }
+
+  let SubtargetPredicate = Has16BitInsts,
+      True16Predicate = UseFakeTrue16Insts in {
+    def : FPBinOpPat<fminimumnum, f16, V_MIN_F16_fake16_e64>;
+    def : FPBinOpPat<fmaximumnum, f16, V_MAX_F16_fake16_e64>;
+  }
+
+  let SubtargetPredicate = HasVOP3PInsts in {
+    def : FPPkBinOpPat<fminimumnum, v2f16, V_PK_MIN_F16>;
+    def : FPPkBinOpPat<fmaximumnum, v2f16, V_PK_MAX_F16>;
+  }
+}
+
 /********** ============================================ **********/
 /********** Extraction, Insertion, Building and Casting  **********/
 /********** ============================================ **********/
@@ -2574,6 +2623,8 @@ def : GCNPat<
   (i32 (DivergentSextInreg<i1> i32:$src)),
   (V_BFE_I32_e64 i32:$src, (i32 0), (i32 1))>;
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (i16 (DivergentSextInreg<i1> i16:$src)),
   (V_BFE_I32_e64 $src, (i32 0), (i32 1))
@@ -2583,6 +2634,23 @@ def : GCNPat <
   (i16 (DivergentSextInreg<i8> i16:$src)),
   (V_BFE_I32_e64 $src, (i32 0), (i32 8))
 >;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (i16 (DivergentSextInreg<i1> i16:$src)),
+  (V_BFE_I32_e64
+   (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+   (i32 0), (i32 1))
+>;
+
+def : GCNPat <
+  (i16 (DivergentSextInreg<i8> i16:$src)),
+  (V_BFE_I32_e64
+   (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+   (i32 0), (i32 8))
+>;
+}
 
 def : GCNPat<
   (i32 (DivergentSextInreg<i8> i32:$src)),

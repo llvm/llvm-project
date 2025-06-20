@@ -13,6 +13,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_UTILS_H
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_UTILS_H
 
+#include "ExceptionBreakpoint.h"
 #include "Protocol/ProtocolTypes.h"
 
 #include "lldb/API/SBAddress.h"
@@ -73,6 +74,18 @@ protocol::Thread CreateThread(lldb::SBThread &thread, lldb::SBFormat &format);
 /// Returns the set of threads associated with the process.
 std::vector<protocol::Thread> GetThreads(lldb::SBProcess process,
                                          lldb::SBFormat &format);
+
+/// Create a "ExceptionBreakpointsFilter" JSON object as described in
+/// the debug adapter definition.
+///
+/// \param[in] bp
+///     The exception breakpoint object to use
+///
+/// \return
+///     A "ExceptionBreakpointsFilter" JSON object with that follows
+///     the formal JSON definition outlined by Microsoft.
+protocol::ExceptionBreakpointsFilter
+CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 
 } // namespace lldb_dap
 

@@ -1664,7 +1664,7 @@ ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
   if (!ToUnderlyingOrErr)
     return ToUnderlyingOrErr.takeError();
   return Importer.getToContext().getTemplateSpecializationType(
-      *ToTemplateOrErr, ToTemplateArgs, std::nullopt, *ToUnderlyingOrErr);
+      *ToTemplateOrErr, ToTemplateArgs, {}, *ToUnderlyingOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitElaboratedType(const ElaboratedType *T) {
@@ -4452,7 +4452,7 @@ ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
   }
 
   SmallVector<TemplateParameterList *, 1> ToTPLists(D->NumTPLists);
-  auto **FromTPLists = D->getTrailingObjects<TemplateParameterList *>();
+  auto **FromTPLists = D->getTrailingObjects();
   for (unsigned I = 0; I < D->NumTPLists; I++) {
     if (auto ListOrErr = import(FromTPLists[I]))
       ToTPLists[I] = *ListOrErr;

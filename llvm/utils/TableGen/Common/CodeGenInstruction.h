@@ -226,7 +226,7 @@ public:
 
   /// AsmString - The format string used to emit a .s file for the
   /// instruction.
-  std::string AsmString;
+  StringRef AsmString;
 
   /// Operands - This is information about the (ins) and (outs) list specified
   /// to the instruction.

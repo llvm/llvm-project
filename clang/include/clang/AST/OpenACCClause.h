@@ -307,7 +307,7 @@ public:
   }
 
   ArrayRef<DeviceTypeArgument> getArchitectures() const {
-    return getTrailingObjects<DeviceTypeArgument>(NumArchs);
+    return getTrailingObjects(NumArchs);
   }
 
   static OpenACCDeviceTypeClause *

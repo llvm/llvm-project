@@ -348,8 +348,15 @@ void DILParser::BailOut(const std::string &error, uint32_t loc,
 //    ? Integer constant ?
 //
 std::optional<int64_t> DILParser::ParseIntegerConstant() {
-  auto spelling = CurToken().GetSpelling();
-  llvm::StringRef spelling_ref = spelling;
+  std::string number_spelling;
+  if (CurToken().GetKind() == Token::minus) {
+    // StringRef::getAsInteger<>() can parse negative numbers.
+    // FIXME: Remove this once unary minus operator is added.
+    number_spelling = "-";
+    m_dil_lexer.Advance();
+  }
+  number_spelling.append(CurToken().GetSpelling());
+  llvm::StringRef spelling_ref = number_spelling;
   int64_t raw_value;
   if (!spelling_ref.getAsInteger<int64_t>(0, raw_value)) {
     m_dil_lexer.Advance();

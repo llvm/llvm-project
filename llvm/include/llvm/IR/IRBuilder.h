@@ -965,11 +965,13 @@ public:
   }
 
   /// Create an expression which evaluates to the number of elements in \p EC
-  /// at runtime.
+  /// at runtime. This can result in poison if type \p Ty is not big enough to
+  /// hold the value.
   LLVM_ABI Value *CreateElementCount(Type *Ty, ElementCount EC);
 
   /// Create an expression which evaluates to the number of units in \p Size
-  /// at runtime.  This works for both units of bits and bytes.
+  /// at runtime. This works for both units of bits and bytes. This can result
+  /// in poison if type \p Ty is not big enough to hold the value.
   LLVM_ABI Value *CreateTypeSize(Type *Ty, TypeSize Size);
 
   /// Creates a vector of type \p DstType with the linear sequence <0, 1, ...>

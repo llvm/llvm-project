@@ -531,6 +531,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     ``gfx1250``                 ``amdgcn``   APU                     - Architected                   *TBA*
+                                                                        flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      =========== =============== ============ ===== ================= =============== =============== ======================
 
 Generic processors allow execution of a single code object on any of the processors that
@@ -1402,6 +1409,10 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    performs subtraction only if the memory value is greater than or
                                                    equal to the data value.
 
+  llvm.amdgcn.s.barrier.signal.isfirst             Provides access to the s_barrier_signal_first instruction;
+                                                   additionally ensures that the result value is valid even when the
+                                                   intrinsic is used from a wave that is not running in a workgroup.
+
   llvm.amdgcn.s.getpc                              Provides access to the s_getpc_b64 instruction, but with the return value
                                                    sign-extended from the width of the underlying PC hardware register even on
                                                    processors where the s_getpc_b64 instruction returns a zero-extended value.
@@ -2261,7 +2272,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1101``          0x046      ``gfx1101``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1102``          0x047      ``gfx1102``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1200``          0x048      ``gfx1200``
-     *reserved*                                 0x049      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1250``          0x049      ``gfx1250``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1151``          0x04a      ``gfx1151``
      *reserved*                                 0x04b      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX942``           0x04c      ``gfx942``
@@ -2709,7 +2720,8 @@ The following relocation types are supported:
 the ``mesa3d`` OS, which does not support ``R_AMDGPU_ABS64``.
 
 There is no current OS loader support for 32-bit programs and so
-``R_AMDGPU_ABS32`` is not used.
+``R_AMDGPU_ABS32`` is only generated for static relocations, for example to
+implement some DWARF32 forms.
 
 .. _amdgpu-loaded-code-object-path-uniform-resource-identifier:
 

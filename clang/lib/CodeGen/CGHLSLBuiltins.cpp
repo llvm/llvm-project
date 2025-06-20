@@ -12,6 +12,7 @@
 
 #include "CGBuiltin.h"
 #include "CGHLSLRuntime.h"
+#include "CodeGenFunction.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -212,6 +213,44 @@ static Intrinsic::ID getWaveActiveMaxIntrinsic(llvm::Triple::ArchType Arch,
     llvm_unreachable("Intrinsic WaveActiveMax"
                      " not supported by target architecture");
   }
+}
+
+// Returns the mangled name for a builtin function that the SPIR-V backend
+// will expand into a spec Constant.
+static std::string getSpecConstantFunctionName(clang::QualType SpecConstantType,
+                                               ASTContext &Context) {
+  // The parameter types for our conceptual intrinsic function.
+  QualType ClangParamTypes[] = {Context.IntTy, SpecConstantType};
+
+  // Create a temporary FunctionDecl for the builtin fuction. It won't be
+  // added to the AST.
+  FunctionProtoType::ExtProtoInfo EPI;
+  QualType FnType =
+      Context.getFunctionType(SpecConstantType, ClangParamTypes, EPI);
+  DeclarationName FuncName = &Context.Idents.get("__spirv_SpecConstant");
+  FunctionDecl *FnDeclForMangling = FunctionDecl::Create(
+      Context, Context.getTranslationUnitDecl(), SourceLocation(),
+      SourceLocation(), FuncName, FnType, /*TSI=*/nullptr, SC_Extern);
+
+  // Attach the created parameter declarations to the function declaration.
+  SmallVector<ParmVarDecl *, 2> ParamDecls;
+  for (QualType ParamType : ClangParamTypes) {
+    ParmVarDecl *PD = ParmVarDecl::Create(
+        Context, FnDeclForMangling, SourceLocation(), SourceLocation(),
+        /*IdentifierInfo*/ nullptr, ParamType, /*TSI*/ nullptr, SC_None,
+        /*DefaultArg*/ nullptr);
+    ParamDecls.push_back(PD);
+  }
+  FnDeclForMangling->setParams(ParamDecls);
+
+  // Get the mangled name.
+  std::string Name;
+  llvm::raw_string_ostream MangledNameStream(Name);
+  std::unique_ptr<MangleContext> Mangler(Context.createMangleContext());
+  Mangler->mangleName(FnDeclForMangling, MangledNameStream);
+  MangledNameStream.flush();
+
+  return Name;
 }
 
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
@@ -773,6 +812,42 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitRuntimeCall(
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
   }
+  case Builtin::BI__builtin_get_spirv_spec_constant_bool:
+  case Builtin::BI__builtin_get_spirv_spec_constant_short:
+  case Builtin::BI__builtin_get_spirv_spec_constant_ushort:
+  case Builtin::BI__builtin_get_spirv_spec_constant_int:
+  case Builtin::BI__builtin_get_spirv_spec_constant_uint:
+  case Builtin::BI__builtin_get_spirv_spec_constant_longlong:
+  case Builtin::BI__builtin_get_spirv_spec_constant_ulonglong:
+  case Builtin::BI__builtin_get_spirv_spec_constant_half:
+  case Builtin::BI__builtin_get_spirv_spec_constant_float:
+  case Builtin::BI__builtin_get_spirv_spec_constant_double: {
+    llvm::Function *SpecConstantFn = getSpecConstantFunction(E->getType());
+    llvm::Value *SpecId = EmitScalarExpr(E->getArg(0));
+    llvm::Value *DefaultVal = EmitScalarExpr(E->getArg(1));
+    llvm::Value *Args[] = {SpecId, DefaultVal};
+    return Builder.CreateCall(SpecConstantFn, Args);
+  }
   }
   return nullptr;
+}
+
+llvm::Function *clang::CodeGen::CodeGenFunction::getSpecConstantFunction(
+    const clang::QualType &SpecConstantType) {
+
+  // Find or create the declaration for the function.
+  llvm::Module *M = &CGM.getModule();
+  std::string MangledName =
+      getSpecConstantFunctionName(SpecConstantType, getContext());
+  llvm::Function *SpecConstantFn = M->getFunction(MangledName);
+
+  if (!SpecConstantFn) {
+    llvm::Type *IntType = ConvertType(getContext().IntTy);
+    llvm::Type *RetTy = ConvertType(SpecConstantType);
+    llvm::Type *ArgTypes[] = {IntType, RetTy};
+    llvm::FunctionType *FnTy = llvm::FunctionType::get(RetTy, ArgTypes, false);
+    SpecConstantFn = llvm::Function::Create(
+        FnTy, llvm::GlobalValue::ExternalLinkage, MangledName, M);
+  }
+  return SpecConstantFn;
 }

@@ -17,10 +17,10 @@ program OmpAtomic
 !$omp atomic
    x = 1 + x
 !$omp atomic
-   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level + operator
+   !ERROR: The atomic variable x should appear as an argument of the top-level + operator
    x = y + 1
 !$omp atomic
-   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level + operator
+   !ERROR: The atomic variable x should appear as an argument of the top-level + operator
    x = 1 + y
 
 !$omp atomic
@@ -28,10 +28,10 @@ program OmpAtomic
 !$omp atomic
    x = 1 - x
 !$omp atomic
-   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level - operator
+   !ERROR: The atomic variable x should appear as an argument of the top-level - operator
    x = y - 1
 !$omp atomic
-   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level - operator
+   !ERROR: The atomic variable x should appear as an argument of the top-level - operator
    x = 1 - y
 
 !$omp atomic
@@ -50,10 +50,10 @@ program OmpAtomic
 !$omp atomic
    x = 1/x
 !$omp atomic
-   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
+   !ERROR: The atomic variable x should appear as an argument of the top-level / operator
    x = y/1
 !$omp atomic
-   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
+   !ERROR: The atomic variable x should appear as an argument of the top-level / operator
    x = 1/y
 
 !$omp atomic
@@ -61,7 +61,7 @@ program OmpAtomic
 !$omp atomic
    m = n .AND. m
 !$omp atomic 
-   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level AND operator
+   !ERROR: The atomic variable m should appear as an argument of the top-level AND operator
    m = n .AND. l
 
 !$omp atomic
@@ -69,7 +69,7 @@ program OmpAtomic
 !$omp atomic
    m = n .OR. m
 !$omp atomic 
-   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level OR operator
+   !ERROR: The atomic variable m should appear as an argument of the top-level OR operator
    m = n .OR. l
 
 !$omp atomic
@@ -77,7 +77,7 @@ program OmpAtomic
 !$omp atomic
    m = n .EQV. m
 !$omp atomic
-   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level EQV operator
+   !ERROR: The atomic variable m should appear as an argument of the top-level EQV operator
    m = n .EQV. l
 
 !$omp atomic
@@ -85,7 +85,7 @@ program OmpAtomic
 !$omp atomic
    m = n .NEQV. m
 !$omp atomic
-   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level NEQV/EOR operator
+   !ERROR: The atomic variable m should appear as an argument of the top-level NEQV/EOR operator
    m = n .NEQV. l
 
 !$omp atomic update
@@ -93,10 +93,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1 + x
 !$omp atomic update
-   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level + operator
+   !ERROR: The atomic variable x should appear as an argument of the top-level + operator
    x = y + 1
 !$omp atomic update
-   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level + operator
+   !ERROR: The atomic variable x should appear as an argument of the top-level + operator
    x = 1 + y
 
 !$omp atomic update
@@ -104,10 +104,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1 - x
 !$omp atomic update
-   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level - operator
+   !ERROR: The atomic variable x should appear as an argument of the top-level - operator
    x = y - 1
 !$omp atomic update
-   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level - operator
+   !ERROR: The atomic variable x should appear as an argument of the top-level - operator
    x = 1 - y
 
 !$omp atomic update
@@ -126,10 +126,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1/x
 !$omp atomic update
-   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
+   !ERROR: The atomic variable x should appear as an argument of the top-level / operator
    x = y/1
 !$omp atomic update
-   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
+   !ERROR: The atomic variable x should appear as an argument of the top-level / operator
    x = 1/y
 
 !$omp atomic update
@@ -137,7 +137,7 @@ program OmpAtomic
 !$omp atomic update
    m = n .AND. m
 !$omp atomic update
-   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level AND operator
+   !ERROR: The atomic variable m should appear as an argument of the top-level AND operator
    m = n .AND. l
 
 !$omp atomic update
@@ -145,7 +145,7 @@ program OmpAtomic
 !$omp atomic update
    m = n .OR. m
 !$omp atomic update
-   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level OR operator
+   !ERROR: The atomic variable m should appear as an argument of the top-level OR operator
    m = n .OR. l
 
 !$omp atomic update
@@ -153,7 +153,7 @@ program OmpAtomic
 !$omp atomic update
    m = n .EQV. m
 !$omp atomic update
-   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level EQV operator
+   !ERROR: The atomic variable m should appear as an argument of the top-level EQV operator
    m = n .EQV. l
 
 !$omp atomic update
@@ -161,7 +161,7 @@ program OmpAtomic
 !$omp atomic update
    m = n .NEQV. m
 !$omp atomic update
-   !ERROR: The atomic variable m should occur exactly once among the arguments of the top-level NEQV/EOR operator
+   !ERROR: The atomic variable m should appear as an argument of the top-level NEQV/EOR operator
    m = n .NEQV. l
 
 end program OmpAtomic
@@ -184,27 +184,30 @@ subroutine more_invalid_atomic_update_stmts()
         x = 1    
 
     !$omp atomic update
-    !ERROR: Within atomic operation a and a*b access the same storage
+    !ERROR: The atomic variable a cannot be a proper subexpression of an argument (here: a*b) in the update operation
         a = a * b + a
 
     !$omp atomic
-    !ERROR: The atomic variable a should occur exactly once among the arguments of the top-level * operator
+    !ERROR: The atomic variable a cannot be a proper subexpression of an argument (here: (a+9_4)) in the update operation
+    !ERROR: The atomic variable a should appear as an argument of the top-level * operator
         a = b * (a + 9)
 
     !$omp atomic update
-    !ERROR: Within atomic operation a and (a+b) access the same storage
+    !ERROR: The atomic variable a cannot be a proper subexpression of an argument (here: (a+b)) in the update operation
         a = a * (a + b)
 
     !$omp atomic
-    !ERROR: Within atomic operation a and (b+a) access the same storage
+    !ERROR: The atomic variable a cannot be a proper subexpression of an argument (here: (b+a)) in the update operation
         a = (b + a) * a
 
     !$omp atomic
-    !ERROR: The atomic variable a should occur exactly once among the arguments of the top-level + operator
+    !ERROR: The atomic variable a cannot be a proper subexpression of an argument (here: a*b) in the update operation
+    !ERROR: The atomic variable a should appear as an argument of the top-level + operator
         a = a * b + c
 
     !$omp atomic update
-    !ERROR: The atomic variable a should occur exactly once among the arguments of the top-level + operator
+    !ERROR: The atomic variable a cannot be a proper subexpression of an argument (here: a+b) in the update operation
+    !ERROR: The atomic variable a should appear as an argument of the top-level + operator
         a = a + b + c
 
     !$omp atomic
@@ -219,11 +222,12 @@ subroutine more_invalid_atomic_update_stmts()
 
     !$omp atomic update
     !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches scalar REAL(4) and rank 1 array of REAL(4)
-    !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
+    !ERROR: The atomic variable x cannot be a proper subexpression of an argument (here: x*y) in the update operation
+    !ERROR: The atomic variable x should appear as an argument of the top-level / operator
         x = x * y / z
 
     !$omp atomic
-    !ERROR: The atomic variable p%m should occur exactly once among the arguments of the top-level + operator
+    !ERROR: The atomic variable p%m should appear as an argument of the top-level + operator
         p%m = x + y
 
     !$omp atomic update
