@@ -2703,9 +2703,8 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
   }
 
   std::array<VPValue *, 2> MulOps = {Op0, Op1};
-  auto *Mul = new VPWidenRecipe(
-      Instruction::Mul, ArrayRef(MulOps), MulAcc->hasNoUnsignedWrap(),
-      MulAcc->hasNoSignedWrap(), MulAcc->getDebugLoc());
+  auto *Mul = new VPWidenRecipe(Instruction::Mul, ArrayRef(MulOps), *MulAcc,
+                                MulAcc->getDebugLoc());
   Mul->insertBefore(MulAcc);
 
   auto *Red = new VPReductionRecipe(

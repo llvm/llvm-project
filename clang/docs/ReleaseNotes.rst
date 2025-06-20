@@ -366,6 +366,10 @@ Modified Compiler Flags
 
 - The ``-fveclib=libmvec`` option now supports AArch64 targets (requires GLIBC 2.40 or newer).
 
+- The ``-Og`` optimization flag now sets ``-fextend-variable-liveness``,
+  reducing performance slightly while reducing the number of optimized-out
+  variables. (#GH118026)
+
 Removed Compiler Flags
 -------------------------
 
@@ -852,6 +856,7 @@ Bug Fixes to C++ Support
 - Fixed the handling of pack indexing types in the constraints of a member function redeclaration. (#GH138255)
 - Clang now correctly parses arbitrary order of ``[[]]``, ``__attribute__`` and ``alignas`` attributes for declarations (#GH133107)
 - Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
+- Fixed a function declaration mismatch that caused inconsistencies between concepts and variable template declarations. (#GH139476)
 - Clang no longer segfaults when there is a configuration mismatch between modules and their users (http://crbug.com/400353616).
 - Fix an incorrect deduction when calling an explicit object member function template through an overload set address.
 - Fixed bug in constant evaluation that would allow using the value of a

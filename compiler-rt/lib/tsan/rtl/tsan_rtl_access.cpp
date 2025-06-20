@@ -525,7 +525,7 @@ SECOND:
 void ShadowSet(RawShadow* p, RawShadow* end, RawShadow v) {
   DCHECK_LE(p, end);
   DCHECK(IsShadowMem(p));
-  DCHECK(IsShadowMem(end));
+  DCHECK(p == end || IsShadowMem(end - 1));
   UNUSED const uptr kAlign = kShadowCnt * kShadowSize;
   DCHECK_EQ(reinterpret_cast<uptr>(p) % kAlign, 0);
   DCHECK_EQ(reinterpret_cast<uptr>(end) % kAlign, 0);
@@ -669,7 +669,7 @@ void MemoryAccessRangeT(ThreadState* thr, uptr pc, uptr addr, uptr size) {
   RawShadow* shadow_mem = MemToShadow(addr);
   DPrintf2("#%d: MemoryAccessRange: @%p %p size=%d is_read=%d\n", thr->tid,
            (void*)pc, (void*)addr, (int)size, is_read);
-
+  DCHECK_NE(size, 0);
 #if SANITIZER_DEBUG
   if (!IsAppMem(addr)) {
     Printf("Access to non app mem start: %p\n", (void*)addr);

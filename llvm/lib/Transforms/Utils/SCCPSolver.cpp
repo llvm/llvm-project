@@ -764,6 +764,26 @@ public:
     FnPredicateInfo.insert({&F, std::make_unique<PredicateInfo>(F, DT, AC)});
   }
 
+  void removeSSACopies(Function &F) {
+    auto It = FnPredicateInfo.find(&F);
+    if (It == FnPredicateInfo.end())
+      return;
+
+    for (BasicBlock &BB : F) {
+      for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
+        if (It->second->getPredicateInfoFor(&Inst)) {
+          if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
+            if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
+              Value *Op = II->getOperand(0);
+              Inst.replaceAllUsesWith(Op);
+              Inst.eraseFromParent();
+            }
+          }
+        }
+      }
+    }
+  }
+
   void visitCallInst(CallInst &I) { visitCallBase(I); }
 
   bool markBlockExecutable(BasicBlock *BB);
@@ -2166,6 +2186,10 @@ SCCPSolver::~SCCPSolver() = default;
 void SCCPSolver::addPredicateInfo(Function &F, DominatorTree &DT,
                                   AssumptionCache &AC) {
   Visitor->addPredicateInfo(F, DT, AC);
+}
+
+void SCCPSolver::removeSSACopies(Function &F) {
+  Visitor->removeSSACopies(F);
 }
 
 bool SCCPSolver::markBlockExecutable(BasicBlock *BB) {
