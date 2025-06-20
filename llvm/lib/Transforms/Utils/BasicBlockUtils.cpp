@@ -377,33 +377,14 @@ bool llvm::MergeBlockSuccessorsIntoGivenBlocks(
 ///
 /// Possible improvements:
 /// - Check fully overlapping fragments and not only identical fragments.
-/// - Support dbg.declare. dbg.label, and possibly other meta instructions being
-///   part of the sequence of consecutive instructions.
 static bool
 DbgVariableRecordsRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
   SmallVector<DbgVariableRecord *, 8> ToBeRemoved;
   SmallDenseSet<DebugVariable> VariableSet;
   for (auto &I : reverse(*BB)) {
-    for (DbgRecord &DR : reverse(I.getDbgRecordRange())) {
-      if (isa<DbgLabelRecord>(DR)) {
-        // Emulate existing behaviour (see comment below for dbg.declares).
-        // FIXME: Don't do this.
-        VariableSet.clear();
-        continue;
-      }
-
+    for (DbgVariableRecord &DR :
+         reverse(filterDbgVars(I.getDbgRecordRange()))) {
       DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
-      // Skip declare-type records, as the debug intrinsic method only works
-      // on dbg.value intrinsics.
-      if (DVR.getType() == DbgVariableRecord::LocationType::Declare) {
-        // The debug intrinsic method treats dbg.declares are "non-debug"
-        // instructions (i.e., a break in a consecutive range of debug
-        // intrinsics). Emulate that to create identical outputs. See
-        // "Possible improvements" above.
-        // FIXME: Delete the line below.
-        VariableSet.clear();
-        continue;
-      }
 
       DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
                         DVR.getDebugLoc()->getInlinedAt());
