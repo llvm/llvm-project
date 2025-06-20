@@ -497,73 +497,15 @@ static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
   return (Flags & ~Mask) == FlagT::NONE;
 }
 
-static bool verifySamplerFilter(uint32_t Filter) {
-  switch (Filter) {
-  case llvm::to_underlying(dxbc::StaticSamplerFilter::MIN_MAG_MIP_POINT):
-  case llvm::to_underlying(dxbc::StaticSamplerFilter::MIN_MAG_POINT_MIP_LINEAR):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MIN_POINT_MAG_LINEAR_MIP_POINT):
-  case llvm::to_underlying(dxbc::StaticSamplerFilter::MIN_POINT_MAG_MIP_LINEAR):
-  case llvm::to_underlying(dxbc::StaticSamplerFilter::MIN_LINEAR_MAG_MIP_POINT):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MIN_LINEAR_MAG_POINT_MIP_LINEAR):
-  case llvm::to_underlying(dxbc::StaticSamplerFilter::MIN_MAG_LINEAR_MIP_POINT):
-  case llvm::to_underlying(dxbc::StaticSamplerFilter::MIN_MAG_MIP_LINEAR):
-  case llvm::to_underlying(dxbc::StaticSamplerFilter::ANISOTROPIC):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::COMPARISON_MIN_MAG_MIP_POINT):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::COMPARISON_MIN_MAG_POINT_MIP_LINEAR):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::COMPARISON_MIN_POINT_MAG_MIP_LINEAR):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::COMPARISON_MIN_LINEAR_MAG_MIP_POINT):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::COMPARISON_MIN_MAG_LINEAR_MIP_POINT):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::COMPARISON_MIN_MAG_MIP_LINEAR):
-  case llvm::to_underlying(dxbc::StaticSamplerFilter::COMPARISON_ANISOTROPIC):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MINIMUM_MIN_MAG_MIP_POINT):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MINIMUM_MIN_MAG_POINT_MIP_LINEAR):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MINIMUM_MIN_POINT_MAG_MIP_LINEAR):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MINIMUM_MIN_LINEAR_MAG_MIP_POINT):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MINIMUM_MIN_MAG_LINEAR_MIP_POINT):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MINIMUM_MIN_MAG_MIP_LINEAR):
-  case llvm::to_underlying(dxbc::StaticSamplerFilter::MINIMUM_ANISOTROPIC):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MAXIMUM_MIN_MAG_MIP_POINT):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MAXIMUM_MIN_MAG_POINT_MIP_LINEAR):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MAXIMUM_MIN_POINT_MAG_MIP_LINEAR):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MAXIMUM_MIN_LINEAR_MAG_MIP_POINT):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MAXIMUM_MIN_MAG_LINEAR_MIP_POINT):
-  case llvm::to_underlying(
-      dxbc::StaticSamplerFilter::MAXIMUM_MIN_MAG_MIP_LINEAR):
-  case llvm::to_underlying(dxbc::StaticSamplerFilter::MAXIMUM_ANISOTROPIC):
-    return true;
-  }
-  return false;
+static bool verifySamplerFilter(uint32_t Value) {
+  dxbc::StaticSamplerFilter Filter = dxbc::StaticSamplerFilter(Value);
+
+  dxbc::StaticSamplerFilter Mask = dxbc::StaticSamplerFilter::MIN_MAG_MIP_POINT;
+
+#define STATIC_SAMPLER_FILTER(Num, Val) Mask |= dxbc::StaticSamplerFilter::Val;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+
+  return popcount(llvm::to_underlying(Filter & Mask)) == 1;
 }
 
 // Values allowed here:
