@@ -117,7 +117,8 @@ public:
 
   /// Returns true if the embedding is approximately equal to the RHS embedding
   /// within the specified tolerance.
-  bool approximatelyEquals(const Embedding &RHS, double Tolerance = 1e-6) const;
+  LLVM_ABI bool approximatelyEquals(const Embedding &RHS,
+                                    double Tolerance = 1e-4) const;
 
   void print(raw_ostream &OS) const;
 };

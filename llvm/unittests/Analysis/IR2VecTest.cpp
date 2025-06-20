@@ -154,14 +154,14 @@ TEST(EmbeddingTest, ApproximatelyEqual) {
   EXPECT_TRUE(E1.approximatelyEquals(E2)); // Diff = 1e-7
 
   Embedding E3 = {1.00002, 2.00002, 3.00002}; // Diff = 2e-5
-  EXPECT_FALSE(E1.approximatelyEquals(E3));
+  EXPECT_FALSE(E1.approximatelyEquals(E3, 1e-6));
   EXPECT_TRUE(E1.approximatelyEquals(E3, 3e-5));
 
   Embedding E_clearly_within = {1.0000005, 2.0000005, 3.0000005}; // Diff = 5e-7
   EXPECT_TRUE(E1.approximatelyEquals(E_clearly_within));
 
   Embedding E_clearly_outside = {1.00001, 2.00001, 3.00001}; // Diff = 1e-5
-  EXPECT_FALSE(E1.approximatelyEquals(E_clearly_outside));
+  EXPECT_FALSE(E1.approximatelyEquals(E_clearly_outside, 1e-6));
 
   Embedding E4 = {1.0, 2.0, 3.5}; // Large diff
   EXPECT_FALSE(E1.approximatelyEquals(E4, 0.01));
