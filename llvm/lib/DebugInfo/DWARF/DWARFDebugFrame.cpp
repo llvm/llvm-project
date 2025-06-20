@@ -18,6 +18,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -212,45 +213,56 @@ Expected<UnwindTable> llvm::dwarf::createUnwindTable(const FDE *Fde) {
 
   // Rows will be empty if there are no CFI instructions.
   if (Cie->cfis().empty() && Fde->cfis().empty())
-    return UnwindTable();
+    return UnwindTable({});
 
-  UnwindTable UT;
+  UnwindTable::RowContainer CieRows;
   UnwindRow Row;
   Row.setAddress(Fde->getInitialLocation());
-  if (Error CieError = UT.parseRows(Cie->cfis(), Row, nullptr))
+  if (Error CieError = parseRows(Cie->cfis(), Row, nullptr).moveInto(CieRows))
     return std::move(CieError);
   // We need to save the initial locations of registers from the CIE parsing
   // in case we run into DW_CFA_restore or DW_CFA_restore_extended opcodes.
+  UnwindTable::RowContainer FdeRows;
   const RegisterLocations InitialLocs = Row.getRegisterLocations();
-  if (Error FdeError = UT.parseRows(Fde->cfis(), Row, &InitialLocs))
+  if (Error FdeError =
+          parseRows(Fde->cfis(), Row, &InitialLocs).moveInto(FdeRows))
     return std::move(FdeError);
+
+  UnwindTable::RowContainer AllRows;
+  AllRows.insert(AllRows.end(), CieRows.begin(), CieRows.end());
+  AllRows.insert(AllRows.end(), FdeRows.begin(), FdeRows.end());
+
   // May be all the CFI instructions were DW_CFA_nop amd Row becomes empty.
   // Do not add that to the unwind table.
   if (Row.getRegisterLocations().hasLocations() ||
       Row.getCFAValue().getLocation() != UnwindLocation::Unspecified)
-    UT.insertRow(Row);
-  return UT;
+    AllRows.push_back(Row);
+  return UnwindTable(AllRows);
 }
 
 Expected<UnwindTable> llvm::dwarf::createUnwindTable(const CIE *Cie) {
   // Rows will be empty if there are no CFI instructions.
   if (Cie->cfis().empty())
-    return UnwindTable();
+    return UnwindTable({});
 
-  UnwindTable UT;
+  UnwindTable::RowContainer Rows;
   UnwindRow Row;
-  if (Error CieError = UT.parseRows(Cie->cfis(), Row, nullptr))
+  if (Error CieError = parseRows(Cie->cfis(), Row, nullptr).moveInto(Rows))
     return std::move(CieError);
   // May be all the CFI instructions were DW_CFA_nop amd Row becomes empty.
   // Do not add that to the unwind table.
   if (Row.getRegisterLocations().hasLocations() ||
       Row.getCFAValue().getLocation() != UnwindLocation::Unspecified)
-    UT.insertRow(Row);
-  return UT;
+    Rows.push_back(Row);
+  return UnwindTable(Rows);
 }
 
-Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
-                             const RegisterLocations *InitialLocs) {
+Expected<UnwindTable::RowContainer>
+llvm::dwarf::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
+                       const RegisterLocations *InitialLocs) {
+  // All the unwinding rows parsed during processing of the CFI program.
+  UnwindTable::RowContainer Rows;
+
   // State consists of CFA value and register locations.
   std::vector<std::pair<UnwindLocation, RegisterLocations>> States;
   for (const CFIProgram::Instruction &Inst : CFIP) {
@@ -552,7 +564,7 @@ Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
       break;
     }
   }
-  return Error::success();
+  return Rows;
 }
 
 // Returns the CIE identifier to be used by the requested format.
