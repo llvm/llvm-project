@@ -707,7 +707,6 @@ class CursorKind(BaseEnumeration):
         """Test if this is an unexposed kind."""
         return conf.lib.clang_isUnexposed(self)  # type: ignore [no-any-return]
 
-
     ###
     # Declaration Kinds
 
@@ -833,7 +832,6 @@ class CursorKind(BaseEnumeration):
 
     # A C++ access specifier decl.
     CXX_ACCESS_SPEC_DECL = 39
-
 
     ###
     # Reference Kinds
@@ -1435,11 +1433,59 @@ class CursorKind(BaseEnumeration):
     # OpenMP scope directive.
     OMP_SCOPE_DIRECTIVE = 306
 
+    # OpenMP reverse directive.
+    OMPReverseDirective = 307
+
+    # OpenMP interchange directive.
+    OMPInterchangeDirective = 308
+
+    # OpenMP assume directive.
+    OMPAssumeDirective = 309
+
     # OpenMP stripe directive.
     OMP_STRIPE_DIRECTIVE = 310
 
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
+
+    # OpenACC Loop Construct.
+    OpenACCLoopConstruct = 321
+
+    # OpenACC Combined Constructs.
+    OpenACCCombinedConstruct = 322
+
+    # OpenACC data Construct.
+    OpenACCDataConstruct = 323
+
+    # OpenACC enter data Construct.
+    OpenACCEnterDataConstruct = 324
+
+    # OpenACC exit data Construct.
+    OpenACCExitDataConstruct = 325
+
+    # OpenACC host_data Construct.
+    OpenACCHostDataConstruct = 326
+
+    # OpenACC wait Construct.
+    OpenACCWaitConstruct = 327
+
+    # OpenACC init Construct.
+    OpenACCInitConstruct = 328
+
+    # OpenACC shutdown Construct.
+    OpenACCShutdownConstruct = 329
+
+    # OpenACC set Construct.
+    OpenACCSetConstruct = 330
+
+    # OpenACC update Construct.
+    OpenACCUpdateConstruct = 331
+
+    # OpenACC atomic Construct.
+    OpenACCAtomicConstruct = 332
+
+    # OpenACC cache Construct.
+    OpenACCCacheConstruct = 333
 
     ###
     # Other Kinds
@@ -1559,6 +1605,7 @@ class ExceptionSpecificationKind(BaseEnumeration):
     UNEVALUATED = 6
     UNINSTANTIATED = 7
     UNPARSED = 8
+    NOTHROW = 9
 
 ### Cursors ###
 
@@ -2482,6 +2529,13 @@ class TypeKind(BaseEnumeration):
     FLOAT128 = 30
     HALF = 31
     FLOAT16 = 32
+    SHORTACCUM = 33
+    ACCUM = 34
+    LONGACCUM = 35
+    USHORTACCUM = 36
+    UACCUM = 37
+    ULONGACCUM = 38
+    BFLOAT16 = 39
     IBM128 = 40
     COMPLEX = 100
     POINTER = 101
@@ -2565,6 +2619,10 @@ class TypeKind(BaseEnumeration):
     EXTVECTOR = 176
     ATOMIC = 177
     BTFTAGATTRIBUTED = 178
+
+    HLSLRESOURCE = 179
+    HLSLATTRIBUTEDRESOURCE = 180
+    HLSLINLINESPIRV = 181
 
 class RefQualifierKind(BaseEnumeration):
     """Describes a specific ref-qualifier of a type."""
