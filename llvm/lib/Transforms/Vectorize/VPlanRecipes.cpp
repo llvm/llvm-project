@@ -2440,24 +2440,74 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                             Ctx.CostKind);
 }
 
+void VPBundleRecipe::bundle(ArrayRef<VPValue *> Operands) {
+  assert(!BundledRecipes.empty() && "Nothing to bundle?");
+
+  // Bundle up the operand recipes.
+  SmallPtrSet<VPUser *, 4> BundledUsers;
+  for (auto *R : BundledRecipes)
+    BundledUsers.insert(R);
+
+  // Recipes in the bundle, except the last one, must only be used inside the
+  // bundle. If there other external users, clone the recipes for the bundle.
+  for (unsigned Idx = 0; Idx != BundledRecipes.size() - 1; ++Idx) {
+    VPSingleDefRecipe *R = BundledRecipes[Idx];
+    if (all_of(R->users(), [&BundledUsers](VPUser *U) {
+          return BundledUsers.contains(U);
+        })) {
+      if (R->getParent())
+        R->removeFromParent();
+      continue;
+    }
+    // The users external to the bundle. Clone the recipe for use in the
+    // bundle and update all its in-bundle users.
+    VPSingleDefRecipe *Copy = R->clone();
+    BundledRecipes[Idx] = Copy;
+    BundledUsers.insert(Copy);
+    R->replaceUsesWithIf(Copy, [&BundledUsers](VPUser &U, unsigned) {
+      return BundledUsers.contains(&U);
+    });
+  }
+  if (BundledRecipes.back()->getParent())
+    BundledRecipes.back()->removeFromParent();
+
+  // Internalize all external operands to the bundled operations. To do so,
+  // create new temporary VPValues for all operands not defined by recipe in
+  // the bundle. The original operands are added as operands of the
+  // VPBundleRecipe.
+  for (auto *R : BundledRecipes) {
+    for (const auto &[Idx, Op] : enumerate(R->operands())) {
+      auto *Def = Op->getDefiningRecipe();
+      if (Def && BundledUsers.contains(Def))
+        continue;
+      if (Operands.empty())
+        addOperand(Op);
+      else
+        addOperand(Operands[TmpValues.size()]);
+      TmpValues.push_back(new VPValue());
+      R->setOperand(Idx, TmpValues.back());
+    }
+  }
+}
+
 void VPBundleRecipe::unbundle() {
-  for (auto *Op : BundledOps)
-    if (!Op->getParent())
-      Op->insertBefore(this);
+  for (auto *R : BundledRecipes)
+    if (!R->getParent())
+      R->insertBefore(this);
 
   for (const auto &[Idx, Op] : enumerate(operands()))
     TmpValues[Idx]->replaceAllUsesWith(Op);
 
-  replaceAllUsesWith(getResultOp());
+  replaceAllUsesWith(getResultRecipe());
 
   if (BundleType == BundleTypes::MulAccumulateReduction &&
-      BundledOps.size() == 5) {
+      BundledRecipes.size() == 5) {
     // Note that we will drop the extend after mul which transforms
     // reduce.add(ext(mul(ext, ext))) to reduce.add(mul(ext, ext)).
     // TODO: This transform should be done separately from bundling/unbundling.
-    auto *Ext0 = cast<VPWidenCastRecipe>(BundledOps[0]);
-    auto *Ext1 = cast<VPWidenCastRecipe>(BundledOps[1]);
-    auto *Ext2 = cast<VPWidenCastRecipe>(BundledOps[3]);
+    auto *Ext0 = cast<VPWidenCastRecipe>(BundledRecipes[0]);
+    auto *Ext1 = cast<VPWidenCastRecipe>(BundledRecipes[1]);
+    auto *Ext2 = cast<VPWidenCastRecipe>(BundledRecipes[3]);
     auto *Op0 =
         new VPWidenCastRecipe(Ext0->getOpcode(), Ext0->getOperand(0),
                               Ext2->getResultType(), *Ext0, getDebugLoc());
@@ -2469,8 +2519,8 @@ void VPBundleRecipe::unbundle() {
                                   Ext2->getResultType(), *Ext1, getDebugLoc());
       Op1->insertBefore(Ext1);
     }
-    auto *Mul = cast<VPWidenRecipe>(BundledOps[2]);
-    auto *Red = cast<VPReductionRecipe>(BundledOps[4]);
+    auto *Mul = cast<VPWidenRecipe>(BundledRecipes[2]);
+    auto *Red = cast<VPReductionRecipe>(BundledRecipes[4]);
     Mul->setOperand(0, Op0);
     Mul->setOperand(1, Op1);
     Red->setOperand(1, Mul);
@@ -2479,7 +2529,7 @@ void VPBundleRecipe::unbundle() {
     if (Ext0 != Ext1)
       Ext1->eraseFromParent();
   }
-  BundledOps.clear();
+  BundledRecipes.clear();
 }
 
 InstructionCost VPBundleRecipe::computeCost(ElementCount VF,
@@ -2492,17 +2542,17 @@ InstructionCost VPBundleRecipe::computeCost(ElementCount VF,
   switch (BundleType) {
   case BundleTypes::ExtendedReduction: {
     unsigned Opcode = RecurrenceDescriptor::getOpcode(
-        cast<VPReductionRecipe>(BundledOps[1])->getRecurrenceKind());
+        cast<VPReductionRecipe>(BundledRecipes[1])->getRecurrenceKind());
     return Ctx.TTI.getExtendedReductionCost(
         Opcode,
-        cast<VPWidenCastRecipe>(BundledOps.front())->getOpcode() ==
+        cast<VPWidenCastRecipe>(BundledRecipes.front())->getOpcode() ==
             Instruction::ZExt,
         RedTy, SrcVecTy, std::nullopt, Ctx.CostKind);
   }
   case BundleTypes::MulAccumulateReduction:
     return Ctx.TTI.getMulAccReductionCost(
-        BundledOps.size() > 2
-            ? cast<VPWidenCastRecipe>(BundledOps.front())->getOpcode() ==
+        BundledRecipes.size() > 2
+            ? cast<VPWidenCastRecipe>(BundledRecipes.front())->getOpcode() ==
                   Instruction::ZExt
             : false,
         RedTy, SrcVecTy, Ctx.CostKind);
@@ -2516,7 +2566,7 @@ void VPBundleRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "BUNDLE ";
   printAsOperand(O, SlotTracker);
   O << " = ";
-  auto *Red = cast<VPReductionRecipe>(BundledOps.back());
+  auto *Red = cast<VPReductionRecipe>(BundledRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
 
   switch (BundleType) {
@@ -2527,7 +2577,7 @@ void VPBundleRecipe::print(raw_ostream &O, const Twine &Indent,
     getOperand(0)->printAsOperand(O, SlotTracker);
     Red->printFlags(O);
 
-    auto *Ext0 = cast<VPWidenCastRecipe>(BundledOps[0]);
+    auto *Ext0 = cast<VPWidenCastRecipe>(BundledRecipes[0]);
     O << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
       << *Ext0->getResultType();
     if (Red->isConditional()) {
@@ -2545,16 +2595,16 @@ void VPBundleRecipe::print(raw_ostream &O, const Twine &Indent,
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
       << " (";
     O << "mul";
-    auto *Mul = cast<VPWidenRecipe>(BundledOps.size() == 2 ? BundledOps[0]
-                                                           : BundledOps[2]);
+    auto *Mul = cast<VPWidenRecipe>(
+        BundledRecipes.size() == 2 ? BundledRecipes[0] : BundledRecipes[2]);
     Mul->printFlags(O);
-    bool IsExtended = BundledOps.size() > 2;
+    bool IsExtended = BundledRecipes.size() > 2;
     if (IsExtended)
       O << "(";
     getOperand(0)->printAsOperand(O, SlotTracker);
     if (IsExtended) {
       auto *Ext0 = cast<VPWidenCastRecipe>(
-          BundledOps.size() == 5 ? BundledOps[3] : BundledOps[0]);
+          BundledRecipes.size() == 5 ? BundledRecipes[3] : BundledRecipes[0]);
       O << " " << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
         << *Ext0->getResultType() << "), (";
     } else {
@@ -2563,7 +2613,7 @@ void VPBundleRecipe::print(raw_ostream &O, const Twine &Indent,
     getOperand(1)->printAsOperand(O, SlotTracker);
     if (IsExtended) {
       auto *Ext1 = cast<VPWidenCastRecipe>(
-          BundledOps.size() == 5 ? BundledOps[3] : BundledOps[1]);
+          BundledRecipes.size() == 5 ? BundledRecipes[3] : BundledRecipes[1]);
       O << " " << Instruction::getOpcodeName(Ext1->getOpcode()) << " to "
         << *Ext1->getResultType() << ")";
     }

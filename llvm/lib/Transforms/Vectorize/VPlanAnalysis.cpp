@@ -269,8 +269,9 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
           .Case<VPBundleRecipe>([this](const auto *R) {
             unsigned RdxOpIdxOffset =
-                cast<VPReductionRecipe>(R->getResultOp())->isConditional() ? 2
-                                                                           : 1;
+                cast<VPReductionRecipe>(R->getResultRecipe())->isConditional()
+                    ? 2
+                    : 1;
             return inferScalarType(
                 R->getOperand(R->getNumOperands() - RdxOpIdxOffset));
           })

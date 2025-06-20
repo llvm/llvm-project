@@ -2697,7 +2697,10 @@ public:
 /// A recipe to combine multiple recipes into a 'bundle' recipe, which should be
 /// considered as single entity for cost-modeling and transforms. The recipe
 /// needs to be 'unbundled', i.e. replaced by its individual recipes before
-/// execute.
+/// execute. The bundled recipes are completely connected from the def-use graph
+/// outside the bundled recipes. Operands not defined by recipes in the bundle
+/// are added as operands of the VPBundleRecipe and the users of the result
+/// recipe must be updated to use the VPBundleRecipe.
 class VPBundleRecipe : public VPSingleDefRecipe {
   enum class BundleTypes {
     ExtendedReduction,
@@ -2705,7 +2708,7 @@ class VPBundleRecipe : public VPSingleDefRecipe {
   };
 
   /// Recipes bundled together in this VPBundleRecipe.
-  SmallVector<VPSingleDefRecipe *> BundledOps;
+  SmallVector<VPSingleDefRecipe *> BundledRecipes;
 
   /// Temporary VPValues used for external operands of the bundle, i.e. operands
   /// not defined by recipes in the bundle.
@@ -2714,69 +2717,39 @@ class VPBundleRecipe : public VPSingleDefRecipe {
   /// Type of the bundle.
   BundleTypes BundleType;
 
-  VPBundleRecipe(BundleTypes BundleType, ArrayRef<VPSingleDefRecipe *> ToBundle)
-      : VPSingleDefRecipe(VPDef::VPBundleSC, {}, {}), BundledOps(ToBundle),
+  VPBundleRecipe(BundleTypes BundleType, ArrayRef<VPSingleDefRecipe *> ToBundle,
+                 ArrayRef<VPValue *> Operands)
+      : VPSingleDefRecipe(VPDef::VPBundleSC, {}, {}), BundledRecipes(ToBundle),
         BundleType(BundleType) {
-    // Bundle up the operand recipes.
-    SmallPtrSet<VPUser *, 4> BundledUsers;
-    for (auto *R : BundledOps)
-      BundledUsers.insert(R);
-
-    // Recipes in the bundle, except the last one, must only be used inside the
-    // bundle. If there other external users, clone the recipes for the bundle.
-    for (const auto &[Idx, R] : enumerate(drop_end(ToBundle))) {
-      if (all_of(R->users(), [&BundledUsers](VPUser *U) {
-            return BundledUsers.contains(U);
-          })) {
-        if (R->getParent())
-          R->removeFromParent();
-        continue;
-      }
-      // The users external to the bundle. Clone the recipe for use in the
-      // bundle and update all its in-bundle users.
-      VPSingleDefRecipe *Copy = R->clone();
-      BundledOps[Idx] = Copy;
-      BundledUsers.insert(Copy);
-      R->replaceUsesWithIf(Copy, [&BundledUsers](VPUser &U, unsigned) {
-        return BundledUsers.contains(&U);
-      });
-    }
-    BundledOps.back()->removeFromParent();
-
-    // Internalize all external operands to the bundled operations. To do so,
-    // create new temporary VPValues for all operands not defined by recipe in
-    // the bundle. The original operands are added as operands of the
-    // VPBundleRecipe.
-    for (auto *R : BundledOps) {
-      for (const auto &[Idx, Op] : enumerate(R->operands())) {
-        auto *Def = Op->getDefiningRecipe();
-        if (Def && BundledUsers.contains(Def))
-          continue;
-        addOperand(Op);
-        TmpValues.push_back(new VPValue());
-        R->setOperand(Idx, TmpValues.back());
-      }
-    }
+    bundle(Operands);
   }
+
+  /// Internalize recipes in BundledRecipes External operands (i.e. not defined
+  /// by another recipe in the bundle) are replaced by temporary VPValues and
+  /// the original operands are transferred to the VPBundleRecipe itself. Clone
+  /// recipes as needed to ensure they are only used by other recipes in the
+  /// bundle. If \p Operands is not empty, use it as operands for the new
+  /// VPBundleRecipe (used when cloning the recipe).
+  void bundle(ArrayRef<VPValue *> Operands);
 
 public:
   VPBundleRecipe(VPWidenCastRecipe *Ext, VPReductionRecipe *Red)
-      : VPBundleRecipe(BundleTypes::ExtendedReduction, {Ext, Red}) {}
+      : VPBundleRecipe(BundleTypes::ExtendedReduction, {Ext, Red}, {}) {}
   VPBundleRecipe(VPWidenRecipe *Mul, VPReductionRecipe *Red)
-      : VPBundleRecipe(BundleTypes::MulAccumulateReduction, {Mul, Red}) {}
+      : VPBundleRecipe(BundleTypes::MulAccumulateReduction, {Mul, Red}, {}) {}
   VPBundleRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
                  VPWidenRecipe *Mul, VPReductionRecipe *Red)
       : VPBundleRecipe(BundleTypes::MulAccumulateReduction,
-                       {Ext0, Ext1, Mul, Red}) {}
+                       {Ext0, Ext1, Mul, Red}, {}) {}
   VPBundleRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
                  VPWidenRecipe *Mul, VPWidenCastRecipe *Ext2,
                  VPReductionRecipe *Red)
       : VPBundleRecipe(BundleTypes::MulAccumulateReduction,
-                       {Ext0, Ext1, Mul, Ext2, Red}) {}
+                       {Ext0, Ext1, Mul, Ext2, Red}, {}) {}
 
   ~VPBundleRecipe() override {
     SmallPtrSet<VPRecipeBase *, 4> Seen;
-    for (auto *R : reverse(BundledOps))
+    for (auto *R : reverse(BundledRecipes))
       if (Seen.insert(R).second)
         delete R;
     for (VPValue *T : TmpValues)
@@ -2786,13 +2759,21 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPBundleSC)
 
   VPBundleRecipe *clone() override {
-    assert(!BundledOps.empty() && "empty bundles should be removed");
-    return new VPBundleRecipe(BundleType, BundledOps);
+    assert(!BundledRecipes.empty() && "empty bundles should be removed");
+    SmallVector<VPSingleDefRecipe *> NewBundledRecipes;
+    for (auto *R : BundledRecipes)
+      NewBundledRecipes.push_back(R->clone());
+    for (auto *New : NewBundledRecipes) {
+      for (const auto &[Idx, Old] : enumerate(BundledRecipes)) {
+        New->replaceUsesOfWith(Old, NewBundledRecipes[Idx]);
+      }
+    }
+    return new VPBundleRecipe(BundleType, NewBundledRecipes, operands());
   }
 
   /// Return the VPSingleDefRecipe producing the final result of the bundled
   /// recipe.
-  VPSingleDefRecipe *getResultOp() const { return BundledOps.back(); }
+  VPSingleDefRecipe *getResultRecipe() const { return BundledRecipes.back(); }
 
   /// Insert the bundled recipes back into the VPlan, directly before the
   /// current recipe. Leaves the bundle recipe empty and the recipe must be
