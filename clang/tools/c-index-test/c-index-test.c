@@ -1997,9 +1997,9 @@ PrintGCCInlineAssembly(CXCursor cursor, CXCursor p, CXClientData d) {
   CXString Constraint, Template, Clobber;
   CXCursor Expr;
   unsigned hasGoto, i, e;
-  if (clang_getCursorKind(cursor) != CXCursor_AsmStmt) {
+  if (clang_getCursorKind(cursor) != CXCursor_AsmStmt)
     return CXChildVisit_Recurse;
-  }
+
   hasGoto = clang_Cursor_isGCCAssemblyHasGoto(cursor);
   printf("===ASM TEMPLATE%s===\n", hasGoto ? " (WITH GOTO)" : "");
   Template = clang_Cursor_getGCCAssemblyTemplate(cursor);
@@ -2009,8 +2009,6 @@ PrintGCCInlineAssembly(CXCursor cursor, CXCursor p, CXClientData d) {
 
   printf("volatile: %s\n",
          clang_Cursor_isGCCAssemblyVolatile(cursor) ? "true" : "false");
-  printf("simple: %s\n",
-         clang_Cursor_isGCCAssemblySimple(cursor) ? "true" : "false");
 
   for (i = 0, e = clang_Cursor_getGCCAssemblyNumOutputs(cursor); i < e; ++i) {
     clang_Cursor_getGCCAssemblyOutput(cursor, i, &Constraint, &Expr);

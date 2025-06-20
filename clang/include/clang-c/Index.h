@@ -4518,6 +4518,9 @@ CINDEX_LINKAGE CXStringSet *clang_Cursor_getObjCManglings(CXCursor);
  * The index N in both cases points into the the total inputs and outputs,
  * or more specifically, into the list of outputs followed by the inputs,
  * starting from index 0 as the first available template argument.
+ *
+ * This function also returns a valid empty string if the cursor does not point
+ * at a GCC inline assembly block.
  */
 
 CINDEX_LINKAGE CXString clang_Cursor_getGCCAssemblyTemplate(CXCursor);
@@ -4525,18 +4528,24 @@ CINDEX_LINKAGE CXString clang_Cursor_getGCCAssemblyTemplate(CXCursor);
 /**
  * Given a CXCursor_GCCAsmStmt cursor, check if the assembly block has goto
  * labels.
+ * This function also returns FALSE if the cursor does not point at a GCC inline
+ * assembly block.
  */
 
 CINDEX_LINKAGE unsigned clang_Cursor_isGCCAssemblyHasGoto(CXCursor);
 
 /**
- * Given a CXCursor_GCCAsmStmt cursor, count the number of outputs
+ * Given a CXCursor_GCCAsmStmt cursor, count the number of outputs.
+ * This function also returns 0 if the cursor does not point at a GCC inline
+ * assembly block.
  */
 
 CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyNumOutputs(CXCursor);
 
 /**
- * Given a CXCursor_GCCAsmStmt cursor, count the number of inputs
+ * Given a CXCursor_GCCAsmStmt cursor, count the number of inputs.
+ * This function also returns 0 if the cursor does not point at a GCC inline
+ * assembly block.
  */
 
 CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyNumInputs(CXCursor);
@@ -4544,6 +4553,11 @@ CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyNumInputs(CXCursor);
 /**
  * Given a CXCursor_GCCAsmStmt cursor, get the constraint and expression cursor
  * to the Index-th input.
+ * This function returns TRUE when the cursor points at a GCC inline assembly
+ * statement, `Index` is within bounds and both the `Constraint` and `Expr` are
+ * not NULL.
+ * Otherwise, this function returns FALSE but leaves `Constraint` and `Expr`
+ * intact.
  */
 
 CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyInput(CXCursor Cursor,
@@ -4554,6 +4568,11 @@ CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyInput(CXCursor Cursor,
 /**
  * Given a CXCursor_GCCAsmStmt cursor, get the constraint and expression cursor
  * to the Index-th output.
+ * This function returns TRUE when the cursor points at a GCC inline assembly
+ * statement, `Index` is within bounds and both the `Constraint` and `Expr` are
+ * not NULL.
+ * Otherwise, this function returns FALSE but leaves `Constraint` and `Expr`
+ * intact.
  */
 
 CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyOutput(CXCursor Cursor,
@@ -4563,26 +4582,26 @@ CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyOutput(CXCursor Cursor,
 
 /**
  * Given a CXCursor_GCCAsmStmt cursor, count the clobbers in it.
+ * This function also returns 0 if the cursor does not point at a GCC inline
+ * assembly block.
  */
 
 CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyNumClobbers(CXCursor Cursor);
 
 /**
  * Given a CXCursor_GCCAsmStmt cursor, get the Index-th clobber of it.
+ * This function returns a valid empty string if the cursor does not point
+ * at a GCC inline assembly block or `Index` is out of bounds.
  */
 
 CINDEX_LINKAGE CXString clang_Cursor_getGCCAssemblyClobber(CXCursor Cursor,
                                                            unsigned Index);
 
 /**
- * Given a CXCursor_GCCAsmStmt cursor, check if the inline assembly is simple.
- */
-
-CINDEX_LINKAGE unsigned clang_Cursor_isGCCAssemblySimple(CXCursor Cursor);
-
-/**
  * Given a CXCursor_GCCAsmStmt cursor, check if the inline assembly is
  * `volatile`.
+ * This function returns FALSE if the cursor does not point at a GCC inline
+ * assembly block.
  */
 
 CINDEX_LINKAGE unsigned clang_Cursor_isGCCAssemblyVolatile(CXCursor Cursor);
