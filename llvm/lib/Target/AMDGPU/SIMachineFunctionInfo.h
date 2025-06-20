@@ -493,8 +493,6 @@ private:
   // user arguments. This is an offset from the KernargSegmentPtr.
   bool ImplicitArgPtr : 1;
 
-  bool MayNeedAGPRs : 1;
-
   // The hard-wired high half of the address of the global information table
   // for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
   // current hardware only allows a 16 bit value.
@@ -1164,10 +1162,6 @@ public:
   }
 
   unsigned getMaxMemoryClusterDWords() const { return MaxMemoryClusterDWords; }
-
-  bool mayNeedAGPRs() const {
-    return MayNeedAGPRs;
-  }
 
   // \returns true if a function has a use of AGPRs via inline asm or
   // has a call which may use it.

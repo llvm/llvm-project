@@ -856,17 +856,11 @@ defvar MayNotNeedAGPRs_gisel = [{
   return !MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
 }];
 
-class AgprMAIFrag<SDPatternOperator Op, bit HasAbid = true,
-                  bit Scaled = false> :
-  MAIFrag<Op, MayNeedAGPRs, HasAbid, Scaled> {
-  let GISelPredicateCode = MayNeedAGPRs_gisel;
-}
+class AgprMAIFrag<SDPatternOperator Op, bit HasAbid = true, bit Scaled = false>
+    : MAIFrag<Op, [{}], HasAbid, Scaled> {}
 
-class VgprMAIFrag<SDPatternOperator Op, bit HasAbid = true,
-                   bit Scaled = false> :
-  MAIFrag<Op, MayNotNeedAGPRs, HasAbid, Scaled> {
-  let GISelPredicateCode = MayNotNeedAGPRs_gisel;
-}
+class VgprMAIFrag<SDPatternOperator Op, bit HasAbid = true, bit Scaled = false>
+    : MAIFrag<Op, [{}], HasAbid, Scaled> {}
 
 let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
   defm V_ACCVGPR_READ_B32  : VOP3Inst<"v_accvgpr_read_b32",  VOPProfileAccRead>;
@@ -917,10 +911,14 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
                          !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
                  MFMATable<0, "AGPR", NAME # "_e64">;
 
-      let OtherPredicates = [isGFX90APlus], Mnemonic = OpName in
-      def _vgprcd_e64 : MAIInst<OpName # "_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
-                                !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, VgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
-                        MFMATable<0, "VGPR", NAME # "_vgprcd_e64", NAME # "_e64">;
+      let OtherPredicates = [isGFX90APlus], Mnemonic = OpName,
+          AddedComplexity = 10 in def _vgprcd_e64
+          : MAIInst<OpName#"_vgprcd",
+                    !cast<VOPProfileMAI>("VOPProfileMAI_"#P#"_VCD"),
+                    !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag,
+                        VgprMAIFrag<node, HasAbid, Scaled>),
+                    Scaled>,
+          MFMATable<0, "VGPR", NAME#"_vgprcd_e64", NAME#"_e64">;
     }
 
     if NoDstOverlap then {
@@ -931,16 +929,22 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
                                  !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
                          MFMATable<1, "AGPR", NAME # "_e64", NAME # "_mac_e64">;
 
-        let OtherPredicates = [isGFX90APlus] in
-        def _mac_vgprcd_e64 : MAIInst<OpName # "_mac_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
-                                      !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
-                              MFMATable<1, "VGPR", NAME # "_vgprcd_e64", NAME # "_mac_e64">;
+        let OtherPredicates = [isGFX90APlus],
+            AddedComplexity = 10 in def _mac_vgprcd_e64
+            : MAIInst<OpName#"_mac_vgprcd",
+                      !cast<VOPProfileMAI>("VOPProfileMAI_"#P#"_VCD"),
+                      !if(!eq(node, null_frag), null_frag,
+                          VgprMAIFrag<node, HasAbid, Scaled>),
+                      Scaled>,
+            MFMATable<1, "VGPR", NAME#"_vgprcd_e64", NAME#"_mac_e64">;
       }
     }
   } // End isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1
 }
 
-// Provide a wrapper around MAIInst that provides the appended operands from V_MFMA_LD_SCALE_B32
+// Provide a wrapper around MAIInst that provides the appended operands from
+// V_MFMA_LD_SCALE_B32 AGPR variants are never selected; VGPR is selected and
+// may later be rewritten to AGPR.
 multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOperator node> {
   defvar VariantSuffix = !subst(!toupper(OpName), "", NAME); // Drop the main opcode name prefix to get the "_fN_fM" suffix.
   defvar UnscaledOpName = UnscaledOpName_#VariantSuffix;
@@ -949,9 +953,9 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
 
   defvar NoDstOverlap = !cast<VOPProfileMAI>(!cast<MAIInst>(UnscaledOpName#"_e64").Pfl).NoDstOverlap;
 
-  def _e64 : ScaledMAIInst<OpName,
-        !cast<MAIInst>(UnscaledOpName#"_e64"), !if(NoDstOverlap, null_frag, AgprMAIFrag<node, HasAbid, true>)>,
-      MFMATable<0, "AGPR", NAME # "_e64">;
+  def _e64
+      : ScaledMAIInst<OpName, !cast<MAIInst>(UnscaledOpName#"_e64"), null_frag>,
+        MFMATable<0, "AGPR", NAME#"_e64">;
 
   def _vgprcd_e64 : ScaledMAIInst<OpName # "_vgprcd",
           !cast<MAIInst>(UnscaledOpName#"_vgprcd_e64"), !if(NoDstOverlap, null_frag, VgprMAIFrag<node, HasAbid, true>)>,
@@ -961,9 +965,10 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
    let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
        isConvertibleToThreeAddress = NoDstOverlap,
        Mnemonic = UnscaledOpName_ in {
-     def _mac_e64 : ScaledMAIInst<OpName # "_mac",
-          !cast<MAIInst>(UnscaledOpName # "_mac_e64"), AgprMAIFrag<node, HasAbid, true>>,
-        MFMATable<1, "AGPR", NAME # "_e64">;
+     def _mac_e64
+         : ScaledMAIInst<OpName#"_mac",
+                         !cast<MAIInst>(UnscaledOpName#"_mac_e64"), null_frag>,
+           MFMATable<1, "AGPR", NAME#"_e64">;
 
      def _mac_vgprcd_e64 : ScaledMAIInst<OpName # " _mac_vgprcd",
           !cast<MAIInst>(UnscaledOpName # "_mac_vgprcd_e64"), VgprMAIFrag<node, HasAbid, true>>,
