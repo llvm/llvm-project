@@ -130,6 +130,9 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
         if (VirtReg.isPhysical())
           continue;
 
+        if (MI.isDebugInstr() && VirtReg == AMDGPU::NoRegister)
+          continue;
+
         if (!VRM->hasPhys(VirtReg))
           continue;
 
