@@ -3610,6 +3610,26 @@ bool AMDGPUDAGToDAGISel::SelectSWMMACIndex16(SDValue In, SDValue &Src,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectImmSub(SDValue In, SDValue &Src,
+                                      SDValue &InvSrc) const {
+  Src = In;
+
+  // Handle constant operands
+  ConstantSDNode *ImmVal = dyn_cast<ConstantSDNode>(In);
+  if (ImmVal)
+    InvSrc = CurDAG->getTargetConstant(32 - ImmVal->getZExtValue(), SDLoc(In),
+                                       MVT::i32);
+  else {
+    // Fallback: generate SUB instruction for non-constant, non-negation cases
+    SDNode *VMov = CurDAG->getMachineNode(
+        AMDGPU::S_SUB_U32, SDLoc(In), MVT::i32,
+        {CurDAG->getTargetConstant(32, SDLoc(In), MVT::i32), In});
+    InvSrc = SDValue(VMov, 0);
+  }
+
+  return true;
+}
+
 bool AMDGPUDAGToDAGISel::SelectVOP3OpSel(SDValue In, SDValue &Src,
                                          SDValue &SrcMods) const {
   Src = In;
