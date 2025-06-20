@@ -381,9 +381,23 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
   const SCEV *ValAtSecondToLastIter = LeftAR->evaluateAtIteration(
       SE.getMinusSCEV(BTC, SE.getOne(BTC->getType())), SE);
 
-  return SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), ValAtLastIter,
-                             RightSCEV) &&
-         SE.isKnownPredicate(Pred, ValAtSecondToLastIter, RightSCEV);
+  CmpPredicate InvPred = ICmpInst::getInversePredicate(Pred);
+  if (!SE.isKnownPredicate(InvPred, ValAtLastIter, RightSCEV) ||
+      !SE.isKnownPredicate(Pred, ValAtSecondToLastIter, RightSCEV))
+    return false;
+
+  // For a monotonic predicate, we've found the single transition point and
+  // don't need to check further.
+  if (!ICmpInst::isEquality(Pred))
+    return true;
+
+  // For an equality, the condition can toggle twice.  For the peeling to be
+  // profitable, we need to know that this is the first toggle.  The two
+  // toggles are separate by one iteration.  If the BTC isn't at least two
+  // this will overflow, but that's okay correctness wise.
+  const SCEV *ValAtPriorIter = LeftAR->evaluateAtIteration(
+      SE.getMinusSCEV(BTC, SE.getConstant(BTC->getType(), 2)), SE);
+  return SE.isKnownPredicate(Pred, ValAtPriorIter, RightSCEV);
 }
 
 // Return the number of iterations to peel off from the beginning and end of the
