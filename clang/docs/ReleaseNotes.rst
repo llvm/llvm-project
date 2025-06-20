@@ -161,6 +161,11 @@ Resolutions to C++ Defect Reports
 
 - Implemented `CWG2496 ref-qualifiers and virtual overriding <https://wg21.link/CWG2496>`_.
 
+- Fully implemented `CWG400 Using-declarations and the "struct hack" `
+  `<https://wg21.link/CWG400>`_. Correctly rejected invalid member
+  using-declaration whose nested-name-specifier doesn't refer to a base class of
+  the current class in C++98 mode.
+
 C Language Changes
 ------------------
 
