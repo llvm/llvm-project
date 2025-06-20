@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------===//
 
 #include "llvm/Object/OffloadBundle.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/StringTableBuilder.h"
@@ -20,7 +18,6 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Timer.h"

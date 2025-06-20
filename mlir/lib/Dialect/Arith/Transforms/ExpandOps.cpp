@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arith/Transforms/Passes.h"
-
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -31,7 +31,6 @@ static Value createConst(Location loc, Type type, int value,
     return rewriter.create<arith::ConstantOp>(
         loc, DenseElementsAttr::get(shapedTy, attr));
   }
-
   return rewriter.create<arith::ConstantOp>(loc, attr);
 }
 
@@ -357,9 +356,10 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     f32Bits = b.create<arith::SelectOp>(isNan, cF32NaN, f32Bits);
     Value result = b.create<arith::BitcastOp>(f32Ty, f32Bits);
     if (resultETy.getIntOrFloatBitWidth() < 32) {
-      result = b.create<arith::TruncFOp>(resultTy, result);
+      result = b.create<arith::TruncFOp>(resultTy, result, nullptr,
+                                         op.getFastmathAttr());
     } else if (resultETy.getIntOrFloatBitWidth() > 32) {
-      result = b.create<arith::ExtFOp>(resultTy, result);
+      result = b.create<arith::ExtFOp>(resultTy, result, op.getFastmathAttr());
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -395,9 +395,10 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
     if (operandETy.getIntOrFloatBitWidth() < 32) {
-      operand = b.create<arith::ExtFOp>(f32Ty, operand);
+      operand = b.create<arith::ExtFOp>(f32Ty, operand, op.getFastmathAttr());
     } else if (operandETy.getIntOrFloatBitWidth() > 32) {
-      operand = b.create<arith::TruncFOp>(f32Ty, operand);
+      operand = b.create<arith::TruncFOp>(
+          f32Ty, operand, op.getRoundingmodeAttr(), op.getFastmathAttr());
     }
     Value f32Bits = b.create<arith::BitcastOp>(i32Ty, operand);
     Value cF32MantissaWidth = createConst(op->getLoc(), i32Ty, 23, rewriter);
@@ -405,6 +406,83 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Value exp8Bits = b.create<arith::TruncIOp>(i8Ty, f32SignExp);
     Value result = b.create<arith::BitcastOp>(resultTy, exp8Bits);
     rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(arith::ScalingExtFOp op,
+                                PatternRewriter &rewriter) const final {
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value inputOperand = op.getIn();
+    Value scaleOperand = op.getScale();
+    Type scaleTy = scaleOperand.getType();
+    Type scaleETy = getElementTypeOrSelf(scaleOperand);
+    // allow implicit exponent extraction from 16/32 bits floats
+    if (scaleETy.getIntOrFloatBitWidth() >= 16) {
+      scaleETy = b.getF8E8M0Type();
+      scaleTy = cloneToShapedType(scaleTy, scaleETy);
+      scaleOperand = b.create<arith::TruncFOp>(scaleTy, scaleOperand, nullptr,
+                                               op.getFastmathAttr());
+    }
+    if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
+      return rewriter.notifyMatchFailure(
+          op, "scaling_extf is using scales of type which can not be converted "
+              "to f8E8M0FNU");
+    }
+    Type resultTy = op.getType();
+    // extf on scale will essentially create floating point number
+    // of type resulTy that is 2^scale and will also propagate NaNs
+    Value scaleExt =
+        b.create<arith::ExtFOp>(resultTy, scaleOperand, op.getFastmathAttr());
+    Value inputExt =
+        b.create<arith::ExtFOp>(resultTy, inputOperand, op.getFastmathAttr());
+    Value result =
+        b.create<arith::MulFOp>(inputExt, scaleExt, op.getFastmathAttr());
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+/*
+Expands arith.ScalingTruncFOp(in, scale) into
+  scale = arith.truncf(scale) : scaleTy -> f8E8M0FNU
+  result = arith.truncf(in / (2^scale))
+ */
+struct ScalingTruncFOpConverter
+    : public OpRewritePattern<arith::ScalingTruncFOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(arith::ScalingTruncFOp op,
+                                PatternRewriter &rewriter) const final {
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value inputOperand = op.getIn();
+    Value scaleOperand = op.getScale();
+    Type scaleTy = scaleOperand.getType();
+    Type scaleETy = getElementTypeOrSelf(scaleOperand);
+    // allow implicit exponent extraction from 16/32 bits floats
+    if (scaleETy.getIntOrFloatBitWidth() >= 16) {
+      scaleETy = b.getF8E8M0Type();
+      scaleTy = cloneToShapedType(scaleTy, scaleETy);
+      scaleOperand = b.create<arith::TruncFOp>(scaleTy, scaleOperand, nullptr,
+                                               op.getFastmathAttr());
+    }
+    if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
+      return rewriter.notifyMatchFailure(
+          op, "scaling_truncf is using scales type which can not be converted "
+              "to f8E8M0FNU");
+    }
+    Type resultTy = op.getType();
+    Type inputTy = inputOperand.getType();
+    // this will create a floating point number of type
+    // inputTy that is 2^scale and will also propagate NaNs
+    scaleOperand =
+        b.create<arith::ExtFOp>(inputTy, scaleOperand, op.getFastmathAttr());
+    Value result = b.create<arith::DivFOp>(inputOperand, scaleOperand,
+                                           op.getFastmathAttr());
+    Value resultCast = b.create<arith::TruncFOp>(
+        resultTy, result, op.getRoundingmodeAttr(), op.getFastmathAttr());
+    rewriter.replaceOp(op, resultCast);
     return success();
   }
 };
@@ -432,7 +510,9 @@ struct ArithExpandOpsPass
       arith::MaximumFOp,
       arith::MinimumFOp,
       arith::MaxNumFOp,
-      arith::MinNumFOp
+      arith::MinNumFOp,
+      arith::ScalingExtFOp,
+      arith::ScalingTruncFOp
     >();
 
     if (includeBf16) {
@@ -492,8 +572,15 @@ void mlir::arith::populateExpandF8E8M0Patterns(RewritePatternSet &patterns) {
       patterns.getContext());
 }
 
+void mlir::arith::populateExpandScalingExtTruncPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<ScalingExtFOpConverter, ScalingTruncFOpConverter>(
+      patterns.getContext());
+}
+
 void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
   populateCeilFloorDivExpandOpsPatterns(patterns);
+  populateExpandScalingExtTruncPatterns(patterns);
   // clang-format off
   patterns.add<
     MaxMinIOpConverter<MaxSIOp, arith::CmpIPredicate::sgt>,
@@ -503,7 +590,7 @@ void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
     MaximumMinimumFOpConverter<MaximumFOp, arith::CmpFPredicate::UGT>,
     MaximumMinimumFOpConverter<MinimumFOp, arith::CmpFPredicate::ULT>,
     MaxNumMinNumFOpConverter<MaxNumFOp, arith::CmpFPredicate::UGT>,
-    MaxNumMinNumFOpConverter<MinNumFOp, arith::CmpFPredicate::ULT>
+    MaxNumMinNumFOpConverter<MinNumFOp, arith::CmpFPredicate::ULT> 
    >(patterns.getContext());
   // clang-format on
 }

@@ -198,24 +198,6 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
     // improvements in how we treat 16-bit "registers" to be feasible.
   }
 
-  // Division and modulus rtlib functions
-  setLibcallName(RTLIB::SDIVREM_I8, "__divmodqi4");
-  setLibcallName(RTLIB::SDIVREM_I16, "__divmodhi4");
-  setLibcallName(RTLIB::SDIVREM_I32, "__divmodsi4");
-  setLibcallName(RTLIB::UDIVREM_I8, "__udivmodqi4");
-  setLibcallName(RTLIB::UDIVREM_I16, "__udivmodhi4");
-  setLibcallName(RTLIB::UDIVREM_I32, "__udivmodsi4");
-
-  // Several of the runtime library functions use a special calling conv
-  setLibcallCallingConv(RTLIB::SDIVREM_I8, CallingConv::AVR_BUILTIN);
-  setLibcallCallingConv(RTLIB::SDIVREM_I16, CallingConv::AVR_BUILTIN);
-  setLibcallCallingConv(RTLIB::UDIVREM_I8, CallingConv::AVR_BUILTIN);
-  setLibcallCallingConv(RTLIB::UDIVREM_I16, CallingConv::AVR_BUILTIN);
-
-  // Trigonometric rtlib functions
-  setLibcallName(RTLIB::SIN_F32, "sin");
-  setLibcallName(RTLIB::COS_F32, "cos");
-
   setMinFunctionAlignment(Align(2));
   setMinimumJumpTableEntries(UINT_MAX);
 }

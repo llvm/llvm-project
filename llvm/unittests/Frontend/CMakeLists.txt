@@ -12,6 +12,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(LLVMFrontendTests
   HLSLRootSignatureDumpTest.cpp
+  HLSLRootSignatureRangesTest.cpp
   OpenACCTest.cpp
   OpenMPContextTest.cpp
   OpenMPIRBuilderTest.cpp

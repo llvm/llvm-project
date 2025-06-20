@@ -910,7 +910,8 @@ namespace CompoundLiterals {
   constexpr int f2(int *x =(int[]){1,2,3}) {
     return x[0];
   }
-  constexpr int g = f2(); // Should evaluate to 1?
+  // Should evaluate to 1?
+  constexpr int g = f2(); // #g_decl
   static_assert(g == 1, "");
 
   // This example should be rejected because the lifetime of the compound
@@ -1347,7 +1348,10 @@ namespace NTTP {
 namespace UnaryOpError {
   constexpr int foo() {
     int f = 0;
-    ++g; // both-error {{use of undeclared identifier 'g'}}
+    ++g; // both-error {{use of undeclared identifier 'g'}} \
+            both-error {{cannot assign to variable 'g' with const-qualified type 'const int'}} \
+            both-note@#g_decl {{'CompoundLiterals::g' declared here}} \
+            both-note@#g_decl {{variable 'g' declared const here}}
     return f;
   }
 }

@@ -244,6 +244,7 @@ declare ptr @fn_nonnull_arg(ptr nonnull %p)
 declare ptr @fn_noundef_arg(ptr noundef %p)
 declare ptr @fn_ptr_arg(ptr)
 declare ptr @fn_ptr_arg_nounwind_willreturn(ptr) nounwind willreturn
+declare void @fn_arg_vec(<2 x ptr>)
 
 define void @test9(i1 %X, ptr %Y) {
 ; CHECK-LABEL: @test9(
@@ -915,6 +916,25 @@ bb5:                                              ; preds = %bb3, %bb
   call void @fn_ptr_arg_nounwind_willreturn(i1 %i8)
   %i7 = load i32, ptr %i6, align 4
   ret i32 %i7
+}
+
+define void @test9_gep_splat(i1 %X, ptr %Y) {
+; CHECK-LABEL: @test9_gep_splat(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SPEC_SELECT]], <2 x i64> zeroinitializer
+; CHECK-NEXT:    call void @fn_arg_vec(<2 x ptr> [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+if:
+  br label %else
+else:
+  %phi = phi ptr [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr i8, ptr %phi, <2 x i64> zeroinitializer
+  call void @fn_arg_vec(<2 x ptr> %gep)
+  ret void
 }
 
 declare void @side.effect()

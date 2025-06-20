@@ -101,8 +101,6 @@ static cl::opt<bool> ExpandConstantExprs(
     cl::desc(
         "Expand constant expressions to instructions for testing purposes"));
 
-LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
-
 namespace {
 
 enum {
@@ -4481,10 +4479,6 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
                                  ParserCallbacks Callbacks) {
-  // In preparation for the deletion of debug-intrinsics, don't allow module
-  // loading to escape intrinsics being autoupgraded to debug records.
-  TheModule->IsNewDbgInfoFormat = UseNewDbgInfoFormat;
-
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
   if (ResumeBit) {
     if (Error JumpFailed = Stream.JumpToBit(ResumeBit))
@@ -6996,10 +6990,6 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (Error JumpFailed = Stream.JumpToBit(DFII->second))
     return JumpFailed;
 
-  // Regardless of the debug info format we want to end up in, we need
-  // IsNewDbgInfoFormat=true to construct any debug records seen in the bitcode.
-  F->IsNewDbgInfoFormat = true;
-
   if (Error Err = parseFunctionBody(F))
     return Err;
   F->setIsMaterializable(false);
@@ -8164,6 +8154,14 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           ContextSizes.reserve(NumContextSizeInfoEntries);
           for (unsigned J = 0; J < NumContextSizeInfoEntries; J++) {
             assert(ContextIdIndex < PendingContextIds.size());
+            // Skip any 0 entries for MIBs without the context size info.
+            if (PendingContextIds[ContextIdIndex] == 0) {
+              // The size should also be 0 if the context was 0.
+              assert(!Record[I]);
+              ContextIdIndex++;
+              I++;
+              continue;
+            }
             // PendingContextIds read from the preceding FS_ALLOC_CONTEXT_IDS
             // should be in the same order as the total sizes.
             ContextSizes.push_back(

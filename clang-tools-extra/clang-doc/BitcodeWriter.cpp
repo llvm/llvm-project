@@ -484,8 +484,9 @@ void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
 
 void ClangDocBitcodeWriter::emitBlock(const CommentInfo &I) {
   StreamSubBlockGuard Block(Stream, BI_COMMENT_BLOCK_ID);
+  // Handle Kind (enum) separately, since it is not a string.
+  emitRecord(commentKindToString(I.Kind), COMMENT_KIND);
   for (const auto &L : std::vector<std::pair<llvm::StringRef, RecordId>>{
-           {I.Kind, COMMENT_KIND},
            {I.Text, COMMENT_TEXT},
            {I.Name, COMMENT_NAME},
            {I.Direction, COMMENT_DIRECTION},
@@ -663,7 +664,7 @@ bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
   case InfoType::IT_typedef:
     emitBlock(*static_cast<clang::doc::TypedefInfo *>(I));
     break;
-  default:
+  case InfoType::IT_default:
     llvm::errs() << "Unexpected info, unable to write.\n";
     return true;
   }

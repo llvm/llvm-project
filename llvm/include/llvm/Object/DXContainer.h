@@ -20,6 +20,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -245,7 +246,7 @@ private:
 public:
   RootSignature(StringRef PD) : PartData(PD) {}
 
-  Error parse();
+  LLVM_ABI Error parse();
   uint32_t getVersion() const { return Version; }
   uint32_t getNumParameters() const { return NumParameters; }
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
@@ -337,7 +338,7 @@ public:
   PSVRuntimeInfo(StringRef D) : Data(D), Size(0) {}
 
   // Parsing depends on the shader kind
-  Error parse(uint16_t ShaderKind);
+  LLVM_ABI Error parse(uint16_t ShaderKind);
 
   uint32_t getSize() const { return Size; }
   uint32_t getResourceCount() const { return Resources.size(); }
@@ -381,9 +382,9 @@ public:
     return SemanticIndexTable;
   }
 
-  uint8_t getSigInputCount() const;
-  uint8_t getSigOutputCount() const;
-  uint8_t getSigPatchOrPrimCount() const;
+  LLVM_ABI uint8_t getSigInputCount() const;
+  LLVM_ABI uint8_t getSigOutputCount() const;
+  LLVM_ABI uint8_t getSigPatchOrPrimCount() const;
 
   SigElementArray getSigInputElements() const { return SigInputElements; }
   SigElementArray getSigOutputElements() const { return SigOutputElements; }
@@ -460,7 +461,7 @@ public:
 
   bool isEmpty() const { return Parameters.isEmpty(); }
 
-  Error initialize(StringRef Part);
+  LLVM_ABI Error initialize(StringRef Part);
 };
 
 } // namespace DirectX
@@ -528,7 +529,7 @@ public:
 
     // Implementation for updating the iterator state based on a specified
     // offest.
-    void updateIteratorImpl(const uint32_t Offset);
+    LLVM_ABI void updateIteratorImpl(const uint32_t Offset);
 
   public:
     PartIterator &operator++() {
@@ -564,7 +565,7 @@ public:
   PartIterator end() const { return PartIterator(*this, PartOffsets.end()); }
 
   StringRef getData() const { return Data.getBuffer(); }
-  static Expected<DXContainer> create(MemoryBufferRef Object);
+  LLVM_ABI static Expected<DXContainer> create(MemoryBufferRef Object);
 
   const dxbc::Header &getHeader() const { return Header; }
 

@@ -724,6 +724,19 @@ public:
     }
   }
 
+  /// Test if this node is an assert operation.
+  bool isAssert() const {
+    switch (NodeType) {
+    default:
+      return false;
+    case ISD::AssertAlign:
+    case ISD::AssertNoFPClass:
+    case ISD::AssertSext:
+    case ISD::AssertZext:
+      return true;
+    }
+  }
+
   /// Test if this node is a vector predication operation.
   bool isVPOpcode() const { return ISD::isVPOpcode(getOpcode()); }
 

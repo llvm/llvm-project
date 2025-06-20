@@ -93,6 +93,10 @@ def FixedSizeIntegralTypeClass : TypeClass {
                Uint32, Sint64, Uint64, Bool];
 }
 
+def FixedSizeIntegralNoBoolTypeClass : TypeClass {
+  let Types = [Sint8, Uint8, Sint16, Uint16, Sint32, Uint32, Sint64, Uint64];
+}
+
 def NumberTypeClass : TypeClass {
   let Types = !listconcat(IntegerTypeClass.Types, [Float]);
 }
@@ -650,10 +654,6 @@ def CastFixedPoint : Opcode {
   let Args = [ArgUint32];
 }
 
-def FixedSizeIntegralTypes : TypeClass {
-  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
-}
-
 def CastAP : Opcode {
   let Types = [AluTypeClass];
   let Args = [ArgUint32];
@@ -675,7 +675,7 @@ def CastIntegralFloating : Opcode {
 
 // Cast a floating to an integer type
 def CastFloatingIntegral : Opcode {
-  let Types = [FixedSizeIntegralTypes];
+  let Types = [FixedSizeIntegralTypeClass];
   let Args = [ArgUint32];
   let HasGroup = 1;
 }
@@ -699,7 +699,7 @@ def CastPointerIntegralAPS : Opcode {
   let Args = [ArgUint32];
 }
 def CastIntegralFixedPoint : Opcode {
-  let Types = [FixedSizeIntegralTypes];
+  let Types = [FixedSizeIntegralTypeClass];
   let Args = [ArgUint32];
   let HasGroup = 1;
 }
@@ -710,7 +710,7 @@ def CastFixedPointFloating : Opcode {
   let Args = [ArgFltSemantics];
 }
 def CastFixedPointIntegral : Opcode {
-  let Types = [FixedSizeIntegralTypes];
+  let Types = [FixedSizeIntegralNoBoolTypeClass];
   let HasGroup = 1;
 }
 def ShiftFixedPoint : Opcode {

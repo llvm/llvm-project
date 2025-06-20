@@ -14,18 +14,18 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = sub i32 -1, [[N:%.*]]
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], 4
+; IF-EVL-NEXT:    [[TMP2:%.*]] = mul nuw i32 [[TMP1]], 4
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP19]], [[TMP2]]
 ; IF-EVL-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i32 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP5]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], [[TMP8]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], [[TMP5]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], 4
+; IF-EVL-NEXT:    [[TMP10:%.*]] = mul nuw i32 [[TMP9]], 4
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -62,16 +62,16 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; NO-VP-LABEL: @iv32(
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP0]], 4
+; NO-VP-NEXT:    [[TMP10:%.*]] = mul nuw i32 [[TMP0]], 4
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], [[TMP10]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP11:%.*]] = mul i32 [[TMP1]], 4
+; NO-VP-NEXT:    [[TMP11:%.*]] = mul nuw i32 [[TMP1]], 4
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], [[TMP11]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP12:%.*]] = mul i32 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP12:%.*]] = mul nuw i32 [[TMP2]], 4
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

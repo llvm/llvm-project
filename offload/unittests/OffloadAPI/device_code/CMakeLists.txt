@@ -7,6 +7,7 @@ macro(add_offload_test_device_code test_filename test_name)
         add_custom_command(OUTPUT ${BIN_PATH}
             COMMAND
             ${CMAKE_C_COMPILER} --target=nvptx64-nvidia-cuda
+            ${ARGN}
             -march=${LIBOMPTARGET_DEP_CUDA_ARCH}
             --cuda-path=${CUDA_ROOT}
             ${SRC_PATH} -o ${BIN_PATH}
@@ -21,6 +22,7 @@ macro(add_offload_test_device_code test_filename test_name)
         add_custom_command(OUTPUT ${BIN_PATH}
             COMMAND
             ${CMAKE_C_COMPILER} --target=amdgcn-amd-amdhsa -nogpulib
+            ${ARGN}
             -mcpu=${LIBOMPTARGET_DEP_AMDGPU_ARCH}
             ${SRC_PATH} -o ${BIN_PATH}
             DEPENDS ${SRC_PATH}
@@ -61,6 +63,9 @@ endif()
 
 add_offload_test_device_code(foo.c foo)
 add_offload_test_device_code(bar.c bar)
+# By default, amdhsa will add a number of "hidden" arguments to the kernel defintion
+# O3 disables this, and results in a kernel function with actually no arguments as seen by liboffload
+add_offload_test_device_code(noargs.c noargs -O3)
 
 add_custom_target(OffloadUnitTestsDeviceBins DEPENDS ${BIN_PATHS})
 

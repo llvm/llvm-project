@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -triple=i686-linux-gnu -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref,both %s
-// RUN: %clang_cc1 -triple=i686-linux-gnu -std=c++20 -verify=ref,both %s
+// RUN: %clang_cc1            -verify=expected,both                        -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -std=c++20 -verify=expected,both                        -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -std=c++20 -verify=expected,both -triple=i686-linux-gnu -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1            -verify=ref,both                                                                     %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,both                                                                     %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,both      -triple=i686-linux-gnu                                         %s
 
 #if __cplusplus >= 202002L
 
@@ -1011,6 +1011,16 @@ namespace WrongFrame {
 constexpr int no_deallocate_nonalloc = (std::allocator<int>().deallocate((int*)&no_deallocate_nonalloc), 1); // both-error {{constant expression}} \
                                                                                                              // both-note {{in call}} \
                                                                                                              // both-note {{declared here}}
+
+namespace OpNewNothrow {
+  constexpr int f() {
+      int *v = (int*)operator new(sizeof(int), std::align_val_t(2), std::nothrow); // both-note {{cannot allocate untyped memory in a constant expression; use 'std::allocator<T>::allocate' to allocate memory of type 'T'}}
+      operator delete(v, std::align_val_t(2), std::nothrow);
+      return 1;
+  }
+  static_assert(f()); // both-error {{not an integral constant expression}} \
+                      // both-note {{in call to}}
+}
 
 #else
 /// Make sure we reject this prior to C++20

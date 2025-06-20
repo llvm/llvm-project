@@ -2495,22 +2495,16 @@ void Writer::setECSymbols() {
               offsetof(data_directory, Size),
           ctx.symtab.edataEnd->getRVA() - ctx.symtab.edataStart->getRVA() +
               ctx.symtab.edataEnd->getSize());
-    if (hybridPdata.first) {
+    if (hybridPdata.first)
       ctx.dynamicRelocs->set(
           dataDirOffset64 + EXCEPTION_TABLE * sizeof(data_directory) +
               offsetof(data_directory, Size),
           hybridPdata.last->getRVA() - hybridPdata.first->getRVA() +
               hybridPdata.last->getSize());
-      if (chpeSym) {
-        size_t size = 0;
-        if (pdata.first)
-          size = pdata.last->getRVA() + pdata.last->getSize() -
-                 pdata.first->getRVA();
-        ctx.dynamicRelocs->set(chpeSym->getRVA() +
-                                   offsetof(chpe_metadata, ExtraRFETableSize),
-                               size);
-      }
-    }
+    if (chpeSym && pdata.first)
+      ctx.dynamicRelocs->set(
+          chpeSym->getRVA() + offsetof(chpe_metadata, ExtraRFETableSize),
+          pdata.last->getRVA() + pdata.last->getSize() - pdata.first->getRVA());
   }
 }
 
