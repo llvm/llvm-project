@@ -172,6 +172,8 @@ LANGOPT(PointerAuthVTPtrTypeDiscrimination, 1, 0, "incorporate type discriminati
 LANGOPT(PointerAuthTypeInfoVTPtrDiscrimination, 1, 0, "incorporate type and address discrimination in authenticated vtable pointers for std::type_info")
 BENIGN_LANGOPT(PointerAuthFunctionTypeDiscrimination, 1, 0,
                "Use type discrimination when signing function pointers")
+LANGOPT(PointerAuthFunctionTypeDiscrimination128, 1, 1,
+        "Use different discriminators for __int128_t / __uint128_t / _BitInt(n) compared to other integer types when computing function pointer type discriminator")
 LANGOPT(PointerAuthInitFini, 1, 0, "sign function pointers in init/fini arrays")
 LANGOPT(PointerAuthInitFiniAddressDiscrimination, 1, 0,
         "incorporate address discrimination in authenticated function pointers in init/fini arrays")
