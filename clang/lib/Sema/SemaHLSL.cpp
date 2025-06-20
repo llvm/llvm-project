@@ -1132,7 +1132,7 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
 
   // Create a ResourceRange for each Visibility
   ResourceRange::MapT::Allocator Allocator;
-  SmallVector<ResourceRange, 8> Ranges = {
+  std::array<ResourceRange, 8> Ranges = {
       ResourceRange(Allocator), // All
       ResourceRange(Allocator), // Vertex
       ResourceRange(Allocator), // Hull
