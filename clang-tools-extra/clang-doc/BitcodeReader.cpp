@@ -54,10 +54,8 @@ static llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
   case AS_none:
     Field = (AccessSpecifier)R[0];
     return llvm::Error::success();
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid value for AccessSpecifier");
   }
+  llvm_unreachable("invalid value for AccessSpecifier");
 }
 
 static llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
@@ -315,9 +313,13 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
 
 static llvm::Error parseRecord(const Record &R, unsigned ID,
                                llvm::StringRef Blob, CommentInfo *I) {
+  llvm::SmallString<16> KindStr;
   switch (ID) {
   case COMMENT_KIND:
-    return decodeRecord(R, I->Kind, Blob);
+    if (llvm::Error Err = decodeRecord(R, KindStr, Blob))
+      return Err;
+    I->Kind = stringToCommentKind(KindStr);
+    return llvm::Error::success();
   case COMMENT_TEXT:
     return decodeRecord(R, I->Text, Blob);
   case COMMENT_NAME:

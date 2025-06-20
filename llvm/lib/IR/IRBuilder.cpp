@@ -15,7 +15,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -61,19 +60,12 @@ Type *IRBuilderBase::getCurrentFunctionReturnType() const {
   return BB->getParent()->getReturnType();
 }
 
-DebugLoc IRBuilderBase::getCurrentDebugLocation() const {
-  for (auto &KV : MetadataToCopy)
-    if (KV.first == LLVMContext::MD_dbg)
-      return {cast<DILocation>(KV.second)};
-
-  return {};
-}
+DebugLoc IRBuilderBase::getCurrentDebugLocation() const { return StoredDL; }
 void IRBuilderBase::SetInstDebugLocation(Instruction *I) const {
-  for (const auto &KV : MetadataToCopy)
-    if (KV.first == LLVMContext::MD_dbg) {
-      I->setDebugLoc(DebugLoc(KV.second));
-      return;
-    }
+  // We prefer to set our current debug location if any has been set, but if
+  // our debug location is empty and I has a valid location, we shouldn't
+  // overwrite it.
+  I->setDebugLoc(StoredDL.orElse(I->getDebugLoc()));
 }
 
 Value *IRBuilderBase::CreateAggregateCast(Value *V, Type *DestTy) {
@@ -120,23 +112,26 @@ IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
   return CI;
 }
 
-Value *IRBuilderBase::CreateVScale(Constant *Scaling, const Twine &Name) {
-  assert(isa<ConstantInt>(Scaling) && "Expected constant integer");
-  if (cast<ConstantInt>(Scaling)->isZero())
-    return Scaling;
-  CallInst *CI =
-      CreateIntrinsic(Intrinsic::vscale, {Scaling->getType()}, {}, {}, Name);
-  return cast<ConstantInt>(Scaling)->isOne() ? CI : CreateMul(CI, Scaling);
+static Value *CreateVScaleMultiple(IRBuilderBase &B, Type *Ty, uint64_t Scale) {
+  Value *VScale = B.CreateVScale(Ty);
+  if (Scale == 1)
+    return VScale;
+
+  return B.CreateNUWMul(VScale, ConstantInt::get(Ty, Scale));
 }
 
-Value *IRBuilderBase::CreateElementCount(Type *DstType, ElementCount EC) {
-  Constant *MinEC = ConstantInt::get(DstType, EC.getKnownMinValue());
-  return EC.isScalable() ? CreateVScale(MinEC) : MinEC;
+Value *IRBuilderBase::CreateElementCount(Type *Ty, ElementCount EC) {
+  if (EC.isFixed() || EC.isZero())
+    return ConstantInt::get(Ty, EC.getKnownMinValue());
+
+  return CreateVScaleMultiple(*this, Ty, EC.getKnownMinValue());
 }
 
-Value *IRBuilderBase::CreateTypeSize(Type *DstType, TypeSize Size) {
-  Constant *MinSize = ConstantInt::get(DstType, Size.getKnownMinValue());
-  return Size.isScalable() ? CreateVScale(MinSize) : MinSize;
+Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
+  if (Size.isFixed() || Size.isZero())
+    return ConstantInt::get(Ty, Size.getKnownMinValue());
+
+  return CreateVScaleMultiple(*this, Ty, Size.getKnownMinValue());
 }
 
 Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
@@ -457,10 +452,10 @@ CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
 }
 
 static MaybeAlign getAlign(Value *Ptr) {
-  if (auto *O = dyn_cast<GlobalObject>(Ptr))
-    return O->getAlign();
+  if (auto *V = dyn_cast<GlobalVariable>(Ptr))
+    return V->getAlign();
   if (auto *A = dyn_cast<GlobalAlias>(Ptr))
-    return A->getAliaseeObject()->getAlign();
+    return getAlign(A->getAliaseeObject());
   return {};
 }
 

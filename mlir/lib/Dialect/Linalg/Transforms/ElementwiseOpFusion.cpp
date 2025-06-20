@@ -231,8 +231,7 @@ static void generateFusedElementwiseOpRegion(
   // `consumerToProducerLoopsMap` to map the producer indices.
   if (producer.hasIndexSemantics()) {
     // Add an index operation for every fused loop dimension.
-    unsigned numFusedOpLoops =
-        std::max(producer.getNumLoops(), consumer.getNumLoops());
+    unsigned numFusedOpLoops = fusedOp.getNumLoops();
     SmallVector<Value> fusedIndices;
     fusedIndices.reserve(numFusedOpLoops);
     llvm::transform(llvm::seq<uint64_t>(0, numFusedOpLoops),

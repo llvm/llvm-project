@@ -104,25 +104,38 @@ struct HardwareLimits {
   unsigned KmcntMax;     // gfx12+ only.
 };
 
+#define AMDGPU_DECLARE_WAIT_EVENTS(DECL)                                       \
+  DECL(VMEM_ACCESS)              /* vmem read & write */                       \
+  DECL(VMEM_READ_ACCESS)         /* vmem read */                               \
+  DECL(VMEM_SAMPLER_READ_ACCESS) /* vmem SAMPLER read (gfx12+ only) */         \
+  DECL(VMEM_BVH_READ_ACCESS)     /* vmem BVH read (gfx12+ only) */             \
+  DECL(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */          \
+  DECL(SCRATCH_WRITE_ACCESS)     /* vmem write that may be scratch */          \
+  DECL(LDS_ACCESS)               /* lds read & write */                        \
+  DECL(GDS_ACCESS)               /* gds read & write */                        \
+  DECL(SQ_MESSAGE)               /* send message */                            \
+  DECL(SMEM_ACCESS)              /* scalar-memory read & write */              \
+  DECL(EXP_GPR_LOCK)             /* export holding on its data src */          \
+  DECL(GDS_GPR_LOCK)             /* GDS holding on its data and addr src */    \
+  DECL(EXP_POS_ACCESS)           /* write to export position */                \
+  DECL(EXP_PARAM_ACCESS)         /* write to export parameter */               \
+  DECL(VMW_GPR_LOCK)             /* vmem write holding on its data src */      \
+  DECL(EXP_LDS_ACCESS)           /* read by ldsdir counting as export */
+
+// clang-format off
+#define AMDGPU_EVENT_ENUM(Name) Name,
 enum WaitEventType {
-  VMEM_ACCESS,              // vector-memory read & write
-  VMEM_READ_ACCESS,         // vector-memory read
-  VMEM_SAMPLER_READ_ACCESS, // vector-memory SAMPLER read (gfx12+ only)
-  VMEM_BVH_READ_ACCESS,     // vector-memory BVH read (gfx12+ only)
-  VMEM_WRITE_ACCESS,        // vector-memory write that is not scratch
-  SCRATCH_WRITE_ACCESS,     // vector-memory write that may be scratch
-  LDS_ACCESS,               // lds read & write
-  GDS_ACCESS,               // gds read & write
-  SQ_MESSAGE,               // send message
-  SMEM_ACCESS,              // scalar-memory read & write
-  EXP_GPR_LOCK,             // export holding on its data src
-  GDS_GPR_LOCK,             // GDS holding on its data and addr src
-  EXP_POS_ACCESS,           // write to export position
-  EXP_PARAM_ACCESS,         // write to export parameter
-  VMW_GPR_LOCK,             // vector-memory write holding on its data src
-  EXP_LDS_ACCESS,           // read by ldsdir counting as export
-  NUM_WAIT_EVENTS,
+  AMDGPU_DECLARE_WAIT_EVENTS(AMDGPU_EVENT_ENUM)
+  NUM_WAIT_EVENTS
 };
+#undef AMDGPU_EVENT_ENUM
+
+#define AMDGPU_EVENT_NAME(Name) #Name,
+static constexpr StringLiteral WaitEventTypeName[] = {
+  AMDGPU_DECLARE_WAIT_EVENTS(AMDGPU_EVENT_NAME)
+};
+#undef AMDGPU_EVENT_NAME
+// clang-format on
 
 // The mapping is:
 //  0                .. SQ_MAX_PGM_VGPRS-1               real VGPRs
@@ -1100,6 +1113,20 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
     }
     OS << '\n';
   }
+
+  OS << "Pending Events: ";
+  if (hasPendingEvent()) {
+    ListSeparator LS;
+    for (unsigned I = 0; I != NUM_WAIT_EVENTS; ++I) {
+      if (hasPendingEvent((WaitEventType)I)) {
+        OS << LS << WaitEventTypeName[I];
+      }
+    }
+  } else {
+    OS << "none";
+  }
+  OS << '\n';
+
   OS << '\n';
 }
 
@@ -1265,10 +1292,15 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
   MachineInstr *WaitcntInstr = nullptr;
   MachineInstr *WaitcntVsCntInstr = nullptr;
 
+  LLVM_DEBUG(dbgs() << "PreGFX12::applyPreexistingWaitcnt at: " << *It);
+
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
-    if (II.isMetaInstruction())
+    LLVM_DEBUG(dbgs() << "pre-existing iter: " << II);
+    if (II.isMetaInstruction()) {
+      LLVM_DEBUG(dbgs() << "skipped meta instruction\n");
       continue;
+    }
 
     unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(II.getOpcode());
     bool TrySimplify = Opcode != II.getOpcode() && !OptNone;
@@ -1320,9 +1352,9 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
 
     LLVM_DEBUG(It == WaitcntInstr->getParent()->end()
                    ? dbgs()
-                         << "applyPreexistingWaitcnt\n"
+                         << "applied pre-existing waitcnt\n"
                          << "New Instr at block end: " << *WaitcntInstr << '\n'
-                   : dbgs() << "applyPreexistingWaitcnt\n"
+                   : dbgs() << "applied pre-existing waitcnt\n"
                             << "Old Instr: " << *It
                             << "New Instr: " << *WaitcntInstr << '\n');
   }
@@ -1336,10 +1368,10 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     Wait.StoreCnt = ~0u;
 
     LLVM_DEBUG(It == WaitcntVsCntInstr->getParent()->end()
-                   ? dbgs() << "applyPreexistingWaitcnt\n"
+                   ? dbgs() << "applied pre-existing waitcnt\n"
                             << "New Instr at block end: " << *WaitcntVsCntInstr
                             << '\n'
-                   : dbgs() << "applyPreexistingWaitcnt\n"
+                   : dbgs() << "applied pre-existing waitcnt\n"
                             << "Old Instr: " << *It
                             << "New Instr: " << *WaitcntVsCntInstr << '\n');
   }
@@ -1413,10 +1445,15 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   MachineInstr *CombinedStoreDsCntInstr = nullptr;
   MachineInstr *WaitInstrs[NUM_EXTENDED_INST_CNTS] = {};
 
+  LLVM_DEBUG(dbgs() << "GFX12Plus::applyPreexistingWaitcnt at: " << *It);
+
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
-    if (II.isMetaInstruction())
+    LLVM_DEBUG(dbgs() << "pre-existing iter: " << II);
+    if (II.isMetaInstruction()) {
+      LLVM_DEBUG(dbgs() << "skipped meta instruction\n");
       continue;
+    }
 
     MachineInstr **UpdatableInstr;
 
@@ -1486,10 +1523,10 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Wait.DsCnt = ~0u;
 
       LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
+                     ? dbgs() << "applied pre-existing waitcnt\n"
                               << "New Instr at block end: "
                               << *CombinedLoadDsCntInstr << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
+                     : dbgs() << "applied pre-existing waitcnt\n"
                               << "Old Instr: " << *It << "New Instr: "
                               << *CombinedLoadDsCntInstr << '\n');
     } else {
@@ -1511,10 +1548,10 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Wait.DsCnt = ~0u;
 
       LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
+                     ? dbgs() << "applied pre-existing waitcnt\n"
                               << "New Instr at block end: "
                               << *CombinedStoreDsCntInstr << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
+                     : dbgs() << "applied pre-existing waitcnt\n"
                               << "Old Instr: " << *It << "New Instr: "
                               << *CombinedStoreDsCntInstr << '\n');
     } else {
@@ -1570,10 +1607,10 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       setNoWait(Wait, CT);
 
       LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
+                     ? dbgs() << "applied pre-existing waitcnt\n"
                               << "New Instr at block end: " << *WaitInstrs[CT]
                               << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
+                     : dbgs() << "applied pre-existing waitcnt\n"
                               << "Old Instr: " << *It
                               << "New Instr: " << *WaitInstrs[CT] << '\n');
     } else {
@@ -2306,7 +2343,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   bool Modified = false;
 
   LLVM_DEBUG({
-    dbgs() << "*** Block" << Block.getNumber() << " ***";
+    dbgs() << "*** Begin Block: ";
+    Block.printName(dbgs());
     ScoreBrackets.dump();
   });
 
@@ -2436,6 +2474,12 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   // Combine or remove any redundant waitcnts at the end of the block.
   Modified |= generateWaitcnt(Wait, Block.instr_end(), Block, ScoreBrackets,
                               OldWaitcntInstr);
+
+  LLVM_DEBUG({
+    dbgs() << "*** End Block: ";
+    Block.printName(dbgs());
+    ScoreBrackets.dump();
+  });
 
   return Modified;
 }
@@ -2699,8 +2743,10 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
           BlockInfo &SuccBI = SuccBII->second;
           if (!SuccBI.Incoming) {
             SuccBI.Dirty = true;
-            if (SuccBII <= BII)
+            if (SuccBII <= BII) {
+              LLVM_DEBUG(dbgs() << "repeat on backedge\n");
               Repeat = true;
+            }
             if (!MoveBracketsToSucc) {
               MoveBracketsToSucc = &SuccBI;
             } else {
@@ -2708,8 +2754,10 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
             }
           } else if (SuccBI.Incoming->merge(*Brackets)) {
             SuccBI.Dirty = true;
-            if (SuccBII <= BII)
+            if (SuccBII <= BII) {
+              LLVM_DEBUG(dbgs() << "repeat on backedge\n");
               Repeat = true;
+            }
           }
         }
         if (MoveBracketsToSucc)

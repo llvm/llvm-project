@@ -3294,6 +3294,30 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
   }
 };
 
+struct LocalitySpecifierOpConversion
+    : public fir::FIROpConversion<fir::LocalitySpecifierOp> {
+  using FIROpConversion::FIROpConversion;
+  llvm::LogicalResult
+  matchAndRewrite(fir::LocalitySpecifierOp localizer, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+#ifdef EXPENSIVE_CHECKS
+    auto uses = mlir::SymbolTable::getSymbolUses(
+        localizer, localizer->getParentOfType<mlir::ModuleOp>());
+
+    // `fir.local` ops are not supposed to have any uses at this point (i.e.
+    // during lowering to LLVM). In case of serialization, the
+    // `fir.do_concurrent` users are expected to have been lowered to
+    // `fir.do_loop` nests. In case of parallelization, the `fir.do_concurrent`
+    // users are expected to have been lowered to the target parallel model
+    // (e.g. OpenMP).
+    assert(uses && uses->empty());
+#endif
+
+    rewriter.eraseOp(localizer);
+    return mlir::success();
+  }
+};
+
 /// Lower `fir.no_reassoc` to LLVM IR dialect.
 /// TODO: how do we want to enforce this in LLVM-IR? Can we manipulate the fast
 /// math flags?
@@ -3930,12 +3954,25 @@ struct BoxOffsetOpConversion : public fir::FIROpConversion<fir::BoxOffsetOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
 
     mlir::Type pty = ::getLlvmPtrType(boxOffset.getContext());
-    mlir::Type boxType = fir::unwrapRefType(boxOffset.getBoxRef().getType());
-    mlir::Type llvmBoxTy =
-        lowerTy().convertBoxTypeAsStruct(mlir::cast<fir::BaseBoxType>(boxType));
-    int fieldId = boxOffset.getField() == fir::BoxFieldAttr::derived_type
-                      ? getTypeDescFieldId(boxType)
-                      : kAddrPosInBox;
+    mlir::Type boxRefType = fir::unwrapRefType(boxOffset.getBoxRef().getType());
+
+    assert((mlir::isa<fir::BaseBoxType>(boxRefType) ||
+            mlir::isa<fir::BoxCharType>(boxRefType)) &&
+           "boxRef should be a reference to either fir.box or fir.boxchar");
+
+    mlir::Type llvmBoxTy;
+    int fieldId;
+    if (auto boxType = mlir::dyn_cast_or_null<fir::BaseBoxType>(boxRefType)) {
+      llvmBoxTy = lowerTy().convertBoxTypeAsStruct(
+          mlir::cast<fir::BaseBoxType>(boxType));
+      fieldId = boxOffset.getField() == fir::BoxFieldAttr::derived_type
+                    ? getTypeDescFieldId(boxType)
+                    : kAddrPosInBox;
+    } else {
+      auto boxCharType = mlir::cast<fir::BoxCharType>(boxRefType);
+      llvmBoxTy = lowerTy().convertType(boxCharType);
+      fieldId = kAddrPosInBox;
+    }
     rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
         boxOffset, pty, llvmBoxTy, adaptor.getBoxRef(),
         llvm::ArrayRef<mlir::LLVM::GEPArg>{0, fieldId});
@@ -4236,15 +4273,15 @@ void fir::populateFIRToLLVMConversionPatterns(
       FieldIndexOpConversion, FirEndOpConversion, FreeMemOpConversion,
       GlobalLenOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
       IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
-      MulcOpConversion, NegcOpConversion, NoReassocOpConversion,
-      SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
-      SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
-      ShiftOpConversion, SliceOpConversion, StoreOpConversion,
-      StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
-      TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
-      UndefOpConversion, UnreachableOpConversion, XArrayCoorOpConversion,
-      XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(converter,
-                                                                options);
+      LocalitySpecifierOpConversion, MulcOpConversion, NegcOpConversion,
+      NoReassocOpConversion, SelectCaseOpConversion, SelectOpConversion,
+      SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
+      ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
+      StoreOpConversion, StringLitOpConversion, SubcOpConversion,
+      TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
+      UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
+      XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
+      ZeroOpConversion>(converter, options);
 
   // Patterns that are populated without a type converter do not trigger
   // target materializations for the operands of the root op.

@@ -224,18 +224,6 @@ llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
 ///     definition outlined by Microsoft.
 llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 
-/// Create a "ExceptionBreakpointsFilter" JSON object as described in
-/// the debug adapter definition.
-///
-/// \param[in] bp
-///     The exception breakpoint object to use
-///
-/// \return
-///     A "ExceptionBreakpointsFilter" JSON object with that follows
-///     the formal JSON definition outlined by Microsoft.
-protocol::ExceptionBreakpointsFilter
-CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
-
 /// Create a "StackFrame" object for a LLDB frame object.
 ///
 /// This function will fill in the following keys in the returned
@@ -282,30 +270,6 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
                                                 lldb::SBFormat &format);
-
-/// Create a "Thread" object for a LLDB thread object.
-///
-/// This function will fill in the following keys in the returned
-/// object:
-///   "id" - the thread ID as an integer
-///   "name" - the thread name as a string which combines the LLDB
-///            thread index ID along with the string name of the thread
-///            from the OS if it has a name.
-///
-/// \param[in] thread
-///     The LLDB thread to use when populating out the "Thread"
-///     object.
-///
-/// \param[in] format
-///     The LLDB format to use when populating out the "Thread"
-///     object.
-///
-/// \return
-///     A "Thread" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format);
-
-llvm::json::Array GetThreads(lldb::SBProcess process, lldb::SBFormat &format);
 
 /// Create a "StoppedEvent" object for a LLDB thread object.
 ///

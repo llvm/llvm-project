@@ -810,7 +810,7 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
   // Acquire a writer-lock so that we can safely create the new instance.
   ScopedWriterLock lock(ctxImpl.operationInfoMutex, isMultithreadingEnabled);
 
-  auto it = ctxImpl.operations.insert({name, nullptr});
+  auto it = ctxImpl.operations.try_emplace(name);
   if (it.second) {
     auto nameAttr = StringAttr::get(context, name);
     it.first->second = std::make_unique<UnregisteredOpModel>(
