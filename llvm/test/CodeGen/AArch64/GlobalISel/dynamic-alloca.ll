@@ -28,11 +28,7 @@ define ptr @test_aligned_alloca(i32 %numelts) {
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
   ; CHECK:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
-  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
-  ; CHECK:   [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C1]]
-  ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
-  ; CHECK:   [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
-  ; CHECK:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 32
+  ; CHECK:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[MUL]](s64), 32
   ; CHECK:   $x0 = COPY [[DYN_STACKALLOC]](p0)
   ; CHECK:   RET_ReallyLR implicit $x0
   %addr = alloca i8, i32 %numelts, align 32
