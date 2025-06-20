@@ -10718,15 +10718,15 @@ let Predicates = [HasCPA] in {
   def MSUBPT : MulAccumCPA<1, "msubpt">;
 
   def : Pat<(ptradd GPR64sp:$Rn, GPR64sp:$Rm),
-            (ADDPT_shift GPR64sp:$Rn, GPR64sp:$Rm, (i32 0))>;
+            (ADDPT_shift GPR64sp:$Rn, GPR64sp:$Rm, (i64 0))>;
   def : Pat<(ptradd GPR64sp:$Rn, (shl GPR64sp:$Rm, (i64 imm0_7:$imm))),
             (ADDPT_shift GPR64sp:$Rn, GPR64sp:$Rm,
-                         (i32 (trunc_imm imm0_7:$imm)))>;
+                         (i64 imm0_7:$imm))>;
   def : Pat<(ptradd GPR64sp:$Rn, (ineg GPR64sp:$Rm)),
-            (SUBPT_shift GPR64sp:$Rn, GPR64sp:$Rm, (i32 0))>;
+            (SUBPT_shift GPR64sp:$Rn, GPR64sp:$Rm, (i64 0))>;
   def : Pat<(ptradd GPR64sp:$Rn, (ineg (shl GPR64sp:$Rm, (i64 imm0_7:$imm)))),
             (SUBPT_shift GPR64sp:$Rn, GPR64sp:$Rm,
-                         (i32 (trunc_imm imm0_7:$imm)))>;
+                         (i64 imm0_7:$imm))>;
   def : Pat<(ptradd GPR64:$Ra, (mul GPR64:$Rn, GPR64:$Rm)),
             (MADDPT GPR64:$Rn, GPR64:$Rm, GPR64:$Ra)>;
   def : Pat<(ptradd GPR64:$Ra, (mul GPR64:$Rn, (ineg GPR64:$Rm))),
