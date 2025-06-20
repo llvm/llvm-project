@@ -13,7 +13,7 @@
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVInstPrinter.h"
-#include "MCTargetDesc/RISCVMCExpr.h"
+#include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
 #include "RISCV.h"
@@ -432,7 +432,7 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   if (Offset.isImm())
     OS << MCO.getImm();
   else if (Offset.isGlobal() || Offset.isBlockAddress() || Offset.isMCSymbol())
-    OS << *MCO.getExpr();
+    MAI->printExpr(OS, *MCO.getExpr());
 
   if (Offset.isMCSymbol())
     MMI->getContext().registerInlineAsmLabel(Offset.getMCSymbol());
@@ -630,7 +630,7 @@ void RISCVAsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
     Sym = OutContext.getOrCreateSymbol(SymName);
   }
   auto Res = MCSymbolRefExpr::create(Sym, OutContext);
-  auto Expr = RISCVMCExpr::create(Res, ELF::R_RISCV_CALL_PLT, OutContext);
+  auto Expr = MCSpecifierExpr::create(Res, ELF::R_RISCV_CALL_PLT, OutContext);
 
   EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::PseudoCALL).addExpr(Expr));
 }
@@ -741,8 +741,8 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 
   const MCSymbolRefExpr *HwasanTagMismatchV2Ref =
       MCSymbolRefExpr::create(HwasanTagMismatchV2Sym, OutContext);
-  auto Expr = RISCVMCExpr::create(HwasanTagMismatchV2Ref, ELF::R_RISCV_CALL_PLT,
-                                  OutContext);
+  auto Expr = MCSpecifierExpr::create(HwasanTagMismatchV2Ref,
+                                      ELF::R_RISCV_CALL_PLT, OutContext);
 
   for (auto &P : HwasanMemaccessSymbols) {
     unsigned Reg = std::get<0>(P.first);
@@ -957,25 +957,25 @@ void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
 static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
                                     const AsmPrinter &AP) {
   MCContext &Ctx = AP.OutContext;
-  RISCVMCExpr::Specifier Kind;
+  RISCV::Specifier Kind;
 
   switch (MO.getTargetFlags()) {
   default:
     llvm_unreachable("Unknown target flag on GV operand");
   case RISCVII::MO_None:
-    Kind = RISCVMCExpr::VK_None;
+    Kind = RISCV::S_None;
     break;
   case RISCVII::MO_CALL:
     Kind = ELF::R_RISCV_CALL_PLT;
     break;
   case RISCVII::MO_LO:
-    Kind = RISCVMCExpr::VK_LO;
+    Kind = RISCV::S_LO;
     break;
   case RISCVII::MO_HI:
     Kind = ELF::R_RISCV_HI20;
     break;
   case RISCVII::MO_PCREL_LO:
-    Kind = RISCVMCExpr::VK_PCREL_LO;
+    Kind = RISCV::S_PCREL_LO;
     break;
   case RISCVII::MO_PCREL_HI:
     Kind = ELF::R_RISCV_PCREL_HI20;
@@ -984,7 +984,7 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     Kind = ELF::R_RISCV_GOT_HI20;
     break;
   case RISCVII::MO_TPREL_LO:
-    Kind = RISCVMCExpr::VK_TPREL_LO;
+    Kind = RISCV::S_TPREL_LO;
     break;
   case RISCVII::MO_TPREL_HI:
     Kind = ELF::R_RISCV_TPREL_HI20;
@@ -1018,8 +1018,8 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     ME = MCBinaryExpr::createAdd(
         ME, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
-  if (Kind != RISCVMCExpr::VK_None)
-    ME = RISCVMCExpr::create(ME, Kind, Ctx);
+  if (Kind != RISCV::S_None)
+    ME = MCSpecifierExpr::create(ME, Kind, Ctx);
   return MCOperand::createExpr(ME);
 }
 
@@ -1101,7 +1101,7 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   if (RISCVII::hasRoundModeOp(TSFlags))
     --NumOps;
 
-  bool hasVLOutput = RISCV::isFaultFirstLoad(*MI);
+  bool hasVLOutput = RISCVInstrInfo::isFaultOnlyFirstLoad(*MI);
   for (unsigned OpNo = 0; OpNo != NumOps; ++OpNo) {
     const MachineOperand &MO = MI->getOperand(OpNo);
     // Skip vl output. It should be the second output.

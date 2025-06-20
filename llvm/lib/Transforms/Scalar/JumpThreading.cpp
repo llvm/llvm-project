@@ -3001,8 +3001,10 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
       continue;
     // Expand the select.
     Value *Cond = SI->getCondition();
-    if (!isGuaranteedNotToBeUndefOrPoison(Cond, nullptr, SI))
+    if (!isGuaranteedNotToBeUndefOrPoison(Cond, nullptr, SI)) {
       Cond = new FreezeInst(Cond, "cond.fr", SI->getIterator());
+      cast<FreezeInst>(Cond)->setDebugLoc(DebugLoc::getTemporary());
+    }
     MDNode *BranchWeights = getBranchWeightMDNode(*SI);
     Instruction *Term =
         SplitBlockAndInsertIfThen(Cond, SI, false, BranchWeights);

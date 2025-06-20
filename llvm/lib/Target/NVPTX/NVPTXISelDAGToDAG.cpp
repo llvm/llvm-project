@@ -71,8 +71,8 @@ NVPTXDAGToDAGISel::getDivF32Level(const SDNode *N) const {
   return Subtarget->getTargetLowering()->getDivF32Level(*MF, *N);
 }
 
-bool NVPTXDAGToDAGISel::usePrecSqrtF32() const {
-  return Subtarget->getTargetLowering()->usePrecSqrtF32();
+bool NVPTXDAGToDAGISel::usePrecSqrtF32(const SDNode *N) const {
+  return Subtarget->getTargetLowering()->usePrecSqrtF32(*MF, N);
 }
 
 bool NVPTXDAGToDAGISel::useF32FTZ() const {
@@ -2556,18 +2556,24 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorG2SCommon(SDNode *N,
   // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
   // {dst, mbar, src, dims{d0...dN}, im2col_offsets{dims-2}
   // multicast, cache_hint,
-  // multicast_flag, cache_hint_flag}
+  // multicast_flag, cache_hint_flag, cta_group_flag}
   // NumOperands = {Chain, IID} + {Actual intrinsic args}
-  //             = {2}          + {7 + dims + im2col_offsets}
+  //             = {2}          + {8 + dims + im2col_offsets}
   size_t NumOps = N->getNumOperands();
   size_t NumDims = IsIm2Col ? GetDimsFromIntrinsic(N->getConstantOperandVal(1))
-                            : (NumOps - 9);
+                            : (NumOps - 10);
   // Offsets is always 'NumDims - 2' and only for im2col mode
   size_t NumOffsets = IsIm2Col ? (NumDims - 2) : 0;
-  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
-  bool IsMultiCast = N->getConstantOperandVal(NumOps - 2) == 1;
+  bool IsCacheHint = N->getConstantOperandVal(NumOps - 2) == 1;
+  bool IsMultiCast = N->getConstantOperandVal(NumOps - 3) == 1;
   size_t NumBaseArgs = NumDims + NumOffsets + 3; // for {dst, mbar, src}
   size_t MultiCastIdx = NumBaseArgs + 2;         // for Chain and IID
+
+  unsigned CTAGroupVal = N->getConstantOperandVal(NumOps - 1);
+  if ((CTAGroupVal > 0) && !Subtarget->hasCpAsyncBulkTensorCTAGroupSupport())
+    report_fatal_error(
+        formatv("CpAsyncBulkTensorG2S cta_group::1/2 is not supported on sm_{}",
+                Subtarget->getSmVersion()));
 
   SDLoc DL(N);
   SmallVector<SDValue, 8> Ops(N->ops().slice(2, NumBaseArgs));
@@ -2579,6 +2585,9 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorG2SCommon(SDNode *N,
   // Push CacheHint operand, if available
   if (IsCacheHint)
     Ops.push_back(N->getOperand(MultiCastIdx + 1));
+
+  // Flag for CTA Group
+  Ops.push_back(getI32Imm(CTAGroupVal, DL));
 
   // Finally, the chain operand
   Ops.push_back(N->getOperand(0));

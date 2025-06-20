@@ -626,10 +626,6 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
   let HasOpSel = 1;
   let HasFP8DstByteSel = 1;
   let HasFP8ByteSel = 0; // It works as a dst-bytesel, but does not have byte_sel operand.
-  let AsmVOP3OpSel = !subst(", $src2_modifiers", "",
-                            getAsmVOP3OpSel<3, HasClamp, HasOMod,
-                                            HasSrc0FloatMods, HasSrc1FloatMods,
-                                            HasSrc2FloatMods>.ret);
   let AsmVOP3Base = !subst(", $src2_modifiers", "",
                     getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
                     HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasModifiers, 0/*Src1Mods*/,
@@ -1003,18 +999,7 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
   let HasClamp = 0;
   let HasOMod = 0;
   let HasModifiers = 0;
-
-  let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                            0 /* HasIntClamp */, HasModifiers, HasSrc2Mods,
-                            HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
-                   (ins bitop3_0:$bitop3));
-
-  let InsVOP3OpSel = !con(getInsVOP3Base<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs, 0, 1, 1, 0,
-                                         Src0Mod, Src1Mod, Src2Mod, 0>.ret,
-                          (ins bitop3_0:$bitop3, op_sel0:$op_sel));
-
-  let Asm64 = "$vdst, $src0, $src1, $src2$bitop3";
-  let AsmVOP3OpSel = !subst("$op_sel", "$bitop3$op_sel", getAsmVOP3OpSel<3, 0, 0, 0, 0, 0>.ret);
+  let HasBitOp3 = 1;
 }
 
 class VOP3_CVT_SCALE_F1632_FP8BF8_Profile<ValueType DstTy> : VOP3_Profile<VOPProfile<[DstTy, i32, f32, untyped]>,
@@ -1055,6 +1040,7 @@ class VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<VOPProfile P> : VOP3_Profil
 
 class VOP3_CVT_SCALE_FP4_F32_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<P> {
   let HasFP8DstByteSel = 1;
+  let HasFP8ByteSel = 0; // It works as a dst-bytesel, but does not have byte_sel operand.
 }
 
 class VOP3_CVT_SCALE_SR_F8BF8_F16BF16F32_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<P> {
@@ -1063,6 +1049,7 @@ class VOP3_CVT_SCALE_SR_F8BF8_F16BF16F32_TiedInput_Profile<VOPProfile P> : VOP3_
                           FP32InputMods:$src2_modifiers, Src2RC64:$src2,
                           VGPR_32:$vdst_in, op_sel0:$op_sel);
   let HasFP8DstByteSel = 1;
+  let HasFP8ByteSel = 0; // It works as a dst-bytesel, but does not have byte_sel operand.
 }
 
 
@@ -1075,12 +1062,10 @@ class VOP3_CVT_SCALE_FP4_F16BF16_TiedInput_Profile<VOPProfile P> : VOP3_Profile<
   let HasSrc2 = 0;
   let HasSrc2Mods = 1;
   let HasOpSel = 1;
-  let AsmVOP3OpSel = !subst(", $src2_modifiers", "",
-                            getAsmVOP3OpSel<3, HasClamp, HasOMod,
-                                            HasSrc0FloatMods, HasSrc1FloatMods,
-                                            HasSrc2FloatMods>.ret);
+  let Asm64 = !subst(", $src2_modifiers", "", AsmVOP3Base);
   let HasExtVOP3DPP = 0;
   let HasFP8DstByteSel = 1;
+  let HasFP8ByteSel = 0;
 }
 
 class VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<ValueType Src0Ty> :
@@ -1333,10 +1318,10 @@ let SubtargetPredicate = isGFX10Plus in {
   } // End isCommutable = 1, isReMaterializable = 1
   def : ThreeOp_i32_Pats<xor, xor, V_XOR3_B32_e64>;
 
-  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in", isConvergent = 1 in {
     defm V_PERMLANE16_B32 : VOP3Inst<"v_permlane16_b32", VOP3_PERMLANE_Profile>;
     defm V_PERMLANEX16_B32 : VOP3Inst<"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
-  } // End $vdst = $vdst_in, DisableEncoding $vdst_in
+  } // End $vdst = $vdst_in, DisableEncoding $vdst_in, isConvergent = 1
 
   foreach vt = Reg32Types.types in {
     def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64, vt>;

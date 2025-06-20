@@ -526,23 +526,20 @@ void MatcherGen::EmitMatchCode(const TreePatternNode &N,
     EmitOperatorMatchCode(N, NodeNoTypes);
 
   // If there are node predicates for this node, generate their checks.
-  for (unsigned i = 0, e = N.getPredicateCalls().size(); i != e; ++i) {
-    const TreePredicateCall &Pred = N.getPredicateCalls()[i];
+  for (const TreePredicateCall &Pred : N.getPredicateCalls()) {
     SmallVector<unsigned, 4> Operands;
     if (Pred.Fn.usesOperands()) {
       TreePattern *TP = Pred.Fn.getOrigPatFragRecord();
-      for (unsigned i = 0; i < TP->getNumArgs(); ++i) {
-        std::string Name =
-            ("pred:" + Twine(Pred.Scope) + ":" + TP->getArgName(i)).str();
+      for (const std::string &Arg : TP->getArgList()) {
+        std::string Name = ("pred:" + Twine(Pred.Scope) + ":" + Arg).str();
         Operands.push_back(getNamedArgumentSlot(Name));
       }
     }
     AddMatcher(new CheckPredicateMatcher(Pred.Fn, Operands));
   }
 
-  for (unsigned i = 0, e = ResultsToTypeCheck.size(); i != e; ++i)
-    AddMatcher(new CheckTypeMatcher(N.getSimpleType(ResultsToTypeCheck[i]),
-                                    ResultsToTypeCheck[i]));
+  for (unsigned I : ResultsToTypeCheck)
+    AddMatcher(new CheckTypeMatcher(N.getSimpleType(I), I));
 }
 
 /// EmitMatcherCode - Generate the code that matches the predicate of this
@@ -836,8 +833,8 @@ void MatcherGen::EmitResultInstructionAsOperand(
       // overridden, or which we aren't letting it override; emit the 'default
       // ops' operands.
       const DAGDefaultOperand &DefaultOp = CGP.getDefaultOperand(OperandNode);
-      for (unsigned i = 0, e = DefaultOp.DefaultOps.size(); i != e; ++i)
-        EmitResultOperand(*DefaultOp.DefaultOps[i], InstOps);
+      for (const TreePatternNodePtr &Op : DefaultOp.DefaultOps)
+        EmitResultOperand(*Op, InstOps);
       continue;
     }
 
@@ -886,10 +883,10 @@ void MatcherGen::EmitResultInstructionAsOperand(
   if (isRoot && !PhysRegInputs.empty()) {
     // Emit all of the CopyToReg nodes for the input physical registers.  These
     // occur in patterns like (mul:i8 AL:i8, GR8:i8:$src).
-    for (unsigned i = 0, e = PhysRegInputs.size(); i != e; ++i) {
+    for (const auto &PhysRegInput : PhysRegInputs) {
       const CodeGenRegister *Reg =
-          CGP.getTargetInfo().getRegBank().getReg(PhysRegInputs[i].first);
-      AddMatcher(new EmitCopyToRegMatcher(PhysRegInputs[i].second, Reg));
+          CGP.getTargetInfo().getRegBank().getReg(PhysRegInput.first);
+      AddMatcher(new EmitCopyToRegMatcher(PhysRegInput.second, Reg));
     }
 
     // Even if the node has no other glue inputs, the resultant node must be
@@ -977,8 +974,8 @@ void MatcherGen::EmitResultInstructionAsOperand(
                                  NumFixedArityOperands, NextRecordedOperandNo));
 
   // The non-chain and non-glue results of the newly emitted node get recorded.
-  for (unsigned i = 0, e = ResultVTs.size(); i != e; ++i) {
-    if (ResultVTs[i] == MVT::Other || ResultVTs[i] == MVT::Glue)
+  for (MVT::SimpleValueType ResultVT : ResultVTs) {
+    if (ResultVT == MVT::Other || ResultVT == MVT::Glue)
       break;
     OutputOps.push_back(NextRecordedOperandNo++);
   }

@@ -51,23 +51,21 @@ private:
 
 bool OmpRewriteMutator::Pre(parser::OpenMPAtomicConstruct &x) {
   // Find top-level parent of the operation.
-  Symbol *topLevelParent{common::visit(
-      [&](auto &atomic) {
-        Symbol *symbol{nullptr};
-        Scope *scope{
-            &context_.FindScope(std::get<parser::Verbatim>(atomic.t).source)};
-        do {
-          if (Symbol * parent{scope->symbol()}) {
-            symbol = parent;
-          }
-          scope = &scope->parent();
-        } while (!scope->IsGlobal());
+  Symbol *topLevelParent{[&]() {
+    Symbol *symbol{nullptr};
+    Scope *scope{&context_.FindScope(
+        std::get<parser::OmpDirectiveSpecification>(x.t).source)};
+    do {
+      if (Symbol * parent{scope->symbol()}) {
+        symbol = parent;
+      }
+      scope = &scope->parent();
+    } while (!scope->IsGlobal());
 
-        assert(symbol &&
-            "Atomic construct must be within a scope associated with a symbol");
-        return symbol;
-      },
-      x.u)};
+    assert(symbol &&
+        "Atomic construct must be within a scope associated with a symbol");
+    return symbol;
+  }()};
 
   // Get the `atomic_default_mem_order` clause from the top-level parent.
   std::optional<common::OmpMemoryOrderType> defaultMemOrder;
@@ -86,66 +84,61 @@ bool OmpRewriteMutator::Pre(parser::OpenMPAtomicConstruct &x) {
     return false;
   }
 
-  auto findMemOrderClause =
-      [](const std::list<parser::OmpAtomicClause> &clauses) {
-        return llvm::any_of(clauses, [](const auto &clause) {
-          return std::get_if<parser::OmpMemoryOrderClause>(&clause.u);
+  auto findMemOrderClause{[](const parser::OmpClauseList &clauses) {
+    return llvm::any_of(
+        clauses.v, [](auto &clause) -> const parser::OmpClause * {
+          switch (clause.Id()) {
+          case llvm::omp::Clause::OMPC_acq_rel:
+          case llvm::omp::Clause::OMPC_acquire:
+          case llvm::omp::Clause::OMPC_relaxed:
+          case llvm::omp::Clause::OMPC_release:
+          case llvm::omp::Clause::OMPC_seq_cst:
+            return &clause;
+          default:
+            return nullptr;
+          }
         });
-      };
+  }};
 
-  // Get the clause list to which the new memory order clause must be added,
-  // only if there are no other memory order clauses present for this atomic
-  // directive.
-  std::list<parser::OmpAtomicClause> *clauseList = common::visit(
-      common::visitors{[&](parser::OmpAtomic &atomicConstruct) {
-                         // OmpAtomic only has a single list of clauses.
-                         auto &clauses{std::get<parser::OmpAtomicClauseList>(
-                             atomicConstruct.t)};
-                         return !findMemOrderClause(clauses.v) ? &clauses.v
-                                                               : nullptr;
-                       },
-          [&](auto &atomicConstruct) {
-            // All other atomic constructs have two lists of clauses.
-            auto &clausesLhs{std::get<0>(atomicConstruct.t)};
-            auto &clausesRhs{std::get<2>(atomicConstruct.t)};
-            return !findMemOrderClause(clausesLhs.v) &&
-                    !findMemOrderClause(clausesRhs.v)
-                ? &clausesRhs.v
-                : nullptr;
-          }},
-      x.u);
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
+  auto &clauseList{std::get<std::optional<parser::OmpClauseList>>(dirSpec.t)};
+  if (clauseList) {
+    if (findMemOrderClause(*clauseList)) {
+      return false;
+    }
+  } else {
+    clauseList = parser::OmpClauseList(decltype(parser::OmpClauseList::v){});
+  }
 
   // Add a memory order clause to the atomic directive.
-  if (clauseList) {
-    atomicDirectiveDefaultOrderFound_ = true;
-    switch (*defaultMemOrder) {
-    case common::OmpMemoryOrderType::Acq_Rel:
-      clauseList->emplace_back<parser::OmpMemoryOrderClause>(common::visit(
-          common::visitors{[](parser::OmpAtomicRead &) -> parser::OmpClause {
-                             return parser::OmpClause::Acquire{};
-                           },
-              [](parser::OmpAtomicCapture &) -> parser::OmpClause {
-                return parser::OmpClause::AcqRel{};
-              },
-              [](auto &) -> parser::OmpClause {
-                // parser::{OmpAtomic, OmpAtomicUpdate, OmpAtomicWrite}
-                return parser::OmpClause::Release{};
-              }},
-          x.u));
-      break;
-    case common::OmpMemoryOrderType::Relaxed:
-      clauseList->emplace_back<parser::OmpMemoryOrderClause>(
-          parser::OmpClause{parser::OmpClause::Relaxed{}});
-      break;
-    case common::OmpMemoryOrderType::Seq_Cst:
-      clauseList->emplace_back<parser::OmpMemoryOrderClause>(
-          parser::OmpClause{parser::OmpClause::SeqCst{}});
-      break;
-    default:
-      // FIXME: Don't process other values at the moment since their validity
-      // depends on the OpenMP version (which is unavailable here).
-      break;
+  atomicDirectiveDefaultOrderFound_ = true;
+  llvm::omp::Clause kind{x.GetKind()};
+  switch (*defaultMemOrder) {
+  case common::OmpMemoryOrderType::Acq_Rel:
+    // FIXME: Implement 5.0 rules, pending clarification on later spec
+    // versions.
+    // [5.0:62:22-26]
+    if (kind == llvm::omp::Clause::OMPC_read) {
+      clauseList->v.emplace_back(
+          parser::OmpClause{parser::OmpClause::Acquire{}});
+    } else if (kind == llvm::omp::Clause::OMPC_update && x.IsCapture()) {
+      clauseList->v.emplace_back(
+          parser::OmpClause{parser::OmpClause::AcqRel{}});
+    } else {
+      clauseList->v.emplace_back(
+          parser::OmpClause{parser::OmpClause::Release{}});
     }
+    break;
+  case common::OmpMemoryOrderType::Relaxed:
+    clauseList->v.emplace_back(parser::OmpClause{parser::OmpClause::Relaxed{}});
+    break;
+  case common::OmpMemoryOrderType::Seq_Cst:
+    clauseList->v.emplace_back(parser::OmpClause{parser::OmpClause::SeqCst{}});
+    break;
+  default:
+    // FIXME: Don't process other values at the moment since their validity
+    // depends on the OpenMP version (which is unavailable here).
+    break;
   }
 
   return false;

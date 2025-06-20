@@ -5405,7 +5405,7 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
       // Handle Undocumented category separately - no content merging
       if (Cat == "Undocumented" && UndocumentedCategory) {
         UndocumentedDocs.push_back(
-            DocumentationData(Doc, Attr, HeadingAndSpellings));
+            DocumentationData(Doc, Attr, std::move(HeadingAndSpellings)));
         continue;
       }
 

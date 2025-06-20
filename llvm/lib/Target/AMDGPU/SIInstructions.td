@@ -1376,6 +1376,20 @@ def : GCNPat <
       (i32 (V_MOV_B32_e32 (i32 0))), sub1)
 >;
 
+//===----------------------------------------------------------------------===//
+// PTRADD Patterns
+//===----------------------------------------------------------------------===//
+
+// GlobalISel shouldn't generate 64-bit addition pseudos.
+let GISelShouldIgnore = 1 in {
+def : GCNPat<
+  (DivergentBinFrag<ptradd> i64:$src0, i64:$src1),
+  (V_ADD_U64_PSEUDO $src0, $src1)>;
+def : GCNPat<
+  (UniformBinFrag<ptradd> i64:$src0, i64:$src1),
+  (S_ADD_U64_PSEUDO $src0, $src1)>;
+}
+
 /********** ============================================ **********/
 /********** Extraction, Insertion, Building and Casting  **********/
 /********** ============================================ **********/

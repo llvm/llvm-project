@@ -35,7 +35,6 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <utility>
 
 using namespace clang;
 using namespace CodeGen;
@@ -237,35 +236,6 @@ static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
   }
 }
 
-std::pair<llvm::Intrinsic::ID, bool>
-CGHLSLRuntime::getCreateHandleFromBindingIntrinsic() {
-  switch (getArch()) {
-  case llvm::Triple::dxil:
-    return std::pair(llvm::Intrinsic::dx_resource_handlefrombinding, true);
-  case llvm::Triple::spirv:
-    return std::pair(llvm::Intrinsic::spv_resource_handlefrombinding, false);
-  default:
-    llvm_unreachable("Intrinsic resource_handlefrombinding not supported by "
-                     "target architecture");
-  }
-}
-
-std::pair<llvm::Intrinsic::ID, bool>
-CGHLSLRuntime::getCreateHandleFromImplicitBindingIntrinsic() {
-  switch (getArch()) {
-  case llvm::Triple::dxil:
-    return std::pair(llvm::Intrinsic::dx_resource_handlefromimplicitbinding,
-                     true);
-  case llvm::Triple::spirv:
-    return std::pair(llvm::Intrinsic::spv_resource_handlefromimplicitbinding,
-                     false);
-  default:
-    llvm_unreachable(
-        "Intrinsic resource_handlefromimplicitbinding not supported by "
-        "target architecture");
-  }
-}
-
 // Codegen for HLSLBufferDecl
 void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
 
@@ -384,6 +354,30 @@ static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
   return B.CreateCall(F, {B.getInt32(0)});
 }
 
+static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
+                                      unsigned BuiltIn) {
+  LLVMContext &Ctx = GV->getContext();
+  IRBuilder<> B(GV->getContext());
+  MDNode *Operands = MDNode::get(
+      Ctx,
+      {ConstantAsMetadata::get(B.getInt32(/* Spirv::Decoration::BuiltIn */ 11)),
+       ConstantAsMetadata::get(B.getInt32(BuiltIn))});
+  MDNode *Decoration = MDNode::get(Ctx, {Operands});
+  GV->addMetadata("spirv.Decorations", *Decoration);
+}
+
+static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
+                                           llvm::Type *Ty, const Twine &Name,
+                                           unsigned BuiltInID) {
+  auto *GV = new llvm::GlobalVariable(
+      M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
+      /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
+      llvm::GlobalVariable::GeneralDynamicTLSModel,
+      /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
+  addSPIRVBuiltinDecoration(GV, BuiltInID);
+  return B.CreateLoad(Ty, GV);
+}
+
 llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
                                               const ParmVarDecl &D,
                                               llvm::Type *Ty) {
@@ -406,6 +400,12 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
   if (D.hasAttr<HLSLSV_GroupIDAttr>()) {
     llvm::Function *GroupIDIntrinsic = CGM.getIntrinsic(getGroupIdIntrinsic());
     return buildVectorInput(B, GroupIDIntrinsic, Ty);
+  }
+  if (D.hasAttr<HLSLSV_PositionAttr>()) {
+    if (getArch() == llvm::Triple::spirv)
+      return createSPIRVBuiltinLoad(B, CGM.getModule(), Ty, "sv_position",
+                                    /* BuiltIn::Position */ 0);
+    llvm_unreachable("SV_Position semantic not implemented for this target.");
   }
   assert(false && "Unhandled parameter attribute");
   return nullptr;
@@ -595,47 +595,35 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
       llvm::ConstantInt::get(CGM.IntTy, RBA ? RBA->getSpaceNumber() : 0);
   Value *Name = nullptr;
 
-  auto [IntrinsicID, HasNameArg] =
+  llvm::Intrinsic::ID IntrinsicID =
       RBA->hasRegisterSlot()
           ? CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic()
           : CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
 
-  if (HasNameArg) {
-    std::string Str(BufDecl->getName());
-    std::string GlobalName(Str + ".str");
-    Name = CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
-  }
+  std::string Str(BufDecl->getName());
+  std::string GlobalName(Str + ".str");
+  Name = CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
 
   // buffer with explicit binding
   if (RBA->hasRegisterSlot()) {
     auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
-    SmallVector<Value *> Args{Space, RegSlot, RangeSize, Index, NonUniform};
-    if (Name)
-      Args.push_back(Name);
+    SmallVector<Value *> Args{Space, RegSlot,    RangeSize,
+                              Index, NonUniform, Name};
     initializeBuffer(CGM, GV, IntrinsicID, Args);
   } else {
     // buffer with implicit binding
     auto *OrderID =
         llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
-    SmallVector<Value *> Args{OrderID, Space, RangeSize, Index, NonUniform};
-    if (Name)
-      Args.push_back(Name);
+    SmallVector<Value *> Args{OrderID, Space,      RangeSize,
+                              Index,   NonUniform, Name};
     initializeBuffer(CGM, GV, IntrinsicID, Args);
   }
 }
 
 void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
                                               llvm::GlobalVariable *GV) {
-  if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>()) {
-    LLVMContext &Ctx = GV->getContext();
-    IRBuilder<> B(GV->getContext());
-    MDNode *Operands = MDNode::get(
-        Ctx, {ConstantAsMetadata::get(
-                  B.getInt32(/* Spirv::Decoration::BuiltIn */ 11)),
-              ConstantAsMetadata::get(B.getInt32(Attr->getBuiltIn()))});
-    MDNode *Decoration = MDNode::get(Ctx, {Operands});
-    GV->addMetadata("spirv.Decorations", *Decoration);
-  }
+  if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>())
+    addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
 }
 
 llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {

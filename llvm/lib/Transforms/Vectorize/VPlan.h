@@ -882,11 +882,40 @@ protected:
   unsigned getUnrollPart(VPUser &U) const;
 };
 
+/// Helper to manage IR metadata for recipes. It filters out metadata that
+/// cannot be propagated.
+class VPIRMetadata {
+  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+
+public:
+  VPIRMetadata() {}
+
+  /// Adds metatadata that can be preserved from the original instruction
+  /// \p I.
+  VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
+
+  /// Adds metatadata that can be preserved from the original instruction
+  /// \p I and noalias metadata guaranteed by runtime checks using \p LVer.
+  VPIRMetadata(Instruction &I, LoopVersioning *LVer);
+
+  /// Copy constructor for cloning.
+  VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
+
+  /// Add all metadata to \p I.
+  void applyMetadata(Instruction &I) const;
+
+  /// Add metadata with kind \p Kind and \p Node.
+  void addMetadata(unsigned Kind, MDNode *Node) {
+    Metadata.emplace_back(Kind, Node);
+  }
+};
+
 /// This is a concrete Recipe that models a single VPlan-level instruction.
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
 /// the VPInstruction is also a single def-use vertex.
 class VPInstruction : public VPRecipeWithIRFlags,
+                      public VPIRMetadata,
                       public VPUnrollPartAccessor<1> {
   friend class VPlanSlp;
 
@@ -934,6 +963,10 @@ public:
     /// Scale the first operand (vector step) by the second operand
     /// (scalar-step).  Casts both operands to the result type if needed.
     WideIVStep,
+    /// Start vector for reductions with 3 operands: the original start value,
+    /// the identity value for the reduction and an integer indicating the
+    /// scaling factor.
+    ReductionStartVector,
     // Creates a step vector starting from 0 to VF with a step of 1.
     StepVector,
 
@@ -972,7 +1005,7 @@ public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL = {},
                 const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
-        Opcode(Opcode), Name(Name.str()) {}
+        VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags, DebugLoc DL = {},
@@ -1262,29 +1295,6 @@ struct VPIRPhi : public VPIRInstruction, public VPPhiAccessors {
 
 protected:
   const VPRecipeBase *getAsRecipe() const override { return this; }
-};
-
-/// Helper to manage IR metadata for recipes. It filters out metadata that
-/// cannot be propagated.
-class VPIRMetadata {
-  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
-
-public:
-  VPIRMetadata() {}
-
-  /// Adds metatadata that can be preserved from the original instruction
-  /// \p I.
-  VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
-
-  /// Adds metatadata that can be preserved from the original instruction
-  /// \p I and noalias metadata guaranteed by runtime checks using \p LVer.
-  VPIRMetadata(Instruction &I, LoopVersioning *LVer);
-
-  /// Copy constructor for cloning.
-  VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
-
-  /// Add all metadata to \p I.
-  void applyMetadata(Instruction &I) const;
 };
 
 /// VPWidenRecipe is a recipe for producing a widened instruction using the
@@ -1812,9 +1822,9 @@ public:
 class VPHeaderPHIRecipe : public VPSingleDefRecipe, public VPPhiAccessors {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
-                    VPValue *Start, DebugLoc DL = {})
-      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}), UnderlyingInstr, DL) {
-  }
+                    VPValue *Start, DebugLoc DL = DebugLoc::getUnknown())
+      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}),
+                          UnderlyingInstr, DL) {}
 
   const VPRecipeBase *getAsRecipe() const override { return this; }
 
@@ -2110,7 +2120,7 @@ public:
   VPWidenPHIRecipe *clone() override {
     auto *C = new VPWidenPHIRecipe(cast<PHINode>(getUnderlyingValue()),
                                    getOperand(0), getDebugLoc(), Name);
-    for (VPValue *Op : make_range(std::next(op_begin()), op_end()))
+    for (VPValue *Op : llvm::drop_begin(operands()))
       C->addOperand(Op);
     return C;
   }
@@ -2231,7 +2241,7 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return Op == getStartValue();
+    return isOrdered() || isInLoop();
   }
 };
 

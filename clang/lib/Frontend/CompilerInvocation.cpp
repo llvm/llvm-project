@@ -1492,11 +1492,11 @@ static void setPGOUseInstrumentor(CodeGenOptions &Opts,
   // which is available (might be one or both).
   if (PGOReader->isIRLevelProfile() || PGOReader->hasMemoryProfile()) {
     if (PGOReader->hasCSIRLevelProfile())
-      Opts.setProfileUse(CodeGenOptions::ProfileCSIRInstr);
+      Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileCSIRInstr);
     else
-      Opts.setProfileUse(CodeGenOptions::ProfileIRInstr);
+      Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
   } else
-    Opts.setProfileUse(CodeGenOptions::ProfileClangInstr);
+    Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileClangInstr);
 }
 
 void CompilerInvocation::setDefaultPointerAuthOptions(

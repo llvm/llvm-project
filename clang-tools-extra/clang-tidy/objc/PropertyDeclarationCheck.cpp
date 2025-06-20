@@ -88,7 +88,7 @@ bool prefixedPropertyNameValid(llvm::StringRef PropertyName) {
   auto RegexExp = llvm::Regex(llvm::StringRef(validPropertyNameRegex(false)));
   return RegexExp.match(PropertyName.substr(Start + 1));
 }
-}  // namespace
+} // namespace
 
 void PropertyDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(objcPropertyDecl(

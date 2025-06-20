@@ -142,6 +142,7 @@ write_lit_cfg("lit_shell_site_cfg") {
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_USE_SANITIZER=",
     "Python3_EXECUTABLE=$python_path",
+    "Python3_ROOT_DIR=",  # FIXME
   ]
 
   if (llvm_enable_zlib) {
@@ -167,6 +168,7 @@ write_lit_cfg("lit_unit_site_cfg") {
     "LLVM_BUILD_MODE=.",
     "LLVM_USE_SANITIZER=",
     "Python3_EXECUTABLE=$python_path",
+    "Python3_ROOT_DIR=",  # FIXME
   ]
 }
 

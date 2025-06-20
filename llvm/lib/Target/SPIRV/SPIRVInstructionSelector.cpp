@@ -322,7 +322,7 @@ private:
                                   SPIRV::StorageClass::StorageClass SC,
                                   uint32_t Set, uint32_t Binding,
                                   uint32_t ArraySize, Register IndexReg,
-                                  bool IsNonUniform,
+                                  bool IsNonUniform, StringRef Name,
                                   MachineIRBuilder MIRBuilder) const;
   SPIRVType *widenTypeToVec4(const SPIRVType *Type, MachineInstr &I) const;
   bool extractSubvector(Register &ResVReg, const SPIRVType *ResType,
@@ -1564,15 +1564,14 @@ static bool isUSMStorageClass(SPIRV::StorageClass::StorageClass SC) {
 static bool isASCastInGVar(MachineRegisterInfo *MRI, Register ResVReg) {
   bool IsGRef = false;
   bool IsAllowedRefs =
-      std::all_of(MRI->use_instr_begin(ResVReg), MRI->use_instr_end(),
-                  [&IsGRef](auto const &It) {
-                    unsigned Opcode = It.getOpcode();
-                    if (Opcode == SPIRV::OpConstantComposite ||
-                        Opcode == SPIRV::OpVariable ||
-                        isSpvIntrinsic(It, Intrinsic::spv_init_global))
-                      return IsGRef = true;
-                    return Opcode == SPIRV::OpName;
-                  });
+      llvm::all_of(MRI->use_instructions(ResVReg), [&IsGRef](auto const &It) {
+        unsigned Opcode = It.getOpcode();
+        if (Opcode == SPIRV::OpConstantComposite ||
+            Opcode == SPIRV::OpVariable ||
+            isSpvIntrinsic(It, Intrinsic::spv_init_global))
+          return IsGRef = true;
+        return Opcode == SPIRV::OpName;
+      });
   return IsAllowedRefs && IsGRef;
 }
 
@@ -3380,14 +3379,14 @@ bool SPIRVInstructionSelector::selectImageWriteIntrinsic(
 Register SPIRVInstructionSelector::buildPointerToResource(
     const SPIRVType *SpirvResType, SPIRV::StorageClass::StorageClass SC,
     uint32_t Set, uint32_t Binding, uint32_t ArraySize, Register IndexReg,
-    bool IsNonUniform, MachineIRBuilder MIRBuilder) const {
+    bool IsNonUniform, StringRef Name, MachineIRBuilder MIRBuilder) const {
   const Type *ResType = GR.getTypeForSPIRVType(SpirvResType);
   if (ArraySize == 1) {
     SPIRVType *PtrType =
         GR.getOrCreateSPIRVPointerType(ResType, MIRBuilder, SC);
     assert(GR.getPointeeType(PtrType) == SpirvResType &&
            "SpirvResType did not have an explicit layout.");
-    return GR.getOrCreateGlobalVariableWithBinding(PtrType, Set, Binding,
+    return GR.getOrCreateGlobalVariableWithBinding(PtrType, Set, Binding, Name,
                                                    MIRBuilder);
   }
 
@@ -3395,7 +3394,7 @@ Register SPIRVInstructionSelector::buildPointerToResource(
   SPIRVType *VarPointerType =
       GR.getOrCreateSPIRVPointerType(VarType, MIRBuilder, SC);
   Register VarReg = GR.getOrCreateGlobalVariableWithBinding(
-      VarPointerType, Set, Binding, MIRBuilder);
+      VarPointerType, Set, Binding, Name, MIRBuilder);
 
   SPIRVType *ResPointerType =
       GR.getOrCreateSPIRVPointerType(ResType, MIRBuilder, SC);
@@ -4081,6 +4080,9 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
   uint32_t ArraySize = foldImm(HandleDef.getOperand(4), MRI);
   Register IndexReg = HandleDef.getOperand(5).getReg();
   bool IsNonUniform = ArraySize > 1 && foldImm(HandleDef.getOperand(6), MRI);
+  std::string Name =
+      getStringValueFromReg(HandleDef.getOperand(7).getReg(), *MRI);
+
   bool IsStructuredBuffer = ResType->getOpcode() == SPIRV::OpTypePointer;
   MachineIRBuilder MIRBuilder(HandleDef);
   SPIRVType *VarType = ResType;
@@ -4091,8 +4093,9 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
     SC = GR.getPointerStorageClass(ResType);
   }
 
-  Register VarReg = buildPointerToResource(VarType, SC, Set, Binding, ArraySize,
-                                           IndexReg, IsNonUniform, MIRBuilder);
+  Register VarReg =
+      buildPointerToResource(VarType, SC, Set, Binding, ArraySize, IndexReg,
+                             IsNonUniform, Name, MIRBuilder);
 
   if (IsNonUniform)
     buildOpDecorate(HandleReg, HandleDef, TII, SPIRV::Decoration::NonUniformEXT,

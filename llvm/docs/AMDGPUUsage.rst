@@ -1215,12 +1215,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    denormalization mode, enabled traps, and floating point exceptions.
                                                    The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
 
-  :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specifies state.
+  :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specified state.
   llvm.amdgcn.load.to.lds.p<1/7>                   Loads values from global memory (either in the form of a global
                                                    a raw fat buffer pointer) to LDS. The size of the data copied can be 1, 2,
                                                    or 4 bytes (and gfx950 also allows 12 or 16 bytes). The LDS pointer
                                                    argument should be wavefront-uniform; the global pointer need not be.
-                                                   The LDS pointer is implicitly offset by 4 * lane_id bytes for sies <= 4 bytes
+                                                   The LDS pointer is implicitly offset by 4 * lane_id bytes for size <= 4 bytes
                                                    and 16 * lane_id bytes for larger sizes. This lowers to `global_load_lds`,
                                                    `buffer_load_* ... lds`, or `global_load__* ... lds` depending on address
                                                    space and architecture. `amdgcn.global.load.lds` has the same semantics as
@@ -4263,9 +4263,10 @@ same *vendor-name*.
                                                                   wavefront for
                                                                   GFX6-GFX9. A register
                                                                   is required if it is
-                                                                  written to, or
+                                                                  used explicitly, or
                                                                   if a higher numbered
-                                                                  register is written to. This
+                                                                  register is used
+                                                                  explicitly. This
                                                                   includes the special
                                                                   SGPRs for VCC, Flat
                                                                   Scratch (GFX7-GFX9)
@@ -4283,10 +4284,10 @@ same *vendor-name*.
                                                                   each work-item for
                                                                   GFX6-GFX9. A register
                                                                   is required if it is
-                                                                  written to, or
+                                                                  used explicitly, or
                                                                   if a higher numbered
-                                                                  register is
-                                                                  written to.
+                                                                  register is used
+                                                                  explicitly.
      ".agpr_count"                       integer        Required  Number of accumulator
                                                                   registers required by
                                                                   each work-item for
@@ -18435,8 +18436,8 @@ Additional Documentation
 .. [AMD-RADEON-HD-5000] `AMD Evergreen shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-6000] `AMD Cayman/Trinity shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_HD_6900_Series_Instruction_Set_Architecture.pdf>`__
 .. [AMD-ROCm] `AMD ROCm™ Platform <https://rocmdocs.amd.com/>`__
-.. [AMD-ROCm-github] `AMD ROCm™ github <http://github.com/RadeonOpenCompute>`__
-.. [AMD-ROCm-Release-Notes] `AMD ROCm Release Notes <https://github.com/RadeonOpenCompute/ROCm>`__
+.. [AMD-ROCm-github] `AMD ROCm™ github <http://github.com/ROCm>`__
+.. [AMD-ROCm-Release-Notes] `AMD ROCm Release Notes <https://github.com/ROCm/ROCm>`__
 .. [CLANG-ATTR] `Attributes in Clang <https://clang.llvm.org/docs/AttributeReference.html>`__
 .. [DWARF] `DWARF Debugging Information Format <http://dwarfstd.org/>`__
 .. [ELF] `Executable and Linkable Format (ELF) <http://www.sco.com/developers/gabi/>`__

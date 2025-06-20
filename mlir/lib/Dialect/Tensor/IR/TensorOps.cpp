@@ -1061,8 +1061,7 @@ void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
 void EmptyOp::build(OpBuilder &builder, OperationState &result,
                     ArrayRef<int64_t> staticShape, Type elementType,
                     Attribute encoding) {
-  assert(all_of(staticShape,
-                [](int64_t sz) { return !ShapedType::isDynamic(sz); }) &&
+  assert(none_of(staticShape, ShapedType::isDynamic) &&
          "expected only static sizes");
   build(builder, result, staticShape, elementType, ValueRange{}, encoding);
 }

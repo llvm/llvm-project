@@ -288,7 +288,7 @@ void ARMTargetAsmStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {
   OS << "\t.thumb_set\t";
   Symbol->print(OS, MAI);
   OS << ", ";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
@@ -590,7 +590,7 @@ public:
   /// necessary.
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
     if (const MCSymbolRefExpr *SRE = dyn_cast_or_null<MCSymbolRefExpr>(Value)) {
-      if (getSpecifier(SRE) == ARMMCExpr::VK_SBREL && !(Size == 4)) {
+      if (SRE->getSpecifier() == ARMMCExpr::VK_SBREL && !(Size == 4)) {
         getContext().reportError(Loc, "relocated expression must be 32-bit");
         return;
       }

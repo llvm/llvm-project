@@ -181,6 +181,56 @@ void PluginManager::Terminate() {
   plugin_map.clear();
 }
 
+llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
+  // Currently supported set of plugin namespaces. This will be expanded
+  // over time.
+  static PluginNamespace PluginNamespaces[] = {
+      {"system-runtime", PluginManager::GetSystemRuntimePluginInfo,
+       PluginManager::SetSystemRuntimePluginEnabled},
+      {"instrumentation-runtime",
+       PluginManager::GetInstrumentationRuntimePluginInfo,
+       PluginManager::SetInstrumentationRuntimePluginEnabled}};
+
+  return PluginNamespaces;
+}
+
+llvm::json::Object PluginManager::GetJSON(llvm::StringRef pattern) {
+  llvm::json::Object plugin_stats;
+
+  for (const PluginNamespace &plugin_ns : GetPluginNamespaces()) {
+    llvm::json::Array namespace_stats;
+
+    for (const RegisteredPluginInfo &plugin : plugin_ns.get_info()) {
+      if (MatchPluginName(pattern, plugin_ns, plugin)) {
+        llvm::json::Object plugin_json;
+        plugin_json.try_emplace("name", plugin.name);
+        plugin_json.try_emplace("enabled", plugin.enabled);
+        namespace_stats.emplace_back(std::move(plugin_json));
+      }
+    }
+    if (!namespace_stats.empty())
+      plugin_stats.try_emplace(plugin_ns.name, std::move(namespace_stats));
+  }
+
+  return plugin_stats;
+}
+
+bool PluginManager::MatchPluginName(llvm::StringRef pattern,
+                                    const PluginNamespace &plugin_ns,
+                                    const RegisteredPluginInfo &plugin_info) {
+  // The empty pattern matches all plugins.
+  if (pattern.empty())
+    return true;
+
+  // Check if the pattern matches the namespace.
+  if (pattern == plugin_ns.name)
+    return true;
+
+  // Check if the pattern matches the qualified name.
+  std::string qualified_name = (plugin_ns.name + "." + plugin_info.name).str();
+  return pattern == qualified_name;
+}
+
 template <typename Callback> struct PluginInstance {
   typedef Callback CallbackType;
 
@@ -1511,6 +1561,16 @@ PluginManager::GetInstrumentationRuntimeGetTypeCallbackAtIndex(uint32_t idx) {
 InstrumentationRuntimeCreateInstance
 PluginManager::GetInstrumentationRuntimeCreateCallbackAtIndex(uint32_t idx) {
   return GetInstrumentationRuntimeInstances().GetCallbackAtIndex(idx);
+}
+
+std::vector<RegisteredPluginInfo>
+PluginManager::GetInstrumentationRuntimePluginInfo() {
+  return GetInstrumentationRuntimeInstances().GetPluginInfoForAllInstances();
+}
+
+bool PluginManager::SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
+                                                           bool enable) {
+  return GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable);
 }
 
 #pragma mark TypeSystem

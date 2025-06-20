@@ -1063,7 +1063,7 @@ RuntimeTableBuilder::DescribeSpecialGenerics(const Scope &dtScope,
     specials =
         DescribeSpecialGenerics(*parentScope, thisScope, derivedTypeSpec);
   }
-  for (auto pair : dtScope) {
+  for (const auto &pair : dtScope) {
     const Symbol &symbol{*pair.second};
     if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
       DescribeSpecialGeneric(*generic, specials, thisScope, derivedTypeSpec);
@@ -1241,7 +1241,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
     AddValue(values, specialSchema_, procCompName,
         SomeExpr{evaluate::ProcedureDesignator{specific}});
     // index might already be present in the case of an override
-    specials.emplace(*index,
+    specials.insert_or_assign(*index,
         evaluate::StructureConstructor{
             DEREF(specialSchema_.AsDerived()), std::move(values)});
   }
