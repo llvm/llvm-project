@@ -27,8 +27,8 @@
 
 using namespace __tsan;
 
-static bool correctRaceDetection(){
-	return flags()->correct_race_detection;
+static bool relaxedSupport(){
+	return flags()->relaxed_support;
 }
 
 #if !SANITIZER_GO && __TSAN_HAS_INT128
@@ -231,16 +231,16 @@ namespace {
 template <typename T, T (*F)(volatile T *v, T op)>
 static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
   MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
-  if (!correctRaceDetection()){
+  if (!relaxedSupport()){
     if (LIKELY(mo == mo_relaxed))
       return F(a, v);
   }
   SlotLocker locker(thr);
   {
     auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
-	bool fullLock = correctRaceDetection() || IsReleaseOrder(mo);
+	bool fullLock = relaxedSupport() || IsReleaseOrder(mo);
     RWLock lock(&s->mtx, fullLock);
-	if (!correctRaceDetection()){
+	if (!relaxedSupport()){
       if (IsAcqRelOrder(mo))
         thr->clock.ReleaseAcquire(&s->clock);
       else if (IsReleaseOrder(mo))
@@ -286,7 +286,7 @@ struct OpLoad {
     DCHECK(IsLoadOrder(mo));
     // This fast-path is critical for performance.
     // Assume the access is atomic.
-    if (!correctRaceDetection() && !IsAcquireOrder(mo)) {
+    if (!relaxedSupport() && !IsAcquireOrder(mo)) {
       MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
                    kAccessRead | kAccessAtomic);
       return NoTsanAtomic(mo, a);
@@ -300,7 +300,7 @@ struct OpLoad {
       ReadLock lock(&s->mtx);
 	  if (IsAcquireOrder(mo)) {
 		  thr->clock.Acquire(s->clock);
-	  } else if (correctRaceDetection()) {
+	  } else if (relaxedSupport()) {
 		  thr->clockA.Acquire(s->clock);
 	  }
       // Re-read under sync mutex because we need a consistent snapshot
@@ -335,7 +335,7 @@ struct OpStore {
     // Assume the access is atomic.
     // Strictly saying even relaxed store cuts off release sequence,
     // so must reset the clock.
-    if (!correctRaceDetection() && !IsReleaseOrder(mo)) {
+    if (!relaxedSupport() && !IsReleaseOrder(mo)) {
       NoTsanAtomic(mo, a, v);
       return;
     }
@@ -345,7 +345,7 @@ struct OpStore {
       Lock lock(&s->mtx);
 	  if (IsReleaseOrder(mo))
         thr->clock.ReleaseStore(&s->clock);
-	  else if (correctRaceDetection())
+	  else if (relaxedSupport())
 		thr->clockR.ReleaseStore(&s->clock);
       NoTsanAtomic(mo, a, v);
     }
@@ -471,7 +471,7 @@ struct OpCAS {
 
     MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
                  kAccessWrite | kAccessAtomic);
-    if (LIKELY(!correctRaceDetection() && mo == mo_relaxed && fmo == mo_relaxed)) {
+    if (LIKELY(!relaxedSupport() && mo == mo_relaxed && fmo == mo_relaxed)) {
       T cc = *c;
       T pr = func_cas(a, cc, v);
       if (pr == cc)
@@ -484,7 +484,7 @@ struct OpCAS {
     bool success;
     {
       auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
-	  bool fullLock = correctRaceDetection() || release;
+	  bool fullLock = relaxedSupport() || release;
       RWLock lock(&s->mtx, fullLock);
       T cc = *c;
       T pr = func_cas(a, cc, v);
@@ -493,7 +493,7 @@ struct OpCAS {
         *c = pr;
         mo = fmo;
       }
-	  if (!correctRaceDetection()){
+	  if (!relaxedSupport()){
         if (success && IsAcqRelOrder(mo))
           thr->clock.ReleaseAcquire(&s->clock);
         else if (success && IsReleaseOrder(mo))
@@ -533,7 +533,7 @@ struct OpFence {
   static void NoTsanAtomic(morder mo) { __sync_synchronize(); }
 
   static void Atomic(ThreadState *thr, uptr pc, morder mo) {
-	  if (correctRaceDetection()){
+	  if (relaxedSupport()){
 		SlotLocker locker(thr);
         if (IsAcquireOrder(mo))
             thr->clock.Acquire(&thr->clockA);
