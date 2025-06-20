@@ -84,6 +84,17 @@ public:
     return WalkResult::advance();
   }
 
+  /// Get the top instance of frame type `T` or nullptr if none are found
+  template <typename T>
+  T *getStackTop() {
+    T *top = nullptr;
+    stackWalk<T>([&](T &frame) -> mlir::WalkResult {
+      top = &frame;
+      return mlir::WalkResult::interrupt();
+    });
+    return top;
+  }
+
 private:
   SmallVector<std::unique_ptr<StateStackFrame>> stack;
 };
