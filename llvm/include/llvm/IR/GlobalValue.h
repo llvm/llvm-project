@@ -589,17 +589,33 @@ private:
   /// used as the key for a global lookup (e.g. profile or ThinLTO).
   LLVM_ABI std::string getGlobalIdentifier() const;
 
+  /// Assign a GUID to this value based on its current name and linkage.
+  /// This GUID will remain the same even if those change. This method is
+  /// idempotent -- if a GUID has already been assigned, calling it again
+  /// will do nothing.
+  ///
+  /// This is private (exposed only to \c AssignGUIDPass), as users don't need
+  /// to call it. GUIDs are assigned only by \c AssignGUIDPass. The pass
+  /// pipeline should be set up such that GUIDs are always available when
+  /// needed. If not, the GUID assignment pass should be moved (or run again)
+  /// such that they are.
+  void assignGUID();
+
+  // assignGUID needs to be accessible from AssignGUIDPass, which is called
+  // early in the pipeline to make GUIDs available to later passes. But we'd
+  // rather not expose it publicly, as no-one else should call it.
+  friend class AssignGUIDPass;
+
 public:
   /// Return a 64-bit global unique ID constructed from the name of a global
   /// symbol. Since this call doesn't supply the linkage or defining filename,
   /// the GUID computation will assume that the global has external linkage.
   LLVM_ABI static GUID getGUIDAssumingExternalLinkage(StringRef GlobalName);
 
-  /// Return a 64-bit global unique ID constructed from global value name
-  /// (i.e. returned by getGlobalIdentifier()).
-  GUID getGUID() const {
-    return getGUIDAssumingExternalLinkage(getGlobalIdentifier());
-  }
+  /// Return a 64-bit global unique ID for this value. It is based on the
+  /// "original" name and linkage of this value (i.e. whenever its GUID was
+  /// assigned). This might not match the current name and linkage.
+  GUID getGUID() const;
 
   /// @name Materialization
   /// Materialization is used to construct functions only as they're needed.
