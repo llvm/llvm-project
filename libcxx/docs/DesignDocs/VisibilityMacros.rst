@@ -93,6 +93,13 @@ Visibility Macros
   the extern template declaration) as exported on Windows, as discussed above.
   On all other platforms, this macro has an empty definition.
 
+**_LIBCPP_INNER_CLASS_IN_TEMPLATE_VIS**
+  To let dll-importing and dll-exporting consitent on windows-gnu environment,
+  this annotation must be attached to a non-template class that isn't marked
+  as `dllexport` defined in a class template. Currentry here are ostream::sentry
+  and istream::sentry only but if a time to such a new class be introduced,
+  the class has to be attached this annotation.
+
 Links
 =====
 
