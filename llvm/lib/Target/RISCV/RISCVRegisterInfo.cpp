@@ -15,6 +15,8 @@
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -28,6 +30,11 @@
 #include "RISCVGenRegisterInfo.inc"
 
 using namespace llvm;
+
+static cl::opt<bool>
+    EnableRVVOverlapConstraints("riscv-rvv-overlap-constraints",
+                                cl::desc("Enable RVV overlap constraints."),
+                                cl::init(true), cl::Hidden);
 
 static cl::opt<bool> DisableCostPerUse("riscv-disable-cost-per-use",
                                        cl::init(false), cl::Hidden);
@@ -1039,4 +1046,222 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       Hints.push_back(OrderReg);
 
   return BaseImplRetVal;
+}
+
+unsigned RISCVRegisterInfo::getMCRegIndex(MCRegister Reg,
+                                          const MachineRegisterInfo *MRI) {
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  return TRI->getEncodingValue(Reg);
+}
+
+unsigned RISCVRegisterInfo::getMCRegLMUL(MCRegister Reg) {
+  if (RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg))
+    return 1;
+  if (RISCVMCRegisterClasses[RISCV::VRM2RegClassID].contains(Reg))
+    return 2;
+  if (RISCVMCRegisterClasses[RISCV::VRM4RegClassID].contains(Reg))
+    return 4;
+  if (RISCVMCRegisterClasses[RISCV::VRM8RegClassID].contains(Reg))
+    return 8;
+
+  llvm_unreachable("Not supported Register.");
+}
+
+// The destination EEW is smaller than the source EEW and the overlap is in the
+// lowest-numbered part of the source register group (e.g., when LMUL=1,
+// vnsrl.wi v0, v0, 3 is legal, but a destination of v1 is not).
+bool RISCVRegisterInfo::isRVVConstraintsType2(unsigned DestRegIndex,
+                                              unsigned DestRegLMUL,
+                                              unsigned SrcRegIndex,
+                                              unsigned SrcRegLMUL) {
+  if (DestRegIndex == SrcRegIndex)
+    return false;
+
+  return SrcRegIndex < DestRegIndex && DestRegIndex < SrcRegIndex + SrcRegLMUL;
+}
+
+// The destination EEW is greater than the source EEW, the source EMUL is at
+// least 1, and the overlap is in the highest-numbered part of the destination
+// register group (e.g., when LMUL=8, vzext.vf4 v0, v6 is legal, but a source of
+// v0, v2, or v4 is not).
+bool RISCVRegisterInfo::isRVVConstraintsType3(unsigned DestRegIndex,
+                                              unsigned DestRegLMUL,
+                                              unsigned SrcRegIndex,
+                                              unsigned SrcRegLMUL) {
+  if (DestRegLMUL == SrcRegLMUL && DestRegIndex == SrcRegIndex)
+    return true;
+
+  if (SrcRegIndex == DestRegIndex + DestRegLMUL - SrcRegLMUL)
+    return false;
+
+  return DestRegIndex <= SrcRegIndex &&
+         SrcRegIndex < DestRegIndex + DestRegLMUL - SrcRegLMUL;
+}
+
+static MCRegister getPhysicalReg(const MachineOperand MO,
+                                 const MachineOperand MObeAllocated,
+                                 MCRegister PhysRegbeAllocated,
+                                 const VirtRegMap *VRM) {
+  if (MObeAllocated.isIdenticalTo(MO))
+    return PhysRegbeAllocated;
+
+  if (MO.getReg().isPhysical())
+    return MO.getReg().asMCReg();
+
+  if (MO.getReg().isVirtual() && VRM->hasPhys(MO.getReg()))
+    return VRM->getPhys(MO.getReg());
+
+  return PhysRegbeAllocated;
+}
+
+static bool checkConstraintsWithTwoOperand(
+    const MachineInstr *MI, const MachineOperand MObeAllocated,
+    MCRegister PhysRegbeAllocated, MachineOperand DestMO, MachineOperand SrcMO,
+    const MachineRegisterInfo *MRI, const VirtRegMap *VRM) {
+
+  assert(DestMO.isReg() && SrcMO.isReg() && "Must be Register");
+
+  // Allocate for DestMO or SrcMO.
+  if (!MObeAllocated.isIdenticalTo(DestMO) &&
+      !MObeAllocated.isIdenticalTo(SrcMO))
+    return false;
+
+  // Another Operand already assign phyiscal register.
+  if (DestMO.getReg().isVirtual() && !VRM->hasPhys(DestMO.getReg()) &&
+      SrcMO.getReg().isVirtual() && !VRM->hasPhys(SrcMO.getReg()))
+    return false;
+
+  MCRegister DestReg =
+      getPhysicalReg(DestMO, MObeAllocated, PhysRegbeAllocated, VRM);
+  MCRegister SrcReg =
+      getPhysicalReg(SrcMO, MObeAllocated, PhysRegbeAllocated, VRM);
+
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+
+  // Handle sub-register like sub_vrm4_0:vrm8
+  if (DestMO.getSubReg() != 0)
+    DestReg = TRI->getSubReg(DestReg, DestMO.getSubReg());
+
+  if (SrcMO.getSubReg() != 0)
+    SrcReg = TRI->getSubReg(SrcReg, SrcMO.getSubReg());
+
+  unsigned DestRegIndex = RISCVRegisterInfo::getMCRegIndex(DestReg, MRI);
+  unsigned DestRegLMUL = RISCVRegisterInfo::getMCRegLMUL(DestReg);
+  unsigned SrcRegIndex = RISCVRegisterInfo::getMCRegIndex(SrcReg, MRI);
+  unsigned SrcRegLMUL = RISCVRegisterInfo::getMCRegLMUL(SrcReg);
+
+  unsigned OverlapConstraints =
+      RISCVInstrInfo::getOverlapConstraintsFromMI(MI->getOpcode());
+  if (OverlapConstraints == 2)
+    return RISCVRegisterInfo::isRVVConstraintsType2(DestRegIndex, DestRegLMUL,
+                                                    SrcRegIndex, SrcRegLMUL);
+  if (OverlapConstraints == 3)
+    return RISCVRegisterInfo::isRVVConstraintsType3(DestRegIndex, DestRegLMUL,
+                                                    SrcRegIndex, SrcRegLMUL);
+  return false;
+}
+
+static bool isVectorVirtRegClass(MachineOperand MO, Register R,
+                                 const MachineRegisterInfo *MRI) {
+  // Register like sub_vrm4_0:vrn2m4 also need check.
+  return RISCV::VRRegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRM2RegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRM4RegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRM8RegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRN2M1RegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRN2M2RegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRN2M4RegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRN3M1RegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRN3M2RegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRN4M1RegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRN4M2RegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRN5M1RegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRN6M1RegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRN7M1RegClass.hasSubClassEq(MRI->getRegClass(R)) ||
+         RISCV::VRN8M1RegClass.hasSubClassEq(MRI->getRegClass(R));
+}
+
+// FIXME: Are we need support register like V26_V27?
+bool isVectorPhyRegClass(MCRegister Reg, const MachineRegisterInfo *MRI) {
+  return (RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg) ||
+          RISCVMCRegisterClasses[RISCV::VRM2RegClassID].contains(Reg) ||
+          RISCVMCRegisterClasses[RISCV::VRM4RegClassID].contains(Reg) ||
+          RISCVMCRegisterClasses[RISCV::VRM8RegClassID].contains(Reg));
+}
+
+static BitVector getConstraintsRegFromMI(const MachineInstr *MI,
+                                         const MachineOperand MObeAllocated,
+                                         MCRegister PhysRegbeAllocated,
+                                         int RegNums,
+                                         const MachineRegisterInfo *MRI,
+                                         const VirtRegMap *VRM) {
+  BitVector IReg(RegNums);
+  // Assume early-clobber operand place on 0.
+  unsigned ECDestOperand = 0;
+  for (auto &MO : MI->uses()) {
+    if (!MO.isReg())
+      continue;
+    if (MO.isTied())
+      continue;
+    if ((MO.getReg().isVirtual() &&
+         isVectorVirtRegClass(MO, MO.getReg(), MRI)) ||
+        (MO.getReg().isPhysical() && !MO.isImplicit() &&
+         isVectorPhyRegClass(MO.getReg(), MRI))) {
+      if (checkConstraintsWithTwoOperand(MI, MObeAllocated, PhysRegbeAllocated,
+                                         MI->getOperand(ECDestOperand), MO, MRI,
+                                         VRM)) {
+        if (VRM->hasPhys(MI->getOperand(ECDestOperand).getReg()))
+          IReg.set(VRM->getPhys(MI->getOperand(ECDestOperand).getReg()));
+        if (VRM->hasPhys(MO.getReg()))
+          IReg.set(VRM->getPhys(MO.getReg()));
+      }
+    }
+  }
+
+  return IReg;
+}
+
+BitVector RISCVRegisterInfo::getTargetInterferenceReg(
+    const LiveInterval &VirtReg, MCRegister PhysReg,
+    const MachineRegisterInfo *MRI, const VirtRegMap *VRM) const {
+  unsigned Reg = VirtReg.reg();
+  int NumRegs = getNumRegs();
+  BitVector IReg(NumRegs);
+
+  for (const MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
+    const MachineInstr *MI = MO.getParent();
+    if (MI->getOperand(0).isReg() && !MI->getOperand(0).isEarlyClobber())
+      continue;
+    if (!needConstraintsMI(MI))
+      continue;
+    IReg |= getConstraintsRegFromMI(MI, MO, PhysReg, NumRegs, MRI, VRM);
+  }
+
+  return IReg;
+}
+
+bool RISCVRegisterInfo::needConstraintsMI(const MachineInstr *MI) const {
+  unsigned OverlapConstraints =
+      RISCVInstrInfo::getOverlapConstraintsFromMI(MI->getOpcode());
+  return (OverlapConstraints == 2 || OverlapConstraints == 3);
+}
+
+bool RISCVRegisterInfo::enableTargetInterference() const {
+  return EnableRVVOverlapConstraints;
+}
+
+bool RISCVRegisterInfo::needUpdateECSlot(const LiveRange &LR, LiveRange &newLR,
+                                         const LiveIntervals &LIS) const {
+  bool Changed = false;
+  for (LiveRange::Segment &Seg : newLR.segments) {
+    SlotIndex Start = Seg.start;
+    const MachineInstr *CurrMI = LIS.getInstructionFromIndex(Start);
+    if (CurrMI == nullptr)
+      continue;
+    if (Start.isEarlyClobber() && needConstraintsMI(CurrMI)) {
+      Seg.start = Start.getRegSlot();
+      Changed = true;
+    }
+  }
+  return Changed;
 }

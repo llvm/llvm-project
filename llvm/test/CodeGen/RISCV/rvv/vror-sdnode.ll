@@ -1714,8 +1714,8 @@ define <vscale x 2 x i64> @vror_vx_nxv2i64(<vscale x 2 x i64> %a, i64 %b) {
 ; CHECK-RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; CHECK-RV32-NEXT:    vmv.v.x v10, a0
 ; CHECK-RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-RV32-NEXT:    vmv.v.i v14, 0
-; CHECK-RV32-NEXT:    vwsub.vx v12, v14, a0
+; CHECK-RV32-NEXT:    vmv.v.i v13, 0
+; CHECK-RV32-NEXT:    vwsub.vx v12, v13, a0
 ; CHECK-RV32-NEXT:    li a0, 63
 ; CHECK-RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; CHECK-RV32-NEXT:    vand.vx v10, v10, a0
@@ -1816,8 +1816,8 @@ define <vscale x 4 x i64> @vror_vx_nxv4i64(<vscale x 4 x i64> %a, i64 %b) {
 ; CHECK-RV32-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; CHECK-RV32-NEXT:    vmv.v.x v12, a0
 ; CHECK-RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-RV32-NEXT:    vmv.v.i v20, 0
-; CHECK-RV32-NEXT:    vwsub.vx v16, v20, a0
+; CHECK-RV32-NEXT:    vmv.v.i v18, 0
+; CHECK-RV32-NEXT:    vwsub.vx v16, v18, a0
 ; CHECK-RV32-NEXT:    li a0, 63
 ; CHECK-RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-RV32-NEXT:    vand.vx v12, v12, a0
@@ -1918,8 +1918,8 @@ define <vscale x 8 x i64> @vror_vx_nxv8i64(<vscale x 8 x i64> %a, i64 %b) {
 ; CHECK-RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vmv.v.x v16, a0
 ; CHECK-RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-RV32-NEXT:    vmv.v.i v4, 0
-; CHECK-RV32-NEXT:    vwsub.vx v24, v4, a0
+; CHECK-RV32-NEXT:    vmv.v.i v28, 0
+; CHECK-RV32-NEXT:    vwsub.vx v24, v28, a0
 ; CHECK-RV32-NEXT:    li a0, 63
 ; CHECK-RV32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vand.vx v16, v16, a0

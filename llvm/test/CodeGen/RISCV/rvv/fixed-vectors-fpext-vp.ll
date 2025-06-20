@@ -84,8 +84,8 @@ define <15 x double> @vfpext_v15f32_v15f64(<15 x float> %a, <15 x i1> %m, i32 ze
 ; CHECK-LABEL: vfpext_v15f32_v15f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v16, v8
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v16, v0.t
+; CHECK-NEXT:    vmv4r.v v12, v8
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v12, v0.t
 ; CHECK-NEXT:    ret
   %v = call <15 x double> @llvm.vp.fpext.v15f64.v15f32(<15 x float> %a, <15 x i1> %m, i32 %vl)
   ret <15 x double> %v

@@ -286,6 +286,8 @@ public:
   finalizeInsInstrs(MachineInstr &Root, unsigned &Pattern,
                     SmallVectorImpl<MachineInstr *> &InsInstrs) const override;
 
+  static int getOverlapConstraintsFromMI(uint16_t RVVPseudoOpcode);
+
   void genAlternativeCodeSequence(
       MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
@@ -398,6 +400,7 @@ namespace RISCVVPseudosTable {
 struct PseudoInfo {
   uint16_t Pseudo;
   uint16_t BaseInstr;
+  uint16_t TargetOverlapConstraintType;
 };
 
 #define GET_RISCVVPseudosTable_DECL

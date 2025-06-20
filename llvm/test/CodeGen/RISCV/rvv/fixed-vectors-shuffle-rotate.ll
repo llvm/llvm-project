@@ -615,10 +615,10 @@ define <8 x i32> @shuffle_v8i32_as_i64(<8 x i32> %v) {
 ; RV32-LABEL: shuffle_v8i32_as_i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 0
+; RV32-NEXT:    vmv.v.i v11, 0
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vwsubu.vx v10, v12, a0
+; RV32-NEXT:    vwsubu.vx v10, v11, a0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vand.vx v10, v10, a1
@@ -819,10 +819,10 @@ define <8 x float> @shuffle_v8f32_as_i64(<8 x float> %v) {
 ; RV32-LABEL: shuffle_v8f32_as_i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 0
+; RV32-NEXT:    vmv.v.i v11, 0
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vwsubu.vx v10, v12, a0
+; RV32-NEXT:    vwsubu.vx v10, v11, a0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vand.vx v10, v10, a1
@@ -864,10 +864,10 @@ define <8 x float> @shuffle_v8f32_as_i64_exact(<8 x float> %v) vscale_range(2,2)
 ; RV32-LABEL: shuffle_v8f32_as_i64_exact:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 0
+; RV32-NEXT:    vmv.v.i v11, 0
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vwsubu.vx v10, v12, a0
+; RV32-NEXT:    vwsubu.vx v10, v11, a0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vand.vx v10, v10, a1

@@ -103,9 +103,9 @@ define <2 x half> @max_v2f16(<2 x half> %a, <2 x half> %b) {
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfmax.vv v9, v9, v10
+; ZVFHMIN-NEXT:    vfmax.vv v8, v9, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v8
 ; ZVFHMIN-NEXT:    ret
 entry:
   %c = call <2 x half> @llvm.maximumnum.v2f16(<2 x half> %a, <2 x half> %b)
@@ -125,9 +125,9 @@ define <4 x half> @max_v4f16(<4 x half> %a, <4 x half> %b) {
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfmax.vv v9, v9, v10
+; ZVFHMIN-NEXT:    vfmax.vv v8, v9, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v8
 ; ZVFHMIN-NEXT:    ret
 entry:
   %c = call <4 x half> @llvm.maximumnum.v4f16(<4 x half> %a, <4 x half> %b)
@@ -147,9 +147,9 @@ define <8 x half> @max_v8f16(<8 x half> %a, <8 x half> %b) {
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfmax.vv v10, v12, v10
+; ZVFHMIN-NEXT:    vfmax.vv v8, v12, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v10
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v8
 ; ZVFHMIN-NEXT:    ret
 entry:
   %c = call <8 x half> @llvm.maximumnum.v8f16(<8 x half> %a, <8 x half> %b)
@@ -169,9 +169,9 @@ define <9 x half> @max_v9f16(<9 x half> %a, <9 x half> %b) {
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmax.vv v12, v16, v12
+; ZVFHMIN-NEXT:    vfmax.vv v8, v16, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v12
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v8
 ; ZVFHMIN-NEXT:    ret
 entry:
   %c = call <9 x half> @llvm.maximumnum.v9f16(<9 x half> %a, <9 x half> %b)
@@ -191,9 +191,9 @@ define <16 x half> @max_v16f16(<16 x half> %a, <16 x half> %b) {
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmax.vv v12, v16, v12
+; ZVFHMIN-NEXT:    vfmax.vv v8, v16, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v12
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v8
 ; ZVFHMIN-NEXT:    ret
 entry:
   %c = call <16 x half> @llvm.maximumnum.v16f16(<16 x half> %a, <16 x half> %b)

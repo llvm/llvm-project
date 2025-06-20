@@ -3215,25 +3215,25 @@ define void @mulhu_v16i16(ptr %x) {
 ; RV32-NEXT:    addi a1, a1, 289
 ; RV32-NEXT:    vmv1r.v v0, v8
 ; RV32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; RV32-NEXT:    vmerge.vim v16, v9, 1, v0
+; RV32-NEXT:    vmerge.vim v9, v9, 1, v0
 ; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    lui a1, %hi(.LCPI182_0)
 ; RV32-NEXT:    addi a1, a1, %lo(.LCPI182_0)
 ; RV32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v9, 3
-; RV32-NEXT:    vmerge.vim v9, v9, 2, v0
+; RV32-NEXT:    vmv.v.i v14, 3
+; RV32-NEXT:    vmerge.vim v16, v14, 2, v0
 ; RV32-NEXT:    vle16.v v14, (a1)
 ; RV32-NEXT:    vmv1r.v v0, v8
-; RV32-NEXT:    vmerge.vim v17, v9, 1, v0
+; RV32-NEXT:    vmerge.vim v16, v16, 1, v0
 ; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV32-NEXT:    vsext.vf2 v8, v16
+; RV32-NEXT:    vsext.vf2 v8, v9
 ; RV32-NEXT:    vsrl.vv v8, v10, v8
 ; RV32-NEXT:    vmulhu.vv v8, v8, v14
 ; RV32-NEXT:    vsub.vv v10, v10, v8
 ; RV32-NEXT:    vmulhu.vv v10, v10, v12
 ; RV32-NEXT:    vadd.vv v8, v10, v8
-; RV32-NEXT:    vsext.vf2 v10, v17
+; RV32-NEXT:    vsext.vf2 v10, v16
 ; RV32-NEXT:    vsrl.vv v8, v8, v10
 ; RV32-NEXT:    vse16.v v8, (a0)
 ; RV32-NEXT:    ret
@@ -3253,11 +3253,11 @@ define void @mulhu_v16i16(ptr %x) {
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    slli a1, a1, 48
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v16, a1
+; RV64-NEXT:    vmv.v.x v15, a1
 ; RV64-NEXT:    lui a1, %hi(.LCPI182_1)
 ; RV64-NEXT:    ld a1, %lo(.LCPI182_1)(a1)
 ; RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV64-NEXT:    vsext.vf2 v14, v16
+; RV64-NEXT:    vsext.vf2 v14, v15
 ; RV64-NEXT:    vsrl.vv v14, v8, v14
 ; RV64-NEXT:    vmulhu.vv v12, v14, v12
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma

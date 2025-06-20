@@ -1290,9 +1290,9 @@ define <vscale x 4 x float> @intrinsic_vfwsub.w_wv_untie_nxv4f32_nxv4f32_nxv4f16
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_untie_nxv4f32_nxv4f32_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v12, v8
+; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    fsrmi a0, 0
-; CHECK-NEXT:    vfwsub.wv v8, v10, v12
+; CHECK-NEXT:    vfwsub.wv v8, v10, v9
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 entry:
@@ -1309,9 +1309,9 @@ define <vscale x 8 x float> @intrinsic_vfwsub.w_wv_untie_nxv8f32_nxv8f32_nxv8f16
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_untie_nxv8f32_nxv8f32_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; CHECK-NEXT:    vmv2r.v v16, v8
+; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    fsrmi a0, 0
-; CHECK-NEXT:    vfwsub.wv v8, v12, v16
+; CHECK-NEXT:    vfwsub.wv v8, v12, v10
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 entry:
@@ -1347,9 +1347,9 @@ define <vscale x 2 x double> @intrinsic_vfwsub.w_wv_untie_nxv2f64_nxv2f64_nxv2f3
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_untie_nxv2f64_nxv2f64_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v12, v8
+; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    fsrmi a0, 0
-; CHECK-NEXT:    vfwsub.wv v8, v10, v12
+; CHECK-NEXT:    vfwsub.wv v8, v10, v9
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 entry:
@@ -1366,9 +1366,9 @@ define <vscale x 4 x double> @intrinsic_vfwsub.w_wv_untie_nxv4f64_nxv4f64_nxv4f3
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_untie_nxv4f64_nxv4f64_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vmv2r.v v16, v8
+; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    fsrmi a0, 0
-; CHECK-NEXT:    vfwsub.wv v8, v12, v16
+; CHECK-NEXT:    vfwsub.wv v8, v12, v10
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 entry:
@@ -1385,9 +1385,9 @@ define <vscale x 8 x double> @intrinsic_vfwsub.w_wv_untie_nxv8f64_nxv8f64_nxv8f3
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_untie_nxv8f64_nxv8f64_nxv8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v24, v8
+; CHECK-NEXT:    vmv4r.v v12, v8
 ; CHECK-NEXT:    fsrmi a0, 0
-; CHECK-NEXT:    vfwsub.wv v8, v16, v24
+; CHECK-NEXT:    vfwsub.wv v8, v16, v12
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 entry:

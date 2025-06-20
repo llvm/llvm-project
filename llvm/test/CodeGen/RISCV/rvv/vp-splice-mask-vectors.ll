@@ -369,8 +369,7 @@ define <vscale x 16 x i1> @test_vp_splice_nxv16i1_masked(<vscale x 16 x i1> %va,
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
 ; CHECK-NEXT:    vslideup.vx v10, v12, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmsne.vi v8, v10, 0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmsne.vi v0, v10, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i1> @llvm.experimental.vp.splice.nxv16i1(<vscale x 16 x i1> %va, <vscale x 16 x i1> %vb, i32 5, <vscale x 16 x i1> %mask, i32 %evla, i32 %evlb)
   ret <vscale x 16 x i1> %v
@@ -443,8 +442,7 @@ define <vscale x 32 x i1> @test_vp_splice_nxv32i1_masked(<vscale x 32 x i1> %va,
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
 ; CHECK-NEXT:    vslideup.vx v16, v12, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmsne.vi v8, v16, 0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmsne.vi v0, v16, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i1> @llvm.experimental.vp.splice.nxv32i1(<vscale x 32 x i1> %va, <vscale x 32 x i1> %vb, i32 5, <vscale x 32 x i1> %mask, i32 %evla, i32 %evlb)
   ret <vscale x 32 x i1> %v
@@ -517,8 +515,7 @@ define <vscale x 64 x i1> @test_vp_splice_nxv64i1_masked(<vscale x 64 x i1> %va,
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
 ; CHECK-NEXT:    vslideup.vx v24, v16, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmsne.vi v8, v24, 0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmsne.vi v0, v24, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 64 x i1> @llvm.experimental.vp.splice.nxv64i1(<vscale x 64 x i1> %va, <vscale x 64 x i1> %vb, i32 5, <vscale x 64 x i1> %mask, i32 %evla, i32 %evlb)
   ret <vscale x 64 x i1> %v

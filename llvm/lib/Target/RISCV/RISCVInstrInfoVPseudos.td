@@ -556,6 +556,7 @@ defset list<VTypeInfoToWide> AllWidenableBFloatToFloatVectors = {
 class RISCVVPseudo {
   Pseudo Pseudo = !cast<Pseudo>(NAME); // Used as a key.
   Instruction BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+  bits<2> TargetOverlapConstraintType = 1;
   // SEW = 0 is used to denote that the Pseudo is not SEW specific (or unknown).
   bits<8> SEW = 0;
   bit IncludeInInversePseudoTable = 1;
@@ -565,7 +566,7 @@ class RISCVVPseudo {
 def RISCVVPseudosTable : GenericTable {
   let FilterClass = "RISCVVPseudo";
   let CppTypeName = "PseudoInfo";
-  let Fields = [ "Pseudo", "BaseInstr" ];
+  let Fields = [ "Pseudo", "BaseInstr", "TargetOverlapConstraintType"];
   let PrimaryKey = [ "Pseudo" ];
   let PrimaryKeyName = "getPseudoInfo";
   let PrimaryKeyEarlyOut = true;

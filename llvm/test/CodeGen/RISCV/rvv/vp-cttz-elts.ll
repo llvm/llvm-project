@@ -108,8 +108,8 @@ define iXLen @nxv2i64(<vscale x 2 x i64> %src, <vscale x 2 x i1> %m, i32 %evl) {
 ; RV32-LABEL: nxv2i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV32-NEXT:    vmsne.vi v10, v8, 0, v0.t
-; RV32-NEXT:    vfirst.m a1, v10, v0.t
+; RV32-NEXT:    vmsne.vi v8, v8, 0, v0.t
+; RV32-NEXT:    vfirst.m a1, v8, v0.t
 ; RV32-NEXT:    bltz a1, .LBB4_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a0, a1
@@ -121,8 +121,8 @@ define iXLen @nxv2i64(<vscale x 2 x i64> %src, <vscale x 2 x i1> %m, i32 %evl) {
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV64-NEXT:    vmsne.vi v10, v8, 0, v0.t
-; RV64-NEXT:    vfirst.m a1, v10, v0.t
+; RV64-NEXT:    vmsne.vi v8, v8, 0, v0.t
+; RV64-NEXT:    vfirst.m a1, v8, v0.t
 ; RV64-NEXT:    bltz a1, .LBB4_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a0, a1
@@ -136,8 +136,8 @@ define iXLen @nxv2i64_zero_poison(<vscale x 2 x i64> %src, <vscale x 2 x i1> %m,
 ; RV32-LABEL: nxv2i64_zero_poison:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV32-NEXT:    vmsne.vi v10, v8, 0, v0.t
-; RV32-NEXT:    vfirst.m a0, v10, v0.t
+; RV32-NEXT:    vmsne.vi v8, v8, 0, v0.t
+; RV32-NEXT:    vfirst.m a0, v8, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: nxv2i64_zero_poison:
@@ -145,8 +145,8 @@ define iXLen @nxv2i64_zero_poison(<vscale x 2 x i64> %src, <vscale x 2 x i1> %m,
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV64-NEXT:    vmsne.vi v10, v8, 0, v0.t
-; RV64-NEXT:    vfirst.m a0, v10, v0.t
+; RV64-NEXT:    vmsne.vi v8, v8, 0, v0.t
+; RV64-NEXT:    vfirst.m a0, v8, v0.t
 ; RV64-NEXT:    ret
   %r = call iXLen @llvm.vp.cttz.elts.iXLen.nxv2i64(<vscale x 2 x i64> %src, i1 1, <vscale x 2 x i1> %m, i32 %evl)
   ret iXLen %r
