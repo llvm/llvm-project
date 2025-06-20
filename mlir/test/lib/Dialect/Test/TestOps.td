@@ -3387,6 +3387,8 @@ def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
   let assemblyFormat = [{
     (`anAttr` `=` $anAttr^)?
     (`simple` `=` $simple^)?
+    (`simplei8` `=` $simplei8^)?
+    (`simpleui8` `=` $simpleui8^)?
     (`nonTrivialStorage` `=` $nonTrivialStorage^)?
     (`hasDefault` `=` $hasDefault^)?
     (`nested` `=` $nested^)?
@@ -3398,6 +3400,8 @@ def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
   let arguments = (ins
     OptionalAttr<I32Attr>:$anAttr,
     OptionalProp<I64Prop>:$simple,
+    OptionalProp<IntProp<"int8_t">>:$simplei8,
+    OptionalProp<IntProp<"uint8_t">>:$simpleui8,
     OptionalProp<StringProp>:$nonTrivialStorage,
     // Confirm that properties with default values now default to nullopt and have
     // the long syntax.
