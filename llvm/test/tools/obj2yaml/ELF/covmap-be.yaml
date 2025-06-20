@@ -1,0 +1,81 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: obj2yaml %t.o > %t.plain.yaml
+# RUN: yaml2obj %t.plain.yaml -o - | cmp %t.o -
+
+# FIXME: This is synthetically created. s/ELFDATA2LSB/ELF2DATAMSB/ s/EM_X86_64/EM_PPC64/
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2MSB
+  OSABI:           ELFOSABI_GNU
+  Type:            ET_REL
+  Machine:         EM_PPC64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            __llvm_covfun
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - NameRef:         0xA72DB7A33048E6A3
+        FuncHash:        0xAFC772D567676299
+        FilenamesRef:    0x70DA2CAFD8CE198E
+        FileIDs:         [ 1, 1 ]
+        Expressions:
+          - [ { Tag: Ref, Val: 0 }, { Tag: Ref, Val: 1 } ]
+          - [ { Tag: Add, Val: 0 }, { Tag: Ref, Val: 2 } ]
+          - [ { Tag: Add, Val: 0 }, { Tag: Ref, Val: 2 } ]
+          - [ { Tag: Add, Val: 0 }, { Tag: Ref, Val: 2 } ]
+          - [ { Tag: Ref, Val: 0 }, { Tag: Ref, Val: 2 } ]
+          - [ { Tag: Ref, Val: 0 }, { Tag: Ref, Val: 2 } ]
+          - [ { Tag: Ref, Val: 0 }, { Tag: Ref, Val: 2 } ]
+          - [ { Tag: Add, Val: 0 }, { Tag: Ref, Val: 5 } ]
+        Files:
+          - Regions:
+              - { dLoc: [ 3, 17, 11, 2 ], Tag: Ref, Val: 0 }
+              - { dLoc: [ 3, 6, 5, 4 ], Tag: Add, Val: 0 }
+              - { dLoc: [ 1, 9, 0, 13 ], Tag: Zero, Val: 3, Expansion: 1 }
+              - { dLoc: [ 0, 23, 1, 7 ], isGap: true, Tag: Ref, Val: 2 }
+              - { dLoc: [ 1, 7, 0, 16 ], Tag: Ref, Val: 2 }
+              - { dLoc: [ 0, 17, 2, 5 ], isGap: true, Tag: Sub, Val: 3 }
+              - { dLoc: [ 1, 1, 0, 1 ], Tag: Zero, Val: 4, ExtTag: Skip }
+              - { dLoc: [ 1, 5, 1, 4 ], Tag: Sub, Val: 3 }
+              - { dLoc: [ 1, 12, 0, 17 ], Tag: Sub, Val: 3 }
+              - { dLoc: [ 0, 12, 0, 17 ], Tag: Zero, Val: 8, ExtTag: Branch, Branch: [ { Tag: Ref, Val: 1 }, { Tag: Sub, Val: 6 } ] }
+              - { dLoc: [ 0, 19, 1, 3 ], isGap: true, Tag: Sub, Val: 6 }
+              - { dLoc: [ 1, 3, 0, 11 ], Tag: Sub, Val: 6 }
+              - { dLoc: [ 0, 12, 1, 3 ], isGap: true, Tag: Zero, Val: 0 }
+              - { dLoc: [ 1, 3, 0, 12 ], Tag: Zero, Val: 0 }
+          - Regions:
+              - { dLoc: [ 1, 17, 0, 41 ], Tag: Add, Val: 0 }
+              - { dLoc: [ 0, 18, 0, 32 ], Tag: Add, Val: 0 }
+              - { dLoc: [ 0, 18, 0, 40 ], Tag: Zero, Val: 10, ExtTag: Decision, Decision: { BIdx: 5, NCond: 3 } }
+              - { dLoc: [ 0, 19, 0, 22 ], Tag: Add, Val: 0 }
+              - { dLoc: [ 0, 19, 0, 22 ], Tag: Zero, Val: 12, ExtTag: MCDCBranch, Branch: [ { Tag: Sub, Val: 7 }, { Tag: Ref, Val: 5 } ], MCDC: [ 1, 2, 3 ] }
+              - { dLoc: [ 0, 26, 0, 31 ], Tag: Ref, Val: 5 }
+              - { dLoc: [ 0, 26, 0, 31 ], Tag: Zero, Val: 12, ExtTag: MCDCBranch, Branch: [ { Tag: Zero, Val: 0 }, { Tag: Ref, Val: 6 } ], MCDC: [ 3, 2, 0 ] }
+              - { dLoc: [ 0, 36, 0, 40 ], Tag: Ref, Val: 3 }
+              - { dLoc: [ 0, 36, 0, 40 ], Tag: Zero, Val: 12, ExtTag: MCDCBranch, Branch: [ { Tag: Ref, Val: 4 }, { Tag: Zero, Val: 0 } ], MCDC: [ 2, 0, 0 ] }
+  - Name:            __llvm_covmap
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovMap:
+      - FilenamesRef:    0x70DA2CAFD8CE198E
+        Version:         6
+        Filenames:
+          - ''
+          - func.cpp
+  - Name:            __llvm_prf_names
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
+    AddressAlign:    0x1
+    PrfNames:
+      - - _Z4funci
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            __llvm_covfun
+      - Name:            __llvm_covmap
+      - Name:            __llvm_prf_names
+...
