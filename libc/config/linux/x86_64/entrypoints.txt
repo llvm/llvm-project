@@ -989,9 +989,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.strings.strcasecmp_l
     libc.src.strings.strncasecmp_l
 
-    # wchar.h entrypoints
-    libc.src.wchar.mbrtowc
-
     # assert.h entrypoints
     libc.src.assert.__assert_fail
 
@@ -1247,6 +1244,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.socket.recv
     libc.src.sys.socket.recvfrom
     libc.src.sys.socket.recvmsg
+
+    # wchar.h entrypoints
+    libc.src.wchar.mbrtowc
   )
 endif()
 
