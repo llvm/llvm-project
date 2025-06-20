@@ -125,6 +125,25 @@ def ApplyRewriteTensorOpsAsConstantPatternsOp : Op<Transform_Dialect,
       "(`aggressive` $aggressive^)? attr-dict";
 }
 
+def GetDimOp : TransformDialectOp<"tensor.get_dim",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     TransformEachOpTrait]> {
+  let summary = "Get a handle to the result of a newly created DimOp";
+  let description = [{
+    This transform always succeeds, it is the user's responsibility that the op
+    arguments makes sense and verifies.
+  }];
+
+  let arguments = (ins TransformValueHandleTypeInterface:$target,
+                       I64Attr:$rank);
+  let results = (outs TransformValueHandleTypeInterface:$result);
+  let assemblyFormat =
+      "$target `[` $rank `]` "
+      "attr-dict `:` functional-type(operands, results)";
+  let hasVerifier = 1;
+}
+
 def Transform_TensorPadOp : Transform_ConcreteOpType<"tensor.pad">;
 
 def MakeLoopIndependentOp

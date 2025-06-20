@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Tensor/TransformOps/TensorTransformOps.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
@@ -141,6 +142,37 @@ void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
     tensor::populateRewriteAsConstantPatterns(patterns, aggressiveControlFn);
   else
     tensor::populateRewriteAsConstantPatterns(patterns, defaultControlFn);
+}
+
+//===----------------------------------------------------------------------===//
+// GetDimOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::GetDimOp::apply(transform::TransformRewriter &rewriter,
+                           transform::TransformResults &results,
+                           transform::TransformState &state) {
+  SmallVector<Value> dims;
+  for (Value v : state.getPayloadValues(getTarget())) {
+    Location loc = v.getLoc();
+    Value cst = rewriter.create<arith::ConstantIndexOp>(loc, getRank());
+    Value dim = rewriter.create<tensor::DimOp>(loc, v, cst);
+    dims.push_back(dim);
+  }
+  results.setValues(cast<OpResult>(getResult()), dims);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::GetDimOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTargetMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
+  onlyReadsPayload(effects);
+}
+
+LogicalResult transform::GetDimOp::verify() {
+  // TODO: could verify rank.
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
