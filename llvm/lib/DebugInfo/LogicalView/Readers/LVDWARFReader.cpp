@@ -949,10 +949,7 @@ LVElement *LVDWARFReader::getElementForOffset(LVOffset Offset,
 Error LVDWARFReader::loadTargetInfo(const ObjectFile &Obj) {
   // Detect the architecture from the object file. We usually don't need OS
   // info to lookup a target and create register info.
-  Triple TT;
-  TT.setArch(Triple::ArchType(Obj.getArch()));
-  TT.setVendor(Triple::UnknownVendor);
-  TT.setOS(Triple::UnknownOS);
+  Triple TT = Obj.makeTriple();
 
   // Features to be passed to target/subtarget
   Expected<SubtargetFeatures> Features = Obj.getFeatures();
@@ -962,7 +959,12 @@ Error LVDWARFReader::loadTargetInfo(const ObjectFile &Obj) {
     FeaturesValue = SubtargetFeatures();
   }
   FeaturesValue = *Features;
-  return loadGenericTargetInfo(TT.str(), FeaturesValue.getString());
+
+  StringRef CPU;
+  if (auto OptCPU = Obj.tryGetCPUName())
+    CPU = *OptCPU;
+
+  return loadGenericTargetInfo(TT.str(), FeaturesValue.getString(), CPU);
 }
 
 void LVDWARFReader::mapRangeAddress(const ObjectFile &Obj) {
