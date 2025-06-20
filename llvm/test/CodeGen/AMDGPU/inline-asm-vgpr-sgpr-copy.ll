@@ -9,20 +9,19 @@ define <4 x float> @test_sgpr_constraint_bug(ptr addrspace(5) %buf_desc_ptr) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    scratch_load_dwordx4 v[4:7], v0, off
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, v0
-; CHECK-NEXT:    v_mov_b32_e32 v2, v0
-; CHECK-NEXT:    v_mov_b32_e32 v3, v0
+; CHECK-NEXT:    v_mov_b64_e32 v[0:1], 0
+; CHECK-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], exec
-; CHECK-NEXT:    v_mov_b32_e32 v8, 1
+; CHECK-NEXT:    v_mov_b32_e32 v8, 0
+; CHECK-NEXT:    v_mov_b32_e32 v9, 1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_readfirstlane_b32 s3, v7
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v6
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v5
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v4
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    v_cmpx_le_u32 exec, 1, v8
-; CHECK-NEXT:  buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:0
+; CHECK-NEXT:    v_cmpx_le_u32 exec, 1, v9
+; CHECK-NEXT:  buffer_load_dwordx4 v[0:3], v8, s[0:3], 0 offen offset:0
 ; CHECK-NEXT:  s_mov_b64 exec s[4:5]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
