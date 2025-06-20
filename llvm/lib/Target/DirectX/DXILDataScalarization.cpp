@@ -187,9 +187,8 @@ DataScalarizerVisitor::AllocaAndGEPs
 DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
                                              const Twine &Name = "") {
   // If there is already an alloca for this vector, return it
-  auto VA = VectorAllocaMap.find(Vec);
-  if (VA != VectorAllocaMap.end())
-    return VA->second;
+  if (VectorAllocaMap.contains(Vec))
+    return VectorAllocaMap[Vec];
 
   auto InsertPoint = Builder.GetInsertPoint();
 
