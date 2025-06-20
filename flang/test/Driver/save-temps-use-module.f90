@@ -4,7 +4,7 @@
 ! RUN: rm -rf %t && split-file %s %t
 ! RUN: mkdir %t/mod_inc_dir
 ! RUN: mv %t/somemodule.mod %t/mod_inc_dir
-! RUN: %flang -S -emit-llvm --save-temps=obj -I%t/mod_inc_dir -fno-integrated-as \
+! RUN: %flang -S -emit-llvm --save-temps=obj -I%t/mod_inc_dir \
 ! RUN:   %t/ModuleUser.f90 -o %t/ModuleUser
 ! RUN: ls %t | FileCheck %s
 
