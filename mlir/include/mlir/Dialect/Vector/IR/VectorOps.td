@@ -1899,7 +1899,9 @@ def Vector_MaskedLoadOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$pass_thru)>,
+               AnyVectorOfNonZeroRank:$pass_thru,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                            [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "loads elements from memory into a vector as defined by a mask vector";
@@ -1920,6 +1922,12 @@ def Vector_MaskedLoadOp :
     comes from the pass-through vector regardless of the index, and the index is
     allowed to be out-of-bounds.
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    load operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
+
     The masked load can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to
     hardware ISA support for a masked load. The semantics of the operation
@@ -1936,6 +1944,18 @@ def Vector_MaskedLoadOp :
        : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
     ```
   }];
+  let builders = [
+    OpBuilder<(ins "Type":$resultType,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$pass_thru,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, resultType, base, indices, mask, pass_thru,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>
+  ];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
       return ::llvm::cast<MemRefType>(getBase().getType());
@@ -1962,7 +1982,9 @@ def Vector_MaskedStoreOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$valueToStore)> {
+               AnyVectorOfNonZeroRank:$valueToStore,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                            [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
 
   let summary = "stores elements from a vector into memory as defined by a mask vector";
 
@@ -1982,6 +2004,12 @@ def Vector_MaskedStoreOp :
     is stored regardless of the index, and the index is allowed to be
     out-of-bounds.
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    store operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
+
     The masked store can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to
     hardware ISA support for a masked store. The semantics of the operation
@@ -1998,6 +2026,27 @@ def Vector_MaskedStoreOp :
       : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
     ```
   }];
+  let builders = [
+    OpBuilder<(ins "TypeRange":$resultTypes,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$valueToStore,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, resultTypes, base, indices, mask, valueToStore,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>,
+    OpBuilder<(ins "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$valueToStore,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, base, indices, mask, valueToStore,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>
+  ];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
       return ::llvm::cast<MemRefType>(getBase().getType());
