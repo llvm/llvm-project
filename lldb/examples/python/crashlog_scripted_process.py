@@ -123,11 +123,6 @@ class CrashLogScriptedProcess(ScriptedProcess):
 
 class CrashLogScriptedThread(ScriptedThread):
     def create_register_ctx(self):
-        if not self.has_crashed:
-            return dict.fromkeys(
-                [*map(lambda reg: reg["name"], self.register_info["registers"])], 0
-            )
-
         if not self.backing_thread or not len(self.backing_thread.registers):
             return dict.fromkeys(
                 [*map(lambda reg: reg["name"], self.register_info["registers"])], 0
