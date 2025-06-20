@@ -498,9 +498,9 @@ std::optional<Socket::ProtocolModePair>
 Socket::GetProtocolAndMode(llvm::StringRef scheme) {
   // Keep in sync with ConnectionFileDescriptor::Connect.
   return llvm::StringSwitch<std::optional<ProtocolModePair>>(scheme)
-      .Case("listen", ProtocolModePair{SocketProtocol::ProtocolTcp,
-                                       SocketMode::ModeAccept})
-      .Cases("accept", "unix-accept",
+      .Cases("listen", "tcp", ProtocolModePair{SocketProtocol::ProtocolTcp, 
+                                    SocketMode::ModeAccept})
+      .Cases("accept", "unix", "unix-accept", 
              ProtocolModePair{SocketProtocol::ProtocolUnixDomain,
                               SocketMode::ModeAccept})
       .Case("unix-abstract-accept",
