@@ -73,6 +73,69 @@ TEST(Hover, Structured) {
          HI.Type = "void ()";
          HI.Parameters.emplace();
        }},
+      {R"cpp(
+            struct [[F^oo]] {
+              char a;
+              long long b;
+            };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "Foo";
+         HI.Kind = index::SymbolKind::Struct;
+         HI.Definition = "struct Foo {}";
+         HI.Size = 128;
+         HI.Padding = 56;
+         HI.Align = 64;
+       }},
+      {R"cpp(
+            struct [[F^oo]] {
+              int b;
+              char a;
+            };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "Foo";
+         HI.Kind = index::SymbolKind::Struct;
+         HI.Definition = "struct Foo {}";
+         HI.Size = 64;
+         HI.Padding = 24;
+         HI.Align = 32;
+       }},
+      {R"cpp(
+            struct [[F^oo]] {
+              double a;
+              char b;
+              double c;
+            };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "Foo";
+         HI.Kind = index::SymbolKind::Struct;
+         HI.Definition = "struct Foo {}";
+         HI.Size = 192;
+         HI.Padding = 46;
+         HI.Align = 64;
+       }},
+      {R"cpp(
+            struct [[F^oo]] {
+              double a;
+              char b;
+              double c;
+              char d;
+            };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "Foo";
+         HI.Kind = index::SymbolKind::Struct;
+         HI.Definition = "struct Foo {}";
+         HI.Size = 256;
+         HI.Padding = 112;
+         HI.Align = 64;
+       }},
       // Field
       {R"cpp(
           namespace ns1 { namespace ns2 {
