@@ -30,7 +30,8 @@ subroutine f03
   integer :: x, y
 
   !$omp atomic update
-  !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level + operator
+  !ERROR: The atomic variable x cannot be a proper subexpression of an argument (here: (x+y)) in the update operation
+  !ERROR: The atomic variable x should appear as an argument of the top-level + operator
   x = (x + y) + 1
 end
 
